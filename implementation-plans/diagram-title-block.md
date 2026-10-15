@@ -39,6 +39,12 @@ at the end of Phase 1):
   built (1c: the final check)"); what is left is his: H-Q1 to H-Q7 under
   "For Zach (header, 2026-10-15)" — H-Q7 the one size pair at which the
   model only touches the pattern's corner — and Q2–Q4 above.
+- He tested it again the same day: no placeholder for an empty credit
+  (H-Q1 closed: not drawn), default credits Author / Steps / Recommended
+  paper with values, the band 10 pt short of the pattern as the subtitle's
+  rule is over the band, the model on top of a header it never moves, a
+  wider gutter and more room before the note. Built: "As built (1c: Zach's
+  second test)".
 
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
@@ -2454,7 +2460,9 @@ A new diagram is made by the slice's first edit (`createDiagram` in its
 `commit`). It writes, in the app's language (`i18n.t`, the catalogs'
 `panels:diagram.titleBlock.default.*`): the subtitle "Origami diagram", and
 the credits Author (empty), Recommended size (empty) and Steps (the live
-count). A diagram already in a file is given them only by its author's
+count) (*since Zach's second test, 2026-10-15: Author "Your name here",
+Steps live, Recommended paper "15 cm × 15 cm", in that order; see "As
+built (1c: Zach's second test)"*). A diagram already in a file is given them only by its author's
 own act: the block's toggle, turned on where the content says no subtitle
 and no credits (H-14, built 2026-10-15, "As built (1c: Zach's test)");
 what it does not say otherwise stays none. `createDiagram()` with no
@@ -2500,7 +2508,8 @@ one undo step, the commits of one sitting at a text field one step
   (white on it under 2.5:1) the title and the rules in ink; labels, values
   and the note in the step text's ink. `diagramFontTexts` lists the
   subtitle, labels and values, the step count's digits and the note.
-- The overlay marks a missing title, pattern or model as now, a credit
+- The overlay marks a missing title, pattern or model as now (*no longer
+  a credit with no value, which is simply not drawn: H-Q1, closed*), a credit
   with no value, and what is cut.
 
 #### The Page pane (built: "As built (1c: the Page pane)")
@@ -2623,6 +2632,14 @@ scaffolded"), see "As built (1c: Zach's test and the review)":
   *The final check found one pair at which the crane only touches the
   corner: model 100% with pattern 30% (H-Q7).*
 - [x] The subtitle's rule hidden by the Pages view's guides.
+**Zach's second test (2026-10-15)**
+- [x] No placeholder for an empty credit, on the page or the Pages view
+  (H-Q1 closed).
+- [x] Default credits Author "Your name here", Steps (live), Recommended
+  paper "15 cm × 15 cm", nine catalogs.
+- [x] The band and the subtitle's rule end `HEADER_GAP_MM` (10 pt) short of
+  the pattern; the model on top of the header, which no model size moves.
+- [x] The credits' gutter 20 pt; 20 pt between the credits and the note.
 - [ ] Zach: the questions under "For Zach (header, 2026-10-15)" below,
   H-Q7 among them.
 
@@ -3120,9 +3137,91 @@ plan's notes only. Evidence in `artifacts/title-block/header-final/`
   slider that cannot move (H-Q7); the one console error on opening, a 403,
   is GitHub's releases API (the update check), at 0b59543ec too.
 
+*As built (1c: Zach's second test, 2026-10-15).* Zach tested the branch
+again and said, verbatim: "I don't want this weird placeholder UI for like
+the author and the recommended size. Like can you just default to
+something? Like idk 'Your name here' - if its empty, it should not be
+rendered at all. and by default the order should be 'Author', then
+'steps', then 'recommended paper'. also there is way too much margin
+between the title bar and the CP, make it smaller (maybe match the
+disstance between the header bar and the subtitle line?"; then "i also
+want slightly more horizontal space between the different credits"; "there
+should be more bottom padding between the credits and the description
+text"; and, of the model, "changing the model size shouldn't change the
+like header block. It's okay if they overlap. The model should just go on
+top of the header block." Four commits: db5db25ff, dd7141b81, 5726d93a4,
+213b2d0a2. Evidence: `artifacts/title-block/credits-gap/final.png`
+(gitignored; `capture.mjs` and `compose.py` beside it), before at
+ae0122418 and after, PDF page 1 on A4 portrait.
+- **No placeholders** (db5db25ff). A credit with no value prints nothing
+  and keeps no room, on the page and on the Pages view: the column lays out
+  no `emptyCredits`, the overlay no credit room, `PagePlaceholder` has no
+  `slot` kind; "No value yet" left the nine catalogs. The pane's own
+  text-field hint stays. H-Q1 is closed.
+- **The default credits** (dd7141b81): Author = "Your name here", Steps =
+  the live count, Recommended paper = "15 cm × 15 cm", in that order, each
+  with a value, written at creation and by the toggle where the content
+  says no subtitle and no credits (`titleBlockDefaultWords`, two new keys
+  and one renamed, translated in the eight other catalogs: Russian writes
+  "15 см × 15 см", the others the Latin "cm"). This branch's files saved
+  with the old labels or order keep them: the format is unreleased, so
+  there is no migration.
+- **The band's end** (5726d93a4). The text column — the band, the
+  subtitle's rule, the credits and the note — ends `HEADER_GAP_MM` short of
+  the crease pattern: the room between the subtitle's rule (its capitals'
+  middle) and the band's top, measured from `TITLE_BLOCK_TYPE` (10.0 pt),
+  one constant for both. The crane, turned on through the pane: rule to
+  band 9.96 pt by the layout (10.02 pt in the PDF's ink at 600 dpi; the
+  rule stands at the subtitle's ink, whose O overshoots a capital by
+  0.04 pt), band end to pattern 10.00 pt (10.08 pt in the ink, to the
+  border's left edge); the band and the rule end together at 410.65 pt,
+  where they ended 31.19 pt short of the pattern at the model's box before.
+- **The model on top** (5726d93a4, Zach's correction). The column reads
+  the pattern's size as the content says it, never the model's:
+  `TitleBlockGeometry.under` and the model's rise rule are gone, and a test
+  sets every header word across the whole model range, at three pattern
+  sizes on two papers, and gets the same layout. The composer draws the art
+  after the words, so the model is in front of the band, its title, the
+  credits and the note wherever it lands; it still covers the pattern's
+  lower-left corner as before. On the Pages view, a missing title's mark
+  and the square's fallback stop where the model, drawn or marked, begins.
+  A pair the sliders do not offer, which draws the pattern smaller than
+  said, leaves the band ending at the pattern as said: further from the
+  drawn one, but no model size moves a word.
+- **What Zach should see** (`final.png`, block 6): with the crane's title
+  ("Crane") no letter is under the model at any size. A title that fills
+  the band meets the model's ink only with the model at its largest and
+  the pattern small: at model 100% with pattern 79% the crane's neck
+  crosses the band just after "Traditional Flapping Crane"; at model 100%
+  with pattern 30% (H-Q7's pair) the band runs to 497.9 pt, the title is
+  set larger to fill it, and the crane, whose box goes no further left than
+  366.1 pt, covers part of its last word. Left as asked (the model on top);
+  not shortened.
+- **The gutter and the note** (213b2d0a2): the credits' gutter is 20 pt
+  (J1b's 12), its divider in the middle; the note's first line stands
+  20 pt under the last row's values (`noteGapMm`, twice the rows' 10 pt),
+  in the column's fit too, so a note with no room is still cut with "…".
+  The crane's two-line note: 10.0 pt before, 20.0 pt after, not cut.
+- **Tests that failed before**: 3 for the placeholders (the column, the
+  marks, the Pages view), 6 for the defaults (the document, the store's
+  first edit, the toggle, Japanese), 5 for the band and the model (the
+  column's end and gap, the column the same at every model size, every
+  header word the same at every model size, J1b's band end, the model
+  drawn after the title), 2 for the gutter and the note.
+- Checked at 213b2d0a2: `tsc`; ESLint on every changed file;
+  `i18n:extract`, `i18n:stamp`, `i18n:check`; vitest over `src/diagram`,
+  `src/components/diagram`, `src/components/panels` and
+  `src/store/workspaceStore` (296 files, 4906 tests): all pass. In the browser
+  (5332, Chromium): a new diagram, the crane turned on through the pane,
+  Author cleared, a two-line note, the model at 100%, and a long title at
+  100% with the pattern at 79% and at 30%; page counts 7 / 11 / 9 / 1 as
+  before, no console errors.
+
 *For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
 header-fixes/` and `header-final/`.
-- **H-Q1. An empty credit on the page.** The scaffold prints STEPS 28 at
+- **H-Q1. An empty credit on the page.** *Closed (Zach, 2026-10-15): empty
+  credits are not drawn, no placeholders — on the page or the Pages view;
+  and a new diagram's credits all start with a value.* The scaffold prints STEPS 28 at
   the margin and marks Author and Recommended size after it, though the
   pane lists them first; typing Author's value moves it ahead. A
   (recommended): as built, empty values print nothing and the printed
