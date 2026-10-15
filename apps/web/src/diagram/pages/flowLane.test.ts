@@ -16,7 +16,7 @@ import {
   type LayoutTurn,
 } from './diagramPageLayout';
 import { estimateTextSetter } from './estimateTextSetter';
-import { partBox } from './pagePlacement';
+import { lanePicture, partBox } from './pagePlacement';
 import { CRANE_PAGES, CRANE_STEPS, craneFlow } from './craneLane.fixtures';
 import {
   AS_ROUND_MM,
@@ -27,7 +27,9 @@ import {
   curveStart,
   flowLane,
   flowPagePlan,
+  laneStretch,
   pageSide,
+  spotAlong,
   type Lane,
   type LaneCurve,
   type LanePoint,
@@ -1061,6 +1063,36 @@ describe('a step standing in a bend', () => {
   });
 });
 
+describe('the lane between two pictures (laneStretch)', () => {
+  /** A straight cubic from the curve before's end to `to`. */
+  const line = (from: LanePoint, to: LanePoint): LaneCurve => ({
+    c1: { x: from.x + (to.x - from.x) / 3, y: from.y + (to.y - from.y) / 3 },
+    c2: { x: from.x + ((to.x - from.x) * 2) / 3, y: from.y + ((to.y - from.y) * 2) / 3 },
+    to,
+  });
+  // Stops at (0, 0), where the lane starts, and (100, 0), two curves on.
+  const lane: Lane = { from: { x: 0, y: 0 }, curves: [line({ x: 0, y: 0 }, { x: 50, y: 0 }), line({ x: 50, y: 0 }, { x: 100, y: 0 })] };
+  const into = [-1, 1];
+  const box = (left: number, right: number) => ({ left, right, top: -10, bottom: 10 });
+
+  it('runs from where the lane leaves the one picture to where it reaches the other, measured along it', () => {
+    const stretch = laneStretch(lane, into, 0, 1, box(-10, 10), box(80, 120))!;
+    expect(stretch[0]!.x).toBeCloseTo(10, 6);
+    expect(stretch.at(-1)!.x).toBeCloseTo(80, 6);
+    expect(stretch.at(-1)!.s).toBeCloseTo(70, 6);
+    expect(spotAlong(stretch, 35)).toEqual({ x: expect.closeTo(45, 6), y: 0 });
+    // Held to its ends.
+    expect(spotAlong(stretch, -5).x).toBeCloseTo(10, 6);
+    expect(spotAlong(stretch, 99).x).toBeCloseTo(80, 6);
+  });
+
+  it('is a point where the one picture reaches into the other, and none where the two stops are one', () => {
+    const touching = laneStretch(lane, into, 0, 1, box(-10, 60), box(40, 120))!;
+    expect(touching.at(-1)!.s).toBe(0);
+    expect(laneStretch(lane, [1, 1], 0, 1, box(-10, 10), box(80, 120))).toBeNull();
+  });
+});
+
 describe('a turn on a packed page, on the lane', () => {
   const over = (id: string): LayoutTurn => ({ id, turn: { kind: 'turn-over', axis: 'vertical' } });
 
@@ -1099,41 +1131,36 @@ describe('a turn on a packed page, on the lane', () => {
               expect(turn.at.y, label).toBeCloseTo((centreOf(before).y + centreOf(next).y) / 2, 9);
               expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThan(left.cellMm.x + left.cellMm.w);
               expect(turn.at.x + turn.box.w / 2, label).toBeLessThan(right.cellMm.x);
-            } else if (before.bend || next.bend) {
-              seen.add('beside');
-              // Midway between the step in the bend's picture and its neighbour's, where that is clear of both;
-              // else moved off them, never further than to beyond the nearer.
-              const mid = { x: (centreOf(before).x + centreOf(next).x) / 2, y: (centreOf(before).y + centreOf(next).y) / 2 };
-              if (clear(mid, turn.box)) expect(turn.at, label).toEqual(mid);
-              else {
-                seen.add('moved');
-                const reach = Math.max(...[before, next].map((cell) => Math.hypot(cell.cellMm.w, cell.cellMm.h)));
-                expect(Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y), label).toBeLessThan(reach);
-              }
             } else {
-              seen.add('bend');
-              // On the lane at the turn's middle, where it turns between the two bands — halfway between the two
-              // pictures' heights, as deep as the margin lets it stand (Zach, 2026-10-14), its glyph with it — where
-              // that is clear of every step; else moved off them, never further than to beyond the nearer.
-              const { widthMm: W, marginMm: m } = drawn.paper;
-              const middle = flowLane(page.flow!)!.turns.get(page.cells.indexOf(next))!;
-              const mid = middle.at;
-              expect(mid.y, label).toBeCloseTo((centreOf(before).y + centreOf(next).y) / 2, 9);
+              const bend = before.bend || next.bend ? 'beside' : 'bend';
+              seen.add(bend);
+              // On the lane, midway along it from where it leaves the one picture to where it reaches the other
+              // (Zach, 2026-10-15), where that is clear of every step; else as near that along it as is clear; and
+              // where nowhere along it is, moved off the steps from its middle, never further than to beyond the
+              // nearer.
+              const solved = flowLane(page.flow!)!;
+              const stretch = laneStretch(solved.lane, solved.into, k - 1, k, lanePicture(before), lanePicture(next))!;
+              const length = stretch.at(-1)!.s;
+              const mid = spotAlong(stretch, length / 2);
               if (clear(mid, turn.box)) {
+                seen.add(`${bend} midway`);
                 expect(turn.at.x, label).toBeCloseTo(mid.x, 9);
                 expect(turn.at.y, label).toBeCloseTo(mid.y, 9);
-                // On the ribbon: the lane passes through the turn's middle.
-                expect(knotAt(page.band!, mid), label).toBe(true);
-                // Inside the margin wherever the turn is: its band's outer edge no further out than the margin.
-                if (middle.stands !== 'past') {
-                  seen.add('bend inside');
-                  expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThanOrEqual(m - 1e-9);
-                  expect(turn.at.x + turn.box.w / 2, label).toBeLessThanOrEqual(W - m + 1e-9);
-                }
               } else {
-                seen.add('bend moved');
+                seen.add(`${bend} moved`);
+                const onStretch = Array.from({ length: Math.ceil(length / 0.25) + 1 }, (_, n) => spotAlong(stretch, n * 0.25)).some(
+                  (spot) => Math.hypot(spot.x - turn.at.x, spot.y - turn.at.y) < 1e-6
+                );
                 const reach = Math.max(...[before, next].map((cell) => Math.hypot(cell.cellMm.w, cell.cellMm.h)));
-                expect(Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y), label).toBeLessThan(reach);
+                expect(onStretch || Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y) < reach, label).toBe(true);
+              }
+              // Inside the margin wherever the turn is: its band's outer edge no further out than the margin.
+              const middle = bend === 'bend' ? solved.turns.get(k)! : null;
+              if (middle && middle.stands !== 'past' && clear(mid, turn.box)) {
+                seen.add('bend inside');
+                const { widthMm: W, marginMm: m } = drawn.paper;
+                expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThanOrEqual(m - 1e-9);
+                expect(turn.at.x + turn.box.w / 2, label).toBeLessThanOrEqual(W - m + 1e-9);
               }
             }
           }
@@ -1141,6 +1168,6 @@ describe('a turn on a packed page, on the lane', () => {
       }
     }
     // A glyph beside a step in a bend has had to move off one at least once: the case the review found.
-    expect([...seen].sort()).toEqual(['beside', 'bend', 'bend inside', 'bend moved', 'gutter', 'moved'].sort());
+    expect([...seen].sort()).toEqual(['beside', 'beside midway', 'beside moved', 'bend', 'bend inside', 'bend midway', 'bend moved', 'gutter'].sort());
   });
 });

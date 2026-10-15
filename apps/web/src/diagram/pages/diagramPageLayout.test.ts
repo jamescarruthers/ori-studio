@@ -16,6 +16,7 @@ import {
   FIT_SAME,
   FIT_ZOOM,
   flowShape,
+  GLYPH_CLEAR_MM,
   layoutDiagramPages,
   MARKS_FLOOR,
   overrunFit,
@@ -40,13 +41,14 @@ import {
 import { enlargeArrowMm, enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomSplits } from './zoomArrows';
 import { readFontMetrics, type FontMetrics } from '../fonts/fontMetrics';
-import { curvePoint, curveStart, flowLane, type Lane } from './flowLane';
+import { curvePoint, curveStart, type Lane } from './flowLane';
 import { estimateTextSetter } from './estimateTextSetter';
 import { PACKED_TURN_GUTTER_MM, packingArea } from './flowPacking';
 import { pastItsBox } from './pageOverflow.fixtures';
 import { captionStartShift } from './captionMeasure';
 import { fontTextSetter } from './fontTextSetter';
 import { pageCapacity } from './pagePlan';
+import { partBox } from './pagePlacement';
 import { printPaper } from './printPaper';
 import { emptyTitleBlockLook, type DiagramTitles, type TitleBlockLook } from './titleBlockColumn';
 
@@ -114,6 +116,56 @@ function laneDistance(lane: Lane, point: { x: number; y: number }): number {
     }
   });
   return nearest;
+}
+
+/**
+ * Where a glyph stands along the lane between two steps, by arc length (mm): from where the lane last leaves the
+ * step before's picture, to where it first reaches the next's; and how far off the lane it stands. Sampled finely.
+ */
+function alongLane(lane: Lane, before: LayoutCell, next: LayoutCell, at: { x: number; y: number }) {
+  const points: { x: number; y: number; s: number }[] = [{ ...lane.from, s: 0 }];
+  lane.curves.forEach((curve, index) => {
+    const from = curveStart(lane, index);
+    for (let n = 1; n <= 2000; n += 1) {
+      const point = curvePoint(from, curve, n / 2000);
+      const last = points.at(-1)!;
+      points.push({ ...point, s: last.s + Math.hypot(point.x - last.x, point.y - last.y) });
+    }
+  });
+  const nearest = (p: { x: number; y: number }, from: number, to: number) => {
+    let best = from;
+    for (let i = from; i <= to; i += 1) {
+      if (Math.hypot(points[i]!.x - p.x, points[i]!.y - p.y) < Math.hypot(points[best]!.x - p.x, points[best]!.y - p.y)) best = i;
+    }
+    return best;
+  };
+  const centre = (cell: LayoutCell) => ({ x: cell.pictureMm.x + cell.pictureMm.size / 2, y: cell.drawMm.y + cell.drawMm.h / 2 });
+  const inside = (p: { x: number; y: number }, box: { x: number; y: number; w: number; h: number }) =>
+    p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h;
+  const a = nearest(centre(before), 0, points.length - 1);
+  const b = nearest(centre(next), a, points.length - 1);
+  let reach = b;
+  for (let i = a; i <= b; i += 1) {
+    if (inside(points[i]!, partBox(next, 'picture'))) {
+      reach = i;
+      break;
+    }
+  }
+  let leave = a;
+  for (let i = reach; i >= a; i -= 1) {
+    if (inside(points[i]!, partBox(before, 'picture'))) {
+      leave = i;
+      break;
+    }
+  }
+  const g = nearest(at, a, b);
+  const half = (points[leave]!.s + points[reach]!.s) / 2;
+  return {
+    fromBefore: points[g]!.s - points[leave]!.s,
+    toNext: points[reach]!.s - points[g]!.s,
+    offLane: Math.hypot(points[g]!.x - at.x, points[g]!.y - at.y),
+    midway: points.find((point) => point.s >= half)!,
+  };
 }
 
 /** Where a cell draws its picture, at its scale, centred in its room. */
@@ -1366,7 +1418,7 @@ describe('turns between steps on the page (D22)', () => {
     expect(byId.get('turn-end')!.at.x).toBeCloseTo(fourth.pictureMm.x + fourth.pictureMm.size + gutter / 2, 6);
   });
 
-  it('prints one across a flow page’s bend on the band at the turn’s middle, inside the margin, going the way of the band it leads into', () => {
+  it('prints one across a flow page’s bend on the band, inside the margin, going the way of the band it leads into', () => {
     // Zach, 2026-10-06, the X-ray Heart's page 1: "the turn over step between
     // 3 and 4 should be rendered in the flow lane between steps 3 and 4, not
     // to the right of step 4." The prototype he chose stands it on the bend.
@@ -1381,16 +1433,61 @@ describe('turns between steps on the page (D22)', () => {
       expect(turn.rightToLeft, turn.id).toBe(Boolean(next.rightToLeft));
       if (before.band === next.band || before.bend || next.bend) continue;
       bends += 1;
-      // On the ribbon at the turn's middle, its band's edge no further out than the margin (Zach, 2026-10-13: the
-      // margin is kept for marks like it; 2026-10-14, "(b4)"), so its glyph stands inside the margin too.
-      const middle = flowLane(page.flow!)!.turns.get(k)!;
-      expect(turn.at, turn.id).toEqual(middle.at);
-      expect(laneDistance(page.band!, turn.at), turn.id).toBeLessThan(1e-6);
+      // On the ribbon, whose band's edge comes no further out than the margin (Zach, 2026-10-13: the margin is kept
+      // for marks like it; 2026-10-14, "(b4)"), so its glyph stands inside the margin too. Where along it: below.
+      expect(laneDistance(page.band!, turn.at), turn.id).toBeLessThan(0.01);
       expect(turn.at.x - turn.box.w / 2, turn.id).toBeGreaterThanOrEqual(m - 1e-9);
       expect(turn.at.x + turn.box.w / 2, turn.id).toBeLessThanOrEqual(W - m + 1e-9);
-      expect(turn.at.y, turn.id).toBeCloseTo((before.drawMm.y + before.drawMm.h / 2 + next.drawMm.y + next.drawMm.h / 2) / 2, 9);
     }
     expect(bends).toBeGreaterThan(0);
+  });
+
+  it('stands one across a flow page’s bend midway along the ribbon between the two pictures, however unlike they are', () => {
+    // Zach, 2026-10-15, his crane's page 2: "it feels like the flip over / rotate symbol isn't placed correctly
+    // between step 14 and 15 ... its really close to 14 - it should be equidistant between the two steps along the
+    // ribbon path." Step 14, tall and narrow, ends its row hard by the margin; 15 starts the next further in. The
+    // turn's middle is the bend's deepest point, halfway between the two in height, not halfway along the ribbon.
+    const tall = paper(150, 600);
+    const wide = paper(700, 300);
+    const cases = [
+      [paper(400), paper(400), tall, wide, paper(400), paper(400), tall, wide, paper(400)],
+      [wide, paper(400), tall, paper(400), wide, tall, paper(400), wide, tall],
+      [tall, tall, tall, wide, wide, wide, tall, tall, tall],
+    ];
+    /** Whether a glyph `box` centred at `at` comes nearer than {@link GLYPH_CLEAR_MM} to a step's number, picture or caption. */
+    const onAStep = (page: LayoutPage, at: { x: number; y: number }, box: { w: number; h: number }) =>
+      page.cells.some((cell) =>
+        (['number', 'picture', 'text'] as const).some((part) => {
+          const { x, y, w, h } = partBox(cell, part);
+          const clear = GLYPH_CLEAR_MM - 1e-6;
+          return !(at.x + box.w / 2 + clear <= x || at.x - box.w / 2 - clear >= x + w || at.y + box.h / 2 + clear <= y || at.y - box.h / 2 - clear >= y + h);
+        })
+      );
+    let [midway, slid] = [0, 0];
+    for (const [n, shapes] of cases.entries()) {
+      const list = steps(9, (index) => ({ picture: shapes[index]!, ...(index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}) }));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const turn of page.turns) {
+        const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        if (before.band === next.band || before.bend || next.bend) continue;
+        const along = alongLane(page.band!, before, next, turn.at);
+        const label = `case ${n} ${turn.id}: ${along.fromBefore.toFixed(2)} / ${along.toNext.toFixed(2)} mm`;
+        // On the ribbon, clear of every step.
+        expect(along.offLane, label).toBeLessThan(0.05);
+        expect(onAStep(page, turn.at, turn.box), label).toBe(false);
+        if (!onAStep(page, along.midway, turn.box)) {
+          // Midway along it, from where it leaves the one picture to where it reaches the other.
+          midway += 1;
+          expect(Math.abs(along.fromBefore - along.toNext), label).toBeLessThan(0.25);
+        } else {
+          // Midway would stand it on a step's number, picture or caption: it slides along the ribbon off it.
+          slid += 1;
+        }
+      }
+    }
+    expect(midway).toBeGreaterThan(2);
+    expect(slid).toBeGreaterThan(0);
   });
 
   it('prints one before a flow page’s first step at its leading edge, half a turn’s gutter out, as on the page before there is no row to turn from', () => {
@@ -1780,12 +1877,10 @@ describe('enlarged steps on the page (Revision 2)', () => {
       expect(arrow!.at.x).toBeCloseTo((next.cellMm.x + next.cellMm.w + before.cellMm.x) / 2, 6);
     });
 
-    it('prints across a flow page’s bend on the band at the turn’s middle, where a turn would', () => {
+    it('prints across a flow page’s bend on the band, where a turn would', () => {
       const { page, areaAt } = flowArrowed(9, atBend);
       const [arrow] = page.zoomArrows;
-      const k = page.cells.findIndex((cell) => cell.stepId === arrow!.beforeStepId);
-      expect(arrow!.at).toEqual(flowLane(page.flow!)!.turns.get(k)!.at);
-      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(1e-6);
+      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(0.01);
       expect(arrow!.liftable).toBe(false);
       // Where a turn there prints.
       const turned = layout(steps(9, (index) => (index === areaAt + 1 ? { turnsBefore: [over('turn-a')] } : {})), { layout: 'flow', stepsPerPage: 9 });

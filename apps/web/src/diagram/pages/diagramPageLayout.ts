@@ -86,10 +86,13 @@ import {
   flowLane,
   flowPagePlan,
   handoverHeight,
+  laneStretch,
   pageSide,
   rowRightToLeft,
+  spotAlong,
   type FlowPagePlan,
   type Lane,
+  type LaneSpot,
   type LaneStop,
 } from './flowLane';
 import {
@@ -1986,6 +1989,9 @@ function zoomScales<T extends { step: LayoutStep }>(
  */
 export const GLYPH_CLEAR_MM = 0.5;
 
+/** The step a glyph slides along the lane in, off its middle, to stand clear of the steps (`placeTurns`). */
+const SLIDE_STEP_MM = 0.25;
+
 /**
  * The nearest place to `at` where a box `size` centred there stands
  * {@link GLYPH_CLEAR_MM} clear of every one of `obstacles`, its centre within
@@ -2000,17 +2006,8 @@ export function clearSpot(
   obstacles: readonly { x: number; y: number; w: number; h: number }[],
   bounds: { x0: number; x1: number; y0: number; y1: number }
 ): { x: number; y: number } {
-  const clear = GLYPH_CLEAR_MM - 1e-9;
   const [halfW, halfH] = [size.w / 2, size.h / 2];
-  const free = (x: number, y: number) =>
-    x >= bounds.x0 - 1e-9 &&
-    x <= bounds.x1 + 1e-9 &&
-    y >= bounds.y0 - 1e-9 &&
-    y <= bounds.y1 + 1e-9 &&
-    obstacles.every(
-      (box) =>
-        x + halfW + clear <= box.x || x - halfW - clear >= box.x + box.w || y + halfH + clear <= box.y || y - halfH - clear >= box.y + box.h
-    );
+  const free = (x: number, y: number) => standsClear({ x, y }, size, obstacles, bounds);
   if (free(at.x, at.y)) return at;
   const xs = [at.x, ...obstacles.flatMap((box) => [box.x - halfW - GLYPH_CLEAR_MM, box.x + box.w + halfW + GLYPH_CLEAR_MM])];
   const ys = [at.y, ...obstacles.flatMap((box) => [box.y - halfH - GLYPH_CLEAR_MM, box.y + box.h + halfH + GLYPH_CLEAR_MM])];
@@ -2028,6 +2025,27 @@ export function clearSpot(
   return nearest ?? at;
 }
 
+/** Whether a box `size` centred at `at` stands {@link GLYPH_CLEAR_MM} clear of every one of `obstacles`, its centre within `bounds` ({@link clearSpot}). */
+function standsClear(
+  at: { x: number; y: number },
+  size: { w: number; h: number },
+  obstacles: readonly { x: number; y: number; w: number; h: number }[],
+  bounds: { x0: number; x1: number; y0: number; y1: number }
+): boolean {
+  const clear = GLYPH_CLEAR_MM - 1e-9;
+  const [{ x, y }, halfW, halfH] = [at, size.w / 2, size.h / 2];
+  return (
+    x >= bounds.x0 - 1e-9 &&
+    x <= bounds.x1 + 1e-9 &&
+    y >= bounds.y0 - 1e-9 &&
+    y <= bounds.y1 + 1e-9 &&
+    obstacles.every(
+      (box) =>
+        x + halfW + clear <= box.x || x - halfW - clear >= box.x + box.w || y + halfH + clear <= box.y || y - halfH - clear >= box.y + box.h
+    )
+  );
+}
+
 /** An enlarged step's frame's longer side as a share of its window's: one but for a turned rectangle. */
 function frameInWindowOf({ frameShare, windowShare }: LayoutZoom): number {
   return windowShare > 0 && frameShare > 0 ? frameShare / windowShare : 1;
@@ -2041,10 +2059,12 @@ function laneCentre(cell: LayoutCell): { x: number; y: number } {
 /**
  * Where the turns on a page print (D22): between two pictures on one row,
  * midway between them at their centres' height — on a flow page, between
- * their boxes, in the gutter the packing kept; across a flow page's bend with
- * no step in it, on the lane at the turn's middle, toward the page's edge
- * (`flowLane`'s `LaneTurn`, also when the lane is not shown); between a step in a bend
- * and its neighbour, midway between their pictures' centres; before a picture
+ * their boxes, in the gutter the packing kept; across a flow page's bend, and
+ * between a step in a bend and its neighbour, on the lane midway along it
+ * between where it leaves the one picture and reaches the other (Zach,
+ * 2026-10-15: "equidistant between the two steps along the ribbon path"; also
+ * when the lane is not shown), or as near that along it as the glyphs stand
+ * clear of the steps ({@link laneStretch}); before a picture
  * that starts a grid's row or the page, at its leading edge — a page's first
  * step has no row on the page to turn from, and the lane comes in at its
  * leading side; after the last picture, at its trailing edge. Several in one
@@ -2125,20 +2145,49 @@ function placeTurns(
     y1: pageHeight - size.h / 2,
   });
   /**
+   * Where along `stretch`, the lane clear of the pictures either side of it,
+   * `glyphs` stand clear of every step's box: its middle, or the nearest to
+   * it they do. Null where nowhere along it they do.
+   */
+  const alongStretch = (
+    glyphs: readonly BetweenGlyph[],
+    stretch: readonly LaneSpot[],
+    toward: { x: number; y: number } | null,
+    outward: number
+  ): ReturnType<typeof standAt> | null => {
+    const middle = stretch.at(-1)!.s / 2;
+    for (let off = 0; off <= middle; off += SLIDE_STEP_MM) {
+      for (const s of off === 0 ? [middle] : [middle - off, middle + off]) {
+        const stood = standAt(glyphs, spotAlong(stretch, s), toward, outward);
+        if (standsClear(stood.at, stood.size, obstacles, onPaper(stood.size))) return stood;
+      }
+    }
+    return null;
+  };
+  /**
    * `glyphs` stood at `at`, in the row of the `k`th picture, which they go the
    * way of; an enlarge arrow among them aimed at `toward`, when given, its bow
    * `outward` (+1 to the page's right, −1 to its left). On a flow page, moved
    * the least way clear of every step's box where they would stand on one.
+   * Given a `stretch` of the lane between two pictures, they stand midway along
+   * it instead, or as near its middle along it as they stand clear; where
+   * nowhere along it they do, at its middle, moved the least way clear.
    */
   const stack = (
     glyphs: readonly BetweenGlyph[],
     at: { x: number; y: number },
     k: number,
     beforeStepId: string | null,
-    { shared = false, toward = null, outward = 1 }: { shared?: boolean; toward?: { x: number; y: number } | null; outward?: number } = {}
+    {
+      shared = false,
+      toward = null,
+      outward = 1,
+      stretch = null,
+    }: { shared?: boolean; toward?: { x: number; y: number } | null; outward?: number; stretch?: readonly LaneSpot[] | null } = {}
   ) => {
-    let stood = standAt(glyphs, at, toward, outward);
-    if (flow) {
+    const slid = stretch ? alongStretch(glyphs, stretch, toward, outward) : null;
+    let stood = slid ?? standAt(glyphs, stretch ? spotAlong(stretch, stretch.at(-1)!.s / 2) : at, toward, outward);
+    if (flow && !slid) {
       const spot = clearSpot(stood.at, stood.size, obstacles, onPaper(stood.size));
       if (spot !== stood.at) {
         // An arrow aimed from its new place takes another box: clear of the boxes with either.
@@ -2185,19 +2234,15 @@ function placeTurns(
         const [previous, next] = [centre(cells[k - 1]!), centre(cells[k]!)];
         const outward = backwards(k - 1) ? -1 : 1;
         const { lane } = flow;
-        let at: { x: number; y: number };
-        if (inBend) {
-          // Midway between the step in the bend and its neighbour's pictures, as the prototype stands it: its stack
-          // then moves clear of both boxes.
-          at = { x: (previous.x + next.x) / 2, y: (previous.y + next.y) / 2 };
-        } else {
-          // On the lane at the turn's middle, where it turns between the two bands: halfway between their heights, as
-          // deep as the margin lets the turn stand.
-          const middle = lane?.turns.get(k)?.at;
-          at = middle ? { ...middle } : { x: outward > 0 ? pageWidth - flow.bendInset : flow.bendInset, y: (previous.y + next.y) / 2 };
-        }
+        // On the lane, midway along it between where it leaves the one picture and reaches the other (Zach,
+        // 2026-10-15): the turn's middle, halfway between the two in height, is that only where the two stand alike.
+        const stretch = lane ? laneStretch(lane.lane, lane.into, k - 1, k, lanePicture(cells[k - 1]!), lanePicture(cells[k]!)) : null;
+        // Else beside a step in a bend midway between the two pictures, and across a bend at its middle.
+        const at = inBend
+          ? { x: (previous.x + next.x) / 2, y: (previous.y + next.y) / 2 }
+          : (lane?.turns.get(k)?.at ?? { x: outward > 0 ? pageWidth - flow.bendInset : flow.bendInset, y: (previous.y + next.y) / 2 });
         // An arrow there points at the step it leads to, not across the page.
-        stack(before, at, k, step.id, { toward: next, outward });
+        stack(before, at, k, step.id, { toward: next, outward, stretch });
       } else {
         stack(before, edge(k, true), k, step.id);
       }

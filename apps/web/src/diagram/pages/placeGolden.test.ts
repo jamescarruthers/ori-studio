@@ -207,6 +207,17 @@ describe('pages as they printed before placement came', () => {
     // search, halving from it, ending two millionths lower (0.966025 →
     // 0.966023), its numbers a ten-thousandth of a mm off at most. No arrow or
     // grid page moved.
+    // 2026-10-15, later (Zach's crane, steps 14→15: the turn "should be
+    // equidistant between the two steps along the ribbon path"): a turn across
+    // a bend, or beside a step in one, stands on the lane midway along it
+    // between where it leaves the one picture and reaches the other, or as near
+    // that along it as it stands clear (`laneStretch`), where it stood at the
+    // turn's middle or midway between the two pictures' centres. Five pages
+    // changed, both views, by one glyph each: "a page break and turns at a
+    // row's end" page 1 (3→4, 3.1 mm), "pages with their own counts" pages 2
+    // (5→6, 20.0 mm) and 4 (12→13, 13.1 mm), "seven steps a page" page 1 (3→4,
+    // 17.0 mm) and "flow landscape" page 1 (7→8, 8.2 mm). No home, arrow,
+    // band or grid page moved.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -224,18 +235,18 @@ describe('pages as they printed before placement came', () => {
         "flow from the right, across spreads, rows read upward · page 1": "112071bbf0ef8d2a a17ea0be4c9ff643 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 2": "3806a26235e98c81 1a2ba3bcdc4a97af 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 3": "4ffec0e00275d974 4e556a1f96e3d587 4f53cda18c2baa0c",
-        "flow landscape, an odd row count · page 1": "a2bc033bd05476b8 17daa93cce66c063 4f53cda18c2baa0c",
+        "flow landscape, an odd row count · page 1": "372e464efe771b06 500178ad0c113c33 4f53cda18c2baa0c",
         "flow landscape, an odd row count · page 2": "4f156ef02e89e61b 75590eb5e9c8b775 4f53cda18c2baa0c",
         "flow, a last page with its own count · page 1": "3ff926b1703c8e79 760ec382788b7393 4f53cda18c2baa0c",
         "flow, a last page with its own count · page 2": "c7945e9df33c6410 07afe7fb8e35e5b8 4f53cda18c2baa0c",
-        "flow, a page break and turns at a row’s end · page 1": "b710f3c611df80d5 ba2bf05a3dfa020d 4f53cda18c2baa0c",
+        "flow, a page break and turns at a row’s end · page 1": "606a0f79289fb3cd ed5a6d63712086f7 4f53cda18c2baa0c",
         "flow, a page break and turns at a row’s end · page 2": "77abe2641874bc12 bc6af1698ff96420 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 1": "b95ac905ca9104aa 7fcdc750dac69d2b 4f53cda18c2baa0c",
-        "flow, pages with their own counts · page 2": "2b3c290837353a1c 5c6cba2cc4a34819 4f53cda18c2baa0c",
+        "flow, pages with their own counts · page 2": "8c4939afa8f7745c 84cbf972bb4500a1 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 3": "4cce1725247f86de 5f4e7c904e03cb91 4f53cda18c2baa0c",
-        "flow, pages with their own counts · page 4": "5a6df002485a12a4 8bfeaae5005f8549 4f53cda18c2baa0c",
+        "flow, pages with their own counts · page 4": "8ad2fbdc3b7376c2 12fab43f5f246697 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 5": "ece26eda8a93adec 550b8d887bc9495a 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "9178969beac40873 ff986b80908f4fd8 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "766402a2801fd487 6e12da019e150db3 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "c7d1c2e266f5b707 22d6df0be18d2d81 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "26b0041be8aefdb8 d4e7c4bb5143c429 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",

@@ -30,7 +30,6 @@ import { PACKER_VERSION } from './flowArrangement';
 import { FIXTURE_FONTS } from '../fonts/diagramFonts.fixtures';
 import type { LayoutCell, LayoutPage } from './diagramPageLayout';
 import { layoutDiagram } from './diagramPages';
-import { flowLane } from './flowLane';
 import { fontTextSetter } from './fontTextSetter';
 import { setFrameScale } from '../zoom/zoomFrames';
 import { zoomReadout } from '../zoom/zoomActions';
@@ -552,17 +551,17 @@ describe('a structural edit', () => {
           }
           // Beside a page packed again, the lane leaving it or coming into it may meet the other page's at another
           // height over their spine or page turn (halfway between the two, `handoverHeight`). Through the same stops as before, it
-          // is one curve (`flowLane.ts`, "(b4)"), so all of it is drawn again — and a glyph standing at a turn's
-          // middle on it with it. Every other glyph stands as it was.
+          // is one curve (`flowLane.ts`, "(b4)"), so all of it is drawn again — and a glyph standing on it across a
+          // bend, midway along it between two pictures, with it. Every other glyph stands as it was.
           const stopsOf = ({ handoverIn: _in, handoverOut: _out, ...rest }: NonNullable<LayoutPage['flow']>) => rest;
           expect(stopsOf(page.flow!), at).toEqual(stopsOf(was.flow!));
-          const middles = flowLane(page.flow!)!.turns;
           page.turns.forEach((turn, t) => {
             const old = was.turns[t]!;
             expect({ ...turn, at: old.at }, at).toEqual(old);
             if (turn.at.x === old.at.x && turn.at.y === old.at.y) return;
             const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
-            expect(turn.at, `${at}, ${turn.id}`).toEqual(middles.get(k)?.at);
+            const [before, next] = [page.cells[k - 1], page.cells[k]];
+            expect(Boolean(before && next && (before.band !== next.band || before.bend || next.bend)), `${at}, ${turn.id}`).toBe(true);
           });
         });
       }
