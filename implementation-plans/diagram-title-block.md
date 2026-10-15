@@ -2236,8 +2236,8 @@ whose still-valid parts are folded in here; that file is history.
 = 12 mm). The mockup's numbers, read from its SVG:
 - **Subtitle**: "ORIGAMI DIAGRAM", 7 pt bold, uppercase, tracked 0.12 em
   (0.84 pt), its caps' top on the top margin (baseline 39.02). A rule in the
-  paper's colour, 0.75 pt, from 8.7 pt after the text (x 120.49) to the
-  band's right end (390.24), at y 36.52.
+  paper's colour, 0.75 pt, at the caps' middle (y 36.52), from just after
+  the text (x 120.49) to the band's right end (390.24).
 - **Band**: a rectangle in the paper's colour (the style's `paper.front`,
   pink in the mock's style), x 34.02 → 390.24, y 46.52, 62.36 pt (22 mm)
   tall: from the left margin to the art's left edge (the model's box).
@@ -2445,22 +2445,22 @@ with your recs", for him to see:
 #### Checklist
 
 **Format**
-- [ ] `titleBlockContent` gains `subtitle`, `credits`, `note`, `modelSize`
+- [x] `titleBlockContent` gains `subtitle`, `credits`, `note`, `modelSize`
   and `patternSize`; the byline reads as the note; the reader lenient by
   part, a newer build's part carried; the writer's order.
-- [ ] The v1 contract, the evolution audit and the fixture: every part, in
+- [x] The v1 contract, the evolution audit and the fixture: every part, in
   Korean and English, a live count, a newer credit and a size past its
   range; written back byte for byte. Round-trip tests.
 
 **Defaults**
-- [ ] `PAGE_SETTINGS.titleBlock.default` at 0.23, its legacy value
+- [x] `PAGE_SETTINGS.titleBlock.default` at 0.23, its legacy value
   unchanged; the tests that rest on a new diagram's share updated
   deliberately.
-- [ ] A new diagram's subtitle and credits written at creation in the app's
+- [x] A new diagram's subtitle and credits written at creation in the app's
   language; nine catalogs.
 
 **Store**
-- [ ] `setDiagramTitleBlockContent` sets every part: the credits by add,
+- [x] `setDiagramTitleBlockContent` sets every part: the credits by add,
   remove, label and value (text or live); one undo step a call, one a
   sitting; read-only refuses.
 
@@ -2487,6 +2487,87 @@ with your recs", for him to see:
   block turned on beside J1b) and a new diagram, A4 and A5 either way up, a
   3 × 3 grid; the Pages view, PDF, Print and the one-sheet SVG; light and
   dark for the pane.
+
+*As built (1c: the format, the defaults and the store, 2026-10-15).* Three
+commits after the plan's (84f16afce): the format (d23293107), the defaults
+(e1e3bbd2f) and the store (27e4ba0ae). Nothing on the page changes yet but
+a new diagram's shorter block: the drawing and the pane are the next lanes.
+- **The format** is as written above. In `diagramDocument.ts`: the types
+  (`DiagramTitleBlockCredit`, its value, `DiagramTitleBlockCreditEdit`),
+  `TITLE_BLOCK_PARTS` (the writer's order, and what an edit lets go of a
+  newer build's), `TITLE_BLOCK_ART_SIZE_RANGE` (0.3–1),
+  `TITLE_BLOCK_ART_SIZE_DEFAULTS` (0.6 and 0.8) and `titleBlockArtSizes`
+  (what the geometry reads), and one rule each for the file and an edit:
+  `titleBlockLine` (one line, cleaned), `titleBlockCredit`,
+  `titleBlockArtSize` (held to the range; the default is no size). A size a
+  file says is kept as said, the default included, so a build with another
+  default never drops an author's choice. `setTitleBlockContent` takes the
+  new parts; a credits edit at a place past the list changes nothing, and
+  an add past it goes at the end.
+- **Calls made here.** A credit with nothing in it is kept (the pane's Add
+  makes one). A credit field that does not read (a label that is no string,
+  a value of the wrong type) reads empty and keeps its credit; a credit that
+  is no object is dropped. A value `{ kind: 'step-count' }` with another
+  field, or of another kind, is a newer build's and carries the whole list.
+- **The note prints where the byline did**, and the pane's Byline field
+  edits it, until the drawing and the pane take J1b (`layoutDiagram` and
+  `diagramFontTexts` read `note`; `useDiagramTitleBlock` gives `note` and
+  `setNote`). The event is still `title_block_byline`; the analytics lane
+  renames it.
+- **The fixture** (`diagram-title-block.json`): the Korean flow says every
+  part this build makes (a subtitle, four credits — text, the live count,
+  one empty — a two-line note, both sizes); the grid adds what a newer
+  build says (a `page-count` credit, a model size of 1.4) beside its own
+  model; the flow of eight is unchanged. All three written back byte for
+  byte. The byline's reading is tested on its own (`diagramFile.test.ts`).
+- **The defaults.** `PAGE_SETTINGS.titleBlock.default` is `{ enabled: true,
+  heightShare: 0.23 }`, its legacy value `{ enabled: false, heightShare:
+  0.27 }` as it was. The slice's first edit makes the diagram through
+  `newDiagram()`: `createDiagram` with `defaultTitleBlockContent` of four
+  words, `panels:diagram.titleBlock.default.*`, translated in the eight
+  catalogs (折り紙の折り図 / 作者 / 推奨サイズ / ステップ数; 折纸图解;
+  Diagrama de origami; Diagramme d’origami; Origami-Diagramm; Diagrama de
+  origami; Схема оригами; 종이접기 도해 — each catalog's own word for the
+  Diagram workspace and for Steps). `createDiagram()` without content is
+  unchanged.
+- **Tests the share broke, updated deliberately** (5 in 4 files): a new
+  diagram's block in `diagramDocument.test.ts` and `diagramFile.test.ts`
+  (now 0.23); two enlarge-arrow tests in `zoomPages.test.ts` whose flow
+  rows were laid out under a 0.27 block (at 6 a page the first page holds
+  5 at 0.23, 4 at 0.27, and packs otherwise), which pin 0.27 and say why;
+  the pane's toggle test, which now expects the share the file says (an
+  old diagram's 0.27, see "The toggle's share"). No golden, snapshot or
+  digest changed (`FROZEN_BLOCK_SIGNATURES` are built at 0.27).
+  `pagePlan.test.ts` pins a new diagram's page 1 at 7 of 9, the counts
+  above, a grid's one block row for 2–6 rows, and no tie.
+- **The store** needed no new code: `setDiagramTitleBlockContent` already
+  folded a sitting into one step by its session, and every part goes
+  through `setTitleBlockContent`. Its tests are new
+  (`diagramTitleBlockContent.test.ts`): creation in English and Japanese,
+  each credits edit one undo step and Undo exact, a sitting at the
+  subtitle, a label, a value and the note one step each, the sizes,
+  read-only and a replaced diagram.
+- **Failing before.** With the model and reader of 84f16afce in place, 18
+  of the format's tests failed; with the four sources of 84f16afce, 6 of
+  the store file's 8 (the other two, a file's diagram given nothing and
+  read-only refusing, guard what already held).
+- Checked at 27e4ba0ae: `tsc`; ESLint on every changed file; `i18n:check`;
+  vitest over `src/diagram`, `src/components/diagram`,
+  `src/components/panels`, `src/components/ui/fieldRows`, `src/store`,
+  `src/export`, `src/print`, `src/commands`, `src/keyboard`,
+  `src/analytics`, `src/i18n` and `src/styles` (341 files, 5360 tests): all
+  pass. On the dev server (5332): a new diagram of nine steps reads "9
+  steps · 2 pages", Steps on page 1 at 7 (Default), the block on at 0.23
+  (step 1's number at 242.3 pt, under a foot at 212.0 pt), and its content
+  the English subtitle and three credits, the third live
+  (`artifacts/title-block/1c-format/new-diagram-page-1.jpg`). Nothing else
+  here draws yet.
+- **For the next lanes, from this one:** the step count's value has no
+  resolver yet (the drawing's: `stepNumbers(document).size`, turns
+  unnumbered); `diagramFontTexts` must list the subtitle, labels and values
+  once they print; the toggle's share and the content on turning on are
+  still the pane lane's (above), and the crane turned on today gets a 0.27
+  block and no subtitle or credits.
 
 ### Phase 2: after the release
 
