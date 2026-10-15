@@ -161,11 +161,14 @@
   text-overflow: ellipsis;
 }
 
-/* Why a disabled toggle cannot be switched (`FieldRow.note`): the one line on
-   a dimmed row that is there to be read, so it keeps the label's ink and is
-   not dimmed with the row. */
+/* A reason (`FieldRow.note`), as why a disabled toggle cannot be switched: the
+   one line on a dimmed row that is there to be read, so it keeps the label's
+   ink, is not dimmed with the row, and wraps in a narrow pane rather than lose
+   its end. */
 .note[data-field-note='reason'] {
+  height: auto;
   color: var(--text-secondary);
+  white-space: normal;
 }
 
 .row[data-disabled] .label,
