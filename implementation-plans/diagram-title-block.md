@@ -45,6 +45,11 @@ at the end of Phase 1):
   rule is over the band, the model on top of a header it never moves, a
   wider gutter and more room before the note. Built: "As built (1c: Zach's
   second test)".
+- Steadiness (Zach, 2026-10-15): a new diagram's scale steadiness is 0.5,
+  saved files keep theirs (0.85); the typical-page rule it was written on
+  was built and not merged (ddadc5143, cherry-picked from 3f49f7993;
+  `diagram-flow-packing.md`, "Scale steadiness 0.5 for a new diagram"). The
+  crane opens with its PDF the same to the byte.
 
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
