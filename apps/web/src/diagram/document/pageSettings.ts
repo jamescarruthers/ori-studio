@@ -15,8 +15,9 @@
  *   added later declares its legacy value here with it: the value that
  *   reproduces how pages were drawn before it existed.
  *
- * Today every legacy value is today's default but two: the layout, and the
- * steps per page, which a file without them reads from its columns and rows.
+ * Today every legacy value is today's default but three: the layout, the
+ * steps per page, which a file without them reads from its columns and rows,
+ * and the title block, off.
  *
  * A value of the wrong type is damage, and reads as the legacy value too
  * (`normalizePageSetup`); one past this build's range is a newer build's
@@ -77,9 +78,9 @@ export const PAGE_SETTINGS: PageSettingValues = {
   flowBendSteps: { default: true, legacy: true },
   flowNesting: { default: 0.8, legacy: 0.8 },
   flowSteadiness: { default: 0.85, legacy: 0.85 },
-  // Off: every first page was drawn without one before it existed (2026-10-14, `diagram-title-block.md`). A new
-  // diagram's default stays off until the block is drawn on every surface.
-  titleBlock: { default: { enabled: false, heightShare: 0.27 }, legacy: { enabled: false, heightShare: 0.27 } },
+  // A new diagram has the block (2026-10-14, `diagram-title-block.md`); every first page saved before it existed was
+  // drawn without one.
+  titleBlock: { default: { enabled: true, heightShare: 0.27 }, legacy: { enabled: false, heightShare: 0.27 } },
 };
 
 /** The page settings, in the order a file writes them. */

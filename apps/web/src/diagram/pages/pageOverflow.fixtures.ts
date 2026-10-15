@@ -5,7 +5,7 @@
  * nowhere (Zach, 2026-10-12), laid out with the real fonts. Node only, for
  * tests.
  */
-import { createDiagram, insertSteps, setPageSetup, type DiagramDocument } from '../document/diagramDocument';
+import { createDiagram, insertSteps, PAGE_SETTINGS, setPageSetup, type DiagramDocument } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { FIXTURE_FONTS } from '../fonts/diagramFonts.fixtures';
 import type { FontSubsetter } from '../fonts/fontSubset';
@@ -48,6 +48,8 @@ export function overflowingDiagram(subsetter: FontSubsetter): {
   const base = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
     layout: 'flow',
     stepsPerPage: 6,
+    // No title block, so the six share one page.
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
   const held = adoptPageArrangements(base, preparedPages(base, FIXTURE_FONTS, subsetter).layout.packed ?? {});
   const overflowing = {

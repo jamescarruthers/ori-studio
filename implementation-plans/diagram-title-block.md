@@ -17,8 +17,10 @@ The decisions are numbered T-1 to T-19. T-20, raised in the review of 1a
 and 1b, and T-21, raised in the review of 1c to 1e, were taken as
 recommended (T-20 B, T-21 A) on 2026-10-14 under Zach's standing "go with
 your recs"; they are not his answer, and he may still overrule either
-before 1f turns the default on. Each gives its options and a
-recommendation. Four of them were the real forks:
+before 1f turns the default on. (1f is built under both, in one commit,
+unpushed: if he takes T-21 C, C lands before the PR's preview or the
+release saves a file with the block on, or 1f is reverted.) Each gives its
+options and a recommendation. Four of them were the real forks:
 
 - **T-3**, how many steps page 1 holds. The recommendation re-paginates every
   later page when the block is turned on in an existing diagram.
@@ -1672,13 +1674,56 @@ merged at befff256c without a combined check; the check, on
   either.
 
 **1f. The default goes on**
-- [ ] `PAGE_SETTINGS.titleBlock.default` on, in a commit of its own. A new
+- [x] `PAGE_SETTINGS.titleBlock.default` on, in a commit of its own. A new
   diagram has the block; a file without it still reads off.
-- [ ] Each test that breaks: one about something else pins the block off
+- [x] Each test that breaks: one about something else pins the block off
   (its legacy value) and says so; one about a new diagram's pages is
   updated to the block. `FROZEN_SIGNATURES` unchanged.
 - [ ] If this commit is not green in time, it is reverted and the release
-  ships with the default off (T-18 B).
+  ships with the default off (T-18 B). (Green locally; CI on the PR
+  decides.)
+
+*As built (1f).* One commit, "Diagram title block: on by default for new
+diagrams", the default and its tests together, so it reverts whole:
+- `PAGE_SETTINGS.titleBlock.default` is `{ enabled: true, heightShare:
+  0.27 }`; its legacy value stays off. The title block is now the third
+  setting whose legacy value is not its default. A test that failed before:
+  a new diagram has the block, a page that does not say it has none
+  (`diagramDocument.test.ts`).
+- The flip broke 88 tests in 25 files. Two were about a new diagram or
+  about reading: a new diagram writes the block on (`diagramFile.test.ts`),
+  and a page with nothing said reads as every legacy value, the block's
+  now unlike its default (`diagramDocument.test.ts`). Each of the rest was
+  about something else and pins the block off at its legacy value, with a
+  line saying why: in the shared fixtures (`pageLayouts.fixtures.ts`, so
+  the page goldens and the held-page sweeps read their pages as before;
+  `pageOverflow.fixtures.ts`, whose six steps share a page), in a file's own
+  diagram helper, or in the one case. No golden, snapshot or digest
+  changed; `FROZEN_SIGNATURES` and `FROZEN_BLOCK_SIGNATURES` as they were.
+- In the browser (5332): a new diagram's first page has the block, the
+  overlay's marks in its rooms and Steps on page 1 at 7, Default; the crane
+  opens as before, its title in page 1's tab, the switch off, nine steps
+  on page 1, no unsaved change. Screenshots under
+  `artifacts/title-block/default-on/`.
+- Found by the flip, not changed in it (for 1g's review and Zach):
+  - The flow lane's "an A4 page of up to 12 steps never" bends a turn
+    tighter than the band is half wide (`flowLane.test.ts`) does not hold
+    with the block on: page 1 of A4 landscape at 12 a page (steps 6→7,
+    7.3 mm against 9.6), and later pages the block re-paginates (A4 at 9 a
+    page, page 3, 5.8 mm; A4 landscape at 6, page 4, 8.1 mm; no margin,
+    page 3, 6.8 mm). The test pins the block off; the claim in its comment
+    is now true of block-off pages only.
+  - A References card pulled into steps prints within 4.7–4.8% of the
+    baked card's scale on a flow with the block, against the 2% the test
+    allows without it (`referencesCardMarks.pages.test.ts`). Cause not
+    looked into.
+  - Two held-page cases failed with the block on: a photo on an enlarged
+    step waiting for its picture packs its page again, and resizing an
+    enlarged step's caption on a grid moves its own picture. A check kept
+    out of the repo (`artifacts/title-block/held-check.test.ts`) shows
+    both happen with the block off too: the sweep samples the first,
+    middle and last step of each page, and only the block's pagination
+    put those steps there. Not the block's.
 
 **1g. Gate and handoff**
 - [ ] The full gate. The browser checks above, with First page Left and

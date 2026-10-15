@@ -10,6 +10,7 @@ import {
   insertSteps,
   isTurn,
   moveStep,
+  PAGE_SETTINGS,
   pullReferencesSteps,
   removeStepPicture,
   removeSteps,
@@ -104,7 +105,7 @@ const { frame: _frame, ...PARTS } = PLACE;
 /**
  * Steps `s0`… on a 3 × 3 grid, each placed: two full pages and a third
  * started by a page break at `s13` — so a shift from page one stops at the
- * end of page two.
+ * end of page two. No title block unless a case asks for one.
  */
 function placed(count = 16, page: Partial<DiagramPageSetup> = {}, breaks: readonly number[] = [13]): DiagramDocument {
   const steps = Array.from({ length: count }, (_, index) => ({ ...cpStep(`s${index}`), place: PLACE, breakBefore: breaks.includes(index) }));
@@ -112,6 +113,7 @@ function placed(count = 16, page: Partial<DiagramPageSetup> = {}, breaks: readon
     layout: 'grid',
     columns: 3,
     rows: 3,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
     ...page,
   });
 }

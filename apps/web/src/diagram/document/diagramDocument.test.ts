@@ -288,6 +288,11 @@ describe('page setup', () => {
     expect(createDiagram().page.layout).toBe('flow');
   });
 
+  it('gives a new diagram the title block, and a page that does not say it none', () => {
+    expect(createDiagram().page.titleBlock).toEqual({ enabled: true, heightShare: 0.27 });
+    expect(normalizePageSetup({ layout: 'flow' }).titleBlock).toEqual({ enabled: false, heightShare: 0.27 });
+  });
+
   it('takes a new diagram’s page setup from each setting’s default, and an unsaid one from its legacy value', () => {
     const settings = Object.entries(PAGE_SETTINGS);
     expect(createDiagram().page).toEqual(Object.fromEntries(settings.map(([key, values]) => [key, values.default])));
@@ -299,8 +304,8 @@ describe('page setup', () => {
   });
 
   it('reads anything, falling back field by field', () => {
-    // A layout not said is the grid, every diagram's before the flow was a new one's.
-    expect(normalizePageSetup(null)).toEqual({ ...DEFAULT_PAGE_SETUP, layout: 'grid' });
+    // A layout not said is the grid, every diagram's before the flow was a new one's; a title block not said is none.
+    expect(normalizePageSetup(null)).toEqual({ ...DEFAULT_PAGE_SETUP, layout: 'grid', titleBlock: PAGE_SETTINGS.titleBlock.legacy });
     expect(
       normalizePageSetup({
         size: 'letter',

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PAGE_SETUP,
   DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
   type DiagramPageSetup,
   type DiagramPageSide,
 } from '../document/diagramDocument';
@@ -64,8 +65,14 @@ function steps(count: number, patch: (index: number) => Partial<LayoutStep> = ()
   }));
 }
 
+// No title block unless a case asks for one: these are the lane's pages, as drawn before it.
 const flow = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}) =>
-  layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, { title: 'Heart', byline: '' }, estimateTextSetter);
+  layoutDiagramPages(
+    list,
+    { ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: PAGE_SETTINGS.titleBlock.legacy, ...setup },
+    { title: 'Heart', byline: '' },
+    estimateTextSetter
+  );
 
 const centreOf = (cell: LayoutCell): LanePoint => ({
   x: cell.pictureMm.x + cell.pictureMm.size / 2,

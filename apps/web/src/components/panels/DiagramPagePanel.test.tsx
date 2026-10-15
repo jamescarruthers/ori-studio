@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { stepsOf, type DiagramDocument, type DiagramPageArrangement } from '../../diagram/document/diagramDocument';
+import { PAGE_SETTINGS, stepsOf, type DiagramDocument, type DiagramPageArrangement } from '../../diagram/document/diagramDocument';
 import { usePublishPageInView } from '../../diagram/pages/pageInView';
 import { firstPageCapacity, paginate } from '../../diagram/pages/pagePlan';
 import { heldPageArrangements } from '../../diagram/pages/pageArrangements';
@@ -320,8 +320,13 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     act(() => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
   };
 
-  // “Add step” selects the step it adds: the last, on page 2.
-  beforeEach(() => act(() => state().selectDiagramStep(null)));
+  // “Add step” selects the step it adds: the last, on page 2. No title block unless a case asks for one.
+  beforeEach(() =>
+    act(() => {
+      state().selectDiagramStep(null);
+      state().setDiagramPage({ titleBlock: PAGE_SETTINGS.titleBlock.legacy });
+    })
+  );
 
   it('shows page 1 with nothing selected: what it is cut for, and that it is the default', () => {
     // Ten steps, nine a page by default.

@@ -3,6 +3,7 @@ import {
   createDiagram,
   insertSteps,
   isLockedStep,
+  PAGE_SETTINGS,
   setPageSetup,
   stepsOf,
   type DiagramDocument,
@@ -199,7 +200,9 @@ describe('layoutDiagram', () => {
       annotations: [{ id: 'a', kind: 'valley-arrow', from: [0.2, 0.004 + 0.05 * (index % 4)], to: [0.8, 0.004], bend: 0.05 }],
       text: index % 3 === 0 ? 'Fold the corner up to the top edge, crease firmly, and unfold.' : 'Fold in half.',
     }));
-    const document = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), steps, 0);
+    // No title block, so the twelve take two pages of nine.
+    const made = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), steps, 0);
+    const document = setPageSetup(made, { titleBlock: PAGE_SETTINGS.titleBlock.legacy });
     vi.mocked(packFlowPage).mockClear();
     const first = layoutDiagram(document, estimateTextSetter);
     expect(first.pages).toHaveLength(2);

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DIAGRAM_STYLE,
   DEFAULT_PAGE_SETUP,
+  PAGE_SETTINGS,
   STEPS_PER_PAGE_RANGE,
   type DiagramPageArrangement,
   type DiagramPageSetup,
@@ -55,6 +56,8 @@ const LONG =
 const NO_MARKS = { width: 0, height: 0 };
 /** The diagram's title, and no byline. */
 const CRANE = { title: 'Crane', byline: '' };
+/** A new diagram's page setup with no title block: but for the block's own cases, these are the pages as drawn before it. */
+const NO_BLOCK_SETUP: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, titleBlock: PAGE_SETTINGS.titleBlock.legacy };
 
 function step(index: number, patch: Partial<LayoutStep> = {}): LayoutStep {
   return {
@@ -73,7 +76,7 @@ const steps = (count: number, patch: (index: number) => Partial<LayoutStep> = ()
 
 /** The pages under a setup: the grid unless it says, as these cases were written for (a new diagram's is the flow). */
 function layout(list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, title = 'Crane') {
-  return layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', ...setup }, { title, byline: '' }, estimateTextSetter);
+  return layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'grid', ...setup }, { title, byline: '' }, estimateTextSetter);
 }
 
 const paper = (width: number, height: number = width): LayoutStep['picture'] => ({
@@ -226,7 +229,7 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     list: LayoutStep[],
     setup: Partial<DiagramPageSetup> = {},
     arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}
-  ) => layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
+  ) => layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
   const bandsOf = (page: LayoutPage) => [...new Set(page.cells.map((cell) => cell.band!))];
   const bandCells = (page: LayoutPage, band: number) => page.cells.filter((cell) => cell.band === band && !cell.bend);
   /** Where each step is at home: its box, its number and its caption's start. */
@@ -502,7 +505,7 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
 
 describe('a caption’s pinned measure (`diagram-caption-resize.md`)', () => {
   const flowLayout = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}) =>
-    layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
+    layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
   const pin = (list: readonly LayoutStep[], index: number, textWidth: number) =>
     list.map((each, at) => (at === index ? { ...each, place: { ...each.place, textWidth } } : each));
   const cellsById = (result: DiagramPagesLayout) => new Map(result.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell] as const)));

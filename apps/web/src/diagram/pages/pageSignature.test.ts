@@ -170,10 +170,12 @@ describe('pageSignature', () => {
     });
 
     it('whether it is the last page, and whether it hands over at its spine', () => {
-      // Ten steps fill two pages; an eleventh starts a third, after which page two is no longer the last.
+      // Ten steps fill two pages; an eleventh starts a third, after which page two is no longer the last. No title
+      // block, as in `diagram()`.
       const ten = setPageSetup(insertSteps(createDiagram({ title: 'Crane' }), Array.from({ length: 10 }, (_, index) => cpStep(`s${index}`)), 0), {
         layout: 'flow',
         stepsPerPage: 5,
+        titleBlock: PAGE_SETTINGS.titleBlock.legacy,
       });
       expect(changed(ten, insertSteps(ten, [cpStep('s10')], ten.steps.length))).toEqual([1, 2]);
       // All ten on one page; an eleventh makes it a left page that hands over at its spine, and not the last.

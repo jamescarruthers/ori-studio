@@ -6,6 +6,7 @@ import {
   createDiagram,
   createTurn,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   type DiagramDocument,
   type DiagramEntry,
@@ -23,7 +24,10 @@ import { currentDiagramPage, pageName, useCurrentDiagramPage, type CurrentDiagra
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-/** Steps `s0`… on flow pages of 4, with a turn `t-…` before each step index in `turnsBefore`, and one at the end where asked. */
+/**
+ * Steps `s0`… on flow pages of 4 with no title block, with a turn `t-…` before each step index in `turnsBefore`,
+ * and one at the end where asked.
+ */
 function diagram(size: number, turnsBefore: readonly number[] = [], trailingTurn = false): DiagramDocument {
   const entries: DiagramEntry[] = [];
   for (let index = 0; index < size; index += 1) {
@@ -34,6 +38,7 @@ function diagram(size: number, turnsBefore: readonly number[] = [], trailingTurn
   return setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), entries, 0), {
     layout: 'flow',
     stepsPerPage: 4,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
 }
 

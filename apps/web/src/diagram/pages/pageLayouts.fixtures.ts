@@ -3,6 +3,7 @@ import {
   createStep,
   createTurn,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   uploadPictureKey,
   type DiagramDocument,
@@ -42,7 +43,8 @@ const WORDS = [
 
 function diagram(entries: readonly DiagramEntry[], page: Partial<DiagramPageSetup>, assets: DiagramDocument['assets'] = {}): DiagramDocument {
   const document = insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-fixture' }), entries, 0);
-  return setPageSetup({ ...document, assets }, page);
+  // No title block: the goldens hold these pages as they printed before it.
+  return setPageSetup({ ...document, assets }, { titleBlock: PAGE_SETTINGS.titleBlock.legacy, ...page });
 }
 
 /** A run of steps: crease patterns, References cards and empty steps in turn, each with its words. */

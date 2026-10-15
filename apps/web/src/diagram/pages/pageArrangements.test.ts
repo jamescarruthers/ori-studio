@@ -4,6 +4,7 @@ import {
   insertSteps,
   isTurn,
   moveStep,
+  PAGE_SETTINGS,
   removeSteps,
   setPageSetup,
   setStepBreakBefore,
@@ -35,12 +36,13 @@ import { cellSlots, settlePlaces } from './stepPlaces';
  * moved by hand on a page packed afresh (`repackedFrames.ts`).
  */
 
-/** Twelve steps `s0`…, five a flow page: pages s0–s4, s5–s9, s10–s11. */
+/** Twelve steps `s0`…, five a flow page, with no title block: pages s0–s4, s5–s9, s10–s11. */
 function diagram(): DiagramDocument {
   const steps = Array.from({ length: 12 }, (_, index) => cpStep(`s${index}`));
   return setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
     layout: 'flow',
     stepsPerPage: 5,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
 }
 

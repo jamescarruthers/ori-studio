@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   createDiagram,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   type DiagramDocument,
   type DiagramStepPlace,
@@ -30,7 +31,8 @@ function document(place?: DiagramStepPlace): DiagramDocument {
       })),
       0,
     ),
-    { layout: 'grid', columns: 2, rows: 2 },
+    // No title block, so the four share page 1.
+    { layout: 'grid', columns: 2, rows: 2, titleBlock: PAGE_SETTINGS.titleBlock.legacy },
   );
 }
 const prepare = (doc: DiagramDocument) => preparedPages(doc, FIXTURE_FONTS, subsetter);
@@ -135,7 +137,8 @@ it('draws the lane again as a step is dragged only on its page and the pages its
       Array.from({ length: 28 }, (_, i) => cpStep(`s${i}`)),
       0,
     ),
-    { layout: 'flow', stepsPerPage: 7 },
+    // No title block, so the 28 take four pages of seven.
+    { layout: 'flow', stepsPerPage: 7, titleBlock: PAGE_SETTINGS.titleBlock.legacy },
   );
   const base = prepare(doc).layout;
   // Pages 1–2 and 3–4 are spreads, a page turn between them: a step on page 3 moves the lane on pages 2, 3 and 4 only.

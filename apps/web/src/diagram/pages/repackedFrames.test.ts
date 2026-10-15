@@ -3,6 +3,7 @@ import {
   createDiagram,
   insertSteps,
   isTurn,
+  PAGE_SETTINGS,
   setPageSetup,
   stepsOf,
   type DiagramArrangedStep,
@@ -59,10 +60,14 @@ describe('keepsMovedFrame', () => {
 /** The frame every step is moved by, its parts' offsets and a pin with it. */
 const PLACE: DiagramStepPlace = { frame: [3, -2], number: [1, 0], text: [0, 1.5] };
 
-/** Nine crease-pattern steps on one flow page, packed and held, each step's frame moved by hand. */
+/** Nine crease-pattern steps on one flow page with no title block, packed and held, each step's frame moved by hand. */
 function heldPage(): DiagramDocument {
   const steps = Array.from({ length: 9 }, (_, index) => ({ ...cpStep(`s${index}`), text: index % 2 ? 'Fold the corner up to the centre line.' : 'Fold.' }));
-  const base = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), { layout: 'flow', stepsPerPage: 9 });
+  const base = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
+    layout: 'flow',
+    stepsPerPage: 9,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+  });
   const held = adoptPageArrangements(base, layoutDiagram(base, estimateTextSetter).packed ?? {});
   return { ...held, steps: held.steps.map((entry) => (isTurn(entry) ? entry : { ...entry, place: PLACE })) };
 }

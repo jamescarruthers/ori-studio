@@ -12,6 +12,7 @@ import {
   createStep,
   createTurn,
   insertSteps,
+  PAGE_SETTINGS,
   setTitleBlockContent,
   type DiagramDocument,
   type KnownDiagramAnnotation,
@@ -241,7 +242,11 @@ describe('DiagramPagesView', () => {
 
   it('tags a step placed past the margin, or off the paper, “Outside margin”, and says nothing of a step placed over another', () => {
     const steps = ['s0', 's1', 's2', 's3'].map((id) => cpStep(id));
-    const grid = (document: DiagramDocument) => ({ ...document, page: { ...document.page, layout: 'grid' as const, columns: 2, rows: 2 } });
+    // No title block, so the four share page 1.
+    const grid = (document: DiagramDocument) => ({
+      ...document,
+      page: { ...document.page, layout: 'grid' as const, columns: 2, rows: 2, titleBlock: PAGE_SETTINGS.titleBlock.legacy },
+    });
     const plain = preparedPages(grid(insertSteps(createDiagram({ title: 'Crane' }), steps, 0)), FONTS, subsetter).layout;
     const [first, second, , fourth] = plain.pages[0]!.cells;
     const { widthMm, marginMm } = plain.paper;
@@ -719,7 +724,8 @@ describe('an enlarged step’s grip on a held flow page (Zach, 2026-10-12)', () 
       [cpStep('step-a'), { ...cpStep('step-area'), annotations: [AREA] }, enlarged(6), cpStep('step-after')],
       0
     );
-    const twoAPage = { ...fresh, page: { ...fresh.page, stepsPerPage: 2 } };
+    // No title block, so page 1 holds two and ends with the area.
+    const twoAPage = { ...fresh, page: { ...fresh.page, stepsPerPage: 2, titleBlock: PAGE_SETTINGS.titleBlock.legacy } };
     const { before, was, during, after, state } = dragGrip(twoAPage, -15);
     expect(before.find((cell) => cell.stepId === 'step-enlarged')!.zoom!.printed).toBeLessThan(5.9);
     expect(during.w).toBeLessThan(was.w * 0.9);

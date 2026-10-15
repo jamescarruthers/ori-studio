@@ -9,6 +9,8 @@ import {
   DEFAULT_PAGE_SETUP,
   insertSteps,
   createTurn,
+  PAGE_SETTINGS,
+  setPageSetup,
   setTitleBlockContent,
   stepsOf,
   type DiagramDocument,
@@ -74,6 +76,10 @@ const UPLOAD_SVG =
   '<rect id="asset-up-r" width="40" height="20" fill="url(#asset-up-g)"/><use href="#asset-up-r"/></svg>';
 const UPLOAD: KnownDiagramAsset = { id: 'asset-up', kind: 'svg', svg: UPLOAD_SVG, widthPx: 40, heightPx: 20, bytes: 1 };
 
+/** A new diagram with no title block: but for the block's own cases, these are pages as composed before it. */
+const unblockedDiagram = (options: Parameters<typeof createDiagram>[0]) =>
+  setPageSetup(createDiagram(options), { titleBlock: PAGE_SETTINGS.titleBlock.legacy });
+
 function uploadStep(id: string): DiagramStep {
   return {
     ...createStep(() => id),
@@ -92,7 +98,7 @@ function diagram(): DiagramDocument {
     { ...createStep(() => 'step-empty'), text: '将底角向上折至顶角，压实折痕后展开。' },
     { ...createStep(() => 'step-fixed'), source: null, picture: fixedPicture() },
   ];
-  const document = insertSteps(createDiagram({ title: 'Crane · 千纸鹤', hanStyle: 'sc' }), steps, 0);
+  const document = insertSteps(unblockedDiagram({ title: 'Crane · 千纸鹤', hanStyle: 'sc' }), steps, 0);
   return { ...document, assets: { [UPLOAD.id]: UPLOAD } };
 }
 
@@ -253,7 +259,7 @@ describe('composeDiagramPage', () => {
       ...cpStep('step-4'),
       annotations: [{ id: 'b', kind: 'push-arrow', from: [-0.5, 0.5], to: [0.2, 0.5] }],
     };
-    return insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), [cpStep('step-1'), over, cpStep('step-3'), far], 0);
+    return insertSteps(unblockedDiagram({ title: 'Crane', hanStyle: 'sc' }), [cpStep('step-1'), over, cpStep('step-3'), far], 0);
   };
 
   it('fits each step, the paper one scale whatever their marks reach a little past, on any page', () => {
@@ -683,7 +689,8 @@ describe('composeDiagramPage', () => {
 
   it('turns a turn-over side to side round on a flow row read right to left, to lead to the step after it', () => {
     // Two to a row: steps 3 and 4 are read right to left.
-    const document: DiagramDocument = { ...diagram(), page: { ...DEFAULT_PAGE_SETUP, layout: 'flow', stepsPerPage: 6 } };
+    const made = diagram();
+    const document: DiagramDocument = { ...made, page: { ...made.page, layout: 'flow', stepsPerPage: 6 } };
     const over = () => createTurn({ kind: 'turn-over', axis: 'vertical' });
     const upright = createTurn({ kind: 'turn-over', axis: 'horizontal' });
     // Before steps 2 and 4, and a turn top to bottom beside the one before step 4.

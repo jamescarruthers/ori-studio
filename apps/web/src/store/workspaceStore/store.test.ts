@@ -45,6 +45,7 @@ import {
   annotationsOutOfStep,
   createDiagram,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   stepAsset,
   stepIndex,
@@ -9798,6 +9799,8 @@ describe('the project diagram', () => {
     const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-old' }), steps, 0), {
       layout: 'flow',
       stepsPerPage: 4,
+      // No title block, as no diagram of then had one.
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
     });
     state().installDiagram({ document, readOnly: false, raw: {} });
     const saving = createFileService();

@@ -81,7 +81,8 @@ describe('writeDiagram / readDiagram', () => {
     const chosen = throughJson(writeDiagram(sampleDiagram()));
     expect(Object.keys(chosen.page)).toEqual([...PAGE_SETTING_KEYS]);
     // One unsaid was written before this build knew it, or before every setting was said: its legacy value, never
-    // the default — the same today but for the layout, and the steps per page, read from the columns and rows.
+    // the default — the same today but for the layout, the steps per page, read from the columns and rows, and the
+    // title block, off.
     for (const key of PAGE_SETTING_KEYS) {
       const { [key]: _unsaid, ...page } = chosen.page;
       const read = readDiagram({ ...chosen, page })!;
@@ -296,8 +297,9 @@ describe('writeDiagram / readDiagram', () => {
     const LEGACY = { enabled: false, heightShare: 0.27 };
 
     it('writes its setting whole, always, and reads a file without it, or with it damaged, as no block', () => {
+      // A new diagram has the block, and says so.
       const plain = throughJson(writeDiagram(sampleDiagram()));
-      expect(plain.page.titleBlock).toEqual(LEGACY);
+      expect(plain.page.titleBlock).toEqual({ enabled: true, heightShare: 0.27 });
       const on = setPageSetup(sampleDiagram(), { titleBlock: { enabled: true, heightShare: 0.3 } });
       const written = throughJson(writeDiagram(on));
       expect(written.page.titleBlock).toEqual({ enabled: true, heightShare: 0.3 });

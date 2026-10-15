@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   createDiagram,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   stepById,
   stepsOf,
@@ -24,7 +25,10 @@ const state = () => useWorkspaceStore.getState();
 const undoSteps = () => state().diagramHistory.past.length;
 const PLACE: DiagramStepPlace = { frame: [2, 1], text: [0, 1.5] };
 
-/** Steps `s0`… on flow pages of 4 by default, with `counts` by step index, installed as a file would be. */
+/**
+ * Steps `s0`… on flow pages of 4 by default with no title block, with `counts` by step index, installed as a file
+ * would be.
+ */
 function install(size: number, counts: Readonly<Record<number, number>> = {}, readOnly = false, placed = false): DiagramDocument {
   const steps = Array.from({ length: size }, (_, index): DiagramStep => ({
     ...cpStep(`s${index}`),
@@ -34,6 +38,7 @@ function install(size: number, counts: Readonly<Record<number, number>> = {}, re
   const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
     layout: 'flow',
     stepsPerPage: 4,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
   state().installDiagram({ document, readOnly, raw: {} });
   return document;
