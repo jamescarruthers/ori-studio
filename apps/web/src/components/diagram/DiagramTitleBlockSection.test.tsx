@@ -12,6 +12,7 @@ import {
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpSource, cpStep } from '../../diagram/document/diagramSteps.fixtures';
+import { TITLE_BLOCK_BYLINE_LINES } from '../../diagram/pages/titleBlockGeometry';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramTitleBlockSection } from './DiagramTitleBlockSection';
@@ -177,6 +178,15 @@ describe('DiagramTitleBlockSection', () => {
     render();
     expect(select('Model')!.textContent).toBe('Step 1 (no picture)');
     expect(optionsOf('Model')).toEqual(['Auto (step 3)', 'Step 1 (no picture)', 'Step 2', 'Step 3', 'None']);
+  });
+
+  it('says how many of the byline’s lines print, as the page cuts them', () => {
+    install({ titleBlock: ON });
+    render();
+    const help = byline()!.parentElement!.querySelector('[data-field-help]');
+    expect(help?.getAttribute('aria-label')).toBe(
+      `Credits under the title, as you write them. Up to ${TITLE_BLOCK_BYLINE_LINES} lines print; a long line wraps onto the next.`
+    );
   });
 
   it('commits the byline as it is typed: a sitting at the field one undo step and one count', () => {

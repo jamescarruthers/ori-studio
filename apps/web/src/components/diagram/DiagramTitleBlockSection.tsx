@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { TitleBlockPartChoices } from '../../diagram/pages/titleBlockChoices';
+import { TITLE_BLOCK_BYLINE_LINES } from '../../diagram/pages/titleBlockGeometry';
 import { useDiagramTitleBlock } from '../../diagram/pages/useDiagramTitleBlock';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { SelectRow, TextAreaRow, ToggleRow, type SelectRowOption } from '../ui/fieldRows';
@@ -72,6 +73,11 @@ export function DiagramTitleBlockSection() {
             // One field per diagram: a draft never carries over to the one that replaces it.
             key={block.loadId}
             label={t('panels:diagram.pagePane.titleBlock.byline', 'Byline')}
+            help={t(
+              'panels:diagram.pagePane.titleBlock.bylineHelp',
+              'Credits under the title, as you write them. Up to {{lines}} lines print; a long line wraps onto the next.',
+              { lines: TITLE_BLOCK_BYLINE_LINES }
+            )}
             value={block.byline}
             placeholder={t('panels:diagram.pagePane.titleBlock.bylinePlaceholder', 'Design: …\nPaper: 60 cm square')}
             rows={4}

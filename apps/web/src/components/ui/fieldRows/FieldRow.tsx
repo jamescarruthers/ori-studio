@@ -148,18 +148,7 @@ export function FieldRow({
     );
   }
 
-  const helpMark = help && (
-    // Prompt, unlike a toolbar's tooltips: nobody sweeps past an info mark by
-    // accident, and the provider's 700 ms reads as nothing happening.
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <button type="button" className={styles.help} data-field-help="" aria-label={help}>
-          <Info size={13} aria-hidden="true" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{help}</TooltipContent>
-    </Tooltip>
-  );
+  const helpMark = help && <FieldRowHelp help={help} />;
   return (
     <div className={rootClass} {...rootData} title={title}>
       {htmlFor ? (
@@ -211,6 +200,26 @@ export function FieldRow({
         </span>
       )}
     </div>
+  );
+}
+
+/**
+ * The info mark after a row's label (`FieldRow.help`), for a row of the kit
+ * that is not a `FieldRow`, as a stacked text field is: a component rather
+ * than a class, for the reason `FieldRowSelectTrigger` gives.
+ */
+export function FieldRowHelp({ help }: { help: string }) {
+  return (
+    // Prompt, unlike a toolbar's tooltips: nobody sweeps past an info mark by
+    // accident, and the provider's 700 ms reads as nothing happening.
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <button type="button" className={styles.help} data-field-help="" aria-label={help}>
+          <Info size={13} aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{help}</TooltipContent>
+    </Tooltip>
   );
 }
 

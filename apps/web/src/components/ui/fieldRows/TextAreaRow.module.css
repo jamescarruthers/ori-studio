@@ -13,6 +13,12 @@
   font-size: 0.74rem;
 }
 
+/* The label and its help mark, on one line as a `FieldRow`'s are, at the
+   label's size so the line is no taller than the label alone. */
+.head {
+  font-size: 0.74rem;
+}
+
 .field {
   width: 100%;
   min-height: 64px;

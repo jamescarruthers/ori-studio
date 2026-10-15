@@ -5,6 +5,7 @@ import {
   endOpenCanvasSessions,
   resetCanvasSessionEndersForTests,
 } from '../../../cp-workspace/canvasObjects/canvasSessions';
+import { TooltipProvider } from '../Tooltip';
 import { TextAreaRow } from './TextAreaRow';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -83,6 +84,19 @@ describe('TextAreaRow', () => {
     const label = container?.querySelector('label');
     expect(label?.textContent).toBe('Instruction');
     expect(label?.htmlFor).toBe(field().id);
+  });
+
+  it('explains itself behind a help mark beside its label, which stays out of the field’s name', () => {
+    render(
+      <TooltipProvider>
+        <TextAreaRow label="Byline" help="Credits under the title." value="" onCommit={vi.fn()} />
+      </TooltipProvider>
+    );
+    const help = container?.querySelector('[data-field-help]');
+    expect(help?.getAttribute('aria-label')).toBe('Credits under the title.');
+    const label = container?.querySelector('label');
+    expect(label?.textContent).toBe('Byline');
+    expect(label?.contains(help!)).toBe(false);
   });
 
   it('commits once typing pauses, and not on every keystroke', () => {

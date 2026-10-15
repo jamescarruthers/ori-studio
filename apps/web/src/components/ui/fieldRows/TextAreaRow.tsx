@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type Ref } from 'react';
 import { registerCanvasSessionEnder } from '../../../cp-workspace/canvasObjects/canvasSessions';
 import { registerPendingEditFlush } from '../../../lib/pendingEdits';
+import { FieldRowHelp } from './FieldRow';
 import { isComposingKey } from './isComposingKey';
 import styles from './TextAreaRow.module.css';
 
@@ -37,6 +38,7 @@ interface PendingEdit {
 export function TextAreaRow({
   label,
   labelHidden = false,
+  help,
   value,
   placeholder,
   disabled = false,
@@ -55,6 +57,8 @@ export function TextAreaRow({
    * title already says what it is.
    */
   labelHidden?: boolean;
+  /** What the field is for, behind a help mark after its label, as a `FieldRow`'s (`FieldRow.help`). */
+  help?: string;
   value: string;
   placeholder?: string;
   disabled?: boolean;
@@ -112,11 +116,22 @@ export function TextAreaRow({
     session.current = lastSession;
   };
 
+  const labelElement = (
+    <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
+      {label}
+    </label>
+  );
   return (
     <div className={styles.row} data-disabled={disabled || undefined} title={title}>
-      <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
-        {label}
-      </label>
+      {help ? (
+        // Beside the label, not in it: a mark inside would join the field's name.
+        <span className={styles.head}>
+          {labelElement}
+          <FieldRowHelp help={help} />
+        </span>
+      ) : (
+        labelElement
+      )}
       <textarea
         ref={fieldRef}
         id={fieldId}
