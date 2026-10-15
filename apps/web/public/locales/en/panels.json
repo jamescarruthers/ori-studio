@@ -1182,7 +1182,7 @@
         "needsRows": "Needs two rows or more",
         "none": "None",
         "pattern": "Crease pattern",
-        "patternHelp": "Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the last step that links it.",
+        "patternHelp": "Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the step chosen for it or else the last step that links it.",
         "section": "Title block",
         "show": "Show on first page",
         "showHelp": "The title, the crease pattern and the finished model, at the top of the first page.",

@@ -1219,7 +1219,7 @@
         "needsRows": "Precisa de duas linhas ou mais",
         "none": "Nenhum",
         "pattern": "Padrão de vincos",
-        "patternHelp": "Desenhado a partir do padrão de vincos que um passo vincula. Auto usa o último passo vinculado; cada padrão aparece uma só vez, pelo último passo que o vincula.",
+        "patternHelp": "Desenhado a partir do padrão de vincos que um passo vincula. Auto usa o último passo vinculado; cada padrão aparece uma só vez, pelo passo escolhido para ele ou, se não houver, pelo último passo que o vincula.",
         "section": "Bloco de título",
         "show": "Na primeira página",
         "showHelp": "O título, o padrão de vincos e o modelo pronto, no alto da primeira página.",

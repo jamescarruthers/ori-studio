@@ -1182,7 +1182,7 @@
         "needsRows": "Braucht mindestens zwei Reihen",
         "none": "Ohne",
         "pattern": "Faltmuster",
-        "patternHelp": "Gezeichnet nach dem Faltmuster, das ein Schritt verknüpft. Auto nimmt den letzten verknüpften Schritt; jedes Muster steht nur einmal in der Liste, unter dem letzten Schritt, der es verknüpft.",
+        "patternHelp": "Gezeichnet nach dem Faltmuster, das ein Schritt verknüpft. Auto nimmt den letzten verknüpften Schritt; jedes Muster steht nur einmal in der Liste, unter dem dafür gewählten Schritt oder sonst unter dem letzten Schritt, der es verknüpft.",
         "section": "Titelblock",
         "show": "Auf erster Seite zeigen",
         "showHelp": "Titel, Faltmuster und fertiges Modell oben auf der ersten Seite.",

@@ -1219,7 +1219,7 @@
         "needsRows": "Il faut au moins deux rangées",
         "none": "Aucun",
         "pattern": "Patron de plis",
-        "patternHelp": "Dessiné d’après le patron de plis qu’une étape lie. Auto prend la dernière étape liée ; chaque patron n’apparaît qu’une fois, sous la dernière étape qui le lie.",
+        "patternHelp": "Dessiné d’après le patron de plis qu’une étape lie. Auto prend la dernière étape liée ; chaque patron n’apparaît qu’une fois, sous l’étape choisie pour lui, ou à défaut sous la dernière étape qui le lie.",
         "section": "Bloc titre",
         "show": "Sur la première page",
         "showHelp": "Le titre, le patron de plis et le modèle fini, en haut de la première page.",

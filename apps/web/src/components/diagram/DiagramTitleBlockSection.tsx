@@ -64,7 +64,7 @@ export function DiagramTitleBlockSection() {
             label={t('panels:diagram.pagePane.titleBlock.pattern', 'Crease pattern')}
             help={t(
               'panels:diagram.pagePane.titleBlock.patternHelp',
-              'Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the last step that links it.'
+              'Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the step chosen for it or else the last step that links it.'
             )}
             note={reason(block.pattern, (number) =>
               t('panels:diagram.pages.titleBlock.stepNoPattern', 'Step {{number}} has no crease pattern', { number })
