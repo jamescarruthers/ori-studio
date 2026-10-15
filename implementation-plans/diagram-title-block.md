@@ -8,19 +8,24 @@ built.**
 using your recommendations. Keep this work in a separate PR. I'll decide
 whether to delay the release based on how implementation goes. Don't merge
 the PR or publish a release." So every decision, T-1 to T-19, takes its
-recommendation; the ones still marked PENDING below are decided as
-recommended. T-18 is built as recommended (A, with B as the fallback), but
-whether the release waits for it is Zach's call once the build is done. The
-PR goes into #436's branch and no agent merges it.
+recommendation, and each is marked so below. T-18 is built as recommended
+(A, with B as the fallback), but whether the release waits for it is Zach's
+call once the build is done. The PR goes into #436's branch and no agent
+merges it.
 
 The decisions are numbered T-1 to T-19. T-20, raised in the review of 1a
 and 1b, and T-21, raised in the review of 1c to 1e, were taken as
 recommended (T-20 B, T-21 A) on 2026-10-14 under Zach's standing "go with
-your recs"; they are not his answer, and he may still overrule either
-before 1f turns the default on. (1f is built under both, in one commit,
-unpushed: if he takes T-21 C, C lands before the PR's preview or the
-release saves a file with the block on, or 1f is reverted.) Each gives its
-options and a recommendation. Four of them were the real forks:
+your recs"; they are not his answer, and he may still overrule either.
+T-21 has a deadline. Page 1's capacity rule is frozen by the first file any
+build saves with the block on, and every build of this branch since 1e has
+the switch, whatever its default: so T-21 is settled before this branch
+merges into #436 (whose PR preview into `main` then offers the switch), or
+ships in a release. Reverting 1f (T-18 B) does not avoid the freeze; fewer
+files would freeze the rule, not none. If Zach cannot answer in time and
+might take C, the one safe fallback is to hide the switch, not to turn the
+default off. Each decision gives its options and a recommendation. Four of
+them were the real forks:
 
 - **T-3**, how many steps page 1 holds. The recommendation re-paginates every
   later page when the block is turned on in an existing diagram.
@@ -254,7 +259,7 @@ step, so it stays out of the page setup and out of every signature.
 #### Decisions: the setting
 
 **T-1. Where the toggle and the content live, and what old files read.
-PENDING.**
+Taken as recommended (Zach, 2026-10-14).**
 - A. The toggle and height as a page setting (`titleBlock`, default on,
   legacy off, written always). The content as a new document field.
 - B. Everything in one new document field, outside the page settings.
@@ -266,7 +271,8 @@ PENDING.**
   consent". A one-time "Add a title block?" offer for old diagrams could
   come later (Not in the first cut).
 
-**T-2. How tall the block is, and whether it can be changed. PENDING.**
+**T-2. How tall the block is, and whether it can be changed. Taken as recommended
+(Zach, 2026-10-14).**
 - A. 27% of the printable height, written to the file. No control for it in
   the first cut.
 - B. A, plus a Height slider in the Title block section.
@@ -358,8 +364,8 @@ layout:
 
 #### Decisions: page 1's layout
 
-**T-3. How many steps page 1 holds with the block on. PENDING. Needs
-Zach's answer.**
+**T-3. How many steps page 1 holds with the block on. Taken as recommended
+(Zach, 2026-10-14).**
 - A. Fewer by default, by the block's share: 9 becomes 7 at 27%. A count
   set on page 1 still wins. Turning the block on in an existing diagram
   moves steps from page to page, so every later page re-packs.
@@ -375,7 +381,8 @@ Zach's answer.**
   would open with a small page 1 and a ramp. C leaves a count behind that
   the author did not set.
 
-**T-4. The block in a grid. PENDING.**
+**T-4. The block in a grid. Taken as recommended
+(Zach, 2026-10-14).**
 - A. One whole row, whatever the rows. With 6 rows it is 17% of the page.
 - B. The whole rows nearest the block's share: one row for 2 to 5 rows, two
   for 6. At least one, never all.
@@ -390,8 +397,8 @@ Zach's answer.**
   setting has to be defined as the flow's alone, in the contract, and the
   grid's block would need a setting of its own later.
 
-**T-5. The title tab on page 1, and the Title toggle. PENDING. Needs
-Zach's answer.**
+**T-5. The title tab on page 1, and the Title toggle. Taken as recommended
+(Zach, 2026-10-14).**
 - A. Page 1 prints no tab. The block always prints the title. The Title
   toggle governs the tab on the other pages, and its help says so.
 - B. As A, but Title off also leaves the block's title out.
@@ -433,8 +440,9 @@ Zach's crane has a count on every page (9, 11, 9).
 
 **T-21. What the block costs a landscape diagram. Raised in the review of
 1c to 1e. A taken as recommended, 2026-10-14, under Zach's standing "go
-with your recs": not his answer, and he may still overrule it — before 1f,
-since C changes a rule frozen once a file is saved with the block on.** On
+with your recs": not his answer, and he may still overrule it — before this branch
+merges into #436 or ships, since C changes a rule frozen once any build
+with the switch saves a file with the block on (the header).** On
 a landscape page with First page Left, page 1 under the block is a left
 page that hands over at the spine, so its packing takes an odd number of
 bands (`flowPacking.ts`): one or three, in 123 mm on A4 and 77 mm on A5.
@@ -481,7 +489,8 @@ large again as page 2 on the same spread.
   parity), and C is a new rule in the format the day before the release.
   If A is not acceptable for landscape, T-18 B (default off) leaves the
   rule unfrozen only until the first author turns the block on, so C would
-  still have to come first.
+  still have to come first; hiding the switch is the only fallback that
+  keeps the rule unfrozen.
 
 ### 3. Inside the block
 
@@ -518,7 +527,8 @@ are look, not layout: no step moves when they change.
 
 #### Decisions: inside the block
 
-**T-6. How the block is arranged. PENDING.**
+**T-6. How the block is arranged. Taken as recommended
+(Zach, 2026-10-14).**
 - A. The title at the left, the pattern at the right, and the model in
   front of the pattern's lower left. The same on every page side.
 - B. As A, mirrored on a left page: the art at the outer edge, the title at
@@ -528,7 +538,8 @@ are look, not layout: no step moves when they change.
   reference picture, without copying its bands. B puts the title after the
   art on a left page. C drops the overlap Zach asked for.
 
-**T-7. Credit lines. PENDING.**
+**T-7. Credit lines. Taken as recommended
+(Zach, 2026-10-14).**
 - A. The title only.
 - B. The title and one free-text byline, up to four lines, written as the
   author likes ("Design: …", "Paper: 60 cm square"). The app prints no
@@ -540,7 +551,8 @@ are look, not layout: no step moves when they change.
   author's and numbers (`composeDiagramPage.ts` has no `t()`). Printing
   labels would first need a language for the printed page.
 
-**T-8. A step count ("175 step"). PENDING.**
+**T-8. A step count ("175 step"). Taken as recommended
+(Zach, 2026-10-14).**
 - A. Not printed in the first cut. An author can type it in the byline,
   where it will not update.
 - B. "N steps", counted, in a printed language chosen for the diagram.
@@ -599,7 +611,8 @@ What the after-release half touches, so the size is clear:
 
 #### Decisions: the model
 
-**T-9. What the "special step" is. PENDING. Needs Zach's answer.**
+**T-9. What the "special step" is. Taken as recommended (Zach,
+2026-10-14).**
 - A. A step you choose. Auto (the last step with a picture), a chosen step,
   or none. Its pose is that step's.
 - B. A record of its own, seeded from the last step, with Link and Relink,
@@ -619,7 +632,8 @@ What the after-release half touches, so the size is clear:
   (numbering, pagination, the ribbon, the Steps view, duplicate, delete,
   Refresh all) would have to learn to skip it.
 
-**T-10. How the model is drawn. PENDING.**
+**T-10. How the model is drawn. Taken as recommended
+(Zach, 2026-10-14).**
 - A. The picture alone: no marks (arrows, labels), no number, no caption.
   An enlarged step shows its whole picture, not its window. Fitted to its
   box.
@@ -682,7 +696,8 @@ What the thumbnail is, honestly:
 
 #### Decisions: the crease pattern
 
-**T-11. Where the pattern's lines come from. PENDING.**
+**T-11. Where the pattern's lines come from. Taken as recommended
+(Zach, 2026-10-14).**
 - A. The link's stored thumbnail: in the file already, no capture, no open
   pattern.
 - B. A crease-pattern capture of its own, stored as a picture. It draws
@@ -694,7 +709,8 @@ What the thumbnail is, honestly:
   release. C leaves the pattern empty for most diagrams, whose last steps
   are folded.
 
-**T-12. What counts as "the last CP linked". PENDING.**
+**T-12. What counts as "the last CP linked". Taken as recommended
+(Zach, 2026-10-14).**
 - A. The last step whose source is a link to a crease pattern, whatever it
   is shown as.
 - B. A, and a References step's sheet too.
@@ -703,7 +719,8 @@ What the thumbnail is, honestly:
   that have nothing to do with the model, and an Edit document need not be
   open.
 
-**T-13. Setting the pattern separately. PENDING.**
+**T-13. Setting the pattern separately. Taken as recommended
+(Zach, 2026-10-14).**
 - A. In the first cut: Auto, a step's pattern, or None. After the release:
   any region of the open pattern, through the pattern picker, with its own
   status and Refresh.
@@ -713,7 +730,8 @@ What the thumbnail is, honestly:
   way to make a fingerprint and thumbnail outside a step's capture. That is
   new code the day before the release.
 
-**T-14. The pattern's pens. PENDING.**
+**T-14. The pattern's pens. Taken as recommended
+(Zach, 2026-10-14).**
 - A. The style's fold pens: solid, the Diagram preset's one ink at 0.25 pt
   under 0.5 pt edges (the reference picture's look), red and blue in the
   Default preset. Aux lines left out.
@@ -801,7 +819,8 @@ the model to pose it, come after the release with T-9's own half.
 
 #### Decisions: controls
 
-**T-15. Where the block is edited. PENDING.**
+**T-15. Where the block is edited. Taken as recommended
+(Zach, 2026-10-14).**
 - A. The Title block section in the Page pane, and nowhere else in the first
   cut.
 - B. A, plus a press on the block in the Pages view opening that section
@@ -814,7 +833,8 @@ the model to pose it, come after the release with T-9's own half.
   of selection, which nothing has today (`diagramPagesPart` is a step's
   part). C is cheap but adds a verb to a menu just regrouped.
 
-**T-16. A step frame placed over the block. PENDING.**
+**T-16. A step frame placed over the block. Taken as recommended
+(Zach, 2026-10-14).**
 - A. Say nothing. A step placed over the block by hand is the author's call.
 - B. The "Outside margin" notice counts the block as margin on page 1.
 - **Recommended: A.** `markOutsideMargin` (`pages/pagePlacement.ts:145-156`)
@@ -823,7 +843,8 @@ the model to pose it, come after the release with T-9's own half.
   at its offset by a re-pack could land on the block, but only when it was
   moved up toward the top by hand.
 
-**T-19. Where the toggle sits. PENDING.**
+**T-19. Where the toggle sits. Taken as recommended
+(Zach, 2026-10-14).**
 - A. In its own Title block section, after Layout, with the block's content
   under it.
 - B. In Header & footer, under Title, as "Title block on page 1", with the
@@ -916,7 +937,8 @@ Auto.
 
 #### Decisions: the file
 
-**T-17. How much of the later format the release reads. PENDING.**
+**T-17. How much of the later format the release reads. Taken as recommended
+(Zach, 2026-10-14).**
 - A. All of it. The release reads and draws an own model and an own
   pattern, though it cannot make one. Anything else is carried.
 - B. Only what the release makes: Auto, a step, or none. An own model or
@@ -964,7 +986,9 @@ pattern ("can be linked", "set it separately").
 
 #### Decision: the release
 
-**T-18. What ships in tomorrow's release. PENDING. Needs Zach's answer.**
+**T-18. What ships in tomorrow's release. Built as recommended (A, B the
+fallback); whether the release waits for it is Zach's call once the build
+is done (Zach, 2026-10-14).**
 - A. The first cut ships, on for new diagrams.
 - B. The first cut ships with its default off, so new diagrams opt in. It
   is the fallback if the gate is not green on every surface in time. Only
@@ -976,6 +1000,15 @@ pattern ("can be linked", "set it separately").
   is part of the release, so files saved by the release build already say
   whether they have a block. In C, files from the release say nothing and
   read as off, which is also safe.
+- **B, as built.** The default is f24ee7f57 (`pageSettings.ts` and the tests
+  it broke) and 979199073 (the evolution plan's sentence on legacy values).
+  B reverts those two for their code and docs, and keeps this plan as it
+  is, its 1f items unticked: f24ee7f57 also wrote this plan's notes on
+  pages with the block (1f, and the final review under 1g), and those
+  pages exist with the default off as soon as an author turns the block on
+  (`git revert --no-commit f24ee7f57 979199073`, then
+  `git checkout HEAD -- implementation-plans/diagram-title-block.md`). B
+  settles nothing about T-21: the switch stays.
 
 ### 10. i18n, analytics and tests
 
@@ -1139,6 +1172,13 @@ module only if styled), new `diagram/pages/useDiagramTitleBlock.ts`;
 `docs/analytics.md`, the export's analytics call; `public/locales/*` (nine
 catalogs). In 1f, the tests that lay out a new diagram's pages.
 
+**The final review.** `diagram/pages/pagePictures.ts` (`fittedScene` by its
+ink, `wholePictureRoom`), `stepPlaces.ts` and `pagePlan.ts`
+(`PlannedPage.titleBlockRows`), `diagramPageLayout.ts` (a grid's enlarged
+step's `placed.auto`), `components/ui/fieldRows/` (`SelectRow.note`, a
+reason note that wraps), `implementation-plans/diagram-document-evolution.md`
+(part 3).
+
 ## Checklist
 
 **Every phase.**
@@ -1162,7 +1202,8 @@ catalogs). In 1f, the tests that lay out a new diagram's pages.
 - [x] The rest: "using your recommendations" (2026-10-14).
 - [x] T-20 and T-21, raised during the build: taken as recommended
   (T-20 B, T-21 A), 2026-10-14, under his standing "go with your recs".
-  Not his answer: Zach may still overrule either, T-21 before 1f.
+  Not his answer: Zach may still overrule either, T-21 before this branch
+  merges into #436 or ships (the header).
 
 ### Phase 1: the first cut (for the release)
 
@@ -1409,14 +1450,15 @@ until 1f.
 *As built (1d, the resolution only; the drawing is its own lane).*
 `diagram/pages/titleBlockContent.ts`: `resolveTitleBlock(document)` gives
 each part's `from` (`auto`, `step` or `none`) and `step`, and the
-pattern's `thumbnail`. Auto is the last step `givesModel` (this build's,
+pattern's lines (its `scene` since the drawing below; the `thumbnail` the
+first build also gave went in the final review, no reader left). Auto is the last step `givesModel` (this build's,
 with a picture) or `givesPattern` (this build's, linked to a crease
 pattern, whatever it is shown as); `autoModelStep` and `autoPatternStep`
 name what Auto finds whatever is chosen, for the Page pane's "Auto (step
 N)". A chosen id that is no step of this build's (gone, a turn's, or a
 newer build's step) reads as Auto. A chosen step that is there but cannot
 give its part stays `from: 'step'` with nothing to draw (its `picture`
-null, or a null `thumbnail`), so the overlay can name it.
+null, or a null `scene`), so the overlay can name it.
 
 *As built (1d, the drawing).* As planned, with these calls:
 - `resolveTitleBlock` also gives the pattern as the painter draws it,
@@ -1539,10 +1581,15 @@ A5 landscape, untitled and unlinked, a model with no pattern, long,
 accented and Korean titles; the Pages view in light and dark in Chromium,
 and the crane, a new flow, a 3 × 3 grid and the untitled case in WebKit at
 iPad size (1024 × 1366); the PDF (home) and the one-sheet SVG exported from
-the app for each. No page error in any. The Korean title's PDF does not
-export here, before or after the review, because the Japanese and Korean
-faces are not available offline (`no glyph for U+C885`): the same refusal
-a reader without them gets, not this lane's.
+the app for each. No page error in any. The Korean title's PDF did not
+export here, before or after the review (`no glyph for U+C885`), because
+this worktree had no CJK font files: `apps/web/public/fonts/diagram/` is
+gitignored build output (`scripts/diagram-fonts/build_fonts.py`), which
+`scripts/setup-worktree.sh` does not copy, so the dev server answered its
+manifest with the app's page. Not a regression: 952fc658e refuses a Korean
+caption the same way without them. (The final review copied them in and
+checked Korean and Japanese titles and bylines on every surface, under
+1g.)
 
 Not done here: `claude/diagram-title-block` is still to be fast-forwarded
 to this lane's head. The review's agent was isolated in its own worktree,
@@ -1566,9 +1613,12 @@ As planned, with these calls:
   model; for the pattern one step per distinct pattern, told apart by
   `thumbnailJson` (now exported from `diagramFile.ts`, the table's own key),
   named by the step chosen where that one links it, else the last. A step
-  chosen that can no longer give its part stays in the list, marked "Step
-  12 (no picture)" or "(not linked)", since the select must show what the
-  part is set to; nothing else that cannot be shown is offered. Auto with
+  chosen that can no longer give its part stays in the list, since the
+  select must show what the part is set to; nothing else that cannot be
+  shown is offered. (This build marked it in the list, "Step 12 (no
+  picture)" or "(not linked)"; the pane's review dropped "(not linked)",
+  and since the final review the list names the step alone and the row's
+  note says why, in the Pages view's words.) Auto with
   nothing to find reads "Auto (none linked)" for the pattern, as planned,
   and "Auto (no pictures)" for the model. On the crane: the model offers
   steps 1–28, the pattern 19 distinct patterns.
@@ -1581,9 +1631,9 @@ As planned, with these calls:
   typing as well as on blur. So the slice action takes the field's
   `{ loadId, session }`, as an instruction's edit does: a sitting is one
   undo step, and a draft typed into a diagram since replaced is dropped. Its
-  analytics counts once per sitting. Its help is its placeholder, an
-  example ("Design: …", "Paper: 60 cm square"): `TextAreaRow` has no help
-  mark.
+  analytics counts once per sitting. Its placeholder is an example
+  ("Design: …", "Paper: 60 cm square"). (This build had no help mark for
+  it, `TextAreaRow` having none; the pane's review below gave it one.)
 - T-20 B: "Steps on page 1" gets a help mark (`NumberRow` gained `help`)
   while page 1 holds its own count under the block: the block leaves it,
   and it would hold 7 by default (`CurrentDiagramPage.titleBlockDefault`).
@@ -1634,7 +1684,8 @@ As planned, with these calls:
 - Not changed: the section stays after Layout (T-19 A). Moving it after On
   the page, just above Header & footer, keeps Layout's own sections
   together and sits beside the Title toggle; both orders are captured for
-  Zach (`artifacts/title-block/out/order/`). The i18n step waits for both
+  Zach (`artifacts/title-block/out/order/`, copied into this worktree in
+  the final review), and 1g puts it to him. The i18n step waits for both
   lanes' review fixes, so the nine catalogs are done once.
 
 *As built (the integration of 1a to 1e, 2026-10-14).* The lanes were
@@ -1705,31 +1756,125 @@ diagrams", the default and its tests together, so it reverts whole:
   opens as before, its title in page 1's tab, the switch off, nine steps
   on page 1, no unsaved change. Screenshots under
   `artifacts/title-block/default-on/`.
-- Found by the flip, not changed in it (for 1g's review and Zach):
-  - The flow lane's "an A4 page of up to 12 steps never" bends a turn
-    tighter than the band is half wide (`flowLane.test.ts`) does not hold
-    with the block on: page 1 of A4 landscape at 12 a page (steps 6→7,
-    7.3 mm against 9.6), and later pages the block re-paginates (A4 at 9 a
-    page, page 3, 5.8 mm; A4 landscape at 6, page 4, 8.1 mm; no margin,
-    page 3, 6.8 mm). The test pins the block off; the claim in its comment
-    is now true of block-off pages only.
+- Found by the flip, not changed in it; corrected and settled in the final
+  review (under 1g):
+  - The flow lane bends a turn tighter than the band is half wide on page 1
+    of A4 landscape at 12 a page with the block (steps 6→7, 7.3 mm where
+    `flowLane.test.ts` asks 9.6): the one case the block causes. The later
+    pages first listed here (A4 at 9 a page, page 3, 5.8 mm; A4 landscape
+    at 6, page 4, 8.1 mm; no margin, page 3, 6.8 mm) are #436's lane at
+    other step counts, which the block's pagination puts there: with the
+    block off, 22 steps at 9 a page bend page 3's last turn 8.7 mm round.
+    The test's claim now says it covers its 23 steps without the block
+    (2fcb867d8); whether the rule must hold under the block is Zach's (1g).
   - A References card pulled into steps prints within 4.7–4.8% of the
     baked card's scale on a flow with the block, against the 2% the test
     allows without it (`referencesCardMarks.pages.test.ts`). Cause not
-    looked into.
-  - Two held-page cases failed with the block on: a photo on an enlarged
-    step waiting for its picture packs its page again, and resizing an
-    enlarged step's caption on a grid moves its own picture. A check kept
-    out of the repo (`artifacts/title-block/held-check.test.ts`) shows
-    both happen with the block off too: the sweep samples the first,
-    middle and last step of each page, and only the block's pagination
-    put those steps there. Not the block's.
+    looked into; still open.
+  - Two held-page cases failed with the block on, and with it off too: the
+    sweep sampled three steps a page, and only the block's pagination put
+    these there. Neither is the block's. A photo on an enlarged step waiting
+    for its picture drops its window (`startsWhole`), an edit of its page's
+    structure, so its page packs again, as a structure edit does: the sweep
+    called it a picture edit. Resizing an enlarged step's caption on a grid
+    moved its own picture: #436's bug, fixed in the final review
+    (2ef450643), which also sweeps every step with the block on and off.
 
 **1g. Gate and handoff**
 - [ ] The full gate. The browser checks above, with First page Left and
   Right, a 3 × 3 grid, a one-row grid and A4 landscape.
-- [ ] A review of the phase, its findings fixed.
+- [x] A review of the phase, its findings fixed (the final review,
+  2026-10-14, below). What needs a new decision is put to Zach here.
+- [ ] T-21 settled by Zach before this branch merges into #436 or ships
+  (the header); if he cannot answer in time and might take C, the switch
+  is hidden.
+- [ ] Zach: step 1 on page 1 under the block stands 20 mm in on A4 at 9 a
+  page (22.5 mm on Letter, 51 mm on A4 landscape, First page Left), where
+  his rule puts it at the top left. The packer shares a band's spare width
+  half a share before its first step (`flowPacking.ts`, `cursor = space /
+  2`); under the block page 1's first band holds two steps, not three, so
+  the share is large. #436 already does it without the block (12 mm at 7
+  a page, 19 mm on A4 landscape). Recommended: the first step of a page's
+  first band at the packing area's left on a page the lane does not come
+  into, the spare shared between the steps and after the last. It reaches
+  only pages packed from then on (arrangements are stored), and changes
+  fresh block-off packs at 6 and 7 a page and in landscape too, so before
+  and after renders go with it. Or keep the packer's look and record the
+  exception. Renders: `artifacts/title-block/review-final/step1-*.png`.
+- [ ] Zach: whether "no turn tighter than half the band" must hold under
+  the block (page 1 of A4 landscape at 12 a page bends 7.3 mm, 1f). If
+  yes, a block-on case in `flowLane.test.ts` and the lane's bend on short
+  first pages; if not, the test's claim already says what it covers.
+- [ ] Zach: the room between the title and the byline. A title's ink can
+  reach its 10 mm row's foot, so a title with a descender or of ideographs
+  keeps about 2 mm over the byline ("Frog" 1.96, 折り鶴 2.08, 종이학
+  2.17), a capital-only title 4.2 mm ("Crane"); `fixes/titleGap.txt`.
+  Recommended: the byline at least 3 mm under the title's ink, so a
+  title without a descender keeps its look. Or a larger fixed gap
+  (`BYLINE_GAP_MM`), or as built. A look: it may change for every file.
+- [ ] Zach: "Auto (step 28)" is cut to "Auto (ste…" in a pane of 214 px
+  rows (every language), as the pane's other selects are at that width
+  ("Ve…" for Portrait). Recommended: leave it with them, the pane's width
+  being his; or a shorter form ("Auto · 28") in every catalog; or a wider
+  value column for these rows.
+- [ ] Zach: the section's order, after Layout (as built, T-19 A) or just
+  above Header & footer (`artifacts/title-block/out/order/`).
 - [ ] As built, written here. The PR into #436.
+
+*The final review (2026-10-14).* Each fix a commit of its own with a test
+that failed before it. Before and after under
+`artifacts/title-block/fixes/`, captured from the dev server (5332) with
+the files before each fix put back from git for the "before" run
+(`capture.mjs`):
+- **The byline stands on its box by its ink** (44ab8e1eb), as the title
+  does: a CJK or accented first line rose 0.36 mm into the gap under the
+  title. `CAP_SHARE`, a copy of the estimate setter's number, is gone.
+  `byline-ja-before-after.png`, `title-ko-before-after.png`.
+- **The pattern is fitted by its ink** (644a29c1b): its edge reached half
+  its pen past the square, and so past the top and right margins (0.09 mm
+  in the Diagram preset, 2.1 mm at a 12 pt edge).
+  `pattern-ink-before-after.png`, at 12 pt.
+- **The square's mark keeps clear of a model in it** (8004b9b84): with no
+  pattern, a portrait model fills the square's height and the words sat on
+  it. The mark is the strip the model leaves above or beside itself, else
+  the title's column under the byline's lines; only the least block (A5
+  landscape at 15%, 18.6 mm) has room for neither and keeps the square.
+  The prepared pages carry where the composer draws the model
+  (`titleBlockModel`, through `wholePictureRoom`).
+  `tall-model-before-after.png`.
+- **One answer to the rows the block takes** (c17f7f095):
+  `PlannedPage.titleBlockRows`, read by the layout's cells and by
+  `pageShape`, which inferred it from how many rows a page listed. The
+  `rowCounts` doc says every row under the block is listed.
+- **The resolved pattern is its scene** (552d6b95c): `thumbnail` had no
+  reader.
+- **The Page pane** (5ea4b6bd5, 017524600, 1b4ff611f, d7cc79ed0): a reason
+  note wraps rather than lose its end; a select set to a step that shows
+  nothing names the step alone, and the row's note says why in the Pages
+  view's words, read with the select (`SelectRow` takes a `note`); the
+  pattern's help names a pattern as its list does; German says "Auf Seite
+  1 zeigen", Sie, and "Keine" for None; Russian calls the byline "Авторы",
+  "Подпись" being the Label tool's. In en, de and es at 214 px rows (the
+  sash dragged to the review's width) and the default 280, no reason and
+  no chosen step is cut: `pane-*-before-after.png`, `paneFacts.py`.
+- **Held pages** (2ef450643): both sweeps edit every step, on every page
+  fixture as saved and with the block on. Fixed: a grid's enlarged step at
+  a Size moved its own picture when its caption was resized (#436's:
+  `placed.auto` had no scale for an enlarged step, so the layout's second
+  pass measured it unmeasured). Written down in the sweep: a photo filling
+  an enlarged step that waits for its picture is a structure edit that
+  packs its own page; an area's new capture changes its enlargements'
+  read-out, not where they stand.
+- **CJK on every surface**: `apps/web/public/fonts/diagram/` copied from the
+  base worktree; a Japanese and a Korean title and byline in the Pages
+  view, the PDF (exported, nothing missing), Print and the one-sheet SVG
+  (its JP faces embedded): `cjk-pdf-print-check.png`, `after/byline-ja*`,
+  `after/title-ko*`.
+- **This plan and its neighbours**: T-21's deadline is this branch's merge
+  into #436 or a release, not 1f; T-18 B says what its revert keeps; the
+  decisions read as taken; superseded As built lines say so; the evolution
+  plan names the block's legacy value (979199073); the flow lane test says
+  what its claim covers (2fcb867d8).
 
 ### Phase 2: after the release
 
