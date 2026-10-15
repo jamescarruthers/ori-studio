@@ -23,6 +23,11 @@ at the end of Phase 1):
   questions for him, Q1–Q4 under "For Zach (round 2, 2026-10-15)" — the
   first two about hand positions on a page the toggle re-packs, which is
   the first thing he will see when he turns the block on in the crane.
+- He tested the branch the same day: the credits missing when he turned
+  the block on, the band running under the crease pattern, the model off
+  its corner. Fixed with the header's review (1f51947c1, 00bd52d97, "As
+  built (1c: Zach's test and the review)"); what is left is his: H-Q1 to
+  H-Q6 under "For Zach (header, 2026-10-15)", and Q1–Q4 above.
 
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
@@ -2365,9 +2370,11 @@ A new diagram is made by the slice's first edit (`createDiagram` in its
 `commit`). It writes, in the app's language (`i18n.t`, the catalogs'
 `panels:diagram.titleBlock.default.*`): the subtitle "Origami diagram", and
 the credits Author (empty), Recommended size (empty) and Steps (the live
-count). A diagram already in a file is never given them: what it does not
-say stays none. `createDiagram()` with no content is unchanged, so the
-fixtures that call it are too.
+count). A diagram already in a file is given them only by its author's
+own act: the block's toggle, turned on where the content says no subtitle
+and no credits (H-14, built 2026-10-15, "As built (1c: Zach's test)");
+what it does not say otherwise stays none. `createDiagram()` with no
+content is unchanged, so the fixtures that call it are too.
 
 #### The store
 
@@ -2387,7 +2394,9 @@ one undo step, the commits of one sitting at a text field one step
   width), at the top right; the model's box, `modelSize × h` tall, at most
   1.1 times as wide (as built; 1.25 before, see the as-built notes) and 0.45
   of the block's width, its foot on the block's foot, its right edge 0.6
-  across the pattern; with no pattern drawn, the model keeps its size at the
+  across the pattern (*since 2026-10-15 on the pattern's lower-left corner,
+  and the column a gutter short of the pattern: "As built (1c: Zach's
+  test and the review)"*); with no pattern drawn, the model keeps its size at the
   pattern's place.
 - The text column, from the left margin to the art's left edge: the
   subtitle's row (where there is a subtitle), the band (the title shrunk to
@@ -2426,8 +2435,10 @@ while its part is None) — then Title tab and Page numbers; Style.
 footer mounts; its bindings stay in `useDiagramTitleBlock`.
 
 Two calls recommended for this lane, under Zach's standing "go with your
-recs", for him to see; **not built** in the pane lane, which was asked for
-the order and the rows only (both still open in the checklist):
+recs", for him to see; not built in the pane lane, which was asked for
+the order and the rows only; **built after Zach's test of the branch**
+("All the credits we talked about should default to being added and
+scaffolded"), see "As built (1c: Zach's test and the review)":
 - **The toggle's share.** Turning the block on in a diagram saved without
   it (his crane) turns it on at the legacy share, 0.27, not the mock's
   0.23. Recommended: Show on first page turns the block on at today's
@@ -2492,8 +2503,9 @@ the order and the rows only (both still open in the checklist):
 **Page pane**
 - [x] The order above; the block's rows nested under the toggle in Header &
   footer; the sizes, subtitle, credits and note; "Title tab".
-- [ ] The toggle's share and the content on turning on, as recommended
-  above. Not built: the pane lane was asked for the order and the rows.
+- [x] The toggle's share and the content on turning on, as recommended
+  above (00bd52d97, after Zach's test; the pane lane was asked for the
+  order and the rows only).
 
 **i18n and analytics**
 - [x] The strings in English (extract); the other catalogs have empty
@@ -2504,10 +2516,23 @@ the order and the rows only (both still open in the checklist):
 - [x] The events and `docs/analytics.md`.
 
 **Review**
-- [ ] A review of 1c, its findings fixed; in the browser on the crane (the
-  block turned on beside J1b) and a new diagram, A4 and A5 either way up, a
-  3 × 3 grid; the Pages view, PDF, Print and the one-sheet SVG; light and
-  dark for the pane.
+- [x] A review of 1c, its findings fixed; in the browser on the crane (the
+  block turned on through the pane's own switch, beside J1b) and a new
+  diagram, A4 and A5 either way up; the Pages view, PDF and the one-sheet
+  SVG; light, dark and iPad for the pane (1f51947c1, 00bd52d97; see "As
+  built (1c: Zach's test and the review)"). Print and a 3 × 3 grid were
+  not captured again this round: the composer they share is the PDF's.
+
+**Zach's test of the branch (2026-10-15)**
+- [x] 1. The credits added and scaffolded: the toggle writes them (and
+  today's share); the pane shows them before a diagram exists.
+- [x] 2. The band stops a gutter short of the crease pattern, and of a
+  model that rises beside it; the credits and the note keep that gutter
+  from the model.
+- [x] 3. The model on the pattern's lower-left corner at every size, its
+  picture set to cover it; the sliders offer only sizes that keep it.
+- [x] The subtitle's rule hidden by the Pages view's guides.
+- [ ] Zach: the questions under "For Zach (header, 2026-10-15)" below.
 
 *As built (1c: the format, the defaults and the store, 2026-10-15).* Three
 commits after the plan's (84f16afce): the format (d23293107), the defaults
@@ -2517,7 +2542,7 @@ a new diagram's shorter block: the drawing and the pane are the next lanes.
   (`DiagramTitleBlockCredit`, its value, `DiagramTitleBlockCreditEdit`),
   `TITLE_BLOCK_PARTS` (the writer's order, and what an edit lets go of a
   newer build's), `TITLE_BLOCK_ART_SIZE_RANGE` (0.3–1),
-  `TITLE_BLOCK_ART_SIZE_DEFAULTS` (0.6 and 0.8) and `titleBlockArtSizes`
+  `TITLE_BLOCK_ART_SIZE_DEFAULTS` (0.6 and 0.8; *now 0.59 and 0.79*) and `titleBlockArtSizes`
   (what the geometry reads), and one rule each for the file and an edit:
   `titleBlockLine` (one line, cleaned), `titleBlockCredit`,
   `titleBlockArtSize` (held to the range; the default is no size). A size a
@@ -2740,10 +2765,12 @@ drawing is the other lane's.
   `titleBlock.show`; the section's title key is retired), then "Title tab"
   (relabelled under `pagePane.title`) and Page numbers.
 - **The block's rows**, a step in under the toggle while the page has a
-  block, top to bottom as J1b reads (the plan listed the art first; the
-  orchestrator's brief put the text first, and it follows the page):
+  block, top to bottom as J1b reads (*corrected 2026-10-15:* the plan's own
+  Page pane section lists the text first too; only an earlier draft had
+  the art first):
   - **Subtitle**: a one-line `TextAreaRow` (`singleLine`, the Layers pane's
-    label text is the precedent, so it is that row's 64 px box); cleared,
+    label text is the precedent, so it is that row's 64 px box — *one line
+    tall since 1f51947c1*); cleared,
     the content has none.
   - **Credits** (`DiagramTitleBlockCredits`, a module of its own): a row per
     credit, its label and its value side by side (equal columns), and a
@@ -2759,7 +2786,8 @@ drawing is the other lane's.
   - **Note**: a three-row `TextAreaRow`; its help says it prints only when
     it has text.
   - **Model** and **Crease pattern** as before (nested), each followed by
-    its size: a `SliderRow` in percent, 30–100 in steps of 5, handed over
+    its size: a `SliderRow` in percent, 30–100 in steps of 5 (*now 1%, and
+    each only as far as the other allows*), handed over
     where it is let go (`onCommit`, `useHeldDrag`), Reset while it is off
     the default, hidden while its part is None.
   - Read-only: every field, button and slider disabled. A one-row grid: the
@@ -2836,6 +2864,156 @@ before a colon. `i18n:stamp` (216 hashes), then `i18n:check` passes.
   0b59543ec; vitest over `src/diagram`, `src/components/diagram`,
   `src/components/panels`, `src/store/workspaceStore`, `src/analytics`,
   `src/components/ui` and `src/i18n`.
+
+*As built (1c: Zach's test and the review, 2026-10-15).* Two commits: the
+field rows (1f51947c1) and the fixes (00bd52d97). Zach tested the branch
+on his crane and reported, verbatim: "All the credits we talked about
+should default to being added and scaffolded"; "The title bar should stop
+before the crease pattern with some margin - right now if i make the model
+size really small the title bar extends underneath the CP"; "The model
+should laways cover the bottom left of the CP regardless of hte ize of the
+CP or the model". Captures and numbers: `artifacts/title-block/
+header-fixes/` (`before/` at 2f28d6321, `after/` at 00bd52d97; `capture.mjs`
+writes each case's Pages view, PDF, sheet and layout dump, `repro.mjs`
+replays his test through the pane's own switch and fields, `measured.txt`
+the numbers below).
+- **1. The credits.** `setDiagramTitleBlockShown` (store) and
+  `setTitleBlockShown` (document) are the toggle: on, at today's share
+  (`DEFAULT_PAGE_SETUP`, 0.23) and, where the content — or a newer build's
+  carried with it — says no subtitle and no credits, a new diagram's
+  subtitle and three credits in the app's language
+  (`titleBlockDefaultWords`, `document/titleBlockWords.ts`, the one source
+  for the first edit, the toggle and the pane), all in the toggle's undo
+  step; off keeps the share and the words. A diagram that says a subtitle
+  or credits keeps them as they are. The crane turned on through the
+  pane: 0.23, block 177.99 pt (62.79 mm; 208.94 before), the subtitle and
+  STEPS 28 printed, Author and Recommended size marked, step 1's number
+  at 239.4 pt (270.3), pages 7 / 11 / 9 / 1, two undo steps for the switch
+  and the subtitle typed (`after/repro/facts.json`). Before a diagram
+  exists the pane shows the content its first edit will make it with, so
+  Add Step Count is not offered and Add Credit lands fourth (two live
+  counts before, and the focus in credit 1). Not printed: an empty value
+  (as built); its mark is set at its label's size, so "RECOMMENDED SIZE"
+  is no longer cut short.
+- **2. The band.** The column — the band, the subtitle's rule and the
+  rows under them — ends 12 pt (`ART_GAP_MM`, the credits' gutter) short
+  of the pattern, and at the model's box, or short of it by as far as the
+  model rises beside the band past J1b's 3.9 pt, up to the same gutter
+  (`MODEL_RISE_MM`), so the band never touches a model standing beside it.
+  The credits and the note (`TitleBlockGeometry.under`) keep the gutter
+  from the model's box always: they stand beside its lower part, where
+  the crane's tail is. At the defaults nothing moves from J1b (the band's
+  end at 389.46 pt; J1b 390.24). Model 30%: the band's end 15.9 pt short
+  of the pattern (0 before, under its border); both at 30%: 27.9 pt short
+  and 12 pt short of the model.
+- **3. The model on the corner.** `titleBlockParts` stands the model's box
+  with the pattern's lower-left corner 27% across it and 66% down (J1b's
+  0.27 / 0.66), held in the block; `modelAlign` says where the corner then
+  is in the box, and the picture is set there (`wholePicture`'s `align`),
+  so the corner is at the same shares of any picture, tall or wide.
+  `MODEL_COVER` keeps it a fifth of the picture at least from each side:
+  sizes that cannot (the pattern so tall that the model, kept in the
+  block, would stand on its own foot) are not offered — each slider's
+  `max` is `artSizeLimits` of the other's value (at the defaults the model
+  goes to 100% and the pattern to 88%; the model at 100% stops the pattern
+  at 80%) — and a pair a file says is drawn with the pattern as large as
+  fits (`fittedArtSizes`), shown so in the pane. Chosen over shrinking
+  both by one factor, which makes a larger pattern draw a smaller model.
+  The corner in the drawn crane, (across, down): defaults 0.27 / 0.66
+  (0.27 / 0.64 before); model 30% with pattern 100% 0.27 / 0.80 (−0.83 /
+  1.00: beside it); model 100% with pattern 30% 0.73 / 0.30 (0.84 / 0.30);
+  both 30% 0.27 / 0.66 (0.45 / −1.33: under it). A part set to none is laid
+  out at its default size (`titleBlockArtSizes`), so a size the pane hides
+  moves nothing, its own kept for when the part is back.
+- **The subtitle's rule** was drawn to the band's end; at the Pages view's
+  fit zoom the dashed margin guide and block outline, 2.5 pt above it, ran
+  over it, so it showed for a stroke after the text
+  (`rule-52-before-after.png`). The guides are drawn outside what they
+  outline (`outline`), and the block's outline is its foot alone (the
+  margin's guide draws its top and sides).
+- **The review's other findings, fixed:** the fit predicate reckons each
+  row of credits on its labels' ink, as the row is placed, and rows stack
+  under the one before's values (an accented or CJK label had dropped
+  every credit at a scale under 1; A5 landscape in French and German now
+  prints them, `short-before-after.png`); a non-empty note's first line is
+  in the scale search where it can fit at the least scale (A4 landscape,
+  Letter landscape, A5 portrait printed none); a title that one line would
+  set under half its size takes two (`TextSetter.paragraph` takes a
+  weight), cut with "…" only past two lines at its least size; the cut tag
+  hangs under the block's foot at the column's end, over nothing it
+  prints, and says "The note doesn't fit" when none of it did; the missing
+  title's mark is in the title's ink (1.55:1 on the default grey band
+  before); a richer subtitle or note a newer build writes is carried, as
+  sources are; one pair of text-box constants (`CAP_HEIGHT`, `DESCENT`);
+  the credits' fields are `TextField`s in a `StackedRow` (the copied look
+  gone, the Subtitle one line tall, the Layers pane's label text too); the
+  live count is a read-only field named as the credit's value, the pencil
+  names its credit, an added credit takes the focus and a removed one hands
+  it on; the byline's names are gone from the tests and
+  `titleBlockGeometry()` is a test fixture; the analytics row says counts
+  are bucketed; ja's "No value yet" is 未入力.
+- **Declined, with why.** Enter moving to the next credit field: the
+  pane's other text rows leave the field on Enter, and a browser's
+  sequential focus starting point keeps Tab going from the field left.
+  Keyboard steps folded into one commit on the size sliders: `SliderRow`'s
+  per-step commit is shared by every slider in the app; a change belongs to
+  it, not to this pane (a follow-up).
+- **Tests that failed before** (`header-fixes/failing-before.txt`, the
+  sources of 2f28d6321 with this round's tests): 32 in 8 files — the
+  toggle in the store (2) and the pane (2), the pane before a diagram, the
+  credits' focus, field and size limits (6 more), the geometry's corner,
+  gutter and fit (5), the picture over the corner and the cut tag (5), the
+  labels' ink, the note's line and the two-line title (5), the composer's
+  model (4), the Pages view's guide, ink and tag (2), the richer note (1).
+- Checked at 00bd52d97: `tsc`; ESLint on every changed file; `i18n:check`
+  (2 new or reworded keys in 9 catalogs, stamped); vitest over
+  `src/diagram`, `src/components/diagram`, `src/components/panels`,
+  `src/components/ui`, `src/store`, `src/export`, `src/print`,
+  `src/analytics`, `src/i18n` and `src/styles` (352 files): all pass but
+  timing budgets and sweeps that ran out of time under a machine load of
+  ~170, each of which passes run alone. In the browser (5332, Chromium):
+  the pane-driven replay at 1440 × 3200 and 1280 × 800 (`after/repro`,
+  `after/repro-small`); seventeen cases before and after
+  (`sizes-before-after.png`, `content-before-after.png`,
+  `short-before-after.png`, `view-marks-before-after.png`); the pane in
+  light, dark and iPad (`after/pane/`, `pane-crane-on-before-after-dark.png`).
+
+*For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
+header-fixes/`.
+- **H-Q1. An empty credit on the page.** The scaffold prints STEPS 28 at
+  the margin and marks Author and Recommended size after it, though the
+  pane lists them first; typing Author's value moves it ahead. A
+  (recommended): as built, empty values print nothing and the printed
+  credits close up from the margin; the Pages view's marks follow them. B:
+  an empty credit prints its label over blank space (the plan's first
+  rule): the list's order everywhere, nothing moves when a value is typed,
+  but an unfilled AUTHOR prints in the PDF. C: hold a blank slot in the
+  print, without the label: order kept, a gap before STEPS on paper.
+- **H-Q2. The band with no pattern.** With the pattern set to none the
+  model stands at the right margin, but the band ends where a model in
+  front of a default pattern would (content-free: choosing none reflows
+  no words). A (recommended): keep it. B: the band runs to the drawn art,
+  rewrapping the credits and the note when a part is set to none.
+- **H-Q3. The sizes as written.** A size equal to the default is not
+  written (class (b), a look); a later default would change every untouched
+  block's art and its column. A (recommended): keep (b). B: write both
+  sizes at creation and on every edit, legacy unsaid 0.59 / 0.79.
+- **H-Q4. The credits' gutter.** J1b's second and third columns start 4.2
+  and 8.5 mm further right than the app's, its columns wider than their
+  words. A (recommended): keep 12 pt between true widths. B: 24 pt, 12 pt
+  each side of the divider, J1b's look with true widths.
+- **H-Q5. A new diagram's default look.** The Diagram preset's grey paper
+  gives a flat grey band with the title and rules in ink
+  (`header-review/visual/new-default-style/`). A (recommended): as built,
+  J1b's rule — the band in the paper's colour — on every paper. B: a
+  colour of the band's own for papers with no colour (a setting, or the
+  preset's). C: a lighter tint of the paper with a dark title.
+- **H-Q6. The Page pane at its default width.** "Recommended size" is cut
+  in its label field, and "Crease pattern size" wraps with its help mark.
+  A (recommended): the credit's label over its value (two lines a credit)
+  where the pane is narrow, and "Pattern size"; B: leave it.
+- The zh-CN word for Credits (信息) wants a native reader: 署名 is a
+  byline, which a size or a step count is not; 作品信息 is a candidate.
 
 ### Phase 2: after the release
 

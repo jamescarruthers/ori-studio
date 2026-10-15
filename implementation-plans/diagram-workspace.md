@@ -1804,7 +1804,8 @@ on its next save.
   size held to its range), and an asset or a thumbnail it names is kept. An
   unsaid source means Auto, and an unsaid subtitle, credits or note none,
   for good (class (c) in `diagram-document-evolution.md`); a new diagram
-  writes its subtitle and credits at creation. What Auto finds, and an
+  writes its subtitle and credits at creation, and so does the toggle turned
+  on where the content says neither (the author's act). What Auto finds, and an
   unsaid size, are a look (class (b)): a later build may change them for
   every file, which changes the step an old file's block pictures, or how
   large, but never moves a step. The content is in no page's signature.
