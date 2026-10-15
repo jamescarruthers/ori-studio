@@ -311,8 +311,14 @@ describe('page setup', () => {
   });
 
   it('reads anything, falling back field by field', () => {
-    // A layout not said is the grid, every diagram's before the flow was a new one's; a title block not said is none.
-    expect(normalizePageSetup(null)).toEqual({ ...DEFAULT_PAGE_SETUP, layout: 'grid', titleBlock: PAGE_SETTINGS.titleBlock.legacy });
+    // A layout not said is the grid, every diagram's before the flow was a new one's; a title block not said is none;
+    // a steadiness not said is 0.85, every flow page's before a new diagram's was 0.5.
+    expect(normalizePageSetup(null)).toEqual({
+      ...DEFAULT_PAGE_SETUP,
+      layout: 'grid',
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+      flowSteadiness: 0.85,
+    });
     expect(
       normalizePageSetup({
         size: 'letter',

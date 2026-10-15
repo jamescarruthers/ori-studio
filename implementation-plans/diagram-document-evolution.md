@@ -402,8 +402,11 @@ signature), re-packed it.
 - `normalizePageSetup` falls back to the legacy value for a missing or damaged
   setting. Today every legacy value is what an unsaid setting already read as —
   the default, but for the layout (`grid`), the steps per page (the file's
-  columns × rows) and the title block (off, where a new diagram's is on; added
-  2026-10-14, `diagram-title-block.md`) — so no existing file opens
+  columns × rows), the title block (off, where a new diagram's is on; added
+  2026-10-14, `diagram-title-block.md`) and the scale steadiness (0.85, where
+  a new diagram's is 0.5 since 2026-10-15, `diagram-flow-packing.md`,
+  "Scale steadiness 0.5 for a new diagram": the first default changed under this
+  rule, one line in `PAGE_SETTINGS`) — so no existing file opens
   differently.
 - **Adding a setting:** give it a default and a legacy value in the table; its
   legacy value reproduces how pages were drawn before it existed and never

@@ -566,12 +566,12 @@ describe('DiagramPagePanel › Packing', () => {
     expect(button('Re-pack All Pages')).toBeUndefined();
   });
 
-  it('shows Zach’s defaults: Auto preferring three bands at 0.5, steps in bends, nesting 0.8, steadiness 0.85', () => {
+  it('shows Zach’s defaults: Auto preferring three bands at 0.5, steps in bends, nesting 0.8, steadiness 0.5', () => {
     expect(segment('Bands', 'Auto').getAttribute('aria-pressed')).toBe('true');
     expect(readout('Prefer three bands')).toBe('0.5');
     expect(toggle('Steps in bends').getAttribute('aria-checked')).toBe('true');
     expect(readout('Nesting')).toBe('0.8');
-    expect(readout('Scale steadiness')).toBe('0.85');
+    expect(readout('Scale steadiness')).toBe('0.5');
     // Nothing to reset at a default.
     expect(host!.querySelector('[aria-label^="Reset Nesting"]')).toBeNull();
   });
@@ -608,8 +608,8 @@ describe('DiagramPagePanel › Packing', () => {
     const past = state().diagramHistory.past.length;
     drag('Prefer three bands', ['0.2']);
     expect(state().diagram?.page.flowPreferBands).toBe(0.2);
-    drag('Scale steadiness', ['0.5']);
-    expect(state().diagram?.page.flowSteadiness).toBe(0.5);
+    drag('Scale steadiness', ['0.85']);
+    expect(state().diagram?.page.flowSteadiness).toBe(0.85);
     act(() => toggle('Steps in bends').click());
     expect(state().diagram?.page.flowBendSteps).toBe(false);
     expect(state().diagramHistory.past).toHaveLength(past + 3);

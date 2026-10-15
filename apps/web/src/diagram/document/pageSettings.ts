@@ -15,9 +15,9 @@
  *   added later declares its legacy value here with it: the value that
  *   reproduces how pages were drawn before it existed.
  *
- * Today every legacy value is today's default but three: the layout, the
+ * Today every legacy value is today's default but four: the layout, the
  * steps per page, which a file without them reads from its columns and rows,
- * and the title block, off.
+ * the title block, off, and the scale steadiness, 0.85.
  *
  * A value of the wrong type is damage, and reads as the legacy value too
  * (`normalizePageSetup`); one past this build's range is a newer build's
@@ -77,7 +77,10 @@ export const PAGE_SETTINGS: PageSettingValues = {
   flowPreferBands: { default: 0.5, legacy: 0.5 },
   flowBendSteps: { default: true, legacy: true },
   flowNesting: { default: 0.8, legacy: 0.8 },
-  flowSteadiness: { default: 0.85, legacy: 0.85 },
+  // 0.5 for a new diagram (Zach, 2026-10-15): a page may grow ×1.3 past the page before it, where it was ×1.09. Every
+  // flow page was packed at 0.85 until then, and every file since 2026-10-12 says it, so a file that does not reads
+  // as 0.85.
+  flowSteadiness: { default: 0.5, legacy: 0.85 },
   // A new diagram has the block (2026-10-14, `diagram-title-block.md`); every first page saved before it existed was
   // drawn without one. Its share was 0.27 until Zach's header (J1b, 2026-10-15) made it shorter: a file saved with
   // the block keeps the share it says.

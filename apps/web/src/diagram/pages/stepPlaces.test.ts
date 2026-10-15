@@ -273,7 +273,7 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     ['page numbers', { pageNumbers: { enabled: false, first: 4 } }],
     ['band count', { flowBands: 3 }],
     ['steps in bends', { flowBendSteps: false }],
-    ['scale steadiness', { flowSteadiness: 0.5 }],
+    ['scale steadiness', { flowSteadiness: 0.85 }],
   ] as const)('keeps every flow frame when the %s changes: every page is packed afresh, its steps on it, their places for the layout to judge', (_label, patch) => {
     const before = placed(16, { layout: 'flow' });
     expect(settle(before, setPageSetup(before, patch as Partial<DiagramPageSetup>))).toEqual([]);

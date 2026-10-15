@@ -210,6 +210,8 @@ describe('writeDiagram / readDiagram', () => {
   describe('the flow’s packing (diagram-flow-packing.md, Decision 7)', () => {
     const PACKING_KEYS = ['flowBands', 'flowPreferBands', 'flowBendSteps', 'flowNesting', 'flowSteadiness'];
     const packingSaid = (page: Record<string, unknown>) => Object.keys(page).filter((key) => PACKING_KEYS.includes(key));
+    /** The packing every flow page had before it could be chosen, Zach's (Decision 7): what a file that does not say it reads as. */
+    const LEGACY_PACKING = { flowBands: 'auto', flowPreferBands: 0.5, flowBendSteps: true, flowNesting: 0.8, flowSteadiness: 0.85 } as const;
 
     it('writes every choice, a default too, and reads a file without one as the packing every page had before: Zach’s', () => {
       // Said, at its default: part of every flow page's signature, so a default changed later re-packs nothing saved.
@@ -220,14 +222,8 @@ describe('writeDiagram / readDiagram', () => {
       // Unsaid, as every file before every setting was said: the legacy packing, Zach's (Decision 7).
       const unsaid = Object.fromEntries(Object.entries(plain.page).filter(([key]) => !PACKING_KEYS.includes(key)));
       const legacy = readDiagram({ ...plain, page: unsaid })!;
-      expect(legacy.document.page).toMatchObject({
-        flowBands: 'auto',
-        flowPreferBands: 0.5,
-        flowBendSteps: true,
-        flowNesting: 0.8,
-        flowSteadiness: 0.85,
-      });
-      expect(legacy.document).toEqual(readDiagram(plain)!.document);
+      expect(legacy.document.page).toMatchObject(LEGACY_PACKING);
+      expect(legacy.document).toEqual(readDiagram({ ...plain, page: { ...plain.page, ...LEGACY_PACKING } })!.document);
       const choices = { flowBands: 3, flowPreferBands: 0.2, flowBendSteps: false, flowNesting: 0.4, flowSteadiness: 1 } as const;
       const chosen = setPageSetup(sampleDiagram(), choices);
       const written = throughJson(writeDiagram(chosen));
@@ -239,7 +235,23 @@ describe('writeDiagram / readDiagram', () => {
       expect(throughJson(writeDiagram(setPageSetup(chosen, DEFAULT_FLOW_PACKING))).page).toEqual(plain.page);
     });
 
-    it('holds each choice to its range, a band count whole, and reads damage as the default', () => {
+    it('starts a new diagram at a steadiness of 0.5, and keeps every file’s as it says it, or reads it as 0.85 (Zach, 2026-10-15)', () => {
+      expect(PAGE_SETTINGS.flowSteadiness).toEqual({ default: 0.5, legacy: 0.85 });
+      expect(createDiagram().page.flowSteadiness).toBe(0.5);
+      const plain = throughJson(writeDiagram(sampleDiagram()));
+      expect(plain.page.flowSteadiness).toBe(0.5);
+      // Saved at 0.85, as every diagram until now: read and written back at 0.85, its pages packed as they were.
+      const saved = readDiagram({ ...plain, page: { ...plain.page, flowSteadiness: 0.85 } })!;
+      expect(saved.document.page.flowSteadiness).toBe(0.85);
+      expect(throughJson(writeDiagram(saved.document)).page.flowSteadiness).toBe(0.85);
+      // A file that does not say it, written before every setting was said: 0.85, and said from then on.
+      const { flowSteadiness: _unsaid, ...unsaid } = plain.page;
+      const old = readDiagram({ ...plain, page: unsaid })!;
+      expect(old.document.page.flowSteadiness).toBe(0.85);
+      expect(throughJson(writeDiagram(old.document)).page.flowSteadiness).toBe(0.85);
+    });
+
+    it('holds each choice to its range, a band count whole, and reads damage as the packing every page had before', () => {
       // As a hand-made patch might say them: past the ranges, a band count not whole.
       const set = (patch: Record<string, unknown>) => setPageSetup(sampleDiagram(), patch as Partial<DiagramPageSetup>).page;
       expect(set({ flowBands: 7 })).toMatchObject({ flowBands: 5 });
@@ -264,7 +276,9 @@ describe('writeDiagram / readDiagram', () => {
       ]) {
         const read = page(damage);
         expect(read.readOnly, JSON.stringify(damage)).toBe(false);
-        expect(read.document.page, JSON.stringify(damage)).toMatchObject(DEFAULT_FLOW_PACKING);
+        // The damaged setting as a file that does not say it; the rest as the file says them, a new diagram's.
+        const [key] = Object.keys(damage) as (keyof typeof LEGACY_PACKING)[];
+        expect(read.document.page, JSON.stringify(damage)).toMatchObject({ ...DEFAULT_FLOW_PACKING, [key!]: LEGACY_PACKING[key!] });
         expect(read.document.newer, JSON.stringify(damage)).toBeUndefined();
       }
     });

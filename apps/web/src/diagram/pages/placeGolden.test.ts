@@ -190,6 +190,23 @@ describe('pages as they printed before placement came', () => {
     // an arrangement; a page held as saved keeps its boxes. Rasterised and
     // checked by eye beside the pages before (first bands only; later bands,
     // the lane's rules and every arrow as they were). Grid pages are unchanged.
+    // 2026-10-15, later (Zach: steadiness 0.5 for a new diagram, 0.85 before;
+    // cherry-picked without the typical-page rule, which was built and not
+    // merged): every fixture is a new diagram's, so each page may grow ×1.3
+    // past the page before it where it grew ×1.09. One page grew: "a last page
+    // with its own count" page 2, its one step at the largest scale, 1.4,
+    // where it was held to 1.328 (its picture 5% larger, its box up to 7.8 mm
+    // moved); its page 1 changed by the band handed over to it alone (5
+    // thousandths of a mm), in the print. Two pages packed at their own size
+    // already, a millionth off it now, their numbers a thousandth of a mm at
+    // most: "flow landscape" page 2 and "seven steps a page" page 2, both
+    // views. Each is a second page, held to its first page under either rule,
+    // so these are the digests the cherry-picked commit took. One more here,
+    // under the page-before rule: "flow from the right" page 3, in the print
+    // only, its cap (×1.3 page 2's) far above what it packs at but the scale
+    // search, halving from it, ending two millionths lower (0.966025 →
+    // 0.966023), its numbers a ten-thousandth of a mm off at most. No arrow or
+    // grid page moved.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -206,11 +223,11 @@ describe('pages as they printed before placement came', () => {
         "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "6f0a09122da36e45 ac52759daf91f1bb 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 1": "112071bbf0ef8d2a a17ea0be4c9ff643 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 2": "3806a26235e98c81 1a2ba3bcdc4a97af 4f53cda18c2baa0c",
-        "flow from the right, across spreads, rows read upward · page 3": "090ae992b2d6d51a 4e556a1f96e3d587 4f53cda18c2baa0c",
+        "flow from the right, across spreads, rows read upward · page 3": "4ffec0e00275d974 4e556a1f96e3d587 4f53cda18c2baa0c",
         "flow landscape, an odd row count · page 1": "a2bc033bd05476b8 17daa93cce66c063 4f53cda18c2baa0c",
-        "flow landscape, an odd row count · page 2": "e65458c66466ee58 dc025a95e723a0e9 4f53cda18c2baa0c",
-        "flow, a last page with its own count · page 1": "66a129a23617e4ff 760ec382788b7393 4f53cda18c2baa0c",
-        "flow, a last page with its own count · page 2": "fa9566e273d69381 c9e16f54f72a1964 4f53cda18c2baa0c",
+        "flow landscape, an odd row count · page 2": "4f156ef02e89e61b 75590eb5e9c8b775 4f53cda18c2baa0c",
+        "flow, a last page with its own count · page 1": "3ff926b1703c8e79 760ec382788b7393 4f53cda18c2baa0c",
+        "flow, a last page with its own count · page 2": "c7945e9df33c6410 07afe7fb8e35e5b8 4f53cda18c2baa0c",
         "flow, a page break and turns at a row’s end · page 1": "b710f3c611df80d5 ba2bf05a3dfa020d 4f53cda18c2baa0c",
         "flow, a page break and turns at a row’s end · page 2": "77abe2641874bc12 bc6af1698ff96420 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 1": "b95ac905ca9104aa 7fcdc750dac69d2b 4f53cda18c2baa0c",
@@ -219,7 +236,7 @@ describe('pages as they printed before placement came', () => {
         "flow, pages with their own counts · page 4": "5a6df002485a12a4 8bfeaae5005f8549 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 5": "ece26eda8a93adec 550b8d887bc9495a 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "9178969beac40873 ff986b80908f4fd8 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "5e970e195ad136de a270fccc80a14f3a 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "c7d1c2e266f5b707 22d6df0be18d2d81 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "26b0041be8aefdb8 d4e7c4bb5143c429 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 2": "09fc08ba3982c9d1 09fc08ba3982c9d1 4f53cda18c2baa0c",
@@ -269,6 +286,13 @@ describe('homes as the layout computes them', () => {
     // golden above moved, only the homes in their first bands (fresh packs; a
     // page held as saved keeps every home, so no saved placement moves). Grid
     // homes as they were.
+    // 2026-10-15, later (Zach: steadiness 0.5 for a new diagram): the print
+    // golden's three pages that packed again ("a last page with its own
+    // count" page 2, "flow landscape" page 2, "seven steps a page" page 2),
+    // and the enlarged steps' page 2, its scale a millionth off (1.05484 →
+    // 1.05483) and its homes under a hundredth of a mm off, its print the same;
+    // and "flow from the right" page 3 (above), a ten-thousandth of a mm. A
+    // saved diagram keeps the steadiness it says, so no saved home moves.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         preparedPages(document, FIXTURE_FONTS, subsetter).layout.pages.map((page, index) => [
@@ -291,14 +315,14 @@ describe('homes as the layout computes them', () => {
         "a newer build’s steps and turns · page 1": "7c3808646e04671c",
         "a newer build’s steps and turns · page 2": "340f944242881549",
         "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "d277a9a582aa3d1c",
-        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "d52b77437d50ae5b",
+        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "d4ed9556912dd243",
         "flow from the right, across spreads, rows read upward · page 1": "bd40e085511af7ae",
         "flow from the right, across spreads, rows read upward · page 2": "0385acdaa384f961",
-        "flow from the right, across spreads, rows read upward · page 3": "e80ad430a1c94179",
+        "flow from the right, across spreads, rows read upward · page 3": "6b436f4473a34632",
         "flow landscape, an odd row count · page 1": "15beff8eb84a5c59",
-        "flow landscape, an odd row count · page 2": "be46a2c2344258e2",
+        "flow landscape, an odd row count · page 2": "ec0bf5eafcffb5d9",
         "flow, a last page with its own count · page 1": "400e36cecbffc115",
-        "flow, a last page with its own count · page 2": "39f64763543e016c",
+        "flow, a last page with its own count · page 2": "59c2cfd10a1857d4",
         "flow, a page break and turns at a row’s end · page 1": "79c46295f327baa4",
         "flow, a page break and turns at a row’s end · page 2": "308645cc7ac38862",
         "flow, pages with their own counts · page 1": "e63891a52a5f4e1f",
@@ -307,7 +331,7 @@ describe('homes as the layout computes them', () => {
         "flow, pages with their own counts · page 4": "c9c3c38055027a53",
         "flow, pages with their own counts · page 5": "f4f1e39875630a38",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "8de763d72ee1d672",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "278ca42ba1c92fc5",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "6f1fabcfaf8a3fd0",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "228c59f7cc3e5a78",
         "grid, a page break, turns and an upload · page 1": "b2981a60e29ba484",
         "grid, a page break, turns and an upload · page 2": "2866f10b51c574cb",

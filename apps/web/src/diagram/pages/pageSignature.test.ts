@@ -38,13 +38,19 @@ import { cellSlots } from './stepPlaces';
 
 /**
  * Twelve steps `s0`…, five a page, a turn before `s2`: pages s0–s4, s5–s9, s10–s11 (laid out for five). No title
- * block, as every page saved before it, whatever a new diagram has.
+ * block, and a scale steadiness of 0.85, as every page saved before either changed, whatever a new diagram has.
  */
 function diagram(page: Partial<DiagramPageSetup> = {}): DiagramDocument {
   const steps = Array.from({ length: 12 }, (_, index) => cpStep(`s${index}`));
   const document = insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0);
   const turned = insertSteps(document, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 't0')], 2);
-  return setPageSetup(turned, { layout: 'flow', stepsPerPage: 5, titleBlock: PAGE_SETTINGS.titleBlock.legacy, ...page });
+  return setPageSetup(turned, {
+    layout: 'flow',
+    stepsPerPage: 5,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+    flowSteadiness: PAGE_SETTINGS.flowSteadiness.legacy,
+    ...page,
+  });
 }
 
 const signatures = (document: DiagramDocument) => cellSlots(document).signatures;

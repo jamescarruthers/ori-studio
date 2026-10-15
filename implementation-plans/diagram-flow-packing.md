@@ -24,7 +24,7 @@ build must look like it at its defaults.
   its arrangement is then stored in the file and held.
 - Every packing parameter is a page setting, with Zach's defaults: Bands
   Auto preferring 3 (strength 0.5), steps in bends allowed, nesting 0.8,
-  scale steadiness 0.85.
+  scale steadiness 0.85 (0.5 for a new diagram since 2026-10-15).
 - Packing a page takes tens of milliseconds; drawing a held page costs what
   today's layout costs.
 
@@ -72,7 +72,8 @@ build must look like it at its defaults.
      are preferred);
    - `flowBendSteps`: boolean, default true;
    - `flowNesting`: 0–1, default 0.8;
-   - `flowSteadiness`: 0–1, default 0.85.
+   - `flowSteadiness`: 0–1, default 0.85 (0.5 for a diagram made since
+     2026-10-15, Zach; a file that does not say it still reads 0.85).
    A fixed even band count on a left page that hands over at its spine uses
    the odd count either side that packs larger (step 1 top left; Decision 8).
 8. Grid pages are unchanged. Pagination, per-page counts and the last page laid
@@ -655,6 +656,30 @@ changes Decisions 4 and 6, or the note just above, this holds:
   number, 15.6 mm², and step 21's and step 28's pictures past their boxes).
   Re-pack Page on page 3 alone: k 1.01 → 0.79, every picture in its box
   (`after/B-page-3-repacked.png`, `after/C-page-3-repacked.png`).
+
+## Scale steadiness 0.5 for a new diagram (2026-10-15)
+
+**Decided by Zach, 2026-10-15:** "also lower the steadiness to 0.5 by
+default". A rule measuring each page against the typical page so far (the
+median of the pages before it, `pack-8`) was built on its own branch the
+same day and not merged: "Let's just not merge it ... make the default zero
+point five ... I do want that." Only the default came over (cherry-picked
+from 3f49f7993), onto the page-before rule.
+
+- `PAGE_SETTINGS.flowSteadiness` is `{ default: 0.5, legacy: 0.85 }`: a new
+  diagram's page may grow ×1.3 past the page before it, where it was ×1.09,
+  and its score still makes growth past the page before pay
+  (`s × 1.5 = 0.75 < 1`), only less.
+- Nothing saved moves: every file saved since 2026-10-12 says its
+  steadiness (0.85), and one that does not reads the legacy 0.85. The
+  packer is unchanged, so `PACKER_VERSION` is too; held pages keep their
+  arrangements.
+- The help text is today's ("…the page before it…").
+- Fixtures that meant the old default now say 0.85: the frozen signatures'
+  structure (`pageSignature.test.ts`, `FROZEN_SIGNATURES` unchanged), the
+  steadiness case in `stepPlaces.test.ts`, and damage in
+  `diagramFile.test.ts`. The page golden's changed pages are explained in
+  `placeGolden.test.ts`.
 
 ## Affected Areas
 

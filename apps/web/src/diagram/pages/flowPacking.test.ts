@@ -728,11 +728,15 @@ describe('packFlowPage: scale', () => {
   });
 
   it('holds a page’s scale to the page before’s, as steadily as asked', () => {
-    expect(pack(tiny, { kPrev: 0.5 }).k).toBeCloseTo(0.5 * (1 + 0.6 * (1 - 0.85)), 12);
+    // 0.85, every page saved so far: ×1.09 past the page before.
+    const saved = { flowSteadiness: 0.85 };
+    expect(pack(tiny, { kPrev: 0.5, settings: saved }).k).toBeCloseTo(0.5 * (1 + 0.6 * (1 - 0.85)), 12);
     expect(pack(tiny, { kPrev: 0.5, settings: { flowSteadiness: 1 } }).k).toBe(0.5);
     expect(pack(tiny, { kPrev: 0.5, settings: { flowSteadiness: 0 } }).k).toBeCloseTo(0.8, 12);
     expect(pack(tiny, { kPrev: 1.2, settings: { flowSteadiness: 0 } }).k).toBe(PAGE_SCALE.max);
-    expect(pack(tiny, { kPrev: 0.5 }).summary.cap).toBeCloseTo(0.545, 12);
+    expect(pack(tiny, { kPrev: 0.5, settings: saved }).summary.cap).toBeCloseTo(0.545, 12);
+    // A new diagram's 0.5 (Zach, 2026-10-15): ×1.3.
+    expect(pack(tiny, { kPrev: 0.5 }).k).toBeCloseTo(0.65, 12);
   });
 
   it('never caps a scale under the least the search starts from', () => {
