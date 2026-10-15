@@ -57,8 +57,12 @@ const LEAST_SCALE = 0.01;
  * its pin, which no page scale changes, so its box holds it as it prints.
  * `pack-6` (2026-10-13): a caption 3 mm under its picture (`CAPTION_TOP_MM`,
  * 2 before), so a box with a caption is packed a millimetre taller.
+ * `pack-7` (2026-10-15): a page's first band starts at its area's left edge,
+ * where it kept half a share of the spare width (Zach: step 1 at the top
+ * left), and a first step whose picture prints past its box (a size pin no
+ * plan holds) stands in as far as that picture needs to start there.
  */
-export const PACKER_VERSION = 'pack-6';
+export const PACKER_VERSION = 'pack-7';
 
 /**
  * The page as packed, kept as its arrangement, rounded as the store keeps it

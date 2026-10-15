@@ -2054,6 +2054,37 @@ otherwise still checks every plan, scale and box.
   ribbon's tests (b4), the held-page sweeps and the layout budget pass.
 - A test that failed before: every page kind's first step at the area's
   left, the spare shared between the band's steps and after its last.
+- *(Missed here, fixed in the review: `PACKER_VERSION` was left at
+  `pack-6`, so pages packed before and after this change carried the same
+  stamp. It is `pack-7` now, with the review's first-step fix below.)*
+
+*Review fixes (round 2, 2026-10-15): the packer.* `pages/flowPacking.ts`,
+`pages/diagramPageLayout.ts`, `pages/flowArrangement.ts`.
+- **`PACKER_VERSION` is `pack-7`,** dated in its doc comment and in
+  `diagram-document-evolution.md` §1 and its checklist. A held page keeps
+  its stamp (`holdsArrangement` never reads it): the crane as it opens
+  stays `pack-6` on every page, its PDF the same to the byte as before the
+  bump (`artifacts/title-block/round2-final/commit1/` against `commit2/`).
+- **A first step whose picture prints past its box stands in as far as
+  that picture needs to start at the area's left edge,** as much as the
+  band's spare allows, the rest shared between its steps and after the
+  last as before. That happens only where a page's size pins take more
+  than any plan holds, which is packed as with no pin and draws each
+  pinned picture at its pin past its box (2026-10-13): the packer is now
+  told how wide such a picture prints (`PackStep.drawnWidth`). On the
+  crane with the block on, step 28 (its picture pinned at 65.3 mm in a
+  47.9 mm box) stood alone at page 4's foot with its picture 8.7 mm past
+  the margin, 3.3 mm from the paper's edge at the spine (3.3 mm past it
+  before step 1 moved to the top left); it now starts at the margin. On
+  then off, page 2's step 10 went from 2.3 mm past the margin to 4.1 mm
+  inside it (its hand offset). Pins too large for the band's spare (four
+  times their size, `heldPages.test.ts`) still reach past it: the band
+  gives the first step all of it. No golden moved; no fixture page packs
+  so.
+- Tests that failed before, against a copy of 3789b31b3's packer
+  (`round2-final/failing-before/packer/`): the new placement case in
+  `flowPacking.test.ts`. The held-page case that pinned "every box where it
+  was" for such a page now pins the first band's lead.
 
 *Review fixes (round 2, 2026-10-15): the toggle and the shift.*
 `pages/pageCounts.ts`, `pages/useCurrentDiagramPage.ts`,

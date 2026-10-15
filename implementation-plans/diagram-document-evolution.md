@@ -47,7 +47,10 @@ new homes (reproduced with `artifacts/layout-review/crane_final_oldpack.osf`,
 - `PACKER_VERSION` (`pages/flowArrangement.ts`; `pack-4` when this part was
   built, `pack-5` since 2026-10-13: a size pin packed at its pin; `pack-6` the
   same day: a caption 3 mm under its picture, so captioned boxes pack a
-  millimetre taller, while held pages keep their boxes) — the packer's own
+  millimetre taller, while held pages keep their boxes; `pack-7` since
+  2026-10-15: a page's first band at its area's left edge, step 1 at the top
+  left, and a first step whose picture prints past its box set in as far as
+  that picture needs) — the packer's own
   version, stamped on each newly packed arrangement as `packer`
   (`DiagramPageArrangement.packer`): read leniently (any string kept as it
   came; anything else dropped alone, the page still held), written back,
@@ -321,6 +324,7 @@ legacy value.
 - [x] Signature covers the page's structure only; `SIGNATURE_VERSION` frozen at `pack-3`, the format rule written down
 - [x] `PACKER_VERSION` stamped on newly packed arrangements as `packer`, read leniently, written back, never asked
 - [x] `PACKER_VERSION` bumped to `pack-4` for the enlarged-step packing change (c1bd3d0a2)
+- [x] `PACKER_VERSION` bumped to `pack-7` for step 1 at the top left (`diagram-title-block.md`, 2026-10-15; missed by 3789b31b3, bumped in its review)
 - [x] Store and layout sign a diagram's first and last pages alike (turns at the ends)
 - [x] Frozen fixture: a file saved before the change opens with every page held, nothing adopted, every step in its box
 - [x] A bumped packer version holds every saved page and packs only a re-packed one, stamped with it

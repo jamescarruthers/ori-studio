@@ -13,7 +13,9 @@
  * first step stands at the area's left edge where the prototype set it in by
  * half a share of the spare width (Zach, 2026-10-15: step 1 starts at the top
  * left; every later page, a right-hand one entered at its spine included,
- * starts on its left). Five things the prototype never met are decided here:
+ * starts on its left) — or, where its picture prints wider than its box
+ * (`PackStep.drawnWidth`), as far in as lets the picture start there. Five
+ * things the prototype never met are decided here:
  * a fixed even band count on a left page that hands over at its spine takes
  * the odd count either side that packs larger (Decision 7); a fixed count past
  * the page's steps is held to them; Prefer three bands weighs only in Auto; a
@@ -128,6 +130,13 @@ export interface PackStep {
   textWidth?: number;
   /** Turns stand before it, so it keeps their gutter before it in its band. */
   turnsBefore: boolean;
+  /**
+   * Its picture's width as it prints, mm, where that is more than {@link size}
+   * packs it at: a size pinned by hand that no plan could hold, drawn at its
+   * pin past its box, centred on it. A page's first step is set in far enough
+   * that such a picture starts at the area's left edge. Absent, as packed.
+   */
+  drawnWidth?: number;
 }
 
 /** One flow page to pack. */
@@ -322,6 +331,8 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
   const gapBefore = new Float64Array(n);
   // A caption's pinned measure, or 0 where it follows its picture.
   const pinned = new Float64Array(n);
+  // A picture's width as it prints where more than it packs at, or 0.
+  const drawnW = new Float64Array(n);
   for (let i = 0; i < n; i += 1) {
     const s = i % real;
     const step = steps[s]!;
@@ -336,6 +347,7 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
     least[i] = step.numberWidth;
     gapBefore[i] = i < real && step.turnsBefore ? PACKED_TURN_GUTTER_MM : STEP_GAP_MM;
     pinned[i] = step.textWidth !== undefined && Number.isFinite(step.textWidth) && step.textWidth > 0 ? step.textWidth : 0;
+    drawnW[i] = step.drawnWidth !== undefined && Number.isFinite(step.drawnWidth) && step.drawnWidth > 0 ? step.drawnWidth : 0;
   }
 
   // Each step's caption, set once per measure: its lines, and how many.
@@ -728,11 +740,15 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
     const avail = area.w - leftCol - rightCol;
     // In reading order: each step's own gutter before it, then the spare width shared out evenly — a share after
     // each step, half of one before the first; but the page's first band keeps none before its first step, which
-    // stands at the area's left edge (Zach, 2026-10-15: step 1 starts "at the top left of the steps").
+    // stands at the area's left edge (Zach, 2026-10-15: step 1 starts "at the top left of the steps"), or as far
+    // in as its picture needs to start there where it prints wider than its box, as much as the spare allows.
     let sum = 0;
     for (let i = start[b]!; i < end[b]!; i += 1) sum = sum + widthAt(i, k) + (i === start[b]! ? 0 : gapBefore[i]!);
-    const space = Math.max(0, (avail - sum) / (end[b]! - start[b]!));
-    let cursor = b === 0 ? 0 : space / 2;
+    const count = end[b]! - start[b]!;
+    const spare = Math.max(0, avail - sum);
+    const lead = b === 0 ? Math.min(spare, Math.max(0, (drawnW[start[b]!]! - widthAt(start[b]!, k)) / 2)) : spare / count / 2;
+    const space = b === 0 ? (spare - lead) / count : spare / count;
+    let cursor = lead;
     for (let i = start[b]!; i < end[b]!; i += 1) {
       const w = widthAt(i, k);
       cursor += i === start[b]! ? 0 : gapBefore[i]!;

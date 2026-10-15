@@ -332,11 +332,33 @@ describe('a picture whose size is pinned by hand (Zach, 2026-10-13)', () => {
     }, base);
     const layout = layOut(pinned);
     expect(layout.pages[0]!.packing!.fits).toBe(true);
-    // The page packed as with no pin: every box where it was, each picture at its pin past it.
-    for (const cell of layout.pages[0]!.cells) {
-      expect(cell.cellMm, cell.stepId).toEqual(cellOf(before, cell.stepId).cellMm);
+    // The page packed as with no pin, each picture at its pin past its box: every box where it was, but in the first
+    // band, which keeps its steps, its row and their sizes, its first step set in as far as its picture needs to
+    // start at the area's left edge, or the band's spare width allows (`pack-7`, 2026-10-15).
+    const cells = layout.pages[0]!.cells;
+    for (const cell of cells) {
+      const was = cellOf(before, cell.stepId);
+      expect(cell.band, cell.stepId).toBe(was.band);
+      if (cell.band === 0) expect({ ...cell.cellMm, x: 0 }, cell.stepId).toEqual({ ...was.cellMm, x: 0 });
+      else expect(cell.cellMm, cell.stepId).toEqual(was.cellMm);
       expect(pastItsBox(cell), cell.stepId).toBe('picture');
     }
+    // Without a pin the first step stands at the area's left edge. Pins four times the size reach further past it
+    // than the band has spare, so the band gives the first step all of it: its steps stand a gutter apart.
+    const areaLeft = cellOf(before, 's0').cellMm.x;
+    const first = cellOf(layout, 's0');
+    expect(first.cellMm.x).toBeGreaterThan(areaLeft);
+    expect(first.drawMm.x).toBeLessThan(areaLeft);
+    const row = cells.filter((cell) => cell.band === 0 && !cell.bend).sort((a, b) => a.cellMm.x - b.cellMm.x);
+    const wasRow = row.map((cell) => cellOf(before, cell.stepId));
+    row.slice(1).forEach((cell, j) => {
+      const gap = cell.cellMm.x - (row[j]!.cellMm.x + row[j]!.cellMm.w);
+      const wasGap = wasRow[j + 1]!.cellMm.x - (wasRow[j]!.cellMm.x + wasRow[j]!.cellMm.w);
+      // Each gap before was the gutter and one share of the spare, which the first step now has, every share of it
+      // (to the hundredth of a mm an arrangement keeps).
+      expect(gap, cell.stepId).toBeLessThan(wasGap);
+      expect(first.cellMm.x - areaLeft, cell.stepId).toBeCloseTo((wasGap - gap) * row.length, 1);
+    });
   });
 
   it('re-packs nothing when its pin changes on a held page, drawn past its box, until Re-pack Page makes room', () => {
