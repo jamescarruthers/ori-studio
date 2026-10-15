@@ -43,6 +43,7 @@ import { loadDiagramFonts, type DiagramFonts } from '../fonts/diagramFonts';
 import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramFontTexts, enlargeArrowCount, preparedPages, type PreparedDiagramPages } from '../pages/diagramPages';
 import { unfitPages } from '../pages/pageOverflow';
+import { hasTitleBlock } from '../pages/pagePlan';
 import { outsideMarginSteps } from '../pages/pagePlacement';
 import { composedPageUrl } from '../pages/useDiagramPages';
 import { zoomSplits, type ZoomSplit } from '../pages/zoomArrows';
@@ -398,7 +399,8 @@ export function useDiagramExport(
           steps: stepsOf(document).length,
           empty: empty.length,
           enlarged: stepsOf(document).filter((step) => step.zoom !== undefined).length,
-        }
+        },
+        pdf || svg ? { titleBlock: hasTitleBlock(document.page) } : undefined
       );
       toast.success(t('toasts:diagramExport.saved', 'Exported {{name}}', { name }));
       close();

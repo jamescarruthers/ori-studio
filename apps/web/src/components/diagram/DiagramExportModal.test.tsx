@@ -187,6 +187,7 @@ describe('DiagramExportDialog', () => {
     expect(track).toHaveBeenCalledWith('diagram exported', {
       format: 'pdf',
       preset: 'home',
+      title_block: 'hidden',
       file_count_bucket: '<=1',
       step_count_bucket: '<=5',
       empty_step_bucket: '<=1',
@@ -194,6 +195,13 @@ describe('DiagramExportDialog', () => {
       placed_step_bucket: '<=0',
       clash_bucket: '<=0',
     });
+  });
+
+  it('says the pages it writes carry the title block, where the first page has one', async () => {
+    const document = diagram();
+    await open({ ...document, page: { ...document.page, titleBlock: { enabled: true, heightShare: 0.27 } } });
+    await click(exportButton());
+    expect(track).toHaveBeenCalledWith('diagram exported', expect.objectContaining({ format: 'pdf', title_block: 'shown' }));
   });
 
   it('sends a print shop its bleed', async () => {
@@ -223,6 +231,8 @@ describe('DiagramExportDialog', () => {
       'diagram exported',
       expect.objectContaining({ format: 'zip', file_type: 'svg', resolution: 'none', canvas: 'same', number: 'shown' })
     );
+    // Step files carry no title block, so they say nothing of one.
+    expect(track.mock.calls.find(([event]) => event === 'diagram exported')![1]).not.toHaveProperty('title_block');
   });
 
   it('lays the pages out as spreads on one SVG: a spread in the preview, the sheet in the caption', async () => {
@@ -254,6 +264,7 @@ describe('DiagramExportDialog', () => {
     expect(toastSuccess).toHaveBeenCalledWith('Exported Crane.svg');
     expect(track).toHaveBeenCalledWith('diagram exported', {
       format: 'svg',
+      title_block: 'hidden',
       file_count_bucket: '<=2',
       step_count_bucket: '<=20',
       empty_step_bucket: '<=0',

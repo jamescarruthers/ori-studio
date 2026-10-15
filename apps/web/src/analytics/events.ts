@@ -426,7 +426,8 @@ export type DiagramView = 'steps' | 'pages';
  * `page_steps` gives one flow page its own count of steps, and `page_steps_reset` returns it to the
  * default (since 2026-10-11). The `flow_*` settings are the flow's packing, in the Page pane's
  * Packing section (since 2026-10-12): Bands, Prefer three bands, Steps in bends, Nesting and
- * Scale steadiness, set or reset to the default.
+ * Scale steadiness, set or reset to the default. The `title_block*` settings are the Title block
+ * section's: the toggle, and what the block shows — its model, its crease pattern, its byline.
  */
 export type DiagramPageSetting =
   | 'size'
@@ -451,7 +452,14 @@ export type DiagramPageSetting =
   | 'page_numbers'
   | 'first_page'
   | 'style'
-  | 'han_style';
+  | 'han_style'
+  | 'title_block'
+  | 'title_block_model'
+  | 'title_block_pattern'
+  | 'title_block_byline';
+
+/** Where the title block's model or crease pattern was set to come from: what Auto finds, a step chosen, or none. */
+export type DiagramTitleBlockChoice = 'auto' | 'step' | 'none';
 
 /** What Re-pack packed afresh: one flow page (Re-pack Page) or every one (Re-pack All Pages). */
 export type DiagramRepackScope = 'page' | 'all';

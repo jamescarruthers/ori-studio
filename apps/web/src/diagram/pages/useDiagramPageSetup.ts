@@ -49,7 +49,7 @@ export function useDiagramPageSetup() {
   }, []);
   const setStyle = useCallback((choice: DiagramStyleChoice) => {
     if (useWorkspaceStore.getState().setDiagramStyle(choice.style)) {
-      trackDiagramPageSetupChanged('style', choice.analytics);
+      trackDiagramPageSetupChanged('style', { style: choice.analytics });
     }
   }, []);
   const setHanStyle = useCallback((next: DiagramHanStyle) => {

@@ -45,6 +45,7 @@ export type {
   DiagramSourceWorkspace,
   DiagramStepOpenedVia,
   DiagramStyleChoiceName,
+  DiagramTitleBlockChoice,
   DiagramView,
   DiagramPulledInto,
   DiagramPulledMode,
