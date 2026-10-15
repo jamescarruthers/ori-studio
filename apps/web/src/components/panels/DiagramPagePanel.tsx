@@ -23,7 +23,7 @@ import { DiagramPagePlacements } from '../diagram/DiagramPagePlacements';
 import { DiagramPageStepsRow } from '../diagram/DiagramPageStepsRow';
 import { DiagramPathColorRow } from '../diagram/DiagramPathColorRow';
 import { DiagramStyleControl } from '../diagram/DiagramStyleControl';
-import { DiagramTitleBlockSection } from '../diagram/DiagramTitleBlockSection';
+import { DiagramTitleBlockRows } from '../diagram/DiagramTitleBlockRows';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { NumberRow, SegmentedRow, SelectRow, ToggleRow } from '../ui/fieldRows';
 import { OptionCards } from '../ui/OptionCard';
@@ -33,9 +33,10 @@ const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'
 
 /**
  * The Page pane: the paper, how steps are laid out on it — in the flow, how
- * its pages are packed (`DiagramPagePacking`) — the first page's title block
- * (`DiagramTitleBlockSection`), what the header and footer carry, and the
- * style every step is drawn in (D10, D13).
+ * its pages are packed (`DiagramPagePacking`), right under the counts, and the
+ * path's look — what the header and footer carry, opening with the first
+ * page's title block (`DiagramTitleBlockRows`), and the style every step is
+ * drawn in (D10, D13; `diagram-title-block.md`, Phase 1c, H-15 A and H-16 A).
  *
  * A composition site (AGENTS.md › Panel components): the bindings, each one
  * undo step and one count, are `useDiagramPageSetup`, and the page a count of
@@ -110,6 +111,27 @@ export function DiagramPagePanel() {
               onChange={(layout) => setPage({ layout }, 'layout')}
             />
           </div>
+          <SegmentedRow
+            label={t('panels:diagram.pagePane.firstPageSide', 'First page')}
+            value={page.firstPageSide}
+            disabled={readOnly}
+            help={
+              flow
+                ? t(
+                    'panels:diagram.pagePane.firstPageSideFlowHint',
+                    'Which side of a printed spread page 1 falls on. Across each spread the path runs on over the spine, so a right-hand page starts at the bottom, where the left one ends. Page numbers print at the outer corners.'
+                  )
+                : t(
+                    'panels:diagram.pagePane.firstPageSideHint',
+                    'Which side of a printed spread page 1 falls on. Page numbers print at the outer corners.'
+                  )
+            }
+            options={[
+              { id: 'left', label: t('panels:diagram.pagePane.sideLeft', 'Left') },
+              { id: 'right', label: t('panels:diagram.pagePane.sideRight', 'Right') },
+            ]}
+            onChange={(side) => setPage({ firstPageSide: side as DiagramPageSide }, 'first_page_side')}
+          />
           {flow ? (
             <>
               {/* The flow takes a number of steps and chooses its rows to suit the paper (`flowShape`): the
@@ -153,61 +175,42 @@ export function DiagramPagePanel() {
               />
             </>
           )}
-          {flow && (
+        </CollapsibleSection>
+        {flow && <DiagramPagePacking page={page} readOnly={readOnly} setPage={setPage} />}
+        <DiagramPagePlacements />
+        {flow && (
+          <CollapsibleSection title={t('panels:diagram.pagePane.path', 'Path')}>
             <ToggleRow
               label={t('panels:diagram.pagePane.showPath', 'Show path')}
               checked={page.showPath}
               disabled={readOnly}
               onChange={(showPath) => setPage({ showPath }, 'path')}
             />
-          )}
-          {flow && page.showPath && (
-            <>
-              <NumberRow
-                label={t('panels:diagram.pagePane.pathWidthMm', 'Path width (mm)')}
-                value={page.pathWidthMm}
-                min={PATH_WIDTH_MM_RANGE.min}
-                max={PATH_WIDTH_MM_RANGE.max}
-                step={1}
-                disabled={readOnly}
-                onCommit={(pathWidthMm) => setPage({ pathWidthMm }, 'path_width')}
-                onReset={
-                  page.pathWidthMm !== DEFAULT_PATH_WIDTH_MM
-                    ? () => setPage({ pathWidthMm: DEFAULT_PATH_WIDTH_MM }, 'path_width')
-                    : undefined
-                }
-              />
-              <DiagramPathColorRow />
-            </>
-          )}
-          <SegmentedRow
-            label={t('panels:diagram.pagePane.firstPageSide', 'First page')}
-            value={page.firstPageSide}
-            disabled={readOnly}
-            help={
-              flow
-                ? t(
-                    'panels:diagram.pagePane.firstPageSideFlowHint',
-                    'Which side of a printed spread page 1 falls on. Across each spread the path runs on over the spine, so a right-hand page starts at the bottom, where the left one ends. Page numbers print at the outer corners.'
-                  )
-                : t(
-                    'panels:diagram.pagePane.firstPageSideHint',
-                    'Which side of a printed spread page 1 falls on. Page numbers print at the outer corners.'
-                  )
-            }
-            options={[
-              { id: 'left', label: t('panels:diagram.pagePane.sideLeft', 'Left') },
-              { id: 'right', label: t('panels:diagram.pagePane.sideRight', 'Right') },
-            ]}
-            onChange={(side) => setPage({ firstPageSide: side as DiagramPageSide }, 'first_page_side')}
-          />
-        </CollapsibleSection>
-        <DiagramTitleBlockSection />
-        {flow && <DiagramPagePacking page={page} readOnly={readOnly} setPage={setPage} />}
-        <DiagramPagePlacements />
+            {page.showPath && (
+              <>
+                <NumberRow
+                  label={t('panels:diagram.pagePane.pathWidthMm', 'Path width (mm)')}
+                  value={page.pathWidthMm}
+                  min={PATH_WIDTH_MM_RANGE.min}
+                  max={PATH_WIDTH_MM_RANGE.max}
+                  step={1}
+                  disabled={readOnly}
+                  onCommit={(pathWidthMm) => setPage({ pathWidthMm }, 'path_width')}
+                  onReset={
+                    page.pathWidthMm !== DEFAULT_PATH_WIDTH_MM
+                      ? () => setPage({ pathWidthMm: DEFAULT_PATH_WIDTH_MM }, 'path_width')
+                      : undefined
+                  }
+                />
+                <DiagramPathColorRow />
+              </>
+            )}
+          </CollapsibleSection>
+        )}
         <CollapsibleSection title={t('panels:diagram.pagePane.headerFooter', 'Header & footer')}>
+          <DiagramTitleBlockRows />
           <ToggleRow
-            label={t('panels:diagram.pagePane.title', 'Title')}
+            label={t('panels:diagram.pagePane.title', 'Title tab')}
             help={
               // The title block carries the title on the first page, which prints no tab (T-5 A).
               hasTitleBlock(page)

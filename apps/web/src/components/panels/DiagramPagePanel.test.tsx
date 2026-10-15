@@ -261,12 +261,49 @@ describe('DiagramPagePanel', () => {
     expect(analytics.trackDiagramPageSetupChanged).not.toHaveBeenCalled();
   });
 
-  it('puts the Title block section after Layout (T-19 A)', () => {
-    const sections = ['Paper', 'Layout', 'Title block', 'Header & footer', 'Style'];
-    const shown = [...host!.querySelectorAll('[role="group"][aria-label]')]
-      .map((group) => group.getAttribute('aria-label')!)
-      .filter((label) => sections.includes(label));
-    expect(shown).toEqual(sections);
+  /**
+   * The pane's sections in order, by the names they carry: an open section's
+   * group, a closed one's disclosure. Once each: the Style section's cards are
+   * a group of the same name.
+   */
+  const sectionOrder = () => {
+    const names = ['Paper', 'Layout', 'Packing', 'On the page', 'Path', 'Header & footer', 'Style'];
+    const found = [...host!.querySelectorAll('[role="group"][aria-label], button[aria-expanded]')]
+      .map((element) => element.getAttribute('aria-label') ?? element.textContent ?? '')
+      .filter((name) => names.includes(name));
+    return [...new Set(found)];
+  };
+
+  it('puts Packing right under the counts, the path in a section of its own, and the title block in Header & footer (H-15 A, H-16 A)', () => {
+    expect(sectionOrder()).toEqual(['Paper', 'Layout', 'Packing', 'Path', 'Header & footer', 'Style']);
+    // Layout ends on the current page's count, which Packing follows.
+    const layout = host!.querySelector('[role="group"][aria-label="Layout"]')!;
+    const rows = [...layout.querySelectorAll('[data-field-label]')].map((label) => label.textContent);
+    expect(rows).toEqual(['First page', 'Steps per page', expect.stringMatching(/^Steps on page \d/)]);
+    // The path's rows are its section's, and the title block opens Header & footer, before the title's tab.
+    const path = host!.querySelector('[role="group"][aria-label="Path"]')!;
+    expect([...path.querySelectorAll('[data-field-label]')].map((label) => label.textContent)).toEqual([
+      'Show path',
+      'Path width (mm)',
+      'Path color',
+    ]);
+    // Found by its name, not a selector: jsdom's selector engine trips on the ampersand.
+    const header = [...host!.querySelectorAll('[role="group"]')].find(
+      (group) => group.getAttribute('aria-label') === 'Header & footer'
+    )!;
+    const switches = [...header.querySelectorAll('[role="switch"]')].map((each) => each.getAttribute('aria-label'));
+    expect(switches).toEqual(['Title block', 'Title tab', 'Page numbers']);
+  });
+
+  it('has no Packing and no Path in a grid, whose layout ends on its columns and rows', () => {
+    act(() => radio('Grid').click());
+    expect(sectionOrder()).toEqual(['Paper', 'Layout', 'Header & footer', 'Style']);
+    const layout = host!.querySelector('[role="group"][aria-label="Layout"]')!;
+    expect([...layout.querySelectorAll('[data-field-label]')].map((label) => label.textContent)).toEqual([
+      'First page',
+      'Columns',
+      'Rows',
+    ]);
   });
 
   it('says the title’s tab leaves the first page to the title block while the block is on (T-5 A)', () => {

@@ -2,18 +2,17 @@ import { useTranslation } from 'react-i18next';
 import type { TitleBlockPartChoices } from '../../diagram/pages/titleBlockChoices';
 import { TITLE_BLOCK_BYLINE_LINES } from '../../diagram/pages/titleBlockGeometry';
 import { useDiagramTitleBlock } from '../../diagram/pages/useDiagramTitleBlock';
-import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { SelectRow, TextAreaRow, ToggleRow, type SelectRowOption } from '../ui/fieldRows';
 
 /**
- * The Page pane's Title block section (`implementation-plans/diagram-title-block.md`,
- * section 7, T-15 A and T-19 A): the toggle for the first page's title block
- * and, while the page has one, what it shows — the finished model and the
- * crease pattern, each Auto (named by the step it finds), a step, or None,
- * and the byline under the title. Bound by `useDiagramTitleBlock`, which
- * offers only what the block can show.
+ * The first page's title block, as rows the Page pane's Header & footer opens
+ * with (`implementation-plans/diagram-title-block.md`, Phase 1c, H-16 A): the
+ * toggle and, a step in under it while the page has a block, what the block
+ * shows — the finished model and the crease pattern, each Auto (named by the
+ * step it finds), a step, or None, and the byline under the title. Bound by
+ * `useDiagramTitleBlock`, which offers only what the block can show.
  */
-export function DiagramTitleBlockSection() {
+export function DiagramTitleBlockRows() {
   const { t } = useTranslation();
   const block = useDiagramTitleBlock();
   const { readOnly } = block;
@@ -32,9 +31,9 @@ export function DiagramTitleBlockSection() {
     return chosen && !chosen.gives ? cannot(chosen.number) : undefined;
   };
   return (
-    <CollapsibleSection title={t('panels:diagram.pagePane.titleBlock.section', 'Title block')}>
+    <>
       <ToggleRow
-        label={t('panels:diagram.pagePane.titleBlock.show', 'Show on first page')}
+        label={t('panels:diagram.pagePane.titleBlock.show', 'Title block')}
         help={t(
           'panels:diagram.pagePane.titleBlock.showHelp',
           'The title, the crease pattern and the finished model, at the top of the first page.'
@@ -55,6 +54,7 @@ export function DiagramTitleBlockSection() {
             note={reason(block.model, (number) =>
               t('panels:diagram.pages.titleBlock.stepNoPicture', 'Step {{number}} has no picture yet', { number })
             )}
+            nested
             value={block.model.value}
             disabled={readOnly}
             options={options(block.model, t('panels:diagram.pagePane.titleBlock.autoNoPicture', 'Auto (no pictures)'))}
@@ -69,6 +69,7 @@ export function DiagramTitleBlockSection() {
             note={reason(block.pattern, (number) =>
               t('panels:diagram.pages.titleBlock.stepNoPattern', 'Step {{number}} has no crease pattern', { number })
             )}
+            nested
             value={block.pattern.value}
             disabled={readOnly}
             options={options(block.pattern, t('panels:diagram.pagePane.titleBlock.autoNoneLinked', 'Auto (none linked)'))}
@@ -83,6 +84,7 @@ export function DiagramTitleBlockSection() {
               'Credits under the title, as you write them. Up to {{lines}} lines print; a long line wraps onto the next.',
               { lines: TITLE_BLOCK_BYLINE_LINES }
             )}
+            nested
             value={block.note}
             placeholder={t('panels:diagram.pagePane.titleBlock.bylinePlaceholder', 'Design: …\nPaper: 60 cm square')}
             rows={4}
@@ -91,6 +93,6 @@ export function DiagramTitleBlockSection() {
           />
         </>
       )}
-    </CollapsibleSection>
+    </>
   );
 }

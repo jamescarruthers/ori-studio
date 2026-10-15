@@ -1114,6 +1114,7 @@
       "pageStepsTitleBlockOwn": "关闭标题栏会给此步骤数加上 {{number}}；后面的页面保留各自的步骤数，并随之顺移。",
       "pageStepsUseDefault": "使用默认值",
       "paper": "纸张",
+      "path": "",
       "pathColor": "路径颜色",
       "pathWidthMm": "路径宽度（mm）",
       "portrait": "纵向",
@@ -1146,7 +1147,6 @@
         "none": "无",
         "pattern": "折痕图",
         "patternHelp": "取自步骤所链接的折痕图。自动时使用最后一个已链接的步骤；每个折痕图只列出一次，以为它选定的步骤命名，没有则以链接它的最后一步命名。",
-        "section": "标题栏",
         "show": "在首页显示",
         "showHelp": "在首页顶部显示标题、折痕图和成品。",
         "step": "第 {{number}} 步"

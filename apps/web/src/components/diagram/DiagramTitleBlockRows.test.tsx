@@ -7,7 +7,7 @@ import { emptyStep, patternStep, titleBlockDiagram } from '../../diagram/pages/t
 import { TITLE_BLOCK_BYLINE_LINES } from '../../diagram/pages/titleBlockGeometry';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
-import { DiagramTitleBlockSection } from './DiagramTitleBlockSection';
+import { DiagramTitleBlockRows } from './DiagramTitleBlockRows';
 
 const analytics = vi.hoisted(() => ({ trackDiagramPageSetupChanged: vi.fn() }));
 vi.mock('../../analytics', async (importOriginal) => ({
@@ -23,10 +23,11 @@ vi.mock('../../diagram/pages/titleBlockChoices', async (importOriginal) => {
 });
 
 /**
- * The Page pane's Title block section (`implementation-plans/diagram-title-block.md`,
- * section 7): the toggle a page setting, what the block shows set one part at a
- * time — each one undo step and one count — and only what the block can show
- * offered, each select naming what Auto finds.
+ * The title block's rows in the Page pane's Header & footer
+ * (`implementation-plans/diagram-title-block.md`, section 7 and Phase 1c): the
+ * toggle a page setting, what the block shows set one part at a time — each
+ * one undo step and one count — and only what the block can show offered,
+ * each select naming what Auto finds.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -54,7 +55,7 @@ function install(
   act(() => state().installDiagram({ document, readOnly, raw: {} }));
 }
 
-const toggle = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Show on first page"]')!;
+const toggle = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Title block"]')!;
 const select = (label: string) => host!.querySelector<HTMLButtonElement>(`button[role="combobox"][aria-label="${label}"]`);
 const byline = () => host!.querySelector<HTMLTextAreaElement>('textarea');
 /** The note a select is described by, and whether it is a reason; null with none. */
@@ -111,12 +112,12 @@ const render = () =>
   act(() =>
     root?.render(
       <TooltipProvider>
-        <DiagramTitleBlockSection />
+        <DiagramTitleBlockRows />
       </TooltipProvider>
     )
   );
 
-describe('DiagramTitleBlockSection', () => {
+describe('DiagramTitleBlockRows', () => {
   it('turns the block on as a page setting, one undo step and one count, and shows what it holds only then', () => {
     install();
     render();
@@ -147,18 +148,26 @@ describe('DiagramTitleBlockSection', () => {
     expect(choices.titleBlockChoices).toHaveBeenCalled();
   });
 
-  it('names the switch by what it does, not again by its section, and says what each select’s Auto follows', () => {
+  it('names the switch by what it turns on, and says what each select’s Auto follows', () => {
     install({ titleBlock: ON });
     render();
-    const group = host!.querySelector('[role="group"]');
-    expect(group?.getAttribute('aria-label')).toBe('Title block');
-    expect(group?.querySelector('button[role="switch"]')?.getAttribute('aria-label')).toBe('Show on first page');
+    expect(toggle()).not.toBeNull();
     const helpOf = (label: string) =>
       select(label)!.closest('[data-field-row]')!.querySelector('[data-field-help]')?.getAttribute('aria-label');
     expect(helpOf('Model')).toBe('The finished model, drawn from a step’s picture. Auto uses the last step with one.');
     expect(helpOf('Crease pattern')).toBe(
       'Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the step chosen for it or else the last step that links it.'
     );
+  });
+
+  it('sets what the block shows a step in under its toggle, which stands at the margin', () => {
+    install({ titleBlock: ON });
+    render();
+    const nested = (element: Element) => element.closest('[data-nested]') !== null;
+    expect(nested(toggle())).toBe(false);
+    expect(nested(select('Model')!)).toBe(true);
+    expect(nested(select('Crease pattern')!)).toBe(true);
+    expect(nested(byline()!)).toBe(true);
   });
 
   it('offers the steps with a picture for the model and each linked pattern once, each select naming what Auto finds', () => {

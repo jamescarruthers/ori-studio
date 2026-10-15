@@ -1151,6 +1151,7 @@
       "pageStepsTitleBlockOwn": "Turning the title block off adds {{number}} to this count; later pages keep theirs and shift.",
       "pageStepsUseDefault": "Use default",
       "paper": "Paper",
+      "path": "Path",
       "pathColor": "Path color",
       "pathWidthMm": "Path width (mm)",
       "portrait": "Portrait",
@@ -1169,7 +1170,7 @@
       "style": "Style",
       "styleHint": "Ink and pens change on every step at once. A 3D step takes a new light when it is refreshed.",
       "styleSection": "Style",
-      "title": "Title",
+      "title": "Title tab",
       "titleBlock": {
         "auto": "Auto (step {{number}})",
         "autoNoneLinked": "Auto (none linked)",
@@ -1183,8 +1184,7 @@
         "none": "None",
         "pattern": "Crease pattern",
         "patternHelp": "Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the step chosen for it or else the last step that links it.",
-        "section": "Title block",
-        "show": "Show on first page",
+        "show": "Title block",
         "showHelp": "The title, the crease pattern and the finished model, at the top of the first page.",
         "step": "Step {{number}}"
       },

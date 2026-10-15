@@ -1114,6 +1114,7 @@
       "pageStepsTitleBlockOwn": "제목 영역을 끄면 이 단계 수에 {{number}}이(가) 더해집니다. 다음 페이지는 각자의 단계 수를 유지한 채 밀립니다.",
       "pageStepsUseDefault": "기본값 사용",
       "paper": "용지",
+      "path": "",
       "pathColor": "경로 색상",
       "pathWidthMm": "경로 너비(mm)",
       "portrait": "세로",
@@ -1146,7 +1147,6 @@
         "none": "없음",
         "pattern": "전개도",
         "patternHelp": "단계에 연결된 전개도에서 그립니다. 자동은 연결된 마지막 단계를 사용하며, 각 전개도는 그 전개도로 선택한 단계, 없으면 그것을 연결한 마지막 단계의 이름으로 한 번만 표시됩니다.",
-        "section": "제목 영역",
         "show": "첫 페이지에 표시",
         "showHelp": "제목, 전개도, 완성 모델을 첫 페이지 위쪽에 표시합니다.",
         "step": "{{number}}단계"

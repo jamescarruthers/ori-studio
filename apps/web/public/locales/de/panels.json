@@ -1151,6 +1151,7 @@
       "pageStepsTitleBlockOwn": "Wird der Titelblock ausgeschaltet, kommen {{number}} zu dieser Anzahl hinzu; die folgenden Seiten behalten ihre und verschieben sich.",
       "pageStepsUseDefault": "Standard verwenden",
       "paper": "Papier",
+      "path": "",
       "pathColor": "Pfadfarbe",
       "pathWidthMm": "Pfadbreite (mm)",
       "portrait": "Hochformat",
@@ -1183,7 +1184,6 @@
         "none": "Keine",
         "pattern": "Faltmuster",
         "patternHelp": "Gezeichnet nach dem Faltmuster, das ein Schritt verknüpft. Auto nimmt den letzten verknüpften Schritt; jedes Muster steht nur einmal in der Liste, unter dem dafür gewählten Schritt oder sonst unter dem letzten Schritt, der es verknüpft.",
-        "section": "Titelblock",
         "show": "Auf Seite 1 zeigen",
         "showHelp": "Titel, Faltmuster und fertiges Modell oben auf der ersten Seite.",
         "step": "Schritt {{number}}"
