@@ -1349,6 +1349,27 @@ null, or a null `thumbnail`), so the overlay can name it.
   Diagram's policy), whose aux switch decides whether an `unassigned` line
   shows.
 
+**1e. The Page pane and the overlay**
+- [x] **Order:** 1c is merged into `claude/diagram-title-block` before the
+  toggle is. Page 1's signature already assumes 1c's layout (the block's
+  entry, no tab), so a page 1 packed and saved with the block on before 1c,
+  in a PR preview say, would be held after it with steps under the block.
+  Until 1c is in, the toggle stays hidden, and nobody saves a block-on file
+  from an intermediate build. (Done in the review of the pane: the pane's
+  lane carries 1c and 1d, merged in at 07f2596c6, so it cannot land without
+  them.)
+- [x] `useDiagramTitleBlock` and `DiagramTitleBlockSection`, mounted by the
+  Page pane after Layout (T-19 A). `setDiagramTitleBlockContent`, one undo
+  step each.
+- [x] Only valid choices offered: steps with pictures, distinct linked
+  patterns, each select naming what Auto finds. The toggle disabled in a
+  one-row grid, with its hint. Read-only diagrams disable the section.
+- [x] The overlay's placeholders. The Title help updated.
+- [x] With the block on and page 1 holding its own count, "Steps on page
+  1" says the block does not change it (T-20 B).
+- [x] Analytics and `docs/analytics.md`.
+- [ ] i18n: extract, eight locales, stamp, check.
+
 *As built (1e, the overlay's placeholders; the pane is its own lane).*
 `DiagramTitleBlockOverlay` (with its CSS module) is mounted by the Pages
 view over the first page: the block's outline, drawn as the margin guide
@@ -1364,25 +1385,6 @@ white in either theme; one placeholder component for both would move the
 Pages view's `.placeholder` block, which needs its browser proof, so it is
 left for a CSS move of its own. Strings are inline English only; the
 catalogs are extracted and translated with the pane's.
-
-**1e. The Page pane and the overlay**
-- [ ] **Order:** 1c is merged into `claude/diagram-title-block` before the
-  toggle is. Page 1's signature already assumes 1c's layout (the block's
-  entry, no tab), so a page 1 packed and saved with the block on before 1c,
-  in a PR preview say, would be held after it with steps under the block.
-  Until 1c is in, the toggle stays hidden, and nobody saves a block-on file
-  from an intermediate build.
-- [x] `useDiagramTitleBlock` and `DiagramTitleBlockSection`, mounted by the
-  Page pane after Layout (T-19 A). `setDiagramTitleBlockContent`, one undo
-  step each.
-- [x] Only valid choices offered: steps with pictures, distinct linked
-  patterns, each select naming what Auto finds. The toggle disabled in a
-  one-row grid, with its hint. Read-only diagrams disable the section.
-- [ ] The overlay's placeholders. The Title help updated.
-- [x] With the block on and page 1 holding its own count, "Steps on page
-  1" says the block does not change it (T-20 B).
-- [x] Analytics and `docs/analytics.md`.
-- [ ] i18n: extract, eight locales, stamp, check.
 
 *As built (1e, the store only; the pane is its own lane).* The slice
 action `setDiagramTitleBlockContent(patch)` commits `setTitleBlockContent`
@@ -1434,6 +1436,42 @@ As planned, with these calls:
 - Order: the toggle is live in this lane, so it merges after 1c.
 - Checked in the browser (crane and a new diagram; Chromium at desktop width
   and WebKit at iPad width, light and dark; the one-row grid; read-only).
+
+*Review of the Page pane (2026-10-14).* What it changed:
+- The pane's lane carries 1c and 1d (the layout and drawing lane, merged in
+  at 07f2596c6), so the toggle cannot reach `claude/diagram-title-block`
+  without page 1's layout, and the lane shows the block when previewed on
+  its own. On the crane, turning the block on now draws it on page 1.
+- One answer to "is there a pattern": `givesPattern` asks `drawsPattern`,
+  the test `patternScene` is drawn by. A link whose thumbnail has no line
+  to draw (a capture that found none, or aux lines only) is not offered,
+  Auto passes over it, and one chosen is marked "(no crease pattern)", as
+  the overlay names it. "(not linked)" is gone.
+- "Needs two rows or more" is not dimmed with its disabled row: the note
+  says which it is (`data-field-note="reason"`), and a reason keeps the
+  label's ink. 1.46:1 became 4.59:1 in light, 1.57:1 became 4.38:1 in dark
+  (the enabled labels' own figures). "Overridden" still dims.
+- The switch is "Show on first page", as Layout's is "Show path", so the
+  pane no longer reads "Title block" twice (section 7 called both "Title
+  block").
+- Model and Crease pattern each have help saying what Auto uses. Previews
+  in the lists belong with the Phase 2 picker.
+- The byline has help, through a `help` prop on `TextAreaRow` (the field
+  row's own mark, `FieldRowHelp`, set beside the label so it stays out of
+  the field's name). It says up to `TITLE_BLOCK_BYLINE_LINES` lines print,
+  the drawing's own limit, so the two cannot disagree.
+- "Steps on page 1" has help whenever page 1 is under the block: why it
+  holds 7 by default, or that its own count stays and it would hold 7
+  without one. The Title help reads "…every page. On the first page the
+  title block carries it instead."
+- `setPageSetting` is the Page pane's one commit-and-count for a page
+  setting, used by `useDiagramPageSetup` and the title block's toggle.
+- The choices are worked out only while the first page has the block.
+- Not changed: the section stays after Layout (T-19 A). Moving it after On
+  the page, just above Header & footer, keeps Layout's own sections
+  together and sits beside the Title toggle; both orders are captured for
+  Zach (`artifacts/title-block/out/order/`). The i18n step waits for both
+  lanes' review fixes, so the nine catalogs are done once.
 
 **1f. The default goes on**
 - [ ] `PAGE_SETTINGS.titleBlock.default` on, in a commit of its own. A new
