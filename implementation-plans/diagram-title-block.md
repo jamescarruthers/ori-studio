@@ -16,8 +16,9 @@ at the end of Phase 1):
   there is space above it dedicated to the title)". A page's first step
   stands at its packing area's left edge.
 - The header's look (sizes, a striking design on the left, a rich-text
-  byline, the pane's order, a default byline) waits on mockups he will
-  choose from; nothing of it is built here.
+  byline, the pane's order, a default byline) waited on mockups. He chose
+  J1b the same day, with label + value credits, an editable subtitle, a
+  plain-text note and no rich text: "Phase 1c: the header", after Phase 1.
 - Reviewed the same day (round 2): fixed what the review found, and four
   questions for him, Q1–Q4 under "For Zach (round 2, 2026-10-15)" — the
   first two about hand positions on a page the toggle re-packs, which is
@@ -1233,9 +1234,9 @@ reason note that wraps), `implementation-plans/diagram-document-evolution.md`
 - [x] T-20 answered by Zach, 2026-10-15: "shift everything later" (replaces
   B). Step 1 at the top left of the steps' area (1g's step 1 item). Built
   below, "Zach's answers of 2026-10-15".
-- [ ] The header's look (sizes, the left-hand design, a rich-text byline,
-  the pane's order, a default byline): mockups first, his choice, then a
-  build.
+- [x] The header's look (sizes, the left-hand design, a rich-text byline,
+  the pane's order, a default byline): mockups first, his choice (J1b,
+  2026-10-15), then a build: Phase 1c.
 
 ### Phase 1: the first cut (for the release)
 
@@ -2204,6 +2205,288 @@ otherwise still checks every plan, scale and box.
   moving and coming back; the round-trip sweep; a newer build's counted
   page stopping the toggle; and Set Steps on Page with one two pages on.
   The hook's and the pane's help tests fail on the old wording.
+
+### Phase 1c: the header (Zach, 2026-10-15)
+
+Not 1c above (Layout): a phase of its own, after Phase 1, for the header's
+look and settings. It replaces the planning addendum
+`artifacts/title-block/header-settings-plan.md` (written before Zach chose),
+whose still-valid parts are folded in here; that file is history.
+
+**Zach's words, 2026-10-15, verbatim.**
+- On the addendum's items: "Default the CP and model to be maybe 33%
+  smaller"; "I want to be able to control the size of each of them
+  independently"; "put the collapsed packing controls section below "steps
+  on page one""; "Group the header controls with the header and footer
+  controls".
+- On the look: mockup J1b (`artifacts/title-block/mockups/round3/J1b.svg`
+  and `.png`, A4 portrait, the crane). It is the target, numbers included.
+- On the credits and the subtitle: "agree with both recs" — the credits are
+  a short list of label + value fields in the Page pane, defaulting to
+  Author, Recommended size and Steps, Steps following the real step count;
+  add, remove, rename. The subtitle is an editable field defaulting to
+  "Origami diagram" in the app's language; cleared, its line and its rule
+  disappear and the band moves up.
+- "there should also be a free text box field that is hidden if there is no
+  text in it but gets rendered if they type something in it"
+- "I take it back, i want to scope wysiwyg for now, just plain text". So
+  nothing in the header is rich text: the note is plain text.
+
+**The look: J1b**, in points on A4 portrait (595.28 × 841.89, margin 34.02
+= 12 mm). The mockup's numbers, read from its SVG:
+- **Subtitle**: "ORIGAMI DIAGRAM", 7 pt bold, uppercase, tracked 0.12 em
+  (0.84 pt), its caps' top on the top margin (baseline 39.02). A rule in the
+  paper's colour, 0.75 pt, from 8.7 pt after the text (x 120.49) to the
+  band's right end (390.24), at y 36.52.
+- **Band**: a rectangle in the paper's colour (the style's `paper.front`,
+  pink in the mock's style), x 34.02 → 390.24, y 46.52, 62.36 pt (22 mm)
+  tall: from the left margin to the art's left edge (the model's box).
+- **Title**: white, bold, 45.35 pt (16 mm), 17 pt (6 mm) in from the band's
+  left, its caps centred in the band (baseline 93.89); a long title shrinks
+  to fit.
+- **Credits**: one row of columns, the first at the left margin, the
+  band's left edge. Each column is a label (7 pt bold, uppercase, tracked
+  0.12 em, baseline 126.88: its caps 13 pt under the band) over a value
+  (11.91 pt regular, baseline 141.88), as wide as the wider of the two. 12 pt
+  gutters, each with a 0.5 pt divider in the paper's colour at its middle,
+  from the labels' caps to the values' baseline (y 121.88 → 141.88). No rule
+  under the row.
+- **Crease pattern**: a square of 139.99 pt (49.39 mm) at the top right, its
+  top on the block's top (y 34.02 → 174.01), its right on the right margin.
+- **Model**: a box of 115.02 × 104.99 pt (40.58 × 37.04 mm), its foot on the
+  block's foot (y 105.00 → 209.99), its right edge 0.6 of the way across the
+  pattern (x 505.26, as built), overlapping the pattern for 69 pt, two
+  thirds of its height.
+- **The block** runs from the top margin to the model's foot: 175.97 pt,
+  62.08 mm, against 73.71 mm today. The steps start 11.63 mm higher.
+
+**The derived numbers** (a new diagram's; derived from the mock, rounded):
+- **The block's share**: 62.08 / 273 (A4's printable height) = 0.227, so
+  **0.23**: 62.79 mm on A4 portrait, 0.7 mm taller than the mock. A page
+  setting's default (T-1, the evolution policy): it reaches new diagrams
+  only; its legacy value stays 0.27, and a file saved with the block keeps
+  its share.
+- **The pattern's side**: 49.39 / 62.08 = 0.796, so **0.8** of the block's
+  height: 50.23 mm at 0.23 on A4 portrait.
+- **The model's height**: 37.04 / 62.08 = 0.597, so **0.6** of the block's
+  height: 37.67 mm. Its top stands 25.12 mm under the block's top, the
+  pattern's foot 50.23 mm down: they overlap for 25.11 mm, 0.67 of the
+  model's height (the mock's 0.66).
+- Against today's 73.71 and 55.28 mm, both are 32% smaller: Zach's "maybe
+  33%". A file saved with the block at 0.27 keeps its block; under the new
+  look its pattern is 58.97 mm and its model 44.23 mm (20% smaller), since
+  the sizes are shares of the block's own height.
+- **Page 1's capacity at 0.23** (the rule is unchanged, `firstPageCapacity`):
+  9 a page still gives 7 (`round(9 × 0.77)` = round(6.93)). Other counts
+  move for new diagrams only: 2 → 2 (1 at 0.27), 6 → 5 (4), 10 → 8 (7), 30
+  → 23 (22). A grid's block rows, `min(rows − 1, max(1, round(0.23 ×
+  rows)))`, are 1 for 2 to 6 rows; at 0.27 a six-row grid gave the block 2.
+  Nothing ties at 0.23 for any steps per page (2–30) or rows (1–6):
+  `77n ≡ 50 (mod 100)` needs n ≡ 50.
+- **What the text column needs** at the mock's sizes: 111.4 pt (39.3 mm)
+  from the subtitle's caps to the values' descent. At 0.23 that leaves the
+  note 23.5 mm on A4 portrait, 3.5 mm on A4 landscape and A5 portrait (a
+  42.8 mm block), and on A5 landscape (28.5 mm) it does not fit: the
+  geometry scales the column down there (below).
+
+**What carries over from the addendum**, and what does not:
+- *Kept*: the sizes as shares of the block's height in the content (H-1 A),
+  at the new defaults above (H-2's 0.67 / 0.5 replaced); a model with no
+  pattern keeps its own size (H-4); the band shorter (H-5 B, answered by
+  the mock); the pane's order (H-15 A: a Path section of its own; H-16 A:
+  the block's rows first in Header & footer, nested under its toggle, and
+  "Title" relabelled "Title tab"); its strings and analytics, less the rich
+  text's.
+- *Changed*: the art's place. The pattern's top stands on the block's top
+  and the model's foot on its foot (H-3 A had both on the foot). The
+  credits are a list of label + value pairs, not a byline document; the
+  live step count is a credit's value, not a field node (H-12).
+- *Dropped*: everything rich (H-6 to H-11: the shared editor, the byline's
+  toolbar, its size, italics, the italic faces, the rich setter), the
+  design slot and its enum (H-17: one look, J1b), and the remembered author
+  (H-13: Author starts empty, as Zach agreed).
+- *Met another way*: T-7 C and T-8 B (labelled credits, a printed step
+  count, waiting on a printed language). The labels are the author's own
+  text, written once at creation in the app's language and editable; the
+  count prints digits only. T-19 A (the block's own section) is replaced by
+  H-16 A.
+
+#### The format
+
+`titleBlockContent` (unreleased: #449 is not merged, so its shape changes
+freely; this branch's own saved files read leniently):
+
+```text
+titleBlockContent?: {
+  model?:       { kind: 'step', stepId } | { kind: 'none' }
+  pattern?:     { kind: 'step', stepId } | { kind: 'none' }
+  subtitle?:    string
+  credits?:     { label: string, value: string | { kind: 'step-count' } }[]
+  note?:        string
+  modelSize?:   number
+  patternSize?: number
+}
+```
+
+- **`subtitle`**, one line of plain text. Unsaid, or blank, is none: no
+  line and no rule (class (c), for good).
+- **`credits`**, in order. A label and a text value are one line each; a
+  value `{ kind: 'step-count' }` prints the number the last numbered step
+  prints (turns are not numbered, D22), kept up to date. Unsaid, or an
+  empty list, is none (class (c)). A credit with nothing in it is kept: it
+  is the author's, half typed.
+- **`note`**, plain text, its line breaks kept. Unsaid, or blank, is none:
+  nothing printed (class (c)).
+- **`modelSize`**, **`patternSize`**: the model's height and the pattern's
+  side as shares of the block's height, 0.3–1. Unsaid is the app's default,
+  0.6 and 0.8 (class (b), a look: no step moves). An edit to the default
+  takes the size away, as Reset does; a finite number past the range is a
+  newer build's (carried, read as the nearest, as `heightShare` is); one
+  that is not a number is dropped alone.
+- **One line**: a line break in the subtitle, a label or a text value reads
+  as a space, in the reader and an edit alike.
+- **The branch's byline** (never released) is retired, like the page's
+  `scale`: a string reads as the note where the note is unsaid, and is never
+  carried or written.
+- **A newer build's**: a part of a kind or with a field this build has no
+  name for is carried whole under its key, as the model's and the pattern's
+  are, and shown as the nearest: the credits as this build reads them (a
+  value of a kind it does not know reads empty), a size held to its range.
+  Setting that part here lets it go.
+- Written in this order: model, pattern, subtitle, credits, note,
+  modelSize, patternSize, then a newer build's fields.
+
+#### Defaults, at creation
+
+A new diagram is made by the slice's first edit (`createDiagram` in its
+`commit`). It writes, in the app's language (`i18n.t`, the catalogs'
+`panels:diagram.titleBlock.default.*`): the subtitle "Origami diagram", and
+the credits Author (empty), Recommended size (empty) and Steps (the live
+count). A diagram already in a file is never given them: what it does not
+say stays none. `createDiagram()` with no content is unchanged, so the
+fixtures that call it are too.
+
+#### The store
+
+`setDiagramTitleBlockContent(patch, { loadId, session })` sets every part:
+the model and the pattern (a source or Auto), the subtitle and the note (a
+blank one taken away), a size (a number, or the default), and the credits
+by one edit at a time — add (at an index, or the end), remove, or set a
+credit's label or value (text, or the live count, and back). Each call is
+one undo step, the commits of one sitting at a text field one step
+(`session`, as the byline's were), and a read-only diagram takes nothing.
+
+#### The geometry and the drawing (the next lane)
+
+- `titleBlockGeometry` takes the content's sizes (the parts stay
+  content-free otherwise: they never read what `resolveTitleBlock` finds).
+  The pattern's square, `patternSize × h` (held to 0.45 of the block's
+  width), at the top right; the model's box, `modelSize × h` tall, at most
+  1.25 times as wide, its foot on the block's foot, its right edge 0.6
+  across the pattern; with no pattern drawn, the model keeps its size at the
+  pattern's place.
+- The text column, from the left margin to the art's left edge: the
+  subtitle's row (where there is a subtitle), the band (the title shrunk to
+  fit, from 16 mm), the credits' row, the note below them to the block's
+  foot. The mock's sizes are A4 portrait's; where the block is shorter than
+  the column needs, the column scales down together, and what still does
+  not fit (the note's last lines, a credit past the band's end) is not
+  printed and the Pages view marks where it is cut.
+- Labels print uppercase in the diagram's language (`toLocaleUpperCase`,
+  CJK unchanged); a credit with nothing in it prints nothing, one with only
+  a label prints the label (an unfinished credit shows, H-13 A).
+- Ink: the band, the rule and the dividers in the paper's colour (the
+  style's front); the title in white; labels, values and the note in the
+  step text's ink. `diagramFontTexts` lists the subtitle, labels and
+  values, the step count's digits and the note.
+- The overlay marks a missing title, pattern or model as now, and what is
+  cut.
+
+#### The Page pane (the next lane)
+
+The order (H-15 A, H-16 A, items 5 and 6): Paper; Layout (the cards, First
+page, Steps per page, Steps on page N, or Columns and Rows); ▸ Packing,
+collapsed, flow only, right under Steps on page N; On the page; Path, flow
+only (Show path, Path width, Path colour); Header & footer — Title block
+(the toggle), and nested under it while on: Model, Model size; Crease
+pattern, Crease pattern size (each size a `SliderRow` in percent with
+Reset, hidden while its part is None); Subtitle; Credits (a row each, label
+and value, a step-count switch, remove; Add credit); Note — then Title tab
+and Page numbers; Style. `DiagramTitleBlockSection` becomes the rows Header
+& footer mounts; its bindings stay in `useDiagramTitleBlock`.
+
+Two calls for this lane, taken as recommended under Zach's standing "go
+with your recs", for him to see:
+- **The toggle's share.** Turning the block on in a diagram saved without
+  it (his crane) turns it on at the legacy share, 0.27, not the mock's
+  0.23. Recommended: Show on first page turns the block on at today's
+  default share (there is no Height control yet, so every share a file has
+  is a default of its day); off keeps the share. His own act, so the layout
+  may move.
+- **The content on turning on** (H-14 kept). A diagram whose content says
+  nothing of the subtitle and the credits gets the defaults with the
+  toggle, in its undo step: or the crane's block opens bare.
+
+#### i18n and analytics
+
+- Strings, in nine catalogs: the default subtitle and three labels; Model
+  size, Crease pattern size and their help; Subtitle, Credits, a credit's
+  label and value fields, Step count, Add credit, Remove credit; Note and
+  its help; Path; "Title tab"; the overlay's cut mark. Retired: the byline's
+  three keys and the section's title.
+- Analytics, enums only: `DiagramPageSetting` gains
+  `title_block_model_size`, `title_block_pattern_size`,
+  `title_block_subtitle`, `title_block_credits` and `title_block_note`
+  (`title_block_byline` retired); `title_block_credits` carries a
+  `title_block_credit_edit` property (`add`, `remove`, `label`, `value`,
+  `step_count_on`, `step_count_off`). A text field counts once per sitting,
+  a slider where it is let go. Never the text, never a size.
+
+#### Checklist
+
+**Format**
+- [ ] `titleBlockContent` gains `subtitle`, `credits`, `note`, `modelSize`
+  and `patternSize`; the byline reads as the note; the reader lenient by
+  part, a newer build's part carried; the writer's order.
+- [ ] The v1 contract, the evolution audit and the fixture: every part, in
+  Korean and English, a live count, a newer credit and a size past its
+  range; written back byte for byte. Round-trip tests.
+
+**Defaults**
+- [ ] `PAGE_SETTINGS.titleBlock.default` at 0.23, its legacy value
+  unchanged; the tests that rest on a new diagram's share updated
+  deliberately.
+- [ ] A new diagram's subtitle and credits written at creation in the app's
+  language; nine catalogs.
+
+**Store**
+- [ ] `setDiagramTitleBlockContent` sets every part: the credits by add,
+  remove, label and value (text or live); one undo step a call, one a
+  sitting; read-only refuses.
+
+**Geometry and drawing**
+- [ ] The parts take the sizes; the J1b column (subtitle row and rule,
+  band, credits, note) scaled to the block; the overlay's cut marks.
+- [ ] The composer draws them in the style's paper colour and inks; fonts
+  listed; the live count printed and followed.
+- [ ] The tests that pin today's boxes (`titleBlockGeometry.test.ts`, the
+  overlay sweep) re-baselined, at every paper, share and grid.
+
+**Page pane**
+- [ ] The order above; the block's rows nested under the toggle in Header &
+  footer; the sizes, subtitle, credits and note; "Title tab".
+- [ ] The toggle's share and the content on turning on, as recommended
+  above.
+
+**i18n and analytics**
+- [ ] The strings in nine catalogs (extract, translate, stamp, check).
+- [ ] The events and `docs/analytics.md`.
+
+**Review**
+- [ ] A review of 1c, its findings fixed; in the browser on the crane (the
+  block turned on beside J1b) and a new diagram, A4 and A5 either way up, a
+  3 × 3 grid; the Pages view, PDF, Print and the one-sheet SVG; light and
+  dark for the pane.
 
 ### Phase 2: after the release
 
