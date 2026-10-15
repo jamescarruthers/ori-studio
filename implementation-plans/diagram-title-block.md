@@ -2657,6 +2657,12 @@ scaffolded"), see "As built (1c: Zach's test and the review)":
   packs smaller; opened files as saved; no note tags (3f1953fc2).
 - [ ] Zach: the questions under "For Zach (header, 2026-10-15)" below,
   H-Q7 among them.
+**Zach's small fixes (2026-10-15)**
+- [x] "Add a title" drawn as the title on the Pages view, no dashed box
+  round the title's room; default subtitle "Subtitle"; Note renamed
+  Description; the description's spaces kept (pre-wrap); an editable
+  Band color, following the paper until chosen (e1b7eea50, 545497192,
+  4f230e6a8, d0dc409f6).
 
 *As built (1c: the format, the defaults and the store, 2026-10-15).* Three
 commits after the plan's (84f16afce): the format (d23293107), the defaults
@@ -3296,6 +3302,36 @@ lorem note, PDF page 1, before at fd1e23d7d and after).
   `src/components/diagram`, `src/components/panels` and
   `src/store/workspaceStore` (297 files, 4914 tests: the page golden,
   `FROZEN_SIGNATURES` and the layout budget included): all pass.
+
+*As built (1c: Zach's small fixes, 2026-10-15).* Four commits on
+9d579f1c5. (1, 2) Where the diagram has no title the Pages view composes
+"Add a title" into the band through `PageComposeOptions.untitled`, set by
+`titleBlockTitle` exactly as a title (font, weight, size, ink, place); the
+file, PDF and Print never pass it; the overlay's title room, its dashed box,
+the placeholder's `ink` and `PreparedDiagramPages.titleBlockInk` are gone.
+(3) The default subtitle is the field's own name, "Subtitle", nine catalogs.
+(4) The pane's Note is Description (keys `description`, `descriptionHelp`);
+the file's `note`, the hook's names and `title_block_note` stay. (5) The
+shared setter takes `spaces: 'pre-wrap'`, the description's alone: indents,
+runs of spaces, blank lines between paragraphs, a tab as four spaces, each
+kept space room before the next run; wrapped lines start at the margin; the
+reflow and the cap's "…" measure it so. (6) `titleBlockContent.bandColor`
+(`#rrggbb`, written only when set, written before `room`, read leniently:
+one that is no colour reads as none) drives the band, the subtitle's rule,
+the dividers and the title's white-or-ink choice; a Band color row under
+Subtitle (the shared `ColorRow`, now `nested` and with `help`), Reset back
+on the paper's; a pick is one undo step and one count of
+`title_block_band_color` (`title_block_band`: `paper`/`custom`), through
+`useSettledColorPick`, the path colour's settle logic now shared, its picks
+numbered negatively. A Japanese or Chinese "Add a title" on a diagram that
+loads no face for it is drawn by the reader's own fonts on screen. Failing
+before: 5 (whitespace), 3 (title), 9 (subtitle, Description), 8 (band
+colour). Checked: `tsc`; ESLint on every changed file; `i18n:extract`,
+`i18n:stamp`, `i18n:check`; vitest over `src/diagram`,
+`src/components/diagram`, `src/components/panels`, `src/components/ui`,
+`src/store/workspaceStore`, `src/analytics`, `src/i18n`, `src/styles`
+(347 files, 5268 tests). Evidence: `artifacts/title-block/small-fixes/
+final.png` (before at 9d579f1c5, after; Chromium, 5403).
 
 *For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
 header-fixes/` and `header-final/`.
