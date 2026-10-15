@@ -81,6 +81,7 @@ export function composeEveryPage(
         style: document.style,
         hanStyle: document.hanStyle,
         setter: prepared.setter,
+        titleBlock: prepared.titleBlock,
         bleedMm,
         embedFonts: (used) => {
           for (const [face, characters] of used) {

@@ -85,7 +85,8 @@ import { prefixIds } from '../pictures/prefixIds';
 import { fontFaceId } from '../fonts/diagramFontFaces';
 import { setUploadText } from '../upload/uploadText';
 import { xrayPainter, xraySurfaceOf } from '../xray/xrayPaint';
-import type { LayoutCell, LayoutStep, ReachLine, TextSetter } from './diagramPageLayout';
+import { pictureExtent, pictureFit, type LayoutCell, type LayoutStep, type ReachLine, type TextSetter } from './diagramPageLayout';
+import type { PageBox } from './pagePlacement';
 
 /** A picture whose size cannot be read: fitted, square. */
 const UNSIZED: NonNullable<LayoutStep['picture']> = {
@@ -652,6 +653,50 @@ export function cellPicture(
     framePt,
     text: [...usage].map(([face, characters]) => ({ face, characters })),
   };
+}
+
+/**
+ * A step's picture alone, as the first page's title block shows the finished
+ * model (`diagram-title-block.md`, T-10 A): with none of its marks, and an
+ * enlarged step's whole picture rather than its window; as large as fits
+ * `boxMm`, and set to its bottom right — {@link cellPicture} centres a
+ * picture in its room, so the room is first cut to the picture's own extent
+ * there. Null for a step with nothing to draw.
+ */
+export function wholePicture(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  idPrefix: string,
+  text: PictureText
+): CellPicture | null {
+  const { zoom: _window, ...unzoomed } = step;
+  const bare: DiagramStep = { ...unzoomed, annotations: [] };
+  const picture = layoutPicture(bare, assets, style);
+  const scale = picture ? pictureFit(picture, boxMm.w, boxMm.h) : null;
+  if (!picture || scale === null || !(scale > 0)) return null;
+  const { width, height } = pictureExtent(picture, scale);
+  const room = { x: boxMm.x + boxMm.w - width, y: boxMm.y + boxMm.h - height, w: width, h: height };
+  const paper = picture.kind === 'paper';
+  const cell = {
+    pictureMm: { x: room.x, y: room.y, size: Math.min(width, height) },
+    drawMm: room,
+    mmPerUnit: paper ? scale : null,
+    frameMm: paper ? null : scale,
+  };
+  return cellPicture(bare, assets, style, cell, idPrefix, text);
+}
+
+/**
+ * A scene drawn by the shared painter into a box on the page, `boxMm`, as
+ * large as fits, centred: its pens their pt widths whatever its size. The
+ * title block's crease pattern.
+ */
+export function fittedScene(scene: PaperScene, style: PaperStyle, boxMm: PageBox): string {
+  const box: Rect = { x: boxMm.x * PT_PER_MM, y: boxMm.y * PT_PER_MM, width: boxMm.w * PT_PER_MM, height: boxMm.h * PT_PER_MM };
+  const { minX, minY, maxX, maxY } = scene.bounds;
+  return placedScene(scene, style, box, fitScale(box, maxX - minX, maxY - minY, null)).markup;
 }
 
 type Rect = { x: number; y: number; width: number; height: number };

@@ -20,7 +20,7 @@ import { pictureExtent } from './diagramPageLayout';
 import { layoutDiagram } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
 import { fontTextSetter } from './fontTextSetter';
-import { cellPicture, layoutPicture, type PictureText } from './pagePictures';
+import { cellPicture, layoutPicture, wholePicture, type PictureText } from './pagePictures';
 
 const style = DEFAULT_DIAGRAM_STYLE;
 /** How far a crease pattern's ink reaches past its lines, in mm: the margin the painter's own page leaves it. */
@@ -131,6 +131,39 @@ describe('layoutPicture', () => {
     expect(bottom.grows * at + bottom.beyond).toBeGreaterThan(top.grows * at + top.beyond);
     const whole = measured.frame.height * at + top.grows * at + top.beyond + bottom.grows * at + bottom.beyond;
     expect(whole).toBeCloseTo(pictureExtent(measured, at).height, 6);
+  });
+});
+
+describe('wholePicture', () => {
+  /** The bitmap's box on the page, mm. */
+  const placed = (markup: string) =>
+    /<svg x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/.exec(markup)!.slice(1).map((value) => Number(value) / PT_PER_MM);
+
+  it('draws a picture as large as fits its box, set to the box’s bottom right', () => {
+    // 3 : 2 in a box 60 × 30 mm: 45 × 30, against its right; in one 40 × 60: 40 × 26.7, on its foot.
+    const [x, y, width, height] = placed(wholePicture(bitmapStep(null), assets, style, { x: 10, y: 20, w: 60, h: 30 }, 't-', TEXT)!.markup);
+    expect([x, y, width, height].map((value) => Math.round(value! * 100) / 100)).toEqual([25, 20, 45, 30]);
+    const [, top, , tall] = placed(wholePicture(bitmapStep(null), assets, style, { x: 10, y: 20, w: 40, h: 60 }, 't-', TEXT)!.markup);
+    expect(top! + tall!).toBeCloseTo(80, 3);
+  });
+
+  it('draws the whole picture with none of its marks: an enlarged step’s whole picture, not its window', () => {
+    const plain = cpStep('step-cp');
+    const box = { x: 10, y: 20, w: 60, h: 40 };
+    const drawn = wholePicture(plain, {}, style, box, 't-', TEXT)!.markup;
+    const callout = { id: 'c-1', kind: 'callout' as const, from: [0.2, 0.8] as [number, number], to: [0.6, 0.3] as [number, number], text: 'Repeat' };
+    const marked = { ...plain, annotations: [callout], annotatedPictureKey: plain.picture!.key };
+    const enlarged: DiagramStep = { ...plain, zoom: { from: 'area', shape: 'circle', frame: { centre: [0.5, 0.5], radius: 0.2 } } };
+    expect(wholePicture(marked, {}, style, box, 't-', TEXT)!.markup).toBe(drawn);
+    expect(wholePicture(enlarged, {}, style, box, 't-', TEXT)!.markup).toBe(drawn);
+    // Where its cell draws it, the callout and the window are its own.
+    const cell = { pictureMm: { x: 10, y: 20, size: 40 }, drawMm: box, mmPerUnit: null, frameMm: null };
+    expect(cellPicture(marked, {}, style, cell, 't-', TEXT)!.markup).not.toBe(cellPicture(plain, {}, style, cell, 't-', TEXT)!.markup);
+    expect(cellPicture(enlarged, {}, style, cell, 't-', TEXT)!.markup).not.toBe(cellPicture(plain, {}, style, cell, 't-', TEXT)!.markup);
+  });
+
+  it('draws nothing for a step with no picture', () => {
+    expect(wholePicture(createStep(() => 'step-empty'), {}, style, { x: 0, y: 0, w: 10, h: 10 }, 't-', TEXT)).toBeNull();
   });
 });
 

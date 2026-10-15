@@ -45,6 +45,7 @@ import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
 import { zoomOutlineOf, zoomShapeOf } from '../zoom/zoomModel';
 import { liftedZoomArrows, type PlacedZoomArrow } from './zoomArrows';
+import { resolveTitleBlock, type ResolvedTitleBlock } from './titleBlockContent';
 
 export interface DiagramPagesDependencies {
   fontSource: DiagramFontSource;
@@ -70,6 +71,8 @@ export interface PreparedDiagramPages {
   unavailableFonts: DiagramFontFace[];
   /** Page `index` (from 0) as an SVG document; `band: false` leaves the flow band out, for the Pages view. */
   compose: (index: number, options?: PageComposeOptions) => ComposedPage;
+  /** What the first page's title block shows (`resolveTitleBlock`), which the Pages view marks where a part is missing. */
+  titleBlock: ResolvedTitleBlock;
   /**
    * The enlarge arrows on page `index` where it prints them (Revision 2),
    * lifted to their areas as the page lifts them: what the Pages view puts
@@ -399,13 +402,15 @@ function scalesOf(pages: DiagramPagesLayout): Map<string, { scale: number; measu
 }
 
 /**
- * Every text a diagram's pages set, at its weight: the title, the
- * instructions and the digits, and the runs of its uploads' text and its
- * annotations' labels, each in the CJK face it was given.
+ * Every text a diagram's pages set, at its weight: the title, the title
+ * block's byline, the instructions and the digits, and the runs of its
+ * uploads' text and its annotations' labels, each in the CJK face it was
+ * given.
  */
 export function diagramFontTexts(document: DiagramDocument): DiagramFontText[] {
   return [
     { text: document.title, weight: 700 },
+    { text: document.titleBlockContent?.byline ?? '', weight: 400 },
     ...stepsOf(document).map((step) => ({ text: step.text, weight: 400 as const })),
     ...[...diagramUploadTexts(document), ...diagramLabelTexts(document)].map(({ face, text }) =>
       face.key === 'latin' ? { text, weight: face.weight } : { text, weight: face.weight, cjk: face.key }
@@ -455,6 +460,7 @@ export function preparedPages(
     setter.runs(text, face);
   }
   const steps = new Map(stepsOf(document).map((step) => [step.id, step]));
+  const titleBlock = resolveTitleBlock(document);
   const make = (
     layout: DiagramPagesLayout,
     of: DiagramDocument = document,
@@ -467,6 +473,7 @@ export function preparedPages(
     setter,
     missing: [...setter.missing],
     unavailableFonts: fonts.unavailable,
+    titleBlock,
     zoomArrows(index) {
       const page = layout.pages[index];
       if (!page) return [];
@@ -489,6 +496,7 @@ export function preparedPages(
         hanStyle: document.hanStyle,
         setter,
         embedFonts: (usage) => embeddedFontFaces(usage, fonts, subsetter),
+        titleBlock,
         ...options,
       });
     },

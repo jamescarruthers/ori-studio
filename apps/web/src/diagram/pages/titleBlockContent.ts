@@ -15,9 +15,13 @@
  *
  * That a part unsaid is Auto is fixed for good; what Auto finds is a look
  * (`diagram-document-evolution.md`, class (b)): a change to it moves no step,
- * though it changes the picture a saved block shows. Pure.
+ * though it changes the picture a saved block shows.
+ *
+ * The pattern is drawn from its step's stored thumbnail, as a scene for the
+ * shared painter ({@link patternScene}). Pure.
  */
-import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import type { SheetStrokeRole, SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import type { PaperLineItem, PaperLineRole, PaperScene } from '../../lib/paper/paperScene';
 import {
   isLockedStep,
   stepById,
@@ -42,8 +46,12 @@ export interface TitleBlockPart {
 export interface ResolvedTitleBlock {
   /** The step whose picture is the finished model. */
   model: TitleBlockPart;
-  /** The step whose link gives the crease pattern, and the pattern's lines: its stored thumbnail, null where it gives none. */
-  pattern: TitleBlockPart & { thumbnail: SheetThumbnail | null };
+  /**
+   * The step whose link gives the crease pattern, and the pattern's lines:
+   * its stored thumbnail, null where it gives none, and that as the painter
+   * draws it ({@link patternScene}), null where it has no line to draw.
+   */
+  pattern: TitleBlockPart & { thumbnail: SheetThumbnail | null; scene: PaperScene | null };
 }
 
 /** Whether a step can give the block's model: one of this build's, with a picture. */
@@ -80,7 +88,7 @@ export function resolveTitleBlock(document: DiagramDocument): ResolvedTitleBlock
   const model = resolvePart(document, content?.model, autoModelStep);
   const pattern = resolvePart(document, content?.pattern, autoPatternStep);
   const thumbnail = pattern.step && givesPattern(pattern.step) ? pattern.step.source.thumbnail : null;
-  return { model, pattern: { ...pattern, thumbnail } };
+  return { model, pattern: { ...pattern, thumbnail, scene: thumbnail ? patternScene(thumbnail) : null } };
 }
 
 function resolvePart(
@@ -92,4 +100,38 @@ function resolvePart(
   const chosen = source?.kind === 'step' ? stepById(document, source.stepId) : null;
   if (chosen && !isLockedStep(chosen)) return { from: 'step', step: chosen };
   return { from: 'auto', step: auto(document) };
+}
+
+/**
+ * The pen each of a thumbnail's lines is drawn in (T-14 A): the pattern's
+ * own — its folds in the fold pens, solid, its edge in the edge pen, a crease
+ * with no direction yet in the aux pen where the style shows aux lines — and
+ * an aux line not at all.
+ */
+const PATTERN_ROLES: Readonly<Record<SheetStrokeRole, PaperLineRole | null>> = {
+  edge: 'edge',
+  mountain: 'mountain',
+  valley: 'valley',
+  unassigned: 'aux',
+  aux: null,
+};
+
+/**
+ * A stored thumbnail as a scene for the shared painter (`paperSceneSvgBody`):
+ * its lines in their roles, in its own units, its bounds its box. No paper is
+ * filled, so the pattern sits on the page and the model in front covers it
+ * with its own. Null where it has no line to draw.
+ */
+export function patternScene(thumbnail: SheetThumbnail): PaperScene | null {
+  const [minX = 0, minY = 0, width = 0, height = 0] = thumbnail.viewBox.trim().split(/[\s,]+/).map(Number);
+  const sheet = Math.max(width, height);
+  if (!(sheet > 0) || !Number.isFinite(sheet)) return null;
+  const items = thumbnail.strokes.flatMap((stroke): PaperLineItem[] => {
+    const role = PATTERN_ROLES[stroke.role];
+    return role
+      ? [{ kind: 'line', role, a: [stroke.x1, stroke.y1], b: [stroke.x2, stroke.y2], onBoundary: [false, false], hidden: false }]
+      : [];
+  });
+  if (items.length === 0) return null;
+  return { bounds: { minX, minY, maxX: minX + width, maxY: minY + height }, sheet, items };
 }

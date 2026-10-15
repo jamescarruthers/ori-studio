@@ -13,10 +13,10 @@ import {
   type DiagramStep,
   type DiagramTitleBlockContentPatch,
 } from '../document/diagramDocument';
-import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import type { SheetStrokeRole, SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { readDiagram, writeDiagram } from '../document/diagramFile';
 import { cpSource, cpStep, referencesStep } from '../document/diagramSteps.fixtures';
-import { autoModelStep, autoPatternStep, resolveTitleBlock } from './titleBlockContent';
+import { autoModelStep, autoPatternStep, patternScene, resolveTitleBlock } from './titleBlockContent';
 
 /**
  * What the first page's title block shows (`implementation-plans/
@@ -119,5 +119,40 @@ describe('resolveTitleBlock', () => {
     const document = diagram([cpStep('s1'), folded('s2'), empty('s3')], { model: { kind: 'none' }, pattern: { kind: 'step', stepId: 's1' } });
     expect(autoModelStep(document)?.id).toBe('s2');
     expect(autoPatternStep(document)?.id).toBe('s2');
+  });
+
+  it('gives the pattern’s lines as the painter draws them, none where it gives none', () => {
+    const pattern = folded('s2');
+    const { thumbnail, scene } = resolveTitleBlock(diagram([cpStep('s1'), pattern])).pattern;
+    expect(scene).toEqual(patternScene(thumbnail!));
+    expect(resolveTitleBlock(diagram([cpStep('s1')], { pattern: { kind: 'none' } })).pattern.scene).toBeNull();
+  });
+});
+
+describe('patternScene', () => {
+  const stroke = (role: SheetStrokeRole, y: number) => ({ x1: 0, y1: y, x2: 100, y2: y, role });
+
+  it('draws a thumbnail’s lines in the pattern’s own pens, an unassigned one as aux, and leaves its aux lines out', () => {
+    const thumbnail: SheetThumbnail = {
+      viewBox: '0 0 100 100',
+      strokes: [stroke('aux', 10), stroke('unassigned', 20), stroke('mountain', 30), stroke('valley', 40), stroke('edge', 0)],
+    };
+    const scene = patternScene(thumbnail)!;
+    expect(scene.bounds).toEqual({ minX: 0, minY: 0, maxX: 100, maxY: 100 });
+    expect(scene.sheet).toBe(100);
+    expect(scene.items.map((item) => (item.kind === 'line' ? [item.role, item.a, item.b] : item.kind))).toEqual([
+      ['aux', [0, 20], [100, 20]],
+      ['mountain', [0, 30], [100, 30]],
+      ['valley', [0, 40], [100, 40]],
+      ['edge', [0, 0], [100, 0]],
+    ]);
+    // No paper: the pattern sits on the page.
+    expect(scene.items.some((item) => item.kind === 'face')).toBe(false);
+  });
+
+  it('is none for a thumbnail with no line to draw', () => {
+    expect(patternScene({ viewBox: '0 0 100 100', strokes: [] })).toBeNull();
+    expect(patternScene({ viewBox: '0 0 100 100', strokes: [stroke('aux', 50)] })).toBeNull();
+    expect(patternScene({ viewBox: '0 0 0 0', strokes: [stroke('edge', 0)] })).toBeNull();
   });
 });
