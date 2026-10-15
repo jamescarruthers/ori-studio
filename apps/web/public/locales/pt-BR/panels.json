@@ -1223,9 +1223,7 @@
         "section": "Bloco de título",
         "show": "Na primeira página",
         "showHelp": "O título, o padrão de vincos e o modelo pronto, no alto da primeira página.",
-        "step": "Passo {{number}}",
-        "stepNoPattern": "Passo {{number}} (sem padrão de vincos)",
-        "stepNoPicture": "Passo {{number}} (sem imagem)"
+        "step": "Passo {{number}}"
       },
       "titleHelp": "O título do diagrama, numa aba no alto de cada página.",
       "titleHelpWithBlock": "O título do diagrama, numa aba no alto de cada página. Na primeira página, ele fica no bloco de título."

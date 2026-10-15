@@ -1186,9 +1186,7 @@
         "section": "Title block",
         "show": "Show on first page",
         "showHelp": "The title, the crease pattern and the finished model, at the top of the first page.",
-        "step": "Step {{number}}",
-        "stepNoPattern": "Step {{number}} (no crease pattern)",
-        "stepNoPicture": "Step {{number}} (no picture)"
+        "step": "Step {{number}}"
       },
       "titleHelp": "The diagram’s title, in a tab at the top of every page.",
       "titleHelpWithBlock": "The diagram’s title, in a tab at the top of every page. On the first page the title block carries it instead."

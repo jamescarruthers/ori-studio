@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import { useId, type ComponentPropsWithoutRef } from 'react';
 import { Select, SelectContent, SelectItem, SelectValue } from '../Select';
 import { FieldRow, FieldRowSelectTrigger } from './FieldRow';
 
@@ -22,6 +22,7 @@ export function SelectRow({
   disabled,
   title,
   help,
+  note,
   onChange,
   onReset,
   contentProps,
@@ -34,14 +35,17 @@ export function SelectRow({
   title?: string;
   /** What the row means, behind a help mark beside its label: reachable by keyboard and touch, where a title is not. */
   help?: string;
+  /** Why what it is set to shows nothing, under its label, read with it (`FieldRow.note`). */
+  note?: string;
   onChange: (value: string) => void;
   onReset?: () => void;
   contentProps?: Omit<ComponentPropsWithoutRef<typeof SelectContent>, 'children'>;
 }) {
+  const noteId = useId();
   return (
-    <FieldRow label={label} kind="select" disabled={disabled} title={title} help={help} onReset={onReset}>
+    <FieldRow label={label} kind="select" disabled={disabled} title={title} help={help} noteId={noteId} note={note} onReset={onReset}>
       <Select value={value ?? ''} onValueChange={onChange} disabled={disabled}>
-        <FieldRowSelectTrigger aria-label={label}>
+        <FieldRowSelectTrigger aria-label={label} aria-describedby={note === undefined ? undefined : noteId}>
           <SelectValue placeholder={placeholder} />
         </FieldRowSelectTrigger>
         <SelectContent {...contentProps}>

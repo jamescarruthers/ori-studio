@@ -1149,9 +1149,7 @@
         "section": "タイトル欄",
         "show": "最初のページに表示",
         "showHelp": "タイトル、展開図、完成形を最初のページの上部に入れます。",
-        "step": "ステップ {{number}}",
-        "stepNoPattern": "ステップ {{number}}（展開図なし）",
-        "stepNoPicture": "ステップ {{number}}（図なし）"
+        "step": "ステップ {{number}}"
       },
       "titleHelp": "折り図のタイトルを、各ページ上部のタブに表示します。",
       "titleHelpWithBlock": "折り図のタイトルを、各ページ上部のタブに表示します。最初のページでは代わりにタイトル欄に入ります。"

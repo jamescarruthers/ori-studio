@@ -1149,9 +1149,7 @@
         "section": "标题栏",
         "show": "在首页显示",
         "showHelp": "在首页顶部显示标题、折痕图和成品。",
-        "step": "第 {{number}} 步",
-        "stepNoPattern": "第 {{number}} 步（无折痕图）",
-        "stepNoPicture": "第 {{number}} 步（无图）"
+        "step": "第 {{number}} 步"
       },
       "titleHelp": "在每页顶部的标签中显示图解标题。",
       "titleHelpWithBlock": "在每页顶部的标签中显示图解标题。首页则改由标题栏显示。"

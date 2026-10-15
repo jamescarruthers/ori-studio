@@ -55,14 +55,16 @@ export function FieldRow({
   /** Set when the control is a native input the label can point at. */
   htmlFor?: string;
   /**
-   * The id the note carries on a toggle, so the switch can name it in
+   * The id the note carries, so the control can name it in
    * `aria-describedby`.
    */
   noteId?: string;
   /**
-   * A short line under the label, on the note's line: why a toggle cannot be
-   * switched now ("Needs two rows or more"). "Overridden" takes its place
-   * while the row is overridden.
+   * A short reason under the label, on the note's line: why a toggle cannot
+   * be switched now ("Needs two rows or more"), or why what a select is set
+   * to shows nothing ("Step 2 has no crease pattern"). It wraps rather than
+   * be cut, since it is there to be read. "Overridden" takes its place while
+   * the row is overridden.
    */
   note?: string;
   /**

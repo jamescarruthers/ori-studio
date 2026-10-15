@@ -1223,9 +1223,7 @@
         "section": "Bloque de título",
         "show": "En la primera página",
         "showHelp": "El título, el patrón de pliegues y el modelo terminado, en la parte superior de la primera página.",
-        "step": "Paso {{number}}",
-        "stepNoPattern": "Paso {{number}} (sin patrón de pliegues)",
-        "stepNoPicture": "Paso {{number}} (sin imagen)"
+        "step": "Paso {{number}}"
       },
       "titleHelp": "El título del diagrama, en una pestaña en la parte superior de cada página.",
       "titleHelpWithBlock": "El título del diagrama, en una pestaña en la parte superior de cada página. En la primera página lo lleva el bloque de título."

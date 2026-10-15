@@ -1223,9 +1223,7 @@
         "section": "Bloc titre",
         "show": "Sur la première page",
         "showHelp": "Le titre, le patron de plis et le modèle fini, en haut de la première page.",
-        "step": "Étape {{number}}",
-        "stepNoPattern": "Étape {{number}} (sans patron de plis)",
-        "stepNoPicture": "Étape {{number}} (sans image)"
+        "step": "Étape {{number}}"
       },
       "titleHelp": "Le titre du diagramme, dans un onglet en haut de chaque page.",
       "titleHelpWithBlock": "Le titre du diagramme, dans un onglet en haut de chaque page. Sur la première page, c’est le bloc titre qui le porte."

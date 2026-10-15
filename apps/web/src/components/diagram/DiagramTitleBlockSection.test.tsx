@@ -57,6 +57,12 @@ function install(
 const toggle = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Show on first page"]')!;
 const select = (label: string) => host!.querySelector<HTMLButtonElement>(`button[role="combobox"][aria-label="${label}"]`);
 const byline = () => host!.querySelector<HTMLTextAreaElement>('textarea');
+/** The note a select is described by, and whether it is a reason; null with none. */
+function noteOf(label: string) {
+  const id = select(label)!.getAttribute('aria-describedby');
+  const note = id ? document.getElementById(id) : null;
+  return note ? { text: note.textContent, reason: note.dataset.fieldNote === 'reason' } : null;
+}
 
 /** The options a select offers, opened from the keyboard as a reader would. */
 function optionsOf(label: string): string[] {
@@ -191,8 +197,12 @@ describe('DiagramTitleBlockSection', () => {
     act(() => state().setDiagramTitleBlockContent({ model: { kind: 'step', stepId: 's1' } }));
     act(() => state().removeDiagramStepPicture('s1'));
     render();
-    expect(select('Model')!.textContent).toBe('Step 1 (no picture)');
-    expect(optionsOf('Model')).toEqual(['Auto (step 3)', 'Step 1 (no picture)', 'Step 2', 'Step 3', 'None']);
+    // The select names the step, whole; why it shows nothing is the row's note, read with it, as the Pages view says it.
+    expect(select('Model')!.textContent).toBe('Step 1');
+    expect(noteOf('Model')).toEqual({ text: 'Step 1 has no picture yet', reason: true });
+    expect(optionsOf('Model')).toEqual(['Auto (step 3)', 'Step 1', 'Step 2', 'Step 3', 'None']);
+    act(() => state().setDiagramTitleBlockContent({ model: { kind: 'step', stepId: 's2' } }));
+    expect(noteOf('Model')).toBeNull();
   });
 
   it('says how many of the byline’s lines print, as the page cuts them', () => {
@@ -210,7 +220,8 @@ describe('DiagramTitleBlockSection', () => {
     render();
     expect(optionsOf('Crease pattern')).toEqual(['Auto (step 1)', 'Step 1', 'None']);
     act(() => state().setDiagramTitleBlockContent({ pattern: { kind: 'step', stepId: 's2' } }));
-    expect(select('Crease pattern')!.textContent).toBe('Step 2 (no crease pattern)');
+    expect(select('Crease pattern')!.textContent).toBe('Step 2');
+    expect(noteOf('Crease pattern')).toEqual({ text: 'Step 2 has no crease pattern', reason: true });
   });
 
   it('commits the byline as it is typed: a sitting at the field one undo step and one count', () => {

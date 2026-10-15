@@ -1149,9 +1149,7 @@
         "section": "제목 영역",
         "show": "첫 페이지에 표시",
         "showHelp": "제목, 전개도, 완성 모델을 첫 페이지 위쪽에 표시합니다.",
-        "step": "{{number}}단계",
-        "stepNoPattern": "{{number}}단계 (전개도 없음)",
-        "stepNoPicture": "{{number}}단계 (그림 없음)"
+        "step": "{{number}}단계"
       },
       "titleHelp": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다.",
       "titleHelpWithBlock": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다. 첫 페이지에서는 대신 제목 영역에 들어갑니다."

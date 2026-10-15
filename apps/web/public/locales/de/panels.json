@@ -1186,9 +1186,7 @@
         "section": "Titelblock",
         "show": "Auf erster Seite zeigen",
         "showHelp": "Titel, Faltmuster und fertiges Modell oben auf der ersten Seite.",
-        "step": "Schritt {{number}}",
-        "stepNoPattern": "Schritt {{number}} (kein Faltmuster)",
-        "stepNoPicture": "Schritt {{number}} (kein Bild)"
+        "step": "Schritt {{number}}"
       },
       "titleHelp": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite.",
       "titleHelpWithBlock": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite. Auf der ersten Seite steht er stattdessen im Titelblock."

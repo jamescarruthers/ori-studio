@@ -20,16 +20,17 @@ export function DiagramTitleBlockSection() {
   const step = (number: number) => t('panels:diagram.pagePane.titleBlock.step', 'Step {{number}}', { number });
   const auto = (number: number) => t('panels:diagram.pagePane.titleBlock.auto', 'Auto (step {{number}})', { number });
   const none = t('panels:diagram.pagePane.titleBlock.none', 'None');
-  /** Auto, each step offered — one that can no longer give the part, as `cannot` names it — and None. */
-  const options = (
-    part: TitleBlockPartChoices,
-    autoNone: string,
-    cannot: (number: number) => string
-  ): SelectRowOption[] => [
+  /** Auto, each step offered, and None. */
+  const options = (part: TitleBlockPartChoices, autoNone: string): SelectRowOption[] => [
     { id: 'auto', label: part.autoNumber === null ? autoNone : auto(part.autoNumber) },
-    ...part.steps.map((each) => ({ id: each.choice, label: each.gives ? step(each.number) : cannot(each.number) })),
+    ...part.steps.map((each) => ({ id: each.choice, label: step(each.number) })),
     { id: 'none', label: none },
   ];
+  /** Why the step a part is set to shows nothing, as `cannot` says it for its number: on the row's note line, whole. */
+  const reason = (part: TitleBlockPartChoices, cannot: (number: number) => string) => {
+    const chosen = part.steps.find((each) => each.choice === part.value);
+    return chosen && !chosen.gives ? cannot(chosen.number) : undefined;
+  };
   return (
     <CollapsibleSection title={t('panels:diagram.pagePane.titleBlock.section', 'Title block')}>
       <ToggleRow
@@ -51,14 +52,12 @@ export function DiagramTitleBlockSection() {
               'panels:diagram.pagePane.titleBlock.modelHelp',
               'The finished model, drawn from a step’s picture. Auto uses the last step with one.'
             )}
+            note={reason(block.model, (number) =>
+              t('panels:diagram.pages.titleBlock.stepNoPicture', 'Step {{number}} has no picture yet', { number })
+            )}
             value={block.model.value}
             disabled={readOnly}
-            options={options(
-              block.model,
-              t('panels:diagram.pagePane.titleBlock.autoNoPicture', 'Auto (no pictures)'),
-              (number) =>
-                t('panels:diagram.pagePane.titleBlock.stepNoPicture', 'Step {{number}} (no picture)', { number })
-            )}
+            options={options(block.model, t('panels:diagram.pagePane.titleBlock.autoNoPicture', 'Auto (no pictures)'))}
             onChange={block.setModel}
           />
           <SelectRow
@@ -67,14 +66,12 @@ export function DiagramTitleBlockSection() {
               'panels:diagram.pagePane.titleBlock.patternHelp',
               'Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the last step that links it.'
             )}
+            note={reason(block.pattern, (number) =>
+              t('panels:diagram.pages.titleBlock.stepNoPattern', 'Step {{number}} has no crease pattern', { number })
+            )}
             value={block.pattern.value}
             disabled={readOnly}
-            options={options(
-              block.pattern,
-              t('panels:diagram.pagePane.titleBlock.autoNoneLinked', 'Auto (none linked)'),
-              (number) =>
-                t('panels:diagram.pagePane.titleBlock.stepNoPattern', 'Step {{number}} (no crease pattern)', { number })
-            )}
+            options={options(block.pattern, t('panels:diagram.pagePane.titleBlock.autoNoneLinked', 'Auto (none linked)'))}
             onChange={block.setPattern}
           />
           <TextAreaRow
