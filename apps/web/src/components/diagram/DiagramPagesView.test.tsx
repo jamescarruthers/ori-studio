@@ -373,6 +373,32 @@ describe('DiagramPagesView', () => {
     expect(props.onSelect).toHaveBeenLastCalledWith(null);
   });
 
+  it('sets the words for a missing pattern beside a portrait model standing in its square, not on it', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400"><rect width="300" height="400" fill="#c48"/></svg>';
+    const photo = {
+      ...createStep(() => 'step-photo'),
+      source: { kind: 'upload' as const, assetId: 'asset-tall', rotationQuarterTurns: 0 as const, mirrored: false },
+      picture: { kind: 'asset' as const, assetId: 'asset-tall', paperScale: 1, key: 'upload-asset-tall' },
+    };
+    const made = insertSteps(createDiagram({ title: 'Standing figure' }), [photo], 0);
+    const document: DiagramDocument = {
+      ...made,
+      assets: { 'asset-tall': { id: 'asset-tall', kind: 'svg', svg, widthPx: 300, heightPx: 400, bytes: svg.length } },
+      page: { ...made.page, titleBlock: { enabled: true, heightShare: 0.27 } },
+    };
+    const pages = preparedPages(document, FONTS, subsetter);
+    render(pages, {}, pages.layout.bandInk, document);
+    const { pattern } = pages.layout.pages[0]!.titleBlock!.geometry;
+    // Three quarters as wide as tall, the model fills the square's height at its right.
+    const model = pages.titleBlockModel()!;
+    expect([model.y, model.h, model.x + model.w]).toEqual([pattern.y, pattern.h, pattern.x + pattern.w].map((mm) => expect.closeTo(mm, 6)));
+    const room = host.querySelector<HTMLElement>('[data-title-block-room="square"]')!;
+    expect(room.textContent).toBe('No step is linked to a crease pattern');
+    expect([room.style.left, room.style.top, room.style.width, room.style.height]).toEqual(
+      [pattern.x, pattern.y, model.x - pattern.x, pattern.h].map((mm) => `${mm * PX_PER_MM}px`)
+    );
+  });
+
   it('selects a step on a press, stays on the page on a double press, and elsewhere asks about the page and lets the selection go', () => {
     const props = render(preparedPages(diagram(), FONTS, subsetter));
     act(() => cells()[1]!.click());

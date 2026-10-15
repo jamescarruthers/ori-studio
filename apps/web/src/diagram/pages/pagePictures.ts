@@ -671,13 +671,10 @@ export function wholePicture(
   idPrefix: string,
   text: PictureText
 ): CellPicture | null {
-  const { zoom: _window, ...unzoomed } = step;
-  const bare: DiagramStep = { ...unzoomed, annotations: [] };
-  const picture = layoutPicture(bare, assets, style);
-  const scale = picture ? pictureFit(picture, boxMm.w, boxMm.h) : null;
-  if (!picture || scale === null || !(scale > 0)) return null;
-  const { width, height } = pictureExtent(picture, scale);
-  const room = { x: boxMm.x + boxMm.w - width, y: boxMm.y + boxMm.h - height, w: width, h: height };
+  const fitted = fittedWhole(step, assets, style, boxMm);
+  if (!fitted) return null;
+  const { bare, picture, scale, room } = fitted;
+  const { w: width, h: height } = room;
   const paper = picture.kind === 'paper';
   const cell = {
     pictureMm: { x: room.x, y: room.y, size: Math.min(width, height) },
@@ -686,6 +683,28 @@ export function wholePicture(
     frameMm: paper ? null : scale,
   };
   return cellPicture(bare, assets, style, cell, idPrefix, text);
+}
+
+/** Where {@link wholePicture} draws a step's picture in `boxMm`, in mm; null for a step with nothing to draw. */
+export function wholePictureRoom(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox
+): PageBox | null {
+  return fittedWhole(step, assets, style, boxMm)?.room ?? null;
+}
+
+/** A step's picture with none of its marks and no window, the scale that fits it to `boxMm`, and its room there: its extent, at the box's bottom right. */
+function fittedWhole(step: DiagramStep, assets: Readonly<Record<string, DiagramAsset>>, style: DiagramStyle, boxMm: PageBox) {
+  const { zoom: _window, ...unzoomed } = step;
+  const bare: DiagramStep = { ...unzoomed, annotations: [] };
+  const picture = layoutPicture(bare, assets, style);
+  const scale = picture ? pictureFit(picture, boxMm.w, boxMm.h) : null;
+  if (!picture || scale === null || !(scale > 0)) return null;
+  const { width, height } = pictureExtent(picture, scale);
+  const room: PageBox = { x: boxMm.x + boxMm.w - width, y: boxMm.y + boxMm.h - height, w: width, h: height };
+  return { bare, picture, scale, room };
 }
 
 /**

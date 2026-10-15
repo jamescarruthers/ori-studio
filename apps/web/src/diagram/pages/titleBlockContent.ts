@@ -27,6 +27,7 @@
 import type { SheetStrokeRole, SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import type { PaperLineItem, PaperLineRole, PaperScene } from '../../lib/paper/paperScene';
 import type { PageBox } from './pagePlacement';
+import { STEP_TEXT_LEADING_MM, TEXT_DESCENT_MM } from './stepType';
 import type { LayoutTitleBlock, TitleBlockGeometry } from './titleBlockGeometry';
 import {
   isLockedStep,
@@ -194,10 +195,14 @@ export interface MissingTitleBlockPart {
 export interface TitleBlockPlaceholder {
   /** The title's column, the pattern's square — the model's room too where no pattern is drawn — or the model's box. */
   room: 'title' | 'square' | 'model';
+  /** Where it is marked: the room, or for the square, what a model drawn in it leaves free ({@link squareMark}). */
   box: PageBox;
   /** What prints nothing there, in the order it would be drawn. */
   missing: MissingTitleBlockPart[];
 }
+
+/** The least room across, in mm, a mark's words are set in: two or three lines of them on the Pages view. */
+const MARK_ROOM_MM = 10;
 
 /**
  * What of the block prints nothing where it would show, room by room: the
@@ -205,9 +210,15 @@ export interface TitleBlockPlaceholder {
  * Auto or a step, and no step gives them — a part set to none is the
  * author's, and is not missing. The pattern and a model with no pattern in
  * front of it would print in one square, which is one room; so no two rooms
- * overlap. For the Pages view's overlay, never the page.
+ * overlap. `drawnModel` is where the model is drawn, null where it is not
+ * (`wholePictureRoom`), which the square's mark keeps clear of. For the
+ * Pages view's overlay, never the page.
  */
-export function missingTitleBlockParts(block: LayoutTitleBlock, content: ResolvedTitleBlock): TitleBlockPlaceholder[] {
+export function missingTitleBlockParts(
+  block: LayoutTitleBlock,
+  content: ResolvedTitleBlock,
+  drawnModel: PageBox | null
+): TitleBlockPlaceholder[] {
   const { geometry } = block;
   const { model, pattern } = content;
   const missing = ({ step, number }: TitleBlockPart, part: MissingTitleBlockPart['part']) => ({ part, step, number });
@@ -217,7 +228,27 @@ export function missingTitleBlockParts(block: LayoutTitleBlock, content: Resolve
   if (model.from !== 'none' && !model.step?.picture) (pattern.scene ? front : square).push(missing(model, 'model'));
   return [
     ...(block.title ? [] : [{ room: 'title' as const, box: geometry.title, missing: [{ part: 'title' as const, step: null, number: null }] }]),
-    ...(square.length > 0 ? [{ room: 'square' as const, box: geometry.pattern, missing: square }] : []),
+    ...(square.length > 0 ? [{ room: 'square' as const, box: squareMark(block, drawnModel), missing: square }] : []),
     ...(front.length > 0 ? [{ room: 'model' as const, box: geometry.model, missing: front }] : []),
   ];
+}
+
+/**
+ * Where the pattern's square is marked, clear of a model drawn in it
+ * (`inSquare`): the square, less the model — the strip it leaves above
+ * itself or beside itself, whichever is larger — or, where it leaves no room
+ * for words, the title's column under the byline's lines; the square itself
+ * where neither has room.
+ */
+function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null): PageBox {
+  const { pattern: square, byline, block: band } = block.geometry;
+  if (!inSquare) return square;
+  const above = { ...square, h: inSquare.y - square.y };
+  const beside = { ...square, w: inSquare.x - square.x };
+  const strip = above.w * above.h >= beside.w * beside.h ? above : beside;
+  if (Math.min(strip.w, strip.h) >= MARK_ROOM_MM) return strip;
+  const lines = block.byline;
+  const top = lines ? lines.firstBaseline + (lines.lines.length - 1) * STEP_TEXT_LEADING_MM + TEXT_DESCENT_MM : byline.y;
+  const under = { x: byline.x, y: top, w: byline.w, h: band.y + band.h - top };
+  return Math.min(under.w, under.h) >= MARK_ROOM_MM ? under : square;
 }

@@ -31,6 +31,7 @@ import {
   patternScene,
   resolveTitleBlock,
 } from './titleBlockContent';
+import { STEP_TEXT_LEADING_MM, TEXT_DESCENT_MM } from './stepType';
 import { setTitleBlock, titleBlockGeometry } from './titleBlockGeometry';
 
 /**
@@ -178,7 +179,7 @@ describe('patternScene', () => {
 describe('missingTitleBlockParts', () => {
   const geometry = titleBlockGeometry({ ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: { enabled: true, heightShare: 0.27 } }, 11, 8)!;
   const missing = (document: DiagramDocument, title = 'Crane') =>
-    missingTitleBlockParts(setTitleBlock(geometry, { title, byline: '' }, estimateTextSetter), resolveTitleBlock(document)).map(
+    missingTitleBlockParts(setTitleBlock(geometry, { title, byline: '' }, estimateTextSetter), resolveTitleBlock(document), null).map(
       ({ room, box, missing: parts }) => [room, box, parts.map(({ part, step, number }) => [part, step?.id ?? null, number])]
     );
 
@@ -205,6 +206,30 @@ describe('missingTitleBlockParts', () => {
     expect(missing(titleBlockDiagram([uploadStep('s1')]))).toEqual([['square', geometry.pattern, [['pattern', null, null]]]]);
     // The pattern set to none, the model missing: the model's room is the square.
     expect(missing(titleBlockDiagram([emptyStep('s1')], { pattern: { kind: 'none' } }))).toEqual([['square', geometry.pattern, [['model', null, null]]]]);
+  });
+
+  it('keeps the square’s mark clear of a model drawn in it: the strip it leaves, else the title’s column under the byline', () => {
+    const block = setTitleBlock(geometry, { title: 'Crane', byline: '' }, estimateTextSetter);
+    const content = resolveTitleBlock(titleBlockDiagram([uploadStep('s1')]));
+    const square = geometry.pattern;
+    const near = ({ x, y, w, h }: PageBox) => [x, y, w, h].map((value) => expect.closeTo(value, 9));
+    const mark = (model: PageBox | null) => missingTitleBlockParts(block, content, model).map(({ room, box: { x, y, w, h } }) => [room, [x, y, w, h]]);
+    // Taller than wide, a portrait upload: the strip beside it.
+    const tall = { x: square.x + square.w / 4, y: square.y, w: (3 * square.w) / 4, h: square.h };
+    expect(mark(tall)).toEqual([['square', near({ ...square, w: square.w / 4 })]]);
+    // Wider than tall: the strip above it.
+    const wide = { x: square.x, y: square.y + square.h / 4, w: square.w, h: (3 * square.h) / 4 };
+    expect(mark(wide)).toEqual([['square', near({ ...square, h: square.h / 4 })]]);
+    // Filling it: in the title's column, under the byline's lines — the whole column under the title, with none.
+    const { byline, block: band } = geometry;
+    expect(mark(square)).toEqual([['square', near({ x: byline.x, y: byline.y, w: byline.w, h: band.y + band.h - byline.y })]]);
+    const two = setTitleBlock(geometry, { title: 'Crane', byline: 'Design: traditional\nPaper: 15 cm square' }, estimateTextSetter);
+    const top = two.byline!.firstBaseline + STEP_TEXT_LEADING_MM + TEXT_DESCENT_MM;
+    expect(missingTitleBlockParts(two, content, square).map(({ box: { x, y, w, h } }) => [x, y, w, h])).toEqual([
+      near({ x: byline.x, y: top, w: byline.w, h: band.y + band.h - top }),
+    ]);
+    // No model drawn: the square.
+    expect(mark(null)).toEqual([['square', near(square)]]);
   });
 
   it('marks nothing the author set to none', () => {
@@ -234,7 +259,14 @@ describe('missingTitleBlockParts', () => {
     ].map(resolveTitleBlock);
     const papers = Object.keys(PRINT_PAPER_MM).flatMap((size) => (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation })));
     const layouts = [{ layout: 'flow' as const }, ...[2, 3, 6].map((rows) => ({ layout: 'grid' as const, columns: 3, rows }))];
+    /** A picture of `aspect` fitted to `room`, at its bottom right, as `wholePicture` draws it. */
+    const standing = (room: PageBox, aspect: number): PageBox => {
+      const w = Math.min(room.w, room.h * aspect);
+      const h = w / aspect;
+      return { x: right(room) - w, y: foot(room) - h, w, h };
+    };
     let rooms = 0;
+    const crowded = new Set<string>();
     for (const paper of papers) {
       for (const heightShare of [0.15, 0.27, 0.5]) {
         for (const layout of layouts) {
@@ -246,14 +278,25 @@ describe('missingTitleBlockParts', () => {
             expect(overlap(room, shape.title), label).toBe(0);
             expect(overlap(room, shape.byline), label).toBe(0);
             for (const title of ['', 'Crane']) {
-              const boxes = missingTitleBlockParts(setTitleBlock(shape, { title, byline: '' }, estimateTextSetter), content).map(({ box }) => box);
-              rooms += boxes.length;
-              boxes.forEach((a, index) => boxes.slice(index + 1).forEach((b) => expect(overlap(a, b), label).toBe(0)));
+              // The model as drawn where it is: tall, square or wide, set to its room's bottom right.
+              for (const aspect of [3 / 4, 1, 4 / 3]) {
+                const drawn = content.model.step?.picture ? standing(room, aspect) : null;
+                const marks = missingTitleBlockParts(setTitleBlock(shape, { title, byline: '' }, estimateTextSetter), content, drawn);
+                const boxes = marks.map(({ box }) => box);
+                rooms += boxes.length;
+                boxes.forEach((a, index) => boxes.slice(index + 1).forEach((b) => expect(overlap(a, b), label).toBe(0)));
+                const square = marks.find((mark) => mark.room === 'square');
+                if (drawn && square && square.box !== shape.pattern) expect(overlap(square.box, drawn), label).toBe(0);
+                if (drawn && square?.box === shape.pattern) crowded.add(label);
+              }
             }
           }
         }
       }
     }
     expect(rooms).toBeGreaterThan(0);
+    // Only where neither the square nor the title's column has room for words does a mark stand on the model: the
+    // least block there is, 18.6 mm on A5 landscape at 15%.
+    expect([...crowded]).toEqual([JSON.stringify({ size: 'a5', orientation: 'landscape', layout: 'flow', heightShare: 0.15 })]);
   });
 });

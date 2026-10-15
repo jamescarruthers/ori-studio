@@ -36,7 +36,7 @@ import {
 } from './diagramPageLayout';
 import { fontTextSetter } from './fontTextSetter';
 import { uploadTextRuns, type UploadTextRun } from '../upload/uploadText';
-import { layoutPicture, measureKey, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
+import { layoutPicture, measureKey, wholePictureRoom, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import { viewOfStep } from '../zoom/stepView';
@@ -45,7 +45,8 @@ import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
 import { zoomOutlineOf, zoomShapeOf } from '../zoom/zoomModel';
 import { liftedZoomArrows, type PlacedZoomArrow } from './zoomArrows';
-import { resolveTitleBlock, type ResolvedTitleBlock } from './titleBlockContent';
+import { modelRoom, resolveTitleBlock, type ResolvedTitleBlock } from './titleBlockContent';
+import type { PageBox } from './pagePlacement';
 import { hasTitleBlock } from './pagePlan';
 
 export interface DiagramPagesDependencies {
@@ -78,6 +79,12 @@ export interface PreparedDiagramPages {
    * no block.
    */
   titleBlock: ResolvedTitleBlock | null;
+  /**
+   * Where the first page's title block draws its model, in mm, as the page
+   * is composed: what the Pages view keeps its marks clear of. Null where it
+   * draws none. Worked out once.
+   */
+  titleBlockModel: () => PageBox | null;
   /**
    * The enlarge arrows on page `index` where it prints them (Revision 2),
    * lifted to their areas as the page lifts them: what the Pages view puts
@@ -469,16 +476,25 @@ export function preparedPages(
   const make = (
     layout: DiagramPagesLayout,
     of: DiagramDocument = document,
-    arrows = new Map<number, PlacedZoomArrow[]>()
+    arrows = new Map<number, PlacedZoomArrow[]>(),
+    model: { box?: PageBox | null } = {}
   ): PreparedDiagramPages => ({
     withLayout: (next) => make(next, of),
-    adoptedAs: (adopted) => make(layout, adopted, arrows),
+    adoptedAs: (adopted) => make(layout, adopted, arrows, model),
     layout,
     document: of,
     setter,
     missing: [...setter.missing],
     unavailableFonts: fonts.unavailable,
     titleBlock,
+    titleBlockModel() {
+      if (model.box === undefined) {
+        const block = layout.pages[0]?.titleBlock;
+        const step = titleBlock?.model.step;
+        model.box = block && titleBlock && step ? wholePictureRoom(step, document.assets, document.style, modelRoom(block.geometry, titleBlock)) : null;
+      }
+      return model.box;
+    },
     zoomArrows(index) {
       const page = layout.pages[index];
       if (!page) return [];

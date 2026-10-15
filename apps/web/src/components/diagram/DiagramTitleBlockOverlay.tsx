@@ -15,10 +15,9 @@ import { PagePlaceholder } from './PagePlaceholder';
 const px = (mm: number) => mm * PAGES_PX_PER_MM;
 
 /**
- * Where the words go in each room, clear of what may stand in it: the
- * title's beside nothing; the pattern's square's at its top, since a model
- * standing in it is set to its foot; the model's box's at its foot, under
- * the pattern drawn behind it.
+ * Where the words go in each room: the title's beside nothing; the pattern's
+ * square's at the top of what a model standing in it leaves free; the model's
+ * box's at its foot, under the pattern drawn behind it.
  */
 const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | 'bottom'>> = {
   title: 'middle',
@@ -37,10 +36,13 @@ const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | '
 export function DiagramTitleBlockOverlay({
   block,
   content,
+  model,
   paper,
 }: {
   block: LayoutTitleBlock;
   content: ResolvedTitleBlock;
+  /** Where the block draws its model (`PreparedDiagramPages.titleBlockModel`), which the square's mark keeps clear of. */
+  model: PageBox | null;
   /** The page, which the outline is inset into as the margin guide is. */
   paper: Pick<PrintPaper, 'widthMm' | 'heightMm'>;
 }) {
@@ -67,7 +69,7 @@ export function DiagramTitleBlockOverlay({
         data-title-block=""
         style={{ left: px(x), top: px(y), right: px(paper.widthMm - x - w), bottom: px(paper.heightMm - y - h) }}
       />
-      {missingTitleBlockParts(block, content).map(({ room, box, missing }) => (
+      {missingTitleBlockParts(block, content, model).map(({ room, box, missing }) => (
         <PagePlaceholder key={room} kind="part" words={WORDS[room]} data-title-block-room={room} style={at(box)}>
           {missing.map((part) => (
             <span key={part.part} data-title-block-missing={part.part}>
