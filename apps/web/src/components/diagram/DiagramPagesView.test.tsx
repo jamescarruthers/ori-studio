@@ -373,6 +373,37 @@ describe('DiagramPagesView', () => {
     expect(props.onSelect).toHaveBeenLastCalledWith(null);
   });
 
+  it('marks each credit with no value where it would print and where the note is cut, never in the page, and no empty note', () => {
+    const header = (credits: { label: string; value: string }[], note = '') => {
+      const made = insertSteps(createDiagram({ title: 'Crane' }), [cpStep('step-1'), cpStep('step-2')], 0);
+      const blocked = { ...made, page: { ...made.page, titleBlock: { enabled: true, heightShare: 0.23 } } };
+      const noted = setTitleBlockContent(blocked, { subtitle: 'Origami diagram', note });
+      return credits.reduce((done, credit) => setTitleBlockContent(done, { credits: { op: 'add', credit } }), noted);
+    };
+    const rooms = () =>
+      [...host.querySelectorAll<HTMLElement>('[data-title-block-room]')].map((room) => [
+        room.dataset.titleBlockRoom,
+        [...room.querySelectorAll<HTMLElement>('[data-title-block-missing]')].map((part) => [part.dataset.titleBlockMissing, part.textContent]),
+      ]);
+    const document = header([
+      { label: 'Author', value: '' },
+      { label: 'Steps', value: '2' },
+    ]);
+    const pages = preparedPages(document, FONTS, subsetter);
+    render(pages, {}, pages.layout.bandInk, document);
+    expect(rooms()).toEqual([['credit', [['value', 'AUTHORNo value yet']]]]);
+    const credit = host.querySelector<HTMLElement>('[data-title-block-room="credit"]')!;
+    const { box } = pages.layout.pages[0]!.titleBlock!.emptyCredits[0]!;
+    expect([credit.style.left, credit.style.top, credit.style.width, credit.style.height]).toEqual([box.x, box.y, box.w, box.h].map((mm) => `${mm * PX_PER_MM}px`));
+    expect(pages.compose(0).svg).not.toContain('AUTHOR');
+    // A note longer than the block has room for: marked where it is cut, after its last line.
+    const long = header([{ label: 'Steps', value: '2' }], Array.from({ length: 40 }, (_, index) => `Line ${index + 1}`).join('\n'));
+    const longPages = preparedPages(long, FONTS, subsetter);
+    render(longPages, {}, longPages.layout.bandInk, long);
+    expect(rooms()).toEqual([['cut', [['note', 'The rest of the note doesn’t fit']]]]);
+    expect(host.querySelector('[data-title-block-room="cut"]')!.getAttribute('data-kind')).toBe('cut');
+  });
+
   it('sets the words for a missing pattern over a portrait model standing at its own size in its place, not on it', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400"><rect width="300" height="400" fill="#c48"/></svg>';
     const photo = {

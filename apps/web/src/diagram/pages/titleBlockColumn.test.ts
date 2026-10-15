@@ -139,15 +139,24 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     expect(none.geometry).toEqual(plain.geometry);
   });
 
-  it('prints no credit with an empty value', () => {
+  it('prints no credit with an empty value, and marks where each would go after the printed ones, for the Pages view', () => {
     const set = setOf({ credits: [{ label: 'AUTHOR', value: '' }, { label: 'RECOMMENDED SIZE', value: ' ' }, { label: 'STEPS', value: '28' }] });
     expect(set.credits!.columns.map(({ label }) => label.text)).toEqual(['STEPS']);
-    expect(set.credits!.columns[0]!.x).toBe(set.geometry.block.x);
     expect(set.credits!.dividers).toEqual([]);
-    expect(setOf({ credits: [{ label: 'AUTHOR', value: '' }] }).credits).toBeNull();
+    const steps = set.credits!.columns[0]!;
+    expect(set.emptyCredits.map(({ label }) => label)).toEqual(['AUTHOR', 'RECOMMENDED SIZE']);
+    const [author, size] = set.emptyCredits.map(({ box }) => box);
+    expect(author!.x).toBeCloseTo(right(steps) + 12 / PT, 9);
+    expect(author!.y).toBe(steps.top);
+    expect(size!.x).toBeCloseTo(right(author!) + 12 / PT, 9);
+    expect(right(size!)).toBeLessThanOrEqual(right(set.geometry.column) + 1e-9);
+    // None with a value: each marked from the margin.
+    const blank = setOf({ credits: [{ label: 'AUTHOR', value: '' }] });
+    expect(blank.credits).toBeNull();
+    expect(blank.emptyCredits[0]!.box.x).toBe(blank.geometry.block.x);
   });
 
-  it('wraps the credits to a second row where a row is wider than the band, and counts those the block has no room for', () => {
+  it('wraps the credits to a second row where a row is wider than the band, and marks none where one with a value is cut', () => {
     const many = [...CREDITS, { label: 'DIAGRAMS', value: 'Zachary Marion' }, { label: 'PAPER', value: 'One uncut square of kami' }];
     const { credits, geometry } = setOf({ credits: many });
     const rows = [...new Set(credits!.columns.map(({ top }) => top))];
@@ -158,10 +167,11 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     // Every row inside the band's width, and no divider at a row's end.
     for (const column of credits!.columns) expect(right(column)).toBeLessThanOrEqual(right(geometry.column) + 1e-9);
     expect(credits!.dividers).toHaveLength(many.length - 2);
-    // On the shortest block, what has no room is not printed, and counted.
-    const short = setOf({ credits: [...many, ...many] }, { ...J1B_SETUP, size: 'a5', orientation: 'landscape', titleBlock: { enabled: true, heightShare: 0.15 } });
+    // On the shortest block, what has no room is not printed: counted, and no empty credit marked after it.
+    const short = setOf({ credits: [...many, ...many, { label: 'NOTE', value: '' }] }, { ...J1B_SETUP, size: 'a5', orientation: 'landscape', titleBlock: { enabled: true, heightShare: 0.15 } });
     expect(short.credits!.cut).toBeGreaterThan(0);
     expect(short.credits!.columns.length + short.credits!.cut).toBe(2 * many.length);
+    expect(short.emptyCredits).toEqual([]);
   });
 
   it('wraps the note to the band’s width under the credits, and cuts it with "…" where it would run past the block’s foot', () => {

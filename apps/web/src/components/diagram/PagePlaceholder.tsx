@@ -7,7 +7,10 @@ import styles from './PagePlaceholder.module.css';
  * step's picture is tinted as paper, its words in the middle (`picture`); a
  * part of the first page's title block is not, since the art in front of it
  * may show through, and its words stand at the box's `words` end, clear of
- * what may stand at the other (`part`). Placed by its parent.
+ * what may stand at the other (`part`); a credit's with no value is its
+ * label over the reason, a line each (`slot`). Where the title block is cut, the
+ * box is the printed line it is cut after, and its words a tag at that
+ * line's end, over the page (`cut`). Placed by its parent.
  */
 export function PagePlaceholder({
   kind,
@@ -16,7 +19,7 @@ export function PagePlaceholder({
   children,
   ...rest
 }: {
-  kind: 'picture' | 'part';
+  kind: 'picture' | 'part' | 'slot' | 'cut';
   words?: 'top' | 'middle' | 'bottom';
   style: CSSProperties;
   children: ReactNode;

@@ -1206,8 +1206,11 @@
       "textCut": "Text doesn’t fit",
       "titleBlock": {
         "addTitle": "Add a title",
+        "creditsCut": "Some credits don’t fit",
         "noModel": "No step has a picture yet",
         "noPattern": "No step is linked to a crease pattern",
+        "noteCut": "The rest of the note doesn’t fit",
+        "noValue": "No value yet",
         "stepNoPattern": "Step {{number}} has no crease pattern",
         "stepNoPicture": "Step {{number}} has no picture yet"
       },

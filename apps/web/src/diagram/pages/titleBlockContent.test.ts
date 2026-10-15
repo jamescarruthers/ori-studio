@@ -259,6 +259,56 @@ describe('missingTitleBlockParts', () => {
     expect(missing(titleBlockDiagram([emptyStep('s1')], { pattern: { kind: 'none' } }))).toEqual([['square', geometry.pattern, [['model', null, null]]]]);
   });
 
+  it('marks each credit with no value where it would print, and no empty note', () => {
+    const content = resolveTitleBlock(titleBlockDiagram([cpStep('s1')]));
+    const block = set('Crane', {
+      credits: [
+        { label: 'AUTHOR', value: '' },
+        { label: 'STEPS', value: '9' },
+        { label: '', value: '' },
+      ],
+      note: '',
+    });
+    const marks = missingTitleBlockParts(block, content, null);
+    expect(marks.map(({ room, key, box, missing: [part] }) => [room, key, box, part!.part, part!.label])).toEqual([
+      ['credit', 'credit-0', block.emptyCredits[0]!.box, 'value', 'AUTHOR'],
+      ['credit', 'credit-1', block.emptyCredits[1]!.box, 'value', ''],
+    ]);
+  });
+
+  it('marks where the column is cut: after the note’s last line, or the last row of credits where credits are left out', () => {
+    const content = resolveTitleBlock(titleBlockDiagram([cpStep('s1')]));
+    const long = set('Crane', { note: Array.from({ length: 30 }, (_, index) => `Line ${index + 1}`).join('\n') });
+    const [cut] = missingTitleBlockParts(long, content, null);
+    const note = long.note!;
+    const last = note.firstBaseline + (note.lines.length - 1) * note.leadingMm;
+    const after = geometry.column.x + note.lines.at(-1)!.widthMm + 1;
+    expect(cut).toEqual({
+      room: 'cut',
+      key: 'cut',
+      box: {
+        x: expect.closeTo(after, 9),
+        y: expect.closeTo(last - 0.72 * note.sizeMm, 9),
+        w: expect.closeTo(geometry.column.x + geometry.column.w - after, 9),
+        h: expect.closeTo(0.96 * note.sizeMm, 9),
+      },
+      missing: [{ part: 'note', step: null, number: null }],
+    });
+    // Credits left out on the shortest block, and the note under them.
+    const short = titleBlockGeometry(
+      { ...DEFAULT_PAGE_SETUP, layout: 'flow', size: 'a5', orientation: 'landscape', titleBlock: { enabled: true, heightShare: 0.15 } },
+      11,
+      8,
+      TITLE_BLOCK_ART_SIZE_DEFAULTS
+    )!;
+    const many = Array.from({ length: 12 }, (_, index) => ({ label: `CREDIT ${index + 1}`, value: 'Traditional design' }));
+    const cramped = setTitleBlock(short, { title: 'Crane', block: { ...emptyTitleBlockLook(), credits: many, note: 'Use thin paper.' } }, estimateTextSetter);
+    const marks = missingTitleBlockParts(cramped, content, null).filter(({ room }) => room === 'cut');
+    expect(marks.map(({ missing: parts }) => parts.map(({ part }) => part))).toEqual([['credits', 'note']]);
+    const row = cramped.credits!.columns.at(-1)!;
+    expect(marks[0]!.box.y).toBe(row.top);
+  });
+
   it('keeps the square’s mark clear of a model drawn in it: the strip it leaves, else the column under what it prints', () => {
     const block = set('Crane');
     const content = resolveTitleBlock(titleBlockDiagram([uploadStep('s1')]));

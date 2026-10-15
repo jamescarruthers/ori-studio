@@ -11,7 +11,8 @@
  * - the credits, a row of columns from the left margin, each a label over its
  *   value and as wide as the wider, with a divider in each gutter; a row
  *   wider than the band wraps to another. A credit with no value prints
- *   nothing;
+ *   nothing; the Pages view marks where it would go ({@link
+ *   LayoutTitleBlock.emptyCredits});
  * - the note, plain text wrapped to the column, cut with "…" where it would
  *   run past the block's foot.
  *
@@ -63,6 +64,8 @@ const DESCENT = 0.24;
 const TITLE_LEAST = 0.3;
 /** The least the column is scaled to, in the shortest block. */
 export const LEAST_SCALE = 0.5;
+/** A credit with no value marked on the Pages view: at least this wide, for its words. */
+const EMPTY_CREDIT_MM = 22;
 
 /** A credit as the page prints it: its label as printed, and its value's text; a blank value prints nothing. */
 export interface TitleBlockCreditText {
@@ -132,6 +135,8 @@ export interface LayoutTitleBlock {
   } | null;
   /** The note's lines from the column's left; null with no note. `cut`: some of it is not printed, for want of room. */
   note: { lines: SetLine[]; sizeMm: number; leadingMm: number; top: number; firstBaseline: number; cut: boolean } | null;
+  /** For the Pages view, never the page: where each credit with no value would print, in the room the printed ones leave. */
+  emptyCredits: { label: string; box: PageBox }[];
 }
 
 /** Under this contrast with white the paper's colour is pale: the title and the rules are printed in ink instead. */
@@ -212,6 +217,20 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   const noteTop = cut > 0 ? foot : lastRow ? lastRow.valueBaseline + T.rowGapMm * scale : firstRowTop;
   const note = setNote(look.note.trim(), column, noteTop, scale, setter);
 
+  // Each credit with no value, after the last printed one, for as long as the block has room above the note: none
+  // where a credit with one has none.
+  const room = note && note.lines.length > 0 ? note.top : foot;
+  const emptyCredits: LayoutTitleBlock['emptyCredits'] = [];
+  let at = lastRow ? { x: lastRow.x + lastRow.w + T.gutterMm * scale, top: lastRow.top } : { x: column.x, top: firstRowTop };
+  for (const { label } of cut > 0 ? [] : credits.filter(({ value }) => value === '')) {
+    const w = Math.min(column.w, Math.max(EMPTY_CREDIT_MM * scale, trackedLine(setter, label, labelSizeMm, 700, trackingMm, column.w).widthMm));
+    if (at.x > column.x && at.x + w > column.x + column.w + 1e-9) at = { x: column.x, top: at.top + pitch };
+    const h = (CAP_HEIGHT * T.labelMm + T.valueDropMm) * scale + DESCENT * valueSizeMm;
+    if (at.top + h > room + 1e-9) break;
+    emptyCredits.push({ label, box: { x: at.x, y: at.top, w, h } });
+    at = { ...at, x: at.x + w + T.gutterMm * scale };
+  }
+
   return {
     geometry,
     scale,
@@ -220,6 +239,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
     title,
     credits: printed.length > 0 ? { labelSizeMm, valueSizeMm, trackingMm, columns, dividers, cut } : null,
     note,
+    emptyCredits,
   };
 }
 

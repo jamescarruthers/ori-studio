@@ -213,18 +213,25 @@ export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBl
 
 /** A part of the title block that prints nothing where it would show, and why. */
 export interface MissingTitleBlockPart {
-  part: 'title' | 'pattern' | 'model';
-  /** The step that cannot give it; null where Auto finds none, and for the title. */
+  /** The title, the pattern or the model; a credit's value; the credits' or the note's end, cut for want of room. */
+  part: 'title' | 'pattern' | 'model' | 'value' | 'credits' | 'note';
+  /** The step that cannot give it; null where Auto finds none, and for the rest. */
   step: DiagramStep | null;
   /** That step's number, as the pages print it. */
   number: number | null;
+  /** A credit's label, as printed, for its value. */
+  label?: string;
 }
 
 /** A room of the block where what would print there prints nothing ({@link missingTitleBlockParts}). */
 export interface TitleBlockPlaceholder {
-  /** The title's band, the pattern's square — the model's room too where no pattern is drawn — or the model's box. */
-  room: 'title' | 'square' | 'model';
-  /** One for each mark. */
+  /**
+   * The title's band; the pattern's square — the model's room too where no
+   * pattern is drawn; the model's box; a credit with no value; and where the
+   * column is cut.
+   */
+  room: 'title' | 'square' | 'model' | 'credit' | 'cut';
+  /** One for each mark: a credit's is its place among the marked credits. */
   key: string;
   /** Where it is marked: the room, or for the square, what a model drawn in it leaves free ({@link squareMark}). */
   box: PageBox;
@@ -234,18 +241,21 @@ export interface TitleBlockPlaceholder {
 
 /** The least room across, in mm, a mark's words are set in: two or three lines of them on the Pages view. */
 const MARK_ROOM_MM = 10;
-/** A descender's depth, as a share of the size: a printed line's foot, for a mark. */
+/** A capital's height and a descender's depth, as shares of the size: a printed line's box, for a mark. */
+const CAPITAL = 0.72;
 const DESCENDER = 0.24;
 
 /**
  * What of the block prints nothing where it would show, room by room: the
- * title, in its band, where the diagram has none; the pattern and the model
- * where they are Auto or a step, and no step gives them — a part set to none
- * is the author's, and is not missing. The pattern and a model with no
- * pattern in front of it would print in one square, which is one room; so no
- * two rooms overlap. `drawnModel` is where the model is drawn, null where it
- * is not (`wholePictureRoom`), which the square's mark keeps clear of. For
- * the Pages view's overlay, never the page.
+ * title where the diagram has none; each credit with no value, where the
+ * column has room to show it; where the credits or the note are cut; the
+ * pattern and the model where they are Auto or a step, and no step gives
+ * them — a part set to none is the author's, and is not missing, nor is an
+ * empty note. The pattern and a model with no pattern in front of it would
+ * print in one square, which is one room; so no two rooms overlap.
+ * `drawnModel` is where the model is drawn, null where it is not
+ * (`wholePictureRoom`), which the square's mark keeps clear of. For the
+ * Pages view's overlay, never the page.
  */
 export function missingTitleBlockParts(
   block: LayoutTitleBlock,
@@ -259,38 +269,88 @@ export function missingTitleBlockParts(
   const front: MissingTitleBlockPart[] = [];
   if (pattern.from !== 'none' && !pattern.scene) square.push(missing(pattern, 'pattern'));
   if (model.from !== 'none' && !model.step?.picture) (pattern.scene ? front : square).push(missing(model, 'model'));
+  const unset = { step: null, number: null };
+  const cut = cutMark(block);
   return [
-    ...(block.title ? [] : [{ room: 'title' as const, key: 'title', box: block.band, missing: [{ part: 'title' as const, step: null, number: null }] }]),
-    ...(square.length > 0 ? [{ room: 'square' as const, key: 'square', box: squareMark(block, drawnModel), missing: square }] : []),
+    ...(block.title ? [] : [{ room: 'title' as const, key: 'title', box: block.band, missing: [{ part: 'title' as const, ...unset }] }]),
+    ...block.emptyCredits.map(({ label, box }, index) => ({
+      room: 'credit' as const,
+      key: `credit-${index}`,
+      box,
+      missing: [{ part: 'value' as const, ...unset, label }],
+    })),
+    ...(cut ? [cut] : []),
+    ...(square.length > 0 ? [{ room: 'square' as const, key: 'square', box: squareMark(block, drawnModel, cut), missing: square }] : []),
     ...(front.length > 0 ? [{ room: 'model' as const, key: 'model', box: geometry.model, missing: front }] : []),
   ];
 }
 
 /**
+ * Where the column is cut: after the last thing printed on the last line of
+ * what is cut short — the note's last line, or the last row of credits and
+ * the credits marked on it — to the column's end; or, where none of it
+ * printed, the column's room under the band.
+ */
+function cutMark(block: LayoutTitleBlock): TitleBlockPlaceholder | null {
+  const { column } = block.geometry;
+  const { note, credits, band, emptyCredits } = block;
+  const missing: MissingTitleBlockPart[] = [];
+  if (credits && credits.cut > 0) missing.push({ part: 'credits', step: null, number: null });
+  if (note?.cut) missing.push({ part: 'note', step: null, number: null });
+  if (missing.length === 0) return null;
+  const foot = column.y + column.h;
+  const lastLine = note?.lines.at(-1);
+  const lastRow = credits?.columns.at(-1);
+  const line = (() => {
+    if (note && lastLine) {
+      const baseline = note.firstBaseline + (note.lines.length - 1) * note.leadingMm;
+      return { x: column.x + lastLine.widthMm, top: baseline - CAPITAL * note.sizeMm, foot: baseline + DESCENDER * note.sizeMm };
+    }
+    if (lastRow && credits) {
+      const onRow = [...credits.columns, ...emptyCredits.map(({ box }) => ({ ...box, top: box.y }))].filter(({ top }) => top === lastRow.top);
+      return { x: Math.max(...onRow.map(({ x, w }) => x + w)), top: lastRow.top, foot: lastRow.valueBaseline + DESCENDER * credits.valueSizeMm };
+    }
+    return { x: column.x, top: band.y + band.h, foot };
+  })();
+  const x = Math.min(line.x + (line.x > column.x ? CUT_GAP_MM : 0), column.x + column.w);
+  return {
+    room: 'cut',
+    key: 'cut',
+    box: { x, y: line.top, w: column.x + column.w - x, h: Math.max(0, Math.min(foot, line.foot) - line.top) },
+    missing,
+  };
+}
+
+/** What a cut's mark keeps clear of the last thing printed before it. */
+const CUT_GAP_MM = 1;
+
+/**
  * Where the pattern's square is marked, clear of a model drawn in it
  * (`inSquare`): the square, less the model — the strip it leaves above
  * itself or beside itself, whichever is larger — or, where it leaves no room
- * for words, the column under all it prints; the square itself where neither
- * has room.
+ * for words, the column under all it prints and marks; the square itself
+ * where neither has room.
  */
-function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null): PageBox {
+function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null, cut: TitleBlockPlaceholder | null): PageBox {
   const { pattern: square, column } = block.geometry;
   if (!inSquare) return square;
   const above = { ...square, h: Math.max(0, inSquare.y - square.y) };
   const beside = { ...square, w: Math.max(0, inSquare.x - square.x) };
   const strip = above.w * above.h >= beside.w * beside.h ? above : beside;
   if (Math.min(strip.w, strip.h) >= MARK_ROOM_MM) return strip;
-  const top = columnFoot(block);
+  const top = Math.max(columnFoot(block), cut ? cut.box.y + cut.box.h : Number.NEGATIVE_INFINITY);
   const under = { x: column.x, y: top, w: column.w, h: column.y + column.h - top };
   return Math.min(under.w, under.h) >= MARK_ROOM_MM ? under : square;
 }
 
-/** How far down the column what it prints reaches: the band, the credits and the note. */
+/** How far down the column what it prints and marks reaches: the band, the credits, the marked credits and the note. */
 function columnFoot(block: LayoutTitleBlock): number {
-  const { band, credits, note } = block;
+  const { band, credits, note, emptyCredits } = block;
   const feet = [band.y + band.h];
   const lastRow = credits?.columns.at(-1);
   if (lastRow && credits) feet.push(lastRow.valueBaseline + DESCENDER * credits.valueSizeMm);
+  for (const { box } of emptyCredits) feet.push(box.y + box.h);
   if (note && note.lines.length > 0) feet.push(note.firstBaseline + (note.lines.length - 1) * note.leadingMm + DESCENDER * note.sizeMm);
   return Math.max(...feet);
 }
+
