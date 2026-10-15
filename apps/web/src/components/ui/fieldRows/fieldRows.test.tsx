@@ -301,6 +301,18 @@ describe('SelectRow and SegmentedRow', () => {
     act(() => buttons[1]?.click());
     expect(onChange).toHaveBeenCalledWith('right');
   });
+  it('step in under the row they qualify, a select as the other rows do', () => {
+    const view = render(
+      <>
+        <SelectRow label="Model" value="auto" options={[{ id: 'auto', label: 'Auto' }]} onChange={() => {}} />
+        <SelectRow label="Crease pattern" nested value="auto" options={[{ id: 'auto', label: 'Auto' }]} onChange={() => {}} />
+      </>
+    );
+    const nestedOf = (label: string) =>
+      view.querySelector(`button[aria-label="${label}"]`)!.closest('[data-field-row]')!.hasAttribute('data-nested');
+    expect(nestedOf('Model')).toBe(false);
+    expect(nestedOf('Crease pattern')).toBe(true);
+  });
 });
 
 describe('SliderRow', () => {
