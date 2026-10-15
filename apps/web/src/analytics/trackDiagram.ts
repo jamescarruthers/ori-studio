@@ -8,6 +8,7 @@ import {
   DIAGRAM_SPREAD_AXIS_DEGREE_BUCKETS,
   DIAGRAM_SPREAD_PERCENT_BUCKETS,
   DIAGRAM_SPREAD_SKEW_PERCENT_BUCKETS,
+  DIAGRAM_TITLE_BLOCK_CREDIT_BUCKETS,
   bucketCount,
 } from './events';
 import type {
@@ -59,6 +60,9 @@ import type {
   DiagramStepOpenedVia,
   DiagramStyleChoiceName,
   DiagramTitleBlockChoice,
+  DiagramTitleBlockCreditChange,
+  DiagramTitleBlockSize,
+  DiagramTitleBlockTextShown,
   DiagramView,
 } from './events';
 import { track } from './runtime';
@@ -325,17 +329,36 @@ export function trackDiagramViewSwitched(view: DiagramView): void {
 /**
  * A page setting changed. Which one, never its value — except the style,
  * named as a built-in, the export style or `custom`, never a preset's name;
- * and where the title block's model or pattern now comes from, never which
- * step.
+ * where the title block's model or pattern now comes from, never which step;
+ * and for the title block's text and sizes, what a reader of the page would
+ * see change, never the text or the size: whether its subtitle or note
+ * prints, how its credits changed and how many it has, bucketed, and whether
+ * a size is the default.
  */
 export function trackDiagramPageSetupChanged(
   setting: DiagramPageSetting,
-  detail: { style?: DiagramStyleChoiceName; titleBlockChoice?: DiagramTitleBlockChoice } = {}
+  detail: {
+    style?: DiagramStyleChoiceName;
+    titleBlockChoice?: DiagramTitleBlockChoice;
+    titleBlockCreditChange?: DiagramTitleBlockCreditChange;
+    /** How many credits the block holds after the change, sent bucketed. */
+    titleBlockCredits?: number;
+    titleBlockSubtitle?: DiagramTitleBlockTextShown;
+    titleBlockNote?: DiagramTitleBlockTextShown;
+    titleBlockSize?: DiagramTitleBlockSize;
+  } = {}
 ): void {
   track(ANALYTICS_EVENTS.diagramPageSetupChanged, {
     setting,
     ...(detail.style ? { style: detail.style } : {}),
     ...(detail.titleBlockChoice ? { title_block_choice: detail.titleBlockChoice } : {}),
+    ...(detail.titleBlockCreditChange ? { title_block_credit_change: detail.titleBlockCreditChange } : {}),
+    ...(detail.titleBlockCredits !== undefined
+      ? { title_block_credit_bucket: bucketCount(detail.titleBlockCredits, DIAGRAM_TITLE_BLOCK_CREDIT_BUCKETS) }
+      : {}),
+    ...(detail.titleBlockSubtitle ? { title_block_subtitle: detail.titleBlockSubtitle } : {}),
+    ...(detail.titleBlockNote ? { title_block_note: detail.titleBlockNote } : {}),
+    ...(detail.titleBlockSize ? { title_block_size: detail.titleBlockSize } : {}),
   });
 }
 

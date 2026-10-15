@@ -38,7 +38,7 @@ export function useDiagramTitleBlock() {
       if (!useWorkspaceStore.getState().setDiagramTitleBlockContent({ note }, { loadId, session })) return;
       if (countedSession.current === session) return;
       countedSession.current = session;
-      trackDiagramPageSetupChanged('title_block_byline');
+      trackDiagramPageSetupChanged('title_block_note', { titleBlockNote: note.trim() ? 'shown' : 'hidden' });
     },
     [loadId]
   );

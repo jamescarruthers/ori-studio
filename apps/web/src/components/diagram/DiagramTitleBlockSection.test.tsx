@@ -239,7 +239,7 @@ describe('DiagramTitleBlockSection', () => {
     act(() => byline()!.blur());
     expect(state().diagram!.titleBlockContent?.note).toBe('Design: Lang\nPaper: 35 cm');
     expect(undoSteps()).toBe(1);
-    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('title_block_byline');
+    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('title_block_note', { titleBlockNote: 'shown' });
     // Another sitting counts again.
     act(() => byline()!.focus());
     type('Design: Robert Lang');

@@ -426,8 +426,10 @@ export type DiagramView = 'steps' | 'pages';
  * `page_steps` gives one flow page its own count of steps, and `page_steps_reset` returns it to the
  * default (since 2026-10-11). The `flow_*` settings are the flow's packing, in the Page pane's
  * Packing section (since 2026-10-12): Bands, Prefer three bands, Steps in bends, Nesting and
- * Scale steadiness, set or reset to the default. The `title_block*` settings are the Title block
- * section's: the toggle, and what the block shows — its model, its crease pattern, its byline.
+ * Scale steadiness, set or reset to the default. The `title_block*` settings are the title block's,
+ * in Header & footer: the toggle, and what the block shows — its model and crease pattern and their
+ * sizes, its subtitle, credits and note (since 2026-10-15; until then a byline, `title_block_byline`,
+ * on preview builds only).
  */
 export type DiagramPageSetting =
   | 'size'
@@ -456,10 +458,26 @@ export type DiagramPageSetting =
   | 'title_block'
   | 'title_block_model'
   | 'title_block_pattern'
-  | 'title_block_byline';
+  | 'title_block_model_size'
+  | 'title_block_pattern_size'
+  | 'title_block_subtitle'
+  | 'title_block_credits'
+  | 'title_block_note';
 
 /** Where the title block's model or crease pattern was set to come from: what Auto finds, a step chosen, or none. */
 export type DiagramTitleBlockChoice = 'auto' | 'step' | 'none';
+
+/**
+ * What changed in the title block's credits (`title_block_credits`): a credit added or removed, its
+ * label or its value typed, or its value made the live step count or typed instead of it.
+ */
+export type DiagramTitleBlockCreditChange = 'add' | 'remove' | 'label' | 'value' | 'step_count_on' | 'step_count_off';
+
+/** Whether the title block's subtitle or note prints after the change: it prints only with text. */
+export type DiagramTitleBlockTextShown = 'shown' | 'hidden';
+
+/** The title block's model or crease pattern size after the change: the app's default, or the author's own. */
+export type DiagramTitleBlockSize = 'default' | 'custom';
 
 /** What Re-pack packed afresh: one flow page (Re-pack Page) or every one (Re-pack All Pages). */
 export type DiagramRepackScope = 'page' | 'all';
@@ -1842,6 +1860,9 @@ export const DIAGRAM_PAGE_COUNT_BUCKETS = [1, 2, 5, 10, 25] as const;
 
 /** How many of a diagram's steps had no picture when it was exported: none, one, a few, many. */
 export const DIAGRAM_EMPTY_STEP_BUCKETS = [0, 1, 5, 20] as const;
+
+/** How many credits the title block holds: none, the three a new diagram starts with, a few more, many. */
+export const DIAGRAM_TITLE_BLOCK_CREDIT_BUCKETS = [0, 1, 2, 3, 5, 10] as const;
 
 /** Default threshold ladder for element counts (nodes, lines, etc.). */
 export const COUNT_BUCKETS = [1, 5, 10, 20, 50, 100, 200, 500] as const;
