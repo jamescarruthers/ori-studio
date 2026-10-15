@@ -18,10 +18,15 @@
  * though it changes the picture a saved block shows.
  *
  * The pattern is drawn from its step's stored thumbnail, as a scene for the
- * shared painter ({@link patternScene}). Pure.
+ * shared painter ({@link patternScene}); the model in front of it, or over
+ * the pattern's square too where none is drawn ({@link modelRoom}). What
+ * prints nothing where it would show, the Pages view marks
+ * ({@link missingTitleBlockParts}). Pure.
  */
 import type { SheetStrokeRole, SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import type { PaperLineItem, PaperLineRole, PaperScene } from '../../lib/paper/paperScene';
+import type { PageBox } from './pagePlacement';
+import type { LayoutTitleBlock, TitleBlockGeometry } from './titleBlockGeometry';
 import {
   isLockedStep,
   stepById,
@@ -134,4 +139,34 @@ export function patternScene(thumbnail: SheetThumbnail): PaperScene | null {
   });
   if (items.length === 0) return null;
   return { bounds: { minX, minY, maxX: minX + width, maxY: minY + height }, sheet, items };
+}
+
+/** Where the block's model stands: in front of the pattern's lower left, or over the whole art where no pattern is drawn. */
+export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBlock): PageBox {
+  return content.pattern.scene ? geometry.model : geometry.art;
+}
+
+/** A part of the title block that prints nothing where it would show ({@link missingTitleBlockParts}). */
+export interface MissingTitleBlockPart {
+  part: 'title' | 'pattern' | 'model';
+  /** Where it would print. */
+  box: PageBox;
+  /** The step it comes from, which cannot give it; null where Auto finds none, and for the title. */
+  step: DiagramStep | null;
+}
+
+/**
+ * What of the block prints nothing where it would show: the title where the
+ * diagram has none; the pattern and the model where they are Auto or a step,
+ * and no step gives them — a part set to none is the author's, and is not
+ * missing. For the Pages view's overlay, never the page.
+ */
+export function missingTitleBlockParts(block: LayoutTitleBlock, content: ResolvedTitleBlock): MissingTitleBlockPart[] {
+  const { geometry } = block;
+  const { model, pattern } = content;
+  const missing: MissingTitleBlockPart[] = [];
+  if (!block.title) missing.push({ part: 'title', box: geometry.title, step: null });
+  if (pattern.from !== 'none' && !pattern.scene) missing.push({ part: 'pattern', box: geometry.pattern, step: pattern.step });
+  if (model.from !== 'none' && !model.step?.picture) missing.push({ part: 'model', box: modelRoom(geometry, content), step: model.step });
+  return missing;
 }

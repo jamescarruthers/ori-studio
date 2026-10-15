@@ -46,7 +46,7 @@ import { cellPicture, fittedScene, wholePicture, type CellPicture } from './page
 import { placedZoomArrows } from './zoomArrows';
 import type { PagePart } from './pagePlacement';
 import { diagramSurfaceStyle } from '../pictures/diagramPaperStyle';
-import type { ResolvedTitleBlock } from './titleBlockContent';
+import { modelRoom, type ResolvedTitleBlock } from './titleBlockContent';
 import type { LayoutTitleBlock } from './titleBlockGeometry';
 
 export interface PageComposeOptions {
@@ -217,8 +217,8 @@ function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageIn
   const { model, pattern } = input.titleBlock;
   const elements: string[] = [];
   if (pattern.scene) elements.push(fittedScene(pattern.scene, diagramSurfaceStyle(input.style), geometry.pattern));
-  const room = pattern.scene ? geometry.model : geometry.art;
   const text = { hanStyle: input.hanStyle, runs: input.setter.runs };
+  const room = modelRoom(geometry, input.titleBlock);
   const picture = model.step ? wholePicture(model.step, input.assets, input.style, room, 'title-block-', text) : null;
   if (picture) {
     elements.push(picture.markup);

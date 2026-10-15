@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_PAGE_SETUP,
   createDiagram,
   createStep,
   createTurn,
@@ -16,7 +17,9 @@ import {
 import type { SheetStrokeRole, SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { readDiagram, writeDiagram } from '../document/diagramFile';
 import { cpSource, cpStep, referencesStep } from '../document/diagramSteps.fixtures';
-import { autoModelStep, autoPatternStep, patternScene, resolveTitleBlock } from './titleBlockContent';
+import { estimateTextSetter } from './estimateTextSetter';
+import { autoModelStep, autoPatternStep, missingTitleBlockParts, modelRoom, patternScene, resolveTitleBlock } from './titleBlockContent';
+import { setTitleBlock, titleBlockGeometry } from './titleBlockGeometry';
 
 /**
  * What the first page's title block shows (`implementation-plans/
@@ -154,5 +157,43 @@ describe('patternScene', () => {
     expect(patternScene({ viewBox: '0 0 100 100', strokes: [] })).toBeNull();
     expect(patternScene({ viewBox: '0 0 100 100', strokes: [stroke('aux', 50)] })).toBeNull();
     expect(patternScene({ viewBox: '0 0 0 0', strokes: [stroke('edge', 0)] })).toBeNull();
+  });
+});
+
+describe('missingTitleBlockParts', () => {
+  const geometry = titleBlockGeometry({ ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: { enabled: true, heightShare: 0.27 } }, 11, 8)!;
+  const missing = (document: DiagramDocument, title = 'Crane') =>
+    missingTitleBlockParts(setTitleBlock(geometry, { title, byline: '' }, estimateTextSetter), resolveTitleBlock(document)).map(
+      ({ part, box, step }) => [part, box, step?.id ?? null]
+    );
+
+  it('marks nothing where every part prints', () => {
+    expect(missing(diagram([cpStep('s1'), cpStep('s2')]))).toEqual([]);
+  });
+
+  it('marks the title where there is none, and a part no step gives where it would print', () => {
+    // No linked step and no picture: the pattern in its square, the model over the whole art.
+    expect(missing(diagram([empty('s1')]), '')).toEqual([
+      ['title', geometry.title, null],
+      ['pattern', geometry.pattern, null],
+      ['model', geometry.art, null],
+    ]);
+    // A chosen step that can no longer give its part names it; the model stands in front of a pattern drawn.
+    const chosen = diagram([cpStep('s1'), upload('s2')], { model: { kind: 'step', stepId: 's1' }, pattern: { kind: 'step', stepId: 's2' } });
+    expect(missing(removeStepPicture(chosen, 's1'))).toEqual([
+      ['pattern', geometry.pattern, 's2'],
+      ['model', geometry.art, 's1'],
+    ]);
+    const pictureless = diagram([cpStep('s1'), cpStep('s2')], { model: { kind: 'step', stepId: 's2' } });
+    expect(missing(removeStepPicture(pictureless, 's2'))).toEqual([['model', geometry.model, 's2']]);
+  });
+
+  it('marks nothing the author set to none', () => {
+    expect(missing(diagram([empty('s1')], { model: { kind: 'none' }, pattern: { kind: 'none' } }))).toEqual([]);
+  });
+
+  it('stands the model in front of the pattern where one is drawn, and over its square too where none is', () => {
+    expect(modelRoom(geometry, resolveTitleBlock(diagram([cpStep('s1')])))).toBe(geometry.model);
+    expect(modelRoom(geometry, resolveTitleBlock(diagram([cpStep('s1')], { pattern: { kind: 'none' } })))).toBe(geometry.art);
   });
 });
