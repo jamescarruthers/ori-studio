@@ -124,7 +124,9 @@ describe('DiagramTitleBlockSection', () => {
     expect(select('Model')).toBeNull();
     expect(byline()).toBeNull();
     act(() => toggle().click());
-    expect(state().diagram!.page.titleBlock).toEqual(ON);
+    // At the share the file says, a diagram saved without the block the legacy 0.27, not a new diagram's 0.23.
+    const saidOn = { ...PAGE_SETTINGS.titleBlock.legacy, enabled: true };
+    expect(state().diagram!.page.titleBlock).toEqual(saidOn);
     expect(undoSteps()).toBe(1);
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('title_block');
     expect(toggle().getAttribute('aria-checked')).toBe('true');
@@ -132,7 +134,7 @@ describe('DiagramTitleBlockSection', () => {
     expect(select('Crease pattern')).not.toBeNull();
     expect(byline()).not.toBeNull();
     act(() => toggle().click());
-    expect(state().diagram!.page.titleBlock).toEqual({ ...ON, enabled: false });
+    expect(state().diagram!.page.titleBlock).toEqual({ ...saidOn, enabled: false });
     expect(select('Model')).toBeNull();
   });
 

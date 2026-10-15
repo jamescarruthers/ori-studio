@@ -1448,6 +1448,14 @@
       "positionLabel": "ステップの位置",
       "step": "ステップ"
     },
+    "titleBlock": {
+      "default": {
+        "author": "作者",
+        "recommendedSize": "推奨サイズ",
+        "steps": "ステップ数",
+        "subtitle": "折り紙の折り図"
+      }
+    },
     "turns": {
       "actions": "回し方の操作",
       "afterLast": "ステップ{{before}}の後",

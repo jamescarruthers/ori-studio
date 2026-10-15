@@ -1875,8 +1875,9 @@ on its next save.
   takes a half up (JavaScript's `Math.round`), and each product is computed
   in double precision as written, `stepsPerPage × (1 − heightShare)` and
   `heightShare × rows`: another rounding or order would re-cut saved first
-  pages. (At 0.27, the only share this build writes, nothing ties.) A
-  `pageSteps` on the first step still wins.
+  pages. (At 0.27 and 0.23, the only shares this build writes — a new
+  diagram's until 2026-10-15 and since — nothing ties.) A `pageSteps` on
+  the first step still wins.
 - `source`, null for an empty step, or:
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;
   - `{ kind: 'cp', scope: { kind: 'segment', region }, fingerprint,

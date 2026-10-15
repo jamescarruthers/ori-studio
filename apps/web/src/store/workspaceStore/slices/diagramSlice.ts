@@ -2,6 +2,7 @@ import {
   createDiagram,
   createStep,
   defaultHanStyle,
+  defaultTitleBlockContent,
   duplicateStep,
   editStepAnnotations,
   keepStepAnnotations,
@@ -81,6 +82,22 @@ import type { DiagramSlice, WorkspaceSliceCreator } from '../types';
  */
 function authorLocale(): string | null {
   return typeof document === 'undefined' ? null : document.documentElement.lang || null;
+}
+
+/**
+ * The diagram a first edit brings into being: its Han style from the author's
+ * language, and its title block's subtitle and credits written in the app's
+ * (Zach, 2026-10-15), the author's own text from then on.
+ */
+function newDiagram() {
+  const t = i18n.t;
+  const titleBlockContent = defaultTitleBlockContent({
+    subtitle: t('panels:diagram.titleBlock.default.subtitle', 'Origami diagram'),
+    author: t('panels:diagram.titleBlock.default.author', 'Author'),
+    recommendedSize: t('panels:diagram.titleBlock.default.recommendedSize', 'Recommended size'),
+    steps: t('panels:diagram.titleBlock.default.steps', 'Steps'),
+  });
+  return createDiagram({ hanStyle: defaultHanStyle(authorLocale()), titleBlockContent });
 }
 
 /**
@@ -173,7 +190,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     const state = get();
     if (state.diagramReadOnly) return null;
     const before = state.diagram;
-    const base = before ?? createDiagram({ hanStyle: defaultHanStyle(authorLocale()) });
+    const base = before ?? newDiagram();
     const edited = edit(base);
     // An edit that changed nothing records nothing — and does not bring a
     // diagram into being just to leave it empty.

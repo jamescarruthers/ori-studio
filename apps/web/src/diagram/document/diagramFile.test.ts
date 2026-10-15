@@ -298,9 +298,9 @@ describe('writeDiagram / readDiagram', () => {
     const LEGACY = { enabled: false, heightShare: 0.27 };
 
     it('writes its setting whole, always, and reads a file without it, or with it damaged, as no block', () => {
-      // A new diagram has the block, and says so.
+      // A new diagram has the block, J1b's shorter one (2026-10-15), and says so.
       const plain = throughJson(writeDiagram(sampleDiagram()));
-      expect(plain.page.titleBlock).toEqual({ enabled: true, heightShare: 0.27 });
+      expect(plain.page.titleBlock).toEqual({ enabled: true, heightShare: 0.23 });
       const on = setPageSetup(sampleDiagram(), { titleBlock: { enabled: true, heightShare: 0.3 } });
       const written = throughJson(writeDiagram(on));
       expect(written.page.titleBlock).toEqual({ enabled: true, heightShare: 0.3 });

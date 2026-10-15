@@ -1498,6 +1498,14 @@
       "positionLabel": "Step position",
       "step": "Step"
     },
+    "titleBlock": {
+      "default": {
+        "author": "Author",
+        "recommendedSize": "Recommended size",
+        "steps": "Steps",
+        "subtitle": "Origami diagram"
+      }
+    },
     "turns": {
       "actions": "Turn actions",
       "afterLast": "after step {{before}}",

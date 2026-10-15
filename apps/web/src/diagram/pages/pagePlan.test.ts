@@ -289,6 +289,23 @@ describe('paginate: the first page with the title block (diagram-title-block.md,
     expect(paginate(steps(20), grid({ rows: 1 }))).toEqual(paginate(steps(20), { ...GRID, rows: 1 }));
   });
 
+  it('holds seven of nine on a new diagram’s first page under its shorter block, and gives a grid’s block one row', () => {
+    // J1b's block (Zach, 2026-10-15): the rule unchanged, at the share a new diagram is given.
+    const NEW = DEFAULT_PAGE_SETUP.titleBlock;
+    expect(NEW).toEqual({ enabled: true, heightShare: 0.23 });
+    expect(firstPageCapacity(flow({ titleBlock: NEW }))).toBe(7);
+    expect([2, 5, 6, 10, 12, 16, 30].map((stepsPerPage) => firstPageCapacity(flow({ stepsPerPage, titleBlock: NEW })))).toEqual([
+      2, 4, 5, 8, 9, 12, 23,
+    ]);
+    expect([1, 2, 3, 4, 5, 6].map((rows) => blockRows(grid({ rows, titleBlock: NEW })))).toEqual([0, 1, 1, 1, 1, 1]);
+    expect(firstPageCapacity(grid({ titleBlock: NEW }))).toBe(6);
+    // No product ties at a half, so no rounding question arises at this share either.
+    for (let stepsPerPage = STEPS_PER_PAGE_RANGE.min; stepsPerPage <= STEPS_PER_PAGE_RANGE.max; stepsPerPage += 1) {
+      expect(Math.abs(((stepsPerPage * (1 - NEW.heightShare)) % 1) - 0.5), String(stepsPerPage)).toBeGreaterThan(0.01);
+    }
+    for (let rows = 1; rows <= 6; rows += 1) expect(Math.abs(((NEW.heightShare * rows) % 1) - 0.5), String(rows)).toBeGreaterThan(0.01);
+  });
+
   it('leaves every page as it was with the block off, whatever its share', () => {
     const list = steps(20, (index) => (index === 12 ? { pageSteps: 4 } : {}));
     const off = { enabled: false, heightShare: 0.5 };

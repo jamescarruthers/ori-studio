@@ -1598,6 +1598,14 @@
       "positionLabel": "Позиция шага",
       "step": "Шаг"
     },
+    "titleBlock": {
+      "default": {
+        "author": "Автор",
+        "recommendedSize": "Рекомендуемый размер",
+        "steps": "Шаги",
+        "subtitle": "Схема оригами"
+      }
+    },
     "turns": {
       "actions": "Действия с переворотом",
       "afterLast": "после шага {{before}}",

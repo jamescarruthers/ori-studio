@@ -79,8 +79,9 @@ export const PAGE_SETTINGS: PageSettingValues = {
   flowNesting: { default: 0.8, legacy: 0.8 },
   flowSteadiness: { default: 0.85, legacy: 0.85 },
   // A new diagram has the block (2026-10-14, `diagram-title-block.md`); every first page saved before it existed was
-  // drawn without one.
-  titleBlock: { default: { enabled: true, heightShare: 0.27 }, legacy: { enabled: false, heightShare: 0.27 } },
+  // drawn without one. Its share was 0.27 until Zach's header (J1b, 2026-10-15) made it shorter: a file saved with
+  // the block keeps the share it says.
+  titleBlock: { default: { enabled: true, heightShare: 0.23 }, legacy: { enabled: false, heightShare: 0.27 } },
 };
 
 /** The page settings, in the order a file writes them. */

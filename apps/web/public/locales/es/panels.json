@@ -1548,6 +1548,14 @@
       "positionLabel": "Posición del paso",
       "step": "Paso"
     },
+    "titleBlock": {
+      "default": {
+        "author": "Autor",
+        "recommendedSize": "Tamaño recomendado",
+        "steps": "Pasos",
+        "subtitle": "Diagrama de origami"
+      }
+    },
     "turns": {
       "actions": "Acciones de la vuelta",
       "afterLast": "después del paso {{before}}",

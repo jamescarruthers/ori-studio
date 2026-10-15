@@ -1448,6 +1448,14 @@
       "positionLabel": "단계 위치",
       "step": "단계"
     },
+    "titleBlock": {
+      "default": {
+        "author": "작가",
+        "recommendedSize": "권장 크기",
+        "steps": "단계 수",
+        "subtitle": "종이접기 도해"
+      }
+    },
     "turns": {
       "actions": "뒤집기·회전 작업",
       "afterLast": "{{before}}단계 뒤",

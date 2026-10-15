@@ -292,8 +292,11 @@ describe('page setup', () => {
   });
 
   it('gives a new diagram the title block, and a page that does not say it none', () => {
-    expect(createDiagram().page.titleBlock).toEqual({ enabled: true, heightShare: 0.27 });
+    // J1b's shorter block (Zach, 2026-10-15); a page that says none reads as every first page before the block.
+    expect(createDiagram().page.titleBlock).toEqual({ enabled: true, heightShare: 0.23 });
     expect(normalizePageSetup({ layout: 'flow' }).titleBlock).toEqual({ enabled: false, heightShare: 0.27 });
+    // A file saved with the block keeps its share.
+    expect(normalizePageSetup({ layout: 'flow', titleBlock: { enabled: true, heightShare: 0.27 } }).titleBlock.heightShare).toBe(0.27);
   });
 
   it('takes a new diagram’s page setup from each setting’s default, and an unsaid one from its legacy value', () => {

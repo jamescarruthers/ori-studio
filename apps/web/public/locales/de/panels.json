@@ -1498,6 +1498,14 @@
       "positionLabel": "Position des Schritts",
       "step": "Schritt"
     },
+    "titleBlock": {
+      "default": {
+        "author": "Autor",
+        "recommendedSize": "Empfohlene Größe",
+        "steps": "Schritte",
+        "subtitle": "Origami-Diagramm"
+      }
+    },
     "turns": {
       "actions": "Aktionen der Wendung",
       "afterLast": "nach Schritt {{before}}",
