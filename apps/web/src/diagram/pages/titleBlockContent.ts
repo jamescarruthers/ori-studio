@@ -7,11 +7,12 @@
  * Each part is Auto, a step chosen, or none. Auto is the last step that can
  * give the part ({@link givesModel}, {@link givesPattern}), so turns, empty
  * steps, a newer build's locked steps and a link whose pattern draws no line
- * are passed over, and a diagram with no linked step has no pattern. A chosen step that is gone — deleted, or
- * now a newer build's — reads as Auto; one that is there but can no longer
- * give its part, its picture removed or its link replaced, gives nothing,
- * which the Pages view says. A part only a newer build reads is not in the
- * content here, so it is Auto too.
+ * are passed over, and a diagram with no linked step has no pattern. A
+ * chosen step that is gone — deleted, or now a newer build's — reads as
+ * Auto; one that is there but can no longer give its part, its picture
+ * removed or its link replaced, gives nothing, which the Pages view says. A
+ * part only a newer build reads is not in the content here, so it is Auto
+ * too.
  *
  * That a part unsaid is Auto is fixed for good; what Auto finds is a look
  * (`diagram-document-evolution.md`, class (b)): a change to it moves no step,
@@ -97,21 +98,23 @@ function lastStep(document: DiagramDocument, gives: (step: DiagramStep) => boole
 /** What the first page's title block shows: each part's step, and the pattern's lines. */
 export function resolveTitleBlock(document: DiagramDocument): ResolvedTitleBlock {
   const content = document.titleBlockContent;
-  const model = resolvePart(document, content?.model, autoModelStep);
-  const pattern = resolvePart(document, content?.pattern, autoPatternStep);
+  const numbers = stepNumbers(document);
+  const model = resolvePart(document, numbers, content?.model, autoModelStep);
+  const pattern = resolvePart(document, numbers, content?.pattern, autoPatternStep);
   const thumbnail = pattern.step && givesPattern(pattern.step) ? pattern.step.source.thumbnail : null;
   return { model, pattern: { ...pattern, thumbnail, scene: thumbnail ? patternScene(thumbnail) : null } };
 }
 
 function resolvePart(
   document: DiagramDocument,
+  numbers: ReadonlyMap<string, number>,
   source: DiagramTitleBlockSource | undefined,
   auto: (document: DiagramDocument) => DiagramStep | null
 ): TitleBlockPart {
   const part = (from: TitleBlockPartFrom, step: DiagramStep | null): TitleBlockPart => ({
     from,
     step,
-    number: step ? (stepNumbers(document).get(step.id) ?? null) : null,
+    number: step ? (numbers.get(step.id) ?? null) : null,
   });
   if (source?.kind === 'none') return part('none', null);
   const chosen = source?.kind === 'step' ? stepById(document, source.stepId) : null;
