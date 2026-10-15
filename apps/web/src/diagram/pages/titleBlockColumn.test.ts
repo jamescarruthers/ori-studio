@@ -101,7 +101,7 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     expect(title!.baseline - (0.714 * title!.sizeMm) / 2).toBeCloseTo(band.y + band.h / 2, 9);
   });
 
-  it('sets the credits in a row of columns from the margin, each as wide as its wider part, a divider in each 12 pt gutter', () => {
+  it('sets the credits in a row of columns from the margin, each as wide as its wider part, a divider in the middle of each 20 pt gutter', () => {
     const { credits, band, geometry } = setOf();
     const { columns, dividers } = credits!;
     expect(columns.map(({ label, value }) => [label.text, value.text])).toEqual(CREDITS.map(({ label, value }) => [label, value]));
@@ -119,8 +119,9 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     expect(columns[0]!.w * PT).toBeCloseTo(60.29, 1);
     columns.slice(1).forEach((column, index) => {
       const before = columns[index]!;
-      expect(column.x).toBeCloseTo(right(before) + 12 / PT, 9);
-      expect(dividers[index]).toEqual({ x: expect.closeTo(right(before) + 6 / PT, 9), y1: column.top, y2: column.valueBaseline });
+      // J1b's 12 pt widened to 20 (Zach, 2026-10-15: "slightly more horizontal space between the different credits").
+      expect(column.x).toBeCloseTo(right(before) + 20 / PT, 9);
+      expect(dividers[index]).toEqual({ x: expect.closeTo(right(before) + 10 / PT, 9), y1: column.top, y2: column.valueBaseline });
     });
     expect(dividers).toHaveLength(columns.length - 1);
     expect(credits!.cut).toBe(0);
@@ -192,7 +193,9 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     expect(set!.lines.length).toBeGreaterThan(2);
     expect(set!.cut).toBe(false);
     for (const line of set!.lines) expect(line.widthMm).toBeLessThanOrEqual(band.w + 1e-9);
-    expect(set!.top).toBeCloseTo(credits!.columns[0]!.valueBaseline + 10 / PT, 9);
+    // 20 pt under the credits' values, twice the room between their rows (Zach, 2026-10-15: "more bottom padding
+    // between the credits and the description text").
+    expect(set!.top).toBeCloseTo(credits!.columns[0]!.valueBaseline + 20 / PT, 9);
     expect(set!.firstBaseline - fonts.ink(set!.lines[0]!, set!.sizeMm).above).toBeCloseTo(set!.top, 9);
     // A long one: as many lines as the block has room for, the last cut, the block as it was.
     const long = setOf({ note: Array.from({ length: 30 }, (_, index) => `Line ${index + 1}`).join('\n') });

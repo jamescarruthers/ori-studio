@@ -52,9 +52,12 @@ export const TITLE_BLOCK_TYPE = {
   valueMm: 4.2,
   /** A value's baseline under its label's. */
   valueDropMm: pt(15),
-  gutterMm: pt(12),
-  /** A row's labels' capitals under the row before's values' baseline; the note's first line's under the last row's. */
+  /** Between two credits' columns, a divider in its middle: J1b's 12 pt, widened (Zach, 2026-10-15). */
+  gutterMm: pt(20),
+  /** A row's labels' capitals under the row before's values' baseline. */
   rowGapMm: pt(10),
+  /** The note's first line's capitals under the last row's values' baseline: twice a row's gap (Zach, 2026-10-15). */
+  noteGapMm: pt(20),
 } as const;
 
 /**
@@ -230,7 +233,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   const lastRow = columns.at(-1);
   const cut = printed.length - columns.length;
   // The note under the credits; where a credit with a value has no room, none for the note either.
-  const noteTop = cut > 0 ? foot : lastRow ? lastRow.valueBaseline + T.rowGapMm * scale : firstRowTop;
+  const noteTop = cut > 0 ? foot : lastRow ? lastRow.valueBaseline + T.noteGapMm * scale : firstRowTop;
 
   return {
     geometry,
@@ -250,7 +253,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
 function columnHeight(subtitle: boolean, rows: readonly number[], noteLine: number): number {
   const T = TITLE_BLOCK_TYPE;
   const values = rows.reduce((sum, above) => sum + above + T.valueDropMm, 0) + (rows.length - 1) * T.rowGapMm;
-  const under = rows.length > 0 ? values + (noteLine > 0 ? T.rowGapMm + noteLine : DESCENT * T.valueMm) : noteLine;
+  const under = rows.length > 0 ? values + (noteLine > 0 ? T.noteGapMm + noteLine : DESCENT * T.valueMm) : noteLine;
   return (subtitle ? T.subtitleRowMm : 0) + T.bandMm + (under > 0 ? T.creditsGapMm + under : 0);
 }
 
