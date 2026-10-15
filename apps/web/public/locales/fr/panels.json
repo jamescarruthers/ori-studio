@@ -1184,6 +1184,8 @@
       "pageSteps": "Étapes sur la page {{number}}",
       "pageStepsDefault": "Par défaut",
       "pageStepsHolds": "Garde les pages suivantes en place",
+      "pageStepsTitleBlock": "Le bloc titre prend de la place sur cette page, qui en contient donc {{number}} par défaut.",
+      "pageStepsTitleBlockOwn": "Cette page garde son propre nombre d’étapes sous le bloc titre ; à défaut, elle en contiendrait {{number}}.",
       "pageStepsUseDefault": "Utiliser la valeur par défaut",
       "paper": "Papier",
       "pathColor": "Couleur du chemin",
@@ -1205,7 +1207,28 @@
       "styleHint": "L’encre et les plumes changent sur toutes les étapes à la fois. Une étape 3D prend le nouvel éclairage quand elle est actualisée.",
       "styleSection": "Style",
       "title": "Titre",
-      "titleHelp": "Le titre du diagramme, dans un onglet en haut de chaque page."
+      "titleBlock": {
+        "auto": "Auto (étape {{number}})",
+        "autoNoneLinked": "Auto (aucun lien)",
+        "autoNoPicture": "Auto (aucune image)",
+        "byline": "Crédits",
+        "bylineHelp": "Les crédits sous le titre, tels que vous les écrivez. Jusqu’à {{lines}} lignes s’impriment ; une ligne longue passe à la suivante.",
+        "bylinePlaceholder": "Création : …\nPapier : carré de 60 cm",
+        "model": "Modèle",
+        "modelHelp": "Le modèle fini, dessiné d’après l’image d’une étape. Auto prend la dernière étape qui en a une.",
+        "needsRows": "Il faut au moins deux rangées",
+        "none": "Aucun",
+        "pattern": "Patron de plis",
+        "patternHelp": "Dessiné d’après le patron de plis qu’une étape lie. Auto prend la dernière étape liée ; chaque patron n’apparaît qu’une fois, sous la dernière étape qui le lie.",
+        "section": "Bloc titre",
+        "show": "Afficher sur la première page",
+        "showHelp": "Le titre, le patron de plis et le modèle fini, en haut de la première page.",
+        "step": "Étape {{number}}",
+        "stepNoPattern": "Étape {{number}} (sans patron de plis)",
+        "stepNoPicture": "Étape {{number}} (sans image)"
+      },
+      "titleHelp": "Le titre du diagramme, dans un onglet en haut de chaque page.",
+      "titleHelpWithBlock": "Le titre du diagramme, dans un onglet en haut de chaque page. Sur la première page, c’est le bloc titre qui le porte."
     },
     "pages": {
       "caption": "Page {{number}}",
@@ -1220,6 +1243,13 @@
       "step": "Étape {{number}}",
       "stepCut": "Étape {{number}}, le texte ne tient pas",
       "textCut": "Le texte ne tient pas",
+      "titleBlock": {
+        "addTitle": "Ajoutez un titre",
+        "noModel": "Aucune étape n’a encore d’image",
+        "noPattern": "Aucune étape n’est liée à un patron de plis",
+        "stepNoPattern": "L’étape {{number}} n’a pas de patron de plis",
+        "stepNoPicture": "L’étape {{number}} n’a pas encore d’image"
+      },
       "zoomSplitStep": "L’étape {{step}} est sur la page qui suit la zone qu’elle agrandit, à l’étape {{area}}. « Commencer une nouvelle page ici » sur l’étape {{area}} les garde ensemble.",
       "zoomSplitSteps": "Les étapes {{steps}} sont chacune sur la page qui suit la zone qu’elles agrandissent. « Commencer une nouvelle page ici » sur les étapes {{areas}} les garde ensemble."
     },

@@ -1110,6 +1110,8 @@
       "pageSteps": "{{number}} ページのステップ数",
       "pageStepsDefault": "既定",
       "pageStepsHolds": "後のページの位置を保ちます",
+      "pageStepsTitleBlock": "タイトル欄がこのページの場所を取るため、既定では {{number}} ステップを収めます。",
+      "pageStepsTitleBlockOwn": "このページはタイトル欄があっても独自のステップ数を保ちます。指定がなければ {{number}} ステップになります。",
       "pageStepsUseDefault": "既定を使う",
       "paper": "用紙",
       "pathColor": "経路の色",
@@ -1131,7 +1133,28 @@
       "styleHint": "インクとペンはすべてのステップに一度に反映されます。3Dのステップは更新すると新しい照明になります。",
       "styleSection": "スタイル",
       "title": "タイトル",
-      "titleHelp": "折り図のタイトルを、各ページ上部のタブに表示します。"
+      "titleBlock": {
+        "auto": "自動（ステップ {{number}}）",
+        "autoNoneLinked": "自動（リンクなし）",
+        "autoNoPicture": "自動（図なし）",
+        "byline": "クレジット",
+        "bylineHelp": "タイトルの下に、書いたとおりに入るクレジット。印刷されるのは {{lines}} 行までで、長い行は次の行に折り返します。",
+        "bylinePlaceholder": "創作：…\n用紙：60 cm 角",
+        "model": "完成形",
+        "modelHelp": "完成した作品を、ステップの図から描きます。自動では図のある最後のステップを使います。",
+        "needsRows": "2 行以上が必要です",
+        "none": "なし",
+        "pattern": "展開図",
+        "patternHelp": "ステップにリンクした展開図から描きます。自動ではリンクした最後のステップを使います。各展開図は、それをリンクした最後のステップの名前で一度だけ表示されます。",
+        "section": "タイトル欄",
+        "show": "最初のページに表示",
+        "showHelp": "タイトル、展開図、完成形を最初のページの上部に入れます。",
+        "step": "ステップ {{number}}",
+        "stepNoPattern": "ステップ {{number}}（展開図なし）",
+        "stepNoPicture": "ステップ {{number}}（図なし）"
+      },
+      "titleHelp": "折り図のタイトルを、各ページ上部のタブに表示します。",
+      "titleHelpWithBlock": "折り図のタイトルを、各ページ上部のタブに表示します。最初のページでは代わりにタイトル欄に入ります。"
     },
     "pages": {
       "caption": "{{number}} ページ",
@@ -1146,6 +1169,13 @@
       "step": "ステップ {{number}}",
       "stepCut": "ステップ {{number}}、文章が収まりません",
       "textCut": "文章が収まりません",
+      "titleBlock": {
+        "addTitle": "タイトルを追加してください",
+        "noModel": "図のあるステップがまだありません",
+        "noPattern": "展開図にリンクしたステップがありません",
+        "stepNoPattern": "ステップ {{number}} には展開図がありません",
+        "stepNoPicture": "ステップ {{number}} にはまだ図がありません"
+      },
       "zoomSplitStep": "ステップ {{step}} は、拡大する範囲のあるステップ {{area}} の次のページにあります。ステップ {{area}} で「ここで新しいページを始める」を選ぶと同じページにまとまります。",
       "zoomSplitSteps": "ステップ {{steps}} は、それぞれ拡大する範囲の次のページにあります。ステップ {{areas}} で「ここで新しいページを始める」を選ぶと同じページにまとまります。"
     },

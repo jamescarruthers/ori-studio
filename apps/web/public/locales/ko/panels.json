@@ -1110,6 +1110,8 @@
       "pageSteps": "{{number}}페이지 단계 수",
       "pageStepsDefault": "기본값",
       "pageStepsHolds": "다음 페이지 위치를 유지합니다",
+      "pageStepsTitleBlock": "제목 영역이 이 페이지의 공간을 차지하므로 기본적으로 {{number}}단계가 들어갑니다.",
+      "pageStepsTitleBlockOwn": "이 페이지는 제목 영역 아래에서도 자체 단계 수를 유지합니다. 지정하지 않으면 {{number}}단계가 들어갑니다.",
       "pageStepsUseDefault": "기본값 사용",
       "paper": "용지",
       "pathColor": "경로 색상",
@@ -1131,7 +1133,28 @@
       "styleHint": "잉크와 펜은 모든 단계에 한꺼번에 바뀝니다. 3D 단계는 새로 고치면 새 조명을 받습니다.",
       "styleSection": "스타일",
       "title": "제목",
-      "titleHelp": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다."
+      "titleBlock": {
+        "auto": "자동 ({{number}}단계)",
+        "autoNoneLinked": "자동 (연결 없음)",
+        "autoNoPicture": "자동 (그림 없음)",
+        "byline": "크레딧",
+        "bylineHelp": "제목 아래에 쓴 그대로 들어가는 크레딧입니다. 최대 {{lines}}줄까지 인쇄되며, 긴 줄은 다음 줄로 넘어갑니다.",
+        "bylinePlaceholder": "디자인: …\n종이: 60 cm 정사각형",
+        "model": "모델",
+        "modelHelp": "완성된 모델을 단계의 그림에서 그립니다. 자동은 그림이 있는 마지막 단계를 사용합니다.",
+        "needsRows": "2줄 이상이 필요합니다",
+        "none": "없음",
+        "pattern": "전개도",
+        "patternHelp": "단계에 연결된 전개도에서 그립니다. 자동은 연결된 마지막 단계를 사용하며, 각 전개도는 그것을 연결한 마지막 단계의 이름으로 한 번만 표시됩니다.",
+        "section": "제목 영역",
+        "show": "첫 페이지에 표시",
+        "showHelp": "제목, 전개도, 완성 모델을 첫 페이지 위쪽에 표시합니다.",
+        "step": "{{number}}단계",
+        "stepNoPattern": "{{number}}단계 (전개도 없음)",
+        "stepNoPicture": "{{number}}단계 (그림 없음)"
+      },
+      "titleHelp": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다.",
+      "titleHelpWithBlock": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다. 첫 페이지에서는 대신 제목 영역에 들어갑니다."
     },
     "pages": {
       "caption": "{{number}}페이지",
@@ -1146,6 +1169,13 @@
       "step": "{{number}}단계",
       "stepCut": "{{number}}단계, 텍스트가 들어가지 않습니다",
       "textCut": "텍스트가 들어가지 않습니다",
+      "titleBlock": {
+        "addTitle": "제목을 추가하세요",
+        "noModel": "아직 그림이 있는 단계가 없습니다",
+        "noPattern": "전개도에 연결된 단계가 없습니다",
+        "stepNoPattern": "{{number}}단계에는 전개도가 없습니다",
+        "stepNoPicture": "{{number}}단계에는 아직 그림이 없습니다"
+      },
       "zoomSplitStep": "{{step}}단계는 확대하는 영역이 있는 {{area}}단계의 다음 페이지에 있습니다. {{area}}단계에서 ‘여기서 새 페이지 시작’을 선택하면 한 페이지에 함께 놓입니다.",
       "zoomSplitSteps": "{{steps}}단계는 각각 확대하는 영역의 다음 페이지에 있습니다. {{areas}}단계에서 ‘여기서 새 페이지 시작’을 선택하면 한 페이지에 함께 놓입니다."
     },

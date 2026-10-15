@@ -1147,6 +1147,8 @@
       "pageSteps": "Schritte auf Seite {{number}}",
       "pageStepsDefault": "Standard",
       "pageStepsHolds": "Hält die folgenden Seiten an ihrem Platz",
+      "pageStepsTitleBlock": "Der Titelblock braucht Platz auf dieser Seite, daher fasst sie standardmäßig {{number}}.",
+      "pageStepsTitleBlockOwn": "Diese Seite behält unter dem Titelblock ihre eigene Anzahl; ohne diese würde sie {{number}} fassen.",
       "pageStepsUseDefault": "Standard verwenden",
       "paper": "Papier",
       "pathColor": "Pfadfarbe",
@@ -1168,7 +1170,28 @@
       "styleHint": "Tinte und Stifte ändern sich bei allen Schritten zugleich. Ein 3D-Schritt erhält die neue Beleuchtung, wenn er aktualisiert wird.",
       "styleSection": "Stil",
       "title": "Titel",
-      "titleHelp": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite."
+      "titleBlock": {
+        "auto": "Auto (Schritt {{number}})",
+        "autoNoneLinked": "Auto (nichts verknüpft)",
+        "autoNoPicture": "Auto (keine Bilder)",
+        "byline": "Autorenzeile",
+        "bylineHelp": "Angaben unter dem Titel, so wie du sie schreibst. Bis zu {{lines}} Zeilen werden gedruckt; eine lange Zeile bricht in die nächste um.",
+        "bylinePlaceholder": "Entwurf: …\nPapier: 60 × 60 cm",
+        "model": "Modell",
+        "modelHelp": "Das fertige Modell, gezeichnet nach dem Bild eines Schritts. Auto nimmt den letzten Schritt mit Bild.",
+        "needsRows": "Braucht mindestens zwei Reihen",
+        "none": "Ohne",
+        "pattern": "Faltmuster",
+        "patternHelp": "Gezeichnet nach dem Faltmuster, das ein Schritt verknüpft. Auto nimmt den letzten verknüpften Schritt; jedes Muster steht nur einmal in der Liste, unter dem letzten Schritt, der es verknüpft.",
+        "section": "Titelblock",
+        "show": "Auf der ersten Seite zeigen",
+        "showHelp": "Titel, Faltmuster und fertiges Modell oben auf der ersten Seite.",
+        "step": "Schritt {{number}}",
+        "stepNoPattern": "Schritt {{number}} (kein Faltmuster)",
+        "stepNoPicture": "Schritt {{number}} (kein Bild)"
+      },
+      "titleHelp": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite.",
+      "titleHelpWithBlock": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite. Auf der ersten Seite steht er stattdessen im Titelblock."
     },
     "pages": {
       "caption": "Seite {{number}}",
@@ -1183,6 +1206,13 @@
       "step": "Schritt {{number}}",
       "stepCut": "Schritt {{number}}, Text passt nicht",
       "textCut": "Text passt nicht",
+      "titleBlock": {
+        "addTitle": "Füge einen Titel hinzu",
+        "noModel": "Noch hat kein Schritt ein Bild",
+        "noPattern": "Kein Schritt ist mit einem Faltmuster verknüpft",
+        "stepNoPattern": "Schritt {{number}} hat kein Faltmuster",
+        "stepNoPicture": "Schritt {{number}} hat noch kein Bild"
+      },
       "zoomSplitStep": "Schritt {{step}} steht auf der Seite nach dem Bereich, den er vergrößert, auf Schritt {{area}}. „Hier eine neue Seite beginnen“ auf Schritt {{area}} hält beide zusammen.",
       "zoomSplitSteps": "Die Schritte {{steps}} stehen jeweils auf der Seite nach dem Bereich, den sie vergrößern. „Hier eine neue Seite beginnen“ auf den Schritten {{areas}} hält sie zusammen."
     },

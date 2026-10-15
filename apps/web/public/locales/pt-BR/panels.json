@@ -1184,6 +1184,8 @@
       "pageSteps": "Passos na página {{number}}",
       "pageStepsDefault": "Padrão",
       "pageStepsHolds": "Mantém as páginas seguintes no lugar",
+      "pageStepsTitleBlock": "O bloco de título ocupa espaço nesta página, então ela comporta {{number}} por padrão.",
+      "pageStepsTitleBlockOwn": "Esta página mantém sua própria contagem sob o bloco de título; sem ela, comportaria {{number}}.",
       "pageStepsUseDefault": "Usar padrão",
       "paper": "Papel",
       "pathColor": "Cor do trajeto",
@@ -1205,7 +1207,28 @@
       "styleHint": "A tinta e as canetas mudam em todos os passos de uma vez. Um passo 3D recebe a nova iluminação ao ser atualizado.",
       "styleSection": "Estilo",
       "title": "Título",
-      "titleHelp": "O título do diagrama, numa aba no alto de cada página."
+      "titleBlock": {
+        "auto": "Auto (passo {{number}})",
+        "autoNoneLinked": "Auto (nada vinculado)",
+        "autoNoPicture": "Auto (sem imagens)",
+        "byline": "Créditos",
+        "bylineHelp": "Os créditos sob o título, do jeito que você escrever. Até {{lines}} linhas são impressas; uma linha longa continua na seguinte.",
+        "bylinePlaceholder": "Criação: …\nPapel: quadrado de 60 cm",
+        "model": "Modelo",
+        "modelHelp": "O modelo pronto, desenhado a partir da imagem de um passo. Auto usa o último passo que tiver uma.",
+        "needsRows": "Precisa de duas linhas ou mais",
+        "none": "Nenhum",
+        "pattern": "Padrão de vincos",
+        "patternHelp": "Desenhado a partir do padrão de vincos que um passo vincula. Auto usa o último passo vinculado; cada padrão aparece uma só vez, pelo último passo que o vincula.",
+        "section": "Bloco de título",
+        "show": "Mostrar na primeira página",
+        "showHelp": "O título, o padrão de vincos e o modelo pronto, no alto da primeira página.",
+        "step": "Passo {{number}}",
+        "stepNoPattern": "Passo {{number}} (sem padrão de vincos)",
+        "stepNoPicture": "Passo {{number}} (sem imagem)"
+      },
+      "titleHelp": "O título do diagrama, numa aba no alto de cada página.",
+      "titleHelpWithBlock": "O título do diagrama, numa aba no alto de cada página. Na primeira página, ele fica no bloco de título."
     },
     "pages": {
       "caption": "Página {{number}}",
@@ -1220,6 +1243,13 @@
       "step": "Passo {{number}}",
       "stepCut": "Passo {{number}}, o texto não cabe",
       "textCut": "O texto não cabe",
+      "titleBlock": {
+        "addTitle": "Adicione um título",
+        "noModel": "Nenhum passo tem imagem ainda",
+        "noPattern": "Nenhum passo está vinculado a um padrão de vincos",
+        "stepNoPattern": "O passo {{number}} não tem padrão de vincos",
+        "stepNoPicture": "O passo {{number}} ainda não tem imagem"
+      },
       "zoomSplitStep": "O passo {{step}} está na página seguinte à da área que amplia, no passo {{area}}. “Começar uma nova página aqui” no passo {{area}} mantém os dois juntos.",
       "zoomSplitSteps": "Os passos {{steps}} estão cada um na página seguinte à da área que ampliam. “Começar uma nova página aqui” nos passos {{areas}} os mantém juntos."
     },

@@ -1184,6 +1184,8 @@
       "pageSteps": "Pasos en la página {{number}}",
       "pageStepsDefault": "Predeterminado",
       "pageStepsHolds": "Mantiene las páginas siguientes en su sitio",
+      "pageStepsTitleBlock": "El bloque de título ocupa espacio en esta página, así que por defecto admite {{number}}.",
+      "pageStepsTitleBlockOwn": "Esta página conserva su propio número de pasos bajo el bloque de título; si no lo tuviera, admitiría {{number}}.",
       "pageStepsUseDefault": "Usar predeterminado",
       "paper": "Papel",
       "pathColor": "Color del recorrido",
@@ -1205,7 +1207,28 @@
       "styleHint": "La tinta y las plumas cambian en todos los pasos a la vez. Un paso 3D toma la nueva iluminación al actualizarlo.",
       "styleSection": "Estilo",
       "title": "Título",
-      "titleHelp": "El título del diagrama, en una pestaña en la parte superior de cada página."
+      "titleBlock": {
+        "auto": "Auto (paso {{number}})",
+        "autoNoneLinked": "Auto (sin vínculos)",
+        "autoNoPicture": "Auto (sin imágenes)",
+        "byline": "Créditos",
+        "bylineHelp": "Los créditos bajo el título, tal como los escribes. Se imprimen hasta {{lines}} líneas; una línea larga pasa a la siguiente.",
+        "bylinePlaceholder": "Diseño: …\nPapel: cuadrado de 60 cm",
+        "model": "Modelo",
+        "modelHelp": "El modelo terminado, dibujado a partir de la imagen de un paso. Auto usa el último paso que tenga una.",
+        "needsRows": "Necesita dos filas o más",
+        "none": "Ninguno",
+        "pattern": "Patrón de pliegues",
+        "patternHelp": "Se dibuja a partir del patrón de pliegues que vincula un paso. Auto usa el último paso vinculado; cada patrón aparece una sola vez, con el último paso que lo vincula.",
+        "section": "Bloque de título",
+        "show": "Mostrar en la primera página",
+        "showHelp": "El título, el patrón de pliegues y el modelo terminado, en la parte superior de la primera página.",
+        "step": "Paso {{number}}",
+        "stepNoPattern": "Paso {{number}} (sin patrón de pliegues)",
+        "stepNoPicture": "Paso {{number}} (sin imagen)"
+      },
+      "titleHelp": "El título del diagrama, en una pestaña en la parte superior de cada página.",
+      "titleHelpWithBlock": "El título del diagrama, en una pestaña en la parte superior de cada página. En la primera página lo lleva el bloque de título."
     },
     "pages": {
       "caption": "Página {{number}}",
@@ -1220,6 +1243,13 @@
       "step": "Paso {{number}}",
       "stepCut": "Paso {{number}}, el texto no cabe",
       "textCut": "El texto no cabe",
+      "titleBlock": {
+        "addTitle": "Añade un título",
+        "noModel": "Ningún paso tiene imagen todavía",
+        "noPattern": "Ningún paso está vinculado a un patrón de pliegues",
+        "stepNoPattern": "El paso {{number}} no tiene patrón de pliegues",
+        "stepNoPicture": "El paso {{number}} aún no tiene imagen"
+      },
       "zoomSplitStep": "El paso {{step}} está en la página siguiente al área que amplía, en el paso {{area}}. «Empezar una página nueva aquí» en el paso {{area}} los mantiene juntos.",
       "zoomSplitSteps": "Los pasos {{steps}} están cada uno en la página siguiente al área que amplían. «Empezar una página nueva aquí» en los pasos {{areas}} los mantiene juntos."
     },
