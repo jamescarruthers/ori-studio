@@ -373,7 +373,7 @@ describe('DiagramPagesView', () => {
     expect(props.onSelect).toHaveBeenLastCalledWith(null);
   });
 
-  it('sets the words for a missing pattern beside a portrait model standing in its square, not on it', () => {
+  it('sets the words for a missing pattern over a portrait model standing at its own size in its place, not on it', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400"><rect width="300" height="400" fill="#c48"/></svg>';
     const photo = {
       ...createStep(() => 'step-photo'),
@@ -388,14 +388,15 @@ describe('DiagramPagesView', () => {
     };
     const pages = preparedPages(document, FONTS, subsetter);
     render(pages, {}, pages.layout.bandInk, document);
-    const { pattern } = pages.layout.pages[0]!.titleBlock!.geometry;
-    // Three quarters as wide as tall, the model fills the square's height at its right.
+    const { pattern, block, model: box } = pages.layout.pages[0]!.titleBlock!.geometry;
+    // Three quarters as wide as tall, the model is its box's height, on the band's foot at its right.
     const model = pages.titleBlockModel()!;
-    expect([model.y, model.h, model.x + model.w]).toEqual([pattern.y, pattern.h, pattern.x + pattern.w].map((mm) => expect.closeTo(mm, 6)));
+    expect([model.h, model.y + model.h, model.x + model.w]).toEqual([box.h, block.y + block.h, block.x + block.w].map((mm) => expect.closeTo(mm, 6)));
+    // The square's words in the strip the model leaves over itself.
     const room = host.querySelector<HTMLElement>('[data-title-block-room="square"]')!;
     expect(room.textContent).toBe('No step is linked to a crease pattern');
     expect([room.style.left, room.style.top, room.style.width, room.style.height]).toEqual(
-      [pattern.x, pattern.y, model.x - pattern.x, pattern.h].map((mm) => `${mm * PX_PER_MM}px`)
+      [pattern.x, pattern.y, pattern.w, model.y - pattern.y].map((mm) => `${mm * PX_PER_MM}px`)
     );
   });
 

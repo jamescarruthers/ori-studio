@@ -6,7 +6,7 @@ import {
   type ResolvedTitleBlock,
   type TitleBlockPlaceholder,
 } from '../../diagram/pages/titleBlockContent';
-import type { LayoutTitleBlock } from '../../diagram/pages/titleBlockGeometry';
+import type { LayoutTitleBlock } from '../../diagram/pages/titleBlockColumn';
 import type { PrintPaper } from '../../diagram/pages/printPaper';
 import { PAGES_PX_PER_MM } from '../../diagram/pages/usePagesView';
 import { PageGuide } from './PageGuide';
@@ -69,8 +69,8 @@ export function DiagramTitleBlockOverlay({
         data-title-block=""
         style={{ left: px(x), top: px(y), right: px(paper.widthMm - x - w), bottom: px(paper.heightMm - y - h) }}
       />
-      {missingTitleBlockParts(block, content, model).map(({ room, box, missing }) => (
-        <PagePlaceholder key={room} kind="part" words={WORDS[room]} data-title-block-room={room} style={at(box)}>
+      {missingTitleBlockParts(block, content, model).map(({ room, key, box, missing }) => (
+        <PagePlaceholder key={key} kind="part" words={WORDS[room]} data-title-block-room={room} style={at(box)}>
           {missing.map((part) => (
             <span key={part.part} data-title-block-missing={part.part}>
               {label(part)}

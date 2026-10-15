@@ -48,14 +48,15 @@ import { captionStartShift } from './captionMeasure';
 import { fontTextSetter } from './fontTextSetter';
 import { pageCapacity } from './pagePlan';
 import { printPaper } from './printPaper';
+import { emptyTitleBlockLook, type DiagramTitles, type TitleBlockLook } from './titleBlockColumn';
 
 const SHORT = 'Fold in half.';
 const LONG =
   'Fold the bottom edge up to the top edge, crease firmly, unfold, then fold both sides in to meet the centre line and turn the model over carefully.';
 
 const NO_MARKS = { width: 0, height: 0 };
-/** The diagram's title, and no byline. */
-const CRANE = { title: 'Crane', byline: '' };
+/** The diagram's title alone. */
+const CRANE: DiagramTitles = { title: 'Crane' };
 /** A new diagram's page setup with no title block: but for the block's own cases, these are the pages as drawn before it. */
 const NO_BLOCK_SETUP: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, titleBlock: PAGE_SETTINGS.titleBlock.legacy };
 
@@ -76,7 +77,7 @@ const steps = (count: number, patch: (index: number) => Partial<LayoutStep> = ()
 
 /** The pages under a setup: the grid unless it says, as these cases were written for (a new diagram's is the flow). */
 function layout(list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, title = 'Crane') {
-  return layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'grid', ...setup }, { title, byline: '' }, estimateTextSetter);
+  return layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'grid', ...setup }, { title }, estimateTextSetter);
 }
 
 const paper = (width: number, height: number = width): LayoutStep['picture'] => ({
@@ -1246,36 +1247,58 @@ describe('the title block on the first page (`diagram-title-block.md`, section 2
     const result = flowLayout(steps(12), { stepsPerPage: 9 });
     expect(result.title).not.toBeNull();
     expect(result.pages.map((page) => Boolean(page.titleBlock))).toEqual([true, false]);
-    expect(result.pages[0]!.titleBlock!.title).toMatchObject({ sizeMm: 10, line: { text: 'Crane' } });
+    expect(result.pages[0]!.titleBlock!.title).toMatchObject({ sizeMm: 16, line: { text: 'Crane' } });
     // Off, or in a grid of one row with no room for it, there is no block, and page 1 keeps its tab.
     expect(flowLayout(steps(12), { titleBlock: { enabled: false, heightShare: 0.27 } }).pages[0]!.titleBlock).toBeUndefined();
     expect(layout(steps(4), { rows: 1, columns: 4, titleBlock: ON }).pages[0]!.titleBlock).toBeUndefined();
   });
 
-  it('sets the byline it is handed under the title', () => {
-    const result = flowLayout(steps(3), {}, { title: 'Crane', byline: 'Traditional\nDiagrams: Zach' });
-    expect(result.pages[0]!.titleBlock!.byline!.lines.map((line) => line.text)).toEqual(['Traditional', 'Diagrams: Zach']);
+  it('sets the header it is handed in the block: the subtitle, the credits and the note, the art at its sizes', () => {
+    const block: TitleBlockLook = {
+      subtitle: 'ORIGAMI DIAGRAM',
+      credits: [{ label: 'AUTHOR', value: 'Traditional' }],
+      note: 'Traditional\nDiagrams: Zach',
+      sizes: { modelSize: 0.5, patternSize: 0.7 },
+    };
+    const set = flowLayout(steps(3), {}, { title: 'Crane', block }).pages[0]!.titleBlock!;
+    expect(set.subtitle!.line.text).toBe('ORIGAMI DIAGRAM');
+    expect(set.credits!.columns.map(({ label, value }) => [label.text, value.text])).toEqual([['AUTHOR', 'Traditional']]);
+    expect(set.note!.lines.map((line) => line.text)).toEqual(['Traditional', 'Diagrams: Zach']);
+    const { block: band, pattern, model } = set.geometry;
+    expect(pattern.w).toBeCloseTo(0.7 * band.h, 9);
+    expect(model.h).toBeCloseTo(0.5 * band.h, 9);
   });
 
-  it('holds the first page as packed when the title is typed, cleared or given a byline: no tab there for its room to move', () => {
+  it('holds the first page as packed whatever the title and the header: the block’s parts never change its area', () => {
     const list = steps(16);
     const packed = flowLayout(list, { stepsPerPage: 9 }).packed!;
     const cellsOf = (result: DiagramPagesLayout) => result.pages[0]!.cells.map((cell) => [cell.stepId, cell.cellMm]);
-    for (const titles of [{ title: '', byline: '' }, { title: 'Crane, folded', byline: 'Design: traditional' }]) {
+    const header = (patch: Partial<TitleBlockLook>): TitleBlockLook => ({ ...emptyTitleBlockLook(), ...patch });
+    const looks = [
+      header({}),
+      header({ subtitle: 'ORIGAMI DIAGRAM', credits: [{ label: 'AUTHOR', value: 'Traditional' }], note: 'Design: traditional' }),
+      header({ credits: Array.from({ length: 9 }, () => ({ label: 'RECOMMENDED SIZE', value: '60 cm × 60 cm' })), note: LONG.repeat(6) }),
+      header({ sizes: { modelSize: 1, patternSize: 1 } }),
+      header({ sizes: { modelSize: 0.3, patternSize: 0.3 } }),
+    ];
+    for (const titles of [{ title: '' }, ...looks.map((block) => ({ title: 'Crane, folded', block }))]) {
       const again = flowLayout(list, { stepsPerPage: 9 }, titles, packed);
       expect(again.pages[0]!.packing!.packed, JSON.stringify(titles)).toBe(false);
       expect(cellsOf(again)).toEqual(cellsOf(flowLayout(list, { stepsPerPage: 9 }, CRANE, packed)));
+      // Packed afresh, the same: the area is the band's alone.
+      expect(cellsOf(flowLayout(list, { stepsPerPage: 9 }, titles))).toEqual(cellsOf(flowLayout(list, { stepsPerPage: 9 })));
+      expect(again.pages[0]!.titleBlock!.geometry.block).toEqual(flowLayout(list, { stepsPerPage: 9 }).pages[0]!.titleBlock!.geometry.block);
     }
     // Without the block, clearing the title takes the tab's room away, and page 1 is packed again.
     const off = { stepsPerPage: 9, titleBlock: { enabled: false, heightShare: 0.27 } };
     const tabbed = flowLayout(list, off).packed!;
-    expect(flowLayout(list, off, { title: '', byline: '' }, tabbed).pages[0]!.packing!.packed).toBe(true);
+    expect(flowLayout(list, off, { title: '' }, tabbed).pages[0]!.packing!.packed).toBe(true);
   });
 
   it('keeps an empty title’s room: the first page packs as it does under a title', () => {
     const cellsOf = (result: DiagramPagesLayout) => result.pages[0]!.cells.map((cell) => cell.cellMm);
-    const untitled = flowLayout(steps(9), { stepsPerPage: 9 }, { title: '', byline: '' });
-    expect(untitled.pages[0]!.titleBlock).toMatchObject({ title: null, byline: null });
+    const untitled = flowLayout(steps(9), { stepsPerPage: 9 }, { title: '' });
+    expect(untitled.pages[0]!.titleBlock).toMatchObject({ title: null });
     expect(cellsOf(untitled)).toEqual(cellsOf(flowLayout(steps(9), { stepsPerPage: 9 })));
   });
 

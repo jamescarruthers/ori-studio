@@ -41,6 +41,8 @@ import {
   FLOW_WEIGHT_RANGE,
   PAGE_STEPS_RANGE,
   STEPS_PER_PAGE_RANGE,
+  TITLE_BLOCK_ART_SIZE_DEFAULTS,
+  TITLE_BLOCK_ART_SIZE_RANGE,
   TITLE_BLOCK_SHARE_RANGE,
 } from './pageRanges';
 import {
@@ -1401,15 +1403,7 @@ export interface DiagramTitleBlockContentPatch {
 /** The parts of the title block's content, in the order a file writes them. */
 export const TITLE_BLOCK_PARTS = ['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize'] as const;
 
-/** The range of the model's and the pattern's sizes, as shares of the block's height: past it, a newer build's. */
-export const TITLE_BLOCK_ART_SIZE_RANGE = { min: 0.3, max: 1 } as const;
-
-/**
- * The model's and the pattern's sizes where the content says none: Zach's J1b (2026-10-15), the pattern's side 0.8
- * of the block's height and the model 0.6, each about a third smaller than the first cut's. A look (class (b)): it
- * may change for every file, since no step moves when it does.
- */
-export const TITLE_BLOCK_ART_SIZE_DEFAULTS = { modelSize: 0.6, patternSize: 0.8 } as const;
+export { TITLE_BLOCK_ART_SIZE_DEFAULTS, TITLE_BLOCK_ART_SIZE_RANGE };
 
 /**
  * A flow page as it was packed (`diagram-flow-packing.md`, Decision 1): the

@@ -70,7 +70,7 @@ const flow = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}) =>
   layoutDiagramPages(
     list,
     { ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: PAGE_SETTINGS.titleBlock.legacy, ...setup },
-    { title: 'Heart', byline: '' },
+    { title: 'Heart' },
     estimateTextSetter
   );
 

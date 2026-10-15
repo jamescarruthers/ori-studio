@@ -5,6 +5,9 @@ import {
   DEFAULT_PAGE_SETUP,
   removeStepPicture,
   removeSteps,
+  setTitleBlockContent,
+  TITLE_BLOCK_ART_SIZE_DEFAULTS,
+  TITLE_BLOCK_ART_SIZE_RANGE,
   type DiagramCpSource,
   type DiagramDocument,
   type DiagramPageSetup,
@@ -30,14 +33,16 @@ import {
   modelRoom,
   patternScene,
   resolveTitleBlock,
+  titleBlockLook,
 } from './titleBlockContent';
-import { STEP_TEXT_LEADING_MM, TEXT_DESCENT_MM } from './stepType';
-import { setTitleBlock, titleBlockGeometry } from './titleBlockGeometry';
+import { emptyTitleBlockLook, setTitleBlock, type TitleBlockLook } from './titleBlockColumn';
+import { titleBlockGeometry } from './titleBlockGeometry';
 
 /**
  * What the first page's title block shows (`implementation-plans/
- * diagram-title-block.md`, sections 4 and 5): Auto, a chosen step, or none,
- * for the model and the pattern alike.
+ * diagram-title-block.md`, sections 4 and 5, Phase 1c): Auto, a chosen step,
+ * or none, for the model and the pattern alike; the words it prints of its
+ * own; and what the Pages view marks.
  */
 
 /** A linked step shown folded, on a pattern of its own. */
@@ -176,21 +181,68 @@ describe('patternScene', () => {
   });
 });
 
+
+describe('titleBlockLook', () => {
+  it('prints the subtitle and the labels in capitals, the live count as the last numbered step’s number, and the sizes', () => {
+    const document = titleBlockDiagram([cpStep('s1'), turnOver('t1'), cpStep('s2'), uploadStep('s3')], {
+      subtitle: 'Origami diagram',
+      note: 'Use thin paper.',
+      modelSize: 0.5,
+    });
+    const credited = [
+      { op: 'add' as const, credit: { label: 'Author', value: 'Traditional' } },
+      { op: 'add' as const, credit: { label: 'Steps', value: { kind: 'step-count' as const } } },
+      { op: 'add' as const, credit: { label: 'Größe', value: '' } },
+    ].reduce((made, credits) => setTitleBlockContent(made, { credits }), document);
+    expect(titleBlockLook(credited)).toEqual({
+      subtitle: 'ORIGAMI DIAGRAM',
+      credits: [
+        { label: 'AUTHOR', value: 'Traditional' },
+        // Three steps; the turn is not numbered.
+        { label: 'STEPS', value: '3' },
+        { label: 'GRÖSSE', value: '' },
+      ],
+      note: 'Use thin paper.',
+      sizes: { modelSize: 0.5, patternSize: TITLE_BLOCK_ART_SIZE_DEFAULTS.patternSize },
+    });
+    // The count follows the steps.
+    expect(titleBlockLook(removeSteps(credited, ['s1'])).credits[1]).toEqual({ label: 'STEPS', value: '2' });
+    // CJK as it is; none said, none printed.
+    expect(titleBlockLook(setTitleBlockContent(credited, { subtitle: '折り紙の折り図' })).subtitle).toBe('折り紙の折り図');
+    expect(titleBlockLook(titleBlockDiagram([cpStep('s1')]))).toEqual({ subtitle: '', credits: [], note: '', sizes: TITLE_BLOCK_ART_SIZE_DEFAULTS });
+  });
+});
+
+describe('modelRoom', () => {
+  const geometry = titleBlockGeometry({ ...DEFAULT_PAGE_SETUP, layout: 'flow' }, 11, 8, TITLE_BLOCK_ART_SIZE_DEFAULTS)!;
+
+  it('stands the model in front of the pattern where one is drawn, and at its own size in the pattern’s place where none is', () => {
+    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([cpStep('s1')])))).toBe(geometry.model);
+    const alone = { ...geometry.model, x: geometry.block.x + geometry.block.w - geometry.model.w };
+    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([cpStep('s1')], { pattern: { kind: 'none' } })))).toEqual(alone);
+    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([uploadStep('s1')])))).toEqual(alone);
+  });
+});
+
 describe('missingTitleBlockParts', () => {
-  const geometry = titleBlockGeometry({ ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: { enabled: true, heightShare: 0.27 } }, 11, 8)!;
+  const geometry = titleBlockGeometry({ ...DEFAULT_PAGE_SETUP, layout: 'flow' }, 11, 8, TITLE_BLOCK_ART_SIZE_DEFAULTS)!;
+  const set = (title = 'Crane', block: Partial<TitleBlockLook> = {}) =>
+    setTitleBlock(geometry, { title, block: { ...emptyTitleBlockLook(), ...block } }, estimateTextSetter);
   const missing = (document: DiagramDocument, title = 'Crane') =>
-    missingTitleBlockParts(setTitleBlock(geometry, { title, byline: '' }, estimateTextSetter), resolveTitleBlock(document), null).map(
-      ({ room, box, missing: parts }) => [room, box, parts.map(({ part, step, number }) => [part, step?.id ?? null, number])]
-    );
+    missingTitleBlockParts(set(title), resolveTitleBlock(document), null).map(({ room, box, missing: parts }) => [
+      room,
+      box,
+      parts.map(({ part, step, number }) => [part, step?.id ?? null, number]),
+    ]);
 
   it('marks nothing where every part prints', () => {
     expect(missing(titleBlockDiagram([cpStep('s1'), cpStep('s2')]))).toEqual([]);
   });
 
-  it('marks the title where there is none, and a part no step gives in the room it would print in, naming the step by its number', () => {
+  it('marks the title in the band where there is none, and a part no step gives in the room it would print in, naming the step', () => {
     // No linked step and no picture: the pattern and the model would both stand in the pattern's square, one room.
     expect(missing(titleBlockDiagram([emptyStep('s1')]), '')).toEqual([
-      ['title', geometry.title, [['title', null, null]]],
+      ['title', set('').band, [['title', null, null]]],
       ['square', geometry.pattern, [['pattern', null, null], ['model', null, null]]],
     ]);
     // A chosen step that can no longer give its part names it, numbered as the pages number it, turns left out.
@@ -202,32 +254,32 @@ describe('missingTitleBlockParts', () => {
     // The model alone missing, in front of a pattern drawn: its own box.
     const pictureless = titleBlockDiagram([cpStep('s1'), cpStep('s2')], { model: { kind: 'step', stepId: 's2' } });
     expect(missing(removeStepPicture(pictureless, 's2'))).toEqual([['model', geometry.model, [['model', 's2', 2]]]]);
-    // The pattern alone missing: the model stands in its square, which says why there is no pattern.
+    // The pattern alone missing: the model stands in its place, and its square says why there is no pattern.
     expect(missing(titleBlockDiagram([uploadStep('s1')]))).toEqual([['square', geometry.pattern, [['pattern', null, null]]]]);
-    // The pattern set to none, the model missing: the model's room is the square.
     expect(missing(titleBlockDiagram([emptyStep('s1')], { pattern: { kind: 'none' } }))).toEqual([['square', geometry.pattern, [['model', null, null]]]]);
   });
 
-  it('keeps the square’s mark clear of a model drawn in it: the strip it leaves, else the title’s column under the byline', () => {
-    const block = setTitleBlock(geometry, { title: 'Crane', byline: '' }, estimateTextSetter);
+  it('keeps the square’s mark clear of a model drawn in it: the strip it leaves, else the column under what it prints', () => {
+    const block = set('Crane');
     const content = resolveTitleBlock(titleBlockDiagram([uploadStep('s1')]));
     const square = geometry.pattern;
     const near = ({ x, y, w, h }: PageBox) => [x, y, w, h].map((value) => expect.closeTo(value, 9));
-    const mark = (model: PageBox | null) => missingTitleBlockParts(block, content, model).map(({ room, box: { x, y, w, h } }) => [room, [x, y, w, h]]);
+    const mark = (model: PageBox | null, on = block) =>
+      missingTitleBlockParts(on, content, model).map(({ room, box: { x, y, w, h } }) => [room, [x, y, w, h]]);
     // Taller than wide, a portrait upload: the strip beside it.
     const tall = { x: square.x + square.w / 4, y: square.y, w: (3 * square.w) / 4, h: square.h };
     expect(mark(tall)).toEqual([['square', near({ ...square, w: square.w / 4 })]]);
     // Wider than tall: the strip above it.
     const wide = { x: square.x, y: square.y + square.h / 4, w: square.w, h: (3 * square.h) / 4 };
     expect(mark(wide)).toEqual([['square', near({ ...square, h: square.h / 4 })]]);
-    // Filling it: in the title's column, under the byline's lines — the whole column under the title, with none.
-    const { byline, block: band } = geometry;
-    expect(mark(square)).toEqual([['square', near({ x: byline.x, y: byline.y, w: byline.w, h: band.y + band.h - byline.y })]]);
-    const two = setTitleBlock(geometry, { title: 'Crane', byline: 'Design: traditional\nPaper: 15 cm square' }, estimateTextSetter);
-    const top = two.byline!.firstBaseline + STEP_TEXT_LEADING_MM + TEXT_DESCENT_MM;
-    expect(missingTitleBlockParts(two, content, square).map(({ box: { x, y, w, h } }) => [x, y, w, h])).toEqual([
-      near({ x: byline.x, y: top, w: byline.w, h: band.y + band.h - top }),
-    ]);
+    // Filling it: in the column, under the band — and under the credits where there are some.
+    const { column } = geometry;
+    const foot = column.y + column.h;
+    const under = (top: number) => near({ x: column.x, y: top, w: column.w, h: foot - top });
+    expect(mark(square)).toEqual([['square', under(block.band.y + block.band.h)]]);
+    const credited = set('Crane', { credits: [{ label: 'STEPS', value: '9' }] });
+    const row = credited.credits!.columns[0]!;
+    expect(mark(square, credited)).toEqual([['square', under(row.valueBaseline + 0.24 * credited.credits!.valueSizeMm)]]);
     // No model drawn: the square.
     expect(mark(null)).toEqual([['square', near(square)]]);
   });
@@ -236,13 +288,7 @@ describe('missingTitleBlockParts', () => {
     expect(missing(titleBlockDiagram([emptyStep('s1')], { model: { kind: 'none' }, pattern: { kind: 'none' } }))).toEqual([]);
   });
 
-  it('stands the model in front of the pattern where one is drawn, and in its square where none is', () => {
-    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([cpStep('s1')])))).toBe(geometry.model);
-    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([cpStep('s1')], { pattern: { kind: 'none' } })))).toBe(geometry.pattern);
-    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([uploadStep('s1')])))).toBe(geometry.pattern);
-  });
-
-  it('never stands the model on the title or the byline, nor one box of the overlay on another, on any paper, share or grid', () => {
+  it('never stands the model on the column, nor one box of the overlay on another, on any paper, share, grid or size', () => {
     const right = (box: PageBox) => box.x + box.w;
     const foot = (box: PageBox) => box.y + box.h;
     const overlap = (a: PageBox, b: PageBox) =>
@@ -257,8 +303,22 @@ describe('missingTitleBlockParts', () => {
       titleBlockDiagram([emptyStep('s1')], { pattern: { kind: 'none' } }),
       titleBlockDiagram([cpStep('s1')], { model: { kind: 'none' } }),
     ].map(resolveTitleBlock);
+    const looks: Partial<TitleBlockLook>[] = [
+      {},
+      {
+        subtitle: 'ORIGAMI DIAGRAM',
+        credits: [
+          { label: 'AUTHOR', value: '' },
+          { label: 'RECOMMENDED SIZE', value: '' },
+          { label: 'STEPS', value: '28' },
+        ],
+        note: 'Use thin paper. The neck and the tail are reverse folded at the same angle.',
+      },
+    ];
     const papers = Object.keys(PRINT_PAPER_MM).flatMap((size) => (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation })));
     const layouts = [{ layout: 'flow' as const }, ...[2, 3, 6].map((rows) => ({ layout: 'grid' as const, columns: 3, rows }))];
+    const { min, max } = TITLE_BLOCK_ART_SIZE_RANGE;
+    const sizes = [TITLE_BLOCK_ART_SIZE_DEFAULTS, { modelSize: max, patternSize: min }, { modelSize: min, patternSize: max }];
     /** A picture of `aspect` fitted to `room`, at its bottom right, as `wholePicture` draws it. */
     const standing = (room: PageBox, aspect: number): PageBox => {
       const w = Math.min(room.w, room.h * aspect);
@@ -266,28 +326,27 @@ describe('missingTitleBlockParts', () => {
       return { x: right(room) - w, y: foot(room) - h, w, h };
     };
     let rooms = 0;
-    const crowded = new Set<string>();
     for (const paper of papers) {
-      for (const heightShare of [0.15, 0.27, 0.5]) {
+      for (const heightShare of [0.15, 0.23, 0.5]) {
         for (const layout of layouts) {
-          const setup = { ...DEFAULT_PAGE_SETUP, ...paper, ...layout, titleBlock: { enabled: true, heightShare } } as DiagramPageSetup;
-          const label = JSON.stringify({ ...paper, ...layout, heightShare });
-          const shape = titleBlockGeometry(setup, 11, 8)!;
-          for (const content of contents) {
-            const room = modelRoom(shape, content);
-            expect(overlap(room, shape.title), label).toBe(0);
-            expect(overlap(room, shape.byline), label).toBe(0);
-            for (const title of ['', 'Crane']) {
-              // The model as drawn where it is: tall, square or wide, set to its room's bottom right.
-              for (const aspect of [3 / 4, 1, 4 / 3]) {
-                const drawn = content.model.step?.picture ? standing(room, aspect) : null;
-                const marks = missingTitleBlockParts(setTitleBlock(shape, { title, byline: '' }, estimateTextSetter), content, drawn);
-                const boxes = marks.map(({ box }) => box);
-                rooms += boxes.length;
-                boxes.forEach((a, index) => boxes.slice(index + 1).forEach((b) => expect(overlap(a, b), label).toBe(0)));
-                const square = marks.find((mark) => mark.room === 'square');
-                if (drawn && square && square.box !== shape.pattern) expect(overlap(square.box, drawn), label).toBe(0);
-                if (drawn && square?.box === shape.pattern) crowded.add(label);
+          for (const size of sizes) {
+            const setup = { ...DEFAULT_PAGE_SETUP, ...paper, ...layout, titleBlock: { enabled: true, heightShare } } as DiagramPageSetup;
+            const label = JSON.stringify({ ...paper, ...layout, heightShare, ...size });
+            const shape = titleBlockGeometry(setup, 11, 8, size)!;
+            for (const content of contents) {
+              const room = modelRoom(shape, content);
+              expect(overlap(room, shape.column), label).toBe(0);
+              for (const look of looks) {
+                for (const title of ['', 'Crane']) {
+                  const block = setTitleBlock(shape, { title, block: { ...emptyTitleBlockLook(), ...look, sizes: size } }, estimateTextSetter);
+                  // The model as drawn where it is: tall, square or wide, set to its room's bottom right.
+                  for (const aspect of [3 / 4, 1, 4 / 3]) {
+                    const drawn = content.model.step?.picture ? standing(room, aspect) : null;
+                    const boxes = missingTitleBlockParts(block, content, drawn).map(({ box }) => box);
+                    rooms += boxes.length;
+                    boxes.forEach((a, index) => boxes.slice(index + 1).forEach((b) => expect(overlap(a, b), label).toBeLessThan(1e-9)));
+                  }
+                }
               }
             }
           }
@@ -295,8 +354,5 @@ describe('missingTitleBlockParts', () => {
       }
     }
     expect(rooms).toBeGreaterThan(0);
-    // Only where neither the square nor the title's column has room for words does a mark stand on the model: the
-    // least block there is, 18.6 mm on A5 landscape at 15%.
-    expect([...crowded]).toEqual([JSON.stringify({ size: 'a5', orientation: 'landscape', layout: 'flow', heightShare: 0.15 })]);
   });
 });

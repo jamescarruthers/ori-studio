@@ -45,7 +45,8 @@ import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
 import { zoomOutlineOf, zoomShapeOf } from '../zoom/zoomModel';
 import { liftedZoomArrows, type PlacedZoomArrow } from './zoomArrows';
-import { modelRoom, resolveTitleBlock, type ResolvedTitleBlock } from './titleBlockContent';
+import type { TitleBlockLook } from './titleBlockColumn';
+import { modelRoom, resolveTitleBlock, titleBlockLook, type ResolvedTitleBlock } from './titleBlockContent';
 import type { PageBox } from './pagePlacement';
 import { hasTitleBlock } from './pagePlan';
 
@@ -304,8 +305,7 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
   let packed: Record<string, DiagramPageArrangement> = {};
   const stored = document.pageArrangements ?? {};
-  // The note prints where the byline did until the block takes Zach's J1b (`diagram-title-block.md`, Phase 1c).
-  const titles = { title: document.title, byline: document.titleBlockContent?.note ?? '' };
+  const titles = { title: document.title, block: titleBlockLook(document) };
   const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
     const pages = layoutDiagramPages(steps, document.page, titles, setter, { ...stored, ...packed }, stored);
     if (pages.packed) packed = { ...packed, ...pages.packed };
@@ -416,18 +416,30 @@ function scalesOf(pages: DiagramPagesLayout): Map<string, { scale: number; measu
 
 /**
  * Every text a diagram's pages set, at its weight: the title, the title
- * block's note where the first page has the block, the instructions and
- * the digits, and the runs of its uploads' text and its annotations' labels,
- * each in the CJK face it was given.
+ * block's own words as it prints them where the first page has the block,
+ * the instructions and the digits, and the runs of its uploads' text and its
+ * annotations' labels, each in the CJK face it was given.
  */
 export function diagramFontTexts(document: DiagramDocument): DiagramFontText[] {
   return [
     { text: document.title, weight: 700 },
-    ...(hasTitleBlock(document.page) ? [{ text: document.titleBlockContent?.note ?? '', weight: 400 as const }] : []),
+    ...(hasTitleBlock(document.page) ? titleBlockFontTexts(titleBlockLook(document)) : []),
     ...stepsOf(document).map((step) => ({ text: step.text, weight: 400 as const })),
     ...[...diagramUploadTexts(document), ...diagramLabelTexts(document)].map(({ face, text }) =>
       face.key === 'latin' ? { text, weight: face.weight } : { text, weight: face.weight, cjk: face.key }
     ),
+  ];
+}
+
+/** The title block's words at their weights: the subtitle and the labels bold, the values and the note regular. */
+function titleBlockFontTexts({ subtitle, credits, note }: TitleBlockLook): DiagramFontText[] {
+  return [
+    { text: subtitle, weight: 700 },
+    ...credits.flatMap(({ label, value }) => [
+      { text: label, weight: 700 as const },
+      { text: value, weight: 400 as const },
+    ]),
+    { text: note, weight: 400 },
   ];
 }
 

@@ -110,7 +110,8 @@ import { normalizeStepPlace } from '../document/placeValues';
 import { pinnedCaptionWidth, setCaption } from './captionMeasure';
 import { lanePicture, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
-import { setTitleBlock, titleBlockGeometry, type DiagramTitles, type LayoutTitleBlock } from './titleBlockGeometry';
+import { setTitleBlock, titleBlockLookOf, type DiagramTitles, type LayoutTitleBlock } from './titleBlockColumn';
+import { titleBlockBand, titleBlockParts } from './titleBlockGeometry';
 
 // The type a step is set in, which placement's hit boxes measure too.
 export { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM } from './stepType';
@@ -518,7 +519,7 @@ export interface LayoutPage {
   zoomArrows: LayoutZoomArrow[];
   pageNumberAt: { x: number; y: number; anchor: 'start' | 'end' } | null;
   /**
-   * The title block (`titleBlockGeometry.ts`): on the first page only, where
+   * The title block (`titleBlockColumn.ts`): on the first page only, where
    * the page setup has one. It carries the title, so a page with it prints
    * no title tab ({@link DiagramPagesLayout.title}).
    */
@@ -1094,7 +1095,8 @@ export function layoutDiagramPages(
   const showTitle = titleShown(setup, title);
   const headH = showTitle ? HEADER_MM : 0;
   const footH = setup.pageNumbers.enabled ? FOOTER_MM : 0;
-  const titleBlock = titleBlockGeometry(setup, headH, footH);
+  // The band is page 1's layout; what is in it is look, set on that page alone, and moves no step.
+  const titleBand = titleBlockBand(setup, headH, footH);
   const bandWidthMm = setup.pathWidthMm;
   // An enlarge arrow stands where a turn would, and keeps the gutter a turn keeps.
   const turning = steps.some(
@@ -1261,7 +1263,7 @@ export function layoutDiagramPages(
         stored,
         area: packingArea(paper, headH, footH),
         // The first page's steps under its title block, with the room under it a header keeps.
-        ...(titleBlock ? { firstArea: packingArea(paper, titleBlock.block.h, footH) } : {}),
+        ...(titleBand ? { firstArea: packingArea(paper, titleBand.block.h, footH) } : {}),
         margin: m,
         paper,
         // A step's reference scale: Fit each's in its cell, before any pin — an enlarged step's, its run's.
@@ -1422,7 +1424,9 @@ export function layoutDiagramPages(
       pageNumberAt: setup.pageNumbers.enabled
         ? { x: right ? W - m : m, y: H - m - PAGE_NUMBER_RAISE_MM, anchor: right ? 'end' : 'start' }
         : null,
-      ...(pageIndex === 0 && titleBlock ? { titleBlock: setTitleBlock(titleBlock, titles, setter) } : {}),
+      ...(pageIndex === 0 && titleBand
+        ? { titleBlock: setTitleBlock(titleBlockParts(titleBand, titleBlockLookOf(titles).sizes), titles, setter) }
+        : {}),
     };
   });
 

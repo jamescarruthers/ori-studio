@@ -31,3 +31,18 @@ export const FLOW_WEIGHT_RANGE = { min: 0, max: 1 } as const;
  * from it (`pages/pagePlan.ts`).
  */
 export const TITLE_BLOCK_SHARE_RANGE = { min: 0.15, max: 0.5 } as const;
+
+/**
+ * The range of the title block's model's and pattern's sizes, as shares of
+ * the block's height (`DiagramTitleBlockContent`): past it, a newer build's.
+ * Here because the page's layout reads them (`pages/titleBlockColumn.ts`).
+ */
+export const TITLE_BLOCK_ART_SIZE_RANGE = { min: 0.3, max: 1 } as const;
+
+/**
+ * The model's and the pattern's sizes where the content says none: Zach's
+ * J1b (2026-10-15), the pattern's side 0.8 of the block's height and the
+ * model 0.6, each about a third smaller than the first cut's. A look (class
+ * (b)): it may change for every file, since no step moves when it does.
+ */
+export const TITLE_BLOCK_ART_SIZE_DEFAULTS = { modelSize: 0.6, patternSize: 0.8 } as const;

@@ -46,8 +46,9 @@ import { cellPicture, fittedScene, wholePicture, type CellPicture } from './page
 import { placedZoomArrows } from './zoomArrows';
 import type { PagePart } from './pagePlacement';
 import { diagramSurfaceStyle } from '../pictures/diagramPaperStyle';
+import { titleBlockInks, type LayoutTitleBlock } from './titleBlockColumn';
 import { modelRoom, type ResolvedTitleBlock } from './titleBlockContent';
-import type { LayoutTitleBlock, TitleBlockGeometry } from './titleBlockGeometry';
+import type { TitleBlockGeometry } from './titleBlockGeometry';
 
 export interface PageComposeOptions {
   band?: boolean;
@@ -211,17 +212,44 @@ export type FontUse = (face: string, text: string) => void;
 
 /**
  * The first page's title block, back to front (`diagram-title-block.md`,
- * section 6): the crease pattern in its square, in the style's fold pens; the
- * finished model in front of it — in the pattern's square, where there is no
- * pattern; then the title and the byline.
+ * section 6 and Phase 1c): the band in the paper's colour, the subtitle's
+ * rule and the credits' dividers; the crease pattern in its square, in the
+ * style's fold pens; the finished model in front of it — in the pattern's
+ * place, where there is no pattern; then the words: the subtitle, the title
+ * on the band, the credits and the note.
  */
 function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
-  const { geometry, title, byline } = block;
+  const { geometry, subtitle, band, title, credits, note } = block;
+  const inks = titleBlockInks(diagramSurfaceStyle(input.style).paper, INK);
+  const x = geometry.column.x;
   const elements: string[] = [];
+  if (band.w > 0 && band.h > 0) {
+    elements.push(`<rect x="${pt(band.x)}" y="${pt(band.y)}" width="${pt(band.w)}" height="${pt(band.h)}" fill="${escapeXml(inks.band)}"/>`);
+  }
+  if (subtitle?.rule) elements.push(ruleElement(subtitle.rule.x1, subtitle.rule.y, subtitle.rule.x2, subtitle.rule.y, SUBTITLE_RULE_PT, inks.rule));
+  for (const { x: at, y1, y2 } of credits?.dividers ?? []) elements.push(ruleElement(at, y1, at, y2, DIVIDER_PT, inks.rule));
   if (input.titleBlock) elements.push(...titleBlockArt(geometry, input.titleBlock, input, count));
-  if (title) elements.push(textElement([title.line], geometry.title.x, title.baseline, title.sizeMm, 0, 700, INK, count));
-  if (byline) elements.push(stepTextElement(byline.lines, geometry.byline.x, byline.firstBaseline, count));
+  if (subtitle) elements.push(textElement([subtitle.line], x, subtitle.baseline, subtitle.sizeMm, 0, 700, TEXT_INK, count, subtitle.trackingMm));
+  if (title) elements.push(textElement([title.line], title.x, title.baseline, title.sizeMm, 0, 700, inks.title, count));
+  for (const column of credits?.columns ?? []) {
+    elements.push(
+      textElement([column.label], column.x, column.labelBaseline, credits!.labelSizeMm, 0, 700, TEXT_INK, count, credits!.trackingMm),
+      textElement([column.value], column.x, column.valueBaseline, credits!.valueSizeMm, 0, 400, TEXT_INK, count)
+    );
+  }
+  if (note && note.lines.length > 0) elements.push(textElement(note.lines, x, note.firstBaseline, note.sizeMm, note.leadingMm, 400, TEXT_INK, count));
   return elements;
+}
+
+/** The subtitle's rule and the credits' dividers, in pt: J1b's. */
+const SUBTITLE_RULE_PT = 0.75;
+const DIVIDER_PT = 0.5;
+
+function ruleElement(x1: number, y1: number, x2: number, y2: number, widthPt: number, stroke: string): string {
+  return (
+    `<line x1="${pt(x1)}" y1="${pt(y1)}" x2="${pt(x2)}" y2="${pt(y2)}" ` +
+    `stroke="${escapeXml(stroke)}" stroke-width="${num(widthPt)}" stroke-linecap="butt"/>`
+  );
 }
 
 /** The block's crease pattern and its model in front. */
@@ -280,7 +308,8 @@ export function stepTextElement(lines: readonly SetLine[], xMm: number, firstBas
 /**
  * Set lines as one `<text>`: a `<tspan>` per run, each at its own x, every
  * line `leadingMm` below the last. Runs of the estimate setter, which name no
- * face, fall back to Noto Sans.
+ * face, fall back to Noto Sans. A tracked line (`trackingMm`) was set with
+ * the room after each letter (`trackedLine`), which `letter-spacing` prints.
  */
 function textElement(
   lines: readonly SetLine[],
@@ -290,7 +319,8 @@ function textElement(
   leadingMm: number,
   weight: 400 | 700,
   fill: string,
-  use: FontUse
+  use: FontUse,
+  trackingMm = 0
 ): string {
   const spans: string[] = [];
   lines.forEach((line, index) => {
@@ -305,8 +335,9 @@ function textElement(
       );
     }
   });
+  const spacing = trackingMm > 0 ? ` letter-spacing="${pt(trackingMm)}"` : '';
   return (
-    `<text xml:space="preserve" font-size="${pt(sizeMm)}" font-weight="${weight}" fill="${fill}">` +
+    `<text xml:space="preserve" font-size="${pt(sizeMm)}" font-weight="${weight}" fill="${escapeXml(fill)}"${spacing}>` +
     `${spans.join('')}</text>`
   );
 }

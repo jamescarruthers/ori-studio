@@ -392,7 +392,7 @@ describe('composeDiagramPage', () => {
     const again = layoutDiagramPages(
       diagramLayoutSteps(document, (id) => measures.get(id) ?? null),
       document.page,
-      { title: document.title, byline: '' },
+      { title: document.title },
       estimateTextSetter
     ).pages.flatMap((page) => page.cells);
     return Math.max(
@@ -714,7 +714,7 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
   const ON = { enabled: true, heightShare: 0.27 };
   const BYLINE = 'Design: 将底角\nPaper: 15 cm';
   const TITLE = 'Crane · 千纸鹤';
-  /** Nine linked steps on a flow, the block on and a byline: page 1 holds seven, and the last step is Auto's model. */
+  /** Nine linked steps on a flow, the block on and a note: page 1 holds seven, and the last step is Auto's model. */
   function blockDiagram(content: DiagramTitleBlockContentPatch = {}, last: DiagramStep = cpStep('step-9')): DiagramDocument {
     const steps = [...Array.from({ length: 8 }, (_, index) => cpStep(`step-${index + 1}`)), last].map((step) => ({ ...step, text: 'Fold in half.' }));
     const made = insertSteps(createDiagram({ title: TITLE, hanStyle: 'sc' }), steps, 0);
@@ -827,12 +827,13 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     // Set to its box's bottom right: its drawing's right and foot on the box's, but for its pens' ink.
     expect((model.boundsPt.x + model.boundsPt.width) / PT_PER_MM).toBeCloseTo(geometry.model.x + geometry.model.w, 0);
     expect((model.boundsPt.y + model.boundsPt.height) / PT_PER_MM).toBeCloseTo(geometry.model.y + geometry.model.h, 0);
-    // No pattern: the model in the pattern's square, clear of the title's column.
+    // No pattern: the model at its own size in the pattern's place, on the band's right, clear of the column.
     const alone = blockDiagram({ pattern: { kind: 'none' } }, marked);
     const alonePages = preparedPages(alone, FONTS, subsetter);
-    const standing = modelOf(alone, geometry.pattern, alonePages);
+    const room = { ...geometry.model, x: geometry.block.x + geometry.block.w - geometry.model.w };
+    const standing = modelOf(alone, room, alonePages);
     expect(alonePages.compose(0).svg).toContain(standing.markup);
-    expect(standing.boundsPt.x / PT_PER_MM).toBeGreaterThanOrEqual(geometry.title.x + geometry.title.w);
+    expect(standing.boundsPt.x / PT_PER_MM).toBeGreaterThanOrEqual(geometry.column.x + geometry.column.w);
   });
 
   it('draws only the words where there is neither pattern nor model, and keeps the block’s room', () => {
@@ -848,12 +849,12 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     expect(pages.layout.pages[0]!.cells).toEqual(preparedPages(blockDiagram(), FONTS, subsetter).layout.pages[0]!.cells);
   });
 
-  it('prints the title large and the byline in the diagram’s fonts, embedded, and no title tab on the first page, but on the next', () => {
+  it('prints the title large and the note in the diagram’s fonts, embedded, and no title tab on the first page, but on the next', () => {
     const document = blockDiagram();
     expect(diagramFontTexts(document)).toContainEqual({ text: BYLINE, weight: 400 });
     const pages = preparedPages(document, FONTS, subsetter);
     expect(pages.missing).toEqual([]);
-    const { title, byline } = pages.layout.pages[0]!.titleBlock!;
+    const { title, note } = pages.layout.pages[0]!.titleBlock!;
     const svg = pages.compose(0).svg;
     const [heading, credits] = [...parse(svg).querySelectorAll('svg > text')];
     expect(heading!.textContent).toBe(TITLE);
@@ -861,9 +862,9 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     expect(heading!.getAttribute('font-weight')).toBe('700');
     expect(credits!.getAttribute('font-weight')).toBe('400');
     expect([...credits!.querySelectorAll('tspan')].map((span) => span.textContent)).toEqual(
-      byline!.lines.flatMap((line) => line.runs.map((run) => run.text))
+      note!.lines.flatMap((line) => line.runs.map((run) => run.text))
     );
-    // Each face embedded holds every character it sets: the title's Han in bold, the byline's in regular.
+    // Each face embedded holds every character it sets: the title's Han in bold, the note's in regular.
     const faces = [...svg.matchAll(/@font-face\{font-family:'([^']*)';font-weight:(\d+);[^}]*base64,([^)]*)\)/g)];
     const embedded = new Map(
       faces.map(([, family, weight, data]) => [`${family}|${weight}`, readFontMetrics(Uint8Array.from(atob(data!), (c) => c.charCodeAt(0)))])
@@ -881,9 +882,9 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     expect(pages.compose(1).svg).toMatch(/<rect [^>]*rx=/);
   });
 
-  it('neither loads the byline’s faces nor works out what the block shows where the first page has no block', () => {
+  it('neither loads the note’s faces nor works out what the block shows where the first page has no block', () => {
     const off = { ...blockDiagram(), page: { ...blockDiagram().page, titleBlock: { ...ON, enabled: false } } };
-    // A Chinese byline left in a diagram with the block off asks for no face of its own.
+    // A Chinese note left in a diagram with the block off asks for no face of its own.
     expect(diagramFontTexts(off).map(({ text }) => text)).not.toContain(BYLINE);
     expect(preparedPages(off, FONTS, subsetter).titleBlock).toBeNull();
     // Nor where a grid of one row has no room for it.
@@ -932,3 +933,125 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     expect(two.compose(0).svg).not.toContain(modelOf(before, one.layout.pages[0]!.titleBlock!.geometry.model, one).markup);
   });
 });
+
+describe('the title block’s header on the first page (`diagram-title-block.md`, Phase 1c: J1b)', () => {
+  const ON = { enabled: true, heightShare: 0.23 };
+  const PINK = { style: { ...DEFAULT_PAPER_STYLE, paper: { front: '#ffffff', back: '#d982a5' } } };
+  const CREDITS = [
+    { label: 'Author', value: 'Traditional' },
+    { label: 'Recommended size', value: '' },
+    { label: 'Steps', value: { kind: 'step-count' as const } },
+  ];
+  /** Nine linked steps on a flow under J1b's header: a subtitle, three credits — one with no value — and the paper's colours. */
+  function headerDiagram(patch: Partial<DiagramDocument> = {}, credits = CREDITS, subtitle = 'Origami diagram'): DiagramDocument {
+    const steps = Array.from({ length: 9 }, (_, index) => ({ ...cpStep(`step-${index + 1}`), text: 'Fold in half.' }));
+    const made = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), steps, 0);
+    const document = { ...made, page: { ...made.page, layout: 'flow' as const, titleBlock: ON }, ...patch };
+    const titled = setTitleBlockContent(document, { subtitle });
+    return credits.reduce((done, credit) => setTitleBlockContent(done, { credits: { op: 'add', credit } }), titled);
+  }
+  const texts = (svg: string) =>
+    [...parse(svg).querySelectorAll('svg > text')].map((text) => ({
+      text: text.textContent,
+      weight: text.getAttribute('font-weight'),
+      fill: text.getAttribute('fill'),
+      spacing: text.getAttribute('letter-spacing'),
+      x: Number(text.querySelector('tspan')?.getAttribute('x')),
+      y: Number(text.querySelector('tspan')?.getAttribute('y')),
+    }));
+  const pt = (mm: number) => Math.round(mm * PT_PER_MM * 1000) / 1000;
+
+  it('draws the band in the paper’s coloured side, the title white on it, the subtitle tracked with its rule, and the credits with a divider between', () => {
+    const document = headerDiagram({ style: PINK });
+    const pages = preparedPages(document, FONTS, subsetter);
+    const block = pages.layout.pages[0]!.titleBlock!;
+    const svg = pages.compose(0).svg;
+    const { band, subtitle, credits, title } = block;
+    const rect = parse(svg).querySelector(`svg > rect[fill="#d982a5"]`)!;
+    expect(['x', 'y', 'width', 'height'].map((name) => Number(rect.getAttribute(name)))).toEqual([band.x, band.y, band.w, band.h].map(pt));
+    const printed = texts(svg);
+    // Back to front: the band, then the words; the subtitle and the labels in capitals, tracked; the value with none
+    // not printed; the live count the last step's number.
+    expect(svg.indexOf('<rect')).toBeLessThan(svg.indexOf('>ORIGAMI DIAGRAM<'));
+    expect(printed.slice(0, 6)).toEqual([
+      { text: 'ORIGAMI DIAGRAM', weight: '700', fill: '#26292c', spacing: String(pt(subtitle!.trackingMm)), x: pt(band.x), y: pt(subtitle!.baseline) },
+      { text: 'Crane', weight: '700', fill: '#ffffff', spacing: null, x: pt(title!.x), y: pt(title!.baseline) },
+      { text: 'AUTHOR', weight: '700', fill: '#26292c', spacing: String(pt(credits!.trackingMm)), x: pt(band.x), y: pt(credits!.columns[0]!.labelBaseline) },
+      { text: 'Traditional', weight: '400', fill: '#26292c', spacing: null, x: pt(band.x), y: pt(credits!.columns[0]!.valueBaseline) },
+      { text: 'STEPS', weight: '700', fill: '#26292c', spacing: String(pt(credits!.trackingMm)), x: pt(credits!.columns[1]!.x), y: pt(credits!.columns[1]!.labelBaseline) },
+      { text: '9', weight: '400', fill: '#26292c', spacing: null, x: pt(credits!.columns[1]!.x), y: pt(credits!.columns[1]!.valueBaseline) },
+    ]);
+    expect(printed.map(({ text }) => text)).not.toContain('RECOMMENDED SIZE');
+    // The rule and the one divider, in the paper's colour.
+    const rules = linesOf(svg).filter(({ stroke }) => stroke === '#d982a5');
+    const { rule } = subtitle!;
+    const [divider] = credits!.dividers;
+    expect(rules).toEqual([
+      { ends: [rule!.x1, rule!.y, rule!.x2, rule!.y].map(pt), width: 0.75, stroke: '#d982a5' },
+      { ends: [divider!.x, divider!.y1, divider!.x, divider!.y2].map(pt), width: 0.5, stroke: '#d982a5' },
+    ]);
+  });
+
+  it('prints the title and the rules in ink on a pale paper, and follows the step count', () => {
+    // A new diagram's Diagram style: a white front and a grey back, 2.1:1 against white.
+    const document = headerDiagram();
+    const svg = preparedPages(document, FONTS, subsetter).compose(0).svg;
+    expect(parse(svg).querySelector('svg > rect')!.getAttribute('fill')).toBe(diagramSurfaceStyle(document.style).paper.back);
+    expect(texts(svg).find(({ text }) => text === 'Crane')!.fill).toBe('#16191c');
+    expect(new Set(linesOf(svg).filter(({ width }) => width === 0.75 || width === 0.5).map(({ stroke }) => stroke))).toEqual(new Set(['#16191c']));
+    // One step fewer: the count prints 8.
+    const fewer = { ...document, steps: document.steps.slice(0, -1) };
+    expect(texts(preparedPages(fewer, FONTS, subsetter).compose(0).svg).map(({ text }) => text)).toContain('8');
+  });
+
+  it('moves the band up where the subtitle is cleared, and prints neither it nor its rule', () => {
+    const shown = preparedPages(headerDiagram({ style: PINK }), FONTS, subsetter);
+    const cleared = preparedPages(headerDiagram({ style: PINK }, CREDITS, ''), FONTS, subsetter);
+    const [with_, without] = [shown, cleared].map((pages) => pages.layout.pages[0]!.titleBlock!);
+    expect(without!.band.y).toBe(without!.geometry.block.y);
+    expect(without!.band.y).toBeLessThan(with_!.band.y);
+    const svg = cleared.compose(0).svg;
+    expect(svg).not.toContain('ORIGAMI DIAGRAM');
+    expect(linesOf(svg).filter(({ width }) => width === 0.75)).toEqual([]);
+    // The steps where they were.
+    expect(cleared.layout.pages[0]!.cells).toEqual(shown.layout.pages[0]!.cells);
+  });
+
+  it('loads and embeds the faces the header’s Chinese subtitle, labels, values and note need', () => {
+    const han = '将底角向上折至顶角';
+    const document = setTitleBlockContent(headerDiagram({ style: PINK }, [{ label: han.slice(0, 2), value: han.slice(2, 5) }], han.slice(5, 9)), {
+      note: '压实折痕后展开。',
+    });
+    expect(diagramFontTexts(document)).toEqual(
+      expect.arrayContaining([
+        { text: han.slice(5, 9), weight: 700 },
+        { text: han.slice(0, 2), weight: 700 },
+        { text: han.slice(2, 5), weight: 400 },
+        { text: '压实折痕后展开。', weight: 400 },
+      ])
+    );
+    const pages = preparedPages(document, FONTS, subsetter);
+    expect(pages.missing).toEqual([]);
+    const svg = pages.compose(0).svg;
+    const faces = [...svg.matchAll(/@font-face\{font-family:'([^']*)';font-weight:(\d+);[^}]*base64,([^)]*)\)/g)];
+    const embedded = new Map(faces.map(([, family, weight, data]) => [`${family}|${weight}`, readFontMetrics(Uint8Array.from(atob(data!), (c) => c.charCodeAt(0)))]));
+    for (const text of parse(svg).querySelectorAll('svg > text')) {
+      for (const span of text.querySelectorAll('tspan')) {
+        const family = /^'([^']*)'/.exec(span.getAttribute('font-family') ?? '')![1]!;
+        for (const character of span.textContent ?? '') {
+          if (character.trim()) expect(embedded.get(`${family}|${text.getAttribute('font-weight')}`)?.has(character.codePointAt(0)!), character).toBe(true);
+        }
+      }
+    }
+    expect(texts(svg).map(({ text }) => text)).toEqual(expect.arrayContaining([han.slice(5, 9), han.slice(0, 2), han.slice(2, 5), '压实折痕后展开。']));
+  });
+});
+
+/** Each line of a page: its ends and its pen, in pt. */
+function linesOf(svg: string) {
+  return [...parse(svg).querySelectorAll('svg > line')].map((line) => ({
+    ends: ['x1', 'y1', 'x2', 'y2'].map((name) => Number(line.getAttribute(name))),
+    width: Number(line.getAttribute('stroke-width')),
+    stroke: line.getAttribute('stroke'),
+  }));
+}

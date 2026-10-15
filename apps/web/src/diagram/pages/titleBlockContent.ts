@@ -20,20 +20,22 @@
  *
  * The pattern is drawn from its step's stored thumbnail, as a scene for the
  * shared painter ({@link patternScene}); the model in front of it, or in
- * the pattern's square where none is drawn ({@link modelRoom}). What
- * prints nothing where it would show, the Pages view marks
+ * the pattern's place where none is drawn ({@link modelRoom}). The words
+ * the block prints of its own are read here too ({@link titleBlockLook}).
+ * What prints nothing where it would show, the Pages view marks
  * ({@link missingTitleBlockParts}). Pure.
  */
 import type { SheetStrokeRole, SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import type { PaperLineItem, PaperLineRole, PaperScene } from '../../lib/paper/paperScene';
 import type { PageBox } from './pagePlacement';
-import { STEP_TEXT_LEADING_MM, TEXT_DESCENT_MM } from './stepType';
-import type { LayoutTitleBlock, TitleBlockGeometry } from './titleBlockGeometry';
+import type { LayoutTitleBlock, TitleBlockLook } from './titleBlockColumn';
+import type { TitleBlockGeometry } from './titleBlockGeometry';
 import {
   isLockedStep,
   stepById,
   stepNumbers,
   stepsOf,
+  titleBlockArtSizes,
   type DiagramCpSource,
   type DiagramDocument,
   type DiagramStep,
@@ -174,15 +176,42 @@ function thumbnailBox(thumbnail: SheetThumbnail): { minX: number; minY: number; 
 }
 
 /**
- * Where the block's model stands: in front of the pattern's lower left, or in
- * the pattern's square where no pattern is drawn — clear of the title's
- * column either way.
+ * What the block prints of its own, as it prints it (`titleBlockColumn.ts`):
+ * the subtitle and the credits' labels in capitals, each credit's value — the
+ * live step count as the number the last numbered step prints — the note,
+ * and the art's sizes. One answer for the layout and for the fonts it loads.
  */
-export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBlock): PageBox {
-  return content.pattern.scene ? geometry.model : geometry.pattern;
+export function titleBlockLook(document: DiagramDocument): TitleBlockLook {
+  const content = document.titleBlockContent;
+  const count = Math.max(0, ...stepNumbers(document).values());
+  return {
+    subtitle: printedCapitals(content?.subtitle ?? ''),
+    credits: (content?.credits ?? []).map(({ label, value }) => ({
+      label: printedCapitals(label),
+      value: typeof value === 'string' ? value : String(count),
+    })),
+    note: content?.note ?? '',
+    sizes: titleBlockArtSizes(content),
+  };
 }
 
-/** A part of the title block that prints nothing where it would show, and the step it comes from. */
+/** Upper case as the page prints it, the same on every machine: Unicode's own mapping, not the reader's locale; CJK unchanged. */
+function printedCapitals(text: string): string {
+  return text.toUpperCase();
+}
+
+/**
+ * Where the block's model stands: in front of the pattern's lower left, or
+ * at its own size in the pattern's place, on the band's right, where no
+ * pattern is drawn — its foot on the band's either way.
+ */
+export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBlock): PageBox {
+  if (content.pattern.scene) return geometry.model;
+  const { block, model } = geometry;
+  return { ...model, x: block.x + block.w - model.w };
+}
+
+/** A part of the title block that prints nothing where it would show, and why. */
 export interface MissingTitleBlockPart {
   part: 'title' | 'pattern' | 'model';
   /** The step that cannot give it; null where Auto finds none, and for the title. */
@@ -193,8 +222,10 @@ export interface MissingTitleBlockPart {
 
 /** A room of the block where what would print there prints nothing ({@link missingTitleBlockParts}). */
 export interface TitleBlockPlaceholder {
-  /** The title's column, the pattern's square — the model's room too where no pattern is drawn — or the model's box. */
+  /** The title's band, the pattern's square — the model's room too where no pattern is drawn — or the model's box. */
   room: 'title' | 'square' | 'model';
+  /** One for each mark. */
+  key: string;
   /** Where it is marked: the room, or for the square, what a model drawn in it leaves free ({@link squareMark}). */
   box: PageBox;
   /** What prints nothing there, in the order it would be drawn. */
@@ -203,16 +234,18 @@ export interface TitleBlockPlaceholder {
 
 /** The least room across, in mm, a mark's words are set in: two or three lines of them on the Pages view. */
 const MARK_ROOM_MM = 10;
+/** A descender's depth, as a share of the size: a printed line's foot, for a mark. */
+const DESCENDER = 0.24;
 
 /**
  * What of the block prints nothing where it would show, room by room: the
- * title where the diagram has none; the pattern and the model where they are
- * Auto or a step, and no step gives them — a part set to none is the
- * author's, and is not missing. The pattern and a model with no pattern in
- * front of it would print in one square, which is one room; so no two rooms
- * overlap. `drawnModel` is where the model is drawn, null where it is not
- * (`wholePictureRoom`), which the square's mark keeps clear of. For the
- * Pages view's overlay, never the page.
+ * title, in its band, where the diagram has none; the pattern and the model
+ * where they are Auto or a step, and no step gives them — a part set to none
+ * is the author's, and is not missing. The pattern and a model with no
+ * pattern in front of it would print in one square, which is one room; so no
+ * two rooms overlap. `drawnModel` is where the model is drawn, null where it
+ * is not (`wholePictureRoom`), which the square's mark keeps clear of. For
+ * the Pages view's overlay, never the page.
  */
 export function missingTitleBlockParts(
   block: LayoutTitleBlock,
@@ -227,9 +260,9 @@ export function missingTitleBlockParts(
   if (pattern.from !== 'none' && !pattern.scene) square.push(missing(pattern, 'pattern'));
   if (model.from !== 'none' && !model.step?.picture) (pattern.scene ? front : square).push(missing(model, 'model'));
   return [
-    ...(block.title ? [] : [{ room: 'title' as const, box: geometry.title, missing: [{ part: 'title' as const, step: null, number: null }] }]),
-    ...(square.length > 0 ? [{ room: 'square' as const, box: squareMark(block, drawnModel), missing: square }] : []),
-    ...(front.length > 0 ? [{ room: 'model' as const, box: geometry.model, missing: front }] : []),
+    ...(block.title ? [] : [{ room: 'title' as const, key: 'title', box: block.band, missing: [{ part: 'title' as const, step: null, number: null }] }]),
+    ...(square.length > 0 ? [{ room: 'square' as const, key: 'square', box: squareMark(block, drawnModel), missing: square }] : []),
+    ...(front.length > 0 ? [{ room: 'model' as const, key: 'model', box: geometry.model, missing: front }] : []),
   ];
 }
 
@@ -237,18 +270,27 @@ export function missingTitleBlockParts(
  * Where the pattern's square is marked, clear of a model drawn in it
  * (`inSquare`): the square, less the model — the strip it leaves above
  * itself or beside itself, whichever is larger — or, where it leaves no room
- * for words, the title's column under the byline's lines; the square itself
- * where neither has room.
+ * for words, the column under all it prints; the square itself where neither
+ * has room.
  */
 function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null): PageBox {
-  const { pattern: square, byline, block: band } = block.geometry;
+  const { pattern: square, column } = block.geometry;
   if (!inSquare) return square;
-  const above = { ...square, h: inSquare.y - square.y };
-  const beside = { ...square, w: inSquare.x - square.x };
+  const above = { ...square, h: Math.max(0, inSquare.y - square.y) };
+  const beside = { ...square, w: Math.max(0, inSquare.x - square.x) };
   const strip = above.w * above.h >= beside.w * beside.h ? above : beside;
   if (Math.min(strip.w, strip.h) >= MARK_ROOM_MM) return strip;
-  const lines = block.byline;
-  const top = lines ? lines.firstBaseline + (lines.lines.length - 1) * STEP_TEXT_LEADING_MM + TEXT_DESCENT_MM : byline.y;
-  const under = { x: byline.x, y: top, w: byline.w, h: band.y + band.h - top };
+  const top = columnFoot(block);
+  const under = { x: column.x, y: top, w: column.w, h: column.y + column.h - top };
   return Math.min(under.w, under.h) >= MARK_ROOM_MM ? under : square;
+}
+
+/** How far down the column what it prints reaches: the band, the credits and the note. */
+function columnFoot(block: LayoutTitleBlock): number {
+  const { band, credits, note } = block;
+  const feet = [band.y + band.h];
+  const lastRow = credits?.columns.at(-1);
+  if (lastRow && credits) feet.push(lastRow.valueBaseline + DESCENDER * credits.valueSizeMm);
+  if (note && note.lines.length > 0) feet.push(note.firstBaseline + (note.lines.length - 1) * note.leadingMm + DESCENDER * note.sizeMm);
+  return Math.max(...feet);
 }
