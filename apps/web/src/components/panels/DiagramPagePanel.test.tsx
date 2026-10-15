@@ -278,7 +278,7 @@ describe('DiagramPagePanel', () => {
     expect(titleHelp()).toBe('The diagram’s title, in a tab at the top of every page.');
     act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled: true } }));
     expect(titleHelp()).toBe(
-      'The diagram’s title, in a tab at the top of every page after the first, whose title block carries it.'
+      'The diagram’s title, in a tab at the top of every page. On the first page the title block carries it instead.'
     );
   });
 });
@@ -402,20 +402,19 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(host?.textContent).not.toContain('Keeps later pages in place');
   });
 
-  it('says page 1 keeps a count of its own under the title block, and what the block would give it (T-20 B)', () => {
-    const blockHelp = () =>
-      [...host!.querySelectorAll('[data-field-help]')]
-        .map((mark) => mark.getAttribute('aria-label'))
-        .find((help) => help?.startsWith('This page has a count of its own'));
+  it('says why page 1 holds fewer under the title block, or that its own count stays there (T-20 B)', () => {
+    const blockHelp = () => field()!.closest('[data-field-row]')!.querySelector('[data-field-help]')?.getAttribute('aria-label');
     const block = (enabled: boolean) =>
       act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled } }));
     block(true);
-    // The default under the block: nothing to say.
-    expect(field()?.value).toBe(String(firstPageCapacity(state().diagram!.page)));
-    expect(blockHelp()).toBeUndefined();
+    // The default under the block, fewer than Steps per page shows: the row says why.
+    const underBlock = firstPageCapacity(state().diagram!.page);
+    expect(underBlock).toBeLessThan(state().diagram!.page.stepsPerPage);
+    expect(field()?.value).toBe(String(underBlock));
+    expect(blockHelp()).toBe(`The title block takes room on this page, so it holds ${underBlock} by default.`);
     act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Decrease Steps on page 1"]')!.click());
     expect(blockHelp()).toBe(
-      `This page has a count of its own, so the title block leaves it as it is. With the block, it would hold ${firstPageCapacity(state().diagram!.page)} by default.`
+      `This page keeps its own count under the title block; without one it would hold ${underBlock}.`
     );
     // Page 2 says nothing of it, and nor does page 1 with the block off.
     showPage(1);

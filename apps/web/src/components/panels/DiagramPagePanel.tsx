@@ -213,7 +213,7 @@ export function DiagramPagePanel() {
               hasTitleBlock(page)
                 ? t(
                     'panels:diagram.pagePane.titleHelpWithBlock',
-                    'The diagram’s title, in a tab at the top of every page after the first, whose title block carries it.'
+                    'The diagram’s title, in a tab at the top of every page. On the first page the title block carries it instead.'
                   )
                 : t('panels:diagram.pagePane.titleHelp', 'The diagram’s title, in a tab at the top of every page.')
             }

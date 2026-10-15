@@ -18,9 +18,10 @@ export interface CurrentDiagramPage {
   /** Its own count stays, holding a later page with one still (`countHoldsLaterPages`): it has no Use default. */
   holdsLaterPages: boolean;
   /**
-   * The first page under the title block, holding a count of its own, which
-   * the block leaves as it is (T-20 B): the count it would hold by default
-   * (`firstPageCapacity`). Null on any other page.
+   * The first page under the title block: the count the block gives it by
+   * default (`firstPageCapacity`), which a count of its own overrides and
+   * keeps as the block comes and goes (T-20 B). Null on any other page, and
+   * without the block.
    */
   titleBlockDefault: number | null;
 }
@@ -63,8 +64,7 @@ export function currentDiagramPage(
     page: pages[index]!,
     range: pageStepsRange(document, index) ?? PAGE_STEPS_RANGE,
     holdsLaterPages: countHoldsLaterPages(document, index),
-    titleBlockDefault:
-      index === 0 && pages[0]!.ownCount && hasTitleBlock(document.page) ? firstPageCapacity(document.page) : null,
+    titleBlockDefault: index === 0 && hasTitleBlock(document.page) ? firstPageCapacity(document.page) : null,
   };
 }
 
