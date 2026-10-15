@@ -1,8 +1,9 @@
 # Diagram: a title block on the first page
 
 **Status: planned 2026-10-14, revised the same day after a critique (see
-"What the critique changed" at the end of the Approach). Phase 1 is being
-built.**
+"What the critique changed" at the end of the Approach). Phase 1 is built
+and its gate passed (1g, "As built (Phase 1)"); what is left is Zach's:
+T-21 and the looks listed in 1g. Phase 2 waits for the release.**
 
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
@@ -1445,7 +1446,8 @@ until 1f.
   a two-row grid's block is half the page, its art standing on its foot;
   the crane, with no byline, leaves most of the block's left blank — and
   the ribbon's band reaching up to 6 mm into the block's foot on dense or
-  short first pages, pinned by a test in `flowLane.test.ts`.)
+  short first pages, pinned by a test in `flowLane.test.ts`. Rendered
+  again at the branch's head under `artifacts/title-block/final/`, 1g.)
 
 *As built (1d, the resolution only; the drawing is its own lane).*
 `diagram/pages/titleBlockContent.ts`: `resolveTitleBlock(document)` gives
@@ -1781,8 +1783,9 @@ diagrams", the default and its tests together, so it reverts whole:
     (2ef450643), which also sweeps every step with the block on and off.
 
 **1g. Gate and handoff**
-- [ ] The full gate. The browser checks above, with First page Left and
-  Right, a 3 × 3 grid, a one-row grid and A4 landscape.
+- [x] The full gate. The browser checks above, with First page Left and
+  Right, a 3 × 3 grid, a one-row grid and A4 landscape. (At the branch's
+  head, 2026-10-14: "As built (Phase 1)" below.)
 - [x] A review of the phase, its findings fixed (the final review,
   2026-10-14, below). What needs a new decision is put to Zach here.
 - [ ] T-21 settled by Zach before this branch merges into #436 or ships
@@ -1819,7 +1822,9 @@ diagrams", the default and its tests together, so it reverts whole:
   value column for these rows.
 - [ ] Zach: the section's order, after Layout (as built, T-19 A) or just
   above Header & footer (`artifacts/title-block/out/order/`).
-- [ ] As built, written here. The PR into #436.
+- [x] As built, written here.
+- [ ] The PR into #436 (whoever runs the lanes opens it; no agent merges
+  it).
 
 *The final review (2026-10-14).* Each fix a commit of its own with a test
 that failed before it. Before and after under
@@ -1875,6 +1880,41 @@ the files before each fix put back from git for the "before" run
   decisions read as taken; superseded As built lines say so; the evolution
   plan names the block's legacy value (979199073); the flow lane test says
   what its claim covers (2fcb867d8).
+
+*As built (Phase 1, 2026-10-14).* 1a to 1f as written above, with the final
+review's fixes. Checked at the branch's head (eb70f8105), evidence under
+`artifacts/title-block/final/`:
+- ESLint on the 81 script files changed since 952fc658e, `tsc`,
+  `i18n:check`, and vitest over `src/diagram`, `src/components/diagram`,
+  `src/components/panels`, `src/components/ui/fieldRows`,
+  `src/store/workspaceStore`, `src/analytics`, `src/keyboard`, `src/styles`
+  and `src/i18n` (331 files, 5144 tests): all pass.
+- Zach's crane as it opens, against 952fc658e: the Pages view, PDF and
+  Print, each of its three pages, the same to the pixel; the one-sheet SVG
+  the same to the byte; its layout the same; nothing unsaved
+  (`a-crane-block-off-before-after.png`). Turned on, page 1 keeps its nine
+  under the block, and page 2's steps hold; only its ribbon's entry from
+  the spine follows page 1's new exit (`b-crane-block-on-pdf.png`).
+- A new diagram has the block, with 7 steps on page 1 in the flow and 6 on
+  a 3 × 3 grid (`c-new-diagram-page-1.png`). The Page pane in light and dark
+  (`d-page-pane-light-dark.png`).
+- The gate: First page Left and Right, a 3 × 3 grid, a one-row grid (no
+  block, the tab on page 1), A4 landscape on either side, a byline; the
+  Pages view, PDF, Print and one-sheet SVG of each, with no page error. In
+  iPad-sized WebKit the crane (off and on), the new flow and grid, and A4
+  landscape lay out as in Chromium, their PDFs byte for byte the same; the
+  Page pane, in its drawer there, in light and dark (`gate-*`). On the dev
+  server WebKit blocks two workers by COEP, at 952fc658e too.
+- Seen there, #436's: the crane with First page Right puts step 17 past
+  page 2's foot and steps 14 to 16 over the captions of 11 to 13, at
+  952fc658e too. The flip turns the page's bands top to bottom and keeps
+  each hand offset (`gate-crane-right-page-2.png`).
+
+Left for Zach: T-21, before this branch merges into #436 or ships; the
+five looks in 1g's list; and the first look (1d). Open, not looked into: a
+pulled References card's scale on a flow page with the block (1f). Phase 2
+is as listed below; nothing from Phase 1 moved into it. A separate change,
+if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
 
 ### Phase 2: after the release
 
