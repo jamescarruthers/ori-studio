@@ -14,8 +14,10 @@ whether the release waits for it is Zach's call once the build is done. The
 PR goes into #436's branch and no agent merges it.
 
 The decisions are numbered T-1 to T-19. T-20, raised in the review of 1a
-and 1b, and T-21, raised in the review of 1c to 1e, still need Zach's
-answer, before 1f turns the default on. Each gives its options and a
+and 1b, and T-21, raised in the review of 1c to 1e, were taken as
+recommended (T-20 B, T-21 A) on 2026-10-14 under Zach's standing "go with
+your recs"; they are not his answer, and he may still overrule either
+before 1f turns the default on. Each gives its options and a
 recommendation. Four of them were the real forks:
 
 - **T-3**, how many steps page 1 holds. The recommendation re-paginates every
@@ -396,12 +398,13 @@ Zach's answer.**
   says the title twice. B gives one switch two jobs.
 
 **T-20. A count on page 1 when the block comes or goes. Raised in the
-review of 1a and 1b; built as B. Needs Zach's answer.** A count on page 1
-wins (T-3 A), and the app writes one itself. Setting a later page's count
-holds every page in front of it at its present size (`heldCounts`,
-`pages/pageCounts.ts`), so page 1 gets a count its author never set, and the
-toggle no longer changes what page 1 holds. Zach's crane has a count on
-every page (9, 11, 9).
+review of 1a and 1b; built as B. B taken as recommended, 2026-10-14, under
+Zach's standing "go with your recs": not his answer, and he may still
+overrule it.** A count on page 1 wins (T-3 A), and the app writes one
+itself. Setting a later page's count holds every page in front of it at its
+present size (`heldCounts`, `pages/pageCounts.ts`), so page 1 gets a count
+its author never set, and the toggle no longer changes what page 1 holds.
+Zach's crane has a count on every page (9, 11, 9).
 - A. When the block is turned on or off, or its share changes, a page-1
   count equal to the old first-page default is taken as automatic. It moves
   to the new default through Set Steps on Page, which keeps every later
@@ -427,14 +430,17 @@ every page (9, 11, 9).
   a third of their size; Zach chooses which page pays.
 
 **T-21. What the block costs a landscape diagram. Raised in the review of
-1c to 1e. Needs Zach's answer before 1f.** On a landscape page with First
-page Left, page 1 under the block is a left page that hands over at the
-spine, so its packing takes an odd number of bands (`flowPacking.ts`): one
-or three, in 123 mm on A4 and 77 mm on A5. With the block on, a new
-diagram's first two pages come out much smaller than without it. Page
-scales `k`, page 1 / page 2, block off → on (new diagrams of the crane's 29
-steps, First page Left; `artifacts/title-block/landscape.txt`, every paper
-4 to 16 steps a page, both first-page sides):
+1c to 1e. A taken as recommended, 2026-10-14, under Zach's standing "go
+with your recs": not his answer, and he may still overrule it — before 1f,
+since C changes a rule frozen once a file is saved with the block on.** On
+a landscape page with First page Left, page 1 under the block is a left
+page that hands over at the spine, so its packing takes an odd number of
+bands (`flowPacking.ts`): one or three, in 123 mm on A4 and 77 mm on A5.
+With the block on, a new diagram's first two pages come out much smaller
+than without it. Page scales `k`, page 1 / page 2, block off → on (new
+diagrams of the crane's 29 steps, First page Left;
+`artifacts/title-block/landscape.txt`, every paper 4 to 16 steps a page,
+both first-page sides):
 
 | case | block off | block on | on ÷ off |
 | --- | --- | --- | --- |
@@ -1152,6 +1158,9 @@ catalogs). In 1f, the tests that lay out a new diagram's pages.
 
 - [x] T-3, T-5, T-9 and T-18 answered: the recommendations (2026-10-14).
 - [x] The rest: "using your recommendations" (2026-10-14).
+- [x] T-20 and T-21, raised during the build: taken as recommended
+  (T-20 B, T-21 A), 2026-10-14, under his standing "go with your recs".
+  Not his answer: Zach may still overrule either, T-21 before 1f.
 
 ### Phase 1: the first cut (for the release)
 
@@ -1283,27 +1292,29 @@ until 1f.
   keeps the room.
 - [x] The ribbon with First page Left (spine) and Right (page turn): page 1
   to page 2 lines up as before (952fc658e).
-- [ ] Steadiness: on the crane and on new diagrams of 9, 12 and 16 steps a
+- [x] Steadiness: on the crane and on new diagrams of 9, 12 and 16 steps a
   page (A4, Letter, A4 landscape), page 1's scale is within ×1.09 of page
   2's, so page 2 is not held down. If not, the page-1 capacity rule is tuned
   and the numbers shown to Zach. The crane is measured under T-20 B, its
-  page 1 holding its own count of nine. **Measured, not tuned; Zach
-  decides.** Page 2 is held down in 3 of the 9 new cases with the block (4
-  without), and no page-1 count clears it (As built below). Widened in the
-  review to 4–16 steps a page on A4, Letter and A5 either way up: the cost
-  is landscape with First page Left, put to Zach as T-21; the crane's is in
-  T-20.
+  page 1 holding its own count of nine. **Measured, not tuned.** Page 2 is
+  held down in 3 of the 9 new cases with the block (4 without), and no
+  page-1 count clears it (As built below). Widened in the review to 4–16
+  steps a page on A4, Letter and A5 either way up: the cost is landscape
+  with First page Left, put to Zach as T-21; the crane's is in T-20. The
+  rule stands as built under T-20 B and T-21 A, taken as recommended
+  (2026-10-14); this reopens if Zach overrules either.
 - [x] With the block on, typing or clearing the title leaves page 1's
   packing area, and its held arrangement, unchanged: the signature already
   reads no tab there (1b). On a grid, page 1's rows start at
   `blockRows(setup)` (`pageShape` already counts them).
-- [ ] Once the page-1 rule is settled, the fixture's third diagram gains a
+- [x] Once the page-1 rule is settled, the fixture's third diagram gains a
   page-1 arrangement packed under the block by 1c's layout, and a test
   opens it with every page held (`packing.packed === false`) and its
   signatures the stored ones: the whole chain from read to hold, as
   `savedPagesHold.test.ts` checks it for files without the block. (Done
-  under the rule as built; the rule is not settled while T-20 and T-21 are
-  open, and the fixture's pages are packed again if either changes it.)
+  under the rule as built, which T-20 B and T-21 A, taken as recommended,
+  keep; the fixture's pages are packed again if Zach's answer to either
+  changes it.)
 
 *As built (1c).* As planned, with these calls:
 - `titleBlockGeometry(setup, headMm, footMm)` takes the header and footer
@@ -1449,7 +1460,7 @@ null, or a null `thumbnail`), so the overlay can name it.
 - [x] With the block on and page 1 holding its own count, "Steps on page
   1" says the block does not change it (T-20 B).
 - [x] Analytics and `docs/analytics.md`.
-- [ ] i18n: extract, eight locales, stamp, check.
+- [x] i18n: extract, eight locales, stamp, check.
 
 *As built (1e, the overlay's placeholders; the pane is its own lane).*
 `DiagramTitleBlockOverlay` is mounted by the Pages view over the first
@@ -1481,6 +1492,7 @@ Strings are inline English only, five keys under
 `panels:diagram.pages.titleBlock.*`, so `i18n:check` fails on this lane
 until the one i18n step (1e's last item) extracts, translates and stamps
 them with the pane's. That step runs before the PR into #436 is opened.
+(Done at the integration, below.)
 
 *Review of 1c to 1e, the layout lane (2026-10-14).* What it changed, each
 in a commit of its own with a test that failed before it:
@@ -1533,7 +1545,8 @@ a reader without them gets, not this lane's.
 Not done here: `claude/diagram-title-block` is still to be fast-forwarded
 to this lane's head. The review's agent was isolated in its own worktree,
 so whoever runs the lanes moves the branch, then checks the Pages view on
-the branch's dev server (5332) once more.
+the branch's dev server (5332) once more. (Done: merged at befff256c, and
+checked on 5332 at the integration, below.)
 
 *As built (1e, the store only; the pane is its own lane).* The slice
 action `setDiagramTitleBlockContent(patch)` commits `setTitleBlockContent`
@@ -1621,6 +1634,42 @@ As planned, with these calls:
   together and sits beside the Title toggle; both orders are captured for
   Zach (`artifacts/title-block/out/order/`). The i18n step waits for both
   lanes' review fixes, so the nine catalogs are done once.
+
+*As built (the integration of 1a to 1e, 2026-10-14).* The lanes were
+merged at befff256c without a combined check; the check, on
+`claude/diagram-title-block`:
+- Nothing the merge broke. `tsc`, ESLint on every file changed since
+  952fc658e, and vitest over `src/diagram`, `src/components/diagram`,
+  `src/components/panels`, `src/store/workspaceStore`, `src/analytics` and
+  `src/keyboard` (321 files, 5047 tests), and over `src/styles`,
+  `src/components/ui/fieldRows` and `src/i18n`, all passed as merged. The
+  merge had already taken one viewBox reader (`thumbnailBox`) and one
+  answer to "is there a pattern" (`drawsPattern`) for both lanes.
+- What the two lanes each wrote for the same job: the resolution's, the
+  choices' and the section's tests each built their own turn, empty,
+  locked, upload and linked-pattern steps and their own diagram (and the
+  same "pattern with no line" step three times). They share
+  `pages/titleBlock.fixtures.ts`. `resolveTitleBlock` numbered the whole
+  diagram once per part; it numbers it once.
+- i18n, once for both lanes: 26 keys in `panels` (the section, the Steps on
+  page 1 and Title help it changes, and the Pages view's five marks),
+  translated into the eight locales in each catalog's own terms for crease
+  pattern, step, picture, link and tab; the block is タイトル欄, 标题栏,
+  bloque de título, bloc titre, Titelblock, bloco de título, титульный блок
+  and 제목 영역. Stamped; `i18n:check` passes. In the browser the switch's
+  label ran to two lines in German, Spanish, French, Portuguese and Russian
+  at the pane's default width, so those five say it shorter.
+- Checked on the branch's dev server (5332) with the crane: it opens with
+  no block, its title in page 1's tab; turning the block on draws the
+  title, the pattern (Auto, step 27) and the model (Auto, step 28) on page
+  1, which keeps its nine steps (T-20 B); the section, its helps and the
+  byline's placeholder read in Japanese, and in German the overlay names a
+  chosen step with no pattern ("Schritt 1 hat kein Faltmuster") in the
+  pattern's square, the model standing in it. Screenshots under
+  `artifacts/title-block/integration/`.
+- T-20 B and T-21 A are recorded as taken as recommended, not as Zach's
+  answer; the 1c items they closed are ticked, to reopen if he overrules
+  either.
 
 **1f. The default goes on**
 - [ ] `PAGE_SETTINGS.titleBlock.default` on, in a commit of its own. A new
