@@ -2125,8 +2125,9 @@ function placeTurns(
   };
   /**
    * A step's part where the layout puts it, before any hand placement: a
-   * glyph keeps clear of where the layout puts the steps, and a part placed
-   * onto one shows there as placed: never a reason to move the glyph.
+   * glyph placed from the steps' homes keeps clear of where the layout puts
+   * them, and a part placed onto one shows there as placed: never a reason to
+   * move the glyph.
    */
   const homePart = (cell: LayoutCell, part: 'number' | 'picture' | 'text'): PageBox => {
     if (!cell.placed || !cell.homeParts) return partBox(cell, part);
@@ -2134,10 +2135,14 @@ function placeTurns(
     const home = cell.homeParts[part];
     return { ...home, x: home.x - dx, y: home.y - dy };
   };
-  // On a flow page a glyph stands clear of every step's number, picture and caption (`clearSpot`).
-  const obstacles = flow
-    ? cells.flatMap((cell) => [homePart(cell, 'number'), homePart(cell, 'picture'), ...(cell.text.lines.length > 0 ? [homePart(cell, 'text')] : [])])
-    : [];
+  /** Every step's number, picture and caption on a flow page, by `at`: a step with no caption has none. */
+  const partsBy = (at: (cell: LayoutCell, part: 'number' | 'picture' | 'text') => PageBox) =>
+    flow ? cells.flatMap((cell) => [at(cell, 'number'), at(cell, 'picture'), ...(cell.text.lines.length > 0 ? [at(cell, 'text')] : [])]) : [];
+  // On a flow page a glyph stands clear of every step's number, picture and caption (`clearSpot`). One on the lane
+  // between two steps clears them as drawn (Zach's crane, 2026-10-15): the lane runs through the pictures as
+  // placed, and a step dragged off its home leaves nothing there for the glyph to stand clear of.
+  const obstacles = partsBy(homePart);
+  const drawn = partsBy(partBox);
   const onPaper = (size: { w: number; h: number }) => ({
     x0: TURN_GUTTER_MM / 2,
     x1: pageWidth - TURN_GUTTER_MM / 2,
@@ -2146,8 +2151,8 @@ function placeTurns(
   });
   /**
    * Where along `stretch`, the lane clear of the pictures either side of it,
-   * `glyphs` stand clear of every step's box: its middle, or the nearest to
-   * it they do. Null where nowhere along it they do.
+   * `glyphs` stand clear of every step as drawn: its middle, or the nearest
+   * to it they do. Null where nowhere along it they do.
    */
   const alongStretch = (
     glyphs: readonly BetweenGlyph[],
@@ -2159,7 +2164,7 @@ function placeTurns(
     for (let off = 0; off <= middle; off += SLIDE_STEP_MM) {
       for (const s of off === 0 ? [middle] : [middle - off, middle + off]) {
         const stood = standAt(glyphs, spotAlong(stretch, s), toward, outward);
-        if (standsClear(stood.at, stood.size, obstacles, onPaper(stood.size))) return stood;
+        if (standsClear(stood.at, stood.size, drawn, onPaper(stood.size))) return stood;
       }
     }
     return null;
@@ -2171,7 +2176,8 @@ function placeTurns(
    * the least way clear of every step's box where they would stand on one.
    * Given a `stretch` of the lane between two pictures, they stand midway along
    * it instead, or as near its middle along it as they stand clear; where
-   * nowhere along it they do, at its middle, moved the least way clear.
+   * nowhere along it they do, at its middle, moved the least way clear. Those
+   * clear the steps as drawn; every other glyph, where the layout puts them.
    */
   const stack = (
     glyphs: readonly BetweenGlyph[],
@@ -2188,12 +2194,13 @@ function placeTurns(
     const slid = stretch ? alongStretch(glyphs, stretch, toward, outward) : null;
     let stood = slid ?? standAt(glyphs, stretch ? spotAlong(stretch, stretch.at(-1)!.s / 2) : at, toward, outward);
     if (flow && !slid) {
-      const spot = clearSpot(stood.at, stood.size, obstacles, onPaper(stood.size));
+      const clearOf = stretch ? drawn : obstacles;
+      const spot = clearSpot(stood.at, stood.size, clearOf, onPaper(stood.size));
       if (spot !== stood.at) {
         // An arrow aimed from its new place takes another box: clear of the boxes with either.
         const moved = standAt(glyphs, spot, toward, outward);
         const either = { w: Math.max(stood.size.w, moved.size.w), h: Math.max(stood.size.h, moved.size.h) };
-        stood = standAt(glyphs, clearSpot(stood.at, either, obstacles, onPaper(either)), toward, outward);
+        stood = standAt(glyphs, clearSpot(stood.at, either, clearOf, onPaper(either)), toward, outward);
       }
     }
     const { at: { x }, aim, boxes, size } = stood;

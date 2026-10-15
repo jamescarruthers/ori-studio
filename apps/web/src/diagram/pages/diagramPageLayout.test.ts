@@ -1381,6 +1381,16 @@ describe('turns between steps on the page (D22)', () => {
     x: cell.pictureMm.x + cell.pictureMm.size / 2,
     y: cell.pictureMm.y + cell.pictureMm.size / 2,
   });
+  /** Whether a glyph `box` centred at `at` comes nearer than {@link GLYPH_CLEAR_MM} to a step's number, picture or caption as drawn. */
+  const onAStep = (page: LayoutPage, at: { x: number; y: number }, box: { w: number; h: number }) =>
+    page.cells.some((cell) =>
+      (['number', 'picture', 'text'] as const).some((part) => {
+        if (part === 'text' && cell.text.lines.length === 0) return false;
+        const { x, y, w, h } = partBox(cell, part);
+        const clear = GLYPH_CLEAR_MM - 1e-6;
+        return !(at.x + box.w / 2 + clear <= x || at.x - box.w / 2 - clear >= x + w || at.y + box.h / 2 + clear <= y || at.y - box.h / 2 - clear >= y + h);
+      })
+    );
 
   it('keeps a gutter between all the pictures of a diagram with a turn: one scale, a little smaller', () => {
     // Landscape A4 at 5 × 2: cells narrow enough that their width, not their height, sets the box.
@@ -1454,15 +1464,6 @@ describe('turns between steps on the page (D22)', () => {
       [wide, paper(400), tall, paper(400), wide, tall, paper(400), wide, tall],
       [tall, tall, tall, wide, wide, wide, tall, tall, tall],
     ];
-    /** Whether a glyph `box` centred at `at` comes nearer than {@link GLYPH_CLEAR_MM} to a step's number, picture or caption. */
-    const onAStep = (page: LayoutPage, at: { x: number; y: number }, box: { w: number; h: number }) =>
-      page.cells.some((cell) =>
-        (['number', 'picture', 'text'] as const).some((part) => {
-          const { x, y, w, h } = partBox(cell, part);
-          const clear = GLYPH_CLEAR_MM - 1e-6;
-          return !(at.x + box.w / 2 + clear <= x || at.x - box.w / 2 - clear >= x + w || at.y + box.h / 2 + clear <= y || at.y - box.h / 2 - clear >= y + h);
-        })
-      );
     let [midway, slid] = [0, 0];
     for (const [n, shapes] of cases.entries()) {
       const list = steps(9, (index) => ({ picture: shapes[index]!, ...(index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}) }));
@@ -1488,6 +1489,41 @@ describe('turns between steps on the page (D22)', () => {
     }
     expect(midway).toBeGreaterThan(2);
     expect(slid).toBeGreaterThan(0);
+  });
+
+  it('stands one across a bend midway along the ribbon past a step dragged off its home, clear of the steps as drawn', () => {
+    // Zach's crane, page 2: every step placed by hand, step 15 dragged 32.5 mm in from where the layout put it. The
+    // ribbon follows the pictures as placed; the glyph on it keeps clear of them as drawn, not of where 15 would
+    // have stood, which is empty paper.
+    const list = steps(9, (index) => (index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}));
+    const plain = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+    const afterBends = plain.cells.flatMap((cell, k) => {
+      const before = plain.cells[k - 1];
+      return before && before.band !== cell.band && !before.bend && !cell.bend ? [k] : [];
+    });
+    expect(afterBends.length).toBeGreaterThan(0);
+    let homeInTheWay = 0;
+    for (const along of [20, 30, 40]) {
+      const placed = list.map((step, k) => (afterBends.includes(k) ? { ...step, place: { frame: [along, 0] as [number, number] } } : step));
+      const page = layout(placed, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const k of afterBends) {
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        const turn = page.turns.find((each) => each.beforeStepId === next.stepId)!;
+        const measured = alongLane(page.band!, before, next, turn.at);
+        const label = `${along} mm, ${turn.id}: ${measured.fromBefore.toFixed(2)} / ${measured.toNext.toFixed(2)} mm`;
+        expect(onAStep(page, turn.at, turn.box), label).toBe(false);
+        if (onAStep(page, measured.midway, turn.box)) continue;
+        // Where it stood at home, the step would have been in the way.
+        const home = plain.cells[k]!;
+        const { x, y, w, h } = partBox(home, 'picture');
+        const [hw, hh] = [turn.box.w / 2 + GLYPH_CLEAR_MM, turn.box.h / 2 + GLYPH_CLEAR_MM];
+        const { midway } = measured;
+        if (midway.x + hw > x && midway.x - hw < x + w && midway.y + hh > y && midway.y - hh < y + h) homeInTheWay += 1;
+        expect(measured.offLane, label).toBeLessThan(0.05);
+        expect(Math.abs(measured.fromBefore - measured.toNext), label).toBeLessThan(0.25);
+      }
+    }
+    expect(homeInTheWay).toBeGreaterThan(0);
   });
 
   it('prints one before a flow page’s first step at its leading edge, half a turn’s gutter out, as on the page before there is no row to turn from', () => {
