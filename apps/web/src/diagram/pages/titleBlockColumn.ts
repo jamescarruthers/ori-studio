@@ -30,7 +30,7 @@ import { wcagContrast } from '../../themes/paperBack';
 import { TITLE_BLOCK_ART_SIZE_DEFAULTS } from '../document/pageRanges';
 import type { SetLine, TextSetter } from './diagramPageLayout';
 import type { PageBox } from './pagePlacement';
-import { STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM } from './stepType';
+import { STEP_TEXT_SIZE_MM } from './stepType';
 import type { TitleBlockGeometry, TitleBlockSizes } from './titleBlockGeometry';
 
 /** A length in pt, in mm. */
@@ -80,6 +80,12 @@ const TITLE_LEAST = 0.3;
 const TITLE_ONE_LINE_LEAST = 0.5;
 /** A two-line title's baselines apart, as a share of its size. */
 const TITLE_LEADING = 1.1;
+/**
+ * The description's baselines apart, as a share of its size: 4.48 mm at its 3.2 mm (Zach, 2026-10-15: "increase
+ * the description line spacing a bit"), where it took a caption's 4.1 mm, 1.28 of its size. Its own: the captions
+ * keep theirs.
+ */
+const NOTE_LEADING = 1.4;
 /** The least the column is scaled to, in the shortest block. */
 export const LEAST_SCALE = 0.5;
 
@@ -270,7 +276,7 @@ export function titleBlockTextMm(column: Pick<PageBox, 'w'>, titles: DiagramTitl
   const note = noteText(look);
   const S = STEP_TEXT_SIZE_MM;
   const lines = note === '' || !(column.w > 0) ? [] : noteLines(setter, note, column.w, S, Number.MAX_SAFE_INTEGER).lines;
-  const noteMm = lines[0] ? setter.ink(lines[0], S).above + (lines.length - 1) * STEP_TEXT_LEADING_MM + DESCENT * S : 0;
+  const noteMm = lines[0] ? setter.ink(lines[0], S).above + (lines.length - 1) * NOTE_LEADING * S + DESCENT * S : 0;
   return columnHeight(look.subtitle.trim() !== '', rows, noteMm);
 }
 
@@ -395,7 +401,7 @@ function setTitle(band: PageBox, title: string, scale: number, setter: TextSette
 function setNote(note: string, column: PageBox, top: number, scale: number, setter: TextSetter): LayoutTitleBlock['note'] {
   if (note === '' || !(column.w > 0)) return null;
   const sizeMm = STEP_TEXT_SIZE_MM * scale;
-  const leadingMm = STEP_TEXT_LEADING_MM * scale;
+  const leadingMm = NOTE_LEADING * sizeMm;
   const lastBaseline = column.y + column.h - DESCENT * sizeMm;
   const all = noteLines(setter, note, column.w, sizeMm, Number.MAX_SAFE_INTEGER);
   const baselineOf = (lines: readonly SetLine[]) => top + (lines[0] ? setter.ink(lines[0], sizeMm).above : CAP_HEIGHT * sizeMm);

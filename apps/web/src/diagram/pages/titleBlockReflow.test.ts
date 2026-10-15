@@ -176,6 +176,18 @@ describe('the flow’s title block grows to its words after an edit of them', ()
     expect(grownTitleBlockMm(after.page, 1000)).toBeCloseTo(TITLE_BLOCK_MOST_SHARE * printable(after), 9);
   });
 
+  it('sets the description’s lines 1.4 times its size apart, and grows for them at that (Zach, 2026-10-15)', () => {
+    // "increase the description line spacing a bit": it took a caption's 4.1 mm at 3.2 mm, 1.28 times its size.
+    const lines = (count: number) => Array.from({ length: count }, (_, index) => `Use thin paper, note ${index + 1}.`).join('\n');
+    const [three, six] = [layout(edited(held(), lines(3))), layout(edited(held(), lines(6)))];
+    const set = blockOf(six).note!;
+    expect(set.cut).toBe(false);
+    expect(set.lines).toHaveLength(6);
+    expect(set.leadingMm / set.sizeMm).toBeCloseTo(1.4, 9);
+    // The block grows by the three lines more at that leading, measured to half a millimetre.
+    expect(Math.abs(six.titleBlockRoom! - three.titleBlockRoom! - 3 * set.leadingMm)).toBeLessThanOrEqual(0.5);
+  });
+
   it('grows for the description as it prints it, its indents and blank lines kept (Zach, 2026-10-15)', () => {
     // Four indented paragraphs, a blank line between each: "if I like indent a paragraph it should stay indented".
     const note = LOREM.split('\n')

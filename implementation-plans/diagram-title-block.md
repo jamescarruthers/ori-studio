@@ -3365,8 +3365,16 @@ drawn; and where nowhere along it is clear, on its middle all the same
 The crane's 14→15 went from 21.3 / 55.3 mm along the ribbon to 38.2 / 38.3;
 crane_final's 19→20 from 16.9 / 9.7 to 13.3 / 13.3. Computed at layout,
 never stored: a saved page keeps its arrangement and only its glyphs move.
-Commits 9c7700ded, 3649feee7 and the one after them. Evidence:
+Commits 9c7700ded, 3649feee7 and 135f0637d. Evidence:
 `artifacts/turn-glyph/proposal-2.png` (agent worktree).
+
+*As built (the description's leading, 2026-10-15).* Zach: "increase the
+description line spacing a bit". The description's baselines stand 1.4 times
+its size apart, 4.48 mm at 3.2 mm (`NOTE_LEADING`, `titleBlockColumn.ts`),
+where it took a caption's 4.1 mm (1.28); titles, credits and captions keep
+theirs. The reflow measures the description at the same leading, so the
+block grows for it as it prints it, to half the printable height, "…" past
+that. Evidence: `artifacts/turn-glyph/proposal-2.png`, the header row.
 
 *For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
 header-fixes/` and `header-final/`.
