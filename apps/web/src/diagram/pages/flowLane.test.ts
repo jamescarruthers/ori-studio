@@ -493,10 +493,13 @@ describe('a turn between two rows (Zach, 2026-10-14: "(b4)")', () => {
    * tighter than the band is half wide: its inner edge then comes to a point, the band kept inside the margin
    * (2026-10-14, for Zach to choose). Standing such a turn past the margin far enough to keep it that round would
    * take its band up to 19 mm past it at the default band (A4, 28 a page) — off a 12 mm margin's paper.
-   * At the default band, an A4 page of up to 12 steps never comes to that.
+   * At the default band, these 23 steps on an A4 page of up to 12 steps, with no title block, do not come to
+   * that. Other diagrams can: 22 steps at 9 a page bend page 3's last turn 8.7 mm round, and the title block
+   * bends page 1 of A4 landscape at 12 a page 7.3 mm round, where this asks 9.6 (`diagram-title-block.md`,
+   * As built (1f): for Zach).
    */
   it.each(SETUPS.filter((setup) => !setup.size && (setup.stepsPerPage ?? 9) <= 12))(
-    'bends no turn tighter than the band is half wide, or its rows half apart, at the default band on an A4 page of up to 12 steps: %j',
+    'bends no turn tighter than the band is half wide, or its rows half apart, at the default band in 23 steps on an A4 page of up to 12: %j',
     (setup) => {
       for (const firstPageSide of ['left', 'right'] as const) {
         const result = flow(steps(23), { ...setup, firstPageSide });
