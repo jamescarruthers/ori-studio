@@ -13,8 +13,10 @@
  *   wider than the band wraps to another. A credit with no value prints
  *   nothing and keeps no room, on the page or the Pages view (Zach,
  *   2026-10-15);
- * - the note, plain text wrapped to the column, cut with "…" where it would
- *   run past the block's foot.
+ * - the note (the Page pane's Description), plain text wrapped to the column,
+ *   its spaces kept as typed — an indent, a run of spaces, a blank line —
+ *   as a text editor's pre-wrap keeps them (Zach, 2026-10-15), cut with "…"
+ *   where it would run past the block's foot.
  *
  * J1b's sizes are A4 portrait's. Where the block is shorter than the subtitle,
  * band and credits need, all of the column is set smaller by one scale, down
@@ -188,7 +190,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   const foot = column.y + column.h;
   const subtitle = look.subtitle.trim();
   const { printed, natural, labelAbove } = creditsAtFullSize(look, setter);
-  const note = look.note.trim();
+  const note = noteText(look);
   // The note's first line, at its tallest letter wherever the line breaks: one line of it at least has room.
   const S = STEP_TEXT_SIZE_MM;
   const noteLine = note === '' ? 0 : Math.max(CAP_HEIGHT * S, setter.ink(setter.line(note, S, 400), S).above) + DESCENT * S;
@@ -260,9 +262,9 @@ export function titleBlockTextMm(column: Pick<PageBox, 'w'>, titles: DiagramTitl
   const rows = rowsOf(natural, T.gutterMm, column.w).map((row) => Math.max(...row.map((at) => labelAbove[at]!)));
   // The whole note, as `setNote` sets it: its first line's tallest letter, its baselines a leading apart, the last
   // one's descent.
-  const note = look.note.trim();
+  const note = noteText(look);
   const S = STEP_TEXT_SIZE_MM;
-  const lines = note === '' || !(column.w > 0) ? [] : setter.paragraph(note, column.w, S, Number.MAX_SAFE_INTEGER).lines;
+  const lines = note === '' || !(column.w > 0) ? [] : noteLines(setter, note, column.w, S, Number.MAX_SAFE_INTEGER).lines;
   const noteMm = lines[0] ? setter.ink(lines[0], S).above + (lines.length - 1) * STEP_TEXT_LEADING_MM + DESCENT * S : 0;
   return columnHeight(look.subtitle.trim() !== '', rows, noteMm);
 }
@@ -390,12 +392,22 @@ function setNote(note: string, column: PageBox, top: number, scale: number, sett
   const sizeMm = STEP_TEXT_SIZE_MM * scale;
   const leadingMm = STEP_TEXT_LEADING_MM * scale;
   const lastBaseline = column.y + column.h - DESCENT * sizeMm;
-  const all = setter.paragraph(note, column.w, sizeMm, Number.MAX_SAFE_INTEGER);
+  const all = noteLines(setter, note, column.w, sizeMm, Number.MAX_SAFE_INTEGER);
   const baselineOf = (lines: readonly SetLine[]) => top + (lines[0] ? setter.ink(lines[0], sizeMm).above : CAP_HEIGHT * sizeMm);
   const room = Math.floor((lastBaseline - baselineOf(all.lines)) / leadingMm + 1e-9) + 1;
   if (room < 1) return { lines: [], sizeMm, leadingMm, top, firstBaseline: baselineOf(all.lines), cut: true };
-  const lines = all.lines.length <= room ? all.lines : setter.paragraph(note, column.w, sizeMm, room).lines;
+  const lines = all.lines.length <= room ? all.lines : noteLines(setter, note, column.w, sizeMm, room).lines;
   return { lines, sizeMm, leadingMm, top, firstBaseline: baselineOf(lines), cut: all.lines.length > room };
+}
+
+/** The note as set: as typed, its spaces and all; none where it is blank. */
+function noteText(look: TitleBlockLook): string {
+  return look.note.trim() === '' ? '' : look.note;
+}
+
+/** The note's lines, at most `maxLines`: its spaces kept as typed (`pre-wrap`), the one way it is set and measured. */
+function noteLines(setter: TextSetter, note: string, widthMm: number, sizeMm: number, maxLines: number) {
+  return setter.paragraph(note, widthMm, sizeMm, maxLines, 400, 'pre-wrap');
 }
 
 /**

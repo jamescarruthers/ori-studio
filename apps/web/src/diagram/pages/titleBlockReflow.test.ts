@@ -176,6 +176,43 @@ describe('the flow’s title block grows to its words after an edit of them', ()
     expect(grownTitleBlockMm(after.page, 1000)).toBeCloseTo(TITLE_BLOCK_MOST_SHARE * printable(after), 9);
   });
 
+  it('grows for the description as it prints it, its indents and blank lines kept (Zach, 2026-10-15)', () => {
+    // Four indented paragraphs, a blank line between each: "if I like indent a paragraph it should stay indented".
+    const note = LOREM.split('\n')
+      .slice(0, 4)
+      .map((line) => `        ${line}`)
+      .join('\n\n');
+    const pages = layout(edited(held(), note));
+    const block = blockOf(pages);
+    const set = block.note!;
+    expect(set.cut).toBe(false);
+    expect(block.geometry.block.h).toBe(pages.titleBlockRoom);
+    const typed = setter.paragraph(note, block.geometry.column.w, set.sizeMm, Number.MAX_SAFE_INTEGER, 400, 'pre-wrap').lines;
+    expect(set.lines.map((line) => line.text)).toEqual(typed.map((line) => line.text));
+    expect(set.lines.filter((line) => line.text === '')).toHaveLength(3);
+    // Each paragraph's first line indented; a wrapped line of one at the margin.
+    const firsts = set.lines.filter((line, index) => index === 0 || set.lines[index - 1]!.text === '');
+    expect(firsts).toHaveLength(4);
+    for (const line of firsts) expect(line.runs[0]!.xMm).toBeGreaterThan(5);
+    for (const line of set.lines.filter((line) => line.text !== '' && !firsts.includes(line))) expect(line.runs[0]!.xMm).toBe(0);
+    // Every line inside the grown block.
+    const last = set.firstBaseline + (set.lines.length - 1) * set.leadingMm;
+    expect(last + 0.24 * set.sizeMm).toBeLessThanOrEqual(block.geometry.block.y + block.geometry.block.h + 1e-9);
+  });
+
+  it('cuts an indented description with “…” at half the printable height, its blank lines counted', () => {
+    const note = Array.from({ length: 40 }, (_, index) => `    Paragraph ${index + 1} of a very long description.`).join('\n\n');
+    const after = edited(held(), note);
+    const block = blockOf(layout(after));
+    expect(block.geometry.block.h).toBeCloseTo(TITLE_BLOCK_MOST_SHARE * printable(after), 9);
+    const set = block.note!;
+    expect(set.cut).toBe(true);
+    expect(set.lines.at(-1)!.ellipsis).toBe(true);
+    expect(set.lines.some((line) => line.text === '')).toBe(true);
+    const last = set.firstBaseline + (set.lines.length - 1) * set.leadingMm;
+    expect(last + 0.24 * set.sizeMm).toBeLessThanOrEqual(block.geometry.block.y + block.geometry.block.h + 1e-9);
+  });
+
   it('keeps a grid’s block in its whole rows: a note past them is cut with “…”', () => {
     const before = held({ layout: 'grid', columns: 3, rows: 6 });
     const pages = layout(edited(before, LOREM));

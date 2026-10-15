@@ -44,7 +44,7 @@ function facesAt(sizeMm: number): TextFaces {
 }
 
 export const estimateTextSetter: TextSetter = {
-  paragraph: (text, widthMm, sizeMm, maxLines) => setTextLines(text, widthMm, maxLines, facesAt(sizeMm)),
+  paragraph: (text, widthMm, sizeMm, maxLines, _weight, spaces) => setTextLines(text, widthMm, maxLines, facesAt(sizeMm), spaces),
   line(text, sizeMm, _weight, maxWidthMm = Number.POSITIVE_INFINITY) {
     const set = setTextLines(text, maxWidthMm, 1, facesAt(sizeMm));
     return set.lines[0] ?? { text: '', widthMm: 0, runs: [], ellipsis: false };

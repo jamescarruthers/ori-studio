@@ -108,6 +108,7 @@ import { printPaper, type PrintPaper } from './printPaper';
 import { keepsMovedFrame } from './repackedFrames';
 import { normalizeStepPlace } from '../document/placeValues';
 import { pinnedCaptionWidth, setCaption } from './captionMeasure';
+import type { TextSpaces } from './setText';
 import { lanePicture, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 import { setTitleBlock, titleBlockLookOf, type DiagramTitles, type LayoutTitleBlock } from './titleBlockColumn';
@@ -249,8 +250,11 @@ export interface SetText {
 
 /** How text is measured and set: the composer's font, or a test's estimate. */
 export interface TextSetter {
-  /** `text` broken into lines at most `widthMm` wide, at most `maxLines` of them (the last cut with "…"); regular unless `weight` says. */
-  paragraph: (text: string, widthMm: number, sizeMm: number, maxLines: number, weight?: 400 | 700) => SetText;
+  /**
+   * `text` broken into lines at most `widthMm` wide, at most `maxLines` of them (the last cut with "…"); regular
+   * unless `weight` says; its runs of spaces one space unless `spaces` keeps them as typed (`setText.ts`).
+   */
+  paragraph: (text: string, widthMm: number, sizeMm: number, maxLines: number, weight?: 400 | 700, spaces?: TextSpaces) => SetText;
   /** One line: a title or a number, cut with "…" at `maxWidthMm` when one is given. */
   line: (text: string, sizeMm: number, weight: 400 | 700, maxWidthMm?: number) => SetLine;
   /**
