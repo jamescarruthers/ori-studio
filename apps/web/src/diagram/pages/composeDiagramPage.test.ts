@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { PT_PER_MM } from '../../lib/paper/paperSvg';
+import { PT_PER_MM, SEAM_STROKE_WIDTH_PT, widestPenPt } from '../../lib/paper/paperSvg';
 import {
   createDiagram,
   createStep,
@@ -754,7 +754,9 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     const { pattern: square } = pages.layout.pages[0]!.titleBlock!.geometry;
     const pens = diagramSurfaceStyle(document.style);
     const drawn = linesIn(pages.compose(0).svg, square);
-    const at = (x: number, y: number) => [square.x + (x / 100) * square.w, square.y + (y / 100) * square.h];
+    // Fitted by its ink, as a step's picture is: half the widest pen inside the square's edges.
+    const ink = Math.max(widestPenPt(pens), SEAM_STROKE_WIDTH_PT) / 2 / PT_PER_MM;
+    const at = (x: number, y: number) => [square.x + ink + (x / 100) * (square.w - 2 * ink), square.y + ink + (y / 100) * (square.h - 2 * ink)];
     const near = (ends: readonly number[]) => ends.map((value) => expect.closeTo(value, 2));
     expect(drawn.map(({ ends }) => ends)).toEqual(
       [[...at(0, 0), ...at(100, 0)], [...at(0, 50), ...at(100, 50)], [...at(50, 0), ...at(50, 100)]].map(near)
@@ -764,6 +766,45 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
       [pens.mountainFolds.color, pens.mountainFolds.width, false],
       [pens.valleyFolds.color, pens.valleyFolds.width, false],
     ]);
+  });
+
+  it('keeps the pattern’s ink in its square, so in the margin, whatever its pens', () => {
+    const edges = [
+      { x1: 0, y1: 0, x2: 100, y2: 0, role: 'edge' as const },
+      { x1: 100, y1: 0, x2: 100, y2: 100, role: 'edge' as const },
+      { x1: 0, y1: 100, x2: 100, y2: 100, role: 'edge' as const },
+      { x1: 0, y1: 0, x2: 0, y2: 100, role: 'edge' as const },
+      { x1: 0, y1: 0, x2: 100, y2: 100, role: 'valley' as const },
+    ];
+    const linked = cpStep('step-9');
+    const made = blockDiagram({ model: { kind: 'none' } }, { ...linked, source: { ...linked.source!, thumbnail: { viewBox: '0 0 100 100', strokes: edges } } } as DiagramStep);
+    const style = DEFAULT_PAPER_STYLE;
+    const heavy = { ...made, style: { style: { ...style, edges: { ...style.edges, width: PEN_WIDTH_RANGE.max } } } };
+    for (const document of [made, heavy]) {
+      const pages = preparedPages(document, FONTS, subsetter);
+      const { pattern: square } = pages.layout.pages[0]!.titleBlock!.geometry;
+      const drawn = linesIn(pages.compose(0).svg, square);
+      expect(drawn).toHaveLength(edges.length);
+      const reach = (key: 'min' | 'max', a: number, b: number, width: number) => Math[key](a, b) + ((key === 'min' ? -1 : 1) * width) / 2 / PT_PER_MM;
+      const ink = {
+        left: Math.min(...drawn.map(({ ends: [x1, , x2], width }) => reach('min', x1, x2, width))),
+        top: Math.min(...drawn.map(({ ends: [, y1, , y2], width }) => reach('min', y1, y2, width))),
+        right: Math.max(...drawn.map(({ ends: [x1, , x2], width }) => reach('max', x1, x2, width))),
+        bottom: Math.max(...drawn.map(({ ends: [, y1, , y2], width }) => reach('max', y1, y2, width))),
+      };
+      // To the SVG's thousandth of a pt.
+      const within = 1e-3;
+      expect(ink.left).toBeGreaterThanOrEqual(square.x - within);
+      expect(ink.top).toBeGreaterThanOrEqual(square.y - within);
+      expect(ink.right).toBeLessThanOrEqual(square.x + square.w + within);
+      expect(ink.bottom).toBeLessThanOrEqual(square.y + square.h + within);
+      // Its widest pen its edge's: the edge's ink on the square's, filling it.
+      if (document === heavy) {
+        expect([ink.left, ink.top, ink.right, ink.bottom]).toEqual(
+          [square.x, square.y, square.x + square.w, square.y + square.h].map((value) => expect.closeTo(value, 2))
+        );
+      }
+    }
   });
 
   it('stands the model in front of the pattern, set to its box’s bottom right with none of its marks; over the pattern’s square where there is none', () => {

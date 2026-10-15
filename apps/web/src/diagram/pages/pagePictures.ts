@@ -709,11 +709,11 @@ function fittedWhole(step: DiagramStep, assets: Readonly<Record<string, DiagramA
 
 /**
  * A scene drawn by the shared painter into a box on the page, `boxMm`, as
- * large as fits, centred: its pens their pt widths whatever its size. The
- * title block's crease pattern.
+ * large as its ink fits, centred: its pens their pt widths whatever its size,
+ * and half the widest inside the box. The title block's crease pattern.
  */
 export function fittedScene(scene: PaperScene, style: PaperStyle, boxMm: PageBox): string {
-  const box: Rect = { x: boxMm.x * PT_PER_MM, y: boxMm.y * PT_PER_MM, width: boxMm.w * PT_PER_MM, height: boxMm.h * PT_PER_MM };
+  const box = grown({ x: boxMm.x * PT_PER_MM, y: boxMm.y * PT_PER_MM, width: boxMm.w * PT_PER_MM, height: boxMm.h * PT_PER_MM }, -inkPt(style));
   const { minX, minY, maxX, maxY } = scene.bounds;
   return placedScene(scene, style, box, fitScale(box, maxX - minX, maxY - minY, null)).markup;
 }
