@@ -9,32 +9,22 @@ import styles from './PagePlaceholder.module.css';
  * may show through, and its words stand at the box's `words` end, clear of
  * what may stand at the other (`part`). Where the title block is cut, the
  * box is the strip under it, and its words a tag hanging at that strip's end,
- * over the page (`cut`). Its words in `ink` where they stand on something
- * printed in a colour of its own (the title's band). Placed by its parent.
+ * over the page (`cut`). Placed by its parent.
  */
 export function PagePlaceholder({
   kind,
   words = 'middle',
-  ink,
   style,
   children,
   ...rest
 }: {
   kind: 'picture' | 'part' | 'cut';
   words?: 'top' | 'middle' | 'bottom';
-  ink?: string;
   style: CSSProperties;
   children: ReactNode;
 } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      {...rest}
-      className={styles.placeholder}
-      data-kind={kind}
-      data-words={words}
-      aria-hidden="true"
-      style={ink ? ({ ...style, '--placeholder-ink': ink } as CSSProperties) : style}
-    >
+    <div {...rest} className={styles.placeholder} data-kind={kind} data-words={words} aria-hidden="true" style={style}>
       {children}
     </div>
   );

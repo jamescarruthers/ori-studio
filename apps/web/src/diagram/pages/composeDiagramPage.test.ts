@@ -1013,6 +1013,22 @@ describe('the title block’s header on the first page (`diagram-title-block.md`
     expect(texts(preparedPages(fewer, FONTS, subsetter).compose(0).svg).map(({ text }) => text)).toContain('8');
   });
 
+  it('draws the Pages view’s “Add a title” where there is no title exactly as the title would print, and nowhere else (Zach, 2026-10-15)', () => {
+    const untitled = { ...headerDiagram({ style: PINK }), title: '' };
+    const pages = preparedPages(untitled, FONTS, subsetter);
+    // As if it were the title: its font, weight, size, ink and place, set in the same band at the same scale.
+    const titled = preparedPages({ ...untitled, title: 'Add a title' }, FONTS, subsetter).compose(0).svg;
+    const titleOf = (svg: string) => [...parse(svg).querySelectorAll('svg > text')].find((text) => text.textContent === 'Add a title')?.outerHTML;
+    expect(titleOf(titled)).toBeDefined();
+    expect(titleOf(pages.compose(0, { band: false, untitled: 'Add a title' }).svg)).toBe(titleOf(titled));
+    // The screen's alone: the page as filed, printed or exported has nothing there.
+    expect(pages.compose(0).svg).not.toContain('Add a title');
+    expect(texts(pages.compose(0).svg).map(({ fill }) => fill)).not.toContain('#ffffff');
+    // A diagram with a title prints its own, whatever the view asks.
+    const own = preparedPages(headerDiagram({ style: PINK }), FONTS, subsetter);
+    expect(own.compose(0, { untitled: 'Add a title' }).svg).toBe(own.compose(0).svg);
+  });
+
   it('moves the band up where the subtitle is cleared, and prints neither it nor its rule', () => {
     const shown = preparedPages(headerDiagram({ style: PINK }), FONTS, subsetter);
     const cleared = preparedPages(headerDiagram({ style: PINK }, CREDITS, ''), FONTS, subsetter);

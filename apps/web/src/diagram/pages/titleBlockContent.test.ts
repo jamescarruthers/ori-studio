@@ -285,10 +285,10 @@ describe('missingTitleBlockParts', () => {
     expect(missing(titleBlockDiagram([cpStep('s1'), cpStep('s2')]))).toEqual([]);
   });
 
-  it('marks the title in the band where there is none, and a part no step gives in the room it would print in, naming the step', () => {
+  it('marks a part no step gives in the room it would print in, naming the step, and no box for a missing title', () => {
     // No linked step and no picture: the pattern and the model would both stand in the pattern's square, one room.
+    // No title: no room either — the Pages view sets "Add a title" in its place, as the title prints (Zach, 2026-10-15).
     expect(missing(titleBlockDiagram([emptyStep('s1')]), '')).toEqual([
-      ['title', set('').band, [['title', null, null]]],
       ['square', geometry.pattern, [['pattern', null, null], ['model', null, null]]],
     ]);
     // A chosen step that can no longer give its part names it, numbered as the pages number it, turns left out.
@@ -393,7 +393,7 @@ describe('missingTitleBlockParts', () => {
     expect(missing(titleBlockDiagram([emptyStep('s1')], { model: { kind: 'none' }, pattern: { kind: 'none' } }))).toEqual([]);
   });
 
-  it('never stands one box of the overlay on another, the model’s on the title’s included, on any paper, share, grid or size', () => {
+  it('never stands one box of the overlay on another, on any paper, share, grid or size', () => {
     const right = (box: PageBox) => box.x + box.w;
     const foot = (box: PageBox) => box.y + box.h;
     const overlap = (a: PageBox, b: PageBox) =>
@@ -450,9 +450,6 @@ describe('missingTitleBlockParts', () => {
                     const boxes = marks.map(({ box }) => box);
                     rooms += boxes.length;
                     boxes.forEach((a, index) => boxes.slice(index + 1).forEach((b) => expect(overlap(a, b), label).toBeLessThan(1e-9)));
-                    // The model is drawn on the band where it reaches it: the title's mark stops at it.
-                    const title = marks.find(({ room: kind }) => kind === 'title');
-                    if (title && drawn) expect(overlap(title.box, drawn), label).toBeLessThan(1e-9);
                   }
                 }
               }

@@ -22,7 +22,7 @@ import type { DiagramFontFace } from '../fonts/diagramFontFaces';
 import { loadDiagramFonts, type DiagramFontSource, type DiagramFontText, type DiagramFonts } from '../fonts/diagramFonts';
 import { embeddedFontFaces } from '../fonts/fontEmbedding';
 import type { FontSubsetter } from '../fonts/fontSubset';
-import { composeDiagramPage, titleBlockInksOf, type ComposedPage, type PageComposeOptions } from './composeDiagramPage';
+import { composeDiagramPage, type ComposedPage, type PageComposeOptions } from './composeDiagramPage';
 import {
   layoutDiagramPages,
   pictureFit,
@@ -81,8 +81,6 @@ export interface PreparedDiagramPages {
    * no block.
    */
   titleBlock: ResolvedTitleBlock | null;
-  /** The ink the title block's title prints in on its band (`titleBlockInksOf`), which the Pages view marks a missing title in; null where there is no block. */
-  titleBlockInk: string | null;
   /**
    * Where the first page's title block draws its model, in mm, as the page
    * is composed: what the Pages view keeps its marks clear of. Null where it
@@ -505,7 +503,6 @@ export function preparedPages(
     missing: [...setter.missing],
     unavailableFonts: fonts.unavailable,
     titleBlock,
-    titleBlockInk: titleBlock ? titleBlockInksOf(document.style).title : null,
     titleBlockModel() {
       if (model.box === undefined) {
         const block = layout.pages[0]?.titleBlock;

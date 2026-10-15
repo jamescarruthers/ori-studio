@@ -13,6 +13,7 @@ import {
   createTurn,
   insertSteps,
   PAGE_SETTINGS,
+  setDiagramTitle,
   setTitleBlockContent,
   type DiagramDocument,
   type KnownDiagramAnnotation,
@@ -344,29 +345,31 @@ describe('DiagramPagesView', () => {
     );
     expect(outline.dataset.edges).toBe('foot');
     expect(missing()).toEqual([]);
-    // No title, no linked step, no picture: each part says why, in the room it would print in — the pattern and
+    // No linked step, no picture: each part of the art says why, in the room it would print in — the pattern and
     // the model, which would stand in the pattern's square, in one box there.
     const bare = withBlock(insertSteps(createDiagram({ title: '' }), [{ ...createStep(() => 'step-empty'), text: 'Nothing yet.' }], 0));
     const empty = preparedPages(bare, FONTS, subsetter);
     render(empty, {}, empty.layout.bandInk, bare);
     expect(missing()).toEqual([
-      ['title', 'Add a title'],
       ['pattern', 'No step is linked to a crease pattern'],
       ['model', 'No step has a picture yet'],
     ]);
     const rooms = [...host.querySelectorAll<HTMLElement>('[data-title-block-room]')];
     expect(rooms.map((room) => [room.dataset.titleBlockRoom, [...room.querySelectorAll<HTMLElement>('[data-title-block-missing]')].map((part) => part.dataset.titleBlockMissing)])).toEqual([
-      ['title', ['title']],
       ['square', ['pattern', 'model']],
     ]);
     const { pattern } = empty.layout.pages[0]!.titleBlock!.geometry;
-    expect([rooms[1]!.style.left, rooms[1]!.style.width]).toEqual([pattern.x, pattern.w].map((mm) => `${mm * PX_PER_MM}px`));
-    // The title's words in the title's own ink, which reads on the band (review, 2026-10-15); the others in the mark's.
-    expect(empty.titleBlockInk).not.toBeNull();
-    expect(rooms[0]!.style.getPropertyValue('--placeholder-ink')).toBe(empty.titleBlockInk);
-    expect(rooms[1]!.style.getPropertyValue('--placeholder-ink')).toBe('');
+    expect([rooms[0]!.style.left, rooms[0]!.style.width]).toEqual([pattern.x, pattern.w].map((mm) => `${mm * PX_PER_MM}px`));
     const svg = empty.compose(0).svg;
     for (const [, words] of missing()) expect(svg).not.toContain(words);
+    // No title: no box round the title's room, but "Add a title" on the band in the page's image, set exactly as the
+    // title would print — its font, weight, size, ink and place — and never in the file (Zach, 2026-10-15).
+    const titleText = (page: string) => page.match(/<text [^>]*>(?:<tspan [^>]*>[^<]*<\/tspan>)+<\/text>/g)!.find((text) => text.includes('Add a title'));
+    const titled = preparedPages(setDiagramTitle(bare, 'Add a title'), FONTS, subsetter).compose(0).svg;
+    expect(titleText(titled)).toBeDefined();
+    expect(titleText(svgOf(host.querySelector<HTMLImageElement>('[data-page="0"] img')!))).toBe(titleText(titled));
+    expect(svg).not.toContain('Add a title');
+    expect(empty.compose(0, { band: false }).svg).not.toContain('Add a title');
     // A step chosen for the model that has no picture is named by its number.
     const chosen = setTitleBlockContent(withBlock(diagram()), { model: { kind: 'step', stepId: 'step-empty' } });
     const chosenPages = preparedPages(chosen, FONTS, subsetter);

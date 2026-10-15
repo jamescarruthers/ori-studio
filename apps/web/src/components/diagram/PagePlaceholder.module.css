@@ -8,7 +8,7 @@
   box-sizing: border-box;
   border: 1px dashed #c4c4bd;
   border-radius: var(--radius-sm);
-  color: var(--placeholder-ink, #8f8f88);
+  color: #8f8f88;
   font-size: 0.7rem;
   pointer-events: none;
 }

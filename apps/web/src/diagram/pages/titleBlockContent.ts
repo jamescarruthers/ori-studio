@@ -223,10 +223,11 @@ export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBl
 /** A part of the title block that prints nothing where it would show, and why. */
 export interface MissingTitleBlockPart {
   /**
-   * The title, the pattern or the model; or credits cut for want of room. A note cut for want of room is not
-   * marked: the block grows for it, and past half the page its end is cut with "…" (Zach, 2026-10-15).
+   * The pattern or the model; or credits cut for want of room. A note cut for want of room is not marked: the block
+   * grows for it, and past half the page its end is cut with "…"; nor is a missing title, which the Pages view sets
+   * "Add a title" in place of, as the title would print (Zach, 2026-10-15).
    */
-  part: 'title' | 'pattern' | 'model' | 'credits';
+  part: 'pattern' | 'model' | 'credits';
   /** The step that cannot give it; null where Auto finds none, and for the rest. */
   step: DiagramStep | null;
   /** That step's number, as the pages print it. */
@@ -236,10 +237,10 @@ export interface MissingTitleBlockPart {
 /** A room of the block where what would print there prints nothing ({@link missingTitleBlockParts}). */
 export interface TitleBlockPlaceholder {
   /**
-   * The title's band; the pattern's square — the model's room too where no
-   * pattern is drawn; the model's box; and where the column is cut.
+   * The pattern's square — the model's room too where no pattern is drawn; the
+   * model's box; and where the column is cut.
    */
-  room: 'title' | 'square' | 'model' | 'cut';
+  room: 'square' | 'model' | 'cut';
   /** One for each mark. */
   key: string;
   /**
@@ -257,18 +258,17 @@ const MARK_ROOM_MM = 10;
 const CUT_TAG_MM = 5;
 
 /**
- * What of the block prints nothing where it would show, room by room: the
- * title where the diagram has none; where the credits or the note are cut;
- * the pattern and the model where they are Auto or a step, and no step gives
- * them — a part set to none is the author's, and is not missing, nor is an
- * empty note or a credit with no value, which are simply not drawn (Zach,
- * 2026-10-15). The pattern and a model with no pattern in front of it would
- * print in one square, which is one room; so no two rooms overlap.
- * `drawnModel` is where the model is drawn, null where it is not
- * (`wholePictureRoom`), which the square's mark keeps clear of, and the
- * title's: the model stands on the band where it reaches it (Zach,
- * 2026-10-15), and so does a missing model's mark. For the Pages view's
- * overlay, never the page.
+ * What of the block prints nothing where it would show, room by room: where
+ * the credits are cut; the pattern and the model where they are Auto or a
+ * step, and no step gives them — a part set to none is the author's, and is
+ * not missing, nor is an empty note or a credit with no value, which are
+ * simply not drawn (Zach, 2026-10-15). A missing title is no room: the Pages
+ * view sets "Add a title" in its place, as the title would print
+ * (`PageComposeOptions.untitled`). The pattern and a model with no pattern in
+ * front of it would print in one square, which is one room; so no two rooms
+ * overlap. `drawnModel` is where the model is drawn, null where it is not
+ * (`wholePictureRoom`), which the square's mark keeps clear of. For the Pages
+ * view's overlay, never the page.
  */
 export function missingTitleBlockParts(
   block: LayoutTitleBlock,
@@ -282,11 +282,8 @@ export function missingTitleBlockParts(
   const front: MissingTitleBlockPart[] = [];
   if (pattern.from !== 'none' && !pattern.scene) square.push(missing(pattern, 'pattern'));
   if (model.from !== 'none' && !model.step?.picture) (pattern.scene ? front : square).push(missing(model, 'model'));
-  const unset = { step: null, number: null };
   const cut = cutMark(block);
-  const onBand = drawnModel ?? (front.length > 0 ? geometry.model : null);
   return [
-    ...(block.title ? [] : [{ room: 'title' as const, key: 'title', box: leftOf(block.band, onBand), missing: [{ part: 'title' as const, ...unset }] }]),
     ...(cut ? [cut] : []),
     ...(square.length > 0 ? [{ room: 'square' as const, key: 'square', box: squareMark(block, drawnModel), missing: square }] : []),
     ...(front.length > 0 ? [{ room: 'model' as const, key: 'model', box: geometry.model, missing: front }] : []),

@@ -16,13 +16,11 @@ import { PagePlaceholder } from './PagePlaceholder';
 const px = (mm: number) => mm * PAGES_PX_PER_MM;
 
 /**
- * Where the words go in each room: the title's in the band's middle; the
- * pattern's square's at the top of what a model standing in it leaves free;
- * the model's box's at its foot, under the pattern drawn behind it; a cut's
- * at the end of the line it marks.
+ * Where the words go in each room: the pattern's square's at the top of what
+ * a model standing in it leaves free; the model's box's at its foot, under the
+ * pattern drawn behind it; a cut's at the end of the line it marks.
  */
 const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | 'bottom'>> = {
-  title: 'middle',
   square: 'top',
   model: 'bottom',
   cut: 'middle',
@@ -31,35 +29,32 @@ const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | '
 /**
  * The first page's title block on the Pages view, over the page and never in
  * it (`implementation-plans/diagram-title-block.md`, section 6): its outline,
- * drawn as the margin guide is, and a box in each room of it where what
- * would print there prints nothing, saying why — the title, the crease
- * pattern, the finished model — and where the header has no more room for
- * the credits. An empty credit or note is not drawn, and not marked either,
- * nor a note's end cut with "…" past half the page (Zach, 2026-10-15). No
- * two boxes overlap. A press
- * passes through to the page, which brings the Page tab forward.
+ * drawn as the margin guide is, and a box in each room of its art where what
+ * would print there prints nothing, saying why — the crease pattern, the
+ * finished model — and where the header has no more room for the credits. A
+ * missing title is not boxed: the page shows "Add a title" in its place, set
+ * as the title would print (`PageComposeOptions.untitled`; Zach, 2026-10-15).
+ * An empty credit or note is not drawn, and not marked either, nor a note's
+ * end cut with "…" past half the page (Zach, 2026-10-15). No two boxes
+ * overlap. A press passes through to the page, which brings the Page tab
+ * forward.
  */
 export function DiagramTitleBlockOverlay({
   block,
   content,
   model,
-  titleInk,
   paper,
 }: {
   block: LayoutTitleBlock;
   content: ResolvedTitleBlock;
   /** Where the block draws its model (`PreparedDiagramPages.titleBlockModel`), which the square's mark keeps clear of. */
   model: PageBox | null;
-  /** The ink the title prints in on the band (`PreparedDiagramPages.titleBlockInk`), which a missing title is marked in. */
-  titleInk?: string;
   /** The page, which the outline is inset into as the margin guide is. */
   paper: Pick<PrintPaper, 'widthMm' | 'heightMm'>;
 }) {
   const { t } = useTranslation();
   const words = ({ part, step, number }: MissingTitleBlockPart): string[] => {
     switch (part) {
-      case 'title':
-        return [t('panels:diagram.pages.titleBlock.addTitle', 'Add a title')];
       case 'pattern':
         return [
           step
@@ -91,8 +86,6 @@ export function DiagramTitleBlockOverlay({
           key={key}
           kind={room === 'cut' ? 'cut' : 'part'}
           words={WORDS[room]}
-          // The title's mark in the title's own ink, which reads on the band whatever its colour.
-          ink={room === 'title' ? titleInk : undefined}
           data-title-block-room={room}
           style={at(box)}
         >
