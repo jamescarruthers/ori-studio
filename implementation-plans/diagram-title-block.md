@@ -2105,7 +2105,10 @@ full rule and how it is built are in `diagram-document-evolution.md`, part 2.
   reads (on a grid, its cell, which was already the rule there). An edit
   that changes it clears the step's whole-step offset, so it sits at its new
   home: the toggle, Steps on page N, a step put in, taken out or moved before
-  it, a re-pack that moves it along or across, any re-pagination. Kept,
+  it, a re-pack that moves it along or across, a re-pagination that moves it
+  to another page or turns its page to the other side of its spread. In the
+  flow a page is the same page while it starts with the same step **and its
+  rows stack the same way up** (the review's default, below). Kept,
   always: the number's, picture's and caption's offsets in the step's box,
   the caption's width, the size pin, an enlarged step's Size. A step that
   keeps its place keeps its offset, even as a re-pack moves its home a
@@ -2138,6 +2141,24 @@ full rule and how it is built are in `diagram-document-evolution.md`, part 2.
   "the title block turned on" case: pages two to four home with all inside
   their boxes, page one's steps in their place keeping theirs, a notice of 25
   and one Undo.
+- **Review fix: a page on the other side of its spread.** Where pages start
+  with page breaks — as on a diagram whose designer ends each page by hand —
+  the toggle (or a page break on page 1, or the first page's side) renumbers
+  later pages by one with their first steps kept. Each falls on the other
+  side of its spread, so its rows stack from its other end (a right page
+  from its foot): every band is where another was, though each step's band
+  and place along it read the same, and the review measured offsets made for
+  the old side landing in the band below or past the paper's foot. Such a
+  page is now a new place for every step on it: the edit sends them home
+  (`staysOnFlowPage`, `CellSlots.up`), with the notice and one Undo. A page
+  renumbered by two keeps its side and its offsets. On the crane, which
+  counts its pages, the toggle renumbers no page, so the toggle's evidence
+  above is unchanged to the byte; a page break before step 5 now sends all 22
+  home (the base kept 19, step 17 printed off the paper), and the turned page
+  keeps 8 overlaps, all from size pins
+  (`artifacts/hand-offsets-review/break-p1-page3-open-before-after.png`).
+  Details and what is left for Zach (rows of a re-packed page, Q2, pins):
+  `diagram-document-evolution.md`, part 2, "Review fixes".
 
 *As built (B, step 1 at the top left).* `pages/flowPacking.ts`: a page's
 first band starts at its packing area's left edge; its spare width is

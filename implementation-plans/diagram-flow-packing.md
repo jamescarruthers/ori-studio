@@ -607,7 +607,8 @@ changes Decisions 4 and 6, or the note just above, this holds:
   and caption widths always stay. *Replaced by Zach on 2026-10-15: the offset
   is kept while the step keeps its **place** — its page, its band and its
   place along the band as the band reads — and goes home when any of them
-  changes; everything inside its box stays
+  changes, a page whose rows now stack from its other end (the other side of
+  its spread) counting as another page; everything inside its box stays
   (`diagram-document-evolution.md`, part 2).* Replaces Decision 4's "frames placed by
   hand on a repacked page go home" and Decision 6's "a page whose signature
   changes sends its placed frames home in the same commit". The rule, the
