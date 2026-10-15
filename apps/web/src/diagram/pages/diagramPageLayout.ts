@@ -102,7 +102,7 @@ import {
   type PackRect,
   type PackStep,
 } from './flowPacking';
-import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea, type PlannedPage } from './pagePlan';
+import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, grownTitleBlockMm, paginate, printableArea, type PlannedPage } from './pagePlan';
 import { holdsArrangement, keepsGlyphGutter, pageSignatures, titleShown } from './pageSignature';
 import { printPaper, type PrintPaper } from './printPaper';
 import { keepsMovedFrame } from './repackedFrames';
@@ -111,7 +111,7 @@ import { pinnedCaptionWidth, setCaption } from './captionMeasure';
 import { lanePicture, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 import { setTitleBlock, titleBlockLookOf, type DiagramTitles, type LayoutTitleBlock } from './titleBlockColumn';
-import { titleBlockBand, titleBlockParts } from './titleBlockGeometry';
+import { grownTitleBlockBand, titleBlockBand, titleBlockParts, titleBlockRoom } from './titleBlockGeometry';
 
 // The type a step is set in, which placement's hit boxes measure too.
 export { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM } from './stepType';
@@ -555,6 +555,12 @@ export interface DiagramPagesLayout {
    * when nothing was packed.
    */
   packed?: Readonly<Record<string, DiagramPageArrangement>>;
+  /**
+   * The room this layout measured the title block's words to, where it was asked to (`DiagramTitles.room`,
+   * `'measure'`, after an edit of them): what the store keeps with the packing it adopts
+   * (`DiagramTitleBlockContent.room`), so the next layout holds page 1 as this one drew it. Absent otherwise.
+   */
+  titleBlockRoom?: number;
   /** The title tab, when shown: on every page but one with the title block ({@link LayoutPage.titleBlock}). */
   title: {
     tab: { x: number; y: number; w: number; h: number };
@@ -1095,8 +1101,13 @@ export function layoutDiagramPages(
   const showTitle = titleShown(setup, title);
   const headH = showTitle ? HEADER_MM : 0;
   const footH = setup.pageNumbers.enabled ? FOOTER_MM : 0;
-  // The band is page 1's layout; what is in it is look, set on that page alone, and moves no step.
-  const titleBand = titleBlockBand(setup, headH, footH);
+  // The band is page 1's layout: its share, grown in the flow where the block's words need more room (Zach,
+  // 2026-10-15) — the room they were measured to at the author's last edit of them, or measured now after one. What
+  // is in it is look, set on that page alone, and moves no step.
+  const shareBand = titleBlockBand(setup, headH, footH);
+  const measured = titles.room === 'measure' && shareBand !== null ? titleBlockRoom(shareBand, titles, setter) : undefined;
+  const roomMm = titles.room === 'measure' ? measured : titles.room;
+  const titleBand = shareBand && grownTitleBlockBand(shareBand, grownTitleBlockMm(setup, roomMm));
   const bandWidthMm = setup.pathWidthMm;
   // An enlarge arrow stands where a turn would, and keeps the gutter a turn keeps.
   const turning = steps.some(
@@ -1258,6 +1269,7 @@ export function layoutDiagramPages(
         steps,
         setup,
         title,
+        titleBlockRoomMm: roomMm,
         setter,
         arrangements,
         stored,
@@ -1453,6 +1465,7 @@ export function layoutDiagramPages(
     bandWidthMm,
     bandInk: setup.pathColor,
     ...(flowPages && Object.keys(flowPages.packed).length > 0 ? { packed: flowPages.packed } : {}),
+    ...(measured !== undefined ? { titleBlockRoom: measured } : {}),
   };
   markOutsideMargin(result);
   return result;
@@ -1494,6 +1507,8 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   steps: readonly LayoutStep[];
   setup: DiagramPageSetup;
   title: string;
+  /** The room the title block's words stand in, which page 1's signature reads where it grows the block (`pageSignature`). */
+  titleBlockRoomMm?: number;
   setter: TextSetter;
   arrangements: Readonly<Record<string, DiagramPageArrangement>>;
   /**
@@ -1520,8 +1535,8 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   packing: (LayoutPage['packing'] | undefined)[];
   packed: Record<string, DiagramPageArrangement>;
 } {
-  const { placedPages, planned, plans, steps, setup, title, setter, arrangements } = input;
-  const signatures = pageSignatures({ steps, pages: planned, setup, title });
+  const { placedPages, planned, plans, steps, setup, title, titleBlockRoomMm, setter, arrangements } = input;
+  const signatures = pageSignatures({ steps, pages: planned, setup, title, titleBlockRoomMm });
   const packed: Record<string, DiagramPageArrangement> = {};
   const packing: (LayoutPage['packing'] | undefined)[] = [];
   // The longer side each picture's frame prints at, mm: what an enlarged step's read-out is measured against.

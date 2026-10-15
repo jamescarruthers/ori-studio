@@ -1225,8 +1225,6 @@
         "creditsCut": "Some credits don’t fit",
         "noModel": "No step has a picture yet",
         "noPattern": "No step is linked to a crease pattern",
-        "noteCut": "The rest of the note doesn’t fit",
-        "noteNone": "The note doesn’t fit",
         "stepNoPattern": "Step {{number}} has no crease pattern",
         "stepNoPicture": "Step {{number}} has no picture yet"
       },

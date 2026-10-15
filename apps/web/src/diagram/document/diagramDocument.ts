@@ -1338,7 +1338,9 @@ export interface DiagramDocument {
   /**
    * What the first page's title block shows (`implementation-plans/
    * diagram-title-block.md`), each part set by hand; absent where none is.
-   * Never part of the page setup: what the block shows moves no step.
+   * Never part of the page setup: what the block shows moves no step, but
+   * that its words may grow the flow's block, to the room the layout measured
+   * after the author's edit of them ({@link DiagramTitleBlockContent.room}).
    */
   titleBlockContent?: DiagramTitleBlockContent;
   /** What a newer build wrote here that this build cannot read, written back as it came. */
@@ -1372,6 +1374,14 @@ export interface DiagramTitleBlockContent {
   modelSize?: number;
   /** The crease pattern's side, as a share of the block's height, within {@link TITLE_BLOCK_ART_SIZE_RANGE}. */
   patternSize?: number;
+  /**
+   * How tall its words stood, mm, as the layout measured them after the author's last edit of them, to half a
+   * millimetre (`pages/titleBlockGeometry.ts`, `titleBlockRoom`; Zach, 2026-10-15: the header reflows): layout,
+   * kept as the file says it, so a file opens as it was saved. The flow's block grows to it past its share, up to half
+   * the printable height (`grownTitleBlockMm`). Unsaid: the block at its share. Written by the store with the
+   * packing it adopts ({@link setTitleBlockRoom}), never by an edit of its own.
+   */
+  room?: number;
 }
 
 /** One credit: a label over its value, each one line. A credit with nothing in it is kept, half typed. */
@@ -1404,7 +1414,7 @@ export interface DiagramTitleBlockContentPatch {
 }
 
 /** The parts of the title block's content, in the order a file writes them. */
-export const TITLE_BLOCK_PARTS = ['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize'] as const;
+export const TITLE_BLOCK_PARTS = ['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize', 'room'] as const;
 
 export { TITLE_BLOCK_ART_SIZE_DEFAULTS, TITLE_BLOCK_ART_SIZE_RANGE };
 
@@ -2545,15 +2555,26 @@ export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTi
     note: text('note', xmlText),
     modelSize: size('modelSize'),
     patternSize: size('patternSize'),
+    room: was.room,
   });
   const newer = withoutKeys(
     document.newer?.titleBlockContent,
-    TITLE_BLOCK_PARTS.filter((key) => patch[key] !== undefined)
+    TITLE_BLOCK_PARTS.filter((key) => key !== 'room' && patch[key] !== undefined)
   );
   if (sameTitleBlockContent(was, next) && newer === document.newer?.titleBlockContent) return document;
   const { titleBlockContent: _was, ...rest } = document;
   const content = Object.keys(next).length > 0 ? { ...rest, titleBlockContent: next } : rest;
   return withNewer(content, { ...document.newer, titleBlockContent: newer });
+}
+
+/**
+ * `document` with the room its title block's words were measured to (`DiagramTitleBlockContent.room`, mm): what
+ * the store keeps with a layout's packing after an edit of the words, no edit of its own. The same document where it
+ * says that already, and for a room that is no length.
+ */
+export function setTitleBlockRoom(document: DiagramDocument, roomMm: number): DiagramDocument {
+  if (!Number.isFinite(roomMm) || !(roomMm > 0) || document.titleBlockContent?.room === roomMm) return document;
+  return { ...document, titleBlockContent: titleBlockContentOf({ ...document.titleBlockContent, room: roomMm }) };
 }
 
 /**
@@ -2662,7 +2683,8 @@ function sameTitleBlockContent(a: DiagramTitleBlockContent, b: DiagramTitleBlock
     (a.credits ?? []).every((credit, index) => sameCredit(credit, b.credits![index]!)) &&
     a.note === b.note &&
     a.modelSize === b.modelSize &&
-    a.patternSize === b.patternSize
+    a.patternSize === b.patternSize &&
+    a.room === b.room
   );
 }
 

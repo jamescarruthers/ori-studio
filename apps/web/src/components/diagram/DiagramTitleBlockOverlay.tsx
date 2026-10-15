@@ -34,8 +34,9 @@ const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | '
  * drawn as the margin guide is, and a box in each room of it where what
  * would print there prints nothing, saying why — the title, the crease
  * pattern, the finished model — and where the header has no more room for
- * the credits or the note. An empty credit or note is not drawn, and not
- * marked either (Zach, 2026-10-15). No two boxes overlap. A press
+ * the credits. An empty credit or note is not drawn, and not marked either,
+ * nor a note's end cut with "…" past half the page (Zach, 2026-10-15). No
+ * two boxes overlap. A press
  * passes through to the page, which brings the Page tab forward.
  */
 export function DiagramTitleBlockOverlay({
@@ -73,10 +74,6 @@ export function DiagramTitleBlockOverlay({
         ];
       case 'credits':
         return [t('panels:diagram.pages.titleBlock.creditsCut', 'Some credits don’t fit')];
-      case 'note':
-        return [t('panels:diagram.pages.titleBlock.noteCut', 'The rest of the note doesn’t fit')];
-      case 'wholeNote':
-        return [t('panels:diagram.pages.titleBlock.noteNone', 'The note doesn’t fit')];
     }
   };
   const { x, y, w, h } = block.geometry.block;

@@ -431,6 +431,9 @@ function readTitleBlockContent(value: unknown): { content: DiagramTitleBlockCont
       if (typeof part !== 'number' || !Number.isFinite(part)) continue;
       if (isPastRange(part, TITLE_BLOCK_ART_SIZE_RANGE)) newer[key] = part;
       content[key] = Math.min(TITLE_BLOCK_ART_SIZE_RANGE.max, Math.max(TITLE_BLOCK_ART_SIZE_RANGE.min, part));
+    } else if (key === 'room') {
+      // Layout, kept as said: a length the layout measured. One that is no length is dropped alone.
+      if (typeof part === 'number' && Number.isFinite(part) && part > 0) content.room = part;
     } else if (key === 'byline') {
       if (typeof part === 'string') byline = xmlText(part);
     } else newer[key] = part;

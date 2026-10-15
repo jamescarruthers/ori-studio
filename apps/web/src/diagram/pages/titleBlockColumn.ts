@@ -100,6 +100,13 @@ export interface DiagramTitles {
   title: string;
   /** None: the title alone, the art at the default sizes. */
   block?: TitleBlockLook;
+  /**
+   * The room the block's words stand in, mm: as measured at the author's last edit of them
+   * (`DiagramTitleBlockContent.room`), held as the file says it; `'measure'` after an edit of them, measured by the
+   * layout (`titleBlockTextMm`) and handed back for the store to keep (`DiagramPagesLayout.titleBlockRoom`). None:
+   * the block at its share.
+   */
+  room?: number | 'measure';
 }
 
 /** The title block's look where the titles give none: no words of its own, the art at the default sizes. */
@@ -180,14 +187,8 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   const { column } = geometry;
   const foot = column.y + column.h;
   const subtitle = look.subtitle.trim();
-  const printed = look.credits.map(({ label, value }) => ({ label: label.trim(), value: value.trim() })).filter(({ value }) => value !== '');
+  const { printed, natural, labelAbove } = creditsAtFullSize(look, setter);
   const note = look.note.trim();
-  // Each credit's column at J1b's sizes, which scale with it: as wide as the wider of its label, tracked, and its
-  // value; and how far its label's ink reaches over its baseline — an accented capital's or an ideograph's past a
-  // capital's — which sets its row's baseline, here and where the row is placed alike.
-  const labels = printed.map(({ label }) => trackedLine(setter, label, T.labelMm, 700, T.labelMm * T.tracking, Number.POSITIVE_INFINITY));
-  const natural = printed.map(({ value }, at) => Math.max(labels[at]!.widthMm, setter.line(value, T.valueMm, 400).widthMm));
-  const labelAbove = labels.map((label) => Math.max(CAP_HEIGHT * T.labelMm, setter.ink(label, T.labelMm).above));
   // The note's first line, at its tallest letter wherever the line breaks: one line of it at least has room.
   const S = STEP_TEXT_SIZE_MM;
   const noteLine = note === '' ? 0 : Math.max(CAP_HEIGHT * S, setter.ink(setter.line(note, S, 400), S).above) + DESCENT * S;
@@ -247,8 +248,43 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
 }
 
 /**
+ * How tall the header's words stand at J1b's sizes, the scale 1, in `column`'s width: the subtitle's row, the
+ * band, every row of credits and the whole note, with the rooms between them — what the flow's block grows to where
+ * its share is shorter (Zach, 2026-10-15: "actually reflow the content"; `grownTitleBlockMm`). The title never
+ * counts: it is set to the band.
+ */
+export function titleBlockTextMm(column: Pick<PageBox, 'w'>, titles: DiagramTitles, setter: TextSetter): number {
+  const look = titleBlockLookOf(titles);
+  const T = TITLE_BLOCK_TYPE;
+  const { natural, labelAbove } = creditsAtFullSize(look, setter);
+  const rows = rowsOf(natural, T.gutterMm, column.w).map((row) => Math.max(...row.map((at) => labelAbove[at]!)));
+  // The whole note, as `setNote` sets it: its first line's tallest letter, its baselines a leading apart, the last
+  // one's descent.
+  const note = look.note.trim();
+  const S = STEP_TEXT_SIZE_MM;
+  const lines = note === '' || !(column.w > 0) ? [] : setter.paragraph(note, column.w, S, Number.MAX_SAFE_INTEGER).lines;
+  const noteMm = lines[0] ? setter.ink(lines[0], S).above + (lines.length - 1) * STEP_TEXT_LEADING_MM + DESCENT * S : 0;
+  return columnHeight(look.subtitle.trim() !== '', rows, noteMm);
+}
+
+/**
+ * The credits with a value, as printed, and each one's column at J1b's sizes, which scale with it: as wide as the
+ * wider of its label, tracked, and its value; and how far its label's ink reaches over its baseline — an accented
+ * capital's or an ideograph's past a capital's — which sets its row's baseline, where the row is measured and
+ * placed alike.
+ */
+function creditsAtFullSize(look: TitleBlockLook, setter: TextSetter) {
+  const T = TITLE_BLOCK_TYPE;
+  const printed = look.credits.map(({ label, value }) => ({ label: label.trim(), value: value.trim() })).filter(({ value }) => value !== '');
+  const labels = printed.map(({ label }) => trackedLine(setter, label, T.labelMm, 700, T.labelMm * T.tracking, Number.POSITIVE_INFINITY));
+  const natural = printed.map(({ value }, at) => Math.max(labels[at]!.widthMm, setter.line(value, T.valueMm, 400).widthMm));
+  const labelAbove = labels.map((label) => Math.max(CAP_HEIGHT * T.labelMm, setter.ink(label, T.labelMm).above));
+  return { printed, natural, labelAbove };
+}
+
+/**
  * How tall J1b's column is, at its own sizes: a subtitle or none, the band, a row of credits for each of `rows` —
- * how far its labels' ink reaches over their baseline — and `noteLine`, the note's first line, or none.
+ * how far its labels' ink reaches over their baseline — and `noteLine`, the note's first line or all of it, or none.
  */
 function columnHeight(subtitle: boolean, rows: readonly number[], noteLine: number): number {
   const T = TITLE_BLOCK_TYPE;

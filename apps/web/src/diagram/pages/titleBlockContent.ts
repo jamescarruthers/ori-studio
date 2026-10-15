@@ -211,18 +211,22 @@ export interface ModelRoom {
  * Where the block's model stands: on the pattern's lower-left corner, its
  * picture set so that it covers the corner (`TitleBlockGeometry.modelAlign`);
  * or, where no pattern is drawn, at its own size in the pattern's place, on
- * the band's right and its foot, its picture at the box's bottom right.
+ * the band's right and the foot of its share (`artH`: the block its words
+ * grew stands taller under it), its picture at the box's bottom right.
  */
 export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBlock): ModelRoom {
-  const { block, model, modelAlign } = geometry;
+  const { block, artH, model, modelAlign } = geometry;
   if (content.pattern.scene) return { box: model, align: modelAlign };
-  return { box: { ...model, x: block.x + block.w - model.w, y: block.y + block.h - model.h }, align: { x: 1, y: 1 } };
+  return { box: { ...model, x: block.x + block.w - model.w, y: block.y + artH - model.h }, align: { x: 1, y: 1 } };
 }
 
 /** A part of the title block that prints nothing where it would show, and why. */
 export interface MissingTitleBlockPart {
-  /** The title, the pattern or the model; the credits' or the note's end, cut for want of room, or the whole note. */
-  part: 'title' | 'pattern' | 'model' | 'credits' | 'note' | 'wholeNote';
+  /**
+   * The title, the pattern or the model; or credits cut for want of room. A note cut for want of room is not
+   * marked: the block grows for it, and past half the page its end is cut with "…" (Zach, 2026-10-15).
+   */
+  part: 'title' | 'pattern' | 'model' | 'credits';
   /** The step that cannot give it; null where Auto finds none, and for the rest. */
   step: DiagramStep | null;
   /** That step's number, as the pages print it. */
@@ -290,18 +294,16 @@ export function missingTitleBlockParts(
 }
 
 /**
- * Where the column is cut — credits left out, the note's end or all of it —
- * marked by a tag hanging under the block's foot at the column's end: the
- * line cut short runs to that end, and nothing the block prints is under the
- * tag, whatever the paper.
+ * Where credits are left out for want of room — past half the page, or in a
+ * grid's rows — marked by a tag hanging under the block's foot at the
+ * column's end, over nothing the block prints, whatever the paper. A note's
+ * end cut with "…" is not marked (Zach, 2026-10-15).
  */
 function cutMark(block: LayoutTitleBlock): TitleBlockPlaceholder | null {
   const { column } = block.geometry;
-  const { note, credits } = block;
-  const missing: MissingTitleBlockPart[] = [];
-  if (credits && credits.cut > 0) missing.push({ part: 'credits', step: null, number: null });
-  if (note?.cut) missing.push({ part: note.lines.length > 0 ? 'note' : 'wholeNote', step: null, number: null });
-  if (missing.length === 0) return null;
+  const { credits } = block;
+  if (!credits || credits.cut === 0) return null;
+  const missing: MissingTitleBlockPart[] = [{ part: 'credits', step: null, number: null }];
   return { room: 'cut', key: 'cut', box: { x: column.x, y: column.y + column.h, w: column.w, h: CUT_TAG_MM }, missing };
 }
 

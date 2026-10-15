@@ -1262,8 +1262,6 @@
         "creditsCut": "Alguns créditos não cabem",
         "noModel": "Nenhum passo tem imagem ainda",
         "noPattern": "Nenhum passo está vinculado a um padrão de vincos",
-        "noteCut": "O resto da nota não cabe",
-        "noteNone": "A nota não cabe",
         "stepNoPattern": "O passo {{number}} não tem padrão de vincos",
         "stepNoPicture": "O passo {{number}} ainda não tem imagem"
       },

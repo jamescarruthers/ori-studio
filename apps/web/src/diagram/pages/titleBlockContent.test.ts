@@ -318,18 +318,12 @@ describe('missingTitleBlockParts', () => {
     expect(missingTitleBlockParts(block, content, null)).toEqual([]);
   });
 
-  it('marks where the column is cut by a tag under the block’s foot, over nothing it prints: the note’s end, or credits left out', () => {
+  it('marks credits left out by a tag under the block’s foot, over nothing it prints, and never a note cut with “…” (Zach, 2026-10-15)', () => {
     const content = resolveTitleBlock(titleBlockDiagram([cpStep('s1')]));
     const long = set('Crane', { note: Array.from({ length: 30 }, (_, index) => `Line ${index + 1}`).join('\n') });
-    const [cut] = missingTitleBlockParts(long, content, null);
-    const { column } = geometry;
-    expect(cut).toEqual({
-      room: 'cut',
-      key: 'cut',
-      box: { x: column.x, y: column.y + column.h, w: column.w, h: 5 },
-      missing: [{ part: 'note', step: null, number: null }],
-    });
-    // Credits left out on the shortest block, and the whole note under them.
+    expect(long.note!.cut).toBe(true);
+    expect(missingTitleBlockParts(long, content, null)).toEqual([]);
+    // Credits left out on the shortest block, and the whole note under them: the credits alone are marked.
     const short = titleBlockGeometry(
       { ...DEFAULT_PAGE_SETUP, layout: 'flow', size: 'a5', orientation: 'landscape', titleBlock: { enabled: true, heightShare: 0.15 } },
       11,
@@ -339,8 +333,8 @@ describe('missingTitleBlockParts', () => {
     const many = Array.from({ length: 12 }, (_, index) => ({ label: `CREDIT ${index + 1}`, value: 'Traditional design' }));
     const cramped = setTitleBlock(short, { title: 'Crane', block: { ...emptyTitleBlockLook(), credits: many, note: 'Use thin paper.' } }, estimateTextSetter);
     const marks = missingTitleBlockParts(cramped, content, null).filter(({ room }) => room === 'cut');
-    expect(marks.map(({ missing: parts }) => parts.map(({ part }) => part))).toEqual([['credits', 'wholeNote']]);
-    expect(marks[0]!.box.y).toBe(short.block.y + short.block.h);
+    expect(marks.map(({ missing: parts }) => parts.map(({ part }) => part))).toEqual([['credits']]);
+    expect(marks[0]!.box).toEqual({ x: short.column.x, y: short.block.y + short.block.h, w: short.column.w, h: 5 });
   });
 
   it('hangs a cut’s tag under the block, never over a line it prints, on every paper, share and grid', () => {

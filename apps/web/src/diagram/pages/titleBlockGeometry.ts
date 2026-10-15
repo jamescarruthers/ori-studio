@@ -8,11 +8,13 @@
  * the page setup says (`DiagramPageSetup.titleBlock`) — in the flow, its
  * share of the printable height; on a grid, the whole rows nearest that share
  * ({@link blockRows}) and the header's room above them, so that every page
- * keeps one cell. The first page's steps start under it, and nothing else
- * here moves them.
+ * keeps one cell. In the flow it grows past its share where its words need
+ * the room ({@link grownTitleBlockBand}, Zach, 2026-10-15). The first page's
+ * steps start under it, and nothing else here moves them.
  *
  * The parts ({@link titleBlockParts}) are look, which may change for every
- * file: the crease pattern a square at the band's top right, the finished
+ * file, at the band's share whatever its words grew it to: the crease
+ * pattern a square at the band's top right, the finished
  * model standing on its lower-left corner, each as large as the content's
  * sizes say ({@link fittedArtSizes}), and the text column from the left
  * margin to the pattern, {@link HEADER_GAP_MM} short of it
@@ -24,10 +26,11 @@
  * Pure.
  */
 import type { DiagramPageSetup } from '../document/diagramDocument';
+import type { TextSetter } from './diagramPageLayout';
 import type { PageBox } from './pagePlacement';
 import { blockRows, hasTitleBlock } from './pagePlan';
 import { printPaper } from './printPaper';
-import { HEADER_GAP_MM } from './titleBlockColumn';
+import { HEADER_GAP_MM, titleBlockLookOf, titleBlockTextMm, type DiagramTitles } from './titleBlockColumn';
 
 /** Neither the crease pattern's square nor the model's box is wider than this share of the band: a grid of two rows gives the band half the page. */
 const ART_WIDTH_SHARE = 0.45;
@@ -47,6 +50,11 @@ export interface TitleBlockBand {
   block: PageBox;
   /** How many of a grid's rows it takes; none in the flow. */
   rows: number;
+  /**
+   * How tall its share makes it: what the art's sizes are shares of, and stand in from the block's top. The block
+   * itself is taller where its words grew it ({@link grownTitleBlockBand}); the art stays as it was.
+   */
+  artH: number;
 }
 
 /** The model's height and the pattern's side, each a share of the band's height (`titleBlockArtSizes`). */
@@ -93,31 +101,37 @@ export function titleBlockBand(setup: DiagramPageSetup, headMm: number, footMm: 
     setup.layout === 'flow'
       ? setup.titleBlock.heightShare * printable
       : headMm + (rows * (printable - headMm - footMm)) / setup.rows;
-  return { block: { x: m, y: m, w: W - 2 * m, h: height }, rows };
+  return { block: { x: m, y: m, w: W - 2 * m, h: height }, rows, artH: height };
+}
+
+/** `band` grown to `heightMm` (`grownTitleBlockMm`), its art where it was; as it is where that is none. */
+export function grownTitleBlockBand(band: TitleBlockBand, heightMm: number | null): TitleBlockBand {
+  return heightMm === null ? band : { ...band, block: { ...band.block, h: heightMm } };
 }
 
 /**
  * The parts of a band at `sizes`, as {@link fittedArtSizes} draws them: the
- * pattern's square, `patternSize` of the band's height on a side, its top on
- * the band's and its right on the margin; the model's box, `modelSize` of the
- * band's height tall and at most {@link MODEL_ASPECT} as wide, standing on
- * the pattern's lower-left corner — the corner {@link MODEL_ANCHOR} into it,
- * or as near that as keeps the box in the band; and the text column, to
+ * pattern's square, `patternSize` of the band's share ({@link
+ * TitleBlockBand.artH}) on a side, its top on the band's and its right on the
+ * margin; the model's box, `modelSize` of it tall and at most {@link
+ * MODEL_ASPECT} as wide, standing on the pattern's lower-left corner — the
+ * corner {@link MODEL_ANCHOR} into it, or as near that as keeps the box in
+ * the share's room; and the text column, the block's height, to
  * {@link HEADER_GAP_MM} short of the pattern as `sizes` says it. Where a
  * pair the sliders do not offer draws the pattern smaller, the column still
  * ends at the pattern said, so that nothing of the model's moves a word.
  */
 export function titleBlockParts(band: TitleBlockBand, sizes: TitleBlockSizes): TitleBlockGeometry {
-  const { block } = band;
-  const foot = block.y + block.h;
+  const { block, artH } = band;
+  const foot = block.y + artH;
   const end = block.x + block.w;
   const widest = block.w * ART_WIDTH_SHARE;
-  const square = (share: number) => Math.min(share * block.h, widest);
+  const square = (share: number) => Math.min(share * artH, widest);
   const { modelSize, patternSize } = fittedArtSizes(sizes);
   const side = square(patternSize);
   const pattern = { x: end - side, y: block.y, w: side, h: side };
   const corner = { x: pattern.x, y: pattern.y + side };
-  const h = modelSize * block.h;
+  const h = modelSize * artH;
   const w = Math.min(h * MODEL_ASPECT, widest);
   const x = clamp(corner.x - MODEL_ANCHOR.x * w, block.x, end - w);
   const y = clamp(corner.y - MODEL_ANCHOR.y * h, block.y, foot - h);
@@ -126,6 +140,20 @@ export function titleBlockParts(band: TitleBlockBand, sizes: TitleBlockSizes): T
   const columnEnd = end - square(sizes.patternSize) - HEADER_GAP_MM;
   const column = { x: block.x, y: block.y, w: Math.max(0, columnEnd - block.x), h: block.h };
   return { ...band, pattern, model, modelAlign, column };
+}
+
+/** The steps the room for the block's words is measured to: an edit of them that moves it less re-packs nothing. */
+export const TITLE_BLOCK_ROOM_STEP_MM = 0.5;
+
+/**
+ * The room the block's words need in `band` at J1b's sizes (`titleBlockTextMm`), up to the next half millimetre:
+ * what the store keeps after an edit of them (`DiagramTitleBlockContent.room`), and what the flow's block grows to
+ * past its share (`grownTitleBlockMm`). Read across the column the band's share leaves, which its growing never
+ * changes: the art keeps its size.
+ */
+export function titleBlockRoom(band: TitleBlockBand, titles: DiagramTitles, setter: TextSetter): number {
+  const { column } = titleBlockParts(band, titleBlockLookOf(titles).sizes);
+  return Math.ceil(titleBlockTextMm(column, titles, setter) / TITLE_BLOCK_ROOM_STEP_MM - 1e-9) * TITLE_BLOCK_ROOM_STEP_MM;
 }
 
 /**

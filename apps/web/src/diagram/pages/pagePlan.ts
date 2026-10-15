@@ -111,6 +111,27 @@ export function hasTitleBlock(setup: Pick<DiagramPageSetup, 'layout' | 'rows' | 
   return setup.titleBlock.enabled && titleBlockFits(setup);
 }
 
+/** The most of the printable height the flow's title block grows to for its words (Zach, 2026-10-15). */
+export const TITLE_BLOCK_MOST_SHARE = 0.5;
+
+/**
+ * How tall the first flow page's title block is where its words need more
+ * room than its share gives (Zach, 2026-10-15: "actually reflow the
+ * content"): `roomMm`, the room they were measured to at the author's last
+ * edit of them (`DiagramTitleBlockContent.room`), held to
+ * {@link TITLE_BLOCK_MOST_SHARE} of the printable height. Null where the
+ * share has room, on a grid — whose block keeps its whole rows — and with no
+ * block. Layout: page 1's area and its signature read it; its step count
+ * does not, so page 1 keeps its steps and packs them smaller.
+ */
+export function grownTitleBlockMm(setup: DiagramPageSetup, roomMm: number | undefined): number | null {
+  if (setup.layout !== 'flow' || !hasTitleBlock(setup) || roomMm === undefined || !(roomMm > 0)) return null;
+  const { heightMm, marginMm } = printPaper(setup);
+  const printable = heightMm - 2 * marginMm;
+  const grown = Math.min(roomMm, TITLE_BLOCK_MOST_SHARE * printable);
+  return grown > setup.titleBlock.heightShare * printable + 1e-9 ? grown : null;
+}
+
 /**
  * How many steps the first page holds when it has no count of its own: with
  * the title block, fewer by its share — in the flow the steps per page less

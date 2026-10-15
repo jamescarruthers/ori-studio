@@ -4,6 +4,7 @@ import {
   defaultHanStyle,
   defaultTitleBlockContent,
   duplicateStep,
+  setTitleBlockRoom,
   editStepAnnotations,
   keepStepAnnotations,
   insertPictureSteps,
@@ -65,6 +66,7 @@ import {
 import { lacksPaperFaces } from '../../../diagram/capture/stepPaperFaces';
 import { resetStepPlace, resetStepPlaces, setStepPlace } from '../../../diagram/document/stepPlace';
 import { adoptPacking, followPageArrangements, repackPages } from '../../../diagram/pages/pageArrangements';
+import { noteTitleBlockEdit } from '../../../diagram/pages/titleBlockEdits';
 import { retainPageCounts, setPageSteps } from '../../../diagram/pages/pageCounts';
 import { flushPlacementNudge } from '../../../diagram/pages/placementGestures';
 import { cellSlots, settlePlaces } from '../../../diagram/pages/stepPlaces';
@@ -216,6 +218,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     // replace took away; and with the current diagram no longer holding it,
     // the history byte cap (`trimDiagramHistory`) sees what only history keeps.
     const next = withReferencedAssets(settled);
+    // Where the edit changed the title block's words, the next layout measures the room they need (Zach, 2026-10-15).
+    noteTitleBlockEdit(before, next);
     if (!extend) openSession = null;
     const history = extend
       ? state.diagramHistory
@@ -815,12 +819,14 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
         return page ? resetStepPlaces(document, new Set(page)) : document;
       }) !== null,
 
-    adoptDiagramPageArrangements: (arrangements, ofDocument) => {
+    adoptDiagramPageArrangements: (arrangements, ofDocument, titleBlockRoom) => {
       const { diagram, diagramReadOnly } = get();
       // Packed from a diagram that has changed since, or one that is shown and never edited: nothing to take in.
       if (diagramReadOnly || diagram === null || diagram !== ofDocument) return false;
+      // The room the block's words were measured to first: page 1 was packed for the block it grew (Zach, 2026-10-15).
+      const measured = titleBlockRoom === undefined ? diagram : setTitleBlockRoom(diagram, titleBlockRoom);
       // A frame moved by hand on a page packed afresh goes home where its step changed place, as the layout drew it.
-      const { document: next, settled } = adoptPacking(diagram, arrangements);
+      const { document: next, settled } = adoptPacking(measured, arrangements);
       if (next === diagram) return false;
       // Not an edit: no undo entry, the history as it was, and the project no dirtier than it was.
       noteAdoptedPacking(next, diagram);

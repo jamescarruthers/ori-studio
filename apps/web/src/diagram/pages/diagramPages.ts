@@ -47,6 +47,7 @@ import { zoomOutlineOf, zoomShapeOf } from '../zoom/zoomModel';
 import { liftedZoomArrows, type PlacedZoomArrow } from './zoomArrows';
 import type { TitleBlockLook } from './titleBlockColumn';
 import { modelRoom, resolveTitleBlock, titleBlockLook, type ResolvedTitleBlock } from './titleBlockContent';
+import { measuresTitleBlock } from './titleBlockEdits';
 import type { PageBox } from './pagePlacement';
 import { hasTitleBlock } from './pagePlan';
 
@@ -307,7 +308,9 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
   let packed: Record<string, DiagramPageArrangement> = {};
   const stored = document.pageArrangements ?? {};
-  const titles = { title: document.title, block: titleBlockLook(document) };
+  // The block's words in the room the diagram says they stand in, or measured now after an edit of them.
+  const room = measuresTitleBlock(document) ? ('measure' as const) : document.titleBlockContent?.room;
+  const titles = { title: document.title, block: titleBlockLook(document), ...(room !== undefined ? { room } : {}) };
   const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
     const pages = layoutDiagramPages(steps, document.page, titles, setter, { ...stored, ...packed }, stored);
     if (pages.packed) packed = { ...packed, ...pages.packed };

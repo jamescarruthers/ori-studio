@@ -1262,8 +1262,6 @@
         "creditsCut": "Certains crédits ne tiennent pas",
         "noModel": "Aucune étape n’a encore d’image",
         "noPattern": "Aucune étape n’est liée à un patron de plis",
-        "noteCut": "La suite de la note ne tient pas",
-        "noteNone": "La note ne tient pas",
         "stepNoPattern": "L’étape {{number}} n’a pas de patron de plis",
         "stepNoPicture": "L’étape {{number}} n’a pas encore d’image"
       },

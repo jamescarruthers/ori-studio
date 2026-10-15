@@ -63,6 +63,7 @@ describe('titleBlockBand', () => {
       expect(titleBlockBand(setup, HEADER_MM, FOOTER_MM), JSON.stringify(paper)).toEqual({
         block: { x: m, y: m, w: W - 2 * m, h: 0.27 * (H - 2 * m) },
         rows: 0,
+        artH: 0.27 * (H - 2 * m),
       });
     }
     // 74 mm on A4 portrait, 50 mm on A4 landscape at 0.27; J1b's 62.79 mm at a new diagram's 0.23.
@@ -232,7 +233,7 @@ describe('titleBlockParts', () => {
     const band = titleBlockBand(setupOf(), HEADER_MM, FOOTER_MM)!;
     for (const sizes of EVERY_SIZE) {
       const parts = titleBlockParts(band, sizes);
-      expect({ block: parts.block, rows: parts.rows }).toEqual(band);
+      expect({ block: parts.block, rows: parts.rows, artH: parts.artH }).toEqual(band);
     }
   });
 });

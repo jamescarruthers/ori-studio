@@ -2411,11 +2411,16 @@ export interface DiagramSliceActions {
    * (`repackedFrames.ts`), with the reflow notice. Not an edit: no undo
    * entry, the undo history left as it is, and the project no dirtier than it
    * was — they are written with the next save, and a file written before
-   * packs and draws the same when it opens. Whether it changed.
+   * packs and draws the same when it opens. With them, `titleBlockRoom`:
+   * the room the layout measured the title block's words to after an edit of
+   * them (`DiagramPagesLayout.titleBlockRoom`), kept first
+   * (`setTitleBlockRoom`), so page 1, packed for the block it grew, is held.
+   * Whether it changed.
    */
   adoptDiagramPageArrangements: (
     arrangements: Readonly<Record<string, DiagramPageArrangement>>,
-    ofDocument: DiagramDocument
+    ofDocument: DiagramDocument,
+    titleBlockRoom?: number
   ) => boolean;
   /**
    * Re-pack Page: let go of the arrangement flow page `pageIndex` (from 0, as

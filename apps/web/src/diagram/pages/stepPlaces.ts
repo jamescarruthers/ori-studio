@@ -152,7 +152,9 @@ export function cellSlots(document: DiagramDocument): CellSlots {
     slots,
     pages,
     shapes: planned.map((plan) => pageShape(plan, layout)),
-    signatures: flow ? pageSignatures({ steps, pages: planned, setup: document.page, title: document.title }) : [],
+    signatures: flow
+      ? pageSignatures({ steps, pages: planned, setup: document.page, title: document.title, titleBlockRoomMm: document.titleBlockContent?.room })
+      : [],
     stored: flow ? pages.map((ids) => (ids[0] === undefined ? undefined : document.pageArrangements?.[ids[0]])) : [],
     up: flow ? planned.map((_, page) => flowPagePlan(page, planned.length, document.page.firstPageSide, 1).up) : [],
   };

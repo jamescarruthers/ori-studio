@@ -379,7 +379,7 @@ describe('DiagramPagesView', () => {
     expect(props.onSelect).toHaveBeenLastCalledWith(null);
   });
 
-  it('marks where the note is cut, never in the page, and no credit with an empty value nor an empty note (Zach, 2026-10-15)', () => {
+  it('marks credits left out, never in the page, and no credit with an empty value, nor an empty note or one cut with “…” (Zach, 2026-10-15)', () => {
     const header = (credits: { label: string; value: string }[], note = '') => {
       const made = insertSteps(createDiagram({ title: 'Crane' }), [cpStep('step-1'), cpStep('step-2')], 0);
       const blocked = { ...made, page: { ...made.page, titleBlock: { enabled: true, heightShare: 0.23 } } };
@@ -402,15 +402,23 @@ describe('DiagramPagesView', () => {
     expect(host.querySelector('[data-page="0"]')!.textContent).not.toContain('AUTHOR');
     expect(pages.compose(0).svg).not.toContain('AUTHOR');
     expect(pages.compose(0).svg).toContain('STEPS');
-    // A note longer than the block has room for: marked where it is cut, by a tag under the block.
+    // A note longer than the block has room for, cut with "…": no tag (Zach, 2026-10-15: the block grows for it after
+    // an edit of it, and past half the page the end is simply not printed).
     const long = header([{ label: 'Steps', value: '2' }], Array.from({ length: 40 }, (_, index) => `Line ${index + 1}`).join('\n'));
     const longPages = preparedPages(long, FONTS, subsetter);
     render(longPages, {}, longPages.layout.bandInk, long);
-    expect(rooms()).toEqual([['cut', [['note', 'The rest of the note doesn’t fit']]]]);
+    expect(longPages.layout.pages[0]!.titleBlock!.note!.cut).toBe(true);
+    expect(rooms()).toEqual([]);
+    // Credits left out for want of room, on a short block: marked by a tag under the block.
+    const many = header(Array.from({ length: 12 }, (_, index) => ({ label: `Credit ${index + 1}`, value: 'Traditional design' })));
+    const short = { ...many, page: { ...many.page, size: 'a5' as const, orientation: 'landscape' as const, titleBlock: { enabled: true, heightShare: 0.15 } } };
+    const shortPages = preparedPages(short, FONTS, subsetter);
+    render(shortPages, {}, shortPages.layout.bandInk, short);
+    expect(rooms()).toEqual([['cut', [['credits', 'Some credits don’t fit']]]]);
     const cut = host.querySelector<HTMLElement>('[data-title-block-room="cut"]')!;
     expect(cut.getAttribute('data-kind')).toBe('cut');
-    const { block: longBlock } = longPages.layout.pages[0]!.titleBlock!.geometry;
-    expect(cut.style.top).toBe(`${(longBlock.y + longBlock.h) * PX_PER_MM}px`);
+    const { block: shortBlock } = shortPages.layout.pages[0]!.titleBlock!.geometry;
+    expect(cut.style.top).toBe(`${(shortBlock.y + shortBlock.h) * PX_PER_MM}px`);
   });
 
   it('sets the words for a missing pattern over a portrait model standing at its own size in its place, not on it', () => {
