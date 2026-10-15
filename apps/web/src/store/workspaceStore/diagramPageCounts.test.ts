@@ -68,10 +68,11 @@ describe('setDiagramPageSteps', () => {
     expect(pages()).toEqual(['s0 s1 s2 s3', 's4 s5 s6 s7', 's8 s9 s10 s11', 's12 s13']);
   });
 
-  it('moves the boundary with a next page of its own count, and takes a count away again', () => {
+  it('shifts a next page of its own count, which keeps it, and takes a count away again', () => {
     install(14, { 4: 4, 8: 4 });
     expect(state().setDiagramPageSteps(1, 6)).toBe(true);
-    expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10:2 s11', 's12 s13']);
+    // Page three keeps its four, starting two later: the page of two after it is gone (Zach, 2026-10-15).
+    expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10:4 s11 s12 s13']);
     expect(state().setDiagramPageSteps(2, null)).toBe(true);
     expect(state().diagramHistory.past.at(-1)?.label).toBe('Fill page by default');
     expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10 s11 s12 s13']);

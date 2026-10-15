@@ -1185,7 +1185,7 @@
       "pageStepsDefault": "Predeterminado",
       "pageStepsHolds": "Mantiene las páginas siguientes en su sitio",
       "pageStepsTitleBlock": "El bloque de título ocupa espacio en esta página, así que por defecto admite {{number}}.",
-      "pageStepsTitleBlockOwn": "Esta página conserva su propio número de pasos bajo el bloque de título; si no lo tuviera, admitiría {{number}}.",
+      "pageStepsTitleBlockOwn": "Mientras está activado, el bloque de título resta {{number}} al número de pasos propio de esta página; las páginas siguientes conservan el suyo y se desplazan con ella.",
       "pageStepsUseDefault": "Usar predeterminado",
       "paper": "Papel",
       "pathColor": "Color del recorrido",

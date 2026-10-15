@@ -24,9 +24,10 @@ import styles from './DiagramPageStepsRow.module.css';
  * The line under the field holds the note or the action, so the stepper
  * stays where it is as one gives way to the other. On the first page under
  * the title block the row's help says why the page holds fewer than Steps
- * per page, or, where the page has a count of its own, that the block keeps
- * it (`implementation-plans/diagram-title-block.md`, T-20 B) and what the
- * page would hold without it.
+ * per page, or, where the page has a count of its own, how many the block
+ * takes off that count, and that later pages keep theirs and shift
+ * (`implementation-plans/diagram-title-block.md`, Zach's answer of
+ * 2026-10-15).
  */
 export function DiagramPageStepsRow({
   current,
@@ -39,7 +40,7 @@ export function DiagramPageStepsRow({
   onChange: (count: number | null) => void;
 }) {
   const { t } = useTranslation();
-  const { page, index, name, range, holdsLaterPages, titleBlockDefault } = current;
+  const { page, index, name, range, holdsLaterPages, titleBlockDefault, titleBlockTakes } = current;
   const own = page.ownCount;
   return (
     <div className={styles.row}>
@@ -53,8 +54,8 @@ export function DiagramPageStepsRow({
             : own
               ? t(
                   'panels:diagram.pagePane.pageStepsTitleBlockOwn',
-                  'This page keeps its own count under the title block; without one it would hold {{number}}.',
-                  { number: titleBlockDefault }
+                  'The title block takes {{number}} off this page’s own count while it is on; later pages keep their counts and shift with it.',
+                  { number: titleBlockTakes }
                 )
               : t(
                   'panels:diagram.pagePane.pageStepsTitleBlock',

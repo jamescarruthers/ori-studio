@@ -284,17 +284,56 @@ describe('setPageSteps', () => {
     expect(pages(setPageSteps(plain, 1, 6))).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10 s11 s12 s13']);
   });
 
-  it('grows into a next page with its own count, which then starts later and keeps its last step', () => {
+  it('grows into a next page with its own count, which keeps it and starts later: the page the shift empties at the end is gone', () => {
     const counted = diagram(14, { 4: 4, 8: 4 });
-    expect(pages(setPageSteps(counted, 1, 6))).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10:2 s11', 's12 s13']);
+    expect(pages(setPageSteps(counted, 1, 6))).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10:4 s11 s12 s13']);
   });
 
-  it('empties a next page with its own count, which is gone, and carries on into the page after', () => {
+  it('shifts every later page with its own count on, each keeping it; one pushed past the last step is gone', () => {
     const counted = diagram(14, { 4: 4, 8: 2, 10: 3 });
     expect(pages(counted)).toEqual(['s0 s1 s2 s3', 's4:4 s5 s6 s7', 's8:2 s9', 's10:3 s11 s12', 's13']);
-    expect(pages(setPageSteps(counted, 1, 7))).toEqual(['s0:4 s1 s2 s3', 's4:7 s5 s6 s7 s8 s9 s10', 's11:2 s12', 's13']);
+    expect(pages(setPageSteps(counted, 1, 7))).toEqual(['s0:4 s1 s2 s3', 's4:7 s5 s6 s7 s8 s9 s10', 's11:2 s12', 's13:3']);
+    expect(pages(setPageSteps(counted, 1, 9))).toEqual(['s0:4 s1 s2 s3', 's4:9 s5 s6 s7 s8 s9 s10 s11 s12', 's13:2']);
     // As far as the last step: every page after is gone, and the count is the steps it holds.
     expect(pages(setPageSteps(counted, 1, 30))).toEqual(['s0:4 s1 s2 s3', 's4:10 s5 s6 s7 s8 s9 s10 s11 s12 s13']);
+  });
+
+  it('shifts the crane’s pages (Zach, 2026-10-15): its first page set to 7 holds 7 / 11 / 9 / 1, and back to 9 its pages as they were', () => {
+    // 28 steps, each page with its own count, the last laid out for 9 and holding 8.
+    const crane = diagram(28, { 0: 9, 9: 11, 20: 9 }, [], { stepsPerPage: 9 });
+    const sizes = (document: DiagramDocument) => pages(document).map((page) => page.split(' ').length);
+    expect(sizes(crane)).toEqual([9, 11, 8]);
+    const seven = setPageSteps(crane, 0, 7);
+    expect(sizes(seven)).toEqual([7, 11, 9, 1]);
+    expect(counts(seven)).toEqual({ s0: 7, s7: 11, s18: 9 });
+    expect(setPageSteps(seven, 0, 9)).toEqual(crane);
+  });
+
+  it('stops the shift at a page break: the page in front of it takes up the difference, so the break stays on its step', () => {
+    // `s0:4 … | s4:4 … | s8:4 … | |s12 s13 s14 s15`: a break before s12, a page with its own count in front of it.
+    const broken = diagram(16, { 0: 4, 4: 4, 8: 4 }, [12]);
+    expect(pages(setPageSteps(broken, 0, 2))).toEqual(['s0:2 s1', 's2:4 s3 s4 s5', 's6:6 s7 s8 s9 s10 s11', 's12 s13 s14 s15']);
+    expect(pages(setPageSteps(broken, 0, 6))).toEqual(['s0:6 s1 s2 s3 s4 s5', 's6:4 s7 s8 s9', 's10:2 s11', 's12 s13 s14 s15']);
+    // Pushed up to the break, the page in front of it is gone, and the one the shift brings there ends at it.
+    expect(pages(setPageSteps(broken, 0, 9))).toEqual(['s0:9 s1 s2 s3 s4 s5 s6 s7 s8', 's9:3 s10 s11', 's12 s13 s14 s15']);
+    for (const count of [2, 6, 9]) expect(breaks(setPageSteps(broken, 0, count))).toEqual(['s12']);
+    // Grown past the break, the page it starts takes up the rest, its break moving on, as before.
+    const past = setPageSteps(broken, 0, 13);
+    expect(pages(past)).toEqual(['s0:13 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12', 's13 s14 s15']);
+    expect(breaks(past)).toEqual(['s13']);
+    // A page in front of the break with no count of its own refills, the steps it cannot hold on a page of their own.
+    const automatic = diagram(16, { 0: 4, 4: 4 }, [12]);
+    expect(pages(setPageSteps(automatic, 0, 2))).toEqual(['s0:2 s1', 's2:4 s3 s4 s5', 's6 s7 s8 s9', 's10 s11', 's12 s13 s14 s15']);
+  });
+
+  it('shrinks no further than leaves the page in front of a break 30 at most', () => {
+    // 70 steps, 30 a page: pages of 10 and 29 by their counts, a break before s39 and the steps after it.
+    const full = diagram(70, { 0: 10, 10: 29 }, [39], { stepsPerPage: 30 });
+    expect(pages(full).map((page) => page.split(' ').length)).toEqual([10, 29, 30, 1]);
+    expect(pageStepsRange(full, 0)).toEqual({ min: 9, max: 30 });
+    const shrunk = setPageSteps(full, 0, 5);
+    expect(pages(shrunk).map((page) => page.split(' ').length)).toEqual([9, 30, 30, 1]);
+    expect(breaks(shrunk)).toEqual(['s39']);
   });
 
   it('never empties a page that starts by a page break: it grows to that page’s last step, and gives the steps back', () => {
@@ -311,14 +350,14 @@ describe('setPageSteps', () => {
     expect(pageStepsRange(broken, 1)).toEqual({ min: 1, max: 7 });
   });
 
-  it('shrinks no further than leaves a next page with its own count 30 at most, so its last step stays', () => {
+  it('shifts a later page of 29 back as it is, with no break to take up the change: the steps after it fill the page at the end', () => {
     // 62 steps, 30 a page: pages of 30 and 29 by their counts, and 3 more.
     const full = diagram(62, { 0: 30, 30: 29 }, [], { stepsPerPage: 30 });
     expect(pages(full).map((page) => page.split(' ').length)).toEqual([30, 29, 3]);
-    expect(pageStepsRange(full, 0)).toEqual({ min: 29, max: 30 });
+    expect(pageStepsRange(full, 0)).toEqual({ min: 1, max: 30 });
     const shrunk = setPageSteps(full, 0, 20);
-    expect(pages(shrunk).map((page) => page.split(' ').length)).toEqual([29, 30, 3]);
-    expect(pages(shrunk)[1]!.split(' ').at(-1)).toBe('s58');
+    expect(pages(shrunk).map((page) => page.split(' ').length)).toEqual([20, 29, 13]);
+    expect(counts(shrunk)).toEqual({ s0: 20, s20: 29 });
   });
 
   it('lets the last page take any count up to 30, the count it is then laid out for', () => {
@@ -345,9 +384,9 @@ describe('setPageSteps', () => {
     expect(stepsOf(next).filter((step) => step.breakBefore).map((step) => step.id)).toEqual(['s9']);
   });
 
-  it('shrinks back from a next page with its own count, which then starts earlier and keeps its last step', () => {
+  it('shrinks back from a next page with its own count, which keeps it and starts earlier, the pages after refilling', () => {
     const counted = diagram(14, { 4: 4, 8: 4 });
-    expect(pages(setPageSteps(counted, 1, 2))).toEqual(['s0:4 s1 s2 s3', 's4:2 s5', 's6:6 s7 s8 s9 s10 s11', 's12 s13']);
+    expect(pages(setPageSteps(counted, 1, 2))).toEqual(['s0:4 s1 s2 s3', 's4:2 s5', 's6:4 s7 s8 s9', 's10 s11 s12 s13']);
   });
 
   it('shrinks back from an automatic next page, which refills with the steps it gave up', () => {
@@ -380,10 +419,10 @@ describe('setPageSteps', () => {
     expect(countHoldsLaterPages(plain, 0)).toBe(false);
   });
 
-  it('gives a page between this one and a later one with a count its size, so the boundary adds no page in front of that', () => {
-    // `s0 s1 s2 s3 | s4 s5 s6 s7 | s8:4 …`: page 1 to 2 hands page 2 its steps, which keeps them all.
+  it('gives a page between this one and a later one with a count its size, which it keeps as the pages shift', () => {
+    // `s0 s1 s2 s3 | s4 s5 s6 s7 | s8:4 …`: page 2 holds its four, and every page after page 1 starts two earlier.
     const counted = diagram(12, { 8: 4 });
-    expect(pages(setPageSteps(counted, 0, 2))).toEqual(['s0:2 s1', 's2:6 s3 s4 s5 s6 s7', 's8:4 s9 s10 s11']);
+    expect(pages(setPageSteps(counted, 0, 2))).toEqual(['s0:2 s1', 's2:4 s3 s4 s5', 's6:4 s7 s8 s9', 's10 s11']);
     expect(pageStepsRange(counted, 0)).toEqual({ min: 1, max: 12 });
   });
 
@@ -438,24 +477,73 @@ describe('the first page with the title block (diagram-title-block.md)', () => {
     expect(counts(setPageSteps(lone, 0, 9))).toEqual({ s0: 9 });
   });
 
-  it('keeps a first page’s count, one a later page’s count held it at included, when the block comes or goes: only that page re-packs', () => {
-    // As built (`diagram-title-block.md`, T-20 B): a count on the first page wins, whoever wrote it. Zach's crane
-    // holds one on every page, so its first page keeps its steps in the block's shorter room.
+  describe('rule 7: the block coming or going moves the first page’s count by what it takes, and the pages after shift (Zach, 2026-10-15)', () => {
     const ON = { titleBlock: { enabled: true, heightShare: 0.27 } };
     const OFF = { titleBlock: PAGE_SETTINGS.titleBlock.legacy };
-    const changed = (before: DiagramDocument, after: DiagramDocument) =>
-      cellSlots(after).signatures.map((signature, index) => signature !== cellSlots(before).signatures[index]);
-    const held = setPageSteps(diagram(12), 1, 5);
-    expect(pages(held)).toEqual(['s0:4 s1 s2 s3', 's4:5 s5 s6 s7 s8', 's9 s10 s11']);
-    const on = setPageSetup(held, ON);
-    expect(pages(on)).toEqual(pages(held));
-    expect(changed(held, on)).toEqual([true, false, false]);
-    // And back: a first page held at what it held under the block keeps it without.
-    const blocked = setPageSteps(diagram(12, {}, [], ON), 1, 5);
-    expect(pages(blocked)).toEqual(['s0:3 s1 s2', 's3:5 s4 s5 s6 s7', 's8 s9 s10 s11']);
-    const off = setPageSetup(blocked, OFF);
-    expect(pages(off)).toEqual(pages(blocked));
-    expect(changed(blocked, off)).toEqual([true, false, false]);
+    const toggled = (document: DiagramDocument, page: Partial<DiagramPageSetup>) => kept(document, (d) => setPageSetup(d, page));
+    const sizes = (document: DiagramDocument) => pages(document).map((page) => page.split(' ').length);
+
+    it('moves the crane’s own counts: 9 / 11 / 9 holding 8 becomes 7 / 11 / 9 / 1, and off again the pages as they were', () => {
+      const crane = diagram(28, { 0: 9, 9: 11, 20: 9 }, [], { stepsPerPage: 9 });
+      expect(sizes(crane)).toEqual([9, 11, 8]);
+      const on = toggled(crane, ON);
+      expect(sizes(on)).toEqual([7, 11, 9, 1]);
+      expect(counts(on)).toEqual({ s0: 7, s7: 11, s18: 9 });
+      const off = toggled(on, OFF);
+      expect(sizes(off)).toEqual([9, 11, 8]);
+      expect(off).toEqual(crane);
+    });
+
+    it('moves a first page’s count a later page’s count held it at, as one set by hand', () => {
+      const held = setPageSteps(diagram(12), 1, 5);
+      expect(pages(held)).toEqual(['s0:4 s1 s2 s3', 's4:5 s5 s6 s7 s8', 's9 s10 s11']);
+      const on = toggled(held, ON);
+      expect(pages(on)).toEqual(['s0:3 s1 s2', 's3:5 s4 s5 s6 s7', 's8 s9 s10 s11']);
+      expect(toggled(on, OFF)).toEqual(held);
+    });
+
+    it('gives an automatic first page no count, its default doing the moving: a later page with one shifts all the same', () => {
+      const plain = diagram(12);
+      const on = setPageSetup(plain, ON);
+      expect(retainPageCounts(plain, on)).toBe(on);
+      expect(pages(on)).toEqual(['s0 s1 s2', 's3 s4 s5 s6', 's7 s8 s9 s10', 's11']);
+      // A later page with its own count, as an older build could leave one, starts one earlier.
+      const counted = diagram(12, { 8: 4 });
+      const shifted = toggled(counted, ON);
+      expect(pages(shifted)).toEqual(['s0 s1 s2', 's3 s4 s5 s6', 's7:4 s8 s9 s10', 's11']);
+      expect(counts(shifted)).toEqual({ s7: 4 });
+      expect(toggled(shifted, OFF)).toEqual(counted);
+    });
+
+    it('moves a page cut short by a break only past its new count, and a lone page’s count as it is laid out', () => {
+      // A first page of its own 6, cut to 4 by a break: under the block its count is 5, and it still holds its 4.
+      const cut = toggled(diagram(12, { 0: 6 }, [4]), ON);
+      expect(pages(cut)).toEqual(['s0:5 s1 s2 s3', 's4 s5 s6 s7', 's8 s9 s10 s11']);
+      // A lone page of its own 4 holding 2: laid out for 3 under the block.
+      expect(counts(toggled(diagram(2, { 0: 4 }), ON))).toEqual({ s0: 3 });
+    });
+
+    it('stops at a page break as Set Steps on Page does', () => {
+      const broken = diagram(16, { 0: 4, 4: 4, 8: 4 }, [12]);
+      expect(pages(toggled(broken, ON))).toEqual(['s0:3 s1 s2', 's3:4 s4 s5 s6', 's7:5 s8 s9 s10 s11', 's12 s13 s14 s15']);
+    });
+
+    it('moves the flow’s counts on a grid too, which ignores them', () => {
+      const grid = diagram(28, { 0: 9, 9: 11, 20: 9 }, [], { stepsPerPage: 9, layout: 'grid', columns: 3, rows: 3 });
+      expect(counts(toggled(grid, ON))).toEqual({ s0: 7, s7: 11, s18: 9 });
+    });
+
+    it('moves nothing where the block did not change what the first page holds, or would have to edit a newer build’s step', () => {
+      const crane = diagram(28, { 0: 9, 9: 11, 20: 9 }, [], { stepsPerPage: 9 });
+      // A share that still leaves the first page its 7 of 9.
+      const on = toggled(crane, ON);
+      const share = setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.25 } });
+      expect(retainPageCounts(on, share)).toBe(share);
+      const steps = stepsOf(crane).map((step) => (step.id === 's9' ? { ...step, unknown: { id: 's9', pageSteps: 11 } } : step));
+      const locked = { ...crane, steps };
+      const lockedOn = setPageSetup(locked, ON);
+      expect(retainPageCounts(locked, lockedOn)).toBe(lockedOn);
+    });
   });
 
   it('keeps a first page’s own count through an edit on it, as without the block', () => {

@@ -324,6 +324,41 @@ describe('the title block (diagram-title-block.md)', () => {
     expect(frames()).toEqual(ids(0, 11));
   });
 
+  it('moves the first page’s own count, the pages after shifting: frames that changed page go home; one Undo restores it (Zach, 2026-10-15)', () => {
+    // The crane's shape: 28 steps, 9 a page, each page with its own count — 9, 11, and 9 holding 8.
+    const counted = plain(28).map((step, index) => ({
+      ...step,
+      place: PLACE,
+      ...(index === 0 ? { pageSteps: 9 } : index === 9 ? { pageSteps: 11 } : index === 20 ? { pageSteps: 9 } : {}),
+    }));
+    const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), counted, 0), {
+      layout: 'flow',
+      stepsPerPage: 9,
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+    });
+    state().installDiagram({ document, readOnly: false, raw: {} });
+    const held = adoptAll();
+    expect(pages().map((page) => page.length)).toEqual([9, 11, 8]);
+    expect(state().setDiagramPage(ON)).toBe(true);
+    expect(pages()).toEqual([ids(0, 6), ids(7, 17), ids(18, 26), ids(27, 27)]);
+    // s7 and s8 went on to page two, s18 and s19 to page three, s27 to a page of its own: home, with Undo in the notice.
+    const moved = ['s7', 's8', 's18', 's19', 's27'];
+    expect(frames()).toEqual(ids(0, 27).filter((id) => !moved.includes(id)));
+    expect(state().diagramPlacesSettled).toMatchObject({ count: 5, added: 5, entry: state().diagramHistory.past.at(-1) });
+    expect(undoSteps()).toBe(1);
+    state().undoDiagram();
+    expect(state().diagram).toBe(held);
+    // Off again, as an edit of its own: the pages as they were cut.
+    state().redoDiagram();
+    expect(state().setDiagramPage(OFF)).toBe(true);
+    expect(pages()).toEqual([ids(0, 8), ids(9, 19), ids(20, 27)]);
+    expect(stepsOf(state().diagram!).flatMap((step) => (step.pageSteps !== undefined ? [[step.id, step.pageSteps]] : []))).toEqual([
+      ['s0', 9],
+      ['s9', 11],
+      ['s20', 9],
+    ]);
+  });
+
   it('turned off again, re-cuts the pages back as an edit of its own', () => {
     install();
     adoptAll();

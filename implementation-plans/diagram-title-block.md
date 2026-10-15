@@ -5,6 +5,20 @@
 and its gate passed (1g, "As built (Phase 1)"); what is left is Zach's:
 T-21 and the looks listed in 1g. Phase 2 waits for the release.**
 
+**Zach's answers, 2026-10-15** (built under "Zach's answers of 2026-10-15"
+at the end of Phase 1):
+- Page counts: "shift everything later". When a page's count changes, the
+  pages after it keep their own counts and shift; the title block's toggle
+  moves page 1's count, its own included, by the steps the block takes, and
+  the later pages shift the same way (the crane: 9 / 11 / 9 → 7 / 11 / 9 /
+  1, and back). This replaces T-20 B.
+- Step 1: "just needs to start at the top left of the steps (its okay if
+  there is space above it dedicated to the title)". A page's first step
+  stands at its packing area's left edge.
+- The header's look (sizes, a striking design on the left, a rich-text
+  byline, the pane's order, a default byline) waits on mockups he will
+  choose from; nothing of it is built here.
+
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
 whether to delay the release based on how implementation goes. Don't merge
@@ -305,7 +319,8 @@ With the block on, page 1 is laid out like this.
   7 at 27%. In the grid, `columns × (rows − blockRows)`. A half rounds up,
   and each product is taken as written; the contract says so, since another
   rounding would re-cut saved first pages. A count set on page 1 itself
-  still wins (T-20). It is read from the page setup alone, through one
+  still wins; the toggle moves it by the block's difference (T-20, as Zach
+  answered it on 2026-10-15). It is read from the page setup alone, through one
   function, `firstPageCapacity(setup)` in `pagePlan.ts`, called inside
   `splitPages` and `paginate` for the first page only. No caller changes:
   each already paginates through those two. The grid's "per page" readout
@@ -357,7 +372,9 @@ layout:
   later flow page re-packs. Frames on steps that change page go home, with
   the existing toast and Undo (`usePlacementReflowNotice.ts`). This is the
   same kind of change as editing Steps per page. A page 1 with its own
-  count keeps it, and only page 1 re-packs (T-20).
+  count has it moved by the block's difference, and the later pages keep
+  their own counts and shift (T-20, Zach's answer of 2026-10-15; T-20 B,
+  "only page 1 re-packs", was built first and is replaced).
 - On a grid, every cell on page 1 moves under the block, so every frame
   there goes home, as Decision 1A says of a cell that moves
   (`stepPlaces.ts`, `pageShape`).
@@ -409,8 +426,12 @@ layout:
 
 **T-20. A count on page 1 when the block comes or goes. Raised in the
 review of 1a and 1b; built as B. B taken as recommended, 2026-10-14, under
-Zach's standing "go with your recs": not his answer, and he may still
-overrule it.** A count on page 1 wins (T-3 A), and the app writes one
+Zach's standing "go with your recs". Answered by Zach on 2026-10-15, "shift
+everything later", which is neither A nor B: page 1's count, its own
+included, moves by the block's difference, and every later page keeps its
+own count and shifts (the crane 9 / 11 / 9 → 7 / 11 / 9 / 1, where A gave
+7 / 13 / 8). Built, and B's pin replaced: "Zach's answers of 2026-10-15"
+under Phase 1. The options as they were put to him follow.** A count on page 1 wins (T-3 A), and the app writes one
 itself. Setting a later page's count holds every page in front of it at its
 present size (`heldCounts`, `pages/pageCounts.ts`), so page 1 gets a count
 its author never set, and the toggle no longer changes what page 1 holds.
@@ -1205,6 +1226,12 @@ reason note that wraps), `implementation-plans/diagram-document-evolution.md`
   (T-20 B, T-21 A), 2026-10-14, under his standing "go with your recs".
   Not his answer: Zach may still overrule either, T-21 before this branch
   merges into #436 or ships (the header).
+- [x] T-20 answered by Zach, 2026-10-15: "shift everything later" (replaces
+  B). Step 1 at the top left of the steps' area (1g's step 1 item). Built
+  below, "Zach's answers of 2026-10-15".
+- [ ] The header's look (sizes, the left-hand design, a rich-text byline,
+  the pane's order, a default byline): mockups first, his choice, then a
+  build.
 
 ### Phase 1: the first cut (for the release)
 
@@ -1504,7 +1531,9 @@ null, or a null `scene`), so the overlay can name it.
   one-row grid, with its hint. Read-only diagrams disable the section.
 - [x] The overlay's placeholders. The Title help updated.
 - [x] With the block on and page 1 holding its own count, "Steps on page
-  1" says the block does not change it (T-20 B).
+  1" says the block does not change it (T-20 B). (Since Zach's answer of
+  2026-10-15 it says how many the block takes off that count, and that
+  later pages keep theirs and shift.)
 - [x] Analytics and `docs/analytics.md`.
 - [x] i18n: extract, eight locales, stamp, check.
 
@@ -1915,6 +1944,68 @@ five looks in 1g's list; and the first look (1d). Open, not looked into: a
 pulled References card's scale on a flow page with the block (1f). Phase 2
 is as listed below; nothing from Phase 1 moved into it. A separate change,
 if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
+
+**Zach's answers of 2026-10-15**
+- [x] A. Page counts shift (T-20, his answer; replaces B).
+- [ ] B. Step 1 at the top left of the steps' area (1g's step 1 item).
+
+*As built (A, the shift).* `pages/pageCounts.ts`:
+- `setPageSteps` sets a page's count, then `shiftLaterPages` moves the
+  pages after it: each keeps its own count, its start (and the count with
+  it) moving by as many steps as the page set gained or gave up. A page
+  without a count refills as it always has, so the steps pushed past the
+  end fill a page added there, and a page the shift empties is gone. The
+  pages in front still take their present size as their own count
+  (`heldCounts`, unchanged), and so do the pages between the one set and a
+  later one with a count, which then keep it as they shift.
+- **At a page break (decided here, as recommended):** the shift stops. The
+  break's page and every page after stay as they are; the page in front of
+  the break takes up the difference, its count changing by as many steps as
+  its size does, so it still ends at the break (one with no count refills,
+  and the steps it cannot hold go on a page of their own in front of the
+  break, as an automatic page's always have). Where the page set is itself
+  in front of the break, or grows past it, the break's page takes it up as
+  every count did before: its start moves, the break with it, and its last
+  step stays (`breakTakesUp`, the old code). So a break stays on the step it
+  was set on unless the page in front of it is the one set. The limit that
+  kept a counted next page to 30 (L3) now guards the page that takes up the
+  change; without a break nothing takes it up, and the least count is 1.
+- **The toggle (rule 7, `shiftForTitleBlock`),** inside `retainPageCounts`,
+  which the store runs on every edit: turning the block on or off, or
+  changing its share, moves page 1's count by the steps the block takes off
+  its default (Steps per page less `firstPageCapacity`), a count of its own
+  included, and shifts the later pages as above. Read in the flow's pages
+  whatever the layout, as counts are. An automatic page 1 is given no count
+  (its default moves); no other page is given one; a page 1 its next page
+  cut short gives up only the steps past its new count; a lone page's count
+  moves as it is laid out; where the shift would edit a newer build's step,
+  nothing moves (page 1 then keeps its steps under the block, as under B).
+- The Page pane's "Steps on page 1" help, with a count of its own under the
+  block, says the block takes N off it while on and later pages keep theirs
+  and shift (`CurrentDiagramPage.titleBlockTakes`), in all nine catalogs.
+- Tests that failed before (13 in `pageCounts.test.ts`, swapped against the
+  old module; 1 in `diagramPageArrangements.test.ts`): the crane's shape,
+  9 / 11 / 9 holding 8 → 7 / 11 / 9 / 1 by Set Steps on Page and by the
+  toggle, and back to the document as it was; a break taking up the change
+  both ways, pushed up to and past; the 30 limit at a break; an automatic
+  page 1 with a later count; a page cut short; a lone page; on a grid; a
+  newer build's step. Through the store: frames on the five steps that
+  change page go home with the notice, and one Undo restores the document
+  exactly. The tests that pinned the old rule (T-20 B, the next page
+  keeping its last step) were rewritten to the shift.
+- On the dev server (5332) with Zach's crane (`artifacts/title-block/
+  answers-1015/`, `a/`): it opens as before (9 / 11 / 8, held, nothing
+  unsaved); the switch on gives 7 / 11 / 9 / 1, four pages, page scales
+  0.999 / 0.840 / 0.843 / 0.919 (B kept 9 on page 1 at 0.864); off again
+  gives 9 / 11 / 8 with its counts on the steps they started on, and every
+  page held as saved again (page scales 1.251 / 0.891 / 0.972), since each
+  page's stored arrangement matches once more. **Seen there, for Zach:** the
+  crane's pages 2 and 3 re-pack under the shift, and steps that stay on
+  their page and band keep the hand offsets made for the old packing (his
+  rule of 2026-10-13), which on page 2 now overlap (step 17 was moved
+  74 mm down, 15 and 16 30 mm left): `a/crane-on/pdf-all.png`. Undo, or
+  moving them home, clears it; whether a page whose first step changed
+  should keep offsets is his call.
 
 ### Phase 2: after the release
 

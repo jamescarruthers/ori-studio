@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { PAGE_STEPS_RANGE, isStep, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
 import { countHoldsLaterPages, pageStepsRange, type PageStepsRange } from './pageCounts';
 import { usePageInView, type PagesInView } from './pageInView';
-import { firstPageCapacity, hasTitleBlock, paginate, type PlannedPage } from './pagePlan';
+import { firstPageCapacity, hasTitleBlock, pageCapacity, paginate, type PlannedPage } from './pagePlan';
 
 /** The page a pane's "this page" means: its index, what it is called, and how the page setup cuts it. */
 export interface CurrentDiagramPage {
@@ -19,11 +19,17 @@ export interface CurrentDiagramPage {
   holdsLaterPages: boolean;
   /**
    * The first page under the title block: the count the block gives it by
-   * default (`firstPageCapacity`), which a count of its own overrides and
-   * keeps as the block comes and goes (T-20 B). Null on any other page, and
-   * without the block.
+   * default (`firstPageCapacity`), which a count of its own overrides. Null
+   * on any other page, and without the block.
    */
   titleBlockDefault: number | null;
+  /**
+   * The first page under the title block: how many steps the block takes off
+   * its default, Steps per page less {@link titleBlockDefault} — what the
+   * block coming or going moves a count of its own by (`pageCounts.ts`, rule
+   * 7). Null where {@link titleBlockDefault} is.
+   */
+  titleBlockTakes: number | null;
 }
 
 /** What the Pages view captions page `index`: the number it prints, or its place when it prints none. */
@@ -58,13 +64,15 @@ export function currentDiagramPage(
     else if (selected === null || selected < view.first || selected > view.last) index = view.middle;
   }
   index = Math.min(Math.max(0, index), last);
+  const titleBlockDefault = index === 0 && hasTitleBlock(document.page) ? firstPageCapacity(document.page) : null;
   return {
     index,
     name: pageName(document.page, index),
     page: pages[index]!,
     range: pageStepsRange(document, index) ?? PAGE_STEPS_RANGE,
     holdsLaterPages: countHoldsLaterPages(document, index),
-    titleBlockDefault: index === 0 && hasTitleBlock(document.page) ? firstPageCapacity(document.page) : null,
+    titleBlockDefault,
+    titleBlockTakes: titleBlockDefault === null ? null : pageCapacity(document.page) - titleBlockDefault,
   };
 }
 

@@ -165,6 +165,18 @@ As built (the second review, 2026-10-11; the layout itself unchanged):
   and a later counted page its present size, so the boundary it moves adds or
   drops no page in front of that one.
 
+Changed by Zach, 2026-10-15 ("shift everything later";
+`diagram-title-block.md`, "Zach's answers of 2026-10-15"): a count set no
+longer moves the boundary with the next page alone. Every later page keeps
+its own count and shifts, its start and count moving together; a page is
+added at the end where the steps no longer fit, and one emptied is gone. A
+page break stops the shift: the page in front of it takes up the
+difference, ending at the break as before, or, where the page set is itself
+in front of the break, the break's page does, as above (L4 unchanged). L3's
+limit now guards that page. The title block's toggle moves page 1's count,
+its own included, by the steps the block takes, and the later pages shift
+the same way.
+
 ### Layout (`diagramPageLayout.ts`, flow branch)
 
 Start from the cell path (#436's code, as on the 90b4cf001 Phase 1b commit)

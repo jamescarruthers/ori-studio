@@ -1185,7 +1185,7 @@
       "pageStepsDefault": "Padrão",
       "pageStepsHolds": "Mantém as páginas seguintes no lugar",
       "pageStepsTitleBlock": "O bloco de título ocupa espaço nesta página, então ela comporta {{number}} por padrão.",
-      "pageStepsTitleBlockOwn": "Esta página mantém sua própria contagem sob o bloco de título; sem ela, comportaria {{number}}.",
+      "pageStepsTitleBlockOwn": "Enquanto está ativado, o bloco de título tira {{number}} da contagem própria desta página; as páginas seguintes mantêm a delas e se deslocam junto.",
       "pageStepsUseDefault": "Usar padrão",
       "paper": "Papel",
       "pathColor": "Cor do trajeto",

@@ -407,7 +407,7 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(host?.textContent).not.toContain('Keeps later pages in place');
   });
 
-  it('says why page 1 holds fewer under the title block, or that its own count stays there (T-20 B)', () => {
+  it('says why page 1 holds fewer under the title block, or how many the block takes off its own count (Zach, 2026-10-15)', () => {
     const blockHelp = () => field()!.closest('[data-field-row]')!.querySelector('[data-field-help]')?.getAttribute('aria-label');
     const block = (enabled: boolean) =>
       act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled } }));
@@ -418,8 +418,9 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(field()?.value).toBe(String(underBlock));
     expect(blockHelp()).toBe(`The title block takes room on this page, so it holds ${underBlock} by default.`);
     act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Decrease Steps on page 1"]')!.click());
+    const takes = state().diagram!.page.stepsPerPage - underBlock;
     expect(blockHelp()).toBe(
-      `This page keeps its own count under the title block; without one it would hold ${underBlock}.`
+      `The title block takes ${takes} off this page’s own count while it is on; later pages keep their counts and shift with it.`
     );
     // Page 2 says nothing of it, and nor does page 1 with the block off.
     showPage(1);

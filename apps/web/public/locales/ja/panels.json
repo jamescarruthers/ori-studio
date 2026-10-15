@@ -1111,7 +1111,7 @@
       "pageStepsDefault": "既定",
       "pageStepsHolds": "後のページの位置を保ちます",
       "pageStepsTitleBlock": "タイトル欄がこのページの場所を取るため、既定では {{number}} ステップを収めます。",
-      "pageStepsTitleBlockOwn": "このページはタイトル欄があっても独自のステップ数を保ちます。指定がなければ {{number}} ステップになります。",
+      "pageStepsTitleBlockOwn": "タイトル欄がオンの間は、このページ独自のステップ数から {{number}} を差し引きます。後のページはそれぞれのステップ数を保ったまま、それに合わせてずれます。",
       "pageStepsUseDefault": "既定を使う",
       "paper": "用紙",
       "pathColor": "経路の色",

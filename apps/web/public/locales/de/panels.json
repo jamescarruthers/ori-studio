@@ -1148,7 +1148,7 @@
       "pageStepsDefault": "Standard",
       "pageStepsHolds": "Hält die folgenden Seiten an ihrem Platz",
       "pageStepsTitleBlock": "Der Titelblock braucht Platz auf dieser Seite, daher fasst sie standardmäßig {{number}}.",
-      "pageStepsTitleBlockOwn": "Diese Seite behält unter dem Titelblock ihre eigene Anzahl; ohne diese würde sie {{number}} fassen.",
+      "pageStepsTitleBlockOwn": "Solange der Titelblock an ist, zieht er {{number}} von der eigenen Anzahl dieser Seite ab; die folgenden Seiten behalten ihre Anzahl und verschieben sich mit.",
       "pageStepsUseDefault": "Standard verwenden",
       "paper": "Papier",
       "pathColor": "Pfadfarbe",
