@@ -1220,14 +1220,14 @@
         "creditsHelp": "Une rangée sous le titre\u00a0: chaque crédit imprime son libellé au-dessus de sa valeur. Une valeur peut être le nombre d’étapes, toujours à jour.",
         "creditValue": "Valeur du crédit {{number}}",
         "creditValuePlaceholder": "Valeur",
+        "description": "Description",
+        "descriptionHelp": "Texte libre sous les crédits, imprimé seulement quand il n’est pas vide.",
         "model": "Modèle",
         "modelHelp": "Le modèle fini, dessiné d’après l’image d’une étape. Auto prend la dernière étape qui en a une.",
         "modelSize": "Taille du modèle",
         "modelSizeHelp": "La hauteur du modèle, en part de celle du bloc titre.",
         "needsRows": "Il faut au moins deux rangées",
         "none": "Aucun",
-        "note": "Note",
-        "noteHelp": "Texte libre sous les crédits, imprimé seulement quand il n’est pas vide.",
         "pattern": "Patron de plis",
         "patternHelp": "Dessiné d’après le patron de plis qu’une étape lie. Auto prend la dernière étape liée ; chaque patron n’apparaît qu’une fois, sous l’étape choisie pour lui, ou à défaut sous la dernière étape qui le lie.",
         "patternSize": "Taille du patron de plis",
@@ -1572,7 +1572,7 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Papier recommandé",
         "steps": "Étapes",
-        "subtitle": "Diagramme d’origami"
+        "subtitle": "Sous-titre"
       }
     },
     "turns": {

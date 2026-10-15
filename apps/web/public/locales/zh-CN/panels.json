@@ -1146,14 +1146,14 @@
         "creditsHelp": "标题下方的一行：每条信息在标签下方打印其内容。内容可以是步骤数，并会自动保持最新。",
         "creditValue": "第 {{number}} 条信息的内容",
         "creditValuePlaceholder": "内容",
+        "description": "描述",
+        "descriptionHelp": "信息下方的自由文本。只有填写了文字才会打印。",
         "model": "成品",
         "modelHelp": "折好的成品，取自某一步的图。自动时使用最后一个有图的步骤。",
         "modelSize": "成品尺寸",
         "modelSizeHelp": "成品的高度，占标题栏高度的比例。",
         "needsRows": "需要两行或更多",
         "none": "无",
-        "note": "备注",
-        "noteHelp": "信息下方的自由文本。只有填写了文字才会打印。",
         "pattern": "折痕图",
         "patternHelp": "取自步骤所链接的折痕图。自动时使用最后一个已链接的步骤；每个折痕图只列出一次，以为它选定的步骤命名，没有则以链接它的最后一步命名。",
         "patternSize": "折痕图尺寸",
@@ -1472,7 +1472,7 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "建议用纸",
         "steps": "步骤数",
-        "subtitle": "折纸图解"
+        "subtitle": "副标题"
       }
     },
     "turns": {

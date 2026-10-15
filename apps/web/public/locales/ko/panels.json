@@ -1146,14 +1146,14 @@
         "creditsHelp": "제목 아래의 한 줄입니다. 각 크레딧은 레이블 아래에 내용을 인쇄합니다. 내용으로 단계 수를 쓸 수 있으며, 항상 최신으로 유지됩니다.",
         "creditValue": "크레딧 {{number}}의 내용",
         "creditValuePlaceholder": "내용",
+        "description": "설명",
+        "descriptionHelp": "크레딧 아래의 자유 텍스트입니다. 텍스트가 있을 때만 인쇄됩니다.",
         "model": "모델",
         "modelHelp": "완성된 모델을 단계의 그림에서 그립니다. 자동은 그림이 있는 마지막 단계를 사용합니다.",
         "modelSize": "모델 크기",
         "modelSizeHelp": "모델의 높이로, 제목 영역 높이에 대한 비율입니다.",
         "needsRows": "2줄 이상이 필요합니다",
         "none": "없음",
-        "note": "메모",
-        "noteHelp": "크레딧 아래의 자유 텍스트입니다. 텍스트가 있을 때만 인쇄됩니다.",
         "pattern": "전개도",
         "patternHelp": "단계에 연결된 전개도에서 그립니다. 자동은 연결된 마지막 단계를 사용하며, 각 전개도는 그 전개도로 선택한 단계, 없으면 그것을 연결한 마지막 단계의 이름으로 한 번만 표시됩니다.",
         "patternSize": "전개도 크기",
@@ -1472,7 +1472,7 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "권장 용지",
         "steps": "단계 수",
-        "subtitle": "종이접기 도해"
+        "subtitle": "부제목"
       }
     },
     "turns": {

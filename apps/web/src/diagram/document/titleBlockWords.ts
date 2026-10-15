@@ -5,14 +5,15 @@ type Translate = (key: string, english: string) => string;
 
 /**
  * The words a title block starts with, in the app's language (Zach,
- * 2026-10-15): the subtitle, and the credits Author, Steps and Recommended
- * paper with their values. One source for every place that writes them — a
- * new diagram's first edit and the block's toggle (the workspace store) — and
- * for the Page pane, which shows them before a diagram exists.
+ * 2026-10-15): the subtitle — the field's own name, "Subtitle", for the
+ * author to type over — and the credits Author, Steps and Recommended paper
+ * with their values. One source for every place that writes them — a new
+ * diagram's first edit and the block's toggle (the workspace store) — and for
+ * the Page pane, which shows them before a diagram exists.
  */
 export function titleBlockDefaultWords(t: Translate): TitleBlockDefaultWords {
   return {
-    subtitle: t('panels:diagram.titleBlock.default.subtitle', 'Origami diagram'),
+    subtitle: t('panels:diagram.titleBlock.default.subtitle', 'Subtitle'),
     author: t('panels:diagram.titleBlock.default.author', 'Author'),
     authorName: t('panels:diagram.titleBlock.default.authorName', 'Your name here'),
     steps: t('panels:diagram.titleBlock.default.steps', 'Steps'),

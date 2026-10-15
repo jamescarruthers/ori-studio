@@ -15,10 +15,11 @@ const SIZE_MAX = Math.round(TITLE_BLOCK_ART_SIZE_RANGE.max * 100);
  * The first page's title block, as rows the Page pane's Header & footer opens
  * with (`implementation-plans/diagram-title-block.md`, Phase 1c, H-16 A): the
  * toggle and, a step in under it while the page has a block, what it shows —
- * top to bottom as the block reads: the subtitle, the credits and the note,
- * then the finished model and the crease pattern, each Auto (named by the step
- * it finds), a step, or None, with its size while it is shown. Bound by
- * `useDiagramTitleBlock`, which offers only what the block can show.
+ * top to bottom as the block reads: the subtitle, the credits and the
+ * description (the file's `note`), then the finished model and the crease
+ * pattern, each Auto (named by the step it finds), a step, or None, with its
+ * size while it is shown. Bound by `useDiagramTitleBlock`, which offers only
+ * what the block can show.
  */
 export function DiagramTitleBlockRows() {
   const { t, i18n } = useTranslation();
@@ -104,10 +105,11 @@ export function DiagramTitleBlockRows() {
             onValue={block.setCreditValue}
             onTypeValue={block.typeCreditValue}
           />
+          {/* The description: the file's `note`, named for the author as Zach asked (2026-10-15). */}
           <TextAreaRow
-            label={t('panels:diagram.pagePane.titleBlock.note', 'Note')}
+            label={t('panels:diagram.pagePane.titleBlock.description', 'Description')}
             help={t(
-              'panels:diagram.pagePane.titleBlock.noteHelp',
+              'panels:diagram.pagePane.titleBlock.descriptionHelp',
               'Free text under the credits. It prints only when it has text.'
             )}
             nested

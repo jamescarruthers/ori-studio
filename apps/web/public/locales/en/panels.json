@@ -1183,14 +1183,14 @@
         "creditsHelp": "A row under the title: each credit prints its label over its value. A value can be the step count, kept up to date.",
         "creditValue": "Value of credit {{number}}",
         "creditValuePlaceholder": "Value",
+        "description": "Description",
+        "descriptionHelp": "Free text under the credits. It prints only when it has text.",
         "model": "Model",
         "modelHelp": "The finished model, drawn from a step’s picture. Auto uses the last step with one.",
         "modelSize": "Model size",
         "modelSizeHelp": "The model’s height, as a share of the title block’s.",
         "needsRows": "Needs two rows or more",
         "none": "None",
-        "note": "Note",
-        "noteHelp": "Free text under the credits. It prints only when it has text.",
         "pattern": "Crease pattern",
         "patternHelp": "Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the step chosen for it or else the last step that links it.",
         "patternSize": "Crease pattern size",
@@ -1522,7 +1522,7 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Recommended paper",
         "steps": "Steps",
-        "subtitle": "Origami diagram"
+        "subtitle": "Subtitle"
       }
     },
     "turns": {

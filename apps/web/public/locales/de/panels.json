@@ -1183,14 +1183,14 @@
         "creditsHelp": "Eine Reihe unter dem Titel: Jede Angabe druckt ihre Bezeichnung über ihrem Wert. Ein Wert kann die Schrittzahl sein, stets aktuell.",
         "creditValue": "Wert der Angabe {{number}}",
         "creditValuePlaceholder": "Wert",
+        "description": "Beschreibung",
+        "descriptionHelp": "Freier Text unter den Angaben; er wird nur gedruckt, wenn er nicht leer ist.",
         "model": "Modell",
         "modelHelp": "Das fertige Modell, gezeichnet nach dem Bild eines Schritts. Auto nimmt den letzten Schritt mit Bild.",
         "modelSize": "Modellgröße",
         "modelSizeHelp": "Die Höhe des Modells, als Anteil an der des Titelblocks.",
         "needsRows": "Braucht mindestens zwei Reihen",
         "none": "Keine",
-        "note": "Anmerkung",
-        "noteHelp": "Freier Text unter den Angaben; er wird nur gedruckt, wenn er nicht leer ist.",
         "pattern": "Faltmuster",
         "patternHelp": "Gezeichnet nach dem Faltmuster, das ein Schritt verknüpft. Auto nimmt den letzten verknüpften Schritt; jedes Muster steht nur einmal in der Liste, unter dem dafür gewählten Schritt oder sonst unter dem letzten Schritt, der es verknüpft.",
         "patternSize": "Faltmustergröße",
@@ -1522,7 +1522,7 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Empfohlenes Papier",
         "steps": "Schritte",
-        "subtitle": "Origami-Diagramm"
+        "subtitle": "Untertitel"
       }
     },
     "turns": {

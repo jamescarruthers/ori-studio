@@ -65,7 +65,7 @@ function install(
 
 /** What a new diagram's title block says, in English. */
 const NEW_CONTENT = defaultTitleBlockContent({
-  subtitle: 'Origami diagram',
+  subtitle: 'Subtitle',
   author: 'Author',
   authorName: 'Your name here',
   steps: 'Steps',
@@ -182,7 +182,7 @@ describe('DiagramTitleBlockRows', () => {
     render();
     expect(toggle().getAttribute('aria-checked')).toBe('false');
     expect(select('Model')).toBeNull();
-    expect(textField('Note')).toBeNull();
+    expect(textField('Description')).toBeNull();
     act(() => toggle().click());
     expect(state().diagram!.page.titleBlock).toEqual(PAGE_SETTINGS.titleBlock.default);
     expect(state().diagram!.titleBlockContent).toEqual(NEW_CONTENT);
@@ -191,7 +191,7 @@ describe('DiagramTitleBlockRows', () => {
     // Shown at once, scaffolded: the subtitle, and the three credits, each with a value, the second following the
     // step count (Zach, 2026-10-15).
     expect(toggle().getAttribute('aria-checked')).toBe('true');
-    expect(textField('Subtitle')!.value).toBe('Origami diagram');
+    expect(textField('Subtitle')!.value).toBe('Subtitle');
     expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Steps', 'Recommended paper']);
     expect([1, 2, 3].map((number) => input(`Value of credit ${number}`)!.value)).toEqual(['Your name here', 'Auto (4)', '15 cm × 15 cm']);
     expect(select('Model')).not.toBeNull();
@@ -222,7 +222,7 @@ describe('DiagramTitleBlockRows', () => {
     // No diagram yet: the first edit makes one with the default subtitle and credits, then applies itself.
     render();
     expect(state().diagram).toBeNull();
-    expect(textField('Subtitle')!.value).toBe('Origami diagram');
+    expect(textField('Subtitle')!.value).toBe('Subtitle');
     expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Steps', 'Recommended paper']);
     // The step count already follows: there is none to add.
     expect(button('Add Step Count')).toBeUndefined();
@@ -253,7 +253,7 @@ describe('DiagramTitleBlockRows', () => {
     );
   });
 
-  it('reads as the block does, a step in under its toggle: subtitle, credits, note, then the model and the pattern with their sizes', () => {
+  it('reads as the block does, a step in under its toggle: subtitle, credits, description, then the model and the pattern with their sizes', () => {
     install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     const names = [...host!.querySelectorAll('[data-field-label], label, [role="group"][aria-labelledby]')].map(
@@ -266,7 +266,7 @@ describe('DiagramTitleBlockRows', () => {
       'Title block',
       'Subtitle',
       'Credits',
-      'Note',
+      'Description',
       'Model',
       'Model size',
       'Crease pattern',
@@ -277,7 +277,7 @@ describe('DiagramTitleBlockRows', () => {
     for (const each of [
       textField('Subtitle')!,
       input('Label of credit 1')!,
-      textField('Note')!,
+      textField('Description')!,
       select('Model')!,
       slider('Model size')!,
       select('Crease pattern')!,
@@ -333,11 +333,13 @@ describe('DiagramTitleBlockRows', () => {
     expect(noteOf('Model')).toBeNull();
   });
 
-  it('says the note prints only when it has text', () => {
+  it('calls the note the Description, and says it prints only when it has text (Zach, 2026-10-15)', () => {
     install({ titleBlock: ON });
     render();
-    const help = textField('Note')!.parentElement!.querySelector('[data-field-help]');
+    const help = textField('Description')!.parentElement!.querySelector('[data-field-help]');
     expect(help?.getAttribute('aria-label')).toBe('Free text under the credits. It prints only when it has text.');
+    expect(textField('Note')).toBeNull();
+    expect(host!.textContent).not.toMatch(/\bNote\b/);
   });
 
   it('offers no linked step whose pattern draws nothing, and names one chosen as the page’s overlay does', () => {
@@ -350,11 +352,11 @@ describe('DiagramTitleBlockRows', () => {
     expect(noteOf('Crease pattern')).toEqual({ text: 'Step 2 has no crease pattern', reason: true });
   });
 
-  it('commits the note as it is typed: a sitting at the field one undo step and one count, never its words', () => {
+  it('commits the description as it is typed: a sitting at the field one undo step and one count, never its words', () => {
     vi.useFakeTimers();
     install({ titleBlock: ON });
     render();
-    const note = () => textField('Note');
+    const note = () => textField('Description');
     act(() => note()!.focus());
     typeInto(note()!, 'Design');
     // A pause in typing commits.
@@ -592,7 +594,7 @@ describe('DiagramTitleBlockRows', () => {
     expect(select('Model')!.disabled).toBe(true);
     expect(select('Crease pattern')!.disabled).toBe(true);
     expect(textField('Subtitle')!.disabled).toBe(true);
-    expect(textField('Note')!.disabled).toBe(true);
+    expect(textField('Description')!.disabled).toBe(true);
     expect(input('Label of credit 1')!.disabled).toBe(true);
     expect(input('Value of credit 1')!.disabled).toBe(true);
     for (const name of ['Remove credit 1', 'Type a value for credit 3 instead', 'Add Credit']) expect(button(name)!.disabled).toBe(true);

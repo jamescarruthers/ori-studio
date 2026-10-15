@@ -26,7 +26,7 @@ const state = () => useWorkspaceStore.getState();
 
 /** A new diagram's words in English (Zach, 2026-10-15): every credit with a value, in this order. */
 const NEW_CONTENT = {
-  subtitle: 'Origami diagram',
+  subtitle: 'Subtitle',
   credits: [
     { label: 'Author', value: 'Your name here' },
     { label: 'Steps', value: { kind: 'step-count' as const } },

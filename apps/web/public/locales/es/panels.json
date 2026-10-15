@@ -1220,14 +1220,14 @@
         "creditsHelp": "Una fila bajo el título: cada crédito imprime su etiqueta sobre su valor. Un valor puede ser el número de pasos, siempre al día.",
         "creditValue": "Valor del crédito {{number}}",
         "creditValuePlaceholder": "Valor",
+        "description": "Descripción",
+        "descriptionHelp": "Texto libre bajo los créditos. Solo se imprime cuando tiene texto.",
         "model": "Modelo",
         "modelHelp": "El modelo terminado, dibujado a partir de la imagen de un paso. Auto usa el último paso que tenga una.",
         "modelSize": "Tamaño del modelo",
         "modelSizeHelp": "La altura del modelo, como parte de la del bloque de título.",
         "needsRows": "Necesita dos filas o más",
         "none": "Ninguno",
-        "note": "Nota",
-        "noteHelp": "Texto libre bajo los créditos. Solo se imprime cuando tiene texto.",
         "pattern": "Patrón de pliegues",
         "patternHelp": "Se dibuja a partir del patrón de pliegues que vincula un paso. Auto usa el último paso vinculado; cada patrón aparece una sola vez, con el paso elegido para él o, si no hay, con el último paso que lo vincula.",
         "patternSize": "Tamaño del patrón de pliegues",
@@ -1572,7 +1572,7 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Papel recomendado",
         "steps": "Pasos",
-        "subtitle": "Diagrama de origami"
+        "subtitle": "Subtítulo"
       }
     },
     "turns": {

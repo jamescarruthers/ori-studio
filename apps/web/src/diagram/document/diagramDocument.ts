@@ -1364,7 +1364,7 @@ export interface DiagramTitleBlockContent {
   model?: DiagramTitleBlockSource;
   /** The crease pattern: a linked step's pattern. */
   pattern?: DiagramTitleBlockSource;
-  /** The small line over the title's band ("Origami diagram"): one line, never blank. */
+  /** The small line over the title's band ("Subtitle" in a new diagram, for its author to type over): one line, never blank. */
   subtitle?: string;
   /** The credits under the band, in order; never empty. */
   credits?: readonly DiagramTitleBlockCredit[];

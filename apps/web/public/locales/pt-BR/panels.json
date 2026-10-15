@@ -1220,14 +1220,14 @@
         "creditsHelp": "Uma linha sob o título: cada crédito imprime seu rótulo sobre seu valor. Um valor pode ser o número de passos, sempre atualizado.",
         "creditValue": "Valor do crédito {{number}}",
         "creditValuePlaceholder": "Valor",
+        "description": "Descrição",
+        "descriptionHelp": "Texto livre sob os créditos, impresso só quando não está vazio.",
         "model": "Modelo",
         "modelHelp": "O modelo pronto, desenhado a partir da imagem de um passo. Auto usa o último passo que tiver uma.",
         "modelSize": "Tamanho do modelo",
         "modelSizeHelp": "A altura do modelo, como fração da altura do bloco de título.",
         "needsRows": "Precisa de duas linhas ou mais",
         "none": "Nenhum",
-        "note": "Nota",
-        "noteHelp": "Texto livre sob os créditos, impresso só quando não está vazio.",
         "pattern": "Padrão de vincos",
         "patternHelp": "Desenhado a partir do padrão de vincos que um passo vincula. Auto usa o último passo vinculado; cada padrão aparece uma só vez, pelo passo escolhido para ele ou, se não houver, pelo último passo que o vincula.",
         "patternSize": "Tamanho do padrão de vincos",
@@ -1572,7 +1572,7 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Papel recomendado",
         "steps": "Passos",
-        "subtitle": "Diagrama de origami"
+        "subtitle": "Subtítulo"
       }
     },
     "turns": {
