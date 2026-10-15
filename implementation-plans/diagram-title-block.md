@@ -26,8 +26,10 @@ at the end of Phase 1):
 - He tested the branch the same day: the credits missing when he turned
   the block on, the band running under the crease pattern, the model off
   its corner. Fixed with the header's review (1f51947c1, 00bd52d97, "As
-  built (1c: Zach's test and the review)"); what is left is his: H-Q1 to
-  H-Q6 under "For Zach (header, 2026-10-15)", and Q1–Q4 above.
+  built (1c: Zach's test and the review)") and checked end to end ("As
+  built (1c: the final check)"); what is left is his: H-Q1 to H-Q7 under
+  "For Zach (header, 2026-10-15)" — H-Q7 the one size pair at which the
+  model only touches the pattern's corner — and Q1–Q4 above.
 
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
@@ -2520,8 +2522,13 @@ scaffolded"), see "As built (1c: Zach's test and the review)":
   block turned on through the pane's own switch, beside J1b) and a new
   diagram, A4 and A5 either way up; the Pages view, PDF and the one-sheet
   SVG; light, dark and iPad for the pane (1f51947c1, 00bd52d97; see "As
-  built (1c: Zach's test and the review)"). Print and a 3 × 3 grid were
-  not captured again this round: the composer they share is the PDF's.
+  built (1c: Zach's test and the review)").
+- [x] The final check: the checks, and the evidence in
+  `artifacts/title-block/header-final/` — the crane beside J1b, a new
+  diagram in the flow and a 3 × 3 grid, every part and none, the pane in
+  light and dark, the crane as it opens against 0b59543ec (PDF, Print, the
+  sheet and the layout), Zach's three reports through the pane (see "As
+  built (1c: the final check)").
 
 **Zach's test of the branch (2026-10-15)**
 - [x] 1. The credits added and scaffolded: the toggle writes them (and
@@ -2531,8 +2538,11 @@ scaffolded"), see "As built (1c: Zach's test and the review)":
   from the model.
 - [x] 3. The model on the pattern's lower-left corner at every size, its
   picture set to cover it; the sliders offer only sizes that keep it.
+  *The final check found one pair at which the crane only touches the
+  corner: model 100% with pattern 30% (H-Q7).*
 - [x] The subtitle's rule hidden by the Pages view's guides.
-- [ ] Zach: the questions under "For Zach (header, 2026-10-15)" below.
+- [ ] Zach: the questions under "For Zach (header, 2026-10-15)" below,
+  H-Q7 among them.
 
 *As built (1c: the format, the defaults and the store, 2026-10-15).* Three
 commits after the plan's (84f16afce): the format (d23293107), the defaults
@@ -2978,8 +2988,58 @@ the numbers below).
   `short-before-after.png`, `view-marks-before-after.png`); the pane in
   light, dark and iPad (`after/pane/`, `pane-crane-on-before-after-dark.png`).
 
+*As built (1c: the final check, 2026-10-15).* No code changed; the
+plan's notes only. Evidence in `artifacts/title-block/header-final/`
+(gitignored; `capture.mjs`, `compare_e.py`, `measure.py`, `sweep.mjs`,
+`compose.py`), one composite a group:
+- **Checks at 2fa938da4**: ESLint on the 54 TS files changed since
+  0b59543ec, `tsc` and `i18n:check`, clean; vitest over `src/diagram`,
+  `src/components/diagram`, `src/components/panels`,
+  `src/store/workspaceStore`, `src/analytics`, `src/components/ui` and
+  `src/keyboard`: 342 files, 5353 tests, all pass.
+- **(a) The crane beside J1b** (`a-crane-beside-J1b.png`): turned on by the
+  pane's switch, two values typed in the pane. The header within 0.3 mm of
+  J1b (the band's end 389.46 pt, J1b 390.24; the pattern's left 420.65,
+  421.27; the corner 0.27 / 0.66 into the drawn crane, J1b's); the block
+  0.71 mm taller (the 0.23 share), page 1 holding 7 steps, pages 7 / 11 /
+  9 / 1.
+- **(b) A new diagram** (`b-new-diagram-default-credits.png`), made by the
+  slice's own first edit: "Origami diagram", Author and Recommended size
+  empty, Steps live. The page prints the subtitle and STEPS 28; the Pages
+  view marks the two empty values, the pane shows "Value" in their fields
+  and "Auto (28)" read-only. Flow 7 / 9 / 9 / 3, 3 × 3 grid 6 / 9 / 9 / 4.
+- **(c) Every part, and none** (`c-all-parts-and-bare.png`): the two-line
+  note prints as typed; cleared, the subtitle's line and rule go and the
+  band rises to the top margin, with the block and every step where they
+  were.
+- **(d) The pane** (`d-page-pane-header-footer.png`), light and dark.
+- **(e) The crane as it opens** (`e-crane-as-opened-identical.png`,
+  `e/identical.txt`), against a server of 0b59543ec's `apps/web`: the
+  PDF, the sheet and the layout the same to the byte; the PDF's and
+  Print's three pages the same to the pixel; nothing unsaved. The Pages
+  view differs only on the margin guide's line (every differing pixel
+  within 2 CSS px of it), drawn outside the margin since 00bd52d97.
+- **(f) Zach's reports through the pane** (`f-zach-reports.png`,
+  `measured.txt`), at the defaults, model 30% with the pattern at the
+  slider's end (94%), and model 100% with pattern 30%: 1 holds at all
+  three (the subtitle and three credits from the switch, one undo step,
+  and one Undo gives back the crane as it opened); 2 holds at all three
+  (the band and the rule end 31.2, 15.9 and 154.4 pt short of the
+  pattern, never under it; the rule always at the band's end, at the
+  52% fit zoom too); 3 holds at the first two, **not at the third**: there
+  the box is held at the right margin and the block's top, the corner
+  falls 0.73 / 0.30 into the crane, between its wing and its neck, and
+  white shows within 2 pt of it. A sweep of every pair the sliders offer
+  (`sweep/`; 180 pairs at 5%, and every 1% at model 88–100% with pattern
+  30–40%) finds it at that pair alone, though at model 95–99% with
+  pattern 30% the corner sits on the wing's edge by 2–4 pt (4.9 pt at the
+  defaults). H-Q7 below.
+- Also seen: with the pattern at its end the model's slider runs 30–30, a
+  slider that cannot move (H-Q7); the one console error on opening, a 403,
+  is GitHub's releases API (the update check), at 0b59543ec too.
+
 *For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
-header-fixes/`.
+header-fixes/` and `header-final/`.
 - **H-Q1. An empty credit on the page.** The scaffold prints STEPS 28 at
   the margin and marks Author and Recommended size after it, though the
   pane lists them first; typing Author's value moves it ahead. A
@@ -3012,6 +3072,24 @@ header-fixes/`.
   in its label field, and "Crease pattern size" wraps with its help mark.
   A (recommended): the credit's label over its value (two lines a credit)
   where the pane is narrow, and "Pattern size"; B: leave it.
+- **H-Q7. The model at its largest over the smallest pattern.** At model
+  100% with pattern 30% the crane only touches the pattern's corner: its
+  box, held inside the block, puts the corner 0.73 / 0.30 into the
+  picture, a notch between the wing and the neck
+  (`header-final/f-zach-reports.png`, last row). Every other pair keeps
+  the corner under the crane, at 95–99% with pattern 30% by 2–4 pt. And
+  the rule is the picture's box, not its ink: a model of another shape
+  can leave J1b's 0.27 / 0.66 bare at any size. A: keep it. B
+  (recommended): offer only the pairs at which the box needs no holding,
+  so the corner is J1b's 0.27 / 0.66 at every size: the shares with
+  0.8 m ≤ p ≤ 1 − 0.34 m (the pattern 47–80% at the default model), the
+  model at most about 87% on A4 portrait: narrower sliders, the mock's
+  relation everywhere. C: set the picture by its own ink, the nearest
+  point of the drawn model to 0.27 / 0.66, which covers the corner for
+  any model's shape, at the cost of reading the picture at layout. Under
+  any of them, a slider the other size leaves no room (the model's runs
+  30–30 with the pattern at its end) could be shown disabled with its
+  reason rather than as a slider that does not move.
 - The zh-CN word for Credits (信息) wants a native reader: 署名 is a
   byline, which a size or a step count is not; 作品信息 is a candidate.
 
