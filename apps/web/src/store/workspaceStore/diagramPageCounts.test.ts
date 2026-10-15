@@ -94,8 +94,8 @@ describe('setDiagramPageSteps', () => {
     install(12, {}, false, true);
     expect(state().diagramPlacesSettled).toBeNull();
     // Page two from 4 steps to 3: s7 starts page three, which refills — s7–s10 — and s11 makes a page four. A flow
-    // step keeps its frame while it stays on its page (Zach, 2026-10-13): s7 and s11 leave theirs. No page was
-    // packed and adopted, so no band is known: the others keep their offsets.
+    // step keeps its frame while it keeps its place (Zach, 2026-10-15): s7 and s11 changed page, and leave theirs at
+    // once. No page was packed and adopted, so no place on a page is known: the others keep their offsets.
     expect(state().setDiagramPageSteps(1, 3)).toBe(true);
     const frames = Array.from({ length: 12 }, (_, index) => stepById(state().diagram!, `s${index}`)!.place?.frame ?? null);
     expect(frames.map((frame) => frame !== null)).toEqual([true, true, true, true, true, true, true, false, true, true, true, false]);

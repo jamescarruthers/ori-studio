@@ -222,7 +222,7 @@ describe('repackPages', () => {
   });
 });
 
-describe('adoptPacking: frames moved by hand on a page packed afresh (Zach, 2026-10-13)', () => {
+describe('adoptPacking: frames moved by hand on a page packed afresh (Zach, 2026-10-15)', () => {
   const PLACE: DiagramStepPlace = { frame: [2, 1], text: [0, 1.5], scale: { mmPerUnit: 0.2 } };
   /** The diagram with every step's frame moved, its pages packed one band each and held. */
   const placed = () => {
@@ -232,21 +232,21 @@ describe('adoptPacking: frames moved by hand on a page packed afresh (Zach, 2026
   };
   const framesOf = (document: DiagramDocument) => stepsOf(document).filter((step) => step.place?.frame).map((step) => step.id);
 
-  it('keeps the offset of a step that keeps its band, and sends home one that changes band or goes into a bend', () => {
+  it('keeps the offset of a step that keeps its place, and sends home one whose band or place along it changes, or that goes into a bend', () => {
     const held = placed();
     const repacked = repackPages(held, 1);
-    // s6 packed into band 1, s8 into the bend after band 0; the rest where they were.
+    // s6 packed into band 1, s8 into the bend after band 0, so s7 and s9 come up along band 0; s5 where it was.
     const offered = packed(repacked, 1.1, (id) => (id === 's6' ? { band: 1 } : id === 's8' ? { band: 0, bend: true } : { band: 0 }));
     const { document, settled } = adoptPacking(repacked, offered);
-    expect(settled).toBe(2);
-    expect(framesOf(document)).toEqual(ids(0, 11).filter((id) => id !== 's6' && id !== 's8'));
+    expect(settled).toBe(4);
+    expect(framesOf(document)).toEqual(ids(0, 11).filter((id) => !['s6', 's7', 's8', 's9'].includes(id)));
     // What a frame sent home keeps: its parts' offsets and its pin.
     const { frame: _frame, ...parts } = PLACE;
     expect(stepById(document, 's6')!.place).toEqual(parts);
     expect(document.pageArrangements!.s5!.k).toBe(1.1);
   });
 
-  it('after an edit, judges each page against the arrangement that followed it: the steps that stayed keep their offsets', () => {
+  it('after an edit, judges each page against the arrangement that followed it: steps in their place keep their offsets', () => {
     const held = placed();
     // A page break at s4, as the store lands it: s4 leaves page one, page two takes page two's arrangement under s4.
     const edited = setStepBreakBefore(held, 's4', true);
@@ -256,8 +256,12 @@ describe('adoptPacking: frames moved by hand on a page packed afresh (Zach, 2026
     // Off their pages in the edit: s4 (page one's), s9 (page two's).
     expect(atEdit).toBe(2);
     expect(framesOf(landed)).toEqual([...ids(0, 3), ...ids(5, 8), 's10', 's11']);
-    // Packed afresh, every band kept: nothing more goes home.
-    expect(adoptPacking(landed, packed(landed)).settled).toBe(0);
+    // Packed afresh: page one's steps keep their places, and their offsets. Pages two and three each start a step
+    // earlier, against the arrangement that followed them: every step that stayed on them is a place on along its
+    // band, and goes home too.
+    const adopted = adoptPacking(landed, packed(landed));
+    expect(adopted.settled).toBe(6);
+    expect(framesOf(adopted.document)).toEqual(ids(0, 3));
   });
 
   it('sends home a step last held on another page, in a file whose pages changed outside the app', () => {
@@ -272,14 +276,14 @@ describe('adoptPacking: frames moved by hand on a page packed afresh (Zach, 2026
     expect(settled).toBe(8);
   });
 
-  it('keeps every offset where no arrangement ever placed the step: no band is known to have changed', () => {
+  it('keeps every offset where no arrangement ever placed the step: no place is known to have changed', () => {
     const fresh = { ...diagram(), steps: diagram().steps.map((entry) => (isTurn(entry) ? entry : { ...entry, place: PLACE })) };
     const adopted = adoptPacking(fresh, packed(fresh, 1, () => ({ band: 2 })));
     expect(adopted.settled).toBe(0);
     expect(framesOf(adopted.document)).toEqual(ids(0, 11));
   });
 
-  it('keeps every offset through a re-pack that keeps every band, and changes nothing more than the arrangement', () => {
+  it('keeps every offset through a re-pack that keeps every place, and changes nothing more than the arrangement', () => {
     const held = placed();
     const { document, settled } = adoptPacking(repackPages(held, null), packed(held, 0.8));
     expect(settled).toBe(0);

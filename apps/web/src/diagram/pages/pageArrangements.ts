@@ -11,8 +11,8 @@
  *
  * Until then a page keeps the arrangement it was last held in — packed for a
  * structure it no longer has, or let go by Re-pack Page — for one thing only:
- * the band each of its steps was in, which says whether a frame moved by hand
- * keeps its offset on the page packed afresh (Zach, 2026-10-13;
+ * the place each of its steps had, which says whether a frame moved by hand
+ * keeps its offset on the page packed afresh (Zach, 2026-10-15;
  * `repackedFrames.ts`). It moves with its page as each edit lands, and any
  * stored arrangement no page keeps goes ({@link followPageArrangements}, which
  * the store runs in `commit`); adoption replaces it. A newer build's carried
@@ -35,8 +35,8 @@ import { cellSlots, framesSentHome, type CellSlots } from './stepPlaces';
 /**
  * The signature an arrangement Re-pack Page lets go of is kept under: no
  * page's (a page's is `pageSignature`'s, its format and a colon first), so
- * its page is packed afresh, while the arrangement still says which band each
- * of its steps was in. Written to a file as any signature is; a build that
+ * its page is packed afresh, while the arrangement still says where each of
+ * its steps was. Written to a file as any signature is; a build that
  * reads it packs the page afresh, as for any stale arrangement.
  */
 export const LET_GO_SIGNATURE = 'let-go';
@@ -74,8 +74,8 @@ export function heldPageArrangements(
  * at once when none is stored.
  *
  * What it keeps for a page whose structure the edit changed is stale: the
- * layout packs the page afresh, and the arrangement says only which band each
- * of its steps was in (`repackedFrames.ts`).
+ * layout packs the page afresh, and the arrangement says only where each of
+ * its steps was (`repackedFrames.ts`).
  */
 export function followPageArrangements(before: DiagramDocument, after: DiagramDocument): DiagramDocument {
   const stored = after.pageArrangements;
@@ -107,10 +107,11 @@ export function followPageArrangements(before: DiagramDocument, after: DiagramDo
  * step on it; the places of any other step (a short last page's stand-ins)
  * are left out. A stored arrangement no page holds goes.
  *
- * On a page that takes one, a frame moved by hand whose step's band changed
- * since the arrangement it was last held in, or that was last held on another
- * page, goes home: exactly the frames the layout drew at home
- * (`repackedFrames.ts`). How many; the same document when nothing changes.
+ * On a page that takes one, a frame moved by hand whose step's place — its
+ * band, a bend, its place along the band — changed since the arrangement it
+ * was last held in, or that was last held on another page, goes home: exactly
+ * the frames the layout drew at home (`repackedFrames.ts`). How many; the
+ * same document when nothing changes.
  */
 export function adoptPacking(
   document: DiagramDocument,
@@ -126,11 +127,10 @@ export function adoptPacking(
     const offered = adopted[first]!;
     if (!holdsArrangement(offered, signature, ids)) return;
     const steps: Record<string, DiagramArrangedStep> = {};
-    for (const id of ids) {
-      steps[id] = offered.steps[id]!;
-      if (!keepsMovedFrame(document.pageArrangements, first, id, steps[id])) home.add(id);
-    }
-    held[first] = roundPageArrangement({ ...offered, steps });
+    for (const id of ids) steps[id] = offered.steps[id]!;
+    const taken = { ...offered, steps };
+    for (const id of ids) if (!keepsMovedFrame(document.pageArrangements, first, id, taken)) home.add(id);
+    held[first] = roundPageArrangement(taken);
   });
   return framesSentHome(withPageArrangements(document, held), (step) => home.has(step.id));
 }
@@ -146,8 +146,8 @@ export function adoptPageArrangements(
 /**
  * Re-pack Page (Decision 4): the arrangement flow page `pageIndex` holds let
  * go — or, for null, every page's (Re-pack All Pages) — so the layout packs
- * the page afresh. It is kept, under {@link LET_GO_SIGNATURE}, for the band
- * each of its steps was in, until the page's packing is adopted. A newer
+ * the page afresh. It is kept, under {@link LET_GO_SIGNATURE}, for where each
+ * of its steps was, until the page's packing is adopted. A newer
  * build's carried arrangement goes too. The same document on a grid, for a
  * page that is not there, and where nothing is held or carried: a page that
  * holds nothing is packed afresh already.
