@@ -24,8 +24,8 @@ import styles from './DiagramPageStepsRow.module.css';
  * The line under the field holds the note or the action, so the stepper
  * stays where it is as one gives way to the other. On the first page under
  * the title block the row's help says why the page holds fewer than Steps
- * per page, or, where the page has a count of its own, how many the block
- * takes off that count, and that later pages keep theirs and shift
+ * per page, or, where the page has a count of its own, how many turning the
+ * block off adds to it, and that later pages keep theirs and shift
  * (`implementation-plans/diagram-title-block.md`, Zach's answer of
  * 2026-10-15).
  */
@@ -40,7 +40,7 @@ export function DiagramPageStepsRow({
   onChange: (count: number | null) => void;
 }) {
   const { t } = useTranslation();
-  const { page, index, name, range, holdsLaterPages, titleBlockDefault, titleBlockTakes } = current;
+  const { page, index, name, range, holdsLaterPages, titleBlockDefault, titleBlockOffAdds } = current;
   const own = page.ownCount;
   return (
     <div className={styles.row}>
@@ -52,11 +52,13 @@ export function DiagramPageStepsRow({
           titleBlockDefault === null
             ? undefined
             : own
-              ? t(
-                  'panels:diagram.pagePane.pageStepsTitleBlockOwn',
-                  'The title block takes {{number}} off this page’s own count while it is on; later pages keep their counts and shift with it.',
-                  { number: titleBlockTakes }
-                )
+              ? titleBlockOffAdds === null
+                ? undefined
+                : t(
+                    'panels:diagram.pagePane.pageStepsTitleBlockOwn',
+                    'Turning the title block off adds {{number}} to this count; later pages keep theirs and shift.',
+                    { number: titleBlockOffAdds }
+                  )
               : t(
                   'panels:diagram.pagePane.pageStepsTitleBlock',
                   'The title block takes room on this page, so it holds {{number}} by default.',

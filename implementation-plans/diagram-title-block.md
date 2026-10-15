@@ -1975,19 +1975,23 @@ if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
   was set on unless the page in front of it is the one set. The limit that
   kept a counted next page to 30 (L3) now guards the page that takes up the
   change; without a break nothing takes it up, and the least count is 1.
+  (Set Steps on Page only: since the review fixes below, the toggle never
+  moves a break, and a page a newer build's step starts by its own count
+  stops the shift as a break does.)
 - **The toggle (rule 7, `shiftForTitleBlock`),** inside `retainPageCounts`,
   which the store runs on every edit: turning the block on or off, or
   changing its share, moves page 1's count by the steps the block takes off
   its default (Steps per page less `firstPageCapacity`), a count of its own
   included, and shifts the later pages as above. Read in the flow's pages
   whatever the layout, as counts are. An automatic page 1 is given no count
-  (its default moves); no other page is given one; a page 1 its next page
-  cut short gives up only the steps past its new count; a lone page's count
-  moves as it is laid out; where the shift would edit a newer build's step,
-  nothing moves (page 1 then keeps its steps under the block, as under B).
+  (its default moves); no other page is given one. *(As first built, a
+  page 1 its next page cut short gave up only the steps past its new count,
+  a break directly after page 1 moved, and a newer build's step anywhere in
+  the shift stopped it all. Replaced in the review fixes below: none of
+  those came back when the block went off again.)*
 - The Page pane's "Steps on page 1" help, with a count of its own under the
-  block, says the block takes N off it while on and later pages keep theirs
-  and shift (`CurrentDiagramPage.titleBlockTakes`), in all nine catalogs.
+  block, said the block takes N off it while on. *(Reworded in the review
+  fixes below: it was read as N off the count the field already shows.)*
 - Tests that failed before (13 in `pageCounts.test.ts`, swapped against the
   old module; 1 in `diagramPageArrangements.test.ts`): the crane's shape,
   9 / 11 / 9 holding 8 → 7 / 11 / 9 / 1 by Set Steps on Page and by the
@@ -2050,6 +2054,60 @@ otherwise still checks every plan, scale and box.
   ribbon's tests (b4), the held-page sweeps and the layout budget pass.
 - A test that failed before: every page kind's first step at the area's
   left, the spare shared between the band's steps and after its last.
+
+*Review fixes (round 2, 2026-10-15): the toggle and the shift.*
+`pages/pageCounts.ts`, `pages/useCurrentDiagramPage.ts`,
+`components/diagram/DiagramPageStepsRow.tsx`.
+- **The toggle never moves a page break.** A break directly after page 1
+  used to move with page 1's end (`breakTakesUp`), re-cutting every page
+  after it when the break's page had no count, and a page 1 a break cut
+  short came back a step off (`diagram(20, {0:6}, [5])`: the break on s5
+  went to s4 on and s6 off). Now the toggle passes `breaksMove: false`:
+  page 1's count moves, and in front of a break the steps it gives up
+  refill an automatic page there, which it takes back when the block goes
+  off (crane-like `[9]` at a break before step 10: 7 / 2 / | 9 / … and back).
+  Set Steps on Page keeps #436's behaviour, the break moving with the page
+  in front of it when that is the page set; whether it should is for Zach.
+- **The later pages shift by the steps the block gives or takes**, as Zach
+  put it ("later pages shift the same way"), so a page 1 the page after it
+  cut short stays as short (an automatic 8 of 9 before a counted page:
+  6 of 7 under the block, and 8 again off); a page 1's count moves by them
+  whatever it holds, a lone or last page's included (own 9 holding 8: 7,
+  then 9 again, where it came back as 8). Held to 1, to the new count, and
+  to what leaves the page in front of a stop 30 at most.
+- **So on and then off gives the document back,** at every page-1 count it
+  can move by the whole of what the block takes: a sweep of counts 1–30 at
+  9 and at 4 a page, alone, at the diagram's end, cut short by a later
+  count, and in front of a break (`pageCounts.test.ts`; against the module
+  as first built, 196 of 1,986 such cases did not come back,
+  `artifacts/title-block/round2-final/failing-before/sweep-categories.txt`).
+  The clamps cannot: a count of 1 loses nothing under the block and gains
+  2 off (1 → 1 → 3), 29 under the block goes to 30 off and 28 on again; a
+  page 1 cut short to as few steps as the block takes alike. Undo is exact
+  in every case. Pinned in a test, as known.
+- **A newer build's step that starts a page by its own count stops the
+  shift as a break does** (`startsStop`), under Set Steps on Page and the
+  toggle alike: the page in front of it takes up the difference, and it
+  never moves. Before, such a step anywhere after the page set made Set
+  Steps on Page refuse every value while the field offered them all (the
+  crane with page 3's first step locked: 1–28 offered, nothing set); now
+  7 gives 7 / 13 / 8 and the field offers 1–20, as far as that page. One
+  directly after the page set offers no more than the page holds, the
+  steps given up refilling a page in front of it. A shift that would start
+  a page on a newer build's step elsewhere still moves nothing.
+- **The help reworded:** "Turning the title block off adds {{number}} to
+  this count; later pages keep theirs and shift.", the number read from
+  the toggle itself (`titleBlockOffAdds`: page 1 as `retainPageCounts`
+  leaves it with the block off, less what it shows now), so it is right at
+  the clamps (29 → 1 more), and gone where off adds none (30; a page a break
+  cuts short). Re-translated in all nine catalogs and stamped.
+- Tests that failed before, checked against the module as first built
+  (`artifacts/title-block/round2-final/failing-before/`, the new
+  `pageCounts.test.ts` pointed at a copy of 3789b31b3's module: 4 failed):
+  a break directly after page 1, automatic, counted and cut short, never
+  moving and coming back; the round-trip sweep; a newer build's counted
+  page stopping the toggle; and Set Steps on Page with one two pages on.
+  The hook's and the pane's help tests fail on the old wording.
 
 ### Phase 2: after the release
 

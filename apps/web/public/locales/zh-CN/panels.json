@@ -1111,7 +1111,7 @@
       "pageStepsDefault": "默认",
       "pageStepsHolds": "保持后面的页面不变",
       "pageStepsTitleBlock": "标题栏占用了此页的空间，因此默认容纳 {{number}} 步。",
-      "pageStepsTitleBlockOwn": "标题栏开启时，会从此页自己的步骤数中减去 {{number}}；后面的页面保留各自的步骤数，并随之顺移。",
+      "pageStepsTitleBlockOwn": "关闭标题栏会给此步骤数加上 {{number}}；后面的页面保留各自的步骤数，并随之顺移。",
       "pageStepsUseDefault": "使用默认值",
       "paper": "纸张",
       "pathColor": "路径颜色",

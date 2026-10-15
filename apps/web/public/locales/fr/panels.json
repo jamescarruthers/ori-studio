@@ -1185,7 +1185,7 @@
       "pageStepsDefault": "Par défaut",
       "pageStepsHolds": "Garde les pages suivantes en place",
       "pageStepsTitleBlock": "Le bloc titre prend de la place sur cette page, qui en contient donc {{number}} par défaut.",
-      "pageStepsTitleBlockOwn": "Tant qu’il est activé, le bloc titre retire {{number}} au nombre d’étapes propre à cette page ; les pages suivantes gardent le leur et se décalent avec elle.",
+      "pageStepsTitleBlockOwn": "Désactiver le bloc titre ajoute {{number}} à ce nombre ; les pages suivantes gardent le leur et se décalent.",
       "pageStepsUseDefault": "Utiliser la valeur par défaut",
       "paper": "Papier",
       "pathColor": "Couleur du chemin",

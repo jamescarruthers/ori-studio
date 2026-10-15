@@ -175,7 +175,11 @@ difference, ending at the break as before, or, where the page set is itself
 in front of the break, the break's page does, as above (L4 unchanged). L3's
 limit now guards that page. The title block's toggle moves page 1's count,
 its own included, by the steps the block takes, and the later pages shift
-the same way.
+the same way. In the review the same day: the toggle never moves a break
+(the steps page 1 gives up in front of one refill a page there), and a page
+a newer build's step starts by its own count stops the shift as a break
+does, under Set Steps on Page too (`diagram-title-block.md`, "Review fixes
+(round 2, 2026-10-15)").
 
 ### Layout (`diagramPageLayout.ts`, flow branch)
 

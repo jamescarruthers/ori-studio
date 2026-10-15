@@ -454,6 +454,27 @@ describe('setPageSteps', () => {
     // A page whose boundary is clear of it is set.
     expect(counts(setPageSteps(locked, 2, 3))).toEqual({ s0: 4, s8: 3 });
   });
+
+  it('stops the shift at a page a newer build’s step starts by its own count, offering only what reaches it', () => {
+    // The crane’s shape, its third page started by a newer build’s step with its own 9.
+    const crane = diagram(28, { 0: 9, 9: 11, 20: 9 }, [], { stepsPerPage: 9 });
+    const lock = (id: string) => ({ ...crane, steps: stepsOf(crane).map((step) => (step.id === id ? { ...step, unknown: { id } } : step)) });
+    const later = lock('s20');
+    // The page in front of it takes up the difference, as in front of a page break; nothing grows past it.
+    expect(pageStepsRange(later, 0)).toEqual({ min: 1, max: 20 });
+    const seven = setPageSteps(later, 0, 7);
+    expect(counts(seven)).toEqual({ s0: 7, s7: 13, s20: 9 });
+    expect(counts(setPageSteps(later, 0, 20))).toEqual({ s0: 20, s20: 9 });
+    // Directly after the page set, it never moves: the page gives steps up to a page in front of it, and grows no further.
+    const next = lock('s9');
+    expect(pageStepsRange(next, 0)).toEqual({ min: 1, max: 9 });
+    expect(pages(setPageSteps(next, 0, 7))).toEqual([
+      's0:7 s1 s2 s3 s4 s5 s6',
+      's7 s8',
+      's9:11 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19',
+      's20:9 s21 s22 s23 s24 s25 s26 s27',
+    ]);
+  });
 });
 
 describe('the first page with the title block (diagram-title-block.md)', () => {
@@ -528,6 +549,86 @@ describe('the first page with the title block (diagram-title-block.md)', () => {
       expect(pages(toggled(broken, ON))).toEqual(['s0:3 s1 s2', 's3:4 s4 s5 s6', 's7:5 s8 s9 s10 s11', 's12 s13 s14 s15']);
     });
 
+    it('never moves a page break directly after the first page: the steps it gives up refill a page in front of the break, and come back', () => {
+      // 30 steps, 9 a page, a break before s9: page 1 automatic, with its own 9, and with its own 6 cut to 5 by a break before s5.
+      const automatic = diagram(30, {}, [9], { stepsPerPage: 9 });
+      const counted = diagram(30, { 0: 9 }, [9], { stepsPerPage: 9 });
+      const cut = diagram(20, { 0: 6 }, [5], { stepsPerPage: 9 });
+      expect(pages(automatic)).toEqual([
+        's0 s1 s2 s3 s4 s5 s6 s7 s8',
+        's9 s10 s11 s12 s13 s14 s15 s16 s17',
+        's18 s19 s20 s21 s22 s23 s24 s25 s26',
+        's27 s28 s29',
+      ]);
+      const automaticOn = toggled(automatic, ON);
+      expect(pages(automaticOn)).toEqual([
+        's0 s1 s2 s3 s4 s5 s6',
+        's7 s8',
+        's9 s10 s11 s12 s13 s14 s15 s16 s17',
+        's18 s19 s20 s21 s22 s23 s24 s25 s26',
+        's27 s28 s29',
+      ]);
+      expect(pages(toggled(counted, ON))).toEqual(['s0:7 s1 s2 s3 s4 s5 s6', ...pages(automaticOn).slice(1)]);
+      const cutOn = toggled(cut, ON);
+      expect(pages(cutOn)).toEqual(['s0:4 s1 s2 s3', 's4', 's5 s6 s7 s8 s9 s10 s11 s12 s13', 's14 s15 s16 s17 s18 s19']);
+      for (const [document, on] of [
+        [automatic, automaticOn],
+        [counted, toggled(counted, ON)],
+        [cut, cutOn],
+      ] as const) {
+        expect(breaks(on)).toEqual(breaks(document));
+        expect(toggled(on, OFF)).toEqual(document);
+      }
+    });
+
+    it('gives the document back when the block goes off again, at every first-page count it can move by the whole of what the block takes', () => {
+      // Page 1 with its own count from 1 to 30, alone, before more steps, cut short by a later page’s count, and in front of a break.
+      const cases: { name: string; document: DiagramDocument }[] = [];
+      for (const [perPage, takes] of [
+        [9, 2],
+        [4, 1],
+      ] as const) {
+        const setup = { stepsPerPage: perPage };
+        for (let own = 1; own <= 30; own += 1) {
+          for (const size of [own - 2, own - 1, own, own + 1, own + 9]) {
+            if (size < 1) continue;
+            cases.push({ name: `own ${own} of ${size}`, document: diagram(size, { 0: own }, [], setup) });
+          }
+          // Cut short by a later page with its own count, or by a break.
+          for (let at = 1; at <= own; at += 1) {
+            cases.push({ name: `own ${own} cut at ${at} by a count`, document: diagram(own + 12, { 0: own, [at]: 5 }, [], setup) });
+            cases.push({ name: `own ${own} cut at ${at} by a break`, document: diagram(own + 12, { 0: own }, [at], setup) });
+          }
+        }
+        // An automatic page 1, cut short by a later page’s count.
+        for (let at = 1; at <= perPage; at += 1) {
+          cases.push({ name: `automatic cut at ${at}`, document: diagram(perPage + 12, { [at]: 5 }, [], setup) });
+        }
+        for (const { name, document } of cases.splice(0)) {
+          // A count the block would take below 1, or a first page it would cut to nothing, is held: those cannot come back.
+          const own = stepsOf(document)[0]!.pageSteps;
+          const first = pages(document)[0]!.split(' ').length;
+          if ((own !== undefined && own - takes < 1) || first - takes < 1) continue;
+          const on = toggled(document, ON);
+          expect(breaks(on), name).toEqual(breaks(document));
+          expect(toggled(on, OFF), name).toEqual(document);
+        }
+      }
+    });
+
+    it('holds a first-page count at 1 and 30, which the block coming back cannot undo', () => {
+      // At 1 the block takes nothing off, and off again gives the two it would have taken.
+      const one = diagram(12, { 0: 1, 1: 9 }, [], { stepsPerPage: 9 });
+      const oneOn = toggled(one, ON);
+      expect(counts(oneOn)).toEqual({ s0: 1, s1: 9 });
+      expect(counts(toggled(oneOn, OFF))).toEqual({ s0: 3, s3: 9 });
+      // At 29 under the block, off gives 30, and on again 28.
+      const most = diagram(40, { 0: 29 }, [], { stepsPerPage: 9, ...ON });
+      const mostOff = toggled(most, OFF);
+      expect(counts(mostOff)).toEqual({ s0: 30 });
+      expect(counts(toggled(mostOff, ON))).toEqual({ s0: 28 });
+    });
+
     it('moves the flow’s counts on a grid too, which ignores them', () => {
       const grid = diagram(28, { 0: 9, 9: 11, 20: 9 }, [], { stepsPerPage: 9, layout: 'grid', columns: 3, rows: 3 });
       expect(counts(toggled(grid, ON))).toEqual({ s0: 7, s7: 11, s18: 9 });
@@ -539,10 +640,32 @@ describe('the first page with the title block (diagram-title-block.md)', () => {
       const on = toggled(crane, ON);
       const share = setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.25 } });
       expect(retainPageCounts(on, share)).toBe(share);
-      const steps = stepsOf(crane).map((step) => (step.id === 's9' ? { ...step, unknown: { id: 's9', pageSteps: 11 } } : step));
+      // A newer build's step the shift would start a page on: page 2's start moving onto s7.
+      const steps = stepsOf(crane).map((step) => (step.id === 's7' ? { ...step, unknown: { id: 's7' } } : step));
       const locked = { ...crane, steps };
       const lockedOn = setPageSetup(locked, ON);
       expect(retainPageCounts(locked, lockedOn)).toBe(lockedOn);
+    });
+
+    it('stops at a page a newer build’s step starts by its own count, as at a page break', () => {
+      const crane = diagram(28, { 0: 9, 9: 11, 20: 9 }, [], { stepsPerPage: 9 });
+      const lock = (id: string) => ({ ...crane, steps: stepsOf(crane).map((step) => (step.id === id ? { ...step, unknown: { id } } : step)) });
+      // Directly after page 1: the two steps it gives up refill a page in front of it.
+      const next = lock('s9');
+      const nextOn = toggled(next, ON);
+      expect(pages(nextOn)).toEqual([
+        's0:7 s1 s2 s3 s4 s5 s6',
+        's7 s8',
+        's9:11 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19',
+        's20:9 s21 s22 s23 s24 s25 s26 s27',
+      ]);
+      expect(toggled(nextOn, OFF)).toEqual(next);
+      // Two pages on: the page in front of it takes up the difference.
+      const later = lock('s20');
+      const laterOn = toggled(later, ON);
+      expect(pages(laterOn).map((page) => page.split(' ').length)).toEqual([7, 13, 8]);
+      expect(counts(laterOn)).toEqual({ s0: 7, s7: 13, s20: 9 });
+      expect(toggled(laterOn, OFF)).toEqual(later);
     });
   });
 

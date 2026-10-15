@@ -98,6 +98,34 @@ describe('currentDiagramPage', () => {
     expect(currentDiagramPage(unnumbered, at(1), null)!.name).toBe(2);
     expect(pageName({ pageNumbers: { enabled: true, first: 1 } }, 0)).toBe(1);
   });
+
+  it('says how many steps turning the title block off adds to a first page’s own count, as the toggle moves it', () => {
+    const ON = { titleBlock: { enabled: true, heightShare: 0.27 }, stepsPerPage: 9 };
+    const own = (count: number, size = 40, breakAt?: number) => {
+      const document = setPageSetup(diagram(size), ON);
+      const steps = document.steps.map((entry, index) => ({
+        ...entry,
+        ...(index === 0 ? { pageSteps: count } : {}),
+        ...(index === breakAt ? { breakBefore: true } : {}),
+      }));
+      return currentDiagramPage({ ...document, steps } as DiagramDocument, null, null)!;
+    };
+    // The block takes 2 off the 9: off gives them back, at 1 as anywhere.
+    expect(own(5).titleBlockOffAdds).toBe(2);
+    expect(own(1).titleBlockOffAdds).toBe(2);
+    // As far as 30: 29 gets one, 30 none.
+    expect(own(29).titleBlockOffAdds).toBe(1);
+    expect(own(30).titleBlockOffAdds).toBeNull();
+    // A page a break cuts to 4 holds its 4 off as on: nothing added.
+    expect(own(6, 40, 4).titleBlockOffAdds).toBeNull();
+    // A lone page is laid out for its count, which off moves on.
+    expect(own(5, 3).titleBlockOffAdds).toBe(2);
+    // An automatic first page says why it holds fewer instead, and so does no page without the block.
+    const automatic = currentDiagramPage(setPageSetup(diagram(20), ON), null, null)!;
+    expect(automatic.titleBlockDefault).toBe(7);
+    expect(automatic.titleBlockOffAdds).toBeNull();
+    expect(currentDiagramPage(diagram(20), null, null)!.titleBlockOffAdds).toBeNull();
+  });
 });
 
 describe('useCurrentDiagramPage', () => {

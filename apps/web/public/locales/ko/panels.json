@@ -1111,7 +1111,7 @@
       "pageStepsDefault": "기본값",
       "pageStepsHolds": "다음 페이지 위치를 유지합니다",
       "pageStepsTitleBlock": "제목 영역이 이 페이지의 공간을 차지하므로 기본적으로 {{number}}단계가 들어갑니다.",
-      "pageStepsTitleBlockOwn": "제목 영역이 켜져 있는 동안 이 페이지의 자체 단계 수에서 {{number}}을(를) 뺍니다. 다음 페이지는 각자의 단계 수를 유지한 채 함께 밀립니다.",
+      "pageStepsTitleBlockOwn": "제목 영역을 끄면 이 단계 수에 {{number}}이(가) 더해집니다. 다음 페이지는 각자의 단계 수를 유지한 채 밀립니다.",
       "pageStepsUseDefault": "기본값 사용",
       "paper": "용지",
       "pathColor": "경로 색상",

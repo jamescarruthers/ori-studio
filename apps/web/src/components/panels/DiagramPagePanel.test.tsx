@@ -407,7 +407,7 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(host?.textContent).not.toContain('Keeps later pages in place');
   });
 
-  it('says why page 1 holds fewer under the title block, or how many the block takes off its own count (Zach, 2026-10-15)', () => {
+  it('says why page 1 holds fewer under the title block, or how many turning it off adds to its own count (Zach, 2026-10-15)', () => {
     const blockHelp = () => field()!.closest('[data-field-row]')!.querySelector('[data-field-help]')?.getAttribute('aria-label');
     const block = (enabled: boolean) =>
       act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled } }));
@@ -418,10 +418,14 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(field()?.value).toBe(String(underBlock));
     expect(blockHelp()).toBe(`The title block takes room on this page, so it holds ${underBlock} by default.`);
     act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Decrease Steps on page 1"]')!.click());
+    // Its own count, one under the default: turning the block off gives it back what the block takes.
+    expect(field()?.value).toBe(String(underBlock - 1));
     const takes = state().diagram!.page.stepsPerPage - underBlock;
-    expect(blockHelp()).toBe(
-      `The title block takes ${takes} off this page’s own count while it is on; later pages keep their counts and shift with it.`
-    );
+    expect(blockHelp()).toBe(`Turning the title block off adds ${takes} to this count; later pages keep theirs and shift.`);
+    // At 1, where the block took nothing off, it says what off adds all the same.
+    act(() => state().setDiagramPageSteps(0, 1));
+    expect(field()?.value).toBe('1');
+    expect(blockHelp()).toBe(`Turning the title block off adds ${takes} to this count; later pages keep theirs and shift.`);
     // Page 2 says nothing of it, and nor does page 1 with the block off.
     showPage(1);
     expect(blockHelp()).toBeUndefined();
