@@ -2176,11 +2176,13 @@ export interface DiagramSliceActions {
    */
   setDiagramPage: (patch: Partial<DiagramPageSetup>, options?: { session?: number }) => boolean;
   /**
-   * Set what the first page's title block shows — its model, its crease
-   * pattern, its byline — each call one undo step. Its room is the page
-   * setup's (`setDiagramPage`, `titleBlock`); what it shows moves no step.
+   * Set what the first page's title block shows — its model and crease
+   * pattern, their sizes, its subtitle, credits (one added, removed, or a
+   * label or value set, text or the live step count) and note — each call
+   * one undo step. Its room is the page setup's (`setDiagramPage`,
+   * `titleBlock`); what it shows moves no step.
    *
-   * `loadId` and `session` are the byline's, as for an instruction
+   * `loadId` and `session` are a text field's, as for an instruction
    * (`setDiagramStepText`): an edit that outlives its diagram is dropped, and
    * the commits of one sitting at the field are one undo step.
    */
