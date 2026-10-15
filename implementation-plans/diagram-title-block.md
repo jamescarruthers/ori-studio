@@ -45,6 +45,10 @@ at the end of Phase 1):
   rule is over the band, the model on top of a header it never moves, a
   wider gutter and more room before the note. Built: "As built (1c: Zach's
   second test)".
+- The header reflows (Zach, 2026-10-15: "actually reflow the content"):
+  the flow's block grows to its words after an edit of them, up to half
+  the printable height, page 1 keeping its steps; a file opens as saved.
+  Built: "As built (1c: the header reflows)".
 - Steadiness (Zach, 2026-10-15): a new diagram's scale steadiness is 0.5,
   saved files keep theirs (0.85); the typical-page rule it was written on
   was built and not merged (ddadc5143, cherry-picked from 3f49f7993;
@@ -2501,7 +2505,10 @@ one undo step, the commits of one sitting at a text field one step
   foot. The mock's sizes are A4 portrait's; where the block is shorter than
   the column needs, the column scales down together, and what still does
   not fit (the note's last lines, a credit past the band's end) is not
-  printed and the Pages view marks where it is cut.
+  printed and the Pages view marks where it is cut. (*Since 2026-10-15 the
+  flow's block grows to its words instead, up to half the printable
+  height, and a note's end cut there is not marked: "As built (1c: the
+  header reflows)". A grid's block still scales and cuts.*)
 - Labels print uppercase (as built: Unicode's own mapping, the same on
   every machine, not a locale's; CJK unchanged); a credit with an empty
   value prints nothing, and the Pages view marks where it would go (as
@@ -2645,6 +2652,9 @@ scaffolded"), see "As built (1c: Zach's test and the review)":
 - [x] The band and the subtitle's rule end `HEADER_GAP_MM` (10 pt) short of
   the pattern; the model on top of the header, which no model size moves.
 - [x] The credits' gutter 20 pt; 20 pt between the credits and the note.
+- [x] The header reflows: the flow's block grows to its words after an
+  edit of them, to half the printable height; page 1 keeps its steps,
+  packs smaller; opened files as saved; no note tags (3f1953fc2).
 - [ ] Zach: the questions under "For Zach (header, 2026-10-15)" below,
   H-Q7 among them.
 
@@ -3221,6 +3231,71 @@ ae0122418 and after, PDF page 1 on A4 portrait.
   Author cleared, a two-line note, the model at 100%, and a long title at
   100% with the pattern at 79% and at 30%; page counts 7 / 11 / 9 / 1 as
   before, no console errors.
+
+*As built (1c: the header reflows, 2026-10-15).* Zach, of a six-line
+note cut on his X-ray Heart: "Instead of saying that the rest of the note
+doesn't fit, i would like it to actually reflow the content", then "Yes,
+please do the reflow". One commit, 3f1953fc2. Evidence: block 7 of
+`artifacts/title-block/credits-gap/final.png` (the crane with a six-line
+lorem note, PDF page 1, before at fd1e23d7d and after).
+- **The height.** The flow's block is as tall as the larger of its share
+  and what its words need at full size — the subtitle's row, the band,
+  every row of credits and the whole note, with their gaps
+  (`titleBlockTextMm`, the column's own sums, so it fits at scale 1) —
+  measured to 0.5 mm (`titleBlockRoom`) and held to half the printable
+  height (`grownTitleBlockMm`, `TITLE_BLOCK_MOST_SHARE`). The art keeps its
+  size and place: its sizes are shares of the share's height
+  (`TitleBlockBand.artH`) and it stands at the top right, the model on top;
+  so the column's width, and the note's wrapping, never depend on the
+  growth. Past the cap the note's end is cut with "…". The Pages view's
+  two note tags and their strings are gone (`noteCut`, `noteNone`); credits
+  left out, which only the cap or a grid can do, keep theirs.
+- **Layout, from the author's edit only.** Page 1's area is under the grown
+  block and its signature carries the grown height, only while grown: a
+  block at its share signs as before, so `FROZEN_SIGNATURES`, the
+  block-off pages and the page golden are unchanged. Page 1 keeps its step
+  count (the share still sets it) and packs smaller; later pages hold. An
+  edit that changes the words as printed, the pattern's size, the paper,
+  the margin, the block's setting or the CJK face marks its result
+  (`titleBlockEdits.ts`, kept beside the diagrams, never in them); that
+  layout measures the room, grows the block, packs page 1 for it where it
+  grows, and hands the room back (`DiagramPagesLayout.titleBlockRoom`). The
+  store keeps it in the content (`titleBlockContent.room`, mm, written last;
+  read as said, one that is no length dropped) with the packing it adopts:
+  no undo entry, so one Undo restores the note, page 1's arrangement and its
+  hand offsets together; frames whose place changed go home on adoption, as
+  for any re-pack. Every other layout reads the room the diagram says, so a
+  file opens exactly as saved — one saved before this, its note longer than
+  its block, opens at its share with the note cut, and grows at the first
+  edit of its words.
+- **A grid** keeps its whole rows (growing would take cells from page 1 and
+  re-paginate): a note past them is cut with "…", untagged. Said here
+  rather than built, as the brief allowed.
+- **The crane, six lorem lines** (A4 portrait, through the pane): before,
+  the block at 62.79 mm, the note cut after 4 lines with the tag, step 1's
+  number at 239.4 pt; after, the block 93.5 mm, the note's 12 lines whole,
+  no tag, step 1's number at 326.4 pt, page 1 still 7 steps packed smaller,
+  pages 7 / 11 / 9 / 1. Written as a file and opened again: room 93.5 kept,
+  not measured, the PDF the same to the byte. The crane as it opens (block
+  off): its PDF the same to the byte.
+- **Not built:** the Page pane's note field does not say when the end does
+  not print (the brief's "may"; the pane has no layout to ask). A save made
+  before the layout has measured an edit (within the layout's debounce, or
+  with the Pages view never shown) writes the room as it was: that file
+  opens with it, as saved, and grows at the next edit of its words.
+- **For Zach:** with the model on top, the crane's wing stands over the end
+  of the note's third and fourth lines (block 7), as it would over any
+  note at the default sizes.
+- **Tests that failed before**, against fd1e23d7d's sources with this
+  commit's tests (9): the growth and page 1 alone, a short note packing
+  nothing, held once taken in and an old file at its share, the cap, the
+  signature, the store's measure and Undo, the band's `artH`, and the two
+  tag tests. The grid's guard passes before and after.
+- Checked at 3f1953fc2: `tsc`; ESLint on every changed file;
+  `i18n:extract`, `i18n:stamp`, `i18n:check`; vitest over `src/diagram`,
+  `src/components/diagram`, `src/components/panels` and
+  `src/store/workspaceStore` (297 files, 4914 tests: the page golden,
+  `FROZEN_SIGNATURES` and the layout budget included): all pass.
 
 *For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
 header-fixes/` and `header-final/`.
