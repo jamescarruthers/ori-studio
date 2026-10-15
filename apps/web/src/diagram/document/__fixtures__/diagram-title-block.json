@@ -109,7 +109,30 @@
       "pattern": {
         "kind": "none"
       },
-      "byline": "디자인: 김민수\n종이: 35 cm 정사각형"
+      "subtitle": "종이접기 도해",
+      "credits": [
+        {
+          "label": "디자인",
+          "value": "김민수"
+        },
+        {
+          "label": "권장 크기",
+          "value": "35 cm × 35 cm"
+        },
+        {
+          "label": "단계",
+          "value": {
+            "kind": "step-count"
+          }
+        },
+        {
+          "label": "",
+          "value": ""
+        }
+      ],
+      "note": "종이: 35 cm 정사각형\n접는 시간: 약 20분",
+      "modelSize": 0.5,
+      "patternSize": 0.7
     },
     "steps": [
       {
@@ -330,7 +353,27 @@
       "pattern": {
         "kind": "step",
         "stepId": "step-swan"
-      }
+      },
+      "subtitle": "Origami diagram",
+      "credits": [
+        {
+          "label": "Author",
+          "value": "Traditional"
+        },
+        {
+          "label": "Pages",
+          "value": {
+            "kind": "page-count"
+          }
+        },
+        {
+          "label": "Steps",
+          "value": {
+            "kind": "step-count"
+          }
+        }
+      ],
+      "modelSize": 1.4
     },
     "steps": [
       {

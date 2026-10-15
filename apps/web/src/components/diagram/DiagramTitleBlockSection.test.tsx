@@ -139,7 +139,7 @@ describe('DiagramTitleBlockSection', () => {
   it('works out what the selects offer only while the first page has the block, as an old file has not', () => {
     install();
     render();
-    act(() => state().setDiagramTitleBlockContent({ byline: 'Design: Lang' }));
+    act(() => state().setDiagramTitleBlockContent({ note: 'Design: Lang' }));
     expect(choices.titleBlockChoices).not.toHaveBeenCalled();
     act(() => toggle().click());
     expect(choices.titleBlockChoices).toHaveBeenCalled();
@@ -224,7 +224,7 @@ describe('DiagramTitleBlockSection', () => {
     expect(noteOf('Crease pattern')).toEqual({ text: 'Step 2 has no crease pattern', reason: true });
   });
 
-  it('commits the byline as it is typed: a sitting at the field one undo step and one count', () => {
+  it('commits the note (the field labelled Byline until Phase 1c) as it is typed: a sitting at the field one undo step and one count', () => {
     vi.useFakeTimers();
     install({ titleBlock: ON });
     render();
@@ -232,10 +232,10 @@ describe('DiagramTitleBlockSection', () => {
     type('Design');
     // A pause in typing commits.
     act(() => vi.advanceTimersByTime(1000));
-    expect(state().diagram!.titleBlockContent?.byline).toBe('Design');
+    expect(state().diagram!.titleBlockContent?.note).toBe('Design');
     type('Design: Lang\nPaper: 35 cm');
     act(() => byline()!.blur());
-    expect(state().diagram!.titleBlockContent?.byline).toBe('Design: Lang\nPaper: 35 cm');
+    expect(state().diagram!.titleBlockContent?.note).toBe('Design: Lang\nPaper: 35 cm');
     expect(undoSteps()).toBe(1);
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('title_block_byline');
     // Another sitting counts again.

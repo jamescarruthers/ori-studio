@@ -20,6 +20,7 @@ import {
   type DiagramDocument,
   type DiagramPageSetup,
   type DiagramRasterAsset,
+  type DiagramTitleBlockContentPatch,
 } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { setStepPlace } from '../document/stepPlace';
@@ -248,8 +249,13 @@ describe('pageSignature', () => {
     });
 
     it('never changes with what the block shows', () => {
-      const shown = setTitleBlockContent(before, { model: { kind: 'none' }, pattern: { kind: 'step', stepId: 's3' }, byline: 'Design: Lang' });
-      expect(shown).not.toBe(before);
+      const shown = [
+        { model: { kind: 'none' }, pattern: { kind: 'step', stepId: 's3' } },
+        { subtitle: 'Origami diagram', note: 'Design: Lang' },
+        { credits: { op: 'add', credit: { label: 'Steps', value: { kind: 'step-count' } } } },
+        { modelSize: 1, patternSize: 0.3 },
+      ].reduce((document, patch) => setTitleBlockContent(document, patch as DiagramTitleBlockContentPatch), before);
+      expect(Object.keys(shown.titleBlockContent!)).toEqual(['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize']);
       expect(changed(before, shown)).toEqual([]);
       expect(changed(before, setDiagramTitle(before, 'Swan'))).toEqual([]);
     });
@@ -273,7 +279,7 @@ describe('pageSignature', () => {
       ['the first page number', setPageSetup(before, { pageNumbers: { enabled: true, first: 7 } })],
       ['a grid’s columns and rows', setPageSetup(before, { columns: 5, rows: 2 })],
       ['the share of a title block that is off', setPageSetup(before, { titleBlock: { enabled: false, heightShare: 0.4 } })],
-      ['what a title block shows', setTitleBlockContent(before, { model: { kind: 'none' }, byline: 'Design: Lang' })],
+      ['what a title block shows', setTitleBlockContent(before, { model: { kind: 'none' }, note: 'Design: Lang', patternSize: 0.5 })],
     ])('%s', (_label, after) => {
       expect(after).not.toBe(before);
       expect(changed(before, after)).toEqual([]);

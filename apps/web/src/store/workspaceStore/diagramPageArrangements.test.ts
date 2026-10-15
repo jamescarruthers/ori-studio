@@ -378,11 +378,11 @@ describe('the title block (diagram-title-block.md)', () => {
     const installed = install();
     expect(state().setDiagramTitleBlockContent({ model: { kind: 'step', stepId: 's11' } })).toBe(true);
     expect(state().setDiagramTitleBlockContent({ pattern: { kind: 'none' } })).toBe(true);
-    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ note: 'Design: Lang' })).toBe(true);
     expect(state().diagram!.titleBlockContent).toEqual({
       model: { kind: 'step', stepId: 's11' },
       pattern: { kind: 'none' },
-      byline: 'Design: Lang',
+      note: 'Design: Lang',
     });
     expect(undoSteps()).toBe(3);
     expect(state().diagramHistory.past.at(-1)?.label).toBe('Change title block');
@@ -393,30 +393,30 @@ describe('the title block (diagram-title-block.md)', () => {
     state().undoDiagram();
     expect(state().diagram).toBe(installed);
     // What changes nothing records nothing; a read-only diagram takes nothing.
-    expect(state().setDiagramTitleBlockContent({ model: 'auto', byline: '' })).toBe(false);
+    expect(state().setDiagramTitleBlockContent({ model: 'auto', note: '' })).toBe(false);
     const readOnly = install(plain(12), true);
-    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' })).toBe(false);
+    expect(state().setDiagramTitleBlockContent({ note: 'Design: Lang' })).toBe(false);
     expect(state().diagram).toBe(readOnly);
   });
 
-  it('takes a sitting at the byline as one undo step, and drops a byline typed into a diagram since replaced', () => {
+  it('takes a sitting at the note as one undo step, and drops a note typed into a diagram since replaced', () => {
     install();
     const loadId = state().diagramLoadId;
     // The field commits at each pause in typing: one sitting, one step.
-    expect(state().setDiagramTitleBlockContent({ byline: 'Design' }, { loadId, session: 7 })).toBe(true);
-    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' }, { loadId, session: 7 })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ note: 'Design' }, { loadId, session: 7 })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ note: 'Design: Lang' }, { loadId, session: 7 })).toBe(true);
     expect(undoSteps()).toBe(1);
     // Another sitting is a step of its own, and so is the sitting's commit after another edit.
-    state().setDiagramTitleBlockContent({ byline: 'Design: Lang\nPaper: 35 cm' }, { loadId, session: 8 });
+    state().setDiagramTitleBlockContent({ note: 'Design: Lang\nPaper: 35 cm' }, { loadId, session: 8 });
     expect(undoSteps()).toBe(2);
     state().setDiagramTitleBlockContent({ model: { kind: 'none' } });
-    state().setDiagramTitleBlockContent({ byline: 'Design: R. Lang\nPaper: 35 cm' }, { loadId, session: 8 });
+    state().setDiagramTitleBlockContent({ note: 'Design: R. Lang\nPaper: 35 cm' }, { loadId, session: 8 });
     expect(undoSteps()).toBe(4);
     state().undoDiagram();
-    expect(state().diagram!.titleBlockContent).toEqual({ model: { kind: 'none' }, byline: 'Design: Lang\nPaper: 35 cm' });
+    expect(state().diagram!.titleBlockContent).toEqual({ model: { kind: 'none' }, note: 'Design: Lang\nPaper: 35 cm' });
     // Typed against the diagram another has replaced since: it lands nowhere.
     install();
-    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' }, { loadId, session: 9 })).toBe(false);
+    expect(state().setDiagramTitleBlockContent({ note: 'Design: Lang' }, { loadId, session: 9 })).toBe(false);
     expect(state().diagram!.titleBlockContent).toBeUndefined();
   });
 
@@ -425,7 +425,7 @@ describe('the title block (diagram-title-block.md)', () => {
     state().setDiagramPage(ON);
     const adopted = adoptAll();
     const notice = state().diagramPlacesSettled;
-    state().setDiagramTitleBlockContent({ model: { kind: 'none' }, pattern: { kind: 'step', stepId: 's3' }, byline: 'Design: Lang' });
+    state().setDiagramTitleBlockContent({ model: { kind: 'none' }, pattern: { kind: 'step', stepId: 's3' }, note: 'Design: Lang' });
     expect(state().diagram!.pageArrangements).toBe(adopted.pageArrangements);
     expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s0', 's4', 's9']);
     expect(state().diagramPlacesSettled).toBe(notice);

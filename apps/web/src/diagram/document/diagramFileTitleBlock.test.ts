@@ -11,13 +11,16 @@ import { resolveTitleBlock } from '../pages/titleBlockContent';
 
 /**
  * Three diagrams saved with the first page's title block on
- * (`implementation-plans/diagram-title-block.md`, The file; 2026-10-14), as
- * this build writes them: a flow whose model is a chosen step, with no
- * pattern and a byline in Korean; a grid at a share of its own, whose
- * pattern is a chosen step and whose model is of a kind only a newer build
- * reads — its own picture, naming an asset nothing else names; and a flow of
- * eight steps with no model and the pattern unsaid, Auto, its two pages
- * saved as this build packed them, the first under the block.
+ * (`implementation-plans/diagram-title-block.md`, The file; 2026-10-14; the
+ * header's parts, Phase 1c, 2026-10-15), as this build writes them: a flow
+ * in Korean whose model is a chosen step, with no pattern, and every part of
+ * the header this build makes — a subtitle, credits (text, the live step
+ * count, one left empty), a note and both sizes; a grid at a share of its
+ * own, whose pattern is a chosen step, with what only a newer build reads —
+ * its own model, naming an asset nothing else names, a credit of a kind this
+ * build does not know, and a model size past its range; and a flow of eight
+ * steps with no model and the pattern unsaid, Auto, its two pages saved as
+ * this build packed them, the first under the block.
  *
  * A change that reads them otherwise, or writes them back otherwise, changes
  * what saved title blocks mean, and fails here first.
@@ -36,17 +39,37 @@ describe('a diagram saved with a title block', () => {
     expect(flow.document.titleBlockContent).toEqual({
       model: { kind: 'step', stepId: 'step-model' },
       pattern: { kind: 'none' },
-      byline: '디자인: 김민수\n종이: 35 cm 정사각형',
+      subtitle: '종이접기 도해',
+      credits: [
+        { label: '디자인', value: '김민수' },
+        { label: '권장 크기', value: '35 cm × 35 cm' },
+        { label: '단계', value: { kind: 'step-count' } },
+        { label: '', value: '' },
+      ],
+      note: '종이: 35 cm 정사각형\n접는 시간: 약 20분',
+      modelSize: 0.5,
+      patternSize: 0.7,
     });
     const grid = read(1);
     expect(grid.readOnly).toBe(false);
     expect(grid.document.page).toMatchObject({ layout: 'grid', titleBlock: { enabled: true, heightShare: 0.33 } });
-    // The model it has no name for is Auto here: no model said, so the last step with a picture.
-    expect(grid.document.titleBlockContent).toEqual({ pattern: { kind: 'step', stepId: 'step-swan' } });
+    // The model it has no name for is Auto here: no model said, so the last step with a picture. The credit of a
+    // kind it does not know reads empty, and the model's size past its range as the nearest.
+    expect(grid.document.titleBlockContent).toEqual({
+      pattern: { kind: 'step', stepId: 'step-swan' },
+      subtitle: 'Origami diagram',
+      credits: [
+        { label: 'Author', value: 'Traditional' },
+        { label: 'Pages', value: '' },
+        { label: 'Steps', value: { kind: 'step-count' } },
+      ],
+      modelSize: 1,
+    });
     const shown = resolveTitleBlock(grid.document);
     expect([shown.model.from, shown.model.step?.id]).toEqual(['auto', 'step-swan']);
     expect([shown.pattern.from, shown.pattern.step?.id]).toEqual(['step', 'step-swan']);
-    expect(grid.document.newer).toEqual({ titleBlockContent: { model: fixture()[1]!.titleBlockContent!.model } });
+    const { model, credits, modelSize } = fixture()[1]!.titleBlockContent!;
+    expect(grid.document.newer).toEqual({ titleBlockContent: { model, credits, modelSize } });
     const auto = read(2);
     expect(auto.readOnly).toBe(false);
     expect(auto.document.newer).toBeUndefined();
@@ -96,12 +119,24 @@ describe('a diagram saved with a title block', () => {
 
   it('lets go of the newer build’s model, and its asset, once the model is set here; another part set keeps it', () => {
     const { document } = read(1);
-    const byline = setTitleBlockContent(document, { byline: 'Design: Lang' });
-    expect(written(byline).titleBlockContent).toEqual({ ...fixture()[1]!.titleBlockContent, byline: 'Design: Lang' });
+    const noted = setTitleBlockContent(document, { note: 'Design: Lang' });
+    expect(written(noted).titleBlockContent).toEqual({ ...fixture()[1]!.titleBlockContent, note: 'Design: Lang' });
     const chosen = setTitleBlockContent(document, { model: { kind: 'step', stepId: 'step-swan' } });
-    expect(chosen.newer).toBeUndefined();
+    expect(chosen.newer).toEqual({ titleBlockContent: { credits: fixture()[1]!.titleBlockContent!.credits, modelSize: 1.4 } });
     const again = written(chosen);
-    expect(again.titleBlockContent).toEqual({ model: { kind: 'step', stepId: 'step-swan' }, pattern: { kind: 'step', stepId: 'step-swan' } });
+    expect(again.titleBlockContent).toEqual({ ...fixture()[1]!.titleBlockContent, model: { kind: 'step', stepId: 'step-swan' } });
     expect(again.assets).toEqual({});
+  });
+
+  it('lets go of the newer build’s credits and size each as that part is set here, the rest carried', () => {
+    const { document } = read(1);
+    const credited = setTitleBlockContent(document, { credits: { op: 'remove', at: 1 } });
+    expect((written(credited).titleBlockContent as SavedDiagram['titleBlockContent'])!.credits).toEqual([
+      { label: 'Author', value: 'Traditional' },
+      { label: 'Steps', value: { kind: 'step-count' } },
+    ]);
+    const sized = setTitleBlockContent(credited, { modelSize: 'default' });
+    expect(sized.newer).toEqual({ titleBlockContent: { model: fixture()[1]!.titleBlockContent!.model } });
+    expect(written(sized).titleBlockContent).not.toHaveProperty('modelSize');
   });
 });

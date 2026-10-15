@@ -1347,22 +1347,69 @@ export interface DiagramDocument {
  */
 export type DiagramTitleBlockSource = { kind: 'step'; stepId: string } | { kind: 'none' };
 
-/** The parts of the first page's title block set by hand ({@link DiagramDocument.titleBlockContent}). */
+/**
+ * The parts of the first page's title block set by hand ({@link DiagramDocument.titleBlockContent};
+ * `implementation-plans/diagram-title-block.md`, Phase 1c). Plain text throughout. An unsaid subtitle,
+ * credits or note is none, for good; an unsaid size is the app's ({@link TITLE_BLOCK_ART_SIZE_DEFAULTS}).
+ */
 export interface DiagramTitleBlockContent {
   /** The finished model: a step's picture. */
   model?: DiagramTitleBlockSource;
   /** The crease pattern: a linked step's pattern. */
   pattern?: DiagramTitleBlockSource;
-  /** Credits under the title, as the author writes them; never empty. */
-  byline?: string;
+  /** The small line over the title's band ("Origami diagram"): one line, never blank. */
+  subtitle?: string;
+  /** The credits under the band, in order; never empty. */
+  credits?: readonly DiagramTitleBlockCredit[];
+  /** Free text under the credits, its line breaks kept; never blank. */
+  note?: string;
+  /** The model's height, as a share of the block's, within {@link TITLE_BLOCK_ART_SIZE_RANGE}. */
+  modelSize?: number;
+  /** The crease pattern's side, as a share of the block's height, within {@link TITLE_BLOCK_ART_SIZE_RANGE}. */
+  patternSize?: number;
 }
 
-/** The parts of the title block an edit sets ({@link setTitleBlockContent}): `auto` takes a part's source away, an empty byline the byline. */
+/** One credit: a label over its value, each one line. A credit with nothing in it is kept, half typed. */
+export interface DiagramTitleBlockCredit {
+  label: string;
+  value: DiagramTitleBlockCreditValue;
+}
+
+/** A credit's value: text, or the diagram's step count, kept up to date (the number its last numbered step prints). */
+export type DiagramTitleBlockCreditValue = string | { kind: 'step-count' };
+
+/** One change to the credits, by a credit's place in the list: added (at the end, or at `at`), removed, or a field of it set. */
+export type DiagramTitleBlockCreditEdit =
+  | { op: 'add'; credit?: DiagramTitleBlockCredit; at?: number }
+  | { op: 'remove'; at: number }
+  | { op: 'set'; at: number; label?: string; value?: DiagramTitleBlockCreditValue };
+
+/**
+ * The parts of the title block an edit sets ({@link setTitleBlockContent}): `auto` takes a part's source away, a
+ * blank subtitle or note takes it away, and `default` a size.
+ */
 export interface DiagramTitleBlockContentPatch {
   model?: DiagramTitleBlockSource | 'auto';
   pattern?: DiagramTitleBlockSource | 'auto';
-  byline?: string;
+  subtitle?: string;
+  credits?: DiagramTitleBlockCreditEdit;
+  note?: string;
+  modelSize?: number | 'default';
+  patternSize?: number | 'default';
 }
+
+/** The parts of the title block's content, in the order a file writes them. */
+export const TITLE_BLOCK_PARTS = ['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize'] as const;
+
+/** The range of the model's and the pattern's sizes, as shares of the block's height: past it, a newer build's. */
+export const TITLE_BLOCK_ART_SIZE_RANGE = { min: 0.3, max: 1 } as const;
+
+/**
+ * The model's and the pattern's sizes where the content says none: Zach's J1b (2026-10-15), the pattern's side 0.8
+ * of the block's height and the model 0.6, each about a third smaller than the first cut's. A look (class (b)): it
+ * may change for every file, since no step moves when it does.
+ */
+export const TITLE_BLOCK_ART_SIZE_DEFAULTS = { modelSize: 0.6, patternSize: 0.8 } as const;
 
 /**
  * A flow page as it was packed (`diagram-flow-packing.md`, Decision 1): the
@@ -1447,9 +1494,11 @@ export interface DiagramNewerFields {
   pageArrangements?: Readonly<Record<string, unknown>>;
   /**
    * Parts of the title block's content with a kind or a field this build has
-   * no name for, each under its part's key, as they came — and fields of the
-   * content it has no name for, under theirs. Each such part is Auto here,
-   * and is written back until that part is set here.
+   * no name for, or a size past its range, each under its part's key, as they
+   * came — and fields of the content it has no name for, under theirs. Each
+   * such part is shown as the nearest here (a source as Auto, the credits as
+   * this build reads them, a size held to its range), and is written back
+   * until that part is set here.
    */
   titleBlockContent?: Readonly<Record<string, unknown>>;
 }
@@ -1486,9 +1535,12 @@ export function defaultHanStyle(locale: string | null | undefined): DiagramHanSt
 export function createDiagram(options: {
   title?: string;
   hanStyle?: DiagramHanStyle;
+  /** What its title block says from the start ({@link defaultTitleBlockContent}); none where unsaid. */
+  titleBlockContent?: DiagramTitleBlockContent;
   newId?: DiagramIdFactory;
 } = {}): DiagramDocument {
   const newId = options.newId ?? randomDiagramId;
+  const content = options.titleBlockContent;
   return {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: newId('diagram'),
@@ -1498,7 +1550,31 @@ export function createDiagram(options: {
     page: DEFAULT_PAGE_SETUP,
     steps: [],
     assets: {},
+    ...(content && Object.keys(content).length > 0 ? { titleBlockContent: content } : {}),
   };
+}
+
+/** The words a new diagram's title block starts with, in the author's language. */
+export interface TitleBlockDefaultWords {
+  subtitle: string;
+  author: string;
+  recommendedSize: string;
+  steps: string;
+}
+
+/**
+ * What a new diagram's title block says, written at its creation (Zach, 2026-10-15): the subtitle, and the credits
+ * Author and Recommended size, empty, and Steps, the live count. From then on they are the author's, in the file;
+ * a diagram that does not say them has none.
+ */
+export function defaultTitleBlockContent(words: TitleBlockDefaultWords): DiagramTitleBlockContent {
+  const credits: DiagramTitleBlockCredit[] = [
+    { label: titleBlockLine(words.author), value: '' },
+    { label: titleBlockLine(words.recommendedSize), value: '' },
+    { label: titleBlockLine(words.steps), value: { kind: 'step-count' } },
+  ];
+  const subtitle = titleBlockLine(words.subtitle);
+  return { ...(subtitle.trim() ? { subtitle } : {}), credits };
 }
 
 export function createStep(newId: DiagramIdFactory = randomDiagramId): DiagramStep {
@@ -2435,29 +2511,101 @@ export function setDiagramTitle(document: DiagramDocument, title: string): Diagr
 
 /**
  * The title block's content with each part `patch` says set: a source, or
- * `auto` taking it away; a byline, one of blanks taking it away. A part it
- * sets lets go of a newer build's value for it, even one shown as this
- * value; the same document when nothing changes.
+ * `auto` taking it away; a subtitle or a note, a blank one taking it away; a
+ * size, held to its range, the default taking it away; the credits by one
+ * edit, an index past the list changing nothing and the last credit removed
+ * taking them away. A part it sets lets go of a newer build's value for it,
+ * even one shown as this value; the same document when nothing changes.
  */
 export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTitleBlockContentPatch): DiagramDocument {
   const was = document.titleBlockContent ?? {};
-  const said = (key: keyof DiagramTitleBlockContentPatch) => patch[key] !== undefined;
   const source = (key: 'model' | 'pattern') => {
     const asked = patch[key];
     return asked === undefined ? was[key] : asked === 'auto' ? undefined : (titleBlockSource(asked) ?? undefined);
   };
-  const [model, pattern] = [source('model'), source('pattern')];
-  const byline = patch.byline === undefined ? was.byline : xmlText(patch.byline);
-  const next: DiagramTitleBlockContent = {
-    ...(model ? { model } : {}),
-    ...(pattern ? { pattern } : {}),
-    ...(byline?.trim() ? { byline } : {}),
+  const text = (key: 'subtitle' | 'note', clean: (text: string) => string) => {
+    const asked = patch[key];
+    if (asked === undefined) return was[key];
+    const cleaned = clean(asked);
+    return cleaned.trim() ? cleaned : undefined;
   };
-  const newer = withoutKeys(document.newer?.titleBlockContent, (['model', 'pattern', 'byline'] as const).filter(said));
+  const size = (key: 'modelSize' | 'patternSize') => {
+    const asked = patch[key];
+    if (asked === undefined || (asked !== 'default' && !Number.isFinite(asked))) return was[key];
+    return asked === 'default' ? undefined : titleBlockArtSize(key, asked);
+  };
+  const credits = patch.credits ? editedCredits(was.credits ?? [], patch.credits) : was.credits;
+  const next = titleBlockContentOf({
+    model: source('model'),
+    pattern: source('pattern'),
+    subtitle: text('subtitle', titleBlockLine),
+    credits: credits && credits.length > 0 ? credits : undefined,
+    note: text('note', xmlText),
+    modelSize: size('modelSize'),
+    patternSize: size('patternSize'),
+  });
+  const newer = withoutKeys(
+    document.newer?.titleBlockContent,
+    TITLE_BLOCK_PARTS.filter((key) => patch[key] !== undefined)
+  );
   if (sameTitleBlockContent(was, next) && newer === document.newer?.titleBlockContent) return document;
   const { titleBlockContent: _was, ...rest } = document;
   const content = Object.keys(next).length > 0 ? { ...rest, titleBlockContent: next } : rest;
   return withNewer(content, { ...document.newer, titleBlockContent: newer });
+}
+
+/** The content with only the parts that say something, in {@link TITLE_BLOCK_PARTS}' order. */
+function titleBlockContentOf(parts: { [K in keyof DiagramTitleBlockContent]: DiagramTitleBlockContent[K] | undefined }): DiagramTitleBlockContent {
+  return Object.fromEntries(
+    TITLE_BLOCK_PARTS.flatMap((key) => (parts[key] === undefined ? [] : [[key, parts[key]]]))
+  ) as DiagramTitleBlockContent;
+}
+
+/** The credits after one edit; the same list where it changes nothing. */
+function editedCredits(
+  credits: readonly DiagramTitleBlockCredit[],
+  edit: DiagramTitleBlockCreditEdit
+): readonly DiagramTitleBlockCredit[] {
+  const inList = (at: number) => Number.isInteger(at) && at >= 0 && at < credits.length;
+  if (edit.op === 'add') {
+    const credit = titleBlockCredit(edit.credit ?? { label: '', value: '' });
+    const at = edit.at !== undefined && Number.isInteger(edit.at) ? Math.min(Math.max(edit.at, 0), credits.length) : credits.length;
+    return [...credits.slice(0, at), credit, ...credits.slice(at)];
+  }
+  if (!inList(edit.at)) return credits;
+  if (edit.op === 'remove') return credits.filter((_, index) => index !== edit.at);
+  const was = credits[edit.at]!;
+  const credit = titleBlockCredit({ label: edit.label ?? was.label, value: edit.value ?? was.value });
+  if (sameCredit(credit, was)) return credits;
+  return credits.map((entry, index) => (index === edit.at ? credit : entry));
+}
+
+/**
+ * A line of the title block's text as stored — the subtitle, a credit's label or its text — cleaned as all typed
+ * text is, a line break a space. The one rule for the file and an edit.
+ */
+export function titleBlockLine(text: string): string {
+  return xmlText(text).replace(/[\r\n]+/g, ' ');
+}
+
+/** A credit as stored: its label and its text value each one line. */
+export function titleBlockCredit(credit: DiagramTitleBlockCredit): DiagramTitleBlockCredit {
+  const value = typeof credit.value === 'string' ? titleBlockLine(credit.value) : { kind: 'step-count' as const };
+  return { label: titleBlockLine(credit.label), value };
+}
+
+/** A size as stored: held to {@link TITLE_BLOCK_ART_SIZE_RANGE}, and none at its default. */
+export function titleBlockArtSize(key: 'modelSize' | 'patternSize', value: number): number | undefined {
+  const held = clampNumber(value, TITLE_BLOCK_ART_SIZE_RANGE, TITLE_BLOCK_ART_SIZE_DEFAULTS[key]);
+  return held === TITLE_BLOCK_ART_SIZE_DEFAULTS[key] ? undefined : held;
+}
+
+/** The model's and the pattern's sizes the block draws at: the content's, or the defaults. */
+export function titleBlockArtSizes(content: DiagramTitleBlockContent | undefined): { modelSize: number; patternSize: number } {
+  return {
+    modelSize: content?.modelSize ?? TITLE_BLOCK_ART_SIZE_DEFAULTS.modelSize,
+    patternSize: content?.patternSize ?? TITLE_BLOCK_ART_SIZE_DEFAULTS.patternSize,
+  };
 }
 
 /**
@@ -2474,7 +2622,20 @@ export function titleBlockSource(value: { readonly kind?: unknown; readonly step
 }
 
 function sameTitleBlockContent(a: DiagramTitleBlockContent, b: DiagramTitleBlockContent): boolean {
-  return sameSource(a.model, b.model) && sameSource(a.pattern, b.pattern) && a.byline === b.byline;
+  return (
+    sameSource(a.model, b.model) &&
+    sameSource(a.pattern, b.pattern) &&
+    a.subtitle === b.subtitle &&
+    (a.credits ?? []).length === (b.credits ?? []).length &&
+    (a.credits ?? []).every((credit, index) => sameCredit(credit, b.credits![index]!)) &&
+    a.note === b.note &&
+    a.modelSize === b.modelSize &&
+    a.patternSize === b.patternSize
+  );
+}
+
+function sameCredit(a: DiagramTitleBlockCredit, b: DiagramTitleBlockCredit): boolean {
+  return a.label === b.label && (typeof a.value === 'string' ? a.value === b.value : typeof b.value !== 'string');
 }
 
 function sameSource(a: DiagramTitleBlockSource | undefined, b: DiagramTitleBlockSource | undefined): boolean {

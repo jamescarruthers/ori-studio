@@ -1724,8 +1724,8 @@ flow's packing, 2026-10-12; the title block, off, 2026-10-14). The fixture
 stays unchanged, the migrated save is idempotent, and the legacy preset
 values are frozen in `paper-presets-v1.json`. `diagramFileTitleBlock.test.ts`
 holds three diagrams saved with a title block (`__fixtures__/diagram-title-block.json`,
-2026-10-14) to them the same way, written back byte for byte. A change to
-anything below is a format change.
+2026-10-14, its header's parts 2026-10-15) to them the same way, written
+back byte for byte. A change to anything below is a format change.
 
 **Where it lives.** `workspace.diagrams`, a list (D1), which asks for reader
 10. This build shows the first diagram and carries the rest verbatim
@@ -1771,25 +1771,43 @@ on its next save.
   `titleBlock` is read as `pageNumbers` and the margin are: `enabled` as
   written, `heightShare` held to its range, so the first page keeps a block
   where that build drew one, and at the same share holds the same steps.
-- `titleBlockContent` (added 2026-10-14, `diagram-title-block.md`), only
-  when a part is set: what the first page's title block shows, `{ model?,
-  pattern?, byline? }`, written in that order. `model` (the finished model:
-  a step's picture) and `pattern` (the crease pattern: a linked step's
-  thumbnail) are each `{ kind: 'step', stepId }` or `{ kind: 'none' }`.
-  Unsaid is Auto: the last step with a picture, and the last step linked to
-  a crease pattern, whatever it is shown as (none when no step is linked),
-  turns and locked steps skipped. A chosen step that is gone, or locked,
-  reads as Auto, its id kept. `byline`, the author's credits as typed,
-  never blank (one of blanks reads as unsaid). A part that does not read is
-  dropped alone, and is Auto. A part of a kind, or with a field, this build
-  has no name for, and a field of the content it has no name for, is a newer
-  build's (rule 2): carried under its key and written back until that part
-  is set here, Auto here, and an asset or a thumbnail it names is kept.
-  An unsaid part means Auto for good (class (c) in
-  `diagram-document-evolution.md`). What Auto finds is a look (class (b)):
-  a later build may change it for every file, which changes the step an old
-  file's block pictures but never moves a step. The content is in no page's
-  signature.
+- `titleBlockContent` (added 2026-10-14, `diagram-title-block.md`; the
+  header's parts added 2026-10-15, its Phase 1c), only when a part is set:
+  what the first page's title block shows, `{ model?, pattern?, subtitle?,
+  credits?, note?, modelSize?, patternSize? }`, written in that order. All
+  its text is plain. `model` (the finished model: a step's picture) and
+  `pattern` (the crease pattern: a linked step's thumbnail) are each `{
+  kind: 'step', stepId }` or `{ kind: 'none' }`. Unsaid is Auto: the last
+  step with a picture, and the last step linked to a crease pattern,
+  whatever it is shown as (none when no step is linked), turns and locked
+  steps skipped. A chosen step that is gone, or locked, reads as Auto, its
+  id kept. `subtitle`, one line over the title's band, and `note`, free
+  text under the credits, its line breaks kept: never blank, and unsaid (or
+  blank) is none. `credits`, in order, each `{ label, value }`: the label
+  one line, the value one line of text or `{ kind: 'step-count' }`, the
+  number the last numbered step prints (turns unnumbered, D22), kept up to
+  date; unsaid, or an empty list, is none; a credit with nothing in it is
+  kept. In the subtitle, a label and a text value a line break reads as a
+  space. `modelSize` and `patternSize`, the model's height and the pattern's
+  side as shares of the block's height (0.3–1); unsaid is the build's
+  default (0.6 and 0.8 since 2026-10-15), a look, and a size said is kept as
+  said, the default included. `byline` (this branch's credits as one text,
+  never released) is retired: a string reads as the note where none is
+  said, and is never written. A part that does not read is dropped alone,
+  and is Auto, none or the default; a credit that is no object is dropped,
+  and a field of one that does not read is empty. A part of a kind, or with
+  a field, this build has no name for — a source, a credit or a credit's
+  value — a size past its range, and a field of the content it has no name
+  for, is a newer build's (rule 2): carried under its key and written back
+  until that part is set here, shown here as the nearest (a source as Auto,
+  the credits as this build reads them, a value it does not know empty, a
+  size held to its range), and an asset or a thumbnail it names is kept. An
+  unsaid source means Auto, and an unsaid subtitle, credits or note none,
+  for good (class (c) in `diagram-document-evolution.md`); a new diagram
+  writes its subtitle and credits at creation. What Auto finds, and an
+  unsaid size, are a look (class (b)): a later build may change them for
+  every file, which changes the step an old file's block pictures, or how
+  large, but never moves a step. The content is in no page's signature.
 - `steps`: the order, steps and the turns between them (D22). A turn is
   `{ id: 'turn-<uuid>', kind: 'turn-over', axis }` (unsaid: `vertical`) or
   `{ id, kind: 'rotate', rotate: { amount, direction } }` (unsaid: a quarter

@@ -28,6 +28,7 @@ import {
   type DiagramCpRender,
   type DiagramCpSource,
   type DiagramPageSetup,
+  type DiagramTitleBlockContentPatch,
 } from './diagramDocument';
 import { readDiagram, storedSceneJson, writeDiagram } from './diagramFile';
 import { SVG_STORED_MAX_BYTES, sanitizeSvg } from '../upload/svgSanitize';
@@ -371,24 +372,49 @@ describe('writeDiagram / readDiagram', () => {
     it('writes its content only when a part is set, in one order, and reads each part', () => {
       const plain = throughJson(writeDiagram(sampleDiagram()));
       expect(plain).not.toHaveProperty('titleBlockContent');
-      const set = setTitleBlockContent(sampleDiagram(), {
-        byline: '設計：笠原邦彦',
-        pattern: { kind: 'none' },
-        model: { kind: 'step', stepId: 'step-3' },
-      });
+      const set = [
+        { note: '設計：笠原邦彦\n用紙：15 cm', patternSize: 0.5, modelSize: 0.75 },
+        { credits: { op: 'add', credit: { label: '作者', value: '笠原邦彦' } } },
+        { credits: { op: 'add', credit: { label: '工程数', value: { kind: 'step-count' } } } },
+        { subtitle: '折り紙の図', pattern: { kind: 'none' }, model: { kind: 'step', stepId: 'step-3' } },
+      ].reduce((document, patch) => setTitleBlockContent(document, patch as DiagramTitleBlockContentPatch), sampleDiagram());
       const written = throughJson(writeDiagram(set));
       expect(JSON.stringify(written.titleBlockContent)).toBe(
-        JSON.stringify({ model: { kind: 'step', stepId: 'step-3' }, pattern: { kind: 'none' }, byline: '設計：笠原邦彦' })
+        JSON.stringify({
+          model: { kind: 'step', stepId: 'step-3' },
+          pattern: { kind: 'none' },
+          subtitle: '折り紙の図',
+          credits: [
+            { label: '作者', value: '笠原邦彦' },
+            { label: '工程数', value: { kind: 'step-count' } },
+          ],
+          note: '設計：笠原邦彦\n用紙：15 cm',
+          modelSize: 0.75,
+          patternSize: 0.5,
+        })
       );
       const read = readDiagram(written)!;
       expect(read.document).toEqual(set);
       expect(read.document.newer).toBeUndefined();
-      // Every part back to Auto, and no byline: nothing written.
-      const cleared = setTitleBlockContent(set, { model: 'auto', pattern: 'auto', byline: '' });
+      expect(throughJson(writeDiagram(read.document))).toEqual(written);
+      // Every part back to Auto, its default or none: nothing written.
+      const cleared = [
+        { model: 'auto', pattern: 'auto', subtitle: '', note: '', modelSize: 'default', patternSize: 0.8 },
+        { credits: { op: 'remove', at: 0 } },
+        { credits: { op: 'remove', at: 0 } },
+      ].reduce((document, patch) => setTitleBlockContent(document, patch as DiagramTitleBlockContentPatch), set);
       expect(throughJson(writeDiagram(cleared))).toEqual(plain);
     });
 
-    it('drops a part that does not read alone, as Auto; the rest reads', () => {
+    it('keeps a size a file says at the default as it says it: unsaid is the default, said is the author’s', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const written = { ...base, titleBlockContent: { modelSize: 0.6, patternSize: 0.8 } };
+      const read = readDiagram(written)!;
+      expect(read.document.titleBlockContent).toEqual({ modelSize: 0.6, patternSize: 0.8 });
+      expect(throughJson(writeDiagram(read.document))).toEqual(written);
+    });
+
+    it('drops a part that does not read alone, as Auto, none or the default; the rest reads', () => {
       const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { pattern: { kind: 'none' } })));
       const content = (titleBlockContent: unknown) => readDiagram({ ...base, titleBlockContent })!;
       for (const damage of [
@@ -397,6 +423,16 @@ describe('writeDiagram / readDiagram', () => {
         { model: { kind: 'step' } },
         { model: { kind: 'step', stepId: '' } },
         { model: { kind: 3 } },
+        { subtitle: 3 },
+        { subtitle: ' \n ' },
+        { note: ['Design: Lang'] },
+        { note: '  \n ' },
+        { credits: 'Author: Lang' },
+        { credits: { label: 'Author', value: 'Lang' } },
+        { credits: [] },
+        { credits: ['Author', 3, null, [{ label: 'Author' }]] },
+        { modelSize: '0.5' },
+        { patternSize: null },
         { byline: 3 },
         { byline: '  \n ' },
       ]) {
@@ -411,8 +447,51 @@ describe('writeDiagram / readDiagram', () => {
         expect(read.document.titleBlockContent, JSON.stringify(damage)).toBeUndefined();
         expect(read.document.newer, JSON.stringify(damage)).toBeUndefined();
       }
-      // A byline is cleaned as every string a user typed is.
-      expect(content({ byline: 'Design\u0000: Lang' }).document.titleBlockContent).toEqual({ byline: 'Design: Lang' });
+      // Text is cleaned as every string a user typed is; the subtitle, a label and a text value are one line each.
+      expect(
+        content({
+          subtitle: 'Origami\ndiagram',
+          credits: [{ label: 'Au\u0000thor', value: 'Robert\nLang' }],
+          note: 'Design\u0000: Lang\nPaper: 15 cm',
+        }).document.titleBlockContent
+      ).toEqual({
+        subtitle: 'Origami diagram',
+        credits: [{ label: 'Author', value: 'Robert Lang' }],
+        note: 'Design: Lang\nPaper: 15 cm',
+      });
+    });
+
+    it('reads a credit leniently: a field that does not read is empty, the credit kept', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const read = readDiagram({
+        ...base,
+        titleBlockContent: { credits: [{ label: 3, value: 'Lang' }, { label: 'Paper' }, { label: 'Size', value: 60 }, { label: 'Steps', value: { kind: 3 } }, {}] },
+      })!;
+      expect(read.document.newer).toBeUndefined();
+      expect(read.document.titleBlockContent).toEqual({
+        credits: [
+          { label: '', value: 'Lang' },
+          { label: 'Paper', value: '' },
+          { label: 'Size', value: '' },
+          { label: 'Steps', value: '' },
+          { label: '', value: '' },
+        ],
+      });
+    });
+
+    it('reads this branch’s byline as the note, and never writes it', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const read = (titleBlockContent: unknown) => readDiagram({ ...base, titleBlockContent })!.document;
+      const bylined = read({ model: { kind: 'none' }, byline: '디자인: 김민수\n종이: 35 cm 정사각형' });
+      expect(bylined.newer).toBeUndefined();
+      expect(bylined.titleBlockContent).toEqual({ model: { kind: 'none' }, note: '디자인: 김민수\n종이: 35 cm 정사각형' });
+      expect(throughJson(writeDiagram(bylined)).titleBlockContent).toEqual({
+        model: { kind: 'none' },
+        note: '디자인: 김민수\n종이: 35 cm 정사각형',
+      });
+      // A note said wins; a byline beside it is let go.
+      expect(read({ byline: 'Design: Lang', note: 'Paper: 15 cm' }).titleBlockContent).toEqual({ note: 'Paper: 15 cm' });
+      expect(read({ byline: 'Design: Lang', note: ' ' }).titleBlockContent).toEqual({ note: 'Design: Lang' });
     });
 
     it('reads back exactly what an edit set: the edit holds a source to what the file reads', () => {
@@ -421,30 +500,75 @@ describe('writeDiagram / readDiagram', () => {
     });
 
     it('carries a part of a kind or with a field it has no name for, and a field of its own, as a newer build’s: Auto here', () => {
-      const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { byline: 'Design: Lang' })));
+      const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { note: 'Design: Lang' })));
       for (const [patch, carried] of [
         [{ model: { kind: 'own', step: { id: 'title-model' } } }, 'model'],
         [{ pattern: { kind: 'own', scope: {}, fingerprint: 'fp', thumbnail: 'thumb-own' } }, 'pattern'],
         [{ model: { kind: 'step', stepId: 'step-1', pose: 'front' } }, 'model'],
         [{ pattern: { kind: 'none', why: 'no pattern' } }, 'pattern'],
-        [{ subtitle: 'Traditional' }, 'subtitle'],
+        [{ ribbon: 'gold' }, 'ribbon'],
       ] as const) {
-        const titleBlockContent = { ...patch, byline: 'Design: Lang' };
+        const titleBlockContent = { ...patch, note: 'Design: Lang' };
         const written = { ...base, titleBlockContent };
         const read = readDiagram(written)!;
         expect(read.readOnly, carried).toBe(false);
-        expect(read.document.titleBlockContent, carried).toEqual({ byline: 'Design: Lang' });
+        expect(read.document.titleBlockContent, carried).toEqual({ note: 'Design: Lang' });
         expect(read.document.newer, carried).toEqual({ titleBlockContent: patch });
         expect(throughJson(writeDiagram(read.document)), carried).toEqual(written);
         // Another part set keeps it; that part set here lets it go.
-        const bylined = throughJson(writeDiagram(setTitleBlockContent(read.document, { byline: 'Design: Kasahara' })));
-        expect(bylined.titleBlockContent, carried).toEqual({ ...patch, byline: 'Design: Kasahara' });
-        if (carried !== 'subtitle') {
+        const noted = throughJson(writeDiagram(setTitleBlockContent(read.document, { note: 'Design: Kasahara' })));
+        expect(noted.titleBlockContent, carried).toEqual({ ...patch, note: 'Design: Kasahara' });
+        if (carried !== 'ribbon') {
           const auto = setTitleBlockContent(read.document, { [carried]: 'auto' });
           expect(auto.newer, carried).toBeUndefined();
           expect(throughJson(writeDiagram(auto)), carried).toEqual(base);
         }
       }
+    });
+
+    it('carries credits with a credit or a value it has no name for, shown as it reads them, until the credits are edited here', () => {
+      const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { note: 'Design: Lang' })));
+      for (const [credits, shown] of [
+        [
+          [{ label: 'Author', value: 'Lang' }, { label: 'Pages', value: { kind: 'page-count' } }],
+          [{ label: 'Author', value: 'Lang' }, { label: 'Pages', value: '' }],
+        ],
+        [[{ label: 'Steps', value: { kind: 'step-count', from: 2 } }], [{ label: 'Steps', value: '' }]],
+        [[{ label: 'Author', value: 'Lang', align: 'right' }], [{ label: 'Author', value: 'Lang' }]],
+      ] as const) {
+        const written = { ...base, titleBlockContent: { credits, note: 'Design: Lang' } };
+        const read = readDiagram(written)!;
+        const label = JSON.stringify(credits);
+        expect(read.readOnly, label).toBe(false);
+        expect(read.document.titleBlockContent, label).toEqual({ credits: shown, note: 'Design: Lang' });
+        expect(read.document.newer, label).toEqual({ titleBlockContent: { credits } });
+        expect(throughJson(writeDiagram(read.document)), label).toEqual(written);
+        // Another part set keeps them; a credit edited here lets them go, the list as shown here taking their place.
+        expect(throughJson(writeDiagram(setTitleBlockContent(read.document, { note: 'Paper' }))).titleBlockContent.credits, label).toEqual(credits);
+        const edited = setTitleBlockContent(read.document, { credits: { op: 'set', at: 0, label: 'By' } });
+        expect(edited.newer, label).toBeUndefined();
+        expect(throughJson(writeDiagram(edited)).titleBlockContent.credits, label).toEqual([{ ...shown[0], label: 'By' }, ...shown.slice(1)]);
+      }
+    });
+
+    it('carries a size past its range as a newer build’s, drawn here at the nearest, until it is set here', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      for (const [titleBlockContent, shown, carried] of [
+        [{ modelSize: 1.4 }, { modelSize: 1 }, { modelSize: 1.4 }],
+        [{ patternSize: 0.1 }, { patternSize: 0.3 }, { patternSize: 0.1 }],
+        [{ modelSize: 1.4, patternSize: 0.5 }, { modelSize: 1, patternSize: 0.5 }, { modelSize: 1.4 }],
+      ] as const) {
+        const written = { ...base, titleBlockContent };
+        const read = readDiagram(written)!;
+        const label = JSON.stringify(titleBlockContent);
+        expect(read.document.titleBlockContent, label).toEqual(shown);
+        expect(read.document.newer, label).toEqual({ titleBlockContent: carried });
+        expect(throughJson(writeDiagram(read.document)), label).toEqual(written);
+      }
+      const read = readDiagram({ ...base, titleBlockContent: { modelSize: 1.4 } })!.document;
+      const set = setTitleBlockContent(read, { modelSize: 0.9 });
+      expect(set.newer).toBeUndefined();
+      expect(throughJson(writeDiagram(set)).titleBlockContent).toEqual({ modelSize: 0.9 });
     });
   });
 

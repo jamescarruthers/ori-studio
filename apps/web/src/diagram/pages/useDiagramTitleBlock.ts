@@ -16,9 +16,9 @@ const NO_CHOICES: TitleBlockChoices = {
  * components; `implementation-plans/diagram-title-block.md`, section 7): the
  * toggle, a page setting (`titleBlock`), and what the block shows — its model
  * and crease pattern, from the choices `titleBlockChoices` offers, and its
- * byline. Each change is one undo step and one count of which setting
- * changed; the byline's commits, at each pause in typing, are one of each per
- * sitting at its field.
+ * note (the pane's Byline until Phase 1c's rows). Each change is one undo
+ * step and one count of which setting changed; the note's commits, at each
+ * pause in typing, are one of each per sitting at its field.
  */
 export function useDiagramTitleBlock() {
   const document = useWorkspaceStore((state) => state.diagram);
@@ -28,14 +28,14 @@ export function useDiagramTitleBlock() {
   const shown = hasTitleBlock(page);
   // Only while the selects are there to offer them: a file without the block pays nothing.
   const choices = useMemo(() => (document && shown ? titleBlockChoices(document) : NO_CHOICES), [document, shown]);
-  /** The sitting at the byline last counted. */
+  /** The sitting at the note last counted. */
   const countedSession = useRef<number | null>(null);
 
   const setModel = useCallback((choice: string) => choose('model', choice), []);
   const setPattern = useCallback((choice: string) => choose('pattern', choice), []);
-  const setByline = useCallback(
-    (byline: string, session: number) => {
-      if (!useWorkspaceStore.getState().setDiagramTitleBlockContent({ byline }, { loadId, session })) return;
+  const setNote = useCallback(
+    (note: string, session: number) => {
+      if (!useWorkspaceStore.getState().setDiagramTitleBlockContent({ note }, { loadId, session })) return;
       if (countedSession.current === session) return;
       countedSession.current = session;
       trackDiagramPageSetupChanged('title_block_byline');
@@ -53,11 +53,11 @@ export function useDiagramTitleBlock() {
     shown,
     model: choices.model,
     pattern: choices.pattern,
-    byline: document?.titleBlockContent?.byline ?? '',
+    note: document?.titleBlockContent?.note ?? '',
     setEnabled,
     setModel,
     setPattern,
-    setByline,
+    setNote,
   };
 }
 

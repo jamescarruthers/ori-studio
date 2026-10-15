@@ -718,7 +718,7 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
   function blockDiagram(content: DiagramTitleBlockContentPatch = {}, last: DiagramStep = cpStep('step-9')): DiagramDocument {
     const steps = [...Array.from({ length: 8 }, (_, index) => cpStep(`step-${index + 1}`)), last].map((step) => ({ ...step, text: 'Fold in half.' }));
     const made = insertSteps(createDiagram({ title: TITLE, hanStyle: 'sc' }), steps, 0);
-    return setTitleBlockContent({ ...made, page: { ...made.page, layout: 'flow', titleBlock: ON } }, { byline: BYLINE, ...content });
+    return setTitleBlockContent({ ...made, page: { ...made.page, layout: 'flow', titleBlock: ON } }, { note: BYLINE, ...content });
   }
   type Box = { x: number; y: number; w: number; h: number };
   /** Each line of the page with both ends in `box`, mm: its ends, its pen, and whether it is dashed. */

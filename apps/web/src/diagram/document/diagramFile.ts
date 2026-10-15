@@ -132,9 +132,13 @@ import {
   SPREAD_AXIS_RANGE,
   SPREAD_SKEW_RANGE,
   STEPS_PER_PAGE_RANGE,
+  TITLE_BLOCK_ART_SIZE_RANGE,
+  TITLE_BLOCK_PARTS,
   TITLE_BLOCK_SHARE_RANGE,
   isTurn,
   showAsOf,
+  titleBlockCredit,
+  titleBlockLine,
   titleBlockSource,
   carriedJson,
   isKnownAsset,
@@ -175,6 +179,8 @@ import {
   type DiagramStyle,
   type DiagramSvgAsset,
   type DiagramTitleBlockContent,
+  type DiagramTitleBlockCredit,
+  type DiagramTitleBlockCreditValue,
   type DiagramTitleBlockSource,
   type DiagramTurn,
   type DiagramPaperFaces,
@@ -322,7 +328,7 @@ const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
  * page arrangement this build does not read (`pageArrangements`, read by
  * `readPageArrangements`): the page is packed here as if none were stored.
  * And so is a part of the title block's content (`readTitleBlockContent`):
- * Auto, here.
+ * shown as the nearest here.
  */
 function readNewerFields(
   value: Record<string, unknown>,
@@ -385,28 +391,71 @@ const TITLE_BLOCK_SOURCE_KEYS: ReadonlyMap<string, ReadonlySet<string>> = new Ma
   ['none', new Set(['kind'])],
 ]);
 
+/** The fields of a credit, and of a live step count, this build knows. */
+const TITLE_BLOCK_CREDIT_KEYS: ReadonlySet<string> = new Set(['label', 'value']);
+const STEP_COUNT_KEYS: ReadonlySet<string> = new Set(['kind']);
+
 /**
  * The title block's content (`titleBlockContent`), each part read alone. A
- * source of a kind or with a field this build has no name for, and a field of
- * the content it has no name for, is a newer build's: carried under its key
- * and Auto here. A part that does not read — the wrong type, a step without
- * its id — is dropped alone, and is Auto too; so is a byline of blanks.
+ * source of a kind or with a field this build has no name for, credits with
+ * such a credit or value, a size past its range, and a field of the content
+ * it has no name for, are a newer build's: carried under its key, and shown
+ * as the nearest here — a source as Auto, the credits as this build reads
+ * them, a size held to its range. A part that does not read — the wrong type,
+ * a step without its id — is dropped alone, and so is a blank subtitle or
+ * note, and a credit that is no object.
+ *
+ * `byline` is retired: this branch's credits as one text, never released. It
+ * reads as the note where the file says none, and is never written.
  */
 function readTitleBlockContent(value: unknown): { content: DiagramTitleBlockContent; newer: Record<string, unknown> } {
-  const content: DiagramTitleBlockContent = {};
+  const content: { -readonly [K in keyof DiagramTitleBlockContent]: DiagramTitleBlockContent[K] } = {};
   const newer: Record<string, unknown> = {};
   if (!isRecord(value)) return { content, newer };
+  let byline: string | undefined;
   for (const [key, part] of Object.entries(value)) {
     if (key === 'model' || key === 'pattern') {
       const source = readTitleBlockSource(part);
       if (source === 'newer') newer[key] = part;
       else if (source) content[key] = source;
+    } else if (key === 'subtitle' || key === 'note') {
+      const text = typeof part === 'string' ? (key === 'subtitle' ? titleBlockLine(part) : xmlText(part)) : '';
+      if (text.trim() !== '') content[key] = text;
+    } else if (key === 'credits') {
+      const read = readTitleBlockCredits(part);
+      if (read.newer) newer[key] = part;
+      if (read.credits.length > 0) content.credits = read.credits;
+    } else if (key === 'modelSize' || key === 'patternSize') {
+      if (typeof part !== 'number' || !Number.isFinite(part)) continue;
+      if (isPastRange(part, TITLE_BLOCK_ART_SIZE_RANGE)) newer[key] = part;
+      content[key] = Math.min(TITLE_BLOCK_ART_SIZE_RANGE.max, Math.max(TITLE_BLOCK_ART_SIZE_RANGE.min, part));
     } else if (key === 'byline') {
-      const byline = typeof part === 'string' ? xmlText(part) : '';
-      if (byline.trim() !== '') content.byline = byline;
+      if (typeof part === 'string') byline = xmlText(part);
     } else newer[key] = part;
   }
+  if (content.note === undefined && byline?.trim()) content.note = byline;
   return { content, newer };
+}
+
+/** The credits this build reads, in order — a value of a kind it does not know as empty — and whether a newer build's are among them. */
+function readTitleBlockCredits(value: unknown): { credits: DiagramTitleBlockCredit[]; newer: boolean } {
+  const credits: DiagramTitleBlockCredit[] = [];
+  let newer = false;
+  for (const entry of Array.isArray(value) ? value : []) {
+    if (!isRecord(entry)) continue;
+    const read = readCreditValue(entry.value);
+    if (read === 'newer' || hasNewerKey(entry, TITLE_BLOCK_CREDIT_KEYS)) newer = true;
+    const label = typeof entry.label === 'string' ? entry.label : '';
+    credits.push(titleBlockCredit({ label, value: read === 'newer' || read === null ? '' : read }));
+  }
+  return { credits, newer };
+}
+
+/** A credit's value: text, the live step count, a newer build's (`'newer'`), or null for one that does not read. */
+function readCreditValue(value: unknown): DiagramTitleBlockCreditValue | 'newer' | null {
+  if (typeof value === 'string') return value;
+  if (!isRecord(value) || typeof value.kind !== 'string') return null;
+  return value.kind === 'step-count' && !hasNewerKey(value, STEP_COUNT_KEYS) ? { kind: 'step-count' } : 'newer';
 }
 
 /** A part's source: this build's, a newer build's (`'newer'`), or null for one that does not read. */
@@ -556,13 +605,10 @@ function writePageSetup(page: DiagramPageSetup): Record<string, unknown> {
   return Object.fromEntries(PAGE_SETTING_KEYS.map((key) => [key, whole(key)]));
 }
 
-/** The order a title block's parts are written in; a newer build's fields follow. */
-const TITLE_BLOCK_PARTS = ['model', 'pattern', 'byline'] as const;
-
 /**
  * The title block's content as written, only when a part is set: each part
- * set here, or a newer build's in its place as it came, in one order, then
- * the fields only a newer build has names for.
+ * set here, or a newer build's in its place as it came, in one order
+ * (`TITLE_BLOCK_PARTS`), then the fields only a newer build has names for.
  */
 function writeTitleBlockContent(
   content: DiagramTitleBlockContent | undefined,
@@ -570,13 +616,17 @@ function writeTitleBlockContent(
 ): { titleBlockContent?: Record<string, unknown> } {
   const parts: Record<string, unknown> = {};
   for (const key of TITLE_BLOCK_PARTS) {
-    const part = carried?.[key] ?? content?.[key];
+    const part = carried?.[key] ?? (key === 'credits' ? content?.credits?.map(writeCredit) : content?.[key]);
     if (part !== undefined) parts[key] = part;
   }
   for (const [key, part] of Object.entries(carried ?? {})) {
     if (!Object.hasOwn(parts, key)) parts[key] = part;
   }
   return Object.keys(parts).length > 0 ? { titleBlockContent: parts } : {};
+}
+
+function writeCredit(credit: DiagramTitleBlockCredit): Record<string, unknown> {
+  return { label: credit.label, value: typeof credit.value === 'string' ? credit.value : { kind: credit.value.kind } };
 }
 
 function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<string, unknown> {

@@ -304,7 +304,8 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
   let packed: Record<string, DiagramPageArrangement> = {};
   const stored = document.pageArrangements ?? {};
-  const titles = { title: document.title, byline: document.titleBlockContent?.byline ?? '' };
+  // The note prints where the byline did until the block takes Zach's J1b (`diagram-title-block.md`, Phase 1c).
+  const titles = { title: document.title, byline: document.titleBlockContent?.note ?? '' };
   const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
     const pages = layoutDiagramPages(steps, document.page, titles, setter, { ...stored, ...packed }, stored);
     if (pages.packed) packed = { ...packed, ...pages.packed };
@@ -415,14 +416,14 @@ function scalesOf(pages: DiagramPagesLayout): Map<string, { scale: number; measu
 
 /**
  * Every text a diagram's pages set, at its weight: the title, the title
- * block's byline where the first page has the block, the instructions and
+ * block's note where the first page has the block, the instructions and
  * the digits, and the runs of its uploads' text and its annotations' labels,
  * each in the CJK face it was given.
  */
 export function diagramFontTexts(document: DiagramDocument): DiagramFontText[] {
   return [
     { text: document.title, weight: 700 },
-    ...(hasTitleBlock(document.page) ? [{ text: document.titleBlockContent?.byline ?? '', weight: 400 as const }] : []),
+    ...(hasTitleBlock(document.page) ? [{ text: document.titleBlockContent?.note ?? '', weight: 400 as const }] : []),
     ...stepsOf(document).map((step) => ({ text: step.text, weight: 400 as const })),
     ...[...diagramUploadTexts(document), ...diagramLabelTexts(document)].map(({ face, text }) =>
       face.key === 'latin' ? { text, weight: face.weight } : { text, weight: face.weight, cjk: face.key }

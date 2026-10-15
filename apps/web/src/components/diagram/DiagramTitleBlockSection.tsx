@@ -83,11 +83,11 @@ export function DiagramTitleBlockSection() {
               'Credits under the title, as you write them. Up to {{lines}} lines print; a long line wraps onto the next.',
               { lines: TITLE_BLOCK_BYLINE_LINES }
             )}
-            value={block.byline}
+            value={block.note}
             placeholder={t('panels:diagram.pagePane.titleBlock.bylinePlaceholder', 'Design: …\nPaper: 60 cm square')}
             rows={4}
             disabled={readOnly}
-            onCommit={block.setByline}
+            onCommit={block.setNote}
           />
         </>
       )}
