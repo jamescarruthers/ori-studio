@@ -1470,7 +1470,9 @@
     "titleBlock": {
       "default": {
         "author": "作者",
-        "recommendedSize": "推奨サイズ",
+        "authorName": "お名前",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "推奨用紙",
         "steps": "ステップ数",
         "subtitle": "折り紙の折り図"
       }

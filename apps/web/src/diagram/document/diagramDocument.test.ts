@@ -347,6 +347,8 @@ describe('page setup', () => {
 
 describe('the title block’s content', () => {
   const STEP = { kind: 'step', stepId: 'step-2' } as const;
+  /** A new diagram's words in Japanese. */
+  const JA_WORDS = { subtitle: '折り紙の図', author: '作者', authorName: 'お名前', steps: '工程数', recommendedPaper: '推奨用紙', paperSize: '15 cm × 15 cm' };
 
   it('sets each part alone, and takes it away: a source by Auto, the subtitle and the note by blanks', () => {
     const { diagram } = diagramWith(2);
@@ -424,15 +426,16 @@ describe('the title block’s content', () => {
     expect(setTitleBlockContent(set, { modelSize: 0.59, patternSize: 'default' })).toEqual(diagram);
   });
 
-  it('starts a new diagram with the words it is given, and none where it is given none', () => {
+  it('starts a new diagram with the words it is given — Author, Steps and Recommended paper, each with a value — and none where it is given none', () => {
     expect(createDiagram()).not.toHaveProperty('titleBlockContent');
-    const content = defaultTitleBlockContent({ subtitle: '折り紙の図', author: '作者', recommendedSize: '推奨サイズ', steps: '工程数' });
+    const content = defaultTitleBlockContent(JA_WORDS);
+    // Zach, 2026-10-15: no credit starts empty, and this order.
     expect(content).toEqual({
       subtitle: '折り紙の図',
       credits: [
-        { label: '作者', value: '' },
-        { label: '推奨サイズ', value: '' },
+        { label: '作者', value: 'お名前' },
         { label: '工程数', value: { kind: 'step-count' } },
+        { label: '推奨用紙', value: '15 cm × 15 cm' },
       ],
     });
     expect(createDiagram({ titleBlockContent: content }).titleBlockContent).toEqual(content);

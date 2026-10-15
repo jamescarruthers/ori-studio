@@ -1470,7 +1470,9 @@
     "titleBlock": {
       "default": {
         "author": "작가",
-        "recommendedSize": "권장 크기",
+        "authorName": "이름을 입력하세요",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "권장 용지",
         "steps": "단계 수",
         "subtitle": "종이접기 도해"
       }

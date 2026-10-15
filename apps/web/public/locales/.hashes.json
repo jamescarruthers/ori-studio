@@ -4449,7 +4449,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -4474,7 +4473,10 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8926,7 +8928,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -8951,7 +8952,10 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13405,7 +13409,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -13430,7 +13433,10 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -17785,7 +17791,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -17810,7 +17815,10 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22165,7 +22173,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -22190,7 +22197,10 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -26642,7 +26652,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -26667,7 +26676,10 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -31119,7 +31131,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -31144,7 +31155,10 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -35499,7 +35513,6 @@
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
     "panels:diagram.pages.titleBlock.stepNoPicture": "334a19cce34f",
     "panels:diagram.titleBlock.default.author": "d95082a2ee57",
-    "panels:diagram.titleBlock.default.recommendedSize": "53ae50fd899c",
     "panels:diagram.titleBlock.default.steps": "1de3df70ddf4",
     "panels:diagram.titleBlock.default.subtitle": "53039737eab2",
     "panels:diagram.pagePane.path": "62fa5a5b0d3c",
@@ -35524,6 +35537,9 @@
     "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991",
+    "panels:diagram.titleBlock.default.authorName": "437f27c1e849",
+    "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
+    "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092"
   }
 }

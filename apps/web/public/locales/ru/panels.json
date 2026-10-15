@@ -1620,7 +1620,9 @@
     "titleBlock": {
       "default": {
         "author": "Автор",
-        "recommendedSize": "Рекомендуемый размер",
+        "authorName": "Ваше имя",
+        "paperSize": "15 см × 15 см",
+        "recommendedPaper": "Рекомендуемая бумага",
         "steps": "Шаги",
         "subtitle": "Схема оригами"
       }

@@ -1520,7 +1520,9 @@
     "titleBlock": {
       "default": {
         "author": "Author",
-        "recommendedSize": "Recommended size",
+        "authorName": "Your name here",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "Recommended paper",
         "steps": "Steps",
         "subtitle": "Origami diagram"
       }

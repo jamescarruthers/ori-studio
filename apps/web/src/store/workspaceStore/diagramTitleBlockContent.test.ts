@@ -24,6 +24,24 @@ import { useWorkspaceStore } from '../workspaceStore';
 
 const state = () => useWorkspaceStore.getState();
 
+/** A new diagram's words in English (Zach, 2026-10-15): every credit with a value, in this order. */
+const NEW_CONTENT = {
+  subtitle: 'Origami diagram',
+  credits: [
+    { label: 'Author', value: 'Your name here' },
+    { label: 'Steps', value: { kind: 'step-count' as const } },
+    { label: 'Recommended paper', value: '15 cm × 15 cm' },
+  ],
+};
+/** The same in Japanese, for the catalog. */
+const JA_BUNDLE = {
+  diagram: {
+    titleBlock: {
+      default: { subtitle: '折り紙の図', author: '作者', authorName: 'お名前', steps: '工程数', recommendedPaper: '推奨用紙', paperSize: '15 cm × 15 cm' },
+    },
+  },
+};
+
 beforeEach(() => {
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
 });
@@ -33,18 +51,11 @@ afterEach(async () => {
 });
 
 describe('a new diagram’s title block', () => {
-  it('is written with the diagram’s first edit: the subtitle, and Author, Recommended size and the live step count', () => {
+  it('is written with the diagram’s first edit: the subtitle, and Author, the live step count and Recommended paper, each with a value (Zach, 2026-10-15)', () => {
     expect(state().diagram).toBeNull();
     expect(state().setDiagramTitle('Crane')).toBe(true);
     expect(state().diagram!.page.titleBlock).toEqual({ enabled: true, heightShare: 0.23 });
-    expect(state().diagram!.titleBlockContent).toEqual({
-      subtitle: 'Origami diagram',
-      credits: [
-        { label: 'Author', value: '' },
-        { label: 'Recommended size', value: '' },
-        { label: 'Steps', value: { kind: 'step-count' } },
-      ],
-    });
+    expect(state().diagram!.titleBlockContent).toEqual(NEW_CONTENT);
     // One undo step for the edit that made it, which takes the diagram away again.
     expect(state().undoDiagram()).toBe(true);
     expect(state().diagram).toBeNull();
@@ -54,7 +65,7 @@ describe('a new diagram’s title block', () => {
     i18n.addResourceBundle(
       'ja',
       'panels',
-      { diagram: { titleBlock: { default: { subtitle: '折り紙の図', author: '作者', recommendedSize: '推奨サイズ', steps: '工程数' } } } },
+      JA_BUNDLE,
       true,
       true
     );
@@ -63,9 +74,9 @@ describe('a new diagram’s title block', () => {
     expect(state().diagram!.titleBlockContent).toEqual({
       subtitle: '折り紙の図',
       credits: [
-        { label: '作者', value: '' },
-        { label: '推奨サイズ', value: '' },
+        { label: '作者', value: 'お名前' },
         { label: '工程数', value: { kind: 'step-count' } },
+        { label: '推奨用紙', value: '15 cm × 15 cm' },
       ],
     });
   });
@@ -74,13 +85,7 @@ describe('a new diagram’s title block', () => {
     state().setDiagramTitle('Crane');
     expect(state().setDiagramTitleBlockContent({ credits: { op: 'set', at: 0, value: 'Traditional' } })).toBe(true);
     expect(state().setDiagramTitleBlockContent({ subtitle: '' })).toBe(true);
-    expect(state().diagram!.titleBlockContent).toEqual({
-      credits: [
-        { label: 'Author', value: 'Traditional' },
-        { label: 'Recommended size', value: '' },
-        { label: 'Steps', value: { kind: 'step-count' } },
-      ],
-    });
+    expect(state().diagram!.titleBlockContent).toEqual({ credits: [{ label: 'Author', value: 'Traditional' }, ...NEW_CONTENT.credits.slice(1)] });
   });
 
   it('is never given to a diagram from a file, which says what it has', () => {
@@ -117,14 +122,7 @@ describe('setDiagramTitleBlockShown, the block’s toggle', () => {
     expect(counts()).toEqual([9, 11, 8]);
     expect(state().setDiagramTitleBlockShown(true)).toBe(true);
     expect(state().diagram!.page.titleBlock).toEqual(PAGE_SETTINGS.titleBlock.default);
-    expect(state().diagram!.titleBlockContent).toEqual({
-      subtitle: 'Origami diagram',
-      credits: [
-        { label: 'Author', value: '' },
-        { label: 'Recommended size', value: '' },
-        { label: 'Steps', value: { kind: 'step-count' } },
-      ],
-    });
+    expect(state().diagram!.titleBlockContent).toEqual(NEW_CONTENT);
     // The later pages keep their counts and shift (Zach, 2026-10-15).
     expect(counts()).toEqual([7, 11, 9, 1]);
     expect(state().diagramHistory.past).toHaveLength(1);
@@ -140,7 +138,7 @@ describe('setDiagramTitleBlockShown, the block’s toggle', () => {
     i18n.addResourceBundle(
       'ja',
       'panels',
-      { diagram: { titleBlock: { default: { subtitle: '折り紙の図', author: '作者', recommendedSize: '推奨サイズ', steps: '工程数' } } } },
+      JA_BUNDLE,
       true,
       true
     );
@@ -148,7 +146,11 @@ describe('setDiagramTitleBlockShown, the block’s toggle', () => {
     crane();
     state().setDiagramTitleBlockShown(true);
     const content = state().diagram!.titleBlockContent;
-    expect(content?.credits?.map(({ label }) => label)).toEqual(['作者', '推奨サイズ', '工程数']);
+    expect(content?.credits).toEqual([
+      { label: '作者', value: 'お名前' },
+      { label: '工程数', value: { kind: 'step-count' } },
+      { label: '推奨用紙', value: '15 cm × 15 cm' },
+    ]);
     expect(state().setDiagramTitleBlockShown(false)).toBe(true);
     expect(state().diagram!.page.titleBlock).toEqual({ ...PAGE_SETTINGS.titleBlock.default, enabled: false });
     expect(state().diagram!.titleBlockContent).toBe(content);

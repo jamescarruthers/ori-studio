@@ -67,9 +67,20 @@ function install(
 const NEW_CONTENT = defaultTitleBlockContent({
   subtitle: 'Origami diagram',
   author: 'Author',
-  recommendedSize: 'Recommended size',
+  authorName: 'Your name here',
   steps: 'Steps',
+  recommendedPaper: 'Recommended paper',
+  paperSize: '15 cm × 15 cm',
 });
+/** A block's words as an author may leave them: a credit with no value, a second, and the step count, live, last. */
+const CREDITED: DiagramTitleBlockContent = {
+  subtitle: 'Origami diagram',
+  credits: [
+    { label: 'Author', value: '' },
+    { label: 'Recommended size', value: '' },
+    { label: 'Steps', value: { kind: 'step-count' } },
+  ],
+};
 
 const toggle = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Title block"]')!;
 const select = (label: string) => host!.querySelector<HTMLButtonElement>(`button[role="combobox"][aria-label="${label}"]`);
@@ -177,11 +188,12 @@ describe('DiagramTitleBlockRows', () => {
     expect(state().diagram!.titleBlockContent).toEqual(NEW_CONTENT);
     expect(undoSteps()).toBe(1);
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('title_block');
-    // Shown at once, scaffolded: the subtitle, and the three credits, the last following the step count.
+    // Shown at once, scaffolded: the subtitle, and the three credits, each with a value, the second following the
+    // step count (Zach, 2026-10-15).
     expect(toggle().getAttribute('aria-checked')).toBe('true');
     expect(textField('Subtitle')!.value).toBe('Origami diagram');
-    expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Recommended size', 'Steps']);
-    expect(input('Value of credit 3')!.value).toBe('Auto (4)');
+    expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Steps', 'Recommended paper']);
+    expect([1, 2, 3].map((number) => input(`Value of credit ${number}`)!.value)).toEqual(['Your name here', 'Auto (4)', '15 cm × 15 cm']);
     expect(select('Model')).not.toBeNull();
     expect(select('Crease pattern')).not.toBeNull();
     // One Undo gives the diagram back as it was saved.
@@ -211,11 +223,11 @@ describe('DiagramTitleBlockRows', () => {
     render();
     expect(state().diagram).toBeNull();
     expect(textField('Subtitle')!.value).toBe('Origami diagram');
-    expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Recommended size', 'Steps']);
+    expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Steps', 'Recommended paper']);
     // The step count already follows: there is none to add.
     expect(button('Add Step Count')).toBeUndefined();
     act(() => button('Add Credit')!.click());
-    expect(credits()!.map(({ label }) => label)).toEqual(['Author', 'Recommended size', 'Steps', '']);
+    expect(credits()!.map(({ label }) => label)).toEqual(['Author', 'Steps', 'Recommended paper', '']);
     expect(credits()!.filter(({ value }) => typeof value !== 'string')).toHaveLength(1);
     expect(document.activeElement).toBe(input('Label of credit 4'));
   });
@@ -242,7 +254,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('reads as the block does, a step in under its toggle: subtitle, credits, note, then the model and the pattern with their sizes', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     const names = [...host!.querySelectorAll('[data-field-label], label, [role="group"][aria-labelledby]')].map(
       (each) =>
@@ -361,7 +373,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('commits the subtitle on one line, a sitting one undo step and one count; cleared, there is none', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     const subtitle = () => textField('Subtitle');
     expect(subtitle()!.value).toBe('Origami diagram');
@@ -377,7 +389,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('lists the credits as label and value fields, the step count live and followed, with no way to add a second', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual([
       'Author',
@@ -398,7 +410,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('keeps a credit field’s text on Enter and Escape, leaves it there, and lets an input method’s Enter be (review, 2026-10-15)', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     const author = () => input('Value of credit 1')!;
     const key = (init: KeyboardEventInit) => act(() => author().dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })));
@@ -419,7 +431,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('types a credit’s label and value, a sitting at each one undo step and one count, never the words', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     sitting(() => input('Value of credit 1'), 'Robert', 'Robert J. Lang');
     sitting(() => input('Label of credit 2'), 'Paper');
@@ -435,7 +447,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('types a value in place of the step count, and offers the step count back, each one undo step and one count', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     act(() => button('Type a value for credit 3 instead')!.click());
     expect(credits()![2]).toEqual({ label: 'Steps', value: '' });
@@ -454,7 +466,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('adds a credit at the end, ready to name, and removes one, each one undo step and one count', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     act(() => button('Add Credit')!.click());
     expect(credits()).toHaveLength(4);
@@ -471,7 +483,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('never lets the focus fall out of the credits as they are removed (review, 2026-10-15)', () => {
-    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, false, undefined, CREDITED);
     render();
     const remove = (number: number) => {
       act(() => button(`Remove credit ${number}`)!.focus());
@@ -574,7 +586,7 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('takes nothing on a read-only diagram', () => {
-    install({ titleBlock: ON }, true, undefined, NEW_CONTENT);
+    install({ titleBlock: ON }, true, undefined, CREDITED);
     render();
     expect(toggle().disabled).toBe(true);
     expect(select('Model')!.disabled).toBe(true);

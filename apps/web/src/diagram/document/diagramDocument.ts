@@ -1551,24 +1551,29 @@ export function createDiagram(options: {
   };
 }
 
-/** The words a new diagram's title block starts with, in the author's language. */
+/** The words a new diagram's title block starts with, in the author's language: each credit's label and value. */
 export interface TitleBlockDefaultWords {
   subtitle: string;
   author: string;
-  recommendedSize: string;
+  /** Author's value: a stand-in for the author's name, which prints until they type theirs. */
+  authorName: string;
   steps: string;
+  recommendedPaper: string;
+  /** Recommended paper's value. */
+  paperSize: string;
 }
 
 /**
  * What a new diagram's title block says, written at its creation (Zach, 2026-10-15): the subtitle, and the credits
- * Author and Recommended size, empty, and Steps, the live count. From then on they are the author's, in the file;
- * a diagram that does not say them has none.
+ * Author, Steps — the live count — and Recommended paper, in that order, each with a value, so that the header
+ * prints whole from the start (an empty credit is not drawn). From then on they are the author's, in the file; a
+ * diagram that does not say them has none.
  */
 export function defaultTitleBlockContent(words: TitleBlockDefaultWords): DiagramTitleBlockContent {
   const credits: DiagramTitleBlockCredit[] = [
-    { label: titleBlockLine(words.author), value: '' },
-    { label: titleBlockLine(words.recommendedSize), value: '' },
+    { label: titleBlockLine(words.author), value: titleBlockLine(words.authorName) },
     { label: titleBlockLine(words.steps), value: { kind: 'step-count' } },
+    { label: titleBlockLine(words.recommendedPaper), value: titleBlockLine(words.paperSize) },
   ];
   const subtitle = titleBlockLine(words.subtitle);
   return { ...(subtitle.trim() ? { subtitle } : {}), credits };

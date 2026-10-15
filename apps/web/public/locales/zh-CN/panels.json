@@ -1470,7 +1470,9 @@
     "titleBlock": {
       "default": {
         "author": "作者",
-        "recommendedSize": "建议尺寸",
+        "authorName": "您的姓名",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "建议用纸",
         "steps": "步骤数",
         "subtitle": "折纸图解"
       }

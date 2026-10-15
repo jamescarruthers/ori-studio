@@ -11,7 +11,7 @@
 }
 
 /* The label and the value side by side, as wide as each other: a label as long as
-   "Recommended size" needs the room as much as a name or a size does. */
+   "Recommended paper" needs the room as much as a name or a size does. */
 .credit {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;

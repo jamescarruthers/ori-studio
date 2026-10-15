@@ -1570,7 +1570,9 @@
     "titleBlock": {
       "default": {
         "author": "Autor",
-        "recommendedSize": "Tamanho recomendado",
+        "authorName": "Seu nome aqui",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "Papel recomendado",
         "steps": "Passos",
         "subtitle": "Diagrama de origami"
       }
