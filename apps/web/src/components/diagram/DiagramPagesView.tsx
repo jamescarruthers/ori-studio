@@ -22,6 +22,8 @@ import { PAGES_PAD, PAGES_PX_PER_MM, usePagesView } from '../../diagram/pages/us
 import { ViewportToolbar } from '../panels/ViewportToolbar';
 import { DiagramPageBand } from './DiagramPageBand';
 import { DiagramTitleBlockOverlay } from './DiagramTitleBlockOverlay';
+import { PageGuide } from './PageGuide';
+import { PagePlaceholder } from './PagePlaceholder';
 import styles from './DiagramPagesView.module.css';
 import { turnLabel, type TurnBetween } from '../../diagram/actions/diagramTurnActions';
 
@@ -248,10 +250,7 @@ export function DiagramPagesView({
                       />
                     )}
                     {margin > 0 && (
-                      <div
-                        className={styles.guide}
-                        style={{ left: mm(margin), top: mm(margin), right: mm(margin), bottom: mm(margin) }}
-                      />
+                      <PageGuide style={{ left: mm(margin), top: mm(margin), right: mm(margin), bottom: mm(margin) }} />
                     )}
                     {page.titleBlock && (
                       <DiagramTitleBlockOverlay block={page.titleBlock} content={pages.titleBlock} steps={steps} />
@@ -273,9 +272,8 @@ export function DiagramPagesView({
                               )
                             )}
                           {empty && (
-                            <div
-                              className={styles.placeholder}
-                              aria-hidden="true"
+                            <PagePlaceholder
+                              kind="picture"
                               style={{
                                 left: mm(cell.pictureMm.x),
                                 top: mm(cell.pictureMm.y),
@@ -287,7 +285,7 @@ export function DiagramPagesView({
                               {step && isLockedStep(step)
                                 ? t('panels:diagram.card.locked', 'Made with a newer Ori Studio')
                                 : t('panels:diagram.pages.noPicture', 'No picture yet')}
-                            </div>
+                            </PagePlaceholder>
                           )}
                           {cell.textOverflow && (
                             // Round the text, never over it: an outline of the

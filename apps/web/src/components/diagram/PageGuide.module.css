@@ -1,0 +1,6 @@
+/* A guide over a page of the Pages view (PageGuide.tsx): the margin, or the title block's outline. */
+.guide {
+  position: absolute;
+  border: 1px dashed color-mix(in srgb, var(--accent-primary) 45%, transparent);
+  pointer-events: none;
+}
