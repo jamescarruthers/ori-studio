@@ -31,13 +31,11 @@ const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | '
  * it (`implementation-plans/diagram-title-block.md`, section 6): its outline,
  * drawn as the margin guide is, and a box in each room of its art where what
  * would print there prints nothing, saying why — the crease pattern, the
- * finished model — and where the header has no more room for the credits. A
- * missing title is not boxed: the page shows "Add a title" in its place, set
- * as the title would print (`PageComposeOptions.untitled`; Zach, 2026-10-15).
- * An empty credit or note is not drawn, and not marked either, nor a note's
- * end cut with "…" past half the page (Zach, 2026-10-15). No two boxes
- * overlap. A press passes through to the page, which brings the Page tab
- * forward.
+ * finished model — and where the header has no more room for the credits. An
+ * empty title, credit or note is not drawn, and not marked either, nor a
+ * note's end cut with "…" past half the page (Zach, 2026-10-15). No two
+ * boxes overlap. A press passes through to the page, which brings the Page
+ * tab forward.
  */
 export function DiagramTitleBlockOverlay({
   block,

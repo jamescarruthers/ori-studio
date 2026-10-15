@@ -90,12 +90,13 @@ function authorLocale(): string | null {
 
 /**
  * The diagram a first edit brings into being: its Han style from the author's
- * language, and its title block's subtitle and credits written in the app's
- * (Zach, 2026-10-15), the author's own text from then on.
+ * language, and its title, "Add a title", and its title block's subtitle and
+ * credits written in the app's (Zach, 2026-10-15), the author's own text from
+ * then on.
  */
 function newDiagram() {
-  const titleBlockContent = defaultTitleBlockContent(titleBlockWords());
-  return createDiagram({ hanStyle: defaultHanStyle(authorLocale()), titleBlockContent });
+  const words = titleBlockWords();
+  return createDiagram({ title: words.title, hanStyle: defaultHanStyle(authorLocale()), titleBlockContent: defaultTitleBlockContent(words) });
 }
 
 /** A title block's first words in the app's language: a new diagram's, and those its toggle writes. */

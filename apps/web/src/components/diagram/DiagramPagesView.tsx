@@ -38,22 +38,19 @@ const CUT_OUTLINE_MM = 1;
 const TURN_TARGET_PAD_MM = TURN_STACK_CLEAR_MM / 2;
 
 /**
- * Page `index`'s image: composed without its band, with `untitled` in the
- * title block's band where the diagram has no title — set as the title would
- * print, for the screen alone — and while a part of a step is lifted off it —
- * a drag, or a nudge in its pause — without that part, from the layout the
- * lift began on; the part is drawn over it on its own
+ * Page `index`'s image: composed without its band, and while a part of a step
+ * is lifted off it — a drag, or a nudge in its pause — without that part,
+ * from the layout the lift began on; the part is drawn over it on its own
  * (`DiagramPagesPlacement`). A resize lifts the whole step.
  */
 function pageImageUrl(
   pages: PreparedDiagramPages,
   index: number,
-  draft: ReturnType<typeof usePagePlacement>['draft'],
-  untitled: string
+  draft: ReturnType<typeof usePagePlacement>['draft']
 ): string {
-  if (draft?.page !== index) return composedPageUrl(pages, index, { band: false, untitled });
+  if (draft?.page !== index) return composedPageUrl(pages, index, { band: false });
   const part = draft.pointer?.size ? 'frame' : draft.part;
-  return composedPageUrl(draft.base, index, { band: false, untitled, omit: { stepId: draft.cell.stepId, part } });
+  return composedPageUrl(draft.base, index, { band: false, omit: { stepId: draft.cell.stepId, part } });
 }
 
 /**
@@ -61,9 +58,7 @@ function pageImageUrl(
  * shown as an `<img>`, so what the screen shows is the file — all but the
  * flow band, which the view draws under the image from the file's own path
  * and pen (`DiagramPageBand`), so that a colour being picked repaints the
- * band alone and a new colour composes no page again; and, where the title
- * block has no title, "Add a title" set in its place as the title would print
- * (Zach, 2026-10-15), which the file never has.
+ * band alone and a new colour composes no page again.
  *
  * Over each page, and never in it: the margin guide, the first page's title
  * block with a box where a part of its art prints nothing
@@ -108,7 +103,6 @@ export function DiagramPagesView({
   onPageClick: () => void;
 }) {
   const { t } = useTranslation();
-  const untitled = t('panels:diagram.pages.titleBlock.addTitle', 'Add a title');
   const coarse = useIsCoarsePointerSurface();
   const {
     containerRef,
@@ -250,7 +244,7 @@ export function DiagramPagesView({
                     {isNear(index) && (
                       <img
                         className={styles.image}
-                        src={pageImageUrl(prepared ?? pages, index, placement.draft, untitled)}
+                        src={pageImageUrl(prepared ?? pages, index, placement.draft)}
                         alt=""
                         draggable={false}
                       />

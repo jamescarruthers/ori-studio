@@ -1571,6 +1571,8 @@ export function createDiagram(options: {
 
 /** The words a new diagram's title block starts with, in the author's language: each credit's label and value. */
 export interface TitleBlockDefaultWords {
+  /** The diagram's title ({@link DiagramDocument.title}): real text, printed as any title is, for the author to type over. */
+  title: string;
   subtitle: string;
   author: string;
   /** Author's value: a stand-in for the author's name, which prints until they type theirs. */
@@ -1587,7 +1589,7 @@ export interface TitleBlockDefaultWords {
  * prints whole from the start (an empty credit is not drawn). From then on they are the author's, in the file; a
  * diagram that does not say them has none.
  */
-export function defaultTitleBlockContent(words: TitleBlockDefaultWords): DiagramTitleBlockContent {
+export function defaultTitleBlockContent(words: Omit<TitleBlockDefaultWords, 'title'>): DiagramTitleBlockContent {
   const credits: DiagramTitleBlockCredit[] = [
     { label: titleBlockLine(words.author), value: titleBlockLine(words.authorName) },
     { label: titleBlockLine(words.steps), value: { kind: 'step-count' } },
@@ -2592,17 +2594,20 @@ export function setTitleBlockRoom(document: DiagramDocument, roomMm: number): Di
 /**
  * The first page's title block turned on or off by its toggle (`implementation-plans/diagram-title-block.md`,
  * Phase 1c). On: at today's share ({@link DEFAULT_PAGE_SETUP}; with no control for the share, a file's is the
- * default of its day) and, where the content says nothing of the subtitle or the credits, with `words`' — a new
- * diagram's, in the author's language — so that the header is never bare. Off: its share and its words kept. The
- * author's own act, so the first page may move; the same document where the block is already so.
+ * default of its day) and, with `words`' — a new diagram's, in the author's language — the title where the diagram
+ * has none, and the subtitle and credits where the content says nothing of them, so that the header is never bare
+ * (Zach, 2026-10-15). Off: its share and its words kept. The author's own act, so the pages may move; the same
+ * document where the block is already so.
  */
 export function setTitleBlockShown(document: DiagramDocument, enabled: boolean, words: TitleBlockDefaultWords): DiagramDocument {
   const { titleBlock } = document.page;
   if (titleBlock.enabled === enabled) return document;
   const shown = setPageSetup(document, { titleBlock: enabled ? DEFAULT_PAGE_SETUP.titleBlock : { ...titleBlock, enabled } });
-  if (!enabled || saysTitleBlockWords(document)) return shown;
+  if (!enabled) return shown;
+  const titled = shown.title.trim() === '' ? setDiagramTitle(shown, words.title) : shown;
+  if (saysTitleBlockWords(document)) return titled;
   const { subtitle, credits } = defaultTitleBlockContent(words);
-  return { ...shown, titleBlockContent: titleBlockContentOf({ ...shown.titleBlockContent, subtitle, credits }) };
+  return { ...titled, titleBlockContent: titleBlockContentOf({ ...titled.titleBlockContent, subtitle, credits }) };
 }
 
 /** Whether the title block's content, or a newer build's carried with it, says anything of its subtitle or credits. */

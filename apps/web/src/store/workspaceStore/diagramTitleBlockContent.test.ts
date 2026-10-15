@@ -37,7 +37,7 @@ const NEW_CONTENT = {
 const JA_BUNDLE = {
   diagram: {
     titleBlock: {
-      default: { subtitle: '折り紙の図', author: '作者', authorName: 'お名前', steps: '工程数', recommendedPaper: '推奨用紙', paperSize: '15 cm × 15 cm' },
+      default: { title: 'タイトルを追加', subtitle: '折り紙の図', author: '作者', authorName: 'お名前', steps: '工程数', recommendedPaper: '推奨用紙', paperSize: '15 cm × 15 cm' },
     },
   },
 };
@@ -61,6 +61,21 @@ describe('a new diagram’s title block', () => {
     expect(state().diagram).toBeNull();
   });
 
+  it('starts its title as “Add a title”, real text in the file, which the author’s own replaces or deletes (Zach, 2026-10-15)', () => {
+    expect(state().addDiagramStep()).not.toBeNull();
+    expect(state().diagram!.title).toBe('Add a title');
+    // Deleted, it is empty, and stays so.
+    expect(state().setDiagramTitle('')).toBe(true);
+    expect(state().diagram!.title).toBe('');
+    expect(state().addDiagramStep()).not.toBeNull();
+    expect(state().diagram!.title).toBe('');
+  });
+
+  it('never puts its title over one typed as the diagram’s first edit', () => {
+    expect(state().setDiagramTitle('Crane')).toBe(true);
+    expect(state().diagram!.title).toBe('Crane');
+  });
+
   it('is written in the app’s language', async () => {
     i18n.addResourceBundle(
       'ja',
@@ -71,6 +86,7 @@ describe('a new diagram’s title block', () => {
     );
     await i18n.changeLanguage('ja');
     state().addDiagramStep();
+    expect(state().diagram!.title).toBe('タイトルを追加');
     expect(state().diagram!.titleBlockContent).toEqual({
       subtitle: '折り紙の図',
       credits: [
@@ -97,6 +113,10 @@ describe('a new diagram’s title block', () => {
     expect(state().setDiagramTitle('Swan')).toBe(true);
     expect(state().diagram!.titleBlockContent).toBeUndefined();
     expect(state().diagram!.page.titleBlock).toEqual(PAGE_SETTINGS.titleBlock.legacy);
+    // Nor its title: a file with none keeps none.
+    state().installDiagram({ document: { ...document, title: '' }, readOnly: false, raw: {} });
+    expect(state().addDiagramStep()).not.toBeNull();
+    expect(state().diagram!.title).toBe('');
   });
 });
 
@@ -123,6 +143,8 @@ describe('setDiagramTitleBlockShown, the block’s toggle', () => {
     expect(state().setDiagramTitleBlockShown(true)).toBe(true);
     expect(state().diagram!.page.titleBlock).toEqual(PAGE_SETTINGS.titleBlock.default);
     expect(state().diagram!.titleBlockContent).toEqual(NEW_CONTENT);
+    // Its own title kept.
+    expect(state().diagram!.title).toBe('Crane');
     // The later pages keep their counts and shift (Zach, 2026-10-15).
     expect(counts()).toEqual([7, 11, 9, 1]);
     expect(state().diagramHistory.past).toHaveLength(1);
@@ -155,6 +177,28 @@ describe('setDiagramTitleBlockShown, the block’s toggle', () => {
     expect(state().diagram!.page.titleBlock).toEqual({ ...PAGE_SETTINGS.titleBlock.default, enabled: false });
     expect(state().diagram!.titleBlockContent).toBe(content);
     expect(counts()).toEqual([9, 11, 8]);
+  });
+
+  it('gives a diagram with no title “Add a title” as it turns the block on, in the same undo step (Zach, 2026-10-15)', () => {
+    const untitled = { ...crane(), title: '' };
+    state().installDiagram({ document: untitled, readOnly: false, raw: {} });
+    expect(state().setDiagramTitleBlockShown(true)).toBe(true);
+    expect(state().diagram!.title).toBe('Add a title');
+    expect(state().diagramHistory.past).toHaveLength(1);
+    expect(state().undoDiagram()).toBe(true);
+    expect(state().diagram).toEqual(untitled);
+    // Words of its own already and no title: the title alone is written.
+    const worded = { ...untitled, titleBlockContent: { subtitle: 'Bird base' } };
+    state().installDiagram({ document: worded, readOnly: false, raw: {} });
+    expect(state().setDiagramTitleBlockShown(true)).toBe(true);
+    expect(state().diagram!.title).toBe('Add a title');
+    expect(state().diagram!.titleBlockContent).toEqual({ subtitle: 'Bird base' });
+    // Deleted, it stays deleted, and turning the block off writes nothing; turned on again, the block is given it again.
+    expect(state().setDiagramTitle('')).toBe(true);
+    expect(state().setDiagramTitleBlockShown(false)).toBe(true);
+    expect(state().diagram!.title).toBe('');
+    expect(state().setDiagramTitleBlockShown(true)).toBe(true);
+    expect(state().diagram!.title).toBe('Add a title');
   });
 });
 

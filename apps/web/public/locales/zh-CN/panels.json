@@ -1186,7 +1186,6 @@
       "stepCut": "第 {{number}} 步，文字放不下",
       "textCut": "文字放不下",
       "titleBlock": {
-        "addTitle": "添加标题",
         "creditsCut": "部分信息放不下",
         "noModel": "还没有带图的步骤",
         "noPattern": "没有步骤链接到折痕图",
@@ -1474,7 +1473,8 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "建议用纸",
         "steps": "步骤数",
-        "subtitle": "副标题"
+        "subtitle": "副标题",
+        "title": "添加标题"
       }
     },
     "turns": {

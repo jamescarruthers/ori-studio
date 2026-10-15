@@ -11,6 +11,7 @@ import {
   type DiagramEntry,
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
+import { titleBlockDefaultWords } from '../../diagram/document/titleBlockWords';
 import { stepPageFits } from '../../diagram/pages/pageOverflow';
 import { paginate } from '../../diagram/pages/pagePlan';
 import { useDiagramPages } from '../../diagram/pages/useDiagramPages';
@@ -105,7 +106,8 @@ const revealPagePane = () => revealDiagramPane(DIAGRAM_PAGE_PANE_ID);
 export function DiagramPanel() {
   const { t } = useTranslation();
   const setViewDrawerSlot = useLayoutStore((state) => state.setViewDrawerSlot);
-  const title = useWorkspaceStore((state) => state.diagram?.title ?? '');
+  // Before a diagram exists, the title its first edit will make it with (Zach, 2026-10-15).
+  const title = useWorkspaceStore((state) => state.diagram?.title) ?? titleBlockDefaultWords(t).title;
   // The order — steps and the turns between them (D22) — and the steps alone,
   // which are numbered, opened, laid out and exported.
   const entries = useWorkspaceStore((state) => state.diagram?.steps ?? NO_ENTRIES);

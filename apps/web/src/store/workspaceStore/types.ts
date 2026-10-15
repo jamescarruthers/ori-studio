@@ -2177,9 +2177,10 @@ export interface DiagramSliceActions {
   setDiagramPage: (patch: Partial<DiagramPageSetup>, options?: { session?: number }) => boolean;
   /**
    * Turn the first page's title block on or off, as its toggle does
-   * (`setTitleBlockShown`): on at today's share, with a new diagram's subtitle
-   * and credits, in the app's language, where the diagram says none; one undo
-   * step, in which the later pages' counts shift as for any change of the block.
+   * (`setTitleBlockShown`): on at today's share, with a new diagram's title
+   * where it has none, and its subtitle and credits where the diagram says
+   * none, in the app's language; one undo step, in which the later pages'
+   * counts shift as for any change of the block.
    */
   setDiagramTitleBlockShown: (enabled: boolean) => boolean;
   /**

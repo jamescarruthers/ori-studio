@@ -226,8 +226,8 @@ export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBl
 export interface MissingTitleBlockPart {
   /**
    * The pattern or the model; or credits cut for want of room. A note cut for want of room is not marked: the block
-   * grows for it, and past half the page its end is cut with "…"; nor is a missing title, which the Pages view sets
-   * "Add a title" in place of, as the title would print (Zach, 2026-10-15).
+   * grows for it, and past half the page its end is cut with "…"; nor is an empty title, which prints nothing (Zach,
+   * 2026-10-15).
    */
   part: 'pattern' | 'model' | 'credits';
   /** The step that cannot give it; null where Auto finds none, and for the rest. */
@@ -264,11 +264,10 @@ const CUT_TAG_MM = 5;
  * the credits are cut; the pattern and the model where they are Auto or a
  * step, and no step gives them — a part set to none is the author's, and is
  * not missing, nor is an empty note or a credit with no value, which are
- * simply not drawn (Zach, 2026-10-15). A missing title is no room: the Pages
- * view sets "Add a title" in its place, as the title would print
- * (`PageComposeOptions.untitled`). The pattern and a model with no pattern in
- * front of it would print in one square, which is one room; so no two rooms
- * overlap. `drawnModel` is where the model is drawn, null where it is not
+ * simply not drawn, nor an empty title, which prints nothing (Zach,
+ * 2026-10-15). The pattern and a model with no pattern in front of it would
+ * print in one square, which is one room; so no two rooms overlap.
+ * `drawnModel` is where the model is drawn, null where it is not
  * (`wholePictureRoom`), which the square's mark keeps clear of. For the Pages
  * view's overlay, never the page.
  */

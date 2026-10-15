@@ -210,7 +210,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   const set = setSubtitle(subtitle, column, scale, setter);
   const bandTop = column.y + (set ? T.subtitleRowMm * scale : 0);
   const band = { x: column.x, y: bandTop, w: column.w, h: Math.max(0, Math.min(T.bandMm * scale, foot - bandTop)) };
-  const title = titleBlockTitle({ band, scale }, titles.title, setter);
+  const title = setTitle(band, titles.title.trim(), scale, setter);
 
   const labelSizeMm = T.labelMm * scale;
   const valueSizeMm = T.valueMm * scale;
@@ -252,14 +252,6 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
     credits: printed.length > 0 ? { labelSizeMm, valueSizeMm, trackingMm, columns, dividers, cut } : null,
     note: setNote(note, column, noteTop, scale, setter),
   };
-}
-
-/**
- * `title` set in `block`'s band exactly as the block's own title would be — its font, weight, size and place: what
- * the Pages view draws "Add a title" as where the diagram has none (Zach, 2026-10-15). Null where it sets nothing.
- */
-export function titleBlockTitle(block: Pick<LayoutTitleBlock, 'band' | 'scale'>, title: string, setter: TextSetter): LayoutTitleBlock['title'] {
-  return setTitle(block.band, title.trim(), block.scale, setter);
 }
 
 /**

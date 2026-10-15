@@ -9592,7 +9592,8 @@ describe('the project diagram', () => {
   });
 
   it('records nothing for an edit that changes nothing, and makes no diagram for one', () => {
-    expect(state().setDiagramTitle('')).toBe(false);
+    // The title a new diagram starts with (Zach, 2026-10-15): no change.
+    expect(state().setDiagramTitle('Add a title')).toBe(false);
     expect(state().diagram).toBeNull();
     expect(state().dirty).toBe(false);
 

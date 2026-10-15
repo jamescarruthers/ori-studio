@@ -287,7 +287,7 @@ describe('missingTitleBlockParts', () => {
 
   it('marks a part no step gives in the room it would print in, naming the step, and no box for a missing title', () => {
     // No linked step and no picture: the pattern and the model would both stand in the pattern's square, one room.
-    // No title: no room either — the Pages view sets "Add a title" in its place, as the title prints (Zach, 2026-10-15).
+    // No title: no room either — an empty title prints nothing, and is not marked (Zach, 2026-10-15).
     expect(missing(titleBlockDiagram([emptyStep('s1')]), '')).toEqual([
       ['square', geometry.pattern, [['pattern', null, null], ['model', null, null]]],
     ]);

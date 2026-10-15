@@ -1223,7 +1223,6 @@
       "stepCut": "Schritt {{number}}, Text passt nicht",
       "textCut": "Text passt nicht",
       "titleBlock": {
-        "addTitle": "Fügen Sie einen Titel hinzu",
         "creditsCut": "Einige Angaben passen nicht",
         "noModel": "Noch hat kein Schritt ein Bild",
         "noPattern": "Kein Schritt ist mit einem Faltmuster verknüpft",
@@ -1524,7 +1523,8 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Empfohlenes Papier",
         "steps": "Schritte",
-        "subtitle": "Untertitel"
+        "subtitle": "Untertitel",
+        "title": "Titel hinzufügen"
       }
     },
     "turns": {

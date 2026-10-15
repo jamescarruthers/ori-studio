@@ -4443,7 +4443,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -4476,7 +4475,8 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8922,7 +8922,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -8955,7 +8954,8 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13403,7 +13403,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -13436,7 +13435,8 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -17785,7 +17785,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -17818,7 +17817,8 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22167,7 +22167,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -22200,7 +22199,8 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -26646,7 +26646,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -26679,7 +26678,8 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -31125,7 +31125,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -31158,7 +31157,8 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -35507,7 +35507,6 @@
     "panels:diagram.pagePane.titleBlock.showHelp": "9b7129f5174d",
     "panels:diagram.pagePane.titleBlock.step": "74af848b3052",
     "panels:diagram.pagePane.titleHelpWithBlock": "44058b5ed686",
-    "panels:diagram.pages.titleBlock.addTitle": "a1d38e84441a",
     "panels:diagram.pages.titleBlock.noModel": "b189698dcd73",
     "panels:diagram.pages.titleBlock.noPattern": "6fab4adcaac4",
     "panels:diagram.pages.titleBlock.stepNoPattern": "3d03a296cb32",
@@ -35540,6 +35539,7 @@
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
     "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
     "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
-    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368",
+    "panels:diagram.titleBlock.default.title": "a1d38e84441a"
   }
 }

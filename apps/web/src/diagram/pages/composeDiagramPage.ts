@@ -12,8 +12,7 @@
  * (`zoomArrows.ts`). An empty step keeps
  * its number and its text and leaves its picture box blank; the placeholder,
  * the margin guide and the selection ring are the Pages view's overlay, never
- * in the file. The one thing the view has composed in, "Add a title" where
- * the block has no title, is its own option (`untitled`), never the file's.
+ * in the file.
  *
  * Text is set by the layout's setter and written run by run: one `<tspan>` per
  * font, each placed at its own x, so no renderer re-breaks or re-spaces a line.
@@ -47,7 +46,7 @@ import { cellPicture, fittedScene, wholePicture, type CellPicture } from './page
 import { placedZoomArrows } from './zoomArrows';
 import type { PagePart } from './pagePlacement';
 import { diagramSurfaceStyle } from '../pictures/diagramPaperStyle';
-import { titleBlockInks, titleBlockTitle, type LayoutTitleBlock } from './titleBlockColumn';
+import { titleBlockInks, type LayoutTitleBlock } from './titleBlockColumn';
 import { modelRoom, type ResolvedTitleBlock } from './titleBlockContent';
 import type { TitleBlockGeometry } from './titleBlockGeometry';
 
@@ -55,12 +54,6 @@ export interface PageComposeOptions {
   band?: boolean;
   omit?: { stepId: string; part: PagePart };
   only?: { stepId: string; part: PagePart };
-  /**
-   * The Pages view's words for the title block's title where the diagram has none ("Add a title"), set and drawn
-   * exactly as a title would be (Zach, 2026-10-15). The screen's alone: a page file, the PDF and Print never pass
-   * it, so an untitled page prints nothing there.
-   */
-  untitled?: string;
 }
 
 /** The page's own inks: the mockup's, whatever the paper style. The band's is the page setup's (`layout.bandInk`). */
@@ -228,9 +221,7 @@ export type FontUse = (face: string, text: string) => void;
  * reaches them (Zach, 2026-10-15).
  */
 function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
-  const { geometry, subtitle, band, credits, note } = block;
-  // No title: the Pages view's "Add a title" in its place, as the title would print (`untitled`).
-  const title = block.title ?? (input.untitled ? titleBlockTitle(block, input.untitled, input.setter) : null);
+  const { geometry, subtitle, band, title, credits, note } = block;
   const inks = titleBlockInksOf(input.style, input.titleBlock?.bandColor);
   const x = geometry.column.x;
   const elements: string[] = [];

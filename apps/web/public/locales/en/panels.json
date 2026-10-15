@@ -1223,7 +1223,6 @@
       "stepCut": "Step {{number}}, text doesn’t fit",
       "textCut": "Text doesn’t fit",
       "titleBlock": {
-        "addTitle": "Add a title",
         "creditsCut": "Some credits don’t fit",
         "noModel": "No step has a picture yet",
         "noPattern": "No step is linked to a crease pattern",
@@ -1524,7 +1523,8 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Recommended paper",
         "steps": "Steps",
-        "subtitle": "Subtitle"
+        "subtitle": "Subtitle",
+        "title": "Add a title"
       }
     },
     "turns": {

@@ -28,4 +28,13 @@ describe('titleBlockDefaultWords', () => {
       if (locale !== 'en') expect(words.subtitle, locale).not.toBe('Subtitle');
     }
   });
+
+  it('starts the title as “Add a title”, in every language (Zach, 2026-10-15)', () => {
+    expect(titleBlockDefaultWords((_key, english) => english).title).toBe('Add a title');
+    for (const locale of SUPPORTED_LOCALE_CODES) {
+      const { title } = titleBlockDefaultWords(translate(panels(locale)));
+      expect(title.trim(), locale).not.toBe('');
+      if (locale !== 'en') expect(title, locale).not.toBe('Add a title');
+    }
+  });
 });

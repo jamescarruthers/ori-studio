@@ -13,7 +13,6 @@ import {
   createTurn,
   insertSteps,
   PAGE_SETTINGS,
-  setDiagramTitle,
   setTitleBlockContent,
   type DiagramDocument,
   type KnownDiagramAnnotation,
@@ -362,14 +361,10 @@ describe('DiagramPagesView', () => {
     expect([rooms[0]!.style.left, rooms[0]!.style.width]).toEqual([pattern.x, pattern.w].map((mm) => `${mm * PX_PER_MM}px`));
     const svg = empty.compose(0).svg;
     for (const [, words] of missing()) expect(svg).not.toContain(words);
-    // No title: no box round the title's room, but "Add a title" on the band in the page's image, set exactly as the
-    // title would print — its font, weight, size, ink and place — and never in the file (Zach, 2026-10-15).
-    const titleText = (page: string) => page.match(/<text [^>]*>(?:<tspan [^>]*>[^<]*<\/tspan>)+<\/text>/g)!.find((text) => text.includes('Add a title'));
-    const titled = preparedPages(setDiagramTitle(bare, 'Add a title'), FONTS, subsetter).compose(0).svg;
-    expect(titleText(titled)).toBeDefined();
-    expect(titleText(svgOf(host.querySelector<HTMLImageElement>('[data-page="0"] img')!))).toBe(titleText(titled));
-    expect(svg).not.toContain('Add a title');
-    expect(empty.compose(0, { band: false }).svg).not.toContain('Add a title');
+    // No title: nothing in the band, on screen or in print — no box, no words; the page's image is the page as
+    // filed, its flow band aside (Zach, 2026-10-15).
+    expect(svgOf(host.querySelector<HTMLImageElement>('[data-page="0"] img')!)).toBe(empty.compose(0, { band: false }).svg);
+    expect(svgOf(host.querySelector<HTMLImageElement>('[data-page="0"] img')!)).not.toContain('Add a title');
     // A step chosen for the model that has no picture is named by its number.
     const chosen = setTitleBlockContent(withBlock(diagram()), { model: { kind: 'step', stepId: 'step-empty' } });
     const chosenPages = preparedPages(chosen, FONTS, subsetter);

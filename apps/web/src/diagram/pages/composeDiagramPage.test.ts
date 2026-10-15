@@ -1036,20 +1036,14 @@ describe('the title block’s header on the first page (`diagram-title-block.md`
     expect(fills({ ...setTitleBlockContent(pink, { bandColor: '#2a4d8f' }), style: green }).band).toBe('#2a4d8f');
   });
 
-  it('draws the Pages view’s “Add a title” where there is no title exactly as the title would print, and nowhere else (Zach, 2026-10-15)', () => {
+  it('draws nothing in the band where the title is empty, with the flow band or without it (Zach, 2026-10-15)', () => {
     const untitled = { ...headerDiagram({ style: PINK }), title: '' };
+    const titled = (svg: string) => texts(svg).filter(({ fill }) => fill === '#ffffff');
+    // The title's white on the pink band, where there is one; none where there is not.
+    expect(titled(preparedPages(headerDiagram({ style: PINK }), FONTS, subsetter).compose(0).svg)).not.toEqual([]);
     const pages = preparedPages(untitled, FONTS, subsetter);
-    // As if it were the title: its font, weight, size, ink and place, set in the same band at the same scale.
-    const titled = preparedPages({ ...untitled, title: 'Add a title' }, FONTS, subsetter).compose(0).svg;
-    const titleOf = (svg: string) => [...parse(svg).querySelectorAll('svg > text')].find((text) => text.textContent === 'Add a title')?.outerHTML;
-    expect(titleOf(titled)).toBeDefined();
-    expect(titleOf(pages.compose(0, { band: false, untitled: 'Add a title' }).svg)).toBe(titleOf(titled));
-    // The screen's alone: the page as filed, printed or exported has nothing there.
-    expect(pages.compose(0).svg).not.toContain('Add a title');
-    expect(texts(pages.compose(0).svg).map(({ fill }) => fill)).not.toContain('#ffffff');
-    // A diagram with a title prints its own, whatever the view asks.
-    const own = preparedPages(headerDiagram({ style: PINK }), FONTS, subsetter);
-    expect(own.compose(0, { untitled: 'Add a title' }).svg).toBe(own.compose(0).svg);
+    expect(titled(pages.compose(0).svg)).toEqual([]);
+    expect(titled(pages.compose(0, { band: false }).svg)).toEqual([]);
   });
 
   it('moves the band up where the subtitle is cleared, and prints neither it nor its rule', () => {

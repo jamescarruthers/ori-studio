@@ -1260,7 +1260,6 @@
       "stepCut": "Étape {{number}}, le texte ne tient pas",
       "textCut": "Le texte ne tient pas",
       "titleBlock": {
-        "addTitle": "Ajoutez un titre",
         "creditsCut": "Certains crédits ne tiennent pas",
         "noModel": "Aucune étape n’a encore d’image",
         "noPattern": "Aucune étape n’est liée à un patron de plis",
@@ -1574,7 +1573,8 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Papier recommandé",
         "steps": "Étapes",
-        "subtitle": "Sous-titre"
+        "subtitle": "Sous-titre",
+        "title": "Ajoutez un titre"
       }
     },
     "turns": {

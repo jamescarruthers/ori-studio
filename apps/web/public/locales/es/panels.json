@@ -1260,7 +1260,6 @@
       "stepCut": "Paso {{number}}, el texto no cabe",
       "textCut": "El texto no cabe",
       "titleBlock": {
-        "addTitle": "Añade un título",
         "creditsCut": "Algunos créditos no caben",
         "noModel": "Ningún paso tiene imagen todavía",
         "noPattern": "Ningún paso está vinculado a un patrón de pliegues",
@@ -1574,7 +1573,8 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "Papel recomendado",
         "steps": "Pasos",
-        "subtitle": "Subtítulo"
+        "subtitle": "Subtítulo",
+        "title": "Añade un título"
       }
     },
     "turns": {

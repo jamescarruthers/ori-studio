@@ -1186,7 +1186,6 @@
       "stepCut": "ステップ {{number}}、文章が収まりません",
       "textCut": "文章が収まりません",
       "titleBlock": {
-        "addTitle": "タイトルを追加してください",
         "creditsCut": "入りきらないクレジットがあります",
         "noModel": "図のあるステップがまだありません",
         "noPattern": "展開図にリンクしたステップがありません",
@@ -1474,7 +1473,8 @@
         "paperSize": "15 cm × 15 cm",
         "recommendedPaper": "推奨用紙",
         "steps": "ステップ数",
-        "subtitle": "サブタイトル"
+        "subtitle": "サブタイトル",
+        "title": "タイトルを追加"
       }
     },
     "turns": {
