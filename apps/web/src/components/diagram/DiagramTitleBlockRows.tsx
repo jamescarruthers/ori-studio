@@ -6,8 +6,10 @@ import { useDiagramTitleBlock, type TitleBlockArtSize } from '../../diagram/page
 import { SelectRow, SliderRow, TextAreaRow, ToggleRow, type SelectRowOption } from '../ui/fieldRows';
 import { DiagramTitleBlockCredits } from './DiagramTitleBlockCredits';
 
-/** The sizes move in steps of 5%. */
-const SIZE_STEP = 5;
+/** The sizes move by whole percents, so the defaults (59% and 79%) are stops. */
+const SIZE_STEP = 1;
+const SIZE_MIN = Math.round(TITLE_BLOCK_ART_SIZE_RANGE.min * 100);
+const SIZE_MAX = Math.round(TITLE_BLOCK_ART_SIZE_RANGE.max * 100);
 
 /**
  * The first page's title block, as rows the Page pane's Header & footer opens
@@ -44,8 +46,8 @@ export function DiagramTitleBlockRows() {
       help={help}
       nested
       value={Math.round(block.sizes[key] * 100)}
-      min={TITLE_BLOCK_ART_SIZE_RANGE.min * 100}
-      max={TITLE_BLOCK_ART_SIZE_RANGE.max * 100}
+      min={SIZE_MIN}
+      max={SIZE_MAX}
       step={SIZE_STEP}
       format={percent}
       valueText={percent}

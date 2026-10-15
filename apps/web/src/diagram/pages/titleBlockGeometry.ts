@@ -101,6 +101,3 @@ export function titleBlockGeometry(setup: DiagramPageSetup, headMm: number, foot
   const band = titleBlockBand(setup, headMm, footMm);
   return band ? titleBlockParts(band, sizes) : null;
 }
-
-/** The pane's byline help reads this until the Page pane takes the note (Phase 1c); the note is cut at the band's foot instead. */
-export const TITLE_BLOCK_BYLINE_LINES = 4;

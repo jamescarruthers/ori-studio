@@ -36,6 +36,7 @@ import {
   stepNumbers,
   stepsOf,
   titleBlockArtSizes,
+  titleBlockStepCount,
   type DiagramCpSource,
   type DiagramDocument,
   type DiagramStep,
@@ -183,7 +184,7 @@ function thumbnailBox(thumbnail: SheetThumbnail): { minX: number; minY: number; 
  */
 export function titleBlockLook(document: DiagramDocument): TitleBlockLook {
   const content = document.titleBlockContent;
-  const count = Math.max(0, ...stepNumbers(document).values());
+  const count = titleBlockStepCount(document);
   return {
     subtitle: printedCapitals(content?.subtitle ?? ''),
     credits: (content?.credits ?? []).map(({ label, value }) => ({

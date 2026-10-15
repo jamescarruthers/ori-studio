@@ -424,8 +424,15 @@ describe('DiagramTitleBlockRows', () => {
     const readout = (label: string) =>
       slider(label)!.closest('[data-field-row]')!.querySelector('[data-field-readout]')!.textContent;
     const reset = (label: string) => button(`Reset ${label} to default`);
-    expect(readout('Model size')).toBe('60%');
-    expect(readout('Crease pattern size')).toBe('80%');
+    expect(readout('Model size')).toBe('59%');
+    expect(readout('Crease pattern size')).toBe('79%');
+    // A browser snaps a range's value to its stops: the defaults must be stops, or the thumb leaves them.
+    const onStop = (label: string, percent: number) => {
+      const { min, step } = slider(label)!;
+      return (percent - Number(min)) % Number(step) === 0;
+    };
+    expect(onStop('Model size', 59)).toBe(true);
+    expect(onStop('Crease pattern size', 79)).toBe(true);
     expect(reset('Model size')).toBeUndefined();
     drag('Model size', '75');
     expect(state().diagram!.titleBlockContent?.modelSize).toBe(0.75);
