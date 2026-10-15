@@ -41,7 +41,8 @@ import { estimateTextSetter } from './estimateTextSetter';
 import { flowPagePlan } from './flowLane';
 import { followPageArrangements, repackPages } from './pageArrangements';
 import { pageLayoutFixtures } from './pageLayouts.fixtures';
-import { cellSlots, sameCell, settlePlaces } from './stepPlaces';
+import type { PlannedPage } from './pagePlan';
+import { cellSlots, pageShape, sameCell, settlePlaces } from './stepPlaces';
 
 /**
  * Which cell each step prints in, and the rules that clear a frame moved by
@@ -92,6 +93,13 @@ describe('cellSlots', () => {
     expect(cellSlots(after).slots.get('d')).toEqual({ page: 2, first: 'c', k: 1 });
     expect(sameCell(cellSlots(before), cellSlots(after), 'd')).toBe(true);
     expect(sameCell(cellSlots(before), cellSlots(after), 'b')).toBe(false);
+  });
+
+  it('reads the rows a grid page’s title block takes from its plan, not from how many rows it lists', () => {
+    const page: PlannedPage = { steps: [0], firstStepId: 'a', ownCount: false, capacity: 9, layoutCount: 9, rows: 3, titleBlockRows: 0, rowCounts: [3], columns: 3 };
+    // A page listing fewer rows than it is cut into has no block above its cells unless its plan says so.
+    expect(pageShape(page, 'grid')).toBe('3x3');
+    expect(pageShape({ ...page, titleBlockRows: 1, rowCounts: [3, 3] }, 'grid')).toBe('3x3-1');
   });
 });
 

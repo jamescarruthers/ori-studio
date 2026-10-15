@@ -1157,8 +1157,7 @@ export function layoutDiagramPages(
     const { page, cellW, cellH, slots } = cuts[pageIndex]!;
     const { row, along, count } = slots[k]!;
     const x = count === page.columns ? m + along * cellW : m + ((along + 0.5) / count) * (W - 2 * m) - cellW / 2;
-    const under = pageIndex === 0 ? (titleBlock?.rows ?? 0) : 0;
-    return { x, y: m + headH + (under + row) * cellH };
+    return { x, y: m + headH + (page.titleBlockRows + row) * cellH };
   };
   /** How far down the page the text of a page's `k`th cell may sit: by its cell. */
   const cellFoot = (pageIndex: number, k: number) => cellAt(pageIndex, k).y + cuts[pageIndex]!.cellH - TEXT_DESCENT_MM;

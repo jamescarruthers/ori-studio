@@ -66,13 +66,20 @@ export interface PlannedPage {
   /**
    * How many rows it is cut into: in the flow {@link flowRows} for its layout
    * count; on a grid the setup's rows, on the first page the title block's
-   * among them ({@link blockRows}).
+   * among them ({@link PlannedPage.titleBlockRows}).
    */
   rows: number;
   /**
+   * How many of a grid's rows the title block takes above its cells: on the
+   * first page with the block, {@link blockRows}; none on any other page, and
+   * none in the flow, whose block shortens the page's area instead. The one
+   * answer the layout's cells and a cell's shape (`stepPlaces.ts`) read.
+   */
+  titleBlockRows: number;
+  /**
    * How many of its layout count each row holds, in reading order
-   * ({@link balancedRows}); on a grid, each row its steps fill, every one its
-   * columns — on the first page the rows under the title block.
+   * ({@link balancedRows}); on a grid, every row under the title block, each
+   * its columns, however many of them its steps fill.
    */
   rowCounts: readonly number[];
   /** Its longest row: the first. A grid's columns. */
@@ -247,6 +254,7 @@ export function paginate(steps: readonly PaginatedStep[], setup: DiagramPageSetu
   if (setup.layout !== 'flow') {
     return pages.map((page, pageIndex) => {
       const capacity = defaultPageCapacity(setup, pageIndex);
+      const titleBlockRows = pageIndex === 0 && hasTitleBlock(setup) ? blockRows(setup) : 0;
       return {
         steps: page.steps,
         firstStepId: firstId(steps, page),
@@ -254,7 +262,8 @@ export function paginate(steps: readonly PaginatedStep[], setup: DiagramPageSetu
         capacity,
         layoutCount: capacity,
         rows: setup.rows,
-        rowCounts: Array.from({ length: capacity / setup.columns }, () => setup.columns),
+        titleBlockRows,
+        rowCounts: Array.from({ length: setup.rows - titleBlockRows }, () => setup.columns),
         columns: setup.columns,
       };
     });
@@ -275,6 +284,7 @@ export function paginate(steps: readonly PaginatedStep[], setup: DiagramPageSetu
       capacity,
       layoutCount,
       rows,
+      titleBlockRows: 0,
       rowCounts,
       columns: rowCounts[0]!,
     };

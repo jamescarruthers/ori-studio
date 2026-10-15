@@ -185,7 +185,7 @@ describe('pageSignature', () => {
 
     it('the page’s index and side', () => {
       const steps: SignedStep[] = ['a', 'b'].map((id) => ({ id, breakBefore: false, turnsBefore: [], turnsAfter: [] }));
-      const page: PlannedPage = { steps: [0, 1], firstStepId: 'a', ownCount: false, capacity: 2, layoutCount: 2, rows: 1, rowCounts: [2], columns: 2 };
+      const page: PlannedPage = { steps: [0, 1], firstStepId: 'a', ownCount: false, capacity: 2, layoutCount: 2, rows: 1, titleBlockRows: 0, rowCounts: [2], columns: 2 };
       const input = (count: number, patch: Partial<DiagramPageSetup> = {}): PageSignatureInput => ({
         steps,
         pages: Array.from({ length: count }, () => page),

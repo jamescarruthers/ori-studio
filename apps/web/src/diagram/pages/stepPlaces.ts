@@ -85,8 +85,8 @@ export interface CellSlots {
  */
 export function pageShape(page: PlannedPage, layout: DiagramPageLayout): string {
   if (layout === 'flow') return `${page.layoutCount}/${page.rows}`;
-  const blockRows = page.rows - page.rowCounts.length;
-  return blockRows > 0 ? `${page.columns}x${page.rows}-${blockRows}` : `${page.columns}x${page.rows}`;
+  const under = page.titleBlockRows;
+  return under > 0 ? `${page.columns}x${page.rows}-${under}` : `${page.columns}x${page.rows}`;
 }
 
 /**

@@ -97,7 +97,7 @@ describe('paginate: which steps go on which page', () => {
 
   it('makes an empty diagram one empty page, laid out for a full one', () => {
     expect(paginate([], FLOW)).toEqual([
-      { steps: [], firstStepId: null, ownCount: false, capacity: 9, layoutCount: 9, rows: 3, rowCounts: [3, 3, 3], columns: 3 },
+      { steps: [], firstStepId: null, ownCount: false, capacity: 9, layoutCount: 9, rows: 3, titleBlockRows: 0, rowCounts: [3, 3, 3], columns: 3 },
     ]);
     expect(paginate([], GRID)).toHaveLength(1);
   });
@@ -280,9 +280,11 @@ describe('paginate: the first page with the title block (diagram-title-block.md,
     expect(firstPageCapacity(grid())).toBe(6);
     expect(sizes(steps(20), grid())).toEqual([6, 9, 5]);
     const [first, second] = paginate(steps(20), grid());
-    expect(first).toMatchObject({ capacity: 6, layoutCount: 6, rows: 3, columns: 3, rowCounts: [3, 3], ownCount: false });
-    expect(second).toMatchObject({ capacity: 9, layoutCount: 9, rows: 3, columns: 3, rowCounts: [3, 3, 3] });
-    expect(paginate(steps(20), grid({ columns: 4, rows: 6 }))[0]).toMatchObject({ capacity: 16, rowCounts: [4, 4, 4, 4] });
+    expect(first).toMatchObject({ capacity: 6, layoutCount: 6, rows: 3, titleBlockRows: 1, columns: 3, rowCounts: [3, 3], ownCount: false });
+    expect(second).toMatchObject({ capacity: 9, layoutCount: 9, rows: 3, titleBlockRows: 0, columns: 3, rowCounts: [3, 3, 3] });
+    expect(paginate(steps(20), grid({ columns: 4, rows: 6 }))[0]).toMatchObject({ capacity: 16, titleBlockRows: 2, rowCounts: [4, 4, 4, 4] });
+    // The flow's block shortens its first page instead: no rows of its own.
+    expect(paginate(steps(20), flow()).map((page) => page.titleBlockRows)).toEqual([0, 0, 0]);
     // No room on a grid of one row: every page as without the block.
     expect(paginate(steps(20), grid({ rows: 1 }))).toEqual(paginate(steps(20), { ...GRID, rows: 1 }));
   });
