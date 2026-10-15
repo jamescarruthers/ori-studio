@@ -1,10 +1,15 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PAGE_SETTINGS, setPageSetup, type DiagramPageSetup } from '../../diagram/document/diagramDocument';
+import {
+  PAGE_SETTINGS,
+  defaultTitleBlockContent,
+  setPageSetup,
+  type DiagramPageSetup,
+  type DiagramTitleBlockContent,
+} from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
 import { emptyStep, patternStep, titleBlockDiagram } from '../../diagram/pages/titleBlock.fixtures';
-import { TITLE_BLOCK_BYLINE_LINES } from '../../diagram/pages/titleBlockGeometry';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramTitleBlockRows } from './DiagramTitleBlockRows';
@@ -45,19 +50,42 @@ const undoSteps = () => state().diagramHistory.past.length;
 function install(
   page: Partial<DiagramPageSetup> = {},
   readOnly = false,
-  steps = [cpStep('s1'), cpStep('s2'), patternStep('s3'), emptyStep('s4')]
+  steps = [cpStep('s1'), cpStep('s2'), patternStep('s3'), emptyStep('s4')],
+  content?: DiagramTitleBlockContent
 ) {
   const document = setPageSetup(titleBlockDiagram(steps), {
     layout: 'flow',
     titleBlock: PAGE_SETTINGS.titleBlock.legacy,
     ...page,
   });
-  act(() => state().installDiagram({ document, readOnly, raw: {} }));
+  act(() =>
+    state().installDiagram({ document: content ? { ...document, titleBlockContent: content } : document, readOnly, raw: {} })
+  );
 }
+
+/** What a new diagram's title block says, in English. */
+const NEW_CONTENT = defaultTitleBlockContent({
+  subtitle: 'Origami diagram',
+  author: 'Author',
+  recommendedSize: 'Recommended size',
+  steps: 'Steps',
+});
 
 const toggle = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Title block"]')!;
 const select = (label: string) => host!.querySelector<HTMLButtonElement>(`button[role="combobox"][aria-label="${label}"]`);
-const byline = () => host!.querySelector<HTMLTextAreaElement>('textarea');
+/** A stacked text field, by its label. */
+const textField = (label: string) => {
+  const found = [...host!.querySelectorAll('label')].find((each) => each.textContent === label);
+  return found ? (document.getElementById(found.htmlFor) as HTMLTextAreaElement | null) : null;
+};
+const input = (label: string) => host!.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`);
+const button = (name: string) =>
+  [...host!.querySelectorAll<HTMLButtonElement>('button')].find(
+    (each) => each.getAttribute('aria-label') === name || each.textContent === name
+  );
+const slider = (label: string) => host!.querySelector<HTMLInputElement>(`input[type="range"][aria-label="${label}"]`);
+const credits = () => state().diagram!.titleBlockContent?.credits;
+const calls = () => analytics.trackDiagramPageSetupChanged.mock.calls;
 /** The note a select is described by, and whether it is a reason; null with none. */
 function noteOf(label: string) {
   const id = select(label)!.getAttribute('aria-describedby');
@@ -80,12 +108,30 @@ function choose(label: string, option: string) {
   act(() => found.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
 }
 
-const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
-function type(text: string) {
+/** Types `text` into a field, as a whole new value, the way a test can. */
+function typeInto(field: HTMLTextAreaElement | HTMLInputElement, text: string) {
+  const prototype = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   act(() => {
-    setValue.call(byline()!, text);
-    byline()!.dispatchEvent(new Event('input', { bubbles: true }));
+    Object.getOwnPropertyDescriptor(prototype, 'value')!.set!.call(field, text);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
   });
+}
+
+/** A sitting at a field: focused, typed through `texts`, left. */
+function sitting(field: () => HTMLTextAreaElement | HTMLInputElement | null, ...texts: string[]) {
+  act(() => field()!.focus());
+  for (const text of texts) typeInto(field()!, text);
+  act(() => field()!.blur());
+}
+
+/** A drag of slider `label` to `value`, let go there. */
+function drag(label: string, value: string) {
+  const input = slider(label)!;
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  act(() => input.dispatchEvent(new Event('change', { bubbles: true })));
 }
 
 beforeAll(() => {
@@ -123,7 +169,7 @@ describe('DiagramTitleBlockRows', () => {
     render();
     expect(toggle().getAttribute('aria-checked')).toBe('false');
     expect(select('Model')).toBeNull();
-    expect(byline()).toBeNull();
+    expect(textField('Note')).toBeNull();
     act(() => toggle().click());
     // At the share the file says, a diagram saved without the block the legacy 0.27, not a new diagram's 0.23.
     const saidOn = { ...PAGE_SETTINGS.titleBlock.legacy, enabled: true };
@@ -133,7 +179,7 @@ describe('DiagramTitleBlockRows', () => {
     expect(toggle().getAttribute('aria-checked')).toBe('true');
     expect(select('Model')).not.toBeNull();
     expect(select('Crease pattern')).not.toBeNull();
-    expect(byline()).not.toBeNull();
+    expect(textField('Note')).not.toBeNull();
     act(() => toggle().click());
     expect(state().diagram!.page.titleBlock).toEqual({ ...saidOn, enabled: false });
     expect(select('Model')).toBeNull();
@@ -160,14 +206,38 @@ describe('DiagramTitleBlockRows', () => {
     );
   });
 
-  it('sets what the block shows a step in under its toggle, which stands at the margin', () => {
-    install({ titleBlock: ON });
+  it('reads as the block does, a step in under its toggle: subtitle, credits, note, then the model and the pattern with their sizes', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
     render();
+    const names = [...host!.querySelectorAll('[data-field-label], label, [role="group"][aria-labelledby]')].map(
+      (each) =>
+        each.getAttribute('role') === 'group'
+          ? document.getElementById(each.getAttribute('aria-labelledby')!)!.textContent
+          : each.textContent
+    );
+    expect(names).toEqual([
+      'Title block',
+      'Subtitle',
+      'Credits',
+      'Note',
+      'Model',
+      'Model size',
+      'Crease pattern',
+      'Crease pattern size',
+    ]);
     const nested = (element: Element) => element.closest('[data-nested]') !== null;
     expect(nested(toggle())).toBe(false);
-    expect(nested(select('Model')!)).toBe(true);
-    expect(nested(select('Crease pattern')!)).toBe(true);
-    expect(nested(byline()!)).toBe(true);
+    for (const each of [
+      textField('Subtitle')!,
+      input('Label of credit 1')!,
+      textField('Note')!,
+      select('Model')!,
+      slider('Model size')!,
+      select('Crease pattern')!,
+      slider('Crease pattern size')!,
+    ]) {
+      expect(nested(each)).toBe(true);
+    }
   });
 
   it('offers the steps with a picture for the model and each linked pattern once, each select naming what Auto finds', () => {
@@ -216,13 +286,11 @@ describe('DiagramTitleBlockRows', () => {
     expect(noteOf('Model')).toBeNull();
   });
 
-  it('says how many of the byline’s lines print, as the page cuts them', () => {
+  it('says the note prints only when it has text', () => {
     install({ titleBlock: ON });
     render();
-    const help = byline()!.parentElement!.querySelector('[data-field-help]');
-    expect(help?.getAttribute('aria-label')).toBe(
-      `Credits under the title, as you write them. Up to ${TITLE_BLOCK_BYLINE_LINES} lines print; a long line wraps onto the next.`
-    );
+    const help = textField('Note')!.parentElement!.querySelector('[data-field-help]');
+    expect(help?.getAttribute('aria-label')).toBe('Free text under the credits. It prints only when it has text.');
   });
 
   it('offers no linked step whose pattern draws nothing, and names one chosen as the page’s overlay does', () => {
@@ -235,26 +303,154 @@ describe('DiagramTitleBlockRows', () => {
     expect(noteOf('Crease pattern')).toEqual({ text: 'Step 2 has no crease pattern', reason: true });
   });
 
-  it('commits the note (the field labelled Byline until Phase 1c) as it is typed: a sitting at the field one undo step and one count', () => {
+  it('commits the note as it is typed: a sitting at the field one undo step and one count, never its words', () => {
     vi.useFakeTimers();
     install({ titleBlock: ON });
     render();
-    act(() => byline()!.focus());
-    type('Design');
+    const note = () => textField('Note');
+    act(() => note()!.focus());
+    typeInto(note()!, 'Design');
     // A pause in typing commits.
     act(() => vi.advanceTimersByTime(1000));
     expect(state().diagram!.titleBlockContent?.note).toBe('Design');
-    type('Design: Lang\nPaper: 35 cm');
-    act(() => byline()!.blur());
+    typeInto(note()!, 'Design: Lang\nPaper: 35 cm');
+    act(() => note()!.blur());
     expect(state().diagram!.titleBlockContent?.note).toBe('Design: Lang\nPaper: 35 cm');
     expect(undoSteps()).toBe(1);
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('title_block_note', { titleBlockNote: 'shown' });
-    // Another sitting counts again.
-    act(() => byline()!.focus());
-    type('Design: Robert Lang');
-    act(() => byline()!.blur());
+    // Another sitting counts again; cleared, the note is none, and counted as hidden.
+    sitting(note, '');
+    expect(state().diagram!.titleBlockContent).toBeUndefined();
     expect(undoSteps()).toBe(2);
-    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledTimes(2);
+    expect(calls().at(-1)).toEqual(['title_block_note', { titleBlockNote: 'hidden' }]);
+  });
+
+  it('commits the subtitle on one line, a sitting one undo step and one count; cleared, there is none', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    render();
+    const subtitle = () => textField('Subtitle');
+    expect(subtitle()!.value).toBe('Origami diagram');
+    sitting(subtitle, 'Origami', 'Origami\ndiagram by Lang');
+    expect(state().diagram!.titleBlockContent?.subtitle).toBe('Origami diagram by Lang');
+    expect(undoSteps()).toBe(1);
+    expect(calls()).toEqual([['title_block_subtitle', { titleBlockSubtitle: 'shown' }]]);
+    sitting(subtitle, '');
+    expect(state().diagram!.titleBlockContent).not.toHaveProperty('subtitle');
+    expect(subtitle()!.value).toBe('');
+    expect(undoSteps()).toBe(2);
+    expect(calls().at(-1)).toEqual(['title_block_subtitle', { titleBlockSubtitle: 'hidden' }]);
+  });
+
+  it('lists the credits as label and value fields, the step count live and followed, with no way to add a second', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    render();
+    expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual([
+      'Author',
+      'Recommended size',
+      'Steps',
+    ]);
+    expect(input('Value of credit 1')!.value).toBe('');
+    expect(input('Value of credit 3')).toBeNull();
+    const live = () => host!.querySelector('[data-credit-live]')!.textContent;
+    // Four numbered steps: a turn would not count.
+    expect(live()).toBe('Auto (4)');
+    act(() => state().addDiagramStep());
+    expect(live()).toBe('Auto (5)');
+    expect(button('Add Credit')).toBeDefined();
+    expect(button('Add Step Count')).toBeUndefined();
+  });
+
+  it('types a credit’s label and value, a sitting at each one undo step and one count, never the words', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    render();
+    sitting(() => input('Value of credit 1'), 'Robert', 'Robert J. Lang');
+    sitting(() => input('Label of credit 2'), 'Paper');
+    expect(credits()!.slice(0, 2)).toEqual([
+      { label: 'Author', value: 'Robert J. Lang' },
+      { label: 'Paper', value: '' },
+    ]);
+    expect(undoSteps()).toBe(2);
+    expect(calls()).toEqual([
+      ['title_block_credits', { titleBlockCreditChange: 'value', titleBlockCredits: 3 }],
+      ['title_block_credits', { titleBlockCreditChange: 'label', titleBlockCredits: 3 }],
+    ]);
+  });
+
+  it('types a value in place of the step count, and offers the step count back, each one undo step and one count', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    render();
+    act(() => button('Type a value instead')!.click());
+    expect(credits()![2]).toEqual({ label: 'Steps', value: '' });
+    // The field it asked for, ready to type into.
+    expect(document.activeElement).toBe(input('Value of credit 3'));
+    expect(host!.querySelector('[data-credit-live]')).toBeNull();
+    expect(calls()).toEqual([['title_block_credits', { titleBlockCreditChange: 'step_count_off', titleBlockCredits: 3 }]]);
+    act(() => button('Add Step Count')!.click());
+    expect(credits()!.at(-1)).toEqual({ label: 'Steps', value: { kind: 'step-count' } });
+    expect(button('Add Step Count')).toBeUndefined();
+    expect(undoSteps()).toBe(2);
+    expect(calls().at(-1)).toEqual(['title_block_credits', { titleBlockCreditChange: 'step_count_on', titleBlockCredits: 4 }]);
+  });
+
+  it('adds a credit at the end, ready to name, and removes one, each one undo step and one count', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    render();
+    act(() => button('Add Credit')!.click());
+    expect(credits()).toHaveLength(4);
+    expect(credits()![3]).toEqual({ label: '', value: '' });
+    expect(document.activeElement).toBe(input('Label of credit 4'));
+    act(() => button('Remove credit 1')!.click());
+    expect(credits()!.map((credit) => credit.label)).toEqual(['Recommended size', 'Steps', '']);
+    expect(input('Label of credit 1')!.value).toBe('Recommended size');
+    expect(undoSteps()).toBe(2);
+    expect(calls()).toEqual([
+      ['title_block_credits', { titleBlockCreditChange: 'add', titleBlockCredits: 4 }],
+      ['title_block_credits', { titleBlockCreditChange: 'remove', titleBlockCredits: 3 }],
+    ]);
+  });
+
+  it('offers the step count to a block whose credits say nothing, as an old diagram’s', () => {
+    install({ titleBlock: ON });
+    render();
+    expect(host!.querySelector('[data-credit]')).toBeNull();
+    act(() => button('Add Step Count')!.click());
+    expect(credits()).toEqual([{ label: 'Steps', value: { kind: 'step-count' } }]);
+    expect(host!.querySelector('[data-credit-live]')!.textContent).toBe('Auto (4)');
+  });
+
+  it('sizes the model and the pattern in percent, handed over where let go, each one undo step and one count, and resets them', () => {
+    install({ titleBlock: ON });
+    render();
+    const readout = (label: string) =>
+      slider(label)!.closest('[data-field-row]')!.querySelector('[data-field-readout]')!.textContent;
+    const reset = (label: string) => button(`Reset ${label} to default`);
+    expect(readout('Model size')).toBe('60%');
+    expect(readout('Crease pattern size')).toBe('80%');
+    expect(reset('Model size')).toBeUndefined();
+    drag('Model size', '75');
+    expect(state().diagram!.titleBlockContent?.modelSize).toBe(0.75);
+    expect(readout('Model size')).toBe('75%');
+    expect(undoSteps()).toBe(1);
+    expect(calls()).toEqual([['title_block_model_size', { titleBlockSize: 'custom' }]]);
+    act(() => reset('Model size')!.click());
+    expect(state().diagram!.titleBlockContent).toBeUndefined();
+    expect(undoSteps()).toBe(2);
+    expect(calls().at(-1)).toEqual(['title_block_model_size', { titleBlockSize: 'default' }]);
+    drag('Crease pattern size', '100');
+    expect(state().diagram!.titleBlockContent?.patternSize).toBe(1);
+    expect(calls().at(-1)).toEqual(['title_block_pattern_size', { titleBlockSize: 'custom' }]);
+  });
+
+  it('offers a size only while its part is shown', () => {
+    install({ titleBlock: ON });
+    render();
+    choose('Model', 'None');
+    expect(slider('Model size')).toBeNull();
+    expect(slider('Crease pattern size')).not.toBeNull();
+    choose('Crease pattern', 'None');
+    expect(slider('Crease pattern size')).toBeNull();
+    choose('Model', 'Auto (step 3)');
+    expect(slider('Model size')).not.toBeNull();
   });
 
   it('cannot be turned on in a grid of one row, and says why', () => {
@@ -273,11 +469,17 @@ describe('DiagramTitleBlockRows', () => {
   });
 
   it('takes nothing on a read-only diagram', () => {
-    install({ titleBlock: ON }, true);
+    install({ titleBlock: ON }, true, undefined, NEW_CONTENT);
     render();
     expect(toggle().disabled).toBe(true);
     expect(select('Model')!.disabled).toBe(true);
     expect(select('Crease pattern')!.disabled).toBe(true);
-    expect(byline()!.disabled).toBe(true);
+    expect(textField('Subtitle')!.disabled).toBe(true);
+    expect(textField('Note')!.disabled).toBe(true);
+    expect(input('Label of credit 1')!.disabled).toBe(true);
+    expect(input('Value of credit 1')!.disabled).toBe(true);
+    for (const name of ['Remove credit 1', 'Type a value instead', 'Add Credit']) expect(button(name)!.disabled).toBe(true);
+    expect(slider('Model size')!.disabled).toBe(true);
+    expect(slider('Crease pattern size')!.disabled).toBe(true);
   });
 });

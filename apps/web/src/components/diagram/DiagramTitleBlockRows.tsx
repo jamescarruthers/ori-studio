@@ -1,19 +1,25 @@
+import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
+import { TITLE_BLOCK_ART_SIZE_DEFAULTS, TITLE_BLOCK_ART_SIZE_RANGE } from '../../diagram/document/diagramDocument';
 import type { TitleBlockPartChoices } from '../../diagram/pages/titleBlockChoices';
-import { TITLE_BLOCK_BYLINE_LINES } from '../../diagram/pages/titleBlockGeometry';
-import { useDiagramTitleBlock } from '../../diagram/pages/useDiagramTitleBlock';
-import { SelectRow, TextAreaRow, ToggleRow, type SelectRowOption } from '../ui/fieldRows';
+import { useDiagramTitleBlock, type TitleBlockArtSize } from '../../diagram/pages/useDiagramTitleBlock';
+import { SelectRow, SliderRow, TextAreaRow, ToggleRow, type SelectRowOption } from '../ui/fieldRows';
+import { DiagramTitleBlockCredits } from './DiagramTitleBlockCredits';
+
+/** The sizes move in steps of 5%. */
+const SIZE_STEP = 5;
 
 /**
  * The first page's title block, as rows the Page pane's Header & footer opens
  * with (`implementation-plans/diagram-title-block.md`, Phase 1c, H-16 A): the
- * toggle and, a step in under it while the page has a block, what the block
- * shows — the finished model and the crease pattern, each Auto (named by the
- * step it finds), a step, or None, and the byline under the title. Bound by
+ * toggle and, a step in under it while the page has a block, what it shows —
+ * top to bottom as the block reads: the subtitle, the credits and the note,
+ * then the finished model and the crease pattern, each Auto (named by the step
+ * it finds), a step, or None, with its size while it is shown. Bound by
  * `useDiagramTitleBlock`, which offers only what the block can show.
  */
 export function DiagramTitleBlockRows() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const block = useDiagramTitleBlock();
   const { readOnly } = block;
   const step = (number: number) => t('panels:diagram.pagePane.titleBlock.step', 'Step {{number}}', { number });
@@ -30,13 +36,31 @@ export function DiagramTitleBlockRows() {
     const chosen = part.steps.find((each) => each.choice === part.value);
     return chosen && !chosen.gives ? cannot(chosen.number) : undefined;
   };
+  const percent = (value: number) => new Intl.NumberFormat(i18n.language, { style: 'percent' }).format(value / 100);
+  /** A size's slider, in percent of the block's height, handed over where it is let go. */
+  const sizeRow = (key: TitleBlockArtSize, label: string, help: string) => (
+    <SliderRow
+      label={label}
+      help={help}
+      nested
+      value={Math.round(block.sizes[key] * 100)}
+      min={TITLE_BLOCK_ART_SIZE_RANGE.min * 100}
+      max={TITLE_BLOCK_ART_SIZE_RANGE.max * 100}
+      step={SIZE_STEP}
+      format={percent}
+      valueText={percent}
+      disabled={readOnly}
+      onCommit={(value) => block.setSize(key, value / 100)}
+      onReset={block.sizes[key] !== TITLE_BLOCK_ART_SIZE_DEFAULTS[key] ? () => block.setSize(key, 'default') : undefined}
+    />
+  );
   return (
     <>
       <ToggleRow
         label={t('panels:diagram.pagePane.titleBlock.show', 'Title block')}
         help={t(
           'panels:diagram.pagePane.titleBlock.showHelp',
-          'The title, the crease pattern and the finished model, at the top of the first page.'
+          'The title and its credits, the crease pattern and the finished model, at the top of the first page.'
         )}
         note={block.fits ? undefined : t('panels:diagram.pagePane.titleBlock.needsRows', 'Needs two rows or more')}
         checked={block.shown}
@@ -44,7 +68,46 @@ export function DiagramTitleBlockRows() {
         onChange={block.setEnabled}
       />
       {block.shown && (
-        <>
+        // One set of fields per diagram: a draft never carries over to the one that replaces it.
+        <Fragment key={block.loadId}>
+          <TextAreaRow
+            label={t('panels:diagram.pagePane.titleBlock.subtitle', 'Subtitle')}
+            help={t(
+              'panels:diagram.pagePane.titleBlock.subtitleHelp',
+              'The small line over the title. Clear it to print none.'
+            )}
+            nested
+            value={block.subtitle}
+            rows={1}
+            singleLine
+            disabled={readOnly}
+            onCommit={block.setSubtitle}
+          />
+          <DiagramTitleBlockCredits
+            credits={block.credits}
+            stepCount={block.stepCount}
+            hasStepCount={block.hasStepCount}
+            disabled={readOnly}
+            nested
+            onAdd={block.addCredit}
+            onAddStepCount={block.addStepCount}
+            onRemove={block.removeCredit}
+            onLabel={block.setCreditLabel}
+            onValue={block.setCreditValue}
+            onTypeValue={block.typeCreditValue}
+          />
+          <TextAreaRow
+            label={t('panels:diagram.pagePane.titleBlock.note', 'Note')}
+            help={t(
+              'panels:diagram.pagePane.titleBlock.noteHelp',
+              'Free text under the credits. It prints only when it has text.'
+            )}
+            nested
+            value={block.note}
+            rows={3}
+            disabled={readOnly}
+            onCommit={block.setNote}
+          />
           <SelectRow
             label={t('panels:diagram.pagePane.titleBlock.model', 'Model')}
             help={t(
@@ -60,6 +123,12 @@ export function DiagramTitleBlockRows() {
             options={options(block.model, t('panels:diagram.pagePane.titleBlock.autoNoPicture', 'Auto (no pictures)'))}
             onChange={block.setModel}
           />
+          {block.model.value !== 'none' &&
+            sizeRow(
+              'modelSize',
+              t('panels:diagram.pagePane.titleBlock.modelSize', 'Model size'),
+              t('panels:diagram.pagePane.titleBlock.modelSizeHelp', 'The model’s height, as a share of the title block’s.')
+            )}
           <SelectRow
             label={t('panels:diagram.pagePane.titleBlock.pattern', 'Crease pattern')}
             help={t(
@@ -75,23 +144,16 @@ export function DiagramTitleBlockRows() {
             options={options(block.pattern, t('panels:diagram.pagePane.titleBlock.autoNoneLinked', 'Auto (none linked)'))}
             onChange={block.setPattern}
           />
-          <TextAreaRow
-            // One field per diagram: a draft never carries over to the one that replaces it.
-            key={block.loadId}
-            label={t('panels:diagram.pagePane.titleBlock.byline', 'Byline')}
-            help={t(
-              'panels:diagram.pagePane.titleBlock.bylineHelp',
-              'Credits under the title, as you write them. Up to {{lines}} lines print; a long line wraps onto the next.',
-              { lines: TITLE_BLOCK_BYLINE_LINES }
+          {block.pattern.value !== 'none' &&
+            sizeRow(
+              'patternSize',
+              t('panels:diagram.pagePane.titleBlock.patternSize', 'Crease pattern size'),
+              t(
+                'panels:diagram.pagePane.titleBlock.patternSizeHelp',
+                'The crease pattern’s side, as a share of the title block’s height.'
+              )
             )}
-            nested
-            value={block.note}
-            placeholder={t('panels:diagram.pagePane.titleBlock.bylinePlaceholder', 'Design: …\nPaper: 60 cm square')}
-            rows={4}
-            disabled={readOnly}
-            onCommit={block.setNote}
-          />
-        </>
+        </Fragment>
       )}
     </>
   );
