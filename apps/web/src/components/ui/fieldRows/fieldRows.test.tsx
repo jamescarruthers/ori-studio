@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CollapsibleSection } from '../CollapsibleSection';
 import { ColorField } from '../ColorField';
+import { TooltipProvider } from '../Tooltip';
 import { FieldRow, NumberRow, SegmentedRow, SelectRow, SliderRow, TextRow, ToggleRow } from './index';
 
 /**
@@ -143,6 +144,19 @@ describe('ToggleRow', () => {
     expect(row.hasAttribute('data-noted')).toBe(false);
   });
 
+  it('says why it cannot be switched on the note’s line, read with the switch', () => {
+    const view = render(<ToggleRow label="Title block" checked={false} disabled note="Needs two rows or more" onChange={() => {}} />);
+    const row = view.querySelector('[data-field-row]')!;
+    const note = view.querySelector('[data-field-note]');
+    expect(note?.textContent).toBe('Needs two rows or more');
+    expect([...row.children].map(part)).toEqual(['label', 'value:toggle', 'note']);
+    expect(view.querySelector('button[role="switch"]')?.getAttribute('aria-describedby')).toBe(note?.id);
+    // Without one, the row has no note's line.
+    rerender(<ToggleRow label="Title block" checked={false} onChange={() => {}} />);
+    expect(view.querySelector('[data-field-note]')).toBeNull();
+    expect(view.querySelector('button[role="switch"]')?.hasAttribute('aria-describedby')).toBe(false);
+  });
+
   it('resets rather than pins when an override is switched back to the value it inherits', () => {
     const onChange = vi.fn();
     const onReset = vi.fn();
@@ -194,6 +208,15 @@ describe('NumberRow', () => {
     expect(view.querySelector('[data-field-note]')).toBeNull();
     act(() => reset?.click());
     expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains itself behind a help mark, as the other rows do', () => {
+    const view = render(
+      <TooltipProvider>
+        <NumberRow label="Steps on page 1" help="Its own count." value={9} onCommit={() => {}} />
+      </TooltipProvider>
+    );
+    expect(view.querySelector('[data-field-help]')?.getAttribute('aria-label')).toBe('Its own count.');
   });
 });
 

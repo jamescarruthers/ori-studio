@@ -33,6 +33,7 @@ export function FieldRow({
   help,
   htmlFor,
   noteId,
+  note,
   overridable = false,
   kind,
   disabled = false,
@@ -54,10 +55,16 @@ export function FieldRow({
   /** Set when the control is a native input the label can point at. */
   htmlFor?: string;
   /**
-   * The id the "Overridden" note carries on a toggle, so the switch can name
-   * it in `aria-describedby`.
+   * The id the note carries on a toggle, so the switch can name it in
+   * `aria-describedby`.
    */
   noteId?: string;
+  /**
+   * A short line under the label, on the note's line: why a toggle cannot be
+   * switched now ("Needs two rows or more"). "Overridden" takes its place
+   * while the row is overridden.
+   */
+  note?: string;
   /**
    * A toggle that can be overridden, whether or not it is now. Its row keeps
    * the note's line under the label while the note is empty, so the row is
@@ -108,7 +115,7 @@ export function FieldRow({
 }) {
   const { t } = useTranslation();
   const overridden = kind === 'toggle' && onReset !== undefined;
-  const noteLine = overridden || (kind === 'toggle' && overridable);
+  const noteLine = overridden || (kind === 'toggle' && overridable) || note !== undefined;
   const resetButton = kind !== 'toggle' && onReset !== undefined;
   const rootData = {
     'data-field-row': '',
@@ -196,7 +203,7 @@ export function FieldRow({
           rather than absent while nothing is overridden (see `overridable`). */}
       {noteLine && (
         <span className={styles.note} data-field-note="" id={noteId}>
-          {overridden && t('common:fieldRow.overridden', 'Overridden')}
+          {overridden ? t('common:fieldRow.overridden', 'Overridden') : note}
         </span>
       )}
     </div>
