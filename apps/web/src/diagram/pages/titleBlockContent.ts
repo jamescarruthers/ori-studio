@@ -57,11 +57,11 @@ export interface ResolvedTitleBlock {
   /** The step whose picture is the finished model. */
   model: TitleBlockPart;
   /**
-   * The step whose link gives the crease pattern, and the pattern's lines:
-   * its stored thumbnail, null where it gives none, and that as the painter
-   * draws it ({@link patternScene}), null where it has no line to draw.
+   * The step whose link gives the crease pattern, and the pattern as the
+   * painter draws it: its stored thumbnail's lines ({@link patternScene}),
+   * null where it gives none or has no line to draw.
    */
-  pattern: TitleBlockPart & { thumbnail: SheetThumbnail | null; scene: PaperScene | null };
+  pattern: TitleBlockPart & { scene: PaperScene | null };
 }
 
 /** Whether a step can give the block's model: one of this build's, with a picture. */
@@ -102,8 +102,8 @@ export function resolveTitleBlock(document: DiagramDocument): ResolvedTitleBlock
   const numbers = stepNumbers(document);
   const model = resolvePart(document, numbers, content?.model, autoModelStep);
   const pattern = resolvePart(document, numbers, content?.pattern, autoPatternStep);
-  const thumbnail = pattern.step && givesPattern(pattern.step) ? pattern.step.source.thumbnail : null;
-  return { model, pattern: { ...pattern, thumbnail, scene: thumbnail ? patternScene(thumbnail) : null } };
+  const scene = pattern.step && givesPattern(pattern.step) ? patternScene(pattern.step.source.thumbnail) : null;
+  return { model, pattern: { ...pattern, scene } };
 }
 
 function resolvePart(

@@ -55,7 +55,7 @@ describe('resolveTitleBlock', () => {
     const document = titleBlockDiagram([cpStep('s1'), pattern, uploadStep('s3')]);
     expect(shown(document)).toEqual({ model: ['auto', 's3'], pattern: ['auto', 's2'] });
     // Shown folded, a link still names its pattern: the lines are its stored thumbnail's.
-    expect(resolveTitleBlock(document).pattern.thumbnail).toBe((pattern.source as DiagramCpSource).thumbnail);
+    expect(resolveTitleBlock(document).pattern.scene).toEqual(patternScene((pattern.source as DiagramCpSource).thumbnail));
   });
 
   it('passes over turns, empty steps and a newer build’s steps, so a diagram ending in a turn still finds its model', () => {
@@ -66,7 +66,7 @@ describe('resolveTitleBlock', () => {
   it('finds no pattern where no step is linked to a crease pattern: a References step’s sheet is not the model’s pattern', () => {
     const document = titleBlockDiagram([referencesStep('r1'), emptyStep('s2')]);
     expect(shown(document)).toEqual({ model: ['auto', 'r1'], pattern: ['auto', null] });
-    expect(resolveTitleBlock(document).pattern.thumbnail).toBeNull();
+    expect(resolveTitleBlock(document).pattern.scene).toBeNull();
     expect(shown(titleBlockDiagram([]))).toEqual({ model: ['auto', null], pattern: ['auto', null] });
   });
 
@@ -78,7 +78,7 @@ describe('resolveTitleBlock', () => {
     });
     const none = titleBlockDiagram(steps, { model: { kind: 'none' }, pattern: { kind: 'none' } });
     expect(shown(none)).toEqual({ model: ['none', null], pattern: ['none', null] });
-    expect(resolveTitleBlock(none).pattern.thumbnail).toBeNull();
+    expect(resolveTitleBlock(none).pattern.scene).toBeNull();
   });
 
   it('reads a chosen step that is gone, or a newer build’s now, as Auto: its id left as it is', () => {
@@ -104,7 +104,7 @@ describe('resolveTitleBlock', () => {
     const pictureless = removeStepPicture(chosen, 's1');
     const { model, pattern } = resolveTitleBlock(pictureless);
     expect([model.from, model.step?.id, model.step?.picture]).toEqual(['step', 's1', null]);
-    expect([pattern.from, pattern.step?.id, pattern.thumbnail]).toEqual(['step', 's3', null]);
+    expect([pattern.from, pattern.step?.id, pattern.scene]).toEqual(['step', 's3', null]);
   });
 
   it('shows Auto for a part only a newer build reads', () => {
@@ -129,8 +129,8 @@ describe('resolveTitleBlock', () => {
 
   it('gives the pattern’s lines as the painter draws them, none where it gives none', () => {
     const pattern = folded('s2');
-    const { thumbnail, scene } = resolveTitleBlock(titleBlockDiagram([cpStep('s1'), pattern])).pattern;
-    expect(scene).toEqual(patternScene(thumbnail!));
+    const { scene } = resolveTitleBlock(titleBlockDiagram([cpStep('s1'), pattern])).pattern;
+    expect(scene).toEqual(patternScene((pattern.source as DiagramCpSource).thumbnail));
     expect(resolveTitleBlock(titleBlockDiagram([cpStep('s1')], { pattern: { kind: 'none' } })).pattern.scene).toBeNull();
   });
 });
