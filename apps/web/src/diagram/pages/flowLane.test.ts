@@ -65,7 +65,7 @@ function steps(count: number, patch: (index: number) => Partial<LayoutStep> = ()
 }
 
 const flow = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}) =>
-  layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, 'Heart', estimateTextSetter);
+  layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, { title: 'Heart', byline: '' }, estimateTextSetter);
 
 const centreOf = (cell: LayoutCell): LanePoint => ({
   x: cell.pictureMm.x + cell.pictureMm.size / 2,
@@ -614,6 +614,41 @@ describe('a printed spread', () => {
       });
       expect(spreads, `${JSON.stringify(setup)} ${firstPageSide}`).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  it('hands the first page over under its title block as it does without one, for either first page', () => {
+    const titleBlock = { enabled: true, heightShare: 0.27 };
+    let [spine, turn] = [0, 0];
+    for (const setup of SETUPS) {
+      for (const firstPageSide of ['left', 'right'] as const) {
+        const result = flow(steps(3 * (setup.stepsPerPage ?? 9) + 2), { ...setup, firstPageSide, titleBlock });
+        const [one, two] = result.pages;
+        const W = result.paper.widthMm;
+        const label = `${JSON.stringify(setup)} ${firstPageSide}`;
+        const { block } = one!.titleBlock!.geometry;
+        // The lane starts at step 1's centre, under the block, with no stub.
+        expect(one!.band!.from, label).toEqual({ x: one!.flow!.stops[0]!.x, y: one!.flow!.stops[0]!.y });
+        expect(one!.band!.from.y, label).toBeGreaterThan(block.y + block.h);
+        const [out, into] = [one!.band!.curves.at(-2)!.to, two!.band!.curves[0]!.to];
+        if (firstPageSide === 'left') {
+          // Over the spine at one height, level there, and on into the bleed both ways.
+          spine += 1;
+          expect([out.x, into.x], label).toEqual([W, 0]);
+          expect(into.y, label).toBeCloseTo(out.y, 6);
+          expect(one!.band!.curves.at(-2)!.c2.y, label).toBeCloseTo(out.y, 9);
+          expect(one!.band!.curves.at(-1)!.to, label).toEqual({ x: W + 10, y: out.y });
+          expect(two!.band!.from, label).toEqual({ x: -10, y: into.y });
+          continue;
+        }
+        // Alone on the right, reading down from under the block: where it runs off its outer edge, level with its
+        // last picture, the next page starts at its head, level with its first (952fc658e).
+        if (one!.band!.curves.at(-1)!.to.x !== W + 10 || two!.band!.from.x !== -10) continue;
+        turn += 1;
+        expect([out.y, into.y], label).toEqual([one!.flow!.stops.at(-1)!.y, two!.flow!.stops[0]!.y]);
+      }
+    }
+    expect(spine).toBe(SETUPS.length);
+    expect(turn).toBeGreaterThan(0);
   });
 
   it('carries the lane over a page turn at one height, as over the spine, where the page before read up to its head (Zach’s crane, 2026-10-14)', () => {

@@ -53,6 +53,8 @@ const LONG =
   'Fold the bottom edge up to the top edge, crease firmly, unfold, then fold both sides in to meet the centre line and turn the model over carefully.';
 
 const NO_MARKS = { width: 0, height: 0 };
+/** The diagram's title, and no byline. */
+const CRANE = { title: 'Crane', byline: '' };
 
 function step(index: number, patch: Partial<LayoutStep> = {}): LayoutStep {
   return {
@@ -71,7 +73,7 @@ const steps = (count: number, patch: (index: number) => Partial<LayoutStep> = ()
 
 /** The pages under a setup: the grid unless it says, as these cases were written for (a new diagram's is the flow). */
 function layout(list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, title = 'Crane') {
-  return layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', ...setup }, title, estimateTextSetter);
+  return layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', ...setup }, { title, byline: '' }, estimateTextSetter);
 }
 
 const paper = (width: number, height: number = width): LayoutStep['picture'] => ({
@@ -224,7 +226,7 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     list: LayoutStep[],
     setup: Partial<DiagramPageSetup> = {},
     arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}
-  ) => layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, 'Crane', estimateTextSetter, arrangements);
+  ) => layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
   const bandsOf = (page: LayoutPage) => [...new Set(page.cells.map((cell) => cell.band!))];
   const bandCells = (page: LayoutPage, band: number) => page.cells.filter((cell) => cell.band === band && !cell.bend);
   /** Where each step is at home: its box, its number and its caption's start. */
@@ -500,7 +502,7 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
 
 describe('a caption’s pinned measure (`diagram-caption-resize.md`)', () => {
   const flowLayout = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}) =>
-    layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, 'Crane', estimateTextSetter, arrangements);
+    layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
   const pin = (list: readonly LayoutStep[], index: number, textWidth: number) =>
     list.map((each, at) => (at === index ? { ...each, place: { ...each.place, textWidth } } : each));
   const cellsById = (result: DiagramPagesLayout) => new Map(result.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell] as const)));
@@ -993,7 +995,7 @@ describe('layoutDiagramPages', () => {
     const CJK = '将底角向上折至顶角，压实折痕后展开。将底角向上折至顶角，压实折痕后展开。';
     for (const [columns, rows] of [[2, 1], [3, 3], [5, 6]] as const) {
       const list = steps(12, (index) => ({ text: [SHORT, LONG, CJK][index % 3]! }));
-      const result = layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', columns, rows }, 'Crane', setter);
+      const result = layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', columns, rows }, CRANE, setter);
       for (const cell of result.pages.flatMap((page) => page.cells)) {
         for (const line of cell.text.lines) expect(line.widthMm).toBeLessThanOrEqual(cell.text.widthMm + 1e-9);
         const last = cell.text.firstBaseline + (cell.text.lines.length - 1) * STEP_TEXT_LEADING_MM;
@@ -1203,6 +1205,95 @@ describe('layoutDiagramPages', () => {
     const result = layout([]);
     expect(result.pages).toHaveLength(1);
     expect(result.pages[0]!.cells).toEqual([]);
+  });
+});
+
+describe('the title block on the first page (`diagram-title-block.md`, section 2)', () => {
+  const ON = { enabled: true, heightShare: 0.27 } as const;
+  const flowLayout = (
+    list: LayoutStep[],
+    setup: Partial<DiagramPageSetup> = {},
+    titles = CRANE,
+    arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}
+  ) => layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: ON, ...setup }, titles, estimateTextSetter, arrangements);
+  const within = (box: { x: number; y: number; w: number; h: number }, area: { x: number; y: number; w: number; h: number }) =>
+    box.x >= area.x - 0.01 && box.x + box.w <= area.x + area.w + 0.01 && box.y >= area.y - 0.01 && box.y + box.h <= area.y + area.h + 0.01;
+
+  it('packs the first flow page under the block, step 1 at the top left of what is left, and the other pages as every page', () => {
+    const result = flowLayout(steps(20), { stepsPerPage: 9 });
+    const [one, ...rest] = result.pages;
+    const block = one!.titleBlock!.geometry.block;
+    // Seven steps under the block (`firstPageCapacity`), in an area that starts 3 mm under it.
+    expect(result.pages.map((page) => page.cells.length)).toEqual([7, 9, 4]);
+    const area = packingArea(result.paper, block.h, FOOTER_MM);
+    expect(area.y).toBeCloseTo(block.y + block.h + 3, 9);
+    for (const cell of one!.cells) expect(within(cell.cellMm, area), cell.stepId).toBe(true);
+    const first = one!.cells[0]!;
+    expect(first.band).toBe(0);
+    expect(first.cellMm.x).toBe(Math.min(...one!.cells.filter((cell) => cell.band === 0).map((cell) => cell.cellMm.x)));
+    expect(one!.packing).toMatchObject({ packed: true, fits: true });
+    // The other pages keep the area every page has, and no block.
+    for (const page of rest) {
+      expect(page.titleBlock).toBeUndefined();
+      for (const cell of page.cells) expect(within(cell.cellMm, packingArea(result.paper, HEADER_MM, FOOTER_MM)), cell.stepId).toBe(true);
+    }
+  });
+
+  it('leaves the title tab to the other pages: the block carries the title, set large', () => {
+    const result = flowLayout(steps(12), { stepsPerPage: 9 });
+    expect(result.title).not.toBeNull();
+    expect(result.pages.map((page) => Boolean(page.titleBlock))).toEqual([true, false]);
+    expect(result.pages[0]!.titleBlock!.title).toMatchObject({ sizeMm: 10, line: { text: 'Crane' } });
+    // Off, or in a grid of one row with no room for it, there is no block, and page 1 keeps its tab.
+    expect(flowLayout(steps(12), { titleBlock: { enabled: false, heightShare: 0.27 } }).pages[0]!.titleBlock).toBeUndefined();
+    expect(layout(steps(4), { rows: 1, columns: 4, titleBlock: ON }).pages[0]!.titleBlock).toBeUndefined();
+  });
+
+  it('sets the byline it is handed under the title', () => {
+    const result = flowLayout(steps(3), {}, { title: 'Crane', byline: 'Traditional\nDiagrams: Zach' });
+    expect(result.pages[0]!.titleBlock!.byline!.lines.map((line) => line.text)).toEqual(['Traditional', 'Diagrams: Zach']);
+  });
+
+  it('holds the first page as packed when the title is typed, cleared or given a byline: no tab there for its room to move', () => {
+    const list = steps(16);
+    const packed = flowLayout(list, { stepsPerPage: 9 }).packed!;
+    const cellsOf = (result: DiagramPagesLayout) => result.pages[0]!.cells.map((cell) => [cell.stepId, cell.cellMm]);
+    for (const titles of [{ title: '', byline: '' }, { title: 'Crane, folded', byline: 'Design: traditional' }]) {
+      const again = flowLayout(list, { stepsPerPage: 9 }, titles, packed);
+      expect(again.pages[0]!.packing!.packed, JSON.stringify(titles)).toBe(false);
+      expect(cellsOf(again)).toEqual(cellsOf(flowLayout(list, { stepsPerPage: 9 }, CRANE, packed)));
+    }
+    // Without the block, clearing the title takes the tab's room away, and page 1 is packed again.
+    const off = { stepsPerPage: 9, titleBlock: { enabled: false, heightShare: 0.27 } };
+    const tabbed = flowLayout(list, off).packed!;
+    expect(flowLayout(list, off, { title: '', byline: '' }, tabbed).pages[0]!.packing!.packed).toBe(true);
+  });
+
+  it('keeps an empty title’s room: the first page packs as it does under a title', () => {
+    const cellsOf = (result: DiagramPagesLayout) => result.pages[0]!.cells.map((cell) => cell.cellMm);
+    const untitled = flowLayout(steps(9), { stepsPerPage: 9 }, { title: '', byline: '' });
+    expect(untitled.pages[0]!.titleBlock).toMatchObject({ title: null, byline: null });
+    expect(cellsOf(untitled)).toEqual(cellsOf(flowLayout(steps(9), { stepsPerPage: 9 })));
+  });
+
+  it('cuts a grid’s first page under the rows the block takes, every cell the size of every page’s', () => {
+    for (const [rows, taken] of [[3, 1], [4, 1], [6, 2]] as const) {
+      const result = layout(steps(30), { columns: 3, rows, titleBlock: ON });
+      const [one, two] = result.pages;
+      const { block } = one!.titleBlock!.geometry;
+      const cellH = (result.paper.heightMm - 2 * 12 - HEADER_MM - FOOTER_MM) / rows;
+      expect(one!.cells).toHaveLength(3 * (rows - taken));
+      expect(block.h).toBeCloseTo(HEADER_MM + taken * cellH, 9);
+      // Its first row starts at the block's foot, under the rows it takes; each cell is every page's size.
+      expect(one!.cells[0]!.cellMm.y).toBeCloseTo(block.y + block.h, 9);
+      expect(one!.cells[0]!.cellMm.y).toBeCloseTo(two!.cells[0]!.cellMm.y + taken * cellH, 9);
+      for (const cell of [...one!.cells, ...two!.cells]) {
+        expect(cell.cellMm.w).toBeCloseTo(result.cellMm.w, 9);
+        expect(cell.cellMm.h).toBeCloseTo(cellH, 9);
+      }
+      // The last row's foot where every page's is.
+      expect(one!.cells.at(-1)!.cellMm.y).toBeCloseTo(two!.cells.at(-1)!.cellMm.y, 9);
+    }
   });
 });
 

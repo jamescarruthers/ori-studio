@@ -289,8 +289,9 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
   let packed: Record<string, DiagramPageArrangement> = {};
   const stored = document.pageArrangements ?? {};
+  const titles = { title: document.title, byline: document.titleBlockContent?.byline ?? '' };
   const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
-    const pages = layoutDiagramPages(steps, document.page, document.title, setter, { ...stored, ...packed }, stored);
+    const pages = layoutDiagramPages(steps, document.page, titles, setter, { ...stored, ...packed }, stored);
     if (pages.packed) packed = { ...packed, ...pages.packed };
     if (Object.keys(packed).length === 0) return pages;
     // A page the first layout packed is held by the rest, and packed all the same.

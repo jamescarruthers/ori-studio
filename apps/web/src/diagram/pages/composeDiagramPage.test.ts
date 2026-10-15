@@ -379,7 +379,7 @@ describe('composeDiagramPage', () => {
     const again = layoutDiagramPages(
       diagramLayoutSteps(document, (id) => measures.get(id) ?? null),
       document.page,
-      document.title,
+      { title: document.title, byline: '' },
       estimateTextSetter
     ).pages.flatMap((page) => page.cells);
     return Math.max(

@@ -110,6 +110,7 @@ import { normalizeStepPlace } from '../document/placeValues';
 import { pinnedCaptionWidth, setCaption } from './captionMeasure';
 import { lanePicture, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
+import { setTitleBlock, titleBlockGeometry, type DiagramTitles, type LayoutTitleBlock } from './titleBlockGeometry';
 
 // The type a step is set in, which placement's hit boxes measure too.
 export { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM } from './stepType';
@@ -503,6 +504,12 @@ export interface LayoutPage {
    */
   zoomArrows: LayoutZoomArrow[];
   pageNumberAt: { x: number; y: number; anchor: 'start' | 'end' } | null;
+  /**
+   * The title block (`titleBlockGeometry.ts`): on the first page only, where
+   * the page setup has one. It carries the title, so a page with it prints
+   * no title tab ({@link DiagramPagesLayout.title}).
+   */
+  titleBlock?: LayoutTitleBlock;
 }
 
 /** An enlarge arrow as the layout places it ({@link LayoutPage.zoomArrows}). */
@@ -534,7 +541,7 @@ export interface DiagramPagesLayout {
    * when nothing was packed.
    */
   packed?: Readonly<Record<string, DiagramPageArrangement>>;
-  /** The title tab, when shown. */
+  /** The title tab, when shown: on every page but one with the title block ({@link LayoutPage.titleBlock}). */
   title: {
     tab: { x: number; y: number; w: number; h: number };
     textAt: { x: number; y: number };
@@ -1054,11 +1061,15 @@ export function pictureExtent(picture: NonNullable<LayoutStep['picture']>, scale
  * page packed afresh, here or there, draws a frame moved by hand at its
  * offset only where its step keeps its band (`repackedFrames.ts`), and at
  * home where the store, adopting the packing, will send it.
+ *
+ * The first page may carry the title block (`titleBlockGeometry.ts`), which
+ * its steps start under: a flow page's area begins below it, and a grid
+ * page's cells in the rows it leaves. That page prints no title tab.
  */
 export function layoutDiagramPages(
   steps: readonly LayoutStep[],
   setup: DiagramPageSetup,
-  title: string,
+  titles: DiagramTitles,
   setter: TextSetter,
   arrangements: Readonly<Record<string, DiagramPageArrangement>> = {},
   stored: Readonly<Record<string, DiagramPageArrangement>> = arrangements
@@ -1066,9 +1077,11 @@ export function layoutDiagramPages(
   const paper = printPaper(setup);
   const { widthMm: W, heightMm: H, marginMm: m } = paper;
   const flow = setup.layout === 'flow';
+  const { title } = titles;
   const showTitle = titleShown(setup, title);
   const headH = showTitle ? HEADER_MM : 0;
   const footH = setup.pageNumbers.enabled ? FOOTER_MM : 0;
+  const titleBlock = titleBlockGeometry(setup, headH, footH);
   const bandWidthMm = setup.pathWidthMm;
   // An enlarge arrow stands where a turn would, and keeps the gutter a turn keeps.
   const turning = steps.some(
@@ -1120,9 +1133,10 @@ export function layoutDiagramPages(
     overflow: boolean;
   }
   /**
-   * The top-left of a page's `k`th cell, rows down the page. A row stands its
-   * steps at even shares of the page's width, each centred in its share — a
-   * full row's cells side by side, a shorter row's spread across the page.
+   * The top-left of a page's `k`th cell, rows down the page — on the first,
+   * under the rows the title block takes. A row stands its steps at even
+   * shares of the page's width, each centred in its share — a full row's
+   * cells side by side, a shorter row's spread across the page.
    */
   const cellAt = (pageIndex: number, k: number) => {
     // A flow step's reference cell: where on the page it stands changes nothing it measures.
@@ -1130,7 +1144,8 @@ export function layoutDiagramPages(
     const { page, cellW, cellH, slots } = cuts[pageIndex]!;
     const { row, along, count } = slots[k]!;
     const x = count === page.columns ? m + along * cellW : m + ((along + 0.5) / count) * (W - 2 * m) - cellW / 2;
-    return { x, y: m + headH + row * cellH };
+    const under = pageIndex === 0 ? (titleBlock?.rows ?? 0) : 0;
+    return { x, y: m + headH + (under + row) * cellH };
   };
   /** How far down the page the text of a page's `k`th cell may sit: by its cell. */
   const cellFoot = (pageIndex: number, k: number) => cellAt(pageIndex, k).y + cuts[pageIndex]!.cellH - TEXT_DESCENT_MM;
@@ -1233,6 +1248,8 @@ export function layoutDiagramPages(
         arrangements,
         stored,
         area: packingArea(paper, headH, footH),
+        // The first page's steps under its title block, with the room under it a header keeps.
+        ...(titleBlock ? { firstArea: packingArea(paper, titleBlock.block.h, footH) } : {}),
         margin: m,
         paper,
         // A step's reference scale: Fit each's in its cell, before any pin — an enlarged step's, its run's.
@@ -1386,6 +1403,7 @@ export function layoutDiagramPages(
       pageNumberAt: setup.pageNumbers.enabled
         ? { x: right ? W - m : m, y: H - m - PAGE_NUMBER_RAISE_MM, anchor: right ? 'end' : 'start' }
         : null,
+      ...(pageIndex === 0 && titleBlock ? { titleBlock: setTitleBlock(titleBlock, titles, setter) } : {}),
     };
   });
 
@@ -1461,7 +1479,10 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
    * by hand only in its step's band there (`repackedFrames.ts`).
    */
   stored: Readonly<Record<string, DiagramPageArrangement>>;
+  /** Where every page's bands may go; the first page's, {@link firstArea} where given. */
   area: PackRect;
+  /** Where the first page's bands may go, where it is not {@link area}: under its title block. */
+  firstArea?: PackRect;
   /** The page's margin: one too narrow for a turn at the page's edge has the area give up what it lacks. */
   margin: number;
   /** The paper, which a caption's pinned measure is held to (`pinnedCaptionWidth`). */
@@ -1476,7 +1497,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   packing: (LayoutPage['packing'] | undefined)[];
   packed: Record<string, DiagramPageArrangement>;
 } {
-  const { placedPages, planned, plans, steps, setup, title, setter, arrangements, area } = input;
+  const { placedPages, planned, plans, steps, setup, title, setter, arrangements } = input;
   const signatures = pageSignatures({ steps, pages: planned, setup, title });
   const packed: Record<string, DiagramPageArrangement> = {};
   const packing: (LayoutPage['packing'] | undefined)[] = [];
@@ -1618,12 +1639,14 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   };
 
   /**
-   * Where a page's bands may go: its area, less what a margin too narrow for a
-   * turn standing at the page's edge lacks — before its first step, on a bend,
-   * after the diagram's last — where the page has any, so the glyph clears the
-   * pictures as a grid's does. Its turns are in its signature.
+   * Where the `pageIndex`th page's bands may go: its area — the first page's
+   * under its title block — less what a margin too narrow for a turn standing
+   * at the page's edge lacks — before its first step, on a bend, after the
+   * diagram's last — where the page has any, so the glyph clears the pictures
+   * as a grid's does. Its turns are in its signature.
    */
-  const areaOf = (entries: readonly T[]): PackRect => {
+  const areaOf = (entries: readonly T[], pageIndex: number): PackRect => {
+    const area = pageIndex === 0 ? (input.firstArea ?? input.area) : input.area;
     const turning = entries.some(({ step, index }) => keepsGlyphGutter(step, index) || step.turnsAfter.length > 0);
     const lacks = turning ? Math.max(0, EDGE_TURN_ROOM_MM - input.margin) : 0;
     return { ...area, x: area.x + lacks, w: area.w - 2 * lacks };
@@ -1677,7 +1700,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
       packing.push(undefined);
       return [];
     }
-    const pageArea = areaOf(entries);
+    const pageArea = areaOf(entries, pageIndex);
     const stored = arrangements[first];
     const ids = entries.map(({ step }) => step.id);
     const holds = holdsArrangement(stored, signatures[pageIndex], ids);
