@@ -1,0 +1,299 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-kitten",
+    "title": "Kitten — Origami.me",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-kitten",
+        "title": "Kitten — Origami.me",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-kitten-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white side up, diamond. https://origami.me/kitten/"
+          },
+          {
+            "id": "fstep-kitten-2",
+            "parent": "fstep-kitten-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.30000000000000004,
+                0.7000000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-kitten-3",
+            "parent": "fstep-kitten-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.41421356237309526
+                  ]
+                ]
+              },
+              "moving": [
+                0.7000000000000001,
+                0.10000000000000009
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2a: Fold the lower left edge to the center."
+          },
+          {
+            "id": "fstep-kitten-4",
+            "parent": "fstep-kitten-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.4142135623730951,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.09999999999999992,
+                0.7000000000000002
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2b: Fold the lower right edge to the center."
+          },
+          {
+            "id": "fstep-kitten-5",
+            "parent": "fstep-kitten-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5000000000000001,
+                    0.14142135623730961
+                  ],
+                  [
+                    0.1414213562373096,
+                    0.5000000000000001
+                  ]
+                ]
+              },
+              "moving": [
+                0.14142135623730953,
+                3.9252311467094385e-17
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "3: Bring the bottom corner to the color boundary."
+          },
+          {
+            "id": "fstep-kitten-6",
+            "parent": "fstep-kitten-5",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    2.355138688025664e-16,
+                    -2.355138688025661e-16
+                  ],
+                  [
+                    0.5000000000000002,
+                    0.20710678118654766
+                  ]
+                ]
+              },
+              "moving": [
+                0.848528137423857,
+                0.2828427124746193
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    2.355138688025664e-16,
+                    -2.355138688025661e-16
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.5000000000000002,
+                    0.20710678118654766
+                  ]
+                }
+              }
+            },
+            "note": "4: Precrease the left lower layers along the top flap edge, stopping at its tip."
+          },
+          {
+            "id": "fstep-kitten-7",
+            "parent": "fstep-kitten-6",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    2.355138688025664e-16,
+                    -2.355138688025661e-16
+                  ],
+                  [
+                    0.20710678118654774,
+                    0.5000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.282842712474619,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    2.355138688025664e-16,
+                    -2.355138688025661e-16
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.20710678118654774,
+                    0.5000000000000002
+                  ]
+                }
+              }
+            },
+            "note": "4: Precrease the right lower layers along the top flap edge, stopping at its tip."
+          },
+          {
+            "id": "fstep-kitten-8",
+            "parent": "fstep-kitten-7",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.4035533905932739,
+                0.30355339059327385
+              ],
+              "moving": [
+                0.20710678118654777,
+                0.20710678118654757
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.2271067811865478,
+                  0.18710678118654755
+                ],
+                "layers": 2
+              },
+              "direction": "valley"
+            },
+            "note": "5: Unfold the top flap."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-kitten",
+        "cursor": "fstep-kitten-8",
+        "activeChild": {
+          "": "fstep-kitten-1",
+          "fstep-kitten-1": "fstep-kitten-2",
+          "fstep-kitten-2": "fstep-kitten-3",
+          "fstep-kitten-3": "fstep-kitten-4",
+          "fstep-kitten-4": "fstep-kitten-5",
+          "fstep-kitten-5": "fstep-kitten-6",
+          "fstep-kitten-6": "fstep-kitten-7",
+          "fstep-kitten-7": "fstep-kitten-8"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

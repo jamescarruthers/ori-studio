@@ -1,0 +1,15 @@
+.bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+.description { flex: 1; min-width: 180px; }
+.description p, .controls p { margin: 4px 0; color: var(--text-secondary); font-size: 12px; }
+.picture { width: 56px; height: 48px; object-fit: contain; }
+.controls { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+
+.target { width: auto; min-width: 150px; }

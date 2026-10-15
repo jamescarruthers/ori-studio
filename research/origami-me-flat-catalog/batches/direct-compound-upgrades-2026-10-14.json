@@ -1,0 +1,82 @@
+[
+  {
+    "slug": "dove",
+    "source": 6,
+    "folds": 6,
+    "nodes": 7,
+    "states": 8,
+    "checks": [
+      {
+        "label": "Dove direct nested reverse matches independently checked CP material/order",
+        "witnesses": 10
+      }
+    ],
+    "originalSha256": "3557cd586ce653aef2b13c9ab6e61eb738d9fd8f0fe73c89cc2ac8050cfccef0"
+  },
+  {
+    "slug": "squirrel",
+    "source": 26,
+    "folds": 29,
+    "nodes": 34,
+    "states": 35,
+    "checks": [
+      {
+        "label": "Squirrel direct crimp and following node 21 preserve every material stack",
+        "witnesses": 23
+      },
+      {
+        "label": "Squirrel direct crimp and following node 22 preserve every material stack",
+        "witnesses": 26
+      },
+      {
+        "label": "Squirrel direct crimp and following node 23 preserve every material stack",
+        "witnesses": 39
+      },
+      {
+        "label": "Squirrel direct crimp and following node 24 preserve every material stack",
+        "witnesses": 41
+      },
+      {
+        "label": "Squirrel direct crimp and following node 25 preserve every material stack",
+        "witnesses": 41
+      },
+      {
+        "label": "Squirrel direct crimp and following node 26 preserve every material stack",
+        "witnesses": 41
+      },
+      {
+        "label": "Squirrel direct crimp and following node 27 preserve every material stack",
+        "witnesses": 54
+      },
+      {
+        "label": "Squirrel direct crimp and following node 28 preserve every material stack",
+        "witnesses": 54
+      },
+      {
+        "label": "Squirrel direct crimp and following node 29 preserve every material stack",
+        "witnesses": 55
+      },
+      {
+        "label": "Squirrel direct crimp and following node 30 preserve every material stack",
+        "witnesses": 55
+      },
+      {
+        "label": "Squirrel direct crimp and following node 31 preserve every material stack",
+        "witnesses": 70
+      },
+      {
+        "label": "Squirrel direct crimp and following node 32 preserve every material stack",
+        "witnesses": 70
+      },
+      {
+        "label": "Squirrel direct crimp and following node 33 preserve every material stack",
+        "witnesses": 79
+      },
+      {
+        "label": "Squirrel direct crimp and following node 34 preserve every material stack",
+        "witnesses": 89
+      }
+    ],
+    "originalSha256": "27fea5790618366138308912daa34c661b144cc34277768c010f74798f87fd67"
+  }
+]

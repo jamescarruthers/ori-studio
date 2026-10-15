@@ -229,7 +229,12 @@ export const FOLD_BRIDGE_REFUSAL_CODES = [
 ] as const;
 
 /** Every refusal code: the stable ids the UI and analytics use (D18). They never collide. */
+export const FOLD_RETURN_REFUSAL_CODES = [
+  'return_target_invalid', 'return_state_unavailable', 'return_source_changed', 'return_unavailable',
+  'return_sheet_mismatch', 'return_limit', 'return_material', 'return_order', 'return_pose', 'return_arrangement', 'return_invalid_state',
+] as const;
 export const FOLD_REFUSAL_CODES = [
+  ...FOLD_RETURN_REFUSAL_CODES,
   ...FOLD_ENGINE_REFUSAL_CODES,
   ...FOLD_LINE_REFUSAL_CODES,
   ...FOLD_BRIDGE_REFUSAL_CODES,

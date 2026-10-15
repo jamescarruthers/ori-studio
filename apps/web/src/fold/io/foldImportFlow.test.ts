@@ -26,6 +26,7 @@ import {
   foldShapeOfOutline,
   type FoldImportFlow,
   type FoldImportRequest,
+  type FoldProjectCpImport,
 } from './foldImportFlow';
 
 /** Import CP's calls over the fake engine: each import lists `orders` per component. */
@@ -120,7 +121,8 @@ function setup(
   document: FoldSequenceDocument | null,
   cursor: string | null,
   io: FakeIoOptions = {},
-  editFoldedFigure: () => Promise<OristudioCpFoldedPaperScene | null> = async () => null
+  editFoldedFigure: () => Promise<OristudioCpFoldedPaperScene | null> = async () => null,
+  projectCp?: () => Promise<FoldProjectCpImport | null>
 ) {
   const engines: FakeIo[] = [];
   const make = fakeIo(io);
@@ -141,7 +143,7 @@ function setup(
   sessions.push(session);
   const imported = vi.fn();
   const offered = vi.fn();
-  const flow = createFoldImportFlow({ session, editFoldedFigure, onImported: imported, onChoiceOffered: offered });
+  const flow = createFoldImportFlow({ session, editFoldedFigure, projectCp, onImported: imported, onChoiceOffered: offered });
   flows.push(flow);
   return { session, source, runtime, flow, imported, offered, io: () => engines[engines.length - 1]! };
 }
@@ -298,5 +300,52 @@ describe('foldShapeOfOutline', () => {
     expect(foldShapeOfOutline([[0, 0], [1, 0], [1, 1], [0, 1]])).toEqual({ kind: 'square' });
     expect(foldShapeOfOutline([[0, 0], [1, 0], [1, 0.5], [0, 0.5]])).toEqual({ kind: 'rectangle', aspect: [1, 0.5] });
     expect(foldShapeOfOutline([[0, 0], [1, 0]])).toBeNull();
+  });
+});
+
+
+describe('Linked Collapse transactions', () => {
+  const link = { documentId: 'crease-pattern', revision: 'revision-1' };
+  const cp: FoldProjectCpImport = { source: { format: 'fold', text: '{}' }, link, current: () => true };
+  it('commits the captured source with the chosen order', async () => {
+    const { flow, source, imported } = setup(null, null, { orders: [2] }, undefined, async () => cp);
+    await flow.open({ kind: 'project-cp' });
+    expect(source.commits).toHaveLength(0);
+    flow.choose(0, 1);
+    await flow.commit();
+    expect(source.commits[0]?.op).toMatchObject({ source: link, orderJson: '[1]', origin: 'project_cp' });
+    expect(imported).toHaveBeenCalledWith('project_cp');
+  });
+  it('cancels without replacing the saved step', async () => {
+    const replace = vi.fn((_landed: import('../engine/foldEngineIoWire').FoldImportFingerprinted) => true);
+    const { flow, source } = setup(null, null, { orders: [2] }, undefined, async () => ({ ...cp, replace }));
+    await flow.open({ kind: 'project-cp', stepId: 'collapse' });
+    flow.reset();
+    await flow.commit();
+    expect(replace).not.toHaveBeenCalled();
+    expect(source.commits).toHaveLength(0);
+  });
+  it('refuses a stale capture and does not replace or append', async () => {
+    let current = true;
+    const replace = vi.fn((_landed: import('../engine/foldEngineIoWire').FoldImportFingerprinted) => true);
+    const { flow, source } = setup(null, null, { orders: [2] }, undefined,
+      async () => ({ ...cp, replace, current: () => current }));
+    await flow.open({ kind: 'project-cp', stepId: 'collapse' });
+    current = false;
+    await flow.commit();
+    expect(flow.store.getState()).toMatchObject({ phase: 'refused', refusal: { code: 'changed' } });
+    expect(replace).not.toHaveBeenCalled();
+    expect(source.commits).toHaveLength(0);
+  });
+  it('lands an explicit refresh against the target parent and replaces once', async () => {
+    const replace = vi.fn((_landed: import('../engine/foldEngineIoWire').FoldImportFingerprinted) => true);
+    const { flow, source, imported } = setup(sequenceOf([step('a', null), step('b', 'a')]), 'b', {}, undefined,
+      async () => ({ ...cp, at: 'a', replace }));
+    await flow.open({ kind: 'project-cp', stepId: 'b' });
+    expect(flow.store.getState()).toMatchObject({ phase: 'done', stepId: 'b' });
+    expect(replace).toHaveBeenCalledOnce();
+    expect(replace.mock.calls[0]?.[0]).toMatchObject({ op: { source: link, origin: 'project_cp' } });
+    expect(source.commits).toHaveLength(0);
+    expect(imported).toHaveBeenCalledWith('project_cp', 'update');
   });
 });

@@ -145,6 +145,10 @@ const api = {
     return call((calls) => calls.sheet(paper));
   },
 
+  async returnTo(current: number, target: number, history: readonly number[]): Promise<FoldEngineOutcome<FoldStepFingerprinted>> {
+    return call((calls) => calls.returnTo(current, target, history));
+  },
+
   /** One step for a preview (D14 tier 3): a new handle, no fingerprint. */
   async apply(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineOutcome<FoldStepLanded>> {
     return call((calls) => calls.apply(state, op, choices));

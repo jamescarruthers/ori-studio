@@ -1,0 +1,242 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-dolphin",
+    "title": "Dolphin — Origami.me (batch 4)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-dolphin",
+        "title": "Dolphin — Origami.me (batch 4)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-dolphin-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "1a: White side up; rotate to a diamond. Source: https://origami.me/dolphin/"
+          },
+          {
+            "id": "fstep-dolphin-2",
+            "parent": "fstep-dolphin-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.3535533905932736,
+                0.6363961030678928
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1b: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-dolphin-3",
+            "parent": "fstep-dolphin-2",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ],
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.14142135623730945,
+                0.282842712474619
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1c: Precrease the horizontal diagonal."
+          },
+          {
+            "id": "fstep-dolphin-4",
+            "parent": "fstep-dolphin-3",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ],
+                  [
+                    0.7071067811865475,
+                    0.7071067811865476
+                  ]
+                ]
+              },
+              "moving": [
+                0.5707106781186546,
+                0.8535533905932737
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "2a: Precrease the right upper edge to the horizontal center."
+          },
+          {
+            "id": "fstep-dolphin-5",
+            "parent": "fstep-dolphin-4",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ],
+                  [
+                    0.2928932188134524,
+                    0.2928932188134525
+                  ]
+                ]
+              },
+              "moving": [
+                0.14644660940672624,
+                0.42928932188134533
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "2b: Precrease the right lower edge to the horizontal center."
+          },
+          {
+            "id": "fstep-dolphin-6",
+            "parent": "fstep-dolphin-5",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ],
+                  [
+                    0.7071067811865475,
+                    0.7071067811865476
+                  ]
+                ]
+              },
+              "moving": [
+                0.8535533905932737,
+                0.5707106781186548
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3a: Precrease the left upper edge to the horizontal center."
+          },
+          {
+            "id": "fstep-dolphin-7",
+            "parent": "fstep-dolphin-6",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ],
+                  [
+                    0.2928932188134524,
+                    0.2928932188134525
+                  ]
+                ]
+              },
+              "moving": [
+                0.4292893218813453,
+                0.14644660940672632
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3b: Precrease the left lower edge to the horizontal center."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-dolphin",
+        "cursor": "fstep-dolphin-7",
+        "activeChild": {
+          "": "fstep-dolphin-1",
+          "fstep-dolphin-1": "fstep-dolphin-2",
+          "fstep-dolphin-2": "fstep-dolphin-3",
+          "fstep-dolphin-3": "fstep-dolphin-4",
+          "fstep-dolphin-4": "fstep-dolphin-5",
+          "fstep-dolphin-5": "fstep-dolphin-6",
+          "fstep-dolphin-6": "fstep-dolphin-7"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

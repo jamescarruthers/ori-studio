@@ -192,8 +192,6 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return foldToolLabel(t, 'valley');
     case 'fold.toolMountain':
       return foldToolLabel(t, 'mountain');
-    case 'fold.toolPrecrease':
-      return foldToolLabel(t, 'precrease');
     case 'fold.toolInsideReverse':
       return foldToolLabel(t, 'inside-reverse');
     case 'fold.toolCrimp':

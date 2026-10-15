@@ -1,0 +1,271 @@
+{
+  "date": "2026-10-14",
+  "purpose": "Consolidate all native research projects into the user-selected models directory; byte-for-byte moves only.",
+  "files": [
+    {
+      "from": "research/origami-me-flat-catalog/models/rectangle-paper-to-square.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-paper-to-square.osf",
+      "sha256": "e613dbf04b50aaecbc9c5de9649e79d9621937bbc60879d92e76cd1456ffa98d"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/angelfish.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/angelfish.osf",
+      "sha256": "75443e54e8919159af11a3584dc43bdad5920dc9feba8412944291aca173134e"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/bird.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/bird.osf",
+      "sha256": "20065c8d430ad612310b68e5daef8c0cea069f32c92022f6cdbb5a0f5376ed87"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/bookmark.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/bookmark.osf",
+      "sha256": "65f5fc00a4ca50dc5dd5b9cdb2c2ea87b024f0f2d63658c3a534da506f3fec8d"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/cat-face.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/cat-face.osf",
+      "sha256": "70e255621073a3b487b11240c02f001020aa909bb4bec5b8eb1bfac22d8d48db"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/christmas-tree.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/christmas-tree.osf",
+      "sha256": "51fc3b5c4ba17800777712ae96fb2e80539f03e35178734007348e4254529991"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/models/cicada.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/cicada.osf",
+      "sha256": "6872bea63b139589a711117ed851dad0474622913819b64fe92034080179b996"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/dog.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/dog.osf",
+      "sha256": "4bde941bae11c0967bac43fd003864397607036699a912095389974bde7454cb"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/easter-egg.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/easter-egg.osf",
+      "sha256": "aca9a35372d69d1036055e433ed6f3400184dfdce1beb6364b0991510547b9f6"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/elephant.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/elephant.osf",
+      "sha256": "3670ac6af655c5d108e75d68ae58ff23b0443279d6eafd45814445c34909d447"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/fish.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/fish.osf",
+      "sha256": "56948ec5e16622d8cb70ed959e585b3260fda13e2cdf2bc0eb48848888375413"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/fox.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/fox.osf",
+      "sha256": "5419dacb781adc22e104e258fcb424879b93265a9cf2f39a4b8dc2d5499526c5"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/goldfish.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/goldfish.osf",
+      "sha256": "f988922c1f61a25dce60fe81bbd611cd6c320f269074de0ff1975f8a1d993ea3"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/happi.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/happi.osf",
+      "sha256": "0e9bc0aba84ff80f9648489162be5d0be2324c4f9329bccaaa4359fff5ab39df"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/models/heart.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/heart.osf",
+      "sha256": "4fd6c64e8ce51ffe206bb0c5fa81e72ca0ad060849758a101d68f4b749535954"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/horse.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/horse.osf",
+      "sha256": "733ff7a7f7c2a732fad0fee95895774e8dd57621c7d46f106a257f8429bf02ba"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/kimono.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/kimono.osf",
+      "sha256": "69aa057e248146ef7b238ee16191f3900772490ecb0b2020d12f5e2f9156c562"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/lantern.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/lantern.osf",
+      "sha256": "0e2acb777d4959bf3a4894f6e96f86d01f55de03bf77f511b92bf86f2d931469"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/necktie.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/necktie.osf",
+      "sha256": "3de7d9b9567a5af4177d67606b556abe44cc9b014dd3c7b9eccbbe352dfe493b"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/ninja-star-a.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-a.osf",
+      "sha256": "55345af9239272eb4b86b7afaaaa60e3a236a26a08c832a959cf8c0e494447af"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/ninja-star-b.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-b.osf",
+      "sha256": "dd30611c1e55126e749fab476b8284607a0fd137399f2f3c13c607103142582e"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/pajarita.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/pajarita.osf",
+      "sha256": "7b6670417af41e03f2051cae1236f80841626fd351f04665572bb06046b46e86"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/parrot.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/parrot.osf",
+      "sha256": "e089f7d020a5a5a7b8b2f681ae8e9a4280aef3ea14b3279ef73e2a0026d55fce"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/penguin.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/penguin.osf",
+      "sha256": "04acea6af22e96f462818372310475cc948466cde674c3377cfbc61a16e378dc"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/pigeon.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/pigeon.osf",
+      "sha256": "f43db0e7c0178cae989358bb83e6f038b87e4ba9d2a73c60401263a400945493"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/santa.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/santa.osf",
+      "sha256": "3f44b3ef283b308d4186eba5ab517691d9214ee7617af0a7cf114e394a3506b3"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/shirt.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/shirt.osf",
+      "sha256": "a9d431a423278132ce3917303f1c60e85366aa46701de493d4c0a1af6f3d7efb"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/models/swan.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/completed/swan.osf",
+      "sha256": "2a4f07ed8363ef4d35baee5040014ac0fb28367ecbbd2105b9e02aa9ac8a2ed4"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/whale.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/whale.osf",
+      "sha256": "318db0a02a695fb216caf9b5003447cf005da28d189394949a0d9f4fef776d3c"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/witch-hat.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/witch-hat.osf",
+      "sha256": "33e04decf2e056d828f27462d8499cfbf80254bfeced21392cc2ca1ab8e032fd"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/paper-envelope.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/paper-envelope.osf",
+      "sha256": "cee9a373900f75326e21e1f576a05d4a093da8fa2683da6ff47afd0bada074df"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/rectangle-to-hexagon.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-to-hexagon.osf",
+      "sha256": "0afad37dc1023c45b3b7a31e8f8ce869e8c701f01994d4d1b1a6c6deace66f20"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/pentagon-from-square-paper.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/pentagon-from-square-paper.osf",
+      "sha256": "fc90e71ee73143f2270d4fc3d70eb8d8f1e00e351df48b7f1382584c8f2d1bef"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/4-pointed-star.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/4-pointed-star.osf",
+      "sha256": "481ae5dab3698fee1a20db5d0053c236f68c84635f1907ad757283feca975aea"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/models/box.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/3d/box.osf",
+      "sha256": "b3f2180cd3ec275ae56acc53943083f0d1cfc233354c786c6657189f9c30ae02"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/camellia.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/camellia.osf",
+      "sha256": "0f3c3950f5d2d171f316c65fe1a983babf1aab34b572bd1fb7089f3144543036"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/chicken.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/chicken.osf",
+      "sha256": "786a87d089a702d7addae226095de7a2c6d7ca38ddfe2db6cf960551771a7de0"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/crab.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/crab.osf",
+      "sha256": "dc8385f8b899df107ed02e6c76b11069ff444e640c00df374a8f20c57e5b6141"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/models/crane.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/3d/crane.osf",
+      "sha256": "f056054e7ba37f3115ed5c9c29ca52f6f0ec2887cfd9c153a338269359d5d466"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/crow.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/crow.osf",
+      "sha256": "6ab4c12ade8374411bda3d9e84897c64df5d795097fc53837905e0a2800f9aed"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/dolphin.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/dolphin.osf",
+      "sha256": "f23bb0da40bd3b103e385d9876c1aba3ac262ff6994b8370ce1fafc6225da89a"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/models/dove.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/in-progress/dove.osf",
+      "sha256": "3557cd586ce653aef2b13c9ab6e61eb738d9fd8f0fe73c89cc2ac8050cfccef0"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/crane.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/crane.osf",
+      "sha256": "b2e820ae76674fb76f75b0a8dc377fa13e48b31da965deed274da35d50c132c1"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/box.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/box.osf",
+      "sha256": "590e89b4f9f83b994246e91148f5104486dc5f9c0f6142b347eb94f7eb8dc832"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/crane-reverse-alternative.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/crane-reverse-alternative.osf",
+      "sha256": "c6b7fadef9e76d9ecc34e2eb758bf1bf9ffedfeb015996a5ca8fd6c1bdf0acf9"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/heart.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/heart.osf",
+      "sha256": "c6981ddf8bd086f8e8f111a64844c91ea171758309558d6041168fdabe9af85f"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/swan.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/swan.osf",
+      "sha256": "f18461ba1d9c4847b5f8189f0d7abb0e3d24021ec7f2ef7114a10451db25c75f"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/origami-trials.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/origami-trials.osf",
+      "sha256": "f4b44648414e816816856a0ecf3f12d469dee8c5ecabdf48b60eb4f8c0a5acbb"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/swan-reverse-alternative.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/swan-reverse-alternative.osf",
+      "sha256": "05dde3cf7f992d63743c63a1ae6817514cced0349a6004acb81fecbd25637e31"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/cicada.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/early-prototypes/cicada.osf",
+      "sha256": "938eabc56fce70cc39791b22a6473e69dcb5bd42b1862925456522e16d5a61ab"
+    },
+    {
+      "from": "research/2026-10-13-origami-fold-trials/models/origami-trials.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/combined/origami-trials.osf",
+      "sha256": "b5383b21a753f884f973c10200b8f1b023d886647638d16363559e76cde51a57"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/batches/cat-face-before-tuck.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/checkpoints/cat-face-before-tuck.osf",
+      "sha256": "2725e936eb8a121c27becd3eb1d75e3b41bfb63dfcec648f7cad097b6dd3c04d"
+    },
+    {
+      "from": "research/origami-me-flat-catalog/batches/bookmark-before-tuck.osf",
+      "to": "research/2026-10-13-origami-fold-trials/models/archive/checkpoints/bookmark-before-tuck.osf",
+      "sha256": "204a4132aa91a16e6740f2d7993b49720c8ad6a5fb758ef87725aa2f4800d7e0"
+    }
+  ]
+}

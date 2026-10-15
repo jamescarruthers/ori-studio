@@ -40,6 +40,7 @@ export function FoldImportPicker({
   onRequest: (request: FoldImportRequest) => void;
 }) {
   const { t } = useTranslation();
+  const hasCp = useWorkspaceStore((state) => state.oristudioCpDocument !== null);
   const hasFigure = useWorkspaceStore((state) => foldStartingFigure(state) !== null);
 
   // Inside the press: a browser allows a picker only from a gesture.
@@ -59,6 +60,11 @@ export function FoldImportPicker({
 
   return (
     <div className={styles.picker}>
+      {hasCp && <button type="button" className={styles.row} disabled={busy}
+        onClick={() => onRequest({ kind: 'project-cp' })}>
+        <Layers size={18} aria-hidden="true" />
+        {t('dialogs:foldImport.projectCp', 'Collapse from CP…')}
+      </button>}
       <button
         type="button"
         className={styles.drop}

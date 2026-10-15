@@ -201,6 +201,8 @@ export const foldSequenceEngineSource: FoldEngineSource = {
     askFoldSequenceClient<FoldEngineOutcome<FoldStepFingerprinted>>((engine) =>
       engine.step(state, op, choices)
     ),
+  returnTo: (current, target, history) =>
+    askFoldSequenceClient<FoldEngineOutcome<FoldStepFingerprinted>>((engine) => engine.returnTo(current, target, history)),
   release: (states) => askFoldSequenceClient((engine) => engine.release([...states])),
 };
 

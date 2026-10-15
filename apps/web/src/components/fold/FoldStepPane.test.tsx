@@ -334,7 +334,7 @@ describe('FoldStepPane', () => {
     expect(notices()[0]).toContain('made with a newer Ori Studio');
     expect(host.querySelector('header')?.textContent).toBe('Step 2Newer');
     render({ step: { ...VALLEY_STEP, status: 'changed' }, startSide: 'front' });
-    expect(notices()).toEqual(['This step folds differently in this version of Ori Studio than when it was saved.']);
+    expect(notices()).toEqual(['This step folds differently than when it was saved. Check its inputs and the steps above it.']);
   });
 
   it('says folding away from the tip starts a branch, at a step or at the sheet', () => {

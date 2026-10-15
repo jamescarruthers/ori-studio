@@ -13,8 +13,8 @@ use std::collections::BTreeMap;
 
 use oristudio_fold::random::{self, Rng};
 use oristudio_fold::{
-    CompoundRefused, Direction, FaceId, FoldRefusal, Letter, NoFlap, Squash, State, VertexChoices,
-    VertexOutcome,
+    CompoundRefused, Direction, FaceId, FoldRefusal, Letter, NoFlap, Seed, Squash, State,
+    VertexChoices, VertexOutcome,
 };
 use vertex::cases::{self, landed, squash_op};
 use vertex::{Segment, check, folded_segments, frame_segments, symmetries_between};
@@ -25,6 +25,94 @@ fn refusal(state: &State, op: &Squash) -> FoldRefusal {
         Err(CompoundRefused::Broken(broken)) => panic!("broken {broken}"),
         Ok(_) => panic!("{op:?} landed"),
     }
+}
+
+/// Preparation creases divide a pocket's faces, not the pocket. Every exposed
+/// subdivision must name the same material, hinge, motion and layer order.
+#[test]
+fn squash_selection_crosses_precreases_on_both_sides_of_the_pocket() {
+    for mirror in [false, true] {
+        let m = |p| cases::m(mirror, p);
+        let mut flat = cases::square();
+        for (a, b, toward) in [
+            ([0.0, 0.5], [1.0, 0.5], [0.5, 1.0]),
+            ([0.5, 0.0], [0.5, 1.0], [1.0, 0.5]),
+            ([0.25, 0.0], [0.25, 1.0], [1.0, 0.5]),
+            ([0.0, 0.75], [1.0, 0.75], [0.5, 1.0]),
+        ] {
+            flat = cases::precrease(&flat, m(a), m(b), m(toward), Seed::All);
+        }
+        let half = cases::valley(&flat, m([1.0, 0.0]), m([0.0, 1.0]), m([1.0, 1.0]));
+        let start = cases::valley(&half, m([0.0, 0.0]), m([1.0, 1.0]), m([1.0, 0.0]));
+        let first = equivalent_pocket_picks(&start, m([0.1, 0.7]));
+        // The second squash has an upper hinge that the first squash unfolded.
+        equivalent_pocket_picks(&first.turn_over(), m([0.1, 0.7]));
+    }
+}
+
+fn equivalent_pocket_picks(state: &State, at: [f64; 2]) -> State {
+    let op = squash_op(state, at, None);
+    let analysis = state.analyse_squash(&op).unwrap();
+    assert!(analysis.upper.len() > 1);
+    assert!(analysis.lower.len() > 1);
+    for &face in &analysis.lower {
+        let covered = Squash {
+            flap: state.face_witness(face).unwrap(),
+            ..op.clone()
+        };
+        assert!(matches!(
+            refusal(state, &covered),
+            FoldRefusal::SquashFlapCovered { .. }
+        ));
+    }
+    let result = landed(state.squash(&op, &VertexChoices::default()));
+    check(state, &result);
+    let angle = analysis.wedge / 4.0;
+    let [x, y] = analysis.hinge_direction;
+    let target = [
+        x * angle.cos() - y * angle.sin(),
+        x * angle.sin() + y * angle.cos(),
+    ];
+    for target in [None, Some(target)] {
+        let op = Squash {
+            target,
+            ..op.clone()
+        };
+        let expected = state.analyse_squash(&op).unwrap();
+        for turned in [false, true] {
+            let parent = if turned {
+                state.turn_over()
+            } else {
+                state.clone()
+            };
+            let direction = if turned {
+                Direction::Mountain
+            } else {
+                Direction::Valley
+            };
+            let baseline = Squash {
+                direction,
+                ..op.clone()
+            };
+            let landed = landed(parent.squash(&baseline, &VertexChoices::default()));
+            check(&parent, &landed);
+            for &face in &analysis.upper {
+                let pick = Squash {
+                    flap: state.face_witness(face).unwrap(),
+                    direction,
+                    ..op.clone()
+                };
+                let found = parent
+                    .analyse_squash(&pick)
+                    .unwrap_or_else(|e| panic!("{pick:?}: {e:?}"));
+                assert_eq!(found, expected);
+                let folded = cases::landed(parent.squash(&pick, &VertexChoices::default()));
+                check(&parent, &folded);
+                assert_eq!(folded.state.parts(), landed.state.parts());
+            }
+        }
+    }
+    result.state
 }
 
 /// Spike case 1b: two squashes along the diagonal route are the preliminary

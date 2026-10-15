@@ -21,6 +21,7 @@ const STEP_LABELS: Record<FoldOpKind, string> = {
   mountain: 'Mountain fold',
   precrease: 'Precrease',
   unfold: 'Unfold',
+  'unfold-to': 'Unfold to step',
   refold: 'Refold',
   turn: 'Turn over',
   rotate: 'Rotate',
@@ -122,6 +123,13 @@ export const createFoldSlice: WorkspaceSliceCreator<FoldSlice> = (set, get) => {
       if (reader) set({ foldReader: withFoldCursor(reader, shown.document, stepId) });
       return stepId;
     },
+
+    updateFoldReturn: (stepId, expected, op, expect, loadId) =>
+      !outlived(loadId) && commitShown('Rebuild unfold', (document) =>
+        foldEdits.updateFoldReturn(document, stepId, expected, op, expect)) !== null,
+    updateFoldCollapse: (stepId, expected, op, expect, loadId) =>
+      !outlived(loadId) && commitShown('Update Collapse from CP', (document) =>
+        foldEdits.updateFoldCollapse(document, stepId, expected, op, expect)) !== null,
 
     deleteFoldStep: (stepId) =>
       commitShown('Delete step', (document) => foldEdits.deleteFoldStep(document, stepId)) !== null,

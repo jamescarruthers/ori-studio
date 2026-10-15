@@ -12,16 +12,16 @@ describe('workspace definitions', () => {
       'design',
       'simulate',
       'references',
-      'diagram',
       'fold',
+      'diagram',
     ]);
     expect(WORKSPACE_DEFINITIONS.map((workspace) => workspace.label)).toEqual([
       'Edit',
       'Design',
       'Simulate',
       'References',
-      'Diagram',
       'Fold',
+      'Diagram',
     ]);
   });
 

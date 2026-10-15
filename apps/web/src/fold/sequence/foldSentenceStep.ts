@@ -47,6 +47,7 @@ import { sceneToModel, sheetToScene, type FoldStateFrame } from './foldStateFram
 
 /** What the engine said about the states either side of a step. Each is null while unknown. */
 export interface FoldSentenceContext {
+  returnStep?: number | null;
   /** The state the step folds from: its frame is the sentence's. */
   parent: FoldStateFrame | null;
   /** The state it lands. */
@@ -91,8 +92,10 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
     case 'turn':
     case 'rotate':
       return { op: 'turn', turn: turnKindOf(op) };
+    case 'unfold-to':
+      return { op: 'unfold-to', sheet: op.target === null, number: context.returnStep ?? undefined };
     case 'cp-jump':
-      return { op: 'cp-jump' };
+      return { op: 'cp-jump', ...(op.source ? { collapse: true } : {}) };
     // Compound folds (plan D4), one block per family.
     case 'inside-reverse':
     case 'outside-reverse':

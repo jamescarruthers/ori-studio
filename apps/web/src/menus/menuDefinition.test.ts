@@ -40,7 +40,6 @@ describe('web menu definition', () => {
     expect(rows()).toMatchObject({
       'fold.valley': 'V',
       'fold.mountain': 'M',
-      'fold.precrease': 'P',
       'fold.turn-over': 'T',
       // Rotate takes its tool in hand, as R does.
       'fold.rotate': 'R',
@@ -49,10 +48,9 @@ describe('web menu definition', () => {
     expect(rows()['fold.rotate-cw']).toBeUndefined();
     expect(rows()['fold.rotate-ccw']).toBeUndefined();
     // The keys the canvas runs are the ones the rail and the window name.
-    expect([FOLD_TOOL_SHORTCUTS.valley, FOLD_TOOL_SHORTCUTS.mountain, FOLD_TOOL_SHORTCUTS.precrease]).toEqual([
+    expect([FOLD_TOOL_SHORTCUTS.valley, FOLD_TOOL_SHORTCUTS.mountain]).toEqual([
       'fold.toolValley',
       'fold.toolMountain',
-      'fold.toolPrecrease',
     ]);
     expect(FOLD_TOOL_SHORTCUTS.rotate).toBe('fold.rotate');
     expect(FOLD_MODEL_VERB_SHORTCUTS).toEqual({ 'turn-over': 'fold.turnOver' });

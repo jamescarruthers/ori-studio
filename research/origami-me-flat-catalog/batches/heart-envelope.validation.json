@@ -1,0 +1,55 @@
+{
+  "source": "https://origami.me/heart-envelope/",
+  "file": "../2026-10-13-origami-fold-trials/models/in-progress/heart-envelope.osf",
+  "fileSha256": "ebc178f0c3b39c9b7f4ec1d8e5e6030d7cce623827a7cf4bf76f6f65d7ab4c30",
+  "nodes": 9,
+  "folds": 8,
+  "finalFaces": 10,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "f821451f36f8565f83ab8bfba8fe4c62baa742510dfa9369ef23e765449bd20f",
+    "13aea6647d9157685cabce716d1fc33a732a8a4d9753004d529788e1ae861a6b",
+    "2a203a211491e59d820a14880022a1e769b5048a63b79ec192be2e403a543f19",
+    "328dd15726b05db246a34357dc717ea6664ca241664ade6b39be348d3817d814",
+    "2eb21d9bf13b9d5f40e04a0f65f02c93d0369d81f495181c422b8be9da0d6450",
+    "76e9eea94780c0a731b5856cecea7619055ddda3d69f913fd7533b7b0c95dec1",
+    "5a49a51ccc0fed5987dc54af090b9dfc59a86330a7d2f94d937c98ffca709ab5",
+    "9ed25cd348e36ea3d3fc5443d2160d53be29534d3b17f471f1378a362e7ef28e",
+    "ccb4014ac50c1fc8260406d4123b86471daae052619e2c8e7887de72701ee500",
+    "1d50cfa0c2707a1bcea16eab0614ccd8cd53d750741b0515e05af76d017ed11a"
+  ],
+  "sourceSteps": 30,
+  "sourceStepsCompleted": 5,
+  "sourceDiagramsReviewed": 32,
+  "blockedAtSourceStep": 6,
+  "audit": "Verified prefix; source 6–7 layer selection investigation",
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "visuallyCheckedStates": 10,
+  "checks": [
+    {
+      "label": "Precrease node 1: same material stacks",
+      "witnesses": 3
+    },
+    {
+      "label": "Precrease node 2: same material stacks",
+      "witnesses": 6
+    },
+    {
+      "label": "Precrease node 4: same material stacks",
+      "witnesses": 8
+    },
+    {
+      "label": "Precrease node 5: same material stacks",
+      "witnesses": 8
+    },
+    {
+      "label": "Precrease node 7: same material stacks",
+      "witnesses": 10
+    },
+    {
+      "label": "Source 4 unfolds to the same flat material stacks",
+      "witnesses": 14
+    }
+  ],
+  "latestReport": "heart-envelope-prefix-2026-10-14.md"
+}

@@ -11,7 +11,7 @@ import {
   type FoldFanCreasePiece,
   type FoldFanGiven,
 } from '../../tools/vertex/fanGeometry';
-import { fanGiven, fanStayerRegion, picksFanStayer } from '../../tools/vertex/vertexStep';
+import { fanGiven, fanHingeRegion, picksFanHinge } from '../../tools/vertex/vertexStep';
 import type { FoldOverlayRegions } from '../foldPaneOverlays';
 import type { FoldPendingCreases } from '../foldPaneScenes';
 import type { FoldHit, FoldPaneId, FoldPickIndex } from '../foldPicking';
@@ -28,7 +28,7 @@ export interface FoldFanMarks {
    * crease pattern each layer's piece, by the letter it has from the front.
    */
   pending: FoldPendingCreases;
-  /** While the paper that stays is being picked, or picked again: its regions on each pane, and the one picked. */
+  /** While the hinge region is being picked, or picked again: its regions on each pane, and the one picked. */
   regions: Readonly<Record<FoldPaneId, FoldOverlayRegions>> | null;
 }
 
@@ -40,7 +40,7 @@ function regionOfHit(fan: FoldFanGiven): (hit: FoldHit) => number | null {
 /**
  * A fan fold's marks from its clicks (`tools/vertex/fanGeometry`): once a
  * rabbit ear's corners are in, its given creases on every layer it cuts,
- * folded the way the direction says; and while the paper that stays is
+ * folded the way the direction says; and while the hinge region is
  * picked, the regions between them on both panes, the one picked lit, and
  * the one under the pointer. Null for any other tool, and before those
  * clicks are in.
@@ -55,7 +55,7 @@ export function useFoldFanMarks(
   const { tool, picks, vertexDirection: direction } = tools;
   const { fanLayers } = tools.compound;
   const fan = useMemo(() => (isVertexTool(tool) ? fanGiven({ tool, picks }) : null), [tool, picks]);
-  const stayer = picksFanStayer(tool, picks.length);
+  const pickingRegion = picksFanHinge(tool, picks.length);
   const creases = useMemo(
     () => (index && fan ? fanGivenCreases(index, fan, direction, fanLayers) : []),
     [index, fan, direction, fanLayers]
@@ -68,14 +68,14 @@ export function useFoldFanMarks(
     [creases, direction]
   );
   const regions = useMemo<FoldFanMarks['regions']>(() => {
-    if (!index || !fan || !stayer || !isVertexTool(tool)) return null;
-    const picked = fanStayerRegion({ tool, picks }, fan);
+    if (!index || !fan || !pickingRegion || !isVertexTool(tool)) return null;
+    const picked = fanHingeRegion({ tool, picks }, fan);
     const at = regionOfHit(fan);
     return {
       folded: { polygons: fan.rays.map((_, k) => fanRegionOnFolded(index, fan, k)), picked, at },
       'crease-pattern': { polygons: fan.rays.map((_, k) => fanRegionOnSheet(index, fan, k)), picked, at },
     };
-  }, [index, fan, stayer, tool, picks]);
+  }, [index, fan, pickingRegion, tool, picks]);
   return useMemo(
     () => (fan ? { creases, direction, pending, regions } : null),
     [fan, creases, direction, pending, regions]

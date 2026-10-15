@@ -1,0 +1,26 @@
+{
+  "source": "https://origami.me/dolphin/",
+  "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/dolphin.osf",
+  "fileSha256": "f23bb0da40bd3b103e385d9876c1aba3ac262ff6994b8370ce1fafc6225da89a",
+  "nodes": 7,
+  "folds": 6,
+  "finalFaces": 12,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "78e5aa210477cfe0df3103ecaeaf18174bed27efdd5f205d0c004803cce3df6f",
+    "932403a2b5f36e540dfc02c8b5183c061b3c9a34b61f36db47e10425a0e43745",
+    "5e06cfa4b207e21faa820b51ac9633a7d7b2415b7b9116e94868e373826b21c2",
+    "7a3be35a6ad1f4b70127db7b2bc58cc408d4294f949236d0ee3e84de012a2187",
+    "17edc44f1a6df9047c4226ca40cbced7251ae9cf66cad6ea61a8c931fd7b686c"
+  ],
+  "sourceSteps": 17,
+  "sourceStepsCompleted": 3,
+  "sourceDiagramsReviewed": 20,
+  "blockedAtSourceStep": 4,
+  "audit": "valid prefix ready for audit; tutorial blocked",
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "visuallyCheckedStates": 8
+}

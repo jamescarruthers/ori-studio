@@ -79,8 +79,9 @@ describe('appendFoldStep', () => {
     const steps = readFoldSequence(writtenSequence())!.document.steps.filter((node): node is FoldStep => !isLockedStep(node));
     expect(new Set(steps.map((node) => node.op.kind))).toEqual(new Set(FOLD_OP_KINDS));
     for (const node of steps) {
-      const draft = { parent: null, op: node.op, ...(node.choices ? { choices: node.choices } : {}) };
-      expect(appendFoldStep(sequenceOf([]), draft)?.document.steps[0], node.id).toMatchObject(draft);
+      const history = node.op.kind === 'unfold-to' ? [step('a', null)] : [];
+      const draft = { parent: history.at(-1)?.id ?? null, op: node.op, ...(node.choices ? { choices: node.choices } : {}) };
+      expect(appendFoldStep(sequenceOf(history), draft)?.document.steps.at(-1), node.id).toMatchObject(draft);
     }
   });
 

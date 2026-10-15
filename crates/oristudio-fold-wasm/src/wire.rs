@@ -536,6 +536,9 @@ impl Refusal {
 #[serde(untagged)]
 pub enum RefusalBody {
     Engine(FoldRefusal),
+    Return {
+        code: &'static str,
+    },
     /// The engine's `folded_image` without its `message`, which is a
     /// diagnostic sentence from the layer-order crate.
     FoldedImage {
@@ -552,6 +555,7 @@ impl RefusalBody {
     pub fn code(&self) -> &'static str {
         match self {
             RefusalBody::Engine(r) => r.code(),
+            RefusalBody::Return { code } => code,
             RefusalBody::FoldedImage { code, .. } => code,
             RefusalBody::Line(r) => r.code(),
             RefusalBody::Bridge(r) => r.code(),
@@ -931,6 +935,15 @@ impl BridgeError {
             BridgeError::InvalidInput(_) => "invalid_input",
             BridgeError::UnknownState(_) => "unknown_state",
             BridgeError::ParentReleased { .. } => "parent_released",
+        }
+    }
+}
+
+impl From<oristudio_fold::reversal::ReturnRefusal> for Refusal {
+    fn from(value: oristudio_fold::reversal::ReturnRefusal) -> Self {
+        match value {
+            oristudio_fold::reversal::ReturnRefusal::State(reason) => reason.into(),
+            other => Self::of(RefusalBody::Return { code: other.code() }),
         }
     }
 }

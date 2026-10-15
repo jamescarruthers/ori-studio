@@ -346,11 +346,12 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['valley', ALONG_LINE_KEYS],
   ['mountain', ALONG_LINE_KEYS],
   ['precrease', new Set([...ALONG_LINE_KEYS, 'direction', 'extent'])],
+  ['unfold-to', new Set(['kind', 'target', 'source'])],
   ['unfold', new Set(['kind', 'crease', 'direction', 'moving', 'seed'])],
   ['refold', new Set(['kind', 'crease', 'direction', 'moving', 'seed'])],
   ['turn', new Set(['kind', 'axis'])],
   ['rotate', new Set(['kind', 'rotate'])],
-  ['cp-jump', new Set(['kind', 'cpJson', 'orderJson', 'origin'])],
+  ['cp-jump', new Set(['kind', 'cpJson', 'orderJson', 'origin', 'source'])],
   // Compound folds (plan D4), one block per family.
   ['inside-reverse', ALONG_LINE_KEYS],
   ['outside-reverse', ALONG_LINE_KEYS],
@@ -434,11 +435,26 @@ function readOp(value: unknown): FoldOp | null {
       const rotate = readRotation(value.rotate);
       return rotate && { kind, rotate };
     }
+    case 'unfold-to': {
+      const { target, source } = value;
+      if (target !== null && (typeof target !== 'string' || target.length === 0)) return null;
+      if (!isRecord(source) || hasNewerKey(source, new Set(['path', 'state', 'targetState']))) return null;
+      const { path, state, targetState } = source;
+      if (typeof path !== 'string' || !path.startsWith('fh1:') ||
+          typeof state !== 'string' || !state.startsWith('fs1:') ||
+          typeof targetState !== 'string' || !targetState.startsWith('fs1:')) return null;
+      return { kind, target, source: { path, state, targetState } };
+    }
     case 'cp-jump': {
       const origin = FOLD_CP_ORIGINS.find((known) => known === value.origin);
       const { cpJson, orderJson } = value;
+      const source = value.source;
+      if (source !== undefined && (!isRecord(source) ||
+        Object.keys(source).some((key) => key !== 'documentId' && key !== 'revision') ||
+        typeof source.documentId !== 'string' || !source.documentId ||
+        typeof source.revision !== 'string' || !source.revision)) return null;
       return origin && typeof cpJson === 'string' && typeof orderJson === 'string'
-        ? { kind, cpJson, orderJson, origin }
+        ? { kind, cpJson, orderJson, origin, ...(source ? { source: source as { documentId: string; revision: string } } : {}) }
         : null;
     }
     // Compound folds (plan D4), one block per family.
@@ -999,8 +1015,10 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
     case 'rotate':
       // A preset as it always was; an exact angle with its degrees between.
       return { kind: op.kind, rotate: writeTurnRotation(op.rotate) };
+    case 'unfold-to':
+      return { kind: op.kind, target: op.target, source: { ...op.source } };
     case 'cp-jump':
-      return { kind: op.kind, cpJson: op.cpJson, orderJson: op.orderJson, origin: op.origin };
+      return { kind: op.kind, cpJson: op.cpJson, orderJson: op.orderJson, origin: op.origin, ...(op.source ? { source: { ...op.source } } : {}) };
     // Compound folds (plan D4), one block per family.
     case 'inside-reverse':
     case 'outside-reverse':

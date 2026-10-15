@@ -1,0 +1,470 @@
+{
+  "source": "https://origami.me/witch-hat/",
+  "sourceStep": 7,
+  "exactRequest": {
+    "kind": "precrease",
+    "line": {
+      "via": "free",
+      "through": [
+        [
+          0.6464466094067263,
+          0.14644660940672632
+        ],
+        [
+          0.1464466094067262,
+          0.6464466094067265
+        ]
+      ]
+    },
+    "moving": [
+      0.35402020253553346,
+      0.3681623381592644
+    ],
+    "seed": {
+      "scope": "all"
+    },
+    "direction": "valley",
+    "extent": {
+      "kind": "segment",
+      "from": {
+        "kind": "point",
+        "at": [
+          0.6464466094067263,
+          0.14644660940672632
+        ]
+      },
+      "to": {
+        "kind": "point",
+        "at": [
+          0.1464466094067262,
+          0.6464466094067265
+        ]
+      }
+    }
+  },
+  "exactResult": {
+    "status": "ok",
+    "state": 14,
+    "report": {
+      "line": {
+        "n": [
+          0.7071067811865474,
+          0.7071067811865478
+        ],
+        "d": 0.5606601717798214
+      },
+      "side": "negative",
+      "snap": {
+        "clusters": 3,
+        "angle": 0,
+        "max_shift": 5.551115123125783e-16
+      },
+      "direction": "mountain",
+      "flaps": [
+        {
+          "faces": [
+            15,
+            17,
+            23,
+            25,
+            27,
+            29
+          ],
+          "witness": [
+            0.29289321881345254,
+            0.09763107293781753
+          ]
+        }
+      ],
+      "picked": [
+        0
+      ],
+      "added": [],
+      "moving": [
+        15,
+        17,
+        23,
+        25,
+        27,
+        29
+      ],
+      "moving_faces": [
+        15,
+        17,
+        23,
+        25,
+        27,
+        29
+      ],
+      "created": [],
+      "unfolded": [],
+      "refolded": [],
+      "split": 0
+    },
+    "summary": {
+      "step": 13,
+      "faces": 18,
+      "pairs": 0,
+      "creases": {
+        "border": 10,
+        "mountain": 0,
+        "valley": 0,
+        "flat": 26
+      },
+      "view": {
+        "flipped": true,
+        "rotation": -0.7853981633974483
+      },
+      "residual": 0,
+      "sheet": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    }
+  },
+  "savedRequest": {
+    "kind": "precrease",
+    "line": {
+      "via": "crease",
+      "at": [
+        0.4797799427400596,
+        0.31311327607339307
+      ]
+    },
+    "moving": [
+      0.35402020253553346,
+      0.3681623381592644
+    ],
+    "seed": {
+      "scope": "all"
+    },
+    "direction": "valley",
+    "extent": {
+      "kind": "segment",
+      "from": {
+        "kind": "point",
+        "at": [
+          0.6464466094067263,
+          0.14644660940672632
+        ]
+      },
+      "to": {
+        "kind": "point",
+        "at": [
+          0.1464466094067262,
+          0.6464466094067265
+        ]
+      }
+    }
+  },
+  "summary": {
+    "status": "ok",
+    "summary": {
+      "counts": {
+        "mountain": 0,
+        "valley": 0,
+        "flat": 26
+      },
+      "diff": {
+        "added": [],
+        "reversed": [
+          47,
+          48
+        ],
+        "unfolded": [],
+        "refolded": []
+      },
+      "layers": 1
+    }
+  },
+  "unchanged": [
+    "face geometry and exposed paper sides",
+    "every face transform",
+    "complete subface layer stacks",
+    "sheet vertices",
+    "face lineage"
+  ],
+  "nextStep": {
+    "sourceStep": 8,
+    "toggled": [
+      {
+        "id": 11,
+        "vertices": [
+          4,
+          6
+        ],
+        "from": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "to": {
+          "x": 0.7071067811865477,
+          "y": 0.2928932188134523
+        },
+        "kind": "flat",
+        "letter": "valley",
+        "made_at": 3
+      },
+      {
+        "id": 18,
+        "vertices": [
+          8,
+          4
+        ],
+        "from": {
+          "x": 0.29289321881345254,
+          "y": 0.7071067811865475
+        },
+        "to": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "kind": "flat",
+        "letter": "valley",
+        "made_at": 3
+      },
+      {
+        "id": 31,
+        "vertices": [
+          6,
+          12
+        ],
+        "from": {
+          "x": 0.7071067811865477,
+          "y": 0.2928932188134523
+        },
+        "to": {
+          "x": 0.8535533905932737,
+          "y": 0.1464466094067263
+        },
+        "kind": "flat",
+        "letter": "mountain",
+        "made_at": 3
+      },
+      {
+        "id": 32,
+        "vertices": [
+          12,
+          1
+        ],
+        "from": {
+          "x": 0.8535533905932737,
+          "y": 0.1464466094067263
+        },
+        "to": {
+          "x": 1,
+          "y": 0
+        },
+        "kind": "flat",
+        "letter": "mountain",
+        "made_at": 3
+      },
+      {
+        "id": 35,
+        "vertices": [
+          3,
+          14
+        ],
+        "from": {
+          "x": 0,
+          "y": 1
+        },
+        "to": {
+          "x": 0.14644660940672632,
+          "y": 0.8535533905932737
+        },
+        "kind": "flat",
+        "letter": "mountain",
+        "made_at": 3
+      },
+      {
+        "id": 36,
+        "vertices": [
+          14,
+          8
+        ],
+        "from": {
+          "x": 0.14644660940672632,
+          "y": 0.8535533905932737
+        },
+        "to": {
+          "x": 0.29289321881345254,
+          "y": 0.7071067811865475
+        },
+        "kind": "flat",
+        "letter": "mountain",
+        "made_at": 3
+      }
+    ],
+    "classification": "authoring/compound investigation",
+    "op": {
+      "kind": "mountain",
+      "line": {
+        "via": "crease",
+        "at": [
+          0.46464466094067264,
+          0.5353553390593275
+        ]
+      },
+      "moving": [
+        0.13435028842544403,
+        0.148492424049175
+      ],
+      "seed": {
+        "scope": "all"
+      }
+    },
+    "result": {
+      "status": "ok",
+      "state": 16,
+      "report": {
+        "line": {
+          "n": [
+            0.7071067811865476,
+            0.7071067811865476
+          ],
+          "d": 0.7071067811865476
+        },
+        "side": "negative",
+        "snap": {
+          "clusters": 7,
+          "angle": 0,
+          "max_shift": 1.1102230246251565e-16
+        },
+        "direction": "valley",
+        "flaps": [
+          {
+            "faces": [
+              15,
+              17,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30
+            ],
+            "witness": [
+              0.29289321881345254,
+              0.09763107293781753
+            ]
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "added": [],
+        "moving": [
+          15,
+          17,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30
+        ],
+        "moving_faces": [
+          15,
+          17,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30
+        ],
+        "created": [],
+        "unfolded": [],
+        "refolded": [
+          {
+            "edge": 11,
+            "remembered": "valley",
+            "letter": "valley"
+          },
+          {
+            "edge": 18,
+            "remembered": "valley",
+            "letter": "valley"
+          },
+          {
+            "edge": 31,
+            "remembered": "mountain",
+            "letter": "valley"
+          },
+          {
+            "edge": 32,
+            "remembered": "mountain",
+            "letter": "valley"
+          },
+          {
+            "edge": 35,
+            "remembered": "mountain",
+            "letter": "valley"
+          },
+          {
+            "edge": 36,
+            "remembered": "mountain",
+            "letter": "valley"
+          }
+        ],
+        "split": 0
+      },
+      "summary": {
+        "step": 14,
+        "faces": 18,
+        "pairs": 22,
+        "creases": {
+          "border": 10,
+          "mountain": 0,
+          "valley": 6,
+          "flat": 20
+        },
+        "view": {
+          "flipped": true,
+          "rotation": -0.7853981633974483
+        },
+        "residual": 6.280369834735101e-16,
+        "sheet": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      }
+    },
+    "note": "The full-line mountain fold succeeds and refolds six existing crease pieces, including the outer wings. It is not accepted as the source collapse. Establish a flat compound decomposition before claiming a missing operation."
+  }
+}

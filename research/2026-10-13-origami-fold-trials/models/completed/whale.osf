@@ -1,0 +1,580 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-whale",
+    "title": "Whale — Origami.me",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-whale",
+        "title": "Whale — Origami.me",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-whale-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white-side-up diamond. Source: https://origami.me/whale/"
+          },
+          {
+            "id": "fstep-whale-2",
+            "parent": "fstep-whale-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.2828427124746189,
+                0.7071067811865475
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-whale-3",
+            "parent": "fstep-whale-2",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ],
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.14142135623730945,
+                0.282842712474619
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "2: Precrease the horizontal diagonal."
+          },
+          {
+            "id": "fstep-whale-4",
+            "parent": "fstep-whale-3",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.41421356237309503
+                  ]
+                ]
+              },
+              "moving": [
+                0.8485281374238569,
+                0.14142135623730956
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3a: Precrease lower-left edge to center."
+          },
+          {
+            "id": "fstep-whale-5",
+            "parent": "fstep-whale-4",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.4142135623730949,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373094,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3b: Repeat on the lower right."
+          },
+          {
+            "id": "fstep-whale-6",
+            "parent": "fstep-whale-5",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    0.5857864376269051,
+                    0
+                  ]
+                ]
+              },
+              "moving": [
+                0.8485281374238569,
+                0.14142135623730956
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "4a: Precrease upper-left edge to center."
+          },
+          {
+            "id": "fstep-whale-7",
+            "parent": "fstep-whale-6",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    0,
+                    0.5857864376269051
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373094,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "4b: Repeat on the upper right."
+          },
+          {
+            "id": "fstep-whale-8",
+            "parent": "fstep-whale-7",
+            "op": {
+              "kind": "rabbit-ear",
+              "corners": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  1,
+                  1.0000000000000002
+                ],
+                [
+                  1,
+                  1.1102230246251565e-16
+                ]
+              ],
+              "emergent": [
+                1,
+                0
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.7071067811865475,
+                    0.28284271247461906
+                  ]
+                ]
+              },
+              "stayer": [
+                0.14142135623730945,
+                0.282842712474619
+              ],
+              "direction": "valley"
+            },
+            "note": "5a: Collapse the left rabbit ear along the existing preparation creases, with its fin tip toward the upper corner."
+          },
+          {
+            "id": "fstep-whale-9",
+            "parent": "fstep-whale-8",
+            "op": {
+              "kind": "rabbit-ear",
+              "corners": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  1,
+                  1.0000000000000002
+                ],
+                [
+                  -1.1102230246251565e-16,
+                  1
+                ]
+              ],
+              "emergent": [
+                0,
+                1
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.2828427124746189,
+                    0.7071067811865475
+                  ]
+                ]
+              },
+              "stayer": [
+                0.282842712474619,
+                0.1414213562373095
+              ],
+              "direction": "valley"
+            },
+            "note": "5b: Collapse the right rabbit ear; both fins point toward the upper tip."
+          },
+          {
+            "id": "fstep-whale-10",
+            "parent": "fstep-whale-9",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9500000000000002,
+                    0.7928932188134524
+                  ],
+                  [
+                    0.7928932188134525,
+                    0.95
+                  ]
+                ]
+              },
+              "moving": [
+                0.8857864376269051,
+                0.99
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "6a: Mountain fold the upper tip back to the level of the two ear tips (y=1)."
+          },
+          {
+            "id": "fstep-whale-11",
+            "parent": "fstep-whale-10",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "6b: Turn over to the plain colored face."
+          },
+          {
+            "id": "fstep-whale-12",
+            "parent": "fstep-whale-11",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.2778174593052022,
+                    0.5707106781186548
+                  ],
+                  [
+                    0.41923881554251174,
+                    0.7121320343559644
+                  ]
+                ]
+              },
+              "moving": [
+                0.3090811690796321,
+                0.690918830920368
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7a: Fold the left corner inward on x=−(√2−1)/2; approximate diagram proportion, tip stays on the horizontal precrease."
+          },
+          {
+            "id": "fstep-whale-13",
+            "parent": "fstep-whale-12",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5707106781186547,
+                    0.27781745930520224
+                  ],
+                  [
+                    0.7121320343559643,
+                    0.41923881554251186
+                  ]
+                ]
+              },
+              "moving": [
+                0.6909188309203679,
+                0.3090811690796323
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7b: Repeat symmetrically on the right."
+          },
+          {
+            "id": "fstep-whale-14",
+            "parent": "fstep-whale-13",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.1414213562373095,
+                    0.14142135623730953
+                  ],
+                  [
+                    0.9999999999999994,
+                    0.8999999999999996
+                  ]
+                ]
+              },
+              "moving": [
+                0.4242640687119285,
+                0.282842712474619
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "8a: Fold the right half over the left half."
+          },
+          {
+            "id": "fstep-whale-15",
+            "parent": "fstep-whale-14",
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "quarter",
+                "direction": "ccw"
+              }
+            },
+            "note": "8b: Rotate counterclockwise so the head is on the left and the tail on the right."
+          },
+          {
+            "id": "fstep-whale-16",
+            "parent": "fstep-whale-15",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7071067811865477,
+                    -3.9252311467094354e-15
+                  ],
+                  [
+                    0.8071067811865464,
+                    0.17320508075688457
+                  ]
+                ]
+              },
+              "moving": [
+                0.8999999999999999,
+                0.02499999999999753
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.8999999999999999,
+                  0.02499999999999753
+                ],
+                "layers": 2
+              }
+            },
+            "note": "9a: Lower the exposed two-ply fin only. Chosen hinge is 60° to the horizontal; the diagram gives no exact angle."
+          },
+          {
+            "id": "fstep-whale-17",
+            "parent": "fstep-whale-16",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "9b: Turn over to reach the other fin."
+          },
+          {
+            "id": "fstep-whale-18",
+            "parent": "fstep-whale-17",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    5.887846720064148e-16,
+                    0.707106781186548
+                  ],
+                  [
+                    0.17320508075688812,
+                    0.8071067811865481
+                  ]
+                ]
+              },
+              "moving": [
+                0.025000000000000355,
+                0.9000000000000005
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.025000000000000355,
+                  0.9000000000000005
+                ],
+                "layers": 2
+              }
+            },
+            "note": "9c: Lower the opposite two-ply fin along the mirrored hinge, leaving the body and first fin still."
+          },
+          {
+            "id": "fstep-whale-19",
+            "parent": "fstep-whale-18",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "9d: Return to the source viewing side."
+          },
+          {
+            "id": "fstep-whale-20",
+            "parent": "fstep-whale-19",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.15000000000000016,
+                    -8.13111802111661e-15
+                  ],
+                  [
+                    0.19999999999999982,
+                    0.04999999999999225
+                  ]
+                ]
+              },
+              "moving": [
+                0.040000000000000126,
+                0.0049999999999910385
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "10: Mountain fold the tail behind the body along a 45° crease at x=−0.15 on the top edge. Approximate source proportion; ordinary mountain-fold option, not the optional outside reverse."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-whale",
+        "cursor": "fstep-whale-20",
+        "activeChild": {
+          "": "fstep-whale-1",
+          "fstep-whale-1": "fstep-whale-2",
+          "fstep-whale-2": "fstep-whale-3",
+          "fstep-whale-3": "fstep-whale-4",
+          "fstep-whale-4": "fstep-whale-5",
+          "fstep-whale-5": "fstep-whale-6",
+          "fstep-whale-6": "fstep-whale-7",
+          "fstep-whale-7": "fstep-whale-8",
+          "fstep-whale-8": "fstep-whale-9",
+          "fstep-whale-9": "fstep-whale-10",
+          "fstep-whale-10": "fstep-whale-11",
+          "fstep-whale-11": "fstep-whale-12",
+          "fstep-whale-12": "fstep-whale-13",
+          "fstep-whale-13": "fstep-whale-14",
+          "fstep-whale-14": "fstep-whale-15",
+          "fstep-whale-15": "fstep-whale-16",
+          "fstep-whale-16": "fstep-whale-17",
+          "fstep-whale-17": "fstep-whale-18",
+          "fstep-whale-18": "fstep-whale-19",
+          "fstep-whale-19": "fstep-whale-20"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

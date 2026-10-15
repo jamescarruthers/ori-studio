@@ -384,7 +384,6 @@
       "fold": "Plier",
       "locate": "Placer la ligne",
       "model": "Modèle",
-      "planned": "Prévus",
       "reference": "Points de repère",
       "sink": "Enfoncements"
     },
@@ -418,12 +417,6 @@
       "free": "Ligne libre",
       "freeHelp": "Une ligne tracée n’importe où, sans repère."
     },
-    "mark": {
-      "mountain": "M",
-      "precrease": "P",
-      "reverse": "RF",
-      "valley": "V"
-    },
     "note": {
       "acrossLayers": "Ces points sont sur des couches que le pliage a écartées : la ligne passe par eux là où ils se trouvent dans la forme pliée. Le patron de plis montre les plis qu’elle crée.",
       "along": "Les points s’accrochent là où la ligne croise des plis, des bords et des repères, aux points situés sur elle et à son milieu.",
@@ -450,7 +443,6 @@
       "openSink": "Enfoncement ouvert",
       "outsideReverse": "Pli inversé extérieur",
       "petal": "Pli pétale",
-      "pleat": "Pli en escalier",
       "rabbitEar": "Oreille de lapin",
       "squash": "Pli écrasé",
       "swivel": "Pli pivoté",
@@ -462,8 +454,6 @@
       "title": "Outils de pliage",
       "trigger": "Outils"
     },
-    "plannedPleat": "Pas un outil à part : pliez un pli en escalier en deux plis simples, une vallée puis une montagne à côté.",
-    "plannedReason": "Prévu : pas encore dans Ori Studio.",
     "playStep": "Lire l’étape",
     "railLabel": "Outils de pliage",
     "readOnly": {
@@ -808,8 +798,6 @@
       "mountain": "Pli montagne",
       "mountainHelp": "Plier le côté qui bouge en l’éloignant de vous, pour qu’il passe dessous.",
       "openSinkHelp": "Enfoncer l’extrémité d’une pointe fermée en retournant chacune de ses couches.",
-      "precrease": "Pré-plier",
-      "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
       "reverse": "Pli inversé",
       "reverseHelp": "Inversez un rabat vers l’intérieur ou enveloppez-le par l’extérieur, en inversant son pli central.",
       "rotateHelp": "Tourner le modèle d’une fraction de tour ou d’un angle exact, d’abord en aperçu, puis en une étape à part.",
@@ -837,7 +825,6 @@
     "vertex": {
       "direction": "Sens",
       "directionCannot": "Dans ce sens, il ne peut pas se plier à plat ici.",
-      "emergent": "Quatrième pli",
       "fix": {
         "creaseKites": "Marquer les plis du cerf-volant en pliant",
         "emergent": "Prendre le quatrième pli qui convient",
@@ -848,16 +835,15 @@
         "precreaseKite": "Pré-plier le cerf-volant",
         "resetTarget": "Poser le dos sur la charnière"
       },
-      "fourthNone": "Aucun",
-      "fourthsFit_one": "Un quatrième pli convient avec ce papier en place.",
-      "fourthsFit_many": "{{count}} quatrièmes plis conviennent avec ce papier en place.",
-      "fourthsFit_other": "{{count}} quatrièmes plis conviennent avec ce papier en place.",
       "help": {
         "petalHinge": "Soulever la pointe inférieure d’un rabat le long d’une charnière pendant que ses côtés se replient le long de deux plis en cerf-volant.",
         "rabbitEar": "Replier les coins d’un triangle le long de leurs bissectrices, pour qu’une pointe se dresse.",
         "squash": "Ouvrir un rabat de deux couches et l’aplatir, son dos sur sa charnière.",
         "swivelEdge": "Faire pivoter un bord sur une ligne, autour d’un point."
       },
+      "hingeRegionBlocked": "Cette région de charnière ne peut pas se plier avec ces couches. Cliquez sur une autre région ou changez les couches.",
+      "hingeRegionBlockedTouch": "Cette région de charnière ne peut pas se plier avec ces couches. Touchez une autre région ou changez les couches.",
+      "hingeRegionFits": "Le pli de charnière se trouve dans la région sélectionnée.",
       "intro": {
         "petalLift": "Soulève la pointe d’un rabat le long d’une charnière.",
         "swivelSwing": "Fait pivoter un bord du papier sur une ligne."
@@ -886,10 +872,6 @@
       },
       "mountain": "Montagne",
       "mountainTitle": "Montagne : le papier tourne en s’éloignant de vous",
-      "noFourth": "Aucun quatrième pli ne convient avec ce papier en place : cliquez sur un autre papier à laisser en place.",
-      "noFourthAnywhere": "Aucun quatrième pli ne convient à ces plis, quel que soit le papier laissé en place : appuyez sur Échap et choisissez de nouveau.",
-      "noFourthAnywhereTouch": "Aucun quatrième pli ne convient à ces plis, quel que soit le papier laissé en place : touchez Annuler et choisissez de nouveau.",
-      "noFourthTouch": "Aucun quatrième pli ne convient avec ce papier en place : touchez un autre papier à laisser en place.",
       "note": {
         "petalCreasesAll": "Pendant que le rabat se soulève, le pliage marque la charnière dans la couche du dessus et les deux plis du cerf-volant dans les deux couches du dessus.",
         "petalCreasesHinge": "Pendant que le rabat se soulève, le pliage marque la charnière dans la couche du dessus. Les plis du cerf-volant sont déjà là.",
@@ -929,7 +911,7 @@
           "title": "Le quatrième pli ne peut pas se dresser ici"
         },
         "kite": {
-          "creaseOrPrecrease": "Sur un pli de charnière, un pli pétale replie des plis déjà là, et un pli du cerf-volant manque. Désignez plutôt la charnière par ses deux extrémités, et le pliage marque lui-même le cerf-volant ; ou pré-pliez-le d’abord, avec l’outil Pré-plier sur l’Axiome 3 : un bord inférieur du rabat du dessus sur sa ligne médiane, sans les rabats de derrière.",
+          "creaseOrPrecrease": "Sur un pli de charnière, un pli pétale replie des plis déjà là, et un pli du cerf-volant manque. Désignez plutôt la charnière par ses deux extrémités, et le pliage marque lui-même le cerf-volant ; ou pré-pliez-le d’abord, avec l’option Plier puis déplier sur l’Axiome 3 : un bord inférieur du rabat du dessus sur sa ligne médiane, sans les rabats de derrière.",
           "titleMissing": "Les plis du cerf-volant manquent"
         },
         "line": {
@@ -1033,16 +1015,16 @@
       "reset": "Revenir à la charnière",
       "ridge": "Arête",
       "steps": {
-        "earChoose": "Choisissez le quatrième pli et les couches, ou cliquez sur une autre partie pour qu’elle reste en place.",
-        "earChooseTouch": "Choisissez le quatrième pli et les couches, ou touchez une autre partie pour qu’elle reste en place.",
-        "earFinish": "Choisissez le quatrième pli, puis appuyez sur Entrée.",
-        "earFinishTouch": "Choisissez le quatrième pli, puis touchez {{action}}.",
+        "earChoose": "Choisissez les couches ou cliquez sur une autre région pour le pli de charnière.",
+        "earChooseTouch": "Choisissez les couches ou touchez une autre région pour le pli de charnière.",
+        "earFinish": "Appuyez sur Entrée pour plier.",
+        "earFinishTouch": "Touchez {{action}} pour plier.",
         "earFirstCorner": "Cliquez sur le premier coin du triangle.",
         "earFirstCornerTouch": "Touchez le premier coin du triangle.",
+        "earHingeRegion": "Cliquez sur la région où doit passer le pli de charnière.",
+        "earHingeRegionTouch": "Touchez la région où doit passer le pli de charnière.",
         "earSecondCorner": "Cliquez sur son deuxième coin.",
         "earSecondCornerTouch": "Touchez son deuxième coin.",
-        "earStay": "Cliquez sur la partie du papier qui reste en place.",
-        "earStayTouch": "Touchez la partie du papier qui reste en place.",
         "earThirdCorner": "Cliquez sur son troisième coin.",
         "earThirdCornerTouch": "Touchez son troisième coin.",
         "fixOrPickAgain": "Cliquez sur une correction ci-dessous, ou appuyez sur Échap et choisissez de nouveau.",
@@ -1092,6 +1074,7 @@
     "window": {
       "cancel": "Annuler",
       "finding": "Recherche des couches sur la ligne…",
+      "foldAndUnfold": "Plier puis déplier",
       "instructions": "Instructions",
       "kind": "Pli",
       "label": "Options de l’outil de pliage",

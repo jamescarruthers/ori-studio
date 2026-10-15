@@ -192,7 +192,6 @@ export type FoldShortcutId =
   // model verbs, the moving side, the axiom's roots and the commit.
   | 'fold.toolValley'
   | 'fold.toolMountain'
-  | 'fold.toolPrecrease'
   | 'fold.toolInsideReverse'
   | 'fold.toolCrimp'
   | 'fold.toolTuck'
@@ -796,7 +795,6 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   // since `[` and `]` are the steps'.
   foldShortcut('fold.toolValley', 'Valley Fold', { key: 'v' }),
   foldShortcut('fold.toolMountain', 'Mountain Fold', { key: 'm' }),
-  foldShortcut('fold.toolPrecrease', 'Precrease', { key: 'p' }),
   foldShortcut('fold.toolInsideReverse', 'Inside Reverse Fold', null),
   // The crimp and the tuck, unbound as inside reverse is: C is the existing
   // crease's line mode and T the turn over, and neither is used often enough
@@ -828,7 +826,7 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.lineCrease', 'Existing Crease', { key: 'c' }),
   foldShortcut('fold.swapSide', 'Swap Moving Side', { key: 's' }),
   // A precrease's extent, on E: the whole line, a segment, a pinch, round
-  // again. Only with the Precrease tool in hand; otherwise E falls through.
+  // again. Only with Fold and unfold enabled; otherwise E falls through.
   foldShortcut('fold.cycleExtent', 'Next Precrease Extent', { key: 'e' }),
   // The axiom's roots, on Shift+arrows: the arrows alone are the steps'.
   foldShortcut('fold.previousCandidate', 'Previous Root', { shift: true, key: 'arrowleft' }),

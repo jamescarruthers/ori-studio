@@ -37,7 +37,7 @@
 //! Refusals name points in the input's coordinates, so they can be marked on
 //! the pattern as its file draws it.
 
-mod arrangement;
+pub(crate) mod arrangement;
 mod placement;
 
 use oristudio_geometry::RefusalReason;

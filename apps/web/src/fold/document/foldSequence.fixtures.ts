@@ -366,6 +366,11 @@ export function writtenSequence(): Record<string, unknown> {
           direction: 'mountain',
         },
       },
+      {
+        id: 'fstep-24', parent: 'fstep-23',
+        op: { kind: 'unfold-to', target: null,
+          source: { path: 'fh1:source', state: 'fs1:source', targetState: 'fs1:sheet' } },
+      },
     ],
   };
 }

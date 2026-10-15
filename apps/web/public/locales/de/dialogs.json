@@ -315,6 +315,8 @@
   "foldImport": {
     "back": "Zurück",
     "browse": "oder zum Durchsuchen klicken",
+    "collapse": "Zusammenfalten",
+    "collapseTitle": "Aus CP zusammenfalten",
     "creases_one": "{{count}} Falte",
     "creases_other": "{{count}} Falten",
     "drop": "Eine .cp-, .fold-, .ori- oder .orh-Datei hier ablegen",
@@ -341,8 +343,10 @@
       "afterStep": "Fügt nach Schritt {{number}} einen Schritt hinzu; sein gefalteter Zustand wird aus den Falten berechnet.",
       "branch": "Er beginnt einen neuen Zweig.",
       "empty": "Beginnt die Folge auf dem Blatt des Faltmusters, entlang seiner Falten gefaltet. Nutze es, wenn sich ein Zustand nicht Faltung für Faltung erreichen lässt.",
+      "update": "Aktualisiert diesen Zusammenfalten-Schritt. Spätere Schritte und Verzweigungen bleiben erhalten und werden erneut berechnet; betroffene Faltungen werden als geändert oder nicht mehr ausführbar markiert.",
       "why": "Nutze es, wenn sich der nächste Zustand nicht Faltung für Faltung erreichen lässt."
     },
+    "projectCp": "Aus CP zusammenfalten…",
     "refusal": {
       "budget": {
         "text": "Herauszufinden, wie die Lagen übereinanderliegen, dauerte länger, als ein Import Zeit hat. Suche länger oder importiere ein einfacheres Muster.",
@@ -379,6 +383,10 @@
       "noOrder": {
         "text": "Bei den Berg- und Talfalten des Musters lassen sich die Lagen nicht stapeln, ohne einander zu durchdringen.",
         "title": "Keine Lagenfolge passt"
+      },
+      "noProjectCp": {
+        "text": "Öffne oder erstelle das Quell-Faltmuster in Bearbeiten und versuche es erneut. Der gespeicherte Zusammenfalten-Schritt bleibt unverändert.",
+        "title": "Quell-CP nicht verfügbar"
       },
       "noState": {
         "text": "Der angezeigte Schritt hat keinen gefalteten Zustand, daher lässt sich nichts danach hinzufügen. Gehe zu einem Schritt, der sich falten lässt.",
@@ -429,9 +437,11 @@
     },
     "samples": "Beispiele",
     "title": "Faltmuster importieren",
+    "updateTitle": "Aus CP aktualisieren",
     "working": {
       "figure": "Gefaltetes Modell aus Bearbeiten wird importiert…",
       "file": "{{name}} wird importiert…",
+      "projectCp": "Faltmuster des Projekts wird gelöst…",
       "sample": "Beispiel wird importiert…"
     }
   },

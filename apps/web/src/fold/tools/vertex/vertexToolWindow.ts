@@ -31,13 +31,8 @@
  * - a squash's **spine target**: its hinge line until a point is clicked on
  *   the folded pane, drawn there either way (the bold line its step names),
  *   with a way back to the hinge;
- * - a rabbit ear's **fourth crease**, among the candidates the engine lists
- *   (three at most) that land — one that cannot fold is never offered (owner
- *   feedback, 2026-10-12) — in a row that stays put with one or none, and
- *   under it, in a place kept for it, how many fit with this paper staying
- *   put; and the **layers** it cuts, from the direction's side. Its fourth
- *   crease is its ridge, folding the other way from the three to the
- *   corners, so there is no ridge to choose;
+ * - a rabbit ear's **layers** and hinge-region status. The canvas's fourth
+ *   click fixes its hinge crease; no separate crease selector is offered;
  * - a swivel's **ridge**, the crease of its four that folds the other way:
  *   square to the edge, or toward its end — by name, only when both land;
  * - a petal fold's note: what the fold creases itself, the hinge and the
@@ -174,18 +169,9 @@ export interface FoldVertexControls {
     value: string;
     reset: { label: string; disabled: boolean; run: () => void } | null;
   } | null;
-  /**
-   * A rabbit ear's fourth crease, once the engine has described the fold: a
-   * stepper through the ones that land, its arrows off when one lands or
-   * none — always there, so the window keeps its shape whichever paper
-   * stays. A swivel's ridge, only when both of its ridges land.
-   */
+  /** A swivel's ridge selector; null for rabbit ears and the other tools. */
   emergent: FoldChoiceStepper | null;
-  /**
-   * Said under a rabbit ear's fourth crease, in a place kept for it: how
-   * many fit with this paper staying put — when none does, to pick other
-   * paper to stay. Null for the other folds.
-   */
+  /** Status of the rabbit ear's selected hinge region; null for other folds. */
   emergentNote: string | null;
   /** The layers a rabbit ear cuts, when more than one lies at its center. */
   layers: FoldChoiceStepper | null;
@@ -201,7 +187,7 @@ export interface FoldVertexControls {
 
 /** Whether a vertex fold has any choice to show beside its direction. */
 export function hasVertexChoices(controls: FoldVertexControls): boolean {
-  return Boolean(controls.target || controls.emergent || controls.layers || controls.order);
+  return Boolean(controls.target || controls.emergent || controls.emergentNote || controls.layers || controls.order);
 }
 
 /**
@@ -324,8 +310,8 @@ function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
         : t('tools:fold.vertex.steps.petalFinish', 'Choose Valley or Mountain, then press Enter.');
     case 'rabbit-ear':
       return host.coarse
-        ? t('tools:fold.vertex.steps.earFinishTouch', 'Choose the fourth crease, then tap {{action}}.', { action })
-        : t('tools:fold.vertex.steps.earFinish', 'Choose the fourth crease, then press Enter.');
+        ? t('tools:fold.vertex.steps.earFinishTouch', 'Tap {{action}} to fold.', { action })
+        : t('tools:fold.vertex.steps.earFinish', 'Press Enter to fold.');
     // A swivel's ridge and way are offered only when there is a choice, once it is previewed.
     case 'swivel':
     case 'squash':
@@ -365,10 +351,10 @@ function chooseStep(t: TFunction, tool: Exclude<FoldVertexToolId, 'swivel'>, hos
         ? t('tools:fold.vertex.steps.petalWayTouch', 'Choose which way it lifts, or tap another flap to lift that one.')
         : t('tools:fold.vertex.steps.petalWay', 'Choose which way it lifts, or click another flap to lift that one.');
     case 'rabbit-ear':
-      // The paper that stays is picked again by a click on another part.
+      // The hinge region is picked again by clicking another region.
       return host.coarse
-        ? t('tools:fold.vertex.steps.earChooseTouch', 'Choose the fourth crease and the layers, or tap another part to stay put.')
-        : t('tools:fold.vertex.steps.earChoose', 'Choose the fourth crease and the layers, or click another part to stay put.');
+        ? t('tools:fold.vertex.steps.earChooseTouch', 'Choose the layers, or tap another region for the hinge crease.')
+        : t('tools:fold.vertex.steps.earChoose', 'Choose the layers, or click another region for the hinge crease.');
   }
 }
 
@@ -450,65 +436,24 @@ function previewInstructions(
   };
 }
 
-/**
- * A rabbit ear's fourth crease: a stepper through the ones that land, the
- * only ones offered. With one, or none, the row stays where it is with its
- * arrows off, so the window keeps its shape as the paper that stays changes.
- * A swivel's ridge, likewise named — offered only when both land.
- */
+/** A swivel's two available ridges, named by where they point. */
 function fourthStepper(
   t: TFunction,
   vertex: FoldVertexWindowView,
   verbs: FoldToolWindowVerbs,
   readOnly: boolean
-): FoldChoiceStepper {
-  const swivel = vertex.tool === 'swivel';
-  const label = swivel ? t('tools:fold.vertex.ridge', 'Ridge') : t('tools:fold.vertex.emergent', 'Fourth crease');
-  // A swivel's two ridges by name, as its step's row names them: there are only ever two.
-  const named = swivel && vertex.ridge && vertex.fourths > 0 ? swivelRidgeName(t, vertex.ridge) : undefined;
-  const stepper = choiceStepper(t, label, vertex.fourth, vertex.fourths, verbs.stepEmergent, readOnly, named);
-  if (stepper) return stepper;
-  const still = (name: string) => ({ label: name, disabled: true, run: () => undefined });
-  return {
-    label,
-    value:
-      vertex.fourths === 1
-        ? (named ?? t('tools:fold.reverse.ofCount', '{{index}} of {{total}}', { index: 1, total: 1 }))
-        : t('tools:fold.vertex.fourthNone', 'None'),
-    previous: still(t('tools:fold.reverse.previous', 'Previous')),
-    next: still(t('tools:fold.reverse.next', 'Next')),
-  };
+): FoldChoiceStepper | null {
+  return choiceStepper(t, t('tools:fold.vertex.ridge', 'Ridge'), vertex.fourth, vertex.fourths,
+    verbs.stepEmergent, readOnly, vertex.ridge ? swivelRidgeName(t, vertex.ridge) : undefined);
+
 }
 
-/**
- * What the fourth crease's stepper says beneath it, in a place kept for it:
- * how many fit with this paper staying put — and when none does, the change
- * that helps: other paper to stay, or, when no paper staying would do,
- * other picks.
- */
+/** Whether the selected hinge region can fold with the current layers. */
 function emergentNote(t: TFunction, vertex: FoldVertexWindowView, host: FoldToolHost): string {
-  const { fourths } = vertex;
-  if (fourths === 0 && vertex.fourthElsewhere === false) {
-    return host.coarse
-      ? t(
-          'tools:fold.vertex.noFourthAnywhereTouch',
-          'No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.'
-        )
-      : t(
-          'tools:fold.vertex.noFourthAnywhere',
-          'No fourth crease fits these creases, whichever paper stays: press Esc and pick again.'
-        );
-  }
-  if (fourths === 0) {
-    return host.coarse
-      ? t('tools:fold.vertex.noFourthTouch', 'No fourth crease fits with this paper staying put: tap other paper to stay.')
-      : t('tools:fold.vertex.noFourth', 'No fourth crease fits with this paper staying put: click other paper to stay.');
-  }
-  return t('tools:fold.vertex.fourthsFit', {
-    count: fourths,
-    defaultValue_one: 'One fourth crease fits with this paper staying put.',
-    defaultValue_other: '{{count}} fourth creases fit with this paper staying put.',
-  });
+  if (vertex.fourths > 0) return t('tools:fold.vertex.hingeRegionFits', 'The hinge crease lies in the selected region.');
+  return host.coarse
+    ? t('tools:fold.vertex.hingeRegionBlockedTouch', 'This hinge region cannot fold with these layers. Tap another region or change the layers.')
+    : t('tools:fold.vertex.hingeRegionBlocked', 'This hinge region cannot fold with these layers. Click another region or change the layers.');
 }
 
 /** The layers stepper's value: every layer, or the first few from the direction's side. */
@@ -646,8 +591,7 @@ export function vertexControls(
 ): FoldVertexControls {
   const { tool } = vertex;
   const located = clicked && vertex.described;
-  // A rabbit ear's fourth crease, its row kept whichever paper stays; a
-  // swivel's ridge only when both land (one on a folded edge has none).
+  // Only swivels offer a ridge selector, and only when both ridges land.
   const ear = tool === 'rabbit-ear';
   const ridges = tool === 'swivel' && !vertex.onFold && vertex.fourths >= 2;
   const { setVertexDirection, resetSquashTarget } = verbs;
@@ -694,7 +638,7 @@ export function vertexControls(
                 : null,
           }
         : null,
-    emergent: (ear || ridges) && located ? fourthStepper(t, vertex, verbs, readOnly) : null,
+    emergent: ridges && located ? fourthStepper(t, vertex, verbs, readOnly) : null,
     emergentNote: ear && located ? emergentNote(t, vertex, host) : null,
     // A rabbit ear's layers; a swivel by its edge folds every layer at its vertex.
     layers:

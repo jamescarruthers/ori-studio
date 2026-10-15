@@ -5,7 +5,7 @@
  *
  * Three kinds of item stand on the rail, and they combine:
  *
- * - **a tool** is taken in hand: a fold (valley, mountain, precrease), the
+ * - **a tool** is taken in hand: a fold (valley or mountain), the
  *   Divide line, or Rotate, which previews the model turned by the amount
  *   its window sets and adds the turn as a step once applied (`tools/rotate`);
  * - **a line mode** says how a fold's line is located — an axiom, a free line,
@@ -23,10 +23,11 @@ import { turnCardWords } from '../../lib/steps/turnWords';
 import type { FoldVertexOpKind } from '../document/foldSequenceDocument';
 import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
 
-/** A plain fold's kind, as the tool window's V / M / P control offers it. */
+/** A plain engine operation, including folding and unfolding in one step. */
 export type FoldKind = 'valley' | 'mountain' | 'precrease';
 
-export const FOLD_KINDS: readonly FoldKind[] = ['valley', 'mountain', 'precrease'];
+export type FoldPlainToolId = 'valley' | 'mountain';
+export const FOLD_KINDS: readonly FoldPlainToolId[] = ['valley', 'mountain'];
 
 /**
  * A vertex fold's tool (plan Phase 11): paper turned about a vertex rather
@@ -51,7 +52,7 @@ export function isVertexTool(id: FoldToolId): id is FoldVertexToolId {
  * of their own, each along a located line.
  */
 export type FoldToolId =
-  | FoldKind
+  | FoldPlainToolId
   | 'inside-reverse'
   | FoldCompoundLineToolId
   | FoldVertexToolId
@@ -63,12 +64,12 @@ export type FoldToolId =
 /** The compound folds along a located line that are tools of their own, beside inside reverse. */
 export type FoldCompoundLineToolId = 'crimp' | 'tuck';
 
-export function isFoldKind(id: FoldToolId): id is FoldKind {
-  return id === 'valley' || id === 'mountain' || id === 'precrease';
+export function isFoldKind(id: string): id is FoldPlainToolId {
+  return id === 'valley' || id === 'mountain';
 }
 
 /** A tool that folds along a located line: the plain folds, and the compound folds along one. */
-export type FoldLineToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId | FoldSinkToolId;
+export type FoldLineToolId = FoldPlainToolId | 'inside-reverse' | FoldCompoundLineToolId | FoldSinkToolId;
 
 export function isLineTool(id: FoldToolId): id is FoldLineToolId {
   return isFoldKind(id) || id === 'inside-reverse' || id === 'crimp' || id === 'tuck' || isSinkTool(id);
@@ -206,18 +207,8 @@ export const FOLD_MODEL_TURNS: Readonly<Record<FoldModelVerbId, TurnKind>> = {
   'turn-over': { kind: 'turn-over', axis: 'vertical' },
 };
 
-/**
- * What the rail's Planned group lists. Every compound fold of plan Phase 11
- * is a tool now (the outside reverse fold is the reverse tool's other kind,
- * not a tool of its own); a pleat stays listed only to say it is no tool at
- * all: it is two plain folds (`foldPlannedOpReason`).
- */
-export type FoldPlannedOpId = 'pleat';
-
-export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = ['pleat'];
-
 /** Anything the rail shows: what its glyph is chosen by. */
-export type FoldRailItemId = FoldToolId | FoldLineModeId | FoldModelVerbId | FoldPlannedOpId;
+export type FoldRailItemId = FoldToolId | FoldLineModeId | FoldModelVerbId;
 
 /**
  * The registry ids the Fold scope binds (plan D14 Keyboard, `keyboard/shortcuts.ts`'s
@@ -233,7 +224,6 @@ export type FoldKeyLabel = (id: FoldShortcutId) => string | undefined;
 export const FOLD_TOOL_SHORTCUTS: Readonly<Record<FoldToolId, FoldShortcutId>> = {
   valley: 'fold.toolValley',
   mountain: 'fold.toolMountain',
-  precrease: 'fold.toolPrecrease',
   'inside-reverse': 'fold.toolInsideReverse',
   crimp: 'fold.toolCrimp',
   tuck: 'fold.toolTuck',
@@ -268,9 +258,10 @@ export const FOLD_MODEL_VERB_SHORTCUTS: Readonly<Record<FoldModelVerbId, FoldSho
 };
 
 /** Why nothing on the sequence can change: a newer build wrote it (D7), or the step is locked (D6). */
-export type FoldReadOnlyReason = 'newer' | 'locked';
+export type FoldReadOnlyReason = 'newer' | 'locked' | 'preview';
 
 export function foldReadOnlyReason(t: TFunction, reason: FoldReadOnlyReason): string {
+  if (reason === 'preview') return t('panels:fold.return.finishPreview', 'Finish or cancel the unfold preview first.');
   switch (reason) {
     case 'newer':
       return t('tools:fold.readOnly.newer', 'This sequence is from a newer Ori Studio, so it opens read-only.');
@@ -285,8 +276,6 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.valley', 'Valley fold');
     case 'mountain':
       return t('tools:fold.tool.mountain', 'Mountain fold');
-    case 'precrease':
-      return t('tools:fold.tool.precrease', 'Precrease');
     case 'inside-reverse':
       return t('tools:fold.tool.reverse', 'Reverse fold');
     case 'crimp':
@@ -324,8 +313,6 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.valleyHelp', 'Fold the moving side toward you, so it lands on top.');
     case 'mountain':
       return t('tools:fold.tool.mountainHelp', 'Fold the moving side away from you, so it lands underneath.');
-    case 'precrease':
-      return t('tools:fold.tool.precreaseHelp', 'Fold and unfold, leaving a crease to use later.');
     case 'inside-reverse':
       return t('tools:fold.tool.reverseHelp', 'Reverse a flap inside itself or wrap it around the outside, reversing its spine.');
     case 'crimp':
@@ -357,24 +344,6 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
         'tools:fold.tool.rotateHelp',
         'Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.'
       );
-  }
-}
-
-/**
- * A fold kind's letter, in the ink of the crease it leaves: the glyph on the
- * rail and in the window's V / M / P control. Localized, as Edit's line-type
- * letters are, for a locale that writes them otherwise.
- */
-export function foldKindLetter(t: TFunction, id: FoldKind | 'inside-reverse'): string {
-  switch (id) {
-    case 'valley':
-      return t('tools:fold.mark.valley', 'V');
-    case 'mountain':
-      return t('tools:fold.mark.mountain', 'M');
-    case 'precrease':
-      return t('tools:fold.mark.precrease', 'P');
-    case 'inside-reverse':
-      return t('tools:fold.mark.reverse', 'RF');
   }
 }
 
@@ -521,29 +490,4 @@ export function foldModelVerbDescription(t: TFunction, id: FoldModelVerbId): str
     case 'turn-over':
       return t('tools:fold.verb.turnOverHelp', 'Turn the model over, side to side, as a step of its own.');
   }
-}
-
-export function foldPlannedOpLabel(t: TFunction, id: FoldPlannedOpId): string {
-  switch (id) {
-    case 'pleat':
-      return t('tools:fold.op.pleat', 'Pleat');
-  }
-}
-
-/** Why a planned fold is on the rail and cannot be taken. */
-export function foldPlannedReason(t: TFunction): string {
-  return t('tools:fold.plannedReason', 'Planned: not in Ori Studio yet.');
-}
-
-/**
- * Why this planned item cannot be taken: a fold still to come, or — for a
- * pleat — that it needs no tool, being two plain folds (research §5.2).
- */
-export function foldPlannedOpReason(t: TFunction, id: FoldPlannedOpId): string {
-  return id === 'pleat'
-    ? t(
-        'tools:fold.plannedPleat',
-        'Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
-      )
-    : foldPlannedReason(t);
 }

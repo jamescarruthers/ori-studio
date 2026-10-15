@@ -323,6 +323,8 @@
   "foldImport": {
     "back": "Atrás",
     "browse": "o haz clic para buscar",
+    "collapse": "Colapsar",
+    "collapseTitle": "Colapsar desde CP",
     "creases_one": "{{count}} pliegue",
     "creases_many": "{{count}} pliegues",
     "creases_other": "{{count}} pliegues",
@@ -352,8 +354,10 @@
       "afterStep": "Añade un paso después del paso {{number}}, con su estado plegado calculado a partir de los pliegues.",
       "branch": "Empieza una rama nueva.",
       "empty": "Empieza la secuencia en la hoja del patrón de pliegues, plegada por sus pliegues. Úsalo cuando un estado no se pueda alcanzar pliegue a pliegue.",
+      "update": "Actualiza este paso de colapso. Los pasos posteriores y las ramas se conservan y se vuelven a calcular; los pliegues afectados se marcan como modificados o imposibles de plegar.",
       "why": "Úsalo cuando el siguiente estado no se pueda alcanzar pliegue a pliegue."
     },
+    "projectCp": "Colapsar desde CP…",
     "refusal": {
       "budget": {
         "text": "Averiguar cómo se apilan las capas llevó más tiempo del que tiene una importación. Busca más tiempo o importa un patrón más sencillo.",
@@ -390,6 +394,10 @@
       "noOrder": {
         "text": "Con los montes y valles del patrón, las capas no se pueden apilar sin atravesarse.",
         "title": "Ningún orden de capas encaja"
+      },
+      "noProjectCp": {
+        "text": "Abre o crea el patrón de pliegues de origen en Editar e inténtalo de nuevo. El paso de colapso guardado no cambia.",
+        "title": "CP de origen no disponible"
       },
       "noState": {
         "text": "El paso en pantalla no tiene estado plegado, así que no se puede añadir nada después. Ve a un paso que se pliegue.",
@@ -440,9 +448,11 @@
     },
     "samples": "Ejemplos",
     "title": "Importar patrón de pliegues",
+    "updateTitle": "Actualizar desde CP",
     "working": {
       "figure": "Importando la figura plegada de Editar…",
       "file": "Importando {{name}}…",
+      "projectCp": "Resolviendo el patrón de pliegues del proyecto…",
       "sample": "Importando el ejemplo…"
     }
   },

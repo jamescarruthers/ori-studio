@@ -153,10 +153,11 @@ export const MENU_ACTION_IDS = [
   // The Fold sequence's verbs, by the action catalog's ids (`fold/foldActions`).
   'fold.valley',
   'fold.mountain',
-  'fold.precrease',
   'fold.turn-over',
   // Rotate takes its tool in hand: how far and which way are its window's.
   'fold.rotate',
+  'fold.unfold-to',
+  'fold.unfold-last',
   'fold.delete-step',
   // Fold's imports and hand-offs (plan D16, D10, D11): `fold.` and the action
   // catalog's command id (`fold/foldActions.ts`) where it has one.
@@ -414,9 +415,10 @@ const VIEW_PANEL_ACTIONS: Partial<Record<MenuActionId, string>> = {
 const FOLD_SEQUENCE_ACTIONS: Partial<Record<MenuActionId, FoldMenuVerb>> = {
   'fold.valley': { kind: 'fold-kind', id: 'valley' },
   'fold.mountain': { kind: 'fold-kind', id: 'mountain' },
-  'fold.precrease': { kind: 'fold-kind', id: 'precrease' },
   'fold.turn-over': { kind: 'command', id: 'turn-over' },
   'fold.rotate': { kind: 'command', id: 'rotate' },
+  'fold.unfold-to': { kind: 'command', id: 'unfold-to' },
+  'fold.unfold-last': { kind: 'command', id: 'unfold-last' },
   'fold.delete-step': { kind: 'command', id: 'delete-step' },
 };
 

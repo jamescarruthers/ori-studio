@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import {Trial} from '../2026-10-13-origami-fold-trials/trial-lib.mjs';
 const dir=new URL('./',import.meta.url);
-const d=JSON.parse(fs.readFileSync(new URL('models/dog.osf',dir))).workspace.foldSequences[0];
+const d=JSON.parse(fs.readFileSync(new URL('../2026-10-13-origami-fold-trials/models/in-progress/dog.osf',dir))).workspace.foldSequences[0];
 const t=new Trial('probe-dog',d.title,d.paper);
 for(const s of d.steps) t.add(s.op,s.note,s.choices);
 const p3=(2*(Math.SQRT1_2-.07)+Math.SQRT2-1)/2-.055;

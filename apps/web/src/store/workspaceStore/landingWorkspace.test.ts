@@ -66,6 +66,17 @@ describe('landingWorkspace', () => {
     ).toBe('fold');
   });
 
+  it('opens a linked Collapse sequence in Fold while retaining its companion CP', () => {
+    const sequence = createFoldSequence();
+    sequence.steps = [{ id: 'collapse', parent: null, op: { kind: 'cp-jump', origin: 'project_cp',
+      cpJson: '{}', orderJson: '[]', source: { documentId: 'crease-pattern', revision: 'saved' } } }];
+    const linked = { ...base, oristudioCpDocument: cpDocument, importedCreasePattern: null,
+      foldSequences: [{ document: sequence, readOnlyRaw: null }] };
+    expect(landingWorkspace(linked)).toBe('fold');
+    expect(landingWorkspace({ ...linked, designTabs: [design] })).toBe('edit');
+    expect(landingWorkspace({ ...linked, diagram })).toBe('edit');
+  });
+
   it('lands in the Diagram for a project of a diagram and fold sequences, and where it always did beside a design', () => {
     const nothingElse = { ...base, oristudioCpDocument: null, importedCreasePattern: null };
     expect(landingWorkspace({ ...nothingElse, diagram, foldSequences })).toBe('diagram');

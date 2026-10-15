@@ -1446,7 +1446,6 @@
       "pathBrokenHint": "此路径上的某个步骤已无法折叠。",
       "pathLockedHint": "此路径上的某个步骤由更新版本的 Ori Studio 创建。",
       "pathReplayingHint": "仍在折叠各步骤。",
-      "precrease": "预折",
       "readOnlyHint": "由更新版本的 Ori Studio 创建：此序列以只读方式打开。",
       "replayingHint": "仍在折叠此前的步骤。",
       "rotate": "旋转…",
@@ -1466,6 +1465,14 @@
       "stepCreases": "本步折痕",
       "stepCreasesTitle": "用粗线画出当前步骤产生的折痕，作为该步骤的说明",
       "toolbar": "折叠视图"
+    },
+    "collapse": {
+      "changed": "有可用更新。此步骤仍使用已保存的展开图版本。",
+      "openSource": "打开源展开图",
+      "replay": "更新后会重新计算后续折叠。继续前，请在时间轴中检查已更改或无法折叠的步骤。",
+      "saved": "正在使用已保存的展开图版本。只有更新时才会应用源展开图的修改。",
+      "unavailable": "源展开图不可用。已保存的快照仍可重放。",
+      "update": "从展开图更新"
     },
     "grid": {
       "broken": "这一步已无法折叠",
@@ -1516,6 +1523,34 @@
       "scrub": "步骤进度",
       "stepForward": "向前一点"
     },
+    "return": {
+      "append": "添加展开步骤",
+      "changed": "之前的折叠已更改。请重建此展开步骤以检查新结果。",
+      "empty": "请先折叠一步。",
+      "failureTitle": "无法展开",
+      "finishPreview": "请先完成或取消展开预览。",
+      "invalidTarget": "请选择此分支中较早的步骤。",
+      "label": "展开到指定步骤",
+      "last": "展开最后一步",
+      "limit": "折痕历史过于庞大，无法安全恢复。",
+      "loading": "正在准备展开预览…",
+      "noop": "纸张已处于此形态，且具有相同的折痕。",
+      "numberedSentence": "返回第 {{number}} 步，保留所有折痕。",
+      "open": "展开到指定步骤…",
+      "preview": "预览如下。所有折痕都会保留。",
+      "rebuild": "重建展开步骤",
+      "refused": "引擎无法在保留折痕历史的同时恢复此形态。未更改任何步骤。",
+      "retain": "返回较早的形态，保留所有折痕。",
+      "sentence": "返回之前折叠后的形态，保留所有折痕。",
+      "sheet": "初始纸张",
+      "sheetSentence": "展开至初始纸张形态，保留所有折痕。",
+      "step": "第 {{number}} 步",
+      "target": "返回到",
+      "title": "展开预览",
+      "turn": "第 {{number}} 步后的转动",
+      "unavailable": "请等待之前的步骤重放完成，然后重试。",
+      "viewTarget": "查看目标：{{target}}"
+    },
     "sentence": {
       "behind": {
         "petal": "将翼片向后做花瓣折。",
@@ -1531,6 +1566,7 @@
         "swivelInsideLine": "让折痕交于折边，以内旋转折将边向后旋转到线上。"
       },
       "closedSink": "将尖角闭合沉折：把尖端压入，各层保持在一起。",
+      "collapse": "沿已保存的展开图收拢。",
       "cpJump": "按导入的折痕图折叠。",
       "crimp": {
         "inside": {
@@ -2140,7 +2176,7 @@
       "branchStep": "你位于第 {{at}} 步（共 {{total}} 步）：在这里折叠会开始新的分支。",
       "broken": "此步骤已无法折叠：构成它的元素在它之前的纸上已不存在。此步骤及之后的步骤只能删除。",
       "brokenAbove": "此前的某个步骤已无法折叠，因此无法显示此步骤。",
-      "changed": "在此版本的 Ori Studio 中，此步骤的折叠结果与保存时不同。",
+      "changed": "此步骤的折叠结果与保存时不同。请检查其输入及之前的步骤。",
       "changes": "变化",
       "chosen": "从多种中选定",
       "creases": "折痕",
@@ -2223,6 +2259,7 @@
         "swivelInside": "向后内旋转折"
       },
       "closedSink": "闭合沉折",
+      "collapse": "收拢",
       "cpJump": "导入折痕图",
       "crimpInside": "内翻阶梯折",
       "crimpOutside": "外翻阶梯折",
@@ -2244,6 +2281,7 @@
       "originFold": "FOLD 文件",
       "originOrh": "ORH 文件",
       "originOri": "ORI 文件",
+      "originProjectCp": "项目展开图",
       "originSample": "示例",
       "outsideReverse": "外翻折",
       "petal": "花瓣折",

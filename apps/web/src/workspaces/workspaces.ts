@@ -44,18 +44,18 @@ export const WORKSPACE_DEFINITIONS: WorkspaceDefinition[] = [
     primaryPanelId: 'references',
   },
   {
-    id: 'diagram',
-    label: 'Diagram',
-    tooltip: 'Diagram workspace',
-    commandId: 'view.diagram',
-    primaryPanelId: 'diagram',
-  },
-  {
     id: 'fold',
     label: 'Fold',
     tooltip: 'Fold workspace',
     commandId: 'view.fold',
     primaryPanelId: 'fold',
+  },
+  {
+    id: 'diagram',
+    label: 'Diagram',
+    tooltip: 'Diagram workspace',
+    commandId: 'view.diagram',
+    primaryPanelId: 'diagram',
   },
 ];
 

@@ -1,28 +1,22 @@
 import type { ReactElement, ReactNode } from 'react';
 import {
-  Activity,
   ArrowDownToDot,
   ArrowDownToLine,
   ArrowUpFromLine,
   BetweenHorizontalStart,
-  ChevronsDownUp,
   Divide,
   Flower2,
-  IterationCw,
   Rabbit,
   RotateCcwSquare,
   RotateCw,
-  Shrink,
   type LucideIcon,
 } from 'lucide-react';
 import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
 import { cpActionByOperation } from '../../lib/oristudioCpActions';
 import type {
   FoldLineModeId,
-  FoldPlannedOpId,
   FoldRailItemId,
   FoldSinkToolId,
-  FoldVertexToolId,
 } from '../../fold/tools/foldToolCatalog';
 import { FoldKindMark } from './FoldKindMark';
 
@@ -140,23 +134,6 @@ function lineModeGlyph(mode: FoldLineModeId): ReactElement {
   }
 }
 
-const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
-  // A pleat's zig-zag: two plain folds, never a tool of its own.
-  pleat: Activity,
-};
-
-/**
- * The vertex folds keep the icons the rail showed them by while they were
- * planned — the rabbit ear only until Edit's own tool is found
- * ({@link EDIT_RABBIT_EAR}).
- */
-const VERTEX_ICONS: Readonly<Record<FoldVertexToolId, LucideIcon>> = {
-  squash: Shrink,
-  petal: Flower2,
-  'rabbit-ear': Rabbit,
-  swivel: IterationCw,
-};
-
 /**
  * Edit's Rabbit Ear tool (Oriedita's `Inward`): the rabbit ear is drawn as
  * Edit's rail draws it, so the one fold looks the same in both workspaces
@@ -172,11 +149,11 @@ const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
 };
 
 /**
- * Every Fold rail item's icon: a fold's letter in its crease's ink; a line
+ * Every Fold rail item's icon: a fold's symbol in the control's ink; a line
  * mode's picture of what it locates; Edit's own glyph for the rabbit ear; the
- * app's own icons for the crimp and the tuck, the Divide line, the model
+ * app's own icons for the tuck, the Divide line, the model
  * verbs (Turn over is the turn-over icon of Edit's Flip and the Diagram's
- * turns), the other vertex folds, the sinks and the folds still to come.
+ * turns), the other vertex folds and the sinks.
  * `compact`: beside text in a toolbar button, at the text's scale, as Edit's
  * "Tools" trigger draws its glyph.
  */
@@ -184,11 +161,16 @@ export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; com
   switch (id) {
     case 'valley':
     case 'mountain':
-    case 'precrease':
     case 'inside-reverse':
-      return <FoldKindMark kind={id} />;
     case 'crimp':
-      return <ChevronsDownUp size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+      return <FoldKindMark kind={id} size={compact ? 16 : SIZE} />;
+    case 'squash':
+    case 'swivel': {
+      // Enlarge the paper while matching Petal's visible stroke weight.
+      // Both SVGs use a 24-unit viewBox; Petal is SIZE pixels at stroke 1.5.
+      const size = compact ? 20 : 24;
+      return <FoldKindMark kind={id} size={size} strokeWidth={(1.5 * SIZE) / size} />;
+    }
     case 'tuck':
       return <BetweenHorizontalStart size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'divide-line':
@@ -210,21 +192,13 @@ export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; com
       return lineModeGlyph(id);
     case 'rabbit-ear':
       if (EDIT_RABBIT_EAR) return <CpToolGlyph action={EDIT_RABBIT_EAR} compact={compact} />;
-    // falls through: Edit's tool not found
-    case 'squash':
+      return <Rabbit size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'petal':
-    case 'swivel': {
-      const Icon = VERTEX_ICONS[id];
-      return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
-    }
+      return <Flower2 size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'open-sink':
     case 'closed-sink':
     case 'unsink': {
       const Icon = SINK_ICONS[id];
-      return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
-    }
-    default: {
-      const Icon = PLANNED_ICONS[id];
       return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     }
   }

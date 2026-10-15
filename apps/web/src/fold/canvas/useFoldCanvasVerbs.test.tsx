@@ -2,8 +2,13 @@ import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const tracked = vi.hoisted(() => ({ added: vi.fn(), offered: vi.fn() }));
-vi.mock('../../analytics', () => ({ trackFoldStepAdded: tracked.added, trackFoldChoiceOffered: tracked.offered }));
+const tracked = vi.hoisted(() => ({ added: vi.fn(), offered: vi.fn(), changed: vi.fn() }));
+vi.mock('../../analytics', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../analytics')>(),
+  trackFoldStepAdded: tracked.added,
+  trackFoldChoiceOffered: tracked.offered,
+  track: tracked.changed,
+}));
 
 import type { FoldOp } from '../document/foldSequenceDocument';
 import type { FoldSessionSurface } from '../session/useFoldSession';
@@ -132,6 +137,24 @@ describe('the Fold canvas’s commit', () => {
     expect(bound!.queued).toBe(false);
   });
 
+  it('changes fold-and-unfold mode in either direction, retains it when switching direction, and ignores other tools', () => {
+    const tools = createFoldTools();
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview()} />));
+    tracked.changed.mockClear();
+    act(() => bound!.verbs.setFoldAndUnfold(true));
+    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true });
+    expect(tracked.changed).toHaveBeenLastCalledWith('fold and unfold changed', { state: 'on', direction: 'valley' });
+    act(() => bound!.verbs.foldOtherWay());
+    expect(tools.store.getState()).toMatchObject({ tool: 'mountain', foldAndUnfold: true });
+    act(() => bound!.verbs.setFoldAndUnfold(false));
+    expect(tracked.changed).toHaveBeenLastCalledWith('fold and unfold changed', { state: 'off', direction: 'mountain' });
+    act(() => bound!.verbs.setFoldAndUnfold(false));
+    act(() => tools.selectTool('squash'));
+    act(() => bound!.verbs.setFoldAndUnfold(true));
+    expect(tools.store.getState().foldAndUnfold).toBe(false);
+    expect(tracked.changed).toHaveBeenCalledTimes(2);
+  });
+
   it('counts a fold of the default top flap as `top`, a flap the folder picked as `flaps`, and every layer as `all`', async () => {
     const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() =>
       Promise.resolve({ status: 'committed' as const, id: 'fstep-t', fingerprint: 'fs1:0' } as never)
@@ -161,7 +184,7 @@ describe('the Fold canvas’s commit', () => {
     );
     const surface = session(commitStep);
     const tools = createFoldTools();
-    act(() => tools.selectTool('precrease'));
+    act(() => tools.setFoldAndUnfold(true));
     act(() => tools.selectTool('rotate'));
     act(() => tools.setRotation({ amount: 'degrees', degrees: 30, direction: 'cw' }));
     const op: FoldOp = { kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } };
@@ -176,7 +199,7 @@ describe('the Fold canvas’s commit', () => {
     // Never the angle: an exact one is `other`.
     expect(tracked.added).toHaveBeenCalledWith('rotate', { amount: 'other' });
     // The tool it was taken up from is back in hand: no second turn previewed on the step just made.
-    expect(tools.store.getState().tool).toBe('precrease');
+    expect(tools.store.getState().tool).toBe('valley');
 
     act(() => tools.selectTool('rotate'));
     let cancelled = false;
@@ -185,7 +208,7 @@ describe('the Fold canvas’s commit', () => {
     });
     expect(cancelled).toBe(true);
     expect(surface.cancel).toHaveBeenCalled();
-    expect(tools.store.getState().tool).toBe('precrease');
+    expect(tools.store.getState().tool).toBe('valley');
     // A preset is counted as its preset.
     act(() => tools.selectTool('rotate'));
     const quarter: FoldOp = { kind: 'rotate', rotate: { amount: 'quarter', direction: 'ccw' } };
@@ -480,9 +503,9 @@ describe('a vertex fold’s choices on the canvas', () => {
     ...extra,
   });
 
-  it('steps the order, then a fan’s fourth ray among those that land: the deepest with more than one', () => {
+  it('offers orders and swivel ridges, but never a rabbit ear’s fourth ray', () => {
     const tools = FOLD_TOOL_INITIAL;
-    expect(foldCanvasChoice(preview({ vertex: vertex() }), tools)).toEqual({ kind: 'emergent', index: 1, count: 2 });
+    expect(foldCanvasChoice(preview({ vertex: vertex() }), tools)).toBeNull();
     // One lands: nothing to step through on the canvas.
     expect(foldCanvasChoice(preview({ vertex: vertex({ fourths: [1] }) }), tools)).toBeNull();
     const order = { faces: [], orders: [] };
@@ -501,16 +524,16 @@ describe('a vertex fold’s choices on the canvas', () => {
     });
   });
 
-  it('steps a rabbit ear’s fourth ray, its only choice, through the ones that land: the fourth crease is its ridge', () => {
+  it('does not change a rabbit ear’s hinge through the choice shortcut', () => {
     const tools = createFoldTools();
     const shown = preview({ vertex: vertex() });
     act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={shown} />));
     act(() => tools.selectTool('rabbit-ear'));
-    // From the second of the two that land, round to the first: never the third, which does not.
+    // The hinge is controlled only by the region click.
     act(() => void bound!.verbs.stepChoice(1));
-    expect(tools.store.getState().compound.emergent).toBe(0);
+    expect(tools.store.getState().compound.emergent).toBeNull();
     act(() => void bound!.verbs.stepChoice(-1));
-    expect(tools.store.getState().compound.emergent).toBe(0);
+    expect(tools.store.getState().compound.emergent).toBeNull();
     expect(Object.keys(tools.store.getState().compound)).not.toContain('ridge');
   });
 
@@ -617,16 +640,16 @@ describe('a vertex fold’s choices on the canvas', () => {
     act(() => bound!.verbs.stepFanLayers(-1));
     expect(tools.store.getState().compound.fanLayers).toBeNull();
 
-    // A petal fold's hinge refused: the Precrease tool through its two ends, or on the edge-to-edge axiom.
+    // A petal fold's hinge refused: Fold and unfold through its two ends, or on the edge-to-edge axiom.
     const end = (x: number) => ({ kind: 'point', provenance: 'free', sheet: [x, 0.5], mark: null, scene: { x, y: 0.5 } }) as const;
     act(() => tools.selectTool('petal'));
     act(() => bound!.verbs.setVertexLineBy('points'));
     expect(tools.store.getState().petalHinge).toBe('points');
     for (const x of [0.2, 0.8]) act(() => void tools.pick(end(x)));
     act(() => bound!.verbs.precreaseLine());
-    expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'axiom-1', picks: [end(0.2), end(0.8)] });
+    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true, lineMode: 'axiom-1', picks: [end(0.2), end(0.8)] });
     act(() => bound!.verbs.precreaseKite());
-    expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'axiom-3', picks: [] });
+    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true, lineMode: 'axiom-3', picks: [] });
 
     // Over a hinge crease whose kite is not creased: the same hinge by its ends, the flap as clicked.
     const hinge = index.folded.segments[0]!;
@@ -772,7 +795,7 @@ describe('a vertex fold’s choices on the canvas', () => {
     const surface = session(commitStep);
     const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
     const view = { index } as FoldStateView;
-    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'precrease', lineMode: 'free', extent: 'pinch' });
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'valley', foldAndUnfold: true, lineMode: 'free', extent: 'pinch' });
     const across = { n: [0, 1] as [number, number], d: 0.5 };
     const along = { folded: foldAlongLine(index, across, 'folded'), creasePattern: foldAlongLine(index, across, 'crease-pattern') };
     const render = (shown: FoldToolPreview) =>
@@ -802,20 +825,20 @@ describe('a vertex fold’s choices on the canvas', () => {
     expect(tools.store.getState().picks).toHaveLength(2);
     act(() => void bound!.verbs.cancel());
     expect(tools.store.getState().picks).toHaveLength(0);
-    // The extent key steps it with the Precrease tool in hand, and declines otherwise.
+    // The extent key steps it with Fold and unfold enabled, and declines otherwise.
     let stepped = false;
     act(() => {
       stepped = bound!.verbs.cycleExtent();
     });
     expect(stepped).toBe(true);
     expect(tools.store.getState().extent).toBe('whole');
-    act(() => tools.selectTool('valley'));
+    act(() => bound!.verbs.setFoldAndUnfold(false));
     expect(bound!.verbs.cycleExtent()).toBe(false);
     expect(commitStep).not.toHaveBeenCalled();
   });
 
   it('turns a too-short segment into a pinch at its first point, or the whole line, or every layer', () => {
-    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'precrease', extent: 'segment' });
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'valley', foldAndUnfold: true, extent: 'segment' });
     act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview()} />));
     const at = { kind: 'point' as const, provenance: 'crossing' as const, sheet: [0.5, 0.5] as [number, number], mark: null, scene: { x: 0.5, y: 0.5 } };
     act(() => {

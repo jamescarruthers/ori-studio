@@ -22,7 +22,7 @@ const item = (groups: ReturnType<typeof foldRailGroups>, id: string) => {
 };
 
 describe('foldRailGroups', () => {
-  it('lists the folds, the sinks, Reference points, Locate line, the model verbs and the planned folds, in that order', () => {
+  it('lists the folds, the sinks, Reference points, Locate line, the model verbs, in that order', () => {
     const groups = foldRailGroups(t, view(), verbs());
     expect(groups.map((group) => [group.id, group.label])).toEqual([
       ['fold', 'Fold'],
@@ -30,18 +30,16 @@ describe('foldRailGroups', () => {
       ['reference', 'Reference points'],
       ['locate', 'Locate line'],
       ['model', 'Model'],
-      ['planned', 'Planned'],
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
-      ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'tuck', 'squash', 'petal', 'rabbit-ear', 'swivel'],
+      ['valley', 'mountain', 'inside-reverse', 'crimp', 'tuck', 'squash', 'petal', 'rabbit-ear', 'swivel'],
       ['open-sink', 'closed-sink', 'unsink'],
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
       ['turn-over', 'rotate'],
-      ['pleat'],
     ]);
-    // A roadmap, out of the way until asked for; everything else open.
-    expect(groups.filter((group) => group.collapsedByDefault).map((group) => group.id)).toEqual(['planned']);
+    // Only usable tool groups are shown, all open initially.
+    expect(groups.filter((group) => group.collapsedByDefault).map((group) => group.id)).toEqual([]);
   });
 
   it('names the axioms by the move a folder makes, and every item by its key', () => {
@@ -56,10 +54,9 @@ describe('foldRailGroups', () => {
     expect(item(groups, 'rotate').shortcut).toBe('fold.rotate');
     expect(item(groups, 'squash').shortcut).toBe('fold.toolSquash');
     expect(item(groups, 'crimp').shortcut).toBe('fold.toolCrimp');
-    expect(item(groups, 'pleat').shortcut).toBeNull();
   });
 
-  it('takes the reverse fold as a tool, its line mode marked, and lists only the pleat as planned', () => {
+  it('takes the reverse fold as a tool, its line mode marked', () => {
     const calls = verbs();
     const groups = foldRailGroups(t, view({ tool: 'inside-reverse', lineMode: 'free' }), calls);
     const reverse = item(groups, 'inside-reverse');
@@ -70,15 +67,7 @@ describe('foldRailGroups', () => {
     calls.selectTool.mockClear();
     // Every compound fold is a tool now: none is planned.
     for (const id of ['crimp', 'squash', 'swivel', 'unsink']) expect(item(groups, id).kind).toBe('tool');
-    // A pleat is listed only to say it needs no tool of its own.
-    const pleat = item(groups, 'pleat');
-    expect(pleat).toMatchObject({ kind: 'planned', available: false, label: 'Pleat' });
-    expect(pleat.reason).toBe('Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.');
-    expect(pleat.description).toBe(pleat.reason);
-    pleat.select();
-    // The rail and the sheet refuse the press (`available: false`), and a planned item binds nothing besides.
-    expect(calls.selectTool).not.toHaveBeenCalled();
-    expect(calls.turn).not.toHaveBeenCalled();
+    expect(groups.flatMap((group) => group.items.map((each) => each.id))).not.toContain('pleat');
   });
 
   it('takes the crimp and the tuck as tools of the Fold group, unbound until a key is given', () => {
@@ -140,13 +129,13 @@ describe('foldRailGroups', () => {
   it('binds each item to its call: a tool, a line mode, a turn as a step of its own', () => {
     const calls = verbs();
     const groups = foldRailGroups(t, view(), calls);
-    item(groups, 'precrease').select();
+    item(groups, 'mountain').select();
     item(groups, 'divide-line').select();
     item(groups, 'crease').select();
     item(groups, 'turn-over').select();
     item(groups, 'rotate').select();
     // Rotate is a tool: taken in hand, its window sets how far and which way before it is applied.
-    expect(calls.selectTool.mock.calls).toEqual([['precrease'], ['divide-line'], ['rotate']]);
+    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['divide-line'], ['rotate']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['crease']]);
     expect(calls.turn.mock.calls).toEqual([[{ kind: 'turn-over', axis: 'vertical' }]]);
     // Done at once: a verb is never the thing in hand; a tool is, while it is.
@@ -166,10 +155,6 @@ describe('foldRailGroups', () => {
     expect(item(groups, 'tuck').available).toBe(false);
     expect(item(groups, 'squash').available).toBe(false);
     expect(item(groups, 'unsink').available).toBe(false);
-    // What is planned stays planned, whatever the sequence.
-    expect(item(groups, 'pleat').reason).toBe(
-      'Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
-    );
   });
 
   it('builds a tooltip from the name, the key and what it does, or why it cannot', () => {
@@ -179,9 +164,6 @@ describe('foldRailGroups', () => {
     );
     expect(foldRailTooltip(item(groups, 'axiom-1'), undefined)).toBe(
       'Axiom 1: through two points - The line through two points.'
-    );
-    expect(foldRailTooltip(item(groups, 'pleat'), undefined)).toBe(
-      'Pleat - Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
     );
   });
 

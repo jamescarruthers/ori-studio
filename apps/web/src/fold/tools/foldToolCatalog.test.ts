@@ -5,7 +5,6 @@ import {
   FOLD_LINE_MODE_SHORTCUTS,
   FOLD_MODEL_VERB_SHORTCUTS,
   FOLD_TOOL_SHORTCUTS,
-  foldKindLetter,
   isFoldKind,
   isFoldLineMode,
   lineModeAxiom,
@@ -35,19 +34,13 @@ describe('the Fold tool catalog', () => {
     expect(FOLD_LINE_MODES.map((mode) => lineModeSteps(t, mode).length)).toEqual([2, 2, 2, 2, 3, 4, 3, 2, 1]);
   });
 
-  it('knows a plain fold from the other tools, and letters each fold', () => {
+  it('knows a plain fold from the other tools', () => {
     expect((['valley', 'mountain', 'precrease', 'inside-reverse', 'divide-line'] as const).map(isFoldKind)).toEqual([
       true,
       true,
-      true,
       false,
       false,
-    ]);
-    expect((['valley', 'mountain', 'precrease', 'inside-reverse'] as const).map((kind) => foldKindLetter(t, kind))).toEqual([
-      'V',
-      'M',
-      'P',
-      'RF',
+      false,
     ]);
   });
 });

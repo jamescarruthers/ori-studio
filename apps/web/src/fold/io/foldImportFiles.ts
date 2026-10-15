@@ -74,9 +74,16 @@ const SUMMARIES = new Map<FoldSampleId, FoldSampleSummary>();
 export function foldSampleSummary(sample: FoldSample): FoldSampleSummary {
   const known = SUMMARIES.get(sample.id);
   if (known) return known;
+  const summary = foldCpSummary(sample.text);
+  SUMMARIES.set(sample.id, summary);
+  return summary;
+}
+
+/** Saved CP snapshots use the same line renderer as the import picker. */
+export function foldCpSummary(text: string): FoldSampleSummary {
   let summary: FoldSampleSummary = { thumbnail: null, creases: 0 };
   try {
-    const fold = JSON.parse(sample.text) as {
+    const fold = JSON.parse(text) as {
       vertices_coords?: unknown;
       edges_vertices?: unknown;
       edges_assignment?: unknown;
@@ -98,6 +105,5 @@ export function foldSampleSummary(sample: FoldSample): FoldSampleSummary {
   } catch {
     // A sample that does not parse draws no picture; the engine says why when it is imported.
   }
-  SUMMARIES.set(sample.id, summary);
   return summary;
 }

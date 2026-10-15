@@ -1,3 +1,4 @@
+import { CREASE_PATTERN_DOCUMENT_ID } from '../../lib/nativeProjectDesigns';
 import type { WorkspaceId } from '../../workspaces/workspaces';
 import { projectDocumentLanding, type ProjectDocumentPresence } from './projectDocuments';
 import type { WorkspaceState } from './types';
@@ -26,9 +27,15 @@ export function landingWorkspace(
   state: Pick<WorkspaceState, 'oristudioCpDocument' | 'importedCreasePattern' | 'designTabs'> &
     ProjectDocumentPresence
 ): WorkspaceId {
+  const hasDesign = state.designTabs.some((tab) => tab.kind !== null);
+  // A linked CP is this sequence's authoring source. Reopening its native
+  // project should show the sequence, with the source still available in Edit.
+  if (!hasDesign && state.diagram === null && state.foldSequences?.some(({ document }) =>
+    document.steps.some(({ op }) => op?.kind === 'cp-jump' && op.source?.documentId === CREASE_PATTERN_DOCUMENT_ID))) {
+    return 'fold';
+  }
   if (state.oristudioCpDocument !== null || state.importedCreasePattern !== null) return 'edit';
   // A project that is only a diagram — pictures drawn elsewhere, no pattern and
   // no design — or only fold sequences has nothing to show in Design but the chooser.
-  const hasDesign = state.designTabs.some((tab) => tab.kind !== null);
   return (hasDesign ? null : projectDocumentLanding(state)) ?? 'design';
 }

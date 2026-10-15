@@ -95,9 +95,9 @@ describe.skipIf(!available)('the classic pinch, through the session and the tool
     await fold(DIAGONAL);
     const folded = await shownIndex();
 
-    // The Precrease tool, a pinch, its line the other diagonal: from the
+    // Fold and unfold, a pinch, its line the other diagonal: from the
     // folded triangle's corner (1, 0) through the folded edge's middle.
-    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'precrease', lineMode: 'free', extent: 'pinch' });
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'valley', foldAndUnfold: true, lineMode: 'free', extent: 'pinch' });
     for (const at of [{ x: 1, y: 0 }, { x: 0.5, y: 0.5 }]) {
       const pick = resolveFoldPick(folded, 'folded', at, RADII, { snap: 'free', edges: false, free: false });
       if (!pick) throw new Error('no pick');

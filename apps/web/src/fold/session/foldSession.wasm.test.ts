@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { FoldMark, FoldOp, FoldSequenceDocument } from '../document/foldSequenceDocument';
+import { readFoldSequence, writeFoldSequence } from '../document/foldSequenceFile';
+import type { FoldMark, FoldOp, FoldReturnOp, FoldSequenceDocument } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls } from '../engine/foldEngineCalls';
 import { foldSessionDocumentSource } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
@@ -83,6 +84,70 @@ describe.skipIf(!available)('the Fold session over the real bridge', () => {
 
   afterEach(() => {
     session.dispose();
+  });
+
+  it('appends a return, adopts its preview, preserves branches, and reopens it in a fresh engine', async () => {
+    for (const op of KITE_STEPS) expect((await session.commitStep(op)).status).toBe('committed');
+    await settle();
+    const old = snapshot().sequence!;
+    const source = cursor();
+    const target = old.steps[0]!.id;
+    const op: FoldReturnOp = { kind: 'unfold-to', target, source: {
+      path: source.path!, state: source.fingerprint!, targetState: snapshot().nodes.get(target)!.fingerprint!,
+    } };
+    const preview = await session.preview(op);
+    expect(preview.status).toBe('landed');
+    if (preview.status !== 'landed') throw new Error(JSON.stringify(preview));
+    expect(preview.summary.faces).toBe(source.summary!.faces);
+    const saved = await session.commitStep(op);
+    expect(saved.status).toBe('committed');
+    await settle();
+    expect(cursor().state).toEqual(preview.state);
+    expect(snapshot().sequence!.steps.slice(0, 3)).toEqual(old.steps);
+    const fingerprint = cursor().fingerprint;
+    expect(state().undoFold()).toBe(true);
+    await settle();
+    expect(snapshot().sequence!.steps).toEqual(old.steps);
+    expect(state().redoFold()).toBe(true);
+    await settle();
+    expect(cursor().fingerprint).toBe(fingerprint);
+    const file = writeFoldSequence({ document: snapshot().sequence!, readOnlyRaw: null });
+    const reopened = readFoldSequence(JSON.parse(JSON.stringify(file)))!;
+    expect(reopened.document.steps.at(-1)!.op).toEqual(op);
+    state().installFoldSequences([reopened], null);
+    runtime.lose('crashed');
+    await settle(12);
+    expect(statuses()).toEqual(['ok', 'ok', 'ok', 'ok']);
+    expect([...snapshot().nodes.values()].at(-1)!.fingerprint).toBe(fingerprint);
+    const sourceId = old.steps.at(-1)!.id;
+    state().moveFoldCursor(sourceId);
+    await settle();
+    expect((await session.commitStep(TURN_OVER)).status).toBe('committed');
+    await settle();
+    expect(snapshot().sequence!.steps.filter((n) => n.parent === sourceId)).toHaveLength(2);
+  });
+
+  it('refuses a stale return and lets an explicit rebuild keep its ID and annotations', async () => {
+    for (const op of KITE_STEPS) await session.commitStep(op);
+    await settle();
+    const source = cursor();
+    const op: FoldReturnOp = { kind: 'unfold-to', target: null, source: {
+      path: source.path!, state: source.fingerprint!, targetState: snapshot().sheet.fingerprint!,
+    } };
+    const committed = await session.commitStep(op);
+    if (committed.status !== 'committed') throw new Error(committed.status);
+    await settle();
+    const doc = snapshot().sequence!;
+    const changed = { ...doc, steps: doc.steps.map((n) => n.id === committed.stepId && n.op
+      ? { ...n, note: 'Keep my annotation', op: { ...op, source: { ...op.source, state: 'fs1:stale' } } } : n) };
+    state().installFoldSequences([{ document: changed, readOnlyRaw: null }], null);
+    await settle();
+    expect(snapshot().nodes.get(committed.stepId)).toMatchObject({ status: 'broken', refusal: { code: 'return_source_changed' } });
+    const expected = changed.steps.at(-1)!.op as FoldReturnOp;
+    expect(state().updateFoldReturn(committed.stepId, expected, op, committed.fingerprint)).toBe(true);
+    await settle();
+    expect(snapshot().nodes.get(committed.stepId)?.status).toBe('ok');
+    expect(snapshot().sequence!.steps.at(-1)).toMatchObject({ id: committed.stepId, note: 'Keep my annotation' });
   });
 
   it('folds the kite base as a user does, to the outcomes the classic records', async () => {

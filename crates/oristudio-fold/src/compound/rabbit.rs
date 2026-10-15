@@ -71,6 +71,7 @@ impl RabbitEar {
         };
         Ok(FanInput {
             kind: VertexFoldKind::RabbitEar,
+            triangle: Some(self.corners),
             center,
             given: [a, b, c],
             emergent: self.emergent,

@@ -1,3 +1,4 @@
+import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldChoiceOffered, trackFoldRefused } from '../../analytics';
 import { reportError } from '../../monitoring';
@@ -239,13 +240,13 @@ export function useFoldToolPreview(
     if (!index || !isFoldKind(seeded.tool)) return { status: 'unlocated' };
     return buildFoldStep(
       {
-        kind: seeded.tool,
+        kind: seeded.foldAndUnfold ? 'precrease' : seeded.tool,
         lineMode: seeded.lineMode,
         picks: seeded.picks,
         candidate,
         swapped: seeded.swapped,
         seed: seeded.seed,
-        precreaseDirection: seeded.precreaseDirection,
+        precreaseDirection: seeded.tool,
         ...(extentState.status === 'ready' ? { extent: extentState.extent } : {}),
       },
       index
@@ -260,9 +261,11 @@ export function useFoldToolPreview(
   const build = compoundStep ? compoundStep.build : vertexing ? UNLOCATED : plainBuild;
   const vertexBuilt = vertexStep.step;
   // Rotate's step is its rotation, from the moment it is in hand: it locates nothing.
+  const returning = useFoldReturnUi((s) => s.opening !== null);
   const rotating = tools.tool === 'rotate';
   const rotation = tools.rotation;
   const step = useMemo<FoldToolStep | null>(() => {
+    if (returning) return null;
     if (rotating) {
       const op = rotateStepOp(rotation);
       return { op, key: foldStepInputKey({ op }) };
@@ -277,7 +280,7 @@ export function useFoldToolPreview(
     const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingTop, vertexBuilt]);
+  }, [returning, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingTop, vertexBuilt]);
   // The located line on each pane, while points are clicked along it.
   const sceneLine = along && plainBuild.status === 'built' ? plainBuild.sceneLine : null;
   const lineKey = sceneLine ? `${sceneLine.n[0]},${sceneLine.n[1]},${sceneLine.d}` : null;
@@ -299,6 +302,7 @@ export function useFoldToolPreview(
   const asked = useRef<string | null>(null);
   const [action, setAction] = useState<{ key: string; action: FoldActionGeometry | null } | null>(null);
   useEffect(() => {
+    if (returning) { asked.current = null; return undefined; }
     if (!step) {
       if (asked.current !== null) cancel();
       asked.current = null;
@@ -326,7 +330,7 @@ export function useFoldToolPreview(
     };
     // The step is read through its key: an equal step must not ask again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analyse, preview, cancel, withCursor, step?.key, stateKey]);
+  }, [returning, analyse, preview, cancel, withCursor, step?.key, stateKey]);
 
   // --- With no step, a compound tool's refused fold may still show its
   // layers (`FoldCompoundStepAnswer.layers`), and a precrease whose extent's

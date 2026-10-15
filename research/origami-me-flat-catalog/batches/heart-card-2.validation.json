@@ -1,0 +1,74 @@
+{
+  "source": "https://origami.me/heart-card-2/",
+  "file": "../2026-10-13-origami-fold-trials/models/in-progress/heart-card-2.osf",
+  "fileSha256": "1532ed8e8664c2ac08121f6e85b95a080ef9c6ab835cd1daf5e88a3b3cd8ad9d",
+  "nodes": 20,
+  "folds": 17,
+  "finalFaces": 20,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "f821451f36f8565f83ab8bfba8fe4c62baa742510dfa9369ef23e765449bd20f",
+    "13aea6647d9157685cabce716d1fc33a732a8a4d9753004d529788e1ae861a6b",
+    "2a203a211491e59d820a14880022a1e769b5048a63b79ec192be2e403a543f19",
+    "328dd15726b05db246a34357dc717ea6664ca241664ade6b39be348d3817d814",
+    "3ebd1977bc10c8ea0d297f5e46c08e41944982de418427fb2cc0b082e2cb3e4a",
+    "cde803bc60a033ba7731ef784258486110c8f34b5e17851defbc9b3c402d3ecc",
+    "079be2698adda349bd5951bb8377188474b994bdc4954b45d0f9d2d49ccf0ca1",
+    "faae3ce82e31b7a54a5be59d1827aee4e10aa5a6c544dc64cc2dc233ff1cd1ef",
+    "4079e8b56823496af3478298e4e155f888401fe9bcb2ff2a56293b2ce70a8cc9",
+    "07003eea201a983902a77220d7827dcfeff081b799800325481001f2ad56ad20",
+    "60f1565ac19f3fe180230f23c1de25f5a8cfc42751d905249819c8db13a6ed20",
+    "b1acf22582a4db6955e58ecd3cd4b182c06bff36641d0fa51e077e2dcaa2d75c",
+    "959c64f3be7ab5fb31c325c3ccb4513f4edd0befcd6376995be1ec507d2d847f",
+    "9e328b6cde2a8d0165632b2fd50ed81529f79385d3b7a7e99805ccac9eea9a22",
+    "4e337ce628b6a013d591ab8343f87f507f13c1e9fce547f92c153e432a46b3f0",
+    "60f62fe3d9bf3a1bf8c7125fafcfde86599adacb9cdc9536ecd615c755b258ba",
+    "f6b9910888dc4cc7ed7ad0f74e8933902542a03f5ba7952980985407b2e78417",
+    "d8f039e728d9469c1cf108510cd177f5153a4111365da9bd3bb252e0e3fb8019",
+    "a6919fd2cb20eb9fe1ac842add021599ed6962f6168ac68b854afe64c6279fc4",
+    "81012ef39673cb68e542f6dfc1bcfffb48b7a411252d42f9b90d408de8083830",
+    "58314e4ad16389676aafebb9415425cfd82e07c40b97154751e0e2033f405579"
+  ],
+  "sourceSteps": 18,
+  "sourceStepsCompleted": 13,
+  "sourceDiagramsReviewed": 19,
+  "blockedAtSourceStep": 14,
+  "audit": "Verified prefix; endpoint-swivel authoring investigation",
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "visuallyCheckedStates": 21,
+  "checks": [
+    {
+      "label": "Precrease node 1: same material stacks",
+      "witnesses": 3
+    },
+    {
+      "label": "Precrease node 2: same material stacks",
+      "witnesses": 6
+    },
+    {
+      "label": "Precrease node 5: same material stacks",
+      "witnesses": 10
+    },
+    {
+      "label": "Precrease node 11: same material stacks",
+      "witnesses": 12
+    },
+    {
+      "label": "Precrease node 12: same material stacks",
+      "witnesses": 12
+    },
+    {
+      "label": "Precrease node 13: same material stacks",
+      "witnesses": 13
+    },
+    {
+      "label": "Precrease node 16: same material stacks",
+      "witnesses": 19
+    },
+    {
+      "label": "Source 3 unfolding restores the source-1 sheet material and sides",
+      "witnesses": 14
+    }
+  ],
+  "latestReport": "heart-card-prefix-2026-10-14.md"
+}

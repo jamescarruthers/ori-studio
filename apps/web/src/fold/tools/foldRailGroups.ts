@@ -16,15 +16,11 @@ import {
   FOLD_LINE_MODE_SHORTCUTS,
   FOLD_MODEL_TURNS,
   FOLD_MODEL_VERB_SHORTCUTS,
-  FOLD_PLANNED_OPS,
   FOLD_SINK_TOOLS,
   FOLD_TOOL_SHORTCUTS,
   FOLD_VERTEX_TOOLS,
   foldModelVerbDescription,
   foldModelVerbLabel,
-  foldPlannedOpLabel,
-  foldPlannedOpReason,
-  foldPlannedReason,
   foldReadOnlyReason,
   foldToolDescription,
   foldToolLabel,
@@ -55,10 +51,10 @@ export interface FoldRailVerbs {
   turn: (turn: TurnKind) => void;
 }
 
-export type FoldRailGroupId = 'fold' | 'sink' | 'reference' | 'locate' | 'model' | 'planned';
+export type FoldRailGroupId = 'fold' | 'sink' | 'reference' | 'locate' | 'model';
 
-/** Taken in hand; a way of locating the line; done at once; or not built yet. */
-export type FoldRailItemKind = 'tool' | 'line-mode' | 'verb' | 'planned';
+/** Taken in hand; a way of locating the line; or done at once. */
+export type FoldRailItemKind = 'tool' | 'line-mode' | 'verb';
 
 export interface FoldRailItem {
   id: FoldRailItemId;
@@ -85,16 +81,12 @@ export interface FoldRailGroup {
 const FOLD_GROUP_TOOLS: readonly FoldToolId[] = [
   'valley',
   'mountain',
-  'precrease',
   'inside-reverse',
   'crimp',
   'tuck',
   // The vertex folds.
   ...FOLD_VERTEX_TOOLS,
 ];
-
-/** Tools not built yet: shown so the rail says what is coming, never taken. Every fold tool is built now. */
-const PLANNED_TOOLS: ReadonlySet<FoldToolId> = new Set();
 
 function groupLabel(t: TFunction, id: FoldRailGroupId): string {
   switch (id) {
@@ -108,37 +100,27 @@ function groupLabel(t: TFunction, id: FoldRailGroupId): string {
       return t('tools:fold.group.locate', 'Locate line');
     case 'model':
       return t('tools:fold.group.model', 'Model');
-    case 'planned':
-      return t('tools:fold.group.planned', 'Planned');
   }
 }
 
 /**
  * The rail's groups, in order: the folds; the sinks; Reference points; Locate
- * line; the model — Turn over, done at once, and the Rotate tool; and the
- * planned folds, collapsed. Every surface that shows the Fold tools reads
- * this list.
+ * line; and the model — Turn over, done at once, and the Rotate tool.
+ * Every surface that shows the Fold tools reads this list.
  */
 export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRailVerbs): FoldRailGroup[] {
   const locked = view.readOnly === null ? null : foldReadOnlyReason(t, view.readOnly);
-  const planned = foldPlannedReason(t);
-
-  const tool = (id: FoldToolId): FoldRailItem => {
-    const isPlanned = PLANNED_TOOLS.has(id);
-    const reason = isPlanned ? planned : locked;
-    return {
-      id,
-      kind: isPlanned ? 'planned' : 'tool',
-      label: foldToolLabel(t, id),
-      description: foldToolDescription(t, id),
-      reason,
-      shortcut: FOLD_TOOL_SHORTCUTS[id],
-      active: view.tool === id,
-      available: reason === null,
-      // A planned tool binds nothing, whichever surface would press it.
-      select: isPlanned ? () => {} : () => verbs.selectTool(id),
-    };
-  };
+  const tool = (id: FoldToolId): FoldRailItem => ({
+    id,
+    kind: 'tool',
+    label: foldToolLabel(t, id),
+    description: foldToolDescription(t, id),
+    reason: locked,
+    shortcut: FOLD_TOOL_SHORTCUTS[id],
+    active: view.tool === id,
+    available: locked === null,
+    select: () => verbs.selectTool(id),
+  });
 
   const lineMode = (id: FoldLineModeId): FoldRailItem => ({
     id,
@@ -174,30 +156,11 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
     ['locate', FOLD_LINE_MODES.map(lineMode)],
     // Turn over at once; Rotate a tool, its amount and direction to choose.
     ['model', [verb('turn-over'), tool('rotate')]],
-    [
-      'planned',
-      FOLD_PLANNED_OPS.map((id) => {
-        // A pleat says it is two plain folds; the rest that they are coming.
-        const reason = foldPlannedOpReason(t, id);
-        return {
-          id,
-          kind: 'planned' as const,
-          label: foldPlannedOpLabel(t, id),
-          description: reason,
-          reason,
-          shortcut: null,
-          active: false,
-          available: false,
-          select: () => {},
-        };
-      }),
-    ],
   ];
   return groups.map(([id, items]) => ({
     id,
     label: groupLabel(t, id),
-    // A roadmap, not tools: out of the way until asked for.
-    collapsedByDefault: id === 'planned',
+    collapsedByDefault: false,
     items,
   }));
 }

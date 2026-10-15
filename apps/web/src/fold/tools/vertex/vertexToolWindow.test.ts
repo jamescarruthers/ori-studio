@@ -94,8 +94,8 @@ describe('a vertex fold’s window while its clicks are made', () => {
     expect(ear?.instructions.items).toHaveLength(5);
     expect(ear?.instructions.current).toBe(3);
     // The paper that stays, by what the folder sees: a part of it, lit under the pointer.
-    expect(ear?.instructions.items[3]).toBe('Click the part of the paper that stays put.');
-    expect(ear?.instructions.items[4]).toBe('Choose the fourth crease, then press Enter.');
+    expect(ear?.instructions.items[3]).toBe('Click the region where the hinge crease goes.');
+    expect(ear?.instructions.items[4]).toBe('Press Enter to fold.');
     // Its corners clicked: no point is asked for, so nothing is said of snapping.
     expect(ear?.instructions.notes).toEqual(['Esc clears the picks.']);
     // While a corner is asked for: what a point snaps to, and the key that frees it, in one note.
@@ -114,8 +114,8 @@ describe('a vertex fold’s window while its clicks are made', () => {
       'Tap the triangle’s first corner.',
       'Tap its second corner.',
       'Tap its third corner.',
-      'Tap the part of the paper that stays put.',
-      'Choose the fourth crease, then tap Rabbit ear.',
+      'Tap the region where the hinge crease goes.',
+      'Tap Rabbit ear to fold.',
     ]);
     expect(ear?.instructions.notes).toEqual([
       'Points snap to corners, crossings, marks and midpoints: turn on Free point to put one anywhere.',
@@ -266,7 +266,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(aimed?.footer?.commit).toMatchObject({ label: 'Squash fold', disabled: false });
   });
 
-  it('steps a fan’s fourth crease among those that land, and layers, and offers no ridge: the fourth crease is the ear’s', () => {
+  it('offers layers but no separate fourth-crease selector for a rabbit ear', () => {
     const calls = verbs();
     const ear = vertex({
       tool: 'rabbit-ear',
@@ -278,22 +278,22 @@ describe('a vertex fold’s window while it previews', () => {
     });
     const model = foldToolWindow(t, view(ear, { preview: preview() }), calls, mouse);
     const controls = model?.vertex;
-    expect(controls?.emergent?.value).toBe('2 of 2');
-    expect(controls?.emergentNote).toBe('2 fourth creases fit with this paper staying put.');
+    expect(controls?.emergent).toBeNull();
+    expect(controls?.emergentNote).toBe('The hinge crease lies in the selected region.');
     expect(controls?.layers?.value).toBe('Top 2 of 4');
     expect(controls).not.toHaveProperty('ridge');
-    // Direction, fourth crease, layers.
-    expect(model?.meta).toBe('3 settings');
+    // Direction and layers.
+    expect(model?.meta).toBe('2 settings');
     expect(model?.instructions.items[0]).toBe(
-      'Choose the fourth crease and the layers, or click another part to stay put.'
+      'Choose the layers, or click another region for the hinge crease.'
     );
     expect(foldToolWindow(t, view(ear, { preview: preview() }), calls, finger)?.instructions.items[0]).toBe(
-      'Choose the fourth crease and the layers, or tap another part to stay put.'
+      'Choose the layers, or tap another region for the hinge crease.'
     );
     expect(controls?.note).toMatch(/a fourth the ear stands up along/);
     controls?.emergent?.next.run();
     controls?.layers?.previous.run();
-    expect(calls.stepEmergent).toHaveBeenCalledWith(1);
+    expect(calls.stepEmergent).not.toHaveBeenCalled();
     expect(calls.stepFanLayers).toHaveBeenCalledWith(-1);
     // From the bottom, for a mountain; every layer, said so.
     const mountain = foldToolWindow(t, view({ ...ear, direction: 'mountain' }, { preview: preview() }), calls, mouse);
@@ -302,34 +302,22 @@ describe('a vertex fold’s window while it previews', () => {
     expect(all?.vertex?.layers?.value).toBe('All 4');
   });
 
-  it('keeps a fan’s fourth crease row with one that lands, or none, and says in its place what helps', () => {
+  it('explains an unavailable hinge region without offering another fourth crease', () => {
     const calls = verbs();
     const ear = vertex({ tool: 'rabbit-ear', fourths: 1, fourth: 0, layers: 1 });
     const one = foldToolWindow(t, view(ear, { preview: preview() }), calls, mouse)?.vertex;
-    expect(one?.emergent).toMatchObject({ value: '1 of 1', previous: { disabled: true }, next: { disabled: true } });
-    expect(one?.emergentNote).toBe('One fourth crease fits with this paper staying put.');
-    one?.emergent?.next.run();
-    expect(calls.stepEmergent).not.toHaveBeenCalled();
-    // None lands: no step, so nothing to refuse, and the row says so where it always is.
-    const none = foldToolWindow(t, view({ ...ear, fourths: 0, known: false }, { preview: preview() }), calls, mouse);
-    expect(none?.vertex?.emergent).toMatchObject({ value: 'None', next: { disabled: true } });
-    expect(none?.vertex?.emergentNote).toBe('No fourth crease fits with this paper staying put: click other paper to stay.');
-    expect(none?.refusal).toBeNull();
+    expect(one?.emergent).toBeNull();
+    expect(one?.emergentNote).toBe('The hinge crease lies in the selected region.');
+    expect(one && hasVertexChoices(one)).toBe(true);
+    const blocked = { ...ear, fourths: 0, known: false };
+    const none = foldToolWindow(t, view(blocked, { preview: preview() }), calls, mouse);
+    expect(none?.vertex?.emergent).toBeNull();
+    expect(none?.vertex?.emergentNote).toBe('This hinge region cannot fold with these layers. Click another region or change the layers.');
     expect(none?.footer?.commit.disabled).toBe(true);
-    const touch = foldToolWindow(t, view({ ...ear, fourths: 0, known: false }, { preview: preview() }), calls, finger);
-    expect(touch?.vertex?.emergentNote).toBe('No fourth crease fits with this paper staying put: tap other paper to stay.');
-    // Nor would other paper staying: pick again.
-    const nowhere = { ...ear, fourths: 0, known: false, fourthElsewhere: false };
-    expect(foldToolWindow(t, view(nowhere, { preview: preview() }), calls, mouse)?.vertex?.emergentNote).toBe(
-      'No fourth crease fits these creases, whichever paper stays: press Esc and pick again.'
+    expect(foldToolWindow(t, view(blocked, { preview: preview() }), calls, finger)?.vertex?.emergentNote).toBe(
+      'This hinge region cannot fold with these layers. Tap another region or change the layers.'
     );
-    expect(foldToolWindow(t, view(nowhere, { preview: preview() }), calls, finger)?.vertex?.emergentNote).toBe(
-      'No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.'
-    );
-    // Other paper would: said so, as before the answer is in.
-    expect(
-      foldToolWindow(t, view({ ...nowhere, fourthElsewhere: true }, { preview: preview() }), calls, mouse)?.vertex?.emergentNote
-    ).toBe('No fourth crease fits with this paper staying put: click other paper to stay.');
+    expect(calls.stepEmergent).not.toHaveBeenCalled();
   });
 
   it('keeps a swivel’s steps once previewed, its last in hand, and steps its ridge by name only when both land', () => {
@@ -645,7 +633,7 @@ describe('a vertex fold’s refusals', () => {
     kite.actions.forEach((action) => action.run());
     expect(calls.petalByEnds).toHaveBeenCalledTimes(1);
     expect(calls.precreaseKite).toHaveBeenCalledTimes(1);
-    // By its ends, the fold creases the kite already: only the Precrease tool is left to offer.
+    // By its ends, the fold creases the kite already: only Fold and unfold is left to offer.
     const byEnds = foldRefusalNotice(t, refused(kiteBody), vertexContext('petal', { hinge: 'points' }), calls);
     expect(byEnds.actions.map((action) => action.label)).toEqual(['Precrease the kite']);
     // Read-only: shown, none taken.

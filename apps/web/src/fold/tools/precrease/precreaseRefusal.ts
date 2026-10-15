@@ -3,7 +3,7 @@
  * an extent that does not resolve — a point off the paper, a stretch too
  * short to crease, over no paper or none of the layers the precrease goes
  * through — and the marks the state's gate turns away. Each says what to do,
- * and the buttons the Precrease tool can offer where the engine offers none:
+ * and the buttons Fold and unfold can offer where the engine offers none:
  * crease the whole line, pinch where a too-short segment starts, crease
  * through every layer.
  *

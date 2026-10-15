@@ -49,6 +49,7 @@ const SEED: FoldSeedView = { picked: new Set([0, 1]), added: new Set(), needed: 
 function verbs(): FoldCanvasVerbs {
   return {
     selectTool: vi.fn(),
+    setFoldAndUnfold: vi.fn(),
     selectLineMode: vi.fn(),
     turn: vi.fn(),
     hitTest: vi.fn(),

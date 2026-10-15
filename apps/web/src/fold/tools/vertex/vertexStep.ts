@@ -8,9 +8,8 @@
  * - **The asked op** ({@link vertexAskedOp}) is what the engine is asked to
  *   describe first (the compound question): the clicks' sheet anchors, the
  *   direction, a fan's layers — the geometry the folder's choices are made
- *   against. A fan's fourth ray is not known before the engine lists its
- *   candidates, so it is asked with a placeholder ray, and the answer lists
- *   every candidate and which land; a squash is asked with its spine on the
+ *   against. A rabbit ear's hinge ray is fixed by the region clicked;
+ *   its stationary anchor is resolved automatically. A squash is asked with its spine on the
  *   hinge, so its vertex is known wherever the folder aims it; a swivel by its
  *   edge is asked with the ridge square to the edge, and the answer lists both
  *   ridges and which land.
@@ -30,10 +29,9 @@
  * petal). It is found here, from the scene, so a click keeps meaning the same
  * flap when the direction changes.
  *
- * **The paper that stays** in a rabbit ear is one of the regions between its
- * given rays, the one clicked in (`fanGeometry`): the stayer stored is the
- * sheet point that names that region, on the farthest layer the fan cuts, so
- * the wedge the engine keeps still is the region the canvas lit.
+ * **The hinge region** in a rabbit ear is picked after its three corners.
+ * Kawasaki's theorem fixes one fourth ray there. The other two regions are
+ * tried as stationary anchors, without changing the selected hinge.
  *
  * **A petal fold's hinge** is named as the folder chose ({@link petalHingeOf}):
  * the precrease clicked, or the line through two points clicked, which the
@@ -75,10 +73,10 @@ import {
 } from '../../document/foldSequenceDocument';
 import type { FoldVertexAnalysed } from '../../engine/foldEngineSquashWire';
 import type { FoldEngineRefused, FoldModelPoint } from '../../engine/foldEngineWire';
-import { applyIsometry, invertIsometry, lineThrough, sideOf, toPair } from '../../canvas/foldCanvasGeometry';
+import { applyIsometry, invertIsometry, lineThrough, polygonArea, sideOf, toPair } from '../../canvas/foldCanvasGeometry';
 import { foldStackAt, type FoldPick, type FoldPickIndex, type FoldSegmentPick } from '../../canvas/foldPicking';
 import { isVertexTool, type FoldLineBy, type FoldToolId, type FoldVertexToolId } from '../foldToolCatalog';
-import { fanRegionAt, fanStayer, fanToward, type FoldFanGiven } from './fanGeometry';
+import { fanHingeRay, fanLayerProbe, fanRegionAt, fanRegionOnFolded, fanStayer, fanToward, type FoldFanGiven } from './fanGeometry';
 import { lineByClicks, SWIVEL_TARGET_FROM } from './vertexInputs';
 
 /** What the tools have picked for a vertex fold, and every choice made of what the engine lists. */
@@ -290,7 +288,7 @@ export function fanCenterScene(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>)
   return a && b && c ? incenter([a, b, c]) : null;
 }
 
-/** How many clicks place a fan's given rays; the paper that stays is the click after them. Null for any other fold. */
+/** How many clicks place a fan's given rays; the hinge region is the click after them. Null for any other fold. */
 export function fanGivenClicks(tool: FoldVertexToolId): number | null {
   return tool === 'rabbit-ear' ? 3 : null;
 }
@@ -305,21 +303,21 @@ export function fanGiven(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>): Fold
   const center = fanCenterScene(intent);
   if (clicks === null || !center || intent.picks.length < clicks) return null;
   const toward = intent.picks.slice(clicks - 3, clicks).map(sceneOf);
-  return toward.every((q): q is Point => q !== null) ? fanToward(center, toward) : null;
+  return toward.every((q): q is Point => q !== null) ? fanToward(center, toward, true) : null;
 }
 
 /**
- * Whether a click now picks a fan's paper that stays: its next click, once
+ * Whether a click now picks a fan's hinge region: its next click, once
  * its given rays are placed, or a click while its fold is previewed, which
  * picks it again. `picks` is how many clicks are in.
  */
-export function picksFanStayer(tool: FoldToolId, picks: number): boolean {
+export function picksFanHinge(tool: FoldToolId, picks: number): boolean {
   const clicks = isVertexTool(tool) ? fanGivenClicks(tool) : null;
   return clicks !== null && (picks === clicks || picks === clicks + 1);
 }
 
-/** The region of `fan` the paper that stays was clicked in; null before that click, or at the center. */
-export function fanStayerRegion(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>, fan: FoldFanGiven): number | null {
+/** The region of `fan` the hinge was clicked in; null before that click, or at the center. */
+export function fanHingeRegion(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>, fan: FoldFanGiven): number | null {
   const clicks = fanGivenClicks(intent.tool);
   const scene = clicks === null ? null : sceneOf(intent.picks[clicks]);
   return scene ? fanRegionAt(fan, scene) : null;
@@ -327,7 +325,7 @@ export function fanStayerRegion(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>
 
 /** How many layers lie at a fan's center: what its layers stepper counts up to. */
 export function fanLayerCount(index: FoldPickIndex, center: Point): number {
-  return foldStackAt(index, center).length;
+  return foldStackAt(index, fanLayerProbe(index, center)).length;
 }
 
 /**
@@ -344,8 +342,18 @@ export function fanSeed(
   const count = fanLayerCount(index, center);
   if (count === 0) return null;
   if (layers === null || layers >= count) return { scope: 'all' };
-  const at = layerSheetPointAt(index, center, direction, 'near');
+  const at = layerSheetPointAt(index, fanLayerProbe(index, center), direction, 'near');
   return at ? { scope: 'depth', at, layers: Math.max(1, layers) } : null;
+}
+
+/** Prefer keeping the larger remaining region still, then try the other.
+ * This anchors the body of a model instead of flipping it with the ear.
+ */
+function fanAnchors(intent: FoldVertexIntent, index: FoldPickIndex, fan: FoldFanGiven, hinge: number): SheetPoint[] {
+  return [0, 1, 2].filter(k => k !== hinge).map(k => ({
+    at: fanStayer(index, fan, k, intent.direction, intent.fanLayers),
+    area: fanRegionOnFolded(index, fan, k).reduce((sum, polygon) => sum + Math.abs(polygonArea(polygon)), 0),
+  })).sort((a, b) => b.area - a.area).flatMap(({ at }) => at ? [at] : []);
 }
 
 // ---------------------------------------------------------------------------
@@ -380,14 +388,19 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
     case 'rabbit-ear': {
       if (picks.length < 4) return null;
       const points = picks.slice(0, 3).map(sheetOf);
-      // The paper that stays: the region clicked in, named on a layer the fan cuts.
+      // Fix the hinge in the clicked region; anchor another region automatically.
       const fan = fanGiven(intent);
-      const region = fan ? fanStayerRegion(intent, fan) : null;
-      const stayer = fan && region !== null ? fanStayer(index, fan, region, direction, intent.fanLayers) : null;
+      const region = fan ? fanHingeRegion(intent, fan) : null;
+      const ray = fan && region !== null ? fanHingeRay(fan, region) : null;
+      if (!ray) return refusedAs({ code: 'fan_not_flat' });
+      const stayer = fan && region !== null ? fanAnchors(intent, index, fan, region)[0] ?? null : null;
       const seed = fan ? fanSeed(index, fan.center, direction, intent.fanLayers) : null;
       const [a, b, c] = points;
       if (!a || !b || !c || !stayer || !seed) return offPaper(null);
-      return { kind: 'rabbit-ear', corners: [a, b, c], emergent: PLACEHOLDER_RAY, seed, stayer, direction };
+      const origin = index.toModel({ x: 0, y: 0 });
+      const tip = index.toModel(ray);
+      const emergent: FoldModelDirection = [tip.x - origin.x, tip.y - origin.y];
+      return { kind: 'rabbit-ear', corners: [a, b, c], emergent, seed, stayer, direction };
     }
     case 'swivel': {
       if (picks.length < SWIVEL_TARGET_FROM + lineByClicks(intent.swivelTarget)) return null;
@@ -406,21 +419,13 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
   }
 }
 
-/**
- * The asked op of a rabbit ear with each other region as the paper that
- * stays: what is asked when none of its fourth creases lands with the region
- * picked, to tell whether other paper would help. Empty for any other fold,
- * or before the paper that stays is picked.
- */
-export function fanOpsElsewhere(intent: FoldVertexIntent, index: FoldPickIndex, asked: FoldVertexOp): FoldVertexOp[] {
-  if (asked.kind !== 'rabbit-ear') return [];
+/** Try the other stationary region without changing the selected hinge or layers. */
+export function fanAnchorAlternative(intent: FoldVertexIntent, index: FoldPickIndex, asked: FoldVertexOp): FoldVertexOp | null {
+  if (asked.kind !== 'rabbit-ear') return null;
   const fan = fanGiven(intent);
-  const picked = fan ? fanStayerRegion(intent, fan) : null;
-  if (!fan || picked === null) return [];
-  return fan.rays.flatMap((_, k) => {
-    const stayer = k === picked ? null : fanStayer(index, fan, k, intent.direction, intent.fanLayers);
-    return stayer ? [{ ...asked, stayer }] : [];
-  });
+  const picked = fan ? fanHingeRegion(intent, fan) : null;
+  const stayer = fan && picked !== null ? fanAnchors(intent, index, fan, picked).find(at => at[0] !== asked.stayer[0] || at[1] !== asked.stayer[1]) : null;
+  return stayer ? { ...asked, stayer } : null;
 }
 
 /**
@@ -432,10 +437,14 @@ export function fanOpsElsewhere(intent: FoldVertexIntent, index: FoldPickIndex, 
  */
 export function landingFourths(answer: FoldVertexAnalysed | null): number[] {
   const analysis = answer?.analysis;
+  if (analysis?.kind === 'rabbit-ear') {
+    const k = analysis.emergent;
+    return k !== null && (answer?.emergents[k] === true) ? [k] : [];
+  }
   const listed =
     analysis?.kind === 'swivel-by-edge'
       ? analysis.ridges
-      : analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel'
+      : analysis?.kind === 'swivel'
         ? analysis.candidates
         : [];
   return listed.flatMap((_, k) => ((answer?.emergents[k] ?? true) ? [k] : []));

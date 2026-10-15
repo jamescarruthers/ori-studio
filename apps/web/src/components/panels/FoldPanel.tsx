@@ -13,6 +13,7 @@ import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { useLayoutStore } from '../../store/layoutStore';
 import { FileDropOverlay } from '../FileDropOverlay';
 import { FoldCanvas } from '../fold/canvas/FoldCanvas';
+import { FoldReturnBar } from '../fold/return/FoldReturnBar';
 import { FoldHeader } from '../fold/FoldHeader';
 import { FoldWorkspaceRail } from '../fold/FoldWorkspaceRail';
 import { FoldStepStrip } from '../fold/steps/FoldStepStrip';
@@ -78,6 +79,7 @@ export function FoldPanel() {
             sendToEdit={sendToEdit}
             drawerSlot={setViewDrawerSlot}
           />
+          <FoldReturnBar />
           {view === 'steps' ? (
             <div className={`panel-body ${styles.steps}`}>
               <FoldStepsGrid view={sequence} />

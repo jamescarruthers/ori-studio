@@ -92,9 +92,10 @@ function verbsOf(flow: Flow) {
 }
 
 /** A tool taken in hand from the rail, and its line mode. */
-async function take(flow: Flow, tool: FoldToolId, lineMode?: FoldLineModeId) {
+async function take(flow: Flow, tool: FoldToolId, lineMode?: FoldLineModeId, foldAndUnfold = false) {
   await act(async () => {
     verbsOf(flow).selectTool(tool);
+    verbsOf(flow).setFoldAndUnfold(foldAndUnfold);
     if (lineMode) verbsOf(flow).selectLineMode(lineMode);
     await settle();
   });
@@ -227,7 +228,7 @@ describe.skipIf(!FOLD_FLOW_AVAILABLE)('the fold examples made fresh through the 
 
     // 2. Precrease, Axiom 2: the bottom-right corner onto the top-left. The
     // triangle's half is one flap, its two layers joined by the fold: every layer.
-    await take(flow, 'precrease', 'axiom-2');
+    await take(flow, 'valley', 'axiom-2', true);
     await clickAxiom(flow, step(2));
     await landedStep(flow);
     expectStoredRoot(flow, step(2));
@@ -362,7 +363,7 @@ describe.skipIf(!FOLD_FLOW_AVAILABLE)('the fold examples made fresh through the 
     // at each line; the top one, Flap 1, is pressed by default and alone
     // folds — what the README had the folder unpress Flap 2 for.
     for (const n of [6, 7]) {
-      await take(flow, 'precrease', 'axiom-3');
+      await take(flow, 'valley', 'axiom-3', true);
       await clickAxiom(flow, step(n));
       await landedStep(flow);
       expectStoredRoot(flow, step(n));

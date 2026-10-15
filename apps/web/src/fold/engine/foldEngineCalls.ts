@@ -46,6 +46,7 @@ import type {
 export interface FoldWasmEngine {
   sheet(paper: unknown): unknown;
   apply(state: number, op: unknown, choices: unknown): unknown;
+  return_to(current: number, target: number, history: Uint32Array): unknown;
   summary(state: number): unknown;
   canonical_keys(state: number): string[];
   release(states: Uint32Array): number;
@@ -116,6 +117,7 @@ export interface FoldEngineCalls {
   step(state: number, op: FoldEngineOp, choices?: FoldChoices): FoldEngineOutcome<FoldStepFingerprinted>;
   summary(state: number): FoldStateSummary;
   fingerprint(state: number): FoldStateFingerprint;
+  returnTo(current: number, target: number, history: readonly number[]): FoldEngineOutcome<FoldStepFingerprinted>;
   /** Let states go; how many were held. */
   release(states: readonly number[]): number;
   clear(): void;
@@ -175,6 +177,12 @@ export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
 
     step(state, op, choices) {
       const landed = apply(state, op, choices);
+      return landed.status === 'ok' ? { ...landed, fingerprint: fingerprint(landed.state) } : landed;
+    },
+
+    returnTo(current, target, history) {
+      const landed = engine.return_to(requireHandle('current', current), requireHandle('target', target),
+        Uint32Array.from(history.map((id) => requireHandle('history', id)))) as FoldEngineOutcome<FoldStepLanded>;
       return landed.status === 'ok' ? { ...landed, fingerprint: fingerprint(landed.state) } : landed;
     },
 

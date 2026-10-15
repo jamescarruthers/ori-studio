@@ -2388,6 +2388,14 @@ export interface FoldSliceActions {
    * `loadId` the sequences have been replaced since (a preview that outlived
    * them).
    */
+  updateFoldReturn: (stepId: string,
+    expected: import('../../fold/document/foldSequenceDocument').FoldReturnOp,
+    op: import('../../fold/document/foldSequenceDocument').FoldReturnOp,
+    expect: string, loadId?: number) => boolean;
+  updateFoldCollapse: (stepId: string,
+    expected: import('../../fold/document/foldSequenceDocument').FoldCpJumpOp,
+    op: import('../../fold/document/foldSequenceDocument').FoldCpJumpOp,
+    expect: string, loadId: number) => boolean;
   commitFoldStep: (draft: FoldStepDraft, options?: { loadId?: number }) => string | null;
   /**
    * "Delete this step and what follows" (D6): the step and its subtree,

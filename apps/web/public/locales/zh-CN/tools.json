@@ -358,7 +358,6 @@
       "fold": "折叠",
       "locate": "确定折线",
       "model": "模型",
-      "planned": "计划中",
       "reference": "参考点",
       "sink": "沉折"
     },
@@ -392,12 +391,6 @@
       "free": "自由线",
       "freeHelp": "随处画出的线，没有参考。"
     },
-    "mark": {
-      "mountain": "M",
-      "precrease": "P",
-      "reverse": "RF",
-      "valley": "V"
-    },
     "note": {
       "acrossLayers": "这些点位于被折叠分开的层上，因此折线经过它们在折叠形态中的位置。折痕图显示这次折叠产生的折痕。",
       "along": "点会吸附到线与折痕、边和印记的交点、线上的点以及线的中点。",
@@ -422,7 +415,6 @@
       "openSink": "开放沉折",
       "outsideReverse": "外翻折",
       "petal": "花瓣折",
-      "pleat": "阶梯折",
       "rabbitEar": "兔耳折",
       "squash": "压平折",
       "swivel": "旋转折",
@@ -434,8 +426,6 @@
       "title": "折叠工具",
       "trigger": "工具"
     },
-    "plannedPleat": "没有单独的工具：阶梯折可以用两次普通折叠完成，先谷折，再在旁边山折。",
-    "plannedReason": "计划中：Ori Studio 尚未提供。",
     "playStep": "播放步骤",
     "railLabel": "折叠工具",
     "readOnly": {
@@ -776,8 +766,6 @@
       "mountain": "山折",
       "mountainHelp": "把移动的一侧向远离你的方向折，使它落在下面。",
       "openSinkHelp": "把闭合角的尖端推进去，并把它的每一层翻转。",
-      "precrease": "预折",
-      "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
       "reverse": "反折",
       "reverseHelp": "将折翼向内折入或向外包折，反转脊线折痕。",
       "rotateHelp": "将模型旋转一部分圈数或精确角度，先预览，再作为单独的一步添加。",
@@ -801,7 +789,6 @@
     "vertex": {
       "direction": "方向",
       "directionCannot": "朝这个方向，这里无法折平。",
-      "emergent": "第四折痕",
       "fix": {
         "creaseKites": "折叠时压出风筝形折痕",
         "emergent": "使用适用的第四折痕",
@@ -812,14 +799,15 @@
         "precreaseKite": "预折风筝形",
         "resetTarget": "把脊放回铰链上"
       },
-      "fourthNone": "无",
-      "fourthsFit_other": "此纸不动时，有 {{count}} 条第四折痕适用。",
       "help": {
         "petalHinge": "沿铰链抬起翼片的下尖，同时沿两条风筝形折痕把两侧向内折。",
         "rabbitEar": "沿角平分线把三角形的各角向内折，使一个尖立起来。",
         "squash": "打开一个两层的翼片并压平，让它的脊落在铰链上。",
         "swivelEdge": "以一点为支点，把一条边旋转到一条线上。"
       },
+      "hingeRegionBlocked": "所选纸层无法在此区域形成铰链折痕。请点击其他区域或更改纸层。",
+      "hingeRegionBlockedTouch": "所选纸层无法在此区域形成铰链折痕。请轻触其他区域或更改纸层。",
+      "hingeRegionFits": "铰链折痕位于所选区域内。",
       "intro": {
         "petalLift": "沿铰链抬起翼片的尖端。",
         "swivelSwing": "把纸的一条边旋转到一条线上。"
@@ -842,10 +830,6 @@
       },
       "mountain": "山",
       "mountainTitle": "山：纸朝远离你的方向转",
-      "noFourth": "此纸不动时，没有适用的第四折痕：单击另一处纸，让它保持不动。",
-      "noFourthAnywhere": "无论哪处纸保持不动，都没有适合这些折痕的第四折痕：按 Esc 后重新选择。",
-      "noFourthAnywhereTouch": "无论哪处纸保持不动，都没有适合这些折痕的第四折痕：轻点“取消”后重新选择。",
-      "noFourthTouch": "此纸不动时，没有适用的第四折痕：轻点另一处纸，让它保持不动。",
       "note": {
         "petalCreasesAll": "翼片抬起时，会在最上层压出铰链，并在最上面两层压出两条风筝形折痕。",
         "petalCreasesHinge": "翼片抬起时，会在最上层压出铰链。风筝形折痕已经存在。",
@@ -885,7 +869,7 @@
           "title": "第四折痕在这里无法立起"
         },
         "kite": {
-          "creaseOrPrecrease": "以铰链折痕做花瓣折时，只会重新折起已有的折痕，而风筝形折痕还没有。请改用两个端点指定铰链，折叠时会自动压出风筝形折痕；或者先用“预折”工具的公理 3 预折它们：把上层翼片的一条下边折到中心线上，不含后面的翼片。",
+          "creaseOrPrecrease": "以铰链折痕做花瓣折时，只会重新折起已有的折痕，而风筝形折痕还没有。请改用两个端点指定铰链，折叠时会自动压出风筝形折痕；或者先用“折叠后展开”选项和公理 3 预折它们：把上层翼片的一条下边折到中心线上，不含后面的翼片。",
           "titleMissing": "缺少风筝形折痕"
         },
         "line": {
@@ -989,16 +973,16 @@
       "reset": "放回铰链",
       "ridge": "脊线",
       "steps": {
-        "earChoose": "选择第四折痕和层，或单击另一部分让它保持不动。",
-        "earChooseTouch": "选择第四折痕和层，或轻点另一部分让它保持不动。",
-        "earFinish": "选择第四折痕，然后按 Enter。",
-        "earFinishTouch": "选择第四折痕，然后轻点“{{action}}”。",
+        "earChoose": "选择纸层，或点击其他区域以放置铰链折痕。",
+        "earChooseTouch": "选择纸层，或轻触其他区域以放置铰链折痕。",
+        "earFinish": "按 Enter 键折叠。",
+        "earFinishTouch": "轻触{{action}}进行折叠。",
         "earFirstCorner": "单击三角形的第一个角。",
         "earFirstCornerTouch": "轻点三角形的第一个角。",
+        "earHingeRegion": "点击铰链折痕所在的区域。",
+        "earHingeRegionTouch": "轻触铰链折痕所在的区域。",
         "earSecondCorner": "单击它的第二个角。",
         "earSecondCornerTouch": "轻点它的第二个角。",
-        "earStay": "单击纸上保持不动的那部分。",
-        "earStayTouch": "轻点纸上保持不动的那部分。",
         "earThirdCorner": "单击它的第三个角。",
         "earThirdCornerTouch": "轻点它的第三个角。",
         "fixOrPickAgain": "单击下面的修正，或按 Esc 后重新选择。",
@@ -1048,6 +1032,7 @@
     "window": {
       "cancel": "取消",
       "finding": "正在查找折线处的层…",
+      "foldAndUnfold": "折叠后展开",
       "instructions": "操作说明",
       "kind": "折法",
       "label": "折叠工具选项",

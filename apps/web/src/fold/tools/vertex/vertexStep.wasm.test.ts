@@ -2,8 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../../../lib/geometry';
-import { lineThrough, sideOf } from '../../canvas/foldCanvasGeometry';
-import { foldPickIndex, topSheetPointAt, type FoldPick, type FoldPickIndex } from '../../canvas/foldPicking';
+import { applyIsometry, invertIsometry, lineThrough, sideOf } from '../../canvas/foldCanvasGeometry';
+import { foldPickIndex, foldStackAt, topSheetPointAt, type FoldPick, type FoldPickIndex } from '../../canvas/foldPicking';
 import type { FoldChoices, FoldOp, FoldVertexOp } from '../../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../../engine/foldEngineCompoundCalls';
@@ -17,7 +17,7 @@ import { FOLD_TOOL_INITIAL, type FoldToolState } from '../foldToolState';
 import type { FoldToolHost, FoldToolWindowVerbs } from '../foldToolWindow';
 import {
   fanHasNoFourth,
-  fanOpsElsewhere,
+  fanAnchorAlternative,
   landingFourths,
   layerSheetPointAt,
   vertexAskedOp,
@@ -29,6 +29,8 @@ import {
   type FoldVertexTaken,
 } from './vertexStep';
 import { vertexControls } from './vertexToolWindow';
+import { fanGivenCreases } from './fanGeometry';
+import { fanGiven } from './vertexStep';
 
 /**
  * Each vertex fold over the real bridge, in-process, as its tool folds it:
@@ -124,9 +126,16 @@ interface Folded {
 
 /** A vertex fold as its tool builds it (see the module docs). */
 function vertexFold(engined: Engine, state: number, wanted: FoldVertexIntent, taken: FoldVertexTaken = NONE): Folded {
-  const base = vertexAskedOp(wanted, indexOf(engined.calls, state));
+  let base = vertexAskedOp(wanted, indexOf(engined.calls, state));
   if (!base || 'status' in base) throw new Error(`no op: ${JSON.stringify(base)}`);
-  const first = described(ask(engined, state, base));
+  let first = described(ask(engined, state, base));
+  if (fanHasNoFourth(first)) {
+    const alternative = fanAnchorAlternative(wanted, indexOf(engined.calls, state), base);
+    if (alternative) {
+      const answer = described(ask(engined, state, alternative));
+      if (!fanHasNoFourth(answer)) { base = alternative; first = answer; }
+    }
+  }
   const chosen = vertexChosenOp(base, first, taken);
   if (!chosen) throw new Error('no fourth crease lands');
   const answer = chosen.again ? described(ask(engined, state, chosen.op)) : first;
@@ -405,7 +414,7 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
       landmark(p(0, 0), [0, 0]),
       landmark(p(1, 0), [1, 0]),
       landmark(p(0, 1), [0, 1]),
-      free(p(0.6, 0.35)),
+      free(p(0.1, 0.3)),
     ];
     const ear = vertexFold(engined, tri, intent({ tool: 'rabbit-ear', picks }));
     if (ear.first.analysis.kind !== 'rabbit-ear') throw new Error('not a rabbit ear');
@@ -447,7 +456,7 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
       landmark(p(0, 0), [0, 0]),
       landmark(p(1, 0), [1, 0]),
       landmark(p(1, 1), [1, 1]),
-      free(p(0.25, 0.75)),
+      free(p(0.9, 0.2)),
     ];
     const corners = [
       [0, 0],
@@ -462,6 +471,63 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
       const [group] = groups;
       expect(group!.find((crease) => crease.toCorner)?.letter).toBe(direction);
     }
+  });
+
+  it('rabbit-ears the saved Whale prefix through its existing precreases via the same four UI picks', async () => {
+    const fixture = JSON.parse(readFileSync(resolve(process.cwd(), '../../tests/fixtures/fold-examples/rabbit-ear-precreased-whale.json'), 'utf8'));
+    const engined = await engine();
+    const { calls } = engined;
+    let state = landed(calls.sheet(fixture.paper)).state;
+    for (const step of fixture.steps) state = landed(calls.step(state, step.op, step.choices)).state;
+    const direct = landed(calls.step(state, fixture.op));
+    const index = indexOf(calls, state);
+    const corners = fixture.op.corners as [number, number][];
+    // The bridge's rabbit-ear corner anchors are original-sheet points.
+    const picks = corners.map(c => {
+      const scene = index.toScene(p(c[0], c[1]));
+      return landmark(scene, c);
+    });
+    const selectedRegion = index.toScene(p(0.93, 0.29));
+    const wanted = intent({ tool: 'rabbit-ear', picks: [...picks, free(selectedRegion)] });
+    const given = fanGiven(wanted)!;
+    const pending = fanGivenCreases(index, given, 'valley', null);
+    expect(pending).toHaveLength(3);
+    for (const segment of pending) {
+      expect(Math.hypot(segment.scene[1].x - given.center.x, segment.scene[1].y - given.center.y)).toBeCloseTo(given.limits![segment.ray]!, 8);
+    }
+    const ear = vertexFold(engined, state, wanted);
+    expect(landingFourths(ear.first)).toHaveLength(1);
+    const folded = land(engined, state, ear.built.step);
+    expect(folded.fingerprint).toBe(direct.fingerprint);
+    // Serialization keeps exactly the public operation and choices used by preview.
+    const reopened = land(engined, state, JSON.parse(JSON.stringify(ear.built.step)));
+    expect(reopened.fingerprint).toBe(folded.fingerprint);
+    const fish = landed(calls.step(folded.state, fixture.second));
+    // Both ears must match the control that omitted the preparation marks,
+    // including which original sheet points and paper sides appear in each layer.
+    let control = landed(calls.sheet(fixture.paper)).state;
+    for (const step of fixture.steps.slice(0, 2)) control = landed(calls.step(control, step.op)).state;
+    control = landed(calls.step(control, fixture.op)).state;
+    control = landed(calls.step(control, fixture.second)).state;
+    const actualIndex = indexOf(calls, fish.state);
+    const controlIndex = indexOf(calls, control);
+    let compared = 0;
+    for (let x = -12; x <= 12; x += 1) for (let y = 0; y <= 28; y += 1) {
+      const point = p(x / 20 + 0.00131, y / 20 + 0.00217);
+      const stack = (index: FoldPickIndex) => foldStackAt(index, point).map(f => ({
+        material: applyIsometry(invertIsometry(index.scene.face_transforms[f]!), point),
+        front: index.scene.faces[f]!.front_up,
+      }));
+      const actual = stack(actualIndex), expected = stack(controlIndex);
+      expect(actual.length).toBe(expected.length);
+      actual.forEach((layer, i) => {
+        expect(layer.material.x).toBeCloseTo(expected[i]!.material.x, 7);
+        expect(layer.material.y).toBeCloseTo(expected[i]!.material.y, 7);
+        expect(layer.front).toBe(expected[i]!.front);
+        compared += 1;
+      });
+    }
+    expect(compared).toBeGreaterThan(100);
   });
 
   it('swivels the bottom edge onto the precreased diagonal by its edge, stepping its ridge among those that land', async () => {
@@ -508,7 +574,7 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     expect(fingerprints.size).toBe(fourths.length);
   });
 
-  it('offers only the fourth creases that land in the owner’s case, each landing, listed anew for other paper', async () => {
+  it('uses exactly the hinge region picked, with no separate fourth-crease control', async () => {
     // A square precreased on its diagonal, top left to bottom right; the
     // triangle above it rabbit-eared, its corners clicked as landmarks.
     const engined = await engine();
@@ -548,43 +614,18 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
       return { ear, fourths, candidates: ear.first.analysis.candidates.length, controls };
     };
 
-    // The lower-left half stays: of three candidates, the one into it is refused; two are offered.
-    const below = offered(p(0.3, 0.3));
-    expect(below.candidates).toBe(3);
-    expect(below.fourths).toHaveLength(2);
-    expect(below.controls.emergent?.value).toBe('1 of 2');
-    expect(below.controls.emergentNote).toBe('2 fourth creases fit with this paper staying put.');
-    // Each offered one lands as the step its tool builds.
-    for (const emergent of below.fourths) {
-      const stepped = vertexFold(engined, precreased, intent({ tool: 'rabbit-ear', picks: [...corners, free(p(0.3, 0.3))] }), {
-        ...NONE,
-        emergent,
-      });
-      expect(stepped.emergent).toBe(emergent);
-      landed(calls.step(precreased, stepped.built.step.op, stepped.built.step.choices));
-    }
-    // The candidate not offered is the engine's to refuse, never the window's to show.
-    const refusedOne = [0, 1, 2].find((k) => !below.fourths.includes(k))!;
-    expect(calls.step(precreased, withEmergent(below.ear.base, below.ear.first, refusedOne)).status).toBe('refused');
-
-    // The other regions, asked when one lands nowhere: here each has one.
-    const elsewhere = fanOpsElsewhere(
-      intent({ tool: 'rabbit-ear', picks: [...corners, free(p(0.3, 0.3))] }),
-      indexOf(calls, precreased),
-      below.ear.base
-    );
-    expect(elsewhere).toHaveLength(2);
-    for (const op of elsewhere) expect(fanHasNoFourth(described(ask(engined, precreased, op)))).toBe(false);
-
-    // The triangle's top stays, or its right: one fourth crease lands each time, its row kept in place.
+    const fingerprints = new Set<string>();
     for (const at of [p(0.72, 0.9), p(0.9, 0.6)]) {
       const other = offered(at);
       expect(other.fourths, `${at.x},${at.y}`).toHaveLength(1);
-      expect(other.controls.emergent?.value).toBe('1 of 1');
-      expect(other.controls.emergent?.next.disabled).toBe(true);
-      expect(other.controls.emergentNote).toBe('One fourth crease fits with this paper staying put.');
-      landed(calls.step(precreased, other.ear.built.step.op, other.ear.built.step.choices));
+      expect(other.controls.emergent).toBeNull();
+      expect(other.controls.emergentNote).toBe('The hinge crease lies in the selected region.');
+      fingerprints.add(landed(calls.step(precreased, other.ear.built.step.op, other.ear.built.step.choices)).fingerprint);
     }
+    expect(fingerprints.size).toBe(2);
+    // The lower-left region aims into attached paper. Neither automatic
+    // anchor may replace that selected hinge with one of the other rays.
+    expect(() => offered(p(0.3, 0.3))).toThrow('no fourth crease lands');
   });
 
   it('builds no step when no fourth crease lands, and finds none for other paper on the twice-precreased square’s top triangle', async () => {
@@ -612,8 +653,8 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     // No step, so no preview to refuse.
     expect(vertexChosenOp(base, first, NONE)).toBeNull();
     // Nor would the triangle's other regions staying help.
-    const elsewhere = fanOpsElsewhere(wanted, index, base);
-    expect(elsewhere).toHaveLength(2);
-    for (const op of elsewhere) expect(fanHasNoFourth(described(ask(engined, twice, op)))).toBe(true);
+    const elsewhere = fanAnchorAlternative(wanted, index, base);
+    expect(elsewhere).not.toBeNull();
+    if (elsewhere) expect(fanHasNoFourth(described(ask(engined, twice, elsewhere)))).toBe(true);
   });
 });

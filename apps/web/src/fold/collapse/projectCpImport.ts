@@ -1,0 +1,44 @@
+import { CREASE_PATTERN_DOCUMENT_ID } from '../../lib/nativeProjectDesigns';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { exportOristudioCpDocumentAsFold } from '../../store/workspaceStore/oristudioCpRuntime';
+import type { FoldProjectCpImport } from '../io/foldImportFlow';
+import { canonicalJson } from '../document/foldDigest';
+import { projectCpRevision } from './projectCpRevision';
+
+/** Capture once. An editor change after capture leaves the saved revision
+ * alone; a different project, sequence edit or cursor move cancels the transaction. */
+export async function projectCpImport(stepId?: string): Promise<FoldProjectCpImport | null> {
+  const before = useWorkspaceStore.getState();
+  const cp = before.oristudioCpDocument;
+  const sequence = before.foldSequences[0]?.document;
+  const node = stepId ? sequence?.steps.find((step) => step.id === stepId) : undefined;
+  if (!cp || (stepId && (node?.op?.kind !== 'cp-jump' ||
+      node.op.source?.documentId !== CREASE_PATTERN_DOCUMENT_ID))) return null;
+  const revision = projectCpRevision(cp.document);
+  const text = await exportOristudioCpDocumentAsFold();
+  const after = useWorkspaceStore.getState();
+  if (after.projectLoadId !== before.projectLoadId || after.oristudioCpDocument?.loadSerial !== cp.loadSerial ||
+      !after.oristudioCpDocument || projectCpRevision(after.oristudioCpDocument.document) !== revision) return null;
+  const expected = node?.op?.kind === 'cp-jump' ? node.op : null;
+  const current = () => {
+    const now = useWorkspaceStore.getState();
+    return now.projectLoadId === before.projectLoadId && now.foldLoadId === before.foldLoadId &&
+      now.foldSequences === before.foldSequences && now.foldReader === before.foldReader;
+  };
+  return {
+    source: { format: 'fold', text },
+    link: { documentId: CREASE_PATTERN_DOCUMENT_ID, revision },
+    current,
+    ...(node && expected ? {
+      at: node.parent,
+      replace: (landed) => {
+        if (!current()) return false;
+        // A fresh resolution can land the exact saved revision and order.
+        // That is successful without manufacturing an undo entry.
+        if (canonicalJson(expected) === canonicalJson(landed.op) && 'expect' in node && node.expect === landed.fingerprint) return true;
+        return useWorkspaceStore.getState().updateFoldCollapse(
+          node.id, expected, landed.op, landed.fingerprint, before.foldLoadId);
+      },
+    } : {}),
+  };
+}

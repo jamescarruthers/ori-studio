@@ -18,6 +18,7 @@ function deps(): FoldActionDeps {
     setFoldKind: vi.fn(),
     turn: vi.fn(),
     rotate: vi.fn(),
+    unfold: vi.fn(),
     deleteStep: vi.fn(),
     importCp: vi.fn(),
     sendToEdit: vi.fn(),
@@ -61,6 +62,8 @@ describe('buildFoldActions', () => {
       '—',
       'turn-over',
       'rotate',
+      'unfold-last',
+      'unfold-to',
       '—',
       'import-cp',
       '—',
@@ -87,19 +90,18 @@ describe('buildFoldActions', () => {
     expect(command(replaying, 'send-path-to-diagram').disabled).toBe(true);
   });
 
-  it('offers the three fold kinds, the armed one checked, each setting itself', () => {
+  it('offers the two fold directions, the armed one checked, each setting itself', () => {
     const bound = deps();
     const kinds = choice(buildFoldActions(at({ foldKind: 'mountain' }), bound));
     expect(kinds.options.map((option) => [option.label, option.checked])).toEqual([
       ['Valley fold', false],
       ['Mountain fold', true],
-      ['Precrease', false],
     ]);
-    kinds.options[2]?.run();
-    expect(bound.setFoldKind).toHaveBeenCalledWith('precrease');
+    kinds.options[0]?.run();
+    expect(bound.setFoldKind).toHaveBeenCalledWith('valley');
     // Another tool in hand — a squash, a sink — arms no plain fold: none reads as chosen.
     const none = choice(buildFoldActions(at({ foldKind: null }), bound));
-    expect(none.options.map((option) => option.checked)).toEqual([false, false, false]);
+    expect(none.options.map((option) => option.checked)).toEqual([false, false]);
   });
 
   it('names Turn over as its card does and adds it at once, and takes the Rotate tool for a rotation', () => {

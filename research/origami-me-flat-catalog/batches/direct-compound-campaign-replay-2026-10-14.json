@@ -1,0 +1,497 @@
+{
+  "files": 49,
+  "nodes": 694,
+  "states": 743,
+  "results": [
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/angelfish.osf",
+      "sequences": [
+        {
+          "nodes": 14,
+          "states": 15,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/bookmark.osf",
+      "sequences": [
+        {
+          "nodes": 12,
+          "states": 13,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/cat-face.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/christmas-tree.osf",
+      "sequences": [
+        {
+          "nodes": 10,
+          "states": 11,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/cicada.osf",
+      "sequences": [
+        {
+          "nodes": 16,
+          "states": 17,
+          "recordedHashesMatch": null
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/crow.osf",
+      "sequences": [
+        {
+          "nodes": 34,
+          "states": 35,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/easter-egg.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/fish.osf",
+      "sequences": [
+        {
+          "nodes": 9,
+          "states": 10,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/heart.osf",
+      "sequences": [
+        {
+          "nodes": 18,
+          "states": 19,
+          "recordedHashesMatch": null
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/penguin.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/pigeon.osf",
+      "sequences": [
+        {
+          "nodes": 12,
+          "states": 13,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/pumpkin.osf",
+      "sequences": [
+        {
+          "nodes": 25,
+          "states": 26,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/santa.osf",
+      "sequences": [
+        {
+          "nodes": 23,
+          "states": 24,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/squirrel.osf",
+      "sequences": [
+        {
+          "nodes": 34,
+          "states": 35,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/swan.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": null
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/completed/whale.osf",
+      "sequences": [
+        {
+          "nodes": 20,
+          "states": 21,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/3d/box.osf",
+      "sequences": [
+        {
+          "nodes": 13,
+          "states": 14,
+          "recordedHashesMatch": null
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/3d/crane.osf",
+      "sequences": [
+        {
+          "nodes": 24,
+          "states": 25,
+          "recordedHashesMatch": null
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/crab.osf",
+      "sequences": [
+        {
+          "nodes": 29,
+          "states": 30,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/dolphin.osf",
+      "sequences": [
+        {
+          "nodes": 7,
+          "states": 8,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/goldfish.osf",
+      "sequences": [
+        {
+          "nodes": 14,
+          "states": 15,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/horse.osf",
+      "sequences": [
+        {
+          "nodes": 16,
+          "states": 17,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/pentagon-from-square-paper.osf",
+      "sequences": [
+        {
+          "nodes": 9,
+          "states": 10,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-paper-to-square.osf",
+      "sequences": [
+        {
+          "nodes": 2,
+          "states": 3,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-to-hexagon.osf",
+      "sequences": [
+        {
+          "nodes": 5,
+          "states": 6,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-a.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-b.osf",
+      "sequences": [
+        {
+          "nodes": 10,
+          "states": 11,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/4-pointed-star.osf",
+      "sequences": [
+        {
+          "nodes": 21,
+          "states": 22,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/bird.osf",
+      "sequences": [
+        {
+          "nodes": 32,
+          "states": 33,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/camellia.osf",
+      "sequences": [
+        {
+          "nodes": 7,
+          "states": 8,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/chicken.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/dog.osf",
+      "sequences": [
+        {
+          "nodes": 15,
+          "states": 16,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/dove.osf",
+      "sequences": [
+        {
+          "nodes": 7,
+          "states": 8,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/elephant.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/envelope.osf",
+      "sequences": [
+        {
+          "nodes": 20,
+          "states": 21,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/fox.osf",
+      "sequences": [
+        {
+          "nodes": 9,
+          "states": 10,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/happi.osf",
+      "sequences": [
+        {
+          "nodes": 9,
+          "states": 10,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/heart-card-2.osf",
+      "sequences": [
+        {
+          "nodes": 20,
+          "states": 21,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/heart-corner-bookmark.osf",
+      "sequences": [
+        {
+          "nodes": 10,
+          "states": 11,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/heart-envelope.osf",
+      "sequences": [
+        {
+          "nodes": 9,
+          "states": 10,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/kimono.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/kitten.osf",
+      "sequences": [
+        {
+          "nodes": 8,
+          "states": 9,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/lantern.osf",
+      "sequences": [
+        {
+          "nodes": 17,
+          "states": 18,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/necktie.osf",
+      "sequences": [
+        {
+          "nodes": 6,
+          "states": 7,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/pajarita.osf",
+      "sequences": [
+        {
+          "nodes": 16,
+          "states": 17,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/paper-envelope.osf",
+      "sequences": [
+        {
+          "nodes": 11,
+          "states": 12,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/parrot.osf",
+      "sequences": [
+        {
+          "nodes": 8,
+          "states": 9,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/shirt.osf",
+      "sequences": [
+        {
+          "nodes": 9,
+          "states": 10,
+          "recordedHashesMatch": true
+        }
+      ]
+    },
+    {
+      "file": "research/2026-10-13-origami-fold-trials/models/in-progress/witch-hat.osf",
+      "sequences": [
+        {
+          "nodes": 16,
+          "states": 17,
+          "recordedHashesMatch": true
+        }
+      ]
+    }
+  ]
+}

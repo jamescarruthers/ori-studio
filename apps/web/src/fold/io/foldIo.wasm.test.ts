@@ -11,6 +11,9 @@ import type { PaperExportTarget } from '../../paperExport/paperExportTarget';
 import { createFoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineIoCalls } from '../engine/foldEngineIoCalls';
 import { FOLD_SAMPLES } from '../engine/foldEngineIoSamples';
+import { withFoldCursor } from '../document/foldReaderState';
+import { updateFoldCollapse } from '../document/foldSequenceEdits';
+import { readFoldSequence, writeFoldSequence } from '../document/foldSequenceFile';
 import type { FoldSequenceDocument } from '../document/foldSequenceDocument';
 import { createFoldSession, type FoldSession } from '../session/foldSession';
 import { inProcessFoldRuntime, memoryFoldDocument, settle } from '../session/foldSession.fixtures';
@@ -195,6 +198,63 @@ describe.skipIf(!available)('Import CP and the hand-offs over the built bridge',
     await expect(openFoldStepsExport(deps, 'all')).resolves.toBe(true);
     expect(exported[0]?.pages?.list.map((page) => page.label)).toEqual(['Step 1']);
     expect(deps.blocked).not.toHaveBeenCalled();
+  });
+
+  it('replays linked snapshots offline and marks affected descendants after an explicit update', async () => {
+    const { source, session } = await setup();
+    const half = JSON.stringify({ vertices_coords: [[0,0],[1,0],[1,1],[0,1],[.5,0],[.5,1]],
+      edges_vertices: [[0,4],[4,1],[1,2],[2,5],[5,3],[3,0],[4,5]],
+      edges_assignment: ['B','B','B','B','B','B','V'] });
+    const link = { documentId: 'crease-pattern', revision: 'saved' };
+    const flow = createFoldImportFlow({ session, editFoldedFigure: async () => null,
+      projectCp: async () => ({ source: { format: 'fold', text: half }, link, current: () => true }),
+    });
+    flows.push(flow);
+    await flow.open({ kind: 'project-cp' });
+    expect((await settled(flow)).phase).toBe('done');
+    const held = source.read().held!;
+    const collapse = held.document.steps[0]!;
+    if (collapse.op?.kind !== 'cp-jump') throw new Error('Expected linked collapse');
+    expect(collapse.op.source).toEqual(link);
+    const before = selectFoldCursorNode(session.store.getState()).fingerprint;
+    // Reopen with no live source adapter. Replay uses only the embedded CP/order.
+    const saved = readFoldSequence(JSON.parse(JSON.stringify(writeFoldSequence(held))))!;
+    source.set({ held: saved, loadId: 2 });
+    await settle(20);
+    expect(selectFoldCursorNode(session.store.getState()).fingerprint).toBe(before);
+    const child = source.commit({ parent: collapse.id, op: { kind: 'turn', axis: 'vertical' } }, 2)!;
+    await settle(20);
+    const childFingerprint = selectFoldCursorNode(session.store.getState()).fingerprint!;
+    const branch = source.commit({ parent: collapse.id, op: { kind: 'unfold', crease: [.5, .25],
+      direction: 'valley', seed: { scope: 'depth', at: [.25, .25], layers: 1 } } }, 2)!;
+    await settle(20);
+    expect(session.store.getState().nodes.get(branch)?.status).toBe('ok');
+    const doc = source.read().held!.document;
+    const expectedDoc = { ...doc, steps: doc.steps.map(node => node.id === child ? { ...node, expect: childFingerprint } : node) };
+    source.set({ held: { document: expectedDoc, readOnlyRaw: null } });
+    await settle(10);
+    const simple = JSON.stringify({ vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]], edges_assignment: ['B','B','B','B'] });
+    const update = createFoldImportFlow({ session, editFoldedFigure: async () => null,
+      projectCp: async () => ({ source: { format: 'fold', text: simple }, link: { ...link, revision: 'new' },
+        at: null, current: () => true, replace: (landed) => {
+          const document = updateFoldCollapse(expectedDoc, collapse.id, collapse.op as import('../document/foldSequenceDocument').FoldCpJumpOp, landed.op, landed.fingerprint);
+          source.set({ held: { document, readOnlyRaw: null } });
+          return document !== expectedDoc;
+        },
+      }),
+    });
+    flows.push(update);
+    await update.open({ kind: 'project-cp', stepId: collapse.id });
+    expect(await settled(update)).toMatchObject({ phase: 'done', stepId: collapse.id });
+    await settle(20);
+    expect(source.read().held!.document.steps).toHaveLength(3);
+    expect(source.read().held!.document.steps[1]).toMatchObject({ expect: childFingerprint });
+    expect(session.store.getState().nodes.get(branch)).toMatchObject({ status: 'broken' });
+    // The other branch remains in the document with its old expectation.
+    source.set({ reader: withFoldCursor(source.read().reader!, source.read().held!.document, child) });
+    await settle(20);
+    expect(session.store.getState().nodes.get(child)).toMatchObject({ status: 'changed' });
   });
 
   it('says why a pattern that does not fold flat was refused', async () => {

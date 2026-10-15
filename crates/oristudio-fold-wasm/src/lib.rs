@@ -171,6 +171,21 @@ impl FoldEngine {
         )
     }
 
+    /// A history-based return, with retained physical creases.
+    pub fn return_to(
+        &mut self,
+        current: u32,
+        target: u32,
+        history: Vec<u32>,
+    ) -> Result<JsValue, JsValue> {
+        to_js_value(
+            &self
+                .inner
+                .return_to(current, target, &history)
+                .map_err(bridge_error)?,
+        )
+    }
+
     pub fn summary(&self, state: u32) -> Result<JsValue, JsValue> {
         to_js_value(&self.inner.summary(state).map_err(bridge_error)?)
     }

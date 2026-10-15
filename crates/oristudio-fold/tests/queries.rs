@@ -16,9 +16,9 @@ use std::path::PathBuf;
 use oristudio_fold::numerics::{MIN_FEATURE, TOL};
 use oristudio_fold::random::Rng;
 use oristudio_fold::{
-    ActionKind, ClosurePolicy, CrossSection, DepthChoice, Direction, FaceId, FoldRefusal,
-    FoldScene, Folded, Isometry, PlainFold, RowOrder, ScenePoint, Seed, Sheet, Side, StartSide,
-    State, VertexId,
+    ActionKind, ClosurePolicy, CreaseKind, CrossSection, DepthChoice, Direction, FaceId,
+    FoldRefusal, FoldScene, Folded, Isometry, PlainFold, RowOrder, ScenePoint, Seed, Sheet, Side,
+    StartSide, State, VertexId,
 };
 use oristudio_geometry::Line;
 use serde_json::Value;
@@ -842,10 +842,34 @@ fn check_queries(
     let refolded: BTreeSet<_> = summary.diff.refolded.iter().map(|r| r.edge).collect();
     let reported: BTreeSet<_> = folded.report.refolded.iter().map(|r| r.edge).collect();
     assert_eq!(refolded, reported);
-    assert!(
-        summary.diff.reversed.is_empty(),
-        "a plain fold reverses no letter"
-    );
+    if !precreased {
+        assert!(
+            summary.diff.reversed.is_empty(),
+            "a plain fold reverses no letter"
+        );
+    } else {
+        // Re-precreasing can change an existing flat crease's memory.
+        let reversed: BTreeSet<_> = child
+            .creases()
+            .iter()
+            .filter(|c| {
+                let [a, b] = c.vertices.map(|v| child.vertices()[v.0 as usize]);
+                let middle = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
+                matches!((parent.crease_at(middle).map(|p| p.kind), c.kind),
+                (Some(CreaseKind::Flat(was)), CreaseKind::Flat(now)) if was != now)
+            })
+            .map(|c| c.id)
+            .collect();
+        assert_eq!(
+            summary
+                .diff
+                .reversed
+                .iter()
+                .copied()
+                .collect::<BTreeSet<_>>(),
+            reversed
+        );
+    }
     assert_eq!(summary.layers, Some(s.layers));
 
     // The depth picker, for a depth seed.

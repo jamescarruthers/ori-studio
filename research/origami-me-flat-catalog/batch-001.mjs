@@ -1,3 +1,4 @@
+import {modelFile} from './model-paths.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ const stateHash = (t) => hash(JSON.stringify(t.e.canonical_keys(t.state).sort())
 const template = JSON.parse(fs.readFileSync(path.join(dir, '../../tests/fixtures/fold-examples/petal-fold.osf')));
 
 export function publish(t, source, observations = {}) {
-  const filename = `models/${t.slug}.osf`;
+  const filename = modelFile(t.slug);
   const manifestFile = path.join(dir, `batches/${t.slug}.validation.json`);
   const destination = path.join(dir, filename);
   // User saves are authoritative. Never silently regenerate over an audited edit.
@@ -37,6 +38,7 @@ export function publish(t, source, observations = {}) {
     check.add(step.op, step.note, step.choices);
     assert.equal(stateHash(check), expected[i + 1]);
   }
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.writeFileSync(destination, serialized);
   fs.writeFileSync(manifestFile, JSON.stringify({ source, file: filename,
     fileSha256: hash(serialized), nodes: t.doc.steps.length,

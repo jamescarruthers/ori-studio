@@ -5,9 +5,9 @@
  *
  * - **Committing is append-only.** A step is added under its parent, never
  *   inserted; committing at a node that already has children makes a branch.
- *   No middle step is edited in place. A step is appended only as the file
+ *   A linked Collapse may be explicitly updated in place. A step is appended only as the file
  *   keeps it, so none comes back locked when the project is opened again.
- * - **The only in-place edits of a step are annotations** — its note, the
+ * - **Other in-place edits of a step are annotations** — its note, the
  *   marks made on it or on the sheet, and how its picture spreads its layers.
  *   None can break a step: inputs hold resolved points, and all are outside
  *   `fh1` and `fs1`. The sequence's title is outside both too.
@@ -22,6 +22,7 @@
  * Pure: no React, no store.
  */
 
+import { foldReturnPath } from './foldReturn';
 import { sameSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import { xmlText } from '../../lib/xmlEscape';
 import { canonicalJson, foldPaperKey } from './foldDigest';
@@ -30,6 +31,8 @@ import {
   isLockedStep,
   randomFoldId,
   type FoldChoices,
+  type FoldCpJumpOp,
+  type FoldReturnOp,
   type FoldIdFactory,
   type FoldMarkEntry,
   type FoldOp,
@@ -87,6 +90,7 @@ export function appendFoldStep(
 ): { document: FoldSequenceDocument; id: string } | null {
   const { parent } = draft;
   if (!keptAsFolded(draft)) return null;
+  if (draft.op.kind === 'unfold-to' && !foldReturnPath(document, parent, draft.op.target)) return null;
   if (draft.adopt) {
     if (parent !== null || document.steps.length > 0) return null;
     document = setFoldPaperShape(document, draft.adopt);
@@ -225,4 +229,34 @@ function editStep(
   const edited = edit(node);
   if (edited === node) return document;
   return { ...document, steps: document.steps.map((step) => (step === node ? edited : step)) };
+}
+
+/** Explicit source refresh: keep the node, branches and notes, and let replay
+ * compare every descendant against its saved fingerprint. Never retarget it. */
+export function updateFoldCollapse(
+  document: FoldSequenceDocument,
+  stepId: string,
+  expected: FoldCpJumpOp,
+  op: FoldCpJumpOp,
+  expect: string
+): FoldSequenceDocument {
+  const step = document.steps.find((node) => node.id === stepId);
+  if (!step?.op || step.op.kind !== 'cp-jump' || !step.op.source || !op.source ||
+      canonicalJson(step.op) !== canonicalJson(expected) ||
+      lockedIds(foldStepTree(document.steps)).has(stepId) ||
+      !keptAsFolded({ parent: step.parent, op })) return document;
+  if (canonicalJson(step.op) === canonicalJson(op) && step.expect === expect) return document;
+  return { ...document, steps: document.steps.map((node) => node.id === stepId ? { ...step, op, expect } : node) };
+}
+
+/** Rebuild a recorded return only against the revision the preview opened on. */
+export function updateFoldReturn(document: FoldSequenceDocument, stepId: string,
+  expected: FoldReturnOp, op: FoldReturnOp, expect: string): FoldSequenceDocument {
+  const step = document.steps.find((node) => node.id === stepId);
+  if (!step?.op || step.op.kind !== 'unfold-to' || !foldReturnPath(document, step.parent, op.target) ||
+      canonicalJson(step.op) !== canonicalJson(expected) ||
+      lockedIds(foldStepTree(document.steps)).has(stepId) ||
+      !keptAsFolded({ parent: step.parent, op })) return document;
+  if (canonicalJson(step.op) === canonicalJson(op) && step.expect === expect) return document;
+  return { ...document, steps: document.steps.map((node) => node.id === stepId ? { ...step, op, expect } : node) };
 }

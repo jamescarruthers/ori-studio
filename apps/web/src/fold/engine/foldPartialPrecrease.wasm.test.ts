@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createFoldReplayer } from '../document/foldReplay';
-import type { FoldPaper, FoldPrecreaseExtent, FoldPrecreaseOp } from '../document/foldSequenceDocument';
+import type { FoldOp, FoldPaper, FoldPrecreaseExtent, FoldPrecreaseOp } from '../document/foldSequenceDocument';
 import { readFoldSequence, writeFoldSequence } from '../document/foldSequenceFile';
 import { sequenceOf, step } from '../document/foldSequence.fixtures';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
@@ -77,6 +77,54 @@ function thrown(fn: () => unknown): unknown {
 }
 
 describe.skipIf(!available)('partial precreases over the real bridge', () => {
+  it('reverses an existing segment, then folds it as M or V and replays the saved document', async () => {
+    const { calls, version } = await engine();
+    for (const kind of ['mountain', 'valley'] as const) {
+      const reverse: FoldPrecreaseOp = {
+        ...precrease(pinchAt([0.5, 0.5], 0.6)), direction: 'mountain',
+        line: { via: 'crease', at: [0.5, 0.4] },
+      };
+      const refold: FoldOp = { kind, line: { via: 'crease', at: [0.5, 0.4] }, moving: [0.9, 0.5], seed: { scope: 'all' } };
+      const ops: FoldOp[] = [precrease(), reverse, refold];
+      let state = landed(calls.sheet(SQUARE)).state;
+      const nodes = ops.map((op, i) => {
+        const result = landed(calls.step(state, op));
+        state = result.state;
+        if (i === 1) {
+          expect(result.summary.faces).toBe(2);
+          expect(result.summary.crease_marks).toBeUndefined();
+          expect(landed(calls.stepSummary(state)).summary?.diff.reversed).toHaveLength(1);
+        }
+        if (i === 2) {
+          expect(result.report?.created).toEqual([]);
+          expect(result.report?.refolded).toHaveLength(3);
+          expect(result.report?.refolded.every(r => r.letter === kind)).toBe(true);
+        }
+        return step(`fstep-${i + 1}`, i ? `fstep-${i}` : null, op, { expect: result.fingerprint });
+      });
+      const document = sequenceOf(nodes);
+      const held = readFoldSequence(JSON.parse(JSON.stringify(writeFoldSequence({ document, readOnlyRaw: null }))))!;
+      const replay = await createFoldReplayer(createFoldEnginePort(sourceOf(calls), version)).run({ loadId: 1, sequence: held.document });
+      expect([...replay!.steps.values()].every(s => s.status === 'ok')).toBe(true);
+      expect(replay?.steps.get('fstep-3')?.fingerprint).toBe(nodes[2].expect);
+    }
+  });
+
+  it('accepts the exact Witch Hat source-7 request without moving its material', async () => {
+    const { calls } = await engine();
+    const fixture = JSON.parse(readFileSync(resolve(ROOT, '../../tests/fixtures/fold-examples/witch-hat-existing-precrease.json'), 'utf8'));
+    let state = landed(calls.sheet(fixture.paper)).state;
+    for (const node of fixture.steps) state = landed(calls.step(state, node.op, node.choices)).state;
+    const before = calls.scene(state);
+    const after = landed(calls.step(state, fixture.op));
+    const scene = calls.scene(after.state);
+    expect(scene.faces).toEqual(before.faces);
+    expect(scene.face_transforms).toEqual(before.face_transforms);
+    expect(scene.subfaces).toEqual(before.subfaces);
+    expect(scene.crease_marks).toBeUndefined();
+    expect(landed(calls.stepSummary(after.state)).summary?.diff.reversed).toHaveLength(2);
+  });
+
   it('lands a pinch whose marks every query carries', async () => {
     const { calls } = await engine();
     const sheet = landed(calls.sheet(SQUARE));

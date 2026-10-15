@@ -12,7 +12,7 @@
  *   it (`free`): a region the canvas lights as the pointer crosses it, the
  *   part that lifts (`useFoldPetalMarks`).
  * - **Rabbit ear**: the triangle's three corners (`point` landmarks, or with
- *   Alt any point), then the paper that stays put (`free`).
+ *   Alt any point), then the region containing the hinge crease (`free`).
  * - **Swivel**, by its edge (`FoldSwivelEdgeOp`): where its creases meet — a
  *   point on a folded edge, near one and away from any landmark, for the
  *   classic swivel whose creases meet on that edge (`resolveFoldEdgePoint`,
@@ -195,13 +195,13 @@ export function vertexToolSteps(
             t('tools:fold.vertex.steps.earFirstCornerTouch', 'Tap the triangle’s first corner.'),
             t('tools:fold.vertex.steps.earSecondCornerTouch', 'Tap its second corner.'),
             t('tools:fold.vertex.steps.earThirdCornerTouch', 'Tap its third corner.'),
-            t('tools:fold.vertex.steps.earStayTouch', 'Tap the part of the paper that stays put.'),
+            t('tools:fold.vertex.steps.earHingeRegionTouch', 'Tap the region where the hinge crease goes.'),
           ]
         : [
             t('tools:fold.vertex.steps.earFirstCorner', 'Click the triangle’s first corner.'),
             t('tools:fold.vertex.steps.earSecondCorner', 'Click its second corner.'),
             t('tools:fold.vertex.steps.earThirdCorner', 'Click its third corner.'),
-            t('tools:fold.vertex.steps.earStay', 'Click the part of the paper that stays put.'),
+            t('tools:fold.vertex.steps.earHingeRegion', 'Click the region where the hinge crease goes.'),
           ];
     case 'swivel':
       return swivelSteps(t, lines.swivelTarget, host, nothingSwings);

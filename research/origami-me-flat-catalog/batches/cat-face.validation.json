@@ -1,6 +1,6 @@
 {
   "source": "https://origami.me/cat-face/",
-  "file": "models/cat-face.osf",
+  "file": "../2026-10-13-origami-fold-trials/models/completed/cat-face.osf",
   "fileSha256": "70e255621073a3b487b11240c02f001020aa909bb4bec5b8eb1bfac22d8d48db",
   "nodes": 11,
   "folds": 9,
@@ -58,5 +58,8 @@
     }
   ],
   "proportions": "Ear and face shaping use symmetric approximate diagram references; no drawn eyes/whiskers.",
-  "audit": "pending visual review"
+  "audit": "ready for audit",
+  "auditEvidence": "batches/001.md",
+  "auditMetadataReconciledOn": "2026-10-14",
+  "auditMetadataNote": "Corrected stale pending label using the existing batch-1 visual audit; no new visual audit or user approval is implied."
 }

@@ -1546,7 +1546,6 @@
       "pathBrokenHint": "Un paso de este camino ya no se puede doblar.",
       "pathLockedHint": "Un paso de este camino se creó con una versión más reciente de Ori Studio.",
       "pathReplayingHint": "Todavía se están doblando los pasos.",
-      "precrease": "Prepliegue",
       "readOnlyHint": "Creada con una versión más reciente de Ori Studio: esta secuencia se abre en modo de solo lectura.",
       "replayingHint": "Todavía se están doblando los pasos anteriores.",
       "rotate": "Girar…",
@@ -1566,6 +1565,14 @@
       "stepCreases": "Pliegues del paso",
       "stepCreasesTitle": "Dibujar en trazo grueso los pliegues que hizo el paso mostrado, como su instrucción",
       "toolbar": "Vista de plegado"
+    },
+    "collapse": {
+      "changed": "Hay una actualización disponible. Este paso sigue usando la versión guardada del CP.",
+      "openSource": "Abrir CP de origen",
+      "replay": "Al actualizar se vuelven a calcular los pliegues posteriores. Revisa si hay pasos modificados o que ya no se pueden plegar en la línea de tiempo antes de continuar.",
+      "saved": "Se usa la versión guardada del CP. Los cambios del origen solo se aplican al actualizar.",
+      "unavailable": "El CP de origen no está disponible. La copia guardada sigue reproduciéndose.",
+      "update": "Actualizar desde CP"
     },
     "grid": {
       "broken": "Este paso ya no se puede plegar",
@@ -1618,6 +1625,34 @@
       "scrub": "Progreso del paso",
       "stepForward": "Avanzar un poco"
     },
+    "return": {
+      "append": "Añadir paso de despliegue",
+      "changed": "Los pliegues anteriores han cambiado. Reconstruye este despliegue para revisar el nuevo resultado.",
+      "empty": "Primero realiza un pliegue.",
+      "failureTitle": "No se puede desplegar",
+      "finishPreview": "Primero termina o cancela la vista previa del despliegue.",
+      "invalidTarget": "Elige un paso anterior de esta rama.",
+      "label": "Desplegar hasta un paso",
+      "last": "Desplegar el último paso",
+      "limit": "El historial de pliegues es demasiado grande para restaurarlo de forma segura.",
+      "loading": "Preparando la vista previa del despliegue…",
+      "noop": "El papel ya tiene esta forma y estos pliegues.",
+      "numberedSentence": "Vuelve al paso {{number}}, conservando todos los pliegues.",
+      "open": "Desplegar hasta un paso…",
+      "preview": "La vista previa aparece abajo. Se conservan todos los pliegues.",
+      "rebuild": "Reconstruir despliegue",
+      "refused": "El motor no pudo restaurar esta forma conservando el historial de pliegues. No se modificó ningún paso.",
+      "retain": "Volver a una forma anterior conservando todos los pliegues.",
+      "sentence": "Vuelve a la forma plegada anterior, conservando todos los pliegues.",
+      "sheet": "Hoja inicial",
+      "sheetSentence": "Despliega hasta la hoja inicial, conservando todos los pliegues.",
+      "step": "Paso {{number}}",
+      "target": "Volver a",
+      "title": "Vista previa del despliegue",
+      "turn": "Giro después del paso {{number}}",
+      "unavailable": "Espera a que terminen de reproducirse los pasos anteriores y vuelve a intentarlo.",
+      "viewTarget": "Ver destino: {{target}}"
+    },
     "sentence": {
       "behind": {
         "petal": "Haz un pliegue de pétalo con la solapa por detrás.",
@@ -1633,6 +1668,7 @@
         "swivelInsideLine": "Gira el borde por detrás sobre la línea con un giro interior, con los pliegues juntándose en el borde plegado."
       },
       "closedSink": "Hunde la punta en hundido cerrado: empújala hacia dentro con sus capas juntas.",
+      "collapse": "Colapsa siguiendo el patrón de pliegues guardado.",
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
       "crimp": {
         "inside": {
@@ -2646,7 +2682,7 @@
       "branchStep": "Estás en el paso {{at}} de {{total}}: si doblas aquí, empieza una rama nueva.",
       "broken": "Este paso ya no se puede doblar: aquello de lo que se hizo ya no está en el papel antes de él. Este paso y los siguientes solo se pueden eliminar.",
       "brokenAbove": "Un paso anterior ya no se puede doblar, así que este no se puede mostrar.",
-      "changed": "Este paso se dobla de otra forma en esta versión de Ori Studio que cuando se guardó.",
+      "changed": "Este paso se pliega de otra forma que cuando se guardó. Revisa sus entradas y los pasos anteriores.",
       "changes": "Cambios",
       "chosen": "Elección entre varias",
       "creases": "Pliegues",
@@ -2737,6 +2773,7 @@
         "swivelInside": "Pliegue giratorio interior por detrás"
       },
       "closedSink": "Hundido cerrado",
+      "collapse": "Colapsar",
       "cpJump": "Importar patrón de pliegues",
       "crimpInside": "Crimp interior",
       "crimpOutside": "Crimp exterior",
@@ -2758,6 +2795,7 @@
       "originFold": "Archivo FOLD",
       "originOrh": "Archivo ORH",
       "originOri": "Archivo ORI",
+      "originProjectCp": "Patrón de pliegues del proyecto",
       "originSample": "Ejemplo",
       "outsideReverse": "Pliegue invertido exterior",
       "petal": "Pliegue de pétalo",

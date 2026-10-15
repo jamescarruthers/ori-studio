@@ -20,8 +20,8 @@ import type { TurnKind } from '../lib/steps/turn';
 import { turnName } from '../lib/steps/turnWords';
 import type { FoldPaperShapeKind } from './paperShape';
 
-/** The fold the tool makes: the design's V / M / P (plan D14). */
-export type FoldKind = 'valley' | 'mountain' | 'precrease';
+/** The direction armed by the two plain fold tools. */
+export type FoldKind = 'valley' | 'mountain';
 
 /**
  * Where a state stands: replayed and foldable, still replaying, broken (its
@@ -34,9 +34,10 @@ export type FoldStateStatus = 'ready' | 'replaying' | 'broken' | 'locked';
 export type FoldActionIcon =
   | 'valley'
   | 'mountain'
-  | 'precrease'
   | 'turn-over'
   | 'rotate'
+  | 'unfold-to'
+  | 'unfold-last'
   | 'import-cp'
   | 'send-to-edit'
   | 'send-to-diagram'
@@ -47,6 +48,8 @@ export type FoldActionIcon =
 export type FoldCommandId =
   | 'turn-over'
   | 'rotate'
+  | 'unfold-to'
+  | 'unfold-last'
   | 'import-cp'
   | 'send-to-edit'
   | 'send-to-diagram'
@@ -133,6 +136,7 @@ export interface FoldActionDeps {
   turn: (turn: TurnKind) => void;
   /** Take the Rotate tool in hand at the context's step: its window sets how far and which way. */
   rotate: () => void;
+  unfold: (last: boolean) => void;
   /** Delete a step and its subtree, locked ones included (plan D6). */
   deleteStep: (stepId: string) => void;
   /** Open Import CP's dialog. */
@@ -173,8 +177,6 @@ export function foldKindLabel(t: TFunction, kind: FoldKind): string {
       return t('panels:fold.words.valleyFold', 'Valley fold');
     case 'mountain':
       return t('panels:fold.words.mountainFold', 'Mountain fold');
-    case 'precrease':
-      return t('panels:fold.actions.precrease', 'Precrease');
   }
 }
 
@@ -307,7 +309,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       label: t('panels:fold.actions.foldKind', 'Fold'),
       disabled: addBlock !== null,
       hint: addBlock ?? undefined,
-      options: (['valley', 'mountain', 'precrease'] as const).map((kind) => ({
+      options: (['valley', 'mountain'] as const).map((kind) => ({
         id: kind,
         label: foldKindLabel(t, kind),
         icon: kind,
@@ -328,6 +330,16 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       note: branchNote,
       run: deps.rotate,
     },
+    ...(['unfold-last', 'unfold-to'] as const).map((id): FoldCommand => ({
+      kind: 'command', id, icon: 'unfold-to',
+      label: id === 'unfold-last'
+        ? t('panels:fold.return.last', 'Unfold last step')
+        : t('panels:fold.return.open', 'Unfold to step…'),
+      disabled: addBlock !== null || step === null,
+      hint: addBlock ?? (step === null ? t('panels:fold.return.empty', 'Fold a step first.') : undefined),
+      note: branchNote,
+      run: () => deps.unfold(id === 'unfold-last'),
+    })),
     { kind: 'separator', id: 'after-turns' },
     {
       kind: 'command',

@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Precrease node 2 preserves material stacks",
+    "witnesses": 3
+  },
+  {
+    "label": "Precrease node 3 preserves material stacks",
+    "witnesses": 4
+  },
+  {
+    "label": "Precrease node 17 preserves material stacks",
+    "witnesses": 48
+  },
+  {
+    "label": "Precrease node 18 preserves material stacks",
+    "witnesses": 50
+  }
+]

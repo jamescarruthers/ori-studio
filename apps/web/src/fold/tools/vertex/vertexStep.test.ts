@@ -14,7 +14,7 @@ import {
   fanHasNoFourth,
   fanLayerCount,
   fanSeed,
-  fanStayerRegion,
+  fanHingeRegion,
   incenter,
   landingFourths,
   layerSheetPointAt,
@@ -22,7 +22,7 @@ import {
   parallelSegments,
   petalHingeOf,
   petalRegionKey,
-  picksFanStayer,
+  picksFanHinge,
   picksPetalRegion,
   picksSwivelPivot,
   PLACEHOLDER_RAY,
@@ -197,7 +197,7 @@ describe('a swivel by its edge', () => {
     expect(vertexAskedOp(intent({ tool: 'swivel', picks: picks.slice(0, 2) }), index)).toBeNull();
     // A swivel has no given rays and no paper that stays to pick: the edge form computes them.
     expect(fanGiven({ tool: 'swivel', picks })).toBeNull();
-    expect(picksFanStayer('swivel', 3)).toBe(false);
+    expect(picksFanHinge('swivel', 3)).toBe(false);
   });
 
   it('is asked by the folded edge its pivot was clicked on, with no seed: the creases meet on that edge', () => {
@@ -249,7 +249,7 @@ describe('a fan’s center and layers', () => {
     expect(fanSeed(index, p(0.75, 0.5), 'valley', 1)).toBeNull();
   });
 
-  it('asks a rabbit ear with a placeholder fourth ray, the paper that stays named by the region clicked', () => {
+  it('derives the hinge from the clicked region and anchors a different region', () => {
     const index = book();
     const corners = [point(0, 0), point(0.5, 0), point(0, 1)];
     const clicked = intent({ tool: 'rabbit-ear', picks: [...corners, free(0.1, 0.5)] });
@@ -261,32 +261,29 @@ describe('a fan’s center and layers', () => {
         [0.5, 0],
         [0, 1],
       ],
-      emergent: PLACEHOLDER_RAY,
       seed: { scope: 'all' },
       direction: 'valley',
     });
-    // Not the point clicked: a point of the same region, half way from the
-    // incenter to the paper's edge along its middle, on the farthest layer cut
-    // — the left half, which lies where it is.
     const fan = fanGiven(clicked);
     if (!fan || !ear || !('kind' in ear) || ear.kind !== 'rabbit-ear') throw new Error('no fan');
-    expect(fanStayerRegion(clicked, fan)).toBe(0);
-    expect(ear.stayer[0]).toBeCloseTo(fan.center.x / 2, 12);
-    expect(ear.stayer[1]).toBeCloseTo(0.21811, 4);
-    expect(fanRegionAt(fan, toPoint(ear.stayer))).toBe(0);
-    // Anywhere else in that region names the same paper.
+    const region = fanHingeRegion(clicked, fan);
+    expect(region).toBe(0);
+    expect(fanRegionAt(fan, p(fan.center.x + ear.emergent[0], fan.center.y + ear.emergent[1]))).toBe(region);
+    expect(fanRegionAt(fan, toPoint(ear.stayer))).not.toBe(region);
     expect(vertexAskedOp({ ...clicked, picks: [...corners, free(0.05, 0.6)] }, index)).toEqual(ear);
+    const other = vertexAskedOp({ ...clicked, picks: [...corners, free(0.3, 0.1)] }, index);
+    expect(other).not.toMatchObject({ emergent: ear.emergent });
     // Its layers: the first one from the direction's side, at the incenter.
     const one = vertexAskedOp({ ...clicked, fanLayers: 1 }, index);
     expect(one).toMatchObject({ kind: 'rabbit-ear', seed: { scope: 'depth', layers: 1 } });
   });
 
-  it('picks a rabbit ear’s paper that stays on its next click, and again while its fold is previewed', () => {
-    expect(picksFanStayer('rabbit-ear', 2)).toBe(false);
-    expect(picksFanStayer('rabbit-ear', 3)).toBe(true);
-    expect(picksFanStayer('rabbit-ear', 4)).toBe(true);
-    expect(picksFanStayer('squash', 0)).toBe(false);
-    expect(picksFanStayer('valley', 2)).toBe(false);
+  it('picks a rabbit ear’s hinge region on its next click, and again while its fold is previewed', () => {
+    expect(picksFanHinge('rabbit-ear', 2)).toBe(false);
+    expect(picksFanHinge('rabbit-ear', 3)).toBe(true);
+    expect(picksFanHinge('rabbit-ear', 4)).toBe(true);
+    expect(picksFanHinge('squash', 0)).toBe(false);
+    expect(picksFanHinge('valley', 2)).toBe(false);
     // Its rays run from its incenter toward its three corners.
     const ear = fanGiven({ tool: 'rabbit-ear', picks: [point(0, 0), point(0.5, 0), point(0, 1)] });
     expect(ear?.rays).toHaveLength(3);
@@ -321,19 +318,15 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     more: false,
   });
 
-  it('offers only the fourth rays that land, takes the folder’s while it does, else the first that does, else none', () => {
-    expect(landingFourths(fan([false, true, true]))).toEqual([1, 2]);
-    // A candidate the answer says nothing of lands, as far as is known.
-    expect(landingFourths(fan([false]))).toEqual([1, 2]);
+  it('keeps the hinge in the selected region even when other fourth rays land', () => {
+    expect(landingFourths(fan([false, true, true]))).toEqual([]);
+    expect(landingFourths(fan([false, true, true], 1))).toEqual([1]);
+    expect(landingFourths(fan([false], 1))).toEqual([]);
     expect(landingFourths(null)).toEqual([]);
-    expect(emergentToFold(2, fan([false, true, true]))).toBe(2);
-    expect(emergentToFold(2, fan([false, true, false]))).toBe(1);
-    expect(emergentToFold(null, fan([false, true, true]))).toBe(1);
-    expect(emergentToFold(7, fan([false, false, true]))).toBe(2);
-    // None lands: nothing to fold, never the engine's own choice refused.
-    expect(emergentToFold(null, fan([false, false, false], 1))).toBeNull();
-    expect(fanHasNoFourth(fan([false, false, false]))).toBe(true);
-    expect(fanHasNoFourth(fan([false, true, false]))).toBe(false);
+    expect(emergentToFold(2, fan([false, true, true], 1))).toBe(1);
+    expect(emergentToFold(null, fan([false, true, true], 0))).toBeNull();
+    expect(fanHasNoFourth(fan([false, true, false], 0))).toBe(true);
+    expect(fanHasNoFourth(fan([false, true, false], 1))).toBe(false);
     expect(nearestDirection([[1, 0], [0, 1]], [0.2, 0.9])).toBe(1);
     expect(nearestDirection([[1, 0]], [0, 0])).toBeNull();
   });
@@ -570,7 +563,7 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     const same = vertexChosenOp(base, fan([true, true, false], 0), NONE);
     expect(same).toMatchObject({ emergent: 0, again: false, op: { emergent: [1, 1] } });
     const other = vertexChosenOp(base, fan([false, true, false], 0), NONE);
-    expect(other).toMatchObject({ emergent: 1, again: true, op: { emergent: [-1, 0] } });
+    expect(other).toBeNull();
     // None lands: no fold to preview, so none to refuse.
     expect(vertexChosenOp(base, fan([false, false, false], 0), NONE)).toBeNull();
     // A squash aimed off its hinge is another fold; on its hinge it is the one asked.

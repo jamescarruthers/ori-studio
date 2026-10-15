@@ -29,6 +29,7 @@ pub(crate) mod apply;
 pub(crate) mod closure;
 pub(crate) mod line;
 mod partial;
+mod partial_existing;
 pub(crate) mod score;
 mod section;
 

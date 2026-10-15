@@ -256,6 +256,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     t,
     {
       tool: toolState.tool,
+      foldAndUnfold: toolState.foldAndUnfold,
       lineMode: toolState.lineMode,
       readOnly,
       picks: toolState.picks.length,

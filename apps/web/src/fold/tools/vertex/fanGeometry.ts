@@ -5,15 +5,11 @@
  *
  * - **The given rays** from where the creases meet, toward the points the
  *   clicks named (a rabbit ear's bisectors run to its corners).
- * - **The regions** between them, which the paper that stays is chosen
- *   among. The engine keeps still the wedge of the fan holding the stayer,
- *   and refuses a fourth crease beside it (`fan_fourth_beside_stayer`): a
- *   fourth crease that lands lies in another region, so the wedge that stays
- *   is a whole region between two given rays whichever fourth is taken.
- *   Region k runs counter-clockwise from ray k to ray k + 1.
- * - **The stayer** a region names: a sheet point just inside it, near the
- *   center, on the farthest layer the fan cuts — so the wedge the engine keeps
- *   still is the region chosen, wherever in it the click was.
+ * - **The regions** between them. The click selects the hinge region;
+ *   Kawasaki's theorem fixes its fourth ray. Region k runs counter-clockwise
+ *   from ray k to ray k + 1.
+ * - **The stayer** is an interior sheet witness in another region, on the
+ *   farthest selected layer. The tool tries both possible anchor regions.
  * - **The given creases** each layer the fan cuts takes: from the center to
  *   where that layer ends along the ray, in the scene frame and on the sheet,
  *   with the letter each has from the sheet's front.
@@ -40,6 +36,8 @@ import type { FoldPickIndex } from '../../canvas/foldPicking';
 export interface FoldFanGiven {
   center: Point;
   rays: readonly Point[];
+  /** Stop pending rabbit-ear rays at their picked triangle corners. */
+  limits?: readonly number[];
 }
 
 /** How near two rays may point before they are one. */
@@ -60,15 +58,15 @@ const sector = (from: number, to: number): number => {
  * The fan from `center` toward each of `toward`, counter-clockwise; null when
  * a point is the center or two rays point the same way.
  */
-export function fanToward(center: Point, toward: readonly Point[]): FoldFanGiven | null {
-  const rays: { angle: number; ray: Point }[] = [];
+export function fanToward(center: Point, toward: readonly Point[], stopAtPoints = false): FoldFanGiven | null {
+  const rays: { angle: number; ray: Point; length: number }[] = [];
   for (const q of toward) {
     const dx = q.x - center.x;
     const dy = q.y - center.y;
     const length = Math.hypot(dx, dy);
     if (!(length > 1e-12)) return null;
     const ray = { x: dx / length, y: dy / length };
-    rays.push({ angle: angleOf(ray), ray });
+    rays.push({ angle: angleOf(ray), ray, length });
   }
   rays.sort((a, b) => a.angle - b.angle);
   const n = rays.length;
@@ -76,7 +74,7 @@ export function fanToward(center: Point, toward: readonly Point[]): FoldFanGiven
   for (let k = 0; k < n; k += 1) {
     if (sector(rays[k]!.angle, rays[(k + 1) % n]!.angle) <= SAME_RAY) return null;
   }
-  return { center, rays: rays.map((each) => each.ray) };
+  return { center, rays: rays.map((each) => each.ray), ...(stopAtPoints ? { limits: rays.map(each => each.length) } : {}) };
 }
 
 /** The region a scene point lies in; null at the center itself. */
@@ -90,6 +88,18 @@ export function fanRegionAt(fan: FoldFanGiven, p: Point): number | null {
     if (sector(from, a) < sector(from, angleOf(fan.rays[(k + 1) % n]!))) return k;
   }
   return 0;
+}
+
+/** The unique Kawasaki fourth ray inside region k; null if that region cannot close flat. */
+export function fanHingeRay(fan: FoldFanGiven, k: number): Point | null {
+  if (fan.rays.length !== 3) return null;
+  const angles = fan.rays.map(angleOf);
+  const lo = angles[k]!;
+  const hi = k < 2 ? angles[k + 1]! : angles[0]! + 2 * Math.PI;
+  const sign = (slot: number) => slot % 2 === 0 ? -1 : 1;
+  const others = angles.reduce((sum, angle, i) => sum + sign(i <= k ? i : i + 1) * angle, 0);
+  const angle = (Math.PI - others) / sign(k + 1);
+  return angle > lo + SAME_RAY && angle < hi - SAME_RAY ? { x: Math.cos(angle), y: Math.sin(angle) } : null;
 }
 
 /** The direction halfway round region `k`, unit, in the scene frame. */
@@ -181,16 +191,39 @@ export function fanStayer(
   layers: number | null
 ): SheetPoint | null {
   const middle = fanRegionMiddle(fan, k);
-  const cell = cellToward(index, fan.center, middle);
-  const ray = rayLine(fan.center, middle);
-  if (!cell || !ray) return null;
-  const reach = reachIn(cell.polygon, ray);
-  if (!(reach > 0)) return null;
-  const at = { x: fan.center.x + (middle.x * reach) / 2, y: fan.center.y + (middle.y * reach) / 2 };
-  const cut = cutLayers(cell.stack, direction, layers);
-  const far = direction === 'valley' ? cut[cut.length - 1] : cut[0];
-  const transform = far === undefined ? undefined : index.scene.face_transforms[far];
-  return transform ? toPair(applyIsometry(invertIsometry(transform), at)) : null;
+  // A bisector may itself be a precrease. Keep the witness strictly inside
+  // a subface while retaining the chosen angular region and paper layer.
+  for (const offset of [0, 0.07, -0.07, 0.17, -0.17]) {
+    const a = angleOf(middle) + offset;
+    const toward = { x: Math.cos(a), y: Math.sin(a) };
+    if (fanRegionAt(fan, { x: fan.center.x + toward.x, y: fan.center.y + toward.y }) !== k) continue;
+    const cell = cellToward(index, fan.center, toward);
+    const ray = rayLine(fan.center, toward);
+    if (!cell || !ray) continue;
+    const reach = reachIn(cell.polygon, ray);
+    if (!(reach > 0)) continue;
+    const at = { x: fan.center.x + toward.x * reach / 2, y: fan.center.y + toward.y * reach / 2 };
+    if (!strictlyInside(cell.polygon, at)) continue;
+    const cut = cutLayers(cell.stack, direction, layers);
+    const far = direction === 'valley' ? cut[cut.length - 1] : cut[0];
+    const transform = far === undefined ? undefined : index.scene.face_transforms[far];
+    if (transform) return toPair(applyIsometry(invertIsometry(transform), at));
+  }
+  return null;
+}
+
+/** An interior point may name material; a point on a subdivision cannot. */
+function strictlyInside(polygon: readonly Point[], p: Point): boolean {
+  return insideConvex(polygon, p) && polygon.every((a, i) => {
+    const b = polygon[(i + 1) % polygon.length]!;
+    return Math.abs((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) > 1e-9 * Math.hypot(b.x - a.x, b.y - a.y);
+  });
+}
+
+/** Read the stack beside a precrease junction using an interior witness. */
+export function fanLayerProbe(index: FoldPickIndex, center: Point): Point {
+  const points = [center, ...Array.from({ length: 24 }, (_, k) => ({ x: center.x + 8e-6 * Math.cos(0.137 + k * 2.399963229728653), y: center.y + 8e-6 * Math.sin(0.137 + k * 2.399963229728653) }))];
+  return points.find(p => index.subfaces.some(cell => strictlyInside(cell.polygon, p))) ?? center;
 }
 
 /** One given crease on one layer: where it runs on the folded pane and on the sheet, and its letter from the front. */
@@ -228,7 +261,20 @@ export function fanGivenCreases(
       const image = scene.faces[face]?.outline;
       const transform = scene.face_transforms[face];
       if (!image || !transform) continue;
-      const reach = reachIn(image, ray);
+      let reach = reachIn(image, ray);
+      if (fan.limits) {
+        // Flat precreases subdivide one layer into several faces. Walk their
+        // contiguous ray intervals with the same sheet-to-scene transform.
+        const intervals = scene.faces.flatMap((piece, f) => {
+          if (!scene.face_transforms[f]?.every((value, i) => Math.abs(value - transform[i]!) < 1e-9)) return [];
+          const chord = chordOfConvex(piece.outline, ray.line);
+          return chord ? [[chord[0] - ray.from, chord[1] - ray.from] as const] : [];
+        }).sort((a, b) => a[0] - b[0]);
+        for (const [lo, hi] of intervals) {
+          if (lo <= reach + 1e-9 && hi > reach) reach = hi;
+        }
+        reach = Math.min(reach, fan.limits[k]!);
+      }
       if (!(reach > 1e-9)) continue;
       const end = { x: fan.center.x + toward.x * reach, y: fan.center.y + toward.y * reach };
       const back = invertIsometry(transform);

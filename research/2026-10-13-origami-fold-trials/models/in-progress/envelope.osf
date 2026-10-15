@@ -1,0 +1,684 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-envelope",
+    "title": "Envelope — Origami.me",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-envelope",
+        "title": "Envelope — Origami.me",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-envelope-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white side up, diamond. https://origami.me/envelope/"
+          },
+          {
+            "id": "fstep-envelope-2",
+            "parent": "fstep-envelope-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.2878679656440357,
+                0.7121320343559643
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1a: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-envelope-3",
+            "parent": "fstep-envelope-2",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ],
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373095,
+                0.14142135623730953
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1b: Precrease the horizontal diagonal."
+          },
+          {
+            "id": "fstep-envelope-4",
+            "parent": "fstep-envelope-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.5,
+                      0.5000000000000001
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865475,
+                  0.7071067811865477
+                ],
+                "d": 0.35355339059327384
+              }
+            },
+            "note": "2a: Bring the lower point to the center."
+          },
+          {
+            "id": "fstep-envelope-5",
+            "parent": "fstep-envelope-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.0000000000000002
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.5,
+                      0.5000000000000001
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865475,
+                  0.7071067811865477
+                ],
+                "d": 1.0606601717798216
+              }
+            },
+            "note": "2b: Bring the upper point to the center."
+          },
+          {
+            "id": "fstep-envelope-6",
+            "parent": "fstep-envelope-5",
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "quarter",
+                "direction": "cw"
+              }
+            },
+            "note": "3: Rotate clockwise a quarter turn."
+          },
+          {
+            "id": "fstep-envelope-7",
+            "parent": "fstep-envelope-6",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7250000000000001,
+                    0.22500000000000003
+                  ],
+                  [
+                    0.7750000000000001,
+                    0.27500000000000013
+                  ]
+                ]
+              },
+              "moving": [
+                0.9500000000000001,
+                0.0500000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0.7250000000000001,
+                    0.22500000000000003
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.7750000000000001,
+                    0.27500000000000013
+                  ]
+                }
+              }
+            },
+            "note": "4: Pinch the top corner to the center; mark width 0.1 normalized units."
+          },
+          {
+            "id": "fstep-envelope-8",
+            "parent": "fstep-envelope-7",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      -1.1102230246251565e-16,
+                      1
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.75,
+                      0.2500000000000001
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865477,
+                  -0.7071067811865475
+                ],
+                "d": -0.17677669529663684
+              }
+            },
+            "note": "5: Precrease the bottom corner to the pinch."
+          },
+          {
+            "id": "fstep-envelope-9",
+            "parent": "fstep-envelope-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -5.551115123125783e-17,
+                    0.625
+                  ],
+                  [
+                    0.37499999999999994,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.05999999999999994,
+                0.9600000000000002
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "6: Bring the bottom tip to the source-5 crease."
+          },
+          {
+            "id": "fstep-envelope-10",
+            "parent": "fstep-envelope-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.12499999999999999,
+                    0.37500000000000006
+                  ],
+                  [
+                    0.12499999999999989,
+                    0.7500000000000001
+                  ]
+                ]
+              },
+              "moving": [
+                0.04999999999999993,
+                0.55
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7: Align the left lower edge with the source-5 crease."
+          },
+          {
+            "id": "fstep-envelope-11",
+            "parent": "fstep-envelope-10",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.6250000000000003,
+                    0.8750000000000006
+                  ],
+                  [
+                    0.25000000000000006,
+                    0.8749999999999999
+                  ]
+                ]
+              },
+              "moving": [
+                0.4499999999999999,
+                0.9500000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "8: Repeat on the right."
+          },
+          {
+            "id": "fstep-envelope-12",
+            "parent": "fstep-envelope-11",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.3999999999999999,
+                0.875
+              ],
+              "moving": [
+                0.4499999999999999,
+                0.9500000000000001
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.4499999999999999,
+                    0.9500000000000001
+                  ]
+                ]
+              },
+              "direction": "valley"
+            },
+            "note": "9a: Unfold source 8."
+          },
+          {
+            "id": "fstep-envelope-13",
+            "parent": "fstep-envelope-12",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.12499999999999992,
+                0.6
+              ],
+              "moving": [
+                0.04999999999999993,
+                0.55
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.04999999999999993,
+                    0.55
+                  ]
+                ]
+              },
+              "direction": "valley"
+            },
+            "note": "9b: Unfold source 7."
+          },
+          {
+            "id": "fstep-envelope-14",
+            "parent": "fstep-envelope-13",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.22499999999999992,
+                0.8500000000000001
+              ],
+              "moving": [
+                0.05999999999999994,
+                0.9600000000000002
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.05999999999999994,
+                    0.9600000000000002
+                  ]
+                ]
+              },
+              "direction": "valley"
+            },
+            "note": "9c: Unfold source 6."
+          },
+          {
+            "id": "fstep-envelope-15",
+            "parent": "fstep-envelope-14",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.1102230246251565e-16,
+                    0.875
+                  ],
+                  [
+                    0.12499999999999989,
+                    0.75
+                  ]
+                ]
+              },
+              "moving": [
+                0.03499999999999992,
+                0.7850000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    -1.1102230246251565e-16,
+                    0.875
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.12499999999999989,
+                    0.75
+                  ]
+                }
+              }
+            },
+            "note": "10: Precrease the left vertical lower segment, using the unfolded corner crease as its upper endpoint."
+          },
+          {
+            "id": "fstep-envelope-16",
+            "parent": "fstep-envelope-15",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.12499999999999994,
+                    1
+                  ],
+                  [
+                    0.24999999999999994,
+                    0.8750000000000001
+                  ]
+                ]
+              },
+              "moving": [
+                0.2149999999999999,
+                0.9650000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0.12499999999999994,
+                    1
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.24999999999999994,
+                    0.8750000000000001
+                  ]
+                }
+              }
+            },
+            "note": "10: Precrease the right vertical lower segment, using the unfolded corner crease as its upper endpoint."
+          },
+          {
+            "id": "fstep-envelope-17",
+            "parent": "fstep-envelope-16",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.1102230246251565e-16,
+                    0.875
+                  ],
+                  [
+                    0.12499999999999994,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.034999999999999976,
+                0.9850000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "11: Fold the bottom point up between the segment endpoints."
+          },
+          {
+            "id": "fstep-envelope-18",
+            "parent": "fstep-envelope-17",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -5.551115123125783e-17,
+                    0.625
+                  ],
+                  [
+                    0.37499999999999994,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.03500000000000002,
+                0.985
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "12: Lift the lower area along the existing crease."
+          },
+          {
+            "id": "fstep-envelope-19",
+            "parent": "fstep-envelope-18",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.12499999999999999,
+                    0.37500000000000006
+                  ],
+                  [
+                    0.12499999999999989,
+                    0.7499999999999999
+                  ]
+                ]
+              },
+              "moving": [
+                0.04999999999999993,
+                0.55
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "13a: Fold the left lower section inward."
+          },
+          {
+            "id": "fstep-envelope-20",
+            "parent": "fstep-envelope-19",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.6250000000000003,
+                    0.8750000000000006
+                  ],
+                  [
+                    0.25,
+                    0.875
+                  ]
+                ]
+              },
+              "moving": [
+                0.4499999999999999,
+                0.9500000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "13b: Repeat on the right."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-envelope",
+        "cursor": "fstep-envelope-20",
+        "activeChild": {
+          "": "fstep-envelope-1",
+          "fstep-envelope-1": "fstep-envelope-2",
+          "fstep-envelope-2": "fstep-envelope-3",
+          "fstep-envelope-3": "fstep-envelope-4",
+          "fstep-envelope-4": "fstep-envelope-5",
+          "fstep-envelope-5": "fstep-envelope-6",
+          "fstep-envelope-6": "fstep-envelope-7",
+          "fstep-envelope-7": "fstep-envelope-8",
+          "fstep-envelope-8": "fstep-envelope-9",
+          "fstep-envelope-9": "fstep-envelope-10",
+          "fstep-envelope-10": "fstep-envelope-11",
+          "fstep-envelope-11": "fstep-envelope-12",
+          "fstep-envelope-12": "fstep-envelope-13",
+          "fstep-envelope-13": "fstep-envelope-14",
+          "fstep-envelope-14": "fstep-envelope-15",
+          "fstep-envelope-15": "fstep-envelope-16",
+          "fstep-envelope-16": "fstep-envelope-17",
+          "fstep-envelope-17": "fstep-envelope-18",
+          "fstep-envelope-18": "fstep-envelope-19",
+          "fstep-envelope-19": "fstep-envelope-20"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

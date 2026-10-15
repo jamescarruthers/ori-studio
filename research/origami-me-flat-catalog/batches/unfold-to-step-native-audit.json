@@ -1,0 +1,230 @@
+[
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/angelfish.osf",
+    "steps": 14,
+    "returns": 27,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/bookmark.osf",
+    "steps": 12,
+    "returns": 23,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/cat-face.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/christmas-tree.osf",
+    "steps": 10,
+    "returns": 19,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/cicada.osf",
+    "steps": 16,
+    "returns": 31,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/crow.osf",
+    "steps": 34,
+    "returns": 67,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/dove.osf",
+    "steps": 23,
+    "returns": 45,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/easter-egg.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/fish.osf",
+    "steps": 9,
+    "returns": 17,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/heart.osf",
+    "steps": 18,
+    "returns": 35,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/penguin.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/pigeon.osf",
+    "steps": 12,
+    "returns": 23,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/pumpkin.osf",
+    "steps": 25,
+    "returns": 49,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/santa.osf",
+    "steps": 23,
+    "returns": 45,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/squirrel.osf",
+    "steps": 34,
+    "returns": 67,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/swan.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/completed/whale.osf",
+    "steps": 20,
+    "returns": 39,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/4-pointed-star.osf",
+    "steps": 21,
+    "returns": 41,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/bird.osf",
+    "steps": 32,
+    "returns": 63,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/camellia.osf",
+    "steps": 7,
+    "returns": 13,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/chicken.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/dog.osf",
+    "steps": 15,
+    "returns": 29,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/elephant.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/envelope.osf",
+    "steps": 20,
+    "returns": 39,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/fox.osf",
+    "steps": 9,
+    "returns": 17,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/happi.osf",
+    "steps": 9,
+    "returns": 17,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/heart-card-2.osf",
+    "steps": 20,
+    "returns": 39,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/heart-corner-bookmark.osf",
+    "steps": 10,
+    "returns": 19,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/heart-envelope.osf",
+    "steps": 9,
+    "returns": 17,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/kimono.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/kitten.osf",
+    "steps": 8,
+    "returns": 15,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/lantern.osf",
+    "steps": 17,
+    "returns": 33,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/necktie.osf",
+    "steps": 6,
+    "returns": 11,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/pajarita.osf",
+    "steps": 16,
+    "returns": 31,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/paper-envelope.osf",
+    "steps": 11,
+    "returns": 21,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/parrot.osf",
+    "steps": 8,
+    "returns": 15,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/shirt.osf",
+    "steps": 9,
+    "returns": 17,
+    "failed": []
+  },
+  {
+    "file": "research/2026-10-13-origami-fold-trials/models/in-progress/witch-hat.osf",
+    "steps": 16,
+    "returns": 31,
+    "failed": []
+  }
+]

@@ -1,0 +1,64 @@
+{
+  "source": "https://origami.me/pumpkin/",
+  "file": "../2026-10-13-origami-fold-trials/models/completed/pumpkin.osf",
+  "fileSha256": "c516bb8f0f40cc31a0259f2e987d5262b86bb22d8250cca597102aafa883a94b",
+  "nodes": 25,
+  "folds": 23,
+  "finalFaces": 38,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "65adb73d79beb09234bfaf29617bf1ad583237280c1e2666b55ac90a28f6cd41",
+    "7e2a5f669d5b140a269a81d82ca69a13dc02501a34ff83957a1c6888ff2459e3",
+    "cbca88a5b2c965e0c066b79b9d23bcb5e37202e2da19f5e9f9ed8c029cf3b0ce",
+    "0303bdd5a19072b76fac24d08eab3cbb2a13a26ee41b19bfc49c504b26fa597e",
+    "cfa1f73cb4c043e9be15f684d40182e63c723cfadd5cc938c6dd20e0e6bbe5bb",
+    "7d28f0282c453ceddc00ca14b3decb3c8e668d0f9f23c1151b92659bf3296389",
+    "cc33d0b0a50a6c619fc6ab274d168a5dc6b386c9e82b51ed663d41ccbbe9a98b",
+    "8ed23af1c60bac31698c5a3b992438f237fd35dbe296a361ef0631d899db73d6",
+    "1bbb70eddbe661461883961b5541367db175427ef8c440af364c2cd8ceefd6bc",
+    "b0c4eadd8eb632187c12d8d7be7a131d787d1b08e00b524b460dc974cbc1e500",
+    "484973dc923813a3c895a0862cbc98aced44d9758fe9c2219197c53d62eb569a",
+    "0ecf71a92d75f4ce65ef9341938bf365259e4c3dec0e73a543dbe84d6f2f671d",
+    "189f7166930576379175f89fb954c195950cf93c729fb1ea18d2a4caa9c84921",
+    "de3d08f4d3bae6a37f2b7cf7a7b7780a8eafab5a43f5fb675d4b81940b5cc1a3",
+    "5096f5a55de939c854c47727923b5336d1b121e9867bbe3e6d9ca44c1456161d",
+    "8e3ae4d15407e4c9e8632e91b840aa4f3ab67e2f4d7141bc208684316b2625e8",
+    "1fc87e0680636056819401aa7409822f6ed1e7d0f886c89429a986ab38061815",
+    "0f89abe293456434b392e622d7fdcd8c781f0d65d81bf32e51f64090ab7941d8",
+    "0affbe6a4310cb0a42920a72e1915f664c1f1a2eb70aa97c74b1e7466c75767b",
+    "0fcb09fbb126ebc52e5a4af2b53297d0d4467611b9a186158d56b202451526ea",
+    "569bfeff047abea18a8f54c0cca1cf1ec067b5494dc599ff0825128c3988ee68",
+    "ef518515c707415e45b14f2d5075fdb6196d18da0ba68d71c775711a6cd097cf",
+    "0f5c84905c0a5c0b1990bec71e87400465f9607291f69db6903384e1d952e424"
+  ],
+  "sourceSteps": 18,
+  "sourceStepsCompleted": 18,
+  "sourceDiagramsReviewed": 20,
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "visuallyCheckedStates": 26,
+  "checks": [
+    {
+      "label": "Precrease node 2 preserves material stacks",
+      "witnesses": 3
+    },
+    {
+      "label": "Precrease node 3 preserves material stacks",
+      "witnesses": 4
+    },
+    {
+      "label": "Precrease node 17 preserves material stacks",
+      "witnesses": 48
+    },
+    {
+      "label": "Precrease node 18 preserves material stacks",
+      "witnesses": 50
+    }
+  ],
+  "audit": "Ready for user audit; all intermediate geometry, paper sides, and CP layer choices checked",
+  "proportions": "Source 2 pinch uses a short 6% center mark. Stem and shaping folds use the illustrated crease intersections. Optional standing display is omitted; the tutorial explicitly offers a flat endpoint.",
+  "cpCheckpoints": "pumpkin-cp-checkpoints.json",
+  "latestReport": "pumpkin-completion-2026-10-14.md"
+}

@@ -1495,7 +1495,6 @@
       "pathBrokenHint": "A step on this path no longer folds.",
       "pathLockedHint": "A step on this path was made with a newer Ori Studio.",
       "pathReplayingHint": "Still folding the steps.",
-      "precrease": "Precrease",
       "readOnlyHint": "Made with a newer Ori Studio: this sequence opens read-only.",
       "replayingHint": "Still folding the steps before this one.",
       "rotate": "Rotate…",
@@ -1515,6 +1514,14 @@
       "stepCreases": "Step creases",
       "stepCreasesTitle": "Draw the creases the step on show made in bold, as its instruction",
       "toolbar": "Fold view"
+    },
+    "collapse": {
+      "changed": "Update available. This step still uses its saved CP revision.",
+      "openSource": "Open source CP",
+      "replay": "Updating replays later folds. Check the timeline for Changed or Broken steps before continuing.",
+      "saved": "Using the saved CP revision. Source edits are applied only when you update.",
+      "unavailable": "Source CP unavailable. The saved snapshot still replays.",
+      "update": "Update from CP"
     },
     "grid": {
       "broken": "This step no longer folds",
@@ -1566,6 +1573,34 @@
       "scrub": "Step progress",
       "stepForward": "Step forward"
     },
+    "return": {
+      "append": "Append unfold step",
+      "changed": "Earlier folds changed. Rebuild this unfold to review the new result.",
+      "empty": "Fold a step first.",
+      "failureTitle": "Cannot unfold",
+      "finishPreview": "Finish or cancel the unfold preview first.",
+      "invalidTarget": "Choose an earlier step on this branch.",
+      "label": "Unfold to step",
+      "last": "Unfold last step",
+      "limit": "This crease history is too large to restore safely.",
+      "loading": "Preparing unfold preview…",
+      "noop": "The paper is already in this pose with these creases.",
+      "numberedSentence": "Return to step {{number}}, keeping all creases.",
+      "open": "Unfold to step…",
+      "preview": "Preview shown below. All creases are retained.",
+      "rebuild": "Rebuild unfold",
+      "refused": "The engine could not restore this pose while preserving the crease history. No step was changed.",
+      "retain": "Return to an earlier pose, keeping all creases.",
+      "sentence": "Return to the earlier folded pose, keeping all creases.",
+      "sheet": "Starting sheet",
+      "sheetSentence": "Unfold to the starting sheet, keeping all creases.",
+      "step": "Step {{number}}",
+      "target": "Return to",
+      "title": "Unfold preview",
+      "turn": "Turn after step {{number}}",
+      "unavailable": "Wait for the earlier steps to finish replaying, then try again.",
+      "viewTarget": "View target: {{target}}"
+    },
     "sentence": {
       "behind": {
         "petal": "Petal-fold the flap behind.",
@@ -1581,6 +1616,7 @@
         "swivelInsideLine": "Inside-swivel the edge behind onto the line, the creases meeting on the folded edge."
       },
       "closedSink": "Closed-sink the point: push its tip in, its layers kept together.",
+      "collapse": "Collapse along the saved crease pattern.",
       "cpJump": "Collapse into the imported crease pattern.",
       "crimp": {
         "inside": {
@@ -2392,7 +2428,7 @@
       "branchStep": "You are at step {{at}} of {{total}}: folding here starts a new branch.",
       "broken": "This step no longer folds: what it was made from is not on the paper before it. It and the steps after it can only be deleted.",
       "brokenAbove": "A step before this one no longer folds, so this one cannot be shown.",
-      "changed": "This step folds differently in this version of Ori Studio than when it was saved.",
+      "changed": "This step folds differently than when it was saved. Check its inputs and the steps above it.",
       "changes": "Changes",
       "chosen": "Chosen among several",
       "creases": "Creases",
@@ -2479,6 +2515,7 @@
         "swivelInside": "Inside swivel behind"
       },
       "closedSink": "Closed sink",
+      "collapse": "Collapse",
       "cpJump": "Import crease pattern",
       "crimpInside": "Inside crimp",
       "crimpOutside": "Outside crimp",
@@ -2500,6 +2537,7 @@
       "originFold": "FOLD file",
       "originOrh": "ORH file",
       "originOri": "ORI file",
+      "originProjectCp": "Project crease pattern",
       "originSample": "Sample",
       "outsideReverse": "Outside reverse fold",
       "petal": "Petal fold",

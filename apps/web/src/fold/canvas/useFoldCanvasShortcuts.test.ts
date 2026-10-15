@@ -9,6 +9,7 @@ import { focusLeavesEnterToFold, runFoldCanvasShortcut } from './useFoldCanvasSh
 function verbs(roots = 1, extents = true): FoldCanvasVerbs {
   return {
     selectTool: vi.fn(),
+    setFoldAndUnfold: vi.fn(),
     selectLineMode: vi.fn(),
     turn: vi.fn(),
     hitTest: vi.fn(),
@@ -87,7 +88,7 @@ describe('the Fold canvas’s keys', () => {
     expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(false);
   });
 
-  it('steps the precrease extent on E only with the Precrease tool in hand', () => {
+  it('steps the precrease extent on E only while Fold and unfold is enabled', () => {
     const bound = verbs(1, true);
     release = registerFoldCanvasVerbs(bound);
     expect(runFoldCanvasShortcut('fold.cycleExtent', null)).toBe(true);

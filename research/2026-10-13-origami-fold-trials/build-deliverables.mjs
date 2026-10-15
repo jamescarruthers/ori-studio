@@ -1,3 +1,4 @@
+import {modelPath} from '../origami-me-flat-catalog/model-paths.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -26,7 +27,9 @@ for(const spec of specs){
  for(const s of d.steps.slice(0,spec.limit)){t.add(s.op,s.note,s.choices);stateHashes.push(hash(t.e,t.state));}
  const p=structuredClone(template);p.workspace.id='workspace-origami-'+spec.slug;p.workspace.title=spec.title;p.workspace.foldSequences=[t.doc];
  p.workspace.viewState={fold:{v:1,sequenceId:t.doc.id,cursor:t.doc.steps.at(-1)?.id??null,activeChild:Object.fromEntries(t.doc.steps.map(s=>[s.parent??'',s.id]))}};
- const osf=path.join(out,spec.slug+'.osf');fs.writeFileSync(osf,JSON.stringify(p,null,2)+'\n');
+ const osf=modelPath(spec.slug),serialized=JSON.stringify(p,null,2)+'\n';
+ if(fs.existsSync(osf))assert.equal(fs.readFileSync(osf,'utf8'),serialized,`Preserve existing model ${osf}; save a new revision instead.`);
+ fs.mkdirSync(path.dirname(osf),{recursive:true});fs.writeFileSync(osf,serialized);
  fs.copyFileSync(osf,path.join(dir,'../../tests/fixtures/fold-design-completion',spec.slug+'.osf'));
  const f=t.e.export_fold(new Uint32Array(t.states),spec.title);assert.equal(f.status,'ok');
  fs.writeFileSync(path.join(exports,spec.slug+'.fold'),JSON.stringify(JSON.parse(f.text))+'\n');
@@ -41,6 +44,8 @@ for(const spec of specs){
 }
 const combined=structuredClone(template);combined.workspace.id='workspace-origami-trials';combined.workspace.title='Origami.me — five Fold workspace trials';combined.workspace.foldSequences=docs;
 const first=docs[0];combined.workspace.viewState={fold:{v:1,sequenceId:first.id,cursor:first.steps.at(-1).id,activeChild:Object.fromEntries(first.steps.map(s=>[s.parent??'',s.id]))}};
-fs.writeFileSync(path.join(out,'origami-trials.osf'),JSON.stringify(combined,null,2)+'\n');
+const bundle=path.join(out,'archive/combined/origami-trials.osf');
+fs.mkdirSync(path.dirname(bundle),{recursive:true});
+fs.writeFileSync(bundle,JSON.stringify(combined,null,2)+'\n');
 fs.writeFileSync(path.join(dir,'validation.json'),JSON.stringify({sourceCommit:'aa736f95d126d339f70cd531b85daf60770193a3',completion:'flat-only; outside reverse and multiple-target tuck',models:validation},null,2)+'\n');
 console.table(validation.map(({stateHashes,...v})=>v));

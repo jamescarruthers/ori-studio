@@ -35,6 +35,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { WasmErrorEnvelope } from '../../engine/types';
 import type { FoldPreviewResult, FoldSequenceClientLossReason } from '../../store/workspaceStore/foldSequenceRuntime';
 import type { FoldSequenceWorkerApi } from '../../workers/foldSequenceWorker';
+import { resolveFoldReturn } from '../document/foldReturn';
 import type { FoldStateFingerprint } from '../document/foldDigest';
 import { foldReaderActivePath, type FoldReaderState } from '../document/foldReaderState';
 import { createFoldReplayer, type FoldReplayer, type FoldReplayProgress } from '../document/foldReplay';
@@ -634,6 +635,21 @@ export function createFoldSession({
   const guarded = <T>(state: FoldEngineStateHandle, call: () => Promise<T>): Promise<T> =>
     state.generation === runtime.generation() ? call() : Promise.reject(foldStateLostError(state));
 
+  const applyStep = (worker: FoldSessionWorker, parent: FoldEngineStateHandle, parentId: string | null,
+    op: FoldEngineOp, choices?: FoldChoices) => {
+    if (op.kind !== 'unfold-to') return worker.apply(parent.id, op, choices);
+    const snapshot = store.getState();
+    const dependency = snapshot.sequence
+      ? resolveFoldReturn(snapshot.sequence, parentId, op, snapshot.sheet, snapshot.nodes)
+      : { code: 'return_state_unavailable' as const };
+    if ('code' in dependency) return Promise.resolve({ status: 'refused' as const,
+      refusal: { code: dependency.code }, fixes: [], faces: [], vertices: [] });
+    for (const state of [dependency.target, ...dependency.history]) {
+      if (state.generation !== parent.generation) return Promise.reject(foldStateLostError(state));
+    }
+    return worker.returnTo(parent.id, dependency.target.id, dependency.history.map((s) => s.id));
+  };
+
   const preview = (op: FoldEngineOp, choices?: FoldChoices): Promise<FoldPreviewOutcome> => {
     const from = foldableFrom();
     if (!(from instanceof Promise)) return previewFrom(from, op, choices);
@@ -657,7 +673,7 @@ export function createFoldSession({
     render();
     const answer = previewChannel
       .request(
-        (worker) => guarded(parent, () => worker.apply(parent.id, op, choices)),
+        (worker) => guarded(parent, () => applyStep(worker, parent, from.parentId, op, choices)),
         // Superseded on its way back: nobody will see it.
         (late) => {
           if (late.status === 'ok') engine?.release({ generation: parent.generation, id: late.state });
@@ -787,7 +803,7 @@ export function createFoldSession({
     let fingerprint: FoldStateFingerprint;
     try {
       if (!landed) {
-        const answer = await runtime.ask((worker) => guarded(parent, () => worker.apply(parent.id, op, choices)));
+        const answer = await runtime.ask((worker) => guarded(parent, () => applyStep(worker, parent, parentId, op, choices)));
         if (answer.status !== 'ok') {
           // Shown as a preview's refusal is, with its fixes.
           dropPending();

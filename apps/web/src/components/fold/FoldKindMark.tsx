@@ -1,26 +1,70 @@
-import { useTranslation } from 'react-i18next';
-import { foldKindLetter, type FoldKind } from '../../fold/tools/foldToolCatalog';
+import type { FoldKind } from '../../fold/tools/foldToolCatalog';
 import styles from './FoldKindMark.module.css';
 
 /**
- * A fold's letter in the ink of the crease it leaves — V in the valley ink, M
- * in the mountain's, P in the flat crease's a precrease leaves — and IR for
- * the inside reverse fold: the icon of each fold on the rail, in the phone
- * tool sheet and in the tool window's V / M / P control. Edit's line-type
- * letters (`CpLineTypeMark`) are the same idea for its line types.
+ * A fold's shape in the control's ink, shared by the rail, phone tool sheet,
+ * menus and tool-window controls. The parent control supplies its accessible
+ * name; these drawings are decorative.
  */
 export function FoldKindMark({
   kind,
-  size = 'md',
+  size = 20,
+  strokeWidth = 1.7,
 }: {
-  kind: FoldKind | 'inside-reverse';
-  /** `lg` where a control is sized for a thumb. */
-  size?: 'md' | 'lg';
+  kind: FoldKind | 'inside-reverse' | 'crimp' | 'squash' | 'swivel';
+  size?: number;
+  strokeWidth?: number;
 }) {
-  const { t } = useTranslation();
   return (
-    <span className={styles.mark} data-kind={kind} data-size={size} aria-hidden="true">
-      {foldKindLetter(t, kind)}
-    </span>
+    <svg
+      className={styles.mark}
+      data-kind={kind}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {kind === 'valley' && <path d="M5 6 12 18 19 6" />}
+      {kind === 'mountain' && <path d="M5 18 12 6 19 18" />}
+      {kind === 'precrease' && (
+        <>
+          <path d="M2.5 2.5h19v19h-19Z" />
+          <path d="M3 12h18" strokeDasharray="2 2" strokeWidth={1.2} />
+          <path d="M10 5.5Q17 13 10 19Q21 12 13 5.5" />
+          <path d="m13 5.5 1 3.5 1.5-1.5Z" fill="currentColor" stroke="none" />
+        </>
+      )}
+      {kind === 'crimp' && (
+        <>
+          <path d="M9 5.5h12M9 18.5h12" />
+          <path d="M2 9.5h11m-3-2.5 3 2.5-3 2M2 14.5h11m-3-2 3 2-3 2.5" />
+        </>
+      )}
+      {kind === 'squash' && (
+        <>
+          <path d="m12 2 10 10-10 10L2 12Z" />
+          <path d="M12 2 7 17h10L12 2M12 17v5" />
+          <path d="M12 2v15" />
+        </>
+      )}
+      {kind === 'swivel' && (
+        <>
+          <path d="m12 2 10 10-10 10L2 12Z" />
+          <path d="M12 2 7.5 10.5 12 22l5.5-7.5L12 2M7.5 10.5 12 9l5.5 5.5M12 9v13m0-9.5 5.5 2" />
+          <path d="M12 2v7" />
+        </>
+      )}
+      {kind === 'inside-reverse' && (
+        <>
+          <path d="M4 21 7 6.5 11 3.5 22 9.5 10.5 8 8.5 21Z" />
+          <path d="m11 3.5-.5 4.5-2 13" />
+        </>
+      )}
+    </svg>
   );
 }

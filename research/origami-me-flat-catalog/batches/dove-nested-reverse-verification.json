@@ -1,0 +1,30 @@
+{
+  "materialWitnesses": 34,
+  "stationaryOrderCells": 5,
+  "nestedPacketCells": 1,
+  "orders": [
+    [
+      12,
+      16,
+      15,
+      11,
+      13,
+      17,
+      18,
+      14,
+      4,
+      6
+    ]
+  ],
+  "statesReplayed": 8,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "0813afec04ce5a97a4ad71a47454134a59b2d8c2bc0943507588041c99297642",
+    "6d904d339255f4da08d35a8001ea52c605689a38b25c0f60b5f1ef9b2fb855f4",
+    "fb04b2e7cc05ef78532daee5c57c77121089b58e8ff90a4bf04c42932df2badf",
+    "ba4cd711b12b0fd5ae2f4d8552132a87b78e910a9d1b1c175a9da715ed19252d",
+    "4ec0f71120c8edc2d8a21963ff57a35fb04d6969c999397e1f7e796fbd2f0414",
+    "5039be436b5bcfb7d18b5985fe458e3f88bbe8f98309671dae579409f4574f6c"
+  ]
+}

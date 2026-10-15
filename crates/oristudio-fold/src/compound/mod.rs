@@ -60,6 +60,7 @@ pub mod tuck;
 // (`fan`). `pieces` is the pipeline's steps 3–7 for any scoring, which
 // `prepare` shares.
 pub mod fan;
+mod fan_precreased;
 pub mod petal;
 pub(crate) mod pieces;
 pub mod rabbit;
@@ -88,7 +89,7 @@ use crate::witness::{Broken, WitnessOrder};
 use pieces::{Pieces, Scoring, prepare_pieces};
 
 /// How the pairs of two faces in different blocks are ordered (step 7).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Across {
     /// As they were, in absolute terms: reverse folds and tucks (research
     /// §5.2, `crossBlock: "keep"`). Seeds, since the blocks' creases between
@@ -100,11 +101,32 @@ pub(crate) enum Across {
     /// its own strip, and orders nothing else of the tip against the strip
     /// afresh.
     Alike,
+    /// Corresponding halves of nested openings turn as one packet. Only
+    /// these explicit block pairs carry their order through the motion;
+    /// other pairs keep their absolute order (or, for a crimp, do so only
+    /// within the strip or tip). Pocket placements remain per opening.
+    Packets {
+        coupled: Vec<[usize; 2]>,
+        alike_only: bool,
+    },
     /// Left to the completion: the vertex folds, whose blocks land in
     /// different places (research §5.3), seeded only against what stays; and
     /// an unsink, whose order back is the completion's alone (research
     /// §5.4).
     Free,
+}
+
+impl Across {
+    pub(super) fn packets(coupled: Vec<[usize; 2]>, alike_only: bool) -> Self {
+        if coupled.is_empty() {
+            if alike_only { Self::Alike } else { Self::Keep }
+        } else {
+            Self::Packets {
+                coupled,
+                alike_only,
+            }
+        }
+    }
 }
 
 /// A block placed against the pieces of some parent faces that stay: above
@@ -243,7 +265,7 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
             block_of,
             blocks: m.blocks.clone(),
             against: m.against.clone(),
-            across: m.across,
+            across: m.across.clone(),
         },
     )
 }

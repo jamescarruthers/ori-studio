@@ -315,13 +315,13 @@ function StatusNotices({
           <Notice>
             {t(
               'panels:fold.step.changed',
-              'This step folds differently in this version of Ori Studio than when it was saved.'
+              'This step folds differently than when it was saved. Check its inputs and the steps above it.'
             )}
           </Notice>
         );
     }
   })();
-  const imported = step.words.op === 'cp-jump' && (
+  const imported = step.words.op === 'cp-jump' && !step.words.collapse && (
     <Notice>
       {t(
         'panels:fold.step.imported',

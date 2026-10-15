@@ -1,0 +1,30 @@
+[
+  {
+    "label": "Precrease node 2: identical material stacks",
+    "witnesses": 3
+  },
+  {
+    "label": "Precrease node 3: identical material stacks",
+    "witnesses": 6
+  },
+  {
+    "label": "Precrease node 7: identical material stacks",
+    "witnesses": 16
+  },
+  {
+    "label": "Precrease node 8: identical material stacks",
+    "witnesses": 20
+  },
+  {
+    "label": "Precrease node 15: identical material stacks",
+    "witnesses": 40
+  },
+  {
+    "label": "Precrease node 16: identical material stacks",
+    "witnesses": 40
+  },
+  {
+    "label": "Source 9 restores the source-5 geometry, paper sides and complete layer stacks",
+    "witnesses": 32
+  }
+]

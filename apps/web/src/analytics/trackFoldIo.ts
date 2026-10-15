@@ -7,8 +7,8 @@ import { track } from './runtime';
  * own closed enum — a format, `sample` or `edit_folded_figure` — never a file
  * name.
  */
-export function trackFoldCpImported(origin: FoldCpOrigin): void {
-  track(ANALYTICS_EVENTS.foldCpImported, { origin });
+export function trackFoldCpImported(origin: FoldCpOrigin, action?: 'insert' | 'update'): void {
+  track(ANALYTICS_EVENTS.foldCpImported, { origin, ...(action ? { action } : {}) });
 }
 
 /** A Fold sequence was sent to Edit (plan D10, D18): there is one Send to Edit, so no property. */

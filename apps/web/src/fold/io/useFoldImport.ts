@@ -7,6 +7,7 @@ import { reportError } from '../../monitoring';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { getOristudioCpFoldedFigurePaperScene } from '../../store/workspaceStore/oristudioCpRuntime';
+import { projectCpImport } from '../collapse/projectCpImport';
 import { foldStartingFigureScene } from './foldEditFigure';
 import { createFoldImportFlow, type FoldImportFlow, type FoldImportFlowState, type FoldImportRequest } from './foldImportFlow';
 
@@ -19,6 +20,7 @@ export function createAppFoldImportFlow(): FoldImportFlow {
     session: foldSession(),
     editFoldedFigure: () =>
       foldStartingFigureScene(useWorkspaceStore.getState(), (handle) => getOristudioCpFoldedFigurePaperScene(handle)),
+    projectCp: projectCpImport,
     onImported: trackFoldCpImported,
     onChoiceOffered: (orders) => trackFoldChoiceOffered('import_order', orders),
   });

@@ -78,6 +78,7 @@ function phoneVerbGroups(
         ]
       : [commandRow(sendToEdit, false)];
   const groups: { id: string; items: (ViewportToolbarAction | null)[] }[] = [
+    { id: 'return', items: [commandRow(foldCommand(actions, 'unfold-to'), false)] },
     { id: 'in', items: [commandRow(foldCommand(actions, 'import-cp'), true)] },
     { id: 'send', items: send },
     {
@@ -134,6 +135,7 @@ export function FoldHeader({
 }) {
   const { t } = useTranslation();
   const phone = useIsPhoneLayout();
+  const unfold = foldCommand(actions, 'unfold-to');
   const importCp = foldCommand(actions, 'import-cp');
   const sendToEdit = foldCommand(actions, 'send-to-edit');
   const exportFold = foldCommand(actions, 'export-fold');
@@ -176,6 +178,7 @@ export function FoldHeader({
           />
         ) : (
           <>
+            {unfold && <CommandButton command={unfold} />}
             {importCp && <CommandButton command={importCp} />}
             {sendToEdit &&
               (sendToEditButton ? (

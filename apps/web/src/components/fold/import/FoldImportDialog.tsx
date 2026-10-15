@@ -82,6 +82,8 @@ function workingLabel(t: TFunction, state: FoldImportFlowState): string {
   if (state.phase !== 'working') return '';
   const { request } = state;
   switch (request.kind) {
+    case 'project-cp':
+      return t('dialogs:foldImport.working.projectCp', 'Resolving the project crease pattern…');
     case 'file':
       return t('dialogs:foldImport.working.file', 'Importing {{name}}…', { name: request.name });
     case 'sample':
@@ -144,7 +146,13 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
     void importFile(file);
   };
 
-  const title = t('dialogs:foldImport.title', 'Import crease pattern');
+  const request = state.phase === 'idle' ? opening.request : state.request;
+  const projectCp = request?.kind === 'project-cp';
+  const updating = projectCp && !!request.stepId;
+  const title = updating
+    ? t('dialogs:foldImport.updateTitle', 'Update from CP')
+    : projectCp ? t('dialogs:foldImport.collapseTitle', 'Collapse from CP')
+      : t('dialogs:foldImport.title', 'Import crease pattern');
   const choosing = state.phase === 'choosing' ? state : null;
   const verbs = { searchLonger: () => void flow?.searchLonger() };
   const notice =
@@ -204,14 +212,17 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
           {notice && <FoldRefusalNotice notice={notice} />}
         </div>
         <div className={styles.footer}>
-          <p className={styles.placement}>{placement(t, { sequence, cursor, activePath })}</p>
+          <p className={styles.placement}>{state.phase !== 'idle' && state.request.kind === 'project-cp' && state.request.stepId
+            ? t('dialogs:foldImport.placement.update', 'Updates this Collapse step. Later steps and branches are kept and replayed; affected folds are marked Changed or Broken.')
+            : placement(t, { sequence, cursor, activePath })}</p>
           {choosing && (
             <div className={styles.actions}>
               <Button size="sm" variant="ghost" disabled={choosing.committing} onClick={() => flow?.reset()}>
                 {t('dialogs:foldImport.back', 'Back')}
               </Button>
               <Button size="sm" variant="primary" disabled={choosing.committing} onClick={() => void flow?.commit()}>
-                {t('dialogs:foldImport.import', 'Import')}
+                {updating ? t('dialogs:foldImport.updateTitle', 'Update from CP')
+                  : projectCp ? t('dialogs:foldImport.collapse', 'Collapse') : t('dialogs:foldImport.import', 'Import')}
               </Button>
             </div>
           )}

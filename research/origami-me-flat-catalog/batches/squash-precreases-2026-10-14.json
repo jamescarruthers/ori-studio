@@ -1,0 +1,1376 @@
+{
+  "date": "2026-10-14",
+  "gap": "F019",
+  "source": "https://origami.me/bird/",
+  "picks": [
+    {
+      "op": {
+        "kind": "squash",
+        "flap": [
+          0.6666666666666666,
+          0.1666666666666666
+        ],
+        "direction": "valley"
+      },
+      "analysis": {
+        "status": "ok",
+        "family": "vertex",
+        "analysis": {
+          "kind": "squash",
+          "vertex": [
+            0.5,
+            0.5
+          ],
+          "hinge": {
+            "n": [
+              0.7071067811865476,
+              -0.7071067811865476
+            ],
+            "d": 0
+          },
+          "spine": {
+            "n": [
+              0.7071067811865475,
+              0.7071067811865475
+            ],
+            "d": 0.7071067811865475
+          },
+          "hinge_direction": [
+            -0.7071067811865475,
+            -0.7071067811865475
+          ],
+          "spine_direction": [
+            -0.7071067811865475,
+            0.7071067811865475
+          ],
+          "upper": [
+            7,
+            8
+          ],
+          "lower": [
+            11,
+            12
+          ],
+          "upper_crease": {
+            "n": [
+              1.1102230246251568e-16,
+              -1
+            ],
+            "d": -0.49999999999999994
+          },
+          "lower_crease": {
+            "n": [
+              1.1102230246251568e-16,
+              -1
+            ],
+            "d": -0.49999999999999994
+          },
+          "wedge": -1.5707963267948966,
+          "share": 0
+        },
+        "emergents": [],
+        "orders": null
+      },
+      "result": {
+        "status": "ok",
+        "state": 10,
+        "report": null,
+        "compound": {
+          "family": "vertex",
+          "kind": "squash",
+          "vertices": [
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          "creases": [
+            {
+              "n": [
+                1.1102230246251568e-16,
+                -1
+              ],
+              "d": -0.49999999999999994
+            },
+            {
+              "n": [
+                0.7071067811865475,
+                0.7071067811865475
+              ],
+              "d": 0.7071067811865475
+            },
+            {
+              "n": [
+                0.7071067811865476,
+                -0.7071067811865476
+              ],
+              "d": 0
+            }
+          ],
+          "direction": "mountain",
+          "moving": [
+            7,
+            8,
+            12
+          ],
+          "blocks": [
+            [
+              12
+            ],
+            [
+              7
+            ],
+            [
+              8
+            ]
+          ],
+          "created": [],
+          "unfolded": [
+            5,
+            7
+          ],
+          "refolded": [
+            {
+              "edge": 13,
+              "remembered": "mountain",
+              "letter": "mountain"
+            },
+            {
+              "edge": 19,
+              "remembered": "mountain",
+              "letter": "mountain"
+            }
+          ],
+          "reversed": [],
+          "split": 0,
+          "motion": {
+            "kind": "visual",
+            "legs": [
+              {
+                "name": "spread",
+                "stacking": "parent",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865475,
+                        0.7071067811865475
+                      ],
+                      "d": 0.7071067811865475
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966,
+                    "then": [
+                      1,
+                      2.2204460492503136e-16,
+                      -1.1102230246251565e-16,
+                      2.2204460492503136e-16,
+                      -1,
+                      0.9999999999999999
+                    ]
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  }
+                ]
+              },
+              {
+                "name": "close",
+                "stacking": "parent",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865475,
+                        0.7071067811865475
+                      ],
+                      "d": 0.7071067811865475
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793,
+                    "then": [
+                      1,
+                      2.2204460492503136e-16,
+                      -1.1102230246251565e-16,
+                      2.2204460492503136e-16,
+                      -1,
+                      0.9999999999999999
+                    ]
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  }
+                ]
+              },
+              {
+                "name": "spread",
+                "stacking": "parent",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966
+                  }
+                ]
+              },
+              {
+                "name": "close",
+                "stacking": "landed",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793
+                  }
+                ]
+              }
+            ]
+          },
+          "stored": {}
+        },
+        "summary": {
+          "step": 9,
+          "faces": 8,
+          "pairs": 8,
+          "creases": {
+            "border": 8,
+            "mountain": 3,
+            "valley": 1,
+            "flat": 4
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 3.1401849173675503e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      },
+      "stateHash": "5132406ccc067607b63159d41f36f5a2f2481d85198c69702481e3b6d6146ec8"
+    },
+    {
+      "op": {
+        "kind": "squash",
+        "flap": [
+          0.33333333333333337,
+          0.16666666666666669
+        ],
+        "direction": "valley"
+      },
+      "analysis": {
+        "status": "ok",
+        "family": "vertex",
+        "analysis": {
+          "kind": "squash",
+          "vertex": [
+            0.5,
+            0.5
+          ],
+          "hinge": {
+            "n": [
+              0.7071067811865476,
+              -0.7071067811865476
+            ],
+            "d": 0
+          },
+          "spine": {
+            "n": [
+              0.7071067811865475,
+              0.7071067811865475
+            ],
+            "d": 0.7071067811865475
+          },
+          "hinge_direction": [
+            -0.7071067811865475,
+            -0.7071067811865475
+          ],
+          "spine_direction": [
+            -0.7071067811865475,
+            0.7071067811865475
+          ],
+          "upper": [
+            7,
+            8
+          ],
+          "lower": [
+            11,
+            12
+          ],
+          "upper_crease": {
+            "n": [
+              1.1102230246251568e-16,
+              -1
+            ],
+            "d": -0.49999999999999994
+          },
+          "lower_crease": {
+            "n": [
+              1.1102230246251568e-16,
+              -1
+            ],
+            "d": -0.49999999999999994
+          },
+          "wedge": -1.5707963267948966,
+          "share": 0
+        },
+        "emergents": [],
+        "orders": null
+      },
+      "result": {
+        "status": "ok",
+        "state": 11,
+        "report": null,
+        "compound": {
+          "family": "vertex",
+          "kind": "squash",
+          "vertices": [
+            [
+              0.5,
+              0.5
+            ]
+          ],
+          "creases": [
+            {
+              "n": [
+                1.1102230246251568e-16,
+                -1
+              ],
+              "d": -0.49999999999999994
+            },
+            {
+              "n": [
+                0.7071067811865475,
+                0.7071067811865475
+              ],
+              "d": 0.7071067811865475
+            },
+            {
+              "n": [
+                0.7071067811865476,
+                -0.7071067811865476
+              ],
+              "d": 0
+            }
+          ],
+          "direction": "mountain",
+          "moving": [
+            7,
+            8,
+            12
+          ],
+          "blocks": [
+            [
+              12
+            ],
+            [
+              7
+            ],
+            [
+              8
+            ]
+          ],
+          "created": [],
+          "unfolded": [
+            5,
+            7
+          ],
+          "refolded": [
+            {
+              "edge": 13,
+              "remembered": "mountain",
+              "letter": "mountain"
+            },
+            {
+              "edge": 19,
+              "remembered": "mountain",
+              "letter": "mountain"
+            }
+          ],
+          "reversed": [],
+          "split": 0,
+          "motion": {
+            "kind": "visual",
+            "legs": [
+              {
+                "name": "spread",
+                "stacking": "parent",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865475,
+                        0.7071067811865475
+                      ],
+                      "d": 0.7071067811865475
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966,
+                    "then": [
+                      1,
+                      2.2204460492503136e-16,
+                      -1.1102230246251565e-16,
+                      2.2204460492503136e-16,
+                      -1,
+                      0.9999999999999999
+                    ]
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  }
+                ]
+              },
+              {
+                "name": "close",
+                "stacking": "parent",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865475,
+                        0.7071067811865475
+                      ],
+                      "d": 0.7071067811865475
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793,
+                    "then": [
+                      1,
+                      2.2204460492503136e-16,
+                      -1.1102230246251565e-16,
+                      2.2204460492503136e-16,
+                      -1,
+                      0.9999999999999999
+                    ]
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": 0
+                  }
+                ]
+              },
+              {
+                "name": "spread",
+                "stacking": "parent",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": 0,
+                    "to": -1.5707963267948966
+                  }
+                ]
+              },
+              {
+                "name": "close",
+                "stacking": "landed",
+                "groups": [
+                  {
+                    "faces": [
+                      12
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793
+                  },
+                  {
+                    "faces": [
+                      7
+                    ],
+                    "axis": {
+                      "n": [
+                        1.1102230246251568e-16,
+                        -1
+                      ],
+                      "d": -0.49999999999999994
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793
+                  },
+                  {
+                    "faces": [
+                      8
+                    ],
+                    "axis": {
+                      "n": [
+                        0.7071067811865476,
+                        -0.7071067811865476
+                      ],
+                      "d": 0
+                    },
+                    "side": "negative",
+                    "from": -1.5707963267948966,
+                    "to": -3.141592653589793
+                  }
+                ]
+              }
+            ]
+          },
+          "stored": {}
+        },
+        "summary": {
+          "step": 9,
+          "faces": 8,
+          "pairs": 8,
+          "creases": {
+            "border": 8,
+            "mountain": 3,
+            "valley": 1,
+            "flat": 4
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 3.1401849173675503e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      },
+      "stateHash": "5132406ccc067607b63159d41f36f5a2f2481d85198c69702481e3b6d6146ec8"
+    }
+  ],
+  "comparison": "Identical complete analysis, canonical material/crease/order keys and scene including exposed sides and subface stacks.",
+  "models": [
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/angelfish.osf",
+      "sha256": "75443e54e8919159af11a3584dc43bdad5920dc9feba8412944291aca173134e",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 14,
+          "replayedStates": 15,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/bookmark.osf",
+      "sha256": "65f5fc00a4ca50dc5dd5b9cdb2c2ea87b024f0f2d63658c3a534da506f3fec8d",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 12,
+          "replayedStates": 13,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/cat-face.osf",
+      "sha256": "70e255621073a3b487b11240c02f001020aa909bb4bec5b8eb1bfac22d8d48db",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/christmas-tree.osf",
+      "sha256": "51fc3b5c4ba17800777712ae96fb2e80539f03e35178734007348e4254529991",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 10,
+          "replayedStates": 11,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/cicada.osf",
+      "sha256": "6872bea63b139589a711117ed851dad0474622913819b64fe92034080179b996",
+      "fileMatchesManifest": null,
+      "sequences": [
+        {
+          "nodes": 16,
+          "replayedStates": 17,
+          "failures": [],
+          "stateHashesMatchManifest": null
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/easter-egg.osf",
+      "sha256": "aca9a35372d69d1036055e433ed6f3400184dfdce1beb6364b0991510547b9f6",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/fish.osf",
+      "sha256": "56948ec5e16622d8cb70ed959e585b3260fda13e2cdf2bc0eb48848888375413",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 9,
+          "replayedStates": 10,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/heart.osf",
+      "sha256": "4fd6c64e8ce51ffe206bb0c5fa81e72ca0ad060849758a101d68f4b749535954",
+      "fileMatchesManifest": null,
+      "sequences": [
+        {
+          "nodes": 18,
+          "replayedStates": 19,
+          "failures": [],
+          "stateHashesMatchManifest": null
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/penguin.osf",
+      "sha256": "04acea6af22e96f462818372310475cc948466cde674c3377cfbc61a16e378dc",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/pigeon.osf",
+      "sha256": "f43db0e7c0178cae989358bb83e6f038b87e4ba9d2a73c60401263a400945493",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 12,
+          "replayedStates": 13,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/santa.osf",
+      "sha256": "3f44b3ef283b308d4186eba5ab517691d9214ee7617af0a7cf114e394a3506b3",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 23,
+          "replayedStates": 24,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/swan.osf",
+      "sha256": "2a4f07ed8363ef4d35baee5040014ac0fb28367ecbbd2105b9e02aa9ac8a2ed4",
+      "fileMatchesManifest": null,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": null
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/completed/whale.osf",
+      "sha256": "0f8b0f55bf74f2dbcd0eeddc33d68257949a4fe05f1cd7ed6144f35e7cea7cfc",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 20,
+          "replayedStates": 21,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/3d/box.osf",
+      "sha256": "b3f2180cd3ec275ae56acc53943083f0d1cfc233354c786c6657189f9c30ae02",
+      "fileMatchesManifest": null,
+      "sequences": [
+        {
+          "nodes": 13,
+          "replayedStates": 14,
+          "failures": [],
+          "stateHashesMatchManifest": null
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/3d/crane.osf",
+      "sha256": "f056054e7ba37f3115ed5c9c29ca52f6f0ec2887cfd9c153a338269359d5d466",
+      "fileMatchesManifest": null,
+      "sequences": [
+        {
+          "nodes": 24,
+          "replayedStates": 25,
+          "failures": [],
+          "stateHashesMatchManifest": null
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/crab.osf",
+      "sha256": "dc8385f8b899df107ed02e6c76b11069ff444e640c00df374a8f20c57e5b6141",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 29,
+          "replayedStates": 30,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/dolphin.osf",
+      "sha256": "f23bb0da40bd3b103e385d9876c1aba3ac262ff6994b8370ce1fafc6225da89a",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 7,
+          "replayedStates": 8,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/goldfish.osf",
+      "sha256": "f988922c1f61a25dce60fe81bbd611cd6c320f269074de0ff1975f8a1d993ea3",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 14,
+          "replayedStates": 15,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/horse.osf",
+      "sha256": "733ff7a7f7c2a732fad0fee95895774e8dd57621c7d46f106a257f8429bf02ba",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 16,
+          "replayedStates": 17,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/pentagon-from-square-paper.osf",
+      "sha256": "fc90e71ee73143f2270d4fc3d70eb8d8f1e00e351df48b7f1382584c8f2d1bef",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 9,
+          "replayedStates": 10,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-paper-to-square.osf",
+      "sha256": "e613dbf04b50aaecbc9c5de9649e79d9621937bbc60879d92e76cd1456ffa98d",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 2,
+          "replayedStates": 3,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-to-hexagon.osf",
+      "sha256": "0afad37dc1023c45b3b7a31e8f8ce869e8c701f01994d4d1b1a6c6deace66f20",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 5,
+          "replayedStates": 6,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-a.osf",
+      "sha256": "55345af9239272eb4b86b7afaaaa60e3a236a26a08c832a959cf8c0e494447af",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-b.osf",
+      "sha256": "dd30611c1e55126e749fab476b8284607a0fd137399f2f3c13c607103142582e",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 10,
+          "replayedStates": 11,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/4-pointed-star.osf",
+      "sha256": "481ae5dab3698fee1a20db5d0053c236f68c84635f1907ad757283feca975aea",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 21,
+          "replayedStates": 22,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/bird.osf",
+      "sha256": "20065c8d430ad612310b68e5daef8c0cea069f32c92022f6cdbb5a0f5376ed87",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 14,
+          "replayedStates": 15,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/camellia.osf",
+      "sha256": "0f3c3950f5d2d171f316c65fe1a983babf1aab34b572bd1fb7089f3144543036",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 7,
+          "replayedStates": 8,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/chicken.osf",
+      "sha256": "786a87d089a702d7addae226095de7a2c6d7ca38ddfe2db6cf960551771a7de0",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/crow.osf",
+      "sha256": "6ab4c12ade8374411bda3d9e84897c64df5d795097fc53837905e0a2800f9aed",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 14,
+          "replayedStates": 15,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/dog.osf",
+      "sha256": "4bde941bae11c0967bac43fd003864397607036699a912095389974bde7454cb",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 15,
+          "replayedStates": 16,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/dove.osf",
+      "sha256": "3557cd586ce653aef2b13c9ab6e61eb738d9fd8f0fe73c89cc2ac8050cfccef0",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 6,
+          "replayedStates": 7,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/elephant.osf",
+      "sha256": "3670ac6af655c5d108e75d68ae58ff23b0443279d6eafd45814445c34909d447",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/fox.osf",
+      "sha256": "5419dacb781adc22e104e258fcb424879b93265a9cf2f39a4b8dc2d5499526c5",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 9,
+          "replayedStates": 10,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/happi.osf",
+      "sha256": "0e9bc0aba84ff80f9648489162be5d0be2324c4f9329bccaaa4359fff5ab39df",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 9,
+          "replayedStates": 10,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/kimono.osf",
+      "sha256": "69aa057e248146ef7b238ee16191f3900772490ecb0b2020d12f5e2f9156c562",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/lantern.osf",
+      "sha256": "0e2acb777d4959bf3a4894f6e96f86d01f55de03bf77f511b92bf86f2d931469",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 17,
+          "replayedStates": 18,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/necktie.osf",
+      "sha256": "3de7d9b9567a5af4177d67606b556abe44cc9b014dd3c7b9eccbbe352dfe493b",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 6,
+          "replayedStates": 7,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/pajarita.osf",
+      "sha256": "7b6670417af41e03f2051cae1236f80841626fd351f04665572bb06046b46e86",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 16,
+          "replayedStates": 17,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/paper-envelope.osf",
+      "sha256": "cee9a373900f75326e21e1f576a05d4a093da8fa2683da6ff47afd0bada074df",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 11,
+          "replayedStates": 12,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/parrot.osf",
+      "sha256": "e089f7d020a5a5a7b8b2f681ae8e9a4280aef3ea14b3279ef73e2a0026d55fce",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 8,
+          "replayedStates": 9,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/shirt.osf",
+      "sha256": "a9d431a423278132ce3917303f1c60e85366aa46701de493d4c0a1af6f3d7efb",
+      "fileMatchesManifest": true,
+      "sequences": [
+        {
+          "nodes": 9,
+          "replayedStates": 10,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    },
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/witch-hat.osf",
+      "sha256": "393e372da04d78201012f0dec2d436b61505c2f390ce608c682fe8d803fecce9",
+      "fileMatchesManifest": false,
+      "sequences": [
+        {
+          "nodes": 13,
+          "replayedStates": 14,
+          "failures": [],
+          "stateHashesMatchManifest": true
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "files": 42,
+    "nodes": 526,
+    "states": 568
+  },
+  "userEdits": [
+    {
+      "file": "../2026-10-13-origami-fold-trials/models/in-progress/witch-hat.osf",
+      "sha256": "393e372da04d78201012f0dec2d436b61505c2f390ce608c682fe8d803fecce9"
+    }
+  ],
+  "note": "Witch Hat contains the user-added CP; its file hash differs from the pre-edit manifest, while its saved Fold states still match. No native file is written. Replay is not a fresh source audit or tutorial completion."
+}

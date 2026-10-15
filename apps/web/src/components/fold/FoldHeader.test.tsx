@@ -30,6 +30,7 @@ function deps(): FoldActionDeps {
     setFoldKind: vi.fn(),
     turn: vi.fn(),
     rotate: vi.fn(),
+    unfold: vi.fn(),
     deleteStep: vi.fn(),
     importCp: vi.fn(),
     sendToEdit: vi.fn(),
@@ -154,12 +155,13 @@ describe('FoldHeader', () => {
     });
     const rows = [...document.querySelectorAll<HTMLElement>('[role="menu"] [role^="menuitem"]')];
     expect(rows.map((row) => row.textContent)).toEqual([
+      'Unfold to step…',
       'Import CP…',
       'Send to Edit',
       'Export FOLD…',
       'Export steps…',
     ]);
-    act(() => rows[0]?.click());
+    act(() => rows[1]?.click());
     expect(bound.importCp).toHaveBeenCalledOnce();
   });
 

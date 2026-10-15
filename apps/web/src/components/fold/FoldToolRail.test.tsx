@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import {
   FOLD_LINE_MODES,
-  FOLD_PLANNED_OPS,
   FOLD_SINK_TOOLS,
   type FoldRailItemId,
   type FoldShortcutId,
@@ -13,7 +12,7 @@ import {
 import { foldRailGroups, type FoldToolsView } from '../../fold/tools/foldRailGroups';
 import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
 import { cpActionByOperation } from '../../lib/oristudioCpActions';
-import { allByRole, byRole } from '../../test/roleQueries';
+import { allByRole, byRole, queryByRole } from '../../test/roleQueries';
 import { TooltipProvider } from '../ui/Tooltip';
 import { FoldActionIcon } from './FoldActionIcon';
 import { FoldToolGlyph } from './FoldToolGlyph';
@@ -50,7 +49,7 @@ function verbs() {
 const view: FoldToolsView = { tool: 'valley', lineMode: 'axiom-2', readOnly: null };
 
 describe('FoldToolRail', () => {
-  it('draws every group as a named section, the planned folds collapsed', () => {
+  it('draws the usable groups without a Planned section', () => {
     const rail = mount(<FoldToolRail groups={foldRailGroups(t, view, verbs())} />);
     expect(byRole(rail, 'complementary', 'Fold tools')).toBeTruthy();
     const toggles = [...rail.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')];
@@ -60,16 +59,17 @@ describe('FoldToolRail', () => {
       ['Reference points', 'true'],
       ['Locate line', 'true'],
       ['Model', 'true'],
-      ['Planned', 'false'],
     ]);
-    expect(rail.querySelector('[aria-label="Pleat"]')).toBeNull();
+    expect(queryByRole(rail, 'button', 'Planned')).toBeNull();
+    expect(queryByRole(rail, 'button', 'Pleat')).toBeNull();
+    expect(queryByRole(rail, 'button', 'Precrease')).toBeNull();
     // The crimp, the tuck, the vertex folds and the sinks are tools, open with the other folds.
     expect(byRole(rail, 'button', 'Crimp').getAttribute('aria-disabled')).not.toBe('true');
     expect(byRole(rail, 'button', 'Squash fold').getAttribute('aria-disabled')).not.toBe('true');
     expect(byRole(rail, 'button', 'Unsink').getAttribute('aria-disabled')).not.toBe('true');
   });
 
-  it('takes a tool, a line mode and a model verb from their buttons, and refuses a planned one', () => {
+  it('takes a tool, a line mode and a model verb from their buttons', () => {
     const calls = verbs();
     const rail = mount(<FoldToolRail groups={foldRailGroups(t, view, calls)} />);
     act(() => byRole(rail, 'button', 'Mountain fold').click());
@@ -79,12 +79,6 @@ describe('FoldToolRail', () => {
     act(() => byRole(rail, 'button', 'Open sink').click());
     act(() => byRole(rail, 'button', 'Axiom 6: two points onto two lines').click());
     act(() => byRole(rail, 'button', 'Turn over').click());
-    // The planned folds are collapsed until asked for.
-    act(() => byRole(rail, 'button', 'Planned').click());
-    // A pleat is two plain folds: listed to say so, and taken by nothing.
-    const pleat = byRole(rail, 'button', 'Pleat');
-    act(() => pleat.click());
-    expect(pleat.getAttribute('aria-disabled')).toBe('true');
     expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse'], ['crimp'], ['tuck'], ['open-sink']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['axiom-6']]);
     expect(calls.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
@@ -121,18 +115,16 @@ describe('FoldToolPickerSheet', () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
-  it('says why a planned tool cannot be taken, and does not take it', () => {
+  it('keeps unavailable tools disabled in the phone sheet', () => {
     const calls = verbs();
     const close = vi.fn();
-    const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, view, calls)} close={close} />);
-    const row = byRole(
-      sheet,
-      'button',
-      'Pleat Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
-    );
+    const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, { ...view, readOnly: 'locked' }, calls)} close={close} />);
+    const row = byRole(sheet, 'button', /^Valley fold/);
     expect(row.getAttribute('aria-disabled')).toBe('true');
     act(() => row.click());
+    expect(calls.selectTool).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
+    expect(sheet.textContent).not.toContain('Planned');
   });
 });
 
@@ -141,14 +133,12 @@ describe('FoldToolGlyph', () => {
     const ids: FoldRailItemId[] = [
       'valley',
       'mountain',
-      'precrease',
       'inside-reverse',
       'divide-line',
       'turn-over',
       'rotate',
       ...FOLD_SINK_TOOLS,
       ...FOLD_LINE_MODES,
-      ...FOLD_PLANNED_OPS,
     ];
     const glyphs = mount(
       <>
@@ -165,8 +155,10 @@ describe('FoldToolGlyph', () => {
       // Decoration: the button around it carries the name.
       expect(glyph?.firstElementChild?.getAttribute('aria-hidden'), id).toBe('true');
     }
-    expect(glyphs.querySelector('[data-glyph="valley"]')?.textContent).toBe('V');
-    expect(glyphs.querySelector('[data-glyph="inside-reverse"]')?.textContent).toBe('RF');
+    for (const id of ['valley', 'mountain', 'inside-reverse']) {
+      expect(glyphs.querySelector(`[data-glyph="${id}"] svg`)).not.toBeNull();
+      expect(glyphs.querySelector(`[data-glyph="${id}"]`)?.textContent).toBe('');
+    }
   });
 
   it('draws the rabbit ear as Edit draws its own Rabbit Ear tool, in the rail and compact', () => {

@@ -384,7 +384,6 @@
       "fold": "Dobrar",
       "locate": "Localizar a linha",
       "model": "Modelo",
-      "planned": "Planejados",
       "reference": "Pontos de referência",
       "sink": "Afundamentos"
     },
@@ -418,12 +417,6 @@
       "free": "Linha livre",
       "freeHelp": "Uma linha traçada em qualquer lugar, sem referência."
     },
-    "mark": {
-      "mountain": "M",
-      "precrease": "P",
-      "reverse": "RF",
-      "valley": "V"
-    },
     "note": {
       "acrossLayers": "Estes pontos ficam em camadas que a dobragem separou, então a linha passa por eles onde estão na forma dobrada. O padrão de vincos mostra os vincos que ela cria.",
       "along": "Os pontos se ajustam onde a linha cruza vincos, bordas e marcas, aos pontos sobre ela e ao seu meio.",
@@ -450,7 +443,6 @@
       "openSink": "Afundamento aberto",
       "outsideReverse": "Dobra invertida externa",
       "petal": "Dobra pétala",
-      "pleat": "Prega",
       "rabbitEar": "Orelha de coelho",
       "squash": "Dobra esmagada",
       "swivel": "Dobra pivotante",
@@ -462,8 +454,6 @@
       "title": "Ferramentas de dobra",
       "trigger": "Ferramentas"
     },
-    "plannedPleat": "Não é uma ferramenta própria: faça uma prega como duas dobras simples, uma vale e depois uma monte ao lado.",
-    "plannedReason": "Planejado: ainda não está no Ori Studio.",
     "playStep": "Reproduzir passo",
     "railLabel": "Ferramentas de dobra",
     "readOnly": {
@@ -808,8 +798,6 @@
       "mountain": "Dobra montanha",
       "mountainHelp": "Dobrar o lado que se move para longe de você, para que fique por baixo.",
       "openSinkHelp": "Empurrar para dentro a extremidade de uma ponta fechada, virando cada camada do avesso.",
-      "precrease": "Pré-vincar",
-      "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
       "reverse": "Dobra reversa",
       "reverseHelp": "Inverta uma aba para dentro ou envolva-a por fora, invertendo seu vinco central.",
       "rotateHelp": "Girar o modelo uma fração de volta ou um ângulo exato, primeiro em prévia e depois como um passo próprio.",
@@ -837,7 +825,6 @@
     "vertex": {
       "direction": "Sentido",
       "directionCannot": "Neste sentido não dá para dobrar plano aqui.",
-      "emergent": "Quarto vinco",
       "fix": {
         "creaseKites": "Vincar a pipa ao dobrar",
         "emergent": "Usar o quarto vinco que cabe",
@@ -848,16 +835,15 @@
         "precreaseKite": "Pré-vincar a pipa",
         "resetTarget": "Levar a lombada à dobradiça"
       },
-      "fourthNone": "Nenhum",
-      "fourthsFit_one": "Um quarto vinco cabe com este papel parado.",
-      "fourthsFit_many": "{{count}} quartos vincos cabem com este papel parado.",
-      "fourthsFit_other": "{{count}} quartos vincos cabem com este papel parado.",
       "help": {
         "petalHinge": "Levantar a ponta de baixo de uma aba ao longo de uma dobradiça enquanto os lados se dobram para dentro por dois vincos de pipa.",
         "rabbitEar": "Dobrar os cantos de um triângulo ao longo das bissetrizes, para que uma ponta se levante.",
         "squash": "Abrir uma aba de duas camadas e achatá-la, com a lombada sobre a dobradiça.",
         "swivelEdge": "Girar uma borda sobre uma linha, pivotando em um ponto."
       },
+      "hingeRegionBlocked": "Não é possível dobrar esta região de articulação com estas camadas. Clique em outra região ou altere as camadas.",
+      "hingeRegionBlockedTouch": "Não é possível dobrar esta região de articulação com estas camadas. Toque em outra região ou altere as camadas.",
+      "hingeRegionFits": "O vinco de articulação fica na região selecionada.",
       "intro": {
         "petalLift": "Levanta a ponta de uma aba ao longo de uma dobradiça.",
         "swivelSwing": "Gira uma borda do papel sobre uma linha."
@@ -886,10 +872,6 @@
       },
       "mountain": "Montanha",
       "mountainTitle": "Montanha: o papel gira para longe de você",
-      "noFourth": "Nenhum quarto vinco cabe com este papel parado: clique em outro papel para ficar parado.",
-      "noFourthAnywhere": "Nenhum quarto vinco cabe com estes vincos, qualquer que seja o papel que fica parado: pressione Esc e escolha de novo.",
-      "noFourthAnywhereTouch": "Nenhum quarto vinco cabe com estes vincos, qualquer que seja o papel que fica parado: toque em Cancelar e escolha de novo.",
-      "noFourthTouch": "Nenhum quarto vinco cabe com este papel parado: toque em outro papel para ficar parado.",
       "note": {
         "petalCreasesAll": "Enquanto a aba sobe, a dobra vinca a dobradiça na camada de cima e os dois vincos da pipa nas duas camadas de cima.",
         "petalCreasesHinge": "Enquanto a aba sobe, a dobra vinca a dobradiça na camada de cima. Os vincos da pipa já existem.",
@@ -929,7 +911,7 @@
           "title": "O quarto vinco não pode subir aqui"
         },
         "kite": {
-          "creaseOrPrecrease": "Sobre um vinco de dobradiça, a dobra pétala redobra vincos que já existem, e falta um vinco da pipa. Escolha a dobradiça pelas duas extremidades, e a dobra vinca a pipa sozinha; ou pré-vinque a pipa antes, com a ferramenta Pré-vincar no Axioma 3: uma borda de baixo da aba de cima sobre a linha central, sem as abas de trás.",
+          "creaseOrPrecrease": "Sobre um vinco de dobradiça, a dobra pétala redobra vincos que já existem, e falta um vinco da pipa. Escolha a dobradiça pelas duas extremidades, e a dobra vinca a pipa sozinha; ou pré-vinque a pipa antes, com a opção Dobrar e desdobrar no Axioma 3: uma borda de baixo da aba de cima sobre a linha central, sem as abas de trás.",
           "titleMissing": "Faltam os vincos da pipa"
         },
         "line": {
@@ -1033,16 +1015,16 @@
       "reset": "Voltar à dobradiça",
       "ridge": "Crista",
       "steps": {
-        "earChoose": "Escolha o quarto vinco e as camadas, ou clique em outra parte para que ela fique parada.",
-        "earChooseTouch": "Escolha o quarto vinco e as camadas, ou toque em outra parte para que ela fique parada.",
-        "earFinish": "Escolha o quarto vinco e pressione Enter.",
-        "earFinishTouch": "Escolha o quarto vinco e toque em {{action}}.",
+        "earChoose": "Escolha as camadas ou clique em outra região para o vinco de articulação.",
+        "earChooseTouch": "Escolha as camadas ou toque em outra região para o vinco de articulação.",
+        "earFinish": "Pressione Enter para dobrar.",
+        "earFinishTouch": "Toque em {{action}} para dobrar.",
         "earFirstCorner": "Clique no primeiro canto do triângulo.",
         "earFirstCornerTouch": "Toque no primeiro canto do triângulo.",
+        "earHingeRegion": "Clique na região onde deve ficar o vinco de articulação.",
+        "earHingeRegionTouch": "Toque na região onde deve ficar o vinco de articulação.",
         "earSecondCorner": "Clique no segundo canto.",
         "earSecondCornerTouch": "Toque no segundo canto.",
-        "earStay": "Clique na parte do papel que fica parada.",
-        "earStayTouch": "Toque na parte do papel que fica parada.",
         "earThirdCorner": "Clique no terceiro canto.",
         "earThirdCornerTouch": "Toque no terceiro canto.",
         "fixOrPickAgain": "Clique em uma correção abaixo, ou pressione Esc e escolha de novo.",
@@ -1092,6 +1074,7 @@
     "window": {
       "cancel": "Cancelar",
       "finding": "Procurando as camadas na linha…",
+      "foldAndUnfold": "Dobrar e desdobrar",
       "instructions": "Instruções",
       "kind": "Dobra",
       "label": "Opções da ferramenta de dobra",

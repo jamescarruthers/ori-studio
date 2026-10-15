@@ -371,7 +371,6 @@
       "fold": "Fold",
       "locate": "Locate line",
       "model": "Model",
-      "planned": "Planned",
       "reference": "Reference points",
       "sink": "Sinks"
     },
@@ -405,12 +404,6 @@
       "free": "Free line",
       "freeHelp": "A line drawn anywhere, with no reference."
     },
-    "mark": {
-      "mountain": "M",
-      "precrease": "P",
-      "reverse": "RF",
-      "valley": "V"
-    },
     "note": {
       "acrossLayers": "These points lie on layers that are folded apart, so the line runs through them where they lie in the folded form. The crease pattern shows the creases it makes.",
       "along": "Points snap to where the line crosses creases, edges and marks, to points on it, and to its middle.",
@@ -436,7 +429,6 @@
       "openSink": "Open sink",
       "outsideReverse": "Outside reverse fold",
       "petal": "Petal fold",
-      "pleat": "Pleat",
       "rabbitEar": "Rabbit ear",
       "squash": "Squash fold",
       "swivel": "Swivel fold",
@@ -448,8 +440,6 @@
       "title": "Fold tools",
       "trigger": "Tools"
     },
-    "plannedPleat": "Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.",
-    "plannedReason": "Planned: not in Ori Studio yet.",
     "playStep": "Play Step",
     "railLabel": "Fold tools",
     "readOnly": {
@@ -792,8 +782,6 @@
       "mountain": "Mountain fold",
       "mountainHelp": "Fold the moving side away from you, so it lands underneath.",
       "openSinkHelp": "Push a closed point’s tip in, turning every layer of it inside out.",
-      "precrease": "Precrease",
-      "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
       "reverse": "Reverse fold",
       "reverseHelp": "Reverse a flap inside itself or wrap it around the outside, reversing its spine.",
       "rotateHelp": "Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.",
@@ -819,7 +807,6 @@
     "vertex": {
       "direction": "Direction",
       "directionCannot": "This way it cannot fold flat here.",
-      "emergent": "Fourth crease",
       "fix": {
         "creaseKites": "Crease the kites as it folds",
         "emergent": "Use the fourth crease that fits",
@@ -830,15 +817,15 @@
         "precreaseKite": "Precrease the kite",
         "resetTarget": "Put the spine onto the hinge"
       },
-      "fourthNone": "None",
-      "fourthsFit_one": "One fourth crease fits with this paper staying put.",
-      "fourthsFit_other": "{{count}} fourth creases fit with this paper staying put.",
       "help": {
         "petalHinge": "Lift a flap’s lower point along a hinge while its sides fold in along two kite creases.",
         "rabbitEar": "Fold a triangle’s corners in along their bisectors, so a point stands up.",
         "squash": "Open a two-layer flap and press it flat, its spine onto its hinge.",
         "swivelEdge": "Swivel an edge onto a line, pivoting at a point."
       },
+      "hingeRegionBlocked": "This hinge region cannot fold with these layers. Click another region or change the layers.",
+      "hingeRegionBlockedTouch": "This hinge region cannot fold with these layers. Tap another region or change the layers.",
+      "hingeRegionFits": "The hinge crease lies in the selected region.",
       "intro": {
         "petalLift": "Lifts a flap’s point up along a hinge.",
         "swivelSwing": "Swings an edge of the paper onto a line."
@@ -864,10 +851,6 @@
       },
       "mountain": "Mountain",
       "mountainTitle": "Mountain: the paper turns away from you",
-      "noFourth": "No fourth crease fits with this paper staying put: click other paper to stay.",
-      "noFourthAnywhere": "No fourth crease fits these creases, whichever paper stays: press Esc and pick again.",
-      "noFourthAnywhereTouch": "No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.",
-      "noFourthTouch": "No fourth crease fits with this paper staying put: tap other paper to stay.",
       "note": {
         "petalCreasesAll": "The fold creases the hinge through the top layer and both kite creases through the top two layers as the flap lifts.",
         "petalCreasesHinge": "The fold creases the hinge through the top layer as the flap lifts. The kite creases are there already.",
@@ -907,7 +890,7 @@
           "title": "The fourth crease cannot rise here"
         },
         "kite": {
-          "creaseOrPrecrease": "Over a hinge crease, a petal fold refolds creases already there, and a kite crease is not. Name the hinge by its two ends instead, and the fold creases the kites itself; or precrease them first, with the Precrease tool on Axiom 3: a lower edge of the top flap onto its centre line, the flaps behind left out.",
+          "creaseOrPrecrease": "Over a hinge crease, a petal fold refolds creases already there, and a kite crease is not. Name the hinge by its two ends instead, and the fold creases the kites itself; or precrease them first, with Fold and unfold on Axiom 3: a lower edge of the top flap onto its centre line, the flaps behind left out.",
           "titleMissing": "The kite creases are not there"
         },
         "line": {
@@ -1011,16 +994,16 @@
       "reset": "Back to the hinge",
       "ridge": "Ridge",
       "steps": {
-        "earChoose": "Choose the fourth crease and the layers, or click another part to stay put.",
-        "earChooseTouch": "Choose the fourth crease and the layers, or tap another part to stay put.",
-        "earFinish": "Choose the fourth crease, then press Enter.",
-        "earFinishTouch": "Choose the fourth crease, then tap {{action}}.",
+        "earChoose": "Choose the layers, or click another region for the hinge crease.",
+        "earChooseTouch": "Choose the layers, or tap another region for the hinge crease.",
+        "earFinish": "Press Enter to fold.",
+        "earFinishTouch": "Tap {{action}} to fold.",
         "earFirstCorner": "Click the triangle’s first corner.",
         "earFirstCornerTouch": "Tap the triangle’s first corner.",
+        "earHingeRegion": "Click the region where the hinge crease goes.",
+        "earHingeRegionTouch": "Tap the region where the hinge crease goes.",
         "earSecondCorner": "Click its second corner.",
         "earSecondCornerTouch": "Tap its second corner.",
-        "earStay": "Click the part of the paper that stays put.",
-        "earStayTouch": "Tap the part of the paper that stays put.",
         "earThirdCorner": "Click its third corner.",
         "earThirdCornerTouch": "Tap its third corner.",
         "fixOrPickAgain": "Click a fix below, or press Esc and pick again.",
@@ -1070,6 +1053,7 @@
     "window": {
       "cancel": "Cancel",
       "finding": "Finding the layers at the line…",
+      "foldAndUnfold": "Fold and unfold",
       "instructions": "Instructions",
       "kind": "Fold",
       "label": "Fold tool options",

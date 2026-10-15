@@ -38,6 +38,7 @@ export interface FoldEngineSource {
   generation(): number;
   sheet(paper: FoldPaper): Promise<FoldEngineAnswer<FoldSheetLanded>>;
   step(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineAnswer<FoldStepFingerprinted>>;
+  returnTo?(current: number, target: number, history: readonly number[]): Promise<FoldEngineAnswer<FoldStepFingerprinted>>;
   release(states: readonly number[]): Promise<unknown>;
 }
 
@@ -110,6 +111,15 @@ export function createFoldEnginePort(
       const generation = source.generation();
       if (parent.generation !== generation) throw foldStateLostError(parent);
       return refusingInvalidInput(async () => landing(await source.step(parent.id, op, choices), generation));
+    },
+
+    async returnTo(parent, target, history) {
+      const generation = source.generation();
+      for (const handle of [parent, target, ...history]) {
+        if (handle.generation !== generation) throw foldStateLostError(handle);
+      }
+      if (!source.returnTo) return { landed: false, code: 'return_unavailable' };
+      return refusingInvalidInput(async () => landing(await source.returnTo!(parent.id, target.id, history.map((s) => s.id)), generation));
     },
 
     release(state) {

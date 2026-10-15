@@ -323,6 +323,8 @@
   "foldImport": {
     "back": "Voltar",
     "browse": "ou clique para procurar",
+    "collapse": "Colapsar",
+    "collapseTitle": "Colapsar a partir do CP",
     "creases_one": "{{count}} vinco",
     "creases_many": "{{count}} vincos",
     "creases_other": "{{count}} vincos",
@@ -352,8 +354,10 @@
       "afterStep": "Adiciona um passo depois do passo {{number}}, com o estado dobrado calculado a partir dos vincos.",
       "branch": "Ele começa um novo ramo.",
       "empty": "Começa a sequência na folha do padrão de vincos, dobrada pelos seus vincos. Use quando um estado não puder ser alcançado uma dobra de cada vez.",
+      "update": "Atualiza este passo de colapso. Os passos seguintes e as ramificações são mantidos e recalculados; as dobras afetadas são marcadas como alteradas ou impossíveis de dobrar.",
       "why": "Use quando o próximo estado não puder ser alcançado uma dobra de cada vez."
     },
+    "projectCp": "Colapsar a partir do CP…",
     "refusal": {
       "budget": {
         "text": "Descobrir como as camadas se empilham levou mais tempo do que uma importação tem. Procure por mais tempo ou importe um padrão mais simples.",
@@ -390,6 +394,10 @@
       "noOrder": {
         "text": "Com as dobras montanha e vale do padrão, as camadas não podem ser empilhadas sem se atravessarem.",
         "title": "Nenhuma ordem de camadas serve"
+      },
+      "noProjectCp": {
+        "text": "Abra ou crie o padrão de dobras de origem em Editar e tente novamente. O passo de colapso salvo permanece inalterado.",
+        "title": "CP de origem indisponível"
       },
       "noState": {
         "text": "O passo na tela não tem estado dobrado, então nada pode ser adicionado depois dele. Vá para um passo que dobre.",
@@ -440,9 +448,11 @@
     },
     "samples": "Exemplos",
     "title": "Importar padrão de vincos",
+    "updateTitle": "Atualizar a partir do CP",
     "working": {
       "figure": "Importando o modelo dobrado da Edição…",
       "file": "Importando {{name}}…",
+      "projectCp": "Resolvendo o padrão de dobras do projeto…",
       "sample": "Importando o exemplo…"
     }
   },

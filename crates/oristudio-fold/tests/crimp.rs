@@ -521,6 +521,12 @@ fn crimp_refusals_name_their_faces() {
     let refused = refusal(&tri, &crossing);
     assert_eq!(refused.refusal.code(), "crimp_lines_meet");
     assert!(!refused.refusal.faces().is_empty());
+    // Coincident hinges and a sub-minimum strip must not become endpoint
+    // exceptions. Neither leaves a nondegenerate strip clear of ℓ2.
+    for second in [first, through([0.4002, 0.6], [0.6002, 0.8])] {
+        let refused = refusal(&tri, &crimp(first, second, [0.97, 0.06], INSIDE));
+        assert_eq!(refused.refusal.code(), "crimp_lines_meet");
+    }
     // ℓ2 beyond the paper.
     let missing = crimp(
         first,

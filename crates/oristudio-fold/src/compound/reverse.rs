@@ -21,7 +21,9 @@
 //! - **The fold** reflects every tip piece across ℓ — the geometry and crease
 //!   pattern of a plain fold of the whole tip — as two blocks per flap.
 //!   Carried: pairs that stay, kept; pairs in one block, reversed. Seeded:
-//!   pairs across blocks, kept in absolute terms; each block against its own
+//!   pairs across blocks, kept in absolute terms except corresponding halves
+//!   of nested openings along one spine, which turn together as a packet;
+//!   each block against its own
 //!   body, inside putting T1 over B1 and T2 under B2, outside the reverse.
 //!   The completion decides the rest: with these seeds it is unique in
 //!   99.4% of the spike's feasible inside folds.
@@ -581,6 +583,55 @@ impl RawOpening {
 }
 
 impl Tip {
+    /// Two openings form a nested packet only along the same spine, with
+    /// one upper half above the other's and its lower half below the other's.
+    /// Test the actual moving-side pieces, not overlap elsewhere in a face.
+    /// Pairwise coupling avoids merging unrelated sibling pockets through a
+    /// common enclosing flap. All opposite-half and body contacts remain.
+    pub(super) fn packet_pairs(&self, state: &State, plan: &Plan) -> Vec<[usize; 2]> {
+        let above = |upper: &[usize], lower: &[usize]| {
+            let mut overlaps = false;
+            for &a in upper {
+                for &b in lower {
+                    let (Some(p), Some(q)) = (&self.side.pieces[a], &self.side.pieces[b]) else {
+                        continue;
+                    };
+                    if convex::penetration(p, q) > TOL {
+                        overlaps = true;
+                        if state.above(state.faces()[a].id, state.faces()[b].id) != Some(true) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            overlaps
+        };
+        let mut coupled = Vec::new();
+        for (a, outer) in plan.openings.iter().enumerate() {
+            for (b, inner) in plan.openings.iter().enumerate().skip(a + 1) {
+                // Both ends of every spine segment must lie on the other
+                // spine; a shared crossing point is insufficient.
+                let same_spine = outer.across.iter().all(|&k| {
+                    state.creases()[k].vertices.iter().all(|v| {
+                        inner
+                            .spine
+                            .signed_distance(state.geometry().vertex_images[v.index()])
+                            .abs()
+                            <= TOL
+                    })
+                });
+                let nested = (above(&outer.upper, &inner.upper)
+                    && above(&inner.lower, &outer.lower))
+                    || (above(&inner.upper, &outer.upper) && above(&outer.lower, &inner.lower));
+                if same_spine && nested {
+                    coupled.push([2 * a, 2 * b]);
+                    coupled.push([2 * a + 1, 2 * b + 1]);
+                }
+            }
+        }
+        coupled
+    }
+
     fn new(
         state: &State,
         classified: Classified,
@@ -909,7 +960,7 @@ impl Tip {
                 block_of,
                 blocks: vec![reflection; 2 * plan.openings.len() + plan.whole.len()],
                 against,
-                across: Across::Keep,
+                across: Across::packets(self.packet_pairs(state, plan), false),
             },
         )
     }

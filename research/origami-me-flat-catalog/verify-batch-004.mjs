@@ -1,3 +1,4 @@
+import {modelFile} from './model-paths.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -6,13 +7,18 @@ const folder=new URL('./',import.meta.url),eq=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const inside=(p,poly)=>{let sign=0;return poly.every((a,i)=>{const b=poly[(i+1)%poly.length],c=(b.x-a.x)*(p[1]-a.y)-(b.y-a.y)*(p[0]-a.x);if(Math.abs(c)<1e-9)return true;if(sign*c<0)return false;sign=c;return true;});};
 for(const slug of process.argv.slice(2)){
- const text=fs.readFileSync(new URL(`models/${slug}.osf`,folder)),d=JSON.parse(text).workspace.foldSequences[0];
+ const text=fs.readFileSync(new URL(modelFile(slug),folder)),d=JSON.parse(text).workspace.foldSequences[0];
  const manifest=JSON.parse(fs.readFileSync(new URL(`batches/${slug}.validation.json`,folder)));
  assert.equal(hash(text),manifest.fileSha256,'Retain user edits; do not validate changed files as generated.');
  const t=new Trial(slug,d.title,d.paper),states=[hash(JSON.stringify(t.e.canonical_keys(t.state).sort()))];
  for(const n of d.steps){t.add(n.op,n.note,n.choices);states.push(hash(JSON.stringify(t.e.canonical_keys(t.state).sort())));}
  assert.deepEqual(states,manifest.stateHashes);
  const evidence={slug,allStatesReplayedIdentically:true};
+ if(slug==='dolphin'){
+  const p=[.2,.8],before=t.at(p,0,t.states[1]),after=t.at(p);assert(eq(before,after));
+  const s=t.scene();assert(s.subfaces.every(c=>c.faces_top_to_bottom.length===1&&!s.faces[c.faces_top_to_bottom[0]].front_up));
+  evidence.precreasesPreserveSingleWhiteLayer={point:p,before,after};
+ }
  if(slug==='crow'){
   const p=[-.06,.3],before=t.at(p,0,t.states[12]),after=t.at(p,0,t.states[13]);
   assert(eq(before,after),'The right kite fold preserves the folded left flap material.');

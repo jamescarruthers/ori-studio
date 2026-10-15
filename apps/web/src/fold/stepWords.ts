@@ -62,7 +62,8 @@ export function extentLabel(t: TFunction, step: FoldSentenceStep): string | null
 }
 
 /** Where an imported crease pattern came from (plan D16's closed enum), never a file name. */
-export type FoldCpOrigin = 'cp' | 'fold' | 'ori' | 'orh' | 'sample' | 'edit_folded_figure';
+import type { FoldCpOrigin } from './document/foldSequenceDocument';
+export type { FoldCpOrigin } from './document/foldSequenceDocument';
 
 /** What the operation is called: "Valley fold", "Turn over, side to side". */
 export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
@@ -79,8 +80,10 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
       return t('panels:fold.words.unfold', 'Unfold');
     case 'turn':
       return turnName(step.turn, t);
+    case 'unfold-to':
+      return t('panels:fold.return.label', 'Unfold to step');
     case 'cp-jump':
-      return t('panels:fold.words.cpJump', 'Import crease pattern');
+      return step.collapse ? t('panels:fold.words.collapse', 'Collapse') : t('panels:fold.words.cpJump', 'Import crease pattern');
     case 'reverse':
       return step.kind === 'inside'
         ? t('panels:fold.words.insideReverse', 'Inside reverse fold')
@@ -128,8 +131,10 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
     case 'turn':
       // The turn card's own title, so a turn's badge and card agree.
       return turnCardWords(step.turn, t).title;
+    case 'unfold-to':
+      return t('panels:fold.return.label', 'Unfold to step');
     case 'cp-jump':
-      return t('panels:fold.words.badgeImported', 'Imported');
+      return step.collapse ? t('panels:fold.words.collapse', 'Collapse') : t('panels:fold.words.badgeImported', 'Imported');
     case 'reverse':
       return step.kind === 'inside'
         ? t('panels:fold.words.badgeInsideReverse', 'Inside reverse')
@@ -278,6 +283,8 @@ export function cpOriginLabel(t: TFunction, origin: FoldCpOrigin): string {
       return t('panels:fold.words.originOrh', 'ORH file');
     case 'sample':
       return t('panels:fold.words.originSample', 'Sample');
+    case 'project_cp':
+      return t('panels:fold.words.originProjectCp', 'Project crease pattern');
     case 'edit_folded_figure':
       return t('panels:fold.words.originEditFoldedFigure', 'Edit’s folded figure');
   }

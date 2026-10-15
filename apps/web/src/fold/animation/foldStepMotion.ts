@@ -179,6 +179,7 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
       const turn = turnOf(input, before, after, from.place, to.place);
       return turn ? { step, before, after, motion: turn } : crossfade();
     }
+    case 'unfold-to':
     case 'cp-jump':
       return crossfade();
     // Compound folds (plan D4), every family on the engine's legs: a
@@ -206,6 +207,8 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
 
 function playKind(op: FoldOp): FoldStepPlayKind {
   switch (op.kind) {
+    case 'unfold-to':
+      return 'unfold';
     case 'cp-jump':
       return 'import';
     case 'inside-reverse':

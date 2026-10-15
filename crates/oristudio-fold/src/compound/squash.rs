@@ -5,7 +5,8 @@
 //! - **The flap** is named by a sheet point on its upper layer as the viewer
 //!   sees it: the face there must be the first at its point from the side
 //!   the direction names (the top for a valley), and the face next to it is
-//!   the lower layer. A folded crease between the two is the **spine** s;
+//!   the lower layer. Each is first connected across flat precreases; a
+//!   folded crease between these regions is the **spine** s;
 //!   the end of the spine where the lower layer folds over a hinge is the
 //!   **vertex** O, and that crease's line is the **hinge** h. Each layer is
 //!   its face grown across flat creases off h and folded ones on s.
@@ -297,12 +298,23 @@ impl State {
             .into());
         };
 
-        // The spine: the folded creases between the two.
+        // A precrease may separate the picked faces from the spine. Discover
+        // each layer across flat creases before looking for their shared fold.
+        // These regions are only for discovery: the flap below is still bounded
+        // by its hinge, which may itself be flat after an earlier squash.
         let creases = self.creases();
-        let spine: Vec<usize> = topology.face_creases[p]
+        let upper_region = self.squash_flat_region(p);
+        let lower_region = self.squash_flat_region(q);
+        let spine: Vec<usize> = topology
+            .crease_faces
             .iter()
-            .copied()
-            .filter(|&k| creases[k].kind.is_folded() && topology.across(k, p) == Some(q))
+            .enumerate()
+            .filter(|(k, incident)| {
+                creases[*k].kind.is_folded()
+                    && incident.iter().any(|&f| upper_region[f])
+                    && incident.iter().any(|&f| lower_region[f])
+            })
+            .map(|(k, _)| k)
             .collect();
         let no_flap = |cause| -> Refused {
             FoldRefusal::SquashNoFlap {
@@ -329,11 +341,20 @@ impl State {
             return Err(no_flap(NoFlap::NoSpine));
         };
 
-        // The vertex: the end where the lower layer folds over a hinge.
-        let Some((o, other, hinge)) = [(lo, hi), (hi, lo)]
-            .into_iter()
-            .find_map(|(v, w)| self.hinge_at(q, v, &spine_line).map(|h| (v, w, h)))
-        else {
+        // The vertex: the end where the lower layer folds over a hinge. Start
+        // from the lower face actually incident to that end of the spine, not
+        // the picked subdivision (which need not reach either endpoint).
+        let Some((o, other, hinge)) = [(lo, hi), (hi, lo)].into_iter().find_map(|(v, w)| {
+            spine.iter().find_map(|&k| {
+                if !creases[k].vertices.iter().any(|end| end.index() == v) {
+                    return None;
+                }
+                let &lower = topology.crease_faces[k]
+                    .iter()
+                    .find(|&&f| lower_region[f])?;
+                self.hinge_at(lower, v, &spine_line).map(|h| (v, w, h))
+            })
+        }) else {
             return Err(no_flap(NoFlap::NoHinge));
         };
         let vertex = images[o];
@@ -509,6 +530,29 @@ impl State {
         )?;
         action.push = push(self, &flap);
         Ok(action)
+    }
+
+    /// Connected subdivisions of one material layer, ignoring flat precreases.
+    /// Folded creases remain boundaries, even when another layer overlaps it.
+    fn squash_flat_region(&self, seed: usize) -> Vec<bool> {
+        let topology = self.topology();
+        let mut region = vec![false; self.faces().len()];
+        region[seed] = true;
+        let mut queue = vec![seed];
+        while let Some(f) = queue.pop() {
+            for &k in &topology.face_creases[f] {
+                if !matches!(self.creases()[k].kind, CreaseKind::Flat(_)) {
+                    continue;
+                }
+                if let Some(g) = topology.across(k, f)
+                    && !region[g]
+                {
+                    region[g] = true;
+                    queue.push(g);
+                }
+            }
+        }
+        region
     }
 
     /// Where the lower layer `q` folds over a hinge at its vertex `v`, an end

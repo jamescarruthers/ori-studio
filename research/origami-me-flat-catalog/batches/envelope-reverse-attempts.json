@@ -1,0 +1,626 @@
+[
+  {
+    "layer": 0,
+    "op": {
+      "kind": "inside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.09500000000000008,
+        0.665
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.09500000000000008,
+            0.665
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    }
+  },
+  {
+    "layer": 0,
+    "op": {
+      "kind": "outside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.09500000000000008,
+        0.665
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.09500000000000008,
+            0.665
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    }
+  },
+  {
+    "layer": 1,
+    "op": {
+      "kind": "inside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.03999999999999997,
+        0.7200000000000004
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.03999999999999997,
+            0.7200000000000004
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    }
+  },
+  {
+    "layer": 1,
+    "op": {
+      "kind": "outside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.03999999999999997,
+        0.7200000000000004
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.03999999999999997,
+            0.7200000000000004
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    }
+  },
+  {
+    "layer": 2,
+    "op": {
+      "kind": "inside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.040000000000000015,
+        0.78
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.040000000000000015,
+            0.78
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    }
+  },
+  {
+    "layer": 2,
+    "op": {
+      "kind": "outside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.040000000000000015,
+        0.78
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.040000000000000015,
+            0.78
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          29,
+          40
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        29,
+        40
+      ],
+      "vertices": []
+    }
+  },
+  {
+    "layer": 3,
+    "op": {
+      "kind": "inside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.15499999999999992,
+        0.665
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.15499999999999992,
+            0.665
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    }
+  },
+  {
+    "layer": 3,
+    "op": {
+      "kind": "outside-reverse",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.1075000000000002,
+            0.7325
+          ],
+          [
+            0.02250000000000013,
+            0.6475
+          ]
+        ]
+      },
+      "moving": [
+        0.15499999999999992,
+        0.665
+      ],
+      "seed": {
+        "scope": "flaps",
+        "at": [
+          [
+            0.15499999999999992,
+            0.665
+          ]
+        ]
+      }
+    },
+    "result": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    },
+    "analysis": {
+      "status": "refused",
+      "refusal": {
+        "code": "reverse_no_opening",
+        "faces": [
+          9,
+          10,
+          16,
+          18,
+          27,
+          28,
+          31,
+          32
+        ],
+        "cause": "no_body"
+      },
+      "fixes": [],
+      "faces": [
+        9,
+        10,
+        16,
+        18,
+        27,
+        28,
+        31,
+        32
+      ],
+      "vertices": []
+    }
+  }
+]

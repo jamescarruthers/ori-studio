@@ -371,7 +371,6 @@
       "fold": "Falten",
       "locate": "Linie bestimmen",
       "model": "Modell",
-      "planned": "Geplant",
       "reference": "Bezugspunkte",
       "sink": "Versenken"
     },
@@ -405,12 +404,6 @@
       "free": "Freie Linie",
       "freeHelp": "Eine beliebig gezogene Linie, ohne Bezug."
     },
-    "mark": {
-      "mountain": "M",
-      "precrease": "P",
-      "reverse": "RF",
-      "valley": "V"
-    },
     "note": {
       "acrossLayers": "Diese Punkte liegen auf Lagen, die durch das Falten auseinanderliegen, daher verläuft die Linie durch sie dort, wo sie in der gefalteten Form liegen. Das Faltmuster zeigt die Faltlinien, die dabei entstehen.",
       "along": "Punkte rasten dort ein, wo die Linie Faltlinien, Kanten und Markierungen kreuzt, an Punkten auf ihr und in ihrer Mitte.",
@@ -436,7 +429,6 @@
       "openSink": "Offenes Versenken",
       "outsideReverse": "Äußerer Gegenbruch",
       "petal": "Blütenblattfalte",
-      "pleat": "Stufenfalte",
       "rabbitEar": "Hasenohr",
       "squash": "Quetschfalte",
       "swivel": "Schwenkfalte",
@@ -448,8 +440,6 @@
       "title": "Falt-Werkzeuge",
       "trigger": "Werkzeuge"
     },
-    "plannedPleat": "Kein eigenes Werkzeug: Falte eine Stufenfalte als zwei einfache Faltungen, eine Talfalte und daneben eine Bergfalte.",
-    "plannedReason": "Geplant: noch nicht in Ori Studio.",
     "playStep": "Schritt abspielen",
     "railLabel": "Falt-Werkzeuge",
     "readOnly": {
@@ -792,8 +782,6 @@
       "mountain": "Bergfalte",
       "mountainHelp": "Die bewegte Seite von dir weg falten, sodass sie unten landet.",
       "openSinkHelp": "Das Ende einer geschlossenen Spitze hineindrücken und dabei jede ihrer Lagen umstülpen.",
-      "precrease": "Vorfalten",
-      "precreaseHelp": "Falten und wieder öffnen: eine Faltlinie für später.",
       "reverse": "Umkehrfaltung",
       "reverseHelp": "Falte eine Klappe nach innen oder stülpe sie nach außen um und kehre dabei ihre Rückenkante um.",
       "rotateHelp": "Das Modell um einen Teil einer Umdrehung oder einen genauen Winkel drehen: erst als Vorschau, dann als eigener Schritt.",
@@ -819,7 +807,6 @@
     "vertex": {
       "direction": "Richtung",
       "directionCannot": "In diese Richtung lässt es sich hier nicht flach falten.",
-      "emergent": "Vierte Faltlinie",
       "fix": {
         "creaseKites": "Die Drachenlinien beim Falten mitfalten",
         "emergent": "Die vierte Faltlinie nehmen, die passt",
@@ -830,15 +817,15 @@
         "precreaseKite": "Den Drachen vorfalten",
         "resetTarget": "Den Rücken auf das Scharnier legen"
       },
-      "fourthNone": "Keine",
-      "fourthsFit_one": "Eine vierte Faltlinie passt, wenn dieses Papier liegen bleibt.",
-      "fourthsFit_other": "{{count}} vierte Faltlinien passen, wenn dieses Papier liegen bleibt.",
       "help": {
         "petalHinge": "Die untere Spitze einer Lasche entlang eines Scharniers anheben, während sich ihre Seiten entlang zweier Drachenlinien einfalten.",
         "rabbitEar": "Die Ecken eines Dreiecks entlang ihrer Winkelhalbierenden einfalten, sodass sich eine Spitze aufstellt.",
         "squash": "Eine zweilagige Lasche öffnen und flach drücken, ihren Rücken auf ihr Scharnier.",
         "swivelEdge": "Eine Kante um einen Drehpunkt auf eine Linie schwenken."
       },
+      "hingeRegionBlocked": "Dieser Scharnierbereich lässt sich mit diesen Lagen nicht falten. Klicke auf einen anderen Bereich oder ändere die Lagen.",
+      "hingeRegionBlockedTouch": "Dieser Scharnierbereich lässt sich mit diesen Lagen nicht falten. Tippe auf einen anderen Bereich oder ändere die Lagen.",
+      "hingeRegionFits": "Der Scharnierfalz liegt im gewählten Bereich.",
       "intro": {
         "petalLift": "Hebt die Spitze einer Lasche entlang eines Scharniers an.",
         "swivelSwing": "Schwenkt eine Kante des Papiers auf eine Linie."
@@ -864,10 +851,6 @@
       },
       "mountain": "Berg",
       "mountainTitle": "Berg: das Papier dreht sich von dir weg",
-      "noFourth": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Klicke auf anderes Papier, das liegen bleiben soll.",
-      "noFourthAnywhere": "Keine vierte Faltlinie passt zu diesen Faltlinien, welches Papier auch liegen bleibt: Drücke Esc und wähle neu.",
-      "noFourthAnywhereTouch": "Keine vierte Faltlinie passt zu diesen Faltlinien, welches Papier auch liegen bleibt: Tippe auf Abbrechen und wähle neu.",
-      "noFourthTouch": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Tippe auf anderes Papier, das liegen bleiben soll.",
       "note": {
         "petalCreasesAll": "Die Faltung faltet beim Anheben der Lasche das Scharnier durch die oberste Lage und beide Drachenlinien durch die beiden obersten Lagen.",
         "petalCreasesHinge": "Die Faltung faltet beim Anheben der Lasche das Scharnier durch die oberste Lage. Die Drachenlinien sind schon da.",
@@ -907,7 +890,7 @@
           "title": "Die vierte Faltlinie kann sich hier nicht aufrichten"
         },
         "kite": {
-          "creaseOrPrecrease": "Über einer Scharnierlinie faltet eine Blütenblattfalte vorhandene Faltlinien nach, und eine Drachenlinie ist noch nicht da. Nenne das Scharnier stattdessen über seine beiden Enden, dann faltet die Faltung die Drachenlinien selbst; oder falte sie zuerst vor, mit dem Werkzeug Vorfalten auf Axiom 3: eine untere Kante der oberen Lasche auf ihre Mittellinie, die Laschen dahinter herausgenommen.",
+          "creaseOrPrecrease": "Über einer Scharnierlinie faltet eine Blütenblattfalte vorhandene Faltlinien nach, und eine Drachenlinie ist noch nicht da. Nenne das Scharnier stattdessen über seine beiden Enden, dann faltet die Faltung die Drachenlinien selbst; oder falte sie zuerst vor, mit „Falten und wieder öffnen“ auf Axiom 3: eine untere Kante der oberen Lasche auf ihre Mittellinie, die Laschen dahinter herausgenommen.",
           "titleMissing": "Die Drachenlinien fehlen"
         },
         "line": {
@@ -1011,16 +994,16 @@
       "reset": "Zurück auf das Scharnier",
       "ridge": "Grat",
       "steps": {
-        "earChoose": "Wähle die vierte Faltlinie und die Lagen, oder klicke auf einen anderen Teil, der liegen bleibt.",
-        "earChooseTouch": "Wähle die vierte Faltlinie und die Lagen, oder tippe auf einen anderen Teil, der liegen bleibt.",
-        "earFinish": "Wähle die vierte Faltlinie, dann drücke die Eingabetaste.",
-        "earFinishTouch": "Wähle die vierte Faltlinie, dann tippe auf {{action}}.",
+        "earChoose": "Wähle die Lagen oder klicke auf einen anderen Bereich für den Scharnierfalz.",
+        "earChooseTouch": "Wähle die Lagen oder tippe auf einen anderen Bereich für den Scharnierfalz.",
+        "earFinish": "Drücke Enter zum Falten.",
+        "earFinishTouch": "Tippe auf {{action}} zum Falten.",
         "earFirstCorner": "Klicke auf die erste Ecke des Dreiecks.",
         "earFirstCornerTouch": "Tippe auf die erste Ecke des Dreiecks.",
+        "earHingeRegion": "Klicke auf den Bereich, in dem der Scharnierfalz liegen soll.",
+        "earHingeRegionTouch": "Tippe auf den Bereich, in dem der Scharnierfalz liegen soll.",
         "earSecondCorner": "Klicke auf seine zweite Ecke.",
         "earSecondCornerTouch": "Tippe auf seine zweite Ecke.",
-        "earStay": "Klicke auf den Teil des Papiers, der liegen bleibt.",
-        "earStayTouch": "Tippe auf den Teil des Papiers, der liegen bleibt.",
         "earThirdCorner": "Klicke auf seine dritte Ecke.",
         "earThirdCornerTouch": "Tippe auf seine dritte Ecke.",
         "fixOrPickAgain": "Klicke unten auf eine Lösung, oder drücke Esc und wähle neu.",
@@ -1070,6 +1053,7 @@
     "window": {
       "cancel": "Abbrechen",
       "finding": "Lagen an der Linie werden ermittelt …",
+      "foldAndUnfold": "Falten und wieder öffnen",
       "instructions": "Anleitung",
       "kind": "Faltung",
       "label": "Optionen des Falt-Werkzeugs",

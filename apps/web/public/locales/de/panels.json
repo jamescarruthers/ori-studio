@@ -1495,7 +1495,6 @@
       "pathBrokenHint": "Ein Schritt auf diesem Pfad lässt sich nicht mehr falten.",
       "pathLockedHint": "Ein Schritt auf diesem Pfad wurde mit einem neueren Ori Studio erstellt.",
       "pathReplayingHint": "Die Schritte werden noch gefaltet.",
-      "precrease": "Vorfalte",
       "readOnlyHint": "Mit einem neueren Ori Studio erstellt: Diese Folge wird schreibgeschützt geöffnet.",
       "replayingHint": "Die Schritte davor werden noch gefaltet.",
       "rotate": "Drehen…",
@@ -1515,6 +1514,14 @@
       "stepCreases": "Schritt-Faltlinien",
       "stepCreasesTitle": "Die Faltlinien des gezeigten Schritts fett zeichnen, als dessen Anleitung",
       "toolbar": "Faltansicht"
+    },
+    "collapse": {
+      "changed": "Aktualisierung verfügbar. Dieser Schritt verwendet weiterhin seine gespeicherte CP-Version.",
+      "openSource": "Quell-CP öffnen",
+      "replay": "Beim Aktualisieren werden spätere Faltungen erneut berechnet. Prüfe die Zeitleiste auf geänderte oder nicht mehr ausführbare Schritte, bevor du fortfährst.",
+      "saved": "Die gespeicherte CP-Version wird verwendet. Änderungen an der Quelle werden erst beim Aktualisieren übernommen.",
+      "unavailable": "Quell-CP nicht verfügbar. Der gespeicherte Stand lässt sich weiterhin wiedergeben.",
+      "update": "Aus CP aktualisieren"
     },
     "grid": {
       "broken": "Dieser Schritt lässt sich nicht mehr falten",
@@ -1566,6 +1573,34 @@
       "scrub": "Fortschritt des Schritts",
       "stepForward": "Ein Stück weiter"
     },
+    "return": {
+      "append": "Entfaltungsschritt anhängen",
+      "changed": "Frühere Faltungen wurden geändert. Berechne diese Entfaltung neu, um das neue Ergebnis zu prüfen.",
+      "empty": "Falte zuerst einen Schritt.",
+      "failureTitle": "Entfalten nicht möglich",
+      "finishPreview": "Schließe zuerst die Entfaltungsvorschau ab oder brich sie ab.",
+      "invalidTarget": "Wähle einen früheren Schritt in diesem Zweig.",
+      "label": "Bis zu Schritt entfalten",
+      "last": "Letzten Schritt entfalten",
+      "limit": "Diese Faltenhistorie ist zu groß, um sie sicher wiederherzustellen.",
+      "loading": "Entfaltungsvorschau wird vorbereitet…",
+      "noop": "Das Papier hat bereits diese Form mit diesen Falten.",
+      "numberedSentence": "Kehre zu Schritt {{number}} zurück und behalte alle Falten bei.",
+      "open": "Bis zu Schritt entfalten…",
+      "preview": "Die Vorschau erscheint unten. Alle Falten bleiben erhalten.",
+      "rebuild": "Entfaltung neu berechnen",
+      "refused": "Die Engine konnte diese Form unter Beibehaltung der Faltenhistorie nicht wiederherstellen. Kein Schritt wurde geändert.",
+      "retain": "Zu einer früheren Form zurückkehren und alle Falten beibehalten.",
+      "sentence": "Kehre zur früheren gefalteten Form zurück und behalte alle Falten bei.",
+      "sheet": "Ausgangsblatt",
+      "sheetSentence": "Entfalte bis zum Ausgangsblatt und behalte alle Falten bei.",
+      "step": "Schritt {{number}}",
+      "target": "Zurück zu",
+      "title": "Entfaltungsvorschau",
+      "turn": "Drehung nach Schritt {{number}}",
+      "unavailable": "Warte, bis die früheren Schritte vollständig wiedergegeben wurden, und versuche es erneut.",
+      "viewTarget": "Ziel anzeigen: {{target}}"
+    },
     "sentence": {
       "behind": {
         "petal": "Falte die Klappe nach hinten als Blütenblattfalte.",
@@ -1581,6 +1616,7 @@
         "swivelInsideLine": "Drehe die Kante mit einer inneren Drehfalte nach hinten auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante."
       },
       "closedSink": "Versenke die Spitze geschlossen: Drücke sie hinein, ihre Lagen bleiben zusammen.",
+      "collapse": "Entlang des gespeicherten Faltmusters zusammenfalten.",
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
       "crimp": {
         "inside": {
@@ -2392,7 +2428,7 @@
       "branchStep": "Du bist bei Schritt {{at}} von {{total}}: Wenn du hier faltest, beginnt ein neuer Zweig.",
       "broken": "Dieser Schritt lässt sich nicht mehr falten: Das, woraus er gemacht wurde, liegt vor ihm nicht mehr auf dem Papier. Er und die folgenden Schritte können nur noch gelöscht werden.",
       "brokenAbove": "Ein früherer Schritt lässt sich nicht mehr falten, deshalb kann dieser nicht gezeigt werden.",
-      "changed": "Dieser Schritt faltet sich in dieser Version von Ori Studio anders als beim Speichern.",
+      "changed": "Dieser Schritt faltet sich anders als beim Speichern. Prüfe seine Eingaben und die Schritte darüber.",
       "changes": "Änderungen",
       "chosen": "Aus mehreren gewählt",
       "creases": "Faltlinien",
@@ -2479,6 +2515,7 @@
         "swivelInside": "Innere Drehfalte nach hinten"
       },
       "closedSink": "Geschlossenes Versenken",
+      "collapse": "Zusammenfalten",
       "cpJump": "Faltmuster importieren",
       "crimpInside": "Innerer Crimp",
       "crimpOutside": "Äußerer Crimp",
@@ -2500,6 +2537,7 @@
       "originFold": "FOLD-Datei",
       "originOrh": "ORH-Datei",
       "originOri": "ORI-Datei",
+      "originProjectCp": "Faltmuster des Projekts",
       "originSample": "Beispiel",
       "outsideReverse": "Äußerer Gegenbruch",
       "petal": "Blütenblattfalte",

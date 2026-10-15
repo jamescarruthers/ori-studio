@@ -3,6 +3,7 @@ import type { FoldPaper, FoldSequenceDocument } from '../document/foldSequenceDo
 import { foldedLineOf } from '../engine/foldEngineCompoundWire';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineOp, FoldReport } from '../engine/foldEngineWire';
+import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useFoldSessionState } from '../session/useFoldSession';
 import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionProgress } from '../session/foldSessionState';
 import type { FoldSentenceStep } from '../stepSentence';
@@ -71,6 +72,7 @@ export function useFoldSequenceView(): FoldSequenceView {
   const { sequence, document, entries, cursor } = useFoldPath();
   const readOnly = useFoldSessionState((snapshot) => snapshot.readOnly);
   const pendingStep = useFoldSessionState((snapshot) => snapshot.pending);
+  const rebuildingReturn = useFoldReturnUi((state) => state.opening?.rebuild != null);
   const progress = useFoldSessionState((snapshot) => snapshot.progress);
   const failed = useFoldSessionState((snapshot) => snapshot.error !== null);
   const pendingState = pendingStep.status === 'landed' ? pendingStep.state : null;
@@ -87,6 +89,7 @@ export function useFoldSequenceView(): FoldSequenceView {
       entries.map((entry, index): FoldSentenceStep =>
         entry.node
           ? foldNodeSentenceStep(entry.node, {
+              returnStep: entry.node.op?.kind === 'unfold-to' ? entries.find((e) => entry.node?.op?.kind === 'unfold-to' && e.id === entry.node.op.target)?.number : null,
               parent: frames[index - 1] ?? null,
               child: frames[index] ?? null,
               report: foldedLineOf(entry.session),
@@ -104,13 +107,13 @@ export function useFoldSequenceView(): FoldSequenceView {
     return {
       status: pendingStep.status,
       op,
-      words: foldSentenceStepOf(op, { parent: frames[cursor] ?? null, child: pendingFrame, report: folded }),
+      words: foldSentenceStepOf(op, { returnStep: op.kind === 'unfold-to' ? entries.find((e) => e.id === op.target)?.number : null, parent: frames[cursor] ?? null, child: pendingFrame, report: folded }),
       state: pendingStep.status === 'landed' ? pendingStep.state : null,
       frame: pendingFrame,
       report,
-      branch: cursor !== entries.length - 1,
+      branch: cursor !== entries.length - 1 && !(op.kind === 'unfold-to' && rebuildingReturn),
     };
-  }, [pendingStep, frames, cursor, pendingFrame, entries.length]);
+  }, [pendingStep, frames, cursor, pendingFrame, entries, rebuildingReturn]);
 
   return {
     document,

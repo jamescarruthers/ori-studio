@@ -38,6 +38,7 @@ export type FoldStepAddedOpKind =
   | 'mountain'
   | 'precrease'
   | 'unfold'
+  | 'unfold_to'
   | 'refold'
   | 'turn'
   | 'rotate'
@@ -1610,6 +1611,10 @@ export const ANALYTICS_EVENTS = {
    * take — with how many, bucketed.
    */
   foldStepAdded: 'fold step added',
+  /** Explicit dependency refresh of a saved history return; no document content. */
+  foldUnfoldRebuilt: 'fold unfold rebuilt',
+  /** The plain fold tool's optional fold-and-unfold mode changed: enums only. */
+  foldAndUnfoldChanged: 'fold and unfold changed',
   foldRefused: 'fold refused',
   foldChoiceOffered: 'fold choice offered',
   /**

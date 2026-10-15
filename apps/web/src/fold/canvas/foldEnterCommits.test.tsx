@@ -47,16 +47,16 @@ const PINCH: FoldPrecreaseExtent = { kind: 'pinch', at: { kind: 'point', at: [0.
 const FOLDS: { name: string; tool: FoldToolId; op: FoldOp; extent?: FoldPrecreaseExtent }[] = [
   { name: 'a valley fold', tool: 'valley', op: { kind: 'valley', line: DIAGONAL, seed: ALL } },
   { name: 'a mountain fold', tool: 'mountain', op: { kind: 'mountain', line: DIAGONAL, seed: ALL } },
-  { name: 'a precrease of the whole line', tool: 'precrease', op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL } },
+  { name: 'a precrease of the whole line', tool: 'valley', op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL } },
   {
     name: 'a precrease of a segment',
-    tool: 'precrease',
+    tool: 'valley',
     op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL, extent: SEGMENT },
     extent: SEGMENT,
   },
   {
     name: 'a pinch',
-    tool: 'precrease',
+    tool: 'valley',
     op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL, extent: PINCH },
     extent: PINCH,
   },
@@ -230,6 +230,7 @@ describe('Enter commits every tool’s preview', () => {
       render(landed(fold.op));
       act(() => {
         tools.selectTool(fold.tool);
+        tools.setFoldAndUnfold(fold.op.kind === 'precrease');
         if (fold.extent) tools.setExtent(fold.extent.kind);
       });
       render(landed(fold.op, fold.extent ? { status: 'ready', extent: fold.extent } : null));
@@ -251,7 +252,7 @@ describe('Enter commits every tool’s preview', () => {
 
   it('declines while a partial precrease’s points are still to be clicked', () => {
     act(() => {
-      tools.selectTool('precrease');
+      tools.setFoldAndUnfold(true);
       tools.setExtent('pinch');
     });
     render(landed(FOLDS[4]!.op, { status: 'incomplete', mode: 'pinch', picked: 0, needed: 1 }, { step: null }));

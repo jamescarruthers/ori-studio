@@ -8,11 +8,11 @@
   ],
   "coverage": "All five pages of the current index, cross-checked against all 142 easy collection entries. Eligibility review ongoing.",
   "nextQueue": [
-    "dolphin",
-    "dove",
-    "dragonfly",
-    "flying-squirrel",
-    "frog"
+    "witch-hat-bookmark",
+    "5-petal-lily",
+    "6-pointed-star",
+    "cat",
+    "crocodile"
   ],
   "designs": [
     {
@@ -24,15 +24,17 @@
       "indexPage": 1,
       "earlyRelease": false,
       "eligibility": "flat preparation",
-      "status": "blocked",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": 2,
-      "model": "models/rectangle-paper-to-square.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-paper-to-square.osf",
       "gaps": [
         "F011"
       ],
-      "notes": "Flat preparation through source 2; required strip cut has no public Fold operation.",
-      "report": "batches/003.md"
+      "notes": "Excluded from current completion target: required cuts. Flat preparation through source 2; required strip cut has no public Fold operation.",
+      "report": "batches/003.md",
+      "requiresCuts": true,
+      "exclusionReason": "Required cuts are outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "yoshizawa-butterfly",
@@ -98,7 +100,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/angelfish.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/angelfish.osf",
       "gaps": [],
       "notes": "All steps replayed and visually checked in Fold; paper-side and material checks passed.",
       "report": "batches/003.md"
@@ -112,16 +114,15 @@
       "indexPage": 5,
       "earlyRelease": false,
       "eligibility": "flat folded endpoint; optional flapping action",
-      "status": "blocked",
+      "status": "in progress",
       "audit": "pending",
-      "lastSourceStep": 6,
-      "model": "models/bird.osf",
+      "lastSourceStep": 13,
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/bird.osf",
       "gaps": [
-        "F019",
-        "F020"
+        "F033"
       ],
-      "notes": "Square base and closed kite through source 6 verified. Source 7 opening moved wrong connected layers; exact invalid attempt retained separately.",
-      "report": "batches/004.md",
+      "notes": "Verified through source 13 / Fold 24 (32 nodes). Source 14 outward pull remains an authoring/compound investigation; failed probes are separate from the native prefix. No confirmed engine gap.",
+      "report": "batches/bird-crow-shaping-2026-10-14.md",
       "sourceDifficulty": "Easy"
     },
     {
@@ -154,7 +155,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 10,
-      "model": "models/bookmark.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/bookmark.osf",
       "gaps": [
         "F006",
         "F008"
@@ -174,7 +175,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/cat-face.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/cat-face.osf",
       "gaps": [
         "F006",
         "F007"
@@ -194,7 +195,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 8,
-      "model": "models/christmas-tree.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/christmas-tree.osf",
       "gaps": [],
       "notes": "All steps replayed and visually checked in Fold; paper-side and material checks passed.",
       "report": "batches/003.md"
@@ -211,9 +212,9 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": null,
-      "model": "../2026-10-13-origami-fold-trials/models/cicada.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/cicada.osf",
       "gaps": [],
-      "notes": "Existing sequence; preserve local user edits.",
+      "notes": "Original completed path remains ready for audit. User edits preserved: five additional branch nodes replay successfully but have not received a source/visual audit; readiness does not certify that branch.",
       "report": "../2026-10-13-origami-fold-trials/REPORT.md"
     },
     {
@@ -230,7 +231,7 @@
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": "All 12 instructions and 14 diagrams reviewed. Eight module steps plus four assembly steps. Assembly 3\u20134 closes six Sonobe units into a volume.",
+      "notes": "All 12 instructions and 14 diagrams reviewed. Eight module steps plus four assembly steps. Assembly 3–4 closes six Sonobe units into a volume.",
       "sourceDifficulty": "Easy",
       "report": "batches/004.md"
     },
@@ -264,7 +265,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 12,
-      "model": "models/dog.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/dog.osf",
       "gaps": [
         "F006",
         "F009"
@@ -302,7 +303,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/easter-egg.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/easter-egg.osf",
       "gaps": [
         "F006"
       ],
@@ -321,7 +322,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/elephant.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/elephant.osf",
       "gaps": [
         "F023"
       ],
@@ -358,7 +359,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 8,
-      "model": "models/fish.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/fish.osf",
       "gaps": [],
       "notes": "All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed.",
       "report": "batches/003.md"
@@ -410,7 +411,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/fox.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/fox.osf",
       "gaps": [
         "F017"
       ],
@@ -427,17 +428,19 @@
       "indexPage": 4,
       "earlyRelease": false,
       "eligibility": "flat",
-      "status": "blocked",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": 10,
-      "model": "models/goldfish.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/cuts/goldfish.osf",
       "gaps": [
         "F025",
         "F011"
       ],
-      "notes": "All 14 instructions and 15 diagrams reviewed. Fourteen-node prefix through source 10 checked in Fold. Source 11 pocket collapse remains an investigation; source 12 requires missing layer-selective cuts.",
+      "notes": "Excluded from current completion target: required cuts. All 14 instructions and 15 diagrams reviewed. Fourteen-node prefix through source 10 checked in Fold. Source 11 pocket collapse remains an investigation; source 12 requires missing layer-selective cuts.",
       "sourceDifficulty": "Easy",
-      "report": "batches/004.md"
+      "report": "batches/004.md",
+      "requiresCuts": true,
+      "exclusionReason": "Required cuts are outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "happi",
@@ -451,7 +454,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 5,
-      "model": "models/happi.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/happi.osf",
       "gaps": [
         "F015"
       ],
@@ -470,9 +473,9 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": null,
-      "model": "../2026-10-13-origami-fold-trials/models/heart.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/heart.osf",
       "gaps": [],
-      "notes": "Existing sequence; preserve local user edits.",
+      "notes": "Existing completed sequence; user save/layout edits preserved. Fold operations unchanged and freshly replayed.",
       "report": "../2026-10-13-origami-fold-trials/REPORT.md"
     },
     {
@@ -489,7 +492,7 @@
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": "All 12 instructions and 13 diagrams reviewed. Required source 12 adjusts the center fold into a standing V. Flat source-11 card is a possible variant, not full tutorial completion. Step-2 JPG link is broken; the page\u2019s actual PNG image was reviewed.",
+      "notes": "All 12 instructions and 13 diagrams reviewed. Required source 12 adjusts the center fold into a standing V. Flat source-11 card is a possible variant, not full tutorial completion. Step-2 JPG link is broken; the page’s actual PNG image was reviewed.",
       "sourceDifficulty": "Easy",
       "report": "batches/004.md"
     },
@@ -502,15 +505,17 @@
       "indexPage": 4,
       "earlyRelease": false,
       "eligibility": "flat",
-      "status": "blocked",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/horse.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/cuts/horse.osf",
       "gaps": [
         "F011"
       ],
-      "notes": "Required source 8 partial cut through the front layer has no public Fold operation. Sixteen-node verified prefix; all 20 instructions and 21 diagrams reviewed.",
-      "report": "batches/004.md"
+      "notes": "Excluded from current completion target: required cuts. Required source 8 partial cut through the front layer has no public Fold operation. Sixteen-node verified prefix; all 20 instructions and 21 diagrams reviewed.",
+      "report": "batches/004.md",
+      "requiresCuts": true,
+      "exclusionReason": "Required cuts are outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "jack-o-lantern",
@@ -542,7 +547,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/kimono.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/kimono.osf",
       "gaps": [
         "F013"
       ],
@@ -561,7 +566,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 4,
-      "model": "models/lantern.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/lantern.osf",
       "gaps": [
         "F018"
       ],
@@ -599,7 +604,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 4,
-      "model": "models/necktie.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/necktie.osf",
       "gaps": [
         "F010"
       ],
@@ -615,19 +620,21 @@
       "indexPage": 3,
       "earlyRelease": false,
       "eligibility": "flat modular",
-      "status": "blocked",
+      "status": "excluded multi-sheet assembly",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/ninja-star-a.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-a.osf",
       "gaps": [
         "F024"
       ],
-      "notes": "Both mirrored modules through source 7 verified in Fold. Source 8 needs multi-sheet placement; 9 and 11 tuck one sheet into another. Public Fold has no assembly operation.",
+      "notes": "Excluded from current completion target: multi-sheet assembly. Both mirrored modules through source 7 verified in Fold. Source 8 needs multi-sheet placement; 9 and 11 tuck one sheet into another. Public Fold has no assembly operation.",
       "additionalModels": [
-        "models/ninja-star-b.osf"
+        "../2026-10-13-origami-fold-trials/models/excluded/multi-sheet/ninja-star-b.osf"
       ],
       "sourceDifficulty": "Easy",
-      "report": "batches/004.md"
+      "report": "batches/004.md",
+      "requiresMultiSheetAssembly": true,
+      "exclusionReason": "Required multi-sheet assembly is outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "pajarita",
@@ -641,7 +648,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/pajarita.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/pajarita.osf",
       "gaps": [
         "F021"
       ],
@@ -661,7 +668,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 5,
-      "model": "models/parrot.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/parrot.osf",
       "gaps": [
         "F016"
       ],
@@ -680,7 +687,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/penguin.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/penguin.osf",
       "gaps": [],
       "notes": "All 12 states checked in Fold; outside reverse head wraps both neck walls, preserving white chest and colored wing.",
       "report": "batches/004.md"
@@ -697,7 +704,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 11,
-      "model": "models/pigeon.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/pigeon.osf",
       "gaps": [],
       "notes": "All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed.",
       "report": "batches/003.md"
@@ -732,7 +739,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": 14,
-      "model": "models/santa.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/santa.osf",
       "gaps": [],
       "notes": "All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed.",
       "report": "batches/003.md"
@@ -749,7 +756,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 6,
-      "model": "models/shirt.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/shirt.osf",
       "gaps": [
         "F022"
       ],
@@ -804,7 +811,7 @@
       "status": "ready for audit",
       "audit": "pending",
       "lastSourceStep": null,
-      "model": "../2026-10-13-origami-fold-trials/models/swan.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/completed/swan.osf",
       "gaps": [],
       "notes": "Outside reverse neck and head.",
       "report": "../2026-10-13-origami-fold-trials/REPORT.md"
@@ -874,15 +881,15 @@
       "indexPage": 3,
       "earlyRelease": false,
       "eligibility": "flat",
-      "status": "blocked",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": 4,
-      "model": "models/whale.osf",
+      "lastSourceStep": 10,
+      "model": "../2026-10-13-origami-fold-trials/models/completed/whale.osf",
       "gaps": [
         "F012"
       ],
-      "notes": "Precreased fish-base rabbit ear refuses fan_center; matching unprecreased control accepts both ears. Every saved prefix state checked in Fold.",
-      "report": "batches/003.md"
+      "notes": "Completed all 10 source instructions with 20 editable nodes (15 numbered folds, five turns/rotations). All 21 states replayed and visually checked in Fold; fin/body/tail material stacks checked. F012 resolved. Approximate shaping proportions documented; user audit pending.",
+      "report": "batches/whale-completion-2026-10-14.md"
     },
     {
       "slug": "witch-hat",
@@ -895,13 +902,13 @@
       "eligibility": "flat",
       "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": 6,
-      "model": "models/witch-hat.osf",
+      "lastSourceStep": 10,
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/witch-hat.osf",
       "gaps": [
-        "F014"
+        "F032"
       ],
-      "notes": "Partial precrease on an existing flat crease refuses extent_misses_layers; 12-node valid prefix retained.",
-      "report": "batches/004.md"
+      "notes": "Linked source-8 Collapse implemented; verified prefix through source 10 (16 nodes / 13 numbered steps). Source 11–13 candidate archived separately: final tuck is refused, and hidden layers need authoring verification. Original user CP checkpoint preserved; front-relative M/V correction recorded.",
+      "report": "batches/linked-cp-collapse-2026-10-14.md"
     },
     {
       "slug": "yoda",
@@ -933,11 +940,11 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 7,
-      "model": "models/paper-envelope.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/paper-envelope.osf",
       "gaps": [
         "F005"
       ],
-      "notes": "Partial through source 7; wide swivel 8\u20139 refused; interpretation under investigation.",
+      "notes": "Partial through source 7; wide swivel 8–9 refused; interpretation under investigation.",
       "report": "batches/003.md"
     },
     {
@@ -949,15 +956,17 @@
       "indexPage": 2,
       "earlyRelease": false,
       "eligibility": "flat preparation",
-      "status": "blocked",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": 5,
-      "model": "models/rectangle-to-hexagon.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/cuts/rectangle-to-hexagon.osf",
       "gaps": [
         "F011"
       ],
-      "notes": "All 11 instructions and 12 diagrams reviewed. Five-node prefix through source 5 verified in Fold. Source 6 requires an oblique cut through both folded layers; source 10 needs another cut.",
-      "report": "batches/004.md"
+      "notes": "Excluded from current completion target: required cuts. All 11 instructions and 12 diagrams reviewed. Five-node prefix through source 5 verified in Fold. Source 6 requires an oblique cut through both folded layers; source 10 needs another cut.",
+      "report": "batches/004.md",
+      "requiresCuts": true,
+      "exclusionReason": "Required cuts are outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "pentagon-from-square-paper",
@@ -968,15 +977,17 @@
       "indexPage": 1,
       "earlyRelease": false,
       "eligibility": "flat preparation",
-      "status": "blocked",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": 8,
-      "model": "models/pentagon-from-square-paper.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/cuts/pentagon-from-square-paper.osf",
       "gaps": [
         "F011"
       ],
-      "notes": "All 10 instructions and 12 diagrams reviewed. Nine-node prefix includes orientation for source 9; all 10 states verified. Required straight cut through the packet is missing. Front-ply-only reference marks checked.",
-      "report": "batches/004.md"
+      "notes": "Excluded from current completion target: required cuts. All 10 instructions and 12 diagrams reviewed. Nine-node prefix includes orientation for source 9; all 10 states verified. Required straight cut through the packet is missing. Front-ply-only reference marks checked.",
+      "report": "batches/004.md",
+      "requiresCuts": true,
+      "exclusionReason": "Required cuts are outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "lazy-susan",
@@ -992,7 +1003,7 @@
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": "All 18 instructions and 19 diagrams reviewed. Required steps 17\u201318 open and curve the compartments into a container; excluded 3D completion.",
+      "notes": "All 18 instructions and 19 diagrams reviewed. Required steps 17–18 open and curve the compartments into a container; excluded 3D completion.",
       "report": "batches/004.md",
       "sourceDifficulty": "Easy"
     },
@@ -1008,7 +1019,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 14,
-      "model": "models/4-pointed-star.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/4-pointed-star.osf",
       "gaps": [
         "F026"
       ],
@@ -1046,14 +1057,14 @@
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": "All 20 instructions (3 preparation, 3 handle, 14 basket) and 21 diagrams reviewed. Curved handle plus basket steps 13\u201314 open and finish a spatial container. Excluded 3D completion.",
+      "notes": "All 20 instructions (3 preparation, 3 handle, 14 basket) and 21 diagrams reviewed. Curved handle plus basket steps 13–14 open and finish a spatial container. Excluded 3D completion.",
       "report": "batches/004.md"
     },
     {
       "slug": "bat",
       "title": "Origami Bat",
       "url": "https://origami.me/bat/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Easy",
       "indexPage": 5,
       "earlyRelease": false,
@@ -1095,7 +1106,7 @@
       "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
-      "model": "../2026-10-13-origami-fold-trials/models/box.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/3d/box.osf",
       "gaps": [],
       "notes": "Flat preparation only; upright walls excluded."
     },
@@ -1128,7 +1139,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 6,
-      "model": "models/camellia.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/camellia.osf",
       "gaps": [
         "F027"
       ],
@@ -1215,7 +1226,7 @@
       "status": "blocked",
       "audit": "pending",
       "lastSourceStep": 9,
-      "model": "models/chicken.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/chicken.osf",
       "gaps": [
         "F028"
       ],
@@ -1231,16 +1242,18 @@
       "indexPage": 4,
       "earlyRelease": false,
       "eligibility": "flat with cuts",
-      "status": "blocked",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": 11,
-      "model": "models/crab.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/cuts/crab.osf",
       "gaps": [
         "F029",
         "F011"
       ],
-      "notes": "All 32 instructions and 34 diagrams reviewed. Twenty-nine nodes through source 11; all 30 states checked in Fold. Four pocket squashes work; first petal rejects the mapped geometry. Cutting is additionally required at sources 17, 19 and 25.",
-      "report": "batches/004.md"
+      "notes": "Excluded from current completion target: required cuts. All 32 instructions and 34 diagrams reviewed. Twenty-nine nodes through source 11; all 30 states checked in Fold. Four pocket squashes work; first petal rejects the mapped geometry. Cutting is additionally required at sources 17, 19 and 25.",
+      "report": "batches/004.md",
+      "requiresCuts": true,
+      "exclusionReason": "Required cuts are outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "crane",
@@ -1254,7 +1267,7 @@
       "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
-      "model": "../2026-10-13-origami-fold-trials/models/crane.osf",
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/3d/crane.osf",
       "gaps": [],
       "notes": "Flat alternative retained; final wing opening excluded."
     },
@@ -1267,15 +1280,13 @@
       "indexPage": 2,
       "earlyRelease": false,
       "eligibility": "flat",
-      "status": "blocked",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": 6,
-      "model": "models/crow.osf",
-      "gaps": [
-        "F020"
-      ],
-      "notes": "All 17 instructions and 20 diagrams reviewed. Fourteen nodes through source 6; all 15 states checked in Fold. Source-7 coupled kite opening remains the same investigation as Bird. Full-packet top fold has identical geometry; depth-one unfold also moves the wrong connected packet.",
-      "report": "batches/004.md"
+      "lastSourceStep": 17,
+      "model": "../2026-10-13-origami-fold-trials/models/completed/crow.osf",
+      "gaps": [],
+      "notes": "Complete flat endpoint; all 34 nodes replayed and 35 states checked in Fold. Central-spine feet/head choices and hidden pocket order verified. Ready for user audit; no engine change needed.",
+      "report": "batches/bird-crow-shaping-2026-10-14.md"
     },
     {
       "slug": "devilish-heart",
@@ -1294,7 +1305,8 @@
         "F011"
       ],
       "notes": "All 20 instructions, 21 diagrams and completed photograph reviewed. Required source-20 center dimple retains a non-flat three-ray vertex. A flattened heart would be a variant. Source 12 additionally requires cutting the precreased square into two triangles; no native variant authored.",
-      "report": "batches/004.md"
+      "report": "batches/004.md",
+      "requiresCuts": true
     },
     {
       "slug": "dolphin",
@@ -1304,13 +1316,19 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat with cuts",
+      "status": "excluded cuts",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 3,
+      "model": "../2026-10-13-origami-fold-trials/models/excluded/cuts/dolphin.osf",
+      "gaps": [
+        "F012",
+        "F011"
+      ],
+      "notes": "Excluded: source 11 requires a tail slit. F012 is resolved locally and the recorded source-4 ear succeeds, but no cut or substitute completion was added. Retained native prefix through source 3 is unchanged; 17 instructions and 20 diagrams previously reviewed.",
+      "report": "batches/004.md",
+      "requiresCuts": true,
+      "exclusionReason": "Required cuts are outside the user-approved scope as of 2026-10-14."
     },
     {
       "slug": "dove",
@@ -1320,13 +1338,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
-      "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "eligibility": "flat endpoint; optional 3D tail shaping omitted",
+      "status": "ready for audit",
+      "audit": "ready for user audit",
+      "lastSourceStep": 16,
+      "model": "../2026-10-13-origami-fold-trials/models/completed/dove.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "Complete flat Dove: 23 nodes / 24 states, 17 numbered folds. Direct nested reverses on both sides and a direct inside tail crimp. Material, exposed sides and stationary layer order checked; all new states inspected in Fold. Optional non-flat tail styling omitted.",
+      "report": "batches/dove-completion-2026-10-14.md"
     },
     {
       "slug": "dragonfly",
@@ -1336,13 +1355,14 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
-      "audit": "pending",
+      "eligibility": "requires cuts and 3D completion",
+      "status": "excluded cuts",
+      "audit": "full source reviewed",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 17 instructions, 22 diagrams and 8 photographs reviewed. Required source 15 splits the wings with scissors; source 16 opens wings perpendicular to the body. No flat variant counted.",
+      "report": "batches/easy-eligibility-2026-10-14.md"
     },
     {
       "slug": "eagle",
@@ -1352,13 +1372,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
-      "audit": "pending",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
+      "audit": "full source reviewed",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 22 instructions, 23 diagrams and 2 photographs reviewed. Sources 16–17 open the wing pleats without flattening; final photograph retains raised pleats. A pressed-flat variant is not tutorial completion.",
+      "report": "batches/easy-eligibility-2026-10-14.md"
     },
     {
       "slug": "elephant-head",
@@ -1368,13 +1389,14 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
-      "audit": "pending",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
+      "audit": "full source reviewed",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 12 instructions, 13 diagrams and 3 photographs reviewed. Required source 12 is a partial center mountain fold that gives the head depth. Flat source 11 would be a labeled variant.",
+      "report": "batches/easy-eligibility-2026-10-14.md"
     },
     {
       "slug": "envelope",
@@ -1384,13 +1406,16 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
-      "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "eligibility": "flat",
+      "status": "blocked",
+      "audit": "verified prefix; user audit pending",
+      "lastSourceStep": 13,
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/envelope.osf",
+      "gaps": [
+        "F034"
+      ],
+      "notes": "Current 24-step tutorial reviewed. Verified through source 13 / Fold 18: 20 nodes, 21 states replayed and checked in Fold; 157 material-stack witnesses. Source 14 hidden-flap mapping unresolved; F034 is an authoring investigation.",
+      "report": "batches/envelope-prefix-2026-10-14.md"
     },
     {
       "slug": "heart-bookmark",
@@ -1400,13 +1425,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
-      "audit": "pending",
+      "eligibility": "flat with required cut preparation",
+      "status": "excluded cuts",
+      "audit": "full source reviewed",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 20 instructions and 21 diagrams reviewed. Required source 1 cuts a square in half. Starting from a half-square rectangle would be a variant; no cut support or native variant added.",
+      "report": "batches/easy-eligibility-2026-10-14.md"
     },
     {
       "slug": "heart-box",
@@ -1416,13 +1442,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Required heart/container walls raised at sources 23–27. Full tutorial and final photograph reviewed; no flat variant authored.",
+      "report": "batches/heart-eligibility-2026-10-14.md"
     },
     {
       "slug": "heart-card-2",
@@ -1432,13 +1459,16 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat; supplied 1:2 rectangle",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 13,
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/heart-card-2.osf",
+      "gaps": [
+        "F035"
+      ],
+      "notes": "Verified through source 13 / Fold 17 (20 nodes). All saved states replayed and visually checked in Fold. Next compound step remains an authoring investigation, not a confirmed engine gap.",
+      "report": "batches/heart-card-prefix-2026-10-14.md"
     },
     {
       "slug": "heart-corner-bookmark",
@@ -1448,13 +1478,16 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat; supplied 1:2 rectangle",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 8,
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/heart-corner-bookmark.osf",
+      "gaps": [
+        "F036"
+      ],
+      "notes": "Verified through source 8 / Fold 7 (10 nodes). All saved states replayed and visually checked in Fold. Next compound step remains an authoring investigation, not a confirmed engine gap.",
+      "report": "batches/heart-corner-bookmark-prefix-2026-10-14.md"
     },
     {
       "slug": "heart-envelope",
@@ -1464,29 +1497,34 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat; supplied rectangle",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 5,
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/heart-envelope.osf",
+      "gaps": [
+        "F037"
+      ],
+      "notes": "Verified through source 5 / Fold 8 (9 nodes, 10 states). All states replayed and visually checked in Fold; 49 material-stack witnesses. Sources 6–7 layer selection is an authoring investigation.",
+      "report": "batches/heart-envelope-prefix-2026-10-14.md"
     },
     {
       "slug": "hummingbird",
       "title": "Origami Hummingbird",
       "url": "https://origami.me/hummingbird/",
-      "designer": "by Cekouat Le\u00f3n",
+      "designer": "by Cekouat León",
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full tutorial and diagrams reviewed. Source 25 shapes a spatial beak/head/neck; full diagrams and final video reviewed.",
+      "exclusionReason": "Source 25 shapes a spatial beak/head/neck; full diagrams and final video reviewed.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "hydrangea",
@@ -1496,13 +1534,15 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "multi-sheet assembly and 3D",
+      "status": "excluded multi-sheet assembly",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full tutorial and diagrams reviewed. Full model assembles 10–15 blossom sheets plus leaves around a paper ball; a flat blossom is only a unit.",
+      "exclusionReason": "Full model assembles 10–15 blossom sheets plus leaves around a paper ball; a flat blossom is only a unit.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "iris",
@@ -1512,13 +1552,15 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full tutorial and diagrams reviewed. Source 18 opens four petals spatially, even without optional curling.",
+      "exclusionReason": "Source 18 opens four petals spatially, even without optional curling.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "jumping-frog",
@@ -1528,13 +1570,15 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full tutorial and diagrams reviewed. Source 22 extends the leg spring into a standing/jumping pose; pressed-flat preparation is a variant.",
+      "exclusionReason": "Source 22 extends the leg spring into a standing/jumping pose; pressed-flat preparation is a variant.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "kissing-lips",
@@ -1544,13 +1588,15 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full tutorial and diagrams reviewed. Source 17 partially opens the model into raised lips.",
+      "exclusionReason": "Source 17 partially opens the model into raised lips.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "kitten",
@@ -1560,13 +1606,16 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 5,
+      "model": "../2026-10-13-origami-fold-trials/models/in-progress/kitten.osf",
+      "gaps": [
+        "F038"
+      ],
+      "notes": "Verified through source 5 / Fold 7: eight nodes, nine states, 37 material-stack witnesses. Source-6 simultaneous side opening remains an authoring investigation.",
+      "report": "batches/kitten-prefix-2026-10-14.md"
     },
     {
       "slug": "kusudama-chrysanthemum",
@@ -1576,13 +1625,15 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "multi-sheet assembly and 3D",
+      "status": "excluded multi-sheet assembly",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "13 unit instructions plus assembly, 18 diagrams and 3 photos reviewed. Six flower units are glued into a spatial ball.",
+      "exclusionReason": "13 unit instructions plus assembly, 18 diagrams and 3 photos reviewed. Six flower units are glued into a spatial ball.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "lily",
@@ -1592,13 +1643,15 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 20 instructions, 22 diagrams and 2 photos reviewed. Source 20 opens petals to roughly 90 degrees; curling is additionally optional.",
+      "exclusionReason": "All 20 instructions, 22 diagrams and 2 photos reviewed. Source 20 opens petals to roughly 90 degrees; curling is additionally optional.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "lotus",
@@ -1608,13 +1661,15 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 16 instructions, 17 diagrams and completed photo reviewed. Petals are reversed upright and curved; required 3D completion.",
+      "exclusionReason": "All 16 instructions, 17 diagrams and completed photo reviewed. Petals are reversed upright and curved; required 3D completion.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "moon",
@@ -1624,13 +1679,15 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "cuts and 3D corrugation",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 14 instructions, 16 diagrams and finished photo reviewed. Numbered source 4 cuts out a narrow diamond; source 14 retains spatial corrugations. Suggested uncut fish-base alternative still has the non-flat finish.",
+      "exclusionReason": "All 14 instructions, 16 diagrams and finished photo reviewed. Numbered source 4 cuts out a narrow diamond; source 14 retains spatial corrugations. Suggested uncut fish-base alternative still has the non-flat finish.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "mushroom",
@@ -1640,13 +1697,16 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": true,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "access blocked",
+      "status": "blocked",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
-      "gaps": [],
-      "notes": ""
+      "gaps": [
+        "A002"
+      ],
+      "notes": "The current tutorial is restricted to Origami Friends early access. Public landing page says release in five weeks. No model authored; do not use image URLs from page metadata to reconstruct gated instructions.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "owl",
@@ -1656,13 +1716,15 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat with required cuts",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 18 instructions, 21 diagrams and final photo reviewed. Sources 15 and 18 cut the talons and ear tufts.",
+      "exclusionReason": "All 18 instructions, 21 diagrams and final photo reviewed. Sources 15 and 18 cut the talons and ear tufts.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "panda",
@@ -1672,13 +1734,15 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 26 instructions, 27 diagrams and final photo reviewed, plus final-step video. Source 26 only partially releases the snout, leaving the muzzle raised; a flat source-25 endpoint would be a labeled variant.",
+      "exclusionReason": "Required partial snout opening retains a non-flat muzzle.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "pig",
@@ -1688,13 +1752,15 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 29 instructions, 31 diagrams and completed photo reviewed. Tail curl, shaped ears and source-29 curved body require 3D completion.",
+      "exclusionReason": "All 29 instructions, 31 diagrams and completed photo reviewed. Tail curl, shaped ears and source-29 curved body require 3D completion.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "pumpkin",
@@ -1704,13 +1770,14 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 18,
+      "model": "../2026-10-13-origami-fold-trials/models/completed/pumpkin.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All 18 instructions complete; 25 nodes / 26 states replayed and checked in Fold. Three public CP imports retain explicit material/layer choices. Optional standing display omitted; flat completion is an explicit tutorial option.",
+      "report": "batches/pumpkin-completion-2026-10-14.md"
     },
     {
       "slug": "rabbit",
@@ -1720,13 +1787,15 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 14 instructions and 15 diagrams reviewed. Source 14 opens the ears spatially; source 11 also leaves the feet curved. A pressed-flat model before shaping would be a variant.",
+      "exclusionReason": "All 14 instructions and 15 diagrams reviewed. Source 14 opens the ears spatially; source 11 also leaves the feet curved. A pressed-flat model before shaping would be a variant.",
+      "report": "batches/easy-eligibility-part2-2026-10-14.md"
     },
     {
       "slug": "sanbou-box",
@@ -1736,13 +1805,14 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "13 instructions / 15 diagrams and completed photograph reviewed. Source 13 opens a raised-base container; required spatial completion.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "sea-turtle",
@@ -1752,13 +1822,16 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat with required cuts",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
-      "gaps": [],
-      "notes": ""
+      "gaps": [
+        "F011"
+      ],
+      "notes": "27 instructions / 30 diagrams and final video still reviewed. Source 24 cuts the top layer for the rear flippers; out of scope.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "seal",
@@ -1768,13 +1841,14 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "21 instructions / 22 diagrams and completed photograph reviewed. Source 21 folds both flippers to 90 degrees for standing.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "sitting-crane",
@@ -1784,13 +1858,14 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "21 instructions / 23 diagrams and completed photograph reviewed. Source 21 opens the pleated wings into a spatial fan and spreads the tail.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "sparrow",
@@ -1800,29 +1875,31 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "19 instructions / 22 diagrams and completed photograph reviewed. Source 19 uses 90-degree feet for the standing model; source-18 flat form would be a variant.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "squirrel",
       "title": "Origami Squirrel",
       "url": "https://origami.me/squirrel/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 26,
+      "model": "../2026-10-13-origami-fold-trials/models/completed/squirrel.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All 26 instructions complete; 34 nodes / 35 states replay. Source 16 / Fold 19 now uses a direct boundary-meeting crimp. All 14 states from the crimp onward preserve the previous checked CP sequence’s full material stacks. F039 resolved locally; optional advanced tail shaping omitted.",
+      "report": "batches/direct-compound-priorities-2026-10-14.md"
     },
     {
       "slug": "star-box",
@@ -1832,13 +1909,14 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "15 instructions / 16 diagrams and final photograph reviewed. Source 15 opens four flaps and forms the spatial container.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "styracosaurus",
@@ -1848,13 +1926,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "28 instructions / 29 diagrams and final photograph reviewed. Source 28 rounds the body and legs into a standing spatial model.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "swallow",
@@ -1864,13 +1943,16 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat with required cuts",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
-      "gaps": [],
-      "notes": ""
+      "gaps": [
+        "F011"
+      ],
+      "notes": "23 instructions / 24 diagrams and final photograph reviewed. Source 22 cuts the top layer for the forked tail.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "tulip",
@@ -1880,13 +1962,14 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "14 instructions / 16 diagrams reviewed. Source 13 inflates the flower and source 14 opens curved petals.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "turtle",
@@ -1896,13 +1979,14 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "19 instructions / 21 diagrams and two final photos reviewed. Source 15 introduces a spatial shell; source 19 shapes the legs with volume.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "witch-hat-bookmark",
@@ -1912,13 +1996,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
+      "eligibility": "flat",
       "status": "queued",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full tutorial and diagrams reviewed. Single-sheet flat completion eligible; authoring queued.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "square-paper-to-hexagon",
@@ -1928,13 +2013,16 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat with required cuts",
+      "status": "excluded cuts",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
-      "gaps": [],
-      "notes": ""
+      "gaps": [
+        "F011"
+      ],
+      "notes": "9 instructions / 10 diagrams and final photograph reviewed. Source 9 cuts the six triangle flaps off.",
+      "report": "batches/easy-eligibility-part3-2026-10-14.md"
     },
     {
       "slug": "5-petal-lily",
@@ -2004,7 +2092,7 @@
       "slug": "dragon",
       "title": "Origami Dragon",
       "url": "https://origami.me/dragon/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 2,
       "earlyRelease": false,
@@ -2056,19 +2144,20 @@
       "difficulty": "Challenging Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Source 23 spreads pleated wings; the completed photograph retains raised corrugation. Full tutorial and final photograph reviewed; no flat variant authored.",
+      "report": "batches/heart-eligibility-2026-10-14.md"
     },
     {
       "slug": "hedgehog",
       "title": "Origami Hedgehog",
       "url": "https://origami.me/hedgehog/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 1,
       "earlyRelease": true,
@@ -2116,7 +2205,7 @@
       "slug": "lion",
       "title": "Origami Lion",
       "url": "https://origami.me/lion/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 2,
       "earlyRelease": false,
@@ -2148,7 +2237,7 @@
       "slug": "mouse",
       "title": "Origami Mouse",
       "url": "https://origami.me/mouse/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 1,
       "earlyRelease": false,
@@ -2180,7 +2269,7 @@
       "slug": "skull",
       "title": "Origami Skull",
       "url": "https://origami.me/skull/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 4,
       "earlyRelease": false,
@@ -2276,7 +2365,7 @@
       "slug": "skull-advanced",
       "title": "Advanced Origami Skull",
       "url": "https://origami.me/skull-advanced/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 1,
       "earlyRelease": false,
@@ -2292,7 +2381,7 @@
       "slug": "camel",
       "title": "Origami Camel",
       "url": "https://origami.me/camel/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 5,
       "earlyRelease": false,
@@ -2340,7 +2429,7 @@
       "slug": "dragon-advanced",
       "title": "Origami Dragon v2",
       "url": "https://origami.me/dragon-advanced/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 1,
       "earlyRelease": false,
@@ -2500,7 +2589,7 @@
       "slug": "tiger",
       "title": "Origami Tiger",
       "url": "https://origami.me/tiger/",
-      "designer": "by S\u00e9bastien Limet",
+      "designer": "by Sébastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 2,
       "earlyRelease": false,
@@ -2595,9 +2684,58 @@
   ],
   "blockedInvestigations": [
     "dog",
-    "paper-envelope",
+    "elephant",
+    "fox",
+    "happi",
+    "kimono",
+    "lantern",
     "necktie",
-    "kimono"
+    "pajarita",
+    "parrot",
+    "shirt",
+    "paper-envelope",
+    "4-pointed-star",
+    "camellia",
+    "chicken",
+    "witch-hat",
+    "bird",
+    "envelope",
+    "heart-card-2",
+    "heart-corner-bookmark",
+    "heart-envelope",
+    "kitten"
   ],
-  "lastBatch": "batches/004.md"
+  "lastBatch": "batches/004.md",
+  "scope": {
+    "updatedOn": "2026-10-14",
+    "flatOnly": true,
+    "requiredCuts": false,
+    "multiSheetAssembly": false,
+    "notes": "Complete single-sheet flat tutorials only; preserve excluded trials as evidence. No schedule, PR, or push."
+  },
+  "lastReconciliation": "RECONCILIATION-2026-10-14.md",
+  "modelRoot": "../2026-10-13-origami-fold-trials/models",
+  "lastCompletionBatch": {
+    "report": "batches/004.md",
+    "completed": [
+      "penguin",
+      "whale",
+      "crow",
+      "pumpkin",
+      "squirrel"
+    ],
+    "status": "ready for user audit",
+    "nextBatchCompletions": 1
+  },
+  "workPriority": {
+    "updatedOn": "2026-10-14",
+    "mode": "plan history-based unfolding",
+    "resolved": [
+      "F030",
+      "F039"
+    ],
+    "next": "Plan append-only Unfold to step with retained creases. Reverse authoring from an imported CP is deferred. Dove completed; Bird F033 and Witch Hat F032 remain investigations.",
+    "newDiagramsPaused": true,
+    "report": "../../implementation-plans/reversible-fold-steps.md"
+  }
 }

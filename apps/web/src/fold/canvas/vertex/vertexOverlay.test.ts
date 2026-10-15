@@ -98,19 +98,14 @@ describe('a vertex tool’s marks over the folded pane', () => {
     expect(marks.strokes).toHaveLength(0);
   });
 
-  it('marks a fan’s center and the other fourth creases that land, never one that does not', () => {
-    const three: FoldVertexAnalysis = { ...fan, candidates: [[0, -1], [0.6, -0.8], [-0.6, -0.8]] };
-    const marks = vertexOverlayMarks(index, { analysis: three, emergent: 1, emergents: [false, true, true] }, inks);
-    // The given rays and the fourth taken are creases, drawn as paper; the
-    // first candidate does not land, so is not offered: only the third is left.
-    expect(marks.strokes).toHaveLength(1);
-    const [other] = marks.strokes;
-    close(other!.a, { x: 0.5, y: 0.5 });
-    close(other!.b, { x: 0.125, y: 0 });
-    expect(other!.color[3]).toBeLessThan(accent[3]);
+  it('marks a rabbit ear’s center without offering other fourth creases', () => {
+    const marks = vertexOverlayMarks(index, { analysis: fan, emergent: 1, emergents: [true, true] }, inks);
+    expect(marks.strokes).toEqual([]);
     expect(marks.dots).toHaveLength(1);
-    // Nothing taken yet: every candidate is a choice.
-    expect(vertexOverlayMarks(index, { analysis: fan, emergent: null, emergents: [] }, inks).strokes).toHaveLength(2);
+    expect(vertexOverlayMarks(index, { analysis: fan, emergent: null, emergents: [] }, inks).strokes).toEqual([]);
+    // Legacy swivel fans still show their other available rays.
+    const swivel = { ...fan, kind: 'swivel' as const };
+    expect(vertexOverlayMarks(index, { analysis: swivel, emergent: 0, emergents: [true, true] }, inks).strokes).toHaveLength(1);
   });
 });
 

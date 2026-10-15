@@ -137,9 +137,10 @@ export type FoldIoCapabilityId =
 export type FoldSequenceCapabilityId =
   | 'fold.valley'
   | 'fold.mountain'
-  | 'fold.precrease'
   | 'fold.turn-over'
   | 'fold.rotate'
+  | 'fold.unfold-to'
+  | 'fold.unfold-last'
   | 'fold.delete-step';
 
 export interface WorkspaceCapability {
@@ -1474,8 +1475,9 @@ function foldSequenceCapabilities(
   return {
     'fold.valley': verb(canChange, t('common:capability.foldValley', 'Valley Fold'), t('common:capability.armValleyFold', 'Fold the moving side toward you')),
     'fold.mountain': verb(canChange, t('common:capability.foldMountain', 'Mountain Fold'), t('common:capability.armMountainFold', 'Fold the moving side away from you')),
-    'fold.precrease': verb(canChange, t('common:capability.foldPrecrease', 'Precrease'), t('common:capability.armPrecrease', 'Fold and unfold, leaving a crease')),
     'fold.turn-over': verb(canChange, t('common:capability.foldTurnOver', 'Turn Over'), t('common:capability.addTurnOver', 'Turn the model over, as a step of its own')),
+    'fold.unfold-to': verb(canDelete, t('panels:fold.return.open', 'Unfold to step…'), t('panels:fold.return.retain', 'Return to an earlier pose, keeping all creases.'), canChange ? t('panels:fold.return.empty', 'Fold a step first.') : blocked),
+    'fold.unfold-last': verb(canDelete, t('panels:fold.return.last', 'Unfold last step'), t('panels:fold.return.retain', 'Return to an earlier pose, keeping all creases.'), canChange ? t('panels:fold.return.empty', 'Fold a step first.') : blocked),
     'fold.rotate': verb(canChange, t('common:capability.foldRotate', 'Rotate'), t('common:capability.takeRotate', 'Take the Rotate tool: turn the model by a part of a turn or an exact angle, as a step of its own')),
     'fold.delete-step': verb(
       canDelete,

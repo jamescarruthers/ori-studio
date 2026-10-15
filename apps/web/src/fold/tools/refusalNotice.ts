@@ -9,6 +9,7 @@
  *
  * React-free and store-free.
  */
+import { foldReturnFailure } from '../return/foldReturnWords';
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
 import type { FoldNoOpening, FoldReverseKind } from '../engine/foldEngineReverseWire';
@@ -123,6 +124,10 @@ export function sectionFlapNames(section: FoldCrossSection | null): Pick<FoldRef
 function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext): { title: string; text: string } {
   const { refusal } = refused;
   switch (refusal.code) {
+    case 'return_target_invalid': case 'return_state_unavailable': case 'return_source_changed':
+    case 'return_unavailable': case 'return_sheet_mismatch': case 'return_limit': case 'return_material':
+    case 'return_order': case 'return_pose': case 'return_arrangement': case 'return_invalid_state':
+      return { title: t('panels:fold.return.failureTitle', 'Cannot unfold'), text: foldReturnFailure(t, refusal.code) };
     case 'no_moving_side':
       return {
         title: t('tools:fold.refusal.noMovingSide.title', 'Nothing to fold'),
@@ -931,7 +936,7 @@ export function foldRefusalNotice(
       ...refused.fixes.flatMap((fix, position) => fixActions(t, fix, position, context, verbs)),
       // What a vertex fold's tools can do where the engine offers no fix.
       ...(context.vertex ? vertexExtraActions(t, refused.refusal, context.readOnly, context.vertex, verbs) : []),
-      // And what the Precrease tool can do with part of a line.
+      // And what Fold and unfold can do with part of a line.
       ...(context.extent ? extentExtraActions(t, refused.refusal.code, context.extent, context.readOnly, verbs) : []),
     ],
   };

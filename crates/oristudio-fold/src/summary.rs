@@ -8,7 +8,7 @@
 //!   geometry rather than by edge id (a split crease's halves get new ids):
 //!   each of the child's creases is matched to the parent's crease through its
 //!   midpoint. One with no parent crease was *added* (a precrease's creases
-//!   are added flat); one whose letter changed while folded was *reversed*;
+//!   are added flat); one whose folded or remembered letter changed was *reversed*;
 //!   folded to flat was *unfolded*; flat to folded was *refolded*, with the
 //!   letter it remembered. Lists hold the child's edge ids, in order. The
 //!   crease marks a partial precrease made are counted apart
@@ -118,7 +118,10 @@ impl State {
                 continue;
             };
             match (before.kind, crease.kind) {
-                (CreaseKind::Folded(was), CreaseKind::Folded(now)) if was != now => {
+                (CreaseKind::Folded(was), CreaseKind::Folded(now))
+                | (CreaseKind::Flat(was), CreaseKind::Flat(now))
+                    if was != now =>
+                {
                     diff.reversed.push(crease.id);
                 }
                 (CreaseKind::Folded(_), CreaseKind::Flat(_)) => diff.unfolded.push(crease.id),

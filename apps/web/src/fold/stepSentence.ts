@@ -135,6 +135,7 @@ export type FoldSentenceExtent =
 
 /** A step as its sentence reads it. */
 export type FoldSentenceStep =
+  | { op: 'unfold-to'; sheet: boolean; number?: number }
   | { op: 'fold'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope }
   /**
    * Fold and unfold: the creases stay, flat, remembering their letters — or,
@@ -148,7 +149,7 @@ export type FoldSentenceStep =
   | { op: 'unfold'; direction: FoldDirection; scope: FoldLayerScope }
   | { op: 'turn'; turn: TurnKind }
   /** Import CP: the state jumps to an imported crease pattern's (plan D16). */
-  | { op: 'cp-jump' }
+  | { op: 'cp-jump'; collapse?: boolean }
   /** A reverse fold along a line (plan Phase 9), its layers the tip's anchor, counted from the top. */
   | { op: 'reverse'; kind: 'inside' | 'outside'; line: FoldSentenceLine; scope: FoldLayerScope }
   /**
@@ -332,8 +333,12 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       // The turn's own words, shared with the Diagram's turn cards, made a
       // sentence by a key of its own so the full stop is the language's.
       return t('panels:fold.sentence.turn', '{{turn}}.', { turn: turnName(step.turn, t) });
+    case 'unfold-to':
+      return step.sheet ? t('panels:fold.return.sheetSentence', 'Unfold to the starting sheet, keeping all creases.')
+        : step.number !== undefined ? t('panels:fold.return.numberedSentence', 'Return to step {{number}}, keeping all creases.', { number: step.number })
+        : t('panels:fold.return.sentence', 'Return to the earlier folded pose, keeping all creases.');
     case 'cp-jump':
-      return t('panels:fold.sentence.cpJump', 'Collapse into the imported crease pattern.');
+      return step.collapse ? t('panels:fold.sentence.collapse', 'Collapse along the saved crease pattern.') : t('panels:fold.sentence.cpJump', 'Collapse into the imported crease pattern.');
     case 'reverse':
       return reverseFoldSentence(t, step.kind, lineClause(t, step.line), step.scope);
     case 'crimp':

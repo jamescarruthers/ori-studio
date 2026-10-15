@@ -1,0 +1,91 @@
+[
+  {
+    "label": "Precrease node 2 retains every material stack",
+    "witnesses": 3
+  },
+  {
+    "label": "Precrease node 5 retains every material stack",
+    "witnesses": 10
+  },
+  {
+    "label": "Precrease node 7 retains every material stack",
+    "witnesses": 14
+  },
+  {
+    "label": "Precrease node 9 retains every material stack",
+    "witnesses": 17
+  },
+  {
+    "label": "Precrease node 12 retains every material stack",
+    "witnesses": 25
+  },
+  {
+    "label": "Precrease node 17 retains every material stack",
+    "witnesses": 17
+  },
+  {
+    "label": "Precrease node 18 retains every material stack",
+    "witnesses": 19
+  },
+  {
+    "label": "Precrease node 19 retains every material stack",
+    "witnesses": 20
+  },
+  {
+    "label": "Precrease node 20 retains every material stack",
+    "witnesses": 21
+  },
+  {
+    "label": "Precrease node 24 retains every material stack",
+    "witnesses": 39
+  },
+  {
+    "label": "Precrease node 26 retains every material stack",
+    "witnesses": 40
+  },
+  {
+    "node": 6,
+    "materialWitnesses": 6,
+    "pocketOrderWitnesses": 4
+  },
+  {
+    "node": 8,
+    "materialWitnesses": 8,
+    "pocketOrderWitnesses": 4
+  },
+  {
+    "node": 10,
+    "materialWitnesses": 10,
+    "pocketOrderWitnesses": 5
+  },
+  {
+    "node": 13,
+    "materialWitnesses": 13,
+    "pocketOrderWitnesses": 5
+  },
+  {
+    "node": 22,
+    "materialWitnesses": 22,
+    "pocketOrderWitnesses": 9
+  },
+  {
+    "node": 23,
+    "materialWitnesses": 24,
+    "pocketOrderWitnesses": 13
+  },
+  {
+    "node": 25,
+    "materialWitnesses": 26,
+    "pocketOrderWitnesses": 3
+  },
+  {
+    "node": 21,
+    "crimpMaterialWitnesses": 20,
+    "stationaryOrderWitnesses": 17,
+    "ordersAvailable": 1
+  },
+  {
+    "node": 27,
+    "armPinchAlignment": true
+  }
+]

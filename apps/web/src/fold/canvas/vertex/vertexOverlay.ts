@@ -242,6 +242,8 @@ export function vertexOverlayMarks(
       for (const p of [...analysis.ends, analysis.corner]) dot(p);
       break;
     case 'rabbit-ear':
+      dot(analysis.center);
+      break;
     case 'swivel':
       strokes.push(...fanChoices(index, analysis, input, accent));
       dot(analysis.center);

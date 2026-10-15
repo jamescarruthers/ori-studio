@@ -152,7 +152,6 @@ export function toolInput(
       return NO_CLICKS;
     case 'valley':
     case 'mountain':
-    case 'precrease':
     case 'inside-reverse':
     case 'tuck':
     case 'open-sink':

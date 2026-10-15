@@ -41,6 +41,7 @@ pub enum CpOrigin {
     /// One of the samples that ship with Fold (`tests/fixtures/fold-samples`).
     Sample,
     EditFoldedFigure,
+    ProjectCp,
 }
 
 impl From<CpFormat> for CpOrigin {

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, RotateCcw, RotateCw } from 'lucide-react';
 import type { TurnDirection, TurnRotationPreset } from '../../lib/steps/turn';
-import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
+import type { FoldKeyLabel, FoldPlainToolId, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
 import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
 import type { FoldExtentMode } from '../../fold/tools/precrease/precreaseExtent';
 import type { FoldKindChoice } from '../../fold/tools/reverse/reverseToolWindow';
@@ -103,6 +103,7 @@ export function FoldToolWindow({
     lineMode,
     secondLine,
     kind,
+    foldAndUnfold,
     extent,
     movingSide,
     layers,
@@ -192,6 +193,17 @@ export function FoldToolWindow({
           </Button>
         </div>
       )}
+      {foldAndUnfold && (
+        <div className={styles.section}>
+          <ToggleRow
+            label={foldAndUnfold.label}
+            checked={foldAndUnfold.checked}
+            disabled={foldAndUnfold.disabled}
+            divider={false}
+            onChange={foldAndUnfold.set}
+          />
+        </div>
+      )}
       {lineMode && (
         <div className={styles.section}>
           <SelectRow
@@ -218,7 +230,7 @@ export function FoldToolWindow({
       {kind && (
         <div className={styles.section}>
           <FieldRow label={kind.label} kind="segmented" divider={false} disabled={kind.disabled}>
-            <SegmentedControl<FoldKind>
+            <SegmentedControl<FoldPlainToolId>
               size="sm"
               iconsOnly
               aria-label={kind.label}
@@ -228,7 +240,7 @@ export function FoldToolWindow({
                 value: option.value,
                 label: option.label,
                 icon: <FoldKindMark kind={option.value} />,
-                // A letter names nothing to someone who has not met it.
+                // The tooltip names the symbol.
                 tooltip: option.label,
               }))}
               onChange={kind.set}

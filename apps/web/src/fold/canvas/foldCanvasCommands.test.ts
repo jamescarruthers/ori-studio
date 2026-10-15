@@ -59,7 +59,8 @@ describe('the tools’ fold kind, as the menus arm it', () => {
       tools.selectTool(tool);
       expect(control.kind(), tool).toBeNull();
     }
-    control.arm('precrease');
-    expect(tools.store.getState().tool).toBe('precrease');
+    tools.setFoldAndUnfold(true);
+    control.arm('valley');
+    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true });
   });
 });

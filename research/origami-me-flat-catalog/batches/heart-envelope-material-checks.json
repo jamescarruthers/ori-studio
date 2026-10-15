@@ -1,0 +1,26 @@
+[
+  {
+    "label": "Precrease node 1: same material stacks",
+    "witnesses": 3
+  },
+  {
+    "label": "Precrease node 2: same material stacks",
+    "witnesses": 6
+  },
+  {
+    "label": "Precrease node 4: same material stacks",
+    "witnesses": 8
+  },
+  {
+    "label": "Precrease node 5: same material stacks",
+    "witnesses": 8
+  },
+  {
+    "label": "Precrease node 7: same material stacks",
+    "witnesses": 10
+  },
+  {
+    "label": "Source 4 unfolds to the same flat material stacks",
+    "witnesses": 14
+  }
+]

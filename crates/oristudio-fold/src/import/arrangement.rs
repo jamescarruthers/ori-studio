@@ -33,7 +33,7 @@ type Point = [f64; 2];
 
 /// What an imported edge becomes (D10's inverse).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Kind {
+pub(crate) enum Kind {
     Border,
     /// Folded, with its letter or with one the order decides.
     Folded(Option<Letter>),
@@ -43,7 +43,7 @@ pub(super) enum Kind {
 
 impl Kind {
     /// The kind of an input segment; none for an aux line, which is a guide.
-    pub(super) fn of(kind: ImportKind) -> Option<Kind> {
+    pub(crate) fn of(kind: ImportKind) -> Option<Kind> {
         Some(match kind {
             ImportKind::Border => Kind::Border,
             ImportKind::Mountain => Kind::Folded(Some(Letter::Mountain)),
@@ -67,36 +67,49 @@ impl Kind {
 }
 
 /// One input segment in sheet coordinates.
-pub(super) struct Placed {
-    pub(super) ends: [Point; 2],
-    pub(super) kind: Kind,
+pub(crate) struct Placed {
+    pub(crate) ends: [Point; 2],
+    pub(crate) kind: Kind,
     /// Its index in the input.
-    pub(super) segment: usize,
+    pub(crate) segment: usize,
 }
 
 /// One edge of the planar graph.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(super) struct ArrangedEdge {
-    pub(super) ends: [usize; 2],
-    pub(super) kind: Kind,
+pub(crate) struct ArrangedEdge {
+    pub(crate) ends: [usize; 2],
+    pub(crate) kind: Kind,
     /// The input segment it is (part of).
-    pub(super) segment: usize,
+    pub(crate) segment: usize,
 }
 
 /// The planar graph and its faces.
 #[derive(Debug, Clone)]
-pub(super) struct Arrangement {
-    pub(super) vertices: Vec<Point>,
-    pub(super) edges: Vec<ArrangedEdge>,
+pub(crate) struct Arrangement {
+    pub(crate) vertices: Vec<Point>,
+    pub(crate) edges: Vec<ArrangedEdge>,
     /// Counter-clockwise vertex rings.
-    pub(super) faces: Vec<Vec<usize>>,
+    pub(crate) faces: Vec<Vec<usize>>,
     /// Input segments, or pieces of them, that added nothing: shorter than
     /// the tolerance, or lying on another of the same kind or on the border.
-    pub(super) dropped: usize,
+    pub(crate) dropped: usize,
 }
 
 /// Build the planar graph of `placed` on `sheet` and find its faces.
-pub(super) fn arrange(placed: &[Placed], sheet: &Sheet) -> Result<Arrangement, ImportRefusal> {
+pub(crate) fn arrange(placed: &[Placed], sheet: &Sheet) -> Result<Arrangement, ImportRefusal> {
+    arrange_graph(placed, sheet, true)
+}
+
+/// Refine historical graphs without erasing collinear provenance boundaries.
+pub(crate) fn refine(placed: &[Placed], sheet: &Sheet) -> Result<Arrangement, ImportRefusal> {
+    arrange_graph(placed, sheet, false)
+}
+
+fn arrange_graph(
+    placed: &[Placed],
+    sheet: &Sheet,
+    join: bool,
+) -> Result<Arrangement, ImportRefusal> {
     let mut grid = PointGrid::new(TOL);
     let mut dropped = 0;
     let mut segments: Vec<Segment> = Vec::with_capacity(placed.len());
@@ -138,7 +151,9 @@ pub(super) fn arrange(placed: &[Placed], sheet: &Sheet) -> Result<Arrangement, I
             }
         }
     }
-    graph.join_collinear(&grid);
+    if join {
+        graph.join_collinear(&grid);
+    }
     let (vertices, edges) = graph.compact(&grid);
 
     let mut degree = vec![0usize; vertices.len()];

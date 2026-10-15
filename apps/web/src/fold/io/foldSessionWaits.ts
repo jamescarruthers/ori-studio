@@ -72,17 +72,19 @@ function landedState(node: FoldSessionNode, snapshot: FoldSessionSnapshot): Fold
 }
 
 /** The step on screen once the replay has landed it, or why nothing can be added after it. */
-export function foldCursorReady(session: FoldSession): Promise<FoldCursorReady | FoldWaitUnavailable> {
+export function foldCursorReady(session: FoldSession, at?: string | null): Promise<FoldCursorReady | FoldWaitUnavailable> {
   return untilAnswered(session, (snapshot) => {
     if (!snapshot.live) return unavailable('not-live');
     if (snapshot.readOnly) return unavailable('read-only');
-    const state = landedState(selectFoldCursorNode(snapshot), snapshot);
+    const node = at === undefined ? selectFoldCursorNode(snapshot) : at === null ? snapshot.sheet : snapshot.nodes.get(at);
+    if (!node) return unavailable('no-state');
+    const state = landedState(node, snapshot);
     if (state === undefined) return undefined;
     if (state === null) return unavailable('no-state');
     return {
       status: 'ready',
       state,
-      cursor: snapshot.cursor,
+      cursor: at === undefined ? snapshot.cursor : at,
       empty: (snapshot.sequence?.steps.length ?? 0) === 0,
       paper: snapshot.paper,
     };

@@ -106,6 +106,12 @@ export function createFoldSessionEngine(source: FoldEngineSource, engineVersion:
       if (answer.status === 'ok') details.set(handleKey({ generation, id: answer.state }), foldStateDetailsOf(answer));
       return answer;
     },
+    ...(source.returnTo ? { async returnTo(current: number, target: number, history: readonly number[]) {
+      const generation = source.generation();
+      const answer = await source.returnTo!(current, target, history);
+      if (answer.status === 'ok') details.set(handleKey({ generation, id: answer.state }), foldStateDetailsOf(answer));
+      return answer;
+    } } : {}),
     release: (states) => source.release(states),
   };
   const inner = createFoldEnginePort(keeping, engineVersion);
@@ -127,6 +133,15 @@ export function createFoldSessionEngine(source: FoldEngineSource, engineVersion:
       details.set(handleKey(state), known);
       const adopted: FoldEngineOutcome<FoldEngineStateHandle> = { landed: true, state, fingerprint };
       return Promise.resolve(adopted);
+    },
+    returnTo(parent, target, history, step) {
+      const key = adoptionKey(parent, step);
+      const offered = adoptions.get(key);
+      if (!offered) return inner.returnTo!(parent, target, history, step);
+      adoptions.delete(key);
+      const { state, fingerprint, details: known } = offered.landed;
+      details.set(handleKey(state), known);
+      return Promise.resolve({ landed: true, state, fingerprint });
     },
     release,
   };

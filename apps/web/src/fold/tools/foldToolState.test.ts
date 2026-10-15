@@ -101,15 +101,26 @@ describe('the Fold tools’ state', () => {
     expect(tools.store.getState()).toMatchObject({ picks: [], seed: { scope: 'top' } });
   });
 
-  it('keeps the flaps picked through V, M and P along one line: the same layers fold the other way', () => {
+  it('keeps the flaps picked through direction and fold-and-unfold changes along one line: the same layers fold the other way', () => {
     const tools = createFoldTools();
     tools.pick(point(1, 0));
     tools.pick(point(0, 1));
     tools.selectTool('mountain');
     expect(tools.store.getState().seed).toEqual({ scope: 'top' });
     tools.toggleFlap(flapB, [flapA, flapB], flapA);
-    tools.selectTool('precrease');
+    tools.setFoldAndUnfold(true);
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+    expect(tools.store.getState()).toMatchObject({ tool: 'mountain', foldAndUnfold: true, picks: [point(1, 0), point(0, 1)] });
+    tools.selectTool('valley');
+    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true, seed: { scope: 'all' } });
+    tools.setExtent('segment');
+    expect(picksAlongLine(tools.store.getState())).toBe(true);
+    tools.setFoldAndUnfold(false);
+    expect(picksAlongLine(tools.store.getState())).toBe(false);
+    expect(tools.store.getState().picks).toHaveLength(2);
+    tools.setFoldAndUnfold(true);
+    tools.clear();
+    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true, extent: 'segment', picks: [] });
   });
 
   it('swaps the side only once the line is located, and folds the new side’s own top flap', () => {
@@ -147,7 +158,7 @@ describe('the Fold tools’ state', () => {
           candidate: null,
           swapped: state.swapped,
           seed,
-          precreaseDirection: state.precreaseDirection,
+          precreaseDirection: 'valley',
         },
         index
       );
@@ -390,7 +401,7 @@ describe('the vertex folds’ tool state', () => {
 
   it('clicks a precrease’s extent along its located line, steps back on Escape, and keeps the extent from fold to fold', () => {
     const tools = createFoldTools();
-    tools.selectTool('precrease');
+    tools.setFoldAndUnfold(true);
     tools.setExtent('segment');
     expect(FOLD_TOOL_INITIAL.extent).toBe('whole');
     // Before the line is located, a click is the line's.

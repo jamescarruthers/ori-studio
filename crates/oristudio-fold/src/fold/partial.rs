@@ -13,8 +13,9 @@
 //! of one letter that touch along one sheet line merge (one layer crossing
 //! a flat crease is one mark); pieces shorter than the minimum feature go.
 //! The paper is flat again, so the faces, the order and the view are the
-//! parent's: only the marks change, and a newer mark subsumes the part of an
-//! older one it covers.
+//! parent's. New material gets marks; an existing flat hinge has its
+//! remembered letter updated only within the extent. Its endpoints may
+//! subdivide a crease, but never split a face or change the layer order.
 //!
 //! A pinch is a crease made in place, so a tuck placement is not part of
 //! it: the closure is grown as for a fold on top.
@@ -32,7 +33,7 @@ use crate::crease_marks::{self, CreaseMark, Extent};
 use crate::fold::section::clip_line;
 use crate::fold::{FoldReport, Folded, Placement, PlainFold, ResolvedSeed, closure::Analysis};
 use crate::numerics::{MIN_FEATURE, TOL};
-use crate::pattern::Letter;
+use crate::pattern::{CreaseKind, Letter};
 use crate::refusal::{FoldRefusal, Refused};
 use crate::state::State;
 use crate::view::Direction;
@@ -65,7 +66,7 @@ impl State {
         let [t0, t1] = self.extent_along(&line, extent)?;
         let step = self.step() + 1;
         let marks = self.marks_within(&analysis, &line, [t0, t1], step)?;
-        let state = self.with_marks(crease_marks::add(self.crease_marks(), marks), step)?;
+        let state = super::partial_existing::land(self, marks, step)?;
         let public = self.public_analysis(&analysis);
         Ok(Folded {
             state,
@@ -153,6 +154,44 @@ impl State {
         }
         if covered_length(paper) < MIN_FEATURE {
             return Err(FoldRefusal::ExtentMissesPaper.into());
+        }
+        // An existing flat crease is already a face boundary, so neither
+        // face straddles the line. It participates exactly when a full fold
+        // would refold it: one incident face moves and the other stays.
+        for (k, crease) in self.creases().iter().enumerate() {
+            if !matches!(crease.kind, CreaseKind::Flat(_))
+                || !crease
+                    .vertices
+                    .iter()
+                    .all(|v| analysis.classified.classes[v.index()] == 0)
+            {
+                continue;
+            }
+            let [f, g] = self.topology().crease_faces[k].as_slice() else {
+                continue;
+            };
+            if analysis.moving[*f] == analysis.moving[*g] {
+                continue;
+            }
+            let [a, b] = crease
+                .vertices
+                .map(|v| line.parameter(geometry.vertex_images[v.index()]));
+            let (lo, hi) = (a.min(b).max(t0), a.max(b).min(t1));
+            if hi - lo <= TOL {
+                continue;
+            }
+            let t = geometry.isometries[*f];
+            let inverse = t.inverse();
+            pieces.push(CreaseMark {
+                a: inverse.apply(line.point_at(lo)),
+                b: inverse.apply(line.point_at(hi)),
+                letter: if valley == t.front_up() {
+                    Letter::Valley
+                } else {
+                    Letter::Mountain
+                },
+                made_at: step,
+            });
         }
         let marks: Vec<CreaseMark> = crease_marks::merge(pieces)
             .into_iter()
@@ -296,8 +335,7 @@ mod tests {
                 .map(|e| e.refusal.code()),
             Some("extent_misses_paper")
         );
-        // Along a crease already there: paper along the line, but no layer
-        // the line crosses.
+        // A crease already there is also a valid place to pinch.
         let creased = s.precrease(&op).unwrap_or_else(|e| panic!("{e}")).state;
         let again = creased.precrease_extent(
             &op,
@@ -306,9 +344,6 @@ mod tests {
                 length: 0.1,
             },
         );
-        assert_eq!(
-            again.err().map(|e| e.refusal.code()),
-            Some("extent_misses_layers")
-        );
+        assert!(again.is_ok(), "{again:?}");
     }
 }

@@ -1,3 +1,4 @@
+import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useMemo, useState } from 'react';
 import { visibleMarks } from '../document/foldStepTree';
 import { markPoints, type FoldMark, type FoldSequenceDocument } from '../document/foldSequenceDocument';
@@ -5,7 +6,7 @@ import type { FoldLandmarks, FoldScene, FoldStateSummary } from '../engine/foldE
 import type { FoldStateCall } from '../session/foldSession';
 import type { FoldSessionNode } from '../session/foldSessionState';
 import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
-import { useFoldCursor, useFoldNodeQuery, useFoldSessionState } from '../session/useFoldSession';
+import { useFoldStateQuery, useFoldCursor, useFoldNodeQuery, useFoldSessionState } from '../session/useFoldSession';
 import { foldPickIndex, type FoldMarkPoint, type FoldPickIndex } from './foldPicking';
 
 /** What the canvas knows about the state on screen, from the engine and the document. */
@@ -89,9 +90,12 @@ export function useFoldStateView(): FoldStateView {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pointsKey]
   );
-  const scene = useFoldNodeQuery(cursorId, FOLD_SCENE_QUERY);
+  const returning = useFoldReturnUi((s) => s.opening !== null);
+  const pending = useFoldSessionState((s) => s.pending);
+  const returned = returning && pending.status === 'landed' && pending.request.op.kind === 'unfold-to' ? pending : null;
+  const scene = useFoldStateQuery(returned?.state ?? cursor.state, FOLD_SCENE_QUERY);
   const landmarks = useFoldNodeQuery(cursorId, landmarksQuery);
-  const summary = cursor.summary;
+  const summary = returned?.summary ?? cursor.summary;
   const fresh = useMemo(() => (scene && summary ? { scene, summary } : null), [scene, summary]);
   const picture = usePicture(fresh, loading(cursor));
   const index = useMemo(() => (scene ? foldPickIndex(scene, landmarks, points) : null), [scene, landmarks, points]);
@@ -102,6 +106,6 @@ export function useFoldStateView(): FoldStateView {
     landmarks,
     marks,
     markPoints: points,
-    index,
+    index: returning ? null : index,
   };
 }

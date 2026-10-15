@@ -33,6 +33,7 @@ import {
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
 import {
+  isFoldKind,
   isLineTool,
   locatesLine,
   type FoldLineBy,
@@ -173,8 +174,8 @@ export interface FoldToolState {
   /** The moving side is the other one from the default. */
   swapped: boolean;
   seed: FoldToolSeed;
-  /** The way a precrease folds before it unfolds. */
-  precreaseDirection: FoldDirection;
+  /** Fold in the selected direction, then unfold. Retained across plain folds. */
+  foldAndUnfold: boolean;
   /**
    * How much of its line a precrease creases (`tools/precrease`): the whole
    * line, a segment or a pinch. Kept from one precrease to the next, as the
@@ -224,7 +225,7 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   root: 0,
   swapped: false,
   seed: FOLD_TOP_FLAP,
-  precreaseDirection: 'valley',
+  foldAndUnfold: false,
   extent: 'whole',
   extentPicks: [],
   secondLineMode: 'free',
@@ -303,12 +304,12 @@ export function hasToolInput(state: FoldToolState): boolean {
 }
 
 /**
- * The precrease's extent is what the tools are asking for: the Precrease tool
- * in hand, its line located, and a segment or a pinch chosen — so a click
+ * The precrease's extent is what the tools are asking for: Fold and unfold
+ * enabled on a plain fold, its line located, and a segment or a pinch chosen — so a click
  * along the line is one of its points.
  */
 export function picksAlongLine(state: FoldToolState): boolean {
-  return state.tool === 'precrease' && state.extent !== 'whole' && isLocated(state) && state.override === null;
+  return isFoldKind(state.tool) && state.foldAndUnfold && state.extent !== 'whole' && isLocated(state) && state.override === null;
 }
 
 export interface FoldTools {
@@ -342,7 +343,7 @@ export interface FoldTools {
    * picks, and so what a press widens from.
    */
   toggleFlap(flap: FoldFlap, all: readonly FoldFlap[], top: FoldFlap | null): void;
-  setPrecreaseDirection(direction: FoldDirection): void;
+  setFoldAndUnfold(enabled: boolean): void;
   // A precrease's extent (`tools/precrease`).
   /** Crease this much of the line: its points along the line start again. */
   setExtent(extent: FoldExtentMode): void;
@@ -552,8 +553,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       });
     },
 
-    setPrecreaseDirection(precreaseDirection) {
-      set((state) => (state.precreaseDirection === precreaseDirection ? state : { ...state, precreaseDirection, override: null }));
+    setFoldAndUnfold(foldAndUnfold) {
+      set((state) => (state.foldAndUnfold === foldAndUnfold ? state : { ...state, foldAndUnfold, override: null }));
     },
 
     setExtent(extent) {

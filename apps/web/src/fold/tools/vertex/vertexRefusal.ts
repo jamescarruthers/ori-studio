@@ -15,7 +15,7 @@
  * - a squash's spine aimed outside its wedge goes back onto the hinge;
  * - a petal fold over a hinge crease whose kite creases are not there takes
  *   the same hinge by its two ends, so the fold creases them, or the
- *   Precrease tool on the edge-to-edge axiom that makes them; a hinge the
+ *   Fold and unfold on the edge-to-edge axiom that makes them; a hinge the
  *   fold cannot crease through the layers that fold takes the Precrease
  *   tool through its two ends. The engine cannot offer these: it cannot
  *   know the kite's corner before the kite is creased.
@@ -96,9 +96,9 @@ export interface FoldVertexFixVerbs {
   takeEmergent?: (direction: FoldModelPoint) => void;
   /** Put a squash's spine back onto its hinge line. */
   resetSquashTarget?: () => void;
-  /** Precrease a petal fold's hinge first: the Precrease tool through its two ends. */
+  /** Precrease a petal fold's hinge first: Fold and unfold through its two ends. */
   precreaseLine?: () => void;
-  /** Precrease a petal fold's kite first: the Precrease tool on the edge-to-edge axiom. */
+  /** Precrease a petal fold's kite first: Fold and unfold on the edge-to-edge axiom. */
   precreaseKite?: () => void;
   /** The same petal fold with its hinge named by its two ends, so the fold creases the kite creases it lacks. */
   petalByEnds?: () => void;
@@ -308,10 +308,10 @@ export function vertexRefusalWords(
       if (refusal.missing === 'kite') {
         return {
           title: t('tools:fold.vertex.refusal.kite.titleMissing', 'The kite creases are not there'),
-          // What each button does: the fold creases them, or the Precrease tool makes them first.
+          // What each button does: the fold creases them, or Fold and unfold makes them first.
           text: t(
             'tools:fold.vertex.refusal.kite.creaseOrPrecrease',
-            'Over a hinge crease, a petal fold refolds creases already there, and a kite crease is not. Name the hinge by its two ends instead, and the fold creases the kites itself; or precrease them first, with the Precrease tool on Axiom 3: a lower edge of the top flap onto its centre line, the flaps behind left out.'
+            'Over a hinge crease, a petal fold refolds creases already there, and a kite crease is not. Name the hinge by its two ends instead, and the fold creases the kites itself; or precrease them first, with Fold and unfold on Axiom 3: a lower edge of the top flap onto its centre line, the flaps behind left out.'
           ),
         };
       }

@@ -432,9 +432,21 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
                     (Some(x), Some(y)) if x == y => {
                         (lo_above == blocks[x].front_up(), FixedKind::Carried)
                     }
-                    (Some(x), Some(y)) => match across {
+                    (Some(x), Some(y)) => match &across {
                         Across::Keep => (lo_above, FixedKind::Seed),
                         Across::Alike if alike(&blocks, x, y) => (lo_above, FixedKind::Seed),
+                        Across::Packets {
+                            coupled,
+                            alike_only,
+                        } => {
+                            if coupled.contains(&[x.min(y), x.max(y)]) {
+                                (lo_above == blocks[x].front_up(), FixedKind::Seed)
+                            } else if !alike_only || alike(&blocks, x, y) {
+                                (lo_above, FixedKind::Seed)
+                            } else {
+                                continue;
+                            }
+                        }
                         Across::Alike | Across::Free => continue,
                     },
                     _ => continue,

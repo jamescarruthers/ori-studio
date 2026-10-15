@@ -43,6 +43,7 @@ afterEach(() => {
 function verbs() {
   return {
     selectTool: vi.fn(),
+    setFoldAndUnfold: vi.fn(),
     selectLineMode: vi.fn(),
     includeFlaps: vi.fn(),
     foldOtherWay: vi.fn(),
@@ -313,13 +314,12 @@ describe('FoldToolWindow', () => {
     expect(window.querySelector('[data-fold-vertex-note]')?.textContent).toMatch(/incenter/);
     // No moving side, no layer picker: a vertex fold has neither.
     expect(window.textContent).not.toContain('Moving side');
-    // The fourth crease and the layers, steppers; no ridge to choose: the
-    // fourth crease is the ear's ridge.
-    expect(window.textContent).toContain('1 of 2');
+    // The region fixes the hinge; only the layer count is stepped.
+    expect(window.textContent).not.toContain('Fourth crease');
     expect(window.textContent).toContain('All 2');
-    expect(window.querySelector('[data-reserved]')?.textContent).toBe('2 fourth creases fit with this paper staying put.');
-    act(() => byRole(window, 'button', 'Fourth crease: Next').click());
-    expect(calls.stepEmergent).toHaveBeenCalledWith(1);
+    expect(window.querySelector('[data-reserved]')?.textContent).toBe('The hinge crease lies in the selected region.');
+    expect(queryByRole(window, 'button', 'Fourth crease: Next')).toBeNull();
+    expect(calls.stepEmergent).not.toHaveBeenCalled();
     act(() => byRole(window, 'button', 'Layers: Previous').click());
     expect(calls.stepFanLayers).toHaveBeenCalledWith(-1);
     expect(queryByRole(window, 'group', 'Ridge')).toBeNull();
@@ -377,7 +377,7 @@ describe('FoldToolWindow', () => {
     }
   });
 
-  it('keeps a fan’s fourth crease in one place whether two land, one or none, and never shows a refusal for it', () => {
+  it('shows hinge-region status even with one layer, without a fourth-crease selector', () => {
     const calls = { ...verbs(), setVertexDirection: vi.fn(), stepEmergent: vi.fn() } satisfies FoldToolWindowVerbs;
     const vertex = {
       tool: 'rabbit-ear' as const,
@@ -403,14 +403,14 @@ describe('FoldToolWindow', () => {
     };
     render({ tool: 'rabbit-ear', lineMode: 'crease', picks: 4, preview: preview({ section: null }), vertex }, calls);
     const two = shape(fold()!);
-    expect(two).toMatchObject({ value: '2 of 2', arrows: [false, false] });
+    expect(two).toMatchObject({ value: null, arrows: [] });
 
     render(
       { tool: 'rabbit-ear', lineMode: 'crease', picks: 4, preview: preview({ section: null }), vertex: { ...vertex, fourths: 1, fourth: 0 } },
       calls
     );
     const one = shape(fold()!);
-    expect(one).toMatchObject({ value: '1 of 1', note: 'One fourth crease fits with this paper staying put.', arrows: [true, true] });
+    expect(one).toMatchObject({ value: null, note: 'The hinge crease lies in the selected region.', arrows: [] });
 
     // None lands: nothing to fold, said in the same place, with the change that helps.
     render(
@@ -426,9 +426,9 @@ describe('FoldToolWindow', () => {
     const window = fold()!;
     const none = shape(window);
     expect(none).toMatchObject({
-      value: 'None',
-      note: 'No fourth crease fits with this paper staying put: click other paper to stay.',
-      arrows: [true, true],
+      value: null,
+      note: 'This hinge region cannot fold with these layers. Click another region or change the layers.',
+      arrows: [],
     });
     // The same rows in the same order each time: nothing moves.
     expect(one.rows).toEqual(two.rows);
@@ -533,7 +533,7 @@ describe('FoldToolWindow', () => {
     render({ picks: 1 });
     const window = fold()!;
     expect(byRole(window, 'button', /^Valley fold/).getAttribute('aria-expanded')).toBe('true');
-    expect(window.textContent).toContain('1 setting');
+    expect(window.textContent).toContain('2 settings');
     const steps = [...window.querySelectorAll('ol li')];
     expect(steps.map((step) => step.textContent)).toEqual([
       'Click the point to move.',
@@ -548,9 +548,27 @@ describe('FoldToolWindow', () => {
     expect(queryByRole(window, 'button', 'Cancel')).toBeNull();
   });
 
+  it('offers Fold and unfold before locating and during preview, with extent controls only while enabled', () => {
+    const calls = { ...verbs(), setExtent: vi.fn() };
+    render({ tool: 'mountain', foldAndUnfold: false }, calls);
+    const off = byRole(fold()!, 'switch', 'Fold and unfold');
+    expect(off.getAttribute('aria-checked')).toBe('false');
+    act(() => off.click());
+    expect(calls.setFoldAndUnfold).toHaveBeenCalledWith(true);
+    render({ tool: 'mountain', foldAndUnfold: true, picks: 2, extent: { mode: 'whole', picked: 0 }, preview: preview() }, calls);
+    const on = byRole(fold()!, 'switch', 'Fold and unfold');
+    expect(on.getAttribute('aria-checked')).toBe('true');
+    expect(byRole(fold()!, 'group', 'Extent')).toBeTruthy();
+    expect(queryByRole(fold()!, 'button', 'Precrease')).toBeNull();
+    act(() => on.click());
+    expect(calls.setFoldAndUnfold).toHaveBeenLastCalledWith(false);
+    render({ tool: 'mountain', foldAndUnfold: true, readOnly: 'locked' }, calls);
+    expect(byRole(fold()!, 'switch', 'Fold and unfold').hasAttribute('disabled')).toBe(true);
+  });
+
   it('offers a precrease’s extent under its own heading, says what the one chosen creases, and switches it', () => {
     const calls = { ...verbs(), setExtent: vi.fn() };
-    render({ tool: 'precrease', picks: 2, extent: { mode: 'pinch', picked: 0 }, preview: preview({ incomplete: true }) }, calls);
+    render({ tool: 'valley', foldAndUnfold: true, picks: 2, extent: { mode: 'pinch', picked: 0 }, preview: preview({ incomplete: true }) }, calls);
     const window = fold()!;
     const extent = byRole(window, 'group', 'Extent');
     expect(allByRole(extent, 'button').map((button) => [button.textContent, button.getAttribute('aria-pressed')])).toEqual([
@@ -629,7 +647,6 @@ describe('FoldToolWindow', () => {
     expect(allByRole(kinds, 'button').map((button) => [button.getAttribute('aria-label'), button.getAttribute('aria-pressed')])).toEqual([
       ['Valley fold', 'true'],
       ['Mountain fold', 'false'],
-      ['Precrease', 'false'],
     ]);
     act(() => byRole(kinds, 'button', 'Mountain fold').click());
     expect(calls.selectTool).toHaveBeenCalledWith('mountain');
@@ -646,7 +663,7 @@ describe('FoldToolWindow', () => {
 
   it('commits and cancels from its footer, naming their keys, and refuses a commit while refused', () => {
     const keys = (id: FoldShortcutId) => ({ 'fold.commit': 'Enter', 'viewport.cancel': 'Esc', 'fold.swapSide': 'S' })[id as string];
-    // The footer's commit is named for the fold, as the V / M / P control's option is.
+    // The footer's commit is named for the fold, as the V / M control's option is.
     const footer = () => fold()!.querySelector<HTMLElement>('[data-footer]')!;
     let calls = render({ preview: preview() }, verbs(), keys);
     let window = fold()!;

@@ -24,6 +24,7 @@
  * Pure orchestration: no React, no store, no wasm.
  */
 
+import { resolveFoldReturn } from './foldReturn';
 import {
   foldDrift,
   foldPathDigest,
@@ -66,6 +67,8 @@ export interface FoldEnginePort<S> {
   sheet(paper: FoldPaper): Promise<FoldEngineOutcome<S>>;
   /** One step, from its parent's landed state. */
   step(parent: S, step: { op: FoldOp; choices?: FoldChoices }): Promise<FoldEngineOutcome<S>>;
+  /** A resolved historical return; step is supplied for preview adoption. */
+  returnTo?(parent: S, target: S, history: readonly S[], step: { op: FoldOp; choices?: FoldChoices }): Promise<FoldEngineOutcome<S>>;
   /** Let go of a state the cache no longer holds. */
   release?(state: S): void;
 }
@@ -275,7 +278,17 @@ async function replay<S>(
     const parentState = parent.state;
     if (isLockedStep(node) || parentState === null) continue;
     const { op, choices } = node;
-    const answer = outcomeOf(own.path, () => port.step(parentState, choices ? { op, choices } : { op }));
+    const request = choices ? { op, choices } : { op };
+    const dependency = op.kind === 'unfold-to' ? resolveFoldReturn(sequence, node.parent, op, sheet, steps) : null;
+    // Validate dependencies even before serving a cached result.
+    if (dependency && 'code' in dependency) {
+      steps.set(node.id, unlanded('broken', own.path, { at: node.id, code: dependency.code }));
+      continue;
+    }
+    const answer = outcomeOf(own.path, () => dependency
+      ? port.returnTo?.(parentState, dependency.target, dependency.history, request)
+        ?? Promise.resolve({ landed: false, code: 'return_unavailable' })
+      : port.step(parentState, request));
     const outcome = await answer;
     if (!current()) return null;
     steps.set(node.id, landing(own.path, outcome, node.expect, node.id));

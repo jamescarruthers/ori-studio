@@ -371,7 +371,6 @@ describe('workspace capabilities', () => {
     const verbs = [
       'fold.valley',
       'fold.mountain',
-      'fold.precrease',
       'fold.turn-over',
       'fold.rotate',
       'fold.delete-step',

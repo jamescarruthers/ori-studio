@@ -313,11 +313,14 @@ describe('the top flap a fold takes by default (owner request, 2026-10-13)', () 
     expect(engine.crossSection).toHaveBeenCalledTimes(1);
   });
 
-  it('takes the same top flap for a mountain, the top as the front shows it, and for a precrease and a tuck', async () => {
-    await render({ ...FREE_LINE, tool: 'mountain' });
-    expect(seen?.step?.op).toMatchObject({ kind: 'mountain', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
-    await render({ ...FREE_LINE, tool: 'precrease' });
-    expect(seen?.step?.op).toMatchObject({ kind: 'precrease', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
+  it('folds and unfolds in the selected direction, keeping the same top flap; switching it off restores an ordinary fold', async () => {
+    for (const tool of ['mountain', 'valley'] as const) {
+      await render({ ...FREE_LINE, tool, foldAndUnfold: true });
+      expect(seen?.step?.op).toMatchObject({ kind: 'precrease', direction: tool, seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
+      await render({ ...FREE_LINE, tool, foldAndUnfold: false });
+      expect(seen?.step?.op).toMatchObject({ kind: tool, seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
+      expect(seen?.step?.op).not.toHaveProperty('extent');
+    }
   });
 
   it('folds every layer when the moving side is that one flap, as a fold always has', async () => {
@@ -526,12 +529,12 @@ describe('a vertex fold’s step', () => {
         [0.71, 0.71],
         [0.38, -0.92],
       ],
-      candidates: CANDIDATES,
+      candidates: [op.emergent, ...CANDIDATES.slice(1)],
       // The engine names the candidate nearest the ray asked for.
-      emergent: CANDIDATES.findIndex(([x, y]) => x === op.emergent[0] && y === op.emergent[1]) === 1 ? 1 : 0,
+      emergent: 0,
       layers: [0],
     },
-    emergents: [false, true, true],
+    emergents: [true, true, true],
     orders: null,
   });
   const EAR: FoldToolState = {
@@ -586,21 +589,22 @@ describe('a vertex fold’s step', () => {
     if (unpictured) engine.action.mockImplementation(unpictured);
   });
 
-  it('builds no step when none of a fan’s fourth creases lands, refuses nothing, and asks whether other paper staying would help', async () => {
+  it('automatically changes the stationary anchor while keeping the selected hinge', async () => {
     let picked: string | null = null;
     engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number]; stayer: [number, number] }) => {
       const stayer = op.stayer.join();
       picked ??= stayer;
       // None lands with the paper picked; one does with other paper staying.
-      return { ...fanAnswer(op), emergents: stayer === picked ? [false, false, false] : [false, true, false] };
+      return { ...fanAnswer(op), emergents: stayer === picked ? [false, true, true] : [true, false, false] };
     }) as never);
     await render(EAR);
     for (let k = 0; k < 3; k += 1) await render(EAR);
-    expect(seen?.step).toBeNull();
+    expect(seen?.step).not.toBeNull();
     expect(seen?.refused).toBeNull();
-    expect(seen?.landing).toBe(false);
-    expect(seen?.vertex).toMatchObject({ emergent: null, fourths: [], elsewhere: true });
-    expect(verbs.preview).not.toHaveBeenCalled();
+    expect(seen?.vertex).toMatchObject({ emergent: 0, fourths: [0], elsewhere: null });
+    expect(verbs.preview).toHaveBeenCalled();
+    const rays = engine.compoundAnalysis.mock.calls.map(call => (call as unknown as [unknown, { emergent: number[] }])[1].emergent);
+    expect(rays[1]).toEqual(rays[0]);
     // The fan, then another region as the paper that stays — the first that has one is enough.
     const stayers = engine.compoundAnalysis.mock.calls.map((call) => (call as unknown as [unknown, { stayer: number[] }])[1].stayer.join());
     expect(stayers).toHaveLength(2);
@@ -608,7 +612,7 @@ describe('a vertex fold’s step', () => {
     expect(tracked.refused).not.toHaveBeenCalled();
   });
 
-  it('asks the compound question, again for the fourth ray that lands, and previews the step with its picture but no line to analyse', async () => {
+  it('previews the selected hinge after one analysis when its first anchor works', async () => {
     engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number] }) =>
       fanAnswer(op)) as never);
     const PICTURE = {
@@ -625,20 +629,28 @@ describe('a vertex fold’s step', () => {
     engine.action.mockImplementation((async () => ({ status: 'ok', action: PICTURE })) as never);
     await render(EAR);
     for (let k = 0; k < 3; k += 1) await render(EAR);
-    // The placeholder ray first, then the first candidate that lands.
-    expect(engine.compoundAnalysis).toHaveBeenCalledTimes(2);
-    const asked = engine.compoundAnalysis.mock.calls.map((call) => (call as unknown as [unknown, { emergent: unknown }])[1].emergent);
-    expect(asked).toEqual([[1, 0], CANDIDATES[1]]);
-    expect(seen?.step?.op).toMatchObject({ kind: 'rabbit-ear', emergent: CANDIDATES[1], seed: { scope: 'all' } });
-    // Only the two that land are offered.
-    expect(seen?.vertex).toMatchObject({ emergent: 1, fourths: [1, 2], layers: 1, orders: [] });
+    expect(engine.compoundAnalysis).toHaveBeenCalledTimes(1);
+    const asked = (engine.compoundAnalysis.mock.calls[0] as unknown as [unknown, { emergent: number[] }])[1].emergent;
+    expect(seen?.step?.op).toMatchObject({ kind: 'rabbit-ear', emergent: asked, seed: { scope: 'all' } });
+    expect(seen?.vertex).toMatchObject({ emergent: 0, fourths: [0], layers: 1, orders: [] });
     // Previewed through the session and pictured; a vertex fold has no line to analyse.
     expect(verbs.preview).toHaveBeenCalledWith(seen?.step?.op, undefined);
     expect(analyse).not.toHaveBeenCalled();
     expect(engine.action).toHaveBeenLastCalledWith(PARENT, seen?.step?.op, undefined);
     expect(seen?.action).toEqual(PICTURE);
-    expect(tracked.offered).toHaveBeenCalledWith('emergent', 2);
+    expect(tracked.offered).not.toHaveBeenCalled();
     expect(seen?.refused).toBeNull();
+  });
+
+  it('never substitutes a different hinge when both anchors reject the selected region', async () => {
+    engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number] }) =>
+      ({ ...fanAnswer(op), emergents: [false, true, true] })) as never);
+    await render(EAR);
+    for (let k = 0; k < 3; k += 1) await render(EAR);
+    expect(engine.compoundAnalysis).toHaveBeenCalledTimes(2);
+    expect(seen?.step).toBeNull();
+    expect(seen?.vertex?.fourths).toEqual([]);
+    expect(verbs.preview).not.toHaveBeenCalled();
   });
 
   it('asks a swivel by its edge, takes the foot’s ridge by storing none, and still folds its own when no ridge lands', async () => {

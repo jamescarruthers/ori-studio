@@ -64,7 +64,6 @@ function shortcut(id: MenuActionId, resolution?: ShortcutResolutionInput): strin
 const FOLD_ROW_KEYS: Partial<Record<MenuActionId, FoldShortcutId>> = {
   'fold.valley': 'fold.toolValley',
   'fold.mountain': 'fold.toolMountain',
-  'fold.precrease': 'fold.toolPrecrease',
   'fold.turn-over': 'fold.turnOver',
   'fold.rotate': 'fold.rotate',
 };
@@ -337,10 +336,12 @@ export function getMenuBarDef(
       items: [
         { type: 'action', id: 'fold.valley', label: t('menu:fold.valley', 'Valley Fold'), shortcut: foldRowKey('fold.valley', resolution) },
         { type: 'action', id: 'fold.mountain', label: t('menu:fold.mountain', 'Mountain Fold'), shortcut: foldRowKey('fold.mountain', resolution) },
-        { type: 'action', id: 'fold.precrease', label: t('menu:fold.precrease', 'Precrease'), shortcut: foldRowKey('fold.precrease', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.turn-over', label: t('menu:fold.turn-over', 'Turn Over'), shortcut: foldRowKey('fold.turn-over', resolution) },
         { type: 'action', id: 'fold.rotate', label: t('menu:fold.rotate', 'Rotate...'), shortcut: foldRowKey('fold.rotate', resolution) },
+        { type: 'separator' },
+        { type: 'action', id: 'fold.unfold-last', label: t('panels:fold.return.last', 'Unfold last step') },
+        { type: 'action', id: 'fold.unfold-to', label: t('panels:fold.return.open', 'Unfold to step…') },
         { type: 'separator' },
         { type: 'action', id: 'fold.delete-step', label: t('menu:fold.delete-step', 'Delete Step'), shortcut: shortcut('fold.delete-step', resolution) },
         { type: 'separator' },

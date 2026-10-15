@@ -358,7 +358,6 @@
       "fold": "접기",
       "locate": "선 정하기",
       "model": "모델",
-      "planned": "예정",
       "reference": "기준점",
       "sink": "가라앉혀 접기"
     },
@@ -392,12 +391,6 @@
       "free": "자유 선",
       "freeHelp": "기준 없이 아무 곳에나 그은 선입니다."
     },
-    "mark": {
-      "mountain": "M",
-      "precrease": "P",
-      "reverse": "RF",
-      "valley": "V"
-    },
     "note": {
       "acrossLayers": "이 점들은 접기로 서로 떨어진 겹 위에 있어서, 선은 접힌 모양에서 점들이 놓인 위치를 지납니다. 전개도에는 이 접기로 생기는 접은 선이 표시됩니다.",
       "along": "점은 선이 접는 선·변·자국과 만나는 곳, 선 위의 점, 선의 가운데에 스냅됩니다.",
@@ -422,7 +415,6 @@
       "openSink": "열린 가라앉혀 접기",
       "outsideReverse": "바깥 뒤집어 접기",
       "petal": "꽃잎 접기",
-      "pleat": "계단 접기",
       "rabbitEar": "토끼 귀 접기",
       "squash": "눌러 접기",
       "swivel": "회전 접기",
@@ -434,8 +426,6 @@
       "title": "접기 도구",
       "trigger": "도구"
     },
-    "plannedPleat": "별도의 도구가 아닙니다. 계단 접기는 골접기와 그 옆의 산접기, 두 번의 접기로 접으세요.",
-    "plannedReason": "예정: 아직 Ori Studio에 없습니다.",
     "playStep": "단계 재생",
     "railLabel": "접기 도구",
     "readOnly": {
@@ -776,8 +766,6 @@
       "mountain": "산접기",
       "mountainHelp": "움직이는 쪽을 바깥쪽으로 접어 아래에 놓습니다.",
       "openSinkHelp": "닫힌 꼭지의 끝을 밀어 넣어 모든 겹을 뒤집습니다.",
-      "precrease": "미리 접기",
-      "precreaseHelp": "접었다 펼쳐 나중에 쓸 접는 선을 남깁니다.",
       "reverse": "뒤집어 접기",
       "reverseHelp": "플랩을 안으로 접어 넣거나 바깥으로 뒤집어 중심 접힌 선을 반전합니다.",
       "rotateHelp": "모델을 회전의 일부나 정확한 각도만큼 돌립니다. 미리 본 뒤 별도의 단계로 추가됩니다.",
@@ -801,7 +789,6 @@
     "vertex": {
       "direction": "방향",
       "directionCannot": "이 방향으로는 여기서 평평하게 접히지 않습니다.",
-      "emergent": "네 번째 접는 선",
       "fix": {
         "creaseKites": "접으면서 연 모양 접는 선 만들기",
         "emergent": "맞는 네 번째 접는 선 사용",
@@ -812,14 +799,15 @@
         "precreaseKite": "연 모양 미리 접기",
         "resetTarget": "등을 경첩에 맞추기"
       },
-      "fourthNone": "없음",
-      "fourthsFit_other": "이 종이가 그대로 있을 때 맞는 네 번째 접는 선은 {{count}}개입니다.",
       "help": {
         "petalHinge": "경첩을 따라 플랩의 아래 끝을 들어 올리면서, 두 연 모양 접는 선을 따라 양옆을 안으로 접습니다.",
         "rabbitEar": "삼각형의 모서리를 이등분선을 따라 접어 넣어 끝이 서도록 합니다.",
         "squash": "두 겹 플랩을 펼쳐 눌러 납작하게 하고, 등을 경첩에 맞춥니다.",
         "swivelEdge": "한 점을 회전 중심으로 변을 선 위로 돌려 접습니다."
       },
+      "hingeRegionBlocked": "이 영역에서는 선택한 층으로 힌지를 접을 수 없습니다. 다른 영역을 클릭하거나 층을 변경하세요.",
+      "hingeRegionBlockedTouch": "이 영역에서는 선택한 층으로 힌지를 접을 수 없습니다. 다른 영역을 탭하거나 층을 변경하세요.",
+      "hingeRegionFits": "힌지 접는 선이 선택한 영역 안에 있습니다.",
       "intro": {
         "petalLift": "경첩을 따라 플랩의 끝을 들어 올립니다.",
         "swivelSwing": "종이의 변을 선 위로 돌려 접습니다."
@@ -842,10 +830,6 @@
       },
       "mountain": "산",
       "mountainTitle": "산: 종이가 멀어지는 쪽으로 돕니다",
-      "noFourth": "이 종이가 그대로 있을 때 맞는 네 번째 접는 선이 없습니다. 그대로 둘 다른 종이를 클릭하세요.",
-      "noFourthAnywhere": "어느 종이를 그대로 두어도 이 접는 선들에 맞는 네 번째 접는 선이 없습니다. Esc를 누르고 다시 고르세요.",
-      "noFourthAnywhereTouch": "어느 종이를 그대로 두어도 이 접는 선들에 맞는 네 번째 접는 선이 없습니다. '취소'를 탭하고 다시 고르세요.",
-      "noFourthTouch": "이 종이가 그대로 있을 때 맞는 네 번째 접는 선이 없습니다. 그대로 둘 다른 종이를 탭하세요.",
       "note": {
         "petalCreasesAll": "플랩을 들어 올리면서 맨 위 겹에 경첩을, 위의 두 겹에 두 연 모양 접는 선을 만듭니다.",
         "petalCreasesHinge": "플랩을 들어 올리면서 맨 위 겹에 경첩을 만듭니다. 연 모양 접는 선은 이미 있습니다.",
@@ -885,7 +869,7 @@
           "title": "여기서는 네 번째 접는 선을 세울 수 없음"
         },
         "kite": {
-          "creaseOrPrecrease": "경첩 접는 선을 쓰는 꽃잎 접기는 이미 있는 접는 선을 다시 접는데, 연 모양 접는 선이 없습니다. 대신 경첩을 두 끝으로 지정하면 접으면서 연 모양 접는 선도 만듭니다. 아니면 먼저 '미리 접기' 도구의 공리 3으로 미리 접으세요. 위 플랩의 아래쪽 변을 가운데 선 위로 접고, 뒤쪽 플랩은 뺍니다.",
+          "creaseOrPrecrease": "경첩 접는 선을 쓰는 꽃잎 접기는 이미 있는 접는 선을 다시 접는데, 연 모양 접는 선이 없습니다. 대신 경첩을 두 끝으로 지정하면 접으면서 연 모양 접는 선도 만듭니다. 아니면 먼저 '접었다 펴기' 옵션을 켜고 공리 3으로 미리 접으세요. 위 플랩의 아래쪽 변을 가운데 선 위로 접고, 뒤쪽 플랩은 뺍니다.",
           "titleMissing": "연 모양 접는 선이 없음"
         },
         "line": {
@@ -989,16 +973,16 @@
       "reset": "경첩으로 되돌리기",
       "ridge": "능선",
       "steps": {
-        "earChoose": "네 번째 접는 선과 겹을 고르거나, 그대로 둘 다른 부분을 클릭하세요.",
-        "earChooseTouch": "네 번째 접는 선과 겹을 고르거나, 그대로 둘 다른 부분을 탭하세요.",
-        "earFinish": "네 번째 접는 선을 고른 뒤 Enter 키를 누르세요.",
-        "earFinishTouch": "네 번째 접는 선을 고른 뒤 {{action}}을(를) 탭하세요.",
+        "earChoose": "층을 선택하거나 힌지 접는 선이 들어갈 다른 영역을 클릭하세요.",
+        "earChooseTouch": "층을 선택하거나 힌지 접는 선이 들어갈 다른 영역을 탭하세요.",
+        "earFinish": "Enter 키를 눌러 접으세요.",
+        "earFinishTouch": "{{action}}을(를) 탭하여 접으세요.",
         "earFirstCorner": "삼각형의 첫 번째 모서리를 클릭하세요.",
         "earFirstCornerTouch": "삼각형의 첫 번째 모서리를 탭하세요.",
+        "earHingeRegion": "힌지 접는 선이 들어갈 영역을 클릭하세요.",
+        "earHingeRegionTouch": "힌지 접는 선이 들어갈 영역을 탭하세요.",
         "earSecondCorner": "두 번째 모서리를 클릭하세요.",
         "earSecondCornerTouch": "두 번째 모서리를 탭하세요.",
-        "earStay": "종이에서 그대로 있는 부분을 클릭하세요.",
-        "earStayTouch": "종이에서 그대로 있는 부분을 탭하세요.",
         "earThirdCorner": "세 번째 모서리를 클릭하세요.",
         "earThirdCornerTouch": "세 번째 모서리를 탭하세요.",
         "fixOrPickAgain": "아래의 해결 방법을 클릭하거나, Esc를 누르고 다시 고르세요.",
@@ -1048,6 +1032,7 @@
     "window": {
       "cancel": "취소",
       "finding": "선 위의 겹을 찾는 중…",
+      "foldAndUnfold": "접었다 펴기",
       "instructions": "사용법",
       "kind": "접기",
       "label": "접기 도구 옵션",

@@ -315,6 +315,8 @@
   "foldImport": {
     "back": "Back",
     "browse": "or click to browse",
+    "collapse": "Collapse",
+    "collapseTitle": "Collapse from CP",
     "creases_one": "{{count}} crease",
     "creases_other": "{{count}} creases",
     "drop": "Drop a .cp, .fold, .ori or .orh file",
@@ -341,8 +343,10 @@
       "afterStep": "Adds a step after step {{number}}, its folded state computed from the creases.",
       "branch": "It starts a new branch.",
       "empty": "Starts the sequence on the crease pattern’s sheet, folded along its creases. Use it when a state can’t be reached one fold at a time.",
+      "update": "Updates this Collapse step. Later steps and branches are kept and replayed; affected folds are marked Changed or Broken.",
       "why": "Use it when the next state can’t be reached one fold at a time."
     },
+    "projectCp": "Collapse from CP…",
     "refusal": {
       "budget": {
         "text": "Finding how the layers stack took longer than an import is given. Search longer, or import a simpler pattern.",
@@ -379,6 +383,10 @@
       "noOrder": {
         "text": "The layers cannot be stacked without passing through each other, given the pattern’s mountains and valleys.",
         "title": "No layer order fits"
+      },
+      "noProjectCp": {
+        "text": "Open or create the source crease pattern in Edit, then try again. The saved Collapse step is unchanged.",
+        "title": "Source CP unavailable"
       },
       "noState": {
         "text": "The step on screen has no folded state, so nothing can be added after it. Go to a step that folds.",
@@ -429,9 +437,11 @@
     },
     "samples": "Samples",
     "title": "Import crease pattern",
+    "updateTitle": "Update from CP",
     "working": {
       "figure": "Importing Edit’s folded figure…",
       "file": "Importing {{name}}…",
+      "projectCp": "Resolving the project crease pattern…",
       "sample": "Importing the sample…"
     }
   },

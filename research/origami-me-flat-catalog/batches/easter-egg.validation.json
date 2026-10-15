@@ -1,6 +1,6 @@
 {
   "source": "https://origami.me/easter-egg/",
-  "file": "models/easter-egg.osf",
+  "file": "../2026-10-13-origami-fold-trials/models/completed/easter-egg.osf",
   "fileSha256": "aca9a35372d69d1036055e433ed6f3400184dfdce1beb6364b0991510547b9f6",
   "nodes": 11,
   "folds": 9,
@@ -25,5 +25,8 @@
   "checks": [
     "All exposed final subfaces show the colored/front paper side."
   ],
-  "audit": "pending visual review"
+  "audit": "ready for audit",
+  "auditEvidence": "batches/001.md",
+  "auditMetadataReconciledOn": "2026-10-14",
+  "auditMetadataNote": "Corrected stale pending label using the existing batch-1 visual audit; no new visual audit or user approval is implied."
 }

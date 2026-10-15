@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { trackFoldChoiceOffered, trackFoldStepAdded } from '../../analytics';
+import { ANALYTICS_EVENTS, track, trackFoldChoiceOffered, trackFoldStepAdded } from '../../analytics';
 import type { FoldStepAddedOpKind, FoldStepVertexForm } from '../../analytics';
 import { readHeldModifiers } from '../../keyboard/heldModifiers';
 import type { TurnKind } from '../../lib/steps/turn';
@@ -31,6 +31,7 @@ import type { FoldFlap, FoldModelPoint } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { sameFlap, topFlapOf, wovenIntervalAt } from '../tools/crossSection';
 import {
+  isFoldKind,
   isLineTool,
   isVertexTool,
   type FoldLineModeId,
@@ -55,12 +56,12 @@ import { extentClicks, nextExtentMode, type FoldExtentMode } from '../tools/prec
 import {
   fanGiven,
   fanHasNoFourth,
-  fanStayerRegion,
+  fanHingeRegion,
   nearestDirection,
   parallelSegments,
   petalHingeClicks,
   petalRegionKey,
-  picksFanStayer,
+  picksFanHinge,
   picksPetalRegion,
   picksSwivelPivot,
   squashTargetToward,
@@ -180,7 +181,7 @@ export interface FoldCanvasVerbs {
   resetSquashTarget: () => void;
   /** Name a petal fold's hinge, or a swivel's target, by a crease or by two points. */
   setVertexLineBy: (lineBy: FoldLineBy) => void;
-  /** Precrease a petal fold's hinge, or its kite, first: the Precrease tool through the hinge's ends, or on the edge-to-edge axiom. */
+  /** Precrease a petal fold's hinge, or its kite, first: Fold and unfold through the hinge's ends, or on the edge-to-edge axiom. */
   precreaseLine: () => void;
   precreaseKite: () => void;
   /** A petal fold over a hinge crease whose kite is not creased: the same hinge by its ends, so the fold creases the kite. */
@@ -191,7 +192,8 @@ export interface FoldCanvasVerbs {
   // A precrease's extent (`tools/precrease`), and what its refusals' buttons do.
   /** Crease this much of the line. */
   setExtent: (extent: FoldExtentMode) => void;
-  /** The extent after the one chosen, with the Precrease tool in hand; whether it was in hand. */
+  setFoldAndUnfold: (enabled: boolean) => void;
+  /** The extent after the one chosen, with Fold and unfold enabled; whether it was in hand. */
   cycleExtent: () => boolean;
   /** Crease the whole line instead of part of it. */
   useWholeLine: () => void;
@@ -267,6 +269,7 @@ function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
   if (!vertex) return null;
   const { orders, order, emergent, fourths } = vertex;
   if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
+  if (vertex.base?.analysis.kind === 'rabbit-ear') return null;
   // Only the fourth creases — a swivel's ridges — that land, numbered among themselves.
   const at = emergent === null ? -1 : fourths.indexOf(emergent);
   const kind = vertex.base?.analysis.kind === 'swivel-by-edge' ? 'ridge' : 'emergent';
@@ -302,6 +305,7 @@ export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState)
 /** What a committed op is called in `fold step added`; null for Import CP, which the canvas does not commit. */
 function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
   switch (op.kind) {
+    case 'unfold-to':
     case 'cp-jump':
       return null;
     // Compound folds, snake_case as the event's enums are.
@@ -352,7 +356,7 @@ function trackCommitted(op: FoldOp, defaulted: boolean): void {
     trackFoldStepAdded(kind, vertex ? { vertex } : undefined);
     return;
   }
-  if (op.kind === 'turn' || op.kind === 'cp-jump') {
+  if (op.kind === 'turn' || op.kind === 'cp-jump' || op.kind === 'unfold-to') {
     trackFoldStepAdded(kind);
     return;
   }
@@ -465,7 +469,7 @@ export function useFoldCanvasVerbs(
       const { view: shown, preview: previewed, session: current } = live.current;
       const step = previewed.step;
       const index = shown.index;
-      if (!step || !index || step.op.kind === 'turn' || step.op.kind === 'rotate' || step.op.kind === 'cp-jump') return;
+      if (!step || !index || step.op.kind === 'turn' || step.op.kind === 'rotate' || step.op.kind === 'cp-jump' || step.op.kind === 'unfold-to') return;
       const sheet = topSheetPointAt(index, at);
       if (!sheet) return;
       const seed = state().seed;
@@ -495,13 +499,13 @@ export function useFoldCanvasVerbs(
       if (target) tools.setSquashTarget(target);
     };
 
-    /** A fan's paper that stays, clicked again while its fold is previewed: taken when it is another region. */
-    const restay = (pick: FoldPick) => {
+    /** A fan's hinge region, clicked again while its fold is previewed: taken when it is another region. */
+    const repickHinge = (pick: FoldPick) => {
       const now = state();
       const tool = now.tool;
       if (!isVertexTool(tool)) return;
       const fan = fanGiven({ tool, picks: now.picks });
-      const region = (picks: readonly FoldPick[]) => (fan ? fanStayerRegion({ tool, picks }, fan) : null);
+      const region = (picks: readonly FoldPick[]) => (fan ? fanHingeRegion({ tool, picks }, fan) : null);
       const next = region([...now.picks.slice(0, -1), pick]);
       if (next === null || next === region(now.picks)) return;
       tools.repick(pick);
@@ -575,10 +579,10 @@ export function useFoldCanvasVerbs(
         const index = drawn === undefined ? shown.index : drawn;
         if (!index) return null;
         const tool = state();
-        // A fan's paper that stays, or a petal fold's flap, picked or picked
+        // A fan's hinge region, or a petal fold's flap, picked or picked
         // again: the paper under the pointer, whose region the panes light —
         // off it, nothing.
-        if (picksFanStayer(tool.tool, tool.picks.length) || picksPetalRegion(tool.tool, tool.petalHinge, tool.picks.length)) {
+        if (picksFanHinge(tool.tool, tool.picks.length) || picksPetalRegion(tool.tool, tool.petalHinge, tool.picks.length)) {
           const pick = resolveFoldPick(index, pane, at, radii, { snap: 'free', edges: false, free: false });
           return { pane, at, pick: pick?.kind === 'free' && pick.sheet ? pick : null };
         }
@@ -638,8 +642,8 @@ export function useFoldCanvasVerbs(
           if (hit.pane === 'folded' && isLineTool(tool.tool)) pickDepth(hit.at);
           // A squash's spine lands toward the point clicked on the folded paper.
           else if (hit.pane === 'folded' && tool.tool === 'squash') aimSquash(hit.at);
-          // A fan's paper that stays, picked again in another region, on either pane.
-          else if (hit.pick && picksFanStayer(tool.tool, tool.picks.length)) restay(hit.pick);
+          // A fan's hinge region, picked again in another region, on either pane.
+          else if (hit.pick && picksFanHinge(tool.tool, tool.picks.length)) repickHinge(hit.pick);
           // A petal fold's flap, picked again below the hinge, on either pane.
           else if (hit.pick && picksPetalRegion(tool.tool, tool.petalHinge, tool.picks.length)) repetal(hit.pick);
           return;
@@ -715,7 +719,6 @@ export function useFoldCanvasVerbs(
         const tool = state();
         if (tool.tool === 'valley') tools.selectTool('mountain');
         else if (tool.tool === 'mountain') tools.selectTool('valley');
-        else if (tool.tool === 'precrease') tools.setPrecreaseDirection(tool.precreaseDirection === 'valley' ? 'mountain' : 'valley');
         else if (tool.tool === 'tuck') tools.setTuckDirection(tool.tuckDirection === 'valley' ? 'mountain' : 'valley');
         else if (isVertexTool(tool.tool)) vertexOtherWay();
       },
@@ -785,15 +788,19 @@ export function useFoldCanvasVerbs(
 
       precreaseLine: () => {
         const ends = hingeEnds();
-        // The Precrease tool on the hinge, through its two ends, through every layer.
-        tools.selectTool('precrease');
+        // Fold and unfold the hinge in the petal fold’s direction, through its two ends.
+        tools.selectTool(state().vertexDirection);
+        tools.setFoldAndUnfold(true);
+        tools.setExtent('whole');
         tools.selectLineMode('axiom-1');
         for (const pick of ends ?? []) tools.pick(pick);
       },
 
       precreaseKite: () => {
         // A kite crease folds a side edge onto the centre line: the edge-to-edge axiom.
-        tools.selectTool('precrease');
+        tools.selectTool(state().vertexDirection);
+        tools.setFoldAndUnfold(true);
+        tools.setExtent('whole');
         tools.selectLineMode('axiom-3');
       },
 
@@ -814,9 +821,16 @@ export function useFoldCanvasVerbs(
       // A precrease's extent.
       setExtent: (extent) => tools.setExtent(extent),
 
+      setFoldAndUnfold: (enabled) => {
+        const now = state();
+        if (!isFoldKind(now.tool) || now.foldAndUnfold === enabled) return;
+        tools.setFoldAndUnfold(enabled);
+        track(ANALYTICS_EVENTS.foldAndUnfoldChanged, { state: enabled ? 'on' : 'off', direction: now.tool });
+      },
+
       cycleExtent: () => {
         const now = state();
-        if (now.tool !== 'precrease') return false;
+        if (!isFoldKind(now.tool) || !now.foldAndUnfold) return false;
         tools.setExtent(nextExtentMode(now.extent));
         return true;
       },
@@ -861,7 +875,10 @@ export function useFoldCanvasVerbs(
           if (!picks) return;
           const before = state();
           tools.selectLineMode('free');
-          if (isVertexTool(before.tool) && before.vertexDirection === 'mountain') tools.selectTool('mountain');
+          if (isVertexTool(before.tool)) {
+            tools.selectTool(before.vertexDirection);
+            tools.setFoldAndUnfold(false);
+          }
           for (const pick of picks) tools.pick(pick);
           if (defaultMovingSign(index, sceneLine, false) !== (fix.side === 'positive' ? 1 : -1)) tools.swapSide();
           return;
@@ -907,7 +924,7 @@ export function useFoldCanvasVerbs(
       commit: () => {
         const { step, refused, landing, extent, vertex } = live.current.preview;
         if (refused || live.current.session.readOnly) return false;
-        // A fan none of whose fourth creases lands: nothing to fold, or to wait for, until other paper stays.
+        // A fan none of whose fourth creases lands: nothing to fold, or to wait for, until another hinge region is picked.
         if (!step && fanHasNoFourth(vertex?.base ?? null)) return false;
         // A partial precrease whose points along the line are still to be clicked has nothing to commit.
         if (extent?.state.status === 'incomplete') return false;

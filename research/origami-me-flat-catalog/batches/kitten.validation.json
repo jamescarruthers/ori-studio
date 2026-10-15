@@ -1,0 +1,46 @@
+{
+  "source": "https://origami.me/kitten/",
+  "file": "../2026-10-13-origami-fold-trials/models/in-progress/kitten.osf",
+  "fileSha256": "9425c56baed81a411c3dd0e78218347d247de6415b1c3a83a29a74f29badca1e",
+  "nodes": 8,
+  "folds": 7,
+  "finalFaces": 8,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "ff0862e4382acbf232515039ead0e964bbeb0d685ff417413e6124d5b4748ede",
+    "1031e20914f02e8282a8ef336398b8b06e76cae4a676255f9c45f8181cdbecab",
+    "c48dea907c62ef640ee6d6fb2dc89b64faae9db1d8045c230bdf59b550c7c4ef",
+    "51d00e0f0c409c7516b021eb383deec902c2b58474381c3af5217caedb7a17bd",
+    "56a04c73d4aef7d7e656660348758d60d7060c54c96822090e298b83cb71eec4",
+    "55b31d444141185b6e0924c404b5bb5a7eb67d9053cb8d03642c5e4365b49e9f"
+  ],
+  "sourceSteps": 27,
+  "sourceStepsCompleted": 5,
+  "sourceDiagramsReviewed": 30,
+  "blockedAtSourceStep": 6,
+  "audit": "Verified prefix; side-opening collapse correspondence unresolved",
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "visuallyCheckedStates": 9,
+  "checks": [
+    {
+      "label": "Precrease node 2 preserves material stacks",
+      "witnesses": 3
+    },
+    {
+      "label": "Precrease node 6 preserves material stacks",
+      "witnesses": 12
+    },
+    {
+      "label": "Precrease node 7 preserves material stacks",
+      "witnesses": 12
+    },
+    {
+      "label": "Source 5 restores the original kite material and order",
+      "witnesses": 10
+    }
+  ],
+  "latestReport": "kitten-prefix-2026-10-14.md"
+}

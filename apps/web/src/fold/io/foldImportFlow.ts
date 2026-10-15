@@ -25,7 +25,7 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
 import type { WasmErrorEnvelope } from '../../engine/types';
-import type { FoldCpOrigin, FoldPaperShape } from '../document/foldSequenceDocument';
+import type { FoldCpJumpOp, FoldCpOrigin, FoldPaperShape } from '../document/foldSequenceDocument';
 import { rectangleShape } from '../document/foldSequenceDocument';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldSampleId } from '../engine/foldEngineIoSamples';
@@ -54,7 +54,17 @@ export type FoldImportRequest =
       readonly unreadable?: boolean;
     }
   | { readonly kind: 'sample'; readonly sample: FoldSampleId }
-  | { readonly kind: 'edit-folded-figure' };
+  | { readonly kind: 'edit-folded-figure' }
+  | { readonly kind: 'project-cp'; readonly stepId?: string };
+
+/** Captured project CP and transaction guard, supplied by the app adapter. */
+export interface FoldProjectCpImport {
+  source: FoldImportSource;
+  link: NonNullable<FoldCpJumpOp['source']>;
+  at?: string | null;
+  current: () => boolean;
+  replace?: (landed: FoldImportFingerprinted) => boolean;
+}
 
 /** One order's picture: the folded state it lands. */
 export type FoldOrderPreview =
@@ -86,7 +96,8 @@ export interface FoldImportFlowOptions {
   /** Edit's chosen flat folded figure as the CP kernel's paper scene, or null when Edit has none. */
   editFoldedFigure: () => Promise<OristudioCpFoldedPaperScene | null>;
   /** A step was imported: the analytics event, by the step's closed origin. */
-  onImported?: (origin: FoldCpOrigin) => void;
+  projectCp?: (stepId?: string) => Promise<FoldProjectCpImport | null>;
+  onImported?: (origin: FoldCpOrigin, action?: 'insert' | 'update') => void;
   /** The chooser asks about a part with `orders` layer orders: once per such part, as the import opens. */
   onChoiceOffered?: (orders: number) => void;
 }
@@ -158,6 +169,7 @@ interface Held {
   readonly handle: number;
   readonly where: FoldCursorReady;
   readonly opened: FoldImportOpened;
+  readonly project?: FoldProjectCpImport;
 }
 
 const IDLE: FoldImportFlowState = { phase: 'idle' };
@@ -165,6 +177,7 @@ const IDLE: FoldImportFlowState = { phase: 'idle' };
 export function createFoldImportFlow({
   session,
   editFoldedFigure,
+  projectCp,
   onImported,
   onChoiceOffered,
 }: FoldImportFlowOptions): FoldImportFlow {
@@ -206,8 +219,24 @@ export function createFoldImportFlow({
     where: FoldCursorReady,
     landed: FoldImportFingerprinted,
     adopt: FoldPaperShape | null,
-    mine: number
+    mine: number,
+    project?: FoldProjectCpImport
   ): Promise<void> => {
+    if (project) {
+      landed = { ...landed, op: { ...landed.op, origin: 'project_cp', source: project.link } };
+      if (!project.current() || project.replace) {
+        await ask(where.state, (engine) => engine.release([landed.state]));
+        if (mine !== ticket) return;
+        if (!project.current() || !project.replace?.(landed)) {
+          store.setState(local(request, 'changed'), true);
+          return;
+        }
+        letGo();
+        store.setState({ phase: 'done', request, stepId: request.kind === 'project-cp' ? request.stepId! : '', origin: 'project_cp' }, true);
+        onImported?.('project_cp', 'update');
+        return;
+      }
+    }
     const state = { generation: where.state.generation, id: landed.state };
     const outcome = await session.commitLanded({
       state,
@@ -256,7 +285,7 @@ export function createFoldImportFlow({
       store.setState({ phase: 'refused', request, refusal: { kind: 'engine', refused: picked } }, true);
       return;
     }
-    await commitLandedStep(request, import_.where, picked, import_.opened.paper, mine);
+    await commitLandedStep(request, import_.where, picked, import_.opened.paper, mine, import_.project);
   };
 
   /** Picture the orders the chooser shows, one at a time, the newest choice's first. */
@@ -309,7 +338,13 @@ export function createFoldImportFlow({
       return;
     }
     try {
-      const where = await foldCursorReady(session);
+      const project = request.kind === 'project-cp' ? await projectCp?.(request.stepId) : undefined;
+      if (mine !== ticket) return;
+      if (request.kind === 'project-cp' && !project) {
+        store.setState(local(request, 'no_project_cp'), true);
+        return;
+      }
+      const where = await foldCursorReady(session, project?.at);
       if (mine !== ticket) return;
       if (where.status !== 'ready') {
         store.setState(local(request, where.reason === 'read-only' ? 'read_only' : 'no_state'), true);
@@ -342,7 +377,7 @@ export function createFoldImportFlow({
         return;
       }
 
-      const source = request.kind === 'sample' ? sampleSource(request.sample) : request.source;
+      const source = request.kind === 'sample' ? sampleSource(request.sample) : request.kind === 'project-cp' ? project?.source : request.source;
       if (!source) {
         store.setState(local(request, 'unsupported_file'), true);
         return;
@@ -364,7 +399,7 @@ export function createFoldImportFlow({
         store.setState({ phase: 'refused', request, refusal: { kind: 'engine', refused: opened } }, true);
         return;
       }
-      const import_: Held = { handle: opened.import, where, opened };
+      const import_: Held = { handle: opened.import, where, opened, ...(project ? { project } : {}) };
       held = import_;
       const choice = opened.components.map(() => 0);
       if (foldOrderChoices(opened) === 0) {

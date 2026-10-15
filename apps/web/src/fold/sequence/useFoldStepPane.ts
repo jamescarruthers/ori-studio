@@ -83,7 +83,7 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
     return {
       step,
       pending: pendingFold,
-      branch: atTip ? null : { at: numberAt(entries, cursor), total: foldedStepCount(entries) },
+      branch: atTip || pending?.branch === false ? null : { at: numberAt(entries, cursor), total: foldedStepCount(entries) },
       fixes:
         entry?.status === 'broken' && remove && !remove.disabled
           ? [

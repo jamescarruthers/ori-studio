@@ -102,6 +102,7 @@ describe('the compound folds’ one wire', () => {
       'mountain',
       'precrease',
       'unfold',
+      'unfold-to',
       'refold',
       'turn',
       'rotate',

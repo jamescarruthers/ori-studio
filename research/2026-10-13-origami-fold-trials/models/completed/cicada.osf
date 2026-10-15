@@ -1,0 +1,4882 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-13T23:51:46.497Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-13T23:51:46.497Z"
+  },
+  "workspace": {
+    "id": "workspace",
+    "title": "Untitled CP",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": {
+      "id": "crease-pattern",
+      "kind": "crease-pattern",
+      "title": "Untitled CP",
+      "source": {
+        "format": "osf",
+        "filename": "cicada.osf",
+        "path": null
+      },
+      "creasePattern": {
+        "engine": "oristudio-cp",
+        "document": {
+          "crease_pattern": {
+            "line_segments": [
+              {
+                "a": {
+                  "x": -200,
+                  "y": 200
+                },
+                "b": {
+                  "x": 200,
+                  "y": 200
+                },
+                "color": "Black0",
+                "active": "Inactive0",
+                "selected": 0,
+                "customized": 0,
+                "customized_color": {
+                  "red": 100,
+                  "green": 200,
+                  "blue": 200
+                }
+              },
+              {
+                "a": {
+                  "x": 200,
+                  "y": 200
+                },
+                "b": {
+                  "x": 200,
+                  "y": -200
+                },
+                "color": "Black0",
+                "active": "Inactive0",
+                "selected": 0,
+                "customized": 0,
+                "customized_color": {
+                  "red": 100,
+                  "green": 200,
+                  "blue": 200
+                }
+              },
+              {
+                "a": {
+                  "x": 200,
+                  "y": -200
+                },
+                "b": {
+                  "x": -200,
+                  "y": -200
+                },
+                "color": "Black0",
+                "active": "Inactive0",
+                "selected": 0,
+                "customized": 0,
+                "customized_color": {
+                  "red": 100,
+                  "green": 200,
+                  "blue": 200
+                }
+              },
+              {
+                "a": {
+                  "x": -200,
+                  "y": -200
+                },
+                "b": {
+                  "x": -200,
+                  "y": 200
+                },
+                "color": "Black0",
+                "active": "Inactive0",
+                "selected": 0,
+                "customized": 0,
+                "customized_color": {
+                  "red": 100,
+                  "green": 200,
+                  "blue": 200
+                }
+              }
+            ],
+            "circles": [],
+            "points": [],
+            "aux_line_segments": [],
+            "texts": [],
+            "grid": {
+              "interval_grid_size": 2,
+              "grid_size": 8,
+              "grid_xa": 1,
+              "grid_xb": 0,
+              "grid_xc": 1,
+              "grid_ya": 1,
+              "grid_yb": 0,
+              "grid_yc": 1,
+              "grid_angle": 90,
+              "base_state": "WithinPaper",
+              "vertical_scale_position": 0,
+              "horizontal_scale_position": 0,
+              "draw_diagonal_gridlines": false
+            }
+          },
+          "operation_frame": {
+            "active": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 0
+              }
+            ]
+          },
+          "metadata": {},
+          "title": "Untitled CP"
+        },
+        "source": {
+          "format": "osf",
+          "filename": "cicada.osf",
+          "path": null
+        },
+        "foldProjection": {
+          "file_spec": 1.1,
+          "file_creator": "oriedita",
+          "frame_title": "Untitled CP",
+          "vertices_coords": [
+            [
+              -200,
+              200
+            ],
+            [
+              200,
+              200
+            ],
+            [
+              200,
+              -200
+            ],
+            [
+              -200,
+              -200
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              3,
+              0
+            ]
+          ],
+          "edges_assignment": [
+            "B",
+            "B",
+            "B",
+            "B"
+          ],
+          "edges_foldAngle": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "faces_vertices": [
+            [
+              0,
+              1,
+              2,
+              3
+            ]
+          ],
+          "faces_edges": [
+            [
+              3,
+              0,
+              1,
+              2
+            ]
+          ],
+          "oriedita:edges_colors": [
+            "",
+            "",
+            "",
+            ""
+          ],
+          "oriedita:grid_size": 8,
+          "oriedita:grid_style": 1,
+          "oriedita:version": "dev",
+          "oristudio:edges_line_colors": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "sourceFold": null,
+        "lineage": {
+          "kind": "blank",
+          "manualEditCount": 0,
+          "stale": false
+        },
+        "images": [],
+        "textAnnotations": [],
+        "inlineSimulations": [],
+        "suppressionRegions": []
+      },
+      "viewState": {
+        "creaseColorMode": "mvf",
+        "selection": {
+          "lines": [],
+          "points": [],
+          "circles": [],
+          "texts": [],
+          "faces": []
+        },
+        "viewport": {
+          "gridVisible": true,
+          "snapToGrid": true,
+          "snapToVertices": true,
+          "snapToLines": true,
+          "camvIssuesVisible": true,
+          "foldAngleDisplay": "opacity",
+          "lineStyle": "color",
+          "lineWidth": 1,
+          "pointSize": 1
+        },
+        "camera": {
+          "centerX": 360,
+          "centerY": 348,
+          "zoom": 2.2857142857142856,
+          "rotation": 0
+        },
+        "foldedFigures": [],
+        "activeFoldedFigureId": null,
+        "references": null
+      },
+      "extensions": {}
+    },
+    "unknownDesigns": [],
+    "diagram": {
+      "formatVersion": 1,
+      "id": "diagram-c1c8be7d-4034-425d-9ff9-4818750eeed7",
+      "title": "",
+      "hanStyle": "sc",
+      "style": {
+        "preset": "diagram"
+      },
+      "page": {
+        "size": "a4",
+        "orientation": "portrait",
+        "marginMm": 12,
+        "layout": "flow",
+        "columns": 3,
+        "rows": 3,
+        "showPath": true,
+        "showTitle": true,
+        "pageNumbers": {
+          "enabled": true,
+          "first": 1
+        }
+      },
+      "steps": [
+        {
+          "id": "step-b1a0370b-551f-4875-8a82-8b8b062e0f8d",
+          "revision": 1,
+          "source": {
+            "kind": "cp",
+            "scope": {
+              "kind": "segment",
+              "region": {
+                "boundary": [
+                  [
+                    {
+                      "x": -200,
+                      "y": 200
+                    },
+                    {
+                      "x": 200,
+                      "y": 200
+                    },
+                    {
+                      "x": 200,
+                      "y": -200
+                    },
+                    {
+                      "x": -200,
+                      "y": -200
+                    }
+                  ]
+                ],
+                "bounds": {
+                  "minX": -200,
+                  "minY": -200,
+                  "maxX": 200,
+                  "maxY": 200
+                },
+                "segmentIdHint": 0
+              }
+            },
+            "fingerprint": "rc1:20f48825fd4d293c",
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "crease-pattern",
+              "rotationDeg": 0
+            }
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-294,\"minY\":-294,\"maxX\":294,\"maxY\":294},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[-294,294],[294,294],[294,-294],[-294,-294]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"edge\",\"a\":[-294,294],\"b\":[294,294],\"onBoundary\":[false,false],\"joined\":[true,true],\"face\":0,\"hidden\":false},{\"kind\":\"line\",\"role\":\"edge\",\"a\":[294,294],\"b\":[294,-294],\"onBoundary\":[false,false],\"joined\":[true,true],\"face\":0,\"hidden\":false},{\"kind\":\"line\",\"role\":\"edge\",\"a\":[294,-294],\"b\":[-294,-294],\"onBoundary\":[false,false],\"joined\":[true,true],\"face\":0,\"hidden\":false},{\"kind\":\"line\",\"role\":\"edge\",\"a\":[-294,-294],\"b\":[-294,294],\"onBoundary\":[false,false],\"joined\":[true,true],\"face\":0,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-135wws0swehn"
+          },
+          "annotations": [],
+          "annotatedPictureKey": null,
+          "text": "Start with a square, white side up",
+          "breakBefore": false
+        },
+        {
+          "id": "turn-cc67512d-5296-403c-8fdf-741004acff78",
+          "kind": "rotate",
+          "rotate": {
+            "amount": "eighth",
+            "direction": "ccw"
+          }
+        },
+        {
+          "id": "step-7a65953d-06dd-4fe0-9519-758f088d0fed",
+          "revision": 1,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-cicada-2",
+            "moment": "before",
+            "path": "fh1:42a23ad887ec2097",
+            "state": "fs1:2d12b570661c6c37",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1,
+              "spread": {
+                "kind": "affine",
+                "amount": 0.03,
+                "keep": "top",
+                "skew": 1,
+                "axisDeg": 81
+              }
+            },
+            "sentence": "Valley fold in half, bringing point P onto point Q, through all layers."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-415.78,\"minY\":-831.56,\"maxX\":415.78,\"maxY\":0},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[415.78,-415.78],[0,-831.56],[-415.78,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-1pfvf9z1e52p7q",
+            "paperFaces": "{\"points\":[[-200,200,0,0],[200,200,415.78,-415.78],[200,-200,0,-831.56],[-200,-200,-415.78,-415.78]],\"rings\":[[0,1,2,3]],\"levels\":[0]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-97b6be71-881c-498b-866a-2962553e1d54",
+              "kind": "valley-line",
+              "from": [
+                1,
+                0.5
+              ],
+              "to": [
+                0,
+                0.5
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-b10d6279-21ea-48f5-8495-78c3a6c0ff11",
+              "kind": "valley-arrow",
+              "from": [
+                0.5,
+                0.8500011374873674
+              ],
+              "to": [
+                0.5000000000000001,
+                0.15000177910869283
+              ],
+              "bend": -0.1339745962155613,
+              "imported": "untouched"
+            }
+          ],
+          "annotatedPictureKey": "scene-1pfvf9z1e52p7q",
+          "text": "Valley fold in half, bringing point P onto point Q, through all layers.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-cf5a51df-1d8a-425a-bcf3-153008bc0f6f",
+          "revision": 0,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-cicada-3",
+            "moment": "before",
+            "path": "fh1:9f5b13179dd9709a",
+            "state": "fs1:1356e1a07ca77ad3",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1,
+              "spread": {
+                "kind": "affine",
+                "amount": 0.03,
+                "keep": "top",
+                "skew": 1,
+                "axisDeg": 81
+              }
+            },
+            "sentence": "Valley fold, bringing point P onto point Q, through all layers."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-415.78,\"minY\":-840.31,\"maxX\":415.78,\"maxY\":-415.78},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":1,\"side\":\"front\",\"rings\":[[[415.78,-415.78],[-24.48,-840.31],[-415.78,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"back\",\"rings\":[[[415.78,-415.78],[0,-831.56],[-415.78,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-wljnzpmagqry",
+            "paperFaces": "{\"points\":[[-200,200,0,-831.56],[200,200,415.78,-415.78],[200,-200,0,-831.56],[-200,-200,-415.78,-415.78]],\"rings\":[[1,0,3],[1,2,3]],\"levels\":[0,1]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-9568215a-c0bf-4718-8153-fdcaa1fc43b5",
+              "kind": "valley-line",
+              "from": [
+                0.4999999999999999,
+                0.51052239164943
+              ],
+              "to": [
+                0.24999927085098483,
+                0.26052312079844525
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-a5d7da51-d137-477e-8fc9-47bb81f8a310",
+              "kind": "valley-arrow",
+              "from": [
+                0.2875001248033597,
+                0.4730244542931157
+              ],
+              "to": [
+                0.4625006043456554,
+                0.29802397475082015
+              ],
+              "bend": -0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 1
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-wljnzpmagqry",
+          "text": "Valley fold, bringing point P onto point Q, through all layers.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-915ba5c2-e950-4b5c-a55c-b88f92ae5906",
+          "revision": 8,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-cicada-4",
+            "moment": "before",
+            "path": "fh1:5c6d0ed45d46bf15",
+            "state": "fs1:657091d60079b507",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1,
+              "spread": {
+                "kind": "depth",
+                "amount": 0.045,
+                "toward": "up"
+              }
+            },
+            "sentence": "Valley fold, bringing point P onto point Q, through all layers."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-859.62,\"maxX\":415.78,\"maxY\":-429.81},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":3,\"side\":\"front\",\"rings\":[[[0,-429.81],[415.78,-439.17],[0,-859.62],[-207.89,-637.7]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":1,\"side\":\"back\",\"rings\":[[[0,-429.81],[415.78,-439.17],[0,-850.27],[-207.89,-637.7]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,-429.81],[0,-836.24],[-207.89,-637.7]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":2,\"side\":\"back\",\"rings\":[[[0,-429.81],[0,-836.24],[-207.89,-637.7]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-ceus7a2egzp5",
+            "paperFaces": "{\"points\":[[-200,200,0,-831.56],[200,200,415.78,-415.78],[200,-200,0,-831.56],[-200,-200,0,-831.56],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67]],\"rings\":[[5,3,4],[5,1,0,4],[5,3,6],[5,1,2,6]],\"levels\":[1,2,0,3]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-d18aa13f-65ce-40ca-9df0-0de695b1addb",
+              "kind": "valley-line",
+              "from": [
+                0.6666676388653533,
+                0.344574213135665
+              ],
+              "to": [
+                0.3333333333333333,
+                0.68916253788061
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-04f4c214-0d63-407b-9c0e-2cd646ee0d55",
+              "kind": "valley-arrow",
+              "from": [
+                0.6166665002621871,
+                0.6321479200913505
+              ],
+              "to": [
+                0.3833325275391259,
+                0.4007168283693557
+              ],
+              "bend": 0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 1
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-ceus7a2egzp5",
+          "text": "Valley fold, bringing point P onto point Q, through all layers.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-5386bb01-56a6-4c89-8b1e-c54d17976a42",
+          "revision": 8,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-cicada-5",
+            "moment": "before",
+            "path": "fh1:4e603e3bfad2aa42",
+            "state": "fs1:8b06e919478c383a",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1,
+              "spread": {
+                "kind": "depth",
+                "amount": 0.045,
+                "toward": "up"
+              }
+            },
+            "sentence": "Valley fold along the line drawn, folding only the top layer."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-850.27,\"maxX\":207.89,\"maxY\":-423.05},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":5,\"side\":\"front\",\"rings\":[[[207.89,-633.02],[0,-850.27],[-207.89,-633.02],[0,-423.05]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":3,\"side\":\"back\",\"rings\":[[[207.89,-633.02],[0,-844.03],[-207.89,-633.02],[0,-423.05]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,-423.05],[0,-834.68],[-207.89,-633.02]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":1,\"side\":\"back\",\"rings\":[[[0,-423.05],[0,-834.68],[-207.89,-633.02]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":2,\"side\":\"front\",\"rings\":[[[207.89,-633.02],[0,-834.68],[0,-423.05]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":4,\"side\":\"back\",\"rings\":[[[207.89,-633.02],[0,-834.68],[0,-423.05]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-bj0omrcgqm3a",
+            "paperFaces": "{\"points\":[[-200,200,0,-831.56],[200,200,0,-831.56],[200,-200,0,-831.56],[-200,-200,0,-831.56],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,207.89,-623.67],[200,0,207.89,-623.67]],\"rings\":[[5,3,4],[5,3,6],[7,1,5],[7,0,4,5],[8,1,5],[8,2,6,5]],\"levels\":[1,0,1,2,0,3]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-e986f1e7-f48b-4be7-9a7e-b8d09e9e64cb",
+              "kind": "valley-line",
+              "from": [
+                0,
+                0.5085202003651514
+              ],
+              "to": [
+                0.48661111371190485,
+                0.5856954655647304
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-fd8493b7-3f69-499e-847a-3b84787738c1",
+              "kind": "valley-arrow",
+              "from": [
+                0.27491348541457444,
+                0.3242292470559187
+              ],
+              "to": [
+                0.21169904754538652,
+                0.7902386657639929
+              ],
+              "bend": -0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 1
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-bj0omrcgqm3a",
+          "text": "Valley fold along the line drawn, folding only the top layer.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-a0869806-251c-478c-916d-5b62de9eb73f",
+          "revision": 2,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-cicada-6",
+            "moment": "before",
+            "path": "fh1:714bfac45c6c2b07",
+            "state": "fs1:e692e0b13e4125d2",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1,
+              "spread": {
+                "kind": "affine",
+                "amount": 0.03,
+                "keep": "top",
+                "skew": 0.67,
+                "axisDeg": 105
+              }
+            },
+            "sentence": "Valley fold along the line drawn, folding only the top layer."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-200.57,\"minY\":-839.07,\"maxX\":207.89,\"maxY\":-365.71},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":3,\"side\":\"front\",\"rings\":[[[207.89,-623.67],[15.56,-824.44],[-192.32,-616.55],[0,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":1,\"side\":\"back\",\"rings\":[[[199.64,-630.98],[-0.94,-839.07],[-200.57,-623.86],[0,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[199.64,-630.98],[0,-831.56],[0,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":2,\"side\":\"back\",\"rings\":[[[207.89,-623.67],[0,-831.56],[0,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":5,\"side\":\"front\",\"rings\":[[[-200.57,-623.86],[0,-415.78],[6.29,-594.73]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":7,\"side\":\"back\",\"rings\":[[[-192.32,-616.55],[0,-415.78],[6.29,-594.73]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":6,\"side\":\"front\",\"rings\":[[[-192.32,-616.55],[-57.34,-365.71],[6.29,-594.73]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":4,\"side\":\"back\",\"rings\":[[[-200.57,-623.86],[-57.34,-365.71],[6.29,-594.73]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-io0mkj196l4cc",
+            "paperFaces": "{\"points\":[[-200,200,0,-831.56],[200,200,0,-831.56],[200,-200,0,-831.56],[-200,-200,-65.08,-366.68],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,207.89,-623.67],[200,0,207.89,-623.67],[-86,-86,0,-594.56]],\"rings\":[[7,1,5],[7,0,4,5],[8,1,5],[8,2,6,5],[4,3,9],[4,5,9],[6,3,9],[6,5,9]],\"levels\":[1,4,0,5,0,3,1,2]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-5b68640a-1bc6-49d0-bed1-32947efc0700",
+              "kind": "valley-line",
+              "from": [
+                0.4370035490958255,
+                0.5161821869190468
+              ],
+              "to": [
+                0.8628950481663004,
+                0.4550447862092278
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-a529de67-d19c-4077-990b-11a88c9a0c52",
+              "kind": "valley-arrow",
+              "from": [
+                0.6147783098723698,
+                0.2820314143841378
+              ],
+              "to": [
+                0.6718310227050441,
+                0.6895507917603798
+              ],
+              "bend": 0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 1
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-io0mkj196l4cc",
+          "text": "Valley fold along the line drawn, folding only the top layer.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-d49dc437-4c89-4bde-b03a-90b971956557",
+          "revision": 6,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-cicada-6",
+            "moment": "before",
+            "path": "fh1:714bfac45c6c2b07",
+            "state": "fs1:e692e0b13e4125d2",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1,
+              "spread": {
+                "kind": "depth",
+                "amount": 0.045,
+                "toward": "up"
+              }
+            },
+            "sentence": "Valley fold along the line drawn, folding only the top layer."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-852.48,\"maxX\":207.89,\"maxY\":-368.77},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":3,\"side\":\"front\",\"rings\":[[[207.89,-634.13],[0,-852.48],[-207.89,-634.83],[0,-426.24]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":1,\"side\":\"back\",\"rings\":[[[207.89,-634.13],[0,-848.29],[-207.89,-633.43],[0,-426.24]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[207.89,-634.13],[0,-833.65],[0,-426.24]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":2,\"side\":\"back\",\"rings\":[[[207.89,-634.13],[0,-833.65],[0,-426.24]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":5,\"side\":\"front\",\"rings\":[[[-207.89,-633.43],[0,-426.24],[0,-600.84]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":7,\"side\":\"back\",\"rings\":[[[-207.89,-634.83],[0,-426.24],[0,-600.84]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":6,\"side\":\"front\",\"rings\":[[[-207.89,-634.83],[-65.08,-368.77],[0,-600.84]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":4,\"side\":\"back\",\"rings\":[[[-207.89,-633.43],[-65.08,-368.77],[0,-600.84]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-73g6jk16j3fzb",
+            "paperFaces": "{\"points\":[[-200,200,0,-831.56],[200,200,0,-831.56],[200,-200,0,-831.56],[-200,-200,-65.08,-366.68],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,207.89,-623.67],[200,0,207.89,-623.67],[-86,-86,0,-594.56]],\"rings\":[[7,1,5],[7,0,4,5],[8,1,5],[8,2,6,5],[4,3,9],[4,5,9],[6,3,9],[6,5,9]],\"levels\":[1,4,0,5,0,3,1,2]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-3b66ed84-bc84-4cd9-a2ed-09f297543cc5",
+              "kind": "valley-line",
+              "from": [
+                0.42978230758098857,
+                0.5202290628682474
+              ],
+              "to": [
+                0.8595646151619771,
+                0.4514068346736681
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-8e58bf82-eb68-4946-ac27-19051205b034",
+              "kind": "valley-arrow",
+              "from": [
+                0.6167568600218829,
+                0.290391754206825
+              ],
+              "to": [
+                0.6725888092196971,
+                0.7025196146196965
+              ],
+              "bend": 0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 1
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-73g6jk16j3fzb",
+          "text": "Valley fold along the line drawn, folding only the top layer.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-872848b4-6e10-4b40-b559-f0bf0a9d7e7c",
+          "revision": 0,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-e160add1-eb97-44e3-b800-1827b1a1af37",
+            "moment": "before",
+            "path": "fh1:f96b5e511d6bd69c",
+            "state": "fs1:7cd8c4a15f7701ca",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 67.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 32.3,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1
+            },
+            "sentence": "Valley fold, bringing point P onto point Q, folding only the flap shown."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-831.56,\"maxX\":207.89,\"maxY\":-366.68},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"back\",\"rings\":[[[207.89,-623.67],[0,-831.56],[-207.89,-623.67],[0,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":5,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[0,-415.78],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":2,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[-65.08,-366.68],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":9,\"side\":\"back\",\"rings\":[[[0,-594.56],[0,-415.78],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":6,\"side\":\"back\",\"rings\":[[[0,-594.56],[65.08,-366.68],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-1q2hv06135h6kz",
+            "paperFaces": "{\"points\":[[-200,200,0,-831.56],[200,200,65.08,-366.68],[200,-200,0,-831.56],[-200,-200,-65.08,-366.68],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,207.89,-623.67],[200,0,207.89,-623.67],[-86,-86,0,-594.56],[86,86,0,-594.56]],\"rings\":[[7,0,4,5],[8,2,6,5],[4,3,9],[4,5,9],[6,3,9],[6,5,9],[10,1,7],[10,5,7],[10,1,8],[10,5,8]],\"levels\":[4,5,0,3,1,2,0,3,1,2]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-1e84b26f-ed76-4630-9808-8f974a8f9f51",
+              "kind": "valley-line",
+              "from": [
+                0.15855886857466314,
+                0.2886370213853696
+              ],
+              "to": [
+                0.735854075578387,
+                0.2886686198147922
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-11e7dffa-bad2-4f42-a999-544ad4e40b35",
+              "kind": "valley-arrow",
+              "from": [
+                0.4472175303847364,
+                0.0866203637770549
+              ],
+              "to": [
+                0.44719541376831357,
+                0.49068527742310647
+              ],
+              "bend": 0.1339745962155613,
+              "imported": "untouched"
+            }
+          ],
+          "annotatedPictureKey": "scene-1q2hv06135h6kz",
+          "text": "Valley fold, bringing point P onto point Q, folding only the flap shown.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-dbca659f-6435-473c-8c3c-bb39eaa31eb7",
+          "revision": 0,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-2cb6cb0d-2f3a-4cc6-ae2b-612a1b3d5e1a",
+            "moment": "before",
+            "path": "fh1:379f094a5daca45f",
+            "state": "fs1:07c8905c3a446bcb",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 67.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 32.3,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 71.6,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 28.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1
+            },
+            "sentence": "Valley fold, bringing point P onto point Q, through all layers."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-831.56,\"maxX\":207.89,\"maxY\":-366.68},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[207.89,-623.67],[0,-831.56],[-207.89,-623.67],[0,-415.78]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":10,\"side\":\"back\",\"rings\":[[[-134.18,-697.38],[-207.89,-623.67],[0,-415.78],[207.89,-623.67],[134.19,-697.36]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":4,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[0,-415.78],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":1,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[-65.08,-366.68],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":8,\"side\":\"back\",\"rings\":[[[0,-594.56],[0,-415.78],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":5,\"side\":\"back\",\"rings\":[[[0,-594.56],[65.08,-366.68],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":9,\"side\":\"front\",\"rings\":[[[-134.18,-697.38],[-0.01,-563.18],[134.19,-697.36]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-11adv2zxi6hui",
+            "paperFaces": "{\"points\":[[-200,200,-0.01,-563.18],[200,200,65.08,-366.68],[200,-200,0,-831.56],[-200,-200,-65.08,-366.68],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,207.89,-623.67],[200,0,207.89,-623.67],[-86,-86,0,-594.56],[86,86,0,-594.56],[-200,70.913,-134.18,-697.38],[-70.899,200,134.19,-697.36]],\"rings\":[[8,2,6,5],[4,3,9],[4,5,9],[6,3,9],[6,5,9],[10,1,7],[10,5,7],[10,1,8],[10,5,8],[11,0,12],[11,4,5,7,12]],\"levels\":[6,1,4,2,3,1,4,2,3,0,5]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-c81227b1-f3a2-4b65-884b-32efed6e3a46",
+              "kind": "valley-line",
+              "from": [
+                0.19351950401218138,
+                0.2536763859478514
+              ],
+              "to": [
+                0.7014118367158167,
+                0.25422638095222166
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-79612117-7957-4b5b-a76a-2ff4f32d01f3",
+              "kind": "valley-arrow",
+              "from": [
+                0.4476577535094752,
+                0.07657239627053795
+              ],
+              "to": [
+                0.44727358721852256,
+                0.43133037062953483
+              ],
+              "bend": 0.1339745962155613,
+              "imported": "untouched"
+            }
+          ],
+          "annotatedPictureKey": "scene-11adv2zxi6hui",
+          "text": "Valley fold, bringing point P onto point Q, through all layers.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-ef635883-ac70-4ef4-8544-d61e8ee4c686",
+          "revision": 0,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-24c930cc-f897-4828-ad8f-cee3963d4801",
+            "moment": "before",
+            "path": "fh1:afd7245b6a5424c6",
+            "state": "fs1:1530d9ba2b773c19",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 63.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 0,
+                  "y2": 67.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 71.8,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 28.1,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 32.3,
+                  "y1": 100,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 36.5,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 79.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 71.6,
+                  "y1": 0,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 63.7,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 36.5,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 100,
+                  "y2": 28.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 20.4,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1
+            },
+            "sentence": "Valley fold along the line drawn, folding only the flap shown."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-713.63,\"maxX\":207.89,\"maxY\":-366.68},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":11,\"side\":\"front\",\"rings\":[[[-117.93,-713.63],[-207.89,-623.67],[0,-415.78],[207.89,-623.67],[118.18,-713.38]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":9,\"side\":\"back\",\"rings\":[[[-134.18,-697.38],[-207.89,-623.67],[0,-415.78],[207.89,-623.67],[134.19,-697.36]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":3,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[0,-415.78],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[-65.08,-366.68],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":7,\"side\":\"back\",\"rings\":[[[0,-594.56],[0,-415.78],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":4,\"side\":\"back\",\"rings\":[[[0,-594.56],[65.08,-366.68],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":8,\"side\":\"front\",\"rings\":[[[-134.18,-697.38],[-0.01,-563.18],[134.19,-697.36]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":10,\"side\":\"back\",\"rings\":[[[-117.93,-713.63],[-0.26,-595.45],[118.18,-713.38]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-8nhbfrefn7aa",
+            "paperFaces": "{\"points\":[[-200,200,-0.01,-563.18],[200,200,65.08,-366.68],[200,-200,-0.26,-595.45],[-200,-200,-65.08,-366.68],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,207.89,-623.67],[200,0,207.89,-623.67],[-86,-86,0,-594.56],[86,86,0,-594.56],[-200,70.913,-134.18,-697.38],[-70.899,200,134.19,-697.36],[200,-86.303,118.18,-713.38],[86.549,-200,-117.93,-713.63]],\"rings\":[[4,3,9],[4,5,9],[6,3,9],[6,5,9],[10,1,7],[10,5,7],[10,1,8],[10,5,8],[11,0,12],[11,4,5,7,12],[14,2,13],[14,6,5,8,13]],\"levels\":[2,5,3,4,2,5,3,4,1,6,0,7]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-b6627e03-102f-4c66-a990-d59e8a511107",
+              "kind": "valley-line",
+              "from": [
+                0.13674616185819327,
+                0.0796240948271206
+              ],
+              "to": [
+                0.8647462532533173,
+                0.08111650993863194
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-897a4353-e260-4c8d-8d40-2613da7da9e1",
+              "kind": "valley-arrow",
+              "from": [
+                0.49996509628326324,
+                0.02432300637466355
+              ],
+              "to": [
+                0.4997353076027452,
+                0.13641392473133976
+              ],
+              "bend": -0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 1
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-8nhbfrefn7aa",
+          "text": "Valley fold along the line drawn, folding only the flap shown.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-34722407-769e-4380-ad95-81549795aecb",
+          "revision": 0,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-fe32caad-92df-4ae5-9569-9dc6273b0e0d",
+            "moment": "before",
+            "path": "fh1:f23bd51622a2914d",
+            "state": "fs1:0798998a1a28c8e1",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 80.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 80.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 80.5,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 80.5,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 60.2,
+                  "y2": 86.4,
+                  "role": "valley"
+                },
+                {
+                  "x1": 60.2,
+                  "y1": 86.4,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 86.4,
+                  "y2": 60.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 86.4,
+                  "y1": 60.2,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 27.6,
+                  "y2": 95.3,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 27.6,
+                  "y1": 95.3,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 97.7,
+                  "y2": 26.2,
+                  "role": "valley"
+                },
+                {
+                  "x1": 97.7,
+                  "y1": 26.2,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 24.9,
+                  "y2": 96.8,
+                  "role": "valley"
+                },
+                {
+                  "x1": 24.9,
+                  "y1": 96.8,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 29.1,
+                  "y2": 92.6,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 29.1,
+                  "y1": 92.6,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 92.6,
+                  "y2": 29.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 92.6,
+                  "y1": 29.1,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 60.2,
+                  "y1": 86.4,
+                  "x2": 74.3,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 80.5,
+                  "x2": 60.2,
+                  "y2": 86.4,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 74.3,
+                  "x2": 86.4,
+                  "y2": 60.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 86.4,
+                  "y1": 60.2,
+                  "x2": 80.5,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 24.9,
+                  "y1": 96.8,
+                  "x2": 27.6,
+                  "y2": 95.3,
+                  "role": "valley"
+                },
+                {
+                  "x1": 23.1,
+                  "y1": 100,
+                  "x2": 24.9,
+                  "y2": 96.8,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 27.6,
+                  "y1": 95.3,
+                  "x2": 29.1,
+                  "y2": 92.6,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 29.1,
+                  "y1": 92.6,
+                  "x2": 50,
+                  "y2": 80.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 97.7,
+                  "y1": 26.2,
+                  "x2": 100,
+                  "y2": 22.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 92.6,
+                  "y1": 29.1,
+                  "x2": 97.7,
+                  "y2": 26.2,
+                  "role": "valley"
+                },
+                {
+                  "x1": 80.5,
+                  "y1": 50,
+                  "x2": 92.6,
+                  "y2": 29.1,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 63.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 0,
+                  "y2": 67.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 71.8,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 32.3,
+                  "y1": 100,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 36.5,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 79.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 71.6,
+                  "y1": 0,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 63.7,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 36.5,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 100,
+                  "y2": 28.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 20.4,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 74.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 74.3,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 74.3,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 74.3,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 23.1,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 23.1,
+                  "y1": 100,
+                  "x2": 28.1,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 100,
+                  "y2": 22.2,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 22.2,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1
+            },
+            "sentence": "Mountain fold along the line drawn, through all layers."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-680.52,\"maxX\":207.89,\"maxY\":-366.68},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":11,\"side\":\"back\",\"rings\":[[[-151.03,-680.52],[-207.89,-623.67],[0,-415.78],[207.89,-623.67],[151.65,-679.9]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":3,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[0,-415.78],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[-65.08,-366.68],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":7,\"side\":\"back\",\"rings\":[[[0,-594.56],[0,-415.78],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":4,\"side\":\"back\",\"rings\":[[[0,-594.56],[65.08,-366.68],[207.89,-623.67]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":9,\"side\":\"front\",\"rings\":[[[-117.26,-680.45],[-0.01,-563.18],[116.8,-679.97]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":13,\"side\":\"back\",\"rings\":[[[-84.83,-680.39],[-0.26,-595.45],[84.7,-680.04]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":14,\"side\":\"back\",\"rings\":[[[-151.03,-680.52],[-118.06,-647.28],[118.05,-646.57],[151.65,-679.9]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-4lgiiskk2jid",
+            "paperFaces": "{\"points\":[[-200,200,-0.01,-563.18],[200,200,65.08,-366.68],[200,-200,-0.26,-595.45],[-200,-200,-65.08,-366.68],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,207.89,-623.67],[200,0,207.89,-623.67],[-86,-86,0,-594.56],[86,86,0,-594.56],[-200,70.913,-134.25,-663.6],[-70.899,200,134.12,-662.51],[200,-86.303,118.05,-646.57],[86.549,-200,-118.06,-647.28],[-200,87.193,-117.26,-680.45],[-87.63,200,116.8,-679.97],[-54.101,200,151.65,-679.9],[-200,54.698,-151.03,-680.52],[200,-118.442,84.7,-680.04],[118.461,-200,-84.83,-680.39],[54.698,-200,-151.03,-680.52],[200,-54.101,151.65,-679.9]],\"rings\":[[4,3,9],[4,5,9],[6,3,9],[6,5,9],[10,1,7],[10,5,7],[10,1,8],[10,5,8],[15,11,12,16],[15,0,16],[18,11,12,17],[18,4,5,7,17],[20,14,13,19],[20,2,19],[21,14,13,22],[21,6,5,8,22]],\"levels\":[6,9,7,8,6,9,7,8,2,5,1,10,3,4,0,11]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-1b63c0d0-5bdc-42bb-b72e-773fd2ce4a10",
+              "kind": "mountain-line",
+              "from": [
+                0.7173223306097123,
+                0.0011808278721054776
+              ],
+              "to": [
+                0.832742669672942,
+                0.4377194918758145
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-e57f53ae-f40a-487a-80a2-9483139eeb28",
+              "kind": "mountain-arrow",
+              "from": [
+                0.9090234883788098,
+                0.2177859805273455
+              ],
+              "to": [
+                0.6577287051876197,
+                0.284228042760123
+              ],
+              "bend": -0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 9
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-4lgiiskk2jid",
+          "text": "Mountain fold along the line drawn, through all layers.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-c368624d-21f0-4798-94f7-9bc4960e4e7e",
+          "revision": 0,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-5179e68a-35c4-4cc6-9641-d6ee10c091fd",
+            "moment": "before",
+            "path": "fh1:2727f55e6da772dd",
+            "state": "fs1:6d79bf87e2d1d3b6",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 80.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 80.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 80.5,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 80.5,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 60.2,
+                  "y2": 86.4,
+                  "role": "valley"
+                },
+                {
+                  "x1": 60.2,
+                  "y1": 86.4,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 86.4,
+                  "y2": 60.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 86.4,
+                  "y1": 60.2,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 27.6,
+                  "y1": 95.3,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 97.7,
+                  "y2": 26.2,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 24.9,
+                  "y2": 96.8,
+                  "role": "valley"
+                },
+                {
+                  "x1": 29.1,
+                  "y1": 92.6,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 92.6,
+                  "y2": 29.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 60.2,
+                  "y1": 86.4,
+                  "x2": 74.3,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 80.5,
+                  "x2": 60.2,
+                  "y2": 86.4,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 74.3,
+                  "x2": 86.4,
+                  "y2": 60.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 86.4,
+                  "y1": 60.2,
+                  "x2": 80.5,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 24.9,
+                  "y1": 96.8,
+                  "x2": 27.6,
+                  "y2": 95.3,
+                  "role": "valley"
+                },
+                {
+                  "x1": 23.1,
+                  "y1": 100,
+                  "x2": 24.9,
+                  "y2": 96.8,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 27.6,
+                  "y1": 95.3,
+                  "x2": 29.1,
+                  "y2": 92.6,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 29.1,
+                  "y1": 92.6,
+                  "x2": 50,
+                  "y2": 80.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 97.7,
+                  "y1": 26.2,
+                  "x2": 100,
+                  "y2": 22.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 92.6,
+                  "y1": 29.1,
+                  "x2": 97.7,
+                  "y2": 26.2,
+                  "role": "valley"
+                },
+                {
+                  "x1": 80.5,
+                  "y1": 50,
+                  "x2": 92.6,
+                  "y2": 29.1,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 19,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 19,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 19,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 19,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 13.1,
+                  "y2": 40.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 13.1,
+                  "y1": 40.1,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 40.1,
+                  "y2": 13.1,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 40.1,
+                  "y1": 13.1,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 4.3,
+                  "y2": 72,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 4.3,
+                  "y1": 72,
+                  "x2": 27.6,
+                  "y2": 95.3,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 97.7,
+                  "y1": 26.2,
+                  "x2": 73.5,
+                  "y2": 1.9,
+                  "role": "valley"
+                },
+                {
+                  "x1": 73.5,
+                  "y1": 1.9,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 24.9,
+                  "y1": 96.8,
+                  "x2": 2.8,
+                  "y2": 74.6,
+                  "role": "valley"
+                },
+                {
+                  "x1": 2.8,
+                  "y1": 74.6,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 6.9,
+                  "y2": 70.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 6.9,
+                  "y1": 70.5,
+                  "x2": 29.1,
+                  "y2": 92.6,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 92.6,
+                  "y1": 29.1,
+                  "x2": 70.5,
+                  "y2": 6.9,
+                  "role": "valley"
+                },
+                {
+                  "x1": 70.5,
+                  "y1": 6.9,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 26.2,
+                  "x2": 13.1,
+                  "y2": 40.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 13.1,
+                  "y1": 40.1,
+                  "x2": 19,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 40.1,
+                  "y1": 13.1,
+                  "x2": 26.2,
+                  "y2": 0,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 19,
+                  "x2": 40.1,
+                  "y2": 13.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 4.3,
+                  "y1": 72,
+                  "x2": 2.8,
+                  "y2": 74.6,
+                  "role": "valley"
+                },
+                {
+                  "x1": 2.8,
+                  "y1": 74.6,
+                  "x2": 0,
+                  "y2": 76.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 6.9,
+                  "y1": 70.5,
+                  "x2": 4.3,
+                  "y2": 72,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 19,
+                  "y1": 50,
+                  "x2": 6.9,
+                  "y2": 70.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 76.6,
+                  "y1": 0,
+                  "x2": 73.5,
+                  "y2": 1.9,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 73.5,
+                  "y1": 1.9,
+                  "x2": 70.5,
+                  "y2": 6.9,
+                  "role": "valley"
+                },
+                {
+                  "x1": 70.5,
+                  "y1": 6.9,
+                  "x2": 50,
+                  "y2": 19,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 63.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 0,
+                  "y2": 67.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "edge"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 32.3,
+                  "y1": 100,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 36.5,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 79.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 71.6,
+                  "y1": 0,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 63.7,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 36.5,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 100,
+                  "y2": 28.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 20.4,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 74.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 74.3,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 74.3,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 74.3,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 23.1,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 23.1,
+                  "y1": 100,
+                  "x2": 28.1,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 100,
+                  "y2": 22.2,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 22.2,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 26.2,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 26.2,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 26.2,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 26.2,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 71.8,
+                  "x2": 0,
+                  "y2": 76.2,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 76.2,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 76.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 76.6,
+                  "y1": 0,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1
+            },
+            "sentence": "Mountain fold, pivoting on point P, bringing point Q onto line A, through all layers."
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-207.89,\"minY\":-680.52,\"maxX\":138.35,\"maxY\":-366.68},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":20,\"side\":\"back\",\"rings\":[[[90.36,-680.03],[-151.03,-680.52],[-207.89,-623.67],[0,-415.78],[126.72,-542.5]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":3,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[0,-415.78],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"back\",\"rings\":[[[-207.89,-623.67],[-65.08,-366.68],[0,-594.56]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":12,\"side\":\"back\",\"rings\":[[[108.92,-609.81],[0,-594.56],[0,-415.78],[126.72,-542.5]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":6,\"side\":\"back\",\"rings\":[[[108.92,-609.81],[0,-594.56],[65.08,-366.68],[138.35,-498.52]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":16,\"side\":\"front\",\"rings\":[[[90.36,-680.03],[-117.26,-680.45],[-0.01,-563.18],[95.9,-659.08]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":4,\"side\":\"back\",\"rings\":[[[-84.83,-680.39],[-0.26,-595.45],[84.7,-680.04]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":24,\"side\":\"back\",\"rings\":[[[90.36,-680.03],[-151.03,-680.52],[-118.06,-647.28],[99.19,-646.63]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-1gttobaz2pzj9",
+            "paperFaces": "{\"points\":[[-200,200,-0.01,-563.18],[200,200,65.08,-366.68],[200,-200,-0.26,-595.45],[-200,-200,-65.08,-366.68],[-200,0,-207.89,-623.67],[0,0,0,-415.78],[0,-200,-207.89,-623.67],[0,200,16.04,-572.94],[200,0,16.04,-572.94],[-86,-86,0,-594.56],[86,86,0,-594.56],[-200,70.913,-134.25,-663.6],[-70.899,200,60.97,-643.17],[200,-86.303,82.83,-637.26],[86.549,-200,-118.06,-647.28],[-200,87.193,-117.26,-680.45],[-87.63,200,67.4,-666.91],[-54.101,200,37.13,-649.62],[-200,54.698,-151.03,-680.52],[200,-118.442,84.7,-680.04],[118.461,-200,-84.83,-680.39],[54.698,-200,-151.03,-680.52],[200,-54.101,37.13,-649.62],[97.393,200,138.35,-498.52],[40.94,145.73,108.92,-609.81],[0,121.912,126.72,-542.5],[200,97.393,138.35,-498.52],[145.73,40.94,108.92,-609.81],[121.912,0,126.72,-542.5],[-89.744,181.157,94.95,-662.67],[-100.325,187.256,90.36,-680.03],[-107.737,200,95.9,-659.08],[-83.646,170.576,90.36,-680.03],[190.94,-95.382,99.19,-646.63],[200,-111.025,92.4,-672.32],[170.576,-83.646,90.36,-680.03]],\"rings\":[[4,3,9],[4,5,9],[6,3,9],[6,5,9],[20,2,19],[24,7,23],[24,10,1,23],[24,7,25],[24,10,5,25],[27,8,26],[27,10,1,26],[27,8,28],[27,10,5,28],[30,16,12,29],[30,15,11,29],[30,16,31],[30,15,0,31],[32,17,12,29],[32,18,11,29],[32,17,7,25],[32,18,4,5,25],[34,13,33],[34,19,20,14,33],[35,22,13,33],[35,21,14,33],[35,22,8,28],[35,21,6,5,28]],\"levels\":[6,9,7,8,4,17,6,14,9,16,7,15,8,16,2,14,5,17,1,13,10,15,3,18,0,12,11]}"
+          },
+          "annotations": [
+            {
+              "id": "annotation-b3d9ca6e-636f-437b-a0cf-b456ce9f1f7e",
+              "kind": "mountain-line",
+              "from": [
+                0.19607739339024086,
+                0.5170442937911289
+              ],
+              "to": [
+                0.32862251998808517,
+                0.00032580145450382343
+              ],
+              "imported": "untouched"
+            },
+            {
+              "id": "annotation-2f2169b5-134f-4a20-a972-aace24b13700",
+              "kind": "mountain-arrow",
+              "from": [
+                0.10686228717247989,
+                0.2602793529543113
+              ],
+              "to": [
+                0.39787157527013783,
+                0.3349270837866819
+              ],
+              "bend": 0.1339745962155613,
+              "imported": "untouched",
+              "behind": {
+                "to": 9
+              }
+            }
+          ],
+          "annotatedPictureKey": "scene-1gttobaz2pzj9",
+          "text": "Mountain fold, pivoting on point P, bringing point Q onto line A, through all layers.",
+          "breakBefore": false
+        },
+        {
+          "id": "step-06423d4d-f349-46d8-8042-5e8ddab9a59f",
+          "revision": 0,
+          "source": {
+            "kind": "fold-step",
+            "sequence": "fold-trial-cicada",
+            "step": "fstep-5179e68a-35c4-4cc6-9641-d6ee10c091fd",
+            "moment": "after",
+            "path": "fh1:2727f55e6da772dd",
+            "state": "fs1:c53b6317a6b72ad2",
+            "engine": 1,
+            "thumbnail": {
+              "viewBox": "0 0 100 100",
+              "strokes": [
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 80.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 80.5,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 80.5,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 80.5,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 60.2,
+                  "y2": 86.4,
+                  "role": "valley"
+                },
+                {
+                  "x1": 60.2,
+                  "y1": 86.4,
+                  "x2": 71.5,
+                  "y2": 71.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 71.5,
+                  "y1": 71.5,
+                  "x2": 86.4,
+                  "y2": 60.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 86.4,
+                  "y1": 60.2,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 27.6,
+                  "y1": 95.3,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 97.7,
+                  "y2": 26.2,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 24.9,
+                  "y2": 96.8,
+                  "role": "valley"
+                },
+                {
+                  "x1": 29.1,
+                  "y1": 92.6,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 92.6,
+                  "y2": 29.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 60.2,
+                  "y1": 86.4,
+                  "x2": 74.3,
+                  "y2": 100,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 80.5,
+                  "x2": 60.2,
+                  "y2": 86.4,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 100,
+                  "y1": 74.3,
+                  "x2": 86.4,
+                  "y2": 60.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 86.4,
+                  "y1": 60.2,
+                  "x2": 80.5,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 24.9,
+                  "y1": 96.8,
+                  "x2": 27.6,
+                  "y2": 95.3,
+                  "role": "valley"
+                },
+                {
+                  "x1": 23.1,
+                  "y1": 100,
+                  "x2": 24.9,
+                  "y2": 96.8,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 27.6,
+                  "y1": 95.3,
+                  "x2": 29.1,
+                  "y2": 92.6,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 29.1,
+                  "y1": 92.6,
+                  "x2": 50,
+                  "y2": 80.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 97.7,
+                  "y1": 26.2,
+                  "x2": 100,
+                  "y2": 22.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 92.6,
+                  "y1": 29.1,
+                  "x2": 97.7,
+                  "y2": 26.2,
+                  "role": "valley"
+                },
+                {
+                  "x1": 80.5,
+                  "y1": 50,
+                  "x2": 92.6,
+                  "y2": 29.1,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 50,
+                  "x2": 19,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 19,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 19,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 19,
+                  "x2": 50,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 28.5,
+                  "y1": 28.5,
+                  "x2": 13.1,
+                  "y2": 40.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 13.1,
+                  "y1": 40.1,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "valley"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 40.1,
+                  "y2": 13.1,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 40.1,
+                  "y1": 13.1,
+                  "x2": 28.5,
+                  "y2": 28.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 4.3,
+                  "y2": 72,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 4.3,
+                  "y1": 72,
+                  "x2": 27.6,
+                  "y2": 95.3,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 97.7,
+                  "y1": 26.2,
+                  "x2": 73.5,
+                  "y2": 1.9,
+                  "role": "valley"
+                },
+                {
+                  "x1": 73.5,
+                  "y1": 1.9,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 24.9,
+                  "y1": 96.8,
+                  "x2": 2.8,
+                  "y2": 74.6,
+                  "role": "valley"
+                },
+                {
+                  "x1": 2.8,
+                  "y1": 74.6,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 6.9,
+                  "y2": 70.5,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 6.9,
+                  "y1": 70.5,
+                  "x2": 29.1,
+                  "y2": 92.6,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 92.6,
+                  "y1": 29.1,
+                  "x2": 70.5,
+                  "y2": 6.9,
+                  "role": "valley"
+                },
+                {
+                  "x1": 70.5,
+                  "y1": 6.9,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "valley"
+                },
+                {
+                  "x1": 0,
+                  "y1": 26.2,
+                  "x2": 13.1,
+                  "y2": 40.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 13.1,
+                  "y1": 40.1,
+                  "x2": 19,
+                  "y2": 50,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 40.1,
+                  "y1": 13.1,
+                  "x2": 26.2,
+                  "y2": 0,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 50,
+                  "y1": 19,
+                  "x2": 40.1,
+                  "y2": 13.1,
+                  "role": "valley"
+                },
+                {
+                  "x1": 4.3,
+                  "y1": 72,
+                  "x2": 2.8,
+                  "y2": 74.6,
+                  "role": "valley"
+                },
+                {
+                  "x1": 2.8,
+                  "y1": 74.6,
+                  "x2": 0,
+                  "y2": 76.2,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 6.9,
+                  "y1": 70.5,
+                  "x2": 4.3,
+                  "y2": 72,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 19,
+                  "y1": 50,
+                  "x2": 6.9,
+                  "y2": 70.5,
+                  "role": "valley"
+                },
+                {
+                  "x1": 76.6,
+                  "y1": 0,
+                  "x2": 73.5,
+                  "y2": 1.9,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 73.5,
+                  "y1": 1.9,
+                  "x2": 70.5,
+                  "y2": 6.9,
+                  "role": "valley"
+                },
+                {
+                  "x1": 70.5,
+                  "y1": 6.9,
+                  "x2": 50,
+                  "y2": 19,
+                  "role": "mountain"
+                },
+                {
+                  "x1": 0,
+                  "y1": 50,
+                  "x2": 0,
+                  "y2": 63.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 63.7,
+                  "x2": 0,
+                  "y2": 67.7,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 67.7,
+                  "x2": 0,
+                  "y2": 71.8,
+                  "role": "edge"
+                },
+                {
+                  "x1": 28.1,
+                  "y1": 100,
+                  "x2": 32.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 32.3,
+                  "y1": 100,
+                  "x2": 36.5,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 36.5,
+                  "y1": 100,
+                  "x2": 50,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 0,
+                  "x2": 79.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 71.6,
+                  "y1": 0,
+                  "x2": 63.7,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 63.7,
+                  "y1": 0,
+                  "x2": 50,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 50,
+                  "x2": 100,
+                  "y2": 36.5,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 36.5,
+                  "x2": 100,
+                  "y2": 28.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 20.4,
+                  "x2": 100,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 100,
+                  "x2": 74.3,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 74.3,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 100,
+                  "x2": 100,
+                  "y2": 74.3,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 74.3,
+                  "x2": 100,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 100,
+                  "x2": 23.1,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 23.1,
+                  "y1": 100,
+                  "x2": 28.1,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 28.4,
+                  "x2": 100,
+                  "y2": 22.2,
+                  "role": "edge"
+                },
+                {
+                  "x1": 100,
+                  "y1": 22.2,
+                  "x2": 100,
+                  "y2": 20.4,
+                  "role": "edge"
+                },
+                {
+                  "x1": 50,
+                  "y1": 0,
+                  "x2": 26.2,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 26.2,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 26.2,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 26.2,
+                  "x2": 0,
+                  "y2": 50,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 71.8,
+                  "x2": 0,
+                  "y2": 76.2,
+                  "role": "edge"
+                },
+                {
+                  "x1": 0,
+                  "y1": 76.2,
+                  "x2": 0,
+                  "y2": 100,
+                  "role": "edge"
+                },
+                {
+                  "x1": 79.6,
+                  "y1": 0,
+                  "x2": 76.6,
+                  "y2": 0,
+                  "role": "edge"
+                },
+                {
+                  "x1": 76.6,
+                  "y1": 0,
+                  "x2": 71.6,
+                  "y2": 0,
+                  "role": "edge"
+                }
+              ]
+            },
+            "render": {
+              "mode": "folded-flat",
+              "side": "front",
+              "rotationDeg": 0,
+              "foldCase": 1
+            }
+          },
+          "picture": {
+            "kind": "scene",
+            "sceneJson": "{\"bounds\":{\"minX\":-140,\"minY\":-680.41,\"maxX\":138.35,\"maxY\":-366.68},\"sheet\":588,\"items\":[{\"kind\":\"face\",\"face\":31,\"side\":\"back\",\"rings\":[[[-128.92,-544.7],[0,-415.78],[126.72,-542.5],[90.36,-680.03],[-94.11,-680.41]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":8,\"side\":\"back\",\"rings\":[[[108.92,-609.81],[0,-594.56],[0,-415.78],[126.72,-542.5]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":2,\"side\":\"back\",\"rings\":[[[108.92,-609.81],[0,-594.56],[65.08,-366.68],[138.35,-498.52]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":23,\"side\":\"back\",\"rings\":[[[-128.92,-544.7],[0,-415.78],[0,-594.56],[-112.1,-610.26]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":17,\"side\":\"back\",\"rings\":[[[-140,-501.5],[-65.08,-366.68],[0,-594.56],[-112.1,-610.26]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":27,\"side\":\"front\",\"rings\":[[[-98.83,-662.02],[-0.01,-563.18],[95.9,-659.08],[90.36,-680.03],[-94.11,-680.41]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":0,\"side\":\"back\",\"rings\":[[[-84.83,-680.39],[-0.26,-595.45],[84.7,-680.04]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false},{\"kind\":\"face\",\"face\":35,\"side\":\"back\",\"rings\":[[[-102.62,-647.23],[99.19,-646.63],[90.36,-680.03],[-94.11,-680.41]]],\"outline\":\"edge\",\"shade\":1,\"hidden\":false}]}",
+            "paperScale": 1.47,
+            "styleKey": null,
+            "key": "scene-12xegaeiu1pyd",
+            "paperFaces": "{\"points\":[[-200,200,-0.01,-563.18],[200,200,65.08,-366.68],[200,-200,-0.26,-595.45],[-200,-200,-65.08,-366.68],[-200,0,-21.69,-575.9],[0,0,0,-415.78],[0,-200,-21.69,-575.9],[0,200,16.04,-572.94],[200,0,16.04,-572.94],[-86,-86,0,-594.56],[86,86,0,-594.56],[-200,70.913,-67.01,-646.35],[-70.899,200,60.97,-643.17],[200,-86.303,82.83,-637.26],[86.549,-200,-89.06,-639.84],[-200,87.193,-73.79,-669.3],[-87.63,200,67.4,-666.91],[-54.101,200,37.13,-649.62],[-200,54.698,-44.15,-653.11],[200,-118.442,84.7,-680.04],[118.461,-200,-84.83,-680.39],[54.698,-200,-44.15,-653.11],[200,-54.101,37.13,-649.62],[97.393,200,138.35,-498.52],[40.94,145.73,108.92,-609.81],[0,121.912,126.72,-542.5],[200,97.393,138.35,-498.52],[145.73,40.94,108.92,-609.81],[121.912,0,126.72,-542.5],[-89.744,181.157,94.95,-662.67],[-100.325,187.256,90.36,-680.03],[-107.737,200,95.9,-659.08],[-83.646,170.576,90.36,-680.03],[190.94,-95.382,99.19,-646.63],[200,-111.025,92.4,-672.32],[170.576,-83.646,90.36,-680.03],[-200,-95.078,-140,-501.5],[-147.473,-39.625,-112.1,-610.26],[-124.027,0,-128.92,-544.7],[-95.078,-200,-140,-501.5],[-39.625,-147.473,-112.1,-610.26],[0,-124.027,-128.92,-544.7],[-182.782,88.129,-98.46,-663.46],[-188.885,98.351,-94.11,-680.41],[-200,104.929,-98.83,-662.02],[-172.561,82.025,-94.11,-680.41],[106.485,-200,-97.3,-667.96],[93.97,-192.562,-102.62,-647.23],[82.025,-172.561,-94.11,-680.41]],\"rings\":[[20,2,19],[24,7,23],[24,10,1,23],[24,7,25],[24,10,5,25],[27,8,26],[27,10,1,26],[27,8,28],[27,10,5,28],[30,16,12,29],[30,16,31],[32,17,12,29],[32,17,7,25],[34,13,33],[35,22,13,33],[35,22,8,28],[36,4,37],[36,3,9,37],[38,4,37],[38,5,9,37],[39,6,40],[39,3,9,40],[41,6,40],[41,5,9,40],[42,11,15,43],[42,29,30,43],[44,15,43],[44,0,31,30,43],[42,11,18,45],[42,29,32,45],[38,4,18,45],[38,5,25,32,45],[47,14,46],[47,33,34,19,20,46],[47,14,21,48],[47,33,35,48],[41,6,21,48],[41,5,28,35,48]],\"levels\":[4,17,6,14,9,16,7,15,8,16,14,17,13,15,18,12,17,6,14,9,16,7,15,8,16,2,14,5,17,1,13,10,15,3,18,0,12,11]}"
+          },
+          "annotations": [],
+          "annotatedPictureKey": "scene-12xegaeiu1pyd",
+          "text": "",
+          "breakBefore": false
+        }
+      ],
+      "assets": {}
+    },
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-cicada",
+        "title": "Cicada — completed flat sequence",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "front"
+        },
+        "steps": [
+          {
+            "id": "fstep-cicada-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "ccw"
+              }
+            },
+            "note": "Orientation: square to diamond"
+          },
+          {
+            "id": "fstep-cicada-2",
+            "parent": "fstep-cicada-1",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.0000000000000002
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865475,
+                  0.7071067811865477
+                ],
+                "d": 0.7071067811865477
+              }
+            },
+            "note": "1: lower tip to upper tip"
+          },
+          {
+            "id": "fstep-cicada-3",
+            "parent": "fstep-cicada-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      1.0000000000000002
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      -2.3551386880256634e-16,
+                      -7.850462293418878e-17
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  1,
+                  0
+                ],
+                "d": 0.49999999999999983
+              }
+            },
+            "note": "2a: left corner to peak"
+          },
+          {
+            "id": "fstep-cicada-4",
+            "parent": "fstep-cicada-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      -2.7755575615628914e-16,
+                      1
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  2.220446049250313e-16,
+                  1
+                ],
+                "d": 0.5000000000000002
+              }
+            },
+            "note": "2b: right corner to peak"
+          },
+          {
+            "id": "fstep-cicada-5",
+            "parent": "fstep-cicada-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.4999999999999997,
+                    1
+                  ],
+                  [
+                    0.2849999999999998,
+                    0.7149999999999999
+                  ]
+                ]
+              },
+              "moving": [
+                0.1565685424949234,
+                0.9565685424949238
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.1565685424949234,
+                  0.9565685424949238
+                ],
+                "layers": 1
+              }
+            },
+            "note": "3a: left wing folded down"
+          },
+          {
+            "id": "fstep-cicada-6",
+            "parent": "fstep-cicada-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7149999999999999,
+                    0.28500000000000025
+                  ],
+                  [
+                    1.0000000000000002,
+                    0.5
+                  ]
+                ]
+              },
+              "moving": [
+                0.9565685424949237,
+                0.1565685424949237
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.9565685424949237,
+                  0.1565685424949237
+                ],
+                "layers": 1
+              }
+            },
+            "note": "3b: right wing folded down",
+            "spread": "off"
+          },
+          {
+            "id": "fstep-cicada-7",
+            "parent": "fstep-cicada-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.0015075759508250968,
+                    0.29849242404917475
+                  ],
+                  [
+                    0.29849242404917536,
+                    0.0015075759508249025
+                  ]
+                ]
+              },
+              "moving": [
+                0.050000000000000336,
+                0.04999999999999978
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.050000000000000336,
+                  0.04999999999999978
+                ],
+                "layers": 1
+              }
+            },
+            "note": "4: one top layer down",
+            "spread": {
+              "kind": "affine",
+              "amount": 0.005,
+              "keep": "bottom",
+              "skew": 0,
+              "axisDeg": 81
+            }
+          },
+          {
+            "id": "fstep-cicada-8",
+            "parent": "fstep-cicada-7",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.00029437251522873586,
+                    0.3397056274847713
+                  ],
+                  [
+                    0.33970562748477184,
+                    0.0002943725152285971
+                  ]
+                ]
+              },
+              "moving": [
+                0.95,
+                0.9500000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "5: remaining tip down, leaving a band"
+          },
+          {
+            "id": "fstep-cicada-9",
+            "parent": "fstep-cicada-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.0735786437626905,
+                    0.3564213562373093
+                  ],
+                  [
+                    0.3564213562373098,
+                    0.07357864376269038
+                  ]
+                ]
+              },
+              "moving": [
+                0.835,
+                0.8350000000000001
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "6: fold upper band down"
+          },
+          {
+            "id": "fstep-cicada-10",
+            "parent": "fstep-cicada-9",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.664791847198287,
+                    0.9052081528017133
+                  ],
+                  [
+                    0.009047796878308043,
+                    0.9748343229184555
+                  ]
+                ]
+              },
+              "moving": [
+                0.04454322574716803,
+                0.5712688703219579
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7a: left side behind"
+          },
+          {
+            "id": "fstep-cicada-11",
+            "parent": "fstep-cicada-10",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9052081528017132,
+                    0.6647918471982872
+                  ],
+                  [
+                    0.9748343229184556,
+                    0.009047796878309198
+                  ]
+                ]
+              },
+              "moving": [
+                0.5712688703219583,
+                0.044543225747168035
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7b: right side behind"
+          },
+          {
+            "id": "fstep-e160add1-eb97-44e3-b800-1827b1a1af37",
+            "parent": "fstep-cicada-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.3227529781162528,
+                      0.6772823519155563
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.10758432668338624,
+                    0.10757255000604604
+                  ]
+                ]
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071454838328315,
+                  0.7070680764218045
+                ],
+                "d": 1.1860052314911653
+              }
+            },
+            "expect": "fs1:07c8905c3a446bcb"
+          },
+          {
+            "id": "fstep-2cb6cb0d-2f3a-4cc6-ae2b-612a1b3d5e1a",
+            "parent": "fstep-e160add1-eb97-44e3-b800-1827b1a1af37",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.038506065160295866,
+                      0.039094175057453606
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7078720898400407,
+                  0.7063406433340033
+                ],
+                "d": 1.2134401376704493
+              }
+            },
+            "expect": "fs1:1530d9ba2b773c19"
+          },
+          {
+            "id": "fstep-24c930cc-f897-4828-ad8f-cee3963d4801",
+            "parent": "fstep-2cb6cb0d-2f3a-4cc6-ae2b-612a1b3d5e1a",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.004069931970678398,
+                    0.35920161838840203
+                  ],
+                  [
+                    0.36054742548803076,
+                    0.004182707086751392
+                  ]
+                ]
+              },
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.877156185832152,
+                    0.8767498055077605
+                  ]
+                ]
+              }
+            },
+            "expect": "fs1:0798998a1a28c8e1"
+          },
+          {
+            "id": "fstep-fe32caad-92df-4ae5-9569-9dc6273b0e0d",
+            "parent": "fstep-24c930cc-f897-4828-ad8f-cee3963d4801",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9276144573312428,
+                    0.7097934295076449
+                  ],
+                  [
+                    0.7379050200641868,
+                    0.005361094005182032
+                  ]
+                ]
+              },
+              "moving": [
+                0.596688649138245,
+                0.06309520482378828
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "expect": "fs1:6d79bf87e2d1d3b6"
+          },
+          {
+            "id": "fstep-5179e68a-35c4-4cc6-9641-d6ee10c091fd",
+            "parent": "fstep-fe32caad-92df-4ae5-9569-9dc6273b0e0d",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "axiom",
+                "axiom": 5,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.7061742356565263,
+                      0.9332652846874053
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0.2820183300674864
+                    ]
+                  },
+                  {
+                    "kind": "edge",
+                    "a": [
+                      1,
+                      1
+                    ],
+                    "b": [
+                      0.7961520224497359,
+                      1
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.509237748207692,
+                  -0.8606258860854463
+                ],
+                "d": -0.44254516729229987
+              }
+            },
+            "expect": "fs1:c53b6317a6b72ad2"
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-cicada",
+        "cursor": "fstep-5179e68a-35c4-4cc6-9641-d6ee10c091fd",
+        "activeChild": {
+          "": "fstep-cicada-1",
+          "fstep-cicada-1": "fstep-cicada-2",
+          "fstep-cicada-2": "fstep-cicada-3",
+          "fstep-cicada-3": "fstep-cicada-4",
+          "fstep-cicada-4": "fstep-cicada-5",
+          "fstep-cicada-5": "fstep-cicada-6",
+          "fstep-cicada-6": "fstep-e160add1-eb97-44e3-b800-1827b1a1af37",
+          "fstep-cicada-7": "fstep-cicada-8",
+          "fstep-cicada-8": "fstep-cicada-9",
+          "fstep-cicada-9": "fstep-cicada-10",
+          "fstep-cicada-10": "fstep-cicada-11",
+          "fstep-e160add1-eb97-44e3-b800-1827b1a1af37": "fstep-2cb6cb0d-2f3a-4cc6-ae2b-612a1b3d5e1a",
+          "fstep-2cb6cb0d-2f3a-4cc6-ae2b-612a1b3d5e1a": "fstep-24c930cc-f897-4828-ad8f-cee3963d4801",
+          "fstep-24c930cc-f897-4828-ad8f-cee3963d4801": "fstep-fe32caad-92df-4ae5-9569-9dc6273b0e0d",
+          "fstep-fe32caad-92df-4ae5-9569-9dc6273b0e0d": "fstep-5179e68a-35c4-4cc6-9641-d6ee10c091fd"
+        }
+      }
+    }
+  },
+  "artifacts": {
+    "fold": {
+      "documentId": "crease-pattern",
+      "value": {
+        "fold": {
+          "file_spec": 1.1,
+          "file_creator": "oriedita",
+          "frame_title": "Untitled CP",
+          "vertices_coords": [
+            [
+              -200,
+              200
+            ],
+            [
+              200,
+              200
+            ],
+            [
+              200,
+              -200
+            ],
+            [
+              -200,
+              -200
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              3,
+              0
+            ]
+          ],
+          "edges_assignment": [
+            "B",
+            "B",
+            "B",
+            "B"
+          ],
+          "edges_foldAngle": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "faces_vertices": [
+            [
+              0,
+              1,
+              2,
+              3
+            ]
+          ],
+          "faces_edges": [
+            [
+              3,
+              0,
+              1,
+              2
+            ]
+          ],
+          "oriedita:edges_colors": [
+            "",
+            "",
+            "",
+            ""
+          ],
+          "oriedita:grid_size": 8,
+          "oriedita:grid_style": 1,
+          "oriedita:version": "dev",
+          "oristudio:edges_line_colors": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "folded_base": null,
+        "folded_base_error": null,
+        "simulation_model": {
+          "fold": {
+            "file_spec": 1.1,
+            "file_creator": "oriedita",
+            "frame_title": "Untitled CP",
+            "vertices_coords": [
+              [
+                -200,
+                0,
+                -200
+              ],
+              [
+                200,
+                0,
+                -200
+              ],
+              [
+                200,
+                0,
+                200
+              ],
+              [
+                -200,
+                0,
+                200
+              ]
+            ],
+            "edges_vertices": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                0
+              ],
+              [
+                0,
+                2
+              ]
+            ],
+            "edges_assignment": [
+              "B",
+              "B",
+              "B",
+              "B",
+              "F"
+            ],
+            "edges_foldAngle": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "faces_vertices": [
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                3
+              ]
+            ],
+            "oriedita:edges_colors": [
+              "",
+              "",
+              "",
+              ""
+            ],
+            "oriedita:grid_size": 8,
+            "oriedita:grid_style": 1,
+            "oriedita:version": "dev",
+            "oristudio:edges_line_colors": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "frame_classes": [],
+            "oristudio:edges_facet": [
+              false,
+              false,
+              false,
+              false,
+              true
+            ],
+            "edges_faces": [
+              [
+                0
+              ],
+              [
+                0
+              ],
+              [
+                1
+              ],
+              [
+                1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "faces_edges": [
+              [
+                0,
+                1,
+                4
+              ],
+              [
+                4,
+                2,
+                3
+              ]
+            ]
+          },
+          "crease_params": []
+        },
+        "simulation_model_error": null
+      }
+    }
+  },
+  "extensions": {}
+}

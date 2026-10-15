@@ -33,6 +33,7 @@ export type FoldImportLocalCode =
   | 'unsupported_file'
   | 'unreadable_file'
   | 'no_folded_figure'
+  | 'no_project_cp'
   | 'no_state'
   | 'read_only'
   | 'changed';
@@ -227,6 +228,11 @@ function localWords(
       return {
         title: t('dialogs:foldImport.refusal.unreadableFile.title', 'Could not read the file'),
         text: t('dialogs:foldImport.refusal.unreadableFile.text', '{{name}} could not be read.', { name: name ?? '' }),
+      };
+    case 'no_project_cp':
+      return {
+        title: t('dialogs:foldImport.refusal.noProjectCp.title', 'Source CP unavailable'),
+        text: t('dialogs:foldImport.refusal.noProjectCp.text', 'Open or create the source crease pattern in Edit, then try again. The saved Collapse step is unchanged.'),
       };
     case 'no_folded_figure':
       return {

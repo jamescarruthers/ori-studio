@@ -1,5 +1,7 @@
 # Fold workspace: five Origami.me trials
 
+**Current file locations:** all native files are consolidated in the [models library](models/README.md), grouped by completion status. Historical root prototypes and combined snapshots have moved to `models/archive/`; current working files are in `models/completed/`, `models/in-progress/`, or `models/excluded/`. Links below point to the relocated files.
+
 2026-10-13. Research and flat-completion implementation in the copied Fold workspace branch.
 
 ## Heart tuck layer-order correction
@@ -30,7 +32,7 @@ tuck and completed heart were visually checked in Fold; see
 runtime source changed in this correction, so a WASM rebuild/full workspace
 rerun was unnecessary; the full checks below describe the preceding implementation.
 
-Reopen **models/heart.osf** (or the combined project) to load the corrected
+Reopen **models/completed/heart.osf** (or the combined project) to load the corrected
 choice into an already-open app session.
 
 ## Implementation update — flat scope
@@ -87,13 +89,13 @@ The `.fold` files are interchange exports: opening them produces an Edit crease 
 
 | Design / tutorial | Native sequence | Fold steps | Result |
 | --- | --- | ---: | --- |
-| [Cicada](https://origami.me/cicada/) | [cicada.osf](models/cicada.osf) | 10 | Complete flat model; all seven tutorial stages represented. |
-| [Swan](https://origami.me/swan/) | [swan.osf](models/swan.osf) | 8 | Complete flat model with outside-reverse neck and head. |
-| [Heart](https://origami.me/heart/) | [heart.osf](models/heart.osf) | 15 | Complete heart, including both pockets, side/corner folds and final turnover. |
-| [Masu box](https://origami.me/box/) | [box.osf](models/box.osf) | 12 | Flat preparation through tutorial step 6. Upright walls need a nonflat state. |
-| [Crane](https://origami.me/crane/) | [crane.osf](models/crane.osf) | 19 | Complete flat alternative with head and both wings folded down. Final three-dimensional opening excluded. |
+| [Cicada](https://origami.me/cicada/) | [cicada.osf](models/completed/cicada.osf) | 10 | Complete flat model; all seven tutorial stages represented. |
+| [Swan](https://origami.me/swan/) | [swan.osf](models/completed/swan.osf) | 8 | Complete flat model with outside-reverse neck and head. |
+| [Heart](https://origami.me/heart/) | [heart.osf](models/completed/heart.osf) | 15 | Complete heart, including both pockets, side/corner folds and final turnover. |
+| [Masu box](https://origami.me/box/) | [box.osf](models/excluded/3d/box.osf) | 12 | Flat preparation through tutorial step 6. Upright walls need a nonflat state. |
+| [Crane](https://origami.me/crane/) | [crane.osf](models/excluded/3d/crane.osf) | 19 | Complete flat alternative with head and both wings folded down. Final three-dimensional opening excluded. |
 
-[Combined native project](models/origami-trials.osf) contains all five sequences. Individual files are the simplest entry points: I did not find a sequence selector in the Fold surface I inspected. [Replay validation](validation.json) records every final-path state's canonical hash.
+[Combined native project](models/archive/combined/origami-trials.osf) contains all five sequences. Individual files are the simplest entry points: I did not find a sequence selector in the Fold surface I inspected. [Replay validation](validation.json) records every final-path state's canonical hash.
 
 ## Setup and scope
 
@@ -120,7 +122,7 @@ Native reopening, history selection, final rendering, and playback were checked.
 
 The tutorial-order attempt reached the double kite, folded-up neck, head tip, and body half-fold. Trying to raise the neck with the folded-edge swivel produced `swivel_fold_wide` on one hinge choice and `fan_ray_blocked` on another. Open/inside and valley/mountain variants were tested; exact inputs and responses are in [compound-probes.json](compound-probes.json).
 
-A workable alternative starts from the double kite, folds the body in half, then inside-reverses the long point. The head's inside reverse returned `reverse_kind_infeasible` with an `other_kind: outside` suggestion. Applying that suggestion succeeded. The saved model has 11 nodes and 24 faces; its neck leans and its proportions differ from the reference. The original attempt remains in `swan.osf` at this report's root, and the alternate prototype has now been replaced by the corrected outside-reverse construction in **models/swan.osf**.
+A workable alternative starts from the double kite, folds the body in half, then inside-reverses the long point. The head's inside reverse returned `reverse_kind_infeasible` with an `other_kind: outside` suggestion. Applying that suggestion succeeded. The saved model has 11 nodes and 24 faces; its neck leans and its proportions differ from the reference. The original attempt remains in `models/archive/early-prototypes/swan.osf` in the archive, and the alternate prototype has now been replaced by the corrected outside-reverse construction in **models/completed/swan.osf**.
 
 The UI reopened the alternate sequence and played its head fold to completion. [Workspace capture](swan-workspace.png).
 
@@ -128,7 +130,7 @@ The UI reopened the alternate sequence and played its head fold to completion. [
 
 The center precreases, bottom strip, lower diagonals, turnovers, and upper diagonals landed, reaching tutorial step 7. A one-layer valley lowering the upper point was accepted by the engine but did not reproduce the reference's pocket release and subsequent shape. Acceptance alone is insufficient: that probe is omitted from the delivered path.
 
-The original delivered sequence ended before that probe: 9 nodes and 16 faces. The current **models/heart.osf** now completes the heart (18 nodes). The longer `heart.sequence.json`, `heart.log.json`, and root `heart.osf` retain the accepted-but-wrong operation for investigation. This does **not** establish that the heart is impossible or that squash support is missing; squash is implemented and worked for the crane. I did not find the correct pocket decomposition during this trial. [Workspace capture](heart-workspace.png).
+The original delivered sequence ended before that probe: 9 nodes and 16 faces. The current **models/completed/heart.osf** now completes the heart (18 nodes). The longer `heart.sequence.json`, `heart.log.json`, and archived `models/archive/early-prototypes/heart.osf` retain the accepted-but-wrong operation for investigation. This does **not** establish that the heart is impossible or that squash support is missing; squash is implemented and worked for the crane. I did not find the correct pocket decomposition during this trial. [Workspace capture](heart-workspace.png).
 
 ### Masu box — flat preparation completed
 
@@ -142,7 +144,7 @@ A sequential square base using two squash folds replaces the tutorial's simultan
 
 Starting instead from the narrowed bird base, inside reverses raise the neck and tail. The engine offered several openings; selecting the central spine opening made both succeed. Another inside reverse forms the head, followed by two flat wing folds. The saved alternative has 24 nodes and 80 faces. It represents the flat crane; opening the wings into the final pose has the same nonflat-state limitation as the box. The tutorial does not explicitly require separate body inflation; only body articulation needed for the wing opening is part of the completion target.
 
-The root `crane.osf` retains the tutorial-order attempt. **models/crane.osf is the completed flat alternative.** [Workspace capture](crane-workspace.png).
+The archived `models/archive/early-prototypes/crane.osf` retains the tutorial-order attempt. **models/excluded/3d/crane.osf is the retained flat alternative.** [Workspace capture](crane-workspace.png).
 
 ## Functionality findings
 
@@ -214,7 +216,7 @@ node research/2026-10-13-origami-fold-trials/swan-alternative.mjs
 node research/2026-10-13-origami-fold-trials/build-deliverables.mjs
 ```
 
-The first four scripts preserve experiments and logs in this directory. Their root `origami-trials.osf` is a transient probe bundle. The final script writes native Fold projects under **models/** and FOLD exports under **interchange-exports/**, then verifies native-file replay plus FOLD frame counts. `validation.json` is the machine-readable result.
+The first four scripts preserve experiments and logs in this directory. Their archived `models/archive/early-prototypes/origami-trials.osf` is a transient probe bundle. The final script writes native Fold projects under **models/** and FOLD exports under **interchange-exports/**, then verifies native-file replay plus FOLD frame counts. `validation.json` is the machine-readable result.
 
 ## Deferred investigations (original plan, now limited to 2D)
 

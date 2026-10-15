@@ -19,11 +19,13 @@
 //!   both blocks or with neither.
 //! - **Two scores.** ℓ1 scores the tip, then ℓ2 scores what lies across it
 //!   (the second score pass), and steps 3–7 run once on the result. The
-//!   lines must not meet over the paper the crimp moves.
+//!   lines must not cross over the paper the crimp moves. They may share an
+//!   exact boundary endpoint with a nondegenerate strip on one side.
 //! - **The order.** Carried: pairs that stay, kept; pairs in one block,
 //!   reversed in the strip and kept in the tip (ρ1∘ρ2 turns nothing over).
 //!   Seeded: pairs across the blocks of the strip, and across those of the
-//!   tip, kept; each strip block against its body on ℓ1, and each tip block
+//!   tip, kept, except corresponding nested packet halves which follow
+//!   their strip/tip motion; each strip block against its body on ℓ1, and each tip block
 //!   against its strip on ℓ2, inside putting the lower block over its body
 //!   and the upper under, outside the reverse. Nothing else of the tip is
 //!   ordered against the strip: as the second reverse would, the completion
@@ -482,8 +484,18 @@ impl State {
                     .map(move |v| (s.old, op.second.signed_distance(images_ref[v.index()])))
             })
             .collect();
-        let strip_below = on_first.iter().all(|&(_, d)| d <= -MIN_FEATURE);
-        let strip_above = on_first.iter().all(|&(_, d)| d >= MIN_FEATURE);
+        // An exact common endpoint may bound a wedge-shaped strip. It is
+        // not an interior crossing: every other point of the first hinge
+        // must still be clear of ℓ2 on the same side. Near misses retain the
+        // minimum-feature refusal, and coincident hinges have no clear side.
+        let strip_below = on_first
+            .iter()
+            .all(|&(_, d)| d.abs() <= TOL || d <= -MIN_FEATURE)
+            && on_first.iter().any(|&(_, d)| d <= -MIN_FEATURE);
+        let strip_above = on_first
+            .iter()
+            .all(|&(_, d)| d.abs() <= TOL || d >= MIN_FEATURE)
+            && on_first.iter().any(|&(_, d)| d >= MIN_FEATURE);
         if on_first.is_empty() || !(strip_below || strip_above) {
             let mut faces: Vec<FaceId> = on_first
                 .iter()
@@ -578,6 +590,13 @@ impl State {
         let tip = first.after(&second);
         let mut blocks = vec![first; strip_blocks];
         blocks.extend(vec![tip; strip_blocks]);
+        let mut coupled = crimp.tip.packet_pairs(self, plan);
+        coupled.extend(
+            coupled
+                .clone()
+                .into_iter()
+                .map(|[a, b]| [strip_blocks + a, strip_blocks + b]),
+        );
         let mut prepared = prepare_pieces(
             self,
             Pieces {
@@ -585,7 +604,7 @@ impl State {
                 block_of: scored_block_of,
                 blocks,
                 against,
-                across: Across::Alike,
+                across: Across::packets(coupled, true),
             },
         )?;
         // Each tip block against its strip on ℓ2, as the second reverse

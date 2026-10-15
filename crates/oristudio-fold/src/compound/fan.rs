@@ -474,6 +474,7 @@ fn distance(a: Point, b: Point) -> f64 {
 /// its inputs to.
 #[derive(Debug, Clone)]
 pub(crate) struct FanFold {
+    pub(crate) patches: Option<Vec<Vec<usize>>>,
     pub(crate) kind: VertexFoldKind,
     pub(crate) fan: Fan,
     /// The layers the rays cut, by position, the first nearest the side the
@@ -503,7 +504,10 @@ impl FanFold {
     pub(crate) fn compile(&self, state: &State) -> Result<Compiled, Refused> {
         let fan = &self.fan;
         let n = fan.rays.len();
-        let FanScoring { scoring, wedge_of } = score_fan(state, fan, &self.layers)?;
+        let FanScoring { scoring, wedge_of } = match &self.patches {
+            Some(patches) => super::fan_precreased::score(state, fan, patches)?,
+            None => score_fan(state, fan, &self.layers)?,
+        };
         let count = scoring.faces.len();
 
         // Paper joined across every crease but the new ones.
@@ -530,9 +534,15 @@ impl FanFold {
             a
         }
         for (&(p, q), faces) in &sides {
-            let chord = created
-                .iter()
-                .any(|c| (c[0].0.min(c[1].0), c[0].0.max(c[1].0)) == (p, q));
+            let on_existing_ray = self.patches.is_some()
+                && faces.len() == 2
+                && wedge_of[faces[0]].is_some()
+                && wedge_of[faces[1]].is_some()
+                && wedge_of[faces[0]] != wedge_of[faces[1]];
+            let chord = on_existing_ray
+                || created
+                    .iter()
+                    .any(|c| (c[0].0.min(c[1].0), c[0].0.max(c[1].0)) == (p, q));
             if let [a, b] = faces[..]
                 && !chord
             {
@@ -625,19 +635,31 @@ impl FanFold {
         };
         let up = self.direction == Direction::Valley;
         let mut extra = Vec::with_capacity(2 * self.layers.len());
-        for &layer in &self.layers {
-            let piece =
-                |w: usize| (0..count).find(|&a| scoring.old[a] == layer && wedge_of[a] == Some(w));
-            let (Some(f), Some(o), Some(u)) = (piece(far), piece(over), piece(under)) else {
+        let groups = self
+            .patches
+            .clone()
+            .unwrap_or_else(|| self.layers.iter().map(|&f| vec![f]).collect());
+        for group in groups {
+            let pieces = |w| {
+                (0..count)
+                    .filter(|&a| group.contains(&scoring.old[a]) && wedge_of[a] == Some(w))
+                    .collect::<Vec<_>>()
+            };
+            let (far_pieces, over_pieces, under_pieces) =
+                (pieces(far), pieces(over), pieces(under));
+            if far_pieces.is_empty() || over_pieces.is_empty() || under_pieces.is_empty() {
                 return Err(FoldRefusal::Internal {
                     message: "a cut layer has no piece in a wedge".to_string(),
                 }
                 .into());
-            };
-            // The far wedge over its neighbour across the fourth ray, under
-            // the other, toward the side the direction names.
-            for (x, y) in [(f, o), (u, f)] {
-                extra.push(if up { [x, y] } else { [y, x] });
+            }
+            for &f in &far_pieces {
+                for &o in &over_pieces {
+                    extra.push(if up { [f, o] } else { [o, f] });
+                }
+                for &u in &under_pieces {
+                    extra.push(if up { [u, f] } else { [f, u] });
+                }
             }
         }
         let turns = drop_empty(&mut block_of, turns);
@@ -728,6 +750,7 @@ pub(crate) fn fan_layers(
 /// ear's and the swivel's.
 #[derive(Debug, Clone)]
 pub(crate) struct FanInput {
+    pub(crate) triangle: Option<[Point; 3]>,
     pub(crate) kind: VertexFoldKind,
     pub(crate) center: Point,
     /// The three given rays' directions.
@@ -758,10 +781,36 @@ pub struct FanAnalysis {
     pub layers: Vec<FaceId>,
 }
 
+struct FanLayers {
+    faces: Vec<usize>,
+    patches: Option<Vec<Vec<usize>>>,
+}
+
 impl FanInput {
+    fn selected_layers(&self, state: &State, direction: Direction) -> Result<FanLayers, Refused> {
+        if let Some(triangle) = &self.triangle
+            && let Some(patches) = super::fan_precreased::layers(
+                state,
+                triangle,
+                self.center,
+                &self.layers,
+                direction,
+            )?
+        {
+            return Ok(FanLayers {
+                faces: patches.iter().flatten().copied().collect(),
+                patches: Some(patches),
+            });
+        }
+        Ok(FanLayers {
+            faces: fan_layers(state, self.center, &self.layers, direction)?,
+            patches: None,
+        })
+    }
+
     pub(crate) fn analyse(&self, state: &State) -> Result<FanAnalysis, Refused> {
         let direction = state.view().model_direction(self.direction);
-        let layers = fan_layers(state, self.center, &self.layers, direction)?;
+        let layers = self.selected_layers(state, direction)?.faces;
         let candidates = kawasaki(&self.given);
         Ok(FanAnalysis {
             center: self.center,
@@ -799,9 +848,14 @@ impl FanInput {
             return Err(FoldRefusal::FanNotFlat.into());
         }
         let fourth = nearest(&fan.rays, candidates[k]).ok_or(FoldRefusal::FanNotFlat)?;
+        let FanLayers {
+            faces: layers,
+            patches,
+        } = self.selected_layers(state, direction)?;
         let compiled = FanFold {
+            patches,
             kind: self.kind,
-            layers: fan_layers(state, self.center, &self.layers, direction)?,
+            layers,
             fan: fan.clone(),
             stayer: self.stayer,
             direction,

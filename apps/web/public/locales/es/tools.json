@@ -384,7 +384,6 @@
       "fold": "Plegar",
       "locate": "Situar la línea",
       "model": "Modelo",
-      "planned": "Previstos",
       "reference": "Puntos de referencia",
       "sink": "Hundidos"
     },
@@ -418,12 +417,6 @@
       "free": "Línea libre",
       "freeHelp": "Una línea trazada en cualquier lugar, sin referencia."
     },
-    "mark": {
-      "mountain": "M",
-      "precrease": "P",
-      "reverse": "RF",
-      "valley": "V"
-    },
     "note": {
       "acrossLayers": "Estos puntos están en capas que el plegado ha separado, así que la línea pasa por ellos donde quedan en la forma plegada. El patrón de pliegues muestra los pliegues que crea.",
       "along": "Los puntos se ajustan a donde la línea cruza pliegues, bordes y marcas, a los puntos sobre ella y a su punto medio.",
@@ -450,7 +443,6 @@
       "openSink": "Hundido abierto",
       "outsideReverse": "Pliegue invertido exterior",
       "petal": "Pliegue pétalo",
-      "pleat": "Plisado",
       "rabbitEar": "Oreja de conejo",
       "squash": "Pliegue aplastado",
       "swivel": "Pliegue pivotante",
@@ -462,8 +454,6 @@
       "title": "Herramientas de plegado",
       "trigger": "Herramientas"
     },
-    "plannedPleat": "No es una herramienta propia: pliega un plisado como dos pliegues simples, uno en valle y luego uno en monte a su lado.",
-    "plannedReason": "Previsto: aún no está en Ori Studio.",
     "playStep": "Reproducir paso",
     "railLabel": "Herramientas de plegado",
     "readOnly": {
@@ -808,8 +798,6 @@
       "mountain": "Pliegue de monte",
       "mountainHelp": "Plegar el lado que se mueve alejándolo de ti, para que quede debajo.",
       "openSinkHelp": "Empujar hacia dentro el extremo de una punta cerrada, dando la vuelta a cada una de sus capas.",
-      "precrease": "Premarcar",
-      "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
       "reverse": "Pliegue inverso",
       "reverseHelp": "Invierte una solapa hacia dentro o envuélvela por fuera, invirtiendo su pliegue central.",
       "rotateHelp": "Girar el modelo una parte de vuelta o un ángulo exacto, primero en vista previa y luego como un paso propio.",
@@ -837,7 +825,6 @@
     "vertex": {
       "direction": "Sentido",
       "directionCannot": "En este sentido no se puede plegar plano aquí.",
-      "emergent": "Cuarto pliegue",
       "fix": {
         "creaseKites": "Marcar los pliegues de la cometa al plegar",
         "emergent": "Usar el cuarto pliegue que cabe",
@@ -848,16 +835,15 @@
         "precreaseKite": "Premarcar la cometa",
         "resetTarget": "Llevar el lomo a la bisagra"
       },
-      "fourthNone": "Ninguno",
-      "fourthsFit_one": "Un cuarto pliegue cabe con este papel quieto.",
-      "fourthsFit_many": "{{count}} cuartos pliegues caben con este papel quieto.",
-      "fourthsFit_other": "{{count}} cuartos pliegues caben con este papel quieto.",
       "help": {
         "petalHinge": "Levantar la punta inferior de una solapa a lo largo de una bisagra mientras sus lados se pliegan hacia dentro por dos pliegues de cometa.",
         "rabbitEar": "Plegar las esquinas de un triángulo a lo largo de sus bisectrices, para que se levante una punta.",
         "squash": "Abrir una solapa de dos capas y aplastarla, con su lomo sobre su bisagra.",
         "swivelEdge": "Girar un borde sobre una línea, pivotando en un punto."
       },
+      "hingeRegionBlocked": "Esta región de bisagra no se puede plegar con estas capas. Haz clic en otra región o cambia las capas.",
+      "hingeRegionBlockedTouch": "Esta región de bisagra no se puede plegar con estas capas. Toca otra región o cambia las capas.",
+      "hingeRegionFits": "El pliegue de bisagra está en la región seleccionada.",
       "intro": {
         "petalLift": "Levanta la punta de una solapa a lo largo de una bisagra.",
         "swivelSwing": "Gira un borde del papel sobre una línea."
@@ -886,10 +872,6 @@
       },
       "mountain": "Monte",
       "mountainTitle": "Monte: el papel gira alejándose de ti",
-      "noFourth": "Ningún cuarto pliegue cabe con este papel quieto: haz clic en otro papel para que se quede quieto.",
-      "noFourthAnywhere": "Ningún cuarto pliegue cabe con estos pliegues, sea cual sea el papel que se quede quieto: pulsa Esc y vuelve a elegir.",
-      "noFourthAnywhereTouch": "Ningún cuarto pliegue cabe con estos pliegues, sea cual sea el papel que se quede quieto: toca Cancelar y vuelve a elegir.",
-      "noFourthTouch": "Ningún cuarto pliegue cabe con este papel quieto: toca otro papel para que se quede quieto.",
       "note": {
         "petalCreasesAll": "Mientras la solapa se levanta, el pliegue marca la bisagra en la capa superior y los dos pliegues de la cometa en las dos capas superiores.",
         "petalCreasesHinge": "Mientras la solapa se levanta, el pliegue marca la bisagra en la capa superior. Los pliegues de la cometa ya están.",
@@ -929,7 +911,7 @@
           "title": "El cuarto pliegue no puede alzarse aquí"
         },
         "kite": {
-          "creaseOrPrecrease": "Sobre un pliegue bisagra, un pliegue pétalo vuelve a plegar pliegues que ya existen, y falta un pliegue de la cometa. Elige la bisagra por sus dos extremos y el pliegue marcará la cometa por sí mismo; o premárcala antes con la herramienta Premarcar en el Axioma 3: un borde inferior de la solapa superior sobre su línea central, sin las solapas de detrás.",
+          "creaseOrPrecrease": "Sobre un pliegue bisagra, un pliegue pétalo vuelve a plegar pliegues que ya existen, y falta un pliegue de la cometa. Elige la bisagra por sus dos extremos y el pliegue marcará la cometa por sí mismo; o premárcala antes con la opción Plegar y desplegar en el Axioma 3: un borde inferior de la solapa superior sobre su línea central, sin las solapas de detrás.",
           "titleMissing": "Faltan los pliegues de la cometa"
         },
         "line": {
@@ -1033,16 +1015,16 @@
       "reset": "Volver a la bisagra",
       "ridge": "Cresta",
       "steps": {
-        "earChoose": "Elige el cuarto pliegue y las capas, o haz clic en otra parte para que se quede quieta.",
-        "earChooseTouch": "Elige el cuarto pliegue y las capas, o toca otra parte para que se quede quieta.",
-        "earFinish": "Elige el cuarto pliegue y pulsa Intro.",
-        "earFinishTouch": "Elige el cuarto pliegue y toca {{action}}.",
+        "earChoose": "Elige las capas o haz clic en otra región para el pliegue de bisagra.",
+        "earChooseTouch": "Elige las capas o toca otra región para el pliegue de bisagra.",
+        "earFinish": "Pulsa Enter para plegar.",
+        "earFinishTouch": "Toca {{action}} para plegar.",
         "earFirstCorner": "Haz clic en la primera esquina del triángulo.",
         "earFirstCornerTouch": "Toca la primera esquina del triángulo.",
+        "earHingeRegion": "Haz clic en la región donde debe ir el pliegue de bisagra.",
+        "earHingeRegionTouch": "Toca la región donde debe ir el pliegue de bisagra.",
         "earSecondCorner": "Haz clic en su segunda esquina.",
         "earSecondCornerTouch": "Toca su segunda esquina.",
-        "earStay": "Haz clic en la parte del papel que se queda quieta.",
-        "earStayTouch": "Toca la parte del papel que se queda quieta.",
         "earThirdCorner": "Haz clic en su tercera esquina.",
         "earThirdCornerTouch": "Toca su tercera esquina.",
         "fixOrPickAgain": "Haz clic en una solución de abajo, o pulsa Esc y vuelve a elegir.",
@@ -1092,6 +1074,7 @@
     "window": {
       "cancel": "Cancelar",
       "finding": "Buscando las capas en la línea…",
+      "foldAndUnfold": "Plegar y desplegar",
       "instructions": "Instrucciones",
       "kind": "Pliegue",
       "label": "Opciones de la herramienta de plegado",

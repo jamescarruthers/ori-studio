@@ -1,5 +1,5 @@
 /**
- * The Precrease tool's own part of the plain fold window
+ * The fold-and-unfold option's part of the plain fold window
  * (`tools/foldToolWindow`): the extent control — Whole line, Segment, Pinch —
  * and, for a segment or a pinch, the clicks along the located line its
  * instructions add and the notes on what they snap to.
@@ -24,7 +24,7 @@ import {
   type FoldExtentMode,
 } from './precreaseExtent';
 
-/** The Precrease tool's extent, as its window reads it. */
+/** The fold-and-unfold extent, as its window reads it. */
 export interface FoldExtentWindowView {
   mode: FoldExtentMode;
   /** How many of its points along the line are clicked. */

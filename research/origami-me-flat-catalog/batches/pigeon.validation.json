@@ -1,6 +1,6 @@
 {
   "source": "https://origami.me/pigeon/",
-  "file": "models/pigeon.osf",
+  "file": "../2026-10-13-origami-fold-trials/models/completed/pigeon.osf",
   "fileSha256": "f43db0e7c0178cae989358bb83e6f038b87e4ba9d2a73c60401263a400945493",
   "nodes": 12,
   "folds": 9,
@@ -24,7 +24,7 @@
   "sourceStepsCompleted": 11,
   "sourceSteps": 11,
   "audit": "ready for user audit; not user-approved",
-  "proportions": "Thirds used for steps 3\u20134; wing hinge y=-r/3.",
+  "proportions": "Thirds used for steps 3–4; wing hinge y=-r/3.",
   "allNativeStatesVisuallyChecked": true,
   "materialChecks": "pigeon.material-checks.json",
   "screenshot": "pigeon-fold.png"

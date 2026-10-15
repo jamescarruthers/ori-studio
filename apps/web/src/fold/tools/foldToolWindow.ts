@@ -12,7 +12,7 @@
  *   line (the cross-section picker and the flap chips), a refusal with its
  *   fixes, and Cancel / commit.
  *
- * The Precrease tool adds its extent control in both phases — the whole line,
+ * Fold and unfold adds its extent control in both phases — the whole line,
  * a segment or a pinch — and a segment's or a pinch's clicks along the line
  * to its steps (`tools/precrease/precreaseToolWindow`).
  *
@@ -50,7 +50,7 @@ import {
   isVertexTool,
   lineModeLabel,
   lineModeSteps,
-  type FoldKind,
+  type FoldPlainToolId,
   type FoldKeyLabel,
   type FoldLineModeId,
   type FoldSecondLineModeId,
@@ -123,6 +123,8 @@ export interface FoldPreview {
 }
 
 export interface FoldToolWindowView extends FoldToolsView {
+  /** Plain folds return to the starting pose after creasing. */
+  foldAndUnfold?: boolean;
   /** How many of the line mode's references are picked. */
   picks: number;
   /** The located line, or null while it is being located. */
@@ -145,7 +147,7 @@ export interface FoldToolWindowView extends FoldToolsView {
   vertex?: FoldVertexWindowView;
   /** A sink tool's point and choices, while it previews (`tools/sink/sinkToolWindow`). */
   sink?: FoldSinkWindowView;
-  /** The Precrease tool's extent and its points along the line (`tools/precrease`); absent for every other tool. */
+  /** Fold-and-unfold extent and its points along the line (`tools/precrease`); absent for every other tool. */
   extent?: FoldExtentWindowView;
   /** The Rotate tool's rotation (`tools/rotate`); absent where the surface offers none. */
   rotate?: FoldRotateWindowView;
@@ -192,6 +194,7 @@ export interface FoldToolWindowVerbs
   stepPocket?: (delta: number) => void;
   /** How much of its line a precrease creases (`tools/precrease`). */
   setExtent?: (mode: FoldExtentMode) => void;
+  setFoldAndUnfold?: (enabled: boolean) => void;
   /** How far and which way Rotate turns the model (`tools/rotate`). */
   setRotation?: (rotation: TurnRotation) => void;
 }
@@ -242,10 +245,10 @@ export interface FoldLineModeSelect {
 export interface FoldKindControl {
   label: string;
   /** Null while the tool in hand is no plain fold. */
-  value: FoldKind | null;
-  options: readonly { value: FoldKind; label: string }[];
+  value: FoldPlainToolId | null;
+  options: readonly { value: FoldPlainToolId; label: string }[];
   disabled: boolean;
-  set: (kind: FoldKind) => void;
+  set: (kind: FoldPlainToolId) => void;
 }
 
 export interface FoldMovingSideControl {
@@ -286,6 +289,7 @@ export interface FoldToolWindowModel {
   instructions: FoldToolInstructions;
   lineMode: FoldLineModeSelect | null;
   kind: FoldKindControl | null;
+  foldAndUnfold?: { label: string; checked: boolean; disabled: boolean; set: (enabled: boolean) => void };
   movingSide: FoldMovingSideControl | null;
   layers: FoldLayersSection | null;
   refusal: FoldRefusalNoticeModel | null;
@@ -432,7 +436,7 @@ export function locateInstructions(
       ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', { action })
       : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.'));
   // A precrease of part of its line: its points along the line, once it is located.
-  const extent = view.tool === 'precrease' ? view.extent : undefined;
+  const extent = isFoldKind(view.tool) && view.foldAndUnfold ? view.extent : undefined;
   const items = [...lineModeSteps(t, view.lineMode), ...extentLocateSteps(t, extent), finish];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
@@ -444,7 +448,6 @@ export function locateInstructions(
 
 function previewInstructions(
   t: TFunction,
-  kind: FoldKind,
   host: FoldToolHost,
   preview: FoldPreview,
   extent: FoldExtentWindowView | undefined,
@@ -458,7 +461,7 @@ function previewInstructions(
       ...(along?.along ?? []),
       t('tools:fold.steps.pickLayers', 'Pick which layers move.'),
       host.coarse
-        ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: along ? action : foldToolLabel(t, kind) })
+        ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action })
         : t('tools:fold.steps.commit', 'Press Enter to fold.'),
     ],
     // Picking layers is optional: the top flap folds unless the folder picks
@@ -590,15 +593,22 @@ export function foldToolWindow(
   const { preview } = view;
   // A precrease's extent: the control in both phases, so a pinch can be
   // chosen before its line is located, and its points along the line after.
-  const extentView = kind === 'precrease' ? view.extent : undefined;
+  const extentView = view.foldAndUnfold ? view.extent : undefined;
   const extent = extentView ? extentControl(t, extentView, verbs.setExtent, readOnly) : null;
-  const action = extentCommitLabel(t, extentView, title);
+  const foldAndUnfold = {
+    label: t('tools:fold.window.foldAndUnfold', 'Fold and unfold'),
+    checked: view.foldAndUnfold === true,
+    disabled: readOnly || !verbs.setFoldAndUnfold,
+    set: (enabled: boolean) => verbs.setFoldAndUnfold?.(enabled),
+  };
+  const action = extentCommitLabel(t, extentView, view.foldAndUnfold ? foldAndUnfold.label : title);
 
   if (!preview) {
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, extent ? 2 : 1),
+      meta: settingsMeta(t, extent ? 3 : 2),
+      foldAndUnfold,
       instructions: locateInstructions(t, view, action, host),
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,
@@ -614,8 +624,9 @@ export function foldToolWindow(
   return {
     phase: 'preview',
     title,
-    meta: settingsMeta(t, extent ? 4 : 3),
-    instructions: previewInstructions(t, kind, host, preview, extentView, action),
+    meta: settingsMeta(t, extent ? 5 : 4),
+    foldAndUnfold,
+    instructions: previewInstructions(t, host, preview, extentView, action),
     lineMode: null,
     kind: {
       label: t('tools:fold.window.kind', 'Fold'),
@@ -639,7 +650,7 @@ export function foldToolWindow(
           t,
           preview.refused,
           {
-            kind,
+            kind: view.foldAndUnfold ? 'precrease' : kind,
             readOnly,
             ...sectionFlapNames(preview.section),
             ...(extentView ? { extent: { mode: extentView.mode, allLayers: preview.seed === 'all' } } : {}),

@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { trackFoldChoiceOffered } from '../../../analytics';
-import { reportError } from '../../../monitoring';
-import { canonicalJson } from '../../document/foldDigest';
 import {
   isSwivelOnFoldOp,
   swivelKindOf,
@@ -20,7 +18,7 @@ import {
   fanCenterScene,
   fanHasNoFourth,
   fanLayerCount,
-  fanOpsElsewhere,
+  fanAnchorAlternative,
   landingFourths,
   swivelDirectionsOf,
   swivelKindsLanding,
@@ -101,44 +99,6 @@ export interface FoldVertexStepAnswer {
 const NONE: FoldVertexStepAnswer = { step: null, vertex: null, refused: null };
 
 /**
- * Whether any of `asks` — a fan with each other region as the paper that
- * stays (`fanOpsElsewhere`) — has a fourth crease that lands: asked of the
- * engine once per set on a state, one after another, stopping at the first
- * that does. Null while asking, and with nothing to ask.
- */
-function useFourthElsewhere(
-  session: FoldSessionSurface,
-  stateKey: string | null,
-  asks: readonly FoldVertexOp[]
-): boolean | null {
-  const { withCursor } = session;
-  const key = asks.length > 0 && stateKey ? `${stateKey}|${canonicalJson(asks)}` : null;
-  const [answer, setAnswer] = useState<{ key: string; lands: boolean } | null>(null);
-  useEffect(() => {
-    if (key === null || answer?.key === key) return undefined;
-    let current = true;
-    void withCursor(async (engine, at) => {
-      for (const op of asks) {
-        const reply = await engine.compoundAnalysis(at, op);
-        if (reply.status === 'ok' && reply.family === 'vertex' && !fanHasNoFourth(reply)) return true;
-      }
-      return false;
-    }).then(
-      (reply) => {
-        if (current && reply.status === 'answered') setAnswer({ key, lands: reply.value });
-      },
-      (error: unknown) => reportError(error, { surface: 'fold:vertex' })
-    );
-    return () => {
-      current = false;
-    };
-    // The asks are read through their key: equal asks must not ask again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [withCursor, key, answer?.key]);
-  return answer && answer.key === key ? answer.lands : null;
-}
-
-/**
  * A vertex tool's step (plan Phase 11), the reverse tool's `useFoldReverseStep`
  * for the squash, petal fold, rabbit ear and swivel: the clicks asked about
  * (the compound question, `useFoldCompoundAsk`) as a flap, a line or a fan;
@@ -151,10 +111,8 @@ function useFourthElsewhere(
  * fold the engine has not described. The preview and the commit go through
  * the session as every step's do.
  *
- * A fan none of whose fourth creases lands builds no step at all — nothing
- * is refused for a choice the folder did not make — and the other regions
- * are asked about as the paper that stays, so the window can say whether
- * other paper helps (`elsewhere`).
+ * A rabbit ear tries the other stationary anchor when the first cannot
+ * support the selected hinge. Neither attempt changes the hinge region.
  */
 export function useFoldVertexStep(
   session: FoldSessionSurface,
@@ -190,10 +148,17 @@ export function useFoldVertexStep(
 
   // --- The geometry, asked once per base op on a state.
   const asked = useMemo(() => (intent && index ? vertexAskedOp(intent, index) : null), [intent, index]);
-  const base = asked && 'kind' in asked ? asked : null;
+  const initial = asked && 'kind' in asked ? asked : null;
   const told = asked && 'status' in asked ? asked : null;
-  const first = useFoldCompoundAsk(session, stateKey, base ? { op: base } : null, 'vertex', 'fold:vertex');
-  const firstAnswer = first?.asked ?? null;
+  const first = useFoldCompoundAsk(session, stateKey, initial ? { op: initial } : null, 'vertex', 'fold:vertex');
+  const needsAnchor = initial?.kind === 'rabbit-ear' && (first?.refused != null || fanHasNoFourth(first?.asked ?? null));
+  const alternative = useMemo(() => needsAnchor && intent && index && initial ? fanAnchorAlternative(intent, index, initial) : null, [needsAnchor, intent, index, initial]);
+  const alternate = useFoldCompoundAsk(session, stateKey, alternative ? { op: alternative } : null, 'vertex', 'fold:vertex');
+  const useAlternate = alternative !== null && alternate?.asked != null && !fanHasNoFourth(alternate.asked);
+  const resolvingAnchor = alternative !== null && alternate === null;
+  const base = useAlternate ? alternative : initial;
+  const resolved = useAlternate ? alternate : first;
+  const firstAnswer = resolvingAnchor ? null : resolved?.asked ?? null;
 
   // --- The op as it will be folded, asked again when a choice makes it another fold.
   const chosen = useMemo(
@@ -217,15 +182,6 @@ export function useFoldVertexStep(
     [chosen, answer, taken]
   );
 
-  // --- A fan none of whose fourth creases lands with this paper staying:
-  // whether one would with other paper, so the window offers what helps.
-  const stuck = fanHasNoFourth(firstAnswer);
-  const asksElsewhere = useMemo(
-    () => (stuck && intent && index && base ? fanOpsElsewhere(intent, index, base) : []),
-    [stuck, intent, index, base]
-  );
-  const elsewhere = useFourthElsewhere(session, stateKey, asksElsewhere);
-
   // --- What the window and the canvas read beside the step.
   const center = intent ? fanCenterScene(intent) : null;
   const layers = center && index ? fanLayerCount(index, center) : 0;
@@ -237,7 +193,7 @@ export function useFoldVertexStep(
   const fourths = useMemo(() => landingFourths(firstAnswer), [firstAnswer]);
   const candidates = fourths.length;
   const ridges = firstAnswer?.analysis.kind === 'swivel-by-edge';
-  const firstKey = first?.key ?? null;
+  const firstKey = resolved?.key ?? null;
   const orderKey = again ? (second?.key ?? null) : firstKey;
   const orderCount = built?.orders.length ?? 0;
   useEffect(() => {
@@ -252,7 +208,7 @@ export function useFoldVertexStep(
   }, [firstKey, candidates, ridges, orderKey, orderCount]);
 
   if (!intent) return NONE;
-  const refused = told ?? first?.refused ?? answerRefused;
+  const refused = told ?? (resolvingAnchor ? null : resolved?.refused) ?? answerRefused;
   // A swivel on a folded edge's kind folded, and the ways that land of it.
   const kind = chosen?.kind ?? null;
   const askedKind = base && isSwivelOnFoldOp(base) ? swivelKindOf(base) : null;
@@ -269,7 +225,7 @@ export function useFoldVertexStep(
       answer,
       emergent: chosen?.emergent ?? null,
       fourths,
-      elsewhere: stuck ? elsewhere : null,
+      elsewhere: null,
       // The folder's, or the other when only that one lands.
       direction: chosen?.direction ?? intent.direction,
       orders: built?.orders ?? [],

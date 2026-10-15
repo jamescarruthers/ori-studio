@@ -160,6 +160,7 @@ impl Swivel {
         };
         Ok(FanInput {
             kind: VertexFoldKind::Swivel,
+            triangle: None,
             center: self.vertex,
             given: [a, b, c],
             emergent: self.emergent,
@@ -697,6 +698,7 @@ impl Construction {
         let (ridge, other) = if k == 0 { (foot, end) } else { (end, foot) };
         Ok(FanInput {
             kind: VertexFoldKind::Swivel,
+            triangle: None,
             center: self.vertex,
             given: [meet, other, hinge],
             emergent: ridge,

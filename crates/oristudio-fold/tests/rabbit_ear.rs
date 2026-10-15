@@ -417,3 +417,133 @@ fn the_fans_own_refusals() {
     };
     assert_eq!(refused.refusal.code(), "fan_center");
 }
+
+#[test]
+fn rabbit_ears_reuse_precreased_triangular_layers() {
+    for case in cases::ear_cases()
+        .into_iter()
+        .chain(cases::mountain_ear_cases())
+        .filter(|case| !case.name.contains("kite"))
+    {
+        let name = case.name;
+        let mut state = case.state.clone();
+        let center = state.analyse_rabbit_ear(&case.op).unwrap().center;
+        for corner in case.op.corners {
+            let toward = [center[0] + 0.031, center[1] + 0.073];
+            state = cases::precrease(&state, center, corner, toward, Seed::All);
+        }
+        let interior = |p: [f64; 2]| {
+            if state.face_at(p).is_some() {
+                return p;
+            }
+            let parent = case.state.face_at(p);
+            (0..24)
+                .map(|k| {
+                    let a = 0.137 + k as f64 * 2.399963229728653;
+                    [p[0] + a.cos() * 0.002, p[1] + a.sin() * 0.002]
+                })
+                .find(|q| state.face_at(*q).is_some() && case.state.face_at(*q) == parent)
+                .unwrap()
+        };
+        let mut prepared_op = case.op.clone();
+        prepared_op.stayer = interior(prepared_op.stayer);
+        prepared_op.layers = match prepared_op.layers {
+            Seed::All => Seed::All,
+            Seed::Depth { at, layers } => Seed::Depth {
+                at: interior(at),
+                layers,
+            },
+            Seed::Flaps { at } => Seed::Flaps {
+                at: at.into_iter().map(interior).collect(),
+            },
+        };
+        for (_, ray) in candidates_of(&case.state, &case.op) {
+            let op = RabbitEar {
+                emergent: ray,
+                ..prepared_op.clone()
+            };
+            let control = case.state.rabbit_ear(&op, &VertexChoices::default());
+            if let Err(CompoundRefused::Refused(_)) = control {
+                assert!(
+                    state.rabbit_ear(&op, &VertexChoices::default()).is_err(),
+                    "{name}: precreasing must not bypass an incompatible hinge"
+                );
+                continue;
+            }
+            let folded = landed(state.rabbit_ear(&op, &VertexChoices::default()));
+            check(&state, &folded);
+            assert!(folded.state.faces().len() >= state.faces().len());
+            let clean = landed(case.state.rabbit_ear(&op, &VertexChoices::default()));
+            assert_eq!(
+                vertex::folded_segments(&folded.state),
+                vertex::folded_segments(&clean.state),
+                "{name}"
+            );
+            // At every shared interior sample the same sheet material must be
+            // visible in the same stack order, not merely the same silhouette.
+            for x in 1..30 {
+                for y in 1..30 {
+                    let p = [x as f64 / 30.0 + 0.00017, y as f64 / 30.0 + 0.00031];
+                    if let (Some(a), Some(b)) = (folded.state.stack_at(p), clean.state.stack_at(p))
+                    {
+                        assert_eq!(a.len(), b.len(), "{name} layer count at {p:?}");
+                        for (a, b) in a.into_iter().zip(b) {
+                            let material_a = folded.state.isometry(a).unwrap().inverse().apply(p);
+                            let material_b = clean.state.isometry(b).unwrap().inverse().apply(p);
+                            assert!(
+                                (material_a[0] - material_b[0])
+                                    .hypot(material_a[1] - material_b[1])
+                                    < 1e-6,
+                                "{name} layer order at {p:?}"
+                            );
+                            assert_eq!(folded.state.front_up(a), clean.state.front_up(b));
+                        }
+                    }
+                }
+            }
+            for x in 1..20 {
+                for y in 1..20 {
+                    let p = [x as f64 / 20.0 + 0.0013, y as f64 / 20.0 + 0.0021];
+                    if let (Some(a), Some(b)) = (folded.state.face_at(p), clean.state.face_at(p)) {
+                        let a = folded.state.isometry(a).unwrap().apply(p);
+                        let b = clean.state.isometry(b).unwrap().apply(p);
+                        assert!(
+                            (a[0] - b[0]).hypot(a[1] - b[1]) < 1e-6,
+                            "{name} material {p:?}: {a:?} != {b:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn a_rabbit_ear_crosses_unrelated_precreases_without_losing_their_history() {
+    let case = case("3c flat square");
+    let mut state = case.state.clone();
+    for (p, q) in [([0.0, 0.23], [1.0, 0.23]), ([0.6, 0.0], [0.6, 1.0])] {
+        state = cases::precrease(&state, p, q, [0.9, 0.1], Seed::All);
+    }
+    let op = at_degree(&case.state, &case.op, 0);
+    let folded = landed(state.rabbit_ear(&op, &VertexChoices::default()));
+    check(&state, &folded);
+    let control = landed(case.state.rabbit_ear(&op, &VertexChoices::default()));
+    assert_eq!(
+        vertex::folded_segments(&folded.state),
+        vertex::folded_segments(&control.state)
+    );
+    assert_eq!(
+        &folded.state.vertices()[..state.vertices().len()],
+        state.vertices()
+    );
+    for crease in folded.state.creases() {
+        let [a, b] = crease
+            .vertices
+            .map(|v| folded.state.vertices()[v.0 as usize]);
+        let mid = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
+        if let Some(old) = state.crease_at(mid) {
+            assert_eq!(crease.made_at, old.made_at, "crease provenance at {mid:?}");
+        }
+    }
+}

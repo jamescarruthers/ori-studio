@@ -1,3 +1,4 @@
+import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { setFoldView } from '../sequence/foldViewMode';
@@ -14,6 +15,8 @@ import { withFoldCanvasVerbs } from './foldCanvasCommands';
 export function useFoldReadOnly(): FoldReadOnlyReason | null {
   const readOnly = useFoldSessionState((snapshot) => snapshot.readOnly);
   const cursor = useFoldCursor();
+  const returning = useFoldReturnUi((s) => s.opening !== null);
+  if (returning) return 'preview';
   if (readOnly) return 'newer';
   return cursor.status === 'locked' ? 'locked' : null;
 }

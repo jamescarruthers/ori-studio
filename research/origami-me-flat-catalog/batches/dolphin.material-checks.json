@@ -1,0 +1,18 @@
+{
+  "slug": "dolphin",
+  "allStatesReplayedIdentically": true,
+  "precreasesPreserveSingleWhiteLayer": {
+    "point": [
+      0.2,
+      0.8
+    ],
+    "before": [
+      0.42426406871192845,
+      0.7071067811865477
+    ],
+    "after": [
+      0.42426406871192845,
+      0.7071067811865477
+    ]
+  }
+}

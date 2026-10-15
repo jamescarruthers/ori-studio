@@ -3,6 +3,8 @@ import { useFoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
 import { useFoldStepPane } from '../../fold/sequence/useFoldStepPane';
 import { useFoldStepSpread } from '../../fold/sequence/useFoldStepSpread';
 import { useFoldSession } from '../../fold/session/useFoldSession';
+import { FoldCollapseControls } from '../fold/collapse/FoldCollapse';
+import { FoldReturnControls } from '../fold/return/FoldReturnControls';
 import { FoldStepPane } from '../fold/FoldStepPane';
 import { Notice } from '../ui/Notice';
 import styles from './FoldStepPanel.module.css';
@@ -37,6 +39,8 @@ export function FoldStepPanel() {
             </Notice>
           </div>
         )}
+        <FoldCollapseControls />
+        <FoldReturnControls />
         <FoldStepPane
           step={pane.step}
           pending={pane.pending}

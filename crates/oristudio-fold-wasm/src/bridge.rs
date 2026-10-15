@@ -48,7 +48,10 @@ enum Held {
     /// A flat sheet.
     Sheet(State),
     /// A turn or a rotation of `parent`.
-    View { state: State, parent: u32 },
+    View {
+        state: State,
+        parent: u32,
+    },
     /// A fold of `parent`, with its report.
     Fold {
         folded: Box<Folded>,
@@ -58,6 +61,10 @@ enum Held {
     /// An imported crease pattern (a `cp-jump`, plan D16), landed after a
     /// state it replaces.
     Jump(State),
+    Returned {
+        state: State,
+        parent: u32,
+    },
     /// A compound fold of `parent`, any family's (`crate::compound`): its
     /// step's summary and picture are its own to give, against `parent`
     /// when it needs it.
@@ -70,7 +77,10 @@ enum Held {
 impl Held {
     fn state(&self) -> &State {
         match self {
-            Held::Sheet(state) | Held::View { state, .. } | Held::Jump(state) => state,
+            Held::Sheet(state)
+            | Held::View { state, .. }
+            | Held::Jump(state)
+            | Held::Returned { state, .. } => state,
             Held::Fold { folded, .. } => &folded.state,
             Held::Compound { landed, .. } => landed.state(),
         }
@@ -286,6 +296,31 @@ impl Bridge {
         })
     }
 
+    /// Restore a recorded target pose with the physical creases of the supplied history.
+    pub fn return_to(
+        &mut self,
+        current: u32,
+        target: u32,
+        history: &[u32],
+    ) -> Result<Outcome<Applied>, BridgeError> {
+        let history = history
+            .iter()
+            .map(|&s| self.state(s))
+            .collect::<Result<Vec<_>, _>>()?;
+        let result = oristudio_fold::reversal::restore_pose(
+            self.state(current)?,
+            self.state(target)?,
+            &history,
+        );
+        Ok(match result {
+            Ok(returned) => Outcome::Ok(self.hold_step(Held::Returned {
+                state: returned.state,
+                parent: current,
+            })),
+            Err(refusal) => Outcome::Refused(refusal.into()),
+        })
+    }
+
     /// Hold a compound fold of the held state `parent` that its family's own
     /// call landed — a crimp's or a tuck's order, a vertex fold's pick — as
     /// `apply` would have: its handle and its step as `apply` returns it.
@@ -304,7 +339,9 @@ impl Bridge {
         let (report, compound) = match &held {
             Held::Fold { folded, .. } => (Some(folded.report.clone()), None),
             Held::Compound { landed, .. } => (None, Some(landed.report())),
-            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => (None, None),
+            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) | Held::Returned { .. } => {
+                (None, None)
+            }
         };
         Applied {
             state: self.hold(held),
@@ -330,6 +367,10 @@ impl Bridge {
             Held::View {
                 state: child,
                 parent,
+            }
+            | Held::Returned {
+                state: child,
+                parent,
             } => Ok(Some(StepSummary::new(
                 self.parent(state, *parent)?,
                 child,
@@ -353,7 +394,7 @@ impl Bridge {
     /// parent must still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
-            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => Ok(None),
+            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) | Held::Returned { .. } => Ok(None),
             Held::Fold {
                 folded,
                 parent,

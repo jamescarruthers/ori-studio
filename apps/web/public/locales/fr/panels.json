@@ -1546,7 +1546,6 @@
       "pathBrokenHint": "Une étape de ce chemin ne se plie plus.",
       "pathLockedHint": "Une étape de ce chemin a été créée avec une version plus récente d’Ori Studio.",
       "pathReplayingHint": "Les étapes sont encore en cours de pliage.",
-      "precrease": "Prépliage",
       "readOnlyHint": "Créée avec une version plus récente d’Ori Studio\u00a0: cette séquence s’ouvre en lecture seule.",
       "replayingHint": "Les étapes précédentes sont encore en cours de pliage.",
       "rotate": "Tourner…",
@@ -1566,6 +1565,14 @@
       "stepCreases": "Plis de l’étape",
       "stepCreasesTitle": "Dessiner en gras les plis faits par l’étape affichée, comme son instruction",
       "toolbar": "Vue de pliage"
+    },
+    "collapse": {
+      "changed": "Une mise à jour est disponible. Cette étape utilise toujours la version enregistrée du CP.",
+      "openSource": "Ouvrir le CP source",
+      "replay": "La mise à jour recalcule les plis suivants. Vérifiez les étapes modifiées ou impossibles à plier dans la chronologie avant de continuer.",
+      "saved": "La version enregistrée du CP est utilisée. Les modifications de la source ne sont appliquées que lors de la mise à jour.",
+      "unavailable": "Le CP source est indisponible. La copie enregistrée peut toujours être rejouée.",
+      "update": "Mettre à jour depuis le CP"
     },
     "grid": {
       "broken": "Cette étape ne se plie plus",
@@ -1618,6 +1625,34 @@
       "scrub": "Progression de l’étape",
       "stepForward": "Avancer un peu"
     },
+    "return": {
+      "append": "Ajouter une étape de dépliage",
+      "changed": "Les plis précédents ont changé. Recalculez ce dépliage pour vérifier le nouveau résultat.",
+      "empty": "Effectuez d’abord un pli.",
+      "failureTitle": "Dépliage impossible",
+      "finishPreview": "Terminez ou annulez d’abord l’aperçu du dépliage.",
+      "invalidTarget": "Choisissez une étape antérieure sur cette branche.",
+      "label": "Déplier jusqu’à une étape",
+      "last": "Déplier la dernière étape",
+      "limit": "L’historique des plis est trop volumineux pour être restauré de manière fiable.",
+      "loading": "Préparation de l’aperçu du dépliage…",
+      "noop": "Le papier a déjà cette forme avec ces plis.",
+      "numberedSentence": "Revenir à l’étape {{number}} en conservant tous les plis.",
+      "open": "Déplier jusqu’à une étape…",
+      "preview": "L’aperçu est affiché ci-dessous. Tous les plis sont conservés.",
+      "rebuild": "Recalculer le dépliage",
+      "refused": "Le moteur n’a pas pu restaurer cette forme tout en conservant l’historique des plis. Aucune étape n’a été modifiée.",
+      "retain": "Revenir à une forme antérieure en conservant tous les plis.",
+      "sentence": "Revenir à la forme pliée précédente en conservant tous les plis.",
+      "sheet": "Feuille de départ",
+      "sheetSentence": "Déplier jusqu’à la feuille de départ en conservant tous les plis.",
+      "step": "Étape {{number}}",
+      "target": "Revenir à",
+      "title": "Aperçu du dépliage",
+      "turn": "Rotation après l’étape {{number}}",
+      "unavailable": "Attendez la fin de la relecture des étapes précédentes, puis réessayez.",
+      "viewTarget": "Voir la cible : {{target}}"
+    },
     "sentence": {
       "behind": {
         "petal": "Faites un pli pétale avec le rabat, vers l’arrière.",
@@ -1633,6 +1668,7 @@
         "swivelInsideLine": "Faites pivoter le bord vers l’arrière sur la ligne en pli pivot intérieur, les plis se rejoignant sur le bord plié."
       },
       "closedSink": "Enfoncez la pointe en enfoncement fermé : poussez-la vers l’intérieur, ses couches restant ensemble.",
+      "collapse": "Mettez en forme selon le canevas de plis enregistré.",
       "cpJump": "Repliez le papier selon le patron de plis importé.",
       "crimp": {
         "inside": {
@@ -2646,7 +2682,7 @@
       "branchStep": "Vous êtes à l’étape {{at}} sur {{total}}\u00a0: plier ici commence une nouvelle branche.",
       "broken": "Cette étape ne se plie plus\u00a0: ce dont elle est faite n’est plus sur le papier avant elle. Elle et les étapes suivantes ne peuvent qu’être supprimées.",
       "brokenAbove": "Une étape précédente ne se plie plus, donc celle-ci ne peut pas être affichée.",
-      "changed": "Cette étape se plie autrement dans cette version d’Ori Studio que lors de son enregistrement.",
+      "changed": "Cette étape se plie autrement que lors de son enregistrement. Vérifiez ses entrées et les étapes précédentes.",
       "changes": "Modifications",
       "chosen": "Choix parmi plusieurs",
       "creases": "Plis",
@@ -2737,6 +2773,7 @@
         "swivelInside": "Pli pivot intérieur vers l’arrière"
       },
       "closedSink": "Enfoncement fermé",
+      "collapse": "Mettre en forme",
       "cpJump": "Importer un patron de plis",
       "crimpInside": "Crimp intérieur",
       "crimpOutside": "Crimp extérieur",
@@ -2758,6 +2795,7 @@
       "originFold": "Fichier FOLD",
       "originOrh": "Fichier ORH",
       "originOri": "Fichier ORI",
+      "originProjectCp": "Canevas de plis du projet",
       "originSample": "Exemple",
       "outsideReverse": "Pli inversé extérieur",
       "petal": "Pli pétale",

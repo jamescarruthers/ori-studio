@@ -290,12 +290,12 @@ export interface FoldRotateOp {
 }
 
 /** Where an imported crease pattern came from: a closed enum, never a file name (plan D16, D18). */
-export type FoldCpOrigin = 'cp' | 'fold' | 'ori' | 'orh' | 'sample' | 'edit_folded_figure';
+export type FoldCpOrigin = 'cp' | 'fold' | 'ori' | 'orh' | 'sample' | 'edit_folded_figure' | 'project_cp';
 
-export const FOLD_CP_ORIGINS: readonly FoldCpOrigin[] = ['cp', 'fold', 'ori', 'orh', 'sample', 'edit_folded_figure'];
+export const FOLD_CP_ORIGINS: readonly FoldCpOrigin[] = ['cp', 'fold', 'ori', 'orh', 'sample', 'edit_folded_figure', 'project_cp'];
 
 /**
- * Import CP (plan D16): a snapshot, not a link. The crease pattern and its
+ * Import CP: an authoritative snapshot, optionally linked to a project CP. The crease pattern and its
  * chosen layer order are compact JSON strings — about a third the size of
  * nested arrays in the pretty-printed project file — and the order names
  * faces by interior sheet-point witnesses, as {@link FoldChoices} does.
@@ -305,6 +305,8 @@ export interface FoldCpJumpOp {
   cpJson: string;
   orderJson: string;
   origin: FoldCpOrigin;
+  /** Project-local source. Replay always uses cpJson and orderJson, never the live source. */
+  source?: { documentId: string; revision: string };
 }
 
 // --- Compound folds (plan D4), one block per family -------------------------
@@ -590,7 +592,15 @@ export interface FoldSinkOp extends FoldAlongLine {
 // ---------------------------------------------------------------------------
 
 /** What a step does. A kind this build does not know locks its node and subtree. */
+/** A recorded ancestor pose, restored with every physical crease retained. */
+export interface FoldReturnOp {
+  kind: 'unfold-to';
+  target: string | null;
+  source: { path: string; state: string; targetState: string };
+}
+
 export type FoldOp =
+  | FoldReturnOp
   | FoldPlainOp
   | FoldPrecreaseOp
   | FoldCreaseOp
@@ -610,6 +620,7 @@ export const FOLD_OP_KINDS: readonly FoldOpKind[] = [
   'mountain',
   'precrease',
   'unfold',
+  'unfold-to',
   'refold',
   'turn',
   'rotate',

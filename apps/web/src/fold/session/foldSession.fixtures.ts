@@ -215,6 +215,12 @@ export function fakeFoldEngine({ refuse, fail, compound }: FakeFoldEngineOptions
       return landed.status === 'ok' ? { ...landed, fingerprint: fingerprintOf(held(landed.state)) } : landed;
     },
 
+    returnTo(current, target, history) {
+      held(current); history.forEach(held);
+      const trail = [...held(target), 'return'];
+      return { status: 'ok', state: land(trail), report: null, summary: summaryOf(trail), fingerprint: fingerprintOf(trail) };
+    },
+
     summary(state) {
       log.push('summary');
       return summaryOf(held(state));
@@ -279,6 +285,7 @@ function workerOver(calls: FoldEngineCalls, version: number): FoldSessionWorker 
     analyse: async (state, op, choices) => calls.analyse(state, op, choices),
     apply: async (state, op, choices) => calls.apply(state, op, choices),
     step: async (state, op, choices) => calls.step(state, op, choices),
+    returnTo: async (current, target, history) => calls.returnTo(current, target, history),
     summary: async (state) => calls.summary(state),
     fingerprint: async (state) => calls.fingerprint(state),
     release: async (states) => calls.release(states),
@@ -388,6 +395,7 @@ export function inProcessFoldRuntime(makeEngine: () => FoldEngineCalls, version 
       generation: () => generation,
       sheet: (paper) => ask((worker) => worker.sheet(paper)),
       step: (state, op, choices) => ask((worker) => worker.step(state, op, choices)),
+      returnTo: (current, target, history) => ask((worker) => worker.returnTo(current, target, history)),
       release: (states) => ask((worker) => worker.release([...states])),
     },
     engine: () => engine,

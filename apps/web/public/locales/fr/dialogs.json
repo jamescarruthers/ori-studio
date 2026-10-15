@@ -323,6 +323,8 @@
   "foldImport": {
     "back": "Retour",
     "browse": "ou cliquez pour parcourir",
+    "collapse": "Mettre en forme",
+    "collapseTitle": "Mettre en forme depuis le CP",
     "creases_one": "{{count}} pli",
     "creases_many": "{{count}} plis",
     "creases_other": "{{count}} plis",
@@ -352,8 +354,10 @@
       "afterStep": "Ajoute une étape après l’étape {{number}}, son état plié calculé à partir des plis.",
       "branch": "Elle commence une nouvelle branche.",
       "empty": "Commence la séquence sur la feuille du patron de plis, pliée selon ses plis. Utilisez-le quand un état ne peut pas être atteint pli après pli.",
+      "update": "Met à jour cette étape de mise en forme. Les étapes suivantes et les branches sont conservées et recalculées ; les plis concernés sont signalés comme modifiés ou impossibles à plier.",
       "why": "Utilisez-le quand l’état suivant ne peut pas être atteint pli après pli."
     },
+    "projectCp": "Mettre en forme depuis le CP…",
     "refusal": {
       "budget": {
         "text": "Trouver comment les couches s’empilent a pris plus de temps qu’un import n’en dispose. Cherchez plus longtemps ou importez un patron plus simple.",
@@ -390,6 +394,10 @@
       "noOrder": {
         "text": "Avec les plis montagne et vallée du patron, les couches ne peuvent pas s’empiler sans se traverser.",
         "title": "Aucun ordre des couches ne convient"
+      },
+      "noProjectCp": {
+        "text": "Ouvrez ou créez le canevas de plis source dans Modifier, puis réessayez. L’étape de mise en forme enregistrée reste inchangée.",
+        "title": "CP source indisponible"
       },
       "noState": {
         "text": "L’étape affichée n’a pas d’état plié\u00a0: rien ne peut être ajouté après. Allez à une étape qui se plie.",
@@ -440,9 +448,11 @@
     },
     "samples": "Exemples",
     "title": "Importer un patron de plis",
+    "updateTitle": "Mettre à jour depuis le CP",
     "working": {
       "figure": "Import du modèle plié d’Édition…",
       "file": "Import de {{name}}…",
+      "projectCp": "Résolution du canevas de plis du projet…",
       "sample": "Import de l’exemple…"
     }
   },

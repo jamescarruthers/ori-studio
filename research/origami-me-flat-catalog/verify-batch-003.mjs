@@ -1,10 +1,11 @@
+import {modelFile} from './model-paths.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {Trial} from '../2026-10-13-origami-fold-trials/trial-lib.mjs';
 const folder=new URL('./',import.meta.url);
 const eq=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-8;
 for(const slug of process.argv.slice(2)){
- const p=JSON.parse(fs.readFileSync(new URL(`models/${slug}.osf`,folder)));
+ const p=JSON.parse(fs.readFileSync(new URL(modelFile(slug),folder)));
  const doc=p.workspace.foldSequences[0],t=new Trial(slug,doc.title,doc.paper);
  for(const node of doc.steps)t.add(node.op,node.note,node.choices);
  const evidence={slug,allStatesReplayed:true};

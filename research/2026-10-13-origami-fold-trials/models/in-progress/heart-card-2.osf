@@ -1,0 +1,654 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-heart-card-2",
+    "title": "Heart Card — Francis Ow",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-heart-card-2",
+        "title": "Heart Card — Francis Ow",
+        "paper": {
+          "shape": {
+            "kind": "rectangle",
+            "aspect": [
+              1,
+              2
+            ]
+          },
+          "startSide": "front"
+        },
+        "steps": [
+          {
+            "id": "fstep-heart-card-2-1",
+            "parent": null,
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.25,
+                    0
+                  ],
+                  [
+                    0.25,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.2
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1a: Precrease vertical center on the supplied 1:2 rectangle. https://origami.me/heart-card-2/"
+          },
+          {
+            "id": "fstep-heart-card-2-2",
+            "parent": "fstep-heart-card-2-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.5
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ]
+                ]
+              },
+              "moving": [
+                0.1,
+                0.1
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1b: Precrease the horizontal center."
+          },
+          {
+            "id": "fstep-heart-card-2-3",
+            "parent": "fstep-heart-card-2-2",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "1c: Turn over."
+          },
+          {
+            "id": "fstep-heart-card-2-4",
+            "parent": "fstep-heart-card-2-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.25
+                  ],
+                  [
+                    0,
+                    0.25
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.05
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2: Bring the bottom edge to the horizontal center."
+          },
+          {
+            "id": "fstep-heart-card-2-5",
+            "parent": "fstep-heart-card-2-4",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.125
+                  ],
+                  [
+                    0,
+                    0.125
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.2
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3a: Fold/unfold the lower edge to the nearest horizontal line."
+          },
+          {
+            "id": "fstep-heart-card-2-6",
+            "parent": "fstep-heart-card-2-5",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.4,
+                0.25
+              ],
+              "moving": [
+                0.4,
+                0.15000000000000002
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.4,
+                  0.15000000000000002
+                ],
+                "layers": 1
+              },
+              "direction": "valley"
+            },
+            "note": "3b: Unfold the bottom flap."
+          },
+          {
+            "id": "fstep-heart-card-2-7",
+            "parent": "fstep-heart-card-2-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.125
+                  ],
+                  [
+                    0,
+                    0.125
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.05
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4: Refold the bottom edge on the new lower crease."
+          },
+          {
+            "id": "fstep-heart-card-2-8",
+            "parent": "fstep-heart-card-2-7",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "5: Turn over."
+          },
+          {
+            "id": "fstep-heart-card-2-9",
+            "parent": "fstep-heart-card-2-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.5
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ]
+                ]
+              },
+              "moving": [
+                0.1,
+                0.3
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "6a: Valley-fold the lower half upward."
+          },
+          {
+            "id": "fstep-heart-card-2-10",
+            "parent": "fstep-heart-card-2-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.375
+                  ],
+                  [
+                    0.5,
+                    0.375
+                  ]
+                ]
+              },
+              "moving": [
+                0.1,
+                0.050000000000000044
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.1,
+                  0.050000000000000044
+                ],
+                "layers": 1
+              }
+            },
+            "note": "6b: Lower the front flap to complete the pleat. The source mountain direction reverses in the lifted view."
+          },
+          {
+            "id": "fstep-heart-card-2-11",
+            "parent": "fstep-heart-card-2-10",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.375
+                  ],
+                  [
+                    0.25,
+                    0.125
+                  ]
+                ]
+              },
+              "moving": [
+                0.04999999999999999,
+                0.15000000000000002
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0,
+                    0.375
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.25,
+                    0.125
+                  ]
+                }
+              }
+            },
+            "note": "7a: Precrease only the lower left corner."
+          },
+          {
+            "id": "fstep-heart-card-2-12",
+            "parent": "fstep-heart-card-2-11",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.375
+                  ],
+                  [
+                    0.25,
+                    0.125
+                  ]
+                ]
+              },
+              "moving": [
+                0.45,
+                0.15000000000000002
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0.5,
+                    0.375
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.25,
+                    0.125
+                  ]
+                }
+              }
+            },
+            "note": "7b: Precrease only the lower right corner."
+          },
+          {
+            "id": "fstep-heart-card-2-13",
+            "parent": "fstep-heart-card-2-12",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.375,
+                    0.375
+                  ],
+                  [
+                    0.5,
+                    0.25
+                  ]
+                ]
+              },
+              "moving": [
+                0.475,
+                0.35
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.475,
+                  0.35
+                ],
+                "layers": 1
+              },
+              "direction": "valley"
+            },
+            "note": "8: Precrease the top corner of the folded strip."
+          },
+          {
+            "id": "fstep-heart-card-2-14",
+            "parent": "fstep-heart-card-2-13",
+            "op": {
+              "kind": "inside-reverse",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.375,
+                    0.375
+                  ],
+                  [
+                    0.5,
+                    0.25
+                  ]
+                ]
+              },
+              "moving": [
+                0.475,
+                0.35
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.475,
+                  0.35
+                ],
+                "layers": 1
+              }
+            },
+            "note": "9: Inside reverse the corner."
+          },
+          {
+            "id": "fstep-heart-card-2-15",
+            "parent": "fstep-heart-card-2-14",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.375,
+                    0.125
+                  ],
+                  [
+                    0.375,
+                    0.375
+                  ]
+                ]
+              },
+              "moving": [
+                0.45,
+                0.2
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.45,
+                  0.2
+                ],
+                "layers": 1
+              }
+            },
+            "note": "10: Fold the side flap toward the center."
+          },
+          {
+            "id": "fstep-heart-card-2-16",
+            "parent": "fstep-heart-card-2-15",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.125,
+                    0.375
+                  ],
+                  [
+                    0,
+                    0.25
+                  ]
+                ]
+              },
+              "moving": [
+                0.025000000000000022,
+                0.35
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.025000000000000022,
+                  0.35
+                ],
+                "layers": 1
+              },
+              "direction": "valley"
+            },
+            "note": "11a: Precrease the top corner of the folded strip."
+          },
+          {
+            "id": "fstep-heart-card-2-17",
+            "parent": "fstep-heart-card-2-16",
+            "op": {
+              "kind": "inside-reverse",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.125,
+                    0.375
+                  ],
+                  [
+                    0,
+                    0.25
+                  ]
+                ]
+              },
+              "moving": [
+                0.025000000000000022,
+                0.35
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.025000000000000022,
+                  0.35
+                ],
+                "layers": 1
+              }
+            },
+            "note": "11b: Inside reverse the corner."
+          },
+          {
+            "id": "fstep-heart-card-2-18",
+            "parent": "fstep-heart-card-2-17",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.125,
+                    0.125
+                  ],
+                  [
+                    0.125,
+                    0.375
+                  ]
+                ]
+              },
+              "moving": [
+                0.04999999999999999,
+                0.2
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.04999999999999999,
+                  0.2
+                ],
+                "layers": 1
+              }
+            },
+            "note": "11c: Fold the side flap toward the center."
+          },
+          {
+            "id": "fstep-heart-card-2-19",
+            "parent": "fstep-heart-card-2-18",
+            "op": {
+              "kind": "turn",
+              "axis": "horizontal"
+            },
+            "note": "12: Turn over from top to bottom."
+          },
+          {
+            "id": "fstep-heart-card-2-20",
+            "parent": "fstep-heart-card-2-19",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.12500000000000006,
+                    0.5
+                  ],
+                  [
+                    0.37500000000000006,
+                    0.49999999999999994
+                  ]
+                ]
+              },
+              "moving": [
+                0.20000000000000007,
+                0.1
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.20000000000000007,
+                  0.1
+                ],
+                "layers": 1
+              }
+            },
+            "note": "13: Lower the colored flap."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-heart-card-2",
+        "cursor": "fstep-heart-card-2-20",
+        "activeChild": {
+          "": "fstep-heart-card-2-1",
+          "fstep-heart-card-2-1": "fstep-heart-card-2-2",
+          "fstep-heart-card-2-2": "fstep-heart-card-2-3",
+          "fstep-heart-card-2-3": "fstep-heart-card-2-4",
+          "fstep-heart-card-2-4": "fstep-heart-card-2-5",
+          "fstep-heart-card-2-5": "fstep-heart-card-2-6",
+          "fstep-heart-card-2-6": "fstep-heart-card-2-7",
+          "fstep-heart-card-2-7": "fstep-heart-card-2-8",
+          "fstep-heart-card-2-8": "fstep-heart-card-2-9",
+          "fstep-heart-card-2-9": "fstep-heart-card-2-10",
+          "fstep-heart-card-2-10": "fstep-heart-card-2-11",
+          "fstep-heart-card-2-11": "fstep-heart-card-2-12",
+          "fstep-heart-card-2-12": "fstep-heart-card-2-13",
+          "fstep-heart-card-2-13": "fstep-heart-card-2-14",
+          "fstep-heart-card-2-14": "fstep-heart-card-2-15",
+          "fstep-heart-card-2-15": "fstep-heart-card-2-16",
+          "fstep-heart-card-2-16": "fstep-heart-card-2-17",
+          "fstep-heart-card-2-17": "fstep-heart-card-2-18",
+          "fstep-heart-card-2-18": "fstep-heart-card-2-19",
+          "fstep-heart-card-2-19": "fstep-heart-card-2-20"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

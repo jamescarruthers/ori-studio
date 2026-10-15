@@ -1546,7 +1546,6 @@
       "pathBrokenHint": "Um passo deste caminho não dobra mais.",
       "pathLockedHint": "Um passo deste caminho foi criado com uma versão mais recente do Ori Studio.",
       "pathReplayingHint": "Os passos ainda estão sendo dobrados.",
-      "precrease": "Pré-dobra",
       "readOnlyHint": "Criada com uma versão mais recente do Ori Studio: esta sequência abre somente para leitura.",
       "replayingHint": "Os passos anteriores ainda estão sendo dobrados.",
       "rotate": "Girar…",
@@ -1566,6 +1565,14 @@
       "stepCreases": "Vincos do passo",
       "stepCreasesTitle": "Desenhar em negrito os vincos feitos pelo passo mostrado, como sua instrução",
       "toolbar": "Visualização da dobra"
+    },
+    "collapse": {
+      "changed": "Há uma atualização disponível. Este passo ainda usa a versão salva do CP.",
+      "openSource": "Abrir CP de origem",
+      "replay": "A atualização recalcula as dobras seguintes. Antes de continuar, confira na linha do tempo os passos alterados ou que não podem mais ser dobrados.",
+      "saved": "Usando a versão salva do CP. As edições na origem só são aplicadas ao atualizar.",
+      "unavailable": "CP de origem indisponível. A cópia salva continua sendo reproduzida.",
+      "update": "Atualizar a partir do CP"
     },
     "grid": {
       "broken": "Este passo não dobra mais",
@@ -1618,6 +1625,34 @@
       "scrub": "Progresso do passo",
       "stepForward": "Avançar um pouco"
     },
+    "return": {
+      "append": "Adicionar etapa de desdobramento",
+      "changed": "As dobras anteriores mudaram. Reconstrua este desdobramento para conferir o novo resultado.",
+      "empty": "Faça uma dobra primeiro.",
+      "failureTitle": "Não é possível desdobrar",
+      "finishPreview": "Primeiro conclua ou cancele a prévia do desdobramento.",
+      "invalidTarget": "Escolha uma etapa anterior neste ramo.",
+      "label": "Desdobrar até uma etapa",
+      "last": "Desdobrar a última etapa",
+      "limit": "O histórico de vincos é grande demais para ser restaurado com segurança.",
+      "loading": "Preparando a prévia do desdobramento…",
+      "noop": "O papel já está nesta forma com estes vincos.",
+      "numberedSentence": "Volte à etapa {{number}}, mantendo todos os vincos.",
+      "open": "Desdobrar até uma etapa…",
+      "preview": "A prévia aparece abaixo. Todos os vincos são mantidos.",
+      "rebuild": "Reconstruir desdobramento",
+      "refused": "O mecanismo não conseguiu restaurar esta forma mantendo o histórico de vincos. Nenhuma etapa foi alterada.",
+      "retain": "Voltar a uma forma anterior, mantendo todos os vincos.",
+      "sentence": "Volte à forma dobrada anterior, mantendo todos os vincos.",
+      "sheet": "Folha inicial",
+      "sheetSentence": "Desdobre até a folha inicial, mantendo todos os vincos.",
+      "step": "Etapa {{number}}",
+      "target": "Voltar para",
+      "title": "Prévia do desdobramento",
+      "turn": "Giro após a etapa {{number}}",
+      "unavailable": "Aguarde a reprodução das etapas anteriores e tente novamente.",
+      "viewTarget": "Ver destino: {{target}}"
+    },
     "sentence": {
       "behind": {
         "petal": "Faça uma dobra pétala com a aba, por trás.",
@@ -1633,6 +1668,7 @@
         "swivelInsideLine": "Gire a borda por trás sobre a linha com um giro interno, com os vincos se encontrando na borda dobrada."
       },
       "closedSink": "Afunde a ponta em afundamento fechado: empurre-a para dentro com as camadas juntas.",
+      "collapse": "Colapse seguindo o padrão de dobras salvo.",
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
       "crimp": {
         "inside": {
@@ -2646,7 +2682,7 @@
       "branchStep": "Você está no passo {{at}} de {{total}}: dobrar aqui começa um novo ramo.",
       "broken": "Este passo não dobra mais: aquilo de que ele foi feito não está mais no papel antes dele. Ele e os passos seguintes só podem ser excluídos.",
       "brokenAbove": "Um passo anterior não dobra mais, por isso este não pode ser mostrado.",
-      "changed": "Este passo dobra de outro jeito nesta versão do Ori Studio do que quando foi salvo.",
+      "changed": "Este passo dobra de forma diferente de quando foi salvo. Confira suas entradas e os passos anteriores.",
       "changes": "Alterações",
       "chosen": "Escolha entre várias",
       "creases": "Vincos",
@@ -2737,6 +2773,7 @@
         "swivelInside": "Dobra giratória interna por trás"
       },
       "closedSink": "Afundamento fechado",
+      "collapse": "Colapsar",
       "cpJump": "Importar padrão de vincos",
       "crimpInside": "Crimp interno",
       "crimpOutside": "Crimp externo",
@@ -2758,6 +2795,7 @@
       "originFold": "Arquivo FOLD",
       "originOrh": "Arquivo ORH",
       "originOri": "Arquivo ORI",
+      "originProjectCp": "Padrão de dobras do projeto",
       "originSample": "Exemplo",
       "outsideReverse": "Dobra invertida externa",
       "petal": "Dobra pétala",
