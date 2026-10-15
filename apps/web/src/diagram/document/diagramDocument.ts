@@ -1254,8 +1254,9 @@ export interface DiagramStep {
    * prints where the layout puts it and stays editable. Never beside
    * {@link place}. Carried as it is through every edit but for its `frame`,
    * which this build knows belongs to the step's cell: it goes home when the
-   * step changes cell — in the flow, its page or its band — as this build's
-   * does, and a duplicate does not copy it. A reset of the whole placement
+   * step changes cell — in the flow, when it does not keep its place
+   * (`pages/repackedFrames.ts`) — as this build's does, and a duplicate does
+   * not copy it. A reset of the whole placement
    * drops the lot.
    */
   placeNewer?: Record<string, unknown>;

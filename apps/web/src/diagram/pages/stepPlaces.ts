@@ -24,10 +24,11 @@
  * Page, or an arrangement stored for another structure packs it afresh, and
  * gives each of its steps a new home. An edit clears here, in its own undo
  * step, the offsets of the steps it took off their page
- * ({@link staysOnFlowPage}); where each step lands on its page is known only
- * once the layout packs the page, so the layout draws one whose place
- * changed at home, and the store clears its offset as it adopts the packing
- * (`repackedFrames.ts`, `adoptPacking`).
+ * ({@link staysOnFlowPage}) — a page whose rows now stack from its other end
+ * included; where each step lands on its page is known only once the layout
+ * packs the page, so the layout draws one whose place changed at home, and
+ * the store clears its offset as it adopts the packing (`repackedFrames.ts`,
+ * `adoptPacking`).
  *
  * Either way the offset is kept in the page's reading terms, along its row
  * and across its rows, and follows a page that turns. Part offsets, size pins
@@ -45,6 +46,7 @@ import {
   type DiagramPageLayout,
   type DiagramStep,
 } from '../document/diagramDocument';
+import { flowPagePlan } from './flowLane';
 import { paginate, type PlannedPage } from './pagePlan';
 import { pageSignatures, type SignedStep } from './pageSignature';
 import { placedIn } from './repackedFrames';
@@ -76,6 +78,12 @@ export interface CellSlots {
    * in while it waits to be packed again; none on a grid.
    */
   stored: readonly (DiagramPageArrangement | undefined)[];
+  /**
+   * In the flow, whether each page's rows stack from its foot, by its index:
+   * a right page the lane comes into at its spine (`FlowPagePlan.up`). None
+   * on a grid.
+   */
+  up: readonly boolean[];
 }
 
 /**
@@ -146,6 +154,7 @@ export function cellSlots(document: DiagramDocument): CellSlots {
     shapes: planned.map((plan) => pageShape(plan, layout)),
     signatures: flow ? pageSignatures({ steps, pages: planned, setup: document.page, title: document.title }) : [],
     stored: flow ? pages.map((ids) => (ids[0] === undefined ? undefined : document.pageArrangements?.[ids[0]])) : [],
+    up: flow ? planned.map((_, page) => flowPagePlan(page, planned.length, document.page.firstPageSide, 1).up) : [],
   };
 }
 
@@ -179,6 +188,17 @@ export function sameCell(was: CellSlots, now: CellSlots, stepId: string): boolea
  * the page of the same number or that starts with the same step, as a grid
  * page is the same page. Not a step missing from either, nor one placed only
  * by another page's arrangement: it changed page.
+ *
+ * Nor one whose page's rows now stack from its other end (`CellSlots.up`): a
+ * page renumbered by one, or every page after the first when the first
+ * page's side changes, falls on the other side of its spread, and a right
+ * page stacks its rows from its foot (`flowLane.ts`). Each of its rows is
+ * then where another was, so every step on it is in a new place, though its
+ * band and its place along it read the same — and its offset, whose `across`
+ * is always down the page, was made against the neighbours on the other side
+ * (Zach's rule of 2026-10-15, as its review read "its page";
+ * `diagram-document-evolution.md`, part 2). A page renumbered by two keeps its
+ * side, and is its own page still.
  */
 export function staysOnFlowPage(
   was: CellSlots,
@@ -189,6 +209,7 @@ export function staysOnFlowPage(
   const before = was.slots.get(stepId);
   const after = now.slots.get(stepId);
   if (!before || !after || was.layout !== 'flow' || now.layout !== 'flow') return false;
+  if (was.up[before.page] !== now.up[after.page]) return false;
   const own = now.stored[after.page];
   if (own && Object.hasOwn(own.steps, stepId)) return true;
   return !placedIn(earlier, stepId) && samePage(before, after);

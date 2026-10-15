@@ -428,6 +428,33 @@ describe('a frame moved by hand follows its step’s place (Zach, 2026-10-15)', 
     expect(state().diagram).toBe(document);
   });
 
+  it('a page break on the first page sends home every frame on the pages it moves to the other side of their spread, at once; one Undo restores it', () => {
+    // s0–s4 | s5–s9 | s10–s11, each page started by a page break, as a designer who ends each page by hand has them;
+    // each packed three a band.
+    install(placedAll(12).map((step) => (step.id === 's5' || step.id === 's10' ? { ...step, breakBefore: true } : step)));
+    const held = adoptRibbon();
+    expect(cellSlots(held).up).toEqual([false, true, false]);
+    // A new page at s2: s0 s1 | s2–s4 | s5–s9 | s10–s11. The pages s5 and s10 start are a page on, each on the other
+    // side of its spread, its rows stacking from its other end: s5 is still band 0 along 0, but band 0 is the head of
+    // its page now, where it was the foot. Every step after s1 goes home with the edit, all inside its box kept.
+    expect(state().setDiagramStepBreakBefore('s2', true)).toBe(true);
+    expect(cellSlots(state().diagram!).pages).toEqual([['s0', 's1'], ids(2, 4), ids(5, 9), ids(10, 11)]);
+    expect(cellSlots(state().diagram!).up).toEqual([false, true, false, true]);
+    expect(frames()).toEqual(['s0', 's1']);
+    for (const id of ids(2, 11)) expect(stepById(state().diagram!, id)!.place, id).toEqual(INSIDE);
+    const atEdit = state().diagramPlacesSettled!;
+    expect([atEdit.count, atEdit.added]).toEqual([10, 10]);
+    expect(atEdit.entry).toBe(state().diagramHistory.past.at(-1));
+    // Page one, packed afresh, keeps s0 and s1 in their places; adopting it sends nothing more home.
+    adoptRibbon();
+    expect(frames()).toEqual(['s0', 's1']);
+    expect(state().diagramPlacesSettled).toMatchObject({ count: 10, added: 10, entry: atEdit.entry });
+    // One Undo: the diagram exactly as it was, every frame and every page's arrangement.
+    state().undoDiagram();
+    expect(state().diagram).toBe(held);
+    expect(frames()).toEqual(ids(0, 11));
+  });
+
   it('keeps every frame on a page whose steps keep their places: an edit on a page before with its own count', () => {
     // Page one counts five of its own: a step put in there leaves page two as it was, and held.
     install(placedAll(12).map((step, index) => (index === 0 ? { ...step, pageSteps: 5 } : step)));

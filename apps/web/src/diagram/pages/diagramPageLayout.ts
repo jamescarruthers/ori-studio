@@ -1073,7 +1073,7 @@ export function pictureExtent(picture: NonNullable<LayoutStep['picture']>, scale
  * `stored` is what the document keeps (`DiagramDocument.pageArrangements`),
  * where `arrangements` adds what an earlier pass of the same layout packed: a
  * page packed afresh, here or there, draws a frame moved by hand at its
- * offset only where its step keeps its band (`repackedFrames.ts`), and at
+ * offset only where its step keeps its place (`repackedFrames.ts`), and at
  * home where the store, adopting the packing, will send it.
  *
  * The first page may carry the title block (`titleBlockGeometry.ts`), which

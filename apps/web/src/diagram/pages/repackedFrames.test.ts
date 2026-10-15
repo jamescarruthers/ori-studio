@@ -5,6 +5,7 @@ import {
   isTurn,
   PAGE_SETTINGS,
   setPageSetup,
+  setStepBreakBefore,
   stepsOf,
   type DiagramArrangedStep,
   type DiagramDocument,
@@ -214,5 +215,65 @@ describe('a flow page packed afresh with frames moved by hand', () => {
     expectDrawn(layout, new Set());
     expect(adoptPacking(opened, {})).toEqual({ document: opened, settled: 0 });
     expect(framed(opened)).toEqual(framed(held));
+  });
+});
+
+/**
+ * Twenty-four crease-pattern steps, six a flow page, each page started by a page break — as a designer who ends each
+ * page by hand has them — with no title block, packed and held, each step's frame moved by hand.
+ */
+function heldPages(): DiagramDocument {
+  const steps = Array.from({ length: 24 }, (_, index) => ({
+    ...cpStep(`s${index}`),
+    text: index % 2 ? 'Fold the corner up to the centre line.' : 'Fold.',
+    breakBefore: index > 0 && index % 6 === 0,
+  }));
+  const base = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
+    layout: 'flow',
+    stepsPerPage: 6,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+  });
+  const placed = { ...base, steps: base.steps.map((entry) => (isTurn(entry) ? entry : { ...entry, place: PLACE })) };
+  return adoptPageArrangements(placed, layoutDiagram(placed, estimateTextSetter).packed ?? {});
+}
+
+/** Whether the page `first` starts stacks its rows from its foot, as `arrangement` boxes them: band 0 under band 1. */
+const stacksUp = (arrangement: DiagramPageArrangement, first: string, next: string): boolean =>
+  arrangement.steps[first]!.box[1] > arrangement.steps[next]!.box[1];
+
+describe('a flow page whose rows now stack from its other end (Zach, 2026-10-15)', () => {
+  it.each([
+    ['the title block turned on', (document: DiagramDocument) => setPageSetup(document, { titleBlock: { enabled: true, heightShare: 0.27 } })],
+    ['the first page’s side changed', (document: DiagramDocument) => setPageSetup(document, { firstPageSide: 'right' })],
+    ['a page break put in on the first page', (document: DiagramDocument) => setStepBreakBefore(document, 's3', true)],
+  ])('%s: every step on the pages it moves to the other side of their spread goes home, all inside its box kept', (_label, edit) => {
+    const held = heldPages();
+    // Pages s6, s12 and s18 start: a right page, its rows stacked from its foot, then a left one, then a right one.
+    const firsts = ['s6', 's12', 's18'];
+    expect(firsts.map((first) => stacksUp(held.pageArrangements![first]!, first, `s${Number(first.slice(1)) + 2}`))).toEqual([true, false, true]);
+    // The edit lands as the store lands it: arrangements following their pages, frames off their place home.
+    const edited = edit(held);
+    const landed = settlePlaces(held, followPageArrangements(held, edited));
+    const later = stepsOf(held)
+      .slice(6)
+      .map((step) => step.id);
+    expect(framed(landed.document).filter((id) => later.includes(id))).toEqual([]);
+    for (const id of later) expect(stepsOf(landed.document).find((step) => step.id === id)!.place, id).toEqual(INSIDE);
+    // Packed afresh, each of those pages stacks its rows from its other end: band 0 is where band 2 was. Each step on
+    // it keeps its band and its place along it, so an offset made against its old neighbours would land among new ones.
+    const layout = layoutDiagram(landed.document, estimateTextSetter);
+    for (const first of firsts) {
+      const packed = layout.packed![first]!;
+      const next = `s${Number(first.slice(1)) + 2}`;
+      expect(stacksUp(packed, first, next), first).toBe(!stacksUp(held.pageArrangements![first]!, first, next));
+      for (const id of later.filter((each) => Object.hasOwn(packed.steps, each)))
+        expect(flowSlot(packed, id), id).toEqual(flowSlot(held.pageArrangements![first]!, id));
+    }
+    // Drawn at home before any adoption, and the adoption sends nothing more home there: the first page's own steps
+    // keep their offsets where they keep their places, s0 among them.
+    for (const cell of cellsOf(layout).filter((each) => later.includes(each.stepId))) expect(cell.placed?.offsets, cell.stepId).toEqual(INSIDE);
+    const adopted = adoptPacking(landed.document, layout.packed!);
+    expect(framed(adopted.document).filter((id) => later.includes(id))).toEqual([]);
+    expect(framed(adopted.document)).toContain('s0');
   });
 });

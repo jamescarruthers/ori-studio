@@ -21,8 +21,16 @@
  * starts with now. The store moves a stale arrangement with its page as each
  * edit lands: a page keeps it while it starts with the same step, and, when
  * no page starts with that step any more, the page of the same number takes
- * it (`followPageArrangements`). A step pushed onto another page is sent home
- * as the edit lands (`stepPlaces.ts`).
+ * it (`followPageArrangements`). So a page renumbered by a page break before
+ * it is still its own page, as a grid page is (`stepPlaces.ts`) — but only
+ * while its rows stack the same way up. A page renumbered by one, or every
+ * page after the first when the first page's side changes, falls on the
+ * other side of its spread, where its rows stack from the other end (a right
+ * page stacks them from its foot, `flowLane.ts`), so each band is where
+ * another was: every step on it is in a new place, though its band and its
+ * place along it read the same. A step pushed onto another page, and every
+ * step on a page whose rows now stack the other way, is sent home as the edit
+ * lands (`staysOnFlowPage`).
  *
  * **Its place along the band** is read from the boxes, in the band's reading
  * direction — an even band left to right, an odd one right to left, as the

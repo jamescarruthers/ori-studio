@@ -271,13 +271,30 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     ['margin', { marginMm: 25 }],
     ['title shown', { showTitle: false }],
     ['page numbers', { pageNumbers: { enabled: false, first: 4 } }],
-    ['first page’s side', { firstPageSide: 'right' }],
     ['band count', { flowBands: 3 }],
     ['steps in bends', { flowBendSteps: false }],
     ['scale steadiness', { flowSteadiness: 0.5 }],
   ] as const)('keeps every flow frame when the %s changes: every page is packed afresh, its steps on it, their places for the layout to judge', (_label, patch) => {
     const before = placed(16, { layout: 'flow' });
     expect(settle(before, setPageSetup(before, patch as Partial<DiagramPageSetup>))).toEqual([]);
+  });
+
+  it('sends home every frame after the first flow page when the first page’s side changes: their rows now stack from the other end', () => {
+    // s0–s8 | s9–s12 | s13–s15. Each page after the first falls on the other side of its spread: a right page stacks
+    // its rows from its foot, a left one from its head, so every band of pages two and three is where another was.
+    // The first page's rows stack from its head on either side: its steps stay on it, their places for the layout.
+    const before = placed(16, { layout: 'flow' });
+    const after = setPageSetup(before, { firstPageSide: 'right' });
+    expect([cellSlots(before).up, cellSlots(after).up]).toEqual([
+      [false, true, false],
+      [false, false, true],
+    ]);
+    expect(settle(before, after)).toEqual(ids(9, 15));
+    expect(settle(after, before)).toEqual(ids(9, 15));
+    // A grid's pages have no side to stack from.
+    const grid = placed(16);
+    expect(cellSlots(grid).up).toEqual([]);
+    expect(settle(grid, setPageSetup(grid, { firstPageSide: 'right' }))).toEqual([]);
   });
 
   it('keeps a grid page’s frames through the paper, and a flow page’s through the grid’s columns and rows', () => {
@@ -309,14 +326,27 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(one, insertSteps(one, [createStep(() => 'next')], one.steps.length))).toEqual([]);
   });
 
-  it('keeps a flow page’s frames when an edit earlier renumbers it: it is the page that starts with the same step', () => {
+  it('keeps a flow page’s frames when an edit earlier renumbers it by two: it is the page that starts with the same step, on the same side', () => {
     // Breaks at s1 and s3 add two pages in front of the one s4 starts: the fourth now, packed afresh, as a grid's is
-    // the same page (above). s1–s3 leave page one for pages of their own.
+    // the same page (above), its rows stacking from its foot as before. s1–s3 leave page one for pages of their own.
     const before = placed(16, { layout: 'flow' }, [4, 13]);
     expect(cellSlots(before).slots.get('s5')).toEqual({ page: 1, first: 's4', k: 1 });
     const after = setStepBreakBefore(setStepBreakBefore(before, 's1', true), 's3', true);
     expect(cellSlots(after).slots.get('s5')).toEqual({ page: 3, first: 's4', k: 1 });
+    expect([cellSlots(before).up[1], cellSlots(after).up[3]]).toEqual([true, true]);
     expect(settle(before, after)).toEqual(ids(1, 3));
+  });
+
+  it('sends home every frame on a flow page an edit earlier renumbers by one: it falls on the other side, its rows stacking from the other end', () => {
+    // s0–s3 | s4–s12 | s13–s15. A break at s1 adds a page in front: s4's page is the third now, a left page whose
+    // rows stack from its head where they stacked from its foot, and s13's the fourth, the other way round. Each
+    // step keeps its band and its place along it, but every band is where another was (Zach, 2026-10-15).
+    const before = placed(16, { layout: 'flow' }, [4, 13]);
+    const after = setStepBreakBefore(before, 's1', true);
+    expect(cellSlots(after).pages).toEqual([['s0'], ids(1, 3), ids(4, 12), ids(13, 15)]);
+    expect(settle(before, after)).toEqual(ids(1, 15));
+    // Taken out again: the same pages go back to their sides, so the same frames go home.
+    expect(settle(after, setStepBreakBefore(after, 's1', false))).toEqual(ids(1, 15));
   });
 
   it('keeps the frames of the flow page a turn is added to, moved on or taken from: every step stays on its page', () => {

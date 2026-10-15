@@ -4,7 +4,7 @@
  * for (`DiagramPageArrangement.signature`). The layout holds a page's
  * arrangement while its signature matches and packs the page afresh when it
  * does not; a frame placed by hand on a page packed afresh keeps its offset
- * while its step stays in its band (`repackedFrames.ts`).
+ * while its step keeps its place (`repackedFrames.ts`).
  *
  * It covers exactly what the packing is cut from: the page's steps in order,
  * the turns before each (on the diagram's last page, those after its last

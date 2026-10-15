@@ -168,7 +168,7 @@ describe('heldPageArrangements / followPageArrangements', () => {
     expect(after.pageArrangements).toEqual(held.pageArrangements);
   });
 
-  it('keeps one that leaves a step of its page without a place for the bands it holds, though the page holds none', () => {
+  it('keeps one that leaves a step of its page without a place, for the places it does give, though the page holds none', () => {
     // A damaged or hand-edited file: page two's arrangement has its signature, and no place for s7.
     const before = diagram();
     const offered = packed(before);
@@ -195,7 +195,7 @@ describe('repackPages', () => {
     return adoptPageArrangements(before, packed(before));
   };
 
-  it('lets go of one page’s arrangement, kept for its bands, a newer build’s carried one dropped; or every page’s', () => {
+  it('lets go of one page’s arrangement, kept for its steps’ places, a newer build’s carried one dropped; or every page’s', () => {
     const document = held();
     const one = repackPages(document, 1);
     expect(Object.keys(one.pageArrangements!)).toEqual(['s0', 's5', 's10']);
