@@ -1,17 +1,9 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
-import {
-  PAGE_SETTINGS,
-  createDiagram,
-  createStep,
-  insertSteps,
-  setPageSetup,
-  type DiagramPageSetup,
-  type DiagramStep,
-} from '../../diagram/document/diagramDocument';
-import { cpSource, cpStep } from '../../diagram/document/diagramSteps.fixtures';
+import { PAGE_SETTINGS, setPageSetup, type DiagramPageSetup } from '../../diagram/document/diagramDocument';
+import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
+import { emptyStep, patternStep, titleBlockDiagram } from '../../diagram/pages/titleBlock.fixtures';
 import { TITLE_BLOCK_BYLINE_LINES } from '../../diagram/pages/titleBlockGeometry';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
@@ -45,13 +37,6 @@ let host: HTMLDivElement | null = null;
 const state = () => useWorkspaceStore.getState();
 const undoSteps = () => state().diagramHistory.past.length;
 
-const empty = (id: string) => createStep(() => id);
-/** A step linked to another pattern than `cpStep`'s: a valley across it. */
-function otherPattern(id: string): DiagramStep {
-  const thumbnail: SheetThumbnail = { viewBox: '0 0 100 100', strokes: [{ x1: 0, y1: 0, x2: 100, y2: 100, role: 'valley' }] };
-  return { ...cpStep(id), source: { ...cpSource(), thumbnail } };
-}
-
 /**
  * Steps 1 and 2 linked to one pattern, step 3 to another, step 4 empty: the
  * model offers 1–3, the pattern 2 and 3. Installed as a file would be.
@@ -59,9 +44,9 @@ function otherPattern(id: string): DiagramStep {
 function install(
   page: Partial<DiagramPageSetup> = {},
   readOnly = false,
-  steps = [cpStep('s1'), cpStep('s2'), otherPattern('s3'), empty('s4')]
+  steps = [cpStep('s1'), cpStep('s2'), patternStep('s3'), emptyStep('s4')]
 ) {
-  const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
+  const document = setPageSetup(titleBlockDiagram(steps), {
     layout: 'flow',
     titleBlock: PAGE_SETTINGS.titleBlock.legacy,
     ...page,
@@ -178,7 +163,7 @@ describe('DiagramTitleBlockSection', () => {
   });
 
   it('says Auto finds nothing where no step has a picture or a link, and offers nothing else but None', () => {
-    install({ titleBlock: ON }, false, [empty('s1'), empty('s2')]);
+    install({ titleBlock: ON }, false, [emptyStep('s1'), emptyStep('s2')]);
     render();
     expect(optionsOf('Model')).toEqual(['Auto (no pictures)', 'None']);
     expect(optionsOf('Crease pattern')).toEqual(['Auto (none linked)', 'None']);
@@ -220,7 +205,7 @@ describe('DiagramTitleBlockSection', () => {
   });
 
   it('offers no linked step whose pattern draws nothing, and names one chosen as the page’s overlay does', () => {
-    const blank: DiagramStep = { ...cpStep('s2'), source: { ...cpSource(), thumbnail: { viewBox: '0 0 100 100', strokes: [] } } };
+    const blank = patternStep('s2', []);
     install({ titleBlock: ON }, false, [cpStep('s1'), blank]);
     render();
     expect(optionsOf('Crease pattern')).toEqual(['Auto (step 1)', 'Step 1', 'None']);
