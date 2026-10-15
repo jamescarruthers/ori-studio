@@ -2402,21 +2402,24 @@ one undo step, the commits of one sitting at a text field one step
 - The overlay marks a missing title, pattern or model as now, and what is
   cut.
 
-#### The Page pane (the next lane)
+#### The Page pane (built: "As built (1c: the Page pane)")
 
 The order (H-15 A, H-16 A, items 5 and 6): Paper; Layout (the cards, First
 page, Steps per page, Steps on page N, or Columns and Rows); ▸ Packing,
 collapsed, flow only, right under Steps on page N; On the page; Path, flow
 only (Show path, Path width, Path colour); Header & footer — Title block
-(the toggle), and nested under it while on: Model, Model size; Crease
-pattern, Crease pattern size (each size a `SliderRow` in percent with
-Reset, hidden while its part is None); Subtitle; Credits (a row each, label
-and value, a step-count switch, remove; Add credit); Note — then Title tab
-and Page numbers; Style. `DiagramTitleBlockSection` becomes the rows Header
-& footer mounts; its bindings stay in `useDiagramTitleBlock`.
+(the toggle), and nested under it while on, top to bottom as the block
+reads: Subtitle; Credits (a row each, label and value, the live count with
+a way to type a value instead, remove; Add Credit, and Add Step Count while
+no credit follows the count); Note; Model, Model size; Crease pattern,
+Crease pattern size (each size a `SliderRow` in percent with Reset, hidden
+while its part is None) — then Title tab and Page numbers; Style.
+`DiagramTitleBlockSection` becomes `DiagramTitleBlockRows`, which Header &
+footer mounts; its bindings stay in `useDiagramTitleBlock`.
 
-Two calls for this lane, taken as recommended under Zach's standing "go
-with your recs", for him to see:
+Two calls recommended for this lane, under Zach's standing "go with your
+recs", for him to see; **not built** in the pane lane, which was asked for
+the order and the rows only (both still open in the checklist):
 - **The toggle's share.** Turning the block on in a diagram saved without
   it (his crane) turns it on at the legacy share, 0.27, not the mock's
   0.23. Recommended: Show on first page turns the block on at today's
@@ -2434,13 +2437,19 @@ with your recs", for him to see:
   label and value fields, Step count, Add credit, Remove credit; Note and
   its help; Path; "Title tab"; the overlay's cut mark. Retired: the byline's
   three keys and the section's title.
-- Analytics, enums only: `DiagramPageSetting` gains
+- Analytics, enums and buckets only (as built): `DiagramPageSetting` gains
   `title_block_model_size`, `title_block_pattern_size`,
   `title_block_subtitle`, `title_block_credits` and `title_block_note`
-  (`title_block_byline` retired); `title_block_credits` carries a
-  `title_block_credit_edit` property (`add`, `remove`, `label`, `value`,
-  `step_count_on`, `step_count_off`). A text field counts once per sitting,
-  a slider where it is let go. Never the text, never a size.
+  (`title_block_byline` retired: the note's, on preview builds only).
+  `title_block_credits` carries `title_block_credit_change` (`add`,
+  `remove`, `label`, `value`, `step_count_on` — the live count added back
+  by Add Step Count — `step_count_off`) and `title_block_credit_bucket`
+  (how many credits after the change: `<=0` … `<=10`, `>10`); the subtitle
+  and the note carry `title_block_subtitle` / `title_block_note`
+  (`shown`/`hidden`, whether it prints as the sitting's first commit leaves
+  it); a size carries `title_block_size` (`default`/`custom`). A text field
+  counts once per sitting, a slider where it is let go. Never the text,
+  never a size.
 
 #### Checklist
 
@@ -2473,14 +2482,18 @@ with your recs", for him to see:
   overlay sweep) re-baselined, at every paper, share and grid.
 
 **Page pane**
-- [ ] The order above; the block's rows nested under the toggle in Header &
+- [x] The order above; the block's rows nested under the toggle in Header &
   footer; the sizes, subtitle, credits and note; "Title tab".
 - [ ] The toggle's share and the content on turning on, as recommended
-  above.
+  above. Not built: the pane lane was asked for the order and the rows.
 
 **i18n and analytics**
-- [ ] The strings in nine catalogs (extract, translate, stamp, check).
-- [ ] The events and `docs/analytics.md`.
+- [x] The strings in English (extract); the other catalogs have empty
+  slots, which fall back to English.
+- [ ] The strings translated in the eight other catalogs, stamped and
+  checked (`i18n:check` lists them as missing, and "Title tab", "Title
+  block" and the toggle's help as stale, until then).
+- [x] The events and `docs/analytics.md`.
 
 **Review**
 - [ ] A review of 1c, its findings fixed; in the browser on the crane (the
@@ -2568,6 +2581,89 @@ a new diagram's shorter block: the drawing and the pane are the next lanes.
   once they print; the toggle's share and the content on turning on are
   still the pane lane's (above), and the crane turned on today gets a 0.27
   block and no subtitle or credits.
+
+*As built (1c: the Page pane, 2026-10-15).* Four commits after b363e0856,
+in a worktree of its own: the field rows (0d4d57360), the analytics
+(93c5f2354), the pane's order (7bbb7425c) and the block's rows
+(ac94901d1). Nothing under `diagram/pages/` but the hook changed: the
+drawing is the other lane's.
+- **Field rows.** `SelectRow` and `TextAreaRow` take `nested`, as
+  `FieldRow`, `SliderRow` and `ToggleRow` do (`TextAreaRow` at `FieldRow`'s
+  24 px, in its own module). `TextAreaRow`'s commit-as-you-type machinery
+  moved, unchanged, into `usePendingText` (`components/ui/fieldRows/`), so
+  the credit fields commit exactly as the row does: idle, blur, before an
+  undo or a save, on unmount; a session per focus.
+- **The order.** Layout reads the cards, First page, then the counts, and
+  ▸ Packing follows Steps on page N; Show path, Path width and Path colour
+  are a Path section of their own (flow only), after On the page. Header &
+  footer opens with `DiagramTitleBlockRows` (renamed from
+  `DiagramTitleBlockSection`): the toggle, now "Title block" (the key
+  `titleBlock.show`; the section's title key is retired), then "Title tab"
+  (relabelled under `pagePane.title`) and Page numbers.
+- **The block's rows**, a step in under the toggle while the page has a
+  block, top to bottom as J1b reads (the plan listed the art first; the
+  orchestrator's brief put the text first, and it follows the page):
+  - **Subtitle**: a one-line `TextAreaRow` (`singleLine`, the Layers pane's
+    label text is the precedent, so it is that row's 64 px box); cleared,
+    the content has none.
+  - **Credits** (`DiagramTitleBlockCredits`, a module of its own): a row per
+    credit, its label and its value side by side (equal columns), and a
+    remove button (Minus, as the path's nodes are removed). A live value
+    shows "Auto (N)" (the select's idiom for what the app works out), N
+    from `titleBlockStepCount` — new in `diagramDocument.ts`, the one rule
+    the drawing should print too — with a Pencil, "Type a value instead",
+    which empties the value and puts the focus in its field. Add Credit
+    appends an empty credit and focuses its label; Add Step Count, offered
+    only while no credit follows the count, appends "Steps" (the default's
+    word) live. Fields commit through `usePendingText`; Enter and Escape
+    leave a field, keeping its text.
+  - **Note**: a three-row `TextAreaRow`; its help says it prints only when
+    it has text.
+  - **Model** and **Crease pattern** as before (nested), each followed by
+    its size: a `SliderRow` in percent, 30–100 in steps of 5, handed over
+    where it is let go (`onCommit`, `useHeldDrag`), Reset while it is off
+    the default, hidden while its part is None.
+  - Read-only: every field, button and slider disabled. A one-row grid: the
+    toggle disabled with its reason and no rows, as before. The fields are
+    keyed by the diagram's load, so a draft never carries over.
+- **Bindings** (`useDiagramTitleBlock`): `sizes`, `subtitle`, `credits`,
+  `stepCount`, `hasStepCount`, `note`, and `setSize`, `setSubtitle`,
+  `setNote`, `addCredit`, `addStepCount`, `removeCredit`,
+  `setCreditLabel`, `setCreditValue`, `typeCreditValue`. Each change is one
+  undo step and one count (above); a text field's sitting is one of each.
+- **Strings**: English only, by the brief: `i18n:extract` gave the eight
+  other catalogs empty slots, which fall back to English, and pruned the
+  byline's three keys and the section's title. `i18n:check` fails until the
+  translation step (listed in the checklist).
+- **Tests.** `DiagramTitleBlockRows.test.tsx` (21): the order and the
+  step-in; the subtitle, a credit's label and value and the note each one
+  undo step and one count a sitting, cleared to none; the live count
+  followed as a step is added; Type a value instead (and the focus); Add
+  Step Count only while none follows; Add Credit (and the focus) and
+  remove; the sizes in percent, let go once, Reset; a size hidden with its
+  part; read-only. `DiagramPagePanel.test.tsx`: the section order in the
+  flow and the grid, Layout ending on the counts, the Path section's rows,
+  and Header & footer's switches (Title block, Title tab, Page numbers).
+  `fieldRows.test.tsx`, `TextAreaRow.test.tsx`: `nested`.
+  `trackDiagramPageSetupChanged.test.ts`: the new properties.
+  `diagramDocument.test.ts`: the step count leaves turns out. Each failed
+  before its code (14 of the rows' file and the step count with the old
+  rows, hook and document; 2 for `nested`; 3 for the tracker).
+- Checked at ac94901d1: `tsc`; ESLint on every changed file; vitest over
+  `src/styles`, `src/components/diagram`, `src/components/panels`,
+  `src/components/ui`, `src/diagram/document`, `src/analytics`, `src/i18n`
+  and the store's title-block tests (124 files, 1768 tests): all pass. On a
+  dev server of its own (5394), the crane opened by a synthetic drop, the
+  block turned on and its rows filled through the pane: screenshots under
+  `artifacts/title-block/header-pane/` (gitignored) — `pane-light.png`,
+  `pane-dark.png` (One Dark), `pane-top-dark.png` (Paper to Header &
+  footer), `pane-ipad.png` (820 px, touch: 44 px fields and buttons) and
+  the two windows.
+- **For Zach's eye:** the subtitle's 64 px box for one line (the shared
+  row's look; a one-line field would mean a new row kind); "Auto (N)" for
+  the live count; Add Step Count as the way back to a live count (there is
+  no per-row switch to it); "Recommended size" cut in its field at the
+  pane's default width.
 
 ### Phase 2: after the release
 
