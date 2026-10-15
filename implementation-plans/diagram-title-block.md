@@ -2498,9 +2498,9 @@ the order and the rows only (both still open in the checklist):
 **i18n and analytics**
 - [x] The strings in English (extract); the other catalogs have empty
   slots, which fall back to English.
-- [ ] The strings translated in the eight other catalogs, stamped and
-  checked (`i18n:check` lists them as missing, and "Title tab", "Title
-  block" and the toggle's help as stale, until then).
+- [x] The strings translated in the eight other catalogs, stamped and
+  checked: the pane's 21 new and 3 reworded keys and the overlay's 3 (see
+  "As built (1c: the merge)").
 - [x] The events and `docs/analytics.md`.
 
 **Review**
@@ -2803,6 +2803,39 @@ drawing is the other lane's.
   the live count; Add Step Count as the way back to a live count (there is
   no per-row switch to it); "Recommended size" cut in its field at the
   pane's default width.
+
+*As built (1c: the merge and i18n, 2026-10-15).* The pane lane merged into
+the branch at 9cb33971e; the only conflict was these notes, both kept.
+What the two lanes disagreed on, settled in 038762d31:
+- **The sizes' stops.** The pane's sliders stopped every 5% from 30, and
+  the drawing lane's defaults are 59% and 79%, between stops: a browser
+  snaps a range to its stops, so the thumb left the default and a slider
+  let go there could never read Default again. They now move by whole
+  percents (the defaults are stops; the test checks the defaults against
+  the slider's own `min` and `step`). Their ends are rounded: 0.3 × 100 is
+  30.000000000000004, which had shifted every stop.
+- **One step count.** The page prints the live count through
+  `titleBlockStepCount`, the pane's rule, instead of its own reading of
+  `stepNumbers` (the same number: steps are numbered 1 to N).
+- `TITLE_BLOCK_BYLINE_LINES` is gone with the pane's byline; the drawing
+  lane's "for the next lanes" notes about the Byline field are done.
+
+**i18n.** `i18n:extract` left English as it was and gave the eight other
+catalogs the overlay's three slots. All 27 keys per catalog are
+translated in each catalog's own terms: the block is its old section's
+word (タイトル欄, 标题栏, Bloque de título, Bloc titre, Titelblock, Bloco
+de título, Титульный блок, 제목 영역), the pattern and model as their
+selects say. Credits are クレジット, 信息, Créditos, Crédits, Angaben,
+Créditos, Сведения (a credit a пункт) and 크레딧: German and Russian take
+a word for "particulars", since a credit may be a size or a step count.
+A value is 内容 in Chinese, Japanese and Korean (what a field holds) and
+the plain word for value elsewhere; the note is 備考, 备注, Nota, Note,
+Anmerkung, Nota, Примечание, 메모. French keeps its non-breaking space
+before a colon. `i18n:stamp` (216 hashes), then `i18n:check` passes.
+- Checked at the i18n commit: `tsc`; ESLint on every file changed since
+  0b59543ec; vitest over `src/diagram`, `src/components/diagram`,
+  `src/components/panels`, `src/store/workspaceStore`, `src/analytics`,
+  `src/components/ui` and `src/i18n`.
 
 ### Phase 2: after the release
 
