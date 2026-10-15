@@ -2548,6 +2548,29 @@ export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTi
   return withNewer(content, { ...document.newer, titleBlockContent: newer });
 }
 
+/**
+ * The first page's title block turned on or off by its toggle (`implementation-plans/diagram-title-block.md`,
+ * Phase 1c). On: at today's share ({@link DEFAULT_PAGE_SETUP}; with no control for the share, a file's is the
+ * default of its day) and, where the content says nothing of the subtitle or the credits, with `words`' — a new
+ * diagram's, in the author's language — so that the header is never bare. Off: its share and its words kept. The
+ * author's own act, so the first page may move; the same document where the block is already so.
+ */
+export function setTitleBlockShown(document: DiagramDocument, enabled: boolean, words: TitleBlockDefaultWords): DiagramDocument {
+  const { titleBlock } = document.page;
+  if (titleBlock.enabled === enabled) return document;
+  const shown = setPageSetup(document, { titleBlock: enabled ? DEFAULT_PAGE_SETUP.titleBlock : { ...titleBlock, enabled } });
+  if (!enabled || saysTitleBlockWords(document)) return shown;
+  const { subtitle, credits } = defaultTitleBlockContent(words);
+  return { ...shown, titleBlockContent: titleBlockContentOf({ ...shown.titleBlockContent, subtitle, credits }) };
+}
+
+/** Whether the title block's content, or a newer build's carried with it, says anything of its subtitle or credits. */
+function saysTitleBlockWords(document: DiagramDocument): boolean {
+  const own = document.titleBlockContent;
+  const newer = document.newer?.titleBlockContent;
+  return own?.subtitle !== undefined || own?.credits !== undefined || (newer !== undefined && ('subtitle' in newer || 'credits' in newer));
+}
+
 /** The content with only the parts that say something, in {@link TITLE_BLOCK_PARTS}' order. */
 function titleBlockContentOf(parts: { [K in keyof DiagramTitleBlockContent]: DiagramTitleBlockContent[K] | undefined }): DiagramTitleBlockContent {
   return Object.fromEntries(
@@ -2594,12 +2617,14 @@ export function titleBlockArtSize(key: 'modelSize' | 'patternSize', value: numbe
   return held === TITLE_BLOCK_ART_SIZE_DEFAULTS[key] ? undefined : held;
 }
 
-/** The model's and the pattern's sizes the block draws at: the content's, or the defaults. */
+/**
+ * The model's and the pattern's sizes the block is laid out at: the content's, or the defaults — and the default for
+ * a part set to none, which draws nothing, so that a size kept for when it comes back moves nothing meanwhile.
+ */
 export function titleBlockArtSizes(content: DiagramTitleBlockContent | undefined): { modelSize: number; patternSize: number } {
-  return {
-    modelSize: content?.modelSize ?? TITLE_BLOCK_ART_SIZE_DEFAULTS.modelSize,
-    patternSize: content?.patternSize ?? TITLE_BLOCK_ART_SIZE_DEFAULTS.patternSize,
-  };
+  const size = (key: 'modelSize' | 'patternSize', part: 'model' | 'pattern') =>
+    content?.[part]?.kind === 'none' ? TITLE_BLOCK_ART_SIZE_DEFAULTS[key] : (content?.[key] ?? TITLE_BLOCK_ART_SIZE_DEFAULTS[key]);
+  return { modelSize: size('modelSize', 'model'), patternSize: size('patternSize', 'pattern') };
 }
 
 /** The number a credit's live step count prints: the last numbered step's (turns are not numbered, D22). */

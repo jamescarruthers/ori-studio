@@ -57,11 +57,18 @@ export const TITLE_BLOCK_TYPE = {
   rowGapMm: pt(10),
 } as const;
 
-/** A capital's height, and a descender's depth, as shares of the size: what the column's rows are spaced by. */
-const CAP_HEIGHT = 0.714;
-const DESCENT = 0.24;
+/**
+ * A capital's height, and a descender's depth, as shares of the size: the box of a printed line where no letter
+ * reaches past it — what the column's rows are spaced by, and what the Pages view's marks are drawn round.
+ */
+export const CAP_HEIGHT = 0.714;
+export const DESCENT = 0.24;
 /** The least the title is set at, as a share of its size: past that it is cut with "…". */
 const TITLE_LEAST = 0.3;
+/** Under this share of its size on one line, the title is set on two, as large as they fit. */
+const TITLE_ONE_LINE_LEAST = 0.5;
+/** A two-line title's baselines apart, as a share of its size. */
+const TITLE_LEADING = 1.1;
 /** The least the column is scaled to, in the shortest block. */
 export const LEAST_SCALE = 0.5;
 /** A credit with no value marked on the Pages view: at least this wide, for its words. */
@@ -120,8 +127,8 @@ export interface LayoutTitleBlock {
   } | null;
   /** The band, filled in the paper's colour: across the column, under the subtitle, or at the block's top with none. */
   band: PageBox;
-  /** The title, one bold line in the band, its capitals centred in it; null with no title. */
-  title: { line: SetLine; sizeMm: number; x: number; baseline: number } | null;
+  /** The title, one bold line in the band or two, its capitals centred in it, `baseline` the first's; null with no title. */
+  title: { lines: SetLine[]; sizeMm: number; leadingMm: number; x: number; baseline: number } | null;
   /** The credits with a value, row by row, as many as the block has room for; null where none has a value. */
   credits: {
     labelSizeMm: number;
@@ -137,6 +144,8 @@ export interface LayoutTitleBlock {
   note: { lines: SetLine[]; sizeMm: number; leadingMm: number; top: number; firstBaseline: number; cut: boolean } | null;
   /** For the Pages view, never the page: where each credit with no value would print, in the room the printed ones leave. */
   emptyCredits: { label: string; box: PageBox }[];
+  /** The size the credits' labels print at, mm, at the column's scale: what a credit with no value is marked at. */
+  labelSizeMm: number;
 }
 
 /** Under this contrast with white the paper's colour is pale: the title and the rules are printed in ink instead. */
@@ -165,20 +174,28 @@ export function titleBlockLookOf(titles: DiagramTitles): TitleBlockLook {
 export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitles, setter: TextSetter): LayoutTitleBlock {
   const look = titleBlockLookOf(titles);
   const T = TITLE_BLOCK_TYPE;
-  const { column } = geometry;
+  const { column, under } = geometry;
   const foot = column.y + column.h;
   const subtitle = look.subtitle.trim();
   const credits = look.credits.map(({ label, value }) => ({ label: label.trim(), value: value.trim() }));
   const printed = credits.filter(({ value }) => value !== '');
-  // Each credit's column at J1b's sizes, which scale with it: as wide as the wider of its label, tracked, and its value.
-  const natural = printed.map(({ label, value }) =>
-    Math.max(
-      trackedLine(setter, label, T.labelMm, 700, T.labelMm * T.tracking, Number.POSITIVE_INFINITY).widthMm,
-      setter.line(value, T.valueMm, 400).widthMm
-    )
-  );
-  const rowsAt = (scale: number) => rowsOf(natural.map((width) => width * scale), T.gutterMm * scale, column.w);
-  const scale = largestScale((at) => at * columnHeight(subtitle !== '', rowsAt(at).length) <= column.h + 1e-9);
+  const note = look.note.trim();
+  // Each credit's column at J1b's sizes, which scale with it: as wide as the wider of its label, tracked, and its
+  // value; and how far its label's ink reaches over its baseline — an accented capital's or an ideograph's past a
+  // capital's — which sets its row's baseline, here and where the row is placed alike.
+  const labels = printed.map(({ label }) => trackedLine(setter, label, T.labelMm, 700, T.labelMm * T.tracking, Number.POSITIVE_INFINITY));
+  const natural = printed.map(({ value }, at) => Math.max(labels[at]!.widthMm, setter.line(value, T.valueMm, 400).widthMm));
+  const labelAbove = labels.map((label) => Math.max(CAP_HEIGHT * T.labelMm, setter.ink(label, T.labelMm).above));
+  // The note's first line, at its tallest letter wherever the line breaks: one line of it at least has room.
+  const S = STEP_TEXT_SIZE_MM;
+  const noteLine = note === '' ? 0 : Math.max(CAP_HEIGHT * S, setter.ink(setter.line(note, S, 400), S).above) + DESCENT * S;
+  const rowsAt = (scale: number) => rowsOf(natural.map((width) => width * scale), T.gutterMm * scale, under.w);
+  const fitsAt = (withNote: boolean) => (scale: number) => {
+    const rows = rowsAt(scale).map((row) => Math.max(...row.map((at) => labelAbove[at]!)));
+    return scale * columnHeight(subtitle !== '', rows, withNote ? noteLine : 0) <= column.h + 1e-9;
+  };
+  // Where the note's first line cannot have room even at the least scale, the column is scaled as if there were none.
+  const scale = largestScale(fitsAt(noteLine > 0 && fitsAt(true)(LEAST_SCALE)));
 
   const set = setSubtitle(subtitle, column, scale, setter);
   const bandTop = column.y + (set ? T.subtitleRowMm * scale : 0);
@@ -192,11 +209,11 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   const firstRowTop = band.y + band.h + T.creditsGapMm * scale;
   const columns: LayoutCredit[] = [];
   const dividers: { x: number; y1: number; y2: number }[] = [];
-  for (const [index, row] of rowsAt(scale).entries()) {
-    const top = firstRowTop + index * pitch;
+  let top = firstRowTop;
+  for (const row of rowsAt(scale)) {
     const lines = row.map((at) => ({
-      label: trackedLine(setter, printed[at]!.label, labelSizeMm, 700, trackingMm, column.w),
-      value: setter.line(printed[at]!.value, valueSizeMm, 400, column.w),
+      label: trackedLine(setter, printed[at]!.label, labelSizeMm, 700, trackingMm, under.w),
+      value: setter.line(printed[at]!.value, valueSizeMm, 400, under.w),
     }));
     const above = Math.max(CAP_HEIGHT * labelSizeMm, ...lines.map(({ label }) => setter.ink(label, labelSizeMm).above));
     const labelBaseline = top + above;
@@ -205,26 +222,27 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
     if (valueBaseline + DESCENT * valueSizeMm > foot + 1e-9) break;
     let x = column.x;
     lines.forEach(({ label, value }, k) => {
-      const w = Math.min(column.w, Math.max(label.widthMm, value.widthMm));
+      const w = Math.min(under.w, Math.max(label.widthMm, value.widthMm));
       columns.push({ label, value, x, w, top, labelBaseline, valueBaseline });
       if (k < lines.length - 1) dividers.push({ x: x + w + (T.gutterMm * scale) / 2, y1: top, y2: valueBaseline });
       x += w + T.gutterMm * scale;
     });
+    top = valueBaseline + T.rowGapMm * scale;
   }
   const lastRow = columns.at(-1);
   const cut = printed.length - columns.length;
   // The note under the credits; where a credit with a value has no room, none for the note either.
   const noteTop = cut > 0 ? foot : lastRow ? lastRow.valueBaseline + T.rowGapMm * scale : firstRowTop;
-  const note = setNote(look.note.trim(), column, noteTop, scale, setter);
+  const setNoteLines = setNote(note, under, noteTop, scale, setter);
 
   // Each credit with no value, after the last printed one, for as long as the block has room above the note: none
   // where a credit with one has none.
-  const room = note && note.lines.length > 0 ? note.top : foot;
+  const room = setNoteLines && setNoteLines.lines.length > 0 ? setNoteLines.top : foot;
   const emptyCredits: LayoutTitleBlock['emptyCredits'] = [];
   let at = lastRow ? { x: lastRow.x + lastRow.w + T.gutterMm * scale, top: lastRow.top } : { x: column.x, top: firstRowTop };
   for (const { label } of cut > 0 ? [] : credits.filter(({ value }) => value === '')) {
-    const w = Math.min(column.w, Math.max(EMPTY_CREDIT_MM * scale, trackedLine(setter, label, labelSizeMm, 700, trackingMm, column.w).widthMm));
-    if (at.x > column.x && at.x + w > column.x + column.w + 1e-9) at = { x: column.x, top: at.top + pitch };
+    const w = Math.min(under.w, Math.max(EMPTY_CREDIT_MM * scale, trackedLine(setter, label, labelSizeMm, 700, trackingMm, under.w).widthMm));
+    if (at.x > column.x && at.x + w > column.x + under.w + 1e-9) at = { x: column.x, top: at.top + pitch };
     const h = (CAP_HEIGHT * T.labelMm + T.valueDropMm) * scale + DESCENT * valueSizeMm;
     if (at.top + h > room + 1e-9) break;
     emptyCredits.push({ label, box: { x: at.x, y: at.top, w, h } });
@@ -238,17 +256,21 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
     band,
     title,
     credits: printed.length > 0 ? { labelSizeMm, valueSizeMm, trackingMm, columns, dividers, cut } : null,
-    note,
+    note: setNoteLines,
     emptyCredits,
+    labelSizeMm,
   };
 }
 
-/** How tall J1b's column is, at its own sizes, with a subtitle or none and `rows` rows of credits. */
-function columnHeight(subtitle: boolean, rows: number): number {
+/**
+ * How tall J1b's column is, at its own sizes: a subtitle or none, the band, a row of credits for each of `rows` —
+ * how far its labels' ink reaches over their baseline — and `noteLine`, the note's first line, or none.
+ */
+function columnHeight(subtitle: boolean, rows: readonly number[], noteLine: number): number {
   const T = TITLE_BLOCK_TYPE;
-  const credits =
-    rows > 0 ? T.creditsGapMm + rows * (CAP_HEIGHT * T.labelMm + T.valueDropMm) + (rows - 1) * T.rowGapMm + DESCENT * T.valueMm : 0;
-  return (subtitle ? T.subtitleRowMm : 0) + T.bandMm + credits;
+  const values = rows.reduce((sum, above) => sum + above + T.valueDropMm, 0) + (rows.length - 1) * T.rowGapMm;
+  const under = rows.length > 0 ? values + (noteLine > 0 ? T.rowGapMm + noteLine : DESCENT * T.valueMm) : noteLine;
+  return (subtitle ? T.subtitleRowMm : 0) + T.bandMm + (under > 0 ? T.creditsGapMm + under : 0);
 }
 
 /** The largest scale up to 1 that `fits`, to a thousandth, and never under {@link LEAST_SCALE}. */
@@ -295,9 +317,11 @@ function setSubtitle(subtitle: string, column: PageBox, scale: number, setter: T
 }
 
 /**
- * The title in the band: bold, on one line, as large as fits the band's width
- * less its inset either side, up to J1b's size, and its ink inside the band
- * with its capitals centred; at its least size cut with "…".
+ * The title in the band: bold, as large as fits the band's width less its
+ * inset either side, up to J1b's size, its ink inside the band and its
+ * capitals centred in it — on one line down to {@link TITLE_ONE_LINE_LEAST}
+ * of that size, then on two, down to {@link TITLE_LEAST}, where the second is
+ * cut with "…".
  */
 function setTitle(band: PageBox, title: string, scale: number, setter: TextSetter): LayoutTitleBlock['title'] {
   const T = TITLE_BLOCK_TYPE;
@@ -305,16 +329,39 @@ function setTitle(band: PageBox, title: string, scale: number, setter: TextSette
   const room = band.w - 2 * inset;
   if (title === '' || !(room > 0) || !(band.h > 0)) return null;
   const max = T.titleMm * scale;
+  const half = band.h / 2;
+  /** Lines at `sizeMm`, their capitals' block centred in the band. */
+  const centred = (lines: SetLine[], sizeMm: number) => {
+    const leadingMm = TITLE_LEADING * sizeMm;
+    return { lines, sizeMm, leadingMm, x: band.x + inset, baseline: band.y + half + (CAP_HEIGHT * sizeMm - (lines.length - 1) * leadingMm) / 2 };
+  };
   const whole = setter.line(title, max, 700);
   const { above, below } = setter.ink(whole, max);
-  // A width and an ink are each proportional to the size, so the size that fits is read off them at the largest.
-  const half = band.h / 2;
+  // A width and an ink are each proportional to the size, so the size that fits one line is read off them at the largest.
   const across = whole.widthMm > 0 ? (max * room) / whole.widthMm : max;
   const up = above / max > CAP_HEIGHT / 2 ? half / (above / max - CAP_HEIGHT / 2) : Number.POSITIVE_INFINITY;
   const down = half / (below / max + CAP_HEIGHT / 2);
-  const sizeMm = Math.max(max * TITLE_LEAST, Math.min(max, Math.floor(Math.min(across, up, down) * 100) / 100));
-  const line = setter.line(title, sizeMm, 700, room);
-  return { line, sizeMm, x: band.x + inset, baseline: band.y + half + (CAP_HEIGHT * sizeMm) / 2 };
+  const oneLine = Math.min(max, Math.floor(Math.min(across, up, down) * 100) / 100);
+  if (oneLine >= max * TITLE_ONE_LINE_LEAST) return centred([setter.line(title, oneLine, 700, room)], oneLine);
+  // Two lines: where the words break moves with the size, so the size is found by halving.
+  const twoLines = (sizeMm: number) => setter.paragraph(title, room, sizeMm, 2, 700).lines;
+  const fits = (sizeMm: number) => {
+    const set = centred(twoLines(sizeMm), sizeMm);
+    const first = set.lines[0];
+    const last = set.lines.at(-1);
+    if (!first || !last || last.ellipsis) return false;
+    const top = set.baseline - setter.ink(first, sizeMm).above;
+    const bottom = set.baseline + (set.lines.length - 1) * set.leadingMm + setter.ink(last, sizeMm).below;
+    return top >= band.y - 1e-9 && bottom <= band.y + band.h + 1e-9;
+  };
+  let [low, high] = [max * TITLE_LEAST, max];
+  if (!fits(low)) return centred(twoLines(low), low);
+  while (high - low > 0.01) {
+    const middle = (low + high) / 2;
+    if (fits(middle)) low = middle;
+    else high = middle;
+  }
+  return centred(twoLines(low), low);
 }
 
 /** The note from `top`, its first line's tallest letter there, on as many lines as the block has room for; the last cut with "…". */

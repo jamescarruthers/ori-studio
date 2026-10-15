@@ -19,6 +19,7 @@ import {
   setHanStyle,
   setPageSetup,
   setTitleBlockContent,
+  setTitleBlockShown,
   setStepBreakBefore,
   setReferencesSide,
   setStepPicture,
@@ -41,6 +42,7 @@ import {
   setReferencesWay,
   makeCardMarksEditable,
 } from '../../../diagram/document/diagramDocument';
+import { titleBlockDefaultWords } from '../../../diagram/document/titleBlockWords';
 import i18n from '../../../i18n';
 import { trackDiagramImportedMarkEdited } from '../../../analytics';
 import { annotationEventKind } from '../../../diagram/annotate/annotationEventKind';
@@ -90,14 +92,13 @@ function authorLocale(): string | null {
  * (Zach, 2026-10-15), the author's own text from then on.
  */
 function newDiagram() {
-  const t = i18n.t;
-  const titleBlockContent = defaultTitleBlockContent({
-    subtitle: t('panels:diagram.titleBlock.default.subtitle', 'Origami diagram'),
-    author: t('panels:diagram.titleBlock.default.author', 'Author'),
-    recommendedSize: t('panels:diagram.titleBlock.default.recommendedSize', 'Recommended size'),
-    steps: t('panels:diagram.titleBlock.default.steps', 'Steps'),
-  });
+  const titleBlockContent = defaultTitleBlockContent(titleBlockWords());
   return createDiagram({ hanStyle: defaultHanStyle(authorLocale()), titleBlockContent });
+}
+
+/** A title block's first words in the app's language: a new diagram's, and those its toggle writes. */
+function titleBlockWords() {
+  return titleBlockDefaultWords((key, english) => i18n.t(key, english));
 }
 
 /**
@@ -579,6 +580,11 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       remember();
       return true;
     },
+
+    setDiagramTitleBlockShown: (enabled) =>
+      commit(enabled ? 'Show title block' : 'Hide title block', (document) =>
+        setTitleBlockShown(document, enabled, titleBlockWords())
+      ) !== null,
 
     setDiagramTitleBlockContent: (patch, { loadId, session } = {}) => {
       if (loadId !== undefined && loadId !== get().diagramLoadId) return false;

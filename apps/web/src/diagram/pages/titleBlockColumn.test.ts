@@ -22,7 +22,7 @@ import {
   type TitleBlockCreditText,
   type TitleBlockLook,
 } from './titleBlockColumn';
-import { titleBlockGeometry } from './titleBlockGeometry';
+import { titleBlockGeometry } from './titleBlock.fixtures';
 
 /**
  * The title block's text column (`implementation-plans/diagram-title-block.md`,
@@ -94,7 +94,7 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     nearJ1b(band.h, 62.36);
     expect(band.x).toBe(geometry.block.x);
     expect(right(band)).toBe(right(geometry.column));
-    expect(title!.line.text).toBe('Crane');
+    expect(title!.lines.map(({ text }) => text)).toEqual(['Crane']);
     expect(title!.sizeMm).toBeCloseTo(16, 9);
     nearJ1b(title!.x, 51.02);
     nearJ1b(title!.baseline, 93.89);
@@ -197,16 +197,37 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     expect(alone.note!.top).toBeCloseTo(foot(alone.band) + 13 / PT, 9);
   });
 
-  it('sets a longer title smaller to fit the band, and at its least size cuts it with "…"', () => {
-    const { title: longer, band } = setOf({}, J1B_SETUP, 'The Traditional Japanese Crane');
+  it('sets a longer title smaller to fit the band, on two lines rather than under half its size, and cuts it only past that', () => {
+    const { title: longer, band } = setOf({}, J1B_SETUP, 'Traditional Crane');
+    expect(longer!.lines).toHaveLength(1);
     expect(longer!.sizeMm).toBeLessThan(16);
-    expect(longer!.line.ellipsis).toBe(false);
-    expect(longer!.line.widthMm).toBeLessThanOrEqual(band.w - 12 + 1e-9);
-    expect(longer!.line.widthMm).toBeGreaterThan((band.w - 12) * 0.99);
-    const longest = setOf({}, J1B_SETUP, 'The Traditional Japanese Crane, Folded from One Uncut Square of Paper, with Its Flapping Wings').title!;
+    expect(longer!.sizeMm).toBeGreaterThanOrEqual(8);
+    expect(longer!.lines[0]!.ellipsis).toBe(false);
+    expect(longer!.lines[0]!.widthMm).toBeLessThanOrEqual(band.w - 12 + 1e-9);
+    expect(longer!.lines[0]!.widthMm).toBeGreaterThan((band.w - 12) * 0.99);
+    // One line would be under half its size: two, every word printed, larger than one line could be, inside the band.
+    const two = (title: string, setter: TextSetter = fonts) => {
+      const set = setOf({}, J1B_SETUP, title, setter);
+      const { lines, sizeMm, leadingMm, baseline } = set.title!;
+      expect(lines, title).toHaveLength(2);
+      expect(lines.map(({ text }) => text).join(' ').replace(/\s+/g, ''), title).toBe(title.replace(/\s+/g, ''));
+      expect(lines.some(({ ellipsis }) => ellipsis), title).toBe(false);
+      for (const line of lines) expect(line.widthMm, title).toBeLessThanOrEqual(set.band.w - 12 + 1e-9);
+      expect(baseline - setter.ink(lines[0]!, sizeMm).above, title).toBeGreaterThanOrEqual(set.band.y - 1e-9);
+      expect(baseline + leadingMm + setter.ink(lines[1]!, sizeMm).below, title).toBeLessThanOrEqual(foot(set.band) + 1e-9);
+      // Its capitals' block centred in the band.
+      expect(baseline + (leadingMm - 0.714 * sizeMm) / 2, title).toBeCloseTo(set.band.y + set.band.h / 2, 9);
+      return sizeMm;
+    };
+    // The review's titles (2026-10-15), each cut to "…" on one line at its least size, 13.6 pt, before.
+    const crane = 'The Traditional Japanese Crane, with Flapping Wings and a Long Neck';
+    expect(two(crane)).toBeGreaterThan(0.3 * 16 * 1.25);
+    expect(two(`${CJK}${CJK.slice(0, 9)}`)).toBeGreaterThan(0.3 * 16 * 1.25);
+    // Past two lines at its least size: cut with "…" on the second.
+    const longest = setOf({}, J1B_SETUP, Array.from({ length: 6 }, () => crane).join(' ')).title!;
     expect(longest.sizeMm).toBeCloseTo(0.3 * 16, 9);
-    expect(longest.line.ellipsis).toBe(true);
-    expect(longest.line.widthMm).toBeLessThanOrEqual(band.w - 12 + 1e-9);
+    expect(longest.lines).toHaveLength(2);
+    expect(longest.lines[1]!.ellipsis).toBe(true);
     expect(setOf({}, J1B_SETUP, '   ').title).toBeNull();
   });
 
@@ -216,7 +237,7 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
       J1B_SETUP,
       `${CJK.slice(0, 3)} Crane`
     );
-    expect(set.title!.line.runs.some((run) => run.font === 'sc-700')).toBe(true);
+    expect(set.title!.lines[0]!.runs.some((run) => run.font === 'sc-700')).toBe(true);
     expect(set.subtitle!.line.runs.every((run) => run.font === 'sc-700')).toBe(true);
     expect(set.credits!.columns[0]!.label.runs.every((run) => run.font === 'sc-700')).toBe(true);
     expect(set.credits!.columns[0]!.value.runs.every((run) => run.font === 'sc-400')).toBe(true);
@@ -277,6 +298,50 @@ describe('setTitleBlock: every paper, share and grid', () => {
     }
     // The short blocks: A5 and landscape pages, the least shares.
     expect(scaled).toBeGreaterThan(0);
+  });
+
+  it('prints every credit wherever the column is scaled above its least, whatever its labels’ letters (review, 2026-10-15)', () => {
+    // The labels a new diagram gets in each catalog that reaches past a capital — an accent, an ideograph — beside
+    // English: all with values, and as a new diagram has them, the step count alone.
+    const LABELS = [
+      ['AUTHOR', 'RECOMMENDED SIZE', 'STEPS'],
+      ['AUTEUR', 'TAILLE RECOMMANDÉE', 'ÉTAPES'],
+      ['AUTOR', 'EMPFOHLENE GRÖSSE', 'SCHRITTE'],
+      ['AUTOR', 'TAMAÑO RECOMENDADO', 'PASOS'],
+      [CJK.slice(0, 2), CJK.slice(2, 6), CJK.slice(6, 9)],
+    ];
+    const VALUES = [
+      ['Traditional', '60 cm × 60 cm', '28'],
+      ['', '', '28'],
+    ];
+    let scaled = 0;
+    for (const paper of EVERY_PAPER) {
+      for (const heightShare of [0.15, 0.23, 0.27, 0.5]) {
+        for (const layout of layouts) {
+          for (const labels of LABELS) {
+            for (const values of VALUES) {
+              const credits = labels.map((label, at) => ({ label, value: values[at]! }));
+              const set = setOf({ credits }, { ...J1B_SETUP, ...paper, ...layout, titleBlock: { enabled: true, heightShare } });
+              const label = JSON.stringify({ ...paper, heightShare, ...layout, labels, values, scale: set.scale });
+              if (set.scale < 1) scaled += 1;
+              if (set.scale > LEAST_SCALE) expect(set.credits!.cut, label).toBe(0);
+            }
+          }
+        }
+      }
+    }
+    expect(scaled).toBeGreaterThan(0);
+  });
+
+  it('prints a note’s first line at least, on every paper either way up at a new diagram’s share (review, 2026-10-15)', () => {
+    for (const paper of EVERY_PAPER) {
+      for (const layout of layouts) {
+        const set = setOf({ note: NOTE }, { ...J1B_SETUP, ...paper, ...layout, titleBlock: { enabled: true, heightShare: 0.23 } });
+        const label = JSON.stringify({ ...paper, ...layout, scale: set.scale });
+        expect(set.credits!.cut, label).toBe(0);
+        expect(set.note!.lines.length, label).toBeGreaterThanOrEqual(1);
+      }
+    }
   });
 });
 

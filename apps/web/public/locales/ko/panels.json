@@ -1163,10 +1163,9 @@
         "showHelp": "제목과 크레딧, 전개도, 완성 모델을 첫 페이지 위쪽에 표시합니다.",
         "step": "{{number}}단계",
         "stepCount": "자동 ({{number}})",
-        "stepCountHelp": "단계 수, 항상 최신으로 유지",
         "subtitle": "부제목",
         "subtitleHelp": "제목 위의 작은 한 줄입니다. 비우면 인쇄되지 않습니다.",
-        "typeValue": "대신 내용 입력"
+        "typeValue": "크레딧 {{number}}에 대신 내용 입력"
       },
       "titleHelp": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다.",
       "titleHelpWithBlock": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다. 첫 페이지에서는 대신 제목 영역에 들어갑니다."
@@ -1190,6 +1189,7 @@
         "noModel": "아직 그림이 있는 단계가 없습니다",
         "noPattern": "전개도에 연결된 단계가 없습니다",
         "noteCut": "메모의 나머지가 들어가지 않습니다",
+        "noteNone": "메모가 들어가지 않습니다",
         "noValue": "아직 내용이 없습니다",
         "stepNoPattern": "{{number}}단계에는 전개도가 없습니다",
         "stepNoPicture": "{{number}}단계에는 아직 그림이 없습니다"

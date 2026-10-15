@@ -4469,13 +4469,13 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8947,13 +8947,13 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13427,13 +13427,13 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -17808,13 +17808,13 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22189,13 +22189,13 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -26667,13 +26667,13 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -31145,13 +31145,13 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -35526,12 +35526,12 @@
     "panels:diagram.pagePane.titleBlock.patternSizeHelp": "9958dd69fe73",
     "panels:diagram.pagePane.titleBlock.removeCredit": "5db0db39d243",
     "panels:diagram.pagePane.titleBlock.stepCount": "90b9f3d92fdc",
-    "panels:diagram.pagePane.titleBlock.stepCountHelp": "f76e93067593",
     "panels:diagram.pagePane.titleBlock.subtitle": "383cd6c0b871",
     "panels:diagram.pagePane.titleBlock.subtitleHelp": "ad5dfa4ab941",
-    "panels:diagram.pagePane.titleBlock.typeValue": "691c95e9dbab",
+    "panels:diagram.pagePane.titleBlock.typeValue": "32a839174fbd",
     "panels:diagram.pages.titleBlock.creditsCut": "0ef0bccd7ded",
     "panels:diagram.pages.titleBlock.noteCut": "62d9c824e906",
-    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae"
+    "panels:diagram.pages.titleBlock.noValue": "90d6c41c98ae",
+    "panels:diagram.pages.titleBlock.noteNone": "509fbf18a991"
   }
 }

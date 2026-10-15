@@ -1247,7 +1247,7 @@ describe('the title block on the first page (`diagram-title-block.md`, section 2
     const result = flowLayout(steps(12), { stepsPerPage: 9 });
     expect(result.title).not.toBeNull();
     expect(result.pages.map((page) => Boolean(page.titleBlock))).toEqual([true, false]);
-    expect(result.pages[0]!.titleBlock!.title).toMatchObject({ sizeMm: 16, line: { text: 'Crane' } });
+    expect(result.pages[0]!.titleBlock!.title).toMatchObject({ sizeMm: 16, lines: [{ text: 'Crane' }] });
     // Off, or in a grid of one row with no room for it, there is no block, and page 1 keeps its tab.
     expect(flowLayout(steps(12), { titleBlock: { enabled: false, heightShare: 0.27 } }).pages[0]!.titleBlock).toBeUndefined();
     expect(layout(steps(4), { rows: 1, columns: 4, titleBlock: ON }).pages[0]!.titleBlock).toBeUndefined();

@@ -8,7 +8,7 @@
   box-sizing: border-box;
   border: 1px dashed #c4c4bd;
   border-radius: var(--radius-sm);
-  color: #8f8f88;
+  color: var(--placeholder-ink, #8f8f88);
   font-size: 0.7rem;
   pointer-events: none;
 }
@@ -42,14 +42,15 @@
 
 /*
  * A credit of the title block with no value, in the room it would print in:
- * its label over the reason, a line each, cut short rather than wrapped, as
- * the printed column is a line each.
+ * its label over the reason, a line each, at the size its label prints at
+ * (set by its parent), cut short rather than wrapped, as the printed column
+ * is a line each.
  */
 .placeholder[data-kind='slot'] {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 2px;
   line-height: 1.15;
   white-space: nowrap;
 }
@@ -60,14 +61,14 @@
 }
 
 /*
- * Where the title block is cut: no box round the printed line, only a tag at
- * its end, on paper so that it reads over the line's last words.
+ * Where the title block is cut: no box, only a tag hanging under the block's
+ * foot at the column's end, on paper, over nothing the block prints.
  */
 .placeholder[data-kind='cut'] {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 2px;
   border: none;
   line-height: 1.3;

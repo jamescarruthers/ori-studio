@@ -39,23 +39,29 @@ export function DiagramTitleBlockRows() {
     return chosen && !chosen.gives ? cannot(chosen.number) : undefined;
   };
   const percent = (value: number) => new Intl.NumberFormat(i18n.language, { style: 'percent' }).format(value / 100);
-  /** A size's slider, in percent of the block's height, handed over where it is let go. */
-  const sizeRow = (key: TitleBlockArtSize, label: string, help: string) => (
-    <SliderRow
-      label={label}
-      help={help}
-      nested
-      value={Math.round(block.sizes[key] * 100)}
-      min={SIZE_MIN}
-      max={SIZE_MAX}
-      step={SIZE_STEP}
-      format={percent}
-      valueText={percent}
-      disabled={readOnly}
-      onCommit={(value) => block.setSize(key, value / 100)}
-      onReset={block.sizes[key] !== TITLE_BLOCK_ART_SIZE_DEFAULTS[key] ? () => block.setSize(key, 'default') : undefined}
-    />
-  );
+  /**
+   * A size's slider, in percent of the block's height, handed over where it is let go: only as far as keeps the
+   * model on the pattern's corner with the other size as it is.
+   */
+  const sizeRow = (key: TitleBlockArtSize, label: string, help: string) => {
+    const max = Math.min(SIZE_MAX, Math.floor(block.sizeLimits[key] * 100 + 1e-9));
+    return (
+      <SliderRow
+        label={label}
+        help={help}
+        nested
+        value={Math.min(max, Math.round(block.sizes[key] * 100))}
+        min={SIZE_MIN}
+        max={max}
+        step={SIZE_STEP}
+        format={percent}
+        valueText={percent}
+        disabled={readOnly}
+        onCommit={(value) => block.setSize(key, value / 100)}
+        onReset={block.sizes[key] !== TITLE_BLOCK_ART_SIZE_DEFAULTS[key] ? () => block.setSize(key, 'default') : undefined}
+      />
+    );
+  };
   return (
     <>
       <ToggleRow

@@ -1163,10 +1163,9 @@
         "showHelp": "タイトルとクレジット、展開図、完成形を最初のページの上部に入れます。",
         "step": "ステップ {{number}}",
         "stepCount": "自動（{{number}}）",
-        "stepCountHelp": "ステップ数（常に最新）",
         "subtitle": "サブタイトル",
         "subtitleHelp": "タイトルの上の小さな一行。空にすると印刷されません。",
-        "typeValue": "代わりに内容を入力"
+        "typeValue": "クレジット {{number}} の内容を代わりに入力"
       },
       "titleHelp": "折り図のタイトルを、各ページ上部のタブに表示します。",
       "titleHelpWithBlock": "折り図のタイトルを、各ページ上部のタブに表示します。最初のページでは代わりにタイトル欄に入ります。"
@@ -1190,7 +1189,8 @@
         "noModel": "図のあるステップがまだありません",
         "noPattern": "展開図にリンクしたステップがありません",
         "noteCut": "備考の続きが入りきりません",
-        "noValue": "内容はまだありません",
+        "noteNone": "備考が入りきりません",
+        "noValue": "未入力",
         "stepNoPattern": "ステップ {{number}} には展開図がありません",
         "stepNoPicture": "ステップ {{number}} にはまだ図がありません"
       },

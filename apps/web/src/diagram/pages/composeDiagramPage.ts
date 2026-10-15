@@ -220,7 +220,7 @@ export type FontUse = (face: string, text: string) => void;
  */
 function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
   const { geometry, subtitle, band, title, credits, note } = block;
-  const inks = titleBlockInks(diagramSurfaceStyle(input.style).paper, INK);
+  const inks = titleBlockInksOf(input.style);
   const x = geometry.column.x;
   const elements: string[] = [];
   if (band.w > 0 && band.h > 0) {
@@ -230,7 +230,7 @@ function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageIn
   for (const { x: at, y1, y2 } of credits?.dividers ?? []) elements.push(ruleElement(at, y1, at, y2, DIVIDER_PT, inks.rule));
   if (input.titleBlock) elements.push(...titleBlockArt(geometry, input.titleBlock, input, count));
   if (subtitle) elements.push(textElement([subtitle.line], x, subtitle.baseline, subtitle.sizeMm, 0, 700, TEXT_INK, count, subtitle.trackingMm));
-  if (title) elements.push(textElement([title.line], title.x, title.baseline, title.sizeMm, 0, 700, inks.title, count));
+  if (title) elements.push(textElement(title.lines, title.x, title.baseline, title.sizeMm, title.leadingMm, 700, inks.title, count));
   for (const column of credits?.columns ?? []) {
     elements.push(
       textElement([column.label], column.x, column.labelBaseline, credits!.labelSizeMm, 0, 700, TEXT_INK, count, credits!.trackingMm),
@@ -239,6 +239,11 @@ function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageIn
   }
   if (note && note.lines.length > 0) elements.push(textElement(note.lines, x, note.firstBaseline, note.sizeMm, note.leadingMm, 400, TEXT_INK, count));
   return elements;
+}
+
+/** The title block's band, title and rules in `style`'s paper and the page's ink (`titleBlockInks`): the page's, and what the Pages view marks the band in. */
+export function titleBlockInksOf(style: DiagramStyle): ReturnType<typeof titleBlockInks> {
+  return titleBlockInks(diagramSurfaceStyle(style).paper, INK);
 }
 
 /** The subtitle's rule and the credits' dividers, in pt: J1b's. */
@@ -258,8 +263,8 @@ function titleBlockArt(geometry: TitleBlockGeometry, content: ResolvedTitleBlock
   const elements: string[] = [];
   if (pattern.scene) elements.push(fittedScene(pattern.scene, diagramSurfaceStyle(input.style), geometry.pattern));
   const text = { hanStyle: input.hanStyle, runs: input.setter.runs };
-  const room = modelRoom(geometry, content);
-  const picture = model.step ? wholePicture(model.step, input.assets, input.style, room, 'title-block-', text) : null;
+  const { box, align } = modelRoom(geometry, content);
+  const picture = model.step ? wholePicture(model.step, input.assets, input.style, box, 'title-block-', text, align) : null;
   if (picture) {
     elements.push(picture.markup);
     for (const { face, characters } of picture.text) count(face, characters);

@@ -164,25 +164,60 @@ const render = () =>
   );
 
 describe('DiagramTitleBlockRows', () => {
-  it('turns the block on as a page setting, one undo step and one count, and shows what it holds only then', () => {
+  it('turns the block on at today’s height with a new diagram’s subtitle and credits, one undo step and one count (Zach, 2026-10-15)', () => {
+    // A diagram saved without the block, as Zach's crane was: the legacy 0.27 share, and nothing said of its words.
     install();
+    const saved = state().diagram;
     render();
     expect(toggle().getAttribute('aria-checked')).toBe('false');
     expect(select('Model')).toBeNull();
     expect(textField('Note')).toBeNull();
     act(() => toggle().click());
-    // At the share the file says, a diagram saved without the block the legacy 0.27, not a new diagram's 0.23.
-    const saidOn = { ...PAGE_SETTINGS.titleBlock.legacy, enabled: true };
-    expect(state().diagram!.page.titleBlock).toEqual(saidOn);
+    expect(state().diagram!.page.titleBlock).toEqual(PAGE_SETTINGS.titleBlock.default);
+    expect(state().diagram!.titleBlockContent).toEqual(NEW_CONTENT);
     expect(undoSteps()).toBe(1);
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('title_block');
+    // Shown at once, scaffolded: the subtitle, and the three credits, the last following the step count.
     expect(toggle().getAttribute('aria-checked')).toBe('true');
+    expect(textField('Subtitle')!.value).toBe('Origami diagram');
+    expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Recommended size', 'Steps']);
+    expect(input('Value of credit 3')!.value).toBe('Auto (4)');
     expect(select('Model')).not.toBeNull();
     expect(select('Crease pattern')).not.toBeNull();
-    expect(textField('Note')).not.toBeNull();
+    // One Undo gives the diagram back as it was saved.
+    act(() => state().undoDiagram());
+    expect(state().diagram).toEqual(saved);
     act(() => toggle().click());
-    expect(state().diagram!.page.titleBlock).toEqual({ ...saidOn, enabled: false });
+    // Off keeps its height and its words.
+    act(() => toggle().click());
+    expect(state().diagram!.page.titleBlock).toEqual({ ...PAGE_SETTINGS.titleBlock.default, enabled: false });
+    expect(state().diagram!.titleBlockContent).toEqual(NEW_CONTENT);
     expect(select('Model')).toBeNull();
+  });
+
+  it('keeps the words a diagram already says when the block is turned on', () => {
+    install({}, false, undefined, { subtitle: 'Modular', credits: [{ label: 'Units', value: '30' }] });
+    render();
+    act(() => toggle().click());
+    expect(state().diagram!.titleBlockContent).toEqual({ subtitle: 'Modular', credits: [{ label: 'Units', value: '30' }] });
+    // A subtitle and no credits — its author removed them all — is the author's: the toggle adds none.
+    install({}, false, undefined, { subtitle: 'Modular' });
+    act(() => toggle().click());
+    expect(state().diagram!.titleBlockContent).toEqual({ subtitle: 'Modular' });
+  });
+
+  it('shows a new diagram’s words before there is one, so the first edit lands among them (review, 2026-10-15)', () => {
+    // No diagram yet: the first edit makes one with the default subtitle and credits, then applies itself.
+    render();
+    expect(state().diagram).toBeNull();
+    expect(textField('Subtitle')!.value).toBe('Origami diagram');
+    expect([1, 2, 3].map((number) => input(`Label of credit ${number}`)!.value)).toEqual(['Author', 'Recommended size', 'Steps']);
+    // The step count already follows: there is none to add.
+    expect(button('Add Step Count')).toBeUndefined();
+    act(() => button('Add Credit')!.click());
+    expect(credits()!.map(({ label }) => label)).toEqual(['Author', 'Recommended size', 'Steps', '']);
+    expect(credits()!.filter(({ value }) => typeof value !== 'string')).toHaveLength(1);
+    expect(document.activeElement).toBe(input('Label of credit 4'));
   });
 
   it('works out what the selects offer only while the first page has the block, as an old file has not', () => {
@@ -350,14 +385,37 @@ describe('DiagramTitleBlockRows', () => {
       'Steps',
     ]);
     expect(input('Value of credit 1')!.value).toBe('');
-    expect(input('Value of credit 3')).toBeNull();
-    const live = () => host!.querySelector('[data-credit-live]')!.textContent;
+    // The live count is the credit's value, read and never typed: a field the keyboard reaches, which a reader hears.
+    const live = () => input('Value of credit 3')!;
+    expect(live().readOnly).toBe(true);
+    expect(live().tabIndex).toBe(0);
     // Four numbered steps: a turn would not count.
-    expect(live()).toBe('Auto (4)');
+    expect(live().value).toBe('Auto (4)');
     act(() => state().addDiagramStep());
-    expect(live()).toBe('Auto (5)');
+    expect(live().value).toBe('Auto (5)');
     expect(button('Add Credit')).toBeDefined();
     expect(button('Add Step Count')).toBeUndefined();
+  });
+
+  it('keeps a credit field’s text on Enter and Escape, leaves it there, and lets an input method’s Enter be (review, 2026-10-15)', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    render();
+    const author = () => input('Value of credit 1')!;
+    const key = (init: KeyboardEventInit) => act(() => author().dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })));
+    act(() => author().focus());
+    typeInto(author(), 'Lang');
+    // An input method converting: its Enter is its own, and the field keeps the focus.
+    key({ key: 'Enter', isComposing: true });
+    expect(document.activeElement).toBe(author());
+    key({ key: 'Enter' });
+    expect(document.activeElement).not.toBe(author());
+    expect(credits()![0]).toEqual({ label: 'Author', value: 'Lang' });
+    act(() => author().focus());
+    typeInto(author(), 'Robert J. Lang');
+    key({ key: 'Escape' });
+    expect(document.activeElement).not.toBe(author());
+    expect(credits()![0]).toEqual({ label: 'Author', value: 'Robert J. Lang' });
+    expect(undoSteps()).toBe(2);
   });
 
   it('types a credit’s label and value, a sitting at each one undo step and one count, never the words', () => {
@@ -379,15 +437,18 @@ describe('DiagramTitleBlockRows', () => {
   it('types a value in place of the step count, and offers the step count back, each one undo step and one count', () => {
     install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
     render();
-    act(() => button('Type a value instead')!.click());
+    act(() => button('Type a value for credit 3 instead')!.click());
     expect(credits()![2]).toEqual({ label: 'Steps', value: '' });
     // The field it asked for, ready to type into.
     expect(document.activeElement).toBe(input('Value of credit 3'));
+    expect(input('Value of credit 3')!.readOnly).toBe(false);
     expect(host!.querySelector('[data-credit-live]')).toBeNull();
     expect(calls()).toEqual([['title_block_credits', { titleBlockCreditChange: 'step_count_off', titleBlockCredits: 3 }]]);
     act(() => button('Add Step Count')!.click());
     expect(credits()!.at(-1)).toEqual({ label: 'Steps', value: { kind: 'step-count' } });
     expect(button('Add Step Count')).toBeUndefined();
+    // The button that went with it hands the focus to the credit it added.
+    expect(document.activeElement).toBe(input('Label of credit 4'));
     expect(undoSteps()).toBe(2);
     expect(calls().at(-1)).toEqual(['title_block_credits', { titleBlockCreditChange: 'step_count_on', titleBlockCredits: 4 }]);
   });
@@ -409,13 +470,32 @@ describe('DiagramTitleBlockRows', () => {
     ]);
   });
 
+  it('never lets the focus fall out of the credits as they are removed (review, 2026-10-15)', () => {
+    install({ titleBlock: ON }, false, undefined, NEW_CONTENT);
+    render();
+    const remove = (number: number) => {
+      act(() => button(`Remove credit ${number}`)!.focus());
+      act(() => button(`Remove credit ${number}`)!.click());
+    };
+    // The first: the next credit's remove, now in its place.
+    remove(1);
+    expect(document.activeElement).toBe(button('Remove credit 1'));
+    // The last: the one before it.
+    remove(2);
+    expect(document.activeElement).toBe(button('Remove credit 1'));
+    // The only one: Add Credit.
+    remove(1);
+    expect(credits()).toBeUndefined();
+    expect(document.activeElement).toBe(button('Add Credit'));
+  });
+
   it('offers the step count to a block whose credits say nothing, as an old diagram’s', () => {
     install({ titleBlock: ON });
     render();
     expect(host!.querySelector('[data-credit]')).toBeNull();
     act(() => button('Add Step Count')!.click());
     expect(credits()).toEqual([{ label: 'Steps', value: { kind: 'step-count' } }]);
-    expect(host!.querySelector('[data-credit-live]')!.textContent).toBe('Auto (4)');
+    expect(input('Value of credit 1')!.value).toBe('Auto (4)');
   });
 
   it('sizes the model and the pattern in percent, handed over where let go, each one undo step and one count, and resets them', () => {
@@ -443,9 +523,27 @@ describe('DiagramTitleBlockRows', () => {
     expect(state().diagram!.titleBlockContent).toBeUndefined();
     expect(undoSteps()).toBe(2);
     expect(calls().at(-1)).toEqual(['title_block_model_size', { titleBlockSize: 'default' }]);
-    drag('Crease pattern size', '100');
-    expect(state().diagram!.titleBlockContent?.patternSize).toBe(1);
+    drag('Crease pattern size', '85');
+    expect(state().diagram!.titleBlockContent?.patternSize).toBe(0.85);
     expect(calls().at(-1)).toEqual(['title_block_pattern_size', { titleBlockSize: 'custom' }]);
+  });
+
+  it('offers no pair of sizes at which the model would leave the pattern’s corner, each as far as the other allows (Zach, 2026-10-15)', () => {
+    install({ titleBlock: ON });
+    render();
+    const max = (label: string) => Number(slider(label)!.max);
+    // At the defaults the model goes to 100%, and the pattern to 88%.
+    expect([max('Model size'), max('Crease pattern size')]).toEqual([100, 88]);
+    drag('Model size', '100');
+    expect(max('Crease pattern size')).toBe(80);
+    drag('Model size', '30');
+    expect(max('Crease pattern size')).toBe(94);
+    drag('Crease pattern size', '94');
+    expect(max('Model size')).toBe(30);
+    // A pair a file says that does not fit is drawn, and shown, with the pattern as large as fits.
+    act(() => state().setDiagramTitleBlockContent({ modelSize: 1, patternSize: 1 }));
+    expect(slider('Crease pattern size')!.value).toBe('80');
+    expect(slider('Model size')!.value).toBe('100');
   });
 
   it('offers a size only while its part is shown', () => {
@@ -485,7 +583,7 @@ describe('DiagramTitleBlockRows', () => {
     expect(textField('Note')!.disabled).toBe(true);
     expect(input('Label of credit 1')!.disabled).toBe(true);
     expect(input('Value of credit 1')!.disabled).toBe(true);
-    for (const name of ['Remove credit 1', 'Type a value instead', 'Add Credit']) expect(button(name)!.disabled).toBe(true);
+    for (const name of ['Remove credit 1', 'Type a value for credit 3 instead', 'Add Credit']) expect(button(name)!.disabled).toBe(true);
     expect(slider('Model size')!.disabled).toBe(true);
     expect(slider('Crease pattern size')!.disabled).toBe(true);
   });

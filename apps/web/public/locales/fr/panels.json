@@ -1237,10 +1237,9 @@
         "showHelp": "Le titre et ses crédits, le patron de plis et le modèle fini, en haut de la première page.",
         "step": "Étape {{number}}",
         "stepCount": "Auto ({{number}})",
-        "stepCountHelp": "Le nombre d’étapes, toujours à jour",
         "subtitle": "Sous-titre",
         "subtitleHelp": "La petite ligne au-dessus du titre. Videz-la pour n’en imprimer aucune.",
-        "typeValue": "Saisir une valeur à la place"
+        "typeValue": "Saisir une valeur pour le crédit {{number}} à la place"
       },
       "titleHelp": "Le titre du diagramme, dans un onglet en haut de chaque page.",
       "titleHelpWithBlock": "Le titre du diagramme, dans un onglet en haut de chaque page. Sur la première page, c’est le bloc titre qui le porte."
@@ -1264,6 +1263,7 @@
         "noModel": "Aucune étape n’a encore d’image",
         "noPattern": "Aucune étape n’est liée à un patron de plis",
         "noteCut": "La suite de la note ne tient pas",
+        "noteNone": "La note ne tient pas",
         "noValue": "Pas encore de valeur",
         "stepNoPattern": "L’étape {{number}} n’a pas de patron de plis",
         "stepNoPicture": "L’étape {{number}} n’a pas encore d’image"

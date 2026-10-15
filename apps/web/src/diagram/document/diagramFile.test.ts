@@ -570,6 +570,25 @@ describe('writeDiagram / readDiagram', () => {
       expect(set.newer).toBeUndefined();
       expect(throughJson(writeDiagram(set)).titleBlockContent).toEqual({ modelSize: 0.9 });
     });
+
+    it('carries a subtitle or a note of a kind it has no name for — a richer one — as a newer build’s, none here until set here (review, 2026-10-15)', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const rich = { kind: 'rich', blocks: [{ text: 'Design: ', marks: [] }, { text: 'Lang', marks: ['italic'] }] };
+      for (const titleBlockContent of [{ note: rich }, { subtitle: { kind: 'styled', text: 'Origami diagram' } }, { note: rich, credits: [{ label: 'Steps', value: { kind: 'step-count' } }] }]) {
+        const written = { ...base, titleBlockContent };
+        const read = readDiagram(written)!;
+        const label = JSON.stringify(titleBlockContent);
+        expect(read.readOnly, label).toBe(false);
+        expect(read.document.titleBlockContent?.note, label).toBeUndefined();
+        expect(read.document.titleBlockContent?.subtitle, label).toBeUndefined();
+        expect(throughJson(writeDiagram(read.document)), label).toEqual(written);
+      }
+      // Set here, it is this build's: the newer one let go.
+      const read = readDiagram({ ...base, titleBlockContent: { note: rich } })!.document;
+      const set = setTitleBlockContent(read, { note: 'Design: Lang' });
+      expect(set.newer).toBeUndefined();
+      expect(throughJson(writeDiagram(set)).titleBlockContent).toEqual({ note: 'Design: Lang' });
+    });
   });
 
   describe('the page arrangements (diagram-flow-packing.md, Decision 1)', () => {

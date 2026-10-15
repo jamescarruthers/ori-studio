@@ -337,10 +337,12 @@ describe('DiagramPagesView', () => {
     const outline = host.querySelector<HTMLElement>('[data-page="0"] [data-title-block]')!;
     const { block } = shown.layout.pages[0]!.titleBlock!.geometry;
     const { widthMm, heightMm } = shown.layout.paper;
-    // Inset into the page as the margin guide is.
+    // Inset into the page as the margin guide is, its foot alone drawn: its top and sides are the margin's, and a line
+    // there would run over the subtitle and its rule (Zach, 2026-10-15).
     expect([outline.style.left, outline.style.top, outline.style.right, outline.style.bottom]).toEqual(
       [block.x, block.y, widthMm - block.x - block.w, heightMm - block.y - block.h].map((mm) => `${mm * PX_PER_MM}px`)
     );
+    expect(outline.dataset.edges).toBe('foot');
     expect(missing()).toEqual([]);
     // No title, no linked step, no picture: each part says why, in the room it would print in — the pattern and
     // the model, which would stand in the pattern's square, in one box there.
@@ -359,6 +361,10 @@ describe('DiagramPagesView', () => {
     ]);
     const { pattern } = empty.layout.pages[0]!.titleBlock!.geometry;
     expect([rooms[1]!.style.left, rooms[1]!.style.width]).toEqual([pattern.x, pattern.w].map((mm) => `${mm * PX_PER_MM}px`));
+    // The title's words in the title's own ink, which reads on the band (review, 2026-10-15); the others in the mark's.
+    expect(empty.titleBlockInk).not.toBeNull();
+    expect(rooms[0]!.style.getPropertyValue('--placeholder-ink')).toBe(empty.titleBlockInk);
+    expect(rooms[1]!.style.getPropertyValue('--placeholder-ink')).toBe('');
     const svg = empty.compose(0).svg;
     for (const [, words] of missing()) expect(svg).not.toContain(words);
     // A step chosen for the model that has no picture is named by its number.
@@ -395,13 +401,18 @@ describe('DiagramPagesView', () => {
     const credit = host.querySelector<HTMLElement>('[data-title-block-room="credit"]')!;
     const { box } = pages.layout.pages[0]!.titleBlock!.emptyCredits[0]!;
     expect([credit.style.left, credit.style.top, credit.style.width, credit.style.height]).toEqual([box.x, box.y, box.w, box.h].map((mm) => `${mm * PX_PER_MM}px`));
+    // Its words at the size its label prints at, so that the label is as wide as its room (review, 2026-10-15).
+    expect(credit.style.fontSize).toBe(`${pages.layout.pages[0]!.titleBlock!.labelSizeMm * PX_PER_MM}px`);
     expect(pages.compose(0).svg).not.toContain('AUTHOR');
-    // A note longer than the block has room for: marked where it is cut, after its last line.
+    // A note longer than the block has room for: marked where it is cut, by a tag under the block.
     const long = header([{ label: 'Steps', value: '2' }], Array.from({ length: 40 }, (_, index) => `Line ${index + 1}`).join('\n'));
     const longPages = preparedPages(long, FONTS, subsetter);
     render(longPages, {}, longPages.layout.bandInk, long);
     expect(rooms()).toEqual([['cut', [['note', 'The rest of the note doesn’t fit']]]]);
-    expect(host.querySelector('[data-title-block-room="cut"]')!.getAttribute('data-kind')).toBe('cut');
+    const cut = host.querySelector<HTMLElement>('[data-title-block-room="cut"]')!;
+    expect(cut.getAttribute('data-kind')).toBe('cut');
+    const { block: longBlock } = longPages.layout.pages[0]!.titleBlock!.geometry;
+    expect(cut.style.top).toBe(`${(longBlock.y + longBlock.h) * PX_PER_MM}px`);
   });
 
   it('sets the words for a missing pattern over a portrait model standing at its own size in its place, not on it', () => {

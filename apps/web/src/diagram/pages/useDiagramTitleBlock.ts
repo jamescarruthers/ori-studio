@@ -4,6 +4,7 @@ import { trackDiagramPageSetupChanged, type DiagramTitleBlockCreditChange } from
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import {
   DEFAULT_PAGE_SETUP,
+  defaultTitleBlockContent,
   TITLE_BLOCK_ART_SIZE_DEFAULTS,
   titleBlockArtSizes,
   titleBlockStepCount,
@@ -11,9 +12,10 @@ import {
   type DiagramTitleBlockCredit,
   type DiagramTitleBlockCreditEdit,
 } from '../document/diagramDocument';
+import { titleBlockDefaultWords } from '../document/titleBlockWords';
 import { hasTitleBlock, titleBlockFits } from './pagePlan';
 import { titleBlockChoiceSource, titleBlockChoices, type TitleBlockChoices } from './titleBlockChoices';
-import { setPageSetting } from './useDiagramPageSetup';
+import { artSizeLimits, fittedArtSizes } from './titleBlockGeometry';
 
 const NO_CHOICES: TitleBlockChoices = {
   model: { value: 'auto', autoNumber: null, steps: [] },
@@ -45,8 +47,11 @@ export function useDiagramTitleBlock() {
   // Only while the selects are there to offer them: a file without the block pays nothing.
   const choices = useMemo(() => (document && shown ? titleBlockChoices(document) : NO_CHOICES), [document, shown]);
   const stepCount = useMemo(() => (document ? titleBlockStepCount(document) : 0), [document]);
-  const content = document?.titleBlockContent;
+  // Before a diagram exists, what the first edit will make it with: a field typed or a credit added then lands among them.
+  const firstContent = useMemo(() => (document ? undefined : defaultTitleBlockContent(titleBlockDefaultWords(t))), [document, t]);
+  const content = document ? document.titleBlockContent : firstContent;
   const credits = content?.credits ?? NO_CREDITS;
+  const sizes = fittedArtSizes(titleBlockArtSizes(content));
   /** The sitting at a text field last counted: sessions are numbered across every field, so one is enough. */
   const countedSession = useRef<number | null>(null);
 
@@ -91,11 +96,7 @@ export function useDiagramTitleBlock() {
   const addCredit = useCallback(() => editCredits({ op: 'add' }, 'add'), []);
   /** Add the live step count at the end, labelled as a new diagram's is. */
   const addStepCount = useCallback(
-    () =>
-      editCredits(
-        { op: 'add', credit: { label: t('panels:diagram.titleBlock.default.steps', 'Steps'), value: { kind: 'step-count' } } },
-        'step_count_on'
-      ),
+    () => editCredits({ op: 'add', credit: { label: titleBlockDefaultWords(t).steps, value: { kind: 'step-count' } } }, 'step_count_on'),
     [t]
   );
   const removeCredit = useCallback((at: number) => editCredits({ op: 'remove', at }, 'remove'), []);
@@ -112,8 +113,10 @@ export function useDiagramTitleBlock() {
     shown,
     model: choices.model,
     pattern: choices.pattern,
-    /** The model's and the pattern's sizes, as shares of the block's height: the content's, or the defaults. */
-    sizes: titleBlockArtSizes(content),
+    /** The model's and the pattern's sizes as the block draws them, shares of its height: the content's, or the defaults. */
+    sizes,
+    /** The largest each size may be with the other as it is: past it the model would no longer cover the pattern's corner. */
+    sizeLimits: artSizeLimits(sizes),
     subtitle: content?.subtitle ?? '',
     credits,
     /** The number a live step count prints now. */
@@ -136,10 +139,9 @@ export function useDiagramTitleBlock() {
   };
 }
 
-/** Turn the first page's title block on or off, at the height it has. */
+/** Turn the first page's title block on — at today's height, with a new diagram's words where it has none — or off. */
 function setEnabled(enabled: boolean) {
-  const { titleBlock } = useWorkspaceStore.getState().diagram?.page ?? DEFAULT_PAGE_SETUP;
-  setPageSetting({ titleBlock: { ...titleBlock, enabled } }, 'title_block');
+  if (useWorkspaceStore.getState().setDiagramTitleBlockShown(enabled)) trackDiagramPageSetupChanged('title_block');
 }
 
 /** Set where a part of the block comes from, from the choice the Page pane offered. */

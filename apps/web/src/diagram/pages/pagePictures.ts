@@ -87,6 +87,7 @@ import { setUploadText } from '../upload/uploadText';
 import { xrayPainter, xraySurfaceOf } from '../xray/xrayPaint';
 import { pictureExtent, pictureFit, type LayoutCell, type LayoutStep, type ReachLine, type TextSetter } from './diagramPageLayout';
 import type { PageBox } from './pagePlacement';
+import type { PictureAlign } from './titleBlockGeometry';
 
 /** A picture whose size cannot be read: fitted, square. */
 const UNSIZED: NonNullable<LayoutStep['picture']> = {
@@ -669,9 +670,10 @@ export function wholePicture(
   style: DiagramStyle,
   boxMm: PageBox,
   idPrefix: string,
-  text: PictureText
+  text: PictureText,
+  align: PictureAlign = BOTTOM_RIGHT
 ): CellPicture | null {
-  const fitted = fittedWhole(step, assets, style, boxMm);
+  const fitted = fittedWhole(step, assets, style, boxMm, align);
   if (!fitted) return null;
   const { bare, picture, scale, room } = fitted;
   const { w: width, h: height } = room;
@@ -690,20 +692,33 @@ export function wholePictureRoom(
   step: DiagramStep,
   assets: Readonly<Record<string, DiagramAsset>>,
   style: DiagramStyle,
-  boxMm: PageBox
+  boxMm: PageBox,
+  align: PictureAlign = BOTTOM_RIGHT
 ): PageBox | null {
-  return fittedWhole(step, assets, style, boxMm)?.room ?? null;
+  return fittedWhole(step, assets, style, boxMm, align)?.room ?? null;
 }
 
-/** A step's picture with none of its marks and no window, the scale that fits it to `boxMm`, and its room there: its extent, at the box's bottom right. */
-function fittedWhole(step: DiagramStep, assets: Readonly<Record<string, DiagramAsset>>, style: DiagramStyle, boxMm: PageBox) {
+/** Where a whole picture stands in its box when nothing says: its bottom right. */
+const BOTTOM_RIGHT: PictureAlign = { x: 1, y: 1 };
+
+/**
+ * A step's picture with none of its marks and no window, the scale that fits it to `boxMm`, and its room there: its
+ * extent, standing at `align` in the box.
+ */
+function fittedWhole(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  align: PictureAlign
+) {
   const { zoom: _window, ...unzoomed } = step;
   const bare: DiagramStep = { ...unzoomed, annotations: [] };
   const picture = layoutPicture(bare, assets, style);
   const scale = picture ? pictureFit(picture, boxMm.w, boxMm.h) : null;
   if (!picture || scale === null || !(scale > 0)) return null;
   const { width, height } = pictureExtent(picture, scale);
-  const room: PageBox = { x: boxMm.x + boxMm.w - width, y: boxMm.y + boxMm.h - height, w: width, h: height };
+  const room: PageBox = { x: boxMm.x + align.x * (boxMm.w - width), y: boxMm.y + align.y * (boxMm.h - height), w: width, h: height };
   return { bare, picture, scale, room };
 }
 

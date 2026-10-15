@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PageBox } from './pagePlacement';
 import { PRINT_PAPER_MM } from './printPaper';
 import {
+  DEFAULT_DIAGRAM_STYLE,
   DEFAULT_PAGE_SETUP,
   removeStepPicture,
   removeSteps,
@@ -22,6 +23,7 @@ import {
   lockedStep,
   patternStep,
   titleBlockDiagram,
+  titleBlockGeometry,
   turnOver,
   uploadStep,
 } from './titleBlock.fixtures';
@@ -34,9 +36,10 @@ import {
   patternScene,
   resolveTitleBlock,
   titleBlockLook,
+  type ModelRoom,
 } from './titleBlockContent';
+import { wholePictureRoom } from './pagePictures';
 import { emptyTitleBlockLook, setTitleBlock, type TitleBlockLook } from './titleBlockColumn';
-import { titleBlockGeometry } from './titleBlockGeometry';
 
 /**
  * What the first page's title block shows (`implementation-plans/
@@ -216,11 +219,54 @@ describe('titleBlockLook', () => {
 describe('modelRoom', () => {
   const geometry = titleBlockGeometry({ ...DEFAULT_PAGE_SETUP, layout: 'flow' }, 11, 8, TITLE_BLOCK_ART_SIZE_DEFAULTS)!;
 
-  it('stands the model in front of the pattern where one is drawn, and at its own size in the pattern’s place where none is', () => {
-    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([cpStep('s1')])))).toBe(geometry.model);
-    const alone = { ...geometry.model, x: geometry.block.x + geometry.block.w - geometry.model.w };
+  it('stands the model on the pattern’s corner where one is drawn, and at its own size in the pattern’s place where none is', () => {
+    expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([cpStep('s1')])))).toEqual({ box: geometry.model, align: geometry.modelAlign });
+    const { block, model } = geometry;
+    const alone = { box: { ...model, x: block.x + block.w - model.w, y: block.y + block.h - model.h }, align: { x: 1, y: 1 } };
     expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([cpStep('s1')], { pattern: { kind: 'none' } })))).toEqual(alone);
     expect(modelRoom(geometry, resolveTitleBlock(titleBlockDiagram([uploadStep('s1')])))).toEqual(alone);
+  });
+
+  it('draws the model’s picture over the pattern’s lower-left corner, whatever its shape and both sizes, on every paper and share (Zach, 2026-10-15)', () => {
+    // Pictures tall, square, wide and the crane's 539 × 492, linked to a pattern drawn behind them.
+    const pictures = [
+      [1, 2],
+      [1, 1],
+      [2, 1],
+      [539, 492],
+    ].map(([widthPx, heightPx], index) => {
+      const asset = { id: `asset-${index}`, kind: 'raster' as const, src: 'data:image/png;base64,AAAA', widthPx: widthPx! * 100, heightPx: heightPx! * 100, bytes: 4 };
+      const step = { ...cpStep(`s${index}`), picture: { kind: 'asset' as const, assetId: asset.id, paperScale: null, key: `raster-${asset.id}` } };
+      return { asset, step };
+    });
+    const stops = Array.from({ length: 8 }, (_, index) => Math.round(30 + 10 * index) / 100).concat(1);
+    const papers = Object.keys(PRINT_PAPER_MM).flatMap((size) => (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation })));
+    let drawn = 0;
+    for (const paper of papers) {
+      for (const heightShare of [0.15, 0.23, 0.5]) {
+        for (const modelSize of stops) {
+          for (const patternSize of stops) {
+            const setup = { ...DEFAULT_PAGE_SETUP, ...paper, layout: 'flow', titleBlock: { enabled: true, heightShare } } as DiagramPageSetup;
+            const shape = titleBlockGeometry(setup, 11, 8, { modelSize, patternSize })!;
+            const corner = { x: shape.pattern.x, y: shape.pattern.y + shape.pattern.h };
+            for (const { asset, step } of pictures) {
+              const content = resolveTitleBlock(titleBlockDiagram([step]));
+              expect(content.pattern.scene).not.toBeNull();
+              const room = modelRoom(shape, content);
+              const picture = wholePictureRoom(step, { [asset.id]: asset }, DEFAULT_DIAGRAM_STYLE, room.box, room.align)!;
+              const label = JSON.stringify({ ...paper, heightShare, modelSize, patternSize, asset: [asset.widthPx, asset.heightPx] });
+              // The corner a fifth of the picture at least inside each of its sides.
+              for (const share of [(corner.x - picture.x) / picture.w, (corner.y - picture.y) / picture.h]) {
+                expect(share, label).toBeGreaterThanOrEqual(0.2 - 1e-9);
+                expect(share, label).toBeLessThanOrEqual(0.8 + 1e-9);
+              }
+              drawn += 1;
+            }
+          }
+        }
+      }
+    }
+    expect(drawn).toBeGreaterThan(0);
   });
 });
 
@@ -276,25 +322,18 @@ describe('missingTitleBlockParts', () => {
     ]);
   });
 
-  it('marks where the column is cut: after the note’s last line, or the last row of credits where credits are left out', () => {
+  it('marks where the column is cut by a tag under the block’s foot, over nothing it prints: the note’s end, or credits left out', () => {
     const content = resolveTitleBlock(titleBlockDiagram([cpStep('s1')]));
     const long = set('Crane', { note: Array.from({ length: 30 }, (_, index) => `Line ${index + 1}`).join('\n') });
     const [cut] = missingTitleBlockParts(long, content, null);
-    const note = long.note!;
-    const last = note.firstBaseline + (note.lines.length - 1) * note.leadingMm;
-    const after = geometry.column.x + note.lines.at(-1)!.widthMm + 1;
+    const { column } = geometry;
     expect(cut).toEqual({
       room: 'cut',
       key: 'cut',
-      box: {
-        x: expect.closeTo(after, 9),
-        y: expect.closeTo(last - 0.72 * note.sizeMm, 9),
-        w: expect.closeTo(geometry.column.x + geometry.column.w - after, 9),
-        h: expect.closeTo(0.96 * note.sizeMm, 9),
-      },
+      box: { x: column.x, y: column.y + column.h, w: column.w, h: 5 },
       missing: [{ part: 'note', step: null, number: null }],
     });
-    // Credits left out on the shortest block, and the note under them.
+    // Credits left out on the shortest block, and the whole note under them.
     const short = titleBlockGeometry(
       { ...DEFAULT_PAGE_SETUP, layout: 'flow', size: 'a5', orientation: 'landscape', titleBlock: { enabled: true, heightShare: 0.15 } },
       11,
@@ -304,9 +343,35 @@ describe('missingTitleBlockParts', () => {
     const many = Array.from({ length: 12 }, (_, index) => ({ label: `CREDIT ${index + 1}`, value: 'Traditional design' }));
     const cramped = setTitleBlock(short, { title: 'Crane', block: { ...emptyTitleBlockLook(), credits: many, note: 'Use thin paper.' } }, estimateTextSetter);
     const marks = missingTitleBlockParts(cramped, content, null).filter(({ room }) => room === 'cut');
-    expect(marks.map(({ missing: parts }) => parts.map(({ part }) => part))).toEqual([['credits', 'note']]);
-    const row = cramped.credits!.columns.at(-1)!;
-    expect(marks[0]!.box.y).toBe(row.top);
+    expect(marks.map(({ missing: parts }) => parts.map(({ part }) => part))).toEqual([['credits', 'wholeNote']]);
+    expect(marks[0]!.box.y).toBe(short.block.y + short.block.h);
+  });
+
+  it('hangs a cut’s tag under the block, never over a line it prints, on every paper, share and grid', () => {
+    const content = resolveTitleBlock(titleBlockDiagram([cpStep('s1')]));
+    const papers = Object.keys(PRINT_PAPER_MM).flatMap((size) => (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation })));
+    const layouts = [{ layout: 'flow' as const }, ...[2, 3, 6].map((rows) => ({ layout: 'grid' as const, columns: 3, rows }))];
+    const credits = Array.from({ length: 9 }, (_, index) => ({ label: `CREDIT ${index + 1}`, value: 'Traditional design' }));
+    const note = Array.from({ length: 12 }, () => 'Use thin paper and crease each fold well.').join(' ');
+    let cuts = 0;
+    for (const paper of papers) {
+      for (const heightShare of [0.15, 0.23, 0.5]) {
+        for (const layout of layouts) {
+          const setup = { ...DEFAULT_PAGE_SETUP, ...paper, ...layout, titleBlock: { enabled: true, heightShare } } as DiagramPageSetup;
+          const shape = titleBlockGeometry(setup, 11, 8, TITLE_BLOCK_ART_SIZE_DEFAULTS)!;
+          for (const look of [{ note }, { credits, note }]) {
+            const block = setTitleBlock(shape, { title: 'Crane', block: { ...emptyTitleBlockLook(), ...look } }, estimateTextSetter);
+            const cut = missingTitleBlockParts(block, content, null).find(({ room }) => room === 'cut');
+            if (!cut) continue;
+            cuts += 1;
+            const label = JSON.stringify({ ...paper, ...layout, heightShare, credits: 'credits' in look });
+            expect(cut.box.y, label).toBeCloseTo(shape.block.y + shape.block.h, 9);
+            expect([cut.box.x, cut.box.w], label).toEqual([shape.column.x, shape.column.w]);
+          }
+        }
+      }
+    }
+    expect(cuts).toBeGreaterThan(0);
   });
 
   it('keeps the square’s mark clear of a model drawn in it: the strip it leaves, else the column under what it prints', () => {
@@ -369,11 +434,11 @@ describe('missingTitleBlockParts', () => {
     const layouts = [{ layout: 'flow' as const }, ...[2, 3, 6].map((rows) => ({ layout: 'grid' as const, columns: 3, rows }))];
     const { min, max } = TITLE_BLOCK_ART_SIZE_RANGE;
     const sizes = [TITLE_BLOCK_ART_SIZE_DEFAULTS, { modelSize: max, patternSize: min }, { modelSize: min, patternSize: max }];
-    /** A picture of `aspect` fitted to `room`, at its bottom right, as `wholePicture` draws it. */
-    const standing = (room: PageBox, aspect: number): PageBox => {
-      const w = Math.min(room.w, room.h * aspect);
+    /** A picture of `aspect` fitted to its room's box, standing where the room says, as `wholePicture` draws it. */
+    const standing = ({ box, align }: ModelRoom, aspect: number): PageBox => {
+      const w = Math.min(box.w, box.h * aspect);
       const h = w / aspect;
-      return { x: right(room) - w, y: foot(room) - h, w, h };
+      return { x: box.x + align.x * (box.w - w), y: box.y + align.y * (box.h - h), w, h };
     };
     let rooms = 0;
     for (const paper of papers) {
@@ -385,11 +450,11 @@ describe('missingTitleBlockParts', () => {
             const shape = titleBlockGeometry(setup, 11, 8, size)!;
             for (const content of contents) {
               const room = modelRoom(shape, content);
-              expect(overlap(room, shape.column), label).toBe(0);
+              expect(overlap(room.box, shape.column), label).toBe(0);
               for (const look of looks) {
                 for (const title of ['', 'Crane']) {
                   const block = setTitleBlock(shape, { title, block: { ...emptyTitleBlockLook(), ...look, sizes: size } }, estimateTextSetter);
-                  // The model as drawn where it is: tall, square or wide, set to its room's bottom right.
+                  // The model as drawn where it is: tall, square or wide, standing where its room says.
                   for (const aspect of [3 / 4, 1, 4 / 3]) {
                     const drawn = content.model.step?.picture ? standing(room, aspect) : null;
                     const boxes = missingTitleBlockParts(block, content, drawn).map(({ box }) => box);

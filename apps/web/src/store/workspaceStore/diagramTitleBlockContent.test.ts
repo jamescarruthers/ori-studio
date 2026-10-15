@@ -3,11 +3,16 @@ import i18n from '../../i18n';
 import {
   PAGE_SETTINGS,
   createDiagram,
+  insertSteps,
   setPageSetup,
+  stepsOf,
   type DiagramDocument,
+  type DiagramStep,
   type DiagramTitleBlockContentPatch,
   type DiagramTitleBlockCreditEdit,
 } from '../../diagram/document/diagramDocument';
+import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
+import { paginate } from '../../diagram/pages/pagePlan';
 import { useWorkspaceStore } from '../workspaceStore';
 
 /**
@@ -87,6 +92,67 @@ describe('a new diagram’s title block', () => {
     expect(state().setDiagramTitle('Swan')).toBe(true);
     expect(state().diagram!.titleBlockContent).toBeUndefined();
     expect(state().diagram!.page.titleBlock).toEqual(PAGE_SETTINGS.titleBlock.legacy);
+  });
+});
+
+describe('setDiagramTitleBlockShown, the block’s toggle', () => {
+  /** Zach's crane as saved: 28 steps, 9 a page, pages two and three of their own 11 and 9, and no block. */
+  function crane(): DiagramDocument {
+    const steps = Array.from({ length: 28 }, (_, index): DiagramStep => ({
+      ...cpStep(`s${index}`),
+      ...(index === 9 ? { pageSteps: 11 } : index === 20 ? { pageSteps: 9 } : {}),
+    }));
+    const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
+      layout: 'flow',
+      stepsPerPage: 9,
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+    });
+    state().installDiagram({ document, readOnly: false, raw: {} });
+    return document;
+  }
+  const counts = () => paginate(stepsOf(state().diagram!), state().diagram!.page).map((page) => page.steps.length);
+
+  it('turns the crane’s block on as a new diagram’s — today’s height, the subtitle and three credits — in one undo step (Zach, 2026-10-15)', () => {
+    const saved = crane();
+    expect(counts()).toEqual([9, 11, 8]);
+    expect(state().setDiagramTitleBlockShown(true)).toBe(true);
+    expect(state().diagram!.page.titleBlock).toEqual(PAGE_SETTINGS.titleBlock.default);
+    expect(state().diagram!.titleBlockContent).toEqual({
+      subtitle: 'Origami diagram',
+      credits: [
+        { label: 'Author', value: '' },
+        { label: 'Recommended size', value: '' },
+        { label: 'Steps', value: { kind: 'step-count' } },
+      ],
+    });
+    // The later pages keep their counts and shift (Zach, 2026-10-15).
+    expect(counts()).toEqual([7, 11, 9, 1]);
+    expect(state().diagramHistory.past).toHaveLength(1);
+    expect(state().diagramHistory.past.at(-1)?.label).toBe('Show title block');
+    expect(state().undoDiagram()).toBe(true);
+    expect(state().diagram).toEqual(saved);
+    // Already as asked: nothing recorded.
+    expect(state().setDiagramTitleBlockShown(false)).toBe(false);
+    expect(state().diagramHistory.past).toHaveLength(0);
+  });
+
+  it('writes the words in the app’s language, and keeps its height and its words when turned off', async () => {
+    i18n.addResourceBundle(
+      'ja',
+      'panels',
+      { diagram: { titleBlock: { default: { subtitle: '折り紙の図', author: '作者', recommendedSize: '推奨サイズ', steps: '工程数' } } } },
+      true,
+      true
+    );
+    await i18n.changeLanguage('ja');
+    crane();
+    state().setDiagramTitleBlockShown(true);
+    const content = state().diagram!.titleBlockContent;
+    expect(content?.credits?.map(({ label }) => label)).toEqual(['作者', '推奨サイズ', '工程数']);
+    expect(state().setDiagramTitleBlockShown(false)).toBe(true);
+    expect(state().diagram!.page.titleBlock).toEqual({ ...PAGE_SETTINGS.titleBlock.default, enabled: false });
+    expect(state().diagram!.titleBlockContent).toBe(content);
+    expect(counts()).toEqual([9, 11, 8]);
   });
 });
 

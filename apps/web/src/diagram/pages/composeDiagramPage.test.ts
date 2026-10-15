@@ -40,6 +40,7 @@ import { estimateTextSetter } from './estimateTextSetter';
 import { diagramFontTexts, diagramLayoutSteps, layoutDiagram, preparedPages } from './diagramPages';
 import { composeDiagramPage } from './composeDiagramPage';
 import { cellPicture, layoutPicture, wholePicture } from './pagePictures';
+import { modelRoom, type ModelRoom } from './titleBlockContent';
 import { composeEveryPage } from '../export/diagramPdf';
 import { diagramSheetFile } from '../export/diagramSheet';
 import { diagramPrintRequest } from '../print/printDiagram';
@@ -712,13 +713,13 @@ describe('composeDiagramPage', () => {
 
 describe('the title block on the first page (`diagram-title-block.md`, section 6)', () => {
   const ON = { enabled: true, heightShare: 0.27 };
-  const BYLINE = 'Design: 将底角\nPaper: 15 cm';
+  const NOTE = 'Design: 将底角\nPaper: 15 cm';
   const TITLE = 'Crane · 千纸鹤';
   /** Nine linked steps on a flow, the block on and a note: page 1 holds seven, and the last step is Auto's model. */
   function blockDiagram(content: DiagramTitleBlockContentPatch = {}, last: DiagramStep = cpStep('step-9')): DiagramDocument {
     const steps = [...Array.from({ length: 8 }, (_, index) => cpStep(`step-${index + 1}`)), last].map((step) => ({ ...step, text: 'Fold in half.' }));
     const made = insertSteps(createDiagram({ title: TITLE, hanStyle: 'sc' }), steps, 0);
-    return setTitleBlockContent({ ...made, page: { ...made.page, layout: 'flow', titleBlock: ON } }, { note: BYLINE, ...content });
+    return setTitleBlockContent({ ...made, page: { ...made.page, layout: 'flow', titleBlock: ON } }, { note: NOTE, ...content });
   }
   type Box = { x: number; y: number; w: number; h: number };
   /** Each line of the page with both ends in `box`, mm: its ends, its pen, and whether it is dashed. */
@@ -732,11 +733,15 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     });
   const textsOf = (svg: string) => [...parse(svg).querySelectorAll('svg > text')].map((text) => text.textContent);
   /** The model as the block draws it into `room`. */
-  const modelOf = (document: DiagramDocument, room: Box, pages = preparedPages(document, FONTS, subsetter)) =>
-    wholePicture(pages.titleBlock!.model.step!, document.assets, document.style, room, 'title-block-', {
+  /** The model drawn as the first page draws it: in its room (`modelRoom`), or in `box` from its bottom right. */
+  const modelOf = (document: DiagramDocument, room: Box | ModelRoom | null = null, pages = preparedPages(document, FONTS, subsetter)) => {
+    const { box, align } =
+      room === null ? modelRoom(pages.layout.pages[0]!.titleBlock!.geometry, pages.titleBlock!) : 'box' in room ? room : { box: room, align: { x: 1, y: 1 } };
+    return wholePicture(pages.titleBlock!.model.step!, document.assets, document.style, box, 'title-block-', {
       hanStyle: document.hanStyle,
       runs: pages.setter.runs,
-    })!;
+    }, align)!;
+  };
 
   it('draws the pattern in its square in the style’s solid fold pens, its edge in the edge pen, and no aux line', () => {
     const thumbnail = {
@@ -807,14 +812,14 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     }
   });
 
-  it('stands the model in front of the pattern, set to its box’s bottom right with none of its marks; over the pattern’s square where there is none', () => {
+  it('stands the model on the pattern’s lower-left corner, covering it, with none of its marks; over the pattern’s square where there is none', () => {
     const callout = { id: 'c-1', kind: 'callout' as const, from: [0.2, 0.8] as [number, number], to: [0.6, 0.3] as [number, number], text: 'Repeat behind' };
     const marked = { ...cpStep('step-9'), annotations: [callout], annotatedPictureKey: cpStep('step-9').picture!.key };
     const document = blockDiagram({}, marked);
     const pages = preparedPages(document, FONTS, subsetter);
     const { geometry } = pages.layout.pages[0]!.titleBlock!;
     const svg = pages.compose(0).svg;
-    const model = modelOf(document, geometry.model, pages);
+    const model = modelOf(document, { box: geometry.model, align: geometry.modelAlign }, pages);
     // Its picture alone: the step's callout is on its own page, not here.
     expect(svg).toContain(model.markup);
     expect(textsOf(svg)).not.toContain('Repeat behind');
@@ -824,13 +829,15 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     expect(patternAt).toBeGreaterThan(-1);
     expect(patternAt).toBeLessThan(svg.indexOf(model.markup));
     expect(svg.indexOf(model.markup)).toBeLessThan(svg.indexOf('>Crane'));
-    // Set to its box's bottom right: its drawing's right and foot on the box's, but for its pens' ink.
-    expect((model.boundsPt.x + model.boundsPt.width) / PT_PER_MM).toBeCloseTo(geometry.model.x + geometry.model.w, 0);
-    expect((model.boundsPt.y + model.boundsPt.height) / PT_PER_MM).toBeCloseTo(geometry.model.y + geometry.model.h, 0);
-    // No pattern: the model at its own size in the pattern's place, on the band's right, clear of the column.
+    // Over the pattern's lower-left corner: the corner as far into its drawing as into its box, but for its pens' ink.
+    const corner = { x: geometry.pattern.x, y: geometry.pattern.y + geometry.pattern.h };
+    const drawn = { x: model.boundsPt.x / PT_PER_MM, y: model.boundsPt.y / PT_PER_MM, w: model.boundsPt.width / PT_PER_MM, h: model.boundsPt.height / PT_PER_MM };
+    expect((corner.x - drawn.x) / drawn.w).toBeCloseTo(geometry.modelAlign.x, 1);
+    expect((corner.y - drawn.y) / drawn.h).toBeCloseTo(geometry.modelAlign.y, 1);
+    // No pattern: the model at its own size in the pattern's place, on the band's right and its foot, clear of the column.
     const alone = blockDiagram({ pattern: { kind: 'none' } }, marked);
     const alonePages = preparedPages(alone, FONTS, subsetter);
-    const room = { ...geometry.model, x: geometry.block.x + geometry.block.w - geometry.model.w };
+    const room = { ...geometry.model, x: geometry.block.x + geometry.block.w - geometry.model.w, y: geometry.block.y + geometry.block.h - geometry.model.h };
     const standing = modelOf(alone, room, alonePages);
     expect(alonePages.compose(0).svg).toContain(standing.markup);
     expect(standing.boundsPt.x / PT_PER_MM).toBeGreaterThanOrEqual(geometry.column.x + geometry.column.w);
@@ -851,7 +858,7 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
 
   it('prints the title large and the note in the diagram’s fonts, embedded, and no title tab on the first page, but on the next', () => {
     const document = blockDiagram();
-    expect(diagramFontTexts(document)).toContainEqual({ text: BYLINE, weight: 400 });
+    expect(diagramFontTexts(document)).toContainEqual({ text: NOTE, weight: 400 });
     const pages = preparedPages(document, FONTS, subsetter);
     expect(pages.missing).toEqual([]);
     const { title, note } = pages.layout.pages[0]!.titleBlock!;
@@ -885,11 +892,11 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
   it('neither loads the note’s faces nor works out what the block shows where the first page has no block', () => {
     const off = { ...blockDiagram(), page: { ...blockDiagram().page, titleBlock: { ...ON, enabled: false } } };
     // A Chinese note left in a diagram with the block off asks for no face of its own.
-    expect(diagramFontTexts(off).map(({ text }) => text)).not.toContain(BYLINE);
+    expect(diagramFontTexts(off).map(({ text }) => text)).not.toContain(NOTE);
     expect(preparedPages(off, FONTS, subsetter).titleBlock).toBeNull();
     // Nor where a grid of one row has no room for it.
     const oneRow = { ...blockDiagram(), page: { ...blockDiagram().page, layout: 'grid' as const, rows: 1 } };
-    expect(diagramFontTexts(oneRow).map(({ text }) => text)).not.toContain(BYLINE);
+    expect(diagramFontTexts(oneRow).map(({ text }) => text)).not.toContain(NOTE);
     expect(preparedPages(oneRow, FONTS, subsetter).titleBlock).toBeNull();
     expect(preparedPages(blockDiagram(), FONTS, subsetter).titleBlock?.model.step?.id).toBe('step-9');
   });
@@ -901,13 +908,13 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     expect(textsOf(pages.compose(0, { only: part }).svg)).not.toContain(TITLE);
     const omitted = pages.compose(0, { omit: part }).svg;
     expect(textsOf(omitted)).toContain(TITLE);
-    expect(omitted).toContain(modelOf(document, pages.layout.pages[0]!.titleBlock!.geometry.model, pages).markup);
+    expect(omitted).toContain(modelOf(document, null, pages).markup);
   });
 
   it('carries the block onto every printed surface: the PDF’s pages, the one-sheet SVG and Print', async () => {
     const document = blockDiagram();
     const pages = preparedPages(document, FONTS, subsetter);
-    const model = modelOf(document, pages.layout.pages[0]!.titleBlock!.geometry.model, pages).markup;
+    const model = modelOf(document, null, pages).markup;
     const credits = 'Design: 将底角Paper: 15 cm';
     const pdf = composeEveryPage(document, pages).pages;
     expect(textsOf(pdf[0]!)).toEqual(expect.arrayContaining([TITLE, credits]));
@@ -929,8 +936,8 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     const [one, two] = [preparedPages(before, FONTS, subsetter), preparedPages(after, FONTS, subsetter)];
     expect(one.layout.pages[1]!.cells.map((cell) => cell.stepId)).toContain('step-9');
     expect(composedPageUrl(two, 0)).not.toBe(composedPageUrl(one, 0));
-    expect(two.compose(0).svg).toContain(modelOf(after, two.layout.pages[0]!.titleBlock!.geometry.model, two).markup);
-    expect(two.compose(0).svg).not.toContain(modelOf(before, one.layout.pages[0]!.titleBlock!.geometry.model, one).markup);
+    expect(two.compose(0).svg).toContain(modelOf(after, null, two).markup);
+    expect(two.compose(0).svg).not.toContain(modelOf(before, null, one).markup);
   });
 });
 

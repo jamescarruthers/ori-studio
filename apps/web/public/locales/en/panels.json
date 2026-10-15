@@ -1200,10 +1200,9 @@
         "showHelp": "The title and its credits, the crease pattern and the finished model, at the top of the first page.",
         "step": "Step {{number}}",
         "stepCount": "Auto ({{number}})",
-        "stepCountHelp": "The step count, kept up to date",
         "subtitle": "Subtitle",
         "subtitleHelp": "The small line over the title. Clear it to print none.",
-        "typeValue": "Type a value instead"
+        "typeValue": "Type a value for credit {{number}} instead"
       },
       "titleHelp": "The diagram’s title, in a tab at the top of every page.",
       "titleHelpWithBlock": "The diagram’s title, in a tab at the top of every page. On the first page the title block carries it instead."
@@ -1227,6 +1226,7 @@
         "noModel": "No step has a picture yet",
         "noPattern": "No step is linked to a crease pattern",
         "noteCut": "The rest of the note doesn’t fit",
+        "noteNone": "The note doesn’t fit",
         "noValue": "No value yet",
         "stepNoPattern": "Step {{number}} has no crease pattern",
         "stepNoPicture": "Step {{number}} has no picture yet"

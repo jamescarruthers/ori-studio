@@ -42,12 +42,15 @@ export function DiagramTitleBlockOverlay({
   block,
   content,
   model,
+  titleInk,
   paper,
 }: {
   block: LayoutTitleBlock;
   content: ResolvedTitleBlock;
   /** Where the block draws its model (`PreparedDiagramPages.titleBlockModel`), which the square's mark keeps clear of. */
   model: PageBox | null;
+  /** The ink the title prints in on the band (`PreparedDiagramPages.titleBlockInk`), which a missing title is marked in. */
+  titleInk?: string;
   /** The page, which the outline is inset into as the margin guide is. */
   paper: Pick<PrintPaper, 'widthMm' | 'heightMm'>;
 }) {
@@ -74,23 +77,29 @@ export function DiagramTitleBlockOverlay({
         return [t('panels:diagram.pages.titleBlock.creditsCut', 'Some credits don’t fit')];
       case 'note':
         return [t('panels:diagram.pages.titleBlock.noteCut', 'The rest of the note doesn’t fit')];
+      case 'wholeNote':
+        return [t('panels:diagram.pages.titleBlock.noteNone', 'The note doesn’t fit')];
     }
   };
   const { x, y, w, h } = block.geometry.block;
   const at = (box: PageBox) => ({ left: px(box.x), top: px(box.y), width: px(box.w), height: px(box.h) });
   return (
     <>
+      {/* The margin's guide draws the block's top and sides: its foot alone says where the steps begin. */}
       <PageGuide
         data-title-block=""
+        edges="foot"
         style={{ left: px(x), top: px(y), right: px(paper.widthMm - x - w), bottom: px(paper.heightMm - y - h) }}
       />
-      {missingTitleBlockParts(block, content, model).map(({ room, key, box, missing }) => (
+      {missingTitleBlockParts(block, content, model).map(({ room, key, box, missing, sizeMm }) => (
         <PagePlaceholder
           key={key}
           kind={room === 'cut' ? 'cut' : room === 'credit' ? 'slot' : 'part'}
           words={WORDS[room]}
+          // The title's mark in the title's own ink, which reads on the band whatever its colour; a credit's at its label's size.
+          ink={room === 'title' ? titleInk : undefined}
           data-title-block-room={room}
-          style={at(box)}
+          style={{ ...at(box), ...(sizeMm !== undefined ? { fontSize: px(sizeMm) } : {}) }}
         >
           {missing.map((part) => (
             <span key={part.part} data-title-block-missing={part.part}>

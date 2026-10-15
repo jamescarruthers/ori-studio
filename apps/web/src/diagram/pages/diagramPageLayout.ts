@@ -249,8 +249,8 @@ export interface SetText {
 
 /** How text is measured and set: the composer's font, or a test's estimate. */
 export interface TextSetter {
-  /** `text` broken into lines at most `widthMm` wide, at most `maxLines` of them (the last cut with "…"). */
-  paragraph: (text: string, widthMm: number, sizeMm: number, maxLines: number) => SetText;
+  /** `text` broken into lines at most `widthMm` wide, at most `maxLines` of them (the last cut with "…"); regular unless `weight` says. */
+  paragraph: (text: string, widthMm: number, sizeMm: number, maxLines: number, weight?: 400 | 700) => SetText;
   /** One line: a title or a number, cut with "…" at `maxWidthMm` when one is given. */
   line: (text: string, sizeMm: number, weight: 400 | 700, maxWidthMm?: number) => SetLine;
   /**

@@ -1237,10 +1237,9 @@
         "showHelp": "O título e seus créditos, o padrão de vincos e o modelo pronto, no alto da primeira página.",
         "step": "Passo {{number}}",
         "stepCount": "Auto ({{number}})",
-        "stepCountHelp": "O número de passos, sempre atualizado",
         "subtitle": "Subtítulo",
         "subtitleHelp": "A linha pequena acima do título. Deixe-a vazia para não imprimir nenhuma.",
-        "typeValue": "Digitar um valor no lugar"
+        "typeValue": "Digitar um valor para o crédito {{number}} no lugar"
       },
       "titleHelp": "O título do diagrama, numa aba no alto de cada página.",
       "titleHelpWithBlock": "O título do diagrama, numa aba no alto de cada página. Na primeira página, ele fica no bloco de título."
@@ -1264,6 +1263,7 @@
         "noModel": "Nenhum passo tem imagem ainda",
         "noPattern": "Nenhum passo está vinculado a um padrão de vincos",
         "noteCut": "O resto da nota não cabe",
+        "noteNone": "A nota não cabe",
         "noValue": "Sem valor ainda",
         "stepNoPattern": "O passo {{number}} não tem padrão de vincos",
         "stepNoPicture": "O passo {{number}} ainda não tem imagem"

@@ -8,10 +8,12 @@ import {
   type DiagramCpRender,
   type DiagramDocument,
   type DiagramEntry,
+  type DiagramPageSetup,
   type DiagramStep,
   type DiagramTitleBlockContentPatch,
 } from '../document/diagramDocument';
 import { cpSource, cpStep } from '../document/diagramSteps.fixtures';
+import { titleBlockBand, titleBlockParts, type TitleBlockGeometry, type TitleBlockSizes } from './titleBlockGeometry';
 
 /**
  * The steps and diagrams the title block's tests build: one of each kind
@@ -46,6 +48,12 @@ export const OTHER_PATTERN: readonly SheetStroke[] = [{ x1: 0, y1: 0, x2: 100, y
  */
 export function patternStep(id: string, strokes: readonly SheetStroke[] = OTHER_PATTERN, render?: DiagramCpRender): DiagramStep {
   return { ...cpStep(id), source: { ...cpSource(render), thumbnail: { viewBox: '0 0 100 100', strokes: [...strokes] } } };
+}
+
+/** The band and its parts at once, as the layout takes them: `titleBlockBand`, then `titleBlockParts`. */
+export function titleBlockGeometry(setup: DiagramPageSetup, headMm: number, footMm: number, sizes: TitleBlockSizes): TitleBlockGeometry | null {
+  const band = titleBlockBand(setup, headMm, footMm);
+  return band ? titleBlockParts(band, sizes) : null;
 }
 
 /** A diagram of `entries`, its title block's content set by `content`. */

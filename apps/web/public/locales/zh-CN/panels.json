@@ -1163,10 +1163,9 @@
         "showHelp": "在首页顶部显示标题及其信息、折痕图和成品。",
         "step": "第 {{number}} 步",
         "stepCount": "自动（{{number}}）",
-        "stepCountHelp": "步骤数，自动保持最新",
         "subtitle": "副标题",
         "subtitleHelp": "标题上方的一小行文字。清空则不打印。",
-        "typeValue": "改为手动输入内容"
+        "typeValue": "改为手动输入第 {{number}} 条信息的内容"
       },
       "titleHelp": "在每页顶部的标签中显示图解标题。",
       "titleHelpWithBlock": "在每页顶部的标签中显示图解标题。首页则改由标题栏显示。"
@@ -1190,6 +1189,7 @@
         "noModel": "还没有带图的步骤",
         "noPattern": "没有步骤链接到折痕图",
         "noteCut": "备注的其余部分放不下",
+        "noteNone": "备注放不下",
         "noValue": "尚无内容",
         "stepNoPattern": "第 {{number}} 步没有折痕图",
         "stepNoPicture": "第 {{number}} 步还没有图"

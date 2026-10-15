@@ -419,6 +419,8 @@ function readTitleBlockContent(value: unknown): { content: DiagramTitleBlockCont
       if (source === 'newer') newer[key] = part;
       else if (source) content[key] = source;
     } else if (key === 'subtitle' || key === 'note') {
+      // One of a kind this build has no name for — a richer text — is a newer build's: none here, and carried.
+      if (isRecord(part) && typeof part.kind === 'string') newer[key] = part;
       const text = typeof part === 'string' ? (key === 'subtitle' ? titleBlockLine(part) : xmlText(part)) : '';
       if (text.trim() !== '') content[key] = text;
     } else if (key === 'credits') {

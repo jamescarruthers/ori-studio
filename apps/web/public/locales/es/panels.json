@@ -1237,10 +1237,9 @@
         "showHelp": "El título y sus créditos, el patrón de pliegues y el modelo terminado, en la parte superior de la primera página.",
         "step": "Paso {{number}}",
         "stepCount": "Auto ({{number}})",
-        "stepCountHelp": "El número de pasos, siempre al día",
         "subtitle": "Subtítulo",
         "subtitleHelp": "La línea pequeña sobre el título. Déjala vacía para no imprimir ninguna.",
-        "typeValue": "Escribir un valor en su lugar"
+        "typeValue": "Escribir un valor para el crédito {{number}} en su lugar"
       },
       "titleHelp": "El título del diagrama, en una pestaña en la parte superior de cada página.",
       "titleHelpWithBlock": "El título del diagrama, en una pestaña en la parte superior de cada página. En la primera página lo lleva el bloque de título."
@@ -1264,6 +1263,7 @@
         "noModel": "Ningún paso tiene imagen todavía",
         "noPattern": "Ningún paso está vinculado a un patrón de pliegues",
         "noteCut": "El resto de la nota no cabe",
+        "noteNone": "La nota no cabe",
         "noValue": "Sin valor todavía",
         "stepNoPattern": "El paso {{number}} no tiene patrón de pliegues",
         "stepNoPicture": "El paso {{number}} aún no tiene imagen"

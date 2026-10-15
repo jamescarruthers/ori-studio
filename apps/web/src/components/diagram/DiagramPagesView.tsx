@@ -257,6 +257,7 @@ export function DiagramPagesView({
                         block={page.titleBlock}
                         content={pages.titleBlock}
                         model={pages.titleBlockModel()}
+                        titleInk={pages.titleBlockInk ?? undefined}
                         paper={pages.layout.paper}
                       />
                     )}
