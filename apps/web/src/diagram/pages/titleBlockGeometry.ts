@@ -35,8 +35,6 @@ const MODEL_RIGHT_SHARE = 0.6;
 const TEXT_CLEAR_MM = 4;
 /** The title: one bold line, the largest size up to `max` that fits its column, down to `min`, and past that cut with "…". */
 export const TITLE_BLOCK_TITLE_MM = { max: 10, min: 5 } as const;
-/** How far the byline's capitals stand above its first baseline, as a share of its size. */
-const CAP_SHARE = 0.72;
 /** The room between the largest title's line and the byline's. */
 const BYLINE_GAP_MM = 1.5;
 /** The byline: the step text's size and leading, on up to this many lines. */
@@ -145,10 +143,15 @@ function setTitle(geometry: TitleBlockGeometry, title: string, setter: TextSette
 function setByline(geometry: TitleBlockGeometry, byline: string, setter: TextSetter): LayoutTitleBlock['byline'] {
   const room = geometry.byline;
   if (byline === '' || !(room.w > 0)) return null;
-  const firstBaseline = room.y + CAP_SHARE * STEP_TEXT_SIZE_MM;
+  // Its first line's tallest letter stands on its box's top, as the title's does on the block's.
+  const baselineOf = (lines: readonly SetLine[]) => room.y + (lines[0] ? setter.ink(lines[0], STEP_TEXT_SIZE_MM).above : 0);
   const lastBaseline = room.y + room.h - TEXT_DESCENT_MM;
-  const maxLines = Math.min(TITLE_BLOCK_BYLINE_LINES, Math.floor((lastBaseline - firstBaseline) / STEP_TEXT_LEADING_MM + 1e-9) + 1);
-  if (maxLines < 1) return null;
-  const { lines } = setter.paragraph(byline, room.w, STEP_TEXT_SIZE_MM, maxLines);
-  return lines.length > 0 ? { lines, firstBaseline } : null;
+  const linesFrom = (firstBaseline: number) =>
+    Math.min(TITLE_BLOCK_BYLINE_LINES, Math.floor((lastBaseline - firstBaseline) / STEP_TEXT_LEADING_MM + 1e-9) + 1);
+  const all = setter.paragraph(byline, room.w, STEP_TEXT_SIZE_MM, TITLE_BLOCK_BYLINE_LINES).lines;
+  const maxLines = linesFrom(baselineOf(all));
+  if (all.length === 0 || maxLines < 1) return null;
+  // Cut to the lines there is room for, the last with "…".
+  const lines = all.length <= maxLines ? all : setter.paragraph(byline, room.w, STEP_TEXT_SIZE_MM, maxLines).lines;
+  return { lines, firstBaseline: baselineOf(lines) };
 }

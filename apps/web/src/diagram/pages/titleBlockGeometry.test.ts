@@ -224,6 +224,17 @@ describe('setTitleBlock', () => {
     expect(last).toBeLessThan(foot(geometry.block));
   });
 
+  it('stands the byline’s tallest first-line letter on its box’s top, as the title’s on the block’s: an ideograph’s, an accent’s', () => {
+    for (const byline of [`${CJK.slice(0, 6)}\nPaper: 15 cm`, 'Élan: Ångström\nDiagrams: Zach', 'Design: traditional']) {
+      for (const setter of [fonts, estimateTextSetter]) {
+        const set = setTitleBlock(geometry, { title: 'Crane', byline }, setter).byline!;
+        expect(set.firstBaseline - setter.ink(set.lines[0]!, STEP_TEXT_SIZE_MM).above, byline).toBeCloseTo(geometry.byline.y, 9);
+      }
+    }
+    // Estimated where the fonts are not loaded: an ideograph's height.
+    expect(set('Crane', `${CJK.slice(0, 6)}`).byline!.firstBaseline).toBeCloseTo(geometry.byline.y + 0.88 * STEP_TEXT_SIZE_MM, 9);
+  });
+
   it('sets fewer byline lines in a block too short for four, and nothing for an empty title or byline: the block keeps its room', () => {
     // The least share on the shortest page: A5 landscape at 15%.
     const short = geometryOf({ size: 'a5', orientation: 'landscape', titleBlock: { enabled: true, heightShare: 0.15 } });
