@@ -23,6 +23,12 @@ at the end of Phase 1):
   questions for him, Q1–Q4 under "For Zach (round 2, 2026-10-15)" — the
   first two about hand positions on a page the toggle re-packs, which is
   the first thing he will see when he turns the block on in the crane.
+- Q1, hand positions: "steps that change their place remove their offset
+  (but they keep all the internal moves like where the text box / image /
+  number are relative to their step bounding box". A step's place is its
+  page, its row and its place along the row (a grid's cell); his rule of
+  2026-10-13 is replaced. Built under "Q1 answered" after the round-2
+  questions.
 
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
@@ -371,8 +377,10 @@ heightShare]`, appended only when the block is on. So:
 Title and Page numbers are. It is the author's own act, so it may move
 layout:
 
-- Page 1 re-packs. Its hand-moved frames keep their offsets while they stay
-  in their bands (`repackedFrames.ts`).
+- Page 1 re-packs. Its hand-moved frames keep their offsets while they keep
+  their place — band and place along it — and go home where it changes
+  (`repackedFrames.ts`; Zach, 2026-10-15, replacing "while they stay in
+  their bands").
 - Page 1's count changes (T-3 A), so the steps after it shift and every
   later flow page re-packs. Frames on steps that change page go home, with
   the existing toast and Undo (`usePlacementReflowNotice.ts`). This is the
@@ -1962,7 +1970,10 @@ if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
   a newer build's counted page stops the shift, the help reworded
   (28b5b9af9); `pack-7`, a first step's wide picture kept inside the
   margin (bb3242311); the As-built corrected below.
-- [ ] Zach: Q1–Q4 under "For Zach (round 2, 2026-10-15)" below.
+- [x] Q1 answered by Zach (2026-10-15): a step that changes its place loses
+  its whole-step offset, keeping everything inside its box; built under "Q1
+  answered" below.
+- [ ] Zach: Q2–Q4 under "For Zach (round 2, 2026-10-15)" below.
 
 *As built (A, the shift).* `pages/pageCounts.ts`:
 - `setPageSteps` sets a page's count, then `shiftLaterPages` moves the
@@ -2061,6 +2072,10 @@ crane with the block on, under the old count rule and the new);
   changed", with the existing notice and one Undo; a page whose first step
   stays keeps them as now. B is what the crane needs and keeps his consent
   rule (his own act, one notice, one Undo).
+  **Answered (Zach, 2026-10-15), neither A nor B but a rule for every
+  edit:** "steps that change their place remove their offset (but they keep
+  all the internal moves like where the text box / image / number are
+  relative to their step bounding box". See "Q1 answered" below.
 - **Q2. Should the toggle be reversible without Undo?** Off again keeps the
   counts but not the boxes or the hand positions (above). A (recommended):
   no, Undo is the way back, and the notice says what moved; B: keep the
@@ -2081,6 +2096,48 @@ crane with the block on, under the old count rule and the new);
   page Left). A (recommended): keep it, as built; B: spread the spare
   between the first row's steps only, its last step reaching the row's end.
   B re-baselines the page goldens again.
+
+*Q1 answered (Zach, 2026-10-15): hand offsets follow the step's place.*
+Replaces his rule of 2026-10-13 everywhere, not only under the toggle; the
+full rule and how it is built are in `diagram-document-evolution.md`, part 2.
+- **The rule, as confirmed with him.** A step's place is its slot in the
+  layout: its page, its band (row) and its place along the band as the band
+  reads (on a grid, its cell, which was already the rule there). An edit
+  that changes it clears the step's whole-step offset, so it sits at its new
+  home: the toggle, Steps on page N, a step put in, taken out or moved before
+  it, a re-pack that moves it along or across, any re-pagination. Kept,
+  always: the number's, picture's and caption's offsets in the step's box,
+  the caption's width, the size pin, an enlarged step's Size. A step that
+  keeps its place keeps its offset, even as a re-pack moves its home a
+  little. The "steps moved home" notice and one Undo cover it; opening a
+  saved file moves nothing.
+- **Built.** `pages/repackedFrames.ts`: `flowSlot` reads a step's place from
+  an arrangement's boxes — its band, a bend, how many steps of its band come
+  before it as the band reads (even bands left to right, odd ones right to
+  left) — and `keepsMovedFrame` compares the place in the arrangement the page
+  was last held in with the one just packed. The layout and `adoptPacking`
+  both call it with the page's new arrangement, so a page drawn before
+  adoption and after are the same. No file change: the place is read from
+  boxes every arrangement already stores.
+- **On the crane** (`artifacts/hand-offsets/`, :5395): with the block on,
+  all 22 hand-moved steps go home — none keeps its place: page 1 goes from
+  3 · 3 · 3 to 2 · 2 + bend · 2 (step 5 into the bend, step 7 a place on),
+  pages 2 and 3 keep their plans but start two steps earlier — and the
+  notice says 22 (13 at the base, the 9 above staying). Page 2's overlaps
+  between steps go from 11 to 5 (`crane-on-before-after-p1-2.png`). The 5
+  left are size pins, not offsets: steps 10 and 13, pinned at the old page's
+  scale, drawn past boxes the page packed at k 0.840 cannot make room for
+  (the pin fallback, 2026-10-13); with page 2's pins taken away there are
+  none (`residual-page-2.json`). Pins are kept by the rule, so whether a pin
+  that no longer fits its new place should go home too is Zach's. One Undo
+  gives back the opened crane, its PDF the same to the byte; opened with the
+  block off, its PDF is the same to the byte before and after this change.
+- **Tests that failed before** are listed in `diagram-document-evolution.md`,
+  part 2 (`repackedFrames.test.ts`, the store's
+  `diagramPageArrangements.test.ts`); the crane's shape is the store's
+  "the title block turned on" case: pages two to four home with all inside
+  their boxes, page one's steps in their place keeping theirs, a notice of 25
+  and one Undo.
 
 *As built (B, step 1 at the top left).* `pages/flowPacking.ts`: a page's
 first band starts at its packing area's left edge; its spare width is

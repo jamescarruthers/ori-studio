@@ -1,7 +1,8 @@
 # Diagram documents across app changes: saved layout holds
 
 **Status: parts 1 and 3 built, 2026-10-12, on `claude/diagram-launch-completion-59e60c`.
-Part 2 decided by Zach and built, 2026-10-13.**
+Part 2 decided by Zach and built, 2026-10-13; its rule replaced by Zach on
+2026-10-15 (a step's place, not its band) and built on the title-block branch.**
 
 After launch people will have saved diagrams, and the app will keep changing.
 Three things would have hurt saved documents (Zach, 2026-10-12: "yikes yeah
@@ -82,7 +83,83 @@ Forward compatibility: a build from before this change reads a `packer`-stamped
 arrangement as a newer build's — it re-packs that page for display and writes
 the stored one back untouched. Only pre-launch builds are affected.
 
-### 2. A hand-moved step keeps its offset across a re-pack while it stays in its band (decided and built)
+### 2. A hand-moved step keeps its offset across a re-pack while it keeps its place (decided and built)
+
+**Zach's rule (2026-10-15), replacing his rule of 2026-10-13 below: "steps
+that change their place remove their offset (but they keep all the internal
+moves like where the text box / image / number are relative to their step
+bounding box".** As confirmed with him:
+
+- A step's **place** is its slot in the layout: its page, its band (row), and
+  its place along that band — on a grid, its cell. A step standing in a bend
+  is in another place than one in a band.
+- An edit that changes a step's place clears its whole-step offset (`frame`),
+  so it sits at its new home: the title block's toggle, Steps on page N (the
+  shift), a step put in, taken out or moved before it on its page, a re-pack
+  that moves it to another band or along its band, any re-pagination.
+- Kept, always: everything inside its own box — the number's, picture's and
+  caption's offsets, the caption's width (`textWidth`), the size pin
+  (`scale`), and an enlarged step's Size (on the step, never touched).
+- A step that keeps its place keeps its offset, even when its page re-packs
+  and its home moves a little: a step put in after it, Re-pack Page that
+  keeps the plan, a page setting.
+- The existing "steps moved home" notice and one Undo cover it. Opening a
+  saved file still moves nothing: a held page is drawn as stored, and no rule
+  change re-packs one.
+
+Why: on Zach's crane, turning the title block on shifts pages 2–4 by two
+steps. Under the 10-13 rule nine hand-moved steps (7, 10, 11, 14, 17, 18,
+21, 24, 27) stayed on their page and in their band, so they kept offsets
+made for the old layout, which on the new page 2 landed on each other and on
+their captions (11 overlaps there).
+
+**Built (2026-10-15)** — one predicate changed; where it runs is as below.
+`repackedFrames.ts`: `flowSlot` reads a step's place in an arrangement —
+its band, whether it stands in a bend, and how many steps of the same band
+(or bend) come before it **as the band reads**: an even band left to right,
+an odd one right to left, as the packer lays a ribbon (`flowPacking.ts`,
+`rightToLeft: band % 2 === 1`). It is read from the boxes, so it needs no
+record of the order the steps had when the page was packed, and the file
+format does not change: a reorder, a step put in before it or one before it
+taken out moves it along, a step put in after it does not.
+`keepsMovedFrame(stored, first, stepId, now)` now takes the page's new
+arrangement and compares the two places; the layout passes the arrangement it
+packed, `adoptPacking` the one it takes in, so both still agree step for step.
+The edit's own rule (`settlePlaces`: off its page, home at once) and the grid's
+cell rule (`sameCell`, Decision 1A — already a place rule) are unchanged.
+
+Tests that failed before (`artifacts/hand-offsets/failing-before.txt`):
+`repackedFrames.test.ts` — `flowSlot` reading an odd band from the right; the
+predicate keeping a step in its place wherever its home moved, sending home
+one whose place along its band changed (a step put in before it, one before it
+gone, a swap), an odd band read from the right; through the real packer, a
+stale arrangement opened and Re-pack Page each drawing two steps swapped along
+a band at home before any adoption, the adoption clearing exactly those. The
+store's `diagramPageArrangements.test.ts` — Re-pack Page sending home a step
+still in its band but second along it now, with its parts, caption width and
+size pin kept; the crane's shape with the block on (pages two to four home
+with all inside their boxes, page one's steps in their place keeping theirs,
+the notice counting 25, one Undo restoring the diagram exactly); a step put in
+or taken out before others on its page; an edit on a page before with its own
+count leaving later pages' offsets. Guards that passed before too: opening a
+saved file (written, read, laid out: nothing packed, every offset drawn, no
+adoption), a grid's block toggle (every step whose cell moved home, all inside
+its box kept, one Undo). Tests that pinned the 10-13 rule were rewritten to
+this one (`pageArrangements.test.ts`, the store's Re-pack, notice and title
+block cases).
+
+On the crane (`artifacts/hand-offsets/`, dev server :5395, `capture.mjs`):
+opened with the block off, the PDF is the same to the byte before and after
+this change, nothing unsaved. With the block on, all 22 hand-moved steps go
+home (notice 22; at the base 13 went and 9 stayed), page 2's overlaps between
+steps go from 11 to 5, and one Undo gives back the opened diagram (PDF the
+same to the byte, every frame back). The 5 left on page 2 are not offsets: no
+frame is moved there. They are size pins (steps 10 and 13, pinned at the old
+page's scale) drawn past boxes that a page packed at k 0.840 cannot make room
+for — the pin fallback of 2026-10-13 — and they go with page 2's pins alone
+(`residual-page-2.json`). Pins are kept by this rule, so that is for Zach.
+
+*The rule of 2026-10-13, as first built (replaced above):*
 
 **Zach's rule (2026-10-13): keep a moved step's frame offset across any
 re-pack while the step stays on the same page and in the same band; send it
@@ -331,7 +408,8 @@ legacy value.
 - [x] A bumped packer version holds every saved page and packs only a re-packed one, stamped with it
 - [x] Part 2 (Zach, 2026-10-13): a moved frame keeps its offset across any re-pack while its step stays on its page and in its band — the edit, the layout and adoption each apply it; stale and let-go arrangements kept for their bands; one notice per edit
 - [x] Part 2 browser proof in `artifacts/layout-review/out/repack-keeps-hand-moves/`
-- [ ] Part 2, for Zach: on the crane no band changes through Re-pack Page or the old-format open, so tight offsets clash against homes moved inside their bands
+- [x] Part 2, for Zach: on the crane no band changes through Re-pack Page or the old-format open, so tight offsets clash against homes moved inside their bands — answered by his rule of 2026-10-15: a step that keeps its place keeps its offset, "even if its page re-packs and its home moves a little"
+- [x] Part 2 revised (Zach, 2026-10-15): a moved frame keeps its offset while its step keeps its place — page, band, place along the band as it reads (`flowSlot`) — and goes home when any changes; everything inside its box kept; the edit, the layout and adoption as before; tests that failed before, crane evidence in `artifacts/hand-offsets/`
 - [x] Every page setting written; `PAGE_SETTINGS` with default and legacy values; `normalizePageSetup` reads legacy values
 - [x] File contract: settings said, adding (legacy value) and retiring (`RETIRED_PAGE_KEYS`) a setting
 - [x] Audit of the other fields written only when not default (table above); only page settings changed
