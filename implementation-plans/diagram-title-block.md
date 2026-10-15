@@ -1276,16 +1276,16 @@ null, or a null `thumbnail`), so the overlay can name it.
   in a PR preview say, would be held after it with steps under the block.
   Until 1c is in, the toggle stays hidden, and nobody saves a block-on file
   from an intermediate build.
-- [ ] `useDiagramTitleBlock` and `DiagramTitleBlockSection`, mounted by the
+- [x] `useDiagramTitleBlock` and `DiagramTitleBlockSection`, mounted by the
   Page pane after Layout (T-19 A). `setDiagramTitleBlockContent`, one undo
   step each.
-- [ ] Only valid choices offered: steps with pictures, distinct linked
+- [x] Only valid choices offered: steps with pictures, distinct linked
   patterns, each select naming what Auto finds. The toggle disabled in a
   one-row grid, with its hint. Read-only diagrams disable the section.
 - [ ] The overlay's placeholders. The Title help updated.
-- [ ] With the block on and page 1 holding its own count, "Steps on page
+- [x] With the block on and page 1 holding its own count, "Steps on page
   1" says the block does not change it (T-20 B).
-- [ ] Analytics and `docs/analytics.md`.
+- [x] Analytics and `docs/analytics.md`.
 - [ ] i18n: extract, eight locales, stamp, check.
 
 *As built (1e, the store only; the pane is its own lane).* The slice
@@ -1296,6 +1296,48 @@ nothing records nothing, and a read-only diagram takes nothing. Its tests
 that what the block shows moves no step: every page held as packed, no
 frame sent home. The toggle stays `setDiagramPage({ titleBlock })`, and
 the pane disables it where `titleBlockFits(page)` is false.
+
+*As built (1e, the pane; the overlay's placeholders are the other lane's).*
+As planned, with these calls:
+- What the selects offer is a pure module beside the resolution,
+  `diagram/pages/titleBlockChoices.ts`: the steps with a picture for the
+  model; for the pattern one step per distinct pattern, told apart by
+  `thumbnailJson` (now exported from `diagramFile.ts`, the table's own key),
+  named by the step chosen where that one links it, else the last. A step
+  chosen that can no longer give its part stays in the list, marked "Step
+  12 (no picture)" or "(not linked)", since the select must show what the
+  part is set to; nothing else that cannot be shown is offered. Auto with
+  nothing to find reads "Auto (none linked)" for the pattern, as planned,
+  and "Auto (no pictures)" for the model. On the crane: the model offers
+  steps 1–28, the pattern 19 distinct patterns.
+- The toggle shows what the first page has (`hasTitleBlock`): in a grid of
+  one row it reads off, disabled, with "Needs two rows or more" under its
+  label, and the setting is kept, so a second row brings the block back.
+  The hint is the field row's note line (a `note` prop on `FieldRow` and
+  `ToggleRow`, where "Overridden" goes), so the section needs no CSS module.
+- The byline is a `TextAreaRow` of four rows, which commits at each pause in
+  typing as well as on blur. So the slice action takes the field's
+  `{ loadId, session }`, as an instruction's edit does: a sitting is one
+  undo step, and a draft typed into a diagram since replaced is dropped. Its
+  analytics counts once per sitting. Its help is its placeholder, an
+  example ("Design: …", "Paper: 60 cm square"): `TextAreaRow` has no help
+  mark.
+- T-20 B: "Steps on page 1" gets a help mark (`NumberRow` gained `help`)
+  while page 1 holds its own count under the block: the block leaves it,
+  and it would hold 7 by default (`CurrentDiagramPage.titleBlockDefault`).
+- The Title toggle's help has a second text while the first page has the
+  block: the tab is on every page after the first.
+- Analytics: no view event, so no `use*Event` hook; each event is a change,
+  fired by `useDiagramTitleBlock` beside its store call, as
+  `useDiagramPageSetup` does. `trackDiagramPageSetupChanged` takes
+  `{ style?, titleBlockChoice? }` as its second argument. `diagram exported`
+  sends `title_block` for a PDF or the SVG (`hasTitleBlock(document.page)`),
+  none for step files.
+- Strings are inline English only, not extracted; the i18n step does every
+  catalog at once.
+- Order: the toggle is live in this lane, so it merges after 1c.
+- Checked in the browser (crane and a new diagram; Chromium at desktop width
+  and WebKit at iPad width, light and dark; the one-row grid; read-only).
 
 **1f. The default goes on**
 - [ ] `PAGE_SETTINGS.titleBlock.default` on, in a commit of its own. A new
