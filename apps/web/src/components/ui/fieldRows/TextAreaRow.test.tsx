@@ -86,6 +86,13 @@ describe('TextAreaRow', () => {
     expect(label?.htmlFor).toBe(field().id);
   });
 
+  it('steps in under the row it belongs to, where asked', () => {
+    render(<TextAreaRow label="Note" nested value="" onCommit={vi.fn()} />);
+    expect(field().closest('[data-nested]')).not.toBeNull();
+    rerender(<TextAreaRow label="Note" value="" onCommit={vi.fn()} />);
+    expect(field().closest('[data-nested]')).toBeNull();
+  });
+
   it('explains itself behind a help mark beside its label, which stays out of the field’s name', () => {
     render(
       <TooltipProvider>

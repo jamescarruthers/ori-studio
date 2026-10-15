@@ -20,6 +20,7 @@ export function SelectRow({
   options,
   placeholder,
   disabled,
+  nested,
   title,
   help,
   note,
@@ -32,6 +33,8 @@ export function SelectRow({
   options: readonly SelectRowOption[];
   placeholder?: string;
   disabled?: boolean;
+  /** A step in, for an option that qualifies the one above it (`FieldRow.nested`). */
+  nested?: boolean;
   title?: string;
   /** What the row means, behind a help mark beside its label: reachable by keyboard and touch, where a title is not. */
   help?: string;
@@ -43,7 +46,17 @@ export function SelectRow({
 }) {
   const noteId = useId();
   return (
-    <FieldRow label={label} kind="select" disabled={disabled} title={title} help={help} noteId={noteId} note={note} onReset={onReset}>
+    <FieldRow
+      label={label}
+      kind="select"
+      disabled={disabled}
+      nested={nested}
+      title={title}
+      help={help}
+      noteId={noteId}
+      note={note}
+      onReset={onReset}
+    >
       <Select value={value ?? ''} onValueChange={onChange} disabled={disabled}>
         <FieldRowSelectTrigger aria-label={label} aria-describedby={note === undefined ? undefined : noteId}>
           <SelectValue placeholder={placeholder} />

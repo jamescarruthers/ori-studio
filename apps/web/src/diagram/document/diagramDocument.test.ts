@@ -8,6 +8,7 @@ import {
   createDiagram,
   defaultTitleBlockContent,
   titleBlockArtSizes,
+  titleBlockStepCount,
   createStep,
   defaultHanStyle,
   duplicateStep,
@@ -1113,6 +1114,11 @@ describe('turns between steps (D22)', () => {
     expect(next.steps.map((entry) => entry.id)).toEqual([s1, 'turn-5', stepIds(diagram)[1], s3, 'turn-6']);
     return { diagram: next, ids };
   }
+
+  it('gives the title block’s live step count as the last step’s number, the turns not counted', () => {
+    expect(titleBlockStepCount(turning().diagram)).toBe(3);
+    expect(titleBlockStepCount(diagramWith(0).diagram)).toBe(0);
+  });
 
   it('numbers the steps alone: the steps either side of a turn read 1 and 2', () => {
     const { diagram } = turning();

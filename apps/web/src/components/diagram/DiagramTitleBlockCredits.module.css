@@ -1,0 +1,118 @@
+/* The title block's credits in the Page pane (DiagramTitleBlockCredits.tsx):
+   a stacked row, as a TextAreaRow is — its label above, then a line per
+   credit, its label and its value side by side, and the buttons that add. */
+.credits {
+  display: grid;
+  gap: 5px;
+  padding: 7px var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* A step in under the title block's toggle, as the field rows step in. */
+.credits[data-nested] {
+  padding-left: 24px;
+}
+
+.head {
+  font-size: 0.74rem;
+}
+
+.label {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+.credits[data-disabled] .label {
+  opacity: 0.5;
+}
+
+.list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The label and the value side by side, as wide as each other: a label as long as
+   "Recommended size" needs the room as much as a name or a size does. */
+.credit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.field {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.74rem;
+}
+
+.field:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+
+.field::placeholder {
+  color: var(--text-muted);
+}
+
+.field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* The live step count in the value's place: read, not typed, so quieter than
+   a field, with the way to type one instead at its end. */
+.live {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.count {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  overflow: hidden;
+  padding: 0 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 24px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+@media (pointer: coarse) {
+  /* Below 16px, iOS zooms the page to a field the moment it takes focus; and
+     the fields stand as tall as the buttons beside them, a finger's height. */
+  .field {
+    height: var(--touch-target);
+    font-size: 16px;
+  }
+
+  .count {
+    height: var(--touch-target);
+    line-height: calc(var(--touch-target) - 2px);
+  }
+}

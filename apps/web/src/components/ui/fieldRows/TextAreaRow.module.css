@@ -8,6 +8,12 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* A field that belongs to the row above it, a step in: `FieldRow`'s step-in,
+   so the two kinds of row line up under one toggle. */
+.row[data-nested] {
+  padding-left: 24px;
+}
+
 .label {
   color: var(--text-secondary);
   font-size: 0.74rem;

@@ -2602,6 +2602,11 @@ export function titleBlockArtSizes(content: DiagramTitleBlockContent | undefined
   };
 }
 
+/** The number a credit's live step count prints: the last numbered step's (turns are not numbered, D22). */
+export function titleBlockStepCount(document: DiagramDocument): number {
+  return stepNumbers(document).size;
+}
+
 /**
  * A title block source as this build holds it, its own fields and no other;
  * null for a kind it does not make, or a step without its id. The one rule
