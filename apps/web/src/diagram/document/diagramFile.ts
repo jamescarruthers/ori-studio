@@ -523,7 +523,12 @@ class ThumbnailWriter {
  */
 const thumbnailJsonOf = new WeakMap<SheetThumbnail, string>();
 
-function thumbnailJson(thumbnail: SheetThumbnail): string {
+/**
+ * A thumbnail's content as one string: what the file's thumbnail table writes
+ * once however many links share it, and so what tells two linked patterns
+ * apart (the title block's choices, `pages/titleBlockChoices.ts`).
+ */
+export function thumbnailJson(thumbnail: SheetThumbnail): string {
   let json = thumbnailJsonOf.get(thumbnail);
   if (json === undefined) {
     json = JSON.stringify(thumbnail);
