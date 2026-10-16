@@ -195,6 +195,8 @@ export function usePagesView({
 
   // Pages are composed once they come within a view's height of the screen:
   // the first, or the ones round those a view coming back had on screen.
+  // Release their artwork again when they leave that area; interaction targets
+  // remain mounted for selection and keyboard navigation.
   const [near, setNear] = useState<ReadonlySet<number>>(() => {
     if (!restoring) return new Set([0]);
     const { first: from, last: to } = restoring.onScreen;
@@ -217,7 +219,9 @@ export function usePagesView({
           let next: Set<number> | null = null;
           for (const entry of entries) {
             const index = Number((entry.target as HTMLElement).dataset.page);
-            if (entry.isIntersecting && !previous.has(index)) (next ??= new Set(previous)).add(index);
+            const has = (next ?? previous).has(index);
+            if (entry.isIntersecting && !has) (next ??= new Set(previous)).add(index);
+            if (!entry.isIntersecting && has) (next ??= new Set(previous)).delete(index);
           }
           return next ?? previous;
         });
