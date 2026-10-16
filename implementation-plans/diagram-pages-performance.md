@@ -29,7 +29,7 @@ Make pan and zoom responsive on dense diagram pages, including the external
 - [x] Add bounded raster previews and release distant page artwork.
 - [x] Verify changes to paper/style, annotations, and placements refresh previews.
 - [x] Run web validation and compare browser rendering/performance.
-- [ ] Open a draft PR and provide the local testing URL.
+- [x] Open a draft PR and provide the local testing URL.
 
 ## Measurements and verification
 
@@ -64,3 +64,6 @@ existing 32 ms packing benchmark slower. All generated wasm bridges were
 rebuilt locally because the bootstrap copies were stale. Rust/oracle,
 native-shell, and production-build checks are omitted: no engine, native,
 bundling, routing, or export behavior changed.
+
+Draft PR: https://github.com/zacharyfmarion/ori-studio/pull/452.
+Local preview: http://localhost:5234/diagram (detached dev server).
