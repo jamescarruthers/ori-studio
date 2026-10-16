@@ -5,6 +5,7 @@ import { ANALYTICS_EVENTS, track } from '../analytics';
 import { RELEASES_URL } from '../constants/release';
 import { relaunchIntoUpdate, startUpdateDownload } from '../lib/updateController';
 import { confirmDiscardUnsavedWork } from '../lib/unsavedWork';
+import { openExternalUrl } from '../platform/externalUrl';
 import { shouldShowUpdateCard, useUpdateStore } from '../store/updateStore';
 import styles from './UpdateCard.module.css';
 
@@ -60,7 +61,7 @@ export function UpdateCard() {
   }, []);
 
   const onOpenReleases = useCallback(() => {
-    window.open(RELEASES_URL, '_blank', 'noopener,noreferrer');
+    void openExternalUrl(RELEASES_URL);
   }, []);
 
   const onDismiss = useCallback(() => {

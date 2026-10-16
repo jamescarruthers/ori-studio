@@ -5,6 +5,7 @@ import { track, type LandingCta, type LandingSectionId } from '../../analytics';
 import { DISCORD_URL, REPOSITORY_URL } from '../../constants/release';
 import { EDIT_PATH } from '../../routing/paths';
 import { buttonClassName, ButtonLink } from '../ui/Button';
+import { externalAnchorProps } from '../ui/ExternalAnchor';
 import { DesktopDownloadButton } from '../download/DesktopDownloadButton';
 import { LandingFeatureList } from './LandingFeatureList';
 import { LandingSwipeCarousel, type LandingSwipeItem } from './LandingSwipeCarousel';
@@ -263,12 +264,12 @@ export function WelcomeLanding() {
             // build whose reader has already installed this.
             <DesktopDownloadButton surface="landing" />
           )}
+          {/* A new tab, so the app stays open behind them; on desktop, the
+              system browser rather than the app's own window. */}
           <ButtonLink
             variant="secondary"
             size="lg"
-            href={DISCORD_URL}
-            rel="noreferrer"
-            onClick={() => trackCta('discord')}
+            {...externalAnchorProps(DISCORD_URL, () => trackCta('discord'))}
           >
             <MessageCircle size={15} aria-hidden="true" />
             {t('landing:get.discord', 'Join the Discord')}
@@ -276,9 +277,7 @@ export function WelcomeLanding() {
           <ButtonLink
             variant="secondary"
             size="lg"
-            href={REPOSITORY_URL}
-            rel="noreferrer"
-            onClick={() => trackCta('github')}
+            {...externalAnchorProps(REPOSITORY_URL, () => trackCta('github'))}
           >
             <Github size={15} aria-hidden="true" />
             {t('landing:get.github', 'Source and issues')}

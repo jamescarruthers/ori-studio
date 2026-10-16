@@ -12,6 +12,7 @@ import {
 } from '../../lib/errorReport';
 import { Button } from '../ui/Button';
 import { CONTROL_RADIUS_CLASS, ICON_CONTROL_SIZE_CLASSES } from '../ui/controlStyles';
+import { ExternalAnchor } from '../ui/ExternalAnchor';
 
 /**
  * What an error boundary renders in place of the subtree it lost.
@@ -213,15 +214,10 @@ export function ErrorFallback({
         )}
         {extraActions}
         {variant !== 'strip' && (
-          <a
-            className="error-fallback__report"
-            href={ISSUES_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
+          <ExternalAnchor className="error-fallback__report" href={ISSUES_URL}>
             {t('errors:boundary.report', 'Report an issue')}
             <ExternalLink size={12} aria-hidden="true" />
-          </a>
+          </ExternalAnchor>
         )}
       </div>
 
