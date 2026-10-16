@@ -1,86 +1,166 @@
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: grid;
-  place-items: center;
-  background: rgb(0 0 0 / 35%);
-  padding: 24px;
-}
-.dialog {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius);
-  padding: 24px;
-  width: min(720px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-  box-shadow: 0 16px 64px rgb(0 0 0 / 20%);
-}
-.dialog h2 {
-  margin: 0 0 12px;
-  font-size: 18px;
-}
-.dialog p {
-  font-size: 13px;
-}
-.controls {
+/* Modal chrome and controls come from PreviewDialog and the shared UI kit. */
+.fileColumn {
   display: flex;
-  gap: 16px;
-  align-items: center;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: var(--space-3);
+}
+
+.fileActions {
+  display: flex;
   flex-wrap: wrap;
-  margin: 16px 0;
+  gap: var(--space-2);
 }
-.controls label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-.controls input[type='number'] {
-  width: 70px;
-  padding: 6px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-default);
-  background: inherit;
-  color: inherit;
-}
-.preview {
-  width: 100%;
-  height: 110px;
-  margin: 8px 0;
-  fill: var(--text-secondary);
-}
-.files {
-  max-height: 240px;
+
+.fileWell {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding-left: 24px;
-  font-size: 13px;
+  border-radius: var(--radius);
+  background: var(--bg-primary);
 }
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 100%;
+  padding: var(--space-4);
+  color: var(--text-tertiary);
+  text-align: center;
+  font-size: 0.72rem;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.files {
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+}
+
 .files li {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
 }
-.files span {
+
+.files li[data-current] {
+  background: var(--bg-tertiary);
+}
+
+.fileIndex {
+  flex: 0 0 3ch;
+  color: var(--text-tertiary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  margin-right: var(--space-2);
+}
+
+.fileName {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
 }
-.results {
-  max-height: 260px;
-  overflow: auto;
-  font-size: 13px;
-  padding-left: 20px;
-}
-.footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
-}
-.dialog progress {
+
+.preview {
+  display: block;
   width: 100%;
+  height: 110px;
+  padding: var(--space-3);
+  fill: var(--text-secondary);
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+}
+
+.progress {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.progressHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.progressTrack {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-primary);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 120ms linear;
+}
+
+.progressFile {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.results {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.results li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.selectionCount {
+  margin-right: auto;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.spinner {
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+  .progressFill {
+    transition: none;
+  }
 }

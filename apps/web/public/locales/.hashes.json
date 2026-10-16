@@ -4497,7 +4497,16 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8997,7 +9006,16 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13499,7 +13517,16 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -17904,7 +17931,16 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22309,7 +22345,16 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -26809,7 +26854,16 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -31309,7 +31363,16 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -35714,6 +35777,15 @@
     "panels:diagram.import.savedViewNotice": "effff6601976",
     "panels:diagram.import.start": "2cff9baabf56",
     "panels:diagram.import.title": "d2b93e0000ef",
-    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3"
+    "panels:diagram.picture.linkedDefox": "b871ed9b2ec3",
+    "panels:diagram.import.empty": "59f1d86dbabb",
+    "panels:diagram.import.foldingHeading": "5fad9cc3dcdc",
+    "panels:diagram.import.layoutHeading": "e73b0adc4bae",
+    "panels:diagram.import.order": "7f748110c33b",
+    "panels:diagram.import.placing": "910c5d3c23a1",
+    "panels:diagram.import.preparing": "8f2fc10e9ad1",
+    "panels:diagram.import.reading": "c3ec64928d7d",
+    "panels:diagram.import.selected": "be0d38a7574a",
+    "panels:diagram.import.formats": "d2cc8e14cdda"
   }
 }
