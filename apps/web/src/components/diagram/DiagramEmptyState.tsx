@@ -4,6 +4,7 @@ import { trackDiagramTutorialOpened } from '../../analytics';
 import { DIAGRAM_TUTORIAL_URL } from '../../diagram/example/diagramExample';
 import { useOpenDiagramExample } from '../../diagram/example/useOpenDiagramExample';
 import { Button, ButtonLink } from '../ui/Button';
+import { externalAnchorProps } from '../ui/ExternalAnchor';
 import styles from './DiagramEmptyState.module.css';
 
 /**
@@ -94,13 +95,7 @@ export function DiagramEmptyState({
               ? t('panels:diagram.empty.openingExample', 'Opening the example…')
               : t('panels:diagram.empty.openExample', 'Open the example crane')}
           </Button>
-          <ButtonLink
-            variant="ghost"
-            href={DIAGRAM_TUTORIAL_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            onClick={() => trackDiagramTutorialOpened()}
-          >
+          <ButtonLink variant="ghost" {...externalAnchorProps(DIAGRAM_TUTORIAL_URL, () => trackDiagramTutorialOpened())}>
             <CirclePlay size={15} aria-hidden="true" />
             {t('panels:diagram.empty.tutorial', 'Watch the walkthrough')}
             <ArrowUpRight size={13} aria-hidden="true" />
