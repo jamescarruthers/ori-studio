@@ -59,5 +59,5 @@ web all of these work and must keep working as links.
 - [x] Route every external link through it
 - [x] Source scan for raw `target="_blank"` / `window.open(`
 - [x] Lint, typecheck, relevant vitest, `check:desktop`, cargo fmt/clippy for the shell
-- [ ] Build the desktop app and click external links in it
-- [ ] Draft PR, noting #451's walkthrough link
+- [x] Build the desktop app and click external links in it
+- [x] Draft PR, noting #451's walkthrough link
