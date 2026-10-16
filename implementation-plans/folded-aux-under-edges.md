@@ -27,4 +27,5 @@ hidden flags, erosion and round outline joins.
 - [x] Verify AUX endpoints, mixed outlines, overlapping layers and woven patches.
 - [x] Run web lint, typecheck and tests; inspect browser output (273 focused tests
   and Chromium pixel checks passed).
-- [ ] Open a draft PR against `main` and leave the local app available.
+- [x] Open a draft PR against `main` and leave the local app available
+  ([PR #453](https://github.com/zacharyfmarion/ori-studio/pull/453)).
