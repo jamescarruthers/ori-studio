@@ -90,6 +90,7 @@ try {
       segments: s.oristudioCpDocument.document.crease_pattern.line_segments.length,
       failed: s.diagram.steps.filter((x) => x.importStatus === 'failed').length,
       pending: s.diagram.steps.filter((x) => x.importStatus === 'pending').length,
+      wireframes: s.diagram.steps.filter((x) => x.source?.render?.mode === 'folded-flat' && x.picture?.kind === 'fixed').length,
       readOnly: read?.readOnly,
       readSteps: read?.document.steps.length,
       unknownSteps: read?.document.steps.filter((x) => x.unknown).length,
@@ -103,6 +104,32 @@ try {
   await writeFile('artifacts/diagram-import/result.json', JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   await page.screenshot({ path: 'artifacts/diagram-import/diagram.png', timeout: 90000 });
+
+  // Optional interaction measurement: run after import and before cold analysis
+  // so it measures card painting, not a whole-document cache reconstruction.
+  if (process.env.ORI_IMPORT_SCROLL_CHECK) {
+    result.scrolling = await page.evaluate(async () => {
+      const grid = document.querySelector('[data-diagram-steps]');
+      const scroller = grid?.parentElement;
+      if (!grid || !scroller) throw new Error('The Steps grid is not mounted');
+      const samples = [];
+      for (const position of [0.25, 0.5, 0.75, 1, 0]) {
+        let previous = performance.now();
+        const start = previous;
+        let maxFrameMs = 0;
+        scroller.scrollTop = (scroller.scrollHeight - scroller.clientHeight) * position;
+        while (performance.now() - start < 2000) {
+          await new Promise(requestAnimationFrame);
+          const now = performance.now();
+          maxFrameMs = Math.max(maxFrameMs, now - previous);
+          previous = now;
+        }
+        samples.push({ position, maxFrameMs, mountedCards: grid.querySelectorAll('[role=option]').length });
+      }
+      return samples;
+    });
+    console.log('Scroll samples', JSON.stringify(result.scrolling));
+  }
 
   const links = await page.evaluate(async () => {
     const { ensureCpSegmentationArtifacts } = window.__importModules.cold;

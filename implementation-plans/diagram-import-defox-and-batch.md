@@ -184,7 +184,7 @@ reported save times exclude physical disk writes.
 
 | Fixture/run | Import | Result | Cold analysis | OSF save / reopen | OSF size |
 | --- | ---: | --- | ---: | ---: | ---: |
-| 205 Betta CPs, normal folds | 91.8 s | 205 folded steps; 490,853 segments; no failed/pending folds | 25.5 s; 205/205 links current | 3.77 s / 24.90 s | 428.5 MB |
+| 205 Betta CPs, normal folds | 91.8 s | 205 imported steps; 490,853 segments; included unfinished wireframes (classification corrected below) | 25.5 s; 205/205 links current | 3.77 s / 24.90 s | 428.5 MB |
 | Same batch, Finish import now | 21.7 s | 205 pending previews; all geometry retained | 31.2 s; 205/205 links current | 4.25 s / 26.92 s | 489.2 MB |
 | Supplied Defox project | 0.52 s | 8 saved views; 2,861 segments; no failed entries | 0.10 s; 8/8 links current | 0.07 s / 0.58 s | 4.23 MB |
 | Synthetic mixed batch | 0.18 s | SVG, folded CP, SVG; 5 editable segments | 0.001 s; source link current | 0.02 s / 0.43 s | 16.3 KB |
@@ -198,7 +198,7 @@ A separate release Rust engine benchmark parsed the full CP corpus in 474 ms,
 appended it in 15 ms and exported raw FOLD in 3,393 ms (3,887 ms total). These
 numbers isolate engine costs; they are not frontend end-to-end timings.
 
-The final full folded import recorded a worst main-thread long task of about
+The initial full import recorded a worst main-thread long task of about
 2.0 seconds, with another 1.8-second serialization task. Shared thumbnail work
 reduced the Finish-now run from roughly 30 seconds to 22 seconds and removed an
 earlier 7–8-second publication stall, but the original targets are still missed:
@@ -271,6 +271,88 @@ byte-for-byte comparison with the pinned checkout passed, so they are retained.
 | `scripts/diagram-import-check.mjs`, Rust benchmark example | External corpus validation and measurements |
 | Locales, analytics, `PORTING.md`, `upstream-sync.json` | Product integration and compatibility documentation |
 
+## Import review follow-up
+
+The initial dialog did not follow the existing export dialog and control
+conventions. It now shares the preview/options dialog frame, ToggleRow,
+NumberField/NumberRow and icon buttons. Verify light/dark, narrow screens,
+keyboard focus and cancellation before shipping.
+
+The Steps grid mounted every card and delayed painting with IntersectionObserver;
+it was not virtualized. Adopt the existing TanStack Virtual dependency with
+measured responsive rows and preserve selection, keyboard focus, turns and
+insertion targets. Avoid annotation geometry for unannotated thumbnails. Profile
+scrolling and switching to CP on the supplied 205-file corpus.
+
+An Order5 request can return Wire2/NotAttempted with zero solutions without
+throwing. Import incorrectly accepted that as a finished fold. Require a paper
+view with a discovered solution; retain a failed CP preview otherwise. Earlier
+counts of “205 folded” only counted absence of an import error and are superseded
+by the corrected classification below.
+
+The scroll CPU profile on the original grid showed a 2,363 ms frame stall:
+`xraySurfaceOf`/face-overlap calculations dominated, even though the imported
+steps have no annotations. The grid now paints only mounted/overscanned rows,
+without a second visibility observer, using the existing 48 MiB URL cache.
+Thumbnail markup retains the exact crease order and CSS theme tokens while
+avoiding a React fiber for every alternating mountain/valley stroke run.
+
+Show as also paid roughly 688 ms across the sampled captures to construct a
+whole-document sheet-thumbnail index. Capture thumbnails now read the chosen
+region's `scopedLineIds`, using the same shared fitting and stored-stroke budget,
+so switching one step costs that step's creases. No importer-only cache or
+additional worker was introduced.
+
+A separate kernel limitation explains why a later refold can succeed: isolated
+192.cp stopped at Wire2/NotAttempted, while the same lines translated to their
+appended Edit position reached Paper5/Solved. This was reproduced in the same
+worker/session; no edits to the geometry beyond translation. Import prepares
+folds before placement. The completion/fallback fix does not change the ported
+solver's sensitivity to coordinates or claim to repair it.
+
+
+### Follow-up measurements and validation
+
+Chromium/Metal, same 205-file external corpus, development UI and release WASM:
+
+- Final import: 118.45 s, **190 completed paper folds, 15 failed CP previews,
+  zero pending previews and zero imported wireframes**. All 490,853 segments
+  remain in Edit. The additional failed CP previews make this output different
+  from the initial incorrect wireframe run.
+- Five cold scroll jumps (25%, 50%, 75%, end, start): mounted cards stayed at
+  17–32 rather than 205. Worst frame gaps were 200, 169, 233, 620 and 101 ms.
+  The original grid's worst gap was 2,363 ms. The remaining cost is dense SVG
+  construction/decoding/mounting, not unused face-overlap analysis. These are
+  jump samples, not a p95 interaction guarantee or the original 50-ms target.
+- Dense step 205, folded → CP: 540 ms before scoped thumbnails and stable card
+  mounts, 345 ms after. Capture CPU work across the sampled view changes fell
+  from about 757 ms to 125 ms after removing whole-document thumbnail indexing;
+  rendering and worker time are separate from that CPU figure.
+- The affected step 191 refolded successfully after placement. Another completed
+  import can fail when refolded at its translated position; the existing manual
+  Pose/capture flow still offers its diagnostic transparent drawing. This change
+  enforces the strict completed-fold-or-CP contract at **import** and does not
+  change that established manual flow or the coordinate-sensitive kernel.
+- Light/dark and 390px dialog screenshots inspected; folder toggle, numeric
+  controls, shared dialog Escape/focus and cancellation verified. Closing while
+  Edit provisions cannot reopen the dialog or publish a cancelled job.
+- Browser virtual-grid checks: selected off-screen card mounts, Home/End reach
+  the first/last entries, resizing preserves selection, no ResizeObserver-loop
+  warning, and no page errors. The shared export dialog's existing tests pass.
+- Follow-up suite: 3,811 passed / 3 skipped across 220 diagram, export and style
+  files. Final targeted captures/import regressions: 122 passed; final virtual
+  grid/thumbnail/picture regressions: 27 passed. Lint, typecheck and i18n check
+  pass. `git diff --check` and the external harness syntax check pass.
+- Rust/native/oracle and production bundling checks from the initial feature
+  were not repeated: this follow-up changes shared frontend behavior and does
+  not change engines, bindings, routing, native APIs or build configuration.
+
+For repeatable scroll samples, run the external harness with
+`ORI_IMPORT_SCROLL_CHECK=1 node scripts/diagram-import-check.mjs <corpus-folder>`.
+It also records unfinished wireframes separately from retained CP failures.
+Ignored browser profiles/screenshots are under `artifacts/diagram-import-ui/`;
+no corpus data or screenshots are committed.
+
 ## Checklist
 
 - [x] Inspect merged Diagram, existing SVG/Append behavior, supplied files and workers/caches.
@@ -287,6 +369,9 @@ byte-for-byte comparison with the pinned checkout passed, so they are retained.
 - [x] Validate 205 CPs, eight Defox steps and a mixed CP/SVG batch in Chromium.
 - [x] Validate the production Defox worker bundle and native build/launch.
 - [x] Add locales, private analytics and measured-result documentation.
+- [x] Verify shared modal UI and controls in browser and focused tests.
+- [x] Verify incomplete folds become failed CP previews and completed folds remain paper views.
+- [x] Virtualize the grid and measure scrolling and CP switching.
 - [ ] Meet the original 10-second preparation and 50-ms main-thread targets.
 - [ ] Establish p95 interaction/cancel latency and total-process peak/retained memory.
 - [ ] Complete native picker/drop and WebKit/Firefox UI matrix plus full-corpus PDF/SVG export.

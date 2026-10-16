@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { SheetThumbnail, SheetStrokeRole } from '../../cp-workspace/sheets/sheetThumbnail';
 import styles from './DiagramSheetThumbnail.module.css';
 
@@ -11,7 +11,7 @@ import styles from './DiagramSheetThumbnail.module.css';
  *
  * Decorative: what it shows is said in words beside it.
  */
-export function DiagramSheetThumbnail({
+export const DiagramSheetThumbnail = memo(function DiagramSheetThumbnail({
   thumbnail,
   className,
 }: {
@@ -20,10 +20,17 @@ export function DiagramSheetThumbnail({
   className?: string;
 }) {
   // Independent M/L subpaths keep every segment and its drawing order, but
-  // avoid one React/DOM element per crease in a long imported diagram.
-  const paths = useMemo(() => {
+  // avoid one element per crease. Mount the generated SVG in one operation:
+  // alternating mountain/valley runs can still number in the thousands, and
+  // a React fiber per run made scrolling stall. Drawing order and live theme
+  // tokens remain intact.
+  const markup = useMemo(() => {
     const runs: Array<{ role: SheetStrokeRole; commands: string[] }> = [];
     for (const stroke of thumbnail.strokes) {
+      // Only finite numbers enter the generated path markup; no uploaded SVG
+      // or arbitrary text crosses this boundary.
+      if (![stroke.x1, stroke.y1, stroke.x2, stroke.y2].every(Number.isFinite)) continue;
+      if (!['edge', 'mountain', 'valley', 'unassigned', 'aux'].includes(stroke.role)) continue;
       let run = runs.at(-1);
       if (!run || run.role !== stroke.role) {
         run = { role: stroke.role, commands: [] };
@@ -31,18 +38,18 @@ export function DiagramSheetThumbnail({
       }
       run.commands.push(`M${stroke.x1} ${stroke.y1}L${stroke.x2} ${stroke.y2}`);
     }
-    return runs.map((run) => ({ role: run.role, d: run.commands.join('') }));
+    return runs
+      .map((run) => `<path class="${styles.stroke}" data-role="${run.role}" d="${run.commands.join('')}"/>`)
+      .join('');
   }, [thumbnail]);
+  const content = useMemo(() => ({ __html: markup }), [markup]);
   return (
     <svg
       viewBox={thumbnail.viewBox}
       aria-hidden="true"
       focusable="false"
       className={className ? `${styles.thumbnail} ${className}` : styles.thumbnail}
-    >
-      {paths.map((path, index) => (
-        <path key={index} className={styles.stroke} data-role={path.role} d={path.d} />
-      ))}
-    </svg>
+      dangerouslySetInnerHTML={content}
+    />
   );
-}
+});

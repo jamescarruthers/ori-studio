@@ -74,6 +74,8 @@ export const DiagramStepCard = forwardRef<
     selected: boolean;
     /** Whether this card is the grid's tab stop. */
     tabStop: boolean;
+    position?: number;
+    total?: number;
     /** A picture dragged over the grid would land on this card. */
     dropTarget: boolean;
     readOnly: boolean;
@@ -123,6 +125,8 @@ export const DiagramStepCard = forwardRef<
     number,
     selected,
     tabStop,
+    position,
+    total,
     dropTarget,
     readOnly,
     onSelect,
@@ -157,7 +161,7 @@ export const DiagramStepCard = forwardRef<
   const locked = isLockedStep(step);
   const text = step.text.trim();
   const picture = stepPictureSource(step, assets);
-  const url = useStepPictureUrl(own, step, assets, style);
+  const url = useStepPictureUrl(step, assets, style);
   const linked = linkedSourceOf(step);
   const sent = linked?.kind === 'references-step';
   const restyled = capturedStyleChange(step, style);
@@ -190,6 +194,8 @@ export const DiagramStepCard = forwardRef<
     <div
       ref={ref}
       role="option"
+      aria-posinset={position}
+      aria-setsize={total}
       aria-selected={selected}
       tabIndex={tabStop ? 0 : -1}
       aria-labelledby={`${labelId}-number ${labelId}-kind${chip ? ` ${labelId}-chip` : ''}${enlargedFrom !== undefined ? ` ${labelId}-enlarged` : ''} ${labelId}-text`}
@@ -441,13 +447,15 @@ export const DiagramTurnCard = forwardRef<
     style: DiagramStyle;
     selected: boolean;
     tabStop: boolean;
+    position?: number;
+    total?: number;
     /** A picture dragged over the grid would land here: a new step after the turn. */
     dropTarget: boolean;
     readOnly: boolean;
     onSelect: (id: string) => void;
     onDelete: (id: string) => void;
   }
->(function DiagramTurnCard({ turn, between, style, selected, tabStop, dropTarget, readOnly, onSelect, onDelete }, ref) {
+>(function DiagramTurnCard({ turn, between, style, selected, tabStop, position, total, dropTarget, readOnly, onSelect, onDelete }, ref) {
   const { t } = useTranslation();
   const locked = isLockedTurn(turn);
   const { title, how } = turnCardWords(turn, t);
@@ -460,6 +468,8 @@ export const DiagramTurnCard = forwardRef<
     <div
       ref={ref}
       role="option"
+      aria-posinset={position}
+      aria-setsize={total}
       aria-selected={selected}
       aria-label={turnLabel(turn, between, t)}
       tabIndex={tabStop ? 0 : -1}

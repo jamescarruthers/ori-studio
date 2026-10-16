@@ -34,6 +34,7 @@ import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSp
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import {
   openFold,
+  hasFoldedLayerOrder,
   readFoldedPicture,
   type CpFoldRuntime,
   type FoldedFigureState,
@@ -399,7 +400,7 @@ export async function captureStep(
   const choice = chooseStepCreases(document, request.scope, segmentation, request.known ?? null);
   if (choice.status !== 'found') return choice;
   const { creases } = choice;
-  const thumbnail = creasesThumbnail(creases, segmentation);
+  const thumbnail = creasesThumbnail(creases, document);
   // Found where it moved to, the link follows it.
   const scope = followedScope(request.scope, creases);
   const source = (render: DiagramCpRender): DiagramCpSource => {
@@ -455,8 +456,9 @@ export async function captureStep(
       state = await runtime.foldToCase(folded.handle, render.foldCase);
       foldCase = Math.max(1, Math.min(render.foldCase, state.discoveredCases));
     }
-    const captured = await readFlatPicture(runtime, folded.handle, state, render.rotationDeg, env, render.spread);
-    const noLayerOrder = state.outcome === 'NoSolutions' || state.outcome === 'Contradiction';
+    const picture = await readFoldedPicture(runtime, folded.handle, state.displayStyle);
+    const captured = flatPicture(picture, render.rotationDeg, env, render.spread);
+    const noLayerOrder = !hasFoldedLayerOrder(state) || !picture.scene?.faces.length;
     return { status: 'captured', source: source({ ...render, foldCase }), captured, noLayerOrder };
   } finally {
     await runtime.free(folded.handle);
