@@ -312,3 +312,30 @@ it("places new geometry beyond existing simulation windows, including their rota
   ).toBe(1300);
   expect(appendDisjoint.mock.calls[0]![2]).toBe(false);
 });
+
+it("uses the same localized defaults as adding the first step, including undo/redo", async () => {
+  get().addDiagramStep();
+  const expected = get().diagram!;
+  useWorkspaceStore.setState(initial, true);
+  await commitDiagramImport([{ steps: [createStep()] }], importTarget(), 1, 100);
+  expect(get().diagram!.title).toBe(expected.title);
+  expect(get().diagram!.titleBlockContent).toEqual(expected.titleBlockContent);
+  expect(get().diagram!.hanStyle).toBe(expected.hanStyle);
+  expect(get().diagram!.page).toEqual(expected.page);
+  get().undoDiagram();
+  expect(get().diagram).toBeNull();
+  get().redoDiagram();
+  expect(get().diagram!.titleBlockContent).toEqual(expected.titleBlockContent);
+});
+
+it("preserves authored fields, including intentionally blank fields, when appending", async () => {
+  get().setDiagramTitle('My model');
+  get().setDiagramTitleBlockContent({ subtitle: '' });
+  const before = get().diagram!;
+  await commitDiagramImport([{ steps: [createStep()] }], importTarget(), 1, 100);
+  expect(get().diagram!.title).toBe('My model');
+  expect(get().diagram!.titleBlockContent).toEqual(before.titleBlockContent);
+  get().setDiagramTitle('');
+  await commitDiagramImport([{ steps: [createStep()] }], importTarget(), 1, 100);
+  expect(get().diagram!.title).toBe('');
+});

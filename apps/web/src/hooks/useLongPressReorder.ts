@@ -12,9 +12,8 @@
  * the case a drag library's weight buys nothing for.
  *
  * The one thing a library would have given free is keyboard reordering, and the
- * answer to that is the one `DesignTabStrip` already reached: a Move up / Move
- * down pair beside the drag, which is the accessible equivalent rather than a
- * convenience.
+ * caller supplies that: DesignTabStrip uses Move up / Move down, and import
+ * rows accept arrow keys on their focused drag handle.
  *
  * # Activation splits on pointer type, and that is what makes it reusable
  *
@@ -73,6 +72,8 @@ export interface LongPressReorderOptions {
   onReorder: (id: string, toIndex: number) => void;
   /** Fired once when a drag completes, with where it ended up. */
   onDragEnd?: (id: string, toIndex: number) => void;
+  /** Opt in to edge scrolling for long lists; short favorites lists need none. */
+  scrollElement?: (list: HTMLElement) => HTMLElement | null;
 }
 
 export interface LongPressReorder {
@@ -101,6 +102,7 @@ export function useLongPressReorder({
   itemAttribute,
   onReorder,
   onDragEnd,
+  scrollElement,
 }: LongPressReorderOptions): LongPressReorder {
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -169,6 +171,30 @@ export function useLongPressReorder({
         lastIndex: rowIndex(container, itemAttribute, id),
       };
       gestureRef.current = gesture;
+      const scroller = scrollElement?.(container);
+      let pointerY = event.clientY;
+      let scrollFrame = 0;
+      let lastFrame = 0;
+      const reorderAtPointer = () => {
+        const next = dropIndex(gesture.container, itemAttribute, pointerY);
+        if (next === -1 || next === gesture.lastIndex) return;
+        gesture.lastIndex = next;
+        onReorderRef.current(gesture.id, next);
+      };
+      const autoScroll = (time: number) => {
+        if (!scroller || gestureRef.current !== gesture) return;
+        const box = scroller.getBoundingClientRect();
+        const edge = Math.min(40, box.height / 4);
+        const speed = pointerY < box.top + edge
+          ? -Math.min(1, (box.top + edge - pointerY) / edge)
+          : pointerY > box.bottom - edge
+            ? Math.min(1, (pointerY - box.bottom + edge) / edge) : 0;
+        const previous = scroller.scrollTop;
+        scroller.scrollTop += speed * Math.min(32, time - (lastFrame || time)) * 0.6;
+        lastFrame = time;
+        if (scroller.scrollTop !== previous) reorderAtPointer();
+        scrollFrame = requestAnimationFrame(autoScroll);
+      };
 
       /** Cancel the browser's own scroll for the rest of an armed drag. */
       const preventScroll = (touchEvent: TouchEvent) => {
@@ -183,10 +209,12 @@ export function useLongPressReorder({
           window.addEventListener('touchmove', preventScroll, { passive: false });
         }
         setDraggingId(gesture.id);
+        if (scroller) scrollFrame = requestAnimationFrame(autoScroll);
       };
 
       const onMove = (move: PointerEvent) => {
         if (gestureRef.current !== gesture) return;
+        pointerY = move.clientY;
         const travelled = Math.hypot(
           move.clientX - gesture.origin.x,
           move.clientY - gesture.origin.y
@@ -202,10 +230,7 @@ export function useLongPressReorder({
           if (travelled < POINTER_DRAG_THRESHOLD_PX) return;
           arm();
         }
-        const next = dropIndex(gesture.container, itemAttribute, move.clientY);
-        if (next === -1 || next === gesture.lastIndex) return;
-        gesture.lastIndex = next;
-        onReorderRef.current(gesture.id, next);
+        reorderAtPointer();
       };
 
       const onUp = () => {
@@ -219,6 +244,7 @@ export function useLongPressReorder({
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onUp);
       teardownRef.current = () => {
+        cancelAnimationFrame(scrollFrame);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
         window.removeEventListener('pointercancel', onUp);
@@ -232,7 +258,7 @@ export function useLongPressReorder({
         }, TOUCH_LABEL_HOLD_MS);
       }
     },
-    [endGesture, itemAttribute]
+    [endGesture, itemAttribute, scrollElement]
   );
 
   // Android Chrome raises a context menu on the same press that arms the drag.

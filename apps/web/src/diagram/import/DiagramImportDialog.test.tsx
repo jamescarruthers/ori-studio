@@ -65,6 +65,9 @@ it('uses the shared toggle for recursive folder picking and exposes layout numbe
   expect(mocks.folder).toHaveBeenCalledWith(true);
   expect(document.querySelector('input[aria-label=Columns]')).not.toBeNull();
   expect(document.querySelector('input[aria-label=Gap]')).not.toBeNull();
+  expect(document.querySelector('input[aria-label="Max seconds per fold"]')).not.toBeNull();
+  expect(document.body.textContent).not.toContain('Auto');
+  expect(document.querySelector('button[title=Reset]')).toBeNull();
   expect(document.querySelector('input[type=checkbox]:not([aria-hidden=true])')).toBeNull();
 });
 it('closing during Edit provisioning cancels the job and cannot reopen the dialog when provisioning finishes', async () => {

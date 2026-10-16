@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
-import { ArrowDown, ArrowUp, Check, FilePlus2, Files, FolderOpen, Import, LoaderCircle } from 'lucide-react';
+import { Check, FilePlus2, Files, FolderOpen, Import, LoaderCircle } from 'lucide-react';
 import { PreviewDialog } from '../../components/ui/PreviewDialog';
-import { IconButton } from '../../components/ui/IconButton';
 import { NumberField } from '../../components/ui/NumberField';
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection';
 import { FieldRow, NumberRow, ToggleRow } from '../../components/ui/fieldRows';
@@ -14,6 +13,7 @@ import { ensureDiagramImportTarget } from '../../store/workspaceStore/diagramBat
 import { useImportDialogStore } from './importDialogStore';
 import { orderedImportFiles, runImportJob, supportsStepImport, type ImportProgress } from './importJob';
 import styles from './DiagramImportDialog.module.css';
+import { ImportFileOrder } from './ImportFileOrder';
 
 export function DiagramImportDialogHost() {
   const target = useImportDialogStore((s) => s.target);
@@ -120,12 +120,6 @@ function DiagramImportDialog() {
       setRunning(false);
     }
   };
-  const move = (i: number, by: number) =>
-    setFiles((current) => {
-      const next = [...current];
-      [next[i], next[i + by]] = [next[i + by]!, next[i]!];
-      return next;
-    });
   const done = progress?.phase === 'done';
   const cells = files.filter((file) => /\.cp$/i.test(file.name)).length;
   const hasCp = files.some((file) => /\.(cp|defox)$/i.test(file.name));
@@ -174,37 +168,12 @@ function DiagramImportDialog() {
                 <span>{t('panels:diagram.import.formats', 'CP · SVG · Defox')}</span>
               </div>
             ) : (
-              <ol className={styles.files} aria-label={t('panels:diagram.import.order', 'Import order')}>
-                {files.map((file, index) => (
-                  <li
-                    key={`${index}:${file.name}`}
-                    data-current={(running && progress?.name === file.name) || undefined}
-                  >
-                    <span className={styles.fileIndex} aria-hidden="true">
-                      {index + 1}
-                    </span>
-                    <span className={styles.fileName} title={file.name}>
-                      {file.name}
-                    </span>
-                    <IconButton
-                      size="sm"
-                      title={t('panels:diagram.import.earlier', 'Move earlier')}
-                      disabled={running || done || index === 0}
-                      onClick={() => move(index, -1)}
-                    >
-                      <ArrowUp size={14} />
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      title={t('panels:diagram.import.later', 'Move later')}
-                      disabled={running || done || index === files.length - 1}
-                      onClick={() => move(index, 1)}
-                    >
-                      <ArrowDown size={14} />
-                    </IconButton>
-                  </li>
-                ))}
-              </ol>
+              <ImportFileOrder
+                files={files}
+                onChange={setFiles}
+                disabled={running || done}
+                currentName={running ? progress?.name : undefined}
+              />
             )}
           </div>
         </div>
@@ -231,8 +200,6 @@ function DiagramImportDialog() {
                     label={t('panels:diagram.import.columns', 'Columns')}
                     htmlFor="diagram-import-columns"
                     kind="input"
-                    readout={columns === 0 ? t('panels:diagram.import.auto', 'Auto') : undefined}
-                    onReset={columns > 0 ? () => setColumns(0) : undefined}
                   >
                     <NumberField
                       id="diagram-import-columns"
@@ -275,7 +242,7 @@ function DiagramImportDialog() {
               {cells > 0 && (
                 <CollapsibleSection title={t('panels:diagram.import.foldingHeading', 'Folding')}>
                   <NumberRow
-                    label={t('panels:diagram.import.budget', 'Seconds per fold')}
+                    label={t('panels:diagram.import.budget', 'Max seconds per fold')}
                     value={timeout}
                     min={1}
                     max={120}

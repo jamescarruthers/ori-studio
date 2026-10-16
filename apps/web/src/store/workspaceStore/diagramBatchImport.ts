@@ -1,3 +1,4 @@
+import { newDiagram } from '../../diagram/document/newDiagram';
 import {
   emptyOristudioCpSelection,
   getEditableCpModelBounds,
@@ -25,7 +26,6 @@ import {
 } from "./snapshotHistory";
 import { trimDiagramHistory } from "./diagramState";
 import {
-  createDiagram,
   insertionIndex,
   insertSteps,
   type DiagramStep,
@@ -241,7 +241,7 @@ export async function commitDiagramImport(
     for (const asset of group.assets ?? []) assets[asset.id] = asset;
   }
   if (!steps.length) return 0;
-  const base = before.diagram ?? createDiagram();
+  const base = before.diagram ?? newDiagram();
   const inserted = insertSteps(
     { ...base, assets },
     steps,
