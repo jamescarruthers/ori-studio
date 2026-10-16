@@ -1123,9 +1123,9 @@ describe('a turn on a packed page, on the lane', () => {
               continue;
             }
             const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
-            // Each goes the way of the step it comes before.
-            expect(turn.rightToLeft, label).toBe(Boolean(next.rightToLeft));
             const where = before.band === next.band && !before.bend && !next.bend ? 'row' : before.bend || next.bend ? 'beside' : 'bend';
+            // Within a row, each goes the way of the step it comes before; across a bend, below.
+            if (where === 'row') expect(turn.rightToLeft, label).toBe(Boolean(next.rightToLeft));
             seen.add(where);
             // On the lane, midway along it from where it leaves the one picture to where it reaches the other (Zach,
             // 2026-10-15), where that is clear of every step as drawn; else as near that along it as is clear; and
@@ -1147,6 +1147,19 @@ describe('a turn on a packed page, on the lane', () => {
               expect(clear(turn.at, turn.box), label).toBe(true);
               expect(spots.some((spot) => Math.hypot(spot.x - turn.at.x, spot.y - turn.at.y) < 1e-6), label).toBe(true);
             }
+            if (where !== 'row') {
+              // Across a bend: the way of the row it leaves before the bend's deepest point, of the next from there.
+              const outward = before.rightToLeft ? -1 : 1;
+              const deepest = stretch.reduce((best, spot) => (outward * spot.x > outward * best.x ? spot : best));
+              const at = stretch.reduce((best, spot) =>
+                Math.hypot(spot.x - turn.at.x, spot.y - turn.at.y) < Math.hypot(best.x - turn.at.x, best.y - turn.at.y) ? spot : best
+              );
+              // Measured to the stretch's samples: a glyph within a sample of the threshold may go either way.
+              if (Math.abs(at.s - (deepest.s - 0.5)) > 1.5) {
+                seen.add(at.s < deepest.s - 0.5 ? `${where} leaving` : `${where} entering`);
+                expect(turn.rightToLeft, label).toBe(Boolean(at.s < deepest.s - 0.5 ? before.rightToLeft : next.rightToLeft));
+              }
+            }
             // Inside the margin wherever the turn is: its band's outer edge no further out than the margin.
             const middle = where === 'bend' ? solved.turns.get(k)! : null;
             if (middle && middle.stands !== 'past' && clear(mid, turn.box)) {
@@ -1160,9 +1173,14 @@ describe('a turn on a packed page, on the lane', () => {
       }
     }
     // Within a row, across a bend and beside a step in one, each midway and slid along the lane off a step at least
-    // once; and beside a step in a bend, a glyph that stands clear nowhere along its stretch, centred on it.
+    // once; beside a step in a bend, a glyph that stands clear nowhere along its stretch, centred on it; and across
+    // a bend, and beside a step in one, glyphs both before the bend's deepest point and from it on.
     expect([...seen].sort()).toEqual(
-      ['bend', 'bend inside', 'bend midway', 'bend slid', 'beside', 'beside centred', 'beside midway', 'beside slid', 'row', 'row midway', 'row slid'].sort()
+      [
+        ...['bend', 'bend entering', 'bend inside', 'bend leaving', 'bend midway', 'bend slid'],
+        ...['beside', 'beside centred', 'beside entering', 'beside leaving', 'beside midway', 'beside slid'],
+        ...['row', 'row midway', 'row slid'],
+      ].sort()
     );
   });
 });

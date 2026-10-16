@@ -1993,6 +1993,13 @@ export const GLYPH_CLEAR_MM = 0.5;
 const SLIDE_STEP_MM = 0.25;
 
 /**
+ * How far before a bend's deepest point, along the lane, a glyph must stand to read the way of the row it leaves
+ * (`placeTurns`): at the point, or about it, where the lane runs upright, it reads on into the next row, as one
+ * standing at the bend's middle always did.
+ */
+const BEND_FACING_MM = 0.5;
+
+/**
  * The nearest place to `at` where a box `size` centred there stands
  * {@link GLYPH_CLEAR_MM} clear of every one of `obstacles`, its centre within
  * `bounds`: `at` itself where it already does; else the nearest of the places
@@ -2151,23 +2158,36 @@ function placeTurns(
   });
   /**
    * Where along `stretch`, the lane clear of the pictures either side of it,
-   * `glyphs` stand clear of every step as drawn: its middle, or the nearest
-   * to it they do. Null where nowhere along it they do.
+   * `glyphs` stand clear of every step as drawn, and how far along it: its
+   * middle, or the nearest to it they do. Null where nowhere along it they do.
    */
   const alongStretch = (
     glyphs: readonly BetweenGlyph[],
     stretch: readonly LaneSpot[],
     toward: { x: number; y: number } | null,
     outward: number
-  ): ReturnType<typeof standAt> | null => {
+  ): { stood: ReturnType<typeof standAt>; s: number } | null => {
     const middle = stretch.at(-1)!.s / 2;
     for (let off = 0; off <= middle; off += SLIDE_STEP_MM) {
       for (const s of off === 0 ? [middle] : [middle - off, middle + off]) {
         const stood = standAt(glyphs, spotAlong(stretch, s), toward, outward);
-        if (standsClear(stood.at, stood.size, drawn, onPaper(stood.size))) return stood;
+        if (standsClear(stood.at, stood.size, drawn, onPaper(stood.size))) return { stood, s };
       }
     }
     return null;
+  };
+  /**
+   * Which way glyphs `s` mm along `stretch` across a bend read, the bend
+   * turning out toward `outward` from the `k − 1`th step's row to the `k`th's:
+   * the way of the row it leaves before the bend's deepest point, where the
+   * lane still heads that way; of the row it comes into from there on, as at
+   * the bend's middle, where it runs upright (Zach, 2026-10-15: the crane's 2 →
+   * 3 turn-over, stood midway along the ribbon before the bend, "is
+   * backwards" facing the next row).
+   */
+  const facingAcross = (stretch: readonly LaneSpot[], s: number, k: number, outward: number): boolean => {
+    const deepest = stretch.reduce((best, spot) => (outward * spot.x > outward * best.x ? spot : best));
+    return s < deepest.s - BEND_FACING_MM ? backwards(k - 1) : backwards(k);
   };
   /**
    * `glyphs` stood at `at`, in the row of the `k`th picture, which they go the
@@ -2177,6 +2197,8 @@ function placeTurns(
    * Given a `stretch` of the lane between two pictures, they stand midway along
    * it instead, or as near its middle along it as they stand clear of the
    * steps as drawn; where nowhere along it they do, on its middle all the same.
+   * They read the way of the `k`th step's row; across a bend (`across`), the
+   * way the lane heads where they stand ({@link facingAcross}).
    */
   const stack = (
     glyphs: readonly BetweenGlyph[],
@@ -2188,12 +2210,16 @@ function placeTurns(
       toward = null,
       outward = 1,
       stretch = null,
-    }: { shared?: boolean; toward?: { x: number; y: number } | null; outward?: number; stretch?: readonly LaneSpot[] | null } = {}
+      across = false,
+    }: { shared?: boolean; toward?: { x: number; y: number } | null; outward?: number; stretch?: readonly LaneSpot[] | null; across?: boolean } = {}
   ) => {
     // Along the lane: as near its middle as is clear, else on its middle all the same, over what it overlaps (Zach,
     // 2026-10-15: "the middle of the arrow should kinda be sitting over the green centre").
-    const onLane = stretch ? (alongStretch(glyphs, stretch, toward, outward) ?? standAt(glyphs, spotAlong(stretch, stretch.at(-1)!.s / 2), toward, outward)) : null;
-    let stood = onLane ?? standAt(glyphs, at, toward, outward);
+    const onLane = stretch
+      ? (alongStretch(glyphs, stretch, toward, outward) ?? { stood: standAt(glyphs, spotAlong(stretch, stretch.at(-1)!.s / 2), toward, outward), s: stretch.at(-1)!.s / 2 })
+      : null;
+    const rightToLeft = stretch && onLane && across ? facingAcross(stretch, onLane.s, k, outward) : backwards(k);
+    let stood = onLane?.stood ?? standAt(glyphs, at, toward, outward);
     if (flow && !onLane) {
       const spot = clearSpot(stood.at, stood.size, obstacles, onPaper(stood.size));
       if (spot !== stood.at) {
@@ -2210,7 +2236,7 @@ function placeTurns(
       const middle = { x, y: top + box.h / 2 };
       if (glyph.kind === 'turn') {
         const { kind: _kind, ...turn } = glyph;
-        placed.push({ ...turn, at: middle, box, beforeStepId, rightToLeft: backwards(k) });
+        placed.push({ ...turn, at: middle, box, beforeStepId, rightToLeft });
       } else if (beforeStepId !== null) {
         zoomArrows.push({
           at: middle,
@@ -2218,7 +2244,7 @@ function placeTurns(
           beforeStepId,
           areaStepId: glyph.arrowFrom.stepId,
           areaId: glyph.arrowFrom.areaId,
-          rightToLeft: backwards(k),
+          rightToLeft,
           // Alone between the area's step and its own on one row: the page lifts it to the area.
           liftable: shared && glyphs.length === 1 && cells[k - 1]?.stepId === glyph.arrowFrom.stepId,
           aim,
@@ -2250,7 +2276,7 @@ function placeTurns(
           ? { x: (previous.x + next.x) / 2, y: (previous.y + next.y) / 2 }
           : (lane?.turns.get(k)?.at ?? { x: outward > 0 ? pageWidth - flow.bendInset : flow.bendInset, y: (previous.y + next.y) / 2 });
         // An arrow there points at the step it leads to, not across the page.
-        stack(before, at, k, step.id, { toward: next, outward, stretch });
+        stack(before, at, k, step.id, { toward: next, outward, stretch, across: true });
       } else {
         stack(before, edge(k, true), k, step.id);
       }

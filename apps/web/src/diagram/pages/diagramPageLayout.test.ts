@@ -160,12 +160,16 @@ function alongLane(lane: Lane, before: LayoutCell, next: LayoutCell, at: { x: nu
   }
   const g = nearest(at, a, b);
   const half = (points[leave]!.s + points[reach]!.s) / 2;
+  // The way the lane heads there, across the page: its tangent's x, from the points either side.
+  const [p, q] = [points[Math.max(0, g - 20)]!, points[Math.min(points.length - 1, g + 20)]!];
   return {
     fromBefore: points[g]!.s - points[leave]!.s,
     toNext: points[reach]!.s - points[g]!.s,
     offLane: Math.hypot(points[g]!.x - at.x, points[g]!.y - at.y),
     midway: points.find((point) => point.s >= half)!,
     stretch: points.slice(leave, reach + 1),
+    s: points[g]!.s,
+    across: (q.x - p.x) / Math.hypot(q.x - p.x, q.y - p.y),
   };
 }
 
@@ -1549,6 +1553,48 @@ describe('turns between steps on the page (D22)', () => {
     expect(centred).toBeGreaterThan(1);
   });
 
+  it('faces a glyph across a bend the way the ribbon heads where it stands: the row it leaves before the bend’s deepest point, the next from there on', () => {
+    // Zach, 2026-10-15, the crane's 2 → 3 turn-over, moved midway along the ribbon to before the bend: "Now the
+    // turnover symbol between two and three is backwards". It faced the row it leads into, as it did at the bend's
+    // deepest point, where the ribbon runs upright and that is the way on; before that point the ribbon still heads
+    // the way of the row it leaves.
+    const tall = paper(150, 600);
+    const wide = paper(700, 300);
+    const cases = [
+      [paper(400), paper(400), tall, wide, paper(400), paper(400), tall, wide, paper(400)],
+      [wide, paper(400), tall, paper(400), wide, tall, paper(400), wide, tall],
+      [tall, tall, tall, wide, wide, wide, tall, tall, tall],
+      [wide, wide, paper(250), tall, tall, wide, wide, paper(250), tall],
+      [paper(250), paper(250), paper(250), tall, paper(400), tall, wide, wide, wide],
+    ];
+    let [leaving, entering] = [0, 0];
+    for (const [n, shapes] of cases.entries()) {
+      const list = steps(9, (index) => ({ picture: shapes[index]!, ...(index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}) }));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const turn of page.turns) {
+        const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        if (before.band === next.band || before.bend || next.bend) continue;
+        const along = alongLane(page.band!, before, next, turn.at);
+        // The bend's deepest point: where the lane stands furthest out toward the side the row before reads to.
+        const outward = before.rightToLeft ? -1 : 1;
+        const deepest = along.stretch.reduce((best, point) => (outward * point.x > outward * best.x ? point : best));
+        const label = `case ${n} ${turn.id}: ${(along.s - deepest.s).toFixed(2)} mm from the deepest point, heading ${along.across.toFixed(2)} across`;
+        if (along.s < deepest.s - 0.5) {
+          leaving += 1;
+          expect(turn.rightToLeft, label).toBe(Boolean(before.rightToLeft));
+        } else {
+          entering += 1;
+          expect(turn.rightToLeft, label).toBe(Boolean(next.rightToLeft));
+        }
+        // Never against a ribbon that runs more across the page than up or down it there.
+        if (Math.abs(along.across) > Math.SQRT1_2) expect(turn.rightToLeft, label).toBe(along.across < 0);
+      }
+    }
+    expect(leaving).toBeGreaterThan(0);
+    expect(entering).toBeGreaterThan(0);
+  });
+
   it('stands one across a bend midway along the ribbon past a step dragged off its home, clear of the steps as drawn', () => {
     // Zach's crane, page 2: every step placed by hand, step 15 dragged 32.5 mm in from where the layout put it. The
     // ribbon follows the pictures as placed; the glyph on it keeps clear of them as drawn, not of where 15 would
@@ -1616,13 +1662,16 @@ describe('turns between steps on the page (D22)', () => {
     const result = layout(list, { layout: 'flow', stepsPerPage: 6 });
     const page = result.pages[0]!;
     const byId = new Map(page.turns.map((turn) => [turn.id, turn]));
-    // Each in the band of the step it comes before, or after the last: one across into a band reads as that
-    // band does. Between two steps of a band read right to left, between their boxes, the later on the left.
+    // Each in the band of the step it comes before, or after the last; one across a bend reads as the ribbon
+    // heads where it stands (`faces a glyph across a bend`). Between two steps of a band read right to left,
+    // between their boxes, the later on the left.
     let backwards = 0;
     for (const turn of page.turns) {
       const k = turn.beforeStepId === null ? page.cells.length - 1 : page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
       const [before, next] = [page.cells[k - 1], page.cells[k]!];
-      expect(turn.rightToLeft, turn.id).toBe(Boolean(next.rightToLeft));
+      const acrossBend = Boolean(before && turn.beforeStepId !== null && (before.band !== next.band || before.bend || next.bend));
+      if (!acrossBend) expect(turn.rightToLeft, turn.id).toBe(Boolean(next.rightToLeft));
+      else expect([Boolean(before!.rightToLeft), Boolean(next.rightToLeft)], turn.id).toContain(turn.rightToLeft);
       if (turn.beforeStepId === null || !before || before.band !== next.band || before.bend || next.bend || !next.rightToLeft) continue;
       backwards += 1;
       expect(next.cellMm.x, turn.id).toBeLessThan(before.cellMm.x);
