@@ -49,6 +49,8 @@ export type ContextMenuItem =
       /** Whether this is the current member of its set. */
       checked: boolean;
       disabled?: boolean;
+      /** Why this row is the way it is, as its tooltip — see `action.hint`. */
+      hint?: string;
       /**
        * Leave the menu open after the pick. For a set that is adjusted alongside
        * its neighbours (a figure's render style, next to its colours) rather than
@@ -61,6 +63,11 @@ export type ContextMenuItem =
       kind: 'checkbox';
       id: string;
       label: string;
+      /**
+       * For an on/off verb among verbs drawn with icons: the icon takes the
+       * leading slot, as its neighbours' do, and the check moves to the row's end.
+       */
+      icon?: ReactNode;
       checked: boolean;
       disabled?: boolean;
       /** Why the row is disabled, as its tooltip. */

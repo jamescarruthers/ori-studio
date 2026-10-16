@@ -1,0 +1,63 @@
+/*
+ * Where a page prints nothing that it would (PagePlaceholder.tsx): only for
+ * the screen, laid over the composed page. The page is white paper in either
+ * theme, so the inks are the paper's.
+ */
+.placeholder {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed #c4c4bd;
+  border-radius: var(--radius-sm);
+  color: #8f8f88;
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+
+/* An empty step's picture box: where its picture will go. */
+.placeholder[data-kind='picture'] {
+  display: grid;
+  place-items: center;
+  background: #fafaf7;
+}
+
+/* A part of the title block: each reason on a line of its own, at the end its words are given. */
+.placeholder[data-kind='part'] {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 6px;
+  line-height: 1.3;
+}
+
+.placeholder[data-kind='part'][data-words='top'] {
+  justify-content: flex-start;
+}
+
+.placeholder[data-kind='part'][data-words='middle'] {
+  justify-content: center;
+}
+
+.placeholder[data-kind='part'][data-words='bottom'] {
+  justify-content: flex-end;
+}
+
+/*
+ * Where the title block is cut: no box, only a tag hanging under the block's
+ * foot at the column's end, on paper, over nothing the block prints.
+ */
+.placeholder[data-kind='cut'] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 2px;
+  border: none;
+  line-height: 1.3;
+}
+
+.placeholder[data-kind='cut'] > * {
+  padding: 1px 6px;
+  border: 1px dashed #c4c4bd;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  white-space: nowrap;
+}

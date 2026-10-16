@@ -9,6 +9,7 @@ import {
   MenuItemIcon,
   MenuItemLabel,
   MenuItemShortcut,
+  MenuItemTrailingCheck,
   MenuSeparator,
   MenuSubContent,
   MenuSubTrigger,
@@ -67,11 +68,15 @@ function renderItem(
       // Rendered as a plain item carrying its own checked state rather than a
       // Radix RadioGroup: the caller owns the set (each option knows whether it
       // is current), and a group would need a single value binding that the
-      // generic item list deliberately does not model.
+      // generic item list deliberately does not model. Its role and state are a
+      // radio's all the same, so assistive tech hears one of a set, and which.
       return (
         <MenuItem
           key={item.id}
+          role="menuitemradio"
+          aria-checked={item.checked}
           disabled={item.disabled}
+          title={item.hint}
           {...hover}
           onSelect={(event) => {
             if (item.keepOpen) event.preventDefault();
@@ -95,8 +100,15 @@ function renderItem(
             item.onToggle();
           }}
         >
-          <MenuItemIcon>{item.checked && <Check size={12} />}</MenuItemIcon>
+          {/* An icon of its own takes the leading slot, as its neighbours'
+              icons do, and the check moves to the row's end. */}
+          <MenuItemIcon>{item.icon ?? (item.checked && <Check size={12} />)}</MenuItemIcon>
           <MenuItemLabel>{item.label}</MenuItemLabel>
+          {item.icon != null && item.checked && (
+            <MenuItemTrailingCheck>
+              <Check size={12} />
+            </MenuItemTrailingCheck>
+          )}
         </MenuCheckboxItem>
       );
     case 'color':

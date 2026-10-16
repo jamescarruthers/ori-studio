@@ -5,6 +5,7 @@ import { FieldRow } from './FieldRow';
 export function ToggleRow({
   label,
   help,
+  note,
   checked,
   inherited,
   disabled,
@@ -16,6 +17,8 @@ export function ToggleRow({
 }: {
   label: string;
   help?: string;
+  /** Why the switch cannot be switched now, under its label, read with it (`FieldRow.note`). */
+  note?: string;
   checked: boolean;
   /**
    * The value the row would show once reset — what it follows while nothing
@@ -45,6 +48,7 @@ export function ToggleRow({
       label={label}
       help={help}
       noteId={noteId}
+      note={note}
       overridable={inherited !== undefined}
       kind="toggle"
       disabled={disabled}
@@ -55,7 +59,7 @@ export function ToggleRow({
     >
       <Toggle
         aria-label={label}
-        aria-describedby={onReset ? noteId : undefined}
+        aria-describedby={onReset || note ? noteId : undefined}
         checked={checked}
         disabled={disabled}
         onChange={change}

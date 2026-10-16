@@ -1,0 +1,74 @@
+/*
+ * What the Diagram header (DiagramHeader.tsx) adds to the shared toolbar frame.
+ *
+ * Steps | Pages at the left end, the tab strip stretched to the bar's full
+ * height (its own rule, as embedded); the verbs' side takes the rest of the
+ * row, its verbs at the right end. The verbs' side is as wide as what it
+ * holds, so a row too narrow for both wraps rather than squeezing it: the
+ * verbs right-aligned under the tabs. On a wide desktop the row never wraps,
+ * so the frame's one-row height holds.
+ */
+.header {
+  flex-wrap: wrap;
+  column-gap: var(--space-2);
+}
+
+.views {
+  flex: 0 0 auto;
+}
+
+/* The verbs' side: the rest of the row. */
+.verbs {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+.actions {
+  flex: 0 0 auto;
+}
+
+/* On a phone the two views share a row of their own, before the verbs, in the
+   order they come in the DOM and so in the focus order. */
+@media (max-width: 720px) {
+  .views {
+    flex: 1 1 100%;
+  }
+
+  /*
+   * The verbs take the last row, a little air from the frame's bottom rule,
+   * and wrap within it rather than run off a phone's edge: undo and redo,
+   * Add step, Export and the Step pane's pill are wider together than 375 px.
+   */
+  .verbs {
+    flex-basis: 100%;
+    min-width: 0;
+    padding-block: var(--space-1);
+  }
+
+  .actions {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: var(--space-1);
+  }
+}
+
+/* Print's icon while the pages are made ready for the print dialog. */
+.spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

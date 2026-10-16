@@ -189,6 +189,41 @@ describe('app keyboard shortcuts', () => {
     }
   });
 
+  it('acts on nothing while a command dialog is open', () => {
+    // The dialog is modal: Delete behind "Discard unsaved changes?" must not
+    // delete, and Escape belongs to the dialog's own listener.
+    const actions = { ...createActions(selectEverything(createSampleProject())), isCommandDialogOpen: () => true };
+    for (const key of ['Delete', 'Escape', 'ArrowLeft']) {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true });
+      expect(handleAppKeyDown(event, actions), key).toBe(false);
+      expect(event.defaultPrevented, key).toBe(false);
+    }
+    expect(actions.handleMenuAction).not.toHaveBeenCalled();
+    expect(actions.selectNone).not.toHaveBeenCalled();
+  });
+
+  it('acts on nothing behind a dialog that owns every key, though the key was aimed outside it', () => {
+    // The References browser over a Diagram step: focus slipped out to the
+    // page behind must not let Delete remove the step the browser fills.
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('data-shortcut-barrier', '');
+    document.body.append(dialog);
+    cleanups.push(() => dialog.remove());
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    cleanups.push(() => outside.remove());
+    const actions = createActions(selectEverything(createSampleProject()));
+    for (const key of ['Delete', 'Backspace', 'Escape']) {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true });
+      Object.defineProperty(event, 'target', { value: outside });
+      expect(handleAppKeyDown(event, actions), key).toBe(false);
+    }
+    expect(actions.handleMenuAction).not.toHaveBeenCalled();
+    expect(actions.selectNone).not.toHaveBeenCalled();
+  });
+
   it('routes Delete through the menu layer so CP mode can delete selected lines', () => {
     const actions = createActions({ kind: 'tree' });
     const event = new KeyboardEvent('keydown', { key: 'Delete', cancelable: true });
@@ -563,9 +598,9 @@ describe('in a focused form control', () => {
     ['a select', () => document.createElement('select')],
   ];
 
-  function focusIn(control: HTMLElement, overrides?: ShortcutOverrides) {
+  function focusIn(control: HTMLElement, overrides?: ShortcutOverrides, activeEditingContext: EditingContext = 'simulate') {
     const actions = {
-      ...createActions(selectEverything(createSampleProject()), { activeEditingContext: 'simulate' }),
+      ...createActions(selectEverything(createSampleProject()), { activeEditingContext }),
       getShortcutOverrides: () => overrides ?? {},
     };
     cleanups.push(installAppKeyboardListener(actions));
@@ -621,6 +656,20 @@ describe('in a focused form control', () => {
     }
     expect(actions.handleMenuAction).not.toHaveBeenCalled();
   });
+
+  // A slider keeps focus after its drag, so ⌘Z there undid nothing: Pose's
+  // spread sliders on #436 (Zach, 2026-10-14). It has no text to undo.
+  for (const type of ['range', 'checkbox', 'radio']) {
+    it(`undoes on ⌘Z and redoes on ⌘⇧Z from a focused ${type} input, which types nothing`, () => {
+      const control = Object.assign(document.createElement('input'), { type });
+      const actions = focusIn(control, undefined, 'diagram');
+
+      expect(press(control, { key: 'z', metaKey: true }).defaultPrevented).toBe(true);
+      expect(press(control, { key: 'Z', metaKey: true, shiftKey: true }).defaultPrevented).toBe(true);
+      expect(press(control, { key: 'z', ctrlKey: true }).defaultPrevented).toBe(true);
+      expect(actions.handleMenuAction.mock.calls).toEqual([['edit.undo'], ['edit.redo'], ['edit.undo']]);
+    });
+  }
 
   it('still types a letter that Save was rebound to', () => {
     const control = document.createElement('input');

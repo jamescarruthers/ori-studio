@@ -1,0 +1,4 @@
+/* The Page pane (DiagramPagePanel.tsx): the layout's cards. */
+.cards {
+  padding: 2px var(--space-3) var(--space-2);
+}

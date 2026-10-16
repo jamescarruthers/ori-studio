@@ -1,0 +1,125 @@
+/**
+ * The composer's text setter: every width from the fonts' own advances
+ * (Decision 2), so a line set here is exactly as wide in Chromium, WebKit and
+ * the PDF, whose fonts are cut from the same files with no layout features.
+ *
+ * A run's `font` is its face's id (`sc-400`), which the composer turns back
+ * into the family and weight it names and embeds.
+ *
+ * Pure: the fonts are loaded by the caller.
+ */
+import { graphemesOf } from '../../lib/paper/textWrap';
+import type { DiagramHanStyle } from '../document/diagramDocument';
+import {
+  fontFaceId,
+  parseFontFaceId,
+  type DiagramFontFace,
+  type DiagramFontKey,
+  type DiagramFontWeight,
+} from '../fonts/diagramFontFaces';
+import type { FontMetrics } from '../fonts/fontMetrics';
+import { assignFonts, coverFonts, needsNoGlyph, textCjkKey } from '../fonts/fontScripts';
+import type { LineInk, SetLine, TextSetter } from './diagramPageLayout';
+import { estimatedInk } from './estimateTextSetter';
+import { ELLIPSIS, setTextLines, type TextFaces } from './setText';
+
+/** The metrics of a loaded face, or null for one that could not be loaded. */
+export type FontLookup = (key: DiagramFontKey, weight: DiagramFontWeight) => FontMetrics | null;
+
+export interface FontTextSetter extends TextSetter {
+  /** Every grapheme set so far that no loaded font has: drawn as a missing-glyph box. */
+  readonly missing: ReadonlySet<string>;
+}
+
+
+export function fontTextSetter(fonts: FontLookup, hanStyle: DiagramHanStyle): FontTextSetter {
+  const missing = new Set<string>();
+  // A layout treats its loaded font set as immutable: each face is resolved
+  // once, rather than per grapheme.
+  const metricsByFace = new Map<string, FontMetrics | null>();
+  const lookup: FontLookup = (key, weight) => {
+    const id = `${key}:${weight}`;
+    if (!metricsByFace.has(id)) metricsByFace.set(id, fonts(key, weight));
+    return metricsByFace.get(id)!;
+  };
+
+  const covers = (weight: DiagramFontWeight) => (key: DiagramFontKey, grapheme: string) => {
+    const metrics = lookup(key, weight);
+    if (!metrics) return false;
+    for (const character of grapheme) {
+      if (!needsNoGlyph(character) && !metrics.has(character.codePointAt(0)!)) return false;
+    }
+    return true;
+  };
+
+  /** A grapheme's advance in mm, in its font at `sizeMm`. */
+  const advanceOf = (grapheme: string, key: DiagramFontKey, weight: DiagramFontWeight, sizeMm: number) => {
+    const metrics = lookup(key, weight) ?? lookup('latin', weight);
+    if (!metrics) return 0;
+    let units = 0;
+    for (const character of grapheme) {
+      const codePoint = character.codePointAt(0)!;
+      if (needsNoGlyph(character) && !metrics.has(codePoint)) continue;
+      units += metrics.advance(codePoint);
+    }
+    return (units * sizeMm) / metrics.unitsPerEm;
+  };
+
+  const facesFor = (text: string, weight: DiagramFontWeight, sizeMm: number): TextFaces => {
+    const cjk = textCjkKey(text, hanStyle);
+    const coverage = covers(weight);
+    return {
+      set(graphemes) {
+        const assigned = assignFonts(graphemes, cjk, coverage);
+        for (const grapheme of assigned.missing) missing.add(grapheme);
+        return {
+          fonts: assigned.fonts.map((key) => fontFaceId({ key, weight })),
+          advances: graphemes.map((grapheme, index) => advanceOf(grapheme, assigned.fonts[index]!, weight, sizeMm)),
+        };
+      },
+      ellipsis(font) {
+        const before = parseFontFaceId(font)?.key ?? 'latin';
+        const key = coverage(before, ELLIPSIS) ? before : 'latin';
+        return { font: fontFaceId({ key, weight }), advance: advanceOf(ELLIPSIS, key, weight, sizeMm) };
+      },
+    };
+  };
+
+  return {
+    missing,
+    paragraph: (text, widthMm, sizeMm, maxLines, weight = 400, spaces) =>
+      setTextLines(text, widthMm, maxLines, facesFor(text, weight, sizeMm), spaces),
+    line(text, sizeMm, weight, maxWidthMm = Number.POSITIVE_INFINITY): SetLine {
+      const set = setTextLines(text, maxWidthMm, 1, facesFor(text, weight, sizeMm));
+      return set.lines[0] ?? { text: '', widthMm: 0, runs: [], ellipsis: false };
+    },
+    ink(line, sizeMm) {
+      const glyphs: LineInk[] = line.runs.flatMap((run) => {
+        const face = parseFontFaceId(run.font);
+        const metrics = face ? lookup(face.key, face.weight) : null;
+        if (!metrics) return [];
+        const mm = sizeMm / metrics.unitsPerEm;
+        return [...run.text].flatMap((character) => {
+          const glyph = metrics.ink(character.codePointAt(0)!);
+          return glyph ? [{ above: glyph.top * mm, below: -glyph.bottom * mm }] : [];
+        });
+      });
+      // A face whose outlines do not read, or no face loaded: as the estimate has it.
+      if (glyphs.length === 0) return estimatedInk(line.text, sizeMm);
+      return { above: Math.max(0, ...glyphs.map((glyph) => glyph.above)), below: Math.max(0, ...glyphs.map((glyph) => glyph.below)) };
+    },
+    runs(text, { key, weight }) {
+      const graphemes = graphemesOf(text);
+      const assigned = coverFonts(graphemes, graphemes.map(() => key), covers(weight));
+      for (const grapheme of assigned.missing) missing.add(grapheme);
+      const runs: { face: DiagramFontFace; text: string }[] = [];
+      graphemes.forEach((grapheme, index) => {
+        const font = assigned.fonts[index]!;
+        const last = runs[runs.length - 1];
+        if (last?.face.key === font) last.text += grapheme;
+        else runs.push({ face: { key: font, weight }, text: grapheme });
+      });
+      return runs;
+    },
+  };
+}

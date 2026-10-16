@@ -8,19 +8,25 @@ import { ColorField } from '../ColorField';
  */
 export function ColorRow({
   label,
+  help,
   value,
   disabled,
   clearDisabled,
+  nested,
   title,
   onChange,
   onCommit,
   onClear,
 }: {
   label: string;
+  /** What the colour does, for one whose name cannot carry it (`FieldRow.help`). */
+  help?: string;
   value: string;
   disabled?: boolean;
   /** Whether the reset is disabled; defaults to {@link disabled}. */
   clearDisabled?: boolean;
+  /** A step in, for a colour that qualifies the setting above it (`FieldRow.nested`). */
+  nested?: boolean;
   /** Why the row is disabled, shown on hover. */
   title?: string;
   onChange: (value: string) => void;
@@ -30,10 +36,12 @@ export function ColorRow({
   return (
     <ColorField
       label={label}
+      help={help}
       layout="row"
       value={value}
       disabled={disabled}
       clearDisabled={clearDisabled}
+      nested={nested}
       title={title}
       onChange={onChange}
       onCommit={onCommit}

@@ -53,11 +53,16 @@ export function MenuItem(props: Unstyled<ComponentProps<typeof DropdownMenu.Item
   return <DropdownMenu.Item className={styles.item} {...props} />;
 }
 
-/** A row that is on or off. Its check is the caller's to draw, in `MenuItemIcon`. */
-export function MenuCheckboxItem(
-  props: Unstyled<ComponentProps<typeof DropdownMenu.CheckboxItem>>
-) {
-  return <DropdownMenu.CheckboxItem className={styles.item} {...props} />;
+/**
+ * A row that is on or off. Its check is the caller's to draw, in `MenuItemIcon`.
+ * `multiline` for a row whose label runs to more than one line — a name and a
+ * hint under it: its check then sits beside the first line, not the middle.
+ */
+export function MenuCheckboxItem({
+  multiline,
+  ...props
+}: Unstyled<ComponentProps<typeof DropdownMenu.CheckboxItem>> & { multiline?: boolean }) {
+  return <DropdownMenu.CheckboxItem className={styles.item} data-multiline={multiline || undefined} {...props} />;
 }
 
 /** A row that opens a submenu, with the chevron that says so. */
@@ -99,6 +104,14 @@ export function MenuItemLabel(props: SpanProps) {
 /** Trailing text: a key chord, or a size. */
 export function MenuItemShortcut(props: SpanProps) {
   return <span className={styles.shortcut} {...props} />;
+}
+
+/**
+ * A check row's check at the row's end, for a row whose leading slot holds
+ * its icon. Its state is the row's `aria-checked`; this only draws it.
+ */
+export function MenuItemTrailingCheck(props: SpanProps) {
+  return <span className={styles.trailingCheck} data-menu-check="" aria-hidden {...props} />;
 }
 
 export function MenuSeparator(props: Unstyled<ComponentProps<typeof DropdownMenu.Separator>>) {

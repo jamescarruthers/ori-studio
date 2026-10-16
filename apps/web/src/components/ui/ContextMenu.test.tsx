@@ -39,7 +39,7 @@ function render(open: boolean, items: ContextMenuItem[], onOpenChange = () => {}
 }
 
 function menuItems(): HTMLElement[] {
-  return Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+  return Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]'));
 }
 
 afterEach(() => {
@@ -145,6 +145,11 @@ describe('ContextMenu', () => {
       { kind: 'radio', id: 'wire', label: 'Wireframe', checked: false, onSelect: () => {} },
     ]);
     const [paper, wire] = menuItems();
+    // One of a set to assistive tech, and which.
+    expect([paper, wire].map((item) => [item?.getAttribute('role'), item?.getAttribute('aria-checked')])).toEqual([
+      ['menuitemradio', 'true'],
+      ['menuitemradio', 'false'],
+    ]);
     // The check lives in the leading icon slot; only the current option fills it.
     expect(paper?.querySelector('[data-menu-icon]')?.childElementCount).toBe(1);
     expect(wire?.querySelector('[data-menu-icon]')?.childElementCount).toBe(0);
@@ -248,6 +253,20 @@ describe('ContextMenu', () => {
       expect(shadow?.getAttribute('aria-checked')).toBe('true');
       expect(shadow?.querySelector('[data-menu-icon]')?.childElementCount).toBe(1);
       expect(alias?.querySelector('[data-menu-icon]')?.childElementCount).toBe(0);
+    });
+
+    it('draws a check row’s own icon where its check would be, and the check at its end', () => {
+      render(true, [
+        { kind: 'checkbox', id: 'on', label: 'Start a page', icon: <svg data-testid="on" />, checked: true, onToggle: () => {} },
+        { kind: 'checkbox', id: 'off', label: 'Start a page', icon: <svg data-testid="off" />, checked: false, onToggle: () => {} },
+      ]);
+      const [on, off] = checkboxes();
+      expect(on?.querySelector('[data-menu-icon] [data-testid="on"]')).not.toBeNull();
+      expect(on?.getAttribute('aria-checked')).toBe('true');
+      expect(on?.querySelector('[data-menu-check]')?.childElementCount).toBe(1);
+      expect(off?.querySelector('[data-menu-icon] [data-testid="off"]')).not.toBeNull();
+      expect(off?.getAttribute('aria-checked')).toBe('false');
+      expect(off?.querySelector('[data-menu-check]')).toBeNull();
     });
 
     it('toggles and closes, unless asked to stay open', () => {
