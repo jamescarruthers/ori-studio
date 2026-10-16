@@ -32,6 +32,7 @@ import { stepPictureSource, type StepPictureSource } from '../../diagram/picture
 import { useStepPictureUrl } from '../../diagram/pictures/useStepPictureUrl';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { DiagramPicturePreview } from './DiagramPicturePreview';
 import { DiagramSheetThumbnail } from './DiagramSheetThumbnail';
 import styles from './DiagramStepCard.module.css';
 import { capturedStyleChange } from '../../diagram/pictures/lighting';
@@ -243,7 +244,7 @@ export const DiagramStepCard = forwardRef<
       <div className={styles.well} data-picture={picture !== null || undefined}>
         {picture ? (
           // A newer build's step shows its picture as far as this build reads it (decision 2), badged Newer.
-          url && <img className={styles.picture} src={url} alt="" draggable={false} decoding="async" />
+          url && <DiagramPicturePreview className={styles.picture} src={url} width={256} height={256} scale={1} autoSize settleMs={0} vectorWhileLoading={false} />
         ) : locked ? (
           <span className={styles.placeholder}>
             <Lock size={18} aria-hidden="true" />

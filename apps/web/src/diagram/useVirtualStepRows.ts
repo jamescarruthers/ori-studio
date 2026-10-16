@@ -52,6 +52,8 @@ export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: 
     estimateSize: () => layout.estimate,
     scrollMargin: layout.margin,
     overscan: 2,
+    // Let React yield while mounting a new row instead of blocking the scroll event.
+    useFlushSync: false,
     useAnimationFrameWithResizeObserver: true,
     initialRect: { width: 0, height: 600 },
   });

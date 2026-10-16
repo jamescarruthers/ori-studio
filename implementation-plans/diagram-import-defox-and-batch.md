@@ -375,3 +375,66 @@ no corpus data or screenshots are committed.
 - [ ] Meet the original 10-second preparation and 50-ms main-thread targets.
 - [ ] Establish p95 interaction/cancel latency and total-process peak/retained memory.
 - [ ] Complete native picker/drop and WebKit/Firefox UI matrix plus full-corpus PDF/SVG export.
+
+## Follow-up: import ordering and raster step previews
+
+- [x] Merge main through the Pages bitmap-preview PR (#452) and retain its rendering path.
+- [x] Reuse the favorites reorder hook for import files, including keyboard handles and opt-in edge scrolling.
+- [x] Remove the Columns Auto/readout reset, and name the time limit Max seconds per fold.
+- [x] Use one localized new-diagram initializer for first edits and imports; retain authored fields.
+- [x] Replace the empty-state upload shortcut with the shared Import command.
+- [x] Generalize the Pages bitmap cache/component to step cards; keep vector export unchanged.
+- [x] Rasterize dense source badges with the same ordered strokes and theme inks; use native base64 where available.
+- [x] Validate drag, defaults, raster cache invalidation, and cold/warm scrolling in the browser.
+- [x] Run affected frontend checks and update PR #455 with measured results.
+
+### Raster-preview architecture and measurements
+
+Main was merged through `34bc7c3c8` (#452). That change rasterized Pages only;
+Steps still mounted SVG images. The page implementation is now
+`DiagramPicturePreview` / `picturePreviewCache`, shared by both surfaces, with
+one 64 MiB pixel-and-source-bounded LRU. The existing 48 MiB SVG URL cache remains
+shared as before. There is no importer-only bitmap cache or additional worker.
+Pages retain their zoom-settling policy; virtual step cards request their measured
+resolution immediately, reuse ready bitmaps on remount, and show the SVG only if
+rasterization fails. They do not mount the expensive SVG as well as rasterizing
+it. Source badges draw the same ordered strokes and theme inks onto canvas,
+without a DOM path for each crease run. Native byte-to-base64 encoding is used
+where available, with the previous portable fallback retained.
+
+The other unnecessary blank state came from constructing a bare diagram during
+batch commit. Import and first edit now share `newDiagram`, including localized
+title, subtitle, credits and Han style. Existing authored values, including
+intentional blanks, are preserved. The empty-state Import button dispatches the
+same instrumented command as File > Import Diagram Steps.
+
+Final full-corpus browser run (Chromium/Metal, 1440×1000, development renderer):
+
+- 205 files in 108.60 s: 190 completed paper folds, 15 failed CP previews,
+  zero pending steps and zero imported wireframes. The default title and all
+  three title-block credits were verified after actual publication.
+- Cold jump frame gaps at 25%, 50%, 75%, end and start: 88, 74, 110, 135 and
+  43 ms. Repeating those jumps: 74, 79, 73, 70 and 52 ms. The previous full
+  import's worst cold jump was 620 ms. Mounted cards stayed at 17–32; every
+  visible picture was a bitmap after settling, with no blank pictures or
+  browser errors.
+- A separate replay of those completed imported pictures measured the time
+  until every visible bitmap was ready: 62–575 ms on first jumps, 50–125 ms
+  on repeat jumps. The densest first-time CP previews still have a real SVG
+  construction/decoding cost. These are individual samples, not p95 guarantees
+  or proof of the original 50-ms budget.
+- 205-file dialog checks cover pointer dragging, duplicate-name identity in
+  unit tests, keyboard moves, edge scrolling, disabled ordering during import,
+  light/dark themes and a 390px viewport. The existing favorites drag hook
+  gained opt-in edge scrolling; no drag library was added.
+- The external import harness now reports `readyAtMs` alongside frame gaps.
+  Private corpus files, imported documents and profiles remain ignored.
+
+Validation: **3,790 passed / 3 skipped across 224 files** (diagram models,
+components, imports, store/defaults, drag hook, encoding and stylesheet checks).
+Full web lint, final changed-file lint, TypeScript, i18n, and production build
+with landing prerender pass. The build reused generated WASM because this
+follow-up and the merged changes do not alter Rust/WASM sources. Rust/native
+and oracle validation from the initial feature was not repeated for these
+shared frontend changes. The benchmark script passes `node --check`, and
+`git diff --check` is clean for the follow-up.

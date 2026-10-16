@@ -117,14 +117,25 @@ try {
         let previous = performance.now();
         const start = previous;
         let maxFrameMs = 0;
+        let readyAtMs = null;
         scroller.scrollTop = (scroller.scrollHeight - scroller.clientHeight) * position;
         while (performance.now() - start < 2000) {
           await new Promise(requestAnimationFrame);
           const now = performance.now();
           maxFrameMs = Math.max(maxFrameMs, now - previous);
           previous = now;
+          if (readyAtMs === null) {
+            const viewport = scroller.getBoundingClientRect();
+            const visible = [...grid.querySelectorAll('[data-step-id]')].filter((card) => {
+              const box = card.getBoundingClientRect();
+              return box.bottom > viewport.top && box.top < viewport.bottom;
+            });
+            if (visible.length && visible.every((card) => card.querySelector('canvas[data-picture-preview]:not([hidden])'))) {
+              readyAtMs = now - start;
+            }
+          }
         }
-        samples.push({ position, maxFrameMs, mountedCards: grid.querySelectorAll('[role=option]').length });
+        samples.push({ position, maxFrameMs, readyAtMs, mountedCards: grid.querySelectorAll('[role=option]').length });
       }
       return samples;
     });

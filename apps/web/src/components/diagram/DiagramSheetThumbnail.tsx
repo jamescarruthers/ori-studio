@@ -1,55 +1,41 @@
-import { memo, useMemo } from 'react';
-import type { SheetThumbnail, SheetStrokeRole } from '../../cp-workspace/sheets/sheetThumbnail';
+import { memo, useEffect, useRef } from 'react';
+import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import { paintSheetThumbnail } from '../../cp-workspace/sheets/paintSheetThumbnail';
+import { useThemeStore } from '../../store/themeStore';
 import styles from './DiagramSheetThumbnail.module.css';
 
-/**
- * A pattern drawn small, as the pattern pickers draw one: hairlines in the
- * theme's crease inks (the `--sheet-thumb-*` tokens), never the paper style's
- * dashes, which at this size are a field of dots. The Diagram's own, for the
- * pattern picker and a linked card's corner; the rails' `SheetGrid` keeps its
- * cards.
- *
- * Decorative: what it shows is said in words beside it.
- */
-export const DiagramSheetThumbnail = memo(function DiagramSheetThumbnail({
-  thumbnail,
-  className,
-}: {
+/** Decorative CP badge. A canvas keeps thousands of tiny strokes out of the DOM. */
+export const DiagramSheetThumbnail = memo(function DiagramSheetThumbnail({ thumbnail, className }: {
   thumbnail: SheetThumbnail;
-  /** The parent's placement: its size and position. */
   className?: string;
 }) {
-  // Independent M/L subpaths keep every segment and its drawing order, but
-  // avoid one element per crease. Mount the generated SVG in one operation:
-  // alternating mountain/valley runs can still number in the thousands, and
-  // a React fiber per run made scrolling stall. Drawing order and live theme
-  // tokens remain intact.
-  const markup = useMemo(() => {
-    const runs: Array<{ role: SheetStrokeRole; commands: string[] }> = [];
-    for (const stroke of thumbnail.strokes) {
-      // Only finite numbers enter the generated path markup; no uploaded SVG
-      // or arbitrary text crosses this boundary.
-      if (![stroke.x1, stroke.y1, stroke.x2, stroke.y2].every(Number.isFinite)) continue;
-      if (!['edge', 'mountain', 'valley', 'unassigned', 'aux'].includes(stroke.role)) continue;
-      let run = runs.at(-1);
-      if (!run || run.role !== stroke.role) {
-        run = { role: stroke.role, commands: [] };
-        runs.push(run);
-      }
-      run.commands.push(`M${stroke.x1} ${stroke.y1}L${stroke.x2} ${stroke.y2}`);
-    }
-    return runs
-      .map((run) => `<path class="${styles.stroke}" data-role="${run.role}" d="${run.commands.join('')}"/>`)
-      .join('');
-  }, [thumbnail]);
-  const content = useMemo(() => ({ __html: markup }), [markup]);
-  return (
-    <svg
-      viewBox={thumbnail.viewBox}
-      aria-hidden="true"
-      focusable="false"
-      className={className ? `${styles.thumbnail} ${className}` : styles.thumbnail}
-      dangerouslySetInnerHTML={content}
-    />
-  );
+  const ref = useRef<HTMLCanvasElement>(null);
+  const theme = useThemeStore((s) => s.currentTheme);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const css = getComputedStyle(canvas);
+    const colors = {
+      edge: css.getPropertyValue('--sheet-thumb-border'),
+      mountain: css.getPropertyValue('--sheet-thumb-mountain'),
+      valley: css.getPropertyValue('--sheet-thumb-valley'),
+      unassigned: css.getPropertyValue('--sheet-thumb-unassigned'),
+      aux: css.getPropertyValue('--sheet-thumb-unassigned'),
+    };
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width <= 0 || height <= 0) return;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.ceil(width * dpr);
+      canvas.height = Math.ceil(height * dpr);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paintSheetThumbnail(context, thumbnail, width, height, colors);
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [thumbnail, theme]);
+  return <canvas data-sheet-thumbnail="" ref={ref} aria-hidden="true" className={className ? `${styles.thumbnail} ${className}` : styles.thumbnail} />;
 });

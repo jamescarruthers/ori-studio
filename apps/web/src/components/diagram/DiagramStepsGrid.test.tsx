@@ -13,6 +13,11 @@ import type { DiagramCardLinks } from '../../diagram/capture/useCardLinks';
 import type { StepPageFit } from '../../diagram/pages/pageOverflow';
 import { DiagramStepsGrid } from './DiagramStepsGrid';
 
+// The grid chooses the source; bitmap loading and invalidation have their own component tests.
+vi.mock('./DiagramPicturePreview', () => ({
+  DiagramPicturePreview: ({ src }: { src: string }) => <img src={src} alt="" />,
+}));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let root: Root | null = null;
@@ -428,7 +433,7 @@ describe('DiagramStepsGrid', () => {
     });
     const cards = options();
     // Every linked card shows its pattern in the corner.
-    for (const card of cards) expect(card.querySelector('svg [data-role="edge"]')).not.toBeNull();
+    for (const card of cards) expect(card.querySelector('canvas[data-sheet-thumbnail]')).not.toBeNull();
     const name = (card: HTMLElement) =>
       card
         .getAttribute('aria-labelledby')!
