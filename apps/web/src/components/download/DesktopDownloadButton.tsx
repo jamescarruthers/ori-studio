@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { trackDesktopDownload, type DesktopDownloadSurface } from '../../analytics';
 import { useDesktopDownloads } from '../../platform/useDesktopDownloads';
 import { Button, ButtonLink, type ButtonProps } from '../ui/Button';
+import { externalAnchorProps } from '../ui/ExternalAnchor';
 import { DesktopDownloadMenuItems } from './DesktopDownloadMenuItems';
 import { desktopDownloadCtaLabel } from './desktopBuildLabels';
 
@@ -47,10 +48,24 @@ export function DesktopDownloadButton({
 
   if (!available) return null;
 
-  const href = recommended?.url ?? fallbackUrl;
-  // A resolved build is a file; the fallback is the releases page, which is a
-  // page and should not replace what the visitor was reading.
-  const isFallback = !recommended;
+  const onClick = () =>
+    trackDesktopDownload(
+      recommended
+        ? { build: recommended.id, surface }
+        : {
+            build: 'releases-page',
+            surface,
+            // Builds known but none recommended is a device with no desktop
+            // OS to match, not a lookup that failed.
+            fallbackReason: builds.length > 0 ? 'no_platform' : 'release_unresolved',
+          }
+    );
+  // A resolved build is a file, downloaded where the visitor is; the fallback
+  // is the releases page, which is a page and should not replace what the
+  // visitor was reading.
+  const link = recommended
+    ? { href: recommended.url, rel: 'noreferrer noopener', onClick }
+    : externalAnchorProps(fallbackUrl, onClick);
 
   return (
     <div className={`ui-split-button ${className}`.trim()}>
@@ -58,22 +73,7 @@ export function DesktopDownloadButton({
         variant={variant}
         size={size}
         className="ui-split-button__primary"
-        href={href}
-        target={isFallback ? '_blank' : undefined}
-        rel="noreferrer noopener"
-        onClick={() =>
-          trackDesktopDownload(
-            recommended
-              ? { build: recommended.id, surface }
-              : {
-                  build: 'releases-page',
-                  surface,
-                  // Builds known but none recommended is a device with no desktop
-                  // OS to match, not a lookup that failed.
-                  fallbackReason: builds.length > 0 ? 'no_platform' : 'release_unresolved',
-                }
-          )
-        }
+        {...link}
       >
         <Download size={15} aria-hidden="true" />
         {desktopDownloadCtaLabel(t, os)}

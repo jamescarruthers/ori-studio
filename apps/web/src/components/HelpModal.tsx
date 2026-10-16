@@ -6,6 +6,7 @@ import { ISSUES_URL } from '../constants/release';
 import { useDesktopDownloads } from '../platform/useDesktopDownloads';
 import { useHelpStore, type HelpModalKind } from '../store/helpStore';
 import { DesktopDownloadButton } from './download/DesktopDownloadButton';
+import { ExternalAnchor } from './ui/ExternalAnchor';
 import { IconButton } from './ui/IconButton';
 
 function acknowledgements(t: TFunction): Array<{ title: string; href: string; detail: string }> {
@@ -152,9 +153,7 @@ function AboutModal() {
               leans heavily on ports of existing origami tools created by the community — the
               Edit workspace, for instance, is a port of Oriedita to Rust, focused on usability
               and performance. If you have any suggestions, feel free to{' '}
-              <a href={ISSUES_URL} target="_blank" rel="noreferrer noopener">
-                open an issue on GitHub
-              </a>
+              <ExternalAnchor href={ISSUES_URL}>open an issue on GitHub</ExternalAnchor>
               .
             </Trans>
           </p>
@@ -168,19 +167,13 @@ function AboutModal() {
         <h3>{t('dialogs:help.about.acknowledgements', 'Acknowledgements')}</h3>
         <div className="about-modal__ack-list">
           {ackList.map((item) => (
-            <a
-              key={item.title}
-              className="about-modal__ack"
-              href={item.href}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
+            <ExternalAnchor key={item.title} className="about-modal__ack" href={item.href}>
               <strong>
                 {item.title}
                 <ExternalLink size={13} aria-hidden="true" />
               </strong>
               <p>{item.detail}</p>
-            </a>
+            </ExternalAnchor>
           ))}
         </div>
       </section>

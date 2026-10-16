@@ -11,6 +11,7 @@ import {
   Send,
 } from 'lucide-react';
 import { Button, ButtonLink } from '../ui/Button';
+import { externalAnchorProps } from '../ui/ExternalAnchor';
 import { IconButton } from '../ui/IconButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select';
 import {
@@ -310,13 +311,7 @@ export function ExploriResultsPanel() {
               <ChevronRight size={16} />
             </IconButton>
           </div>
-          <ButtonLink
-            size="sm"
-            variant="secondary"
-            href={exploriResultUrl(detail)}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
+          <ButtonLink size="sm" variant="secondary" {...externalAnchorProps(exploriResultUrl(detail))}>
             <ExternalLink size={14} />
             {t('panels:explori.openInExplori', 'Open in ExplOri')}
           </ButtonLink>
