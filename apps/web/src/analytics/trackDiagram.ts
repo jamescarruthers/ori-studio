@@ -8,6 +8,7 @@ import {
   DIAGRAM_SPREAD_AXIS_DEGREE_BUCKETS,
   DIAGRAM_SPREAD_PERCENT_BUCKETS,
   DIAGRAM_SPREAD_SKEW_PERCENT_BUCKETS,
+  DIAGRAM_TITLE_BLOCK_CREDIT_BUCKETS,
   bucketCount,
 } from './events';
 import type {
@@ -58,6 +59,11 @@ import type {
   DiagramStepOpenedMode,
   DiagramStepOpenedVia,
   DiagramStyleChoiceName,
+  DiagramTitleBlockBand,
+  DiagramTitleBlockChoice,
+  DiagramTitleBlockCreditChange,
+  DiagramTitleBlockSize,
+  DiagramTitleBlockTextShown,
   DiagramView,
 } from './events';
 import { track } from './runtime';
@@ -323,13 +329,41 @@ export function trackDiagramViewSwitched(view: DiagramView): void {
 
 /**
  * A page setting changed. Which one, never its value — except the style,
- * named as a built-in, the export style or `custom`, never a preset's name.
+ * named as a built-in, the export style or `custom`, never a preset's name;
+ * where the title block's model or pattern now comes from, never which step;
+ * and for the title block's text and sizes, what a reader of the page would
+ * see change, never the text or the size: whether its subtitle or note
+ * prints, how its credits changed and how many it has, bucketed, whether
+ * a size is the default, and whether the band follows the paper's colour —
+ * never the colour.
  */
 export function trackDiagramPageSetupChanged(
   setting: DiagramPageSetting,
-  style?: DiagramStyleChoiceName
+  detail: {
+    style?: DiagramStyleChoiceName;
+    titleBlockChoice?: DiagramTitleBlockChoice;
+    titleBlockCreditChange?: DiagramTitleBlockCreditChange;
+    /** How many credits the block holds after the change, sent bucketed. */
+    titleBlockCredits?: number;
+    titleBlockSubtitle?: DiagramTitleBlockTextShown;
+    titleBlockNote?: DiagramTitleBlockTextShown;
+    titleBlockSize?: DiagramTitleBlockSize;
+    titleBlockBand?: DiagramTitleBlockBand;
+  } = {}
 ): void {
-  track(ANALYTICS_EVENTS.diagramPageSetupChanged, style ? { setting, style } : { setting });
+  track(ANALYTICS_EVENTS.diagramPageSetupChanged, {
+    setting,
+    ...(detail.style ? { style: detail.style } : {}),
+    ...(detail.titleBlockChoice ? { title_block_choice: detail.titleBlockChoice } : {}),
+    ...(detail.titleBlockCreditChange ? { title_block_credit_change: detail.titleBlockCreditChange } : {}),
+    ...(detail.titleBlockCredits !== undefined
+      ? { title_block_credit_bucket: bucketCount(detail.titleBlockCredits, DIAGRAM_TITLE_BLOCK_CREDIT_BUCKETS) }
+      : {}),
+    ...(detail.titleBlockSubtitle ? { title_block_subtitle: detail.titleBlockSubtitle } : {}),
+    ...(detail.titleBlockNote ? { title_block_note: detail.titleBlockNote } : {}),
+    ...(detail.titleBlockSize ? { title_block_size: detail.titleBlockSize } : {}),
+    ...(detail.titleBlockBand ? { title_block_band: detail.titleBlockBand } : {}),
+  });
 }
 
 /** How a diagram's steps went out as files, for `diagram exported`. */
@@ -351,16 +385,20 @@ export interface DiagramStepFilesExported {
  * those enlarged (Revision 2), `placed` those placed by hand and
  * `outsideMargin` those placed with a part past the margin — the one
  * placement notice the export lists, sent as `clash_bucket` — all bucketed.
+ * `pages` is what the pages printed besides the steps, for the PDF and the
+ * SVG: whether the first carried the title block. Step files have none.
  * Enums and buckets only: never the title, a step or a size.
  */
 export function trackDiagramExported(
   format: DiagramExportFormat,
   how: { preset: DiagramPdfPreset } | DiagramStepFilesExported | null,
-  counts: { files: number; steps: number; empty: number; enlarged: number; placed?: number; outsideMargin?: number }
+  counts: { files: number; steps: number; empty: number; enlarged: number; placed?: number; outsideMargin?: number },
+  pages?: { titleBlock: boolean }
 ): void {
   const shown = (value: boolean) => (value ? 'shown' : 'hidden');
   track(ANALYTICS_EVENTS.diagramExported, {
     format,
+    ...(pages ? { title_block: shown(pages.titleBlock) } : {}),
     ...(how === null
       ? {}
       : 'preset' in how

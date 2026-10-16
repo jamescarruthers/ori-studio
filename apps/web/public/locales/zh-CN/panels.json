@@ -1110,8 +1110,11 @@
       "pageSteps": "第 {{number}} 页的步骤数",
       "pageStepsDefault": "默认",
       "pageStepsHolds": "保持后面的页面不变",
+      "pageStepsTitleBlock": "标题栏占用了此页的空间，因此默认容纳 {{number}} 步。",
+      "pageStepsTitleBlockOwn": "关闭标题栏会给此步骤数加上 {{number}}；后面的页面保留各自的步骤数，并随之顺移。",
       "pageStepsUseDefault": "使用默认值",
       "paper": "纸张",
+      "path": "路径",
       "pathColor": "路径颜色",
       "pathWidthMm": "路径宽度（mm）",
       "portrait": "纵向",
@@ -1130,8 +1133,44 @@
       "style": "样式",
       "styleHint": "墨色和笔画会同时改变所有步骤。3D 步骤在刷新后采用新的光照。",
       "styleSection": "样式",
-      "title": "标题",
-      "titleHelp": "在每页顶部的标签中显示图解标题。"
+      "title": "标题标签",
+      "titleBlock": {
+        "addCredit": "添加信息",
+        "addStepCount": "添加步骤数",
+        "auto": "自动（第 {{number}} 步）",
+        "autoNoneLinked": "自动（无链接）",
+        "autoNoPicture": "自动（无图）",
+        "bandColor": "色带颜色",
+        "bandColorHelp": "标题后面的色带。选择颜色之前，它跟随纸张的颜色。",
+        "creditLabel": "第 {{number}} 条信息的标签",
+        "creditLabelPlaceholder": "标签",
+        "credits": "信息",
+        "creditsHelp": "标题下方的一行：每条信息在标签下方打印其内容。内容可以是步骤数，并会自动保持最新。",
+        "creditValue": "第 {{number}} 条信息的内容",
+        "creditValuePlaceholder": "内容",
+        "description": "描述",
+        "descriptionHelp": "信息下方的自由文本。只有填写了文字才会打印。",
+        "model": "成品",
+        "modelHelp": "折好的成品，取自某一步的图。自动时使用最后一个有图的步骤。",
+        "modelSize": "成品尺寸",
+        "modelSizeHelp": "成品的高度，占标题栏高度的比例。",
+        "needsRows": "需要两行或更多",
+        "none": "无",
+        "pattern": "折痕图",
+        "patternHelp": "取自步骤所链接的折痕图。自动时使用最后一个已链接的步骤；每个折痕图只列出一次，以为它选定的步骤命名，没有则以链接它的最后一步命名。",
+        "patternSize": "折痕图尺寸",
+        "patternSizeHelp": "折痕图的边长，占标题栏高度的比例。",
+        "removeCredit": "移除第 {{number}} 条信息",
+        "show": "标题栏",
+        "showHelp": "在首页顶部显示标题及其信息、折痕图和成品。",
+        "step": "第 {{number}} 步",
+        "stepCount": "自动（{{number}}）",
+        "subtitle": "副标题",
+        "subtitleHelp": "标题上方的一小行文字。清空则不打印。",
+        "typeValue": "改为手动输入第 {{number}} 条信息的内容"
+      },
+      "titleHelp": "在每页顶部的标签中显示图解标题。",
+      "titleHelpWithBlock": "在每页顶部的标签中显示图解标题。首页则改由标题栏显示。"
     },
     "pages": {
       "caption": "第 {{number}} 页",
@@ -1146,6 +1185,13 @@
       "step": "第 {{number}} 步",
       "stepCut": "第 {{number}} 步，文字放不下",
       "textCut": "文字放不下",
+      "titleBlock": {
+        "creditsCut": "部分信息放不下",
+        "noModel": "还没有带图的步骤",
+        "noPattern": "没有步骤链接到折痕图",
+        "stepNoPattern": "第 {{number}} 步没有折痕图",
+        "stepNoPicture": "第 {{number}} 步还没有图"
+      },
       "zoomSplitStep": "第 {{step}} 步在它所放大的区域（第 {{area}} 步）的下一页。在第 {{area}} 步上选择“从这里开始新的一页”可让两者在同一页。",
       "zoomSplitSteps": "第 {{steps}} 步各自在所放大区域的下一页。在第 {{areas}} 步上选择“从这里开始新的一页”可让它们在同一页。"
     },
@@ -1419,6 +1465,17 @@
       "pose": "姿态",
       "positionLabel": "步骤位置",
       "step": "步骤"
+    },
+    "titleBlock": {
+      "default": {
+        "author": "作者",
+        "authorName": "您的姓名",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "建议用纸",
+        "steps": "步骤数",
+        "subtitle": "副标题",
+        "title": "添加标题"
+      }
     },
     "turns": {
       "actions": "翻转操作",

@@ -16,6 +16,14 @@ import { pageCapacity, paginate } from './pagePlan';
 const NO_STEPS: readonly DiagramStep[] = [];
 
 /**
+ * Change the page setup, one undo step, and count which setting changed: the
+ * Page pane's one way to commit a page setting, whichever section it is in.
+ */
+export function setPageSetting(patch: Partial<DiagramPageSetup>, setting: DiagramPageSetting) {
+  if (useWorkspaceStore.getState().setDiagramPage(patch)) trackDiagramPageSetupChanged(setting);
+}
+
+/**
  * The Page pane's store bindings (AGENTS.md › Panel components): the page
  * setup, a flow page's own count of steps, style and Han style, each change
  * one undo step and one count of which setting changed, and how many pages
@@ -38,9 +46,6 @@ export function useDiagramPageSetup() {
   const perPage = pageCapacity(page);
   const pageCount = useMemo(() => paginate(steps, page).length, [steps, page]);
 
-  const setPage = useCallback((patch: Partial<DiagramPageSetup>, setting: DiagramPageSetting) => {
-    if (useWorkspaceStore.getState().setDiagramPage(patch)) trackDiagramPageSetupChanged(setting);
-  }, []);
   /** Give flow page `pageIndex` its own count of steps, or with null return it to the default. */
   const setPageSteps = useCallback((pageIndex: number, count: number | null) => {
     if (useWorkspaceStore.getState().setDiagramPageSteps(pageIndex, count)) {
@@ -49,7 +54,7 @@ export function useDiagramPageSetup() {
   }, []);
   const setStyle = useCallback((choice: DiagramStyleChoice) => {
     if (useWorkspaceStore.getState().setDiagramStyle(choice.style)) {
-      trackDiagramPageSetupChanged('style', choice.analytics);
+      trackDiagramPageSetupChanged('style', { style: choice.analytics });
     }
   }, []);
   const setHanStyle = useCallback((next: DiagramHanStyle) => {
@@ -64,7 +69,7 @@ export function useDiagramPageSetup() {
     stepCount: steps.length,
     perPage,
     pageCount,
-    setPage,
+    setPage: setPageSetting,
     setPageSteps,
     setStyle,
     setHanStyle,

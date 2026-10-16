@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDiagram, createTurn, type DiagramDocument } from '../document/diagramDocument';
+import { createDiagram, createTurn, PAGE_SETTINGS, type DiagramDocument } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { diagramLayoutSteps, layoutDiagram } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
@@ -33,7 +33,8 @@ describe('turns on the pages', () => {
     const steps = Array.from({ length: 7 }, (_, index) => cpStep(`s${index}`));
     const document: DiagramDocument = {
       ...diagramOf([over('turn-lead'), ...steps, over('turn-tail')]),
-      page: { ...createDiagram().page, layout: 'flow', stepsPerPage: 4 },
+      // No title block, so the seven take pages of four and three.
+      page: { ...createDiagram().page, layout: 'flow', stepsPerPage: 4, titleBlock: PAGE_SETTINGS.titleBlock.legacy },
     };
     const packed = layoutDiagram(document, estimateTextSetter).packed ?? {};
     expect(Object.keys(packed)).toEqual(['s0', 's4']);

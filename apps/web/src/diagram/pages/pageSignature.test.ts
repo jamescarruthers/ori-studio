@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  PAGE_SETTINGS,
   createDiagram,
   createTurn,
   editStepAnnotations,
@@ -13,11 +14,13 @@ import {
   setPageStarts,
   setStepPicture,
   setStepText,
+  setTitleBlockContent,
   setTurn,
   stepIndex,
   type DiagramDocument,
   type DiagramPageSetup,
   type DiagramRasterAsset,
+  type DiagramTitleBlockContentPatch,
 } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { setStepPlace } from '../document/stepPlace';
@@ -33,18 +36,33 @@ import { cellSlots } from './stepPlaces';
  * the style — ever does, so an edit of those keeps every page as packed.
  */
 
-/** Twelve steps `s0`…, five a page, a turn before `s2`: pages s0–s4, s5–s9, s10–s11 (laid out for five). */
+/**
+ * Twelve steps `s0`…, five a page, a turn before `s2`: pages s0–s4, s5–s9, s10–s11 (laid out for five). No title
+ * block, and a scale steadiness of 0.85, as every page saved before either changed, whatever a new diagram has.
+ */
 function diagram(page: Partial<DiagramPageSetup> = {}): DiagramDocument {
   const steps = Array.from({ length: 12 }, (_, index) => cpStep(`s${index}`));
   const document = insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0);
   const turned = insertSteps(document, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 't0')], 2);
-  return setPageSetup(turned, { layout: 'flow', stepsPerPage: 5, ...page });
+  return setPageSetup(turned, {
+    layout: 'flow',
+    stepsPerPage: 5,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+    flowSteadiness: PAGE_SETTINGS.flowSteadiness.legacy,
+    ...page,
+  });
 }
 
 const signatures = (document: DiagramDocument) => cellSlots(document).signatures;
 
 /** {@link diagram}'s pages' signatures as every build since 2026-10-12 has signed them. */
 const FROZEN_SIGNATURES = ['pack-3:8lau4w185srg7', 'pack-3:ka9psdp8lya6', 'pack-3:vp5q451hqxros'];
+
+/** The title block on, at a share of 27%: the first page holds four (`firstPageCapacity`). */
+const BLOCK = { titleBlock: { enabled: true, heightShare: 0.27 } } as const;
+
+/** {@link diagram}'s pages' signatures with {@link BLOCK} on, as every build since 2026-10-14 has signed them. */
+const FROZEN_BLOCK_SIGNATURES = ['pack-3:ivpnek1lofqkx', 'pack-3:1away4iko9ze1', 'pack-3:fdcnh51dpj3di'];
 
 /** Which pages' signatures differ between two diagrams, by index. */
 function changed(before: DiagramDocument, after: DiagramDocument): number[] {
@@ -70,6 +88,13 @@ describe('pageSignature', () => {
     // (`implementation-plans/diagram-document-evolution.md`). A change to the packing never is one.
     expect(SIGNATURE_VERSION).toBe('pack-3');
     expect(signatures(diagram())).toEqual(FROZEN_SIGNATURES);
+  });
+
+  it('keeps its format with the title block on, signed by an entry the first page gains only while it is on', () => {
+    // The block's entry is appended, so no page signed without it changes; and these, once saved, hold as these.
+    expect(signatures(diagram(BLOCK))).toEqual(FROZEN_BLOCK_SIGNATURES);
+    // Off, whatever its share: every page as it was before there was a block.
+    expect(signatures(diagram({ titleBlock: { enabled: false, heightShare: 0.4 } }))).toEqual(FROZEN_SIGNATURES);
   });
 
   it('is never the packer’s: an arrangement holds whatever packer packed it', () => {
@@ -152,10 +177,12 @@ describe('pageSignature', () => {
     });
 
     it('whether it is the last page, and whether it hands over at its spine', () => {
-      // Ten steps fill two pages; an eleventh starts a third, after which page two is no longer the last.
+      // Ten steps fill two pages; an eleventh starts a third, after which page two is no longer the last. No title
+      // block, as in `diagram()`.
       const ten = setPageSetup(insertSteps(createDiagram({ title: 'Crane' }), Array.from({ length: 10 }, (_, index) => cpStep(`s${index}`)), 0), {
         layout: 'flow',
         stepsPerPage: 5,
+        titleBlock: PAGE_SETTINGS.titleBlock.legacy,
       });
       expect(changed(ten, insertSteps(ten, [cpStep('s10')], ten.steps.length))).toEqual([1, 2]);
       // All ten on one page; an eleventh makes it a left page that hands over at its spine, and not the last.
@@ -165,7 +192,7 @@ describe('pageSignature', () => {
 
     it('the page’s index and side', () => {
       const steps: SignedStep[] = ['a', 'b'].map((id) => ({ id, breakBefore: false, turnsBefore: [], turnsAfter: [] }));
-      const page: PlannedPage = { steps: [0, 1], firstStepId: 'a', ownCount: false, capacity: 2, layoutCount: 2, rows: 1, rowCounts: [2], columns: 2 };
+      const page: PlannedPage = { steps: [0, 1], firstStepId: 'a', ownCount: false, capacity: 2, layoutCount: 2, rows: 1, titleBlockRows: 0, rowCounts: [2], columns: 2 };
       const input = (count: number, patch: Partial<DiagramPageSetup> = {}): PageSignatureInput => ({
         steps,
         pages: Array.from({ length: count }, () => page),
@@ -202,6 +229,42 @@ describe('pageSignature', () => {
       expect(changed(untitled, setDiagramTitle(untitled, 'Crane'))).toEqual([0, 1, 2]);
       expect(changed(diagram(), setDiagramTitle(diagram(), '   '))).toEqual([0, 1, 2]);
     });
+
+    it('the title block turned on, or off: the first page by its entry, and every page its steps then move to', () => {
+      const before = diagram();
+      // The first page holds four: every later page starts a step earlier.
+      expect(changed(before, setPageSetup(before, BLOCK))).toEqual([0, 1, 2]);
+      expect(changed(diagram(BLOCK), setPageSetup(diagram(BLOCK), { titleBlock: { enabled: false, heightShare: 0.27 } }))).toEqual([0, 1, 2]);
+      // A first page of its own count holds as many either way: it alone changes.
+      const counted = setPageStarts(before, new Map([['s0', { pageSteps: 5 }]]));
+      expect(changed(counted, setPageSetup(counted, BLOCK))).toEqual([0]);
+      // Its share: the first page's room, on it alone while its count holds.
+      const on = setPageSetup(counted, BLOCK);
+      expect(changed(on, setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.35 } }))).toEqual([0]);
+    });
+  });
+
+  describe('with the title block on', () => {
+    const before = diagram(BLOCK);
+
+    it('leaves the first page as it is when a title is typed or cleared: the block carries it, not a tab', () => {
+      const untitled = setDiagramTitle(before, '');
+      expect(changed(untitled, setDiagramTitle(untitled, 'Crane'))).toEqual([1, 2]);
+      expect(changed(before, setDiagramTitle(before, ' '))).toEqual([1, 2]);
+      expect(changed(before, setPageSetup(before, { showTitle: false }))).toEqual([1, 2]);
+    });
+
+    it('never changes with what the block shows', () => {
+      const shown = [
+        { model: { kind: 'none' }, pattern: { kind: 'step', stepId: 's3' } },
+        { subtitle: 'Origami diagram', note: 'Design: Lang' },
+        { credits: { op: 'add', credit: { label: 'Steps', value: { kind: 'step-count' } } } },
+        { modelSize: 1, patternSize: 0.3 },
+      ].reduce((document, patch) => setTitleBlockContent(document, patch as DiagramTitleBlockContentPatch), before);
+      expect(Object.keys(shown.titleBlockContent!)).toEqual(['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize']);
+      expect(changed(before, shown)).toEqual([]);
+      expect(changed(before, setDiagramTitle(before, 'Swan'))).toEqual([]);
+    });
   });
 
   describe('never changes with what it does not cover', () => {
@@ -221,6 +284,8 @@ describe('pageSignature', () => {
       ['another title', setDiagramTitle(before, 'Swan')],
       ['the first page number', setPageSetup(before, { pageNumbers: { enabled: true, first: 7 } })],
       ['a grid’s columns and rows', setPageSetup(before, { columns: 5, rows: 2 })],
+      ['the share of a title block that is off', setPageSetup(before, { titleBlock: { enabled: false, heightShare: 0.4 } })],
+      ['what a title block shows', setTitleBlockContent(before, { model: { kind: 'none' }, note: 'Design: Lang', patternSize: 0.5 })],
     ])('%s', (_label, after) => {
       expect(after).not.toBe(before);
       expect(changed(before, after)).toEqual([]);

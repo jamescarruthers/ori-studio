@@ -1,7 +1,8 @@
 # Diagram documents across app changes: saved layout holds
 
 **Status: parts 1 and 3 built, 2026-10-12, on `claude/diagram-launch-completion-59e60c`.
-Part 2 decided by Zach and built, 2026-10-13.**
+Part 2 decided by Zach and built, 2026-10-13; its rule replaced by Zach on
+2026-10-15 (a step's place, not its band) and built on the title-block branch.**
 
 After launch people will have saved diagrams, and the app will keep changing.
 Three things would have hurt saved documents (Zach, 2026-10-12: "yikes yeah
@@ -47,7 +48,10 @@ new homes (reproduced with `artifacts/layout-review/crane_final_oldpack.osf`,
 - `PACKER_VERSION` (`pages/flowArrangement.ts`; `pack-4` when this part was
   built, `pack-5` since 2026-10-13: a size pin packed at its pin; `pack-6` the
   same day: a caption 3 mm under its picture, so captioned boxes pack a
-  millimetre taller, while held pages keep their boxes) — the packer's own
+  millimetre taller, while held pages keep their boxes; `pack-7` since
+  2026-10-15: a page's first band at its area's left edge, step 1 at the top
+  left, and a first step whose picture prints past its box set in as far as
+  that picture needs) — the packer's own
   version, stamped on each newly packed arrangement as `packer`
   (`DiagramPageArrangement.packer`): read leniently (any string kept as it
   came; anything else dropped alone, the page still held), written back,
@@ -79,7 +83,171 @@ Forward compatibility: a build from before this change reads a `packer`-stamped
 arrangement as a newer build's — it re-packs that page for display and writes
 the stored one back untouched. Only pre-launch builds are affected.
 
-### 2. A hand-moved step keeps its offset across a re-pack while it stays in its band (decided and built)
+### 2. A hand-moved step keeps its offset across a re-pack while it keeps its place (decided and built)
+
+**Zach's rule (2026-10-15), replacing his rule of 2026-10-13 below: "steps
+that change their place remove their offset (but they keep all the internal
+moves like where the text box / image / number are relative to their step
+bounding box".** As confirmed with him:
+
+- A step's **place** is its slot in the layout: its page, its band (row), and
+  its place along that band — on a grid, its cell. A step standing in a bend
+  is in another place than one in a band. *Its page*, in the flow, is the
+  page that starts with the same step (or, where that step is gone, has the
+  same number), **while its rows stack the same way up** (the review's
+  default, 2026-10-15; see "Review fixes" below): a right page after the
+  first stacks its rows from its foot, a left one from its head, so a page
+  that falls on the other side of its spread has each band where another
+  was.
+- An edit that changes a step's place clears its whole-step offset (`frame`),
+  so it sits at its new home: the title block's toggle, Steps on page N (the
+  shift), a step put in, taken out or moved before it on its page, a re-pack
+  that moves it to another band or along its band, a re-pagination that moves
+  it to another page or turns its page to the other side of its spread (a
+  page break put in or taken out before it, the first page's side). A page
+  renumbered by two keeps its side, and its steps their places.
+- Kept, always: everything inside its own box — the number's, picture's and
+  caption's offsets, the caption's width (`textWidth`), the size pin
+  (`scale`), and an enlarged step's Size (on the step, never touched).
+- A step that keeps its place keeps its offset, even when its page re-packs
+  and its home moves a little: a step put in after it, Re-pack Page that
+  keeps the plan, a page setting.
+- The existing "steps moved home" notice and one Undo cover it. Opening a
+  saved file still moves nothing: a held page is drawn as stored, and no rule
+  change re-packs one.
+
+Why: on Zach's crane, turning the title block on shifts pages 2–4 by two
+steps. Under the 10-13 rule nine hand-moved steps (7, 10, 11, 14, 17, 18,
+21, 24, 27) stayed on their page and in their band, so they kept offsets
+made for the old layout, which on the new page 2 landed on each other and on
+their captions (11 overlaps there).
+
+**Built (2026-10-15)** — one predicate changed; where it runs is as below.
+`repackedFrames.ts`: `flowSlot` reads a step's place in an arrangement —
+its band, whether it stands in a bend, and how many steps of the same band
+(or bend) come before it **as the band reads**: an even band left to right,
+an odd one right to left, as the packer lays a ribbon (`flowPacking.ts`,
+`rightToLeft: band % 2 === 1`). It is read from the boxes, so it needs no
+record of the order the steps had when the page was packed, and the file
+format does not change: a reorder, a step put in before it or one before it
+taken out moves it along, a step put in after it does not.
+`keepsMovedFrame(stored, first, stepId, now)` now takes the page's new
+arrangement and compares the two places; the layout passes the arrangement it
+packed, `adoptPacking` the one it takes in, so both still agree step for step.
+The edit's own rule (`settlePlaces`: off its page, home at once) and the grid's
+cell rule (`sameCell`, Decision 1A — already a place rule) are unchanged.
+
+Tests that failed before (`artifacts/hand-offsets/failing-before.txt`):
+`repackedFrames.test.ts` — `flowSlot` reading an odd band from the right; the
+predicate sending home one whose place along its band changed (a step put in
+before it, one before it gone, a swap), an odd band read from the right;
+through the real packer, a
+stale arrangement opened and Re-pack Page each drawing two steps swapped along
+a band at home before any adoption, the adoption clearing exactly those. The
+store's `diagramPageArrangements.test.ts` — Re-pack Page sending home a step
+still in its band but second along it now, with its parts, caption width and
+size pin kept; the crane's shape with the block on (pages two to four home
+with all inside their boxes, page one's steps in their place keeping theirs,
+the notice counting 25, one Undo restoring the diagram exactly); a step put in
+or taken out before others on its page; an edit on a page before with its own
+count leaving later pages' offsets. Guards, which the 10-13 rule would have
+passed too: opening a saved file (written, read, laid out: nothing packed,
+every offset drawn, no adoption), a grid's block toggle (every step whose cell
+moved home, all inside its box kept, one Undo), and `keepsMovedFrame` keeping
+a step in the same place wherever its home is now — it failed against the base
+only because the predicate's signature changed (the base read `now.band` from
+what is now a whole arrangement), and those steps keep their bands, which the
+10-13 rule kept too (review, 2026-10-15). Tests that pinned the 10-13 rule were rewritten to
+this one (`pageArrangements.test.ts`, the store's Re-pack, notice and title
+block cases).
+
+On the crane (`artifacts/hand-offsets/`, dev server :5395, `capture.mjs`):
+opened with the block off, the PDF is the same to the byte before and after
+this change, nothing unsaved. With the block on, all 22 hand-moved steps go
+home (notice 22; at the base 13 went and 9 stayed), page 2's overlaps between
+steps go from 11 to 5, and one Undo gives back the opened diagram (PDF the
+same to the byte, every frame back). The 5 left on page 2 are not offsets: no
+frame is moved there. They are size pins (steps 10 and 13, pinned at the old
+page's scale) drawn past boxes that a page packed at k 0.840 cannot make room
+for — the pin fallback of 2026-10-13 — and they go with page 2's pins alone
+(`residual-page-2.json`). Pins are kept by this rule, so that is for Zach.
+
+**Review fixes (2026-10-15): a page on the other side of its spread is a new
+place.** The review found that a flow page renumbered by one — a page break
+put in or taken out on an earlier page, the title block's toggle where pages
+start with page breaks — or every page after the first when the first page's
+side changes kept every offset on it: its steps keep the step their page
+starts with, and their band and place along it read the same, but the page
+falls on the other side of its spread, where its bands stack from the other
+end (`flowLane.ts`: a right page the lane comes into at its spine reads from
+its foot up; `flowPacking.ts` stacks `tops` the other way). An offset's
+`across` is always down the page (`pagePlacement.ts` flips only `along`), so
+one made against the neighbours above now pushed the step into the band that
+used to be below it. On the crane, a page break before step 5 kept 19
+offsets on pages 3–4; step 17's, (0, +74.4) mm, put it past the paper's foot.
+The grid's page rule (same number or same first step, Oct 7, "3a") holds there
+because only a grid page's number and side change; a flow page's rows turn
+over with its side.
+
+The fix takes the recommended default: the page's rows stacking the other way
+up is a change of place for every step on it. `stepPlaces.ts`: `CellSlots`
+keeps each flow page's `up` (`flowPagePlan(...).up`, the one predicate the
+packer and the lane use), and `staysOnFlowPage` returns false where it
+differs before and after the edit, so the edit sends those frames home in its
+own undo step, with the notice and one Undo; the layout and adoption then see
+no offset there. A page renumbered by two keeps its side and its offsets (an
+existing test, retitled). No file change. The four comments still stating the
+10-13 rule, and `repackedFrames.ts`'s page identity paragraph, now say it.
+
+Tests that failed before (the one new line removed,
+`artifacts/hand-offsets-review/failing-before.txt`: 6 failed, each on which
+frames went home): `stepPlaces.test.ts` — the first page's side sends home
+every frame after the first page, both ways, and a grid's none; a page break
+renumbering later pages by one sends them home, and taken out again the same.
+`repackedFrames.test.ts`, through the real packer, 24 steps six a page with a
+page break at each page start — the title block turned on, the first page's
+side, a page break on page one: every step on the turned pages home at the
+edit, all inside its box kept, the layout drawing them at home, each page's
+band 0 now at its other end while every step's band and place along it read
+the same (so the slot alone could not see it), s0 keeping its offset. The
+store's `diagramPageArrangements.test.ts` — a page break on page one with
+page breaks at every page start: ten frames home at the edit, the notice 10,
+nothing more on adoption, one Undo restoring the diagram exactly.
+
+On the crane (`artifacts/hand-offsets-review/`, :5395, `review.mjs before|after`,
+before = this branch at 5fb79bc1c): opened, the title block on, on and Undo,
+on and off, Steps on page 2 = 12 and a step put in before step 15 give PDFs
+the same to the byte before and after the fix (none turns a page over), and
+Undo gives back the opened crane to the byte. A page break before step 5: the
+base kept 19 offsets on pages 3–4 (notice 3), page 3 had 6 overlaps and step
+17 printed past the paper's foot; with the fix all 22 go home (notice 22),
+nothing prints off the paper, and the page reads top down from its head
+(`break-p1-page3-open-before-after.png`). First page's side: the base kept
+all 22 (no notice) with the same page drawn the same wrong way; the fix sends
+19 home, steps 5, 7 and 8 on page 1 keep theirs (notice 19). **Not fixed by
+this:** the turned page still has 8 overlaps between steps, every one from
+size pins — none with that page's pins taken away (`report.json`,
+`attribution`) — the pinned pictures drawn past boxes the re-packed page
+could not make room for, as on page 2 under the title block above. Whether a
+pin the step's new place cannot hold should go too is Zach's (open).
+
+Open, from the same review, each Zach's call:
+- **A page re-packed into more rows.** A step keeps its band index and place
+  along it while its page goes from 3 rows to 4 at a much smaller scale
+  (Steps on page 2 = 12; a step put in before step 15), so it keeps an offset
+  though its home moved ~70 mm. Counting the page's rows into the place ("row
+  i of n") is cheap for a full page, but a stored arrangement holds only the
+  page's own steps, never a short last page's stand-ins, so the rows it shows
+  there grow as steps are added at the end: every append that opens a row
+  would send the last page's offsets home. Not built until he says what a row
+  is.
+- **Q2 of the title block** (`diagram-title-block.md`): turned on and then off
+  again leaves every offset cleared though every step is back in its place;
+  Undo is the way back.
+- **Size pins** cause nearly every overlap left after an edit, here and in
+  every case the review measured.
+
+*The rule of 2026-10-13, as first built (replaced above):*
 
 **Zach's rule (2026-10-13): keep a moved step's frame offset across any
 re-pack while the step stays on the same page and in the same band; send it
@@ -233,8 +401,13 @@ signature), re-packed it.
   one-line change to `default` alone.
 - `normalizePageSetup` falls back to the legacy value for a missing or damaged
   setting. Today every legacy value is what an unsaid setting already read as —
-  the default, but for the layout (`grid`) and the steps per page (the file's
-  columns × rows) — so no existing file opens differently.
+  the default, but for the layout (`grid`), the steps per page (the file's
+  columns × rows), the title block (off, where a new diagram's is on; added
+  2026-10-14, `diagram-title-block.md`) and the scale steadiness (0.85, where
+  a new diagram's is 0.5 since 2026-10-15, `diagram-flow-packing.md`,
+  "Scale steadiness 0.5 for a new diagram": the first default changed under this
+  rule, one line in `PAGE_SETTINGS`) — so no existing file opens
+  differently.
 - **Adding a setting:** give it a default and a legacy value in the table; its
   legacy value reproduces how pages were drawn before it existed and never
   changes once a build that knows it has shipped.
@@ -267,6 +440,9 @@ leave.
 | Path node `in`, `out`, `type` | `writePathNode` | (c) a straight node |
 | Crease-pattern render `side`, `flipCreases`; flat-fold `spread` | the source as read (`readCpRender`) | (c) the front, not flipped, no spread |
 | Picture `styleKey`, step-diagram `mirrored` | the picture as read | (c) |
+| `titleBlockContent` and its `model`, `pattern`, `subtitle`, `credits` and `note` (added 2026-10-14 and 2026-10-15, `diagram-title-block.md`) | `writeTitleBlockContent` | (c) an unsaid source means Auto, and an unsaid subtitle, credits or note none, for good; a new diagram writes its subtitle and credits at creation, and so does the block’s toggle, turned on, where the content says no subtitle and no credits (the author’s own act; 2026-10-15) — a part a newer build writes of a kind this build has no name for, a richer subtitle or note among them, is carried |
+| The title block's `modelSize` and `patternSize` (added 2026-10-15, `diagram-title-block.md`, Phase 1c) | `writeTitleBlockContent` | (b) look: unsaid is the build's default (0.59 and 0.79), which may change for every file; the block's height is the page setting, so no step moves. Since 2026-10-15 a pair that would leave the model off the pattern's corner is drawn with the pattern as large as fits (`fittedArtSizes`), and a part set to none is laid out at its default size, its own kept for its return |
+| What Auto finds for the title block: the last step with a picture, the last linked pattern | `resolveTitleBlock` (`pages/titleBlockContent.ts`) | (b) a look, as an annotation's `anchor` rule is: the content is in no signature, so no step moves when it changes. Unlike a pen or a gap, a change to it changes content on old files (which model or pattern their block pictures), so it is Zach's call |
 
 Only (a) changed. A (c) field's absence is a value in its own right, so it is
 never redefined: to give new marks another default, write the new value on new
@@ -317,12 +493,16 @@ legacy value.
 - [x] Signature covers the page's structure only; `SIGNATURE_VERSION` frozen at `pack-3`, the format rule written down
 - [x] `PACKER_VERSION` stamped on newly packed arrangements as `packer`, read leniently, written back, never asked
 - [x] `PACKER_VERSION` bumped to `pack-4` for the enlarged-step packing change (c1bd3d0a2)
+- [x] `PACKER_VERSION` bumped to `pack-7` for step 1 at the top left (`diagram-title-block.md`, 2026-10-15; missed by 3789b31b3, bumped in its review)
 - [x] Store and layout sign a diagram's first and last pages alike (turns at the ends)
 - [x] Frozen fixture: a file saved before the change opens with every page held, nothing adopted, every step in its box
 - [x] A bumped packer version holds every saved page and packs only a re-packed one, stamped with it
 - [x] Part 2 (Zach, 2026-10-13): a moved frame keeps its offset across any re-pack while its step stays on its page and in its band — the edit, the layout and adoption each apply it; stale and let-go arrangements kept for their bands; one notice per edit
 - [x] Part 2 browser proof in `artifacts/layout-review/out/repack-keeps-hand-moves/`
-- [ ] Part 2, for Zach: on the crane no band changes through Re-pack Page or the old-format open, so tight offsets clash against homes moved inside their bands
+- [x] Part 2, for Zach: on the crane no band changes through Re-pack Page or the old-format open, so tight offsets clash against homes moved inside their bands — answered by his rule of 2026-10-15: a step that keeps its place keeps its offset, "even if its page re-packs and its home moves a little"
+- [x] Part 2 revised (Zach, 2026-10-15): a moved frame keeps its offset while its step keeps its place — page, band, place along the band as it reads (`flowSlot`) — and goes home when any changes; everything inside its box kept; the edit, the layout and adoption as before; tests that failed before, crane evidence in `artifacts/hand-offsets/`
+- [x] Part 2 review fixes: a flow page whose rows now stack from its other end (renumbered by one, the first page's side) is a new place for every step on it, sent home by the edit (`staysOnFlowPage`, `CellSlots.up`); stale comments; guards listed apart; crane evidence in `artifacts/hand-offsets-review/`
+- [ ] Part 2, for Zach: a page re-packed into more rows ("row i of n"), Q2 (off again restores no offset), size pins that the new place cannot hold
 - [x] Every page setting written; `PAGE_SETTINGS` with default and legacy values; `normalizePageSetup` reads legacy values
 - [x] File contract: settings said, adding (legacy value) and retiring (`RETIRED_PAGE_KEYS`) a setting
 - [x] Audit of the other fields written only when not default (table above); only page settings changed

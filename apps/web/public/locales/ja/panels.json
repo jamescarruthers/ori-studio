@@ -1110,8 +1110,11 @@
       "pageSteps": "{{number}} ページのステップ数",
       "pageStepsDefault": "既定",
       "pageStepsHolds": "後のページの位置を保ちます",
+      "pageStepsTitleBlock": "タイトル欄がこのページの場所を取るため、既定では {{number}} ステップを収めます。",
+      "pageStepsTitleBlockOwn": "タイトル欄をオフにすると、このステップ数に {{number}} が加わります。後のページはそれぞれのステップ数を保ったままずれます。",
       "pageStepsUseDefault": "既定を使う",
       "paper": "用紙",
+      "path": "経路",
       "pathColor": "経路の色",
       "pathWidthMm": "経路の幅（mm）",
       "portrait": "縦向き",
@@ -1130,8 +1133,44 @@
       "style": "スタイル",
       "styleHint": "インクとペンはすべてのステップに一度に反映されます。3Dのステップは更新すると新しい照明になります。",
       "styleSection": "スタイル",
-      "title": "タイトル",
-      "titleHelp": "折り図のタイトルを、各ページ上部のタブに表示します。"
+      "title": "タイトルタブ",
+      "titleBlock": {
+        "addCredit": "クレジットを追加",
+        "addStepCount": "ステップ数を追加",
+        "auto": "自動（ステップ {{number}}）",
+        "autoNoneLinked": "自動（リンクなし）",
+        "autoNoPicture": "自動（図なし）",
+        "bandColor": "帯の色",
+        "bandColorHelp": "タイトルの背景の帯。色を選ぶまでは用紙の色になります。",
+        "creditLabel": "クレジット {{number}} のラベル",
+        "creditLabelPlaceholder": "ラベル",
+        "credits": "クレジット",
+        "creditsHelp": "タイトルの下に横一列に並び、各クレジットはラベルの下に内容を印刷します。内容にはステップ数も使え、常に最新に保たれます。",
+        "creditValue": "クレジット {{number}} の内容",
+        "creditValuePlaceholder": "内容",
+        "description": "説明",
+        "descriptionHelp": "クレジットの下に入る自由なテキスト。テキストがあるときだけ印刷されます。",
+        "model": "完成形",
+        "modelHelp": "完成した作品を、ステップの図から描きます。自動では図のある最後のステップを使います。",
+        "modelSize": "完成形のサイズ",
+        "modelSizeHelp": "完成形の高さ。タイトル欄の高さに対する割合です。",
+        "needsRows": "2 行以上が必要です",
+        "none": "なし",
+        "pattern": "展開図",
+        "patternHelp": "ステップにリンクした展開図から描きます。自動ではリンクした最後のステップを使います。各展開図は、そのために選んだステップ、なければそれをリンクした最後のステップの名前で一度だけ表示されます。",
+        "patternSize": "展開図のサイズ",
+        "patternSizeHelp": "展開図の一辺の長さ。タイトル欄の高さに対する割合です。",
+        "removeCredit": "クレジット {{number}} を削除",
+        "show": "タイトル欄",
+        "showHelp": "タイトルとクレジット、展開図、完成形を最初のページの上部に入れます。",
+        "step": "ステップ {{number}}",
+        "stepCount": "自動（{{number}}）",
+        "subtitle": "サブタイトル",
+        "subtitleHelp": "タイトルの上の小さな一行。空にすると印刷されません。",
+        "typeValue": "クレジット {{number}} の内容を代わりに入力"
+      },
+      "titleHelp": "折り図のタイトルを、各ページ上部のタブに表示します。",
+      "titleHelpWithBlock": "折り図のタイトルを、各ページ上部のタブに表示します。最初のページでは代わりにタイトル欄に入ります。"
     },
     "pages": {
       "caption": "{{number}} ページ",
@@ -1146,6 +1185,13 @@
       "step": "ステップ {{number}}",
       "stepCut": "ステップ {{number}}、文章が収まりません",
       "textCut": "文章が収まりません",
+      "titleBlock": {
+        "creditsCut": "入りきらないクレジットがあります",
+        "noModel": "図のあるステップがまだありません",
+        "noPattern": "展開図にリンクしたステップがありません",
+        "stepNoPattern": "ステップ {{number}} には展開図がありません",
+        "stepNoPicture": "ステップ {{number}} にはまだ図がありません"
+      },
       "zoomSplitStep": "ステップ {{step}} は、拡大する範囲のあるステップ {{area}} の次のページにあります。ステップ {{area}} で「ここで新しいページを始める」を選ぶと同じページにまとまります。",
       "zoomSplitSteps": "ステップ {{steps}} は、それぞれ拡大する範囲の次のページにあります。ステップ {{areas}} で「ここで新しいページを始める」を選ぶと同じページにまとまります。"
     },
@@ -1419,6 +1465,17 @@
       "pose": "ポーズ",
       "positionLabel": "ステップの位置",
       "step": "ステップ"
+    },
+    "titleBlock": {
+      "default": {
+        "author": "作者",
+        "authorName": "お名前",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "推奨用紙",
+        "steps": "ステップ数",
+        "subtitle": "サブタイトル",
+        "title": "タイトルを追加"
+      }
     },
     "turns": {
       "actions": "回し方の操作",

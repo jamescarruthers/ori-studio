@@ -1184,8 +1184,11 @@
       "pageSteps": "Passos na página {{number}}",
       "pageStepsDefault": "Padrão",
       "pageStepsHolds": "Mantém as páginas seguintes no lugar",
+      "pageStepsTitleBlock": "O bloco de título ocupa espaço nesta página, então ela comporta {{number}} por padrão.",
+      "pageStepsTitleBlockOwn": "Desativar o bloco de título soma {{number}} a esta contagem; as páginas seguintes mantêm a delas e se deslocam.",
       "pageStepsUseDefault": "Usar padrão",
       "paper": "Papel",
+      "path": "Trajeto",
       "pathColor": "Cor do trajeto",
       "pathWidthMm": "Largura do trajeto (mm)",
       "portrait": "Retrato",
@@ -1204,8 +1207,44 @@
       "style": "Estilo",
       "styleHint": "A tinta e as canetas mudam em todos os passos de uma vez. Um passo 3D recebe a nova iluminação ao ser atualizado.",
       "styleSection": "Estilo",
-      "title": "Título",
-      "titleHelp": "O título do diagrama, numa aba no alto de cada página."
+      "title": "Aba de título",
+      "titleBlock": {
+        "addCredit": "Adicionar crédito",
+        "addStepCount": "Adicionar número de passos",
+        "auto": "Auto (passo {{number}})",
+        "autoNoneLinked": "Auto (nada vinculado)",
+        "autoNoPicture": "Auto (sem imagens)",
+        "bandColor": "Cor da faixa",
+        "bandColorHelp": "A faixa atrás do título. Segue a cor do papel até você escolher uma.",
+        "creditLabel": "Rótulo do crédito {{number}}",
+        "creditLabelPlaceholder": "Rótulo",
+        "credits": "Créditos",
+        "creditsHelp": "Uma linha sob o título: cada crédito imprime seu rótulo sobre seu valor. Um valor pode ser o número de passos, sempre atualizado.",
+        "creditValue": "Valor do crédito {{number}}",
+        "creditValuePlaceholder": "Valor",
+        "description": "Descrição",
+        "descriptionHelp": "Texto livre sob os créditos, impresso só quando não está vazio.",
+        "model": "Modelo",
+        "modelHelp": "O modelo pronto, desenhado a partir da imagem de um passo. Auto usa o último passo que tiver uma.",
+        "modelSize": "Tamanho do modelo",
+        "modelSizeHelp": "A altura do modelo, como fração da altura do bloco de título.",
+        "needsRows": "Precisa de duas linhas ou mais",
+        "none": "Nenhum",
+        "pattern": "Padrão de vincos",
+        "patternHelp": "Desenhado a partir do padrão de vincos que um passo vincula. Auto usa o último passo vinculado; cada padrão aparece uma só vez, pelo passo escolhido para ele ou, se não houver, pelo último passo que o vincula.",
+        "patternSize": "Tamanho do padrão de vincos",
+        "patternSizeHelp": "O lado do padrão de vincos, como fração da altura do bloco de título.",
+        "removeCredit": "Remover o crédito {{number}}",
+        "show": "Bloco de título",
+        "showHelp": "O título e seus créditos, o padrão de vincos e o modelo pronto, no alto da primeira página.",
+        "step": "Passo {{number}}",
+        "stepCount": "Auto ({{number}})",
+        "subtitle": "Subtítulo",
+        "subtitleHelp": "A linha pequena acima do título. Deixe-a vazia para não imprimir nenhuma.",
+        "typeValue": "Digitar um valor para o crédito {{number}} no lugar"
+      },
+      "titleHelp": "O título do diagrama, numa aba no alto de cada página.",
+      "titleHelpWithBlock": "O título do diagrama, numa aba no alto de cada página. Na primeira página, ele fica no bloco de título."
     },
     "pages": {
       "caption": "Página {{number}}",
@@ -1220,6 +1259,13 @@
       "step": "Passo {{number}}",
       "stepCut": "Passo {{number}}, o texto não cabe",
       "textCut": "O texto não cabe",
+      "titleBlock": {
+        "creditsCut": "Alguns créditos não cabem",
+        "noModel": "Nenhum passo tem imagem ainda",
+        "noPattern": "Nenhum passo está vinculado a um padrão de vincos",
+        "stepNoPattern": "O passo {{number}} não tem padrão de vincos",
+        "stepNoPicture": "O passo {{number}} ainda não tem imagem"
+      },
       "zoomSplitStep": "O passo {{step}} está na página seguinte à da área que amplia, no passo {{area}}. “Começar uma nova página aqui” no passo {{area}} mantém os dois juntos.",
       "zoomSplitSteps": "Os passos {{steps}} estão cada um na página seguinte à da área que ampliam. “Começar uma nova página aqui” nos passos {{areas}} os mantém juntos."
     },
@@ -1519,6 +1565,17 @@
       "pose": "Pose",
       "positionLabel": "Posição do passo",
       "step": "Passo"
+    },
+    "titleBlock": {
+      "default": {
+        "author": "Autor",
+        "authorName": "Seu nome aqui",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "Papel recomendado",
+        "steps": "Passos",
+        "subtitle": "Subtítulo",
+        "title": "Adicione um título"
+      }
     },
     "turns": {
       "actions": "Ações da virada",

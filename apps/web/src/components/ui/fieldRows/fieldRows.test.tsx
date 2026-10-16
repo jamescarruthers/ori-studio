@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CollapsibleSection } from '../CollapsibleSection';
 import { ColorField } from '../ColorField';
+import { TooltipProvider } from '../Tooltip';
 import { FieldRow, NumberRow, SegmentedRow, SelectRow, SliderRow, TextRow, ToggleRow } from './index';
 
 /**
@@ -45,6 +48,23 @@ function rerender(ui: React.ReactElement) {
   act(() => {
     root?.render(ui);
   });
+}
+
+/**
+ * The row's own stylesheet on the page, for what only CSS decides. jsdom gets
+ * no module class, so each class is read as the data attribute its element
+ * carries (`.note` as `[data-field-note]`). Vitest's root is `apps/web`.
+ */
+function withFieldRowStyles(check: () => void) {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(resolve(process.cwd(), 'src/components/ui/fieldRows/FieldRow.module.css'), 'utf8')
+    .replace(/\.([a-z]+)\b/g, '[data-field-$1]');
+  document.head.append(style);
+  try {
+    check();
+  } finally {
+    style.remove();
+  }
 }
 
 describe('ToggleRow', () => {
@@ -143,6 +163,35 @@ describe('ToggleRow', () => {
     expect(row.hasAttribute('data-noted')).toBe(false);
   });
 
+  it('dims a disabled row but not the reason it cannot be switched, which is what is left to read', () => {
+    withFieldRowStyles(() => {
+      const view = render(<ToggleRow label="Title block" checked={false} disabled note="Needs two rows or more" onChange={() => {}} />);
+      const opacity = (selector: string) => getComputedStyle(view.querySelector(selector)!).opacity;
+      const color = (selector: string) => getComputedStyle(view.querySelector(selector)!).color;
+      expect(opacity('[data-field-label]')).toBe('0.5');
+      expect(opacity('[data-field-note]')).not.toBe('0.5');
+      // In the label's ink, not the quieter one "Overridden" wears.
+      expect(color('[data-field-note]')).toBe(color('[data-field-label]'));
+      // "Overridden" dims with its row, as it always has.
+      rerender(<ToggleRow label="Grid" checked disabled inherited={false} onChange={() => {}} onReset={() => {}} />);
+      expect(view.querySelector('[data-field-note]')?.textContent).toBe('Overridden');
+      expect(opacity('[data-field-note]')).toBe('0.5');
+    });
+  });
+
+  it('says why it cannot be switched on the note’s line, read with the switch', () => {
+    const view = render(<ToggleRow label="Title block" checked={false} disabled note="Needs two rows or more" onChange={() => {}} />);
+    const row = view.querySelector('[data-field-row]')!;
+    const note = view.querySelector('[data-field-note]');
+    expect(note?.textContent).toBe('Needs two rows or more');
+    expect([...row.children].map(part)).toEqual(['label', 'value:toggle', 'note']);
+    expect(view.querySelector('button[role="switch"]')?.getAttribute('aria-describedby')).toBe(note?.id);
+    // Without one, the row has no note's line.
+    rerender(<ToggleRow label="Title block" checked={false} onChange={() => {}} />);
+    expect(view.querySelector('[data-field-note]')).toBeNull();
+    expect(view.querySelector('button[role="switch"]')?.hasAttribute('aria-describedby')).toBe(false);
+  });
+
   it('resets rather than pins when an override is switched back to the value it inherits', () => {
     const onChange = vi.fn();
     const onReset = vi.fn();
@@ -195,6 +244,15 @@ describe('NumberRow', () => {
     act(() => reset?.click());
     expect(onReset).toHaveBeenCalledTimes(1);
   });
+
+  it('explains itself behind a help mark, as the other rows do', () => {
+    const view = render(
+      <TooltipProvider>
+        <NumberRow label="Steps on page 1" help="Its own count." value={9} onCommit={() => {}} />
+      </TooltipProvider>
+    );
+    expect(view.querySelector('[data-field-help]')?.getAttribute('aria-label')).toBe('Its own count.');
+  });
 });
 
 describe('SelectRow and SegmentedRow', () => {
@@ -242,6 +300,18 @@ describe('SelectRow and SegmentedRow', () => {
     const buttons = view.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Align"] button');
     act(() => buttons[1]?.click());
     expect(onChange).toHaveBeenCalledWith('right');
+  });
+  it('step in under the row they qualify, a select as the other rows do', () => {
+    const view = render(
+      <>
+        <SelectRow label="Model" value="auto" options={[{ id: 'auto', label: 'Auto' }]} onChange={() => {}} />
+        <SelectRow label="Crease pattern" nested value="auto" options={[{ id: 'auto', label: 'Auto' }]} onChange={() => {}} />
+      </>
+    );
+    const nestedOf = (label: string) =>
+      view.querySelector(`button[aria-label="${label}"]`)!.closest('[data-field-row]')!.hasAttribute('data-nested');
+    expect(nestedOf('Model')).toBe(false);
+    expect(nestedOf('Crease pattern')).toBe(true);
   });
 });
 

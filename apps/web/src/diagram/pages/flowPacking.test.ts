@@ -254,7 +254,8 @@ function layoutPage(items: ProtoStep[], best: { k: number; plan: ProtoPlan }, op
     const sum = seq.reduce((a, it) => a + it.bx.w + it.need, 0);
     const space = (avail - sum) / seq.length;
     const lefts: number[] = [];
-    let cursor = space / 2;
+    // Decided in the port, not the prototype (Zach, 2026-10-15): a page's first band starts at the area's left edge.
+    let cursor = b === 0 ? 0 : space / 2;
     for (const it of seq) {
       cursor += it.need;
       lefts.push(cursor);
@@ -545,6 +546,67 @@ describe('packFlowPage: placement', () => {
     expect(turns).toBeGreaterThan(0);
   });
 
+  it('starts a page’s first band at the area’s left edge, the spare width shared between its steps and after the last (Zach, 2026-10-15)', () => {
+    const crane = craneSteps(setter);
+    const turning = (id: string) => crane.find((step) => step.id === id)?.turnsBefore ?? false;
+    const pagesOf = [
+      ...packCrane(7),
+      ...packCrane(9),
+      ...packCrane(13),
+      // A first page alone on the right, which leaves over a page turn; a right-hand page read up from its spine.
+      pack(alike(9)),
+      pack(alike(9), { up: true }),
+      pack(alike(5), { handsOver: true }),
+    ];
+    let pages = 0;
+    for (const page of pagesOf) {
+      const first = bandSteps(page)[0]!;
+      // Every page kind starts on its left: a page read up starts at its foot, from its spine.
+      expect(first[0]!.box.x).toBeCloseTo(area.x, 9);
+      // A short last page's stand-ins share the band out too, unseen: its own steps are spaced as a full page's.
+      if (page.summary.standIns > 0) continue;
+      // What a step in the bend after the band takes at its right.
+      const seat = page.steps.find((step) => step.bend && step.band === 0);
+      const right = area.x + area.w - (seat ? seat.box.w + STEP_GAP_MM : 0);
+      const last = first.at(-1)!;
+      const share = right - (last.box.x + last.box.w);
+      first.slice(1).forEach((step, j) => {
+        const before = first[j]!;
+        const gutter = turning(step.id) ? PACKED_TURN_GUTTER_MM : STEP_GAP_MM;
+        expect(step.box.x - (before.box.x + before.box.w)).toBeCloseTo(gutter + share, 9);
+      });
+      pages += 1;
+    }
+    expect(pages).toBeGreaterThan(10);
+  });
+
+  it('sets a first step in as far as its picture, printing wider than its box, needs to start at the area’s left edge', () => {
+    // A size pin no plan holds: the step is packed as any other, its picture drawn at its pin, 30 mm wider, centred on its box.
+    const steps = alike(5);
+    const plain = pack(steps);
+    const wide = pack(steps.map((step, index) => (index === 0 ? { ...step, drawnWidth: step.size.width * plain.k + 30 } : step)));
+    const first = (page: FlowPagePacking) => bandSteps(page)[0]!;
+    // The plan, the scale and every band after the first as they were.
+    expect(wide.k).toBe(plain.k);
+    expect(wide.plan).toEqual(plain.plan);
+    expect(wide.steps.filter((step) => step.band > 0)).toEqual(plain.steps.filter((step) => step.band > 0));
+    // Its picture as it prints starts at the area's left edge: the box set in by half what the picture is wider.
+    const box = first(wide)[0]!.box;
+    const drawn = plain.steps[0]!.picture.w + 30;
+    expect(box.x).toBeGreaterThan(area.x);
+    expect(box.x + (box.w - drawn) / 2).toBeCloseTo(area.x, 9);
+    // The rest of the spare is shared between the band's steps and after its last, so the band ends no further on.
+    const end = (page: FlowPagePacking) => first(page).at(-1)!.box;
+    const spareAfter = (page: FlowPagePacking) => area.x + area.w - (end(page).x + end(page).w);
+    expect(spareAfter(wide)).toBeCloseTo(spareAfter(plain) - (box.x - area.x) / first(plain).length, 9);
+    expect(spareAfter(wide)).toBeGreaterThan(0);
+    // A picture no wider than its box, or past it by more than the band has spare, is held to what there is.
+    expect(first(pack(steps.map((step, index) => (index === 0 ? { ...step, drawnWidth: 1 } : step))))[0]!.box.x).toBe(area.x);
+    const huge = pack(steps.map((step, index) => (index === 0 ? { ...step, drawnWidth: 10_000 } : step)));
+    const band = first(huge);
+    expect(band.at(-1)!.box.x + band.at(-1)!.box.w).toBeLessThanOrEqual(area.x + area.w + 1e-9);
+  });
+
   it('turns every other band back, and stacks the bands from the foot on a page read up', () => {
     const down = pack(alike(9));
     const up = pack(alike(9), { up: true });
@@ -666,11 +728,15 @@ describe('packFlowPage: scale', () => {
   });
 
   it('holds a page’s scale to the page before’s, as steadily as asked', () => {
-    expect(pack(tiny, { kPrev: 0.5 }).k).toBeCloseTo(0.5 * (1 + 0.6 * (1 - 0.85)), 12);
+    // 0.85, every page saved so far: ×1.09 past the page before.
+    const saved = { flowSteadiness: 0.85 };
+    expect(pack(tiny, { kPrev: 0.5, settings: saved }).k).toBeCloseTo(0.5 * (1 + 0.6 * (1 - 0.85)), 12);
     expect(pack(tiny, { kPrev: 0.5, settings: { flowSteadiness: 1 } }).k).toBe(0.5);
     expect(pack(tiny, { kPrev: 0.5, settings: { flowSteadiness: 0 } }).k).toBeCloseTo(0.8, 12);
     expect(pack(tiny, { kPrev: 1.2, settings: { flowSteadiness: 0 } }).k).toBe(PAGE_SCALE.max);
-    expect(pack(tiny, { kPrev: 0.5 }).summary.cap).toBeCloseTo(0.545, 12);
+    expect(pack(tiny, { kPrev: 0.5, settings: saved }).summary.cap).toBeCloseTo(0.545, 12);
+    // A new diagram's 0.5 (Zach, 2026-10-15): ×1.3.
+    expect(pack(tiny, { kPrev: 0.5 }).k).toBeCloseTo(0.65, 12);
   });
 
   it('never caps a scale under the least the search starts from', () => {

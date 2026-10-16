@@ -244,6 +244,12 @@ describe('an enlarged step’s marks on a page (Zach, 2026-10-07)', () => {
   });
 });
 
+/**
+ * A new diagram's title block before Zach's header made it shorter (2026-10-15): the flow rows below were laid out
+ * under it, and a new diagram's block, at 0.23, packs them otherwise.
+ */
+const BLOCK_OF_0_27 = { enabled: true, heightShare: 0.27 };
+
 /** A diagram of an area on step 1 and the step enlarged from it beside it, on a flow row read left to right. */
 function areaThenEnlarged(area = circleArea('area-1', [0.5, 0.4], 0.15)): DiagramDocument {
   return insertSteps(
@@ -312,9 +318,9 @@ describe('the enlarge arrow on a page', () => {
     const pages = preparedPages(turned, FIXTURE_FONTS, subsetter);
     expect(pages.layout.pages[0]!.zoomArrows[0]!.liftable).toBe(false);
     expect(pages.zoomArrows(0)).toEqual(pages.layout.pages[0]!.zoomArrows);
-    // Two to a row: the second row reads right to left.
+    // Two to a row: the second row reads right to left — under a title block of 0.27, as these rows were laid out.
     const rows = insertSteps(
-      { ...areaThenEnlarged(), page: { ...document.page, layout: 'flow', stepsPerPage: 6 } },
+      { ...areaThenEnlarged(), page: { ...document.page, layout: 'flow', stepsPerPage: 6, titleBlock: BLOCK_OF_0_27 } },
       [cpStep('step-a'), cpStep('step-b')],
       0
     );
@@ -328,9 +334,9 @@ describe('the enlarge arrow on a page', () => {
   });
 
   it('prints across a flow row’s end aimed at the enlarged step, as the layout aims it', () => {
-    // The area's step ends the first row; the enlarged step starts the second, under it.
+    // The area's step ends the first row; the enlarged step starts the second, under it (under a block of 0.27).
     const document = insertSteps(
-      { ...areaThenEnlarged(), page: { ...createDiagram().page, layout: 'flow', stepsPerPage: 6 } },
+      { ...areaThenEnlarged(), page: { ...createDiagram().page, layout: 'flow', stepsPerPage: 6, titleBlock: BLOCK_OF_0_27 } },
       [cpStep('step-a')],
       0
     );

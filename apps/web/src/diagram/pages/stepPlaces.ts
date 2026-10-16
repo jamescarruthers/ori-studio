@@ -6,25 +6,29 @@
  * 1A) a step's frame offset is kept while its cell is the same, and cleared
  * when its cell changes — whatever changed it. A step's cell is its place
  * among its page's steps, on its page, on a page of a given shape, its
- * columns × rows ({@link sameCell}). A page is the same page while it keeps
+ * columns × rows and the rows the first page's title block takes
+ * ({@link sameCell}), so the block turned on or off moves every cell on the
+ * first page (`diagram-title-block.md`). A page is the same page while it keeps
  * its number, or the step it starts with: a step inserted earlier can add a
  * page and renumber every later one while a page break keeps their steps
  * exactly where they were, and a reorder can change the step a page starts
  * with while every other step on it stays put. The paper, margins and
  * anything after the step leave its cell as it was.
  *
- * On a **flow** page (Zach, 2026-10-13; `diagram-document-evolution.md`, part
- * 2) the offset is kept across any re-pack while the step stays on its page
- * and in its band, and cleared only when its band or its page changes. A page
- * is packed for its structure and then held
- * (`implementation-plans/diagram-flow-packing.md`, Decisions 1 and 6): an edit
- * of its structure (`pageSignature.ts`), Re-pack Page, or an arrangement
- * stored for another structure packs it afresh, and gives each of its steps a
- * new home. An edit clears here, in its own undo step, the offsets of the
- * steps it took off their page ({@link staysOnFlowPage}); the band each step
- * lands in is known only once the layout packs the page, so the layout draws
- * one whose band changed at home, and the store clears its offset as it
- * adopts the packing (`repackedFrames.ts`, `adoptPacking`).
+ * On a **flow** page (Zach, 2026-10-15, replacing his rule of 2026-10-13;
+ * `diagram-document-evolution.md`, part 2) the offset is kept across any
+ * re-pack while the step keeps its place — its page, its band and its place
+ * along the band — and cleared when any of them changes. A page is packed for
+ * its structure and then held (`implementation-plans/diagram-flow-packing.md`,
+ * Decisions 1 and 6): an edit of its structure (`pageSignature.ts`), Re-pack
+ * Page, or an arrangement stored for another structure packs it afresh, and
+ * gives each of its steps a new home. An edit clears here, in its own undo
+ * step, the offsets of the steps it took off their page
+ * ({@link staysOnFlowPage}) — a page whose rows now stack from its other end
+ * included; where each step lands on its page is known only once the layout
+ * packs the page, so the layout draws one whose place changed at home, and
+ * the store clears its offset as it adopts the packing (`repackedFrames.ts`,
+ * `adoptPacking`).
  *
  * Either way the offset is kept in the page's reading terms, along its row
  * and across its rows, and follows a page that turns. Part offsets, size pins
@@ -42,6 +46,7 @@ import {
   type DiagramPageLayout,
   type DiagramStep,
 } from '../document/diagramDocument';
+import { flowPagePlan } from './flowLane';
 import { paginate, type PlannedPage } from './pagePlan';
 import { pageSignatures, type SignedStep } from './pageSignature';
 import { placedIn } from './repackedFrames';
@@ -73,14 +78,24 @@ export interface CellSlots {
    * in while it waits to be packed again; none on a grid.
    */
   stored: readonly (DiagramPageArrangement | undefined)[];
+  /**
+   * In the flow, whether each page's rows stack from its foot, by its index:
+   * a right page the lane comes into at its spine (`FlowPagePlan.up`). None
+   * on a grid.
+   */
+  up: readonly boolean[];
 }
 
 /**
  * What cuts a page into cells: in the flow, the number of steps it is laid
- * out for and its rows; on a grid, its columns and rows.
+ * out for and its rows; on a grid, its columns and rows, and on the first
+ * page the rows the title block takes above its cells, which move every
+ * cell there.
  */
 export function pageShape(page: PlannedPage, layout: DiagramPageLayout): string {
-  return layout === 'flow' ? `${page.layoutCount}/${page.rows}` : `${page.columns}x${page.rows}`;
+  if (layout === 'flow') return `${page.layoutCount}/${page.rows}`;
+  const under = page.titleBlockRows;
+  return under > 0 ? `${page.columns}x${page.rows}-${under}` : `${page.columns}x${page.rows}`;
 }
 
 /**
@@ -137,8 +152,11 @@ export function cellSlots(document: DiagramDocument): CellSlots {
     slots,
     pages,
     shapes: planned.map((plan) => pageShape(plan, layout)),
-    signatures: flow ? pageSignatures({ steps, pages: planned, setup: document.page, title: document.title }) : [],
+    signatures: flow
+      ? pageSignatures({ steps, pages: planned, setup: document.page, title: document.title, titleBlockRoomMm: document.titleBlockContent?.room })
+      : [],
     stored: flow ? pages.map((ids) => (ids[0] === undefined ? undefined : document.pageArrangements?.[ids[0]])) : [],
+    up: flow ? planned.map((_, page) => flowPagePlan(page, planned.length, document.page.firstPageSide, 1).up) : [],
   };
 }
 
@@ -163,14 +181,26 @@ export function sameCell(was: CellSlots, now: CellSlots, stepId: string): boolea
 
 /**
  * Whether a flow step stays on its page through an edit, `was` before it and
- * `now` after, so its frame moved by hand keeps its offset, its band left for
- * the layout to judge once the page is packed (`repackedFrames.ts`). It does
+ * `now` after, so its frame moved by hand keeps its offset, its place on the
+ * page left for the layout to judge once the page is packed
+ * (`repackedFrames.ts`). It does
  * on the page whose arrangement — held, stale or let go, as the edit leaves
  * them, each followed to its page (`followPageArrangements`) — placed it;
  * and, where no arrangement stored before the edit (`earlier`) placed it, on
  * the page of the same number or that starts with the same step, as a grid
  * page is the same page. Not a step missing from either, nor one placed only
  * by another page's arrangement: it changed page.
+ *
+ * Nor one whose page's rows now stack from its other end (`CellSlots.up`): a
+ * page renumbered by one, or every page after the first when the first
+ * page's side changes, falls on the other side of its spread, and a right
+ * page stacks its rows from its foot (`flowLane.ts`). Each of its rows is
+ * then where another was, so every step on it is in a new place, though its
+ * band and its place along it read the same — and its offset, whose `across`
+ * is always down the page, was made against the neighbours on the other side
+ * (Zach's rule of 2026-10-15, as its review read "its page";
+ * `diagram-document-evolution.md`, part 2). A page renumbered by two keeps its
+ * side, and is its own page still.
  */
 export function staysOnFlowPage(
   was: CellSlots,
@@ -181,6 +211,7 @@ export function staysOnFlowPage(
   const before = was.slots.get(stepId);
   const after = now.slots.get(stepId);
   if (!before || !after || was.layout !== 'flow' || now.layout !== 'flow') return false;
+  if (was.up[before.page] !== now.up[after.page]) return false;
   const own = now.stored[after.page];
   if (own && Object.hasOwn(own.steps, stepId)) return true;
   return !placedIn(earlier, stepId) && samePage(before, after);
@@ -230,9 +261,10 @@ export function framesSentHome(
  * `after`, an edit of `before`, with every frame moved by hand sent home
  * where its step is a new one, with no place to keep, or where the edit
  * moved it: on a grid, out of the cell it was in ({@link sameCell}); in the
- * flow, off its page ({@link staysOnFlowPage}) — its band is the layout's to
- * judge once the page is packed. `after` comes with its arrangements as the
- * edit leaves them, each followed to its page (`followPageArrangements`).
+ * flow, off its page ({@link staysOnFlowPage}) — its place on the page is the
+ * layout's to judge once the page is packed. `after` comes with its
+ * arrangements as the edit leaves them, each followed to its page
+ * (`followPageArrangements`).
  * How many were sent home; the same document when none is, and at once when
  * no step has its frame moved ({@link framesSentHome}).
  */

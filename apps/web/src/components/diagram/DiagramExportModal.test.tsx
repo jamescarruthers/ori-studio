@@ -6,6 +6,7 @@ import {
   createDiagram,
   createStep,
   insertSteps,
+  PAGE_SETTINGS,
   type DiagramDocument,
   type DiagramStep,
   type KnownDiagramAnnotation,
@@ -173,7 +174,9 @@ describe('DiagramExportDialog', () => {
   });
 
   it('writes the PDF, saves it under the title, remembers how, and says so', async () => {
-    await open();
+    // No title block: the next case says when one is written.
+    const document = diagram();
+    await open({ ...document, page: { ...document.page, titleBlock: PAGE_SETTINGS.titleBlock.legacy } });
     await click(exportButton());
     expect(writePdf).toHaveBeenCalledOnce();
     const [pages, fonts, options] = writePdf.mock.calls[0]!;
@@ -187,6 +190,7 @@ describe('DiagramExportDialog', () => {
     expect(track).toHaveBeenCalledWith('diagram exported', {
       format: 'pdf',
       preset: 'home',
+      title_block: 'hidden',
       file_count_bucket: '<=1',
       step_count_bucket: '<=5',
       empty_step_bucket: '<=1',
@@ -194,6 +198,13 @@ describe('DiagramExportDialog', () => {
       placed_step_bucket: '<=0',
       clash_bucket: '<=0',
     });
+  });
+
+  it('says the pages it writes carry the title block, where the first page has one', async () => {
+    const document = diagram();
+    await open({ ...document, page: { ...document.page, titleBlock: { enabled: true, heightShare: 0.27 } } });
+    await click(exportButton());
+    expect(track).toHaveBeenCalledWith('diagram exported', expect.objectContaining({ format: 'pdf', title_block: 'shown' }));
   });
 
   it('sends a print shop its bleed', async () => {
@@ -223,16 +234,18 @@ describe('DiagramExportDialog', () => {
       'diagram exported',
       expect.objectContaining({ format: 'zip', file_type: 'svg', resolution: 'none', canvas: 'same', number: 'shown' })
     );
+    // Step files carry no title block, so they say nothing of one.
+    expect(track.mock.calls.find(([event]) => event === 'diagram exported')![1]).not.toHaveProperty('title_block');
   });
 
   it('lays the pages out as spreads on one SVG: a spread in the preview, the sheet in the caption', async () => {
-    // Twelve steps with pictures: two pages, which face each other from a left first page.
+    // Twelve steps with pictures and no title block: two pages, which face each other from a left first page.
     const document = insertSteps(
       createDiagram({ title: 'Crane' }),
       Array.from({ length: 12 }, (_, index) => cpStep(`step-${index}`)),
       0
     );
-    await open(document);
+    await open({ ...document, page: { ...document.page, titleBlock: PAGE_SETTINGS.titleBlock.legacy } });
     await click(radio('SVG'));
     expect(host.textContent).toContain('Every page on one sheet, as spreads.');
     expect(host.textContent).toContain('First page: Left');
@@ -254,6 +267,7 @@ describe('DiagramExportDialog', () => {
     expect(toastSuccess).toHaveBeenCalledWith('Exported Crane.svg');
     expect(track).toHaveBeenCalledWith('diagram exported', {
       format: 'svg',
+      title_block: 'hidden',
       file_count_bucket: '<=2',
       step_count_bucket: '<=20',
       empty_step_bucket: '<=0',
@@ -282,7 +296,7 @@ describe('DiagramExportDialog', () => {
   });
 
   it('says which enlarged step prints on the page after its area, and that step files leave its arrow out (Revision 2)', async () => {
-    // Nine steps to a page: step 9 holds the area, step 10 is enlarged from it on page 2.
+    // Nine steps to a page, with no title block: step 9 holds the area, step 10 is enlarged from it on page 2.
     const area: KnownDiagramAnnotation = { id: 'area-1', kind: 'zoom', from: [0.5, 0.4], to: [0.5, 0.4], radius: 0.2 };
     const steps = Array.from({ length: 10 }, (_, index): DiagramStep => {
       const step = cpStep(`step-${index}`);
@@ -290,13 +304,15 @@ describe('DiagramExportDialog', () => {
       if (index === 9) return { ...step, zoom: { from: 'area-1', shape: 'circle', frame: { centre: [0.5, 0.4], radius: 0.2 } } };
       return step;
     });
-    await open(insertSteps(createDiagram({ title: 'Crane' }), steps, 0));
+    const made = insertSteps(createDiagram({ title: 'Crane' }), steps, 0);
+    const document = { ...made, page: { ...made.page, titleBlock: PAGE_SETTINGS.titleBlock.legacy } };
+    await open(document);
     expect(notice()).toContain(
       'Step 10 is on the page after the area it enlarges, on step 9. Start a New Page Here on step 9 keeps them together.'
     );
     await click(exportButton());
     expect(track).toHaveBeenCalledWith('diagram exported', expect.objectContaining({ format: 'pdf', enlarged_step_bucket: '<=1' }));
-    await open(insertSteps(createDiagram({ title: 'Crane' }), steps, 0));
+    await open(document);
     await click(radio('Step files (ZIP)'));
     expect(notice()).toContain('Enlarge arrows print only on the pages; the step files leave them out.');
     expect(notice()).not.toContain('page after');

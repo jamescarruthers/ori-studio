@@ -1147,8 +1147,11 @@
       "pageSteps": "Steps on page {{number}}",
       "pageStepsDefault": "Default",
       "pageStepsHolds": "Keeps later pages in place",
+      "pageStepsTitleBlock": "The title block takes room on this page, so it holds {{number}} by default.",
+      "pageStepsTitleBlockOwn": "Turning the title block off adds {{number}} to this count; later pages keep theirs and shift.",
       "pageStepsUseDefault": "Use default",
       "paper": "Paper",
+      "path": "Path",
       "pathColor": "Path color",
       "pathWidthMm": "Path width (mm)",
       "portrait": "Portrait",
@@ -1167,8 +1170,44 @@
       "style": "Style",
       "styleHint": "Ink and pens change on every step at once. A 3D step takes a new light when it is refreshed.",
       "styleSection": "Style",
-      "title": "Title",
-      "titleHelp": "The diagram’s title, in a tab at the top of every page."
+      "title": "Title tab",
+      "titleBlock": {
+        "addCredit": "Add Credit",
+        "addStepCount": "Add Step Count",
+        "auto": "Auto (step {{number}})",
+        "autoNoneLinked": "Auto (none linked)",
+        "autoNoPicture": "Auto (no pictures)",
+        "bandColor": "Band color",
+        "bandColorHelp": "The band behind the title. It follows the paper’s color until you pick one.",
+        "creditLabel": "Label of credit {{number}}",
+        "creditLabelPlaceholder": "Label",
+        "credits": "Credits",
+        "creditsHelp": "A row under the title: each credit prints its label over its value. A value can be the step count, kept up to date.",
+        "creditValue": "Value of credit {{number}}",
+        "creditValuePlaceholder": "Value",
+        "description": "Description",
+        "descriptionHelp": "Free text under the credits. It prints only when it has text.",
+        "model": "Model",
+        "modelHelp": "The finished model, drawn from a step’s picture. Auto uses the last step with one.",
+        "modelSize": "Model size",
+        "modelSizeHelp": "The model’s height, as a share of the title block’s.",
+        "needsRows": "Needs two rows or more",
+        "none": "None",
+        "pattern": "Crease pattern",
+        "patternHelp": "Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the step chosen for it or else the last step that links it.",
+        "patternSize": "Crease pattern size",
+        "patternSizeHelp": "The crease pattern’s side, as a share of the title block’s height.",
+        "removeCredit": "Remove credit {{number}}",
+        "show": "Title block",
+        "showHelp": "The title and its credits, the crease pattern and the finished model, at the top of the first page.",
+        "step": "Step {{number}}",
+        "stepCount": "Auto ({{number}})",
+        "subtitle": "Subtitle",
+        "subtitleHelp": "The small line over the title. Clear it to print none.",
+        "typeValue": "Type a value for credit {{number}} instead"
+      },
+      "titleHelp": "The diagram’s title, in a tab at the top of every page.",
+      "titleHelpWithBlock": "The diagram’s title, in a tab at the top of every page. On the first page the title block carries it instead."
     },
     "pages": {
       "caption": "Page {{number}}",
@@ -1183,6 +1222,13 @@
       "step": "Step {{number}}",
       "stepCut": "Step {{number}}, text doesn’t fit",
       "textCut": "Text doesn’t fit",
+      "titleBlock": {
+        "creditsCut": "Some credits don’t fit",
+        "noModel": "No step has a picture yet",
+        "noPattern": "No step is linked to a crease pattern",
+        "stepNoPattern": "Step {{number}} has no crease pattern",
+        "stepNoPicture": "Step {{number}} has no picture yet"
+      },
       "zoomSplitStep": "Step {{step}} is on the page after the area it enlarges, on step {{area}}. Start a New Page Here on step {{area}} keeps them together.",
       "zoomSplitSteps": "Steps {{steps}} are each on the page after the area they enlarge. Start a New Page Here on steps {{areas}} keeps them together."
     },
@@ -1469,6 +1515,17 @@
       "pose": "Pose",
       "positionLabel": "Step position",
       "step": "Step"
+    },
+    "titleBlock": {
+      "default": {
+        "author": "Author",
+        "authorName": "Your name here",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "Recommended paper",
+        "steps": "Steps",
+        "subtitle": "Subtitle",
+        "title": "Add a title"
+      }
     },
     "turns": {
       "actions": "Turn actions",

@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PAGE_SETUP,
   PAGE_SETTINGS,
+  TITLE_BLOCK_ART_SIZE_DEFAULTS,
   snapshotDiagramStyle,
   createDiagram,
+  defaultTitleBlockContent,
+  titleBlockArtSizes,
+  titleBlockStepCount,
   createStep,
   defaultHanStyle,
   duplicateStep,
@@ -21,6 +25,7 @@ import {
   setPageStarts,
   setStepBreakBefore,
   setStepText,
+  setTitleBlockContent,
   stepHasContent,
   insertPictureSteps,
   setStepPicture,
@@ -287,6 +292,14 @@ describe('page setup', () => {
     expect(createDiagram().page.layout).toBe('flow');
   });
 
+  it('gives a new diagram the title block, and a page that does not say it none', () => {
+    // J1b's shorter block (Zach, 2026-10-15); a page that says none reads as every first page before the block.
+    expect(createDiagram().page.titleBlock).toEqual({ enabled: true, heightShare: 0.23 });
+    expect(normalizePageSetup({ layout: 'flow' }).titleBlock).toEqual({ enabled: false, heightShare: 0.27 });
+    // A file saved with the block keeps its share.
+    expect(normalizePageSetup({ layout: 'flow', titleBlock: { enabled: true, heightShare: 0.27 } }).titleBlock.heightShare).toBe(0.27);
+  });
+
   it('takes a new diagram’s page setup from each setting’s default, and an unsaid one from its legacy value', () => {
     const settings = Object.entries(PAGE_SETTINGS);
     expect(createDiagram().page).toEqual(Object.fromEntries(settings.map(([key, values]) => [key, values.default])));
@@ -298,8 +311,14 @@ describe('page setup', () => {
   });
 
   it('reads anything, falling back field by field', () => {
-    // A layout not said is the grid, every diagram's before the flow was a new one's.
-    expect(normalizePageSetup(null)).toEqual({ ...DEFAULT_PAGE_SETUP, layout: 'grid' });
+    // A layout not said is the grid, every diagram's before the flow was a new one's; a title block not said is none;
+    // a steadiness not said is 0.85, every flow page's before a new diagram's was 0.5.
+    expect(normalizePageSetup(null)).toEqual({
+      ...DEFAULT_PAGE_SETUP,
+      layout: 'grid',
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+      flowSteadiness: 0.85,
+    });
     expect(
       normalizePageSetup({
         size: 'letter',
@@ -318,6 +337,138 @@ describe('page setup', () => {
     expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2 }).stepsPerPage).toBe(8);
     expect(normalizePageSetup({ layout: 'flow', columns: 5, rows: 6 }).stepsPerPage).toBe(30);
     expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2, stepsPerPage: 5 }).stepsPerPage).toBe(5);
+  });
+
+  it('sets the title block whole, its share held to its range: the same document where it already is so', () => {
+    const { diagram } = diagramWith(0);
+    expect(PAGE_SETTINGS.titleBlock.legacy).toEqual({ enabled: false, heightShare: 0.27 });
+    const on = setPageSetup(diagram, { titleBlock: { enabled: true, heightShare: 0.27 } });
+    expect(on.page.titleBlock).toEqual({ enabled: true, heightShare: 0.27 });
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.27 } })).toBe(on);
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.3 } }).page.titleBlock.heightShare).toBe(0.3);
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.05 } }).page.titleBlock.heightShare).toBe(0.15);
+    expect(setPageSetup(on, { titleBlock: { enabled: false, heightShare: 0.27 } }).page.titleBlock.enabled).toBe(false);
+  });
+});
+
+describe('the title block’s content', () => {
+  const STEP = { kind: 'step', stepId: 'step-2' } as const;
+  /** A new diagram's words in Japanese. */
+  const JA_WORDS = { subtitle: '折り紙の図', author: '作者', authorName: 'お名前', steps: '工程数', recommendedPaper: '推奨用紙', paperSize: '15 cm × 15 cm' };
+
+  it('sets each part alone, and takes it away: a source by Auto, the subtitle and the note by blanks', () => {
+    const { diagram } = diagramWith(2);
+    const model = setTitleBlockContent(diagram, { model: STEP });
+    expect(model.titleBlockContent).toEqual({ model: STEP });
+    const all = setTitleBlockContent(model, { pattern: { kind: 'none' }, subtitle: '折り紙の図', note: '設計：笠原邦彦\n用紙：15 cm' });
+    expect(all.titleBlockContent).toEqual({ model: STEP, pattern: { kind: 'none' }, subtitle: '折り紙の図', note: '設計：笠原邦彦\n用紙：15 cm' });
+    expect(setTitleBlockContent(all, { note: ' \n ', subtitle: '  ' }).titleBlockContent).toEqual({ model: STEP, pattern: { kind: 'none' } });
+    // Nothing left set: no content at all.
+    const auto = setTitleBlockContent(all, { model: 'auto', pattern: 'auto', subtitle: '', note: '' });
+    expect(auto).not.toHaveProperty('titleBlockContent');
+    expect(auto).toEqual(diagram);
+  });
+
+  it('is the same document where nothing changes', () => {
+    const { diagram } = diagramWith(2);
+    expect(setTitleBlockContent(diagram, {})).toBe(diagram);
+    expect(setTitleBlockContent(diagram, { model: 'auto', note: '', subtitle: '', modelSize: 'default' })).toBe(diagram);
+    expect(setTitleBlockContent(diagram, { credits: { op: 'remove', at: 0 } })).toBe(diagram);
+    const set = setTitleBlockContent(diagram, { model: STEP, note: 'Design: Lang', credits: { op: 'add' }, patternSize: 0.5 });
+    expect(setTitleBlockContent(set, { model: { kind: 'step', stepId: 'step-2' } })).toBe(set);
+    expect(setTitleBlockContent(set, { note: 'Design: Lang', patternSize: 0.5 })).toBe(set);
+    expect(setTitleBlockContent(set, { credits: { op: 'set', at: 0, label: '', value: '' } })).toBe(set);
+    expect(setTitleBlockContent(set, { credits: { op: 'set', at: 1, label: 'Author' } })).toBe(set);
+    expect(setTitleBlockContent(set, { model: { kind: 'step', stepId: 'step-1' } })).not.toBe(set);
+  });
+
+  it('keeps the subtitle, a label and a text value on one line, and the note’s lines as typed', () => {
+    const { diagram } = diagramWith(0);
+    const set = setTitleBlockContent(
+      setTitleBlockContent(diagram, { subtitle: 'Origami\ndiagram', note: 'Design: Lang\r\nPaper: 15 cm' }),
+      { credits: { op: 'add', credit: { label: 'Recommended\nsize', value: '60 cm\n× 60 cm' } } }
+    );
+    expect(set.titleBlockContent).toEqual({
+      subtitle: 'Origami diagram',
+      credits: [{ label: 'Recommended size', value: '60 cm × 60 cm' }],
+      note: 'Design: Lang\r\nPaper: 15 cm',
+    });
+  });
+
+  it('edits the credits one at a time: added at the end or at a place, a label or value set, removed', () => {
+    const { diagram } = diagramWith(0);
+    const credits = (document: DiagramDocument) => document.titleBlockContent?.credits;
+    const author = setTitleBlockContent(diagram, { credits: { op: 'add', credit: { label: 'Author', value: '' } } });
+    expect(credits(author)).toEqual([{ label: 'Author', value: '' }]);
+    // A credit added with nothing said is empty, for the author to fill in.
+    const two = setTitleBlockContent(author, { credits: { op: 'add' } });
+    expect(credits(two)).toEqual([{ label: 'Author', value: '' }, { label: '', value: '' }]);
+    const named = setTitleBlockContent(two, { credits: { op: 'set', at: 1, label: 'Steps', value: { kind: 'step-count' } } });
+    expect(credits(named)).toEqual([{ label: 'Author', value: '' }, { label: 'Steps', value: { kind: 'step-count' } }]);
+    const first = setTitleBlockContent(named, { credits: { op: 'add', credit: { label: 'Paper', value: '15 cm' }, at: 0 } });
+    expect(credits(first)!.map((credit) => credit.label)).toEqual(['Paper', 'Author', 'Steps']);
+    // The live count turned off is text again; a value set leaves the label as it was.
+    const written = setTitleBlockContent(first, { credits: { op: 'set', at: 2, value: '28' } });
+    expect(credits(written)![2]).toEqual({ label: 'Steps', value: '28' });
+    expect(credits(setTitleBlockContent(written, { credits: { op: 'set', at: 1, value: 'Lang' } }))![1]).toEqual({ label: 'Author', value: 'Lang' });
+    // A place past the list changes nothing; an add past it goes at the end.
+    expect(setTitleBlockContent(written, { credits: { op: 'set', at: 3, label: 'X' } })).toBe(written);
+    expect(setTitleBlockContent(written, { credits: { op: 'remove', at: -1 } })).toBe(written);
+    expect(credits(setTitleBlockContent(written, { credits: { op: 'add', at: 9 } }))!.at(-1)).toEqual({ label: '', value: '' });
+    // The last one removed: none at all.
+    const removed = [0, 0, 0].reduce((document, at) => setTitleBlockContent(document, { credits: { op: 'remove', at } }), written);
+    expect(removed).not.toHaveProperty('titleBlockContent');
+  });
+
+  it('holds a size to its range, and takes it away at its default', () => {
+    const { diagram } = diagramWith(0);
+    expect(TITLE_BLOCK_ART_SIZE_DEFAULTS).toEqual({ modelSize: 0.59, patternSize: 0.79 });
+    expect(titleBlockArtSizes(diagram.titleBlockContent)).toEqual({ modelSize: 0.59, patternSize: 0.79 });
+    const set = setTitleBlockContent(diagram, { modelSize: 0.45, patternSize: 2 });
+    expect(set.titleBlockContent).toEqual({ modelSize: 0.45, patternSize: 1 });
+    expect(titleBlockArtSizes(set.titleBlockContent)).toEqual({ modelSize: 0.45, patternSize: 1 });
+    expect(setTitleBlockContent(set, { modelSize: 0.1 }).titleBlockContent?.modelSize).toBe(0.3);
+    expect(setTitleBlockContent(set, { modelSize: Number.NaN })).toBe(set);
+    expect(setTitleBlockContent(set, { modelSize: 0.59, patternSize: 'default' })).toEqual(diagram);
+  });
+
+  it('starts a new diagram with the words it is given — Author, Steps and Recommended paper, each with a value — and none where it is given none', () => {
+    expect(createDiagram()).not.toHaveProperty('titleBlockContent');
+    const content = defaultTitleBlockContent(JA_WORDS);
+    // Zach, 2026-10-15: no credit starts empty, and this order.
+    expect(content).toEqual({
+      subtitle: '折り紙の図',
+      credits: [
+        { label: '作者', value: 'お名前' },
+        { label: '工程数', value: { kind: 'step-count' } },
+        { label: '推奨用紙', value: '15 cm × 15 cm' },
+      ],
+    });
+    expect(createDiagram({ titleBlockContent: content }).titleBlockContent).toEqual(content);
+    expect(createDiagram({ titleBlockContent: {} })).not.toHaveProperty('titleBlockContent');
+  });
+
+  it('takes a step source without its id as Auto, as a file holding one reads', () => {
+    const { diagram } = diagramWith(2);
+    expect(setTitleBlockContent(diagram, { model: { kind: 'step', stepId: '' } })).toBe(diagram);
+    const chosen = setTitleBlockContent(diagram, { model: STEP, pattern: STEP });
+    expect(setTitleBlockContent(chosen, { pattern: { kind: 'step', stepId: '' } }).titleBlockContent).toEqual({ model: STEP });
+  });
+
+  it('keeps only a source’s own fields, and cleans its text as every string typed', () => {
+    const { diagram } = diagramWith(2);
+    const set = setTitleBlockContent(diagram, {
+      model: { ...STEP, pose: 'front' } as never,
+      subtitle: 'Origami\u000b diagram',
+      note: 'Design\u0000: Lang',
+      credits: { op: 'add', credit: { label: 'Au\u0001thor', value: 'La\u0000ng' } },
+    });
+    expect(set.titleBlockContent).toEqual({
+      model: STEP,
+      subtitle: 'Origami diagram',
+      credits: [{ label: 'Author', value: 'Lang' }],
+      note: 'Design: Lang',
+    });
   });
 });
 
@@ -972,6 +1123,11 @@ describe('turns between steps (D22)', () => {
     expect(next.steps.map((entry) => entry.id)).toEqual([s1, 'turn-5', stepIds(diagram)[1], s3, 'turn-6']);
     return { diagram: next, ids };
   }
+
+  it('gives the title block’s live step count as the last step’s number, the turns not counted', () => {
+    expect(titleBlockStepCount(turning().diagram)).toBe(3);
+    expect(titleBlockStepCount(diagramWith(0).diagram)).toBe(0);
+  });
 
   it('numbers the steps alone: the steps either side of a turn read 1 and 2', () => {
     const { diagram } = turning();

@@ -103,6 +103,8 @@ describe('a diagram saved with its pages held', () => {
       flowBendSteps: true,
       flowNesting: 0.8,
       flowSteadiness: 0.85,
+      // Saved before there was a title block: its first page has none.
+      titleBlock: { enabled: false, heightShare: 0.27 },
     };
     expect(written).toEqual({ ...frozen, page: { ...frozen.page, ...unsaid } });
     // Read again, it is the same diagram, every page still held.

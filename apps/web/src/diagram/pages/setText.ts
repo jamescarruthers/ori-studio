@@ -5,6 +5,12 @@
  *
  * - The instruction's own line breaks are kept; runs of spaces are one space,
  *   a blank line is an empty line, and the text is set composed (NFC).
+ * - Or, `pre-wrap` (the title block's description), its spaces kept as typed,
+ *   as a text editor's `white-space: pre-wrap` keeps them: a paragraph's
+ *   indent, runs of spaces, every blank line between paragraphs, a tab as
+ *   four spaces; a line after a break starts at the margin. Blank lines at
+ *   either end print nothing. A kept space is room before the next run, never
+ *   a character a renderer could collapse.
  * - Lines break as `wrapGraphemes` breaks them (kinsoku, Korean keep-all).
  * - A text past `maxLines` keeps that many, the last ending in "…", set in the
  *   font of the character before it when that font has one.
@@ -16,6 +22,12 @@ import { graphemesOf, isBreakSpace, wrapGraphemes } from '../../lib/paper/textWr
 import type { SetLine, SetRun, SetText } from './diagramPageLayout';
 
 export const ELLIPSIS = '…';
+
+/** How a text's white space is set: runs of it made one space, or kept as typed (`pre-wrap`). */
+export type TextSpaces = 'collapse' | 'pre-wrap';
+
+/** A tab, in a text whose spaces are kept. */
+const TAB = '    ';
 
 /** How a paragraph's graphemes are set: each one's font, and its advance in mm. */
 export interface SetGraphemes {
@@ -38,8 +50,9 @@ interface Paragraph {
 }
 
 /** Lines of `text`, at most `widthMm` wide and `maxLines` many. */
-export function setTextLines(text: string, widthMm: number, maxLines: number, faces: TextFaces): SetText {
-  const paragraphs = paragraphsOf(text).map((source): Paragraph => {
+export function setTextLines(text: string, widthMm: number, maxLines: number, faces: TextFaces, spaces: TextSpaces = 'collapse'): SetText {
+  const keepSpaces = spaces === 'pre-wrap';
+  const paragraphs = (keepSpaces ? keptParagraphsOf(text) : paragraphsOf(text)).map((source): Paragraph => {
     const graphemes = graphemesOf(source);
     const { fonts, advances } = faces.set(graphemes);
     const prefix = [0];
@@ -51,13 +64,13 @@ export function setTextLines(text: string, widthMm: number, maxLines: number, fa
 
   const all: { paragraph: Paragraph; start: number; end: number }[] = [];
   for (const paragraph of paragraphs) {
-    const { lines } = wrapGraphemes(paragraph.graphemes, { width: widthMm, measure: measureIn(paragraph) });
+    const { lines } = wrapGraphemes(paragraph.graphemes, { width: widthMm, measure: measureIn(paragraph), keepIndent: keepSpaces });
     if (lines.length === 0) all.push({ paragraph, start: 0, end: 0 });
     for (const line of lines) all.push({ paragraph, start: line.start, end: line.end });
   }
   const linesNeeded = all.length;
   if (linesNeeded <= maxLines) {
-    return { lines: all.map(({ paragraph, start, end }) => lineOf(paragraph, start, end, null)), linesNeeded };
+    return { lines: all.map(({ paragraph, start, end }) => lineOf(paragraph, start, end, null, keepSpaces)), linesNeeded };
   }
 
   const kept = all.slice(0, Math.max(0, maxLines));
@@ -76,33 +89,53 @@ export function setTextLines(text: string, widthMm: number, maxLines: number, fa
   let end = last.end;
   while (end > start && measure(start, trimEnd(end)) + ellipsisAfter(trimEnd(end)) > widthMm + 1e-9) end -= 1;
   end = trimEnd(end);
-  const lines = kept.slice(0, -1).map((line) => lineOf(line.paragraph, line.start, line.end, null));
-  lines.push(lineOf(paragraph, start, end, faces));
+  const lines = kept.slice(0, -1).map((line) => lineOf(line.paragraph, line.start, line.end, null, keepSpaces));
+  lines.push(lineOf(paragraph, start, end, faces, keepSpaces));
   return { lines, linesNeeded };
 }
 
-/** One set line; `ellipsis` given, it ends in "…". */
-function lineOf(paragraph: Paragraph, start: number, end: number, ellipsis: TextFaces | null): SetLine {
+/**
+ * One set line; `ellipsis` given, it ends in "…". With `keepSpaces`, a space
+ * that is kept as typed — one of the line's leading spaces, or of a run of two
+ * or more — is room before the next run, not a character in one.
+ */
+function lineOf(paragraph: Paragraph, start: number, end: number, ellipsis: TextFaces | null, keepSpaces = false): SetLine {
+  const { graphemes } = paragraph;
   const runs: SetRun[] = [];
   let x = 0;
+  let room = false;
   for (let index = start; index < end; index += 1) {
     const font = paragraph.fonts[index]!;
     const advance = paragraph.prefix[index + 1]! - paragraph.prefix[index]!;
-    appendRun(runs, font, paragraph.graphemes[index]!, x, advance);
+    if (keepSpaces && isKeptSpace(graphemes, start, index)) {
+      room = true;
+    } else {
+      appendRun(runs, font, graphemes[index]!, x, advance, room);
+      room = false;
+    }
     x += advance;
   }
   if (ellipsis) {
     const before = end > start ? paragraph.fonts[end - 1]! : (paragraph.fonts[start] ?? '');
     const mark = ellipsis.ellipsis(before);
-    appendRun(runs, mark.font, ELLIPSIS, x, mark.advance);
+    appendRun(runs, mark.font, ELLIPSIS, x, mark.advance, room);
     x += mark.advance;
   }
-  return { text: runs.map((run) => run.text).join(''), widthMm: x, runs, ellipsis: ellipsis !== null };
+  const text = graphemes.slice(start, end).join('') + (ellipsis ? ELLIPSIS : '');
+  return { text, widthMm: x, runs, ellipsis: ellipsis !== null };
 }
 
-function appendRun(runs: SetRun[], font: string, text: string, x: number, advance: number): void {
+/** Whether the space at `index` is kept as room: one of its line's leading spaces, or of a run of two or more. */
+function isKeptSpace(graphemes: readonly string[], start: number, index: number): boolean {
+  if (!isBreakSpace(graphemes[index]!)) return false;
+  const beside = (at: number) => at >= start && at < graphemes.length && isBreakSpace(graphemes[at]!);
+  return index === start || beside(index - 1) || beside(index + 1);
+}
+
+/** `text` added to the last run where it is in the same font and follows on (`afterRoom` false), else a run of its own. */
+function appendRun(runs: SetRun[], font: string, text: string, x: number, advance: number, afterRoom = false): void {
   const last = runs.at(-1);
-  if (last && last.font === font) {
+  if (last && last.font === font && !afterRoom) {
     last.text += text;
     last.widthMm += advance;
   } else {
@@ -119,4 +152,19 @@ function paragraphsOf(text: string): string[] {
   const trimmed = text.normalize('NFC').trim();
   if (trimmed === '') return [];
   return trimmed.split(/\r\n|\r|\n/).map((line) => line.replace(/[ \t\f\v]+/g, ' ').trim());
+}
+
+/**
+ * The text's paragraphs with its spaces kept (`pre-wrap`): its own lines as
+ * typed, a tab four spaces, in composed form (NFC); blank lines at either end
+ * left out, every one between kept.
+ */
+function keptParagraphsOf(text: string): string[] {
+  const lines = text.normalize('NFC').replace(/\t/g, TAB).replace(/[\f\v]/g, ' ').split(/\r\n|\r|\n/);
+  const blank = (line: string) => line.trim() === '';
+  let first = 0;
+  let last = lines.length;
+  while (first < last && blank(lines[first]!)) first += 1;
+  while (last > first && blank(lines[last - 1]!)) last -= 1;
+  return lines.slice(first, last);
 }

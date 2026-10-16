@@ -2,7 +2,9 @@ import {
   createDiagram,
   createStep,
   defaultHanStyle,
+  defaultTitleBlockContent,
   duplicateStep,
+  setTitleBlockRoom,
   editStepAnnotations,
   keepStepAnnotations,
   insertPictureSteps,
@@ -17,6 +19,8 @@ import {
   setDiagramTitle,
   setHanStyle,
   setPageSetup,
+  setTitleBlockContent,
+  setTitleBlockShown,
   setStepBreakBefore,
   setReferencesSide,
   setStepPicture,
@@ -39,6 +43,7 @@ import {
   setReferencesWay,
   makeCardMarksEditable,
 } from '../../../diagram/document/diagramDocument';
+import { titleBlockDefaultWords } from '../../../diagram/document/titleBlockWords';
 import i18n from '../../../i18n';
 import { trackDiagramImportedMarkEdited } from '../../../analytics';
 import { annotationEventKind } from '../../../diagram/annotate/annotationEventKind';
@@ -61,6 +66,7 @@ import {
 import { lacksPaperFaces } from '../../../diagram/capture/stepPaperFaces';
 import { resetStepPlace, resetStepPlaces, setStepPlace } from '../../../diagram/document/stepPlace';
 import { adoptPacking, followPageArrangements, repackPages } from '../../../diagram/pages/pageArrangements';
+import { noteTitleBlockEdit } from '../../../diagram/pages/titleBlockEdits';
 import { retainPageCounts, setPageSteps } from '../../../diagram/pages/pageCounts';
 import { flushPlacementNudge } from '../../../diagram/pages/placementGestures';
 import { cellSlots, settlePlaces } from '../../../diagram/pages/stepPlaces';
@@ -80,6 +86,22 @@ import type { DiagramSlice, WorkspaceSliceCreator } from '../types';
  */
 function authorLocale(): string | null {
   return typeof document === 'undefined' ? null : document.documentElement.lang || null;
+}
+
+/**
+ * The diagram a first edit brings into being: its Han style from the author's
+ * language, and its title, "Add a title", and its title block's subtitle and
+ * credits written in the app's (Zach, 2026-10-15), the author's own text from
+ * then on.
+ */
+function newDiagram() {
+  const words = titleBlockWords();
+  return createDiagram({ title: words.title, hanStyle: defaultHanStyle(authorLocale()), titleBlockContent: defaultTitleBlockContent(words) });
+}
+
+/** A title block's first words in the app's language: a new diagram's, and those its toggle writes. */
+function titleBlockWords() {
+  return titleBlockDefaultWords((key, english) => i18n.t(key, english));
 }
 
 /**
@@ -172,7 +194,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     const state = get();
     if (state.diagramReadOnly) return null;
     const before = state.diagram;
-    const base = before ?? createDiagram({ hanStyle: defaultHanStyle(authorLocale()) });
+    const base = before ?? newDiagram();
     const edited = edit(base);
     // An edit that changed nothing records nothing — and does not bring a
     // diagram into being just to leave it empty.
@@ -183,19 +205,22 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     const counted = retainPageCounts(base, edited);
     // Each flow page's arrangement follows its page, in the same undo step
     // (`diagram-flow-packing.md`): one the page no longer holds is kept for
-    // the bands its steps were in until the layout packs the page afresh, and
-    // one no page keeps goes, so the file never carries it.
+    // where its steps were until the layout packs the page afresh, and one no
+    // page keeps goes, so the file never carries it.
     const followed = followPageArrangements(base, counted);
     // A frame moved by hand whose step the edit took out of its cell — in the
     // flow, off its page — goes home, in this edit's undo step (Decision 1A;
-    // a flow step's band is judged as its page's packing is adopted): one
-    // rule, here, whatever the edit was, so no verb can forget it.
+    // a flow step's band and place along it are judged as its page's packing
+    // is adopted, Zach 2026-10-15): one rule, here, whatever the edit was, so
+    // no verb can forget it.
     const { document: settled, settled: count } = settlePlaces(base, followed);
     // An asset nothing refers to any more goes as the edit lands. Each undo
     // snapshot keeps its own assets table, so undo still has the picture a
     // replace took away; and with the current diagram no longer holding it,
     // the history byte cap (`trimDiagramHistory`) sees what only history keeps.
     const next = withReferencedAssets(settled);
+    // Where the edit changed the title block's words, the next layout measures the room they need (Zach, 2026-10-15).
+    noteTitleBlockEdit(before, next);
     if (!extend) openSession = null;
     const history = extend
       ? state.diagramHistory
@@ -562,6 +587,20 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       return true;
     },
 
+    setDiagramTitleBlockShown: (enabled) =>
+      commit(enabled ? 'Show title block' : 'Hide title block', (document) =>
+        setTitleBlockShown(document, enabled, titleBlockWords())
+      ) !== null,
+
+    setDiagramTitleBlockContent: (patch, { loadId, session } = {}) => {
+      if (loadId !== undefined && loadId !== get().diagramLoadId) return false;
+      const { extend, remember } = sessionFor('title-block', session);
+      const next = commit('Change title block', (document) => setTitleBlockContent(document, patch), extend);
+      if (!next) return false;
+      remember();
+      return true;
+    },
+
     setDiagramStepBreakBefore: (stepId, breakBefore) =>
       commit(breakBefore ? 'Start a new page' : 'Continue the page', (document) =>
         setStepBreakBefore(document, stepId, breakBefore)
@@ -781,12 +820,14 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
         return page ? resetStepPlaces(document, new Set(page)) : document;
       }) !== null,
 
-    adoptDiagramPageArrangements: (arrangements, ofDocument) => {
+    adoptDiagramPageArrangements: (arrangements, ofDocument, titleBlockRoom) => {
       const { diagram, diagramReadOnly } = get();
       // Packed from a diagram that has changed since, or one that is shown and never edited: nothing to take in.
       if (diagramReadOnly || diagram === null || diagram !== ofDocument) return false;
-      // A frame moved by hand on a page packed afresh goes home where its step changed band, as the layout drew it.
-      const { document: next, settled } = adoptPacking(diagram, arrangements);
+      // The room the block's words were measured to first: page 1 was packed for the block it grew (Zach, 2026-10-15).
+      const measured = titleBlockRoom === undefined ? diagram : setTitleBlockRoom(diagram, titleBlockRoom);
+      // A frame moved by hand on a page packed afresh goes home where its step changed place, as the layout drew it.
+      const { document: next, settled } = adoptPacking(measured, arrangements);
       if (next === diagram) return false;
       // Not an edit: no undo entry, the history as it was, and the project no dirtier than it was.
       noteAdoptedPacking(next, diagram);

@@ -13,6 +13,7 @@ import {
   createDiagram,
   createStep,
   insertSteps,
+  PAGE_SETTINGS,
   pullReferencesSteps,
   setPageSetup,
   stepById,
@@ -53,7 +54,8 @@ function diagram(style: DiagramStyle, lifted: boolean, layout: 'grid' | 'flow'):
     })
   );
   const document = insertSteps({ ...createDiagram({ title: 'Pulled', newId: () => 'diagram-pulled' }), style }, steps, 0);
-  return setPageSetup(document, { layout });
+  // No title block: the two are compared on pages as packed before it.
+  return setPageSetup(document, { layout, titleBlock: PAGE_SETTINGS.titleBlock.legacy });
 }
 
 describe('a card pulled into an enlarged step, on its page', () => {

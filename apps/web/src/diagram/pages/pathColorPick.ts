@@ -19,40 +19,22 @@
  * Lifetime is one pick: published by its moves, dropped after the store has
  * been written, so no frame shows the colour from before it.
  */
+import { createColorPick } from './colorPick';
 
-let live: string | null = null;
-const listeners = new Set<() => void>();
-
-function notify(): void {
-  for (const listener of listeners) listener();
-}
+/** The path's pick, which `usePathColorPick` writes as it settles. */
+export const pathColorPick = createColorPick();
 
 /** The colour the picker is at, or null when nothing is being picked. */
-export function livePathColor(): string | null {
-  return live;
-}
+export const livePathColor = pathColorPick.live;
 
 /** Subscribe to the live colour changing or going away. For `useSyncExternalStore`. */
-export function subscribePathColorPick(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
+export const subscribePathColorPick = pathColorPick.subscribe;
 
 /** Publish the colour a pick has reached. */
-export function publishPathColorPick(color: string): void {
-  if (color === live) return;
-  live = color;
-  notify();
-}
+export const publishPathColorPick = pathColorPick.publish;
 
 /**
  * Drop the live colour — after the store has been written. A no-op, waking
  * nothing, when there was none.
  */
-export function clearPathColorPick(): void {
-  if (live === null) return;
-  live = null;
-  notify();
-}
+export const clearPathColorPick = pathColorPick.clear;

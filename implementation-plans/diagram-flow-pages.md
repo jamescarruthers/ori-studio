@@ -136,6 +136,19 @@ As built (Phase 1, `diagram/pages/pagePlan.ts` and `pageCounts.ts`):
   changes a page's rows sends its frames home: a page added after a left page
   (it then hands over at its spine, odd rows), the first page's side, or the
   orientation, where they change some page's rows.
+- *Superseded for flow pages, twice.* Since packing, a flow page's frames
+  are judged when the page is packed afresh, not by its cell. Zach's rule of
+  2026-10-13 kept an offset while the step stayed on its page and in its
+  band; his rule of 2026-10-15 replaces it: the offset is kept while the
+  step keeps its **place** — its page, its band and its place along the band
+  as it reads — and goes home when any changes, so Steps on page N, the title
+  block's toggle and a step put in or taken out before it send home the
+  steps they move along. A page that falls on the other side of its spread
+  (renumbered by one, or the first page's side changed) stacks its rows from
+  its other end, so every step on it is in a new place and goes home with
+  the edit; one renumbered by two keeps its side and its offsets.
+  Everything inside a step's box stays. See
+  `diagram-document-evolution.md`, part 2.
 
 As built (the second review, 2026-10-11; the layout itself unchanged):
 
@@ -164,6 +177,22 @@ As built (the second review, 2026-10-11; the layout itself unchanged):
   counted page. A count set also gives every automatic page between its page
   and a later counted page its present size, so the boundary it moves adds or
   drops no page in front of that one.
+
+Changed by Zach, 2026-10-15 ("shift everything later";
+`diagram-title-block.md`, "Zach's answers of 2026-10-15"): a count set no
+longer moves the boundary with the next page alone. Every later page keeps
+its own count and shifts, its start and count moving together; a page is
+added at the end where the steps no longer fit, and one emptied is gone. A
+page break stops the shift: the page in front of it takes up the
+difference, ending at the break as before, or, where the page set is itself
+in front of the break, the break's page does, as above (L4 unchanged). L3's
+limit now guards that page. The title block's toggle moves page 1's count,
+its own included, by the steps the block takes, and the later pages shift
+the same way. In the review the same day: the toggle never moves a break
+(the steps page 1 gives up in front of one refill a page there), and a page
+a newer build's step starts by its own count stops the shift as a break
+does, under Set Steps on Page too (`diagram-title-block.md`, "Review fixes
+(round 2, 2026-10-15)").
 
 ### Layout (`diagramPageLayout.ts`, flow branch)
 

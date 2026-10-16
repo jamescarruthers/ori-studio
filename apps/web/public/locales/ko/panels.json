@@ -1110,8 +1110,11 @@
       "pageSteps": "{{number}}페이지 단계 수",
       "pageStepsDefault": "기본값",
       "pageStepsHolds": "다음 페이지 위치를 유지합니다",
+      "pageStepsTitleBlock": "제목 영역이 이 페이지의 공간을 차지하므로 기본적으로 {{number}}단계가 들어갑니다.",
+      "pageStepsTitleBlockOwn": "제목 영역을 끄면 이 단계 수에 {{number}}이(가) 더해집니다. 다음 페이지는 각자의 단계 수를 유지한 채 밀립니다.",
       "pageStepsUseDefault": "기본값 사용",
       "paper": "용지",
+      "path": "경로",
       "pathColor": "경로 색상",
       "pathWidthMm": "경로 너비(mm)",
       "portrait": "세로",
@@ -1130,8 +1133,44 @@
       "style": "스타일",
       "styleHint": "잉크와 펜은 모든 단계에 한꺼번에 바뀝니다. 3D 단계는 새로 고치면 새 조명을 받습니다.",
       "styleSection": "스타일",
-      "title": "제목",
-      "titleHelp": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다."
+      "title": "제목 탭",
+      "titleBlock": {
+        "addCredit": "크레딧 추가",
+        "addStepCount": "단계 수 추가",
+        "auto": "자동 ({{number}}단계)",
+        "autoNoneLinked": "자동 (연결 없음)",
+        "autoNoPicture": "자동 (그림 없음)",
+        "bandColor": "띠 색상",
+        "bandColorHelp": "제목 뒤의 띠입니다. 색상을 고르기 전까지는 종이 색상을 따릅니다.",
+        "creditLabel": "크레딧 {{number}}의 레이블",
+        "creditLabelPlaceholder": "레이블",
+        "credits": "크레딧",
+        "creditsHelp": "제목 아래의 한 줄입니다. 각 크레딧은 레이블 아래에 내용을 인쇄합니다. 내용으로 단계 수를 쓸 수 있으며, 항상 최신으로 유지됩니다.",
+        "creditValue": "크레딧 {{number}}의 내용",
+        "creditValuePlaceholder": "내용",
+        "description": "설명",
+        "descriptionHelp": "크레딧 아래의 자유 텍스트입니다. 텍스트가 있을 때만 인쇄됩니다.",
+        "model": "모델",
+        "modelHelp": "완성된 모델을 단계의 그림에서 그립니다. 자동은 그림이 있는 마지막 단계를 사용합니다.",
+        "modelSize": "모델 크기",
+        "modelSizeHelp": "모델의 높이로, 제목 영역 높이에 대한 비율입니다.",
+        "needsRows": "2줄 이상이 필요합니다",
+        "none": "없음",
+        "pattern": "전개도",
+        "patternHelp": "단계에 연결된 전개도에서 그립니다. 자동은 연결된 마지막 단계를 사용하며, 각 전개도는 그 전개도로 선택한 단계, 없으면 그것을 연결한 마지막 단계의 이름으로 한 번만 표시됩니다.",
+        "patternSize": "전개도 크기",
+        "patternSizeHelp": "전개도 한 변의 길이로, 제목 영역 높이에 대한 비율입니다.",
+        "removeCredit": "크레딧 {{number}} 제거",
+        "show": "제목 영역",
+        "showHelp": "제목과 크레딧, 전개도, 완성 모델을 첫 페이지 위쪽에 표시합니다.",
+        "step": "{{number}}단계",
+        "stepCount": "자동 ({{number}})",
+        "subtitle": "부제목",
+        "subtitleHelp": "제목 위의 작은 한 줄입니다. 비우면 인쇄되지 않습니다.",
+        "typeValue": "크레딧 {{number}}에 대신 내용 입력"
+      },
+      "titleHelp": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다.",
+      "titleHelpWithBlock": "도해의 제목을 각 페이지 위쪽 탭에 표시합니다. 첫 페이지에서는 대신 제목 영역에 들어갑니다."
     },
     "pages": {
       "caption": "{{number}}페이지",
@@ -1146,6 +1185,13 @@
       "step": "{{number}}단계",
       "stepCut": "{{number}}단계, 텍스트가 들어가지 않습니다",
       "textCut": "텍스트가 들어가지 않습니다",
+      "titleBlock": {
+        "creditsCut": "일부 크레딧이 들어가지 않습니다",
+        "noModel": "아직 그림이 있는 단계가 없습니다",
+        "noPattern": "전개도에 연결된 단계가 없습니다",
+        "stepNoPattern": "{{number}}단계에는 전개도가 없습니다",
+        "stepNoPicture": "{{number}}단계에는 아직 그림이 없습니다"
+      },
       "zoomSplitStep": "{{step}}단계는 확대하는 영역이 있는 {{area}}단계의 다음 페이지에 있습니다. {{area}}단계에서 ‘여기서 새 페이지 시작’을 선택하면 한 페이지에 함께 놓입니다.",
       "zoomSplitSteps": "{{steps}}단계는 각각 확대하는 영역의 다음 페이지에 있습니다. {{areas}}단계에서 ‘여기서 새 페이지 시작’을 선택하면 한 페이지에 함께 놓입니다."
     },
@@ -1419,6 +1465,17 @@
       "pose": "포즈",
       "positionLabel": "단계 위치",
       "step": "단계"
+    },
+    "titleBlock": {
+      "default": {
+        "author": "작가",
+        "authorName": "이름을 입력하세요",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "권장 용지",
+        "steps": "단계 수",
+        "subtitle": "부제목",
+        "title": "제목 추가"
+      }
     },
     "turns": {
       "actions": "뒤집기·회전 작업",

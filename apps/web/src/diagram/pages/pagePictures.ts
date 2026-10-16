@@ -85,7 +85,9 @@ import { prefixIds } from '../pictures/prefixIds';
 import { fontFaceId } from '../fonts/diagramFontFaces';
 import { setUploadText } from '../upload/uploadText';
 import { xrayPainter, xraySurfaceOf } from '../xray/xrayPaint';
-import type { LayoutCell, LayoutStep, ReachLine, TextSetter } from './diagramPageLayout';
+import { pictureExtent, pictureFit, type LayoutCell, type LayoutStep, type ReachLine, type TextSetter } from './diagramPageLayout';
+import type { PageBox } from './pagePlacement';
+import type { PictureAlign } from './titleBlockGeometry';
 
 /** A picture whose size cannot be read: fitted, square. */
 const UNSIZED: NonNullable<LayoutStep['picture']> = {
@@ -652,6 +654,83 @@ export function cellPicture(
     framePt,
     text: [...usage].map(([face, characters]) => ({ face, characters })),
   };
+}
+
+/**
+ * A step's picture alone, as the first page's title block shows the finished
+ * model (`diagram-title-block.md`, T-10 A): with none of its marks, and an
+ * enlarged step's whole picture rather than its window; as large as fits
+ * `boxMm`, and set to its bottom right — {@link cellPicture} centres a
+ * picture in its room, so the room is first cut to the picture's own extent
+ * there. Null for a step with nothing to draw.
+ */
+export function wholePicture(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  idPrefix: string,
+  text: PictureText,
+  align: PictureAlign = BOTTOM_RIGHT
+): CellPicture | null {
+  const fitted = fittedWhole(step, assets, style, boxMm, align);
+  if (!fitted) return null;
+  const { bare, picture, scale, room } = fitted;
+  const { w: width, h: height } = room;
+  const paper = picture.kind === 'paper';
+  const cell = {
+    pictureMm: { x: room.x, y: room.y, size: Math.min(width, height) },
+    drawMm: room,
+    mmPerUnit: paper ? scale : null,
+    frameMm: paper ? null : scale,
+  };
+  return cellPicture(bare, assets, style, cell, idPrefix, text);
+}
+
+/** Where {@link wholePicture} draws a step's picture in `boxMm`, in mm; null for a step with nothing to draw. */
+export function wholePictureRoom(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  align: PictureAlign = BOTTOM_RIGHT
+): PageBox | null {
+  return fittedWhole(step, assets, style, boxMm, align)?.room ?? null;
+}
+
+/** Where a whole picture stands in its box when nothing says: its bottom right. */
+const BOTTOM_RIGHT: PictureAlign = { x: 1, y: 1 };
+
+/**
+ * A step's picture with none of its marks and no window, the scale that fits it to `boxMm`, and its room there: its
+ * extent, standing at `align` in the box.
+ */
+function fittedWhole(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  align: PictureAlign
+) {
+  const { zoom: _window, ...unzoomed } = step;
+  const bare: DiagramStep = { ...unzoomed, annotations: [] };
+  const picture = layoutPicture(bare, assets, style);
+  const scale = picture ? pictureFit(picture, boxMm.w, boxMm.h) : null;
+  if (!picture || scale === null || !(scale > 0)) return null;
+  const { width, height } = pictureExtent(picture, scale);
+  const room: PageBox = { x: boxMm.x + align.x * (boxMm.w - width), y: boxMm.y + align.y * (boxMm.h - height), w: width, h: height };
+  return { bare, picture, scale, room };
+}
+
+/**
+ * A scene drawn by the shared painter into a box on the page, `boxMm`, as
+ * large as its ink fits, centred: its pens their pt widths whatever its size,
+ * and half the widest inside the box. The title block's crease pattern.
+ */
+export function fittedScene(scene: PaperScene, style: PaperStyle, boxMm: PageBox): string {
+  const box = grown({ x: boxMm.x * PT_PER_MM, y: boxMm.y * PT_PER_MM, width: boxMm.w * PT_PER_MM, height: boxMm.h * PT_PER_MM }, -inkPt(style));
+  const { minX, minY, maxX, maxY } = scene.bounds;
+  return placedScene(scene, style, box, fitScale(box, maxX - minX, maxY - minY, null)).markup;
 }
 
 type Rect = { x: number; y: number; width: number; height: number };

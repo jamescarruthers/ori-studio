@@ -4,7 +4,7 @@
  * for (`DiagramPageArrangement.signature`). The layout holds a page's
  * arrangement while its signature matches and packs the page afresh when it
  * does not; a frame placed by hand on a page packed afresh keeps its offset
- * while its step stays in its band (`repackedFrames.ts`).
+ * while its step keeps its place (`repackedFrames.ts`).
  *
  * It covers exactly what the packing is cut from: the page's steps in order,
  * the turns before each (on the diagram's last page, those after its last
@@ -15,7 +15,12 @@
  * spine, whether it is the last page, its capacity, the diagram's steps per
  * page (the one cell every step's reference scale is found in), the page
  * setup's geometry (size, orientation, margin, the title tab shown, page
- * numbers shown), the five packing settings, and {@link SIGNATURE_VERSION}.
+ * numbers shown), the five packing settings, on the first page the title
+ * block's share while it is on (then no tab: the block carries the title, so
+ * typing one re-packs nothing there) and its height where its words grew it
+ * past that share (`grownTitleBlockMm`, measured to half a millimetre, so
+ * an edit of them that keeps the block's height re-packs nothing), and
+ * {@link SIGNATURE_VERSION}.
  * Never a picture, a caption, a mark, a hand placement, the band's width or
  * colour, or the style: an edit of those keeps every page as it is packed.
  * Whether an
@@ -39,7 +44,7 @@
 import type { DiagramPageArrangement, DiagramPageSetup } from '../document/diagramDocument';
 import { digest } from '../pictures/pictureKey';
 import { flowPagePlan } from './flowLane';
-import type { PaginatedStep, PlannedPage } from './pagePlan';
+import { grownTitleBlockMm, hasTitleBlock, type PaginatedStep, type PlannedPage } from './pagePlan';
 
 /**
  * The signature's format, part of every signature: frozen at `pack-3`, the
@@ -54,6 +59,10 @@ import type { PaginatedStep, PlannedPage } from './pagePlan';
  * before: a page saved under the old format whose structure is the same, as
  * the old format read it, still holds ({@link holdsArrangement}). There is no
  * second format yet.
+ *
+ * An entry appended only under a setting no page was ever saved with keeps
+ * the format: every signature without it is as it was, and none with it can
+ * be one without. The title block's, added 2026-10-14, is the one.
  */
 export const SIGNATURE_VERSION = 'pack-3';
 
@@ -97,6 +106,11 @@ export interface PageSignatureInput {
   setup: DiagramPageSetup;
   /** The diagram's title: whether one is there decides whether the page prints its tab. */
   title: string;
+  /**
+   * The room the title block's words were measured to (`DiagramTitleBlockContent.room`), or the room a layout just
+   * measured them to: what page 1's block grows to past its share.
+   */
+  titleBlockRoomMm?: number;
 }
 
 /** Whether a page prints the title's tab: asked for, and a title to put in it. */
@@ -106,13 +120,17 @@ export function titleShown(setup: Pick<DiagramPageSetup, 'showTitle'>, title: st
 
 /** The signature of the `pageIndex`th page: {@link SIGNATURE_VERSION}, a colon and a digest of its structure. */
 export function pageSignature(input: PageSignatureInput, pageIndex: number): string {
-  const { steps, pages, setup, title } = input;
+  const { steps, pages, setup, title, titleBlockRoomMm } = input;
   const page = pages[pageIndex];
   if (!page) return `${SIGNATURE_VERSION}:none`;
   const last = pageIndex === pages.length - 1;
   const plan = flowPagePlan(pageIndex, pages.length, setup.firstPageSide, 1);
   const lastIndex = page.steps.at(-1);
-  // Each entry, and its place, is the format (`SIGNATURE_VERSION`): one added, taken out or read otherwise is a new one.
+  const titleBlock = pageIndex === 0 && hasTitleBlock(setup);
+  const grown = titleBlock ? grownTitleBlockMm(setup, titleBlockRoomMm) : null;
+  // Each entry, and its place, is the format (`SIGNATURE_VERSION`): one added, taken out or read otherwise is a new
+  // one — but for the title block's, appended only while it is on (`SIGNATURE_VERSION`), its grown height only
+  // while its words grow it, so a block at its share signs as it did before blocks grew (Zach, 2026-10-15).
   const structure = [
     SIGNATURE_VERSION,
     pageIndex,
@@ -125,7 +143,7 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
     setup.size,
     setup.orientation,
     setup.marginMm,
-    titleShown(setup, title),
+    !titleBlock && titleShown(setup, title),
     setup.pageNumbers.enabled,
     setup.flowBands,
     setup.flowPreferBands,
@@ -137,6 +155,7 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
       return [step.id, step.turnsBefore.length, arrowMayPrintBefore(step, index) ? 1 : 0];
     }),
     last && lastIndex !== undefined ? steps[lastIndex]!.turnsAfter.length : 0,
+    ...(titleBlock ? [['title-block', setup.titleBlock.heightShare, ...(grown === null ? [] : [grown])]] : []),
   ];
   return `${SIGNATURE_VERSION}:${digest(JSON.stringify(structure))}`;
 }

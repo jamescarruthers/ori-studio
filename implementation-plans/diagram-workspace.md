@@ -1718,10 +1718,14 @@ their summary. `diagram/document/diagramFileV1.test.ts` holds a frozen v1
 file (`__fixtures__/diagram-v1.json`, every kind of step, picture, render,
 turn and mark) to them: it must open editable, with nothing carried as a
 newer build's, and write back exactly except for the explicit pre-launch
-preset migration: an id-only preset gains its resolved values. The fixture
+preset migration — an id-only preset gains its resolved values — and the
+page settings it does not say, which it gains at their legacy values (the
+flow's packing, 2026-10-12; the title block, off, 2026-10-14). The fixture
 stays unchanged, the migrated save is idempotent, and the legacy preset
-values are frozen in `paper-presets-v1.json`. A change to anything below is
-a format change.
+values are frozen in `paper-presets-v1.json`. `diagramFileTitleBlock.test.ts`
+holds three diagrams saved with a title block (`__fixtures__/diagram-title-block.json`,
+2026-10-14, its header's parts 2026-10-15) to them the same way, written
+back byte for byte. A change to anything below is a format change.
 
 **Where it lives.** `workspace.diagrams`, a list (D1), which asks for reader
 10. This build shows the first diagram and carries the rest verbatim
@@ -1730,8 +1734,8 @@ a format change.
 on its next save.
 
 **A diagram** — `formatVersion: 1`, `id` (`diagram-<uuid>`), `title`,
-`hanStyle` (`sc`/`tc`/`jp`/`kr`), `style`, `page`, `steps`, `assets`,
-`pageArrangements`, `thumbnails`:
+`hanStyle` (`sc`/`tc`/`jp`/`kr`), `style`, `page`, `titleBlockContent`,
+`steps`, `assets`, `pageArrangements`, `thumbnails`:
 - `style` is `{ preset: string, style: PaperStyle }`, a built-in with its
   saved values, or `{ style: PaperStyle }`, a custom or export style stored
   whole (D9). Saved values take precedence over the name, including a name
@@ -1740,21 +1744,71 @@ on its next save.
 - Fonts without a font-set id mean the frozen v1 Noto set. Its files, metrics
   and coverage cannot be replaced; `scripts/diagram-fonts/v1-lock.json` is
   checked on every font build and in the production deployment bundle.
-- `page`: `size` (`a4`/`a5`/`b5-jis`/`letter`), `orientation`, `marginMm`
-  (0–30), `layout` (`grid`/`flow`; unsaid reads as the grid), `columns`
-  (2–5), `rows` (1–6), `stepsPerPage` (2–30, the flow's default count of a
-  page, written only when not `columns × rows` — the columns and rows the
-  file says, a newer build's past their ranges included — which a file
-  without it reads), `showPath`, `pathWidthMm` (4–60, written only when
-  not 20), `pathColor` (`#rrggbb`, only when not `#ecece8`), `firstPageSide`
-  (only when `right`), `showTitle`, `pageNumbers` (`{ enabled, first }`,
-  first 1–9999). `scale` is retired (2026-10-06): read and let go. The flow's
-  packing (added 2026-10-12, `diagram-flow-packing.md`), each written only
-  when not its default, which a file without it reads: `flowBands` (`auto`
-  or a whole 2–5; default `auto`), `flowPreferBands` (0–1, 0.5),
-  `flowBendSteps` (boolean, true), `flowNesting` (0–1, 0.8) and
-  `flowSteadiness` (0–1, 0.85). A number past its range, or a `flowBands`
-  word other than `auto`, is a newer build's (rule 2).
+- `page`: every setting, always, whatever its value (since 2026-10-12,
+  `diagram-document-evolution.md`, part 3); one a file does not say was
+  written before this build knew it, or before every setting was said, and
+  reads as its legacy value (`PAGE_SETTINGS` in `pageSettings.ts`), never
+  today's default. `size` (`a4`/`a5`/`b5-jis`/`letter`), `orientation`,
+  `marginMm` (0–30), `layout` (`grid`/`flow`; unsaid reads as the grid),
+  `columns` (2–5), `rows` (1–6), `stepsPerPage` (2–30, the flow's default
+  count of a page; unsaid reads `columns × rows` — the columns and rows the
+  file says, a newer build's past their ranges included), `showPath`,
+  `pathWidthMm` (4–60; unsaid 20), `pathColor` (`#rrggbb`; unsaid
+  `#ecece8`), `firstPageSide` (unsaid `left`), `showTitle`, `pageNumbers`
+  (`{ enabled, first }`, first 1–9999). `scale` is retired (2026-10-06):
+  read and let go. The flow's packing (added 2026-10-12,
+  `diagram-flow-packing.md`), unsaid read as Zach's: `flowBands` (`auto` or
+  a whole 2–5; `auto`), `flowPreferBands` (0–1, 0.5), `flowBendSteps`
+  (boolean, true), `flowNesting` (0–1, 0.8) and `flowSteadiness` (0–1,
+  0.85). `titleBlock` (added 2026-10-14, `diagram-title-block.md`),
+  `{ enabled, heightShare }`, written whole: whether the first page has a
+  title block, and how tall it is as a share of the printable height
+  (0.15–0.5). Unsaid, or no object, it reads `{ enabled: false,
+  heightShare: 0.27 }`, no block, as every first page before it; a field of
+  it that does not read takes that field's legacy value. A number past its
+  range, a `flowBands` word other than `auto`, or a field of `titleBlock`
+  this build has no name for, is a newer build's (rule 2). A newer build's
+  `titleBlock` is read as `pageNumbers` and the margin are: `enabled` as
+  written, `heightShare` held to its range, so the first page keeps a block
+  where that build drew one, and at the same share holds the same steps.
+- `titleBlockContent` (added 2026-10-14, `diagram-title-block.md`; the
+  header's parts added 2026-10-15, its Phase 1c), only when a part is set:
+  what the first page's title block shows, `{ model?, pattern?, subtitle?,
+  credits?, note?, modelSize?, patternSize? }`, written in that order. All
+  its text is plain. `model` (the finished model: a step's picture) and
+  `pattern` (the crease pattern: a linked step's thumbnail) are each `{
+  kind: 'step', stepId }` or `{ kind: 'none' }`. Unsaid is Auto: the last
+  step with a picture, and the last step linked to a crease pattern,
+  whatever it is shown as (none when no step is linked), turns and locked
+  steps skipped. A chosen step that is gone, or locked, reads as Auto, its
+  id kept. `subtitle`, one line over the title's band, and `note`, free
+  text under the credits, its line breaks kept: never blank, and unsaid (or
+  blank) is none. `credits`, in order, each `{ label, value }`: the label
+  one line, the value one line of text or `{ kind: 'step-count' }`, the
+  number the last numbered step prints (turns unnumbered, D22), kept up to
+  date; unsaid, or an empty list, is none; a credit with nothing in it is
+  kept. In the subtitle, a label and a text value a line break reads as a
+  space. `modelSize` and `patternSize`, the model's height and the pattern's
+  side as shares of the block's height (0.3–1); unsaid is the build's
+  default (0.59 and 0.79 since 2026-10-15), a look, and a size said is kept as
+  said, the default included. `byline` (this branch's credits as one text,
+  never released) is retired: a string reads as the note where none is
+  said, and is never written. A part that does not read is dropped alone,
+  and is Auto, none or the default; a credit that is no object is dropped,
+  and a field of one that does not read is empty. A part of a kind, or with
+  a field, this build has no name for — a source, a credit or a credit's
+  value — a size past its range, and a field of the content it has no name
+  for, is a newer build's (rule 2): carried under its key and written back
+  until that part is set here, shown here as the nearest (a source as Auto,
+  the credits as this build reads them, a value it does not know empty, a
+  size held to its range), and an asset or a thumbnail it names is kept. An
+  unsaid source means Auto, and an unsaid subtitle, credits or note none,
+  for good (class (c) in `diagram-document-evolution.md`); a new diagram
+  writes its subtitle and credits at creation, and so does the toggle turned
+  on where the content says neither (the author's act). What Auto finds, and an
+  unsaid size, are a look (class (b)): a later build may change them for
+  every file, which changes the step an old file's block pictures, or how
+  large, but never moves a step. The content is in no page's signature.
 - `steps`: the order, steps and the turns between them (D22). A turn is
   `{ id: 'turn-<uuid>', kind: 'turn-over', axis }` (unsaid: `vertical`) or
   `{ id, kind: 'rotate', rotate: { amount, direction } }` (unsaid: a quarter
@@ -1769,7 +1823,8 @@ on its next save.
   it starts with — `{ signature, k, steps: { "<step id>": { box: [x, y, w,
   h], scale, band, bend?, zoomScale? } } }`. `signature` is the page's
   structure when it was packed (`pages/pageSignature.ts`, tagged with the
-  packing's version), `k` its page scale, `box` the step's box on the page in
+  signature's format, `pack-3`; the first page's, while the title block is
+  on, ends with the block's share and no longer reads the title), `k` its page scale, `box` the step's box on the page in
   mm, `scale` its printed scale as a pin's (`{ mmPerUnit }` or `{ frameMm }`),
   `band` its band from 0 in reading order (0–4), `bend: true` a step standing
   in the bend after its band, and `zoomScale` (added in the review fixes) an
@@ -1808,10 +1863,22 @@ on its next save.
   dropped alone. **Pagination** (flow): walking the steps in order, turns
   taking no place, a step starts a page when it is the first, or has
   `breakBefore` or `pageSteps`, or the page has reached its capacity — its
-  first step's `pageSteps`, else `page.stepsPerPage`. A flow page is laid out
-  for the steps it holds, but a last page without `pageSteps` for
-  `page.stepsPerPage`, which its few steps fill in order. A grid's pages hold
-  `columns × rows` and ignore `pageSteps`, which they keep.
+  first step's `pageSteps`, else its default capacity: `page.stepsPerPage`,
+  but the first page's under the title block (below). A flow page is laid
+  out for the steps it holds, but a last page without `pageSteps` for its
+  default capacity, which its few steps fill in order (a lone first page
+  under the block for the first page's). A grid's pages hold `columns ×
+  rows` and ignore `pageSteps`, which they keep. With `page.titleBlock` on
+  (2026-10-14), the first page's default is fewer: in the flow `max(1,
+  round(stepsPerPage × (1 − heightShare)))`, on a grid `columns × (rows −
+  r)`, `r = min(rows − 1, max(1, round(heightShare × rows)))`; a grid of one
+  row has no room for the block, and its pages are as without it. `round`
+  takes a half up (JavaScript's `Math.round`), and each product is computed
+  in double precision as written, `stepsPerPage × (1 − heightShare)` and
+  `heightShare × rows`: another rounding or order would re-cut saved first
+  pages. (At 0.27 and 0.23, the only shares this build writes — a new
+  diagram's until 2026-10-15 and since — nothing ties.) A `pageSteps` on
+  the first step still wins.
 - `source`, null for an empty step, or:
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;
   - `{ kind: 'cp', scope: { kind: 'segment', region }, fingerprint,
@@ -1869,7 +1936,8 @@ on its next save.
 **Reading** (`readDiagram`), lenient, in three rules:
 1. **Malformed is dropped.** A step, mark or asset that does not read, or a
    source or picture that does not, is left out; the rest of the diagram
-   opens. A value of the wrong type falls back to its default.
+   opens. A value of the wrong type falls back to its default, but a page
+   setting's to its legacy value (`PAGE_SETTINGS`), as an unsaid one does.
 2. **What a newer build wrote is carried, never dropped** (decisions 1 and
    2 of the launch review, 2026-10-09). A kind, field or value this build has
    no name for, at any depth, or content past what it keeps — an SVG, a scene
@@ -1878,7 +1946,8 @@ on its next save.
    asset a newer build's: kept verbatim in its `unknown` field, written back
    unchanged, and locked (moved or deleted, never edited). A locked step is
    drawn as far as this build reads it. At the document's level such a value
-   falls back alone, shown as this build's default or nearest, and is written
+   falls back alone, shown as this build's default or nearest (a page
+   setting as its legacy value or the nearest in its range), and is written
    back as it came until that field is set here (`DiagramNewerFields`).
 3. **A newer document opens read-only.** Only a `formatVersion` above 1 does;
    the file is written back as it came.

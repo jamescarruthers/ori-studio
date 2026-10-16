@@ -887,3 +887,79 @@ export function curvePoint(from: LanePoint, curve: LaneCurve, t: number): LanePo
 export function curveStart(lane: Lane, index: number): LanePoint {
   return index === 0 ? lane.from : lane.curves[index - 1]!.to;
 }
+
+/** A picture's box as the lane meets it: a {@link LaneStop}'s `picture`. */
+export type LaneBox = NonNullable<LaneStop['picture']>;
+
+/** A point on a stretch of the lane, and how far along the stretch it stands, by arc length (mm). */
+export interface LaneSpot extends LanePoint {
+  s: number;
+}
+
+/** How finely {@link laneStretch} samples each curve; where it leaves and reaches a picture is found exactly. */
+const STRETCH_SAMPLES = 64;
+
+/**
+ * The lane between two stops as it runs clear of both their pictures (Zach's
+ * crane, 2026-10-15: a turn "should be equidistant between the two steps
+ * along the ribbon path"): from where it last leaves `leave`, the picture of
+ * stop `from`, to where it first reaches `reach`, the picture of stop `to`,
+ * as points with how far along it each stands. The lane runs from stop to
+ * stop over the curves `into` gives (`flowLane`). A single point where it
+ * reaches the one picture inside the other; null where the two stops are one
+ * point of the lane.
+ */
+export function laneStretch(
+  lane: Lane,
+  into: readonly number[],
+  from: number,
+  to: number,
+  leave: LaneBox,
+  reach: LaneBox
+): LaneSpot[] | null {
+  const [first, last] = [(into[from] ?? Number.NaN) + 1, into[to] ?? Number.NaN];
+  if (!(first <= last) || first < 0 || last >= lane.curves.length) return null;
+  const at = (curve: number, t: number) => curvePoint(curveStart(lane, curve), lane.curves[curve]!, t);
+  const holds = (box: LaneBox, p: LanePoint) => p.x >= box.left && p.x <= box.right && p.y >= box.top && p.y <= box.bottom;
+  const run: (LanePoint & { curve: number; t: number })[] = [];
+  for (let curve = first; curve <= last; curve += 1) {
+    for (let n = curve === first ? 0 : 1; n <= STRETCH_SAMPLES; n += 1) run.push({ ...at(curve, n / STRETCH_SAMPLES), curve, t: n / STRETCH_SAMPLES });
+  }
+  // Where it first reaches the one picture, and before that last leaves the other.
+  let reached = run.findIndex((p) => holds(reach, p));
+  if (reached < 0) reached = run.length - 1;
+  let left = reached;
+  while (left > 0 && !holds(leave, run[left]!)) left -= 1;
+  /** Where the lane crosses `box`'s edge between sample `i`, inside it or not as `inside` says, and the next. */
+  const edge = (i: number, box: LaneBox, inside: boolean): LanePoint => {
+    const [a, b] = [run[i]!, run[i + 1]!];
+    // A curve's end is the next one's start.
+    let [lo, hi] = [a.curve === b.curve ? a.t : 0, b.t];
+    for (let step = 0; step < 30; step += 1) {
+      const mid = (lo + hi) / 2;
+      if (holds(box, at(b.curve, mid)) === inside) lo = mid;
+      else hi = mid;
+    }
+    return at(b.curve, (lo + hi) / 2);
+  };
+  const start = left < reached && holds(leave, run[left]!) ? edge(left, leave, true) : run[left]!;
+  const end = reached > left && holds(reach, run[reached]!) ? edge(reached - 1, reach, false) : run[reached]!;
+  const points = [start, ...run.slice(left + 1, reached), end].map(({ x, y }) => ({ x, y }));
+  const spots: LaneSpot[] = [];
+  for (const point of points) {
+    const previous = spots.at(-1);
+    spots.push({ ...point, s: previous ? previous.s + Math.hypot(point.x - previous.x, point.y - previous.y) : 0 });
+  }
+  return spots;
+}
+
+/** The point `s` mm along a stretch of the lane ({@link laneStretch}), held to its ends. */
+export function spotAlong(stretch: readonly LaneSpot[], s: number): LanePoint {
+  const last = stretch.at(-1)!;
+  if (!(s > 0)) return { x: stretch[0]!.x, y: stretch[0]!.y };
+  if (s >= last.s) return { x: last.x, y: last.y };
+  const i = stretch.findIndex((spot) => spot.s >= s);
+  const [a, b] = [stretch[i - 1]!, stretch[i]!];
+  const t = b.s > a.s ? (s - a.s) / (b.s - a.s) : 0;
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}

@@ -1147,8 +1147,11 @@
       "pageSteps": "Schritte auf Seite {{number}}",
       "pageStepsDefault": "Standard",
       "pageStepsHolds": "Hält die folgenden Seiten an ihrem Platz",
+      "pageStepsTitleBlock": "Der Titelblock braucht Platz auf dieser Seite, daher fasst sie standardmäßig {{number}}.",
+      "pageStepsTitleBlockOwn": "Wird der Titelblock ausgeschaltet, kommen {{number}} zu dieser Anzahl hinzu; die folgenden Seiten behalten ihre und verschieben sich.",
       "pageStepsUseDefault": "Standard verwenden",
       "paper": "Papier",
+      "path": "Pfad",
       "pathColor": "Pfadfarbe",
       "pathWidthMm": "Pfadbreite (mm)",
       "portrait": "Hochformat",
@@ -1167,8 +1170,44 @@
       "style": "Stil",
       "styleHint": "Tinte und Stifte ändern sich bei allen Schritten zugleich. Ein 3D-Schritt erhält die neue Beleuchtung, wenn er aktualisiert wird.",
       "styleSection": "Stil",
-      "title": "Titel",
-      "titleHelp": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite."
+      "title": "Titelreiter",
+      "titleBlock": {
+        "addCredit": "Angabe hinzufügen",
+        "addStepCount": "Schrittzahl hinzufügen",
+        "auto": "Auto (Schritt {{number}})",
+        "autoNoneLinked": "Auto (nichts verknüpft)",
+        "autoNoPicture": "Auto (keine Bilder)",
+        "bandColor": "Bandfarbe",
+        "bandColorHelp": "Das Band hinter dem Titel. Es folgt der Farbe des Papiers, bis Sie eine Farbe wählen.",
+        "creditLabel": "Bezeichnung der Angabe {{number}}",
+        "creditLabelPlaceholder": "Bezeichnung",
+        "credits": "Angaben",
+        "creditsHelp": "Eine Reihe unter dem Titel: Jede Angabe druckt ihre Bezeichnung über ihrem Wert. Ein Wert kann die Schrittzahl sein, stets aktuell.",
+        "creditValue": "Wert der Angabe {{number}}",
+        "creditValuePlaceholder": "Wert",
+        "description": "Beschreibung",
+        "descriptionHelp": "Freier Text unter den Angaben; er wird nur gedruckt, wenn er nicht leer ist.",
+        "model": "Modell",
+        "modelHelp": "Das fertige Modell, gezeichnet nach dem Bild eines Schritts. Auto nimmt den letzten Schritt mit Bild.",
+        "modelSize": "Modellgröße",
+        "modelSizeHelp": "Die Höhe des Modells, als Anteil an der des Titelblocks.",
+        "needsRows": "Braucht mindestens zwei Reihen",
+        "none": "Keine",
+        "pattern": "Faltmuster",
+        "patternHelp": "Gezeichnet nach dem Faltmuster, das ein Schritt verknüpft. Auto nimmt den letzten verknüpften Schritt; jedes Muster steht nur einmal in der Liste, unter dem dafür gewählten Schritt oder sonst unter dem letzten Schritt, der es verknüpft.",
+        "patternSize": "Faltmustergröße",
+        "patternSizeHelp": "Die Seitenlänge des Faltmusters, als Anteil an der Höhe des Titelblocks.",
+        "removeCredit": "Angabe {{number}} entfernen",
+        "show": "Titelblock",
+        "showHelp": "Titel und Angaben, Faltmuster und fertiges Modell oben auf der ersten Seite.",
+        "step": "Schritt {{number}}",
+        "stepCount": "Auto ({{number}})",
+        "subtitle": "Untertitel",
+        "subtitleHelp": "Die kleine Zeile über dem Titel. Leeren Sie sie, damit keine gedruckt wird.",
+        "typeValue": "Für Angabe {{number}} stattdessen einen Wert eingeben"
+      },
+      "titleHelp": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite.",
+      "titleHelpWithBlock": "Der Titel des Diagramms, in einem Reiter oben auf jeder Seite. Auf der ersten Seite steht er stattdessen im Titelblock."
     },
     "pages": {
       "caption": "Seite {{number}}",
@@ -1183,6 +1222,13 @@
       "step": "Schritt {{number}}",
       "stepCut": "Schritt {{number}}, Text passt nicht",
       "textCut": "Text passt nicht",
+      "titleBlock": {
+        "creditsCut": "Einige Angaben passen nicht",
+        "noModel": "Noch hat kein Schritt ein Bild",
+        "noPattern": "Kein Schritt ist mit einem Faltmuster verknüpft",
+        "stepNoPattern": "Schritt {{number}} hat kein Faltmuster",
+        "stepNoPicture": "Schritt {{number}} hat noch kein Bild"
+      },
       "zoomSplitStep": "Schritt {{step}} steht auf der Seite nach dem Bereich, den er vergrößert, auf Schritt {{area}}. „Hier eine neue Seite beginnen“ auf Schritt {{area}} hält beide zusammen.",
       "zoomSplitSteps": "Die Schritte {{steps}} stehen jeweils auf der Seite nach dem Bereich, den sie vergrößern. „Hier eine neue Seite beginnen“ auf den Schritten {{areas}} hält sie zusammen."
     },
@@ -1469,6 +1515,17 @@
       "pose": "Pose",
       "positionLabel": "Position des Schritts",
       "step": "Schritt"
+    },
+    "titleBlock": {
+      "default": {
+        "author": "Autor",
+        "authorName": "Ihr Name",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "Empfohlenes Papier",
+        "steps": "Schritte",
+        "subtitle": "Untertitel",
+        "title": "Titel hinzufügen"
+      }
     },
     "turns": {
       "actions": "Aktionen der Wendung",

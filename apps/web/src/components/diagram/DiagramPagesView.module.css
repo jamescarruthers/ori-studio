@@ -1,8 +1,9 @@
 /*
  * The Pages view (DiagramPagesView.tsx): the composed pages in a column on the
  * workspace's dark ground, under one camera, with what is only for the screen
- * — the margin guide, the selection, an empty step's box, a cut text's mark —
- * laid over each page rather than drawn into it.
+ * — the margin guide (PageGuide), the selection, an empty step's box
+ * (PagePlaceholder), a cut text's mark — laid over each page rather than
+ * drawn into it.
  */
 .view {
   position: relative;
@@ -60,12 +61,6 @@
   text-align: center;
 }
 
-.guide {
-  position: absolute;
-  border: 1px dashed color-mix(in srgb, var(--accent-primary) 45%, transparent);
-  pointer-events: none;
-}
-
 .cell {
   z-index: 1;
   position: absolute;
@@ -112,20 +107,6 @@
 
 .arrow:hover {
   background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
-}
-
-/* An empty step's picture box: where its picture will go. */
-.placeholder {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  border: 1px dashed #c4c4bd;
-  border-radius: var(--radius-sm);
-  background: #fafaf7;
-  color: #8f8f88;
-  font-size: 0.7rem;
-  pointer-events: none;
 }
 
 /*

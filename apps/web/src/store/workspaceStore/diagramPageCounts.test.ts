@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   createDiagram,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   stepById,
   stepsOf,
@@ -24,7 +25,10 @@ const state = () => useWorkspaceStore.getState();
 const undoSteps = () => state().diagramHistory.past.length;
 const PLACE: DiagramStepPlace = { frame: [2, 1], text: [0, 1.5] };
 
-/** Steps `s0`… on flow pages of 4 by default, with `counts` by step index, installed as a file would be. */
+/**
+ * Steps `s0`… on flow pages of 4 by default with no title block, with `counts` by step index, installed as a file
+ * would be.
+ */
 function install(size: number, counts: Readonly<Record<number, number>> = {}, readOnly = false, placed = false): DiagramDocument {
   const steps = Array.from({ length: size }, (_, index): DiagramStep => ({
     ...cpStep(`s${index}`),
@@ -34,6 +38,7 @@ function install(size: number, counts: Readonly<Record<number, number>> = {}, re
   const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
     layout: 'flow',
     stepsPerPage: 4,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
   state().installDiagram({ document, readOnly, raw: {} });
   return document;
@@ -63,10 +68,11 @@ describe('setDiagramPageSteps', () => {
     expect(pages()).toEqual(['s0 s1 s2 s3', 's4 s5 s6 s7', 's8 s9 s10 s11', 's12 s13']);
   });
 
-  it('moves the boundary with a next page of its own count, and takes a count away again', () => {
+  it('shifts a next page of its own count, which keeps it, and takes a count away again', () => {
     install(14, { 4: 4, 8: 4 });
     expect(state().setDiagramPageSteps(1, 6)).toBe(true);
-    expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10:2 s11', 's12 s13']);
+    // Page three keeps its four, starting two later: the page of two after it is gone (Zach, 2026-10-15).
+    expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10:4 s11 s12 s13']);
     expect(state().setDiagramPageSteps(2, null)).toBe(true);
     expect(state().diagramHistory.past.at(-1)?.label).toBe('Fill page by default');
     expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10 s11 s12 s13']);
@@ -88,8 +94,8 @@ describe('setDiagramPageSteps', () => {
     install(12, {}, false, true);
     expect(state().diagramPlacesSettled).toBeNull();
     // Page two from 4 steps to 3: s7 starts page three, which refills — s7–s10 — and s11 makes a page four. A flow
-    // step keeps its frame while it stays on its page (Zach, 2026-10-13): s7 and s11 leave theirs. No page was
-    // packed and adopted, so no band is known: the others keep their offsets.
+    // step keeps its frame while it keeps its place (Zach, 2026-10-15): s7 and s11 changed page, and leave theirs at
+    // once. No page was packed and adopted, so no place on a page is known: the others keep their offsets.
     expect(state().setDiagramPageSteps(1, 3)).toBe(true);
     const frames = Array.from({ length: 12 }, (_, index) => stepById(state().diagram!, `s${index}`)!.place?.frame ?? null);
     expect(frames.map((frame) => frame !== null)).toEqual([true, true, true, true, true, true, true, false, true, true, true, false]);

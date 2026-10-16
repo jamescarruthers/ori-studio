@@ -74,15 +74,17 @@ export function useDiagramPages(document: DiagramDocument | null): DiagramPagesS
 }
 
 /**
- * The arrangements `pages` packed (`DiagramPagesLayout.packed`), taken into
+ * The arrangements `pages` packed (`DiagramPagesLayout.packed`), and the room
+ * they measured the title block's words to after an edit of them, taken into
  * the store's diagram while it is still `document`, the one laid out — no
  * edit, no undo entry (`adoptDiagramPageArrangements`). The adopted diagram
  * lays out as `pages` do, so it takes them as its own, the pages they have
  * composed with them.
  */
 function adoptPacked(pages: PreparedDiagramPages, document: DiagramDocument): void {
-  const packed = pages.layout.packed;
-  if (!packed || !useWorkspaceStore.getState().adoptDiagramPageArrangements(packed, document)) return;
+  const { packed, titleBlockRoom } = pages.layout;
+  if (!packed && titleBlockRoom === undefined) return;
+  if (!useWorkspaceStore.getState().adoptDiagramPageArrangements(packed ?? {}, document, titleBlockRoom)) return;
   const adopted = useWorkspaceStore.getState().diagram;
   if (!adopted || !pages.adoptedAs) return;
   const same = pages.adoptedAs(adopted);

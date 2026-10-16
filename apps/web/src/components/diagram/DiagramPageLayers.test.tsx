@@ -5,6 +5,7 @@ import {
   createDiagram,
   createTurn,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   type DiagramDocument,
   type DiagramPageArrangement,
@@ -60,7 +61,10 @@ let root: Root | null = null;
 let host: HTMLDivElement | null = null;
 const state = () => useWorkspaceStore.getState();
 
-/** Eight steps on flow pages of 4, a turn between the second and third; s1 says what to do, s2 is placed by hand. */
+/**
+ * Eight steps on flow pages of 4 with no title block, a turn between the second and third; s1 says what to do, s2 is
+ * placed by hand.
+ */
 function install() {
   const steps = Array.from({ length: 8 }, (_, index): DiagramStep => ({
     ...cpStep(`s${index}`),
@@ -71,6 +75,7 @@ function install() {
     setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
       layout: 'flow',
       stepsPerPage: 4,
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
     }),
     [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'turn-a')],
     2

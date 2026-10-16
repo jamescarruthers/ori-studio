@@ -65,6 +65,7 @@ import type {
   DiagramHanStyle,
   DiagramPageArrangement,
   DiagramPageSetup,
+  DiagramTitleBlockContentPatch,
   KnownDiagramAnnotation,
   DiagramStyle,
   KnownDiagramAsset,
@@ -1999,7 +2000,7 @@ export interface DiagramSliceState {
   /**
    * The newest time frames moved by hand were sent home: by an edit
    * (`settlePlaces`, inside that edit's undo step), or as a flow page packed
-   * afresh was adopted, where its steps changed band (`adoptPacking`). How
+   * afresh was adopted, where its steps changed place (`adoptPacking`). How
    * many the edit sent home in all (`count`: an adoption after the edit that
    * re-packed its page adds to the edit's), and how many this time
    * (`added`); a `nonce` that is new each time, so what tells the user — a
@@ -2174,6 +2175,29 @@ export interface DiagramSliceActions {
    * its picker — are one undo step.
    */
   setDiagramPage: (patch: Partial<DiagramPageSetup>, options?: { session?: number }) => boolean;
+  /**
+   * Turn the first page's title block on or off, as its toggle does
+   * (`setTitleBlockShown`): on at today's share, with a new diagram's title
+   * where it has none, and its subtitle and credits where the diagram says
+   * none, in the app's language; one undo step, in which the later pages'
+   * counts shift as for any change of the block.
+   */
+  setDiagramTitleBlockShown: (enabled: boolean) => boolean;
+  /**
+   * Set what the first page's title block shows — its model and crease
+   * pattern, their sizes, its subtitle, credits (one added, removed, or a
+   * label or value set, text or the live step count) and note — each call
+   * one undo step. Its room is the page setup's (`setDiagramPage`,
+   * `titleBlock`); what it shows moves no step.
+   *
+   * `loadId` and `session` are a text field's, as for an instruction
+   * (`setDiagramStepText`): an edit that outlives its diagram is dropped, and
+   * the commits of one sitting at the field are one undo step.
+   */
+  setDiagramTitleBlockContent: (
+    patch: DiagramTitleBlockContentPatch,
+    options?: { loadId?: number; session?: number }
+  ) => boolean;
   /** Start a new page at the step, or stop doing so ("Start a new page here", D10). */
   setDiagramStepBreakBefore: (stepId: string, breakBefore: boolean) => boolean;
   /**
@@ -2388,11 +2412,16 @@ export interface DiagramSliceActions {
    * (`repackedFrames.ts`), with the reflow notice. Not an edit: no undo
    * entry, the undo history left as it is, and the project no dirtier than it
    * was — they are written with the next save, and a file written before
-   * packs and draws the same when it opens. Whether it changed.
+   * packs and draws the same when it opens. With them, `titleBlockRoom`:
+   * the room the layout measured the title block's words to after an edit of
+   * them (`DiagramPagesLayout.titleBlockRoom`), kept first
+   * (`setTitleBlockRoom`), so page 1, packed for the block it grew, is held.
+   * Whether it changed.
    */
   adoptDiagramPageArrangements: (
     arrangements: Readonly<Record<string, DiagramPageArrangement>>,
-    ofDocument: DiagramDocument
+    ofDocument: DiagramDocument,
+    titleBlockRoom?: number
   ) => boolean;
   /**
    * Re-pack Page: let go of the arrangement flow page `pageIndex` (from 0, as

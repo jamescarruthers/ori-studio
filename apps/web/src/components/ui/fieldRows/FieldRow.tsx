@@ -33,6 +33,7 @@ export function FieldRow({
   help,
   htmlFor,
   noteId,
+  note,
   overridable = false,
   kind,
   disabled = false,
@@ -54,10 +55,18 @@ export function FieldRow({
   /** Set when the control is a native input the label can point at. */
   htmlFor?: string;
   /**
-   * The id the "Overridden" note carries on a toggle, so the switch can name
-   * it in `aria-describedby`.
+   * The id the note carries, so the control can name it in
+   * `aria-describedby`.
    */
   noteId?: string;
+  /**
+   * A short reason under the label, on the note's line: why a toggle cannot
+   * be switched now ("Needs two rows or more"), or why what a select is set
+   * to shows nothing ("Step 2 has no crease pattern"). It wraps rather than
+   * be cut, since it is there to be read. "Overridden" takes its place while
+   * the row is overridden.
+   */
+  note?: string;
   /**
    * A toggle that can be overridden, whether or not it is now. Its row keeps
    * the note's line under the label while the note is empty, so the row is
@@ -108,7 +117,7 @@ export function FieldRow({
 }) {
   const { t } = useTranslation();
   const overridden = kind === 'toggle' && onReset !== undefined;
-  const noteLine = overridden || (kind === 'toggle' && overridable);
+  const noteLine = overridden || (kind === 'toggle' && overridable) || note !== undefined;
   const resetButton = kind !== 'toggle' && onReset !== undefined;
   const rootData = {
     'data-field-row': '',
@@ -141,18 +150,7 @@ export function FieldRow({
     );
   }
 
-  const helpMark = help && (
-    // Prompt, unlike a toolbar's tooltips: nobody sweeps past an info mark by
-    // accident, and the provider's 700 ms reads as nothing happening.
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <button type="button" className={styles.help} data-field-help="" aria-label={help}>
-          <Info size={13} aria-hidden="true" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{help}</TooltipContent>
-    </Tooltip>
-  );
+  const helpMark = help && <FieldRowHelp help={help} />;
   return (
     <div className={rootClass} {...rootData} title={title}>
       {htmlFor ? (
@@ -195,11 +193,35 @@ export function FieldRow({
           and the line the switch sits on is the same with or without it. Empty
           rather than absent while nothing is overridden (see `overridable`). */}
       {noteLine && (
-        <span className={styles.note} data-field-note="" id={noteId}>
-          {overridden && t('common:fieldRow.overridden', 'Overridden')}
+        <span
+          className={styles.note}
+          data-field-note={overridden ? 'overridden' : note !== undefined ? 'reason' : ''}
+          id={noteId}
+        >
+          {overridden ? t('common:fieldRow.overridden', 'Overridden') : note}
         </span>
       )}
     </div>
+  );
+}
+
+/**
+ * The info mark after a row's label (`FieldRow.help`), for a row of the kit
+ * that is not a `FieldRow`, as a stacked text field is: a component rather
+ * than a class, for the reason `FieldRowSelectTrigger` gives.
+ */
+export function FieldRowHelp({ help }: { help: string }) {
+  return (
+    // Prompt, unlike a toolbar's tooltips: nobody sweeps past an info mark by
+    // accident, and the provider's 700 ms reads as nothing happening.
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <button type="button" className={styles.help} data-field-help="" aria-label={help}>
+          <Info size={13} aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{help}</TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -1184,8 +1184,11 @@
       "pageSteps": "Pasos en la página {{number}}",
       "pageStepsDefault": "Predeterminado",
       "pageStepsHolds": "Mantiene las páginas siguientes en su sitio",
+      "pageStepsTitleBlock": "El bloque de título ocupa espacio en esta página, así que por defecto admite {{number}}.",
+      "pageStepsTitleBlockOwn": "Al desactivar el bloque de título se suman {{number}} a este número; las páginas siguientes conservan el suyo y se desplazan.",
       "pageStepsUseDefault": "Usar predeterminado",
       "paper": "Papel",
+      "path": "Recorrido",
       "pathColor": "Color del recorrido",
       "pathWidthMm": "Ancho del recorrido (mm)",
       "portrait": "Vertical",
@@ -1204,8 +1207,44 @@
       "style": "Estilo",
       "styleHint": "La tinta y las plumas cambian en todos los pasos a la vez. Un paso 3D toma la nueva iluminación al actualizarlo.",
       "styleSection": "Estilo",
-      "title": "Título",
-      "titleHelp": "El título del diagrama, en una pestaña en la parte superior de cada página."
+      "title": "Pestaña de título",
+      "titleBlock": {
+        "addCredit": "Añadir crédito",
+        "addStepCount": "Añadir número de pasos",
+        "auto": "Auto (paso {{number}})",
+        "autoNoneLinked": "Auto (sin vínculos)",
+        "autoNoPicture": "Auto (sin imágenes)",
+        "bandColor": "Color de la banda",
+        "bandColorHelp": "La banda detrás del título. Sigue el color del papel hasta que elija uno.",
+        "creditLabel": "Etiqueta del crédito {{number}}",
+        "creditLabelPlaceholder": "Etiqueta",
+        "credits": "Créditos",
+        "creditsHelp": "Una fila bajo el título: cada crédito imprime su etiqueta sobre su valor. Un valor puede ser el número de pasos, siempre al día.",
+        "creditValue": "Valor del crédito {{number}}",
+        "creditValuePlaceholder": "Valor",
+        "description": "Descripción",
+        "descriptionHelp": "Texto libre bajo los créditos. Solo se imprime cuando tiene texto.",
+        "model": "Modelo",
+        "modelHelp": "El modelo terminado, dibujado a partir de la imagen de un paso. Auto usa el último paso que tenga una.",
+        "modelSize": "Tamaño del modelo",
+        "modelSizeHelp": "La altura del modelo, como parte de la del bloque de título.",
+        "needsRows": "Necesita dos filas o más",
+        "none": "Ninguno",
+        "pattern": "Patrón de pliegues",
+        "patternHelp": "Se dibuja a partir del patrón de pliegues que vincula un paso. Auto usa el último paso vinculado; cada patrón aparece una sola vez, con el paso elegido para él o, si no hay, con el último paso que lo vincula.",
+        "patternSize": "Tamaño del patrón de pliegues",
+        "patternSizeHelp": "El lado del patrón de pliegues, como parte de la altura del bloque de título.",
+        "removeCredit": "Quitar el crédito {{number}}",
+        "show": "Bloque de título",
+        "showHelp": "El título y sus créditos, el patrón de pliegues y el modelo terminado, en la parte superior de la primera página.",
+        "step": "Paso {{number}}",
+        "stepCount": "Auto ({{number}})",
+        "subtitle": "Subtítulo",
+        "subtitleHelp": "La línea pequeña sobre el título. Déjala vacía para no imprimir ninguna.",
+        "typeValue": "Escribir un valor para el crédito {{number}} en su lugar"
+      },
+      "titleHelp": "El título del diagrama, en una pestaña en la parte superior de cada página.",
+      "titleHelpWithBlock": "El título del diagrama, en una pestaña en la parte superior de cada página. En la primera página lo lleva el bloque de título."
     },
     "pages": {
       "caption": "Página {{number}}",
@@ -1220,6 +1259,13 @@
       "step": "Paso {{number}}",
       "stepCut": "Paso {{number}}, el texto no cabe",
       "textCut": "El texto no cabe",
+      "titleBlock": {
+        "creditsCut": "Algunos créditos no caben",
+        "noModel": "Ningún paso tiene imagen todavía",
+        "noPattern": "Ningún paso está vinculado a un patrón de pliegues",
+        "stepNoPattern": "El paso {{number}} no tiene patrón de pliegues",
+        "stepNoPicture": "El paso {{number}} aún no tiene imagen"
+      },
       "zoomSplitStep": "El paso {{step}} está en la página siguiente al área que amplía, en el paso {{area}}. «Empezar una página nueva aquí» en el paso {{area}} los mantiene juntos.",
       "zoomSplitSteps": "Los pasos {{steps}} están cada uno en la página siguiente al área que amplían. «Empezar una página nueva aquí» en los pasos {{areas}} los mantiene juntos."
     },
@@ -1519,6 +1565,17 @@
       "pose": "Pose",
       "positionLabel": "Posición del paso",
       "step": "Paso"
+    },
+    "titleBlock": {
+      "default": {
+        "author": "Autor",
+        "authorName": "Tu nombre aquí",
+        "paperSize": "15 cm × 15 cm",
+        "recommendedPaper": "Papel recomendado",
+        "steps": "Pasos",
+        "subtitle": "Subtítulo",
+        "title": "Añade un título"
+      }
     },
     "turns": {
       "actions": "Acciones de la vuelta",

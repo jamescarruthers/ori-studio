@@ -94,6 +94,14 @@ describe('DiagramPanel', () => {
     expect(state().dirty).toBe(false);
   });
 
+  it('shows the title a new diagram starts with, “Add a title”, before there is one, and writes it with the first edit (Zach, 2026-10-15)', () => {
+    expect(titleField().value).toBe('Add a title');
+    expect(state().diagram).toBeNull();
+    act(() => buttonNamed('Add step')?.click());
+    expect(state().diagram?.title).toBe('Add a title');
+    expect(titleField().value).toBe('Add a title');
+  });
+
   it('adds a step from the empty state, then from the header, each selected and counted', () => {
     // The empty state's own button, not the header's that precedes it.
     const heading = [...(host?.querySelectorAll('h2') ?? [])].find(

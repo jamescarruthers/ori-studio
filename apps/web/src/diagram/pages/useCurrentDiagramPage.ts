@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { PAGE_STEPS_RANGE, isStep, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
-import { countHoldsLaterPages, pageStepsRange, type PageStepsRange } from './pageCounts';
+import { PAGE_STEPS_RANGE, isStep, setPageSetup, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
+import { countHoldsLaterPages, pageStepsRange, retainPageCounts, type PageStepsRange } from './pageCounts';
 import { usePageInView, type PagesInView } from './pageInView';
-import { paginate, type PlannedPage } from './pagePlan';
+import { firstPageCapacity, hasTitleBlock, paginate, type PlannedPage } from './pagePlan';
 
 /** The page a pane's "this page" means: its index, what it is called, and how the page setup cuts it. */
 export interface CurrentDiagramPage {
@@ -17,6 +17,20 @@ export interface CurrentDiagramPage {
   range: PageStepsRange;
   /** Its own count stays, holding a later page with one still (`countHoldsLaterPages`): it has no Use default. */
   holdsLaterPages: boolean;
+  /**
+   * The first page under the title block: the count the block gives it by
+   * default (`firstPageCapacity`), which a count of its own overrides. Null
+   * on any other page, and without the block.
+   */
+  titleBlockDefault: number | null;
+  /**
+   * The first page under the title block with a count of its own: how many
+   * steps turning the block off adds to what the page is laid out for, as
+   * the toggle moves its count (`pageCounts.ts`, rule 7) — the steps the
+   * block takes off the default, as far as 30 and the page's room allow.
+   * Null on any other page, and where turning it off adds none.
+   */
+  titleBlockOffAdds: number | null;
 }
 
 /** What the Pages view captions page `index`: the number it prints, or its place when it prints none. */
@@ -51,13 +65,24 @@ export function currentDiagramPage(
     else if (selected === null || selected < view.first || selected > view.last) index = view.middle;
   }
   index = Math.min(Math.max(0, index), last);
+  const titleBlockDefault = index === 0 && hasTitleBlock(document.page) ? firstPageCapacity(document.page) : null;
+  const page = pages[index]!;
   return {
     index,
     name: pageName(document.page, index),
-    page: pages[index]!,
+    page,
     range: pageStepsRange(document, index) ?? PAGE_STEPS_RANGE,
     holdsLaterPages: countHoldsLaterPages(document, index),
+    titleBlockDefault,
+    titleBlockOffAdds: titleBlockDefault !== null && page.ownCount ? offAdds(document, page) : null,
   };
+}
+
+/** How many steps the first page is laid out for once the title block is off, as the toggle leaves it, more than `first`; null for none. */
+function offAdds(document: DiagramDocument, first: PlannedPage): number | null {
+  const off = retainPageCounts(document, setPageSetup(document, { titleBlock: { ...document.page.titleBlock, enabled: false } }));
+  const adds = (paginate(stepsOf(off), off.page)[0]?.layoutCount ?? 0) - first.layoutCount;
+  return adds > 0 ? adds : null;
 }
 
 /** The index among the steps of the step `id` prints with: itself, or for a turn the step after it, else the last. */

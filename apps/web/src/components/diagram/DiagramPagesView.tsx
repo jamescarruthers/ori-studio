@@ -21,6 +21,9 @@ import { composedPageUrl } from '../../diagram/pages/useDiagramPages';
 import { PAGES_PAD, PAGES_PX_PER_MM, usePagesView } from '../../diagram/pages/usePagesView';
 import { ViewportToolbar } from '../panels/ViewportToolbar';
 import { DiagramPageBand } from './DiagramPageBand';
+import { DiagramTitleBlockOverlay } from './DiagramTitleBlockOverlay';
+import { PageGuide } from './PageGuide';
+import { PagePlaceholder } from './PagePlaceholder';
 import styles from './DiagramPagesView.module.css';
 import { turnLabel, type TurnBetween } from '../../diagram/actions/diagramTurnActions';
 
@@ -57,8 +60,10 @@ function pageImageUrl(
  * and pen (`DiagramPageBand`), so that a colour being picked repaints the
  * band alone and a new colour composes no page again.
  *
- * Over each page, and never in it: the margin guide, a box for a step with no
- * picture yet, a mark where an instruction was cut, and each step as an option
+ * Over each page, and never in it: the margin guide, the first page's title
+ * block with a box where a part of its art prints nothing
+ * (`DiagramTitleBlockOverlay`), a box for a step with no picture yet, a mark
+ * where an instruction was cut, and each step as an option
  * of one listbox — the Steps grid's keyboard, so Enter opens the step, Delete
  * deletes it and the selected one is the tab stop. A press on a step focuses
  * it and selects it with its frame; a press on a selected frame selects the
@@ -245,9 +250,14 @@ export function DiagramPagesView({
                       />
                     )}
                     {margin > 0 && (
-                      <div
-                        className={styles.guide}
-                        style={{ left: mm(margin), top: mm(margin), right: mm(margin), bottom: mm(margin) }}
+                      <PageGuide style={{ left: mm(margin), top: mm(margin), right: mm(margin), bottom: mm(margin) }} />
+                    )}
+                    {page.titleBlock && pages.titleBlock && (
+                      <DiagramTitleBlockOverlay
+                        block={page.titleBlock}
+                        content={pages.titleBlock}
+                        model={pages.titleBlockModel()}
+                        paper={pages.layout.paper}
                       />
                     )}
                     {page.cells.map((cell) => {
@@ -267,9 +277,8 @@ export function DiagramPagesView({
                               )
                             )}
                           {empty && (
-                            <div
-                              className={styles.placeholder}
-                              aria-hidden="true"
+                            <PagePlaceholder
+                              kind="picture"
                               style={{
                                 left: mm(cell.pictureMm.x),
                                 top: mm(cell.pictureMm.y),
@@ -281,7 +290,7 @@ export function DiagramPagesView({
                               {step && isLockedStep(step)
                                 ? t('panels:diagram.card.locked', 'Made with a newer Ori Studio')
                                 : t('panels:diagram.pages.noPicture', 'No picture yet')}
-                            </div>
+                            </PagePlaceholder>
                           )}
                           {cell.textOverflow && (
                             // Round the text, never over it: an outline of the

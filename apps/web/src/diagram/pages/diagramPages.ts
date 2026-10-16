@@ -36,7 +36,7 @@ import {
 } from './diagramPageLayout';
 import { fontTextSetter } from './fontTextSetter';
 import { uploadTextRuns, type UploadTextRun } from '../upload/uploadText';
-import { layoutPicture, measureKey, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
+import { layoutPicture, measureKey, wholePictureRoom, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import { viewOfStep } from '../zoom/stepView';
@@ -45,6 +45,11 @@ import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
 import { zoomOutlineOf, zoomShapeOf } from '../zoom/zoomModel';
 import { liftedZoomArrows, type PlacedZoomArrow } from './zoomArrows';
+import type { TitleBlockLook } from './titleBlockColumn';
+import { modelRoom, resolveTitleBlock, titleBlockLook, type ResolvedTitleBlock } from './titleBlockContent';
+import { measuresTitleBlock } from './titleBlockEdits';
+import type { PageBox } from './pagePlacement';
+import { hasTitleBlock } from './pagePlan';
 
 export interface DiagramPagesDependencies {
   fontSource: DiagramFontSource;
@@ -70,6 +75,18 @@ export interface PreparedDiagramPages {
   unavailableFonts: DiagramFontFace[];
   /** Page `index` (from 0) as an SVG document; `band: false` leaves the flow band out, for the Pages view. */
   compose: (index: number, options?: PageComposeOptions) => ComposedPage;
+  /**
+   * What the first page's title block shows (`resolveTitleBlock`), which the
+   * Pages view marks where a part is missing; null where the first page has
+   * no block.
+   */
+  titleBlock: ResolvedTitleBlock | null;
+  /**
+   * Where the first page's title block draws its model, in mm, as the page
+   * is composed: what the Pages view keeps its marks clear of. Null where it
+   * draws none. Worked out once.
+   */
+  titleBlockModel: () => PageBox | null;
   /**
    * The enlarge arrows on page `index` where it prints them (Revision 2),
    * lifted to their areas as the page lifts them: what the Pages view puts
@@ -283,14 +300,17 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
  * measuring never packs a page twice. The pages say what was packed
  * (`DiagramPagesLayout.packed`); nothing is written back here. On a page
  * packed afresh a frame moved by hand is drawn at its offset only where its
- * step keeps its band, judged against the document's own arrangements in
+ * step keeps its place, judged against the document's own arrangements in
  * every pass (`repackedFrames.ts`).
  */
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
   let packed: Record<string, DiagramPageArrangement> = {};
   const stored = document.pageArrangements ?? {};
+  // The block's words in the room the diagram says they stand in, or measured now after an edit of them.
+  const room = measuresTitleBlock(document) ? ('measure' as const) : document.titleBlockContent?.room;
+  const titles = { title: document.title, block: titleBlockLook(document), ...(room !== undefined ? { room } : {}) };
   const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
-    const pages = layoutDiagramPages(steps, document.page, document.title, setter, { ...stored, ...packed }, stored);
+    const pages = layoutDiagramPages(steps, document.page, titles, setter, { ...stored, ...packed }, stored);
     if (pages.packed) packed = { ...packed, ...pages.packed };
     if (Object.keys(packed).length === 0) return pages;
     // A page the first layout packed is held by the rest, and packed all the same.
@@ -398,17 +418,31 @@ function scalesOf(pages: DiagramPagesLayout): Map<string, { scale: number; measu
 }
 
 /**
- * Every text a diagram's pages set, at its weight: the title, the
- * instructions and the digits, and the runs of its uploads' text and its
+ * Every text a diagram's pages set, at its weight: the title, the title
+ * block's own words as it prints them where the first page has the block,
+ * the instructions and the digits, and the runs of its uploads' text and its
  * annotations' labels, each in the CJK face it was given.
  */
 export function diagramFontTexts(document: DiagramDocument): DiagramFontText[] {
   return [
     { text: document.title, weight: 700 },
+    ...(hasTitleBlock(document.page) ? titleBlockFontTexts(titleBlockLook(document)) : []),
     ...stepsOf(document).map((step) => ({ text: step.text, weight: 400 as const })),
     ...[...diagramUploadTexts(document), ...diagramLabelTexts(document)].map(({ face, text }) =>
       face.key === 'latin' ? { text, weight: face.weight } : { text, weight: face.weight, cjk: face.key }
     ),
+  ];
+}
+
+/** The title block's words at their weights: the subtitle and the labels bold, the values and the note regular. */
+function titleBlockFontTexts({ subtitle, credits, note }: TitleBlockLook): DiagramFontText[] {
+  return [
+    { text: subtitle, weight: 700 },
+    ...credits.flatMap(({ label, value }) => [
+      { text: label, weight: 700 as const },
+      { text: value, weight: 400 as const },
+    ]),
+    { text: note, weight: 400 },
   ];
 }
 
@@ -454,18 +488,30 @@ export function preparedPages(
     setter.runs(text, face);
   }
   const steps = new Map(stepsOf(document).map((step) => [step.id, step]));
+  const titleBlock = hasTitleBlock(document.page) ? resolveTitleBlock(document) : null;
   const make = (
     layout: DiagramPagesLayout,
     of: DiagramDocument = document,
-    arrows = new Map<number, PlacedZoomArrow[]>()
+    arrows = new Map<number, PlacedZoomArrow[]>(),
+    model: { box?: PageBox | null } = {}
   ): PreparedDiagramPages => ({
     withLayout: (next) => make(next, of),
-    adoptedAs: (adopted) => make(layout, adopted, arrows),
+    adoptedAs: (adopted) => make(layout, adopted, arrows, model),
     layout,
     document: of,
     setter,
     missing: [...setter.missing],
     unavailableFonts: fonts.unavailable,
+    titleBlock,
+    titleBlockModel() {
+      if (model.box === undefined) {
+        const block = layout.pages[0]?.titleBlock;
+        const step = titleBlock?.model.step;
+        const room = block && titleBlock ? modelRoom(block.geometry, titleBlock) : null;
+        model.box = room && step ? wholePictureRoom(step, document.assets, document.style, room.box, room.align) : null;
+      }
+      return model.box;
+    },
     zoomArrows(index) {
       const page = layout.pages[index];
       if (!page) return [];
@@ -488,6 +534,7 @@ export function preparedPages(
         hanStyle: document.hanStyle,
         setter,
         embedFonts: (usage) => embeddedFontFaces(usage, fonts, subsetter),
+        titleBlock,
         ...options,
       });
     },

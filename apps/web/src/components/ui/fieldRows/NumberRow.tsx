@@ -9,6 +9,7 @@ import { FieldRow } from './FieldRow';
  */
 export function NumberRow({
   label,
+  help,
   value,
   min,
   max,
@@ -23,6 +24,8 @@ export function NumberRow({
   onReset,
 }: {
   label: string;
+  /** What the row means, behind a help mark beside its label (`FieldRow.help`). */
+  help?: string;
   /** Null while there is no number to show: the field is empty (`NumberField`). */
   value: number | null;
   min?: number;
@@ -43,6 +46,7 @@ export function NumberRow({
   return (
     <FieldRow
       label={label}
+      help={help}
       htmlFor={inputId}
       kind="input"
       disabled={disabled}

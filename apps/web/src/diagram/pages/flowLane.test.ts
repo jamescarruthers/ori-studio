@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PAGE_SETUP,
   DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
   type DiagramPageSetup,
   type DiagramPageSide,
 } from '../document/diagramDocument';
@@ -15,7 +16,7 @@ import {
   type LayoutTurn,
 } from './diagramPageLayout';
 import { estimateTextSetter } from './estimateTextSetter';
-import { partBox } from './pagePlacement';
+import { lanePicture, partBox } from './pagePlacement';
 import { CRANE_PAGES, CRANE_STEPS, craneFlow } from './craneLane.fixtures';
 import {
   AS_ROUND_MM,
@@ -26,7 +27,9 @@ import {
   curveStart,
   flowLane,
   flowPagePlan,
+  laneStretch,
   pageSide,
+  spotAlong,
   type Lane,
   type LaneCurve,
   type LanePoint,
@@ -64,8 +67,14 @@ function steps(count: number, patch: (index: number) => Partial<LayoutStep> = ()
   }));
 }
 
+// No title block unless a case asks for one: these are the lane's pages, as drawn before it.
 const flow = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}) =>
-  layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, 'Heart', estimateTextSetter);
+  layoutDiagramPages(
+    list,
+    { ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: PAGE_SETTINGS.titleBlock.legacy, ...setup },
+    { title: 'Heart' },
+    estimateTextSetter
+  );
 
 const centreOf = (cell: LayoutCell): LanePoint => ({
   x: cell.pictureMm.x + cell.pictureMm.size / 2,
@@ -486,10 +495,13 @@ describe('a turn between two rows (Zach, 2026-10-14: "(b4)")', () => {
    * tighter than the band is half wide: its inner edge then comes to a point, the band kept inside the margin
    * (2026-10-14, for Zach to choose). Standing such a turn past the margin far enough to keep it that round would
    * take its band up to 19 mm past it at the default band (A4, 28 a page) — off a 12 mm margin's paper.
-   * At the default band, an A4 page of up to 12 steps never comes to that.
+   * At the default band, these 23 steps on an A4 page of up to 12 steps, with no title block, do not come to
+   * that. Other diagrams can: 22 steps at 9 a page bend page 3's last turn 8.7 mm round, and the title block
+   * bends page 1 of A4 landscape at 12 a page 7.3 mm round, where this asks 9.6 (`diagram-title-block.md`,
+   * As built (1f): for Zach).
    */
   it.each(SETUPS.filter((setup) => !setup.size && (setup.stepsPerPage ?? 9) <= 12))(
-    'bends no turn tighter than the band is half wide, or its rows half apart, at the default band on an A4 page of up to 12 steps: %j',
+    'bends no turn tighter than the band is half wide, or its rows half apart, at the default band in 23 steps on an A4 page of up to 12: %j',
     (setup) => {
       for (const firstPageSide of ['left', 'right'] as const) {
         const result = flow(steps(23), { ...setup, firstPageSide });
@@ -614,6 +626,77 @@ describe('a printed spread', () => {
       });
       expect(spreads, `${JSON.stringify(setup)} ${firstPageSide}`).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  it('hands the first page over under its title block as it does without one, for either first page', () => {
+    const titleBlock = { enabled: true, heightShare: 0.27 };
+    let [spine, turn] = [0, 0];
+    for (const setup of SETUPS) {
+      for (const firstPageSide of ['left', 'right'] as const) {
+        const result = flow(steps(3 * (setup.stepsPerPage ?? 9) + 2), { ...setup, firstPageSide, titleBlock });
+        const [one, two] = result.pages;
+        const W = result.paper.widthMm;
+        const label = `${JSON.stringify(setup)} ${firstPageSide}`;
+        const { block } = one!.titleBlock!.geometry;
+        // The lane starts at step 1's centre, under the block, with no stub.
+        expect(one!.band!.from, label).toEqual({ x: one!.flow!.stops[0]!.x, y: one!.flow!.stops[0]!.y });
+        expect(one!.band!.from.y, label).toBeGreaterThan(block.y + block.h);
+        const [out, into] = [one!.band!.curves.at(-2)!.to, two!.band!.curves[0]!.to];
+        if (firstPageSide === 'left') {
+          // Over the spine at one height, level there, and on into the bleed both ways.
+          spine += 1;
+          expect([out.x, into.x], label).toEqual([W, 0]);
+          expect(into.y, label).toBeCloseTo(out.y, 6);
+          expect(one!.band!.curves.at(-2)!.c2.y, label).toBeCloseTo(out.y, 9);
+          expect(one!.band!.curves.at(-1)!.to, label).toEqual({ x: W + 10, y: out.y });
+          expect(two!.band!.from, label).toEqual({ x: -10, y: into.y });
+          continue;
+        }
+        // Alone on the right, reading down from under the block: where it runs off its outer edge, level with its
+        // last picture, the next page starts at its head, level with its first (952fc658e).
+        if (one!.band!.curves.at(-1)!.to.x !== W + 10 || two!.band!.from.x !== -10) continue;
+        turn += 1;
+        expect([out.y, into.y], label).toEqual([one!.flow!.stops.at(-1)!.y, two!.flow!.stops[0]!.y]);
+      }
+    }
+    expect(spine).toBe(SETUPS.length);
+    expect(turn).toBeGreaterThan(0);
+  });
+
+  it('keeps the first page’s lane under its title block, its band’s edge rising into the block’s foot by less than its half width', () => {
+    // A look, not a rule (diagram-title-block.md, 1c As built): the lane's curve through the first row may rise
+    // above the row's pictures, as on any page, where the header's room takes it; under the block, the block's foot.
+    const titleBlock = { enabled: true, heightShare: 0.27 };
+    let rises = 0;
+    // And the shortest blocks, on landscape and A5 pages, where the review saw it (2026-10-14).
+    const short: Partial<DiagramPageSetup>[] = [8, 9, 12, 16].flatMap((stepsPerPage) =>
+      (['a4', 'a5', 'letter'] as const).flatMap((size) =>
+        (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation, stepsPerPage }))
+      )
+    );
+    for (const setup of [...SETUPS, ...short]) {
+      for (const firstPageSide of ['left', 'right'] as const) {
+        const result = flow(steps(3 * (setup.stepsPerPage ?? 9) + 2), { ...setup, firstPageSide, titleBlock });
+        const one = result.pages[0]!;
+        const foot = one.titleBlock!.geometry.block.y + one.titleBlock!.geometry.block.h;
+        const half = result.bandWidthMm / 2;
+        const label = `${JSON.stringify(setup)} ${firstPageSide}`;
+        let from = one.band!.from;
+        let highest = Infinity;
+        for (const curve of one.band!.curves) {
+          const start = from;
+          const y = (t: number) =>
+            (1 - t) ** 3 * start.y + 3 * (1 - t) ** 2 * t * curve.c1.y + 3 * (1 - t) * t ** 2 * curve.c2.y + t ** 3 * curve.to.y;
+          highest = Math.min(highest, -furthest((t) => -y(t)));
+          from = curve.to;
+        }
+        // The lane's line stays under the block; only its band's upper half may reach into it.
+        expect(highest, label).toBeGreaterThan(foot);
+        if (highest - half < foot) rises += 1;
+      }
+    }
+    // It does, on dense first pages: shown to Zach with the first look rather than tuned here.
+    expect(rises).toBeGreaterThan(0);
   });
 
   it('carries the lane over a page turn at one height, as over the spine, where the page before read up to its head (Zach’s crane, 2026-10-14)', () => {
@@ -980,6 +1063,36 @@ describe('a step standing in a bend', () => {
   });
 });
 
+describe('the lane between two pictures (laneStretch)', () => {
+  /** A straight cubic from the curve before's end to `to`. */
+  const line = (from: LanePoint, to: LanePoint): LaneCurve => ({
+    c1: { x: from.x + (to.x - from.x) / 3, y: from.y + (to.y - from.y) / 3 },
+    c2: { x: from.x + ((to.x - from.x) * 2) / 3, y: from.y + ((to.y - from.y) * 2) / 3 },
+    to,
+  });
+  // Stops at (0, 0), where the lane starts, and (100, 0), two curves on.
+  const lane: Lane = { from: { x: 0, y: 0 }, curves: [line({ x: 0, y: 0 }, { x: 50, y: 0 }), line({ x: 50, y: 0 }, { x: 100, y: 0 })] };
+  const into = [-1, 1];
+  const box = (left: number, right: number) => ({ left, right, top: -10, bottom: 10 });
+
+  it('runs from where the lane leaves the one picture to where it reaches the other, measured along it', () => {
+    const stretch = laneStretch(lane, into, 0, 1, box(-10, 10), box(80, 120))!;
+    expect(stretch[0]!.x).toBeCloseTo(10, 6);
+    expect(stretch.at(-1)!.x).toBeCloseTo(80, 6);
+    expect(stretch.at(-1)!.s).toBeCloseTo(70, 6);
+    expect(spotAlong(stretch, 35)).toEqual({ x: expect.closeTo(45, 6), y: 0 });
+    // Held to its ends.
+    expect(spotAlong(stretch, -5).x).toBeCloseTo(10, 6);
+    expect(spotAlong(stretch, 99).x).toBeCloseTo(80, 6);
+  });
+
+  it('is a point where the one picture reaches into the other, and none where the two stops are one', () => {
+    const touching = laneStretch(lane, into, 0, 1, box(-10, 60), box(40, 120))!;
+    expect(touching.at(-1)!.s).toBe(0);
+    expect(laneStretch(lane, [1, 1], 0, 1, box(-10, 10), box(80, 120))).toBeNull();
+  });
+});
+
 describe('a turn on a packed page, on the lane', () => {
   const over = (id: string): LayoutTurn => ({ id, turn: { kind: 'turn-over', axis: 'vertical' } });
 
@@ -1003,63 +1116,71 @@ describe('a turn on a packed page, on the lane', () => {
           };
           for (const turn of page.turns) {
             const label = `${JSON.stringify(setup)} ${firstPageSide} page ${page.number} ${turn.id}`;
-            // Wherever it stands, never on a step's number, picture or caption.
-            expect(clear(turn.at, turn.box), label).toBe(true);
             const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
-            if (k <= 0) continue;
+            if (k <= 0) {
+              // Before a page's first step: never on a step's number, picture or caption.
+              expect(clear(turn.at, turn.box), label).toBe(true);
+              continue;
+            }
             const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
-            // Each goes the way of the step it comes before.
-            expect(turn.rightToLeft, label).toBe(Boolean(next.rightToLeft));
-            if (before.band === next.band && !before.bend && !next.bend) {
-              seen.add('gutter');
-              // Midway between their boxes, in the gutter the packing kept, at their pictures' height.
-              const [left, right] = before.cellMm.x < next.cellMm.x ? [before, next] : [next, before];
-              expect(turn.at.x, label).toBeCloseTo((left.cellMm.x + left.cellMm.w + right.cellMm.x) / 2, 9);
-              expect(turn.at.y, label).toBeCloseTo((centreOf(before).y + centreOf(next).y) / 2, 9);
-              expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThan(left.cellMm.x + left.cellMm.w);
-              expect(turn.at.x + turn.box.w / 2, label).toBeLessThan(right.cellMm.x);
-            } else if (before.bend || next.bend) {
-              seen.add('beside');
-              // Midway between the step in the bend's picture and its neighbour's, where that is clear of both;
-              // else moved off them, never further than to beyond the nearer.
-              const mid = { x: (centreOf(before).x + centreOf(next).x) / 2, y: (centreOf(before).y + centreOf(next).y) / 2 };
-              if (clear(mid, turn.box)) expect(turn.at, label).toEqual(mid);
-              else {
-                seen.add('moved');
-                const reach = Math.max(...[before, next].map((cell) => Math.hypot(cell.cellMm.w, cell.cellMm.h)));
-                expect(Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y), label).toBeLessThan(reach);
-              }
+            const where = before.band === next.band && !before.bend && !next.bend ? 'row' : before.bend || next.bend ? 'beside' : 'bend';
+            // Within a row, each goes the way of the step it comes before; across a bend, below.
+            if (where === 'row') expect(turn.rightToLeft, label).toBe(Boolean(next.rightToLeft));
+            seen.add(where);
+            // On the lane, midway along it from where it leaves the one picture to where it reaches the other (Zach,
+            // 2026-10-15), where that is clear of every step as drawn; else as near that along it as is clear; and
+            // where nowhere along it is, on its middle all the same.
+            const solved = flowLane(page.flow!)!;
+            const stretch = laneStretch(solved.lane, solved.into, k - 1, k, lanePicture(before), lanePicture(next))!;
+            const length = stretch.at(-1)!.s;
+            const mid = spotAlong(stretch, length / 2);
+            // Every quarter millimetre out from its middle, either way.
+            const spots = Array.from({ length: Math.floor(length / 0.5) + 1 }, (_, n) => [length / 2 - n * 0.25, length / 2 + n * 0.25]).flatMap(
+              (pair) => pair.map((s) => spotAlong(stretch, s))
+            );
+            if (clear(mid, turn.box) || !spots.some((spot) => clear(spot, turn.box))) {
+              seen.add(clear(mid, turn.box) ? `${where} midway` : `${where} centred`);
+              expect(turn.at.x, label).toBeCloseTo(mid.x, 9);
+              expect(turn.at.y, label).toBeCloseTo(mid.y, 9);
             } else {
-              seen.add('bend');
-              // On the lane at the turn's middle, where it turns between the two bands — halfway between the two
-              // pictures' heights, as deep as the margin lets it stand (Zach, 2026-10-14), its glyph with it — where
-              // that is clear of every step; else moved off them, never further than to beyond the nearer.
-              const { widthMm: W, marginMm: m } = drawn.paper;
-              const middle = flowLane(page.flow!)!.turns.get(page.cells.indexOf(next))!;
-              const mid = middle.at;
-              expect(mid.y, label).toBeCloseTo((centreOf(before).y + centreOf(next).y) / 2, 9);
-              if (clear(mid, turn.box)) {
-                expect(turn.at.x, label).toBeCloseTo(mid.x, 9);
-                expect(turn.at.y, label).toBeCloseTo(mid.y, 9);
-                // On the ribbon: the lane passes through the turn's middle.
-                expect(knotAt(page.band!, mid), label).toBe(true);
-                // Inside the margin wherever the turn is: its band's outer edge no further out than the margin.
-                if (middle.stands !== 'past') {
-                  seen.add('bend inside');
-                  expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThanOrEqual(m - 1e-9);
-                  expect(turn.at.x + turn.box.w / 2, label).toBeLessThanOrEqual(W - m + 1e-9);
-                }
-              } else {
-                seen.add('bend moved');
-                const reach = Math.max(...[before, next].map((cell) => Math.hypot(cell.cellMm.w, cell.cellMm.h)));
-                expect(Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y), label).toBeLessThan(reach);
+              seen.add(`${where} slid`);
+              expect(clear(turn.at, turn.box), label).toBe(true);
+              expect(spots.some((spot) => Math.hypot(spot.x - turn.at.x, spot.y - turn.at.y) < 1e-6), label).toBe(true);
+            }
+            if (where !== 'row') {
+              // Across a bend: the way of the row it leaves before the bend's deepest point, of the next from there.
+              const outward = before.rightToLeft ? -1 : 1;
+              const deepest = stretch.reduce((best, spot) => (outward * spot.x > outward * best.x ? spot : best));
+              const at = stretch.reduce((best, spot) =>
+                Math.hypot(spot.x - turn.at.x, spot.y - turn.at.y) < Math.hypot(best.x - turn.at.x, best.y - turn.at.y) ? spot : best
+              );
+              // Measured to the stretch's samples: a glyph within a sample of the threshold may go either way.
+              if (Math.abs(at.s - (deepest.s - 0.5)) > 1.5) {
+                seen.add(at.s < deepest.s - 0.5 ? `${where} leaving` : `${where} entering`);
+                expect(turn.rightToLeft, label).toBe(Boolean(at.s < deepest.s - 0.5 ? before.rightToLeft : next.rightToLeft));
               }
+            }
+            // Inside the margin wherever the turn is: its band's outer edge no further out than the margin.
+            const middle = where === 'bend' ? solved.turns.get(k)! : null;
+            if (middle && middle.stands !== 'past' && clear(mid, turn.box)) {
+              seen.add('bend inside');
+              const { widthMm: W, marginMm: m } = drawn.paper;
+              expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThanOrEqual(m - 1e-9);
+              expect(turn.at.x + turn.box.w / 2, label).toBeLessThanOrEqual(W - m + 1e-9);
             }
           }
         });
       }
     }
-    // A glyph beside a step in a bend has had to move off one at least once: the case the review found.
-    expect([...seen].sort()).toEqual(['beside', 'bend', 'bend inside', 'bend moved', 'gutter', 'moved'].sort());
+    // Within a row, across a bend and beside a step in one, each midway and slid along the lane off a step at least
+    // once; beside a step in a bend, a glyph that stands clear nowhere along its stretch, centred on it; and across
+    // a bend, and beside a step in one, glyphs both before the bend's deepest point and from it on.
+    expect([...seen].sort()).toEqual(
+      [
+        ...['bend', 'bend entering', 'bend inside', 'bend leaving', 'bend midway', 'bend slid'],
+        ...['beside', 'beside centred', 'beside entering', 'beside leaving', 'beside midway', 'beside slid'],
+        ...['row', 'row midway', 'row slid'],
+      ].sort()
+    );
   });
 });

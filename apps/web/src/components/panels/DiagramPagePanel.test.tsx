@@ -1,9 +1,9 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { stepsOf, type DiagramDocument, type DiagramPageArrangement } from '../../diagram/document/diagramDocument';
+import { PAGE_SETTINGS, stepsOf, type DiagramDocument, type DiagramPageArrangement } from '../../diagram/document/diagramDocument';
 import { usePublishPageInView } from '../../diagram/pages/pageInView';
-import { paginate } from '../../diagram/pages/pagePlan';
+import { firstPageCapacity, paginate } from '../../diagram/pages/pagePlan';
 import { heldPageArrangements } from '../../diagram/pages/pageArrangements';
 import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { PATH_COLOR_SETTLE_MS } from '../../diagram/pages/usePathColorPick';
@@ -260,6 +260,64 @@ describe('DiagramPagePanel', () => {
     expect(state().diagram?.page.layout).toBe('flow');
     expect(analytics.trackDiagramPageSetupChanged).not.toHaveBeenCalled();
   });
+
+  /**
+   * The pane's sections in order, by the names they carry: an open section's
+   * group, a closed one's disclosure. Once each: the Style section's cards are
+   * a group of the same name.
+   */
+  const sectionOrder = () => {
+    const names = ['Paper', 'Layout', 'Packing', 'On the page', 'Path', 'Header & footer', 'Style'];
+    const found = [...host!.querySelectorAll('[role="group"][aria-label], button[aria-expanded]')]
+      .map((element) => element.getAttribute('aria-label') ?? element.textContent ?? '')
+      .filter((name) => names.includes(name));
+    return [...new Set(found)];
+  };
+
+  it('puts Packing right under the counts, the path in a section of its own, and the title block in Header & footer (H-15 A, H-16 A)', () => {
+    expect(sectionOrder()).toEqual(['Paper', 'Layout', 'Packing', 'Path', 'Header & footer', 'Style']);
+    // Layout ends on the current page's count, which Packing follows.
+    const layout = host!.querySelector('[role="group"][aria-label="Layout"]')!;
+    const rows = [...layout.querySelectorAll('[data-field-label]')].map((label) => label.textContent);
+    expect(rows).toEqual(['First page', 'Steps per page', expect.stringMatching(/^Steps on page \d/)]);
+    // The path's rows are its section's, and the title block opens Header & footer, before the title's tab.
+    const path = host!.querySelector('[role="group"][aria-label="Path"]')!;
+    expect([...path.querySelectorAll('[data-field-label]')].map((label) => label.textContent)).toEqual([
+      'Show path',
+      'Path width (mm)',
+      'Path color',
+    ]);
+    // Found by its name, not a selector: jsdom's selector engine trips on the ampersand.
+    const header = [...host!.querySelectorAll('[role="group"]')].find(
+      (group) => group.getAttribute('aria-label') === 'Header & footer'
+    )!;
+    const switches = [...header.querySelectorAll('[role="switch"]')].map((each) => each.getAttribute('aria-label'));
+    expect(switches).toEqual(['Title block', 'Title tab', 'Page numbers']);
+  });
+
+  it('has no Packing and no Path in a grid, whose layout ends on its columns and rows', () => {
+    act(() => radio('Grid').click());
+    expect(sectionOrder()).toEqual(['Paper', 'Layout', 'Header & footer', 'Style']);
+    const layout = host!.querySelector('[role="group"][aria-label="Layout"]')!;
+    expect([...layout.querySelectorAll('[data-field-label]')].map((label) => label.textContent)).toEqual([
+      'First page',
+      'Columns',
+      'Rows',
+    ]);
+  });
+
+  it('says the title’s tab leaves the first page to the title block while the block is on (T-5 A)', () => {
+    const titleHelp = () =>
+      [...host!.querySelectorAll('[data-field-help]')]
+        .map((mark) => mark.getAttribute('aria-label'))
+        .find((help) => help?.startsWith('The diagram’s title'));
+    act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled: false } }));
+    expect(titleHelp()).toBe('The diagram’s title, in a tab at the top of every page.');
+    act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled: true } }));
+    expect(titleHelp()).toBe(
+      'The diagram’s title, in a tab at the top of every page. On the first page the title block carries it instead.'
+    );
+  });
 });
 
 describe('DiagramPagePanel › the current page’s own count', () => {
@@ -299,8 +357,13 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     act(() => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
   };
 
-  // “Add step” selects the step it adds: the last, on page 2.
-  beforeEach(() => act(() => state().selectDiagramStep(null)));
+  // “Add step” selects the step it adds: the last, on page 2. No title block unless a case asks for one.
+  beforeEach(() =>
+    act(() => {
+      state().selectDiagramStep(null);
+      state().setDiagramPage({ titleBlock: PAGE_SETTINGS.titleBlock.legacy });
+    })
+  );
 
   it('shows page 1 with nothing selected: what it is cut for, and that it is the default', () => {
     // Ten steps, nine a page by default.
@@ -379,6 +442,33 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     showPage(1);
     expect(useDefault()).toBeDefined();
     expect(host?.textContent).not.toContain('Keeps later pages in place');
+  });
+
+  it('says why page 1 holds fewer under the title block, or how many turning it off adds to its own count (Zach, 2026-10-15)', () => {
+    const blockHelp = () => field()!.closest('[data-field-row]')!.querySelector('[data-field-help]')?.getAttribute('aria-label');
+    const block = (enabled: boolean) =>
+      act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled } }));
+    block(true);
+    // The default under the block, fewer than Steps per page shows: the row says why.
+    const underBlock = firstPageCapacity(state().diagram!.page);
+    expect(underBlock).toBeLessThan(state().diagram!.page.stepsPerPage);
+    expect(field()?.value).toBe(String(underBlock));
+    expect(blockHelp()).toBe(`The title block takes room on this page, so it holds ${underBlock} by default.`);
+    act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Decrease Steps on page 1"]')!.click());
+    // Its own count, one under the default: turning the block off gives it back what the block takes.
+    expect(field()?.value).toBe(String(underBlock - 1));
+    const takes = state().diagram!.page.stepsPerPage - underBlock;
+    expect(blockHelp()).toBe(`Turning the title block off adds ${takes} to this count; later pages keep theirs and shift.`);
+    // At 1, where the block took nothing off, it says what off adds all the same.
+    act(() => state().setDiagramPageSteps(0, 1));
+    expect(field()?.value).toBe('1');
+    expect(blockHelp()).toBe(`Turning the title block off adds ${takes} to this count; later pages keep theirs and shift.`);
+    // Page 2 says nothing of it, and nor does page 1 with the block off.
+    showPage(1);
+    expect(blockHelp()).toBeUndefined();
+    showPage(0);
+    block(false);
+    expect(blockHelp()).toBeUndefined();
   });
 
   it('acts on the selected step’s page while no Pages view shows one', () => {
@@ -476,12 +566,12 @@ describe('DiagramPagePanel › Packing', () => {
     expect(button('Re-pack All Pages')).toBeUndefined();
   });
 
-  it('shows Zach’s defaults: Auto preferring three bands at 0.5, steps in bends, nesting 0.8, steadiness 0.85', () => {
+  it('shows Zach’s defaults: Auto preferring three bands at 0.5, steps in bends, nesting 0.8, steadiness 0.5', () => {
     expect(segment('Bands', 'Auto').getAttribute('aria-pressed')).toBe('true');
     expect(readout('Prefer three bands')).toBe('0.5');
     expect(toggle('Steps in bends').getAttribute('aria-checked')).toBe('true');
     expect(readout('Nesting')).toBe('0.8');
-    expect(readout('Scale steadiness')).toBe('0.85');
+    expect(readout('Scale steadiness')).toBe('0.5');
     // Nothing to reset at a default.
     expect(host!.querySelector('[aria-label^="Reset Nesting"]')).toBeNull();
   });
@@ -518,8 +608,8 @@ describe('DiagramPagePanel › Packing', () => {
     const past = state().diagramHistory.past.length;
     drag('Prefer three bands', ['0.2']);
     expect(state().diagram?.page.flowPreferBands).toBe(0.2);
-    drag('Scale steadiness', ['0.5']);
-    expect(state().diagram?.page.flowSteadiness).toBe(0.5);
+    drag('Scale steadiness', ['0.85']);
+    expect(state().diagram?.page.flowSteadiness).toBe(0.85);
     act(() => toggle('Steps in bends').click());
     expect(state().diagram?.page.flowBendSteps).toBe(false);
     expect(state().diagramHistory.past).toHaveLength(past + 3);

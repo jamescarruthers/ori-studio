@@ -12,6 +12,8 @@ import {
   createStep,
   createTurn,
   insertSteps,
+  PAGE_SETTINGS,
+  setTitleBlockContent,
   type DiagramDocument,
   type KnownDiagramAnnotation,
 } from '../../diagram/document/diagramDocument';
@@ -240,7 +242,11 @@ describe('DiagramPagesView', () => {
 
   it('tags a step placed past the margin, or off the paper, “Outside margin”, and says nothing of a step placed over another', () => {
     const steps = ['s0', 's1', 's2', 's3'].map((id) => cpStep(id));
-    const grid = (document: DiagramDocument) => ({ ...document, page: { ...document.page, layout: 'grid' as const, columns: 2, rows: 2 } });
+    // No title block, so the four share page 1.
+    const grid = (document: DiagramDocument) => ({
+      ...document,
+      page: { ...document.page, layout: 'grid' as const, columns: 2, rows: 2, titleBlock: PAGE_SETTINGS.titleBlock.legacy },
+    });
     const plain = preparedPages(grid(insertSteps(createDiagram({ title: 'Crane' }), steps, 0)), FONTS, subsetter).layout;
     const [first, second, , fourth] = plain.pages[0]!.cells;
     const { widthMm, marginMm } = plain.paper;
@@ -316,6 +322,128 @@ describe('DiagramPagesView', () => {
     });
     expect(useWorkspaceStore.getState().diagramDetail).toBeNull();
     expect(props.onPageClick).not.toHaveBeenCalled();
+  });
+
+  it('outlines the first page’s title block over the page, and marks where a part of it prints nothing, never in the page', () => {
+    const withBlock = (document: DiagramDocument): DiagramDocument => ({
+      ...document,
+      page: { ...document.page, titleBlock: { enabled: true, heightShare: 0.27 } },
+    });
+    const missing = () =>
+      [...host.querySelectorAll<HTMLElement>('[data-title-block-missing]')].map((box) => [box.dataset.titleBlockMissing, box.textContent]);
+    // Every part shown: the outline alone, where the block is.
+    const shown = preparedPages(withBlock(diagram()), FONTS, subsetter);
+    render(shown, {}, shown.layout.bandInk, withBlock(diagram()));
+    const outline = host.querySelector<HTMLElement>('[data-page="0"] [data-title-block]')!;
+    const { block } = shown.layout.pages[0]!.titleBlock!.geometry;
+    const { widthMm, heightMm } = shown.layout.paper;
+    // Inset into the page as the margin guide is, its foot alone drawn: its top and sides are the margin's, and a line
+    // there would run over the subtitle and its rule (Zach, 2026-10-15).
+    expect([outline.style.left, outline.style.top, outline.style.right, outline.style.bottom]).toEqual(
+      [block.x, block.y, widthMm - block.x - block.w, heightMm - block.y - block.h].map((mm) => `${mm * PX_PER_MM}px`)
+    );
+    expect(outline.dataset.edges).toBe('foot');
+    expect(missing()).toEqual([]);
+    // No linked step, no picture: each part of the art says why, in the room it would print in — the pattern and
+    // the model, which would stand in the pattern's square, in one box there.
+    const bare = withBlock(insertSteps(createDiagram({ title: '' }), [{ ...createStep(() => 'step-empty'), text: 'Nothing yet.' }], 0));
+    const empty = preparedPages(bare, FONTS, subsetter);
+    render(empty, {}, empty.layout.bandInk, bare);
+    expect(missing()).toEqual([
+      ['pattern', 'No step is linked to a crease pattern'],
+      ['model', 'No step has a picture yet'],
+    ]);
+    const rooms = [...host.querySelectorAll<HTMLElement>('[data-title-block-room]')];
+    expect(rooms.map((room) => [room.dataset.titleBlockRoom, [...room.querySelectorAll<HTMLElement>('[data-title-block-missing]')].map((part) => part.dataset.titleBlockMissing)])).toEqual([
+      ['square', ['pattern', 'model']],
+    ]);
+    const { pattern } = empty.layout.pages[0]!.titleBlock!.geometry;
+    expect([rooms[0]!.style.left, rooms[0]!.style.width]).toEqual([pattern.x, pattern.w].map((mm) => `${mm * PX_PER_MM}px`));
+    const svg = empty.compose(0).svg;
+    for (const [, words] of missing()) expect(svg).not.toContain(words);
+    // No title: nothing in the band, on screen or in print — no box, no words; the page's image is the page as
+    // filed, its flow band aside (Zach, 2026-10-15).
+    expect(svgOf(host.querySelector<HTMLImageElement>('[data-page="0"] img')!)).toBe(empty.compose(0, { band: false }).svg);
+    expect(svgOf(host.querySelector<HTMLImageElement>('[data-page="0"] img')!)).not.toContain('Add a title');
+    // A step chosen for the model that has no picture is named by its number.
+    const chosen = setTitleBlockContent(withBlock(diagram()), { model: { kind: 'step', stepId: 'step-empty' } });
+    const chosenPages = preparedPages(chosen, FONTS, subsetter);
+    render(chosenPages, {}, chosenPages.layout.bandInk, chosen);
+    expect(missing()).toEqual([['model', 'Step 2 has no picture yet']]);
+    // A press on the block is a press on the page: it asks about the page.
+    const props = render(shown, {}, shown.layout.bandInk, withBlock(diagram()));
+    act(() => host.querySelector<HTMLElement>('[data-title-block]')!.click());
+    expect(props.onPageClick).toHaveBeenCalledOnce();
+    expect(props.onSelect).toHaveBeenLastCalledWith(null);
+  });
+
+  it('marks credits left out, never in the page, and no credit with an empty value, nor an empty note or one cut with “…” (Zach, 2026-10-15)', () => {
+    const header = (credits: { label: string; value: string }[], note = '') => {
+      const made = insertSteps(createDiagram({ title: 'Crane' }), [cpStep('step-1'), cpStep('step-2')], 0);
+      const blocked = { ...made, page: { ...made.page, titleBlock: { enabled: true, heightShare: 0.23 } } };
+      const noted = setTitleBlockContent(blocked, { subtitle: 'Origami diagram', note });
+      return credits.reduce((done, credit) => setTitleBlockContent(done, { credits: { op: 'add', credit } }), noted);
+    };
+    const rooms = () =>
+      [...host.querySelectorAll<HTMLElement>('[data-title-block-room]')].map((room) => [
+        room.dataset.titleBlockRoom,
+        [...room.querySelectorAll<HTMLElement>('[data-title-block-missing]')].map((part) => [part.dataset.titleBlockMissing, part.textContent]),
+      ]);
+    const document = header([
+      { label: 'Author', value: '' },
+      { label: 'Steps', value: '2' },
+    ]);
+    const pages = preparedPages(document, FONTS, subsetter);
+    render(pages, {}, pages.layout.bandInk, document);
+    // An empty credit is not drawn, nor marked: no placeholder over the page, nothing on it.
+    expect(rooms()).toEqual([]);
+    expect(host.querySelector('[data-page="0"]')!.textContent).not.toContain('AUTHOR');
+    expect(pages.compose(0).svg).not.toContain('AUTHOR');
+    expect(pages.compose(0).svg).toContain('STEPS');
+    // A note longer than the block has room for, cut with "…": no tag (Zach, 2026-10-15: the block grows for it after
+    // an edit of it, and past half the page the end is simply not printed).
+    const long = header([{ label: 'Steps', value: '2' }], Array.from({ length: 40 }, (_, index) => `Line ${index + 1}`).join('\n'));
+    const longPages = preparedPages(long, FONTS, subsetter);
+    render(longPages, {}, longPages.layout.bandInk, long);
+    expect(longPages.layout.pages[0]!.titleBlock!.note!.cut).toBe(true);
+    expect(rooms()).toEqual([]);
+    // Credits left out for want of room, on a short block: marked by a tag under the block.
+    const many = header(Array.from({ length: 12 }, (_, index) => ({ label: `Credit ${index + 1}`, value: 'Traditional design' })));
+    const short = { ...many, page: { ...many.page, size: 'a5' as const, orientation: 'landscape' as const, titleBlock: { enabled: true, heightShare: 0.15 } } };
+    const shortPages = preparedPages(short, FONTS, subsetter);
+    render(shortPages, {}, shortPages.layout.bandInk, short);
+    expect(rooms()).toEqual([['cut', [['credits', 'Some credits don’t fit']]]]);
+    const cut = host.querySelector<HTMLElement>('[data-title-block-room="cut"]')!;
+    expect(cut.getAttribute('data-kind')).toBe('cut');
+    const { block: shortBlock } = shortPages.layout.pages[0]!.titleBlock!.geometry;
+    expect(cut.style.top).toBe(`${(shortBlock.y + shortBlock.h) * PX_PER_MM}px`);
+  });
+
+  it('sets the words for a missing pattern over a portrait model standing at its own size in its place, not on it', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400"><rect width="300" height="400" fill="#c48"/></svg>';
+    const photo = {
+      ...createStep(() => 'step-photo'),
+      source: { kind: 'upload' as const, assetId: 'asset-tall', rotationQuarterTurns: 0 as const, mirrored: false },
+      picture: { kind: 'asset' as const, assetId: 'asset-tall', paperScale: 1, key: 'upload-asset-tall' },
+    };
+    const made = insertSteps(createDiagram({ title: 'Standing figure' }), [photo], 0);
+    const document: DiagramDocument = {
+      ...made,
+      assets: { 'asset-tall': { id: 'asset-tall', kind: 'svg', svg, widthPx: 300, heightPx: 400, bytes: svg.length } },
+      page: { ...made.page, titleBlock: { enabled: true, heightShare: 0.27 } },
+    };
+    const pages = preparedPages(document, FONTS, subsetter);
+    render(pages, {}, pages.layout.bandInk, document);
+    const { pattern, block, model: box } = pages.layout.pages[0]!.titleBlock!.geometry;
+    // Three quarters as wide as tall, the model is its box's height, on the band's foot at its right.
+    const model = pages.titleBlockModel()!;
+    expect([model.h, model.y + model.h, model.x + model.w]).toEqual([box.h, block.y + block.h, block.x + block.w].map((mm) => expect.closeTo(mm, 6)));
+    // The square's words in the strip the model leaves over itself.
+    const room = host.querySelector<HTMLElement>('[data-title-block-room="square"]')!;
+    expect(room.textContent).toBe('No step is linked to a crease pattern');
+    expect([room.style.left, room.style.top, room.style.width, room.style.height]).toEqual(
+      [pattern.x, pattern.y, pattern.w, model.y - pattern.y].map((mm) => `${mm * PX_PER_MM}px`)
+    );
   });
 
   it('selects a step on a press, stays on the page on a double press, and elsewhere asks about the page and lets the selection go', () => {
@@ -669,7 +797,8 @@ describe('an enlarged step’s grip on a held flow page (Zach, 2026-10-12)', () 
       [cpStep('step-a'), { ...cpStep('step-area'), annotations: [AREA] }, enlarged(6), cpStep('step-after')],
       0
     );
-    const twoAPage = { ...fresh, page: { ...fresh.page, stepsPerPage: 2 } };
+    // No title block, so page 1 holds two and ends with the area.
+    const twoAPage = { ...fresh, page: { ...fresh.page, stepsPerPage: 2, titleBlock: PAGE_SETTINGS.titleBlock.legacy } };
     const { before, was, during, after, state } = dragGrip(twoAPage, -15);
     expect(before.find((cell) => cell.stepId === 'step-enlarged')!.zoom!.printed).toBeLessThan(5.9);
     expect(during.w).toBeLessThan(was.w * 0.9);

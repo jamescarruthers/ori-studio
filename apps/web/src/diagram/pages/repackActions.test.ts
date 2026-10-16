@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import {
   createDiagram,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   type DiagramPageArrangement,
 } from '../document/diagramDocument';
@@ -25,12 +26,13 @@ const state = () => useWorkspaceStore.getState();
 /** The pages that hold their arrangements: one let go is kept, no longer held, until its page is packed again. */
 const stored = () => Object.keys(heldPageArrangements(state().diagram!));
 
-/** Eight steps on flow pages of four, s0–s3 and s4–s7, each page's packing taken in. */
+/** Eight steps on flow pages of four, s0–s3 and s4–s7, with no title block, each page's packing taken in. */
 function install() {
   const steps = Array.from({ length: 8 }, (_, index) => cpStep(`s${index}`));
   const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
     layout: 'flow',
     stepsPerPage: 4,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
   state().installDiagram({ document, readOnly: false, raw: {} });
   const slots = cellSlots(document);

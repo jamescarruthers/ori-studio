@@ -45,6 +45,7 @@ import {
   annotationsOutOfStep,
   createDiagram,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   stepAsset,
   stepIndex,
@@ -9591,7 +9592,8 @@ describe('the project diagram', () => {
   });
 
   it('records nothing for an edit that changes nothing, and makes no diagram for one', () => {
-    expect(state().setDiagramTitle('')).toBe(false);
+    // The title a new diagram starts with (Zach, 2026-10-15): no change.
+    expect(state().setDiagramTitle('Add a title')).toBe(false);
     expect(state().diagram).toBeNull();
     expect(state().dirty).toBe(false);
 
@@ -9798,6 +9800,8 @@ describe('the project diagram', () => {
     const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-old' }), steps, 0), {
       layout: 'flow',
       stepsPerPage: 4,
+      // No title block, as no diagram of then had one.
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
     });
     state().installDiagram({ document, readOnly: false, raw: {} });
     const saving = createFileService();

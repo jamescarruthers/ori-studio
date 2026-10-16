@@ -16,6 +16,7 @@ import {
   setPageSetup,
   setPageStarts,
   setStepText,
+  setTitleBlockContent,
   createTurn,
   isLockedTurn,
   isTurn,
@@ -27,6 +28,7 @@ import {
   type DiagramCpRender,
   type DiagramCpSource,
   type DiagramPageSetup,
+  type DiagramTitleBlockContentPatch,
 } from './diagramDocument';
 import { readDiagram, storedSceneJson, writeDiagram } from './diagramFile';
 import { SVG_STORED_MAX_BYTES, sanitizeSvg } from '../upload/svgSanitize';
@@ -44,6 +46,7 @@ import {
 } from './diagramSteps.fixtures';
 import { markup, sceneOf, sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
 import { diagramLayoutSteps } from '../pages/diagramPages';
+import { cellSlots } from '../pages/stepPlaces';
 
 function sequentialIds(): DiagramIdFactory {
   let next = 0;
@@ -79,7 +82,8 @@ describe('writeDiagram / readDiagram', () => {
     const chosen = throughJson(writeDiagram(sampleDiagram()));
     expect(Object.keys(chosen.page)).toEqual([...PAGE_SETTING_KEYS]);
     // One unsaid was written before this build knew it, or before every setting was said: its legacy value, never
-    // the default — the same today but for the layout, and the steps per page, read from the columns and rows.
+    // the default — the same today but for the layout, the steps per page, read from the columns and rows, and the
+    // title block, off.
     for (const key of PAGE_SETTING_KEYS) {
       const { [key]: _unsaid, ...page } = chosen.page;
       const read = readDiagram({ ...chosen, page })!;
@@ -206,6 +210,8 @@ describe('writeDiagram / readDiagram', () => {
   describe('the flow’s packing (diagram-flow-packing.md, Decision 7)', () => {
     const PACKING_KEYS = ['flowBands', 'flowPreferBands', 'flowBendSteps', 'flowNesting', 'flowSteadiness'];
     const packingSaid = (page: Record<string, unknown>) => Object.keys(page).filter((key) => PACKING_KEYS.includes(key));
+    /** The packing every flow page had before it could be chosen, Zach's (Decision 7): what a file that does not say it reads as. */
+    const LEGACY_PACKING = { flowBands: 'auto', flowPreferBands: 0.5, flowBendSteps: true, flowNesting: 0.8, flowSteadiness: 0.85 } as const;
 
     it('writes every choice, a default too, and reads a file without one as the packing every page had before: Zach’s', () => {
       // Said, at its default: part of every flow page's signature, so a default changed later re-packs nothing saved.
@@ -216,14 +222,8 @@ describe('writeDiagram / readDiagram', () => {
       // Unsaid, as every file before every setting was said: the legacy packing, Zach's (Decision 7).
       const unsaid = Object.fromEntries(Object.entries(plain.page).filter(([key]) => !PACKING_KEYS.includes(key)));
       const legacy = readDiagram({ ...plain, page: unsaid })!;
-      expect(legacy.document.page).toMatchObject({
-        flowBands: 'auto',
-        flowPreferBands: 0.5,
-        flowBendSteps: true,
-        flowNesting: 0.8,
-        flowSteadiness: 0.85,
-      });
-      expect(legacy.document).toEqual(readDiagram(plain)!.document);
+      expect(legacy.document.page).toMatchObject(LEGACY_PACKING);
+      expect(legacy.document).toEqual(readDiagram({ ...plain, page: { ...plain.page, ...LEGACY_PACKING } })!.document);
       const choices = { flowBands: 3, flowPreferBands: 0.2, flowBendSteps: false, flowNesting: 0.4, flowSteadiness: 1 } as const;
       const chosen = setPageSetup(sampleDiagram(), choices);
       const written = throughJson(writeDiagram(chosen));
@@ -235,7 +235,23 @@ describe('writeDiagram / readDiagram', () => {
       expect(throughJson(writeDiagram(setPageSetup(chosen, DEFAULT_FLOW_PACKING))).page).toEqual(plain.page);
     });
 
-    it('holds each choice to its range, a band count whole, and reads damage as the default', () => {
+    it('starts a new diagram at a steadiness of 0.5, and keeps every file’s as it says it, or reads it as 0.85 (Zach, 2026-10-15)', () => {
+      expect(PAGE_SETTINGS.flowSteadiness).toEqual({ default: 0.5, legacy: 0.85 });
+      expect(createDiagram().page.flowSteadiness).toBe(0.5);
+      const plain = throughJson(writeDiagram(sampleDiagram()));
+      expect(plain.page.flowSteadiness).toBe(0.5);
+      // Saved at 0.85, as every diagram until now: read and written back at 0.85, its pages packed as they were.
+      const saved = readDiagram({ ...plain, page: { ...plain.page, flowSteadiness: 0.85 } })!;
+      expect(saved.document.page.flowSteadiness).toBe(0.85);
+      expect(throughJson(writeDiagram(saved.document)).page.flowSteadiness).toBe(0.85);
+      // A file that does not say it, written before every setting was said: 0.85, and said from then on.
+      const { flowSteadiness: _unsaid, ...unsaid } = plain.page;
+      const old = readDiagram({ ...plain, page: unsaid })!;
+      expect(old.document.page.flowSteadiness).toBe(0.85);
+      expect(throughJson(writeDiagram(old.document)).page.flowSteadiness).toBe(0.85);
+    });
+
+    it('holds each choice to its range, a band count whole, and reads damage as the packing every page had before', () => {
       // As a hand-made patch might say them: past the ranges, a band count not whole.
       const set = (patch: Record<string, unknown>) => setPageSetup(sampleDiagram(), patch as Partial<DiagramPageSetup>).page;
       expect(set({ flowBands: 7 })).toMatchObject({ flowBands: 5 });
@@ -260,7 +276,9 @@ describe('writeDiagram / readDiagram', () => {
       ]) {
         const read = page(damage);
         expect(read.readOnly, JSON.stringify(damage)).toBe(false);
-        expect(read.document.page, JSON.stringify(damage)).toMatchObject(DEFAULT_FLOW_PACKING);
+        // The damaged setting as a file that does not say it; the rest as the file says them, a new diagram's.
+        const [key] = Object.keys(damage) as (keyof typeof LEGACY_PACKING)[];
+        expect(read.document.page, JSON.stringify(damage)).toMatchObject({ ...DEFAULT_FLOW_PACKING, [key!]: LEGACY_PACKING[key!] });
         expect(read.document.newer, JSON.stringify(damage)).toBeUndefined();
       }
     });
@@ -287,6 +305,303 @@ describe('writeDiagram / readDiagram', () => {
         expect(chosen.newer).toBeUndefined();
         expect(throughJson(writeDiagram(chosen)).page).toEqual(plain.page);
       }
+    });
+  });
+
+  describe('the title block (diagram-title-block.md)', () => {
+    const LEGACY = { enabled: false, heightShare: 0.27 };
+
+    it('writes its setting whole, always, and reads a file without it, or with it damaged, as no block', () => {
+      // A new diagram has the block, J1b's shorter one (2026-10-15), and says so.
+      const plain = throughJson(writeDiagram(sampleDiagram()));
+      expect(plain.page.titleBlock).toEqual({ enabled: true, heightShare: 0.23 });
+      const on = setPageSetup(sampleDiagram(), { titleBlock: { enabled: true, heightShare: 0.3 } });
+      const written = throughJson(writeDiagram(on));
+      expect(written.page.titleBlock).toEqual({ enabled: true, heightShare: 0.3 });
+      expect(readDiagram(written)!.document).toEqual(on);
+      const page = (titleBlock: unknown) => readDiagram({ ...written, page: { ...written.page, titleBlock } })!;
+      // Unsaid: a first page drawn before there was a block, which has none.
+      const { titleBlock: _unsaid, ...unsaid } = written.page;
+      expect(readDiagram({ ...written, page: unsaid })!.document.page.titleBlock).toEqual(LEGACY);
+      // Damaged, whole or a field at a time: the legacy value, as damage elsewhere reads.
+      for (const [damage, shown] of [
+        ['on', LEGACY],
+        [null, LEGACY],
+        [[true, 0.3], LEGACY],
+        [{ enabled: 'yes', heightShare: '0.3' }, LEGACY],
+        [{ enabled: true }, { enabled: true, heightShare: 0.27 }],
+        [{ enabled: true, heightShare: Number.NaN }, { enabled: true, heightShare: 0.27 }],
+      ] as const) {
+        const read = page(damage);
+        expect(read.readOnly, JSON.stringify(damage)).toBe(false);
+        expect(read.document.newer, JSON.stringify(damage)).toBeUndefined();
+        expect(read.document.page.titleBlock, JSON.stringify(damage)).toEqual(shown);
+      }
+      // An edit holds the share to its range.
+      expect(setPageSetup(sampleDiagram(), { titleBlock: { enabled: true, heightShare: 0.9 } }).page.titleBlock).toEqual({
+        enabled: true,
+        heightShare: 0.5,
+      });
+    });
+
+    it('carries a share past this build’s range, or a field it has no name for, as a newer build’s: shown as the nearest block here', () => {
+      const on = throughJson(writeDiagram(setPageSetup(sampleDiagram(), { titleBlock: { enabled: true, heightShare: 0.3 } })));
+      for (const [titleBlock, shown] of [
+        [{ enabled: true, heightShare: 0.6 }, { enabled: true, heightShare: 0.5 }],
+        [{ enabled: true, heightShare: 0.1 }, { enabled: true, heightShare: 0.15 }],
+        [{ enabled: true, heightShare: 0.3, at: 'bottom' }, { enabled: true, heightShare: 0.3 }],
+        [{ enabled: false, heightShare: 0.3, at: 'bottom' }, { enabled: false, heightShare: 0.3 }],
+      ] as const) {
+        const written = { ...on, page: { ...on.page, titleBlock } };
+        const read = readDiagram(written)!;
+        expect(read.readOnly).toBe(false);
+        // Each field it knows read as a margin past its range is (rule 2), so the first page holds what the newer
+        // build's held at the same share, and the pages after it keep their steps; its value written back as it came.
+        expect(read.document.page.titleBlock, JSON.stringify(titleBlock)).toEqual(shown);
+        expect(read.document.newer).toEqual({ page: { titleBlock } });
+        expect(throughJson(writeDiagram(read.document))).toEqual(written);
+        // Another setting changed keeps it; the block set here is this build's.
+        expect(throughJson(writeDiagram(setPageSetup(read.document, { marginMm: 15 }))).page.titleBlock).toEqual(titleBlock);
+        const chosen = setPageSetup(read.document, { titleBlock: { enabled: true, heightShare: 0.3 } });
+        expect(chosen.newer).toBeUndefined();
+        expect(throughJson(writeDiagram(chosen))).toEqual(on);
+      }
+    });
+
+    it('cuts and signs every page of a newer build’s block with a field it has no name for as that block’s: none re-packs', () => {
+      // Twenty steps, nine a page: seven on the first under the block, then nine and four.
+      const steps = Array.from({ length: 20 }, (_, index) => cpStep(`s${index}`));
+      const saved = setPageSetup(insertSteps(createDiagram({ newId: sequentialIds() }), steps, 0), {
+        layout: 'flow',
+        stepsPerPage: 9,
+        titleBlock: { enabled: true, heightShare: 0.27 },
+      });
+      const written = throughJson(writeDiagram(saved));
+      const newer = readDiagram({ ...written, page: { ...written.page, titleBlock: { ...written.page.titleBlock, align: 'center' } } })!;
+      expect(newer.document.newer).toBeDefined();
+      expect(cellSlots(newer.document).pages.map((page) => page.length)).toEqual([7, 9, 4]);
+      expect(cellSlots(newer.document).signatures).toEqual(cellSlots(saved).signatures);
+    });
+
+    it('writes its content only when a part is set, in one order, and reads each part', () => {
+      const plain = throughJson(writeDiagram(sampleDiagram()));
+      expect(plain).not.toHaveProperty('titleBlockContent');
+      const set = [
+        { note: '設計：笠原邦彦\n用紙：15 cm', patternSize: 0.5, modelSize: 0.75 },
+        { credits: { op: 'add', credit: { label: '作者', value: '笠原邦彦' } } },
+        { credits: { op: 'add', credit: { label: '工程数', value: { kind: 'step-count' } } } },
+        { subtitle: '折り紙の図', pattern: { kind: 'none' }, model: { kind: 'step', stepId: 'step-3' } },
+      ].reduce((document, patch) => setTitleBlockContent(document, patch as DiagramTitleBlockContentPatch), sampleDiagram());
+      const written = throughJson(writeDiagram(set));
+      expect(JSON.stringify(written.titleBlockContent)).toBe(
+        JSON.stringify({
+          model: { kind: 'step', stepId: 'step-3' },
+          pattern: { kind: 'none' },
+          subtitle: '折り紙の図',
+          credits: [
+            { label: '作者', value: '笠原邦彦' },
+            { label: '工程数', value: { kind: 'step-count' } },
+          ],
+          note: '設計：笠原邦彦\n用紙：15 cm',
+          modelSize: 0.75,
+          patternSize: 0.5,
+        })
+      );
+      const read = readDiagram(written)!;
+      expect(read.document).toEqual(set);
+      expect(read.document.newer).toBeUndefined();
+      expect(throughJson(writeDiagram(read.document))).toEqual(written);
+      // Every part back to Auto, its default or none: nothing written.
+      const cleared = [
+        { model: 'auto', pattern: 'auto', subtitle: '', note: '', modelSize: 'default', patternSize: 0.79 },
+        { credits: { op: 'remove', at: 0 } },
+        { credits: { op: 'remove', at: 0 } },
+      ].reduce((document, patch) => setTitleBlockContent(document, patch as DiagramTitleBlockContentPatch), set);
+      expect(throughJson(writeDiagram(cleared))).toEqual(plain);
+    });
+
+    it('keeps a size a file says at the default as it says it: unsaid is the default, said is the author’s', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const written = { ...base, titleBlockContent: { modelSize: 0.59, patternSize: 0.79 } };
+      const read = readDiagram(written)!;
+      expect(read.document.titleBlockContent).toEqual({ modelSize: 0.59, patternSize: 0.79 });
+      expect(throughJson(writeDiagram(read.document))).toEqual(written);
+    });
+
+    it('drops a part that does not read alone, as Auto, none or the default; the rest reads', () => {
+      const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { pattern: { kind: 'none' } })));
+      const content = (titleBlockContent: unknown) => readDiagram({ ...base, titleBlockContent })!;
+      for (const damage of [
+        { model: 'step-1' },
+        { model: { stepId: 'step-1' } },
+        { model: { kind: 'step' } },
+        { model: { kind: 'step', stepId: '' } },
+        { model: { kind: 3 } },
+        { subtitle: 3 },
+        { subtitle: ' \n ' },
+        { note: ['Design: Lang'] },
+        { note: '  \n ' },
+        { credits: 'Author: Lang' },
+        { credits: { label: 'Author', value: 'Lang' } },
+        { credits: [] },
+        { credits: ['Author', 3, null, [{ label: 'Author' }]] },
+        { modelSize: '0.5' },
+        { patternSize: null },
+        { byline: 3 },
+        { byline: '  \n ' },
+      ]) {
+        const read = content({ ...damage, pattern: { kind: 'none' } });
+        expect(read.readOnly, JSON.stringify(damage)).toBe(false);
+        expect(read.document.titleBlockContent, JSON.stringify(damage)).toEqual({ pattern: { kind: 'none' } });
+        expect(read.document.newer, JSON.stringify(damage)).toBeUndefined();
+      }
+      // Content that is no object at all: none.
+      for (const damage of ['auto', 7, null, []]) {
+        const read = content(damage);
+        expect(read.document.titleBlockContent, JSON.stringify(damage)).toBeUndefined();
+        expect(read.document.newer, JSON.stringify(damage)).toBeUndefined();
+      }
+      // Text is cleaned as every string a user typed is; the subtitle, a label and a text value are one line each.
+      expect(
+        content({
+          subtitle: 'Origami\ndiagram',
+          credits: [{ label: 'Au\u0000thor', value: 'Robert\nLang' }],
+          note: 'Design\u0000: Lang\nPaper: 15 cm',
+        }).document.titleBlockContent
+      ).toEqual({
+        subtitle: 'Origami diagram',
+        credits: [{ label: 'Author', value: 'Robert Lang' }],
+        note: 'Design: Lang\nPaper: 15 cm',
+      });
+    });
+
+    it('reads a credit leniently: a field that does not read is empty, the credit kept', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const read = readDiagram({
+        ...base,
+        titleBlockContent: { credits: [{ label: 3, value: 'Lang' }, { label: 'Paper' }, { label: 'Size', value: 60 }, { label: 'Steps', value: { kind: 3 } }, {}] },
+      })!;
+      expect(read.document.newer).toBeUndefined();
+      expect(read.document.titleBlockContent).toEqual({
+        credits: [
+          { label: '', value: 'Lang' },
+          { label: 'Paper', value: '' },
+          { label: 'Size', value: '' },
+          { label: 'Steps', value: '' },
+          { label: '', value: '' },
+        ],
+      });
+    });
+
+    it('reads this branch’s byline as the note, and never writes it', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const read = (titleBlockContent: unknown) => readDiagram({ ...base, titleBlockContent })!.document;
+      const bylined = read({ model: { kind: 'none' }, byline: '디자인: 김민수\n종이: 35 cm 정사각형' });
+      expect(bylined.newer).toBeUndefined();
+      expect(bylined.titleBlockContent).toEqual({ model: { kind: 'none' }, note: '디자인: 김민수\n종이: 35 cm 정사각형' });
+      expect(throughJson(writeDiagram(bylined)).titleBlockContent).toEqual({
+        model: { kind: 'none' },
+        note: '디자인: 김민수\n종이: 35 cm 정사각형',
+      });
+      // A note said wins; a byline beside it is let go.
+      expect(read({ byline: 'Design: Lang', note: 'Paper: 15 cm' }).titleBlockContent).toEqual({ note: 'Paper: 15 cm' });
+      expect(read({ byline: 'Design: Lang', note: ' ' }).titleBlockContent).toEqual({ note: 'Design: Lang' });
+    });
+
+    it('reads back exactly what an edit set: the edit holds a source to what the file reads', () => {
+      const set = setTitleBlockContent(sampleDiagram(), { model: { kind: 'step', stepId: '' }, pattern: { kind: 'none' } });
+      expect(readDiagram(throughJson(writeDiagram(set)))!.document).toEqual(set);
+    });
+
+    it('carries a part of a kind or with a field it has no name for, and a field of its own, as a newer build’s: Auto here', () => {
+      const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { note: 'Design: Lang' })));
+      for (const [patch, carried] of [
+        [{ model: { kind: 'own', step: { id: 'title-model' } } }, 'model'],
+        [{ pattern: { kind: 'own', scope: {}, fingerprint: 'fp', thumbnail: 'thumb-own' } }, 'pattern'],
+        [{ model: { kind: 'step', stepId: 'step-1', pose: 'front' } }, 'model'],
+        [{ pattern: { kind: 'none', why: 'no pattern' } }, 'pattern'],
+        [{ ribbon: 'gold' }, 'ribbon'],
+      ] as const) {
+        const titleBlockContent = { ...patch, note: 'Design: Lang' };
+        const written = { ...base, titleBlockContent };
+        const read = readDiagram(written)!;
+        expect(read.readOnly, carried).toBe(false);
+        expect(read.document.titleBlockContent, carried).toEqual({ note: 'Design: Lang' });
+        expect(read.document.newer, carried).toEqual({ titleBlockContent: patch });
+        expect(throughJson(writeDiagram(read.document)), carried).toEqual(written);
+        // Another part set keeps it; that part set here lets it go.
+        const noted = throughJson(writeDiagram(setTitleBlockContent(read.document, { note: 'Design: Kasahara' })));
+        expect(noted.titleBlockContent, carried).toEqual({ ...patch, note: 'Design: Kasahara' });
+        if (carried !== 'ribbon') {
+          const auto = setTitleBlockContent(read.document, { [carried]: 'auto' });
+          expect(auto.newer, carried).toBeUndefined();
+          expect(throughJson(writeDiagram(auto)), carried).toEqual(base);
+        }
+      }
+    });
+
+    it('carries credits with a credit or a value it has no name for, shown as it reads them, until the credits are edited here', () => {
+      const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { note: 'Design: Lang' })));
+      for (const [credits, shown] of [
+        [
+          [{ label: 'Author', value: 'Lang' }, { label: 'Pages', value: { kind: 'page-count' } }],
+          [{ label: 'Author', value: 'Lang' }, { label: 'Pages', value: '' }],
+        ],
+        [[{ label: 'Steps', value: { kind: 'step-count', from: 2 } }], [{ label: 'Steps', value: '' }]],
+        [[{ label: 'Author', value: 'Lang', align: 'right' }], [{ label: 'Author', value: 'Lang' }]],
+      ] as const) {
+        const written = { ...base, titleBlockContent: { credits, note: 'Design: Lang' } };
+        const read = readDiagram(written)!;
+        const label = JSON.stringify(credits);
+        expect(read.readOnly, label).toBe(false);
+        expect(read.document.titleBlockContent, label).toEqual({ credits: shown, note: 'Design: Lang' });
+        expect(read.document.newer, label).toEqual({ titleBlockContent: { credits } });
+        expect(throughJson(writeDiagram(read.document)), label).toEqual(written);
+        // Another part set keeps them; a credit edited here lets them go, the list as shown here taking their place.
+        expect(throughJson(writeDiagram(setTitleBlockContent(read.document, { note: 'Paper' }))).titleBlockContent.credits, label).toEqual(credits);
+        const edited = setTitleBlockContent(read.document, { credits: { op: 'set', at: 0, label: 'By' } });
+        expect(edited.newer, label).toBeUndefined();
+        expect(throughJson(writeDiagram(edited)).titleBlockContent.credits, label).toEqual([{ ...shown[0], label: 'By' }, ...shown.slice(1)]);
+      }
+    });
+
+    it('carries a size past its range as a newer build’s, drawn here at the nearest, until it is set here', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      for (const [titleBlockContent, shown, carried] of [
+        [{ modelSize: 1.4 }, { modelSize: 1 }, { modelSize: 1.4 }],
+        [{ patternSize: 0.1 }, { patternSize: 0.3 }, { patternSize: 0.1 }],
+        [{ modelSize: 1.4, patternSize: 0.5 }, { modelSize: 1, patternSize: 0.5 }, { modelSize: 1.4 }],
+      ] as const) {
+        const written = { ...base, titleBlockContent };
+        const read = readDiagram(written)!;
+        const label = JSON.stringify(titleBlockContent);
+        expect(read.document.titleBlockContent, label).toEqual(shown);
+        expect(read.document.newer, label).toEqual({ titleBlockContent: carried });
+        expect(throughJson(writeDiagram(read.document)), label).toEqual(written);
+      }
+      const read = readDiagram({ ...base, titleBlockContent: { modelSize: 1.4 } })!.document;
+      const set = setTitleBlockContent(read, { modelSize: 0.9 });
+      expect(set.newer).toBeUndefined();
+      expect(throughJson(writeDiagram(set)).titleBlockContent).toEqual({ modelSize: 0.9 });
+    });
+
+    it('carries a subtitle or a note of a kind it has no name for — a richer one — as a newer build’s, none here until set here (review, 2026-10-15)', () => {
+      const base = throughJson(writeDiagram(sampleDiagram()));
+      const rich = { kind: 'rich', blocks: [{ text: 'Design: ', marks: [] }, { text: 'Lang', marks: ['italic'] }] };
+      for (const titleBlockContent of [{ note: rich }, { subtitle: { kind: 'styled', text: 'Origami diagram' } }, { note: rich, credits: [{ label: 'Steps', value: { kind: 'step-count' } }] }]) {
+        const written = { ...base, titleBlockContent };
+        const read = readDiagram(written)!;
+        const label = JSON.stringify(titleBlockContent);
+        expect(read.readOnly, label).toBe(false);
+        expect(read.document.titleBlockContent?.note, label).toBeUndefined();
+        expect(read.document.titleBlockContent?.subtitle, label).toBeUndefined();
+        expect(throughJson(writeDiagram(read.document)), label).toEqual(written);
+      }
+      // Set here, it is this build's: the newer one let go.
+      const read = readDiagram({ ...base, titleBlockContent: { note: rich } })!.document;
+      const set = setTitleBlockContent(read, { note: 'Design: Lang' });
+      expect(set.newer).toBeUndefined();
+      expect(throughJson(writeDiagram(set)).titleBlockContent).toEqual({ note: 'Design: Lang' });
     });
   });
 
@@ -481,6 +796,8 @@ describe('writeDiagram / readDiagram', () => {
             flowBendSteps: true,
             flowNesting: 0.8,
             flowSteadiness: 0.85,
+            // No title block: a first page drawn before there was one.
+            titleBlock: { enabled: false, heightShare: 0.27 },
           },
           null,
           2
@@ -691,6 +1008,7 @@ describe('a newer build’s work', () => {
     ['turn', (written: WrittenSource) => written.steps.push({ id: 'turn-newer', kind: 'spin', cover: NAMES_BOTH })],
     ['annotation', (written: WrittenSource) => (written.steps[0].annotations = [{ id: 'ann-newer', kind: 'sticker', ...NAMES_BOTH }])],
     ['asset', (written: WrittenSource) => (written.assets['asset-video'] = { id: 'asset-video', kind: 'video', poster: NAMES_BOTH })],
+    ['title block part', (written: WrittenSource) => (written.titleBlockContent = { model: { kind: 'own', ...NAMES_BOTH } })],
   ])('keeps the asset and the thumbnail only a newer build’s %s names', (_label, patch) => {
     const written = throughJson(writeDiagram(linkedDiagram()));
     written.assets = { ...written.assets, 'asset-cover': rasterAsset('asset-cover', 64, 48) };
@@ -722,6 +1040,17 @@ describe('a newer build’s work', () => {
     ['more columns than it lays out', { page: { columns: 8 } }, { page: { columns: 5 } }],
     ['page numbers with a field it does not know', { page: { pageNumbers: { enabled: true, first: 3, at: 'top' } } }, {}],
     ['a first page number past what it reads', { page: { pageNumbers: { enabled: true, first: 20_000 } } }, {}],
+    [
+      'a title block taller than it lays out',
+      { page: { titleBlock: { enabled: true, heightShare: 0.6 } } },
+      { page: { titleBlock: { enabled: true, heightShare: 0.5 } } },
+    ],
+    [
+      'a title block with a field it does not know',
+      { page: { titleBlock: { enabled: true, heightShare: 0.27, align: 'center' } } },
+      { page: { titleBlock: { enabled: true, heightShare: 0.27 } } },
+    ],
+    ['a title block part of a kind it does not know', { titleBlockContent: { model: { kind: 'own' } } }, {}],
   ])('falls back alone, stays editable and writes back as it came, a diagram with %s', (_label, patch, shown) => {
     const base = throughJson(writeDiagram(sampleDiagram()));
     const written = { ...base, ...patch };
