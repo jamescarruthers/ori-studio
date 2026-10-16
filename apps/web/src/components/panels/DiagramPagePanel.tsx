@@ -24,6 +24,7 @@ import { DiagramPageStepsRow } from '../diagram/DiagramPageStepsRow';
 import { DiagramPathColorRow } from '../diagram/DiagramPathColorRow';
 import { DiagramStyleControl } from '../diagram/DiagramStyleControl';
 import { DiagramTitleBlockRows } from '../diagram/DiagramTitleBlockRows';
+import { DiagramTitleRow } from '../diagram/DiagramTitleRow';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { NumberRow, SegmentedRow, SelectRow, ToggleRow } from '../ui/fieldRows';
 import { OptionCards } from '../ui/OptionCard';
@@ -34,8 +35,9 @@ const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'
 /**
  * The Page pane: the paper, how steps are laid out on it — in the flow, how
  * its pages are packed (`DiagramPagePacking`), right under the counts, and the
- * path's look — what the header and footer carry, opening with the first
- * page's title block (`DiagramTitleBlockRows`), and the style every step is
+ * path's look — what the header and footer carry, opening with the diagram's
+ * title (`DiagramTitleRow`) and the first page's title block
+ * (`DiagramTitleBlockRows`), and the style every step is
  * drawn in (D10, D13; `diagram-title-block.md`, Phase 1c, H-15 A and H-16 A).
  *
  * A composition site (AGENTS.md › Panel components): the bindings, each one
@@ -208,6 +210,7 @@ export function DiagramPagePanel() {
           </CollapsibleSection>
         )}
         <CollapsibleSection title={t('panels:diagram.pagePane.headerFooter', 'Header & footer')}>
+          <DiagramTitleRow />
           <DiagramTitleBlockRows />
           <ToggleRow
             label={t('panels:diagram.pagePane.title', 'Title tab')}

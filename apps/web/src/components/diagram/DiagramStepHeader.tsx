@@ -45,7 +45,11 @@ export function DiagramStepHeader({
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(String(number));
-  /** What was typed and not yet committed or discarded, or null; see `DiagramTitleField`. */
+  /**
+   * What was typed and is neither committed nor discarded yet, or null. Every
+   * way out of the field reads this, not a render's `draft`: Escape blurs the
+   * field, and a blur handler from before Escape still holds the typed text.
+   */
   const typed = useRef<string | null>(null);
   const latest = useRef({ number, count, onMoveTo });
   useEffect(() => {

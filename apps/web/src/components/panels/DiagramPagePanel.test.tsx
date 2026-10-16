@@ -320,6 +320,82 @@ describe('DiagramPagePanel', () => {
   });
 });
 
+describe('DiagramPagePanel › the diagram’s title (Zach, 2026-10-15: out of the Diagram’s header)', () => {
+  /** Header & footer, found by its name: jsdom's selector engine trips on the ampersand. */
+  const headerFooter = () =>
+    [...host!.querySelectorAll('[role="group"]')].find((group) => group.getAttribute('aria-label') === 'Header & footer')!;
+  /** Its rows' labels in order: a stacked row's `<label>`, and a field row's. */
+  const rows = () =>
+    [...headerFooter().querySelectorAll('label, [data-field-label]')].map((label) => label.textContent);
+  /** The Title field, by its label. */
+  const titleField = () => {
+    const label = [...host!.querySelectorAll('label')].find((each) => each.textContent === 'Title');
+    return label ? (document.getElementById(label.htmlFor) as HTMLTextAreaElement | null) : null;
+  };
+  function typeInto(text: string) {
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(titleField(), text);
+      titleField()!.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
+  it('opens Header & footer, above the title block, with the title the block and the title tab print', () => {
+    expect(rows().slice(0, 3)).toEqual(['Title', 'Title block', 'Subtitle']);
+    expect(titleField()!.value).toBe('Add a title');
+    act(() => state().setDiagramTitle('Crane'));
+    expect(titleField()!.value).toBe('Crane');
+  });
+
+  it('takes a sitting at the field, committed at each pause, as one undo step', () => {
+    vi.useFakeTimers();
+    try {
+      const past = state().diagramHistory.past.length;
+      act(() => titleField()!.focus());
+      typeInto('Cr');
+      act(() => vi.advanceTimersByTime(1000));
+      expect(state().diagram?.title).toBe('Cr');
+      typeInto('Crane');
+      act(() => titleField()!.blur());
+      expect(state().diagram?.title).toBe('Crane');
+      expect(state().diagramHistory.past).toHaveLength(past + 1);
+      expect(state().diagramHistory.past.at(-1)?.label).toBe('Rename diagram');
+      // A second sitting is a second step; undo takes each back whole.
+      act(() => titleField()!.focus());
+      typeInto('Crane, revised');
+      act(() => titleField()!.blur());
+      expect(state().diagramHistory.past).toHaveLength(past + 2);
+      act(() => state().undoDiagram());
+      expect(state().diagram?.title).toBe('Crane');
+      expect(titleField()!.value).toBe('Crane');
+      act(() => state().undoDiagram());
+      expect(state().diagram?.title).toBe('Add a title');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows the title a new diagram starts with before there is one, and makes the diagram with what is typed', () => {
+    act(() => useWorkspaceStore.setState(initialState, true));
+    expect(titleField()!.value).toBe('Add a title');
+    expect(state().diagram).toBeNull();
+    act(() => titleField()!.focus());
+    typeInto('Crane');
+    act(() => titleField()!.blur());
+    expect(state().diagram?.title).toBe('Crane');
+  });
+
+  it('is there with the title block off, since the title tab and the exports use the title too', () => {
+    act(() => state().setDiagramTitleBlockShown(false));
+    expect(rows().slice(0, 3)).toEqual(['Title', 'Title block', 'Title tab']);
+    expect(titleField()!.disabled).toBe(false);
+  });
+
+  it('changes nothing on a read-only diagram', () => {
+    act(() => useWorkspaceStore.setState({ diagramReadOnly: true }));
+    expect(titleField()!.disabled).toBe(true);
+  });
+});
+
 describe('DiagramPagePanel › the current page’s own count', () => {
   /** The Pages view, as far as the pane sees it: the one page it has on screen. */
   function PagesView({ page }: { page: number }) {

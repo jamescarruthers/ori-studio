@@ -1045,14 +1045,10 @@
       "nothingToPrint": "折り図を印刷するにはステップを追加してください",
       "nothingToRefresh": "古くなったリンク済みステップはありません。リファレンスから送ったステップは更新されません。",
       "onlyPoseAgain_other": "シミュレーションで途中まで折った {{count}} 個のステップは「もう一度ポーズ」が必要です。",
-      "pageCount_other": "{{count}} ページ",
       "preparingPrint": "準備中…",
       "print": "印刷…",
       "refreshAll": "古いステップを更新",
-      "stepCount_other": "{{count}} ステップ",
       "stopRefreshing": "更新を停止（{{done}} / {{total}}）",
-      "titleLabel": "折り図のタイトル",
-      "titlePlaceholder": "無題の折り図",
       "uploadPictures": "図をアップロード…"
     },
     "label": "折り図",
@@ -1082,6 +1078,8 @@
     },
     "pagePane": {
       "columns": "列",
+      "diagramTitle": "タイトル",
+      "diagramTitleHelp": "タイトル欄とタイトルタブに印刷され、書き出すファイルの名前にもなります。",
       "exportStyle": "設定の書き出しスタイル",
       "firstPage": "最初の番号",
       "firstPageSide": "最初のページ",

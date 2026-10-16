@@ -1045,14 +1045,10 @@
       "nothingToPrint": "添加一个步骤才能打印图解",
       "nothingToRefresh": "没有过时的链接步骤。从参考发送的步骤不会刷新。",
       "onlyPoseAgain_other": "{{count}} 个在模拟中折叠到一半的步骤需要“重新调整姿态”。",
-      "pageCount_other": "{{count}} 页",
       "preparingPrint": "正在准备…",
       "print": "打印…",
       "refreshAll": "刷新已过期的步骤",
-      "stepCount_other": "{{count}} 个步骤",
       "stopRefreshing": "停止刷新（{{done}} / {{total}}）",
-      "titleLabel": "图解标题",
-      "titlePlaceholder": "未命名图解",
       "uploadPictures": "上传图片…"
     },
     "label": "图解",
@@ -1082,6 +1078,8 @@
     },
     "pagePane": {
       "columns": "列",
+      "diagramTitle": "标题",
+      "diagramTitleHelp": "打印在标题栏和标题标签中，导出的文件也以它命名。",
       "exportStyle": "设置中的导出样式",
       "firstPage": "起始页码",
       "firstPageSide": "首页位置",

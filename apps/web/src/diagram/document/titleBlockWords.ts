@@ -9,7 +9,7 @@ type Translate = (key: string, english: string) => string;
  * name, "Subtitle" — for the author to type over, and the credits Author,
  * Steps and Recommended paper with their values. One source for every place
  * that writes them — a new diagram's first edit and the block's toggle (the
- * workspace store) — and for the header's title field and the Page pane,
+ * workspace store) — and for the Page pane's title and title block rows,
  * which show them before a diagram exists.
  */
 export function titleBlockDefaultWords(t: Translate): TitleBlockDefaultWords {

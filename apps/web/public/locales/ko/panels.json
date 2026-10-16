@@ -1045,14 +1045,10 @@
       "nothingToPrint": "도해를 인쇄하려면 단계를 추가하세요",
       "nothingToRefresh": "오래된 연결 단계가 없습니다. 참조에서 보낸 단계는 새로 고쳐지지 않습니다.",
       "onlyPoseAgain_other": "시뮬레이션에서 일부만 접은 단계 {{count}}개는 ‘다시 포즈 잡기’가 필요합니다.",
-      "pageCount_other": "{{count}}페이지",
       "preparingPrint": "준비 중…",
       "print": "인쇄…",
       "refreshAll": "오래된 단계 새로 고침",
-      "stepCount_other": "{{count}}단계",
       "stopRefreshing": "새로 고침 중지 ({{done}}/{{total}})",
-      "titleLabel": "도해 제목",
-      "titlePlaceholder": "제목 없는 도해",
       "uploadPictures": "그림 업로드…"
     },
     "label": "도해",
@@ -1082,6 +1078,8 @@
     },
     "pagePane": {
       "columns": "열",
+      "diagramTitle": "제목",
+      "diagramTitleHelp": "제목 영역과 제목 탭에 인쇄되며, 내보낸 파일의 이름이 됩니다.",
       "exportStyle": "설정의 내보내기 스타일",
       "firstPage": "첫 번호",
       "firstPageSide": "첫 페이지",

@@ -13,8 +13,9 @@ const SIZE_MIN = Math.round(TITLE_BLOCK_ART_SIZE_RANGE.min * 100);
 const SIZE_MAX = Math.round(TITLE_BLOCK_ART_SIZE_RANGE.max * 100);
 
 /**
- * The first page's title block, as rows the Page pane's Header & footer opens
- * with (`implementation-plans/diagram-title-block.md`, Phase 1c, H-16 A): the
+ * The first page's title block, as rows the Page pane's Header & footer carries
+ * under the diagram's title (`DiagramTitleRow`;
+ * `implementation-plans/diagram-title-block.md`, Phase 1c, H-16 A): the
  * toggle and, a step in under it while the page has a block, what it shows —
  * top to bottom as the block reads: the subtitle, the band's colour
  * (`DiagramTitleBlockBandColorRow`), the credits and the description (the
