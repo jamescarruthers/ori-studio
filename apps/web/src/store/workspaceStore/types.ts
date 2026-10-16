@@ -2169,7 +2169,14 @@ export interface DiagramSliceActions {
   removeDiagramStepPicture: (stepId: string) => boolean;
   /** Record, or with none clear, what sanitizing changed in an upload. */
   noteDiagramPictureChanges: (assetId: string, notices: readonly SanitizeNotice[]) => void;
-  setDiagramTitle: (title: string) => boolean;
+  /**
+   * Set the diagram's title: what the title block and the title tab print,
+   * and what exports are named after. `loadId` and `session` are a text
+   * field's, as for an instruction (`setDiagramStepText`): an edit that
+   * outlives its diagram is dropped, and the commits of one sitting at the
+   * field are one undo step.
+   */
+  setDiagramTitle: (title: string, options?: { loadId?: number; session?: number }) => boolean;
   /**
    * Change the page setup. Edits in one `session` — a colour dragged through
    * its picker — are one undo step.

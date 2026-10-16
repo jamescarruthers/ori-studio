@@ -576,8 +576,14 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       set({ diagramPictureNotices: next });
     },
 
-    setDiagramTitle: (title) =>
-      commit('Rename diagram', (document) => setDiagramTitle(document, title)) !== null,
+    setDiagramTitle: (title, { loadId, session } = {}) => {
+      if (loadId !== undefined && loadId !== get().diagramLoadId) return false;
+      const { extend, remember } = sessionFor('title', session);
+      const next = commit('Rename diagram', (document) => setDiagramTitle(document, title), extend);
+      if (!next) return false;
+      remember();
+      return true;
+    },
 
     setDiagramPage: (patch, { session } = {}) => {
       const { extend, remember } = sessionFor('page', session);

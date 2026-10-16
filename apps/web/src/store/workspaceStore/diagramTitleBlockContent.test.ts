@@ -328,4 +328,21 @@ describe('setDiagramTitleBlockContent, every part of the header', () => {
     expect(state().setDiagramTitleBlockContent({ credits: { op: 'add' } }, { loadId, session: 21 })).toBe(false);
     expect(content()).toBeUndefined();
   });
+
+  it('takes a sitting at the title’s field as one undo step, apart from the block’s, and drops one typed into a diagram since replaced', () => {
+    install();
+    const loadId = state().diagramLoadId;
+    // The Page pane's Title field, at each pause: one step. The subtitle's sitting is another.
+    expect(state().setDiagramTitle('Swa', { loadId, session: 31 })).toBe(true);
+    expect(state().setDiagramTitle('Swan', { loadId, session: 31 })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ subtitle: 'Traditional' }, { loadId, session: 32 })).toBe(true);
+    expect(undoSteps()).toBe(2);
+    state().undoDiagram();
+    expect(state().diagram!.title).toBe('Swan');
+    state().undoDiagram();
+    expect(state().diagram!.title).toBe('Crane');
+    install();
+    expect(state().setDiagramTitle('Heron', { loadId, session: 33 })).toBe(false);
+    expect(state().diagram!.title).toBe('Crane');
+  });
 });
