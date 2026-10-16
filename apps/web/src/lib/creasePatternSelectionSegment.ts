@@ -121,8 +121,7 @@ function rimAssignmentCounts(
   return { rim, nonBorder };
 }
 
-interface SegmentContainment {
-  document: OristudioCpDocumentSnapshot;
+export interface CpSegmentContainment {
   /** `lineIds[i]` = sorted 1-based line ids contained by `segments[i]`. */
   lineIds: number[][];
   /** `eligible[i]` = whether `segments[i]` is fully rimmed by border creases. */
@@ -136,7 +135,28 @@ interface SegmentContainment {
  * (crease coordinates). Key by artifacts identity, then re-validate the document
  * so a stale pairing recomputes rather than returning a mismatched assignment.
  */
+interface SegmentContainment extends CpSegmentContainment {
+  document: OristudioCpDocumentSnapshot;
+}
+
 const containmentCache = new WeakMap<FoldArtifacts, SegmentContainment>();
+
+/** Compact transfer to the existing analysis worker; containment uses midpoints only. */
+export function creaseMidpoints(document: OristudioCpDocumentSnapshot): Float64Array {
+  const lines = document.crease_pattern.line_segments;
+  const points = new Float64Array(lines.length * 2);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    points[i * 2] = (line.a.x + line.b.x) / 2;
+    points[i * 2 + 1] = (line.a.y + line.b.y) / 2;
+  }
+  return points;
+}
+
+/** Seed the same selection/link cache with the worker's exact calculation. */
+export function seedSegmentContainment(artifacts: FoldArtifacts, document: OristudioCpDocumentSnapshot, result: CpSegmentContainment): void {
+  containmentCache.set(artifacts, { ...result, document });
+}
 
 function segmentContainment(
   artifacts: FoldArtifacts,
@@ -154,6 +174,23 @@ function segmentContainment(
       ? 'document-snapshot-changed'
       : 'segment-count-changed';
 
+  const result: SegmentContainment = {
+    document,
+    ...computeSegmentContainment(artifacts, creaseMidpoints(document)),
+  };
+  containmentCache.set(artifacts, result);
+  if (import.meta.env.DEV) {
+    console.debug(
+      `[cp-toolbar] containment recomputed in ${Math.round(performance.now() - startedAt)}ms ` +
+        `(${missReason}, ${document.crease_pattern.line_segments.length} creases × ${segments.length} regions)`
+    );
+  }
+  return result;
+}
+
+/** The shared geometric predicate, usable by both the worker and synchronous selection callers. */
+export function computeSegmentContainment(artifacts: FoldArtifacts, midpoints: Float64Array): CpSegmentContainment {
+  const segments = resolveCpSegments(artifacts);
   // `segment.faceIndices` indexes the base fold (see `resolveCpSegments`).
   const fold = artifacts.fold;
   const lineIds: number[][] = segments.map(() => []);
@@ -162,8 +199,8 @@ function segmentContainment(
   const index = new BoundsIndex(segments.map((segment) => segment.bounds));
   const eligible = rim.map((counts) => counts.nonBorder === 0);
 
-  document.crease_pattern.line_segments.forEach((line, lineIndex) => {
-    const midpoint = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
+  for (let lineIndex = 0; lineIndex < midpoints.length / 2; lineIndex++) {
+    const midpoint = { x: midpoints[lineIndex * 2]!, y: midpoints[lineIndex * 2 + 1]! };
     index.at(midpoint.x, midpoint.y, ON_BOUNDARY_EPSILON).forEach((s) => {
       const segment = segments[s]!;
       const bounds = segment.bounds;
@@ -179,19 +216,10 @@ function segmentContainment(
         lineIds[s]!.push(lineIndex + 1);
       }
     });
-  });
+  }
 
   for (const ids of lineIds) ids.sort((a, b) => a - b);
-  const result: SegmentContainment = { document, lineIds, eligible, rim };
-  containmentCache.set(artifacts, result);
-  if (import.meta.env.DEV) {
-     
-    console.debug(
-      `[cp-toolbar] containment recomputed in ${Math.round(performance.now() - startedAt)}ms ` +
-        `(${missReason}, ${document.crease_pattern.line_segments.length} creases × ${segments.length} regions)`
-    );
-  }
-  return result;
+  return { lineIds, eligible, rim };
 }
 
 function sameIdSet(selection: readonly number[], segmentIds: readonly number[]): boolean {

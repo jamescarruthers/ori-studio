@@ -1,4 +1,4 @@
 import { DiagramPicturePreview } from './DiagramPicturePreview';
 
-/** Pages settle their zoom before sharpening; step cards rasterize immediately. */
+/** Pages rasterize new pictures immediately and settle zoom before sharpening. */
 export const DiagramPagePreview = DiagramPicturePreview;

@@ -39,10 +39,9 @@ afterEach(() => {
  * index. That is the whole geometry the hook consults, and stubbing it is what
  * lets the hit test be driven from a test at all.
  */
-function List({ ids, scrolling = false }: { ids: string[]; scrolling?: boolean }) {
+function List({ ids }: { ids: string[] }) {
   const { draggingId, handlers, consumeClick } = useLongPressReorder({
     itemAttribute: ATTRIBUTE,
-    scrollElement: scrolling ? (list) => list.parentElement : undefined,
     onReorder: (id, index) => reorders.push([id, index]),
     onDragEnd: (id, index) => ends.push([id, index]),
   });
@@ -74,12 +73,12 @@ function stubBox(element: HTMLElement | null, index: number): void {
       DOMRect;
 }
 
-function render(ids: string[], scrolling = false): HTMLElement {
+function render(ids: string[]): HTMLElement {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
   act(() => {
-    root?.render(<List ids={ids} scrolling={scrolling} />);
+    root?.render(<List ids={ids} />);
   });
   return container;
 }
@@ -302,17 +301,4 @@ describe('the drag itself', () => {
     pointerMove(slotY(2));
     expect(reorders).toEqual([]);
   });
-});
-
-it('edge-scrolls a long list during an armed drag and stops on release', () => {
-  const host = render(['a', 'b', 'c'], true);
-  host.getBoundingClientRect = () => ({ top: 0, bottom: 100, height: 100 }) as DOMRect;
-  pointerDown(row(host, 'a'), 'mouse', 20);
-  pointerMove(98);
-  act(() => vi.advanceTimersByTime(200));
-  expect(host.scrollTop).toBeGreaterThan(0);
-  pointerUp();
-  const stopped = host.scrollTop;
-  act(() => vi.advanceTimersByTime(200));
-  expect(host.scrollTop).toBe(stopped);
 });

@@ -118,15 +118,15 @@ it('retains the vector if copying a cached bitmap cannot allocate a canvas', () 
   expect(host.querySelector('img')!.getAttribute('src')).toBe('old.svg');
 });
 
-it('rasterizes step cards immediately without also mounting their expensive SVG, and keeps failure fallback', async () => {
-  act(() => root.render(<DiagramPagePreview src="step.svg" width={256} height={256} scale={1} settleMs={0} vectorWhileLoading={false} />));
+it('rasterizes new page and card sources before the zoom delay without an extra SVG paint, and keeps failure fallback', async () => {
+  act(() => root.render(<DiagramPagePreview src="step.svg" width={256} height={256} scale={1} vectorWhileLoading={false} />));
   expect(host.querySelector('img')).toBeNull();
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   expect(pending).toHaveLength(1);
   await finish(0);
   expect(host.querySelector('canvas')!.hidden).toBe(false);
   expect(host.querySelector('img')).toBeNull();
-  act(() => root.render(<DiagramPagePreview src="changed.svg" width={256} height={256} scale={1} settleMs={0} vectorWhileLoading={false} />));
+  act(() => root.render(<DiagramPagePreview src="changed.svg" width={256} height={256} scale={1} vectorWhileLoading={false} />));
   expect(host.querySelector('canvas')!.hidden).toBe(true);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   await act(async () => pending[1]!.reject(new Error('unavailable')));

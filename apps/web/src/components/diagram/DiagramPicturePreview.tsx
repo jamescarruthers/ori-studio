@@ -5,8 +5,8 @@ import styles from './DiagramPicturePreview.module.css';
 
 /**
  * Navigate a bitmap of the exact composed picture. Keep its previous resolution
- * during a gesture, then sharpen once zoom settles. Pages show the vector
- * while loading; cards skip that extra SVG paint and rasterize immediately.
+ * during a gesture, then sharpen once zoom settles. Pages and cards skip
+ * the extra SVG paint while loading and rasterize new sources immediately.
  * Changed sources hide old pixels, and late results cannot overwrite them.
  * Both surfaces retain the vector fallback if canvas fails.
  */
@@ -50,6 +50,7 @@ export const DiagramPicturePreview = memo(function DiagramPicturePreview({
   }, []);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [paintedSrc, setPaintedSrc] = useState<string | null>(null);
+  const ready = paintedSrc === src;
   const size = picturePreviewSize(measured || width, measured || height, scale, window.devicePixelRatio || 1);
   const cached = picturePreviewCache.ready(src, size);
   const attachCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
@@ -77,13 +78,14 @@ export const DiagramPicturePreview = memo(function DiagramPicturePreview({
           // A failed refinement may have cleared the canvas: show the vector.
           if (current) { setPaintedSrc(null); setFailedSrc(src); }
         });
-    }, settleMs);
+    // A new picture has nothing to refine: start at once. Only a visible
+    // bitmap's resolution upgrade waits for the zoom gesture to settle.
+    }, ready ? settleMs : 0);
     return () => {
       current = false;
       clearTimeout(timer);
     };
-  }, [src, size.width, size.height, settleMs, copy, autoSize, measured]);
-  const ready = paintedSrc === src;
+  }, [src, size.width, size.height, settleMs, copy, autoSize, measured, ready]);
   return (
     <span ref={hostRef} className={className} aria-hidden="true">
       <canvas data-picture-preview="" ref={attachCanvas} className={styles.surface} hidden={!ready} />

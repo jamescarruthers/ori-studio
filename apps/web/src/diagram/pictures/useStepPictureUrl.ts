@@ -9,7 +9,7 @@ import type {
 import { annotatedPicture, hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import type { PictureLayers } from '../annotate/pictureGeometry';
 import { sourcePaper, viewGeometry, viewOfStep } from '../zoom/stepView';
-import { xrayPainter, xraySurfaceOf, type XRaySurface } from '../xray/xrayPaint';
+import { annotatedXRaySurface, xrayPainter, type XRaySurface } from '../xray/xrayPaint';
 import {
   paintZoomedPicture,
   paintZoomSurround,
@@ -52,7 +52,7 @@ export function useStepPictureUrl(
   // A flat fold's layers, in the units the marks are in: a mark behind a flap is dotted under it (15e).
   const layers = useMemo(() => annotated ? viewGeometry(viewOfStep(step), assets, style).layers : null, [annotated, step, assets, style]);
   // Its faces, on a picture with layers: each x-ray's window is drawn (Revision 3).
-  const xRays = useMemo(() => annotated ? xraySurfaceOf(step) : null, [annotated, step]);
+  const xRays = useMemo(() => annotatedXRaySurface(step), [step]);
   const { annotations } = step;
   return useMemo(() => {
     if (!source) return null;

@@ -1147,8 +1147,6 @@
       "previewNotice": "Cette étape conserve l’aperçu du canevas de plis. Choisissez Plié dans Ajuster la pose pour tenter de le plier.",
       "reading": "Lecture des fichiers…",
       "recursive": "Inclure les sous-dossiers",
-      "reorder": "Réordonner {{name}}",
-      "reorderHint": "Faites glisser pour réordonner ou utilisez les flèches haut et bas.",
       "savedViewNotice": "Il s’agit de la vue enregistrée de Defox. Choisir un mode dans Ajuster la pose la remplace par une capture Ori Studio ; Annuler la rétablit.",
       "selected": "Fichiers sélectionnés : {{total}}",
       "start": "Importer",

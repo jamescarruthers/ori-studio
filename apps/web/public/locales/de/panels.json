@@ -1112,8 +1112,6 @@
       "previewNotice": "Dieser Schritt behält die Vorschau des Faltmusters. Wählen Sie unter Pose anpassen die Option Gefaltet, um die Faltung erneut zu versuchen.",
       "reading": "Dateien lesen…",
       "recursive": "Unterordner einbeziehen",
-      "reorder": "{{name}} umsortieren",
-      "reorderHint": "Zum Umsortieren ziehen oder die Pfeiltasten nach oben und unten verwenden.",
       "savedViewNotice": "Dies ist die gespeicherte Defox-Ansicht. Ein Modus unter Pose anpassen ersetzt sie durch eine Ori Studio-Aufnahme; Rückgängig stellt sie wieder her.",
       "selected": "Ausgewählte Dateien: {{total}}",
       "start": "Importieren",

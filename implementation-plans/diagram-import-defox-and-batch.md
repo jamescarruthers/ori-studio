@@ -363,7 +363,7 @@ no corpus data or screenshots are committed.
 - [x] Implement isolated existing-engine task sessions and cancellation on web/native.
 - [x] Implement bounded staging, duplicates, failures, Cancel and Finish import now.
 - [x] Implement coordinated Edit/Diagram history, rollback and branch/retention handling.
-- [x] Add file/folder/drop UI, reordering, layout controls and existing SVG behavior.
+- [x] Add file/folder/drop UI, layout controls and existing SVG behavior.
 - [x] Preserve Defox saved views/symbols, with explicit undoable native pose replacement.
 - [x] Persist snapshots/statuses and verify private corpus save/reopen and cold links.
 - [x] Validate 205 CPs, eight Defox steps and a mixed CP/SVG batch in Chromium.
@@ -438,3 +438,77 @@ follow-up and the merged changes do not alter Rust/WASM sources. Rust/native
 and oracle validation from the initial feature was not repeated for these
 shared frontend changes. The benchmark script passes `node --check`, and
 `git diff --check` is clean for the follow-up.
+
+## Follow-up: import list simplification and large page documents
+
+- [x] Remove import drag reordering at the user's request; retain a plain numbered file list.
+- [x] Profile continuous Pages scrolling using the supplied 205-step, 23-page OSF.
+- [x] Remove measured scrolling bottlenecks while retaining page selection, placement, navigation and vector export.
+- [x] Add regression coverage and repeat browser checks on the full saved document.
+- [x] Run affected frontend validation and update the draft PR with measured results.
+
+### Root causes and changes
+
+The existing Pages visibility observer limited artwork, but left every step's
+interaction targets mounted. Targets now mount only near the viewport, plus the
+selected page so keyboard reveal and pointer capture retain their DOM. The 23
+lightweight page shells remain for layout, visibility and camera navigation.
+Pages reuse the shared bitmap cache, skip the extra live SVG paint while loading,
+and rasterize a new source immediately; resolution refinements still wait for
+zoom to settle. Export continues to use the vector composition.
+
+Profiling also found three expensive operations that virtualization alone could
+not fix:
+
+- Page composition reconstructed face overlap/layer order for x-rays on pictures
+  without any x-ray annotation. Pages and step cards now ask for this geometry
+  only when a known x-ray mark needs it. Actual x-rays retain the same renderer.
+- The Page inspector subscribed to the page in view and rebuilt all its controls,
+  including 205-option picture selectors, on page changes. Only the current-page
+  step-count row now subscribes to that value.
+- When segmentation arrived, all source links were checked synchronously during
+  rendering. The first check also constructed containment for the roughly 490k
+  Edit creases. Containment now uses the exact existing geometric predicate in
+  the existing CP analysis worker, with transferable midpoint input, and seeds
+  the existing selection/link cache. Bulk link checks yield between batches and
+  discard results when the document or steps change; single-step inspectors
+  retain immediate checks. There is no new worker type or duplicate cache.
+
+Import rows have no drag handles, reorder buttons, drag hints or grab cursors.
+The unused importer-only edge-scrolling extension to the shared favorites hook
+was removed, restoring that hook to main. No other drag interaction was removed.
+
+### Measured result
+
+Chromium/Metal, 1440×1000, development renderer, the supplied saved OSF including
+its full Edit document. Frame intervals are measured with requestAnimationFrame
+while real wheel events scroll down and back; these are local observations, not
+a cross-device guarantee.
+
+| Run | Scroll extent | p95 frame interval | Worst frame interval | Frames over 50 ms |
+| --- | --- | --- | --- | --- |
+| Before | 65 wheel ticks each way | 83.29 ms | 4,481.94 ms | 109 |
+| After, same trace | 65 wheel ticks each way | 9.14 ms | 107.42 ms | 2 |
+| After, full cold pass | All 23 pages, down and back | 10.10 ms | 189.93 ms | 6 |
+| After, repeat pass | All 23 pages, down and back | 10.01 ms | 17.76 ms | 0 |
+
+The full-document check finished with 16 interaction targets and two page bitmaps
+mounted, versus 205 targets before. Home/End selected and revealed the first and
+last steps, picture placement committed and Undo restored it, and no browser
+errors occurred. The 205-file import dialog passed plain-list checks in light,
+dark and narrow layouts. The cold pass still has occasional work above 50 ms;
+this does not claim the original performance budget is fully met.
+
+`scripts/diagram-pages-check.mjs /absolute/path/to/project.osf` repeats the full
+scroll/navigation/placement check and writes timings, a CPU profile and a
+screenshot to ignored `artifacts/diagram-pages/`. Corpus data stays external.
+
+Validation for this follow-up: **3,842 passed / 3 skipped across 229 files**,
+including diagram/import/export, components, the store, selection containment,
+the native client adapter and styles. Full web lint, TypeScript, i18n and the
+production bundle with explicit landing prerender pass; the browser harness
+passes `node --check`, and `git diff --check` is clean. Generated WASM was reused:
+Rust, native commands, file formats and ported solver behavior are unchanged,
+so Rust/oracle/native-launch checks from the initial implementation were not
+repeated. No new analytics event is needed for removing a control and changing
+rendering/scheduling.

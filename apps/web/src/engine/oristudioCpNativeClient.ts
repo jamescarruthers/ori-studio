@@ -5,7 +5,7 @@
 // client in lockstep with the worker (add a method to one, the other fails
 // typecheck). See implementation-plans/desktop-native-cp-engine-migration.md.
 
-import { analyzeCpFold } from './cpAnalysisClient';
+import { analyzeCpFold, analyzeCpFoldWithContainment } from './cpAnalysisClient';
 import { invoke } from '@tauri-apps/api/core';
 
 import type {
@@ -224,6 +224,7 @@ async function exportWithTexts(
 
   return {
     analyzeFold: analyzeCpFold,
+    analyzeFoldWithContainment: analyzeCpFoldWithContainment,
     async segmentationArtifacts(handle: number) {
       return analyzeCpFold(await callSession<string>('cp_export_fold', { handle }));
     },

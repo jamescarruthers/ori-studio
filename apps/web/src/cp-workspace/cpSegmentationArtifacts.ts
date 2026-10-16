@@ -103,7 +103,7 @@ export function ensureCpSegmentationArtifacts(
 
   const promise = (async (): Promise<FoldArtifacts | null> => {
     const startedAt = performance.now();
-    const artifacts = await analyzeOristudioCpDocument();
+    const artifacts = await analyzeOristudioCpDocument(document);
     const current = useWorkspaceStore.getState().oristudioCpDocument?.document;
     if (!current || creaseFingerprint(current) !== fingerprint) return null;
     cached = { fingerprint, artifacts };

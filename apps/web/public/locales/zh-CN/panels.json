@@ -1077,8 +1077,6 @@
       "previewNotice": "此步骤保留了折痕图预览。在“调整姿态”中选择“折叠”可再次尝试折叠。",
       "reading": "正在读取文件…",
       "recursive": "包含子文件夹",
-      "reorder": "调整 {{name}} 的顺序",
-      "reorderHint": "拖动或使用上下方向键调整顺序。",
       "savedViewNotice": "这是Defox保存的视图。在“调整姿态”中选择模式会将其替换为Ori Studio生成的图像；撤销可恢复原视图。",
       "selected": "已选文件：{{total}}",
       "start": "导入",

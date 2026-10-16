@@ -1147,8 +1147,6 @@
       "previewNotice": "Este passo mantém a prévia do padrão de vincos. Escolha Dobrado em Ajustar pose para tentar dobrá-lo.",
       "reading": "Lendo arquivos…",
       "recursive": "Incluir subpastas",
-      "reorder": "Reordenar {{name}}",
-      "reorderHint": "Arraste para reordenar ou use as setas para cima e para baixo.",
       "savedViewNotice": "Esta é a vista salva do Defox. Escolher um modo em Ajustar pose a substitui por uma captura do Ori Studio; Desfazer a restaura.",
       "selected": "Arquivos selecionados: {{total}}",
       "start": "Importar",

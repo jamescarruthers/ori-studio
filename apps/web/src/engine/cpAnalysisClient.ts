@@ -21,7 +21,16 @@ function dispose() {
   shared?.worker.terminate();
   shared = null;
 }
-export async function analyzeCpFold(text: string): Promise<FoldArtifacts> {
+export function analyzeCpFold(text: string): Promise<FoldArtifacts> {
+  return withAnalysisWorker((api) => api.analyzeFold(text));
+}
+
+/** Same worker and containment algorithm as selection, with transferable input. */
+export function analyzeCpFoldWithContainment(text: string, midpoints: Float64Array) {
+  return withAnalysisWorker((api) => api.analyzeFoldWithContainment(text, Comlink.transfer(midpoints, [midpoints.buffer])));
+}
+
+async function withAnalysisWorker<T>(run: (api: Comlink.Remote<OristudioCpWorkerApi>) => Promise<T>): Promise<T> {
   clearTimeout(idle);
   if (!shared) {
     const worker = new Worker(new URL('../workers/oristudioCpWorker.ts', import.meta.url), {
@@ -42,7 +51,7 @@ export async function analyzeCpFold(text: string): Promise<FoldArtifacts> {
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new Error('Crease-pattern analysis timed out')), 120000);
     });
-    return await Promise.race([current.api.analyzeFold(text), current.failure, timeout]);
+    return await Promise.race([run(current.api), current.failure, timeout]);
   } catch (error) {
     if (shared === current) dispose();
     throw error;

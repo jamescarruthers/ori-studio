@@ -1147,8 +1147,6 @@
       "previewNotice": "Este paso conserva la vista previa del patrón de pliegues. Elige Plegado en Ajustar pose para intentar plegarlo.",
       "reading": "Leyendo archivos…",
       "recursive": "Incluir subcarpetas",
-      "reorder": "Reordenar {{name}}",
-      "reorderHint": "Arrastra para reordenar o usa las flechas arriba y abajo.",
       "savedViewNotice": "Esta es la vista guardada de Defox. Elegir un modo en Ajustar pose la sustituye por una captura de Ori Studio; Deshacer la restaura.",
       "selected": "Archivos seleccionados: {{total}}",
       "start": "Importar",

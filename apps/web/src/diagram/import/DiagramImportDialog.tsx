@@ -13,7 +13,7 @@ import { ensureDiagramImportTarget } from '../../store/workspaceStore/diagramBat
 import { useImportDialogStore } from './importDialogStore';
 import { orderedImportFiles, runImportJob, supportsStepImport, type ImportProgress } from './importJob';
 import styles from './DiagramImportDialog.module.css';
-import { ImportFileOrder } from './ImportFileOrder';
+import { ImportFileList } from './ImportFileList';
 
 export function DiagramImportDialogHost() {
   const target = useImportDialogStore((s) => s.target);
@@ -168,10 +168,8 @@ function DiagramImportDialog() {
                 <span>{t('panels:diagram.import.formats', 'CP · SVG · Defox')}</span>
               </div>
             ) : (
-              <ImportFileOrder
+              <ImportFileList
                 files={files}
-                onChange={setFiles}
-                disabled={running || done}
                 currentName={running ? progress?.name : undefined}
               />
             )}

@@ -1112,8 +1112,6 @@
       "previewNotice": "This step keeps its crease pattern preview. Choose Folded in Adjust Pose to try folding it.",
       "reading": "Reading files…",
       "recursive": "Include subfolders",
-      "reorder": "Reorder {{name}}",
-      "reorderHint": "Drag to reorder, or use the up and down arrow keys.",
       "savedViewNotice": "This is the saved Defox view. Choosing a mode in Adjust Pose replaces it with an Ori Studio capture; Undo restores it.",
       "selected": "Selected files: {{total}}",
       "start": "Import",
