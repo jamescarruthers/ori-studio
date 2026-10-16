@@ -24,7 +24,9 @@ diagram, rather than Edit (where an `.osf` holding a crease pattern lands).
   is as it came. Served as a static file and fetched on demand. The service
   worker routes nothing under `/examples/` (it falls through to `bypass`), and
   its precache and warm lists are built from `assets/` only, so it is never
-  cached ahead of a click; a test pins that.
+  cached ahead of a click; a test pins that. Pages types `.osf` as Yamaha's
+  Open Score Format and sends it uncompressed (3.4 MB on the PR preview), so
+  `public/_headers` serves `/examples/*` as `application/json`: 130 KB brotli.
 - **The open.** `diagram/example/diagramExample.ts` fetches the asset, wraps
   it as a `File` named `Crane.osf`, and hands it to `openProject` through
   `createDroppedFileService` — exactly what a drop does. `openProject` asks
@@ -57,6 +59,7 @@ diagram, rather than Edit (where an `.osf` holding a crease pattern lands).
   (`openProject` options)
 - `apps/web/src/analytics/` (two events), `docs/analytics.md`
 - `apps/web/src/pwa/swRoutes.test.ts` (the example is never cached)
+- `apps/web/public/_headers` (the example served as JSON, so compressed)
 - `apps/web/public/locales/*/panels.json`, `errors.json`
 
 ## Checklist
