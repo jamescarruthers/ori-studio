@@ -71,4 +71,4 @@ diagram, rather than Edit (where an `.osf` holding a crease pattern lands).
       button and link, the asset reads cleanly, the service worker leaves it
 - [x] Lint, typecheck, vitest, i18n:check, build:web
 - [x] Browser check and screenshots
-- [ ] Draft PR
+- [x] Draft PR (#451)
