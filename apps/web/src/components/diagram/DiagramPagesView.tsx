@@ -21,6 +21,7 @@ import { composedPageUrl } from '../../diagram/pages/useDiagramPages';
 import { PAGES_PAD, PAGES_PX_PER_MM, usePagesView } from '../../diagram/pages/usePagesView';
 import { ViewportToolbar } from '../panels/ViewportToolbar';
 import { DiagramPageBand } from './DiagramPageBand';
+import { DiagramPagePreview } from './DiagramPagePreview';
 import { DiagramTitleBlockOverlay } from './DiagramTitleBlockOverlay';
 import { PageGuide } from './PageGuide';
 import { PagePlaceholder } from './PagePlaceholder';
@@ -55,7 +56,7 @@ function pageImageUrl(
 
 /**
  * The Pages view (D10): each page as it will print, composed into an SVG and
- * shown as an `<img>`, so what the screen shows is the file — all but the
+ * shown as a cached bitmap of that SVG, so what the screen shows is the file — all but the
  * flow band, which the view draws under the image from the file's own path
  * and pen (`DiagramPageBand`), so that a colour being picked repaints the
  * band alone and a new colour composes no page again.
@@ -242,11 +243,12 @@ export function DiagramPagesView({
                       />
                     )}
                     {isNear(index) && (
-                      <img
+                      <DiagramPagePreview
                         className={styles.image}
                         src={pageImageUrl(prepared ?? pages, index, placement.draft)}
-                        alt=""
-                        draggable={false}
+                        width={pageW}
+                        height={pageH}
+                        scale={zoomPercent / 100}
                       />
                     )}
                     {margin > 0 && (
