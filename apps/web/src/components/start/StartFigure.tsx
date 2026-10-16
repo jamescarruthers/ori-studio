@@ -5,6 +5,7 @@ import { DEFAULT_SIMULATOR_SETTINGS } from '../../lib/simulatorSettings';
 import { useThemeStore } from '../../store/themeStore';
 import { resolveRenderSettings } from '../../simulator/simulatorPalette';
 import { ANALYTICS_EVENTS, track } from '../../analytics';
+import { ExternalAnchor } from '../ui/ExternalAnchor';
 import { START_FIGURE, loadStartFigureAsset, type StartFigureAsset } from './startFigureAsset';
 import { startFigurePaperStyle } from './startFigurePaper';
 import {
@@ -355,14 +356,12 @@ export function StartFigure() {
       <p className="start-figure__credit">
         <Trans i18nKey="common:startFigure.credit">
           Designed by{' '}
-          <a
+          <ExternalAnchor
             className="start-figure__credit-link"
             href="https://www.instagram.com/theplantpsychologist"
-            target="_blank"
-            rel="noreferrer noopener"
           >
             Brandon Wong
-          </a>
+          </ExternalAnchor>
         </Trans>
       </p>
     </div>

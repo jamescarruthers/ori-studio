@@ -858,9 +858,68 @@ describe('a woven stacking', () => {
     const fIndex = scene.items.findIndex((item) => item.kind === 'face' && item.face === F);
     expect(scene.items[fIndex]).not.toHaveProperty('outline');
     const lines = linesAfterEachFace(scene).get(fIndex)!;
-    expect(lines.map((l) => l.role)).toEqual(['edge', 'edge', 'aux', 'edge']);
+    expect(lines.map((l) => l.role)).toEqual(['aux', 'edge', 'edge', 'edge']);
     // The flat edge meets a border at both ends, so both retreat under erode.
-    expect(lines[2]!.onBoundary).toEqual([true, true]);
+    expect(lines[0]!.onBoundary).toEqual([true, true]);
+  });
+});
+
+describe('aux creases beneath folded edges', () => {
+  it.each(['border', 'flat'] as const)('paints AUX before every solid edge of a face with a %s edge', (kind) => {
+    const face = rectangle(0, 0, 4, 4, 0);
+    face.edges[2]!.kind = kind;
+    const kernel: OristudioCpFoldedPaperScene = {
+      schema_version: 2, flipped: false, sheet: 4, sheet_points: [],
+      faces: [face],
+      subfaces: [subface(0, 0, 4, 4, [0])],
+      aux_lines: [{ from: point(2, 0), to: point(2, 4), face: 0 }],
+    };
+    const items = drawn(sceneOf(kernel).items);
+    const aux = items.filter((item) => item.kind === 'line' && item.role === 'aux');
+    const edges = items.filter((item) => item.kind === 'line' && item.role === 'edge');
+    expect(aux).toHaveLength(kind === 'flat' ? 2 : 1);
+    expect(edges).toHaveLength(kind === 'flat' ? 3 : 4);
+    for (const crease of aux) {
+      expect(items.indexOf(crease)).toBeGreaterThan(0); // On top of the paper.
+      for (const edge of edges) expect(items.indexOf(crease)).toBeLessThan(items.indexOf(edge));
+    }
+    // Separating a uniform outline must keep its round corner joins, even
+    // when the edge pen has butt caps.
+    if (kind === 'border') {
+      for (const edge of edges) expect(edge).toMatchObject({ joined: [true, true] });
+    }
+  });
+
+  it('keeps a lower face’s AUX and outline beneath the next paper layer', () => {
+    const kernel: OristudioCpFoldedPaperScene = {
+      schema_version: 2, flipped: false, sheet: 4, sheet_points: [],
+      faces: [rectangle(0, 0, 4, 4, 0), rectangle(0, 0, 4, 4, 4, false)],
+      subfaces: [subface(0, 0, 4, 4, [1, 0])],
+      aux_lines: [0, 1].map((face) => ({ from: point(2, 0), to: point(2, 4), face })),
+    };
+    const items = drawn(sceneOf(kernel).items);
+    const cover = items.findIndex((item) => item.kind === 'face' && item.face === 1);
+    const buried = items.filter((item) => item.kind !== 'markup' && item.face === 0);
+    expect(buried).toHaveLength(6); // Fill, AUX, four outline edges.
+    for (const item of buried) {
+      expect(item.hidden).toBe(true);
+      expect(items.indexOf(item)).toBeLessThan(cover);
+    }
+  });
+
+  it('paints flat stretches before solid edges carried by woven patches', () => {
+    const kernel = wovenScene();
+    kernel.faces[V2]!.edges[1]!.kind = 'flat';
+    const patches = drawn(sceneOf(kernel).items).filter(
+      (item) => item.kind !== 'markup' && item.group === 'patches-1'
+    );
+    const aux = patches.filter((item) => item.kind === 'line' && item.role === 'aux');
+    const edges = patches.filter((item) => item.kind === 'line' && item.role === 'edge');
+    expect(aux.length).toBeGreaterThan(0);
+    expect(edges.length).toBeGreaterThan(0);
+    for (const crease of aux) {
+      for (const edge of edges) expect(patches.indexOf(crease)).toBeLessThan(patches.indexOf(edge));
+    }
   });
 });
 
@@ -967,10 +1026,10 @@ describe('with no spread', () => {
    * Every path the producer emits — whole faces, a face whose outline mixes
    * roles, aux lines, patches with their aux stretches and carried lines — on
    * the real folds and the weave, marked and unmarked, as digests of the
-   * scenes this producer drew before it could spread layers. Folding the
-   * fixtures in a changed kernel can move these; the producer alone must not.
+   * scenes this producer drew before it could spread layers, with the weave
+   * updated for AUX beneath edges. A spread must not change the unspread picture.
    */
-  it('draws what it drew before layers could be spread, byte for byte', () => {
+  it('keeps the unspread picture stable, byte for byte', () => {
     const sink = wovenScene();
     sink.aux_lines.push({ from: point(3.5, 0), to: point(3.5, 5), face: V2 });
     sink.faces[F]!.edges[2]!.kind = 'flat';
@@ -996,8 +1055,8 @@ describe('with no spread', () => {
         "solution sample back unmarked": "303af59b84376884",
         "solution sample front": "d2d39703f1eef887",
         "solution sample front unmarked": "b65c945e996674ca",
-        "weave": "5acace7b39efbd83",
-        "weave unmarked": "21b67eb661442c18",
+        "weave": "b8c9e2a6e29a65c9",
+        "weave unmarked": "6a4c832b415e92d3",
       }
     `);
   });

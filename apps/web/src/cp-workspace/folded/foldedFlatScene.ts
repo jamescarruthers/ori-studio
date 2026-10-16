@@ -18,8 +18,8 @@
  * wherever two faces overlap the nearer one is drawn later. That is one
  * object per face — no sliver per subface, no seam grid (D2) — and a buried
  * layer is a face an editor can delete to reveal the one beneath. A whole face
- * draws its outline itself (`PaperFaceItem.outline`), so reshaping it in an
- * editor moves the fill and the outline together.
+ * draws its outline itself (`PaperFaceItem.outline`) unless it carries aux
+ * lines: those go between the fill and a separate outline, beneath its edges.
  *
  * # Woven flaps
  *
@@ -756,23 +756,35 @@ interface EmitContext {
 }
 
 /**
- * A face once, as its outline, followed by its lines. An outline whose edges
- * all take one role is drawn by the face itself, so the fill and its outline
- * reach a drawing editor as one object; a mixed one is a line per edge.
+ * A face once, then AUX, then its edges. A uniform outline stays on the face
+ * itself when no aux lines need to go between its fill and outline. Otherwise
+ * it is a line per edge, retaining the closed outline's round joins.
  */
 function emitWholeFace(items: PaperItem[], context: EmitContext, face: number): void {
   const { kernel } = context;
   const source = kernel.faces[face]!;
   const hidden = context.markHidden && !context.top.has(face);
-  const outline = outlineRole(source);
+  const uniformOutline = outlineRole(source);
+  const outline = kernel.aux_lines.some((aux) => aux.face === face) ? undefined : uniformOutline;
   const ring = source.outline.map((point) => context.at(face, point));
   items.push(faceItem(face, source, [ring], hidden, outline));
-  if (!outline) {
-    source.edges.forEach(({ from, to }, edge) => {
-      items.push(outlineLine(context, face, edge, from, to, hidden));
-    });
-  }
   emitAuxLines(items, context, face, hidden);
+  if (!outline) {
+    const lines = source.edges.map(({ from, to }, edge): PaperLineItem => ({
+      ...outlineLine(context, face, edge, from, to, hidden),
+      ...(uniformOutline ? { joined: [true, true] } : {}),
+    }));
+    emitOutlineLines(items, lines);
+  }
+}
+
+/** Flat outline stretches use the AUX pen too; solid edges cover their ends. */
+function emitOutlineLines(items: PaperItem[], lines: readonly PaperLineItem[]): void {
+  for (const role of ['aux', 'edge']) {
+    for (const line of lines) {
+      if (line.role === role) items.push(line);
+    }
+  }
 }
 
 /**
@@ -820,6 +832,7 @@ function emitPatches(
     }
   }
   const carried = new Set<string>();
+  const lines: PaperLineItem[] = [];
   for (const subface of batch) {
     const reached = new Set(edges.ofSubface[subface]);
     for (const corner of kernel.subfaces[subface]!.polygon) {
@@ -840,9 +853,10 @@ function emitPatches(
           (parameterOn(along.from, along.to, b, context.epsilon) ?? 0)
       ) as [Point, Point];
       const line = outlineLine(context, owner.face, owner.edge, from, to, false);
-      items.push({ ...line, joined: [true, true], group });
+      lines.push({ ...line, joined: [true, true], group });
     }
   }
+  emitOutlineLines(items, lines);
 }
 
 /** A stretch of one aux line, as parameters along it. */

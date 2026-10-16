@@ -32,6 +32,7 @@ import { WorkspaceViewDrawer } from './WorkspaceViewDrawer';
 import { CpToolsTrigger } from '../cp-workspace/toolCatalog/CpToolsTrigger';
 import { panelComponents } from './panels/PanelComponents';
 import { Button } from './ui/Button';
+import { externalAnchorProps } from './ui/ExternalAnchor';
 import { IconButton, IconButtonLink } from './ui/IconButton';
 import { SplitButton } from './ui/SplitButton';
 import { useSendToEditActions } from '../designKinds/useSendToEditActions';
@@ -251,17 +252,13 @@ function Toolbar() {
           A link and not a button that opens a window: everything that makes a
           destination inspectable before you commit to it — the status bar, the
           context menu, a middle click — comes from this actually being an
-          anchor. `noopener` because `_blank` would otherwise hand Discord a
-          live `window.opener` back into the app.
+          anchor. On desktop it opens the system browser.
         */}
         <IconButtonLink
           size="sm"
           title={t('common:toolbar.discord', 'Join the Discord')}
           tooltipSide="bottom"
-          href={DISCORD_URL}
-          target="_blank"
-          rel="noreferrer noopener"
-          onClick={() => trackCommunityLink('toolbar')}
+          {...externalAnchorProps(DISCORD_URL, () => trackCommunityLink('toolbar'))}
         >
           <MessageCircle size={15} />
         </IconButtonLink>

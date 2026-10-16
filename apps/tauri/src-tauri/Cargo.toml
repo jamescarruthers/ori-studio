@@ -25,6 +25,11 @@ serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+# Opens an external link in the system browser. The webview ignores a request
+# for a new window, so a `target="_blank"` link or `window.open` does nothing on
+# desktop; the frontend's `openExternalUrl` sends those here instead. 2.5 is the
+# newest line that builds against Tauri 2.11; 2.6 needs 2.12.
+tauri-plugin-opener = "2.5.5"
 tauri-plugin-window-state = "2"
 
 # Desktop only. The updater replaces the running application, which has no

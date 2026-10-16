@@ -311,6 +311,16 @@ pub fn run() {
         .manage(cp_engine::new_cancel_state())
         .manage(cp_detect::new_state())
         .plugin(tauri_plugin_dialog::init())
+        // The system browser, for links that leave the app. Without the plugin's
+        // injected click handler: the frontend's `openExternalUrl` already sends
+        // every external link here, including the `window.open` calls and
+        // same-tab links that handler never sees, so a second path would only
+        // be a second thing to keep in step.
+        .plugin(
+            tauri_plugin_opener::Builder::new()
+                .open_js_links_on_click(false)
+                .build(),
+        )
         // Reopen the window where and how it was left. Narrowed from the
         // plugin's default of every flag: `FULLSCREEN` would relaunch into
         // fullscreen after a session that merely ended there, and `VISIBLE` /
