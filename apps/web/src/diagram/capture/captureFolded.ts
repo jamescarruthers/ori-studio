@@ -300,7 +300,7 @@ function renderForRoute(
   route: 'flat' | 'spatial',
   spread: DiagramLayerSpread | undefined
 ): DiagramCpRender {
-  if (render.mode === 'crease-pattern' || render.mode === 'simulated') return render;
+  if (render.mode === 'crease-pattern' || render.mode === 'simulated' || render.mode === 'defox') return render;
   if (route === 'flat') {
     return render.mode === 'folded-flat'
       ? render
@@ -392,6 +392,8 @@ export async function captureStep(
   request: CaptureStepRequest
 ): Promise<CaptureStepResult> {
   const { document, style, env, segmentation } = request;
+  // Saved Defox layer orders cannot be refreshed from an edited CP. Show As explicitly replaces the saved view.
+  if (request.render.mode === 'defox') return { status: 'needs-pose' };
   // A region cannot be looked for before the segmentation is ready.
   if (!segmentation) return { status: 'unknown' };
   const choice = chooseStepCreases(document, request.scope, segmentation, request.known ?? null);

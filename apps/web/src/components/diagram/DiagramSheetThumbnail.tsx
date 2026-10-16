@@ -1,4 +1,5 @@
-import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import { useMemo } from 'react';
+import type { SheetThumbnail, SheetStrokeRole } from '../../cp-workspace/sheets/sheetThumbnail';
 import styles from './DiagramSheetThumbnail.module.css';
 
 /**
@@ -18,6 +19,20 @@ export function DiagramSheetThumbnail({
   /** The parent's placement: its size and position. */
   className?: string;
 }) {
+  // Independent M/L subpaths keep every segment and its drawing order, but
+  // avoid one React/DOM element per crease in a long imported diagram.
+  const paths = useMemo(() => {
+    const runs: Array<{ role: SheetStrokeRole; commands: string[] }> = [];
+    for (const stroke of thumbnail.strokes) {
+      let run = runs.at(-1);
+      if (!run || run.role !== stroke.role) {
+        run = { role: stroke.role, commands: [] };
+        runs.push(run);
+      }
+      run.commands.push(`M${stroke.x1} ${stroke.y1}L${stroke.x2} ${stroke.y2}`);
+    }
+    return runs.map((run) => ({ role: run.role, d: run.commands.join('') }));
+  }, [thumbnail]);
   return (
     <svg
       viewBox={thumbnail.viewBox}
@@ -25,16 +40,8 @@ export function DiagramSheetThumbnail({
       focusable="false"
       className={className ? `${styles.thumbnail} ${className}` : styles.thumbnail}
     >
-      {thumbnail.strokes.map((stroke, index) => (
-        <line
-          key={index}
-          className={styles.stroke}
-          data-role={stroke.role}
-          x1={stroke.x1}
-          y1={stroke.y1}
-          x2={stroke.x2}
-          y2={stroke.y2}
-        />
+      {paths.map((path, index) => (
+        <path key={index} className={styles.stroke} data-role={path.role} d={path.d} />
       ))}
     </svg>
   );

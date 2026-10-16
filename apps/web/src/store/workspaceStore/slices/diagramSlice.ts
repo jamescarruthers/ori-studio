@@ -1,3 +1,4 @@
+import { compoundImportTravel } from '../diagramBatchImport';
 import {
   createDiagram,
   createStep,
@@ -192,7 +193,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     // them (`flushPlacementNudge`).
     flushPlacementNudge();
     const state = get();
-    if (state.diagramReadOnly) return null;
+    if (state.diagramReadOnly || state.diagramImportBusy) return null;
     const before = state.diagram;
     const base = before ?? newDiagram();
     const edited = edit(base);
@@ -278,7 +279,9 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     // An undo takes back a nudge in its pause as it would one committed.
     flushPlacementNudge();
     const state = get();
-    if (state.diagramReadOnly) return false;
+    if (state.diagramReadOnly || state.diagramImportBusy) return false;
+    const head = direction === 'undo' ? state.diagramHistory.past.at(-1) : state.diagramHistory.future[0];
+    if (head?.compoundId) { void compoundImportTravel(direction); return true; }
     openSession = null;
     const current = snapshotEntry(state.diagram, direction);
     const result =

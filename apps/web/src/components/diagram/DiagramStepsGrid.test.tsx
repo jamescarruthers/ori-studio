@@ -370,7 +370,7 @@ describe('DiagramStepsGrid', () => {
     });
     const cards = options();
     // Every linked card shows its pattern in the corner.
-    for (const card of cards) expect(card.querySelector('svg line')).not.toBeNull();
+    for (const card of cards) expect(card.querySelector('svg [data-role="edge"]')).not.toBeNull();
     const name = (card: HTMLElement) =>
       card
         .getAttribute('aria-labelledby')!

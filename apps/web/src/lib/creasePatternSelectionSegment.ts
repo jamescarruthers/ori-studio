@@ -1,3 +1,4 @@
+import { BoundsIndex } from './boundsIndex';
 import type { FoldArtifacts, FoldDocument } from '../engine/types';
 import type { OristudioCpDocumentSnapshot } from '../engine/oristudioCpTypes';
 import {
@@ -89,7 +90,11 @@ function edgeKey(a: number, b: number): string {
  * an ordinary mountain/valley crease is not a self-contained crease pattern, so
  * it is not offered for folding, export, or simulation.
  */
-function rimAssignmentCounts(fold: FoldDocument, segment: CpSegment): { rim: number; nonBorder: number } {
+function rimAssignmentCounts(
+  fold: FoldDocument,
+  segment: CpSegment,
+  assignmentByKey: Map<string, string>
+): { rim: number; nonBorder: number } {
   const faces = fold.faces_vertices ?? [];
   const useCount = new Map<string, number>();
   for (const faceIndex of segment.faceIndices) {
@@ -105,8 +110,6 @@ function rimAssignmentCounts(fold: FoldDocument, segment: CpSegment): { rim: num
 
   // Shared with segmentation so a border overdrawn by another crease still reads
   // as a border here too (see buildAssignmentByKey's precedence).
-  const assignmentByKey = buildAssignmentByKey(fold);
-
   let rim = 0;
   let nonBorder = 0;
   for (const [key, count] of useCount) {
@@ -154,12 +157,15 @@ function segmentContainment(
   // `segment.faceIndices` indexes the base fold (see `resolveCpSegments`).
   const fold = artifacts.fold;
   const lineIds: number[][] = segments.map(() => []);
-  const rim = segments.map((segment) => rimAssignmentCounts(fold, segment));
+  const assignmentByKey = buildAssignmentByKey(fold);
+  const rim = segments.map((segment) => rimAssignmentCounts(fold, segment, assignmentByKey));
+  const index = new BoundsIndex(segments.map((segment) => segment.bounds));
   const eligible = rim.map((counts) => counts.nonBorder === 0);
 
-  document.crease_pattern.line_segments.forEach((line, index) => {
+  document.crease_pattern.line_segments.forEach((line, lineIndex) => {
     const midpoint = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
-    segments.forEach((segment, s) => {
+    index.at(midpoint.x, midpoint.y, ON_BOUNDARY_EPSILON).forEach((s) => {
+      const segment = segments[s]!;
       const bounds = segment.bounds;
       if (
         midpoint.x < bounds.minX - ON_BOUNDARY_EPSILON ||
@@ -170,7 +176,7 @@ function segmentContainment(
         return;
       }
       if (pointInSegment(segment, midpoint) || onSegmentBoundary(segment, midpoint)) {
-        lineIds[s]!.push(index + 1);
+        lineIds[s]!.push(lineIndex + 1);
       }
     });
   });

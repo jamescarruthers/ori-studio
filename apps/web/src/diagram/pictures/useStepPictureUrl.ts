@@ -52,12 +52,12 @@ export function useStepPictureUrl(
   style: DiagramStyle
 ): string | null {
   const seen = useNearView(element);
-  const source = useMemo(() => stepPictureSource(step, assets), [step, assets]);
-  const zoomed = useMemo(() => zoomedSource(step, assets), [step, assets]);
+  const source = useMemo(() => seen ? stepPictureSource(step, assets) : null, [seen, step, assets]);
+  const zoomed = useMemo(() => seen ? zoomedSource(step, assets) : null, [seen, step, assets]);
   // A flat fold's layers, in the units the marks are in: a mark behind a flap is dotted under it (15e).
-  const layers = useMemo(() => viewGeometry(viewOfStep(step), assets, style).layers, [step, assets, style]);
+  const layers = useMemo(() => seen ? viewGeometry(viewOfStep(step), assets, style).layers : null, [seen, step, assets, style]);
   // Its faces, on a picture with layers: each x-ray's window is drawn (Revision 3).
-  const xRays = useMemo(() => xraySurfaceOf(step), [step]);
+  const xRays = useMemo(() => seen ? xraySurfaceOf(step) : null, [seen, step]);
   const { annotations } = step;
   return useMemo(() => {
     if (!seen || !source) return null;

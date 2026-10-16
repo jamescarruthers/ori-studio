@@ -1,3 +1,4 @@
+import { DiagramImportDialogHost } from '../diagram/import/DiagramImportDialog';
 import { selectDesignMethod } from '../store/workspaceStore/designTabs';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -429,6 +430,7 @@ export function WorkspaceShell() {
   // `withPanelErrorBoundary`), so this one only catches Dockview itself.
   return (
     <div className="app-layout">
+      <DiagramImportDialogHost />
       <ErrorBoundary surface="shell:toolbar" variant="strip">
         <Toolbar />
       </ErrorBoundary>

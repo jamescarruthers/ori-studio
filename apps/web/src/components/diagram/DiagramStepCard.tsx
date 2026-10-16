@@ -537,9 +537,13 @@ function DeleteVerb({ label, onDelete }: { label: string; onDelete: () => void }
  * is shown, or what an upload is.
  */
 function stepKindLabel(step: DiagramStep, picture: StepPictureSource | null, t: TFunction): string {
+  if (step.importStatus === 'pending') return t('panels:diagram.card.badgePending', 'Fold pending');
+  if (step.importStatus === 'failed') return t('panels:diagram.card.badgeFailed', 'Fold unavailable');
   if (step.source?.kind === 'references-step') return t('panels:diagram.card.badgeReferences', 'References');
   if (step.source?.kind === 'cp') {
     switch (step.source.render.mode) {
+      case 'defox':
+        return t('panels:diagram.card.badgeDefox', 'Defox');
       case 'crease-pattern':
         return t('panels:diagram.card.badgeCreasePattern', 'Crease pattern');
       case 'folded-flat':
