@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ExternalLink } from 'lucide-react';
+import { ExternalAnchor } from '../ui/ExternalAnchor';
 import { InfoPopover } from '../ui/InfoPopover';
 import styles from './DiagramAffineCredit.module.css';
 
@@ -11,10 +12,10 @@ export function DiagramAffineCredit() {
         <p className={styles.description}>
           {t('panels:diagram.pose.affineCredit', 'Affine distortion by Kei Morisue')}
         </p>
-        <a className={styles.link} href="https://kei-morisue.github.io/step-folder/" target="_blank" rel="noopener noreferrer">
+        <ExternalAnchor className={styles.link} href="https://kei-morisue.github.io/step-folder/">
           {t('panels:diagram.pose.visitDefox', 'Visit DEFOX')}
           <ExternalLink size={12} aria-hidden="true" />
-        </a>
+        </ExternalAnchor>
       </div>
     </InfoPopover>
   );

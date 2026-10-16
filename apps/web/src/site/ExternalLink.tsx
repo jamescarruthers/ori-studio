@@ -10,6 +10,10 @@ import type { AnchorHTMLAttributes, ReactNode } from 'react';
  *
  * Only for links the reader will *read* at, not files they download: a `.dmg` link is an
  * action, and the arrow would say "you are leaving" about something that stays put.
+ *
+ * Web only, which is why it opens in the same tab and does nothing for the desktop app:
+ * the site's pages and footer do not exist there. A link the app itself shows is an
+ * `ExternalAnchor` (`components/ui`), which opens the system browser on desktop.
  */
 export function ExternalLink({
   children,

@@ -1,4 +1,5 @@
 import { Trans } from 'react-i18next';
+import { ExternalAnchor } from './ui/ExternalAnchor';
 
 /**
  * Quiet attribution bar crediting the upstream project a design surface is
@@ -25,23 +26,16 @@ export function DesignAttributionFooter({ method }: { method: 'tree' | 'bp' | 'e
         <span className="design-attribution__text">
           <Trans i18nKey="panels:design.attributionExplori">
             Searches{' '}
-            <a
-              className="design-attribution__link"
-              href="https://225.designorigami.net/"
-              target="_blank"
-              rel="noreferrer noopener"
-            >
+            <ExternalAnchor className="design-attribution__link" href="https://225.designorigami.net/">
               ExplOri 22.5
-            </a>{' '}
+            </ExternalAnchor>{' '}
             by theplantpsychologist ·{' '}
-            <a
+            <ExternalAnchor
               className="design-attribution__link"
               href="https://www.paypal.com/paypalme/theplantpsychologist"
-              target="_blank"
-              rel="noreferrer noopener"
             >
               Donate
-            </a>
+            </ExternalAnchor>
           </Trans>
         </span>
       </footer>
@@ -54,14 +48,12 @@ export function DesignAttributionFooter({ method }: { method: 'tree' | 'bp' | 'e
         <span className="design-attribution__text">
           <Trans i18nKey="panels:design.attributionBoxPleating">
             Adapted from{' '}
-            <a
+            <ExternalAnchor
               className="design-attribution__link"
               href="https://github.com/bp-studio/box-pleating-studio"
-              target="_blank"
-              rel="noreferrer noopener"
             >
               Mu-Tsun Tsai&apos;s Box Pleating Studio
-            </a>
+            </ExternalAnchor>
           </Trans>
         </span>
       </footer>
@@ -73,14 +65,9 @@ export function DesignAttributionFooter({ method }: { method: 'tree' | 'bp' | 'e
       <span className="design-attribution__text">
         <Trans i18nKey="panels:design.attributionTreemaker">
           Adapted from{' '}
-          <a
-            className="design-attribution__link"
-            href="https://langorigami.com/article/treemaker/"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
+          <ExternalAnchor className="design-attribution__link" href="https://langorigami.com/article/treemaker/">
             Robert J. Lang&apos;s TreeMaker
-          </a>{' '}
+          </ExternalAnchor>{' '}
           · GPL-2.0
         </Trans>
       </span>
