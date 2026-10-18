@@ -176,11 +176,12 @@ export function DiagramAnnotationGlyph({
         </Glyph>
       );
     case 'fold-unfold-arrow':
+      // One arc, a head at each end: there and back (Zach, 2026-10-18).
       return (
         <Glyph>
-          <path d="M4.5 13 A9 9 0 0 1 16 10" />
-          <path d="M16 10 A11 11 0 0 1 6 16.4" />
-          <path d="M3.4 17.2 L8.2 14.6 L8 18.6 Z" fill="currentColor" strokeWidth={1} />
+          <path d="M4.2 12.6 C5.8 5.5 14.2 5.5 15.8 12.6" />
+          <path d="M15.8 12.6 L12.8 11.3 M15.8 12.6 L16.1 9.35" />
+          <path d="M4.2 12.6 L7.2 11.3 M4.2 12.6 L3.9 9.35" />
         </Glyph>
       );
     case 'pleat-arrow':
