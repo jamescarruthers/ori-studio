@@ -68,7 +68,7 @@ function DiagramImportDialog() {
     setFiles(selected);
     setColumns(0);
     setError(
-      selected.length ? null : t('panels:diagram.import.noFiles', 'No CP, SVG or Defox files were found.')
+      selected.length ? null : t('panels:diagram.import.noFiles', 'No crease patterns, Defox projects or pictures were found.')
     );
   };
   useEffect(() => {
@@ -197,7 +197,7 @@ function DiagramImportDialog() {
               <div className={styles.empty}>
                 <Files size={28} strokeWidth={1.5} aria-hidden="true" />
                 <p>{t('panels:diagram.import.empty', 'Choose files or a folder to begin.')}</p>
-                <span>{t('panels:diagram.import.formats', 'CP · SVG · Defox')}</span>
+                <span>{t('panels:diagram.import.formats', 'CP · Defox · SVG · PNG · JPEG · WebP')}</span>
               </div>
             ) : (
               <ImportFileList
@@ -213,7 +213,7 @@ function DiagramImportDialog() {
           <p className="simple-modal__message">
             {t(
               'panels:diagram.import.description',
-              'CPs become folded steps and are appended together to Edit. SVGs become pictures. Defox keeps its saved views.'
+              'CPs become folded steps and are appended together to Edit. Pictures become steps of their own. Defox keeps its saved views.'
             )}
           </p>
           {!running && !done && (
