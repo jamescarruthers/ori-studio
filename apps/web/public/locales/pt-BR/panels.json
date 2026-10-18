@@ -1127,6 +1127,8 @@
     },
     "label": "Diagrama",
     "layers": {
+      "deleteMark": "Excluir {{name}}",
+      "deleteStep": "Excluir o passo {{number}}",
       "empty": "Abra um passo em Anotar para ver suas camadas.",
       "list": "Camadas",
       "markCount_one": "{{count}} marca",

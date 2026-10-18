@@ -1127,6 +1127,8 @@
     },
     "label": "Diagramme",
     "layers": {
+      "deleteMark": "Supprimer {{name}}",
+      "deleteStep": "Supprimer l’étape {{number}}",
       "empty": "Ouvrez une étape dans Annoter pour voir ses calques.",
       "list": "Calques",
       "markCount_one": "{{count}} repère",

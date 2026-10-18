@@ -17,7 +17,8 @@ const PART_ICONS: Readonly<Record<PageLayerPart, LucideIcon>> = { number: Hash, 
  * Annotate lists its marks (`usePageLayers`) — under what the list holds, and
  * on a flow page Re-pack Page; a press on one selects it with its whole frame,
  * and its disclosure opens it into its Number, Picture and Text, a press on
- * one of which selects it, as the presses on the page do — and, under the
+ * one of which selects it, as the presses on the page do; its own Delete at
+ * its end — and, under the
  * separator, the selection's placement (`DiagramStepPlacement`). A step placed
  * by hand, or a part of it past the margin, says so at its row's end
  * (redesign, 2026-10-18).
@@ -81,6 +82,14 @@ export function DiagramPageLayers() {
                   }
                 : 'space'
             }
+            remove={
+              layers.canDelete
+                ? {
+                    label: t('panels:diagram.layers.deleteStep', 'Delete step {{number}}', { number: row.number }),
+                    onRemove: () => layers.deleteStep(row.step.id),
+                  }
+                : undefined
+            }
             onPress={() => layers.selectStep(row.step.id)}
             data={{ 'data-layer-step': row.step.id }}
           />
@@ -99,6 +108,8 @@ export function DiagramPageLayers() {
                       status={moved ? placed : null}
                       pressed={pressed}
                       disabled={disabled}
+                      // No Delete of its own: the room kept, so its mark lines up with its step's.
+                      remove={layers.canDelete ? 'space' : undefined}
                       onPress={() => layers.selectPart(row.step.id, part)}
                       data={{ 'data-layer-part': part }}
                     />

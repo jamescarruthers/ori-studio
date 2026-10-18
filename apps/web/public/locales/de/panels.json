@@ -1092,6 +1092,8 @@
     },
     "label": "Diagramm",
     "layers": {
+      "deleteMark": "{{name}} löschen",
+      "deleteStep": "Schritt {{number}} löschen",
       "empty": "Öffnen Sie einen Schritt in Annotieren, um seine Ebenen zu sehen.",
       "list": "Ebenen",
       "markCount_one": "{{count}} Markierung",

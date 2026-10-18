@@ -22,8 +22,8 @@ agreed:
     "pin this" action, so it is not used.
   - The "Outside margin" pill becomes the warning icon.
   - A mark outside an enlarged step's frame is greyed, with no badge.
-- **The Steps view card** swaps its "Placed by hand" pin for the same dot,
-  so one mark means one thing.
+- **The Steps view card** shows no placement mark at all. Placement is the
+  pages' business, not the Steps view's (review of the first build).
 - **A list header** says what the list holds: "Page 1 · 7 steps" or
   "Step 8 · 8 marks". On a flow page it carries Re-pack Page.
 - **Parts open with a disclosure arrow** on any step that can be placed, not
@@ -95,9 +95,26 @@ Not in this change:
 - [x] Pages inspector: header with Reset Layout, Placement section, X/Y pair, resets on the left
 - [x] Annotate: header, numbered names, dimmed outside-frame rows, the split
 - [x] Annotate inspector: header, verb toolbar, "In the folds" section
-- [x] Steps view card: pin → dot
+- [x] Steps view card: no placement mark
 - [x] Fold-and-unfold arrow glyph
 - [x] i18n: extract, translate 8 locales, stamp, check
 - [x] Tests updated and added; lint, typecheck, relevant vitest
 - [x] Browser check on the crane (Pages, Annotate flat and folded, scrub, step card, glyph; a phone was not checked)
 - [x] Draft PR (#456)
+
+## Review of the first build (2026-10-18)
+
+Zach's notes on #456, all taken:
+
+- [x] No dot on the Steps view card: the Steps view has nothing to do with layout
+- [x] The parts' indent halved (18 px)
+- [x] X and Y wrap, Y under X, in a narrow pane
+- [x] Size and Width lose their scrub glyph; the X and Y letters keep it
+- [x] The list header taller (44 px), with a rule under it
+- [x] The parts are an accordion: one step open at a time, the selection's
+      until a disclosure is used, and again once the selection moves
+- [x] Each step and mark row has its own Delete at its end: shown on hover,
+      with the focus and on the selection, always on touch. A step asks first,
+      as its card does. A mark's leaves another mark's selection alone
+- [x] The inspector's Delete sits beside the mark's name; the verb toolbar
+      shows only when the mark has another verb

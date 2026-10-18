@@ -32,7 +32,6 @@ import { useStepPictureUrl } from '../../diagram/pictures/useStepPictureUrl';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { DiagramSheetThumbnail } from './DiagramSheetThumbnail';
-import { DiagramPlacedMark } from './DiagramPlacedMark';
 import styles from './DiagramStepCard.module.css';
 import { capturedStyleChange } from '../../diagram/pictures/lighting';
 
@@ -215,11 +214,6 @@ export const DiagramStepCard = forwardRef<
                   ? t('panels:diagram.card.enlarged', 'Enlarged')
                   : t('panels:diagram.card.enlargedFrom', 'Enlarged · {{number}}', { number: enlargedFrom })}
               </span>
-            </span>
-          )}
-          {(step.place || step.placeNewer) && (
-            <span className={styles.placed} data-placed-badge="">
-              <DiagramPlacedMark />
             </span>
           )}
           {linked && (

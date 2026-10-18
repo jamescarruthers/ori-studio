@@ -1057,6 +1057,8 @@
     },
     "label": "图解",
     "layers": {
+      "deleteMark": "删除{{name}}",
+      "deleteStep": "删除第 {{number}} 步",
       "empty": "在“标注”中打开一个步骤即可查看其图层。",
       "list": "图层",
       "markCount_other": "{{count}} 个标记",

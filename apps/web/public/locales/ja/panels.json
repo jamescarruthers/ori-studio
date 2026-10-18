@@ -1057,6 +1057,8 @@
     },
     "label": "折り図",
     "layers": {
+      "deleteMark": "{{name}} を削除",
+      "deleteStep": "ステップ {{number}} を削除",
       "empty": "ステップを注記で開くと、そのレイヤーが表示されます。",
       "list": "レイヤー",
       "markCount_other": "マーク {{count}} 個",

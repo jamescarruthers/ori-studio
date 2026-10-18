@@ -1092,6 +1092,8 @@
     },
     "label": "Diagram",
     "layers": {
+      "deleteMark": "Delete {{name}}",
+      "deleteStep": "Delete step {{number}}",
       "empty": "Open a step in Annotate to see its layers.",
       "list": "Layers",
       "markCount_one": "{{count}} mark",

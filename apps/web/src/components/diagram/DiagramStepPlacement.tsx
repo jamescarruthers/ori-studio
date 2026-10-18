@@ -1,4 +1,3 @@
-import { Maximize2, MoveHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { stepNumber, type DiagramStep } from '../../diagram/document/diagramDocument';
 import { outsideMarginNote } from '../../diagram/pages/marginLabels';
@@ -27,9 +26,9 @@ const FRAME = { kind: 'frame' } as const;
  * X and Y in one row; the frame's Size, or an enlarged step's Size rows; the
  * text's Width — each with what Auto would give under it, and why a size is
  * kept. A reset sits before what it resets and only while there is something
- * to reset, so the fields never move as one comes and goes. A field's letter
- * or glyph scrubs it; on a touch screen its − and + come back. The list's
- * rows select the part.
+ * to reset, so the fields never move as one comes and goes. X's and Y's
+ * letters scrub them; on a touch screen the fields' − and + come back. In a
+ * narrow pane Y goes under X. The list's rows select the part.
  */
 export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
   const { t } = useTranslation();
@@ -134,7 +133,6 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
                     {...mmField}
                     disabled={place.disabled || place.size === null}
                     className={styles.axis}
-                    prefix={<Maximize2 size={11} aria-hidden="true" />}
                     label={t('panels:diagram.placement.size', 'Size (mm)')}
                     value={place.size === null ? null : Math.round(place.size * 10) / 10}
                     min={4}
@@ -160,7 +158,6 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
                 <NumberField
                   {...mmField}
                   className={styles.axis}
-                  prefix={<MoveHorizontal size={11} aria-hidden="true" />}
                   label={t('panels:diagram.placement.textWidth', 'Text width (mm)')}
                   value={Math.round(place.textWidth * 10) / 10}
                   min={place.textWidthRange ? Math.ceil(place.textWidthRange.least * 10) / 10 : undefined}

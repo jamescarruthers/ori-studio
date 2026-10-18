@@ -1,4 +1,4 @@
-/* The selected mark's verbs (DiagramAnnotationToolbar.tsx): flips, words, and Delete at the end. */
+/* The selected mark's verbs (DiagramAnnotationToolbar.tsx): flips, then words. */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -13,10 +13,4 @@
   height: 16px;
   margin: 0 var(--space-1);
   background: var(--border-default);
-}
-
-/* Delete, apart from the rest, at the toolbar's end. */
-.end {
-  display: flex;
-  margin-inline-start: auto;
 }

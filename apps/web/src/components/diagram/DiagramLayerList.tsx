@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Trash2 } from 'lucide-react';
+import { IconButton } from '../ui/IconButton';
 import styles from './DiagramLayerList.module.css';
 
 /**
@@ -44,6 +45,13 @@ export function DiagramLayersHeader({ title, count, action = null }: { title: st
   );
 }
 
+/** A row's own Delete: what it takes away, and how. */
+export interface DiagramLayerRemove {
+  /** Its name, on hover and for assistive technology: "Delete step 3". */
+  label: string;
+  onRemove: () => void;
+}
+
 /** A row's disclosure: its parts shown or not. */
 export interface DiagramLayerDisclosure {
   expanded: boolean;
@@ -58,7 +66,8 @@ export interface DiagramLayerDisclosure {
  * it, quieter, what it says of itself; and at its end what it is — placed by
  * hand, past the margin — as marks, never as buttons. Pressed, it selects
  * what it names; `pressed` says it is the selection, and `holdsSelection`
- * that a row nested under it is.
+ * that a row nested under it is. Last, its own Delete, shown on hover, with
+ * the focus and on the selection (Zach, 2026-10-18).
  */
 export function DiagramLayerRow({
   glyph,
@@ -70,6 +79,7 @@ export function DiagramLayerRow({
   dimmed = false,
   disabled = false,
   disclosure,
+  remove,
   title,
   onPress,
   data,
@@ -89,6 +99,8 @@ export function DiagramLayerRow({
   disabled?: boolean;
   /** Its parts' disclosure; `'space'` keeps the column, so its glyph lines up with rows that have one. */
   disclosure?: DiagramLayerDisclosure | 'space';
+  /** Its Delete; `'space'` keeps the room, so the marks of rows with one and without line up. */
+  remove?: DiagramLayerRemove | 'space';
   /** What the row says on hover: why it is dimmed. */
   title?: string;
   onPress: () => void;
@@ -132,6 +144,15 @@ export function DiagramLayerRow({
         </span>
         {status !== null && <span className={styles.status}>{status}</span>}
       </button>
+      {remove === 'space' ? (
+        <span className={styles.remove} data-space="" aria-hidden="true" />
+      ) : remove ? (
+        <span className={styles.remove}>
+          <IconButton size="sm" title={remove.label} aria-label={remove.label} onClick={remove.onRemove}>
+            <Trash2 size={14} aria-hidden="true" />
+          </IconButton>
+        </span>
+      ) : null}
     </div>
   );
 }

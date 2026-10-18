@@ -94,7 +94,8 @@ function crane({ readOnly = false } = {}) {
 }
 
 const area = (stepId: string) => stepById(state().diagram!, stepId)!.annotations[0] as KnownDiagramAnnotation;
-const rows = () => [...(host?.querySelectorAll<HTMLButtonElement>('ul button') ?? [])];
+/** The rows' own buttons: what a press on a row presses, its Delete aside. */
+const rows = () => [...(host?.querySelectorAll<HTMLButtonElement>('ul button[aria-pressed]') ?? [])];
 const buttonNamed = (name: string) =>
   [...(host?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((candidate) => candidate.textContent?.trim() === name)!;
 const labelled = (label: string) => host?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`) ?? null;

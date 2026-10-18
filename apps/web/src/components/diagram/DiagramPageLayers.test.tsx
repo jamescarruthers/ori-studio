@@ -191,16 +191,18 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     expect(marks(row('s1'))).toEqual(['Placed by hand']);
   });
 
-  it('opens any step into its parts by its disclosure, and selects a part of a step not selected', () => {
+  it('opens one step into its parts at a time by its disclosure, and selects a part of a step not selected', () => {
     install();
     render();
     act(() => row('s1').click());
     // The selected step opens by itself; another stays shut until asked.
     expect(disclosure('s1').getAttribute('aria-expanded')).toBe('true');
     expect(disclosure('s3').getAttribute('aria-expanded')).toBe('false');
+    // One at a time: opening another shuts the first.
     act(() => disclosure('s3').click());
     expect(disclosure('s3').getAttribute('aria-expanded')).toBe('true');
-    expect(parts()).toHaveLength(6);
+    expect(disclosure('s1').getAttribute('aria-expanded')).toBe('false');
+    expect(parts()).toHaveLength(3);
     // A part of the other step: that step, then its part.
     const number = row('s3').closest('li')!.querySelector<HTMLButtonElement>('button[data-layer-part="number"]')!;
     act(() => number.click());
@@ -209,6 +211,24 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     act(() => disclosure('s3').click());
     expect(disclosure('s3').getAttribute('aria-expanded')).toBe('false');
     expect(row('s3').closest('li')!.querySelector('ul')).toBeNull();
+    // Another step selected: its parts open, and only its.
+    act(() => row('s1').click());
+    expect(rows().filter((each) => disclosure(each.getAttribute('data-layer-step')!).getAttribute('aria-expanded') === 'true')).toEqual([row('s1')]);
+  });
+
+  it('deletes a step from its row’s own Delete, as its card does, and offers none on a diagram that cannot change', () => {
+    install();
+    render();
+    const ask = vi.spyOn(state(), 'confirmDeleteDiagramSteps').mockResolvedValue(true);
+    const remove = host!.querySelector<HTMLButtonElement>('button[aria-label="Delete step 3"]')!;
+    // Beside its row, never inside it: a press on it selects nothing.
+    expect(remove.closest('button[data-layer-step]')).toBeNull();
+    act(() => remove.click());
+    expect(ask).toHaveBeenCalledExactlyOnceWith(['s2']);
+    expect(state().diagramSelectedStepId).toBeNull();
+    ask.mockRestore();
+    act(() => useWorkspaceStore.setState({ diagramReadOnly: true }));
+    expect(host!.querySelector('button[aria-label^="Delete step"]')).toBeNull();
   });
 
   it('lists the page of the step selected elsewhere, a step selected by the keys pressed with no part', () => {

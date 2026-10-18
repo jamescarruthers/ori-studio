@@ -1057,6 +1057,8 @@
     },
     "label": "도해",
     "layers": {
+      "deleteMark": "{{name}} 삭제",
+      "deleteStep": "{{number}}단계 삭제",
       "empty": "단계를 주석에서 열면 레이어가 표시됩니다.",
       "list": "레이어",
       "markCount_other": "표시 {{count}}개",

@@ -6,14 +6,16 @@
   font-size: 0.74rem;
 }
 
-/* What the list holds, over it: "Page 1 · 7 steps", and the list's own verb. */
+/* What the list holds, over it: "Page 1 · 7 steps", and the list's own verb, with room around it and a rule under it. */
 .header {
   display: flex;
   flex: none;
   align-items: center;
   gap: var(--space-2);
-  height: 32px;
-  padding: 0 var(--space-2) 0 var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+  box-sizing: border-box;
   font-size: 0.76rem;
 }
 
@@ -41,13 +43,13 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   margin: 0;
-  padding: 0 var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-2);
   list-style: none;
 }
 
-/* A row's own list, under it: its glyphs start under the parent's name (the disclosure, the number and the gap). */
+/* A row's own list, under it, a short step in: its glyphs under the parent's number. */
 .list[data-nested] {
-  padding: 0 0 0 36px;
+  padding: 0 0 0 18px;
 }
 
 /* One line: the selection a flat fill, never an outlined card. */
@@ -184,8 +186,31 @@
   color: var(--text-tertiary);
 }
 
+/*
+ * The row's own Delete, at its end: shown on hover, with the focus and on the
+ * selection — always under a coarse pointer, which has no hover. Its room is
+ * kept either way, so nothing on the row moves as it shows.
+ */
+.remove {
+  display: flex;
+  flex: none;
+  min-width: 28px;
+  opacity: 0;
+}
+
+.row:hover .remove,
+.row:focus-within .remove,
+.row[data-pressed] .remove {
+  opacity: 1;
+}
+
 @media (pointer: coarse) {
   .row {
     min-height: var(--touch-target);
+  }
+
+  .remove {
+    min-width: var(--touch-target);
+    opacity: 1;
   }
 }

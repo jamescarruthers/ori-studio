@@ -151,6 +151,39 @@ describe('DiagramLayersPanel', () => {
     expect(state().diagramSelectedAnnotationId).toBeNull();
   });
 
+  it('puts Delete beside a mark’s name, with no toolbar for a mark that has no other verb', () => {
+    const stepId = annotatedStep();
+    act(() => state().openDiagramStep(stepId, 'annotate'));
+    act(() => row('B').click());
+    const header = host!.querySelector('[data-inspector-header]')!;
+    expect(header.textContent).toContain('B');
+    expect(header.querySelector('button[aria-label="Delete"]')).not.toBeNull();
+    expect(host!.querySelector('[data-annotation-toolbar]')).toBeNull();
+    // An arrow's other verbs take a toolbar of their own; its Delete stays in the header.
+    act(() => row('Valley Fold Arrow').click());
+    const toolbar = host!.querySelector('[data-annotation-toolbar]')!;
+    expect(toolbar.querySelector('button[aria-label="Delete"]')).toBeNull();
+    expect(host!.querySelector('[data-inspector-header] button[aria-label="Delete"]')).not.toBeNull();
+  });
+
+  it('deletes a mark from its row’s own Delete as one undo step, leaving another mark selected', () => {
+    const stepId = annotatedStep();
+    act(() => state().openDiagramStep(stepId, 'annotate'));
+    act(() => row('B').click());
+    const past = state().diagramHistory.past.length;
+    const remove = button('Delete Valley Fold Arrow')!;
+    // Beside its row, never inside it.
+    expect(remove.closest('button[aria-pressed]')).toBeNull();
+    act(() => remove.click());
+    expect(annotations().map((annotation) => annotation.id)).toEqual(['a-2', 'a-3']);
+    expect(state().diagramSelectedAnnotationId).toBe('a-2');
+    expect(state().diagramHistory.past).toHaveLength(past + 1);
+    // The selected mark's own: the selection goes with it.
+    act(() => button('Delete B')!.click());
+    expect(annotations().map((annotation) => annotation.id)).toEqual(['a-3']);
+    expect(state().diagramSelectedAnnotationId).toBeNull();
+  });
+
   it('makes a selected line another type with Type, the same line, as one undo step (15a)', () => {
     const stepId = annotatedStep();
     act(() => {

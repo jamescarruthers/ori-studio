@@ -34,7 +34,7 @@ import { FieldRow, NumberRow, SegmentedRow, TextAreaRow } from '../ui/fieldRows'
 import { Notice } from '../ui/Notice';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { DiagramAnnotationGlyph, EnlargeGlyph, SolidArrowGlyph } from './DiagramAnnotateToolGlyph';
-import { DiagramAnnotationToolbar } from './DiagramAnnotationToolbar';
+import { DiagramAnnotationIconVerb, DiagramAnnotationToolbar } from './DiagramAnnotationToolbar';
 import { DiagramBehindControls } from './DiagramBehindControls';
 import { DiagramCardMarksNotice } from './DiagramCardMarksNotice';
 import { DiagramColorSelect } from './DiagramColorSelect';
@@ -159,6 +159,7 @@ export function DiagramLayers({ step }: { step: DiagramStep }) {
               selected={annotation.id === selected?.id}
               outside={outside?.has(annotation.id) ?? false}
               onSelect={annotations.select}
+              onRemove={editable ? annotations.remove : null}
             />
           </li>
         ))}
@@ -222,8 +223,8 @@ const FRAME_ROW = { 'data-zoom-frame-row': '' } as const;
 /**
  * A mark's row: its glyph, its name, and after it — for an enlarge area —
  * which steps were enlarged from it; greyed, saying why on hover, when it
- * lies wholly outside an enlarged step's frame. Pressed again, it lets the
- * mark go.
+ * lies wholly outside an enlarged step's frame; and at its end its own
+ * Delete. Pressed again, it lets the mark go.
  */
 function AnnotationRow({
   annotation,
@@ -231,12 +232,15 @@ function AnnotationRow({
   selected,
   outside,
   onSelect,
+  onRemove,
 }: {
   annotation: KnownDiagramAnnotation;
   name: string;
   selected: boolean;
   outside: boolean;
   onSelect: (id: string | null) => void;
+  /** Its own Delete; null where the step's marks cannot change. */
+  onRemove: ((id: string) => void) | null;
 }) {
   const { t } = useTranslation();
   const subtitle = useAreaSubtitle(annotation.kind === 'zoom' ? annotation : null);
@@ -255,6 +259,14 @@ function AnnotationRow({
       note={subtitle || null}
       dimmed={outside}
       title={outside ? t('panels:diagram.annotations.outsideFrame', 'Outside the enlarged frame') : undefined}
+      remove={
+        onRemove
+          ? {
+              label: t('panels:diagram.layers.deleteMark', 'Delete {{name}}', { name }),
+              onRemove: () => onRemove(annotation.id),
+            }
+          : undefined
+      }
       pressed={selected}
       onPress={() => onSelect(selected ? null : annotation.id)}
       data={outside ? OUTSIDE_ROW : undefined}
@@ -297,6 +309,8 @@ function SelectedAnnotation({
     return key ? `${label} (${key})` : label;
   };
   const nodeActions = annotations.actions.filter((action) => action.group === 'node');
+  // Delete beside the mark's name, so a mark with no other verb takes no line for them (Zach, 2026-10-18).
+  const remove = annotations.actions.find((action) => action.id === 'delete');
   // A star's turn, and its Rotation row: a mark with a transform box (Revision 3).
   const boxed = boxedMarkOf(annotation);
   const lineType = lineTypeOf(annotation.kind);
@@ -306,10 +320,14 @@ function SelectedAnnotation({
 
   return (
     <>
-      <DiagramInspectorHeader title={name} detail={place} />
+      <DiagramInspectorHeader
+        title={name}
+        detail={place}
+        action={remove ? <DiagramAnnotationIconVerb action={remove} keyed={keyed} /> : null}
+      />
       <DiagramAnnotationToolbar
         label={name}
-        actions={annotations.actions.filter((action) => action.group !== 'node')}
+        actions={annotations.actions.filter((action) => action.group !== 'node' && action.id !== 'delete')}
         keyed={keyed}
       />
       {nodeActions.length > 0 && (
