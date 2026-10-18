@@ -138,6 +138,19 @@ export function DiagramPagesView({
   const stepsById = useMemo(() => new Map(steps.map((step) => [step.id, step])), [steps]);
   const mm = (value: number) => value * PAGES_PX_PER_MM;
   const tabStop = selectedStepId ?? pages?.layout.pages[0]?.cells[0]?.stepId ?? null;
+  // Each option's place in the whole listbox, in reading order: only nearby
+  // pages mount their targets, so a reader would otherwise count those alone.
+  const positions = useMemo(() => {
+    const order = new Map<string, number>();
+    for (const page of pages?.layout.pages ?? []) {
+      for (const cell of page.cells) {
+        for (const turn of page.turns) if (turn.beforeStepId === cell.stepId) order.set(turn.id, order.size + 1);
+        order.set(cell.stepId, order.size + 1);
+      }
+      for (const turn of page.turns) if (turn.beforeStepId === null) order.set(turn.id, order.size + 1);
+    }
+    return order;
+  }, [pages]);
 
   // A press on a step, a turn or an arrow on page `index` selects it, and makes that page "this page" for the panes.
   const onCellClick = (event: MouseEvent, stepId: string, index: number) => {
@@ -154,6 +167,8 @@ export function DiagramPagesView({
       ref={cellRef(turn.id)}
       role="option"
       tabIndex={turn.id === tabStop ? 0 : -1}
+      aria-posinset={positions.get(turn.id)}
+      aria-setsize={positions.size}
       aria-label={turnLabel(turn.turn, between, t)}
       aria-selected={turn.id === selectedStepId}
       data-step-id={turn.id}
@@ -331,6 +346,8 @@ export function DiagramPagesView({
                             ref={cellRef(cell.stepId)}
                             role="option"
                             tabIndex={cell.stepId === tabStop ? 0 : -1}
+                            aria-posinset={positions.get(cell.stepId)}
+                            aria-setsize={positions.size}
                             aria-label={
                               cell.textOverflow
                                 ? t('panels:diagram.pages.stepCut', 'Step {{number}}, text doesn’t fit', {

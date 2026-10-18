@@ -1060,6 +1060,10 @@ it('mounts nearby page targets, retaining an offscreen selection for keyboard re
   const page = (index: number) => host.querySelector<HTMLElement>(`[data-page="${index}"]`)!;
   expect(page(0).querySelectorAll('[role="option"]').length).toBeGreaterThan(0);
   expect(page(2).querySelectorAll('[role="option"]')).toHaveLength(0);
+  // Counted in the whole listbox, though only nearby pages mount their targets.
+  const first = page(0).querySelector('[role="option"]')!;
+  expect(first.getAttribute('aria-posinset')).toBe('1');
+  expect(first.getAttribute('aria-setsize')).toBe('40');
   const entry = (index: number, isIntersecting: boolean): IntersectionObserverEntry => ({
     target: page(index), isIntersecting, time: 0, rootBounds: null,
     intersectionRatio: isIntersecting ? 1 : 0,
