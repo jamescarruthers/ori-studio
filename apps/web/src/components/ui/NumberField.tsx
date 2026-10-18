@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type Ref } from 'react';
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react';
 import { flushSync } from 'react-dom';
 import { Minus, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +21,12 @@ import styles from './NumberField.module.css';
  * scale formula puts three fields and two operators on one line. Those still
  * lose the native spinners, and still commit on Arrow Up/Down.
  *
+ * A `prefix` — an axis's letter, a size's glyph — sits inside the frame
+ * before the number, and a drag across it scrubs the value, as Photoshop's
+ * and Affinity's field labels do: a step per {@link SCRUB_PX} px, ten with
+ * Shift. The field shows the value as it goes and commits once, on release,
+ * so a scrub is one edit.
+ *
  * Its look is its own (`NumberField.module.css`): a screen that wants it
  * different asks through a prop, and places it through `className`, which lands
  * on the root (`docs/styling.md`). The input carries `data-number-field`, so a
@@ -34,6 +40,7 @@ export function NumberField({
   max,
   step = 1,
   suffix,
+  prefix,
   steppers = true,
   disabled = false,
   normalize,
@@ -53,6 +60,8 @@ export function NumberField({
   step?: number;
   /** The unit, read-only inside the field after the number, and read after the value. */
   suffix?: string;
+  /** Inside the frame, before the number — an axis's letter, a glyph — and the handle a drag scrubs the value by. Decorative: the field's `label` names it. */
+  prefix?: ReactNode;
   steppers?: boolean;
   /** For a row whose subject is absent — no selection, nothing folded yet. */
   disabled?: boolean;
@@ -150,7 +159,37 @@ export function NumberField({
     </button>
   );
 
-  const bare = !steppers && !suffix;
+  // A scrub of the prefix: where it started, and the number it started from.
+  const scrub = useRef<{ pointerId: number; x: number; from: number; to?: number } | null>(null);
+  const scrubHandlers = {
+    onPointerDown(event: ReactPointerEvent<HTMLSpanElement>) {
+      if (disabled || event.button !== 0) return;
+      // Keep the focus where it is: the field commits on release, not on a blur.
+      event.preventDefault();
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      scrub.current = { pointerId: event.pointerId, x: event.clientX, from: shown };
+    },
+    onPointerMove(event: ReactPointerEvent<HTMLSpanElement>) {
+      const current = scrub.current;
+      if (!current || current.pointerId !== event.pointerId) return;
+      const steps = Math.trunc((event.clientX - current.x) / SCRUB_PX) * (event.shiftKey ? 10 : 1);
+      current.to = clamp(Number((current.from + steps * step).toFixed(6)));
+      setDraft(formatNumber(current.to));
+    },
+    onPointerUp(event: ReactPointerEvent<HTMLSpanElement>) {
+      const current = scrub.current;
+      if (!current || current.pointerId !== event.pointerId) return;
+      scrub.current = null;
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+      if (current.to !== undefined) commit(current.to);
+    },
+    onPointerCancel() {
+      scrub.current = null;
+      setDraft(formatNumber(value));
+    },
+  };
+
+  const bare = !steppers && !suffix && prefix === undefined;
 
   const input = (
     <input
@@ -204,6 +243,11 @@ export function NumberField({
       data-disabled={disabled || undefined}
     >
       {steppers && stepButton(-1)}
+      {prefix !== undefined && (
+        <span className={styles.prefix} aria-hidden="true" data-number-scrub="" {...scrubHandlers}>
+          {prefix}
+        </span>
+      )}
       {/* A label, so a click on the unit or beside the number lands in the
           input. No caller puts the field inside a label of its own: a click on
           a step button would reach the input through it. */}
@@ -225,6 +269,9 @@ export function NumberField({
     </span>
   );
 }
+
+/** How far a scrub of the prefix moves for one step. */
+export const SCRUB_PX = 2;
 
 function formatNumber(value: number | null): string {
   if (value === null) return '';

@@ -886,7 +886,6 @@
       "fillWhite": "白色",
       "flip": "翻转",
       "flipHorizontal": "水平翻转",
-      "flipRow": "翻转",
       "flipVertical": "垂直翻转",
       "frameFromArea": "来自步骤 {{number}} 的区域",
       "frameFromGone": "来自图中已不存在的区域",
@@ -896,6 +895,7 @@
       "halo": "描边",
       "haloHelp": "为文字描边，使其在线条上也清晰可读：下方是参考中的纸张时用纸张的颜色，其他地方用白色。",
       "inFront": "前面",
+      "inTheFolds": "折层位置",
       "keep": "保留在此",
       "kinks": "Z 字数",
       "lineEnd": "终点",
@@ -1059,9 +1059,14 @@
     "layers": {
       "empty": "在“标注”中打开一个步骤即可查看其图层。",
       "list": "图层",
+      "markCount_other": "{{count}} 个标记",
+      "markPlace": "{{step}} · {{text}}",
+      "numbered": "{{name}} {{number}}",
       "pageEmpty": "此页没有步骤。",
       "pageList": "第 {{number}} 页的步骤",
-      "parts": "第 {{number}} 步的组成部分"
+      "parts": "第 {{number}} 步的组成部分",
+      "separator": "拖动以调整列表高度",
+      "stepCount_other": "{{count}} 步"
     },
     "packing": {
       "bands": "条带",
@@ -1261,7 +1266,6 @@
       "marginClash": "此步骤的部分内容进入了页边距。",
       "matchPicture": "= 图片",
       "matchStep": "= 步骤 {{number}}",
-      "moved": "已移动",
       "newer": "由更新版本排版",
       "number": "编号",
       "offsetX": "X (mm)",
@@ -1269,16 +1273,20 @@
       "outsideMargin": "超出页边距",
       "picture": "图片",
       "placed": "手动排版",
+      "position": "位置",
       "resetAll": "全部重置",
       "resetLayout": "重置排版",
       "resetPage": "重置此页",
       "resetPart": "重置{{part}}",
       "resetPosition": "重置位置",
       "resetSize": "重置尺寸",
+      "section": "排版",
       "size": "尺寸 (mm)",
+      "sizeLabel": "尺寸",
       "text": "文字",
       "textWidth": "文字宽度 (mm)",
-      "title": "页面排版"
+      "title": "页面排版",
+      "widthLabel": "宽度"
     },
     "pose": {
       "affineCredit": "Kei Morisue 的仿射变形",

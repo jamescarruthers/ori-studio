@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NumberField } from './NumberField';
+import { NumberField, SCRUB_PX } from './NumberField';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -71,6 +71,13 @@ function type(input: HTMLInputElement, value: string) {
     input.focus();
     setter?.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+/** A pointer event on the prefix, as React hears one: the type is what it listens for. */
+function pointer(target: Element, type: string, init: MouseEventInit) {
+  act(() => {
+    target.dispatchEvent(new MouseEvent(type, { bubbles: true, ...init }));
   });
 }
 
@@ -254,6 +261,50 @@ describe('NumberField', () => {
     expect(onCommit).not.toHaveBeenCalled();
     act(() => up?.click());
     expect(onCommit).toHaveBeenLastCalledWith(5);
+  });
+
+  it('scrubs from its prefix: a step every few pixels, shown as it goes, committed once on release', () => {
+    const onCommit = vi.fn();
+    const view = render(<Harness initial={2} prefix="X" steppers={false} onCommit={onCommit} />);
+    const handle = view.querySelector('[data-number-scrub]')!;
+    const { input } = field(view);
+    expect(handle.textContent).toBe('X');
+    // Decorative: the input is named, and the keys step it.
+    expect(handle.getAttribute('aria-hidden')).toBe('true');
+    pointer(handle, 'pointerdown', { clientX: 100, button: 0 });
+    pointer(handle, 'pointermove', { clientX: 100 + 3 * SCRUB_PX });
+    expect(input.value).toBe('5');
+    expect(onCommit).not.toHaveBeenCalled();
+    pointer(handle, 'pointerup', { clientX: 100 + 3 * SCRUB_PX });
+    expect(onCommit).toHaveBeenCalledExactlyOnceWith(5);
+  });
+
+  it('scrubs ten steps a step with Shift, within its bounds', () => {
+    const onCommit = vi.fn();
+    const view = render(<Harness initial={2} prefix="X" onCommit={onCommit} />);
+    const handle = view.querySelector('[data-number-scrub]')!;
+    pointer(handle, 'pointerdown', { clientX: 0, button: 0 });
+    pointer(handle, 'pointermove', { clientX: SCRUB_PX, shiftKey: true });
+    pointer(handle, 'pointerup', { clientX: SCRUB_PX });
+    expect(onCommit).toHaveBeenCalledExactlyOnceWith(8);
+  });
+
+  it('commits nothing for a press on its prefix that never moved, and takes no scrub while disabled', () => {
+    const onCommit = vi.fn();
+    const view = render(<Harness initial={2} prefix="X" onCommit={onCommit} />);
+    const handle = view.querySelector('[data-number-scrub]')!;
+    pointer(handle, 'pointerdown', { clientX: 0, button: 0 });
+    pointer(handle, 'pointerup', { clientX: 0 });
+    expect(onCommit).not.toHaveBeenCalled();
+    act(() => root?.unmount());
+    container?.remove();
+    const disabled = render(<Harness initial={2} prefix="X" disabled onCommit={onCommit} />);
+    const still = disabled.querySelector('[data-number-scrub]')!;
+    pointer(still, 'pointerdown', { clientX: 0, button: 0 });
+    pointer(still, 'pointermove', { clientX: 10 * SCRUB_PX });
+    pointer(still, 'pointerup', { clientX: 10 * SCRUB_PX });
+    expect(field(disabled).input.value).toBe('2');
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   it('labels the input with the region the unit is in, so a click on the unit lands in it', () => {

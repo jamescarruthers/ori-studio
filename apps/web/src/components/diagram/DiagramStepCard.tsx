@@ -7,7 +7,6 @@ import {
   Lock,
   PenLine,
   PenTool,
-  Pin,
   Rotate3d,
   RotateCcwSquare,
   RotateCw,
@@ -33,6 +32,7 @@ import { useStepPictureUrl } from '../../diagram/pictures/useStepPictureUrl';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { DiagramSheetThumbnail } from './DiagramSheetThumbnail';
+import { DiagramPlacedMark } from './DiagramPlacedMark';
 import styles from './DiagramStepCard.module.css';
 import { capturedStyleChange } from '../../diagram/pictures/lighting';
 
@@ -218,8 +218,8 @@ export const DiagramStepCard = forwardRef<
             </span>
           )}
           {(step.place || step.placeNewer) && (
-            <span className={styles.placed} title={t('panels:diagram.placement.placed', 'Placed by hand')} data-placed-badge="">
-              <Pin size={12} aria-label={t('panels:diagram.placement.placed', 'Placed by hand')} />
+            <span className={styles.placed} data-placed-badge="">
+              <DiagramPlacedMark />
             </span>
           )}
           {linked && (

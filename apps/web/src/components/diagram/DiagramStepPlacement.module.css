@@ -1,22 +1,35 @@
-.controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
+/* The Pages view's Layers inspector (DiagramStepPlacement.tsx): the selected step's placement. */
 .inset {
-  padding-inline: var(--space-3);
+  padding: 0 var(--space-3) var(--space-2);
 }
-/* Reset of the selected part, and Reset Layout. */
-.actions {
+
+/* X and Y side by side, in one row's value. */
+.pair {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  min-width: 0;
 }
+
+/* One width for every placement field, so X, Y, Size and Width line up down the pane — narrower in a narrow pane. */
+.axis {
+  flex: 0 1 96px;
+  min-width: 68px;
+}
+
+/* What Auto would give, and why a size is kept: under their row, which they finish with its rule. */
+.notes {
+  display: grid;
+  gap: 2px;
+  padding: 0 var(--space-3) 7px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .note {
   margin: 0;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.5;
+  color: var(--text-tertiary);
+  font-size: 0.66rem;
+  line-height: 1.4;
+  text-align: right;
 }
 
 /*

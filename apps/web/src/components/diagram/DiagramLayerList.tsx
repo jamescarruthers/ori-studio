@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
 import styles from './DiagramLayerList.module.css';
 
 /**
@@ -30,47 +31,107 @@ export function DiagramLayerList({
 }
 
 /**
- * One row of a {@link DiagramLayerList}: its glyph, its name, and under the
- * name what it says of itself — a note, badges. Pressed, it selects what it
- * names; `pressed` says it is the selection.
+ * What a Layers list holds, over it: the page or the step, how many rows, and
+ * the list's own verb, where it has one — Re-pack Page (redesign, 2026-10-18).
+ */
+export function DiagramLayersHeader({ title, count, action = null }: { title: string; count: string; action?: ReactNode }) {
+  return (
+    <div className={styles.header}>
+      <span className={styles.headerTitle}>{title}</span>
+      <span className={styles.headerCount}>{count}</span>
+      {action !== null && <span className={styles.headerAction}>{action}</span>}
+    </div>
+  );
+}
+
+/** A row's disclosure: its parts shown or not. */
+export interface DiagramLayerDisclosure {
+  expanded: boolean;
+  /** What it shows, for assistive technology: "Parts of step 3". */
+  label: string;
+  onToggle: () => void;
+}
+
+/**
+ * One row of a {@link DiagramLayerList}, on one line (redesign, 2026-10-18):
+ * its disclosure, where its list nests one; its glyph; its name, and after
+ * it, quieter, what it says of itself; and at its end what it is — placed by
+ * hand, past the margin — as marks, never as buttons. Pressed, it selects
+ * what it names; `pressed` says it is the selection, and `holdsSelection`
+ * that a row nested under it is.
  */
 export function DiagramLayerRow({
   glyph,
   name,
   note = null,
-  badge = null,
+  status = null,
   pressed,
+  holdsSelection = false,
+  dimmed = false,
   disabled = false,
+  disclosure,
+  title,
   onPress,
   data,
 }: {
   glyph: ReactNode;
   name: ReactNode;
-  /** A line under the name: an area's enlarged steps, a frame's area. */
+  /** After the name, quieter: an area's enlarged steps, a frame's area. */
   note?: ReactNode;
-  /** Badges under the name, side by side, each as wide as its words. */
-  badge?: ReactNode;
+  /** Marks at the row's end: placed by hand, past the margin. */
+  status?: ReactNode;
   pressed: boolean;
+  /** A row nested under this one is the selection: the step of a selected part. */
+  holdsSelection?: boolean;
+  /** Kept but not drawn as the rest are — a mark outside an enlarged step's frame: grey, never dashed. */
+  dimmed?: boolean;
   /** Nothing to select: a part a step does not have. */
   disabled?: boolean;
+  /** Its parts' disclosure; `'space'` keeps the column, so its glyph lines up with rows that have one. */
+  disclosure?: DiagramLayerDisclosure | 'space';
+  /** What the row says on hover: why it is dimmed. */
+  title?: string;
   onPress: () => void;
   /** Data attributes a test or a caller finds the row by. */
   data?: Readonly<Record<`data-${string}`, string>>;
 }) {
   return (
-    <button type="button" className={styles.row} aria-pressed={pressed} disabled={disabled} onClick={onPress} {...data}>
-      {glyph}
-      <span className={styles.rowText}>
-        <span className={styles.rowName}>{name}</span>
-        {note !== null && <span className={styles.rowNote}>{note}</span>}
-        {/* Under its name, as a note is: beside it, the badge took the row's width and cut the name off. */}
-        {badge !== null && <span className={styles.rowBadge}>{badge}</span>}
-      </span>
-    </button>
+    <div
+      className={styles.row}
+      data-pressed={pressed || undefined}
+      data-holds-selection={holdsSelection || undefined}
+      data-dimmed={dimmed || undefined}
+      data-disabled={disabled || undefined}
+    >
+      {disclosure === 'space' ? (
+        <span className={styles.disclosure} aria-hidden="true" />
+      ) : disclosure ? (
+        <button
+          type="button"
+          className={styles.disclosure}
+          aria-expanded={disclosure.expanded}
+          aria-label={disclosure.label}
+          onClick={disclosure.onToggle}
+        >
+          <ChevronRight size={12} aria-hidden="true" />
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className={styles.press}
+        aria-pressed={pressed}
+        disabled={disabled}
+        title={title}
+        onClick={onPress}
+        {...data}
+      >
+        {glyph}
+        <span className={styles.label}>
+          <span className={styles.name}>{name}</span>
+          {note !== null && <span className={styles.note}>{note}</span>}
+        </span>
+        {status !== null && <span className={styles.status}>{status}</span>}
+      </button>
+    </div>
   );
-}
-
-/** The selected layer's own controls, under the list. */
-export function DiagramLayerControls({ children }: { children: ReactNode }) {
-  return <div className={styles.controls}>{children}</div>;
 }

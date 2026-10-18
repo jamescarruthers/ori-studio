@@ -133,6 +133,34 @@
   visibility: hidden;
 }
 
+/* An axis's letter or a size's glyph before the number (`prefix`): a drag across it scrubs the value. */
+.prefix {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.prefix:hover {
+  color: var(--text-primary);
+}
+
+.field[data-disabled] > .prefix {
+  cursor: default;
+}
+
+/* The prefix is the number's room on that side. */
+.prefix + .value {
+  --pad-start: 2px;
+}
+
 /* The bare field (`steppers={false}`, no unit) is this input alone, in the
    pane rows' `.control-row__input`. */
 .input {

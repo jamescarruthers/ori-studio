@@ -1,107 +1,191 @@
-/* A Layers pane's list (DiagramLayerList.tsx): its rows, the line it says when it is empty, and the selected one's controls under it. */
+/* A Layers pane's list (DiagramLayerList.tsx): its header, its one-line rows, and the line it says when it is empty. */
 .empty {
   margin: 0;
-  padding: 0 var(--space-3);
+  padding: var(--space-1) var(--space-3);
   color: var(--text-tertiary);
   font-size: 0.74rem;
 }
 
+/* What the list holds, over it: "Page 1 · 7 steps", and the list's own verb. */
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  font-size: 0.76rem;
+}
+
+.headerTitle {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.headerCount {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerAction {
+  display: flex;
+  flex: none;
+}
+
+/* One column as wide as the pane, never its longest name: a row ends its name with an ellipsis instead. */
 .list {
   display: grid;
-  gap: 2px;
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-1) var(--space-2);
   list-style: none;
 }
 
-/* A row's own list, under it and indented by its glyph: a step's parts. */
+/* A row's own list, under it: its glyphs start under the parent's name (the disclosure, the number and the gap). */
 .list[data-nested] {
-  margin-top: 2px;
-  padding: 0 0 0 var(--space-4);
+  padding: 0 0 0 36px;
 }
 
+/* One line: the selection a flat fill, never an outlined card. */
 .row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  width: 100%;
   min-height: 28px;
-  padding: 2px var(--space-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 0.76rem;
-  text-align: start;
-  cursor: pointer;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
 }
 
 .row:hover {
   background: var(--bg-tertiary);
-  color: var(--text-primary);
 }
 
-.row:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-primary);
+.row[data-holds-selection] {
+  background: color-mix(in srgb, var(--text-primary) 5%, var(--bg-secondary));
 }
 
-.row[aria-pressed='true'] {
-  border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border-default));
-  background: color-mix(in srgb, var(--accent-primary) 13%, var(--bg-tertiary));
-  color: var(--text-primary);
+.row[data-pressed] {
+  background: color-mix(in srgb, var(--accent-primary) 24%, var(--bg-secondary));
 }
 
-.row:disabled,
-.row:disabled:hover {
+.row[data-pressed]:hover {
+  background: color-mix(in srgb, var(--accent-primary) 30%, var(--bg-secondary));
+}
+
+.row:has(.press:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+}
+
+.row[data-disabled],
+.row[data-disabled]:hover {
   background: none;
   color: var(--text-tertiary);
+}
+
+.disclosure {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.disclosure:hover {
+  color: var(--text-primary);
+}
+
+.disclosure > svg {
+  transition: transform 0.12s ease;
+}
+
+.disclosure[aria-expanded='true'] > svg {
+  transform: rotate(90deg);
+}
+
+.disclosure:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+  border-radius: var(--radius-md);
+}
+
+.press {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  align-self: stretch;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.76rem;
+  text-align: start;
+  outline: none;
+  cursor: pointer;
+}
+
+/* The disclosure takes the place of the row's leading space. */
+.disclosure + .press {
+  padding-inline-start: 0;
+}
+
+.press:disabled {
   cursor: default;
 }
 
-.rowName {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* A glyph, a number: quieter than the name, and as bright as it on the selection. */
+.press > :first-child {
+  flex: none;
+  color: var(--text-tertiary);
 }
 
-/* A row's name, and under it what it says of itself: an area's enlarged steps, a frame's area (Revision 2). */
-.rowText {
-  display: grid;
+.row[data-pressed] .press > :first-child,
+.row[data-pressed] .status {
+  color: var(--text-primary);
+}
+
+.label {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.rowNote {
   overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: 0.68rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* A badge on a row, under its name as a note is: as wide as its words, never the row's. */
-.rowBadge {
-  justify-self: start;
-  max-width: 100%;
-  line-height: 1;
+.note {
+  margin-inline-start: var(--space-2);
+  color: var(--text-tertiary);
 }
 
-.rowBadge > * + * {
-  margin-inline-start: var(--space-1);
+/* Kept but not drawn as the rest are: grey, never dashed. */
+.row[data-dimmed] .name {
+  color: var(--text-tertiary);
+}
+
+/* Marks at the row's end, quiet: placed by hand, past the margin. */
+.status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: 12px;
+  color: var(--text-tertiary);
 }
 
 @media (pointer: coarse) {
   .row {
     min-height: var(--touch-target);
   }
-}
-
-.controls {
-  display: grid;
-  gap: var(--space-1);
-  padding-top: var(--space-1);
-  border-top: 1px solid var(--border-subtle);
 }

@@ -110,7 +110,8 @@ describe('DiagramLayersPanel', () => {
       state().editDiagramAnnotations(stepId, 'Delete annotations', () => []);
       state().openDiagramStep(stepId, 'annotate');
     });
-    expect(host?.textContent).toBe('Nothing drawn yet.');
+    // Over the list, the step and how many marks it holds.
+    expect(host?.textContent).toBe('Step 10 marksNothing drawn yet.');
     act(() => state().closeDiagramStep());
     expect(host?.textContent).toBe('Open a step in Annotate to see its layers.');
   });
@@ -145,7 +146,7 @@ describe('DiagramLayersPanel', () => {
     act(() => row('Rotate').click());
     act(() => buttonNamed('1/2').click());
     expect(annotations()[2]!.rotate).toEqual({ amount: 'half', direction: 'cw' });
-    act(() => buttonNamed('Delete').click());
+    act(() => button('Delete')!.click());
     expect(annotations().map((annotation) => annotation.id)).toEqual(['a-1', 'a-2']);
     expect(state().diagramSelectedAnnotationId).toBeNull();
   });
@@ -314,8 +315,9 @@ describe('DiagramLayersPanel', () => {
       ]);
       state().openDiagramStep(stepId, 'annotate');
     });
+    // Two of a kind: numbered.
     const strokes = [...host!.querySelectorAll<HTMLButtonElement>('ul button')]
-      .filter((each) => each.textContent === 'Solid Line')
+      .filter((each) => each.textContent?.startsWith('Solid Line '))
       .map((each) => each.querySelector('svg')!.getAttribute('stroke'));
     expect(strokes).toEqual(['#e8590c', 'currentColor']);
   });
@@ -761,14 +763,14 @@ describe('DiagramLayersPanel', () => {
     expect(host!.textContent).not.toContain('Only a folded picture knows its flaps.');
   });
 
-  it('keeps a mark’s place in the folds off on a picture that knows no flaps, and says why (15e)', () => {
+  it('says, in place of a mark’s place in the folds, why a picture that knows no flaps has none (15e)', () => {
     const stepId = annotatedStep();
     act(() => state().openDiagramStep(stepId, 'annotate'));
     act(() => row('Valley Fold Arrow').click());
-    const options = [...host!.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Tail"] button')];
-    expect(options).toHaveLength(2);
-    expect(options.every((option) => option.disabled)).toBe(true);
-    expect(host!.textContent).toContain('Only a folded picture knows its flaps.');
+    // No rows that would refuse: the section is the one line that says why (redesign, 2026-10-18).
+    expect(host!.querySelector('[role="group"][aria-label="Tail"]')).toBeNull();
+    const section = host!.querySelector<HTMLElement>('[role="group"][aria-label="In the folds"]')!;
+    expect(section.textContent).toBe('Only a folded picture knows its flaps.');
   });
 
   it('turns a right angle a quarter clockwise with Turn 90°, as one undo step', () => {
@@ -1118,7 +1120,7 @@ describe('DiagramLayersPanel', () => {
     // Its verbs on what is selected stay: the list, Delete.
     act(() => state().selectDiagramAnnotation('a-2'));
     expect(row('B').getAttribute('aria-pressed')).toBe('true');
-    expect(buttonNamed('Delete')).toBeDefined();
+    expect(button('Delete')!).toBeDefined();
   });
 
   describe('with Edit Path in hand', () => {
@@ -1171,7 +1173,7 @@ describe('DiagramLayersPanel', () => {
       expect(arrow().path).toBeUndefined();
       expect(host?.textContent).toContain('2 nodes');
       // Back on the arc: the node selected is none, and Delete takes the arrow, not a node.
-      act(() => buttonNamed('Delete').click());
+      act(() => button('Delete')!.click());
       expect(annotations().map((annotation) => annotation.id)).toEqual(['a-2', 'a-3']);
     });
   });

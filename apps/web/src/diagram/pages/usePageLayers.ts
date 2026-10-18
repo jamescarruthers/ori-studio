@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useIsPhoneSurface } from '../../platform/mobileSurface';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { isLockedStep, stepById, stepsOf, type DiagramStep } from '../document/diagramDocument';
@@ -33,8 +33,12 @@ export interface PageLayerRow {
   outsideMargin: boolean;
   /** The selection, with its frame — or no part, as a step selected by the keys or in the Steps view is. */
   pressed: boolean;
-  /** Its parts, while it is the selection and can be placed here; null otherwise. */
+  /** A part of it is the selection. */
+  holdsSelection: boolean;
+  /** Its parts, where it can be placed here; null otherwise. */
   parts: readonly PageLayerPartRow[] | null;
+  /** Its parts are shown under it: as the user left its disclosure, or, untouched, while it holds the selection. */
+  open: boolean;
 }
 
 /** Whether a step can be placed by hand here: a diagram that can change, a placement this build reads, and no phone. */
@@ -45,12 +49,16 @@ const placeable = (step: DiagramStep, readOnly: boolean, phone: boolean) =>
  * The Layers pane in the Pages view: the current page's steps
  * (`useCurrentDiagramPage`) in the order they paint — a later step over an
  * earlier one, so the first at the top, as Annotate lists its marks — each
- * badged when placed by hand and when a part of it is past the margin, the
- * selected one opening into its parts; and the step whose placement it offers under the list. A
+ * marked when placed by hand and when a part of it is past the margin, each
+ * one that can be placed opening into its parts by its disclosure — the
+ * selected one by itself, until its disclosure is used (redesign,
+ * 2026-10-18); and the step whose placement it offers under the list. A
  * press on a row selects as a press on the page does: a step with its whole
  * frame, as the first press there; a part, as the second. Turns are no rows.
  */
 export function usePageLayers() {
+  // Each disclosure the user has used, open or shut; the rest follow the selection.
+  const [disclosed, setDisclosed] = useState<ReadonlyMap<string, boolean>>(() => new Map());
   const current = useCurrentDiagramPage();
   const document = useWorkspaceStore((state) => state.diagram);
   const selectedId = useWorkspaceStore((state) => state.diagramSelectedStepId);
@@ -66,6 +74,15 @@ export function usePageLayers() {
       const step = steps[index]!;
       const selected = step.id === selectedId;
       const cell = cells.get(step.id);
+      const holdsSelection = selected && part !== null && part !== 'frame';
+      const parts = placeable(step, readOnly, phone)
+        ? PAGE_LAYER_PARTS.map((each) => ({
+            part: each,
+            moved: step.place?.[each] !== undefined,
+            pressed: selected && part === each,
+            disabled: each === 'text' && !step.text.trim(),
+          }))
+        : null;
       return {
         step,
         number: index + 1,
@@ -73,18 +90,12 @@ export function usePageLayers() {
         moved: isPlacedStep(step),
         outsideMargin: cell?.outsideMargin === true,
         pressed: selected && (part === null || part === 'frame'),
-        parts:
-          selected && placeable(step, readOnly, phone)
-            ? PAGE_LAYER_PARTS.map((each) => ({
-                part: each,
-                moved: step.place?.[each] !== undefined,
-                pressed: part === each,
-                disabled: each === 'text' && !step.text.trim(),
-              }))
-            : null,
+        holdsSelection,
+        parts,
+        open: parts !== null && (disclosed.get(step.id) ?? selected),
       };
     });
-  }, [document, current, pages, selectedId, part, readOnly, phone]);
+  }, [document, current, pages, selectedId, part, readOnly, phone, disclosed]);
   const chosen = rows.find((row) => row.step.id === selectedId)?.step ?? null;
   // A newer build's step offers no placement, as the Step pane offered none.
   const selected = chosen && !isLockedStep(chosen) ? chosen : null;
@@ -102,9 +113,21 @@ export function usePageLayers() {
       // On a step the pages cannot place by hand, as there: the step alone.
       if (step && placeable(step, store.diagramReadOnly, phone)) store.selectDiagramPagesPart('frame');
     },
-    /** Select a part of the selected step, as a second press on it on the page does. */
-    selectPart(chosen: PagePart) {
+    /**
+     * Select part `chosen` of step `stepId`, as a second press on it on the
+     * page does — the step first, where another was selected — and keep its
+     * parts open.
+     */
+    selectPart(stepId: string, chosen: PagePart) {
+      const store = useWorkspaceStore.getState();
+      if (store.diagramSelectedStepId !== stepId) store.selectDiagramStep(stepId);
       useWorkspaceStore.getState().selectDiagramPagesPart(chosen);
+      setDisclosed((now) => (now.get(stepId) === false ? new Map(now).set(stepId, true) : now));
+    },
+    /** Show step `stepId`'s parts, or hide them. */
+    toggleParts(stepId: string) {
+      const row = rows.find((each) => each.step.id === stepId);
+      if (row) setDisclosed((now) => new Map(now).set(stepId, !row.open));
     },
   };
 }

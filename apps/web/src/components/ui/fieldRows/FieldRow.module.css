@@ -196,6 +196,12 @@
   cursor: pointer;
 }
 
+/* Before the control (`FieldRow.resetSide`): the control keeps its place as the reset comes and goes. */
+.reset[data-side='start'] {
+  margin-right: 4px;
+  margin-left: 0;
+}
+
 .reset:hover:not(:disabled) {
   border-color: var(--border-default);
   color: var(--text-primary);

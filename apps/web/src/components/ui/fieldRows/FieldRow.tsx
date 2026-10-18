@@ -44,6 +44,8 @@ export function FieldRow({
   readout,
   onClick,
   onReset,
+  resetSide = 'end',
+  resetLabel,
   children,
 }: {
   label: string;
@@ -113,6 +115,15 @@ export function FieldRow({
    * is switched to the value it would inherit.
    */
   onReset?: () => void;
+  /**
+   * Which side of the control the reset sits. `start`, before it, is for a row
+   * whose reset comes and goes as its value is set: the control is the row's
+   * end and stays put, and the reset takes room from the label instead
+   * (the Diagram's Layers pane, 2026-10-18). `end` everywhere else, for now.
+   */
+  resetSide?: 'start' | 'end';
+  /** The reset's own name, for a row whose reset puts back more than its label says: "Reset Text". */
+  resetLabel?: string;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -151,6 +162,20 @@ export function FieldRow({
   }
 
   const helpMark = help && <FieldRowHelp help={help} />;
+  const reset = resetButton && (
+    <button
+      type="button"
+      className={styles.reset}
+      data-field-reset=""
+      data-side={resetSide}
+      title={resetLabel ?? t('common:colorField.reset', 'Reset to default')}
+      aria-label={resetLabel ?? t('common:colorField.resetNamed', 'Reset {{label}} to default', { label })}
+      disabled={disabled}
+      onClick={onReset}
+    >
+      <RotateCcw size={11} />
+    </button>
+  );
   return (
     <div className={rootClass} {...rootData} title={title}>
       {htmlFor ? (
@@ -169,25 +194,14 @@ export function FieldRow({
         data-field-value={kind}
         data-reset={resetButton || undefined}
       >
+        {resetButton && resetSide === 'start' && reset}
         {children}
         {readout !== undefined && (
           <span className={styles.readout} data-field-readout="">
             {readout}
           </span>
         )}
-        {resetButton && (
-          <button
-            type="button"
-            className={styles.reset}
-            data-field-reset=""
-            title={t('common:colorField.reset', 'Reset to default')}
-            aria-label={t('common:colorField.resetNamed', 'Reset {{label}} to default', { label })}
-            disabled={disabled}
-            onClick={onReset}
-          >
-            <RotateCcw size={11} />
-          </button>
-        )}
+        {resetButton && resetSide === 'end' && reset}
       </div>
       {/* After the value, so it takes the grid's second line under the label
           and the line the switch sits on is the same with or without it. Empty
