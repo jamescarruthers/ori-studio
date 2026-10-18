@@ -130,6 +130,38 @@ describe('DiagramStepsGrid', () => {
     expect(host!.querySelector('[data-step-id="step-249"]')).toBeNull();
   });
 
+  it('keeps the selected card mounted wherever the grid is scrolled', () => {
+    const many = Array.from({ length: 250 }, (_, index) => createStep(() => `step-${index}`));
+    render('step-200', vi.fn(), { steps: many });
+    const scroller = listbox().parentElement!;
+    act(() => {
+      scroller.scrollTop = 0;
+      scroller.dispatchEvent(new Event('scroll'));
+    });
+    expect(host!.querySelector('[data-step-id="step-0"]')).not.toBeNull();
+    // Focus, the keyboard context menu and the tab stop find its card.
+    expect(host!.querySelector('[data-step-id="step-200"]')).not.toBeNull();
+    expect(host!.querySelector('[data-step-id="step-120"]')).toBeNull();
+  });
+
+  it('reveals a new selection, and stays put when another step is deleted', () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { value: scrollTo, configurable: true, writable: true });
+    try {
+      const many = Array.from({ length: 250 }, (_, index) => createStep(() => `step-${index}`));
+      render('step-200', vi.fn(), { steps: many });
+      expect(scrollTo).toHaveBeenCalled();
+      scrollTo.mockClear();
+      // The selection's index moves from 200 to 199; the selection does not change.
+      render('step-200', vi.fn(), { steps: many.filter((step) => step.id !== 'step-1') });
+      expect(scrollTo).not.toHaveBeenCalled();
+      render('step-5', vi.fn(), { steps: many });
+      expect(scrollTo).toHaveBeenCalled();
+    } finally {
+      delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
+    }
+  });
+
   it('ends with an Add step tile for a pointer, kept out of the listbox’s options and the tab order', () => {
     const onAppend = vi.fn();
     const onSelect = render('step-a', vi.fn(), { onAppend });

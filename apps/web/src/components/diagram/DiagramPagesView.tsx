@@ -218,10 +218,11 @@ export function DiagramPagesView({
               const name = page.pageNumberAt ? page.number : index + 1;
               const label = t('panels:diagram.pages.caption', 'Page {{number}}', { number: name });
               // Keep lightweight page shells for the camera and observer. Only
-              // nearby pages need targets and artwork. Keep the selected page's
-              // targets too, so keyboard reveal and an ongoing drag retain their DOM.
-              const interactive = isNear(index) || page.cells.some((cell) => cell.stepId === selectedStepId)
-                || page.turns.some((turn) => turn.id === selectedStepId);
+              // nearby pages need targets and artwork. Keep the tab stop's page
+              // (the selection's, or the first) too, so keyboard reveal, Tab into
+              // the pages and an ongoing drag retain their DOM.
+              const interactive = isNear(index) || page.cells.some((cell) => cell.stepId === tabStop)
+                || page.turns.some((turn) => turn.id === tabStop);
               return (
                 <div key={index}>
                   <div

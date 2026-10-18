@@ -1,12 +1,16 @@
 import { useCallback, useLayoutEffect, useState, type RefObject } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 
 /**
  * Rows of the responsive Steps grid. CSS owns column widths and gaps; the
  * virtualizer measures actual row heights (including wrapped instructions).
  * Only its initial estimate assumes a square picture plus header and caption.
+ *
+ * The row holding entry `kept` (the grid's tab stop: the selection, or the
+ * first entry) stays mounted wherever the grid is scrolled, so focus, the
+ * keyboard context menu and the roving tab stop always find its card.
  */
-export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: readonly string[]) {
+export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: readonly string[], kept = -1) {
   const [layout, setLayout] = useState({ columns: 1, estimate: 300, margin: 0 });
   useLayoutEffect(() => {
     const element = grid.current;
@@ -44,6 +48,15 @@ export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: 
   // The grid lives directly in the panel's scrolling body. Scrolling and
   // measurements belong to TanStack, including variable-height corrections.
   const getScrollElement = useCallback(() => grid.current?.parentElement ?? null, [grid]);
+  const keptRow = kept >= 0 ? Math.floor(kept / layout.columns) : -1;
+  const rangeExtractor = useCallback(
+    (range: Range) => {
+      const rows = defaultRangeExtractor(range);
+      if (keptRow < 0 || keptRow >= range.count || rows.includes(keptRow)) return rows;
+      return [...rows, keptRow].sort((a, b) => a - b);
+    },
+    [keptRow]
+  );
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: Math.ceil(ids.length / layout.columns),
@@ -52,6 +65,7 @@ export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: 
     estimateSize: () => layout.estimate,
     scrollMargin: layout.margin,
     overscan: 2,
+    rangeExtractor,
     // Let React yield while mounting a new row instead of blocking the scroll event.
     useFlushSync: false,
     useAnimationFrameWithResizeObserver: true,
@@ -59,6 +73,15 @@ export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: 
   });
   useLayoutEffect(() => {
     virtualizer.measure();
-  }, [virtualizer, layout.columns, layout.estimate]);
+    // measure() forgets every measured height. A row that stays mounted is only
+    // measured again when it resizes, which has already happened by now, so it
+    // would sit at the estimate and overlap the next row: measure them again.
+    // Recompute the positions first: a row is only stored when its size differs
+    // from the last computed one, which is still its measured size until then.
+    virtualizer.getVirtualItems();
+    grid.current
+      ?.querySelectorAll<HTMLElement>('[data-index]')
+      .forEach((row) => virtualizer.measureElement(row));
+  }, [virtualizer, layout.columns, layout.estimate, grid]);
   return { columns: layout.columns, margin: layout.margin, virtualizer };
 }

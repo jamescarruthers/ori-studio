@@ -1067,7 +1067,10 @@ it('mounts nearby page targets, retaining an offscreen selection for keyboard re
     intersectionRect: page(index).getBoundingClientRect(),
   });
   act(() => notify!([entry(0, false), entry(2, true)], {} as IntersectionObserver));
-  expect(page(0).querySelectorAll('[role="option"]')).toHaveLength(0);
+  // With nothing selected the first cell is the tab stop: its page keeps its
+  // targets, so Tab still reaches the pages. Other far pages drop theirs.
+  expect(page(0).querySelector('[role="option"][tabindex="0"]')).not.toBeNull();
+  expect(page(1).querySelectorAll('[role="option"]')).toHaveLength(0);
   expect(page(2).querySelectorAll('[role="option"]').length).toBeGreaterThan(0);
   const last = pages.layout.pages.length - 1;
   const selected = pages.layout.pages[last]!.cells[0]!.stepId;

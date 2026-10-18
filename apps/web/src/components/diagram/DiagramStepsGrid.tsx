@@ -133,29 +133,32 @@ export function DiagramStepsGrid({
     () => [...entries.map((entry) => `entry:${entry.id}`), ...(onAppend ? ['append'] : [])],
     [entries, onAppend]
   );
-  const { columns, margin, virtualizer } = useVirtualStepRows(listRef, rowIds);
   const pendingFocus = useRef<string | null>(null);
   const selectedIndex = entries.findIndex((entry) => entry.id === selectedStepId);
+  // The tab stop's card stays mounted wherever the grid is scrolled.
+  const { columns, margin, virtualizer } = useVirtualStepRows(listRef, rowIds, Math.max(0, selectedIndex));
+  /** The selection last brought into view: only a new one is revealed. */
+  const revealed = useRef<string | null>(null);
   useEffect(() => {
+    // Deleting or inserting another step, or a resize that changes the columns,
+    // moves the selection's row without changing the selection: the grid stays
+    // where the reader scrolled it.
+    if (selectedStepId === revealed.current) return;
     pendingFocus.current = null;
+    revealed.current = selectedStepId;
     if (selectedStepId === null) return;
-    const card = cards.current.get(selectedStepId);
-    if (!card) {
-      const index = selectedIndex;
-      if (index >= 0) {
-        const active = document.activeElement;
-        pendingFocus.current =
-          active === document.body || listRef.current?.contains(active) ? selectedStepId : null;
-        virtualizer.scrollToIndex(Math.floor(index / columns), { align: 'auto' });
-      }
+    if (selectedIndex < 0) {
+      // Not in this grid yet: reveal it once it is.
+      revealed.current = null;
       return;
     }
-    card.scrollIntoView?.({ block: 'nearest' });
+    virtualizer.scrollToIndex(Math.floor(selectedIndex / columns), { align: 'auto' });
+    const card = cards.current.get(selectedStepId);
     const active = document.activeElement;
     const nowhere = active === null || active === document.body;
-    if ((nowhere || listRef.current?.contains(active)) && active !== card) {
-      card.focus({ preventScroll: true });
-    }
+    if (!(nowhere || listRef.current?.contains(active))) return;
+    if (!card) pendingFocus.current = selectedStepId;
+    else if (active !== card) card.focus({ preventScroll: true });
   }, [selectedStepId, selectedIndex, columns, virtualizer]);
 
   const tabStop = selectedStepId ?? entries[0]?.id ?? null;
