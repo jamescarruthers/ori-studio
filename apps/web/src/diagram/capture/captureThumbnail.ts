@@ -6,6 +6,7 @@
  * Pure.
  */
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
+import { creaseRoleOf } from '../../cp-workspace/references/creaseRole';
 import {
   MAX_STORED_STROKES,
   fitSheetThumbnail,
@@ -27,8 +28,7 @@ export function creasesThumbnail(creases: StepCreases, document: OristudioCpDocu
   for (const id of creases.scopedLineIds) {
     const line = document.crease_pattern.line_segments[id - 1];
     if (!line) continue;
-    const role = line.color === 'Black0' ? 'edge' : line.color === 'Red1' ? 'mountain' : line.color === 'Blue2' ? 'valley' : 'aux';
-    strokes.push({ x1: line.a.x, y1: line.a.y, x2: line.b.x, y2: line.b.y, role });
+    strokes.push({ x1: line.a.x, y1: line.a.y, x2: line.b.x, y2: line.b.y, role: creaseRoleOf(line) });
   }
   const thumbnail = fitSheetThumbnail(strokes);
   if (!thumbnail) return EMPTY_THUMBNAIL;

@@ -1002,6 +1002,7 @@ function readStep(
   // — never its hand placement, which this build would lay it out by.
   if (
     hasNewerKey(value, STEP_KEYS) ||
+    isNewerWord(value.importStatus, ['pending', 'failed']) ||
     pageSteps === NEWER ||
     paperFaces === NEWER_PAPER_FACES ||
     sourceRead.newer ||
@@ -1130,13 +1131,17 @@ function isNewerUploadSource(value: Record<string, unknown>, assets: Record<stri
  * has no name for, a spread it does not read, or a fold past the whole of
  * one. A render that does not read at all is damage, judged where it is read.
  */
+/** The most of a Defox saved view this build keeps (the importer's own cap). */
+const DEFOX_SNAPSHOT_MAX = 2 * 1024 * 1024;
+
 function isNewerRender(value: unknown): boolean {
   if (!isRecord(value) || typeof value.mode !== 'string') return false;
   if (!Object.hasOwn(CP_RENDER_FIELDS, value.mode)) return true;
   const fields = CP_RENDER_FIELDS[value.mode as DiagramCpRender['mode']];
   if (hasNewerKey(value, fields)) return true;
   switch (value.mode as DiagramCpRender['mode']) {
-    case 'defox': return false;
+    // A snapshot past what this build keeps is a newer build's, not damage.
+    case 'defox': return typeof value.snapshot === 'string' && value.snapshot.length > DEFOX_SNAPSHOT_MAX;
     case 'crease-pattern':
       return readPatternSide(value.side) === NEWER;
     case 'folded-flat':
@@ -1424,7 +1429,7 @@ function readCpRender(value: unknown): DiagramCpRender | null {
   switch (value.mode) {
     case 'defox':
       return typeof value.snapshot === 'string' &&
-        value.snapshot.length <= 2 * 1024 * 1024 &&
+        value.snapshot.length <= DEFOX_SNAPSHOT_MAX &&
         isRecord(safeJson(value.snapshot))
         ? { mode: 'defox', snapshot: value.snapshot }
         : null;

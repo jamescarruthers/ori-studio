@@ -74,12 +74,7 @@ export function useDiagramLinkStatuses(
 ): ReadonlyMap<string, DiagramLinkStatus> {
   const document = useWorkspaceStore((state) => state.oristudioCpDocument?.document ?? null);
   const segmentation = useCpSegmentation(wantsSegmentation(steps));
-  const [checked, setChecked] = useState<{
-    steps: readonly DiagramStep[];
-    document: OristudioCpDocumentSnapshot | null;
-    segmentation: FoldArtifacts | null;
-    statuses: ReadonlyMap<string, DiagramLinkStatus>;
-  } | null>(null);
+  const [checked, setChecked] = useState<ReadonlyMap<string, DiagramLinkStatus> | null>(null);
   useEffect(() => {
     if (!background) return;
     // The workspace needs all statuses for Refresh all; checking hundreds in
@@ -89,14 +84,14 @@ export function useDiagramLinkStatuses(
     const cancel = checkLinkStatusesInBackground(steps, (step) => {
       const source = linkedSourceOf(step);
       return source ? linkStatus(source, document, segmentation) : null;
-    }, (statuses) => setChecked({ steps, document, segmentation, statuses }));
+    }, setChecked);
     return cancel;
   }, [background, steps, document, segmentation]);
   return useMemo(() => {
-    if (background) {
-      return checked?.steps === steps && checked.document === document && checked.segmentation === segmentation
-        ? checked.statuses : NO_STATUSES;
-    }
+    // The last complete answer stays up while the next pass runs: going blank
+    // until it lands made every card's chip and the Refresh-all count blink on
+    // each edit. Statuses are by step id, so a step that is gone has none.
+    if (background) return checked ?? NO_STATUSES;
     let statuses: Map<string, DiagramLinkStatus> | null = null;
     for (const step of steps) {
       const source = linkedSourceOf(step);

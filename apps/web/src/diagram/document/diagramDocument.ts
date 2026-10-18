@@ -1860,6 +1860,8 @@ export function setStepPicture(
       step,
       releaseCardMarks({
         ...step,
+        // An import's fold notice is about the picture this replaces.
+        importStatus: undefined,
         ...uploadStepParts(asset),
         revision: step.revision + 1,
       }),
@@ -2041,6 +2043,7 @@ export function pullReferencesSteps(
       step,
       {
         ...step,
+        importStatus: undefined,
         source: first.source,
         picture: lifted?.picture ?? first.picture,
         text: words(step),
@@ -2388,7 +2391,7 @@ function sameAnnotations(a: readonly KnownDiagramAnnotation[], b: readonly Known
 export function removeStepPicture(document: DiagramDocument, stepId: string): DiagramDocument {
   return updateStep(document, stepId, (step) =>
     stepHasPicture(step)
-      ? releaseCardMarks({ ...step, source: null, picture: null, revision: step.revision + 1 })
+      ? releaseCardMarks({ ...step, importStatus: undefined, source: null, picture: null, revision: step.revision + 1 })
       : step
   );
 }

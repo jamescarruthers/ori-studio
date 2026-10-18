@@ -124,7 +124,8 @@ export async function showLinkedStepAs(
   const store = useWorkspaceStore.getState();
   const step = store.diagram ? stepById(store.diagram, stepId) : null;
   if (step?.source?.kind !== 'cp' || isLockedStep(step) || store.diagramReadOnly) return false;
-  if (showAsOf(step.source.render) === way && step.picture !== null) return true;
+  // A saved Defox view is none of the ways: choosing one replaces it, as Pose does.
+  if (step.source.render.mode !== 'defox' && showAsOf(step.source.render) === way && step.picture !== null) return true;
   const open = openLinkedPoseOf(stepId);
   if (open) {
     // The open step's controller says why, if it could not; only a way shown is counted.
@@ -161,7 +162,7 @@ export async function duplicateLinkedStepAs(stepId: string, way: DiagramShowAs):
   const copyId = store.duplicateDiagramStep(stepId);
   if (copyId === null) return null;
   // Shown the same way, it is a plain duplicate: no way chosen to count.
-  if (showAsOf(source.render) === way) return copyId;
+  if (source.render.mode !== 'defox' && showAsOf(source.render) === way) return copyId;
   const render = renderToShowAs(source, way, startingSpread(copyId));
   const duplicated = useWorkspaceStore.getState().diagramHistory.past.at(-1);
   const outcome = await useWorkspaceStore.getState().captureDiagramStep(copyId, {

@@ -57,3 +57,27 @@ it('keeps unknown links without an open pattern and discards a replaced steps li
     expect([...statuses]).toEqual([['latest', 'unknown']]);
   } finally { act(() => root.unmount()); }
 });
+
+it('keeps the last statuses on screen while the next pass runs', () => {
+  vi.useFakeTimers();
+  useWorkspaceStore.setState({ oristudioCpDocument: null });
+  const root = createRoot(document.createElement('div'));
+  const seen: number[] = [];
+  function Links({ steps }: { steps: DiagramStep[] }) {
+    const statuses = useDiagramLinkStatuses(steps, true);
+    seen.push(statuses.size);
+    return null;
+  }
+  try {
+    const linked = cpStep('linked');
+    act(() => root.render(createElement(Links, { steps: [linked] })));
+    act(() => vi.runAllTimers());
+    expect(seen.at(-1)).toBe(1);
+    seen.length = 0;
+    // Another step's caption edit: a new steps list, the same link.
+    act(() => root.render(createElement(Links, { steps: [linked, createStep(() => 'edited')] })));
+    expect(seen.every((size) => size === 1)).toBe(true);
+    act(() => vi.runAllTimers());
+    expect(seen.at(-1)).toBe(1);
+  } finally { act(() => root.unmount()); }
+});
