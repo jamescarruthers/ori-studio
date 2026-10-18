@@ -3,6 +3,8 @@ import { createStep } from '../document/diagramDocument';
 import type { PickedFile } from '../../platform/fileService';
 import type { ImportTarget } from '../../store/workspaceStore/diagramBatchImport';
 import { orderedImportFiles, runImportJob } from './importJob';
+import { useImportDialogStore } from './importDialogStore';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const mocks = vi.hoisted(() => ({ prepare: vi.fn(), close: vi.fn(), commit: vi.fn() }));
 vi.mock('./prepareCp', () => ({
@@ -11,8 +13,21 @@ vi.mock('./prepareCp', () => ({
     close = mocks.close;
   },
 }));
-vi.mock('../../store/workspaceStore/diagramBatchImport', () => ({ commitDiagramImport: mocks.commit }));
-vi.mock('../../analytics', () => ({ track: vi.fn(), bucketCount: () => '1-10', COUNT_BUCKETS: [] }));
+vi.mock('../../store/workspaceStore/diagramBatchImport', () => ({
+  commitDiagramImport: mocks.commit,
+  importTarget: () => ({}),
+}));
+vi.mock('../../analytics', () => ({
+  track: vi.fn(),
+  trackDiagramPictureUploaded: vi.fn(),
+  bucketCount: () => '1-10',
+  COUNT_BUCKETS: [],
+}));
+const pictures = vi.hoisted(() => ({ importStepPicture: vi.fn() }));
+vi.mock('../upload/importStepPicture', async (original) => ({
+  ...(await original<typeof import('../upload/importStepPicture')>()),
+  importStepPicture: pictures.importStepPicture,
+}));
 const target = { diagram: null, cpLoadSerial: 1 } as ImportTarget;
 const options = { columns: 0, gap: 100, foldTimeoutMs: 5000 };
 const file = (name: string, content = name): PickedFile => ({
@@ -102,4 +117,46 @@ it('Finish now leaves folding cancelled while continuing to stage every CP', asy
   );
   expect(result.added).toBe(2);
   expect(mocks.prepare).toHaveBeenCalledTimes(2);
+});
+
+it('imports any picture the uploader takes, as an upload, and records what sanitizing changed', async () => {
+  const notices = [{ kind: 'removed-external' }];
+  pictures.importStepPicture
+    .mockResolvedValueOnce({
+      ok: true,
+      content: { kind: 'raster', src: 'data:image/png;base64,AA', widthPx: 4, heightPx: 4 },
+      bytes: 10,
+      format: 'png',
+      fileBytes: 10,
+      notices: [],
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      content: { kind: 'svg', svg: '<svg/>', widthPx: 4, heightPx: 4 },
+      bytes: 6,
+      format: 'svg',
+      fileBytes: 6,
+      notices,
+    })
+    .mockResolvedValueOnce({ ok: false, format: 'jpeg', fileBytes: 3, reason: 'unreadable' });
+  const noteDiagramPictureChanges = vi.fn();
+  useWorkspaceStore.setState({ noteDiagramPictureChanges });
+  const result = await runImportJob(
+    [file('1.png'), file('2.svg'), file('3.jpg')],
+    target,
+    options,
+    new AbortController().signal,
+    new AbortController().signal,
+    () => {},
+  );
+  const groups = mocks.commit.mock.calls[0]![0];
+  expect(groups[0].assets[0]).toMatchObject({ kind: 'raster', widthPx: 4 });
+  expect(groups[0].steps[0].picture.key).toBe(`asset:${groups[0].assets[0].id}`);
+  expect(noteDiagramPictureChanges).toHaveBeenCalledWith(groups[1].assets[0].id, notices);
+  expect(result.failures).toEqual([{ name: '3.jpg', message: 'the picture could not be read' }]);
+});
+it('lists only what an import takes when a drop opens the dialog', () => {
+  useImportDialogStore.getState().open([file('a.cp'), file('notes.txt'), file('b.png')]);
+  expect(useImportDialogStore.getState().files.map((f) => f.name)).toEqual(['a.cp', 'b.png']);
+  useImportDialogStore.getState().close();
 });

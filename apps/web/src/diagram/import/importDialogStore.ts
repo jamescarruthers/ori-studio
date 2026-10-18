@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { importTarget, type ImportTarget } from '../../store/workspaceStore/diagramBatchImport';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { PickedFile } from '../../platform/fileService';
-import { orderedImportFiles } from './importJob';
+import { orderedImportFiles, supportsStepImport } from './importJob';
 interface ImportDialogState {
   target: ImportTarget | null;
   files: PickedFile[];
@@ -21,7 +21,8 @@ export const useImportDialogStore = create<ImportDialogState>((set) => ({
     set({
       folder: folder ?? null,
       target: importTarget(),
-      files: orderedImportFiles(files),
+      // A drop brings whatever was dragged; only what an import takes is listed, as the pickers do.
+      files: orderedImportFiles(files.filter((file) => supportsStepImport(file.name))),
       opener: document.activeElement instanceof HTMLElement ? document.activeElement : null,
     });
   },

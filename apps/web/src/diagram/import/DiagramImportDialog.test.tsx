@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ folder: vi.fn(), files: vi.fn(), ensure: vi.fn
 vi.mock('../../platform/fileService', async (original) => ({
   ...(await original<typeof import('../../platform/fileService')>()),
   getFileService: () => ({ openBinaryFiles: mocks.files }),
-  pickBinaryFolder: mocks.folder,
+  pickImportFolder: mocks.folder,
 }));
 vi.mock('../../store/workspaceStore/diagramBatchImport', () => ({
   importTarget: () => ({}),
@@ -35,7 +35,7 @@ beforeEach(async () => {
       disconnect() {}
     }
   );
-  mocks.folder.mockResolvedValue([file]);
+  mocks.folder.mockResolvedValue(vi.fn(async () => [file]));
   mocks.files.mockResolvedValue([file]);
   mocks.ensure.mockResolvedValue({});
   host = document.createElement('div');
@@ -63,7 +63,11 @@ it('uses the shared toggle for recursive folder picking and exposes layout numbe
   expect(toggle.getAttribute('aria-checked')).toBe('false');
   await act(async () => toggle.click());
   await act(async () => button('Choose folder…').click());
-  expect(mocks.folder).toHaveBeenCalledWith(true);
+  const list = await mocks.folder.mock.results[0]!.value;
+  expect(list).toHaveBeenLastCalledWith(true);
+  // A picked folder is listed again as the toggle changes, as a dropped one is.
+  await act(async () => toggle.click());
+  expect(list).toHaveBeenLastCalledWith(false);
   expect(document.querySelector('input[aria-label=Columns]')).not.toBeNull();
   expect(document.querySelector('input[aria-label=Gap]')).not.toBeNull();
   expect(document.querySelector('input[aria-label="Max seconds per fold"]')).not.toBeNull();
@@ -71,7 +75,7 @@ it('uses the shared toggle for recursive folder picking and exposes layout numbe
   expect(document.querySelector('button[title=Reset]')).toBeNull();
   expect(document.querySelector('input[type=checkbox]:not([aria-hidden=true])')).toBeNull();
 });
-it('closing during Edit provisioning cancels the job and cannot reopen the dialog when provisioning finishes', async () => {
+it('ignores Escape while importing; Cancel during Edit provisioning starts nothing once it finishes', async () => {
   let finish!: (value: object) => void;
   mocks.ensure.mockReturnValue(
     new Promise((resolve) => {
@@ -84,9 +88,13 @@ it('closing during Edit provisioning cancels the job and cannot reopen the dialo
   await act(async () =>
     document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
   );
-  expect(document.querySelector('[role=dialog]')).toBeNull();
+  // A stray Escape or backdrop click must not throw a long run away.
+  expect(document.querySelector('[role=dialog]')).not.toBeNull();
+  await act(async () => button('Cancel').click());
   await act(async () => finish({}));
   expect(mocks.run).not.toHaveBeenCalled();
+  expect(document.querySelector('[role=alert]')?.textContent).toContain('Import cancelled');
+  await act(async () => button('Close').click());
   expect(useImportDialogStore.getState().target).toBeNull();
 });
 

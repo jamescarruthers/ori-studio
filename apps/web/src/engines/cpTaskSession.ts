@@ -7,6 +7,14 @@ import type { OristudioCpWorkerApi } from '../workers/oristudioCpWorker';
 
 export type CpClient = OristudioCpWorkerApi | Comlink.Remote<OristudioCpWorkerApi>;
 
+/** A task that ran past its budget, told apart from one the engine failed. */
+export class CpTaskTimeoutError extends Error {
+  constructor() {
+    super('Preparation exceeded its time limit');
+    this.name = 'CpTaskTimeoutError';
+  }
+}
+
 /** An independently owned instance of the existing CP engine, never Edit's singleton. */
 export interface CpTaskSession {
   client: CpClient;
@@ -100,7 +108,7 @@ export async function createCpTaskSession(signal?: AbortSignal): Promise<CpTaskS
         signal.addEventListener('abort', abort, { once: true });
         timer = setTimeout(() => {
           void close().catch(() => undefined);
-          reject(new Error('Preparation exceeded its time limit'));
+          reject(new CpTaskTimeoutError());
         }, timeoutMs);
       });
       try {

@@ -1,7 +1,9 @@
 import { attachWorkerDiagnostics } from "../../lib/workerDiagnostics";
 import * as Comlink from "comlink";
-import { bucketCount, COUNT_BUCKETS, track } from "../../analytics";
+import { bucketCount, COUNT_BUCKETS, track, trackDiagramPictureUploaded } from "../../analytics";
+import i18n from "../../i18n";
 import { type PickedFile } from "../../platform/fileService";
+import { useWorkspaceStore } from "../../store/workspaceStore";
 import {
   type ImportGroup,
   type ImportTarget,
@@ -11,8 +13,11 @@ import {
   createDiagram,
   createStep,
   randomDiagramId,
+  uploadStepParts,
 } from "../document/diagramDocument";
+import { assetFrom, failureReason, STEP_PICTURE_EXTENSIONS, uploadOutcome } from "../upload/addStepPictures";
 import { importStepPicture } from "../upload/importStepPicture";
+import type { SanitizeNotice } from "../upload/svgSanitize";
 import { CpImportPreparer, type PreparedCp } from "./prepareCp";
 import type { DefoxImportWorkerApi } from "../../workers/defoxImportWorker";
 
@@ -25,8 +30,13 @@ export interface ImportProgress {
   notices: { name: string; message: string }[];
   added?: number;
 }
+const CP_FILE = /\.cp$/i;
+const DEFOX_FILE = /\.defox$/i;
+const PICTURE_FILE = new RegExp(`\\.(?:${STEP_PICTURE_EXTENSIONS.join("|")})$`, "i");
+/** What the picker offers: crease patterns, a Defox project, and every picture the step uploader takes. */
+export const STEP_IMPORT_EXTENSIONS = ["cp", "defox", ...STEP_PICTURE_EXTENSIONS];
 export const supportsStepImport = (name: string) =>
-  /\.(cp|svg|defox)$/i.test(name);
+  CP_FILE.test(name) || DEFOX_FILE.test(name) || PICTURE_FILE.test(name);
 export function orderedImportFiles(files: readonly PickedFile[]): PickedFile[] {
   const order = new Intl.Collator(undefined, {
     numeric: true,
@@ -49,6 +59,7 @@ const errorText = (e: unknown) =>
     : typeof e === "object" && e !== null && "message" in e
       ? String(e.message)
       : String(e);
+const MiB = 1024 * 1024;
 /** Staging is job-local. Cancellation never reaches the live document. */
 export async function runImportJob(
   files: readonly PickedFile[],
@@ -58,11 +69,16 @@ export async function runImportJob(
   foldSignal: AbortSignal,
   onProgress: (p: ImportProgress) => void,
 ): Promise<ImportProgress> {
-  if (files.length > 1000) throw new Error("Choose at most 1000 files.");
-  const defoxFiles = files.filter((f) => /\.defox$/i.test(f.name));
+  const t = i18n.t;
+  if (files.length > 1000)
+    throw new Error(t("panels:diagram.import.tooManyFiles", "Choose at most 1,000 files."));
+  const defoxFiles = files.filter((f) => DEFOX_FILE.test(f.name));
   if (defoxFiles.length && files.length !== 1)
     throw new Error(
-      "Import one Defox project at a time, separately from CP/SVG files.",
+      t(
+        "panels:diagram.import.oneDefox",
+        "Import one Defox project at a time, separately from other files.",
+      ),
     );
   const progress: ImportProgress = {
     done: 0,
@@ -80,20 +96,40 @@ export async function runImportJob(
     });
   if (
     target.cpLoadSerial === null &&
-    files.some((file) => /\.(cp|defox)$/i.test(file.name))
+    files.some((file) => CP_FILE.test(file.name) || DEFOX_FILE.test(file.name))
   ) {
     throw new Error(
-      "Open the Edit workspace once before importing crease patterns.",
+      t(
+        "panels:diagram.import.openEditFirst",
+        "Open the Edit workspace once before importing crease patterns.",
+      ),
     );
   }
   const preparer = new CpImportPreparer(),
     groups: ImportGroup[] = [];
   const style = (target.diagram ?? createDiagram()).style;
   const cache = new Map<string, PreparedCp>();
+  /** What sanitizing changed in each staged picture, recorded once it is in the diagram. */
+  const pictureNotices = new Map<string, SanitizeNotice[]>();
   let cacheBytes = 0,
     readBytes = 0,
     stagedBytes = 0;
   const yieldUi = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+  const countRead = (bytes: number) => {
+    readBytes += bytes;
+    if (readBytes > 256 * MiB)
+      throw new ImportBudgetError(
+        t(
+          "panels:diagram.import.batchTooLarge",
+          "These files add up to more than 256 MiB. Import a smaller batch.",
+        ),
+      );
+  };
+  const read = async (file: PickedFile, limit: number) => {
+    const bytes = await file.read(limit);
+    countRead(bytes.byteLength);
+    return bytes;
+  };
   let worker: Worker | undefined;
   const check = () => {
     if (signal.aborted)
@@ -107,59 +143,36 @@ export async function runImportJob(
       publish();
       await yieldUi();
       try {
-        const bytes = await file.read(
-          /\.defox$/i.test(file.name) ? 64 * 1024 * 1024 : 16 * 1024 * 1024,
-        );
-        readBytes += bytes.byteLength;
-        if (readBytes > 256 * 1024 * 1024)
-          throw new ImportBudgetError("Batch exceeds 256 MiB");
-        check();
-        progress.phase = "preparing";
-        publish();
-        if (/\.svg$/i.test(file.name)) {
+        if (PICTURE_FILE.test(file.name)) {
+          progress.phase = "preparing";
+          publish();
+          // The step uploader's own path: its size caps, sanitizer, stored
+          // asset and step parts, so an imported picture is an uploaded one.
           const id = randomDiagramId("asset");
-          const result = await importStepPicture(
-            { ...file, read: async () => bytes },
-            id,
-          );
-          if (!result.ok || result.content.kind !== "svg")
-            throw new Error(!result.ok ? result.reason : "Expected an SVG");
-          const asset = {
-            id,
-            kind: "svg" as const,
-            svg: result.content.svg,
-            widthPx: result.content.widthPx,
-            heightPx: result.content.heightPx,
-            bytes: result.bytes,
-          };
-          groups.push({
-            steps: [
-              {
-                ...createStep(),
-                source: {
-                  kind: "upload",
-                  assetId: id,
-                  rotationQuarterTurns: 0,
-                  mirrored: false,
-                },
-                picture: {
-                  kind: "asset",
-                  assetId: id,
-                  paperScale: null,
-                  key: id,
-                },
-              },
-            ],
-            assets: [asset],
-          });
+          const result = await importStepPicture(file, id);
+          trackDiagramPictureUploaded(result.format, uploadOutcome(result), result.fileBytes, files.length);
+          countRead(result.fileBytes ?? 0);
+          check();
+          if (!result.ok) throw new Error(failureReason(result.reason));
+          const asset = assetFrom(id, result);
+          groups.push({ steps: [{ ...createStep(), ...uploadStepParts(asset) }], assets: [asset] });
           stagedBytes += result.bytes;
-          if (result.notices.length)
+          if (result.notices.length) {
+            pictureNotices.set(id, result.notices);
             progress.notices.push({
               name: file.name,
-              message:
-                "The SVG was sanitized; unsupported or external content was removed.",
+              message: t(
+                "panels:diagram.import.sanitized",
+                "The SVG was sanitized: unsupported or external content was removed.",
+              ),
             });
-        } else if (/\.defox$/i.test(file.name)) {
+          }
+        } else if (DEFOX_FILE.test(file.name)) {
+          const bytes = await read(file, 64 * MiB);
+          check();
+          progress.phase = "preparing";
+          publish();
+          const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
           worker = new Worker(
             new URL("../../workers/defoxImportWorker.ts", import.meta.url),
             {
@@ -176,16 +189,28 @@ export async function runImportJob(
             (info) => failed(new Error(info.message)),
           );
           const api = Comlink.wrap<DefoxImportWorkerApi>(worker);
-          const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-          let cancel: () => void = () => undefined;
+          let stop: (error: Error) => void = () => undefined;
           const stopped = new Promise<never>((_, reject) => {
-            cancel = () => {
+            stop = (error) => {
               worker?.terminate();
-              reject(new DOMException("Import cancelled", "AbortError"));
+              reject(error);
             };
-            signal.addEventListener("abort", cancel, { once: true });
           });
-          const timer = setTimeout(cancel, 30_000);
+          const cancel = () => stop(new DOMException("Import cancelled", "AbortError"));
+          signal.addEventListener("abort", cancel, { once: true });
+          // Not a cancel: said as what it is, and the run goes on to report it.
+          const timer = setTimeout(
+            () =>
+              stop(
+                new Error(
+                  t(
+                    "panels:diagram.import.defoxTimeout",
+                    "Reading the Defox project took longer than 30 seconds.",
+                  ),
+                ),
+              ),
+            30_000,
+          );
           const entries = await Promise.race([
             api.renderDefox(text),
             stopped,
@@ -205,7 +230,14 @@ export async function runImportJob(
             publish();
             await yieldUi();
             if (!entry.ok)
-              progress.failures.push({ name, message: entry.error });
+              progress.failures.push({
+                name,
+                message: t(
+                  "panels:diagram.import.defoxEntryFailed",
+                  "This saved view couldn’t be read ({{reason}}).",
+                  { reason: entry.error },
+                ),
+              });
             else {
               try {
                 const result = await preparer.prepare(
@@ -232,7 +264,11 @@ export async function runImportJob(
             progress.done++;
             publish();
           }
-        } else if (/\.cp$/i.test(file.name)) {
+        } else if (CP_FILE.test(file.name)) {
+          const bytes = await read(file, 16 * MiB);
+          check();
+          progress.phase = "preparing";
+          publish();
           const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
           const cached = cache.get(text);
           const result = cached
@@ -261,22 +297,28 @@ export async function runImportJob(
           if (
             !cached &&
             result.steps.every((s) => s.importStatus !== "failed") &&
-            cost + cacheBytes <= 64 * 1024 * 1024
+            cost + cacheBytes <= 64 * MiB
           ) {
             cache.set(text, result);
             cacheBytes += cost;
           }
           for (const message of result.notices)
             progress.notices.push({ name: file.name, message });
-        } else throw new Error("Unsupported file. Choose CP, SVG or Defox.");
+        } else
+          throw new Error(
+            t("panels:diagram.import.unsupported", "Choose crease patterns, a Defox project or pictures."),
+          );
       } catch (e) {
         check();
         if (e instanceof ImportBudgetError) throw e;
         progress.failures.push({ name: file.name, message: errorText(e) });
       }
-      if (stagedBytes > 384 * 1024 * 1024)
+      if (stagedBytes > 384 * MiB)
         throw new Error(
-          "Prepared import exceeds the 384 MiB prepared-content limit. Import a smaller batch.",
+          t(
+            "panels:diagram.import.preparedTooLarge",
+            "The prepared steps exceed 384 MiB. Import a smaller batch.",
+          ),
         );
       if (!defoxFiles.length) progress.done++;
       publish();
@@ -293,13 +335,18 @@ export async function runImportJob(
       options.columns,
       options.gap,
     );
+    // As an upload records them, for the Step pane: what sanitizing changed in each picture.
+    if (progress.added > 0) {
+      const store = useWorkspaceStore.getState();
+      for (const [id, notices] of pictureNotices) store.noteDiagramPictureChanges(id, notices);
+    }
     progress.phase = "done";
     publish();
     track("diagram import completed", {
       format: defoxFiles.length
         ? "defox"
-        : files.every((f) => /\.svg$/i.test(f.name))
-          ? "svg"
+        : files.every((f) => PICTURE_FILE.test(f.name))
+          ? "pictures"
           : "batch",
       count: bucketCount(progress.added, COUNT_BUCKETS),
       failures: bucketCount(progress.failures.length, COUNT_BUCKETS),

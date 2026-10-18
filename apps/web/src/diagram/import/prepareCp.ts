@@ -1,5 +1,6 @@
 import { keptPicture } from '../../store/workspaceStore/diagramCapture';
-import { createCpTaskSession, type CpTaskSession } from '../../engines/cpTaskSession';
+import i18n from '../../i18n';
+import { CpTaskTimeoutError, createCpTaskSession, type CpTaskSession } from '../../engines/cpTaskSession';
 import { decodeCpGeometryToSnapshot, type CpGeometryTransport } from '../../engine/oristudioCpGeometry';
 import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
@@ -61,7 +62,10 @@ export class CpImportPreparer {
       const regions = resolveCpSegments(segmentation);
       if (defox && regions.length !== 1)
         throw new Error(
-          'This saved Defox view does not have exactly one paper region; importing its linked view is unsupported.',
+          i18n.t(
+            'panels:diagram.import.defoxRegions',
+            'This saved view doesn’t have exactly one paper region, so it can’t be linked to its crease pattern.',
+          ),
         );
       const stopFolding = AbortSignal.any([signal, foldSignal]);
       for (const region of regions) {
@@ -94,14 +98,22 @@ export class CpImportPreparer {
               continue;
             }
             status = 'failed';
-            notices.push('No folded solution was found; the crease pattern preview is retained.');
+            notices.push(
+              i18n.t('panels:diagram.import.noSolution', 'No folded state was found; the step keeps its crease pattern.'),
+            );
           } catch (error) {
             if (signal.aborted) throw error;
             status = foldSignal.aborted ? 'pending' : 'failed';
+            // Said apart: a longer limit helps a fold that ran out of time, never one the engine refused.
             notices.push(
               foldSignal.aborted
-                ? 'Folding deferred.'
-                : 'Fold failed or exceeded its time limit; the crease pattern preview is retained.',
+                ? i18n.t('panels:diagram.import.foldDeferred', 'Folding was left for later; the step keeps its crease pattern.')
+                : error instanceof CpTaskTimeoutError
+                  ? i18n.t(
+                      'panels:diagram.import.foldTimeout',
+                      'Folding took longer than the time limit; the step keeps its crease pattern.',
+                    )
+                  : i18n.t('panels:diagram.import.foldFailed', 'Folding failed; the step keeps its crease pattern.'),
             );
             await this.close();
           }
@@ -137,12 +149,11 @@ export class CpImportPreparer {
         steps.push({ ...createStep(), source: preview.source, picture: kept.picture, importStatus: status });
       }
       if (!steps.length) {
-        steps.push({
-          ...createStep(),
-          text: 'Imported crease pattern has no resolvable paper region.',
-          importStatus: 'failed',
-        });
-        notices.push('No resolvable paper region; geometry will still be appended to Edit.');
+        // No sentence goes into the step: its text is the author's, saved and printed as theirs.
+        steps.push({ ...createStep(), importStatus: 'failed' });
+        notices.push(
+          i18n.t('panels:diagram.import.noRegion', 'No paper region was found; the crease pattern is still added to Edit.'),
+        );
       }
       return { geometry, steps, assets, notices };
     } catch (error) {

@@ -28,3 +28,10 @@ it('exhausts directory-reader batches and only includes descendants when request
   expect(recursive.map((f) => f.name)).toEqual(['root/2.cp', 'root/nested/1.svg', 'root/10.cp']);
   expect(recursive[0]?.size).toBe(2);
 });
+
+it('names a chosen folder\'s files by their path from it on desktop, as the browser does', async () => {
+  const { folderRelativeName } = await import('./fileService');
+  expect(folderRelativeName('/Users/a/Model', '/Users/a/Model/arms/01.cp')).toBe('Model/arms/01.cp');
+  expect(folderRelativeName('/Users/a/Model/', '/Users/a/Model/01.cp')).toBe('Model/01.cp');
+  expect(folderRelativeName('C:\\Work\\Model', 'C:\\Work\\Model\\legs\\02.cp')).toBe('Model/legs/02.cp');
+});

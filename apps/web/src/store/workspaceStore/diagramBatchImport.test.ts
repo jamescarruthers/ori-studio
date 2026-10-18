@@ -43,7 +43,7 @@ it("publishes SVG-only batches in one history entry and refuses a changed target
   expect(get().diagramHistory.past).toHaveLength(1);
   await expect(
     commitDiagramImport([{ steps: [createStep()] }], target, 1, 100),
-  ).rejects.toThrow("destination changed");
+  ).rejects.toThrow("changed while importing");
 });
 it("undoes and redoes both histories together, but never rewinds intervening edits", async () => {
   const before = createStarterOristudioCpDocument();
@@ -270,7 +270,7 @@ it("rejects a destination replaced while the empty Edit canvas is being provisio
   });
   useWorkspaceStore.setState({ ensureEditCreasePattern: ensure });
   await expect(ensureDiagramImportTarget(importTarget())).rejects.toThrow(
-    "destination changed",
+    "changed while importing",
   );
 });
 
@@ -326,7 +326,7 @@ it("places beside an emptied canvas's annotations rather than failing on its emp
     loadSerial: 1,
     document: { ...createStarterOristudioCpDocument(), crease_pattern: { ...createStarterOristudioCpDocument().crease_pattern, line_segments: [] } },
     geometry: empty,
-  } as OristudioCpDocumentState;
+  } as unknown as OristudioCpDocumentState;
   useWorkspaceStore.setState({
     oristudioCpDocument: state,
     oristudioCpAnnotations: [createTextAnnotation({ center: { x: 500, y: 0 }, width: 100, height: 40 })],
@@ -427,7 +427,7 @@ it('does not start publication while Edit history is being restored', async () =
   const target = importTarget();
   useWorkspaceStore.setState({ oristudioCpHistoryBusy: true });
   await expect(commitDiagramImport([{ steps: [createStep()] }], target, 1, 100))
-    .rejects.toThrow('destination changed');
+    .rejects.toThrow('changed while importing');
   expect(get().diagram).toBeNull();
   expect(runtime.getOristudioCpClient).not.toHaveBeenCalled();
 });

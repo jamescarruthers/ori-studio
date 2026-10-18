@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Button } from '../../components/ui/Button';
 import { Check, FilePlus2, Files, FolderOpen, Import, LoaderCircle } from 'lucide-react';
 import { PreviewDialog } from '../../components/ui/PreviewDialog';
@@ -8,12 +9,26 @@ import { NumberField } from '../../components/ui/NumberField';
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection';
 import { FieldRow, NumberRow, ToggleRow } from '../../components/ui/fieldRows';
 import { Notice } from '../../components/ui/Notice';
-import { getFileService, pickBinaryFolder, type PickedFile } from '../../platform/fileService';
-import { ensureDiagramImportTarget } from '../../store/workspaceStore/diagramBatchImport';
+import { getFileService, pickImportFolder, type PickedFile } from '../../platform/fileService';
+import { ensureDiagramImportTarget, importTarget } from '../../store/workspaceStore/diagramBatchImport';
+import { FolderTooLargeError } from '../../platform/droppedFolder';
 import { useImportDialogStore } from './importDialogStore';
-import { orderedImportFiles, runImportJob, supportsStepImport, type ImportProgress } from './importJob';
+import {
+  orderedImportFiles,
+  runImportJob,
+  STEP_IMPORT_EXTENSIONS,
+  supportsStepImport,
+  type ImportProgress,
+} from './importJob';
 import styles from './DiagramImportDialog.module.css';
 import { ImportFileList } from './ImportFileList';
+
+/** What went wrong, without the "Error:" a bare String(e) puts in front. */
+function problem(e: unknown, t: TFunction): string {
+  if (e instanceof FolderTooLargeError)
+    return t('panels:diagram.import.folderTooLarge', 'The folder has more than 10,000 entries. Choose a smaller folder.');
+  return e instanceof Error ? e.message : String(e);
+}
 
 export function DiagramImportDialogHost() {
   const target = useImportDialogStore((s) => s.target);
@@ -68,26 +83,29 @@ function DiagramImportDialog() {
         }
       })
       .catch((e) => {
-        if (live) setError(String(e));
+        if (live) setError(problem(e, t));
       });
     return () => {
       live = false;
     };
-  }, [folder, recursive]);
+  }, [folder, recursive, t]);
   const pick = async (folder: boolean) => {
     try {
-      useImportDialogStore.setState({ folder: null });
-      picked(
-        folder
-          ? await pickBinaryFolder(recursive)
-          : await getFileService().openBinaryFiles({
-              title: t('panels:diagram.import.title', 'Import steps'),
-              extensions: ['cp', 'svg', 'defox'],
-              multiple: true,
-            })
-      );
+      if (folder) {
+        // Listed by the effect above, again whenever Include subfolders changes.
+        const reader = await pickImportFolder(t('panels:diagram.import.folderTitle', 'Choose a folder to import'));
+        if (reader) useImportDialogStore.setState({ folder: reader });
+        return;
+      }
+      const next = await getFileService().openBinaryFiles({
+        title: t('panels:diagram.import.title', 'Import steps'),
+        extensions: STEP_IMPORT_EXTENSIONS,
+        multiple: true,
+      });
+      if (next) useImportDialogStore.setState({ folder: null });
+      picked(next);
     } catch (e) {
-      setError(String(e));
+      setError(problem(e, t));
     }
   };
   const start = async () => {
@@ -99,10 +117,21 @@ function DiagramImportDialog() {
     setProgress(null);
     setFinishing(false);
     try {
+      // The destination as it is now, not as the dialog opened on: anything
+      // since would reject the commit, and every retry with it.
+      const now = importTarget();
+      if (now.loadId !== target.loadId)
+        throw new Error(
+          t('panels:diagram.import.destinationChanged', 'The diagram changed while importing. Start the import again.')
+        );
+      const current = { ...now, anchor: target.anchor };
       const destination = files.some((file) => /\.(cp|defox)$/i.test(file.name))
-        ? await ensureDiagramImportTarget(target)
-        : target;
-      if (job.current.signal.aborted) return;
+        ? await ensureDiagramImportTarget(current)
+        : current;
+      if (job.current.signal.aborted) {
+        setError(t('panels:diagram.import.cancelled', 'Import cancelled. No files were added.'));
+        return;
+      }
       useImportDialogStore.setState({ target: destination });
       await runImportJob(
         files,
@@ -148,7 +177,8 @@ function DiagramImportDialog() {
         if (done) close();
         else void start();
       }}
-      busy={progress?.phase === 'placing'}
+      // A stray click or Escape must not throw away a long run: Cancel stops it.
+      busy={running}
       returnFocus={opener}
       preview={
         <div className={styles.fileColumn}>

@@ -826,22 +826,61 @@ export function getFileService(): FileService {
   return createFileService(getRuntimeSurface());
 }
 
-/** Folder selection shares the capped lazy-file boundary with multi-file imports. */
-export async function pickBinaryFolder(includeSubfolders = false): Promise<PickedFile[] | null> {
+/** A chosen folder's files, listed again whenever "Include subfolders" changes. */
+export type FolderReader = (includeSubfolders: boolean) => Promise<PickedFile[]>;
+
+/**
+ * Choose a folder to import. Its files share the capped lazy-file boundary with
+ * multi-file imports, and are named by their path from the chosen folder on every
+ * platform (`folder/sub/01.cp`, as the browser names them), so a recursive import
+ * sorts subfolder by subfolder and same-named files stay told apart.
+ */
+export async function pickImportFolder(title: string): Promise<FolderReader | null> {
   if (getRuntimeSurface() === 'desktop') {
     const { open } = await import('@tauri-apps/plugin-dialog');
-    const path = await open({ title: 'Import folder', directory: true, multiple: false });
-    if (typeof path !== 'string') return null;
-    const paths = await invoke<string[]>('list_import_folder', { path, recursive: includeSubfolders });
-    return paths.map(path => pickedFileFromPath(path));
+    const folder = await open({ title, directory: true, multiple: false });
+    if (typeof folder !== 'string') return null;
+    return async (recursive) => {
+      const paths = await invoke<string[]>('list_import_folder', { path: folder, recursive });
+      return paths.map((path) => ({ ...pickedFileFromPath(path), name: folderRelativeName(folder, path) }));
+    };
   }
-  return new Promise(resolve => {
-    const input=document.createElement('input'); input.type='file'; input.multiple=true;
-    input.setAttribute('webkitdirectory','');input.style.display='none';document.body.append(input);
-    input.addEventListener('change',()=>{
-      const files=Array.from(input.files??[]).filter(f=>includeSubfolders||f.webkitRelativePath.split('/').length<=2);
-      input.remove();resolve(files.map(f=>({...pickedFileFromFile(f),name:f.webkitRelativePath||f.name})));
-    },{once:true});
-    input.addEventListener('cancel',()=>{input.remove();resolve(null);},{once:true});input.click();
+  const files = await new Promise<File[] | null>((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.setAttribute('webkitdirectory', '');
+    input.style.display = 'none';
+    document.body.append(input);
+    input.addEventListener(
+      'change',
+      () => {
+        input.remove();
+        resolve(Array.from(input.files ?? []));
+      },
+      { once: true }
+    );
+    input.addEventListener(
+      'cancel',
+      () => {
+        input.remove();
+        resolve(null);
+      },
+      { once: true }
+    );
+    input.click();
   });
+  if (!files) return null;
+  // The browser hands over the whole tree at once; the toggle only filters it.
+  return async (recursive) =>
+    files
+      .filter((file) => recursive || file.webkitRelativePath.split('/').length <= 2)
+      .map((file) => ({ ...pickedFileFromFile(file), name: file.webkitRelativePath || file.name }));
+}
+
+/** A file's path from the chosen folder, the folder's own name first, as a browser's `webkitRelativePath`. */
+export function folderRelativeName(folder: string, path: string): string {
+  const root = folder.replace(/[\\/]+$/, '');
+  const parent = root.slice(0, Math.max(root.lastIndexOf('/'), root.lastIndexOf('\\')) + 1);
+  return path.startsWith(parent) ? path.slice(parent.length).replaceAll('\\', '/') : filenameFromPath(path);
 }

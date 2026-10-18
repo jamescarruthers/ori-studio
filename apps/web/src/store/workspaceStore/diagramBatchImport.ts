@@ -58,6 +58,12 @@ export interface ImportGroup {
   steps: DiagramStep[];
   assets?: KnownDiagramAsset[];
 }
+/** Said when what the import was prepared against is no longer there to publish into. */
+const destinationChanged = () =>
+  i18n.t(
+    "panels:diagram.import.destinationChanged",
+    "The diagram changed while importing. Start the import again.",
+  );
 export function importTarget(): ImportTarget {
   const s = useWorkspaceStore.getState();
   return {
@@ -109,11 +115,14 @@ export async function ensureDiagramImportTarget(
   if (target.cpLoadSerial !== null) return target;
   const before = useWorkspaceStore.getState();
   if (!matches(target, before))
-    throw new Error("The destination changed. Start the import again.");
+    throw new Error(destinationChanged());
   // A refused file or pending share needs its existing load flow, not a new blank document.
   if (before.cpLoadFailure || before.pendingSharedCp)
     throw new Error(
-      "Open the Edit workspace to resolve its pending file before importing crease patterns.",
+      i18n.t(
+        "panels:diagram.import.pendingFile",
+        "Open the Edit workspace to resolve its pending file before importing crease patterns.",
+      ),
     );
   await before.ensureEditCreasePattern();
   const after = useWorkspaceStore.getState();
@@ -122,11 +131,11 @@ export async function ensureDiagramImportTarget(
     after.diagram !== target.diagram ||
     after.diagramReadOnly
   )
-    throw new Error("The destination changed. Start the import again.");
+    throw new Error(destinationChanged());
   if (!after.oristudioCpDocument)
     throw new Error(
       after.oristudioCpError ??
-        "Could not create an Edit canvas for the import.",
+        i18n.t("panels:diagram.import.noCanvas", "Couldn’t create an Edit canvas for the import."),
     );
   return { ...importTarget(), anchor: target.anchor };
 }
@@ -141,7 +150,7 @@ export async function commitDiagramImport(
     set = useWorkspaceStore.setState;
   const before = get();
   if (!matches(target, before) || before.diagramImportBusy || before.oristudioCpHistoryBusy)
-    throw new Error("The destination changed. Start the import again.");
+    throw new Error(destinationChanged());
   // Keep the established single-picture fill and batch insertion behavior.
   if (
     groups.length &&
@@ -165,7 +174,9 @@ export async function commitDiagramImport(
       Boolean(g.geometry),
   );
   if (cpGroups.length && !before.oristudioCpDocument)
-    throw new Error("Open an Edit document before importing crease patterns.");
+    throw new Error(
+      i18n.t("panels:diagram.import.openEditFirst", "Open the Edit workspace once before importing crease patterns."),
+    );
   const replaceStarter =
     before.oristudioCpAnnotations.length === 0 &&
     before.oristudioCpFoldedFigures.length === 0 &&
@@ -256,7 +267,7 @@ export async function commitDiagramImport(
     if (cpGroups.length && cp) {
       const api = await getOristudioCpClient();
       if (!matches(target, get()))
-        throw new Error("The destination changed. Start the import again.");
+        throw new Error(destinationChanged());
       await api.appendDisjoint(
         cp.handle,
         cpGroups.map((g, i) => placedGeometry(g.geometry, placements[i]!)),
@@ -265,7 +276,7 @@ export async function commitDiagramImport(
       try {
         cp = await refreshOristudioCpDocument();
         if (!cp || !matches(target, get()))
-          throw new Error("The destination changed while importing.");
+          throw new Error(destinationChanged());
       } catch (error) {
         // The kernel mutation succeeded but publication did not. Restore the
         // original handle directly; a second failed refresh must not prevent rollback.

@@ -13,6 +13,14 @@ export function droppedFolderReader(
     : null;
 }
 
+/** A folder past the entry cap; the dialog says so in the reader's language. */
+export class FolderTooLargeError extends Error {
+  constructor() {
+    super('The folder contains too many entries. Choose a smaller folder.');
+    this.name = 'FolderTooLargeError';
+  }
+}
+
 /** Enumerate metadata only, with the same opt-in recursion and cap as the native picker. */
 export async function readDroppedEntries(
   entries: readonly FileSystemEntry[],
@@ -22,7 +30,7 @@ export async function readDroppedEntries(
   let count = 0;
   const visit = async (entry: FileSystemEntry, path: string, depth: number): Promise<void> => {
     if (++count > 10000 || depth > 32)
-      throw new Error('The folder contains too many entries. Choose a smaller folder.');
+      throw new FolderTooLargeError();
     const name = path ? `${path}/${entry.name}` : entry.name;
     if (entry.isFile) {
       const file = await new Promise<File>((resolve, reject) =>

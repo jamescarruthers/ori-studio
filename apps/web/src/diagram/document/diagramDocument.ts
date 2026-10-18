@@ -1808,7 +1808,7 @@ export function uploadPictureKey(assetId: string): string {
   return `asset:${assetId}`;
 }
 
-function uploadStepParts(asset: KnownDiagramAsset): Pick<DiagramStep, 'source' | 'picture'> {
+export function uploadStepParts(asset: KnownDiagramAsset): Pick<DiagramStep, 'source' | 'picture'> {
   return {
     source: { kind: 'upload', assetId: asset.id, rotationQuarterTurns: 0, mirrored: false },
     picture: { kind: 'asset', assetId: asset.id, paperScale: null, key: uploadPictureKey(asset.id) },
