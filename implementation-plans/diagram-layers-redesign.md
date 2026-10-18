@@ -100,4 +100,4 @@ Not in this change:
 - [x] i18n: extract, translate 8 locales, stamp, check
 - [x] Tests updated and added; lint, typecheck, relevant vitest
 - [x] Browser check on the crane (Pages, Annotate flat and folded, scrub, step card, glyph; a phone was not checked)
-- [ ] Draft PR
+- [x] Draft PR (#456)
