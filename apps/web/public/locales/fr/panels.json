@@ -1094,9 +1094,13 @@
       "fromReferences": "Depuis Références…",
       "goToEdit": "Aller dans Édition",
       "import": "Importer…",
+      "learn": "Première fois avec les diagrammes ?",
       "link": "Lier un patron…",
       "message": "Un diagramme présente votre séquence de pliage, étape par étape. Ajoutez une étape, une image et une instruction, ou importez des patrons de plis, des images ou un projet Defox.",
-      "title": "Commencer un diagramme"
+      "openExample": "Ouvrir la grue d’exemple",
+      "openingExample": "Ouverture de l’exemple…",
+      "title": "Commencer un diagramme",
+      "tutorial": "Voir la vidéo de présentation"
     },
     "grid": {
       "addStep": "Ajouter une étape",

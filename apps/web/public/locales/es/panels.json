@@ -1094,9 +1094,13 @@
       "fromReferences": "Desde Referencias…",
       "goToEdit": "Ir a Editar",
       "import": "Importar…",
+      "learn": "¿Primera vez con los diagramas?",
       "link": "Vincular un patrón…",
       "message": "Un diagrama es tu secuencia de plegado, paso a paso. Añade un paso, una imagen y una instrucción, o importa patrones de pliegues, imágenes o un proyecto Defox.",
-      "title": "Empezar un diagrama"
+      "openExample": "Abrir la grulla de ejemplo",
+      "openingExample": "Abriendo el ejemplo…",
+      "title": "Empezar un diagrama",
+      "tutorial": "Ver el vídeo explicativo"
     },
     "grid": {
       "addStep": "Añadir paso",

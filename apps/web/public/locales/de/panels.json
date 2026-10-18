@@ -1060,9 +1060,13 @@
       "fromReferences": "Aus Referenzen…",
       "goToEdit": "Zu Bearbeiten wechseln",
       "import": "Importieren…",
+      "learn": "Neu bei Diagrammen?",
       "link": "Muster verknüpfen…",
-      "message": "Ein Diagramm zeigt deine Faltfolge Schritt für Schritt. Füge einen Schritt hinzu und gib ihm ein Bild und eine Anleitung – oder importiere Faltmuster, Bilder oder ein Defox-Projekt.",
-      "title": "Ein Diagramm beginnen"
+      "message": "Ein Diagramm ist Ihre Faltfolge, Schritt für Schritt. Fügen Sie einen Schritt hinzu und geben Sie ihm ein Bild und eine Anleitung – oder importieren Sie Faltmuster, Bilder oder ein Defox-Projekt.",
+      "openExample": "Den Beispielkranich öffnen",
+      "openingExample": "Beispiel wird geöffnet…",
+      "title": "Ein Diagramm beginnen",
+      "tutorial": "Video-Einführung ansehen"
     },
     "grid": {
       "addStep": "Schritt hinzufügen",

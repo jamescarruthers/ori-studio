@@ -1026,9 +1026,13 @@
       "fromReferences": "来自参考…",
       "goToEdit": "前往编辑",
       "import": "导入…",
+      "learn": "第一次制作图解？",
       "link": "链接图样…",
       "message": "折图逐步展示折叠过程。添加步骤并配上图片和说明，或导入折痕图、图片或 Defox 项目。",
-      "title": "开始制作图解"
+      "openExample": "打开千纸鹤示例",
+      "openingExample": "正在打开示例…",
+      "title": "开始制作图解",
+      "tutorial": "观看演示视频"
     },
     "grid": {
       "addStep": "添加步骤",

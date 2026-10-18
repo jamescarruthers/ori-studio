@@ -1026,9 +1026,13 @@
       "fromReferences": "참조에서…",
       "goToEdit": "편집으로 이동",
       "import": "가져오기…",
+      "learn": "도해가 처음이신가요?",
       "link": "패턴 연결…",
       "message": "다이어그램은 접는 순서를 단계별로 보여 줍니다. 단계를 추가하고 그림과 설명을 넣거나, 전개도, 그림 또는 Defox 프로젝트를 가져오세요.",
-      "title": "도해 시작하기"
+      "openExample": "학 예제 열기",
+      "openingExample": "예제를 여는 중…",
+      "title": "도해 시작하기",
+      "tutorial": "안내 영상 보기"
     },
     "grid": {
       "addStep": "단계 추가",

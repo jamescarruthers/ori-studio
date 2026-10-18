@@ -1094,9 +1094,13 @@
       "fromReferences": "De Referências…",
       "goToEdit": "Ir para Editar",
       "import": "Importar…",
+      "learn": "Primeira vez com diagramas?",
       "link": "Vincular um padrão…",
       "message": "Um diagrama mostra sua sequência de dobras, passo a passo. Adicione um passo com imagem e instrução ou importe padrões de vincos, imagens ou um projeto Defox.",
-      "title": "Começar um diagrama"
+      "openExample": "Abrir o tsuru de exemplo",
+      "openingExample": "Abrindo o exemplo…",
+      "title": "Começar um diagrama",
+      "tutorial": "Assistir ao vídeo explicativo"
     },
     "grid": {
       "addStep": "Adicionar passo",
