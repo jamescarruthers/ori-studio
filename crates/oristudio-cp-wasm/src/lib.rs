@@ -185,8 +185,9 @@ pub fn deselect_all(handle: u32) -> Result<u32, JsValue> {
     with_session_mut(|session| session.deselect_all(handle))
 }
 
-/// Oriedita import (add): merge the document behind `imported_handle` into the
-/// document behind `handle`. Returns the resulting line-segment count.
+/// Ori Studio's batch import: append pre-placed sheets, which must not overlap
+/// one another or the document, in one atomic mutation (optionally replacing an
+/// untouched starter sheet). Returns each sheet's 1-based line range.
 #[wasm_bindgen]
 pub fn append_disjoint(
     handle: u32,
@@ -202,6 +203,8 @@ pub fn append_disjoint(
     to_js_value(&ranges)
 }
 
+/// Oriedita import (add): merge the document behind `imported_handle` into the
+/// document behind `handle`. Returns the resulting line-segment count.
 #[wasm_bindgen]
 pub fn import_add(handle: u32, imported_handle: u32) -> Result<u32, JsValue> {
     with_session_mut(|session| session.import_add(handle, imported_handle))

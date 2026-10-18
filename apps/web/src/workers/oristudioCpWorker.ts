@@ -1,4 +1,4 @@
-import { segmentationFoldArtifactsFromFold } from '../lib/creasePatternImport';
+import { segmentationFoldArtifactsFromFold, warnIfFacesWereInferred } from '../lib/creasePatternImport';
 import { resolveCpSegments } from '../lib/creasePatternSegmentation';
 import { computeSegmentContainment } from '../lib/creasePatternSelectionSegment';
 import type { FoldArtifacts, FoldDocument } from '../engine/types';
@@ -150,7 +150,10 @@ async function call<T>(fn: () => T): Promise<T> {
 }
 
 function analyzeFold(text: string): FoldArtifacts {
-  const artifacts = segmentationFoldArtifactsFromFold(JSON.parse(text) as FoldDocument);
+  const fold = JSON.parse(text) as FoldDocument;
+  const artifacts = segmentationFoldArtifactsFromFold(fold);
+  // Said here, where segmentation now runs, as it was on the main thread.
+  warnIfFacesWereInferred(fold, artifacts.fold, 'cp-segmentation');
   artifacts.segments = resolveCpSegments(artifacts);
   return artifacts;
 }
