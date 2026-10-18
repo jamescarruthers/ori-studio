@@ -1,8 +1,9 @@
 import type { FoldArtifacts, FoldDocument } from '../engine/types';
 import type { OristudioCpDocumentSnapshot } from '../engine/oristudioCpTypes';
+import { creaseFingerprint } from './creaseFingerprint';
 import {
   type CpSegment,
-  buildAssignmentByKey,
+  assignmentByKeyOf,
   pointInSegment,
   resolveCpSegments,
 } from './creasePatternSegmentation';
@@ -104,8 +105,9 @@ function rimAssignmentCounts(fold: FoldDocument, segment: CpSegment): { rim: num
   }
 
   // Shared with segmentation so a border overdrawn by another crease still reads
-  // as a border here too (see buildAssignmentByKey's precedence).
-  const assignmentByKey = buildAssignmentByKey(fold);
+  // as a border here too (see assignmentByKeyOf's precedence) — and the same map,
+  // built once for the fold rather than once per region.
+  const assignmentByKey = assignmentByKeyOf(fold);
 
   let rim = 0;
   let nonBorder = 0;
@@ -119,7 +121,8 @@ function rimAssignmentCounts(fold: FoldDocument, segment: CpSegment): { rim: num
 }
 
 interface SegmentContainment {
-  document: OristudioCpDocumentSnapshot;
+  /** The creases it was worked out over ({@link creaseFingerprint}). */
+  creases: string;
   /** `lineIds[i]` = sorted 1-based line ids contained by `segments[i]`. */
   lineIds: number[][];
   /** `eligible[i]` = whether `segments[i]` is fully rimmed by border creases. */
@@ -130,8 +133,14 @@ interface SegmentContainment {
 
 /**
  * Containment depends on both the fold (region boundaries) and the document
- * (crease coordinates). Key by artifacts identity, then re-validate the document
+ * (crease coordinates). Key by artifacts identity, then re-validate the creases
  * so a stale pairing recomputes rather than returning a mismatched assignment.
+ *
+ * Re-validated by {@link creaseFingerprint}, not by snapshot identity: every
+ * kernel command returns a fresh snapshot — a selection too — while what this
+ * reads (line positions and endpoints) only changes with the creases. Keyed on
+ * the snapshot, each selection re-ran the whole canvas: on 204 sheets of 489k
+ * creases, half a minute or more per selection.
  */
 const containmentCache = new WeakMap<FoldArtifacts, SegmentContainment>();
 
@@ -140,16 +149,17 @@ function segmentContainment(
   document: OristudioCpDocumentSnapshot,
   segments: CpSegment[]
 ): SegmentContainment {
+  const creases = creaseFingerprint(document);
   const cached = containmentCache.get(artifacts);
-  if (cached && cached.document === document && cached.lineIds.length === segments.length) {
+  if (cached && cached.creases === creases && cached.lineIds.length === segments.length) {
     return cached;
   }
   const startedAt = performance.now();
   const missReason = !cached
     ? 'no-entry-for-artifacts'
-    : cached.document !== document
-      ? 'document-snapshot-changed'
-      : 'segment-count-changed';
+    : cached.lineIds.length !== segments.length
+      ? 'segment-count-changed'
+      : 'creases-changed';
 
   // `segment.faceIndices` indexes the base fold (see `resolveCpSegments`).
   const fold = artifacts.fold;
@@ -176,7 +186,7 @@ function segmentContainment(
   });
 
   for (const ids of lineIds) ids.sort((a, b) => a - b);
-  const result: SegmentContainment = { document, lineIds, eligible, rim };
+  const result: SegmentContainment = { creases, lineIds, eligible, rim };
   containmentCache.set(artifacts, result);
   if (import.meta.env.DEV) {
      

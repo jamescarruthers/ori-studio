@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { creaseFingerprint } from './cpSegmentationArtifacts';
+import { creaseFingerprint } from './creaseFingerprint';
 import type {
   OristudioCpDocumentSnapshot,
   OristudioCpLineSegment,
 } from '../engine/oristudioCpTypes';
-import { FOLD_MAGNITUDE_UNITS_PER_DEGREE } from '../lib/foldAngle';
+import { FOLD_MAGNITUDE_UNITS_PER_DEGREE } from './foldAngle';
 
 function segment(patch: Partial<OristudioCpLineSegment> = {}): OristudioCpLineSegment {
   return {
