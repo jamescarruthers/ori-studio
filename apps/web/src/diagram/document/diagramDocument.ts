@@ -1906,7 +1906,7 @@ export function setLinkedPicture(
         {
           ...current,
           importStatus: undefined,
-    source: withRememberedPoses(current.source, link.source),
+          source: withRememberedPoses(current.source, link.source),
           picture: link.picture,
           revision: current.revision + 1,
         },

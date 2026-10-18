@@ -96,6 +96,7 @@ function DiagramImportDialog() {
     folds.current = new AbortController();
     setRunning(true);
     setError(null);
+    setProgress(null);
     setFinishing(false);
     try {
       const destination = files.some((file) => /\.(cp|defox)$/i.test(file.name))
@@ -112,8 +113,9 @@ function DiagramImportDialog() {
         setProgress
       );
     } catch (e) {
+      // A failed publication must release the placing phase's dismissal lock.
+      setProgress(null);
       if (job.current.signal.aborted) {
-        setProgress(null);
         setError(t('panels:diagram.import.cancelled', 'Import cancelled. No files were added.'));
       } else setError(e instanceof Error ? e.message : String(e));
     } finally {

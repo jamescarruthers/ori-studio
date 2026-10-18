@@ -37,6 +37,7 @@ beforeEach(async () => {
   );
   mocks.folder.mockResolvedValue([file]);
   mocks.files.mockResolvedValue([file]);
+  mocks.ensure.mockResolvedValue({});
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -87,4 +88,18 @@ it('closing during Edit provisioning cancels the job and cannot reopen the dialo
   await act(async () => finish({}));
   expect(mocks.run).not.toHaveBeenCalled();
   expect(useImportDialogStore.getState().target).toBeNull();
+});
+
+it('releases the modal after publication fails so the user can close or retry', async () => {
+  mocks.run.mockImplementation(async (_files, _target, _options, _signal, _foldSignal, publish) => {
+    publish({ phase: 'placing', done: 1, total: 1, name: '', failures: [], notices: [] });
+    throw new Error('The destination changed while importing.');
+  });
+  await act(async () => button('Choose files…').click());
+  await act(async () => button('Import').click());
+  expect(document.querySelector('[role=alert]')?.textContent).toContain('The destination changed');
+  expect(button('Import').disabled).toBe(false);
+  expect(button('Close').disabled).toBe(false);
+  await act(async () => button('Close').click());
+  expect(document.querySelector('[role=dialog]')).toBeNull();
 });

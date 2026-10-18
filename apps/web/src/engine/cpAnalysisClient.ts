@@ -12,14 +12,19 @@ let shared: {
   worker: Worker;
   api: Comlink.Remote<OristudioCpWorkerApi>;
   failure: Promise<never>;
+  fail: (error: unknown) => void;
   detach: () => void;
 } | null = null;
 let users = 0;
 let idle: ReturnType<typeof setTimeout> | undefined;
-function dispose() {
-  shared?.detach();
-  shared?.worker.terminate();
+function dispose(error: unknown = new Error('Crease-pattern analysis worker stopped')) {
+  const current = shared;
   shared = null;
+  // A worker can have several queued callers. Termination must settle all of
+  // them, including those whose Comlink response can no longer arrive.
+  current?.fail(error);
+  current?.detach();
+  current?.worker.terminate();
 }
 export function analyzeCpFold(text: string): Promise<FoldArtifacts> {
   return withAnalysisWorker((api) => api.analyzeFold(text));
@@ -36,13 +41,13 @@ async function withAnalysisWorker<T>(run: (api: Comlink.Remote<OristudioCpWorker
     const worker = new Worker(new URL('../workers/oristudioCpWorker.ts', import.meta.url), {
       type: 'module',
     });
-    let reject: (error: Error) => void = () => undefined;
+    let reject: (error: unknown) => void = () => undefined;
     const failure = new Promise<never>((_, fail) => {
       reject = fail;
     });
     void failure.catch(() => undefined);
     const detach = attachWorkerDiagnostics(worker, 'cp-analysis', (info) => reject(new Error(info.message)));
-    shared = { worker, api: Comlink.wrap<OristudioCpWorkerApi>(worker), failure, detach };
+    shared = { worker, api: Comlink.wrap<OristudioCpWorkerApi>(worker), failure, fail: reject, detach };
   }
   const current = shared;
   users++;
@@ -53,7 +58,7 @@ async function withAnalysisWorker<T>(run: (api: Comlink.Remote<OristudioCpWorker
     });
     return await Promise.race([run(current.api), current.failure, timeout]);
   } catch (error) {
-    if (shared === current) dispose();
+    if (shared === current) dispose(error);
     throw error;
   } finally {
     clearTimeout(timer);

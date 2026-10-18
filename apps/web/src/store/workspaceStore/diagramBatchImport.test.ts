@@ -339,3 +339,36 @@ it("preserves authored fields, including intentionally blank fields, when append
   await commitDiagramImport([{ steps: [createStep()] }], importTarget(), 1, 100);
   expect(get().diagram!.title).toBe('');
 });
+
+it('does not start publication while Edit history is being restored', async () => {
+  const target = importTarget();
+  useWorkspaceStore.setState({ oristudioCpHistoryBusy: true });
+  await expect(commitDiagramImport([{ steps: [createStep()] }], target, 1, 100))
+    .rejects.toThrow('destination changed');
+  expect(get().diagram).toBeNull();
+  expect(runtime.getOristudioCpClient).not.toHaveBeenCalled();
+});
+
+it.each(['undo', 'redo'] as const)('blocks ordinary Edit %s during batch publication', async (direction) => {
+  const document = createStarterOristudioCpDocument();
+  const entry = {
+    document,
+    selection: get().oristudioCpSelection,
+    annotations: [],
+    foldedFigures: [],
+    activeFoldedFigureId: null,
+    label: 'Earlier edit',
+    timestamp: 'now',
+  };
+  useWorkspaceStore.setState({
+    activeEditingContext: 'crease-pattern',
+    oristudioCpDocument: { handle: 1, loadSerial: 1, document } as OristudioCpDocumentState,
+    oristudioCpHistoryPast: [entry],
+    oristudioCpHistoryFuture: [entry],
+    diagramImportBusy: true,
+  });
+  await get()[direction]();
+  expect(runtime.restoreOristudioCpDocumentInPlace).not.toHaveBeenCalled();
+  expect(get().oristudioCpHistoryPast).toEqual([entry]);
+  expect(get().oristudioCpHistoryFuture).toEqual([entry]);
+});

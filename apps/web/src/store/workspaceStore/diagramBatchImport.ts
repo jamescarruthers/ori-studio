@@ -138,7 +138,7 @@ export async function commitDiagramImport(
   const get = useWorkspaceStore.getState,
     set = useWorkspaceStore.setState;
   const before = get();
-  if (!matches(target, before) || before.diagramImportBusy)
+  if (!matches(target, before) || before.diagramImportBusy || before.oristudioCpHistoryBusy)
     throw new Error("The destination changed. Start the import again.");
   // Keep the established single-picture fill and batch insertion behavior.
   if (

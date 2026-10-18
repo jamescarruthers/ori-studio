@@ -512,3 +512,39 @@ Rust, native commands, file formats and ported solver behavior are unchanged,
 so Rust/oracle/native-launch checks from the initial implementation were not
 repeated. No new analytics event is needed for removing a control and changing
 rendering/scheduling.
+
+## Self-review before PR handoff
+
+- [x] Review import staging/publication, compound history, task-session lifecycle,
+  Defox rendering/validation and shared preview/segmentation changes against main.
+- [x] Fix a publication error leaving the import modal permanently locked in its
+  placing phase. Clear progress on failure and before retry, with a regression
+  test and a real-browser check of dismissal after a changed destination.
+- [x] Reject every queued analysis request when the shared worker is terminated
+  after an error or timeout. Previously other callers waited for their own
+  two-minute deadlines. Cover shared rejection, recovery and idle cleanup.
+- [x] Prevent ordinary Undo/Redo during import publication, and refuse publication
+  while Edit history restoration is already running. Cover both directions.
+- [x] Repair the two panel suites missed by the last targeted run: provide jsdom
+  with ResizeObserver and a viewport for the real virtualizer, and check the
+  raster-preview surface instead of the former image element. No production
+  virtualization or rendering fallback is added for the test environment.
+- [x] Browser-check a successful paper-fold import, retained title, raster
+  preview, coordinated Undo/Redo and recoverable commit failure; no page errors.
+- [x] Finish final validation and prepare the existing draft PR #455 for handoff.
+
+Final validation: **13,743 passed / 16 skipped across 979 test files** (977
+passed, two skipped). Full web lint, final changed-file lint, TypeScript, i18n,
+production build and landing prerender pass. The landing budget is 268.9/300 KB
+JavaScript and 24.2/40 KB CSS (Brotli). The 48-file SVG sanitizer check passes in
+Chromium, WebKit and jsdom, including 31 hostile inputs and byte-stable reloads.
+`git diff --check` is clean for the review fixes. The browser recovery/import/
+Undo/Redo check and screenshots are ignored under `artifacts/diagram-self-review/`.
+Rust, native and oracle checks were not repeated for these frontend fixes;
+the prior implementation checks and passing native/Windows CI remain the
+coverage for the unchanged engine/native changes. Generated WASM was reused.
+
+The large OSF opening/topology issue was traced to the existing loader on main.
+This review does not change that loader or claim its opening freeze is resolved.
+The earlier corpus and scrolling measurements above still apply; this review
+does not change folding, geometry, placement or preview resolution policy.
