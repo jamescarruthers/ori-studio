@@ -14,6 +14,10 @@
  * one user, 13 searches, all reported as `unknown`, no stack anywhere because the store's
  * catch swallowed it. PostHog saw the shape; Sentry never saw the error.
  *
+ * `AbortSignal.any` came later still (Safari 17.4, so macOS 14.4): the diagram importer joins
+ * its Cancel and Finish-now signals with it, and without it every crease pattern in an import
+ * failed with "AbortSignal.any is not a function".
+ *
  * Imported first from `main.tsx`, ahead of anything that could call these at module scope.
  * The workers do not import it: none of them use these built-ins, and each is its own global.
  */
@@ -43,6 +47,26 @@ export function abortSignalTimeout(milliseconds: number): AbortSignal {
   return controller.signal;
 }
 
+/**
+ * `AbortSignal.any`, as far as a caller can observe: aborted with the first reason as soon as
+ * any of `signals` is, or at once when one already is.
+ */
+export function abortSignalAny(signals: Iterable<AbortSignal>): AbortSignal {
+  const controller = new AbortController();
+  const sources = [...signals];
+  const already = sources.find((signal) => signal.aborted);
+  if (already) {
+    controller.abort(already.reason);
+    return controller.signal;
+  }
+  const onAbort = (event: Event) => {
+    for (const source of sources) source.removeEventListener('abort', onAbort);
+    controller.abort((event.target as AbortSignal).reason);
+  };
+  for (const source of sources) source.addEventListener('abort', onAbort);
+  return controller.signal;
+}
+
 type PolyfillTarget = {
   Array: { prototype: object };
   AbortSignal?: object;
@@ -61,10 +85,18 @@ export function installPolyfills(target: PolyfillTarget = globalThis): void {
       enumerable: false,
     });
   }
-  const abortSignal = target.AbortSignal as { timeout?: unknown } | undefined;
+  const abortSignal = target.AbortSignal as { timeout?: unknown; any?: unknown } | undefined;
   if (abortSignal && typeof abortSignal.timeout !== 'function') {
     Object.defineProperty(abortSignal, 'timeout', {
       value: abortSignalTimeout,
+      writable: true,
+      configurable: true,
+      enumerable: false,
+    });
+  }
+  if (abortSignal && typeof abortSignal.any !== 'function') {
+    Object.defineProperty(abortSignal, 'any', {
+      value: abortSignalAny,
       writable: true,
       configurable: true,
       enumerable: false,

@@ -56,8 +56,11 @@ class SvgNode {
     return `<${this.tag} ${[...this.attributes].map(([k, v]) => `${k}="${escape(v)}"`).join(' ')}>${escape(this.text)}${this.children.map((c) => c.serialize()).join('')}</${this.tag}>`;
   }
 }
-const originalColors = globalThis.structuredClone(DRAW.color);
-const originalSymbolColors = globalThis.structuredClone(SYM.color);
+// Plain colour tables. A JSON copy, because workers get no polyfills and WebKit before
+// 15.4 has no structuredClone.
+const clone = (value) => JSON.parse(JSON.stringify(value));
+const originalColors = clone(DRAW.color);
+const originalSymbolColors = clone(SYM.color);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 function checkTree(value, depth = 0) {
   if (depth > 32) throw new Error('Defox data is nested too deeply');
@@ -103,7 +106,7 @@ function checkFold(fold) {
     throw new Error('Inconsistent Defox topology');
 }
 function colors(base, saved) {
-  const out = globalThis.structuredClone(base);
+  const out = clone(base);
   if (!isObject(saved)) return out;
   for (const key of Object.keys(out)) {
     if (isObject(out[key])) out[key] = colors(out[key], saved[key]);
@@ -213,7 +216,7 @@ export function renderDefox(text) {
   } finally {
     globalThis.document = previous;
     PRJ.steps = [];
-    DRAW.color = globalThis.structuredClone(originalColors);
-    SYM.color = globalThis.structuredClone(originalSymbolColors);
+    DRAW.color = clone(originalColors);
+    SYM.color = clone(originalSymbolColors);
   }
 }
