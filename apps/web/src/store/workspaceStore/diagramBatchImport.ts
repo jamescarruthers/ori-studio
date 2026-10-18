@@ -1,10 +1,11 @@
+import { toast } from 'sonner';
+import i18n from '../../i18n';
 import { newDiagram } from '../../diagram/document/newDiagram';
 import {
   emptyOristudioCpSelection,
   getEditableCpModelBounds,
 } from "../../lib/creasePatternViewport";
-import { boxCornersModel } from "../../lib/transformBox";
-import { foldedFigureUserBounds } from "../../cp-workspace/adapters/cpFoldedToScene";
+import { occupiedModelSpace } from "./occupiedModelSpace";
 import { useWorkspaceStore } from "../workspaceStore";
 import type { OristudioCpHistoryEntry, WorkspaceState } from "./types";
 import {
@@ -36,6 +37,7 @@ import { followPageArrangements } from "../../diagram/pages/pageArrangements";
 import { settlePlaces } from "../../diagram/pages/stepPlaces";
 import {
   batchPlacement,
+  contentBounds,
   geometryBounds,
   placedGeometry,
 } from "../../diagram/import/batchPlacement";
@@ -170,33 +172,24 @@ export async function commitDiagramImport(
     before.oristudioCpInlineSimulations.length === 0 &&
     !!before.oristudioCpDocument &&
     creasePatternHoldsNothingOfItsOwn(before.oristudioCpDocument.document);
+  // The batch parks to the right of everything already on the canvas, in model
+  // space: its creases (none on an emptied canvas) and every placed object.
+  const cpDocument = before.oristudioCpDocument;
   let existing =
-    !replaceStarter && before.oristudioCpDocument
-      ? before.oristudioCpDocument.geometry
-        ? geometryBounds(before.oristudioCpDocument.geometry)
-        : getEditableCpModelBounds(before.oristudioCpDocument.document)
-      : null;
-  const occupiedPoints = [
-    ...before.oristudioCpAnnotations.flatMap(boxCornersModel),
-    ...before.oristudioCpInlineSimulations.flatMap((simulation) =>
-      boxCornersModel(simulation.box),
-    ),
-    ...foldedFigureUserBounds(before.oristudioCpFoldedFigures).flatMap(
-      ({ bounds }) => [
-        { x: bounds.minX, y: bounds.minY },
-        { x: bounds.maxX, y: bounds.maxY },
-      ],
-    ),
-  ];
-  for (const { x, y } of occupiedPoints) {
+    replaceStarter || !cpDocument
+      ? null
+      : cpDocument.geometry
+        ? contentBounds(cpDocument.geometry)
+        : getEditableCpModelBounds(cpDocument.document);
+  for (const box of occupiedModelSpace(before)) {
     existing = existing
       ? {
-          minX: Math.min(existing.minX, x),
-          minY: Math.min(existing.minY, y),
-          maxX: Math.max(existing.maxX, x),
-          maxY: Math.max(existing.maxY, y),
+          minX: Math.min(existing.minX, box.minX),
+          minY: Math.min(existing.minY, box.minY),
+          maxX: Math.max(existing.maxX, box.maxX),
+          maxY: Math.max(existing.maxY, box.maxY),
         }
-      : { minX: x, maxX: x, minY: y, maxY: y };
+      : box;
   }
   const placements = batchPlacement(
     cpGroups.map((g) => geometryBounds(g.geometry)),
@@ -304,8 +297,6 @@ export async function commitDiagramImport(
         recordSnapshot(before.diagramHistory, entry),
         next,
       ),
-      diagramSelectedStepId: steps[0]!.id,
-      diagramSelectedAnnotationId: null,
       dirty: true,
       projectMessage: label,
       ...(cpEntry && cp
@@ -314,7 +305,6 @@ export async function commitDiagramImport(
             oristudioCpRevision: before.oristudioCpRevision + 1,
             oristudioCpHistoryPast: cpPast.slice(-100),
             oristudioCpSelection: emptyOristudioCpSelection(),
-            oristudioCpCamvResult: null,
             oristudioCpActiveDiagnosticId: null,
             oristudioCpHistoryFuture: [],
             ...staleFoldArtifactResourceState(before.foldArtifactRevision),
@@ -322,6 +312,10 @@ export async function commitDiagramImport(
         : {}),
       diagramImportBusy: false,
     });
+    // Through the slice's rule, which also lets go of a part or picker chosen on the anchor.
+    get().selectDiagramStep(steps[0]!.id);
+    // The foldability overlay keeps its result until the check of the new sheets lands, as after any edit.
+    if (cpEntry) get().scheduleOristudioCamvRefresh();
     return steps.length;
   } finally {
     set({ diagramImportBusy: false });
@@ -346,10 +340,12 @@ export function compoundImportTravel(
   if (!cp?.compoundId && !diagram?.compoundId) return null;
   // The caller only invokes this for its own compound head; an ordinary edit on the other surface must still travel normally.
   if (!cp?.compoundId || cp.compoundId !== diagram?.compoundId) {
-    set({
-      projectMessage:
-        "Undo or redo the later edits in the other workspace first.",
-    });
+    toast.message(
+      i18n.t(
+        "toasts:diagram.import.otherWorkspaceFirst",
+        "Undo or redo the later edits in the other workspace first: the import changed both Edit and Diagram.",
+      ),
+    );
     return Promise.resolve(false);
   }
   if (s.diagramImportBusy || s.oristudioCpHistoryBusy || !s.oristudioCpDocument)
@@ -371,13 +367,22 @@ export function compoundImportTravel(
       );
       const current = captureCp(s, cp.label, id);
       releaseFoldedFigureHandles(cp.foldedFigures);
+      // As ordinary Edit undo restores it (historySlice), the overlay result included.
       set({
         oristudioCpDocument: restored,
+        oristudioCpOperationDescriptors: restored.operationDescriptors,
         oristudioCpRevision: s.oristudioCpRevision + 1,
         oristudioCpSelection: cp.selection,
-        oristudioCpCamvResult: null,
         oristudioCpActiveDiagnosticId: null,
+        oristudioCpError: null,
+        error: null,
+        status: "crease_pattern_ready",
         oristudioCpAnnotations: cp.annotations,
+        oristudioCpSelectedAnnotationId: cp.annotations.some(
+          (annotation) => annotation.id === s.oristudioCpSelectedAnnotationId,
+        )
+          ? s.oristudioCpSelectedAnnotationId
+          : null,
         oristudioCpFoldedFigures: cp.foldedFigures,
         oristudioCpActiveFoldedFigureId: cp.activeFoldedFigureId,
         oristudioCpInlineSimulations: cp.inlineSimulations ?? [],
@@ -391,19 +396,20 @@ export function compoundImportTravel(
             : s.oristudioCpHistoryFuture.slice(1),
         diagram: result.restore.snapshot,
         diagramHistory: result.history,
-        diagramSelectedStepId: null,
-        diagramSelectedAnnotationId: null,
         dirty: true,
         ...staleFoldArtifactResourceState(s.foldArtifactRevision),
       });
+      // The selection survives if its step does; otherwise the slice's rule
+      // also closes a detail or picker left open on an imported step.
+      get().selectDiagramStep(get().diagramSelectedStepId);
+      get().scheduleOristudioCamvRefresh();
+      void get().restoreOristudioCpInlineSimulationSources();
       return true;
     } catch (error) {
-      set({
-        projectMessage:
-          error instanceof Error
-            ? error.message
-            : "Could not restore imported steps.",
-      });
+      toast.error(
+        i18n.t("toasts:diagram.import.restoreFailed", "Couldn’t restore the imported steps."),
+        error instanceof Error ? { description: error.message } : undefined,
+      );
       return false;
     } finally {
       set({ diagramImportBusy: false, oristudioCpHistoryBusy: false });

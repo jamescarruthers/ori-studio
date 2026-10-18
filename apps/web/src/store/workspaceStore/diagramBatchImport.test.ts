@@ -13,6 +13,11 @@ import {
   ensureDiagramImportTarget,
 } from "./diagramBatchImport";
 import type { CpGeometryTransport } from "../../engine/oristudioCpGeometry";
+import { createTextAnnotation } from "../../cp-workspace/annotations/textAnnotation";
+import { toast } from "sonner";
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { message: vi.fn(), error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() }),
+}));
 const runtime = vi.hoisted(() => ({
   getOristudioCpClient: vi.fn(),
   refreshOristudioCpDocument: vi.fn(),
@@ -311,6 +316,84 @@ it("places new geometry beyond existing simulation windows, including their rota
     Math.min(...Array.from(placed.segEndpoints).filter((_, i) => i % 2 === 0)),
   ).toBe(1300);
   expect(appendDisjoint.mock.calls[0]![2]).toBe(false);
+});
+
+it("places beside an emptied canvas's annotations rather than failing on its empty geometry", async () => {
+  const empty = geometry();
+  empty.segEndpoints = new Float64Array();
+  const state = {
+    handle: 1,
+    loadSerial: 1,
+    document: { ...createStarterOristudioCpDocument(), crease_pattern: { ...createStarterOristudioCpDocument().crease_pattern, line_segments: [] } },
+    geometry: empty,
+  } as OristudioCpDocumentState;
+  useWorkspaceStore.setState({
+    oristudioCpDocument: state,
+    oristudioCpAnnotations: [createTextAnnotation({ center: { x: 500, y: 0 }, width: 100, height: 40 })],
+  });
+  const appendDisjoint = vi.fn().mockResolvedValue([]);
+  runtime.getOristudioCpClient.mockResolvedValue({ appendDisjoint });
+  runtime.refreshOristudioCpDocument.mockResolvedValue(state);
+  await commitDiagramImport([{ geometry: geometry(), steps: [createStep()] }], importTarget(), 0, 100);
+  const placed = appendDisjoint.mock.calls[0]![1][0] as CpGeometryTransport;
+  expect(Math.min(...Array.from(placed.segEndpoints).filter((_, i) => i % 2 === 0))).toBe(650);
+});
+
+it("keeps the foldability overlay until its check of the imported sheets lands", async () => {
+  const state = {
+    handle: 1,
+    loadSerial: 1,
+    document: createStarterOristudioCpDocument(),
+    geometry: null,
+  } as OristudioCpDocumentState;
+  const camv = { operation: "CheckCamv" } as unknown as ReturnType<typeof get>["oristudioCpCamvResult"];
+  const scheduleOristudioCamvRefresh = vi.fn();
+  useWorkspaceStore.setState({
+    oristudioCpDocument: state,
+    oristudioCpCamvResult: camv,
+    oristudioCpAnnotations: [createTextAnnotation({ center: { x: 0, y: 0 } })],
+    scheduleOristudioCamvRefresh,
+  });
+  runtime.getOristudioCpClient.mockResolvedValue({ appendDisjoint: vi.fn().mockResolvedValue([]) });
+  runtime.refreshOristudioCpDocument.mockResolvedValue(state);
+  await commitDiagramImport([{ geometry: geometry(), steps: [createStep()] }], importTarget(), 0, 100);
+  expect(get().oristudioCpCamvResult).toBe(camv);
+  expect(scheduleOristudioCamvRefresh).toHaveBeenCalledOnce();
+});
+
+it("says why a paired undo waits, and after one closes a detail left on a removed step", async () => {
+  const before = createStarterOristudioCpDocument();
+  const state = {
+    handle: 1,
+    loadSerial: 1,
+    document: { ...before, title: "after" },
+    source: { format: "cp", filename: "test.cp", path: null },
+    geometry: null,
+  } as OristudioCpDocumentState;
+  const imported = createStep();
+  const diagramBefore = createDiagram();
+  const pair = { label: "Import steps", timestamp: "now", compoundId: "paired" };
+  const scheduleOristudioCamvRefresh = vi.fn();
+  useWorkspaceStore.setState({
+    oristudioCpDocument: state,
+    oristudioCpHistoryPast: [
+      { ...pair, document: before, selection: get().oristudioCpSelection, annotations: [], foldedFigures: [], activeFoldedFigureId: null },
+    ],
+    diagram: { ...diagramBefore, steps: [imported] },
+    diagramHistory: { past: [{ ...pair, snapshot: diagramBefore }], future: [] },
+    scheduleOristudioCamvRefresh,
+  });
+  runtime.restoreOristudioCpDocumentInPlace.mockImplementation(async (document) => ({ ...state, document }));
+  get().setDiagramTitle("later");
+  expect(await compoundImportTravel("undo")).toBe(false);
+  expect(toast.message).toHaveBeenCalledWith(expect.stringContaining("other workspace first"));
+  get().undoDiagram();
+  get().selectDiagramStep(imported.id);
+  useWorkspaceStore.setState({ diagramDetail: "pose" });
+  expect(await compoundImportTravel("undo")).toBe(true);
+  expect(get().diagramSelectedStepId).toBeNull();
+  expect(get().diagramDetail).toBeNull();
+  expect(scheduleOristudioCamvRefresh).toHaveBeenCalledOnce();
 });
 
 it("uses the same localized defaults as adding the first step, including undo/redo", async () => {

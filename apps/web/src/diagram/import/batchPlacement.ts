@@ -3,6 +3,12 @@ import type { IndexedBounds } from '../../lib/boundsIndex';
 const coordinate = (v: number | { 0: number }) => (typeof v === 'number' ? v : v[0]);
 export type Placement = { x: number; y: number; bounds: IndexedBounds };
 export function geometryBounds(g: CpGeometryTransport): IndexedBounds {
+  const b = contentBounds(g);
+  if (!b) throw new Error('Empty crease pattern');
+  return b;
+}
+/** The pattern's bounds, or null for one with nothing in it (an emptied Edit canvas). */
+export function contentBounds(g: CpGeometryTransport): IndexedBounds | null {
   const b = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
   const point = (x: number, y: number) => {
     if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('Non-finite geometry');
@@ -19,8 +25,7 @@ export function geometryBounds(g: CpGeometryTransport): IndexedBounds {
     point(x! + Math.abs(r!), y! + Math.abs(r!));
   }
   for (const text of g.tail.texts) point(coordinate(text.x), coordinate(text.y));
-  if (!Number.isFinite(b.minX)) throw new Error('Empty crease pattern');
-  return b;
+  return Number.isFinite(b.minX) ? b : null;
 }
 /** Translation only. Column and row extents account for differently sized sheets. */
 export function batchPlacement(
