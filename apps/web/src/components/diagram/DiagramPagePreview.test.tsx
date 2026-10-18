@@ -32,10 +32,10 @@ const render = (src = 'old.svg', scale = 1) => act(() => root.render(
   <DiagramPagePreview src={src} width={800} height={1100} scale={scale} />
 ));
 const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(150); });
-async function finish(index: number) {
+async function finish(index: number, width = 1600, height = 2200) {
   const canvas = document.createElement('canvas');
-  canvas.width = 1600;
-  canvas.height = 2200;
+  canvas.width = width;
+  canvas.height = height;
   await act(async () => pending[index]!.resolve(canvas));
   return canvas;
 }
@@ -59,15 +59,17 @@ describe('DiagramPagePreview', () => {
     await finish(1);
   });
 
-  it('immediately stops showing old pixels on paper/style edits and ignores late results', async () => {
+  it('keeps the old pixels until a changed source is drawn, and ignores late results', async () => {
     render();
     await settle();
-    await finish(0);
-    render('new-paper.svg');
-    expect(host.querySelector('canvas')!.hidden).toBe(true);
-    expect(host.querySelector('img')!.getAttribute('src')).toBe('new-paper.svg');
+    const initial = await finish(0);
+    // A drag lifts a part and lands it: each is a new source of the same page.
+    render('lifted.svg');
+    expect(host.querySelector('canvas')!.hidden).toBe(false);
+    expect(host.querySelector('img')).toBeNull();
+    expect(drawImage).toHaveBeenLastCalledWith(initial, 0, 0);
     await settle();
-    render('new-marks.svg');
+    render('landed.svg');
     await settle();
     const latest = await finish(2);
     const paints = drawImage.mock.calls.length;
@@ -75,6 +77,41 @@ describe('DiagramPagePreview', () => {
     expect(drawImage).toHaveBeenCalledTimes(paints);
     expect(drawImage).toHaveBeenLastCalledWith(latest, 0, 0);
     expect(host.querySelector('img')).toBeNull();
+  });
+
+  it('stops showing old pixels when the new source has another shape', async () => {
+    render();
+    await settle();
+    await finish(0);
+    // New paper: the portrait bitmap would be stretched into a landscape box.
+    act(() => root.render(<DiagramPagePreview src="landscape.svg" width={1100} height={800} scale={1} />));
+    expect(host.querySelector('canvas')!.hidden).toBe(true);
+    expect(host.querySelector('img')!.getAttribute('src')).toBe('landscape.svg');
+  });
+
+  it('reports each source once its own pixels are on screen', async () => {
+    const onPaint = vi.fn();
+    const show = (src: string) => act(() => root.render(
+      <DiagramPagePreview src={src} width={800} height={1100} scale={1} onPaint={onPaint} />
+    ));
+    show('old.svg');
+    await settle();
+    await finish(0);
+    expect(onPaint).toHaveBeenLastCalledWith('old.svg');
+    show('new.svg');
+    await settle();
+    expect(onPaint).toHaveBeenCalledTimes(1);
+    await finish(1);
+    expect(onPaint).toHaveBeenLastCalledWith('new.svg');
+  });
+
+  it('does not rasterize again once the bitmap is as sharp as the zoom asks', async () => {
+    render();
+    await settle();
+    await finish(0);
+    await settle();
+    await settle();
+    expect(pending).toHaveLength(1);
   });
 
   it('keeps the SVG fallback on failure and discards work after unmount', async () => {
@@ -123,13 +160,17 @@ it('rasterizes new page and card sources before the zoom delay without an extra 
   expect(host.querySelector('img')).toBeNull();
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   expect(pending).toHaveLength(1);
-  await finish(0);
+  await finish(0, 256, 256);
   expect(host.querySelector('canvas')!.hidden).toBe(false);
   expect(host.querySelector('img')).toBeNull();
   act(() => root.render(<DiagramPagePreview src="changed.svg" width={256} height={256} scale={1} vectorWhileLoading={false} />));
-  expect(host.querySelector('canvas')!.hidden).toBe(true);
+  // The previous bitmap stays until the change is drawn: no spinner, no extra SVG paint.
+  expect(host.querySelector('canvas')!.hidden).toBe(false);
+  expect(host.querySelector('img')).toBeNull();
+  expect(host.querySelector('svg')).toBeNull();
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   await act(async () => pending[1]!.reject(new Error('unavailable')));
+  expect(host.querySelector('canvas')!.hidden).toBe(true);
   expect(host.querySelector('img')!.getAttribute('src')).toBe('changed.svg');
 });
 

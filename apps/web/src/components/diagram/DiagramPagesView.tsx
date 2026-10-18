@@ -1,5 +1,6 @@
 import { partBox } from '../../diagram/pages/pagePlacement';
 import { usePagePlacement } from '../../diagram/pages/usePagePlacement';
+import { useLandingPart } from '../../diagram/pages/useLandingPart';
 import { DiagramPagesPlacement, PAGE_PLACEMENT_PAN_EXCLUDED } from './DiagramPagesPlacement';
 import type { MouseEvent } from 'react';
 import { useMemo } from 'react';
@@ -132,6 +133,7 @@ export function DiagramPagesView({
     cellRef,
   } = usePagesView({ pages: prepared, selectedStepId, fitKey });
   const placement = usePagePlacement(prepared, spacePressed, failed);
+  const { landing, painted } = useLandingPart(placement.draft);
   const pages = placement.pages;
   const stepsById = useMemo(() => new Map(steps.map((step) => [step.id, step])), [steps]);
   const mm = (value: number) => value * PAGES_PX_PER_MM;
@@ -256,6 +258,7 @@ export function DiagramPagesView({
                         height={pageH}
                         scale={zoomPercent / 100}
                         vectorWhileLoading={false}
+                        onPaint={() => painted(index)}
                       />
                     )}
                     {margin > 0 && (
@@ -374,7 +377,14 @@ export function DiagramPagesView({
                           }}
                         />
                       ))}
-                    {isNear(index) && <DiagramPagesPlacement page={page} index={index} placement={placement} />}
+                    {isNear(index) && (
+                      <DiagramPagesPlacement
+                        page={page}
+                        index={index}
+                        placement={placement}
+                        landing={landing?.page === index ? landing : null}
+                      />
+                    )}
                     </>}
                   </div>
                   <div
