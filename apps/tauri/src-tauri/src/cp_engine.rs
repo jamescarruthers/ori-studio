@@ -66,6 +66,18 @@ impl CpEngine {
             None => Ok(Arc::clone(&self.main)),
         }
     }
+    /// End every task session: they belong to the page that opened them.
+    ///
+    /// A page that goes away mid-task — a reload, which the error boundaries
+    /// offer — never closes its own, and the registry outlives it. Left there,
+    /// four of them fill it, and every import after that fails with
+    /// `session_limit` until the app restarts. A fold still running in one keeps
+    /// its engine until it finishes; its result goes nowhere.
+    pub fn end_page_sessions(&self) {
+        if let Ok(mut tasks) = self.tasks.lock() {
+            tasks.clear();
+        }
+    }
 }
 pub fn new_state() -> CpEngine {
     CpEngine {
@@ -1066,6 +1078,32 @@ mod tests {
                 .as_deref(),
             Some("edit")
         );
+    }
+
+    /// A reload mid-import leaves its sessions open; the next page must not
+    /// inherit them, or four reloads leave no room for another import.
+    #[test]
+    fn a_new_page_ends_the_task_sessions_the_last_one_left_open() {
+        let state = new_state();
+        for id in 1..=4 {
+            state.tasks.lock().unwrap().insert(
+                id,
+                super::TaskSession {
+                    engine: std::sync::Arc::new(std::sync::Mutex::new(
+                        oristudio_cp::session::CpSession::new(),
+                    )),
+                    cancel: std::sync::Arc::default(),
+                },
+            );
+        }
+        let edit = state.lock().unwrap().load_cp(SQUARE_CP, "edit").unwrap();
+
+        state.end_page_sessions();
+
+        assert!(state.tasks.lock().unwrap().is_empty());
+        assert!(state.engine(Some(1)).is_err());
+        // Edit's own session is not a task, and keeps its document.
+        assert!(state.lock().unwrap().document_summary(edit).is_ok());
     }
 
     /// A command actually round-trips through the managed session state.

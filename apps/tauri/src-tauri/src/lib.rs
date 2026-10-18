@@ -361,6 +361,13 @@ pub fn run() {
                 clamp_window_to_min(window, *size);
             }
         })
+        // Each page starts with no CP task sessions: a page that reloads
+        // mid-import never closes the ones it opened.
+        .on_page_load(|webview, payload| {
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Started) {
+                webview.state::<cp_engine::CpEngine>().end_page_sessions();
+            }
+        })
         .setup(|_app| {
             // The first launch's document, on the platforms that deliver it as an
             // argument. Queued rather than opened directly: the webview does not
