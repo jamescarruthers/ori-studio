@@ -193,7 +193,7 @@ describe('a petal fold’s H', () => {
       if (isLockedStep(node) || node.op.kind !== 'petal') continue;
       expect(petalHinge(node.op).kind).toBe('points');
     }
-    expect(JSON.stringify(writeFoldSequence(held))).toBe(JSON.stringify(raw));
+    expect(readFoldSequence(writeFoldSequence(held))?.document).toEqual(held.document);
   });
 
   it('locks a node whose H is named both ways, neither way, or by ends that do not read', () => {

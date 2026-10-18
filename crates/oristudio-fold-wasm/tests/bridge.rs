@@ -1279,15 +1279,22 @@ fn the_cross_section_has_rows_and_the_bends_that_join_them() {
     let flipped = ok(bridge.cross_section(book, &written, oristudio_fold::Side::Negative));
     assert_eq!(flipped["section"], *section);
 
-    // A near miss has no section: its landmark line is offered.
-    let near_miss = json_of(
-        &bridge
-            .cross_section(
-                book,
-                &line([1.0, 0.0], 0.5 - 1e-4),
-                oristudio_fold::Side::Negative,
-            )
-            .unwrap_or_else(|e| panic!("{e}")),
+    // The section describes the layers before selection. Folding either
+    // layer this close to the spine still refuses and offers its landmark.
+    let inspection = ok(bridge.cross_section(
+        book,
+        &line([1.0, 0.0], 0.5 - 1e-4),
+        oristudio_fold::Side::Negative,
+    ));
+    assert_eq!(inspection["section"]["layers"], 2);
+    let near_miss = refuse(
+        &mut bridge,
+        book,
+        json!({
+            "kind": "valley",
+            "line": { "via": "free", "through": [[0.4999, 0.0], [0.4999, 1.0]] },
+            "moving": [0.25, 0.3], "seed": { "scope": "all" }
+        }),
     );
     assert_eq!(near_miss["refusal"]["code"], "near_miss");
     assert_eq!(near_miss["fixes"][0]["fix"], "use_line");

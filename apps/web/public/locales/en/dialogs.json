@@ -313,12 +313,8 @@
     "title": "Export Fold Sequence"
   },
   "foldImport": {
-    "back": "Back",
     "browse": "or click to browse",
-    "collapse": "Collapse",
     "collapseTitle": "Collapse from CP",
-    "creases_one": "{{count}} crease",
-    "creases_other": "{{count}} creases",
     "drop": "Drop a .cp, .fold, .ori or .orh file",
     "editFigure": "Edit’s folded figure",
     "editFigureNote": "The crease pattern Edit folded, with the layer order it found",
@@ -326,17 +322,6 @@
       "searchLonger": "Search longer"
     },
     "fromEdit": "From Edit",
-    "import": "Import",
-    "orders": {
-      "atLeast_one": "At least {{count}} layer order fits these creases. Choose one.",
-      "atLeast_other": "At least {{count}} layer orders fit these creases. Choose one.",
-      "count_one": "{{count}} layer order fits these creases.",
-      "count_other": "{{count}} layer orders fit these creases. Choose one.",
-      "label": "Layer order",
-      "more": "More orders fit this part than are listed here; these are the first the search found.",
-      "order": "Order {{number}}",
-      "part": "Part {{number}}"
-    },
     "pickTitle": "Import Crease Pattern",
     "placement": {
       "afterSheet": "Adds a step after the flat sheet, its folded state computed from the creases.",
@@ -346,7 +331,6 @@
       "update": "Updates this Collapse step. Later steps and branches are kept and replayed; affected folds are marked Changed or Broken.",
       "why": "Use it when the next state can’t be reached one fold at a time."
     },
-    "projectCp": "Collapse from CP…",
     "refusal": {
       "budget": {
         "text": "Finding how the layers stack took longer than an import is given. Search longer, or import a simpler pattern.",
@@ -435,7 +419,6 @@
       "preliminaryBase": "Square base",
       "waterbombBase": "Waterbomb base"
     },
-    "samples": "Samples",
     "title": "Import crease pattern",
     "updateTitle": "Update from CP",
     "working": {

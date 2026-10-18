@@ -17,6 +17,7 @@ use oristudio_layer_order::{LayerOrder, Violation};
 
 use crate::complete::{FixedKind, FixedPair};
 use crate::compound::{Across, Against, Prepared};
+use crate::flat_panels::FlatPanels;
 use crate::fold::apply::{deepest, thinner};
 use crate::fold::line::{self, Axis};
 use crate::fold::score;
@@ -171,7 +172,7 @@ pub(crate) fn score_cuts(state: &State, cuts: &[Cut]) -> Result<Scoring, Refused
             parts.faces.iter().map(|f| f.id.0 + 1).max().unwrap_or(0),
             parts.creases.iter().map(|c| c.id.0 + 1).max().unwrap_or(0),
         );
-        let scored = score::score(
+        let scored = score::score_with_boundary_vertices(
             &parts, &topology, &classes, &distances, &splits, step, next_ids,
         )?;
 
@@ -519,6 +520,7 @@ fn image_guard(
     position: &impl Fn(FaceId) -> Option<usize>,
 ) -> Result<(), FoldRefusal> {
     let geometry = unordered.geometry();
+    let mut panels = None;
     for pair in unordered.problem().variables() {
         let (Some(a), Some(b)) = (position(pair.lo()), position(pair.hi())) else {
             continue;
@@ -533,6 +535,20 @@ fn image_guard(
         }
         let penetration = convex::penetration(&geometry.images[a], &geometry.images[b]);
         if penetration < MIN_FEATURE && penetration < thinner(geometry, a, b) - TOL {
+            if panels.is_none() {
+                panels = Some(FlatPanels::new(
+                    unordered.parts(),
+                    geometry,
+                    |x, y| match (block_of[x], block_of[y]) {
+                        (None, None) => true,
+                        (Some(x), Some(y)) => x == y || alike(blocks, x, y),
+                        _ => false,
+                    },
+                )?);
+            }
+            let Some(penetration) = panels.as_ref().and_then(|p| p.sliver(geometry, a, b)) else {
+                continue;
+            };
             let (mover, other) = if block_of[a].is_some() {
                 (a, b)
             } else {

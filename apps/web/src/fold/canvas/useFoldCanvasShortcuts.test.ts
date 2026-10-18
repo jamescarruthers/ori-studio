@@ -9,8 +9,8 @@ import { focusLeavesEnterToFold, runFoldCanvasShortcut } from './useFoldCanvasSh
 function verbs(roots = 1, extents = true): FoldCanvasVerbs {
   return {
     selectTool: vi.fn(),
-    setFoldAndUnfold: vi.fn(),
     selectLineMode: vi.fn(),
+    setFreeLineSnap: vi.fn(),
     turn: vi.fn(),
     hitTest: vi.fn(),
     pick: vi.fn(),
@@ -32,6 +32,7 @@ function verbs(roots = 1, extents = true): FoldCanvasVerbs {
     tuckTarget: vi.fn(),
     setVertexDirection: vi.fn(),
     setSwivelKind: vi.fn(),
+    setSwivelInput: vi.fn(),
     vertexOtherWay: vi.fn(),
     stepEmergent: vi.fn(),
     takeEmergent: vi.fn(),
@@ -88,7 +89,7 @@ describe('the Fold canvas’s keys', () => {
     expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(false);
   });
 
-  it('steps the precrease extent on E only while Fold and unfold is enabled', () => {
+  it('steps the precrease extent on E only with the Precrease tool in hand', () => {
     const bound = verbs(1, true);
     release = registerFoldCanvasVerbs(bound);
     expect(runFoldCanvasShortcut('fold.cycleExtent', null)).toBe(true);
@@ -183,4 +184,20 @@ describe('the fold scope’s shared executor', () => {
     expect(press('v')).toBe(false);
     offScope();
   });
+});
+
+it('routes ordinary left/right to an active order decision before timeline handlers', () => {
+  const bound = verbs(2);
+  bound.choosingOrder = () => true;
+  release = registerFoldCanvasVerbs(bound);
+  const timeline = vi.fn(() => true);
+  const unbind = registerFoldKeyHandler(timeline);
+  try {
+    expect(runFoldKey('fold.nextStep')).toBe(true);
+    expect(bound.stepChoice).toHaveBeenCalledWith(1);
+    expect(timeline).not.toHaveBeenCalled();
+    bound.choosingOrder = () => false;
+    expect(runFoldKey('fold.previousStep')).toBe(true);
+    expect(timeline).toHaveBeenCalledExactlyOnceWith('fold.previousStep');
+  } finally { unbind(); }
 });

@@ -59,6 +59,10 @@ const engine = {
     },
     open: null,
   })),
+  orderSelection: vi.fn(async (_state: unknown, _op: unknown, _choices: { pocket?: unknown }, query: { index: number }) => ({
+    status: 'ok', count: orders.count, index: query.index,
+    completion: orders.components.length ? { faces: [[0.5, 0.6]], orders: [[0, 1, query.index === 0 ? 1 : -1]] } : null,
+  })),
   sinkOrders: vi.fn(async () => ({ status: 'ok', ...orders })),
   sinkPick: vi.fn(async (_state: unknown, _op: unknown, choice: number[]) => ({
     status: 'ok',
@@ -178,16 +182,17 @@ describe('a sink’s point', () => {
         { orders: 1, truncated: false },
       ],
     };
-    let tools = along('open-sink');
+    const tools = along('open-sink');
     await render(tools);
     expect(tracked.offered).toHaveBeenCalledWith('order', 2);
     expect(seen?.sink).toMatchObject({ orders: 2, order: 0 });
     expect(engine.sinkPick).toHaveBeenLastCalledWith(PARENT, expect.objectContaining({ kind: 'open-sink' }), [0, 0], undefined);
     expect(seen?.step?.choices?.completion?.orders).toEqual([[0, 1, 1]]);
 
-    tools = { ...tools, compound: { ...tools.compound, order: 1 } };
+    await act(async () => seen?.orderResolution?.resume());
+    await act(async () => seen?.orderResolution?.step(1));
     await render(tools);
-    expect(engine.sinkPick).toHaveBeenLastCalledWith(PARENT, expect.anything(), [1, 0], undefined);
+    expect(engine.orderSelection).toHaveBeenLastCalledWith(PARENT, expect.anything(), expect.anything(), expect.objectContaining({ index: 1 }));
     expect(seen?.step?.choices?.completion?.orders).toEqual([[0, 1, -1]]);
     // One offer, however the folder steps through it.
     expect(tracked.offered).toHaveBeenCalledTimes(1);

@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-penguin",
         "title": "Penguin — Origami.me (batch 4)",
         "paper": {
@@ -105,6 +105,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2a: Fold the left upper edge inward, leaving a central white gap; chosen crease meets the lower edge at (-0.5,0.5)."
@@ -133,6 +136,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2b: Repeat symmetrically on the right."
@@ -170,6 +176,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4a: Fold the left side corner inward."
@@ -198,6 +207,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4b: Repeat the corner shaping on the right."
@@ -226,6 +238,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Fold the bottom corner up at the lower ends of the side flaps."
@@ -254,6 +269,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Fold the left half over to the right."

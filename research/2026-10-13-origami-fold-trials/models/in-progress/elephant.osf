@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-elephant",
         "title": "Elephant — Origami.me (batch 4)",
         "paper": {
@@ -96,6 +96,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2a: Fold the upper-left edge into the middle."
@@ -124,6 +127,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2b: Repeat on the right."
@@ -164,6 +170,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -206,6 +215,9 @@
                   0.9000000000000002
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: Raise the front lower corner, leaving a 0.0671-wide pleat. Approximate source reference."
@@ -246,6 +258,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -283,6 +298,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7a: Fold the right half over to the left."

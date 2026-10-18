@@ -321,13 +321,8 @@
     "title": "Exporter la séquence de pliage"
   },
   "foldImport": {
-    "back": "Retour",
     "browse": "ou cliquez pour parcourir",
-    "collapse": "Mettre en forme",
     "collapseTitle": "Mettre en forme depuis le CP",
-    "creases_one": "{{count}} pli",
-    "creases_many": "{{count}} plis",
-    "creases_other": "{{count}} plis",
     "drop": "Déposez un fichier .cp, .fold, .ori ou .orh",
     "editFigure": "Modèle plié d’Édition",
     "editFigureNote": "Le patron de plis qu’Édition a plié, avec l’ordre des couches trouvé",
@@ -335,19 +330,6 @@
       "searchLonger": "Chercher plus longtemps"
     },
     "fromEdit": "Depuis Édition",
-    "import": "Importer",
-    "orders": {
-      "atLeast_one": "Au moins {{count}} ordre des couches convient à ces plis. Choisissez-en un.",
-      "atLeast_many": "Au moins {{count}} ordres des couches conviennent à ces plis. Choisissez-en un.",
-      "atLeast_other": "Au moins {{count}} ordres des couches conviennent à ces plis. Choisissez-en un.",
-      "count_one": "{{count}} ordre des couches convient à ces plis.",
-      "count_many": "{{count}} ordres des couches conviennent à ces plis. Choisissez-en un.",
-      "count_other": "{{count}} ordres des couches conviennent à ces plis. Choisissez-en un.",
-      "label": "Ordre des couches",
-      "more": "Plus d’ordres conviennent à cette partie que ceux listés ici\u00a0; ce sont les premiers trouvés par la recherche.",
-      "order": "Ordre {{number}}",
-      "part": "Partie {{number}}"
-    },
     "pickTitle": "Importer un patron de plis",
     "placement": {
       "afterSheet": "Ajoute une étape après la feuille à plat, son état plié calculé à partir des plis.",
@@ -357,7 +339,6 @@
       "update": "Met à jour cette étape de mise en forme. Les étapes suivantes et les branches sont conservées et recalculées ; les plis concernés sont signalés comme modifiés ou impossibles à plier.",
       "why": "Utilisez-le quand l’état suivant ne peut pas être atteint pli après pli."
     },
-    "projectCp": "Mettre en forme depuis le CP…",
     "refusal": {
       "budget": {
         "text": "Trouver comment les couches s’empilent a pris plus de temps qu’un import n’en dispose. Cherchez plus longtemps ou importez un patron plus simple.",
@@ -446,7 +427,6 @@
       "preliminaryBase": "Base carrée",
       "waterbombBase": "Base de la bombe à eau"
     },
-    "samples": "Exemples",
     "title": "Importer un patron de plis",
     "updateTitle": "Mettre à jour depuis le CP",
     "working": {

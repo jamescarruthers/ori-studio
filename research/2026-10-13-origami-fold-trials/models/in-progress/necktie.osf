@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-necktie",
         "title": "Necktie — partial (batch 3)",
         "paper": {
@@ -142,6 +142,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3a: Fold the left side to the center."
@@ -170,6 +173,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3b: Repeat on the right."
@@ -201,6 +207,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {

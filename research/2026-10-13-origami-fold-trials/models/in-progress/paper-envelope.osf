@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-paper-envelope",
         "title": "Paper Envelope — partial (batch 3)",
         "paper": {
@@ -388,6 +388,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Fold the upper-left corner to the top-quarter horizontal crease."
@@ -416,6 +419,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7: Fold the left edge to the center."

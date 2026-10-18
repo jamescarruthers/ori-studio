@@ -55,13 +55,14 @@ import type { Point } from '../../../lib/geometry';
 import {
   FOLD_SWIVEL_KINDS,
   isSwivelEdgeOp,
-  isSwivelOnFoldOp,
+  isFoldedSwivelOp,
   petalOp,
   swivelKindOf,
   withSwivelKind,
   type FoldChoices,
   type FoldCompletionChoice,
   type FoldDirection,
+  type FoldLocatedLine,
   type FoldModelDirection,
   type FoldModelLine,
   type FoldPetalHinge,
@@ -86,6 +87,9 @@ export interface FoldVertexIntent {
   petalHinge: FoldLineBy;
   /** How a swivel's target is named: a crease or an edge, or two points. */
   swivelTarget: FoldLineBy;
+  swivelInput?: 'edge' | 'creases';
+  swivelFirst?: FoldLocatedLine;
+  swivelLine?: FoldLocatedLine;
   /** In click order (`vertexInputs`). */
   picks: readonly FoldPick[];
   /** As the viewer sees it. */
@@ -403,6 +407,11 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
       return { kind: 'rabbit-ear', corners: [a, b, c], emergent, seed, stayer, direction };
     }
     case 'swivel': {
+      if (intent.swivelInput === 'creases') {
+        const { swivelFirst: first, swivelLine: second } = intent;
+        if (!first || !second) return null;
+        return withSwivelKind({ kind: 'swivel', via: 'lines', first, second, direction }, intent.swivelKind ?? 'open');
+      }
       if (picks.length < SWIVEL_TARGET_FROM + lineByClicks(intent.swivelTarget)) return null;
       const [pivotPick, edgePick, ...targetPicks] = picks;
       const pivot = sheetOf(pivotPick);
@@ -489,7 +498,7 @@ export function steppedFourth(fourths: readonly number[], from: number | null, d
 export function withEmergent(op: FoldVertexOp, answer: FoldVertexAnalysed, emergent: number | null): FoldVertexOp {
   const { analysis } = answer;
   // On a folded edge a swivel has no ridge to choose.
-  if (isSwivelOnFoldOp(op)) return op;
+  if (isFoldedSwivelOp(op)) return op;
   if (isSwivelEdgeOp(op)) {
     const ray = emergent === null || analysis.kind !== 'swivel-by-edge' ? undefined : analysis.ridges[emergent];
     if (!ray) return op;
@@ -627,15 +636,15 @@ export function vertexChosenOp(
   taken: FoldVertexTaken
 ): FoldVertexChosen | null {
   const emergent = emergentToFold(taken.emergent, first);
-  const fan = base.kind === 'rabbit-ear' || (base.kind === 'swivel' && !isSwivelEdgeOp(base));
+  const fan = base.kind === 'rabbit-ear' || (base.kind === 'swivel' && !('via' in base));
   if (fan && emergent === null) return null;
   // A swivel on a folded edge chooses its kind and its way together.
-  const asked = isSwivelOnFoldOp(base) ? swivelKindOf(base) : null;
+  const asked = isFoldedSwivelOp(base) ? swivelKindOf(base) : null;
   const way = asked ? swivelWayToFold({ kind: asked, direction: base.direction }, asked, first) : null;
   const direction = way?.direction ?? directionToFold(base.direction, first);
   const taking = withTarget(withEmergent(base, first, emergent), taken.squashTarget);
   const turned = direction === taking.direction ? taking : { ...taking, direction };
-  const op = way && isSwivelOnFoldOp(turned) ? withSwivelKind(turned, way.kind) : turned;
+  const op = way && isFoldedSwivelOp(turned) ? withSwivelKind(turned, way.kind) : turned;
   return {
     op,
     emergent,

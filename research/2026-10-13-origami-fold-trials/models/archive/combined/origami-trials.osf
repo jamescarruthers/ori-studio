@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-cicada",
         "title": "Cicada — completed flat sequence",
         "paper": {
@@ -70,6 +70,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -110,6 +113,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -150,6 +156,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -192,6 +201,9 @@
                   0.9565685424949238
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3a: left wing folded down"
@@ -225,6 +237,9 @@
                   0.1565685424949237
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3b: right wing folded down"
@@ -258,6 +273,9 @@
                   0.04999999999999978
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: one top layer down"
@@ -286,6 +304,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: remaining tip down, leaving a band"
@@ -314,6 +335,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: fold upper band down"
@@ -342,6 +366,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7a: left side behind"
@@ -370,6 +397,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7b: right side behind"
@@ -377,7 +407,7 @@
         ]
       },
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-swan",
         "title": "Swan — completed outside-reverse sequence",
         "paper": {
@@ -452,6 +482,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2a: lower left edge to center"
@@ -480,6 +513,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2b: lower right edge to center"
@@ -517,6 +553,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4a: narrow left side again"
@@ -545,6 +584,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4b: narrow right side again"
@@ -573,6 +615,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "Alternative: fold kite in half"
@@ -706,7 +751,7 @@
         ]
       },
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-heart",
         "title": "Heart — completed flat sequence",
         "paper": {
@@ -801,6 +846,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -847,6 +895,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: left bottom edge to center"
@@ -875,6 +926,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: right bottom edge to center"
@@ -912,6 +966,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7a: upper left edge inward"
@@ -940,6 +997,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7b: upper right edge inward"
@@ -948,8 +1008,7 @@
             "id": "fstep-heart-10",
             "parent": "fstep-heart-9",
             "op": {
-              "kind": "tuck",
-              "direction": "valley",
+              "kind": "valley",
               "line": {
                 "via": "free",
                 "through": [
@@ -975,16 +1034,19 @@
                 ],
                 "layers": 1
               },
-              "target": [
-                0.05000000000000001,
-                0.6000000000000001
-              ],
-              "additionalTargets": [
-                [
-                  0.9500000000000002,
-                  0.6000000000000001
+              "landing": {
+                "kind": "against",
+                "targets": [
+                  [
+                    0.05000000000000001,
+                    0.6000000000000001
+                  ],
+                  [
+                    0.9500000000000002,
+                    0.6000000000000001
+                  ]
                 ]
-              ]
+              }
             },
             "choices": {
               "completion": {
@@ -1064,6 +1126,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9a: fold left side triangle inward"
@@ -1092,6 +1157,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9b: fold right side triangle inward"
@@ -1120,6 +1188,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10a: fold outer left corner"
@@ -1153,6 +1224,9 @@
                   0.25999999999999995
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10b: fold inner left corner"
@@ -1186,6 +1260,9 @@
                   0.2599999999999999
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10c: fold inner right corner"
@@ -1214,6 +1291,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10d: fold outer right corner"
@@ -1242,6 +1322,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "11: fold down both top points"
@@ -1258,7 +1341,7 @@
         ]
       },
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-box",
         "title": "Masu box — flat preparation only",
         "paper": {
@@ -1353,6 +1436,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -1393,6 +1479,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -1433,6 +1522,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -1473,6 +1565,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -1669,7 +1764,7 @@
         ]
       },
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-crane",
         "title": "Crane — flat reverse-fold alternative",
         "paper": {
@@ -1706,6 +1801,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -1746,6 +1844,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -2098,6 +2199,9 @@
                   0.6000000000000001
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12a: narrow front left"
@@ -2131,6 +2235,9 @@
                   0.11000000000000067
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12b: narrow front right"
@@ -2173,6 +2280,9 @@
                   0.3999999999999997
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14a: narrow back left"
@@ -2206,6 +2316,9 @@
                   0.8900000000000005
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14b: narrow back right"
@@ -2410,6 +2523,9 @@
                   0.9800000000000018
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "28a: fold first wing down flat"
@@ -2452,6 +2568,9 @@
                   0.02000000000000206
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "28b: fold second wing down flat"

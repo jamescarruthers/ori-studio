@@ -21,17 +21,32 @@
  * Pure: no React, no store, no wasm import (the engine is handed in).
  */
 
-import type { FoldChoices } from '../document/foldSequenceDocument';
+import type { FoldChoices, FoldCompletionChoice, FoldLanding } from '../document/foldSequenceDocument';
 import { invalidInput, requireHandle, requireObject } from './foldEngineCalls';
 import { isFoldCompoundOp, type FoldCompoundAnalysis, type FoldEngineCompoundOp } from './foldEngineCompoundWire';
-import type { FoldEngineOutcome } from './foldEngineWire';
+import type { FoldEngineOp, FoldEngineOutcome } from './foldEngineWire';
 
 /** The wasm class's compound surface, as the generated `FoldEngine` has it. */
+export interface FoldOrderQuery {
+  batch?: number; prefer?: readonly (readonly [number, number])[]; index: number; perComponent?: number; maxNodes?: number }
+export interface FoldOrderSelection {
+  landing?: FoldLanding;
+  moving_varies?: boolean;
+  relations?: [number, number][];
+  count: { orders: number; exact: boolean };
+  index: number;
+  completion: FoldCompletionChoice | null;
+}
+
 export interface FoldWasmCompoundEngine {
+  release_order_search?(state: number): void;
+  order_selection(state: number, op: unknown, choices: unknown, query: unknown): unknown;
   compound_analysis(state: number, op: unknown, choices: unknown): unknown;
 }
 
 export interface FoldEngineCompoundCalls {
+  releaseOrderSearch?(state: number): void;
+  orderSelection(state: number, op: FoldEngineOp, choices: FoldChoices | undefined, query: FoldOrderQuery): FoldEngineOutcome<FoldOrderSelection>;
   /**
    * What a compound fold from `state` is before it lands, as its family's
    * tools ask: a reverse fold's tip and the kinds that land, a crimp's tip
@@ -57,6 +72,11 @@ function requireCompoundOp(op: FoldEngineCompoundOp): FoldEngineCompoundOp {
 
 export function createFoldEngineCompoundCalls(engine: FoldWasmCompoundEngine): FoldEngineCompoundCalls {
   return {
+    releaseOrderSearch(state) { engine.release_order_search?.(requireHandle('state', state)); },
+    orderSelection(state, op, choices, query) {
+      if (!Number.isSafeInteger(query.index) || query.index < 0) throw invalidInput('order index must be a nonnegative safe integer');
+      return engine.order_selection(requireHandle('state', state), requireObject('op', op), choices, query) as FoldEngineOutcome<FoldOrderSelection>;
+    },
     compoundAnalysis(state, op, choices) {
       return engine.compound_analysis(
         requireHandle('state', state),

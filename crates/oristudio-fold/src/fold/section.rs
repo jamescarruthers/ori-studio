@@ -44,7 +44,7 @@ use serde::Serialize;
 
 use crate::fold::PlainFold;
 use crate::fold::closure::{Closure, MovingSide, moving_side};
-use crate::fold::line::{Axis, Classified, classify};
+use crate::fold::line::{Axis, Classified, classify_for_selection};
 use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, FaceId};
 use crate::refusal::{Flap, FoldRefusal, Refused, Side};
@@ -81,7 +81,8 @@ impl Along {
     /// Snap and classify `line` as a fold along it would, then measure the
     /// moving side's paper along it.
     pub(crate) fn new(state: &State, line: &Line, side: Side) -> Result<Along, Refused> {
-        let classified = classify(&state.geometry().vertex_images, Axis::new(line, side))?;
+        let classified =
+            classify_for_selection(&state.geometry().vertex_images, Axis::new(line, side))?;
         let moving = moving_side(state, &classified)?;
         let (line, side) = classified.axis.line_and_side();
         let normal = match side {
@@ -317,8 +318,10 @@ pub struct DepthChoice {
 
 impl State {
     /// The cross-section of the paper along `line` on its `side` (see the
-    /// module docs). Refused as a fold along it would be refused for its
-    /// line: a near miss (with its landmark line) or no paper on that side.
+    /// module docs). This describes all layers before selection, including
+    /// layers a near miss would prevent from moving. Depth choices and fold
+    /// analysis validate the selected paper. Unsafe snapping or no paper on
+    /// the moving side still refuses the section.
     pub fn cross_section(&self, line: &Line, side: Side) -> Result<CrossSection, Refused> {
         let along = Along::new(self, line, side)?;
         Ok(section(self, &along))
@@ -340,7 +343,8 @@ impl State {
     /// `closure::Closure`): a layer already in U moves nothing new, and once
     /// a depth is refused, every deeper one is too.
     pub fn depth_choices(&self, op: &PlainFold, at: Point) -> Result<Vec<DepthChoice>, Refused> {
-        let classified = classify(&self.geometry().vertex_images, Axis::new(&op.line, op.side))?;
+        let classified =
+            classify_for_selection(&self.geometry().vertex_images, Axis::new(&op.line, op.side))?;
         let side = moving_side(self, &classified)?;
         let face = self
             .face_at(at)

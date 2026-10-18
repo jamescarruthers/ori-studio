@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { trackFoldSpreadChanged, type FoldSpreadVia } from '../../analytics';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
-import { DEFAULT_LAYER_SPREAD } from '../../cp-workspace/folded/layerSpreadSettings';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { shownFoldSequence } from '../../store/workspaceStore/foldState';
 import { foldEffectiveSpread, foldSpreadStarts, foldStateSpread, foldStepSpread } from '../document/foldStepSpread';
@@ -34,7 +33,7 @@ function newSitting(): number {
 export function useFoldStepSpreadShown(stepId: string | null): LayerSpreadOptions | null {
   return useWorkspaceStore((state) => {
     const shown = shownFoldSequence(state);
-    return shown ? foldStepSpread(shown.document, stepId) : DEFAULT_LAYER_SPREAD;
+    return shown ? foldStepSpread(shown.document, stepId) : null;
   });
 }
 

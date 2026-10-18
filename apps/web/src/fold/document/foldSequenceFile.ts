@@ -36,6 +36,7 @@
  * React-free and store-free.
  */
 
+import { readRegionReference } from '../../cp-workspace/regions/regionReference';
 import { readLayerSpread, writeLayerSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import {
   NEWER,
@@ -81,6 +82,7 @@ import {
   type FoldFaceOrder,
   type FoldIdFactory,
   type FoldLineInput,
+  type FoldLocatedLine,
   type FoldLockedStep,
   type FoldMark,
   type FoldMarkEntry,
@@ -343,8 +345,8 @@ function withinTree(nodes: FoldStepNode[]): FoldStepNode[] {
 
 const ALONG_LINE_KEYS = new Set(['kind', 'line', 'moving', 'seed']);
 const OP_KEYS = new Map<string, ReadonlySet<string>>([
-  ['valley', ALONG_LINE_KEYS],
-  ['mountain', ALONG_LINE_KEYS],
+  ['valley', new Set([...ALONG_LINE_KEYS, 'landing'])],
+  ['mountain', new Set([...ALONG_LINE_KEYS, 'landing'])],
   ['precrease', new Set([...ALONG_LINE_KEYS, 'direction', 'extent'])],
   ['unfold-to', new Set(['kind', 'target', 'source'])],
   ['unfold', new Set(['kind', 'crease', 'direction', 'moving', 'seed'])],
@@ -386,9 +388,11 @@ const SWIVEL_EDGE_KEYS = new Set([
   'swivel',
 ]);
 
+const SWIVEL_CREASES_KEYS = new Set(['kind', 'via', 'fold', 'first', 'second', 'direction', 'swivel']);
+
 /** The keys this build knows for an op: its kind's, or its form's when its kind has two. */
 function opKeys(value: Record<string, unknown>, kind: string): ReadonlySet<string> | undefined {
-  return kind === 'swivel' && value.via !== undefined ? SWIVEL_EDGE_KEYS : OP_KEYS.get(kind);
+  return kind === 'swivel' && value.via === 'lines' ? new Set(['kind', 'via', 'first', 'second', 'direction', 'swivel']) : kind === 'swivel' && value.via === 'creases' ? SWIVEL_CREASES_KEYS : kind === 'swivel' && value.via !== undefined ? SWIVEL_EDGE_KEYS : OP_KEYS.get(kind);
 }
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
@@ -408,7 +412,8 @@ function readOp(value: unknown): FoldOp | null {
     case 'valley':
     case 'mountain': {
       const along = readAlongLine(value);
-      return along && { kind, ...along };
+      const landing = readLanding(value.landing);
+      return along && landing && { kind, ...along, landing };
     }
     case 'precrease': {
       const along = readAlongLine(value);
@@ -450,11 +455,15 @@ function readOp(value: unknown): FoldOp | null {
       const { cpJson, orderJson } = value;
       const source = value.source;
       if (source !== undefined && (!isRecord(source) ||
-        Object.keys(source).some((key) => key !== 'documentId' && key !== 'revision') ||
+        Object.keys(source).some((key) => key !== 'documentId' && key !== 'revision' && key !== 'region') ||
         typeof source.documentId !== 'string' || !source.documentId ||
         typeof source.revision !== 'string' || !source.revision)) return null;
+      const region = isRecord(source) && source.region !== undefined ? readRegionReference(source.region) : undefined;
+      if (region === null) return null;
       return origin && typeof cpJson === 'string' && typeof orderJson === 'string'
-        ? { kind, cpJson, orderJson, origin, ...(source ? { source: source as { documentId: string; revision: string } } : {}) }
+        ? { kind, cpJson, orderJson, origin, ...(source ? { source: {
+          documentId: source.documentId as string, revision: source.revision as string, ...(region ? { region } : {}),
+        } } : {}) }
         : null;
     }
     // Compound folds (plan D4), one block per family.
@@ -476,7 +485,7 @@ function readOp(value: unknown): FoldOp | null {
       const target = readPoint(value.target);
       const additionalTargets = value.additionalTargets === undefined ? undefined : readTuckTargets(value.additionalTargets);
       if (additionalTargets === null) return null;
-      return along && direction && target && { kind, direction, target, ...along, ...(additionalTargets ? { additionalTargets } : {}) };
+      return along && direction && target && { kind: direction, ...along, landing: { kind: 'against', targets: [target, ...(additionalTargets ?? [])] } };
     }
     case 'squash':
     case 'petal':
@@ -549,6 +558,16 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
         : null;
     }
     case 'swivel': {
+      if (value.via === 'lines') {
+        const first = readLocatedLine(value.first), second = readLocatedLine(value.second);
+        if (!first || !second || (value.swivel !== undefined && value.swivel !== 'inside')) return null;
+        return { kind, via: 'lines', first, second, direction, ...(value.swivel === 'inside' ? { swivel: 'inside' as const } : {}) };
+      }
+      if (value.via === 'creases') {
+        const fold = readPoint(value.fold), first = readPoint(value.first), second = readPoint(value.second);
+        if (!fold || !first || !second || (value.swivel !== undefined && value.swivel !== 'inside')) return null;
+        return { kind, via: 'creases', fold, first, second, direction, ...(value.swivel === 'inside' ? { swivel: 'inside' as const } : {}) };
+      }
       if (value.via !== undefined) return readSwivelEdgeOp(value, direction);
       const vertex = readPoint(value.vertex);
       const toward = readTriple(value.toward);
@@ -723,6 +742,15 @@ const LINE_KEYS = new Map<string, ReadonlySet<string>>([
   ['free', new Set(['via', 'through'])],
   ['crease', new Set(['via', 'at'])],
 ]);
+
+function readLocatedLine(value: unknown): FoldLocatedLine | null {
+  if (!isRecord(value) || hasNewerKey(value, new Set(['line', 'root']))) return null;
+  const line = readLine(value.line);
+  if (!line) return null;
+  if (line.via !== 'axiom') return value.root === undefined ? { line } : null;
+  const root = readModelLine(value.root);
+  return root ? { line, root } : null;
+}
 
 function readLine(value: unknown): FoldLineInput | null {
   if (!isRecord(value) || typeof value.via !== 'string') return null;
@@ -996,7 +1024,7 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
   switch (op.kind) {
     case 'valley':
     case 'mountain':
-      return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op) };
+      return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op), landing: op.landing ?? { kind: 'outer' } };
     case 'precrease':
       return {
         kind: op.kind,
@@ -1036,12 +1064,10 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
       };
     case 'tuck':
       return {
-        kind: op.kind,
+        kind: op.direction,
         line: writeLine(op.line),
-        direction: op.direction,
         ...writeMotion(op),
-        target: writePoint(op.target),
-        ...(op.additionalTargets?.length ? { additionalTargets: op.additionalTargets.map(writePoint) } : {}),
+        landing: { kind: 'against', targets: [op.target, ...(op.additionalTargets ?? [])].map(writePoint) },
       };
     case 'squash':
     case 'petal':
@@ -1075,6 +1101,12 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
         ...optional('ridge', op.ridge),
       };
     case 'swivel':
+      if ('via' in op && op.via === 'lines') {
+        return { kind: op.kind, via: op.via, first: writeLocatedLine(op.first), second: writeLocatedLine(op.second), direction: op.direction, ...(op.swivel === 'inside' ? { swivel: op.swivel } : {}) };
+      }
+      if ('via' in op && op.via === 'creases') {
+        return { kind: op.kind, via: op.via, fold: writePoint(op.fold), first: writePoint(op.first), second: writePoint(op.second), direction: op.direction, ...(op.swivel === 'inside' ? { swivel: op.swivel } : {}) };
+      }
       if ('via' in op && 'fold' in op) {
         // On a folded edge: `fold` where the free form has its pivot, and
         // neither a seed nor a ridge; last, and only when inside, its kind,
@@ -1137,6 +1169,10 @@ function writeSeed(seed: FoldSeed): Record<string, unknown> {
   }
 }
 
+function writeLocatedLine(located: FoldLocatedLine): Record<string, unknown> {
+  return { line: writeLine(located.line), ...(located.root ? { root: { n: writePoint(located.root.n), d: located.root.d } } : {}) };
+}
+
 function writeLine(line: FoldLineInput): Record<string, unknown> {
   switch (line.via) {
     case 'axiom':
@@ -1193,4 +1229,14 @@ function writeDivide(divide: FoldDivide): Record<string, unknown> {
 
 function writePoint(point: SheetPoint | readonly [number, number]): [number, number] {
   return [point[0], point[1]];
+}
+
+function readLanding(value: unknown): import('./foldSequenceDocument').FoldLanding | null {
+  if (value === undefined) return { kind: 'outer' };
+  if (!isRecord(value)) return null;
+  if (value.kind === 'outer' && !hasNewerKey(value, new Set(['kind']))) return { kind: 'outer' };
+  if (value.kind !== 'against' || hasNewerKey(value, new Set(['kind', 'targets'])) || !Array.isArray(value.targets)
+    || value.targets.length < 1 || value.targets.length > 65) return null;
+  const targets = value.targets.map(readPoint);
+  return targets.every((p): p is SheetPoint => p !== null) ? { kind: 'against', targets } : null;
 }

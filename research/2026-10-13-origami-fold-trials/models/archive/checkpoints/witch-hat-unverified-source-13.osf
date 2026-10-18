@@ -14,7 +14,7 @@
   },
   "workspace": {
     "id": "workspace",
-    "title": "Witch Hat \u2014 UNVERIFIED source 11\u201313 candidate",
+    "title": "Witch Hat — UNVERIFIED source 11–13 candidate",
     "activeDocumentId": "crease-pattern",
     "designs": [],
     "creasePattern": {
@@ -1394,9 +1394,9 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-witch-hat",
-        "title": "Witch Hat \u2014 UNVERIFIED candidate",
+        "title": "Witch Hat — UNVERIFIED candidate",
         "paper": {
           "shape": {
             "kind": "square"
@@ -1498,6 +1498,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2a: Fold the upper-left edge to the middle."
@@ -1526,6 +1529,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2b: Repeat on the right."
@@ -1737,7 +1743,7 @@
                 }
               }
             },
-            "note": "7: Reverse only the middle section of the existing horizontal precrease (Precrease \u2192 Existing crease \u2192 Segment). The outer wing creases stay unchanged."
+            "note": "7: Reverse only the middle section of the existing horizontal precrease (Precrease → Existing crease → Segment). The outer wing creases stay unchanged."
           },
           {
             "id": "fstep-witch-hat-14",
@@ -1905,6 +1911,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "UNVERIFIED CANDIDATE; not tutorial completion. 12: Fold the left brim corner inward. The tutorial gives an approximate amount; use 0.06 sheet units along each edge."
@@ -1933,6 +1942,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "UNVERIFIED CANDIDATE; not tutorial completion. 12: Fold the right brim corner inward. The tutorial gives an approximate amount; use 0.06 sheet units along each edge."
@@ -1961,6 +1973,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "UNVERIFIED CANDIDATE; not tutorial completion. 13: Fold the bottom corner up along the original color boundary."

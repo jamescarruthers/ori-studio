@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-dolphin",
         "title": "Dolphin — Origami.me (batch 4)",
         "paper": {

@@ -259,11 +259,20 @@ impl<'s> Closure<'s> {
         Ok(grew)
     }
 
-    /// Why U cannot be folded: everything moves, or a tuck's target does.
-    /// Both stay true as U grows.
+    /// Why U cannot be folded: participating paper has a near miss,
+    /// everything moves, or a tuck's target does. All stay true as U grows.
     pub(crate) fn refusal(&self) -> Option<Refused> {
         let faces = self.state.faces();
         let moving = &self.moving;
+        if let Some(refused) = self.classified.refusal_for(
+            faces
+                .iter()
+                .zip(moving)
+                .filter(|(_, m)| **m)
+                .flat_map(|(face, _)| face.ring.iter().copied()),
+        ) {
+            return Some(refused);
+        }
         if (0..faces.len()).all(|f| moving[f] && !self.has_stationary[f]) {
             let flaps = &self.side.flaps;
             let fixes = if flaps.len() > 1 {

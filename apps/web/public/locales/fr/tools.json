@@ -435,7 +435,8 @@
       "severalSunk_many": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
       "severalSunk_other": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
       "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords.",
-      "unsinkRing": "La ligne est un pli de l’anneau laissé par l’enfoncement, le long du haut de la pointe enfoncée."
+      "unsinkRing": "La ligne est un pli de l’anneau laissé par l’enfoncement, le long du haut de la pointe enfoncée.",
+      "freeSnap": "S’accroche aux points proches ; sinon, utilise l’endroit exact où vous cliquez."
     },
     "op": {
       "closedSink": "Enfoncement fermé",
@@ -448,6 +449,33 @@
       "swivel": "Pli pivoté",
       "tuck": "Rentrer",
       "unsink": "Désenfoncer"
+    },
+    "order": {
+      "accept": "Utiliser cet ordre",
+      "acceptAll": "Utiliser les ordres et ajouter l’étape",
+      "acceptUpdate": "Utiliser les ordres et mettre à jour l’étape",
+      "back": "Retour",
+      "choose": "Choisir l’ordre des couches",
+      "count_one": "Ordre {{index}} sur {{count}}",
+      "count_many": "Ordre {{index}} sur {{count}}",
+      "count_other": "Ordre {{index}} sur {{count}}",
+      "failed": "Impossible de charger l’ordre. Revenez en arrière et réessayez, ou choisissez un autre ordre.",
+      "found_one": "Ordre {{index}} sur {{count}} trouvés",
+      "found_many": "Ordre {{index}} sur {{count}} trouvés",
+      "found_other": "Ordre {{index}} sur {{count}} trouvés",
+      "help": "Prévisualisez les dispositions, puis choisissez l’ordre souhaité.",
+      "incomplete": "Recherche incomplète. D’autres ordres peuvent exister.",
+      "inspect": "Inspecter les couches",
+      "loading": "Chargement de l’ordre…",
+      "movingVaries": "Ces ordres déplacent des couches différentes. Vérifiez le papier mis en évidence.",
+      "next": "Ordre des couches suivant",
+      "noneFound": "Aucun ordre trouvé pour le moment",
+      "previous": "Ordre des couches précédent",
+      "region": "Région {{number}}",
+      "regions": "Régions indépendantes",
+      "search": "Rechercher d’autres ordres",
+      "stack": "Région {{number}} : {{layers}}",
+      "stackHelp": "Sélectionnez une région pour la surligner. Les couches sont indiquées de l’avant vers l’arrière ; les différences sont comparées au premier aperçu."
     },
     "picker": {
       "close": "Fermer la liste des outils",
@@ -798,6 +826,8 @@
       "mountain": "Pli montagne",
       "mountainHelp": "Plier le côté qui bouge en l’éloignant de vous, pour qu’il passe dessous.",
       "openSinkHelp": "Enfoncer l’extrémité d’une pointe fermée en retournant chacune de ses couches.",
+      "precrease": "Pré-plier",
+      "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
       "reverse": "Pli inversé",
       "reverseHelp": "Inversez un rabat vers l’intérieur ou enveloppez-le par l’extérieur, en inversant son pli central.",
       "rotateHelp": "Tourner le modèle d’une fraction de tour ou d’un angle exact, d’abord en aperçu, puis en une étape à part.",
@@ -844,7 +874,15 @@
       "hingeRegionBlocked": "Cette région de charnière ne peut pas se plier avec ces couches. Cliquez sur une autre région ou changez les couches.",
       "hingeRegionBlockedTouch": "Cette région de charnière ne peut pas se plier avec ces couches. Touchez une autre région ou changez les couches.",
       "hingeRegionFits": "Le pli de charnière se trouve dans la région sélectionnée.",
+      "input": {
+        "edge": "Bord sur ligne",
+        "edgeHelp": "Choisir un bord et la ligne sur laquelle il doit se poser",
+        "label": "Construire par",
+        "lines": "Deux lignes de pli",
+        "linesHelp": "Définissez deux lignes de pli ; leur intersection fixe le point de rencontre"
+      },
       "intro": {
+        "creases": "Définissez les deux charnières ; le pli restant est calculé pour garder le papier à plat.",
         "petalLift": "Soulève la pointe d’un rabat le long d’une charnière.",
         "swivelSwing": "Fait pivoter un bord du papier sur une ligne."
       },
@@ -870,6 +908,13 @@
         "twoPoints": "Deux points",
         "twoPointsHelp": "Cliquez sur deux points de la ligne"
       },
+      "lines": {
+        "confirm": "Appuyez sur Entrée pour utiliser la première ligne et définir la seconde.",
+        "confirmTouch": "Touchez Utiliser la première ligne pour continuer.",
+        "first": "Définissez la première ligne de pli. Sélectionnez un pli existant ou construisez une ligne avec Localiser la ligne.",
+        "second": "Définissez la seconde ligne de pli. Son intersection avec la première fixe le point de rencontre ; la charnière restante est calculée.",
+        "useFirst": "Utiliser la première ligne"
+      },
       "mountain": "Montagne",
       "mountainTitle": "Montagne : le papier tourne en s’éloignant de vous",
       "note": {
@@ -883,6 +928,7 @@
         "snapOrFree": "Les points s’accrochent aux coins, aux croisements, aux repères et aux milieux : maintenez {{modifier}} pour en poser un n’importe où.",
         "snapOrFreeTouch": "Les points s’accrochent aux coins, aux croisements, aux repères et aux milieux : activez Point libre pour en poser un n’importe où.",
         "squashFlap": "Un rabat s’écrase quand ses deux couches ne sont reliées que par sa charnière et que rien ne repose dessus.",
+        "swivelCreasesPicture": "Les plis se rejoignent au point. Le papier en surbrillance se déplace ; le pli restant le maintient à plat.",
         "swivelPicture": "Les plis se rejoignent au point, le bord se pose sur le trait gras, et le papier éclairé bouge."
       },
       "refusal": {
@@ -911,13 +957,17 @@
           "title": "Le quatrième pli ne peut pas se dresser ici"
         },
         "kite": {
-          "creaseOrPrecrease": "Sur un pli de charnière, un pli pétale replie des plis déjà là, et un pli du cerf-volant manque. Désignez plutôt la charnière par ses deux extrémités, et le pliage marque lui-même le cerf-volant ; ou pré-pliez-le d’abord, avec l’option Plier puis déplier sur l’Axiome 3 : un bord inférieur du rabat du dessus sur sa ligne médiane, sans les rabats de derrière.",
+          "creaseOrPrecrease": "Sur un pli de charnière, un pli pétale replie des plis déjà là, et un pli du cerf-volant manque. Désignez plutôt la charnière par ses deux extrémités, et le pliage marque lui-même le cerf-volant ; ou pré-pliez-le d’abord, avec l’outil Pré-plier sur l’Axiome 3 : un bord inférieur du rabat du dessus sur sa ligne médiane, sans les rabats de derrière.",
           "titleMissing": "Les plis du cerf-volant manquent"
         },
         "line": {
           "crease": "Le pli de charnière ne traverse pas toutes les couches en dessous qui se plient. Pré-pliez la charnière à travers toutes les couches, puis faites le pli pétale.",
           "ends": "La charnière traverse du papier de la deuxième couche, qui se replie à côté du cerf-volant, et le pliage ne peut pas le marquer pendant que le rabat se soulève. Pré-pliez la charnière à travers toutes les couches, puis faites le pli pétale.",
           "titleHinge": "Pré-pliez d’abord la charnière"
+        },
+        "lineMeeting": {
+          "text": "Choisissez deux lignes de pli qui se croisent sur un seul bord plié visible.",
+          "title": "Les lignes doivent avoir un point de rencontre"
         },
         "noFlap": {
           "noHinge": "Le rabat ne se plie sur aucune charnière à l’une ou l’autre extrémité de son dos : rien contre quoi l’aplatir.",
@@ -1074,7 +1124,6 @@
     "window": {
       "cancel": "Annuler",
       "finding": "Recherche des couches sur la ligne…",
-      "foldAndUnfold": "Plier puis déplier",
       "instructions": "Instructions",
       "kind": "Pli",
       "label": "Options de l’outil de pliage",
@@ -1089,7 +1138,8 @@
       "settings_one": "{{count}} réglage",
       "settings_many": "{{count}} réglages",
       "settings_other": "{{count}} réglages",
-      "swap": "Inverser"
+      "swap": "Inverser",
+      "snapFreeLine": "Accrocher aux points"
     }
   },
   "foldAngleDisplay": {

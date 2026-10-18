@@ -382,8 +382,9 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
     // A swivel's folded edge: the edge lit, and no dot. Where along it the
     // creases meet is the engine's to find, and its preview draws that dot
     // (owner feedback, 2026-10-13: a dot where it was clicked read as a
-    // point to choose).
-    if (pick.kind === 'point' && pick.fold) {
+    // point to choose). By-creases construction does choose that exact
+    // point, so it gets the usual point hover and selected dot instead.
+    if (pick.kind === 'point' && pick.fold && pick.foldLocation !== 'given') {
       draw(pick.fold, hover);
       return;
     }

@@ -116,6 +116,8 @@ export type FoldSinkSentenceKind = 'open' | 'closed' | 'unsink';
 export type FoldVertexSentenceForm =
   | { hinge: 'crease' | 'points' }
   | { swivel: 'rays' }
+  | { swivel: 'creases'; inside?: true }
+  | { swivel: 'lines'; inside?: true }
   | { swivel: 'edge'; target: 'crease' | 'free'; ridge: 'foot' | 'end' }
   /**
    * A swivel by its edge whose creases meet on a folded edge: no ridge to
@@ -136,7 +138,7 @@ export type FoldSentenceExtent =
 /** A step as its sentence reads it. */
 export type FoldSentenceStep =
   | { op: 'unfold-to'; sheet: boolean; number?: number }
-  | { op: 'fold'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope }
+  | { op: 'fold'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope; inserted?: boolean }
   /**
    * Fold and unfold: the creases stay, flat, remembering their letters — or,
    * with an extent, only part of the line is creased.
@@ -321,6 +323,7 @@ function plainOp(op: 'fold' | 'precrease', direction: FoldDirection): PlainFoldS
 export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
   switch (step.op) {
     case 'fold':
+      if (step.inserted) return foldStepSentence(t, { op: 'tuck', direction: step.direction, line: step.line });
       return plainFoldSentence(t, plainOp(step.op, step.direction), lineClause(t, step.line), step.scope);
     case 'precrease': {
       const sentence = plainFoldSentence(t, plainOp(step.op, step.direction), lineClause(t, step.line), step.scope);

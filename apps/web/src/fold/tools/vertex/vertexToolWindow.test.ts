@@ -146,7 +146,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
       value: 'crease',
       options: [{ short: 'Crease or edge' }, { short: 'Two points' }],
     });
-    expect(swivel?.meta).toBe('1 setting');
+    expect(swivel?.meta).toBe('2 settings');
     swivel?.vertex?.lineBy?.set('points');
     expect(calls.setVertexLineBy).toHaveBeenCalledWith('points');
     const points = foldToolWindow(t, view(vertex({ tool: 'swivel', lineBy: 'points' })), calls, mouse);
@@ -341,7 +341,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(model?.instructions.current).toBe(3);
     // Both ways land: direction, the line it lands on, the ridge.
     expect(controls?.direction?.options.map((option) => option.disabled ?? false)).toEqual([false, false]);
-    expect(model?.meta).toBe('3 settings');
+    expect(model?.meta).toBe('4 settings');
     controls?.emergent?.previous.run();
     expect(calls.stepEmergent).toHaveBeenCalledWith(-1);
     // One ridge and one way land: nothing to choose, so nothing offered, and Enter folds.
@@ -354,7 +354,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(one?.vertex?.emergent).toBeNull();
     expect(one?.vertex?.direction).toBeNull();
     expect(one?.instructions.items.at(-1)).toBe('Press Enter to fold.');
-    expect(one?.meta).toBe('1 setting');
+    expect(one?.meta).toBe('2 settings');
     // Before the engine has described it, nothing is offered that may go again.
     const asking = foldToolWindow(t, view({ ...swivel, described: false, known: false, directions: undefined }, { preview: preview() }), calls, mouse);
     expect(asking?.vertex?.direction).toBeNull();
@@ -374,7 +374,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(controls?.note).toBe('The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.');
     expect(model?.instructions.items.at(-1)).toBe('Press Enter to fold.');
     // The line it lands on.
-    expect(model?.meta).toBe('1 setting');
+    expect(model?.meta).toBe('2 settings');
     // Both ways land: the way is offered, and the commit names its button.
     const both = foldToolWindow(t, view({ ...onFold, directions: [true, true] }, { preview: preview() }), calls, mouse);
     expect(both?.vertex?.direction?.value).toBe('valley');
@@ -414,7 +414,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(kind?.note).toBeNull();
     // A choice above the commit: the commit names its button. The line it lands on and the kind.
     expect(model?.instructions.items.at(-1)).toBe('Press Enter, or click Swivel fold, to fold.');
-    expect(model?.meta).toBe('2 settings');
+    expect(model?.meta).toBe('3 settings');
     kind?.set('inside');
     expect(calls.setSwivelKind).toHaveBeenCalledWith('inside');
     // Inside taken: shown as taken.
@@ -506,6 +506,7 @@ describe('a vertex fold’s refusals', () => {
       swivel_pivot_on_edge: { code: 'swivel_pivot_on_edge', faces: [0] },
       swivel_edge_short: { code: 'swivel_edge_short', faces: [0] },
       swivel_edge_stays: { code: 'swivel_edge_stays', faces: [0] },
+      swivel_line_meeting: { code: 'swivel_line_meeting' },
       swivel_not_a_fold: { code: 'swivel_not_a_fold', point: [0.75, 0.6] },
       swivel_misses_fold: { code: 'swivel_misses_fold', faces: [17, 18] },
       swivel_fold_wide: { code: 'swivel_fold_wide', faces: [17, 18] },
@@ -633,11 +634,26 @@ describe('a vertex fold’s refusals', () => {
     kite.actions.forEach((action) => action.run());
     expect(calls.petalByEnds).toHaveBeenCalledTimes(1);
     expect(calls.precreaseKite).toHaveBeenCalledTimes(1);
-    // By its ends, the fold creases the kite already: only Fold and unfold is left to offer.
+    // By its ends, the fold creases the kite already: only the Precrease tool is left to offer.
     const byEnds = foldRefusalNotice(t, refused(kiteBody), vertexContext('petal', { hinge: 'points' }), calls);
     expect(byEnds.actions.map((action) => action.label)).toEqual(['Precrease the kite']);
     // Read-only: shown, none taken.
     const locked = foldRefusalNotice(t, refused(line), { ...vertexContext('petal'), readOnly: true }, calls);
     expect(locked.actions.every((action) => action.disabled)).toBe(true);
   });
+});
+
+it('uses the normal line instructions for each swivel line and confirms the first without folding', () => {
+  const first=vertex({tool:'swivel',swivelInput:'creases',firstLineSet:false,lineReady:true,described:false,known:false});
+  const actions=verbs();
+  const window=foldToolWindow(t,view(first,{picks:2,lineMode:'axiom-1',preview:preview()}),actions,mouse)!;
+  expect(window.lineMode?.value).toBe('axiom-1');
+  expect(window.instructions.items).toEqual(['Click the first point the fold passes through.','Click the second point.','Press Enter to use the first line and locate the second.']);
+  expect(window.footer?.commit).toMatchObject({label:'Use first line',disabled:false});
+  window.footer!.commit.run();expect(actions.commit).toHaveBeenCalledOnce();
+  const second=foldToolWindow(t,view({...first,firstLineSet:true},{lineMode:'crease'}),actions,mouse)!;
+  expect(second.lineMode?.value).toBe('crease');
+  expect(second.instructions.intro).toContain('second fold line');
+  expect(second.instructions.items[0]).toContain('crease');
+  expect(second.instructions.items.join(' ')).not.toContain('point along');
 });

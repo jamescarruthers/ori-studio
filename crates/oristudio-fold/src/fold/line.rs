@@ -10,8 +10,10 @@
 //!
 //! The snap is accepted only if it changes no vertex's class. Every vertex is
 //! put in a band against both the line asked for and the snapped line; a
-//! vertex in the near-miss band of either, or in different bands of the two,
-//! makes the fold a near miss. The spike did not check this, and its
+//! vertex in different bands makes the snap unsafe. Stable near misses may
+//! be deferred while selecting layers; they refuse only when their material
+//! participates. Strict callers still validate every vertex. The spike did
+//! not check snap stability, and its
 //! two-farthest rule once turned ℓ by 0.86° through two places 1e-4 apart.
 
 use oristudio_geometry::convex::HalfPlane;
@@ -121,12 +123,52 @@ pub(crate) struct Classified {
     pub(crate) classes: Vec<i8>,
     /// Per vertex, the signed distance from the snapped line.
     pub(crate) distances: Vec<f64>,
+    /// Stable near misses, deferred until the participating paper is known.
+    near_misses: Vec<(VertexId, Refused)>,
+}
+
+impl Classified {
+    /// Check every vertex of the participating faces, including the stationary
+    /// corners of faces that will be split. Closure-added paper counts too.
+    pub(crate) fn refusal_for(&self, vertices: impl Iterator<Item = VertexId>) -> Option<Refused> {
+        if self.near_misses.is_empty() {
+            return None;
+        }
+        let mut relevant = vec![false; self.classes.len()];
+        for v in vertices {
+            relevant[v.index()] = true;
+        }
+        self.near_misses
+            .iter()
+            .find(|(v, _)| relevant[v.index()])
+            .map(|(_, refusal)| refusal.clone())
+    }
 }
 
 /// Snap `requested` through the vertex images it nearly touches, then
 /// classify every vertex, refusing a near miss with the landmark line it
 /// nearly is when there is one.
 pub(crate) fn classify(images: &[Point], requested: Axis) -> Result<Classified, Refused> {
+    classify_inner(images, requested, false)
+}
+
+/// Classify for selection without rejecting stable near misses on paper that
+/// may stay untouched. Their signed classes are provisional: the caller must
+/// validate the completed participating set before splitting or moving paper.
+/// Snaps that change a band or side remain globally refused; selection must
+/// never be based on topology altered by an unsafe snap.
+pub(crate) fn classify_for_selection(
+    images: &[Point],
+    requested: Axis,
+) -> Result<Classified, Refused> {
+    classify_inner(images, requested, true)
+}
+
+fn classify_inner(
+    images: &[Point],
+    requested: Axis,
+    defer_near: bool,
+) -> Result<Classified, Refused> {
     let mut places = PointGrid::new(TOL);
     for &p in images {
         if requested.distance(p).abs() <= TOL {
@@ -152,6 +194,7 @@ pub(crate) fn classify(images: &[Point], requested: Axis) -> Result<Classified, 
         max_shift: 0.0,
     };
 
+    let mut near_misses = Vec::new();
     let mut classes = Vec::with_capacity(images.len());
     let mut distances = Vec::with_capacity(images.len());
     for (v, &p) in images.iter().enumerate() {
@@ -176,17 +219,27 @@ pub(crate) fn classify(images: &[Point], requested: Axis) -> Result<Classified, 
                     .unwrap_or_default(),
                 _ => Vec::new(),
             };
-            return Err(Refused {
+            let refused = Refused {
                 refusal: FoldRefusal::NearMiss {
                     vertex,
                     distance,
                     cause,
                 },
                 fixes,
-            });
+            };
+            if defer_near
+                && b0 == Band::Near
+                && b1 == Band::Near
+                && d0.is_sign_positive() == d1.is_sign_positive()
+            {
+                near_misses.push((vertex, refused));
+            } else {
+                return Err(refused);
+            }
         }
-        // A near miss returned above, so the band has a class.
-        classes.push(b1.class().unwrap_or(0));
+        // Near vertices retain their actual side for adjacency/overlap. They
+        // are not snapped onto the line or allowed into an unchecked fold.
+        classes.push(b1.class().unwrap_or(if d1 > 0.0 { 1 } else { -1 }));
         distances.push(d1);
     }
     Ok(Classified {
@@ -194,6 +247,7 @@ pub(crate) fn classify(images: &[Point], requested: Axis) -> Result<Classified, 
         snap,
         classes,
         distances,
+        near_misses,
     })
 }
 
@@ -322,6 +376,10 @@ mod tests {
             n: [0.0, 1.0],
             c: 0.0,
         };
+        assert!(
+            classify_for_selection(&images, requested).is_err(),
+            "selection must not hide unsafe snapping"
+        );
         let Err(refused) = classify(&images, requested) else {
             panic!("a swinging snap folded");
         };

@@ -331,6 +331,58 @@ fn an_order_is_chosen_through_the_query_and_replays() {
     assert_eq!(listed["more"], false);
     let orders = listed["orders"].as_array().cloned().unwrap_or_default();
     assert_eq!(orders.len(), 2);
+    // The shared chooser addresses either witness directly, without a list cap.
+    // Existing completion choices must not suppress the alternatives.
+    use oristudio_fold_wasm::order_selection::OrderQuery;
+    for index in 0..2 {
+        let result = bridge
+            .order_selection(
+                handle,
+                &op(step.clone()),
+                &choices(json!({"completion": orders[0]})),
+                &OrderQuery {
+                    index,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let value = json_of(&result);
+        assert_eq!(value["count"], json!({"orders": 2, "exact": true}));
+        assert_eq!(value["completion"], orders[index as usize]);
+        let preserved = bridge
+            .order_selection(
+                handle,
+                &op(step.clone()),
+                &Choices::default(),
+                &OrderQuery {
+                    index: 1 - index,
+                    prefer: Some(serde_json::from_value(value["relations"].clone()).unwrap()),
+                    per_component: Some(4000),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(json_of(&preserved)["completion"], orders[index as usize]);
+        assert_eq!(json_of(&preserved)["index"], index);
+    }
+    let limited = bridge
+        .order_selection(
+            handle,
+            &op(step.clone()),
+            &Choices::default(),
+            &OrderQuery {
+                per_component: Some(1),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let limited = json_of(&limited);
+    assert_eq!(
+        limited["count"],
+        json!({"orders": 1, "exact": false}),
+        "a bounded single result is not unique"
+    );
+
     // A stored order lists them still, for a chooser moving between them.
     let again = ask(
         &bridge,

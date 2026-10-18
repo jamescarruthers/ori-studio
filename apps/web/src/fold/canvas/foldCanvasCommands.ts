@@ -7,7 +7,7 @@ import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
  * The fold kind the menus and the step cards arm (`registerFoldKindControl`),
  * as the tools hold it: the plain fold in hand, or none while another tool
  * is — a compound or vertex fold, a sink, the Divide line — so no kind reads
- * as chosen. Arming a kind takes that fold in hand, as V and M do.
+ * as chosen. Arming a kind takes that fold in hand, as V, M and P do.
  */
 export function foldToolKindControl(tools: FoldTools): FoldKindControl {
   return {

@@ -37,6 +37,8 @@ export type FoldStepSnap = CpStepSnap | 'free';
 /** One click of a tool's sequence. */
 export interface FoldLocateStep {
   snap: FoldStepSnap;
+  /** A free-line endpoint may snap to points; a free region pick must not. */
+  snapFree?: boolean;
   /** For an axiom: the input slot this click fills, in the axiom's own order. */
   slot: number | null;
   /** For a `crease-required` click: whether the paper's raw edge counts, or only folds and creases. */
@@ -96,8 +98,8 @@ const AXIOM_MODELS: Readonly<Record<FoldAxiom, FoldInputModel>> = {
 
 const FREE_LINE: FoldInputModel = {
   steps: [
-    { snap: 'free', slot: null, edges: false },
-    { snap: 'free', slot: null, edges: false },
+    { snap: 'free', snapFree: true, slot: null, edges: false },
+    { snap: 'free', snapFree: true, slot: null, edges: false },
   ],
 };
 
@@ -152,6 +154,7 @@ export function toolInput(
       return NO_CLICKS;
     case 'valley':
     case 'mountain':
+    case 'precrease':
     case 'inside-reverse':
     case 'tuck':
     case 'open-sink':
@@ -164,7 +167,7 @@ export function toolInput(
     case 'petal':
     case 'rabbit-ear':
     case 'swivel':
-      return vertexToolInput(tool, vertex);
+      return tool === 'swivel' && vertex.swivelInput === 'creases' ? lineModeInput(mode) : vertexToolInput(tool, vertex);
     case 'divide-line':
       return DIVIDE_LINE;
   }

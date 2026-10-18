@@ -24,7 +24,7 @@ import {
   foldReadOnlyReason,
   foldToolDescription,
   foldToolLabel,
-  locatesLine,
+  usesLineMode,
   lineModeDescription,
   lineModeLabel,
   type FoldLineModeId,
@@ -39,6 +39,7 @@ import {
 export interface FoldToolsView {
   tool: FoldToolId;
   lineMode: FoldLineModeId;
+  swivelInput?: 'edge' | 'creases';
   /** Set while nothing on the sequence can change, and why. */
   readOnly: FoldReadOnlyReason | null;
 }
@@ -81,9 +82,9 @@ export interface FoldRailGroup {
 const FOLD_GROUP_TOOLS: readonly FoldToolId[] = [
   'valley',
   'mountain',
+  'precrease',
   'inside-reverse',
   'crimp',
-  'tuck',
   // The vertex folds.
   ...FOLD_VERTEX_TOOLS,
 ];
@@ -116,7 +117,7 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
     label: foldToolLabel(t, id),
     description: foldToolDescription(t, id),
     reason: locked,
-    shortcut: FOLD_TOOL_SHORTCUTS[id],
+    shortcut: FOLD_TOOL_SHORTCUTS[id] ?? null,
     active: view.tool === id,
     available: locked === null,
     select: () => verbs.selectTool(id),
@@ -131,7 +132,7 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
     shortcut: FOLD_LINE_MODE_SHORTCUTS[id],
     // A line mode stays chosen under the Divide line, but is not what the
     // canvas is doing then; a petal fold locates its line H through it.
-    active: view.lineMode === id && locatesLine(view.tool),
+    active: view.lineMode === id && usesLineMode(view.tool, view.swivelInput),
     available: locked === null,
     select: () => verbs.selectLineMode(id),
   });

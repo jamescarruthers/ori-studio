@@ -14,6 +14,7 @@ export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; 
   switch (icon) {
     case 'valley':
     case 'mountain':
+    case 'precrease':
       return <FoldKindMark kind={icon} size={size} />;
     case 'turn-over':
       return <RotateCcwSquare size={size} aria-hidden="true" />;

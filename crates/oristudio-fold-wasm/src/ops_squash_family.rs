@@ -85,8 +85,8 @@ use oristudio_fold::numerics::MIN_FEATURE;
 use oristudio_fold::{
     ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, LineRefusal,
     PetalAnalysis, PetalFold, PetalHinge, RabbitEar, Refused, Squash, SquashAnalysis, State,
-    StepSummary, Swivel, SwivelByEdge, SwivelEdgeAnalysis, SwivelKind, VertexChoice, VertexChoices,
-    VertexFolded, VertexOutcome, WitnessOrder,
+    StepSummary, Swivel, SwivelByCreases, SwivelByEdge, SwivelCreasesAnalysis, SwivelEdgeAnalysis,
+    SwivelKind, VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
 };
 use oristudio_geometry::Line;
 use serde::{Deserialize, Serialize};
@@ -152,6 +152,8 @@ pub struct RabbitEarOp {
 pub enum SwivelOp {
     Rays(SwivelRaysOp),
     Edge(SwivelEdgeOp),
+    Creases(SwivelCreasesOp),
+    Lines(SwivelLinesOp),
 }
 
 impl<'de> Deserialize<'de> for SwivelOp {
@@ -165,8 +167,14 @@ impl<'de> Deserialize<'de> for SwivelOp {
             Some(via) if via == "edge" => serde_json::from_value(value)
                 .map(SwivelOp::Edge)
                 .map_err(D::Error::custom),
+            Some(via) if via == "creases" => serde_json::from_value(value)
+                .map(SwivelOp::Creases)
+                .map_err(D::Error::custom),
+            Some(via) if via == "lines" => serde_json::from_value(value)
+                .map(SwivelOp::Lines)
+                .map_err(D::Error::custom),
             Some(via) => Err(D::Error::custom(format!(
-                "a swivel's `via` is 'edge' or absent, got {via}"
+                "a swivel's `via` is 'edge', 'creases' or absent, got {via}"
             ))),
         }
     }
@@ -222,6 +230,59 @@ pub struct SwivelEdgeOp {
     pub swivel: Option<SwivelKind>,
 }
 
+/// Independently located hinges at an exact point on a folded edge.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SwivelCreasesOp {
+    pub via: String,
+    pub fold: Point,
+    pub first: Point,
+    pub second: Point,
+    pub direction: Direction,
+    #[serde(default)]
+    pub swivel: Option<SwivelKind>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LocatedLine {
+    pub line: LineInput,
+    #[serde(default)]
+    pub root: Option<Line>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SwivelLinesOp {
+    pub via: String,
+    pub first: LocatedLine,
+    pub second: LocatedLine,
+    pub direction: Direction,
+    #[serde(default)]
+    pub swivel: Option<SwivelKind>,
+}
+
+fn located_line(parent: &State, located: &LocatedLine) -> Result<Line, Rejection> {
+    match &located.line {
+        LineInput::Axiom { axiom, inputs } => {
+            let root = crate::resolve::model_line(
+                located.root.as_ref().ok_or(BridgeRefusal::RootMissing)?,
+            )?
+            .0;
+            let axiom = crate::resolve::axiom_of(*axiom, inputs)?;
+            Ok(parent.axiom_root(&axiom, &root)?.candidate.line)
+        }
+        _ if located.root.is_some() => {
+            Err(BridgeRefusal::UnexpectedChoice { choice: "root" }.into())
+        }
+        LineInput::Model { .. } => Err(BridgeError::InvalidInput(
+            "a saved swivel line needs sheet references".into(),
+        )
+        .into()),
+        _ => swivel_target(parent, &located.line),
+    }
+}
+
 /// A vertex op resolved in its parent: the engine's op, and the choice the
 /// step stores.
 #[derive(Debug, Clone)]
@@ -238,6 +299,7 @@ pub enum EngineOp {
     RabbitEar(RabbitEar),
     Swivel(Swivel),
     SwivelByEdge(SwivelByEdge),
+    SwivelByCreases(SwivelByCreases),
 }
 
 /// Resolve a vertex op's anchors in `parent`; any other op is the caller's
@@ -332,6 +394,35 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                 stayer: op.stayer,
                 direction: op.direction,
             })
+        }
+        Op::Swivel(SwivelOp::Creases(op)) => {
+            for (name, p) in [
+                ("fold", op.fold),
+                ("first", op.first),
+                ("second", op.second),
+            ] {
+                image(name, p)?;
+            }
+            EngineOp::SwivelByCreases(SwivelByCreases {
+                fold: op.fold,
+                first: op.first,
+                second: op.second,
+                direction: op.direction,
+                kind: op.swivel.unwrap_or_default(),
+            })
+        }
+        Op::Swivel(SwivelOp::Lines(op)) => {
+            let first = located_line(parent, &op.first)?;
+            let second = located_line(parent, &op.second)?;
+            let swivel = SwivelByCreases::from_lines(
+                parent,
+                first,
+                second,
+                op.direction,
+                op.swivel.unwrap_or_default(),
+            )
+            .map_err(|refused| Rejection::Refused(refused.into()))?;
+            EngineOp::SwivelByCreases(swivel)
         }
         Op::Swivel(SwivelOp::Edge(op)) => {
             finite_point("edge", op.edge)?;
@@ -471,6 +562,7 @@ fn picture(
         EngineOp::RabbitEar(op) => parent.rabbit_ear_action(op, landed),
         EngineOp::Swivel(op) => parent.swivel_action(op, landed),
         EngineOp::SwivelByEdge(op) => parent.swivel_by_edge_action(op, landed),
+        EngineOp::SwivelByCreases(op) => parent.swivel_by_creases_action(op, landed),
     }
 }
 
@@ -483,6 +575,23 @@ fn fold(parent: &State, fold: &VertexFold) -> Result<VertexOutcome, CompoundRefu
         EngineOp::RabbitEar(op) => parent.rabbit_ear(op, choices),
         EngineOp::Swivel(op) => parent.swivel(op, choices),
         EngineOp::SwivelByEdge(op) => parent.swivel_by_edge(op, choices),
+        EngineOp::SwivelByCreases(op) => parent.swivel_by_creases(op, choices),
+    }
+}
+
+fn fold_within(
+    parent: &State,
+    fold: &VertexFold,
+    limits: &oristudio_fold::CompletionLimits,
+) -> Result<VertexOutcome, CompoundRefused> {
+    let choices = &fold.choices;
+    match &fold.op {
+        EngineOp::Squash(op) => parent.squash_within(op, choices, limits),
+        EngineOp::Petal(op) => parent.petal_fold_within(op, choices, limits),
+        EngineOp::RabbitEar(op) => parent.rabbit_ear_within(op, choices, limits),
+        EngineOp::Swivel(op) => parent.swivel_within(op, choices, limits),
+        EngineOp::SwivelByEdge(op) => parent.swivel_by_edge_within(op, choices, limits),
+        EngineOp::SwivelByCreases(op) => parent.swivel_by_creases_within(op, choices, limits),
     }
 }
 
@@ -493,6 +602,9 @@ fn analyse(parent: &State, op: &EngineOp) -> Result<VertexAnalysis, Refused> {
         EngineOp::Petal(op) => parent.analyse_petal(op).map(VertexAnalysis::Petal),
         EngineOp::RabbitEar(op) => parent.analyse_rabbit_ear(op).map(VertexAnalysis::RabbitEar),
         EngineOp::Swivel(op) => parent.analyse_swivel(op).map(VertexAnalysis::Swivel),
+        EngineOp::SwivelByCreases(op) => parent
+            .analyse_swivel_by_creases(op)
+            .map(|a| VertexAnalysis::SwivelByCreases(Box::new(a))),
         EngineOp::SwivelByEdge(op) => parent
             .analyse_swivel_by_edge(op)
             .map(|a| VertexAnalysis::SwivelByEdge(Box::new(a))),
@@ -584,28 +696,42 @@ struct SwivelWays {
 /// A swivel on a folded edge's ways, each folded once; none for every other
 /// fold.
 fn swivel_ways(parent: &State, op: &EngineOp) -> Option<SwivelWays> {
-    let EngineOp::SwivelByEdge(swivel) = op else {
-        return None;
+    let (chosen_kind, chosen_direction) = match op {
+        EngineOp::SwivelByEdge(swivel) if swivel.fold.is_some() => (swivel.kind, swivel.direction),
+        EngineOp::SwivelByCreases(swivel) => (swivel.kind, swivel.direction),
+        _ => return None,
     };
-    swivel.fold?;
     let mut asked = None;
     let mut kinds = Vec::with_capacity(SWIVEL_KINDS.len());
     let mut directions = Vec::new();
     for kind in SWIVEL_KINDS {
         let mut ways = [false; 2];
         for (way, direction) in ways.iter_mut().zip(DIRECTIONS) {
-            let each = SwivelByEdge {
-                kind,
-                direction,
-                ..swivel.clone()
+            let outcome = match op {
+                EngineOp::SwivelByEdge(swivel) => parent.swivel_by_edge(
+                    &SwivelByEdge {
+                        kind,
+                        direction,
+                        ..swivel.clone()
+                    },
+                    &VertexChoices::default(),
+                ),
+                EngineOp::SwivelByCreases(swivel) => parent.swivel_by_creases(
+                    &SwivelByCreases {
+                        kind,
+                        direction,
+                        ..swivel.clone()
+                    },
+                    &VertexChoices::default(),
+                ),
+                _ => return None,
             };
-            let outcome = parent.swivel_by_edge(&each, &VertexChoices::default());
             *way = outcome.is_ok();
-            if kind == swivel.kind && direction == swivel.direction {
+            if kind == chosen_kind && direction == chosen_direction {
                 asked = Some(outcome);
             }
         }
-        if kind == swivel.kind {
+        if kind == chosen_kind {
             directions = ways.to_vec();
         }
         kinds.push(ways);
@@ -618,6 +744,28 @@ fn swivel_ways(parent: &State, op: &EngineOp) -> Option<SwivelWays> {
 }
 
 impl CompoundOp for VertexFold {
+    fn order_selection(
+        &self,
+        parent: &State,
+        query: &crate::order_selection::OrderQuery,
+    ) -> Result<crate::order_selection::OrderSelection, Refusal> {
+        use crate::order_selection::OrderSelection;
+        match fold_within(parent, self, &query.limits()) {
+            Ok(VertexOutcome::Landed(folded)) => {
+                Ok(OrderSelection::unique(folded.report.stored.completion))
+            }
+            Ok(VertexOutcome::ChooseOrder(choice)) => {
+                OrderSelection::pick(choice.completions(), query, |pick| {
+                    choice
+                        .pick(pick)
+                        .map(|folded| folded.report.stored.completion)
+                })
+            }
+
+            Err(refused) => Err(crate::compound::compound_refusal(refused)),
+        }
+    }
+
     /// Its picture along the crease that tells it best: no plain fold's
     /// analysis or depth pick, since it folds along no one line.
     fn action(&self, parent: &State) -> Option<Result<FoldActionGeometry, Refusal>> {
@@ -714,6 +862,7 @@ pub enum VertexAnalysis {
     /// A swivel by its edge (`via: 'edge'`): its vertex, creases with their
     /// letters, landing, ridges and moving paper.
     SwivelByEdge(Box<SwivelEdgeAnalysis>),
+    SwivelByCreases(Box<SwivelCreasesAnalysis>),
 }
 
 /// What `compound_analysis` answers for a vertex op.

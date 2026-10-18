@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-bookmark",
         "title": "Bookmark — Origami.me (batch 2)",
         "paper": {
@@ -145,6 +145,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -185,6 +188,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -222,6 +228,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Fold the lower half upward."
@@ -250,6 +259,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Raise the left side, aligning the lower edge with the centerline."
@@ -278,6 +290,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7: Repeat on the right side."
@@ -324,8 +339,7 @@
             "id": "fstep-bookmark-11",
             "parent": "fstep-bookmark-10",
             "op": {
-              "kind": "tuck",
-              "direction": "valley",
+              "kind": "valley",
               "line": {
                 "via": "free",
                 "through": [
@@ -346,10 +360,15 @@
               "seed": {
                 "scope": "all"
               },
-              "target": [
-                0.8848171003677038,
-                0.8423906934965111
-              ]
+              "landing": {
+                "kind": "against",
+                "targets": [
+                  [
+                    0.8848171003677038,
+                    0.8423906934965111
+                  ]
+                ]
+              }
             },
             "note": "10: Tuck both upper flaps inside the pocket, between the two original folded-corner pocket walls."
           },

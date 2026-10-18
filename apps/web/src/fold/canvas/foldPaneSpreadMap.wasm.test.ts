@@ -97,6 +97,9 @@ describe.skipIf(!available)('the spread folded pane, picked where it is drawn', 
     expect(flap).toMatchObject({ kind: 'point', sheet: [1, 0.25] });
     // The pick lies where the paper does: the step stores the sheet point, and the flat pane draws it there.
     expect(near(flap?.kind === 'point' ? flap.scene : null, truth, 1e-9)).toBe(true);
+    const freeEnd = resolveFoldPick(index, 'folded', drawn, RADII, { ...POINT, snap: 'free', snapFree: true });
+    expect(freeEnd).toMatchObject({ kind: 'free', sheet: [1, 0.25] });
+    expect(near(freeEnd?.kind === 'free' ? freeEnd.scene : null, truth, 1e-9)).toBe(true);
     // The face held still is where it lies, and so is its corner there.
     expect(resolveFoldPick(index, 'folded', truth, RADII, POINT)).toMatchObject({ kind: 'point', sheet: [0, 0.25] });
   });

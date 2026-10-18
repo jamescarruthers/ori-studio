@@ -14,8 +14,9 @@
 //!   closed, 491 of 491; every free, uncovered one was unique, 416 of 416):
 //!   both layers are held along h (the upper one folded over it, or flat
 //!   beside it once an earlier squash has unfolded it); the flap is *free*,
-//!   attached to the rest only along h; and it is *uncovered*, with no
-//!   other paper over it, or inside it, on the side it squashes toward. Each
+//!   its moving portion attached to the rest only along h; and it is
+//!   *uncovered*, with no other paper over its moving portion, or inside it,
+//!   on the side it squashes toward. Each
 //!   is a refusal naming the faces in the way. An upper layer held by its
 //!   spine alone has no squash: its hinge side would lie loose, both ways
 //!   round (2 of 67 seeded draws, before this was checked).
@@ -34,7 +35,7 @@
 use std::collections::BTreeSet;
 use std::f64::consts::PI;
 
-use oristudio_geometry::Line;
+use oristudio_geometry::{Line, convex};
 use serde::{Deserialize, Serialize};
 
 use crate::complete::CompletionLimits;
@@ -366,8 +367,42 @@ impl State {
         let hinge_line =
             Line::from_point_direction(vertex, hinge_dir).ok_or(no_flap(NoFlap::NoHinge))?;
 
+        // Where the spine lands, and each layer's crease.
+        let share = match op.target {
+            None => 0.0,
+            Some(target) => {
+                let target = unit(target).ok_or(FoldRefusal::SquashTargetOutside)?;
+                angle_between(hinge_dir, target) / wedge
+            }
+        };
+        // A share that is not a number is outside too.
+        let inside = share.abs() < 1.0;
+        if !inside || wedge.abs() >= PI {
+            return Err(FoldRefusal::SquashTargetOutside.into());
+        }
+        let crease = |share: f64| {
+            Line::from_point_direction(vertex, rotate(hinge_dir, share * wedge / 2.0))
+                .ok_or(FoldRefusal::SquashTargetOutside)
+        };
+        let lower_crease = crease(1.0 + share)?;
+        let upper_crease = crease(1.0 - share)?;
+        // Only the spine side of the lower layer moves. Its flat material
+        // can continue into a stationary body with other folded attachments.
+        // Those attachments (and paper over that body) do not hold the squash.
+        let lower_dir = rotate(hinge_dir, (1.0 + share) * wedge / 2.0);
+        let normal = [
+            -lower_dir[1] * wedge.signum(),
+            lower_dir[0] * wedge.signum(),
+        ];
+        let moving_lower =
+            convex::HalfPlane::new(normal, normal[0] * vertex[0] + normal[1] * vertex[1])
+                .ok_or(FoldRefusal::SquashTargetOutside)?;
+        let up = geometry.isometries[p].front_up();
+        let upper_face = |f: usize| geometry.isometries[f].front_up() == up;
+
         // The flap: both faces grown across flat creases off the hinge line
-        // and folded ones on the spine's; attached elsewhere, it is not free.
+        // and folded ones on the spine. Attachments outside the hinge are
+        // forbidden only where this material actually moves.
         let on = |line: &Line, k: usize| {
             creases[k]
                 .vertices
@@ -400,10 +435,18 @@ impl State {
             .flat_map(|&f| {
                 topology.face_creases[f]
                     .iter()
-                    .filter_map(move |&k| topology.across(k, f).map(|g| (k, g)))
+                    .filter_map(move |&k| topology.across(k, f).map(|g| (f, k, g)))
             })
-            .filter(|&(k, g)| !in_flap[g] && !on(&hinge_line, k))
-            .map(|(_, g)| g)
+            .filter(|&(f, k, g)| {
+                !in_flap[g]
+                    && !on(&hinge_line, k)
+                    && (upper_face(f)
+                        || creases[k]
+                            .vertices
+                            .iter()
+                            .any(|v| moving_lower.signed_distance(images[v.index()]) > TOL))
+            })
+            .map(|(_, _, g)| g)
             .collect();
         if !attached.is_empty() {
             return Err(FoldRefusal::SquashFlapNotFree {
@@ -415,7 +458,6 @@ impl State {
         // The upper layer must be held along the hinge too (folded over it,
         // or flat beside it): one held by its spine alone has no squash, its
         // hinge side lying loose.
-        let up = geometry.isometries[p].front_up();
         let hinged = flap.iter().any(|&f| {
             geometry.isometries[f].front_up() == up
                 && topology.face_creases[f].iter().any(|&k| {
@@ -425,7 +467,19 @@ impl State {
         if !hinged {
             return Err(no_flap(NoFlap::UpperNotHinged));
         }
-        // Uncovered: no other paper on the side it squashes toward.
+        // Uncovered where the paper moves. Cover over the stationary part
+        // of a lower face is harmless, even when no precrease divides it.
+        let moving_images: Vec<Vec<Point>> = (0..faces.len())
+            .map(|f| {
+                if !in_flap[f] {
+                    Vec::new()
+                } else if upper_face(f) {
+                    geometry.images[f].clone()
+                } else {
+                    convex::split(&geometry.images[f], &moving_lower, TOL).inside
+                }
+            })
+            .collect();
         let mut covering = BTreeSet::new();
         for (pair, _) in self.order().pairs() {
             let (Some(f), Some(g)) = (self.face_position(pair.lo()), self.face_position(pair.hi()))
@@ -437,7 +491,9 @@ impl State {
                 (false, true) => (f, g),
                 _ => continue,
             };
-            if toward(self, x, y, direction) == Some(true) {
+            if toward(self, x, y, direction) == Some(true)
+                && convex::overlaps(&geometry.images[x], &moving_images[y])
+            {
                 covering.insert(x);
             }
         }
@@ -453,25 +509,6 @@ impl State {
             .iter()
             .partition(|&&f| geometry.isometries[f].front_up() == up);
 
-        // Where the spine lands, and each layer's crease.
-        let share = match op.target {
-            None => 0.0,
-            Some(target) => {
-                let target = unit(target).ok_or(FoldRefusal::SquashTargetOutside)?;
-                angle_between(hinge_dir, target) / wedge
-            }
-        };
-        // A share that is not a number is outside too.
-        let inside = share.abs() < 1.0;
-        if !inside || wedge.abs() >= PI {
-            return Err(FoldRefusal::SquashTargetOutside.into());
-        }
-        let crease = |share: f64| {
-            Line::from_point_direction(vertex, rotate(hinge_dir, share * wedge / 2.0))
-                .ok_or(FoldRefusal::SquashTargetOutside)
-        };
-        let lower_crease = crease(1.0 + share)?;
-        let upper_crease = crease(1.0 - share)?;
         Ok(Flap {
             upper,
             lower,

@@ -421,7 +421,8 @@
       "severalSunk_one": "Hier liegt {{count}} versenkte Spitze: Die erste wird genommen.",
       "severalSunk_other": "Hier liegen {{count}} versenkte Spitzen: Die erste wird genommen.",
       "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein.",
-      "unsinkRing": "Die Linie ist eine Faltlinie des Rings, den das Versenken hinterlassen hat, entlang der Oberkante der versenkten Spitze."
+      "unsinkRing": "Die Linie ist eine Faltlinie des Rings, den das Versenken hinterlassen hat, entlang der Oberkante der versenkten Spitze.",
+      "freeSnap": "Rastet an nahen Zielpunkten ein; andernfalls wird genau die angeklickte Position verwendet."
     },
     "op": {
       "closedSink": "Geschlossenes Versenken",
@@ -434,6 +435,31 @@
       "swivel": "Schwenkfalte",
       "tuck": "Einstecken",
       "unsink": "Versenken aufheben"
+    },
+    "order": {
+      "accept": "Diese Reihenfolge verwenden",
+      "acceptAll": "Reihenfolgen verwenden und Schritt hinzufügen",
+      "acceptUpdate": "Reihenfolgen verwenden und Schritt aktualisieren",
+      "back": "Zurück",
+      "choose": "Lagenreihenfolge wählen",
+      "count_one": "Reihenfolge {{index}} von {{count}}",
+      "count_other": "Reihenfolge {{index}} von {{count}}",
+      "failed": "Die Reihenfolge konnte nicht geladen werden. Gehe zurück und versuche es erneut oder wähle eine andere Reihenfolge.",
+      "found_one": "Reihenfolge {{index}} von {{count}} gefundenen",
+      "found_other": "Reihenfolge {{index}} von {{count}} gefundenen",
+      "help": "Sieh dir die Anordnungen an und wähle die gewünschte Reihenfolge.",
+      "incomplete": "Suche unvollständig. Es kann weitere Reihenfolgen geben.",
+      "inspect": "Lagenstapel prüfen",
+      "loading": "Reihenfolge wird geladen…",
+      "movingVaries": "Bei diesen Reihenfolgen werden unterschiedliche Lagen bewegt. Prüfe das hervorgehobene Papier.",
+      "next": "Nächste Lagenreihenfolge",
+      "noneFound": "Noch keine Reihenfolge gefunden",
+      "previous": "Vorherige Lagenreihenfolge",
+      "region": "Bereich {{number}}",
+      "regions": "Unabhängige Bereiche",
+      "search": "Weitere Reihenfolgen suchen",
+      "stack": "Bereich {{number}}: {{layers}}",
+      "stackHelp": "Wähle einen Bereich zum Hervorheben. Die Lagen sind von vorne nach hinten aufgelistet; hervorgehobene Unterschiede beziehen sich auf die erste Vorschau."
     },
     "picker": {
       "close": "Werkzeugliste schließen",
@@ -782,6 +808,8 @@
       "mountain": "Bergfalte",
       "mountainHelp": "Die bewegte Seite von dir weg falten, sodass sie unten landet.",
       "openSinkHelp": "Das Ende einer geschlossenen Spitze hineindrücken und dabei jede ihrer Lagen umstülpen.",
+      "precrease": "Vorfalten",
+      "precreaseHelp": "Falten und wieder öffnen: eine Faltlinie für später.",
       "reverse": "Umkehrfaltung",
       "reverseHelp": "Falte eine Klappe nach innen oder stülpe sie nach außen um und kehre dabei ihre Rückenkante um.",
       "rotateHelp": "Das Modell um einen Teil einer Umdrehung oder einen genauen Winkel drehen: erst als Vorschau, dann als eigener Schritt.",
@@ -826,7 +854,15 @@
       "hingeRegionBlocked": "Dieser Scharnierbereich lässt sich mit diesen Lagen nicht falten. Klicke auf einen anderen Bereich oder ändere die Lagen.",
       "hingeRegionBlockedTouch": "Dieser Scharnierbereich lässt sich mit diesen Lagen nicht falten. Tippe auf einen anderen Bereich oder ändere die Lagen.",
       "hingeRegionFits": "Der Scharnierfalz liegt im gewählten Bereich.",
+      "input": {
+        "edge": "Kante auf Linie",
+        "edgeHelp": "Eine Kante und die Linie wählen, auf der sie landen soll",
+        "label": "Konstruieren über",
+        "lines": "Zwei Faltlinien",
+        "linesHelp": "Zwei Faltlinien bestimmen; ihr Schnittpunkt legt den Treffpunkt fest"
+      },
       "intro": {
+        "creases": "Die beiden Scharniere festlegen; die übrige Faltlinie wird so berechnet, dass das Papier flach bleibt.",
         "petalLift": "Hebt die Spitze einer Lasche entlang eines Scharniers an.",
         "swivelSwing": "Schwenkt eine Kante des Papiers auf eine Linie."
       },
@@ -849,6 +885,13 @@
         "twoPoints": "Zwei Punkte",
         "twoPointsHelp": "Klicke auf zwei Punkte der Linie"
       },
+      "lines": {
+        "confirm": "Drücke Eingabe, um die erste Linie zu übernehmen und die zweite zu bestimmen.",
+        "confirmTouch": "Tippe auf Erste Linie verwenden, um fortzufahren.",
+        "first": "Bestimme die erste Faltlinie. Wähle einen vorhandenen Falz oder konstruiere eine Linie mit Linie bestimmen.",
+        "second": "Bestimme die zweite Faltlinie. Ihr Schnittpunkt mit der ersten legt den Treffpunkt fest; das verbleibende Scharnier wird berechnet.",
+        "useFirst": "Erste Linie verwenden"
+      },
       "mountain": "Berg",
       "mountainTitle": "Berg: das Papier dreht sich von dir weg",
       "note": {
@@ -862,6 +905,7 @@
         "snapOrFree": "Punkte rasten an Ecken, Kreuzungen, Markierungen und Mittelpunkten ein: Halte {{modifier}} gedrückt, um einen beliebig zu setzen.",
         "snapOrFreeTouch": "Punkte rasten an Ecken, Kreuzungen, Markierungen und Mittelpunkten ein: Schalte Freier Punkt ein, um einen beliebig zu setzen.",
         "squashFlap": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen nur an ihrem Scharnier verbunden sind und nichts auf ihr liegt.",
+        "swivelCreasesPicture": "Die Faltlinien treffen sich am Punkt. Das hervorgehobene Papier bewegt sich; die übrige Faltlinie hält es flach.",
         "swivelPicture": "Die Faltlinien treffen sich am Punkt, die Kante landet auf der fetten Linie, und das hervorgehobene Papier bewegt sich."
       },
       "refusal": {
@@ -890,13 +934,17 @@
           "title": "Die vierte Faltlinie kann sich hier nicht aufrichten"
         },
         "kite": {
-          "creaseOrPrecrease": "Über einer Scharnierlinie faltet eine Blütenblattfalte vorhandene Faltlinien nach, und eine Drachenlinie ist noch nicht da. Nenne das Scharnier stattdessen über seine beiden Enden, dann faltet die Faltung die Drachenlinien selbst; oder falte sie zuerst vor, mit „Falten und wieder öffnen“ auf Axiom 3: eine untere Kante der oberen Lasche auf ihre Mittellinie, die Laschen dahinter herausgenommen.",
+          "creaseOrPrecrease": "Über einer Scharnierlinie faltet eine Blütenblattfalte vorhandene Faltlinien nach, und eine Drachenlinie ist noch nicht da. Nenne das Scharnier stattdessen über seine beiden Enden, dann faltet die Faltung die Drachenlinien selbst; oder falte sie zuerst vor, mit dem Werkzeug Vorfalten auf Axiom 3: eine untere Kante der oberen Lasche auf ihre Mittellinie, die Laschen dahinter herausgenommen.",
           "titleMissing": "Die Drachenlinien fehlen"
         },
         "line": {
           "crease": "Die Scharnierlinie läuft nicht durch jede Lage darunter, die mitfaltet. Falte das Scharnier durch alle Lagen vor, dann die Blütenblattfalte.",
           "ends": "Das Scharnier kreuzt Papier der zweiten Lage, das sich neben dem Drachen einfaltet, und die Faltung kann es beim Anheben der Lasche nicht falten. Falte das Scharnier durch alle Lagen vor, dann die Blütenblattfalte.",
           "titleHinge": "Zuerst das Scharnier vorfalten"
+        },
+        "lineMeeting": {
+          "text": "Wähle zwei Faltlinien, die sich auf genau einer sichtbaren Faltkante schneiden.",
+          "title": "Die Linien brauchen einen Treffpunkt"
         },
         "noFlap": {
           "noHinge": "Die Lasche faltet sich an keinem Ende ihres Rückens über ein Scharnier, also gibt es nichts, wogegen sie flach gedrückt werden kann.",
@@ -1053,7 +1101,6 @@
     "window": {
       "cancel": "Abbrechen",
       "finding": "Lagen an der Linie werden ermittelt …",
-      "foldAndUnfold": "Falten und wieder öffnen",
       "instructions": "Anleitung",
       "kind": "Faltung",
       "label": "Optionen des Falt-Werkzeugs",
@@ -1066,7 +1113,8 @@
       "movingSide": "Bewegte Seite",
       "settings_one": "{{count}} Einstellung",
       "settings_other": "{{count}} Einstellungen",
-      "swap": "Tauschen"
+      "swap": "Tauschen",
+      "snapFreeLine": "An Punkten einrasten"
     }
   },
   "foldAngleDisplay": {

@@ -1,3 +1,4 @@
+import { foldToolInputKey } from '../tools/foldToolState';
 import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,16 +48,16 @@ const PINCH: FoldPrecreaseExtent = { kind: 'pinch', at: { kind: 'point', at: [0.
 const FOLDS: { name: string; tool: FoldToolId; op: FoldOp; extent?: FoldPrecreaseExtent }[] = [
   { name: 'a valley fold', tool: 'valley', op: { kind: 'valley', line: DIAGONAL, seed: ALL } },
   { name: 'a mountain fold', tool: 'mountain', op: { kind: 'mountain', line: DIAGONAL, seed: ALL } },
-  { name: 'a precrease of the whole line', tool: 'valley', op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL } },
+  { name: 'a precrease of the whole line', tool: 'precrease', op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL } },
   {
     name: 'a precrease of a segment',
-    tool: 'valley',
+    tool: 'precrease',
     op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL, extent: SEGMENT },
     extent: SEGMENT,
   },
   {
     name: 'a pinch',
-    tool: 'valley',
+    tool: 'precrease',
     op: { kind: 'precrease', line: DIAGONAL, direction: 'valley', seed: ALL, extent: PINCH },
     extent: PINCH,
   },
@@ -164,6 +165,7 @@ function Fold({ session, tools, preview }: { session: FoldSessionSurface; tools:
       <button type="button" onClick={() => verbs.commit()}>
         Valley fold
       </button>
+      <button type="button" onClick={() => verbs.acceptOrder?.()}>Use this order</button>
       <input aria-label="Ratio" defaultValue="0.5" />
       <select aria-label="Locate line" defaultValue="axiom-2">
         <option value="axiom-2">Axiom 2</option>
@@ -230,7 +232,6 @@ describe('Enter commits every tool’s preview', () => {
       render(landed(fold.op));
       act(() => {
         tools.selectTool(fold.tool);
-        tools.setFoldAndUnfold(fold.op.kind === 'precrease');
         if (fold.extent) tools.setExtent(fold.extent.kind);
       });
       render(landed(fold.op, fold.extent ? { status: 'ready', extent: fold.extent } : null));
@@ -252,7 +253,7 @@ describe('Enter commits every tool’s preview', () => {
 
   it('declines while a partial precrease’s points are still to be clicked', () => {
     act(() => {
-      tools.setFoldAndUnfold(true);
+      tools.selectTool('precrease');
       tools.setExtent('pinch');
     });
     render(landed(FOLDS[4]!.op, { status: 'incomplete', mode: 'pinch', picked: 0, needed: 1 }, { step: null }));
@@ -314,6 +315,73 @@ describe('Enter at each focus', () => {
     expect(enter().defaultPrevented).toBe(false);
     expect(commitStep).not.toHaveBeenCalled();
     act(() => button('Valley fold').click());
+    expect(commitStep).toHaveBeenCalledOnce();
+  });
+});
+
+
+describe('explicit layer-order acceptance', () => {
+  function resolution(overrides = {}) {
+    return { key: 'decision', inputKey: foldToolInputKey(tools.store.getState()), active: true, required: true,
+      waiting: false, failed: false, index: 0, count: 2, exact: true, canSearch: true,
+      step: vi.fn(), search: vi.fn(), back: vi.fn(), resume: vi.fn(), ...overrides };
+  }
+  it('opens review when a queued confirmation discovers ambiguity, without committing', () => {
+    render(landed(FOLDS[0]!.op, null, { landing: true }));
+    focus(null);
+    enter();
+    const orderResolution = resolution({ active: false });
+    render({ ...landed(FOLDS[0]!.op), orderResolution });
+    expect(orderResolution.resume).toHaveBeenCalledOnce();
+    expect(commitStep).not.toHaveBeenCalled();
+  });
+  it('leaves the order chooser closed while editing and opens it on confirmation', () => {
+    const orderResolution = resolution({ active: false });
+    render({ ...landed(FOLDS[0]!.op), orderResolution });
+    focus(null);
+    expect(orderResolution.resume).not.toHaveBeenCalled();
+    enter();
+    expect(orderResolution.resume).toHaveBeenCalledOnce();
+    expect(commitStep).not.toHaveBeenCalled();
+  });
+  it.each([true, false])('waits for the order search before confirming (ambiguous: %s)', (ambiguous) => {
+    render({ ...landed(FOLDS[0]!.op), orderResolution: resolution({ active: false, required: false, waiting: true }) });
+    focus(null);
+    enter();
+    expect(commitStep).not.toHaveBeenCalled();
+    const answer = resolution({ active: false, required: ambiguous, count: ambiguous ? 2 : 1 });
+    render({ ...landed(FOLDS[0]!.op), orderResolution: answer });
+    expect(answer.resume).toHaveBeenCalledTimes(ambiguous ? 1 : 0);
+    expect(commitStep).toHaveBeenCalledTimes(ambiguous ? 0 : 1);
+  });
+  it('drops pending confirmation if the moving layers change before the order search answers', () => {
+    const before = resolution({ active: false, required: false, waiting: true });
+    render({ ...landed(FOLDS[0]!.op), orderResolution: before });
+    focus(null);
+    enter();
+    act(() => tools.setSeed({ scope: 'all' }));
+    const answer = resolution({ active: false });
+    render({ ...landed(FOLDS[0]!.op), orderResolution: answer });
+    expect(answer.resume).not.toHaveBeenCalled();
+    expect(commitStep).not.toHaveBeenCalled();
+  });
+  it('does not consume order cycling shortcuts until review is active', () => {
+    const orderResolution = resolution({ active: false });
+    render({ ...landed(FOLDS[0]!.op), orderResolution });
+    focus(null);
+    act(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true })));
+    expect(orderResolution.step).not.toHaveBeenCalled();
+  });
+  it('accepts the first order explicitly, once, and rejects stale input and loading', () => {
+    const ready = { ...landed(FOLDS[0]!.op), landed: {} as NonNullable<FoldToolPreview['landed']> };
+    render({ ...ready, orderResolution: resolution({ waiting: true }) });
+    act(() => button('Use this order').click());
+    expect(commitStep).not.toHaveBeenCalled();
+    render({ ...ready, orderResolution: resolution({ inputKey: 'obsolete' }) });
+    act(() => button('Use this order').click());
+    expect(commitStep).not.toHaveBeenCalled();
+    render({ ...ready, orderResolution: resolution() });
+    act(() => { button('Use this order').click(); button('Use this order').click(); });
     expect(commitStep).toHaveBeenCalledOnce();
   });
 });

@@ -47,4 +47,12 @@ describe('the Fold tools’ input registry', () => {
     expect(runtime.feed({ kind: 'down', point: { x: 0, y: 0 } }).commit).toBeNull();
     expect(runtime.feed({ kind: 'down', point: { x: 1, y: 1 } }).commit?.points).toHaveLength(2);
   });
+
+  it('offers optional point snapping for free-line ends, never for free region picks', () => {
+    expect(lineModeInput('free').steps.every((step) => step.snapFree)).toBe(true);
+    expect(toolInput('crimp', 'free', 'free').steps.every((step) => step.snapFree)).toBe(true);
+    for (const tool of ['squash', 'petal', 'rabbit-ear'] as const) {
+      expect(toolInput(tool, 'free').steps.filter((step) => step.snap === 'free').every((step) => !step.snapFree)).toBe(true);
+    }
+  });
 });

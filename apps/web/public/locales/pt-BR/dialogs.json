@@ -321,13 +321,8 @@
     "title": "Exportar sequência de dobras"
   },
   "foldImport": {
-    "back": "Voltar",
     "browse": "ou clique para procurar",
-    "collapse": "Colapsar",
     "collapseTitle": "Colapsar a partir do CP",
-    "creases_one": "{{count}} vinco",
-    "creases_many": "{{count}} vincos",
-    "creases_other": "{{count}} vincos",
     "drop": "Solte um arquivo .cp, .fold, .ori ou .orh",
     "editFigure": "Modelo dobrado da Edição",
     "editFigureNote": "O padrão de vincos que a Edição dobrou, com a ordem de camadas que encontrou",
@@ -335,19 +330,6 @@
       "searchLonger": "Procurar por mais tempo"
     },
     "fromEdit": "Da Edição",
-    "import": "Importar",
-    "orders": {
-      "atLeast_one": "Pelo menos {{count}} ordem de camadas serve para estes vincos. Escolha uma.",
-      "atLeast_many": "Pelo menos {{count}} ordens de camadas servem para estes vincos. Escolha uma.",
-      "atLeast_other": "Pelo menos {{count}} ordens de camadas servem para estes vincos. Escolha uma.",
-      "count_one": "{{count}} ordem de camadas serve para estes vincos.",
-      "count_many": "{{count}} ordens de camadas servem para estes vincos. Escolha uma.",
-      "count_other": "{{count}} ordens de camadas servem para estes vincos. Escolha uma.",
-      "label": "Ordem de camadas",
-      "more": "Mais ordens servem para esta parte do que as listadas aqui; estas são as primeiras que a busca encontrou.",
-      "order": "Ordem {{number}}",
-      "part": "Parte {{number}}"
-    },
     "pickTitle": "Importar padrão de vincos",
     "placement": {
       "afterSheet": "Adiciona um passo depois da folha plana, com o estado dobrado calculado a partir dos vincos.",
@@ -357,7 +339,6 @@
       "update": "Atualiza este passo de colapso. Os passos seguintes e as ramificações são mantidos e recalculados; as dobras afetadas são marcadas como alteradas ou impossíveis de dobrar.",
       "why": "Use quando o próximo estado não puder ser alcançado uma dobra de cada vez."
     },
-    "projectCp": "Colapsar a partir do CP…",
     "refusal": {
       "budget": {
         "text": "Descobrir como as camadas se empilham levou mais tempo do que uma importação tem. Procure por mais tempo ou importe um padrão mais simples.",
@@ -446,7 +427,6 @@
       "preliminaryBase": "Base quadrada",
       "waterbombBase": "Base da bomba d’água"
     },
-    "samples": "Exemplos",
     "title": "Importar padrão de vincos",
     "updateTitle": "Atualizar a partir do CP",
     "working": {

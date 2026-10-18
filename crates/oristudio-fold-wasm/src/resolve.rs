@@ -104,8 +104,8 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
     check_choices(op.takes(), choices)?;
     let root = choices.root.as_ref();
     match op {
-        Op::Valley(a) => along_line(parent, a, Direction::Valley, ActionKind::Fold, root),
-        Op::Mountain(a) => along_line(parent, a, Direction::Mountain, ActionKind::Fold, root),
+        Op::Valley(a) => resolved_landing(parent, a, Direction::Valley, choices),
+        Op::Mountain(a) => resolved_landing(parent, a, Direction::Mountain, choices),
         Op::Precrease(p) => {
             let a = &p.along;
             let direction = a.direction.ok_or_else(|| {
@@ -461,6 +461,43 @@ pub fn precrease_extent(op: &Op) -> Result<oristudio_fold::Extent, BridgeError> 
             }
         }
     })
+}
+
+/// Saved insertion recipes use the compound tuck validator, including its
+/// target-bounded moving set. Authoring search never runs during replay.
+fn resolved_landing(
+    parent: &State,
+    a: &crate::wire::AlongLine,
+    direction: Direction,
+    choices: &Choices,
+) -> Result<Resolved, Rejection> {
+    match &a.landing {
+        oristudio_fold::FoldLanding::Outer => along_line(
+            parent,
+            a,
+            direction,
+            ActionKind::Fold,
+            choices.root.as_ref(),
+        ),
+        oristudio_fold::FoldLanding::Against { targets } => {
+            if targets.is_empty() || targets.len() > 65 {
+                return Err(BridgeError::InvalidInput(
+                    "an inserted landing needs 1–65 targets".into(),
+                )
+                .into());
+            }
+            let op = crate::ops_crimp_tuck::TuckOp {
+                line: a.line.clone(),
+                direction,
+                moving: a.motion.moving,
+                side: a.motion.side,
+                seed: a.motion.seed.clone(),
+                target: targets[0],
+                additional_targets: targets[1..].to_vec(),
+            };
+            compound(crate::ops_crimp_tuck::resolve_tuck(parent, &op, choices))
+        }
+    }
 }
 
 #[cfg(test)]

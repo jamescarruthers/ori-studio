@@ -18,8 +18,9 @@
 //!   completion ([`super::Across::Free`]). With it the spike found every
 //!   squash and petal unique; a rabbit ear or a swivel also seeds its fourth
 //!   crease as the ridge ([`super::fan`]), the odd letter out. An inside
-//!   swivel on a folded edge places its strip in place of the seed: under
-//!   the paper it is hinged to ([`super::swivel_on_edge`]).
+//!   swivel on a folded edge places its strip under its own body. All
+//!   swivels on folded edges scope placement to their own stationary bodies,
+//!   leaving overlaps with other flaps to completion ([`super::swivel_on_edge`]).
 //! - **Choices** are the completion's, stored as the pairs they decided,
 //!   keyed by witnesses (plan D6), and replayed.
 //! - **The motion** (plan D15) turns each block about its creases in
@@ -174,8 +175,8 @@ pub(crate) struct Compiled {
     pub(crate) extra: Vec<[usize; 2]>,
     /// The placements in place of the direction seed, when a block goes
     /// elsewhere than above (valley) or below (mountain) everything that
-    /// stays: an inside swivel's strip, tucked under the paper it is hinged
-    /// to (`super::swivel_on_edge`). None for the direction seed.
+    /// stays: a swivel's own bodies across its hinges, leaving unrelated
+    /// flaps unordered (`super::swivel_on_edge`). None for the direction seed.
     pub(crate) against: Option<Vec<Against>>,
 }
 

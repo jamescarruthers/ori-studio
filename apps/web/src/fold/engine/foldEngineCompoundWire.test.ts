@@ -183,6 +183,7 @@ describe('the compound folds’ one wire', () => {
 describe('the compound question', () => {
   const engine: FoldWasmCompoundEngine & { asked: unknown[][] } = {
     asked: [],
+    order_selection: () => ({ status: 'ok', count: { orders: 1, exact: true }, index: 0, completion: null }),
     compound_analysis(...args) {
       this.asked.push(args);
       return { status: 'ok', family: 'vertex', analysis: {} };

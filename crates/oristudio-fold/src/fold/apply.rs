@@ -32,6 +32,7 @@ use oristudio_geometry::convex::{self, HalfPlane};
 use oristudio_layer_order::{FacePair, LayerOrder, LayerOrderBuilder, Letter, Violation};
 
 use crate::crease_marks;
+use crate::flat_panels::FlatPanels;
 use crate::fold::closure::Analysis;
 use crate::fold::score::{self, Piece};
 use crate::index::BoxIndex;
@@ -338,6 +339,7 @@ fn carry_and_place(
         .collect();
     let index = BoxIndex::new(stationary_boxes);
     let on_top = analysis.direction == Direction::Valley;
+    let mut panels = None;
     for a in (0..new_faces.len()).filter(|&a| new_faces[a].moving) {
         for b in index.query(&geometry.boxes[a], 0.0) {
             let penetration = depth(a, b);
@@ -345,7 +347,14 @@ fn carry_and_place(
                 continue;
             }
             if penetration < MIN_FEATURE && penetration < thinner(geometry, a, b) - TOL {
-                return Err(sliver(state, new_faces, next, geometry, a, b, penetration));
+                if panels.is_none() {
+                    panels = Some(FlatPanels::new(next, geometry, |x, y| {
+                        new_faces[x].moving == new_faces[y].moving
+                    })?);
+                }
+                if let Some(depth) = panels.as_ref().and_then(|p| p.sliver(geometry, a, b)) {
+                    return Err(sliver(state, new_faces, next, geometry, a, b, depth));
+                }
             }
             let moving_above = match &analysis.tuck {
                 Some(tuck) => !tuck.ends_above[new_faces[b].old],

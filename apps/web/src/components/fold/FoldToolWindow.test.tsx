@@ -12,6 +12,7 @@ import {
 } from '../../fold/tools/foldToolWindow';
 import { allByRole, byRole, queryByRole } from '../../test/roleQueries';
 import { TooltipProvider } from '../ui/Tooltip';
+import type { FoldOrderResolution } from '../../fold/orders/useFoldOrderResolution';
 import { FoldToolWindow } from './FoldToolWindow';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -43,7 +44,6 @@ afterEach(() => {
 function verbs() {
   return {
     selectTool: vi.fn(),
-    setFoldAndUnfold: vi.fn(),
     selectLineMode: vi.fn(),
     includeFlaps: vi.fn(),
     foldOtherWay: vi.fn(),
@@ -108,6 +108,40 @@ function render(view: Partial<FoldToolWindowView>, calls = verbs(), keyLabel?: (
 const fold = () => document.querySelector<HTMLElement>('[aria-label="Fold tool options"]');
 
 describe('FoldToolWindow', () => {
+  it('keeps the layer picker and tool confirmation visible until order review starts', () => {
+    const calls = verbs();
+    const model = foldToolWindow(t, { tool: 'mountain', lineMode: 'free', readOnly: null, picks: 2, preview: preview() }, calls, { coarse: false, alt: 'Alt' });
+    const resolution: FoldOrderResolution = { key: 'order', inputKey: 'input', active: false, required: true,
+      waiting: false, failed: false, index: 0, count: 2, exact: true, canSearch: false,
+      step: vi.fn(), search: vi.fn(), back: vi.fn(), resume: vi.fn() };
+    const show = (active: boolean) => act(() => root.render(<TooltipProvider><FoldToolWindow container={viewport} model={model} resolution={{ ...resolution, active }} /></TooltipProvider>));
+    show(false);
+    expect(fold()).not.toBeNull();
+    expect(document.querySelector('[aria-label="Choose layer order"]')).toBeNull();
+    const confirm = [...document.querySelectorAll('button')].find((b) => b.textContent === 'Mountain fold');
+    expect(confirm).toBeDefined();
+    act(() => confirm!.click());
+    expect(calls.commit).toHaveBeenCalledOnce();
+    const chip = document.querySelector<HTMLButtonElement>('button[aria-pressed]');
+    expect(chip).not.toBeNull();
+    show(true);
+    expect(fold()).toBeNull();
+    expect(document.querySelector('[aria-label="Choose layer order"]')).not.toBeNull();
+  });
+
+  it('offers an accessible snapping switch for Free line and reflects its state', () => {
+    const calls = { ...verbs(), setFreeLineSnap: vi.fn() };
+    render({ lineMode: 'free', freeLineSnap: true }, calls);
+    expect(byRole(fold()!, 'switch', 'Snap to points').getAttribute('aria-checked')).toBe('true');
+    act(() => byRole(fold()!, 'switch', 'Snap to points').click());
+    expect(calls.setFreeLineSnap).toHaveBeenCalledWith(false);
+    render({ lineMode: 'free', freeLineSnap: false }, calls);
+    expect(byRole(fold()!, 'switch', 'Snap to points').getAttribute('aria-checked')).toBe('false');
+    expect(fold()!.textContent).toContain('No snapping');
+    render({ lineMode: 'axiom-2', freeLineSnap: true }, calls);
+    expect(queryByRole(fold()!, 'switch', 'Snap to points')).toBeNull();
+  });
+
   it('locates the reverse fold’s line as every fold does', () => {
     render({ tool: 'inside-reverse', picks: 1 });
     const window = fold()!;
@@ -533,7 +567,7 @@ describe('FoldToolWindow', () => {
     render({ picks: 1 });
     const window = fold()!;
     expect(byRole(window, 'button', /^Valley fold/).getAttribute('aria-expanded')).toBe('true');
-    expect(window.textContent).toContain('2 settings');
+    expect(window.textContent).toContain('1 setting');
     const steps = [...window.querySelectorAll('ol li')];
     expect(steps.map((step) => step.textContent)).toEqual([
       'Click the point to move.',
@@ -548,27 +582,9 @@ describe('FoldToolWindow', () => {
     expect(queryByRole(window, 'button', 'Cancel')).toBeNull();
   });
 
-  it('offers Fold and unfold before locating and during preview, with extent controls only while enabled', () => {
-    const calls = { ...verbs(), setExtent: vi.fn() };
-    render({ tool: 'mountain', foldAndUnfold: false }, calls);
-    const off = byRole(fold()!, 'switch', 'Fold and unfold');
-    expect(off.getAttribute('aria-checked')).toBe('false');
-    act(() => off.click());
-    expect(calls.setFoldAndUnfold).toHaveBeenCalledWith(true);
-    render({ tool: 'mountain', foldAndUnfold: true, picks: 2, extent: { mode: 'whole', picked: 0 }, preview: preview() }, calls);
-    const on = byRole(fold()!, 'switch', 'Fold and unfold');
-    expect(on.getAttribute('aria-checked')).toBe('true');
-    expect(byRole(fold()!, 'group', 'Extent')).toBeTruthy();
-    expect(queryByRole(fold()!, 'button', 'Precrease')).toBeNull();
-    act(() => on.click());
-    expect(calls.setFoldAndUnfold).toHaveBeenLastCalledWith(false);
-    render({ tool: 'mountain', foldAndUnfold: true, readOnly: 'locked' }, calls);
-    expect(byRole(fold()!, 'switch', 'Fold and unfold').hasAttribute('disabled')).toBe(true);
-  });
-
   it('offers a precrease’s extent under its own heading, says what the one chosen creases, and switches it', () => {
     const calls = { ...verbs(), setExtent: vi.fn() };
-    render({ tool: 'valley', foldAndUnfold: true, picks: 2, extent: { mode: 'pinch', picked: 0 }, preview: preview({ incomplete: true }) }, calls);
+    render({ tool: 'precrease', picks: 2, extent: { mode: 'pinch', picked: 0 }, preview: preview({ incomplete: true }) }, calls);
     const window = fold()!;
     const extent = byRole(window, 'group', 'Extent');
     expect(allByRole(extent, 'button').map((button) => [button.textContent, button.getAttribute('aria-pressed')])).toEqual([
@@ -647,6 +663,7 @@ describe('FoldToolWindow', () => {
     expect(allByRole(kinds, 'button').map((button) => [button.getAttribute('aria-label'), button.getAttribute('aria-pressed')])).toEqual([
       ['Valley fold', 'true'],
       ['Mountain fold', 'false'],
+      ['Precrease', 'false'],
     ]);
     act(() => byRole(kinds, 'button', 'Mountain fold').click());
     expect(calls.selectTool).toHaveBeenCalledWith('mountain');
@@ -663,7 +680,7 @@ describe('FoldToolWindow', () => {
 
   it('commits and cancels from its footer, naming their keys, and refuses a commit while refused', () => {
     const keys = (id: FoldShortcutId) => ({ 'fold.commit': 'Enter', 'viewport.cancel': 'Esc', 'fold.swapSide': 'S' })[id as string];
-    // The footer's commit is named for the fold, as the V / M control's option is.
+    // The footer's commit is named for the fold, as the V / M / P control's option is.
     const footer = () => fold()!.querySelector<HTMLElement>('[data-footer]')!;
     let calls = render({ preview: preview() }, verbs(), keys);
     let window = fold()!;

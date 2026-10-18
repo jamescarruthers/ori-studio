@@ -5,7 +5,7 @@
  *
  * Three kinds of item stand on the rail, and they combine:
  *
- * - **a tool** is taken in hand: a fold (valley or mountain), the
+ * - **a tool** is taken in hand: a fold (valley, mountain, precrease), the
  *   Divide line, or Rotate, which previews the model turned by the amount
  *   its window sets and adds the turn as a step once applied (`tools/rotate`);
  * - **a line mode** says how a fold's line is located — an axiom, a free line,
@@ -23,11 +23,10 @@ import { turnCardWords } from '../../lib/steps/turnWords';
 import type { FoldVertexOpKind } from '../document/foldSequenceDocument';
 import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
 
-/** A plain engine operation, including folding and unfolding in one step. */
+/** A plain fold's kind, as the tool window's V / M / P control offers it. */
 export type FoldKind = 'valley' | 'mountain' | 'precrease';
 
-export type FoldPlainToolId = 'valley' | 'mountain';
-export const FOLD_KINDS: readonly FoldPlainToolId[] = ['valley', 'mountain'];
+export const FOLD_KINDS: readonly FoldKind[] = ['valley', 'mountain', 'precrease'];
 
 /**
  * A vertex fold's tool (plan Phase 11): paper turned about a vertex rather
@@ -52,7 +51,7 @@ export function isVertexTool(id: FoldToolId): id is FoldVertexToolId {
  * of their own, each along a located line.
  */
 export type FoldToolId =
-  | FoldPlainToolId
+  | FoldKind
   | 'inside-reverse'
   | FoldCompoundLineToolId
   | FoldVertexToolId
@@ -64,12 +63,12 @@ export type FoldToolId =
 /** The compound folds along a located line that are tools of their own, beside inside reverse. */
 export type FoldCompoundLineToolId = 'crimp' | 'tuck';
 
-export function isFoldKind(id: string): id is FoldPlainToolId {
-  return id === 'valley' || id === 'mountain';
+export function isFoldKind(id: FoldToolId): id is FoldKind {
+  return id === 'valley' || id === 'mountain' || id === 'precrease';
 }
 
 /** A tool that folds along a located line: the plain folds, and the compound folds along one. */
-export type FoldLineToolId = FoldPlainToolId | 'inside-reverse' | FoldCompoundLineToolId | FoldSinkToolId;
+export type FoldLineToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId | FoldSinkToolId;
 
 export function isLineTool(id: FoldToolId): id is FoldLineToolId {
   return isFoldKind(id) || id === 'inside-reverse' || id === 'crimp' || id === 'tuck' || isSinkTool(id);
@@ -103,11 +102,12 @@ export type FoldSecondLineModeId = 'free' | 'crease';
 
 export const FOLD_SECOND_LINE_MODES: readonly FoldSecondLineModeId[] = ['free', 'crease'];
 
-/**
- * A tool whose first clicks locate a line through the line modes: every fold
- * along a line. A vertex fold names its own lines — a petal fold's hinge, a
- * swivel's target — by a crease or two points (`FoldLineBy`), never an axiom.
- */
+/** Whether the active construction uses the shared Locate line tools. */
+export function usesLineMode(id: FoldToolId, swivelInput?: 'edge' | 'creases'): boolean {
+  return locatesLine(id) || (id === 'swivel' && swivelInput === 'creases');
+}
+
+/** Tools folded along one line; the type guard excludes multi-line constructions. */
 export function locatesLine(id: FoldToolId): id is FoldLineToolId {
   return isLineTool(id);
 }
@@ -221,12 +221,12 @@ export type FoldShortcutId = RegistryFoldShortcutId | 'viewport.cancel';
 /** Resolves a key's id to the label the user's layout gives it, or undefined while it has none. */
 export type FoldKeyLabel = (id: FoldShortcutId) => string | undefined;
 
-export const FOLD_TOOL_SHORTCUTS: Readonly<Record<FoldToolId, FoldShortcutId>> = {
+export const FOLD_TOOL_SHORTCUTS: Readonly<Partial<Record<FoldToolId, FoldShortcutId>>> = {
   valley: 'fold.toolValley',
   mountain: 'fold.toolMountain',
+  precrease: 'fold.toolPrecrease',
   'inside-reverse': 'fold.toolInsideReverse',
   crimp: 'fold.toolCrimp',
-  tuck: 'fold.toolTuck',
   // The vertex folds.
   squash: 'fold.toolSquash',
   petal: 'fold.toolPetal',
@@ -276,6 +276,8 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.valley', 'Valley fold');
     case 'mountain':
       return t('tools:fold.tool.mountain', 'Mountain fold');
+    case 'precrease':
+      return t('tools:fold.tool.precrease', 'Precrease');
     case 'inside-reverse':
       return t('tools:fold.tool.reverse', 'Reverse fold');
     case 'crimp':
@@ -313,6 +315,8 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.valleyHelp', 'Fold the moving side toward you, so it lands on top.');
     case 'mountain':
       return t('tools:fold.tool.mountainHelp', 'Fold the moving side away from you, so it lands underneath.');
+    case 'precrease':
+      return t('tools:fold.tool.precreaseHelp', 'Fold and unfold, leaving a crease to use later.');
     case 'inside-reverse':
       return t('tools:fold.tool.reverseHelp', 'Reverse a flap inside itself or wrap it around the outside, reversing its spine.');
     case 'crimp':

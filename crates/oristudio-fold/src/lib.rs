@@ -74,6 +74,7 @@ pub mod axioms;
 pub mod complete;
 pub mod compound;
 pub mod crease_marks;
+mod flat_panels;
 pub mod fold;
 #[cfg(feature = "kernel")]
 pub mod fold_file;
@@ -136,6 +137,7 @@ pub use compound::swivel::{
     Swivel, SwivelByEdge, SwivelCrease, SwivelEdgeAnalysis, SwivelFold, SwivelKind, SwivelRay,
     SwivelRegion, SwivelWedge,
 };
+pub use compound::swivel_by_creases::{SwivelByCreases, SwivelCreasesAnalysis};
 pub use compound::tuck::{
     TuckAnalysis, TuckChoice, TuckChoices, TuckFold, TuckFolded, TuckOutcome, TuckReport, TuckSide,
     TuckTarget,
@@ -145,6 +147,7 @@ pub use compound::vertex::{
 };
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use crease_marks::{CreaseMark, Extent, PINCH_FRACTION, default_pinch_length};
+pub use fold::placements::{FoldLanding, FoldPlacement, FoldPlacementSearch};
 pub use fold::{
     ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,
     FoldLineSpan, FoldReport, Folded, Grip, Placement, PlainFold, Pleat, Push, Refold, RowOrder,
@@ -175,4 +178,4 @@ pub use witness::{Broken, BrokenWitness, WitnessOrder};
 /// The engine's behaviour version: bumped when the same inputs can land a
 /// different state. Stored beside replay caches and on Diagram links for
 /// diagnostics only; a bump alone never marks a link stale (plan D17).
-pub const FOLD_ENGINE_VERSION: u32 = 2;
+pub const FOLD_ENGINE_VERSION: u32 = 7;

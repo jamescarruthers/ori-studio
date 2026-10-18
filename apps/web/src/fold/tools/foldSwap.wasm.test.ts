@@ -200,7 +200,7 @@ describe.skipIf(!available)('Swap over the real bridge', () => {
         const step = (intent: FoldLocateIntent) =>
           built(buildFoldStep({ ...intent, kind, precreaseDirection: 'valley' }, index));
         const [before, after] = [step(plain), step(swapped)];
-        expect(before.op.kind).toBe(kind === 'precrease' ? 'precrease' : 'refold');
+        expect(before.op.kind).toBe(kind);
         expectOtherSide(before, after);
         expect(plainSide(calls, creased, after), kind).toBe(other(plainSide(calls, creased, before)));
         const [one, two] = [

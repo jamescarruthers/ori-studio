@@ -25,6 +25,8 @@ import {
   FOLD_MARK_MAX_PARTS,
   type FoldChoices,
   type FoldDirection,
+  type FoldLocatedLine,
+  type FoldModelLine,
   type FoldModelDirection,
   type FoldOp,
   type FoldSwivelKind,
@@ -33,12 +35,10 @@ import {
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
 import {
-  isFoldKind,
   isLineTool,
   locatesLine,
   type FoldLineBy,
   type FoldLineModeId,
-  type FoldLineToolId,
   type FoldSecondLineModeId,
   type FoldToolId,
 } from './foldToolCatalog';
@@ -67,7 +67,9 @@ function wrappedOpening(index: number, delta: number, count: number): number {
  * `top` names no flap: which flap is on top is the cross-section's to say,
  * and the section is the line's and the side's. It is resolved where the
  * section is known (`tools/topFlapSeed`, `useFoldLineSection`), before any
- * step is built, so no step is ever built with it.
+ * step is built, so no step is ever built with it. For a reverse fold it
+ * instead resolves to every layer, or the material named by an Axiom 2
+ * moving point picked on the CP (`reverseMaterialSeed`).
  */
 export type FoldToolSeed =
   | { scope: 'top' }
@@ -75,7 +77,7 @@ export type FoldToolSeed =
   | { scope: 'flaps'; flaps: readonly FoldFlap[] }
   | { scope: 'depth'; at: SheetPoint; scene: Point; choice: number };
 
-/** A seed a step can be built with: the top flap resolved to the flaps it is, or every layer. */
+/** A seed a step can be built with: the default resolved to named flaps, or every layer. */
 export type FoldResolvedSeed = Exclude<FoldToolSeed, { scope: 'top' }>;
 
 /**
@@ -167,6 +169,8 @@ export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
 export interface FoldToolState {
   tool: FoldToolId;
   lineMode: FoldLineModeId;
+  /** Optional point snapping for free-line endpoints; retained between folds. */
+  freeLineSnap: boolean;
   /** The references clicked so far, in click order. */
   picks: readonly FoldPick[];
   /** The axiom root chosen, by index into the candidates the engine gave for the picks. */
@@ -174,8 +178,8 @@ export interface FoldToolState {
   /** The moving side is the other one from the default. */
   swapped: boolean;
   seed: FoldToolSeed;
-  /** Fold in the selected direction, then unfold. Retained across plain folds. */
-  foldAndUnfold: boolean;
+  /** The way a precrease folds before it unfolds. */
+  precreaseDirection: FoldDirection;
   /**
    * How much of its line a precrease creases (`tools/precrease`): the whole
    * line, a segment or a pinch. Kept from one precrease to the next, as the
@@ -202,6 +206,8 @@ export interface FoldToolState {
    */
   petalHinge: FoldLineBy;
   swivelTarget: FoldLineBy;
+  swivelInput?: 'edge' | 'creases';
+  swivelFirst?: FoldLocatedLine & { sceneLine: FoldModelLine };
   override: FoldToolOverride | null;
   divide: FoldDivideSettings;
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
@@ -221,11 +227,12 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   tool: 'valley',
   // The design opens on point to point, the first fold of most models.
   lineMode: 'axiom-2',
+  freeLineSnap: true,
   picks: [],
   root: 0,
   swapped: false,
   seed: FOLD_TOP_FLAP,
-  foldAndUnfold: false,
+  precreaseDirection: 'valley',
   extent: 'whole',
   extentPicks: [],
   secondLineMode: 'free',
@@ -246,6 +253,7 @@ function located(state: FoldToolState): FoldToolState {
   return {
     ...state,
     picks: [],
+    swivelFirst: undefined,
     extentPicks: [],
     root: 0,
     swapped: false,
@@ -274,11 +282,12 @@ function isSinkKindTool(tool: FoldToolId): boolean {
  */
 export function foldToolInput(
   state: Pick<FoldToolState, 'tool' | 'lineMode'> &
-    Partial<Pick<FoldToolState, 'secondLineMode' | 'petalHinge' | 'swivelTarget'>>
+    Partial<Pick<FoldToolState, 'secondLineMode' | 'petalHinge' | 'swivelTarget' | 'swivelInput'>>
 ): FoldInputModel | null {
   return toolInput(state.tool, state.lineMode, state.secondLineMode, {
     petalHinge: state.petalHinge ?? 'crease',
     swivelTarget: state.swivelTarget ?? 'crease',
+    swivelInput: state.swivelInput ?? 'edge',
   });
 }
 
@@ -288,7 +297,7 @@ export function foldToolInput(
  * nothing. Any change to it is another fold.
  */
 export function foldToolInputKey(state: FoldToolState): string {
-  const { hoveredFlap: _hovered, ...input } = state;
+  const { hoveredFlap: _hovered, freeLineSnap: _snap, ...input } = state;
   return JSON.stringify(input);
 }
 
@@ -300,22 +309,23 @@ export function isLocated(state: FoldToolState): boolean {
 
 /** Whether anything is under way that Escape would let go. */
 export function hasToolInput(state: FoldToolState): boolean {
-  return state.picks.length > 0 || state.extentPicks.length > 0 || state.override !== null;
+  return state.picks.length > 0 || state.extentPicks.length > 0 || state.override !== null || state.swivelFirst !== undefined;
 }
 
 /**
- * The precrease's extent is what the tools are asking for: Fold and unfold
- * enabled on a plain fold, its line located, and a segment or a pinch chosen — so a click
+ * The precrease's extent is what the tools are asking for: the Precrease tool
+ * in hand, its line located, and a segment or a pinch chosen — so a click
  * along the line is one of its points.
  */
 export function picksAlongLine(state: FoldToolState): boolean {
-  return isFoldKind(state.tool) && state.foldAndUnfold && state.extent !== 'whole' && isLocated(state) && state.override === null;
+  return state.tool === 'precrease' && state.extent !== 'whole' && isLocated(state) && state.override === null;
 }
 
 export interface FoldTools {
   readonly store: StoreApi<FoldToolState>;
   selectTool(tool: FoldToolId): void;
   selectLineMode(mode: FoldLineModeId): void;
+  setFreeLineSnap(enabled: boolean): void;
   /** A click: the pick it made. Whether it was taken (a click past the last is not). */
   pick(pick: FoldPick): boolean;
   /**
@@ -339,11 +349,11 @@ export interface FoldTools {
    * Pick or unpick a flap; `all` is the section's every flap, so picking the
    * last unpicked one is `all` again — and so is unpicking the only one
    * picked, which would otherwise leave a seed that moves nothing (`flapSeed`).
-   * `top` is the section's top flap (`topFlapOf`): what the default seed
-   * picks, and so what a press widens from.
+   * `resolved` is the preview's resolved default: the top flap or material
+   * picked on the CP. A press widens from what the preview actually moves.
    */
-  toggleFlap(flap: FoldFlap, all: readonly FoldFlap[], top: FoldFlap | null): void;
-  setFoldAndUnfold(enabled: boolean): void;
+  toggleFlap(flap: FoldFlap, all: readonly FoldFlap[], resolved: FoldResolvedSeed | null): void;
+  setPrecreaseDirection(direction: FoldDirection): void;
   // A precrease's extent (`tools/precrease`).
   /** Crease this much of the line: its points along the line start again. */
   setExtent(extent: FoldExtentMode): void;
@@ -379,6 +389,8 @@ export interface FoldTools {
   /** Name a petal fold's hinge by a crease or by its two ends: its clicks start again. */
   setPetalHinge(hinge: FoldLineBy): void;
   /** Name a swivel's target by a crease or edge, or by two points: its pivot and edge stay, its target is clicked anew. */
+  setSwivelInput(mode: 'edge' | 'creases'): void;
+  acceptSwivelLine(line: NonNullable<FoldToolState['swivelFirst']>): void;
   setSwivelTarget(target: FoldLineBy): void;
   /** Where a squash's spine lands; null for the hinge line. */
   setSquashTarget(target: FoldModelDirection | null): void;
@@ -471,13 +483,18 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       });
     },
 
+    setFreeLineSnap(freeLineSnap) {
+      set((state) => state.freeLineSnap === freeLineSnap ? state : { ...state, freeLineSnap });
+    },
+
     selectLineMode(lineMode) {
       set((state) => {
         // A line mode belongs to the folds along a line: choosing one from
         // any other tool takes a fold in hand.
-        const tool: FoldLineToolId = locatesLine(state.tool) ? state.tool : 'valley';
+        const twoLines = state.tool === 'swivel' && state.swivelInput === 'creases';
+        const tool = twoLines ? 'swivel' : locatesLine(state.tool) ? state.tool : 'valley';
         if (state.lineMode === lineMode && state.tool === tool) return state;
-        return { ...restart(state), tool, lineMode };
+        return { ...restart(state), tool, lineMode, ...(twoLines ? { swivelFirst: state.swivelFirst } : {}) };
       });
     },
 
@@ -542,19 +559,18 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => ({ ...state, seed, override: null, compound: anotherTip(state.compound) }));
     },
 
-    toggleFlap(flap, all, top) {
+    toggleFlap(flap, all, resolved) {
       set((state) => {
-        const { seed } = state;
-        const picked =
-          seed.scope === 'flaps' ? seed.flaps : seed.scope === 'all' ? all : seed.scope === 'top' && top ? [top] : [];
+        const seed = state.seed.scope === 'top' ? resolved : state.seed;
+        const picked = seed?.scope === 'flaps' ? seed.flaps : seed?.scope === 'all' ? all : [];
         const has = picked.some((each) => sameFlap(each, flap));
         const next = has ? picked.filter((each) => !sameFlap(each, flap)) : [...picked, flap];
         return { ...state, seed: flapSeed(next, all), override: null, compound: anotherTip(state.compound) };
       });
     },
 
-    setFoldAndUnfold(foldAndUnfold) {
-      set((state) => (state.foldAndUnfold === foldAndUnfold ? state : { ...state, foldAndUnfold, override: null }));
+    setPrecreaseDirection(precreaseDirection) {
+      set((state) => (state.precreaseDirection === precreaseDirection ? state : { ...state, precreaseDirection, override: null }));
     },
 
     setExtent(extent) {
@@ -674,6 +690,13 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         if (state.petalHinge === petalHinge) return state;
         return state.tool === 'petal' ? { ...restart(state), petalHinge } : { ...state, petalHinge };
       });
+    },
+
+    acceptSwivelLine(line) {
+      set(state => ({ ...restart(state), swivelFirst: line }));
+    },
+    setSwivelInput(swivelInput) {
+      set(state => (state.swivelInput ?? 'edge') === swivelInput ? state : { ...restart(state), swivelInput });
     },
 
     setSwivelTarget(swivelTarget) {

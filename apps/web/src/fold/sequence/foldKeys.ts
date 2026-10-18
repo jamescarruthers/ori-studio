@@ -1,3 +1,4 @@
+import { foldCanvasVerbs } from '../canvas/foldCanvasCommands';
 import { useCallback, useEffect } from 'react';
 import { focusOwnsArrowKeys } from '../../keyboard/arrowKeyOwners';
 import {
@@ -44,6 +45,12 @@ export function registerFoldKeyHandler(handler: FoldKeyHandler): () => void {
 
 /** Run a Fold key through its handlers, as the scope's executor does. */
 export function runFoldKey(id: FoldShortcutId): boolean {
+  // A required order decision owns left/right before timeline handlers,
+  // regardless of parent/child effect registration order.
+  if ((id === 'fold.previousStep' || id === 'fold.nextStep') && !focusOwnsArrowKeys(document.activeElement)) {
+    const canvas = foldCanvasVerbs();
+    if (canvas?.choosingOrder?.()) return canvas.stepChoice(id === 'fold.nextStep' ? 1 : -1);
+  }
   for (let at = handlers.length - 1; at >= 0; at -= 1) if (handlers[at]!(id)) return true;
   return false;
 }

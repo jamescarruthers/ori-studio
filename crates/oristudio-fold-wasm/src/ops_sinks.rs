@@ -188,6 +188,7 @@ pub fn resolve(
 ) -> Result<SinkResolved, Rejection> {
     let closed = matches!(op, Op::ClosedSink(_));
     let along = AlongLine {
+        landing: Default::default(),
         line: sink.line.clone(),
         direction: None,
         motion: Motion {
@@ -257,6 +258,31 @@ pub fn resolve(
 }
 
 impl CompoundOp for SinkResolved {
+    fn order_selection(
+        &self,
+        parent: &State,
+        query: &crate::order_selection::OrderQuery,
+    ) -> Result<crate::order_selection::OrderSelection, Refusal> {
+        use crate::order_selection::OrderSelection;
+        match match self {
+            Self::Sink { op, choices } => parent.sink_within(op, choices, &query.limits()),
+            Self::Unsink { op, choices } => parent.unsink_within(op, choices, &query.limits()),
+        } {
+            Ok(SinkOutcome::Landed(folded)) => {
+                Ok(OrderSelection::unique(folded.report.stored.order))
+            }
+            Ok(SinkOutcome::ChooseOrder(choice)) => {
+                OrderSelection::pick(choice.completions(), query, |pick| {
+                    choice.pick(pick).map(|folded| folded.report.stored.order)
+                })
+            }
+            Ok(SinkOutcome::ChoosePocket(_)) => Err(crate::compound::choice_needed(
+                crate::compound::NeededChoice::Pocket,
+            )),
+            Err(refused) => Err(crate::compound::compound_refusal(refused)),
+        }
+    }
+
     fn analysis(&self, parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
         Some(self.fold_analysis(parent))
     }
@@ -356,6 +382,7 @@ pub fn sink_orders(
                 .components()
                 .iter()
                 .map(|c| ComponentCount {
+                    pairs: c.pairs.iter().map(|pair| [pair.lo(), pair.hi()]).collect(),
                     orders: c.orders.len(),
                     truncated: c.truncated,
                 })

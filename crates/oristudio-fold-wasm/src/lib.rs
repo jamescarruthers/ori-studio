@@ -88,6 +88,7 @@ pub mod canonical;
 pub mod compound;
 pub mod io;
 pub mod joins;
+pub mod order_selection;
 pub mod partial;
 pub mod resolve;
 pub mod wire;

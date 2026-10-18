@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-goldfish",
         "title": "Goldfish — Origami.me (batch 4)",
         "paper": {
@@ -99,6 +99,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -139,6 +142,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -179,6 +185,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -221,6 +230,9 @@
                   0.035355339059327306
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4a: Raise the front left tip."
@@ -254,6 +266,9 @@
                   0.9222182540694797
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4b: Raise the front right tip."
@@ -287,6 +302,9 @@
                   0.07220039738213878
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Fold the left horn outward so its diagonal edge becomes horizontal."
@@ -320,6 +338,9 @@
                   0.963154941677189
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Repeat for the right horn."
@@ -353,6 +374,9 @@
                   0.9646446609406725
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7: Raise the front lower flap; approximate crease y=3r/8."
@@ -386,6 +410,9 @@
                   0.8512741699796953
                 ],
                 "layers": 2
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "8: Raise the two front layers along the horizontal centerline."
@@ -428,6 +455,9 @@
                   0.04242640687119286
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10a: Raise the remaining bottom corner."

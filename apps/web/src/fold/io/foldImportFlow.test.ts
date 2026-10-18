@@ -39,12 +39,13 @@ interface FakeIo {
 
 interface FakeIoOptions {
   orders?: number[];
+  truncated?: boolean;
   refuse?: string;
   /** The sheet an empty target adopts. */
   paper?: FoldImportOpened['paper'];
 }
 
-function fakeIo({ orders = [], refuse, paper = { kind: 'square' } }: FakeIoOptions): () => FakeIo {
+function fakeIo({ orders = [], truncated = false, refuse, paper = { kind: 'square' } }: FakeIoOptions): () => FakeIo {
   return () => {
     const base = fakeFoldEngine();
     const held = new Set<number>();
@@ -79,8 +80,8 @@ function fakeIo({ orders = [], refuse, paper = { kind: 'square' } }: FakeIoOptio
           import: handle,
           summary: {} as FoldImportOpened['summary'],
           paper: target.kind === 'empty' ? paper : null,
-          count: { orders: listed.reduce((a, b) => a * b, 1), exact: true },
-          components: listed.map((n) => ({ orders: n, truncated: false })),
+          count: { orders: listed.reduce((a, b) => a * b, 1), exact: !truncated },
+          components: listed.map((n) => ({ orders: n, truncated })),
           nodes: 7,
         };
       },
@@ -205,7 +206,7 @@ describe('Import CP’s flow', () => {
     if (choosing.phase !== 'choosing') throw new Error('not choosing');
     // The chosen one first, then each component's orders with the others as
     // chosen; a component with one order has nothing to choose.
-    expect([...choosing.previews.keys()]).toEqual(['0,0,0', '1,0,0', '2,0,0', '0,0,1']);
+    expect([...choosing.previews.keys()]).toEqual(['0,0,0']);
     expect([...choosing.previews.values()].every((preview) => preview.status === 'ready')).toBe(true);
     // Every preview's state was let go once pictured: the engine holds the sheet and step a.
     expect(io().engine.live()).toBe(2);
@@ -225,6 +226,10 @@ describe('Import CP’s flow', () => {
     expect(flow.store.getState()).toBe(chosen);
 
     await flow.commit();
+    expect(source.commits).toHaveLength(0);
+    await flow.accept(0);
+    expect(source.commits).toHaveLength(0);
+    await flow.accept(2);
     await settle();
     expect(flow.store.getState()).toMatchObject({ phase: 'done' });
     expect(source.commits).toEqual([
@@ -233,6 +238,19 @@ describe('Import CP’s flow', () => {
     expect(io().held.size).toBe(0);
     // The sheet, step a and the imported step: the pick committed is the state the replay took.
     expect(io().engine.live()).toBe(3);
+  });
+
+  it('cancels an unresolved choice when the cursor changes and releases its import', async () => {
+    const document = sequenceOf([step('a', null), step('b', 'a')]);
+    const { flow, source, io } = setup(document, 'b', { orders: [2] });
+    await flow.open(FILE);
+    await settle(10);
+    source.set({ reader: withFoldCursor(initialFoldReaderState(document.id), document, 'a') });
+    await settle();
+    expect(flow.store.getState().phase).toBe('idle');
+    await flow.accept(0);
+    expect(source.commits).toHaveLength(0);
+    expect(io().held.size).toBe(0);
   });
 
   it('says why a pattern was refused, and asks again with a larger budget when the search ran out', async () => {
@@ -244,6 +262,16 @@ describe('Import CP’s flow', () => {
     });
     await flow.searchLonger();
     expect(io().calls).toEqual(['importCp:after', 'importCp:after']);
+  });
+
+  it('bounds repeated retries when no order is found within the search budget', async () => {
+    const { flow, io } = setup(sequenceOf([step('a', null)]), 'a', { refuse: 'import_budget_exceeded' });
+    await flow.open(FILE);
+    for (let attempt = 0; attempt < 12; attempt += 1) await flow.searchLonger();
+    expect(flow.store.getState()).toMatchObject({ phase: 'refused', searchLimited: true });
+    const count = io().calls.length;
+    await flow.searchLonger();
+    expect(io().calls).toHaveLength(count);
   });
 
   it('refuses a file it cannot read before the engine is asked', async () => {
@@ -312,7 +340,8 @@ describe('Linked Collapse transactions', () => {
     await flow.open({ kind: 'project-cp' });
     expect(source.commits).toHaveLength(0);
     flow.choose(0, 1);
-    await flow.commit();
+    await settle(10);
+    await flow.accept(0);
     expect(source.commits[0]?.op).toMatchObject({ source: link, orderJson: '[1]', origin: 'project_cp' });
     expect(imported).toHaveBeenCalledWith('project_cp');
   });
@@ -332,7 +361,8 @@ describe('Linked Collapse transactions', () => {
       async () => ({ ...cp, replace, current: () => current }));
     await flow.open({ kind: 'project-cp', stepId: 'collapse' });
     current = false;
-    await flow.commit();
+    await settle(10);
+    await flow.accept(0);
     expect(flow.store.getState()).toMatchObject({ phase: 'refused', refusal: { code: 'changed' } });
     expect(replace).not.toHaveBeenCalled();
     expect(source.commits).toHaveLength(0);
@@ -348,4 +378,16 @@ describe('Linked Collapse transactions', () => {
     expect(source.commits).toHaveLength(0);
     expect(imported).toHaveBeenCalledWith('project_cp', 'update');
   });
+});
+
+
+it('requires explicit acceptance even when a bounded CP search lists only one order', async () => {
+  const { flow, source } = setup(null, null, { orders: [1], truncated: true });
+  await flow.open(FILE);
+  await settle(10);
+  expect(flow.store.getState()).toMatchObject({ phase: 'choosing', confirmed: [false] });
+  await flow.commit();
+  expect(source.commits).toHaveLength(0);
+  await flow.accept(0);
+  expect(source.commits).toHaveLength(1);
 });

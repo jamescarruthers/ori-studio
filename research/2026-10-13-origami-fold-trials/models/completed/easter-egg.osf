@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-easter-egg",
         "title": "Easter Egg — Origami.me (batch 1)",
         "paper": {
@@ -96,6 +96,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2a: Align the upper-left edge with the centerline."
@@ -124,6 +127,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2b: Align the upper-right edge with the centerline."
@@ -155,6 +161,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -195,6 +204,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -232,6 +244,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: Fold the left corner inward; chosen symmetric crease x=-0.345."
@@ -260,6 +275,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: Fold the right corner inward; chosen symmetric crease x=0.345."
@@ -288,6 +306,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6a: Shape the upper-left corner with an oblique fold."
@@ -316,6 +337,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6b: Repeat the same shaping on the upper-right corner."

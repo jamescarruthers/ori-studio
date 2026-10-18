@@ -305,11 +305,8 @@
     "title": "导出折叠序列"
   },
   "foldImport": {
-    "back": "返回",
     "browse": "或点击浏览",
-    "collapse": "收拢",
     "collapseTitle": "从展开图收拢",
-    "creases_other": "{{count}} 条折痕",
     "drop": "拖放 .cp、.fold、.ori 或 .orh 文件",
     "editFigure": "编辑中的折叠模型",
     "editFigureNote": "编辑折出的折痕图，以及它找到的层序",
@@ -317,15 +314,6 @@
       "searchLonger": "继续搜索"
     },
     "fromEdit": "来自编辑",
-    "import": "导入",
-    "orders": {
-      "atLeast_other": "至少有 {{count}} 种层序符合这些折痕。请选择一种。",
-      "count_other": "有 {{count}} 种层序符合这些折痕。请选择一种。",
-      "label": "层序",
-      "more": "符合这一部分的层序比这里列出的更多；这些是搜索最先找到的。",
-      "order": "层序 {{number}}",
-      "part": "部分 {{number}}"
-    },
     "pickTitle": "导入折痕图",
     "placement": {
       "afterSheet": "在平整的纸之后添加一步，其折叠状态由折痕计算得出。",
@@ -335,7 +323,6 @@
       "update": "更新此收拢步骤。后续步骤和分支会保留并重新计算；受影响的折叠将标记为已更改或无法折叠。",
       "why": "当下一个状态无法一步一步折出时使用。"
     },
-    "projectCp": "从展开图收拢…",
     "refusal": {
       "budget": {
         "text": "找出各层如何叠放所用的时间超出了导入的时限。请继续搜索，或导入更简单的折痕图。",
@@ -424,7 +411,6 @@
       "preliminaryBase": "正方基本形",
       "waterbombBase": "水雷基本形"
     },
-    "samples": "示例",
     "title": "导入折痕图",
     "updateTitle": "从展开图更新",
     "working": {

@@ -87,7 +87,8 @@ export type FoldStepVertexForm =
   | { hinge: 'crease' | 'points' }
   | { swivelForm: 'edge'; target: 'crease' | 'free' }
   | { swivelForm: 'fold'; target: 'crease' | 'free'; swivelKind: 'open' | 'inside' }
-  | { swivelForm: 'rays' };
+  | { swivelForm: 'rays' }
+  | { swivelForm: 'creases'; swivelKind: 'open' | 'inside' };
 
 /**
  * How the reader set a Fold step moving: Space, the Play button, or either on
@@ -107,6 +108,7 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
  * crease became its ridge.
  */
 export type FoldChoiceKind =
+  | 'placement'
   | 'axiom_root'
   | 'depth'
   | 'import_order'
@@ -1613,10 +1615,9 @@ export const ANALYTICS_EVENTS = {
   foldStepAdded: 'fold step added',
   /** Explicit dependency refresh of a saved history return; no document content. */
   foldUnfoldRebuilt: 'fold unfold rebuilt',
-  /** The plain fold tool's optional fold-and-unfold mode changed: enums only. */
-  foldAndUnfoldChanged: 'fold and unfold changed',
   foldRefused: 'fold refused',
   foldChoiceOffered: 'fold choice offered',
+  foldOrderResolved: 'fold order resolved',
   /**
    * A Fold step's layer spread changed (Wave 5): turned on or off, its kind,
    * or one of its values — from the Step pane's Spread section or the
@@ -1626,6 +1627,7 @@ export const ANALYTICS_EVENTS = {
    * value itself. A slider's drag is one event, at its end.
    */
   foldSpreadChanged: 'fold spread changed',
+  foldFreeLineSnapChanged: 'fold free line snapping changed',
   /**
    * One file of an upload into the Diagram, and what became of it: whether
    * people's own drawings survive the sanitizer, and how big they are.

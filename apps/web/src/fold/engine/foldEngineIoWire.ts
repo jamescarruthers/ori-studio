@@ -84,7 +84,7 @@ export interface FoldImportSummary {
   precreases: number;
   /** Folded creases whose letter the completion decides. */
   unknown_letters: number;
-  /** The pattern's auxiliary lines: guides, never creases, for the caller to keep as marks or drop. */
+  /** Non-crease annotations. Cyan/F lines are retained as flat crease marks instead. */
   guides: [SheetPoint, SheetPoint][];
   /** Segments, or pieces of them, that added nothing. */
   dropped: number;
@@ -103,7 +103,7 @@ export interface FoldImportOpened {
   /** The true ‹ n of m ›: every order the letters allow when `exact`, a lower bound otherwise. */
   count: { orders: number; exact: boolean };
   /** Per independent component, its listed orders. A choice picks one index below each; all zeros is the default. */
-  components: { orders: number; truncated: boolean }[];
+  components: { orders: number; truncated: boolean; pairs?: [number, number][] }[];
   /** Search nodes the completion used. */
   nodes: number;
 }

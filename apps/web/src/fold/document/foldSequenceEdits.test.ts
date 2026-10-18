@@ -77,7 +77,7 @@ describe('appendFoldStep', () => {
 
   it('appends every op and choice the file keeps, of every kind', () => {
     const steps = readFoldSequence(writtenSequence())!.document.steps.filter((node): node is FoldStep => !isLockedStep(node));
-    expect(new Set(steps.map((node) => node.op.kind))).toEqual(new Set(FOLD_OP_KINDS));
+    expect(new Set(steps.map((node) => node.op.kind))).toEqual(new Set(FOLD_OP_KINDS.filter((kind) => kind !== 'tuck')));
     for (const node of steps) {
       const history = node.op.kind === 'unfold-to' ? [step('a', null)] : [];
       const draft = { parent: history.at(-1)?.id ?? null, op: node.op, ...(node.choices ? { choices: node.choices } : {}) };

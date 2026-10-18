@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-camellia",
         "title": "Camellia — Origami.me (batch 4)",
         "paper": {
@@ -113,6 +113,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2: Bring the bottom edge to the descending diagonal."
@@ -141,6 +144,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3: Bring the right edge to the ascending diagonal."
@@ -169,6 +175,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: Bring the top edge to the descending diagonal."

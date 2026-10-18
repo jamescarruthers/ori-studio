@@ -12,11 +12,9 @@ import { foldImportNotice } from '../../../fold/io/foldImportRefusal';
 import { foldStepIsNumbered } from '../../../fold/io/foldStepPages';
 import { useFoldImportUiStore, type FoldImportOpening } from '../../../fold/io/foldImportUiStore';
 import { useFoldImportFlow } from '../../../fold/io/useFoldImport';
-import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { useModalDialog } from '../../ui/useModalDialog';
 import { FoldRefusalNotice } from '../FoldRefusalNotice';
-import { FoldImportOrders } from './FoldImportOrders';
 import { FoldImportPicker } from './FoldImportPicker';
 import styles from './FoldImportDialog.module.css';
 
@@ -95,7 +93,7 @@ function workingLabel(t: TFunction, state: FoldImportFlowState): string {
 
 /**
  * The dialog: what to import — a file, by the picker or a drop anywhere on
- * the dialog, a sample, or Edit's folded figure — and, when the pattern's
+ * the dialog, a linked Edit pattern, or Edit's folded figure — and, when the pattern's
  * creases leave several layer orders, which. A shortcut barrier
  * (`useModalDialog`): Escape, the close button and a press on the backdrop
  * close it, and closing lets go of whatever the engine holds for it. It
@@ -153,7 +151,6 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
     ? t('dialogs:foldImport.updateTitle', 'Update from CP')
     : projectCp ? t('dialogs:foldImport.collapseTitle', 'Collapse from CP')
       : t('dialogs:foldImport.title', 'Import crease pattern');
-  const choosing = state.phase === 'choosing' ? state : null;
   const verbs = { searchLonger: () => void flow?.searchLonger() };
   const notice =
     state.phase === 'refused'
@@ -162,6 +159,11 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
         ? // A failure is no refusal the user can act on: said plainly, reported by the flow's hook.
           foldImportNotice(t, { kind: 'engine', refused: { refusal: { code: 'import_internal' } } }, verbs)
         : null;
+
+  const shownNotice = notice && state.phase === 'refused' && state.searchLimited
+    ? { ...notice, actions: notice.actions.filter((action) => action.id !== 'search-longer') }
+    : notice;
+  if (state.phase === 'choosing') return null;
 
   return (
     <div
@@ -191,41 +193,17 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
           </IconButton>
         </div>
         <div className={styles.body}>
-          {choosing ? (
-            <FoldImportOrders
-              opened={choosing.opened}
-              choice={choosing.choice}
-              previews={choosing.previews}
-              disabled={choosing.committing}
-              onChoose={(component, order) => flow?.choose(component, order)}
-            />
-          ) : (
-            <FoldImportPicker
-              dragging={dragging}
-              busy={state.phase === 'working'}
-              onRequest={(request) => void flow?.open(request)}
-            />
-          )}
+          <FoldImportPicker dragging={dragging} busy={state.phase === 'working'} onRequest={(request) => void flow?.open(request)} />
           <div className={styles.status} role="status">
             {state.phase === 'working' ? workingLabel(t, state) : null}
           </div>
-          {notice && <FoldRefusalNotice notice={notice} />}
+          {shownNotice && <FoldRefusalNotice notice={shownNotice} />}
         </div>
         <div className={styles.footer}>
           <p className={styles.placement}>{state.phase !== 'idle' && state.request.kind === 'project-cp' && state.request.stepId
             ? t('dialogs:foldImport.placement.update', 'Updates this Collapse step. Later steps and branches are kept and replayed; affected folds are marked Changed or Broken.')
             : placement(t, { sequence, cursor, activePath })}</p>
-          {choosing && (
-            <div className={styles.actions}>
-              <Button size="sm" variant="ghost" disabled={choosing.committing} onClick={() => flow?.reset()}>
-                {t('dialogs:foldImport.back', 'Back')}
-              </Button>
-              <Button size="sm" variant="primary" disabled={choosing.committing} onClick={() => void flow?.commit()}>
-                {updating ? t('dialogs:foldImport.updateTitle', 'Update from CP')
-                  : projectCp ? t('dialogs:foldImport.collapse', 'Collapse') : t('dialogs:foldImport.import', 'Import')}
-              </Button>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

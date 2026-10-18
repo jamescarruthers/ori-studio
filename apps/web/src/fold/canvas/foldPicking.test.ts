@@ -16,10 +16,44 @@ const point = { snap: 'point', edges: true, free: false } as const;
 const line = { snap: 'crease-required', edges: true, free: false } as const;
 
 describe('Fold picking', () => {
+  it('snaps free-line ends to the same point targets on each pane, with exact raw fallback', () => {
+    const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), [{ at: [1 / 3, 0], mark: 'fmark-1' }]);
+    const snapping = { snap: 'free', edges: false, free: false, snapFree: true } as const;
+    for (const pane of ['folded', 'crease-pattern'] as const) {
+      const targets = pane === 'folded' ? index.folded : index.creasePattern;
+      expect(targets.points.length).toBeGreaterThan(4);
+      for (const target of targets.points) {
+        const at = { x: target.at.x + 0.001, y: target.at.y + 0.001 };
+        const reference = resolveFoldPick(index, pane, at, RADII, point);
+        if (reference?.kind !== 'point') throw new Error('missing point target');
+        expect(resolveFoldPick(index, pane, at, RADII, snapping))
+          .toEqual({ kind: 'free', pane, sheet: reference.sheet, scene: reference.scene });
+      }
+      const at = { x: 0.37, y: 0.42 };
+      expect(resolveFoldPick(index, pane, at, RADII, snapping))
+        .toEqual({ kind: 'free', pane, sheet: [at.x, at.y], scene: at });
+      const near = { x: 0.01, y: 0.01 };
+      for (const rule of [{ ...snapping, snapFree: false }, { ...snapping, free: true }]) {
+        expect(resolveFoldPick(index, pane, near, RADII, rule))
+          .toEqual({ kind: 'free', pane, sheet: [near.x, near.y], scene: near });
+      }
+    }
+    // Off-paper endpoints remain usable on the folded pane.
+    expect(resolveFoldPick(index, 'folded', { x: 2, y: 0.42 }, RADII, snapping))
+      .toMatchObject({ kind: 'free', sheet: null, scene: { x: 2, y: 0.42 } });
+  });
+
+  it('keeps a buried CP target in its own material coordinates when a free end snaps', () => {
+    const index = foldPickIndex(bookScene(), null, []);
+    const pick = resolveFoldPick(index, 'crease-pattern', { x: 0.99, y: 0.99 }, RADII,
+      { snap: 'free', edges: false, free: false, snapFree: true });
+    expect(pick).toEqual({ kind: 'free', pane: 'crease-pattern', sheet: [1, 1], scene: { x: 0, y: 1 } });
+  });
+
   it('snaps a point step to the landmark nearest, named by its sheet point', () => {
     const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
     const corner = resolveFoldPick(index, 'folded', { x: 0.99, y: 0.01 }, RADII, point);
-    expect(corner).toMatchObject({ kind: 'point', provenance: 'vertex', sheet: [1, 0] });
+    expect(corner).toMatchObject({ kind: 'point', pane: 'folded', provenance: 'vertex', sheet: [1, 0] });
     if (corner?.kind !== 'point') throw new Error('no point');
     expect(pickRef(corner)).toEqual({ kind: 'point', at: [1, 0] });
     // An edge's middle is a landmark too.
@@ -102,7 +136,7 @@ describe('Fold picking', () => {
   it('takes a Divide-line mark as a point of the crease pattern, its id riding along', () => {
     const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), [{ at: [1 / 3, 0], mark: 'fmark-1' }]);
     const mark = resolveFoldPick(index, 'crease-pattern', { x: 0.34, y: 0.005 }, RADII, point);
-    expect(mark).toMatchObject({ kind: 'point', provenance: 'mark', mark: 'fmark-1' });
+    expect(mark).toMatchObject({ kind: 'point', pane: 'crease-pattern', provenance: 'mark', mark: 'fmark-1' });
     if (mark?.kind !== 'point') throw new Error('no point');
     expect(pickRef(mark)).toEqual({ kind: 'mark', at: [1 / 3, 0], mark: 'fmark-1' });
   });
@@ -116,7 +150,8 @@ describe('Fold picking', () => {
     });
     const scene = {
       ...flatSquareScene(),
-      crease_marks: [{ from: { x: 0.5, y: 0.45 }, to: { x: 0.5, y: 0.55 }, letter: 'valley' as const, made_at: 1, pieces: [] }],
+      crease_marks: [{ from: { x: 0.5, y: 0.45 }, to: { x: 0.5, y: 0.55 }, letter: 'valley' as const, made_at: 1,
+        pieces: [{ face: 0, from: { x: 0.5, y: 0.45 }, to: { x: 0.5, y: 0.55 }, seen: 'valley' as const }] }],
     };
     const index = foldPickIndex(scene, { ...landmarks, points: [...landmarks.points, end([0.5, 0.45], true), end([0.5, 0.55], false)] }, []);
     // Where the viewer sees it, on the folded pane; the hidden end is not there to click.
@@ -130,8 +165,10 @@ describe('Fold picking', () => {
       provenance: 'crease-mark-end',
       sheet: [0.5, 0.55],
     });
-    // The mark itself is no line to fold along.
-    expect(resolveFoldPick(index, 'crease-pattern', { x: 0.51, y: 0.5 }, RADII, line)).toBeNull();
+    // A partial flat crease is also a line reference, named by its stretch.
+    expect(resolveFoldPick(index, 'crease-pattern', { x: 0.51, y: 0.5 }, RADII, line)).toMatchObject({
+      kind: 'segment', segment: 'crease', creaseMark: true, sheet: [[0.5, 0.45], [0.5, 0.55]],
+    });
     expect(index.creasePattern.creaseMarks).toHaveLength(1);
   });
 
@@ -158,5 +195,28 @@ describe('Fold picking', () => {
     });
     expect(sameFoldHit(free(0.3), free(0.3))).toBe(true);
     expect(sameFoldHit(free(0.3), free(0.31))).toBe(false);
+  });
+});
+
+
+describe('a located hinge using another layer’s reference', () => {
+  it('keeps an exactly coincident image but anchors to the folded edge', () => {
+    const index=foldPickIndex(bookScene(),{
+      points: [],
+      lines: [{ line: { n: [1, 0], d: 0.5 }, segments: [6], visible: true }],
+      segments: [{ edge: 6, kind: 'bend', sheet: { a: [0.5, 0], b: [0.5, 1] },
+        at: [[0.5, 0], [0.5, 1]], line: 0, visible: [[0, 1]] }],
+    },[]);
+    // The reference belongs to different material under the edge. Its
+    // resolved image is the common location; its sheet point is not on x=½.
+    const reference={kind:'point',provenance:'crossing',sheet:[0.2,0.4],scene:{x:0.5,y:0.4},mark:null} as const;
+    expect(resolveFoldEdgePoint(index,'folded',reference.scene,RADII,reference)).toEqual(reference);
+    const hinge=resolveFoldEdgePoint(index,'folded',reference.scene,RADII,reference,true);
+    expect(hinge).toMatchObject({kind:'point',provenance:'fold',sheet:[0.5,0.4],scene:reference.scene,fold:{edge:6}});
+    // A nearby reference is not silently shifted. Nor is a sheet-pane
+    // reference reinterpreted as a different piece of material.
+    const near={...reference,scene:{x:0.5005,y:0.4}};
+    expect(resolveFoldEdgePoint(index,'folded',near.scene,RADII,near,true)).toEqual(near);
+    expect(resolveFoldEdgePoint(index,'crease-pattern',reference.scene,RADII,reference,true)).toEqual(reference);
   });
 });

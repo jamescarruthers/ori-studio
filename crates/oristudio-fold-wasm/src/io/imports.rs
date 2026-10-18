@@ -117,6 +117,7 @@ impl Imports {
             .components()
             .iter()
             .map(|c| ComponentCount {
+                pairs: c.pairs.iter().map(|pair| [pair.lo(), pair.hi()]).collect(),
                 orders: c.orders.len(),
                 truncated: c.truncated,
             })
@@ -137,6 +138,49 @@ impl Imports {
             components,
             nodes,
         }))
+    }
+
+    /// Expand a held search and locate the previously displayed local order by
+    /// its actual relations, never by a potentially shifted enumeration index.
+    pub fn search(
+        &mut self,
+        import: u32,
+        choice: &[usize],
+        limits: &Limits,
+    ) -> Result<Outcome<super::wire::Searched>, IoCallError> {
+        let held = self
+            .held
+            .get_mut(&import)
+            .ok_or(IoCallError::UnknownImport(import))?;
+        let previous = held
+            .completions
+            .order(choice)
+            .ok_or_else(|| IoCallError::invalid("invalid previous choice"))?;
+        let completions = match held.pattern.complete(&limits.completion()) {
+            Ok(value) => value,
+            Err(error) => return Ok(Outcome::Refused(IoRefusal::from(error).into())),
+        };
+        let choice = completions
+            .choice_of(&previous)
+            .ok_or_else(|| IoCallError::invalid("expanded search lost the previous order"))?;
+        let opened = Opened {
+            import,
+            summary: held.pattern.summary().clone(),
+            paper: held.placed.adopted(),
+            count: completions.count(),
+            nodes: completions.nodes(),
+            components: completions
+                .components()
+                .iter()
+                .map(|c| ComponentCount {
+                    pairs: c.pairs.iter().map(|pair| [pair.lo(), pair.hi()]).collect(),
+                    orders: c.orders.len(),
+                    truncated: c.truncated,
+                })
+                .collect(),
+        };
+        held.completions = completions;
+        Ok(Outcome::Ok(super::wire::Searched { opened, choice }))
     }
 
     /// Land the order `choice` picks — one listed order per component, by

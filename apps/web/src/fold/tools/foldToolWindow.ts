@@ -12,7 +12,7 @@
  *   line (the cross-section picker and the flap chips), a refusal with its
  *   fixes, and Cancel / commit.
  *
- * Fold and unfold adds its extent control in both phases — the whole line,
+ * The Precrease tool adds its extent control in both phases — the whole line,
  * a segment or a pinch — and a segment's or a pinch's clicks along the line
  * to its steps (`tools/precrease/precreaseToolWindow`).
  *
@@ -48,9 +48,10 @@ import {
   isFoldLineMode,
   isSinkTool,
   isVertexTool,
+  usesLineMode,
   lineModeLabel,
   lineModeSteps,
-  type FoldPlainToolId,
+  type FoldKind,
   type FoldKeyLabel,
   type FoldLineModeId,
   type FoldSecondLineModeId,
@@ -123,8 +124,7 @@ export interface FoldPreview {
 }
 
 export interface FoldToolWindowView extends FoldToolsView {
-  /** Plain folds return to the starting pose after creasing. */
-  foldAndUnfold?: boolean;
+  freeLineSnap?: boolean;
   /** How many of the line mode's references are picked. */
   picks: number;
   /** The located line, or null while it is being located. */
@@ -147,7 +147,7 @@ export interface FoldToolWindowView extends FoldToolsView {
   vertex?: FoldVertexWindowView;
   /** A sink tool's point and choices, while it previews (`tools/sink/sinkToolWindow`). */
   sink?: FoldSinkWindowView;
-  /** Fold-and-unfold extent and its points along the line (`tools/precrease`); absent for every other tool. */
+  /** The Precrease tool's extent and its points along the line (`tools/precrease`); absent for every other tool. */
   extent?: FoldExtentWindowView;
   /** The Rotate tool's rotation (`tools/rotate`); absent where the surface offers none. */
   rotate?: FoldRotateWindowView;
@@ -168,6 +168,7 @@ export interface FoldToolWindowVerbs
   extends Pick<FoldRailVerbs, 'selectTool' | 'selectLineMode'>,
     FoldFixVerbs,
     FoldVertexWindowVerbs {
+  setFreeLineSnap?: (enabled: boolean) => void;
   swapSide: () => void;
   /** Pick or unpick a flap (an index into the section's flaps). */
   toggleFlap: (flap: number) => void;
@@ -194,7 +195,6 @@ export interface FoldToolWindowVerbs
   stepPocket?: (delta: number) => void;
   /** How much of its line a precrease creases (`tools/precrease`). */
   setExtent?: (mode: FoldExtentMode) => void;
-  setFoldAndUnfold?: (enabled: boolean) => void;
   /** How far and which way Rotate turns the model (`tools/rotate`). */
   setRotation?: (rotation: TurnRotation) => void;
 }
@@ -245,10 +245,10 @@ export interface FoldLineModeSelect {
 export interface FoldKindControl {
   label: string;
   /** Null while the tool in hand is no plain fold. */
-  value: FoldPlainToolId | null;
-  options: readonly { value: FoldPlainToolId; label: string }[];
+  value: FoldKind | null;
+  options: readonly { value: FoldKind; label: string }[];
   disabled: boolean;
-  set: (kind: FoldPlainToolId) => void;
+  set: (kind: FoldKind) => void;
 }
 
 export interface FoldMovingSideControl {
@@ -282,6 +282,7 @@ export interface FoldWindowButton {
 }
 
 export interface FoldToolWindowModel {
+  freeLineSnap?: { label: string; help: string; checked: boolean; disabled: boolean; set: (enabled: boolean) => void };
   reversePreference?: FoldKindChoice<FoldReversePreference>;
   phase: 'locate' | 'preview' | 'divide';
   title: string;
@@ -289,7 +290,6 @@ export interface FoldToolWindowModel {
   instructions: FoldToolInstructions;
   lineMode: FoldLineModeSelect | null;
   kind: FoldKindControl | null;
-  foldAndUnfold?: { label: string; checked: boolean; disabled: boolean; set: (enabled: boolean) => void };
   movingSide: FoldMovingSideControl | null;
   layers: FoldLayersSection | null;
   refusal: FoldRefusalNoticeModel | null;
@@ -397,9 +397,14 @@ export function settingsMeta(t: TFunction, count: number): string {
 }
 
 /** What snaps under each line mode, and on a pointer with keys, the keys that change it. */
-export function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldToolHost): string[] {
+export function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldToolHost, snapFree = false): string[] {
   const clear = t('tools:fold.note.clear', 'Esc clears the picks.');
   if (mode === 'free') {
+    if (snapFree) {
+      const note = t('tools:fold.note.freeSnap', 'Snap to nearby point targets; otherwise use exactly where you click.');
+      return host.coarse ? [note] : [note,
+        t('tools:fold.note.freePoint', 'Hold {{modifier}} to put a point down anywhere, without snapping.', { modifier: host.alt }), clear];
+    }
     const free = t('tools:fold.note.free', 'No snapping: the line runs exactly through the points you click.');
     return host.coarse ? [free] : [free, clear];
   }
@@ -436,18 +441,19 @@ export function locateInstructions(
       ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', { action })
       : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.'));
   // A precrease of part of its line: its points along the line, once it is located.
-  const extent = isFoldKind(view.tool) && view.foldAndUnfold ? view.extent : undefined;
+  const extent = view.tool === 'precrease' ? view.extent : undefined;
   const items = [...lineModeSteps(t, view.lineMode), ...extentLocateSteps(t, extent), finish];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items,
     current: Math.min(Math.max(0, view.picks), items.length - 1),
-    notes: [...lineModeNotes(t, view.lineMode, host), ...(extent ? extentKeyNote(t, host) : [])],
+    notes: [...lineModeNotes(t, view.lineMode, host, view.freeLineSnap), ...(extent ? extentKeyNote(t, host) : [])],
   };
 }
 
 function previewInstructions(
   t: TFunction,
+  kind: FoldKind,
   host: FoldToolHost,
   preview: FoldPreview,
   extent: FoldExtentWindowView | undefined,
@@ -461,7 +467,7 @@ function previewInstructions(
       ...(along?.along ?? []),
       t('tools:fold.steps.pickLayers', 'Pick which layers move.'),
       host.coarse
-        ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action })
+        ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: along ? action : foldToolLabel(t, kind) })
         : t('tools:fold.steps.commit', 'Press Enter to fold.'),
     ],
     // Picking layers is optional: the top flap folds unless the folder picks
@@ -555,6 +561,25 @@ export function foldToolWindow(
   verbs: FoldToolWindowVerbs,
   host: FoldToolHost
 ): FoldToolWindowModel | null {
+  const model = toolWindow(t, view, verbs, host);
+  const freeLine = (usesLineMode(view.tool, view.vertex?.swivelInput) && view.lineMode === 'free') ||
+    (view.tool === 'crimp' && (view.lineMode === 'free' || (view.secondLineMode ?? 'free') === 'free'));
+  if (!model || !freeLine || view.freeLineSnap === undefined || !verbs.setFreeLineSnap) return model;
+  return { ...model, freeLineSnap: {
+    label: t('tools:fold.window.snapFreeLine', 'Snap to points'),
+    help: t('tools:fold.note.freeSnap', 'Snap to nearby point targets; otherwise use exactly where you click.'),
+    checked: view.freeLineSnap,
+    disabled: view.readOnly !== null,
+    set: verbs.setFreeLineSnap,
+  } };
+}
+
+function toolWindow(
+  t: TFunction,
+  view: FoldToolWindowView,
+  verbs: FoldToolWindowVerbs,
+  host: FoldToolHost
+): FoldToolWindowModel | null {
   const readOnly = view.readOnly !== null;
   if (view.tool === 'divide-line') {
     const divide = view.divide ? divideControls(t, view.divide, verbs, readOnly) : null;
@@ -593,22 +618,15 @@ export function foldToolWindow(
   const { preview } = view;
   // A precrease's extent: the control in both phases, so a pinch can be
   // chosen before its line is located, and its points along the line after.
-  const extentView = view.foldAndUnfold ? view.extent : undefined;
+  const extentView = kind === 'precrease' ? view.extent : undefined;
   const extent = extentView ? extentControl(t, extentView, verbs.setExtent, readOnly) : null;
-  const foldAndUnfold = {
-    label: t('tools:fold.window.foldAndUnfold', 'Fold and unfold'),
-    checked: view.foldAndUnfold === true,
-    disabled: readOnly || !verbs.setFoldAndUnfold,
-    set: (enabled: boolean) => verbs.setFoldAndUnfold?.(enabled),
-  };
-  const action = extentCommitLabel(t, extentView, view.foldAndUnfold ? foldAndUnfold.label : title);
+  const action = extentCommitLabel(t, extentView, title);
 
   if (!preview) {
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, extent ? 3 : 2),
-      foldAndUnfold,
+      meta: settingsMeta(t, extent ? 2 : 1),
       instructions: locateInstructions(t, view, action, host),
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,
@@ -624,9 +642,8 @@ export function foldToolWindow(
   return {
     phase: 'preview',
     title,
-    meta: settingsMeta(t, extent ? 5 : 4),
-    foldAndUnfold,
-    instructions: previewInstructions(t, host, preview, extentView, action),
+    meta: settingsMeta(t, extent ? 4 : 3),
+    instructions: previewInstructions(t, kind, host, preview, extentView, action),
     lineMode: null,
     kind: {
       label: t('tools:fold.window.kind', 'Fold'),
@@ -650,7 +667,7 @@ export function foldToolWindow(
           t,
           preview.refused,
           {
-            kind: view.foldAndUnfold ? 'precrease' : kind,
+            kind,
             readOnly,
             ...sectionFlapNames(preview.section),
             ...(extentView ? { extent: { mode: extentView.mode, allLayers: preview.seed === 'all' } } : {}),

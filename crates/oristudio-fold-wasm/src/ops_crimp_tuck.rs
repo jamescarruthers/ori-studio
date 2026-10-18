@@ -74,7 +74,7 @@ pub const TUCK_TARGETS_BUDGET_MS: f64 = 150.0;
 /// Milliseconds on a monotonic clock, for a completion's deadline: the
 /// page's `performance.now()` in a browser or worker.
 #[cfg(target_arch = "wasm32")]
-mod clock {
+pub(crate) mod clock {
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen]
@@ -89,7 +89,7 @@ mod clock {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-mod clock {
+pub(crate) mod clock {
     use std::sync::OnceLock;
     use std::time::Instant;
 
@@ -256,6 +256,7 @@ fn plain(
     root: Option<&Line>,
 ) -> Result<PlainFold, Rejection> {
     let along = AlongLine {
+        landing: Default::default(),
         line: line.clone(),
         direction: Some(direction),
         motion: Motion {
@@ -394,6 +395,28 @@ pub fn resolve_tuck(parent: &State, op: &TuckOp, choices: &Choices) -> Result<Tu
 }
 
 impl CompoundOp for CrimpStep {
+    fn order_selection(
+        &self,
+        parent: &State,
+        query: &crate::order_selection::OrderQuery,
+    ) -> Result<crate::order_selection::OrderSelection, Refusal> {
+        use crate::order_selection::OrderSelection;
+        match parent.crimp_fold_within(&self.fold, &self.choices, &query.limits()) {
+            Ok(CrimpOutcome::Landed(folded)) => {
+                Ok(OrderSelection::unique(folded.report.stored.order))
+            }
+            Ok(CrimpOutcome::ChooseOrder(choice)) => {
+                OrderSelection::pick(choice.completions(), query, |pick| {
+                    choice.pick(pick).map(|folded| folded.report.stored.order)
+                })
+            }
+            Ok(CrimpOutcome::ChooseOpening(_)) => Err(crate::compound::choice_needed(
+                crate::compound::NeededChoice::Opening,
+            )),
+            Err(refused) => Err(crate::compound::compound_refusal(refused)),
+        }
+    }
+
     /// Its tip at ℓ1, as a plain fold's analysis reads.
     fn analysis(&self, parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
         Some(parent.analyse_crimp_fold(&self.fold).map_err(Refusal::from))
@@ -437,6 +460,26 @@ impl CompoundOp for CrimpStep {
 }
 
 impl CompoundOp for TuckStep {
+    fn order_selection(
+        &self,
+        parent: &State,
+        query: &crate::order_selection::OrderQuery,
+    ) -> Result<crate::order_selection::OrderSelection, Refusal> {
+        use crate::order_selection::OrderSelection;
+        match parent.tuck_fold_within(&self.fold, &self.choices, &query.limits()) {
+            Ok(TuckOutcome::Landed(folded)) => {
+                Ok(OrderSelection::unique(folded.report.stored.order))
+            }
+            Ok(TuckOutcome::ChooseOrder(choice)) => {
+                OrderSelection::pick(choice.completions(), query, |pick| {
+                    choice.pick(pick).map(|folded| folded.report.stored.order)
+                })
+            }
+
+            Err(refused) => Err(crate::compound::compound_refusal(refused)),
+        }
+    }
+
     /// What it moves against its target, as a plain fold's analysis reads.
     fn analysis(&self, parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
         Some(parent.analyse_tuck_fold(&self.fold).map_err(Refusal::from))

@@ -28,7 +28,7 @@ const TOP: FoldToolSeed = { scope: 'top' };
 
 describe('the top flap a fold takes by default (owner request, 2026-10-13)', () => {
   it('is the default of the folds that fold one flap over; a fold of a whole point takes every layer', () => {
-    const takesTop: FoldToolId[] = ['valley', 'mountain', 'tuck'];
+    const takesTop: FoldToolId[] = ['valley', 'mountain', 'precrease', 'tuck'];
     const takesAll: FoldToolId[] = ['inside-reverse', 'crimp', 'open-sink', 'closed-sink', 'unsink'];
     for (const tool of takesTop) {
       expect(takesTopFlap(tool)).toBe(true);

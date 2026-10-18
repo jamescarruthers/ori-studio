@@ -28,15 +28,15 @@ function sequence(spreads: Partial<Record<'a' | 'b' | 'c' | 'd' | 'e', FoldStepS
 }
 
 describe('the spread a Fold step shows (the Diagram’s rule, along its path)', () => {
-  it('is the default with nothing set, so every picture starts spread', () => {
+  it('is the default with nothing set, so every picture starts flat', () => {
     const document = sequence();
-    for (const id of ['a', 'b', 'c', 'd', 'e', null]) expect(foldStepSpread(document, id)).toEqual(DEFAULT_LAYER_SPREAD);
-    expect(foldEffectiveSpread(document, 'c')).toEqual({ spread: DEFAULT_LAYER_SPREAD, origin: 'default', from: null });
+    for (const id of ['a', 'b', 'c', 'd', 'e', null]) expect(foldStepSpread(document, id)).toBeNull();
+    expect(foldEffectiveSpread(document, 'c')).toEqual({ spread: null, origin: 'default', from: null });
   });
 
   it('is the step’s own setting, else the nearest earlier step’s on its path', () => {
     const document = sequence({ b: depth(0.05) });
-    expect(foldStepSpread(document, 'a')).toEqual(DEFAULT_LAYER_SPREAD);
+    expect(foldStepSpread(document, 'a')).toBeNull();
     expect(foldEffectiveSpread(document, 'b')).toEqual({ spread: depth(0.05), origin: 'own', from: 'b' });
     expect(foldEffectiveSpread(document, 'd')).toEqual({ spread: depth(0.05), origin: 'earlier', from: 'b' });
     // A branch from b follows b too: its path runs through it.
@@ -58,15 +58,15 @@ describe('the spread a Fold step shows (the Diagram’s rule, along its path)', 
   it('takes nothing from a locked step, which shows no picture', () => {
     const locked: FoldLockedStep = { id: 'a', parent: null, unknown: { id: 'a', parent: null, spread: 'off' } };
     const document = sequenceOf([locked, step('b', 'a')]);
-    expect(foldStepSpread(document, 'b')).toEqual(DEFAULT_LAYER_SPREAD);
+    expect(foldStepSpread(document, 'b')).toBeNull();
   });
 
   it('gives a Diagram picture the spread of the state it shows: the parent’s before, the step’s after', () => {
     const document = sequence({ b: depth(0.05), c: 'off' });
     expect(foldStateSpread(document, 'c', 'before')).toEqual(depth(0.05));
     expect(foldStateSpread(document, 'c', 'after')).toBeNull();
-    expect(foldStateSpread(document, 'a', 'before')).toEqual(DEFAULT_LAYER_SPREAD);
-    expect(foldInheritedSpread(document, 'b')).toEqual(DEFAULT_LAYER_SPREAD);
+    expect(foldStateSpread(document, 'a', 'before')).toBeNull();
+    expect(foldInheritedSpread(document, 'b')).toBeNull();
   });
 
   it('starts a spread turned on from the steps before it, each kind from the nearest of its kind', () => {
@@ -85,7 +85,7 @@ describe('setFoldStepSpread', () => {
     const set = setFoldStepSpread(sequence(), 'c', depth(0.05));
     expect(own(set, 'c')).toEqual(depth(0.05));
     const off = setFoldStepSpread(set, 'c', 'off');
-    expect(own(off, 'c')).toBe('off');
+    expect(own(off, 'c')).toBeUndefined();
     expect(own(setFoldStepSpread(off, 'c', null), 'c')).toBeUndefined();
   });
 
@@ -97,15 +97,15 @@ describe('setFoldStepSpread', () => {
     expect(on).toEqual(document);
     expect(own(on, 'c')).toBeUndefined();
     // The default is what a step with nothing before it gives.
-    expect(setFoldStepSpread(sequence(), 'a', DEFAULT_LAYER_SPREAD)).toEqual(sequence());
+    expect(setFoldStepSpread(sequence(), 'a', 'off')).toEqual(sequence());
   });
 
   it('changes nothing for the setting a step has, and replaces a newer build’s', () => {
     const document = sequence({ c: depth(0.05) });
     expect(setFoldStepSpread(document, 'c', { ...depth(0.05) })).toBe(document);
     const carried = sequence({ c: { unknown: { kind: 'curve' } } });
-    expect(own(setFoldStepSpread(carried, 'c', 'off'), 'c')).toBe('off');
-    expect(own(setFoldStepSpread(carried, 'c', DEFAULT_LAYER_SPREAD), 'c')).toBeUndefined();
+    expect(own(setFoldStepSpread(carried, 'c', 'off'), 'c')).toBeUndefined();
+    expect(own(setFoldStepSpread(carried, 'c', DEFAULT_LAYER_SPREAD), 'c')).toEqual(DEFAULT_LAYER_SPREAD);
   });
 
   it('edits nothing locked, nor a step it does not hold', () => {

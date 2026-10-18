@@ -413,6 +413,7 @@
       "crease": "Folding along a precrease refolds it; along a folded edge, it unfolds the flap.",
       "free": "No snapping: the line runs exactly through the points you click.",
       "freePoint": "Hold {{modifier}} to put a point down anywhere, without snapping.",
+      "freeSnap": "Snap to nearby point targets; otherwise use exactly where you click.",
       "openSinkSquare": "The line across the point sets how deep it sinks, and must be exactly square to its centre line: Axiom 4 draws one.",
       "queued": "Folding as soon as the preview is ready…",
       "rotateCancel": "Esc puts Rotate down without adding the turn.",
@@ -434,6 +435,31 @@
       "swivel": "Swivel fold",
       "tuck": "Tuck",
       "unsink": "Unsink"
+    },
+    "order": {
+      "accept": "Use this order",
+      "acceptAll": "Use orders and add step",
+      "acceptUpdate": "Use orders and update step",
+      "back": "Back",
+      "choose": "Choose layer order",
+      "count_one": "Order {{index}} of {{count}}",
+      "count_other": "Order {{index}} of {{count}}",
+      "failed": "The order could not be loaded. Go back and try again, or choose another order.",
+      "found_one": "Order {{index}} of {{count}} found",
+      "found_other": "Order {{index}} of {{count}} found",
+      "help": "Preview the arrangements, then choose the order you want.",
+      "incomplete": "Search incomplete. More orders may exist.",
+      "inspect": "Inspect layer stacks",
+      "loading": "Loading order…",
+      "movingVaries": "These orders move different layers. Check the highlighted paper.",
+      "next": "Next layer order",
+      "noneFound": "No order found yet",
+      "previous": "Previous layer order",
+      "region": "Region {{number}}",
+      "regions": "Independent regions",
+      "search": "Find more orders",
+      "stack": "Region {{number}}: {{layers}}",
+      "stackHelp": "Select a region to highlight it. Layers are listed from front to back; highlighted differences are relative to the first preview."
     },
     "picker": {
       "close": "Close tool list",
@@ -782,6 +808,8 @@
       "mountain": "Mountain fold",
       "mountainHelp": "Fold the moving side away from you, so it lands underneath.",
       "openSinkHelp": "Push a closed point’s tip in, turning every layer of it inside out.",
+      "precrease": "Precrease",
+      "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
       "reverse": "Reverse fold",
       "reverseHelp": "Reverse a flap inside itself or wrap it around the outside, reversing its spine.",
       "rotateHelp": "Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.",
@@ -826,7 +854,15 @@
       "hingeRegionBlocked": "This hinge region cannot fold with these layers. Click another region or change the layers.",
       "hingeRegionBlockedTouch": "This hinge region cannot fold with these layers. Tap another region or change the layers.",
       "hingeRegionFits": "The hinge crease lies in the selected region.",
+      "input": {
+        "edge": "Edge onto line",
+        "edgeHelp": "Choose an edge and the line it should land on",
+        "label": "Construct by",
+        "lines": "Two fold lines",
+        "linesHelp": "Locate two fold lines; their intersection sets the meeting point"
+      },
       "intro": {
+        "creases": "Locate the two hinges; the remaining crease is computed to keep the paper flat.",
         "petalLift": "Lifts a flap’s point up along a hinge.",
         "swivelSwing": "Swings an edge of the paper onto a line."
       },
@@ -849,6 +885,13 @@
         "twoPoints": "Two points",
         "twoPointsHelp": "Click two points on the line"
       },
+      "lines": {
+        "confirm": "Press Enter to use the first line and locate the second.",
+        "confirmTouch": "Tap Use first line to continue.",
+        "first": "Locate the first fold line. Select an existing crease or construct a line with Locate line.",
+        "second": "Locate the second fold line. Its intersection with the first sets the meeting point; the remaining hinge is computed.",
+        "useFirst": "Use first line"
+      },
       "mountain": "Mountain",
       "mountainTitle": "Mountain: the paper turns away from you",
       "note": {
@@ -862,6 +905,7 @@
         "snapOrFree": "Points snap to corners, crossings, marks and midpoints: hold {{modifier}} to put one anywhere.",
         "snapOrFreeTouch": "Points snap to corners, crossings, marks and midpoints: turn on Free point to put one anywhere.",
         "squashFlap": "A flap squashes when its two layers are joined only at its hinge and nothing lies on top of it.",
+        "swivelCreasesPicture": "The creases meet at the dot. The lit paper moves; the remaining crease keeps it flat.",
         "swivelPicture": "The creases meet at the dot, the edge lands on the bold line, and the lit paper moves."
       },
       "refusal": {
@@ -890,13 +934,17 @@
           "title": "The fourth crease cannot rise here"
         },
         "kite": {
-          "creaseOrPrecrease": "Over a hinge crease, a petal fold refolds creases already there, and a kite crease is not. Name the hinge by its two ends instead, and the fold creases the kites itself; or precrease them first, with Fold and unfold on Axiom 3: a lower edge of the top flap onto its centre line, the flaps behind left out.",
+          "creaseOrPrecrease": "Over a hinge crease, a petal fold refolds creases already there, and a kite crease is not. Name the hinge by its two ends instead, and the fold creases the kites itself; or precrease them first, with the Precrease tool on Axiom 3: a lower edge of the top flap onto its centre line, the flaps behind left out.",
           "titleMissing": "The kite creases are not there"
         },
         "line": {
           "crease": "The hinge crease does not run through every layer below it that folds. Precrease the hinge through every layer, then petal fold.",
           "ends": "The hinge crosses paper of the second layer that folds in beside the kite, and the fold cannot crease that as the flap lifts. Precrease the hinge through every layer, then petal fold.",
           "titleHinge": "Precrease the hinge first"
+        },
+        "lineMeeting": {
+          "text": "Choose two intersecting fold lines that meet on one visible folded edge.",
+          "title": "The lines need one meeting point"
         },
         "noFlap": {
           "noHinge": "The flap folds over no hinge at either end of its spine, so there is nothing to press it flat against.",
@@ -1053,7 +1101,6 @@
     "window": {
       "cancel": "Cancel",
       "finding": "Finding the layers at the line…",
-      "foldAndUnfold": "Fold and unfold",
       "instructions": "Instructions",
       "kind": "Fold",
       "label": "Fold tool options",
@@ -1066,6 +1113,7 @@
       "movingSide": "Moving side",
       "settings_one": "{{count}} setting",
       "settings_other": "{{count}} settings",
+      "snapFreeLine": "Snap to points",
       "swap": "Swap"
     }
   },

@@ -226,7 +226,8 @@ export type FoldVertexAnalysis =
   | ({ kind: 'petal' } & FoldPetalAnalysis)
   | ({ kind: 'rabbit-ear' } & FoldFanAnalysis)
   | ({ kind: 'swivel' } & FoldFanAnalysis)
-  | ({ kind: 'swivel-by-edge' } & FoldSwivelEdgeAnalysis);
+  | ({ kind: 'swivel-by-edge' } & FoldSwivelEdgeAnalysis)
+  | ({ kind: 'swivel-by-creases' } & Pick<FoldSwivelEdgeAnalysis, 'vertex' | 'creases' | 'layers' | 'regions'> & { fold: FoldSwivelFold });
 
 /** The orders a vertex fold leaves to choose from (`VertexOrders`), as a reverse fold's question lists its own. */
 export interface FoldVertexOrders {
@@ -317,6 +318,7 @@ export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
   'swivel_edge_short',
   'swivel_edge_stays',
   'swivel_not_a_fold',
+  'swivel_line_meeting',
   'swivel_misses_fold',
   'swivel_fold_wide',
   'swivel_inside_free',

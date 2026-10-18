@@ -1,3 +1,5 @@
+import { normalizeFoldLandingOp } from '../../document/foldLandingMigration';
+import type { FoldStep } from '../../document/foldSequenceDocument';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -97,7 +99,7 @@ describe.skipIf(!available)('the Rotate tool over the real bridge', () => {
     const written = JSON.parse(JSON.stringify(writeFoldSequence({ document, readOnlyRaw: null })));
     expect(written.steps.at(-1).op).toEqual({ kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } });
     const read = readFoldSequence(written)!;
-    expect(read.document).toEqual(document);
+    expect(read.document).toEqual({ ...document, steps: document.steps.map((s) => ({ ...s, op: normalizeFoldLandingOp((s as FoldStep).op) })) });
     expect(foldNodeDigest(read.document, step.id)).toBe(foldNodeDigest(document, step.id));
 
     // Replayed into a fresh engine at the state it was committed at.

@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-whale",
         "title": "Whale — partial before fish-base collapse (batch 3)",
         "paper": {

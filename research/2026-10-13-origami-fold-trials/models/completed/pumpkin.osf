@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-pumpkin",
         "title": "Pumpkin — Origami.me",
         "paper": {
@@ -142,6 +142,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3a: Bring the left corner to the center."
@@ -170,6 +173,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3b: Bring the right corner to the center."
@@ -198,6 +204,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4a: Bring the left edge to the center."
@@ -226,6 +235,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4b: Bring the right edge to the center."
@@ -259,6 +271,9 @@
                   0.17000000000000032
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: Pleat the left inner edge out."
@@ -292,6 +307,9 @@
                   0.63
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: Pleat the right inner edge out."
@@ -362,6 +380,9 @@
                   0.07500000000000015
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "8: Fold the left corner back on its existing crease."
@@ -432,6 +453,9 @@
                   0.925
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9c: Refold the right corner on its existing crease."
@@ -460,6 +484,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10: Bring the top corner down along the shoulder line."
@@ -572,6 +599,9 @@
                   0.7900000000000007
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14: Lift the near packet so its two lower corners meet the top edge."
@@ -600,6 +630,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "15: Lift the bottom point along the line between the two shoulder intersections."
@@ -633,6 +666,9 @@
                   0.024999999999999734
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "16: Lower the near flap point to the bottom edge."
@@ -661,6 +697,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "17a: Round the upper left corner onto the stem-fold junction."
@@ -689,6 +728,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "17b: Repeat at the upper right corner."

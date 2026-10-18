@@ -31,6 +31,7 @@ import {
 } from './foldSequenceDocument';
 import { writeFoldChoices, writeFoldOp, writeFoldPaper } from './foldSequenceFile';
 import { foldStepTree, pathTo } from './foldStepTree';
+import { foldHistoryOp } from './foldLandingMigration';
 
 /** A path's identity: `fh1:` and 16 hex digits. */
 export type FoldPathDigest = `fh1:${string}`;
@@ -71,8 +72,8 @@ export function foldStepKey(node: FoldStepNode): string {
   const known = STEP_KEYS.get(node);
   if (known !== undefined) return known;
   const step = isLockedStep(node)
-    ? { op: node.unknown.op, choices: node.unknown.choices }
-    : { op: writeFoldOp(node.op), choices: (node.choices && writeFoldChoices(node.choices)) ?? undefined };
+    ? { op: foldHistoryOp(node.unknown.op), choices: node.unknown.choices }
+    : { op: foldHistoryOp(writeFoldOp(node.op)), choices: (node.choices && writeFoldChoices(node.choices)) ?? undefined };
   const key = canonicalJson(step);
   STEP_KEYS.set(node, key);
   return key;

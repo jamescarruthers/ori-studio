@@ -213,4 +213,23 @@ describe('a free line drawn on the crease-pattern pane', () => {
       expect(overlay.strokes?.count).toBe(1);
     }
   });
+
+  it('shows a given swivel meeting point as a dot on hover and after picking, on both panes', () => {
+    const edge = index.creasePattern.segments.find((segment) => segment.segment === 'bend')!;
+    const meeting: FoldPick = {
+      kind: 'point', provenance: 'fold', sheet: [0.5, 0.4], scene: { x: 0.5, y: 0.4 },
+      mark: null, fold: edge, foldLocation: 'given',
+    };
+    for (const pane of ['folded', 'crease-pattern'] as const) {
+      for (const picked of [false, true]) {
+        const drawn = foldPaneOverlay({
+          pane, scene, picks: picked ? [meeting] : [],
+          hovered: picked ? null : { pane, at: { x: 0.5, y: 0.4 }, pick: meeting },
+          freeFrom: null, marks: [], inks: INKS,
+        });
+        expect(dots(drawn)).toEqual([[0.5, 0.4]]);
+        expect(drawn.strokes).toBeNull();
+      }
+    }
+  });
 });

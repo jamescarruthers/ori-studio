@@ -1,3 +1,4 @@
+import { normalizeFoldLandingOp } from '../document/foldLandingMigration';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -260,7 +261,7 @@ describe.skipIf(!available)('the crimp and the tuck over the real bridge', () =>
     expect(folded.compound.family).toBe('tuck');
     expect(folded.compound.placement).toBe('under');
     const stored = throughTheFile(BOOK_TUCK, folded.stored.completion ? folded.stored : undefined);
-    expect(stored.op).toEqual(BOOK_TUCK);
+    expect(stored.op).toEqual(normalizeFoldLandingOp(BOOK_TUCK));
     const replayed = landed(calls.step(at, stored.op, stored.choices));
     expect(replayed.fingerprint).toBe(folded.fingerprint);
     expect(replayed.compound).toEqual(folded.compound);

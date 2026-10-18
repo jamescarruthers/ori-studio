@@ -1,10 +1,11 @@
 //! Crease marks: partial creases, what a partial precrease leaves (a pinch,
 //! or a stretch of its line; the fold op is `fold::partial`).
 //!
-//! A crease mark is a real crease on the paper: it was folded with a letter
-//! and keeps it, front-relative like the letter a flat crease remembers
-//! (research §3.1). But it ends inside the paper, so it bounds no face: the
-//! paper is flat across it. It therefore lives in the state beside the face
+//! A crease mark is a real flat crease on the paper: it keeps a letter,
+//! front-relative like the letter a flat crease remembers (research §3.1).
+//! It may end inside the paper, so it need not bound a face. Imported cyan
+//! lines use the same representation, including full lines. It therefore
+//! lives in the state beside the face
 //! graph ([`StateParts::marks`]), never in it — no vertex, no edge, no split
 //! face — and it changes no layer order and no flat-foldability.
 //!
@@ -158,7 +159,7 @@ impl State {
 /// The part of the segment `a`–`b` inside a counter-clockwise convex
 /// polygon, as fractions of the way along it; none when that is no longer
 /// than the tolerance.
-fn span_inside(a: Point, b: Point, polygon: &[Point]) -> Option<[f64; 2]> {
+pub(crate) fn span_inside(a: Point, b: Point, polygon: &[Point]) -> Option<[f64; 2]> {
     let (mut u0, mut u1) = (0.0_f64, 1.0_f64);
     for i in 0..polygon.len() {
         let Some(plane) = convex::HalfPlane::left_of(polygon[i], polygon[(i + 1) % polygon.len()])

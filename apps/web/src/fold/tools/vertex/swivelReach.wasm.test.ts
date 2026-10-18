@@ -155,7 +155,7 @@ describe.skipIf(!available)('a swivel’s reach over the real bridge', () => {
     // Step 7, the swivel, folds from the squash.
     const { state, step } = parentOf(e, document, 7);
     const stored = step.op;
-    if (stored.kind !== 'swivel' || !('fold' in stored)) throw new Error('step 7 is the swivel on a folded edge');
+    if (stored.kind !== 'swivel' || !('fold' in stored) || !('edge' in stored)) throw new Error('step 7 is the swivel on a folded edge');
     const index = foldPickIndex(e.calls.scene(state), e.calls.landmarks(state, []), []);
     const ask = swivelReachAsk(index, {
       tool: 'swivel',
@@ -192,7 +192,7 @@ describe.skipIf(!available)('a swivel’s reach over the real bridge', () => {
     const document = opened('swivel-on-edge.osf');
     const { state, step } = parentOf(e, document, 7);
     const stored = step.op;
-    if (stored.kind !== 'swivel' || !('fold' in stored)) throw new Error('step 7 is the swivel on a folded edge');
+    if (stored.kind !== 'swivel' || !('fold' in stored) || !('edge' in stored)) throw new Error('step 7 is the swivel on a folded edge');
     const index = foldPickIndex(e.calls.scene(state), e.calls.landmarks(state, []), []);
     const asked = swivelReachAsk(index, {
       tool: 'swivel',

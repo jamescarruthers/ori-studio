@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { clearHeldModifiers, syncHeldModifiersFromEvent } from '../../../keyboard/heldModifiers';
 import { foldSessionDocumentSource } from '../../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../../store/workspaceStore/store';
+import { sequenceOf } from '../../document/foldSequence.fixtures';
 import { initialFoldReaderState, withFoldCursor } from '../../document/foldReaderState';
-import type { FoldStep, FoldSwivelKind, SheetPoint } from '../../document/foldSequenceDocument';
+import type { FoldOp, FoldStep, FoldSwivelKind, SheetPoint } from '../../document/foldSequenceDocument';
 import { createFoldSession, type FoldSession } from '../../session/foldSession';
 import { settle } from '../../session/foldSession.fixtures';
 import { selectFoldCursorNode } from '../../session/foldSessionState';
@@ -117,7 +118,7 @@ function readyReach(seen: { current: Seen | null }): FoldSwivelReachView | null 
 
 /** The README's three clicks, the lit edges and lines checked as each is offered. */
 async function threeClicks(seen: { current: Seen | null }, index: FoldPickIndex, stored: FoldStep) {
-  if (stored.op.kind !== 'swivel' || !('fold' in stored.op)) throw new Error('not a swivel on a folded edge');
+  if (stored.op.kind !== 'swivel' || !('fold' in stored.op) || stored.op.via !== 'edge') throw new Error('not a swivel on a folded edge');
   const edge = lineThrough(index, stored.op.edge);
   const line = stored.op.target.via === 'crease' ? lineThrough(index, stored.op.target.at) : -1;
 
@@ -166,6 +167,98 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     act(() => root.unmount());
     host.remove();
     session.dispose();
+  });
+
+  it('constructs two independent lines with normal Locate line tools, selects Inside, saves and freshly replays', async () => {
+    const document = sequenceOf([]);
+    useWorkspaceStore.getState().installFoldSequences([{ document, readOnlyRaw: null }], initialFoldReaderState(document.id));
+    await until(() => cursor().status === 'ok', 'the sheet');
+    await session.commitStep({ kind: 'valley', line: { via: 'free', through: [[0.5,0],[0.5,1]] }, moving: [0.8,0.5], seed: { scope: 'all' } });
+    await until(() => cursor().status === 'ok', 'the book fold');
+    const index = await shownPickIndex(session);
+    const tools = createFoldTools(); tools.selectTool('swivel');
+    const seen: { current: Seen | null } = { current: null };
+    await act(async () => { root.render(<Canvas session={session} tools={tools} view={{ index } as FoldStateView} seenRef={seen} />); await settle(); });
+    await act(async () => { seen.current!.verbs.setSwivelInput('creases'); await settle(); });
+    await act(async () => { seen.current!.verbs.selectLineMode('axiom-1'); await settle(); });
+    expect(tools.store.getState().tool).toBe('swivel');
+    syncHeldModifiersFromEvent({ altKey:true,ctrlKey:false,metaKey:false,shiftKey:false });
+    const meet = await clickPane(seen, { x:0.5,y:0.5 }, 'crease-pattern');
+    expect(meet?.pick).toMatchObject({ kind: 'point' });
+    expect(meet?.pick).not.toHaveProperty('fold');
+    await clickPane(seen, { x:0.05,y:0.1 }, 'crease-pattern');
+    await until(() => seen.current?.preview.swivelLine, 'the first line');
+    expect(seen.current?.preview.step).toBeNull();
+    const before = snapshot().sequence!.steps.length;
+    await act(async () => { expect(seen.current!.verbs.commit()).toBe(true); await settle(); });
+    expect(snapshot().sequence!.steps).toHaveLength(before);
+    expect(tools.store.getState().picks).toHaveLength(0);
+    expect(tools.store.getState().swivelFirst?.root).toBeDefined();
+    // Each line is a full independent construction, with its own root.
+    await clickPane(seen, { x:0.5,y:0.5 }, 'crease-pattern');
+    await clickPane(seen, { x:0.1,y:0.8 }, 'crease-pattern');
+    clearHeldModifiers();
+    await until(() => seen.current?.preview.landed, 'the two-line preview');
+    expect(seen.current?.preview.step?.op).toMatchObject({ kind:'swivel',via:'lines',first:{line:{via:'axiom',axiom:1}},second:{line:{via:'axiom',axiom:1}} });
+    const window = foldVertexWindowView(tools.store.getState(),seen.current!.preview)!;
+    expect(window.lineBy).toBeUndefined();
+    expect(window.swivelKinds).toEqual(['open','inside']);
+    await act(async () => { seen.current!.verbs.setSwivelKind('inside'); await settle(); });
+    await until(() => previewed(seen,'inside') && seen.current?.preview.landed, 'the inside preview');
+    await commit(seen);
+    const saved = snapshot().sequence!.steps.at(-1) as FoldStep;
+    expect(saved.op).toMatchObject({ via:'lines',swivel:'inside' });
+    session.dispose();
+    session=createFoldSession({ document:foldSessionDocumentSource(useWorkspaceStore),runtime:await bridge() });session.retain();
+    await until(() => cursor().status==='ok' && cursor().fingerprint===saved.expect,'fresh replay of the located hinges');
+  });
+
+  it('requires a saved order for a matching swivel and cycles before committing', async () => {
+    const t = Math.tan(Math.PI / 8);
+    const document = sequenceOf([]);
+    useWorkspaceStore.getState().installFoldSequences([{ document, readOnlyRaw: null }], initialFoldReaderState(document.id));
+    await until(() => cursor().status === 'ok', 'the sheet');
+    const base: FoldOp[] = [
+      { kind: 'precrease', direction: 'valley', line: { via: 'free', through: [[0, 0], [1, 1]] }, moving: [0.75, 0.25], seed: { scope: 'all' } },
+      { kind: 'valley', line: { via: 'free', through: [[0, 0], [1, t]] }, moving: [0.9, 0.1], seed: { scope: 'all' } },
+      { kind: 'valley', line: { via: 'free', through: [[0, 0], [t, 1]] }, moving: [0.1, 0.9], seed: { scope: 'all' } },
+    ];
+    for (const op of base) {
+      await session.commitStep(op);
+      await until(() => cursor().status === 'ok', 'the kite fold');
+    }
+    const first = { kind: 'swivel', via: 'edge', fold: [0.5, t / 2], edge: [1, (t + 1) / 2], target: { via: 'crease', at: [0.5, 0.5] }, direction: 'valley' } as const;
+    const answer = await session.withCursor((engine, state) => engine.orderSelection(state, first, undefined, { index: 0 }));
+    if (answer.status !== 'answered' || answer.value.status !== 'ok' || !answer.value.completion) throw new Error('no first swivel order');
+    await session.commitStep(first, { completion: answer.value.completion });
+    await until(() => cursor().status === 'ok', 'the first swivel');
+    const index = await shownPickIndex(session);
+    const tools = createFoldTools(); tools.selectTool('swivel');
+    const seen: { current: Seen | null } = { current: null };
+    await act(async () => { root.render(<Canvas session={session} tools={tools} view={{ index } as FoldStateView} seenRef={seen} />); await settle(); });
+    await clickPane(seen, { x: t / 2, y: 0.5 }, 'crease-pattern');
+    await until(() => readyReach(seen), 'the matching swivel reach');
+    await clickPane(seen, { x: (t + 1) / 2, y: 1 }, 'crease-pattern');
+    await clickPane(seen, { x: 0.5, y: 0.5 }, 'crease-pattern');
+    await until(() => seen.current?.preview.orderResolution?.required && seen.current.preview.landed, 'required order selection');
+    const before = snapshot().cursor;
+    await act(async () => { seen.current!.verbs.commit(); await settle(); });
+    expect(snapshot().cursor).toBe(before);
+    const initial = seen.current!.preview.step!.key;
+    await act(async () => { seen.current!.verbs.stepChoice(1); await settle(); });
+    await until(() => seen.current?.preview.step?.key !== initial && seen.current?.preview.landed, 'another valid order');
+    expect(snapshot().cursor).toBe(before);
+    const selected = seen.current!.preview.step!.choices?.completion;
+    expect(selected?.orders.length).toBeGreaterThan(0);
+    await commit(seen);
+    const saved = snapshot().sequence!.steps.at(-1) as FoldStep;
+    expect(saved.choices?.completion).toEqual(selected);
+    const fresh = await bridge();
+    // Reopening this chosen sequence must replay the same local order.
+    session.dispose();
+    session = createFoldSession({ document: foldSessionDocumentSource(useWorkspaceStore), runtime: fresh });
+    session.retain();
+    await until(() => cursor().status === 'ok' && cursor().fingerprint === saved.expect, 'the saved order in a fresh engine');
   });
 
   it('commits the open swivel by default, Kind offering both, to the fingerprint swivel-on-edge.osf stores', async () => {

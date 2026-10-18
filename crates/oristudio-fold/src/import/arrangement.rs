@@ -50,7 +50,7 @@ impl Kind {
             ImportKind::Valley => Kind::Folded(Some(Letter::Valley)),
             ImportKind::Unassigned { hint: Some(letter) } => Kind::Flat(letter),
             ImportKind::Unassigned { hint: None } => Kind::Folded(None),
-            ImportKind::Aux => return None,
+            ImportKind::Aux | ImportKind::CreaseMark { .. } => return None,
         })
     }
 

@@ -8,6 +8,7 @@ import {
   createFoldTools,
   FOLD_EVERY_LAYER,
   FOLD_TOOL_INITIAL,
+  foldToolInputKey,
   hasToolInput,
   isLocated,
   picksAlongLine,
@@ -42,6 +43,18 @@ const flapA = { faces: [1], witness: [0.2, 0.2] as [number, number] };
 const flapB = { faces: [2], witness: [0.8, 0.2] as [number, number] };
 
 describe('the Fold tools’ state', () => {
+  it('retains free-line snapping between folds without changing already placed endpoints', () => {
+    const tools = createFoldTools();
+    expect(tools.store.getState().freeLineSnap).toBe(true);
+    tools.pick(point(1, 0));
+    const key = foldToolInputKey(tools.store.getState());
+    tools.setFreeLineSnap(false);
+    expect(foldToolInputKey(tools.store.getState())).toBe(key);
+    expect(tools.store.getState().picks).toEqual([point(1, 0)]);
+    tools.clear(); tools.selectTool('mountain'); tools.selectLineMode('free');
+    expect(tools.store.getState().freeLineSnap).toBe(false);
+  });
+
   it('locates once every click is in, and takes no click past the last', () => {
     const tools = createFoldTools();
     expect(tools.pick(point(1, 0))).toBe(true);
@@ -82,7 +95,7 @@ describe('the Fold tools’ state', () => {
     expect(FOLD_TOOL_INITIAL.seed).toEqual({ scope: 'top' });
     tools.pick(point(1, 0));
     tools.pick(point(0, 1));
-    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    tools.toggleFlap(flapB, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
     // Widened to every flap: every layer.
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
     // Escape's rung, and a commit's: the picks go, and the seed is the top flap again.
@@ -101,26 +114,15 @@ describe('the Fold tools’ state', () => {
     expect(tools.store.getState()).toMatchObject({ picks: [], seed: { scope: 'top' } });
   });
 
-  it('keeps the flaps picked through direction and fold-and-unfold changes along one line: the same layers fold the other way', () => {
+  it('keeps the flaps picked through V, M and P along one line: the same layers fold the other way', () => {
     const tools = createFoldTools();
     tools.pick(point(1, 0));
     tools.pick(point(0, 1));
     tools.selectTool('mountain');
     expect(tools.store.getState().seed).toEqual({ scope: 'top' });
-    tools.toggleFlap(flapB, [flapA, flapB], flapA);
-    tools.setFoldAndUnfold(true);
+    tools.toggleFlap(flapB, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
+    tools.selectTool('precrease');
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
-    expect(tools.store.getState()).toMatchObject({ tool: 'mountain', foldAndUnfold: true, picks: [point(1, 0), point(0, 1)] });
-    tools.selectTool('valley');
-    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true, seed: { scope: 'all' } });
-    tools.setExtent('segment');
-    expect(picksAlongLine(tools.store.getState())).toBe(true);
-    tools.setFoldAndUnfold(false);
-    expect(picksAlongLine(tools.store.getState())).toBe(false);
-    expect(tools.store.getState().picks).toHaveLength(2);
-    tools.setFoldAndUnfold(true);
-    tools.clear();
-    expect(tools.store.getState()).toMatchObject({ tool: 'valley', foldAndUnfold: true, extent: 'segment', picks: [] });
   });
 
   it('swaps the side only once the line is located, and folds the new side’s own top flap', () => {
@@ -158,7 +160,7 @@ describe('the Fold tools’ state', () => {
           candidate: null,
           swapped: state.swapped,
           seed,
-          precreaseDirection: 'valley',
+          precreaseDirection: state.precreaseDirection,
         },
         index
       );
@@ -178,16 +180,16 @@ describe('the Fold tools’ state', () => {
   it('widens from the top flap one chip at a time, every flap picked being every layer', () => {
     const tools = createFoldTools();
     // The top flap is pressed alone: pressing the other picks both, every layer.
-    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    tools.toggleFlap(flapB, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
     // Unpressing it narrows back to the top flap, named now.
-    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    tools.toggleFlap(flapB, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
     expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [flapA] });
     // From every layer, a chip unpressed leaves the others.
     tools.setSeed({ scope: 'all' });
-    tools.toggleFlap(flapA, [flapA, flapB], flapA);
+    tools.toggleFlap(flapA, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
     expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [flapB] });
-    tools.toggleFlap(flapA, [flapA, flapB], flapA);
+    tools.toggleFlap(flapA, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
   });
 
@@ -196,14 +198,14 @@ describe('the Fold tools’ state', () => {
     // The top flap, the only chip pressed, unpressed: the engine would refuse a
     // seed of none (`no_side`) and the window would have no chips left to pick
     // one again.
-    tools.toggleFlap(flapA, [flapA, flapB], flapA);
+    tools.toggleFlap(flapA, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
     tools.setSeed({ scope: 'flaps', flaps: [flapB] });
-    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    tools.toggleFlap(flapB, [flapA, flapB], { scope: 'flaps', flaps: [flapA] });
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
     // A section of one flap, the top flap every layer: its chip cannot be unpressed into nothing either.
     tools.setSeed({ scope: 'top' });
-    tools.toggleFlap(flapA, [flapA], flapA);
+    tools.toggleFlap(flapA, [flapA], { scope: 'flaps', flaps: [flapA] });
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
     tools.setSeed({ scope: 'flaps', flaps: [] });
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
@@ -401,7 +403,7 @@ describe('the vertex folds’ tool state', () => {
 
   it('clicks a precrease’s extent along its located line, steps back on Escape, and keeps the extent from fold to fold', () => {
     const tools = createFoldTools();
-    tools.setFoldAndUnfold(true);
+    tools.selectTool('precrease');
     tools.setExtent('segment');
     expect(FOLD_TOOL_INITIAL.extent).toBe('whole');
     // Before the line is located, a click is the line's.
@@ -473,4 +475,17 @@ it('steps the largest indexed opening list without losing a choice to integer ro
   expect(tools.store.getState().compound.opening).toBe(count - 1);
   tools.stepOpening(1, count);
   expect(tools.store.getState().compound.opening).toBe(0);
+});
+
+it('keeps the first swivel line while changing the second construction, and clears both on Escape', () => {
+  const tools=createFoldTools();
+  tools.selectTool('swivel');tools.setSwivelInput('creases');tools.selectLineMode('axiom-3');
+  const first={line:{via:'free' as const,through:[[0,0],[1,1]] as [[number,number],[number,number]]},sceneLine:{n:[1,-1] as [number,number],d:0}};
+  tools.acceptSwivelLine(first);
+  expect(hasToolInput(tools.store.getState())).toBe(true);
+  tools.selectLineMode('crease');
+  expect(tools.store.getState()).toMatchObject({tool:'swivel',swivelFirst:first,lineMode:'crease',picks:[],root:0});
+  tools.clear();
+  expect(tools.store.getState().swivelFirst).toBeUndefined();
+  expect(hasToolInput(tools.store.getState())).toBe(false);
 });

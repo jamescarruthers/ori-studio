@@ -22,6 +22,7 @@
  * handed in.
  */
 
+import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
 import type { WasmErrorEnvelope } from '../../engine/types';
@@ -40,6 +41,7 @@ import type { FoldEngineOutcome, FoldScene } from '../engine/foldEngineWire';
 import type { FoldSession, FoldSessionWorker } from '../session/foldSession';
 import { foldSample, foldSampleSource } from './foldImportFiles';
 import type { FoldImportLocalCode, FoldImportRefusal } from './foldImportRefusal';
+import { sameFoldState, selectFoldCursorNode } from '../session/foldSessionState';
 import { foldCursorReady, type FoldCursorReady } from './foldSessionWaits';
 
 /** What is imported: a file the user picked or dropped, a sample, or Edit's folded figure. */
@@ -55,7 +57,7 @@ export type FoldImportRequest =
     }
   | { readonly kind: 'sample'; readonly sample: FoldSampleId }
   | { readonly kind: 'edit-folded-figure' }
-  | { readonly kind: 'project-cp'; readonly stepId?: string };
+  | { readonly kind: 'project-cp'; readonly stepId?: string; readonly region?: RegionReference };
 
 /** Captured project CP and transaction guard, supplied by the app adapter. */
 export interface FoldProjectCpImport {
@@ -76,7 +78,7 @@ export type FoldImportFlowState =
   | { readonly phase: 'idle' }
   /** Reading the file, completing its order, or landing and committing it. */
   | { readonly phase: 'working'; readonly request: FoldImportRequest }
-  | { readonly phase: 'refused'; readonly request: FoldImportRequest; readonly refusal: FoldImportRefusal }
+  | { readonly phase: 'refused'; readonly request: FoldImportRequest; readonly refusal: FoldImportRefusal; readonly searchLimited?: boolean }
   | { readonly phase: 'failed'; readonly request: FoldImportRequest; readonly error: WasmErrorEnvelope }
   | {
       readonly phase: 'choosing';
@@ -88,6 +90,13 @@ export type FoldImportFlowState =
       readonly previews: ReadonlyMap<string, FoldOrderPreview>;
       /** The choice is being landed and committed. */
       readonly committing: boolean;
+      readonly searching?: boolean;
+      readonly searchFailed?: boolean;
+      readonly searchLimited?: boolean;
+      /** Last completed preview stays visible while the next candidate loads. */
+      readonly displayed?: FoldScene;
+      readonly confirmed: readonly boolean[];
+      readonly component: number;
     }
   | { readonly phase: 'done'; readonly request: FoldImportRequest; readonly stepId: string; readonly origin: FoldCpOrigin };
 
@@ -96,10 +105,11 @@ export interface FoldImportFlowOptions {
   /** Edit's chosen flat folded figure as the CP kernel's paper scene, or null when Edit has none. */
   editFoldedFigure: () => Promise<OristudioCpFoldedPaperScene | null>;
   /** A step was imported: the analytics event, by the step's closed origin. */
-  projectCp?: (stepId?: string) => Promise<FoldProjectCpImport | null>;
+  projectCp?: (stepId?: string, region?: RegionReference) => Promise<FoldProjectCpImport | null>;
   onImported?: (origin: FoldCpOrigin, action?: 'insert' | 'update') => void;
   /** The chooser asks about a part with `orders` layer orders: once per such part, as the import opens. */
   onChoiceOffered?: (orders: number) => void;
+  onOrderResolved?: (result: 'accepted' | 'canceled', count: number) => void;
 }
 
 export interface FoldImportFlow {
@@ -110,6 +120,8 @@ export interface FoldImportFlow {
   choose(component: number, order: number): void;
   /** Land the chosen orders as a step and commit it. */
   commit(): Promise<void>;
+  accept(component: number): Promise<void>;
+  region(component: number): void;
   /** A refused search, asked again with a larger budget. */
   searchLonger(): Promise<void>;
   /** Back to choosing what to import; an opened import is let go. */
@@ -117,9 +129,6 @@ export interface FoldImportFlow {
   /** Let the import and the engine go. */
   dispose(): void;
 }
-
-/** The most orders a component pictures; one past them is still listed by count. */
-export const FOLD_ORDER_PREVIEW_LIMIT = 24;
 
 /** How much more a "Search longer" spends than the search that ran out. */
 const SEARCH_LONGER_FACTOR = 8;
@@ -136,7 +145,7 @@ export function withFoldOrder(choice: readonly number[], component: number, orde
 
 /** How many components the chooser has to ask about: the ones with more than one order. */
 export function foldOrderChoices(opened: Pick<FoldImportOpened, 'components'>): number {
-  return opened.components.filter((component) => component.orders > 1).length;
+  return opened.components.filter((component) => (component.orders > 1 || component.truncated)).length;
 }
 
 /**
@@ -180,6 +189,7 @@ export function createFoldImportFlow({
   projectCp,
   onImported,
   onChoiceOffered,
+  onOrderResolved,
 }: FoldImportFlowOptions): FoldImportFlow {
   const store = createStore<FoldImportFlowState>(() => IDLE);
   const releaseHold = session.retain();
@@ -190,6 +200,16 @@ export function createFoldImportFlow({
   let previewRunning = false;
   /** The limits the last request was opened with, for "Search longer". */
   let lastLimits: FoldImportLimits | undefined;
+  let context: { cursor: string | null; state: FoldEngineStateHandle | null } | null = null;
+  const unsubscribe = session.store.subscribe((snapshot) => {
+    const now = store.getState();
+    if (now.phase !== 'choosing' || now.committing || !context) return;
+    if (snapshot.cursor === context.cursor && sameFoldState(selectFoldCursorNode(snapshot).state, context.state)) return;
+    ticket += 1;
+    letGo();
+    onOrderResolved?.('canceled', now.opened.count.orders);
+    store.setState(IDLE, true);
+  });
 
   const local = (request: FoldImportRequest, code: FoldImportLocalCode): FoldImportFlowState => ({
     phase: 'refused',
@@ -297,7 +317,7 @@ export function createFoldImportFlow({
         const now = store.getState();
         const import_ = held;
         if (disposed || now.phase !== 'choosing' || !import_) return;
-        const next = nextPreview(now.opened, now.choice, now.previews);
+        const next = now.previews.has(foldOrderChoiceKey(now.choice)) ? null : [...now.choice];
         if (!next) return;
         const key = foldOrderChoiceKey(next);
         const mine = ticket;
@@ -324,7 +344,8 @@ export function createFoldImportFlow({
     if (now.phase !== 'choosing') return;
     const previews = new Map(now.previews);
     previews.set(key, preview);
-    store.setState({ ...now, previews }, true);
+    if (previews.size > 16) previews.delete(previews.keys().next().value!);
+    store.setState({ ...now, previews, ...(preview.status === 'ready' && key === foldOrderChoiceKey(now.choice) ? { displayed: preview.scene } : {}) }, true);
   };
 
   const open = async (request: FoldImportRequest, limits?: FoldImportLimits): Promise<void> => {
@@ -338,7 +359,7 @@ export function createFoldImportFlow({
       return;
     }
     try {
-      const project = request.kind === 'project-cp' ? await projectCp?.(request.stepId) : undefined;
+      const project = request.kind === 'project-cp' ? await projectCp?.(request.stepId, request.region) : undefined;
       if (mine !== ticket) return;
       if (request.kind === 'project-cp' && !project) {
         store.setState(local(request, 'no_project_cp'), true);
@@ -396,18 +417,20 @@ export function createFoldImportFlow({
         return;
       }
       if (opened.status !== 'ok') {
-        store.setState({ phase: 'refused', request, refusal: { kind: 'engine', refused: opened } }, true);
+        store.setState({ phase: 'refused', request, refusal: { kind: 'engine', refused: opened }, searchLimited: (limits?.maxNodes ?? 0) >= 12_800_000 }, true);
         return;
       }
       const import_: Held = { handle: opened.import, where, opened, ...(project ? { project } : {}) };
       held = import_;
       const choice = opened.components.map(() => 0);
-      if (foldOrderChoices(opened) === 0) {
+      if (foldOrderChoices(opened) === 0 && opened.count.exact) {
         await pickAndCommit(request, import_, choice, mine);
         return;
       }
       for (const component of opened.components) if (component.orders > 1) onChoiceOffered?.(component.orders);
-      store.setState({ phase: 'choosing', request, opened, choice, previews: new Map(), committing: false }, true);
+      const snapshot = session.store.getState();
+      context = { cursor: snapshot.cursor, state: selectFoldCursorNode(snapshot).state };
+      store.setState({ phase: 'choosing', request, opened, choice, previews: new Map(), committing: false, confirmed: opened.components.map((c) => c.orders === 1 && !c.truncated), component: Math.max(0, opened.components.findIndex((c) => c.orders > 1 || c.truncated)) }, true);
       void runPreviews();
     } catch (error) {
       if (mine === ticket) store.setState({ phase: 'failed', request, error: errorEnvelope(error) }, true);
@@ -420,17 +443,33 @@ export function createFoldImportFlow({
 
     choose(component, order) {
       const now = store.getState();
-      if (now.phase !== 'choosing' || now.committing) return;
+      if (now.phase !== 'choosing' || now.committing || now.searching) return;
       const listed = now.opened.components[component]?.orders ?? 0;
       if (!Number.isInteger(order) || order < 0 || order >= listed || now.choice[component] === order) return;
-      store.setState({ ...now, choice: withFoldOrder(now.choice, component, order) }, true);
+      store.setState({ ...now, choice: withFoldOrder(now.choice, component, order), confirmed: now.confirmed.map((value, i) => i === component ? false : value), component }, true);
       void runPreviews();
+    },
+
+    region(component) {
+      const now = store.getState();
+      if (now.phase !== 'choosing' || now.committing || now.searching || !now.opened.components[component]) return;
+      store.setState({ ...now, component }, true);
+    },
+
+    async accept(component) {
+      const now = store.getState();
+      if (now.phase !== 'choosing' || now.committing || now.searching || now.component !== component || now.previews.get(foldOrderChoiceKey(now.choice))?.status !== 'ready') return;
+      onOrderResolved?.('accepted', now.opened.components[component]?.orders ?? 1);
+      const confirmed = now.confirmed.map((value, i) => value || i === component);
+      const next = confirmed.findIndex((value) => !value);
+      store.setState({ ...now, confirmed, component: next < 0 ? component : next }, true);
+      if (next < 0) await this.commit();
     },
 
     async commit() {
       const now = store.getState();
       const import_ = held;
-      if (now.phase !== 'choosing' || now.committing || !import_) return;
+      if (now.phase !== 'choosing' || now.committing || now.searching || !import_ || now.confirmed.some((value) => !value) || now.previews.get(foldOrderChoiceKey(now.choice))?.status !== 'ready') return;
       const mine = ticket;
       store.setState({ ...now, committing: true }, true);
       try {
@@ -442,12 +481,40 @@ export function createFoldImportFlow({
 
     async searchLonger() {
       const now = store.getState();
-      if (now.phase !== 'refused' || now.refusal.kind !== 'engine') return;
+      if (now.phase === 'choosing' && !now.committing && !now.opened.count.exact) {
+        const import_ = held;
+        if (!import_ || now.searching || now.searchLimited) return;
+        const limits = { perComponent: Math.min(64_000, (lastLimits?.perComponent ?? 1000) * 4), maxNodes: Math.min(12_800_000, (lastLimits?.maxNodes ?? 200_000) * 4) };
+        const mine = ticket;
+        const searchLimited = limits.perComponent >= 64_000 && limits.maxNodes >= 12_800_000;
+        lastLimits = limits;
+        store.setState({ ...now, searching: true, searchFailed: false, searchLimited }, true);
+        try {
+          const result = await ask(import_.where.state, (engine) => engine.importSearch(import_.handle, now.choice, limits));
+          if (mine !== ticket) return;
+          if (!result || result.status !== 'ok') {
+            store.setState({ ...now, searching: false, searchFailed: true, searchLimited }, true);
+            return;
+          }
+          lastLimits = limits;
+          held = { ...import_, opened: result.opened };
+          const previous = now.previews.get(foldOrderChoiceKey(now.choice));
+          store.setState({ ...now, opened: result.opened, choice: result.choice,
+            previews: new Map(previous ? [[foldOrderChoiceKey(result.choice), previous]] : []), searching: false,
+            searchLimited,
+          }, true);
+          void runPreviews();
+        } catch {
+          if (mine === ticket) store.setState({ ...now, searching: false, searchFailed: true, searchLimited }, true);
+        }
+        return;
+      }
+      if (now.phase !== 'refused' || now.searchLimited || now.refusal.kind !== 'engine') return;
       const { refusal } = now.refusal.refused;
       if (refusal.code !== 'import_budget_exceeded') return;
       const spent = (refusal as Readonly<Record<string, unknown>>).nodes;
       const nodes = typeof spent === 'number' && spent > 0 ? spent : 1;
-      await open(now.request, { ...lastLimits, maxNodes: Math.ceil(nodes * SEARCH_LONGER_FACTOR) });
+      await open(now.request, { ...lastLimits, maxNodes: Math.min(12_800_000, Math.ceil(Math.max(nodes, lastLimits?.maxNodes ?? 0) * SEARCH_LONGER_FACTOR)) });
     },
 
     reset() {
@@ -458,9 +525,12 @@ export function createFoldImportFlow({
 
     dispose() {
       if (disposed) return;
+      const now = store.getState();
+      if (now.phase === 'choosing') onOrderResolved?.('canceled', now.opened.count.orders);
       disposed = true;
       ticket += 1;
       letGo();
+      unsubscribe();
       releaseHold();
     },
   };
@@ -470,26 +540,4 @@ export function createFoldImportFlow({
 function sampleSource(id: FoldSampleId): FoldImportSource | null {
   const sample = foldSample(id);
   return sample ? foldSampleSource(sample) : null;
-}
-
-/**
- * The next order to picture: the chosen one first, then each component's
- * orders with the others as chosen, up to {@link FOLD_ORDER_PREVIEW_LIMIT}
- * each. Null when every one shown has its picture or is being drawn.
- */
-function nextPreview(
-  opened: FoldImportOpened,
-  choice: readonly number[],
-  previews: ReadonlyMap<string, FoldOrderPreview>
-): number[] | null {
-  if (!previews.has(foldOrderChoiceKey(choice))) return [...choice];
-  for (let component = 0; component < opened.components.length; component += 1) {
-    const { orders } = opened.components[component] ?? { orders: 0 };
-    if (orders <= 1) continue;
-    for (let order = 0; order < Math.min(orders, FOLD_ORDER_PREVIEW_LIMIT); order += 1) {
-      const candidate = withFoldOrder(choice, component, order);
-      if (!previews.has(foldOrderChoiceKey(candidate))) return candidate;
-    }
-  }
-  return null;
 }

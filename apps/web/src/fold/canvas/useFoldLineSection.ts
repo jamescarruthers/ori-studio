@@ -4,26 +4,27 @@ import type { FoldAxiomCandidate, FoldCrossSection } from '../engine/foldEngineW
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { FOLD_EVERY_LAYER, type FoldResolvedSeed, type FoldToolState } from '../tools/foldToolState';
 import { lineSectionProbe, seedForTool, topFlapSeed } from '../tools/topFlapSeed';
+import { reverseMaterialPoint, reverseMaterialSeed } from '../tools/reverse/reverseMaterialSeed';
 import type { FoldPickIndex } from './foldPicking';
 
 /** The section at the line the picks locate, and the seed a step is built with. */
 export interface FoldLineSection {
   /**
    * The cross-section at the located line on its moving side: null for a
-   * fold that does not take the top flap (its section comes with its
+   * fold that does not resolve its default seed here (its section comes with its
    * analysis), while it is asked, and when the engine refuses it.
    */
   section: FoldCrossSection | null;
   /**
-   * The tools' seed with the top flap resolved (`tools/topFlapSeed`): what
-   * every step is built with. Null while the section the top flap is read
+   * The tools' default seed resolved: the top flap, or a reverse fold's
+   * material picked on the CP. Null while the section that seed is read
    * from is still being asked: there is no step to build yet.
    */
   seed: FoldResolvedSeed | null;
 }
 
 /**
- * The cross-section at the line a fold that takes the top flap locates
+ * The cross-section at the line a fold requiring a default flap locates
  * (`lineSectionProbe`), asked once per line and side on a state as soon as
  * every click is in (plan D14 tier 2) — before any step is built, since the
  * default seed is read from it — and the tools' seed resolved against it
@@ -31,7 +32,7 @@ export interface FoldLineSection {
  *
  * Resolved here rather than written into the tools by an effect, so the
  * preview and a commit can never see a seed the chips do not: no step is
- * built until the top flap is known, and every one built is built with it.
+ * built until the default flap is known, and every one built is built with it.
  * A section the engine refuses (a near miss, no paper on the side) resolves
  * to every layer, whose fold the engine then refuses and words as before.
  */
@@ -74,7 +75,12 @@ export function useFoldLineSection(
 
   const own = answer && answer.key === key ? answer : null;
   const asked = seedForTool(tool, tools.seed);
+  const material = reverseMaterialPoint(tools);
   const seed = useMemo<FoldResolvedSeed | null>(() => {
+    if (tools.seed.scope === 'top' && material && index && probe) {
+      if (!own) return null;
+      return own.section ? reverseMaterialSeed(index.scene, own.section, material) : FOLD_EVERY_LAYER;
+    }
     if (asked.scope !== 'top') return asked;
     // No line to read a top flap at: the step, if any, is every layer's — a
     // bend unfolded (its top flap hinged on it), a fix's line, or a fold the
@@ -82,6 +88,6 @@ export function useFoldLineSection(
     if (!probe) return FOLD_EVERY_LAYER;
     if (!own) return null;
     return own.section ? topFlapSeed(own.section) : FOLD_EVERY_LAYER;
-  }, [asked, probe, own]);
+  }, [asked, probe, own, tools.seed.scope, material, index]);
   return { section: own?.section ?? null, seed };
 }

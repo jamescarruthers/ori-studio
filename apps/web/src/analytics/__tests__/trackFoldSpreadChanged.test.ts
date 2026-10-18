@@ -12,11 +12,16 @@ vi.mock('../runtime', async (importOriginal) => {
   return { ...actual, track: runtime.track };
 });
 
-const { trackFoldSpreadChanged } = await import('../trackFold');
+const { trackFoldSpreadChanged, trackFoldOrderResolved, trackFoldFreeLineSnapChanged } = await import('../trackFold');
 const { spreadTracking } = await import('../trackDiagram');
 
 beforeEach(() => {
   runtime.track.mockClear();
+});
+
+it('reports free-line snapping changes as on/off only', () => {
+  trackFoldFreeLineSnapChanged(false);
+  expect(runtime.track).toHaveBeenCalledWith('fold free line snapping changed', { state: 'off' });
 });
 
 describe('trackFoldSpreadChanged', () => {
@@ -58,4 +63,14 @@ describe('trackFoldSpreadChanged', () => {
       amount: 0.025,
     });
   });
+});
+
+it('reports explicit order review using enums and a bucket, without model content', () => {
+  trackFoldOrderResolved('accepted', 'cp', 123);
+  const [event, properties] = runtime.track.mock.calls[0]!;
+  expect(event).toBe('fold order resolved');
+  expect(Object.keys(properties).sort()).toEqual(['count_bucket', 'result', 'source']);
+  expect(properties.result).toBe('accepted');
+  expect(properties.source).toBe('cp');
+  expect(typeof properties.count_bucket).toBe('string');
 });

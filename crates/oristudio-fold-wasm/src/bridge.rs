@@ -40,6 +40,7 @@ use crate::wire::{
 pub struct Bridge {
     states: HashMap<u32, Held>,
     last: u32,
+    pub(crate) placements: Option<crate::order_selection::PlacementSession>,
 }
 
 /// A held state and the step that landed it.
@@ -453,11 +454,15 @@ impl Bridge {
 
     /// Let a state go; whether it was held.
     pub fn release(&mut self, state: u32) -> bool {
+        if self.placements.as_ref().is_some_and(|s| s.parent == state) {
+            self.placements = None;
+        }
         self.states.remove(&state).is_some()
     }
 
     /// Let every state go.
     pub fn clear(&mut self) {
+        self.placements = None;
         self.states.clear();
     }
 

@@ -239,16 +239,21 @@ describe.skipIf(!available)('the swivel on a folded edge over the bridge', () =>
   });
 
   it('lands through `step` and the tools’ call alike, and replays saved', async () => {
-    const folded = landed(engine.calls.step(kite, onFold));
+    const selected = landed(engine.question.orderSelection(kite, onFold, undefined, { index: 0 }));
+    expect(selected.count).toEqual({ orders: 2, exact: true });
+    if (!selected.completion) throw new Error('the open swivel needs an order');
+    const choices = { completion: selected.completion };
+    expect(engine.calls.step(kite, onFold).status).toBe('refused');
+    const folded = landed(engine.calls.step(kite, onFold, choices));
     expect(folded.compound?.family).toBe('vertex');
-    const tried = landed(engine.vertex.vertexFold(kite, onFold));
+    const tried = landed(engine.vertex.vertexFold(kite, onFold, choices));
     if (tried.result !== 'landed') throw new Error('a choice of orders');
     expect(tried.fingerprint).toBe(folded.fingerprint);
     const document = sequenceOf([
       step('a', null, diagonal),
       step('b', 'a', right),
       step('c', 'b', left),
-      step('d', 'c', onFold),
+      step('d', 'c', onFold, { choices }),
     ]);
     const saved = JSON.parse(JSON.stringify(writeFoldSequence({ document, readOnlyRaw: null }))) as unknown;
     const opened = readFoldSequence(saved);
@@ -296,7 +301,9 @@ describe.skipIf(!available)('the swivel on a folded edge over the bridge', () =>
     const completion = answer.orders?.orders[1];
     if (!completion) throw new Error('no second order');
     const folded = landed(engine.calls.step(kite, inside, { completion }));
-    const opened = landed(engine.calls.step(kite, onFold));
+    const openOrder = landed(engine.question.orderSelection(kite, onFold, undefined, { index: 0 }));
+    if (!openOrder.completion) throw new Error('no open order');
+    const opened = landed(engine.calls.step(kite, onFold, { completion: openOrder.completion }));
     expect(folded.fingerprint).not.toBe(opened.fingerprint);
     // Without its order it cannot land: the step must store one.
     expect(engine.calls.step(kite, inside).status).toBe('refused');

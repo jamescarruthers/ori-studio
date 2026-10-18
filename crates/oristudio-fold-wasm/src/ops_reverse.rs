@@ -84,6 +84,7 @@ pub fn resolve_reverse(
     choices: &Choices,
 ) -> Result<ReverseStep, Rejection> {
     let fold = AlongLine {
+        landing: Default::default(),
         line: along.line.clone(),
         direction: None,
         motion: Motion {
@@ -155,6 +156,28 @@ impl ReverseStep {
 }
 
 impl CompoundOp for ReverseStep {
+    fn order_selection(
+        &self,
+        parent: &State,
+        query: &crate::order_selection::OrderQuery,
+    ) -> Result<crate::order_selection::OrderSelection, Refusal> {
+        use crate::order_selection::OrderSelection;
+        match parent.reverse_fold_within(&self.op, &self.choices, &query.limits()) {
+            Ok(ReverseOutcome::Landed(folded)) => {
+                Ok(OrderSelection::unique(folded.report.stored.order))
+            }
+            Ok(ReverseOutcome::ChooseOrder(choice)) => {
+                OrderSelection::pick(choice.completions(), query, |pick| {
+                    choice.pick(pick).map(|folded| folded.report.stored.order)
+                })
+            }
+            Ok(ReverseOutcome::ChooseOpening(_)) => Err(crate::compound::choice_needed(
+                crate::compound::NeededChoice::Opening,
+            )),
+            Err(refused) => Err(crate::compound::compound_refusal(refused)),
+        }
+    }
+
     fn analysis(&self, parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
         Some(self.fold_analysis(parent))
     }

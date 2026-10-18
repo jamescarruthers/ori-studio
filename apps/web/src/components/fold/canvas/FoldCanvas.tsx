@@ -1,3 +1,8 @@
+import { useFoldOrderInspection } from '../../../fold/orders/useFoldOrderInspection';
+import { foldRegionTint } from '../../../fold/canvas/foldPaneOverlays';
+import { useFoldImportOrderUi } from '../../../fold/orders/foldImportOrderUi';
+import { foldOrderChoiceKey } from '../../../fold/io/foldImportFlow';
+import { FoldImportOrderChooser } from '../orders/FoldImportOrderChooser';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CpSurfaceControls } from '../../../cp-workspace/surface/useCpSurface';
@@ -100,7 +105,13 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // paper is picked, hovered and lettered where it is drawn.
   const picking = toolState.picks.length > 0;
   const stepSpread = useFoldStepSpreadShown(view.cursorId);
-  const shownSpread = restingSpread(stepSpread, preview, picking);
+  const importChoice = useFoldImportOrderUi((s) => s.choosing);
+  const importPreview = importChoice?.previews.get(foldOrderChoiceKey(importChoice.choice));
+  const resolvingOrder = !!importChoice || preview.orderResolution?.active === true;
+  const orderScene = importChoice ? (importPreview?.status === 'ready' ? importPreview.scene : importChoice.displayed ?? null) : resolvingOrder ? preview.landed?.scene ?? null : null;
+  const inspection = useFoldOrderInspection(importChoice ? `import:${importChoice.opened.import}` : resolvingOrder ? preview.orderResolution?.key ?? null : null, orderScene);
+  const importSpread = useFoldImportOrderUi((s) => s.spread);
+  const shownSpread = importChoice && view.cursorId === null ? importSpread : resolvingOrder ? stepSpread : restingSpread(stepSpread, preview, picking);
   const paneSpread = useFoldPaneSpread(view, shownSpread);
   const { verbs, queued } = useFoldCanvasVerbs(session, tools, view, preview, paneSpread.index);
   useEffect(() => registerFoldCanvasVerbs(verbs), [verbs]);
@@ -154,8 +165,13 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const swivelMarks = useFoldSwivelMarks(view.index, toolState, preview.vertex?.reach ?? null, inks);
   const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending;
   const regions = fanMarks?.regions ?? petalMarks.regions;
-  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending);
-  const foldedTint = useMemo(() => joinFills(paint.folded.tint, swivelMarks.tint), [paint.folded.tint, swivelMarks.tint]);
+  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending, orderScene);
+  const componentPairs = importChoice?.opened.components[importChoice.component]?.pairs ?? [];
+  const orderTint = inks && resolvingOrder && !shownSpread ? foldRegionTint({
+    polygons: [inspection.rows.filter((row) => inspection.selected === null ? row.changed || componentPairs.some(([a, b]) => row.faces_top_to_bottom.includes(a) && row.faces_top_to_bottom.includes(b)) : row.index === inspection.selected).map((row) => row.polygon)],
+    picked: 0, at: () => null,
+  }, null, inks.accent) : null;
+  const foldedTint = resolvingOrder ? orderTint : joinFills(paint.folded.tint, swivelMarks.tint);
   // The crease pattern as Edit's canvas draws one, not as paper.
   const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name);
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
@@ -183,8 +199,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const freeFrom = foldFreeLineStart(toolState);
   const crimpLines = preview.crimp?.lines ?? null;
   const located = useMemo(
-    () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines),
-    [toolState.tool, preview.action, crimpLines]
+    () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines, { index: view.index, first: toolState.swivelFirst, current: preview.swivelLine }),
+    [toolState.tool, preview.action, crimpLines, view.index, toolState.swivelFirst, preview.swivelLine]
   );
   const previewMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
   const vertexMarks = previewMarks ?? swivelMarks.marks;
@@ -256,8 +272,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     t,
     {
       tool: toolState.tool,
-      foldAndUnfold: toolState.foldAndUnfold,
       lineMode: toolState.lineMode,
+      freeLineSnap: toolState.freeLineSnap,
       readOnly,
       picks: toolState.picks.length,
       preview: foldWindowPreview(toolState, preview, woven.interval, queued),
@@ -284,7 +300,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const choice = foldCanvasChoice(preview, toolState);
   const bounds = chooserBounds(preview, view.scene);
   const chooser: CpToolOptionWindow | null =
-    choice && bounds
+    choice && bounds && !resolvingOrder
       ? {
           bounds,
           index: choice.index,
@@ -305,7 +321,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     wheelGesture,
     snapRadius,
     inkKey: theme.name,
-    onPick: verbs.pick,
+    onPick: resolvingOrder ? () => {} : verbs.pick,
   };
 
   return (
@@ -323,7 +339,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               contentBounds={paint.folded.contentBounds}
               keepInViewKey={paint.folded.keepInView}
               hitTest={(at, radii) => verbs.hitTest('folded', at, radii)}
-              overlay={foldedOverlay}
+              overlay={resolvingOrder ? () => ({ points: null, strokes: null }) : foldedOverlay}
               onHover={onFoldedHover}
               onZoomPercentChange={setZoomPercent}
               posedScene={playback.frames}
@@ -331,7 +347,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
                 <>
                   {inks && (
                     <FoldActionLayer
-                      action={preview.action}
+                      action={resolvingOrder ? null : preview.action}
                       letters={letters}
                       view={camera}
                       style={style}
@@ -384,7 +400,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           sendToEdit={sendToEdit}
         />
       </div>
-      <FoldToolWindow container={viewport} model={windowModel} keyLabel={keyLabel} onFrame={setToolWindowFrame} />
+      {importChoice ? <FoldImportOrderChooser container={viewport} inspection={inspection} onFrame={setToolWindowFrame} /> : <FoldToolWindow inspection={inspection} resolution={preview.orderResolution} acceptOrder={verbs.acceptOrder} orderReady={!!preview.step && !!preview.landed && !preview.landing && !preview.refused && !session.readOnly} container={viewport} model={windowModel} keyLabel={keyLabel} onFrame={setToolWindowFrame} />}
     </div>
   );
 }

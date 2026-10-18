@@ -1,7 +1,11 @@
+import { foldTools } from '../tools/foldToolState';
+import { useFoldImportUiStore } from './foldImportUiStore';
+import { useFoldImportOrderUi } from '../orders/foldImportOrderUi';
+import { setFoldView } from '../sequence/foldViewMode';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
-import { trackFoldChoiceOffered } from '../../analytics/trackFold';
+import { trackFoldChoiceOffered, trackFoldOrderResolved } from '../../analytics/trackFold';
 import { trackFoldCpImported } from '../../analytics/trackFoldIo';
 import { reportError } from '../../monitoring';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -23,6 +27,7 @@ export function createAppFoldImportFlow(): FoldImportFlow {
     projectCp: projectCpImport,
     onImported: trackFoldCpImported,
     onChoiceOffered: (orders) => trackFoldChoiceOffered('import_order', orders),
+    onOrderResolved: (result, count) => trackFoldOrderResolved(result, 'cp', count),
   });
 }
 
@@ -40,17 +45,33 @@ export function useFoldImportFlow(initial: FoldImportRequest | null): {
   const [flow, setFlow] = useState<FoldImportFlow | null>(null);
   useEffect(() => {
     const made = createAppFoldImportFlow();
+    useFoldImportOrderUi.setState({ spread: null });
+    const unsubscribe = made.store.subscribe((next, before) => {
+      if (before.phase === 'choosing' && next.phase === 'idle') useFoldImportUiStore.getState().close();
+    });
     setFlow(made);
     if (initial) void made.open(initial);
     return () => {
+      unsubscribe();
       made.dispose();
       setFlow((current) => (current === made ? null : current));
     };
   }, [initial]);
   const state = useStore(flow?.store ?? IDLE);
+  useEffect(() => foldTools().store.subscribe((next, before) => {
+    if (next.tool !== before.tool && flow?.store.getState().phase === 'choosing') useFoldImportUiStore.getState().close();
+  }), [flow]);
   // An error is no refusal: the dialog says it plainly, and it is reported.
   useEffect(() => {
     if (state.phase === 'failed') reportError(state.error, { surface: 'fold:import' });
   }, [state]);
+  useEffect(() => {
+    const choosing = state.phase === 'choosing' ? state : null;
+    if (choosing) setFoldView('fold');
+    useFoldImportOrderUi.setState({ flow, choosing });
+    return () => {
+      if (useFoldImportOrderUi.getState().flow === flow) useFoldImportOrderUi.setState({ flow: null, choosing: null });
+    };
+  }, [flow, state]);
   return { flow, state };
 }

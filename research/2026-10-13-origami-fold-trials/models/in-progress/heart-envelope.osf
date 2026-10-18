@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-heart-envelope",
         "title": "Heart Envelope — Origami.me",
         "paper": {
@@ -218,6 +218,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3: Bring the top edge to the center."
@@ -300,6 +303,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Fold the top down on the third horizontal crease."

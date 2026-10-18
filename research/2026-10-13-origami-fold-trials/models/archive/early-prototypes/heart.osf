@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-heart",
         "title": "Heart — Origami.me",
         "paper": {
@@ -116,6 +116,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -162,6 +165,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: left bottom edge to center"
@@ -190,6 +196,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: right bottom edge to center"
@@ -227,6 +236,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7a: upper left edge inward"
@@ -255,6 +267,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7b: upper right edge inward"
@@ -288,6 +303,9 @@
                   0.98
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "8 probe: lower the upper flap using one top layer"

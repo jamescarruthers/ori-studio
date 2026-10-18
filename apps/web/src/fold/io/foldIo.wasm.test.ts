@@ -158,7 +158,11 @@ describe.skipIf(!available)('Import CP and the hand-offs over the built bridge',
     await flow.open({ kind: 'file', name: 'solution_sample_1.cp', source: foldImportFileSource('solution_sample_1.cp', bytes) });
     const state = await settled(flow);
     if (state.phase === 'choosing') {
-      await flow.commit();
+      for (let guard = 0; guard < 64; guard++) {
+        const next = await settled(flow);
+        if (next.phase !== 'choosing') break;
+        await flow.accept(next.component);
+      }
       await settled(flow);
     }
     expect(flow.store.getState()).toMatchObject({ phase: 'done', origin: 'cp' });
@@ -172,14 +176,19 @@ describe.skipIf(!available)('Import CP and the hand-offs over the built bridge',
     if (state.phase !== 'choosing') throw new Error(`not choosing: ${state.phase}`);
     expect(state.opened.count.orders).toBeGreaterThan(1);
     const pictures = [...state.previews.values()];
-    expect(pictures.length).toBeGreaterThan(1);
+    expect(pictures.length).toBe(1);
     for (const preview of pictures) {
       expect(preview.status).toBe('ready');
       if (preview.status === 'ready') expect(foldStatePictureUrl(preview.scene, DEFAULT_PAPER_STYLE)).toMatch(/^data:image\/svg\+xml/);
     }
     const last = state.opened.components.findIndex((component) => component.orders > 1);
     flow.choose(last, state.opened.components[last]!.orders - 1);
-    await flow.commit();
+    await settled(flow);
+    for (let guard = 0; guard < 64; guard++) {
+      const next = await settled(flow);
+      if (next.phase !== 'choosing') break;
+      await flow.accept(next.component);
+    }
     expect(await settled(flow)).toMatchObject({ phase: 'done', origin: 'fold' });
     expect(source.read().held?.document.steps).toHaveLength(1);
 

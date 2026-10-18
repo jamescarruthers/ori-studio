@@ -14,16 +14,16 @@
   },
   "workspace": {
     "id": "workspace-flat-catalog-dove",
-    "title": "Dove \u2014 Origami.me",
+    "title": "Dove — Origami.me",
     "activeDocumentId": "crease-pattern",
     "designs": [],
     "creasePattern": null,
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-dove",
-        "title": "Dove \u2014 Origami.me (batch 4)",
+        "title": "Dove — Origami.me (batch 4)",
         "paper": {
           "shape": {
             "kind": "square"
@@ -70,6 +70,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -81,7 +84,7 @@
                 "d": 0.7071067811865477
               }
             },
-            "note": "1: Fold the lower tip upward. The text says unfold, but diagrams 1\u20132 require the folded triangle; follow the diagrams."
+            "note": "1: Fold the lower tip upward. The text says unfold, but diagrams 1–2 require the folded triangle; follow the diagrams."
           },
           {
             "id": "fstep-dove-3",
@@ -110,6 +113,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -152,6 +158,9 @@
                   0.21213203435596423
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3: Fold the front triangular packet upward."
@@ -332,6 +341,9 @@
                   0.9192388155425119
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "8a: Repeat the front triangular packet fold on the back."
@@ -593,6 +605,9 @@
                   0.0749999999999994
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12: Lift the first wing along the upper diagonal."
@@ -635,6 +650,9 @@
                   0.8750000000000003
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "13b: Lift the second wing along its matching upper diagonal."

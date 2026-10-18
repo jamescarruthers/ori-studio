@@ -203,11 +203,13 @@ fn layers_apart_along_the_line_are_unordered() {
 }
 
 #[test]
-fn a_near_miss_has_no_section() {
-    let e = square()
-        .cross_section(&x_eq(1.0 - 1e-4), Side::Negative)
-        .err()
-        .unwrap_or_else(|| panic!("a near miss has a section"));
+fn a_near_miss_can_be_inspected_but_not_selected() {
+    let state = square();
+    let op = all(x_eq(1.0 - 1e-4), [0.5, 0.5], Valley);
+    let section = state.cross_section(&op.line, op.side).unwrap();
+    assert_eq!(section.layers, 1);
+    assert!(state.depth_choices(&op, [0.5, 0.5]).unwrap().is_empty());
+    let e = state.analyse_fold(&op).unwrap_err();
     assert!(matches!(e.refusal, FoldRefusal::NearMiss { .. }));
     assert!(!e.fixes.is_empty(), "with its landmark line");
 }

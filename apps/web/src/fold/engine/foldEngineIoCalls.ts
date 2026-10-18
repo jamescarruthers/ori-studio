@@ -33,6 +33,7 @@ import type { FoldEngineOutcome } from './foldEngineWire';
 /** The wasm class's io surface, as the generated `FoldEngine` has it. */
 export interface FoldWasmIoEngine {
   import_cp(file: unknown, bytes: Uint8Array, target: unknown, limits: unknown): unknown;
+  import_search(importHandle: number, choice: Uint32Array, limits: unknown): unknown;
   import_pick(importHandle: number, choice: Uint32Array): unknown;
   import_edit_folded_figure(scene: unknown, target: unknown, limits: unknown): unknown;
   release_imports(imports: Uint32Array): number;
@@ -89,6 +90,7 @@ export interface FoldEngineIoCalls {
     target: FoldImportTarget,
     limits?: FoldImportLimits
   ): FoldEngineOutcome<FoldImportOpened>;
+  importSearch(importHandle: number, choice: readonly number[], limits?: FoldImportLimits): FoldEngineOutcome<{ opened: FoldImportOpened; choice: number[] }>;
   /** Land one listed order per component as a step: its state, fingerprint and op. */
   importPick(importHandle: number, choice: readonly number[]): FoldEngineOutcome<FoldImportFingerprinted>;
   /** Start from Edit's folded figure: the kernel's paper scene of it. */
@@ -123,6 +125,10 @@ export function createFoldEngineIoCalls(engine: FoldWasmIoEngine): FoldEngineIoC
       return engine.import_cp(file, requireBytes(source), target(to), limits(within)) as FoldEngineOutcome<
         FoldImportOpened
       >;
+    },
+
+    importSearch(importHandle, choice, within) {
+      return engine.import_search(requireHandle('import', importHandle), requireChoice(choice), limits(within)) as FoldEngineOutcome<{ opened: FoldImportOpened; choice: number[] }>;
     },
 
     importPick(importHandle, choice) {

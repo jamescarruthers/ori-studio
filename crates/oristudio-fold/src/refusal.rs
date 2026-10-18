@@ -320,6 +320,9 @@ pub enum FoldRefusal {
     /// folded crease.
     #[error("no folded edge passes through the sheet point {point:?}")]
     SwivelNotAFold { point: Point },
+    /// Two specified fold lines must meet inside one visible folded edge.
+    #[error("the two swivel lines do not identify one folded-edge meeting point")]
+    SwivelLineMeeting,
     /// The line halfway between the edge and the target crosses the folded
     /// edge nowhere inside one of its creases, away from their ends (or
     /// runs parallel to it): the creases cannot meet on it. `faces` are the
@@ -479,6 +482,7 @@ impl FoldRefusal {
             FoldRefusal::SwivelEdgeShort { .. } => "swivel_edge_short",
             FoldRefusal::SwivelEdgeStays { .. } => "swivel_edge_stays",
             FoldRefusal::SwivelNotAFold { .. } => "swivel_not_a_fold",
+            FoldRefusal::SwivelLineMeeting => "swivel_line_meeting",
             FoldRefusal::SwivelMissesFold { .. } => "swivel_misses_fold",
             FoldRefusal::SwivelFoldWide { .. } => "swivel_fold_wide",
             FoldRefusal::SwivelInsideFree { .. } => "swivel_inside_free",

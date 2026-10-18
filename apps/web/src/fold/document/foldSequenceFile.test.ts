@@ -1,3 +1,4 @@
+import { normalizeFoldLandingOp } from './foldLandingMigration';
 import { describe, expect, it } from 'vitest';
 
 import { isLockedStep, type FoldStep, type FoldStepNode } from './foldSequenceDocument';
@@ -31,12 +32,13 @@ function readSteps(steps: unknown[], extra: Record<string, unknown> = {}): HeldF
 const ids = (steps: readonly FoldStepNode[]) => steps.map((node) => node.id);
 
 describe('readFoldSequence and writeFoldSequence', () => {
-  it('writes a well-formed sequence back byte for byte, with every op kind, choice and mark', () => {
+  it('migrates the landing spelling while preserving every other field', () => {
     const value = writtenSequence();
     const held = readFoldSequence(JSON.parse(JSON.stringify(value)));
     expect(held?.readOnlyRaw).toBeNull();
     expect(held?.document.steps.every((node) => !isLockedStep(node))).toBe(true);
-    expect(JSON.stringify(writeFoldSequence(held!))).toBe(JSON.stringify(value));
+    const migrated = { ...value, formatVersion: 2, steps: (value.steps as { op: unknown }[]).map((node) => ({ ...node, op: normalizeFoldLandingOp(node.op) })) };
+    expect(JSON.parse(JSON.stringify(writeFoldSequence(held!)))).toEqual(JSON.parse(JSON.stringify(migrated)));
   });
 
   it('reads what it writes', () => {
@@ -314,14 +316,14 @@ describe('the step tree', () => {
 
 describe('versions and newer builds', () => {
   it('opens a sequence with a newer formatVersion read-only, and writes its raw value back', () => {
-    const value = { ...writtenSequence(), formatVersion: 2, steps: [{ id: 'x', parent: null, op: { kind: 'sink' } }] };
+    const value = { ...writtenSequence(), formatVersion: 3, steps: [{ id: 'x', parent: null, op: { kind: 'sink' } }] };
     const held = readFoldSequence(value)!;
     expect(held.readOnlyRaw).toBe(value);
     expect(writeFoldSequence(held)).toBe(value);
   });
 
   it('opens each sequence read-only on its own', () => {
-    const newer = { ...writtenSequence(), id: 'fold-newer', formatVersion: 2 };
+    const newer = { ...writtenSequence(), id: 'fold-newer', formatVersion: 3 };
     const [first, second] = readFoldSequences([newer, writtenSequence()]);
     expect(first.readOnlyRaw).toBe(newer);
     expect(second.readOnlyRaw).toBeNull();
@@ -468,12 +470,12 @@ describe('readFoldSequences and writeFoldSequences', () => {
 
 describe('tucks with several stationary targets', () => {
   const op = { ...valleyOp, kind: 'tuck', direction: 'valley', target: [0.2, 0.6] };
-  it('round-trips every target witness and keeps legacy single-target steps unchanged', () => {
+  it('migrates every target witness, including legacy single-target steps', () => {
     for (const tuck of [op, { ...op, additionalTargets: [[0.8, 0.6], [0.5, 0.7]] }]) {
       const node = raw('tuck', null, { op: tuck });
       const held = readSteps([node]);
       expect(isLockedStep(held.document.steps[0])).toBe(false);
-      expect((writeFoldSequence(held).steps as unknown[])[0]).toEqual(node);
+      expect((writeFoldSequence(held).steps as unknown[])[0]).toEqual({ ...node, op: normalizeFoldLandingOp(tuck) });
     }
   });
   it('preserves and locks damaged or future target constraints rather than dropping them', () => {
@@ -487,5 +489,43 @@ describe('tucks with several stationary targets', () => {
       expect(isLockedStep(held.document.steps[0])).toBe(true);
       expect((writeFoldSequence(held).steps as unknown[])[0]).toBe(node);
     }
+  });
+});
+
+
+describe('a swivel located by its hinges', () => {
+  const op = { kind: 'swivel', via: 'creases', fold: [0.5, 0.5], first: [0.05, 0.1], second: [0.1, 0.8], direction: 'mountain', swivel: 'inside' };
+  it('round-trips all anchors, the kind, choices and notes', () => {
+    const held = readSteps([raw('a', null, { op, note: 'Two located hinges' })]);
+    expect(isLockedStep(held.document.steps[0]!)).toBe(false);
+    expect((writeFoldSequence(held).steps as { op: unknown }[])[0]!.op).toEqual(op);
+    expect(readFoldSequence(writeFoldSequence(held))!.document).toEqual(held.document);
+  });
+  it('locks incomplete or mixed constructions instead of changing their meaning', () => {
+    for (const bad of [{ ...op, first: null }, { ...op, second: [NaN, 0] }, { ...op, swivel:'outside' }, { ...op, edge:[0,0] }, { ...op, target:{ via:'crease',at:[0,0] } }]) {
+      const held=readSteps([raw('a',null,{op:bad})]);
+      expect(isLockedStep(held.document.steps[0]!)).toBe(true);
+      expect((writeFoldSequence(held).steps as { op: unknown }[])[0]!.op).toEqual(bad);
+    }
+  });
+});
+
+describe('a swivel built from two line constructions', () => {
+  const first = { line: { via:'axiom', axiom:1, inputs:[{kind:'point',at:[0.5,0.5]},{kind:'point',at:[0.05,0.1]}] }, root:{n:[0.4,-0.45],d:-0.025} };
+  const second = { line:{via:'crease',at:[0.1,0.8]} };
+  const op = {kind:'swivel',via:'lines',first,second,direction:'mountain',swivel:'inside'};
+  it('preserves both line inputs and each chosen root through save and open', () => {
+    const held=readSteps([raw('a',null,{op})]);
+    expect(isLockedStep(held.document.steps[0]!)).toBe(false);
+    expect((writeFoldSequence(held).steps as {op:unknown}[])[0]!.op).toEqual(op);
+    expect(readFoldSequence(writeFoldSequence(held))!.document).toEqual(held.document);
+  });
+  it('locks incomplete roots, extra fields, and mixed old constructions', () => {
+    for(const bad of [
+      {...op,first:{line:first.line}},
+      {...op,second:{...second,root:first.root}},
+      {...op,first:{...first,other:true}},
+      {...op,fold:[0.5,0.5]},
+    ]) expect(isLockedStep(readSteps([raw('a',null,{op:bad})]).document.steps[0]!)).toBe(true);
   });
 });

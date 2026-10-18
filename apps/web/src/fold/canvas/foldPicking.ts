@@ -69,6 +69,8 @@ export type FoldPointProvenance =
 /** A point reference: what an axiom input stores, and where it is drawn. */
 export interface FoldPointPick {
   kind: 'point';
+  /** Where it was picked. Omitted by programmatic references; never saved. */
+  pane?: FoldPaneId;
   provenance: FoldPointProvenance;
   /** The sheet point that names it: what a step stores. */
   sheet: SheetPoint;
@@ -82,13 +84,17 @@ export interface FoldPointPick {
    * ({@link resolveFoldEdgePoint}). Absent for every other point.
    */
   fold?: FoldSegmentPick;
+  /** The exact meeting point was chosen, rather than a fold on which the engine locates it. */
+  foldLocation?: 'given';
 }
 
 /** A line reference: an edge, a fold or a crease, by its sheet ends. */
 export interface FoldSegmentPick {
   kind: 'segment';
-  /** Fold's edge id. */
+  /** Fold's edge id; negative local pick identity for a crease mark. */
   edge: number;
+  /** A flat line beside the face graph, stored by its sheet stretch. */
+  creaseMark?: true;
   /** A raw edge of the paper, a fold (a bend of the folded form), or a flat crease. */
   segment: FoldSegmentLandmark['kind'];
   sheet: readonly [SheetPoint, SheetPoint];
@@ -143,7 +149,8 @@ export function sameFoldHit(a: FoldHit, b: FoldHit): boolean {
 export function samePick(a: FoldPick, b: FoldPick): boolean {
   if (a.kind === 'segment') return b.kind === 'segment' && a.edge === b.edge;
   if (a.kind === 'point') {
-    return b.kind === 'point' && a.sheet[0] === b.sheet[0] && a.sheet[1] === b.sheet[1] && a.provenance === b.provenance;
+    return b.kind === 'point' && a.sheet[0] === b.sheet[0] && a.sheet[1] === b.sheet[1] &&
+      a.provenance === b.provenance && a.foldLocation === b.foldLocation && a.pane === b.pane;
   }
   return (
     b.kind === 'free' &&
@@ -372,7 +379,6 @@ export function foldPickIndex(
       });
     }
   }
-  const folded = segmentIndex(foldedPortions);
   const foldedMarks: FoldCreaseMarkPart[] = [];
   for (const part of landmarks?.crease_marks ?? []) {
     const a = toScene(toPoint(part.at[0]));
@@ -380,8 +386,13 @@ export function foldPickIndex(
     const sheet: [SheetPoint, SheetPoint] = [part.sheet.a, part.sheet.b];
     const [p, q] = spread ? spread.segment(sheet, [a, b]) : [a, b];
     const portions = visiblePortions(part, p, q);
-    if (portions.length > 0) foldedMarks.push({ sheet, at: [p, q], portions });
+    if (portions.length > 0) {
+      foldedMarks.push({ sheet, at: [p, q], portions });
+      foldedSegments.push({ kind: 'segment', edge: -foldedMarks.length, creaseMark: true, segment: 'crease', sheet, scene: [a, b] });
+      foldedPortions.push(portions);
+    }
   }
+  const folded = segmentIndex(foldedPortions);
 
   // --- The crease-pattern pane: the sheet, every crease and vertex on it.
   const cpPoints: PointCandidate[] = [];
@@ -427,6 +438,20 @@ export function foldPickIndex(
     ];
     return { sheet: [toPair(mark.from), toPair(mark.to)], at, portions: [at] };
   });
+  // Pick the stretch carried by one face. A mark can bend across several
+  // faces, so its full sheet segment does not necessarily locate one line.
+  let markPick = 0;
+  for (const mark of scene.crease_marks ?? []) {
+    for (const piece of mark.pieces) {
+      const transform = scene.face_transforms[piece.face];
+      if (!transform) continue;
+      const inverse = invertIsometry(transform);
+      const sheet: [SheetPoint, SheetPoint] = [toPair(applyIsometry(inverse, piece.from)), toPair(applyIsometry(inverse, piece.to))];
+      const [a, b] = [piece.from, piece.to];
+      cpSegments.push({ kind: 'segment', edge: --markPick, creaseMark: true, segment: 'crease', sheet, scene: [a, b] });
+      cpPortions.push([[toPoint(sheet[0]), toPoint(sheet[1])]]);
+    }
+  }
   const seenMarkPoint = new Set<string>();
   for (const landmark of landmarks?.points ?? []) {
     for (const source of landmark.sources) {
@@ -496,6 +521,7 @@ export interface FoldHitRadii {
 function pointPick(index: FoldPickIndex, onFolded: boolean, candidate: PointCandidate): FoldPointPick {
   return {
     kind: 'point',
+    pane: onFolded ? 'folded' : 'crease-pattern',
     provenance: candidate.provenance,
     sheet: candidate.sheet,
     mark: candidate.mark,
@@ -518,6 +544,8 @@ function paperUnder(index: FoldPickIndex, at: Point): { scene: Point; sheet: She
 /** How a click resolves (`resolveFoldPick`): its step's snap, and what a line click may take. */
 export interface FoldPickRule {
   snap: FoldStepSnap;
+  /** Snap a free-line endpoint to point targets, with raw-click fallback. */
+  snapFree?: boolean;
   /** Whether a line click takes the paper's raw edge, or only folds and creases. */
   edges: boolean;
   /** Alt held, or its latch: any point of the paper. */
@@ -539,12 +567,20 @@ export function resolveFoldPick(
   pane: FoldPaneId,
   at: Point,
   radii: FoldHitRadii,
-  { snap, edges, free, kinds, accept }: FoldPickRule
+  { snap, snapFree, edges, free, kinds, accept }: FoldPickRule
 ): FoldPick | null {
   const onFolded = pane === 'folded';
   const targets = onFolded ? index.folded : index.creasePattern;
   switch (snap) {
     case 'free': {
+      if (snapFree && !free) {
+        const hit = targets.pointHits.query(at.x, at.y, radii.point);
+        const candidate = hit > 0 ? targets.points[hit - 1] : undefined;
+        if (candidate) {
+          const snapped = pointPick(index, onFolded, candidate);
+          if (snapped.scene) return { kind: 'free', pane, scene: snapped.scene, sheet: snapped.sheet };
+        }
+      }
       if (onFolded) {
         // Off the paper a free line's end lies where it is clicked: no spread reaches there.
         const under = paperUnder(index, at);
@@ -561,10 +597,10 @@ export function resolveFoldPick(
         // Alt (or its latch): the point under the pointer, on the paper.
         if (onFolded) {
           const under = paperUnder(index, at);
-          return under ? { kind: 'point', provenance: 'free', sheet: under.sheet, mark: null, scene: under.scene } : null;
+          return under ? { kind: 'point', pane, provenance: 'free', sheet: under.sheet, mark: null, scene: under.scene } : null;
         }
         const sheet = insideSheet(index, at);
-        return sheet ? { kind: 'point', provenance: 'free', sheet, mark: null, scene: sheetToScene(index.scene, sheet) } : null;
+        return sheet ? { kind: 'point', pane, provenance: 'free', sheet, mark: null, scene: sheetToScene(index.scene, sheet) } : null;
       }
       const hit = targets.pointHits.query(at.x, at.y, radii.point);
       const candidate = hit > 0 ? targets.points[hit - 1] : undefined;
@@ -621,14 +657,39 @@ export function resolveFoldEdgePoint(
   pane: FoldPaneId,
   at: Point,
   radii: FoldHitRadii,
-  point: FoldPick | null
+  point: FoldPick | null,
+  locateMeetingPoint = false
 ): FoldPick | null {
   const onFolded = pane === 'folded';
   const targets = onFolded ? index.folded : index.creasePattern;
   const bends = targets.segments.filter((segment) => segment.segment === 'bend');
   if (point?.kind === 'point') {
     const fold = bends.find((segment) => insideSheetSegment(segment.sheet, point.sheet));
-    return fold ? { ...point, fold } : point;
+    if (fold) return { ...point, fold, ...(locateMeetingPoint ? { foldLocation: 'given' as const } : {}) };
+    // A located hinge can use a reference on another layer. Preserve its
+    // exact image, but anchor the operation to the folded edge's material.
+    // Only an exact coincidence qualifies; the hit radius must not shift
+    // a snapped landmark to a nearby fold.
+    if (locateMeetingPoint && onFolded && point.scene) {
+      for (const segment of bends) {
+        const [a, b] = segment.scene;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const length2 = dx * dx + dy * dy;
+        if (length2 <= 0 || distanceToSegment(point.scene, a, b) > 1e-8) continue;
+        const t = ((point.scene.x - a.x) * dx + (point.scene.y - a.y) * dy) / length2;
+        if (t <= FOLD_END_MARGIN || t >= 1 - FOLD_END_MARGIN) continue;
+        const [p, q] = segment.sheet;
+        return {
+          ...point,
+          provenance: 'fold',
+          sheet: [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])],
+          mark: null,
+          fold: segment,
+          foldLocation: 'given',
+        };
+      }
+    }
+    return point;
   }
   if (point) return point;
   let best: { segment: FoldSegmentPick; distance: number } | null = null;
@@ -657,7 +718,8 @@ export function resolveFoldEdgePoint(
   const sheet: SheetPoint = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   const [s, e] = segment.scene;
   const scene = { x: s.x + (e.x - s.x) * t, y: s.y + (e.y - s.y) * t };
-  return { kind: 'point', provenance: 'fold', sheet, mark: null, scene, fold: segment };
+  return { kind: 'point', pane, provenance: 'fold', sheet, mark: null, scene, fold: segment,
+    ...(locateMeetingPoint ? { foldLocation: 'given' as const } : {}) };
 }
 
 /** A sheet point on the crease-pattern pane, when it is on the sheet. */

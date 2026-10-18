@@ -96,6 +96,7 @@ describe('the tuck tool’s window', () => {
       ['mountain', 'Mountain fold and tuck'],
     ]);
     model?.kind?.set('mountain');
+    model?.kind?.set('precrease');
     expect(calls.setTuckDirection.mock.calls).toEqual([['mountain']]);
     expect(model?.tuck?.note).toBe('2 layers here take the tuck under them: the folded paper lights each.');
     expect(model?.tuck?.target).toMatchObject({ label: 'Tuck under', value: '1 of 2' });

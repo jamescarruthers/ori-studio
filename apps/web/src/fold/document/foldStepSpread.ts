@@ -8,8 +8,7 @@
  * - **Else the nearest earlier step's** on its path — the steps it folds
  *   from — so a spread set on step 2 reaches steps 3, 4 … until one of them
  *   says otherwise, and off is a setting that reaches them too.
- * - **Else the default** (`DEFAULT_LAYER_SPREAD`), so every picture starts
- *   spread, as a Diagram step's flat fold does.
+ * - **Else off**, so Fold starts with the paper lying flat.
  *
  * A newer build's spread, carried, is no setting this build can show: the
  * step takes an earlier one's. The flat sheet has no setting and takes the
@@ -22,7 +21,6 @@
  */
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import {
-  DEFAULT_LAYER_SPREAD,
   sameSpread,
   spreadStartsAmong,
   type LayerSpreadStarts,
@@ -47,7 +45,7 @@ export interface FoldEffectiveSpread {
   from: string | null;
 }
 
-const DEFAULT: FoldEffectiveSpread = { spread: DEFAULT_LAYER_SPREAD, origin: 'default', from: null };
+const DEFAULT: FoldEffectiveSpread = { spread: null, origin: 'default', from: null };
 
 /**
  * A node's own setting, when it has one this build reads. A locked node has

@@ -31,6 +31,14 @@ import { useLayoutStore } from '../../../store/layoutStore';
 import { useFoldImportUiStore } from '../../../fold/io/foldImportUiStore';
 import { FoldImportModal } from './FoldImportDialog';
 
+import { regionReferenceFor } from '../../../cp-workspace/regions/regionReference';
+import { resolveCpSegments } from '../../../lib/creasePatternSegmentation';
+import { twoSquaresSegmentation } from '../../../diagram/capture/capture.fixtures';
+const sheets = resolveCpSegments(twoSquaresSegmentation()).map(segment => ({ segment, thumbnail: null }));
+vi.mock('../../../cp-workspace/sheets/useCpPatternSheets', () => ({
+  useCpPatternSheets: () => ({ status: 'ready', sheets }),
+}));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement;
@@ -43,6 +51,8 @@ beforeEach(() => {
     store: harness.store,
     open: vi.fn(async () => {}),
     choose: vi.fn(),
+    accept: vi.fn(async () => {}),
+    region: vi.fn(),
     commit: vi.fn(async () => {}),
     searchLonger: vi.fn(async () => {}),
     reset: vi.fn(),
@@ -84,25 +94,23 @@ const OPENED: FoldImportOpened = {
 };
 
 describe('Import CP’s dialog', () => {
-  it('opens only in Fold, on the picker, the samples and where the step goes', () => {
+  it('opens only in Fold, on the Edit patterns and where the step goes', () => {
     act(() => useLayoutStore.setState({ activeWorkspace: 'edit' }));
     open();
     expect(dialog()).toBeNull();
     act(() => useLayoutStore.setState({ activeWorkspace: 'fold' }));
     expect(dialog()?.getAttribute('aria-label')).toBe('Import crease pattern');
     expect(button('Drop a .cp, .fold, .ori or .orh file')).toBeDefined();
-    expect(['Square base', 'Waterbomb base', 'Pleat in eighths'].map((name) => button(name) !== undefined)).toEqual([
-      true,
-      true,
-      true,
-    ]);
+    expect(button('Pattern 1')).toBeDefined();
+    expect(button('Pattern 2')).toBeDefined();
+    expect(button('Waterbomb base')).toBeUndefined();
     expect(dialog()?.textContent).toContain('Adds a step after step 1');
   });
 
-  it('imports a sample as it is pressed', () => {
+  it('links the selected Edit pattern as it is pressed', () => {
     open();
-    click(button('Waterbomb base'));
-    expect(harness.flow.open).toHaveBeenCalledExactlyOnceWith({ kind: 'sample', sample: 'waterbomb-base' });
+    click(button('Pattern 2'));
+    expect(harness.flow.open).toHaveBeenCalledExactlyOnceWith({ kind: 'project-cp', region: regionReferenceFor(sheets[1]!.segment) });
   });
 
   it('says why an import was refused, with the fix the engine leaves open', () => {
@@ -120,7 +128,7 @@ describe('Import CP’s dialog', () => {
     expect(harness.flow.searchLonger).toHaveBeenCalledOnce();
   });
 
-  it('offers a card per layer order when several fit, and imports the one chosen', () => {
+  it('hands layer-order resolution to the canvas instead of keeping a modal over the sidebar', () => {
     open();
     act(() =>
       harness.store.setState({
@@ -132,16 +140,8 @@ describe('Import CP’s dialog', () => {
         committing: false,
       })
     );
-    expect(dialog()?.textContent).toContain('3 layer orders fit these creases. Choose one.');
-    const radios = [...document.querySelectorAll('[role="radio"]')];
-    expect(radios.map((radio) => radio.textContent)).toEqual(['Order 1', 'Order 2', 'Order 3']);
-    expect(radios.map((radio) => radio.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
-    click(radios[2]);
-    expect(harness.flow.choose).toHaveBeenCalledExactlyOnceWith(0, 2);
-    click(button(/^Import$/));
-    expect(harness.flow.commit).toHaveBeenCalledOnce();
-    click(button('Back'));
-    expect(harness.flow.reset).toHaveBeenCalledOnce();
+    expect(dialog()).toBeNull();
+    expect(harness.flow.commit).not.toHaveBeenCalled();
   });
 
   it('closes itself once the step is committed', () => {

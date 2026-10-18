@@ -47,6 +47,7 @@ export function ToolHintWindow({
   headerAction,
   inside = false,
   startsCollapsed = false,
+  collapsible = true,
   needsAttention = false,
   height = 'default',
   onFrame,
@@ -84,6 +85,8 @@ export function ToolHintWindow({
    * cover what the tool works on.
    */
   startsCollapsed?: boolean;
+  /** Required decision surfaces remain open. */
+  collapsible?: boolean;
   /**
    * The tool has something to decide that is in the body — a fold ready to
    * commit. A window collapsed by preference opens for it, and a toggle while
@@ -112,7 +115,7 @@ export function ToolHintWindow({
   const [dismissed, setDismissed] = useState(false);
   if (!needsAttention && dismissed) setDismissed(false);
   const attending = needsAttention && preferCollapsed;
-  const collapsed = attending ? dismissed : preferCollapsed;
+  const collapsed = collapsible && (attending ? dismissed : preferCollapsed);
   const setCollapsed = (next: boolean) => {
     if (attending) {
       setDismissed(next);
@@ -162,7 +165,7 @@ export function ToolHintWindow({
         meta={meta}
         action={headerAction}
         collapsed={collapsed}
-        onCollapsedChange={setCollapsed}
+        onCollapsedChange={collapsible ? setCollapsed : undefined}
       />
       {bodyMounted && (
         <FloatingPanelBody

@@ -38,7 +38,7 @@ describe('the Fold tool catalog', () => {
     expect((['valley', 'mountain', 'precrease', 'inside-reverse', 'divide-line'] as const).map(isFoldKind)).toEqual([
       true,
       true,
-      false,
+      true,
       false,
       false,
     ]);

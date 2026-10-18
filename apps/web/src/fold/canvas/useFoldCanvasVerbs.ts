@@ -1,5 +1,9 @@
+import { reportError } from '../../monitoring';
+import { trackFoldOrderResolved, trackFoldFreeLineSnapChanged } from '../../analytics/trackFold';
+import { useFoldImportOrderUi } from '../orders/foldImportOrderUi';
+import { useFoldImportUiStore } from '../io/foldImportUiStore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ANALYTICS_EVENTS, track, trackFoldChoiceOffered, trackFoldStepAdded } from '../../analytics';
+import { trackFoldChoiceOffered, trackFoldStepAdded } from '../../analytics';
 import type { FoldStepAddedOpKind, FoldStepVertexForm } from '../../analytics';
 import { readHeldModifiers } from '../../keyboard/heldModifiers';
 import type { TurnKind } from '../../lib/steps/turn';
@@ -8,6 +12,8 @@ import { shownFoldSequence } from '../../store/workspaceStore/foldState';
 import {
   isLockedStep,
   isSwivelEdgeOp,
+  isSwivelCreasesOp,
+  isSwivelLinesOp,
   isSwivelOnFoldOp,
   isVertexOp,
   randomFoldId,
@@ -29,9 +35,8 @@ import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldSinkKind } from '../engine/foldEngineSinkWire';
 import type { FoldFlap, FoldModelPoint } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { sameFlap, topFlapOf, wovenIntervalAt } from '../tools/crossSection';
+import { sameFlap, wovenIntervalAt } from '../tools/crossSection';
 import {
-  isFoldKind,
   isLineTool,
   isVertexTool,
   type FoldLineModeId,
@@ -119,6 +124,7 @@ function isAlongLine(
 
 /** Every verb the canvas, its window, its rail and its keys share: one path whichever one presses. */
 export interface FoldCanvasVerbs {
+  setFreeLineSnap: (enabled: boolean) => void;
   selectTool: (id: FoldToolId) => void;
   selectLineMode: (id: FoldLineModeId) => void;
   /** Add a turn as a step of its own, after the step on screen. */
@@ -141,12 +147,14 @@ export interface FoldCanvasVerbs {
    * there was more than one to step through.
    */
   stepChoice: (delta: number) => boolean;
+  choosingOrder?: () => boolean;
   /**
    * Commit the fold previewed; whether there was one to commit. Pressed while
    * the preview is still landing, it commits once it lands (or lets go if it
    * is refused), and says so.
    */
   commit: () => boolean;
+  acceptOrder?: () => boolean;
   /** Escape's rung: let go of what the tool holds; whether it held anything. */
   cancel: () => boolean;
   /** Clear the Divide-line marks made on the step on screen. */
@@ -169,6 +177,7 @@ export interface FoldCanvasVerbs {
   // The vertex folds (`tools/vertex`), and what their refusals' buttons do.
   setVertexDirection: (direction: FoldDirection) => void;
   /** A swivel on a folded edge's kind: its strip on top, or tucked between the layers. */
+  setSwivelInput: (mode: 'edge' | 'creases') => void;
   setSwivelKind: (kind: FoldSwivelKind) => void;
   /** The same vertex fold, the other direction. */
   vertexOtherWay: () => void;
@@ -181,7 +190,7 @@ export interface FoldCanvasVerbs {
   resetSquashTarget: () => void;
   /** Name a petal fold's hinge, or a swivel's target, by a crease or by two points. */
   setVertexLineBy: (lineBy: FoldLineBy) => void;
-  /** Precrease a petal fold's hinge, or its kite, first: Fold and unfold through the hinge's ends, or on the edge-to-edge axiom. */
+  /** Precrease a petal fold's hinge, or its kite, first: the Precrease tool through the hinge's ends, or on the edge-to-edge axiom. */
   precreaseLine: () => void;
   precreaseKite: () => void;
   /** A petal fold over a hinge crease whose kite is not creased: the same hinge by its ends, so the fold creases the kite. */
@@ -192,8 +201,7 @@ export interface FoldCanvasVerbs {
   // A precrease's extent (`tools/precrease`), and what its refusals' buttons do.
   /** Crease this much of the line. */
   setExtent: (extent: FoldExtentMode) => void;
-  setFoldAndUnfold: (enabled: boolean) => void;
-  /** The extent after the one chosen, with Fold and unfold enabled; whether it was in hand. */
+  /** The extent after the one chosen, with the Precrease tool in hand; whether it was in hand. */
   cycleExtent: () => boolean;
   /** Crease the whole line instead of part of it. */
   useWholeLine: () => void;
@@ -215,19 +223,24 @@ export interface FoldCanvasVerbBinding {
  * tools' input then (`queued`, `foldToolInputKey`), with `input` theirs now:
  * nothing queued; wait while that input's step is still being built (a
  * reverse fold's tip or an axiom's roots still being asked about) or is
- * landing; commit once it has landed; drop it when it was refused, the input
+ * landing; review ambiguous orders, otherwise commit once landed; drop it
+ * when it was refused, the input
  * changed, or nothing can be committed — a fan none of whose fourth creases
  * lands among them.
  */
 export function queuedCommit(
   queued: string | null,
-  preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'> & Partial<Pick<FoldToolPreview, 'vertex'>>,
+  preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'> & Partial<Pick<FoldToolPreview, 'vertex' | 'orderResolution'>>,
   readOnly: boolean,
   input: string
-): 'idle' | 'wait' | 'commit' | 'drop' {
+): 'idle' | 'wait' | 'review' | 'commit' | 'drop' {
   if (queued === null) return 'idle';
   const { step, refused, landing } = preview;
-  if (input !== queued || refused || readOnly || fanHasNoFourth(preview.vertex?.base ?? null)) return 'drop';
+  if (input !== queued || readOnly) return 'drop';
+  const resolution = preview.orderResolution;
+  if (resolution && (resolution.inputKey !== input || resolution.waiting)) return 'wait';
+  if (resolution?.required) return 'review';
+  if (resolution?.failed || refused || fanHasNoFourth(preview.vertex?.base ?? null)) return 'drop';
   return !step || landing ? 'wait' : 'commit';
 }
 
@@ -268,7 +281,7 @@ function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
   const vertex = preview.vertex;
   if (!vertex) return null;
   const { orders, order, emergent, fourths } = vertex;
-  if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
+  if (!preview.orderResolution && orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
   if (vertex.base?.analysis.kind === 'rabbit-ear') return null;
   // Only the fourth creases — a swivel's ridges — that land, numbered among themselves.
   const at = emergent === null ? -1 : fourths.indexOf(emergent);
@@ -287,7 +300,7 @@ export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState)
   const vertex = vertexCanvasChoice(preview);
   if (vertex) return vertex;
   const { ways, orders, targets } = compoundListed(preview);
-  if (orders > 1) return { kind: 'order', index: Math.min(tools.compound.order, orders - 1), count: orders };
+  if (!preview.orderResolution && orders > 1) return { kind: 'order', index: Math.min(tools.compound.order, orders - 1), count: orders };
   if (ways > 1) return { kind: 'opening', index: Math.min(tools.compound.opening, ways - 1), count: ways };
   const tuck = preview.tuck;
   if (tuck && targets > 1) {
@@ -332,6 +345,7 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
 function vertexFormOf(op: FoldOp): FoldStepVertexForm | undefined {
   if (op.kind === 'petal') return { hinge: 'ends' in op ? 'points' : 'crease' };
   if (op.kind !== 'swivel') return undefined;
+  if (isSwivelCreasesOp(op) || isSwivelLinesOp(op)) return { swivelForm: 'creases', swivelKind: swivelKindOf(op) };
   if (!isSwivelEdgeOp(op)) return { swivelForm: 'rays' };
   if (isSwivelOnFoldOp(op)) return { swivelForm: 'fold', target: op.target.via, swivelKind: swivelKindOf(op) };
   return { swivelForm: 'edge', target: op.target.via };
@@ -369,6 +383,7 @@ function trackCommitted(op: FoldOp, defaulted: boolean): void {
     via,
     ...(extent ? { extent } : {}),
     ...(op.kind === 'tuck' ? { targetCount: 1 + (op.additionalTargets?.length ?? 0) } : {}),
+    ...((op.kind === 'valley' || op.kind === 'mountain') && op.landing?.kind === 'against' ? { targetCount: op.landing.targets.length } : {}),
   });
 }
 
@@ -383,7 +398,7 @@ const SWIVEL_MEET_RULE = { snap: 'point', edges: true } as const;
  * turn lays it on. Nothing to add for any other tool.
  */
 function swivelOffer(tool: FoldToolState, reach: FoldSwivelReachView | null): Pick<FoldPickRule, 'accept'> {
-  if (tool.tool !== 'swivel') return {};
+  if (tool.tool !== 'swivel' || tool.swivelInput === 'creases') return {};
   const offered = swivelOffered(reach, tool.picks);
   if (offered) return { accept: (segment: FoldSegmentPick) => offered(segment.edge) };
   const edge = swivelEdgePick(tool);
@@ -434,16 +449,23 @@ export function useFoldCanvasVerbs(
     tools.clear();
   }, [tools, cursorId]);
 
+  const committing = useRef(false);
   const commitOp = useCallback(
     (op: FoldOp, choices?: Parameters<FoldSessionSurface['commitStep']>[1]) => {
+      if (useFoldImportOrderUi.getState().choosing) return;
+      committing.current = true;
       const defaulted = tools.store.getState().seed.scope === 'top';
       void live.current.session.commitStep(op, choices).then((outcome) => {
+        committing.current = false;
         if (outcome.status !== 'committed') return;
         trackCommitted(op, defaulted);
         tools.clear();
         // A rotation applied puts Rotate down, as Turn over is done at once:
         // left in hand, it would preview another turn on the step just made.
         if (op.kind === 'rotate') tools.putDownRotate();
+      }, (error: unknown) => {
+        committing.current = false;
+        reportError(error, { surface: 'fold:commit' });
       });
     },
     [tools]
@@ -458,6 +480,7 @@ export function useFoldCanvasVerbs(
     const now = queuedCommit(queued, preview, session.readOnly, foldToolInputKey(tools.store.getState()));
     if (now === 'idle' || now === 'wait') return;
     setQueued(null);
+    if (now === 'review') preview.orderResolution?.resume();
     if (now === 'commit' && preview.step) commitOp(preview.step.op, preview.step.choices);
   }, [queued, preview, session.readOnly, commitOp, tools]);
 
@@ -607,10 +630,11 @@ export function useFoldCanvasVerbs(
         // A swivel's meeting point from which nothing can swing: a click
         // picks another point in its place, as its first click would.
         const reach = live.current.preview.vertex?.reach ?? null;
-        const remeet = tool.tool === 'swivel' && tool.picks.length === 1 && swivelReachesNothing(reach);
+        const remeet = tool.tool === 'swivel' && tool.swivelInput !== 'creases' && tool.picks.length === 1 && swivelReachesNothing(reach);
         const pick = resolveFoldPick(index, pane, at, radii, {
           ...(remeet ? SWIVEL_MEET_RULE : { snap: step.snap, edges: step.edges, ...(step.kinds ? { kinds: step.kinds } : {}) }),
           free,
+          snapFree: step.snapFree && tool.freeLineSnap,
           ...(remeet ? {} : swivelOffer(tool, reach)),
         });
         // A swivel's pivot may sit on a folded edge, where its creases meet:
@@ -618,7 +642,8 @@ export function useFoldCanvasVerbs(
         // too — the engine finds where along it they meet, so a point placed
         // freely there would only make a pivot through every layer, which
         // no folder means on a folded edge (owner feedback, 2026-10-13).
-        if (picksSwivelPivot(tool.tool, tool.picks.length) || remeet) {
+        // Two-line construction uses the normal line-mode picks instead.
+        if ((tool.swivelInput !== 'creases' && picksSwivelPivot(tool.tool, tool.picks.length)) || remeet) {
           const onFold = free ? resolveFoldEdgePoint(index, pane, at, radii, null) : null;
           return { pane, at, pick: onFold ?? (free ? pick : resolveFoldEdgePoint(index, pane, at, radii, pick)) };
         }
@@ -688,9 +713,7 @@ export function useFoldCanvasVerbs(
         const section = live.current.preview.section;
         const target = section?.flaps[flap];
         if (!section || !target) return;
-        // The default seed picks the top flap: a press widens from it.
-        const top = topFlapOf(section);
-        tools.toggleFlap(target, section.flaps, top === null ? null : (section.flaps[top] ?? null));
+        tools.toggleFlap(target, section.flaps, live.current.preview.seed);
       },
 
       hoverFlap: tools.setHoveredFlap,
@@ -719,6 +742,7 @@ export function useFoldCanvasVerbs(
         const tool = state();
         if (tool.tool === 'valley') tools.selectTool('mountain');
         else if (tool.tool === 'mountain') tools.selectTool('valley');
+        else if (tool.tool === 'precrease') tools.setPrecreaseDirection(tool.precreaseDirection === 'valley' ? 'mountain' : 'valley');
         else if (tool.tool === 'tuck') tools.setTuckDirection(tool.tuckDirection === 'valley' ? 'mountain' : 'valley');
         else if (isVertexTool(tool.tool)) vertexOtherWay();
       },
@@ -729,11 +753,19 @@ export function useFoldCanvasVerbs(
 
       // The layer orders the compound fold previewed lists: a reverse fold's,
       // a crimp's, a tuck's, a sink's or a vertex fold's.
-      stepOrder: (delta) =>
-        tools.stepOrder(
-          delta,
-          compoundListed(live.current.preview).orders || (live.current.preview.vertex?.orders.length ?? 0)
-        ),
+      stepOrder: (delta) => {
+        const current = state();
+        if (current.tool === 'swivel' && current.swivelInput === 'creases' && !current.swivelFirst) {
+          const { swivelLine, refused } = live.current.preview;
+          if (!swivelLine || refused || live.current.session.readOnly) return false;
+          setQueued(null);
+          tools.acceptSwivelLine(swivelLine);
+          return true;
+        }
+        const resolution = live.current.preview.orderResolution;
+        if (resolution?.active) resolution.step(delta);
+        else if (!resolution) tools.stepOrder(delta, compoundListed(live.current.preview).orders || (live.current.preview.vertex?.orders.length ?? 0));
+      },
 
       setSecondLineMode: (mode) => tools.setSecondLineMode(mode),
 
@@ -751,6 +783,7 @@ export function useFoldCanvasVerbs(
       // The vertex folds' choices, and what their refusals' buttons do.
       setVertexDirection: (direction) => tools.setVertexDirection(direction),
 
+      setSwivelInput: tools.setSwivelInput,
       setSwivelKind: (kind) => tools.setSwivelKind(kind),
 
       vertexOtherWay,
@@ -788,9 +821,9 @@ export function useFoldCanvasVerbs(
 
       precreaseLine: () => {
         const ends = hingeEnds();
-        // Fold and unfold the hinge in the petal fold’s direction, through its two ends.
-        tools.selectTool(state().vertexDirection);
-        tools.setFoldAndUnfold(true);
+        // Precrease the hinge in the petal fold's direction, through its two ends.
+        tools.setPrecreaseDirection(state().vertexDirection);
+        tools.selectTool('precrease');
         tools.setExtent('whole');
         tools.selectLineMode('axiom-1');
         for (const pick of ends ?? []) tools.pick(pick);
@@ -798,8 +831,8 @@ export function useFoldCanvasVerbs(
 
       precreaseKite: () => {
         // A kite crease folds a side edge onto the centre line: the edge-to-edge axiom.
-        tools.selectTool(state().vertexDirection);
-        tools.setFoldAndUnfold(true);
+        tools.setPrecreaseDirection(state().vertexDirection);
+        tools.selectTool('precrease');
         tools.setExtent('whole');
         tools.selectLineMode('axiom-3');
       },
@@ -821,16 +854,9 @@ export function useFoldCanvasVerbs(
       // A precrease's extent.
       setExtent: (extent) => tools.setExtent(extent),
 
-      setFoldAndUnfold: (enabled) => {
-        const now = state();
-        if (!isFoldKind(now.tool) || now.foldAndUnfold === enabled) return;
-        tools.setFoldAndUnfold(enabled);
-        track(ANALYTICS_EVENTS.foldAndUnfoldChanged, { state: enabled ? 'on' : 'off', direction: now.tool });
-      },
-
       cycleExtent: () => {
         const now = state();
-        if (!isFoldKind(now.tool) || !now.foldAndUnfold) return false;
+        if (now.tool !== 'precrease') return false;
         tools.setExtent(nextExtentMode(now.extent));
         return true;
       },
@@ -842,6 +868,12 @@ export function useFoldCanvasVerbs(
         const [first] = state().extentPicks;
         tools.setExtent('pinch');
         if (first) tools.pickAlong(first);
+      },
+
+      setFreeLineSnap: (enabled) => {
+        if (state().freeLineSnap === enabled) return;
+        tools.setFreeLineSnap(enabled);
+        trackFoldFreeLineSnapChanged(enabled);
       },
 
       throughAllLayers: () => tools.setSeed({ scope: 'all' }),
@@ -877,7 +909,6 @@ export function useFoldCanvasVerbs(
           tools.selectLineMode('free');
           if (isVertexTool(before.tool)) {
             tools.selectTool(before.vertexDirection);
-            tools.setFoldAndUnfold(false);
           }
           for (const pick of picks) tools.pick(pick);
           if (defaultMovingSign(index, sceneLine, false) !== (fix.side === 'positive' ? 1 : -1)) tools.swapSide();
@@ -892,7 +923,20 @@ export function useFoldCanvasVerbs(
         tools.setOverride({ op: { ...rest, line: { via: 'free', through }, ...seed } });
       },
 
+      choosingOrder: () => !!useFoldImportOrderUi.getState().choosing || live.current.preview.orderResolution?.active === true,
+
       stepChoice: (delta) => {
+        const imported = useFoldImportOrderUi.getState();
+        if (imported.choosing) {
+          const { component, choice, opened } = imported.choosing;
+          const part = opened.components[component];
+          const count = part?.orders ?? 1;
+          const next = (choice[component] ?? 0) + delta;
+          imported.flow?.choose(component, part?.truncated ? Math.max(0, Math.min(count - 1, next)) : (next + count) % count);
+          return true;
+        }
+        const resolution = live.current.preview.orderResolution;
+        if (resolution?.active) { resolution.step(delta); return true; }
         const choice = foldCanvasChoice(live.current.preview, state());
         if (!choice) return false;
         switch (choice.kind) {
@@ -921,7 +965,33 @@ export function useFoldCanvasVerbs(
         return true;
       },
 
+      acceptOrder: () => {
+        const { preview, session } = live.current;
+        const resolution = preview.orderResolution;
+        if (!resolution?.active || resolution.waiting || resolution.failed || !preview.step || !preview.landed || preview.landing || preview.refused || session.readOnly || committing.current || resolution.inputKey !== foldToolInputKey(state())) return false;
+        setQueued(null);
+        trackFoldOrderResolved('accepted', 'tool', resolution.count);
+        commitOp(preview.step.op, preview.step.choices);
+        return true;
+      },
       commit: () => {
+        if (useFoldImportOrderUi.getState().choosing) return true;
+        const current = state();
+        if (current.tool === 'swivel' && current.swivelInput === 'creases' && !current.swivelFirst) {
+          const { swivelLine, refused } = live.current.preview;
+          if (!swivelLine || refused || live.current.session.readOnly) return false;
+          setQueued(null);
+          tools.acceptSwivelLine(swivelLine);
+          return true;
+        }
+        const resolution = live.current.preview.orderResolution;
+        if (live.current.session.readOnly) return false;
+        // A confirmation made during search must review its answer if ambiguous.
+        if (resolution && (resolution.waiting || resolution.inputKey !== foldToolInputKey(current))) {
+          setQueued(foldToolInputKey(current)); return true;
+        }
+        if (resolution?.required) { setQueued(null); resolution.resume(); return true; }
+        if (resolution?.failed) return false;
         const { step, refused, landing, extent, vertex } = live.current.preview;
         if (refused || live.current.session.readOnly) return false;
         // A fan none of whose fourth creases lands: nothing to fold, or to wait for, until another hinge region is picked.
@@ -941,6 +1011,9 @@ export function useFoldCanvasVerbs(
       },
 
       cancel: () => {
+        if (useFoldImportOrderUi.getState().choosing) { useFoldImportUiStore.getState().close(); return true; }
+        const resolution = live.current.preview.orderResolution;
+        if (resolution?.active) { setQueued(null); resolution.back(); return true; }
         // Escape steps back along the line first: the last point clicked on it.
         if (tools.unpickAlong()) {
           setQueued(null);
@@ -953,7 +1026,7 @@ export function useFoldCanvasVerbs(
           return true;
         }
         const tool = state();
-        const held = tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'top' || tool.swapped;
+        const held = tool.swivelFirst !== undefined || tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'top' || tool.swapped;
         if (!held) return false;
         setQueued(null);
         tools.clear();

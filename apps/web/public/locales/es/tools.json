@@ -435,7 +435,8 @@
       "severalSunk_many": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
       "severalSunk_other": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
       "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes.",
-      "unsinkRing": "La línea es un pliegue del anillo que dejó el hundido, a lo largo de la parte superior de la punta hundida."
+      "unsinkRing": "La línea es un pliegue del anillo que dejó el hundido, a lo largo de la parte superior de la punta hundida.",
+      "freeSnap": "Se ajusta a los puntos cercanos; si no hay ninguno, usa exactamente donde haces clic."
     },
     "op": {
       "closedSink": "Hundido cerrado",
@@ -448,6 +449,33 @@
       "swivel": "Pliegue pivotante",
       "tuck": "Remeter",
       "unsink": "Deshacer hundido"
+    },
+    "order": {
+      "accept": "Usar este orden",
+      "acceptAll": "Usar órdenes y añadir paso",
+      "acceptUpdate": "Usar órdenes y actualizar paso",
+      "back": "Atrás",
+      "choose": "Elegir orden de capas",
+      "count_one": "Orden {{index}} de {{count}}",
+      "count_many": "Orden {{index}} de {{count}}",
+      "count_other": "Orden {{index}} de {{count}}",
+      "failed": "No se pudo cargar el orden. Vuelve e inténtalo de nuevo, o elige otro orden.",
+      "found_one": "Orden {{index}} de {{count}} encontrados",
+      "found_many": "Orden {{index}} de {{count}} encontrados",
+      "found_other": "Orden {{index}} de {{count}} encontrados",
+      "help": "Previsualiza las disposiciones y elige el orden que quieras.",
+      "incomplete": "Búsqueda incompleta. Puede haber más órdenes.",
+      "inspect": "Inspeccionar capas",
+      "loading": "Cargando orden…",
+      "movingVaries": "Estos órdenes mueven distintas capas. Comprueba el papel resaltado.",
+      "next": "Siguiente orden de capas",
+      "noneFound": "Aún no se ha encontrado ningún orden",
+      "previous": "Orden de capas anterior",
+      "region": "Región {{number}}",
+      "regions": "Regiones independientes",
+      "search": "Buscar más órdenes",
+      "stack": "Región {{number}}: {{layers}}",
+      "stackHelp": "Selecciona una región para resaltarla. Las capas se enumeran de delante hacia atrás; las diferencias resaltadas se comparan con la primera vista previa."
     },
     "picker": {
       "close": "Cerrar la lista de herramientas",
@@ -798,6 +826,8 @@
       "mountain": "Pliegue de monte",
       "mountainHelp": "Plegar el lado que se mueve alejándolo de ti, para que quede debajo.",
       "openSinkHelp": "Empujar hacia dentro el extremo de una punta cerrada, dando la vuelta a cada una de sus capas.",
+      "precrease": "Premarcar",
+      "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
       "reverse": "Pliegue inverso",
       "reverseHelp": "Invierte una solapa hacia dentro o envuélvela por fuera, invirtiendo su pliegue central.",
       "rotateHelp": "Girar el modelo una parte de vuelta o un ángulo exacto, primero en vista previa y luego como un paso propio.",
@@ -844,7 +874,15 @@
       "hingeRegionBlocked": "Esta región de bisagra no se puede plegar con estas capas. Haz clic en otra región o cambia las capas.",
       "hingeRegionBlockedTouch": "Esta región de bisagra no se puede plegar con estas capas. Toca otra región o cambia las capas.",
       "hingeRegionFits": "El pliegue de bisagra está en la región seleccionada.",
+      "input": {
+        "edge": "Borde sobre línea",
+        "edgeHelp": "Elegir un borde y la línea sobre la que debe quedar",
+        "label": "Construir por",
+        "lines": "Dos líneas de pliegue",
+        "linesHelp": "Define dos líneas de pliegue; su intersección determina el punto de encuentro"
+      },
       "intro": {
+        "creases": "Define las dos bisagras; el pliegue restante se calcula para mantener el papel plano.",
         "petalLift": "Levanta la punta de una solapa a lo largo de una bisagra.",
         "swivelSwing": "Gira un borde del papel sobre una línea."
       },
@@ -870,6 +908,13 @@
         "twoPoints": "Dos puntos",
         "twoPointsHelp": "Haz clic en dos puntos de la línea"
       },
+      "lines": {
+        "confirm": "Pulsa Intro para usar la primera línea y definir la segunda.",
+        "confirmTouch": "Toca Usar primera línea para continuar.",
+        "first": "Define la primera línea de pliegue. Selecciona un pliegue existente o construye una línea con Localizar línea.",
+        "second": "Define la segunda línea de pliegue. Su intersección con la primera determina el punto de encuentro; la bisagra restante se calcula.",
+        "useFirst": "Usar primera línea"
+      },
       "mountain": "Monte",
       "mountainTitle": "Monte: el papel gira alejándose de ti",
       "note": {
@@ -883,6 +928,7 @@
         "snapOrFree": "Los puntos se ajustan a esquinas, cruces, marcas y puntos medios: mantén {{modifier}} para poner uno en cualquier lugar.",
         "snapOrFreeTouch": "Los puntos se ajustan a esquinas, cruces, marcas y puntos medios: activa Punto libre para poner uno en cualquier sitio.",
         "squashFlap": "Una solapa se aplasta cuando sus dos capas solo están unidas por su bisagra y no tiene nada encima.",
+        "swivelCreasesPicture": "Los pliegues se encuentran en el punto. El papel resaltado se mueve; el pliegue restante lo mantiene plano.",
         "swivelPicture": "Los pliegues se juntan en el punto, el borde cae sobre la línea gruesa y el papel iluminado se mueve."
       },
       "refusal": {
@@ -911,13 +957,17 @@
           "title": "El cuarto pliegue no puede alzarse aquí"
         },
         "kite": {
-          "creaseOrPrecrease": "Sobre un pliegue bisagra, un pliegue pétalo vuelve a plegar pliegues que ya existen, y falta un pliegue de la cometa. Elige la bisagra por sus dos extremos y el pliegue marcará la cometa por sí mismo; o premárcala antes con la opción Plegar y desplegar en el Axioma 3: un borde inferior de la solapa superior sobre su línea central, sin las solapas de detrás.",
+          "creaseOrPrecrease": "Sobre un pliegue bisagra, un pliegue pétalo vuelve a plegar pliegues que ya existen, y falta un pliegue de la cometa. Elige la bisagra por sus dos extremos y el pliegue marcará la cometa por sí mismo; o premárcala antes con la herramienta Premarcar en el Axioma 3: un borde inferior de la solapa superior sobre su línea central, sin las solapas de detrás.",
           "titleMissing": "Faltan los pliegues de la cometa"
         },
         "line": {
           "crease": "El pliegue bisagra no atraviesa todas las capas de debajo que se pliegan. Premarca la bisagra a través de todas las capas; luego haz el pliegue pétalo.",
           "ends": "La bisagra cruza papel de la segunda capa, que se pliega hacia dentro junto a la cometa, y el pliegue no puede marcarlo mientras la solapa se levanta. Premarca la bisagra a través de todas las capas; luego haz el pliegue pétalo.",
           "titleHinge": "Premarca antes la bisagra"
+        },
+        "lineMeeting": {
+          "text": "Elige dos líneas de pliegue que se crucen en un único borde plegado visible.",
+          "title": "Las líneas necesitan un punto de encuentro"
         },
         "noFlap": {
           "noHinge": "La solapa no se pliega sobre ninguna bisagra en ningún extremo de su lomo, así que no hay contra qué aplastarla.",
@@ -1074,7 +1124,6 @@
     "window": {
       "cancel": "Cancelar",
       "finding": "Buscando las capas en la línea…",
-      "foldAndUnfold": "Plegar y desplegar",
       "instructions": "Instrucciones",
       "kind": "Pliegue",
       "label": "Opciones de la herramienta de plegado",
@@ -1089,7 +1138,8 @@
       "settings_one": "{{count}} ajuste",
       "settings_many": "{{count}} ajustes",
       "settings_other": "{{count}} ajustes",
-      "swap": "Cambiar"
+      "swap": "Cambiar",
+      "snapFreeLine": "Ajustar a puntos"
     }
   },
   "foldAngleDisplay": {

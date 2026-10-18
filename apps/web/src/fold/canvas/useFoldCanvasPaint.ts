@@ -119,13 +119,14 @@ export function useFoldCanvasPaint(
   hoveredFlap: number | null,
   inks: FoldCanvasInks | null,
   spread: LayerSpreadOptions | null = null,
-  pending: FoldPendingCreases | null = null
+  pending: FoldPendingCreases | null = null,
+  resolvedScene: import('../engine/foldEngineWire').FoldScene | null = null
 ): FoldCanvasPaint {
   const { summary, index } = view;
   // Rotate's preview: the model turned as it will be, in place of the state
   // on screen, turning about the sheet's middle as the offset places it. The
   // crease pattern, front up, stays the state on screen's.
-  const scene = preview.turned ?? view.scene;
+  const scene = resolvedScene ?? preview.turned ?? view.scene;
   const sheet = summary?.sheet;
   const offset = useMemo(() => (scene && sheet ? foldedDisplayOffset(scene, sheet) : NO_OFFSET), [scene, sheet]);
   const sheetBounds = useMemo(() => (sheet ? boundsOf(sheet.map(([x, y]) => ({ x, y }))) : null), [sheet]);
@@ -141,12 +142,13 @@ export function useFoldCanvasPaint(
   const foldedScene = useMemo(() => {
     if (!scene) return null;
     const base = foldedPaneScene(scene, display, offset, spread);
+    if (resolvedScene) return base;
     return withPreviewCreases(
       base,
       { action: preview.action, second: secondLine, vertex: vertexCreases, pending: pendingFolded },
       offset
     );
-  }, [scene, display, offset, spread, preview.action, secondLine, vertexCreases, pendingFolded]);
+  }, [scene, resolvedScene, display, offset, spread, preview.action, secondLine, vertexCreases, pendingFolded]);
   const foldedInk = useMemo<FoldedSceneInk>(
     () => ({
       policy: PAPER_STYLE_POLICIES.fold,
@@ -167,7 +169,7 @@ export function useFoldCanvasPaint(
   const swivel = preview.vertex?.answer?.analysis ?? preview.vertex?.base?.analysis ?? null;
   const tint = useMemo(() => {
     if (!index || !inks) return null;
-    if (swivel?.kind === 'swivel-by-edge') return swivelRegionsTint(index, swivel, inks.accent);
+    if (swivel?.kind === 'swivel-by-edge' || swivel?.kind === 'swivel-by-creases') return swivelRegionsTint(index, swivel, inks.accent);
     const targets = tuck
       ? foldTargetsTint(
           index,
@@ -205,7 +207,7 @@ export function useFoldCanvasPaint(
   }, [scene, offset, sheetBounds]);
 
   const landed = preview.landed;
-  const cpSource = landed?.scene ?? view.scene;
+  const cpSource = resolvedScene ?? landed?.scene ?? view.scene;
   const cpSummary = landed?.summary ?? summary;
   const cpLines = useMemo(() => {
     if (!cpSource || !cpSummary) return null;
@@ -223,7 +225,7 @@ export function useFoldCanvasPaint(
   const keepInView = formKey !== null && turned ? `${formKey}|turned:${turned.view_transform.join(',')}` : formKey;
 
   return {
-    folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, keepInView, offset, tint },
+    folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, keepInView, offset, tint: resolvedScene ? null : tint },
     creasePattern: { lines: cpLines, contentBounds: cpBounds },
   };
 }

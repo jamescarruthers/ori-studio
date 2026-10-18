@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-heart-card-2",
         "title": "Heart Card — Francis Ow",
         "paper": {
@@ -126,6 +126,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2: Bring the bottom edge to the horizontal center."
@@ -208,6 +211,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: Refold the bottom edge on the new lower crease."
@@ -245,6 +251,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6a: Valley-fold the lower half upward."
@@ -278,6 +287,9 @@
                   0.050000000000000044
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6b: Lower the front flap to complete the pleat. The source mountain direction reverses in the lifted view."
@@ -470,6 +482,9 @@
                   0.2
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10: Fold the side flap toward the center."
@@ -570,6 +585,9 @@
                   0.2
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "11c: Fold the side flap toward the center."
@@ -612,6 +630,9 @@
                   0.1
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "13: Lower the colored flap."

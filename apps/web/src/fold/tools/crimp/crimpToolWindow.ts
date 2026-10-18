@@ -123,7 +123,7 @@ export function crimpLocateInstructions(
             ),
           ]
         : []),
-      ...lineModeNotes(t, onSecond ? second : view.lineMode, host),
+      ...lineModeNotes(t, onSecond ? second : view.lineMode, host, view.freeLineSnap),
     ],
   };
 }

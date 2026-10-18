@@ -453,6 +453,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'swivel_pivot_on_edge':
     case 'swivel_edge_short':
     case 'swivel_edge_stays':
+    case 'swivel_line_meeting':
     case 'swivel_not_a_fold':
     case 'swivel_misses_fold':
     case 'swivel_fold_wide':
@@ -936,7 +937,7 @@ export function foldRefusalNotice(
       ...refused.fixes.flatMap((fix, position) => fixActions(t, fix, position, context, verbs)),
       // What a vertex fold's tools can do where the engine offers no fix.
       ...(context.vertex ? vertexExtraActions(t, refused.refusal, context.readOnly, context.vertex, verbs) : []),
-      // And what Fold and unfold can do with part of a line.
+      // And what the Precrease tool can do with part of a line.
       ...(context.extent ? extentExtraActions(t, refused.refusal.code, context.extent, context.readOnly, verbs) : []),
     ],
   };

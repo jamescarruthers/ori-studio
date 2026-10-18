@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-santa",
         "title": "Santa — Origami.me (batch 3)",
         "paper": {
@@ -125,6 +125,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2a: Bring the lower-left edge to the center."
@@ -153,6 +156,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2b: Bring the lower-right edge to the center."
@@ -222,6 +228,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: Lower the upper flap until the previous crease meets the colored boundary."
@@ -255,6 +264,9 @@
                   0.9893933982822016
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Raise the front lower tip to the previous crease."
@@ -288,6 +300,9 @@
                   0.9646446609406724
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Raise the bottom edge of the front flap along the existing crease."
@@ -321,6 +336,9 @@
                   0.8676955262170054
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7: Halve the top flap upward."
@@ -477,6 +495,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "11a: Align the upper-left outer edge with the nearest crease."
@@ -505,6 +526,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "11b: Repeat on the right."
@@ -533,6 +557,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12a: Refold the left long flap on its existing hinge."
@@ -561,6 +588,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12b: Refold the right long flap on its existing hinge."
@@ -589,6 +619,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "13: Fold the lower flap behind at the horizontal diagonal."
@@ -617,6 +650,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14a: Fold the left side fully behind along its precrease."
@@ -645,6 +681,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14b: Fold the right side fully behind. The source offers an optional stand; this model uses its flat finish."

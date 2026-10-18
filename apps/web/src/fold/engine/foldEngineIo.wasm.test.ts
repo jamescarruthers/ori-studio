@@ -131,6 +131,15 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
       const replayed = landed(calls.step(sheet, picked.op));
       expect(replayed.fingerprint, id).toBe(picked.fingerprint);
       expect(replayed.report).toBeNull();
+      // A region link is provenance only. Offline replay reads the saved CP,
+      // even with no Edit document or with that region moved/deleted.
+      const linked = { ...picked.op, origin: 'project_cp' as const, source: {
+        documentId: 'crease-pattern', revision: 'rc1:saved', region: {
+          boundary: [[{ x: 500, y: 0 }, { x: 900, y: 0 }, { x: 900, y: 400 }, { x: 500, y: 400 }]],
+          bounds: { minX: 500, minY: 0, maxX: 900, maxY: 400 }, segmentIdHint: 2,
+        },
+      } };
+      expect(landed(calls.step(sheet, linked)).fingerprint, id).toBe(picked.fingerprint);
       expect(io.releaseImports([opened.import])).toBe(1);
     }
     expect(io.liveImports()).toBe(0);
@@ -189,6 +198,11 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
     expect(first.fingerprint).not.toBe(last.fingerprint);
     expect(first.op.cpJson).toBe(last.op.cpJson);
     expect(first.op.orderJson).not.toBe(last.op.orderJson);
+
+    const expanded = landed(io.importSearch(opened.import, sizes.map((n) => n - 1), { perComponent: 4000 }));
+    const preserved = landed(io.importPick(expanded.opened.import, expanded.choice));
+    expect(preserved.op.orderJson).toBe(last.op.orderJson);
+    expect(preserved.fingerprint).toBe(last.fingerprint);
 
     // Too small a budget is a refusal, and holds nothing.
     const tight = refused(io.importCp({ format: 'fold', text: PLUS }, { kind: 'after', state: sheet }, { maxNodes: 0 }));

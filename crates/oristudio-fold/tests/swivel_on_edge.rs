@@ -45,6 +45,117 @@ fn analysis(state: &State, op: &SwivelByEdge) -> SwivelEdgeAnalysis {
         .unwrap_or_else(|e| panic!("{e} {e:?}"))
 }
 
+#[test]
+fn a_flat_precrease_through_the_swivel_pivot_does_not_change_its_location() {
+    for name in ["kite narrowed at c, right", "kite narrowed at c, left"] {
+        for turned in [false, true] {
+            let mut c = case(name);
+            if turned {
+                c.state = c.state.turn_over();
+                c.op.direction = Direction::Mountain;
+            }
+            let expected = analysis(&c.state, &c.op);
+            let p = expected.vertex;
+            let precreased = cases::precrease(
+                &c.state,
+                p,
+                [p[0] + 0.2, p[1] - 0.1],
+                [p[0] + 0.1, p[1] + 0.1],
+                Seed::All,
+            );
+            let actual = analysis(&precreased, &c.op);
+            assert!(close(actual.vertex, expected.vertex), "{name}: {actual:?}");
+            assert_same_swivel_choices(&c.state, &precreased, &c.op);
+        }
+    }
+}
+
+/// Geometry, exposed sides, and local material stacks, independent of the
+/// face subdivision introduced by flat precreases.
+fn material_pose(state: &State) -> Vec<i64> {
+    let mut key = Vec::new();
+    let rounded = |x: f64| (x * 1e9).round() as i64;
+    for i in 0..19 {
+        for j in 0..19 {
+            let sheet = [(f64::from(i) + 0.317) / 19.0, (f64::from(j) + 0.613) / 19.0];
+            let p = state.resolve_point(sheet).unwrap();
+            key.extend(p.map(rounded));
+            let stack = state.stack_at(p).unwrap_or_default();
+            key.push(stack.len() as i64);
+            for face in stack {
+                key.extend(
+                    state
+                        .isometry(face)
+                        .unwrap()
+                        .inverse()
+                        .apply(p)
+                        .map(rounded),
+                );
+                key.push(i64::from(state.seen_front_up(face).unwrap()));
+            }
+        }
+    }
+    key
+}
+
+fn assert_same_swivel_choices(before: &State, precreased: &State, op: &SwivelByEdge) {
+    let expected = cases::every(before.swivel_by_edge(op, &VertexChoices::default()));
+    let actual = cases::every(precreased.swivel_by_edge(op, &VertexChoices::default()));
+    assert!(!expected.is_empty());
+    let keys = |folds: &[VertexFolded]| {
+        folds
+            .iter()
+            .map(|f| material_pose(&f.state))
+            .collect::<std::collections::BTreeSet<_>>()
+    };
+    assert_eq!(keys(&expected), keys(&actual));
+    for folded in actual {
+        check(precreased, &folded);
+        let replayed = landed(precreased.swivel_by_edge(op, &folded.report.stored));
+        assert_eq!(replayed.state.order(), folded.state.order());
+    }
+}
+
+#[test]
+fn a_swivel_reuses_its_precreased_rays() {
+    for (name, kind) in [
+        ("kite narrowed at c, right", SwivelKind::Open),
+        ("kite narrowed at c, left", SwivelKind::Open),
+        ("Abrashi's swivel", SwivelKind::Inside),
+    ] {
+        let mut c = case(name);
+        c.op.kind = kind;
+        let a = analysis(&c.state, &c.op);
+        let mut state = c.state.clone();
+        for crease in &a.creases {
+            let p = crease.from;
+            let q = crease.to;
+            if close(p, q) {
+                continue;
+            }
+            let line = Line::from_points(p, q).unwrap();
+            // Several visible rays name the same line in its two layers.
+            if state
+                .vertices()
+                .iter()
+                .any(|&v| state.resolve_point(v).is_some_and(|v| close(v, a.vertex)))
+                && state.creases().iter().any(|edge| {
+                    matches!(edge.kind, CreaseKind::Flat(_))
+                        && edge
+                            .vertices
+                            .iter()
+                            .all(|&v| line.distance_to_point(state.vertex_image(v).unwrap()) < 1e-9)
+                })
+            {
+                continue;
+            }
+            let toward = [p[0] + line.n[0] * 0.1, p[1] + line.n[1] * 0.1];
+            state = cases::precrease(&state, p, q, toward, Seed::All);
+        }
+        assert_same_swivel_choices(&c.state, &state, &c.op);
+    }
+}
+
 fn refusal(outcome: Result<VertexOutcome, CompoundRefused>) -> oristudio_fold::Refused {
     match outcome {
         Err(CompoundRefused::Refused(refused)) => refused,
@@ -261,9 +372,12 @@ fn seen_letters(
 /// Land a swivel on a folded edge as it must, and check it every way
 /// ([`landing_checked`]).
 fn swivel_checked(c: &FoldSwivelCase, op: &SwivelByEdge, label: &str) -> VertexFolded {
-    let folded = landed(c.state.swivel_by_edge(op, &VertexChoices::default()));
-    landing_checked(c, op, &folded, label);
-    folded
+    let folded = cases::every(c.state.swivel_by_edge(op, &VertexChoices::default()));
+    assert!(!folded.is_empty(), "{label}: no valid order");
+    for candidate in &folded {
+        landing_checked(c, op, candidate, label);
+    }
+    folded.into_iter().next().unwrap()
 }
 
 /// A swivel on a folded edge's landing, checked every way: the full gate and
@@ -529,6 +643,85 @@ fn the_kite_base_narrows_at_its_tip() {
     assert_eq!(mirrored, segments);
 }
 
+#[test]
+fn matching_swivels_offer_orders_without_reordering_stationary_paper() {
+    for turned in [false, true] {
+        let mut right = case("kite narrowed at c, right");
+        if turned {
+            right.state = right.state.turn_over();
+            right.op.direction = Direction::Mountain;
+        }
+        let first = cases::every(
+            right
+                .state
+                .swivel_by_edge(&right.op, &VertexChoices::default()),
+        );
+        assert_eq!(first.len(), 2);
+        let left = case("kite narrowed at c, left");
+        for first in first {
+            let parent = &first.state;
+            let mut op = cases::on_fold(parent, left.op.fold.unwrap(), left.op.edge, [0.5, 0.5]);
+            op.direction = right.op.direction;
+            let Ok(VertexOutcome::ChooseOrder(choice)) =
+                parent.swivel_by_edge(&op, &VertexChoices::default())
+            else {
+                panic!("the matching swivel must expose the overlapping flap's orders");
+            };
+            assert!(choice.count().exact && choice.count().orders > 1);
+            let candidates = cases::every(parent.swivel_by_edge(&op, &VertexChoices::default()));
+            let case = FoldSwivelCase {
+                state: parent.clone(),
+                op: op.clone(),
+                name: left.name,
+                edge: left.edge,
+                fold: left.fold,
+            };
+            let baseline = &candidates[0].state;
+            let mut varies_against_stationary = false;
+            for folded in &candidates {
+                landing_checked(&case, &op, folded, "matching swivel");
+                assert_eq!(folded_segments(&folded.state), folded_segments(baseline));
+                let moving: std::collections::HashSet<_> = folded
+                    .report
+                    .fold
+                    .blocks
+                    .iter()
+                    .flatten()
+                    .copied()
+                    .collect();
+                for face in folded.state.faces() {
+                    assert_eq!(
+                        folded.state.face_image(face.id),
+                        baseline.face_image(face.id)
+                    );
+                }
+                for (pair, above) in folded.state.order().pairs() {
+                    let (a, b) = (pair.lo(), pair.hi());
+                    if !moving.contains(&a) && !moving.contains(&b) {
+                        assert_eq!(
+                            above,
+                            parent.above(
+                                lineage(parent, &folded.state, a),
+                                lineage(parent, &folded.state, b)
+                            )
+                        );
+                    } else if moving.contains(&a) != moving.contains(&b) {
+                        varies_against_stationary |= above != baseline.above(a, b);
+                    }
+                }
+                let stored = serde_json::to_string(&folded.report.stored).unwrap();
+                let replayed =
+                    landed(parent.swivel_by_edge(&op, &serde_json::from_str(&stored).unwrap()));
+                assert_eq!(replayed.state.order(), folded.state.order());
+            }
+            assert!(
+                varies_against_stationary,
+                "orders must vary against the other flap"
+            );
+        }
+    }
+}
+
 /// The refusals, each a code: a point on no folded crease, a bisector that
 /// crosses the folded edge nowhere, a swivel crease meeting the folded edge
 /// at a right angle, a crease running into a fold before the paper's edge,
@@ -748,12 +941,11 @@ fn every_swivel_on_a_folded_edge_that_lands_folds_flat_with_its_edge_on_the_targ
     let drawn = drawn_swivels();
     let mut landed_count = 0;
     for (seed, c) in &drawn {
-        let Ok(VertexOutcome::Landed(_)) = c.state.swivel_by_edge(&c.op, &VertexChoices::default())
-        else {
-            continue;
-        };
-        swivel_checked(c, &c.op, &format!("seed {seed}"));
-        landed_count += 1;
+        let candidates = cases::every(c.state.swivel_by_edge(&c.op, &VertexChoices::default()));
+        for folded in &candidates {
+            landing_checked(c, &c.op, folded, &format!("seed {seed}"));
+        }
+        landed_count += usize::from(!candidates.is_empty());
     }
     let tried = drawn.len();
     eprintln!("{landed_count} of {tried} drawn swivels on folded edges landed");
@@ -964,7 +1156,7 @@ fn the_kite_base_narrows_inside_its_strip_over_or_under_the_other_flap() {
             panic!("{name}: {outcome:?}");
         };
         assert_eq!(choice.count().orders, 2, "{name}");
-        let opened = landed(c.state.swivel_by_edge(&c.op, &VertexChoices::default()));
+        let opened = swivel_checked(&c, &c.op, name);
         let every = cases::every(outcome);
         assert_eq!(every.len(), 2);
         for (k, folded) in every.iter().enumerate() {

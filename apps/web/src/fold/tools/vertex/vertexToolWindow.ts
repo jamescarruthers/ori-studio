@@ -47,9 +47,11 @@
 import type { TFunction } from 'i18next';
 import { FOLD_SWIVEL_KINDS, type FoldDirection, type FoldSwivelKind } from '../../document/foldSequenceDocument';
 import type { FoldModelPoint } from '../../engine/foldEngineWire';
-import { FOLD_LINE_BY, foldToolLabel, type FoldLineBy, type FoldVertexToolId } from '../foldToolCatalog';
+import { FOLD_LINE_BY, foldToolLabel, lineModeSteps, type FoldLineBy, type FoldVertexToolId } from '../foldToolCatalog';
 import {
   queuedNote,
+  lineModeNotes,
+  lineModeSelect,
   settingsMeta,
   type FoldToolHost,
   type FoldToolInstructions,
@@ -60,7 +62,7 @@ import {
 import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 import { choiceStepper, type FoldChoiceStepper, type FoldKindChoice } from '../reverse/reverseToolWindow';
 import { swivelRidgeName } from '../../stepSentenceVertex';
-import { vertexToolSteps } from './vertexInputs';
+import { vertexToolSteps, type FoldSwivelInput } from './vertexInputs';
 
 /** Which of a swivel's two creases rises as its ridge: square to the edge, or toward its far end. */
 export type FoldSwivelRidge = 'foot' | 'end';
@@ -76,6 +78,9 @@ export interface FoldPetalScores {
 /** What a vertex tool's window is drawn from, beside every tool's view. */
 export interface FoldVertexWindowView {
   tool: FoldVertexToolId;
+  swivelInput?: FoldSwivelInput;
+  firstLineSet?: boolean;
+  lineReady?: boolean;
   direction: FoldDirection;
   /** The engine has described the flap, line or fan the clicks name: there is something to choose about. */
   described: boolean;
@@ -127,6 +132,7 @@ export interface FoldVertexWindowView {
 
 /** The vertex folds' own calls in the window; the canvas binds them. */
 export interface FoldVertexWindowVerbs {
+  setSwivelInput?: (mode: FoldSwivelInput) => void;
   setVertexDirection?: (direction: FoldDirection) => void;
   /** A swivel on a folded edge's kind: its strip on top, or tucked between the layers. */
   setSwivelKind?: (kind: FoldSwivelKind) => void;
@@ -138,6 +144,7 @@ export interface FoldVertexWindowVerbs {
 
 /** A vertex fold's own controls in the window. */
 export interface FoldVertexControls {
+  input?: FoldKindChoice<FoldSwivelInput> | null;
   /**
    * A swivel on a folded edge's kind, Open or Inside: only once previewed
    * and only when both land — a control with no choice in it is not shown —
@@ -319,6 +326,21 @@ function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
   }
 }
 
+function swivelLineInstructions(t: TFunction, view: FoldToolWindowView, vertex: FoldVertexWindowView, host: FoldToolHost): FoldToolInstructions {
+  const items = [...lineModeSteps(t, view.lineMode), vertex.firstLineSet
+    ? commitStepPlain(t, 'swivel', host)
+    : host.coarse ? t('tools:fold.vertex.lines.confirmTouch', 'Tap Use first line to continue.') : t('tools:fold.vertex.lines.confirm', 'Press Enter to use the first line and locate the second.')];
+  return {
+    heading: t('tools:fold.window.instructions', 'Instructions'),
+    intro: vertex.firstLineSet
+      ? t('tools:fold.vertex.lines.second', 'Locate the second fold line. Its intersection with the first sets the meeting point; the remaining hinge is computed.')
+      : t('tools:fold.vertex.lines.first', 'Locate the first fold line. Select an existing crease or construct a line with Locate line.'),
+    items,
+    current: Math.min(view.picks, items.length - 1),
+    notes: lineModeNotes(t, view.lineMode, host, view.freeLineSnap),
+  };
+}
+
 function locateInstructions(
   t: TFunction,
   view: FoldToolWindowView,
@@ -326,11 +348,12 @@ function locateInstructions(
   host: FoldToolHost
 ): FoldToolInstructions {
   const { tool } = vertex;
-  const lines = { petalHinge: vertex.lineBy ?? 'crease', swivelTarget: vertex.lineBy ?? 'crease' };
+  if (tool === 'swivel' && vertex.swivelInput === 'creases') return swivelLineInstructions(t, view, vertex, host);
+  const lines = { petalHinge: vertex.lineBy ?? 'crease', swivelTarget: vertex.lineBy ?? 'crease', swivelInput: vertex.swivelInput };
   const items = [...vertexToolSteps(t, tool, lines, host, vertex.nothingSwings === true), finishStep(t, tool, host)];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    intro: vertexIntro(t, tool),
+    intro: vertex.swivelInput === 'creases' ? t('tools:fold.vertex.intro.creases', 'Locate the two hinges; the remaining crease is computed to keep the paper flat.') : vertexIntro(t, tool),
     items,
     current: Math.min(Math.max(0, view.picks), items.length - 1),
     notes: locateNotes(t, view, vertex, host),
@@ -380,7 +403,7 @@ function swivelPreviewSteps(
   host: FoldToolHost,
   controls: FoldVertexControls
 ): FoldToolInstructions {
-  const lines = { petalHinge: 'crease' as const, swivelTarget: vertex.lineBy ?? 'crease' };
+  const lines = { petalHinge: 'crease' as const, swivelTarget: vertex.lineBy ?? 'crease', swivelInput: vertex.swivelInput };
   const choice =
     controls.kind !== null || controls.direction !== null || controls.emergent !== null || controls.order !== null;
   const items = [
@@ -389,7 +412,7 @@ function swivelPreviewSteps(
   ];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    intro: vertexIntro(t, 'swivel'),
+    intro: vertex.swivelInput === 'creases' ? t('tools:fold.vertex.intro.creases', 'Locate the two hinges; the remaining crease is computed to keep the paper flat.') : vertexIntro(t, 'swivel'),
     items,
     current: items.length - 1,
     notes: [],
@@ -422,6 +445,7 @@ function previewInstructions(
       notes: [],
     };
   }
+  if (tool === 'swivel' && vertex.swivelInput === 'creases') return swivelLineInstructions(t, view, vertex, host);
   const queued = view.preview ? queuedNote(t, view.preview) : [];
   if (tool === 'swivel') {
     const steps = swivelPreviewSteps(t, vertex, host, controls);
@@ -477,7 +501,7 @@ function lineByControl(
   readOnly: boolean
 ): FoldKindChoice<FoldLineBy> | null {
   const { tool } = vertex;
-  if (tool !== 'petal' && tool !== 'swivel') return null;
+  if ((tool !== 'petal' && tool !== 'swivel') || (tool === 'swivel' && vertex.swivelInput === 'creases')) return null;
   const option = (value: FoldLineBy) => {
     const petal = tool === 'petal';
     const short =
@@ -515,6 +539,7 @@ function lineByControl(
  */
 function previewNote(t: TFunction, vertex: FoldVertexWindowView): string | null {
   if (vertex.tool === 'petal') return vertex.petalScores ? petalScoresNote(t, vertex.petalScores) : null;
+  if (vertex.tool === 'swivel' && vertex.swivelInput === 'creases') return vertex.described ? t('tools:fold.vertex.note.swivelCreasesPicture', 'The creases meet at the dot. The lit paper moves; the remaining crease keeps it flat.') : null;
   if (vertex.tool === 'swivel') {
     return vertex.described
       ? t('tools:fold.vertex.note.swivelPicture', 'The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.')
@@ -599,6 +624,17 @@ export function vertexControls(
   const lands = (k: number) => !located || vertex.directions?.[k] !== false;
   const cannot = t('tools:fold.vertex.directionCannot', 'This way it cannot fold flat here.');
   return {
+    input: tool === 'swivel' ? {
+      label: t('tools:fold.vertex.input.label', 'Construct by'),
+      value: vertex.swivelInput ?? 'edge',
+      options: [
+        { value: 'edge', short: t('tools:fold.vertex.input.edge', 'Edge onto line'), label: t('tools:fold.vertex.input.edgeHelp', 'Choose an edge and the line it should land on'), disabled: false, reason: null },
+        { value: 'creases', short: t('tools:fold.vertex.input.lines', 'Two fold lines'), label: t('tools:fold.vertex.input.linesHelp', 'Locate two fold lines; their intersection sets the meeting point'), disabled: false, reason: null },
+      ],
+      disabled: readOnly || !verbs.setSwivelInput,
+      note: null,
+      set: mode => verbs.setSwivelInput?.(mode),
+    } : null,
     kind: swivelKindControl(t, vertex, verbs, readOnly, located),
     direction: offersDirection(vertex, clicked)
       ? {
@@ -672,21 +708,28 @@ export function vertexToolWindow(
   const { tool } = vertex;
   const title = foldToolLabel(t, tool);
   const { preview } = view;
-  if (!preview) {
+  const twoLines = tool === 'swivel' && vertex.swivelInput === 'creases';
+  const firstLine = twoLines && !vertex.firstLineSet;
+  if (!preview || firstLine) {
     const controls = vertexControls(t, vertex, verbs, readOnly, host, false);
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, [controls.direction, controls.lineBy].filter(Boolean).length),
+      meta: settingsMeta(t, [controls.direction, controls.lineBy, controls.input, twoLines].filter(Boolean).length),
       instructions: locateInstructions(t, view, vertex, host),
-      lineMode: null,
+      lineMode: twoLines ? lineModeSelect(t, view, verbs) : null,
       kind: null,
       movingSide: null,
       layers: null,
-      refusal: null,
+      refusal: preview?.refused ? foldRefusalNotice(t, preview.refused, {
+        kind: 'vertex', readOnly, ...sectionFlapNames(null), vertex: { tool, swivel: 'fold' },
+      }, verbs) : null,
       divide: null,
       vertex: controls,
-      footer: null,
+      footer: firstLine ? {
+        cancel: { label: t('tools:fold.window.cancel', 'Cancel'), shortcut: 'viewport.cancel', disabled: false, run: verbs.cancel },
+        commit: { label: t('tools:fold.vertex.lines.useFirst', 'Use first line'), shortcut: 'fold.commit', disabled: readOnly || !vertex.lineReady || preview?.refused != null, run: verbs.commit },
+      } : null,
     };
   }
   const controls = vertexControls(t, vertex, verbs, readOnly, host, true);
@@ -694,6 +737,7 @@ export function vertexToolWindow(
     controls.kind,
     controls.direction,
     controls.lineBy,
+    controls.input,
     controls.target,
     controls.emergent,
     controls.layers,
@@ -722,9 +766,9 @@ export function vertexToolWindow(
   return {
     phase: 'preview',
     title,
-    meta: settingsMeta(t, settings.filter(Boolean).length),
+    meta: settingsMeta(t, settings.filter(Boolean).length + (twoLines ? 1 : 0)),
     instructions: previewInstructions(t, vertex, host, view, (refusal?.actions.length ?? 0) > 0, controls),
-    lineMode: null,
+    lineMode: twoLines ? lineModeSelect(t, view, verbs) : null,
     kind: null,
     movingSide: null,
     layers: null,

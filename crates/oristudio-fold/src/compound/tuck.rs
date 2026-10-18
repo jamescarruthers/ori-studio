@@ -65,6 +65,13 @@ use crate::witness::WitnessOrder;
 
 type Point = [f64; 2];
 
+/// The selected material-connected flaps, before placement-dependent overlap
+/// closure, and the stationary layers they can land against.
+pub(crate) struct PlacementScope {
+    pub moving: Vec<FaceId>,
+    pub targets: Vec<Point>,
+}
+
 /// The most other targets a refusal tries, and offers, as its fixes.
 const MAX_FIX_TARGETS_TRIED: usize = 8;
 const MAX_FIX_TARGETS: usize = 3;
@@ -550,6 +557,25 @@ impl State {
         choices: &TuckChoices,
         limits: &CompletionLimits,
     ) -> Result<TuckOutcome, CompoundRefused> {
+        self.tuck_with_diagnostics(op, choices, limits, true)
+    }
+
+    /// Search trials do not recursively search diagnostic alternatives.
+    pub(crate) fn search_tuck_within(
+        &self,
+        op: &TuckFold,
+        limits: &CompletionLimits,
+    ) -> Result<TuckOutcome, CompoundRefused> {
+        self.tuck_with_diagnostics(op, &TuckChoices::default(), limits, false)
+    }
+
+    fn tuck_with_diagnostics(
+        &self,
+        op: &TuckFold,
+        choices: &TuckChoices,
+        limits: &CompletionLimits,
+        diagnose: bool,
+    ) -> Result<TuckOutcome, CompoundRefused> {
         let refused = |r: Refused| CompoundRefused::Refused(r);
         let tuck = self.tuck(op).map_err(refused)?;
         let targets = self
@@ -560,7 +586,16 @@ impl State {
         let moving = tuck.closure(self, &targets).map_err(refused)?;
         for &target in &targets {
             if !tuck.lands_on(self, &moving, target) {
-                let mut problem = self.tuck_missed(&tuck, &moving, target, limits);
+                let mut problem = if diagnose {
+                    self.tuck_missed(&tuck, &moving, target, limits)
+                } else {
+                    FoldRefusal::TuckInfeasible {
+                        target: target_id,
+                        placement: tuck.placement(),
+                        faces: Vec::new(),
+                    }
+                    .into()
+                };
                 // Single-target alternatives do not establish that every retained
                 // target can still take the tuck. Never offer an unverified fix.
                 if targets.len() > 1 {
@@ -596,6 +631,9 @@ impl State {
         let completions = match prepared.complete(&[], limits) {
             Ok(completions) => completions,
             Err(refusal) => {
+                if !diagnose {
+                    return Err(refused(no_order(refusal).into()));
+                }
                 let mut problem = self.diagnose_tuck(
                     &tuck,
                     &moving,
@@ -647,7 +685,52 @@ impl State {
         Ok(targets)
     }
 
-    /// The tuck's line classified, its moving side and its seed.
+    /// Material adjacency resolves the selection independently of placement.
+    /// Only these pieces can move in a layer-order search, so a target must
+    /// overlap their reflected images, not those of unselected flaps.
+    pub(crate) fn placement_scope(&self, op: &TuckFold) -> Result<PlacementScope, Refused> {
+        let tuck = self.tuck(op)?;
+        let mut mandatory = vec![false; self.faces().len()];
+        let mut queue: VecDeque<usize> = tuck.seed.iter().copied().collect();
+        while let Some(f) = queue.pop_front() {
+            if mandatory[f] {
+                continue;
+            }
+            mandatory[f] = true;
+            queue.extend(tuck.side.adjacent[f].iter().copied());
+        }
+        let reflection = tuck.classified.axis.reflection();
+        let images: Vec<Vec<Point>> = tuck
+            .side
+            .pieces
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mandatory[*i])
+            .filter_map(|(_, piece)| piece.as_ref())
+            .map(|piece| piece.iter().rev().map(|&p| reflection.apply(p)).collect())
+            .collect();
+        let targets = self
+            .faces()
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| {
+                !mandatory[*i]
+                    && images
+                        .iter()
+                        .any(|image| convex::penetration(image, &self.geometry().images[*i]) > TOL)
+            })
+            .filter_map(|(_, face)| self.face_witness(face.id))
+            .collect();
+        let moving = self
+            .faces()
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mandatory[*i])
+            .map(|(_, face)| face.id)
+            .collect();
+        Ok(PlacementScope { moving, targets })
+    }
+
     fn tuck(&self, op: &TuckFold) -> Result<Tuck, Refused> {
         let classified =
             line::classify(&self.geometry().vertex_images, Axis::new(&op.line, op.side))?;

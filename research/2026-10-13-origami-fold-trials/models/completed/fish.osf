@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-fish",
         "title": "Fish — Origami.me (batch 3)",
         "paper": {
@@ -70,6 +70,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -112,6 +115,9 @@
                   0.9717157287525383
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "2: Raise the front lower corner; chosen hinge y=0.43 (no exact source reference)."
@@ -145,6 +151,9 @@
                   0.042426406871192854
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3: Bring the remaining lower-left edge onto the previous horizontal fold."
@@ -178,6 +187,9 @@
                   0.03000000000000012
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: Pleat the lower flap back down; chosen inner hinge endpoint y=0.235."
@@ -206,6 +218,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Fold the left corner rightward to start the tail; approximate diagram proportion."
@@ -239,6 +254,9 @@
                   0.029043971937033904
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Fold the tail back to the left; approximate second pleat hinge."
@@ -279,6 +297,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {

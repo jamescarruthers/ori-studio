@@ -320,7 +320,7 @@ export function axiomLineOfPicks(lineMode: FoldLineModeId, picks: readonly FoldP
   return { via: 'axiom', axiom, inputs: slots.map(pickRef) };
 }
 
-interface Located {
+export interface Located {
   line: FoldLineInput;
   sceneLine: FoldModelLine;
   implied: 1 | -1 | null;
@@ -335,7 +335,7 @@ interface Located {
  * located and cannot be stored — a free line that misses the paper has no
  * sheet point to be stored by, and moves nothing or everything.
  */
-function locate(intent: FoldLocateIntent, index: FoldPickIndex): Located | FoldEngineRefused | null {
+export function locate(intent: FoldLocateIntent, index: FoldPickIndex): Located | FoldEngineRefused | null {
   const model = lineModeInput(intent.lineMode);
   if (intent.picks.length < model.steps.length) return null;
   if (lineModeAxiom(intent.lineMode) !== null) {
@@ -372,6 +372,9 @@ function locate(intent: FoldLocateIntent, index: FoldPickIndex): Located | FoldE
   if (crease?.kind !== 'segment') return null;
   const sceneLine = lineThrough(crease.scene[0], crease.scene[1]);
   if (!sceneLine) return null;
+  if (crease.creaseMark) {
+    return { line: { via: 'free', through: [...crease.sheet] }, sceneLine, implied: null, crease };
+  }
   const at: SheetPoint = [(crease.sheet[0][0] + crease.sheet[1][0]) / 2, (crease.sheet[0][1] + crease.sheet[1][1]) / 2];
   return { line: { via: 'crease', at }, sceneLine, implied: null, crease };
 }
@@ -497,14 +500,12 @@ export function besideBend(
 export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): FoldStepBuild {
   const located = locateAlongLine(intent, index, intent.kind !== 'precrease');
   if ('status' in located) return located;
-  const { line, choices, along, sceneLine, movingSign, unfolding, acrossLayers } = located;
+  const { line, choices, along, sceneLine, movingSign, acrossLayers } = located;
   let op: FoldOp;
-  if (line.via === 'crease' && intent.kind !== 'precrease') {
-    op = { kind: unfolding ? 'unfold' : 'refold', crease: line.at, direction: intent.kind, ...along };
-  } else if (intent.kind === 'precrease') {
+  if (intent.kind === 'precrease') {
     op = { kind: 'precrease', direction: intent.precreaseDirection, line, ...along, ...(intent.extent ? { extent: intent.extent } : {}) };
   } else {
-    op = { kind: intent.kind, line, ...along };
+    op = { kind: intent.kind, line, ...along, landing: { kind: 'outer' } };
   }
   return {
     status: 'built',

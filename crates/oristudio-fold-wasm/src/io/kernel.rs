@@ -10,6 +10,7 @@
 //! | `Red1`, `Blue2` | M, V |
 //! | `None` with the direction hint X | a precrease remembering X |
 //! | `None` without a hint | folded, its letter decided by the completion |
+//! | `Cyan3` / F | flat crease mark, including partial lines |
 //! | every other colour, and the model's aux lines | a guide, never a crease |
 //!
 //! A crease folded part-way (`fold_magnitude`) is read by its colour, as
@@ -93,6 +94,11 @@ fn kind_of(segment: &LineSegment) -> ImportKind {
         LineColor::Black0 => ImportKind::Border,
         LineColor::Red1 => ImportKind::Mountain,
         LineColor::Blue2 => ImportKind::Valley,
+        // Cyan/F carries no remembered M/V direction. Use Valley as the
+        // memory convention; a later M/V action supplies its own direction.
+        LineColor::Cyan3 => ImportKind::CreaseMark {
+            letter: Letter::Valley,
+        },
         LineColor::None => ImportKind::Unassigned {
             hint: segment
                 .fold_direction_hint
@@ -111,7 +117,7 @@ fn kind_of(segment: &LineSegment) -> ImportKind {
 fn is_crease(segment: &LineSegment) -> bool {
     matches!(
         segment.color,
-        LineColor::Black0 | LineColor::Red1 | LineColor::Blue2 | LineColor::None
+        LineColor::Black0 | LineColor::Red1 | LineColor::Blue2 | LineColor::Cyan3 | LineColor::None
     )
 }
 
@@ -211,7 +217,9 @@ mod tests {
                     hint: Some(Letter::Mountain)
                 },
                 ImportKind::Unassigned { hint: None },
-                ImportKind::Aux,
+                ImportKind::CreaseMark {
+                    letter: Letter::Valley
+                },
                 ImportKind::Aux,
             ]
         );
@@ -243,6 +251,7 @@ mod tests {
             kinds,
             [
                 "Border",
+                "CreaseMark { letter: Valley }",
                 "Mountain",
                 "Unassigned { hint: None }",
                 "Unassigned { hint: Some(Mountain) }",

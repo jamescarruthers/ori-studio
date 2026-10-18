@@ -75,6 +75,7 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
   switch (op.kind) {
     case 'valley':
     case 'mountain':
+      if (op.landing?.kind === 'against') return { op: 'fold', direction: op.kind, line: sentenceLine(op.line, null, context), scope: scopeOf(op.seed), inserted: true };
       return { op: 'fold', direction: op.kind, line: sentenceLine(op.line, op.seed, context), scope: scopeOf(op.seed) };
     case 'precrease':
       return {
@@ -133,7 +134,7 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
         direction: op.direction,
         form: !('via' in op)
           ? { swivel: 'rays' }
-          : 'fold' in op
+          : (op.via === 'creases' || op.via === 'lines') ? { swivel: op.via, ...(op.swivel === 'inside' ? { inside: true as const } : {}) } : 'fold' in op
             ? { swivel: 'fold', target: op.target.via, ...(op.swivel === 'inside' ? { inside: true as const } : {}) }
             : { swivel: 'edge', target: op.target.via, ridge: op.ridge ? 'end' : 'foot' },
       };

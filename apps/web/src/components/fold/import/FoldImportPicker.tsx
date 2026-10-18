@@ -1,9 +1,11 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { FileUp, Layers } from 'lucide-react';
-import { FOLD_SAMPLES, type FoldSampleId } from '../../../fold/engine/foldEngineIoSamples';
+import { regionReferenceFor } from '../../../cp-workspace/regions/regionReference';
+import { useCpPatternSheets } from '../../../cp-workspace/sheets/useCpPatternSheets';
+import { type FoldSampleId } from '../../../fold/engine/foldEngineIoSamples';
 import { foldStartingFigure } from '../../../fold/io/foldEditFigure';
-import { FOLD_IMPORT_EXTENSIONS, foldImportFileSource, foldSampleSummary } from '../../../fold/io/foldImportFiles';
+import { FOLD_IMPORT_EXTENSIONS, foldImportFileSource } from '../../../fold/io/foldImportFiles';
 import type { FoldImportRequest } from '../../../fold/io/foldImportFlow';
 import { getFileService } from '../../../platform/fileService';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
@@ -24,7 +26,7 @@ export function foldSampleName(t: TFunction, id: FoldSampleId): string {
 
 /**
  * What Import CP can bring in (plan D16): a crease-pattern file, by the
- * platform's picker or a drop on the dialog; a sample that ships with Fold;
+ * platform's picker or a drop on the dialog; a linked pattern from Edit;
  * or, when Edit has a flat folded figure, that figure with the layer order
  * Edit found. Each is one press; the dialog runs the import.
  */
@@ -40,7 +42,7 @@ export function FoldImportPicker({
   onRequest: (request: FoldImportRequest) => void;
 }) {
   const { t } = useTranslation();
-  const hasCp = useWorkspaceStore((state) => state.oristudioCpDocument !== null);
+  const sheets = useCpPatternSheets(true);
   const hasFigure = useWorkspaceStore((state) => foldStartingFigure(state) !== null);
 
   // Inside the press: a browser allows a picker only from a gesture.
@@ -60,11 +62,6 @@ export function FoldImportPicker({
 
   return (
     <div className={styles.picker}>
-      {hasCp && <button type="button" className={styles.row} disabled={busy}
-        onClick={() => onRequest({ kind: 'project-cp' })}>
-        <Layers size={18} aria-hidden="true" />
-        {t('dialogs:foldImport.projectCp', 'Collapse from CP…')}
-      </button>}
       <button
         type="button"
         className={styles.drop}
@@ -79,38 +76,30 @@ export function FoldImportPicker({
         <span className={styles.dropHint}>{t('dialogs:foldImport.browse', 'or click to browse')}</span>
       </button>
 
-      <section className={styles.section} aria-labelledby="fold-import-samples">
-        <h3 id="fold-import-samples" className={styles.heading}>
-          {t('dialogs:foldImport.samples', 'Samples')}
+      <section className={styles.section} aria-labelledby="fold-import-patterns">
+        <h3 id="fold-import-patterns" className={styles.heading}>
+          {t('dialogs:foldImport.fromEdit', 'From Edit')}
         </h3>
-        <div className={styles.cards}>
-          {FOLD_SAMPLES.map((sample) => {
-            const summary = foldSampleSummary(sample);
-            return (
-              <button
-                key={sample.id}
-                type="button"
-                className={styles.card}
-                data-sample={sample.id}
-                disabled={busy}
-                onClick={() => onRequest({ kind: 'sample', sample: sample.id })}
-              >
+        {sheets.status === 'ready' && sheets.sheets.length > 0 ? (
+          <div className={styles.cards}>
+            {sheets.sheets.map((sheet, index) => {
+              const name = t('panels:diagram.picker.pattern', 'Pattern {{number}}', { number: index + 1 });
+              return <button key={sheet.segment.id} type="button" className={styles.card}
+                aria-label={name} disabled={busy}
+                onClick={() => onRequest({ kind: 'project-cp', region: regionReferenceFor(sheet.segment) })}>
                 <span className={styles.picture}>
-                  {/* A flat crease in Edit's aux-line ink, as the crease-pattern pane and the Steps grid draw one. */}
-                  {summary.thumbnail && <PatternThumbnail thumbnail={summary.thumbnail} auxInk="aux" />}
+                  {sheet.thumbnail && <PatternThumbnail thumbnail={sheet.thumbnail} auxInk="aux" />}
                 </span>
-                <span className={styles.name}>{foldSampleName(t, sample.id)}</span>
-                <span className={styles.note}>
-                  {t('dialogs:foldImport.creases', {
-                    count: summary.creases,
-                    defaultValue_one: '{{count}} crease',
-                    defaultValue_other: '{{count}} creases',
-                  })}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                <span className={styles.name}>{name}</span>
+              </button>;
+            })}
+          </div>
+        ) : <p className={styles.note} role="status">{
+          sheets.status === 'pending' ? t('panels:diagram.picker.pending', 'Finding the patterns…')
+            : sheets.status === 'failed' ? t('panels:diagram.picker.failed', 'The crease pattern’s patterns couldn’t be found.')
+              : sheets.status === 'no-pattern' ? t('panels:diagram.picker.noPattern', 'Open a crease pattern in Edit to link one.')
+                : t('panels:diagram.picker.none', 'This crease pattern has no patterns to link yet.')
+        }</p>}
       </section>
 
       {hasFigure && (

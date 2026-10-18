@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-christmas-tree",
         "title": "Christmas Tree — Origami.me (batch 3)",
         "paper": {
@@ -96,6 +96,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3a: Bring the upper-left edge to the center."
@@ -124,6 +127,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3b: Repeat on the right."
@@ -155,6 +161,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -197,6 +206,9 @@
                   0.05954798102189203
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: Bring the front upper-left edge to the center."
@@ -230,6 +242,9 @@
                   0.48381204973382036
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: Repeat on the right."
@@ -263,6 +278,9 @@
                   0.11421356237309531
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Lower the front tip, aligning the colored boundary corners with the lower oblique edges."
@@ -294,6 +312,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {

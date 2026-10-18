@@ -18,6 +18,7 @@
  */
 
 import { canonicalJson, type FoldStateFingerprint } from '../document/foldDigest';
+import { normalizeFoldLandingOp } from '../document/foldLandingMigration';
 import type { FoldEngineOutcome, FoldEnginePort } from '../document/foldReplay';
 import type { FoldChoices, FoldOp } from '../document/foldSequenceDocument';
 import {
@@ -69,7 +70,7 @@ export interface FoldSessionEngine {
  * finds the preview it came from.
  */
 export function foldStepInputKey({ op, choices }: FoldEngineStepInput): string {
-  return canonicalJson({ op, choices });
+  return canonicalJson({ op: normalizeFoldLandingOp(op), choices });
 }
 
 /** Which step from which parent. */

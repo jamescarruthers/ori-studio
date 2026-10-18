@@ -3,6 +3,14 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FoldImportPicker } from './FoldImportPicker';
 
+import { regionReferenceFor } from '../../../cp-workspace/regions/regionReference';
+import { resolveCpSegments } from '../../../lib/creasePatternSegmentation';
+import { twoSquaresSegmentation } from '../../../diagram/capture/capture.fixtures';
+const sheets = resolveCpSegments(twoSquaresSegmentation()).map(segment => ({ segment, thumbnail: null }));
+vi.mock('../../../cp-workspace/sheets/useCpPatternSheets', () => ({
+  useCpPatternSheets: () => ({ status: 'ready', sheets }),
+}));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement;
@@ -42,4 +50,16 @@ describe('FoldImportPicker', () => {
     expect(accepts).toHaveLength(1);
     expect(accepts[0]?.split(',')).toEqual(['.cp', '.fold', '.ori', '.orh', 'application/octet-stream']);
   });
+});
+
+it('links just the clicked region and disables pattern cards while resolving', () => {
+  const onRequest = vi.fn();
+  act(() => root.render(<FoldImportPicker dragging={false} busy={false} onRequest={onRequest} />));
+  const card = () => host.querySelector<HTMLButtonElement>('button[aria-label="Pattern 2"]')!;
+  act(() => card().click());
+  expect(onRequest).toHaveBeenCalledExactlyOnceWith({ kind: 'project-cp', region: regionReferenceFor(sheets[1]!.segment) });
+  act(() => root.render(<FoldImportPicker dragging={false} busy onRequest={onRequest} />));
+  expect(card().disabled).toBe(true);
+  act(() => card().click());
+  expect(onRequest).toHaveBeenCalledOnce();
 });

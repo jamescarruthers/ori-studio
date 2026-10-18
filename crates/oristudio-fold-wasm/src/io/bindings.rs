@@ -65,6 +65,22 @@ impl FoldEngine {
         to_js_value(&landed)
     }
 
+    pub fn import_search(
+        &mut self,
+        import: u32,
+        choice: &[u32],
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits: Limits = optional("limits", limits)?;
+        let choice: Vec<usize> = choice.iter().map(|&i| i as usize).collect();
+        to_js_value(
+            &self
+                .imports
+                .search(import, &choice, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
     /// Start from Edit's folded figure: `scene` is the kernel's folded paper
     /// scene of the figure, as `folded_figure_paper_scene` returned it.
     pub fn import_edit_folded_figure(

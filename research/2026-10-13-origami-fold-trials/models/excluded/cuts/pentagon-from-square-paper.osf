@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-pentagon-from-square-paper",
         "title": "Square to Pentagon — Origami.me (batch 4)",
         "paper": {
@@ -55,6 +55,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "1: Fold the lower half upward. Source: https://origami.me/pentagon-from-square-paper/"
@@ -188,6 +191,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -230,6 +236,9 @@
                   0.5379999999999999
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Bisect the top flap, aligning its right edge with its left folded edge."
@@ -258,6 +267,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Bring the lower right edge to the nearest folded edge."
@@ -295,6 +307,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "8: Halve the packet, bringing its right edge onto its left edge."

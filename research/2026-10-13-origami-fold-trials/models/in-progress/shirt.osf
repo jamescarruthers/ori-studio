@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-shirt",
         "title": "Shirt — Origami.me (batch 4)",
         "paper": {
@@ -59,6 +59,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "1: Mountain-fold the upper strip behind, retaining a white collar. Chosen strip height 0.06. Source: https://origami.me/shirt/"
@@ -174,6 +177,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4a: Fold the lower-left corner onto the nearby quarter crease."
@@ -202,6 +208,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4b: Repeat on the right."
@@ -230,6 +239,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: Fold the left side into the center."
@@ -258,6 +270,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: Fold the right side into the center."

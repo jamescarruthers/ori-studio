@@ -44,7 +44,10 @@ const EDGE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: true,
 const LINE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: true };
 
 /** How a petal fold's hinge and a swivel's target are named: what the window's control switches. */
+export type FoldSwivelInput = 'edge' | 'creases';
+
 export interface FoldVertexLines {
+  swivelInput?: FoldSwivelInput;
   petalHinge: FoldLineBy;
   swivelTarget: FoldLineBy;
 }

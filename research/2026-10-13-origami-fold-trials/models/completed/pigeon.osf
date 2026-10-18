@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-pigeon",
         "title": "Pigeon — Origami.me (batch 3)",
         "paper": {
@@ -99,6 +99,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -136,6 +139,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3: Raise both lower layers at the one-third height reference."
@@ -169,6 +175,9 @@
                   0.03734163141063953
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: Lower only the front raised corner; crease one-third up the lower band."
@@ -197,6 +206,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Close right to left."
@@ -242,6 +254,9 @@
                   0.9050966799187805
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7: Raise the front wing at y=-r/3, leaving the rear wing down."
@@ -284,6 +299,9 @@
                   0.056568542494923824
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9: Raise the second wing to meet the first."

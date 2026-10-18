@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-4-pointed-star",
         "title": "Four-Pointed Star — Origami.me (batch 4)",
         "paper": {
@@ -584,6 +584,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10: Fold the top half down."
@@ -617,6 +620,9 @@
                   0.9
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "11: Fold the front layer upward along its existing crease."
@@ -645,6 +651,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12: Fold the left half rightward."
@@ -678,6 +687,9 @@
                   0.2
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "13: Fold the front layer leftward along its existing crease."

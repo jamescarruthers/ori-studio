@@ -52,6 +52,7 @@ function detailProperties(details: FoldStepAddedDetails | undefined): Record<str
 /** A vertex fold's form as `fold step added`'s properties: enums only. */
 function vertexFormProperties(form: FoldStepVertexForm): Record<string, string> {
   if ('hinge' in form) return { hinge: form.hinge };
+  if (form.swivelForm === 'creases') return { swivel_form: 'creases', swivel_kind: form.swivelKind };
   if (form.swivelForm === 'rays') return { swivel_form: 'rays' };
   if (form.swivelForm === 'fold') return { swivel_form: 'fold', target: form.target, swivel_kind: form.swivelKind };
   return { swivel_form: form.swivelForm, target: form.target };
@@ -85,4 +86,14 @@ export function trackFoldChoiceOffered(kind: FoldChoiceKind, count: number): voi
     kind,
     count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS),
   });
+}
+
+/** Explicit order review, without model data or candidate indices. */
+export function trackFoldOrderResolved(result: 'accepted' | 'canceled', source: 'tool' | 'cp', count: number): void {
+  track(ANALYTICS_EVENTS.foldOrderResolved, { result, source, count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS) });
+}
+
+/** Only the setting's state is reported, never the selected references. */
+export function trackFoldFreeLineSnapChanged(enabled: boolean): void {
+  track(ANALYTICS_EVENTS.foldFreeLineSnapChanged, { state: enabled ? 'on' : 'off' });
 }

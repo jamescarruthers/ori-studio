@@ -161,6 +161,7 @@ export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; com
   switch (id) {
     case 'valley':
     case 'mountain':
+    case 'precrease':
     case 'inside-reverse':
     case 'crimp':
       return <FoldKindMark kind={id} size={compact ? 16 : SIZE} />;

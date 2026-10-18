@@ -62,7 +62,7 @@ describe('FoldToolRail', () => {
     ]);
     expect(queryByRole(rail, 'button', 'Planned')).toBeNull();
     expect(queryByRole(rail, 'button', 'Pleat')).toBeNull();
-    expect(queryByRole(rail, 'button', 'Precrease')).toBeNull();
+    expect(byRole(rail, 'button', 'Precrease').getAttribute('aria-disabled')).not.toBe('true');
     // The crimp, the tuck, the vertex folds and the sinks are tools, open with the other folds.
     expect(byRole(rail, 'button', 'Crimp').getAttribute('aria-disabled')).not.toBe('true');
     expect(byRole(rail, 'button', 'Squash fold').getAttribute('aria-disabled')).not.toBe('true');
@@ -75,11 +75,11 @@ describe('FoldToolRail', () => {
     act(() => byRole(rail, 'button', 'Mountain fold').click());
     act(() => byRole(rail, 'button', 'Reverse fold').click());
     act(() => byRole(rail, 'button', 'Crimp').click());
-    act(() => byRole(rail, 'button', 'Tuck').click());
+    expect([...rail.querySelectorAll('button')].some((button) => button.getAttribute('aria-label') === 'Tuck')).toBe(false);
     act(() => byRole(rail, 'button', 'Open sink').click());
     act(() => byRole(rail, 'button', 'Axiom 6: two points onto two lines').click());
     act(() => byRole(rail, 'button', 'Turn over').click());
-    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse'], ['crimp'], ['tuck'], ['open-sink']]);
+    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse'], ['crimp'], ['open-sink']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['axiom-6']]);
     expect(calls.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
     // Shown as the tool and the line mode in hand.

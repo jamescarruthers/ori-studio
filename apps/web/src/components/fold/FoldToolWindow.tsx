@@ -1,7 +1,11 @@
+import { FoldOrderStacks } from './orders/FoldOrderStacks';
+import type { FoldOrderInspection } from '../../fold/orders/useFoldOrderInspection';
+import { FoldOrderChooser } from './orders/FoldOrderChooser';
+import type { FoldOrderResolution } from '../../fold/orders/useFoldOrderResolution';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, RotateCcw, RotateCw } from 'lucide-react';
 import type { TurnDirection, TurnRotationPreset } from '../../lib/steps/turn';
-import type { FoldKeyLabel, FoldPlainToolId, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
+import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
 import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
 import type { FoldExtentMode } from '../../fold/tools/precrease/precreaseExtent';
 import type { FoldKindChoice } from '../../fold/tools/reverse/reverseToolWindow';
@@ -32,12 +36,13 @@ import styles from './FoldToolWindow.module.css';
  * fit across the window: a precrease's extent (`data-fold-extent`), a petal
  * fold's hinge or a swivel's target (`data-fold-line-by`).
  */
-function ChoiceSegments<K extends string>({ choice, section }: { choice: FoldKindChoice<K>; section: 'extent' | 'lineBy' }) {
+function ChoiceSegments<K extends string>({ choice, section }: { choice: FoldKindChoice<K>; section: 'extent' | 'lineBy' | 'swivelInput' }) {
   return (
     <div
       className={styles.section}
       data-fold-extent={section === 'extent' ? '' : undefined}
       data-fold-line-by={section === 'lineBy' ? '' : undefined}
+      data-fold-swivel-input={section === 'swivelInput' ? '' : undefined}
     >
       <span className={styles.heading}>{choice.label}</span>
       <SegmentedControl<K>
@@ -82,8 +87,16 @@ export function FoldToolWindow({
   model,
   keyLabel,
   onFrame,
+  resolution,
+  acceptOrder,
+  orderReady = false,
+  inspection,
 }: {
   /** The viewport cell the window anchors to. */
+  resolution?: FoldOrderResolution | null;
+  acceptOrder?: () => void;
+  orderReady?: boolean;
+  inspection?: FoldOrderInspection;
   container: HTMLElement | null;
   model: FoldToolWindowModel | null;
   /** The label of a Fold key; without it the buttons name none. */
@@ -94,6 +107,18 @@ export function FoldToolWindow({
   const { t } = useTranslation();
   const phone = useIsPhoneLayout();
   if (!model) return null;
+  if (resolution?.active) return (
+    <ToolHintWindow container={container} collapseKey={STORAGE_KEYS.foldToolHintCollapsed}
+      title={t('tools:fold.order.choose', 'Choose layer order')} meta=""
+      ariaLabel={t('tools:fold.order.choose', 'Choose layer order')} collapsible={false} height={phone ? 'capped' : 'default'} onFrame={onFrame}>
+      <FoldOrderChooser index={resolution.index} count={resolution.count} exact={resolution.exact}
+        error={resolution.failed} movingVaries={resolution.movingVaries}
+        ready={orderReady && !resolution.waiting && !resolution.failed} waiting={resolution.waiting}
+        onStep={resolution.step} onBack={resolution.back} onAccept={acceptOrder ?? (() => {})}
+        onSearch={!resolution.exact && resolution.canSearch ? resolution.search : undefined} />
+      {inspection && <FoldOrderStacks inspection={inspection} />}
+    </ToolHintWindow>
+  );
   const titled = (label: string, shortcut: FoldShortcutId) => {
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
@@ -101,9 +126,9 @@ export function FoldToolWindow({
   const {
     instructions,
     lineMode,
+    freeLineSnap,
     secondLine,
     kind,
-    foldAndUnfold,
     extent,
     movingSide,
     layers,
@@ -149,6 +174,7 @@ export function FoldToolWindow({
         ))}
       </div>
       {/* A petal fold's hinge, or a swivel's target: how it is named, which its steps above follow. */}
+      {vertex?.input && <ChoiceSegments choice={vertex.input} section="swivelInput" />}
       {vertex?.lineBy && <ChoiceSegments choice={vertex.lineBy} section="lineBy" />}
       {/* No dividers: the window divides its own sections. */}
       {divide && (
@@ -193,17 +219,6 @@ export function FoldToolWindow({
           </Button>
         </div>
       )}
-      {foldAndUnfold && (
-        <div className={styles.section}>
-          <ToggleRow
-            label={foldAndUnfold.label}
-            checked={foldAndUnfold.checked}
-            disabled={foldAndUnfold.disabled}
-            divider={false}
-            onChange={foldAndUnfold.set}
-          />
-        </div>
-      )}
       {lineMode && (
         <div className={styles.section}>
           <SelectRow
@@ -227,10 +242,16 @@ export function FoldToolWindow({
           )}
         </div>
       )}
+      {freeLineSnap && (
+        <div className={styles.section}>
+          <ToggleRow label={freeLineSnap.label} help={freeLineSnap.help} checked={freeLineSnap.checked}
+            disabled={freeLineSnap.disabled} divider={false} onChange={freeLineSnap.set} />
+        </div>
+      )}
       {kind && (
         <div className={styles.section}>
           <FieldRow label={kind.label} kind="segmented" divider={false} disabled={kind.disabled}>
-            <SegmentedControl<FoldPlainToolId>
+            <SegmentedControl<FoldKind>
               size="sm"
               iconsOnly
               aria-label={kind.label}
@@ -240,7 +261,7 @@ export function FoldToolWindow({
                 value: option.value,
                 label: option.label,
                 icon: <FoldKindMark kind={option.value} />,
-                // The tooltip names the symbol.
+                // A letter names nothing to someone who has not met it.
                 tooltip: option.label,
               }))}
               onChange={kind.set}
@@ -335,7 +356,7 @@ export function FoldToolWindow({
       )}
       {sink && (sink.kind || sink.depth) && (
         <div className={styles.section} data-fold-sink-kind="">
-          <FoldSinkLine controls={sink} />
+          <FoldSinkLine controls={resolution ? { ...sink, order: null } : sink} />
         </div>
       )}
       {movingSide && (
@@ -381,25 +402,25 @@ export function FoldToolWindow({
           />
         </div>
       )}
-      {compound && (compound.opening || compound.order) && (
+      {compound && (compound.opening || (!resolution && compound.order)) && (
         <div className={styles.section} data-fold-choices="">
-          <FoldReverseChoices controls={compound} />
+          <FoldReverseChoices controls={resolution ? { ...compound, order: null } : compound} />
         </div>
       )}
       {/* A tuck's layers to tuck against, which the folded paper lights, and its order. */}
-      {tuck && (tuck.note || tuck.target || tuck.order) && (
+      {tuck && (tuck.note || tuck.target || (!resolution && tuck.order)) && (
         <div className={styles.section} data-fold-tuck="">
           {tuck.note && <p className={styles.note}>{tuck.note}</p>}
           {tuck.target && <FoldChoiceStepperRow stepper={tuck.target} />}
           {tuck.additional?.map((item) => (
             <ToggleRow key={item.label} label={item.label} checked={item.checked} disabled={item.disabled} onChange={item.toggle} />
           ))}
-          {tuck.order && <FoldChoiceStepperRow stepper={tuck.order} />}
+          {!resolution && tuck.order && <FoldChoiceStepperRow stepper={tuck.order} />}
         </div>
       )}
-      {sink && (sink.pocket || sink.order) && (
+      {sink && (sink.pocket || (!resolution && sink.order)) && (
         <div className={styles.section} data-fold-choices="">
-          <FoldSinkChoices controls={sink} />
+          <FoldSinkChoices controls={resolution ? { ...sink, order: null } : sink} />
         </div>
       )}
       {refusal && (

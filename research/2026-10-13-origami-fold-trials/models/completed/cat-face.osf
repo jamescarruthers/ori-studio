@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-cat-face",
         "title": "Cat Face — Origami.me (batch 1)",
         "paper": {
@@ -70,6 +70,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -110,6 +113,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -150,6 +156,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -192,6 +201,9 @@
                   0.03535533905932742
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3a: Lift the left flap to form the left ear."
@@ -225,6 +237,9 @@
                   0.823223304703363
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3b: Lift the right flap symmetrically to form the right ear."
@@ -258,6 +273,9 @@
                   0.5333095244168786
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: Fold down only the crown flap, leaving both ears in place."
@@ -300,6 +318,9 @@
                   0.03535533905932738
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: Raise only the front lower point to form the white muzzle."
@@ -333,6 +354,9 @@
                   0.007071067811865482
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Fold the muzzle tip down to make the colored nose."
@@ -341,8 +365,7 @@
             "id": "fstep-cat-face-11",
             "parent": "fstep-cat-face-10",
             "op": {
-              "kind": "tuck",
-              "direction": "valley",
+              "kind": "valley",
               "line": {
                 "via": "free",
                 "through": [
@@ -368,10 +391,15 @@
                 ],
                 "layers": 1
               },
-              "target": [
-                0.14142135623730948,
-                0.21213203435596428
-              ]
+              "landing": {
+                "kind": "against",
+                "targets": [
+                  [
+                    0.14142135623730948,
+                    0.21213203435596428
+                  ]
+                ]
+              }
             },
             "note": "7: Tuck the remaining lower point behind the white muzzle, keeping the nose exposed."
           }

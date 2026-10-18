@@ -36,12 +36,13 @@ export function useFoldRailGroups(): readonly FoldRailGroup[] {
   const { t } = useTranslation();
   const tool = useFoldTools((state) => state.tool);
   const lineMode = useFoldTools((state) => state.lineMode);
+  const swivelInput = useFoldTools((state) => state.swivelInput);
   const readOnly = useFoldReadOnly();
   return useMemo(() => {
     const tools = foldTools();
     return foldRailGroups(
       t,
-      { tool, lineMode, readOnly },
+      { tool, lineMode, swivelInput, readOnly },
       {
         selectTool: (id) => {
           tools.selectTool(id);
@@ -59,5 +60,5 @@ export function useFoldRailGroups(): readonly FoldRailGroup[] {
         },
       }
     );
-  }, [t, tool, lineMode, readOnly]);
+  }, [t, tool, lineMode, swivelInput, readOnly]);
 }

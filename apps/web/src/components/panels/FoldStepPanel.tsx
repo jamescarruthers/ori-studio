@@ -1,3 +1,4 @@
+import { FoldImportSpread } from '../fold/orders/FoldImportSpread';
 import { useTranslation } from 'react-i18next';
 import { useFoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
 import { useFoldStepPane } from '../../fold/sequence/useFoldStepPane';
@@ -41,6 +42,7 @@ export function FoldStepPanel() {
         )}
         <FoldCollapseControls />
         <FoldReturnControls />
+        <FoldImportSpread atSheet={session.cursorId === null} />
         <FoldStepPane
           step={pane.step}
           pending={pane.pending}

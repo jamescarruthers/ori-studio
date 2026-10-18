@@ -30,6 +30,7 @@ pub(crate) mod closure;
 pub(crate) mod line;
 mod partial;
 mod partial_existing;
+pub mod placements;
 pub(crate) mod score;
 mod section;
 
@@ -317,7 +318,7 @@ impl State {
 
     fn analyse(&self, op: &PlainFold, seed: &ResolvedSeed) -> Result<Analysis, Refused> {
         let requested = Axis::new(&op.line, op.side);
-        let classified = line::classify(&self.geometry().vertex_images, requested)?;
+        let classified = line::classify_for_selection(&self.geometry().vertex_images, requested)?;
         let direction = self.view().model_direction(op.direction);
         closure::analyse(self, classified, direction, seed, &op.placement, op.closure)
     }

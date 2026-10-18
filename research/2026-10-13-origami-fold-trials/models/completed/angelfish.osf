@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-angelfish",
         "title": "Angelfish — Origami.me (batch 3)",
         "paper": {
@@ -180,6 +180,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4a: Begin the waterbomb collapse by closing the horizontal half fold."
@@ -208,6 +211,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4b: Close the vertical half fold."
@@ -276,6 +282,9 @@
                   0.09999999999999981
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: Fold the front left corner down, using the approximate one-third base reference."
@@ -309,6 +318,9 @@
                   0.9
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Fold the front right corner down over the first fin."

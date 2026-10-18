@@ -1365,3 +1365,39 @@ fn a_swivel_on_a_folded_edge_is_refused_by_code_or_thrown() {
         Err(BridgeError::InvalidInput(_))
     ));
 }
+
+#[test]
+fn swivel_lines_resolve_both_stored_roots_and_existing_precreases() {
+    let mut bridge = Bridge::default();
+    let flat = square(&mut bridge);
+    let mut state = land(
+        &mut bridge,
+        flat,
+        valley([[0.5, 0.0], [0.5, 1.0]], [0.8, 0.5]),
+    );
+    let first = [[0.5, 0.5], [0.05, 0.1]];
+    let second = [[0.5, 0.5], [0.1, 0.8]];
+    let located = |points: [Point; 2]| {
+        let line = oristudio_geometry::Line::from_points(points[0], points[1]).unwrap();
+        json!({"line":{"via":"axiom","axiom":1,"inputs":[{"kind":"point","at":points[0]},{"kind":"point","at":points[1]}]},"root":line})
+    };
+    let base = json!({"kind":"swivel","via":"lines","first":located(first),"second":located(second),"direction":"mountain","swivel":"inside"});
+    let described = analysis(&bridge, state, base.clone());
+    assert_eq!(described["analysis"]["kind"], "swivel-by-creases");
+    for side in ["first", "second"] {
+        let mut missing = base.clone();
+        missing[side].as_object_mut().unwrap().remove("root");
+        let rejected = apply(&mut bridge, state, missing, json!({}));
+        assert_eq!(rejected["refusal"]["code"], "root_missing");
+    }
+    for points in [first, second] {
+        state = land(
+            &mut bridge,
+            state,
+            json!({"kind":"precrease","direction":"valley","line":{"via":"free","through":points},"moving":[0.1,0.5],"seed":{"scope":"all"}}),
+        );
+    }
+    let existing = json!({"kind":"swivel","via":"lines","first":{"line":{"via":"crease","at":[0.275,0.3]}},"second":{"line":{"via":"crease","at":[0.3,0.65]}},"direction":"mountain","swivel":"inside"});
+    let a = analysis(&bridge, state, existing);
+    assert_eq!(a["analysis"]["kind"], "swivel-by-creases");
+}

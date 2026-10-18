@@ -161,8 +161,16 @@ pub struct Opened {
     pub nodes: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Serialize)]
+pub struct Searched {
+    pub opened: Opened,
+    pub choice: Vec<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ComponentCount {
+    /// Local face pairs decided by this independent region.
+    pub pairs: Vec<[oristudio_fold::FaceId; 2]>,
     pub orders: usize,
     /// More orders exist than are listed.
     pub truncated: bool,

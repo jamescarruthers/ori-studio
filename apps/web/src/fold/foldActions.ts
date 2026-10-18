@@ -20,8 +20,8 @@ import type { TurnKind } from '../lib/steps/turn';
 import { turnName } from '../lib/steps/turnWords';
 import type { FoldPaperShapeKind } from './paperShape';
 
-/** The direction armed by the two plain fold tools. */
-export type FoldKind = 'valley' | 'mountain';
+/** The plain fold tools: valley, mountain, and fold-and-unfold precrease. */
+export type FoldKind = 'valley' | 'mountain' | 'precrease';
 
 /**
  * Where a state stands: replayed and foldable, still replaying, broken (its
@@ -34,6 +34,7 @@ export type FoldStateStatus = 'ready' | 'replaying' | 'broken' | 'locked';
 export type FoldActionIcon =
   | 'valley'
   | 'mountain'
+  | 'precrease'
   | 'turn-over'
   | 'rotate'
   | 'unfold-to'
@@ -177,6 +178,8 @@ export function foldKindLabel(t: TFunction, kind: FoldKind): string {
       return t('panels:fold.words.valleyFold', 'Valley fold');
     case 'mountain':
       return t('panels:fold.words.mountainFold', 'Mountain fold');
+    case 'precrease':
+      return t('panels:fold.actions.precrease', 'Precrease');
   }
 }
 
@@ -309,7 +312,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       label: t('panels:fold.actions.foldKind', 'Fold'),
       disabled: addBlock !== null,
       hint: addBlock ?? undefined,
-      options: (['valley', 'mountain'] as const).map((kind) => ({
+      options: (['valley', 'mountain', 'precrease'] as const).map((kind) => ({
         id: kind,
         label: foldKindLabel(t, kind),
         icon: kind,

@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-bird",
         "title": "Bird — Origami.me (batch 4)",
         "paper": {
@@ -195,6 +195,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -235,6 +238,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -312,6 +318,9 @@
                   0.9646446609406727
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: Fold the front left edge to the center."
@@ -345,6 +354,9 @@
                   0.5403805922287442
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: Fold the front right edge to the center."
@@ -378,6 +390,9 @@
                   0.5333095244168787
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: Fold the upper triangle down."
@@ -481,6 +496,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7d: Lower the top triangle again; this is the flat endpoint shown before the petal fold."

@@ -305,11 +305,8 @@
     "title": "접기 시퀀스 내보내기"
   },
   "foldImport": {
-    "back": "뒤로",
     "browse": "또는 클릭하여 찾아보기",
-    "collapse": "전개도대로 접기",
     "collapseTitle": "전개도에서 접기",
-    "creases_other": "접는 선 {{count}}개",
     "drop": ".cp, .fold, .ori, .orh 파일을 끌어다 놓으세요",
     "editFigure": "편집의 접힌 모델",
     "editFigureNote": "편집에서 접은 전개도와 찾아낸 층 순서",
@@ -317,15 +314,6 @@
       "searchLonger": "더 오래 찾기"
     },
     "fromEdit": "편집에서",
-    "import": "가져오기",
-    "orders": {
-      "atLeast_other": "이 접는 선에 맞는 층 순서가 {{count}}개 이상 있습니다. 하나를 고르세요.",
-      "count_other": "이 접는 선에 맞는 층 순서가 {{count}}개 있습니다. 하나를 고르세요.",
-      "label": "층 순서",
-      "more": "이 부분에는 여기 나열된 것보다 더 많은 순서가 맞습니다. 이것들은 탐색에서 처음 찾은 순서입니다.",
-      "order": "순서 {{number}}",
-      "part": "부분 {{number}}"
-    },
     "pickTitle": "전개도 가져오기",
     "placement": {
       "afterSheet": "평평한 종이 다음에 단계를 추가하고, 접힌 상태를 접는 선으로 계산합니다.",
@@ -335,7 +323,6 @@
       "update": "이 전개도 접기 단계를 업데이트합니다. 이후 단계와 분기는 유지되며 다시 계산됩니다. 영향을 받는 접기는 변경되었거나 접을 수 없는 상태로 표시됩니다.",
       "why": "다음 상태에 한 번에 하나씩 접어서는 도달할 수 없을 때 사용하세요."
     },
-    "projectCp": "전개도에서 접기…",
     "refusal": {
       "budget": {
         "text": "층이 어떻게 쌓이는지 찾는 데 가져오기에 주어진 시간보다 오래 걸렸습니다. 더 오래 찾거나 더 단순한 전개도를 가져오세요.",
@@ -424,7 +411,6 @@
       "preliminaryBase": "정사각 기본형",
       "waterbombBase": "물풍선 기본형"
     },
-    "samples": "예제",
     "title": "전개도 가져오기",
     "updateTitle": "전개도에서 업데이트",
     "working": {

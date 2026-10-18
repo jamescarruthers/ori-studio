@@ -77,7 +77,7 @@ describe('the rest of the vocabulary', () => {
 
   it('starts a sequence at the square, front up, with no steps', () => {
     expect(createFoldSequence(undefined, 'Crane', sequentialIds())).toEqual({
-      formatVersion: 1,
+      formatVersion: 2,
       id: 'fold-1',
       title: 'Crane',
       paper: { shape: { kind: 'square' }, startSide: 'front' },

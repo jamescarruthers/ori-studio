@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-crane",
         "title": "Crane — flat reverse-fold alternative",
         "paper": {
@@ -58,6 +58,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -98,6 +101,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -450,6 +456,9 @@
                   0.6000000000000001
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12a: narrow front left"
@@ -483,6 +492,9 @@
                   0.11000000000000067
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12b: narrow front right"
@@ -525,6 +537,9 @@
                   0.3999999999999997
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14a: narrow back left"
@@ -558,6 +573,9 @@
                   0.8900000000000005
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14b: narrow back right"
@@ -762,6 +780,9 @@
                   0.9800000000000018
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "28a: fold first wing down flat"
@@ -804,6 +825,9 @@
                   0.02000000000000206
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "28b: fold second wing down flat"

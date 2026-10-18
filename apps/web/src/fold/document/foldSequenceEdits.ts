@@ -43,6 +43,7 @@ import {
   type FoldStep,
 } from './foldSequenceDocument';
 import { readBackFoldStep } from './foldSequenceFile';
+import { normalizeFoldLandingOp } from './foldLandingMigration';
 import { foldInheritedSpread, sameAsInherited } from './foldStepSpread';
 import { foldStepTree, lockedIds, subtreeIds } from './foldStepTree';
 
@@ -70,7 +71,7 @@ export interface FoldStepDraft {
  */
 function keptAsFolded({ op, choices }: FoldStepDraft): boolean {
   const back = readBackFoldStep(op, choices);
-  return back !== null && canonicalJson(back.op) === canonicalJson(op);
+  return back !== null && canonicalJson(back.op) === canonicalJson(normalizeFoldLandingOp(op));
 }
 
 /**

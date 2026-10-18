@@ -155,7 +155,7 @@ describe.skipIf(!available)('the Fold step builder over the real bridge', () => 
     const bend = clicks(index, 'crease', [p(0.5, 0.2071)])[0];
     if (bend?.kind !== 'segment') throw new Error('no bend picked');
     const built = buildFoldStep(intent({ lineMode: 'crease', picks: [bend] }), index);
-    if (built.status !== 'built' || built.op.kind !== 'unfold' || built.op.seed.scope !== 'depth') {
+    if (built.status !== 'built' || built.op.kind !== 'valley' || built.op.seed.scope !== 'depth') {
       throw new Error(`not an unfold by depth: ${JSON.stringify(built)}`);
     }
     const [sx, sy] = built.op.seed.at;
@@ -192,7 +192,7 @@ describe.skipIf(!available)('the Fold step builder over the real bridge', () => 
       book.state,
       intent({ lineMode: 'crease', picks: clicks(index, 'crease', [p(0.5, 0.5)]) })
     );
-    expect(unfold.op).toMatchObject({ kind: 'unfold', direction: 'valley', seed: { scope: 'depth', layers: 1 } });
+    expect(unfold.op).toMatchObject({ kind: 'valley', line: { via: 'crease' }, landing: { kind: 'outer' }, seed: { scope: 'depth', layers: 1 } });
     const after = calls.summary(unfold.state);
     expect(after.creases).toMatchObject({ valley: 0, flat: 1 });
   });
@@ -230,7 +230,7 @@ describe.skipIf(!available)('the Fold step builder over the real bridge', () => 
       precrease.state,
       intent({ lineMode: 'crease', picks: clicks(index, 'crease', [p((x0 + x1) / 2, (y0 + y1) / 2)]) })
     );
-    expect(refold.op.kind).toBe('refold');
+    expect(refold.op).toMatchObject({ kind: 'valley', line: { via: 'crease' }, landing: { kind: 'outer' } });
     expect(calls.summary(refold.state).creases.flat).toBe(0);
   });
 

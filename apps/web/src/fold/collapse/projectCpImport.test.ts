@@ -7,8 +7,13 @@ import { projectCpRevision } from './projectCpRevision';
 import type { FoldCpJumpOp } from '../document/foldSequenceDocument';
 import type { FoldImportFingerprinted } from '../engine/foldEngineIoWire';
 
-const { exportCp } = vi.hoisted(() => ({ exportCp: vi.fn(async () => '{}') }));
-vi.mock('../../store/workspaceStore/oristudioCpRuntime', () => ({ exportOristudioCpDocumentAsFold: exportCp }));
+const { exportCp, exportRegion, segmentation } = vi.hoisted(() => ({ exportCp: vi.fn(async () => '{}'), exportRegion: vi.fn(async () => '{"region":true}'), segmentation: vi.fn() }));
+vi.mock('../../store/workspaceStore/oristudioCpRuntime', () => ({ exportOristudioCpDocumentAsFold: exportCp, exportOristudioCpCreasesAsFold: exportRegion }));
+import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
+import { cpLinesByIds } from '../../cp-workspace/folded/foldedFigureStaleness';
+import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { cpDocument, LEFT_LINE_IDS, movedLines, TWO_SQUARES, twoSquaresSegmentation } from '../../diagram/capture/capture.fixtures';
+vi.mock('../../cp-workspace/cpSegmentationArtifacts', () => ({ ensureCpSegmentationArtifacts: segmentation }));
 const initial = useWorkspaceStore.getState();
 afterEach(() => { useWorkspaceStore.setState(initial, true); vi.clearAllMocks(); });
 function source() {
@@ -56,5 +61,52 @@ describe('project CP snapshots', () => {
       return '{}';
     });
     expect(await projectCpImport()).toBeNull();
+  });
+});
+
+function regionSource() {
+  const cp = { loadSerial: 1, document: cpDocument() } as OristudioCpDocumentState;
+  segmentation.mockResolvedValue(twoSquaresSegmentation());
+  useWorkspaceStore.setState({ oristudioCpDocument: cp });
+  return { cp, region: regionReferenceFor(resolveCpSegments(twoSquaresSegmentation())[0]!) };
+}
+
+describe('one linked Edit pattern', () => {
+  it('exports the selected region including auxiliary precreases and remembers it for later updates', async () => {
+    const { cp, region } = regionSource();
+    const capture = await projectCpImport(undefined, region);
+    expect(exportRegion).toHaveBeenCalledExactlyOnceWith(cp.document.crease_pattern, cpLinesByIds(cp.document, LEFT_LINE_IDS));
+    expect(exportCp).not.toHaveBeenCalled();
+    expect(capture?.link.region).toEqual(region);
+    expect(capture?.link.revision).toMatch(/^rc1:/);
+    expect(capture?.source).toEqual({ format: 'fold', text: '{"region":true}' });
+  });
+
+  it('updates the same sheet after it moves and never substitutes the whole document for a missing sheet', async () => {
+    const { region } = regionSource();
+    const capture = (await projectCpImport(undefined, region))!;
+    const op: FoldCpJumpOp = { kind: 'cp-jump', origin: 'project_cp', cpJson: '{}', orderJson: '[]', source: capture.link };
+    useWorkspaceStore.setState({ foldSequences: [{ document: sequenceOf([step('collapse', null, op)]), readOnlyRaw: null }] });
+    const moved = { loadSerial: 1, document: cpDocument(movedLines(TWO_SQUARES, 300, 40)) } as OristudioCpDocumentState;
+    useWorkspaceStore.setState({ oristudioCpDocument: moved });
+    segmentation.mockResolvedValue(twoSquaresSegmentation({ dx: 300, dy: 40 }));
+    const updated = (await projectCpImport('collapse'))!;
+    expect(updated.link.revision).toBe(capture.link.revision);
+    expect(updated.link.region?.bounds.minX).toBe(region.bounds.minX + 300);
+    expect(updated.replace).toBeTypeOf('function');
+    segmentation.mockResolvedValue(twoSquaresSegmentation({ wall: false }));
+    expect(await projectCpImport('collapse')).toBeNull();
+    expect(exportCp).not.toHaveBeenCalled();
+  });
+
+  it('cancels when the document changes during region export', async () => {
+    const { cp, region } = regionSource();
+    exportRegion.mockImplementationOnce(async () => {
+      const changed = structuredClone(cp);
+      changed.document.crease_pattern.line_segments[7]!.color = 'Blue2';
+      useWorkspaceStore.setState({ oristudioCpDocument: changed });
+      return '{}';
+    });
+    expect(await projectCpImport(undefined, region)).toBeNull();
   });
 });

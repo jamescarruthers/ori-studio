@@ -435,7 +435,8 @@
       "severalSunk_many": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
       "severalSunk_other": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
       "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas.",
-      "unsinkRing": "A linha é um vinco do anel que o afundamento deixou, ao longo do topo da ponta afundada."
+      "unsinkRing": "A linha é um vinco do anel que o afundamento deixou, ao longo do topo da ponta afundada.",
+      "freeSnap": "Ajusta aos pontos próximos; caso contrário, usa exatamente o local onde você clicar."
     },
     "op": {
       "closedSink": "Afundamento fechado",
@@ -448,6 +449,33 @@
       "swivel": "Dobra pivotante",
       "tuck": "Encaixar",
       "unsink": "Desfazer afundamento"
+    },
+    "order": {
+      "accept": "Usar esta ordem",
+      "acceptAll": "Usar ordens e adicionar etapa",
+      "acceptUpdate": "Usar ordens e atualizar etapa",
+      "back": "Voltar",
+      "choose": "Escolher ordem das camadas",
+      "count_one": "Ordem {{index}} de {{count}}",
+      "count_many": "Ordem {{index}} de {{count}}",
+      "count_other": "Ordem {{index}} de {{count}}",
+      "failed": "Não foi possível carregar a ordem. Volte e tente novamente ou escolha outra ordem.",
+      "found_one": "Ordem {{index}} de {{count}} encontradas",
+      "found_many": "Ordem {{index}} de {{count}} encontradas",
+      "found_other": "Ordem {{index}} de {{count}} encontradas",
+      "help": "Visualize as disposições e escolha a ordem desejada.",
+      "incomplete": "Busca incompleta. Pode haver mais ordens.",
+      "inspect": "Inspecionar camadas",
+      "loading": "Carregando ordem…",
+      "movingVaries": "Estas ordens movem camadas diferentes. Confira o papel destacado.",
+      "next": "Próxima ordem das camadas",
+      "noneFound": "Nenhuma ordem encontrada ainda",
+      "previous": "Ordem das camadas anterior",
+      "region": "Região {{number}}",
+      "regions": "Regiões independentes",
+      "search": "Buscar mais ordens",
+      "stack": "Região {{number}}: {{layers}}",
+      "stackHelp": "Selecione uma região para destacá-la. As camadas são listadas da frente para trás; as diferenças destacadas são relativas à primeira prévia."
     },
     "picker": {
       "close": "Fechar a lista de ferramentas",
@@ -798,6 +826,8 @@
       "mountain": "Dobra montanha",
       "mountainHelp": "Dobrar o lado que se move para longe de você, para que fique por baixo.",
       "openSinkHelp": "Empurrar para dentro a extremidade de uma ponta fechada, virando cada camada do avesso.",
+      "precrease": "Pré-vincar",
+      "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
       "reverse": "Dobra reversa",
       "reverseHelp": "Inverta uma aba para dentro ou envolva-a por fora, invertendo seu vinco central.",
       "rotateHelp": "Girar o modelo uma fração de volta ou um ângulo exato, primeiro em prévia e depois como um passo próprio.",
@@ -844,7 +874,15 @@
       "hingeRegionBlocked": "Não é possível dobrar esta região de articulação com estas camadas. Clique em outra região ou altere as camadas.",
       "hingeRegionBlockedTouch": "Não é possível dobrar esta região de articulação com estas camadas. Toque em outra região ou altere as camadas.",
       "hingeRegionFits": "O vinco de articulação fica na região selecionada.",
+      "input": {
+        "edge": "Borda sobre linha",
+        "edgeHelp": "Escolher uma borda e a linha sobre a qual ela deve ficar",
+        "label": "Construir por",
+        "lines": "Duas linhas de dobra",
+        "linesHelp": "Defina duas linhas de dobra; a interseção determina o ponto de encontro"
+      },
       "intro": {
+        "creases": "Defina as duas dobradiças; o vinco restante é calculado para manter o papel plano.",
         "petalLift": "Levanta a ponta de uma aba ao longo de uma dobradiça.",
         "swivelSwing": "Gira uma borda do papel sobre uma linha."
       },
@@ -870,6 +908,13 @@
         "twoPoints": "Dois pontos",
         "twoPointsHelp": "Clique em dois pontos da linha"
       },
+      "lines": {
+        "confirm": "Pressione Enter para usar a primeira linha e definir a segunda.",
+        "confirmTouch": "Toque em Usar primeira linha para continuar.",
+        "first": "Defina a primeira linha de dobra. Selecione um vinco existente ou construa uma linha com Localizar linha.",
+        "second": "Defina a segunda linha de dobra. A interseção com a primeira determina o ponto de encontro; a articulação restante é calculada.",
+        "useFirst": "Usar primeira linha"
+      },
       "mountain": "Montanha",
       "mountainTitle": "Montanha: o papel gira para longe de você",
       "note": {
@@ -883,6 +928,7 @@
         "snapOrFree": "Os pontos se ajustam a cantos, cruzamentos, marcas e pontos médios: segure {{modifier}} para colocar um em qualquer lugar.",
         "snapOrFreeTouch": "Os pontos se ajustam a cantos, cruzamentos, marcas e pontos médios: ative Ponto livre para colocar um em qualquer lugar.",
         "squashFlap": "Uma aba se achata quando suas duas camadas estão unidas só pela dobradiça e nada está por cima dela.",
+        "swivelCreasesPicture": "Os vincos se encontram no ponto. O papel destacado se move; o vinco restante o mantém plano.",
         "swivelPicture": "Os vincos se encontram no ponto, a borda pousa na linha grossa e o papel aceso se move."
       },
       "refusal": {
@@ -911,13 +957,17 @@
           "title": "O quarto vinco não pode subir aqui"
         },
         "kite": {
-          "creaseOrPrecrease": "Sobre um vinco de dobradiça, a dobra pétala redobra vincos que já existem, e falta um vinco da pipa. Escolha a dobradiça pelas duas extremidades, e a dobra vinca a pipa sozinha; ou pré-vinque a pipa antes, com a opção Dobrar e desdobrar no Axioma 3: uma borda de baixo da aba de cima sobre a linha central, sem as abas de trás.",
+          "creaseOrPrecrease": "Sobre um vinco de dobradiça, a dobra pétala redobra vincos que já existem, e falta um vinco da pipa. Escolha a dobradiça pelas duas extremidades, e a dobra vinca a pipa sozinha; ou pré-vinque a pipa antes, com a ferramenta Pré-vincar no Axioma 3: uma borda de baixo da aba de cima sobre a linha central, sem as abas de trás.",
           "titleMissing": "Faltam os vincos da pipa"
         },
         "line": {
           "crease": "O vinco da dobradiça não atravessa todas as camadas abaixo dele que dobram. Pré-vinque a dobradiça através de todas as camadas; depois faça a dobra pétala.",
           "ends": "A dobradiça cruza papel da segunda camada, que se dobra para dentro ao lado da pipa, e a dobra não consegue vincá-lo enquanto a aba sobe. Pré-vinque a dobradiça através de todas as camadas; depois faça a dobra pétala.",
           "titleHinge": "Pré-vinque antes a dobradiça"
+        },
+        "lineMeeting": {
+          "text": "Escolha duas linhas de dobra que se cruzem em uma única borda dobrada visível.",
+          "title": "As linhas precisam de um ponto de encontro"
         },
         "noFlap": {
           "noHinge": "A aba não se dobra sobre nenhuma dobradiça em nenhuma ponta da lombada, então não há contra o que achatá-la.",
@@ -1074,7 +1124,6 @@
     "window": {
       "cancel": "Cancelar",
       "finding": "Procurando as camadas na linha…",
-      "foldAndUnfold": "Dobrar e desdobrar",
       "instructions": "Instruções",
       "kind": "Dobra",
       "label": "Opções da ferramenta de dobra",
@@ -1089,7 +1138,8 @@
       "settings_one": "{{count}} ajuste",
       "settings_many": "{{count}} ajustes",
       "settings_other": "{{count}} ajustes",
-      "swap": "Trocar"
+      "swap": "Trocar",
+      "snapFreeLine": "Ajustar aos pontos"
     }
   },
   "foldAngleDisplay": {

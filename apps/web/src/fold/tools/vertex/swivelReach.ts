@@ -183,6 +183,9 @@ export function swivelReachAsk(
   const edges = new Map<number, FoldSwivelReachLine>();
   const targets = new Map<number, FoldSwivelReachLine>();
   for (const segment of [...index.folded.segments, ...index.creasePattern.segments]) {
+    // This reach catalog resolves physical edges by midpoint. Crease marks
+    // instead locate a line by their stretch (the normal Locate line path).
+    if (segment.creaseMark) continue;
     if (targets.has(segment.edge)) continue;
     const line = { id: segment.edge, at: middleOf(segment) };
     targets.set(segment.edge, line);

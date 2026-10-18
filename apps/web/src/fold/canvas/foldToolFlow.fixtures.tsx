@@ -187,7 +187,7 @@ export async function commitPreviewed(
   if (!verbs) throw new Error('no canvas');
   let taken = false;
   await act(async () => {
-    taken = verbs.commit();
+    taken = seen.current?.preview.orderResolution?.required ? verbs.acceptOrder?.() ?? false : verbs.commit();
     await settle();
   });
   expect(taken).toBe(true);

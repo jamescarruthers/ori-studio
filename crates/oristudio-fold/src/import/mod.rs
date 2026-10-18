@@ -8,7 +8,8 @@
 //! 2. Map the kinds (D10's inverse): B, M and V keep; unassigned with a hint
 //!    X is a precrease remembering X; unassigned without one is folded, its
 //!    letter decided by the completion (Edit does not fold unassigned lines;
-//!    Fold does); aux is a guide line, never an edge.
+//!    Fold does); crease marks stay flat beside the graph, and aux annotations
+//!    remain guides. Edit's cyan/F lines arrive as crease marks.
 //! 3. Build the planar graph and its convex faces (`arrangement`), refusing a
 //!    crease that is no full chord of its face.
 //! 4. Derive the isometries from a root, the folded view and its constraints
@@ -50,8 +51,9 @@ use crate::complete::{
     BudgetLimit, ChoiceCount, CompletionLimits, CompletionRefusal, Completions, FixedKind,
     FixedPair,
 };
+use crate::crease_marks::{self, CreaseMark};
 use crate::isometry::Isometry;
-use crate::numerics::TOL;
+use crate::numerics::{MIN_FEATURE, TOL};
 use crate::pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
 use crate::refusal::FoldRefusal;
 use crate::sheet::{Sheet, SheetShape};
@@ -88,6 +90,11 @@ pub enum ImportKind {
     Unassigned {
         #[serde(default)]
         hint: Option<Letter>,
+    },
+    /// A flat precrease that need not bound a face (it may end inside paper).
+    /// Unlike an unassigned hinge, it never participates in layer completion.
+    CreaseMark {
+        letter: Letter,
     },
     /// An auxiliary line: a guide, never a crease.
     Aux,
@@ -127,6 +134,11 @@ impl CreasePatternInput {
                 };
                 ImportSegment { from, to, kind }
             })
+            .chain(state.crease_marks().iter().map(|m| ImportSegment {
+                from: m.a,
+                to: m.b,
+                kind: ImportKind::CreaseMark { letter: m.letter },
+            }))
             .collect();
         CreasePatternInput {
             space: ImportSpace::Sheet,
@@ -381,8 +393,33 @@ impl ImportedPattern {
         } = placement::recover(input, target.sheet())?;
         let mut placed = Vec::new();
         let mut guides = Vec::new();
+        let mut marks = Vec::new();
         for (segment, s) in input.segments.iter().enumerate() {
             let ends = [placement.to_sheet(s.from), placement.to_sheet(s.to)];
+            if let ImportKind::CreaseMark { letter } = s.kind {
+                // Flat ink outside the recovered sheet carries no paper. Clip
+                // it here; active creases still use the strict chord checks.
+                if let Some([u0, u1]) = crease_marks::span_inside(ends[0], ends[1], sheet.outline())
+                {
+                    let mark = CreaseMark {
+                        a: ends[0],
+                        b: ends[1],
+                        letter,
+                        // Existing flat lines, not M/V instructions made by
+                        // this collapse. Their original folding date is unknown.
+                        made_at: 0,
+                    };
+                    let mark = CreaseMark {
+                        a: mark.at(u0),
+                        b: mark.at(u1),
+                        ..mark
+                    };
+                    if mark.length() >= MIN_FEATURE {
+                        marks = crease_marks::add(&marks, vec![mark]);
+                    }
+                }
+                continue;
+            }
             match Kind::of(s.kind) {
                 Some(kind) => placed.push(Placed {
                     ends,
@@ -408,7 +445,7 @@ impl ImportedPattern {
             dropped: arrangement.dropped,
         };
         let mut unknown = Vec::new();
-        let creases = arrangement
+        let creases: Vec<Crease> = arrangement
             .edges
             .iter()
             .enumerate()
@@ -442,6 +479,19 @@ impl ImportedPattern {
                 }
             })
             .collect();
+        // Active creases and the border own any coincident stretch. Deduplicate
+        // first, then merge split export fragments so import is idempotent.
+        marks = crease_marks::carry(&marks, &arrangement.vertices, &creases);
+        marks.retain(|m| {
+            !creases.iter().any(|c| {
+                c.kind == CreaseKind::Border && {
+                    let [a, b] = c.vertices.map(|v| arrangement.vertices[v.index()]);
+                    crease_marks::covered(m, a, b).is_some()
+                }
+            })
+        });
+        marks = crease_marks::merge(marks);
+        summary.precreases += marks.len();
         let faces: Vec<Face> = arrangement
             .faces
             .iter()
@@ -465,9 +515,7 @@ impl ImportedPattern {
             order: LayerOrder::new(),
             view: target.view(),
             step,
-            // An import replaces the state: its aux lines are guides, never
-            // crease marks (plan D10).
-            marks: Vec::new(),
+            marks,
         };
         let unordered = Unordered::new(parts.clone(), unknown).map_err(|refusal| {
             ImportRefusal::NotFlatFoldable {

@@ -321,13 +321,8 @@
     "title": "Exportar secuencia de plegado"
   },
   "foldImport": {
-    "back": "Atrás",
     "browse": "o haz clic para buscar",
-    "collapse": "Colapsar",
     "collapseTitle": "Colapsar desde CP",
-    "creases_one": "{{count}} pliegue",
-    "creases_many": "{{count}} pliegues",
-    "creases_other": "{{count}} pliegues",
     "drop": "Suelta un archivo .cp, .fold, .ori u .orh",
     "editFigure": "Figura plegada de Editar",
     "editFigureNote": "El patrón de pliegues que plegó Editar, con el orden de capas que encontró",
@@ -335,19 +330,6 @@
       "searchLonger": "Buscar más tiempo"
     },
     "fromEdit": "Desde Editar",
-    "import": "Importar",
-    "orders": {
-      "atLeast_one": "Al menos {{count}} orden de capas encaja con estos pliegues. Elige uno.",
-      "atLeast_many": "Al menos {{count}} órdenes de capas encajan con estos pliegues. Elige uno.",
-      "atLeast_other": "Al menos {{count}} órdenes de capas encajan con estos pliegues. Elige uno.",
-      "count_one": "{{count}} orden de capas encaja con estos pliegues.",
-      "count_many": "{{count}} órdenes de capas encajan con estos pliegues. Elige uno.",
-      "count_other": "{{count}} órdenes de capas encajan con estos pliegues. Elige uno.",
-      "label": "Orden de capas",
-      "more": "En esta parte encajan más órdenes de los que se listan aquí; estos son los primeros que encontró la búsqueda.",
-      "order": "Orden {{number}}",
-      "part": "Parte {{number}}"
-    },
     "pickTitle": "Importar patrón de pliegues",
     "placement": {
       "afterSheet": "Añade un paso después de la hoja plana, con su estado plegado calculado a partir de los pliegues.",
@@ -357,7 +339,6 @@
       "update": "Actualiza este paso de colapso. Los pasos posteriores y las ramas se conservan y se vuelven a calcular; los pliegues afectados se marcan como modificados o imposibles de plegar.",
       "why": "Úsalo cuando el siguiente estado no se pueda alcanzar pliegue a pliegue."
     },
-    "projectCp": "Colapsar desde CP…",
     "refusal": {
       "budget": {
         "text": "Averiguar cómo se apilan las capas llevó más tiempo del que tiene una importación. Busca más tiempo o importa un patrón más sencillo.",
@@ -446,7 +427,6 @@
       "preliminaryBase": "Base cuadrada",
       "waterbombBase": "Base de bomba de agua"
     },
-    "samples": "Ejemplos",
     "title": "Importar patrón de pliegues",
     "updateTitle": "Actualizar desde CP",
     "working": {

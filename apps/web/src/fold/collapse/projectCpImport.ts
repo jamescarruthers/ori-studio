@@ -1,13 +1,17 @@
+import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { cpLinesByIds } from '../../cp-workspace/folded/foldedFigureStaleness';
+import { regionReferenceFor, type RegionReference } from '../../cp-workspace/regions/regionReference';
+import { chooseRegionCreases } from '../../cp-workspace/regions/regionCreases';
 import { CREASE_PATTERN_DOCUMENT_ID } from '../../lib/nativeProjectDesigns';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { exportOristudioCpDocumentAsFold } from '../../store/workspaceStore/oristudioCpRuntime';
+import { exportOristudioCpDocumentAsFold, exportOristudioCpCreasesAsFold } from '../../store/workspaceStore/oristudioCpRuntime';
 import type { FoldProjectCpImport } from '../io/foldImportFlow';
 import { canonicalJson } from '../document/foldDigest';
 import { projectCpRevision } from './projectCpRevision';
 
 /** Capture once. An editor change after capture leaves the saved revision
  * alone; a different project, sequence edit or cursor move cancels the transaction. */
-export async function projectCpImport(stepId?: string): Promise<FoldProjectCpImport | null> {
+export async function projectCpImport(stepId?: string, region?: RegionReference): Promise<FoldProjectCpImport | null> {
   const before = useWorkspaceStore.getState();
   const cp = before.oristudioCpDocument;
   const sequence = before.foldSequences[0]?.document;
@@ -15,7 +19,16 @@ export async function projectCpImport(stepId?: string): Promise<FoldProjectCpImp
   if (!cp || (stepId && (node?.op?.kind !== 'cp-jump' ||
       node.op.source?.documentId !== CREASE_PATTERN_DOCUMENT_ID))) return null;
   const revision = projectCpRevision(cp.document);
-  const text = await exportOristudioCpDocumentAsFold();
+  const saved = node?.op?.kind === 'cp-jump' ? node.op.source : undefined;
+  const selected = saved?.region ?? region;
+  const segmentation = selected ? await ensureCpSegmentationArtifacts(cp.document) : null;
+  const choice = selected ? chooseRegionCreases(cp.document, { kind: 'segment', region: selected }, segmentation,
+    saved?.region ? { fingerprint: saved.revision, drawn: true } : null) : null;
+  if (choice && choice.status !== 'found') return null;
+  const creases = choice?.status === 'found' ? choice.creases : null;
+  const text = creases
+    ? await exportOristudioCpCreasesAsFold(cp.document.crease_pattern, cpLinesByIds(cp.document, creases.scopedLineIds))
+    : await exportOristudioCpDocumentAsFold();
   const after = useWorkspaceStore.getState();
   if (after.projectLoadId !== before.projectLoadId || after.oristudioCpDocument?.loadSerial !== cp.loadSerial ||
       !after.oristudioCpDocument || projectCpRevision(after.oristudioCpDocument.document) !== revision) return null;
@@ -27,7 +40,10 @@ export async function projectCpImport(stepId?: string): Promise<FoldProjectCpImp
   };
   return {
     source: { format: 'fold', text },
-    link: { documentId: CREASE_PATTERN_DOCUMENT_ID, revision },
+    link: { documentId: CREASE_PATTERN_DOCUMENT_ID,
+      revision: creases?.drawnFingerprint ?? revision,
+      ...(creases ? { region: regionReferenceFor(creases.segment) } : {}),
+    },
     current,
     ...(node && expected ? {
       at: node.parent,

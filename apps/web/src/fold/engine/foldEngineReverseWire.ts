@@ -40,13 +40,14 @@ export type FoldNoOpening = 'no_spine' | 'no_split' | 'no_body' | 'bodies_cross'
 
 /**
  * One way a flap of the tip opens: a lower block T1 and an upper block T2
- * of the parent's faces, the spine the creases across them lie on (they
- * turn M↔V), each block's body on ℓ, and what a step stores to choose it.
+ * of the parent's faces, the folded boundary across them (turning M↔V),
+ * each block's body on ℓ, and what a step stores to choose it.
  */
 export interface FoldOpening {
   lower: number[];
   upper: number[];
-  spine: FoldModelLine;
+  /** Common line for a straight boundary; null for a bent pocket boundary. */
+  spine: FoldModelLine | null;
   across: number[];
   lower_body: number[];
   upper_body: number[];

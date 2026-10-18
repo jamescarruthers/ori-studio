@@ -8,16 +8,20 @@
 //! - **Openings.** Each flap opens on its own (case 2b: two stacked flaps
 //!   reverse, each into its own pocket) at a split into a lower block T1 and
 //!   an upper block T2 such that no T1 piece lies above a T2 piece it
-//!   overlaps, every crease across the split is folded and on one line (the
-//!   spine), and each block is hinged on ℓ to a body of its own that stays,
+//!   overlaps, and every crease across the split belongs to a folded spine
+//!   or a two-sided pocket boundary meeting at one material tip (one layer
+//!   per side wherever they overlap). Each block is hinged
+//!   on ℓ to a body of its own that stays,
 //!   the lower body below the upper wherever they overlap. A flap with one
 //!   admissible opening takes it; with more, the step chooses one, stored as
 //!   the upper block's faces by witnesses (plan D6).
 //! - **The scan** takes each line the flap's folded creases lie on as a
-//!   candidate spine, cuts its creases, and lists the ways to split the
-//!   pieces left so that nothing in T1 lies over T2: the down-sets of their
+//!   candidate spine, plus unions meeting at a common material tip. It cuts
+//!   each boundary and lists splits with nothing in T1 over T2: down-sets of their
 //!   stacking, one per way to split a stack rather than one per subset of the
 //!   tip's faces, capped at [`MAX_OPENINGS`] per flap with the cap reported.
+//!   A gap extending sideways around a pocket supersedes its partial gaps;
+//!   different depths among overlapping layers remain distinct choices.
 //! - **The fold** reflects every tip piece across ℓ — the geometry and crease
 //!   pattern of a plain fold of the whole tip — as two blocks per flap.
 //!   Carried: pairs that stay, kept; pairs in one block, reversed. Seeded:
@@ -120,8 +124,9 @@ pub struct Opening {
     pub lower: Vec<FaceId>,
     /// T2, the upper block.
     pub upper: Vec<FaceId>,
-    /// The line the creases across the opening lie on, in the model frame.
-    pub spine: Line,
+    /// Their common line for a straight opening; none for a pocket whose
+    /// boundary turns along several folded hinges.
+    pub spine: Option<Line>,
     /// The creases across the opening, in id order: they turn M↔V.
     pub across: Vec<EdgeId>,
     /// The faces each block is hinged to on ℓ, which stay, in id order.
@@ -417,8 +422,10 @@ impl State {
     /// flaps the anchor grows over. Everything moving is refused, offering
     /// the flaps to pick. A crimp's first line has the same tip.
     pub(super) fn tip(&self, op: &ReverseFold) -> Result<Tip, Refused> {
-        let classified =
-            line::classify(&self.geometry().vertex_images, Axis::new(&op.line, op.side))?;
+        let classified = line::classify_for_selection(
+            &self.geometry().vertex_images,
+            Axis::new(&op.line, op.side),
+        )?;
         let side = moving_side(self, &classified)?;
         // The top layers at a point are the top as the viewer sees them.
         let top = self.view().model_direction(Direction::Valley);
@@ -553,7 +560,7 @@ struct FlapOpenings {
 pub(super) struct RawOpening {
     pub(super) lower: Vec<usize>,
     pub(super) upper: Vec<usize>,
-    spine: Line,
+    spine: Option<Line>,
     across: Vec<usize>,
     pub(super) lower_body: Vec<usize>,
     pub(super) upper_body: Vec<usize>,
@@ -611,10 +618,12 @@ impl Tip {
             for (b, inner) in plan.openings.iter().enumerate().skip(a + 1) {
                 // Both ends of every spine segment must lie on the other
                 // spine; a shared crossing point is insufficient.
+                let (Some(_), Some(spine)) = (outer.spine, inner.spine) else {
+                    continue;
+                };
                 let same_spine = outer.across.iter().all(|&k| {
                     state.creases()[k].vertices.iter().all(|v| {
-                        inner
-                            .spine
+                        spine
                             .signed_distance(state.geometry().vertex_images[v.index()])
                             .abs()
                             <= TOL
@@ -642,6 +651,19 @@ impl Tip {
         let in_tip: Vec<bool> = (0..nf)
             .map(|f| side.flap_of[f].is_some_and(|k| flaps.binary_search(&k).is_ok()))
             .collect();
+        // Adjacency has now grown the entire tip. Untouched layers may have
+        // near vertices, but every corner of participating faces must pass,
+        // including their stationary portions and any attached paper.
+        if let Some(refused) = classified.refusal_for(
+            state
+                .faces()
+                .iter()
+                .zip(&in_tip)
+                .filter(|(_, moves)| **moves)
+                .flat_map(|(face, _)| face.ring.iter().copied()),
+        ) {
+            return Err(refused);
+        }
         let has_stationary: Vec<bool> = state
             .faces()
             .iter()
@@ -1036,7 +1058,42 @@ impl Tip {
         let local = |f: usize| flap.binary_search(&f).unwrap_or(0);
         let (mut openings, mut truncated) = (Vec::new(), false);
         let (mut split_any, mut bodied_any) = (false, false);
-        for (spine, cut) in &spines {
+        // A pocket may close around a corner, with several folded boundary
+        // lines meeting at one material tip. Keep the straight-spine searches
+        // and add only those local boundary unions, not arbitrary combinations
+        // of unrelated or parallel folds elsewhere in the flap.
+        let mut cuts: Vec<Vec<usize>> = spines.iter().map(|(_, hs)| hs.clone()).collect();
+        let vertices: BTreeSet<_> = hinges
+            .iter()
+            .flat_map(|&(k, _)| state.creases()[k].vertices)
+            .collect();
+        for v in vertices {
+            let tip = images[v.index()];
+            if self.classified.axis.distance(tip) <= TOL {
+                continue;
+            }
+            let boundary: Vec<_> = spines
+                .iter()
+                .filter(|(line, hs)| {
+                    line.signed_distance(tip).abs() <= TOL
+                        && hs
+                            .iter()
+                            .any(|&h| state.creases()[hinges[h].0].vertices.contains(&v))
+                })
+                .collect();
+            if boundary.len() < 2 {
+                continue;
+            }
+            let mut cut: Vec<_> = boundary
+                .iter()
+                .flat_map(|(_, hs)| hs.iter().copied())
+                .collect();
+            cut.sort_unstable();
+            if !cuts.contains(&cut) {
+                cuts.push(cut);
+            }
+        }
+        for cut in &cuts {
             // Pieces left once the spine's creases are cut.
             let mut pieces = UnionFind::new(flap.len());
             for (h, &(_, [f, g])) in hinges.iter().enumerate() {
@@ -1045,14 +1102,12 @@ impl Tip {
                 }
             }
             let piece_of: Vec<usize> = (0..flap.len()).map(|i| pieces.root(i)).collect();
-            let Some(splits) = down_sets(&piece_of, &over, &local, MAX_OPENINGS + 1) else {
+            // Room for the empty/full sets plus one beyond the output cap.
+            let Some(splits) = down_sets(&piece_of, &over, &local, MAX_OPENINGS + 3) else {
                 continue;
             };
+            truncated |= splits.len() == MAX_OPENINGS + 3;
             for lower_pieces in splits {
-                if openings.len() >= MAX_OPENINGS {
-                    truncated = true;
-                    break;
-                }
                 let lower: Vec<usize> = (0..flap.len())
                     .filter(|&i| lower_pieces.contains(&piece_of[i]))
                     .map(|i| flap[i])
@@ -1076,6 +1131,21 @@ impl Tip {
                 if across.is_empty() {
                     continue;
                 }
+                let spine = spines
+                    .iter()
+                    .find(|(_, hs)| across.iter().all(|k| hs.iter().any(|&h| hinges[h].0 == *k)))
+                    .map(|(line, _)| *line);
+                // A bent two-sided pocket has one layer on each side of the
+                // gap wherever paper overlaps. Do not invent mixed reversals
+                // through different depths of a stacked/pleated tip: those
+                // retain the established straight-spine openings.
+                if spine.is_none()
+                    && over.iter().any(|&(a, b)| {
+                        lower.binary_search(&a).is_ok() == lower.binary_search(&b).is_ok()
+                    })
+                {
+                    continue;
+                }
                 split_any = true;
                 let (lower_body, upper_body) = (bodies.of(&lower), bodies.of(&upper));
                 if lower_body.is_empty() || upper_body.is_empty() {
@@ -1085,18 +1155,56 @@ impl Tip {
                 if !bodies.separated(state, &lower_body, &upper_body) {
                     continue;
                 }
-                openings.push(RawOpening {
+                let opening = RawOpening {
                     lower,
                     upper,
-                    spine: *spine,
+                    spine,
                     across,
                     lower_body,
                     upper_body,
-                });
+                };
+                if openings.contains(&opening) {
+                    continue;
+                }
+                if openings.len() >= MAX_OPENINGS {
+                    truncated = true;
+                    break;
+                }
+                openings.push(opening);
             }
         }
         openings.sort_by(|a, b| (a.lower.len(), &a.lower).cmp(&(b.lower.len(), &b.lower)));
         openings.dedup();
+        // Extend a gap around the tip when the additional boundary opens a
+        // side-by-side part of the SAME pocket. Choosing just one side would
+        // put its sibling front panel into the back block. A genuinely deeper
+        // gap still survives: moving to it changes an overlapping layer pair.
+        let complete: Vec<_> = openings
+            .iter()
+            .filter(|o| o.spine.is_none())
+            .cloned()
+            .collect();
+        openings.retain(|opening| {
+            !complete.iter().any(|pocket| {
+                if opening.across.len() >= pocket.across.len()
+                    || !opening.across.iter().all(|k| pocket.across.contains(k))
+                {
+                    return false;
+                }
+                let changed: Vec<_> = flap
+                    .iter()
+                    .copied()
+                    .filter(|f| opening.lower.contains(f) != pocket.lower.contains(f))
+                    .collect();
+                // Existing crossings of the gap must all remain crossings, and
+                // each reassigned panel must expose a previously unopened region.
+                let was_crossed = |a, b| opening.lower.contains(&a) != opening.lower.contains(&b);
+                !changed.is_empty()
+                    && over.iter().all(|&(a, b)| {
+                        !was_crossed(a, b) || (!changed.contains(&a) && !changed.contains(&b))
+                    })
+            })
+        });
         let none = openings.is_empty().then_some(if !split_any {
             NoOpening::NoSplit
         } else if !bodied_any {

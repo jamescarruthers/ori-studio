@@ -1,3 +1,4 @@
+import { DEFAULT_LAYER_SPREAD } from '../../cp-workspace/folded/layerSpreadSettings';
 import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { existsSync, readFileSync } from 'node:fs';
@@ -190,7 +191,7 @@ describe.skipIf(!available)('useFoldStepMotion', () => {
     // The note, the spread and the marks each replace the step's node and keep its op.
     const edits = [
       (document: ReturnType<typeof sequenceOf>) => setFoldStepNote(document, 'a', 'Fold in half.'),
-      (document: ReturnType<typeof sequenceOf>) => setFoldStepSpread(document, 'a', 'off'),
+      (document: ReturnType<typeof sequenceOf>) => setFoldStepSpread(document, 'a', DEFAULT_LAYER_SPREAD),
       (document: ReturnType<typeof sequenceOf>) =>
         setFoldMarks(document, 'a', [{ id: 'fmark-1', from: [0, 0], to: [1, 0], divide: { mode: 'count', parts: 2 } }]),
     ];

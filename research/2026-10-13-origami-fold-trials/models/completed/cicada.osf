@@ -4069,7 +4069,7 @@
     },
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-cicada",
         "title": "Cicada — completed flat sequence",
         "paper": {
@@ -4118,6 +4118,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -4158,6 +4161,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -4198,6 +4204,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -4240,6 +4249,9 @@
                   0.9565685424949238
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3a: left wing folded down"
@@ -4273,6 +4285,9 @@
                   0.1565685424949237
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3b: right wing folded down",
@@ -4307,6 +4322,9 @@
                   0.04999999999999978
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "4: one top layer down",
@@ -4342,6 +4360,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5: remaining tip down, leaving a band"
@@ -4370,6 +4391,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6: fold upper band down"
@@ -4398,6 +4422,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7a: left side behind"
@@ -4426,6 +4453,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7b: right side behind"
@@ -4463,6 +4493,9 @@
                     0.10757255000604604
                   ]
                 ]
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -4503,6 +4536,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -4542,6 +4578,9 @@
                     0.8767498055077605
                   ]
                 ]
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "expect": "fs1:0798998a1a28c8e1"
@@ -4570,6 +4609,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "expect": "fs1:6d79bf87e2d1d3b6"
@@ -4612,6 +4654,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {

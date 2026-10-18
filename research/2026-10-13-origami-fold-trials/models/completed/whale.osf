@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-whale",
         "title": "Whale — Origami.me",
         "paper": {
@@ -321,6 +321,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "6a: Mountain fold the upper tip back to the level of the two ear tips (y=1)."
@@ -358,6 +361,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7a: Fold the left corner inward on x=−(√2−1)/2; approximate diagram proportion, tip stays on the horizontal precrease."
@@ -386,6 +392,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7b: Repeat symmetrically on the right."
@@ -414,6 +423,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "8a: Fold the right half over the left half."
@@ -459,6 +471,9 @@
                   0.02499999999999753
                 ],
                 "layers": 2
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9a: Lower the exposed two-ply fin only. Chosen hinge is 60° to the horizontal; the diagram gives no exact angle."
@@ -501,6 +516,9 @@
                   0.9000000000000005
                 ],
                 "layers": 2
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9c: Lower the opposite two-ply fin along the mirrored hinge, leaving the body and first fin still."
@@ -538,6 +556,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10: Mountain fold the tail behind the body along a 45° crease at x=−0.15 on the top edge. Approximate source proportion; ordinary mountain-fold option, not the optional outside reverse."

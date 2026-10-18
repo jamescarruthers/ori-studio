@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-rectangle-paper-to-square",
         "title": "Rectangle to square — before cutting (batch 3)",
         "paper": {

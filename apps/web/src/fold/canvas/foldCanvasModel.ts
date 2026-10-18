@@ -14,6 +14,8 @@ import { FOLD_SWIVEL_KINDS, isVertexOp } from '../document/foldSequenceDocument'
 import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
 import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
 import { sameFlap } from '../tools/crossSection';
+import { lineAcrossPaper } from '../tools/foldStepBuilder';
+import type { FoldPickIndex } from './foldPicking';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import type { FoldPreview } from '../tools/foldToolWindow';
 import type { FoldReverseWindowView } from '../tools/reverse/reverseToolWindow';
@@ -204,10 +206,10 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   const { orders = [], order = null } = vertex ?? {};
   // What the petal fold creases itself, as the engine describes the flap folded.
   const petal = vertex?.answer?.analysis ?? analysis;
-  const lineBy = tool === 'petal' ? tools.petalHinge : tool === 'swivel' ? tools.swivelTarget : null;
+  const lineBy = tool === 'petal' ? tools.petalHinge : tool === 'swivel' && tools.swivelInput !== 'creases' ? tools.swivelTarget : null;
   // A swivel whose creases meet on a folded edge has no ridge; any swivel
   // folds only a way that lands, and offers the other only when it lands too.
-  const onFold = swivelFoldPick(tools) !== null;
+  const onFold = (tool === 'swivel' && tools.swivelInput === 'creases') || swivelFoldPick(tools) !== null;
   const directions = vertex?.directions;
   // A swivel on a folded edge's kind folded, and the kinds that land either way.
   const kinds = vertex?.kinds;
@@ -219,6 +221,7 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
     // The way it folds: the folder's, or the other when only that lands.
     direction: vertex?.direction ?? tools.vertexDirection,
     ...(onFold ? { onFold } : {}),
+    ...(tool === 'swivel' ? { swivelInput: tools.swivelInput ?? 'edge', firstLineSet: tools.swivelFirst !== undefined, lineReady: preview.swivelLine != null } : {}),
     ...(directions && directions.length === 2 ? { directions } : {}),
     ...(onFold && vertex?.kind ? { swivelKind: vertex.kind } : {}),
     ...(swivelKinds ? { swivelKinds } : {}),
@@ -330,14 +333,14 @@ export function refusedFaceInks(
  * `useFoldPetalMarks`.)
  */
 export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | FoldPointPick | null {
-  if (tools.tool === 'swivel') {
+  if (tools.tool === 'swivel' && tools.swivelInput !== 'creases') {
     const pick = tools.swivelTarget === 'points' && tools.picks.length === SWIVEL_TARGET_FROM + 1 ? tools.picks.at(-1) : undefined;
     return pick?.kind === 'point' ? pick : null;
   }
   const first = lineModeInput(tools.lineMode).steps.length;
   const [mode, from] =
     tools.tool === 'crimp' && tools.picks.length > first ? [tools.secondLineMode, first] : [tools.lineMode, 0];
-  const pick = isLineTool(tools.tool) && mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
+  const pick = (isLineTool(tools.tool) || (tools.tool === 'swivel' && tools.swivelInput === 'creases')) && mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
   return pick?.kind === 'free' ? pick : null;
 }
 
@@ -368,8 +371,16 @@ export function foldShownPicks(
 export function foldLocatedLines(
   tool: FoldToolState['tool'],
   pictured: boolean,
-  lines: FoldCrimpLines | null
+  lines: FoldCrimpLines | null,
+  swivel?: { index: FoldPickIndex | null; first?: FoldToolState['swivelFirst']; current?: FoldToolPreview['swivelLine'] }
 ): readonly (readonly [Point, Point])[] {
+  if (tool === 'swivel' && swivel?.index) {
+    const index = swivel.index;
+    return [swivel.first, swivel.current].flatMap(line => {
+      const segment = line ? lineAcrossPaper(index, line.sceneLine) : null;
+      return segment ? [segment] : [];
+    });
+  }
   if (tool !== 'crimp' || pictured || !lines) return [];
   return [lines.first, lines.second].filter((line): line is [Point, Point] => line !== null);
 }

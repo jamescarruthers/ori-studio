@@ -1,3 +1,4 @@
+import type { FoldOrderQuery, FoldOrderSelection } from '../fold/engine/foldEngineCompoundCalls';
 /**
  * The Fold engine's bridge (`crates/oristudio-fold-wasm`), alone in a worker.
  *
@@ -264,6 +265,10 @@ const api = {
   },
 
   /** Land one listed order per component as a step, with its fingerprint and op. */
+  async importSearch(importHandle: number, choice: readonly number[], limits?: import('../fold/engine/foldEngineIoWire').FoldImportLimits) {
+    return call((calls) => calls.importSearch(importHandle, choice, limits));
+  },
+
   async importPick(
     importHandle: number,
     choice: readonly number[]
@@ -303,6 +308,14 @@ const api = {
   // for every family, then each family's own choosing calls.
 
   /** What a compound fold is before it lands, as its family's tools ask; tagged by `family`. */
+  async releaseOrderSearch(state: number): Promise<void> {
+    return call((calls) => calls.releaseOrderSearch?.(state));
+  },
+
+  async orderSelection(state: number, op: FoldEngineOp, choices: FoldChoices | undefined, query: FoldOrderQuery): Promise<FoldEngineOutcome<FoldOrderSelection>> {
+    return call((calls) => calls.orderSelection(state, op, choices, query));
+  },
+
   async compoundAnalysis(
     state: number,
     op: FoldEngineCompoundOp,

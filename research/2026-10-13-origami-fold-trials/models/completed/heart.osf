@@ -6991,7 +6991,7 @@
     },
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-heart",
         "title": "Heart — completed flat sequence",
         "paper": {
@@ -7086,6 +7086,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -7132,6 +7135,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: left bottom edge to center"
@@ -7160,6 +7166,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: right bottom edge to center"
@@ -7197,6 +7206,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7a: upper left edge inward"
@@ -7225,6 +7237,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7b: upper right edge inward"
@@ -7233,7 +7248,7 @@
             "id": "fstep-heart-10",
             "parent": "fstep-heart-9",
             "op": {
-              "kind": "tuck",
+              "kind": "valley",
               "line": {
                 "via": "free",
                 "through": [
@@ -7247,7 +7262,6 @@
                   ]
                 ]
               },
-              "direction": "valley",
               "moving": [
                 0.4000000000000001,
                 0.98
@@ -7260,16 +7274,19 @@
                 ],
                 "layers": 1
               },
-              "target": [
-                0.05000000000000001,
-                0.6000000000000001
-              ],
-              "additionalTargets": [
-                [
-                  0.9500000000000002,
-                  0.6000000000000001
+              "landing": {
+                "kind": "against",
+                "targets": [
+                  [
+                    0.05000000000000001,
+                    0.6000000000000001
+                  ],
+                  [
+                    0.9500000000000002,
+                    0.6000000000000001
+                  ]
                 ]
-              ]
+              }
             },
             "choices": {
               "completion": {
@@ -7349,6 +7366,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9a: fold left side triangle inward"
@@ -7377,6 +7397,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "9b: fold right side triangle inward"
@@ -7405,6 +7428,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10a: fold outer left corner"
@@ -7438,6 +7464,9 @@
                   0.25999999999999995
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10b: fold inner left corner"
@@ -7471,6 +7500,9 @@
                   0.2599999999999999
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10c: fold inner right corner"
@@ -7499,6 +7531,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "10d: fold outer right corner"
@@ -7527,6 +7562,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "11: fold down both top points"

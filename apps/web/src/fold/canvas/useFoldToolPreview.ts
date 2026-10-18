@@ -1,3 +1,4 @@
+import { useFoldOrderResolution, type FoldOrderResolution } from '../orders/useFoldOrderResolution';
 import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldChoiceOffered, trackFoldRefused } from '../../analytics';
@@ -17,8 +18,8 @@ import { canonicalJson } from '../document/foldDigest';
 import { foldStepInputKey } from '../session/foldSessionEngine';
 import { FOLD_PINCH_LENGTH_QUERY, FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
-import { isFoldKind, isSinkTool, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
+import { axiomLineOfPicks, locate, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
+import { isFoldKind, isSinkTool, isVertexTool, usesLineMode } from '../tools/foldToolCatalog';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import { rotateStepOp } from '../tools/rotate/rotateTool';
 import {
@@ -70,11 +71,13 @@ export interface FoldExtentPreview {
 
 /** Everything the canvas knows of the fold the tools describe, tier by tier (plan D14). */
 export interface FoldToolPreview {
+  swivelLine?: NonNullable<FoldToolState['swivelFirst']> | null;
+  orderResolution?: FoldOrderResolution | null;
   /** The axiom's roots for the picks, once the engine has named them; null for no axiom, or not yet. */
   candidates: readonly FoldAxiomCandidate[] | null;
   build: FoldStepBuild;
   /**
-   * The seed every step is built with: the tools' own, the default top flap
+   * The seed every step is built with: the tools' own, or its default flap
    * resolved against the section at the line (`useFoldLineSection`). Null
    * while that section is still being asked, when there is no step yet.
    */
@@ -120,8 +123,8 @@ const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis
 const lineSideKey = (build: FoldStepBuild) => (build.status === 'built' ? lineSideKeyOf(build.sceneLine, build.movingSign) : null);
 
 /** The axiom line a fold's picks locate, once every click of it is in. */
-function axiomLineOf({ tool, lineMode, picks }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): FoldAxiomLine | null {
-  return locatesLine(tool) ? axiomLineOfPicks(lineMode, picks.slice(0, lineModeInput(lineMode).steps.length)) : null;
+function axiomLineOf({ tool, lineMode, picks, swivelInput }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks' | 'swivelInput'>): FoldAxiomLine | null {
+  return usesLineMode(tool, swivelInput) ? axiomLineOfPicks(lineMode, picks.slice(0, lineModeInput(lineMode).steps.length)) : null;
 }
 
 /** No step built: a vertex fold builds none of a fold along a line's. */
@@ -154,8 +157,8 @@ export function useFoldToolPreview(
   // --- The axiom's roots, once per set of picks on a state: a root stepped
   // through, a flap hovered or a side swapped asks nothing. The picks change
   // identity only with a pick or a restart.
-  const { tool, lineMode, picks } = tools;
-  const axiomLine = useMemo(() => axiomLineOf({ tool, lineMode, picks }), [tool, lineMode, picks]);
+  const { tool, lineMode, picks, swivelInput } = tools;
+  const axiomLine = useMemo(() => axiomLineOf({ tool, lineMode, picks, swivelInput }), [tool, lineMode, picks, swivelInput]);
   const axiomKey = axiomLine && stateKey ? `${stateKey}|${canonicalJson(axiomLine)}` : null;
   const [roots, setRoots] = useState<{
     key: string;
@@ -197,11 +200,11 @@ export function useFoldToolPreview(
   const candidate = candidates ? (candidates[tools.root] ?? candidates[0] ?? null) : null;
 
   // --- The section at the located line, and the seed resolved against it:
-  // a fold that takes the top flap by default (`tools/topFlapSeed`) has no
+  // a fold that takes the top flap or material picked on the CP has no
   // step until the section says which flap that is. Every step below is
   // built with the resolved seed, so what is previewed is what commits.
   const lineSection = useFoldLineSection(session, index, tools, candidate);
-  const findingTop = lineSection.seed === null;
+  const findingSeed = lineSection.seed === null;
   const resolvedSeed = lineSection.seed ?? FOLD_EVERY_LAYER;
   const seeded = useMemo<FoldSeededToolState>(() => ({ ...tools, seed: resolvedSeed }), [tools, resolvedSeed]);
 
@@ -210,10 +213,10 @@ export function useFoldToolPreview(
   // it — a reverse fold's tip (`useFoldReverseStep`), a crimp's
   // (`useFoldCrimpStep`), a tuck's targets (`useFoldTuckStep`), a sink's
   // point (`useFoldSinkStep`).
-  const reverseStep = useFoldReverseStep(session, index, seeded, candidate, tools.tool === 'inside-reverse');
+  const reverseStep = useFoldReverseStep(session, index, seeded, candidate, tools.tool === 'inside-reverse' && !findingSeed);
   const crimpStep = useFoldCrimpStep(session, index, seeded, candidate, tools.tool === 'crimp');
   // A tuck's targets are asked with its seed: not until its top flap is known.
-  const tuckStep = useFoldTuckStep(session, index, seeded, candidate, tools.tool === 'tuck' && !findingTop);
+  const tuckStep = useFoldTuckStep(session, index, seeded, candidate, tools.tool === 'tuck' && !findingSeed);
   const sinkStep = useFoldSinkStep(session, index, seeded, candidate, isSinkTool(tools.tool));
   const compoundStep: FoldCompoundStepAnswer | null =
     tools.tool === 'inside-reverse'
@@ -227,7 +230,14 @@ export function useFoldToolPreview(
             : null;
   // A vertex fold's, once the engine has described its flap, line or fan.
   const vertexing = isVertexTool(tools.tool);
-  const vertexStep = useFoldVertexStep(session, index, tools, vertexing);
+  const locatedSwivel = useMemo(() => index && tool === 'swivel' && swivelInput === 'creases'
+    ? locate({ lineMode, picks, candidate, swapped: false, seed: FOLD_EVERY_LAYER }, index) : null,
+    [index, tool, swivelInput, lineMode, picks, candidate]);
+  const swivelLine = useMemo(() => locatedSwivel && !('status' in locatedSwivel)
+    ? { line: locatedSwivel.line, ...(locatedSwivel.choices?.root ? { root: locatedSwivel.choices.root } : {}), sceneLine: locatedSwivel.sceneLine } : null,
+    [locatedSwivel]);
+  const savedSwivelLine = useMemo(() => swivelLine ? { line: swivelLine.line, ...(swivelLine.root ? { root: swivelLine.root } : {}) } : undefined, [swivelLine]);
+  const vertexStep = useFoldVertexStep(session, index, tools, vertexing, savedSwivelLine);
   // A precrease of part of its line: its points along the line, and a pinch's
   // length, which the engine names for the state's sheet.
   const along = picksAlongLine(tools);
@@ -240,13 +250,13 @@ export function useFoldToolPreview(
     if (!index || !isFoldKind(seeded.tool)) return { status: 'unlocated' };
     return buildFoldStep(
       {
-        kind: seeded.foldAndUnfold ? 'precrease' : seeded.tool,
+        kind: seeded.tool,
         lineMode: seeded.lineMode,
         picks: seeded.picks,
         candidate,
         swapped: seeded.swapped,
         seed: seeded.seed,
-        precreaseDirection: seeded.tool,
+        precreaseDirection: seeded.precreaseDirection,
         ...(extentState.status === 'ready' ? { extent: extentState.extent } : {}),
       },
       index
@@ -264,7 +274,7 @@ export function useFoldToolPreview(
   const returning = useFoldReturnUi((s) => s.opening !== null);
   const rotating = tools.tool === 'rotate';
   const rotation = tools.rotation;
-  const step = useMemo<FoldToolStep | null>(() => {
+  const baseStep = useMemo<FoldToolStep | null>(() => {
     if (returning) return null;
     if (rotating) {
       const op = rotateStepOp(rotation);
@@ -276,11 +286,13 @@ export function useFoldToolPreview(
     // its own, built from the engine's answers.
     const override = compounding || vertexing ? null : tools.override;
     // Until the top flap is known, the build is every layer's, which is not what will fold.
-    const built = build.status === 'built' && !findingTop ? { op: build.op, choices: build.choices } : null;
+    const built = build.status === 'built' && !findingSeed ? { op: build.op, choices: build.choices } : null;
     const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [returning, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingTop, vertexBuilt]);
+  }, [returning, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingSeed, vertexBuilt]);
+  const resolvedOrders = useFoldOrderResolution(session, baseStep, foldToolInputKey(tools));
+  const step = resolvedOrders.step;
   // The located line on each pane, while points are clicked along it.
   const sceneLine = along && plainBuild.status === 'built' ? plainBuild.sceneLine : null;
   const lineKey = sceneLine ? `${sceneLine.n[0]},${sceneLine.n[1]},${sceneLine.d}` : null;
@@ -337,7 +349,7 @@ export function useFoldToolPreview(
   // points are still being clicked the whole line's: asked what it moves,
   // after the effect above has let the last step go, and never previewed.
   const extentLayers =
-    extentPending && !findingTop && plainBuild.status === 'built' ? { op: plainBuild.op, choices: plainBuild.choices } : null;
+    extentPending && !findingSeed && plainBuild.status === 'built' ? { op: plainBuild.op, choices: plainBuild.choices } : null;
   const layersAsk = step ? null : (compoundStep?.layers ?? extentLayers);
   const layersKey = layersAsk ? foldStepInputKey(layersAsk) : null;
   useEffect(() => {
@@ -425,9 +437,11 @@ export function useFoldToolPreview(
   // A tuck no layer takes is offered its flaps once its layers are analysed.
   const compoundRefused = tools.tool === 'tuck' ? tuckRefusedWithFlaps(tuckStep.refused, analysis) : compoundStep?.refused;
   const refused =
+    resolvedOrders.refused ??
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ??
     compoundRefused ??
+    (locatedSwivel && 'status' in locatedSwivel ? locatedSwivel : null) ??
     vertexStep.refused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
@@ -450,6 +464,8 @@ export function useFoldToolPreview(
 
   const landedPreview = landed && landed.key === landedKey ? landed.landed : null;
   return {
+    swivelLine,
+    orderResolution: resolvedOrders.resolution,
     candidates,
     build,
     seed: lineSection.seed,

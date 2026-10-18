@@ -73,6 +73,7 @@ const engine = {
   crossSection: vi.fn(async () => ({ status: 'ok', section: SECTION })),
   action: vi.fn(async () => ({ status: 'refused' })),
   compoundAnalysis: vi.fn(tipCannotOpen),
+  orderSelection: vi.fn(async () => ({ status: 'ok', count: { orders: 1, exact: true }, index: 0, completion: null })),
   // A crimp's and a tuck's own calls, which list the orders they leave.
   crimp: vi.fn(async (): Promise<unknown> => ({ status: 'ok', outcome: 'landed', state: 40, stored: {} })),
   tuck: vi.fn(async (): Promise<unknown> => ({ status: 'ok', outcome: 'landed', state: 41, stored: {} })),
@@ -124,6 +125,7 @@ beforeEach(() => {
   pending = { status: 'idle' };
   seen = null;
   vi.clearAllMocks();
+  engine.orderSelection.mockImplementation(async () => ({ status: 'ok', count: { orders: 1, exact: true }, index: 0, completion: null }));
 });
 afterEach(() => {
   act(() => root?.unmount());
@@ -313,14 +315,11 @@ describe('the top flap a fold takes by default (owner request, 2026-10-13)', () 
     expect(engine.crossSection).toHaveBeenCalledTimes(1);
   });
 
-  it('folds and unfolds in the selected direction, keeping the same top flap; switching it off restores an ordinary fold', async () => {
-    for (const tool of ['mountain', 'valley'] as const) {
-      await render({ ...FREE_LINE, tool, foldAndUnfold: true });
-      expect(seen?.step?.op).toMatchObject({ kind: 'precrease', direction: tool, seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
-      await render({ ...FREE_LINE, tool, foldAndUnfold: false });
-      expect(seen?.step?.op).toMatchObject({ kind: tool, seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
-      expect(seen?.step?.op).not.toHaveProperty('extent');
-    }
+  it('takes the same top flap for a mountain, the top as the front shows it, and for a precrease and a tuck', async () => {
+    await render({ ...FREE_LINE, tool: 'mountain' });
+    expect(seen?.step?.op).toMatchObject({ kind: 'mountain', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
+    await render({ ...FREE_LINE, tool: 'precrease' });
+    expect(seen?.step?.op).toMatchObject({ kind: 'precrease', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
   });
 
   it('folds every layer when the moving side is that one flap, as a fold always has', async () => {
@@ -402,6 +401,7 @@ describe('the crimp and the tuck', () => {
       },
       kinds: ['inside', 'outside'],
     }));
+    engine.orderSelection.mockImplementation(async () => ({ status: 'ok', count: { orders: 2, exact: true }, index: 0, completion: ORDER(1) } as never));
     engine.crimp.mockImplementationOnce(async () => ({
       status: 'ok',
       outcome: 'choose_order',
@@ -425,6 +425,7 @@ describe('the crimp and the tuck', () => {
     expect(seen?.crimp?.lines.second).not.toBeNull();
 
     // The outside kind chosen: its orders asked again, and the step folds it.
+    engine.orderSelection.mockImplementation(async () => ({ status: 'ok', count: { orders: 1, exact: true }, index: 0, completion: null }));
     const outside = { ...crimp, compound: { ...crimp.compound, reverseKind: 'outside' as const } };
     await render(outside);
     expect(engine.crimp).toHaveBeenLastCalledWith(PARENT, expect.objectContaining({ crimp: 'outside' }), undefined);

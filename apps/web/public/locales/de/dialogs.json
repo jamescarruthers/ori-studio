@@ -313,12 +313,8 @@
     "title": "Faltfolge exportieren"
   },
   "foldImport": {
-    "back": "Zurück",
     "browse": "oder zum Durchsuchen klicken",
-    "collapse": "Zusammenfalten",
     "collapseTitle": "Aus CP zusammenfalten",
-    "creases_one": "{{count}} Falte",
-    "creases_other": "{{count}} Falten",
     "drop": "Eine .cp-, .fold-, .ori- oder .orh-Datei hier ablegen",
     "editFigure": "Gefaltetes Modell aus Bearbeiten",
     "editFigureNote": "Das Faltmuster, das Bearbeiten gefaltet hat, mit der gefundenen Lagenfolge",
@@ -326,17 +322,6 @@
       "searchLonger": "Länger suchen"
     },
     "fromEdit": "Aus Bearbeiten",
-    "import": "Importieren",
-    "orders": {
-      "atLeast_one": "Mindestens {{count}} Lagenfolge passt zu diesen Falten. Wähle eine.",
-      "atLeast_other": "Mindestens {{count}} Lagenfolgen passen zu diesen Falten. Wähle eine.",
-      "count_one": "{{count}} Lagenfolge passt zu diesen Falten.",
-      "count_other": "{{count}} Lagenfolgen passen zu diesen Falten. Wähle eine.",
-      "label": "Lagenfolge",
-      "more": "Zu diesem Teil passen mehr Folgen, als hier aufgeführt sind; das sind die ersten, die die Suche gefunden hat.",
-      "order": "Folge {{number}}",
-      "part": "Teil {{number}}"
-    },
     "pickTitle": "Faltmuster importieren",
     "placement": {
       "afterSheet": "Fügt nach dem flachen Blatt einen Schritt hinzu; sein gefalteter Zustand wird aus den Falten berechnet.",
@@ -346,7 +331,6 @@
       "update": "Aktualisiert diesen Zusammenfalten-Schritt. Spätere Schritte und Verzweigungen bleiben erhalten und werden erneut berechnet; betroffene Faltungen werden als geändert oder nicht mehr ausführbar markiert.",
       "why": "Nutze es, wenn sich der nächste Zustand nicht Faltung für Faltung erreichen lässt."
     },
-    "projectCp": "Aus CP zusammenfalten…",
     "refusal": {
       "budget": {
         "text": "Herauszufinden, wie die Lagen übereinanderliegen, dauerte länger, als ein Import Zeit hat. Suche länger oder importiere ein einfacheres Muster.",
@@ -435,7 +419,6 @@
       "preliminaryBase": "Quadratische Grundform",
       "waterbombBase": "Wasserbomben-Grundform"
     },
-    "samples": "Beispiele",
     "title": "Faltmuster importieren",
     "updateTitle": "Aus CP aktualisieren",
     "working": {

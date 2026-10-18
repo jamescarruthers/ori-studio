@@ -155,8 +155,8 @@ fn tip_analysis(
 }
 
 /// The push arrow of an inside fold's opening, in the scene frame (see the
-/// module docs); none for an outside fold, or when the spine is parallel to
-/// ℓ or does not reach past it.
+/// module docs); none for an outside fold, a bent pocket boundary with no
+/// single push edge, or a spine parallel to ℓ or not reaching past it.
 fn push(
     state: &State,
     line: &Line,
@@ -167,7 +167,7 @@ fn push(
     if kind != ReverseKind::Inside {
         return None;
     }
-    let spine = &opening.spine;
+    let spine = opening.spine.as_ref()?;
     let at = spine.intersect(line)?;
     // Along the spine toward the tip side of ℓ.
     let mut along = spine.direction();

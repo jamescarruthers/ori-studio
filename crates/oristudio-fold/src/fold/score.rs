@@ -88,6 +88,41 @@ pub(crate) fn score(
     step: u32,
     next_ids: (u32, u32),
 ) -> Result<Scored, FoldRefusal> {
+    score_inner(
+        parts, topology, classes, distances, split, step, next_ids, false,
+    )
+}
+
+/// Compound operations score different axes on adjacent material layers in
+/// succession. A cut may therefore insert a collinear vertex on the boundary
+/// of a face that this particular axis does not split. Preserve its identity
+/// and refine its ring; a later cut and the final continuity gate determine
+/// its motion. Plain-fold closure retains the stricter scoring contract.
+pub(crate) fn score_with_boundary_vertices(
+    parts: &StateParts,
+    topology: &Topology,
+    classes: &[i8],
+    distances: &[f64],
+    split: &[bool],
+    step: u32,
+    next_ids: (u32, u32),
+) -> Result<Scored, FoldRefusal> {
+    score_inner(
+        parts, topology, classes, distances, split, step, next_ids, true,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn score_inner(
+    parts: &StateParts,
+    topology: &Topology,
+    classes: &[i8],
+    distances: &[f64],
+    split: &[bool],
+    step: u32,
+    next_ids: (u32, u32),
+    refine_boundary: bool,
+) -> Result<Scored, FoldRefusal> {
     let nf = parts.faces.len();
     let (mut next_face, mut next_crease) = next_ids;
 
@@ -138,11 +173,14 @@ pub(crate) fn score(
             }
         }
         if !split[f] {
-            if ring.len() != face.ring.len() {
+            if !refine_boundary && ring.len() != face.ring.len() {
                 return Err(FoldRefusal::DegenerateSplit { face: face.id });
             }
             kept.push(ScoredFace {
-                face: face.clone(),
+                face: Face {
+                    ring,
+                    ..face.clone()
+                },
                 old: f,
                 piece: Piece::Whole,
             });

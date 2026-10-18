@@ -1,3 +1,4 @@
+import { normalizeFoldLandingOp } from './foldLandingMigration';
 import { describe, expect, it } from 'vitest';
 import { isLockedStep, type FoldStep } from './foldSequenceDocument';
 import { readFoldSequence, writeFoldSequence } from './foldSequenceFile';
@@ -52,7 +53,7 @@ describe('a fold’s moving side in the file', () => {
       expect(isLockedStep(node), op.kind).toBe(false);
       expect((node as FoldStep).op, op.kind).not.toHaveProperty('moving');
       expect((writeFoldSequence(held).steps as { op: unknown }[])[0]!.op, op.kind).toEqual(
-        JSON.parse(JSON.stringify(op))
+        JSON.parse(JSON.stringify(normalizeFoldLandingOp(op)))
       );
     }
   });

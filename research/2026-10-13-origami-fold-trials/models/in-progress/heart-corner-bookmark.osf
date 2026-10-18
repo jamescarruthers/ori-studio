@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-heart-corner-bookmark",
         "title": "Heart Corner Bookmark — Origami.me",
         "paper": {
@@ -163,6 +163,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "3: Bring the bottom edge to the pinch."
@@ -200,6 +203,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5a: Fold the bottom left edge to the center."
@@ -228,6 +234,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "5b: Fold the bottom right edge to the center."
@@ -265,6 +274,9 @@
               ],
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "7: Bring the bottom tip to the horizontal center."

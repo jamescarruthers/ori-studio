@@ -17,6 +17,14 @@ The scope is single-sheet flat folding, without required cuts or multi-sheet ass
 
 The initial 53 native projects were moved without changing their bytes. Whale has since been completed, with its original seven-node prefix retained in `archive/checkpoints/whale-before-rabbit-ear.osf` (subsequent checkpoints are also retained). Your Heart and Cicada edits are preserved. Cicada’s original completed path is ready for audit, but its five added user branch steps have not received a source/visual audit. Dove is complete through source 16 / Fold 17 using direct nested reverses and a two-pair crimp; its earlier prefixes and CP control remain archived. Squirrel uses a direct crimp at source 16 / Fold 19. Both prior versions are retained in archive/checkpoints/. New diagram authoring is paused while implementation priorities are addressed.
 
+## Landing-format migration — October 15, 2026
+
+All 119 local projects (including checkpoints and private working files) now use
+explicit Mountain/Valley landing recipes. Legacy Tucks keep their exact targets
+and layer order. Fresh replay matched all 2,472 saved steps on all branches;
+no model was regenerated or advanced. Original bytes and per-file verification
+are in `artifacts/fold-placement-migration/2026-10-15T20-33-31.958Z/` at the repository root.
+
 ## Current designs
 
 | Design | Fold file | Status / last source step | Tutorial |

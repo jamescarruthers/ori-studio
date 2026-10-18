@@ -169,6 +169,7 @@ impl Op {
         match self {
             Op::Valley(a) | Op::Mountain(a) => Takes {
                 root: a.line.is_axiom(),
+                completion: matches!(a.landing, oristudio_fold::FoldLanding::Against { .. }),
                 ..Takes::default()
             },
             Op::Precrease(p) => Takes {
@@ -212,6 +213,8 @@ pub struct Takes {
 /// additions.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct AlongLine {
+    #[serde(default)]
+    pub landing: oristudio_fold::FoldLanding,
     pub line: LineInput,
     /// Valley or mountain as seen in the parent's view: the precrease's.
     /// A valley or mountain op takes its direction from its kind.

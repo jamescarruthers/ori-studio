@@ -21,7 +21,7 @@
     "unknownDesigns": [],
     "foldSequences": [
       {
-        "formatVersion": 1,
+        "formatVersion": 2,
         "id": "fold-trial-crane",
         "title": "Crane — Origami.me",
         "paper": {
@@ -58,6 +58,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -98,6 +101,9 @@
               },
               "seed": {
                 "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "choices": {
@@ -450,6 +456,9 @@
                   0.6000000000000001
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12a: narrow front left"
@@ -483,6 +492,9 @@
                   0.11000000000000067
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "12b: narrow front right"
@@ -525,6 +537,9 @@
                   0.3999999999999997
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14a: narrow back left"
@@ -558,6 +573,9 @@
                   0.8900000000000005
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "14b: narrow back right"
@@ -591,6 +609,9 @@
                   0.8429638103594366
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "15: front page right to left"
@@ -633,6 +654,9 @@
                   0.15703618964056354
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "17: back page right to left"
@@ -666,6 +690,9 @@
                   0.06222539674441485
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "18: raise first narrow point"
@@ -708,6 +735,9 @@
                   0.9377746032555841
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "20: raise second narrow point"
@@ -741,6 +771,9 @@
                   0.6862092494301772
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "21: turn front page back"
@@ -783,6 +816,9 @@
                   0.3137907505698235
                 ],
                 "layers": 1
+              },
+              "landing": {
+                "kind": "outer"
               }
             },
             "note": "23: turn back page back"

@@ -225,7 +225,7 @@ impl Sequence {
                 let opening = asked.flaps[0]
                     .openings
                     .iter()
-                    .find(|o| o.spine.approx_eq(&spine))
+                    .find(|o| o.spine.is_some_and(|line| line.approx_eq(&spine)))
                     .unwrap_or_else(|| panic!("{name}: no opening along {spine:?}"));
                 ReverseChoices {
                     openings: vec![opening.stored.clone()],

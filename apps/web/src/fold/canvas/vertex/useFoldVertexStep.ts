@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { trackFoldChoiceOffered } from '../../../analytics';
 import {
-  isSwivelOnFoldOp,
+  isFoldedSwivelOp,
+  isSwivelLinesOp,
   swivelKindOf,
   type FoldChoices,
   type FoldCompletionChoice,
   type FoldDirection,
+  type FoldLocatedLine,
   type FoldSwivelKind,
   type FoldVertexOp,
 } from '../../document/foldSequenceDocument';
@@ -118,28 +120,29 @@ export function useFoldVertexStep(
   session: FoldSessionSurface,
   index: FoldPickIndex | null,
   tools: FoldToolState,
-  enabled: boolean
+  enabled: boolean,
+  swivelLine?: FoldLocatedLine
 ): FoldVertexStepAnswer {
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
-  const { tool, petalHinge, swivelTarget, picks, vertexDirection, compound } = tools;
+  const { tool, petalHinge, swivelTarget, swivelInput, swivelFirst, picks, vertexDirection, compound } = tools;
   const { squashTarget, fanLayers, emergent: chosenEmergent, order: chosenOrder } = compound;
 
   // --- A swivel's reach from where its creases meet: what its next clicks
   // are offered, and the way and kind its edge and line land — the folder's,
   // or the ones that do when those do not.
-  const reach = useFoldSwivelReach(session, stateKey, index, tools, enabled && tool === 'swivel');
+  const reach = useFoldSwivelReach(session, stateKey, index, tools, enabled && tool === 'swivel' && swivelInput !== 'creases');
   const landing = swivelPickedLanding(reach, picks);
   const direction = landing?.op.direction ?? vertexDirection;
   const swivelKind =
-    compound.swivelKind ?? (landing && isSwivelOnFoldOp(landing.op) ? swivelKindOf(landing.op) : 'open');
+    compound.swivelKind ?? (landing && isFoldedSwivelOp(landing.op) ? swivelKindOf(landing.op) : 'open');
 
   const intent = useMemo<FoldVertexIntent | null>(
     () =>
       enabled && isVertexTool(tool)
-        ? { tool, petalHinge, swivelTarget, picks, direction, fanLayers, swivelKind }
+        ? { tool, petalHinge, swivelTarget, swivelInput, swivelFirst: swivelFirst ? { line: swivelFirst.line, ...(swivelFirst.root ? { root: swivelFirst.root } : {}) } : undefined, swivelLine, picks, direction, fanLayers, swivelKind }
         : null,
-    [enabled, tool, petalHinge, swivelTarget, picks, direction, fanLayers, swivelKind]
+    [enabled, tool, petalHinge, swivelTarget, swivelInput, swivelFirst, swivelLine, picks, direction, fanLayers, swivelKind]
   );
   const taken = useMemo<FoldVertexTaken>(
     () => ({ squashTarget, emergent: chosenEmergent, order: chosenOrder }),
@@ -152,7 +155,17 @@ export function useFoldVertexStep(
   const told = asked && 'status' in asked ? asked : null;
   const first = useFoldCompoundAsk(session, stateKey, initial ? { op: initial } : null, 'vertex', 'fold:vertex');
   const needsAnchor = initial?.kind === 'rabbit-ear' && (first?.refused != null || fanHasNoFourth(first?.asked ?? null));
-  const alternative = useMemo(() => needsAnchor && intent && index && initial ? fanAnchorAlternative(intent, index, initial) : null, [needsAnchor, intent, index, initial]);
+  // The two lines describe the same pair regardless of click order. Their
+  // order otherwise chooses which end of the folded edge opens. If that end
+  // is physically blocked, ask about the other interpretation; store the
+  // resolved order so replay never needs to guess or retry a saved operation.
+  const needsOtherEnd = initial && isSwivelLinesOp(initial) && first?.refused?.refusal.code === 'fan_ray_blocked';
+  const alternative = useMemo(() => {
+    if (needsOtherEnd && initial && isSwivelLinesOp(initial)) {
+      return { ...initial, first: initial.second, second: initial.first };
+    }
+    return needsAnchor && intent && index && initial ? fanAnchorAlternative(intent, index, initial) : null;
+  }, [needsOtherEnd, needsAnchor, intent, index, initial]);
   const alternate = useFoldCompoundAsk(session, stateKey, alternative ? { op: alternative } : null, 'vertex', 'fold:vertex');
   const useAlternate = alternative !== null && alternate?.asked != null && !fanHasNoFourth(alternate.asked);
   const resolvingAnchor = alternative !== null && alternate === null;
@@ -211,7 +224,7 @@ export function useFoldVertexStep(
   const refused = told ?? (resolvingAnchor ? null : resolved?.refused) ?? answerRefused;
   // A swivel on a folded edge's kind folded, and the ways that land of it.
   const kind = chosen?.kind ?? null;
-  const askedKind = base && isSwivelOnFoldOp(base) ? swivelKindOf(base) : null;
+  const askedKind = base && isFoldedSwivelOp(base) ? swivelKindOf(base) : null;
   const directions =
     (firstAnswer && kind && askedKind ? swivelDirectionsOf(firstAnswer, kind, askedKind) : null) ??
     firstAnswer?.directions ??

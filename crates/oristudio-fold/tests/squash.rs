@@ -27,6 +27,94 @@ fn refusal(state: &State, op: &Squash) -> FoldRefusal {
     }
 }
 
+/// A rectangular pocket beside another folded panel: the connected lower
+/// sheet reaches the other panel, but that attachment and its cover stay put.
+/// This square-sheet construction is independent of any source model.
+fn neighboring_panels(right: f64, precreased: bool, mirror: bool) -> State {
+    let m = |p| cases::m(mirror, p);
+    let mut s = cases::square();
+    if precreased {
+        for (a, b) in [([0.5, 0.0], [0.5, 1.0]), ([0.0, 0.75], [1.0, 0.75])] {
+            s = cases::precrease(&s, m(a), m(b), m([0.9, 0.9]), Seed::All);
+        }
+    }
+    s = cases::valley(&s, m([0.2, 0.0]), m([0.2, 1.0]), m([0.1, 0.4]));
+    s = cases::valley(&s, m([right, 0.0]), m([right, 1.0]), m([0.99, 0.4]));
+    let line = oristudio_geometry::Line::from_points(m([0.2, 0.5]), m([right, 0.5])).unwrap();
+    s.fold(&oristudio_fold::PlainFold::new(
+        line,
+        oristudio_fold::Side::of_point(&line, m([0.5, 0.1])).unwrap(),
+        Direction::Mountain,
+    ))
+    .unwrap()
+    .state
+}
+
+#[test]
+fn a_squash_leaves_neighboring_attachments_and_their_cover_stationary() {
+    for precreased in [false, true] {
+        for mirror in [false, true] {
+            let m = |p| cases::m(mirror, p);
+            let start = neighboring_panels(0.9, precreased, mirror);
+            for turned in [false, true] {
+                let parent = if turned {
+                    start.turn_over()
+                } else {
+                    start.clone()
+                };
+                let op = Squash {
+                    flap: m([0.1, 0.9]),
+                    target: None,
+                    direction: if turned {
+                        Direction::Mountain
+                    } else {
+                        Direction::Valley
+                    },
+                };
+                let result = landed(parent.squash(&op, &VertexChoices::default()));
+                check(&parent, &result);
+                // The neighboring panel and the lower layer beneath it keep
+                // their exact pose; the selected pocket's two layers move.
+                for (sheet, expected) in [
+                    ([0.95, 0.8], [0.85, 0.8]),
+                    ([0.85, 0.8], [0.85, 0.8]),
+                    ([0.3, 0.9], [0.6, 0.6]),
+                    ([0.1, 0.9], [0.6, 0.4]),
+                ] {
+                    let actual = result.state.image_of(m(sheet)).unwrap();
+                    let expected = m(expected);
+                    assert!(
+                        actual
+                            .iter()
+                            .zip(expected)
+                            .all(|(a, b)| (a - b).abs() < 1e-9),
+                        "{sheet:?}: {actual:?} != {expected:?}"
+                    );
+                }
+                let replay = landed(parent.squash(&op, &result.report.stored));
+                assert_eq!(replay.state.parts(), result.state.parts());
+            }
+        }
+    }
+}
+
+#[test]
+fn a_neighboring_panel_cannot_cover_or_hold_the_moving_part() {
+    // At x=.8 the far hinge stays put, but its folded panel covers the
+    // upper corner of the lower layer's moving triangle.
+    let covered = neighboring_panels(0.8, false, false);
+    assert!(matches!(
+        refusal(&covered, &squash_op(&covered, [0.3, 0.9], None)),
+        FoldRefusal::SquashFlapCovered { .. }
+    ));
+    // A closer hinge actually attaches to that moving triangle.
+    let attached = neighboring_panels(0.65, false, false);
+    assert!(matches!(
+        refusal(&attached, &squash_op(&attached, [0.25, 0.9], None)),
+        FoldRefusal::SquashFlapNotFree { .. }
+    ));
+}
+
 /// Preparation creases divide a pocket's faces, not the pocket. Every exposed
 /// subdivision must name the same material, hinge, motion and layer order.
 #[test]

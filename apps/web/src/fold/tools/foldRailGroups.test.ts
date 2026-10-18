@@ -32,7 +32,7 @@ describe('foldRailGroups', () => {
       ['model', 'Model'],
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
-      ['valley', 'mountain', 'inside-reverse', 'crimp', 'tuck', 'squash', 'petal', 'rabbit-ear', 'swivel'],
+      ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'squash', 'petal', 'rabbit-ear', 'swivel'],
       ['open-sink', 'closed-sink', 'unsink'],
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
@@ -70,7 +70,7 @@ describe('foldRailGroups', () => {
     expect(groups.flatMap((group) => group.items.map((each) => each.id))).not.toContain('pleat');
   });
 
-  it('takes the crimp and the tuck as tools of the Fold group, unbound until a key is given', () => {
+  it('keeps Crimp and removes standalone Tuck from the Fold group', () => {
     const calls = verbs();
     const groups = foldRailGroups(t, view({ tool: 'crimp' }), calls);
     expect(item(groups, 'crimp')).toMatchObject({
@@ -81,15 +81,7 @@ describe('foldRailGroups', () => {
       available: true,
       active: true,
     });
-    expect(item(groups, 'tuck')).toMatchObject({
-      kind: 'tool',
-      label: 'Tuck',
-      description: 'Fold a flap and slide it under, or over, a layer that stays.',
-      shortcut: 'fold.toolTuck',
-      active: false,
-    });
-    item(groups, 'tuck').select();
-    expect(calls.selectTool).toHaveBeenCalledWith('tuck');
+    expect(groups.flatMap((group) => group.items).some((item) => item.id === 'tuck')).toBe(false);
   });
 
   it('takes each sink as a tool along a located line, keyless until the user gives it one', () => {
@@ -129,13 +121,13 @@ describe('foldRailGroups', () => {
   it('binds each item to its call: a tool, a line mode, a turn as a step of its own', () => {
     const calls = verbs();
     const groups = foldRailGroups(t, view(), calls);
-    item(groups, 'mountain').select();
+    item(groups, 'precrease').select();
     item(groups, 'divide-line').select();
     item(groups, 'crease').select();
     item(groups, 'turn-over').select();
     item(groups, 'rotate').select();
     // Rotate is a tool: taken in hand, its window sets how far and which way before it is applied.
-    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['divide-line'], ['rotate']]);
+    expect(calls.selectTool.mock.calls).toEqual([['precrease'], ['divide-line'], ['rotate']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['crease']]);
     expect(calls.turn.mock.calls).toEqual([[{ kind: 'turn-over', axis: 'vertical' }]]);
     // Done at once: a verb is never the thing in hand; a tool is, while it is.
@@ -152,7 +144,6 @@ describe('foldRailGroups', () => {
     }
     expect(item(groups, 'inside-reverse').available).toBe(false);
     expect(item(groups, 'crimp').available).toBe(false);
-    expect(item(groups, 'tuck').available).toBe(false);
     expect(item(groups, 'squash').available).toBe(false);
     expect(item(groups, 'unsink').available).toBe(false);
   });
@@ -188,5 +179,15 @@ describe('foldRailGroups', () => {
     // A petal fold names its hinge in its own window, by a crease or by its two ends: no line mode is lit.
     groups = foldRailGroups(t, view({ tool: 'petal', lineMode: 'crease' }), calls);
     expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual(['petal']);
+  });
+});
+
+ describe('swivel line toolbar', () => {
+  it('highlights the chosen line mode only in two-line construction', () => {
+    for (const swivelInput of ['edge', 'creases'] as const) {
+      const groups = foldRailGroups(t, view({ tool: 'swivel', lineMode: 'axiom-1', swivelInput }), verbs());
+      expect(groups.find(g => g.id === 'locate')!.items.filter(i => i.active).map(i => i.id))
+        .toEqual(swivelInput === 'creases' ? ['axiom-1'] : []);
+    }
   });
 });

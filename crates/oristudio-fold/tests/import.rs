@@ -141,6 +141,52 @@ fn only_state(pattern: &ImportedPattern) -> State {
         .unwrap_or_else(|e| panic!("{} {e}", e.code()))
 }
 
+#[test]
+fn imported_flat_marks_follow_the_paper_without_changing_its_layer_order() {
+    let mut segments = border(1.0, 1.0);
+    segments.push(segment([0.5, 0.0], [0.5, 1.0], VALLEY));
+    let bare = only_state(&imported(&sheet_input(segments.clone()), empty()));
+    let mark = ImportKind::CreaseMark {
+        letter: Letter::Valley,
+    };
+    segments.extend([
+        segment([-0.2, 0.25], [1.2, 0.25], mark), // clipped across both layers
+        segment([0.2, 0.65], [0.4, 0.65], mark),  // dangling inside a face
+        segment([0.2, 0.65], [0.3, 0.65], mark),  // duplicate
+        segment([0.5, 0.0], [0.5, 1.0], mark),    // active crease wins
+        segment([0.0, 0.0], [1.0, 0.0], mark),    // border wins
+    ]);
+    let pattern = imported(&sheet_input(segments), empty());
+    let state = only_state(&pattern);
+    assert_valid(&state);
+    assert_eq!(state.faces(), bare.faces());
+    assert_eq!(state.vertices(), bare.vertices());
+    assert_eq!(state.parts().order, bare.parts().order);
+    assert_eq!(state.crease_marks().len(), 2);
+    assert_eq!(pattern.summary().precreases, 2);
+    assert!(pattern.summary().guides.is_empty());
+    let scene = state.scene();
+    assert_eq!(scene.crease_marks.len(), 2);
+    assert_eq!(
+        scene
+            .crease_marks
+            .iter()
+            .map(|m| m.pieces.len())
+            .sum::<usize>(),
+        3
+    );
+    // Public-state roundtrip and a later fold carry marks, too.
+    let replayed = only_state(&imported(&CreasePatternInput::of_state(&state), empty()));
+    assert_eq!(replayed.crease_marks(), state.crease_marks());
+    let next = fold(&state, &all(y_eq(0.25), [0.25, 0.1], Direction::Valley)).state;
+    assert_valid(&next);
+    assert!(
+        next.crease_marks()
+            .iter()
+            .all(|m| (m.a[1] - 0.65).abs() < 1e-9)
+    );
+}
+
 /// Every choice of a completion, in odometer order.
 fn every_choice(sizes: &[usize]) -> Vec<Vec<usize>> {
     let mut out = vec![Vec::new()];

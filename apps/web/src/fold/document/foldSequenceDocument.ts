@@ -28,6 +28,7 @@
  * Pure: no React, no store, no engine.
  */
 
+import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { randomId, type IdFactory } from '../../lib/documentFile';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
@@ -38,7 +39,7 @@ import {
 import type { TurnKind, TurnOverAxis, TurnRotation } from '../../lib/steps/turn';
 
 /** This build's `formatVersion`: one per sequence, so a newer sequence opens read-only on its own. */
-export const FOLD_SEQUENCE_FORMAT_VERSION = 1;
+export const FOLD_SEQUENCE_FORMAT_VERSION = 2;
 
 /** Makes the ids of a sequence, its steps and its marks: `fold-…`, `fstep-…`, `fmark-…`. */
 export type FoldIdFactory = IdFactory<'fold' | 'fstep' | 'fmark'>;
@@ -217,7 +218,11 @@ interface FoldAlongLine {
 }
 
 /** A valley or mountain fold: the direction is the kind. */
+export type FoldLanding = { kind: 'outer' } | { kind: 'against'; targets: readonly SheetPoint[] };
+
 export interface FoldPlainOp extends FoldAlongLine {
+  /** Absent only on legacy/in-memory outer folds. Writers make it explicit. */
+  landing?: FoldLanding;
   kind: 'valley' | 'mountain';
 }
 
@@ -306,7 +311,7 @@ export interface FoldCpJumpOp {
   orderJson: string;
   origin: FoldCpOrigin;
   /** Project-local source. Replay always uses cpJson and orderJson, never the live source. */
-  source?: { documentId: string; revision: string };
+  source?: { documentId: string; revision: string; region?: RegionReference };
 }
 
 // --- Compound folds (plan D4), one block per family -------------------------
@@ -540,6 +545,33 @@ export interface FoldSwivelOnFoldOp {
   swivel?: 'inside';
 }
 
+/** A swivel located by its meeting point and each layer's hinge direction. */
+export interface FoldSwivelCreasesOp {
+  kind: 'swivel';
+  via: 'creases';
+  fold: SheetPoint;
+  first: SheetPoint;
+  second: SheetPoint;
+  direction: FoldDirection;
+  swivel?: 'inside';
+}
+
+/** A complete line construction, including the chosen axiom solution. */
+export interface FoldLocatedLine {
+  line: FoldLineInput;
+  root?: FoldModelLine;
+}
+
+/** Two independently constructed fold lines; their meeting point is derived. */
+export interface FoldSwivelLinesOp {
+  kind: 'swivel';
+  via: 'lines';
+  first: FoldLocatedLine;
+  second: FoldLocatedLine;
+  direction: FoldDirection;
+  swivel?: 'inside';
+}
+
 /** Where a swivel on a folded edge puts the other layer's strip: on top, or tucked between the two layers. */
 export type FoldSwivelKind = 'open' | 'inside';
 
@@ -547,14 +579,14 @@ export type FoldSwivelKind = 'open' | 'inside';
 export const FOLD_SWIVEL_KINDS: readonly FoldSwivelKind[] = ['open', 'inside'];
 
 /** A swivel op's kind: inside only on a folded edge that says so. */
-export function swivelKindOf(op: FoldSwivelOp | FoldSwivelEdgeOp): FoldSwivelKind {
+export function swivelKindOf(op: FoldSwivelOp | FoldSwivelEdgeOp | FoldSwivelCreasesOp | FoldSwivelLinesOp): FoldSwivelKind {
   return 'swivel' in op && op.swivel === 'inside' ? 'inside' : 'open';
 }
 
 /** A swivel on a folded edge of the kind given: `swivel` spelled only when inside. */
-export function withSwivelKind(op: FoldSwivelOnFoldOp, kind: FoldSwivelKind): FoldSwivelOnFoldOp {
+export function withSwivelKind<T extends FoldSwivelOnFoldOp | FoldSwivelCreasesOp | FoldSwivelLinesOp>(op: T, kind: FoldSwivelKind): T {
   const { swivel: _spelled, ...open } = op;
-  return kind === 'inside' ? { ...open, swivel: 'inside' } : open;
+  return (kind === 'inside' ? { ...open, swivel: 'inside' } : open) as T;
 }
 
 /** Whether a swivel op names its swivel by its edge, not its rays. */
@@ -567,7 +599,19 @@ export function isSwivelOnFoldOp(op: FoldOp): op is FoldSwivelOnFoldOp {
   return isSwivelEdgeOp(op) && 'fold' in op;
 }
 
-export type FoldVertexOp = FoldSquashOp | FoldPetalOp | FoldRabbitEarOp | FoldSwivelOp | FoldSwivelEdgeOp;
+export function isSwivelLinesOp(op: FoldOp): op is FoldSwivelLinesOp {
+  return op.kind === 'swivel' && 'via' in op && op.via === 'lines';
+}
+
+export function isSwivelCreasesOp(op: FoldOp): op is FoldSwivelCreasesOp {
+  return op.kind === 'swivel' && 'via' in op && op.via === 'creases';
+}
+
+export function isFoldedSwivelOp(op: FoldOp): op is FoldSwivelOnFoldOp | FoldSwivelCreasesOp | FoldSwivelLinesOp {
+  return isSwivelOnFoldOp(op) || isSwivelCreasesOp(op) || isSwivelLinesOp(op);
+}
+
+export type FoldVertexOp = FoldSquashOp | FoldPetalOp | FoldRabbitEarOp | FoldSwivelOp | FoldSwivelEdgeOp | FoldSwivelCreasesOp | FoldSwivelLinesOp;
 
 export type FoldVertexOpKind = FoldVertexOp['kind'];
 
@@ -753,7 +797,7 @@ export function markPoints(mark: FoldMark): SheetPoint[] {
  * spreads its layers apart, or `'off'` for not at all. Display data, as a
  * note is: it never changes what the step folds, and is outside `fh1` and
  * `fs1`. A step with none takes the nearest earlier step's on its path, else
- * the default (`foldStepSpread`), so the default spread is on.
+ * the default (`foldStepSpread`), so spreading defaults to off.
  */
 export type FoldSpreadSetting = LayerSpreadOptions | 'off';
 
@@ -815,7 +859,7 @@ export function isLockedStep(node: FoldStepNode): node is FoldLockedStep {
 }
 
 export interface FoldSequenceDocument {
-  formatVersion: typeof FOLD_SEQUENCE_FORMAT_VERSION;
+  formatVersion: 1 | typeof FOLD_SEQUENCE_FORMAT_VERSION;
   /** `fold-<uuid>`. */
   id: string;
   title: string;

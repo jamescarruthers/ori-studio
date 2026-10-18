@@ -84,6 +84,12 @@ pub trait CompoundOp: Debug {
     /// chooses from. Thrown, a question the op cannot be asked (an unsink has
     /// no point to analyse).
     fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError>;
+    /// Inspect a specific order without choosing it for a saved step.
+    fn order_selection(
+        &self,
+        parent: &State,
+        query: &crate::order_selection::OrderQuery,
+    ) -> Result<crate::order_selection::OrderSelection, Refusal>;
     /// Land it with its stored choices.
     fn apply(&self, parent: &State) -> Result<Box<dyn CompoundLanded>, Refusal>;
 }

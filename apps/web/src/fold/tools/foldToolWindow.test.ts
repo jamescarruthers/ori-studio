@@ -15,7 +15,6 @@ const t = i18n.t.bind(i18n);
 function verbs() {
   return {
     selectTool: vi.fn(),
-    setFoldAndUnfold: vi.fn(),
     selectLineMode: vi.fn(),
     includeFlaps: vi.fn(),
     foldOtherWay: vi.fn(),
@@ -78,7 +77,7 @@ describe('foldToolWindow while the line is located', () => {
     const model = foldToolWindow(t, view({ picks: 1 }), verbs(), mouse);
     expect(model?.phase).toBe('locate');
     expect(model?.title).toBe('Valley fold');
-    expect(model?.meta).toBe('2 settings');
+    expect(model?.meta).toBe('1 setting');
     expect(model?.instructions.items).toEqual([
       'Click the point to move.',
       'Click where it should land.',
@@ -154,14 +153,14 @@ describe('foldToolWindow with a fold under preview', () => {
     const calls = verbs();
     const model = foldToolWindow(t, view({ preview: preview() }), calls, mouse);
     expect(model?.phase).toBe('preview');
-    expect(model?.meta).toBe('4 settings');
+    expect(model?.meta).toBe('3 settings');
     expect(model?.instructions.items).toEqual(['Pick which layers move.', 'Press Enter to fold.']);
     expect(model?.lineMode).toBeNull();
 
     expect(model?.kind?.value).toBe('valley');
-    expect(model?.kind?.options.map((option) => option.label)).toEqual(['Valley fold', 'Mountain fold']);
-    model?.kind?.set('mountain');
-    expect(calls.selectTool).toHaveBeenCalledWith('mountain');
+    expect(model?.kind?.options.map((option) => option.label)).toEqual(['Valley fold', 'Mountain fold', 'Precrease']);
+    model?.kind?.set('precrease');
+    expect(calls.selectTool).toHaveBeenCalledWith('precrease');
 
     expect(model?.movingSide?.swapLabel).toBe('Swap');
     model?.movingSide?.swap();
@@ -337,13 +336,13 @@ describe('foldToolWindow for the other tools', () => {
 
 describe('foldToolWindow for a precrease of part of its line', () => {
   const precrease = (extra: Partial<FoldToolWindowView> = {}) =>
-    view({ tool: 'valley', foldAndUnfold: true, extent: { mode: 'pinch', picked: 0 }, ...extra });
+    view({ tool: 'precrease', extent: { mode: 'pinch', picked: 0 }, ...extra });
   const withExtent = () => ({ ...verbs(), setExtent: vi.fn() });
 
   it('offers the extent from the start, and adds its clicks along the line to the steps', () => {
     const calls = withExtent();
     const model = foldToolWindow(t, precrease(), calls, { ...mouse, keyLabel: (id) => (id === 'fold.cycleExtent' ? 'E' : undefined) });
-    expect(model?.meta).toBe('3 settings');
+    expect(model?.meta).toBe('2 settings');
     expect(model?.extent).toMatchObject({ label: 'Extent', value: 'pinch' });
     expect(model?.extent?.options.map((option) => option.short)).toEqual(['Whole line', 'Segment', 'Pinch']);
     expect(model?.extent?.note).toBe('Crease only a short mark, centred on a point you click along the line.');
@@ -371,7 +370,7 @@ describe('foldToolWindow for a precrease of part of its line', () => {
       mouse
     );
     expect(model?.phase).toBe('preview');
-    expect(model?.meta).toBe('5 settings');
+    expect(model?.meta).toBe('4 settings');
     expect(model?.instructions.items).toEqual([
       'Click where the crease starts along the line.',
       'Click where it ends.',
@@ -384,7 +383,7 @@ describe('foldToolWindow for a precrease of part of its line', () => {
       'Hold Option to put a point down anywhere, without snapping.',
       'Esc takes back the last point.',
     ]);
-    expect(model?.footer?.commit).toMatchObject({ label: 'Fold and unfold', disabled: true });
+    expect(model?.footer?.commit).toMatchObject({ label: 'Precrease', disabled: true });
     // Every point in: the layers are next, and a pinch is committed by its own name.
     const pinched = foldToolWindow(
       t,

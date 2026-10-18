@@ -182,6 +182,7 @@ export function vertexCreaseLines(
       if (taken) add(ray(index, analysis.center, taken), other(direction));
       break;
     }
+    case 'swivel-by-creases':
     case 'swivel-by-edge':
       // Each from where it is seen to where it leaves the last layer it
       // cuts, by the engine's letter as seen: on a folded edge, the swivel
@@ -247,6 +248,9 @@ export function vertexOverlayMarks(
     case 'swivel':
       strokes.push(...fanChoices(index, analysis, input, accent));
       dot(analysis.center);
+      break;
+    case 'swivel-by-creases':
+      dot(analysis.vertex);
       break;
     case 'swivel-by-edge':
       // Where the edge lands, on the target.

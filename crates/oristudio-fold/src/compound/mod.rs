@@ -61,11 +61,13 @@ pub mod tuck;
 // `prepare` shares.
 pub mod fan;
 mod fan_precreased;
+mod folded_swivel;
 pub mod petal;
 pub(crate) mod pieces;
 pub mod rabbit;
 pub mod squash;
 pub mod swivel;
+pub mod swivel_by_creases;
 pub mod swivel_on_edge;
 pub mod vertex;
 

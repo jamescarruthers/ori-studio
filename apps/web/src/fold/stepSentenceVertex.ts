@@ -83,6 +83,11 @@ export function vertexSentence(
   direction: FoldDirection,
   form?: FoldVertexSentenceForm
 ): string {
+  if (form && 'swivel' in form && (form.swivel === 'creases' || form.swivel === 'lines')) {
+    return form.inside
+      ? t('panels:fold.sentence.swivelInsideHinges', 'Inside-swivel along the two located hinges, tucking the strip between the layers.')
+      : t('panels:fold.sentence.swivelHinges', 'Swivel along the two located hinges.');
+  }
   if (form && 'swivel' in form && form.swivel === 'edge') return swivelEdgeSentence(t, direction, form.target);
   if (form && 'swivel' in form && form.swivel === 'fold') {
     return swivelFoldSentence(t, direction, form.target, form.inside === true);
@@ -118,7 +123,7 @@ export function vertexSentence(
 
 /** Whether a vertex fold's form is the inside swivel. */
 function isInsideSwivel(form: FoldVertexSentenceForm | undefined): boolean {
-  return form !== undefined && 'swivel' in form && form.swivel === 'fold' && form.inside === true;
+  return form !== undefined && 'swivel' in form && (form.swivel === 'fold' || (form.swivel === 'creases' || form.swivel === 'lines')) && form.inside === true;
 }
 
 /** What the operation is called: "Squash fold", "Squash fold behind", "Inside swivel". */
@@ -209,6 +214,7 @@ export function vertexRows(t: TFunction, form: FoldVertexSentenceForm | undefine
     ];
   }
   if (form.swivel === 'rays') return [];
+  if ((form.swivel === 'creases' || form.swivel === 'lines')) return [{ label: t('panels:fold.step.construction', 'Construction'), value: form.swivel === 'lines' ? t('tools:fold.vertex.input.lines', 'Two fold lines') : t('panels:fold.words.twoHinges', 'Meeting point and two hinges') }];
   const landsOn: FoldVertexRow = {
     label: t('panels:fold.step.landsOn', 'Lands on'),
     value:

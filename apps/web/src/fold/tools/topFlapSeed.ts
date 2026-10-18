@@ -17,9 +17,9 @@
  * The folds that take the top flap are those that fold one flap over: a
  * valley, a mountain (the same flap, the top as the front shows it, folded
  * behind), a precrease of any extent, and a tuck, a plain fold slid under or
- * over a layer. A reverse fold, a crimp and a sink each take a whole point
- * and turn it about between its layers: every layer at the line is theirs,
- * as it always was (`seedForTool`).
+ * over a layer. A reverse fold, a crimp and a sink default to every layer
+ * at the line (`seedForTool`). For a reverse fold, an Axiom 2 moving point
+ * picked on the CP instead names its material flap (`reverseMaterialSeed`).
  *
  * Pure: no React, no store, no engine.
  */
@@ -30,6 +30,7 @@ import type { FoldPickIndex } from '../canvas/foldPicking';
 import { topFlapOf } from './crossSection';
 import { isFoldKind, type FoldToolId } from './foldToolCatalog';
 import { locateAlongLine } from './foldStepBuilder';
+import { reverseMaterialPoint } from './reverse/reverseMaterialSeed';
 import {
   FOLD_EVERY_LAYER,
   flapSeed,
@@ -83,7 +84,8 @@ export type FoldLineSectionTools = Pick<FoldToolState, 'tool' | 'lineMode' | 'pi
 
 /**
  * The line and side the picks locate, for a fold that takes the top flap
- * (`takesTopFlap`): what its section is asked for, before any step is built.
+ * or a reverse fold naming material on the CP: what its section is asked
+ * for, before any step is built.
  * Null when there is none to ask for: another tool; a fix's line folded in
  * place of the picks' (its section comes with its analysis); a line not yet
  * located, or refused before the engine is asked; or a bend being unfolded,
@@ -99,7 +101,7 @@ export function lineSectionProbe(
   candidate: FoldAxiomCandidate | null
 ): FoldLineSectionProbe | null {
   const { tool, lineMode, picks, swapped, override } = tools;
-  if (!takesTopFlap(tool) || override) return null;
+  if ((!takesTopFlap(tool) && reverseMaterialPoint(tools) === null) || override) return null;
   // A valley or mountain along a bend unfolds it; a precrease or a tuck never does.
   const unfolds = tool === 'valley' || tool === 'mountain';
   const located = locateAlongLine({ lineMode, picks, candidate, swapped, seed: FOLD_EVERY_LAYER }, index, unfolds);
