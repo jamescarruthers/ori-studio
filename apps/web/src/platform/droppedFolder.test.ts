@@ -1,5 +1,13 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { readDroppedEntries } from './droppedFolder';
+
+const tauri = vi.hoisted(() => ({ invoke: vi.fn(), open: vi.fn() }));
+vi.mock('@tauri-apps/api/core', () => ({ invoke: tauri.invoke }));
+vi.mock('@tauri-apps/plugin-dialog', () => ({ open: tauri.open }));
+vi.mock('./runtime', async (original) => ({
+  ...(await original<typeof import('./runtime')>()),
+  getRuntimeSurface: () => 'desktop',
+}));
 
 const file = (name: string) =>
   ({
@@ -34,4 +42,14 @@ it('names a chosen folder\'s files by their path from it on desktop, as the brow
   expect(folderRelativeName('/Users/a/Model', '/Users/a/Model/arms/01.cp')).toBe('Model/arms/01.cp');
   expect(folderRelativeName('/Users/a/Model/', '/Users/a/Model/01.cp')).toBe('Model/01.cp');
   expect(folderRelativeName('C:\\Work\\Model', 'C:\\Work\\Model\\legs\\02.cp')).toBe('Model/legs/02.cp');
+});
+
+it('tells a desktop folder past the entry cap apart, as a dropped one is', async () => {
+  const { FolderTooLargeError, pickImportFolder } = await import('./fileService');
+  tauri.open.mockResolvedValue('/Users/a/Model');
+  tauri.invoke.mockRejectedValue('FOLDER_TOO_LARGE');
+  const reader = await pickImportFolder('Choose a folder');
+  await expect(reader!(true)).rejects.toBeInstanceOf(FolderTooLargeError);
+  tauri.invoke.mockResolvedValue(['/Users/a/Model/arms/01.cp']);
+  expect((await reader!(true)).map((file) => file.name)).toEqual(['Model/arms/01.cp']);
 });

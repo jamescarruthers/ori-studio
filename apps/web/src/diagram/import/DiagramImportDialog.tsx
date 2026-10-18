@@ -9,9 +9,13 @@ import { NumberField } from '../../components/ui/NumberField';
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection';
 import { FieldRow, NumberRow, ToggleRow } from '../../components/ui/fieldRows';
 import { Notice } from '../../components/ui/Notice';
-import { getFileService, pickImportFolder, type PickedFile } from '../../platform/fileService';
+import {
+  FolderTooLargeError,
+  getFileService,
+  pickImportFolder,
+  type PickedFile,
+} from '../../platform/fileService';
 import { ensureDiagramImportTarget, importTarget } from '../../store/workspaceStore/diagramBatchImport';
-import { FolderTooLargeError } from '../../platform/droppedFolder';
 import { useImportDialogStore } from './importDialogStore';
 import {
   orderedImportFiles,

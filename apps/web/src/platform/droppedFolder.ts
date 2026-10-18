@@ -1,4 +1,4 @@
-import { pickedFileFromFile, type PickedFile } from './fileService';
+import { FolderTooLargeError, pickedFileFromFile, type PickedFile } from './fileService';
 
 /** Capture the entry handles during the drop, before its protected data store closes. */
 export function droppedFolderReader(
@@ -11,14 +11,6 @@ export function droppedFolderReader(
   return entries.some((entry) => entry.isDirectory)
     ? (recursive) => readDroppedEntries(entries, recursive)
     : null;
-}
-
-/** A folder past the entry cap; the dialog says so in the reader's language. */
-export class FolderTooLargeError extends Error {
-  constructor() {
-    super('The folder contains too many entries. Choose a smaller folder.');
-    this.name = 'FolderTooLargeError';
-  }
 }
 
 /** Enumerate metadata only, with the same opt-in recursion and cap as the native picker. */

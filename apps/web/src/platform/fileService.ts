@@ -77,6 +77,17 @@ export class FileTooLargeError extends Error {
 /** The error string `read_binary_file` returns past `max_bytes` (`lib.rs`). */
 const DESKTOP_FILE_TOO_LARGE = 'FILE_TOO_LARGE';
 
+/** A folder past the entry cap; the dialog says so in the reader's language. */
+export class FolderTooLargeError extends Error {
+  constructor() {
+    super('The folder contains too many entries. Choose a smaller folder.');
+    this.name = 'FolderTooLargeError';
+  }
+}
+
+/** The error string `list_import_folder` returns past its entry cap (`lib.rs`). */
+const DESKTOP_FOLDER_TOO_LARGE = 'FOLDER_TOO_LARGE';
+
 export interface SaveFileResult {
   name: string;
   /**
@@ -841,8 +852,13 @@ export async function pickImportFolder(title: string): Promise<FolderReader | nu
     const folder = await open({ title, directory: true, multiple: false });
     if (typeof folder !== 'string') return null;
     return async (recursive) => {
-      const paths = await invoke<string[]>('list_import_folder', { path: folder, recursive });
-      return paths.map((path) => ({ ...pickedFileFromPath(path), name: folderRelativeName(folder, path) }));
+      try {
+        const paths = await invoke<string[]>('list_import_folder', { path: folder, recursive });
+        return paths.map((path) => ({ ...pickedFileFromPath(path), name: folderRelativeName(folder, path) }));
+      } catch (error) {
+        if (error === DESKTOP_FOLDER_TOO_LARGE) throw new FolderTooLargeError();
+        throw error;
+      }
     };
   }
   const files = await new Promise<File[] | null>((resolve) => {

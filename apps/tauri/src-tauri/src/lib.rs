@@ -30,40 +30,66 @@ fn read_text_file(path: String) -> Result<String, String> {
     fs::read_to_string(path).map_err(|error| error.to_string())
 }
 
-/// Enumerate only regular files. Symlinks are never followed, including directory symlinks.
+/// Enumerate only regular files. Symlinks inside the chosen folder are never followed.
 #[tauri::command]
 async fn list_import_folder(path: String, recursive: bool) -> Result<Vec<String>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let mut pending = vec![std::path::PathBuf::from(path)];
-        let mut files = Vec::new();
-        let mut visited = 0;
-        while let Some(directory) = pending.pop() {
-            if fs::symlink_metadata(&directory)
-                .map_err(|e| e.to_string())?
-                .file_type()
-                .is_symlink()
-            {
-                continue;
-            }
-            for entry in fs::read_dir(directory).map_err(|e| e.to_string())? {
-                let entry = entry.map_err(|e| e.to_string())?;
-                visited += 1;
-                if visited > 10_000 {
-                    return Err("Folder contains more than 10,000 entries".to_string());
-                }
-                let kind = entry.file_type().map_err(|e| e.to_string())?;
-                if kind.is_file() {
-                    files.push(entry.path().to_string_lossy().into_owned());
-                } else if recursive && kind.is_dir() {
-                    pending.push(entry.path());
-                }
-            }
-        }
-        files.sort();
-        Ok(files)
+        list_folder_files(std::path::Path::new(&path), recursive, FOLDER_ENTRY_LIMIT)
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// The error a folder listing returns past its entry cap. The renderer matches
+/// on it (`fileService.ts`), as it does on [`FILE_TOO_LARGE`].
+const FOLDER_TOO_LARGE: &str = "FOLDER_TOO_LARGE";
+
+/// How many entries a folder import walks before refusing: the same cap as a
+/// folder dropped in the browser (`droppedFolder.ts`), hidden entries included.
+const FOLDER_ENTRY_LIMIT: usize = 10_000;
+
+/// The regular files under `root`, sorted, and under its subfolders when `recursive`.
+///
+/// `root` is read even when it is a symlink, since the user chose it; nothing
+/// inside it is followed, so the walk cannot leave it or loop. Only the root's
+/// own error reaches the user: a subfolder or entry that cannot be read is
+/// skipped, so one locked folder does not cost the whole import.
+fn list_folder_files(
+    root: &std::path::Path,
+    recursive: bool,
+    limit: usize,
+) -> Result<Vec<String>, String> {
+    let mut pending = vec![root.to_path_buf()];
+    let mut files = Vec::new();
+    let mut visited = 0;
+    while let Some(directory) = pending.pop() {
+        let is_root = directory == root;
+        // Checked again as it is read: a subfolder swapped for a symlink since it
+        // was listed is still not followed.
+        if !is_root && !fs::symlink_metadata(&directory).is_ok_and(|meta| meta.is_dir()) {
+            continue;
+        }
+        let entries = match fs::read_dir(&directory) {
+            Ok(entries) => entries,
+            Err(error) if is_root => return Err(error.to_string()),
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            visited += 1;
+            if visited > limit {
+                return Err(FOLDER_TOO_LARGE.to_string());
+            }
+            match entry.file_type() {
+                Ok(kind) if kind.is_file() => {
+                    files.push(entry.path().to_string_lossy().into_owned());
+                }
+                Ok(kind) if recursive && kind.is_dir() => pending.push(entry.path()),
+                _ => {}
+            }
+        }
+    }
+    files.sort();
+    Ok(files)
 }
 
 /// The error a capped read returns past its cap. The renderer matches on it
@@ -462,6 +488,74 @@ mod tests {
             tauri::async_runtime::block_on(super::list_import_folder(path, true)).unwrap();
         assert_eq!(recursive.len(), 2);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn folder_import_skips_a_subfolder_it_cannot_read() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("ori-import-locked-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("open")).unwrap();
+        std::fs::create_dir_all(dir.join("locked")).unwrap();
+        std::fs::write(dir.join("open/one.cp"), b"1 0 0 1 1").unwrap();
+        std::fs::write(dir.join("locked/two.cp"), b"1 0 0 1 1").unwrap();
+        let lock = |mode| {
+            std::fs::set_permissions(dir.join("locked"), std::fs::Permissions::from_mode(mode))
+                .unwrap()
+        };
+        lock(0o000);
+        // Root reads through any lock, so the case only exists where this one holds.
+        let locked = std::fs::read_dir(dir.join("locked")).is_err();
+        let listed = super::list_folder_files(&dir, true, 10);
+        lock(0o755);
+        std::fs::remove_dir_all(&dir).unwrap();
+        let listed = listed.unwrap();
+        assert!(listed.iter().any(|path| path.ends_with("one.cp")));
+        if locked {
+            assert_eq!(listed.len(), 1);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn folder_import_reads_a_chosen_folder_that_is_a_symlink() {
+        let dir = std::env::temp_dir().join(format!("ori-import-linked-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("real")).unwrap();
+        std::fs::write(dir.join("real/one.cp"), b"1 0 0 1 1").unwrap();
+        std::os::unix::fs::symlink(dir.join("real"), dir.join("link")).unwrap();
+        let listed = super::list_folder_files(&dir.join("link"), false, 10);
+        std::fs::remove_dir_all(&dir).unwrap();
+        // Named under the path that was chosen, which the renderer names files from.
+        assert_eq!(
+            listed.unwrap(),
+            vec![
+                dir.join("link")
+                    .join("one.cp")
+                    .to_string_lossy()
+                    .into_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn folder_import_refuses_past_its_cap_with_the_code_the_renderer_matches() {
+        let dir = std::env::temp_dir().join(format!("ori-import-capped-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in ["a.cp", "b.cp", "c.cp"] {
+            std::fs::write(dir.join(name), b"1 0 0 1 1").unwrap();
+        }
+        let at_cap = super::list_folder_files(&dir, false, 3);
+        let past_cap = super::list_folder_files(&dir, false, 2);
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(at_cap.unwrap().len(), 3);
+        assert_eq!(past_cap.unwrap_err(), super::FOLDER_TOO_LARGE);
+    }
+
+    #[test]
+    fn folder_import_reports_a_chosen_folder_it_cannot_read() {
+        let missing =
+            std::env::temp_dir().join(format!("ori-import-missing-{}", std::process::id()));
+        assert!(super::list_folder_files(&missing, true, 10).is_err());
     }
 
     #[test]
