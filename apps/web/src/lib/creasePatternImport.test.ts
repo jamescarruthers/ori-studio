@@ -4,9 +4,48 @@ import {
   parseImportedCreasePattern,
   parseImportedCreasePatternFromFold,
   segmentationFoldArtifactsFromFold,
+  storedImportedCreasePattern,
 } from './creasePatternImport';
 
 describe('crease pattern import', () => {
+  it('storedImportedCreasePattern reads a project FOLD as a full import does, and infers nothing', () => {
+    const fold = {
+      file_spec: 1.1,
+      frame_title: 'square',
+      vertices_coords: [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+      ],
+      edges_vertices: [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [0, 2],
+      ],
+      edges_assignment: ['B', 'B', 'B', 'B', 'M'],
+    };
+    const source = { format: 'fold' as const, filename: 'square.fold', path: null };
+
+    const stored = storedImportedCreasePattern(fold, source);
+    const imported = parseImportedCreasePatternFromFold(fold, source).document;
+
+    // What the record is read for, the same either way.
+    expect(stored.title).toBe(imported.title);
+    expect(stored.source).toEqual(imported.source);
+    expect(stored.selectedFrame).toEqual(imported.selectedFrame);
+    expect(stored.foldFrames).toEqual(imported.foldFrames);
+    expect(stored.sourceFold).toBe(fold);
+    // The frame as stored: no faces inferred, no edges split or renumbered.
+    expect(imported.fold.faces_vertices.length).toBeGreaterThan(0);
+    expect(stored.fold.faces_vertices).toEqual([]);
+    expect(stored.fold.vertices_coords).toBe(fold.vertices_coords);
+    expect(stored.fold.edges_vertices).toBe(fold.edges_vertices);
+    expect(stored.stats).toMatchObject({ edges: 5, faces: 0, boundaries: 4, mountains: 1 });
+  });
+
   it('parseImportedCreasePatternFromFold matches the stringify+reparse path', () => {
     const fold = {
       file_spec: 1.1,
