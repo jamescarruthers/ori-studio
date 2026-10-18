@@ -1253,7 +1253,14 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       path: null,
     });
     const originalSource = importedSourceFromNativeSource(nativeDocument.creasePattern.source);
-    const importedDocument = originalSource ? { ...stored, source: originalSource } : stored;
+    const importedDocument = {
+      ...stored,
+      ...(originalSource ? { source: originalSource } : {}),
+      // The FOLD this crease pattern was imported from, which only a project
+      // that kept one has. The projection is this document exported: kept as
+      // `sourceFold`, every save wrote it a second time.
+      sourceFold: creasePattern.sourceFold ?? null,
+    };
     set({
       ...nativeCpEditorState(nativeDocument, documentState, checked.camvResult, artifacts),
       // Everything below is the "this crease pattern is the whole project" part,
