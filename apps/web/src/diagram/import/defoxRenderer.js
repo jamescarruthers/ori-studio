@@ -195,8 +195,9 @@ export function renderDefox(text) {
           .serialize()
           .replace('>', `>${defs.replaceAll('black', escape(SYM.color.arrow))}`);
         if (/(?:NaN|Infinity)/.test(serialized)) throw new Error('Defox drawing contains invalid geometry');
-        // DEFOX's CP exporter uses M=3/V=2; Ori Studio's CP reader follows M=2/V=3.
-        const cp = Y.FOLD_2_CP(step.fold_cp).replace(/^[23](?= )/gm, (code) => (code === '2' ? '3' : '2'));
+        // Already standard (2 = mountain): DEFOX labels a .cp's mountains "V" when
+        // reading and writes "V" back as 2, so its own CP round trip needs no swap.
+        const cp = Y.FOLD_2_CP(step.fold_cp);
         const saved = { ...step, color: DRAW.color, symcolor: SYM.color };
         delete saved.fold_d;
         const snapshot = JSON.stringify(saved);

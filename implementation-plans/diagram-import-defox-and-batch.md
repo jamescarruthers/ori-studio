@@ -64,9 +64,10 @@ transforms, distortion/catalyst data, colours, clipping and all 16 symbol kinds.
 Import uses saved display state, with **no layer-order search**. Entry zero is
 also imported as a step.
 
-`fold_cp` supplies editable geometry. Defox's CP conversion reverses M/V codes
-relative to standard CP; the adapter corrects this at its boundary without
-changing ordinary CP parsing. Saved display geometry is kept distinct from the
+`fold_cp` supplies editable geometry. Defox's CP export already uses standard
+codes (it swaps M/V on read and back on write), so the adapter passes it through
+unchanged; an earlier extra swap inverted every crease and was removed after
+review. Saved display geometry is kept distinct from the
 source CP. A saved view must resolve to exactly one paper region; otherwise the
 entry reports an unsupported result instead of inventing its source link.
 

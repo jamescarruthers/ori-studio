@@ -1000,8 +1000,10 @@ and vendored unchanged under `third_party/step-folder`. The diagram importer
 uses its saved-state conversion, distortion, and symbol renderer directly in
 an isolated worker. A small inert DOM adapter produces SVG, which then passes
 Ori Studio's existing SVG sanitizer. The importer does not repeat the layer
-search for a saved Defox view. Mountain/valley color codes are translated at
-the CP boundary because Defox and Oriedita number them oppositely.
+search for a saved Defox view. Defox's CP export is used as-is: it labels a
+`.cp`'s mountains "V" internally but swaps them back when writing, so its
+codes already match Oriedita's (2 = mountain, 3 = valley). The oracle checks a
+pleat's codes through that round trip.
 
 Compatibility covers the pinned JSON array format, both linear and cell saved
 states, saved view parameters, and symbol types 0–15. Unsupported or malformed

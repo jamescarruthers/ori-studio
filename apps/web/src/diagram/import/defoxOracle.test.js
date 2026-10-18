@@ -92,8 +92,33 @@ function compare(entry) {
   expect([...imported.children].filter((n) => n.tagName !== 'defs').map(shape)).toEqual(
     [...root.children].map(shape),
   );
-  expect(result.cp).toBe(Y.FOLD_2_CP(native.fold_cp).replace(/^[23](?= )/gm, (c) => (c === '2' ? '3' : '2')));
+  expect(result.cp).toBe(Y.FOLD_2_CP(native.fold_cp));
 }
+
+it("keeps a standard CP's mountain and valley codes through DEFOX's conversion", () => {
+  // A pleat in a standard .cp (2 = mountain, 3 = valley), read the way DEFOX
+  // reads a pattern, then exported again by the adapter.
+  const doc = ['1 0 0 3 0', '1 3 0 3 3', '1 3 3 0 3', '1 0 3 0 0', '2 1 0 1 3', '3 2 0 2 3'].join('\n');
+  const fold = Y.CP_2_FOLD(doc);
+  const faces = fold.FV.map((_, i) => i);
+  const entry = { ...fixture(), fold_cp: fold, fold, lin: { S: faces, cycle: faces.map(() => 0) } };
+  vi.stubGlobal('OffscreenCanvas', class {
+    getContext() {
+      return { font: '', measureText: (text) => ({ width: text.length * 60 }) };
+    }
+  });
+  const result = renderDefox(JSON.stringify([entry]))[0];
+  expect(result.ok, result.error).toBe(true);
+  const creases = result.cp
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => line.split(' ').map(Number))
+    .filter(([code]) => code === 2 || code === 3)
+    .map(([code, x0]) => ({ code, x: Math.round(x0) }))
+    .sort((a, b) => a.x - b.x);
+  // The left crease was the mountain and the right one the valley.
+  expect(creases.map((c) => c.code)).toEqual([2, 3]);
+});
 
 it.each(Array.from({ length: 16 }, (_, i) => i))(
   'matches the unmodified renderer in a real DOM for symbol %i',
