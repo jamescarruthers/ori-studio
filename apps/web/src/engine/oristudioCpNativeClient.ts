@@ -28,6 +28,7 @@ import type {
   OristudioCpOperationDescriptor,
 } from './oristudioCpTypes';
 import type { CpGeometryTransport } from './oristudioCpGeometry';
+import { decodeSheetIndexBytes, type CpSheetIndexTransport } from './oristudioCpSheetIndex';
 import type { WasmErrorEnvelope } from './types';
 import type { OristudioCpOperationId } from '../lib/oristudioCpCommands';
 import type { OristudioCpWorkerApi } from '../workers/oristudioCpWorker';
@@ -259,6 +260,9 @@ export function createOristudioCpNativeClient(): OristudioCpWorkerApi {
     },
     async restoreFromCompact(handle: number, geometry: CpGeometryTransport): Promise<void> {
       return call('cp_restore_from_compact', { handle, geometry: toPlainGeometry(geometry) });
+    },
+    async sheetIndex(handle: number): Promise<CpSheetIndexTransport> {
+      return decodeSheetIndexBytes(await call<ArrayBuffer>('cp_sheet_index', { handle }));
     },
     async summary(handle: number): Promise<OristudioCpDocumentSummary> {
       return call('cp_document_summary', { handle });

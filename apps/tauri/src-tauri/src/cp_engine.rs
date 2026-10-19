@@ -261,6 +261,20 @@ pub async fn cp_restore_from_compact(
     .await
 }
 
+/// The document's sheets as one binary buffer (see `CompactSheetIndex::to_bytes`):
+/// a sheet per line for half a million lines is an `ArrayBuffer`, not JSON.
+#[tauri::command]
+pub async fn cp_sheet_index(
+    handle: u32,
+    state: State<'_, CpEngine>,
+) -> Result<tauri::ipc::Response, EngineError> {
+    let bytes = run(state, move |session| {
+        Ok(session.sheet_index(handle)?.to_bytes())
+    })
+    .await?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 #[tauri::command]
 pub async fn cp_document_summary(
     handle: u32,
@@ -653,6 +667,7 @@ const NATIVE_CP_COMMAND_NAMES: &[&str] = &[
     "cp_document_geometry",
     "cp_restore_from_compact",
     "cp_document_summary",
+    "cp_sheet_index",
     "cp_free_document",
     "cp_execute_command",
     "cp_preview_command",
