@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { peekCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { useCpSheetIndex } from '../../cp-workspace/sheets/useCpSheetIndexState';
 import { useWorkspaceStore } from '../../store/workspaceStore';
