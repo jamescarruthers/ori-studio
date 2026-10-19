@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { FoldArtifacts, FoldDocument } from '../../engine/types';
+import { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type {
   OristudioCpDocumentSnapshot,
   OristudioCpFoldedPaperScene,
@@ -11,29 +11,31 @@ import type { CpCaptureRuntime } from './captureFolded';
 
 /**
  * A pattern for the capture tests, without a kernel: two bordered squares side
- * by side, sharing a middle border wall, each split by one diagonal, with an
- * aux line in the left one from its edge to its diagonal. Line ids are 1-based
- * in this order.
+ * by side, 50 apart, each split by one diagonal, with an aux line in the left
+ * one from its edge to its diagonal. Line ids are 1-based in this order. (Two
+ * squares sharing a side would be one sheet: a border line inside a sheet is
+ * part of it, not a wall.)
  *
- *   (0,100)──5──(100,100)──6──(200,100)
- *      │  ╲   L      │      R   ╱  │
- *      3    8   10   7        9     4        10: aux, (0,50)–(50,50)
- *      │      ╲      │    ╱        │
- *   (0,0)────1───(100,0)────2───(200,0)
+ *   (0,100)──5──(100,100)   (150,100)──6──(250,100)
+ *      │  ╲   L      │         │      R   ╱  │
+ *      3    8   10   7        11        9    4     10: aux, (0,50)–(50,50)
+ *      │      ╲      │         │    ╱        │
+ *   (0,0)────1───(100,0)     (150,0)────2───(250,0)
  */
 export type FixtureLine = [number, number, number, number, string];
 
 export const TWO_SQUARES: FixtureLine[] = [
   [0, 0, 100, 0, 'Black0'], // 1
-  [100, 0, 200, 0, 'Black0'], // 2
+  [150, 0, 250, 0, 'Black0'], // 2
   [0, 0, 0, 100, 'Black0'], // 3
-  [200, 0, 200, 100, 'Black0'], // 4
+  [250, 0, 250, 100, 'Black0'], // 4
   [0, 100, 100, 100, 'Black0'], // 5
-  [100, 100, 200, 100, 'Black0'], // 6
-  [100, 0, 100, 100, 'Black0'], // 7: the middle wall, a border of both
+  [150, 100, 250, 100, 'Black0'], // 6
+  [100, 0, 100, 100, 'Black0'], // 7: the left square's right side
   [0, 0, 100, 100, 'Red1'], // 8
-  [100, 0, 200, 100, 'Blue2'], // 9
+  [150, 0, 250, 100, 'Blue2'], // 9
   [0, 50, 50, 50, 'Cyan3'], // 10
+  [150, 0, 150, 100, 'Black0'], // 11: the right square's left side
 ];
 
 /** {@link TWO_SQUARES}, or any fixture, moved on the canvas by (dx, dy): nothing else changed. */
@@ -41,9 +43,11 @@ export function movedLines(lines: FixtureLine[], dx: number, dy: number): Fixtur
   return lines.map(([ax, ay, bx, by, color]) => [ax + dx, ay + dy, bx + dx, by + dy, color]);
 }
 
-/** The left square's lines: its borders, the wall, its diagonal and its aux line. */
+/** The left square's lines: its borders, its diagonal and its aux line. */
 export const LEFT_LINE_IDS = [1, 3, 5, 7, 8, 10];
 export const LEFT_FOLD_LINE_IDS = [1, 3, 5, 7, 8];
+/** The right square's lines. */
+export const RIGHT_LINE_IDS = [2, 4, 6, 9, 11];
 
 export function cpLine(
   ax: number,
@@ -83,39 +87,29 @@ export function cpDocument(
 }
 
 /**
- * The kernel-space segmentation of {@link TWO_SQUARES}: its faces, as the
- * fold export gives them. The aux line lies on no face. `wall: false` drops
- * the middle wall, merging the squares into one region; `dx`, `dy` is the
- * pattern moved as {@link movedLines} moves its lines.
+ * The sheet index the kernel builds for {@link TWO_SQUARES}: the left square,
+ * then the right, each holding its lines. `dx`, `dy` is the pattern moved as
+ * {@link movedLines} moves its lines; `left: false` is the index once the left
+ * square stopped being closed by its border, its lines in no sheet.
  */
-export function twoSquaresSegmentation({
-  wall = true,
+export function twoSquaresIndex({
+  left = true,
   dx = 0,
   dy = 0,
-}: { wall?: boolean; dx?: number; dy?: number } = {}): FoldArtifacts {
-  const at = (x: number, y: number): [number, number] => [x + dx, y + dy];
-  const fold: FoldDocument = {
-    vertices_coords: [at(0, 0), at(100, 0), at(200, 0), at(0, 100), at(100, 100), at(200, 100)],
-    edges_vertices: [
-      [0, 1],
-      [1, 2],
-      [0, 3],
-      [2, 5],
-      [3, 4],
-      [4, 5],
-      [1, 4],
-      [0, 4],
-      [1, 5],
-    ],
-    edges_assignment: ['B', 'B', 'B', 'B', 'B', 'B', wall ? 'B' : 'M', 'M', 'V'],
-    faces_vertices: [
-      [0, 1, 4],
-      [0, 4, 3],
-      [1, 2, 5],
-      [1, 5, 4],
-    ],
-  };
-  return { fold, simulation_model: null };
+}: { left?: boolean; dx?: number; dy?: number } = {}): CpSheetIndex {
+  const square = (x: number) => [x + dx, dy, x + 100 + dx, dy, x + 100 + dx, 100 + dy, x + dx, 100 + dy];
+  const box = (x: number) => [x + dx, dy, x + 100 + dx, 100 + dy];
+  const sheets = left ? [0, 150] : [150];
+  const lineSheet = TWO_SQUARES.map((_, index) =>
+    LEFT_LINE_IDS.includes(index + 1) ? (left ? 0 : -1) : left ? 1 : 0
+  );
+  return new CpSheetIndex({
+    bounds: new Float64Array(sheets.flatMap(box)),
+    outlineOffsets: new Uint32Array(sheets.map((_, index) => index * 4).concat(sheets.length * 4)),
+    outlineCoords: new Float64Array(sheets.flatMap(square)),
+    lineCounts: new Uint32Array(left ? [LEFT_LINE_IDS.length, RIGHT_LINE_IDS.length] : [RIGHT_LINE_IDS.length]),
+    lineSheet: new Int32Array(lineSheet),
+  });
 }
 
 /** A sheet folded in half: the front face over the back one, so one face is buried. */

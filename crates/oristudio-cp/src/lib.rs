@@ -5,6 +5,7 @@
 //! unsupported operations fail with a typed error instead of fabricating nearby
 //! behavior.
 
+mod batch_append;
 pub mod cancel;
 pub mod canonical;
 pub mod checks;
@@ -17,10 +18,12 @@ pub mod folding3d;
 pub mod geometry;
 pub mod geometry_transport;
 pub mod io;
+pub(crate) mod meetings;
 pub mod model;
 pub mod operations;
 pub mod session;
 pub mod share;
+pub mod sheets;
 pub mod solve_fold_angles;
 pub mod solve_k;
 pub mod solve_spatial;

@@ -7,10 +7,11 @@
  * A step finds its sheet by what it is, not where it sits
  * (implementation-plans/pattern-identity.md): the one still in its place,
  * unchanged or edited there; else a sheet of the same outline whose creases
- * are the ones it remembers, wherever it is now (`resolveMovedRegion`, in the
- * kernel-space segmentation the selection toolbar uses). It is made of
- * every crease inside it. What is folded — and what {@link StepCreases.fingerprint}
- * is taken over — is the region's foldable lines, in kernel order.
+ * are the ones it remembers, wherever it is now (`resolveMovedRegion`, among
+ * the sheets of the index the selection toolbar uses). It is made of every
+ * line the index puts in it. What is folded — and what
+ * {@link StepCreases.fingerprint} is taken over — is the sheet's foldable
+ * lines, in kernel order.
  *
  * Fingerprints are relative (`rc1:`), so a move is not a change. A step that
  * keeps an absolute one (`cs1:`, written before) is compared the old way, and
@@ -18,7 +19,7 @@
  *
  * Pure: no store, no kernel.
  */
-import type { FoldArtifacts } from '../../engine/types';
+import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
 import { cpLinesByIds, foldedSourceFingerprint } from '../../cp-workspace/folded/foldedFigureStaleness';
 import { kernelLineOrder } from '../../cp-workspace/folded/foldRoute';
@@ -29,9 +30,9 @@ import {
   type RegionFound,
 } from '../../cp-workspace/regions/regionIdentity';
 import { boundariesMatch, regionReferenceFor, resolveRegion } from '../../cp-workspace/regions/regionReference';
+import { sheetRegions, type CpSheetRegion } from '../../cp-workspace/sheets/cpSheetRegions';
 import { selectedFoldableCpLineIds } from '../../lib/creasePatternClipboard';
-import { resolveCpSegments, type CpSegment } from '../../lib/creasePatternSegmentation';
-import { segmentContainedLineIds } from '../../lib/creasePatternSelectionSegment';
+import { lineContentFingerprint } from '../../lib/creaseFingerprint';
 import { emptyOristudioCpSelection } from '../../lib/creasePatternViewport';
 import type { Point } from '../../lib/geometry';
 import type {
@@ -55,10 +56,10 @@ export interface StepCreases {
   drawnFingerprint: string;
   /** The same two as absolute fingerprints (`cs1:`), for a step that keeps one from before. */
   absolute: { fingerprint: string; drawnFingerprint: string };
-  /** The paper the region covers, in pattern units: its rim. A crease-pattern picture fills it. */
+  /** The paper the sheet covers, in pattern units: its outline. A crease-pattern picture fills it. */
   paper: Point[][];
-  /** The region: what its thumbnail is drawn from. */
-  segment: CpSegment;
+  /** The sheet: what its thumbnail is drawn from and its simulated model built for. */
+  sheet: CpSheetRegion;
   /** How the region was found: unchanged (wherever it is), in its place, or as the only one of its shape. */
   found: RegionFound;
 }
@@ -84,10 +85,10 @@ export function knownCreasesOf(source: LinkedCreasesSource): KnownCreases {
 
 /**
  * A scope's creases today, or why there are none:
- * - `missing`: the region is gone (merged, split, its rim no longer all
+ * - `missing`: the sheet is gone (merged, split, no longer closed by its
  *   border, or moved and changed among others of its shape), or has no
  *   foldable crease;
- * - `unknown`: a region cannot be looked for yet, because the segmentation is
+ * - `unknown`: a sheet cannot be looked for yet, because the sheet index is
  *   not ready.
  */
 export type StepCreaseChoice =
@@ -98,34 +99,34 @@ export type StepCreaseChoice =
 /**
  * The scope's creases today. `known` is what the step remembers, which lets
  * it find its sheet after a move; without it (a link being made now, to a
- * region just taken from this segmentation) the region is found where it is.
+ * sheet just taken from this index) the sheet is found where it is.
  */
 export function chooseStepCreases(
   document: OristudioCpDocumentSnapshot,
   scope: DiagramCpScope,
-  segmentation: FoldArtifacts | null,
+  sheets: CpSheetIndex | null,
   known: KnownCreases | null = null
 ): StepCreaseChoice {
-  if (!segmentation) return { status: 'unknown' };
-  const segments = resolveCpSegments(segmentation);
-  const creasesOf = (segment: CpSegment) => regionCreases(document, segmentation, segment);
+  if (!sheets) return { status: 'unknown' };
+  const regions = sheetRegions(sheets);
+  const creasesOf = (sheet: CpSheetRegion) => sheetCreases(document, sheets, sheet);
   const resolved = known
-    ? resolveMovedRegion(scope.region, segments, {
+    ? resolveMovedRegion(scope.region, regions, {
         fingerprint: known.fingerprint,
-        fingerprintOf: (segment) => {
-          const creases = creasesOf(segment);
+        fingerprintOf: (sheet) => {
+          const creases = creasesOf(sheet);
           return creases ? (known.drawn ? creases.drawnFingerprint : creases.fingerprint) : null;
         },
       })
-    : inPlace(scope, segments);
+    : inPlace(scope, regions);
   if (!resolved) return { status: 'missing' };
   const creases = creasesOf(resolved.segment);
   if (!creases) return { status: 'missing' };
   return { status: 'found', creases: { ...creases, found: resolved.found } };
 }
 
-function inPlace(scope: DiagramCpScope, segments: readonly CpSegment[]) {
-  const segment = resolveRegion(scope.region, segments);
+function inPlace(scope: DiagramCpScope, regions: readonly CpSheetRegion[]) {
+  const segment = resolveRegion(scope.region, regions);
   return segment ? { segment, found: 'in-place' as const } : null;
 }
 
@@ -139,27 +140,26 @@ export function creasesMatch(creases: StepCreases, known: KnownCreases): boolean
 }
 
 /**
- * A region's creases in this document, or null when it has none to fold:
- * worked out once per document, segmentation and region, since finding a
- * moved sheet asks it of every sheet of the same shape.
+ * A sheet's creases in this document, or null when it has none to fold:
+ * worked out once per sheet while the lines stay as they are, since finding a
+ * moved sheet asks it of every sheet of the same shape, and every linked card
+ * asks for its own.
  */
-function regionCreases(
+function sheetCreases(
   document: OristudioCpDocumentSnapshot,
-  segmentation: FoldArtifacts,
-  segment: CpSegment
+  index: CpSheetIndex,
+  sheet: CpSheetRegion
 ): Omit<StepCreases, 'found'> | null {
-  let bySegmentation = regionCache.get(document);
-  if (!bySegmentation) {
-    bySegmentation = new WeakMap();
-    regionCache.set(document, bySegmentation);
+  // Keyed by the lines' content, not the snapshot: a selection replaces the
+  // snapshot and changes nothing a fingerprint reads, and recomputing every
+  // card's fingerprints on each one cost the diagram seconds on a large canvas.
+  const content = lineContentFingerprint(document);
+  if (sheetCache?.content !== content || sheetCache.index !== index) {
+    sheetCache = { content, index, bySheet: new Map() };
   }
-  let bySegment = bySegmentation.get(segmentation);
-  if (!bySegment) {
-    bySegment = new WeakMap();
-    bySegmentation.set(segmentation, bySegment);
-  }
-  if (bySegment.has(segment)) return bySegment.get(segment) ?? null;
-  const scopedLineIds = segmentContainedLineIds(document, segmentation, segment);
+  const cached = sheetCache.bySheet.get(sheet.id);
+  if (cached !== undefined) return cached;
+  const scopedLineIds = [...sheet.lineIds];
   const foldLineIds = kernelLineOrder(
     selectedFoldableCpLineIds(document, { ...emptyOristudioCpSelection(), lines: scopedLineIds })
   );
@@ -175,18 +175,20 @@ function regionCreases(
             fingerprint: relativeCreaseFingerprint(folded),
             drawnFingerprint: relativeCreaseFingerprint(drawn),
             absolute: { fingerprint: foldedSourceFingerprint(folded), drawnFingerprint: foldedSourceFingerprint(drawn) },
-            paper: segment.boundary,
-            segment,
+            paper: sheet.boundary,
+            sheet,
           };
         })();
-  bySegment.set(segment, creases);
+  sheetCache.bySheet.set(sheet.id, creases);
   return creases;
 }
 
-const regionCache = new WeakMap<
-  OristudioCpDocumentSnapshot,
-  WeakMap<FoldArtifacts, WeakMap<CpSegment, Omit<StepCreases, 'found'> | null>>
->();
+/** One slot: one crease pattern is open, and superseded lines are not asked about again. */
+let sheetCache: {
+  content: string;
+  index: CpSheetIndex;
+  bySheet: Map<number, Omit<StepCreases, 'found'> | null>;
+} | null = null;
 
 /**
  * The fingerprint a step keeps for its creases, by how it shows them: a
@@ -204,6 +206,6 @@ export function creasesFingerprint(creases: StepCreases, render: Pick<DiagramCpR
  * move follows its sheet, and Open in Edit and Open in References go there.
  */
 export function followedScope(scope: DiagramCpScope, creases: StepCreases): DiagramCpScope {
-  if (boundariesMatch(scope.region.boundary, creases.segment.boundary)) return scope;
-  return { kind: 'segment', region: regionReferenceFor(creases.segment) };
+  if (boundariesMatch(scope.region.boundary, creases.sheet.boundary)) return scope;
+  return { kind: 'segment', region: regionReferenceFor(creases.sheet) };
 }

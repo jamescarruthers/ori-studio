@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramCaptureOutcome } from '../../store/workspaceStore/diagramCapture';
-import { twoSquaresSegmentation } from './capture.fixtures';
+import { twoSquaresIndex } from './capture.fixtures';
 import { cpStep, stepsIn } from '../document/diagramSteps.fixtures';
 import { insertSteps, createDiagram } from '../document/diagramDocument';
 import { takeCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
@@ -31,7 +31,7 @@ vi.mock('sonner', () => ({ toast: toasts }));
 
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
-const [left] = resolveCpSegments(twoSquaresSegmentation());
+const [left] = sheetRegions(twoSquaresIndex());
 
 function withSteps() {
   const diagram = insertSteps(createDiagram({ title: 'Linked' }), [
@@ -230,6 +230,17 @@ describe('showLinkedStepAs', () => {
     expect(analytics.trackDiagramStepShownAs).toHaveBeenCalledExactlyOnceWith('crease_pattern', 'pane');
     publishOpenLinkedPose(null, null);
   });
+
+  it('replaces a saved Defox view when Folded is chosen, rather than calling it shown already', async () => {
+    useWorkspaceStore.setState({
+      diagram: insertSteps(state().diagram!, [cpStep('step-defox', { mode: 'defox', snapshot: '{}' })], 2),
+    });
+    const pose = openPose(true);
+    publishOpenLinkedPose('step-defox', pose);
+    expect(await showLinkedStepAs('step-defox', 'folded', 'pane')).toBe(true);
+    expect(pose.showAs).toHaveBeenCalledWith('folded');
+    publishOpenLinkedPose(null, null);
+  });
 });
 
 describe('duplicateLinkedStepAs', () => {
@@ -253,6 +264,15 @@ describe('duplicateLinkedStepAs', () => {
     expect(state().diagramHistory.past.length).toBe(past);
     expect(toasts.error).toHaveBeenCalled();
     expect(analytics.trackDiagramStepShownAs).not.toHaveBeenCalled();
+  });
+
+  it('captures a Defox view’s copy Folded, rather than copying the saved view', async () => {
+    useWorkspaceStore.setState({
+      diagram: insertSteps(state().diagram!, [cpStep('step-defox', { mode: 'defox', snapshot: '{}' })], 2),
+    });
+    const capture = answer({ ...CAPTURED, render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 } });
+    expect(await duplicateLinkedStepAs('step-defox', 'folded')).not.toBeNull();
+    expect(capture).toHaveBeenCalled();
   });
 
   it('is a plain duplicate shown the same way: nothing captured or counted as a way', async () => {

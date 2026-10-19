@@ -895,16 +895,19 @@ export const EMPTY_CREASE_EXPORT_CONTENT: CreaseExportContent = { foldedFigure: 
  * The grid an export of `fold` should draw, or null when `document` is absent.
  *
  * The single place the two halves are resolved together, so every caller that
- * opens an export or share preview hands the artwork the same pair.
+ * opens an export or share preview hands the artwork the same pair. A caller
+ * that knows how `fold` sits on the document passes `transform`; otherwise it is
+ * fitted from the two extents, which assumes `fold` is the whole document.
  */
 export function creaseExportGridSource(
   fold: FoldDocument,
-  document: OristudioCpDocumentSnapshot | null | undefined
+  document: OristudioCpDocumentSnapshot | null | undefined,
+  transform?: CpModelToFoldTransform
 ): CreaseExportGridSource | null {
   if (!document) return null;
   return {
     metadata: document.crease_pattern.grid,
-    transform: cpModelToFoldTransform(fold, document),
+    transform: transform ?? cpModelToFoldTransform(fold, document),
   };
 }
 

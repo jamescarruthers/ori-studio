@@ -83,7 +83,8 @@ import type {
   PrecreaseRfRect,
   SheetAnalysis,
 } from './sheetFrames';
-import { paperFallbackRect, precreaseInputFromTransport } from './sheetFrames';
+import { precreaseInputFromTransport } from './sheetFrames';
+import { referencesSheetLines, type ReferencesSheetLines } from './referencesFrames';
 
 /**
  * The whole-pattern breakdown and the CP-wide analysis: the two runs the
@@ -538,7 +539,8 @@ export function useReferencesBreakdown(
     async (
       client: PrecreaseClient,
       component: PrecreaseComponent,
-      input: { segments: Float64Array; colors: Int32Array },
+      /** The sheet's own lines: the planner is given nothing else of the pattern. */
+      lines: ReferencesSheetLines,
       forRevision: string,
       signal: AbortSignal,
       budgetMs: number,
@@ -555,18 +557,19 @@ export function useReferencesBreakdown(
     ): Promise<
       ReferencesPlanComponent | { refusedKind: PrecreaseRefusalKind | null }
     > => {
-      const created = await client.plannerCreate(
-        input.segments,
-        input.colors,
+      const created = await client.plannerCreateForSheet(
         component.id,
+        lines.outline,
+        lines.segments,
+        lines.colors,
+        lines.indices,
         {
           total_budget_ms: budgetMs,
           precrease_grid: grid.precreaseGrid,
           grid_where_needed: grid.gridWhereNeeded,
           allow_dangling_folds: grid.allowDanglingFolds,
           merge_symmetric_steps: grid.mergeSymmetricSteps,
-        },
-        paperFallbackRect()
+        }
       );
       const info: PrecreasePlannerInfo = created.info;
       if (info.refused || !component.frame || !component.rf_rect) {
@@ -701,6 +704,7 @@ export function useReferencesBreakdown(
     setReferencesProgress({ phase: 'closing', done: 0, total: 0 });
     const started = performance.now();
     const input = precreaseInputFromTransport(current.geometry);
+    const geometry = current.geometry;
     // Taken now, with the rest of `current`, so a toggle mid-run cannot make
     // a plan that is for neither setting.
     const grid: ReferencesPlanSettings = {
@@ -731,7 +735,7 @@ export function useReferencesBreakdown(
           const outcome = await planComponent(
             client,
             sheet,
-            input,
+            referencesSheetLines(geometry, sheet),
             forRevision,
             controller.signal,
             NO_TIME_CEILING_MS,
@@ -934,7 +938,7 @@ export function useReferencesBreakdown(
     const runId = beginReferencesRun(() => controller.abort());
     setReferencesRun({ status: 'running', startedAt: Date.now() });
     setReferencesProgress({ phase: 'closing', done: 0, total: 0 });
-    const input = precreaseInputFromTransport(current.geometry);
+    const lines = referencesSheetLines(current.geometry, sheet);
 
     void (async () => {
       const client = getPrecreaseClient();
@@ -943,12 +947,13 @@ export function useReferencesBreakdown(
         // gives every line an axiom or a rank, and a pleated line has neither
         // — it is in no cp step and never remaining, so it would simply be
         // missing from the count.
-        const created = await client.plannerCreate(
-          input.segments,
-          input.colors,
+        const created = await client.plannerCreateForSheet(
           sheet.id,
-          { precrease_grid: false },
-          paperFallbackRect()
+          lines.outline,
+          lines.segments,
+          lines.colors,
+          lines.indices,
+          { precrease_grid: false }
         );
         const handle = createWorkerPlannerHandle(client, created.token);
         const analysis = await analyzeReferences(handle, {

@@ -15,6 +15,13 @@ import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import type { Point } from '../../lib/geometry';
 import type { FoldedSourceBounds } from '../folded/foldedFigureStaleness';
 
+/**
+ * What a reference is made from and matched against: a segment of a
+ * segmentation, or a sheet of the sheet index (`sheets/cpSheetRegions`). Only
+ * the rim, the box and the id are read.
+ */
+export type RegionLike = Pick<CpSegment, 'id' | 'boundary' | 'bounds'>;
+
 export interface RegionReference {
   /** The region's rim, as rings: its identity. */
   boundary: Point[][];
@@ -24,8 +31,8 @@ export interface RegionReference {
   segmentIdHint: number | null;
 }
 
-/** The reference to a segment as it is now. */
-export function regionReferenceFor(segment: CpSegment): RegionReference {
+/** The reference to a segment, or a sheet, as it is now. */
+export function regionReferenceFor(segment: RegionLike): RegionReference {
   return {
     boundary: segment.boundary.map((ring) => ring.map((point) => ({ x: point.x, y: point.y }))),
     bounds: { ...segment.bounds },
@@ -209,10 +216,10 @@ export function boundariesMatch(a: readonly Point[][], b: readonly Point[][]): b
  * `segmentIdHint` is tried first only as a shortcut, and only when its boundary
  * still matches; it is never trusted on its own.
  */
-export function resolveRegion(
+export function resolveRegion<Region extends RegionLike>(
   reference: Pick<RegionReference, 'boundary' | 'segmentIdHint'>,
-  segments: readonly CpSegment[]
-): CpSegment | null {
+  segments: readonly Region[]
+): Region | null {
   const { boundary, segmentIdHint } = reference;
   if (boundary.length === 0) return null;
   const hinted =

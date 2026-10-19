@@ -24,13 +24,15 @@ import {
   type SheetStrokeRole,
   type SheetThumbnail,
 } from '../sheets/sheetThumbnail';
+import type { ReferencesSheetChoice } from '../../store/workspaceStore/types';
+import { boundariesMatch, resolveRegion, type RegionLike } from '../regions/regionReference';
 import { creaseRoleAt } from './creaseRole';
 import type { ModelBounds } from './referencesStepGeometry';
 import type { PrecreaseComponent, PrecreaseFrame, SheetAnalysis } from './sheetFrames';
 
 /** One row of the sheet picker. */
 export interface ReferencesSheet {
-  /** The precrease component id — what `referencesSelectedSheet` holds. */
+  /** The sheet's id: its place in the sheet index's reading order. */
   id: number;
   /** Can it be planned at all? A refused sheet still gets a row, greyed. */
   plannable: boolean;
@@ -75,6 +77,44 @@ export function resolveSelectedSheet(
 ): number | null {
   if (stored !== null && sheets.some((sheet) => sheet.id === stored)) return stored;
   return sheets.find((sheet) => sheet.plannable)?.id ?? sheets[0]?.id ?? null;
+}
+
+/** A listed sheet as a region: its id, its outline as its one ring, and its box. */
+function regionOf(component: PrecreaseComponent): RegionLike {
+  return {
+    id: component.id,
+    boundary: [component.outline.map(([x, y]) => ({ x, y }))],
+    bounds: sheetBounds(component) ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+  };
+}
+
+/** The sheet `id` of `frames` as `referencesSelectedSheet` holds it, or null when there is none. */
+export function sheetChoice(
+  frames: SheetAnalysis | null,
+  id: number
+): ReferencesSheetChoice | null {
+  const component = frames?.components.find((entry) => entry.id === id);
+  if (!component) return null;
+  const { boundary, id: segmentIdHint } = regionOf(component);
+  return { boundary, segmentIdHint };
+}
+
+/** The id of the sheet of `frames` that `choice` names now: by its outline, its old id a hint. */
+export function chosenSheet(
+  frames: SheetAnalysis | null,
+  choice: ReferencesSheetChoice | null
+): number | null {
+  if (!frames || !choice) return null;
+  return resolveRegion(choice, frames.components.map(regionOf))?.id ?? null;
+}
+
+/** Whether two choices name one sheet, as it was numbered when each was made. */
+export function sameSheetChoice(
+  a: ReferencesSheetChoice | null,
+  b: ReferencesSheetChoice | null
+): boolean {
+  if (a === null || b === null) return a === b;
+  return a.segmentIdHint === b.segmentIdHint && boundariesMatch(a.boundary, b.boundary);
 }
 
 /**

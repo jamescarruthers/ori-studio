@@ -36,6 +36,10 @@
       "unknown": "Le patron de plis n’est pas encore prêt. Réessayez dans un instant."
     },
     "dropReadOnly": "Ce diagramme a été créé avec une version plus récente d’Ori Studio et s’ouvre en lecture seule\u00a0: on ne peut pas y ajouter d’images.",
+    "import": {
+      "otherWorkspaceFirst": "Annulez ou rétablissez d’abord les modifications suivantes dans l’autre espace de travail\u00a0: l’importation a modifié Édition et Diagramme.",
+      "restoreFailed": "Impossible de restaurer les étapes importées."
+    },
     "placementsReflowed_one": "{{count}} étapes déplacées ont retrouvé leur cellule",
     "placementsReflowed_many": "{{count}} étapes déplacées ont retrouvé leur cellule",
     "placementsReflowed_other": "{{count}} étapes déplacées ont retrouvé leur cellule",

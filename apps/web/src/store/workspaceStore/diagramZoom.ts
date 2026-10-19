@@ -18,7 +18,7 @@ import {
   type DiagramStepEnlargedVia,
 } from '../../analytics';
 import { cpAuxLinesKey, NO_AUX_LINES_KEY } from '../../cp-workspace/folded/foldedAuxSource';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { abandonOnEngineLoss } from '../../diagram/capture/engineLoss';
 import { lacksPaperFaces, stepWithPaperFaces } from '../../diagram/capture/stepPaperFaces';
 import {
@@ -61,7 +61,7 @@ export function storePaperFacesBackfill(store: DiagramCaptureStore): PaperFacesB
     if (wanting.length === 0 || !cp) return faced;
     const style = store.get().diagram?.style ?? DEFAULT_DIAGRAM_STYLE;
     try {
-      const segmentation = await abandonOnEngineLoss(ensureCpSegmentationArtifacts(cp.document));
+      const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(cp.document));
       // A flat fold's faces: no 3D figure's aux lines are asked for, but the handle is the capture's own.
       const runtime = createCpCaptureRuntime(
         FOLD_RUN_NONE,
@@ -69,7 +69,7 @@ export function storePaperFacesBackfill(store: DiagramCaptureStore): PaperFacesB
       );
       for (const step of wanting) {
         const got = await abandonOnEngineLoss(
-          stepWithPaperFaces(runtime, { step, document: cp.document, segmentation, style })
+          stepWithPaperFaces(runtime, { step, document: cp.document, sheets, style })
         );
         if (got.status === 'faces') faced.set(step.id, got.step);
       }
@@ -116,6 +116,8 @@ export function enlargedPictureKind(document: DiagramDocument, step: DiagramStep
         return '3d';
       case 'simulated':
         return 'simulated';
+      case 'defox':
+        return 'defox';
     }
   }
   return stepAsset(document, step)?.kind ?? null;

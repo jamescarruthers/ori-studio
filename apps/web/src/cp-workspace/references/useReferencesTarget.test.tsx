@@ -84,15 +84,22 @@ vi.mock('../../store/workspaceStore/precreaseRuntime', async (importOriginal) =>
   return {
     ...actual,
     getPrecreaseClient: () => ({
-      sheetFrames: () => {
-        stubs.framesCalls += 1;
-        return stubs.frames!.promise;
-      },
       modelToRf: () => Promise.resolve([0.5, 0.5]),
       rfToModelMany: () => stubs.mapping!.promise,
     }),
   };
 });
+
+// The sheets as the workspace lists them, answered when the test says so; a
+// sheet's detail is the sheet itself here, since only the endpoints matter.
+vi.mock('./referencesFrames', () => ({
+  referencesFramesOf: () => {
+    stubs.framesCalls += 1;
+    return stubs.frames!.promise;
+  },
+  ensureReferencesSheetDetail: (_geometry: unknown, _revision: string, component: unknown) =>
+    Promise.resolve(component),
+}));
 
 const { useReferencesTarget } = await import('./useReferencesTarget');
 const { useReferencesHighlights } = await import('./useReferencesView');
@@ -113,7 +120,7 @@ const GEOMETRY = {
   segAttr: new Int32Array(10),
 } as unknown as CpGeometryTransport;
 
-/** A single square sheet owning both segments — what `sheetFrames` would answer. */
+/** A single square sheet owning both segments — what the workspace would list. */
 const ANALYSIS = {
   components: [
     {

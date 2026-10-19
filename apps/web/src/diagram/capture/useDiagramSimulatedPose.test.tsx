@@ -41,11 +41,12 @@ const runtime = {
 };
 vi.mock('../../simulator/workerGpuSupport', () => ({ useWorkerGpuSupport: () => true }));
 vi.mock('../../simulator/useSimulatorShortcuts', () => ({ useSimulatorShortcuts: () => {} }));
-vi.mock('./useLinkStatus', () => ({ useCpSegmentationState: () => ({ status: 'ready', artifacts: ARTIFACTS }) }));
-const ARTIFACTS = {};
-const SEGMENT = { id: 0 };
-vi.mock('./linkStatus', () => ({ stepSheet: () => SEGMENT }));
-vi.mock('../../lib/creasePatternSegmentation', () => ({ resolveCpSegments: () => [] }));
+vi.mock('../../cp-workspace/sheets/useCpSheetIndexState', () => ({
+  useCpSheetIndexState: () => ({ status: 'ready', index: INDEX }),
+}));
+const INDEX = {};
+const SHEET = { id: 0 };
+vi.mock('./linkStatus', () => ({ stepSheet: () => SHEET }));
 vi.mock('../../store/workspaceStore/diagramCapture', () => ({
   SIMULATED_FRAME_PX: 512,
   storeSimulationFold: async () => ({ faces_vertices: [[0, 1, 2]] }),

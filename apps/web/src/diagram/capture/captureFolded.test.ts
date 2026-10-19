@@ -4,7 +4,7 @@ import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { DEFAULT_FOLDED_3D_CAMERA, antipodalCamera } from '../../cp-workspace/folded/folded3dCamera';
 import { folded3dSceneStyleKey } from '../../cp-workspace/folded/folded3dScene';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { line, sceneOf, sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
 import {
   createDiagram,
@@ -26,7 +26,7 @@ import {
   LEFT_FOLD_LINE_IDS,
   movedLines,
   TWO_SQUARES,
-  twoSquaresSegmentation,
+  twoSquaresIndex,
 } from './capture.fixtures';
 import {
   captureStep,
@@ -46,12 +46,12 @@ vi.mock('../../cp-workspace/folded/folded3dStoredScene', async (importOriginal) 
   ...folded3dStoredScene,
 }));
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const scope: DiagramCpScope = { kind: 'segment', region: regionReferenceFor(left!) };
 
 function request(render: DiagramCpRender, patch: Partial<CaptureStepRequest> = {}): CaptureStepRequest {
-  return { document: cpDocument(), segmentation, scope, render, style: DEFAULT_DIAGRAM_STYLE, ...patch };
+  return { document: cpDocument(), sheets, scope, render, style: DEFAULT_DIAGRAM_STYLE, ...patch };
 }
 
 const FLAT: DiagramCpRender = { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 };
@@ -94,14 +94,14 @@ describe('captureStep, a crease pattern', () => {
     const before = await captureStep(fakeCaptureRuntime(), request(CP));
     if (before.status !== 'captured') throw new Error('captured');
     const known = { fingerprint: before.source.fingerprint, drawn: true };
-    const moved = twoSquaresSegmentation({ dx: 750.3, dy: -12.9 });
+    const moved = twoSquaresIndex({ dx: 750.3, dy: -12.9 });
     const after = await captureStep(
       fakeCaptureRuntime(),
-      request(CP, { document: cpDocument(movedLines(TWO_SQUARES, 750.3, -12.9)), segmentation: moved, known })
+      request(CP, { document: cpDocument(movedLines(TWO_SQUARES, 750.3, -12.9)), sheets: moved, known })
     );
     if (after.status !== 'captured') throw new Error('captured after the move');
     expect(after.source.fingerprint).toBe(before.source.fingerprint);
-    expect(after.source.scope.region).toEqual(regionReferenceFor(resolveCpSegments(moved)[0]!));
+    expect(after.source.scope.region).toEqual(regionReferenceFor(sheetRegions(moved)[0]!));
     // In its place, the scope it was asked with stands — a stale id hint and
     // all, which a re-anchor to the segment would have replaced.
     const asked: DiagramCpScope = { kind: 'segment', region: { ...regionReferenceFor(left!), segmentIdHint: 99 } };
@@ -110,11 +110,38 @@ describe('captureStep, a crease pattern', () => {
     expect(again.source.scope).toEqual(asked);
   });
 
+  // A sheet's paper is its outline until its own faces say otherwise: an empty
+  // border loop inside it is a hole wherever the kernel certifies the faces,
+  // and the picture leaves it unfilled, as the whole canvas's faces did.
+  it('fills the paper its sheet\'s faces cover, a hole left out', async () => {
+    const outline = left!.boundary[0]!;
+    const hole = [
+      { x: 30, y: 30 },
+      { x: 30, y: 60 },
+      { x: 60, y: 60 },
+      { x: 60, y: 30 },
+    ];
+    const rings = async (sheetPaper?: CaptureStepRequest['sheetPaper']) => {
+      const result = await captureStep(
+        fakeCaptureRuntime(),
+        request({ mode: 'crease-pattern', rotationDeg: 0 }, { sheetPaper })
+      );
+      if (result.status !== 'captured' || result.captured.kind !== 'picture') throw new Error('captured');
+      const picture = result.captured.picture;
+      if (picture.kind !== 'scene') throw new Error('a scene');
+      const scene = JSON.parse(picture.sceneJson) as { items: { kind: string; rings?: unknown[] }[] };
+      return scene.items.find((item) => item.kind === 'face')?.rings?.length;
+    };
+    expect(await rings()).toBe(1);
+    expect(await rings(async () => null)).toBe(1);
+    expect(await rings(async () => [outline, hole])).toBe(2);
+  });
+
   it('says why when there is nothing to capture', async () => {
     const runtime = fakeCaptureRuntime();
-    expect(await captureStep(runtime, request(FLAT, { segmentation: null }))).toEqual({ status: 'unknown' });
+    expect(await captureStep(runtime, request(FLAT, { sheets: null }))).toEqual({ status: 'unknown' });
     expect(
-      await captureStep(runtime, request(FLAT, { segmentation: twoSquaresSegmentation({ wall: false }) }))
+      await captureStep(runtime, request(FLAT, { sheets: twoSquaresIndex({ left: false }) }))
     ).toEqual({ status: 'missing' });
     expect(runtime.fold).not.toHaveBeenCalled();
   });

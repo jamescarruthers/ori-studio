@@ -210,6 +210,7 @@ export function DiagramPanel() {
         onViewChange={switchView}
         readOnly={readOnly}
         onAddStep={addStep}
+        onImport={() => void handleMenuAction('file.importDiagramSteps')}
         onUpload={uploadPictures}
         patternOpen={patternOpen}
         onLink={linkNewStep}
@@ -260,7 +261,7 @@ export function DiagramPanel() {
             readOnly={readOnly}
             dropTarget={dropTarget !== null}
             onAddStep={addStep}
-            onUpload={uploadPictures}
+            onImport={() => void handleMenuAction('file.importDiagramSteps')}
             patternOpen={patternOpen}
             onLink={linkNewStep}
             onFromReferences={openReferencesBrowser}

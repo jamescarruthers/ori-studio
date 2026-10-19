@@ -8,6 +8,7 @@ import type {
   WasmErrorEnvelope,
 } from '../../engine/types';
 import type { Point } from '../../lib/geometry';
+import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { PaperStyleField, PaperStyleValue } from '../../lib/paper/paperStyle';
 import type { CpVertexPin } from '../../cp-workspace/pins/vertexPins';
 import type { PinSet } from '../../simulator/tools/pinSet';
@@ -126,6 +127,7 @@ import type {
 } from '../../engine/oristudioBpTypes';
 
 export interface OristudioCpHistoryEntry {
+  compoundId?: string;
   document: OristudioCpDocumentSnapshot;
   selection: OristudioCpSelection;
   /** Annotation layer (images + text boxes) at the captured moment. */
@@ -454,23 +456,24 @@ export interface ProjectSliceActions {
   exportObj: (fileService?: FileService) => Promise<boolean>;
   exportStl: (fileService?: FileService) => Promise<boolean>;
   /**
-   * Export a single crease-pattern segment. File formats (cp/fold/ori/orh)
-   * download directly; image formats (svg/png) open the export-image modal
-   * pre-scoped to the segment.
+   * Export one sheet of the crease pattern, by its position in the sheet index.
+   * File formats (cp/fold/ori/orh) download directly; image formats (svg/png)
+   * open the export-image modal on that sheet.
    */
-  exportOristudioCpSegment: (
+  exportOristudioCpSheet: (
     format: SegmentExportFormat,
-    segmentId: number,
+    sheet: number,
     fileService?: FileService
   ) => Promise<boolean>;
   /**
-   * Encode one crease-pattern segment as a share link and open the share modal.
+   * Encode one sheet of the crease pattern as a share link and open the share
+   * modal.
    *
-   * Scoped to a segment rather than the whole document: a segment is a region
-   * enclosed by border creases, which is exactly "one crease pattern" and is the
+   * Scoped to a sheet rather than the whole document: a sheet is the region
+   * inside one closed border, which is exactly "one crease pattern" and is the
    * same unit the sibling Fold / Export / Simulate verbs operate on.
    */
-  shareOristudioCpSegment: (segmentId: number) => Promise<boolean>;
+  shareOristudioCpSheet: (sheet: number) => Promise<boolean>;
   publishOristudioCpShare: (args: {
     title: string;
     author: string | null;
@@ -844,6 +847,13 @@ export interface CreasePatternSliceState {
    */
   oristudioCpFocusedInlineSimulationId: string | null;
   /**
+   * The sheet the Simulate workspace shows, by its outline (`RegionReference`),
+   * so an edit that renumbers the sheet index does not move it to another;
+   * null, or an outline no sheet has any more, is the first sheet. Session
+   * state, like the Simulate workspace's other choices.
+   */
+  oristudioCpSimulateSheet: RegionReference | null;
+  /**
    * The 3D folded figure whose body is taking canvas drags as **orbit** rather
    * than as a move.
    *
@@ -888,12 +898,14 @@ export interface CreasePatternSliceActions {
   refreshFoldArtifacts: () => Promise<FoldArtifacts | null>;
   setCreaseColorMode: (mode: CreaseColorMode) => void;
   setSelectedSegment: (id: number | null) => void;
+  /** Show this sheet in the Simulate workspace (see {@link CreasePatternSliceState.oristudioCpSimulateSheet}). */
+  setOristudioCpSimulateSheet: (sheet: RegionReference | null) => void;
   /**
-   * Scope the simulator to one crease-pattern segment and switch to the Simulate
-   * workspace. Ensures the full fold artifacts first (the simulator needs the
-   * simulation mesh). Resolves false when the id no longer resolves to a segment.
+   * Scope the simulator to one sheet of the crease pattern, by its position in
+   * the sheet index, and switch to the Simulate workspace, which builds that
+   * sheet's mesh alone. Resolves false when the index has no such sheet.
    */
-  simulateOristudioCpSegment: (segmentId: number) => Promise<boolean>;
+  simulateOristudioCpSheet: (sheet: number) => Promise<boolean>;
   /**
    * Open a simulation of one crease-pattern region as a window on the Edit
    * canvas.
@@ -1744,14 +1756,18 @@ export interface ReferencesSliceState {
   /** ReferenceFinder's ranked solutions for a vertex or crease target. */
   referencesCandidates: readonly ReferencesCandidate[] | null;
   /**
-   * Which sheet the workspace is working on — a precrease component id.
+   * Which sheet the workspace is working on: its outline, with the id it had
+   * when it was chosen as a hint (`chosenSheet` reads it against the sheets
+   * listed now).
    *
    * The References workspace answers for one crease pattern at a time: a
    * document holding several disjoint sheets is several separate folding
-   * problems, and nobody folds them at once. Null until the frames analysis
-   * lands and the first plannable sheet is chosen; the sidebar sets it.
+   * problems, and nobody folds them at once. By the outline because sheets
+   * are numbered in reading order, top left first, so an edit that adds one
+   * above or to the left of this one renumbers it. Null until a sheet is
+   * chosen; the panel falls back to the first plannable sheet meanwhile.
    */
-  referencesSelectedSheet: number | null;
+  referencesSelectedSheet: ReferencesSheetChoice | null;
   /** Which step and candidate the view frames, and the landmarks-first toggle. */
   referencesView: ReferencesView;
   /** Whether a computation is in flight, stale, or failed. */
@@ -1786,6 +1802,9 @@ export interface ReferencesSliceState {
   referencesCardRequest: { sheet: number; card: ReferencesStepCard } | null;
 }
 
+/** A sheet, by its outline; the id it had when chosen is a hint, never trusted alone. */
+export type ReferencesSheetChoice = Pick<RegionReference, 'boundary' | 'segmentIdHint'>;
+
 /** Open References on the sheet with this rim, in this mode. */
 export interface ReferencesSheetRequest {
   boundary: Point[][];
@@ -1805,7 +1824,7 @@ export interface ReferencesSliceActions {
    * the plan, the pick and the step index all name geometry that belongs to a
    * sheet, so carrying any of them across would describe the wrong pattern.
    */
-  setReferencesSelectedSheet: (component: number | null) => void;
+  setReferencesSelectedSheet: (sheet: ReferencesSheetChoice | null) => void;
   setReferencesView: (view: Partial<ReferencesView>) => void;
   /**
    * The restored sheet has been looked for in the frames analysis: select it,
@@ -1813,7 +1832,7 @@ export interface ReferencesSliceActions {
    * Unlike {@link setReferencesSelectedSheet} this resets nothing — the mode,
    * the toggle and the card waiting for the plan are what was restored with it.
    */
-  commitReferencesRestoredSheet: (component: number | null) => void;
+  commitReferencesRestoredSheet: (sheet: ReferencesSheetChoice | null) => void;
   /**
    * The restored card still waiting for a plan, taken — only by the document
    * it was restored for (`loadSerial`): null when there is none for it. A card
@@ -1917,6 +1936,7 @@ export interface DiagramPathNodeSelection {
 }
 
 export interface DiagramSliceState {
+  diagramImportBusy: boolean;
   /**
    * The project's diagram (implementation-plans/diagram-workspace.md, D1).
    * `null` until the first edit creates one; a project-level document beside

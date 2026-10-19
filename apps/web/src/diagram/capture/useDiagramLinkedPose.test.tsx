@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { resetFoldedFigureHandles, setFoldedFigureHandleFree } from '../../cp-workspace/folded/foldedFigureHandles';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramCpRender, DiagramLayerSpread } from '../document/diagramDocument';
 import { stepsIn } from '../document/diagramSteps.fixtures';
-import { cpDocument, fakeCaptureRuntime, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, twoSquaresIndex } from './capture.fixtures';
 import type { CpCaptureRuntime } from './captureFolded';
 import { useDiagramLinkedPose, type DiagramLinkedPose } from './useDiagramLinkedPose';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 
 /**
  * The Step pane's spread rows reach the controller only through this hook:
@@ -25,16 +25,16 @@ vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', async (importOrigina
   ...(await importOriginal<typeof import('../../store/workspaceStore/cpFoldRuntimeBindings')>()),
   createCpCaptureRuntime: () => bindings.runtime,
 }));
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
-  ensureCpSegmentationArtifacts: vi.fn(async () => segmentation),
-  peekCpSegmentationArtifacts: vi.fn(() => segmentation),
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: vi.fn(async () => sheets),
+  peekCpSheetIndex: vi.fn(() => sheets),
 }));
 const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn(), success: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toasts }));
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const state = () => useWorkspaceStore.getState();
 const DEPTH = { kind: 'depth' as const, amount: 0.025, toward: 'down' as const };
 const AFFINE = { kind: 'affine' as const, amount: 0.03, keep: 'top' as const, skew: 1, axisDeg: 81 };
@@ -100,9 +100,9 @@ function holdTheLookup(): () => void {
   const gate = new Promise<void>((resolve) => {
     open = resolve;
   });
-  vi.mocked(ensureCpSegmentationArtifacts).mockImplementationOnce(async () => {
+  vi.mocked(ensureCpSheetIndex).mockImplementationOnce(async () => {
     await gate;
-    return segmentation;
+    return sheets;
   });
   return open;
 }

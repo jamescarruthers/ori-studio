@@ -115,9 +115,8 @@ export interface ReferencesBrowser {
  * The References browser, a modal over the Diagram (D20): the patterns with a
  * plan, their cards, the selection, and the pull, bound to the store.
  *
- * The patterns are References' sheets (`sheetFrames` in the precrease worker,
- * held while the browser is open) that the plan cache holds a current plan
- * for; it is listed again whenever the cache says it changed. A plan is
+ * The patterns are References' sheets (`referencesFrames`, read while the
+ * browser is open) that the plan cache holds a current plan for; it is listed again whenever the cache says it changed. A plan is
  * unpacked once per pattern shown, and its cards drawn as References draws
  * them (`referencesBrowserPlans.ts`). Find shows the answer References has
  * on screen, while it is for the pattern as it is now.

@@ -7,14 +7,11 @@ import {
   subscribeReferencesPlanCache,
 } from '../../cp-workspace/references/referencesPlanCacheStore';
 import { referencesRevisionKey } from '../../cp-workspace/references/useReferencesView';
-import { paperFallbackRect, precreaseInputFromTransport, type SheetAnalysis } from '../../cp-workspace/references/sheetFrames';
+import { referencesFramesOf } from '../../cp-workspace/references/referencesFrames';
+import { precreaseInputFromTransport, type SheetAnalysis } from '../../cp-workspace/references/sheetFrames';
 import type { CpGeometryTransport } from '../../engine/oristudioCpGeometry';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import {
-  getPrecreaseClient,
-  releasePrecreaseClient,
-  retainPrecreaseClient,
-} from '../../store/workspaceStore/precreaseRuntime';
+import { releasePrecreaseClient, retainPrecreaseClient } from '../../store/workspaceStore/precreaseRuntime';
 import { plannedPatterns, type BrowserPattern } from './referencesBrowserPlans';
 
 /** Where the planned patterns stand. */
@@ -39,9 +36,9 @@ export interface ReferencesSheets {
  * that still fits their creases — what the References browser lists (D20) and
  * a References step's ways are drawn from (D23).
  *
- * The sheets come from the precrease worker (`sheetFrames`), held while a
- * user of this hook is mounted, and are kept for the creases' revision: the
- * same creases asked again answer at once. The patterns are listed again
+ * The sheets are the ones the References workspace lists (`referencesFrames`),
+ * read while a user of this hook is mounted, and are kept for the creases'
+ * revision: the same creases asked again answer at once. The patterns are listed again
  * whenever the plan cache says it changed. Not `enabled`, it asks nothing and
  * holds no worker: its sheets are then whatever was found last for these creases.
  */
@@ -59,12 +56,12 @@ export function useReferencesSheets(enabled = true): ReferencesSheets {
   useEffect(() => {
     if (!enabled || !geometry || lastFrames?.revision === revision) return undefined;
     let live = true;
-    const input = precreaseInputFromTransport(geometry);
-    getPrecreaseClient()
-      .sheetFrames(input.segments, input.colors, paperFallbackRect())
+    referencesFramesOf(revision)
       .then((analysis) => {
+        // Unless the creases moved on while they were read: the next revision asks for its own.
+        if (!live) return;
         lastFrames = { revision, analysis };
-        if (live) setFrames({ revision, analysis });
+        setFrames({ revision, analysis });
       })
       .catch((error: unknown) => {
         reportError(error, { surface: 'diagram:references-browser' });

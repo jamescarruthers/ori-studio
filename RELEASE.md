@@ -19,7 +19,8 @@ Required GitHub Actions secrets:
 
 The Cloudflare Pages project name is `oristudio`; the production URL is
 `https://oristudio.pages.dev/`. Pull request previews are deployed from
-non-fork PRs to `https://pr-<number>.oristudio.pages.dev/`.
+non-fork PRs against `main` to `https://pr-<number>.oristudio.pages.dev/` when
+the PR is opened, reopened, pushed to, or retargeted to `main`.
 
 ## Diagram fonts
 

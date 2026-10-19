@@ -8,14 +8,15 @@
  * - `stale`: they changed; Refresh captures them again.
  * - `missing`: there is nothing to choose — the region is gone, or has no
  *   foldable crease; Relink picks another.
- * - `unknown`: there is no pattern to ask (none is open), or a region cannot
- *   be looked for until the segmentation is ready.
+ * - `unknown`: there is no pattern to ask (none is open), or a sheet cannot
+ *   be looked for until the sheet index is ready.
  *
  * Pure.
  */
-import type { FoldArtifacts } from '../../engine/types';
-import type { CpSegment } from '../../lib/creasePatternSegmentation';
+import type { CpSheetRegion } from '../../cp-workspace/sheets/cpSheetRegions';
+import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
+import { lineContentFingerprint } from '../../lib/creaseFingerprint';
 import {
   isLockedStep,
   type DiagramCpScope,
@@ -44,9 +45,9 @@ export function linkedSourceOf(step: DiagramStep): DiagramLinkedSource | null {
  * fingerprinted on every line in it when it was sent (D6): its picture never
  * follows the pattern, so all its status can say is whether the sheet changed.
  */
-/** A step shown as Simulated above 0%: captured again only in Pose (D19). */
+/** Saved external views and partially simulated steps can only be replaced in Pose. */
 export function needsPose(step: DiagramStep): boolean {
-  return step.source?.kind === 'cp' && step.source.render.mode === 'simulated' && step.source.render.foldPercent > 0;
+  return step.source?.kind === 'cp' && (step.source.render.mode === 'defox' || (step.source.render.mode === 'simulated' && step.source.render.foldPercent > 0));
 }
 
 /**
@@ -76,12 +77,12 @@ export function refreshKind(
 export function linkStatus(
   source: (Pick<DiagramCpSource, 'scope' | 'fingerprint' | 'render'> & { kind?: 'cp' }) | DiagramReferencesSource,
   document: OristudioCpDocumentSnapshot | null,
-  segmentation: FoldArtifacts | null
+  sheets: CpSheetIndex | null
 ): DiagramLinkStatus {
   if (!document) return 'unknown';
   const known = knownCreasesOf(source);
   const scope = source.kind === 'references-step' ? sheetScope(source) : source.scope;
-  const choice = cachedChoice(document, scope, segmentation, known);
+  const choice = cachedChoice(document, scope, sheets, known);
   if (choice.status !== 'found') return choice.status;
   // Sent while its sheet matched no region: there were no creases to keep,
   // so nothing to say it changed from.
@@ -99,21 +100,21 @@ export function stepSheet(
   scope: DiagramCpScope,
   known: KnownCreases,
   document: OristudioCpDocumentSnapshot | null,
-  segmentation: FoldArtifacts | null
-): CpSegment | null {
-  if (!document || !segmentation) return null;
-  const choice = cachedChoice(document, scope, segmentation, known);
-  return choice.status === 'found' ? choice.creases.segment : null;
+  sheets: CpSheetIndex | null
+): CpSheetRegion | null {
+  if (!document || !sheets) return null;
+  const choice = cachedChoice(document, scope, sheets, known);
+  return choice.status === 'found' ? choice.creases.sheet : null;
 }
 
 /** {@link stepSheet} for a linked step's or a References step's source. */
 export function sourceSheet(
   source: DiagramCpSource | DiagramReferencesSource,
   document: OristudioCpDocumentSnapshot | null,
-  segmentation: FoldArtifacts | null
-): CpSegment | null {
+  sheets: CpSheetIndex | null
+): CpSheetRegion | null {
   const scope = source.kind === 'references-step' ? sheetScope(source) : source.scope;
-  return stepSheet(scope, knownCreasesOf(source), document, segmentation);
+  return stepSheet(scope, knownCreasesOf(source), document, sheets);
 }
 
 /** A References step's sheet as a scope: one object per source, so the choice cache keeps it. */
@@ -129,37 +130,34 @@ export function sheetScope(source: DiagramReferencesSource): DiagramCpScope {
 const sheetScopes = new WeakMap<DiagramReferencesSource, DiagramCpScope>();
 
 /**
- * Choices by document, then segmentation, then scope object, then what the
- * step remembers: a card asks on every render, and choosing is a walk over
- * the pattern and a digest. Each object key is replaced, never edited — a
- * document snapshot per kernel command, a segmentation per crease geometry, a
- * scope per capture — so identity is the whole question, and a superseded
- * one's entries go with it. The remembered fingerprint is a string: a Refresh
- * can keep the scope and change it.
+ * Choices for the lines as they are and the index they were found in, then by
+ * scope object, then by what the step remembers: a card asks on every render,
+ * and choosing is a walk over the sheets and a digest. Keyed by the lines'
+ * content rather than the snapshot, which every kernel command replaces — a
+ * selection too — while the choice reads nothing a selection changes. A scope
+ * is replaced per capture, never edited, so its identity is the question; the
+ * remembered fingerprint is a string, since a Refresh can keep the scope and
+ * change it. One slot: one crease pattern is open at a time.
  */
-const choices = new WeakMap<
-  OristudioCpDocumentSnapshot,
-  WeakMap<FoldArtifacts | typeof NO_SEGMENTATION, WeakMap<DiagramCpScope, Map<string, StepCreaseChoice>>>
->();
-const NO_SEGMENTATION = {};
+let choices: {
+  content: string;
+  index: CpSheetIndex;
+  byScope: WeakMap<DiagramCpScope, Map<string, StepCreaseChoice>>;
+} | null = null;
 
 function cachedChoice(
   document: OristudioCpDocumentSnapshot,
   scope: DiagramCpScope,
-  segmentation: FoldArtifacts | null,
+  sheets: CpSheetIndex | null,
   known: KnownCreases
 ): StepCreaseChoice {
-  let bySegmentation = choices.get(document);
-  if (!bySegmentation) {
-    bySegmentation = new WeakMap();
-    choices.set(document, bySegmentation);
+  // Nothing to look in yet: a constant answer, not worth a slot.
+  if (!sheets) return chooseStepCreases(document, scope, null, known);
+  const content = lineContentFingerprint(document);
+  if (choices?.content !== content || choices.index !== sheets) {
+    choices = { content, index: sheets, byScope: new WeakMap() };
   }
-  const segmentationKey = segmentation ?? NO_SEGMENTATION;
-  let byScope = bySegmentation.get(segmentationKey);
-  if (!byScope) {
-    byScope = new WeakMap();
-    bySegmentation.set(segmentationKey, byScope);
-  }
+  const { byScope } = choices;
   let byKnown = byScope.get(scope);
   if (!byKnown) {
     byKnown = new Map();
@@ -168,7 +166,7 @@ function cachedChoice(
   const knownKey = `${known.drawn ? 'drawn' : 'fold'}|${known.fingerprint ?? ''}`;
   let choice = byKnown.get(knownKey);
   if (!choice) {
-    choice = chooseStepCreases(document, scope, segmentation, known);
+    choice = chooseStepCreases(document, scope, sheets, known);
     byKnown.set(knownKey, choice);
   }
   return choice;

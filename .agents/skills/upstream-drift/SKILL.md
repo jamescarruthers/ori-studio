@@ -24,6 +24,7 @@ not, ask which.
 | Flat-Folder | `references/flat-folder.md` | `crates/treemaker-flatfold` |
 | Origami Simulator | `references/origami-simulator.md` | `packages/origami-simulator` |
 | ReferenceFinder | `references/reference-finder.md` | none — not a port; `third_party/reference-finder/src/core` is compiled to wasm by `scripts/build-reference-finder.mjs` |
+| Step-Folder (DEFOX) | `references/step-folder.md` | none — not a port; `apps/web/src/diagram/import/defoxRenderer.js` runs the vendored modules unchanged |
 
 **Read the reference file for the chosen upstream before doing anything else.**
 It carries the repo URL, branch, watch paths, port map, and — most importantly —

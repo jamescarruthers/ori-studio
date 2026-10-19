@@ -9,12 +9,22 @@ const HIDDEN: PaperStyle = {
   auxCreases: { ...DEFAULT_PAPER_STYLE.auxCreases, visible: false },
 };
 
+/** The 400-unit square's map into its unit frame, y flipped: what the planner hands over. */
+const SQUARE_TO_UNIT: [number, number, number, number, number, number] = [
+  0.0025, 0, 0, -0.0025, 0, 1,
+];
+
 function sheet(aux: number[], unit: [number, number, number, number][]): PrecreaseComponent {
   return {
     id: 3,
     frame: null,
     rf_rect: null,
-    affines: null,
+    affines: {
+      model_to_unit: SQUARE_TO_UNIT,
+      unit_to_model: [400, 0, 0, -400, 0, 400],
+      model_to_rf: SQUARE_TO_UNIT,
+      rf_to_model: [400, 0, 0, -400, 0, 400],
+    },
     outline: [],
     outline_residual: 0,
     is_fallback: false,
@@ -52,7 +62,8 @@ describe('referencesShowsAux', () => {
 
 describe('referencesSheetAux', () => {
   it('carries a sheet’s aux lines as ids, unit segments and model segments', () => {
-    const aux = referencesSheetAux(sheet([5], [[0, 0.75, 1, 0.75]]), geometry)!;
+    // No unit segments of its own, as the workspace lists a sheet: the frame maps them.
+    const aux = referencesSheetAux(sheet([5], []), geometry)!;
     expect(aux.component).toBe(3);
     // The editor's crease ids are 1-based.
     expect([...aux.ids]).toEqual([6]);

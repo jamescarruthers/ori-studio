@@ -127,6 +127,20 @@ pub fn document_geometry(handle: u32) -> Result<JsValue, JsValue> {
     compact_to_js(&compact)
 }
 
+/// The document's sheets and which one each line is in (see
+/// `oristudio_cp::sheets`), as typed arrays the worker can transfer.
+#[wasm_bindgen]
+pub fn sheet_index(handle: u32) -> Result<JsValue, JsValue> {
+    let index = with_session(|session| session.sheet_index(handle))?;
+    let object = Object::new();
+    set_f64_array(&object, "bounds", &index.bounds)?;
+    set_u32_array(&object, "outlineOffsets", &index.outline_offsets)?;
+    set_f64_array(&object, "outlineCoords", &index.outline_coords)?;
+    set_u32_array(&object, "lineCounts", &index.line_counts)?;
+    set_i32_array(&object, "lineSheet", &index.line_sheet)?;
+    Ok(object.into())
+}
+
 /// Restore a document in place from the compact geometry produced by
 /// [`document_geometry`] (undo/redo). Keeps the handle stable.
 #[wasm_bindgen]
@@ -185,6 +199,24 @@ pub fn deselect_all(handle: u32) -> Result<u32, JsValue> {
     with_session_mut(|session| session.deselect_all(handle))
 }
 
+/// Ori Studio's batch import: append pre-placed sheets, which must not overlap
+/// one another or the document, in one atomic mutation (optionally replacing an
+/// untouched starter sheet). Returns each sheet's 1-based line range.
+#[wasm_bindgen]
+pub fn append_disjoint(
+    handle: u32,
+    values: js_sys::Array,
+    replace_starter: bool,
+) -> Result<JsValue, JsValue> {
+    let parts = values
+        .iter()
+        .map(|value| compact_from_js(&value))
+        .collect::<Result<Vec<_>, _>>()?;
+    let ranges =
+        with_session_mut(|session| session.append_disjoint(handle, &parts, replace_starter))?;
+    to_js_value(&ranges)
+}
+
 /// Oriedita import (add): merge the document behind `imported_handle` into the
 /// document behind `handle`. Returns the resulting line-segment count.
 #[wasm_bindgen]
@@ -213,6 +245,14 @@ pub fn export_cp(handle: u32) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn export_fold(handle: u32) -> Result<String, JsValue> {
     with_session(|session| session.export_fold(handle))
+}
+
+/// One sheet's lines (1-based ids) as compact FOLD JSON; see
+/// `CpSession::export_fold_lines`.
+#[wasm_bindgen]
+pub fn export_fold_lines(handle: u32, line_ids: JsValue) -> Result<String, JsValue> {
+    let line_ids: Vec<usize> = from_js(line_ids)?;
+    with_session(|session| session.export_fold_lines(handle, &line_ids))
 }
 
 /// `folded_handles` names the 3D folded figures to write as `foldedForm`

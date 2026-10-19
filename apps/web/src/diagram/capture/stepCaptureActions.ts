@@ -11,9 +11,8 @@ import {
 } from '../../analytics';
 import { fold3dRefusalMessage } from '../../cp-workspace/folded/foldedFigureNotice';
 import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
-import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
+import { regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
-import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -78,7 +77,7 @@ export function pickerShowAs(document: DiagramDocument | null, step: DiagramStep
  * (`firstLinkPose`); shown another way, it starts whole (`landSeededFrame`).
  * Whether it was linked.
  */
-export async function linkDiagramStep(stepId: string, segment: CpSegment, way?: DiagramShowAs): Promise<boolean> {
+export async function linkDiagramStep(stepId: string, sheet: RegionLike, way?: DiagramShowAs): Promise<boolean> {
   const store = useWorkspaceStore.getState();
   const step = store.diagram ? stepById(store.diagram, stepId) : null;
   if (!step || !store.diagram) return false;
@@ -95,7 +94,7 @@ export async function linkDiagramStep(stepId: string, segment: CpSegment, way?: 
   const render: DiagramCpRender =
     asked.mode === 'simulated' && asked.foldPercent > 0 ? { ...asked, foldPercent: 0 } : asked;
   const outcome = await store.captureDiagramStep(stepId, {
-    scope: { kind: 'segment', region: regionReferenceFor(segment) },
+    scope: { kind: 'segment', region: regionReferenceFor(sheet) },
     render,
     kind: 'diagram-capture',
     label: linked ? 'Relink pattern' : 'Link pattern',
@@ -124,7 +123,8 @@ export async function showLinkedStepAs(
   const store = useWorkspaceStore.getState();
   const step = store.diagram ? stepById(store.diagram, stepId) : null;
   if (step?.source?.kind !== 'cp' || isLockedStep(step) || store.diagramReadOnly) return false;
-  if (showAsOf(step.source.render) === way && step.picture !== null) return true;
+  // A saved Defox view is none of the ways: choosing one replaces it, as Pose does.
+  if (step.source.render.mode !== 'defox' && showAsOf(step.source.render) === way && step.picture !== null) return true;
   const open = openLinkedPoseOf(stepId);
   if (open) {
     // The open step's controller says why, if it could not; only a way shown is counted.
@@ -161,7 +161,7 @@ export async function duplicateLinkedStepAs(stepId: string, way: DiagramShowAs):
   const copyId = store.duplicateDiagramStep(stepId);
   if (copyId === null) return null;
   // Shown the same way, it is a plain duplicate: no way chosen to count.
-  if (showAsOf(source.render) === way) return copyId;
+  if (source.render.mode !== 'defox' && showAsOf(source.render) === way) return copyId;
   const render = renderToShowAs(source, way, startingSpread(copyId));
   const duplicated = useWorkspaceStore.getState().diagramHistory.past.at(-1);
   const outcome = await useWorkspaceStore.getState().captureDiagramStep(copyId, {
@@ -242,6 +242,7 @@ export function openDiagramStepInEdit(stepId: string): void {
 /** How a captured picture shows its pattern, for analytics. */
 export function captureKind(render: DiagramCpRender): DiagramCaptureKind {
   switch (render.mode) {
+    case 'defox': return 'defox';
     case 'crease-pattern':
       return 'crease_pattern';
     case 'folded-flat':

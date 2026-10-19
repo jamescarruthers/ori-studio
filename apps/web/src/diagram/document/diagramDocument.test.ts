@@ -1202,3 +1202,14 @@ describe('turns between steps (D22)', () => {
     expect(result.document.steps.map((entry) => entry.id)).toEqual([result.turnIds[0], empty]);
   });
 });
+
+describe('an import’s fold notice', () => {
+  const svg = { id: 'asset-new', kind: 'svg' as const, svg: '<svg/>', widthPx: 4, heightPx: 4, bytes: 6 };
+  const failed = { ...cpStep('step-import'), importStatus: 'failed' as const };
+  const diagram = insertSteps(createDiagram(), [failed], 0);
+
+  it('goes with the picture it was about, replaced or taken away', () => {
+    expect(stepById(setStepPicture(diagram, 'step-import', svg), 'step-import')?.importStatus).toBeUndefined();
+    expect(stepById(removeStepPicture(diagram, 'step-import'), 'step-import')?.importStatus).toBeUndefined();
+  });
+});

@@ -61,7 +61,7 @@ export interface ReferencesViewState {
    * selecting in Edit and coming back. And dropping only that one would break
    * the other direction: CP undo/redo bumps `foldArtifactRevision` *alone*
    * (`historySlice`), so a hash is what covers both. Same reasoning, and the
-   * same hash, as `cpSegmentationArtifacts`.
+   * same hash, as the sheet index's cache (`sheets/cpSheetIndex`).
    */
   revision: string;
   /** Refit the camera on a new document only — never on an edit. */

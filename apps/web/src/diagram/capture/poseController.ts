@@ -4,10 +4,7 @@ import {
   type DiagramSpreadDirection,
   type DiagramSpreadTracking,
 } from '../../analytics';
-import {
-  ensureCpSegmentationArtifacts,
-  peekCpSegmentationArtifacts,
-} from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex, peekCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
 import type { LayerSpreadOptions, SpreadDirection, SpreadKind } from '../../cp-workspace/folded/foldedLayerSpread';
 import {
@@ -15,7 +12,6 @@ import {
   releaseFoldedFigureHandle,
   retainFoldedFigureHandle,
 } from '../../cp-workspace/folded/foldedFigureHandles';
-import type { FoldArtifacts } from '../../engine/types';
 import type {
   OristudioCpDocumentSnapshot,
   OristudioCpFolded3dAuxLines,
@@ -28,10 +24,12 @@ import {
   endStepCapture,
   runStepFold,
   stepCaptureRuntime,
+  storeSheetPaper,
   storeSimulateFlat,
   type DiagramCaptureOutcome,
   type StepCaptureStart,
 } from '../../store/workspaceStore/diagramCapture';
+import { withSheetPaper } from './captureFolded';
 import {
   creasePatternSide,
   creasesFlipped,
@@ -127,7 +125,7 @@ function trackPose(verb: LinkedPoseRequest['verb'], render: DiagramCpRender): vo
 /** The side of the paper a render shows; none for a simulation, which has no side. */
 function renderSide(render: DiagramCpRender): 'front' | 'back' | undefined {
   if (render.mode === 'crease-pattern') return creasePatternSide(render);
-  return render.mode === 'simulated' ? undefined : render.side;
+  return render.mode === 'simulated' || render.mode === 'defox' ? undefined : render.side;
 }
 
 function spreadTracking(spread: LayerSpreadOptions): DiagramSpreadTracking {
@@ -371,12 +369,13 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
 
   const creasesFor = async (begun: StepCaptureStart, linked: DiagramCpSource) => {
     const document = begun.cp.document;
-    const segmentation = await abandonOnEngineLoss(ensureCpSegmentationArtifacts(document));
-    return {
-      document,
-      segmentation,
-      choice: chooseStepCreases(document, linked.scope, segmentation, knownCreasesOf(linked)),
-    };
+    const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(document));
+    const choice = chooseStepCreases(document, linked.scope, sheets, knownCreasesOf(linked));
+    if (choice.status !== 'found') return { document, choice };
+    // A crease-pattern pose fills the sheet's paper: its faces' rim, holes and all.
+    const store = { get: useWorkspaceStore.getState, set: useWorkspaceStore.setState };
+    const creases = await abandonOnEngineLoss(withSheetPaper(choice.creases, storeSheetPaper(store)));
+    return { document, choice: { ...choice, creases } };
   };
 
   const run = async (request: LinkedPoseRequest, options?: { tracked?: boolean }): Promise<void> => {
@@ -386,9 +385,8 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
     const outcome = await capturing(async (begun, linked): Promise<DiagramCaptureOutcome> => {
       // Shown another way since the simulator came to rest: an undo, or a verb.
       if (request.verb === 'simulate' && linked.render.mode !== 'simulated') return { status: 'discarded' };
-      const { document, segmentation, choice } = await creasesFor(begun, linked);
+      const { document, choice } = await creasesFor(begun, linked);
       if (choice.status !== 'found') return choice;
-      if (!segmentation) return { status: 'unknown' };
       const result = await abandonOnEngineLoss(
         poseLinkedStep(
           session,
@@ -405,7 +403,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
         )
       );
       if (result.status === 'refused' || result.status === 'unavailable') return result;
-      const source = linkedSource(linked, choice.creases, segmentation, result.render);
+      const source = linkedSource(linked, choice.creases, document, result.render);
       const committed = await useWorkspaceStore
         .getState()
         .commitDiagramCapture(begun, { source, picture: result.picture }, 'Adjust pose');
@@ -696,7 +694,7 @@ const SAME_FOLD_PERCENT = 0.05;
 
 /**
  * Whether a step's picture is not of its pattern as it is now, or not in the
- * diagram's light: what Pose again is for (D19). Unknown — the segmentation
+ * diagram's light: what Pose again is for (D19). Unknown — the sheet index
  * not ready — is not out of date: a capture would find out no more.
  */
 function needsRecapture(stepId: string, linked: DiagramCpSource): boolean {
@@ -704,8 +702,7 @@ function needsRecapture(stepId: string, linked: DiagramCpSource): boolean {
   const step = diagram ? stepById(diagram, stepId) : null;
   if (!diagram || !step) return false;
   const document = oristudioCpDocument?.document ?? null;
-  const segmentation = document ? peekCpSegmentationArtifacts(document) : null;
-  const status = linkStatus(linked, document, segmentation);
+  const status = linkStatus(linked, document, peekCpSheetIndex(document));
   return status === 'stale' || (status === 'current' && lightingChanged(step, diagram.style));
 }
 
@@ -720,7 +717,7 @@ function needsRecapture(stepId: string, linked: DiagramCpSource): boolean {
 function linkedSource(
   previous: DiagramCpSource,
   creases: StepCreases,
-  segmentation: FoldArtifacts,
+  document: OristudioCpDocumentSnapshot,
   render: DiagramCpSource['render']
 ): DiagramCpSource {
   const sameLines = (previous.render.mode === 'crease-pattern') === (render.mode === 'crease-pattern');
@@ -729,7 +726,7 @@ function linkedSource(
     kind: 'cp',
     scope: followedScope(previous.scope, creases),
     fingerprint: keep ? previous.fingerprint : creasesFingerprint(creases, render),
-    thumbnail: creasesThumbnail(creases, segmentation),
+    thumbnail: creasesThumbnail(document, creases),
     render,
   });
   if (!stored) throw new Error('The pose made a link the file cannot read');

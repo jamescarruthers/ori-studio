@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import type { ReferencesDiagramCard } from '../../cp-workspace/references/referencesDiagramCards';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { cpDocument, TWO_SQUARES, twoSquaresSegmentation, type FixtureLine } from '../capture/capture.fixtures';
+import { cpDocument, TWO_SQUARES, twoSquaresIndex, type FixtureLine } from '../capture/capture.fixtures';
 import { linkStatus } from '../capture/linkStatus';
 import { SENT_MODEL } from '../document/diagramSteps.fixtures';
 import { stepsOf, type KnownDiagramAnnotation } from '../document/diagramDocument';
@@ -12,9 +12,9 @@ import { MAX_STEP_ANNOTATIONS } from '../annotate/annotationModel';
 import { STEP_DIAGRAM_MAX_PRIMITIVES } from '../document/stepDiagramModelFile';
 import { chooseReferencesWay, pullFromReferences, referencesCardPicture, type PulledCard, type ReferencesPull } from './referencesPulledSteps';
 
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
-  ensureCpSegmentationArtifacts: vi.fn(async () => segmentation),
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: vi.fn(async () => sheets),
 }));
 const analytics = vi.hoisted(() => ({
   trackDiagramStepAdded: vi.fn(),
@@ -32,8 +32,8 @@ vi.mock('sonner', () => ({ toast: toasts }));
 /** What a pull with every mark shown, lifted, reports (17d). */
 const SHOWN_LIFTED = { letters: 'shown', reference_lines: 'shown', marks: 'lifted' };
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
 // The steps alone: a turn-over card is pulled as a turn between them (D22).
@@ -113,7 +113,7 @@ describe('pulling cards from References', () => {
         plan: 'plan-left',
         way: 'way-b',
         marks: { letters: true, highlights: true },
-        // The region as the segmentation has it, not the planner's outline.
+        // The region as the sheets has it, not the planner's outline.
         region: { segmentIdHint: left!.id, bounds: left!.bounds },
       },
     });
@@ -302,10 +302,10 @@ describe('pulling cards from References', () => {
     await pull();
     const source = steps()[0]!.source!;
     if (source.kind !== 'references-step') throw new Error('pulled');
-    expect(linkStatus(source, cpDocument(), segmentation)).toBe('current');
-    expect(linkStatus(source, flipped(8), segmentation)).toBe('current');
-    expect(linkStatus(source, flipped(7), segmentation)).toBe('stale');
-    expect(linkStatus(source, cpDocument(), twoSquaresSegmentation({ wall: false }))).toBe('missing');
+    expect(linkStatus(source, cpDocument(), sheets)).toBe('current');
+    expect(linkStatus(source, flipped(8), sheets)).toBe('current');
+    expect(linkStatus(source, flipped(7), sheets)).toBe('stale');
+    expect(linkStatus(source, cpDocument(), twoSquaresIndex({ left: false }))).toBe('missing');
   });
 
   it('still adds a card whose sheet matches no region, which says its pattern cannot be found', async () => {
@@ -314,14 +314,14 @@ describe('pulling cards from References', () => {
     if (source.kind !== 'references-step') throw new Error('pulled');
     expect(source).toMatchObject({ fingerprint: null, region: { segmentIdHint: null } });
     expect(source.thumbnail.strokes).toHaveLength(4);
-    expect(linkStatus(source, cpDocument(), segmentation)).toBe('missing');
+    expect(linkStatus(source, cpDocument(), sheets)).toBe('missing');
     // Nor does it say it changed if a region comes to match it: it kept no creases to compare.
     const matched = { ...source, region: { ...source.region, boundary: [LEFT_OUTLINE.map(([x, y]) => ({ x, y }))] } };
-    expect(linkStatus(matched, cpDocument(), segmentation)).toBe('unknown');
+    expect(linkStatus(matched, cpDocument(), sheets)).toBe('unknown');
   });
 
   it('adds nothing while the pattern’s regions cannot be worked out, and says to try again', async () => {
-    vi.mocked(ensureCpSegmentationArtifacts).mockResolvedValueOnce(null);
+    vi.mocked(ensureCpSheetIndex).mockResolvedValueOnce(null);
     expect(await pull()).toEqual({ status: 'unknown' });
     expect(steps()).toEqual([]);
     expect(toasts.error).toHaveBeenCalledWith('The crease pattern isn’t ready yet. Try again in a moment.');
