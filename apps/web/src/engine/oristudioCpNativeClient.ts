@@ -29,6 +29,7 @@ import type {
   OristudioCpOperationDescriptor,
 } from './oristudioCpTypes';
 import type { CpGeometryTransport } from './oristudioCpGeometry';
+import { decodeSheetIndexBytes, type CpSheetIndexTransport } from './oristudioCpSheetIndex';
 import type { WasmErrorEnvelope } from './types';
 import type { OristudioCpOperationId } from '../lib/oristudioCpCommands';
 import type { OristudioCpWorkerApi } from '../workers/oristudioCpWorker';
@@ -270,6 +271,9 @@ async function exportWithTexts(
     async restoreFromCompact(handle: number, geometry: CpGeometryTransport): Promise<void> {
       return callSession('cp_restore_from_compact', { handle, geometry: toPlainGeometry(geometry) });
     },
+    async sheetIndex(handle: number): Promise<CpSheetIndexTransport> {
+      return decodeSheetIndexBytes(await callSession<ArrayBuffer>('cp_sheet_index', { handle }));
+    },
     async summary(handle: number): Promise<OristudioCpDocumentSummary> {
       return callSession('cp_document_summary', { handle });
     },
@@ -414,6 +418,9 @@ async function exportWithTexts(
     },
     async exportFold(handle: number, texts: FlatText[] = []): Promise<string> {
       return exportWithTexts(handle, texts, () => callSession('cp_export_fold', { handle }));
+    },
+    async exportFoldLines(handle: number, lineIds: readonly number[]): Promise<string> {
+      return callSession('cp_export_fold_lines', { handle, lineIds: [...lineIds] });
     },
     /** `foldedHandles` names the 3D figures to write as `foldedForm` frames. */
     async exportFoldFile(

@@ -945,13 +945,13 @@ const VERTEX_BUCKET: f64 = Epsilon::POINT * 4.0;
 /// `ALL-combined.fold`, that one build was 42 ms of a 53 ms check against 5.5 ms
 /// for Oriedita's `check4` alone. The work is wanted; paying `O(n^2)` for it is
 /// not.
-struct VertexIndex {
+pub(crate) struct VertexIndex {
     points: Vec<Point>,
     buckets: HashMap<(i64, i64), Vec<usize>>,
 }
 
 impl VertexIndex {
-    fn with_capacity(capacity: usize) -> Self {
+    pub(crate) fn with_capacity(capacity: usize) -> Self {
         Self {
             points: Vec::with_capacity(capacity),
             buckets: HashMap::with_capacity(capacity),
@@ -968,7 +968,7 @@ impl VertexIndex {
         )
     }
 
-    fn index_of(&mut self, point: Point) -> usize {
+    pub(crate) fn index_of(&mut self, point: Point) -> usize {
         let (bx, by) = Self::bucket(point);
         let mut found: Option<usize> = None;
         for dx in -1..=1 {
@@ -997,7 +997,7 @@ impl VertexIndex {
         index
     }
 
-    fn into_points(self) -> Vec<Point> {
+    pub(crate) fn into_points(self) -> Vec<Point> {
         self.points
     }
 }

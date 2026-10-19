@@ -172,7 +172,7 @@ export const createReferencesSlice: WorkspaceSliceCreator<ReferencesSlice> = (se
   openReferencesWorkspace: (sheet) => {
     if (sheet) set({ referencesSheetRequest: sheet });
     // Through the layout store, which resolves and activates the panel's owning
-    // workspace — the same route `simulateOristudioCpSegment` takes to Simulate.
+    // workspace — the same route `simulateOristudioCpSheet` takes to Simulate.
     useLayoutStore.getState().activatePanel('references');
   },
 

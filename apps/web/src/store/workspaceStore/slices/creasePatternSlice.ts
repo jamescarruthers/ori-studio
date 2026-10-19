@@ -51,6 +51,9 @@ import {
 } from '../../../cp-workspace/inlineSimulation/inlineSimulationRuntime';
 import { nextInlineSimulationId } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
 import { resolveInlineSimulationRegion } from '../../../cp-workspace/inlineSimulation/resolveSimulationRegion';
+import { outerRing, ringsMatch } from '../../../cp-workspace/regions/regionReference';
+import { ensureCpSheetSimulationArtifacts } from '../../../cp-workspace/sheets/cpSheetArtifacts';
+import { ensureCpSheetIndex } from '../../../cp-workspace/sheets/cpSheetIndex';
 import { DEFAULT_SIMULATOR_VIEW } from '../../../simulator/SimulatorViewport';
 import { occupiedModelSpace } from '../occupiedModelSpace';
 import { uprightRotationForView } from '../../../cp-workspace/annotations/annotationTransform';
@@ -1510,18 +1513,26 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       set({ selectedSegmentId: id });
     },
 
-    simulateOristudioCpSegment: async (segmentId) => {
+    simulateOristudioCpSheet: async (sheet) => {
+      const index = await ensureCpSheetIndex(get().oristudioCpDocument?.document);
+      if (!index || sheet < 0 || sheet >= index.sheetCount) return false;
       // Unlike the toolbar's fast path, the simulator needs the full artifacts
       // (the triangulated simulation mesh). Ensure them *before* setting the scope
       // so entering the panel finds them cached and does not reload — a reload
       // resets selectedSegmentId, which would drop the chosen segment.
       const artifacts = get().foldArtifacts ?? (await get().ensureFoldArtifacts());
-      const segments = resolveCpSegments(artifacts);
-      if (!segments.some((segment) => segment.id === segmentId)) return false;
+      // The Simulate workspace lists the canvas's segments, numbered its own way,
+      // so the sheet is found among them by its outline.
+      const outline = index.outline(sheet);
+      const segment = resolveCpSegments(artifacts).find((candidate) => {
+        const ring = outerRing(candidate.boundary);
+        return ring !== null && ringsMatch(ring, outline);
+      });
+      if (!segment) return false;
       // Then set the scope and switch workspace via the layout store (activatePanel
       // resolves and activates the simulator's owning workspace), mirroring
       // sendTreeCreasePatternToEdit.
-      set({ selectedSegmentId: segmentId });
+      set({ selectedSegmentId: segment.id });
       useLayoutStore.getState().activatePanel('simulator');
       return true;
     },
@@ -1539,11 +1550,17 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       // translated anyway. The caller says it, in the user's language.
       if (simulations.length >= MAX_CONCURRENT_SIMULATIONS) return 'at-capacity';
 
-      // The simulator needs the triangulated mesh, so the full artifacts, not
-      // the segmentation-only fast path the toolbar uses to decide it can offer
-      // this at all. The *region* is the caller's — resolving it again here from
-      // a second segmentation is what opened the wrong one.
-      const artifacts = get().foldArtifacts ?? (await get().ensureFoldArtifacts());
+      // The simulator needs the triangulated mesh. It is built for the region's
+      // sheet alone when the region is one — every caller's is, resolved from the
+      // sheet index — so a window on one pattern never meshes the whole canvas;
+      // the whole-canvas artifacts are the fallback. The *region* is the
+      // caller's: resolving it again here from a second segmentation is what
+      // opened the wrong one.
+      const sheet = (await ensureCpSheetIndex(document))?.sheetMadeBy(cpLineIds) ?? null;
+      const artifacts =
+        (sheet !== null ? await ensureCpSheetSimulationArtifacts(document, sheet) : null) ??
+        get().foldArtifacts ??
+        (await get().ensureFoldArtifacts());
       if (!artifacts) return 'unavailable';
 
       const fold = buildSegmentSimulationFold(artifacts, segment);

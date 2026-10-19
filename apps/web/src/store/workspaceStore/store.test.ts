@@ -122,7 +122,9 @@ const oristudioCpMocks = vi.hoisted(() => ({
   executeOristudioCpCommand: vi.fn(),
   exportOristudioCpDocumentAsCp: vi.fn(),
   exportOristudioCpDocumentAsFold: vi.fn(),
+  exportOristudioCpLinesAsFold: vi.fn(),
   exportOristudioCpDocumentAsOri: vi.fn(),
+  fetchOristudioCpSheetIndex: vi.fn(),
   exportOristudioCpDocumentAsOrh: vi.fn(),
   fold3dOristudioCpDocument: vi.fn(),
   fold3dOristudioCpFigureAnother: vi.fn(),
@@ -233,7 +235,9 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
       const { segmentationFoldArtifactsFromFold } = await import('../../lib/creasePatternImport');
       return segmentationFoldArtifactsFromFold(JSON.parse(await oristudioCpMocks.exportOristudioCpDocumentAsFold()));
     },
+    exportOristudioCpLinesAsFold: oristudioCpMocks.exportOristudioCpLinesAsFold,
     exportOristudioCpDocumentAsOri: oristudioCpMocks.exportOristudioCpDocumentAsOri,
+    fetchOristudioCpSheetIndex: oristudioCpMocks.fetchOristudioCpSheetIndex,
     exportOristudioCpDocumentAsOrh: oristudioCpMocks.exportOristudioCpDocumentAsOrh,
     fold3dOristudioCpDocument: oristudioCpMocks.fold3dOristudioCpDocument,
     fold3dOristudioCpFigureAnother: oristudioCpMocks.fold3dOristudioCpFigureAnother,
@@ -259,6 +263,7 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
   };
 });
 
+import { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { EngineClient } from './engineRuntime';
 import { hasDeletableDiagramSelection, selectWorkspaceCapabilities } from './capabilities';
 import { useWorkspaceStore } from './store';
@@ -545,6 +550,27 @@ const editableCpFoldText = JSON.stringify({
     [0, 2, 3],
   ],
 });
+
+/**
+ * The sheet index the kernel would build for the unit square these tests draw
+ * in: one sheet, holding every line of the open document whose midpoint lies in
+ * it. `editableCpFoldText` is that sheet's FOLD.
+ */
+function unitSquareSheetIndex(): CpSheetIndex {
+  const lines = useWorkspaceStore.getState().oristudioCpDocument?.document.crease_pattern.line_segments ?? [];
+  const lineSheet = lines.map((line) => {
+    const x = (line.a.x + line.b.x) / 2;
+    const y = (line.a.y + line.b.y) / 2;
+    return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? 0 : -1;
+  });
+  return new CpSheetIndex({
+    bounds: new Float64Array([0, 0, 1, 1]),
+    outlineOffsets: new Uint32Array([0, 4]),
+    outlineCoords: new Float64Array([0, 0, 1, 0, 1, 1, 0, 1]),
+    lineCounts: new Uint32Array([lineSheet.filter((sheet) => sheet === 0).length]),
+    lineSheet: new Int32Array(lineSheet),
+  });
+}
 
 function nextId<T extends { id: number }>(items: T[]): number {
   return Math.max(0, ...items.map((item) => item.id)) + 1;
@@ -1341,6 +1367,9 @@ function resetStores(snapshot = makeSnapshot()) {
   oristudioCpMocks.exportOristudioCpDocumentAsFold
     .mockReset()
     .mockResolvedValue(editableCpFoldText);
+  // The kernel's sheet index and one sheet's lines, for the same unit square.
+  oristudioCpMocks.fetchOristudioCpSheetIndex.mockReset().mockImplementation(async () => unitSquareSheetIndex());
+  oristudioCpMocks.exportOristudioCpLinesAsFold.mockReset().mockResolvedValue(editableCpFoldText);
   oristudioCpMocks.exportOristudioCpDocumentAsOri
     .mockReset()
     .mockResolvedValue('{"@version":"v1.1","title":"square"}\n');
@@ -2864,6 +2893,47 @@ describe('workspace store slices', () => {
     });
   });
 
+  it('does not save the FOLD projection a second time as the source FOLD', async () => {
+    // A project with no source FOLD of its own carries only its projection. The
+    // open used to adopt that projection as `sourceFold`, so the next save wrote
+    // the same FOLD twice — and every save after carried the copy forward.
+    resetStores(seedSnapshot());
+    loadSnapshotIntoStore(seedSnapshot());
+    const nativeProject = createNativeCreasePatternProjectFile({
+      title: 'Projection only',
+      filename: 'projection.osf',
+      path: '/tmp/projection.osf',
+      document: editableCpState([cpLine({ x: 0, y: 0 }, { x: 1, y: 0 }, { color: 'Red1' })]).document,
+      source: { format: 'cp', filename: 'projection.cp', path: null },
+      foldProjection: JSON.parse(editableCpFoldText),
+      sourceFold: null,
+      foldArtifacts: null,
+      creaseColorMode: 'mvf',
+      selection: emptyOristudioCpSelection(),
+      viewport: DEFAULT_ORISTUDIO_CP_VIEWPORT_OPTIONS,
+      foldedFigures: [],
+      activeFoldedFigureId: null,
+      lineage: importedCpLineage(),
+      appVersion: '0.1.2',
+    });
+    const fileService = createFileService({
+      text: serializeNativeProjectFile(nativeProject),
+      name: 'projection.osf',
+      path: '/tmp/projection.osf',
+    });
+
+    await expect(useWorkspaceStore.getState().openProject(fileService)).resolves.toBe(true);
+    useWorkspaceStore.setState({ dirty: true });
+    await expect(useWorkspaceStore.getState().saveProject(fileService)).resolves.toBe(true);
+
+    const savedOptions = fileService.saveTextFile.mock.calls.at(-1)?.[0] as
+      | SaveTextFileOptions
+      | undefined;
+    const saved = parseNativeProjectFile(savedOptions?.contents ?? '');
+    expect(saved.workspace.creasePattern?.creasePattern.foldProjection).not.toBeNull();
+    expect(saved.workspace.creasePattern?.creasePattern.sourceFold).toBeNull();
+  });
+
   it('preserves original Oriedita source identity when reopening and resaving OSF', async () => {
     resetStores(seedSnapshot());
     loadSnapshotIntoStore(seedSnapshot());
@@ -3266,6 +3336,45 @@ describe('workspace store slices', () => {
       status: 'ready',
     });
     await expect(useWorkspaceStore.getState().foldAnotherOristudioCpFigure()).resolves.toBe(true);
+  });
+
+  // The toolbar's Simulate names a sheet of the index; the Simulate workspace
+  // lists the canvas's own segments, numbered its own way, so the hand-off is by
+  // outline.
+  describe('simulating one sheet in the Simulate workspace', () => {
+    function seedUnitSquare() {
+      const activatePanel = vi.fn();
+      useLayoutStore.setState({ activatePanel });
+      useWorkspaceStore.setState({
+        oristudioCpDocument: editableCpState([
+          cpLine({ x: 0, y: 0 }, { x: 1, y: 0 }, { color: 'Black0' }),
+          cpLine({ x: 1, y: 0 }, { x: 1, y: 1 }, { color: 'Black0' }),
+          cpLine({ x: 1, y: 1 }, { x: 0, y: 1 }, { color: 'Black0' }),
+          cpLine({ x: 0, y: 1 }, { x: 0, y: 0 }, { color: 'Black0' }),
+          cpLine({ x: 0, y: 0 }, { x: 1, y: 1 }, { color: 'Red1' }),
+        ]),
+      });
+      return { activatePanel };
+    }
+
+    it('selects the segment whose outline is the sheet, and opens the simulator', async () => {
+      resetStores(seedSnapshot());
+      const { activatePanel } = seedUnitSquare();
+
+      await expect(useWorkspaceStore.getState().simulateOristudioCpSheet(0)).resolves.toBe(true);
+
+      expect(useWorkspaceStore.getState().selectedSegmentId).toBe(0);
+      expect(activatePanel).toHaveBeenCalledWith('simulator');
+    });
+
+    it('refuses a sheet the index does not have, and stays put', async () => {
+      resetStores(seedSnapshot());
+      const { activatePanel } = seedUnitSquare();
+
+      await expect(useWorkspaceStore.getState().simulateOristudioCpSheet(1)).resolves.toBe(false);
+
+      expect(activatePanel).not.toHaveBeenCalled();
+    });
   });
 
   // `G` routes on the creases it is scoped to. A selection carrying a non-180

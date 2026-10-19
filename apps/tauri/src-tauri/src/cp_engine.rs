@@ -396,6 +396,21 @@ pub async fn cp_restore_from_compact(
     .await
 }
 
+/// The document's sheets as one binary buffer (see `CompactSheetIndex::to_bytes`):
+/// a sheet per line for half a million lines is an `ArrayBuffer`, not JSON.
+#[tauri::command]
+pub async fn cp_sheet_index(
+    handle: u32,
+    state: State<'_, CpEngine>,
+    session_id: Option<u32>,
+) -> Result<tauri::ipc::Response, EngineError> {
+    let bytes = run(state, session_id, move |session| {
+        Ok(session.sheet_index(handle)?.to_bytes())
+    })
+    .await?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 #[tauri::command]
 pub async fn cp_document_summary(
     handle: u32,
@@ -535,6 +550,21 @@ pub async fn cp_export_fold(
 ) -> Result<String, EngineError> {
     run(state, session_id, move |session| {
         session.export_fold(handle)
+    })
+    .await
+}
+
+/// One sheet's lines (1-based ids) as compact FOLD JSON; see
+/// `CpSession::export_fold_lines`.
+#[tauri::command]
+pub async fn cp_export_fold_lines(
+    handle: u32,
+    line_ids: Vec<usize>,
+    state: State<'_, CpEngine>,
+    session_id: Option<u32>,
+) -> Result<String, EngineError> {
+    run(state, session_id, move |session| {
+        session.export_fold_lines(handle, &line_ids)
     })
     .await
 }
@@ -874,6 +904,7 @@ const NATIVE_CP_COMMAND_NAMES: &[&str] = &[
     "cp_document_geometry",
     "cp_restore_from_compact",
     "cp_document_summary",
+    "cp_sheet_index",
     "cp_free_document",
     "cp_execute_command",
     "cp_preview_command",
@@ -884,6 +915,7 @@ const NATIVE_CP_COMMAND_NAMES: &[&str] = &[
     "cp_replace_line_segments",
     "cp_export_cp",
     "cp_export_fold",
+    "cp_export_fold_lines",
     "cp_export_fold_file",
     "cp_export_ori",
     "cp_export_orh",

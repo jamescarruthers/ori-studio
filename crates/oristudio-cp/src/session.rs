@@ -12,6 +12,8 @@
 //! handles (matching the historical wasm bridge). Methods take and return owned,
 //! `serde`-friendly types so each bridge only has to (de)serialize at its edge.
 
+use std::collections::HashSet;
+
 use serde::Serialize;
 
 use crate::fold_graph::FoldGraphError;
@@ -33,6 +35,7 @@ use crate::geometry::{Circle, LineColor, LineSegment, Point};
 use crate::geometry_transport::{self, CompactGeometry};
 use crate::model::TextElement;
 use crate::share;
+use crate::sheets::{CompactSheetIndex, sheet_index};
 use crate::{
     CommandError, CreasePatternCommand, CreasePatternCommandPayload, CreasePatternDocument,
     CreasePatternModel, OperationCategory, OperationDescriptor, OperationId, OperationOrigin,
@@ -56,6 +59,7 @@ pub const CP_ENGINE_COMMANDS: &[&str] = &[
     "document_geometry",
     "restore_from_compact",
     "document_summary",
+    "sheet_index",
     "free_document",
     "execute_command",
     "preview_command",
@@ -66,6 +70,7 @@ pub const CP_ENGINE_COMMANDS: &[&str] = &[
     "replace_line_segments",
     "export_cp",
     "export_fold",
+    "export_fold_lines",
     "export_fold_file",
     "export_ori",
     "export_orh",
@@ -667,6 +672,15 @@ impl CpSession {
         Ok(())
     }
 
+    /// The document's sheets — the separate crease patterns its canvas holds —
+    /// and which one each line is in. See [`crate::sheets`].
+    pub fn sheet_index(&self, handle: u32) -> Result<CompactSheetIndex, EngineError> {
+        let document = self.document(handle)?;
+        Ok(CompactSheetIndex::from(&sheet_index(
+            &document.crease_pattern,
+        )))
+    }
+
     pub fn document_summary(&self, handle: u32) -> Result<DocumentSummary, EngineError> {
         let document = self.document(handle)?;
         let model = &document.crease_pattern;
@@ -784,6 +798,23 @@ impl CpSession {
         let document = self.document(handle)?;
         Ok(io::fold::export_fold_json(
             &document.crease_pattern,
+            document.title.clone(),
+        )?)
+    }
+
+    /// Some of a document's lines — one sheet's — as compact FOLD JSON, with
+    /// faces only when those lines meet nowhere but at their ends. See
+    /// [`io::fold::export_lines_fold_document`].
+    pub fn export_fold_lines(
+        &self,
+        handle: u32,
+        line_ids: &[usize],
+    ) -> Result<String, EngineError> {
+        let document = self.document(handle)?;
+        let indices = resolved_line_indices(&document.crease_pattern, line_ids)?;
+        Ok(io::fold::export_lines_fold_json(
+            &document.crease_pattern,
+            &indices,
             document.title.clone(),
         )?)
     }
@@ -1348,11 +1379,15 @@ fn selected_folding_segments(
     if selected_line_ids.is_empty() {
         return Vec::new();
     }
+    // A set, not `contains` on the list: that was a scan of the selection per
+    // document line, about 1.5 billion comparisons for one sheet of a 489k-line
+    // canvas.
+    let selected: HashSet<usize> = selected_line_ids.iter().copied().collect();
     segments
         .iter()
         .enumerate()
         .filter(|(index, segment)| {
-            segment.color.is_folding_line() && selected_line_ids.contains(&(index + 1))
+            segment.color.is_folding_line() && selected.contains(&(index + 1))
         })
         .map(|(_, segment)| segment.clone())
         .collect()

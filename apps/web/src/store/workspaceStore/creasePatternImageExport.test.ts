@@ -11,7 +11,7 @@ import { useWorkspaceStore } from './store';
 
 const runtime = vi.hoisted(() => ({ track: vi.fn() }));
 const share = vi.hoisted(() => ({ createCpShare: vi.fn() }));
-const segmentation = vi.hoisted(() => ({ ensureCpSegmentationArtifacts: vi.fn() }));
+const sheets = vi.hoisted(() => ({ ensureCpSheetArtifacts: vi.fn() }));
 const dialogs = vi.hoisted(() => ({ requestCreasePatternExportOptions: vi.fn() }));
 
 vi.mock('../../analytics/runtime', async (importOriginal) => {
@@ -34,9 +34,9 @@ vi.mock('../../cp-workspace/share/cpShareService', async (importOriginal) => {
   return { ...actual, createCpShare: share.createCpShare };
 });
 
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>();
-  return { ...actual, ensureCpSegmentationArtifacts: segmentation.ensureCpSegmentationArtifacts };
+vi.mock('../../cp-workspace/sheets/cpSheetArtifacts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetArtifacts')>();
+  return { ...actual, ensureCpSheetArtifacts: sheets.ensureCpSheetArtifacts };
 });
 
 vi.mock('../commandDialogStore', async (importOriginal) => {
@@ -154,7 +154,7 @@ describe('saving a crease pattern as an image', () => {
 
 describe('saving one pattern of a crease pattern as an image', () => {
   beforeEach(() => {
-    segmentation.ensureCpSegmentationArtifacts.mockResolvedValue({ fold: FOLD });
+    sheets.ensureCpSheetArtifacts.mockResolvedValue({ fold: FOLD });
     dialogs.requestCreasePatternExportOptions.mockResolvedValue({
       options: { ...WITH_DIAGRAM_FIGURE, segmentId: 0 },
       content: { foldedFigure: null, grid: null },
@@ -165,7 +165,7 @@ describe('saving one pattern of a crease pattern as an image', () => {
     'remembers and reports the figure’s style for a %s, as the whole-pattern export does',
     async (format) => {
       await expect(
-        useWorkspaceStore.getState().exportOristudioCpSegment(format, 0, fileService(true))
+        useWorkspaceStore.getState().exportOristudioCpSheet(format, 0, fileService(true))
       ).resolves.toBe(true);
       expect(useSettingsStore.getState().creasePatternFoldedFigureStyle).toBe('builtin:diagram');
       expect(tracked('crease pattern exported')).toEqual([{ format, folded_figure: 'diagram' }]);
@@ -176,7 +176,7 @@ describe('saving one pattern of a crease pattern as an image', () => {
     'neither remembers nor reports a %s save the user dismissed',
     async (format) => {
       const dismissed = fileService(false);
-      await expect(useWorkspaceStore.getState().exportOristudioCpSegment(format, 0, dismissed)).resolves.toBe(
+      await expect(useWorkspaceStore.getState().exportOristudioCpSheet(format, 0, dismissed)).resolves.toBe(
         false
       );
       expect(localStorage.getItem(FOLDED_FIGURE_KEY)).toBeNull();

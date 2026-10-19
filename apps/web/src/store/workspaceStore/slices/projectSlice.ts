@@ -63,6 +63,8 @@ import {
 import {
   cpModelToFoldTransform,
   foldSegmentForExport,
+  IDENTITY_CP_MODEL_TO_FOLD,
+  type CpModelToFoldTransform,
   type CreaseExportFoldResult,
 } from '../../../lib/creaseExportFold';
 import { hexToRgbColor } from '../../../lib/rgbColor';
@@ -95,7 +97,7 @@ import {
   rememberAuthor,
   uploadCpShareThumbnail,
 } from '../../../cp-workspace/share/cpShareService';
-import { ensureCpSegmentationArtifacts } from '../../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetArtifacts } from '../../../cp-workspace/sheets/cpSheetArtifacts';
 import {
   importedCreasePatternFormat,
   isCreasePatternFilename,
@@ -175,6 +177,7 @@ import type {
   OristudioCpViewportOptions,
 } from '../../../lib/creasePatternViewport';
 import {
+  resolveCpSegments,
   segmentFoldDocument,
   type CpSegment,
 } from '../../../lib/creasePatternSegmentation';
@@ -588,7 +591,8 @@ async function foldExportSegment(
   documentState: OristudioCpDocumentState | null,
   fold: FoldDocument,
   segment: CpSegment | null,
-  settings: CreaseExportFoldedFigureSettings
+  settings: CreaseExportFoldedFigureSettings,
+  transform?: CpModelToFoldTransform
 ): Promise<CreaseExportFoldResult> {
   if (!documentState) throw new Error('No editable crease-pattern document is loaded');
   try {
@@ -600,7 +604,7 @@ async function foldExportSegment(
       segment,
       exportFoldedFigureModel(documentState, settings),
       settings.foldCase,
-      cpModelToFoldTransform(fold, documentState.document)
+      transform ?? cpModelToFoldTransform(fold, documentState.document)
     );
   } catch (error) {
     // Kernel failures arrive as wasm error envelopes, not Errors; the dialog
@@ -1256,7 +1260,14 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       path: null,
     });
     const originalSource = importedSourceFromNativeSource(nativeDocument.creasePattern.source);
-    const importedDocument = originalSource ? { ...stored, source: originalSource } : stored;
+    const importedDocument = {
+      ...stored,
+      ...(originalSource ? { source: originalSource } : {}),
+      // The FOLD this crease pattern was imported from, which only a project
+      // that kept one has. The projection is this document exported: kept as
+      // `sourceFold`, every save wrote it a second time.
+      sourceFold: creasePattern.sourceFold ?? null,
+    };
     set({
       ...nativeCpEditorState(nativeDocument, documentState, checked.camvResult, artifacts),
       // Everything below is the "this crease pattern is the whole project" part,
@@ -3099,15 +3110,15 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       }
     },
 
-    shareOristudioCpSegment: async (segmentId: number) => {
+    shareOristudioCpSheet: async (sheet: number) => {
       try {
         // Same artifacts and same sub-fold extraction the sibling Export verb
-        // uses, so a shared segment is byte-for-byte the pattern that Export
-        // would have written -- border creases included, since a segment is by
-        // construction a region enclosed by them.
-        const foldArtifacts = await ensureCpSegmentationArtifacts(get().oristudioCpDocument?.document);
+        // uses, so a shared sheet is byte-for-byte the pattern that Export would
+        // have written -- border creases included, since a sheet is by
+        // construction the region inside them.
+        const foldArtifacts = await ensureCpSheetArtifacts(get().oristudioCpDocument?.document, sheet);
         if (!foldArtifacts) return false;
-        const subFold = buildSegmentSubFold(foldArtifacts, segmentId);
+        const subFold = buildSegmentSubFold(foldArtifacts, sheet);
         if (!subFold) return false;
 
         // Encode now rather than at publish time: the payload is what decides
@@ -3116,13 +3127,17 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         const payload = await shareFoldFrameAsLink(JSON.stringify(subFold));
         set({
           oristudioCpShareDraft: {
-            segmentId,
+            segmentId: sheet,
             payload,
             fold: foldArtifacts.fold,
-            segments: segmentFoldDocument(foldArtifacts.fold),
+            segments: resolveCpSegments(foldArtifacts),
+            // A sheet's fold is the kernel's export of the document's own lines,
+            // so it already sits in model space: the extent fit, which assumes a
+            // whole-document fold, would only move it.
             grid: creaseExportGridSource(
               foldArtifacts.fold,
-              get().oristudioCpDocument?.document
+              get().oristudioCpDocument?.document,
+              IDENTITY_CP_MODEL_TO_FOLD
             ),
             url: null,
           },
@@ -3205,7 +3220,14 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       const draft = get().oristudioCpShareDraft;
       if (!draft) throw new Error('No share in progress');
       const segment = draft.segments.find((entry) => entry.id === draft.segmentId) ?? null;
-      return foldExportSegment(get().oristudioCpDocument, draft.fold, segment, settings);
+      // The draft's fold is one sheet's, in model space (see `shareOristudioCpSheet`).
+      return foldExportSegment(
+        get().oristudioCpDocument,
+        draft.fold,
+        segment,
+        settings,
+        IDENTITY_CP_MODEL_TO_FOLD
+      );
     },
 
     dismissOristudioCpShare: () => set({ oristudioCpShareDraft: null }),
@@ -3215,36 +3237,50 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     // provisions from it.
     setPendingSharedCp: (pending: PendingSharedCp) => set({ pendingSharedCp: pending }),
 
-    exportOristudioCpSegment: async (
+    exportOristudioCpSheet: async (
       format: SegmentExportFormat,
-      segmentId: number,
+      sheet: number,
       fileService = getFileService()
     ) => {
       try {
-        // Segments-only artifacts (no simulation mesh) keep per-region export off
-        // the multi-second prepareSimulationFold path; captured once so the segment
-        // id can't drift under a concurrent edit mid-export.
-        const foldArtifacts = await ensureCpSegmentationArtifacts(get().oristudioCpDocument?.document);
+        // This sheet's faces alone (no simulation mesh), built from its own
+        // lines; captured once so a concurrent edit cannot move them mid-export.
+        const foldArtifacts = await ensureCpSheetArtifacts(get().oristudioCpDocument?.document, sheet);
         if (!foldArtifacts) return false;
-        const patternTitle = `${get().workspaceTitle} pattern ${segmentId + 1}`;
+        const patternTitle = `${get().workspaceTitle} pattern ${sheet + 1}`;
 
         if (isSegmentImageFormat(format)) {
-          // Open the export-image modal pre-scoped to this segment.
+          // Open the export-image modal on this sheet. It is the only pattern the
+          // dialog is given, so it offers no picker: the toolbar chose the sheet.
           const fold = foldArtifacts.fold;
-          const segments = segmentFoldDocument(fold);
+          const segments = resolveCpSegments(foldArtifacts);
           const label = format.toUpperCase();
           const resolved = await requestCreasePatternExportOptions({
             title: `Export ${label}`,
             format,
             fold,
             segments,
-            initialOptions: { ...defaultCreaseExportOptions(get().oristudioCpViewport), segmentId },
-            grid: creaseExportGridSource(fold, get().oristudioCpDocument?.document),
+            initialOptions: {
+              ...defaultCreaseExportOptions(get().oristudioCpViewport),
+              segmentId: sheet,
+            },
+            // The sheet's fold is in model space already (see `shareOristudioCpSheet`).
+            grid: creaseExportGridSource(
+              fold,
+              get().oristudioCpDocument?.document,
+              IDENTITY_CP_MODEL_TO_FOLD
+            ),
             // Mirrors resolveCreaseExport: only an editable crease pattern has a
             // kernel handle to fold with, so a TreeMaker design disables it.
             foldSegment: get().oristudioCpDocument
               ? (segment, settings) =>
-                  foldExportSegment(get().oristudioCpDocument, fold, segment, settings)
+                  foldExportSegment(
+                    get().oristudioCpDocument,
+                    fold,
+                    segment,
+                    settings,
+                    IDENTITY_CP_MODEL_TO_FOLD
+                  )
               : null,
             confirmLabel: `Export ${label}`,
           });
@@ -3278,7 +3314,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         }
 
         // File formats: extract the sub-fold and serialize it through the kernel.
-        const subFold = buildSegmentSubFold(foldArtifacts, segmentId);
+        const subFold = buildSegmentSubFold(foldArtifacts, sheet);
         if (!subFold) return false;
         const contents = await exportFoldFrameAsFormat(JSON.stringify(subFold), format);
         const result = await fileService.saveTextFile({

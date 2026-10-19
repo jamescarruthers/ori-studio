@@ -127,6 +127,20 @@ pub fn document_geometry(handle: u32) -> Result<JsValue, JsValue> {
     compact_to_js(&compact)
 }
 
+/// The document's sheets and which one each line is in (see
+/// `oristudio_cp::sheets`), as typed arrays the worker can transfer.
+#[wasm_bindgen]
+pub fn sheet_index(handle: u32) -> Result<JsValue, JsValue> {
+    let index = with_session(|session| session.sheet_index(handle))?;
+    let object = Object::new();
+    set_f64_array(&object, "bounds", &index.bounds)?;
+    set_u32_array(&object, "outlineOffsets", &index.outline_offsets)?;
+    set_f64_array(&object, "outlineCoords", &index.outline_coords)?;
+    set_u32_array(&object, "lineCounts", &index.line_counts)?;
+    set_i32_array(&object, "lineSheet", &index.line_sheet)?;
+    Ok(object.into())
+}
+
 /// Restore a document in place from the compact geometry produced by
 /// [`document_geometry`] (undo/redo). Keeps the handle stable.
 #[wasm_bindgen]
@@ -231,6 +245,14 @@ pub fn export_cp(handle: u32) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn export_fold(handle: u32) -> Result<String, JsValue> {
     with_session(|session| session.export_fold(handle))
+}
+
+/// One sheet's lines (1-based ids) as compact FOLD JSON; see
+/// `CpSession::export_fold_lines`.
+#[wasm_bindgen]
+pub fn export_fold_lines(handle: u32, line_ids: JsValue) -> Result<String, JsValue> {
+    let line_ids: Vec<usize> = from_js(line_ids)?;
+    with_session(|session| session.export_fold_lines(handle, &line_ids))
 }
 
 /// `folded_handles` names the 3D folded figures to write as `foldedForm`
