@@ -41,7 +41,9 @@ const runtime = {
 };
 vi.mock('../../simulator/workerGpuSupport', () => ({ useWorkerGpuSupport: () => true }));
 vi.mock('../../simulator/useSimulatorShortcuts', () => ({ useSimulatorShortcuts: () => {} }));
-vi.mock('./useLinkStatus', () => ({ useCpSheetIndexState: () => ({ status: 'ready', index: INDEX }) }));
+vi.mock('../../cp-workspace/sheets/useCpSheetIndexState', () => ({
+  useCpSheetIndexState: () => ({ status: 'ready', index: INDEX }),
+}));
 const INDEX = {};
 const SHEET = { id: 0 };
 vi.mock('./linkStatus', () => ({ stepSheet: () => SHEET }));

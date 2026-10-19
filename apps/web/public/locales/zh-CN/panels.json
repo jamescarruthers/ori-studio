@@ -2020,6 +2020,7 @@
   },
   "simulatorSegments": {
     "creasePatterns": "折痕图",
+    "creases_other": "{{count}} 条折痕",
     "faces_other": "{{count}} 个面",
     "patterns": "折痕图"
   },

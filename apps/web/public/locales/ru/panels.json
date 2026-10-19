@@ -2193,6 +2193,10 @@
   },
   "simulatorSegments": {
     "creasePatterns": "Паттерны складок",
+    "creases_one": "{{count}} складка",
+    "creases_few": "{{count}} складки",
+    "creases_many": "{{count}} складок",
+    "creases_other": "{{count}} складки",
     "faces_one": "{{count}} грань",
     "faces_few": "{{count}} грани",
     "faces_many": "{{count}} граней",

@@ -19,7 +19,7 @@ import {
   pointFromFrame,
 } from '../canvasObjects/placeBesideCp';
 import type { TransformableCanvasObject } from '../canvasObjects/transformableObject';
-import { resolveRegion } from '../regions/regionReference';
+import { resolveRegion, type RegionLike } from '../regions/regionReference';
 import type { SimulatorOrbitView } from '../../lib/simulatorOrbit';
 
 /**
@@ -260,10 +260,10 @@ export function isInlineSimulationStale(
  * genuinely stopped existing, which the caller should say rather than paper
  * over.
  */
-export function resolveInlineSimulationSegment(
+export function resolveInlineSimulationSegment<Region extends RegionLike>(
   simulation: InlineSimulation,
-  segments: readonly CpSegment[]
-): CpSegment | null {
+  segments: readonly Region[]
+): Region | null {
   const boundary = simulation.sourceBoundary;
   if (!boundary) return null;
   return resolveRegion({ boundary, segmentIdHint: simulation.segmentIdHint }, segments);

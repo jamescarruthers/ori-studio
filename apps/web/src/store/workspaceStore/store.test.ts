@@ -3334,9 +3334,8 @@ describe('workspace store slices', () => {
     await expect(useWorkspaceStore.getState().foldAnotherOristudioCpFigure()).resolves.toBe(true);
   });
 
-  // The toolbar's Simulate names a sheet of the index; the Simulate workspace
-  // lists the canvas's own segments, numbered its own way, so the hand-off is by
-  // outline.
+  // The toolbar's Simulate names a sheet of the index by position; the Simulate
+  // workspace keeps it by outline, so an edit that renumbers the sheets keeps it.
   describe('simulating one sheet in the Simulate workspace', () => {
     function seedUnitSquare() {
       const activatePanel = vi.fn();
@@ -3353,14 +3352,21 @@ describe('workspace store slices', () => {
       return { activatePanel };
     }
 
-    it('selects the segment whose outline is the sheet, and opens the simulator', async () => {
+    it('keeps the sheet by its outline and opens the simulator, meshing nothing yet', async () => {
       resetStores(seedSnapshot());
       const { activatePanel } = seedUnitSquare();
 
       await expect(useWorkspaceStore.getState().simulateOristudioCpSheet(0)).resolves.toBe(true);
 
-      expect(useWorkspaceStore.getState().selectedSegmentId).toBe(0);
+      expect(useWorkspaceStore.getState().oristudioCpSimulateSheet).toEqual({
+        boundary: [[{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]],
+        bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+        segmentIdHint: 0,
+      });
       expect(activatePanel).toHaveBeenCalledWith('simulator');
+      // The workspace builds the one sheet's mesh when it shows it; nothing here
+      // segments the canvas.
+      expect(oristudioCpMocks.exportOristudioCpDocumentAsFold).not.toHaveBeenCalled();
     });
 
     it('refuses a sheet the index does not have, and stays put', async () => {

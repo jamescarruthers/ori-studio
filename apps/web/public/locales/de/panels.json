@@ -2075,6 +2075,8 @@
   },
   "simulatorSegments": {
     "creasePatterns": "Faltmuster",
+    "creases_one": "{{count}} Faltlinie",
+    "creases_other": "{{count}} Faltlinien",
     "faces_one": "{{count}} Fläche",
     "faces_other": "{{count}} Flächen",
     "patterns": "Muster"

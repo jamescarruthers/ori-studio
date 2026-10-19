@@ -38,6 +38,7 @@ export const CP_DOCUMENT_SCOPED_KEYS = [
   'oristudioCpSelectedAnnotationId',
   'oristudioCpInlineSimulations',
   'oristudioCpFocusedInlineSimulationId',
+  'oristudioCpSimulateSheet',
   'oristudioCpPinnedVertices',
   'oristudioCpDocumentExtensions',
 ] as const;
@@ -93,6 +94,7 @@ export function discardCpDocumentState(): CpDocumentScopedState {
     oristudioCpSelectedAnnotationId: null,
     oristudioCpInlineSimulations: [],
     oristudioCpFocusedInlineSimulationId: null,
+    oristudioCpSimulateSheet: null,
     // A pin names a position in *this* document's coordinates; carried into the
     // next one it would hold a junction of a pattern it was never placed on.
     oristudioCpPinnedVertices: NO_CP_VERTEX_PINS,

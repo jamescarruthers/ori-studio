@@ -38,6 +38,8 @@
  *   half a second of folding and for at least one, so this reads a fold under
  *   half a second as one, and is exact only past a second and a half;
  * - `simulate-inline`: an inline simulation window reports ready;
+ * - `simulate`: the Simulate workspace's simulator reports ready (it leaves
+ *   the Edit canvas, so give it last);
  * - `save-image`: the export dialog's preview has drawn (the dialog is then
  *   closed);
  * - `export-cp`: the browser receives the `.cp` download.
@@ -78,6 +80,7 @@ const TRACE_CATEGORIES = [
 const ACTIONS = {
   fold: { button: 'Fold', busy: /Folding…|Still folding|Cancelling…/ },
   'simulate-inline': { button: 'Simulate inline', shown: '.cp-inline-simulation[data-status="ready"]' },
+  simulate: { button: 'Simulate', shown: '.simulator-readout[data-state="ready"]' },
   'save-image': {
     button: 'Save to image',
     shown: '[aria-label="Export preview"] :is(svg, img, canvas)',
