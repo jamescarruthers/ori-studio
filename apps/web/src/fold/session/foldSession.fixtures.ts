@@ -8,7 +8,11 @@
  * worker exposes, minus comlink.
  */
 
-import type { FoldSequenceClientLossReason } from '../../store/workspaceStore/foldSequenceRuntime';
+import type {
+  FoldSequenceClientLossListener,
+  FoldSequenceClientLossReason,
+} from '../../store/workspaceStore/foldSequenceRuntime';
+import type { FoldEngineCrashCause } from '../engine/foldEngineTrap';
 import { foldStateFingerprint } from '../document/foldDigest';
 import { initialFoldReaderState, withFoldCursor } from '../document/foldReaderState';
 import { createFoldSequence, SQUARE_PAPER, type FoldIdFactory } from '../document/foldSequenceDocument';
@@ -266,8 +270,9 @@ export interface InProcessFoldRuntime extends FoldSessionRuntime {
    * Lose the engine, as `foldSequenceRuntime`'s `dropWorker` does: the
    * generation moves, the listeners hear why, the calls under way reject as
    * `fold_sequence_client_lost`, and a fresh engine answers from then on.
+   * A crash says what crashed it, `worker_error` unless told.
    */
-  lose(reason: FoldSequenceClientLossReason): void;
+  lose(reason: FoldSequenceClientLossReason, cause?: FoldEngineCrashCause): void;
   /** Hold every call until {@link InProcessFoldRuntime.open}. */
   hold(): void;
   /** Let the held calls go, and what follows settle. */
@@ -320,7 +325,7 @@ export function inProcessFoldRuntime(makeEngine: () => FoldEngineCalls, version 
   let references = 0;
   let holding = false;
   let gates: (() => void)[] = [];
-  const listeners = new Set<(reason: FoldSequenceClientLossReason) => void>();
+  const listeners = new Set<FoldSequenceClientLossListener>();
   const underWay = new Set<(error: unknown) => void>();
 
   const ask = <T>(call: (worker: FoldSessionWorker) => Promise<T>): Promise<T> => {
@@ -340,12 +345,13 @@ export function inProcessFoldRuntime(makeEngine: () => FoldEngineCalls, version 
     });
   };
 
-  const lose = (reason: FoldSequenceClientLossReason) => {
+  const lose = (reason: FoldSequenceClientLossReason, cause?: FoldEngineCrashCause) => {
     generation += 1;
     engine = makeEngine();
     gates = [];
+    const crash = reason === 'crashed' ? (cause ?? 'worker_error') : undefined;
     // The runtime's order: its listeners first, then the calls it took with it.
-    for (const listener of [...listeners]) listener(reason);
+    for (const listener of [...listeners]) listener(reason, crash);
     const lost = { code: 'fold_sequence_client_lost', message: `The fold engine was ${reason}.` };
     for (const reject of [...underWay]) reject(lost);
     underWay.clear();

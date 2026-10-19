@@ -1,4 +1,5 @@
 import type { StoreApi } from 'zustand';
+import { trackFoldEngineCrashed } from '../../analytics/trackFoldEngine';
 import {
   createFoldSession,
   type FoldSession,
@@ -20,8 +21,9 @@ import type { WorkspaceState } from './types';
 
 // The Fold session as the app runs it (`fold/session/foldSession.ts`): the
 // shown sequence from the workspace store's Fold slice, the engine in the Fold
-// worker (`foldSequenceRuntime`), and errors to the error toast through the
-// store's `error`, as the worker-failure sink sends them.
+// worker (`foldSequenceRuntime`), errors to the error toast through the
+// store's `error`, as the worker-failure sink sends them, and each crash of
+// the engine, with what came of it, to analytics.
 
 /** The shown sequence, the reader's place and the load, as the slice holds them. */
 export function foldSessionDocumentSource(store: StoreApi<WorkspaceState>): FoldSessionDocumentSource {
@@ -69,6 +71,7 @@ export function foldSession(): FoldSession {
     document: foldSessionDocumentSource(useWorkspaceStore),
     runtime: foldSequenceSessionRuntime,
     reportError: (error) => useWorkspaceStore.setState({ error }),
+    onEngineCrash: trackFoldEngineCrashed,
   });
   return session;
 }
