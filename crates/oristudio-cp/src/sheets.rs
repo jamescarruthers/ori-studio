@@ -40,6 +40,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::fold_graph::VertexIndex;
 use crate::geometry::{Epsilon, LineColor, LineSegment, Point};
+use crate::meetings::{cross, distance, dot, lerp, split_where_they_meet, sub};
 use crate::model::CreasePatternModel;
 
 /// Two points this close are one, and a point this close to a line is on it.
@@ -175,7 +176,9 @@ fn outer_borders(segments: &[LineSegment]) -> Vec<Vec<Point>> {
     if borders.is_empty() {
         return Vec::new();
     }
-    let graph = BorderGraph::build(&split_where_borders_meet(&borders));
+    // Cut where they meet, so a border drawn with a corner overshooting, or a
+    // wall ending part-way along a side, still closes.
+    let graph = BorderGraph::build(&split_where_they_meet(&borders));
     let mut outlines: Vec<Vec<Point>> = graph
         .outer_walks()
         .iter()
@@ -193,98 +196,6 @@ fn outer_borders(segments: &[LineSegment]) -> Vec<Vec<Point>> {
         .collect();
     drop_nested(&mut outlines);
     outlines
-}
-
-/// The border lines, cut wherever another border line ends on them or crosses
-/// them, so that every meeting is a shared endpoint. A border drawn with a corner
-/// overshooting, or a wall ending part-way along a side, then still closes.
-fn split_where_borders_meet(borders: &[[Point; 2]]) -> Vec<[Point; 2]> {
-    let mut cuts: Vec<Vec<f64>> = vec![Vec::new(); borders.len()];
-    let low_x = |segment: &[Point; 2]| segment[0].x.min(segment[1].x);
-    let high_x = |segment: &[Point; 2]| segment[0].x.max(segment[1].x);
-    let low_y = |segment: &[Point; 2]| segment[0].y.min(segment[1].y);
-    let high_y = |segment: &[Point; 2]| segment[0].y.max(segment[1].y);
-
-    // Sweep by left edge: only lines whose x-extents overlap can meet.
-    let mut order: Vec<usize> = (0..borders.len()).collect();
-    order.sort_by(|&i, &j| low_x(&borders[i]).total_cmp(&low_x(&borders[j])));
-    let mut active: Vec<usize> = Vec::new();
-    for &i in &order {
-        let s = borders[i];
-        active.retain(|&j| high_x(&borders[j]) >= low_x(&s) - TOLERANCE);
-        for &j in &active {
-            let t = borders[j];
-            if high_y(&t) < low_y(&s) - TOLERANCE || low_y(&t) > high_y(&s) + TOLERANCE {
-                continue;
-            }
-            for end in t {
-                if let Some(at) = interior_parameter(s, end) {
-                    cuts[i].push(at);
-                }
-            }
-            for end in s {
-                if let Some(at) = interior_parameter(t, end) {
-                    cuts[j].push(at);
-                }
-            }
-            if let Some((at_s, at_t)) = crossing(s, t) {
-                cuts[i].push(at_s);
-                cuts[j].push(at_t);
-            }
-        }
-        active.push(i);
-    }
-
-    let mut pieces = Vec::with_capacity(borders.len());
-    for (segment, mut at) in borders.iter().zip(cuts) {
-        at.push(0.0);
-        at.push(1.0);
-        at.sort_by(f64::total_cmp);
-        let length = distance(segment[0], segment[1]);
-        let mut from = 0.0;
-        for &to in &at[1..] {
-            if (to - from) * length <= TOLERANCE {
-                continue;
-            }
-            pieces.push([lerp(*segment, from), lerp(*segment, to)]);
-            from = to;
-        }
-    }
-    pieces
-}
-
-/// Where `point` lies on `segment`'s interior, as a parameter along it, or
-/// `None` when it is off the segment or within the tolerance of either end
-/// (an end is a meeting the weld already makes).
-fn interior_parameter(segment: [Point; 2], point: Point) -> Option<f64> {
-    let direction = sub(segment[1], segment[0]);
-    let length_sq = dot(direction, direction);
-    let at = dot(sub(point, segment[0]), direction) / length_sq;
-    let margin = TOLERANCE / length_sq.sqrt();
-    if at <= margin || at >= 1.0 - margin {
-        return None;
-    }
-    (distance(lerp(segment, at), point) <= TOLERANCE).then_some(at)
-}
-
-/// Where two segments cross in both interiors, as a parameter along each. Lines
-/// that only touch, or run along one another, meet at an end and are found by
-/// [`interior_parameter`].
-fn crossing(s: [Point; 2], t: [Point; 2]) -> Option<(f64, f64)> {
-    let r = sub(s[1], s[0]);
-    let q = sub(t[1], t[0]);
-    let denominator = cross(r, q);
-    let scale = dot(r, r).sqrt() * dot(q, q).sqrt();
-    if denominator.abs() <= 1e-12 * scale {
-        return None;
-    }
-    let w = sub(t[0], s[0]);
-    let at_s = cross(w, q) / denominator;
-    let at_t = cross(w, r) / denominator;
-    let margin_s = TOLERANCE / dot(r, r).sqrt();
-    let margin_t = TOLERANCE / dot(q, q).sqrt();
-    (at_s > margin_s && at_s < 1.0 - margin_s && at_t > margin_t && at_t < 1.0 - margin_t)
-        .then_some((at_s, at_t))
 }
 
 /// The welded border lines as a planar graph, each vertex's neighbours sorted
@@ -577,29 +488,6 @@ impl SheetGrid {
 }
 
 // --- geometry -----------------------------------------------------------------
-
-fn sub(a: Point, b: Point) -> Point {
-    Point::new(a.x - b.x, a.y - b.y)
-}
-
-fn dot(a: Point, b: Point) -> f64 {
-    a.x * b.x + a.y * b.y
-}
-
-fn cross(a: Point, b: Point) -> f64 {
-    a.x * b.y - a.y * b.x
-}
-
-fn distance(a: Point, b: Point) -> f64 {
-    (a.x - b.x).hypot(a.y - b.y)
-}
-
-fn lerp(segment: [Point; 2], at: f64) -> Point {
-    Point::new(
-        segment[0].x + (segment[1].x - segment[0].x) * at,
-        segment[0].y + (segment[1].y - segment[0].y) * at,
-    )
-}
 
 /// The direction from `centre` to `point`, as an angle, for ordering neighbours.
 fn direction(centre: Point, point: Point) -> f64 {

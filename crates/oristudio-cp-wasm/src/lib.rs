@@ -229,6 +229,14 @@ pub fn export_fold(handle: u32) -> Result<String, JsValue> {
     with_session(|session| session.export_fold(handle))
 }
 
+/// One sheet's lines (1-based ids) as compact FOLD JSON; see
+/// `CpSession::export_fold_lines`.
+#[wasm_bindgen]
+pub fn export_fold_lines(handle: u32, line_ids: JsValue) -> Result<String, JsValue> {
+    let line_ids: Vec<usize> = from_js(line_ids)?;
+    with_session(|session| session.export_fold_lines(handle, &line_ids))
+}
+
 /// `folded_handles` names the 3D folded figures to write as `foldedForm`
 /// frames. Empty is the ordinary case and means "the pattern only".
 #[wasm_bindgen]

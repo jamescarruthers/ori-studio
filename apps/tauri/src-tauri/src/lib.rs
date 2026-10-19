@@ -355,6 +355,7 @@ pub fn run() {
             cp_engine::cp_replace_line_segments,
             cp_engine::cp_export_cp,
             cp_engine::cp_export_fold,
+            cp_engine::cp_export_fold_lines,
             cp_engine::cp_export_fold_file,
             cp_engine::cp_export_ori,
             cp_engine::cp_export_orh,

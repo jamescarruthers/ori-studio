@@ -373,6 +373,20 @@ pub async fn cp_export_fold(
     run(state, move |session| session.export_fold(handle)).await
 }
 
+/// One sheet's lines (1-based ids) as compact FOLD JSON; see
+/// `CpSession::export_fold_lines`.
+#[tauri::command]
+pub async fn cp_export_fold_lines(
+    handle: u32,
+    line_ids: Vec<usize>,
+    state: State<'_, CpEngine>,
+) -> Result<String, EngineError> {
+    run(state, move |session| {
+        session.export_fold_lines(handle, &line_ids)
+    })
+    .await
+}
+
 /// `folded_handles` names the 3D folded figures to write as `foldedForm`
 /// frames. Empty is the ordinary case and means "the pattern only".
 #[tauri::command]
@@ -677,6 +691,7 @@ const NATIVE_CP_COMMAND_NAMES: &[&str] = &[
     "cp_replace_line_segments",
     "cp_export_cp",
     "cp_export_fold",
+    "cp_export_fold_lines",
     "cp_export_fold_file",
     "cp_export_ori",
     "cp_export_orh",

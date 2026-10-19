@@ -5,6 +5,7 @@ use crate::folding3d::interchange;
 use crate::geometry::{
     Circle, FoldDirection, FoldMagnitude, LineColor, LineSegment, Point, angle, point_rotate_scaled,
 };
+use crate::meetings::meet_only_at_ends;
 use crate::model::{
     CreasePatternModel, GridState, TextElement, crease_fold_angle, custom_color_from_hex,
     custom_color_hex, fold_angle_for_line_color, fold_assignment_for_line_color,
@@ -333,7 +334,62 @@ pub fn import_fold_document(fold: &FoldDocument) -> Result<CreasePatternModel> {
 
 /// Export a FOLD document with Oriedita extension fields.
 pub fn export_fold_document(model: &CreasePatternModel, title: Option<String>) -> FoldDocument {
-    let topology = FoldGraph::from_model_for_export(model);
+    fold_document(model, &FoldGraph::from_model_for_export(model), title)
+}
+
+/// Some of a document's lines as a FOLD document — one sheet's, for the
+/// surfaces that act on one sheet at a time — with faces only when those lines
+/// meet nowhere but at their ends.
+///
+/// **Ori Studio original.** The face tracer reads its lines as a plane graph,
+/// which Oriedita's own line set always is, and the Euler gate does not always
+/// notice when it is not: a square whose border wall ends on unsplit sides was
+/// certified as two self-touching faces whose areas still sum to the square's.
+/// Left without faces, such a sheet has them inferred by the frontend from the
+/// lines, split where they meet — which is what already happens to every
+/// document the gate refuses. The whole-document export keeps upstream's rule.
+pub fn export_lines_fold_document(
+    model: &CreasePatternModel,
+    indices: &[usize],
+    title: Option<String>,
+) -> FoldDocument {
+    let lines = CreasePatternModel {
+        line_segments: indices
+            .iter()
+            .filter_map(|&index| model.line_segments.get(index).cloned())
+            .collect(),
+        grid: model.grid,
+        ..CreasePatternModel::default()
+    };
+    let ends: Vec<[Point; 2]> = lines
+        .line_segments
+        .iter()
+        .map(|segment| [segment.a, segment.b])
+        .collect();
+    let topology = if meet_only_at_ends(&ends) {
+        FoldGraph::from_model_for_export(&lines)
+    } else {
+        FoldGraph::from_segments(&lines.line_segments, false)
+    };
+    fold_document(&lines, &topology, title)
+}
+
+/// [`export_lines_fold_document`] as compact JSON.
+pub fn export_lines_fold_json(
+    model: &CreasePatternModel,
+    indices: &[usize],
+    title: Option<String>,
+) -> Result<String> {
+    Ok(serde_json::to_string(&export_lines_fold_document(
+        model, indices, title,
+    ))?)
+}
+
+fn fold_document(
+    model: &CreasePatternModel,
+    topology: &FoldGraph,
+    title: Option<String>,
+) -> FoldDocument {
     let mut assignments = Vec::new();
     let mut fold_angles = Vec::new();
     let mut edge_line_colors = Vec::new();
@@ -815,5 +871,64 @@ mod hint_tests {
         let degraded = import_fold_document(&stripped).expect("import stripped");
         assert_eq!(degraded.line_segments[0].color, LineColor::None);
         assert_eq!(degraded.line_segments[0].fold_direction_hint, None);
+    }
+}
+
+#[cfg(test)]
+mod lines_tests {
+    use super::{export_fold_document, export_lines_fold_document};
+    use crate::geometry::{LineColor, LineSegment, Point};
+    use crate::model::CreasePatternModel;
+
+    fn model(lines: &[(f64, f64, f64, f64, LineColor)]) -> CreasePatternModel {
+        CreasePatternModel {
+            line_segments: lines
+                .iter()
+                .map(|&(ax, ay, bx, by, color)| {
+                    LineSegment::with_color(Point::new(ax, ay), Point::new(bx, by), color)
+                })
+                .collect(),
+            ..CreasePatternModel::default()
+        }
+    }
+
+    const B: LineColor = LineColor::Black0;
+    const M: LineColor = LineColor::Red1;
+    const V: LineColor = LineColor::Blue2;
+
+    #[test]
+    fn only_the_named_lines_are_written_with_their_faces() {
+        let model = model(&[
+            (0.0, 0.0, 4.0, 0.0, B),
+            (4.0, 0.0, 4.0, 4.0, B),
+            (4.0, 4.0, 0.0, 4.0, B),
+            (0.0, 4.0, 0.0, 0.0, B),
+            (0.0, 0.0, 4.0, 4.0, M),
+            (10.0, 0.0, 14.0, 4.0, V),
+        ]);
+        let fold = export_lines_fold_document(&model, &[0, 1, 2, 3, 4], None);
+        assert_eq!(fold.edges_vertices.len(), 5);
+        assert_eq!(fold.faces_vertices.len(), 2);
+    }
+
+    #[test]
+    fn lines_ending_part_way_along_another_are_written_without_faces() {
+        // A wall whose ends sit on sides that were never split there, and two
+        // diagonals. The tracer certifies two self-touching faces for it.
+        let model = model(&[
+            (0.0, 0.0, 8.0, 0.0, B),
+            (8.0, 0.0, 8.0, 4.0, B),
+            (8.0, 4.0, 0.0, 4.0, B),
+            (0.0, 4.0, 0.0, 0.0, B),
+            (4.0, 0.0, 4.0, 4.0, B),
+            (0.0, 0.0, 4.0, 4.0, M),
+            (4.0, 0.0, 8.0, 4.0, V),
+        ]);
+        let all: Vec<usize> = (0..model.line_segments.len()).collect();
+        assert_eq!(export_fold_document(&model, None).faces_vertices.len(), 2);
+
+        let fold = export_lines_fold_document(&model, &all, None);
+        assert_eq!(fold.edges_vertices.len(), 7);
+        assert!(fold.faces_vertices.is_empty());
     }
 }

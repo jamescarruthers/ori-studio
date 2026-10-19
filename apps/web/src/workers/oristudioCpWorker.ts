@@ -9,6 +9,7 @@ import init, {
   execute_cp_command,
   export_cp,
   export_fold,
+  export_fold_lines,
   export_fold_file,
   export_orh,
   export_share_link,
@@ -381,6 +382,10 @@ const api = {
   },
   async exportFold(handle: number, texts: FlatText[] = []): Promise<string> {
     return call(() => exportWithTexts(handle, texts, () => export_fold(handle)));
+  },
+  /** Some lines (1-based ids), one sheet's, as compact FOLD JSON: faces only where they meet only at their ends. */
+  async exportFoldLines(handle: number, lineIds: readonly number[]): Promise<string> {
+    return call(() => export_fold_lines(handle, [...lineIds]));
   },
   /** `foldedHandles` names the 3D figures to write as `foldedForm` frames. */
   async exportFoldFile(
