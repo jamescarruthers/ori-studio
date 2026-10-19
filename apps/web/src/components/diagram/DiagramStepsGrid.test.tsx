@@ -130,7 +130,7 @@ describe('DiagramStepsGrid', () => {
     expect(host!.querySelector('[data-step-id="step-249"]')).toBeNull();
   });
 
-  it('keeps the selected card mounted wherever the grid is scrolled', () => {
+  it('keeps the selected card mounted wherever the grid is scrolled', async () => {
     const many = Array.from({ length: 250 }, (_, index) => createStep(() => `step-${index}`));
     render('step-200', vi.fn(), { steps: many });
     const scroller = listbox().parentElement!;
@@ -142,6 +142,10 @@ describe('DiagramStepsGrid', () => {
     // Focus, the keyboard context menu and the tab stop find its card.
     expect(host!.querySelector('[data-step-id="step-200"]')).not.toBeNull();
     expect(host!.querySelector('[data-step-id="step-120"]')).toBeNull();
+    // A scroll leaves the virtualizer a 150 ms "scrolling ended" timer that
+    // unmounting does not cancel. Let it fire here: run after this file's DOM
+    // is gone, it throws "window is not defined" into whichever file runs next.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 200)));
   });
 
   it('reveals a new selection, and stays put when another step is deleted', () => {
