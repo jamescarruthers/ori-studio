@@ -251,6 +251,7 @@
     "renormalizeToEdge": "辺を基準に正規化",
     "renormalizeToUnitScale": "単位スケールに正規化",
     "repairOverlaps": "重なりを修復",
+    "repeatOnOtherSide": "ここまでの手順を反対側でも繰り返す",
     "replaceSelectedLineType": "選択した線種を置換...",
     "resetLayout": "レイアウトをリセット",
     "resetPaneLayout": "ペインのレイアウトをリセット",

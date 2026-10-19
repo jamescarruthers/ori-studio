@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { trackFoldStepAdded } from '../../analytics';
+import { trackFoldRefused, trackFoldStepAdded } from '../../analytics';
+import { trackFoldRepeatRebuilt } from '../../analytics/trackFold';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import { visibleMarks } from '../document/foldStepTree';
@@ -97,6 +98,8 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
           return;
         }
         setAxes(answer.value.axes);
+        // No matching pair of sides: the bar says so for this range, which is Repeat refused.
+        if (!answer.value.axes.length) trackFoldRefused('repeat_axis', 'repeat');
         setBaseline(answer.value.scene);
         const existing = opening.rebuild?.expected.axis;
         const old = existing
@@ -121,8 +124,10 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
 
   const show = async (op: FoldRepeatOp) => {
     const preview = await session.preview(op);
-    if (preview.status === 'refused') setError(preview.refused.refusal.code);
-    else if (preview.status !== 'landed' && preview.status !== 'superseded') setError('repeat_unavailable');
+    if (preview.status === 'refused') {
+      setError(preview.refused.refusal.code);
+      trackFoldRefused(preview.refused.refusal.code, 'repeat');
+    } else if (preview.status !== 'landed' && preview.status !== 'superseded') setError('repeat_unavailable');
   };
   const prepare = async (accepted = selections) => {
     if (!valid || !parent?.state || !axes[axis] || start < 1) return;
@@ -171,6 +176,8 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
         return;
       }
       setResult(answer.value);
+      // Refusals are counted by their closed code; `repeat_unavailable` is the source changing or the worker failing, not one.
+      if (answer.value.status === 'blocked') trackFoldRefused(answer.value.code, 'repeat');
       if (answer.value.status === 'ready') await show(answer.value.op);
       else if (answer.value.prefix?.steps.length) await show(answer.value.prefix);
     } catch {
@@ -229,9 +236,12 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
       done = useWorkspaceStore.getState().commitFoldSteps(opening.parent, op.steps, opening.loadId) !== null;
     else done = (await session.commitStep(op)).status === 'committed';
     if (done) {
-      trackFoldStepAdded('repeat', {
-        repeat: { mode: individual ? 'individual' : 'grouped', count: op.steps.length },
-      });
+      // An update in place is no step added, as an Unfold's rebuild is not.
+      if (opening.rebuild) trackFoldRepeatRebuilt();
+      else
+        trackFoldStepAdded('repeat', {
+          repeat: { mode: individual ? 'individual' : 'grouped', count: op.steps.length },
+        });
       close();
     } else setError('repeat_unavailable');
     setBusy(false);

@@ -251,6 +251,7 @@
     "renormalizeToEdge": "Перенормировать по ребру",
     "renormalizeToUnitScale": "Перенормировать к единичному масштабу",
     "repairOverlaps": "Исправить перекрытия",
+    "repeatOnOtherSide": "Повторить шаги до этого с другой стороны",
     "replaceSelectedLineType": "Заменить выбранный тип линии...",
     "resetLayout": "Сбросить макет",
     "resetPaneLayout": "Сбросить макет панелей",

@@ -251,6 +251,7 @@
     "renormalizeToEdge": "Auf Kante renormieren",
     "renormalizeToUnitScale": "Auf Einheitsmaßstab renormieren",
     "repairOverlaps": "Überlappungen reparieren",
+    "repeatOnOtherSide": "Die Schritte bis zu diesem auf der anderen Seite wiederholen",
     "replaceSelectedLineType": "Ausgewählten Linientyp ersetzen...",
     "resetLayout": "Layout zurücksetzen",
     "resetPaneLayout": "Bereichslayout zurücksetzen",

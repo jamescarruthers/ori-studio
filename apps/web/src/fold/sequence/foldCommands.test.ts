@@ -3,6 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const menu = vi.hoisted(() => ({ handleMenuAction: vi.fn() }));
 vi.mock('../../commands/menuActions', () => ({ handleMenuAction: menu.handleMenuAction }));
 
+const analytics = vi.hoisted(() => ({ trackFoldStepAdded: vi.fn() }));
+vi.mock('../../analytics/trackFold', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../analytics/trackFold')>()),
+  trackFoldStepAdded: analytics.trackFoldStepAdded,
+}));
+
 /** The app's session is the worker-bound one; these tests hand the commands one over a fake engine. */
 const app = vi.hoisted(() => ({ session: null as import('../session/foldSession').FoldSession | null }));
 vi.mock('../../store/workspaceStore/foldSession', async (importOriginal) => ({
@@ -40,6 +46,7 @@ const shownSteps = () => state().foldSequences[0]?.document.steps ?? [];
 beforeEach(async () => {
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   menu.handleMenuAction.mockClear();
+  analytics.trackFoldStepAdded.mockClear();
   app.session = createFoldSession({
     document: foldSessionDocumentSource(useWorkspaceStore),
     runtime: inProcessFoldRuntime(() => fakeFoldEngine()),
@@ -97,6 +104,8 @@ describe('running the verbs', () => {
     await settle();
     expect(shownSteps().map((node) => node.op)).toEqual([{ kind: 'turn', axis: 'vertical' }]);
     expect(state().foldReader?.cursor).toBe(shownSteps()[0]?.id);
+    // The step it added is counted as the rail's and T's turn is; the press was `command invoked`'s.
+    expect(analytics.trackFoldStepAdded.mock.calls).toEqual([['turn']]);
   });
 
   it('deletes the step on screen and what follows, and nothing at the sheet', async () => {

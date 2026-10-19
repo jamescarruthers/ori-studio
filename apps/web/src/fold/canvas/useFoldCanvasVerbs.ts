@@ -1,5 +1,5 @@
 import { reportError } from '../../monitoring';
-import { trackFoldOrderResolved, trackFoldFreeLineSnapChanged } from '../../analytics/trackFold';
+import { trackFoldOrderResolved, trackFoldFreeLineSnapChanged, trackFoldMarkAdded } from '../../analytics/trackFold';
 import { useFoldImportOrderUi } from '../orders/foldImportOrderUi';
 import { useFoldImportUiStore } from '../io/foldImportUiStore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -704,7 +704,9 @@ export function useFoldCanvasVerbs(
         const store = useWorkspaceStore.getState();
         // On the step it was made on — the sheet's own list for the flat
         // sheet — after the marks already there: one undo entry (plan D6).
-        store.setFoldMarks(cursor, [...marksMadeAt(shownFoldSequence(store)?.document ?? null, cursor), mark]);
+        if (store.setFoldMarks(cursor, [...marksMadeAt(shownFoldSequence(store)?.document ?? null, cursor), mark])) {
+          trackFoldMarkAdded(divide.mode);
+        }
         tools.clear();
       },
 

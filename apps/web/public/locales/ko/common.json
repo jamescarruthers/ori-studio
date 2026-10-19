@@ -251,6 +251,7 @@
     "renormalizeToEdge": "모서리 기준 정규화",
     "renormalizeToUnitScale": "단위 배율 정규화",
     "repairOverlaps": "겹침 복구",
+    "repeatOnOtherSide": "이 단계까지의 단계를 반대쪽에서 반복",
     "replaceSelectedLineType": "선택한 선 종류 교체...",
     "resetLayout": "레이아웃 초기화",
     "resetPaneLayout": "창 레이아웃 초기화",

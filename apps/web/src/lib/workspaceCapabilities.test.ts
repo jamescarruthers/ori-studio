@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { AppStatus, DocumentMode, Selection } from './sampleProject';
 import type { EditingContext } from '../workspaces/editingContext';
+import { getMenuBarDef } from '../menus/menuDefinition';
+import { menuHasVisibleItems } from '../menus/menuVisibility';
 import { getNextDocumentAction, getWorkspaceCapabilities, type WorkspaceCapabilityInput } from './workspaceCapabilities';
 
 const treeSelection: Selection = { kind: 'tree' };
@@ -371,8 +373,11 @@ describe('workspace capabilities', () => {
     const verbs = [
       'fold.valley',
       'fold.mountain',
+      // Without its own capability the menu bar kept a Fold menu of Precrease alone everywhere else.
+      'fold.precrease',
       'fold.turn-over',
       'fold.rotate',
+      'fold.repeat',
       'fold.delete-step',
     ] as const;
     for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'diagram'] as const) {
@@ -388,7 +393,14 @@ describe('workspace capabilities', () => {
       enabled: false,
       reason: 'The flat sheet is where the steps start: there is no step to delete',
     });
+    // Repeat mirrors the steps through the one on screen: the flat sheet has none.
+    expect(atSheet['fold.repeat']).toMatchObject({ visible: true, enabled: false, reason: 'Fold a step first.' });
     expect(capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true })['fold.delete-step'].enabled).toBe(true);
+    expect(capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true })['fold.repeat']).toMatchObject({
+      visible: true,
+      enabled: true,
+      label: 'Repeat on the other side…',
+    });
 
     const newer = capabilities({
       activeEditingContext: 'fold',
@@ -402,6 +414,15 @@ describe('workspace capabilities', () => {
         reason: 'This sequence was made with a newer Ori Studio and opens read-only',
       });
     }
+  });
+
+  it('drops the whole Fold menu outside Fold, every row of it gated', () => {
+    const fold = getMenuBarDef().find((menu) => menu.label === 'Fold');
+    expect(fold).toBeDefined();
+    for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'diagram'] as const) {
+      expect(menuHasVisibleItems(fold!, capabilities({ activeEditingContext })), activeEditingContext).toBe(false);
+    }
+    expect(menuHasVisibleItems(fold!, capabilities({ activeEditingContext: 'fold' }))).toBe(true);
   });
 
   it('shows the Fold workspace from every context', () => {

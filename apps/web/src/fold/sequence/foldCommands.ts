@@ -19,6 +19,7 @@
  */
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
+import { trackFoldStepAdded } from '../../analytics/trackFold';
 import { openFoldRepeat } from '../repeat/foldRepeatUi';
 import { openFoldReturn } from '../return/foldReturnUi';
 import { foldSession } from '../../store/workspaceStore/foldSession';
@@ -38,6 +39,7 @@ import {
 import { FOLD_IO_ACTION_DEPS } from '../io/foldIoActions';
 import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionSnapshot } from '../session/foldSessionState';
 import { foldTools } from '../tools/foldToolState';
+import { rotationBucket } from '../tools/rotate/rotateTool';
 import { paneShapeOf } from './foldPaperShapes';
 import { setFoldView } from './foldViewMode';
 import { cursorIndex, foldPathEntries, followerCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
@@ -158,7 +160,13 @@ export function foldActionsAt(
     setFoldKind: (kind) => control?.arm(kind),
     turn: (turn) => {
       fromHere();
-      void session.commitStep(turnOp(turn));
+      const op = turnOp(turn);
+      // Counted as the step it adds, as the rail's and T's turn is: `command invoked` counted only the press.
+      void session.commitStep(op).then((outcome) => {
+        if (outcome.status !== 'committed') return;
+        if (op.kind === 'rotate') trackFoldStepAdded('rotate', { amount: rotationBucket(op.rotate) });
+        else trackFoldStepAdded('turn');
+      });
     },
     // Rotate is a tool: taken in hand on the canvas, at the step it is asked for there.
     rotate: () => {
