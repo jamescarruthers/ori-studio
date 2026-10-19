@@ -27,7 +27,7 @@ try {
     window.__importModules = {
       commands: await import('/src/commands/menuActions.ts'),
       file: await import('/src/diagram/document/diagramFile.ts'),
-      cold: await import('/src/cp-workspace/cpSegmentationArtifacts.ts?cold-import-check'),
+      cold: await import('/src/cp-workspace/sheets/cpSheetIndex.ts?cold-import-check'),
       link: await import('/src/diagram/capture/linkStatus.ts'),
     };
     await window.__importModules.commands.handleMenuAction('view.diagram');
@@ -143,21 +143,21 @@ try {
   }
 
   const links = await page.evaluate(async () => {
-    const { ensureCpSegmentationArtifacts } = window.__importModules.cold;
+    const { ensureCpSheetIndex } = window.__importModules.cold;
     const { linkStatus } = window.__importModules.link;
     const s = window.__treemakerWorkspaceStore.getState();
     const at = performance.now();
-    const artifacts = await ensureCpSegmentationArtifacts(s.oristudioCpDocument.document);
+    const sheets = await ensureCpSheetIndex(s.oristudioCpDocument.document);
     const statuses = s.diagram.steps
       .filter((step) => step.source?.kind === 'cp')
-      .map((step) => linkStatus(step.source, s.oristudioCpDocument.document, artifacts));
+      .map((step) => linkStatus(step.source, s.oristudioCpDocument.document, sheets));
     return {
       ms: performance.now() - at,
-      ready: !!artifacts,
+      ready: !!sheets,
       statuses: statuses.reduce((counts, status) => ({ ...counts, [status]: (counts[status] ?? 0) + 1 }), {}),
     };
   });
-  result.coldSegmentation = links;
+  result.coldSheetIndex = links;
   console.log('Cold links', JSON.stringify(links));
   await writeFile('artifacts/diagram-import/result.json', JSON.stringify(result, null, 2));
   const native = await page.evaluate(async () => {

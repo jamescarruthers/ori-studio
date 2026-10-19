@@ -2,7 +2,8 @@ import { keptPicture } from '../../store/workspaceStore/diagramCapture';
 import i18n from '../../i18n';
 import { CpTaskTimeoutError, createCpTaskSession, type CpTaskSession } from '../../engines/cpTaskSession';
 import { decodeCpGeometryToSnapshot, type CpGeometryTransport } from '../../engine/oristudioCpGeometry';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { createBoundCpCaptureRuntime } from '../../store/workspaceStore/cpFoldRuntimeBindings';
 import { captureStep, fixedPicture } from '../capture/captureFolded';
@@ -52,14 +53,14 @@ export class CpImportPreparer {
           const geometry = await api.documentGeometry(handle);
           geometryBounds(geometry);
           const document = decodeCpGeometryToSnapshot(geometry);
-          const segmentation = await api.segmentationArtifacts(handle);
-          return { geometry, document, segmentation };
+          const sheets = new CpSheetIndex(await api.sheetIndex(handle));
+          return { geometry, document, sheets };
         },
         signal,
         30_000,
       );
-      const { geometry, document, segmentation } = prepared;
-      const regions = resolveCpSegments(segmentation);
+      const { geometry, document, sheets } = prepared;
+      const regions = sheetRegions(sheets);
       if (defox && regions.length !== 1)
         throw new Error(
           i18n.t(
@@ -83,7 +84,7 @@ export class CpImportPreparer {
               () =>
                 captureStep(runtime, {
                   document,
-                  segmentation,
+                  sheets,
                   scope,
                   render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 },
                   style,
@@ -124,14 +125,14 @@ export class CpImportPreparer {
         const runtime = createBoundCpCaptureRuntime(api, handle!, session.runId);
         const preview = await captureStep(runtime, {
           document,
-          segmentation,
+          sheets,
           scope,
           render: { mode: 'crease-pattern', rotationDeg: 0 },
           style,
         });
         if (preview.status !== 'captured') continue;
         if (defox) {
-          const creases = chooseStepCreases(document, scope, segmentation);
+          const creases = chooseStepCreases(document, scope, sheets);
           steps.push({
             ...createStep(),
             source: {

@@ -6,10 +6,9 @@
  * Pure.
  */
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
-import { creaseRoleOf } from '../../cp-workspace/references/creaseRole';
+import { linesSheetThumbnail } from '../../cp-workspace/sheets/linesSheetThumbnail';
 import {
   MAX_STORED_STROKES,
-  fitSheetThumbnail,
   type SheetStroke,
   type SheetThumbnail,
 } from '../../cp-workspace/sheets/sheetThumbnail';
@@ -18,19 +17,14 @@ import type { StepCreases } from './captureCreases';
 const EMPTY_THUMBNAIL: SheetThumbnail = { viewBox: '0 0 100 100', strokes: [] };
 
 /**
- * The same scoped creases the capture draws, fitted with the shared sheet
- * thumbnail painter. Selecting a region has already found these line ids;
- * rebuilding a whole-document FOLD index here made Show as cost hundreds of
- * milliseconds on a large batch. Work is proportional to this sheet alone.
+ * The sheet's thumbnail, as the pattern picker draws it: every line the step
+ * covers, from the document its creases were chosen in.
  */
-export function creasesThumbnail(creases: StepCreases, document: OristudioCpDocumentSnapshot): SheetThumbnail {
-  const strokes: SheetStroke[] = [];
-  for (const id of creases.scopedLineIds) {
-    const line = document.crease_pattern.line_segments[id - 1];
-    if (!line) continue;
-    strokes.push({ x1: line.a.x, y1: line.a.y, x2: line.b.x, y2: line.b.y, role: creaseRoleOf(line) });
-  }
-  const thumbnail = fitSheetThumbnail(strokes);
+export function creasesThumbnail(
+  document: OristudioCpDocumentSnapshot,
+  creases: StepCreases
+): SheetThumbnail {
+  const thumbnail = linesSheetThumbnail(document, creases.scopedLineIds);
   if (!thumbnail) return EMPTY_THUMBNAIL;
   // To a tenth of the 100-unit box: plenty for a corner, and short in the file.
   const snap = (value: number) => Math.round(value * 10) / 10 + 0;

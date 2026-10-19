@@ -54,3 +54,50 @@ export function creaseFingerprint(document: OristudioCpDocumentSnapshot): string
   fingerprints.set(document, fingerprint);
   return fingerprint;
 }
+
+function computeLineContentFingerprint(document: OristudioCpDocumentSnapshot): string {
+  const lines = document.crease_pattern.line_segments;
+  let hash = 0x811c9dc5;
+  const mix = (value: number) => {
+    hash ^= value | 0;
+    hash = Math.imul(hash, 0x01000193);
+  };
+  const mixText = (text: string) => {
+    mix(text.length);
+    for (let i = 0; i < text.length; i += 1) mix(text.charCodeAt(i));
+  };
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    mix(Math.round(line.a.x * COORD_QUANTIZE));
+    mix(Math.round(line.a.y * COORD_QUANTIZE));
+    mix(Math.round(line.b.x * COORD_QUANTIZE));
+    mix(Math.round(line.b.y * COORD_QUANTIZE));
+    mixText(line.color);
+    mixText(line.active);
+    mix(line.customized);
+    mix(line.customized_color.red);
+    mix(line.customized_color.green);
+    mix(line.customized_color.blue);
+    mix(line.fold_magnitude ?? -1);
+    mixText(line.fold_direction_hint ?? '');
+  }
+  return `${lines.length}:${hash >>> 0}`;
+}
+
+const lineContentFingerprints = new WeakMap<OristudioCpDocumentSnapshot, string>();
+
+/**
+ * Everything about the lines except which are selected: what a crease
+ * fingerprint (`relativeCreaseFingerprint`, `cs1:`) reads, and so the key for
+ * caching one. {@link creaseFingerprint} leaves out `active`, the custom colour
+ * and the direction hint, which no geometry depends on but a fingerprint
+ * does; the snapshot itself is replaced by every kernel command, a selection
+ * included. Memoized per snapshot.
+ */
+export function lineContentFingerprint(document: OristudioCpDocumentSnapshot): string {
+  const cached = lineContentFingerprints.get(document);
+  if (cached !== undefined) return cached;
+  const fingerprint = computeLineContentFingerprint(document);
+  lineContentFingerprints.set(document, fingerprint);
+  return fingerprint;
+}

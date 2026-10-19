@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { cpDocument, fakeCaptureRuntime, TWO_SQUARES, twoSquaresSegmentation, type FixtureLine } from './capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, TWO_SQUARES, twoSquaresIndex, type FixtureLine } from './capture.fixtures';
 import type { CpCaptureRuntime } from './captureFolded';
 import { refreshAllDiagramSteps, stopRefreshAll } from './captureQueue';
 import { stepsIn } from '../document/diagramSteps.fixtures';
@@ -14,10 +14,10 @@ vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', async (importOrigina
   ...(await importOriginal<typeof import('../../store/workspaceStore/cpFoldRuntimeBindings')>()),
   createCpCaptureRuntime: () => bindings.runtime,
 }));
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
-  ensureCpSegmentationArtifacts: vi.fn(async () => segmentation),
-  peekCpSegmentationArtifacts: vi.fn(() => segmentation),
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: vi.fn(async () => sheets),
+  peekCpSheetIndex: vi.fn(() => sheets),
 }));
 const dialogs = vi.hoisted(() => ({ requestConfirmation: vi.fn(async () => true) }));
 vi.mock('../../store/commandDialogStore', async (importOriginal) => ({
@@ -32,8 +32,8 @@ vi.mock('../../analytics', async (importOriginal) => ({
   ...analytics,
 }));
 
-const segmentation = twoSquaresSegmentation();
-const [left, right] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left, right] = sheetRegions(sheets);
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
 

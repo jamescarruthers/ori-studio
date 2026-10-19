@@ -7,13 +7,13 @@ import {
   resetFoldedFigureHandles,
   setFoldedFigureHandleFree,
 } from '../../cp-workspace/folded/foldedFigureHandles';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
-import { cpDocument, fakeCaptureRuntime, movedLines, TWO_SQUARES, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, movedLines, TWO_SQUARES, twoSquaresIndex } from './capture.fixtures';
 import type { CpCaptureRuntime } from './captureFolded';
 import { createPoseController, linkedFoldKey } from './poseController';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { stepsIn } from '../document/diagramSteps.fixtures';
 import type { DiagramLayerSpread } from '../document/diagramDocument';
 
@@ -22,12 +22,12 @@ vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', async (importOrigina
   ...(await importOriginal<typeof import('../../store/workspaceStore/cpFoldRuntimeBindings')>()),
   createCpCaptureRuntime: () => bindings.runtime,
 }));
-/** The pattern's segmentation once it has moved; the fixture's until then. */
+/** The pattern's sheets once it has moved; the fixture's until then. */
 const pattern = vi.hoisted(() => ({ moved: null as unknown }));
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
-  ensureCpSegmentationArtifacts: vi.fn(async () => pattern.moved ?? segmentation),
-  peekCpSegmentationArtifacts: vi.fn(() => pattern.moved ?? segmentation),
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: vi.fn(async () => pattern.moved ?? sheets),
+  peekCpSheetIndex: vi.fn(() => pattern.moved ?? sheets),
 }));
 const engines = vi.hoisted(() => ({ listeners: new Set<(loss: { engine: string }) => void>() }));
 vi.mock('../../engines/engineHost', async (importOriginal) => ({
@@ -45,8 +45,8 @@ vi.mock('../../analytics', async (importOriginal) => ({
   ...analytics,
 }));
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
 const document = cpDocument();
@@ -110,7 +110,7 @@ describe('the Pose controller', () => {
     const before = render(stepId);
     if (before?.kind !== 'cp') throw new Error('linked');
     const [dx, dy] = [431.3, -0.7000000000000001];
-    const moved = twoSquaresSegmentation({ dx, dy });
+    const moved = twoSquaresIndex({ dx, dy });
     pattern.moved = moved;
     useWorkspaceStore.setState({
       oristudioCpDocument: {
@@ -125,7 +125,7 @@ describe('the Pose controller', () => {
     if (after?.kind !== 'cp') throw new Error('linked');
     expect(after.render).toMatchObject({ mode: 'crease-pattern', rotationDeg: 15 });
     expect(after.fingerprint).toBe(before.fingerprint);
-    expect(after.scope.region).toEqual(regionReferenceFor(resolveCpSegments(moved)[0]!));
+    expect(after.scope.region).toEqual(regionReferenceFor(sheetRegions(moved)[0]!));
     controller.dispose();
   });
 
@@ -708,10 +708,10 @@ describe('spreading a flat fold’s layers (Phase 13)', () => {
     const gate = new Promise<void>((resolve) => {
       open = resolve;
     });
-    vi.mocked(ensureCpSegmentationArtifacts).mockImplementationOnce(async () => {
+    vi.mocked(ensureCpSheetIndex).mockImplementationOnce(async () => {
       begun = true;
       await gate;
-      return segmentation;
+      return sheets;
     });
     return { begun: () => begun, open };
   }

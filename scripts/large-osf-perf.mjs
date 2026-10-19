@@ -42,6 +42,12 @@
  *   closed);
  * - `export-cp`: the browser receives the `.cp` download.
  *
+ * `--diagram` then enters the Diagram workspace — every linked card's status is
+ * worked out there — selects the first step, and opens its pattern picker,
+ * timing each until the main thread has been quiet for ten seconds: long
+ * enough that a pause while the engine works in its worker is not taken for
+ * the end.
+ *
  * Options: `--out <dir>` (default `artifacts/large-osf-perf/<time>`, ignored by
  * git), `--dist <dir>` (a production build other than `apps/web/dist`, to time
  * two builds with one script), `--trace` (a Chrome trace per phase, for
@@ -86,6 +92,7 @@ function parseArgs(argv) {
     zoomOut: 0,
     boxes: [],
     actions: [],
+    diagram: false,
     out: null,
     dist: path.join(repoRoot, 'apps/web/dist'),
     trace: false,
@@ -96,6 +103,7 @@ function parseArgs(argv) {
     if (arg === '--zoom-out') options.zoomOut = Number(argv[++i]);
     else if (arg === '--box') options.boxes.push(argv[++i].split(',').map(Number));
     else if (arg === '--action') options.actions.push(argv[++i]);
+    else if (arg === '--diagram') options.diagram = true;
     else if (arg === '--out') options.out = argv[++i];
     else if (arg === '--dist') options.dist = path.resolve(argv[++i]);
     else if (arg === '--trace') options.trace = true;
@@ -167,15 +175,15 @@ async function main() {
     await page.evaluate(() => 0);
     return Date.now() - started;
   };
-  /** Ms from `since` until the main thread has been quiet for QUIET_MS (the quiet itself excluded). */
-  const untilQuiet = async (since) => {
+  /** Ms from `since` until the main thread has been quiet for `window` ms (the quiet itself excluded). */
+  const untilQuiet = async (since, window = QUIET_MS) => {
     let quietSince = null;
     for (;;) {
       const busy = (await probe()) > PROBE_LIMIT_MS;
       const now = Date.now();
       if (busy) quietSince = null;
       else quietSince ??= now;
-      if (quietSince !== null && now - quietSince >= QUIET_MS) return quietSince - since;
+      if (quietSince !== null && now - quietSince >= window) return quietSince - since;
       if (now - since > PHASE_LIMIT_MS) throw new Error('the main thread never went quiet');
       await page.waitForTimeout(100);
     }
@@ -362,6 +370,43 @@ async function main() {
     await page.screenshot({ path: path.join(options.out, `${action}.png`) });
     if (close) await page.keyboard.press('Escape');
     results.actions.push({ action, ...result });
+  }
+
+  // ---- The Diagram: every card's link status, a step, then the pattern picker ---
+  if (options.diagram) {
+    const DIAGRAM_QUIET_MS = 10_000;
+    const phase = async (name, act, shown) => {
+      const t0 = await page.evaluate(() => performance.now());
+      const started = Date.now();
+      await act();
+      if (shown) await page.waitForSelector(shown, { timeout: PHASE_LIMIT_MS });
+      const shownMs = Date.now() - started;
+      const quietMs = await untilQuiet(started, DIAGRAM_QUIET_MS);
+      const result = { shownMs, quietMs, longTasks: await longTasksSince(t0) };
+      log(name, JSON.stringify(result));
+      await page.screenshot({ path: path.join(options.out, `${name}.png`) });
+      return result;
+    };
+    results.diagram = await traced('diagram', async () => ({
+      enter: await phase(
+        'diagram-enter',
+        () => page.click('[aria-label="Workspaces"] button[aria-label="Diagram workspace"]'),
+        '[data-step-id]'
+      ),
+      select: await phase('diagram-select', () =>
+        page.click('[data-step-id]', { timeout: PHASE_LIMIT_MS, noWaitAfter: true })
+      ),
+      picker: await phase(
+        'diagram-picker',
+        () =>
+          page
+            .getByRole('button', { name: /^(Re)?[lL]ink Pattern…$/ })
+            .first()
+            .click({ timeout: PHASE_LIMIT_MS }),
+        '[role="listbox"] [role="option"] svg'
+      ),
+    }));
+    results.diagram.heapMiB = await heapMiB();
   }
 
   writeFileSync(path.join(options.out, 'results.json'), `${JSON.stringify(results, null, 2)}\n`);

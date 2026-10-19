@@ -265,6 +265,14 @@ T-junctions included — stay in the same sheet.
     within 1e-6, so it does not care how the rim was traced); fingerprints are
     taken over member lines; the picker lists index sheets, with thumbnails
     drawn from member lines as References' rail already draws them.
+    *(Done.)* Simulated pictures and Pose take the sheet's own mesh, a
+    crease-pattern picture the sheet's own faces' rim (so a hole stays out),
+    and the choice caches key on line content rather than the snapshot (1.2b).
+    Measured on this file: entering the Diagram 28.3 s → 6.4 s to quiet
+    (longest freeze 10.1 s → 4.3 s); **selecting a step 98.8 s → 0.29 s** —
+    the Step pane drew every region's face thumbnail for a picker that was not
+    open; the picker itself 3.1 s → 2.7 s. What is left of entering is the
+    cards' own pictures (4.5).
   - *References:* precrease takes its sheets from the index (frames from
     rectangular outlines) instead of chaining borders again, and runs merge and
     exactness for the sheet being looked at, not for all 204.
@@ -470,7 +478,7 @@ definitions table listed by name.
 Phase 1
 - [x] 1.1 Metadata-only reader on the `.osf` open path (#458); projection no longer saved again as `sourceFold` (#461)
 - [x] 1.2 Assignment map built once; containment cache keyed on crease geometry (#459)
-- [ ] 1.2b Diagram region caches keyed on crease geometry — superseded if the Diagram moves to the index (2.2) first
+- [x] 1.2b Diagram region caches keyed on line content (with the Diagram's move to the index)
 - [x] 1.3 Numeric edge sort in `splitSegments`, ordering pinned by a test (#460)
 - [x] 1.4 Every CP undo push capped at `MAX_CP_HISTORY` (#462)
 - [x] Harness script (`scripts/large-osf-perf.mjs`, #457); before/after numbers in each PR. No synthetic fixture: the measurements use the real file, kept outside the repository
@@ -479,7 +487,7 @@ Phase 2
 - [x] Answers for the definitions table (2026-10-18; the inner-loop reading to confirm at 2.1)
 - [x] 2.1 Sheet index in Rust from outer border loops, in the CP engine, cached by crease fingerprint; differential test against today's regions
 - [x] 2.2 Edit toolbar on the index; its verbs on one sheet's faces
-- [ ] 2.2 Diagram links, picker and thumbnails on the index
+- [x] 2.2 Diagram links, picker and thumbnails on the index
 - [ ] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
 - [ ] 2.2 Simulate rail on the index; mesh for the selected sheet only
 - [x] 2.3 Faces per sheet on demand (kernel when its lines meet only at their ends, else JS), cached per sheet

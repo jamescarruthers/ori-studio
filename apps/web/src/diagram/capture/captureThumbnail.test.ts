@@ -5,9 +5,9 @@ import {
   type SheetStroke,
 } from '../../cp-workspace/sheets/sheetThumbnail';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { storedCpSource } from '../document/diagramFile';
-import { cpDocument, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, twoSquaresIndex } from './capture.fixtures';
 import { chooseStepCreases } from './captureCreases';
 import { creasesThumbnail, withinStoredBudget } from './captureThumbnail';
 
@@ -20,17 +20,23 @@ const stroke = (x1: number, y1: number, x2: number, y2: number, role: SheetStrok
 });
 
 describe('creasesThumbnail', () => {
-  it('draws only the scoped document creases, including loose aux lines, snapped for the file', () => {
-    const segmentation = twoSquaresSegmentation();
-    const [left] = resolveCpSegments(segmentation);
+  it('draws every line of the sheet, snapped, and the file reads it back', () => {
+    const sheets = twoSquaresIndex();
+    const [left] = sheetRegions(sheets);
     const scope = { kind: 'segment' as const, region: regionReferenceFor(left!) };
-    const choice = chooseStepCreases(cpDocument(), scope, segmentation);
-    if (choice.status !== 'found') throw new Error('the left square is a region');
-    const thumbnail = creasesThumbnail(choice.creases, cpDocument());
-    expect(thumbnail.strokes).toHaveLength(6);
-    expect(thumbnail.strokes.filter(stroke => stroke.role === 'edge')).toHaveLength(4);
-    expect(thumbnail.strokes.some(stroke => stroke.role === 'aux')).toBe(true);
-    expect(thumbnail.strokes.some(stroke => stroke.role === 'valley')).toBe(false);
+    const document = cpDocument();
+    const choice = chooseStepCreases(document, scope, sheets);
+    if (choice.status !== 'found') throw new Error('the left square is a sheet');
+    const thumbnail = creasesThumbnail(document, choice.creases);
+    // Its four sides, its diagonal and its aux line: the lines drawn, not face edges.
+    expect(thumbnail.strokes.map((entry) => entry.role).sort()).toEqual([
+      'aux',
+      'edge',
+      'edge',
+      'edge',
+      'edge',
+      'mountain',
+    ]);
     // To a tenth of the box, so the file stays short.
     for (const entry of thumbnail.strokes) {
       for (const value of [entry.x1, entry.y1, entry.x2, entry.y2]) {

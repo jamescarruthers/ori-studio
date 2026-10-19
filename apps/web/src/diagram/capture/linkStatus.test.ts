@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { DEFAULT_DIAGRAM_STYLE, type DiagramCpRender, type DiagramCpScope } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { referencesStep } from '../document/diagramSteps.fixtures';
-import { cpDocument, movedLines, TWO_SQUARES, twoSquaresSegmentation, type FixtureLine } from './capture.fixtures';
+import { cpDocument, movedLines, TWO_SQUARES, twoSquaresIndex, type FixtureLine } from './capture.fixtures';
 import { chooseStepCreases, creasesFingerprint } from './captureCreases';
 import { linkStatus, refreshKind } from './linkStatus';
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const regionScope: DiagramCpScope = { kind: 'segment', region: regionReferenceFor(left!) };
 
 const FOLDED: DiagramCpRender = { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 };
@@ -17,7 +17,7 @@ const CREASE_PATTERN: DiagramCpRender = { mode: 'crease-pattern', rotationDeg: 0
 
 /** The source a capture of `scope` from `document` would record. */
 function linked(scope: DiagramCpScope, document = cpDocument(), render: DiagramCpRender = FOLDED) {
-  const choice = chooseStepCreases(document, scope, segmentation);
+  const choice = chooseStepCreases(document, scope, sheets);
   if (choice.status !== 'found') throw new Error('the scope should be found');
   return { scope, render, fingerprint: creasesFingerprint(choice.creases, render) };
 }
@@ -29,8 +29,8 @@ const edited = () =>
 describe('linkStatus', () => {
   it('reads a region current against the pattern it was captured from, and stale once its creases change', () => {
     const source = linked(regionScope);
-    expect(linkStatus(source, cpDocument(), segmentation)).toBe('current');
-    expect(linkStatus(source, edited(), segmentation)).toBe('stale');
+    expect(linkStatus(source, cpDocument(), sheets)).toBe('current');
+    expect(linkStatus(source, edited(), sheets)).toBe('stale');
   });
 
   // The aux line in the left square (line 10) is drawn in a crease-pattern
@@ -41,17 +41,17 @@ describe('linkStatus', () => {
     const movedAux = cpDocument(
       TWO_SQUARES.map((line, i): FixtureLine => (i === 9 ? [0, 60, 50, 60, 'Cyan3'] : line))
     );
-    expect(linkStatus(linked(scope, cpDocument(), CREASE_PATTERN), movedAux, segmentation)).toBe('stale');
-    expect(linkStatus(linked(scope, cpDocument(), FOLDED), movedAux, segmentation)).toBe('current');
+    expect(linkStatus(linked(scope, cpDocument(), CREASE_PATTERN), movedAux, sheets)).toBe('stale');
+    expect(linkStatus(linked(scope, cpDocument(), FOLDED), movedAux, sheets)).toBe('current');
   });
 
-  it('reads a region whose rim is gone missing, before it reads it stale', () => {
+  it('reads a sheet whose border is gone missing, before it reads it stale', () => {
     const source = linked(regionScope);
-    expect(linkStatus(source, edited(), twoSquaresSegmentation({ wall: false }))).toBe('missing');
+    expect(linkStatus(source, edited(), twoSquaresIndex({ left: false }))).toBe('missing');
   });
 
-  it('cannot say with no pattern open, or a region before the segmentation is ready', () => {
-    expect(linkStatus(linked(regionScope), null, segmentation)).toBe('unknown');
+  it('cannot say with no pattern open, or a sheet before the index is ready', () => {
+    expect(linkStatus(linked(regionScope), null, sheets)).toBe('unknown');
     expect(linkStatus(linked(regionScope), cpDocument(), null)).toBe('unknown');
   });
 });
@@ -62,19 +62,19 @@ describe('linkStatus after the pattern moved', () => {
   const dx = -503.7;
   const dy = 0.1 + 0.2;
   const movedDocument = (lines = TWO_SQUARES) => cpDocument(movedLines(lines, dx, dy));
-  const movedSegmentation = twoSquaresSegmentation({ dx, dy });
+  const movedSheets = twoSquaresIndex({ dx, dy });
 
   it('reads a linked step current, shown as its crease pattern or folded', () => {
-    expect(linkStatus(linked(regionScope, cpDocument(), FOLDED), movedDocument(), movedSegmentation)).toBe('current');
-    expect(linkStatus(linked(regionScope, cpDocument(), CREASE_PATTERN), movedDocument(), movedSegmentation)).toBe('current');
+    expect(linkStatus(linked(regionScope, cpDocument(), FOLDED), movedDocument(), movedSheets)).toBe('current');
+    expect(linkStatus(linked(regionScope, cpDocument(), CREASE_PATTERN), movedDocument(), movedSheets)).toBe('current');
   });
 
   it('reads a References step current: its sheet moved, and no crease of it changed', () => {
-    const choice = chooseStepCreases(cpDocument(), regionScope, segmentation);
+    const choice = chooseStepCreases(cpDocument(), regionScope, sheets);
     if (choice.status !== 'found') throw new Error('found');
     const step = referencesStep('step-r', { region: regionScope.region, fingerprint: choice.creases.drawnFingerprint });
     if (step.source?.kind !== 'references-step') throw new Error('a References step');
-    expect(linkStatus(step.source, movedDocument(), movedSegmentation)).toBe('current');
+    expect(linkStatus(step.source, movedDocument(), movedSheets)).toBe('current');
   });
 
   it('reads it missing when it moved and changed beside a sheet of its shape, and stale when it changed in place', () => {
@@ -82,17 +82,17 @@ describe('linkStatus after the pattern moved', () => {
     const editedMoved = movedDocument(
       TWO_SQUARES.map((line, i): FixtureLine => (i === 7 ? ([...line.slice(0, 4), 'Blue2'] as FixtureLine) : line))
     );
-    expect(linkStatus(linked(regionScope), editedMoved, movedSegmentation)).toBe('missing');
+    expect(linkStatus(linked(regionScope), editedMoved, movedSheets)).toBe('missing');
     // Edited where it is: out of date, as before.
-    expect(linkStatus(linked(regionScope), edited(), segmentation)).toBe('stale');
+    expect(linkStatus(linked(regionScope), edited(), sheets)).toBe('stale');
   });
 
   it('compares a step that keeps a fingerprint from before the change the old way', () => {
-    const choice = chooseStepCreases(cpDocument(), regionScope, segmentation);
+    const choice = chooseStepCreases(cpDocument(), regionScope, sheets);
     if (choice.status !== 'found') throw new Error('found');
     const old = { scope: regionScope, render: FOLDED, fingerprint: choice.creases.absolute.fingerprint };
-    expect(linkStatus(old, cpDocument(), segmentation)).toBe('current');
-    expect(linkStatus(old, edited(), segmentation)).toBe('stale');
+    expect(linkStatus(old, cpDocument(), sheets)).toBe('current');
+    expect(linkStatus(old, edited(), sheets)).toBe('stale');
   });
 });
 

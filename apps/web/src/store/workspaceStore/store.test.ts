@@ -231,10 +231,6 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
     executeOristudioCpCommand: oristudioCpMocks.executeOristudioCpCommand,
     exportOristudioCpDocumentAsCp: oristudioCpMocks.exportOristudioCpDocumentAsCp,
     exportOristudioCpDocumentAsFold: oristudioCpMocks.exportOristudioCpDocumentAsFold,
-    analyzeOristudioCpDocument: async () => {
-      const { segmentationFoldArtifactsFromFold } = await import('../../lib/creasePatternImport');
-      return segmentationFoldArtifactsFromFold(JSON.parse(await oristudioCpMocks.exportOristudioCpDocumentAsFold()));
-    },
     exportOristudioCpLinesAsFold: oristudioCpMocks.exportOristudioCpLinesAsFold,
     exportOristudioCpDocumentAsOri: oristudioCpMocks.exportOristudioCpDocumentAsOri,
     fetchOristudioCpSheetIndex: oristudioCpMocks.fetchOristudioCpSheetIndex,

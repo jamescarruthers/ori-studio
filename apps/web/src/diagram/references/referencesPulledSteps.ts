@@ -1,8 +1,8 @@
 /**
  * Cards pulled from the References browser into the diagram (D20): each a
  * snapshot of its card's picture, its sentence as the instruction, and where
- * it came from (D6) — the sheet, found again in the segmentation every
- * Diagram link is made in (D3), and the plan and way it was drawn from. A
+ * it came from (D6) — the sheet, found again among the sheets every Diagram
+ * link is made in (D3), and the plan and way it was drawn from. A
  * turn-over card is pulled as a turn between steps, unnumbered (D22).
  *
  * The card is split as it is pulled (17d): its paper is the step's picture,
@@ -19,12 +19,12 @@ import {
   trackDiagramTurnAdded,
   type DiagramPulledInto,
 } from '../../analytics';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import type { ReferencesDiagramCard } from '../../cp-workspace/references/referencesDiagramCards';
 import { regionReferenceFor, resolveRegion, type RegionReference } from '../../cp-workspace/regions/regionReference';
 import { fitSheetThumbnail, type SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import i18n from '../../i18n';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
 import { DEFAULT_PAPER_EXPORT_MARKS, type PaperExportMarks } from '../../lib/paperExportSettings';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { editedCardMarksGone } from '../document/cardMarks';
@@ -117,8 +117,8 @@ async function pullCards(pull: ReferencesPull): Promise<ReferencesPullOutcome> {
   const document = start.oristudioCpDocument?.document;
   if (!document) return { status: 'no-pattern' };
   const loadId = start.diagramLoadId;
-  const segmentation = await abandonOnEngineLoss(ensureCpSegmentationArtifacts(document)).catch(() => null);
-  if (!segmentation) return { status: 'unknown' };
+  const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(document)).catch(() => null);
+  if (!sheets) return { status: 'unknown' };
 
   // The sheet, as the Diagram finds regions: by its rim.
   const outline: RegionReference = {
@@ -126,14 +126,14 @@ async function pullCards(pull: ReferencesPull): Promise<ReferencesPullOutcome> {
     bounds: boundsOf(pull.outline),
     segmentIdHint: null,
   };
-  const segment = resolveRegion(outline, resolveCpSegments(segmentation));
-  const region = segment ? regionReferenceFor(segment) : outline;
+  const sheet = resolveRegion(outline, sheetRegions(sheets));
+  const region = sheet ? regionReferenceFor(sheet) : outline;
   // The marks the Show menu shows, laid out as the diagram's style draws its pages (17d).
   const marks = pull.marks ?? DEFAULT_PAPER_EXPORT_MARKS;
   const style = useWorkspaceStore.getState().diagram?.style ?? DEFAULT_DIAGRAM_STYLE;
-  const choice = segment ? chooseStepCreases(document, { kind: 'segment', region }, segmentation) : null;
+  const choice = sheet ? chooseStepCreases(document, { kind: 'segment', region }, sheets) : null;
   const creases = choice?.status === 'found' ? choice.creases : null;
-  const thumbnail = creases ? creasesThumbnail(creases, document) : outlineThumbnail(pull.outline);
+  const thumbnail = creases ? creasesThumbnail(document, creases) : outlineThumbnail(pull.outline);
 
   const sent: SentReferencesEntry[] = [];
   for (const { card, picture, way } of pull.cards) {

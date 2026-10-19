@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { FoldDocument as SimulatorFoldDocument } from '@treemaker/origami-simulator';
-import type { CpSegment } from '../../lib/creasePatternSegmentation';
+import type { CpSheetRegion } from '../../cp-workspace/sheets/cpSheetRegions';
 import type { KnownCreases } from './captureCreases';
 import { stepSheet } from './linkStatus';
 import { withRollAbsorbed, type SimulatorOrbitView } from '../../lib/simulatorOrbit';
@@ -28,7 +28,7 @@ import { diagramPaperStyle } from '../pictures/diagramPaperStyle';
 import type { PaperScene } from '../../lib/paper/paperScene';
 import { registerSimulatedRestNow } from './openLinkedPose';
 import { ORBIT_SETTLE_MS, sameCamera, type SimulatedRest } from './poseController';
-import { useCpSegmentationState } from './useLinkStatus';
+import { useCpSheetIndexState } from './useLinkStatus';
 
 /** Fold % per arrow press and per Step: Simulate's and an inline window's. */
 const FOLD_STEP_PERCENT = 5;
@@ -163,30 +163,30 @@ export function useDiagramSimulatedPose({
   /** Whether a rest at this pose would be captured: asked before its scene is drawn. */
   wantsRest: (pose: Pick<SimulatedRest, 'foldPercent' | 'view'>) => boolean;
 }): DiagramSimulatedPose {
-  // The region's model, built as the 0% picture builds it, again whenever the
-  // pattern's segmentation is.
-  const segmentation = useCpSegmentationState(true);
-  const artifacts = segmentation.status === 'ready' ? segmentation.artifacts : null;
+  // The sheet's model, built as the 0% picture builds it, again whenever the
+  // pattern's sheet index is.
+  const sheets = useCpSheetIndexState(true);
+  const index = sheets.status === 'ready' ? sheets.index : null;
   const document = useWorkspaceStore((state) => state.oristudioCpDocument?.document ?? null);
   const { fingerprint, drawn } = known;
-  const segment = useMemo(
-    // Undefined while the segmentation is not ready; null when the sheet is gone.
-    () => (artifacts ? stepSheet(scope, { fingerprint, drawn }, document, artifacts) : undefined),
-    [artifacts, scope, fingerprint, drawn, document]
+  const sheet = useMemo(
+    // Undefined while the index is not ready; null when the sheet is gone.
+    () => (index ? stepSheet(scope, { fingerprint, drawn }, document, index) : undefined),
+    [index, scope, fingerprint, drawn, document]
   );
-  const [model, setModel] = useState<{ segment: CpSegment; fold: SimulatorFoldDocument | null } | null>(null);
+  const [model, setModel] = useState<{ sheet: CpSheetRegion; fold: SimulatorFoldDocument | null } | null>(null);
   useEffect(() => {
-    if (!segment) return undefined;
+    if (!sheet) return undefined;
     let live = true;
     const store = { get: useWorkspaceStore.getState, set: useWorkspaceStore.setState };
-    void storeSimulationFold(store, segment).then((fold) => {
-      if (live) setModel({ segment, fold: fold as unknown as SimulatorFoldDocument | null });
+    void storeSimulationFold(store, sheet).then((fold) => {
+      if (live) setModel({ sheet, fold: fold as unknown as SimulatorFoldDocument | null });
     });
     return () => {
       live = false;
     };
-  }, [segment]);
-  const fold = segment && model?.segment === segment ? model.fold : undefined;
+  }, [sheet]);
+  const fold = sheet && model?.sheet === sheet ? model.fold : undefined;
 
   const gpu = useWorkerGpuSupport();
   const bitmapOutput = useMemo(
@@ -459,11 +459,11 @@ export function useDiagramSimulatedPose({
   }, [playing, runtimeStatus, setFoldPercent, reset, moved, percentPerSecond]);
 
   const status: DiagramSimulatedPoseStatus =
-    segmentation.status === 'no-pattern'
+    sheets.status === 'no-pattern'
       ? 'no-pattern'
-      : segmentation.status === 'failed'
+      : sheets.status === 'failed'
         ? 'unavailable'
-        : segment === null
+        : sheet === null
           ? 'missing'
           : gpu === false
             ? 'no-gpu'

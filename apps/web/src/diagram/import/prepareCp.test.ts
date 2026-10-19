@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cpDocument, fakeCaptureRuntime, twoSquaresSegmentation } from '../capture/capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, twoSquaresIndex } from '../capture/capture.fixtures';
 import type { CpCaptureRuntime } from '../capture/captureFolded';
 import { DEFAULT_DIAGRAM_STYLE } from '../document/diagramDocument';
 import { CpImportPreparer } from './prepareCp';
@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({
     circleData: new Float64Array(),
     tail: { texts: [] },
   })),
-  segmentationArtifacts: vi.fn(),
+  sheetIndex: vi.fn(),
   freeDocument: vi.fn(async () => {}),
 }));
 vi.mock('../../engines/cpTaskSession', () => ({
@@ -35,7 +35,7 @@ vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  api.segmentationArtifacts.mockResolvedValue(twoSquaresSegmentation());
+  api.sheetIndex.mockResolvedValue(twoSquaresIndex().transport);
   runtime = fakeCaptureRuntime();
 });
 async function prepare() {

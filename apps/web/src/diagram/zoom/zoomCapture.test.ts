@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { createAnnotation, type PicturePoint } from '../annotate/annotationModel';
 import { stepZoomStatus } from './zoomActions';
-import { cpDocument, fakeCaptureRuntime, twoSquaresSegmentation } from '../capture/capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, twoSquaresIndex } from '../capture/capture.fixtures';
 import { captureStep } from '../capture/captureFolded';
 import {
   createDiagram,
@@ -240,12 +240,12 @@ describe('capturing a frame', () => {
 });
 
 describe('a crease pattern’s one face', () => {
-  const segmentation = twoSquaresSegmentation();
-  const [left] = resolveCpSegments(segmentation);
+  const sheets = twoSquaresIndex();
+  const [left] = sheetRegions(sheets);
   const scope = { kind: 'segment' as const, region: regionReferenceFor(left!) };
 
   async function patternStep(render: DiagramCpRender): Promise<DiagramStep> {
-    const result = await captureStep(fakeCaptureRuntime(), { document: cpDocument(), segmentation, scope, render, style: DEFAULT_DIAGRAM_STYLE });
+    const result = await captureStep(fakeCaptureRuntime(), { document: cpDocument(), sheets, scope, render, style: DEFAULT_DIAGRAM_STYLE });
     if (result.status !== 'captured' || result.captured.kind !== 'picture') throw new Error('expected a picture');
     return { ...cpStep('step-cp', render, result.captured.picture), source: result.source };
   }

@@ -16,9 +16,9 @@
  * (plan D24).
  */
 import { SEG_ATTR_STRIDE } from '../../engine/oristudioCpGeometry';
+import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
 import { HINT_MOUNTAIN, HINT_VALLEY } from '../../lib/foldAngle';
 import type { SheetStrokeRole } from '../sheets/sheetThumbnail';
-import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
 
 /** Oriedita's colour codes, as `LINE_COLOR_BY_NUMBER` names them. */
 const CP_ANGLE = -2;
@@ -44,8 +44,8 @@ export function creaseRoleAt(attr: Int32Array, index: number): SheetStrokeRole {
   return 'unassigned';
 }
 
-/** The aux colours, by name: what the kernel exports as `F`. */
-const AUX_COLORS: ReadonlySet<string> = new Set([
+/** Colours read as aux lines: cyan through grey, as `CP_CYAN..=CP_GREY` above. */
+const AUX_COLORS = new Set([
   'Cyan3',
   'Orange4',
   'Magenta5',
@@ -56,12 +56,10 @@ const AUX_COLORS: ReadonlySet<string> = new Set([
   'Grey10',
 ]);
 
-/**
- * {@link creaseRoleAt} for a document snapshot's segment, which names its colour
- * rather than numbering it: the same reading, so a step's source badge and the
- * title block it feeds draw a pattern as every other picture of it does.
- */
-export function creaseRoleOf(line: Pick<OristudioCpLineSegment, 'color' | 'fold_direction_hint'>): SheetStrokeRole {
+/** {@link creaseRoleAt} for a line of a document snapshot, by the same rules. */
+export function creaseRoleOf(
+  line: Pick<OristudioCpLineSegment, 'color' | 'fold_direction_hint'>
+): SheetStrokeRole {
   if (line.color === 'Black0') return 'edge';
   if (line.color === 'Red1') return 'mountain';
   if (line.color === 'Blue2') return 'valley';
@@ -72,3 +70,4 @@ export function creaseRoleOf(line: Pick<OristudioCpLineSegment, 'color' | 'fold_
   }
   return 'unassigned';
 }
+
