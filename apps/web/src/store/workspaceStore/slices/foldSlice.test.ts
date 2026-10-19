@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { initialFoldReaderState } from '../../../fold/document/foldReaderState';
 import { valleyAt, writtenSequence } from '../../../fold/document/foldSequence.fixtures';
 import {
+  FOLD_SEQUENCE_FORMAT_VERSION,
   isLockedStep,
   regularPolygonShape,
   type FoldMark,
@@ -67,8 +68,10 @@ describe('the Fold slice', () => {
 
     const { a } = foldTwo();
     const past = state().foldHistory.past.length;
-    state().setFoldStepSpread(a, 'off');
-    expect(state().setFoldStepSpread(a, 'off')).toBe(false);
+    // Fold's default is no spread, so a step's first spread is the change; the same again is none.
+    const spread = { kind: 'depth' as const, amount: 0.05, toward: 'down' as const };
+    expect(state().setFoldStepSpread(a, spread)).toBe(true);
+    expect(state().setFoldStepSpread(a, spread)).toBe(false);
     expect(state().foldHistory.past).toHaveLength(past + 1);
   });
 
@@ -161,10 +164,12 @@ describe('the Fold slice', () => {
     for (const value of [0.03, 0.05, 0.08]) state().setFoldStepSpread(b, amount(value), { session: 3 });
     expect(state().foldHistory.past).toHaveLength(past + 1);
     expect(shown().steps[1]).toMatchObject({ spread: amount(0.08) });
-    // Off on the step before is an entry of its own, and reaches it no more than its own setting lets it.
-    expect(state().setFoldStepSpread(a, 'off')).toBe(true);
+    // A toggle on the step before — its spread on, as Fold starts every step off — is an entry of its own,
+    // and reaches the step no more than its own setting lets it.
+    expect(state().setFoldStepSpread(a, amount(0.04))).toBe(true);
     expect(state().foldHistory.past).toHaveLength(past + 2);
-    expect(state().setFoldStepSpread(a, 'off')).toBe(false);
+    expect(shown().steps[1]).toMatchObject({ spread: amount(0.08) });
+    expect(state().setFoldStepSpread(a, amount(0.04))).toBe(false);
 
     state().undoFold();
     expect(shown().steps[0]).not.toHaveProperty('spread');
@@ -289,7 +294,8 @@ describe('the Fold slice', () => {
   });
 
   it('changes nothing in a newer build’s sequence, and still lets the reader move', () => {
-    const raw = { ...writtenSequence(), formatVersion: 2 };
+    // Newer than this build writes, whatever that is now.
+    const raw = { ...writtenSequence(), formatVersion: FOLD_SEQUENCE_FORMAT_VERSION + 1 };
     const read = readFoldSequences([raw]);
     state().installFoldSequences(read, null);
     expect(read[0].readOnlyRaw).toBe(raw);

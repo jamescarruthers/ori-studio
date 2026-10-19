@@ -1,8 +1,10 @@
 /**
- * The layer spread a Fold step's folded picture shows (Wave 5, the owner's
- * "the default spread should be applied (same as diagrams) and you can toggle
- * / adjust it per step"): the Diagram's start rule, read along the step's
- * path rather than down a page.
+ * The layer spread a Fold step's folded picture shows (Wave 5): the Diagram's
+ * start rule, read along the step's path rather than down a page. The default
+ * is no spread — the paper lying flat, unlike a Diagram step's flat fold,
+ * which starts spread — and a step can toggle and adjust its own, which the
+ * steps after it take. (Wave 5 first started every picture spread, as the
+ * Diagram does; the default became off on 2026-10-18.)
  *
  * - **Its own setting**, when it has one (`FoldStep.spread`): a spread, or off.
  * - **Else the nearest earlier step's** on its path — the steps it folds

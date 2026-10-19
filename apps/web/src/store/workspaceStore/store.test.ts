@@ -41,6 +41,7 @@ import { CP_DOCUMENT_SCOPED_KEYS, discardCpDocumentState } from './cpDocumentSta
 import { DIAGRAM_SCOPED_KEYS, discardDiagramState, isDiagramAnnotating } from './diagramState';
 import { FOLD_SCOPED_KEYS, discardFoldState, pickFoldState } from './foldState';
 import { valleyAt, writtenSequence } from '../../fold/document/foldSequence.fixtures';
+import { FOLD_SEQUENCE_FORMAT_VERSION } from '../../fold/document/foldSequenceDocument';
 import { readFoldSequences } from '../../fold/document/foldSequenceFile';
 import { registerPendingEditFlush, resetPendingEditsForTests } from '../../lib/pendingEdits';
 import { readDiagram } from '../../diagram/document/diagramFile';
@@ -10714,9 +10715,16 @@ describe('the project fold sequences', () => {
   const state = () => useWorkspaceStore.getState();
 
   /** sheet → a → b, as the author folds it, the reader back on a. */
+  /**
+   * A valley as Fold's canvas commits one (`foldStepBuilder`): its landing
+   * said, as the file writes every valley — so a save and a reopen give back
+   * the step that was committed.
+   */
+  const canvasValley = (y: number) => ({ ...valleyAt(y), landing: { kind: 'outer' as const } });
+
   function foldTwo() {
-    const a = state().commitFoldStep({ parent: null, op: valleyAt(0.5) })!;
-    const b = state().commitFoldStep({ parent: a, op: valleyAt(0.25) })!;
+    const a = state().commitFoldStep({ parent: null, op: canvasValley(0.5) })!;
+    const b = state().commitFoldStep({ parent: a, op: canvasValley(0.25) })!;
     state().moveFoldCursor(a);
     return { a, b };
   }
@@ -10853,7 +10861,8 @@ describe('the project fold sequences', () => {
   });
 
   it('writes a newer build’s sequence back as it came', async () => {
-    const raw = { ...writtenSequence(), formatVersion: 2, hologram: true };
+    // Newer than this build writes, whatever that is now.
+    const raw = { ...writtenSequence(), formatVersion: FOLD_SEQUENCE_FORMAT_VERSION + 1, hologram: true };
     useWorkspaceStore.setState({ ...singleDesignTab('treemaker') });
     state().installFoldSequences(readFoldSequences([raw]), null);
 

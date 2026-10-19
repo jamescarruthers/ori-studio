@@ -118,7 +118,8 @@ describe('the Fold session over the store', () => {
     engine.log.length = 0;
     const before = snapshot().nodes.get(a);
 
-    expect(state().setFoldStepSpread(a, 'off')).toBe(true);
+    // Fold starts every step with no spread: turning one on is the change, and needs no fold.
+    expect(state().setFoldStepSpread(a, { kind: 'depth', amount: 0.05, toward: 'down' })).toBe(true);
     await settle();
     expect(engine.log).toEqual([]);
     expect(snapshot().nodes.get(a)).toBe(before);

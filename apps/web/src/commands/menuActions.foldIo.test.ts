@@ -22,6 +22,7 @@ describe('Fold’s imports and hand-offs in the menu', () => {
     expect(fold && actionIds(fold.items)).toEqual([
       'fold.valley',
       'fold.mountain',
+      'fold.precrease',
       'fold.turn-over',
       'fold.rotate',
       'fold.unfold-last',

@@ -728,11 +728,12 @@ describe('the View pane under a coarse pointer', () => {
       ['edit', 'cp-properties', 'edit'],
       ['simulate', 'simulator-view-controls', 'simulate'],
       ['references', 'references-view-controls', 'references'],
+      // In the workspaces' own order: Fold before the Diagram.
+      ['fold', 'fold-step', 'fold'],
+      ['fold', 'fold-paper', 'fold'],
       ['diagram', 'diagram-step', 'diagram'],
       ['diagram', 'diagram-page', 'diagram'],
       ['diagram', 'diagram-layers', 'diagram'],
-      ['fold', 'fold-step', 'fold'],
-      ['fold', 'fold-paper', 'fold'],
     ]);
   });
 
