@@ -3334,6 +3334,45 @@ describe('workspace store slices', () => {
     await expect(useWorkspaceStore.getState().foldAnotherOristudioCpFigure()).resolves.toBe(true);
   });
 
+  // The toolbar's Simulate names a sheet of the index; the Simulate workspace
+  // lists the canvas's own segments, numbered its own way, so the hand-off is by
+  // outline.
+  describe('simulating one sheet in the Simulate workspace', () => {
+    function seedUnitSquare() {
+      const activatePanel = vi.fn();
+      useLayoutStore.setState({ activatePanel });
+      useWorkspaceStore.setState({
+        oristudioCpDocument: editableCpState([
+          cpLine({ x: 0, y: 0 }, { x: 1, y: 0 }, { color: 'Black0' }),
+          cpLine({ x: 1, y: 0 }, { x: 1, y: 1 }, { color: 'Black0' }),
+          cpLine({ x: 1, y: 1 }, { x: 0, y: 1 }, { color: 'Black0' }),
+          cpLine({ x: 0, y: 1 }, { x: 0, y: 0 }, { color: 'Black0' }),
+          cpLine({ x: 0, y: 0 }, { x: 1, y: 1 }, { color: 'Red1' }),
+        ]),
+      });
+      return { activatePanel };
+    }
+
+    it('selects the segment whose outline is the sheet, and opens the simulator', async () => {
+      resetStores(seedSnapshot());
+      const { activatePanel } = seedUnitSquare();
+
+      await expect(useWorkspaceStore.getState().simulateOristudioCpSheet(0)).resolves.toBe(true);
+
+      expect(useWorkspaceStore.getState().selectedSegmentId).toBe(0);
+      expect(activatePanel).toHaveBeenCalledWith('simulator');
+    });
+
+    it('refuses a sheet the index does not have, and stays put', async () => {
+      resetStores(seedSnapshot());
+      const { activatePanel } = seedUnitSquare();
+
+      await expect(useWorkspaceStore.getState().simulateOristudioCpSheet(1)).resolves.toBe(false);
+
+      expect(activatePanel).not.toHaveBeenCalled();
+    });
+  });
+
   // `G` routes on the creases it is scoped to. A selection carrying a non-180
   // fold angle goes to the computed 3D folder; one that does not goes to the
   // flat folder, whatever the rest of the document looks like. A 3D fold that is
