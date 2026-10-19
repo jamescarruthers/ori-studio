@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizePoint, prepareFoldModel } from '@treemaker/origami-simulator';
 import type { FoldArtifacts, FoldDocument } from '../engine/types';
 import {
+  assignmentByKeyOf,
   buildSegmentFold,
   buildSegmentSimulationFold,
   flatPlaneReader,
@@ -206,6 +207,23 @@ describe('segmentFoldDocument', () => {
     expect(segmentFoldDocument({ vertices_coords: [], edges_vertices: [], faces_vertices: [] })).toEqual(
       []
     );
+  });
+});
+
+describe('assignmentByKeyOf', () => {
+  it('builds one map per fold, with border over a crease drawn on top of it', () => {
+    const square = unitSquare(0, 0);
+    const fold: FoldDocument = {
+      vertices_coords: square.coords,
+      edges_vertices: [...square.edges, square.edges[0]!],
+      edges_assignment: ['B', 'B', 'B', 'B', 'V'],
+      faces_vertices: [square.face],
+    };
+    const map = assignmentByKeyOf(fold);
+    expect(assignmentByKeyOf(fold)).toBe(map);
+    expect(map.get(`${Math.min(...square.edges[0]!)}:${Math.max(...square.edges[0]!)}`)).toBe('B');
+    // Another fold — even an identical copy — gets its own.
+    expect(assignmentByKeyOf({ ...fold })).not.toBe(map);
   });
 });
 
