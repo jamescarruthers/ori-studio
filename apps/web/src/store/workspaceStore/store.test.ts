@@ -10755,7 +10755,8 @@ describe('the project fold sequences', () => {
 
     const { options, file } = writtenFile(fileService);
     expect(options.extensions).toEqual(['osf']);
-    expect(file.minimumReaderSchemaVersion).toBe(10);
+    // Fold sequences ask for reader 11: v0.6.0 reads the diagrams (10) but not these.
+    expect(file.minimumReaderSchemaVersion).toBe(11);
     expect(file.workspace.designs).toEqual([]);
     expect(file.workspace.creasePattern).toBeNull();
     expect(file.workspace.foldSequences?.[0].steps).toHaveLength(2);
@@ -10780,7 +10781,7 @@ describe('the project fold sequences', () => {
 
     await state().saveProjectAs(fileService);
     const { options, file } = writtenFile(fileService);
-    expect(file.minimumReaderSchemaVersion).toBe(10);
+    expect(file.minimumReaderSchemaVersion).toBe(11);
     expect(file.workspace.creasePattern).not.toBeNull();
 
     await reopen(options.contents, 'both.osf');
@@ -10788,6 +10789,28 @@ describe('the project fold sequences', () => {
     expect(state().foldSequences.map((held) => held.document)).toEqual(saved);
     expect(useLayoutStore.getState().activateWorkspace).toHaveBeenLastCalledWith('edit');
     expect(state().dirty).toBe(false);
+  });
+
+  it('opens a development build’s file that stamped its sequences reader 10, and saves it as reader 11', async () => {
+    foldTwo();
+    useWorkspaceStore.setState({ workspaceTitle: 'Crane' });
+    const fileService = createFileService();
+    await state().saveProjectAs(fileService);
+    // As a development build wrote it, before fold sequences had a reader of their own.
+    const file = JSON.parse(writtenFile(fileService).options.contents);
+    file.minimumReaderSchemaVersion = 10;
+
+    await expect(reopen(JSON.stringify(file), 'crane.osf')).resolves.toBe(true);
+    expect(state().foldSequences.map((held) => held.document.id)).toEqual(
+      file.workspace.foldSequences.map((sequence: { id: string }) => sequence.id)
+    );
+    expect(state().foldSequences[0]!.document.steps).toHaveLength(2);
+
+    const again = createFileService();
+    await state().saveProject(again);
+    const written = writtenFile(again).file;
+    expect(written.minimumReaderSchemaVersion).toBe(11);
+    expect(written.workspace.foldSequences?.[0].steps).toHaveLength(2);
   });
 
   it('saves a crease pattern opened from an Oriedita file as .osf once it has fold sequences', async () => {

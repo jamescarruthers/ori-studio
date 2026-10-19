@@ -74,17 +74,22 @@ export const NATIVE_PROJECT_SCHEMA_VERSION = 8;
  * or this build refuses its own files.
  *
  * - 9: one diagram, `workspace.diagram`, as builds before the list wrote it.
- * - 10: the list, `workspace.diagrams`. This build reads both and writes the
- *   list, so a file from before the list is migrated on its next save. Also
- *   Fold's sequences, `workspace.foldSequences`.
+ * - 10: the list, `workspace.diagrams` (v0.6.0). This build reads both and
+ *   writes the list, so a file from before the list is migrated on its next
+ *   save.
+ * - 11: Fold's sequences, `workspace.foldSequences`. A reader-10 build knows
+ *   the diagrams and not the sequences, so it must refuse a file holding them
+ *   rather than open it and drop them on its next save. A development build
+ *   stamped such a file 10: it still opens here, its sequences and all, and
+ *   is stamped 11 on its next save.
  */
-export const NATIVE_PROJECT_READER_VERSION = 10;
+export const NATIVE_PROJECT_READER_VERSION = 11;
 
 /**
  * A `minimumReaderSchemaVersion` a build writes: see
  * {@link NativeProjectFileV1.minimumReaderSchemaVersion}.
  */
-export type NativeProjectReaderVersion = 1 | 8 | 9 | 10;
+export type NativeProjectReaderVersion = 1 | 8 | 9 | 10 | 11;
 
 /**
  * The project-level documents a file carries, each under its own key of
@@ -113,7 +118,8 @@ export interface NativeProjectDocumentValues {
   /**
    * The Fold workspace's sequences, as `fold/document/foldSequenceFile.ts`
    * writes them: an array, each sequence with its own `formatVersion`; `null`
-   * for none. Reader 10.
+   * for none. Reader 11 — the diagrams hold 10, which v0.6.0 reads without
+   * knowing this key.
    */
   foldSequences: Record<string, unknown>[] | null;
 }
@@ -159,7 +165,7 @@ const PROJECT_DOCUMENT_SLOTS: {
   // Anything but an array is none, and so is an array holding no object: an
   // entry that is not one is no sequence.
   foldSequences: {
-    readerVersion: 10,
+    readerVersion: 11,
     carry: (value) => {
       const sequences = Array.isArray(value) ? value.filter(isRecord) : [];
       return sequences.length > 0 ? sequences : null;
@@ -379,10 +385,10 @@ export interface NativeProjectFileV1 {
    * `1` for anything a v1–v7 build could read losslessly; `8` once the file
    * holds more than the old format could express; raised to what each project
    * document it holds needs — `10` for diagrams (`9` in files from before the
-   * list) and for fold sequences (see {@link NATIVE_PROJECT_READER_VERSION}).
-   * Declarative only in practice —
-   * a v7 build already rejects `schemaVersion: 8` because 8 is not in its
-   * enumerated list — but it is what makes the refusal say *why*.
+   * list), `11` for fold sequences (see {@link NATIVE_PROJECT_READER_VERSION}).
+   * Declarative only in practice — a v7 build already rejects
+   * `schemaVersion: 8` because 8 is not in its enumerated list — but it is what
+   * makes the refusal say *why*.
    */
   minimumReaderSchemaVersion: NativeProjectReaderVersion;
   createdBy: NativeProjectActor;

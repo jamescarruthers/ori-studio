@@ -1,7 +1,7 @@
 {
   "format": "oristudio.project",
   "schemaVersion": 8,
-  "minimumReaderSchemaVersion": 10,
+  "minimumReaderSchemaVersion": 11,
   "createdBy": {
     "app": "Ori Studio",
     "version": "0.5.2",

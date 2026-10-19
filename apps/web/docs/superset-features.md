@@ -114,7 +114,8 @@ The native format and its migration live in
   8, the Diagram workspace's `workspace.diagrams`, which asks for reader 10
   (reader 9 was the single `workspace.diagram` before the list; this build
   reads it as a list of one and writes the list), and the Fold workspace's
-  `workspace.foldSequences`, which asks for reader 10.
+  `workspace.foldSequences`, which asks for reader 11 (v0.6.0 reads the
+  diagrams, 10, and knows no sequences).
 - **The reader bar is its own number.** The check is
   `minimumReaderSchemaVersion > NATIVE_PROJECT_READER_VERSION`, and the reader
   version may run ahead of `NATIVE_PROJECT_SCHEMA_VERSION`. That is what lets a

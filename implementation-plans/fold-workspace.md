@@ -410,8 +410,12 @@ FoldSequenceDocument { formatVersion: 1, id: 'fold-<uuid>', title,
   - unknown sequence-level keys are carried verbatim.
 - **Where the array lives:** `workspace.foldSequences` (decision A).
   - Writing a non-empty array raises `minimumReaderSchemaVersion` to the next
-    `NATIVE_PROJECT_READER_VERSION`: **10**. #436 takes 9 for the Diagram, and the
-    two may ship in different releases.
+    `NATIVE_PROJECT_READER_VERSION`: **11**. #436 took 9 for the Diagram, and
+    the list of diagrams (`workspace.diagrams`, released in v0.6.0) took 10 —
+    so v0.6.0, which reads 10 and knows no `foldSequences`, refuses a file
+    holding sequences instead of opening it and dropping them. A development
+    build's file that stamped its sequences 10 (before the bump, 2026-10-19)
+    still opens here, and is stamped 11 on its next save.
   - A build that cannot read the key then refuses the file rather than dropping
     the sequences on its next save.
   - The empty array writes no key and needs no bump.
@@ -1287,8 +1291,11 @@ None is pending.
 - [x] The Fold slice, against the store kit extracted in Phase 5.
 - [x] A `fold` branch in `historySlice`.
 - [x] Reader-state reconciliation (D6), with the undo/redo/delete tests.
-- [x] `workspace.foldSequences` with reader version 10 (decision A); a test that
-  an older reader refuses the file rather than dropping the sequences.
+- [x] `workspace.foldSequences` with reader version 11 (decision A; 10 until
+  the merge with v0.6.0's list of diagrams, which took 10); a test that an
+  older reader — v0.6.0's included — refuses the file rather than dropping the
+  sequences, and one that a file a development build stamped 10 opens with its
+  sequences and is saved as 11.
 - [x] `keepsOriedita` extended; landing; New/Open discard.
 
 ### Phase 5 — Front-end extractions (pre-work)
