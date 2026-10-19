@@ -4530,7 +4530,9 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_one": "4b88310a50d6",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9063,7 +9065,9 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_one": "4b88310a50d6",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13598,7 +13602,9 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_one": "4b88310a50d6",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -18036,7 +18042,8 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22474,7 +22481,8 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -27007,7 +27015,9 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_one": "4b88310a50d6",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -31540,7 +31550,9 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_one": "4b88310a50d6",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -35978,6 +35990,7 @@
     "panels:diagram.empty.openExample": "9c29d0a0b8da",
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
-    "errors:diagramExample.unavailable": "93078836af10"
+    "errors:diagramExample.unavailable": "93078836af10",
+    "panels:simulatorSegments.creases_other": "059cbfda69b1"
   }
 }

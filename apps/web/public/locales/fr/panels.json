@@ -2188,6 +2188,9 @@
   },
   "simulatorSegments": {
     "creasePatterns": "Patrons de plis",
+    "creases_one": "{{count}} pli",
+    "creases_many": "{{count}} plis",
+    "creases_other": "{{count}} plis",
     "faces_one": "{{count}} face",
     "faces_many": "{{count}} faces",
     "faces_other": "{{count}} faces",

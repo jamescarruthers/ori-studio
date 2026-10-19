@@ -258,9 +258,8 @@ T-junctions included — stay in the same sheet.
     *(Done, with 2.3.)* Its verbs build that one sheet's faces: Export and Save
     to image, Share, and Simulate inline, whose window gets a mesh for its
     sheet alone. The image dialog it opens is handed that one sheet, so it no
-    longer offers a picker of every region on the canvas. Simulate still enters
-    the Simulate workspace, which finds the sheet among its whole-canvas
-    segments by outline until the Simulate bullet below lands.
+    longer offers a picker of every region on the canvas. Simulate enters the
+    Simulate workspace on that sheet (below).
   - *Diagram:* links resolve by outline as today (`ringsMatch` compares corners
     within 1e-6, so it does not care how the rim was traced); fingerprints are
     taken over member lines; the picker lists index sheets, with thumbnails
@@ -277,7 +276,16 @@ T-junctions included — stay in the same sheet.
     rectangular outlines) instead of chaining borders again, and runs merge and
     exactness for the sheet being looked at, not for all 204.
   - *Simulate:* the rail lists index sheets; the mesh is built for the selected
-    sheet only.
+    sheet only. *(Done.)* One hook, `useSimulateSource`, gives the panel its
+    rail, the sheet shown and that sheet's fold. For an editable pattern those
+    are the index's sheets, sized in creases as References' rail sizes them,
+    and the shown sheet's own mesh. A design's generated pattern, or an
+    editable one with no closed border, still reads the whole canvas's
+    artifacts. The sheet shown is kept by outline, so an edit that renumbers
+    the index keeps it. Inline windows rebuild from their own sheet's mesh on
+    open, undo and Rebuild. Measured on this file: the toolbar's Simulate →
+    simulator ready 85.4 s (one 82.9 s freeze) → 2.75 s. What is left is the
+    rail drawing 204 cards as some 489k SVG lines, and the layout after (4.6).
 - **2.3 Faces per sheet, on demand.** Export, Fold, Simulate, inline
   simulation and Diagram capture need faces for one sheet. Use the kernel's
   face graph on that sheet's lines when it passes the Euler check, and
@@ -324,9 +332,9 @@ T-junctions included — stay in the same sheet.
   What is left of the first selection is the selection command itself
   (~0.6 s), which is Phase 3. Checking it in the browser turned up a case the
   plane-graph check fixes: a book fold whose crease ends on unsplit borders
-  got the bare square as its one certified face, so its inline simulation (and
-  still, until Simulate moves, the Simulate workspace) showed flat paper that
-  would not fold. Built for the sheet alone, it folds.
+  got the bare square as its one certified face, so its inline simulation and
+  the Simulate workspace showed flat paper that would not fold. Built for the
+  sheet alone, it folds, in both since the Simulate move.
 - **2.4 Inference speed** still matters for one huge sheet: integer-keyed
   welding instead of template strings, a 2D grid instead of the x-only sweep,
   typed adjacency in `buildPlanarFaces` — output bit-identical.
@@ -407,6 +415,11 @@ removes.
   `useStepPictureUrl` already waits for `useNearView` before painting, but
   the `viewGeometry(…).layers` and `xraySurfaceOf` memos above that check run
   for every card on mount. Gate them on the same `seen`.
+- **4.6 Sheet cards draw cheaply.** The Simulate and References rails draw
+  every line of every card as its own SVG `<line>`. On this file that is 204
+  cards and about 489k elements: around 2 s of React commit, and a layout of
+  all of them, on entering Simulate. Draw one `<path>` per ink per card, a few
+  elements a card, and build a card's picture when it scrolls into view.
 
 Expected: ~5.5 s → ~2–3 s total, the main thread busy for well under a second;
 Diagram entry no longer pays 6.9 s for cards nobody is looking at.
@@ -489,7 +502,7 @@ Phase 2
 - [x] 2.2 Edit toolbar on the index; its verbs on one sheet's faces
 - [x] 2.2 Diagram links, picker and thumbnails on the index
 - [ ] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
-- [ ] 2.2 Simulate rail on the index; mesh for the selected sheet only
+- [x] 2.2 Simulate rail on the index; mesh for the selected sheet only
 - [x] 2.3 Faces per sheet on demand (kernel when its lines meet only at their ends, else JS), cached per sheet
 - [ ] 2.3 Whole-canvas paths deleted (after the Diagram and Simulate move)
 - [ ] 2.4 Inference hot spots, output bit-identical
@@ -505,3 +518,4 @@ Phase 4
 - [ ] 4.3 Lazy scene/thumbnail reading
 - [ ] 4.4 Desktop byte read (measure first)
 - [ ] 4.5 Diagram card picture geometry deferred to visible cards
+- [ ] 4.6 Sheet cards: one path per ink, pictures for cards in view

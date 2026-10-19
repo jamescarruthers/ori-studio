@@ -2186,6 +2186,9 @@
   },
   "simulatorSegments": {
     "creasePatterns": "Padrões de vincos",
+    "creases_one": "{{count}} vinco",
+    "creases_many": "{{count}} vincos",
+    "creases_other": "{{count}} vincos",
     "faces_one": "{{count}} face",
     "faces_many": "{{count}} faces",
     "faces_other": "{{count}} faces",

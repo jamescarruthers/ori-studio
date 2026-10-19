@@ -28,7 +28,7 @@ import { diagramPaperStyle } from '../pictures/diagramPaperStyle';
 import type { PaperScene } from '../../lib/paper/paperScene';
 import { registerSimulatedRestNow } from './openLinkedPose';
 import { ORBIT_SETTLE_MS, sameCamera, type SimulatedRest } from './poseController';
-import { useCpSheetIndexState } from './useLinkStatus';
+import { useCpSheetIndexState } from '../../cp-workspace/sheets/useCpSheetIndexState';
 
 /** Fold % per arrow press and per Step: Simulate's and an inline window's. */
 const FOLD_STEP_PERCENT = 5;

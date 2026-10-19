@@ -8,6 +8,7 @@ import type {
   WasmErrorEnvelope,
 } from '../../engine/types';
 import type { Point } from '../../lib/geometry';
+import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { PaperStyleField, PaperStyleValue } from '../../lib/paper/paperStyle';
 import type { CpVertexPin } from '../../cp-workspace/pins/vertexPins';
 import type { PinSet } from '../../simulator/tools/pinSet';
@@ -846,6 +847,13 @@ export interface CreasePatternSliceState {
    */
   oristudioCpFocusedInlineSimulationId: string | null;
   /**
+   * The sheet the Simulate workspace shows, by its outline (`RegionReference`),
+   * so an edit that renumbers the sheet index does not move it to another;
+   * null, or an outline no sheet has any more, is the first sheet. Session
+   * state, like the Simulate workspace's other choices.
+   */
+  oristudioCpSimulateSheet: RegionReference | null;
+  /**
    * The 3D folded figure whose body is taking canvas drags as **orbit** rather
    * than as a move.
    *
@@ -890,11 +898,12 @@ export interface CreasePatternSliceActions {
   refreshFoldArtifacts: () => Promise<FoldArtifacts | null>;
   setCreaseColorMode: (mode: CreaseColorMode) => void;
   setSelectedSegment: (id: number | null) => void;
+  /** Show this sheet in the Simulate workspace (see {@link CreasePatternSliceState.oristudioCpSimulateSheet}). */
+  setOristudioCpSimulateSheet: (sheet: RegionReference | null) => void;
   /**
    * Scope the simulator to one sheet of the crease pattern, by its position in
-   * the sheet index, and switch to the Simulate workspace. Ensures the full fold
-   * artifacts first (the simulator needs the simulation mesh). Resolves false
-   * when no simulator segment is that sheet.
+   * the sheet index, and switch to the Simulate workspace, which builds that
+   * sheet's mesh alone. Resolves false when the index has no such sheet.
    */
   simulateOristudioCpSheet: (sheet: number) => Promise<boolean>;
   /**
