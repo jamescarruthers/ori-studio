@@ -10,8 +10,8 @@ licensing posture, including the open question about the GPL version of the
 ReferenceFinder modifications.
 
 The whole bundles two GPL works — TreeMaker (section 1) and ReferenceFinder
-(section 8) — together with the permissively licensed, GPL-compatible works
-listed between them, except section 6. Section 6 is fonts under the SIL Open
+(section 9) — together with the permissively licensed, GPL-compatible works
+listed between them, except section 7. Section 7 is fonts under the SIL Open
 Font License, distributed alongside the program rather than combined with it
 under the GPL: they keep their own licence, which travels with every copy.
 Copyright and permission notices are reproduced here to satisfy their
@@ -81,6 +81,7 @@ Ported into: crates/oristudio-cp, crates/oristudio-cp-wasm
 License:  MIT
 Upstream: https://github.com/origamimagiro/flat-folder
 Ported into: crates/treemaker-flatfold
+Also bundled unchanged: its JavaScript, as Step-Folder carries it (section 5)
 
   Copyright (c) 2022 Jason S. Ku (origamimagiro)
 
@@ -94,7 +95,38 @@ Ported into: crates/treemaker-flatfold
   contributions.
 
 --------------------------------------------------------------------------------
-5. Origami Simulator — Amanda Ghassaei
+5. Step-Folder / DEFOX — Kei Morisue; origamimagiro (Jason S. Ku)
+--------------------------------------------------------------------------------
+License:  MIT
+Upstream: https://github.com/kei-morisue/step-folder
+Pinned at: 63e08215297f4edc5e4a50a7b12f3e2249f18d55. The pin is maintained in
+          upstream-sync.json, which is authoritative.
+Bundled unchanged, not ported: apps/web/src/diagram/import/defoxRenderer.js
+          runs it in the Defox import worker (workers/defoxImportWorker.ts)
+Vendored source: third_party/step-folder (see its LICENSE and
+          README.ori-studio.md)
+
+  Copyright (c) 2022 origamimagiro (third_party/step-folder/LICENSE, which
+  covers the DEFOX modules under src/defox/: they carry no copyright line of
+  their own)
+  Copyright (c) 2022 Jason S. Ku (origamimagiro) (src/flatfolder/LICENSE)
+  Copyright (c) 2022 origamimagiro (src/linefolder/LICENSE.txt)
+
+  Flat-Folder's JavaScript (section 4) ships through it too: the DEFOX modules
+  import src/flatfolder/math.js, conversion.js and svg.js, and through them
+  avl.js, constraints.js, io.js, note.js, parallel.js and solver.js;
+  src/linefolder/linear.js ships the same way. These are Step-Folder's
+  unchanged copies, under the copyright lines above.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, subject to the condition that the above
+  copyright notice and this permission notice be included in all copies or
+  substantial portions of the Software. See third_party/step-folder/LICENSE
+  for the full MIT text.
+
+--------------------------------------------------------------------------------
+6. Origami Simulator — Amanda Ghassaei
 --------------------------------------------------------------------------------
 License:  MIT
 Upstream: https://github.com/amandaghassaei/OrigamiSimulator
@@ -106,7 +138,7 @@ Ported into: packages/origami-simulator (@treemaker/origami-simulator)
   for the full MIT text and the list of upstream source files used.
 
 --------------------------------------------------------------------------------
-6. Noto Sans, Noto Sans SC, TC, JP and KR — the Noto Project Authors; Adobe
+7. Noto Sans, Noto Sans SC, TC, JP and KR — the Noto Project Authors; Adobe
 --------------------------------------------------------------------------------
 License:  SIL Open Font License, Version 1.1
 Upstream: https://github.com/google/fonts (pinned in
@@ -127,7 +159,7 @@ Bundled as: apps/web/src/diagram/fonts/NotoSans-{Regular,Bold}.ttf, and the
   'Source'
 
 --------------------------------------------------------------------------------
-7. HarfBuzz subsetter (harfbuzzjs) — the HarfBuzz and harfbuzzjs authors
+8. HarfBuzz subsetter (harfbuzzjs) — the HarfBuzz and harfbuzzjs authors
 --------------------------------------------------------------------------------
 License:  MIT (harfbuzzjs); HarfBuzz's own "Old MIT" licence
 Upstream: https://github.com/harfbuzz/harfbuzzjs
@@ -137,7 +169,7 @@ Bundled as: harfbuzz-subset.wasm, which cuts each diagram page's fonts
   HarfBuzz: Copyright © the HarfBuzz authors, under the licence in its COPYING
 
 --------------------------------------------------------------------------------
-8. ReferenceFinder — Robert J. Lang (original); Mu-Tsun Tsai and Omri Shavit
+9. ReferenceFinder — Robert J. Lang (original); Mu-Tsun Tsai and Omri Shavit
    (web/Emscripten build and modifications)
 --------------------------------------------------------------------------------
 License:  GNU GPL, version 2. Lang's original distribution grants version 2 or
@@ -157,14 +189,15 @@ Vendored source: third_party/reference-finder (see its LICENSE)
   Copyright (c) 1999-2006 Robert J. Lang; (c) 2024-2025 Mu-Tsun Tsai;
   (c) 2024-2025 Omri Shavit. All rights reserved.
 
-  Unlike the works above, this one is not ported: the shipped .wasm is the
-  upstream C++ itself, compiled by scripts/build-reference-finder.mjs. The
+  Like Step-Folder (section 5) and unlike the other works above, this one is
+  not ported: the shipped .wasm is the upstream C++ itself, compiled by
+  scripts/build-reference-finder.mjs. The
   GPL's corresponding-source obligation for it is met by the vendored source
   together with that build script and the toolchain pin in
   scripts/reference-finder-emsdk.json.
 
 --------------------------------------------------------------------------------
-9. ExplOri 22.5 — Brandon Wong (theplantpsychologist)
+10. ExplOri 22.5 — Brandon Wong (theplantpsychologist)
 --------------------------------------------------------------------------------
 Service, not a port. Nothing from ExplOri is vendored, ported, or bundled, so
 this section carries no license grant to reproduce — it is here because the
