@@ -9,8 +9,8 @@ import { fetchOristudioCpSheetIndex } from '../../store/workspaceStore/oristudio
  * list — only changes with the creases, while a fresh snapshot arrives with
  * every kernel command, a selection included.
  *
- * One slot, as `cpSegmentationArtifacts` keeps: one crease pattern is open at a
- * time, and a superseded fingerprint is never wanted again.
+ * One slot: one crease pattern is open at a time, and a superseded
+ * fingerprint is never wanted again.
  */
 let cached: { fingerprint: string; index: CpSheetIndex } | null = null;
 let inFlight: {

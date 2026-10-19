@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { resetFoldedFigureHandles, setFoldedFigureHandleFree } from '../../cp-workspace/folded/foldedFigureHandles';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramCpSource, DiagramStep, KnownDiagramAnnotation } from '../document/diagramDocument';
 import { stepsIn } from '../document/diagramSteps.fixtures';
 import { storedScene } from '../pictures/pictureFrame';
-import { cpDocument, fakeCaptureRuntime, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, twoSquaresIndex } from './capture.fixtures';
 import { chooseStepCreases } from './captureCreases';
 import type { CpCaptureRuntime } from './captureFolded';
 import { flipCreasePatternCreases, showCreasePatternSide } from './creasePatternSide';
@@ -26,10 +26,10 @@ vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', async (importOrigina
   ...(await importOriginal<typeof import('../../store/workspaceStore/cpFoldRuntimeBindings')>()),
   createCpCaptureRuntime: () => bindings.runtime,
 }));
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
-  ensureCpSegmentationArtifacts: vi.fn(async () => segmentation),
-  peekCpSegmentationArtifacts: vi.fn(() => segmentation),
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: vi.fn(async () => sheets),
+  peekCpSheetIndex: vi.fn(() => sheets),
 }));
 const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toasts }));
@@ -39,8 +39,8 @@ vi.mock('../../analytics', async (importOriginal) => ({
   ...analytics,
 }));
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const scope = { kind: 'segment' as const, region: regionReferenceFor(left!) };
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
@@ -128,7 +128,7 @@ describe('showCreasePatternSide', () => {
   // out of step with the picture.
   it('keeps a fingerprint from before as a pose does, and the marks of a step that has one in step', async () => {
     const stepId = await markedPattern();
-    const choice = chooseStepCreases(document, scope, segmentation);
+    const choice = chooseStepCreases(document, scope, sheets);
     if (choice.status !== 'found') throw new Error('the left square');
     const absolute = choice.creases.absolute.drawnFingerprint;
     const step = stepOf(stepId);

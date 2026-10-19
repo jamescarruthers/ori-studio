@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import {
   cpDocument,
   fakeCaptureRuntime,
-  twoSquaresSegmentation,
+  twoSquaresIndex,
 } from '../../diagram/capture/capture.fixtures';
 import type { CpCaptureRuntime } from '../../diagram/capture/captureFolded';
 import { linkStatus } from '../../diagram/capture/linkStatus';
@@ -24,9 +24,9 @@ vi.mock('./cpFoldRuntimeBindings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./cpFoldRuntimeBindings')>()),
   createCpCaptureRuntime: bindings.createCpCaptureRuntime,
 }));
-const segmentationModule = vi.hoisted(() => ({ ensureCpSegmentationArtifacts: vi.fn() }));
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
+const segmentationModule = vi.hoisted(() => ({ ensureCpSheetIndex: vi.fn() }));
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
   ...segmentationModule,
 }));
 const cancellation = vi.hoisted(() => ({ foldCancellationAvailable: vi.fn(() => true), cancelFoldRun: vi.fn() }));
@@ -44,8 +44,8 @@ vi.mock('../../lib/paper/paperPng', async (importOriginal) => ({
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const scope: DiagramCpScope = { kind: 'segment', region: regionReferenceFor(left!) };
 const document = cpDocument();
 
@@ -87,7 +87,7 @@ beforeEach(() => {
   });
   bindings.runtime = fakeCaptureRuntime();
   bindings.createCpCaptureRuntime.mockImplementation(() => bindings.runtime);
-  segmentationModule.ensureCpSegmentationArtifacts.mockResolvedValue(segmentation);
+  segmentationModule.ensureCpSheetIndex.mockResolvedValue(sheets);
 });
 
 describe('captureDiagramStep', () => {
@@ -102,7 +102,7 @@ describe('captureDiagramStep', () => {
     expect(state().diagramHistory.past).toHaveLength(before + 1);
     expect(state().dirty).toBe(true);
     if (step.source?.kind !== 'cp') return;
-    expect(linkStatus(step.source, document, segmentation)).toBe('current');
+    expect(linkStatus(step.source, document, sheets)).toBe('current');
     // A crease pattern is drawn, not folded: no run to show.
     expect(bindings.runtime!.fold).not.toHaveBeenCalled();
     expect(state().oristudioCpFoldRuns).toEqual({});

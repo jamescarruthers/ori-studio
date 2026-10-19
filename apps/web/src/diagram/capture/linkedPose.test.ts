@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { antipodalCamera, DEFAULT_FOLDED_3D_CAMERA } from '../../cp-workspace/folded/folded3dCamera';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import type { SpreadKind } from '../../cp-workspace/folded/foldedLayerSpread';
@@ -21,7 +21,7 @@ import {
   fakeCaptureRuntime,
   halfFoldOnSheetKernelScene,
   LEFT_FOLD_LINE_IDS,
-  twoSquaresSegmentation,
+  twoSquaresIndex,
 } from './capture.fixtures';
 import { chooseStepCreases } from './captureCreases';
 import type { CpCaptureRuntime } from './captureFolded';
@@ -34,11 +34,11 @@ vi.mock('../../cp-workspace/folded/folded3dStoredScene', async (importOriginal) 
   ...folded3dStoredScene,
 }));
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 
 function creasesOf(document = cpDocument()) {
-  const choice = chooseStepCreases(document, { kind: 'segment', region: regionReferenceFor(left!) }, segmentation);
+  const choice = chooseStepCreases(document, { kind: 'segment', region: regionReferenceFor(left!) }, sheets);
   if (choice.status !== 'found') throw new Error('the left region should be found');
   return choice.creases;
 }
