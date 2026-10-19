@@ -7,7 +7,7 @@ import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes'
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramStep } from '../document/diagramDocument';
 import { sourceSheet } from './linkStatus';
-import { useCpSheetIndexState } from './useLinkStatus';
+import { useCpSheetIndexState } from '../../cp-workspace/sheets/useCpSheetIndexState';
 
 /** One pattern a step can be linked to: a sheet of the open crease pattern. */
 export interface DiagramPatternSheet {

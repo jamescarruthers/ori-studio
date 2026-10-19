@@ -2134,6 +2134,9 @@
   },
   "simulatorSegments": {
     "creasePatterns": "Patrones de pliegues",
+    "creases_one": "{{count}} pliegue",
+    "creases_many": "{{count}} pliegues",
+    "creases_other": "{{count}} pliegues",
     "faces_one": "{{count}} cara",
     "faces_many": "{{count}} caras",
     "faces_other": "{{count}} caras",

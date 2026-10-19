@@ -2081,6 +2081,8 @@
   },
   "simulatorSegments": {
     "creasePatterns": "Crease patterns",
+    "creases_one": "{{count}} crease",
+    "creases_other": "{{count}} creases",
     "faces_one": "{{count}} face",
     "faces_other": "{{count}} faces",
     "patterns": "Patterns"
