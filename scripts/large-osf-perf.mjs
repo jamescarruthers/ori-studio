@@ -42,6 +42,11 @@
  *   closed);
  * - `export-cp`: the browser receives the `.cp` download.
  *
+ * `--diagram` then enters the Diagram workspace — every linked card's status is
+ * worked out there — and times it until the main thread is quiet, then opens
+ * the pattern picker on the first step and times it until its thumbnails are
+ * drawn and the main thread is quiet again.
+ *
  * Options: `--out <dir>` (default `artifacts/large-osf-perf/<time>`, ignored by
  * git), `--dist <dir>` (a production build other than `apps/web/dist`, to time
  * two builds with one script), `--trace` (a Chrome trace per phase, for
@@ -86,6 +91,7 @@ function parseArgs(argv) {
     zoomOut: 0,
     boxes: [],
     actions: [],
+    diagram: false,
     out: null,
     dist: path.join(repoRoot, 'apps/web/dist'),
     trace: false,
@@ -96,6 +102,7 @@ function parseArgs(argv) {
     if (arg === '--zoom-out') options.zoomOut = Number(argv[++i]);
     else if (arg === '--box') options.boxes.push(argv[++i].split(',').map(Number));
     else if (arg === '--action') options.actions.push(argv[++i]);
+    else if (arg === '--diagram') options.diagram = true;
     else if (arg === '--out') options.out = argv[++i];
     else if (arg === '--dist') options.dist = path.resolve(argv[++i]);
     else if (arg === '--trace') options.trace = true;
@@ -362,6 +369,34 @@ async function main() {
     await page.screenshot({ path: path.join(options.out, `${action}.png`) });
     if (close) await page.keyboard.press('Escape');
     results.actions.push({ action, ...result });
+  }
+
+  // ---- The Diagram: every card's link status, then the pattern picker ----------
+  if (options.diagram) {
+    results.diagram = await traced('diagram', async () => {
+      const t0 = await page.evaluate(() => performance.now());
+      const clicked = Date.now();
+      await page.click('[aria-label="Workspaces"] button[aria-label="Diagram workspace"]');
+      await page.waitForSelector('[data-step-id]', { timeout: PHASE_LIMIT_MS });
+      const cardsMs = Date.now() - clicked;
+      const quietMs = await untilQuiet(clicked);
+      const enter = { cardsMs, quietMs, longTasks: await longTasksSince(t0) };
+      log('diagram', JSON.stringify(enter));
+      await page.screenshot({ path: path.join(options.out, 'diagram.png') });
+
+      const t1 = await page.evaluate(() => performance.now());
+      await page.click('[data-step-id]');
+      const pressed = Date.now();
+      await page.getByRole('button', { name: /^(Re)?[lL]ink Pattern…$/ }).first().click();
+      await page.waitForSelector('[role="listbox"] [role="option"] svg', { timeout: PHASE_LIMIT_MS });
+      const optionsMs = Date.now() - pressed;
+      const pickerQuietMs = await untilQuiet(pressed);
+      const picker = { optionsMs, quietMs: pickerQuietMs, longTasks: await longTasksSince(t1) };
+      log('picker', JSON.stringify(picker));
+      await page.screenshot({ path: path.join(options.out, 'picker.png') });
+      return { enter, picker };
+    });
+    results.diagram.heapMiB = await heapMiB();
   }
 
   writeFileSync(path.join(options.out, 'results.json'), `${JSON.stringify(results, null, 2)}\n`);
