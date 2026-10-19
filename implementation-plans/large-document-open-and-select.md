@@ -443,16 +443,16 @@ removes.
   `useStepPictureUrl` already waits for `useNearView` before painting, but
   the `viewGeometry(…).layers` and `xraySurfaceOf` memos above that check run
   for every card on mount. Gate them on the same `seen`.
-- **4.7 The whole-document export lists sheets.** File › Export to an
-  image format opens a dialog that lists the canvas's face regions to pick
-  from, so it infers the whole canvas first (2.3 s here since 2.4). Listing
-  the index's sheets, with faces only for the one picked or drawn, would make
-  it cost what the selection toolbar's export costs.
 - **4.6 Sheet cards draw cheaply.** The Simulate and References rails draw
   every line of every card as its own SVG `<line>`. On this file that is 204
   cards and about 489k elements: around 2 s of React commit, and a layout of
   all of them, on entering Simulate. Draw one `<path>` per ink per card, a few
   elements a card, and build a card's picture when it scrolls into view.
+- **4.7 The whole-document export lists sheets.** File › Export to an
+  image format opens a dialog that lists the canvas's face regions to pick
+  from, so it infers the whole canvas first (2.3 s here since 2.4). Listing
+  the index's sheets, with faces only for the one picked or drawn, would make
+  it cost what the selection toolbar's export costs.
 
 Expected: ~5.5 s → ~2–3 s total, the main thread busy for well under a second;
 Diagram entry no longer pays 6.9 s for cards nobody is looking at.
