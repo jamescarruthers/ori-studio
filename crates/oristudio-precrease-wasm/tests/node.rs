@@ -436,3 +436,92 @@ fn planner_arguments_are_validated_at_the_boundary() {
     let error = envelope(p.from_rf(&[0.5, 0.5, 0.5, 0.5]).expect_err("coincident"));
     assert_eq!(error["code"], "invalid_input");
 }
+
+// ---------------------------------------------------------------------------
+// One sheet at a time: sheets the caller found, framed and planned alone.
+// ---------------------------------------------------------------------------
+
+use oristudio_precrease_wasm::{outline_components, sheet_component};
+
+const SQUARE_OUTLINE: [f64; 8] = [0.0, 0.0, 400.0, 0.0, 400.0, 400.0, 0.0, 400.0];
+
+#[wasm_bindgen_test]
+fn outlines_are_framed_or_refused_without_their_lines() {
+    // A square, then a triangle.
+    let coords = [
+        SQUARE_OUTLINE.as_slice(),
+        &[500.0, 0.0, 900.0, 0.0, 500.0, 400.0],
+    ]
+    .concat();
+    let components = json(outline_components(&coords, &[0, 4, 7]).expect("components"));
+    let components = components.as_array().expect("components");
+    assert_eq!(components.len(), 2);
+    assert_close(&components[0]["id"], 0.0);
+    assert!(components[0]["frame"].is_object());
+    assert!(components[0]["refused"].is_null());
+    assert_eq!(components[0]["segment_indices"], Value::Array(Vec::new()));
+    assert_close(&components[1]["id"], 1.0);
+    assert!(components[1]["frame"].is_null());
+    assert_eq!(components[1]["refused"]["kind"], "non_rectangular");
+
+    let error = envelope(outline_components(&coords, &[0, 9]).expect_err("past the points"));
+    assert_eq!(error["code"], "invalid_input");
+}
+
+#[wasm_bindgen_test]
+fn one_sheet_is_numbered_as_the_document_numbers_it() {
+    // The square's lines as lines 10..14 of some larger document.
+    let (segments, colors) = square_with_crease();
+    let indices = [10, 11, 12, 13, 14];
+    let analysis =
+        json(sheet_component(3, &SQUARE_OUTLINE, &segments, &colors, &indices).expect("sheet"));
+    let component = &analysis["components"][0];
+    assert_close(&component["id"], 3.0);
+    assert_eq!(
+        component["border_segment_indices"],
+        serde_json::json!([10, 11, 12, 13])
+    );
+    assert_eq!(component["segment_indices"], serde_json::json!([14]));
+    assert_eq!(
+        component["merged_lines"][0]["segment_indices"],
+        serde_json::json!([14])
+    );
+    assert_eq!(component["exactness"]["class"], "exact");
+
+    let error = envelope(
+        sheet_component(3, &SQUARE_OUTLINE, &segments, &colors, &indices[..4]).expect_err("short"),
+    );
+    assert_eq!(error["code"], "invalid_input");
+}
+
+#[wasm_bindgen_test]
+fn a_sheet_alone_plans_as_the_whole_pattern_did() {
+    let (segments, colors) = square_with_verticals(&[100.0, 200.0, 300.0]);
+    let indices: Vec<u32> = (0..colors.len() as u32).collect();
+    let mut alone =
+        PrecreasePlanner::for_sheet(0, &SQUARE_OUTLINE, &segments, &colors, &indices, "")
+            .expect("planner");
+    let mut whole = planner(&[100.0, 200.0, 300.0]);
+    assert_eq!(
+        json(alone.info().expect("info")),
+        json(whole.info().expect("info"))
+    );
+    alone.close(0.0).expect("close");
+    whole.close(0.0).expect("close");
+    // Everything but the diagnostics, which time the run.
+    let plan = |p: &mut PrecreasePlanner| {
+        let mut sequence = json(p.sequence(false).expect("sequence"));
+        sequence
+            .as_object_mut()
+            .expect("sequence")
+            .remove("diagnostics");
+        sequence
+    };
+    assert_eq!(plan(&mut alone), plan(&mut whole));
+
+    let odd = expect_refused(
+        PrecreasePlanner::for_sheet(0, &[0.0, 0.0, 400.0], &segments, &colors, &indices, ""),
+        "an outline with half a point",
+    );
+    assert_eq!(envelope(odd)["code"], "invalid_input");
+}
