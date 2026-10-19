@@ -12,10 +12,15 @@
   min-width: 0;
 }
 
-/* One width for every placement field, so X, Y, Size and Width line up down the pane — narrower in a narrow pane. */
+/*
+ * One width for every placement field, so X, Y, Size and Width line up down
+ * the pane. A floor rather than a basis: the row's column is sized to what
+ * its fields need, so X and Y stay side by side until the pane is too narrow
+ * for both, and only then does Y go under X.
+ */
 .axis {
-  flex: 0 1 96px;
-  min-width: 68px;
+  flex: none;
+  min-width: 96px;
 }
 
 /* What Auto would give, and why a size is kept: under their row, which they finish with its rule. */

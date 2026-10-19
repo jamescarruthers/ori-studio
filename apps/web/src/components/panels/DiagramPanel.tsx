@@ -146,8 +146,12 @@ export function DiagramPanel() {
     detail !== null && selectedStepId !== null
       ? steps.findIndex((step) => step.id === selectedStepId)
       : -1;
-  // Held for as long as the detail is open on a linked step: its fold, between verbs.
-  const linkedPose = useDiagramLinkedPose(detailIndex >= 0 ? steps[detailIndex] : null);
+  // Held for as long as the detail is open on a linked step: its fold, between
+  // verbs. With no detail open, the step selected in the Pages view, whose
+  // pose the Layers pane offers there too (Zach, 2026-10-19) — folded only
+  // when a verb asks, never for a live view it does not have.
+  const inspected = detailIndex < 0 && view === 'pages' ? (steps.find((step) => step.id === selectedStepId) ?? null) : null;
+  const linkedPose = useDiagramLinkedPose(detailIndex >= 0 ? steps[detailIndex] : inspected, { live: detailIndex >= 0 });
   // A References step's other ways to fold its card, while its detail is open (D23).
   const ways = useReferencesStepWays(detailIndex >= 0 ? steps[detailIndex]! : null);
   if (detailIndex >= 0) {

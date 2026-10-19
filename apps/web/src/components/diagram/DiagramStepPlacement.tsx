@@ -1,27 +1,23 @@
 import { useTranslation } from 'react-i18next';
-import { stepNumber, type DiagramStep } from '../../diagram/document/diagramDocument';
+import type { DiagramStep } from '../../diagram/document/diagramDocument';
 import { outsideMarginNote } from '../../diagram/pages/marginLabels';
 import type { PagePart } from '../../diagram/pages/pagePlacement';
 import { useStepPlacement } from '../../diagram/pages/useStepPlacement';
 import { useZoomControls } from '../../diagram/zoom/useZoomControls';
 import { useIsCoarsePointerSurface } from '../../platform/pointerSurface';
-import { useWorkspaceStore } from '../../store/workspaceStore';
-import { Button } from '../ui/Button';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { FieldRow } from '../ui/fieldRows';
 import { Notice } from '../ui/Notice';
 import { NumberField } from '../ui/NumberField';
-import { DiagramInspectorCrumb, DiagramInspectorHeader } from './DiagramInspectorHeader';
 import { ZoomSizeRows } from './DiagramZoomRows';
 import styles from './DiagramStepPlacement.module.css';
 
 const FRAME = { kind: 'frame' } as const;
 
 /**
- * The selected step's placement, the Pages view's Layers inspector
- * (`DiagramPageLayers`; redesign, 2026-10-18): a header naming the step and
- * the part selected — "Step 3 › Text" over its instruction — with Reset
- * Layout; where a part lies past the margin, that it does (`markOutsideMargin`),
+ * The selected step's placement, the last of the Pages view's Layers
+ * inspector (`DiagramPageStepInspector`; redesign, 2026-10-18): where a part
+ * lies past the margin, that it does (`markOutsideMargin`),
  * the one thing said of a placement; and its Placement — the part's Position,
  * X and Y in one row; the frame's Size, or an enlarged step's Size rows; the
  * text's Width — each with what Auto would give under it, and why a size is
@@ -33,7 +29,6 @@ const FRAME = { kind: 'frame' } as const;
 export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
   const { t } = useTranslation();
   const place = useStepPlacement(step);
-  const number = useWorkspaceStore((state) => (state.diagram ? stepNumber(state.diagram, step.id) : null));
   const coarse = useIsCoarsePointerSurface();
   const part: PagePart = place.selected ?? 'frame';
   const labels: Record<PagePart, string> = {
@@ -42,7 +37,6 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
     picture: t('panels:diagram.placement.picture', 'Picture'),
     text: t('panels:diagram.placement.text', 'Text'),
   };
-  const stepName = t('panels:diagram.pages.step', 'Step {{number}}', { number: number ?? '' });
   const offset = place.offset(part);
   const placed = step.place?.[part] !== undefined || (part === 'text' && step.place?.textWidth !== undefined);
   const auto = (mm: number) => t('panels:diagram.placement.autoSize', 'Auto: {{mm}} mm', { mm: mm.toFixed(1) });
@@ -59,19 +53,6 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
   const widthNotes = place.autoTextWidth !== null ? [auto(place.autoTextWidth)] : [];
   return (
     <>
-      <DiagramInspectorHeader
-        title={part === 'frame' ? stepName : <DiagramInspectorCrumb parent={stepName} child={labels[part]} />}
-        detail={step.text.trim() || null}
-        action={
-          <Button
-            size="sm"
-            disabled={place.readOnly || (!step.place && !step.placeNewer)}
-            onClick={() => place.reset('all')}
-          >
-            {t('panels:diagram.placement.resetLayout', 'Reset Layout')}
-          </Button>
-        }
-      />
       {place.cell?.outsideMargin && (
         <div className={styles.inset}>
           <Notice tone="warning">

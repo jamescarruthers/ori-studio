@@ -160,15 +160,26 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     ]);
     // Its placement under the list: the frame's X and Y, named for the step; nothing placed, so nothing to reset.
     expect(host!.querySelector('input[aria-label="X (mm)"]')).not.toBeNull();
-    expect(header()!.textContent).toBe('Step 2Fold in half.Reset Layout');
+    expect(header()!.textContent).toBe('Step 2');
     expect(host!.querySelector('button[aria-label="Reset Frame"]')).toBeNull();
+    // The header's verbs, as icons: Pose and Annotate, as the card has them, and Reset Layout, with nothing to reset.
+    expect([...header()!.querySelectorAll('button')].map((each) => each.getAttribute('aria-label'))).toEqual([
+      'Adjust Pose',
+      'Annotate',
+      'Reset Layout',
+    ]);
+    expect(header()!.querySelector<HTMLButtonElement>('button[aria-label="Reset Layout"]')!.disabled).toBe(true);
+    // Its instruction, the Step pane's own field, above its placement.
+    const instruction = host!.querySelector<HTMLTextAreaElement>('[data-layers-inspector] textarea')!;
+    expect(instruction.value).toBe('Fold in half.');
+    expect(instruction.compareDocumentPosition(host!.querySelector('input[aria-label="X (mm)"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     act(() => part('picture').click());
     expect(state().diagramPagesPart).toBe('picture');
     expect(part('picture').getAttribute('aria-pressed')).toBe('true');
     expect(row('s1').getAttribute('aria-pressed')).toBe('false');
     // The step holds the selection, and the header names the part.
     expect(row('s1').closest('[data-holds-selection]')).not.toBeNull();
-    expect(header()!.textContent).toBe('Step 2 › PictureFold in half.Reset Layout');
+    expect(header()!.textContent).toBe('Step 2 › Picture');
     // The step's row again: its whole frame.
     act(() => row('s1').click());
     expect(state().diagramPagesPart).toBe('frame');

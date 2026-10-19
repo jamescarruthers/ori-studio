@@ -41,14 +41,20 @@ interface SideChoice {
  * (`DiagramStepEnlarged`).
  *
  * In a section of its own, or nothing for a step with nothing to say here.
+ * `main` gives the main rows alone, for a section of the caller's — the Pages
+ * view's Layers inspector (Zach, 2026-10-19): a References step's way and
+ * side, and a linked pattern's turn and side; not an upload's facts, nor a
+ * flat fold's layer order and spread, which are Pose's.
  */
 export function DiagramStepPose({
   step,
   actions,
+  main = false,
 }: {
   step: DiagramStep;
   /** An upload's or a References step's pose verbs (`useDiagramPoseActions`). */
   actions: readonly DiagramPoseAction[];
+  main?: boolean;
 }) {
   const { t } = useTranslation();
   const linkedPose = useOpenLinkedPose(step.id);
@@ -56,11 +62,14 @@ export function DiagramStepPose({
   // A References step's ways to fold its card (D23).
   const ways = useReferencesStepWays(step);
   if (isLockedStep(step)) return null;
-  const section = (body: ReactNode) => (
-    <CollapsibleSection title={t('panels:diagram.stepPane.pose', 'Pose')}>
+  const section = (body: ReactNode) =>
+    main ? (
       <div className={styles.pose}>{body}</div>
-    </CollapsibleSection>
-  );
+    ) : (
+      <CollapsibleSection title={t('panels:diagram.stepPane.pose', 'Pose')}>
+        <div className={styles.pose}>{body}</div>
+      </CollapsibleSection>
+    );
   const sideRow = ({ side, turnOver }: SideChoice) => (
     <SegmentedRow
       label={t('panels:diagram.pose.side', 'Side')}
@@ -80,6 +89,7 @@ export function DiagramStepPose({
 
   const { source } = step;
   if (source?.kind === 'upload') {
+    if (main) return null;
     return section(
       <>
         <FieldRow label={t('panels:diagram.pose.rotation', 'Rotation')} kind="text">
@@ -135,7 +145,7 @@ export function DiagramStepPose({
         />
       )}
       {side !== null && sideRow({ side, turnOver })}
-      {render.mode === 'folded-flat' && (
+      {render.mode === 'folded-flat' && !main && (
         // Any layer order found, back or on (D23), as Pose's own pager has them.
         <FieldRow label={t('panels:diagram.pose.layerOrder', 'Layer order')} kind="text">
           <span className={styles.pager}>
@@ -145,7 +155,7 @@ export function DiagramStepPose({
           </span>
         </FieldRow>
       )}
-      {render.mode === 'folded-flat' && (
+      {render.mode === 'folded-flat' && !main && (
         // Its layers spread apart (Phase 13): on or off, by depth or affine (13g), and how.
         <DiagramSpreadRows toggle={linked.find((action) => action.id === 'spread-layers')} spread={linkedPose.spread} />
       )}

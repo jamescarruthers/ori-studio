@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { DiagramLayerList, DiagramLayerRow, DiagramLayersHeader } from './DiagramLayerList';
 import { DiagramLayersSplit } from './DiagramLayersSplit';
 import { DiagramPlacedMark } from './DiagramPlacedMark';
-import { DiagramStepPlacement } from './DiagramStepPlacement';
+import { DiagramPageStepInspector } from './DiagramPageStepInspector';
 import styles from './DiagramPageLayers.module.css';
 
 const PART_ICONS: Readonly<Record<PageLayerPart, LucideIcon>> = { number: Hash, picture: Image, text: AlignLeft };
@@ -19,7 +19,7 @@ const PART_ICONS: Readonly<Record<PageLayerPart, LucideIcon>> = { number: Hash, 
  * and its disclosure opens it into its Number, Picture and Text, a press on
  * one of which selects it, as the presses on the page do; its own Delete at
  * its end — and, under the
- * separator, the selection's placement (`DiagramStepPlacement`). A step placed
+ * separator, the selection's inspector (`DiagramPageStepInspector`). A step placed
  * by hand, or a part of it past the margin, says so at its row's end
  * (redesign, 2026-10-18).
  */
@@ -126,7 +126,7 @@ export function DiagramPageLayers() {
     <DiagramLayersSplit
       header={header}
       list={list}
-      inspector={layers.selected ? <DiagramStepPlacement step={layers.selected} /> : null}
+      inspector={layers.selected ? <DiagramPageStepInspector step={layers.selected} /> : null}
     />
   );
 }

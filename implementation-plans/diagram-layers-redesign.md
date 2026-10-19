@@ -118,3 +118,19 @@ Zach's notes on #456, all taken:
       as its card does. A mark's leaves another mark's selection alone
 - [x] The inspector's Delete sits beside the mark's name; the verb toolbar
       shows only when the mark has another verb
+
+## Second review (2026-10-19)
+
+- [x] More room either side of the rows (8 px), and the row's Delete off its edge
+- [x] X and Y side by side unless the pane is too narrow for both: the fields'
+      96 px is a floor, so the row's column is sized to fit them
+- [x] The header's verbs as icons: Adjust Pose and Annotate from the step's
+      catalog, as its card has them, and Reset Layout
+- [x] A Picture section over Placement: Show as, a crease pattern's side, a
+      References step's way and side, a linked fold's turn and side
+      (`DiagramStepShowAs`, `DiagramStepPose` `main`). The Diagram panel's
+      pose controller now follows the Pages view's selected step when no
+      detail is open, folding only when a verb asks (`live` false)
+- [x] The instruction, as one shared field (`DiagramStepInstruction`) that the
+      Step pane uses too; the header drops the instruction line it repeated
+

@@ -161,7 +161,6 @@ describe('DiagramStepPlacement › the part selected', () => {
     expect(stepById(state().diagram!, 's1')!.place).toBeUndefined();
     show('s1');
     expect(reset('Reset Picture')).toBeNull();
-    expect(button('Reset Layout')?.disabled).toBe(true);
   });
 });
 
