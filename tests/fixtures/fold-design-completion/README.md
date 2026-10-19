@@ -57,6 +57,8 @@ Generate from the preserved original trial prefixes, with current Fold WASM:
 node research/2026-10-13-origami-fold-trials/build-deliverables.mjs
 ```
 
-This also updates the user-facing native files, combined project, separate FOLD
-interchange exports and per-node replay hashes in the research directory.
+That research directory is kept outside the repository; the tests do not need
+it. The script also updates the user-facing native files, combined project,
+separate FOLD interchange exports and per-node replay hashes in the research
+directory.
 Coordinates are adjustable model proportions, not a general origami solver.
