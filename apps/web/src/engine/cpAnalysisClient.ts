@@ -30,11 +30,6 @@ export function analyzeCpFold(text: string): Promise<FoldArtifacts> {
   return withAnalysisWorker((api) => api.analyzeFold(text));
 }
 
-/** Same worker and containment algorithm as selection, with transferable input. */
-export function analyzeCpFoldWithContainment(text: string, midpoints: Float64Array) {
-  return withAnalysisWorker((api) => api.analyzeFoldWithContainment(text, Comlink.transfer(midpoints, [midpoints.buffer])));
-}
-
 async function withAnalysisWorker<T>(run: (api: Comlink.Remote<OristudioCpWorkerApi>) => Promise<T>): Promise<T> {
   clearTimeout(idle);
   if (!shared) {

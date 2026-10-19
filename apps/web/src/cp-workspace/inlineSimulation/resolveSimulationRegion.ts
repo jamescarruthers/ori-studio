@@ -1,9 +1,18 @@
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
-import type { SelectedSegmentMatch } from '../../lib/creasePatternSelectionSegment';
+import { type CpSegment, resolveCpSegments } from '../../lib/creasePatternSegmentation';
 import { ensureCpSheetArtifacts } from '../sheets/cpSheetArtifacts';
 import { ensureCpSheetIndex, peekCpSheetIndex } from '../sheets/cpSheetIndex';
 import { resolveSelectedSheet } from '../sheets/selectedSheet';
+
+/** A sheet as the region an inline simulation is built from. */
+export interface SelectedSegmentMatch {
+  /** The sheet's one segment, from its own faces (`ensureCpSheetArtifacts`). */
+  segment: CpSegment;
+  /** The sheet's id: its place in the sheet index. */
+  segmentId: number;
+  /** The 1-based `line_segments` ids of every line on the sheet. */
+  cpLineIds: number[];
+}
 
 /**
  * The sheet a set of crease ids makes up exactly, as the region a simulation is

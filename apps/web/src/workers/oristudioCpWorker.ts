@@ -1,6 +1,5 @@
 import { segmentationFoldArtifactsFromFold, warnIfFacesWereInferred } from '../lib/creasePatternImport';
 import { resolveCpSegments } from '../lib/creasePatternSegmentation';
-import { computeSegmentContainment } from '../lib/creasePatternSelectionSegment';
 import type { FoldArtifacts, FoldDocument } from '../engine/types';
 import { expose, transfer } from 'comlink';
 import init, {
@@ -167,10 +166,6 @@ function analyzeFold(text: string): FoldArtifacts {
 const api = {
   async analyzeFold(text: string): Promise<FoldArtifacts> {
     return analyzeFold(text);
-  },
-  async analyzeFoldWithContainment(text: string, midpoints: Float64Array) {
-    const artifacts = analyzeFold(text);
-    return { artifacts, containment: computeSegmentContainment(artifacts, midpoints) };
   },
   async segmentationArtifacts(handle: number): Promise<FoldArtifacts> {
     return call(() => analyzeFold(export_fold(handle)));
