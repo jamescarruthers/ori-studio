@@ -377,6 +377,7 @@ describe('workspace capabilities', () => {
       'fold.precrease',
       'fold.turn-over',
       'fold.rotate',
+      'fold.repeat',
       'fold.delete-step',
     ] as const;
     for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'diagram'] as const) {
@@ -392,7 +393,14 @@ describe('workspace capabilities', () => {
       enabled: false,
       reason: 'The flat sheet is where the steps start: there is no step to delete',
     });
+    // Repeat mirrors the steps through the one on screen: the flat sheet has none.
+    expect(atSheet['fold.repeat']).toMatchObject({ visible: true, enabled: false, reason: 'Fold a step first.' });
     expect(capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true })['fold.delete-step'].enabled).toBe(true);
+    expect(capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true })['fold.repeat']).toMatchObject({
+      visible: true,
+      enabled: true,
+      label: 'Repeat on the other side…',
+    });
 
     const newer = capabilities({
       activeEditingContext: 'fold',

@@ -142,6 +142,7 @@ export type FoldSequenceCapabilityId =
   | 'fold.rotate'
   | 'fold.unfold-to'
   | 'fold.unfold-last'
+  | 'fold.repeat'
   | 'fold.delete-step';
 
 export interface WorkspaceCapability {
@@ -1480,6 +1481,7 @@ function foldSequenceCapabilities(
     'fold.turn-over': verb(canChange, t('common:capability.foldTurnOver', 'Turn Over'), t('common:capability.addTurnOver', 'Turn the model over, as a step of its own')),
     'fold.unfold-to': verb(canDelete, t('panels:fold.return.open', 'Unfold to step…'), t('panels:fold.return.retain', 'Return to an earlier pose, keeping all creases.'), canChange ? t('panels:fold.return.empty', 'Fold a step first.') : blocked),
     'fold.unfold-last': verb(canDelete, t('panels:fold.return.last', 'Unfold last step'), t('panels:fold.return.retain', 'Return to an earlier pose, keeping all creases.'), canChange ? t('panels:fold.return.empty', 'Fold a step first.') : blocked),
+    'fold.repeat': verb(canDelete, t('panels:fold.repeat.open', 'Repeat on the other side…'), t('common:capability.repeatOnOtherSide', 'Repeat the steps through this one on the other side'), canChange ? t('panels:fold.return.empty', 'Fold a step first.') : blocked),
     'fold.rotate': verb(canChange, t('common:capability.foldRotate', 'Rotate'), t('common:capability.takeRotate', 'Take the Rotate tool: turn the model by a part of a turn or an exact angle, as a step of its own')),
     'fold.delete-step': verb(
       canDelete,

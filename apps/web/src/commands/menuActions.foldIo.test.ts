@@ -27,6 +27,7 @@ describe('Fold’s imports and hand-offs in the menu', () => {
       'fold.rotate',
       'fold.unfold-last',
       'fold.unfold-to',
+      'fold.repeat',
       'fold.delete-step',
       'fold.import-cp',
       'fold.import-sample-preliminary-base',

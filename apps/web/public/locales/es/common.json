@@ -251,6 +251,7 @@
     "renormalizeToEdge": "Renormalizar a la arista",
     "renormalizeToUnitScale": "Renormalizar a escala unitaria",
     "repairOverlaps": "Reparar solapamientos",
+    "repeatOnOtherSide": "Repetir los pasos hasta este en el otro lado",
     "replaceSelectedLineType": "Reemplazar tipo de línea seleccionado...",
     "resetLayout": "Restablecer disposición",
     "resetPaneLayout": "Restablecer la disposición de paneles",

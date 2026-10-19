@@ -6184,7 +6184,8 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12371,7 +12372,8 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18560,7 +18562,8 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24416,7 +24419,8 @@
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30272,7 +30276,8 @@
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36459,7 +36464,8 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -42646,7 +42652,8 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48502,6 +48509,7 @@
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   }
 }
