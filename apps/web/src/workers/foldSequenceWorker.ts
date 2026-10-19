@@ -10,6 +10,9 @@ import type { FoldOrderQuery, FoldOrderSelection } from '../fold/engine/foldEngi
  * takes `fs1` fingerprints here, so a step's answer is a handle, a summary
  * and sixteen hex digits however large the state. Errors leave as
  * `{ code, message }` envelopes like every other bridge; refusals are values.
+ * A failure that is not an envelope — a trap — leaves the engine dead, and
+ * this call and every one after it answer `fold_engine_trapped`
+ * (`fold/engine/foldEngineTrap.ts`), which the runtime replaces the worker on.
  *
  * The worker cannot be interrupted mid-call, so the runtime that owns it
  * (`store/workspaceStore/foldSequenceRuntime.ts`) stops work by terminating
@@ -44,6 +47,7 @@ import type {
   FoldSunkPoints,
 } from '../fold/engine/foldEngineSinkWire';
 import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from '../fold/engine/foldEngineSquashCalls';
+import { foldEngineTrapOf, type FoldEngineTrapped } from '../fold/engine/foldEngineTrap';
 import type { FoldVertexFingerprinted, FoldVertexTried } from '../fold/engine/foldEngineSquashWire';
 import type { FoldVertexOp } from '../fold/document/foldSequenceDocument';
 import { swivelReach, type FoldSwivelReach, type FoldSwivelReachAsk } from '../fold/tools/vertex/swivelReach';
@@ -129,11 +133,31 @@ function normalizeError(error: unknown): WasmErrorEnvelope {
   };
 }
 
+/**
+ * The failure that killed the engine, once one has (`foldEngineTrap.ts`):
+ * every later call answers it without touching the instance, until the
+ * runtime, which replaces the worker on the first answer, terminates this one.
+ */
+let trapped: FoldEngineTrapped | null = null;
+
 async function call<T>(fn: (calls: FoldWorkerCalls) => T): Promise<T> {
+  if (trapped) throw trapped;
+  let calls: FoldWorkerCalls;
   try {
-    return fn(await ensureReady());
+    calls = await ensureReady();
   } catch (error) {
+    // A start that failed: nothing ran, and the next call starts again.
     throw normalizeError(error);
+  }
+  if (trapped) throw trapped;
+  try {
+    return fn(calls);
+  } catch (error) {
+    const trap = foldEngineTrapOf(error);
+    if (!trap) throw normalizeError(error);
+    trapped = trap;
+    console.error('[ori-studio] the fold engine failed mid-call; this worker answers nothing more', error);
+    throw trap;
   }
 }
 
