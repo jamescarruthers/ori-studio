@@ -166,6 +166,47 @@ describe('DiagramStepsGrid', () => {
     }
   });
 
+  it('mounts onto a selection past the first row in its measured columns: scrolled to its row, its card focused', async () => {
+    // Three columns, as a wide pane lays them out (jsdom has no grid layout).
+    const computed = getComputedStyle;
+    vi.stubGlobal('getComputedStyle', (element: Element, pseudo?: string | null) =>
+      element.getAttribute('role') === 'listbox'
+        ? ({ gridTemplateColumns: '200px 200px 200px', paddingTop: '0px' } as CSSStyleDeclaration)
+        : computed.call(window, element, pseudo)
+    );
+    // A 1000px viewport over the virtualizer's total height, so a scroll is not clamped to 0.
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this === host ? 1000 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this === host ? Number.parseFloat((listbox().firstElementChild as HTMLElement).style.height) : 0;
+    });
+    const scrollTo = vi.fn(function (this: HTMLElement, options: ScrollToOptions) {
+      this.scrollTop = options.top ?? this.scrollTop;
+      this.dispatchEvent(new Event('scroll'));
+    });
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { value: scrollTo, configurable: true, writable: true });
+    try {
+      // Back from step detail, or Pages → Steps: the grid mounts with step 31 selected.
+      const many = Array.from({ length: 60 }, (_, index) => createStep(() => `step-${index}`));
+      render('step-30', vi.fn(), { steps: many });
+      // Let the virtualizer settle its scroll, and its "scrolling ended" timer fire.
+      await act(() => new Promise((resolve) => setTimeout(resolve, 200)));
+      expect(scrollTo).toHaveBeenCalled();
+      const card = host!.querySelector<HTMLElement>('[data-step-id="step-30"]')!;
+      const row = card.closest<HTMLElement>('[data-index]')!;
+      // Step 31 is in row 11 of 20, not row 31 of 60.
+      expect(row.dataset.index).toBe('10');
+      const start = Number(/translateY\((-?[\d.]+)px\)/.exec(row.style.transform)![1]);
+      const viewport = listbox().parentElement!;
+      expect(start).toBeGreaterThanOrEqual(viewport.scrollTop);
+      expect(start + row.offsetHeight).toBeLessThanOrEqual(viewport.scrollTop + viewport.offsetHeight);
+      expect(document.activeElement).toBe(card);
+    } finally {
+      delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
+    }
+  });
+
   it('ends with an Add step tile for a pointer, kept out of the listbox’s options and the tab order', () => {
     const onAppend = vi.fn();
     const onSelect = render('step-a', vi.fn(), { onAppend });

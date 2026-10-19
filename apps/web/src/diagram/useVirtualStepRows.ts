@@ -9,16 +9,24 @@ import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/rea
  * The row holding entry `kept` (the grid's tab stop: the selection, or the
  * first entry) stays mounted wherever the grid is scrolled, so focus, the
  * keyboard context menu and the roving tab stop always find its card.
+ *
+ * `measured` is false until the grid's columns have been read once. Before
+ * then the layout is a guess of one column, so a row index is an entry index:
+ * nothing should scroll to a row until it is true.
  */
 export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: readonly string[], kept = -1) {
-  const [layout, setLayout] = useState({ columns: 1, estimate: 300, margin: 0 });
+  const [layout, setLayout] = useState({ columns: 1, estimate: 300, margin: 0, measured: false });
   useLayoutEffect(() => {
     const element = grid.current;
     if (!element) return;
     const measure = () => {
       const css = getComputedStyle(element);
       const widths = css.gridTemplateColumns.split(' ').map(Number.parseFloat).filter(Number.isFinite);
-      if (!widths.length) return;
+      // No tracks to read (no layout, as in jsdom): one column is the answer.
+      if (!widths.length) {
+        setLayout((old) => (old.measured ? old : { ...old, measured: true }));
+        return;
+      }
       const parent = element.parentElement!;
       const margin =
         element.getBoundingClientRect().top -
@@ -26,9 +34,12 @@ export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: 
         parent.scrollTop -
         parent.clientTop +
         Number.parseFloat(css.paddingTop || '0');
-      const next = { columns: widths.length, estimate: widths[0]! + 88, margin };
+      const next = { columns: widths.length, estimate: widths[0]! + 88, margin, measured: true };
       setLayout((old) =>
-        old.columns === next.columns && old.estimate === next.estimate && old.margin === next.margin
+        old.measured &&
+        old.columns === next.columns &&
+        old.estimate === next.estimate &&
+        old.margin === next.margin
           ? old
           : next
       );
@@ -83,5 +94,5 @@ export function useVirtualStepRows(grid: RefObject<HTMLDivElement | null>, ids: 
       ?.querySelectorAll<HTMLElement>('[data-index]')
       .forEach((row) => virtualizer.measureElement(row));
   }, [virtualizer, layout.columns, layout.estimate, grid]);
-  return { columns: layout.columns, margin: layout.margin, virtualizer };
+  return { columns: layout.columns, margin: layout.margin, measured: layout.measured, virtualizer };
 }

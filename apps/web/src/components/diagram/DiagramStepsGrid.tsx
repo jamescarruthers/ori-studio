@@ -136,10 +136,18 @@ export function DiagramStepsGrid({
   const pendingFocus = useRef<string | null>(null);
   const selectedIndex = entries.findIndex((entry) => entry.id === selectedStepId);
   // The tab stop's card stays mounted wherever the grid is scrolled.
-  const { columns, margin, virtualizer } = useVirtualStepRows(listRef, rowIds, Math.max(0, selectedIndex));
+  const { columns, margin, measured, virtualizer } = useVirtualStepRows(
+    listRef,
+    rowIds,
+    Math.max(0, selectedIndex)
+  );
   /** The selection last brought into view: only a new one is revealed. */
   const revealed = useRef<string | null>(null);
   useEffect(() => {
+    // A grid that mounts onto a selection (Back from step detail, Pages →
+    // Steps) runs this once before its columns are read, when the selection's
+    // row is a guess: wait for the real one.
+    if (!measured) return;
     // Deleting or inserting another step, or a resize that changes the columns,
     // moves the selection's row without changing the selection: the grid stays
     // where the reader scrolled it.
@@ -159,7 +167,7 @@ export function DiagramStepsGrid({
     if (!(nowhere || listRef.current?.contains(active))) return;
     if (!card) pendingFocus.current = selectedStepId;
     else if (active !== card) card.focus({ preventScroll: true });
-  }, [selectedStepId, selectedIndex, columns, virtualizer]);
+  }, [measured, selectedStepId, selectedIndex, columns, virtualizer]);
 
   const tabStop = selectedStepId ?? entries[0]?.id ?? null;
   const slots = useMemo(() => slotsOf(entries), [entries]);
