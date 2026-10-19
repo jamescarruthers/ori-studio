@@ -100,7 +100,7 @@ import {
   importedCreasePatternFormat,
   isCreasePatternFilename,
   parseImportedCreasePattern,
-  parseImportedCreasePatternFromFold,
+  storedImportedCreasePattern,
   type ImportedCreasePatternResult,
   type ImportedCreasePatternSource,
 } from '../../../lib/creasePatternImport';
@@ -146,6 +146,7 @@ import type { CanvasAnnotation } from '../../../cp-workspace/annotations/annotat
 import type { InlineSimulation } from '../../../cp-workspace/inlineSimulation/inlineSimulation';
 import { noteInlineSimulationIds } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
 import { discardCpDocumentState } from '../cpDocumentState';
+import { withCpHistoryEntry } from '../cpHistory';
 import { diagramDataBytes, discardDiagramState, onlyPackedSince, pickDiagramState } from '../diagramState';
 import { readDiagram, writeDiagram } from '../../../diagram/document/diagramFile';
 import { createCpFoldRuntime } from '../cpFoldRuntimeBindings';
@@ -784,8 +785,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         oristudioCpSelection: selectedLineSelectionFromDocument(commandDocument.document),
         oristudioCpRevision: nextRevision,
         oristudioCpHistoryPast: previousDocument
-          ? [
-              ...get().oristudioCpHistoryPast,
+          ? withCpHistoryEntry(
+              get().oristudioCpHistoryPast,
               cpHistoryEntry(
                 previousDocument,
                 label,
@@ -794,8 +795,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
                 get().oristudioCpFoldedFigures,
                 get().oristudioCpActiveFoldedFigureId,
                 get().oristudioCpInlineSimulations
-              ),
-            ]
+              )
+            )
           : get().oristudioCpHistoryPast,
         oristudioCpHistoryFuture: [],
         ...staleFoldArtifactResourceState(get().foldArtifactRevision),
@@ -1234,8 +1235,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     const creasePattern = nativeDocument.creasePattern;
     const restoredDocument = await restoreOristudioCpDocument(creasePattern.document, nativeSource);
     // The engine now owns the crease-pattern snapshot; drop this (potentially large)
-    // parsed copy so it can be reclaimed before the FOLD projection is turned into
-    // simulator artifacts and uploaded to WebGL below, keeping peak memory lower.
+    // parsed copy so it can be reclaimed before the canvas uploads to WebGL below,
+    // keeping peak memory lower.
     (creasePattern as { document: unknown }).document = undefined;
     const checked = await refreshAlwaysOnCamvDiagnostics(restoredDocument);
     const documentState = checked.documentState;
@@ -1245,24 +1246,27 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       (await exportedEditableFoldProjection());
     if (!fold) throw new Error('Native crease-pattern project does not contain a FOLD projection');
 
-    // Parse straight from the live FOLD object — no stringify + re-parse round-trip.
-    const parsed = parseImportedCreasePatternFromFold(fold, {
+    // A record of what the file says, not a re-import: the document is already in
+    // the kernel, and whatever needs faces or a mesh builds them when it is used.
+    const stored = storedImportedCreasePattern(fold, {
       format: 'fold',
       filename: `${nativeDocument.title || source.filename}.fold`,
       path: null,
     });
-    // Simulation faces are inferred in JS (no flat-folding), so multi-pattern
-    // documents work.
-    const result = parsed;
     const originalSource = importedSourceFromNativeSource(nativeDocument.creasePattern.source);
-    const importedDocument = originalSource
-      ? { ...result.document, source: originalSource }
-      : result.document;
+    const importedDocument = {
+      ...stored,
+      ...(originalSource ? { source: originalSource } : {}),
+      // The FOLD this crease pattern was imported from, which only a project
+      // that kept one has. The projection is this document exported: kept as
+      // `sourceFold`, every save wrote it a second time.
+      sourceFold: creasePattern.sourceFold ?? null,
+    };
     set({
       ...nativeCpEditorState(nativeDocument, documentState, checked.camvResult, artifacts),
       // Everything below is the "this crease pattern is the whole project" part,
       // which the companion path must not apply — it would unclaim the design.
-      workspaceTitle: nativeDocument.title || result.project.title,
+      workspaceTitle: nativeDocument.title || stored.title,
       // A CP-only project establishes no design; keep the Design chooser.
       ...discardAllDesigns(),
       importedCreasePattern: importedDocument,
@@ -2494,8 +2498,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           oristudioCpRevision: nextRevision,
           oristudioCpHistoryPast: previousDocument
             ? mutatesDocument
-              ? [
-                  ...get().oristudioCpHistoryPast,
+              ? withCpHistoryEntry(
+                  get().oristudioCpHistoryPast,
                   cpHistoryEntry(
                     previousDocument,
                     String(operationId),
@@ -2504,8 +2508,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
                     get().oristudioCpFoldedFigures,
                     get().oristudioCpActiveFoldedFigureId,
                     get().oristudioCpInlineSimulations
-                  ),
-                ]
+                  )
+                )
               : get().oristudioCpHistoryPast
             : get().oristudioCpHistoryPast,
           oristudioCpHistoryFuture: mutatesDocument ? [] : get().oristudioCpHistoryFuture,
@@ -2648,18 +2652,18 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           oristudioCpLineage: markCpLineageEdited(get().oristudioCpLineage),
           oristudioCpOperationDescriptors: nextDocument.operationDescriptors,
           oristudioCpError: null,
-          oristudioCpHistoryPast: [
-            ...get().oristudioCpHistoryPast,
+          oristudioCpHistoryPast: withCpHistoryEntry(
+            get().oristudioCpHistoryPast,
             cpHistoryEntry(
-                previousDocument,
-                label,
-                previousSelection,
-                get().oristudioCpAnnotations,
-                get().oristudioCpFoldedFigures,
-                get().oristudioCpActiveFoldedFigureId,
-                get().oristudioCpInlineSimulations
-              ),
-          ],
+              previousDocument,
+              label,
+              previousSelection,
+              get().oristudioCpAnnotations,
+              get().oristudioCpFoldedFigures,
+              get().oristudioCpActiveFoldedFigureId,
+              get().oristudioCpInlineSimulations
+            )
+          ),
           oristudioCpHistoryFuture: [],
           error: null,
           dirty: true,

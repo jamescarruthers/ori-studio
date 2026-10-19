@@ -4,9 +4,48 @@ import {
   parseImportedCreasePattern,
   parseImportedCreasePatternFromFold,
   segmentationFoldArtifactsFromFold,
+  storedImportedCreasePattern,
 } from './creasePatternImport';
 
 describe('crease pattern import', () => {
+  it('storedImportedCreasePattern reads a project FOLD as a full import does, and infers nothing', () => {
+    const fold = {
+      file_spec: 1.1,
+      frame_title: 'square',
+      vertices_coords: [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+      ],
+      edges_vertices: [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [0, 2],
+      ],
+      edges_assignment: ['B', 'B', 'B', 'B', 'M'],
+    };
+    const source = { format: 'fold' as const, filename: 'square.fold', path: null };
+
+    const stored = storedImportedCreasePattern(fold, source);
+    const imported = parseImportedCreasePatternFromFold(fold, source).document;
+
+    // What the record is read for, the same either way.
+    expect(stored.title).toBe(imported.title);
+    expect(stored.source).toEqual(imported.source);
+    expect(stored.selectedFrame).toEqual(imported.selectedFrame);
+    expect(stored.foldFrames).toEqual(imported.foldFrames);
+    expect(stored.sourceFold).toBe(fold);
+    // The frame as stored: no faces inferred, no edges split or renumbered.
+    expect(imported.fold.faces_vertices.length).toBeGreaterThan(0);
+    expect(stored.fold.faces_vertices).toEqual([]);
+    expect(stored.fold.vertices_coords).toBe(fold.vertices_coords);
+    expect(stored.fold.edges_vertices).toBe(fold.edges_vertices);
+    expect(stored.stats).toMatchObject({ edges: 5, faces: 0, boundaries: 4, mountains: 1 });
+  });
+
   it('parseImportedCreasePatternFromFold matches the stringify+reparse path', () => {
     const fold = {
       file_spec: 1.1,
@@ -32,6 +71,23 @@ describe('crease pattern import', () => {
     const viaObject = parseImportedCreasePatternFromFold(fold, source);
 
     expect(viaObject).toEqual(viaText);
+  });
+
+  it('orders inferred edges exactly as numeric collation of their keys did', () => {
+    // A 4x4 grid with both diagonals: 25 vertices, so edge keys run to two
+    // digits and plain string order ("10:11" before "2:10") would differ.
+    const lines = ['1 0 0 4 0', '1 4 0 4 4', '1 4 4 0 4', '1 0 4 0 0', '2 0 0 4 4', '3 4 0 0 4'];
+    for (const at of [1, 2, 3]) lines.push(`2 ${at} 0 ${at} 4`, `3 0 ${at} 4 ${at}`);
+    const { fold } = parseImportedCreasePattern(lines.join('\n'), {
+      format: 'cp',
+      filename: 'grid.cp',
+      path: null,
+    }).document;
+
+    const keys = fold.edges_vertices.map(([a, b]) => `${a}:${b}`);
+    expect(fold.vertices_coords.length).toBeGreaterThan(10);
+    expect([...keys].sort()).not.toEqual(keys);
+    expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })));
   });
 
   it('parses ORIPA CP lines and infers simulatable faces', () => {

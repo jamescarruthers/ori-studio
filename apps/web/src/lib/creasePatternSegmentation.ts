@@ -202,7 +202,7 @@ export function segmentFoldDocument(fold: FoldDocument): CpSegment[] {
   const faceCount = faces.length;
   if (faceCount === 0) return [];
 
-  const assignmentByKey = buildAssignmentByKey(fold);
+  const assignmentByKey = assignmentByKeyOf(fold);
 
   // Map each undirected edge to the faces that use it.
   const facesByEdge = new Map<string, number[]>();
@@ -289,11 +289,20 @@ function strongerAssignment(current: string | undefined, candidate: string): str
   return candidateRank > currentRank ? candidate : current;
 }
 
+const assignmentMaps = new WeakMap<FoldDocument, ReadonlyMap<string, string>>();
+
 /**
- * Map each undirected edge to its effective assignment, resolving creases that
- * share endpoints by {@link ASSIGNMENT_RANK}.
+ * Each undirected edge's effective assignment, resolving creases that share
+ * endpoints by {@link ASSIGNMENT_RANK}.
+ *
+ * Built once per fold and shared, since a fold is never edited after it is
+ * made: segmentation reads it, and so does every region's rim check. Built per
+ * region instead, a canvas of 204 sheets rebuilt a 590k-edge map 204 times —
+ * about a minute on one selection.
  */
-export function buildAssignmentByKey(fold: FoldDocument): Map<string, string> {
+export function assignmentByKeyOf(fold: FoldDocument): ReadonlyMap<string, string> {
+  const cached = assignmentMaps.get(fold);
+  if (cached) return cached;
   const map = new Map<string, string>();
   const edges = fold.edges_vertices ?? [];
   const assignments = fold.edges_assignment ?? [];
@@ -303,6 +312,7 @@ export function buildAssignmentByKey(fold: FoldDocument): Map<string, string> {
     const key = edgeKey(edge[0], edge[1]);
     map.set(key, strongerAssignment(map.get(key), assignment));
   });
+  assignmentMaps.set(fold, map);
   return map;
 }
 
@@ -523,7 +533,7 @@ function scopeAnnotationExtrasToSegment(
 export interface SegmentEdge {
   a: number;
   b: number;
-  /** The effective assignment (see {@link buildAssignmentByKey}); `F` when the fold has none. */
+  /** The effective assignment (see {@link assignmentByKeyOf}); `F` when the fold has none. */
   assignment: string;
 }
 
@@ -536,7 +546,7 @@ export interface SegmentEdge {
  */
 export function segmentEdges(fold: FoldDocument, segments: readonly CpSegment[]): SegmentEdge[] {
   const faces = fold.faces_vertices ?? [];
-  const assignmentByKey = buildAssignmentByKey(fold);
+  const assignmentByKey = assignmentByKeyOf(fold);
   const seen = new Set<string>();
   const edges: SegmentEdge[] = [];
   for (const segment of segments) {

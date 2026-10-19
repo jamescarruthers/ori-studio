@@ -2860,6 +2860,47 @@ describe('workspace store slices', () => {
     });
   });
 
+  it('does not save the FOLD projection a second time as the source FOLD', async () => {
+    // A project with no source FOLD of its own carries only its projection. The
+    // open used to adopt that projection as `sourceFold`, so the next save wrote
+    // the same FOLD twice — and every save after carried the copy forward.
+    resetStores(seedSnapshot());
+    loadSnapshotIntoStore(seedSnapshot());
+    const nativeProject = createNativeCreasePatternProjectFile({
+      title: 'Projection only',
+      filename: 'projection.osf',
+      path: '/tmp/projection.osf',
+      document: editableCpState([cpLine({ x: 0, y: 0 }, { x: 1, y: 0 }, { color: 'Red1' })]).document,
+      source: { format: 'cp', filename: 'projection.cp', path: null },
+      foldProjection: JSON.parse(editableCpFoldText),
+      sourceFold: null,
+      foldArtifacts: null,
+      creaseColorMode: 'mvf',
+      selection: emptyOristudioCpSelection(),
+      viewport: DEFAULT_ORISTUDIO_CP_VIEWPORT_OPTIONS,
+      foldedFigures: [],
+      activeFoldedFigureId: null,
+      lineage: importedCpLineage(),
+      appVersion: '0.1.2',
+    });
+    const fileService = createFileService({
+      text: serializeNativeProjectFile(nativeProject),
+      name: 'projection.osf',
+      path: '/tmp/projection.osf',
+    });
+
+    await expect(useWorkspaceStore.getState().openProject(fileService)).resolves.toBe(true);
+    useWorkspaceStore.setState({ dirty: true });
+    await expect(useWorkspaceStore.getState().saveProject(fileService)).resolves.toBe(true);
+
+    const savedOptions = fileService.saveTextFile.mock.calls.at(-1)?.[0] as
+      | SaveTextFileOptions
+      | undefined;
+    const saved = parseNativeProjectFile(savedOptions?.contents ?? '');
+    expect(saved.workspace.creasePattern?.creasePattern.foldProjection).not.toBeNull();
+    expect(saved.workspace.creasePattern?.creasePattern.sourceFold).toBeNull();
+  });
+
   it('preserves original Oriedita source identity when reopening and resaving OSF', async () => {
     resetStores(seedSnapshot());
     loadSnapshotIntoStore(seedSnapshot());
