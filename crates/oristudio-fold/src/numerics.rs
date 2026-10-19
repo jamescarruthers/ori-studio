@@ -12,14 +12,13 @@
 
 pub use oristudio_geometry::tol::TOL;
 
-/// The minimum feature μ: about a paper thickness (1e-3 of a 15 cm sheet is
-/// 0.15 mm), so no real fold is refused by it.
+/// Minimum material feature μ. Near misses, new creases shorter than μ, and
+/// new pieces thinner than μ/2 are refused to keep material topology stable.
 ///
-/// Refused below it: near misses, new creases shorter than μ, new pieces
-/// thinner than μ/2, and face images that overlap by less than μ but more than
-/// [`TOL`] after a move (a sliver). Measured (research §6): μ = 0 gave 5 hard
-/// failures in 35.5k random folds and μ = 1e-4 three sub-tolerance events in
-/// 4.4k; μ = 1e-3 gave none in 8.7k.
+/// Narrow overlaps of existing face images do not create small material
+/// pieces. They are allowed when the full overlay, pair and hinge constraints
+/// agree at [`TOL`]; ambiguous geometry and invalid orders remain refused.
+/// The original blanket overlap cutoff predated that structural validity gate.
 pub const MIN_FEATURE: f64 = 1e-3;
 
 /// How exactly a snapped line must pass through every vertex image it is

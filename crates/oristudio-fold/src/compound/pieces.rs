@@ -519,6 +519,11 @@ fn image_guard(
     old_of: &[usize],
     position: &impl Fn(FaceId) -> Option<usize>,
 ) -> Result<(), FoldRefusal> {
+    // A small overlap is allowed when the real arrangement represents it
+    // consistently. Completion and the final state gate still check its order.
+    if unordered.problem().ambiguities().is_empty() {
+        return Ok(());
+    }
     let geometry = unordered.geometry();
     let mut panels = None;
     for pair in unordered.problem().variables() {

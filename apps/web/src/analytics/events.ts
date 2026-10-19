@@ -39,6 +39,7 @@ export type FoldStepAddedOpKind =
   | 'precrease'
   | 'unfold'
   | 'unfold_to'
+  | 'repeat'
   | 'refold'
   | 'turn'
   | 'rotate'
@@ -47,6 +48,7 @@ export type FoldStepAddedOpKind =
   | 'outside_reverse'
   // The crimp and the tuck.
   | 'crimp'
+  | 'pleat'
   | 'tuck'
   // The vertex folds.
   | 'squash'

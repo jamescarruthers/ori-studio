@@ -37,8 +37,9 @@ tuck and the vertex folds (squash, petal fold, rabbit ear, swivel) on it.
 - `sheet`: convex sheets only — square, rectangle, regular polygon with its
   first vertex at −π/2, or a convex outline in the unit frame.
 - `numerics`: tol = 1e-6 of the sheet (the shared `TOL`) and the minimum
-  feature μ = 1e-3, refusing near misses, short creases, thin pieces and
-  slivers between faces whose relative isometry changed.
+  material feature μ = 1e-3, refusing near misses, short creases and thin
+  pieces. Narrow image overlaps are admitted when the full arrangement agrees
+  at tol; ambiguous geometry and invalid layer orders are refused.
 - `refusal`: typed refusals with stable codes and the fixes the engine can offer
   (include the flaps the closure adds, fold the other way, pick a flap, fold
   along the landmark line).
@@ -117,8 +118,8 @@ Compound folds (plan D4, D15, Phases 9 and 11):
   implementation (`compound::pieces`):
   the hinge diff follows from the motions (a crease folds where its faces'
   orientations differ); the isometries are derived from the stayer and
-  checked against the prediction; the image–image guard refuses slivers
-  between faces whose relative motion changed; only pairs that both stay or
+  checked against the prediction; the image–image guard checks narrow overlaps
+  against the full arrangement and refuses ambiguous ones; only pairs that both stay or
   share a block are carried (kept under a rotation, reversed under a
   reflection, never because two isometries agree); the placements and the
   cross-block pairs are seeds; the rest is completed around the moved faces;

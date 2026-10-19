@@ -271,23 +271,13 @@ describe.skipIf(!available)('the Fold engine over the real bridge', () => {
       })
     );
 
-    // A sliver: the right end folded at x = 0.79995 lands its corners just
-    // inside the folded layer. Each remedy is a document step that lands.
-    const sliver = refused(
-      calls.apply(folded, {
-        kind: 'valley',
-        line: { via: 'free', through: [[0.79995, 0], [0.79995, 0.5]] },
-        moving: [0.9, 0.25],
-        seed: { scope: 'all' },
-      })
-    );
-    expect(sliver.refusal.code).toBe('sliver');
-    const remedies = sliver.fixes.flatMap((f) => (f.fix === 'use_line' && f.step ? [f.step] : []));
-    expect(remedies.length).toBeGreaterThan(0);
-    for (const remedy of remedies) {
-      expect(remedy.op.line.via).toBe('axiom');
-      landed(calls.step(folded, remedy.op, remedy.choices));
-    }
+    // This narrow image overlap is fully resolved: preserve the requested
+    // line rather than offering a different fold to avoid it.
+    const narrow = landed(calls.apply(folded, {
+      kind: 'valley', line: { via: 'free', through: [[0.79995, 0], [0.79995, 0.5]] },
+      moving: [0.9, 0.25], seed: { scope: 'all' },
+    }));
+    expect(narrow.summary.pairs).toBe(3);
 
     const refold: FoldOp = {
       kind: 'refold',
@@ -304,7 +294,7 @@ describe.skipIf(!available)('the Fold engine over the real bridge', () => {
       [{ ...BOOK, moving: [0.25, 1.5] }, 'point_off_paper'],
       [{ ...BOOK, line: { via: 'free', through: [[0, 0], [1, 0]] }, moving: [0.25, 0.5] }, 'free_line_too_short'],
     ];
-    const codes: string[] = [everything.refusal.code, near.refusal.code, sliver.refusal.code];
+    const codes: string[] = [everything.refusal.code, near.refusal.code];
     for (const [op, code] of others) {
       const refusal = refused(calls.apply(book, op));
       expect(refusal.refusal.code, JSON.stringify(op)).toBe(code);

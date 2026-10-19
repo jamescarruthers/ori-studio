@@ -16,15 +16,15 @@ import styles from './FoldStepStrip.module.css';
  * it — the paper in the user's style, front and back — drawn small. Blank
  * while it is painted, and for a step with no state to draw.
  */
-function StepPicture({ source }: { source: FoldCardPictureSource | null }) {
+function StepPicture({ source, repeating }: { source: FoldCardPictureSource | null; repeating?: boolean }) {
   const picture = useFoldCardPicture(source);
-  if (picture) return <img src={picture} alt="" className={styles.picture} draggable={false} data-fold-picture="paper" />;
+  if (picture) return <img src={picture} alt="" className={styles.picture} draggable={false} data-fold-picture="paper" data-repeat-source={repeating || undefined} />;
   return <span className={styles.blank} data-fold-picture={picture === undefined ? 'painting' : 'none'} />;
 }
 
 /** Module-level, so the strip sees one function for the life of the app and redraws no picture for being re-rendered. */
 function renderStepPicture(card: FoldStripCard) {
-  return <StepPicture source={card.picture} />;
+  return <StepPicture source={card.picture} repeating={card.repeatSource} />;
 }
 
 /**

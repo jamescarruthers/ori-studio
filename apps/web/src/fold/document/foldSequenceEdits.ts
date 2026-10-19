@@ -25,7 +25,7 @@
 import { foldReturnPath } from './foldReturn';
 import { sameSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import { xmlText } from '../../lib/xmlEscape';
-import { canonicalJson, foldPaperKey } from './foldDigest';
+import { canonicalJson, foldPaperKey, foldPathDigest } from './foldDigest';
 import {
   isKnownSpread,
   isLockedStep,
@@ -45,7 +45,7 @@ import {
 import { readBackFoldStep } from './foldSequenceFile';
 import { normalizeFoldLandingOp } from './foldLandingMigration';
 import { foldInheritedSpread, sameAsInherited } from './foldStepSpread';
-import { foldStepTree, lockedIds, subtreeIds } from './foldStepTree';
+import { foldStepTree, lockedIds, subtreeIds, pathTo } from './foldStepTree';
 
 /** A step to commit: everything but its id, which the commit makes. */
 export interface FoldStepDraft {
@@ -108,6 +108,40 @@ export function appendFoldStep(
     ...(draft.expect !== undefined ? { expect: draft.expect } : {}),
   };
   return { document: { ...document, steps: [...document.steps, step] }, id: step.id };
+}
+
+/** Publish a prepared sequence as one editor transaction, or publish nothing. */
+export function appendFoldSteps(document: FoldSequenceDocument, parent: string | null,
+  entries: readonly (Omit<FoldStepDraft, 'parent' | 'adopt'> & { returnTo?: number })[], newId: FoldIdFactory = randomFoldId) {
+  if (!entries.length || entries.length > 128) return null;
+  let next = document;
+  let id = parent;
+  const ids: (string | null)[] = [parent];
+  for (const entry of entries) {
+    let op = entry.op;
+    if (op.kind === 'unfold-to') {
+      const target = entry.returnTo;
+      if (target === undefined || !Number.isInteger(target) || target < 0 || target >= ids.length) return null;
+      const path = id === null ? [] : pathTo(foldStepTree(next.steps), id);
+      if (!path) return null;
+      op = { ...op, target: ids[target]!, source: { ...op.source, path: foldPathDigest(next.paper, path) } };
+    }
+    const result = appendFoldStep(next, { ...entry, op, parent: id }, newId);
+    if (!result) return null;
+    next = result.document;
+    id = result.id;
+    ids.push(id);
+  }
+  return { document: next, id: id! };
+}
+
+export function updateFoldRepeat(document: FoldSequenceDocument, id: string,
+  expected: import('./foldSequenceDocument').FoldRepeatOp,
+  op: import('./foldSequenceDocument').FoldRepeatOp, expect: string) {
+  return editStep(document, id, (step) => {
+    if (canonicalJson(step.op) !== canonicalJson(expected) || !keptAsFolded({ parent: step.parent, op })) return step;
+    return { ...step, op, expect };
+  });
 }
 
 /** "Delete this step and what follows": the step and its subtree, locked or not. */

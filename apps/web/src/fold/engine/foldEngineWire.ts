@@ -234,6 +234,9 @@ export const FOLD_RETURN_REFUSAL_CODES = [
   'return_sheet_mismatch', 'return_limit', 'return_material', 'return_order', 'return_pose', 'return_arrangement', 'return_invalid_state',
 ] as const;
 export const FOLD_REFUSAL_CODES = [
+  // Worker-level composite replay; this is not a Rust engine refusal.
+  'repeat_failed',
+  'pleat_failed',
   ...FOLD_RETURN_REFUSAL_CODES,
   ...FOLD_ENGINE_REFUSAL_CODES,
   ...FOLD_LINE_REFUSAL_CODES,
@@ -602,6 +605,8 @@ export interface FoldScene extends OristudioCpFoldedPaperScene {
 export interface FoldLineSpan {
   from: Point;
   to: Point;
+  /** A compound step can carry both letters; otherwise use the action's direction. */
+  direction?: FoldDirection;
   /** A layer that stays covers it, as the viewer sees it: drawn as a line behind. */
   hidden: boolean;
 }

@@ -4,6 +4,8 @@ import { isRecord } from '../../lib/documentFile';
  * can still detect unsupported inputs that the file writer would discard. */
 export function normalizeFoldLandingOp(op: unknown): unknown {
   if (!isRecord(op)) return op;
+  if (op.kind === 'repeat' && Array.isArray(op.steps)) return { ...op, steps: op.steps.map((entry) =>
+    isRecord(entry) ? { ...entry, op: normalizeFoldLandingOp(entry.op) } : entry) };
   if (op.kind === 'valley' || op.kind === 'mountain') {
     return { ...op, landing: op.landing ?? { kind: 'outer' } };
   }

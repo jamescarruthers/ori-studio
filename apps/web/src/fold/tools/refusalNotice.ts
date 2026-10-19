@@ -78,7 +78,7 @@ export interface FoldRefusalContext {
    * for; a vertex fold's is `vertex`, its tool in `vertex`; a sink's is
    * `sink` (the open and closed sink and the unsink).
    */
-  kind: FoldKind | 'reverse' | 'crimp' | 'tuck' | 'vertex' | 'sink';
+  kind: FoldKind | 'pleat' | 'reverse' | 'crimp' | 'tuck' | 'vertex' | 'sink';
   /** A flap's number on screen, by its index into the section's flaps (`flapNumbers`). */
   flapNumber: (flap: number) => number;
   /**
@@ -124,6 +124,14 @@ export function sectionFlapNames(section: FoldCrossSection | null): Pick<FoldRef
 function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext): { title: string; text: string } {
   const { refusal } = refused;
   switch (refusal.code) {
+    case 'pleat_failed':
+      return { title: t('tools:fold.pleat.refusedTitle', 'The pleat cannot fold here'), text: refusal.reason === 'lines'
+          ? t('tools:fold.pleat.lines', 'The valley line must be beyond the mountain line, toward the end that moves. Check the lines or press Swap.')
+          : refusal.reason === 'limit'
+            ? t('tools:fold.pleat.limit', 'There are too many layer arrangements to resolve this pleat. Select a smaller flap.')
+            : t('tools:fold.pleat.blocked', 'Both folds must fit within the selected flap without moving other paper. Check the lines and selected layers.') };
+    case 'repeat_failed':
+      return { title: t('panels:fold.repeat.failureTitle', 'Cannot repeat'), text: t('panels:fold.repeat.rebuildRequired', 'The saved repeat no longer matches this state. Update it from its source steps.') };
     case 'return_target_invalid': case 'return_state_unavailable': case 'return_source_changed':
     case 'return_unavailable': case 'return_sheet_mismatch': case 'return_limit': case 'return_material':
     case 'return_order': case 'return_pose': case 'return_arrangement': case 'return_invalid_state':
@@ -736,6 +744,7 @@ function otherWayLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
       return t('tools:fold.fix.precreaseOtherWay', 'Precrease the other way');
     // The engine never offers a reverse fold, a crimp or a sink the other way
     // round; it offers the other kind.
+    case 'pleat':
     case 'reverse':
     case 'crimp':
     case 'sink':

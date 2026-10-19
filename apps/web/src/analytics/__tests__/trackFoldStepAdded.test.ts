@@ -20,6 +20,13 @@ beforeEach(() => {
   runtime.track.mockClear();
 });
 
+it('counts Repeat mode and a bucketed range size without source content', () => {
+  trackFoldStepAdded('repeat', { repeat: { mode: 'individual', count: 7 } });
+  expect(runtime.track).toHaveBeenCalledWith('fold step added', {
+    op_kind: 'repeat', repeat_mode: 'individual', count_bucket: '<=10',
+  });
+});
+
 it('counts tuck targets only in buckets, distinguishing a single target from multiple targets', () => {
   for (const [targetCount, bucket] of [[1, '<=1'], [2, '<=5'], [6, '<=10']] as const) {
     trackFoldStepAdded('tuck', { layerScope: 'depth', via: 'free', targetCount });

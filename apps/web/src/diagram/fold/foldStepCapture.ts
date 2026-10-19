@@ -34,6 +34,7 @@ import {
 } from '../document/diagramDocument';
 import { storedFoldStepSource } from '../document/diagramFile';
 import { foldStepPicture, type FoldStepPictureInput } from './foldStepPicture';
+import { foldRepeatCallout } from './foldRepeatCallout';
 
 /** Which Fold step a picture is captured from, at which moment, in which pose. */
 export interface FoldStepCaptureRequest {
@@ -93,7 +94,8 @@ export interface FoldStepCaptureInput {
 /** Read what a Fold step's picture is made from, or why it cannot be. */
 export async function readFoldStepCapture(
   session: FoldSession,
-  request: Pick<FoldStepCaptureRequest, 'sequence' | 'step' | 'moment'>
+  request: Pick<FoldStepCaptureRequest, 'sequence' | 'step' | 'moment'>,
+  t: TFunction,
 ): Promise<{ status: 'ready'; input: FoldStepCaptureInput } | Exclude<FoldStepCaptureResult, { status: 'captured' }>> {
   const ready = await foldStepReady(session, request.sequence, request.step);
   if (ready.status !== 'ready') {
@@ -123,6 +125,12 @@ export async function readFoldStepCapture(
   const { scene, summary, action, engineVersion } = own.value;
   const node = session.store.getState().sequence?.steps.find((step) => step.id === request.step);
   if (!node) return { status: 'missing' };
+  let repeat: FoldStepPictureInput['repeat'];
+  if (request.moment === 'before' && node.op?.kind === 'repeat') {
+    const parentSummary = await session.withState(ready.parentState, (engine, id) => engine.summary(id));
+    if (parentSummary.status !== 'answered') return { status: 'unknown', why: 'unavailable' };
+    repeat = foldRepeatCallout(parent.value, scene, parentSummary.value.step, node.op.axis, t);
+  }
   return {
     status: 'ready',
     input: {
@@ -131,6 +139,7 @@ export async function readFoldStepCapture(
         own: { scene, step: summary.step, sheet: summary.sheet },
         moment: request.moment,
         action: request.moment === 'before' ? action : null,
+        ...(repeat ? { repeat } : {}),
       },
       ready,
       parent: parent.value,
@@ -148,7 +157,7 @@ export async function captureFoldStep(
 ): Promise<FoldStepCaptureResult> {
   const release = session.retain();
   try {
-    const read = await readFoldStepCapture(session, request);
+    const read = await readFoldStepCapture(session, request, t);
     if (read.status !== 'ready') return read;
     const { picture: input, ready, parent, node, engineVersion } = read.input;
     const picture = foldStepPicture(input, request.render, newId);

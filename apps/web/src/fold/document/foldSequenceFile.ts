@@ -345,6 +345,7 @@ function withinTree(nodes: FoldStepNode[]): FoldStepNode[] {
 
 const ALONG_LINE_KEYS = new Set(['kind', 'line', 'moving', 'seed']);
 const OP_KEYS = new Map<string, ReadonlySet<string>>([
+  ['repeat', new Set(['kind', 'source', 'parentState', 'axis', 'steps'])],
   ['valley', new Set([...ALONG_LINE_KEYS, 'landing'])],
   ['mountain', new Set([...ALONG_LINE_KEYS, 'landing'])],
   ['precrease', new Set([...ALONG_LINE_KEYS, 'direction', 'extent'])],
@@ -357,6 +358,7 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   // Compound folds (plan D4), one block per family.
   ['inside-reverse', ALONG_LINE_KEYS],
   ['outside-reverse', ALONG_LINE_KEYS],
+  ['pleat', new Set([...ALONG_LINE_KEYS, 'second', 'secondRoot', 'resolved'])],
   ['crimp', new Set([...ALONG_LINE_KEYS, 'second', 'crimp'])],
   ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target', 'additionalTargets'])],
   ['squash', new Set(['kind', 'flap', 'target', 'direction'])],
@@ -403,12 +405,33 @@ const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
  * judged here. Whether the inputs resolve — a point on the sheet, two free
  * points far enough apart — is the engine's to say on replay, as *broken*.
  */
-function readOp(value: unknown): FoldOp | null {
+function readOp(value: unknown, depth = 0, budget = { remaining: 256 }): FoldOp | null {
+  if (depth > 4 || --budget.remaining < 0) return null;
   if (!isRecord(value) || typeof value.kind !== 'string') return null;
   const keys = opKeys(value, value.kind);
   if (!keys || hasNewerKey(value, keys)) return null;
   const kind = value.kind;
   switch (kind) {
+    case 'repeat': {
+      const { source, parentState } = value;
+      const axis = readModelLine(value.axis);
+      if (!axis || !isRecord(source) || hasNewerKey(source, new Set(['first', 'last', 'revision'])) ||
+        ![source.first, source.last, source.revision].every((s) => typeof s === 'string' && s.length > 0) ||
+        typeof parentState !== 'string' || !parentState.startsWith('fs1:') ||
+        !Array.isArray(value.steps) || value.steps.length === 0 || value.steps.length > 128) return null;
+      const steps: import('./foldSequenceDocument').FoldRepeatEntry[] = [];
+      for (const step of value.steps) {
+        if (!isRecord(step) || hasNewerKey(step, new Set(['op', 'choices', 'expect', 'sourceStep', 'returnTo'])) ||
+          typeof step.expect !== 'string' || !step.expect.startsWith('fs1:') ||
+          typeof step.sourceStep !== 'string' || !step.sourceStep) return null;
+        const op = readOp(step.op, depth + 1, budget);
+        const choices = step.choices === undefined ? undefined : readChoices(step.choices);
+        if (!op || choices === null) return null;
+        if (op.kind === 'unfold-to' ? typeof step.returnTo !== 'number' || !Number.isInteger(step.returnTo) || step.returnTo < 0 || step.returnTo > steps.length : step.returnTo !== undefined) return null;
+        steps.push({ op, ...(choices ? { choices } : {}), expect: step.expect, sourceStep: step.sourceStep, ...(typeof step.returnTo === 'number' ? { returnTo: step.returnTo } : {}) });
+      }
+      return { kind, source: { first: source.first as string, last: source.last as string, revision: source.revision as string }, parentState, axis, steps };
+    }
     case 'valley':
     case 'mountain': {
       const along = readAlongLine(value);
@@ -471,6 +494,19 @@ function readOp(value: unknown): FoldOp | null {
     case 'outside-reverse': {
       const along = readAlongLine(value);
       return along && { kind, ...along };
+    }
+    case 'pleat': {
+      const along = readAlongLine(value);
+      const second = readLine(value.second);
+      const resolved = value.resolved === undefined ? undefined : readList(value.resolved, (entry) => {
+        if (!isRecord(entry) || entry.landing === undefined || Object.keys(entry).some((k) => k !== 'landing' && k !== 'completion')) return null;
+        const landing = readLanding(entry.landing);
+        const completion = entry.completion === undefined ? undefined : readCompletion(entry.completion);
+        return landing && completion !== null ? { landing, ...(completion ? { completion } : {}) } : null;
+      });
+      const secondRoot = value.secondRoot === undefined ? undefined : readModelLine(value.secondRoot);
+      if (!along || !second || secondRoot === null || (secondRoot && second.via !== 'axiom') || (second.via === 'axiom' && !secondRoot) || resolved === null || (resolved && resolved.length !== 2)) return null;
+      return { kind, ...along, second, ...(secondRoot ? { secondRoot } : {}), ...(resolved ? { resolved: [resolved[0]!, resolved[1]!] as const } : {}) };
     }
     case 'crimp': {
       const along = readAlongLine(value);
@@ -1022,6 +1058,9 @@ function writeStepSpread(spread: FoldStepSpreadEntry): unknown {
 /** An op as written — every field named, in a fixed order — and as `fh1` spells it. */
 export function writeFoldOp(op: FoldOp): Record<string, unknown> {
   switch (op.kind) {
+    case 'repeat':
+      return { kind: op.kind, source: { ...op.source }, parentState: op.parentState, axis: op.axis,
+        steps: op.steps.map((step) => ({ op: writeFoldOp(step.op), ...(step.choices && writeFoldChoices(step.choices) ? { choices: writeFoldChoices(step.choices) } : {}), expect: step.expect, sourceStep: step.sourceStep, ...(step.returnTo !== undefined ? { returnTo: step.returnTo } : {}) })) };
     case 'valley':
     case 'mountain':
       return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op), landing: op.landing ?? { kind: 'outer' } };
@@ -1054,6 +1093,11 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
     case 'closed-sink':
     case 'unsink':
       return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op) };
+    case 'pleat':
+      return { kind: op.kind, line: writeLine(op.line), second: writeLine(op.second), ...(op.secondRoot ? { secondRoot: { n: [...op.secondRoot.n], d: op.secondRoot.d } } : {}), ...writeMotion(op),
+        ...(op.resolved ? { resolved: op.resolved.map((r) => ({ landing: r.landing,
+          ...(r.completion ? { completion: { faces: r.completion.faces.map(writePoint), orders: r.completion.orders.map((o) => [...o]) } } : {}),
+        })) } : {}) };
     case 'crimp':
       return {
         kind: op.kind,

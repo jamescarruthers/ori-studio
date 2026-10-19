@@ -78,7 +78,7 @@ function phoneVerbGroups(
         ]
       : [commandRow(sendToEdit, false)];
   const groups: { id: string; items: (ViewportToolbarAction | null)[] }[] = [
-    { id: 'return', items: [commandRow(foldCommand(actions, 'unfold-to'), false)] },
+    { id: 'return', items: [commandRow(foldCommand(actions, 'unfold-to'), false), commandRow(foldCommand(actions, 'repeat'), false)] },
     { id: 'in', items: [commandRow(foldCommand(actions, 'import-cp'), true)] },
     { id: 'send', items: send },
     {

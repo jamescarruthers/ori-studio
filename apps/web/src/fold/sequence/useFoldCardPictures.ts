@@ -9,10 +9,11 @@ import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useFoldPaneDisplay } from '../canvas/foldPaneDisplay';
 import type { FoldPaneDisplay } from '../canvas/foldPaneScenes';
 import { foldSpreadPictureKey, foldStatePictureKey, foldStatePictureUrl } from '../canvas/foldStatePicture';
-import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldScene } from '../engine/foldEngineWire';
 import type { FoldSession } from '../session/foldSession';
 import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
+import type { FoldCardPictureSource } from './foldCardPictureSource';
+export { foldCardPictureSource, type FoldCardPictureSource } from './foldCardPictureSource';
 
 /**
  * The step strip's card pictures (plan D14): each step's folded state as the
@@ -46,26 +47,6 @@ import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
  *   of SVG between them, the oldest let go first; a card scrolled back to
  *   paints again.
  */
-
-/** What a card's picture is of. */
-export interface FoldCardPictureSource {
-  /** The state, to ask its scene of. */
-  readonly state: FoldEngineStateHandle;
-  /** What names the state whatever its handle: its fingerprint, else its handle. */
-  readonly key: string;
-  /** The layer spread the card shows the state with, as the folded pane would (`foldStepSpread`); null for none. */
-  readonly spread: LayerSpreadOptions | null;
-}
-
-/** A state's picture source: by its fingerprint when it has one, spread by `spread`. Null for no state. */
-export function foldCardPictureSource(
-  state: FoldEngineStateHandle | null,
-  fingerprint: string | null = null,
-  spread: LayerSpreadOptions | null = null
-): FoldCardPictureSource | null {
-  if (!state) return null;
-  return { state, key: fingerprint ?? `handle:${state.generation}:${state.id}`, spread };
-}
 
 const MAX_PICTURES = 96;
 const MAX_PICTURE_CHARS = 8_000_000;

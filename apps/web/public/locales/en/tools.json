@@ -430,6 +430,7 @@
       "openSink": "Open sink",
       "outsideReverse": "Outside reverse fold",
       "petal": "Petal fold",
+      "pleat": "Pleat",
       "rabbitEar": "Rabbit ear",
       "squash": "Squash fold",
       "swivel": "Swivel fold",
@@ -467,6 +468,18 @@
       "trigger": "Tools"
     },
     "playStep": "Play Step",
+    "pleat": {
+      "blocked": "Both folds must fit within the selected flap without moving other paper. Check the lines and selected layers.",
+      "intro": "Locate the mountain line first, then the valley line, on the model before it folds.",
+      "layers": "Choose the flap to pleat. The end beyond the valley line folds back.",
+      "limit": "There are too many layer arrangements to resolve this pleat. Select a smaller flap.",
+      "lines": "The valley line must be beyond the mountain line, toward the end that moves. Check the lines or press Swap.",
+      "mountainInstruction": "Mountain line: {{instruction}}",
+      "mountainLine": "Mountain line",
+      "refusedTitle": "The pleat cannot fold here",
+      "valleyInstruction": "Valley line: {{instruction}}",
+      "valleyLine": "Valley line"
+    },
     "railLabel": "Fold tools",
     "readOnly": {
       "locked": "This step is from a newer Ori Studio, so nothing can be folded from it.",
@@ -808,6 +821,7 @@
       "mountain": "Mountain fold",
       "mountainHelp": "Fold the moving side away from you, so it lands underneath.",
       "openSinkHelp": "Push a closed point’s tip in, turning every layer of it inside out.",
+      "pleatHelp": "Make a pleat: locate the mountain line, then the valley line.",
       "precrease": "Precrease",
       "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
       "reverse": "Reverse fold",

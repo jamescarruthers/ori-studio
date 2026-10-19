@@ -93,6 +93,8 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
     case 'turn':
     case 'rotate':
       return { op: 'turn', turn: turnKindOf(op) };
+    case 'repeat':
+      return { op: 'repeat', count: op.steps.length };
     case 'unfold-to':
       return { op: 'unfold-to', sheet: op.target === null, number: context.returnStep ?? undefined };
     case 'cp-jump':
@@ -107,6 +109,8 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
         line: sentenceLine(op.line, null, context),
         scope: scopeOf(op.seed),
       };
+    case 'pleat':
+      return { op: 'pleat', line: sentenceLine(op.line, null, context), second: sentenceLine(op.second, null, context), scope: scopeOf(op.seed) };
     case 'crimp':
       return {
         op: 'crimp',

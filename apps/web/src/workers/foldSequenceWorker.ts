@@ -1,3 +1,5 @@
+import { prepareRepeat, type RepeatRequest } from '../fold/repeat/repeatPreparation';
+import { repeatSymmetries } from '../fold/repeat/repeatGeometry';
 import type { FoldOrderQuery, FoldOrderSelection } from '../fold/engine/foldEngineCompoundCalls';
 /**
  * The Fold engine's bridge (`crates/oristudio-fold-wasm`), alone in a worker.
@@ -136,6 +138,12 @@ async function call<T>(fn: (calls: FoldWorkerCalls) => T): Promise<T> {
 }
 
 const api = {
+  async repeatAxes(state: number) {
+    return call((calls) => repeatSymmetries(calls.scene(state), calls.summary(state).sheet));
+  },
+  async prepareRepeat(request: RepeatRequest) {
+    return call((calls) => prepareRepeat(calls, request));
+  },
   /** `FOLD_ENGINE_VERSION`, stored beside every cached state. */
   async engineVersion(): Promise<number> {
     return call(() => fold_engine_version());

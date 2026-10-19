@@ -339,7 +339,7 @@ export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | FoldPoin
   }
   const first = lineModeInput(tools.lineMode).steps.length;
   const [mode, from] =
-    tools.tool === 'crimp' && tools.picks.length > first ? [tools.secondLineMode, first] : [tools.lineMode, 0];
+    (tools.tool === 'crimp' || tools.tool === 'pleat') && tools.picks.length > first ? [tools.secondLineMode, first] : [tools.lineMode, 0];
   const pick = (isLineTool(tools.tool) || (tools.tool === 'swivel' && tools.swivelInput === 'creases')) && mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
   return pick?.kind === 'free' ? pick : null;
 }
@@ -381,7 +381,7 @@ export function foldLocatedLines(
       return segment ? [segment] : [];
     });
   }
-  if (tool !== 'crimp' || pictured || !lines) return [];
+  if ((tool !== 'crimp' && tool !== 'pleat') || pictured || !lines) return [];
   return [lines.first, lines.second].filter((line): line is [Point, Point] => line !== null);
 }
 

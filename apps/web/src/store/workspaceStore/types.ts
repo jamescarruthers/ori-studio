@@ -2396,6 +2396,10 @@ export interface FoldSliceActions {
     expected: import('../../fold/document/foldSequenceDocument').FoldCpJumpOp,
     op: import('../../fold/document/foldSequenceDocument').FoldCpJumpOp,
     expect: string, loadId: number) => boolean;
+  commitFoldSteps: (parent: string | null, entries: readonly (Omit<FoldStepDraft, 'parent' | 'adopt'> & { returnTo?: number })[], loadId: number) => string | null;
+  updateFoldRepeat: (stepId: string,
+    expected: import('../../fold/document/foldSequenceDocument').FoldRepeatOp,
+    op: import('../../fold/document/foldSequenceDocument').FoldRepeatOp, expect: string, loadId: number) => boolean;
   commitFoldStep: (draft: FoldStepDraft, options?: { loadId?: number }) => string | null;
   /**
    * "Delete this step and what follows" (D6): the step and its subtree,

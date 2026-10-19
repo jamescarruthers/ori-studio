@@ -27,6 +27,8 @@ import type { FoldCardPictureSource } from './useFoldCardPictures';
 
 /** A card, and what it is a card of. */
 export interface FoldStripCard extends StepFilmstripCard {
+  /** Part of the source range being repeated, independently of the cursor. */
+  repeatSource?: boolean;
   /** The path entry it shows, by index; null for the step being folded. */
   entry: number | null;
   /** The state its picture is of; null for none. */

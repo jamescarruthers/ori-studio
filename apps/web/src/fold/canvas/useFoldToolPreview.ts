@@ -1,7 +1,11 @@
+import { useFoldAxiomCandidates } from './useFoldAxiomCandidates';
+import { buildPleatStep, pleatLines } from '../tools/pleat/pleatStep';
+import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
+import { useFoldRepeatUi } from '../repeat/foldRepeatUi';
 import { useFoldOrderResolution, type FoldOrderResolution } from '../orders/useFoldOrderResolution';
 import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { trackFoldChoiceOffered, trackFoldRefused } from '../../analytics';
+import { trackFoldRefused } from '../../analytics';
 import { reportError } from '../../monitoring';
 import { isVertexOp, type FoldChoices, type FoldOp } from '../document/foldSequenceDocument';
 import type {
@@ -14,11 +18,10 @@ import type {
   FoldScene,
   FoldStateSummary,
 } from '../engine/foldEngineWire';
-import { canonicalJson } from '../document/foldDigest';
 import { foldStepInputKey } from '../session/foldSessionEngine';
 import { FOLD_PINCH_LENGTH_QUERY, FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { axiomLineOfPicks, locate, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
+import { axiomLineOfPicks, locate, buildFoldStep, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind, isSinkTool, isVertexTool, usesLineMode } from '../tools/foldToolCatalog';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import { rotateStepOp } from '../tools/rotate/rotateTool';
@@ -71,10 +74,12 @@ export interface FoldExtentPreview {
 
 /** Everything the canvas knows of the fold the tools describe, tier by tier (plan D14). */
 export interface FoldToolPreview {
+  pleatLines?: FoldCrimpLines | null;
   swivelLine?: NonNullable<FoldToolState['swivelFirst']> | null;
   orderResolution?: FoldOrderResolution | null;
   /** The axiom's roots for the picks, once the engine has named them; null for no axiom, or not yet. */
   candidates: readonly FoldAxiomCandidate[] | null;
+  rootLine?: 'first' | 'second';
   build: FoldStepBuild;
   /**
    * The seed every step is built with: the tools' own, or its default flap
@@ -159,51 +164,24 @@ export function useFoldToolPreview(
   // identity only with a pick or a restart.
   const { tool, lineMode, picks, swivelInput } = tools;
   const axiomLine = useMemo(() => axiomLineOf({ tool, lineMode, picks, swivelInput }), [tool, lineMode, picks, swivelInput]);
-  const axiomKey = axiomLine && stateKey ? `${stateKey}|${canonicalJson(axiomLine)}` : null;
-  const [roots, setRoots] = useState<{
-    key: string;
-    candidates: FoldAxiomCandidate[] | null;
-    refused: FoldEngineRefused | null;
-  } | null>(null);
-  // Each choice offered is counted once, by the line it was offered for.
-  const offered = useRef<string | null>(null);
-  useEffect(() => {
-    if (!axiomLine || axiomKey === null || roots?.key === axiomKey) return undefined;
-    let current = true;
-    void withCursor((engine, at) => engine.axiomCandidates(at, axiomLine)).then(
-      (answer) => {
-        if (!current || answer.status !== 'answered') return;
-        const outcome = answer.value;
-        if (outcome.status === 'ok') {
-          setRoots({
-            key: axiomKey,
-            candidates: outcome.candidates,
-            // No fold here: worded as the engine words a stored step's root that is gone.
-            refused: outcome.candidates.length === 0 ? clientRefusal('no_root') : null,
-          });
-          if (outcome.candidates.length > 1 && offered.current !== axiomKey) {
-            offered.current = axiomKey;
-            trackFoldChoiceOffered('axiom_root', outcome.candidates.length);
-          }
-        } else {
-          setRoots({ key: axiomKey, candidates: null, refused: outcome });
-        }
-      },
-      (error: unknown) => reportError(error, { surface: 'fold:axiom-candidates' })
-    );
-    return () => {
-      current = false;
-    };
-  }, [withCursor, axiomLine, axiomKey, roots?.key]);
-  const ownRoots = roots && roots.key === axiomKey ? roots : null;
-  const candidates = ownRoots?.candidates ?? null;
-  const candidate = candidates ? (candidates[tools.root] ?? candidates[0] ?? null) : null;
+  const ownRoots = useFoldAxiomCandidates(session, axiomLine);
+  const candidate = ownRoots?.candidates?.[tools.root] ?? ownRoots?.candidates?.[0] ?? null;
+  const { secondLineMode } = tools;
+  const secondAxiom = useMemo(() => tool === 'pleat'
+    ? axiomLineOfPicks(secondLineMode, picks.slice(lineModeInput(lineMode).steps.length)) : null,
+    [tool, secondLineMode, picks, lineMode]);
+  const secondRoots = useFoldAxiomCandidates(session, secondAxiom);
+  const secondCandidate = secondRoots?.candidates?.[tools.secondRoot ?? 0] ?? secondRoots?.candidates?.[0] ?? null;
+  // Keep the mountain's root picker available until valley picks begin.
+  // Once they do, only the valley's independently stored choice can change.
+  const rootLine = tool === 'pleat' && picks.length > lineModeInput(lineMode).steps.length ? 'second' : 'first';
+  const candidates = (rootLine === 'second' ? secondRoots : ownRoots)?.candidates ?? null;
 
   // --- The section at the located line, and the seed resolved against it:
   // a fold that takes the top flap or material picked on the CP has no
   // step until the section says which flap that is. Every step below is
   // built with the resolved seed, so what is previewed is what commits.
-  const lineSection = useFoldLineSection(session, index, tools, candidate);
+  const lineSection = useFoldLineSection(session, index, tools, candidate, secondCandidate);
   const findingSeed = lineSection.seed === null;
   const resolvedSeed = lineSection.seed ?? FOLD_EVERY_LAYER;
   const seeded = useMemo<FoldSeededToolState>(() => ({ ...tools, seed: resolvedSeed }), [tools, resolvedSeed]);
@@ -247,6 +225,7 @@ export function useFoldToolPreview(
     [along, tools.extent, tools.extentPicks, pinchLength]
   );
   const plainBuild = useMemo<FoldStepBuild>(() => {
+    if (index && seeded.tool === 'pleat') return buildPleatStep({ ...seeded, candidate, secondCandidate }, index);
     if (!index || !isFoldKind(seeded.tool)) return { status: 'unlocated' };
     return buildFoldStep(
       {
@@ -261,17 +240,20 @@ export function useFoldToolPreview(
       },
       index
     );
-  }, [index, seeded, candidate, extentState]);
+  }, [index, seeded, candidate, secondCandidate, extentState]);
   // While its points are still being clicked, the whole line's build stands
   // in for it: what moves and the layers at the line are the whole
   // precrease's (the engine marks through the same layers), but nothing is
   // previewed or committed until the extent is whole.
   const extentPending = extentState.status === 'incomplete' || extentState.status === 'length';
-  const compounding = compoundStep !== null;
+  const pleatDrawing = useMemo(() => index && tools.tool === 'pleat' ? pleatLines({ ...seeded, candidate, secondCandidate }, index) : null, [index, tools.tool, seeded, candidate, secondCandidate]);
+  const compounding = compoundStep !== null || tools.tool === 'pleat';
   const build = compoundStep ? compoundStep.build : vertexing ? UNLOCATED : plainBuild;
   const vertexBuilt = vertexStep.step;
   // Rotate's step is its rotation, from the moment it is in hand: it locates nothing.
-  const returning = useFoldReturnUi((s) => s.opening !== null);
+  const unfolding = useFoldReturnUi((s) => s.opening !== null);
+  const repeating = useFoldRepeatUi((s) => s.opening !== null);
+  const returning = unfolding || repeating;
   const rotating = tools.tool === 'rotate';
   const rotation = tools.rotation;
   const baseStep = useMemo<FoldToolStep | null>(() => {
@@ -439,7 +421,7 @@ export function useFoldToolPreview(
   const refused =
     resolvedOrders.refused ??
     (build.status === 'refused' ? build.refused : null) ??
-    ownRoots?.refused ??
+    ownRoots?.refused ?? secondRoots?.refused ??
     compoundRefused ??
     (locatedSwivel && 'status' in locatedSwivel ? locatedSwivel : null) ??
     vertexStep.refused ??
@@ -464,9 +446,11 @@ export function useFoldToolPreview(
 
   const landedPreview = landed && landed.key === landedKey ? landed.landed : null;
   return {
+    pleatLines: pleatDrawing,
     swivelLine,
     orderResolution: resolvedOrders.resolution,
     candidates,
+    rootLine,
     build,
     seed: lineSection.seed,
     step,

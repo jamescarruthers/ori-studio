@@ -19,6 +19,7 @@
  */
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
+import { openFoldRepeat } from '../repeat/foldRepeatUi';
 import { openFoldReturn } from '../return/foldReturnUi';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
@@ -165,6 +166,7 @@ export function foldActionsAt(
       foldTools().selectTool('rotate');
       setFoldView('fold');
     },
+    repeat: () => { fromHere(); openFoldRepeat(); },
     unfold: (last) => { fromHere(); openFoldReturn(last); },
     deleteStep: (id) => {
       useWorkspaceStore.getState().deleteFoldStep(id);

@@ -262,31 +262,24 @@ fn a_sheet_started_back_up_stores_a_valley_as_m() {
     assert_eq!(kind_at(&r.state, [0.5, 0.5]), M);
 }
 
-/// The numerics (plan D5): a near miss with its landmark line, and the
-/// image–image sliver. A strip's left end folded over at x = 0.3 covers
-/// [0.3, 0.6]; folding the right end at x = 0.79995 lands it at
-/// [0.5999, 0.79995], 1e-4 into that layer.
+/// A narrow image overlap with a resolved order is allowed; a near miss
+/// that would change material topology remains guarded at the same threshold.
 #[test]
-fn near_misses_and_slivers_are_refused() {
+fn resolved_overlaps_land_but_material_near_misses_are_refused() {
     let strip = Sheet::rectangle(1.0, 0.5).unwrap_or_else(|e| panic!("{e}"));
     let s = State::flat(strip, StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
     let s = fold(&s, &all(x_eq(0.3), [0.1, 0.25], Valley)).state;
-    let e = refused(&s, &all(x_eq(0.79995), [0.9, 0.25], Valley));
-    let FoldRefusal::Sliver {
-        penetration,
-        face: f,
-        vertex,
-    } = e.refusal
-    else {
-        panic!("{:?}", e.refusal);
-    };
-    assert!((penetration - 1e-4).abs() < 1e-9);
-    // Named in the parent: the folded-over layer, and a corner of the
-    // strip's right end, which lands on its edge.
-    assert_eq!(f, face(&s, [0.1, 0.25]));
-    let corner = s.vertices()[vertex.0 as usize];
-    assert!(corner[0] == 1.0, "{corner:?}");
-    assert!(e.fixes.is_empty(), "{:?}", e.fixes);
+    let result = fold(&s, &all(x_eq(0.79995), [0.9, 0.25], Valley));
+    assert_valid(&result.state);
+    assert!(
+        (result
+            .state
+            .vertex_image(oristudio_fold::VertexId(1))
+            .unwrap()[0]
+            - 0.5999)
+            .abs()
+            < 1e-9
+    );
 
     // A line 1e-4 from the folded layer's edge at x = 0.6 is a near miss;
     // the landmark offered is the edge's own line, which folds.

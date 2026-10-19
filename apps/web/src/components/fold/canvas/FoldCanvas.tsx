@@ -197,7 +197,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // second is located; a vertex fold's vertex and choices on the folded one
   // (its creases are paper, `useFoldCanvasPaint`).
   const freeFrom = foldFreeLineStart(toolState);
-  const crimpLines = preview.crimp?.lines ?? null;
+  const crimpLines = preview.crimp?.lines ?? preview.pleatLines ?? null;
   const located = useMemo(
     () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines, { index: view.index, first: toolState.swivelFirst, current: preview.swivelLine }),
     [toolState.tool, preview.action, crimpLines, view.index, toolState.swivelFirst, preview.swivelLine]

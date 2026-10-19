@@ -17,6 +17,8 @@ import type { FoldSlice, WorkspaceSliceCreator, WorkspaceState } from '../types'
 
 /** A committed step's undo entry, by what it does. */
 const STEP_LABELS: Record<FoldOpKind, string> = {
+  pleat: 'Pleat',
+  repeat: 'Repeat on the other side',
   valley: 'Valley fold',
   mountain: 'Mountain fold',
   precrease: 'Precrease',
@@ -123,6 +125,23 @@ export const createFoldSlice: WorkspaceSliceCreator<FoldSlice> = (set, get) => {
       if (reader) set({ foldReader: withFoldCursor(reader, shown.document, stepId) });
       return stepId;
     },
+
+    commitFoldSteps: (parent, entries, loadId) => {
+      if (outlived(loadId) || get().foldReader?.cursor !== parent) return null;
+      let id: string | null = null;
+      const next = commitShown('Repeat on the other side', (document) => {
+        const result = foldEdits.appendFoldSteps(document, parent, entries);
+        id = result?.id ?? null;
+        return result?.document ?? document;
+      });
+      const reader = get().foldReader;
+      if (!next?.[0] || !id || !reader) return null;
+      set({ foldReader: withFoldCursor(reader, next[0].document, id) });
+      return id;
+    },
+    updateFoldRepeat: (stepId, expected, op, expect, loadId) =>
+      !outlived(loadId) && commitShown('Update Repeat from source', (document) =>
+        foldEdits.updateFoldRepeat(document, stepId, expected, op, expect)) !== null,
 
     updateFoldReturn: (stepId, expected, op, expect, loadId) =>
       !outlived(loadId) && commitShown('Rebuild unfold', (document) =>

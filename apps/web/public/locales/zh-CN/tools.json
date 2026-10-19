@@ -400,6 +400,7 @@
       "crease": "沿预折痕折叠会把它重新折起；沿折边折叠会展开翼片。",
       "free": "不吸附：折线正好经过你单击的点。",
       "freePoint": "按住 {{modifier}} 可不吸附地把点放在任意位置。",
+      "freeSnap": "吸附到附近的目标点；附近没有目标点时，使用点击的位置。",
       "openSinkSquare": "横跨角的线决定沉折的深度，并且必须与角的中线严格垂直：公理 4 可以画出这样的线。",
       "queued": "预览就绪后立即折叠…",
       "rotateCancel": "按 Esc 放下旋转工具，不添加这次旋转。",
@@ -407,8 +408,7 @@
       "rotateRefused": "无法在此处添加这次旋转。",
       "severalSunk_other": "这里有 {{count}} 个已沉入的角：使用第一个。",
       "snap": "点会吸附到角、标记、折痕交点、中点和边。",
-      "unsinkRing": "这条线是沉折留下的环上的一条折痕，沿着已沉入角的顶边。",
-      "freeSnap": "吸附到附近的目标点；附近没有目标点时，使用点击的位置。"
+      "unsinkRing": "这条线是沉折留下的环上的一条折痕，沿着已沉入角的顶边。"
     },
     "op": {
       "closedSink": "闭合沉折",
@@ -416,6 +416,7 @@
       "openSink": "开放沉折",
       "outsideReverse": "外翻折",
       "petal": "花瓣折",
+      "pleat": "褶折",
       "rabbitEar": "兔耳折",
       "squash": "压平折",
       "swivel": "旋转折",
@@ -451,6 +452,18 @@
       "trigger": "工具"
     },
     "playStep": "播放步骤",
+    "pleat": {
+      "blocked": "两次折叠都必须在所选纸瓣内完成，且不能带动其他纸张。请检查折线和所选纸层。",
+      "intro": "在折叠前的模型上，先确定山折线，再确定谷折线。",
+      "layers": "选择要褶折的纸瓣。谷折线外侧的末端会向回折。",
+      "limit": "纸层排列方案过多，无法确定此次褶折。请选择更小的纸瓣。",
+      "lines": "谷折线必须位于山折线朝向移动末端的一侧。请检查折线，或点击交换。",
+      "mountainInstruction": "山折线：{{instruction}}",
+      "mountainLine": "山折线",
+      "refusedTitle": "此处无法褶折",
+      "valleyInstruction": "谷折线：{{instruction}}",
+      "valleyLine": "谷折线"
+    },
     "railLabel": "折叠工具",
     "readOnly": {
       "locked": "此步骤来自更新版本的 Ori Studio，因此无法从这里继续折叠。",
@@ -790,6 +803,7 @@
       "mountain": "山折",
       "mountainHelp": "把移动的一侧向远离你的方向折，使它落在下面。",
       "openSinkHelp": "把闭合角的尖端推进去，并把它的每一层翻转。",
+      "pleatHelp": "进行褶折：先确定山折线，再确定谷折线。",
       "precrease": "预折",
       "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
       "reverse": "反折",
@@ -1088,8 +1102,8 @@
       "lineMode": "确定折线",
       "movingSide": "移动的一侧",
       "settings_other": "{{count}} 项设置",
-      "swap": "交换",
-      "snapFreeLine": "吸附到点"
+      "snapFreeLine": "吸附到点",
+      "swap": "交换"
     }
   },
   "foldAngleDisplay": {

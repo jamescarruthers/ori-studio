@@ -175,6 +175,8 @@ export interface FoldToolState {
   picks: readonly FoldPick[];
   /** The axiom root chosen, by index into the candidates the engine gave for the picks. */
   root: number;
+  /** Independent axiom choice for the valley line of a pleat. */
+  secondRoot?: number;
   /** The moving side is the other one from the default. */
   swapped: boolean;
   seed: FoldToolSeed;
@@ -256,6 +258,7 @@ function located(state: FoldToolState): FoldToolState {
     swivelFirst: undefined,
     extentPicks: [],
     root: 0,
+    secondRoot: 0,
     swapped: false,
     seed: FOLD_TOP_FLAP,
     override: null,
@@ -301,6 +304,15 @@ export function foldToolInputKey(state: FoldToolState): string {
   return JSON.stringify(input);
 }
 
+/** Toolbar construction changes follow the line currently being drawn. */
+export function pleatDrawingValley(state: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): boolean {
+  return state.tool === 'pleat' && state.picks.length >= lineModeInput(state.lineMode).steps.length;
+}
+
+export function activeFoldLineMode(state: Pick<FoldToolState, 'tool' | 'lineMode' | 'secondLineMode' | 'picks'>): FoldLineModeId {
+  return pleatDrawingValley(state) ? state.secondLineMode : state.lineMode;
+}
+
 /** Every click is in: the line is located (or, for the Divide line, the segment). */
 export function isLocated(state: FoldToolState): boolean {
   const model = foldToolInput(state);
@@ -324,7 +336,7 @@ export function picksAlongLine(state: FoldToolState): boolean {
 export interface FoldTools {
   readonly store: StoreApi<FoldToolState>;
   selectTool(tool: FoldToolId): void;
-  selectLineMode(mode: FoldLineModeId): void;
+  selectLineMode(mode: FoldLineModeId, line?: 'first'): void;
   setFreeLineSnap(enabled: boolean): void;
   /** A click: the pick it made. Whether it was taken (a click past the last is not). */
   pick(pick: FoldPick): boolean;
@@ -342,7 +354,7 @@ export interface FoldTools {
    */
   swapSide(): boolean;
   /** Step through the axiom's roots, of `count`. */
-  stepRoot(delta: number, count: number): void;
+  stepRoot(delta: number, count: number, line?: 'first' | 'second'): void;
   /** Fold with this seed; a seed of no flaps is every layer (`flapSeed`). */
   setSeed(seed: FoldToolSeed): void;
   /**
@@ -465,13 +477,18 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         // Anything else locates anew. The open and the closed sink are one
         // sink's two kinds, as the reverse fold's are: a fix's line taken for
         // one (the square line) is the other's too.
+        if (tool === 'pleat') return { ...restart(state), tool, lineMode: 'free', secondLineMode: 'free' };
         const keeps = isLineTool(tool) && isLineTool(state.tool);
         if (keeps) {
-          const clicks = toolInput(tool, state.lineMode, state.secondLineMode).steps.length;
+          const secondLineMode = tool === 'crimp' && state.secondLineMode !== 'free' && state.secondLineMode !== 'crease' ? 'free' : state.secondLineMode;
+          const clicks = secondLineMode !== state.secondLineMode
+            ? lineModeInput(state.lineMode).steps.length
+            : toolInput(tool, state.lineMode, secondLineMode).steps.length;
           const sinkKinds = isSinkKindTool(tool) && isSinkKindTool(state.tool);
           return {
             ...state,
             tool,
+            secondLineMode,
             picks: state.picks.length > clicks ? state.picks.slice(0, clicks) : state.picks,
             override: sinkKinds ? state.override : null,
             compound: anotherTip(state.compound),
@@ -487,7 +504,11 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => state.freeLineSnap === freeLineSnap ? state : { ...state, freeLineSnap });
     },
 
-    selectLineMode(lineMode) {
+    selectLineMode(lineMode, line) {
+      if (line !== 'first' && pleatDrawingValley(store.getState())) {
+        api.setSecondLineMode(lineMode);
+        return;
+      }
       set((state) => {
         // A line mode belongs to the folds along a line: choosing one from
         // any other tool takes a fold in hand.
@@ -541,11 +562,11 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       return true;
     },
 
-    stepRoot(delta, count) {
+    stepRoot(delta, count, line = 'first') {
       if (count <= 1) return;
       set((state) => ({
         ...state,
-        root: (((state.root + delta) % count) + count) % count,
+        [line === 'second' ? 'secondRoot' : 'root']: ((((line === 'second' ? state.secondRoot ?? 0 : state.root) + delta) % count) + count) % count,
         swapped: false,
         // Another root is another line: points clicked along this one are off it.
         extentPicks: [],
@@ -638,8 +659,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         if (state.secondLineMode === secondLineMode) return state;
         // The first line's clicks stay: only the second line is located anew.
         const first = lineModeInput(state.lineMode).steps.length;
-        const picks = state.tool === 'crimp' ? state.picks.slice(0, first) : state.picks;
-        return { ...state, secondLineMode, picks, override: null, compound: anotherTip(state.compound) };
+        const picks = (state.tool === 'crimp' || state.tool === 'pleat') ? state.picks.slice(0, first) : state.picks;
+        return { ...state, secondLineMode, secondRoot: 0, picks, override: null, compound: anotherTip(state.compound) };
       });
     },
 

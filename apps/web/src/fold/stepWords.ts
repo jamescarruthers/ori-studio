@@ -80,6 +80,8 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
       return t('panels:fold.words.unfold', 'Unfold');
     case 'turn':
       return turnName(step.turn, t);
+    case 'pleat': return t('tools:fold.op.pleat', 'Pleat');
+    case 'repeat': return t('panels:fold.repeat.label', 'Repeat');
     case 'unfold-to':
       return t('panels:fold.return.label', 'Unfold to step');
     case 'cp-jump':
@@ -131,6 +133,8 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
     case 'turn':
       // The turn card's own title, so a turn's badge and card agree.
       return turnCardWords(step.turn, t).title;
+    case 'pleat': return t('tools:fold.op.pleat', 'Pleat');
+    case 'repeat': return t('panels:fold.repeat.label', 'Repeat');
     case 'unfold-to':
       return t('panels:fold.return.label', 'Unfold to step');
     case 'cp-jump':
@@ -164,6 +168,7 @@ export function lineLabel(t: TFunction, step: FoldSentenceStep): string | null {
     case 'reverse':
     case 'sink':
     case 'tuck':
+    case 'pleat':
     case 'crimp':
       return lineWords(t, step.line);
     case 'unfold':
@@ -173,8 +178,9 @@ export function lineLabel(t: TFunction, step: FoldSentenceStep): string | null {
   }
 }
 
-/** How a crimp's second line was found: "Free line", "Existing crease". Null for any other step. */
+/** How a crimp or pleat found its second line, including its axiom. Null for any other step. */
 export function secondLineLabel(t: TFunction, step: FoldSentenceStep): string | null {
+  if (step.op === 'pleat') return lineWords(t, step.second);
   return step.op === 'crimp' ? lineWords(t, { via: step.second }) : null;
 }
 

@@ -98,7 +98,7 @@ describe('the compound folds’ one wire', () => {
     const compound = FOLD_OP_KINDS.filter((kind) => compoundFamilyOf({ kind }) !== null);
     expect(compound).toEqual(Object.keys(FOLD_COMPOUND_FAMILY_OF));
     expect(FOLD_OP_KINDS.filter((kind) => !isFoldCompoundOp({ kind }))).toEqual([
-      'valley',
+      'repeat', 'pleat', 'valley',
       'mountain',
       'precrease',
       'unfold',

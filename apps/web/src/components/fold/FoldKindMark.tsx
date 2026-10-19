@@ -31,14 +31,7 @@ export function FoldKindMark({
     >
       {kind === 'valley' && <path d="M5 6 12 18 19 6" />}
       {kind === 'mountain' && <path d="M5 18 12 6 19 18" />}
-      {kind === 'precrease' && (
-        <>
-          <path d="M2.5 2.5h19v19h-19Z" />
-          <path d="M3 12h18" strokeDasharray="2 2" strokeWidth={1.2} />
-          <path d="M10 5.5Q17 13 10 19Q21 12 13 5.5" />
-          <path d="m13 5.5 1 3.5 1.5-1.5Z" fill="currentColor" stroke="none" />
-        </>
-      )}
+      {kind === 'precrease' && <path d="M5 19 19 5" />}
       {kind === 'crimp' && (
         <>
           <path d="M9 5.5h12M9 18.5h12" />

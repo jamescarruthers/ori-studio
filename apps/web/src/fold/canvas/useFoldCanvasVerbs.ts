@@ -114,7 +114,7 @@ function isAlongLine(
     op?.kind === 'precrease' ||
     op?.kind === 'inside-reverse' ||
     op?.kind === 'outside-reverse' ||
-    op?.kind === 'crimp' ||
+    op?.kind === 'crimp' || op?.kind === 'pleat' ||
     op?.kind === 'tuck' ||
     op?.kind === 'open-sink' ||
     op?.kind === 'closed-sink' ||
@@ -126,7 +126,7 @@ function isAlongLine(
 export interface FoldCanvasVerbs {
   setFreeLineSnap: (enabled: boolean) => void;
   selectTool: (id: FoldToolId) => void;
-  selectLineMode: (id: FoldLineModeId) => void;
+  selectLineMode: (id: FoldLineModeId, line?: 'first') => void;
   /** Add a turn as a step of its own, after the step on screen. */
   turn: (turn: TurnKind) => void;
   /** What a click at a point of a pane takes, for the tool's next click. */
@@ -312,12 +312,13 @@ export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState)
     return { kind: 'pocket', index: Math.min(tools.compound.pocket, sink.pockets.length - 1), count: sink.pockets.length };
   }
   const roots = preview.candidates?.length ?? 0;
-  return roots > 1 ? { kind: 'root', index: Math.min(tools.root, roots - 1), count: roots } : null;
+  return roots > 1 ? { kind: 'root', index: Math.min(preview.rootLine === 'second' ? tools.secondRoot ?? 0 : tools.root, roots - 1), count: roots } : null;
 }
 
 /** What a committed op is called in `fold step added`; null for Import CP, which the canvas does not commit. */
 function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
   switch (op.kind) {
+    case 'repeat':
     case 'unfold-to':
     case 'cp-jump':
       return null;
@@ -370,7 +371,7 @@ function trackCommitted(op: FoldOp, defaulted: boolean): void {
     trackFoldStepAdded(kind, vertex ? { vertex } : undefined);
     return;
   }
-  if (op.kind === 'turn' || op.kind === 'cp-jump' || op.kind === 'unfold-to') {
+  if (op.kind === 'turn' || op.kind === 'cp-jump' || op.kind === 'unfold-to' || op.kind === 'repeat') {
     trackFoldStepAdded(kind);
     return;
   }
@@ -492,7 +493,7 @@ export function useFoldCanvasVerbs(
       const { view: shown, preview: previewed, session: current } = live.current;
       const step = previewed.step;
       const index = shown.index;
-      if (!step || !index || step.op.kind === 'turn' || step.op.kind === 'rotate' || step.op.kind === 'cp-jump' || step.op.kind === 'unfold-to') return;
+      if (!step || !index || step.op.kind === 'turn' || step.op.kind === 'rotate' || step.op.kind === 'cp-jump' || step.op.kind === 'unfold-to' || step.op.kind === 'repeat') return;
       const sheet = topSheetPointAt(index, at);
       if (!sheet) return;
       const seed = state().seed;
@@ -955,7 +956,7 @@ export function useFoldCanvasVerbs(
             tools.stepPocket(delta, choice.count);
             break;
           case 'root':
-            tools.stepRoot(delta, choice.count);
+            tools.stepRoot(delta, choice.count, live.current.preview.rootLine);
             break;
           case 'emergent':
           case 'ridge':

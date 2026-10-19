@@ -135,7 +135,7 @@ export function useFoldCanvasPaint(
   // the near layer, as a pleat's two creases are. A vertex tool's pending
   // creases, each by its letter as the viewer sees it, until the engine's
   // own take their place.
-  const secondLine = preview.action ? (preview.crimp?.lines.second ?? null) : null;
+  const secondLine = preview.action ? (preview.crimp?.lines.second ?? preview.pleatLines?.second ?? null) : null;
   const pendingFolded = pending?.folded ?? null;
   const pendingSheet = pending?.creasePattern;
   const vertexCreases = useFoldVertexCreases(index, preview.vertex);

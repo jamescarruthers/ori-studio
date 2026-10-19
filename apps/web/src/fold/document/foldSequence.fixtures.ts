@@ -371,6 +371,18 @@ export function writtenSequence(): Record<string, unknown> {
         op: { kind: 'unfold-to', target: null,
           source: { path: 'fh1:source', state: 'fs1:source', targetState: 'fs1:sheet' } },
       },
+      {
+        id: 'fstep-26', parent: 'fstep-24',
+        op: { kind: 'pleat', line: { via: 'free', through: [[0.5, 0], [0.5, 1]] },
+          second: { via: 'free', through: [[0.75, 0], [0.75, 1]] }, moving: [0.9, 0.5], seed: { scope: 'all' },
+          resolved: [{ landing: { kind: 'outer' } }, { landing: { kind: 'outer' } }] },
+      },
+      {
+        id: 'fstep-25', parent: 'fstep-24',
+        op: { kind: 'repeat', source: { first: 'fstep-24', last: 'fstep-24', revision: 'fh1:source' },
+          axis: { n: [1, 0], d: 0.5 }, parentState: 'fs1:source',
+          steps: [{ op: { kind: 'turn', axis: 'vertical' }, expect: 'fs1:result', sourceStep: 'fstep-24' }] },
+      },
     ],
   };
 }

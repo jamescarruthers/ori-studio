@@ -426,6 +426,7 @@
       "crease": "Plegar por un premarcado lo vuelve a plegar; por un borde plegado, despliega la solapa.",
       "free": "Sin ajuste: la línea pasa exactamente por los puntos donde haces clic.",
       "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar, sin ajuste.",
+      "freeSnap": "Se ajusta a los puntos cercanos; si no hay ninguno, usa exactamente donde haces clic.",
       "openSinkSquare": "La línea que cruza la punta fija cuánto se hunde, y debe ser exactamente perpendicular a su línea central: el axioma 4 traza una.",
       "queued": "Se plegará en cuanto la vista previa esté lista…",
       "rotateCancel": "Esc suelta la herramienta Girar sin añadir el giro.",
@@ -435,8 +436,7 @@
       "severalSunk_many": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
       "severalSunk_other": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
       "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes.",
-      "unsinkRing": "La línea es un pliegue del anillo que dejó el hundido, a lo largo de la parte superior de la punta hundida.",
-      "freeSnap": "Se ajusta a los puntos cercanos; si no hay ninguno, usa exactamente donde haces clic."
+      "unsinkRing": "La línea es un pliegue del anillo que dejó el hundido, a lo largo de la parte superior de la punta hundida."
     },
     "op": {
       "closedSink": "Hundido cerrado",
@@ -444,6 +444,7 @@
       "openSink": "Hundido abierto",
       "outsideReverse": "Pliegue invertido exterior",
       "petal": "Pliegue pétalo",
+      "pleat": "Pliegue escalonado",
       "rabbitEar": "Oreja de conejo",
       "squash": "Pliegue aplastado",
       "swivel": "Pliegue pivotante",
@@ -483,6 +484,18 @@
       "trigger": "Herramientas"
     },
     "playStep": "Reproducir paso",
+    "pleat": {
+      "blocked": "Ambos pliegues deben caber en la solapa seleccionada sin mover otro papel. Revisa las líneas y las capas seleccionadas.",
+      "intro": "Sitúa primero la línea de montaña y luego la de valle sobre el modelo antes de plegarlo.",
+      "layers": "Elige la solapa que quieres plegar. El extremo más allá de la línea de valle se pliega de vuelta.",
+      "limit": "Hay demasiadas disposiciones de capas para resolver este pliegue. Selecciona una solapa más pequeña.",
+      "lines": "La línea de valle debe estar más allá de la de montaña, hacia el extremo que se mueve. Revisa las líneas o pulsa Intercambiar.",
+      "mountainInstruction": "Línea de montaña: {{instruction}}",
+      "mountainLine": "Línea de montaña",
+      "refusedTitle": "El pliegue no puede realizarse aquí",
+      "valleyInstruction": "Línea de valle: {{instruction}}",
+      "valleyLine": "Línea de valle"
+    },
     "railLabel": "Herramientas de plegado",
     "readOnly": {
       "locked": "Este paso es de una versión más reciente de Ori Studio, así que no se puede plegar a partir de él.",
@@ -826,6 +839,7 @@
       "mountain": "Pliegue de monte",
       "mountainHelp": "Plegar el lado que se mueve alejándolo de ti, para que quede debajo.",
       "openSinkHelp": "Empujar hacia dentro el extremo de una punta cerrada, dando la vuelta a cada una de sus capas.",
+      "pleatHelp": "Haz un pliegue escalonado: sitúa la línea de montaña y luego la de valle.",
       "precrease": "Premarcar",
       "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
       "reverse": "Pliegue inverso",
@@ -1138,8 +1152,8 @@
       "settings_one": "{{count}} ajuste",
       "settings_many": "{{count}} ajustes",
       "settings_other": "{{count}} ajustes",
-      "swap": "Cambiar",
-      "snapFreeLine": "Ajustar a puntos"
+      "snapFreeLine": "Ajustar a puntos",
+      "swap": "Cambiar"
     }
   },
   "foldAngleDisplay": {

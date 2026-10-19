@@ -1,3 +1,4 @@
+import { FoldRepeatBar } from '../fold/repeat/FoldRepeatBar';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { foldCommand } from '../../fold/foldActions';
@@ -80,6 +81,7 @@ export function FoldPanel() {
             drawerSlot={setViewDrawerSlot}
           />
           <FoldReturnBar />
+          <FoldRepeatBar />
           {view === 'steps' ? (
             <div className={`panel-body ${styles.steps}`}>
               <FoldStepsGrid view={sequence} />

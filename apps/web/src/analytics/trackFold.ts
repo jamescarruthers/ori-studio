@@ -18,7 +18,8 @@ import { spreadProperties, spreadTracking } from './trackDiagram';
 type FoldStepAddedDetails =
   | { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent; targetCount?: number }
   | { amount: FoldStepRotationAmount }
-  | { vertex: FoldStepVertexForm };
+  | { vertex: FoldStepVertexForm }
+  | { repeat: { mode: 'grouped' | 'individual'; count: number } };
 
 /**
  * A step committed from the Fold canvas (plan D18). Hand-placed: a commit is
@@ -39,6 +40,7 @@ export function trackFoldStepAdded(opKind: FoldStepAddedOpKind, details?: FoldSt
 
 function detailProperties(details: FoldStepAddedDetails | undefined): Record<string, string> {
   if (!details) return {};
+  if ('repeat' in details) return { repeat_mode: details.repeat.mode, count_bucket: bucketCount(details.repeat.count, COUNT_BUCKETS) };
   if ('amount' in details) return { amount: details.amount };
   if ('vertex' in details) return vertexFormProperties(details.vertex);
   return {

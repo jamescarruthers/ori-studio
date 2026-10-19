@@ -1,3 +1,4 @@
+import { pleatToolWindow } from './pleat/pleatToolWindow';
 /**
  * The Fold tool window (plan D14), as a plain descriptor its one renderer
  * draws (`components/fold/FoldToolWindow`) — Simulate's `tools/actions.ts` →
@@ -180,6 +181,8 @@ export interface FoldToolWindowVerbs
   setDivide?: (divide: Partial<FoldDivideSettings>) => void;
   /** Clear the marks made on the step on screen: one undo entry. */
   clearMarks?: () => void;
+  /** Explicit first-line edits in a two-line tool do not follow the active lane. */
+  selectLineMode: (id: FoldLineModeId, line?: 'first') => void;
   // A compound fold's choices (`tools/reverse/reverseToolWindow`).
   setReverseKind?: (kind: FoldReverseKind | null) => void;
   /** Step through the ways the tip opens, or the layer orders listed. */
@@ -563,7 +566,7 @@ export function foldToolWindow(
 ): FoldToolWindowModel | null {
   const model = toolWindow(t, view, verbs, host);
   const freeLine = (usesLineMode(view.tool, view.vertex?.swivelInput) && view.lineMode === 'free') ||
-    (view.tool === 'crimp' && (view.lineMode === 'free' || (view.secondLineMode ?? 'free') === 'free'));
+    ((view.tool === 'crimp' || view.tool === 'pleat') && (view.lineMode === 'free' || (view.secondLineMode ?? 'free') === 'free'));
   if (!model || !freeLine || view.freeLineSnap === undefined || !verbs.setFreeLineSnap) return model;
   return { ...model, freeLineSnap: {
     label: t('tools:fold.window.snapFreeLine', 'Snap to points'),
@@ -607,6 +610,7 @@ function toolWindow(
     };
   }
   if (view.tool === 'inside-reverse') return reverseToolWindow(t, view, verbs, host);
+  if (view.tool === 'pleat') return pleatToolWindow(t, view, verbs, host);
   if (view.tool === 'crimp') return crimpToolWindow(t, view, verbs, host);
   if (view.tool === 'tuck') return tuckToolWindow(t, view, verbs, host);
   if (isVertexTool(view.tool)) return view.vertex ? vertexToolWindow(t, view, view.vertex, verbs, host) : null;

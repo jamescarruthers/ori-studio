@@ -61,7 +61,7 @@ export type FoldToolId =
   | 'rotate';
 
 /** The compound folds along a located line that are tools of their own, beside inside reverse. */
-export type FoldCompoundLineToolId = 'crimp' | 'tuck';
+export type FoldCompoundLineToolId = 'crimp' | 'tuck' | 'pleat';
 
 export function isFoldKind(id: FoldToolId): id is FoldKind {
   return id === 'valley' || id === 'mountain' || id === 'precrease';
@@ -71,7 +71,7 @@ export function isFoldKind(id: FoldToolId): id is FoldKind {
 export type FoldLineToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId | FoldSinkToolId;
 
 export function isLineTool(id: FoldToolId): id is FoldLineToolId {
-  return isFoldKind(id) || id === 'inside-reverse' || id === 'crimp' || id === 'tuck' || isSinkTool(id);
+  return isFoldKind(id) || id === 'inside-reverse' || id === 'crimp' || id === 'pleat' || id === 'tuck' || isSinkTool(id);
 }
 
 /**
@@ -93,12 +93,8 @@ export function foldSinkKindLabel(t: TFunction, kind: 'open' | 'closed'): string
   return foldToolLabel(t, kind === 'open' ? 'open-sink' : 'closed-sink');
 }
 
-/**
- * How a crimp's second line is located (plan Phase 11): drawn freely, or an
- * existing crease. Never an axiom — a step stores one root, its first
- * line's — so the document names it by two sheet points or a crease.
- */
-export type FoldSecondLineModeId = 'free' | 'crease';
+/** Pleat supports every construction independently on each line. Crimp's menu remains free/crease. */
+export type FoldSecondLineModeId = FoldLineModeId;
 
 export const FOLD_SECOND_LINE_MODES: readonly FoldSecondLineModeId[] = ['free', 'crease'];
 
@@ -227,6 +223,7 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Partial<Record<FoldToolId, FoldShortc
   precrease: 'fold.toolPrecrease',
   'inside-reverse': 'fold.toolInsideReverse',
   crimp: 'fold.toolCrimp',
+  pleat: 'fold.toolPleat',
   // The vertex folds.
   squash: 'fold.toolSquash',
   petal: 'fold.toolPetal',
@@ -280,6 +277,8 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.precrease', 'Precrease');
     case 'inside-reverse':
       return t('tools:fold.tool.reverse', 'Reverse fold');
+    case 'pleat':
+      return t('tools:fold.op.pleat', 'Pleat');
     case 'crimp':
       return t('tools:fold.op.crimp', 'Crimp');
     case 'tuck':
@@ -319,6 +318,8 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.precreaseHelp', 'Fold and unfold, leaving a crease to use later.');
     case 'inside-reverse':
       return t('tools:fold.tool.reverseHelp', 'Reverse a flap inside itself or wrap it around the outside, reversing its spine.');
+    case 'pleat':
+      return t('tools:fold.tool.pleatHelp', 'Make a pleat: locate the mountain line, then the valley line.');
     case 'crimp':
       return t('tools:fold.tool.crimpHelp', 'Fold a flap in along one line and back out along a second, so its end turns.');
     case 'tuck':
@@ -481,6 +482,8 @@ export function secondLineSteps(t: TFunction, mode: FoldSecondLineModeId): strin
       return [
         t('tools:fold.steps.crimpSecondCrease', 'Click the crease or folded edge beyond the first line where the flap turns back out.'),
       ];
+    default:
+      return lineModeSteps(t, mode);
   }
 }
 

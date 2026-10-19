@@ -1528,7 +1528,18 @@ export function setFoldStepPicture(
     const text = own !== undefined && current.text === own ? xmlText(source.sentence ?? '') : current.text;
     const captured: DiagramStep = { ...current, source, picture: link.picture, text, revision: current.revision + 1 };
     const carried = withCarriedAnnotations(current, captured, withAsset.assets);
-    if (posedOnly) return carried;
+    if (posedOnly) {
+      // A Repeat's untouched callout names a screen direction. Recapture its
+      // wording and outside-paper box after a turn; an author's edits carry
+      // normally. Other imported marks retain their shaped geometry as before.
+      const callouts = link.marks.filter((mark) => mark.kind === 'callout');
+      let calloutIndex = 0;
+      return { ...carried, annotations: carried.annotations.map((mark) => {
+        if (!isKnownAnnotation(mark) || mark.kind !== 'callout' || !mark.imported) return mark;
+        const fresh = callouts[calloutIndex++];
+        return mark.imported === 'untouched' && fresh ? { ...fresh, id: mark.id } : mark;
+      }) };
+    }
     const swapped = swapCardMarks(current, carried, link.marks, withAsset.assets);
     replaced = editedCardMarksGone(current, swapped);
     return swapped;

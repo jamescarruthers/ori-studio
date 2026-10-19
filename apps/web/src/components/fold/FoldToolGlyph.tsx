@@ -165,6 +165,8 @@ export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; com
     case 'inside-reverse':
     case 'crimp':
       return <FoldKindMark kind={id} size={compact ? 16 : SIZE} />;
+    case 'pleat':
+      return <Glyph><path d="M19 7.5H5L15 12.5H1" /></Glyph>;
     case 'squash':
     case 'swivel': {
       // Enlarge the paper while matching Petal's visible stroke weight.

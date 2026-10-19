@@ -19,7 +19,8 @@
 //!   two isometries happen to agree). Each newly overlapping moving ×
 //!   stationary pair takes the placement: moving on top for a valley,
 //!   underneath for a mountain, or around a tuck's target. A moving ×
-//!   stationary overlap thinner than the minimum feature is a sliver.
+//!   stationary overlap thinner than the minimum feature must also pass the
+//!   complete arrangement check; width alone is not a physical constraint.
 //! - **Letters**, for the new creases and the refolds, from the order: valley
 //!   iff the front-up face lies below. Every other letter is checked by the
 //!   gate, so a drifted letter is refused there.
@@ -340,6 +341,7 @@ fn carry_and_place(
     let index = BoxIndex::new(stationary_boxes);
     let on_top = analysis.direction == Direction::Valley;
     let mut panels = None;
+    let mut narrow_geometry = None;
     for a in (0..new_faces.len()).filter(|&a| new_faces[a].moving) {
         for b in index.query(&geometry.boxes[a], 0.0) {
             let penetration = depth(a, b);
@@ -353,7 +355,19 @@ fn carry_and_place(
                     })?);
                 }
                 if let Some(depth) = panels.as_ref().and_then(|p| p.sliver(geometry, a, b)) {
-                    return Err(sliver(state, new_faces, next, geometry, a, b, depth));
+                    // Width alone does not make an overlap invalid. Ask the
+                    // actual layer-order arrangement whether its pair, cells,
+                    // hinges and constraints agree at TOL. The final state
+                    // still has to pass every ordering constraint below.
+                    if narrow_geometry.is_none() {
+                        narrow_geometry = Some(crate::Unordered::new(next.clone(), [])?);
+                    }
+                    if narrow_geometry
+                        .as_ref()
+                        .is_some_and(|u| !u.problem().ambiguities().is_empty())
+                    {
+                        return Err(sliver(state, new_faces, next, geometry, a, b, depth));
+                    }
                 }
             }
             let moving_above = match &analysis.tuck {

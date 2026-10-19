@@ -156,12 +156,13 @@ describe('FoldHeader', () => {
     const rows = [...document.querySelectorAll<HTMLElement>('[role="menu"] [role^="menuitem"]')];
     expect(rows.map((row) => row.textContent)).toEqual([
       'Unfold to step…',
+      'Repeat on the other side…',
       'Import CP…',
       'Send to Edit',
       'Export FOLD…',
       'Export steps…',
     ]);
-    act(() => rows[1]?.click());
+    act(() => rows.find((row) => row.textContent === 'Import CP…')?.click());
     expect(bound.importCp).toHaveBeenCalledOnce();
   });
 

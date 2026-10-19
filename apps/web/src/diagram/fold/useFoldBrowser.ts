@@ -44,13 +44,13 @@ function useAppFoldCards(): FoldBrowserCardsState {
   const { t } = useTranslation();
   useEffect(() => foldSession().retain(), []);
   const view = useFoldSequenceView();
-  const { entries, frames, words, exists, document } = view;
+  const { entries, words, exists, document } = view;
   return useMemo(
     () =>
       exists && document.steps.length > 0
-        ? { status: 'ready', sequence: document.id, cards: foldBrowserCards(t, { entries, frames, words }) }
+        ? { status: 'ready', sequence: document.id, cards: foldBrowserCards(t, { document, entries, words }) }
         : { status: 'empty' },
-    [t, exists, document, entries, frames, words]
+    [t, exists, document, entries, words]
   );
 }
 

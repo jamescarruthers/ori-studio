@@ -64,6 +64,7 @@ describe('buildFoldActions', () => {
       'rotate',
       'unfold-last',
       'unfold-to',
+      'repeat',
       '—',
       'import-cp',
       '—',

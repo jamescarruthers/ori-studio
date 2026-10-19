@@ -161,6 +161,7 @@ export function toolInput(
     case 'closed-sink':
     case 'unsink':
       return lineModeInput(mode);
+    case 'pleat':
     case 'crimp':
       return crimpInput(mode, second);
     case 'squash':

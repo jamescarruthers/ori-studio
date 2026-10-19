@@ -157,6 +157,7 @@ export const MENU_ACTION_IDS = [
   'fold.turn-over',
   // Rotate takes its tool in hand: how far and which way are its window's.
   'fold.rotate',
+  'fold.repeat',
   'fold.unfold-to',
   'fold.unfold-last',
   'fold.delete-step',
@@ -419,6 +420,7 @@ const FOLD_SEQUENCE_ACTIONS: Partial<Record<MenuActionId, FoldMenuVerb>> = {
   'fold.precrease': { kind: 'fold-kind', id: 'precrease' },
   'fold.turn-over': { kind: 'command', id: 'turn-over' },
   'fold.rotate': { kind: 'command', id: 'rotate' },
+  'fold.repeat': { kind: 'command', id: 'repeat' },
   'fold.unfold-to': { kind: 'command', id: 'unfold-to' },
   'fold.unfold-last': { kind: 'command', id: 'unfold-last' },
   'fold.delete-step': { kind: 'command', id: 'delete-step' },

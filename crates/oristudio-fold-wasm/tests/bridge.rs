@@ -1,8 +1,7 @@
 //! The bridge natively, through JSON shaped exactly as the web app sends it:
 //! the document's ops resolve against their parent (free lines, creases and
 //! axioms with their stored roots), refusals come back as codes with fixes and
-//! never a sentence, a sliver remedy's fix carries a step the document
-//! stores, the queries on a handle answer for the state they name, and the
+//! never a sentence, narrow resolved overlaps retain their requested lines, the queries on a handle answer for the state they name, and the
 //! engine's own classic sequences replay through the bridge — along model
 //! lines, and along axioms — to the outcomes its fixtures record.
 //! `tests/node.rs` covers the same calls across the wasm boundary.
@@ -1033,94 +1032,31 @@ fn strip(bridge: &mut Bridge) -> u32 {
     .0
 }
 
-/// A refusal's sliver remedies: each `use_line` fix with its stored step.
-fn remedies(refused: &Value) -> Vec<Value> {
-    assert_eq!(refused["refusal"]["code"], "sliver", "{refused}");
-    refused["fixes"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|f| f["fix"] == "use_line" && f.get("step").is_some())
-        .collect()
-}
-
-/// The remedy's step, applied as the document would replay it: it lands with
-/// the right end flush against the layer, at x = 0.6.
-fn remedy_lands(bridge: &mut Bridge, strip: u32, fix: &Value, axiom: u64) {
-    let step = &fix["step"];
-    let op_keys: Vec<&str> = step["op"]
-        .as_object()
-        .map(|o| o.keys().map(String::as_str).collect())
-        .unwrap_or_default();
-    assert!(
-        op_keys
-            .iter()
-            .all(|k| ["kind", "line", "direction", "moving", "seed"].contains(k)),
-        "only the document's keys: {op_keys:?}"
-    );
-    assert_eq!(step["op"]["line"]["via"], "axiom");
-    assert_eq!(step["op"]["line"]["axiom"], axiom);
-    assert_eq!(step["choices"]["root"], fix["line"]);
-    let (landed, _) = land_with(bridge, strip, step["op"].clone(), step["choices"].clone());
-    let state = bridge.state(landed).unwrap_or_else(|e| panic!("{e}"));
-    assert!(
-        [[1.0, 0.0], [1.0, 0.5]].iter().any(|&c| state
-            .resolve_point(c)
-            .is_some_and(|p| (p[0] - 0.6).abs() < 1e-9)),
-        "{fix}"
-    );
-}
-
 #[test]
-fn a_sliver_remedy_carries_the_step_to_store() {
+fn a_resolved_narrow_overlap_replays_without_a_line_correction() {
     let mut bridge = Bridge::new();
-    let strip = strip(&mut bridge);
-
-    // A free line turns about either of its points: O5 remedies.
-    let free = refuse(
-        &mut bridge,
-        strip,
-        json!({
-            "kind": "valley",
-            "line": { "via": "free", "through": [[0.79995, 0.0], [0.79995, 0.5]] },
-            "moving": [0.9, 0.25], "seed": { "scope": "all" }
-        }),
-    );
-    let fixes = remedies(&free);
-    assert!(!fixes.is_empty(), "{free}");
-    for fix in &fixes {
-        remedy_lands(&mut bridge, strip, fix, 5);
+    let parent = strip(&mut bridge);
+    let free = json!({ "kind": "valley",
+        "line": { "via": "free", "through": [[0.79995, 0.0], [0.79995, 0.5]] },
+        "moving": [0.9, 0.25], "seed": { "scope": "all" } });
+    let axiom = json!({ "kind": "valley",
+        "line": { "via": "axiom", "axiom": 4, "inputs": [
+            { "kind": "point", "at": [0.79995, 0.25] },
+            { "kind": "edge", "a": [0.3, 0.0], "b": [1.0, 0.0] }] },
+        "moving": [0.9, 0.25], "seed": { "scope": "all" } });
+    for (op, choices) in [
+        (free, json!({})),
+        (axiom, json!({ "root": { "n": [1.0, 0.0], "d": 0.79995 } })),
+    ] {
+        let (state, result) = land_with(&mut bridge, parent, op.clone(), choices.clone());
+        assert_eq!(result["summary"]["pairs"], 3);
+        assert_eq!(result["report"]["line"]["d"], 0.79995);
+        let (replay, _) = land_with(&mut bridge, parent, op, choices);
+        assert_eq!(
+            bridge.state(state).unwrap().parts(),
+            bridge.state(replay).unwrap().parts()
+        );
     }
-
-    // An O4 line pinned perpendicular to the bottom edge slides: an O7
-    // remedy, which the document stores as an axiom on its own anchors.
-    let o4 = refuse_with(
-        &mut bridge,
-        strip,
-        json!({
-            "kind": "valley",
-            "line": { "via": "axiom", "axiom": 4, "inputs": [
-                { "kind": "point", "at": [0.79995, 0.25] },
-                { "kind": "edge", "a": [0.3, 0.0], "b": [1.0, 0.0] }
-            ] },
-            "moving": [0.9, 0.25], "seed": { "scope": "all" }
-        }),
-        json!({ "root": { "n": [1.0, 0.0], "d": 0.79995 } }),
-    );
-    let [fix] = remedies(&o4).try_into().unwrap_or_else(|f| panic!("{f:?}"));
-    let inputs = fix["step"]["op"]["line"]["inputs"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
-    let kinds: Vec<&str> = inputs.iter().filter_map(|i| i["kind"].as_str()).collect();
-    assert_eq!(kinds, ["point", "edge", "edge"]);
-    assert_eq!(
-        fix["step"]["op"].get("moving"),
-        None,
-        "the axiom says the side"
-    );
-    remedy_lands(&mut bridge, strip, &fix, 7);
 }
 
 // --- Queries on a handle -----------------------------------------------------

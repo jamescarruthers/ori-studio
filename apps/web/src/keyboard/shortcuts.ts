@@ -195,6 +195,7 @@ export type FoldShortcutId =
   | 'fold.toolPrecrease'
   | 'fold.toolInsideReverse'
   | 'fold.toolCrimp'
+  | 'fold.toolPleat'
   // The vertex folds.
   | 'fold.toolSquash'
   | 'fold.toolPetal'
@@ -801,6 +802,7 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   // crease's line mode and T the turn over, and neither is used often enough
   // to take a letter from another tool. A user binds one in Settings.
   foldShortcut('fold.toolCrimp', 'Crimp', null),
+  foldShortcut('fold.toolPleat', 'Pleat', null),
   // The vertex folds take no key by default, as the reverse fold takes none:
   // the letters a folder would look for are the plain folds' and Swap's.
   foldShortcut('fold.toolSquash', 'Squash Fold', null),

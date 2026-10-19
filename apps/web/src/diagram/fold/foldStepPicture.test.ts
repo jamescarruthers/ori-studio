@@ -64,6 +64,27 @@ function sceneOf(captured: CapturedPicture): { picture: DiagramScenePicture; sce
 const lines = (scene: PaperScene) => scene.items.filter((item): item is PaperLineItem => item.kind === 'line');
 
 describe('a Fold step’s picture (D11, D17)', () => {
+  it('keeps both pleat line assignments and its editable arrow under back and rotated poses', () => {
+    const action: FoldActionGeometry = {
+      ...VALLEY, direction: 'mountain', grip: null,
+      spans: [
+        { from: { x: 0.1, y: 0.6 }, to: { x: 0.9, y: 0.6 }, hidden: false },
+        { from: { x: 0.2, y: 0.4 }, to: { x: 0.8, y: 0.4 }, hidden: false, direction: 'valley' },
+      ],
+      pleat: { from: { x: 0.6, y: 0.7 }, to: { x: 0.6, y: 0.3 }, kinks: 1 },
+    };
+    for (const side of ['front', 'back'] as const) {
+      for (const rotationDeg of [0, 90]) {
+        const result = foldStepPicture(input('before', action), { ...FLAT, side, rotationDeg }, sequentialIds());
+        expect(result.marks.map((mark) => mark.kind)).toEqual(side === 'front'
+          ? ['mountain-line', 'valley-line', 'pleat-arrow'] : ['valley-line', 'mountain-line', 'pleat-arrow']);
+        expect(result.marks.every((mark) => mark.imported === 'untouched')).toBe(true);
+        const arrow = result.marks[2]!;
+        expect(arrow.from[rotationDeg === 0 ? 0 : 1]).toBeCloseTo(arrow.to[rotationDeg === 0 ? 0 : 1]);
+      }
+    }
+  });
+
   it('draws its crease pattern before the step with the step’s creases as its instruction, and after it as folds', () => {
     const before = sceneOf(foldStepPicture(input('before'), { mode: 'crease-pattern', rotationDeg: 0 }).captured).scene;
     expect(lines(before).map((line) => line.role).sort()).toEqual(['diagram-valley', 'edge', 'edge', 'edge', 'edge']);

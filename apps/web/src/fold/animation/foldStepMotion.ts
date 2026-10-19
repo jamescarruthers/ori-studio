@@ -83,12 +83,14 @@ export type FoldStepPlayKind =
   | 'precrease'
   | 'unfold'
   | 'refold'
+  | 'repeat'
   | 'turn'
   | 'rotate'
   | 'import'
   // Compound folds, one block per family.
   | 'inside_reverse'
   | 'outside_reverse'
+  | 'pleat'
   | 'crimp'
   | 'tuck'
   | 'squash'
@@ -179,6 +181,8 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
       const turn = turnOf(input, before, after, from.place, to.place);
       return turn ? { step, before, after, motion: turn } : crossfade();
     }
+    case 'repeat':
+    case 'pleat':
     case 'unfold-to':
     case 'cp-jump':
       return crossfade();
@@ -207,6 +211,8 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
 
 function playKind(op: FoldOp): FoldStepPlayKind {
   switch (op.kind) {
+    case 'repeat':
+      return 'repeat';
     case 'unfold-to':
       return 'unfold';
     case 'cp-jump':

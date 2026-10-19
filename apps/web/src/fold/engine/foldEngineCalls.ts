@@ -1,3 +1,5 @@
+import { applyPleat, pleatAction, pleatFirst, pleatFirstChoices } from '../tools/pleat/pleatEngine';
+import type { FoldWasmCompoundEngine } from './foldEngineCompoundCalls';
 /**
  * The Fold engine's calls, over one wasm `FoldEngine`: what
  * `workers/foldSequenceWorker.ts` exposes, kept apart from the worker so the
@@ -18,6 +20,7 @@
  */
 
 import type { WasmErrorEnvelope } from '../../engine/types';
+import { createRepeatExecution } from '../repeat/repeatExecution';
 import { foldStateFingerprint, type FoldStateFingerprint } from '../document/foldDigest';
 import type { FoldChoices, FoldModelLine, FoldPaper, SheetPoint } from '../document/foldSequenceDocument';
 import type {
@@ -158,13 +161,27 @@ export interface FoldEngineCalls {
 }
 
 export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
+  // A native state remembers only the last leg. Keep the composite's original
+  // input so queries describe the whole saved step, just as its preview does.
+  const pleats = new Map<number, { parent: number; op: Extract<FoldEngineOp, { kind: 'pleat' }>; choices?: FoldChoices }>();
   const fingerprint = (state: number): FoldStateFingerprint =>
     foldStateFingerprint({ keys: engine.canonical_keys(state) });
   const apply = (state: number, op: FoldEngineOp, choices?: FoldChoices) => {
     const handle = requireHandle('state', state);
     requireObject('op', op);
+    if (op.kind === 'repeat') {
+      const result = repeats.apply(handle, op);
+      if (result.status === 'ok') pleats.delete(result.state);
+      return result;
+    }
+    if (op.kind === 'pleat') {
+      const result = applyPleat(engine as FoldWasmEngine & FoldWasmCompoundEngine, handle, op, choices, repeats.hold);
+      if (result.status === 'ok') pleats.set(result.state, { parent: handle, op, choices });
+      return result;
+    }
     return engine.apply(handle, op, requireChoices(choices)) as FoldEngineOutcome<FoldStepLanded>;
   };
+  const repeats = createRepeatExecution(engine, fingerprint, apply, (states) => states.forEach((state) => pleats.delete(state)));
 
   return {
     sheet(paper) {
@@ -182,7 +199,7 @@ export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
 
     returnTo(current, target, history) {
       const landed = engine.return_to(requireHandle('current', current), requireHandle('target', target),
-        Uint32Array.from(history.map((id) => requireHandle('history', id)))) as FoldEngineOutcome<FoldStepLanded>;
+        Uint32Array.from(history.flatMap((id) => repeats.history(requireHandle('history', id))))) as FoldEngineOutcome<FoldStepLanded>;
       return landed.status === 'ok' ? { ...landed, fingerprint: fingerprint(landed.state) } : landed;
     },
 
@@ -197,10 +214,12 @@ export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
     release(states) {
       if (!Array.isArray(states)) throw invalidInput('states must be an array of handles');
       const handles = states.map((state, k) => requireHandle(`states[${k}]`, state));
-      return handles.length === 0 ? 0 : engine.release(Uint32Array.from(handles));
+      return handles.length === 0 ? 0 : repeats.release(handles);
     },
 
     clear() {
+      pleats.clear();
+      repeats.clear();
       engine.clear();
     },
 
@@ -211,12 +230,13 @@ export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
     analyse(state, op, choices) {
       const handle = requireHandle('state', state);
       requireObject('op', op);
-      return engine.analyse(handle, op, requireChoices(choices)) as FoldEngineOutcome<FoldAnalysed>;
+      return engine.analyse(handle, op.kind === 'pleat' ? pleatFirst(op) : op, requireChoices(op.kind === 'pleat' ? pleatFirstChoices(choices, op) : choices)) as FoldEngineOutcome<FoldAnalysed>;
     },
 
     action(state, op, choices) {
       const handle = requireHandle('state', state);
       requireObject('op', op);
+      if (op.kind === 'pleat') return pleatAction(engine as FoldWasmEngine & FoldWasmCompoundEngine, handle, op, choices);
       return engine.action(handle, op, requireChoices(choices)) as FoldEngineOutcome<FoldActed>;
     },
 
@@ -225,8 +245,8 @@ export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
       requireObject('op', op);
       return engine.depth_choices(
         handle,
-        op,
-        requireChoices(choices),
+        op.kind === 'pleat' ? pleatFirst(op) : op,
+        requireChoices(op.kind === 'pleat' ? pleatFirstChoices(choices, op) : choices),
         requirePoint('at', at)
       ) as FoldEngineOutcome<FoldDepthChosen>;
     },
@@ -244,10 +264,14 @@ export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
     },
 
     stepSummary(state) {
+      if (repeats.has(state)) return { status: 'ok', summary: null };
       return engine.step_summary(requireHandle('state', state)) as FoldEngineOutcome<FoldStepSummarised>;
     },
 
     stepAction(state) {
+      const composite = pleats.get(requireHandle('state', state));
+      if (composite) return pleatAction(engine as FoldWasmEngine & FoldWasmCompoundEngine, composite.parent, composite.op, composite.choices);
+      if (repeats.has(state)) return { status: 'ok', action: null };
       return engine.step_action(requireHandle('state', state)) as FoldEngineOutcome<FoldStepActed>;
     },
 

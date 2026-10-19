@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import {
   spreadSliderEdit,
@@ -116,14 +117,14 @@ function commitDrag(key: string, stepId: string): void {
 const INPUTS_KEPT = 8;
 
 /** Read what the step's picture is drawn from, once, and draw the drag again with it when it comes. */
-function readInput(key: string, source: DiagramFoldStepSource): void {
+function readInput(key: string, source: DiagramFoldStepSource, t: TFunction): void {
   if (inputs.has(key)) return;
   // The oldest let go first: a Map keeps the order its keys came in.
   if (inputs.size >= INPUTS_KEPT) inputs.delete(inputs.keys().next().value!);
   inputs.set(key, 'reading');
   const session = foldSession();
   const release = session.retain();
-  void readFoldStepCapture(session, source)
+  void readFoldStepCapture(session, source, t)
     .then((read) => {
       if (read.status !== 'ready') {
         inputs.delete(key);
@@ -199,13 +200,13 @@ export function useDiagramFoldStepPose(step: DiagramStep | null): DiagramFoldSte
       ...(unknownMarks ? { disabled: true, hint: annotationsHint } : {}),
       start: () => {
         if (held) return false;
-        readInput(key, source);
+        readInput(key, source, t);
         return true;
       },
       preview: (slider, value) => {
         const stored = source.render.mode === 'folded-flat' ? source.render.spread : undefined;
         if (held || !stored) return;
-        readInput(key, source);
+        readInput(key, source, t);
         const slides = new Map(drag?.key === key ? drag.slides : []);
         slides.delete(slider);
         slides.set(slider, spreadSliderEdit(slider, stored.kind, value));

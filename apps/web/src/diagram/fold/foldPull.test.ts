@@ -7,7 +7,6 @@ import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldPathEntries } from '../../fold/sequence/foldSequencePath';
 import { FOLD_PENDING_NODE, type FoldSessionNode } from '../../fold/session/foldSessionState';
 import { foldSendTargets } from './foldBrowserActions';
-import { DEFAULT_LAYER_SPREAD } from '../../cp-workspace/folded/layerSpreadSettings';
 import { FOLD_PULL_RENDER, foldBrowserCards, foldPullRender } from './foldPull';
 
 const t = ((_key: string, fallback: string | Record<string, unknown>, options?: Record<string, unknown>) => {
@@ -45,7 +44,7 @@ function view(lastLanded = false) {
   const entries = foldPathEntries(SEQUENCE, NODES.map((node) => node.id), landed(0), nodes, FOLD_PENDING_NODE);
   return {
     entries,
-    frames: entries.map(() => null),
+    document: SEQUENCE,
     words: entries.map((entry) =>
       entry.node ? foldNodeSentenceStep(entry.node, { parent: null, child: null, report: null }) : { op: 'unknown' as const }
     ),
@@ -74,14 +73,29 @@ describe('the Fold browser’s cards (D17)', () => {
 
   it('lists a step Fold has not landed, and offers nothing for it — nor Finished after it', () => {
     const cards = foldBrowserCards(t, view(false));
+    expect(cards[3]!.picture).toBeNull();
+    expect(cards[4]!.picture).toBeNull();
     expect(cards[3]!.step).toBeNull();
     expect(cards[4]!.step).toBeNull();
+  });
+
+  it('pictures each landed state and its inherited spread, including turns and Finished', () => {
+    const spread = { kind: 'depth' as const, amount: 0.06, toward: 'down-right' as const };
+    const document = sequenceOf(NODES.map((node, index) => index === 1 ? { ...node, spread } : node));
+    const cards = foldBrowserCards(t, { ...view(true), document });
+    expect(cards.map((card) => card.picture)).toEqual([
+      { state: { generation: 0, id: 1 }, key: 'fs1:1', spread: null },
+      { state: { generation: 0, id: 2 }, key: 'fs1:2', spread },
+      { state: { generation: 0, id: 3 }, key: 'fs1:3', spread },
+      { state: { generation: 0, id: 4 }, key: 'fs1:4', spread },
+      { state: { generation: 0, id: 4 }, key: 'fs1:4', spread },
+    ]);
   });
 
   it('has no Finished for a path that only turns', () => {
     const turnOnly = sequenceOf([{ ...TURN, parent: null }]);
     const entries = foldPathEntries(turnOnly, ['fstep-2'], landed(0), new Map([['fstep-2', landed(2)]]), FOLD_PENDING_NODE);
-    const cards = foldBrowserCards(t, { entries, frames: entries.map(() => null), words: entries.map(() => ({ op: 'unknown' as const })) });
+    const cards = foldBrowserCards(t, { document: turnOnly, entries, words: entries.map(() => ({ op: 'unknown' as const })) });
     expect(cards.map((card) => card.kind)).toEqual(['turn-over']);
   });
 });
@@ -97,11 +111,8 @@ describe('a pulled step’s spread', () => {
   it('is the spread Fold shows the state with: the parent’s before a step, the step’s own after it', () => {
     expect(foldPullRender(spread, 'fold-a', { step: 'fstep-4', moment: 'before' })).toEqual({ ...FOLD_PULL_RENDER, spread: depth });
     expect(foldPullRender(spread, 'fold-a', { step: 'fstep-4', moment: 'after' })).toEqual(FOLD_PULL_RENDER);
-    // The first step folds from the sheet, which takes the default.
-    expect(foldPullRender(spread, 'fold-a', { step: 'fstep-1', moment: 'before' })).toEqual({
-      ...FOLD_PULL_RENDER,
-      spread: DEFAULT_LAYER_SPREAD,
-    });
+    // The first step folds from the sheet, with spread off by default.
+    expect(foldPullRender(spread, 'fold-a', { step: 'fstep-1', moment: 'before' })).toEqual(FOLD_PULL_RENDER);
   });
 
   it('is none for a sequence that is not the one asked for', () => {

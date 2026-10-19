@@ -482,52 +482,47 @@ fn a_tip_with_a_layer_in_its_way_is_not_free() {
     assert!(landings >= 1, "none of {} ways lands", plans.len());
 }
 
-/// The image–image guard (plan D5, research §6): a reverse fold whose
-/// reflected tip lands within the minimum feature of a layer it overlaps is a
-/// sliver, named by the moving vertex and the parent's face it lands in.
-/// (Cases from the seeded campaign.)
+/// Narrow overlaps are real ordering relations when geometry resolves them.
+/// They may not disappear from the order merely because they are small.
 #[test]
-fn a_tip_landing_a_sliver_inside_another_layer_is_refused() {
-    let mut slivers = 0;
+fn narrow_tip_overlaps_pass_the_full_gate_and_require_their_pairs() {
+    let mut narrow = 0;
     for i in 0..160 {
         let Some((state, op)) = campaign_case(1, i) else {
             continue;
         };
-        let analysis = state.analyse_reverse(&op).unwrap_or_else(|e| panic!("{e}"));
+        let analysis = state.analyse_reverse(&op).unwrap();
         for opening in &analysis.flaps[0].openings {
             let choices = ReverseChoices {
                 openings: if analysis.flaps[0].openings.len() > 1 {
                     vec![opening.stored.clone()]
                 } else {
-                    Vec::new()
+                    vec![]
                 },
                 order: None,
             };
-            let Err(CompoundRefused::Refused(refused)) = state.reverse_fold(&op, &choices) else {
+            let Ok(ReverseOutcome::Landed(folded)) = state.reverse_fold(&op, &choices) else {
                 continue;
             };
-            let FoldRefusal::Sliver {
-                vertex,
-                face,
-                penetration,
-            } = refused.refusal
-            else {
-                continue;
-            };
-            assert!(
-                penetration > 1e-6 && penetration < 1e-3,
-                "s1-{i}: {penetration}"
-            );
-            assert!(
-                state.face(face).is_some(),
-                "s1-{i}: {face} is no parent face"
-            );
-            assert_eq!(refused.refusal.vertices(), vec![vertex]);
-            assert_eq!(refused.refusal.faces(), vec![face]);
-            slivers += 1;
+            check(&state, &op, &folded);
+            for (pair, _) in folded.state.order().pairs() {
+                let depth = oristudio_geometry::convex::penetration(
+                    folded.state.face_image(pair.lo()).unwrap(),
+                    folded.state.face_image(pair.hi()).unwrap(),
+                );
+                if depth > 1e-6 && depth < 1e-3 {
+                    let mut missing = folded.state.parts().clone();
+                    missing.order.remove(pair.lo(), pair.hi());
+                    assert!(
+                        State::make(missing).is_err(),
+                        "s1-{i}: narrow pair was optional"
+                    );
+                    narrow += 1;
+                }
+            }
         }
     }
-    assert!(slivers >= 1, "no sliver in the campaign's first states");
+    assert!(narrow > 0, "campaign must exercise narrow overlaps");
 }
 
 // --- Stored choices ----------------------------------------------------------

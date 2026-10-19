@@ -3,16 +3,15 @@
 //! on folded forms with stacked references; O6 with its points on opposite
 //! sides of the fold, from either side; replay of a stored
 //! root after an inserted earlier step; the existing-crease line mode; the
-//! mover check; and the sliver remedy.
+//! mover check; and narrow overlaps without changing the located line.
 
 mod support;
 
 use std::collections::BTreeMap;
 
 use oristudio_fold::{
-    AnchoredFold, AnchoredRefused, Axiom, AxiomCandidate, Direction, Fix, FoldLine, Landmarks,
-    LineRefusal, Pin, PlainFold, Refused, Seed, Sheet, SheetSegment, Side, SliverRemedy, StartSide,
-    State,
+    AnchoredFold, AnchoredRefused, Axiom, AxiomCandidate, Direction, FoldLine, Landmarks,
+    LineRefusal, PlainFold, Seed, Sheet, SheetSegment, Side, StartSide, State,
 };
 use oristudio_geometry::construct::line_residual;
 use oristudio_geometry::{Construction, Line, Paper, Sheet as Rectangle};
@@ -935,112 +934,42 @@ fn strip() -> State {
     fold(&s, &all(x_eq(0.3), [0.1, 0.25], Valley)).state
 }
 
-fn sliver(state: &State, op: &AnchoredFold) -> (Refused, Vec<SliverRemedy>) {
-    match state.fold_anchored(op) {
-        Err(AnchoredRefused::Fold { refused, remedies }) => {
-            assert_eq!(refused.refusal.code(), "sliver", "{:?}", refused.refusal);
-            (refused, remedies)
-        }
-        other => panic!("{other:?}"),
-    }
-}
-
-/// The sliver remedy: an O4 line pinned perpendicular to the bottom edge
-/// slides to x = 0.8, the O7 line landing the corner exactly on the layer's
-/// edge; turning about its point reaches the edge only off the paper. A
-/// free line turns about either end, and the O5 line about the bottom one
-/// lands. O2 has no pin, and no remedy.
+/// Each construction keeps its exact line when the narrow overlap is fully
+/// represented by the overlay. It must not be moved to a nearby contact line.
 #[test]
-fn a_sliver_is_offered_the_exact_line_its_pin_allows() {
+fn resolved_narrow_overlaps_preserve_axiom_and_free_lines() {
     let s = strip();
     let bottom = seg([0.3, 0.0], [1.0, 0.0]);
     let o4 = Axiom::O4 {
         p: [0.79995, 0.25],
         m: bottom,
     };
-    let root = candidates(&s, &o4)[0].line;
-    assert!(root.approx_eq(&x_eq(0.79995)));
-    let op = AnchoredFold::new(FoldLine::Axiom { axiom: o4, root }, Valley).toward([0.9, 0.25]);
-    let (refused, remedies) = sliver(&s, &op);
-    let [remedy] = remedies.as_slice() else {
-        panic!("{remedies:?}");
-    };
-    assert_eq!(remedy.pin, Pin::Perpendicular { segment: bottom });
-    assert!(remedy.line.approx_eq(&x_eq(0.8)), "{:?}", remedy.line);
-    let FoldLine::Axiom {
-        axiom: Axiom::O7 { m1, m2, .. },
-        ..
-    } = &remedy.fold.line
-    else {
-        panic!("{:?}", remedy.fold.line);
-    };
-    assert_eq!(*m2, bottom);
-    assert!(
-        s.resolve_segment(m1)
-            .is_some_and(|l| l.approx_eq(&x_eq(0.6))),
-        "the layer's edge"
-    );
-    assert!(refused.fixes.contains(&Fix::UseLine {
-        line: remedy.line,
-        side: remedy.side
-    }));
-    // The remedy is a step: it lands, the right end flush against the layer.
-    let landed = s
-        .fold_anchored(&remedy.fold)
-        .unwrap_or_else(|e| panic!("{e}"));
-    assert_valid(&landed.state);
-    for corner in [[1.0, 0.0], [1.0, 0.5]] {
-        assert!((image(&landed.state, corner)[0] - 0.6).abs() < 1e-9);
-    }
-
-    // A free line through two points of the raw edges.
-    let free = AnchoredFold::new(
-        FoldLine::Free {
-            a: [0.79995, 0.0],
-            b: [0.79995, 0.5],
-        },
-        Valley,
-    )
-    .toward([0.9, 0.25]);
-    let (_, remedies) = sliver(&s, &free);
-    assert!(!remedies.is_empty());
-    for remedy in &remedies {
-        assert!(matches!(remedy.pin, Pin::Through { .. }));
-        assert!(matches!(
-            remedy.fold.line,
-            FoldLine::Axiom {
-                axiom: Axiom::O5 { .. },
-                ..
-            }
-        ));
-        let landed = s
-            .fold_anchored(&remedy.fold)
-            .unwrap_or_else(|e| panic!("{e}"));
-        assert_valid(&landed.state);
-        // Some corner of the right end lands exactly on the layer's edge.
-        assert!(
-            [[1.0, 0.0], [1.0, 0.5]]
-                .iter()
-                .any(|&c| (image(&landed.state, c)[0] - 0.6).abs() < 1e-9)
-        );
-    }
-
-    // O2 carries the corner's edge point onto a point just inside the
-    // layer: no pin.
     let o2 = Axiom::O2 {
         p: [1.0, 0.25],
         q: [0.5999, 0.25],
     };
-    let root = candidates(&s, &o2)[0].line;
-    let op = AnchoredFold::new(FoldLine::Axiom { axiom: o2, root }, Valley);
-    let (refused, remedies) = sliver(&s, &op);
-    assert!(remedies.is_empty());
-    assert!(
-        !refused
-            .fixes
-            .iter()
-            .any(|f| matches!(f, Fix::UseLine { .. }))
-    );
+    let free = FoldLine::Free {
+        a: [0.79995, 0.0],
+        b: [0.79995, 0.5],
+    };
+    for line in [
+        free,
+        FoldLine::Axiom {
+            root: candidates(&s, &o4)[0].line,
+            axiom: o4,
+        },
+        FoldLine::Axiom {
+            root: candidates(&s, &o2)[0].line,
+            axiom: o2,
+        },
+    ] {
+        let op = AnchoredFold::new(line, Valley).toward([0.9, 0.25]);
+        let landed = s.fold_anchored(&op).unwrap();
+        assert_valid(&landed.state);
+        for corner in [[1.0, 0.0], [1.0, 0.5]] {
+            assert!((image(&landed.state, corner)[0] - 0.5999).abs() < 1e-9);
+        }
+    }
 }
 
 /// What a folded-form test means by an axiom's movers: the same axiom with

@@ -1,3 +1,4 @@
+import { locatePleatFirst } from './pleat/pleatStep';
 /**
  * What a fold along a line takes by default (owner request, 2026-10-13): the
  * topmost flap at the line as the front shows it — the flap that owns the
@@ -41,7 +42,7 @@ import {
 
 /** Whether the tool folds one flap over, so takes the top flap by default; otherwise every layer. */
 export function takesTopFlap(tool: FoldToolId): boolean {
-  return isFoldKind(tool) || tool === 'tuck';
+  return isFoldKind(tool) || tool === 'tuck' || tool === 'pleat';
 }
 
 /**
@@ -80,7 +81,7 @@ export interface FoldLineSectionProbe {
 }
 
 /** What the probe reads of the tools: the tool, the picks and the choices of line and side. */
-export type FoldLineSectionTools = Pick<FoldToolState, 'tool' | 'lineMode' | 'picks' | 'swapped' | 'override'>;
+export type FoldLineSectionTools = Pick<FoldToolState, 'tool' | 'lineMode' | 'picks' | 'swapped' | 'override'> & { secondLineMode?: FoldToolState['secondLineMode'] };
 
 /**
  * The line and side the picks locate, for a fold that takes the top flap
@@ -98,13 +99,15 @@ export type FoldLineSectionTools = Pick<FoldToolState, 'tool' | 'lineMode' | 'pi
 export function lineSectionProbe(
   tools: FoldLineSectionTools,
   index: FoldPickIndex,
-  candidate: FoldAxiomCandidate | null
+  candidate: FoldAxiomCandidate | null,
+  secondCandidate: FoldAxiomCandidate | null = null
 ): FoldLineSectionProbe | null {
   const { tool, lineMode, picks, swapped, override } = tools;
   if ((!takesTopFlap(tool) && reverseMaterialPoint(tools) === null) || override) return null;
   // A valley or mountain along a bend unfolds it; a precrease or a tuck never does.
   const unfolds = tool === 'valley' || tool === 'mountain';
-  const located = locateAlongLine({ lineMode, picks, candidate, swapped, seed: FOLD_EVERY_LAYER }, index, unfolds);
+  const intent = { lineMode, picks, candidate, swapped, seed: FOLD_EVERY_LAYER };
+  const located = tool === 'pleat' ? locatePleatFirst({ ...intent, secondCandidate, secondLineMode: tools.secondLineMode ?? 'free' }, index) : locateAlongLine(intent, index, unfolds);
   if ('status' in located || located.unfolding) return null;
   const { sceneLine, movingSign } = located;
   return {

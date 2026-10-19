@@ -25,12 +25,25 @@ fn flat_subdivisions_do_not_turn_a_broad_overlap_into_a_sliver() {
 }
 
 #[test]
-fn a_real_boundary_sliver_still_fails_with_flat_subdivisions() {
+fn a_resolved_narrow_overlap_keeps_its_order_with_flat_subdivisions() {
     for direction in [Direction::Valley, Direction::Mountain] {
         for marks in [vec![], vec![0.15], vec![0.9], vec![0.15, 0.9]] {
             let state = strip(direction, &marks);
-            let refusal = refused(&state, &all(x_eq(0.79995), [0.95, 0.25], direction));
-            assert_eq!(refusal.refusal.code(), "sliver");
+            let op = all(x_eq(0.79995), [0.95, 0.25], direction);
+            let result = fold(&state, &op).state;
+            assert_valid(&result);
+            // The two flap images really overlap by 1e-4: this is not contact,
+            // and removing that pair must fail the same final validity gate.
+            let left = face(&result, [0.1, 0.25]);
+            let right = face(&result, [0.95, 0.25]);
+            assert_eq!(
+                result.above(right, left),
+                Some(direction == Direction::Valley)
+            );
+            let mut missing = result.parts().clone();
+            assert!(missing.order.remove(left, right));
+            assert!(State::make(missing).is_err());
+            assert_eq!(fold(&state, &op).state.parts(), result.parts());
         }
     }
 }
@@ -66,8 +79,8 @@ fn insertion_uses_the_same_panel_guard() {
 }
 
 #[test]
-fn insertion_still_refuses_a_genuine_boundary_sliver() {
-    use oristudio_fold::{CompoundRefused, FoldRefusal, Seed, TuckChoices, TuckFold};
+fn insertion_orders_a_resolved_narrow_overlap_and_replays() {
+    use oristudio_fold::{Seed, TuckChoices, TuckFold, TuckOutcome};
     for direction in [Direction::Valley, Direction::Mountain] {
         let state = strip(direction, &[0.15, 0.9]);
         let line = x_eq(0.79995);
@@ -79,14 +92,21 @@ fn insertion_still_refuses_a_genuine_boundary_sliver() {
             target: [0.1, 0.25],
             additional_targets: vec![],
         };
-        let CompoundRefused::Refused(refused) =
-            state.tuck_fold(&op, &TuckChoices::default()).unwrap_err()
+        let TuckOutcome::Landed(result) = state.tuck_fold(&op, &TuckChoices::default()).unwrap()
         else {
-            panic!("new insertion has no broken saved choice");
+            panic!("the strip has one insertion order");
         };
-        assert!(
-            matches!(refused.refusal, FoldRefusal::Sliver { .. }),
-            "{refused:?}"
+        assert_valid(&result.state);
+        let left = face(&result.state, [0.1, 0.25]);
+        let right = face(&result.state, [0.95, 0.25]);
+        assert_eq!(
+            result.state.above(right, left),
+            Some(direction == Direction::Mountain)
         );
+        let TuckOutcome::Landed(replayed) = state.tuck_fold(&op, &result.report.stored).unwrap()
+        else {
+            panic!("the saved insertion must replay");
+        };
+        assert_eq!(replayed.state.parts(), result.state.parts());
     }
 }

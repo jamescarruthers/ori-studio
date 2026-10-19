@@ -12,7 +12,7 @@ import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramFoldBrowserState } from '../../store/workspaceStore/types';
 import { Button } from '../ui/Button';
-import { PatternThumbnail } from '../ui/PatternThumbnail';
+import { DiagramFoldPicture } from './DiagramFoldPicture';
 import {
   PullBrowserFrame,
   PullBrowserGrid,
@@ -121,7 +121,7 @@ function FoldCards({ browser }: { browser: FoldBrowser }) {
           picture={
             card.picture ? (
               <DiagramPullCardThumbnail>
-                <PatternThumbnail thumbnail={card.picture} />
+                <DiagramFoldPicture source={card.picture} />
               </DiagramPullCardThumbnail>
             ) : null
           }

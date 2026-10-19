@@ -18,9 +18,9 @@
  */
 
 import type { TFunction } from 'i18next';
-import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { isLockedStep, turnKindOf, type FoldSequenceDocument } from '../../fold/document/foldSequenceDocument';
-import { foldStateSpread } from '../../fold/document/foldStepSpread';
+import { foldStateSpread, foldStepSpread } from '../../fold/document/foldStepSpread';
+import { foldCardPictureSource, type FoldCardPictureSource } from '../../fold/sequence/foldCardPictureSource';
 import type { FoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
 import type { FoldSession } from '../../fold/session/foldSession';
 import { foldStepSentence } from '../../fold/stepSentence';
@@ -49,7 +49,7 @@ export interface FoldBrowserCard extends PullCard<FoldPullTarget> {
   /** The step's words, or the turn's. */
   readonly sentence: string;
   /** The state it lands, as Fold's strip draws it; null while it has not landed. */
-  readonly picture: SheetThumbnail | null;
+  readonly picture: FoldCardPictureSource | null;
 }
 
 /** How a pulled Fold step is shown: folded, as Fold shows it, from the front at no turn. */
@@ -88,13 +88,13 @@ function landed(entry: FoldSequenceView['entries'][number]): boolean {
  */
 export function foldBrowserCards(
   t: TFunction,
-  { entries, frames, words }: Pick<FoldSequenceView, 'entries' | 'frames' | 'words'>
+  { document, entries, words }: Pick<FoldSequenceView, 'document' | 'entries' | 'words'>
 ): FoldBrowserCard[] {
   const cards: FoldBrowserCard[] = [];
   entries.forEach((entry, index) => {
     const node = entry.node;
     if (!node || entry.id === null) return;
-    const picture = frames[index]?.form ?? null;
+    const picture = foldCardPictureSource(entry.session.state, entry.session.fingerprint, foldStepSpread(document, entry.id));
     if (entry.kind === 'turn' && !isLockedStep(node) && (node.op.kind === 'turn' || node.op.kind === 'rotate')) {
       const turn = turnKindOf(node.op);
       cards.push({
@@ -123,7 +123,7 @@ export function foldBrowserCards(
       kind: 'done',
       number: null,
       sentence: t('panels:diagram.fold.finishedSentence', 'The model as the steps leave it.'),
-      picture: frames.at(-1)?.form ?? null,
+      picture: foldCardPictureSource(tip.session.state, tip.session.fingerprint, foldStepSpread(document, tip.id)),
       step: landed(tip) ? { kind: 'step', step: tip.id, moment: 'after' } : null,
     });
   }

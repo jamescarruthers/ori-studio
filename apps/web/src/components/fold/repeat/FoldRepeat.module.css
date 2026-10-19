@@ -1,0 +1,70 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+.setup {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-width: 240px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.controls {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+.message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.error {
+  color: var(--status-danger);
+}
+.picture {
+  width: 132px;
+  height: 132px;
+  flex: 0 0 auto;
+}
+.paper {
+  fill: var(--text-secondary);
+  fill-opacity: 0.12;
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.axis {
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+  vector-effect: non-scaling-stroke;
+}
+.row > .select {
+  flex: 0 1 210px;
+  width: 210px;
+  min-width: 160px;
+}
+
+.axisPicker {
+  max-width: 360px;
+}
+.axisCanvas {
+  width: 260px;
+  height: 260px;
+  touch-action: none;
+  cursor: crosshair;
+}
+.point {
+  fill: var(--accent-primary);
+}

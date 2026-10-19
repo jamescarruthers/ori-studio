@@ -82,6 +82,21 @@ describe('a Fold step’s capture committed (D17)', () => {
     expect(recaptured(own)).toBe('Fold the kite’s edge in.');
   });
 
+  it('rewords and repositions untouched Repeat callouts when posed, preserving edited and author callouts', () => {
+    const callout = fold('repeat', { kind: 'callout', text: 'Repeat on the right', from: [0.8, 0.3], to: [0.75, -0.12] });
+    const fresh = fold('new-repeat', { kind: 'callout', text: 'Repeat at the bottom', from: [0.7, 0.8], to: [0.7, 1.12] });
+    for (const imported of ['untouched', 'edited'] as const) {
+      const { document } = setFoldStepPicture(linked([{ ...callout, imported }, { ...callout, id: 'author', imported: undefined, text: 'My note' }]), 'step-1', {
+        source: foldStepSource({ render: { mode: 'folded-flat', side: 'front', rotationDeg: 90, foldCase: 1 } }),
+        picture: { ...scenePicture(), key: 'scene-turned' },
+        marks: [fresh],
+      });
+      const marks = stepsIn(document)[0]!.annotations;
+      expect(marks[0]).toMatchObject(imported === 'untouched' ? { ...fresh, id: 'repeat' } : { text: 'Repeat on the right', imported: 'edited' });
+      expect(marks[1]).toMatchObject({ id: 'author', text: 'My note' });
+    }
+  });
+
   it('is no edit when nothing changed', () => {
     const document = linked();
     const step = stepsIn(document)[0]!;

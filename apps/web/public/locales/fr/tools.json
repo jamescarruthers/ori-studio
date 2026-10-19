@@ -426,6 +426,7 @@
       "crease": "Plier le long d’un pré-pli le replie ; le long d’un bord plié, cela déplie le rabat.",
       "free": "Sans magnétisme : la ligne passe exactement par les points où vous cliquez.",
       "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où, sans magnétisme.",
+      "freeSnap": "S’accroche aux points proches ; sinon, utilise l’endroit exact où vous cliquez.",
       "openSinkSquare": "La ligne en travers de la pointe fixe la profondeur de l’enfoncement, et doit être exactement perpendiculaire à sa ligne médiane : l’axiome 4 en trace une.",
       "queued": "Pliage dès que l’aperçu est prêt…",
       "rotateCancel": "Échap repose Tourner sans ajouter la rotation.",
@@ -435,8 +436,7 @@
       "severalSunk_many": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
       "severalSunk_other": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
       "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords.",
-      "unsinkRing": "La ligne est un pli de l’anneau laissé par l’enfoncement, le long du haut de la pointe enfoncée.",
-      "freeSnap": "S’accroche aux points proches ; sinon, utilise l’endroit exact où vous cliquez."
+      "unsinkRing": "La ligne est un pli de l’anneau laissé par l’enfoncement, le long du haut de la pointe enfoncée."
     },
     "op": {
       "closedSink": "Enfoncement fermé",
@@ -444,6 +444,7 @@
       "openSink": "Enfoncement ouvert",
       "outsideReverse": "Pli inversé extérieur",
       "petal": "Pli pétale",
+      "pleat": "Pli en accordéon",
       "rabbitEar": "Oreille de lapin",
       "squash": "Pli écrasé",
       "swivel": "Pli pivoté",
@@ -483,6 +484,18 @@
       "trigger": "Outils"
     },
     "playStep": "Lire l’étape",
+    "pleat": {
+      "blocked": "Les deux plis doivent tenir dans le volet sélectionné sans déplacer le reste du papier. Vérifiez les lignes et les couches sélectionnées.",
+      "intro": "Placez d’abord la ligne montagne, puis la ligne vallée, sur le modèle avant le pliage.",
+      "layers": "Choisissez le volet à plier. L’extrémité au-delà de la ligne vallée se replie en sens inverse.",
+      "limit": "Il y a trop de dispositions de couches pour résoudre ce pli. Sélectionnez un volet plus petit.",
+      "lines": "La ligne vallée doit se trouver au-delà de la ligne montagne, vers l’extrémité mobile. Vérifiez les lignes ou appuyez sur Inverser.",
+      "mountainInstruction": "Ligne montagne : {{instruction}}",
+      "mountainLine": "Ligne montagne",
+      "refusedTitle": "Ce pli ne peut pas être réalisé ici",
+      "valleyInstruction": "Ligne vallée : {{instruction}}",
+      "valleyLine": "Ligne vallée"
+    },
     "railLabel": "Outils de pliage",
     "readOnly": {
       "locked": "Cette étape vient d’une version plus récente d’Ori Studio : on ne peut rien plier à partir d’elle.",
@@ -826,6 +839,7 @@
       "mountain": "Pli montagne",
       "mountainHelp": "Plier le côté qui bouge en l’éloignant de vous, pour qu’il passe dessous.",
       "openSinkHelp": "Enfoncer l’extrémité d’une pointe fermée en retournant chacune de ses couches.",
+      "pleatHelp": "Réaliser un pli en accordéon : placer la ligne montagne, puis la ligne vallée.",
       "precrease": "Pré-plier",
       "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
       "reverse": "Pli inversé",
@@ -1138,8 +1152,8 @@
       "settings_one": "{{count}} réglage",
       "settings_many": "{{count}} réglages",
       "settings_other": "{{count}} réglages",
-      "swap": "Inverser",
-      "snapFreeLine": "Accrocher aux points"
+      "snapFreeLine": "Accrocher aux points",
+      "swap": "Inverser"
     }
   },
   "foldAngleDisplay": {

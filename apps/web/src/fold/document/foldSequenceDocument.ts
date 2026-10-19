@@ -643,7 +643,45 @@ export interface FoldReturnOp {
   source: { path: string; state: string; targetState: string };
 }
 
+/** A frozen sequential recipe. Internal steps are not numbered diagram nodes. */
+export interface FoldRepeatOp {
+  kind: 'repeat';
+  source: { first: string; last: string; revision: string };
+  parentState: string;
+  /** Original-sheet reflection; independent of the current viewport. */
+  axis: FoldModelLine;
+  steps: readonly FoldRepeatEntry[];
+}
+
+export interface FoldRepeatEntry {
+  op: FoldOp;
+  choices?: FoldChoices;
+  expect: string;
+  sourceStep: string;
+  /** Only for unfold-to: 0 is the repeat's parent; n is after internal operation n. */
+  returnTo?: number;
+}
+
+/** Two lines in the starting pose: mountain, then valley. */
+export interface FoldPleatPlacement {
+  landing: FoldLanding;
+  completion?: FoldCompletionChoice;
+}
+export interface FoldPleatOp {
+  kind: 'pleat';
+  line: FoldLineInput;
+  second: FoldLineInput;
+  /** The valley construction's chosen root in the starting model frame. */
+  secondRoot?: FoldModelLine;
+  seed: FoldSeed;
+  moving?: SheetPoint;
+  /** Native placement choices for the first fold and the transported return fold. */
+  resolved?: readonly [FoldPleatPlacement, FoldPleatPlacement];
+}
+
 export type FoldOp =
+  | FoldPleatOp
+  | FoldRepeatOp
   | FoldReturnOp
   | FoldPlainOp
   | FoldPrecreaseOp
@@ -660,6 +698,8 @@ export type FoldOp =
 export type FoldOpKind = FoldOp['kind'];
 
 export const FOLD_OP_KINDS: readonly FoldOpKind[] = [
+  'repeat',
+  'pleat',
   'valley',
   'mountain',
   'precrease',

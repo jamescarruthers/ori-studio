@@ -54,6 +54,7 @@ import {
 } from '../document/diagramDocument';
 import { storedAnnotations } from '../document/diagramFile';
 import { storedScene } from '../pictures/pictureFrame';
+import { repeatCalloutMark, type FoldRepeatCallout } from './foldRepeatCallout';
 
 /** Pattern units per Fold sheet unit: a Fold sheet the size Edit draws its paper. */
 export const PATTERN_PER_SHEET_UNIT = ORIEDITA_PAPER_SIZE;
@@ -114,6 +115,8 @@ export interface FoldStepPictureInput {
   moment: DiagramFoldMoment;
   /** What the step does, on the state it folds from; null for a turn, a rotation or an import. */
   action: FoldActionGeometry | null;
+  /** Repeat's affected material in the starting pose, with localized callout words. */
+  repeat?: FoldRepeatCallout;
 }
 
 export interface FoldStepPicture {
@@ -176,10 +179,11 @@ function capturedScene(captured: CapturedPicture): PaperScene | null {
  * marked behind.
  */
 export function foldStepMarks(
-  action: FoldActionGeometry,
+  action: FoldActionGeometry | null,
   captured: CapturedPicture,
   render: Extract<DiagramCpRender, { mode: 'folded-flat' }>,
-  newId: DiagramIdFactory = randomDiagramId
+  newId: DiagramIdFactory = randomDiagramId,
+  repeat?: FoldRepeatCallout,
 ): KnownDiagramAnnotation[] {
   const scene = capturedScene(captured);
   if (!scene) return [];
@@ -193,6 +197,11 @@ export function foldStepMarks(
     const turned = turn(look(sheetToPattern(point)));
     return [(turned.x * CAPTURE_PX_PER_UNIT - minX) / longer, (turned.y * CAPTURE_PX_PER_UNIT - minY) / longer];
   };
+  if (repeat) {
+    const callout = repeatCalloutMark(repeat, frame, toPicture, render.side, newId);
+    return callout ? storedAnnotations([callout]) : [];
+  }
+  if (!action) return [];
   const back = render.side === 'back';
   // As the viewer sees it, from the side the picture shows.
   const valley = (action.direction === 'valley') !== back;
@@ -201,7 +210,8 @@ export function foldStepMarks(
   const marks: KnownDiagramAnnotation[] = [];
   const spans = action.spans.length > 0 ? action.spans : action.line ? [{ from: action.line[0], to: action.line[1], hidden: false }] : [];
   for (const span of spans) {
-    marks.push(mark(span.hidden ? 'hidden-line' : valley ? 'valley-line' : 'mountain-line', span.from, span.to));
+    const spanValley = ((span.direction ?? action.direction) === 'valley') !== back;
+    marks.push(mark(span.hidden ? 'hidden-line' : spanValley ? 'valley-line' : 'mountain-line', span.from, span.to));
   }
   if (action.grip) {
     const { at, image, hidden_at: over, hidden_image: overImage } = action.grip;
@@ -245,11 +255,11 @@ export function foldStepPicture(
   if (render.mode !== 'folded-flat') throw new Error(`A Fold step is not shown ${render.mode}`);
   const pattern = foldScenePattern(input.shown, render.side);
   const captured = flatScenePicture(pattern, render.rotationDeg, render.spread);
-  if (input.moment !== 'before' || !input.action) return { captured, marks: [], thumbnail };
-  if (!render.spread) return { captured, marks: foldStepMarks(input.action, captured, render, newId), thumbnail };
+  if (input.moment !== 'before' || (!input.action && !input.repeat)) return { captured, marks: [], thumbnail };
+  if (!render.spread) return { captured, marks: foldStepMarks(input.action, captured, render, newId, input.repeat), thumbnail };
   const { spread: _spread, ...flatRender } = render;
   const flat = flatScenePicture(pattern, render.rotationDeg);
-  const marks = foldStepMarks(input.action, flat, flatRender, newId);
+  const marks = foldStepMarks(input.action, flat, flatRender, newId, input.repeat);
   return { captured, marks: marksCarriedOntoSpread(marks, { flat, flatRender }, { captured, render }, thumbnail), thumbnail };
 }
 

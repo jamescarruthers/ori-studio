@@ -61,7 +61,7 @@ describe('FoldToolRail', () => {
       ['Model', 'true'],
     ]);
     expect(queryByRole(rail, 'button', 'Planned')).toBeNull();
-    expect(queryByRole(rail, 'button', 'Pleat')).toBeNull();
+    expect(byRole(rail, 'button', 'Pleat').getAttribute('aria-disabled')).not.toBe('true');
     expect(byRole(rail, 'button', 'Precrease').getAttribute('aria-disabled')).not.toBe('true');
     // The crimp, the tuck, the vertex folds and the sinks are tools, open with the other folds.
     expect(byRole(rail, 'button', 'Crimp').getAttribute('aria-disabled')).not.toBe('true');

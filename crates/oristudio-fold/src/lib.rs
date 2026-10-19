@@ -178,4 +178,4 @@ pub use witness::{Broken, BrokenWitness, WitnessOrder};
 /// The engine's behaviour version: bumped when the same inputs can land a
 /// different state. Stored beside replay caches and on Diagram links for
 /// diagnostics only; a bump alone never marks a link stale (plan D17).
-pub const FOLD_ENGINE_VERSION: u32 = 7;
+pub const FOLD_ENGINE_VERSION: u32 = 8;

@@ -1,3 +1,4 @@
+import { useFoldRepeatUi } from '../repeat/foldRepeatUi';
 import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useMemo, useState } from 'react';
 import { visibleMarks } from '../document/foldStepTree';
@@ -90,9 +91,11 @@ export function useFoldStateView(): FoldStateView {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pointsKey]
   );
-  const returning = useFoldReturnUi((s) => s.opening !== null);
+  const unfolding = useFoldReturnUi((s) => s.opening !== null);
+  const repeating = useFoldRepeatUi((s) => s.opening !== null);
+  const returning = unfolding || repeating;
   const pending = useFoldSessionState((s) => s.pending);
-  const returned = returning && pending.status === 'landed' && pending.request.op.kind === 'unfold-to' ? pending : null;
+  const returned = returning && pending.status === 'landed' && (pending.request.op.kind === 'unfold-to' || pending.request.op.kind === 'repeat') ? pending : null;
   const scene = useFoldStateQuery(returned?.state ?? cursor.state, FOLD_SCENE_QUERY);
   const landmarks = useFoldNodeQuery(cursorId, landmarksQuery);
   const summary = returned?.summary ?? cursor.summary;

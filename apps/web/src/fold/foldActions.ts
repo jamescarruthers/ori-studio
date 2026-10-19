@@ -47,6 +47,7 @@ export type FoldActionIcon =
   | 'delete';
 
 export type FoldCommandId =
+  | 'repeat'
   | 'turn-over'
   | 'rotate'
   | 'unfold-to'
@@ -138,6 +139,7 @@ export interface FoldActionDeps {
   /** Take the Rotate tool in hand at the context's step: its window sets how far and which way. */
   rotate: () => void;
   unfold: (last: boolean) => void;
+  repeat?: () => void;
   /** Delete a step and its subtree, locked ones included (plan D6). */
   deleteStep: (stepId: string) => void;
   /** Open Import CP's dialog. */
@@ -343,6 +345,8 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       note: branchNote,
       run: () => deps.unfold(id === 'unfold-last'),
     })),
+    { kind: 'command', id: 'repeat', icon: 'rotate', label: t('panels:fold.repeat.open', 'Repeat on the other side…'),
+      disabled: addBlock !== null || step === null || !deps.repeat, hint: addBlock ?? undefined, note: branchNote, run: () => deps.repeat?.() },
     { kind: 'separator', id: 'after-turns' },
     {
       kind: 'command',

@@ -32,7 +32,7 @@ describe('foldRailGroups', () => {
       ['model', 'Model'],
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
-      ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'squash', 'petal', 'rabbit-ear', 'swivel'],
+      ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'pleat', 'squash', 'petal', 'rabbit-ear', 'swivel'],
       ['open-sink', 'closed-sink', 'unsink'],
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
@@ -67,7 +67,7 @@ describe('foldRailGroups', () => {
     calls.selectTool.mockClear();
     // Every compound fold is a tool now: none is planned.
     for (const id of ['crimp', 'squash', 'swivel', 'unsink']) expect(item(groups, id).kind).toBe('tool');
-    expect(groups.flatMap((group) => group.items.map((each) => each.id))).not.toContain('pleat');
+    expect(groups.flatMap((group) => group.items.map((each) => each.id))).toContain('pleat');
   });
 
   it('keeps Crimp and removes standalone Tuck from the Fold group', () => {

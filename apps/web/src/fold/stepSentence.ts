@@ -137,6 +137,7 @@ export type FoldSentenceExtent =
 
 /** A step as its sentence reads it. */
 export type FoldSentenceStep =
+  | { op: 'repeat'; count: number }
   | { op: 'unfold-to'; sheet: boolean; number?: number }
   | { op: 'fold'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope; inserted?: boolean }
   /**
@@ -159,6 +160,7 @@ export type FoldSentenceStep =
    * as a reverse fold's is found, and its second, drawn or an existing crease;
    * its layers the tip's anchor, as a reverse fold's are.
    */
+  | { op: 'pleat'; line: FoldSentenceLine; second: FoldSentenceLine; scope: FoldLayerScope }
   | { op: 'crimp'; crimp: 'inside' | 'outside'; line: FoldSentenceLine; second: CrimpSecondLine; scope: FoldLayerScope }
   /**
    * A fold slid under the chosen layer (a valley) or over it (a mountain), as
@@ -336,6 +338,12 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       // The turn's own words, shared with the Diagram's turn cards, made a
       // sentence by a key of its own so the full stop is the language's.
       return t('panels:fold.sentence.turn', '{{turn}}.', { turn: turnName(step.turn, t) });
+    case 'repeat':
+      return t('panels:fold.repeat.sentence', {
+        count: step.count,
+        defaultValue_one: 'Repeat the previous operation on the other side.',
+        defaultValue_other: 'Repeat the previous {{count}} operations on the other side.',
+      });
     case 'unfold-to':
       return step.sheet ? t('panels:fold.return.sheetSentence', 'Unfold to the starting sheet, keeping all creases.')
         : step.number !== undefined ? t('panels:fold.return.numberedSentence', 'Return to step {{number}}, keeping all creases.', { number: step.number })
@@ -344,6 +352,8 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       return step.collapse ? t('panels:fold.sentence.collapse', 'Collapse along the saved crease pattern.') : t('panels:fold.sentence.cpJump', 'Collapse into the imported crease pattern.');
     case 'reverse':
       return reverseFoldSentence(t, step.kind, lineClause(t, step.line), step.scope);
+    case 'pleat':
+      return t('panels:fold.sentence.pleat', 'Pleat along the two lines: mountain first, then valley.');
     case 'crimp':
       return crimpSentence(t, step.crimp, lineClause(t, step.line), step.second, step.scope);
     case 'tuck':

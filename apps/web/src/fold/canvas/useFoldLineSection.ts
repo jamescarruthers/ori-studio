@@ -1,3 +1,4 @@
+import { pleatMaterialPoint } from '../tools/pleat/pleatStep';
 import { useEffect, useMemo, useState } from 'react';
 import { reportError } from '../../monitoring';
 import type { FoldAxiomCandidate, FoldCrossSection } from '../engine/foldEngineWire';
@@ -40,15 +41,16 @@ export function useFoldLineSection(
   session: FoldSessionSurface,
   index: FoldPickIndex | null,
   tools: FoldToolState,
-  candidate: FoldAxiomCandidate | null
+  candidate: FoldAxiomCandidate | null,
+  secondCandidate: FoldAxiomCandidate | null = null
 ): FoldLineSection {
   const { withCursor } = session;
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
-  const { tool, lineMode, picks, swapped, override } = tools;
+  const { tool, lineMode, secondLineMode, picks, swapped, override } = tools;
   const probe = useMemo(
-    () => (index ? lineSectionProbe({ tool, lineMode, picks, swapped, override }, index, candidate) : null),
-    [index, tool, lineMode, picks, swapped, override, candidate]
+    () => (index ? lineSectionProbe({ tool, lineMode, secondLineMode, picks, swapped, override }, index, candidate, secondCandidate) : null),
+    [index, tool, lineMode, secondLineMode, picks, swapped, override, candidate, secondCandidate]
   );
   const key = probe && stateKey ? `${stateKey}|${probe.key}` : null;
   const [answer, setAnswer] = useState<{ key: string; section: FoldCrossSection | null } | null>(null);
@@ -75,7 +77,7 @@ export function useFoldLineSection(
 
   const own = answer && answer.key === key ? answer : null;
   const asked = seedForTool(tool, tools.seed);
-  const material = reverseMaterialPoint(tools);
+  const material = reverseMaterialPoint(tools) ?? (index ? pleatMaterialPoint(tools, index) : null);
   const seed = useMemo<FoldResolvedSeed | null>(() => {
     if (tools.seed.scope === 'top' && material && index && probe) {
       if (!own) return null;

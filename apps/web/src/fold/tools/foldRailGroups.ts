@@ -85,6 +85,7 @@ const FOLD_GROUP_TOOLS: readonly FoldToolId[] = [
   'precrease',
   'inside-reverse',
   'crimp',
+  'pleat',
   // The vertex folds.
   ...FOLD_VERTEX_TOOLS,
 ];

@@ -31,7 +31,7 @@ export interface FoldOrderResolution {
 export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldToolStep | null, inputKey: string) {
   const parent = session.cursor.state;
   const placing = base?.op.kind === 'valley' || base?.op.kind === 'mountain';
-  const compound = base && (placing || isFoldCompoundOp(base.op)) ? base.op : null;
+  const compound = base && (placing || base.op.kind === 'pleat' || isFoldCompoundOp(base.op)) ? base.op : null;
   const { completion: _order, ...choices } = base?.choices ?? {};
   const key = compound && parent ? `${parent.generation}:${parent.id}|${canonicalJson({ op: compound, choices })}|${inputKey}` : null;
   const [navigation, setNavigation] = useState<{ key: string; index: number; budget: number; batch: number; reviewing: boolean; prefer?: [number, number][] }>({ key: '', index: 0, budget: 1, batch: 0, reviewing: false });
@@ -99,7 +99,7 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
     if (value.completion) choices.completion = value.completion;
     const stored = Object.keys(choices).length ? choices : undefined;
     const op = (base.op.kind === 'valley' || base.op.kind === 'mountain') && value.landing
-      ? { ...base.op, landing: value.landing } : base.op;
+      ? { ...base.op, landing: value.landing } : base.op.kind === 'pleat' && value.pleat ? { ...base.op, resolved: value.pleat } : base.op;
     return { op, ...(stored ? { choices: stored } : {}), key: foldStepInputKey({ op, choices: stored }) };
   }, [base, key, value]);
   // Search exhaustion belongs to order review, not a geometric refusal that

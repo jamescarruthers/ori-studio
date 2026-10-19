@@ -9,6 +9,10 @@ import type { FoldBrowserCardsState, FoldBrowserProvider } from '../../diagram/f
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { DiagramFoldBrowser } from './DiagramFoldBrowser';
 
+vi.mock('../../fold/sequence/useFoldCardPictures', () => ({
+  useFoldCardPicture: (source: unknown) => source ? 'data:image/svg+xml,test-paper' : null,
+}));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let root: Root | null = null;
@@ -25,7 +29,7 @@ beforeEach(() => {
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
 });
 
-const THUMBNAIL = { viewBox: '0 0 100 100', strokes: [{ x1: 0, y1: 0, x2: 100, y2: 0, role: 'edge' as const }] };
+const THUMBNAIL = { state: { generation: 0, id: 1 }, key: 'fs1:1', spread: null };
 
 /** A sequence's path as the browser lists it: two folds with a turn between them, and Finished; step 3 still folding. */
 function cards(): FoldBrowserCard[] {
@@ -73,6 +77,8 @@ describe('the Fold browser (D17)', () => {
       'Finished',
     ]);
     expect(text()).toContain('Valley fold in half.');
+    expect(host?.querySelectorAll('img[data-fold-picture="paper"]')).toHaveLength(4);
+    expect(host?.querySelector('img')?.getAttribute('src')).toBe('data:image/svg+xml,test-paper');
     // A step Fold has not folded yet cannot be chosen, and says why.
     expect(options()[3]!.getAttribute('aria-disabled')).toBe('true');
     expect(options()[3]!.title).toContain('can’t be added yet');

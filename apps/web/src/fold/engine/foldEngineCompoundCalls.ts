@@ -1,3 +1,6 @@
+import { pleatOrders } from '../tools/pleat/pleatEngine';
+import type { FoldWasmEngine } from './foldEngineCalls';
+import type { FoldPleatOp } from '../document/foldSequenceDocument';
 /**
  * The compound folds' one question on the Fold engine's bridge
  * (`oristudio-fold-wasm/src/compound.rs`), beside the step calls
@@ -30,6 +33,7 @@ import type { FoldEngineOp, FoldEngineOutcome } from './foldEngineWire';
 export interface FoldOrderQuery {
   batch?: number; prefer?: readonly (readonly [number, number])[]; index: number; perComponent?: number; maxNodes?: number }
 export interface FoldOrderSelection {
+  pleat?: FoldPleatOp['resolved'];
   landing?: FoldLanding;
   moving_varies?: boolean;
   relations?: [number, number][];
@@ -75,6 +79,7 @@ export function createFoldEngineCompoundCalls(engine: FoldWasmCompoundEngine): F
     releaseOrderSearch(state) { engine.release_order_search?.(requireHandle('state', state)); },
     orderSelection(state, op, choices, query) {
       if (!Number.isSafeInteger(query.index) || query.index < 0) throw invalidInput('order index must be a nonnegative safe integer');
+      if (op.kind === 'pleat') return pleatOrders(engine as FoldWasmEngine & FoldWasmCompoundEngine, requireHandle('state', state), op, choices, query);
       return engine.order_selection(requireHandle('state', state), requireObject('op', op), choices, query) as FoldEngineOutcome<FoldOrderSelection>;
     },
     compoundAnalysis(state, op, choices) {

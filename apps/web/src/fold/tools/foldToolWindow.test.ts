@@ -421,3 +421,14 @@ describe('foldToolWindow for a precrease of part of its line', () => {
     expect(refused('mark_on_crease', 'pinch')?.actions).toEqual([]);
   });
 });
+
+it('offers every construction separately for the mountain and valley lines of a pleat', () => {
+  const calls = { ...verbs(), setSecondLineMode: vi.fn() };
+  const model = foldToolWindow(t, view({ tool: 'pleat', lineMode: 'free', secondLineMode: 'free', picks: 2 }), calls, mouse)!;
+  expect(model.secondLine?.options.map((option) => option.id)).toEqual(model.lineMode?.options.map((option) => option.id));
+  expect(model.secondLine?.options).toHaveLength(9);
+  model.secondLine?.set('axiom-4');
+  expect(calls.setSecondLineMode).toHaveBeenCalledWith('axiom-4');
+  model.lineMode?.set('axiom-1');
+  expect(calls.selectLineMode).toHaveBeenCalledWith('axiom-1', 'first');
+});

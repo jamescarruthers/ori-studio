@@ -426,6 +426,7 @@
       "crease": "Dobrar ao longo de um pré-vinco o redobra; ao longo de uma borda dobrada, desdobra a aba.",
       "free": "Sem ajuste: a linha passa exatamente pelos pontos em que você clica.",
       "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar, sem ajuste.",
+      "freeSnap": "Ajusta aos pontos próximos; caso contrário, usa exatamente o local onde você clicar.",
       "openSinkSquare": "A linha que cruza a ponta define o quanto ela afunda, e precisa ser exatamente perpendicular à sua linha central: o axioma 4 traça uma.",
       "queued": "Dobrando assim que a prévia estiver pronta…",
       "rotateCancel": "Esc larga a ferramenta Girar sem adicionar o giro.",
@@ -435,8 +436,7 @@
       "severalSunk_many": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
       "severalSunk_other": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
       "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas.",
-      "unsinkRing": "A linha é um vinco do anel que o afundamento deixou, ao longo do topo da ponta afundada.",
-      "freeSnap": "Ajusta aos pontos próximos; caso contrário, usa exatamente o local onde você clicar."
+      "unsinkRing": "A linha é um vinco do anel que o afundamento deixou, ao longo do topo da ponta afundada."
     },
     "op": {
       "closedSink": "Afundamento fechado",
@@ -444,6 +444,7 @@
       "openSink": "Afundamento aberto",
       "outsideReverse": "Dobra invertida externa",
       "petal": "Dobra pétala",
+      "pleat": "Dobra sanfona",
       "rabbitEar": "Orelha de coelho",
       "squash": "Dobra esmagada",
       "swivel": "Dobra pivotante",
@@ -483,6 +484,18 @@
       "trigger": "Ferramentas"
     },
     "playStep": "Reproduzir passo",
+    "pleat": {
+      "blocked": "As duas dobras devem caber na aba selecionada sem mover outras partes do papel. Verifique as linhas e as camadas selecionadas.",
+      "intro": "Localize primeiro a linha de montanha e depois a de vale no modelo antes de dobrá-lo.",
+      "layers": "Escolha a aba para dobrar. A ponta além da linha de vale é dobrada de volta.",
+      "limit": "Há muitas disposições de camadas para resolver esta dobra. Selecione uma aba menor.",
+      "lines": "A linha de vale deve ficar além da linha de montanha, na direção da ponta que se move. Verifique as linhas ou pressione Inverter.",
+      "mountainInstruction": "Linha de montanha: {{instruction}}",
+      "mountainLine": "Linha de montanha",
+      "refusedTitle": "Não é possível fazer a dobra sanfona aqui",
+      "valleyInstruction": "Linha de vale: {{instruction}}",
+      "valleyLine": "Linha de vale"
+    },
     "railLabel": "Ferramentas de dobra",
     "readOnly": {
       "locked": "Este passo é de uma versão mais nova do Ori Studio, então nada pode ser dobrado a partir dele.",
@@ -826,6 +839,7 @@
       "mountain": "Dobra montanha",
       "mountainHelp": "Dobrar o lado que se move para longe de você, para que fique por baixo.",
       "openSinkHelp": "Empurrar para dentro a extremidade de uma ponta fechada, virando cada camada do avesso.",
+      "pleatHelp": "Faça uma dobra sanfona: localize a linha de montanha e depois a de vale.",
       "precrease": "Pré-vincar",
       "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
       "reverse": "Dobra reversa",
@@ -1138,8 +1152,8 @@
       "settings_one": "{{count}} ajuste",
       "settings_many": "{{count}} ajustes",
       "settings_other": "{{count}} ajustes",
-      "swap": "Trocar",
-      "snapFreeLine": "Ajustar aos pontos"
+      "snapFreeLine": "Ajustar aos pontos",
+      "swap": "Trocar"
     }
   },
   "foldAngleDisplay": {

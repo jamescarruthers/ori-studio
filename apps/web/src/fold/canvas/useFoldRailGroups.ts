@@ -1,3 +1,5 @@
+import { activeFoldLineMode } from '../tools/foldToolState';
+import { useFoldRepeatUi } from '../repeat/foldRepeatUi';
 import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +17,9 @@ import { withFoldCanvasVerbs } from './foldCanvasCommands';
 export function useFoldReadOnly(): FoldReadOnlyReason | null {
   const readOnly = useFoldSessionState((snapshot) => snapshot.readOnly);
   const cursor = useFoldCursor();
-  const returning = useFoldReturnUi((s) => s.opening !== null);
+  const unfolding = useFoldReturnUi((s) => s.opening !== null);
+  const repeating = useFoldRepeatUi((s) => s.opening !== null);
+  const returning = unfolding || repeating;
   if (returning) return 'preview';
   if (readOnly) return 'newer';
   return cursor.status === 'locked' ? 'locked' : null;
@@ -35,7 +39,7 @@ export function useFoldReadOnly(): FoldReadOnlyReason | null {
 export function useFoldRailGroups(): readonly FoldRailGroup[] {
   const { t } = useTranslation();
   const tool = useFoldTools((state) => state.tool);
-  const lineMode = useFoldTools((state) => state.lineMode);
+  const lineMode = useFoldTools(activeFoldLineMode);
   const swivelInput = useFoldTools((state) => state.swivelInput);
   const readOnly = useFoldReadOnly();
   return useMemo(() => {
