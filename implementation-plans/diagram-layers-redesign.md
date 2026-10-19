@@ -41,8 +41,9 @@ agreed:
   - A Placement section: Position is X and Y side by side in one row; then
     Size and Width, each with what Auto gives under it.
   - Each reset sits to the left of the inputs it resets and appears only once
-    something was changed, so the inputs never move. This is scoped to this
-    surface: it is a `FieldRow` prop, off by default.
+    something was changed, so the inputs never move. It is a small icon
+    button kept beside the row's first field, in room held for it
+    (`PlacementFields`); `FieldRow` itself is unchanged.
   - Reset Layout moves into the header.
 - **Annotate inspector.**
   - One toolbar of verbs: Flip Horizontal and Flip Vertical as icons; Flip
@@ -90,7 +91,7 @@ Not in this change:
 ## Checklist
 
 - [x] Shared pieces: one-line `DiagramLayerRow`, the list header, `DiagramLayersSplit`, inspector header, placed dot
-- [x] `FieldRow` `resetSide` / `resetLabel`; `NumberField` `prefix` with scrubbing
+- [x] `NumberField` `prefix` with scrubbing (a `FieldRow` reset side, tried first, was dropped)
 - [x] Pages view: header, disclosure parts, dot and warning status, the split
 - [x] Pages inspector: header with Reset Layout, Placement section, X/Y pair, resets on the left
 - [x] Annotate: header, numbered names, dimmed outside-frame rows, the split
@@ -134,4 +135,8 @@ Zach's notes on #456, all taken:
       detail is open, folding only when a verb asks (`live` false)
 - [x] The instruction, as one shared field (`DiagramStepInstruction`) that the
       Step pane uses too; the header drops the instruction line it repeated
-
+- [x] The placement resets: a small icon button beside the row's first field,
+      in room held for it, rather than `FieldRow`'s reset on the value's
+      start. That one stayed at the start of the column when Y wrapped under X,
+      away from the fields, and its hover outline was an 18×22 capsule
+      (2026-10-19)

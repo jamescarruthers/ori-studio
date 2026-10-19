@@ -154,13 +154,15 @@ describe('DiagramStepPlacement › the part selected', () => {
     act(() => state().selectDiagramPagesPart('picture'));
     show('s1');
     expect([field('X (mm)').value, field('Y (mm)').value]).toEqual(['2', '3']);
-    // Its reset sits before X and Y, so neither moves as it comes and goes.
-    const position = reset('Reset Picture')!.closest('[data-field-row]')!;
-    expect(position.querySelector('[data-field-value] > :first-child')).toBe(reset('Reset Picture'));
+    // Its reset sits beside X, before it, in room kept for it: neither field moves as it comes and goes.
+    const lead = reset('Reset Picture')!.parentElement!;
+    expect([...lead.children].map((child) => child === reset('Reset Picture') || child.contains(field('X (mm)')))).toEqual([true, true]);
     act(() => reset('Reset Picture')!.click());
     expect(stepById(state().diagram!, 's1')!.place).toBeUndefined();
     show('s1');
     expect(reset('Reset Picture')).toBeNull();
+    const held = field('X (mm)').closest('[data-field-value]')!.querySelector('[data-reset-slot]')!;
+    expect(held.nextElementSibling?.contains(field('X (mm)'))).toBe(true);
   });
 });
 

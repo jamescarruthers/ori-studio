@@ -255,32 +255,6 @@ describe('NumberRow', () => {
   });
 });
 
-describe('FieldRow › a reset before its control (the Diagram’s Layers pane, 2026-10-18)', () => {
-  it('puts the reset before the control, so the control keeps its place as the reset comes and goes', () => {
-    const view = render(
-      <FieldRow label="Position" kind="input" resetSide="start" onReset={() => {}}>
-        <input aria-label="X" />
-      </FieldRow>
-    );
-    const value = view.querySelector('[data-field-value]')!;
-    expect([...value.children].map((child) => child.tagName.toLowerCase())).toEqual(['button', 'input']);
-    expect(value.firstElementChild?.getAttribute('data-side')).toBe('start');
-  });
-
-  it('names the reset as asked, for a reset that puts back more than its row says', () => {
-    const onReset = vi.fn();
-    const view = render(
-      <FieldRow label="Position" kind="input" resetSide="start" resetLabel="Reset Text" onReset={onReset}>
-        <input aria-label="X" />
-      </FieldRow>
-    );
-    const reset = view.querySelector<HTMLButtonElement>('[data-field-reset]')!;
-    expect([reset.getAttribute('aria-label'), reset.title]).toEqual(['Reset Text', 'Reset Text']);
-    act(() => reset.click());
-    expect(onReset).toHaveBeenCalledTimes(1);
-  });
-});
-
 describe('SelectRow and SegmentedRow', () => {
   it('render the mixed state as no option chosen', () => {
     const view = render(
