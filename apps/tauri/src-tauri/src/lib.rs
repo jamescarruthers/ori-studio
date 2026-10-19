@@ -334,6 +334,7 @@ pub fn run() {
             cp_engine::cp_document_geometry,
             cp_engine::cp_restore_from_compact,
             cp_engine::cp_document_summary,
+            cp_engine::cp_sheet_index,
             cp_engine::cp_free_document,
             cp_engine::cp_execute_command,
             cp_detect::cp_detect_model_dir,

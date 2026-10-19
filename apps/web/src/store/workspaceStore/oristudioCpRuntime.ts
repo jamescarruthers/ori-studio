@@ -30,6 +30,7 @@ import {
   decodeCpGeometryToSnapshot,
   type CpGeometryTransport,
 } from '../../engine/oristudioCpGeometry';
+import { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { ImportedCreasePatternFormat } from '../../lib/creasePatternImport';
 import { orieditaDocumentTitle } from '../../lib/orieditaDocumentTitle';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
@@ -231,6 +232,16 @@ async function fetchDocumentAndGeometry(
 ): Promise<{ document: OristudioCpDocumentSnapshot; geometry: CpGeometryTransport }> {
   const geometry = await api.documentGeometry(targetHandle);
   return { document: decodeCpGeometryToSnapshot(geometry), geometry };
+}
+
+/**
+ * The open document's sheets and which one each line is in (see
+ * `engine/oristudioCpSheetIndex`), or `null` when no document is loaded.
+ */
+export async function fetchOristudioCpSheetIndex(): Promise<CpSheetIndex | null> {
+  if (handle === null) return null;
+  const api = await getOristudioCpClient();
+  return new CpSheetIndex(await api.sheetIndex(handle));
 }
 
 export async function refreshOristudioCpDocument(

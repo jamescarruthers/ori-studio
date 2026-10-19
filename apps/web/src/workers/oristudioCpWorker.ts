@@ -3,6 +3,7 @@ import init, {
   cp_operation_descriptors,
   cp_set_cancel_buffer,
   document_geometry,
+  sheet_index,
   document_snapshot,
   document_summary,
   execute_cp_command,
@@ -45,6 +46,10 @@ import init, {
   place_circles,
 } from '../generated/oristudio-cp-wasm/oristudio_cp_wasm';
 import type { CpGeometryTransport } from '../engine/oristudioCpGeometry';
+import {
+  sheetIndexTransferables,
+  type CpSheetIndexTransport,
+} from '../engine/oristudioCpSheetIndex';
 import type {
   OristudioCpCommandPayload,
   OristudioCpCommandPreview,
@@ -187,6 +192,10 @@ const api = {
     const geometry = await call(() => document_geometry(handle) as CpGeometryTransport);
     // Move the buffers to the main thread instead of structured-cloning them.
     return transfer(geometry, geometryTransferables(geometry));
+  },
+  async sheetIndex(handle: number): Promise<CpSheetIndexTransport> {
+    const index = await call(() => sheet_index(handle) as CpSheetIndexTransport);
+    return transfer(index, sheetIndexTransferables(index));
   },
   async restoreFromCompact(handle: number, geometry: CpGeometryTransport): Promise<void> {
     return call(() => restore_from_compact(handle, geometry as unknown as object));

@@ -33,6 +33,7 @@ use crate::geometry::{Circle, LineColor, LineSegment, Point};
 use crate::geometry_transport::{self, CompactGeometry};
 use crate::model::TextElement;
 use crate::share;
+use crate::sheets::{CompactSheetIndex, sheet_index};
 use crate::{
     CommandError, CreasePatternCommand, CreasePatternCommandPayload, CreasePatternDocument,
     CreasePatternModel, OperationCategory, OperationDescriptor, OperationId, OperationOrigin,
@@ -56,6 +57,7 @@ pub const CP_ENGINE_COMMANDS: &[&str] = &[
     "document_geometry",
     "restore_from_compact",
     "document_summary",
+    "sheet_index",
     "free_document",
     "execute_command",
     "preview_command",
@@ -664,6 +666,15 @@ impl CpSession {
         let document = geometry_transport::decode(compact).map_err(EngineError::invalid_input)?;
         *self.document_mut(handle)? = document;
         Ok(())
+    }
+
+    /// The document's sheets — the separate crease patterns its canvas holds —
+    /// and which one each line is in. See [`crate::sheets`].
+    pub fn sheet_index(&self, handle: u32) -> Result<CompactSheetIndex, EngineError> {
+        let document = self.document(handle)?;
+        Ok(CompactSheetIndex::from(&sheet_index(
+            &document.crease_pattern,
+        )))
     }
 
     pub fn document_summary(&self, handle: u32) -> Result<DocumentSummary, EngineError> {
