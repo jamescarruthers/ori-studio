@@ -35,11 +35,13 @@ export function ensureCpSheetIndex(
   if (cached?.fingerprint === fingerprint) return Promise.resolve(cached.index);
   if (inFlight?.fingerprint === fingerprint) return inFlight.promise;
 
-  const promise = fetchOristudioCpSheetIndex()
-    .then((index) => {
-      if (index) cached = { fingerprint, index };
-      return index;
-    })
+  // Started inside the chain, so a failure of any kind — the call itself
+  // throwing included — lands in the catch below rather than in the caller.
+  const promise = (async () => {
+    const index = await fetchOristudioCpSheetIndex();
+    if (index) cached = { fingerprint, index };
+    return index;
+  })()
     .catch((error: unknown) => {
       // Not cached: one transient failure must not hide the sheets until the
       // next edit.
