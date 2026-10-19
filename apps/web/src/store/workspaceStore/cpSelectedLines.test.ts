@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SEG_ATTR_STRIDE, type CpGeometryTransport } from '../../engine/oristudioCpGeometry';
 import type {
   OristudioCpCommandResult,
@@ -7,6 +7,22 @@ import type {
 } from '../../engine/oristudioCpTypes';
 import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
 import { documentStateAfterSelection, lineSelectionOf, mirrorSelectedLines } from './cpSelectedLines';
+
+/** The kernel as far as a selection asks it: is the store's snapshot still current, and a fresh one. */
+const kernel = vi.hoisted(() => ({
+  current: true,
+  refreshed: null as OristudioCpDocumentState | null,
+}));
+
+vi.mock('./oristudioCpRuntime', () => ({
+  isCurrentOristudioCpDocumentState: () => kernel.current,
+  refreshOristudioCpDocument: async () => kernel.refreshed,
+}));
+
+beforeEach(() => {
+  kernel.current = true;
+  kernel.refreshed = null;
+});
 
 function line(y: number, selected = 0): OristudioCpLineSegment {
   return {
@@ -99,6 +115,36 @@ describe('documentStateAfterSelection', () => {
     expect(next.geometry).toBe(state.geometry);
     expect(next.lastCommandResult).toBe(result);
     expect(snapshotFlags(next)).toEqual([0, 2, 0]);
+  });
+
+  /**
+   * Once an edit, restore or merge has been asked for, an edit or an undo may
+   * be holding the snapshot for its undo entry, and the kernel's ids may name
+   * other lines; a selection then fetches the document rather than write into it.
+   */
+  it('leaves the snapshot alone once the kernel has moved on from it', async () => {
+    const state = stateWith([2, 0, 0]);
+    const refreshed = stateWith([0, 2, 0]);
+    kernel.current = false;
+    kernel.refreshed = refreshed;
+
+    const next = await documentStateAfterSelection(state, state, lines([1]), lines([2]), null);
+
+    expect(next).toBe(refreshed);
+    expect(snapshotFlags(state)).toEqual([2, 0, 0]);
+    expect(geometryFlags(state)).toEqual([2, 0, 0]);
+  });
+
+  it('fetches the document when the store replaced its snapshot meanwhile', async () => {
+    const started = stateWith([2, 0, 0]);
+    const live = stateWith([2, 0, 0]);
+    const refreshed = stateWith([0, 2, 0]);
+    kernel.refreshed = refreshed;
+
+    const next = await documentStateAfterSelection(started, live, lines([1]), lines([2]), null);
+
+    expect(next).toBe(refreshed);
+    expect(snapshotFlags(live)).toEqual([2, 0, 0]);
   });
 });
 

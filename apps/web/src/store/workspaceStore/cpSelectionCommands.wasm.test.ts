@@ -34,29 +34,54 @@ vi.mock('../../engines/engineHost', async (importOriginal) => {
   };
 });
 
+/** Calls the in-process kernel has run and not yet answered. */
+let unanswered = 0;
+
+/**
+ * As the worker does: a call reaches the kernel the moment it is made, so calls
+ * run in the order they are made, and its answer arrives in a later task. That
+ * is what lets one call land while another is still in flight.
+ */
+function answerLater<T>(call: () => T): Promise<T> {
+  let outcome: { value: T } | { error: unknown };
+  try {
+    outcome = { value: call() };
+  } catch (error) {
+    outcome = { error };
+  }
+  unanswered += 1;
+  return new Promise((resolve, reject) =>
+    setTimeout(() => {
+      unanswered -= 1;
+      if ('error' in outcome) reject(outcome.error);
+      else resolve(outcome.value);
+    }, 0)
+  );
+}
+
 /** The worker's API, the parts a selection reaches, over the wasm calls the worker makes. */
 function inProcessClient(wasm: CpWasm) {
   return {
-    operationDescriptors: async () => wasm.cp_operation_descriptors(),
-    loadCp: async (text: string, title = '') => wasm.load_cp(text, title),
-    documentGeometry: async (handle: number) => wasm.document_geometry(handle),
-    summary: async (handle: number) => wasm.document_summary(handle),
-    sheetIndex: async (handle: number) => wasm.sheet_index(handle),
-    executeCommand: async (
+    operationDescriptors: () => answerLater(() => wasm.cp_operation_descriptors()),
+    loadCp: (text: string, title = '') => answerLater(() => wasm.load_cp(text, title)),
+    documentGeometry: (handle: number) => answerLater(() => wasm.document_geometry(handle)),
+    summary: (handle: number) => answerLater(() => wasm.document_summary(handle)),
+    sheetIndex: (handle: number) => answerLater(() => wasm.sheet_index(handle)),
+    executeCommand: (
       handle: number,
       operationId: OristudioCpOperationId,
       payload: OristudioCpCommandPayload = {}
-    ) => wasm.execute_cp_command(handle, operationId, payload),
-    executeSelectionCommand: async (
+    ) => answerLater(() => wasm.execute_cp_command(handle, operationId, payload)),
+    executeSelectionCommand: (
       handle: number,
       operationId: OristudioCpOperationId,
       payload: OristudioCpCommandPayload = {}
-    ) => wasm.execute_cp_selection_command(handle, operationId, payload),
-    setSelectedLines: async (handle: number, lines: OristudioCpSelectedLines) =>
-      wasm.set_selected_lines(handle, lines.ids, lines.values),
-    restoreDocument: async (handle: number, document: OristudioCpDocumentSnapshot) =>
-      wasm.restore_document(handle, document),
-    freeDocument: async (handle: number) => wasm.free_document(handle),
+    ) => answerLater(() => wasm.execute_cp_selection_command(handle, operationId, payload)),
+    setSelectedLines: (handle: number, lines: OristudioCpSelectedLines) =>
+      answerLater(() => wasm.set_selected_lines(handle, lines.ids, lines.values)),
+    restoreDocument: (handle: number, document: OristudioCpDocumentSnapshot) =>
+      answerLater(() => wasm.restore_document(handle, document)),
+    freeDocument: (handle: number) => answerLater(() => wasm.free_document(handle)),
   };
 }
 
@@ -221,6 +246,90 @@ describe.skipIf(!wasmAvailable)('selection commands against the kernel', () => {
     expect(storeIds()).toEqual([]);
     expect(snapshotIds()).toEqual([]);
     expect(state().oristudioCpDocument?.document).toBe(document);
+  });
+
+  /** Let every call in flight land, and whatever its answer goes on to call. */
+  const settle = async () => {
+    do {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    } while (unanswered > 0);
+  };
+
+  /**
+   * A selection that lands while an edit is in flight must not write into the
+   * store's snapshot: the edit has already taken that snapshot for its undo
+   * entry, so undoing the edit would put the selection's flags back into the
+   * kernel while the store's ids came back from the entry.
+   */
+  describe('while an edit is in flight', () => {
+    // Edits that keep the kernel's flags, so the store's ids and the kernel's
+    // flags still agree once one lands. `CreaseMakeValley` would not: Oriedita's
+    // `fix2` unselects everything after it, and the store keeps its ids.
+    const recolor = () =>
+      state().executeOristudioCpCommand('CreaseSetLineColor', {
+        line_ids: [1, 2],
+        line_color: 'Cyan3',
+      });
+    const edits: [string, () => Promise<boolean>][] = [
+      ['a command', recolor],
+      ['a grid change', () => state().setOristudioCpGridSize(7)],
+    ];
+
+    it.each(edits)('a deselect leaves %s its undo snapshot', async (_, edit) => {
+      await select(boxOver(0, 1));
+      const editing = edit();
+      state().clearOristudioCpSelection();
+      await expect(editing).resolves.toBe(true);
+      await settle();
+      expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toHaveLength(2);
+
+      await state().undo();
+      expect(storeIds()).toEqual([1, 2]);
+      expect(kernelIds()).toEqual([1, 2]);
+      expect(snapshotIds()).toEqual([1, 2]);
+    });
+
+    it('a box select leaves the edit its undo snapshot', async () => {
+      await select(boxOver(0, 1));
+      const editing = recolor();
+      const selecting = select(boxOver(2, 3));
+      await Promise.all([editing, selecting]);
+      await settle();
+      expect([storeIds(), kernelIds(), snapshotIds()]).toEqual([[3, 4], [3, 4], [3, 4]]);
+
+      // Back through the select and the edit to the first select, both copies
+      // agreeing at every step.
+      for (const expected of [[1, 2], [1, 2], []]) {
+        await state().undo();
+        expect([storeIds(), kernelIds(), snapshotIds()]).toEqual([expected, expected, expected]);
+      }
+      expect(state().status).not.toBe('error');
+    });
+
+    it('a deselect leaves an undo its redo snapshot', async () => {
+      await select(boxOver(0, 1));
+      await recolor();
+      const undoing = state().undo();
+      state().clearOristudioCpSelection();
+      await undoing;
+      await settle();
+
+      await state().redo();
+      expect(storeIds()).toEqual([1, 2]);
+      expect(kernelIds()).toEqual([1, 2]);
+      expect(snapshotIds()).toEqual([1, 2]);
+    });
+
+    it('still selects in place once the edit has landed', async () => {
+      await recolor();
+      await state().undo();
+      await state().redo();
+      const document = state().oristudioCpDocument?.document;
+
+      await select(boxOver(0, 1));
+      expect(state().oristudioCpDocument?.document).toBe(document);
+      expect([storeIds(), kernelIds(), snapshotIds()]).toEqual([[1, 2], [1, 2], [1, 2]]);
+    });
   });
 
   it('runs every selection-only operation through the kernel as a selection', async () => {

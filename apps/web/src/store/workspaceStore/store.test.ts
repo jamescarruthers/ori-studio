@@ -258,6 +258,10 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
     runOristudioCpCheckCommand: oristudioCpMocks.runOristudioCpCheckCommand,
     setOristudioCpDocumentSource: oristudioCpMocks.setOristudioCpDocumentSource,
     setOristudioCpFoldedFigureModel: oristudioCpMocks.setOristudioCpFoldedFigureModel,
+    // Every call that changes the document is mocked here and answers at once,
+    // so no change is ever in flight and the store's snapshot is always the
+    // kernel's. `cpSelectionCommands.wasm.test.ts` covers the in-flight case.
+    isCurrentOristudioCpDocumentState: () => true,
   };
 });
 

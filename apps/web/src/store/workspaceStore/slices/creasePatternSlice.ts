@@ -796,8 +796,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       try {
         const cleared = await deselectAllOristudioCp();
         if (!cleared) return;
-        // The kernel's flags are mirrored onto the store's snapshot whatever
-        // happened meanwhile; no new copy of the document is fetched.
+        // The cleared flags go onto the store's snapshot, or onto a fresh copy
+        // of the document if an edit or undo was asked for meanwhile.
         const documentState = await documentStateAfterSelection(
           started,
           get().oristudioCpDocument,

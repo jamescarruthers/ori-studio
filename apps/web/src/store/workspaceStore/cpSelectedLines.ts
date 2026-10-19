@@ -6,7 +6,7 @@ import type {
 } from '../../engine/oristudioCpTypes';
 import { emptyOristudioCpSelection, type OristudioCpSelection } from '../../lib/creasePatternViewport';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
-import { refreshOristudioCpDocument } from './oristudioCpRuntime';
+import { isCurrentOristudioCpDocumentState, refreshOristudioCpDocument } from './oristudioCpRuntime';
 
 /**
  * The commands that change which lines are selected and nothing else: the
@@ -46,9 +46,13 @@ const SELECTED_SLOT = 2;
  * sheet caches) carries on. Nothing needs telling: the canvas draws
  * `oristudioCpSelection`, not these flags, and no fingerprint reads them.
  *
- * Only the store's own state may be passed. An edit's undo entry holds a
- * snapshot the store has already replaced, so it is never written; an entry
- * that still shares the store's snapshot (an overlay or selection entry)
+ * Only the store's own state may be passed, and only while it is current
+ * (`isCurrentOristudioCpDocumentState`), which is what keeps this away from
+ * every snapshot an undo entry puts back into the kernel. An edit takes the
+ * store's snapshot for its undo entry, and an undo takes it for the redo entry,
+ * as they are asked for, and each counts as a change to the document from that
+ * moment, so the snapshot stops being current before either is stored. An
+ * entry that keeps sharing the store's snapshot (an overlay or selection entry)
  * never puts its document back.
  */
 export function mirrorSelectedLines(
@@ -74,9 +78,11 @@ export function mirrorSelectedLines(
  *
  * Normally the same snapshot and geometry, mirrored ({@link
  * mirrorSelectedLines}), in a new state object carrying `lastCommandResult`.
- * When something replaced the store's snapshot while the change was in flight,
- * the ids may no longer name the same lines in it, so the document is fetched
- * again instead.
+ * The document is fetched again instead when the store replaced its snapshot
+ * while the change was in flight, or when any other change to the document has
+ * been asked for since the snapshot was read, even one that has not landed: the
+ * ids may no longer name the same lines in it, and an edit or undo in flight
+ * may be holding it for an undo entry.
  */
 export async function documentStateAfterSelection(
   started: OristudioCpDocumentState,
@@ -85,7 +91,7 @@ export async function documentStateAfterSelection(
   current: OristudioCpSelectedLines,
   lastCommandResult: OristudioCpCommandResult | null
 ): Promise<OristudioCpDocumentState> {
-  if (live && live.document === started.document) {
+  if (live && live.document === started.document && isCurrentOristudioCpDocumentState(live)) {
     mirrorSelectedLines(live, replaced, current);
     return { ...live, lastCommandResult };
   }

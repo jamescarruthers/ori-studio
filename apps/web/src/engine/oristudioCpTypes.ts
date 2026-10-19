@@ -1470,6 +1470,14 @@ export interface OristudioCpDocumentState {
    * its viewport auto-fit on this rather than the kernel handle.
    */
   loadSerial: number;
+  /**
+   * How many changes to the kernel's document had been asked for when this
+   * state was read from the kernel. A selection writes its flags into this
+   * state's snapshot only while no change has been asked for since
+   * (`isCurrentOristudioCpDocumentState`). Absent on a state that was not read
+   * from the kernel, such as a test fixture, which never counts as current.
+   */
+  changeSerial?: number;
   document: OristudioCpDocumentSnapshot;
   /**
    * Compact geometry transport for the same kernel state as `document`. This is the
