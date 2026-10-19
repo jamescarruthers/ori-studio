@@ -464,6 +464,10 @@ medium on the effort, since five consumers move.
   compound history's pruning passes them through; select, import, select
   undoes and redoes one step at a time with the store's ids, the kernel's
   flags and the snapshot's flags agreeing at each (kernel-backed test).
+  Re-measured on the merge (c32c16cc5) against main with #455 (0bc59d6b1),
+  two runs each, alternating: first sheet 258 / 267 ms (main 602 / 601),
+  second 201 / 202 ms (main 776 / 748), longest freeze 98–114 ms (main
+  394–619), heap +6 / +2 MiB per selection (main +95 / +92).
 
   What is left of a selection is about 100 ms of the kernel's box select in
   the worker and one ~107 ms main-thread task of passes over every line keyed
