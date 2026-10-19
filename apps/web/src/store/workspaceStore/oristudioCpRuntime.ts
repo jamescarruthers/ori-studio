@@ -912,6 +912,19 @@ export async function exportOristudioCpDocumentAsCp(): Promise<string> {
  * Empty is the ordinary case and means "the pattern only" — see
  * `cp-workspace/folded/foldedFigureInterchange.ts` for which figures qualify.
  */
+/**
+ * Some of the open document's lines — one sheet's — as a FOLD document. Faces
+ * come with it only when those lines meet nowhere but at their ends; otherwise
+ * the caller infers them, as it does for a whole document the kernel refuses.
+ */
+export async function exportOristudioCpLinesAsFold(lineIds: readonly number[]): Promise<string> {
+  if (handle === null) {
+    throw new Error('No editable crease-pattern document is loaded');
+  }
+  const api = await getOristudioCpClient();
+  return api.exportFoldLines(handle, lineIds);
+}
+
 export async function exportOristudioCpDocumentAsFold(
   texts: FlatText[] = [],
   foldedHandles: readonly number[] = []

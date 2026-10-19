@@ -1,6 +1,6 @@
 import { useWorkspaceStore } from '../store/workspaceStore/store';
-import { explainSelectedSegment } from '../lib/creasePatternSelectionSegment';
-import { ensureCpSegmentationArtifacts } from './cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from './sheets/cpSheetIndex';
+import { explainSelectedSheet } from './sheets/selectedSheet';
 import { cpOverlayViewStore } from './cpOverlayViewStore';
 
 /**
@@ -15,16 +15,16 @@ export const toolbarRenderProbe = {
   hasContainer: false,
   hasBox: false,
   hasAnchorRect: false,
-  hasSegmentation: false,
+  hasSheetIndex: false,
 };
 
 /**
  * Dev-only console hook: `await __cpToolbarDebug()`.
  *
  * The selection toolbar renders nothing whenever the selection does not resolve
- * to exactly one border-enclosed crease pattern, and every distinct rejection
- * reason looks the same from the outside. This reports which precondition failed
- * and how far each region was from matching, against the live selection.
+ * to exactly one sheet, and every distinct rejection reason looks the same from
+ * the outside. This reports which precondition failed and how far each sheet
+ * the selection touches was from being selected whole.
  */
 declare global {
   var __cpToolbarDebug: (() => Promise<unknown>) | undefined;
@@ -35,12 +35,12 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     const state = useWorkspaceStore.getState();
     const document = state.oristudioCpDocument?.document ?? null;
     const started = performance.now();
-    const artifacts = await ensureCpSegmentationArtifacts(document);
+    const index = await ensureCpSheetIndex(document);
     const elapsedMs = Math.round(performance.now() - started);
-    const diagnosis = explainSelectedSegment(document, state.oristudioCpSelection, artifacts);
+    const diagnosis = explainSelectedSheet(index, state.oristudioCpSelection.lines);
     const report = {
       ...diagnosis,
-      segmentationMs: elapsedMs,
+      sheetIndexMs: elapsedMs,
       render: { ...toolbarRenderProbe },
       foldArtifactRevision: state.foldArtifactRevision,
       overlayViews: cpOverlayViewStore.get() !== null,
@@ -49,9 +49,9 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
         : false,
     };
 
-    // The closest region is the actionable one; the rest are noise in a document
-    // with many regions, so surface it separately from the full report.
-    const closest = diagnosis.regions[0];
+    // The closest sheet is the actionable one; the rest are noise in a document
+    // with many sheets, so surface it separately from the full report.
+    const closest = diagnosis.touched[0];
     console.log('[cp-toolbar]', report.reason, closest ? { closest } : '', report);
     return report;
   };

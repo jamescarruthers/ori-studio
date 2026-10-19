@@ -1,5 +1,5 @@
 import type { FoldArtifacts, FoldDocument } from '../engine/types';
-import { buildSegmentFold, segmentFoldDocument } from './creasePatternSegmentation';
+import { buildSegmentFold, resolveCpSegments } from './creasePatternSegmentation';
 
 /**
  * Formats a single crease-pattern segment can be exported to. TreeMaker tree
@@ -32,21 +32,19 @@ export function isSegmentImageFormat(format: SegmentExportFormat): format is Seg
 }
 
 /**
- * Build the untriangulated sub-fold for one segment, selected by its stable id.
+ * Build the untriangulated sub-fold for one segment, selected by its stable id
+ * among the artifacts' own segments ({@link resolveCpSegments}) — for one
+ * sheet's artifacts, the whole sheet.
  *
  * Uses `foldArtifacts.fold` (the real crease pattern) rather than the triangulated
  * simulation mesh, matching the image-export path and avoiding spurious diagonals.
- * Relies on `segmentId` being consistent across the base and simulation folds:
- * their coordinates are identical (see `creasePatternSelectionSegment`), so
- * region bounds — and therefore the top-left segment ordering — match. Returns
- * `null` when there are no artifacts or the id no longer resolves.
+ * Returns `null` when there are no artifacts or the id no longer resolves.
  */
 export function buildSegmentSubFold(
   foldArtifacts: FoldArtifacts | null | undefined,
   segmentId: number
 ): FoldDocument | null {
   if (!foldArtifacts) return null;
-  const fold = foldArtifacts.fold;
-  const segment = segmentFoldDocument(fold).find((candidate) => candidate.id === segmentId);
-  return segment ? buildSegmentFold(fold, segment) : null;
+  const segment = resolveCpSegments(foldArtifacts).find((candidate) => candidate.id === segmentId);
+  return segment ? buildSegmentFold(foldArtifacts.fold, segment) : null;
 }

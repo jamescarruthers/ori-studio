@@ -30,9 +30,22 @@
  * For another file, run once with `--zoom-out N` and no boxes, and read the
  * coordinates off the `zoomed.png` it writes.
  *
+ * `--action <name>` (repeatable) then times the selection toolbar's verbs on
+ * the sheet selected last, reselecting the first box whenever an earlier action
+ * dismissed the toolbar. The clock runs from the click until its effect shows:
+ *
+ * - `fold`: the global "Folding…" indicator has come and gone. It shows after
+ *   half a second of folding and for at least one, so this reads a fold under
+ *   half a second as one, and is exact only past a second and a half;
+ * - `simulate-inline`: an inline simulation window reports ready;
+ * - `save-image`: the export dialog's preview has drawn (the dialog is then
+ *   closed);
+ * - `export-cp`: the browser receives the `.cp` download.
+ *
  * Options: `--out <dir>` (default `artifacts/large-osf-perf/<time>`, ignored by
- * git), `--trace` (a Chrome trace per phase, for attributing time to
- * functions; it slows the run), `--headed`.
+ * git), `--dist <dir>` (a production build other than `apps/web/dist`, to time
+ * two builds with one script), `--trace` (a Chrome trace per phase, for
+ * attributing time to functions; it slows the run), `--headed`.
  */
 import { createServer } from 'node:http';
 import { createReadStream, mkdirSync, statSync, writeFileSync } from 'node:fs';
@@ -56,13 +69,35 @@ const TRACE_CATEGORIES = [
   'disabled-by-default-v8.gc',
 ];
 
+const ACTIONS = {
+  fold: { button: 'Fold', busy: /Folding…|Still folding|Cancelling…/ },
+  'simulate-inline': { button: 'Simulate inline', shown: '.cp-inline-simulation[data-status="ready"]' },
+  'save-image': {
+    button: 'Save to image',
+    shown: '[aria-label="Export preview"] :is(svg, img, canvas)',
+    close: true,
+  },
+  'export-cp': { button: 'Export…', menuItem: 'CP', download: true },
+};
+
 function parseArgs(argv) {
-  const options = { file: null, zoomOut: 0, boxes: [], out: null, trace: false, headed: false };
+  const options = {
+    file: null,
+    zoomOut: 0,
+    boxes: [],
+    actions: [],
+    out: null,
+    dist: path.join(repoRoot, 'apps/web/dist'),
+    trace: false,
+    headed: false,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--zoom-out') options.zoomOut = Number(argv[++i]);
     else if (arg === '--box') options.boxes.push(argv[++i].split(',').map(Number));
+    else if (arg === '--action') options.actions.push(argv[++i]);
     else if (arg === '--out') options.out = argv[++i];
+    else if (arg === '--dist') options.dist = path.resolve(argv[++i]);
     else if (arg === '--trace') options.trace = true;
     else if (arg === '--headed') options.headed = true;
     else if (!arg.startsWith('--') && !options.file) options.file = path.resolve(arg);
@@ -72,6 +107,9 @@ function parseArgs(argv) {
   if (options.boxes.some((box) => box.length !== 4 || box.some((n) => !Number.isFinite(n)))) {
     throw new Error('--box takes x0,y0,x1,y1 in viewport pixels');
   }
+  const unknown = options.actions.filter((action) => !ACTIONS[action]);
+  if (unknown.length > 0) throw new Error(`unknown --action ${unknown.join(', ')}; one of ${Object.keys(ACTIONS).join(', ')}`);
+  if (options.actions.length > 0 && options.boxes.length === 0) throw new Error('--action needs a --box to select');
   options.out ??= path.join(repoRoot, 'artifacts/large-osf-perf', new Date().toISOString().replace(/[:.]/g, '-'));
   return options;
 }
@@ -102,7 +140,7 @@ const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ..
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   mkdirSync(options.out, { recursive: true });
-  const app = await servePagesLike(path.join(repoRoot, 'apps/web/dist'));
+  const app = await servePagesLike(options.dist);
   const osf = await serveFile(options.file);
   const browser = await chromium.launch({
     headless: !options.headed,
@@ -231,55 +269,99 @@ async function main() {
   }
   await untilQuiet(Date.now());
   await page.screenshot({ path: path.join(options.out, 'zoomed.png') });
+  /** Drag a box over `[x0, y0, x1, y1]` and time the selection, its toolbar, and quiet. */
+  const selectBox = async ([x0, y0, x1, y1]) => {
+    const selectedBefore = (await readout()).selected;
+    // A toolbar left from the previous selection stays mounted and moves to
+    // the new sheet once that resolves, so "shown" means shown somewhere new.
+    const toolbarBefore = JSON.stringify(await toolbarRect());
+    const t0 = await page.evaluate(() => performance.now());
+    await page.mouse.move(x0, y0);
+    await page.mouse.down();
+    for (let step = 1; step <= 8; step += 1) {
+      await page.mouse.move(x0 + ((x1 - x0) * step) / 8, y0 + ((y1 - y0) * step) / 8);
+    }
+    const released = Date.now();
+    await page.mouse.up();
+    // One loop for all three, so a selection that never yields a toolbar
+    // ends when the main thread goes quiet instead of at the phase limit.
+    // Quiet is only counted once the selection has landed: the kernel runs
+    // the command in its worker, and an idle main thread meanwhile is not done.
+    let selected = selectedBefore;
+    let selectedMs = null;
+    let toolbarMs = null;
+    let quietSince = null;
+    let quietMs = null;
+    for (;;) {
+      const asked = Date.now();
+      const state = await readout();
+      const rect = await toolbarRect();
+      const now = Date.now();
+      selected = state.selected;
+      if (selectedMs === null && selected !== selectedBefore) selectedMs = now - released;
+      if (toolbarMs === null && rect && JSON.stringify(rect) !== toolbarBefore) toolbarMs = now - released;
+      const settled = selectedMs !== null || now - released > 10_000;
+      if (now - asked > 2 * PROBE_LIMIT_MS || !settled) quietSince = null;
+      else quietSince ??= now;
+      if (quietSince !== null && now - quietSince >= QUIET_MS) {
+        quietMs = quietSince - released;
+        break;
+      }
+      if (now - released > PHASE_LIMIT_MS) throw new Error('the main thread never went quiet after a selection');
+      await page.waitForTimeout(25);
+    }
+    return { selected, selectedMs, toolbarMs, quietMs, longTasks: await longTasksSince(t0) };
+  };
+
   results.selections = [];
-  for (const [index, [x0, y0, x1, y1]] of options.boxes.entries()) {
+  for (const [index, box] of options.boxes.entries()) {
     const name = `select-${index + 1}`;
-    const result = await traced(name, async () => {
-      const selectedBefore = (await readout()).selected;
-      // A toolbar left from the previous selection stays mounted and moves to
-      // the new sheet once that resolves, so "shown" means shown somewhere new.
-      const toolbarBefore = JSON.stringify(await toolbarRect());
-      const t0 = await page.evaluate(() => performance.now());
-      await page.mouse.move(x0, y0);
-      await page.mouse.down();
-      for (let step = 1; step <= 8; step += 1) {
-        await page.mouse.move(x0 + ((x1 - x0) * step) / 8, y0 + ((y1 - y0) * step) / 8);
-      }
-      const released = Date.now();
-      await page.mouse.up();
-      // One loop for all three, so a selection that never yields a toolbar
-      // ends when the main thread goes quiet instead of at the phase limit.
-      // Quiet is only counted once the selection has landed: the kernel runs
-      // the command in its worker, and an idle main thread meanwhile is not done.
-      let selected = selectedBefore;
-      let selectedMs = null;
-      let toolbarMs = null;
-      let quietSince = null;
-      let quietMs = null;
-      for (;;) {
-        const asked = Date.now();
-        const state = await readout();
-        const rect = await toolbarRect();
-        const now = Date.now();
-        selected = state.selected;
-        if (selectedMs === null && selected !== selectedBefore) selectedMs = now - released;
-        if (toolbarMs === null && rect && JSON.stringify(rect) !== toolbarBefore) toolbarMs = now - released;
-        const settled = selectedMs !== null || now - released > 10_000;
-        if (now - asked > 2 * PROBE_LIMIT_MS || !settled) quietSince = null;
-        else quietSince ??= now;
-        if (quietSince !== null && now - quietSince >= QUIET_MS) {
-          quietMs = quietSince - released;
-          break;
-        }
-        if (now - released > PHASE_LIMIT_MS) throw new Error(`${name}: the main thread never went quiet`);
-        await page.waitForTimeout(25);
-      }
-      return { selected, selectedMs, toolbarMs, quietMs, longTasks: await longTasksSince(t0) };
-    });
+    const result = await traced(name, () => selectBox(box));
     result.heapMiB = await heapMiB();
     log(name, JSON.stringify(result));
     await page.screenshot({ path: path.join(options.out, `${name}.png`) });
     results.selections.push(result);
+  }
+
+  // ---- The toolbar's verbs, on the first box's sheet ----------------------------
+  results.actions = [];
+  for (const action of options.actions) {
+    const { button, menuItem, shown, busy, download, close } = ACTIONS[action];
+    // Acting dismisses the toolbar, so an action after another starts from a
+    // fresh selection.
+    if ((await toolbarRect()) === null && (await selectBox(options.boxes[0])).toolbarMs === null) {
+      throw new Error(`${action}: the selection showed no toolbar`);
+    }
+    const result = await traced(action, async () => {
+      const t0 = await page.evaluate(() => performance.now());
+      const downloaded = download ? page.waitForEvent('download', { timeout: PHASE_LIMIT_MS }) : null;
+      const clicked = Date.now();
+      await page.click(`[aria-label="Crease pattern actions"] button[aria-label="${button}"]`);
+      if (menuItem) await page.getByRole('menuitem', { name: menuItem, exact: true }).click();
+      let effectMs = null;
+      if (downloaded) {
+        await downloaded;
+        effectMs = Date.now() - clicked;
+      } else if (busy) {
+        const indicator = page.getByText(busy).first();
+        const appeared = await indicator.waitFor({ state: 'visible', timeout: 2000 }).then(
+          () => true,
+          () => false
+        );
+        if (appeared) await indicator.waitFor({ state: 'hidden', timeout: PHASE_LIMIT_MS });
+        effectMs = appeared ? Date.now() - clicked : 500;
+      } else {
+        await page.waitForSelector(shown, { timeout: PHASE_LIMIT_MS });
+        effectMs = Date.now() - clicked;
+      }
+      const quietMs = await untilQuiet(clicked);
+      return { effectMs, quietMs, longTasks: await longTasksSince(t0) };
+    });
+    result.heapMiB = await heapMiB();
+    log(action, JSON.stringify(result));
+    await page.screenshot({ path: path.join(options.out, `${action}.png`) });
+    if (close) await page.keyboard.press('Escape');
+    results.actions.push({ action, ...result });
   }
 
   writeFileSync(path.join(options.out, 'results.json'), `${JSON.stringify(results, null, 2)}\n`);

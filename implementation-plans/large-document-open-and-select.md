@@ -255,6 +255,12 @@ T-junctions included — stay in the same sheet.
 - **2.2 Every consumer reads the index.**
   - *Edit toolbar:* a selection is a sheet when its ids are exactly that
     sheet's members — O(selection) through the line → sheet array. No faces.
+    *(Done, with 2.3.)* Its verbs build that one sheet's faces: Export and Save
+    to image, Share, and Simulate inline, whose window gets a mesh for its
+    sheet alone. The image dialog it opens is handed that one sheet, so it no
+    longer offers a picker of every region on the canvas. Simulate still enters
+    the Simulate workspace, which finds the sheet among its whole-canvas
+    segments by outline until the Simulate bullet below lands.
   - *Diagram:* links resolve by outline as today (`ringsMatch` compares corners
     within 1e-6, so it does not care how the rim was traced); fingerprints are
     taken over member lines; the picker lists index sheets, with thumbnails
@@ -278,6 +284,41 @@ T-junctions included — stay in the same sheet.
   full of T-junctions, are the measure of which. The whole-canvas paths
   (`ensureCpSegmentationArtifacts`, and `computeFoldArtifacts` for an Edit
   document) go away.
+
+  *Done, as built:* the kernel's `export_fold_lines` writes one sheet's lines
+  as FOLD and keeps the traced faces only when those lines meet nowhere but at
+  their ends (`meetings.rs`, the sweep the index's border splitting already
+  used) — refusing rather than splitting, because the frontend's inference
+  already splits, and every sheet of bodo goes to it either way.
+  `ensureCpSheetArtifacts` turns that into artifacts whose one segment is the
+  whole sheet. The inference still runs on the main thread, one sheet at a
+  time, and the cache is the crease fingerprint plus the sheet, so any edit
+  drops every cached sheet and the next action rebuilds only the one it needs.
+  The differential test (`cpSheetArtifacts.wasm.test.ts`) gives every sheet the
+  faces and the exported lines today's whole-canvas segmentation gives its
+  region, on every fixture and on all 204 sheets of bodo; the one named
+  difference is a sheet whose aux lines end on unsplit borders, which today's
+  export dropped. The whole-canvas paths go when the Diagram and Simulate stop
+  reading them.
+
+  Measured with the Edit toolbar on it (`large-osf-perf.mjs --action`, same
+  boxes, main 89da66832 against the branch):
+
+  | | main | sheet faces |
+  | --- | ---: | ---: |
+  | First selection → toolbar | 13.0 s, longest freeze 9.3 s | 0.63 s, 0.39 s |
+  | Save to image → preview drawn | 12.7 s | 0.58 s |
+  | Export `.cp` → download | 1.2 s | 0.49 s |
+  | Simulate inline → window ready | 15.5 s | 0.61 s |
+  | Fold → done | 2.6 s | 2.3 s |
+  | Heap after Simulate inline | 1,341 MiB | 984 MiB |
+
+  What is left of the first selection is the selection command itself
+  (~0.6 s), which is Phase 3. Checking it in the browser turned up a case the
+  plane-graph check fixes: a book fold whose crease ends on unsplit borders
+  got the bare square as its one certified face, so its inline simulation (and
+  still, until Simulate moves, the Simulate workspace) showed flat paper that
+  would not fold. Built for the sheet alone, it folds.
 - **2.4 Inference speed** still matters for one huge sheet: integer-keyed
   welding instead of template strings, a 2D grid instead of the x-only sweep,
   typed adjacency in `buildPlanarFaces` — output bit-identical.
@@ -437,11 +478,12 @@ Phase 1
 Phase 2
 - [x] Answers for the definitions table (2026-10-18; the inner-loop reading to confirm at 2.1)
 - [x] 2.1 Sheet index in Rust from outer border loops, in the CP engine, cached by crease fingerprint; differential test against today's regions
-- [ ] 2.2 Edit toolbar on the index
+- [x] 2.2 Edit toolbar on the index; its verbs on one sheet's faces
 - [ ] 2.2 Diagram links, picker and thumbnails on the index
 - [ ] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
 - [ ] 2.2 Simulate rail on the index; mesh for the selected sheet only
-- [ ] 2.3 Faces per sheet on demand (kernel when certified, else JS), cached per sheet; whole-canvas paths deleted
+- [x] 2.3 Faces per sheet on demand (kernel when its lines meet only at their ends, else JS), cached per sheet
+- [ ] 2.3 Whole-canvas paths deleted (after the Diagram and Simulate move)
 - [ ] 2.4 Inference hot spots, output bit-identical
 
 Phase 3
