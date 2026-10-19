@@ -443,6 +443,13 @@ removes.
   `useStepPictureUrl` already waits for `useNearView` before painting, but
   the `viewGeometry(…).layers` and `xraySurfaceOf` memos above that check run
   for every card on mount. Gate them on the same `seen`.
+  Measured after 2.2 (a profiling build of #465): entering the Diagram is
+  about 3.3 s of these memos for all 204 cards (the X-ray paint order 2.4 s,
+  the picture geometry 0.85 s), 0.8 s of link statuses fingerprinting each
+  step's sheet, and about 2 s of mounting 204 cards. #455 virtualizes the
+  step list (about 16 cards mounted), skips X-ray reconstruction for unmarked
+  pictures and yields between link checks, which should take most of it:
+  re-measure (`large-osf-perf.mjs --diagram`) once it lands before doing more.
 - **4.6 Sheet cards draw cheaply.** The Simulate and References rails draw
   every line of every card as its own SVG `<line>`. On this file that is 204
   cards and about 489k elements: around 2 s of React commit, and a layout of
