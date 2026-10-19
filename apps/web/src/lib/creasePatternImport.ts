@@ -323,6 +323,15 @@ function parseFoldValue(
   filename: string,
   diagnostics: ImportedCreasePatternDiagnostics
 ): ParsedFoldSource {
+  const { frame, ...resolved } = resolveFoldSource(parsed, filename);
+  return { ...resolved, fold: normalizeFoldObject(frame, resolved.title, diagnostics) };
+}
+
+/** A FOLD object's frames, title, and the frame an import reads — nothing normalized yet. */
+function resolveFoldSource(
+  parsed: unknown,
+  filename: string
+): Omit<ParsedFoldSource, 'fold'> & { frame: Record<string, unknown> } {
   if (!isRecord(parsed)) throw new Error('FOLD file must contain a JSON object');
 
   const frames = resolveFoldFrames(parsed);
@@ -335,14 +344,48 @@ function parseFoldValue(
     stringField(chosen.frame.file_title) ??
     basenameWithoutExtension(filename);
 
-  const fold = normalizeFoldObject(chosen.frame, title, diagnostics);
   return {
     title,
     selectedFrame: foldFrameInfo(chosen),
     foldFrames: frameInfos,
     foldedFormFrames: frameInfos.filter((frame) => frame.foldedForm),
     sourceFold: parsed as FoldDocument,
-    fold,
+    frame: chosen.frame,
+  };
+}
+
+/**
+ * The import record for a crease pattern restored from an Ori Studio project:
+ * what the file says, with nothing inferred.
+ *
+ * A project open puts the editable document straight into the kernel, so
+ * nothing on that path reads what {@link parseImportedCreasePatternFromFold}
+ * spends its time on — inferred faces, a simulation mesh and a `TreeProject` of
+ * every crease, 26 s on the main thread for a 489k-crease canvas. The record is
+ * read for its title, source, `sourceFold` and frame list. Its `fold` is the
+ * chosen frame as stored, which only Export FOLD reads, and only when no kernel
+ * document exists.
+ */
+export function storedImportedCreasePattern(
+  fold: unknown,
+  source: ImportedCreasePatternSource
+): ImportedCreasePatternDocument {
+  const { frame, ...resolved } = resolveFoldSource(fold, source.filename);
+  const stored: FoldDocument = {
+    ...frame,
+    frame_title: resolved.title,
+    vertices_coords: arrayField(frame.vertices_coords) as number[][],
+    edges_vertices: arrayField(frame.edges_vertices) as [number, number][],
+    faces_vertices: arrayField(frame.faces_vertices) as number[][],
+  };
+  return {
+    source,
+    ...resolved,
+    fold: stored,
+    lineOnly: stored.faces_vertices.length === 0,
+    simulationModelError: null,
+    diagnostics: { warnings: [], errors: [] },
+    stats: statsFromFold(stored),
   };
 }
 

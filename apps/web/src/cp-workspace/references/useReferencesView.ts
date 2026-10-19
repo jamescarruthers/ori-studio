@@ -11,7 +11,7 @@ import type { WheelGesturePreference } from '../../lib/wheelGesture';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
-import { creaseFingerprint } from '../cpSegmentationArtifacts';
+import { creaseFingerprint } from '../../lib/creaseFingerprint';
 import type { ReferencesSelection } from './ReferencesCpView';
 import type {
   ReferencesCandidateResult,

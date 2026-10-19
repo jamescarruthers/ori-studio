@@ -1,9 +1,10 @@
 import { BoundsIndex } from './boundsIndex';
 import type { FoldArtifacts, FoldDocument } from '../engine/types';
 import type { OristudioCpDocumentSnapshot } from '../engine/oristudioCpTypes';
+import { creaseFingerprint } from './creaseFingerprint';
 import {
   type CpSegment,
-  buildAssignmentByKey,
+  assignmentByKeyOf,
   pointInSegment,
   resolveCpSegments,
 } from './creasePatternSegmentation';
@@ -90,11 +91,7 @@ function edgeKey(a: number, b: number): string {
  * an ordinary mountain/valley crease is not a self-contained crease pattern, so
  * it is not offered for folding, export, or simulation.
  */
-function rimAssignmentCounts(
-  fold: FoldDocument,
-  segment: CpSegment,
-  assignmentByKey: Map<string, string>
-): { rim: number; nonBorder: number } {
+function rimAssignmentCounts(fold: FoldDocument, segment: CpSegment): { rim: number; nonBorder: number } {
   const faces = fold.faces_vertices ?? [];
   const useCount = new Map<string, number>();
   for (const faceIndex of segment.faceIndices) {
@@ -109,7 +106,10 @@ function rimAssignmentCounts(
   }
 
   // Shared with segmentation so a border overdrawn by another crease still reads
-  // as a border here too (see buildAssignmentByKey's precedence).
+  // as a border here too (see assignmentByKeyOf's precedence) — and the same map,
+  // built once for the fold rather than once per region.
+  const assignmentByKey = assignmentByKeyOf(fold);
+
   let rim = 0;
   let nonBorder = 0;
   for (const [key, count] of useCount) {
@@ -132,11 +132,18 @@ export interface CpSegmentContainment {
 
 /**
  * Containment depends on both the fold (region boundaries) and the document
- * (crease coordinates). Key by artifacts identity, then re-validate the document
+ * (crease coordinates). Key by artifacts identity, then re-validate the creases
  * so a stale pairing recomputes rather than returning a mismatched assignment.
+ *
+ * Re-validated by {@link creaseFingerprint}, not by snapshot identity: every
+ * kernel command returns a fresh snapshot — a selection too — while what this
+ * reads (line positions and endpoints) only changes with the creases. Keyed on
+ * the snapshot, each selection re-ran the whole canvas: on 204 sheets of 489k
+ * creases, half a minute or more per selection.
  */
 interface SegmentContainment extends CpSegmentContainment {
-  document: OristudioCpDocumentSnapshot;
+  /** The creases it was worked out over ({@link creaseFingerprint}). */
+  creases: string;
 }
 
 const containmentCache = new WeakMap<FoldArtifacts, SegmentContainment>();
@@ -155,7 +162,7 @@ export function creaseMidpoints(document: OristudioCpDocumentSnapshot): Float64A
 
 /** Seed the same selection/link cache with the worker's exact calculation. */
 export function seedSegmentContainment(artifacts: FoldArtifacts, document: OristudioCpDocumentSnapshot, result: CpSegmentContainment): void {
-  containmentCache.set(artifacts, { ...result, document });
+  containmentCache.set(artifacts, { ...result, creases: creaseFingerprint(document) });
 }
 
 function segmentContainment(
@@ -163,19 +170,20 @@ function segmentContainment(
   document: OristudioCpDocumentSnapshot,
   segments: CpSegment[]
 ): SegmentContainment {
+  const creases = creaseFingerprint(document);
   const cached = containmentCache.get(artifacts);
-  if (cached && cached.document === document && cached.lineIds.length === segments.length) {
+  if (cached && cached.creases === creases && cached.lineIds.length === segments.length) {
     return cached;
   }
   const startedAt = performance.now();
   const missReason = !cached
     ? 'no-entry-for-artifacts'
-    : cached.document !== document
-      ? 'document-snapshot-changed'
-      : 'segment-count-changed';
+    : cached.lineIds.length !== segments.length
+      ? 'segment-count-changed'
+      : 'creases-changed';
 
   const result: SegmentContainment = {
-    document,
+    creases,
     ...computeSegmentContainment(artifacts, creaseMidpoints(document)),
   };
   containmentCache.set(artifacts, result);
@@ -194,8 +202,7 @@ export function computeSegmentContainment(artifacts: FoldArtifacts, midpoints: F
   // `segment.faceIndices` indexes the base fold (see `resolveCpSegments`).
   const fold = artifacts.fold;
   const lineIds: number[][] = segments.map(() => []);
-  const assignmentByKey = buildAssignmentByKey(fold);
-  const rim = segments.map((segment) => rimAssignmentCounts(fold, segment, assignmentByKey));
+  const rim = segments.map((segment) => rimAssignmentCounts(fold, segment));
   const index = new BoundsIndex(segments.map((segment) => segment.bounds));
   const eligible = rim.map((counts) => counts.nonBorder === 0);
 

@@ -14,7 +14,6 @@ import { BoundsIndex } from '../../lib/boundsIndex';
 import type { FoldDocument } from '../../engine/types';
 import {
   flatPlaneReader,
-  buildAssignmentByKey,
   pointInSegment,
   pointOnSegmentBoundary,
   segmentEdges,
@@ -78,7 +77,6 @@ function sheetGeometry(fold: FoldDocument) {
   });
   const result = {
     readPoint,
-    assignmentByKey: buildAssignmentByKey(fold),
     loose,
     index: new BoundsIndex(loose.map(({ middle: p }) => ({ minX: p.x, maxX: p.x, minY: p.y, maxY: p.y }))),
     thumbnails: new WeakMap<CpSegment, SheetThumbnail | null>(),
@@ -90,7 +88,6 @@ const geometryCache = new WeakMap<
   FoldDocument,
   {
     readPoint: ReturnType<typeof flatPlaneReader>;
-    assignmentByKey: Map<string, string>;
     loose: Array<{ edge: SegmentEdge; middle: { x: number; y: number } }>;
     index: BoundsIndex;
     thumbnails: WeakMap<CpSegment, SheetThumbnail | null>;
@@ -100,7 +97,7 @@ const geometryCache = new WeakMap<
 /** One segment's card thumbnail: its edges, border included, fitted. */
 export function segmentSheetThumbnail(fold: FoldDocument, segment: CpSegment): SheetThumbnail | null {
   const coords = fold.vertices_coords ?? [];
-  const { readPoint, assignmentByKey, loose, index, thumbnails } = sheetGeometry(fold);
+  const { readPoint, loose, index, thumbnails } = sheetGeometry(fold);
   if (thumbnails.has(segment)) return thumbnails.get(segment) ?? null;
   // Match pointOnSegmentBoundary's tolerance and retain original edge order.
   const b = segment.bounds,
@@ -117,7 +114,7 @@ export function segmentSheetThumbnail(fold: FoldDocument, segment: CpSegment): S
       const { edge, middle } = loose[i]!;
       return pointInSegment(segment, middle) || pointOnSegmentBoundary(segment, middle) ? [edge] : [];
     });
-  const strokes: SheetStroke[] = [...segmentEdges(fold, [segment], assignmentByKey), ...looseInRegion].map(
+  const strokes: SheetStroke[] = [...segmentEdges(fold, [segment]), ...looseInRegion].map(
     ({ a, b, assignment }) => {
       const from = readPoint(coords[a]);
       const to = readPoint(coords[b]);

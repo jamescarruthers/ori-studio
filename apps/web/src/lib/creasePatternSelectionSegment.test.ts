@@ -241,6 +241,35 @@ describe('resolveSelectedSegment', () => {
     expect(match?.segmentId).toBe(0);
     expect(match?.cpLineIds).toEqual([1, 2, 3, 4, 5]);
   });
+
+  it('reuses its containment for a new snapshot of the same creases, as a selection makes', () => {
+    const artifacts = makeArtifacts();
+    const first = resolveSelectedSegment(makeDocument(), selection(LEFT_LINE_IDS), artifacts);
+    // Every kernel command returns fresh line objects; a selection only changes
+    // their `selected` flags.
+    const reselected = makeDocument();
+    reselected.crease_pattern.line_segments.forEach((line, index) => {
+      line.selected = RIGHT_LINE_IDS.includes(index + 1) ? 2 : 0;
+    });
+    expect(resolveSelectedSegment(reselected, selection(RIGHT_LINE_IDS), artifacts)?.segmentId).toBe(1);
+    // The same containment answered: the very same line-id array comes back.
+    expect(resolveSelectedSegment(reselected, selection(LEFT_LINE_IDS), artifacts)?.cpLineIds).toBe(
+      first?.cpLineIds
+    );
+  });
+
+  it('works containment out again when a crease moves', () => {
+    const artifacts = makeArtifacts();
+    const first = resolveSelectedSegment(makeDocument(), selection(LEFT_LINE_IDS), artifacts);
+    const moved = makeDocument(
+      LINES.map((line, index): [number, number, number, number, string] =>
+        index === 7 ? [0, 0, 1, 0.5, 'Red1'] : line
+      )
+    );
+    const after = resolveSelectedSegment(moved, selection(LEFT_LINE_IDS), artifacts);
+    expect(after?.cpLineIds).toEqual(LEFT_LINE_IDS);
+    expect(after?.cpLineIds).not.toBe(first?.cpLineIds);
+  });
 });
 
 
