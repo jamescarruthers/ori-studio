@@ -16,6 +16,7 @@
  * (plan D24).
  */
 import { SEG_ATTR_STRIDE } from '../../engine/oristudioCpGeometry';
+import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
 import { HINT_MOUNTAIN, HINT_VALLEY } from '../../lib/foldAngle';
 import type { SheetStrokeRole } from '../sheets/sheetThumbnail';
 
@@ -42,3 +43,31 @@ export function creaseRoleAt(attr: Int32Array, index: number): SheetStrokeRole {
   }
   return 'unassigned';
 }
+
+/** Colours read as aux lines: cyan through grey, as `CP_CYAN..=CP_GREY` above. */
+const AUX_COLORS = new Set([
+  'Cyan3',
+  'Orange4',
+  'Magenta5',
+  'Green6',
+  'Yellow7',
+  'Purple8',
+  'Other9',
+  'Grey10',
+]);
+
+/** {@link creaseRoleAt} for a line of a document snapshot, by the same rules. */
+export function creaseRoleOf(
+  line: Pick<OristudioCpLineSegment, 'color' | 'fold_direction_hint'>
+): SheetStrokeRole {
+  if (line.color === 'Black0') return 'edge';
+  if (line.color === 'Red1') return 'mountain';
+  if (line.color === 'Blue2') return 'valley';
+  if (AUX_COLORS.has(line.color)) return 'aux';
+  if (line.color === 'Angle') {
+    if (line.fold_direction_hint === 'Mountain') return 'mountain';
+    if (line.fold_direction_hint === 'Valley') return 'valley';
+  }
+  return 'unassigned';
+}
+

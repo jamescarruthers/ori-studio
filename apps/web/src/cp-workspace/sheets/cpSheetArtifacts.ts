@@ -28,7 +28,7 @@ export function sheetArtifactsFromFold(fold: FoldDocument, sheet: number): FoldA
 
 /**
  * Enough for every sheet one action or one diagram page touches; a superseded
- * crease geometry drops them all, as `cpSegmentationArtifacts` drops its one.
+ * crease geometry drops them all, as `cpSheetIndex` drops its one index.
  */
 const MAX_CACHED_SHEETS = 8;
 

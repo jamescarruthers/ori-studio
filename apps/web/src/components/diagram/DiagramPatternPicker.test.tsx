@@ -5,8 +5,8 @@ import { focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
 import type { DiagramStepAction } from '../../diagram/actions/diagramActions';
 import type { DiagramPatternSheets } from '../../diagram/capture/useDiagramPatternSheets';
 import { createStep } from '../../diagram/document/diagramDocument';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
-import { twoSquaresSegmentation } from '../../diagram/capture/capture.fixtures';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
+import { twoSquaresIndex } from '../../diagram/capture/capture.fixtures';
 import { DiagramPatternPicker } from './DiagramPatternPicker';
 import { DiagramStepPicture } from './DiagramStepPicture';
 
@@ -31,15 +31,15 @@ function mount(node: React.ReactNode) {
   act(() => root!.render(node));
 }
 
-const artifacts = twoSquaresSegmentation();
-const segments = resolveCpSegments(artifacts);
+const index = twoSquaresIndex();
+const regions = sheetRegions(index);
 const SHEETS: DiagramPatternSheets = {
   status: 'ready',
-  sheets: [...segments, ...segments].map((segment, index) => ({
-    segment: { ...segment, id: index },
+  sheets: [...regions, ...regions].map((sheet, position) => ({
+    sheet: { ...sheet, id: position },
     thumbnail: null,
   })),
-  artifacts,
+  index,
 };
 
 const options = () => [...host!.querySelectorAll<HTMLButtonElement>('[role="option"]')];

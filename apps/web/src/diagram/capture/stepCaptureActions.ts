@@ -11,9 +11,8 @@ import {
 } from '../../analytics';
 import { fold3dRefusalMessage } from '../../cp-workspace/folded/foldedFigureNotice';
 import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
-import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
+import { regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
-import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -78,7 +77,7 @@ export function pickerShowAs(document: DiagramDocument | null, step: DiagramStep
  * (`firstLinkPose`); shown another way, it starts whole (`landSeededFrame`).
  * Whether it was linked.
  */
-export async function linkDiagramStep(stepId: string, segment: CpSegment, way?: DiagramShowAs): Promise<boolean> {
+export async function linkDiagramStep(stepId: string, sheet: RegionLike, way?: DiagramShowAs): Promise<boolean> {
   const store = useWorkspaceStore.getState();
   const step = store.diagram ? stepById(store.diagram, stepId) : null;
   if (!step || !store.diagram) return false;
@@ -95,7 +94,7 @@ export async function linkDiagramStep(stepId: string, segment: CpSegment, way?: 
   const render: DiagramCpRender =
     asked.mode === 'simulated' && asked.foldPercent > 0 ? { ...asked, foldPercent: 0 } : asked;
   const outcome = await store.captureDiagramStep(stepId, {
-    scope: { kind: 'segment', region: regionReferenceFor(segment) },
+    scope: { kind: 'segment', region: regionReferenceFor(sheet) },
     render,
     kind: 'diagram-capture',
     label: linked ? 'Relink pattern' : 'Link pattern',

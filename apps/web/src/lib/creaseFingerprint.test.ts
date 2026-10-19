@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creaseFingerprint } from './creaseFingerprint';
+import { creaseFingerprint, lineContentFingerprint } from './creaseFingerprint';
 import type {
   OristudioCpDocumentSnapshot,
   OristudioCpLineSegment,
@@ -68,3 +68,29 @@ describe('creaseFingerprint', () => {
     );
   });
 });
+
+describe('lineContentFingerprint', () => {
+  it('ignores which lines are selected', () => {
+    expect(lineContentFingerprint(snapshot(segment({ selected: 2 })))).toEqual(
+      lineContentFingerprint(snapshot(segment()))
+    );
+  });
+
+  it('changes with what a crease fingerprint reads that the geometry does not', () => {
+    // Each of these leaves `creaseFingerprint` alone — no geometry depends on it —
+    // and changes a relative crease fingerprint, so a cache of one must miss.
+    const plain = lineContentFingerprint(snapshot(segment()));
+    for (const patch of [
+      { active: 'ActiveA1' },
+      { customized: 1 },
+      { customized_color: { red: 1, green: 200, blue: 200 } },
+      { color: 'Angle', fold_direction_hint: 'Mountain' as const },
+    ]) {
+      expect(lineContentFingerprint(snapshot(segment(patch)))).not.toEqual(plain);
+    }
+    expect(creaseFingerprint(snapshot(segment({ customized: 1 })))).toEqual(
+      creaseFingerprint(snapshot(segment()))
+    );
+  });
+});
+

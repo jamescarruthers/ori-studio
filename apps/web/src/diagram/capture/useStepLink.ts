@@ -76,7 +76,7 @@ export function useDiagramStepLink(step: DiagramStep | null): DiagramStepLink {
   }, [stepId]);
   const pick = useCallback(
     (sheet: DiagramPatternSheet) => {
-      if (stepId !== null) void linkDiagramStep(stepId, sheet.segment, showAs);
+      if (stepId !== null) void linkDiagramStep(stepId, sheet.sheet, showAs);
     },
     [stepId, showAs]
   );
@@ -89,7 +89,7 @@ export function useDiagramStepLink(step: DiagramStep | null): DiagramStepLink {
   const selectedId = useMemo(
     () =>
       step && sheets.status === 'ready'
-        ? (linkedSheet(step, sheets.sheets, cpDocument, sheets.artifacts)?.segment.id ?? null)
+        ? (linkedSheet(step, sheets.sheets, cpDocument, sheets.index)?.sheet.id ?? null)
         : null,
     [step, sheets, cpDocument]
   );

@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { onEngineLost } from '../../engines/engineHost';
 import i18n from '../../i18n';
 import { requestConfirmation } from '../../store/commandDialogStore';
@@ -38,11 +38,9 @@ export async function refreshAllDiagramSteps(): Promise<number> {
   const cp = state.oristudioCpDocument;
   if (!state.diagram || !cp || state.diagramReadOnly) return 0;
   const loadId = state.diagramLoadId;
-  const segmentation = await abandonOnEngineLoss(ensureCpSegmentationArtifacts(cp.document)).catch(
-    () => null
-  );
+  const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(cp.document)).catch(() => null);
   const current = useWorkspaceStore.getState().diagram;
-  const stale = current ? outOfDate(stepsOf(current), current.style, segmentation) : [];
+  const stale = current ? outOfDate(stepsOf(current), current.style, sheets) : [];
   if (stale.length === 0) return 0;
   if (useWorkspaceStore.getState().diagramHistory.future.length > 0) {
     const t = i18n.t;
@@ -135,7 +133,7 @@ export function stopRefreshAll(): void {
 export function outOfDate(
   steps: readonly DiagramStep[],
   style: DiagramStyle,
-  segmentation: Parameters<typeof linkStatus>[2]
+  sheets: Parameters<typeof linkStatus>[2]
 ): string[] {
   const document = useWorkspaceStore.getState().oristudioCpDocument?.document ?? null;
   return steps
@@ -143,7 +141,7 @@ export function outOfDate(
       (step) =>
         step.source?.kind === 'cp' &&
         // Folded part way in the simulator (`pose`): only Pose can capture it again (D19).
-        refreshKind(step, linkStatus(step.source, document, segmentation), style) === 'refresh'
+        refreshKind(step, linkStatus(step.source, document, sheets), style) === 'refresh'
     )
     .map((step) => step.id);
 }

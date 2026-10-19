@@ -5,8 +5,8 @@
  *
  * Pure.
  */
-import type { FoldArtifacts } from '../../engine/types';
-import { segmentSheetThumbnail } from '../../cp-workspace/sheets/segmentSheet';
+import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
+import { linesSheetThumbnail } from '../../cp-workspace/sheets/linesSheetThumbnail';
 import {
   MAX_STORED_STROKES,
   type SheetStroke,
@@ -17,12 +17,14 @@ import type { StepCreases } from './captureCreases';
 const EMPTY_THUMBNAIL: SheetThumbnail = { viewBox: '0 0 100 100', strokes: [] };
 
 /**
- * The region's thumbnail, as the Simulate rail draws it, from the
- * segmentation its creases were chosen in — every capture has one, since a
- * region is found by its rim in it.
+ * The sheet's thumbnail, as the pattern picker draws it: every line the step
+ * covers, from the document its creases were chosen in.
  */
-export function creasesThumbnail(creases: StepCreases, segmentation: FoldArtifacts): SheetThumbnail {
-  const thumbnail = segmentSheetThumbnail(segmentation.fold, creases.segment);
+export function creasesThumbnail(
+  document: OristudioCpDocumentSnapshot,
+  creases: StepCreases
+): SheetThumbnail {
+  const thumbnail = linesSheetThumbnail(document, creases.scopedLineIds);
   if (!thumbnail) return EMPTY_THUMBNAIL;
   // To a tenth of the 100-unit box: plenty for a corner, and short in the file.
   const snap = (value: number) => Math.round(value * 10) / 10 + 0;

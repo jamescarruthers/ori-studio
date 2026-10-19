@@ -13,7 +13,7 @@
  *
  * The kernel is injected, as `captureStep`'s is: no store here.
  */
-import type { FoldArtifacts } from '../../engine/types';
+import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
 import { isLockedStep, type DiagramStep, type DiagramStyle } from '../document/diagramDocument';
 import type { SanitizeEnv } from '../upload/svgSanitize';
@@ -49,7 +49,7 @@ export type StepPaperFaces =
   /**
    * Its faces cannot be had without changing its picture, so Refresh is the
    * way: the link is not current (`stale`, `missing`, or `unknown` — no
-   * pattern to ask, or a segmentation not ready), or the fold draws another
+   * pattern to ask, or a sheet index not ready), or the fold draws another
    * picture now (`redrawn`).
    */
   | { status: 'refresh'; why: Exclude<DiagramLinkStatus, 'current'> | 'redrawn' };
@@ -58,8 +58,8 @@ export interface StepPaperFacesRequest {
   step: DiagramStep;
   /** The crease pattern as it stands; null when none is open. */
   document: OristudioCpDocumentSnapshot | null;
-  /** Kernel-space segmentation; null while it is not ready. */
-  segmentation: FoldArtifacts | null;
+  /** The sheet index; null while it is not ready. */
+  sheets: CpSheetIndex | null;
   style: DiagramStyle;
   env?: SanitizeEnv;
 }
@@ -71,18 +71,18 @@ export interface StepPaperFacesRequest {
  */
 export async function stepWithPaperFaces(
   runtime: CpCaptureRuntime,
-  { step, document, segmentation, style, env }: StepPaperFacesRequest
+  { step, document, sheets, style, env }: StepPaperFacesRequest
 ): Promise<StepPaperFaces> {
   const { source, picture } = step;
   if (isLockedStep(step) || source?.kind !== 'cp' || source.render.mode !== 'folded-flat') return { status: 'none' };
   if (picture?.kind !== 'scene') return { status: 'none' };
   if (picture.paperFaces !== undefined) return { status: 'faces', step };
   if (!document) return { status: 'refresh', why: 'unknown' };
-  const link = linkStatus(source, document, segmentation);
+  const link = linkStatus(source, document, sheets);
   if (link !== 'current') return { status: 'refresh', why: link };
   const result = await captureStep(runtime, {
     document,
-    segmentation,
+    sheets,
     scope: source.scope,
     known: knownCreasesOf(source),
     render: source.render,

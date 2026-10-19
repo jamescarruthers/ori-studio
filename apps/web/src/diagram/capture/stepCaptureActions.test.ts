@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramCaptureOutcome } from '../../store/workspaceStore/diagramCapture';
-import { twoSquaresSegmentation } from './capture.fixtures';
+import { twoSquaresIndex } from './capture.fixtures';
 import { cpStep, stepsIn } from '../document/diagramSteps.fixtures';
 import { insertSteps, createDiagram } from '../document/diagramDocument';
 import { takeCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
@@ -31,7 +31,7 @@ vi.mock('sonner', () => ({ toast: toasts }));
 
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
-const [left] = resolveCpSegments(twoSquaresSegmentation());
+const [left] = sheetRegions(twoSquaresIndex());
 
 function withSteps() {
   const diagram = insertSteps(createDiagram({ title: 'Linked' }), [
