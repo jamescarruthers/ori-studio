@@ -33,6 +33,10 @@ were never committed. Traced runs (V8 sampling profiler) were used only for
 attribution; the times below are untraced. Kernel numbers are native Rust
 on the same document (`CpSession`, release build).
 
+Harness numbers taken before 4.8 ran with hidden scrollbars (headless
+Playwright passes `--hide-scrollbars`), so they under-report layout in
+scroll containers. The harness keeps them since.
+
 ### Open — 31.5 s / 33.4 s (two runs), one 26–28 s freeze
 
 | Phase (ms after drop) | run 2 | run 3 |
@@ -442,6 +446,15 @@ removes.
   cards and about 489k elements: around 2 s of React commit, and a layout of
   all of them, on entering Simulate. Draw one `<path>` per ink per card, a few
   elements a card, and build a card's picture when it scrolls into view.
+- **4.8 The rail's grid is not sized from its cards.** While Simulate runs,
+  its readouts change up to 15 times a second, and each change re-laid out
+  the rail beside them: 204 cards, 489k lines, about 630 ms a time, so play
+  ran at 3–4 fps and the solver got 1–3 batches a second. `.sheet-grid` was a
+  scrolling flex item with a content basis (`flex: 1 1 auto`) and a scrollbar
+  that takes layout space (`::-webkit-scrollbar`), so Chromium could not
+  reuse its measurement. `flex: 1 1 0` sizes it from the rail: 0.2 ms an
+  update, play at 118 fps, 30–41 batches a second, the same pixels at desktop
+  and phone. Headless runs never saw it (`--hide-scrollbars`).
 
 Expected: ~5.5 s → ~2–3 s total, the main thread busy for well under a second;
 Diagram entry no longer pays 6.9 s for cards nobody is looking at.
@@ -541,3 +554,4 @@ Phase 4
 - [ ] 4.4 Desktop byte read (measure first)
 - [ ] 4.5 Diagram card picture geometry deferred to visible cards
 - [ ] 4.6 Sheet cards: one path per ink, pictures for cards in view
+- [x] 4.8 Sheet rail grid on a 0 flex basis; the harness keeps scrollbars
