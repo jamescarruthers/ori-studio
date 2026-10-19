@@ -906,6 +906,36 @@ function collectIntersectionCuts(segments: NormalizedSegment[], cuts: number[][]
 
   if (candidates.length < 2) return;
 
+  const testPair = (one: number, other: number) => {
+    if (maxX[one]! < minX[other]! || maxX[other]! < minX[one]!) return;
+    if (maxY[one]! < minY[other]! || maxY[other]! < minY[one]!) return;
+    const lower = one < other ? one : other;
+    const higher = one < other ? other : one;
+    const intersection = segmentIntersectionParams(segments[lower], segments[higher]);
+    intersection.a.forEach((value) => cuts[lower]?.push(value));
+    intersection.b.forEach((value) => cuts[higher]?.push(value));
+  };
+
+  // A box no grid can hold — a coordinate that is infinite or not a number — is
+  // tested against every other segment, as the sweep tested it. No pattern the
+  // app reads has one (import drops such vertices); a raw FOLD handed straight
+  // in can, and one such segment must not turn the grid off for all the rest.
+  const boxed: number[] = [];
+  const unbounded: number[] = [];
+  for (const i of candidates) {
+    const finite =
+      Number.isFinite(minX[i]) &&
+      Number.isFinite(maxX[i]) &&
+      Number.isFinite(minY[i]) &&
+      Number.isFinite(maxY[i]);
+    (finite ? boxed : unbounded).push(i);
+  }
+  unbounded.forEach((one, k) => {
+    for (const other of boxed) testPair(one, other);
+    for (const other of unbounded.slice(k + 1)) testPair(one, other);
+  });
+  if (boxed.length < 2) return;
+
   // Cells about as wide as a typical segment's box, and at most GRID_SIDE to a
   // side, so a cell's two coordinates make one exact key.
   let left = Infinity;
@@ -913,7 +943,7 @@ function collectIntersectionCuts(segments: NormalizedSegment[], cuts: number[][]
   let right = -Infinity;
   let bottom = -Infinity;
   let extent = 0;
-  for (const i of candidates) {
+  for (const i of boxed) {
     left = Math.min(left, minX[i]!);
     top = Math.min(top, minY[i]!);
     right = Math.max(right, maxX[i]!);
@@ -921,7 +951,7 @@ function collectIntersectionCuts(segments: NormalizedSegment[], cuts: number[][]
     extent += Math.max(maxX[i]! - minX[i]!, maxY[i]! - minY[i]!);
   }
   const span = Math.max(right - left, bottom - top);
-  let cell = Math.max(extent / candidates.length, span / GRID_SIDE, Number.MIN_VALUE);
+  let cell = Math.max(extent / boxed.length, span / GRID_SIDE, Number.MIN_VALUE);
   const column = (x: number) => Math.min(GRID_SIDE, Math.floor((x - left) / cell));
   const row = (y: number) => Math.min(GRID_SIDE, Math.floor((y - top) / cell));
   // Widened until the grid lists no more than GRID_COVERAGE cells a segment on
@@ -929,18 +959,18 @@ function collectIntersectionCuts(segments: NormalizedSegment[], cuts: number[][]
   // whole canvas would otherwise be listed in millions of them.
   for (;;) {
     let listed = 0;
-    for (const i of candidates) {
+    for (const i of boxed) {
       listed +=
         (column(maxX[i]!) - column(minX[i]!) + 1) * (row(maxY[i]!) - row(minY[i]!) + 1);
     }
-    if (listed <= GRID_COVERAGE * candidates.length || cell >= span) break;
+    if (listed <= GRID_COVERAGE * boxed.length || cell >= span) break;
     cell *= 2;
   }
 
   const firstColumn = new Int32Array(count);
   const firstRow = new Int32Array(count);
   const cells = new Map<number, number[]>();
-  for (const i of candidates) {
+  for (const i of boxed) {
     firstColumn[i] = column(minX[i]!);
     firstRow[i] = row(minY[i]!);
     const lastColumn = column(maxX[i]!);
@@ -965,13 +995,7 @@ function collectIntersectionCuts(segments: NormalizedSegment[], cuts: number[][]
         // Tested in the first cell the two share, and only there.
         if (Math.max(firstColumn[one]!, firstColumn[other]!) !== cx) continue;
         if (Math.max(firstRow[one]!, firstRow[other]!) !== cy) continue;
-        if (maxX[one]! < minX[other]! || maxX[other]! < minX[one]!) continue;
-        if (maxY[one]! < minY[other]! || maxY[other]! < minY[one]!) continue;
-        const lower = one < other ? one : other;
-        const higher = one < other ? other : one;
-        const intersection = segmentIntersectionParams(segments[lower], segments[higher]);
-        intersection.a.forEach((value) => cuts[lower]?.push(value));
-        intersection.b.forEach((value) => cuts[higher]?.push(value));
+        testPair(one, other);
       }
     }
   }
