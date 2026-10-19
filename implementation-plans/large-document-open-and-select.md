@@ -418,6 +418,34 @@ medium on the effort, since five consumers move.
   replaced (ids), not the document; an edit entry stores the compact typed
   arrays (`restore_from_compact` already exists) instead of the decoded object
   graph — 26 MiB instead of 131 MiB here.
+
+  *3.1 and the selection half of 3.2 done, as built (#472):* the kernel runs
+  the eight region selects through `execute_selection_command`, which answers
+  with the selected lines before and after (`line_selection.rs`) and refuses
+  anything else, and `set_selected_lines` puts an exact selection back for
+  undo, redo and deselect — in the session, the wasm bridge and the Tauri
+  commands alike. The store keeps its snapshot and geometry and writes the
+  changed `selected` flags into them in place (`mirrorSelectedLines`): an
+  `.osf` save writes those flags, and an edit's undo entry puts its snapshot
+  back into the kernel, so they must stay the kernel's; nothing draws from them
+  and no fingerprint reads them. A selection's undo entry holds the selected
+  lines it replaced (`selectedLines`) with `document` a shared reference to the
+  live snapshot, never a copy. Dirty is unchanged: `.osf` and `.ori` both carry
+  the selection, and a save after the same actions is byte-identical to
+  `main`'s apart from `savedAt`. Measured on this file (same boxes, main
+  0be4cdff3 against the branch, two runs each):
+
+  | | main | selection returns ids |
+  | --- | ---: | ---: |
+  | First sheet → selected | 627 / 594 ms | 290 / 254 ms |
+  | Second sheet → selected | 746 / 792 ms | 226 / 202 ms |
+  | Longest freeze per selection | 394–618 ms | 100–124 ms |
+  | Heap per selection (its undo entry) | +92–94 MiB | +2–6 MiB |
+
+  What is left of a selection is about 100 ms of the kernel's box select in
+  the worker and one ~107 ms main-thread task of passes over every line keyed
+  on the selection — the canvas's stroke scene for the highlight, the move-snap
+  document, the selected endpoints, the fold-angle layer — which is 3.3.
 - **3.3 Stop decoding 489k objects on every command.** The compact-transport
   work deliberately left consumers on the decoded snapshot because decoding
   was "~ms"; at this size it is ~150 ms and 131 MiB of garbage per command.
@@ -553,8 +581,9 @@ Phase 2
 - [x] 2.4 Inference hot spots, output bit-identical
 
 Phase 3
-- [ ] 3.1 Selection commands return ids; document identity preserved
-- [ ] 3.2 Selection-only undo entries; compact geometry for edit entries
+- [x] 3.1 Selection commands return ids; document identity preserved (#472)
+- [x] 3.2 Selection-only undo entries (#472)
+- [ ] 3.2 Compact geometry for edit entries
 - [ ] 3.3 Hot consumers on the `CpGeometry` accessor
 
 Phase 4
