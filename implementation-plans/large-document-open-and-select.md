@@ -281,6 +281,11 @@ T-junctions included — stay in the same sheet.
 - **2.4 Inference speed** still matters for one huge sheet: integer-keyed
   welding instead of template strings, a 2D grid instead of the x-only sweep,
   typed adjacency in `buildPlanarFaces` — output bit-identical.
+  *(Done.)* Measured on this file's FOLD projection in Node: the whole canvas
+  10.3 s → 2.3 s, one sheet 27 ms → 7 ms median (60 → 29 ms for the
+  slowest), with every vertex coordinate, edge, assignment and face identical
+  to the bit. The sweep had been the largest part: a long border keeps its
+  whole column of sheets in the active list.
 
 **Definitions — decided 2026-10-18.** The two definitions users see today
 disagreed on all of these; the last column is what the index does:
@@ -442,7 +447,7 @@ Phase 2
 - [ ] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
 - [ ] 2.2 Simulate rail on the index; mesh for the selected sheet only
 - [ ] 2.3 Faces per sheet on demand (kernel when certified, else JS), cached per sheet; whole-canvas paths deleted
-- [ ] 2.4 Inference hot spots, output bit-identical
+- [x] 2.4 Inference hot spots, output bit-identical
 
 Phase 3
 - [ ] 3.1 Selection commands return ids; document identity preserved
