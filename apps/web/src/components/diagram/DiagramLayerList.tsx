@@ -66,8 +66,8 @@ export interface DiagramLayerDisclosure {
  * it, quieter, what it says of itself; and at its end what it is — placed by
  * hand, past the margin — as marks, never as buttons. Pressed, it selects
  * what it names; `pressed` says it is the selection, and `holdsSelection`
- * that a row nested under it is. Last, its own Delete, shown on hover, with
- * the focus and on the selection (Zach, 2026-10-18).
+ * that a row nested under it is. Last, its own Delete, always shown (Zach,
+ * 2026-10-18, 2026-10-19).
  */
 export function DiagramLayerRow({
   glyph,

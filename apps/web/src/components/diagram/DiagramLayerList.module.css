@@ -186,23 +186,12 @@
   color: var(--text-tertiary);
 }
 
-/*
- * The row's own Delete, at its end: shown on hover, with the focus and on the
- * selection — always under a coarse pointer, which has no hover. Its room is
- * kept either way, so nothing on the row moves as it shows.
- */
+/* The row's own Delete, at its end, always shown (Zach, 2026-10-19). */
 .remove {
   display: flex;
   flex: none;
   min-width: 28px;
   margin-inline-end: var(--space-1);
-  opacity: 0;
-}
-
-.row:hover .remove,
-.row:focus-within .remove,
-.row[data-pressed] .remove {
-  opacity: 1;
 }
 
 @media (pointer: coarse) {
@@ -212,6 +201,5 @@
 
   .remove {
     min-width: var(--touch-target);
-    opacity: 1;
   }
 }

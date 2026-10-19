@@ -113,9 +113,10 @@ Zach's notes on #456, all taken:
 - [x] The list header taller (44 px), with a rule under it
 - [x] The parts are an accordion: one step open at a time, the selection's
       until a disclosure is used, and again once the selection moves
-- [x] Each step and mark row has its own Delete at its end: shown on hover,
-      with the focus and on the selection, always on touch. A step asks first,
-      as its card does. A mark's leaves another mark's selection alone
+- [x] Each step and mark row has its own Delete at its end, always shown
+      (shown on hover only at first; Zach asked for it always, 2026-10-19). A
+      step asks first, as its card does. A mark's leaves another mark's
+      selection alone
 - [x] The inspector's Delete sits beside the mark's name; the verb toolbar
       shows only when the mark has another verb
 
