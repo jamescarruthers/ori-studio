@@ -13,6 +13,10 @@ pub enum PrecreaseError {
     #[error("expected {segments} colour codes (one per segment), got {colors}")]
     ColorCountMismatch { segments: usize, colors: usize },
 
+    /// One document index per segment is required.
+    #[error("expected {segments} segment indices (one per segment), got {indices}")]
+    IndexCountMismatch { segments: usize, indices: usize },
+
     /// A coordinate is NaN or infinite.
     #[error("coordinate {index} is not finite")]
     NonFiniteCoordinate { index: usize },

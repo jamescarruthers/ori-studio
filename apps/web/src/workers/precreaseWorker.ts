@@ -2,10 +2,10 @@
  * The precrease planner bridge (`crates/oristudio-precrease-wasm`), alone in a
  * worker.
  *
- * Phase 3 uses the crate's *frames* slice only: the sheet frame(s) hidden in a
- * crease pattern's border creases, its segments merged into distinct lines, an
- * exactness verdict, and the two point maps between Oriedita model space and a
- * component's ReferenceFinder rectangle. The closure planner (Phase 4/5 of
+ * The sheets themselves are the CP kernel's (its sheet index): this frames
+ * their outlines, merges one sheet's segments into distinct lines with an
+ * exactness verdict, and maps points between Oriedita model space and a
+ * sheet's ReferenceFinder rectangle. The closure planner (Phase 4/5 of
  * `implementation-plans/reference-finder-integration.md`) adds its methods to
  * this same `api` object — `PrecreasePlanner` handles held across chunks,
  * `close(budget_ms)`, `fold`, `remaining`, `sequence` — so the runtime that
@@ -23,13 +23,15 @@
 import { expose } from 'comlink';
 import init, {
   model_to_rf,
+  outline_components,
   precrease_tolerances,
   PrecreasePlanner,
   rf_to_model,
-  sheet_frames,
+  sheet_component,
 } from '../generated/oristudio-precrease-wasm/oristudio_precrease_wasm';
 import type { WasmErrorEnvelope } from '../engine/types';
 import type {
+  PrecreaseComponent,
   PrecreaseFrame,
   PrecreaseTolerances,
   SheetAnalysis,
@@ -96,6 +98,41 @@ function requireInt32Array(name: string, value: unknown): Int32Array {
   return value;
 }
 
+function requireUint32Array(name: string, value: unknown): Uint32Array {
+  if (!(value instanceof Uint32Array)) {
+    throw invalidInput(`${name} must be a Uint32Array`);
+  }
+  return value;
+}
+
+/**
+ * One sheet's lines as the bridge takes them: coordinates, one colour code and
+ * one document index per segment, and an outline of `[x, y]` pairs.
+ */
+function requireSheet(
+  outline: unknown,
+  segments: unknown,
+  colors: unknown,
+  indices: unknown
+): { outline: Float64Array; segments: Float64Array; colors: Int32Array; indices: Uint32Array } {
+  const ring = requireFloat64Array('outline', outline);
+  if (ring.length % 2 !== 0) {
+    throw invalidInput(`outline must hold 2 values per point, got ${ring.length}`);
+  }
+  const segs = requireFloat64Array('segments', segments);
+  const cols = requireInt32Array('colors', colors);
+  const ids = requireUint32Array('indices', indices);
+  if (segs.length % 4 !== 0) {
+    throw invalidInput(`segments must hold 4 values per segment, got ${segs.length}`);
+  }
+  if (cols.length !== segs.length / 4 || ids.length !== segs.length / 4) {
+    throw invalidInput(
+      `colors and indices must have one entry per segment: ${cols.length} colors and ${ids.length} indices for ${segs.length / 4} segments`
+    );
+  }
+  return { outline: ring, segments: segs, colors: cols, indices: ids };
+}
+
 function requireUint8Array(name: string, value: unknown): Uint8Array {
   if (!(value instanceof Uint8Array)) {
     throw invalidInput(`${name} must be a Uint8Array`);
@@ -119,6 +156,14 @@ function requireFinite(name: string, value: unknown): number {
   return value;
 }
 
+function requireComponentId(value: unknown): number {
+  const id = requireFinite('id', value);
+  if (id < 0 || !Number.isInteger(id)) {
+    throw invalidInput(`id must be a non-negative integer, got ${String(value)}`);
+  }
+  return id;
+}
+
 function requirePair(name: string, value: unknown): [number, number] {
   if (!Array.isArray(value) || value.length !== 2) {
     throw invalidInput(`${name} must be a [x, y] pair`);
@@ -128,8 +173,8 @@ function requirePair(name: string, value: unknown): [number, number] {
 
 /**
  * The frame as the Rust side deserialises it. Checked field by field so a frame
- * that came back from `sheetFrames` and was then mangled (a `null` where a
- * component was refused, say) is a readable error rather than a serde one.
+ * that came back from `outlineComponents` and was then mangled (a `null` where
+ * a component was refused, say) is a readable error rather than a serde one.
  */
 function requireFrame(value: unknown): PrecreaseFrame {
   if (!value || typeof value !== 'object') {
@@ -150,8 +195,8 @@ function requireFrame(value: unknown): PrecreaseFrame {
  *
  * One at a time: the workspace plans one component — the picked one, or each in
  * turn for the whole-pattern breakdown — and a planner's point store is the
- * expensive thing here (up to the 600,000-point cap). `plannerCreate` disposes
- * whatever was there, and the References workspace disposes on leaving.
+ * expensive thing here (up to the 600,000-point cap). `plannerCreateForSheet`
+ * disposes whatever was there, and the References workspace disposes on leaving.
  */
 let planner: PrecreasePlanner | null = null;
 let plannerToken = 0;
@@ -159,7 +204,7 @@ let plannerToken = 0;
 function requirePlanner(token: number): PrecreasePlanner {
   if (!planner || token !== plannerToken) {
     throw invalidInput(
-      `no planner for token ${token}; create one with plannerCreate before using it`
+      `no planner for token ${token}; create one with plannerCreateForSheet before using it`
     );
   }
   return planner;
@@ -172,36 +217,45 @@ function disposePlanner(): void {
 
 const api = {
   /**
-   * Sheet frames, merged lines and exactness for a crease pattern.
-   *
-   * `segments` is `[x1, y1, x2, y2, …]` in Oriedita model space; `colors` has
-   * one Oriedita colour code per segment (0 border, 1 mountain, 2 valley, 3
-   * auxiliary, negative unassigned); `paperFallback` is `[x0, y0, x1, y1]`,
-   * used only when the pattern has no border creases.
+   * Sheets already found — the CP kernel's sheet index — framed from their
+   * outlines alone: one component per outline, with its frame or the reason
+   * it is refused, and no lines. Sheet `i`'s outline is points
+   * `outlineOffsets[i]..outlineOffsets[i + 1]` of `outlineCoords`.
    */
-  async sheetFrames(
+  async outlineComponents(
+    outlineCoords: Float64Array,
+    outlineOffsets: Uint32Array
+  ): Promise<PrecreaseComponent[]> {
+    const coords = requireFloat64Array('outlineCoords', outlineCoords);
+    const offsets = requireUint32Array('outlineOffsets', outlineOffsets);
+    return call(() => outline_components(coords, offsets) as PrecreaseComponent[]);
+  },
+
+  /**
+   * One sheet already found — its outline and only its lines — framed, merged
+   * and probed: what the planner reads of it. `indices` is each line's
+   * 0-based number in the document, the numbering the result is in; the one
+   * component's id is `id`.
+   */
+  async sheetComponent(
+    id: number,
+    outline: Float64Array,
     segments: Float64Array,
     colors: Int32Array,
-    paperFallback?: Float64Array
+    indices: Uint32Array
   ): Promise<SheetAnalysis> {
-    const segs = requireFloat64Array('segments', segments);
-    const cols = requireInt32Array('colors', colors);
-    if (segs.length % 4 !== 0) {
-      throw invalidInput(`segments must hold 4 values per segment, got ${segs.length}`);
-    }
-    if (cols.length !== segs.length / 4) {
-      throw invalidInput(
-        `colors must have one entry per segment: ${cols.length} colors for ${segs.length / 4} segments`
-      );
-    }
-    let fallback: Float64Array | undefined;
-    if (paperFallback !== undefined) {
-      fallback = requireFloat64Array('paperFallback', paperFallback);
-      if (fallback.length !== 4) {
-        throw invalidInput(`paperFallback must be [x0, y0, x1, y1], got ${fallback.length} values`);
-      }
-    }
-    return call(() => sheet_frames(segs, cols, fallback) as SheetAnalysis);
+    const sheet = requireSheet(outline, segments, colors, indices);
+    const component = requireComponentId(id);
+    return call(
+      () =>
+        sheet_component(
+          component,
+          sheet.outline,
+          sheet.segments,
+          sheet.colors,
+          sheet.indices
+        ) as SheetAnalysis
+    );
   },
 
   /** Model point → the component's ReferenceFinder rectangle. */
@@ -267,44 +321,35 @@ const api = {
   // about the wrong component.
 
   /**
-   * Create the planner for `component` of this crease pattern, replacing any
-   * previous one. Returns the token every other planner call must carry.
+   * Create the planner for one sheet already found, from its outline and only
+   * its lines (as `sheetComponent` takes them), replacing any previous one:
+   * nothing else of the pattern crosses to the worker or is analysed. Returns
+   * the token every other planner call must carry.
    */
-  async plannerCreate(
+  async plannerCreateForSheet(
+    id: number,
+    outline: Float64Array,
     segments: Float64Array,
     colors: Int32Array,
-    component: number,
-    options?: PrecreasePlannerOptions,
-    paperFallback?: Float64Array
+    indices: Uint32Array,
+    options?: PrecreasePlannerOptions
   ): Promise<{ token: number; info: PrecreasePlannerInfo }> {
-    const segs = requireFloat64Array('segments', segments);
-    const cols = requireInt32Array('colors', colors);
-    if (segs.length % 4 !== 0) {
-      throw invalidInput(`segments must hold 4 values per segment, got ${segs.length}`);
-    }
-    if (cols.length !== segs.length / 4) {
-      throw invalidInput(
-        `colors must have one entry per segment: ${cols.length} colors for ${segs.length / 4} segments`
-      );
-    }
-    const id = requireFinite('component', component);
-    if (id < 0 || !Number.isInteger(id)) {
-      throw invalidInput(`component must be a non-negative integer, got ${component}`);
-    }
-    let fallback: Float64Array | undefined;
-    if (paperFallback !== undefined) {
-      fallback = requireFloat64Array('paperFallback', paperFallback);
-      if (fallback.length !== 4) {
-        throw invalidInput(`paperFallback must be [x0, y0, x1, y1], got ${fallback.length} values`);
-      }
-    }
+    const sheet = requireSheet(outline, segments, colors, indices);
+    const component = requireComponentId(id);
     if (options !== undefined && (typeof options !== 'object' || options === null)) {
       throw invalidInput('options must be an object');
     }
     const optsJson = options ? JSON.stringify(options) : '';
     return call(() => {
       disposePlanner();
-      planner = new PrecreasePlanner(segs, cols, fallback, id, optsJson);
+      planner = PrecreasePlanner.for_sheet(
+        component,
+        sheet.outline,
+        sheet.segments,
+        sheet.colors,
+        sheet.indices,
+        optsJson
+      );
       plannerToken += 1;
       return { token: plannerToken, info: planner.info() as PrecreasePlannerInfo };
     });

@@ -1,4 +1,5 @@
 import type { ReferencesReaderStateV1 } from '../../../cp-workspace/references/referencesReaderState';
+import { sameSheetChoice } from '../../../cp-workspace/references/referencesSheets';
 import { useLayoutStore } from '../../layoutStore';
 import type {
   ReferencesSettings,
@@ -105,11 +106,11 @@ export const createReferencesSlice: WorkspaceSliceCreator<ReferencesSlice> = (se
   // A choice of sheet is also the end of whatever an open restored and had not
   // placed yet: the sheet it named is no longer wanted, and the card it named
   // is that sheet's. So is a card asked for from a diagram step.
-  setReferencesSelectedSheet: (component) => {
-    if (get().referencesSelectedSheet === component) return;
+  setReferencesSelectedSheet: (sheet) => {
+    if (sameSheetChoice(get().referencesSelectedSheet, sheet)) return;
     const restore = get().referencesRestore;
     set({
-      referencesSelectedSheet: component,
+      referencesSelectedSheet: sheet,
       referencesTarget: null,
       referencesCandidates: null,
       referencesPlan: null,
@@ -121,15 +122,15 @@ export const createReferencesSlice: WorkspaceSliceCreator<ReferencesSlice> = (se
   },
   setReferencesView: (view) => set({ referencesView: { ...get().referencesView, ...view } }),
 
-  commitReferencesRestoredSheet: (component) => {
+  commitReferencesRestoredSheet: (sheet) => {
     const restore = get().referencesRestore;
     if (!restore?.sheet) return;
-    if (component === null) {
+    if (sheet === null) {
       // A sheet that is not there any more takes its card with it.
       set({ referencesRestore: { ...restore, sheet: null, card: null } });
       return;
     }
-    set({ referencesSelectedSheet: component, referencesRestore: { ...restore, sheet: null } });
+    set({ referencesSelectedSheet: sheet, referencesRestore: { ...restore, sheet: null } });
   },
 
   takeReferencesRestoredCard: (loadSerial) => {

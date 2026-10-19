@@ -36,6 +36,7 @@ import {
   referencesPlanCacheForSave,
 } from '../../../cp-workspace/references/referencesPlanCacheStore';
 import { referencesReaderStateFor } from '../../../cp-workspace/references/referencesReaderState';
+import { chosenSheet } from '../../../cp-workspace/references/referencesSheets';
 import { referencesResultsSnapshot } from '../../../cp-workspace/references/referencesResults';
 import { DEFAULT_REFERENCES_SETTINGS, restoredReferencesState } from './referencesSlice';
 import { reportError } from '../../../monitoring';
@@ -1772,7 +1773,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           settings: get().referencesSettings,
           defaults: DEFAULT_REFERENCES_SETTINGS,
           view: get().referencesView,
-          selectedSheet: get().referencesSelectedSheet,
+          selectedSheet: chosenSheet(side.frames?.analysis ?? null, get().referencesSelectedSheet),
           target: get().referencesTarget,
           restore: get().referencesRestore,
           loadSerial: documentState.loadSerial,

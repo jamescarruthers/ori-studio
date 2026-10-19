@@ -20,7 +20,7 @@ import type { CpGeometryTransport } from '../../engine/oristudioCpGeometry';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { applyPaperStylePolicy, PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import type { DiagramSegment } from './diagram/diagramFrames';
-import type { PrecreaseComponent } from './sheetFrames';
+import { applyPrecreaseAffine, type PrecreaseComponent } from './sheetFrames';
 import type { ReferencesPaperInks } from './usePaperStyleTokens';
 
 /** Whether the pattern's aux lines are drawn: the option when set, else the style's switch. */
@@ -58,13 +58,16 @@ export function referencesSheetAux(
       { x: endpoints[base + 2]!, y: endpoints[base + 3]! },
     ]);
   }
+  // Through the frame's own map rather than `aux_unit_segments`: a sheet as the
+  // workspace lists it carries no unit segments (`referencesFrames`), and the
+  // map is the planner's, not one worked out here.
+  const toUnit = component.affines?.model_to_unit ?? null;
   return {
     component: component.id,
     ids: new Set(indices.map((index) => index + 1)),
-    unit: component.aux_unit_segments.map(([x1, y1, x2, y2]) => [
-      { x: x1, y: y1 },
-      { x: x2, y: y2 },
-    ]),
+    unit: toUnit
+      ? model.map(([a, b]) => [applyPrecreaseAffine(toUnit, a), applyPrecreaseAffine(toUnit, b)])
+      : [],
     model,
   };
 }

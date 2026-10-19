@@ -275,6 +275,23 @@ T-junctions included — stay in the same sheet.
   - *References:* precrease takes its sheets from the index (frames from
     rectangular outlines) instead of chaining borders again, and runs merge and
     exactness for the sheet being looked at, not for all 204.
+    *(Done.)* The rail lists the index's sheets, each outline framed by the
+    planner (`outline_components`: 3 ms for all 204, where `sheet_frames` took
+    3.5 s). The planner is built from one sheet's lines
+    (`PrecreasePlanner::for_sheet`: 21 ms, where it analysed the whole canvas
+    again for 1.6 s). A crease picked in Find asks for its own sheet's merged
+    lines. The chosen sheet is kept by its outline, because reading-order ids
+    move when a sheet is added above or to the left; a saved file already
+    named it by its box and frame. Every sheet of this file comes out with the
+    planner's own frame, lines and exactness (`referencesFrames.wasm.test.ts`).
+    Measured on this file: entering References 5.2 s → 3.0 s to the rail, a
+    sheet's sequence 47.1 s → 45.7 s, heap after 927 → 862 MiB. What is left
+    of entering is mostly the rail's cards (4.6). What is left of a sequence
+    is the planner's own work on one sheet. On the biggest, an off-lattice
+    sheet, about 30 s of the 47 s is the order optimiser spending its 10 s
+    budget on each `sequence()` call, and 12 s is the stuck search.
+    Precrease's own chaining (`analyze`) stays until the whole-canvas paths
+    go, since its fixture tests and the differential test read it.
   - *Simulate:* the rail lists index sheets; the mesh is built for the selected
     sheet only. *(Done.)* One hook, `useSimulateSource`, gives the panel its
     rail, the sheet shown and that sheet's fold. For an editable pattern those
@@ -338,6 +355,11 @@ T-junctions included — stay in the same sheet.
 - **2.4 Inference speed** still matters for one huge sheet: integer-keyed
   welding instead of template strings, a 2D grid instead of the x-only sweep,
   typed adjacency in `buildPlanarFaces` — output bit-identical.
+  *(Done.)* Measured on this file's FOLD projection in Node: the whole canvas
+  10.3 s → 2.3 s, one sheet 27 ms → 7 ms median (60 → 29 ms for the
+  slowest), with every vertex coordinate, edge, assignment and face identical
+  to the bit. The sweep had been the largest part: a long border keeps its
+  whole column of sheets in the active list.
 
 **Definitions — decided 2026-10-18.** The two definitions users see today
 disagreed on all of these; the last column is what the index does:
@@ -501,11 +523,11 @@ Phase 2
 - [x] 2.1 Sheet index in Rust from outer border loops, in the CP engine, cached by crease fingerprint; differential test against today's regions
 - [x] 2.2 Edit toolbar on the index; its verbs on one sheet's faces
 - [x] 2.2 Diagram links, picker and thumbnails on the index
-- [ ] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
+- [x] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
 - [x] 2.2 Simulate rail on the index; mesh for the selected sheet only
 - [x] 2.3 Faces per sheet on demand (kernel when its lines meet only at their ends, else JS), cached per sheet
 - [ ] 2.3 Whole-canvas paths deleted (after the Diagram and Simulate move)
-- [ ] 2.4 Inference hot spots, output bit-identical
+- [x] 2.4 Inference hot spots, output bit-identical
 
 Phase 3
 - [ ] 3.1 Selection commands return ids; document identity preserved
