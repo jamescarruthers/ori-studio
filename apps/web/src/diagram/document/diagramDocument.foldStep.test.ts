@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import {
   annotationsOutOfStep,
   createDiagram,
+  createStep,
+  createTurn,
   insertSteps,
+  nearestEarlierShowAs,
   pullReferencesSteps,
   setFoldStepPicture,
   type DiagramStep,
   type KnownDiagramAnnotation,
 } from './diagramDocument';
-import { foldStepSource, foldStepStep, scenePicture, stepsIn } from './diagramSteps.fixtures';
+import { cpStep, foldStepSource, foldStepStep, referencesStep, scenePicture, stepsIn } from './diagramSteps.fixtures';
 
 /** A mark the fold brought, as it arrives. */
 const fold = (id: string, patch: Partial<KnownDiagramAnnotation> = {}): KnownDiagramAnnotation => ({
@@ -124,5 +127,27 @@ describe('a pull of Fold steps (D17)', () => {
     const step = stepsIn({ steps: document.steps.filter((entry) => stepIds.includes(entry.id)) })[0]!;
     expect(step).toMatchObject({ text: 'Valley fold.', annotatedPictureKey: 'scene-fold', picture });
     expect(step.annotations).toEqual([fold('f-1')]);
+  });
+});
+
+describe('a Fold step in the run the pattern picker follows (review fix 3)', () => {
+  it('counts as posed, as a linked pattern does: a step after it links the way it is shown', () => {
+    const document = insertSteps(
+      createDiagram(),
+      [
+        cpStep('step-cp', { mode: 'crease-pattern', rotationDeg: 0 }),
+        foldStepStep('step-fold'),
+        createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'turn-1'),
+        referencesStep('step-r'),
+        createStep(() => 'step-new'),
+        foldStepStep('step-fold-cp', { render: { mode: 'crease-pattern', rotationDeg: 90 } }),
+        createStep(() => 'step-last'),
+      ],
+      0
+    );
+    // Past the turn and the References step, to the Fold step shown folded, not the pattern before it.
+    expect(nearestEarlierShowAs(document, 'step-new')).toBe('folded');
+    expect(nearestEarlierShowAs(document, 'step-last')).toBe('crease-pattern');
+    expect(nearestEarlierShowAs(document, 'step-fold')).toBe('crease-pattern');
   });
 });
