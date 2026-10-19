@@ -6185,6 +6185,7 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "es": {
@@ -12373,6 +12374,7 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "fr": {
@@ -18563,6 +18565,7 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "ja": {
@@ -24420,6 +24423,7 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "ko": {
@@ -30277,6 +30281,7 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "pt-BR": {
@@ -36465,6 +36470,7 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "ru": {
@@ -42653,6 +42659,7 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   },
   "zh-CN": {
@@ -48510,6 +48517,7 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
     "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
   }
 }

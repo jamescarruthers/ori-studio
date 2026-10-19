@@ -10,6 +10,10 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
+
+vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
+
 async function freshRuntime() {
   vi.resetModules();
   return import('./foldSequenceRuntime');
@@ -30,6 +34,7 @@ class FakeWorker extends EventTarget {
 
 beforeEach(() => {
   FakeWorker.instances = [];
+  monitoring.reportError.mockClear();
   vi.stubGlobal('Worker', FakeWorker as unknown as typeof Worker);
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -141,6 +146,90 @@ describe('fold engine client lifetime', () => {
     const runtime = await freshRuntime();
     await expect(runtime.askFoldSequenceClient(async () => 1)).rejects.toThrow(/retain/);
     await expect(runtime.foldSequenceEngineSource.release([3])).rejects.toThrow(/retain/);
+  });
+
+  it('reports nothing for a release or a stop', async () => {
+    const runtime = await freshRuntime();
+    runtime.retainFoldSequenceClient();
+    runtime.stopFoldSequenceWork();
+    runtime.getFoldSequenceClient();
+    runtime.releaseFoldSequenceClient();
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+  });
+});
+
+describe('a fold engine that crashed', () => {
+  /** What the worker answers once its engine trapped (`fold/engine/foldEngineTrap.ts`). */
+  const TRAPPED = {
+    code: 'fold_engine_trapped',
+    trap: 'wasm_trap',
+    message: 'unreachable',
+    stack: 'RuntimeError: unreachable\n    at wasm://wasm/0a1b2c3d:wasm-function[812]:0x5f1e2',
+  } as const;
+
+  it('drops the worker whose engine trapped, rejects every call on it as its loss, and reports the crash once', async () => {
+    const runtime = await freshRuntime();
+    runtime.retainFoldSequenceClient();
+    const heard: unknown[][] = [];
+    runtime.onFoldSequenceClientLost((...args) => heard.push(args));
+    // Another call to the same worker, whose answer comes after the trap.
+    const late = deferred<number>();
+    const other = runtime.askFoldSequenceClient(() => late.promise).catch((e: unknown) => e);
+
+    const trapped = runtime.askFoldSequenceClient(() => Promise.reject({ ...TRAPPED })).catch((e: unknown) => e);
+
+    await expect(trapped).resolves.toEqual({
+      code: 'fold_sequence_client_lost',
+      message: 'The fold engine stopped while it was running.',
+    });
+    await expect(other).resolves.toMatchObject({ code: 'fold_sequence_client_lost' });
+    expect(FakeWorker.instances[0].terminated).toBe(true);
+    expect(runtime.peekFoldSequenceClient()).toBeNull();
+    expect(runtime.foldSequenceClientGeneration()).toBe(1);
+    expect(heard).toEqual([['crashed', 'wasm_trap']]);
+
+    expect(monitoring.reportError).toHaveBeenCalledTimes(1);
+    const [error, context] = monitoring.reportError.mock.calls[0]!;
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toMatchObject({ name: 'FoldEngineCrash', message: 'wasm_trap: unreachable', stack: TRAPPED.stack });
+    expect(context).toEqual({ surface: 'fold:engine', tags: { reason: 'wasm_trap' } });
+
+    // The next request spawns a fresh worker; the dead one's late trap drops nothing more.
+    runtime.getFoldSequenceClient();
+    late.reject({ ...TRAPPED });
+    await settle();
+    expect(FakeWorker.instances).toHaveLength(2);
+    expect(FakeWorker.instances[1].terminated).toBe(false);
+    expect(runtime.foldSequenceClientGeneration()).toBe(1);
+    expect(monitoring.reportError).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveLength(1);
+  });
+
+  it('reports a worker that died by itself as a worker_error crash', async () => {
+    const runtime = await freshRuntime();
+    runtime.retainFoldSequenceClient();
+    const heard: unknown[][] = [];
+    runtime.onFoldSequenceClientLost((...args) => heard.push(args));
+
+    FakeWorker.instances[0].dispatchEvent(new Event('error'));
+
+    expect(heard).toEqual([['crashed', 'worker_error']]);
+    expect(monitoring.reportError).toHaveBeenCalledTimes(1);
+    expect(monitoring.reportError.mock.calls[0]![0]).toMatchObject({
+      name: 'FoldEngineCrash',
+      message: 'worker_error: The worker stopped unexpectedly.',
+    });
+    expect(monitoring.reportError.mock.calls[0]![1]).toEqual({ surface: 'fold:engine', tags: { reason: 'worker_error' } });
+  });
+
+  it('passes an engine’s own error through, keeping the worker', async () => {
+    const runtime = await freshRuntime();
+    runtime.retainFoldSequenceClient();
+    const unknownState = { code: 'unknown_state', message: 'no state 4' };
+    await expect(runtime.askFoldSequenceClient(() => Promise.reject(unknownState))).rejects.toBe(unknownState);
+    expect(FakeWorker.instances[0].terminated).toBe(false);
+    expect(runtime.foldSequenceClientGeneration()).toBe(0);
+    expect(monitoring.reportError).not.toHaveBeenCalled();
   });
 });
 

@@ -13,7 +13,14 @@ import { sequenceOf, step, valleyAt } from '../document/foldSequence.fixtures';
 import { setFoldStartSide, setFoldStepNote } from '../document/foldSequenceEdits';
 import type { FoldSequenceDocument } from '../document/foldSequenceDocument';
 import type { FoldStateSummary } from '../engine/foldEngineWire';
-import { createFoldSession, MAX_RESTARTS, type FoldSession, type FoldStateCall } from './foldSession';
+import {
+  createFoldSession,
+  FOLD_ENGINE_KEPT_STOPPING,
+  MAX_RESTARTS,
+  type FoldEngineRestart,
+  type FoldSession,
+  type FoldStateCall,
+} from './foldSession';
 import {
   fakeFoldEngine,
   foldOpLabel,
@@ -64,10 +71,12 @@ function setup({
     (prefix) => `${prefix}-${(next += 1)}`
   );
   const reported: WasmErrorEnvelope[] = [];
+  const crashes: FoldEngineRestart[] = [];
   const session = createFoldSession({
     document: source,
     runtime,
     reportError: (error) => reported.push(error),
+    onEngineCrash: (restart) => crashes.push(restart),
     capacity,
   });
   sessions.push(session);
@@ -77,6 +86,7 @@ function setup({
     runtime,
     source,
     reported,
+    crashes,
     snapshot,
     /** The engine answering now. */
     engine: () => engines[engines.length - 1],
@@ -308,20 +318,101 @@ describe('the Fold session: handles', () => {
   });
 
   it('stops replaying into an engine that keeps crashing, until a retry or the next change', async () => {
-    const { session, runtime, snapshot, source, statuses, engine } = setup();
+    const { session, runtime, snapshot, source, statuses, engine, reported, crashes } = setup();
     session.retain();
     await settle();
-    for (let crash = 0; crash <= MAX_RESTARTS; crash += 1) runtime.lose('crashed');
+    const held = source.read().held;
+    for (let crash = 0; crash <= MAX_RESTARTS; crash += 1) runtime.lose('crashed', 'wasm_trap');
     await settle();
-    expect(snapshot().error).toMatchObject({ code: 'fold_sequence_client_lost' });
+    expect(snapshot().error).toBe(FOLD_ENGINE_KEPT_STOPPING);
     expect(engine().log).toEqual([]);
     expect(statuses()).toEqual({ a: 'pending', b: 'pending', c: 'pending' });
+    // Told once, with what to do; each crash counted with what came of its restart.
+    expect(reported).toEqual([FOLD_ENGINE_KEPT_STOPPING]);
+    expect(crashes).toEqual([
+      { cause: 'wasm_trap', attempt: 1, outcome: 'crashed_again' },
+      { cause: 'wasm_trap', attempt: 2, outcome: 'crashed_again' },
+      { cause: 'wasm_trap', attempt: 3, outcome: 'gave_up' },
+    ]);
+    // The document is the user's: nothing was written to it.
+    expect(source.read().held).toBe(held);
 
     // A change is worth one more try.
     source.set({ held: { document: setFoldStepNote(branching(), 'a', 'Again.'), readOnlyRaw: null } });
     await settle();
     expect(snapshot().error).toBeNull();
     expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok' });
+    // One: the count stays until a change finds the engine sound.
+    runtime.lose('crashed', 'wasm_trap');
+    await settle();
+    expect(snapshot().error).toBe(FOLD_ENGINE_KEPT_STOPPING);
+    expect(crashes.at(-1)).toEqual({ cause: 'wasm_trap', attempt: 4, outcome: 'gave_up' });
+
+    session.retry();
+    await settle();
+    expect(snapshot().error).toBeNull();
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok' });
+  });
+
+  it('says a restart recovered once the replay after it finishes', async () => {
+    const { session, runtime, statuses, crashes, reported } = setup();
+    session.retain();
+    await settle();
+    runtime.lose('crashed', 'engine_poisoned');
+    expect(crashes).toEqual([]);
+    await settle();
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok' });
+    expect(crashes).toEqual([{ cause: 'engine_poisoned', attempt: 1, outcome: 'recovered' }]);
+    // Recovered on its own: no toast.
+    expect(reported).toEqual([]);
+    // A stop or a release is no crash.
+    runtime.lose('stopped');
+    await settle();
+    expect(crashes).toHaveLength(1);
+  });
+
+  it('gives up on a crash that comes back after every replay, as a query asked again would bring it', async () => {
+    const { session, runtime, snapshot, statuses, crashes, engines } = setup();
+    session.retain();
+    await settle();
+    // Each replay finishes, then the same query crashes the engine again.
+    for (let crash = 0; crash <= MAX_RESTARTS + 2; crash += 1) {
+      runtime.lose('crashed', 'wasm_trap');
+      await settle();
+    }
+    expect(snapshot().error).toBe(FOLD_ENGINE_KEPT_STOPPING);
+    expect(statuses()).toEqual({ a: 'pending', b: 'pending', c: 'pending' });
+    expect(crashes.map(({ attempt, outcome }) => [attempt, outcome])).toEqual([
+      [1, 'recovered'],
+      [2, 'recovered'],
+      [3, 'gave_up'],
+      [4, 'gave_up'],
+      [5, 'gave_up'],
+    ]);
+    // Only the restarts asked an engine for anything: none after the third crash.
+    expect(engines.filter((made) => made.log.length > 0)).toHaveLength(MAX_RESTARTS + 1);
+  });
+
+  it('ends a run of crashes when the document changes, and counts a crash under way as left when the surface goes', async () => {
+    const { session, runtime, snapshot, source, crashes } = setup();
+    const release = session.retain();
+    await settle();
+    runtime.lose('crashed', 'unexpected_error');
+    runtime.lose('crashed', 'unexpected_error');
+    await settle();
+    source.set({ held: { document: setFoldStepNote(branching(), 'a', 'Moved on.'), readOnlyRaw: null } });
+    await settle();
+    // Two more in a row from here are within the limit again.
+    runtime.lose('crashed', 'unexpected_error');
+    runtime.lose('crashed', 'unexpected_error');
+    expect(snapshot().error).toBeNull();
+    release();
+    expect(crashes.map(({ attempt, outcome }) => [attempt, outcome])).toEqual([
+      [1, 'crashed_again'],
+      [2, 'recovered'],
+      [1, 'crashed_again'],
+      [2, 'left'],
+    ]);
   });
 
   it('answers a query on any landed state, and a handle that outlived its engine is unavailable', async () => {

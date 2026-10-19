@@ -33,7 +33,11 @@
 
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { WasmErrorEnvelope } from '../../engine/types';
-import type { FoldPreviewResult, FoldSequenceClientLossReason } from '../../store/workspaceStore/foldSequenceRuntime';
+import type {
+  FoldPreviewResult,
+  FoldSequenceClientLossListener,
+  FoldSequenceClientLossReason,
+} from '../../store/workspaceStore/foldSequenceRuntime';
 import type { FoldSequenceWorkerApi } from '../../workers/foldSequenceWorker';
 import { resolveFoldReturn } from '../document/foldReturn';
 import type { FoldStateFingerprint } from '../document/foldDigest';
@@ -44,6 +48,7 @@ import type { HeldFoldSequence } from '../document/foldSequenceFile';
 import type { FoldStepDraft } from '../document/foldSequenceEdits';
 import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
+import type { FoldEngineCrashCause } from '../engine/foldEngineTrap';
 import type { FoldEngineOp, FoldEngineRefused, FoldStateSummary } from '../engine/foldEngineWire';
 import { createFoldSessionAnswers } from './foldSessionAnswers';
 import { createFoldSessionEngine, foldStepInputKey, type FoldSessionEngine } from './foldSessionEngine';
@@ -113,8 +118,8 @@ export interface FoldSessionRuntime {
   release(): void;
   /** Which engine handles belong to; it moves the moment one goes away. */
   generation(): number;
-  /** Called when the engine goes away, before any call it took with it rejects. */
-  onLost(listener: (reason: FoldSequenceClientLossReason) => void): () => void;
+  /** Called when the engine goes away, before any call it took with it rejects; a crash says what crashed it. */
+  onLost(listener: FoldSequenceClientLossListener): () => void;
   /** One call, rejected as `fold_sequence_client_lost` if the engine goes away under it. */
   ask<T>(call: (engine: FoldSessionWorker) => Promise<T>): Promise<T>;
   createChannel(): FoldSessionChannel;
@@ -122,11 +127,29 @@ export interface FoldSessionRuntime {
   readonly source: FoldEngineSource;
 }
 
+/**
+ * What became of the restart after a crash: the replay that followed
+ * finished (`recovered`), the engine crashed again first (`crashed_again`),
+ * the session stopped restarting (`gave_up`), the replay failed some other
+ * way (`failed`), or no surface held the session any more (`left`).
+ */
+export type FoldEngineRestartOutcome = 'recovered' | 'crashed_again' | 'gave_up' | 'failed' | 'left';
+
+/** One crash of the engine, once the session knows what came of it. */
+export interface FoldEngineRestart {
+  readonly cause: FoldEngineCrashCause;
+  /** How many times in a row the engine has crashed, this one included ({@link MAX_RESTARTS}). */
+  readonly attempt: number;
+  readonly outcome: FoldEngineRestartOutcome;
+}
+
 export interface FoldSessionOptions {
   document: FoldSessionDocumentSource;
   runtime: FoldSessionRuntime;
   /** An error the user should hear of: the app's error toast. */
   reportError?: (error: WasmErrorEnvelope) => void;
+  /** Each crash of the engine, with what came of the restart: the app's analytics. */
+  onEngineCrash?: (restart: FoldEngineRestart) => void;
   /** The replay cache's room beyond the states on screen (`createFoldReplayer`). */
   capacity?: number;
 }
@@ -253,10 +276,18 @@ export interface FoldSession {
 /**
  * How many times in a row the engine may be lost — a crash, or a state it no
  * longer holds — before the session stops replaying: a step that crashes the
- * worker every time it is folded would otherwise restart it forever. A
- * replay that finishes resets the count; so does a retry.
+ * worker every time it is folded, or a query a surface asks again as soon as
+ * the replay lands, would otherwise restart it forever. Only the user ends a
+ * run of losses: a change to the document resets the count, as do a retry
+ * and the first hold. A replay that finishes does not.
  */
 export const MAX_RESTARTS = 2;
+
+/** Why the session stopped restarting a crashing engine: the snapshot's error, and the toast. */
+export const FOLD_ENGINE_KEPT_STOPPING: WasmErrorEnvelope = Object.freeze({
+  code: 'fold_engine_kept_stopping',
+  message: 'The fold engine kept stopping.',
+});
 
 /** The engine went away under a call, or a handle outlived it: a replay recovers. */
 function isEngineLoss(error: unknown): boolean {
@@ -313,6 +344,7 @@ export function createFoldSession({
   document: source,
   runtime,
   reportError,
+  onEngineCrash,
   capacity,
 }: FoldSessionOptions): FoldSession {
   let input = source.read();
@@ -328,6 +360,8 @@ export function createFoldSession({
   let replaying = false;
   let progress: FoldReplayProgress<FoldEngineStateHandle> | null = null;
   let restarts = 0;
+  /** The crash the session last restarted from, until the replay after it says what came of it. */
+  let restarting: Omit<FoldEngineRestart, 'outcome'> | null = null;
   /** Replay stopped after too many restarts, until the next change or a retry. */
   let halted = false;
   let lastLoss: FoldSequenceClientLossReason | null = null;
@@ -433,7 +467,16 @@ export function createFoldSession({
     if (changed) store.setState(next, true);
   };
 
+  /** Say what came of the restart under way, if one is. */
+  const settleRestart = (outcome: FoldEngineRestartOutcome) => {
+    if (!restarting) return;
+    const restart = { ...restarting, outcome };
+    restarting = null;
+    onEngineCrash?.(restart);
+  };
+
   const fail = (failure: unknown) => {
+    settleRestart('failed');
     error = envelopeOf(failure);
     render();
     reportError?.(error);
@@ -484,7 +527,7 @@ export function createFoldSession({
             progress = finished;
             // A run started after the commit settled the step, or the step is gone.
             if (ticket > aheadTicket || (ahead && settlesLandedAhead(finished, ahead))) ahead = null;
-            restarts = 0;
+            settleRestart('recovered');
             engine?.releaseUnadopted(ticket);
           }
           render();
@@ -555,7 +598,26 @@ export function createFoldSession({
     render();
   };
 
+  /** The engine crashed: restart it and replay, or after too many in a row, stop and say so. */
+  const crashed = (cause: FoldEngineCrashCause) => {
+    settleRestart('crashed_again');
+    restarts += 1;
+    const crash = { cause, attempt: restarts };
+    if (restarts <= MAX_RESTARTS) {
+      restarting = crash;
+      start();
+      return;
+    }
+    // The document is not touched: its steps stay as they are, replayed after
+    // the next change, a retry or a reload.
+    const told = halted;
+    halt(FOLD_ENGINE_KEPT_STOPPING);
+    onEngineCrash?.({ ...crash, outcome: 'gave_up' });
+    if (!told) reportError?.(FOLD_ENGINE_KEPT_STOPPING);
+  };
+
   const stop = () => {
+    settleRestart('left');
     forgetStates();
     // Released through the port's batch, which an engine stopped meanwhile drops.
     replayer?.clear();
@@ -571,24 +633,23 @@ export function createFoldSession({
     // Another branch while a run is under way: put its path first.
     const rerouted = input.reader?.activeChild !== before.reader?.activeChild;
     // A change is worth another try after a halt or a start that failed —
-    // one, since the restart count stays.
-    if (changed) halted = false;
+    // one, since the restart count stays. Otherwise it ends a run of losses:
+    // the document is no longer the one the engine crashed on.
+    if (changed && halted) halted = false;
+    else if (changed) restarts = 0;
     render();
     if (changed) start();
     else if (rerouted && replaying) scheduleReplay();
   });
 
-  const unsubscribeLoss = runtime.onLost((reason) => {
+  const unsubscribeLoss = runtime.onLost((reason, cause) => {
     lastLoss = reason;
     // Every state went with the engine. Nothing is released: there is no one to tell.
     forgetStates();
     replayer?.clear();
     engine?.clear();
-    if (holders > 0 && reason !== 'released') {
-      if (reason === 'crashed') restarts += 1;
-      if (restarts <= MAX_RESTARTS) start();
-      else halt({ code: 'fold_sequence_client_lost', message: 'The fold engine kept stopping.' });
-    }
+    if (holders > 0 && reason === 'crashed') crashed(cause ?? 'worker_error');
+    else if (holders > 0 && reason === 'stopped') start();
     render();
   });
 

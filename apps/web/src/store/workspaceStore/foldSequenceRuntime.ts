@@ -2,7 +2,14 @@ import { wrap, type Remote } from 'comlink';
 import type { FoldSequenceWorkerApi } from '../../workers/foldSequenceWorker';
 import type { WasmErrorEnvelope } from '../../engine/types';
 import { attachWorkerDiagnostics } from '../../lib/workerDiagnostics';
+import { reportError } from '../../monitoring';
 import type { FoldEngineSource } from '../../fold/engine/foldEnginePort';
+import {
+  FoldEngineCrash,
+  isFoldEngineTrapped,
+  type FoldEngineCrashCause,
+  type FoldEngineCrashReport,
+} from '../../fold/engine/foldEngineTrap';
 import type {
   FoldEngineOutcome,
   FoldSheetLanded,
@@ -16,6 +23,12 @@ export type FoldSequenceClient = Remote<FoldSequenceWorkerApi>;
  * {@link stopFoldSequenceWork} terminated it to stop what it was doing.
  */
 export type FoldSequenceClientLossReason = 'crashed' | 'released' | 'stopped';
+
+/** Hears the worker go away: why, and for a crash, what crashed it. */
+export type FoldSequenceClientLossListener = (
+  reason: FoldSequenceClientLossReason,
+  cause?: FoldEngineCrashCause
+) => void;
 
 // Owns the Fold engine's worker, following `precreaseRuntime.ts`: a
 // reference-counted singleton the Fold workspace retains on entry and releases
@@ -37,18 +50,20 @@ export type FoldSequenceClientLossReason = 'crashed' | 'released' | 'stopped';
 // - **Latest wins, for previews** ({@link createFoldPreviewChannel}): one
 //   request in flight, the newest waiting behind it, everything between
 //   superseded without reaching the worker.
+// - **A trapped engine is a crash.** A call the engine failed halfway answers
+//   `fold_engine_trapped` (`fold/engine/foldEngineTrap.ts`) and the worker
+//   answers nothing more, so the first such answer drops the worker as its
+//   `error` event would. Either way the crash is reported to Sentry, once.
 
 let worker: Worker | null = null;
 let client: FoldSequenceClient | null = null;
 let detachDiagnostics: (() => void) | null = null;
 let refCount = 0;
 let generation = 0;
-const lossListeners = new Set<(reason: FoldSequenceClientLossReason) => void>();
+const lossListeners = new Set<FoldSequenceClientLossListener>();
 
 /** Called when the worker goes away, for whatever reason. */
-export function onFoldSequenceClientLost(
-  listener: (reason: FoldSequenceClientLossReason) => void
-): () => void {
+export function onFoldSequenceClientLost(listener: FoldSequenceClientLossListener): () => void {
   lossListeners.add(listener);
   return () => {
     lossListeners.delete(listener);
@@ -85,10 +100,10 @@ function spawn(): FoldSequenceClient {
     type: 'module',
   });
   worker = spawned;
-  detachDiagnostics = attachWorkerDiagnostics(spawned, 'fold-sequence', () => {
+  detachDiagnostics = attachWorkerDiagnostics(spawned, 'fold-sequence', (failure) => {
     // Guarded on identity so a late event from a worker already replaced
     // cannot drop the replacement.
-    if (worker === spawned) dropWorker('crashed');
+    if (worker === spawned) dropWorker('crashed', { cause: 'worker_error', message: failure.message });
   });
   client = wrap<FoldSequenceWorkerApi>(spawned);
   return client;
@@ -144,7 +159,7 @@ export function stopFoldSequenceWork(): boolean {
  * listener that immediately re-asks gets a fresh worker and a fresh
  * generation rather than the corpse.
  */
-function dropWorker(reason: FoldSequenceClientLossReason): void {
+function dropWorker(reason: FoldSequenceClientLossReason, crash?: FoldEngineCrashReport): void {
   const had = worker !== null;
   detachDiagnostics?.();
   detachDiagnostics = null;
@@ -153,7 +168,8 @@ function dropWorker(reason: FoldSequenceClientLossReason): void {
   worker = null;
   if (!had) return;
   generation += 1;
-  for (const listener of [...lossListeners]) listener(reason);
+  if (crash) reportError(new FoldEngineCrash(crash), { surface: 'fold:engine', tags: { reason: crash.cause } });
+  for (const listener of [...lossListeners]) listener(reason, crash?.cause);
 }
 
 /** The running worker, or null when nothing holds a reference. */
@@ -177,10 +193,23 @@ export function foldSequenceClientGeneration(): number {
 /**
  * Ask the live worker, guarded by {@link whileFoldSequenceClientAlive}. A
  * holder that has not retained the client gets a rejection, never a throw.
+ * An engine that trapped under the call takes its worker with it: the call
+ * rejects as the worker's loss, as every other call under way does.
  */
 export function askFoldSequenceClient<T>(ask: (client: FoldSequenceClient) => Promise<T>): Promise<T> {
   try {
-    return whileFoldSequenceClientAlive(ask(getFoldSequenceClient()));
+    const asked = getFoldSequenceClient();
+    const owner = worker;
+    return whileFoldSequenceClientAlive(
+      ask(asked).catch((error: unknown) => {
+        if (!isFoldEngineTrapped(error)) throw error;
+        // Only the first answer from a dead worker drops it; any later one is from a corpse.
+        if (worker === owner) {
+          dropWorker('crashed', { cause: error.trap, message: error.message, stack: error.stack });
+        }
+        throw lostError('crashed');
+      })
+    );
   } catch (error) {
     return Promise.reject(error);
   }
