@@ -2020,6 +2020,7 @@
   },
   "simulatorSegments": {
     "creasePatterns": "展開図",
+    "creases_other": "折り線 {{count}} 本",
     "faces_other": "{{count}} 面",
     "patterns": "パターン"
   },

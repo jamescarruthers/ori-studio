@@ -36,7 +36,7 @@ export function DiagramPatternPicker({
   onCancel,
 }: {
   sheets: DiagramPatternSheets;
-  /** The pattern the step shows now, by segment id. */
+  /** The pattern the step shows now, by its sheet's position in the index. */
   selectedId: number | null;
   /** A capture is running: the patterns wait for it. */
   busy: boolean;
@@ -50,7 +50,7 @@ export function DiagramPatternPicker({
   const list = useRef<HTMLDivElement | null>(null);
   const count = sheets.status === 'ready' ? sheets.sheets.length : 0;
   const selectedIndex =
-    sheets.status === 'ready' ? sheets.sheets.findIndex((sheet) => sheet.segment.id === selectedId) : -1;
+    sheets.status === 'ready' ? sheets.sheets.findIndex((sheet) => sheet.sheet.id === selectedId) : -1;
   // The tab stop: the pattern last moved to, else the one the step shows, else the first.
   const [moved, setMoved] = useState<number | null>(null);
   const active = Math.min(moved ?? Math.max(selectedIndex, 0), Math.max(count - 1, 0));
@@ -93,11 +93,11 @@ export function DiagramPatternPicker({
           onKeyDown={onKeyDown}
         >
           {sheets.sheets.map((sheet, index) => {
-            const selected = sheet.segment.id === selectedId;
+            const selected = sheet.sheet.id === selectedId;
             const name = t('panels:diagram.picker.pattern', 'Pattern {{number}}', { number: index + 1 });
             return (
               <button
-                key={sheet.segment.id}
+                key={sheet.sheet.id}
                 type="button"
                 role="option"
                 aria-selected={selected}

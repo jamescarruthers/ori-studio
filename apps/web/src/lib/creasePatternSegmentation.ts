@@ -343,6 +343,23 @@ function boundsOfFaces(
 }
 
 /**
+ * The whole of a fold as one segment: every face, with the rim and holes they
+ * leave. A sheet's own fold is one sheet whatever border lines run inside it —
+ * the sheet index's definition — so this, not {@link segmentFoldDocument},
+ * which would cut it at those lines, is the segment that stands for it.
+ */
+export function wholeFoldSegment(fold: FoldDocument, id: number): CpSegment {
+  const faceIndices = (fold.faces_vertices ?? []).map((_, index) => index);
+  const readPoint = flatPlaneReader(fold);
+  return {
+    id,
+    faceIndices,
+    boundary: traceBoundaryRings(fold, faceIndices, readPoint),
+    bounds: boundsOfFaces(fold, faceIndices, readPoint),
+  };
+}
+
+/**
  * Boundary edges of a segment are those used by exactly one of the segment's
  * faces. Stitch them into closed rings for clipping / point-in-polygon tests.
  */

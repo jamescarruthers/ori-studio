@@ -65,8 +65,10 @@ import {
   planFilmstrip,
 } from '../../cp-workspace/references/referencesFilmstrip';
 import {
+  chosenSheet,
   referencesSheets,
   resolveSelectedSheet,
+  sheetChoice,
   sheetBorderLineIds,
   sheetLineIds,
 } from '../../cp-workspace/references/referencesSheets';
@@ -148,21 +150,24 @@ export function ReferencesPanel() {
   const setSelectedSheet = useWorkspaceStore((state) => state.setReferencesSelectedSheet);
 
   // Which crease pattern the workspace is answering for. Resolved rather than
-  // read: the frames analysis is recomputed on every revision, so a stored id
-  // can name a component that no longer exists.
+  // read: the store names the sheet by its outline, and the sheets are listed
+  // again, and may be renumbered, on every revision.
   const sheets = useMemo(() => referencesSheets(controller.frames), [controller.frames]);
   // A reopened project's sheet, while it is still being placed, over the store's.
   const restoredSheet = useReferencesRestoredSheet(controller.frames);
-  const selectedSheet = resolveSelectedSheet(sheets, restoredSheet ?? storedSheet);
+  const selectedSheet = resolveSelectedSheet(
+    sheets,
+    restoredSheet ?? chosenSheet(controller.frames, storedSheet)
+  );
   // Against the *resolved* sheet, not the stored one. The store holds null until
   // the first press, so a press on the card the sidebar already draws as
   // selected would otherwise read as a change and wipe the plan and the pick.
   const selectSheet = useCallback(
     (component: number) => {
       if (component === selectedSheet) return;
-      setSelectedSheet(component);
+      setSelectedSheet(sheetChoice(controller.frames, component));
     },
-    [selectedSheet, setSelectedSheet]
+    [selectedSheet, setSelectedSheet, controller.frames]
   );
   const component =
     controller.frames?.components.find((entry) => entry.id === selectedSheet) ?? null;

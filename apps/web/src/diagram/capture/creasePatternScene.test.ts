@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import type { PaperLineItem, PaperScene } from '../../lib/paper/paperScene';
 import { sceneOf, face, line, SQUARE } from '../../lib/paper/paperScene.fixtures';
-import { cpDocument, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, twoSquaresIndex } from './capture.fixtures';
 import { chooseStepCreases, type StepCreases } from './captureCreases';
 import { CAPTURE_PX_PER_UNIT, storableScene } from './captureGeometry';
 import { creasePatternScene } from './creasePatternScene';
 
-const segmentation = twoSquaresSegmentation();
-const [left, right] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left, right] = sheetRegions(sheets);
 
 function regionCreases(segment: typeof left): StepCreases {
   const choice = chooseStepCreases(
     cpDocument(),
     { kind: 'segment', region: regionReferenceFor(segment!) },
-    segmentation
+    sheets
   );
   if (choice.status !== 'found') throw new Error('the region should be found');
   return choice.creases;

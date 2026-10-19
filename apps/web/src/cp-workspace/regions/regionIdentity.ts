@@ -22,7 +22,14 @@ import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
 import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import type { Point } from '../../lib/geometry';
 import { keyDigest } from '../../lib/keyDigest';
-import { outerRing, resolveRegion, ringCorners, ringsMatch, type RegionReference } from './regionReference';
+import {
+  outerRing,
+  resolveRegion,
+  ringCorners,
+  ringsMatch,
+  type RegionLike,
+  type RegionReference,
+} from './regionReference';
 
 /**
  * Names the algorithm in the value, as `cs1:` (absolute, `foldedSourceFingerprint`)
@@ -140,11 +147,11 @@ function boundaryDistance(a: readonly Point[][], b: readonly Point[][]): number 
 }
 
 /** What a link remembers of its region's creases, and how to read a candidate's today. */
-export interface RegionIdentity {
+export interface RegionIdentity<Region extends RegionLike = CpSegment> {
   /** The fingerprint kept for the region's creases. Only a relative one can recognise it after a move. */
   fingerprint: string | null;
   /** A region's fingerprint today, taken over the same lines the kept one was; null when it has none. */
-  fingerprintOf: (segment: CpSegment) => string | null;
+  fingerprintOf: (segment: Region) => string | null;
 }
 
 /**
@@ -171,11 +178,11 @@ export type RegionFound = 'unchanged' | 'in-place';
  * Only a relative fingerprint can take part in 2; an absolute one (`cs1:`)
  * finds its region only in place.
  */
-export function resolveMovedRegion(
+export function resolveMovedRegion<Region extends RegionLike>(
   reference: Pick<RegionReference, 'boundary' | 'segmentIdHint'>,
-  segments: readonly CpSegment[],
-  identity: RegionIdentity
-): { segment: CpSegment; found: RegionFound } | null {
+  segments: readonly Region[],
+  identity: RegionIdentity<Region>
+): { segment: Region; found: RegionFound } | null {
   const { boundary } = reference;
   if (boundary.length === 0) return null;
   const inPlace = resolveRegion(reference, segments);

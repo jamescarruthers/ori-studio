@@ -2020,6 +2020,7 @@
   },
   "simulatorSegments": {
     "creasePatterns": "전개도",
+    "creases_other": "접힘선 {{count}}개",
     "faces_other": "면 {{count}}개",
     "patterns": "패턴"
   },

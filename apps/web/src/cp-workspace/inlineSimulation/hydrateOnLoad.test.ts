@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { isInlineSimulationStale } from './inlineSimulation';
 import type { InlineSimulation } from './inlineSimulation';
@@ -14,18 +15,18 @@ import {
 } from './inlineSimulationRuntime';
 
 /**
- * Fold artifacts with the segmentation already attached, which is what the CP
- * worker supplies in the app. Without this, computing them needs a worker that
- * jsdom has not got, hydration bails at its first guard, and every assertion
- * below passes for having done nothing at all.
+ * One sheet's fold artifacts, as `ensureCpSheetSimulationArtifacts` gives them
+ * for the square below. Without a stand-in, building them needs a kernel jsdom
+ * has not got, hydration bails at its first guard, and every assertion below
+ * passes for having done nothing at all.
  *
  * `scale` exists because a region's boundary — its identity for resolution —
- * is expressed in the *fold's* coordinate space, and that space is not the same
- * everywhere. Artifacts computed from the kernel document are in its own
- * 400-space; the ones sitting in the store just after a file load were observed
- * in a unit square. Passing 1/400 here is not a synthetic edge case, it is what
- * shipped: hydration reused the stale field, no saved boundary matched anything,
- * and every restored window was a permanently empty frame.
+ * is expressed in the *fold's* coordinate space. Artifacts from the kernel
+ * document are in its own 400-space; whole-canvas ones sitting in the store
+ * just after a file load were observed in a unit square, and hydration once
+ * reused them: no saved boundary matched anything, and every restored window
+ * was a permanently empty frame. They are seeded below to prove they are not
+ * read.
  */
 function artifactsForSquare(scale = 1) {
   const at = (x: number, y: number) => ({ x: x * scale, y: y * scale });
@@ -52,33 +53,54 @@ function artifactsForSquare(scale = 1) {
   } as never;
 }
 
+/** The sheet index of the square: one sheet, holding its four lines. */
+function squareIndex() {
+  return new CpSheetIndex({
+    bounds: new Float64Array([-200, -200, 200, 200]),
+    outlineOffsets: new Uint32Array([0, 4]),
+    outlineCoords: new Float64Array([-200, -200, 200, -200, 200, 200, -200, 200]),
+    lineCounts: new Uint32Array([4]),
+    lineSheet: new Int32Array([0, 0, 0, 0]),
+  });
+}
+
+// The engine's side, stood in for: the index, and the one sheet's mesh.
+vi.mock('../sheets/cpSheetIndex', () => ({
+  ensureCpSheetIndex: vi.fn(async () => squareIndex()),
+  peekCpSheetIndex: vi.fn(() => squareIndex()),
+}));
+vi.mock('../sheets/cpSheetArtifacts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sheets/cpSheetArtifacts')>()),
+  ensureCpSheetArtifacts: vi.fn(async () => artifactsForSquare()),
+  ensureCpSheetSimulationArtifacts: vi.fn(async () => artifactsForSquare()),
+}));
+
+/** Whole-canvas builds, counted: none should happen. */
+const wholeCanvas = { refreshes: 0, ensures: 0 };
+
 /**
- * Stands in for the CP worker: hydration recomputes artifacts rather than
- * trusting whatever the load left in the store, so that is the seam to fill.
- *
- * The stale field is seeded alongside, in the unit space a load leaves behind,
- * so that a hydration which reads it instead of refreshing resolves nothing and
- * these tests fail.
+ * The store as a load leaves it: the windows and the document, and whole-canvas
+ * artifacts in the unit space a load leaves behind — so a hydration that read
+ * them instead of the sheet's own would resolve nothing and these tests fail.
  */
 function seedArtifacts(state: Record<string, unknown>) {
   return {
     ...state,
     foldArtifacts: artifactsForSquare(1 / 400),
-    refreshFoldArtifacts: async () => artifactsForSquare(),
+    refreshFoldArtifacts: async () => {
+      wholeCanvas.refreshes += 1;
+      return artifactsForSquare();
+    },
+    ensureFoldArtifacts: async () => {
+      wholeCanvas.ensures += 1;
+      return artifactsForSquare();
+    },
   } as never;
 }
 
-/**
- * Artifacts as they sit mid-session: computed from the kernel document, so in
- * its own 400-space. This is the state a delete-then-undo normally happens in,
- * and the reason the restore path can trust the cache.
- */
+/** The store mid-session: the same, the whole-canvas artifacts in its own space. */
 function midSessionArtifacts(state: Record<string, unknown>) {
-  return {
-    ...state,
-    foldArtifacts: artifactsForSquare(),
-    refreshFoldArtifacts: async () => artifactsForSquare(),
-  } as never;
+  return { ...(seedArtifacts(state) as Record<string, unknown>), foldArtifacts: artifactsForSquare() } as never;
 }
 
 function line(ax: number, ay: number, bx: number, by: number, color = 'Red1') {
@@ -124,6 +146,8 @@ function savedWindow(document: OristudioCpDocumentSnapshot): InlineSimulation {
 
 beforeEach(() => {
   useWorkspaceStore.setState({ oristudioCpInlineSimulations: [], oristudioCpDocument: null });
+  wholeCanvas.refreshes = 0;
+  wholeCanvas.ensures = 0;
 });
 
 describe('provenance across a load', () => {
@@ -278,36 +302,29 @@ describe('restoring the fold of a window undo brought back', () => {
     ).toBe(0);
   });
 
-  it('reuses cached artifacts rather than recomputing them', async () => {
-    // Deleting a window does not invalidate fold artifacts, so the common
-    // delete-then-undo path must not pay for a recompute.
+  it('never meshes the whole canvas: only the window\'s sheet', async () => {
+    // A window is over one sheet, and on a canvas of hundreds a whole-canvas
+    // mesh took half a minute; the delete-then-undo path least of all should pay it.
     const document = doc(SQUARE);
     const saved = savedWindow(document);
-    let refreshes = 0;
-    useWorkspaceStore.setState({
+    useWorkspaceStore.setState(midSessionArtifacts({
       oristudioCpInlineSimulations: [saved],
       oristudioCpDocument: { document },
-      foldArtifacts: artifactsForSquare(),
-      refreshFoldArtifacts: async () => {
-        refreshes += 1;
-        return artifactsForSquare();
-      },
-    } as never);
+    }));
+    await useWorkspaceStore.getState().hydrateOristudioCpInlineSimulations();
 
     deleteWindow(saved.id);
     useWorkspaceStore.setState({ oristudioCpInlineSimulations: [saved] });
     expect(
       await useWorkspaceStore.getState().restoreOristudioCpInlineSimulationSources()
     ).toBe(1);
-    expect(refreshes).toBe(0);
+    expect(wholeCanvas).toEqual({ refreshes: 0, ensures: 0 });
   });
 
-  it('recomputes when the cache is left over from a file load', async () => {
-    // Reachable, and this test is why the fallback exists: a load leaves
-    // artifacts normalised to a unit square, so a delete-then-undo straight
-    // afterwards resolves nothing against the cache and would restore a window
-    // that could never draw. Resolving nothing is the signal to recompute — the
-    // same detection `addOristudioCpInlineSimulation` uses for the same hazard.
+  it('ignores whole-canvas artifacts a file load left behind', async () => {
+    // A load leaves artifacts normalised to a unit square; a delete-then-undo
+    // straight afterwards that resolved against them would restore a window
+    // that could never draw. The sheet's own mesh is in the document's space.
     const document = doc(SQUARE);
     const saved = savedWindow(document);
     useWorkspaceStore.setState(seedArtifacts({

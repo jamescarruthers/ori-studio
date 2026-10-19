@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import {
   annotationsOutOfStep,
@@ -18,7 +18,7 @@ import {
 } from '../document/diagramDocument';
 import { readDiagram, writeDiagram } from '../document/diagramFile';
 import { storedScene } from '../pictures/pictureFrame';
-import { cpDocument, fakeCaptureRuntime, movedLines, TWO_SQUARES, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, movedLines, TWO_SQUARES, twoSquaresIndex } from './capture.fixtures';
 import { knownCreasesOf } from './captureCreases';
 import { captureStep } from './captureFolded';
 import { stepsIn } from '../document/diagramSteps.fixtures';
@@ -29,15 +29,15 @@ import { stepsIn } from '../document/diagramSteps.fixtures';
  * which `creasePatternScene` and `readFlatPicture` both keep. A capture that
  * turned about anywhere else would leave every carried annotation off its mark.
  */
-const segmentation = twoSquaresSegmentation();
+const sheets = twoSquaresIndex();
 // The left square, off the document's middle.
-const [left] = resolveCpSegments(segmentation);
+const [left] = sheetRegions(sheets);
 const scope: DiagramCpScope = { kind: 'segment', region: regionReferenceFor(left!) };
 
 async function capture(render: DiagramCpRender) {
   const result = await captureStep(fakeCaptureRuntime(), {
     document: cpDocument(),
-    segmentation,
+    sheets,
     scope,
     render,
     style: DEFAULT_DIAGRAM_STYLE,
@@ -195,7 +195,7 @@ describe('annotations on a linked crease pattern, after its pattern moved', () =
     const [dx, dy] = [312.7, -88.1];
     const result = await captureStep(fakeCaptureRuntime(), {
       document: cpDocument(movedLines(TWO_SQUARES, dx, dy)),
-      segmentation: twoSquaresSegmentation({ dx, dy }),
+      sheets: twoSquaresIndex({ dx, dy }),
       scope: source.scope,
       known: knownCreasesOf(source),
       render: { mode: 'crease-pattern', rotationDeg: 30 },

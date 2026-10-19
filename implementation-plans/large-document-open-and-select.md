@@ -255,15 +255,54 @@ T-junctions included — stay in the same sheet.
 - **2.2 Every consumer reads the index.**
   - *Edit toolbar:* a selection is a sheet when its ids are exactly that
     sheet's members — O(selection) through the line → sheet array. No faces.
+    *(Done, with 2.3.)* Its verbs build that one sheet's faces: Export and Save
+    to image, Share, and Simulate inline, whose window gets a mesh for its
+    sheet alone. The image dialog it opens is handed that one sheet, so it no
+    longer offers a picker of every region on the canvas. Simulate enters the
+    Simulate workspace on that sheet (below).
   - *Diagram:* links resolve by outline as today (`ringsMatch` compares corners
     within 1e-6, so it does not care how the rim was traced); fingerprints are
     taken over member lines; the picker lists index sheets, with thumbnails
     drawn from member lines as References' rail already draws them.
+    *(Done.)* Simulated pictures and Pose take the sheet's own mesh, a
+    crease-pattern picture the sheet's own faces' rim (so a hole stays out),
+    and the choice caches key on line content rather than the snapshot (1.2b).
+    Measured on this file: entering the Diagram 28.3 s → 6.4 s to quiet
+    (longest freeze 10.1 s → 4.3 s); **selecting a step 98.8 s → 0.29 s** —
+    the Step pane drew every region's face thumbnail for a picker that was not
+    open; the picker itself 3.1 s → 2.7 s. What is left of entering is the
+    cards' own pictures (4.5).
   - *References:* precrease takes its sheets from the index (frames from
     rectangular outlines) instead of chaining borders again, and runs merge and
     exactness for the sheet being looked at, not for all 204.
+    *(Done.)* The rail lists the index's sheets, each outline framed by the
+    planner (`outline_components`: 3 ms for all 204, where `sheet_frames` took
+    3.5 s). The planner is built from one sheet's lines
+    (`PrecreasePlanner::for_sheet`: 21 ms, where it analysed the whole canvas
+    again for 1.6 s). A crease picked in Find asks for its own sheet's merged
+    lines. The chosen sheet is kept by its outline, because reading-order ids
+    move when a sheet is added above or to the left; a saved file already
+    named it by its box and frame. Every sheet of this file comes out with the
+    planner's own frame, lines and exactness (`referencesFrames.wasm.test.ts`).
+    Measured on this file: entering References 5.2 s → 3.0 s to the rail, a
+    sheet's sequence 47.1 s → 45.7 s, heap after 927 → 862 MiB. What is left
+    of entering is mostly the rail's cards (4.6). What is left of a sequence
+    is the planner's own work on one sheet. On the biggest, an off-lattice
+    sheet, about 30 s of the 47 s is the order optimiser spending its 10 s
+    budget on each `sequence()` call, and 12 s is the stuck search.
+    Precrease's own chaining (`analyze`) stays until the whole-canvas paths
+    go, since its fixture tests and the differential test read it.
   - *Simulate:* the rail lists index sheets; the mesh is built for the selected
-    sheet only.
+    sheet only. *(Done.)* One hook, `useSimulateSource`, gives the panel its
+    rail, the sheet shown and that sheet's fold. For an editable pattern those
+    are the index's sheets, sized in creases as References' rail sizes them,
+    and the shown sheet's own mesh. A design's generated pattern, or an
+    editable one with no closed border, still reads the whole canvas's
+    artifacts. The sheet shown is kept by outline, so an edit that renumbers
+    the index keeps it. Inline windows rebuild from their own sheet's mesh on
+    open, undo and Rebuild. Measured on this file: the toolbar's Simulate →
+    simulator ready 85.4 s (one 82.9 s freeze) → 2.75 s. What is left is the
+    rail drawing 204 cards as some 489k SVG lines, and the layout after (4.6).
 - **2.3 Faces per sheet, on demand.** Export, Fold, Simulate, inline
   simulation and Diagram capture need faces for one sheet. Use the kernel's
   face graph on that sheet's lines when it passes the Euler check, and
@@ -278,6 +317,41 @@ T-junctions included — stay in the same sheet.
   full of T-junctions, are the measure of which. The whole-canvas paths
   (`ensureCpSegmentationArtifacts`, and `computeFoldArtifacts` for an Edit
   document) go away.
+
+  *Done, as built:* the kernel's `export_fold_lines` writes one sheet's lines
+  as FOLD and keeps the traced faces only when those lines meet nowhere but at
+  their ends (`meetings.rs`, the sweep the index's border splitting already
+  used) — refusing rather than splitting, because the frontend's inference
+  already splits, and every sheet of bodo goes to it either way.
+  `ensureCpSheetArtifacts` turns that into artifacts whose one segment is the
+  whole sheet. The inference still runs on the main thread, one sheet at a
+  time, and the cache is the crease fingerprint plus the sheet, so any edit
+  drops every cached sheet and the next action rebuilds only the one it needs.
+  The differential test (`cpSheetArtifacts.wasm.test.ts`) gives every sheet the
+  faces and the exported lines today's whole-canvas segmentation gives its
+  region, on every fixture and on all 204 sheets of bodo; the one named
+  difference is a sheet whose aux lines end on unsplit borders, which today's
+  export dropped. The whole-canvas paths go when the Diagram and Simulate stop
+  reading them.
+
+  Measured with the Edit toolbar on it (`large-osf-perf.mjs --action`, same
+  boxes, main 89da66832 against the branch):
+
+  | | main | sheet faces |
+  | --- | ---: | ---: |
+  | First selection → toolbar | 13.0 s, longest freeze 9.3 s | 0.63 s, 0.39 s |
+  | Save to image → preview drawn | 12.7 s | 0.58 s |
+  | Export `.cp` → download | 1.2 s | 0.49 s |
+  | Simulate inline → window ready | 15.5 s | 0.61 s |
+  | Fold → done | 2.6 s | 2.3 s |
+  | Heap after Simulate inline | 1,341 MiB | 984 MiB |
+
+  What is left of the first selection is the selection command itself
+  (~0.6 s), which is Phase 3. Checking it in the browser turned up a case the
+  plane-graph check fixes: a book fold whose crease ends on unsplit borders
+  got the bare square as its one certified face, so its inline simulation and
+  the Simulate workspace showed flat paper that would not fold. Built for the
+  sheet alone, it folds, in both since the Simulate move.
 - **2.4 Inference speed** still matters for one huge sheet: integer-keyed
   welding instead of template strings, a 2D grid instead of the x-only sweep,
   typed adjacency in `buildPlanarFaces` — output bit-identical.
@@ -363,6 +437,11 @@ removes.
   `useStepPictureUrl` already waits for `useNearView` before painting, but
   the `viewGeometry(…).layers` and `xraySurfaceOf` memos above that check run
   for every card on mount. Gate them on the same `seen`.
+- **4.6 Sheet cards draw cheaply.** The Simulate and References rails draw
+  every line of every card as its own SVG `<line>`. On this file that is 204
+  cards and about 489k elements: around 2 s of React commit, and a layout of
+  all of them, on entering Simulate. Draw one `<path>` per ink per card, a few
+  elements a card, and build a card's picture when it scrolls into view.
 
 Expected: ~5.5 s → ~2–3 s total, the main thread busy for well under a second;
 Diagram entry no longer pays 6.9 s for cards nobody is looking at.
@@ -434,7 +513,7 @@ definitions table listed by name.
 Phase 1
 - [x] 1.1 Metadata-only reader on the `.osf` open path (#458); projection no longer saved again as `sourceFold` (#461)
 - [x] 1.2 Assignment map built once; containment cache keyed on crease geometry (#459)
-- [ ] 1.2b Diagram region caches keyed on crease geometry — superseded if the Diagram moves to the index (2.2) first
+- [x] 1.2b Diagram region caches keyed on line content (with the Diagram's move to the index)
 - [x] 1.3 Numeric edge sort in `splitSegments`, ordering pinned by a test (#460)
 - [x] 1.4 Every CP undo push capped at `MAX_CP_HISTORY` (#462)
 - [x] Harness script (`scripts/large-osf-perf.mjs`, #457); before/after numbers in each PR. No synthetic fixture: the measurements use the real file, kept outside the repository
@@ -442,11 +521,12 @@ Phase 1
 Phase 2
 - [x] Answers for the definitions table (2026-10-18; the inner-loop reading to confirm at 2.1)
 - [x] 2.1 Sheet index in Rust from outer border loops, in the CP engine, cached by crease fingerprint; differential test against today's regions
-- [ ] 2.2 Edit toolbar on the index
-- [ ] 2.2 Diagram links, picker and thumbnails on the index
-- [ ] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
-- [ ] 2.2 Simulate rail on the index; mesh for the selected sheet only
-- [ ] 2.3 Faces per sheet on demand (kernel when certified, else JS), cached per sheet; whole-canvas paths deleted
+- [x] 2.2 Edit toolbar on the index; its verbs on one sheet's faces
+- [x] 2.2 Diagram links, picker and thumbnails on the index
+- [x] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
+- [x] 2.2 Simulate rail on the index; mesh for the selected sheet only
+- [x] 2.3 Faces per sheet on demand (kernel when its lines meet only at their ends, else JS), cached per sheet
+- [ ] 2.3 Whole-canvas paths deleted (after the Diagram and Simulate move)
 - [x] 2.4 Inference hot spots, output bit-identical
 
 Phase 3
@@ -460,3 +540,4 @@ Phase 4
 - [ ] 4.3 Lazy scene/thumbnail reading
 - [ ] 4.4 Desktop byte read (measure first)
 - [ ] 4.5 Diagram card picture geometry deferred to visible cards
+- [ ] 4.6 Sheet cards: one path per ink, pictures for cards in view

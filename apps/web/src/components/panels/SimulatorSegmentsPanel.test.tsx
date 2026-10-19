@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { FoldDocument } from '../../engine/types';
+import { segmentSheetThumbnail } from '../../cp-workspace/sheets/segmentSheet';
 import { segmentFoldDocument } from '../../lib/creasePatternSegmentation';
 import { useSettingsStore } from '../../store/settingsStore';
 import { SimulatorSegmentsSidebar } from './SimulatorSegmentsPanel';
@@ -75,11 +76,13 @@ describe('SimulatorSegmentsSidebar', () => {
       },
     });
     const fold = twoSquares();
-    const segments = segmentFoldDocument(fold);
+    const patterns = segmentFoldDocument(fold).map((segment) => ({
+      id: segment.id,
+      thumbnail: segmentSheetThumbnail(fold, segment),
+      size: '',
+    }));
     act(() =>
-      root?.render(
-        <SimulatorSegmentsSidebar fold={fold} segments={segments} selected={0} onSelect={() => {}} />
-      )
+      root?.render(<SimulatorSegmentsSidebar patterns={patterns} selected={0} onSelect={() => {}} />)
     );
     const cards = [...(container?.querySelectorAll('.sheet-card') ?? [])];
     expect(cards).toHaveLength(2);
