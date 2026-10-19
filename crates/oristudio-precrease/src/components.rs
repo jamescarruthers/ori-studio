@@ -19,7 +19,9 @@ use crate::error::PrecreaseError;
 use crate::exactness::{Exactness, probe};
 use crate::frame::{Frame, FrameAffines, RfRect};
 use crate::merge::{LineKind, MergedLine, merge_segments};
-use crate::outline::{RefusalReason, detect_border_loops, point_in_polygon};
+use crate::outline::{
+    RefusalReason, detect_border_loops, point_in_polygon, rectangle_frame, simplify_corners,
+};
 use crate::tol::{SNAP_RADIUS, TOL};
 
 /// Something the caller should surface but that did not stop the analysis.
@@ -336,45 +338,7 @@ pub fn analyze(
     // Merge and probe each sheet in its own unit frame.
     let mut zero_length = 0u32;
     for component in &mut components {
-        let Some(frame) = component.frame else {
-            continue;
-        };
-        component.unit_segments = component
-            .segment_indices
-            .iter()
-            .map(|&gi| {
-                let s = segs[gi as usize];
-                let a = frame.model_to_unit([s[0], s[1]]);
-                let b = frame.model_to_unit([s[2], s[3]]);
-                [a[0], a[1], b[0], b[1]]
-            })
-            .collect();
-        component.aux_unit_segments = component
-            .aux_segment_indices
-            .iter()
-            .map(|&gi| {
-                let s = segs[gi as usize];
-                let a = frame.model_to_unit([s[0], s[1]]);
-                let b = frame.model_to_unit([s[2], s[3]]);
-                [a[0], a[1], b[0], b[1]]
-            })
-            .collect();
-        let local_kinds: Vec<LineKind> = component
-            .segment_indices
-            .iter()
-            .map(|&gi| kinds[gi as usize])
-            .collect();
-        let merged = merge_segments(
-            &component.unit_segments,
-            &local_kinds,
-            Some(&component.segment_indices),
-        );
-        zero_length += merged.skipped_zero_length.len() as u32;
-        component.merged_lines = merged.lines;
-        for line in &mut component.merged_lines {
-            line.on_outline = frame.is_edge_line(&line.line);
-        }
-        component.exactness = Some(probe(component)?);
+        zero_length += merge_and_probe(component, |gi| segs[gi as usize], |gi| kinds[gi as usize])?;
     }
     if zero_length > 0 {
         warnings.push(Warning::ZeroLengthSegments { count: zero_length });
@@ -382,6 +346,173 @@ pub fn analyze(
 
     Ok(SheetAnalysis {
         components,
+        unassigned_segments: unassigned,
+        warnings,
+        segment_count: segs.len() as u32,
+        tol: TOL,
+        snap_radius: SNAP_RADIUS,
+    })
+}
+
+/// A framed component's creases in its unit frame, merged into distinct lines
+/// and probed for exactness; nothing for a refused one. `segment_of` and
+/// `kind_of` read a segment by the caller's number. Returns how many creases
+/// the merge skipped as zero-length.
+fn merge_and_probe(
+    component: &mut Component,
+    segment_of: impl Fn(u32) -> [f64; 4],
+    kind_of: impl Fn(u32) -> LineKind,
+) -> Result<u32, PrecreaseError> {
+    let Some(frame) = component.frame else {
+        return Ok(0);
+    };
+    let unit = |gi: &u32| {
+        let s = segment_of(*gi);
+        let a = frame.model_to_unit([s[0], s[1]]);
+        let b = frame.model_to_unit([s[2], s[3]]);
+        [a[0], a[1], b[0], b[1]]
+    };
+    component.unit_segments = component.segment_indices.iter().map(unit).collect();
+    component.aux_unit_segments = component.aux_segment_indices.iter().map(unit).collect();
+    let local_kinds: Vec<LineKind> = component
+        .segment_indices
+        .iter()
+        .map(|&gi| kind_of(gi))
+        .collect();
+    let merged = merge_segments(
+        &component.unit_segments,
+        &local_kinds,
+        Some(&component.segment_indices),
+    );
+    component.merged_lines = merged.lines;
+    for line in &mut component.merged_lines {
+        line.on_outline = frame.is_edge_line(&line.line);
+    }
+    component.exactness = Some(probe(component)?);
+    Ok(merged.skipped_zero_length.len() as u32)
+}
+
+/// A sheet the caller has already found, framed from its outline alone: a
+/// component with a frame, or the reason the outline is refused, and no lines
+/// yet.
+///
+/// `outline` is the sheet's outer border in model space, as a ring of corners
+/// (its first point not repeated). A vertex that only subdivides a side is
+/// dropped as [`simplify_corners`] drops one from a border loop, at the
+/// chaining tolerance taken over the sheet itself — so whether a sheet is a
+/// rectangle never depends on what else is on the canvas.
+pub fn outline_component(id: u32, outline: &[[f64; 2]]) -> Component {
+    let mut component = empty_component(id);
+    component.outline = outline.to_vec();
+    let mut min = [f64::INFINITY; 2];
+    let mut max = [f64::NEG_INFINITY; 2];
+    for p in outline {
+        min = [min[0].min(p[0]), min[1].min(p[1])];
+        max = [max[0].max(p[0]), max[1].max(p[1])];
+    }
+    let side = (max[0] - min[0]).max(max[1] - min[1]);
+    let radius = TOL
+        * if side.is_finite() && side > 0.0 {
+            side
+        } else {
+            1.0
+        };
+    match rectangle_frame(&simplify_corners(outline, radius), radius) {
+        Ok(sheet) => {
+            component.outline_residual = sheet.residual;
+            with_frame(&mut component, sheet.frame);
+        }
+        Err(reason) => component.refused = Some(reason),
+    }
+    component
+}
+
+/// One sheet the caller has already found — its outline, and the lines it
+/// holds — framed, split, merged and probed: [`analyze`]'s work for one
+/// component, without finding the components.
+///
+/// The app's sheets come from the CP kernel's sheet index
+/// (`oristudio-cp/src/sheets.rs`), which decides what a sheet is and which
+/// lines it holds, so References lists the sheets every other workspace
+/// lists, and pays for the one sheet it is looking at rather than for the
+/// whole canvas. A border line inside the outline does not refuse the sheet
+/// here, as it does when [`analyze`] chains the borders: the index reads it
+/// as one of the sheet's lines, so it is kept with the outline's own.
+///
+/// `segments` / `colors` are the sheet's lines only, and `indices` is each
+/// one's number in the caller's document — the numbering every index of the
+/// result is in. A crease is the sheet's when the frame holds both its ends,
+/// as in [`analyze`]; one the index placed here that leaves the paper is
+/// reported unassigned, since nothing can fold it on this sheet. A refused
+/// sheet keeps every crease, as a refused loop keeps the ones inside it.
+pub fn analyze_sheet(
+    id: u32,
+    outline: &[[f64; 2]],
+    segments: &[f64],
+    colors: &[i32],
+    indices: &[u32],
+) -> Result<SheetAnalysis, PrecreaseError> {
+    let (segs, kinds) = validate(segments, colors)?;
+    if indices.len() != segs.len() {
+        return Err(PrecreaseError::IndexCountMismatch {
+            segments: segs.len(),
+            indices: indices.len(),
+        });
+    }
+    let mut component = outline_component(id, outline);
+    let pad = if component.outline_residual < TOL {
+        TOL
+    } else {
+        SNAP_RADIUS
+    };
+    let on_paper = |s: [f64; 4]| {
+        component.frame.is_some_and(|frame| {
+            frame.contains_model([s[0], s[1]], pad) && frame.contains_model([s[2], s[3]], pad)
+        })
+    };
+    let mut border = Vec::new();
+    let mut creases = Vec::new();
+    let mut aux = Vec::new();
+    let mut unassigned = Vec::new();
+    for ((&gi, &kind), &s) in indices.iter().zip(&kinds).zip(&segs) {
+        match kind {
+            LineKind::Border => border.push(gi),
+            // An aux line is only ever drawn in a frame; one off the paper is
+            // simply not drawn, as in `analyze`.
+            LineKind::Auxiliary => {
+                if on_paper(s) {
+                    aux.push(gi);
+                }
+            }
+            _ if component.frame.is_none() || on_paper(s) => creases.push(gi),
+            _ => unassigned.push(gi),
+        }
+    }
+    component.border_segment_indices = border;
+    component.segment_indices = creases;
+    component.aux_segment_indices = aux;
+
+    let local: HashMap<u32, usize> = indices
+        .iter()
+        .enumerate()
+        .map(|(local, &gi)| (gi, local))
+        .collect();
+    let zero_length = merge_and_probe(
+        &mut component,
+        |gi| local.get(&gi).map_or([0.0; 4], |&i| segs[i]),
+        |gi| local.get(&gi).map_or(LineKind::Unassigned, |&i| kinds[i]),
+    )?;
+    let mut warnings = Vec::new();
+    if !unassigned.is_empty() {
+        warnings.push(Warning::UnassignedSegments {
+            count: unassigned.len() as u32,
+        });
+    }
+    if zero_length > 0 {
+        warnings.push(Warning::ZeroLengthSegments { count: zero_length });
+    }
+    Ok(SheetAnalysis {
+        components: vec![component],
         unassigned_segments: unassigned,
         warnings,
         segment_count: segs.len() as u32,

@@ -1,5 +1,7 @@
 /**
- * The precrease planner's frames analysis, as TypeScript sees it.
+ * The precrease planner's reading of a crease pattern's sheets, as TypeScript
+ * sees it: which sheets the workspace lists comes from the CP kernel's sheet
+ * index (`referencesFrames`), and what the planner says about each from here.
  *
  * The types mirror the serde structs in `crates/oristudio-precrease` (see the
  * `//!` docs in `crates/oristudio-precrease-wasm/src/lib.rs`), serialised
@@ -7,7 +9,8 @@
  * `snake_case` strings. The helpers below only *index* that analysis — which
  * component owns a picked segment, which segments meet at a picked vertex —
  * and never compute geometry: frames, merges, the y-flip and the model ↔
- * ReferenceFinder maps all live in Rust and cross as data (plan decision D6).
+ * ReferenceFinder maps all live in Rust and cross as data (plan decision D6),
+ * the frame's maps as matrices that {@link applyPrecreaseAffine} only applies.
  */
 import type { CpGeometryTransport } from '../../engine/oristudioCpGeometry';
 import { SEG_ATTR_STRIDE } from '../../engine/oristudioCpGeometry';
@@ -36,6 +39,14 @@ export interface PrecreaseFrameAffines {
   unit_to_model: PrecreaseAffine;
   model_to_rf: PrecreaseAffine;
   rf_to_model: PrecreaseAffine;
+}
+
+/**
+ * One of a frame's maps applied to a point, as `frame.rs`'s `apply_affine`
+ * applies it. The matrix is the planner's; this only multiplies.
+ */
+export function applyPrecreaseAffine(m: PrecreaseAffine, p: Point): Point {
+  return { x: m[0] * p.x + m[2] * p.y + m[4], y: m[1] * p.x + m[3] * p.y + m[5] };
 }
 
 /** `{ p : p · n = d }` in unit-sheet coordinates, sign canonicalised in Rust. */
@@ -144,7 +155,7 @@ export interface PrecreaseTolerances {
   snap_radius: number;
 }
 
-/** What `sheetFrames` takes: the transport's segments as the bridge wants them. */
+/** The transport's segments as the bridge takes them, and as a plan's cache key reads them. */
 export interface PrecreaseInput {
   /** `[x1, y1, x2, y2, …]` in model space, one quad per crease segment. */
   segments: Float64Array;

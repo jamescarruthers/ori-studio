@@ -1755,14 +1755,18 @@ export interface ReferencesSliceState {
   /** ReferenceFinder's ranked solutions for a vertex or crease target. */
   referencesCandidates: readonly ReferencesCandidate[] | null;
   /**
-   * Which sheet the workspace is working on — a precrease component id.
+   * Which sheet the workspace is working on: its outline, with the id it had
+   * when it was chosen as a hint (`chosenSheet` reads it against the sheets
+   * listed now).
    *
    * The References workspace answers for one crease pattern at a time: a
    * document holding several disjoint sheets is several separate folding
-   * problems, and nobody folds them at once. Null until the frames analysis
-   * lands and the first plannable sheet is chosen; the sidebar sets it.
+   * problems, and nobody folds them at once. By the outline because sheets
+   * are numbered in reading order, top left first, so an edit that adds one
+   * above or to the left of this one renumbers it. Null until a sheet is
+   * chosen; the panel falls back to the first plannable sheet meanwhile.
    */
-  referencesSelectedSheet: number | null;
+  referencesSelectedSheet: ReferencesSheetChoice | null;
   /** Which step and candidate the view frames, and the landmarks-first toggle. */
   referencesView: ReferencesView;
   /** Whether a computation is in flight, stale, or failed. */
@@ -1797,6 +1801,9 @@ export interface ReferencesSliceState {
   referencesCardRequest: { sheet: number; card: ReferencesStepCard } | null;
 }
 
+/** A sheet, by its outline; the id it had when chosen is a hint, never trusted alone. */
+export type ReferencesSheetChoice = Pick<RegionReference, 'boundary' | 'segmentIdHint'>;
+
 /** Open References on the sheet with this rim, in this mode. */
 export interface ReferencesSheetRequest {
   boundary: Point[][];
@@ -1816,7 +1823,7 @@ export interface ReferencesSliceActions {
    * the plan, the pick and the step index all name geometry that belongs to a
    * sheet, so carrying any of them across would describe the wrong pattern.
    */
-  setReferencesSelectedSheet: (component: number | null) => void;
+  setReferencesSelectedSheet: (sheet: ReferencesSheetChoice | null) => void;
   setReferencesView: (view: Partial<ReferencesView>) => void;
   /**
    * The restored sheet has been looked for in the frames analysis: select it,
@@ -1824,7 +1831,7 @@ export interface ReferencesSliceActions {
    * Unlike {@link setReferencesSelectedSheet} this resets nothing — the mode,
    * the toggle and the card waiting for the plan are what was restored with it.
    */
-  commitReferencesRestoredSheet: (component: number | null) => void;
+  commitReferencesRestoredSheet: (sheet: ReferencesSheetChoice | null) => void;
   /**
    * The restored card still waiting for a plan, taken — only by the document
    * it was restored for (`loadSerial`): null when there is none for it. A card

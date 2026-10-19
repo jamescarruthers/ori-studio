@@ -50,6 +50,11 @@
  * enough that a pause while the engine works in its worker is not taken for
  * the end.
  *
+ * `--references` enters the References workspace (its sheet rail, in Find
+ * mode), switches it to the precreasing sequence (planned for the first sheet
+ * on the switch), then picks the rail's second sheet (which puts the
+ * workspace back in Find) and asks for its sequence; timed the same way.
+ *
  * Options: `--out <dir>` (default `artifacts/large-osf-perf/<time>`, ignored by
  * git), `--dist <dir>` (a production build other than `apps/web/dist`, to time
  * two builds with one script), `--trace` (a Chrome trace per phase, for
@@ -96,6 +101,7 @@ function parseArgs(argv) {
     boxes: [],
     actions: [],
     diagram: false,
+    references: false,
     out: null,
     dist: path.join(repoRoot, 'apps/web/dist'),
     trace: false,
@@ -107,6 +113,7 @@ function parseArgs(argv) {
     else if (arg === '--box') options.boxes.push(argv[++i].split(',').map(Number));
     else if (arg === '--action') options.actions.push(argv[++i]);
     else if (arg === '--diagram') options.diagram = true;
+    else if (arg === '--references') options.references = true;
     else if (arg === '--out') options.out = argv[++i];
     else if (arg === '--dist') options.dist = path.resolve(argv[++i]);
     else if (arg === '--trace') options.trace = true;
@@ -375,26 +382,41 @@ async function main() {
     results.actions.push({ action, ...result });
   }
 
+  /**
+   * A workspace phase: act, wait for each of `marks` in turn and record when
+   * it happened, then wait for ten quiet seconds — long enough that a pause
+   * while an engine works in its worker is not taken for the end. A mark is
+   * `[name, selector, { state, timeout }]`: the selector reaching `state`
+   * (default visible); one that times out is recorded as null.
+   */
+  const WORKSPACE_QUIET_MS = 10_000;
+  const phase = (name, act, marks = []) => traced(name, async () => {
+    const t0 = await page.evaluate(() => performance.now());
+    const started = Date.now();
+    await act();
+    // With no marks, how long the act itself took: a click waits out a freeze.
+    const shown = marks.length === 0 ? { shownMs: Date.now() - started } : {};
+    for (const [mark, selector, { state = 'visible', timeout = PHASE_LIMIT_MS } = {}] of marks) {
+      const happened = await page.waitForSelector(selector, { state, timeout }).then(
+        () => true,
+        () => false
+      );
+      shown[mark] = happened ? Date.now() - started : null;
+    }
+    const quietMs = await untilQuiet(started, WORKSPACE_QUIET_MS);
+    const result = { ...shown, quietMs, longTasks: await longTasksSince(t0) };
+    log(name, JSON.stringify(result));
+    await page.screenshot({ path: path.join(options.out, `${name}.png`) });
+    return result;
+  });
+
   // ---- The Diagram: every card's link status, a step, then the pattern picker ---
   if (options.diagram) {
-    const DIAGRAM_QUIET_MS = 10_000;
-    const phase = async (name, act, shown) => {
-      const t0 = await page.evaluate(() => performance.now());
-      const started = Date.now();
-      await act();
-      if (shown) await page.waitForSelector(shown, { timeout: PHASE_LIMIT_MS });
-      const shownMs = Date.now() - started;
-      const quietMs = await untilQuiet(started, DIAGRAM_QUIET_MS);
-      const result = { shownMs, quietMs, longTasks: await longTasksSince(t0) };
-      log(name, JSON.stringify(result));
-      await page.screenshot({ path: path.join(options.out, `${name}.png`) });
-      return result;
-    };
-    results.diagram = await traced('diagram', async () => ({
+    results.diagram = await (async () => ({
       enter: await phase(
         'diagram-enter',
         () => page.click('[aria-label="Workspaces"] button[aria-label="Diagram workspace"]'),
-        '[data-step-id]'
+        [['shownMs', '[data-step-id]']]
       ),
       select: await phase('diagram-select', () =>
         page.click('[data-step-id]', { timeout: PHASE_LIMIT_MS, noWaitAfter: true })
@@ -406,10 +428,41 @@ async function main() {
             .getByRole('button', { name: /^(Re)?[lL]ink Pattern…$/ })
             .first()
             .click({ timeout: PHASE_LIMIT_MS }),
-        '[role="listbox"] [role="option"] svg'
+        [['shownMs', '[role="listbox"] [role="option"] svg']]
       ),
-    }));
+    }))();
     results.diagram.heapMiB = await heapMiB();
+  }
+
+  // ---- References: the sheet rail and the first sheet's sequence, then another sheet ---
+  if (options.references) {
+    const card = '.references-sidebar [role="option"]';
+    const steps = '[role="list"][aria-label="Folding steps"] [role="listitem"]';
+    results.references = await (async () => ({
+      enter: await phase(
+        'references-enter',
+        () => page.click('[aria-label="Workspaces"] button[aria-label="References workspace"]'),
+        [['railMs', card]]
+      ),
+      sequence: await phase(
+        'references-sequence',
+        () => page.click('[data-references-mode="sequence"]', { timeout: PHASE_LIMIT_MS }),
+        [['stepsMs', steps]]
+      ),
+      // A sheet switch puts the workspace back in Find, so its sequence is
+      // asked for again.
+      pick: await phase(
+        'references-pick',
+        () => page.locator(card).nth(1).click({ timeout: PHASE_LIMIT_MS, noWaitAfter: true }),
+        [['selectedMs', `${card}:nth-child(2)[aria-selected="true"]`]]
+      ),
+      pickSequence: await phase(
+        'references-pick-sequence',
+        () => page.click('[data-references-mode="sequence"]', { timeout: PHASE_LIMIT_MS }),
+        [['stepsMs', steps]]
+      ),
+    }))();
+    results.references.heapMiB = await heapMiB();
   }
 
   writeFileSync(path.join(options.out, 'results.json'), `${JSON.stringify(results, null, 2)}\n`);

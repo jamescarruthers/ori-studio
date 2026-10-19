@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { locateSheet } from './referencesReaderState';
+import { sheetChoice } from './referencesSheets';
 import type { SheetAnalysis } from './sheetFrames';
 
 /**
@@ -28,7 +29,7 @@ export function useReferencesRestoredSheet(frames: SheetAnalysis | null): number
     [pending, frames]
   );
   useEffect(() => {
-    if (pending && frames) commit(resolved);
+    if (pending && frames) commit(resolved === null ? null : sheetChoice(frames, resolved));
   }, [pending, frames, resolved, commit]);
   return resolved;
 }
