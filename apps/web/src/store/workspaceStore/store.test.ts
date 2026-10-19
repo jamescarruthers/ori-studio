@@ -46,11 +46,19 @@ import { registerPendingEditFlush, resetPendingEditsForTests } from '../../lib/p
 import { readDiagram } from '../../diagram/document/diagramFile';
 import {
   annotationsOutOfStep,
+  createDiagram,
+  insertSteps,
+  PAGE_SETTINGS,
+  setPageSetup,
   stepAsset,
   stepIndex,
+  type DiagramDocument,
   type KnownDiagramAnnotation,
   type KnownDiagramAsset,
 } from '../../diagram/document/diagramDocument';
+import { FIXTURE_FONTS } from '../../diagram/fonts/diagramFonts.fixtures';
+import { layoutDiagram } from '../../diagram/pages/diagramPages';
+import { fontTextSetter } from '../../diagram/pages/fontTextSetter';
 import { sanitizeSvg } from '../../diagram/upload/svgSanitize';
 import { foldCancellationBuffer } from '../../lib/foldCancellation';
 import { registerCpCamera } from '../../cp-workspace/renderer/cpCameraRegistry';
@@ -117,7 +125,9 @@ const oristudioCpMocks = vi.hoisted(() => ({
   executeOristudioCpCommand: vi.fn(),
   exportOristudioCpDocumentAsCp: vi.fn(),
   exportOristudioCpDocumentAsFold: vi.fn(),
+  exportOristudioCpLinesAsFold: vi.fn(),
   exportOristudioCpDocumentAsOri: vi.fn(),
+  fetchOristudioCpSheetIndex: vi.fn(),
   exportOristudioCpDocumentAsOrh: vi.fn(),
   fold3dOristudioCpDocument: vi.fn(),
   fold3dOristudioCpFigureAnother: vi.fn(),
@@ -224,7 +234,9 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
     executeOristudioCpCommand: oristudioCpMocks.executeOristudioCpCommand,
     exportOristudioCpDocumentAsCp: oristudioCpMocks.exportOristudioCpDocumentAsCp,
     exportOristudioCpDocumentAsFold: oristudioCpMocks.exportOristudioCpDocumentAsFold,
+    exportOristudioCpLinesAsFold: oristudioCpMocks.exportOristudioCpLinesAsFold,
     exportOristudioCpDocumentAsOri: oristudioCpMocks.exportOristudioCpDocumentAsOri,
+    fetchOristudioCpSheetIndex: oristudioCpMocks.fetchOristudioCpSheetIndex,
     exportOristudioCpDocumentAsOrh: oristudioCpMocks.exportOristudioCpDocumentAsOrh,
     fold3dOristudioCpDocument: oristudioCpMocks.fold3dOristudioCpDocument,
     fold3dOristudioCpFigureAnother: oristudioCpMocks.fold3dOristudioCpFigureAnother,
@@ -250,10 +262,11 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
   };
 });
 
+import { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { EngineClient } from './engineRuntime';
 import { hasDeletableDiagramSelection, selectWorkspaceCapabilities } from './capabilities';
 import { useWorkspaceStore } from './store';
-import { stepsIn } from '../../diagram/document/diagramSteps.fixtures';
+import { cpStep, stepsIn } from '../../diagram/document/diagramSteps.fixtures';
 
 type SnapshotOptions = Partial<
   Pick<
@@ -536,6 +549,27 @@ const editableCpFoldText = JSON.stringify({
     [0, 2, 3],
   ],
 });
+
+/**
+ * The sheet index the kernel would build for the unit square these tests draw
+ * in: one sheet, holding every line of the open document whose midpoint lies in
+ * it. `editableCpFoldText` is that sheet's FOLD.
+ */
+function unitSquareSheetIndex(): CpSheetIndex {
+  const lines = useWorkspaceStore.getState().oristudioCpDocument?.document.crease_pattern.line_segments ?? [];
+  const lineSheet = lines.map((line) => {
+    const x = (line.a.x + line.b.x) / 2;
+    const y = (line.a.y + line.b.y) / 2;
+    return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? 0 : -1;
+  });
+  return new CpSheetIndex({
+    bounds: new Float64Array([0, 0, 1, 1]),
+    outlineOffsets: new Uint32Array([0, 4]),
+    outlineCoords: new Float64Array([0, 0, 1, 0, 1, 1, 0, 1]),
+    lineCounts: new Uint32Array([lineSheet.filter((sheet) => sheet === 0).length]),
+    lineSheet: new Int32Array(lineSheet),
+  });
+}
 
 function nextId<T extends { id: number }>(items: T[]): number {
   return Math.max(0, ...items.map((item) => item.id)) + 1;
@@ -1332,6 +1366,9 @@ function resetStores(snapshot = makeSnapshot()) {
   oristudioCpMocks.exportOristudioCpDocumentAsFold
     .mockReset()
     .mockResolvedValue(editableCpFoldText);
+  // The kernel's sheet index and one sheet's lines, for the same unit square.
+  oristudioCpMocks.fetchOristudioCpSheetIndex.mockReset().mockImplementation(async () => unitSquareSheetIndex());
+  oristudioCpMocks.exportOristudioCpLinesAsFold.mockReset().mockResolvedValue(editableCpFoldText);
   oristudioCpMocks.exportOristudioCpDocumentAsOri
     .mockReset()
     .mockResolvedValue('{"@version":"v1.1","title":"square"}\n');
@@ -2855,6 +2892,47 @@ describe('workspace store slices', () => {
     });
   });
 
+  it('does not save the FOLD projection a second time as the source FOLD', async () => {
+    // A project with no source FOLD of its own carries only its projection. The
+    // open used to adopt that projection as `sourceFold`, so the next save wrote
+    // the same FOLD twice — and every save after carried the copy forward.
+    resetStores(seedSnapshot());
+    loadSnapshotIntoStore(seedSnapshot());
+    const nativeProject = createNativeCreasePatternProjectFile({
+      title: 'Projection only',
+      filename: 'projection.osf',
+      path: '/tmp/projection.osf',
+      document: editableCpState([cpLine({ x: 0, y: 0 }, { x: 1, y: 0 }, { color: 'Red1' })]).document,
+      source: { format: 'cp', filename: 'projection.cp', path: null },
+      foldProjection: JSON.parse(editableCpFoldText),
+      sourceFold: null,
+      foldArtifacts: null,
+      creaseColorMode: 'mvf',
+      selection: emptyOristudioCpSelection(),
+      viewport: DEFAULT_ORISTUDIO_CP_VIEWPORT_OPTIONS,
+      foldedFigures: [],
+      activeFoldedFigureId: null,
+      lineage: importedCpLineage(),
+      appVersion: '0.1.2',
+    });
+    const fileService = createFileService({
+      text: serializeNativeProjectFile(nativeProject),
+      name: 'projection.osf',
+      path: '/tmp/projection.osf',
+    });
+
+    await expect(useWorkspaceStore.getState().openProject(fileService)).resolves.toBe(true);
+    useWorkspaceStore.setState({ dirty: true });
+    await expect(useWorkspaceStore.getState().saveProject(fileService)).resolves.toBe(true);
+
+    const savedOptions = fileService.saveTextFile.mock.calls.at(-1)?.[0] as
+      | SaveTextFileOptions
+      | undefined;
+    const saved = parseNativeProjectFile(savedOptions?.contents ?? '');
+    expect(saved.workspace.creasePattern?.creasePattern.foldProjection).not.toBeNull();
+    expect(saved.workspace.creasePattern?.creasePattern.sourceFold).toBeNull();
+  });
+
   it('preserves original Oriedita source identity when reopening and resaving OSF', async () => {
     resetStores(seedSnapshot());
     loadSnapshotIntoStore(seedSnapshot());
@@ -3257,6 +3335,51 @@ describe('workspace store slices', () => {
       status: 'ready',
     });
     await expect(useWorkspaceStore.getState().foldAnotherOristudioCpFigure()).resolves.toBe(true);
+  });
+
+  // The toolbar's Simulate names a sheet of the index by position; the Simulate
+  // workspace keeps it by outline, so an edit that renumbers the sheets keeps it.
+  describe('simulating one sheet in the Simulate workspace', () => {
+    function seedUnitSquare() {
+      const activatePanel = vi.fn();
+      useLayoutStore.setState({ activatePanel });
+      useWorkspaceStore.setState({
+        oristudioCpDocument: editableCpState([
+          cpLine({ x: 0, y: 0 }, { x: 1, y: 0 }, { color: 'Black0' }),
+          cpLine({ x: 1, y: 0 }, { x: 1, y: 1 }, { color: 'Black0' }),
+          cpLine({ x: 1, y: 1 }, { x: 0, y: 1 }, { color: 'Black0' }),
+          cpLine({ x: 0, y: 1 }, { x: 0, y: 0 }, { color: 'Black0' }),
+          cpLine({ x: 0, y: 0 }, { x: 1, y: 1 }, { color: 'Red1' }),
+        ]),
+      });
+      return { activatePanel };
+    }
+
+    it('keeps the sheet by its outline and opens the simulator, meshing nothing yet', async () => {
+      resetStores(seedSnapshot());
+      const { activatePanel } = seedUnitSquare();
+
+      await expect(useWorkspaceStore.getState().simulateOristudioCpSheet(0)).resolves.toBe(true);
+
+      expect(useWorkspaceStore.getState().oristudioCpSimulateSheet).toEqual({
+        boundary: [[{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]],
+        bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+        segmentIdHint: 0,
+      });
+      expect(activatePanel).toHaveBeenCalledWith('simulator');
+      // The workspace builds the one sheet's mesh when it shows it; nothing here
+      // segments the canvas.
+      expect(oristudioCpMocks.exportOristudioCpDocumentAsFold).not.toHaveBeenCalled();
+    });
+
+    it('refuses a sheet the index does not have, and stays put', async () => {
+      resetStores(seedSnapshot());
+      const { activatePanel } = seedUnitSquare();
+
+      await expect(useWorkspaceStore.getState().simulateOristudioCpSheet(1)).resolves.toBe(false);
+
+      expect(activatePanel).not.toHaveBeenCalled();
+    });
   });
 
   // `G` routes on the creases it is scoped to. A selection carrying a non-180
@@ -9561,7 +9684,7 @@ describe('the project diagram', () => {
     workspace: {
       designs: unknown[];
       creasePattern: unknown;
-      diagram: { steps: unknown[] } | null;
+      diagrams?: { id: string; title?: string; steps: unknown[] }[];
     };
   }
 
@@ -9587,7 +9710,8 @@ describe('the project diagram', () => {
   });
 
   it('records nothing for an edit that changes nothing, and makes no diagram for one', () => {
-    expect(state().setDiagramTitle('')).toBe(false);
+    // The title a new diagram starts with (Zach, 2026-10-15): no change.
+    expect(state().setDiagramTitle('Add a title')).toBe(false);
     expect(state().diagram).toBeNull();
     expect(state().dirty).toBe(false);
 
@@ -9744,7 +9868,7 @@ describe('the project diagram', () => {
 
     const fileService = createFileService();
     await state().saveProjectAs(fileService);
-    expect(writtenFile(fileService).file.workspace.diagram).toEqual(raw);
+    expect(writtenFile(fileService).file.workspace.diagrams).toEqual([raw]);
   });
 
   it('saves and reopens a project that holds only a diagram', async () => {
@@ -9757,10 +9881,10 @@ describe('the project diagram', () => {
 
     const { options, file } = writtenFile(fileService);
     expect(options.extensions).toEqual(['osf']);
-    expect(file.minimumReaderSchemaVersion).toBe(9);
+    expect(file.minimumReaderSchemaVersion).toBe(10);
     expect(file.workspace.designs).toEqual([]);
     expect(file.workspace.creasePattern).toBeNull();
-    expect(file.workspace.diagram?.steps).toHaveLength(2);
+    expect(file.workspace.diagrams?.[0]?.steps).toHaveLength(2);
     expect(state().dirty).toBe(false);
 
     resetStores(seedSnapshot());
@@ -9784,6 +9908,127 @@ describe('the project diagram', () => {
       diagramReadOnly: false,
     });
     expect(state().diagramHistory.past).toEqual([]);
+  });
+
+  it('opens a flow diagram saved before its pages were packed, takes in their packing as no edit, and saves and reopens them held (`diagram-flow-packing.md`, Decision 5)', async () => {
+    const steps = Array.from({ length: 11 }, (_, index) => ({
+      ...cpStep(`step-${index}`),
+      text: index % 3 === 0 ? 'Fold the bottom edge up to the top edge, crease firmly, then unfold.' : 'Fold in half.',
+    }));
+    const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-old' }), steps, 0), {
+      layout: 'flow',
+      stepsPerPage: 4,
+      // No title block, as no diagram of then had one.
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+    });
+    state().installDiagram({ document, readOnly: false, raw: {} });
+    const saving = createFileService();
+    await state().saveProjectAs(saving);
+    const old = writtenFile(saving).options.contents;
+    // As a build before packing wrote it: no page's arrangement.
+    expect(JSON.parse(old).workspace.diagrams[0]).not.toHaveProperty('pageArrangements');
+
+    const open = async (text: string) => {
+      resetStores(seedSnapshot());
+      useLayoutStore.setState({ activateWorkspace: vi.fn() });
+      useWorkspaceStore.setState({ engineReady: true, status: 'ready' });
+      await expect(state().openProject(createFileService({ text, name: 'crane.osf', path: '/tmp/crane.osf' }))).resolves.toBe(true);
+      return state().diagram!;
+    };
+    // The Pages view's layout, with the real fonts.
+    const layOut = (diagram: DiagramDocument) =>
+      layoutDiagram(diagram, fontTextSetter((key, weight) => FIXTURE_FONTS.font(key, weight)?.metrics ?? null, diagram.hanStyle));
+
+    // Opened, it holds no packing, and every page is packed: four steps, four and three.
+    const first = layOut(await open(old));
+    expect(first.pages.map((page) => [page.cells.length, page.packing?.packed])).toEqual([
+      [4, true],
+      [4, true],
+      [3, true],
+    ]);
+    // Opened again, unsaved, it packs the same.
+    const opened = await open(old);
+    expect(opened.pageArrangements).toBeUndefined();
+    const packed = layOut(opened);
+    expect(packed.packed).toEqual(first.packed);
+    // Taken in as the Pages view takes it in: no edit, no undo step, the project as it was.
+    expect(state().adoptDiagramPageArrangements(packed.packed!, opened)).toBe(true);
+    const adopted = state().diagram!;
+    expect(Object.keys(adopted.pageArrangements!).sort()).toEqual(['step-0', 'step-4', 'step-8']);
+    expect(state().dirty).toBe(false);
+    expect(state().diagramHistory.past).toEqual([]);
+
+    // The next save writes them.
+    const again = createFileService();
+    await expect(state().saveProject(again)).resolves.toBe(true);
+    const saved = writtenFile(again).options.contents;
+    expect(Object.keys(JSON.parse(saved).workspace.diagrams[0].pageArrangements)).toEqual(['step-0', 'step-4', 'step-8']);
+    expect(state().dirty).toBe(false);
+
+    // Reopened, every page holds what was saved, and draws as it was packed: nothing is packed again.
+    const reopened = await open(saved);
+    expect(reopened.pageArrangements).toEqual(adopted.pageArrangements);
+    const held = layOut(reopened);
+    expect(held.packed).toBeUndefined();
+    expect(held.pages.map((page) => page.packing?.packed)).toEqual([false, false, false]);
+    expect(held.pages.map((page) => [page.cells, page.band, page.turns])).toEqual(packed.pages.map((page) => [page.cells, page.band, page.turns]));
+    expect(state().dirty).toBe(false);
+  });
+
+  it('opens the first of a project’s diagrams, and saves the others after it as they came', async () => {
+    authorTwoSteps();
+    const fileService = createFileService();
+    await state().saveProjectAs(fileService);
+    const file = JSON.parse(writtenFile(fileService).options.contents);
+    const shown = file.workspace.diagrams[0];
+    // What a later build that keeps several diagrams in a project would write.
+    const other = { formatVersion: 1, id: 'diagram-frog', title: 'Frog', steps: [], futureField: { kept: true } };
+    file.workspace.diagrams = [shown, other];
+
+    resetStores(seedSnapshot());
+    useLayoutStore.setState({ activateWorkspace: vi.fn() });
+    useWorkspaceStore.setState({ engineReady: true, status: 'ready' });
+    await state().openProject(
+      createFileService({ text: JSON.stringify(file), name: 'two.osf', path: '/tmp/two.osf' })
+    );
+    expect(state().diagram?.id).toBe(shown.id);
+    expect(state().diagramOthers).toEqual([other]);
+
+    state().setDiagramTitle('Crane, again');
+    const again = createFileService();
+    await state().saveProject(again);
+    const written = writtenFile(again).file.workspace.diagrams;
+    expect(written?.map((diagram) => diagram.id)).toEqual([shown.id, 'diagram-frog']);
+    expect(written?.[0].title).toBe('Crane, again');
+    expect(written?.[1]).toEqual(other);
+  });
+
+  it('opens a project saved with one diagram, before the list, and saves it as the list', async () => {
+    authorTwoSteps();
+    const saved = state().diagram;
+    const fileService = createFileService();
+    await state().saveProjectAs(fileService);
+    const file = JSON.parse(writtenFile(fileService).options.contents);
+    // As builds before the list wrote it.
+    file.workspace.diagram = file.workspace.diagrams[0];
+    delete file.workspace.diagrams;
+    file.minimumReaderSchemaVersion = 9;
+
+    resetStores(seedSnapshot());
+    useLayoutStore.setState({ activateWorkspace: vi.fn() });
+    useWorkspaceStore.setState({ engineReady: true, status: 'ready' });
+    await state().openProject(
+      createFileService({ text: JSON.stringify(file), name: 'one.osf', path: '/tmp/one.osf' })
+    );
+    expect(state().diagram).toEqual(saved);
+    expect(state().diagramOthers).toEqual([]);
+
+    const again = createFileService();
+    await state().saveProject(again);
+    const written = writtenFile(again).file;
+    expect(written.minimumReaderSchemaVersion).toBe(10);
+    expect(written.workspace.diagrams).toHaveLength(1);
+    expect('diagram' in written.workspace).toBe(false);
   });
 
   it('opening a diagram-only project replaces the crease pattern that was open', async () => {
@@ -9824,7 +10069,7 @@ describe('the project diagram', () => {
 
     await state().saveProjectAs(fileService);
     const { options, file } = writtenFile(fileService);
-    expect(file.minimumReaderSchemaVersion).toBe(9);
+    expect(file.minimumReaderSchemaVersion).toBe(10);
     expect(file.workspace.creasePattern).not.toBeNull();
 
     resetStores(seedSnapshot());
@@ -9837,6 +10082,33 @@ describe('the project diagram', () => {
     expect(state().oristudioCpDocument).not.toBeNull();
     expect(state().diagram).toEqual(saved);
     expect(state().dirty).toBe(false);
+  });
+
+  // The Diagram's example: a crease pattern lands on Edit, unless the caller
+  // names the surface the file is for — and it counts as an example, not a file.
+  it('lands an open where its caller names, and reports the source it gives', async () => {
+    await state().createNewCreasePattern();
+    authorTwoSteps();
+    const fileService = createFileService();
+    await state().saveProjectAs(fileService);
+    const { options } = writtenFile(fileService);
+
+    for (const [openOptions, landing, source] of [
+      [{}, 'edit', 'file'],
+      [{ landing: 'diagram', source: 'example' }, 'diagram', 'example'],
+    ] as const) {
+      resetStores(seedSnapshot());
+      useLayoutStore.setState({ activateWorkspace: vi.fn() });
+      useWorkspaceStore.setState({ engineReady: true, status: 'ready' });
+      analyticsMocks.track.mockClear();
+      await expect(
+        state().openProject(createFileService({ text: options.contents, name: 'Crane.osf', path: null }), openOptions)
+      ).resolves.toBe(true);
+
+      expect(state().oristudioCpDocument).not.toBeNull();
+      expect(useLayoutStore.getState().activateWorkspace).toHaveBeenLastCalledWith(landing);
+      expect(analyticsMocks.track).toHaveBeenCalledWith('project opened', { source });
+    }
   });
 
   it('saves a crease pattern opened from an Oriedita file as .osf once it has a diagram', async () => {
@@ -9856,7 +10128,7 @@ describe('the project diagram', () => {
     const { options, file } = writtenFile(fileService);
     // Never over the `.ori`: a native target is asked for.
     expect(options).toMatchObject({ extensions: ['osf'], path: null });
-    expect(file.workspace.diagram?.steps).toHaveLength(2);
+    expect(file.workspace.diagrams?.[0]?.steps).toHaveLength(2);
   });
 
   describe('typing that has not committed yet', () => {
@@ -9870,7 +10142,7 @@ describe('the project diagram', () => {
 
       await state().saveProject(fileService);
 
-      const steps = writtenFile(fileService).file.workspace.diagram?.steps as { text: string }[];
+      const steps = writtenFile(fileService).file.workspace.diagrams?.[0]?.steps as { text: string }[];
       expect(steps[0].text).toBe('Typed, not committed.');
       expect(state().dirty).toBe(false);
     });
@@ -9906,7 +10178,7 @@ describe('the project diagram', () => {
 
     await state().saveProjectAs(fileService);
 
-    const steps = writtenFile(fileService).file.workspace.diagram?.steps as { text: string }[];
+    const steps = writtenFile(fileService).file.workspace.diagrams?.[0]?.steps as { text: string }[];
     expect(steps[1].text).toBe('Unfold.');
     expect(state().dirty).toBe(true);
   });
@@ -9935,7 +10207,7 @@ describe('the project diagram', () => {
     // So saving again writes the file it came from, diagram and all.
     const again = createFileService();
     await state().saveProject(again);
-    expect(writtenFile(again).file.workspace.diagram?.steps).toHaveLength(2);
+    expect(writtenFile(again).file.workspace.diagrams?.[0]?.steps).toHaveLength(2);
   });
 
   it('keeps the crease pattern when a .bps fails to open over it', async () => {
@@ -9963,7 +10235,7 @@ describe('the project diagram', () => {
         path: null,
         designs: [],
         creasePattern: null,
-        diagram: null,
+        diagrams: [],
         appVersion: 'test',
       })
     );
@@ -10197,7 +10469,7 @@ describe('the project diagram', () => {
       await state().saveProjectAs(fileService);
 
       const { options } = writtenFile(fileService);
-      const written = JSON.parse(options.contents).workspace.diagram;
+      const written = JSON.parse(options.contents).workspace.diagrams?.[0];
       expect(Object.keys(written.assets).sort()).toEqual(['asset-b', 'asset-c']);
 
       resetStores(seedSnapshot());

@@ -1,8 +1,8 @@
+import { compoundImportTravel } from '../diagramBatchImport';
 import {
-  createDiagram,
   createStep,
-  defaultHanStyle,
   duplicateStep,
+  setTitleBlockRoom,
   editStepAnnotations,
   keepStepAnnotations,
   insertPictureSteps,
@@ -17,6 +17,8 @@ import {
   setDiagramTitle,
   setHanStyle,
   setPageSetup,
+  setTitleBlockContent,
+  setTitleBlockShown,
   setStepBreakBefore,
   setReferencesSide,
   setStepPicture,
@@ -40,30 +42,24 @@ import {
   type PulledMarks,
   type SentDiagramEntry,
   setReferencesWay,
-  anchorTakesCard,
   makeCardMarksEditable,
 } from '../../../diagram/document/diagramDocument';
 import i18n from '../../../i18n';
+import { newDiagram, titleBlockWords } from '../../../diagram/document/newDiagram';
 import { trackDiagramImportedMarkEdited } from '../../../analytics';
 import { annotationEventKind } from '../../../diagram/annotate/annotationEventKind';
 import { cardMarkEdits } from '../../../diagram/document/cardMarks';
 import { requestConfirmation } from '../../commandDialogStore';
 import { commitStepCapture, runDiagramCapture, stopDiagramCapture } from '../diagramCapture';
 import { runDiagramFoldCapture } from '../diagramFoldCapture';
-import { discardDiagramState, selectedDiagramAnnotation, trimDiagramHistory } from '../diagramState';
+import { discardDiagramState, noteAdoptedPacking, selectedDiagramAnnotation, trimDiagramHistory } from '../diagramState';
 import { pathNodesOf } from '../../../diagram/annotate/annotationPath';
 import { showsFrame } from '../../../diagram/zoom/zoomActions';
-import {
-  landSeededFrame,
-  seedNewSteps,
-  type LandedFirstFrame,
-  type SeededStep,
-} from '../../../diagram/zoom/zoomFrames';
+import { seedNewSteps, type SeededStep } from '../../../diagram/zoom/zoomFrames';
 import { ZOOM_FRAME_ID } from '../../../diagram/zoom/zoomModel';
 import {
   enlargeInStore,
   storePaperFacesBackfill,
-  trackSeeded,
   trackSeededSteps,
   unenlargeInStore,
   updateInStore,
@@ -71,18 +67,13 @@ import {
 } from '../diagramZoom';
 import { lacksPaperFaces } from '../../../diagram/capture/stepPaperFaces';
 import { resetStepPlace, resetStepPlaces, setStepPlace } from '../../../diagram/document/stepPlace';
+import { adoptPacking, followPageArrangements, repackPages } from '../../../diagram/pages/pageArrangements';
+import { noteTitleBlockEdit } from '../../../diagram/pages/titleBlockEdits';
+import { retainPageCounts, setPageSteps } from '../../../diagram/pages/pageCounts';
+import { flushPlacementNudge } from '../../../diagram/pages/placementGestures';
 import { cellSlots, settlePlaces } from '../../../diagram/pages/stepPlaces';
 import { createProjectDocumentHistory } from '../projectDocumentHistory';
 import type { DiagramSlice, WorkspaceSliceCreator, WorkspaceState } from '../types';
-
-/**
- * The language the author is working in, for a new diagram's Han style. Read
- * from the document's `lang` — which the locale store keeps in step with the
- * interface — rather than from i18n, so the store does not import it.
- */
-function authorLocale(): string | null {
-  return typeof document === 'undefined' ? null : document.documentElement.lang || null;
-}
 
 /**
  * What is selected after a delete: the entry that took the first deleted one's
@@ -119,8 +110,22 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
   /** The References browser's openings, counted: what a pull names its browser by. */
   let browserOpenings = 0;
 
-  /** The edits that sent frames moved by hand home, counted: `diagramPlacesSettled`'s nonce. */
+  /** The edits and adoptions that sent frames moved by hand home, counted: `diagramPlacesSettled`'s nonce. */
   let placesSettled = 0;
+
+  /**
+   * The reflow notice for `added` frames sent home now, with the undo entry
+   * they went home in, so what offers to undo it can tell it is still the
+   * newest — none on a diagram opened with them (no entry). Frames a page's
+   * packing sends home after the edit that re-packed it count with the
+   * edit's own (`count`), as one notice for the edit.
+   */
+  const placesSettledNotice = (added: number, history = get().diagramHistory) => {
+    const entry = history.past.at(-1) ?? null;
+    const shown = get().diagramPlacesSettled;
+    const count = entry !== null && shown?.entry === entry ? shown.count + added : added;
+    return { count, added, nonce: (placesSettled += 1), entry };
+  };
 
   /**
    * The anchor's pick mode put down (Revision 2) unless it is still for the
@@ -141,7 +146,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
   const selection = (stepId: string | null) => ({
     diagramSelectedStepId: stepId,
     // An annotation is selected on its step: another step, or none, selects none.
-    ...(stepId !== get().diagramSelectedStepId ? { diagramSelectedAnnotationId: null, ...pickPutDown() } : {}),
+    ...(stepId !== get().diagramSelectedStepId ? { diagramSelectedAnnotationId: null, diagramPagesPart: null, ...pickPutDown() } : {}),
     // A detail is open on the selected step, and a picker chooses for one:
     // nothing selected — or a turn, which has no detail (D22) — closes the
     // detail, and another step the picker.
@@ -167,22 +172,40 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     get,
     set,
     keys: { document: 'diagram', history: 'diagramHistory', readOnly: 'diagramReadOnly', loadId: 'diagramLoadId' },
-    base: (stored) => stored ?? createDiagram({ hanStyle: defaultHanStyle(authorLocale()) }),
+    base: (stored) => stored ?? newDiagram(),
     discard: discardDiagramState,
-    beforeCommit: (base, edited) => {
-      // A frame moved by hand whose step the edit put in another cell goes back
-      // to it, in this edit's undo step (Decision 1A): one rule, here, whatever
-      // the edit was, so no verb can forget it.
-      const { document: settled, settled: count } = settlePlaces(base, edited);
+    // An import writing the diagram holds every edit, an undo and a redo until it is done.
+    busy: (state) => state.diagramImportBusy,
+    // A keyboard nudge on the Pages view still in its pause lands first, in an
+    // undo step of its own, so an edit comes after it as the screen showed
+    // them, and an undo takes it back as it would one committed.
+    flush: flushPlacementNudge,
+    beforeCommit: (base, edited, before) => {
+      // A page with its own count gains the steps the edit put on it and loses
+      // those it took away, so later pages stay where they were
+      // (`diagram-flow-pages.md`): one rule, here, whatever the edit was.
+      const counted = retainPageCounts(base, edited);
+      // Each flow page's arrangement follows its page, in the same undo step
+      // (`diagram-flow-packing.md`): one the page no longer holds is kept for
+      // where its steps were until the layout packs the page afresh, and one no
+      // page keeps goes, so the file never carries it.
+      const followed = followPageArrangements(base, counted);
+      // A frame moved by hand whose step the edit took out of its cell — in the
+      // flow, off its page — goes home, in this edit's undo step (Decision 1A;
+      // a flow step's band and place along it are judged as its page's packing
+      // is adopted, Zach 2026-10-15): one rule, here, whatever the edit was, so
+      // no verb can forget it.
+      const { document: settled, settled: count } = settlePlaces(base, followed);
+      // An asset nothing refers to any more goes as the edit lands. Each undo
+      // snapshot keeps its own assets table, so undo still has the picture a
+      // replace took away; and with the current diagram no longer holding it,
+      // the history byte cap (`trimDiagramHistory`) sees what only history keeps.
+      const next = withReferencedAssets(settled);
+      // Where the edit changed the title block's words, the next layout measures the room they need (Zach, 2026-10-15).
+      noteTitleBlockEdit(before, next);
       return {
-        // An asset nothing refers to any more goes as the edit lands. Each undo
-        // snapshot keeps its own assets table, so undo still has the picture a
-        // replace took away; and with the current diagram no longer holding it,
-        // the history byte cap (`trimDiagramHistory`) sees what only history keeps.
-        document: withReferencedAssets(settled),
-        // With the undo entry they went home in, so what offers to undo it can tell it is still the newest.
-        alongside: (history) =>
-          count > 0 ? { diagramPlacesSettled: { count, nonce: (placesSettled += 1), entry: history.past.at(-1) ?? null } } : {},
+        document: next,
+        alongside: (history) => (count > 0 ? { diagramPlacesSettled: placesSettledNotice(count, history) } : {}),
       };
     },
     trim: trimDiagramHistory,
@@ -192,6 +215,16 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
   const { commit, session: sessionFor } = documentHistory;
 
   const travel = (direction: 'undo' | 'redo'): boolean => {
+    // An undo takes back a nudge in its pause as it would one committed.
+    flushPlacementNudge();
+    const state = get();
+    if (state.diagramReadOnly || state.diagramImportBusy) return false;
+    // An import that changed Edit and the Diagram is one entry in each: it travels in both or in neither.
+    const head = direction === 'undo' ? state.diagramHistory.past.at(-1) : state.diagramHistory.future[0];
+    if (head?.compoundId) {
+      void compoundImportTravel(direction);
+      return true;
+    }
     if (!documentHistory.travel(direction)) return false;
     // The selected annotation, while it is still on the selected step.
     const { diagram, diagramSelectedStepId: stepId, diagramSelectedAnnotationId: annotationId } = get();
@@ -206,7 +239,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     entry: DiagramEntry = createStep(),
     label = 'Add step'
   ): string | null => {
-    // A step added after an enlarged step starts enlarged (Revision 2, Z2), captured as it is made.
+    // An empty step added after an enlarged step starts enlarged (Revision 2, Z2), captured as it is made;
+    // its first picture keeps the frame only if it shows the run's picture type (`landSeededFrame`).
     let seeded: SeededStep[] = [];
     const next = commit(label, (document) => {
       const inserted = insertSteps(document, [entry], index(document));
@@ -215,23 +249,19 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       return seeding.document;
     });
     if (!next) return null;
-    // Empty, it places its frame on its first picture, which counts it.
+    // Empty, it places its frame on a first picture that keeps it, which counts it.
     trackSeededSteps(next, seeded);
     set(selection(entry.id));
     return entry.id;
   };
 
   /**
-   * One edit that makes steps — an upload, a References pull — as one undo
-   * step, each new step starting enlarged after an enlarged one (Revision 2,
-   * Z2), and a step given its first picture landing the frame it was enlarged
-   * with; each counted as its frame is placed. `edit` returns the diagram and
-   * the steps it made and filled; null when the edit changed nothing.
-   */
-  /**
    * Steps pulled where `anchor` says — References cards or Fold steps, and
-   * the turns between them — as one undo step, the last selected and either
-   * browser closed. Null when nothing was added.
+   * the turns between them — as one undo step through {@link commit}, so the
+   * pages' counts, arrangements and hand-moved places follow them as they do
+   * any edit; the last selected and either browser closed. Null when nothing
+   * was added. A pull never continues an enlarged run: the steps it makes,
+   * and an empty one it fills, start whole (review fix 3).
    */
   const pull = (
     sent: readonly SentDiagramEntry[],
@@ -239,17 +269,10 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     label: string
   ): ({ stepIds: string[]; turnIds: string[] } & PulledMarks) | null => {
     let pulled: { stepIds: string[]; turnIds: string[] } & PulledMarks = { stepIds: [], turnIds: [], baked: [], replaced: 0 };
-    // A filled step lands the frame it was enlarged with, and each card made a step after an enlarged one starts enlarged (Revision 2).
-    const next = commitMade(label, (document) => {
-      // The step a card fills or replaces is not a new one; a filled one gets its first picture.
-      const taking = anchor.kind !== 'end' && anchorTakesCard(document, anchor) ? anchor.stepId : undefined;
+    const next = commit(label, (document) => {
       const { document: pulledInto, ...ids } = pullReferencesSteps(document, sent, anchor);
       pulled = ids;
-      return {
-        document: pulledInto,
-        made: ids.stepIds.filter((id) => id !== taking),
-        ...(taking !== undefined && ids.stepIds.includes(taking) ? { filled: taking } : {}),
-      };
+      return pulledInto;
     });
     const last = pulled.stepIds.at(-1) ?? pulled.turnIds.at(-1);
     if (!next || last === undefined) return null;
@@ -257,33 +280,6 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     return pulled;
   };
 
-  const commitMade = (
-    label: string,
-    edit: (document: DiagramDocument) => { document: DiagramDocument; made: readonly string[]; filled?: string }
-  ): DiagramDocument | null => {
-    let seeded: SeededStep[] = [];
-    let landed = null as (LandedFirstFrame & { stepId: string }) | null;
-    const next = commit(label, (document) => {
-      const result = edit(document);
-      if (result.document === document) return document;
-      let edited = result.document;
-      if (result.filled !== undefined) {
-        // Filled first, so the steps made after it are seeded from the frame it lands.
-        const first = landSeededFrame(document, edited, result.filled);
-        landed = { ...first, stepId: result.filled };
-        edited = first.document;
-      }
-      // The steps made after a filled one are seeded from its frame and imprint as it held them before its picture.
-      const filled = result.filled === undefined ? undefined : (stepById(document, result.filled) ?? undefined);
-      const seeding = seedNewSteps(edited, result.made, edited.assets, filled);
-      seeded = seeding.seeded;
-      return seeding.document;
-    });
-    if (!next) return null;
-    if (landed) trackSeeded(next, landed.stepId, landed);
-    trackSeededSteps(next, seeded);
-    return next;
-  };
   /** Where an add beside an entry lands, or where an add lands at all (after the selection, or at the end). */
   const besideOrSelection = (at?: { stepId: string; where: 'before' | 'after' }) => (document: DiagramDocument) => {
     if (!at) return insertionIndex(document, get().diagramSelectedStepId);
@@ -305,11 +301,12 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
   return {
     ...discardDiagramState(),
 
-    installDiagram: (read) =>
+    installDiagram: (read, others = []) =>
       documentHistory.install({
         diagram: read?.document ?? null,
         diagramReadOnly: read?.readOnly ?? false,
         diagramRaw: read?.readOnly ? read.raw : null,
+        diagramOthers: others,
       }),
 
     addDiagramStep: () =>
@@ -497,22 +494,17 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       const selected = anchorStepId !== undefined ? anchorStepId : get().diagramSelectedStepId;
       const current = get().diagram;
       const target = current && selected !== null ? stepById(current, selected) : undefined;
-      // One picture onto a selected step that has none fills it (D2).
+      // One picture onto a selected step that has none fills it (D2), and starts it whole (`setStepPicture`).
       if (assets.length === 1 && target && !isLockedStep(target) && !stepHasPicture(target)) {
-        // A step enlarged before it had a picture lands its frame on its first (Revision 2).
-        const filled = commitMade('Add picture', (document) => ({
-          document: setStepPicture(document, target.id, assets[0]),
-          made: [],
-          filled: target.id,
-        }));
+        const filled = commit('Add picture', (document) => setStepPicture(document, target.id, assets[0]));
         return filled ? { stepIds: [target.id], filled: true } : null;
       }
       let stepIds: string[] = [];
-      // Each new step after an enlarged one starts enlarged, the run through (Revision 2, Z2).
-      const next = commitMade(assets.length === 1 ? 'Add picture' : 'Add pictures', (document) => {
+      // An upload never continues an enlarged run: new steps start whole (review fix 3, amending Z2).
+      const next = commit(assets.length === 1 ? 'Add picture' : 'Add pictures', (document) => {
         const result = insertPictureSteps(document, assets, insertionIndex(document, selected));
         stepIds = result.stepIds;
-        return { document: result.document, made: result.stepIds };
+        return result.document;
       });
       if (!next) return null;
       // The last of them, so the next add goes on after the batch.
@@ -522,12 +514,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
 
     setDiagramStepPicture: (stepId, asset, { loadId } = {}) => {
       if (loadId !== undefined && loadId !== get().diagramLoadId) return false;
-      const next = commitMade('Replace picture', (document) => ({
-        document: setStepPicture(document, stepId, asset),
-        made: [],
-        filled: stepId,
-      }));
-      return next !== null;
+      return commit('Replace picture', (document) => setStepPicture(document, stepId, asset)) !== null;
     },
 
     removeDiagramStepPicture: (stepId) =>
@@ -542,12 +529,32 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       set({ diagramPictureNotices: next });
     },
 
-    setDiagramTitle: (title) =>
-      commit('Rename diagram', (document) => setDiagramTitle(document, title)) !== null,
+    setDiagramTitle: (title, { loadId, session } = {}) => {
+      if (loadId !== undefined && loadId !== get().diagramLoadId) return false;
+      const { extend, remember } = sessionFor('title', session);
+      const next = commit('Rename diagram', (document) => setDiagramTitle(document, title), extend);
+      if (!next) return false;
+      remember();
+      return true;
+    },
 
     setDiagramPage: (patch, { session } = {}) => {
       const { extend, remember } = sessionFor('page', session);
       const next = commit('Change page setup', (document) => setPageSetup(document, patch), extend);
+      if (!next) return false;
+      remember();
+      return true;
+    },
+
+    setDiagramTitleBlockShown: (enabled) =>
+      commit(enabled ? 'Show title block' : 'Hide title block', (document) =>
+        setTitleBlockShown(document, enabled, titleBlockWords())
+      ) !== null,
+
+    setDiagramTitleBlockContent: (patch, { loadId, session } = {}) => {
+      if (loadId !== undefined && loadId !== get().diagramLoadId) return false;
+      const { extend, remember } = sessionFor('title-block', session);
+      const next = commit('Change title block', (document) => setTitleBlockContent(document, patch), extend);
       if (!next) return false;
       remember();
       return true;
@@ -558,12 +565,22 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
         setStepBreakBefore(document, stepId, breakBefore)
       ) !== null,
 
+    setDiagramPageSteps: (pageIndex, count) =>
+      commit(count === null ? 'Fill page by default' : 'Set steps on page', (document) =>
+        setPageSteps(document, pageIndex, count)
+      ) !== null,
+
     setDiagramStyle: (style) =>
       commit('Change diagram style', (document) => setDiagramStyle(document, style)) !== null,
 
     setDiagramHanStyle: (hanStyle) =>
       commit('Change Han characters', (document) => setHanStyle(document, hanStyle)) !== null,
 
+    selectDiagramPagesPart: (part) => {
+      const state = get();
+      if (part !== null && (!state.diagram || state.diagramReadOnly || !state.diagramSelectedStepId || !stepById(state.diagram, state.diagramSelectedStepId))) return;
+      set({ diagramPagesPart: part, ...(part ? { diagramView: 'pages', diagramDetail: null } : {}) });
+    },
     selectDiagramStep: (stepId) => {
       const diagram = get().diagram;
       const next = stepId !== null && diagram && stepIndex(diagram, stepId) >= 0 ? stepId : null;
@@ -684,6 +701,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       if (view !== get().diagramView) set({ diagramView: view });
     },
 
+    keepDiagramPagesCamera: (camera) => set({ diagramPagesCamera: camera }),
+
     captureDiagramStep: (stepId, request) =>
       runDiagramCapture({ get, set }, commit, stepId, request),
 
@@ -710,7 +729,9 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       return changed;
     },
 
-    updateEnlargedDiagramSteps: (areaId) => updateInStore({ get, set }, commit, paperFacesBackfill, areaId),
+    updateEnlargedDiagramStep: (stepId) => updateInStore({ get, set }, commit, paperFacesBackfill, { stepId }),
+
+    updateEnlargedDiagramSteps: (areaIds) => updateInStore({ get, set }, commit, paperFacesBackfill, { areaIds }),
 
     editDiagramStepZoom: (stepId, label, edit, { loadId } = {}) => {
       if (loadId !== undefined && loadId !== get().diagramLoadId) return false;
@@ -725,13 +746,23 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       const step = diagram && !diagramReadOnly ? stepById(diagram, stepId) : null;
       if (!step || !lacksPaperFaces(step)) return false;
       const newest = diagramHistory.past.at(-1);
-      const faced = await paperFacesBackfill([step]);
-      const now = get();
-      // Only into the edit that made it a source: anything recorded since keeps its own undo step.
-      if (faced.size === 0 || now.diagramLoadId !== diagramLoadId || newest === undefined || now.diagramHistory.past.at(-1) !== newest) {
-        return false;
+      // Told while it runs: an x-ray on the step waits for its faces, and says nothing of a Refresh meanwhile (Revision 3).
+      set({ diagramPaperFacesFetching: { ...get().diagramPaperFacesFetching, [stepId]: true } });
+      try {
+        const faced = await paperFacesBackfill([step]);
+        const now = get();
+        // Only into the edit that made it a source: anything recorded since keeps its own undo step.
+        if (faced.size === 0 || now.diagramLoadId !== diagramLoadId || newest === undefined || now.diagramHistory.past.at(-1) !== newest) {
+          return false;
+        }
+        return commit('Enlarge area', (document) => withPaperFaces(document, faced), true) !== null;
+      } finally {
+        // After the faces, if they came: never a moment with neither.
+        if (get().diagramLoadId === diagramLoadId && Object.hasOwn(get().diagramPaperFacesFetching, stepId)) {
+          const { [stepId]: _done, ...rest } = get().diagramPaperFacesFetching;
+          set({ diagramPaperFacesFetching: rest });
+        }
       }
-      return commit('Enlarge area', (document) => withPaperFaces(document, faced), true) !== null;
     },
 
     setDiagramAnchorPick: (pick) => {
@@ -760,5 +791,25 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
         const page = cellSlots(document).pages[pageIndex];
         return page ? resetStepPlaces(document, new Set(page)) : document;
       }) !== null,
+
+    adoptDiagramPageArrangements: (arrangements, ofDocument, titleBlockRoom) => {
+      const { diagram, diagramReadOnly } = get();
+      // Packed from a diagram that has changed since, or one that is shown and never edited: nothing to take in.
+      if (diagramReadOnly || diagram === null || diagram !== ofDocument) return false;
+      // The room the block's words were measured to first: page 1 was packed for the block it grew (Zach, 2026-10-15).
+      const measured = titleBlockRoom === undefined ? diagram : setTitleBlockRoom(diagram, titleBlockRoom);
+      // A frame moved by hand on a page packed afresh goes home where its step changed place, as the layout drew it.
+      const { document: next, settled } = adoptPacking(measured, arrangements);
+      if (next === diagram) return false;
+      // Not an edit: no undo entry, the history as it was, and the project no dirtier than it was.
+      noteAdoptedPacking(next, diagram);
+      set({ diagram: next, ...(settled > 0 ? { diagramPlacesSettled: placesSettledNotice(settled) } : {}) });
+      return true;
+    },
+
+    repackDiagramPage: (pageIndex) =>
+      commit('Re-pack page', (document) => repackPages(document, pageIndex)) !== null,
+
+    repackDiagramPages: () => commit('Re-pack all pages', (document) => repackPages(document, null)) !== null,
   };
 };

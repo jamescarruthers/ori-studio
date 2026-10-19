@@ -110,7 +110,9 @@ pub use oristudio_geometry::{construct, frame, line, outline, pointgrid, sheet, 
 
 pub use clock::{Clock, Deadline, default_clock};
 pub use closure::{CloseOutcome, Closure, FoldOutcome, FoldedLine, Target};
-pub use components::{Component, SheetAnalysis, Warning, analyze};
+pub use components::{
+    Component, SheetAnalysis, Warning, analyze, analyze_sheet, outline_component,
+};
 pub use direction::{Direction, FIRM_MAJORITY, Side, majority, share_of};
 pub use drive::{DriverState, LastStep, PlanAction, PlanState, StopReason, next_action};
 pub use error::PrecreaseError;

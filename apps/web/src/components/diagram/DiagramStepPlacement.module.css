@@ -1,0 +1,30 @@
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.inset {
+  padding-inline: var(--space-3);
+}
+/* Reset of the selected part, and Reset Layout. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/*
+ * The margin notice's sentence, in the notice's own type. Its own colour,
+ * --text-secondary, reads 3.7:1 on the warning tint in the default dark
+ * theme (4.2:1 in the light one); --text-primary reads 6.1:1 and 9.0:1.
+ */
+.margin {
+  margin: 0;
+  color: var(--text-primary);
+}

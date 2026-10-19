@@ -1,0 +1,15 @@
+/* A guide over a page of the Pages view (PageGuide.tsx): the margin, or the title block's foot. Outside the area it
+   outlines, so a line at the area's edge — the title block's subtitle and its rule on the top margin — stays clear. */
+.guide {
+  --guide-line: 1px dashed color-mix(in srgb, var(--accent-primary) 45%, transparent);
+  position: absolute;
+  outline: var(--guide-line);
+  pointer-events: none;
+}
+
+/* The foot alone, under the area's last line. */
+.guide[data-edges='foot'] {
+  margin-bottom: -1px;
+  outline: none;
+  border-bottom: var(--guide-line);
+}

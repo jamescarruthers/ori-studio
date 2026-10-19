@@ -4,7 +4,8 @@
  * the file. (The view leaves the flow band out and draws it under the image
  * from the same path and pen, so a colour pick repaints only the band.)
  *
- * From back to front: the flow band, the title tab and its rule, each cell's
+ * From back to front: the flow band, the title tab and its rule — on a first
+ * page with the title block, the block in their place — each cell's
  * picture, number and instruction, the turns between steps (D22) and the
  * enlarge arrows (Revision 2) in the gutters, and the page number. An arrow
  * alone beside the area it leaves is lifted to the area's height
@@ -41,8 +42,19 @@ import { paintTurnGlyph, TURN_FRAME_MM } from '../annotate/turnGlyph';
 import type { Lane } from './flowLane';
 import { setUploadText } from '../upload/uploadText';
 import { paintEnlargeArrow } from '../zoom/enlargeArrow';
-import { cellPicture, type CellPicture } from './pagePictures';
+import { cellPicture, fittedScene, wholePicture, type CellPicture } from './pagePictures';
 import { placedZoomArrows } from './zoomArrows';
+import type { PagePart } from './pagePlacement';
+import { diagramSurfaceStyle } from '../pictures/diagramPaperStyle';
+import { titleBlockInks, type LayoutTitleBlock } from './titleBlockColumn';
+import { modelRoom, type ResolvedTitleBlock } from './titleBlockContent';
+import type { TitleBlockGeometry } from './titleBlockGeometry';
+
+export interface PageComposeOptions {
+  band?: boolean;
+  omit?: { stepId: string; part: PagePart };
+  only?: { stepId: string; part: PagePart };
+}
 
 /** The page's own inks: the mockup's, whatever the paper style. The band's is the page setup's (`layout.bandInk`). */
 const INK = '#16191c';
@@ -59,7 +71,7 @@ const SET_TEXT_CSS =
   'font-feature-settings:"kern" 0,"liga" 0,"clig" 0,"calt" 0;' +
   'text-spacing-trim:space-all;text-autospace:no-autospace}';
 
-export interface ComposeDiagramPageInput {
+export interface ComposeDiagramPageInput extends PageComposeOptions {
   layout: DiagramPagesLayout;
   page: LayoutPage;
   steps: ReadonlyMap<string, DiagramStep>;
@@ -71,6 +83,11 @@ export interface ComposeDiagramPageInput {
   setter: TextSetter;
   /** The page's `@font-face` rules for what it sets; `''` writes none. */
   embedFonts: (usage: FontUsage) => string;
+  /**
+   * What the first page's title block shows (`resolveTitleBlock`): drawn on a
+   * page that has the block. Null where the diagram's first page has none.
+   */
+  titleBlock: ResolvedTitleBlock | null;
   /**
    * Art past the trim on every side, mm, for a print shop's bleed: the page
    * grows by it, and what reaches the trim — the flow band — runs on into it.
@@ -103,14 +120,16 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
   };
   const body: string[] = [];
 
-  if (input.band !== false && page.band && page.band.curves.length > 0) {
+  if (!input.only && input.band !== false && page.band && page.band.curves.length > 0) {
     body.push(
       `<path d="${bandPath(page.band)}" fill="none" stroke="${escapeXml(layout.bandInk)}" ` +
         `stroke-width="${pt(layout.bandWidthMm)}" stroke-linecap="round" stroke-linejoin="round"/>`
     );
   }
 
-  if (layout.title) {
+  if (!input.only && page.titleBlock) {
+    body.push(...titleBlockElements(page.titleBlock, input, use));
+  } else if (!input.only && layout.title) {
     const { tab, textAt, line, rule } = layout.title;
     body.push(
       `<rect x="${pt(tab.x)}" y="${pt(tab.y)}" width="${pt(tab.w)}" height="${pt(tab.h)}" ` +
@@ -125,23 +144,30 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
   page.cells.forEach((cell, index) => {
     const step = input.steps.get(cell.stepId);
     const parts: string[] = [];
-    const picture = step
-      ? cellPicture(step, input.assets, input.style, cell, `c${index}-`, { hanStyle: input.hanStyle, runs: setter.runs })
-      : null;
+    const draw = (part: PagePart) => {
+      const matches = (filter: { stepId: string; part: PagePart }) => filter.stepId === cell.stepId && (filter.part === 'frame' || filter.part === part);
+      return (!input.only || matches(input.only)) && (!input.omit || !matches(input.omit));
+    };
+    // A composition of one part of one step (`only`) draws no other picture and no arrow, so none is made for it:
+    // a caption lifted while its grip is dragged is composed afresh, cheaply, each time its lines rewrap.
+    const picture =
+      step && (!input.only || draw('picture'))
+        ? cellPicture(step, input.assets, input.style, cell, `c${index}-`, { hanStyle: input.hanStyle, runs: setter.runs })
+        : null;
     pictures.push(picture);
-    if (picture) {
+    if (picture && draw('picture')) {
       parts.push(picture.markup);
       for (const { face, characters } of picture.text) use(face, characters);
     }
     const number = setter.line(String(cell.number), STEP_NUMBER_SIZE_MM, 700);
-    parts.push(stepNumberElement(number, cell.numberAt.x, cell.numberAt.y, use));
-    if (cell.text.lines.length > 0) parts.push(stepTextElement(cell.text.lines, cell.text.x, cell.text.firstBaseline, use));
+    if (draw('number')) parts.push(stepNumberElement(number, cell.numberAt.x, cell.numberAt.y, use));
+    if (draw('text') && cell.text.lines.length > 0) parts.push(stepTextElement(cell.text.lines, cell.text.x, cell.text.firstBaseline, use));
     body.push(`<g>\n${parts.join('\n')}\n</g>`);
   });
 
   // A turn's glyph, as an annotation's prints: at its own ink size, centred on
   // its place, going the way its row is read.
-  for (const { id, turn, at, rightToLeft } of page.turns) {
+  for (const { id, turn, at, rightToLeft } of input.only ? [] : page.turns) {
     const sizePt = TURN_FRAME_MM * PT_PER_MM;
     const box = { x: at.x * PT_PER_MM - sizePt / 2, y: at.y * PT_PER_MM - sizePt / 2, width: sizePt, height: sizePt };
     const glyph = paintTurnGlyph(turn, box, input.style, id, { rightToLeft });
@@ -153,7 +179,7 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
   // centred on its place — lifted to its area's height where it stands alone
   // beside it — pointing the way its row is read, or across a flow row's end
   // aimed at the step it leads to.
-  placedZoomArrows(page, input.steps, (index) => pictures[index] ?? null).forEach(({ at, rightToLeft, aim }, index) => {
+  (input.only ? [] : placedZoomArrows(page, input.steps, (index) => pictures[index] ?? null)).forEach(({ at, rightToLeft, aim }, index) => {
     const arrow = paintEnlargeArrow({ x: at.x * PT_PER_MM, y: at.y * PT_PER_MM }, PT_PER_MM, input.style, {
       rightToLeft,
       aim,
@@ -162,7 +188,7 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
     if (arrow) body.push(arrow.markup);
   });
 
-  if (page.pageNumberAt) {
+  if (!input.only && page.pageNumberAt) {
     const line = setter.line(String(page.number), PAGE_NUMBER_SIZE_MM, 700);
     const { x, y, anchor } = page.pageNumberAt;
     // Right-aligned by its measured width, not `text-anchor`: no renderer's
@@ -183,6 +209,73 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
 
 /** The characters each face sets, as a page counts them for its fonts. */
 export type FontUse = (face: string, text: string) => void;
+
+/**
+ * The first page's title block, back to front (`diagram-title-block.md`,
+ * section 6 and Phase 1c): the band in the paper's colour or the one chosen
+ * for it, the subtitle's rule and the credits' dividers; the words — the subtitle, the title on the
+ * band, the credits and the note; then the crease pattern in its square, in
+ * the style's fold pens, and the finished model in front of it — in the
+ * pattern's place, where there is no pattern. The model is on top of
+ * everything in the block, the band and its words included, where it
+ * reaches them (Zach, 2026-10-15).
+ */
+function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
+  const { geometry, subtitle, band, title, credits, note } = block;
+  const inks = titleBlockInksOf(input.style, input.titleBlock?.bandColor);
+  const x = geometry.column.x;
+  const elements: string[] = [];
+  if (band.w > 0 && band.h > 0) {
+    elements.push(`<rect x="${pt(band.x)}" y="${pt(band.y)}" width="${pt(band.w)}" height="${pt(band.h)}" fill="${escapeXml(inks.band)}"/>`);
+  }
+  if (subtitle?.rule) elements.push(ruleElement(subtitle.rule.x1, subtitle.rule.y, subtitle.rule.x2, subtitle.rule.y, SUBTITLE_RULE_PT, inks.rule));
+  for (const { x: at, y1, y2 } of credits?.dividers ?? []) elements.push(ruleElement(at, y1, at, y2, DIVIDER_PT, inks.rule));
+  if (subtitle) elements.push(textElement([subtitle.line], x, subtitle.baseline, subtitle.sizeMm, 0, 700, TEXT_INK, count, subtitle.trackingMm));
+  if (title) elements.push(textElement(title.lines, title.x, title.baseline, title.sizeMm, title.leadingMm, 700, inks.title, count));
+  for (const column of credits?.columns ?? []) {
+    elements.push(
+      textElement([column.label], column.x, column.labelBaseline, credits!.labelSizeMm, 0, 700, TEXT_INK, count, credits!.trackingMm),
+      textElement([column.value], column.x, column.valueBaseline, credits!.valueSizeMm, 0, 400, TEXT_INK, count)
+    );
+  }
+  if (note && note.lines.length > 0) elements.push(textElement(note.lines, x, note.firstBaseline, note.sizeMm, note.leadingMm, 400, TEXT_INK, count));
+  if (input.titleBlock) elements.push(...titleBlockArt(geometry, input.titleBlock, input, count));
+  return elements;
+}
+
+/**
+ * The title block's band, title and rules in `style`'s paper, or the band colour its author chose (`band`), and the
+ * page's ink (`titleBlockInks`): the page's, and the colour the Page pane's Band color shows while none is chosen.
+ */
+export function titleBlockInksOf(style: DiagramStyle, band?: string): ReturnType<typeof titleBlockInks> {
+  return titleBlockInks(diagramSurfaceStyle(style).paper, INK, band);
+}
+
+/** The subtitle's rule and the credits' dividers, in pt: J1b's. */
+const SUBTITLE_RULE_PT = 0.75;
+const DIVIDER_PT = 0.5;
+
+function ruleElement(x1: number, y1: number, x2: number, y2: number, widthPt: number, stroke: string): string {
+  return (
+    `<line x1="${pt(x1)}" y1="${pt(y1)}" x2="${pt(x2)}" y2="${pt(y2)}" ` +
+    `stroke="${escapeXml(stroke)}" stroke-width="${num(widthPt)}" stroke-linecap="butt"/>`
+  );
+}
+
+/** The block's crease pattern and its model in front. */
+function titleBlockArt(geometry: TitleBlockGeometry, content: ResolvedTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
+  const { model, pattern } = content;
+  const elements: string[] = [];
+  if (pattern.scene) elements.push(fittedScene(pattern.scene, diagramSurfaceStyle(input.style), geometry.pattern));
+  const text = { hanStyle: input.hanStyle, runs: input.setter.runs };
+  const { box, align } = modelRoom(geometry, content);
+  const picture = model.step ? wholePicture(model.step, input.assets, input.style, box, 'title-block-', text, align) : null;
+  if (picture) {
+    elements.push(picture.markup);
+    for (const { face, characters } of picture.text) count(face, characters);
+  }
+  return elements;
+}
 
 /**
  * A page or a step's file as an SVG document in pt: `widthPt` × `heightPt`
@@ -225,7 +318,8 @@ export function stepTextElement(lines: readonly SetLine[], xMm: number, firstBas
 /**
  * Set lines as one `<text>`: a `<tspan>` per run, each at its own x, every
  * line `leadingMm` below the last. Runs of the estimate setter, which name no
- * face, fall back to Noto Sans.
+ * face, fall back to Noto Sans. A tracked line (`trackingMm`) was set with
+ * the room after each letter (`trackedLine`), which `letter-spacing` prints.
  */
 function textElement(
   lines: readonly SetLine[],
@@ -235,7 +329,8 @@ function textElement(
   leadingMm: number,
   weight: 400 | 700,
   fill: string,
-  use: FontUse
+  use: FontUse,
+  trackingMm = 0
 ): string {
   const spans: string[] = [];
   lines.forEach((line, index) => {
@@ -250,8 +345,9 @@ function textElement(
       );
     }
   });
+  const spacing = trackingMm > 0 ? ` letter-spacing="${pt(trackingMm)}"` : '';
   return (
-    `<text xml:space="preserve" font-size="${pt(sizeMm)}" font-weight="${weight}" fill="${fill}">` +
+    `<text xml:space="preserve" font-size="${pt(sizeMm)}" font-weight="${weight}" fill="${escapeXml(fill)}"${spacing}>` +
     `${spans.join('')}</text>`
   );
 }

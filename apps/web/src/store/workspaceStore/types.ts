@@ -8,6 +8,7 @@ import type {
   WasmErrorEnvelope,
 } from '../../engine/types';
 import type { Point } from '../../lib/geometry';
+import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { PaperStyleField, PaperStyleValue } from '../../lib/paper/paperStyle';
 import type { CpVertexPin } from '../../cp-workspace/pins/vertexPins';
 import type { PinSet } from '../../simulator/tools/pinSet';
@@ -19,6 +20,7 @@ import type {
 import type { SerializedDockview } from 'dockview';
 import type { DesignTab } from './designTabs';
 import type { EditingContext } from '../../workspaces/editingContext';
+import type { WorkspaceId } from '../../workspaces/workspaces';
 import type { SendToEditPayload } from '../../designKinds/types';
 import type {
   AppStatus,
@@ -50,6 +52,7 @@ import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import type { CreaseExportFoldResult } from '../../lib/creaseExportFold';
 import type { SegmentExportFormat } from '../../lib/creaseSegmentExport';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
+import type { KeptCamera } from '../../hooks/useViewportSurface';
 import type { FoldArtifactStatus } from './foldArtifactResource';
 import type { SnapshotEntry, SnapshotHistory } from './snapshotHistory';
 import type {
@@ -63,7 +66,9 @@ import type {
   SentReferencesEntry,
   DiagramDocument,
   DiagramHanStyle,
+  DiagramPageArrangement,
   DiagramPageSetup,
+  DiagramTitleBlockContentPatch,
   KnownDiagramAnnotation,
   DiagramStyle,
   KnownDiagramAsset,
@@ -133,6 +138,7 @@ import type {
 } from '../../engine/oristudioBpTypes';
 
 export interface OristudioCpHistoryEntry {
+  compoundId?: string;
   document: OristudioCpDocumentSnapshot;
   selection: OristudioCpSelection;
   /** Annotation layer (images + text boxes) at the captured moment. */
@@ -426,10 +432,15 @@ export interface ProjectSliceActions {
    * Open a document, replacing the current one. Prompts before discarding
    * unsaved changes unless `confirmDiscard` is false — which only a caller that
    * has already asked in its own prompt may pass.
+   *
+   * `landing` is for a caller that knows which surface the file is for — the
+   * Diagram's example — and lands it there rather than where
+   * `landingWorkspace` would. `source` is what `project opened` reports:
+   * `file` unless the caller is opening one of the app's own examples.
    */
   openProject: (
     fileService?: FileService,
-    options?: { confirmDiscard?: boolean }
+    options?: { confirmDiscard?: boolean; landing?: WorkspaceId; source?: 'file' | 'example' }
   ) => Promise<boolean>;
   importAddCreasePattern: (fileService?: FileService) => Promise<boolean>;
   /**
@@ -456,23 +467,24 @@ export interface ProjectSliceActions {
   exportObj: (fileService?: FileService) => Promise<boolean>;
   exportStl: (fileService?: FileService) => Promise<boolean>;
   /**
-   * Export a single crease-pattern segment. File formats (cp/fold/ori/orh)
-   * download directly; image formats (svg/png) open the export-image modal
-   * pre-scoped to the segment.
+   * Export one sheet of the crease pattern, by its position in the sheet index.
+   * File formats (cp/fold/ori/orh) download directly; image formats (svg/png)
+   * open the export-image modal on that sheet.
    */
-  exportOristudioCpSegment: (
+  exportOristudioCpSheet: (
     format: SegmentExportFormat,
-    segmentId: number,
+    sheet: number,
     fileService?: FileService
   ) => Promise<boolean>;
   /**
-   * Encode one crease-pattern segment as a share link and open the share modal.
+   * Encode one sheet of the crease pattern as a share link and open the share
+   * modal.
    *
-   * Scoped to a segment rather than the whole document: a segment is a region
-   * enclosed by border creases, which is exactly "one crease pattern" and is the
+   * Scoped to a sheet rather than the whole document: a sheet is the region
+   * inside one closed border, which is exactly "one crease pattern" and is the
    * same unit the sibling Fold / Export / Simulate verbs operate on.
    */
-  shareOristudioCpSegment: (segmentId: number) => Promise<boolean>;
+  shareOristudioCpSheet: (sheet: number) => Promise<boolean>;
   publishOristudioCpShare: (args: {
     title: string;
     author: string | null;
@@ -846,6 +858,13 @@ export interface CreasePatternSliceState {
    */
   oristudioCpFocusedInlineSimulationId: string | null;
   /**
+   * The sheet the Simulate workspace shows, by its outline (`RegionReference`),
+   * so an edit that renumbers the sheet index does not move it to another;
+   * null, or an outline no sheet has any more, is the first sheet. Session
+   * state, like the Simulate workspace's other choices.
+   */
+  oristudioCpSimulateSheet: RegionReference | null;
+  /**
    * The 3D folded figure whose body is taking canvas drags as **orbit** rather
    * than as a move.
    *
@@ -890,12 +909,14 @@ export interface CreasePatternSliceActions {
   refreshFoldArtifacts: () => Promise<FoldArtifacts | null>;
   setCreaseColorMode: (mode: CreaseColorMode) => void;
   setSelectedSegment: (id: number | null) => void;
+  /** Show this sheet in the Simulate workspace (see {@link CreasePatternSliceState.oristudioCpSimulateSheet}). */
+  setOristudioCpSimulateSheet: (sheet: RegionReference | null) => void;
   /**
-   * Scope the simulator to one crease-pattern segment and switch to the Simulate
-   * workspace. Ensures the full fold artifacts first (the simulator needs the
-   * simulation mesh). Resolves false when the id no longer resolves to a segment.
+   * Scope the simulator to one sheet of the crease pattern, by its position in
+   * the sheet index, and switch to the Simulate workspace, which builds that
+   * sheet's mesh alone. Resolves false when the index has no such sheet.
    */
-  simulateOristudioCpSegment: (segmentId: number) => Promise<boolean>;
+  simulateOristudioCpSheet: (sheet: number) => Promise<boolean>;
   /**
    * Open a simulation of one crease-pattern region as a window on the Edit
    * canvas.
@@ -1746,14 +1767,18 @@ export interface ReferencesSliceState {
   /** ReferenceFinder's ranked solutions for a vertex or crease target. */
   referencesCandidates: readonly ReferencesCandidate[] | null;
   /**
-   * Which sheet the workspace is working on — a precrease component id.
+   * Which sheet the workspace is working on: its outline, with the id it had
+   * when it was chosen as a hint (`chosenSheet` reads it against the sheets
+   * listed now).
    *
    * The References workspace answers for one crease pattern at a time: a
    * document holding several disjoint sheets is several separate folding
-   * problems, and nobody folds them at once. Null until the frames analysis
-   * lands and the first plannable sheet is chosen; the sidebar sets it.
+   * problems, and nobody folds them at once. By the outline because sheets
+   * are numbered in reading order, top left first, so an edit that adds one
+   * above or to the left of this one renumbers it. Null until a sheet is
+   * chosen; the panel falls back to the first plannable sheet meanwhile.
    */
-  referencesSelectedSheet: number | null;
+  referencesSelectedSheet: ReferencesSheetChoice | null;
   /** Which step and candidate the view frames, and the landmarks-first toggle. */
   referencesView: ReferencesView;
   /** Whether a computation is in flight, stale, or failed. */
@@ -1788,6 +1813,9 @@ export interface ReferencesSliceState {
   referencesCardRequest: { sheet: number; card: ReferencesStepCard } | null;
 }
 
+/** A sheet, by its outline; the id it had when chosen is a hint, never trusted alone. */
+export type ReferencesSheetChoice = Pick<RegionReference, 'boundary' | 'segmentIdHint'>;
+
 /** Open References on the sheet with this rim, in this mode. */
 export interface ReferencesSheetRequest {
   boundary: Point[][];
@@ -1807,7 +1835,7 @@ export interface ReferencesSliceActions {
    * the plan, the pick and the step index all name geometry that belongs to a
    * sheet, so carrying any of them across would describe the wrong pattern.
    */
-  setReferencesSelectedSheet: (component: number | null) => void;
+  setReferencesSelectedSheet: (sheet: ReferencesSheetChoice | null) => void;
   setReferencesView: (view: Partial<ReferencesView>) => void;
   /**
    * The restored sheet has been looked for in the frames analysis: select it,
@@ -1815,7 +1843,7 @@ export interface ReferencesSliceActions {
    * Unlike {@link setReferencesSelectedSheet} this resets nothing — the mode,
    * the toggle and the card waiting for the plan are what was restored with it.
    */
-  commitReferencesRestoredSheet: (component: number | null) => void;
+  commitReferencesRestoredSheet: (sheet: ReferencesSheetChoice | null) => void;
   /**
    * The restored card still waiting for a plan, taken — only by the document
    * it was restored for (`loadSerial`): null when there is none for it. A card
@@ -1919,6 +1947,7 @@ export interface DiagramPathNodeSelection {
 }
 
 export interface DiagramSliceState {
+  diagramImportBusy: boolean;
   /**
    * The project's diagram (implementation-plans/diagram-workspace.md, D1).
    * `null` until the first edit creates one; a project-level document beside
@@ -1936,9 +1965,16 @@ export interface DiagramSliceState {
   diagramReadOnly: boolean;
   /** The diagram as read, kept for writing a read-only one back unchanged. */
   diagramRaw: Record<string, unknown> | null;
+  /**
+   * The project's other diagrams, after the one shown, as a file stored them:
+   * written back after it, unchanged. This build shows one diagram per
+   * project; a later one may keep several, and a save here keeps the rest.
+   */
+  diagramOthers: readonly Record<string, unknown>[];
   /** View state: not history, never dirty, but scoped to this diagram. */
   diagramView: DiagramViewMode;
   diagramSelectedStepId: string | null;
+  diagramPagesPart: 'frame' | 'number' | 'picture' | 'text' | null;
   /**
    * The step detail, open on the selected step, or null for the list. Never
    * open without a selection: whatever clears the selection closes it.
@@ -1998,17 +2034,59 @@ export interface DiagramSliceState {
    */
   diagramAnchorPick: DiagramAnchorPick | null;
   /**
-   * The newest edit that sent frames moved by hand back to their cells
-   * (`settlePlaces`, inside that edit's undo step): how many; a `nonce` that
-   * is new with every such edit, so what tells the user — a toast with
-   * Undo — shows once per edit, never for one already shown; and the undo
-   * `entry` the edit landed in (null when the history kept none), so that
-   * Undo undoes only while that entry is still the newest — never another
-   * edit made since, or a duplicate a failed capture already took back.
-   * Undo and redo leave it as it is. Not saved.
+   * The steps whose faces on the paper are being fetched
+   * (`giveDiagramStepPaperFaces`), by id: an x-ray laid or pasted on a flat
+   * step captured before they were kept waits for them, its Depth held and
+   * saying nothing until they land (Revision 3). Not saved.
    */
-  diagramPlacesSettled: { count: number; nonce: number; entry: SnapshotEntry<DiagramDocument | null> | null } | null;
+  diagramPaperFacesFetching: Readonly<Record<string, true>>;
+  /**
+   * The newest time frames moved by hand were sent home: by an edit
+   * (`settlePlaces`, inside that edit's undo step), or as a flow page packed
+   * afresh was adopted, where its steps changed place (`adoptPacking`). How
+   * many the edit sent home in all (`count`: an adoption after the edit that
+   * re-packed its page adds to the edit's), and how many this time
+   * (`added`); a `nonce` that is new each time, so what tells the user — a
+   * toast with Undo — shows once each time, never for one already shown;
+   * and the undo `entry` the edit landed in (null when the history kept none,
+   * as for a diagram opened with a page to pack), so that Undo undoes only
+   * while that entry is still the newest — never another edit made since, or
+   * a duplicate a failed capture already took back. Undo and redo leave it as
+   * it is. Not saved.
+   */
+  diagramPlacesSettled: {
+    count: number;
+    added: number;
+    nonce: number;
+    entry: SnapshotEntry<DiagramDocument | null> | null;
+  } | null;
+  /**
+   * The newest paste of annotations (18d review): the step it landed on, the
+   * ids of the marks it put there, and a `nonce` that is new with every
+   * paste. A paste lands where its marks were copied, which can be out of
+   * view — on another picture's enlarged step, beside its window (Revision
+   * 2, decision 7) — so the step's canvas steps back to show it, once. Undo
+   * and redo leave it as it is. Not saved.
+   */
+  diagramPasted: { stepId: string; ids: readonly string[]; nonce: number } | null;
+  /**
+   * Where the Pages view's camera stood when it last left the screen — a step
+   * opened in Pose or Annotate, or the Steps view chosen — and the fit key it
+   * stood under (`KeptCamera`), so the view comes back where the reader was,
+   * not framed on page 1 (Zach, 2026-10-12); the pages it had on screen, from
+   * 0, so the panes and the pages' images are those pages' from its first
+   * frame back; and the step it had brought into view, which coming back with
+   * it still selected scrolls to no further. View state: never saved, never
+   * history, gone with the diagram.
+   */
+  diagramPagesCamera: DiagramPagesCamera | null;
 }
+
+/** The Pages view as it left the screen: its camera, the pages on screen, and the step it showed (`diagramPagesCamera`). */
+export type DiagramPagesCamera = KeptCamera & {
+  onScreen: { middle: number; first: number; last: number };
+  shownStepId: string | null;
+};
 
 /** What an anchor is being picked for: an enlarge area on a step, or the step's own frame. */
 export interface DiagramAnchorPick {
@@ -2058,8 +2136,11 @@ export interface DiagramFoldBrowserState {
 }
 
 export interface DiagramSliceActions {
-  /** Install a diagram read from a file (or none), with an empty history. */
-  installDiagram: (read: ReadDiagram | null) => void;
+  /**
+   * Install a diagram read from a file (or none), with an empty history, and
+   * the project's other diagrams (`diagramOthers`), carried as they came.
+   */
+  installDiagram: (read: ReadDiagram | null, others?: readonly Record<string, unknown>[]) => void;
   /**
    * Add an empty step after the selected one (or at the end) and select it.
    * Creates the diagram on first use. The new step's id, or null when the
@@ -2138,19 +2219,59 @@ export interface DiagramSliceActions {
   removeDiagramStepPicture: (stepId: string) => boolean;
   /** Record, or with none clear, what sanitizing changed in an upload. */
   noteDiagramPictureChanges: (assetId: string, notices: readonly SanitizeNotice[]) => void;
-  setDiagramTitle: (title: string) => boolean;
+  /**
+   * Set the diagram's title: what the title block and the title tab print,
+   * and what exports are named after. `loadId` and `session` are a text
+   * field's, as for an instruction (`setDiagramStepText`): an edit that
+   * outlives its diagram is dropped, and the commits of one sitting at the
+   * field are one undo step.
+   */
+  setDiagramTitle: (title: string, options?: { loadId?: number; session?: number }) => boolean;
   /**
    * Change the page setup. Edits in one `session` — a colour dragged through
    * its picker — are one undo step.
    */
   setDiagramPage: (patch: Partial<DiagramPageSetup>, options?: { session?: number }) => boolean;
+  /**
+   * Turn the first page's title block on or off, as its toggle does
+   * (`setTitleBlockShown`): on at today's share, with a new diagram's title
+   * where it has none, and its subtitle and credits where the diagram says
+   * none, in the app's language; one undo step, in which the later pages'
+   * counts shift as for any change of the block.
+   */
+  setDiagramTitleBlockShown: (enabled: boolean) => boolean;
+  /**
+   * Set what the first page's title block shows — its model and crease
+   * pattern, their sizes, its subtitle, credits (one added, removed, or a
+   * label or value set, text or the live step count) and note — each call
+   * one undo step. Its room is the page setup's (`setDiagramPage`,
+   * `titleBlock`); what it shows moves no step.
+   *
+   * `loadId` and `session` are a text field's, as for an instruction
+   * (`setDiagramStepText`): an edit that outlives its diagram is dropped, and
+   * the commits of one sitting at the field are one undo step.
+   */
+  setDiagramTitleBlockContent: (
+    patch: DiagramTitleBlockContentPatch,
+    options?: { loadId?: number; session?: number }
+  ) => boolean;
   /** Start a new page at the step, or stop doing so ("Start a new page here", D10). */
   setDiagramStepBreakBefore: (stepId: string, breakBefore: boolean) => boolean;
+  /**
+   * Give flow page `pageIndex` (from 0) its own count of steps, or — null —
+   * take it away so it fills with the default (`setPageSteps` in
+   * `diagram/pages/pageCounts.ts`): earlier pages without a count keep their
+   * size as one, and the boundary with the next page moves. One undo step;
+   * frames of steps it moves to another page go home, as after any edit.
+   * Whether it changed.
+   */
+  setDiagramPageSteps: (pageIndex: number, count: number | null) => boolean;
   /** The paper style every step is painted in (D9): a built-in by id, or a resolved style. */
   setDiagramStyle: (style: DiagramStyle) => boolean;
   /** How Han characters are drawn when nothing else in a text says (Decision 2). */
   setDiagramHanStyle: (hanStyle: DiagramHanStyle) => boolean;
   selectDiagramStep: (stepId: string | null) => void;
+  selectDiagramPagesPart: (part: 'frame' | 'number' | 'picture' | 'text' | null) => void;
   /**
    * Select a step and open it in detail, with Select in hand when the detail
    * was closed. False when there is no such step.
@@ -2189,6 +2310,8 @@ export interface DiagramSliceActions {
   /** Turn or flip an upload's picture; refused for a step `poseBlocker` names. */
   setDiagramStepPose: (stepId: string, pose: UploadPose) => boolean;
   setDiagramView: (view: DiagramViewMode) => void;
+  /** Keep where the Pages view's camera stood as it leaves the screen (`diagramPagesCamera`). */
+  keepDiagramPagesCamera: (camera: DiagramPagesCamera) => void;
   /**
    * Capture a linked step's picture from the crease pattern as it stands and
    * commit it as one undo step (`diagramCapture.ts`): Link pattern, Refresh,
@@ -2286,7 +2409,7 @@ export interface DiagramSliceActions {
   undoDiagram: () => boolean;
   redoDiagram: () => boolean;
   /**
-   * Pose's Enlarged turned on (Revision 2, Z2): a frame captured from the
+   * The Enlarged toggle turned on (Revision 2, Z2): a frame captured from the
    * nearest earlier step with an area or a frame, the step's own areas gone
    * and its marks carried into the window — one undo step, which first gives
    * either step its faces when it is a flat capture made before they were
@@ -2296,10 +2419,20 @@ export interface DiagramSliceActions {
   /** Enlarged turned off: the frame dropped, the marks carried back to the whole picture, as one undo step. */
   unenlargeDiagramStep: (stepId: string) => boolean;
   /**
-   * Update Enlarged Steps (Z7): every step captured from the area captured
-   * again from it as it is now, as one undo step. Resolves how many it placed.
+   * Update (review fix 4): an enlarged step that is out of date captured
+   * again from its area as it is now, as one undo step — what "Step N's area
+   * changed" asks for. Resolves how many it placed: one, or none with the
+   * area gone or the step up to date; null, refused, while an update of its
+   * area runs.
    */
-  updateEnlargedDiagramSteps: (areaId: string) => Promise<number>;
+  updateEnlargedDiagramStep: (stepId: string) => Promise<number | null>;
+  /**
+   * Update All (Z7; review fix 4): every step enlarged from these areas that
+   * is out of date (`stepsToUpdate`) captured again from its area as it is
+   * now, as one undo step. Resolves how many it placed; null, refused, while
+   * an update of one of its areas runs.
+   */
+  updateEnlargedDiagramSteps: (areaIds: readonly string[]) => Promise<number | null>;
   /**
    * Any other edit of an enlarged step's frame — moved, resized, reshaped,
    * its Size, Edge or anchor — as one undo step called `label`: `edit` gets
@@ -2313,11 +2446,13 @@ export interface DiagramSliceActions {
     options?: { loadId?: number }
   ) => boolean;
   /**
-   * A step just made an enlarge source — an area drawn on it — given its faces
-   * on the paper when it is a flat capture made before they were kept and its
-   * pattern can fold it again (Z11): folded into the newest undo step, the
-   * area's, while it is still the newest; nothing otherwise, as a capture from
-   * it gives them later. Resolves whether it did.
+   * A step just made an enlarge source — an area drawn on it — or x-rayed — an
+   * x-ray laid on it (Revision 3, R3-18a A) — given its faces on the paper when
+   * it is a flat capture made before they were kept and its pattern can fold
+   * it again (Z11): folded into the newest undo step, the area's or the
+   * x-ray's, while it is still the newest; nothing otherwise — a capture from
+   * it gives them later, and an x-ray is drawn once a Refresh has. Resolves
+   * whether it did.
    */
   giveDiagramStepPaperFaces: (stepId: string) => Promise<boolean>;
   /** Arm the anchor's pick mode for an area or a frame, or leave it (null). View state. */
@@ -2349,6 +2484,40 @@ export interface DiagramSliceActions {
    * and Reset All. One undo step. Whether it changed.
    */
   resetDiagramPlaces: (pageIndex: number | null) => boolean;
+  /**
+   * Take in the arrangements a layout of `ofDocument` packed, by the step each
+   * flow page starts with (`implementation-plans/diagram-flow-packing.md`,
+   * Decision 5; `adoptPageArrangements`): only while the diagram is still that
+   * very document, and never a read-only one. A page that holds an
+   * arrangement keeps it, one packed for another structure is refused, and a
+   * stored one no page holds goes. On a page that takes one, a frame moved by
+   * hand whose step changed band or page goes home, as the layout drew it
+   * (`repackedFrames.ts`), with the reflow notice. Not an edit: no undo
+   * entry, the undo history left as it is, and the project no dirtier than it
+   * was — they are written with the next save, and a file written before
+   * packs and draws the same when it opens. With them, `titleBlockRoom`:
+   * the room the layout measured the title block's words to after an edit of
+   * them (`DiagramPagesLayout.titleBlockRoom`), kept first
+   * (`setTitleBlockRoom`), so page 1, packed for the block it grew, is held.
+   * Whether it changed.
+   */
+  adoptDiagramPageArrangements: (
+    arrangements: Readonly<Record<string, DiagramPageArrangement>>,
+    ofDocument: DiagramDocument,
+    titleBlockRoom?: number
+  ) => boolean;
+  /**
+   * Re-pack Page: let go of the arrangement flow page `pageIndex` (from 0, as
+   * the layout numbers them) holds, and of a newer build's, so the layout
+   * packs it afresh (`repackPages`). One undo step, which Undo takes back
+   * with the old arrangement. Frames placed by hand on it keep their offsets
+   * where their steps keep their bands; the others go home, with the reflow
+   * notice, as the packing is adopted. Whether it changed: false on a grid
+   * and where nothing is held.
+   */
+  repackDiagramPage: (pageIndex: number) => boolean;
+  /** Re-pack All Pages: {@link repackDiagramPage} for every page at once, one undo step. */
+  repackDiagramPages: () => boolean;
 }
 
 export type DiagramSlice = DiagramSliceState & DiagramSliceActions;

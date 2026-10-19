@@ -31,7 +31,9 @@
  *   — the weight written on the text and its runs, so a page sets and embeds
  *   Noto Sans Bold — a halo, References' look, a stroke under the letters in
  *   what the text stands on (`paper`), a size in pt, and an offset in pt from
- *   its anchor. A label with none is drawn exactly as before them.
+ *   its anchor. A label with none is drawn exactly as before them. A halo
+ *   across a References sheet's edge (rf6) is painted with the sheet's face
+ *   on the sheet and the page's white off it, so it follows the edge.
  * - A callout is a line from a point to a box of words: the line in the
  *   annotation pen, the box filled with the page's white and outlined in the
  *   arrow pen, its words set as a label's are. Its shape is decided in
@@ -50,6 +52,22 @@
  *   little wider than its pen, which knocks out the creases it crosses (Z5),
  *   and a circle on none. It lies with the close-ups, over the marks and
  *   under the callouts and labels.
+ * - An oval or a rectangle (Revision 3) is its outline — an `<ellipse>`, or
+ *   a `<rect>` with square, mitred corners (R3-11b A) — turned by its angle,
+ *   in the annotation pen and the arrows' ink, a ring's (R3-26 A), with no
+ *   fill (R3-11a A) and no casing: it lies over the creases, as the turtle's
+ *   ovals do. It is painted under every line and mark drawn on the step
+ *   (R3-11d B), in a list of its own (`areas`), so a ring round an area is
+ *   the stroke that gives way where it crosses a fold or an arrow.
+ * - An x-ray (Revision 3) is a window cut into a flat fold's picture: inside
+ *   its rim the picture without its top layers at one point. Only a surface
+ *   has the picture's faces, so each paints the inside under the marks, and
+ *   the rim with it (`xray/xrayScene.ts`); here it is the window, in a list
+ *   of its own (`xRays`), and the rim's pen, 1.5 × the edges' (R3-15b (ii)),
+ *   which its reach takes in. Nothing here draws it: each surface hands its
+ *   painter to `paintAnnotations` (`xray/xrayPaint.ts`), and one that does
+ *   not paint the inside draws no rim either (R3-18), but Pose, its rim
+ *   alone (R3-19 A).
  *
  * The drawing is in CSS px, the frame's top-left at the origin, its longer
  * side `framePx` across — the size it prints at — so its marks have the
@@ -60,13 +78,13 @@
  *
  * Pure: no DOM, no store.
  */
+import { angleRadiusInk } from './angleMarkStyle';
 import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
   INLINE_LABEL_FONT,
   createDiagramRenderContext,
   diagramShapes,
-  labelOnPaper,
   strokeAttributes,
   type DiagramRenderContext,
 } from '../../lib/stepDiagram/DiagramPrimitives';
@@ -74,6 +92,12 @@ import type { StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramMode
 import { diagramInlineInk, type DiagramInlineInk } from '../../lib/stepDiagram/diagramColors';
 import { markRingWidth } from '../../lib/stepDiagram/labelLayout';
 import { markReach, type DiagramMarkPrimitive } from '../../lib/stepDiagram/markReach';
+import {
+  haloPatternElement,
+  sheetHalo,
+  type ReachBox,
+  type SheetHaloAcross,
+} from '../../lib/stepDiagram/sheetHalo';
 import {
   canvasDiagramInk,
   canvasDiagramPens,
@@ -123,6 +147,8 @@ import {
   divisionsOffsetOf,
   divisionsPartsOf,
   DEFAULT_WHITE_ARROW,
+  glyphAngleOf,
+  glyphScaleOf,
   isArrowKind,
   LABEL_SIZE,
   labelHalfWidth,
@@ -135,6 +161,7 @@ import {
   type PicturePoint,
 } from './annotationModel';
 import { arrowPolyline } from './annotationHit';
+import { areaBox, areaOutlineOf, type AreaOutline } from './areaOutline';
 import { frameWindow, zoomCornerRadius, zoomOutlineOf, zoomShapeOf } from '../zoom/zoomModel';
 import { ANNOTATION_INK_MM } from './canvasInk';
 import { hiddenArcs, hiddenStretches } from './behindFlaps';
@@ -155,8 +182,14 @@ export interface AnnotationLabel {
   runs: { family: string; text: string }[];
   /** Set in Noto Sans Bold (17b); absent, Regular. */
   bold?: true;
-  /** A stroke under its letters, in what it stands on (17b): its colour and its width, in the drawing's px. */
-  halo?: { color: string; width: number };
+  /**
+   * A stroke under its letters, in what it stands on (17b): its colour and its
+   * width, in the drawing's px. Across a References sheet's edge (rf6) it is
+   * painted by `across`, a pattern of the sheet (`sheetHalo`, which
+   * References' own letters are haloed by too): the sheet's face on the
+   * sheet, `color` — the page's white — off it, to the edge.
+   */
+  halo?: { color: string; width: number; across?: SheetHaloAcross };
 }
 
 /**
@@ -237,6 +270,29 @@ export interface AnnotationZoomArea {
   ground: string;
 }
 
+/** An oval or a rectangle as drawn, in CSS px (Revision 3). */
+export interface AnnotationArea {
+  id: string;
+  /** Its outline, in the drawing's px: its kind, centre, size and turn. */
+  outline: AreaOutline;
+  /** Its pen: the annotation pen, a ring's (R3-26 A). */
+  pen: number;
+  /** Its ink: the arrows'. */
+  ink: string;
+}
+
+/** An x-ray's window as drawn, in CSS px (Revision 3): where a surface paints its inside, and its rim. */
+export interface AnnotationXRay {
+  id: string;
+  /** The window, in the drawing's px: its centre, and its radius to the middle of its rim. */
+  window: { x: number; y: number; r: number };
+  /** The rim's pen, in the drawing's px, and its ink: 1.5 × the edges' (R3-15b (ii)). */
+  rim: { width: number; color: string };
+}
+
+/** How much heavier an x-ray's rim is than the paper's edges (R3-15b (ii)): Lang's "heavy circle". */
+export const XRAY_RIM_EDGES = 1.5;
+
 /**
  * How far an enlarge area's casing reaches past its pen on each side, in ink
  * (Z5): 0.15 mm, a hairline knock-out. It was 1.5 ink (0.5 mm), which Zach
@@ -276,6 +332,8 @@ export type CompiledAnnotation =
   | { kind: 'callout'; shape: CalloutShape; at: PicturePoint; runs: { key: DiagramFontKey; text: string }[] }
   | { kind: 'close-up'; shape: CloseUpShape }
   | { kind: 'zoom'; outline: DiagramZoomOutline }
+  | { kind: 'area'; outline: AreaOutline }
+  | { kind: 'x-ray'; outline: DiagramZoomOutline }
   | { kind: 'mark'; primitive: AnnotationPrimitive };
 
 /** A label's options as it is compiled (17b): each only as it is set. */
@@ -292,6 +350,8 @@ export interface AnnotationDrawing {
   /** The frame, in CSS px: where the drawing's picture is. */
   width: number;
   height: number;
+  /** Under the lines and every mark (Revision 3, R3-11d B): an oval's or a rectangle's outline. */
+  areas: AnnotationArea[];
   lines: AnnotationLine[];
   /** The marks, in draw order, and the annotation each is. */
   primitives: AnnotationPrimitive[];
@@ -301,6 +361,8 @@ export interface AnnotationDrawing {
   zoomAreas: AnnotationZoomArea[];
   /** Over the marks: a close-up's rings and line. */
   closeUps: AnnotationCloseUp[];
+  /** Under the marks, each painted by its surface: an x-ray's window and rim (Revision 3). */
+  xRays: AnnotationXRay[];
   /** Over the marks: a callout's box hides what lies under it. */
   callouts: AnnotationCallout[];
   labels: AnnotationLabel[];
@@ -502,16 +564,34 @@ function compileAnnotation(annotation: KnownDiagramAnnotation): CompiledAnnotati
       };
     case 'circle':
       // No letter (decision 8): a label names it, if anything does.
-      return { kind: 'mark', primitive: { kind: 'point', at: up(from), style: 'highlight' } };
+      return { kind: 'mark', primitive: { kind: 'point', at: up(from), style: 'highlight', ...(annotation.radius !== undefined ? { radius: annotation.radius } : {}) } };
+    case 'star':
+      // Its fill as a white arrow's; its turn and size its own, on the page (Revision 3).
+      return {
+        kind: 'mark',
+        primitive: {
+          kind: 'star',
+          at: up(from),
+          fill: annotation.fill ?? 'white',
+          angle: glyphAngleOf(annotation),
+          scale: glyphScaleOf(annotation),
+        },
+      };
+    case 'eye':
+      // The way it looks, the picture's — the sheet's as `up` turns it — and its size its own (Revision 3).
+      return {
+        kind: 'mark',
+        primitive: { kind: 'eye', at: up(from), angle: glyphAngleOf(annotation), scale: glyphScaleOf(annotation) },
+      };
     case 'right-angle':
       // `to` says only which way it opens: the drawing sizes it.
       return { kind: 'mark', primitive: { kind: 'right-angle', at: up(from), toward: up(to) } };
     case 'angle-mark': {
       // `to` and `other` say only which way its arms run: the drawing sizes it.
-      if (!annotation.other) return null;
+      if (!annotation.other || annotation.hidden) return null;
       return {
         kind: 'mark',
-        primitive: { kind: 'angle-mark', at: up(from), arms: [up(to), up(annotation.other)], ticks: annotation.ticks ?? 1 },
+        primitive: { kind: 'angle-mark', at: up(from), arms: [up(to), up(annotation.other)], ticks: annotation.ticks ?? 1, ...(annotation.radiusMm !== undefined ? { radiusInk: angleRadiusInk(annotation) } : {}) },
       };
     }
     case 'callout': {
@@ -534,6 +614,7 @@ function compileAnnotation(annotation: KnownDiagramAnnotation): CompiledAnnotati
           mirrored: annotation.mirrored === true,
           ticks: annotation.ticks ?? 1,
           numbered: annotation.numbered === true,
+          shortDividers: annotation.shortDividers === true,
         },
       };
     case 'close-up':
@@ -541,6 +622,13 @@ function compileAnnotation(annotation: KnownDiagramAnnotation): CompiledAnnotati
     // An enlarge area marks what a later step shows enlarged: its outline.
     case 'zoom':
       return { kind: 'zoom', outline: zoomOutlineOf(annotation) };
+    case 'oval':
+    case 'rectangle':
+      // An outline round an area, sized in picture units and turned by its angle (Revision 3).
+      return { kind: 'area', outline: areaOutlineOf(annotation) };
+    // A window cut into the picture (Revision 3): a circle, as Enlarge's is.
+    case 'x-ray':
+      return { kind: 'x-ray', outline: zoomOutlineOf(annotation) };
   }
 }
 
@@ -621,7 +709,9 @@ function withHidden(primitive: AnnotationPrimitive, hidden: HiddenStretches): An
  * what it is. Given its picture's `layers` — a flat fold's — a mark behind a
  * flap is dotted where it is under it (15e); without, it is drawn in front.
  * Given its `paper` — a References picture's (17b) — a label's halo is
- * filled with the face it stands on; without, with the page's white.
+ * filled with the face it stands on, and across the sheet's edge with the
+ * face on it and the page's white off it (rf6); without, with the page's
+ * white.
  */
 export function annotationDrawing(
   annotations: readonly DiagramAnnotation[],
@@ -632,11 +722,11 @@ export function annotationDrawing(
   paper: AnnotationPaper | null = null
 ): AnnotationDrawing {
   const seen = seenStyle(style);
-  // What a halo is filled with where a label's centre stands, in the drawing's px (17b).
-  const haloGround = haloGroundOf(seen, paper, framePx);
+  // What a halo is filled with, by where the label lies on the paper, in the drawing's px (17b, rf6).
+  const haloOf = haloPaint(seen, paper, framePx);
   const ink = canvasDiagramInk(STEP_DIAGRAM_LINE_WIDTH);
   const arrowCss = seen.arrows.width * PT_TO_CSS_PX;
-  // The existing creases' pen, at its pt width: what equal divisions' line is drawn in (ED9).
+  // The aux creases' pen, at its pt width: what the marks that measure — a right angle, equal divisions — are drawn in (`auxMarkPen`).
   const aux = { pen: seen.auxCreases.pen, css: seen.auxCreases.pen.width * PT_TO_CSS_PX };
   const pens = canvasDiagramPens(STEP_DIAGRAM_LINE_WIDTH, arrowCss, aux);
   // The arrow is the style's pen, at its pt width, as on a References step's
@@ -654,6 +744,10 @@ export function annotationDrawing(
   const primitiveIds: string[] = [];
   const closeUps: AnnotationCloseUp[] = [];
   const zoomAreas: AnnotationZoomArea[] = [];
+  const areas: AnnotationArea[] = [];
+  const xRays: AnnotationXRay[] = [];
+  // An x-ray's rim (R3-15b (ii)): 1.5 × the edges' pen, in its ink.
+  const rim = { width: XRAY_RIM_EDGES * surface.edges.width * PT_TO_CSS_PX, color: surface.edges.color };
   const callouts: AnnotationCallout[] = [];
   const labels: AnnotationLabel[] = [];
   const at = ([u, v]: PicturePoint): [number, number] => [u * framePx, v * framePx];
@@ -667,7 +761,7 @@ export function annotationDrawing(
     const compiled = compiledAnnotation(annotation);
     if (!compiled) continue;
     // Behind a flap, on a picture that knows its layers.
-    const hidden = layers && annotation.behind ? behindStretches(annotation, layers, ringRadius) : undefined;
+    const hidden = layers && annotation.behind ? behindStretches(annotation, layers, annotation.kind === 'circle' ? annotation.radius ?? ringRadius : ringRadius) : undefined;
     switch (compiled.kind) {
       case 'line': {
         const [a, b] = [at(compiled.from), at(compiled.to)];
@@ -698,16 +792,8 @@ export function annotationDrawing(
         const x = offsetPt ? ax + offsetPt[0] * PT_TO_CSS_PX : ax;
         const y = offsetPt ? ay + offsetPt[1] * PT_TO_CSS_PX : ay;
         const size = sizePt !== undefined ? sizePt * PT_TO_CSS_PX : LABEL_SIZE * framePx;
-        labels.push({
-          id: annotation.id,
-          x,
-          y,
-          size,
-          fill: color ?? seen.arrows.color,
-          runs,
-          ...(bold ? { bold } : {}),
-          ...(halo ? { halo: { color: haloGround(x, y), width: TEXT_HALO_EMS * size } } : {}),
-        });
+        const drawn: AnnotationLabel = { id: annotation.id, x, y, size, fill: color ?? seen.arrows.color, runs, ...(bold ? { bold } : {}) };
+        labels.push(halo ? { ...drawn, halo: haloOf(drawn, TEXT_HALO_EMS * size) } : drawn);
         break;
       }
       case 'callout': {
@@ -764,6 +850,22 @@ export function annotationDrawing(
         });
         break;
       }
+      case 'area': {
+        // An oval or a rectangle (Revision 3): its outline in the ring's pen and the arrows' ink, nothing filled.
+        const { outline } = compiled;
+        areas.push({
+          id: annotation.id,
+          outline: { ...outline, centre: at(outline.centre), size: [outline.size[0] * framePx, outline.size[1] * framePx] },
+          pen: linePen,
+          ink: seen.arrows.color,
+        });
+        break;
+      }
+      case 'x-ray': {
+        const { centre, radius } = compiled.outline;
+        xRays.push({ id: annotation.id, window: { x: centre[0] * framePx, y: centre[1] * framePx, r: (radius ?? 0) * framePx }, rim });
+        break;
+      }
       case 'mark':
         primitives.push(hidden?.length ? withHidden(compiled.primitive, hidden) : compiled.primitive);
         primitiveIds.push(annotation.id);
@@ -781,31 +883,52 @@ export function annotationDrawing(
   return {
     width: frame.width * framePx,
     height: frame.height * framePx,
+    areas,
     lines,
     primitives,
     primitiveIds,
     context,
     zoomAreas,
     closeUps,
+    xRays,
     callouts,
     labels,
   };
 }
 
+/** A label's halo, `width` wide in the drawing's px (17b, rf6). */
+type HaloPaint = (label: AnnotationLabel, width: number) => NonNullable<AnnotationLabel['halo']>;
+
 /**
- * What a halo is filled with where a label's centre is, at (`x`, `y`) in a
- * drawing `framePx` across (17b): the paper's face the picture shows — read
- * from the style's inks before an annotation's whiten them, the test a baked
- * letter makes (`labelOnPaper`) — where it stands on a References picture's
- * sheet; the page's white off it, and on every other picture.
+ * What a halo is filled with on a drawing `framePx` across, by where its
+ * label reaches ({@link labelReach}) on a References picture's sheet: wholly
+ * on it, the paper's face the picture shows — read from the style's inks
+ * before an annotation's whiten them (17b); wholly off it, the page's white;
+ * across its edge (rf6), the face on the sheet and the page's white off it
+ * (`sheetHalo`), so the halo follows the edge exactly. On every other
+ * picture, the page's white. A face that is the page's white is one colour
+ * wherever it lies.
  */
-function haloGroundOf(seen: PaperStyle, paper: AnnotationPaper | null, framePx: number): (x: number, y: number) => string {
-  if (!paper || paper.outline.length < 3) return () => PAGE_GROUND;
+function haloPaint(seen: PaperStyle, paper: AnnotationPaper | null, framePx: number): HaloPaint {
+  if (!paper || paper.outline.length < 3) return (_, width) => ({ color: PAGE_GROUND, width });
   const { sheet } = seenInk(seen);
   const face = paper.back ? sheet.back : sheet.front;
-  const outline = paper.outline.map(([x, y]) => ({ x, y }));
-  // The text's centre as a box with no size: the baked letter's own test, by its box's middle.
-  return (x, y) => (labelOnPaper({ x: x / framePx, y: y / framePx, width: 0, height: 0 }, outline) ? face : PAGE_GROUND);
+  if (face.toLowerCase() === PAGE_GROUND) return (_, width) => ({ color: PAGE_GROUND, width });
+  const outline = paper.outline.map(([x, y]) => ({ x: x * framePx, y: y * framePx }));
+  const paint = sheetHalo(outline, face, PAGE_GROUND, 'annotation-halo-');
+  return (label, width) => ({ ...paint(labelReach(label, width), label.size), width });
+}
+
+/**
+ * What a label reaches, in its drawing's px: its words at their size and
+ * weight, and a halo `haloWidth` wide half that past them (17b). The box a
+ * file is cropped to ({@link annotationReach}), so a halo never reaches past
+ * it: wholly inside the sheet, it is wholly on it.
+ */
+function labelReach(label: AnnotationLabel, haloWidth: number): ReachBox {
+  const halo = haloWidth / 2;
+  const half = labelHalfWidth(label.runs.map((run) => run.text).join(''), { bold: label.bold, size: label.size }) + halo;
+  return { minX: label.x - half, maxX: label.x + half, minY: label.y - label.size - halo, maxY: label.y + label.size + halo };
 }
 
 /**
@@ -841,15 +964,20 @@ export function closeUpMarks(annotations: readonly DiagramAnnotation[]): Diagram
  * file is cropped to, so a mark cut there is lost and a reach past its ink
  * is paper taken from the picture for nothing. Measured as a page draws the
  * marks (`paintAnnotations`), every join of a stroke round unless the mark
- * mitres its own.
+ * mitres its own. An x-ray's window only with `xRays`, on a surface that
+ * draws it — every surface, on a step with layers (R3-18b A): no room grows
+ * for a rim it does not print (review of 18e).
  */
-export function annotationReach(drawing: AnnotationDrawing): { x: number; y: number; width: number; height: number } {
+export function annotationReach(
+  drawing: AnnotationDrawing,
+  { xRays = false, includeFrame = true }: { xRays?: boolean; includeFrame?: boolean } = {}
+): { x: number; y: number; width: number; height: number } {
   const { project } = drawing.context;
   const ink = project.ink;
-  let minX = 0;
-  let minY = 0;
-  let maxX = drawing.width;
-  let maxY = drawing.height;
+  let minX = includeFrame ? 0 : Infinity;
+  let minY = includeFrame ? 0 : Infinity;
+  let maxX = includeFrame ? drawing.width : -Infinity;
+  let maxY = includeFrame ? drawing.height : -Infinity;
   const take = (x: number, y: number, pad: number) => {
     minX = Math.min(minX, x - pad);
     minY = Math.min(minY, y - pad);
@@ -887,6 +1015,13 @@ export function annotationReach(drawing: AnnotationDrawing): { x: number; y: num
       take(line.b[0], line.b[1], linePen / 2);
     }
   }
+  // An oval or a rectangle (Revision 3), its outline and half its pen round
+  // it, exactly: an ellipse's turned extents, a mitred rectangle's corners.
+  for (const { outline, pen } of drawing.areas) {
+    const box = areaBox(outline, pen / 2);
+    take(box.x, box.y, 0);
+    take(box.x + box.width, box.y + box.height, 0);
+  }
   // An enlarge area, its outline and half its pen or its casing, the wider,
   // round it: a turned rectangle's box.
   for (const { outline, pen, casing } of drawing.zoomAreas) {
@@ -895,6 +1030,8 @@ export function annotationReach(drawing: AnnotationDrawing): { x: number; y: num
     take(box.x, box.y, half);
     take(box.x + box.width, box.y + box.height, half);
   }
+  // An x-ray's window, its rim and half its pen round it (Revision 3), where it is drawn.
+  if (xRays) for (const { window, rim } of drawing.xRays) take(window.x, window.y, window.r + rim.width / 2);
   // A close-up, its two rings and half their pen round them: its line runs
   // between their rims, and its inside is drawn within the outer one.
   for (const { area, inset, pen } of drawing.closeUps) {
@@ -903,14 +1040,15 @@ export function annotationReach(drawing: AnnotationDrawing): { x: number; y: num
   }
   // A label at its size and weight, and its halo half its width past its letters (17b).
   for (const label of drawing.labels) {
-    const halo = label.halo ? label.halo.width / 2 : 0;
-    const half = labelHalfWidth(label.runs.map((run) => run.text).join(''), { bold: label.bold, size: label.size }) + halo;
-    minX = Math.min(minX, label.x - half);
-    maxX = Math.max(maxX, label.x + half);
-    minY = Math.min(minY, label.y - label.size - halo);
-    maxY = Math.max(maxY, label.y + label.size + halo);
+    const reach = labelReach(label, label.halo?.width ?? 0);
+    minX = Math.min(minX, reach.minX);
+    maxX = Math.max(maxX, reach.maxX);
+    minY = Math.min(minY, reach.minY);
+    maxY = Math.max(maxY, reach.maxY);
   }
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  return Number.isFinite(minX)
+    ? { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+    : { x: 0, y: 0, width: 0, height: 0 };
 }
 
 const round = (value: number) => Number(value.toFixed(3));
@@ -921,19 +1059,24 @@ const round = (value: number) => Number(value.toFixed(3));
  * reads off the markup to set and embed it (`setUploadText`); a halo is a
  * stroke painted under the fill, round at its joins, as References draws its
  * letters'. A label with neither is the markup it always was.
+ *
+ * A halo across the sheet's edge (rf6) is the same one stroke, painted with
+ * its pattern (`haloPatternElement`, which says why one stroke), which goes
+ * in the document with it, its id under `scope` when one is given.
  */
-function labelElement(label: AnnotationLabel): ReactNode {
+function labelElement(label: AnnotationLabel, scope = ''): ReactNode {
   const { halo } = label;
-  return (
+  const across = halo?.across;
+  const text = (
     <text
-      key={label.id}
+      key={across ? undefined : label.id}
       x={round(label.x)}
       y={round(label.y + LABEL_BASELINE * label.size)}
       fontSize={round(label.size)}
       textAnchor="middle"
       fill={label.fill}
       fontWeight={label.bold ? 700 : undefined}
-      stroke={halo?.color}
+      stroke={across ? `url(#${across.id}${scope})` : halo?.color}
       strokeWidth={halo ? round(halo.width) : undefined}
       strokeLinejoin={halo ? 'round' : undefined}
       paintOrder={halo ? 'stroke' : undefined}
@@ -944,6 +1087,13 @@ function labelElement(label: AnnotationLabel): ReactNode {
         </tspan>
       ))}
     </text>
+  );
+  if (!halo || !across) return text;
+  return (
+    <g key={label.id}>
+      {haloPatternElement(across, halo.color, scope)}
+      {text}
+    </g>
   );
 }
 
@@ -1044,14 +1194,58 @@ export function zoomAreaElement(area: AnnotationZoomArea): ReactNode {
 }
 
 /**
+ * One oval or rectangle as SVG (Revision 3): an `<ellipse>`, or a `<rect>`
+ * whose corners are mitred square whatever join the caller wraps it in
+ * (R3-11b A), turned with it, in its pen and ink, nothing filled.
+ */
+export function areaElement(area: AnnotationArea): ReactNode {
+  const { outline } = area;
+  const [cx, cy] = outline.centre;
+  const [width, height] = outline.size;
+  const paint = {
+    fill: 'none',
+    stroke: area.ink,
+    strokeWidth: round(area.pen),
+    transform: outline.angle ? `rotate(${round(outline.angle)} ${round(cx)} ${round(cy)})` : undefined,
+  };
+  return outline.kind === 'rectangle' ? (
+    <rect
+      key={area.id}
+      x={round(cx - width / 2)}
+      y={round(cy - height / 2)}
+      width={round(width)}
+      height={round(height)}
+      strokeLinejoin="miter"
+      {...paint}
+    />
+  ) : (
+    <ellipse key={area.id} cx={round(cx)} cy={round(cy)} rx={round(width / 2)} ry={round(height / 2)} {...paint} />
+  );
+}
+
+/**
+ * The ovals and rectangles, as React (Revision 3): painted before the step's
+ * lines and every mark (R3-11d B), which a surface draws after them. `wrap`
+ * puts each in a group of the caller's, by its annotation's id.
+ */
+export function annotationAreas(drawing: AnnotationDrawing, wrap?: (shape: ReactNode, annotationId: string) => ReactNode): ReactNode {
+  return drawing.areas.map((area) => (wrap ? wrap(areaElement(area), area.id) : areaElement(area)));
+}
+
+/**
  * The marks, enlarge areas, close-ups, callouts and labels, as React: the
  * shapes `diagramShapes` draws, the enlarge areas and the close-ups' rings
  * over them, the callouts over those, then the labels over everything. `wrap` puts each in a group of the
- * caller's, by its annotation's id.
+ * caller's, by its annotation's id. A halo's pattern across the sheet's edge
+ * (rf6) goes with its label, as References' clips go with its marks
+ * (`diagramShapes`): a `url(#…)` the document does not hold paints nothing.
+ * `scope` follows each of their ids, for a surface that shares one document
+ * with others: the canvas.
  */
 export function annotationMarks(
   drawing: AnnotationDrawing,
-  wrap?: (shape: ReactNode, annotationId: string) => ReactNode
+  wrap?: (shape: ReactNode, annotationId: string) => ReactNode,
+  scope = ''
 ): ReactNode {
   const shapes = diagramShapes(drawing.primitives, drawing.context, {
     wrap: wrap ? (shape, index) => wrap(shape, drawing.primitiveIds[index]!) : undefined,
@@ -1062,15 +1256,17 @@ export function annotationMarks(
       {drawing.zoomAreas.map((area) => (wrap ? wrap(zoomAreaElement(area), area.id) : zoomAreaElement(area)))}
       {drawing.closeUps.map((closeUp) => (wrap ? wrap(closeUpElement(closeUp), closeUp.id) : closeUpElement(closeUp)))}
       {drawing.callouts.map((callout) => (wrap ? wrap(calloutElement(callout), callout.id) : calloutElement(callout)))}
-      {drawing.labels.map((label) => (wrap ? wrap(labelElement(label), label.id) : labelElement(label)))}
+      {drawing.labels.map((label) => (wrap ? wrap(labelElement(label, scope), label.id) : labelElement(label, scope)))}
     </>
   );
 }
 
 /**
- * The drawing as a paper scene: its lines as lines, its marks and labels as
- * one markup item over them. Its fraction digits are set in Noto Sans, as a
- * References step's letters are on a page. Null when it draws nothing.
+ * The drawing as a paper scene: its ovals and rectangles as one markup item
+ * under everything (Revision 3, R3-11d B), its lines as lines, its marks and
+ * labels as one markup item over them. Its fraction digits are set in Noto
+ * Sans, as a References step's letters are on a page. Null when it draws
+ * nothing.
  */
 export function annotationScene(drawing: AnnotationDrawing): PaperScene | null {
   const lines: PaperLineItem[] = drawing.lines.map((line) => ({
@@ -1087,7 +1283,10 @@ export function annotationScene(drawing: AnnotationDrawing): PaperScene | null {
     `font-family="${uploadTextFamily('latin')}"`
   );
   const bounds = { minX: 0, minY: 0, maxX: drawing.width, maxY: drawing.height };
-  const items: PaperItem[] = [...lines];
+  const areas = renderToStaticMarkup(annotationAreas(drawing));
+  const items: PaperItem[] = [];
+  if (areas !== '') items.push({ kind: 'markup', svg: areas, bounds, hidden: false });
+  items.push(...lines);
   if (svg !== '') items.push({ kind: 'markup', svg, bounds, hidden: false });
   if (items.length === 0) return null;
   return { bounds, sheet: Math.max(drawing.width, drawing.height), items };

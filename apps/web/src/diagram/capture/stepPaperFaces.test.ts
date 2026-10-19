@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import {
   createStep,
   DEFAULT_DIAGRAM_STYLE,
@@ -14,14 +14,14 @@ import {
   fakeCaptureRuntime,
   halfFoldOnSheetKernelScene,
   TWO_SQUARES,
-  twoSquaresSegmentation,
+  twoSquaresIndex,
   type FixtureLine,
 } from './capture.fixtures';
 import { captureStep } from './captureFolded';
 import { lacksPaperFaces, stepWithPaperFaces } from './stepPaperFaces';
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const scope: DiagramCpScope = { kind: 'segment', region: regionReferenceFor(left!) };
 const FLAT: Extract<DiagramCpRender, { mode: 'folded-flat' }> = {
   mode: 'folded-flat',
@@ -45,7 +45,7 @@ const edited = () =>
 async function captured(render: DiagramCpRender = FLAT): Promise<{ now: DiagramStep; older: DiagramStep }> {
   const result = await captureStep(runtime(), {
     document: cpDocument(),
-    segmentation,
+    sheets,
     scope,
     render,
     style: DEFAULT_DIAGRAM_STYLE,
@@ -61,7 +61,7 @@ async function captured(render: DiagramCpRender = FLAT): Promise<{ now: DiagramS
 const request = (step: DiagramStep, patch: Partial<Parameters<typeof stepWithPaperFaces>[1]> = {}) => ({
   step,
   document: cpDocument(),
-  segmentation,
+  sheets,
   style: DEFAULT_DIAGRAM_STYLE,
   ...patch,
 });
@@ -114,12 +114,12 @@ describe('a flat step captured before its faces were kept (Revision 2)', () => {
       status: 'refresh',
       why: 'stale',
     });
-    expect(await stepWithPaperFaces(kernel, request(older, { segmentation: twoSquaresSegmentation({ wall: false }) }))).toEqual({
+    expect(await stepWithPaperFaces(kernel, request(older, { sheets: twoSquaresIndex({ left: false }) }))).toEqual({
       status: 'refresh',
       why: 'missing',
     });
     expect(await stepWithPaperFaces(kernel, request(older, { document: null }))).toEqual({ status: 'refresh', why: 'unknown' });
-    expect(await stepWithPaperFaces(kernel, request(older, { segmentation: null }))).toEqual({ status: 'refresh', why: 'unknown' });
+    expect(await stepWithPaperFaces(kernel, request(older, { sheets: null }))).toEqual({ status: 'refresh', why: 'unknown' });
     expect(kernel.fold).not.toHaveBeenCalled();
   });
 

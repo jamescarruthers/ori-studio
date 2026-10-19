@@ -1,3 +1,4 @@
+import { usePlacementReflowNotice } from '../../diagram/pages/usePlacementReflowNotice';
 import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { trackDiagramViewSwitched } from '../../analytics';
@@ -10,8 +11,7 @@ import {
   type DiagramEntry,
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
-import { cellsPerPage, splitIntoPages } from '../../diagram/pages/diagramPageLayout';
-import type { PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import { stepPageFits } from '../../diagram/pages/pageOverflow';
 import { useDiagramPages } from '../../diagram/pages/useDiagramPages';
 import { fillStepFromReferences, openReferencesBrowser } from '../../diagram/references/referencesBrowserActions';
 import { hasFoldSteps, openFoldBrowser } from '../../diagram/fold/foldBrowserActions';
@@ -37,15 +37,14 @@ import { useDiagramStepMenu } from '../../diagram/useDiagramStepMenu';
 import { useDiagramPrintUiStore } from '../../store/diagramPrintUiStore';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { annotateToolInHand } from '../../store/workspaceStore/diagramState';
 import type { DiagramViewMode } from '../../store/workspaceStore/types';
 import { DiagramEmptyState } from '../diagram/DiagramEmptyState';
 import { DiagramHeader } from '../diagram/DiagramHeader';
+import { DiagramPageOverflowNotice } from '../diagram/DiagramPageOverflowNotice';
 import { DiagramPagesView } from '../diagram/DiagramPagesView';
 import { useReferencesStepWays } from '../../diagram/references/useReferencesStepWays';
 import { usePublishPrintedFrames } from '../../diagram/pages/printedFrames';
 import { useZoomSplitNotice } from '../../diagram/pages/useZoomSplitNotice';
-import { openEnlargeArea } from '../../diagram/zoom/openEnlargeArea';
 import { DiagramStepDetail } from '../diagram/DiagramStepDetail';
 import { DiagramStepsGrid } from '../diagram/DiagramStepsGrid';
 import { ContextMenu } from '../ui/ContextMenu';
@@ -54,19 +53,9 @@ import styles from './DiagramPanel.module.css';
 
 const NO_STEPS: readonly DiagramStep[] = [];
 const NO_ENTRIES: readonly DiagramEntry[] = [];
-const NONE_CUT: ReadonlySet<string> = new Set();
-
-/** The steps whose instruction the pages cut with "…". */
-function cutStepIds(pages: PreparedDiagramPages | null): ReadonlySet<string> {
-  if (!pages) return NONE_CUT;
-  const cut = new Set<string>();
-  for (const page of pages.layout.pages) for (const cell of page.cells) if (cell.textOverflow) cut.add(cell.stepId);
-  return cut.size > 0 ? cut : NONE_CUT;
-}
 const NO_ASSETS: Readonly<Record<string, DiagramAsset>> = {};
 
 const openOnDoubleClick = (stepId: string) => void openDiagramStep(stepId, 'double_click');
-const openAreaOnDoubleClick = (stepId: string, areaId: string) => void openEnlargeArea(stepId, areaId);
 const openFromCard = (stepId: string, mode: 'pose' | 'annotate') => void openDiagramStep(stepId, 'card', mode);
 /** With no crease pattern open, the way to one: Edit, to open or draw it (D12). */
 const goToEdit = () => void handleMenuAction('view.edit');
@@ -116,7 +105,6 @@ const revealPagePane = () => revealDiagramPane(DIAGRAM_PAGE_PANE_ID);
 export function DiagramPanel() {
   const { t } = useTranslation();
   const setViewDrawerSlot = useLayoutStore((state) => state.setViewDrawerSlot);
-  const title = useWorkspaceStore((state) => state.diagram?.title ?? '');
   // The order — steps and the turns between them (D22) — and the steps alone,
   // which are numbered, opened, laid out and exported.
   const entries = useWorkspaceStore((state) => state.diagram?.steps ?? NO_ENTRIES);
@@ -130,10 +118,8 @@ export function DiagramPanel() {
   const detail = useWorkspaceStore((state) => state.diagramDetail);
   const closeStep = useWorkspaceStore((state) => state.closeDiagramStep);
   const openStepIn = useWorkspaceStore((state) => state.openDiagramStep);
-  const annotateTool = useWorkspaceStore(annotateToolInHand);
   const setAnnotateTool = useWorkspaceStore((state) => state.setDiagramAnnotateTool);
   const poseActions = useDiagramPoseActions(detail !== null ? selectedStepId : null);
-  const setTitle = useWorkspaceStore((state) => state.setDiagramTitle);
   const addStep = useAddDiagramStep();
   const rootRef = useRef<HTMLElement | null>(null);
   const menu = useDiagramStepMenu(rootRef);
@@ -148,15 +134,13 @@ export function DiagramPanel() {
   useDiagramPaneReveal();
   // Laid out in either view: the pages are the Pages view, and the cards say
   // whose text the pages cut.
-  const pages = useDiagramPages(steps.length > 0 ? diagram : null);
+  // A diagram of turns alone lays out too: an empty page, its turns having no steps to stand between.
+  const pages = useDiagramPages(entries.length > 0 ? diagram : null);
   const page = diagram?.page ?? DEFAULT_PAGE_SETUP;
-  const pageCount = useMemo(
-    () => splitIntoPages(steps, cellsPerPage(page)).length,
-    [steps, page]
-  );
-  const textCut = useMemo(() => cutStepIds(pages.pages), [pages.pages]);
+  const pageFits = useMemo(() => stepPageFits(pages.pages?.layout), [pages.pages]);
   // And the size each step prints at, for the Layers pane's warnings (Revision 2).
   usePublishPrintedFrames(pages.pages, pages.of);
+  usePlacementReflowNotice();
   // An enlarged step on the page after its area, said over the pages (Revision 2).
   const zoomSplitNotice = useZoomSplitNotice(view === 'pages' ? pages.pages : null, pages.of);
 
@@ -189,7 +173,6 @@ export function DiagramPanel() {
           readOnly={readOnly}
           mode={detail ?? 'pose'}
           onMode={(mode) => openStepIn(step.id, mode)}
-          annotateTool={annotateTool}
           onAnnotateTool={setAnnotateTool}
           poseActions={poseActions}
           linkedPose={linkedPose}
@@ -220,14 +203,12 @@ export function DiagramPanel() {
       {...dropHandlers}
     >
       <DiagramHeader
-        title={title}
         stepCount={steps.length}
-        pageCount={pageCount}
         view={view}
         onViewChange={switchView}
         readOnly={readOnly}
-        onRename={setTitle}
         onAddStep={addStep}
+        onImport={() => void handleMenuAction('file.importDiagramSteps')}
         onUpload={uploadPictures}
         patternOpen={patternOpen}
         onLink={linkNewStep}
@@ -260,8 +241,11 @@ export function DiagramPanel() {
           <Notice>{zoomSplitNotice}</Notice>
         </div>
       )}
+      {view === 'pages' && steps.length > 0 && (
+        <DiagramPageOverflowNotice pages={pages.pages} className={styles.notice} />
+      )}
       <div className="panel-body" onContextMenu={entries.length > 0 ? menu.onContextMenu : undefined}>
-        {steps.length > 0 && view === 'pages' ? (
+        {entries.length > 0 && view === 'pages' ? (
           <DiagramPagesView
             pages={pages.pages}
             failed={pages.failed}
@@ -270,8 +254,6 @@ export function DiagramPanel() {
             pathColor={page.pathColor}
             fitKey={`${diagram?.id ?? ''}:${page.size}:${page.orientation}`}
             onSelect={selectStep}
-            onOpen={openOnDoubleClick}
-            onOpenArea={openAreaOnDoubleClick}
             onPageClick={revealPagePane}
           />
         ) : entries.length === 0 ? (
@@ -279,7 +261,7 @@ export function DiagramPanel() {
             readOnly={readOnly}
             dropTarget={dropTarget !== null}
             onAddStep={addStep}
-            onUpload={uploadPictures}
+            onImport={() => void handleMenuAction('file.importDiagramSteps')}
             patternOpen={patternOpen}
             onLink={linkNewStep}
             onFromReferences={openReferencesBrowser}
@@ -297,7 +279,7 @@ export function DiagramPanel() {
             onOpen={openOnDoubleClick}
             onUpload={uploadPictureFor}
             links={links}
-            textCut={textCut}
+            pageFits={pageFits}
             patternOpen={patternOpen}
             onLink={openDiagramPatternPicker}
             onFromReferences={fillStepFromReferences}

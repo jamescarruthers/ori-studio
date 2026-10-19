@@ -1,12 +1,12 @@
 import { toast } from 'sonner';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { onEngineLost } from '../../engines/engineHost';
 import i18n from '../../i18n';
 import { requestConfirmation } from '../../store/commandDialogStore';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { stepById, stepsOf, type DiagramStep, type DiagramStyle } from '../document/diagramDocument';
-import type { FoldArtifacts } from '../../engine/types';
+import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import { refreshDiagramFoldStep } from '../fold/foldStepActions';
 import { knownCreasesOf } from './captureCreases';
 import { diagramLinkStatus } from './diagramLinks';
@@ -44,11 +44,10 @@ export async function refreshAllDiagramSteps(): Promise<number> {
   const cp = state.oristudioCpDocument;
   if (!state.diagram || state.diagramReadOnly) return 0;
   const loadId = state.diagramLoadId;
-  const segmentation = cp
-    ? await abandonOnEngineLoss(ensureCpSegmentationArtifacts(cp.document)).catch(() => null)
-    : null;
+  // A diagram linked only to Fold steps needs no pattern: its sheets are none.
+  const sheets = cp ? await abandonOnEngineLoss(ensureCpSheetIndex(cp.document)).catch(() => null) : null;
   const current = useWorkspaceStore.getState().diagram;
-  const stale = current ? outOfDate(stepsOf(current), current.style, segmentation) : [];
+  const stale = current ? outOfDate(stepsOf(current), current.style, sheets) : [];
   if (stale.length === 0) return 0;
   if (useWorkspaceStore.getState().diagramHistory.future.length > 0) {
     const t = i18n.t;
@@ -157,10 +156,10 @@ export function stopRefreshAll(): void {
 export function outOfDate(
   steps: readonly DiagramStep[],
   style: DiagramStyle,
-  segmentation: FoldArtifacts | null
+  sheets: CpSheetIndex | null
 ): string[] {
   const now = linkContextNow();
-  const context: DiagramLinkContext = { ...now, cp: { document: now.cp.document, segmentation } };
+  const context: DiagramLinkContext = { ...now, cp: { document: now.cp.document, sheets } };
   return steps
     .filter((step) => {
       const source = linkedSourceOf(step);

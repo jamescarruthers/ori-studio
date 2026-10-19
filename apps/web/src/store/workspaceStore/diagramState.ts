@@ -1,4 +1,4 @@
-import { EDIT_PATH, isEnlargeTool, type AnnotateTool } from '../../diagram/annotate/annotateTools';
+import { EDIT_PATH, isEnlargeTool, xrayToolHeld, type AnnotateTool, type XRayStanding } from '../../diagram/annotate/annotateTools';
 import { pathNodesOf } from '../../diagram/annotate/annotationPath';
 import {
   isKnownAnnotation,
@@ -28,13 +28,16 @@ import type { DiagramAnchorPick, WorkspaceState } from './types';
  * entry point resets every key without keeping its own copy of the list.
  */
 export const DIAGRAM_SCOPED_KEYS = [
+  'diagramImportBusy',
   'diagram',
   'diagramHistory',
   'diagramLoadId',
   'diagramReadOnly',
   'diagramRaw',
+  'diagramOthers',
   'diagramView',
   'diagramSelectedStepId',
+  'diagramPagesPart',
   'diagramDetail',
   'diagramAnnotateTool',
   'diagramSelectedAnnotationId',
@@ -46,7 +49,10 @@ export const DIAGRAM_SCOPED_KEYS = [
   'diagramReferencesBrowser',
   'diagramFoldBrowser',
   'diagramAnchorPick',
+  'diagramPaperFacesFetching',
   'diagramPlacesSettled',
+  'diagramPasted',
+  'diagramPagesCamera',
 ] as const;
 
 /**
@@ -90,13 +96,19 @@ export function escapePutsPickDown(
 /**
  * The Annotate tool in hand on the step open there: the one picked, but
  * Select in place of an Enlarge tool on an enlarged step, where no area is
- * drawn (Revision 2) — so the canvas selects there, as its rail shows, and
- * the tool is in hand again on the next step that can take it.
+ * drawn (Revision 2), and of the X-Ray tool where `xray`, the step's x-ray
+ * standing, holds it (Revision 3, R3-18a A: no layers, or its faces need a
+ * Refresh) — so the canvas selects there, as its rail shows, and the tool is
+ * in hand again on the next step that can take it. The standing knows the
+ * step's link, which the store does not: `useAnnotateToolInHand` supplies the
+ * rail's own.
  */
 export function annotateToolInHand(
-  state: Pick<WorkspaceState, 'diagram' | 'diagramSelectedStepId' | 'diagramAnnotateTool'>
+  state: Pick<WorkspaceState, 'diagram' | 'diagramSelectedStepId' | 'diagramAnnotateTool'>,
+  xray: XRayStanding
 ): AnnotateTool {
   const { diagram, diagramSelectedStepId: stepId, diagramAnnotateTool: tool } = state;
+  if (tool === 'x-ray') return xrayToolHeld(xray) ? null : tool;
   if (!isEnlargeTool(tool) || !diagram || stepId === null) return tool;
   return stepById(diagram, stepId)?.zoom ? null : tool;
 }
@@ -117,6 +129,21 @@ export function activeAnchorPick(
   const pick = state.diagramAnchorPick;
   if (!pick || pick.stepId !== state.diagramSelectedStepId || pick.target !== state.diagramSelectedAnnotationId) return null;
   return isDiagramAnnotating(state) ? pick : null;
+}
+
+/**
+ * Whether the anchor's pick `pick`, now ended, ended where it was made: the
+ * Diagram still where the keys go, its step open in Annotate with the area
+ * or frame it was for selected — anchored, or put down — rather than left for
+ * Pose, the step list, another step or another mark. What the touch View
+ * sheet, stepped aside while the pick was made under it, asks before it comes
+ * back (review of 18f).
+ */
+export function anchorPickEndedInPlace(
+  state: Pick<WorkspaceState, 'activeEditingContext'> & Parameters<typeof activeAnchorPick>[0],
+  pick: DiagramAnchorPick
+): boolean {
+  return state.activeEditingContext === 'diagram' && activeAnchorPick({ ...state, diagramAnchorPick: pick }) !== null;
 }
 
 /**
@@ -162,7 +189,8 @@ export function annotatingSelectionId(
  * What the Layers pane shows selected on the step open in Annotate: an
  * annotation's id, or an enlarged step's frame (`ZOOM_FRAME_ID`, Revision 2),
  * a layer of the step though no mark; null otherwise. What brings Layers
- * forward. Copy and Delete ask `annotatingSelectionId`, which takes no frame.
+ * forward, unless it was selected to pick its anchor (`useDiagramPaneReveal`).
+ * Copy and Delete ask `annotatingSelectionId`, which takes no frame.
  */
 export function layersSelectionId(
   state: Pick<WorkspaceState, 'diagram' | 'diagramDetail' | 'diagramSelectedStepId' | 'diagramSelectedAnnotationId'>
@@ -173,6 +201,21 @@ export function layersSelectionId(
   return id === ZOOM_FRAME_ID && diagram && stepId !== null && isDiagramAnnotating(state) && showsFrame(diagram, stepId)
     ? id
     : null;
+}
+
+/**
+ * The step the Layers pane shows selected in the Pages view: the selected
+ * step, which it lists with the rest of its page and whose placement it
+ * offers — a step, never a turn, which is the Step pane's — while no detail
+ * is open over the pages; null otherwise. With its part, what brings Layers
+ * forward there (`useDiagramPaneReveal`).
+ */
+export function pagesLayersStepId(
+  state: Pick<WorkspaceState, 'diagram' | 'diagramView' | 'diagramDetail' | 'diagramSelectedStepId'>
+): string | null {
+  const { diagram, diagramSelectedStepId: stepId } = state;
+  if (state.diagramView !== 'pages' || state.diagramDetail !== null || !diagram || stepId === null) return null;
+  return stepById(diagram, stepId) ? stepId : null;
 }
 
 /** The selected annotation, when it is one this build reads, on the selected step. */
@@ -225,6 +268,27 @@ export type DiagramHistory = SnapshotHistory<DiagramDocument | null>;
  */
 export const nextDiagramLoadId = loadIdSequence();
 
+/** Each diagram a layout's packed flow pages were adopted into (`adoptDiagramPageArrangements`), and the diagram it was before. */
+const adoptedFrom = new WeakMap<DiagramDocument, DiagramDocument>();
+
+/** Note that `adopted` is `from` with a layout's packing taken in: not an edit. */
+export function noteAdoptedPacking(adopted: DiagramDocument, from: DiagramDocument): void {
+  adoptedFrom.set(adopted, from);
+}
+
+/**
+ * Whether `now` is `written`, or `written` with nothing since but layouts'
+ * packing taken in: a file written from `written` holds every edit of `now`,
+ * and the packing it lacks is packed again, the same, when it opens.
+ */
+export function onlyPackedSince(now: DiagramDocument | null, written: DiagramDocument | null): boolean {
+  if (now === written) return true;
+  for (let at = now ? adoptedFrom.get(now) : undefined; at; at = adoptedFrom.get(at)) {
+    if (at === written) return true;
+  }
+  return false;
+}
+
 /**
  * Let go of the project's diagram, for a replacement that brings its own (or
  * none). Spread it into the replacing `set`.
@@ -233,11 +297,14 @@ export function discardDiagramState(): DiagramScopedState {
   return {
     diagram: null,
     diagramHistory: emptySnapshotHistory(),
+    diagramImportBusy: false,
     diagramLoadId: nextDiagramLoadId(),
     diagramReadOnly: false,
     diagramRaw: null,
+    diagramOthers: [],
     diagramView: 'steps',
     diagramSelectedStepId: null,
+    diagramPagesPart: null,
     diagramDetail: null,
     diagramAnnotateTool: null,
     diagramSelectedAnnotationId: null,
@@ -249,7 +316,10 @@ export function discardDiagramState(): DiagramScopedState {
     diagramReferencesBrowser: null,
     diagramFoldBrowser: null,
     diagramAnchorPick: null,
+    diagramPaperFacesFetching: {},
     diagramPlacesSettled: null,
+    diagramPasted: null,
+    diagramPagesCamera: null,
   };
 }
 
@@ -290,7 +360,11 @@ function heavyParts(document: DiagramDocument | null): object[] {
   if (!document) return [];
   const parts: object[] = [];
   for (const step of stepsOf(document)) {
-    if (step.unknown) parts.push(step.unknown);
+    // A newer build's step is written as it came, its picture inside it.
+    if (step.unknown) {
+      parts.push(step.unknown);
+      continue;
+    }
     const picture = step.picture as unknown;
     if (picture && typeof picture === 'object') parts.push(picture);
   }

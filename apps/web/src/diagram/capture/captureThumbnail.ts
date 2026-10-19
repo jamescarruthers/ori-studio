@@ -5,17 +5,20 @@
  *
  * Pure.
  */
-import type { FoldArtifacts } from '../../engine/types';
-import { segmentSheetThumbnail } from '../../cp-workspace/sheets/segmentSheet';
+import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
+import { linesSheetThumbnail } from '../../cp-workspace/sheets/linesSheetThumbnail';
 import { storedSheetThumbnail, type SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import type { StepCreases } from './captureCreases';
 
 /**
- * The region's thumbnail, as the Simulate rail draws it, from the
- * segmentation its creases were chosen in — every capture has one, since a
- * region is found by its rim in it — kept as every step keeps one
- * (`storedSheetThumbnail`).
+ * The sheet's thumbnail, as the pattern picker draws it: every line the step
+ * covers, from the document its creases were chosen in — kept as every step
+ * keeps one (`storedSheetThumbnail`: snapped, and within what a file takes
+ * back).
  */
-export function creasesThumbnail(creases: StepCreases, segmentation: FoldArtifacts): SheetThumbnail {
-  return storedSheetThumbnail(segmentSheetThumbnail(segmentation.fold, creases.segment));
+export function creasesThumbnail(
+  document: OristudioCpDocumentSnapshot,
+  creases: StepCreases
+): SheetThumbnail {
+  return storedSheetThumbnail(linesSheetThumbnail(document, creases.scopedLineIds));
 }

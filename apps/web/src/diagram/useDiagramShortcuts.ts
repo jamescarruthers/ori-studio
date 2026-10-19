@@ -1,3 +1,4 @@
+import { cancelPlacementGesture, runPlacementKey } from './pages/placementGestures';
 import { useCallback, useEffect, useRef } from 'react';
 import {
   registerArmedMode,
@@ -18,8 +19,9 @@ import {
   selectedDiagramAnnotation,
   selectedDiagramPathNode,
 } from '../store/workspaceStore/diagramState';
-import { annotationActionEdit, nudgePathNodeEdit, offersAnnotationAction } from './annotate/annotationActions';
-import { flipChangesArc } from './annotate/annotationModel';
+import { flipKeyEdit, nudgePathNodeEdit } from './annotate/annotationActions';
+import { xrayStandingNow } from './xray/useXRayStanding';
+import { xrayToolHeld } from './annotate/annotateTools';
 import { applyAnnotationEdit } from './annotate/applyAnnotationEdit';
 import { indexForStepNumber, stepById, stepsOf, type KnownDiagramAnnotation } from './document/diagramDocument';
 import { focusOwnsArrowKeys } from '../keyboard/arrowKeyOwners';
@@ -55,14 +57,21 @@ function keyState(state: WorkspaceState): DiagramKeyState {
             enlarged: state.diagram && state.diagramSelectedStepId !== null
               ? stepById(state.diagram, state.diagramSelectedStepId)?.zoom !== undefined
               : false,
+            xrayHeld: xrayHeldOn(state),
           }
         : null,
   };
 }
 
-/** Whether F flips the selected annotation: one that flips, and would change (a straight arrow's key falls through). */
+/** Whether the X-Ray tool is held on the step open in Annotate (Revision 3, R3-18a A): its picture has no layers, or needs a Refresh. */
+function xrayHeldOn(state: WorkspaceState): boolean {
+  const step = state.diagram && state.diagramSelectedStepId !== null ? stepById(state.diagram, state.diagramSelectedStepId) : null;
+  return step !== null && xrayToolHeld(xrayStandingNow(step));
+}
+
+/** Whether F flips the selected annotation: one with F's verb, which would change it (a straight arrow's key falls through). */
 function offersFlipArc(annotation: KnownDiagramAnnotation | null): boolean {
-  return annotation !== null && offersAnnotationAction('flip-arc', annotation) && flipChangesArc(annotation);
+  return annotation !== null && flipKeyEdit(annotation) !== null;
 }
 
 /** The step whose card has focus, if one does. */
@@ -92,10 +101,11 @@ function keyActions(state: WorkspaceState): DiagramKeyActions {
     selectPathNode: state.selectDiagramPathNode,
     flipArc: () => {
       const stepId = state.diagramSelectedStepId;
-      const id = state.diagramSelectedAnnotationId;
-      if (stepId === null || id === null) return;
-      // The Step pane's Flip Arc, by the same edit (`annotationActions.ts`).
-      applyAnnotationEdit(state, stepId, annotationActionEdit('flip-arc', id));
+      const annotation = selectedDiagramAnnotation(state);
+      const edit = annotation && flipKeyEdit(annotation);
+      if (stepId === null || !edit) return;
+      // The Layers pane's Flip Arc — on an eye, its Flip Horizontal — by the same edit (`annotationActions.ts`).
+      applyAnnotationEdit(state, stepId, edit);
     },
     nudgePathNode: (delta) => {
       const stepId = state.diagramSelectedStepId;
@@ -174,6 +184,7 @@ export function useDiagramShortcuts(handlers: {
           ? !focusLeavesEnterToSteps(document.activeElement)
           : !isAnnotateShortcut(id) && focusOwnsArrowKeys(document.activeElement);
       if (declines) return false;
+      if (runPlacementKey(id)) return true;
       const state = useWorkspaceStore.getState();
       return runDiagramShortcut(id, keyState(state), keyActions(state));
     });
@@ -181,6 +192,8 @@ export function useDiagramShortcuts(handlers: {
       const state = useWorkspaceStore.getState();
       switch (id) {
         case 'viewport.cancel':
+          if (cancelPlacementGesture()) return true;
+          if (state.diagramDetail === null && state.diagramView === 'pages' && state.diagramPagesPart !== null) { state.selectDiagramPagesPart(null); return true; }
           return runDiagramCancel(keyState(state), keyActions(state));
         case 'viewport.contextMenu': {
           const stepId = state.diagramSelectedStepId;

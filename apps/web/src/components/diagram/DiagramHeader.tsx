@@ -5,27 +5,26 @@ import { Button } from "../ui/Button";
 import { SplitButton } from "../ui/SplitButton";
 import { TouchHistoryButtons } from "../ui/TouchHistoryButtons";
 import type { DiagramViewMode } from "../../store/workspaceStore/types";
-import { DiagramTitleField } from "./DiagramTitleField";
 import { DiagramViewSwitch } from "./DiagramViewSwitch";
 import styles from "./DiagramHeader.module.css";
 
 /**
- * The Diagram workspace's header: the title and how many steps, then the verbs
- * that act on the whole diagram. It wears the shared `panel-toolbar` frame so
- * it meets the side pane's tab bar at the same height, and adds rules only for
- * what is its own: on a screen too narrow for both, the verbs wrap onto a row
- * of their own under the title rather than off the edge.
+ * The Diagram workspace's header: Steps | Pages at its left end, then the
+ * verbs that act on the whole diagram at its right. The title is the Page
+ * pane's (`DiagramTitleRow`; Zach, 2026-10-15). It wears the shared
+ * `panel-toolbar` frame so it meets the side pane's tab bar at the same
+ * height, and adds rules only for what is its own: on a screen too narrow for
+ * both, the verbs wrap onto a row of their own under the tabs rather than off
+ * the edge.
  */
 export function DiagramHeader({
-  title,
   stepCount,
-  pageCount,
   view,
   onViewChange,
   readOnly,
-  onRename,
   onAddStep,
   onUpload,
+  onImport,
   patternOpen,
   onLink,
   onFromReferences,
@@ -42,17 +41,15 @@ export function DiagramHeader({
   printing,
   drawerSlot,
 }: {
-  title: string;
+  /** How many steps there are: with none, there is nothing to print or export. */
   stepCount: number;
-  /** How many pages the steps make. */
-  pageCount: number;
   view: DiagramViewMode;
   onViewChange: (view: DiagramViewMode) => void;
   readOnly: boolean;
-  onRename: (title: string) => void;
   onAddStep: () => void;
   /** Pick pictures, each a step. Called from the menu row itself. */
   onUpload: () => void;
+  onImport: () => void;
   /** A crease pattern is open to link a step to. */
   patternOpen: boolean;
   /** Add a step and choose its pattern. */
@@ -85,43 +82,12 @@ export function DiagramHeader({
   const { t } = useTranslation();
   return (
     <div className={`panel-toolbar ${styles.header}`}>
-      <div className={styles.lead}>
-        <div className={styles.side}>
-          <div className={`panel-toolbar__group ${styles.title}`}>
-            <span className={styles.titleSlot}>
-              <DiagramTitleField
-                title={title}
-                disabled={readOnly}
-                onRename={onRename}
-              />
-            </span>
-            {stepCount > 0 && (
-              <span className={styles.count}>
-                {t("panels:diagram.header.stepCount", {
-                  count: stepCount,
-                  defaultValue_one: "1 step",
-                  defaultValue_other: "{{count}} steps",
-                })}
-                {" · "}
-                {t("panels:diagram.header.pageCount", {
-                  count: pageCount,
-                  defaultValue_one: "1 page",
-                  defaultValue_other: "{{count}} pages",
-                })}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className={styles.views}>
-          <span className={styles.separator} aria-hidden="true" />
-          <DiagramViewSwitch
-            className={styles.viewSwitch}
-            view={view}
-            onChange={onViewChange}
-          />
-        </div>
-      </div>
-      <div className={styles.side} data-side="end">
+      <DiagramViewSwitch
+        className={styles.views}
+        view={view}
+        onChange={onViewChange}
+      />
+      <div className={styles.verbs}>
         <div className={`panel-toolbar__group ${styles.actions}`}>
           <TouchHistoryButtons />
           <SplitButton
@@ -136,6 +102,7 @@ export function DiagramHeader({
               "More ways to add steps",
             )}
             actions={[
+              { id: "import-steps", label: t("panels:diagram.import.menu", "Import steps…"), onSelect: onImport },
               {
                 id: "upload-pictures",
                 label: t(

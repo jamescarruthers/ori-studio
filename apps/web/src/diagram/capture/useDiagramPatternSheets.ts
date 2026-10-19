@@ -1,8 +1,11 @@
+import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
-import type { FoldArtifacts } from '../../engine/types';
 import type { DiagramStep } from '../document/diagramDocument';
 import { sourceSheet } from './linkStatus';
 import type { CpPatternSheet as DiagramPatternSheet } from '../../cp-workspace/sheets/useCpPatternSheets';
+
+// The pattern picker's sheets are the shared ones (`useCpPatternSheets`), which
+// Fold's Import CP offers too: one reading of the sheet index for both.
 export { useCpPatternSheets as useDiagramPatternSheets } from '../../cp-workspace/sheets/useCpPatternSheets';
 export type { CpPatternSheet as DiagramPatternSheet, CpPatternSheets as DiagramPatternSheets } from '../../cp-workspace/sheets/useCpPatternSheets';
 
@@ -15,9 +18,9 @@ export function linkedSheet(
   step: DiagramStep,
   sheets: readonly DiagramPatternSheet[],
   document: OristudioCpDocumentSnapshot | null,
-  artifacts: FoldArtifacts
+  index: CpSheetIndex
 ): DiagramPatternSheet | null {
   if (step.source?.kind !== 'cp') return null;
-  const segment = sourceSheet(step.source, document, artifacts);
-  return segment ? (sheets.find((sheet) => sheet.segment === segment) ?? null) : null;
+  const sheet = sourceSheet(step.source, document, index);
+  return sheet ? (sheets.find((candidate) => candidate.sheet === sheet) ?? null) : null;
 }

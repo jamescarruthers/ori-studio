@@ -7,13 +7,13 @@ import {
   resetFoldedFigureHandles,
   setFoldedFigureHandleFree,
 } from '../../cp-workspace/folded/foldedFigureHandles';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
-import { cpDocument, fakeCaptureRuntime, movedLines, TWO_SQUARES, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, movedLines, TWO_SQUARES, twoSquaresIndex } from './capture.fixtures';
 import type { CpCaptureRuntime } from './captureFolded';
 import { createPoseController, linkedFoldKey } from './poseController';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { stepsIn } from '../document/diagramSteps.fixtures';
 import type { DiagramLayerSpread } from '../document/diagramDocument';
 
@@ -22,12 +22,12 @@ vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', async (importOrigina
   ...(await importOriginal<typeof import('../../store/workspaceStore/cpFoldRuntimeBindings')>()),
   createCpCaptureRuntime: () => bindings.runtime,
 }));
-/** The pattern's segmentation once it has moved; the fixture's until then. */
+/** The pattern's sheets once it has moved; the fixture's until then. */
 const pattern = vi.hoisted(() => ({ moved: null as unknown }));
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
-  ensureCpSegmentationArtifacts: vi.fn(async () => pattern.moved ?? segmentation),
-  peekCpSegmentationArtifacts: vi.fn(() => pattern.moved ?? segmentation),
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: vi.fn(async () => pattern.moved ?? sheets),
+  peekCpSheetIndex: vi.fn(() => pattern.moved ?? sheets),
 }));
 const engines = vi.hoisted(() => ({ listeners: new Set<(loss: { engine: string }) => void>() }));
 vi.mock('../../engines/engineHost', async (importOriginal) => ({
@@ -45,8 +45,8 @@ vi.mock('../../analytics', async (importOriginal) => ({
   ...analytics,
 }));
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const initialState = useWorkspaceStore.getInitialState();
 const state = () => useWorkspaceStore.getState();
 const document = cpDocument();
@@ -110,7 +110,7 @@ describe('the Pose controller', () => {
     const before = render(stepId);
     if (before?.kind !== 'cp') throw new Error('linked');
     const [dx, dy] = [431.3, -0.7000000000000001];
-    const moved = twoSquaresSegmentation({ dx, dy });
+    const moved = twoSquaresIndex({ dx, dy });
     pattern.moved = moved;
     useWorkspaceStore.setState({
       oristudioCpDocument: {
@@ -125,7 +125,7 @@ describe('the Pose controller', () => {
     if (after?.kind !== 'cp') throw new Error('linked');
     expect(after.render).toMatchObject({ mode: 'crease-pattern', rotationDeg: 15 });
     expect(after.fingerprint).toBe(before.fingerprint);
-    expect(after.scope.region).toEqual(regionReferenceFor(resolveCpSegments(moved)[0]!));
+    expect(after.scope.region).toEqual(regionReferenceFor(sheetRegions(moved)[0]!));
     controller.dispose();
   });
 
@@ -533,12 +533,15 @@ describe('spreading a flat fold’s layers (Phase 13)', () => {
     await controller.run({ verb: 'spread-kind', kind: 'affine' });
     const reads = vi.mocked(bindings.runtime!.paperScene).mock.calls.length;
     const past = state().diagramHistory.past.length;
+    const pictureOf = () => stepsIn(state().diagram!).find((step) => step.id === stepId)!.picture;
+    const unskewed = pictureOf();
     controller.previewSpread({ slider: 'skew', value: 0.4 });
     expect(heard.preview).toHaveBeenLastCalledWith(
       expect.objectContaining({ slide: { slider: 'skew', value: 0.4 }, spread: { ...AFFINE, skew: 0.4 } }),
       expect.any(String)
     );
     await controller.commitSpread();
+    const skewed = pictureOf();
     controller.previewSpread({ slider: 'axis', value: 30 });
     expect(heard.preview).toHaveBeenLastCalledWith(
       expect.objectContaining({ spread: { ...AFFINE, skew: 0.4, axisDeg: 30 } }),
@@ -548,6 +551,19 @@ describe('spreading a flat fold’s layers (Phase 13)', () => {
     expect(spreadOf(stepId)).toEqual({ ...AFFINE, skew: 0.4, axisDeg: 30 });
     expect(state().diagramHistory.past.length).toBe(past + 2);
     expect(bindings.runtime!.paperScene).toHaveBeenCalledTimes(reads);
+    const turned = pictureOf();
+    expect(new Set([unskewed, skewed, turned]).size).toBe(3);
+    // Each drag undoes on its own, the setting and the picture with it, and redoes.
+    state().undoDiagram();
+    expect(spreadOf(stepId)).toEqual({ ...AFFINE, skew: 0.4 });
+    expect(pictureOf()).toBe(skewed);
+    state().undoDiagram();
+    expect(spreadOf(stepId)).toEqual(AFFINE);
+    expect(pictureOf()).toBe(unskewed);
+    state().redoDiagram();
+    state().redoDiagram();
+    expect(spreadOf(stepId)).toEqual({ ...AFFINE, skew: 0.4, axisDeg: 30 });
+    expect(pictureOf()).toBe(turned);
     controller.dispose();
   });
 
@@ -692,10 +708,10 @@ describe('spreading a flat fold’s layers (Phase 13)', () => {
     const gate = new Promise<void>((resolve) => {
       open = resolve;
     });
-    vi.mocked(ensureCpSegmentationArtifacts).mockImplementationOnce(async () => {
+    vi.mocked(ensureCpSheetIndex).mockImplementationOnce(async () => {
       begun = true;
       await gate;
-      return segmentation;
+      return sheets;
     });
     return { begun: () => begun, open };
   }

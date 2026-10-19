@@ -35,7 +35,13 @@ import type { PaperScene, SceneBounds } from '../../lib/paper/paperScene';
 import { turnClockwise } from '../../lib/geometry';
 import { rectangleAngle, type PicturePoint } from '../annotate/annotationModel';
 import { CAPTURE_PX_PER_UNIT, storedSceneStep } from '../capture/captureGeometry';
-import { posedRenderOf, type DiagramScenePicture, type DiagramStep, type DiagramZoomOutline } from '../document/diagramDocument';
+import {
+  creasesFlipped,
+  posedRenderOf,
+  type DiagramScenePicture,
+  type DiagramStep,
+  type DiagramZoomOutline,
+} from '../document/diagramDocument';
 import { readPaperFaces } from '../document/paperFacesFile';
 import { storedScene } from '../pictures/pictureFrame';
 import { distanceOutside, distanceToSegment, zoomCore, zoomShapeOf } from './zoomModel';
@@ -76,8 +82,9 @@ const memo = new WeakMap<DiagramScenePicture, { render: string; faces: StepFaces
  */
 export function paperFacesOf(step: DiagramStep): StepFaces | null {
   const { picture } = step;
+  // A newer build's step that this build reads has faces as any other (decision 2 of the launch review).
   const render = posedRenderOf(step.source);
-  if (step.unknown || picture?.kind !== 'scene' || !render) return null;
+  if (picture?.kind !== 'scene' || !render) return null;
   if (render.mode !== 'folded-flat' && render.mode !== 'crease-pattern') return null;
   const key = JSON.stringify(render);
   const cached = memo.get(picture);
@@ -87,7 +94,7 @@ export function paperFacesOf(step: DiagramStep): StepFaces | null {
   if (scene) {
     faces =
       render.mode === 'crease-pattern'
-        ? creasePatternFaces(scene, render.rotationDeg)
+        ? creasePatternFaces(scene, render.rotationDeg, creasesFlipped(render))
         : flatFaces(scene, picture.paperFaces, render.spread !== undefined);
   }
   memo.set(picture, { render: key, faces });
@@ -141,11 +148,12 @@ function flatFaces(scene: PaperScene, stored: string | undefined, spread: boolea
 
 /**
  * A crease pattern's one face: the paper, placed as `creasePatternScene`
- * places it — about its centre, turned, at the capture scale, on either
- * side's colour alike — so its ring on the paper is its drawn ring with that
- * undone.
+ * places it — about its centre, turned over side to side when `turnedOver`
+ * (Flip creases), turned, at the capture scale, on either side's colour alike
+ * — so its ring on the paper is its drawn ring with that undone. Its corners
+ * keep their order, so a turned-over sheet's placement fits reflected.
  */
-function creasePatternFaces(scene: PaperScene, rotationDeg: number): StepFaces | null {
+function creasePatternFaces(scene: PaperScene, rotationDeg: number, turnedOver: boolean): StepFaces | null {
   let ring: Pt[] | null = null;
   for (const item of scene.items) {
     if (item.kind !== 'face' || item.face !== 0) continue;
@@ -154,12 +162,13 @@ function creasePatternFaces(scene: PaperScene, rotationDeg: number): StepFaces |
   }
   if (!ring || ring.length < 3) return null;
   const unturn = turnClockwise(-rotationDeg);
+  const across = turnedOver ? -1 : 1;
   const paper = ring.map(([x, y]): Pt => {
     const p = unturn({
       x: x / CAPTURE_PX_PER_UNIT,
       y: y / CAPTURE_PX_PER_UNIT,
     });
-    return [p.x, p.y];
+    return [across * p.x, p.y];
   });
   return {
     kind: 'crease-pattern',

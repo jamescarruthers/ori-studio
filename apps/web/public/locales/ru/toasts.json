@@ -53,6 +53,14 @@
       "someFailed_other": "{{count}} шага не удалось захватить из «Складывания», поэтому они пропущены.",
       "stepGone": "Этого шага больше нет в последовательности «Складывания»."
     },
+    "import": {
+      "otherWorkspaceFirst": "Сначала отмените или повторите более поздние правки в другом рабочем пространстве: импорт изменил и правку, и схему.",
+      "restoreFailed": "Не удалось восстановить импортированные шаги."
+    },
+    "placementsReflowed_one": "Перемещённые шаги вернулись в свои ячейки: {{count}}",
+    "placementsReflowed_few": "Перемещённые шаги вернулись в свои ячейки: {{count}}",
+    "placementsReflowed_many": "Перемещённые шаги вернулись в свои ячейки: {{count}}",
+    "placementsReflowed_other": "Перемещённые шаги вернулись в свои ячейки: {{count}}",
     "references": {
       "addedSteps": "Добавлено как шаги {{first}}–{{last}}",
       "addedTurnOvers_one": "Добавлен {{count}} переворот",
@@ -102,7 +110,15 @@
     "uploadRejected": "это не SVG, который Ori Studio может безопасно прочитать",
     "uploadTooLarge": "файл слишком большой",
     "uploadUnreadable": "не удалось прочитать изображение",
-    "uploadUnsupported": "это не изображение"
+    "uploadUnsupported": "это не изображение",
+    "zoom": {
+      "updatedList": "Увеличенные шаги {{numbers}} обновлены",
+      "updatedOne": "Увеличенный шаг {{number}} обновлён",
+      "updatedRange": "Увеличенные шаги {{first}}–{{last}} обновлены",
+      "updatedSome": "Обновлено увеличенных шагов: {{placed}} из {{total}}",
+      "updatedSomeDetail": "Остальные не смогли взять рамку из этой области.",
+      "updateFailed": "Не удалось обновить увеличенные шаги"
+    }
   },
   "diagramExport": {
     "saved": "Экспортировано: {{name}}"

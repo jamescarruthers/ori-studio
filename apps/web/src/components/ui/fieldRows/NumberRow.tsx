@@ -9,6 +9,7 @@ import { FieldRow } from './FieldRow';
  */
 export function NumberRow({
   label,
+  help,
   value,
   min,
   max,
@@ -18,11 +19,15 @@ export function NumberRow({
   title,
   normalize,
   fieldRef,
+  divider,
   onCommit,
   onReset,
 }: {
   label: string;
-  value: number;
+  /** What the row means, behind a help mark beside its label (`FieldRow.help`). */
+  help?: string;
+  /** Null while there is no number to show: the field is empty (`NumberField`). */
+  value: number | null;
   min?: number;
   max?: number;
   step?: number;
@@ -32,6 +37,8 @@ export function NumberRow({
   normalize?: (value: number) => number;
   /** The input itself, for a caller that puts the focus in it. */
   fieldRef?: Ref<HTMLInputElement>;
+  /** The rule under the row (`FieldRow.divider`). */
+  divider?: boolean;
   onCommit: (value: number) => void;
   onReset?: () => void;
 }) {
@@ -39,10 +46,12 @@ export function NumberRow({
   return (
     <FieldRow
       label={label}
+      help={help}
       htmlFor={inputId}
       kind="input"
       disabled={disabled}
       title={title}
+      divider={divider}
       onReset={onReset}
     >
       <NumberField

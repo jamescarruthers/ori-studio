@@ -42,13 +42,13 @@ type Descriptors = {
 export const DIAGRAM_LINKS: Descriptors = {
   cp: {
     origin: 'edit',
-    statusOf: (source, { cp }) => linkStatus(source, cp.document, cp.segmentation),
+    statusOf: (source, { cp }) => linkStatus(source, cp.document, cp.sheets),
     openSource: openDiagramStepInEdit,
     originLabel: (t) => t('panels:diagram.link.originEdit', 'Edit'),
   },
   'references-step': {
     origin: 'references',
-    statusOf: (source, { cp }) => linkStatus(source, cp.document, cp.segmentation),
+    statusOf: (source, { cp }) => linkStatus(source, cp.document, cp.sheets),
     openSource: openDiagramStepInReferences,
     originLabel: (t) => t('panels:diagram.link.originReferences', 'References'),
   },

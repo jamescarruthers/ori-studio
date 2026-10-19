@@ -7,13 +7,17 @@ import { projectCpRevision } from './projectCpRevision';
 import type { FoldCpJumpOp } from '../document/foldSequenceDocument';
 import type { FoldImportFingerprinted } from '../engine/foldEngineIoWire';
 
-const { exportCp, exportRegion, segmentation } = vi.hoisted(() => ({ exportCp: vi.fn(async () => '{}'), exportRegion: vi.fn(async () => '{"region":true}'), segmentation: vi.fn() }));
+const { exportCp, exportRegion, sheetIndex } = vi.hoisted(() => ({ exportCp: vi.fn(async () => '{}'), exportRegion: vi.fn(async () => '{"region":true}'), sheetIndex: vi.fn() }));
 vi.mock('../../store/workspaceStore/oristudioCpRuntime', () => ({ exportOristudioCpDocumentAsFold: exportCp, exportOristudioCpCreasesAsFold: exportRegion }));
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { cpLinesByIds } from '../../cp-workspace/folded/foldedFigureStaleness';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
-import { cpDocument, LEFT_LINE_IDS, movedLines, TWO_SQUARES, twoSquaresSegmentation } from '../../diagram/capture/capture.fixtures';
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', () => ({ ensureCpSegmentationArtifacts: segmentation }));
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
+import { cpDocument, LEFT_LINE_IDS, movedLines, TWO_SQUARES, twoSquaresIndex } from '../../diagram/capture/capture.fixtures';
+// The sheet index a link is found in, as the kernel would build it.
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: sheetIndex,
+}));
 const initial = useWorkspaceStore.getState();
 afterEach(() => { useWorkspaceStore.setState(initial, true); vi.clearAllMocks(); });
 function source() {
@@ -66,9 +70,9 @@ describe('project CP snapshots', () => {
 
 function regionSource() {
   const cp = { loadSerial: 1, document: cpDocument() } as OristudioCpDocumentState;
-  segmentation.mockResolvedValue(twoSquaresSegmentation());
+  sheetIndex.mockResolvedValue(twoSquaresIndex());
   useWorkspaceStore.setState({ oristudioCpDocument: cp });
-  return { cp, region: regionReferenceFor(resolveCpSegments(twoSquaresSegmentation())[0]!) };
+  return { cp, region: regionReferenceFor(sheetRegions(twoSquaresIndex())[0]!) };
 }
 
 describe('one linked Edit pattern', () => {
@@ -89,12 +93,13 @@ describe('one linked Edit pattern', () => {
     useWorkspaceStore.setState({ foldSequences: [{ document: sequenceOf([step('collapse', null, op)]), readOnlyRaw: null }] });
     const moved = { loadSerial: 1, document: cpDocument(movedLines(TWO_SQUARES, 300, 40)) } as OristudioCpDocumentState;
     useWorkspaceStore.setState({ oristudioCpDocument: moved });
-    segmentation.mockResolvedValue(twoSquaresSegmentation({ dx: 300, dy: 40 }));
+    sheetIndex.mockResolvedValue(twoSquaresIndex({ dx: 300, dy: 40 }));
     const updated = (await projectCpImport('collapse'))!;
     expect(updated.link.revision).toBe(capture.link.revision);
     expect(updated.link.region?.bounds.minX).toBe(region.bounds.minX + 300);
     expect(updated.replace).toBeTypeOf('function');
-    segmentation.mockResolvedValue(twoSquaresSegmentation({ wall: false }));
+    // The left square no longer closed by its border: its sheet is gone.
+    sheetIndex.mockResolvedValue(twoSquaresIndex({ left: false }));
     expect(await projectCpImport('collapse')).toBeNull();
     expect(exportCp).not.toHaveBeenCalled();
   });

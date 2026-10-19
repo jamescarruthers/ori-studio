@@ -1,21 +1,29 @@
 import { useTranslation } from 'react-i18next';
 import { LayoutGrid, Waypoints } from 'lucide-react';
 import {
+  DEFAULT_PATH_WIDTH_MM,
   FIRST_PAGE_NUMBER_RANGE,
   PAGE_COLUMNS_RANGE,
   PAGE_MARGIN_MM_RANGE,
   PAGE_ROWS_RANGE,
   PATH_WIDTH_MM_RANGE,
+  STEPS_PER_PAGE_RANGE,
   type DiagramHanStyle,
   type DiagramPageLayout,
   type DiagramPageOrientation,
   type DiagramPageSide,
   type DiagramPaperSize,
 } from '../../diagram/document/diagramDocument';
+import { hasTitleBlock } from '../../diagram/pages/pagePlan';
 import { layoutLabel, orientationLabel, paperSizeLabel } from '../../diagram/pages/pageSetupLabels';
 import { useDiagramPageSetup } from '../../diagram/pages/useDiagramPageSetup';
+import { DiagramPagePacking } from '../diagram/DiagramPagePacking';
+import { DiagramPagePlacements } from '../diagram/DiagramPagePlacements';
+import { CurrentDiagramPageStepsRow } from '../diagram/DiagramPageStepsRow';
 import { DiagramPathColorRow } from '../diagram/DiagramPathColorRow';
 import { DiagramStyleControl } from '../diagram/DiagramStyleControl';
+import { DiagramTitleBlockRows } from '../diagram/DiagramTitleBlockRows';
+import { DiagramTitleRow } from '../diagram/DiagramTitleRow';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { NumberRow, SegmentedRow, SelectRow, ToggleRow } from '../ui/fieldRows';
 import { OptionCards } from '../ui/OptionCard';
@@ -24,13 +32,18 @@ import styles from './DiagramPagePanel.module.css';
 const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'];
 
 /**
- * The Page pane: the paper, how steps are laid out on it, what the header and
- * footer carry, and the style every step is drawn in (D10, D13).
+ * The Page pane: the paper, how steps are laid out on it — in the flow, how
+ * its pages are packed (`DiagramPagePacking`), right under the counts, and the
+ * path's look — what the header and footer carry, opening with the diagram's
+ * title (`DiagramTitleRow`) and the first page's title block
+ * (`DiagramTitleBlockRows`), and the style every step is
+ * drawn in (D10, D13; `diagram-title-block.md`, Phase 1c, H-15 A and H-16 A).
  *
  * A composition site (AGENTS.md › Panel components): the bindings, each one
- * undo step and one count, are `useDiagramPageSetup`; the rows are the shared
- * field rows, but for the path's colour (`DiagramPathColorRow`), whose
- * pick re-renders its row and not the pane.
+ * undo step and one count, are `useDiagramPageSetup`, and the page a count of
+ * its own is for `useCurrentDiagramPage`; the rows are the shared field rows,
+ * but for the path's colour (`DiagramPathColorRow`), whose pick re-renders its
+ * row and not the pane, and the current page's count (`DiagramPageStepsRow`).
  */
 export function DiagramPagePanel() {
   const { t } = useTranslation();
@@ -98,52 +111,6 @@ export function DiagramPagePanel() {
               onChange={(layout) => setPage({ layout }, 'layout')}
             />
           </div>
-          <NumberRow
-            label={
-              flow
-                ? t('panels:diagram.pagePane.perRow', 'Steps per row')
-                : t('panels:diagram.pagePane.columns', 'Columns')
-            }
-            value={page.columns}
-            min={PAGE_COLUMNS_RANGE.min}
-            max={PAGE_COLUMNS_RANGE.max}
-            step={1}
-            disabled={readOnly}
-            onCommit={(columns) => setPage({ columns }, 'columns')}
-          />
-          <NumberRow
-            label={t('panels:diagram.pagePane.rows', 'Rows')}
-            value={page.rows}
-            min={PAGE_ROWS_RANGE.min}
-            max={PAGE_ROWS_RANGE.max}
-            step={1}
-            disabled={readOnly}
-            onCommit={(rows) => setPage({ rows }, 'rows')}
-          />
-          {flow && (
-            <ToggleRow
-              label={t('panels:diagram.pagePane.showPath', 'Show path')}
-              checked={page.showPath}
-              disabled={readOnly}
-              onChange={(showPath) => setPage({ showPath }, 'path')}
-            />
-          )}
-          {flow && page.showPath && (
-            <>
-              <NumberRow
-                label={t('panels:diagram.pagePane.pathWidthMm', 'Path width (mm)')}
-                value={setup.pathWidth.mm}
-                min={PATH_WIDTH_MM_RANGE.min}
-                max={PATH_WIDTH_MM_RANGE.max}
-                step={1}
-                disabled={readOnly}
-                onCommit={(mm) => setup.setPathWidth(mm)}
-                // Until one is set the path keeps in proportion to the steps; the reset goes back to that.
-                onReset={setup.pathWidth.chosen ? () => setup.setPathWidth(null) : undefined}
-              />
-              <DiagramPathColorRow />
-            </>
-          )}
           <SegmentedRow
             label={t('panels:diagram.pagePane.firstPageSide', 'First page')}
             value={page.firstPageSide}
@@ -165,24 +132,89 @@ export function DiagramPagePanel() {
             ]}
             onChange={(side) => setPage({ firstPageSide: side as DiagramPageSide }, 'first_page_side')}
           />
-          <p className={styles.readout}>
-            {t('panels:diagram.pagePane.perPage', {
-              count: setup.perPage,
-              defaultValue_one: '1 step per page',
-              defaultValue_other: '{{count}} steps per page',
-            })}
-            {' · '}
-            {t('panels:diagram.pagePane.pageCount', {
-              count: setup.pageCount,
-              defaultValue_one: '1 page',
-              defaultValue_other: '{{count}} pages',
-            })}
-          </p>
+          {flow ? (
+            <>
+              {/* The flow takes a number of steps and chooses its rows to suit the paper (`flowShape`): the
+                  default, and the current page's own. */}
+              <NumberRow
+                label={t('panels:diagram.pagePane.stepsPerPage', 'Steps per page')}
+                value={page.stepsPerPage}
+                min={STEPS_PER_PAGE_RANGE.min}
+                max={STEPS_PER_PAGE_RANGE.max}
+                step={1}
+                disabled={readOnly}
+                onCommit={(stepsPerPage) => setPage({ stepsPerPage }, 'steps_per_page')}
+              />
+              <CurrentDiagramPageStepsRow disabled={readOnly} onChange={setup.setPageSteps} />
+            </>
+          ) : (
+            <>
+              <NumberRow
+                label={t('panels:diagram.pagePane.columns', 'Columns')}
+                value={page.columns}
+                min={PAGE_COLUMNS_RANGE.min}
+                max={PAGE_COLUMNS_RANGE.max}
+                step={1}
+                disabled={readOnly}
+                onCommit={(columns) => setPage({ columns }, 'columns')}
+              />
+              <NumberRow
+                label={t('panels:diagram.pagePane.rows', 'Rows')}
+                value={page.rows}
+                min={PAGE_ROWS_RANGE.min}
+                max={PAGE_ROWS_RANGE.max}
+                step={1}
+                disabled={readOnly}
+                onCommit={(rows) => setPage({ rows }, 'rows')}
+              />
+            </>
+          )}
         </CollapsibleSection>
+        {flow && <DiagramPagePacking page={page} readOnly={readOnly} setPage={setPage} />}
+        <DiagramPagePlacements />
+        {flow && (
+          <CollapsibleSection title={t('panels:diagram.pagePane.path', 'Path')}>
+            <ToggleRow
+              label={t('panels:diagram.pagePane.showPath', 'Show path')}
+              checked={page.showPath}
+              disabled={readOnly}
+              onChange={(showPath) => setPage({ showPath }, 'path')}
+            />
+            {page.showPath && (
+              <>
+                <NumberRow
+                  label={t('panels:diagram.pagePane.pathWidthMm', 'Path width (mm)')}
+                  value={page.pathWidthMm}
+                  min={PATH_WIDTH_MM_RANGE.min}
+                  max={PATH_WIDTH_MM_RANGE.max}
+                  step={1}
+                  disabled={readOnly}
+                  onCommit={(pathWidthMm) => setPage({ pathWidthMm }, 'path_width')}
+                  onReset={
+                    page.pathWidthMm !== DEFAULT_PATH_WIDTH_MM
+                      ? () => setPage({ pathWidthMm: DEFAULT_PATH_WIDTH_MM }, 'path_width')
+                      : undefined
+                  }
+                />
+                <DiagramPathColorRow />
+              </>
+            )}
+          </CollapsibleSection>
+        )}
         <CollapsibleSection title={t('panels:diagram.pagePane.headerFooter', 'Header & footer')}>
+          <DiagramTitleRow />
+          <DiagramTitleBlockRows />
           <ToggleRow
-            label={t('panels:diagram.pagePane.title', 'Title')}
-            help={t('panels:diagram.pagePane.titleHelp', 'The diagram’s title, in a tab at the top of every page.')}
+            label={t('panels:diagram.pagePane.title', 'Title tab')}
+            help={
+              // The title block carries the title on the first page, which prints no tab (T-5 A).
+              hasTitleBlock(page)
+                ? t(
+                    'panels:diagram.pagePane.titleHelpWithBlock',
+                    'The diagram’s title, in a tab at the top of every page. On the first page the title block carries it instead.'
+                  )
+                : t('panels:diagram.pagePane.titleHelp', 'The diagram’s title, in a tab at the top of every page.')
+            }
             checked={page.showTitle}
             disabled={readOnly}
             onChange={(showTitle) => setPage({ showTitle }, 'title')}

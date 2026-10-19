@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-16
+
+A new Diagram workspace for printed folding instructions, Pin and Pull tools in Simulate, OBJ export of a simulated fold, and References that reopen as they were saved.
+
+### Added
+
+- Make printed folding instructions in the new **Diagram** workspace. Each step's picture is a pattern from the Edit canvas — shown as its crease pattern, folded (flat, with any of its layer orders, or 3D) or simulated at any fold percentage — a step pulled from References, its marks editable, or a picture of your own (SVG, PNG or JPEG). Turn, rotate or orbit it, spread a flat fold's layers apart so the hidden edges show, and draw the standard symbols: valley, mountain, fold-and-unfold, pleat, push, white and solid arrows — shaped node by node if you like — fold lines, angle bisectors, equal divisions, right angles, circles, stars, eyes, ovals, rectangles, labels, callouts, close-ups, and X-ray windows that show what lies under the top layers; put a mark behind a flap to draw it dotted there; copy, paste and flip marks. Enlarge an area of one step and show the next steps as a window of it. Turn-overs and rotations go between steps, unnumbered. Lay the steps out on A4, A5, B5 or Letter pages, as a grid or a winding flow, the paper kept one size from step to step and zoomed in where the model stays much smaller; give any page its own number of steps and move steps on the page by hand. Open page 1 with a title block — the title, the credits and a description beside the crease pattern, with the finished model in front of it — and export a PDF with the text embedded, or a ZIP of the step pictures. A step linked to a pattern says when the pattern has changed and refreshes on request; moving the pattern on the canvas is not a change.
+- Pin faces in the **Simulate** workspace and fold the rest of the paper around them. A tool rail beside the canvas holds Orbit (O) and Pin (P).
+- Pull the paper open in Simulate with the **Pull** tool (U): pin what should hold still, drag any other part, and it turns about its creases and stays where you let go.
+- Export a simulated fold as **OBJ**, from Simulate and from inline simulations, with texture coordinates taken from the unfolded sheet, so it imports into Blender ready for a texture.
+- Export a paper style from Settings ▸ Paper with an **Export…** button beside Import…; the two slots are now named Display style and Export style.
+
+### Improved
+
+- Reopen a project with the **References** workspace as it was saved — the plan, its settings, the mode, the sheet, the open card and the chosen ways — without planning again.
+- Export each face of a flat folded figure as one editable path, woven flaps included, so reshaping a face in Inkscape moves its fill and outline together.
+- Draw a number field as one joined control, with its unit inside the field.
+- Choose Simulate's render Style (Paper or X-ray) and Color (Paper or Strain) with segmented controls instead of dropdowns.
+- Give the crease-angle popover the same look as the other tool windows.
+- Leave a hidden layer's row blank in the Layers menus, instead of showing its icon as if it were a third state.
+
+### Fixed
+
+- Save and Save As from every workspace when a crease pattern is open on its own. They were greyed out everywhere but Edit.
+- Import SVG reference images on the Edit canvas. Insert ▸ Image and drops offered `.svg` but every SVG failed to load.
+- Fit the View pane's grid scale rows to the pane instead of running past its edge.
+- Fold the same way every time Simulate opens. Whether the opening material push landed before or after the first settle could flip a bistable fold, such as the crane at 60%.
+
 ## [0.5.2] - 2026-10-01
 
 One paper style and one export dialog for every folded surface, other ways to fold a precreasing step, and update checks that work behind a proxy.

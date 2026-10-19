@@ -24,10 +24,11 @@ can obtain the corresponding source code under the same GPL terms.
 ## Third-Party Ports
 
 Beyond TreeMaker, this repository contains Rust/TypeScript ports of four other
-origami tools, and bundles a fifth upstream — ReferenceFinder — as a compiled
-GPL binary rather than a port (its own section below). The four ported upstreams
-are permissively licensed (MIT) and therefore GPL-compatible, so bundling them
-inside the GPL-2.0-or-later whole is allowed. ReferenceFinder is GPL itself, so
+origami tools. It also bundles two upstreams without porting them: Step-Folder /
+DEFOX, whose JavaScript the Defox import runs unchanged (the last row below),
+and ReferenceFinder, as a compiled GPL binary (its own section below). The four
+ported upstreams and Step-Folder are permissively licensed (MIT) and therefore
+GPL-compatible, so bundling them inside the GPL-2.0-or-later whole is allowed. ReferenceFinder is GPL itself, so
 it does not change what kind of whole this is; it is, however, the one component
 whose GPL *version* is not settled. Because the project is GPL v2 **or later**,
 Apache-2.0 components are compatible too (the combined work can be taken as
@@ -42,6 +43,7 @@ copyright/permission notice; keep it in source and binary distributions.
 | Oriedita / Orihime | MIT | `oristudio-cp`, `oristudio-cp-wasm` | MIT OR Apache-2.0 (both) | `crates/oristudio-cp/LICENSE` + `NOTICE` |
 | Flat-Folder (Jason S. Ku) | MIT | `treemaker-flatfold` | MIT OR Apache-2.0 | `crates/treemaker-flatfold/LICENSE-MIT`, `LICENSE-APACHE` + `NOTICE` |
 | Origami Simulator (Amanda Ghassaei) | MIT | `packages/origami-simulator` | MIT | `packages/origami-simulator/LICENSE` + `NOTICE` |
+| Step-Folder / DEFOX (Kei Morisue; origamimagiro) | MIT | Not ported: bundled unchanged as vendored JS (`third_party/step-folder`, including its copy of Flat-Folder's JS) through `apps/web/src/diagram/import/defoxRenderer.js` | MIT (upstream files, unchanged) | `third_party/step-folder/LICENSE` + `NOTICE` |
 
 The individual MIT crate licenses let those crates be reused on their own MIT
 terms; each retains its upstream copyright notice so that reuse stays compliant.
@@ -157,7 +159,7 @@ font may not use a Reserved Font Name ("Source" for the CJK families).
 - Pages and PDFs the app writes embed subsets of them, which the OFL permits:
   a document embedding a font is not a redistribution of the font.
 
-`NOTICE` section 6 carries the copyright lines.
+`NOTICE` section 7 carries the copyright lines.
 
 ## Which Crates Are Actually GPL
 
@@ -228,6 +230,7 @@ published on its own, give it the license text before it goes out.
 | `third_party/box-pleating-studio` | MIT (Mu-Tsun Tsai) | Vendored reference/oracle source for the BP port. Preserve `LICENSE.md`. |
 | `third_party/flat-folder` | MIT (Jason S. Ku) | Vendored reference/oracle source for the flat-fold port. Preserve `LICENSE`. |
 | `third_party/oriedita` | MIT (Oriedita / Orihime) | Vendored reference/oracle source for the CP-editing port. Preserve `LICENSE.md`. |
+| `third_party/step-folder` | MIT (origamimagiro; `src/flatfolder` Jason S. Ku) | Vendored unchanged and bundled into the Defox import worker; not a port. Preserve `LICENSE`, `src/flatfolder/LICENSE` and `src/linefolder/LICENSE.txt`. |
 | `third_party/reference-finder` | GPL — Lang: v2 or later; Tsai/Shavit modifications: v2, or-later unconfirmed | Vendored C++ core compiled to the bundled wasm; not a port. Preserve `LICENSE` and `package.json` (the only file stating a GPL version). See "ReferenceFinder" above. |
 | `apps/web/src/generated/reference-finder/` | Generated GPL wasm | Emscripten build of the vendored source by `scripts/build-reference-finder.mjs`. Ignored by git; distributing any bundle that contains it triggers the GPL source obligations. Corresponding source: the vendored tree, the build script, and `scripts/reference-finder-emsdk.json`. |
 | Upstream `ref.{js,wasm}` fetched by `scripts/build-reference-finder.mjs` (dev fallback) | Upstream's GPL build output | Fetched from the pinned commit and SHA-verified only when `em++` is absent, so `npm run dev` works without Emscripten. **Never deployed**: CI sets `REFERENCE_FINDER_FORCE_SOURCE=1`, so no shipping build can be satisfied by it. |

@@ -3,6 +3,7 @@ import {
   createDiagram,
   createStep,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   stepById,
   type DiagramDocument,
@@ -25,12 +26,13 @@ const undoSteps = () => state().diagramHistory.past.length;
 
 const PLACE: DiagramStepPlace = { frame: [2, 1], text: [0, 1.5], scale: { mmPerUnit: 0.3 } };
 
-/** Steps `s0`… on a 2 × 2 grid, installed as a file would be, with nothing to undo. */
+/** Steps `s0`… on a 2 × 2 grid with no title block, installed as a file would be, with nothing to undo. */
 function install(steps: DiagramStep[], readOnly = false): DiagramDocument {
   const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
     layout: 'grid',
     columns: 2,
     rows: 2,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
   state().installDiagram({ document, readOnly, raw: {} });
   return document;

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { trackDesktopDownload, type DesktopDownloadSurface } from '../../analytics';
 import { desktopBuildLabel, downloadOsLabel } from '../../components/download/desktopBuildLabels';
+import { externalAnchorProps } from '../../components/ui/ExternalAnchor';
 import {
   DESKTOP_BUILDS,
   formatDownloadSize,
@@ -47,17 +48,15 @@ export function DesktopBuildList({ surface }: { surface: DesktopDownloadSurface 
               {group.map((spec) => {
                 const build = shipped.get(spec.id);
                 const size = build ? formatDownloadSize(build.size) : null;
+                const onClick = () => trackDesktopDownload({ build: spec.id, surface });
+                // A resolved build is a file; the fallback is a page, which should not
+                // replace what the visitor was reading.
+                const link = build
+                  ? { href: build.url, rel: 'noreferrer noopener', onClick }
+                  : externalAnchorProps(fallbackUrl, onClick);
                 return (
                   <li key={spec.id}>
-                    <a
-                      className="site-builds__link"
-                      href={build?.url ?? fallbackUrl}
-                      // A resolved build is a file; the fallback is a page, which should not
-                      // replace what the visitor was reading.
-                      target={build ? undefined : '_blank'}
-                      rel="noreferrer noopener"
-                      onClick={() => trackDesktopDownload({ build: spec.id, surface })}
-                    >
+                    <a className="site-builds__link" {...link}>
                       <span className="site-builds__name">{desktopBuildLabel(t, spec.id)}</span>
                       {size && <span className="site-builds__size">{size}</span>}
                     </a>

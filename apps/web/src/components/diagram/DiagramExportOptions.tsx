@@ -6,6 +6,8 @@ import { PRINT_SHOP_BLEED_MM } from '../../diagram/export/diagramPdf';
 import { STEP_FILE_MM_RANGE } from '../../diagram/export/stepFiles';
 import type { DiagramExportBinding } from '../../diagram/export/useDiagramExport';
 import type { DiagramPageSetup } from '../../diagram/document/diagramDocument';
+import { outsideMarginSentence } from '../../diagram/pages/marginLabels';
+import { exportUnfitSentence } from '../../diagram/pages/overflowLabels';
 import { pageSetupSummary, pageSideLabel } from '../../diagram/pages/pageSetupLabels';
 import { zoomSplitSentence } from '../../diagram/pages/zoomSplitLabels';
 import { formatStepNumbers } from '../../diagram/stepNumberList';
@@ -41,6 +43,10 @@ export function DiagramExportOptions({
   // The PDF and the SVG print the pages: a step with no picture is blank space there, not a file left out.
   const printed = pdf || svg;
   const steps = (numbers: readonly number[]) => formatStepNumbers(numbers, i18n.language, t);
+  // The one thing said of a placement: the steps with a part past the margin.
+  const outsideMargin = binding.outsideMargin.length > 0;
+  // And the flow's pages that cannot hold their steps: the automatic layout failing.
+  const overflowing = binding.unfitPages.length > 0;
   const pageSetup = (
     <div className={styles.pageSetup}>
       <span className={styles.setup}>
@@ -195,6 +201,7 @@ export function DiagramExportOptions({
 
       {(binding.empty.length > 0 ||
         binding.cut.length > 0 ||
+        (printed && (outsideMargin || overflowing)) || (!printed && binding.placed > 0) ||
         binding.missing.length > 0 ||
         binding.unavailable ||
         (printed && binding.splits.length > 0) ||
@@ -235,6 +242,13 @@ export function DiagramExportOptions({
                     )}
               </li>
             )}
+            {printed && outsideMargin && (
+              <li data-outside-margin="">{outsideMarginSentence(binding.outsideMargin, t, i18n.language)}</li>
+            )}
+            {printed && overflowing && (
+              <li data-overflow="pages">{exportUnfitSentence(binding.unfitPages, t, i18n.language)}</li>
+            )}
+            {!printed && binding.placed > 0 && <li>{t('dialogs:diagramExport.placementLeftOut', 'Page placements and size pins do not affect step files.')}</li>}
             {binding.empty.length > 0 && (
               <li>{emptySentence(t, printed, steps(binding.empty), binding.empty.length)}</li>
             )}

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowDown, ArrowUp, Trash2, type LucideIcon } from 'lucide-react';
+import { DIAGRAM_ACTION_ICONS } from '../../diagram/actions/diagramActionIcons';
 import { turnLabels } from '../../diagram/actions/diagramTurnActions';
 import { TURN_ROTATION_PRESETS, withTurnDirection, withTurnPreset } from '../../lib/steps/turn';
 import { turnAmountOptions, turnName, turnPlace } from '../../lib/steps/turnWords';
@@ -10,11 +10,9 @@ import { ActionList, type ActionListItem } from '../ui/ActionList';
 import { SegmentedRow } from '../ui/fieldRows';
 import styles from './DiagramTurnPane.module.css';
 
-const VERB_ICONS: Readonly<Record<string, LucideIcon>> = {
-  'move-earlier': ArrowUp,
-  'move-later': ArrowDown,
-  delete: Trash2,
-};
+/** The turn's verbs this pane lists, drawn as the step's same verbs are. */
+const VERBS = ['move-earlier', 'move-later', 'delete'] as const;
+const isListedVerb = (id: string): id is (typeof VERBS)[number] => (VERBS as readonly string[]).includes(id);
 
 /**
  * The Step pane for a turn between steps (D22): what it is and between which
@@ -40,12 +38,12 @@ export function DiagramTurnPane({
   const { t } = useTranslation();
   const where = turnPlace(between, t);
   const verbs: ActionListItem[] = actions.flatMap((action) =>
-    action.kind === 'command' && VERB_ICONS[action.id]
+    action.kind === 'command' && isListedVerb(action.id)
       ? [
           {
             id: action.id,
             label: action.label,
-            icon: VERB_ICONS[action.id]!,
+            icon: DIAGRAM_ACTION_ICONS[action.id],
             disabled: action.disabled,
             hint: action.hint,
             ...(action.danger ? { tone: 'danger' as const } : {}),

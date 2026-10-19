@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { CpGeometryTransport } from '../../engine/oristudioCpGeometry';
 import {
+  chosenSheet,
   referencesSheets,
   resolveSelectedSheet,
+  sameSheetChoice,
   sheetBorderLineIds,
+  sheetChoice,
   sheetLineIds,
   sheetThumbnail,
 } from './referencesSheets';
@@ -148,5 +151,49 @@ describe('sheetThumbnail', () => {
     expect(
       sheetThumbnail(flat, component({ border_segment_indices: [0], segment_indices: [] }))
     ).toBeNull();
+  });
+});
+
+describe('a chosen sheet', () => {
+  const square = (x: number): [number, number][] => [
+    [x, 0],
+    [x + 40, 0],
+    [x + 40, 40],
+    [x, 40],
+  ];
+
+  it('is the same sheet after an edit renumbers the sheets', () => {
+    const before = analysis([
+      component({ id: 0, outline: square(0) }),
+      component({ id: 1, outline: square(100) }),
+    ]);
+    const choice = sheetChoice(before, 1);
+    expect(chosenSheet(before, choice)).toBe(1);
+    // A sheet added above and to the left comes first in reading order now.
+    const after = analysis([
+      component({ id: 0, outline: square(-100) }),
+      component({ id: 1, outline: square(0) }),
+      component({ id: 2, outline: square(100) }),
+    ]);
+    expect(chosenSheet(after, choice)).toBe(2);
+  });
+
+  it('is none when no sheet has its outline any more', () => {
+    const before = analysis([component({ id: 0, outline: square(0) })]);
+    const after = analysis([component({ id: 0, outline: square(5) })]);
+    expect(chosenSheet(after, sheetChoice(before, 0))).toBeNull();
+    expect(chosenSheet(before, null)).toBeNull();
+    expect(sheetChoice(before, 3)).toBeNull();
+  });
+
+  it('is one choice when it names one sheet as it was numbered', () => {
+    const sheets = analysis([
+      component({ id: 0, outline: square(0) }),
+      component({ id: 1, outline: square(100) }),
+    ]);
+    expect(sameSheetChoice(sheetChoice(sheets, 0), sheetChoice(sheets, 0))).toBe(true);
+    expect(sameSheetChoice(sheetChoice(sheets, 0), sheetChoice(sheets, 1))).toBe(false);
+    expect(sameSheetChoice(null, null)).toBe(true);
+    expect(sameSheetChoice(sheetChoice(sheets, 0), null)).toBe(false);
   });
 });

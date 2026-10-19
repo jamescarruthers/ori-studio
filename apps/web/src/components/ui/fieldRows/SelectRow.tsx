@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import { useId, type ComponentPropsWithoutRef } from 'react';
 import { Select, SelectContent, SelectItem, SelectValue } from '../Select';
 import { FieldRow, FieldRowSelectTrigger } from './FieldRow';
 
@@ -20,9 +20,11 @@ export function SelectRow({
   options,
   placeholder,
   disabled,
+  nested,
   title,
   help,
   divider,
+  note,
   onChange,
   onReset,
   contentProps,
@@ -32,27 +34,35 @@ export function SelectRow({
   options: readonly SelectRowOption[];
   placeholder?: string;
   disabled?: boolean;
+  /** A step in, for an option that qualifies the one above it (`FieldRow.nested`). */
+  nested?: boolean;
   title?: string;
   /** What the row means, behind a help mark beside its label: reachable by keyboard and touch, where a title is not. */
   help?: string;
   /** The rule under the row (`FieldRow.divider`). */
   divider?: boolean;
+  /** Why what it is set to shows nothing, under its label, read with it (`FieldRow.note`). */
+  note?: string;
   onChange: (value: string) => void;
   onReset?: () => void;
   contentProps?: Omit<ComponentPropsWithoutRef<typeof SelectContent>, 'children'>;
 }) {
+  const noteId = useId();
   return (
     <FieldRow
       label={label}
       kind="select"
       disabled={disabled}
+      nested={nested}
       title={title}
       help={help}
       divider={divider}
+      noteId={noteId}
+      note={note}
       onReset={onReset}
     >
       <Select value={value ?? ''} onValueChange={onChange} disabled={disabled}>
-        <FieldRowSelectTrigger aria-label={label}>
+        <FieldRowSelectTrigger aria-label={label} aria-describedby={note === undefined ? undefined : noteId}>
           <SelectValue placeholder={placeholder} />
         </FieldRowSelectTrigger>
         <SelectContent {...contentProps}>

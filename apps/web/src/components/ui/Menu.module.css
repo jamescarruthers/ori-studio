@@ -112,6 +112,16 @@ a.item {
   letter-spacing: 0.02em;
 }
 
+/* A check at the row's end, where an icon holds the leading slot: the row's
+   own colour, as a leading check is, since it is the row's state, not a hint. */
+.trailingCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: currentcolor;
+}
+
 .separator {
   height: 1px;
   margin: 4px 6px;

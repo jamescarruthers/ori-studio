@@ -160,6 +160,8 @@
     "home": "在家打印",
     "homeHint": "每页印在一张纸上。",
     "kind": "导出为",
+    "marginStep": "第 {{steps}} 步的部分内容进入了页边距。",
+    "marginSteps": "第 {{steps}} 步的部分内容进入了页边距。",
     "missingFiles": "图解的字体中没有 {{characters}}：文件中会各显示为一个方框。",
     "missingPdf": "图解的字体中没有 {{characters}}，因此无法生成 PDF。请修改文字，或导出步骤文件。",
     "missingSvg": "图解的字体中没有 {{characters}}：SVG 中会交由打开它的应用的字体显示。",
@@ -175,10 +177,12 @@
     "pagerLabel": "{{label}} · 第 {{index}}/{{total}}",
     "pageSetup": "页面设置",
     "pageSetupSummary": "{{size}} {{orientation}} · {{layout}}，{{columns}} × {{rows}}",
+    "pageSetupSummaryFlow_other": "{{size}} {{orientation}} · {{layout}}，每页 {{count}} 步",
     "pdf": "PDF",
     "pdfFailed": "无法生成 PDF：{{message}}",
     "pdfHint": "所有页面，可直接打印。",
     "pdfText": "部分文字无法用图解的字体打印。",
+    "placementLeftOut": "页面排版和固定尺寸不会影响步骤文件。",
     "pngFileTooLarge": "第 {{number}} 步将为 {{width}} × {{height}} 像素，导出为 PNG 过大。请降低分辨率或尺寸。",
     "pngTooLarge": "过大，无法导出为 PNG：{{width}} × {{height}} 像素。请降低分辨率或尺寸。",
     "preparing": "正在准备预览…",
@@ -209,6 +213,8 @@
     "transparent": "透明背景",
     "turnsAndArrowsLeftOut": "翻面、旋转和放大箭头只印在页面上，单步文件中不包含。",
     "turnsLeftOut_other": "步骤之间的 {{count}} 个翻面或旋转会印在页面上，但单步文件中不包含。",
+    "unfitPage": "第 {{pages}} 页即使缩到最小也放不下它的步骤，会超出页边距打印。",
+    "unfitPages": "第 {{pages}} 页即使缩到最小也放不下各自的步骤，会超出页边距打印。",
     "width": "宽度",
     "writingPdf": "正在生成 PDF…"
   },
@@ -440,6 +446,10 @@
         "detail": "箱形褶皱创作方法是 Mu-Tsun Tsai 的 Box Pleating Studio 的 Rust 和 WebAssembly 移植版本。",
         "title": "Mu-Tsun Tsai 和 Box Pleating Studio"
       },
+      "defox": {
+        "detail": "图解工作区中的仿射图层展开基于 Kei Morisue 在 DEFOX 中的仿射变形方法。",
+        "title": "Kei Morisue 与 DEFOX"
+      },
       "explori": {
         "detail": "「搜索 22.5°」创作方法会将你的树发送到 ExplOri（一个可搜索的 22.5° 折痕图存档），并显示它返回的最接近的匹配结果。",
         "title": "Brandon Wong 和 ExplOri 22.5"
@@ -522,6 +532,7 @@
     "empty": "没有可导出的内容：视图中没有纸张。",
     "exporting": "正在导出…",
     "exportingPages": "正在导出第 {{done}} 个，共 {{total}} 个…",
+    "exportObj": "导出 OBJ",
     "exportStyle": "导出样式 · {{style}}",
     "figureMm": "图形尺寸",
     "figureSizeHint": "图形的长边为此尺寸。线条保持原有粗细。",
@@ -534,6 +545,12 @@
     "lettersHint": "步骤所引用的点的名称。",
     "marks": "标记",
     "nextPage": "下一步",
+    "objExpired": "此模拟快照已不可用。请关闭此对话框并重新导出。",
+    "objHint": "带有基于展开纸张的 UV 坐标的 3D 网格，可在您的 3D 软件中添加纹理。",
+    "objMeshUnavailable": "此模拟没有可导出的有效网格。",
+    "objPreview": "捕获的形态 · OBJ 包含完整网格和 UV",
+    "objPreviewEmpty": "无图像预览。仍可导出捕获的 3D 网格。",
+    "objSheetUnavailable": "OBJ 需要在模拟器纸张平面内展开的纸张，才能生成纹理坐标。",
     "padding": "边距",
     "page": "页面",
     "pageMm": "{{width}} × {{height}} mm",

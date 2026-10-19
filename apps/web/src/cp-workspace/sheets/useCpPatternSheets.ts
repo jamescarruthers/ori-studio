@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
-import { segmentSheetThumbnail } from './segmentSheet';
+import { sheetRegions, type CpSheetRegion } from './cpSheetRegions';
+import { linesSheetThumbnail } from './linesSheetThumbnail';
 import type { SheetThumbnail } from './sheetThumbnail';
-import type { FoldArtifacts } from '../../engine/types';
-import { resolveCpSegments, type CpSegment } from '../../lib/creasePatternSegmentation';
-import { useCpSegmentationState } from '../regions/useCpSegmentation';
+import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useCpSheetIndexState } from './useCpSheetIndexState';
 
-/** One pattern a step can be linked to: a region of the open crease pattern. */
+/** One pattern a link can be made to: a sheet of the open crease pattern. */
 export interface CpPatternSheet {
-  segment: CpSegment;
+  sheet: CpSheetRegion;
   thumbnail: SheetThumbnail | null;
 }
 
@@ -18,27 +19,34 @@ export type CpPatternSheets =
   | {
       status: 'ready';
       sheets: readonly CpPatternSheet[];
-      /** The segmentation the sheets are of: what a linked step's own sheet is found in. */
-      artifacts: FoldArtifacts;
+      /** The index the sheets are of: what a linked step's own sheet is found in. */
+      index: CpSheetIndex;
     };
 
+/** What the sheets are while nothing wants them: not worked out. */
+const NOT_WANTED: CpPatternSheets = { status: 'pending' };
+
 /**
- * The patterns of the open crease pattern, for the pattern picker: its
- * regions in the kernel-space segmentation every link is made in (D3), each
- * drawn as the pattern rails draw one. Asked for only while `wanted`.
+ * The patterns of the open crease pattern, for a picker — the Diagram's
+ * pattern picker, Fold's Import CP: the sheets of the index every link is
+ * made in (D3), each drawn from its own lines as the References rail draws
+ * one. Worked out only while `wanted` — drawing every sheet for a picker no
+ * one opened is work for nothing; on a 204-sheet canvas, drawing them from
+ * faces once froze each selection for over a minute.
  */
 export function useCpPatternSheets(wanted: boolean): CpPatternSheets {
-  const segmentation = useCpSegmentationState(wanted);
+  const state = useCpSheetIndexState(wanted);
+  const document = useWorkspaceStore((store) => store.oristudioCpDocument?.document ?? null);
   return useMemo(() => {
-    if (segmentation.status !== 'ready') return segmentation;
-    const { fold } = segmentation.artifacts;
+    if (!wanted) return NOT_WANTED;
+    if (state.status !== 'ready') return state;
     return {
       status: 'ready',
-      sheets: resolveCpSegments(segmentation.artifacts).map((segment) => ({
-        segment,
-        thumbnail: segmentSheetThumbnail(fold, segment),
+      sheets: sheetRegions(state.index).map((sheet) => ({
+        sheet,
+        thumbnail: document ? linesSheetThumbnail(document, sheet.lineIds) : null,
       })),
-      artifacts: segmentation.artifacts,
+      index: state.index,
     };
-  }, [segmentation]);
+  }, [wanted, state, document]);
 }

@@ -35,6 +35,9 @@ export const TurnCard = forwardRef<
     glyph?: string | null;
     selected: boolean;
     tabStop: boolean;
+    /** Its place among the grid's entries and how many there are (`StepCard`). */
+    position?: number;
+    total?: number;
     /** Something dragged over the grid would land here: after the turn. */
     dropTarget?: boolean;
     onSelect: (id: string) => void;
@@ -48,7 +51,7 @@ export const TurnCard = forwardRef<
     deleteLabel?: string;
   }
 >(function TurnCard(
-  { turn, between, glyph, selected, tabStop, dropTarget = false, onSelect, onDelete, deleteLabel },
+  { turn, between, glyph, selected, tabStop, position, total, dropTarget = false, onSelect, onDelete, deleteLabel },
   ref
 ) {
   const { t } = useTranslation();
@@ -63,6 +66,8 @@ export const TurnCard = forwardRef<
       label={turnLabel(turn, between, t)}
       selected={selected}
       tabStop={tabStop}
+      position={position}
+      total={total}
       dropTarget={dropTarget}
       attributes={{ 'data-turn-kind': locked ? 'locked' : turn.kind }}
       title={title}

@@ -13,6 +13,7 @@ import {
   captureStep,
   type CapturedPicture,
   type CpCaptureRuntime,
+  type SheetPaper,
   type SimulateFlat,
 } from '../../diagram/capture/captureFolded';
 import type { KnownCreases } from '../../diagram/capture/captureCreases';
@@ -37,7 +38,12 @@ import {
 import { diagramScenePaintStyle, diagramStyleKey } from '../../diagram/pictures/diagramPaperStyle';
 import { sceneMeasure } from '../../diagram/pictures/paintDiagramStep';
 import { digest } from '../../diagram/pictures/pictureKey';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import {
+  ensureCpSheetArtifacts,
+  ensureCpSheetSimulationArtifacts,
+} from '../../cp-workspace/sheets/cpSheetArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
+import type { CpSheetRegion } from '../../cp-workspace/sheets/cpSheetRegions';
 import { cpAuxLinesKey, NO_AUX_LINES_KEY } from '../../cp-workspace/folded/foldedAuxSource';
 import type {
   OristudioCpDocumentState,
@@ -48,7 +54,7 @@ import { FOLD_RUN_NONE } from '../../lib/foldCancellation';
 import { paperPngSize, paperSvgToPng } from '../../lib/paper/paperPng';
 import type { PaperPage } from '../../lib/paper/paperPage';
 import { pagePtPerPx, paperSceneToSvg } from '../../lib/paper/paperSvg';
-import { buildSegmentSimulationFold, type CpSegment } from '../../lib/creasePatternSegmentation';
+import { buildSegmentSimulationFold, resolveCpSegments } from '../../lib/creasePatternSegmentation';
 import { createCpCaptureRuntime } from './cpFoldRuntimeBindings';
 import type { ProjectDocumentCommit } from './projectDocumentHistory';
 import { landSeededFrame, type LandedFirstFrame } from '../../diagram/zoom/zoomFrames';
@@ -243,7 +249,8 @@ export async function commitStepCapture(
   const current = now.diagram ? stepById(now.diagram, stepId) : null;
   if (now.diagramLoadId !== loadId || !current || current.revision !== revision) return null;
   const join = joinEntry !== undefined && now.diagramHistory.past.at(-1) === joinEntry;
-  // A step enlarged before it had a picture lands its frame on its first, in the same undo step (Revision 2).
+  // A step enlarged before it had a picture lands its frame on its first, or starts whole if that shows another
+  // picture type than its run, in the same undo step (Revision 2; review fix 3).
   let landed = null as LandedFirstFrame | null;
   let replaced = 0;
   const next = commit(
@@ -297,17 +304,18 @@ export async function runDiagramCapture(
   if ('status' in start) return start;
   try {
     const document = start.cp.document;
-    const segmentation = await abandonOnEngineLoss(ensureCpSegmentationArtifacts(document));
+    const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(document));
     const { diagram } = store.get();
     const capture = (runtime: CpCaptureRuntime) =>
       captureStep(runtime, {
         document,
-        segmentation,
+        sheets,
         scope: request.scope,
         known: request.known ?? null,
         render: request.render,
         style: start.style,
         simulateFlat: storeSimulateFlat(store),
+        sheetPaper: storeSheetPaper(store),
         spreadStart: diagram ? spreadStartsFor(diagram, stepId).any : DEFAULT_LAYER_SPREAD,
       });
     const result =
@@ -340,14 +348,14 @@ export async function runDiagramCapture(
 }
 
 /**
- * The simulator's flat sheet for a region (D19), bound to the store: the
- * simulator's own artifacts (the triangulated mesh the region is modelled
- * on, as an inline simulation's is) and its worker, held only for the call.
- * Null when the region has no faces in that mesh.
+ * The simulator's flat sheet for a sheet (D19), bound to the store: the
+ * sheet's own triangulated mesh, as an inline simulation's is, and the
+ * simulator's worker, held only for the call. Null when the sheet has no
+ * faces in that mesh.
  */
 export function storeSimulateFlat(store: DiagramCaptureStore): SimulateFlat {
-  return async (segment, view, style) => {
-    const fold = await storeSimulationFold(store, segment);
+  return async (sheet, view, style) => {
+    const fold = await storeSimulationFold(store, sheet);
     if (!fold) return null;
     const client = retainSimulatorClient();
     try {
@@ -359,17 +367,34 @@ export function storeSimulateFlat(store: DiagramCaptureStore): SimulateFlat {
 }
 
 /**
- * The model the simulator folds for a region, as an inline simulation builds
- * it from the simulator's own artifacts: what a 0% picture is drawn from and
- * what Pose's live simulator loads (D19), so the two are one model. Null when
- * the artifacts cannot be built or the region has no faces in their mesh.
+ * A sheet's paper, from the faces built for it alone (`ensureCpSheetArtifacts`):
+ * the rim of every face, so a hole the kernel left out is left out of the
+ * paper a crease-pattern picture fills, as it was when the paper came from
+ * the whole canvas's faces.
+ */
+export function storeSheetPaper(store: DiagramCaptureStore): SheetPaper {
+  return async (sheet) => {
+    const artifacts = await ensureCpSheetArtifacts(store.get().oristudioCpDocument?.document, sheet.id);
+    return resolveCpSegments(artifacts)[0]?.boundary ?? null;
+  };
+}
+
+/**
+ * The model the simulator folds for a sheet, as an inline simulation builds
+ * it: the sheet's own mesh (`ensureCpSheetSimulationArtifacts`), what a 0%
+ * picture is drawn from and what Pose's live simulator loads (D19), so the
+ * two are one model. Null when the mesh cannot be built or has no faces.
  */
 export async function storeSimulationFold(
   store: DiagramCaptureStore,
-  segment: CpSegment
+  sheet: CpSheetRegion
 ): Promise<FoldDocument | null> {
-  const artifacts = store.get().foldArtifacts ?? (await store.get().ensureFoldArtifacts());
-  if (!artifacts) return null;
+  const artifacts = await ensureCpSheetSimulationArtifacts(
+    store.get().oristudioCpDocument?.document,
+    sheet.id
+  );
+  const [segment] = resolveCpSegments(artifacts);
+  if (!artifacts || !segment) return null;
   const fold = buildSegmentSimulationFold(artifacts, segment);
   return (fold.faces_vertices?.length ?? 0) === 0 ? null : fold;
 }

@@ -1,14 +1,33 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createDiagram, insertSteps, type DiagramStep } from '../document/diagramDocument';
+import {
+  createDiagram,
+  insertSteps,
+  isLockedStep,
+  PAGE_SETTINGS,
+  setPageSetup,
+  stepsOf,
+  type DiagramDocument,
+  type DiagramStep,
+} from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { largestHeld, layoutDiagram, leastOverrunHeld, MEASURE_SETTLED, OVERRUN_SAME_MM, type RoomMeasure } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
+import { packFlowPage } from './flowPacking';
+import { pageLayoutFixtures } from './pageLayouts.fixtures';
+import { adoptPageArrangements } from './pageArrangements';
 import { layoutPicture } from './pagePictures';
+import { paginate } from './pagePlan';
 
 // Every measure counted, each as it was.
 vi.mock('./pagePictures', async (original) => {
   const actual = await original<typeof import('./pagePictures')>();
   return { ...actual, layoutPicture: vi.fn(actual.layoutPicture) };
+});
+
+// And every page packed.
+vi.mock('./flowPacking', async (original) => {
+  const actual = await original<typeof import('./flowPacking')>();
+  return { ...actual, packFlowPage: vi.fn(actual.packFlowPage) };
 });
 
 /** A picture's fit as measured at a scale, and every scale it was measured at. */
@@ -128,7 +147,8 @@ describe('layoutDiagram', () => {
       ...cpStep('step-x'),
       annotations: [{ id: 'a', kind: 'valley-line', from: [0.2, 0.5], to: [0.8, 0.5] }],
     };
-    const document = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), [step], 0);
+    // A grid's cell: a flow step's box is packed round its picture and its marks, which never hang out of it.
+    const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), [step], 0), { layout: 'grid' });
     const line = (grows: number, beyond: number) => ({ grows, beyond });
     /** A unit-square paper picture, its marks `beyond` mm past each side across, shrinking as the paper grows. */
     const square = (beyond: number) => ({
@@ -171,5 +191,112 @@ describe('layoutDiagram', () => {
     const measures = vi.mocked(layoutPicture).mock.calls.map(([step, , , measure]) => `${step.id} ${JSON.stringify(measure)}`);
     expect(measures.length).toBeGreaterThan(steps.length);
     expect(new Set(measures).size).toBe(measures.length);
+  });
+
+  it('packs each flow page once, however often it measures, and lays out the same with that packing adopted', () => {
+    // Pictures whose marks reach past them, so the pages are measured again at the scales they print at.
+    const steps: DiagramStep[] = Array.from({ length: 12 }, (_, index) => ({
+      ...cpStep(`step-${index}`),
+      annotations: [{ id: 'a', kind: 'valley-arrow', from: [0.2, 0.004 + 0.05 * (index % 4)], to: [0.8, 0.004], bend: 0.05 }],
+      text: index % 3 === 0 ? 'Fold the corner up to the top edge, crease firmly, and unfold.' : 'Fold in half.',
+    }));
+    // No title block, so the twelve take two pages of nine.
+    const made = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), steps, 0);
+    const document = setPageSetup(made, { titleBlock: PAGE_SETTINGS.titleBlock.legacy });
+    vi.mocked(packFlowPage).mockClear();
+    const first = layoutDiagram(document, estimateTextSetter);
+    expect(first.pages).toHaveLength(2);
+    expect(vi.mocked(packFlowPage)).toHaveBeenCalledTimes(2);
+    expect(Object.keys(first.packed!)).toEqual(['step-0', 'step-9']);
+    expect(first.pages.map((page) => page.packing!.packed)).toEqual([true, true]);
+    // Adopted, as the store does: every page held, nothing packed, and the pages as they were.
+    vi.mocked(packFlowPage).mockClear();
+    const held = layoutDiagram(adoptPageArrangements(document, first.packed!), estimateTextSetter);
+    expect(vi.mocked(packFlowPage)).not.toHaveBeenCalled();
+    expect(held.packed).toBeUndefined();
+    expect(held.pages.map((page) => page.packing!.packed)).toEqual([false, false]);
+    expect(held.pages.map((page) => [page.cells, page.band, page.turns])).toEqual(first.pages.map((page) => [page.cells, page.band, page.turns]));
+  });
+
+  const fixture = (name: string) => pageLayoutFixtures().find((each) => each.name === name)!.document;
+
+  it('paginates a document by the counts its steps keep, and packs each page for what it is laid out for (`diagram-flow-pages.md`)', () => {
+    // Step 4 starts a page of four and step 11 one of five; the rest fill 9 a page.
+    const document = fixture('flow, pages with their own counts');
+    const layout = layoutDiagram(document, estimateTextSetter);
+    const steps = stepsOf(document);
+    const plan = paginate(steps, document.page);
+    expect(layout.pages.map((page) => page.cells.map((cell) => cell.stepId))).toEqual(
+      plan.map((page) => page.steps.map((index) => steps[index]!.id))
+    );
+    expect(layout.pages.map((page) => page.cells.length)).toEqual([3, 4, 3, 5, 5]);
+    expect(plan.map((page) => page.ownCount)).toEqual([false, true, false, true, false]);
+    layout.pages.forEach((page, index) => {
+      // Packed afresh, in bands in reading order, every box on the page.
+      expect(page.packing, `page ${index + 1}`).toMatchObject({ packed: true, fits: true });
+      const bands = page.cells.map((cell) => cell.band!);
+      expect(bands, `page ${index + 1}`).toEqual([...bands].sort((a, b) => a - b));
+    });
+    expect(Object.keys(layout.packed!)).toEqual(layout.pages.map((page) => page.cells[0]!.stepId));
+    // The last page, automatic, is laid out for 9.
+    expect(plan.at(-1)!.layoutCount).toBe(9);
+    // A grid keeps the counts and does not read them: three pages of 3 × 3, the counts still on their steps.
+    const grid = setPageSetup(document, { layout: 'grid', columns: 3, rows: 3 });
+    expect(layoutDiagram(grid, estimateTextSetter).pages.map((page) => page.cells.length)).toEqual([9, 9, 2]);
+    expect(stepsOf(grid).map((step) => step.pageSteps).filter((count) => count !== undefined)).toEqual([4, 5]);
+  });
+
+  it('moves no other step’s home when a caption grows by lines: its cell, its number, its text’s origin', () => {
+    const long = 'Fold the bottom edge up to the top edge, crease firmly, unfold, then fold both sides in to meet the centre line. '.repeat(3);
+    const homes = (document: DiagramDocument) =>
+      new Map(
+        layoutDiagram(document, estimateTextSetter).pages.flatMap((page) =>
+          page.cells.map(
+            (cell) => [cell.stepId, { cell: cell.cellMm, number: cell.numberAt, text: cell.text, draw: cell.drawMm, scale: cell.mmPerUnit ?? cell.frameMm }] as const
+          )
+        )
+      );
+    let edits = 0;
+    let rescaled = 0;
+    for (const fixture of pageLayoutFixtures()) {
+      const { name } = fixture;
+      // A flow page packed once, and its arrangement adopted, as the store does: then held (`diagram-flow-packing.md`).
+      const document = adoptPageArrangements(fixture.document, layoutDiagram(fixture.document, estimateTextSetter).packed ?? {});
+      const steps = stepsOf(document).filter((step) => !isLockedStep(step));
+      if (steps.length === 0) continue;
+      const before = homes(document);
+      // The first, a middle and the last step.
+      for (const edited of new Set([steps[0]!, steps[Math.floor(steps.length / 2)]!, steps.at(-1)!])) {
+        const longer = { ...document, steps: document.steps.map((entry) => (entry.id === edited.id ? { ...edited, text: long } : entry)) };
+        const after = homes(longer);
+        expect(after.get(edited.id)!.text.lines.length, `${name}: ${edited.id}`).toBeGreaterThan(before.get(edited.id)!.text.lines.length);
+        let redrawn = false;
+        for (const [stepId, home] of before) {
+          const moved = after.get(stepId)!;
+          const label = `${name}: ${stepId}, ${edited.id} edited`;
+          expect(moved.cell, label).toEqual(home.cell);
+          expect(moved.number, label).toEqual(home.number);
+          expect(moved.text.x, label).toBe(home.text.x);
+          expect(moved.text.widthMm, label).toBe(home.text.widthMm);
+          // The edited step's words take room from its own picture.
+          if (stepId === edited.id) continue;
+          // Another's words stay under its picture as drawn. A picture's run is drawn at the scale every
+          // picture in it fits its room at (#436's Fit each), and a picture whose words grow loses the room
+          // under its box they took: its run may then draw a little smaller, and its words start higher.
+          expect(moved.text.firstBaseline - (moved.draw.y + moved.draw.h), label).toBeCloseTo(home.text.firstBaseline - (home.draw.y + home.draw.h), 9);
+          if (moved.scale === home.scale) expect(moved.text.firstBaseline, label).toBe(home.text.firstBaseline);
+          else {
+            // Only a picture of the edited step's run: drawn at its scale before.
+            expect(home.scale, label).toBe(before.get(edited.id)!.scale);
+            redrawn = true;
+          }
+        }
+        edits += 1;
+        if (redrawn) rescaled += 1;
+      }
+    }
+    expect(edits).toBeGreaterThan(20);
+    // Most edits redraw no other picture (6 of the 30 here).
+    expect(rescaled).toBeLessThan(edits / 2);
   });
 });

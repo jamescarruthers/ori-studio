@@ -8,7 +8,7 @@ import type {
   NativeProjectFile,
 } from '../../lib/nativeProjectFile';
 import type { WorkspaceId } from '../../workspaces/workspaces';
-import { diagramDataBytes, discardDiagramState, pickDiagramState } from './diagramState';
+import { diagramDataBytes, discardDiagramState, onlyPackedSince, pickDiagramState } from './diagramState';
 import { discardFoldState, foldSequenceDataBytes, pickFoldState } from './foldState';
 import type { WorkspaceState } from './types';
 
@@ -71,21 +71,34 @@ export interface ProjectDocument<K extends NativeProjectDocumentKey> {
   dataBytes: (state: WorkspaceState) => number;
 }
 
-const DIAGRAM: ProjectDocument<'diagram'> = {
-  key: 'diagram',
+/**
+ * The Diagram's documents: a list in the file (`workspace.diagrams`), of which
+ * the first is shown and edited, and the rest are carried as they came
+ * (`diagramOthers`), so a project holding several loses none of them here.
+ */
+const DIAGRAMS: ProjectDocument<'diagrams'> = {
+  key: 'diagrams',
   landing: 'diagram',
   read: (value) => {
-    const read = readDiagram(value);
-    return { present: read !== null, install: (get) => get().installDiagram(read) };
+    const [shown, ...others] = Array.isArray(value) ? value : [];
+    const read = readDiagram(shown);
+    return { present: read !== null, install: (get) => get().installDiagram(read, others) };
   },
-  write: ({ diagram, diagramReadOnly, diagramRaw }) =>
-    diagram ? writeDiagram(diagram, diagramReadOnly ? diagramRaw : null) : null,
+  // The one shown, then the project's others as they came; none for a project without one.
+  write: ({ diagram, diagramReadOnly, diagramRaw, diagramOthers }) => [
+    ...(diagram ? [writeDiagram(diagram, diagramReadOnly ? diagramRaw : null)] : []),
+    ...diagramOthers,
+  ],
   isPresent: (state) => state.diagram !== null,
-  changedSince: (written, now) => now.diagram !== written.diagram,
+  // A layout's packing adopted since is no edit: the file packs the same when it opens (`onlyPackedSince`).
+  changedSince: (written, now) => !onlyPackedSince(now.diagram, written.diagram),
   discard: discardDiagramState,
   pick: pickDiagramState,
-  // What the file holds: an asset only undo still refers to is not written.
-  dataBytes: ({ diagram }) => diagramDataBytes(diagram && withReferencedAssets(diagram)),
+  dataBytes: ({ diagram, diagramOthers }) =>
+    // What the file holds: an asset only undo still refers to is not written.
+    diagramDataBytes(diagram && withReferencedAssets(diagram)) +
+    // The project's other diagrams are written whole, as they came.
+    diagramOthers.reduce((total, other) => total + JSON.stringify(other).length, 0),
 };
 
 /** Where Fold keeps its reader state in `workspace.viewState` (plan D6). */
@@ -119,7 +132,7 @@ const FOLD_SEQUENCES: ProjectDocument<'foldSequences'> = {
 
 /** Every project document, by its key in the file: a key the file carries with none here is a compile error. */
 const PROJECT_DOCUMENTS: { [K in NativeProjectDocumentKey]: ProjectDocument<K> } = {
-  diagram: DIAGRAM,
+  diagrams: DIAGRAMS,
   foldSequences: FOLD_SEQUENCES,
 };
 

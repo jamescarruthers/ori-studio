@@ -9,6 +9,13 @@ export interface StepCardProps {
   selected: boolean;
   /** Whether this card is the grid's tab stop. */
   tabStop: boolean;
+  /**
+   * Its place among the grid's entries, 1-based, and how many there are: what
+   * a screen reader says of an option while the grid mounts only the rows in
+   * view. Absent, the listbox's mounted options are all there are.
+   */
+  position?: number;
+  total?: number;
   /** Something dragged over the grid would land on this card. */
   dropTarget?: boolean;
   /** The card's accessible name, when it is not named by its parts (`labelledBy`). */
@@ -59,6 +66,8 @@ export const StepCard = forwardRef<HTMLDivElement, StepCardProps>(function StepC
     id,
     selected,
     tabStop,
+    position,
+    total,
     dropTarget = false,
     label,
     labelledBy,
@@ -82,6 +91,8 @@ export const StepCard = forwardRef<HTMLDivElement, StepCardProps>(function StepC
     <div
       ref={ref}
       role="option"
+      aria-posinset={position}
+      aria-setsize={total}
       aria-selected={selected}
       aria-label={label}
       tabIndex={tabStop ? 0 : -1}

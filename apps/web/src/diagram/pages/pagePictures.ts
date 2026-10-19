@@ -26,6 +26,10 @@
  * (`marksTouchingWindow`), so marks copied in from the whole picture cannot
  * shrink it.
  *
+ * An x-ray's window (Revision 3) is drawn on a picture with layers, under the
+ * step's marks, as the canvas draws it (`xray/xrayPaint.ts`), and measured by
+ * its rim; on any other picture it is neither drawn nor measured (R3-18b A).
+ *
  * Everything a picture names by id is renamed under the cell's prefix, so two
  * cells drawn from one asset never share an id on a page. An upload's text is
  * set in the diagram's fonts (`uploadText.ts`), and a picture says what its
@@ -80,7 +84,10 @@ import { storedScene } from '../pictures/pictureFrame';
 import { prefixIds } from '../pictures/prefixIds';
 import { fontFaceId } from '../fonts/diagramFontFaces';
 import { setUploadText } from '../upload/uploadText';
-import type { LayoutCell, LayoutStep, ReachLine, TextSetter } from './diagramPageLayout';
+import { annotatedXRaySurface, xrayPainter } from '../xray/xrayPaint';
+import { pictureExtent, pictureFit, type LayoutCell, type LayoutStep, type ReachLine, type TextSetter } from './diagramPageLayout';
+import type { PageBox } from './pagePlacement';
+import type { PictureAlign } from './titleBlockGeometry';
 
 /** A picture whose size cannot be read: fitted, square. */
 const UNSIZED: NonNullable<LayoutStep['picture']> = {
@@ -137,6 +144,12 @@ interface DrawnPicture extends CellPicture {
  * Null before a layout has found one.
  */
 export type PictureMeasure = { mmPerUnit: number } | { frameMm: number } | null;
+
+/** A measure as a key: one picture measured at it is measured once (`layoutDiagram`). */
+export function measureKey(measure: PictureMeasure): string {
+  if (measure === null) return '';
+  return 'mmPerUnit' in measure ? `p${measure.mmPerUnit}` : `f${measure.frameMm}`;
+}
 
 /** How a picture's own text is set: an upload's runs, its Han in the diagram's style. */
 export interface PictureText {
@@ -286,13 +299,22 @@ function drawingRatio(picture: DiagramStepDiagramPicture, style: DiagramStyle, s
  * `picture` and `frame` are in CSS px at the size the frame prints, which is
  * the size the annotations are drawn at — their marks keep their pt size, so
  * how far they reach depends on it, as a References step's letters do.
- * `layers`, the picture's, draw a mark behind a flap as the page will (15e).
+ * `layers`, the picture's, draw a mark behind a flap as the page will (15e);
+ * an x-ray's window counts by its rim where the page draws it, `xRays` — on a
+ * picture with layers (Revision 3).
  */
-function reachedWith(step: DiagramStep, frame: Rect, picture: Rect, style: DiagramStyle, layers: PictureLayers | null): Rect {
+function reachedWith(
+  step: DiagramStep,
+  frame: Rect,
+  picture: Rect,
+  style: DiagramStyle,
+  layers: PictureLayers | null,
+  xRays: boolean
+): Rect {
   const pictureFrame = frameOf(frame.width, frame.height);
   const framePx = longerOf(frame);
   if (!pictureFrame || !(framePx > 0)) return picture;
-  const reach = annotationReach(annotationDrawing(step.annotations, pictureFrame, framePx, style, layers));
+  const reach = annotationReach(annotationDrawing(step.annotations, pictureFrame, framePx, style, layers), { xRays });
   return union(picture, { ...reach, x: frame.x + reach.x, y: frame.y + reach.y });
 }
 
@@ -364,6 +386,8 @@ export function layoutPicture(
   const view = viewOfStep(step);
   // A flat fold's layers, in the marks' units: a mark behind a flap is drawn dotted under it (15e).
   const layers = annotated ? viewGeometry(view, assets, style).layers : null;
+  // Where an x-ray's window is drawn, it is measured by its rim: on a picture with layers (Revision 3).
+  const xRays = annotated && annotatedXRaySurface(step) !== null;
   /**
    * The picture measured by `at(frameMm)`, which gives the frame and what it
    * reaches with its marks, in px, its frame `frameMm` across its longer
@@ -439,7 +463,7 @@ export function layoutPicture(
       const framePx = mmToCssPx(mm);
       const frame = { x: 0, y: 0, width: (width / longer) * framePx, height: (height / longer) * framePx };
       const inked = grown(frame, inkPx);
-      return { frame, reached: annotated ? reachedWith(step, frame, inked, style, layers) : inked };
+      return { frame, reached: annotated ? reachedWith(step, frame, inked, style, layers, xRays) : inked };
     });
   };
   // An enlarged step is its window (Revision 2), laid out by what of it
@@ -470,7 +494,7 @@ export function layoutPicture(
           height: content.height * unitPx,
         };
         const inked = grown(paper, pen);
-        const inside = marked ? intersection(reachedWith(sizedBy, frame, inked, style, layers), frame) : null;
+        const inside = marked ? intersection(reachedWith(sizedBy, frame, inked, style, layers, xRays), frame) : null;
         return { frame: paper, reached: inside ? union(inked, inside) : inked };
       },
       contentShare
@@ -494,7 +518,7 @@ export function layoutPicture(
         const { drawing, sheet } = stepDiagramBoxes(source.picture, style, mm);
         if (!(longerOf(sheet) > 0)) return null;
         const inked = union(drawing, grown(sheet, ink));
-        return { frame: sheet, reached: annotated ? reachedWith(step, sheet, inked, style, layers) : inked };
+        return { frame: sheet, reached: annotated ? reachedWith(step, sheet, inked, style, layers, xRays) : inked };
       });
     }
     case 'fixed':
@@ -524,6 +548,9 @@ export function cellPicture(
   const layers = hasDrawnAnnotations(step.annotations) ? viewGeometry(viewOfStep(step), assets, style).layers : null;
   // A References picture's sheet: a label's halo is filled with the face it stands on (17b).
   const textPaper = markPaper(step, assets);
+  // Each x-ray's window, on a picture with layers: its picture without its top layers, as the canvas shows it (Revision 3).
+  const xraySurface = annotatedXRaySurface(step);
+  const placing = { paper: textPaper, xRays: xraySurface && xrayPainter(xraySurface, style) };
   // An enlarged step draws its window (Revision 2), a close-up's inside included.
   const zoomed = zoomedSource(step, assets);
   const drawPicture = (inner: Rect, mmPerUnit: number | null, framePt: number | null) =>
@@ -544,11 +571,11 @@ export function cellPicture(
     const drawn = drawPicture(inner, mmPerUnit, frame);
     if (!drawn) return null;
     const framePx = longerOf(drawn.framePt) / PT_PER_CSS_PX;
-    const marks = placeAnnotations(step.annotations, drawn.framePt, framePx, style, layers, textPaper);
+    const marks = placeAnnotations(step.annotations, drawn.framePt, framePx, style, layers, placing);
     if (!marks) return { drawn, marks, reached: drawn.boundsPt };
     if (!zoomed) return { drawn, marks, reached: union(drawn.boundsPt, marks.bounds) };
     const counted =
-      touching === step.annotations ? marks : placeAnnotations(touching, drawn.framePt, framePx, style, layers, textPaper);
+      touching === step.annotations ? marks : placeAnnotations(touching, drawn.framePt, framePx, style, layers, placing);
     const inside = counted ? intersection(counted.bounds, drawn.framePt) : null;
     return { drawn, marks, reached: inside ? union(drawn.boundsPt, inside) : drawn.boundsPt };
   };
@@ -627,6 +654,83 @@ export function cellPicture(
     framePt,
     text: [...usage].map(([face, characters]) => ({ face, characters })),
   };
+}
+
+/**
+ * A step's picture alone, as the first page's title block shows the finished
+ * model (`diagram-title-block.md`, T-10 A): with none of its marks, and an
+ * enlarged step's whole picture rather than its window; as large as fits
+ * `boxMm`, and set to its bottom right — {@link cellPicture} centres a
+ * picture in its room, so the room is first cut to the picture's own extent
+ * there. Null for a step with nothing to draw.
+ */
+export function wholePicture(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  idPrefix: string,
+  text: PictureText,
+  align: PictureAlign = BOTTOM_RIGHT
+): CellPicture | null {
+  const fitted = fittedWhole(step, assets, style, boxMm, align);
+  if (!fitted) return null;
+  const { bare, picture, scale, room } = fitted;
+  const { w: width, h: height } = room;
+  const paper = picture.kind === 'paper';
+  const cell = {
+    pictureMm: { x: room.x, y: room.y, size: Math.min(width, height) },
+    drawMm: room,
+    mmPerUnit: paper ? scale : null,
+    frameMm: paper ? null : scale,
+  };
+  return cellPicture(bare, assets, style, cell, idPrefix, text);
+}
+
+/** Where {@link wholePicture} draws a step's picture in `boxMm`, in mm; null for a step with nothing to draw. */
+export function wholePictureRoom(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  align: PictureAlign = BOTTOM_RIGHT
+): PageBox | null {
+  return fittedWhole(step, assets, style, boxMm, align)?.room ?? null;
+}
+
+/** Where a whole picture stands in its box when nothing says: its bottom right. */
+const BOTTOM_RIGHT: PictureAlign = { x: 1, y: 1 };
+
+/**
+ * A step's picture with none of its marks and no window, the scale that fits it to `boxMm`, and its room there: its
+ * extent, standing at `align` in the box.
+ */
+function fittedWhole(
+  step: DiagramStep,
+  assets: Readonly<Record<string, DiagramAsset>>,
+  style: DiagramStyle,
+  boxMm: PageBox,
+  align: PictureAlign
+) {
+  const { zoom: _window, ...unzoomed } = step;
+  const bare: DiagramStep = { ...unzoomed, annotations: [] };
+  const picture = layoutPicture(bare, assets, style);
+  const scale = picture ? pictureFit(picture, boxMm.w, boxMm.h) : null;
+  if (!picture || scale === null || !(scale > 0)) return null;
+  const { width, height } = pictureExtent(picture, scale);
+  const room: PageBox = { x: boxMm.x + align.x * (boxMm.w - width), y: boxMm.y + align.y * (boxMm.h - height), w: width, h: height };
+  return { bare, picture, scale, room };
+}
+
+/**
+ * A scene drawn by the shared painter into a box on the page, `boxMm`, as
+ * large as its ink fits, centred: its pens their pt widths whatever its size,
+ * and half the widest inside the box. The title block's crease pattern.
+ */
+export function fittedScene(scene: PaperScene, style: PaperStyle, boxMm: PageBox): string {
+  const box = grown({ x: boxMm.x * PT_PER_MM, y: boxMm.y * PT_PER_MM, width: boxMm.w * PT_PER_MM, height: boxMm.h * PT_PER_MM }, -inkPt(style));
+  const { minX, minY, maxX, maxY } = scene.bounds;
+  return placedScene(scene, style, box, fitScale(box, maxX - minX, maxY - minY, null)).markup;
 }
 
 type Rect = { x: number; y: number; width: number; height: number };

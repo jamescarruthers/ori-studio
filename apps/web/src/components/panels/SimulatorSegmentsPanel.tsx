@@ -1,15 +1,13 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Shapes } from 'lucide-react';
-import { segmentSheetThumbnail } from '../../cp-workspace/sheets/segmentSheet';
 import { SheetGrid, type SheetGridItem } from '../../cp-workspace/sheets/SheetGrid';
-import type { FoldDocument } from '../../engine/types';
-import type { CpSegment } from '../../lib/creasePatternSegmentation';
 
 /**
  * Fixed, non-draggable sidebar rendered inside the simulator panel. Lists the
- * document's crease-pattern segments as the shared sheet cards and reports
- * which one was pressed.
+ * document's crease patterns as the shared sheet cards and reports which one
+ * was pressed. What a card shows is the source's (`useSimulateSource`): a sheet
+ * of the index drawn from its lines, or a segment of a design's fold.
  *
  * The same rail the References workspace has (`ReferencesSheetsSidebar`), for
  * the same reason: a document can hold several disjoint patterns and only one
@@ -26,44 +24,22 @@ import type { CpSegment } from '../../lib/creasePatternSegmentation';
  * hides them and the card still shows them. Only the References rail can hide
  * them, and only while its own view does.
  *
- * Presentation only: the segments, which one is active, and a press reports
+ * Presentation only: the cards, which one is active, and a press reports
  * back. What a press *means* is the panel's — a selection beside the canvas
  * on a desktop, and on a phone the detail screen too.
  */
 export interface SimulatorSegmentsSidebarProps {
-  /**
-   * The fold the segments were cut from — the real (untriangulated) crease
-   * fold, not the simulation mesh, so the cards show the actual pattern.
-   */
-  fold: FoldDocument;
-  segments: readonly CpSegment[];
+  patterns: readonly SheetGridItem[];
   selected: number | null;
   onSelect: (id: number) => void;
 }
 
 export const SimulatorSegmentsSidebar = memo(function SimulatorSegmentsSidebar({
-  fold,
-  segments,
+  patterns,
   selected,
   onSelect,
 }: SimulatorSegmentsSidebarProps) {
   const { t } = useTranslation();
-  // Sized in faces, not creases: the fold's edges are split at every crossing,
-  // so a count of them is not the count of drawn lines the References rail
-  // gives the same pattern.
-  const items = useMemo<SheetGridItem[]>(
-    () =>
-      segments.map((segment) => ({
-        id: segment.id,
-        thumbnail: segmentSheetThumbnail(fold, segment),
-        size: t('panels:simulatorSegments.faces', {
-          defaultValue_one: '{{count}} face',
-          defaultValue_other: '{{count}} faces',
-          count: segment.faceIndices.length,
-        }),
-      })),
-    [fold, segments, t]
-  );
 
   return (
     <aside
@@ -73,9 +49,9 @@ export const SimulatorSegmentsSidebar = memo(function SimulatorSegmentsSidebar({
       <div className="segments-sidebar__header">
         <Shapes size={14} />
         <span className="panel-title">{t('panels:simulatorSegments.patterns', 'Patterns')}</span>
-        <span className="segments-sidebar__count">{segments.length}</span>
+        <span className="segments-sidebar__count">{patterns.length}</span>
       </div>
-      <SheetGrid sheets={items} showAux selected={selected} onSelect={onSelect} />
+      <SheetGrid sheets={patterns} showAux selected={selected} onSelect={onSelect} />
     </aside>
   );
 });

@@ -1,7 +1,7 @@
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
 import { cpLinesByIds } from '../../cp-workspace/folded/foldedFigureStaleness';
 import { regionReferenceFor, type RegionReference } from '../../cp-workspace/regions/regionReference';
 import { chooseRegionCreases } from '../../cp-workspace/regions/regionCreases';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { CREASE_PATTERN_DOCUMENT_ID } from '../../lib/nativeProjectDesigns';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { exportOristudioCpDocumentAsFold, exportOristudioCpCreasesAsFold } from '../../store/workspaceStore/oristudioCpRuntime';
@@ -21,8 +21,9 @@ export async function projectCpImport(stepId?: string, region?: RegionReference)
   const revision = projectCpRevision(cp.document);
   const saved = node?.op?.kind === 'cp-jump' ? node.op.source : undefined;
   const selected = saved?.region ?? region;
-  const segmentation = selected ? await ensureCpSegmentationArtifacts(cp.document) : null;
-  const choice = selected ? chooseRegionCreases(cp.document, { kind: 'segment', region: selected }, segmentation,
+  // The sheet the link names, found in the sheet index every link is made in, as a Diagram step's is.
+  const index = selected ? await ensureCpSheetIndex(cp.document) : null;
+  const choice = selected ? chooseRegionCreases(cp.document, { kind: 'segment', region: selected }, index,
     saved?.region ? { fingerprint: saved.revision, drawn: true } : null) : null;
   if (choice && choice.status !== 'found') return null;
   const creases = choice?.status === 'found' ? choice.creases : null;
@@ -42,7 +43,7 @@ export async function projectCpImport(stepId?: string, region?: RegionReference)
     source: { format: 'fold', text },
     link: { documentId: CREASE_PATTERN_DOCUMENT_ID,
       revision: creases?.drawnFingerprint ?? revision,
-      ...(creases ? { region: regionReferenceFor(creases.segment) } : {}),
+      ...(creases ? { region: regionReferenceFor(creases.sheet) } : {}),
     },
     current,
     ...(node && expected ? {

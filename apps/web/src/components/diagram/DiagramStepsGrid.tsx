@@ -11,6 +11,7 @@ import {
 import { GRID_DROP_TARGET } from '../../diagram/upload/useStepPictureDrop';
 import { DIAGRAM_STEPS_ATTRIBUTE } from '../../diagram/actions/diagramShortcuts';
 import type { DiagramCardLinks } from '../../diagram/capture/useCardLinks';
+import type { StepPageFit } from '../../diagram/pages/pageOverflow';
 import { enlargedChips } from '../../diagram/zoom/zoomActions';
 import { StepsGrid, type StepsGridDropTarget } from '../ui/steps/StepsGrid';
 import { DiagramStepCard, DiagramTurnCard } from './DiagramStepCard';
@@ -38,7 +39,7 @@ export function DiagramStepsGrid({
   onOpen,
   onUpload,
   links,
-  textCut,
+  pageFits,
   patternOpen,
   onLink,
   onFromReferences,
@@ -65,8 +66,8 @@ export function DiagramStepsGrid({
   onUpload: (stepId: string) => void;
   /** Each card's link: how it stands, its capture, and a Stop. */
   links: DiagramCardLinks;
-  /** The steps whose instruction the pages cut with "…". */
-  textCut: ReadonlySet<string>;
+  /** What the pages say of each step's place, by its id: its instruction cut with "…". */
+  pageFits: ReadonlyMap<string, StepPageFit>;
   /** A crease pattern is open to link an empty step to. */
   patternOpen: boolean;
   /** Choose a pattern for a step, from a click on its card. */
@@ -87,7 +88,7 @@ export function DiagramStepsGrid({
   onDelete: (id: string) => void;
 }) {
   const { t } = useTranslation();
-  // An enlarged step's chip names the step its area is on (Revision 2).
+  // An enlarged step's chip names the step its area is on (Revision 2), and its well's whether it changed (review fix 4).
   const enlarged = useMemo(() => enlargedChips(entries), [entries]);
   const drop: StepsGridDropTarget | null =
     dropTarget === null ? null : dropTarget === GRID_DROP_TARGET ? { kind: 'grid' } : { kind: 'card', id: dropTarget };
@@ -126,8 +127,9 @@ export function DiagramStepsGrid({
             onOpen={onOpen}
             onUpload={onUpload}
             link={links.statuses.get(slot.entry.id) ?? null}
-            textCut={textCut.has(slot.entry.id)}
-            enlargedFrom={enlarged.get(slot.entry.id)}
+            pageFit={pageFits.get(slot.entry.id) ?? null}
+            enlargedFrom={enlarged.get(slot.entry.id)?.from}
+            areaChanged={enlarged.get(slot.entry.id)?.changed === true}
             capture={links.captures[slot.entry.id] ?? null}
             patternOpen={patternOpen}
             onLink={onLink}

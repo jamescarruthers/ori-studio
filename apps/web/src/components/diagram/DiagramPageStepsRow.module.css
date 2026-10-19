@@ -1,0 +1,29 @@
+/*
+ * The Page pane's count for one flow page (DiagramPageStepsRow.tsx): its field
+ * row without the row's own rule, and a line under it for the "Default" note
+ * or Use default, the two ruled off as one row.
+ */
+.row {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Tucked up into the field row's own bottom padding, so the line reads as the row's. */
+.foot {
+  display: flex;
+  align-items: center;
+  margin-top: calc(-1 * var(--space-1));
+  padding: 0 var(--space-3) var(--space-1);
+}
+
+/* Under the label, as a toggle's "Overridden" is. */
+.note {
+  padding-bottom: var(--space-1);
+  color: var(--text-tertiary);
+  font-size: 0.66rem;
+  line-height: 1.2;
+}
+
+/* Under the stepper: the way back is the value's. */
+.action {
+  margin-left: auto;
+}

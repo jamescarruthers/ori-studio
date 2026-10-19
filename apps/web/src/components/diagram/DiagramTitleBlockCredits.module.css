@@ -1,0 +1,34 @@
+/* The title block's credits in the Page pane (DiagramTitleBlockCredits.tsx),
+   in a stacked row (StackedRow): a line per credit, its label and its value
+   side by side, and the buttons that add. The fields are the panes' own
+   (TextField). */
+.list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The label and the value side by side, as wide as each other: a label as long as
+   "Recommended paper" needs the room as much as a name or a size does. */
+.credit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The live step count in the value's place, with the way to type one instead at its end. */
+.live {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

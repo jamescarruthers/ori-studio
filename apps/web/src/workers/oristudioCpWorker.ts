@@ -3,11 +3,13 @@ import init, {
   cp_operation_descriptors,
   cp_set_cancel_buffer,
   document_geometry,
+  sheet_index,
   document_snapshot,
   document_summary,
   execute_cp_command,
   export_cp,
   export_fold,
+  export_fold_lines,
   export_fold_file,
   export_orh,
   export_share_link,
@@ -35,6 +37,7 @@ import init, {
   load_orh,
   load_ori,
   import_add,
+  append_disjoint,
   insert_line_segments,
   deselect_all,
   preview_cp_command,
@@ -45,6 +48,10 @@ import init, {
   place_circles,
 } from '../generated/oristudio-cp-wasm/oristudio_cp_wasm';
 import type { CpGeometryTransport } from '../engine/oristudioCpGeometry';
+import {
+  sheetIndexTransferables,
+  type CpSheetIndexTransport,
+} from '../engine/oristudioCpSheetIndex';
 import type {
   OristudioCpCommandPayload,
   OristudioCpCommandPreview,
@@ -188,6 +195,10 @@ const api = {
     // Move the buffers to the main thread instead of structured-cloning them.
     return transfer(geometry, geometryTransferables(geometry));
   },
+  async sheetIndex(handle: number): Promise<CpSheetIndexTransport> {
+    const index = await call(() => sheet_index(handle) as CpSheetIndexTransport);
+    return transfer(index, sheetIndexTransferables(index));
+  },
   async restoreFromCompact(handle: number, geometry: CpGeometryTransport): Promise<void> {
     return call(() => restore_from_compact(handle, geometry as unknown as object));
   },
@@ -216,6 +227,9 @@ const api = {
   },
   async deselectAll(handle: number): Promise<number> {
     return call(() => deselect_all(handle));
+  },
+  async appendDisjoint(handle: number, parts: CpGeometryTransport[], replaceStarter: boolean): Promise<[number, number][]> {
+    return call(() => append_disjoint(handle, parts, replaceStarter) as [number, number][]);
   },
   async importAdd(handle: number, importedHandle: number): Promise<number> {
     return call(() => import_add(handle, importedHandle));
@@ -372,6 +386,10 @@ const api = {
   },
   async exportFold(handle: number, texts: FlatText[] = []): Promise<string> {
     return call(() => exportWithTexts(handle, texts, () => export_fold(handle)));
+  },
+  /** Some lines (1-based ids), one sheet's, as compact FOLD JSON: faces only where they meet only at their ends. */
+  async exportFoldLines(handle: number, lineIds: readonly number[]): Promise<string> {
+    return call(() => export_fold_lines(handle, [...lineIds]));
   },
   /** `foldedHandles` names the 3D figures to write as `foldedForm` frames. */
   async exportFoldFile(

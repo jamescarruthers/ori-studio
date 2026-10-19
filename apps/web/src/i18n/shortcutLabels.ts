@@ -146,6 +146,14 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:diagram.toolLabel', 'Label');
     case 'diagram.toolCircle':
       return t('tools:diagram.toolCircle', 'Circle');
+    case 'diagram.toolStar':
+      return t('tools:diagram.toolStar', 'Star');
+    case 'diagram.toolEye':
+      return t('tools:diagram.toolEye', 'Eye');
+    case 'diagram.toolOval':
+      return t('tools:diagram.toolOval', 'Oval');
+    case 'diagram.toolRectangle':
+      return t('tools:diagram.toolRectangle', 'Rectangle');
     case 'diagram.toolRightAngle':
       return t('tools:diagram.toolRightAngle', 'Right Angle');
     case 'diagram.toolCallout':
@@ -160,6 +168,8 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:diagram.toolEnlarge', 'Enlarge');
     case 'diagram.toolEnlargeFrame':
       return t('tools:diagram.toolEnlargeFrame', 'Enlarge in Frame');
+    case 'diagram.toolXRay':
+      return t('tools:diagram.toolXRay', 'X-Ray');
     case 'diagram.flipArc':
       return t('tools:diagram.flipArc', 'Flip Arc');
     case 'diagram.nudgeNodeLeft':
@@ -250,6 +260,25 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
     // The Fold workspace's playback.
     case 'fold.playStep':
       return t('tools:fold.playStep', 'Play Step');
+    // The Pages view's placement keys.
+    case 'diagram.nudgePlacementLeft':
+      return t('tools:diagram.nudgePlacementLeft', 'Nudge Placement Left');
+    case 'diagram.nudgePlacementRight':
+      return t('tools:diagram.nudgePlacementRight', 'Nudge Placement Right');
+    case 'diagram.nudgePlacementUp':
+      return t('tools:diagram.nudgePlacementUp', 'Nudge Placement Up');
+    case 'diagram.nudgePlacementDown':
+      return t('tools:diagram.nudgePlacementDown', 'Nudge Placement Down');
+    case 'diagram.nudgePlacementLeftLarge':
+      return t('tools:diagram.nudgePlacementLeftLarge', 'Nudge Placement Left (Large)');
+    case 'diagram.nudgePlacementRightLarge':
+      return t('tools:diagram.nudgePlacementRightLarge', 'Nudge Placement Right (Large)');
+    case 'diagram.nudgePlacementUpLarge':
+      return t('tools:diagram.nudgePlacementUpLarge', 'Nudge Placement Up (Large)');
+    case 'diagram.nudgePlacementDownLarge':
+      return t('tools:diagram.nudgePlacementDownLarge', 'Nudge Placement Down (Large)');
+    case 'diagram.placementUndo':
+      return t('tools:diagram.placementUndo', 'Cancel Page Placement');
     default:
       return definition.label;
   }
@@ -271,6 +300,8 @@ export function shortcutScopeLabel(t: TFunction, scope: ShortcutScope): string {
       return t('tools:diagram.pathScopeLabel', 'edit path');
     case 'fold':
       return t('tools:fold.scopeLabel', 'fold');
+    case 'diagram-place':
+      return t('tools:diagram.placeScopeLabel', 'place on page');
     default:
       return scope;
   }

@@ -85,6 +85,22 @@ export function isShortcutEditingTarget(target: EventTarget | null): boolean {
 }
 
 /**
+ * Inputs that take no typing. Each keeps the plain keys it moves or toggles
+ * with, but has no ⌘/Ctrl chord of its own: no text to undo, copy or select.
+ */
+const UNTYPED_INPUT_TYPES: ReadonlySet<string> = new Set(['range', 'checkbox', 'radio']);
+
+/**
+ * Does the target own the ⌘/Ctrl chords that edit text, so the app may take
+ * only those declared `inFormControls`? A field you type in, not a slider: a
+ * slider keeps focus after a drag, and ⌘Z there used to undo nothing.
+ */
+function ownsPrimaryChords(target: EventTarget | null): boolean {
+  if (!isShortcutEditingTarget(target)) return false;
+  return !(target instanceof HTMLInputElement && UNTYPED_INPUT_TYPES.has(target.type));
+}
+
+/**
  * Does the target sit inside an open layer — a menu, a Select's listbox, a
  * popover — which owns the keys aimed at it?
  *
@@ -155,8 +171,9 @@ export function handleShortcutKeyDown(
   if (!chord) return false;
   // A form control keeps its keys, except a chord declared `inFormControls`
   // and held with ⌘/Ctrl — so a Save rebound to a bare letter still types it.
-  const inFormControl = isShortcutEditingTarget(event.target);
-  if (inFormControl && !chord.primary) return false;
+  // One that takes no typing has no ⌘/Ctrl chord to keep.
+  if (isShortcutEditingTarget(event.target) && !chord.primary) return false;
+  const ownsChords = ownsPrimaryChords(event.target);
 
   const resolution = {
     overrides: options.overrides,
@@ -166,7 +183,7 @@ export function handleShortcutKeyDown(
   for (const scope of options.scopeStack) {
     const definition = SHORTCUT_DEFINITIONS.find((candidate) => {
       if (candidate.scope !== scope) return false;
-      if (inFormControl && !candidate.inFormControls) return false;
+      if (ownsChords && !candidate.inFormControls) return false;
       return getResolvedShortcuts(candidate.id, resolution).some((shortcut) =>
         keyChordEquals(shortcut, chord)
       );

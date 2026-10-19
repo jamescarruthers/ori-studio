@@ -1,5 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MenuGroupLabel, MenuItem, MenuItemLabel, MenuItemShortcut } from '../ui/Menu';
+import { externalAnchorProps } from '../ui/ExternalAnchor';
 import { useTranslation } from 'react-i18next';
 import { trackDesktopDownload, type DesktopDownloadSurface } from '../../analytics';
 import {
@@ -40,16 +41,13 @@ export function DesktopDownloadMenuItems({
     return (
       <MenuItem asChild>
         <a
-          href={fallbackUrl}
-          target="_blank"
-          rel="noreferrer noopener"
-          onClick={() =>
+          {...externalAnchorProps(fallbackUrl, () =>
             trackDesktopDownload({
               build: 'releases-page',
               surface,
               fallbackReason: 'release_unresolved',
             })
-          }
+          )}
         >
           <MenuItemLabel>
             {t('common:download.allReleases', 'All downloads on GitHub')}

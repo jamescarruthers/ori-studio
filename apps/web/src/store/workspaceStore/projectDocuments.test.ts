@@ -37,7 +37,7 @@ const sequences = (): FoldSequences => readFoldSequences([sequenceValue]);
 
 /** The workspace of a file, as far as the registry reads it. */
 const workspace = (patch: Record<string, unknown> = {}) =>
-  ({ diagram: null, foldSequences: null, viewState: {}, ...patch }) as never;
+  ({ diagrams: [], foldSequences: null, viewState: {}, ...patch }) as never;
 
 describe('the project-document registry', () => {
   it('discards every key scoped to each document, with a fresh load id', () => {
@@ -54,7 +54,7 @@ describe('the project-document registry', () => {
   it('finds nothing in a project without a document, and writes none', () => {
     expect(hasProjectDocument(store())).toBe(false);
     expect(projectDocumentLanding(store())).toBeNull();
-    expect(projectDocumentFileValues(store())).toEqual({ diagram: null, foldSequences: null });
+    expect(projectDocumentFileValues(store())).toEqual({ diagrams: [], foldSequences: null });
     expect(projectDocumentViewState(store())).toEqual({});
     expect(projectDocumentDataBytes(store())).toBe(0);
   });
@@ -66,7 +66,18 @@ describe('the project-document registry', () => {
 
     expect(hasProjectDocument(state)).toBe(true);
     expect(projectDocumentLanding(state)).toBe('diagram');
-    expect(projectDocumentFileValues(state)).toEqual({ diagram: raw, foldSequences: null });
+    expect(projectDocumentFileValues(state)).toEqual({ diagrams: [raw], foldSequences: null });
+  });
+
+  it('writes the diagram shown first, then the project’s others as they came, and counts them', () => {
+    const diagram = createDiagram();
+    const other = { formatVersion: 1, id: 'diagram-2', steps: [] };
+    const state = store({ diagram, diagramOthers: [other] });
+
+    const written = projectDocumentFileValues(state).diagrams;
+    expect(written.map((value) => value.id)).toEqual([diagram.id, 'diagram-2']);
+    expect(written[1]).toBe(other);
+    expect(projectDocumentDataBytes(state)).toBe(JSON.stringify(other).length);
   });
 
   it('finds fold sequences, lands in Fold, and writes them and where the reader was', () => {
@@ -105,15 +116,20 @@ describe('the project-document registry', () => {
     const installed: unknown[] = [];
     const get = () =>
       ({
-        installDiagram: (read: unknown) => installed.push(read),
+        installDiagram: (read: unknown, others: unknown) => installed.push({ read, others }),
         installFoldSequences: (read: unknown, reader: unknown) => installed.push({ read, reader }),
       }) as unknown as WorkspaceState;
-    const some = readProjectDocuments(workspace({ diagram: { id: 'diagram-1', steps: [] } }));
+    const other = { id: 'diagram-2', steps: [] };
+    const some = readProjectDocuments(workspace({ diagrams: [{ id: 'diagram-1', steps: [] }, other] }));
     expect(some.present).toBe(true);
     expect(installed).toEqual([]);
     some.install(get);
+    // The first diagram is shown; the rest are carried as they came.
     expect(installed).toEqual([
-      expect.objectContaining({ readOnly: false, document: expect.objectContaining({ id: 'diagram-1' }) }),
+      {
+        read: expect.objectContaining({ readOnly: false, document: expect.objectContaining({ id: 'diagram-1' }) }),
+        others: [other],
+      },
       { read: [], reader: null },
     ]);
   });

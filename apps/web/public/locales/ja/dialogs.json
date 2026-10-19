@@ -160,6 +160,8 @@
     "home": "家庭で印刷",
     "homeHint": "各ページを1枚ずつに。",
     "kind": "書き出す形式",
+    "marginStep": "ステップ {{steps}} の一部が余白にはみ出しています。",
+    "marginSteps": "ステップ {{steps}} の一部が余白にはみ出しています。",
     "missingFiles": "折り図のフォントには {{characters}} がありません。ファイルではそれぞれ四角で表示されます。",
     "missingPdf": "折り図のフォントには {{characters}} がないため、PDF を作成できません。テキストを変更するか、ステップのファイルを書き出してください。",
     "missingSvg": "折り図のフォントには {{characters}} がありません。SVG では、開いたアプリのフォントで表示されます。",
@@ -175,10 +177,12 @@
     "pagerLabel": "{{label}} · {{total}} 件中 {{index}}",
     "pageSetup": "ページ設定",
     "pageSetupSummary": "{{size}} {{orientation}} · {{layout}}、{{columns}} × {{rows}}",
+    "pageSetupSummaryFlow_other": "{{size}} {{orientation}} · {{layout}}、1ページに {{count}} ステップ",
     "pdf": "PDF",
     "pdfFailed": "PDF を作成できませんでした: {{message}}",
     "pdfHint": "すべてのページを、そのまま印刷できる形で。",
     "pdfText": "一部の文字は折り図のフォントで印刷できません。",
+    "placementLeftOut": "ページ上の配置と固定サイズはステップファイルには反映されません。",
     "pngFileTooLarge": "ステップ {{number}} は {{width}} × {{height}} px になり、PNG には大きすぎます。解像度かサイズを下げてください。",
     "pngTooLarge": "PNG として書き出すには大きすぎます: {{width}} × {{height}} px。解像度かサイズを下げてください。",
     "preparing": "プレビューを準備中…",
@@ -209,6 +213,8 @@
     "transparent": "背景を透明に",
     "turnsAndArrowsLeftOut": "裏返し・回転と拡大の矢印はページにだけ印刷され、ステップごとのファイルには含まれません。",
     "turnsLeftOut_other": "ステップ間の{{count}}件の裏返し・回転はページに印刷されますが、ステップごとのファイルには含まれません。",
+    "unfitPage": "{{pages}} ページは最小サイズでもステップが収まらず、余白の外まで印刷されます。",
+    "unfitPages": "{{pages}} ページは最小サイズでもステップが収まらず、余白の外まで印刷されます。",
     "width": "幅",
     "writingPdf": "PDF を作成中…"
   },
@@ -440,6 +446,10 @@
         "detail": "ボックスプリーツによる作図手法は、蔡牧村の Box Pleating Studio の Rust および WebAssembly への移植です。",
         "title": "蔡牧村と Box Pleating Studio"
       },
+      "defox": {
+        "detail": "図解ワークスペースのアフィン変換によるレイヤー展開は、DEFOX における Kei Morisue のアフィン歪み手法に基づいています。",
+        "title": "Kei Morisue と DEFOX"
+      },
       "explori": {
         "detail": "「22.5° を検索」の作図手法は、ツリーを ExplOri（22.5° の展開図を検索できるアーカイブ）に送信し、返された中で最も近い一致を表示します。",
         "title": "Brandon Wong と ExplOri 22.5"
@@ -522,6 +532,7 @@
     "empty": "書き出すものがありません。ビューに紙が表示されていません。",
     "exporting": "書き出し中…",
     "exportingPages": "{{total}} 件中 {{done}} 件目を書き出し中…",
+    "exportObj": "OBJをエクスポート",
     "exportStyle": "書き出しスタイル · {{style}}",
     "figureMm": "図のサイズ",
     "figureSizeHint": "図の長い辺がこの大きさになります。線の太さは変わりません。",
@@ -534,6 +545,12 @@
     "lettersHint": "ステップが参照する点の名前。",
     "marks": "マーク",
     "nextPage": "次のステップ",
+    "objExpired": "このシミュレーションのキャプチャは利用できなくなりました。このダイアログを閉じて、もう一度エクスポートしてください。",
+    "objHint": "展開した紙に基づくUV座標付きの3Dメッシュです。お使いの3Dソフトでテクスチャを設定できます。",
+    "objMeshUnavailable": "このシミュレーションにはエクスポートできる有効なメッシュがありません。",
+    "objPreview": "キャプチャした形状 · OBJにはメッシュ全体とUVが含まれます",
+    "objPreviewEmpty": "画像プレビューはありません。キャプチャした3Dメッシュはエクスポートできます。",
+    "objSheetUnavailable": "OBJのテクスチャ座標を生成するには、シミュレーターの紙面上に展開した紙が必要です。",
     "padding": "余白",
     "page": "ページ",
     "pageMm": "{{width}} × {{height}} mm",

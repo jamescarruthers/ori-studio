@@ -1,8 +1,9 @@
 /*
  * The Pages view (DiagramPagesView.tsx): the composed pages in a column on the
  * workspace's dark ground, under one camera, with what is only for the screen
- * — the margin guide, the selection, an empty step's box, a cut text's mark —
- * laid over each page rather than drawn into it.
+ * — the margin guide (PageGuide), the selection, an empty step's box
+ * (PagePlaceholder), a cut text's mark — laid over each page rather than
+ * drawn into it.
  */
 .view {
   position: relative;
@@ -60,13 +61,8 @@
   text-align: center;
 }
 
-.guide {
-  position: absolute;
-  border: 1px dashed color-mix(in srgb, var(--accent-primary) 45%, transparent);
-  pointer-events: none;
-}
-
 .cell {
+  z-index: 1;
   position: absolute;
   box-sizing: border-box;
   border-radius: calc(var(--radius) / 2);
@@ -84,6 +80,7 @@
 
 /* A turn's glyph between two pictures (D22), selected as a cell is. */
 .turn {
+  z-index: 2;
   position: absolute;
   box-sizing: border-box;
   border-radius: var(--radius-sm);
@@ -101,6 +98,7 @@
 
 /* An enlarge arrow (Revision 2): a target over it, for the pointer, which selects the step it leads to. */
 .arrow {
+  z-index: 3;
   position: absolute;
   box-sizing: border-box;
   border-radius: var(--radius-sm);
@@ -109,20 +107,6 @@
 
 .arrow:hover {
   background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
-}
-
-/* An empty step's picture box: where its picture will go. */
-.placeholder {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  border: 1px dashed #c4c4bd;
-  border-radius: var(--radius-sm);
-  background: #fafaf7;
-  color: #8f8f88;
-  font-size: 0.7rem;
-  pointer-events: none;
 }
 
 /*
@@ -166,4 +150,9 @@
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* The selected step: a finger on it drags it (`usePagePlacement`), and the camera leaves it alone. */
+.selectedCell {
+  touch-action: none;
 }

@@ -22,7 +22,6 @@ import type { PaperScene } from '../../lib/paper/paperScene';
 import { PT_PER_CSS_PX, pageMarginPt, pagePtPerPx, paperSceneToSvg } from '../../lib/paper/paperSvg';
 import { readPaperScene } from '../../lib/paper/paperSceneValidate';
 import {
-  isLockedStep,
   posedRenderOf,
   type DiagramAsset,
   type DiagramFixedPicture,
@@ -131,7 +130,10 @@ export function sceneMeasure(pattern: boolean): PaperSizeMeasure {
 
 /**
  * What a step's picture is drawn from, or `null` when it has none this build
- * can draw: an empty step, a newer build's, or one whose asset is missing.
+ * can draw: an empty step, one whose asset is missing, or a newer build's
+ * whose picture this build does not read. A newer build's step that it does
+ * read is drawn as any other, and stays locked (decision 2 of the launch
+ * review): what can be done to it is the edit gates' to say.
  */
 export type StepPictureSource =
   | { kind: 'asset'; asset: KnownDiagramAsset; pose: PicturePose }
@@ -144,7 +146,7 @@ export function stepPictureSource(
   assets: Readonly<Record<string, DiagramAsset>>
 ): StepPictureSource | null {
   const { picture, source } = step;
-  if (isLockedStep(step) || !picture) return null;
+  if (!picture) return null;
   switch (picture.kind) {
     case 'asset': {
       const asset = Object.hasOwn(assets, picture.assetId) ? assets[picture.assetId] : undefined;

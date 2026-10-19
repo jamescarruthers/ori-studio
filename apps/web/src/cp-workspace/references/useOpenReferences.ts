@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import type { SelectedSegmentMatch } from '../../lib/creasePatternSelectionSegment';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 /**
@@ -13,7 +12,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
  * lines — equal counts means every line.
  */
 export function selectionCoversEntireCp(
-  match: Pick<SelectedSegmentMatch, 'cpLineIds'> | null,
+  match: { cpLineIds: readonly number[] } | null,
   cpDocument: { crease_pattern: { line_segments: readonly unknown[] } } | null
 ): boolean {
   if (!match || !cpDocument) return false;

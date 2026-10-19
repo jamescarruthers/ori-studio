@@ -20,6 +20,22 @@
 //!   colors: Int32Array,              // one Oriedita colour code per segment
 //!   paper_fallback?: Float64Array,   // [x0, y0, x1, y1]; used when there are no border creases
 //! ): SheetAnalysis;
+//! /** Sheets the caller already found (the CP kernel's sheet index), framed
+//!  *  from their outlines alone: one `Component` per outline, with a frame or
+//!  *  the reason it is refused, and no lines. Sheet `i` is
+//!  *  `outline_coords[2 * outline_offsets[i] .. 2 * outline_offsets[i + 1]]`. */
+//! export function outline_components(
+//!   outline_coords: Float64Array,    // [x, y, …] model space, each ring's first point not repeated
+//!   outline_offsets: Uint32Array,    // sheet count + 1 entries
+//! ): Component[];
+//! /** One sheet the caller found — its outline and only its lines — framed,
+//!  *  merged and probed, as `sheet_frames` does each component. `indices` is
+//!  *  each line's number in the document: every index of the result is one.
+//!  *  The one component's `id` is `id`. */
+//! export function sheet_component(
+//!   id: number, outline: Float64Array,
+//!   segments: Float64Array, colors: Int32Array, indices: Uint32Array,
+//! ): SheetAnalysis;
 //! /** Model point → ReferenceFinder rectangle point for one component's `frame`. */
 //! export function model_to_rf(frame: Frame, x: number, y: number): Float64Array; // [x, y]
 //! /** ReferenceFinder rectangle point → model point. */
@@ -48,6 +64,12 @@
 //!   constructor(segments: Float64Array, colors: Int32Array,
 //!               paper_fallback: Float64Array | undefined, component: number,
 //!               opts_json: string);
+//!   /** The planner over one sheet the caller found, from its outline and
+//!    *  only its lines, as `sheet_component` reads them: what the constructor
+//!    *  does without analysing the whole pattern first. */
+//!   static for_sheet(id: number, outline: Float64Array,
+//!                    segments: Float64Array, colors: Int32Array,
+//!                    indices: Uint32Array, opts_json: string): PrecreasePlanner;
 //!   free(): void;
 //!   /** Status, sheet, target counts and what the exactness policy did. */
 //!   info(): PlannerInfo;
@@ -96,7 +118,10 @@ use oristudio_precrease::drive::DriverState;
 use oristudio_precrease::planner::{Planner, PlannerOptions};
 use oristudio_precrease::sequence::{ExactnessSummary, Status};
 use oristudio_precrease::state::LineTag;
-use oristudio_precrease::{Frame, Line, PrecreaseError, SNAP_RADIUS, Sheet, TOL, analyze};
+use oristudio_precrease::{
+    Component, Frame, Line, PrecreaseError, SNAP_RADIUS, Sheet, TOL, analyze, analyze_sheet,
+    outline_component,
+};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -135,6 +160,49 @@ pub fn sheet_frames(
     install_panic_hook();
     let fallback = parse_paper_fallback(paper_fallback)?;
     let analysis = analyze(segments, colors, fallback).map_err(to_js_precrease_error)?;
+    to_js_value(&analysis)
+}
+
+/// Sheets the caller already found, framed from their outlines alone: one
+/// component per outline, with no lines.
+#[wasm_bindgen]
+pub fn outline_components(
+    outline_coords: &[f64],
+    outline_offsets: &[u32],
+) -> Result<JsValue, JsValue> {
+    install_panic_hook();
+    let points = parse_points(outline_coords, "outline_coords")?;
+    let mut components = Vec::with_capacity(outline_offsets.len().saturating_sub(1));
+    for (id, pair) in outline_offsets.windows(2).enumerate() {
+        let (start, end) = (pair[0] as usize, pair[1] as usize);
+        let outline = points.get(start..end).ok_or_else(|| {
+            js_error(
+                "invalid_input",
+                format!(
+                    "outline {id} spans points {start}..{end} of {}",
+                    points.len()
+                ),
+            )
+        })?;
+        components.push(outline_component(id as u32, outline));
+    }
+    to_js_value(&components)
+}
+
+/// One sheet the caller found — its outline and only its lines — framed,
+/// merged and probed.
+#[wasm_bindgen]
+pub fn sheet_component(
+    id: u32,
+    outline: &[f64],
+    segments: &[f64],
+    colors: &[i32],
+    indices: &[u32],
+) -> Result<JsValue, JsValue> {
+    install_panic_hook();
+    let outline = parse_points(outline, "outline")?;
+    let analysis =
+        analyze_sheet(id, &outline, segments, colors, indices).map_err(to_js_precrease_error)?;
     to_js_value(&analysis)
 }
 
@@ -221,11 +289,27 @@ impl PrecreasePlanner {
                     count: analysis.components.len(),
                 })
             })?;
-        let mut opts = PlannerOptions::from_json(opts_json).map_err(to_js_precrease_error)?;
-        opts.clock = default_clock();
-        Ok(PrecreasePlanner {
-            inner: Planner::new(found, opts),
-        })
+        planner_over(found, opts_json)
+    }
+
+    /// The planner over one sheet the caller found, from its outline and only
+    /// its lines: the constructor's work without analysing the whole pattern.
+    pub fn for_sheet(
+        id: u32,
+        outline: &[f64],
+        segments: &[f64],
+        colors: &[i32],
+        indices: &[u32],
+        opts_json: &str,
+    ) -> Result<PrecreasePlanner, JsValue> {
+        install_panic_hook();
+        let outline = parse_points(outline, "outline")?;
+        let analysis = analyze_sheet(id, &outline, segments, colors, indices)
+            .map_err(to_js_precrease_error)?;
+        let sheet = analysis.components.first().ok_or_else(|| {
+            to_js_precrease_error(PrecreaseError::NoSuchComponent { id, count: 0 })
+        })?;
+        planner_over(sheet, opts_json)
     }
 
     /// Status, sheet, target counts and what the exactness policy did.
@@ -551,6 +635,31 @@ fn parse_frame(frame: JsValue) -> Result<Frame, JsValue> {
         .map_err(|error| to_js_precrease_error(error.into()))
 }
 
+/// A planner over `component`, with the options `opts_json` names.
+fn planner_over(component: &Component, opts_json: &str) -> Result<PrecreasePlanner, JsValue> {
+    let mut opts = PlannerOptions::from_json(opts_json).map_err(to_js_precrease_error)?;
+    opts.clock = default_clock();
+    Ok(PrecreasePlanner {
+        inner: Planner::new(component, opts),
+    })
+}
+
+/// `[x, y, …]` as points: an even count of finite numbers.
+fn parse_points(values: &[f64], name: &str) -> Result<Vec<[f64; 2]>, JsValue> {
+    if !values.len().is_multiple_of(2) {
+        return Err(js_error(
+            "invalid_input",
+            format!("{name} must hold 2 values per point, got {}", values.len()),
+        ));
+    }
+    if let Some(index) = values.iter().position(|v| !v.is_finite()) {
+        return Err(to_js_precrease_error(PrecreaseError::NonFiniteCoordinate {
+            index,
+        }));
+    }
+    Ok(values.chunks_exact(2).map(|p| [p[0], p[1]]).collect())
+}
+
 fn parse_point(x: f64, y: f64) -> Result<[f64; 2], JsValue> {
     if !x.is_finite() || !y.is_finite() {
         return Err(js_error(
@@ -569,6 +678,7 @@ fn to_js_precrease_error(error: PrecreaseError) -> JsValue {
     let code = match error {
         PrecreaseError::MalformedSegments { .. }
         | PrecreaseError::ColorCountMismatch { .. }
+        | PrecreaseError::IndexCountMismatch { .. }
         | PrecreaseError::NonFiniteCoordinate { .. }
         | PrecreaseError::InvalidPaperFallback => "invalid_input",
         PrecreaseError::MalformedLine { .. }

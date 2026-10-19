@@ -53,15 +53,20 @@ describe('a card asked for', () => {
 
 describe('the restore record', () => {
   const restore = () => useWorkspaceStore.getState().referencesRestore;
+  /** A sheet by its outline, as the store holds one. */
+  const sheet = (id: number) => ({
+    boundary: [[{ x: id, y: 0 }, { x: id + 1, y: 0 }, { x: id + 1, y: 1 }, { x: id, y: 1 }]],
+    segmentIdHint: id,
+  });
 
   beforeEach(() => {
     useWorkspaceStore.setState(restoredReferencesState(SAVED, 3, DEFAULT_REFERENCES_SETTINGS));
   });
 
   it('selects the restored sheet without resetting what was restored with it', () => {
-    useWorkspaceStore.getState().commitReferencesRestoredSheet(5);
+    useWorkspaceStore.getState().commitReferencesRestoredSheet(sheet(5));
     const state = useWorkspaceStore.getState();
-    expect(state.referencesSelectedSheet).toBe(5);
+    expect(state.referencesSelectedSheet).toEqual(sheet(5));
     expect(state.referencesView.mode).toBe('sequence');
     expect(state.referencesView.landmarksFirst).toBe(true);
     expect(restore()).toEqual({ loadSerial: 3, sheet: null, card: SAVED.activeCard });
@@ -88,7 +93,7 @@ describe('the restore record', () => {
   });
 
   it('ends when the reader picks a sheet themselves', () => {
-    useWorkspaceStore.getState().setReferencesSelectedSheet(9);
+    useWorkspaceStore.getState().setReferencesSelectedSheet(sheet(9));
     expect(restore()).toEqual({ loadSerial: 3, sheet: null, card: null });
   });
 });

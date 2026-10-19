@@ -10,22 +10,30 @@ import {
   type DiagramStep,
   stepsOf,
 } from '../document/diagramDocument';
-import { cellsPerPage, pageCellMm, pathWidthMm, splitIntoPages } from './diagramPageLayout';
 import type { DiagramStyleChoice } from './diagramStyleChoices';
+import { pageCapacity, paginate } from './pagePlan';
 
 const NO_STEPS: readonly DiagramStep[] = [];
 
 /**
+ * Change the page setup, one undo step, and count which setting changed: the
+ * Page pane's one way to commit a page setting, whichever section it is in.
+ */
+export function setPageSetting(patch: Partial<DiagramPageSetup>, setting: DiagramPageSetting) {
+  if (useWorkspaceStore.getState().setDiagramPage(patch)) trackDiagramPageSetupChanged(setting);
+}
+
+/**
  * The Page pane's store bindings (AGENTS.md › Panel components): the page
- * setup, style and Han style, each change one undo step and one count of
- * which setting changed, and how many pages the steps make.
+ * setup, a flow page's own count of steps, style and Han style, each change
+ * one undo step and one count of which setting changed, and how many pages
+ * the steps make.
  *
  * The flow path's colour is not here: its row binds itself
  * (`usePathColorPick`), so that a pick's moves re-render the row alone.
  */
 export function useDiagramPageSetup() {
   const page = useWorkspaceStore((state) => state.diagram?.page ?? DEFAULT_PAGE_SETUP);
-  const title = useWorkspaceStore((state) => state.diagram?.title ?? '');
   const style = useWorkspaceStore((state) => state.diagram?.style ?? DEFAULT_DIAGRAM_STYLE);
   // A diagram not made yet takes the author's language's, as its first edit will.
   const hanStyle = useWorkspaceStore(
@@ -34,27 +42,24 @@ export function useDiagramPageSetup() {
   );
   const readOnly = useWorkspaceStore((state) => state.diagramReadOnly);
   const steps = useWorkspaceStore((state) => (state.diagram ? stepsOf(state.diagram) : NO_STEPS));
-  const perPage = cellsPerPage(page);
-  const pageCount = useMemo(() => splitIntoPages(steps, perPage).length, [steps, perPage]);
+  // A page without a count of its own holds this many: the grid's readout.
+  const perPage = pageCapacity(page);
+  const pageCount = useMemo(() => paginate(steps, page).length, [steps, page]);
 
-  const setPage = useCallback((patch: Partial<DiagramPageSetup>, setting: DiagramPageSetting) => {
-    if (useWorkspaceStore.getState().setDiagramPage(patch)) trackDiagramPageSetupChanged(setting);
+  /** Give flow page `pageIndex` its own count of steps, or with null return it to the default. */
+  const setPageSteps = useCallback((pageIndex: number, count: number | null) => {
+    if (useWorkspaceStore.getState().setDiagramPageSteps(pageIndex, count)) {
+      trackDiagramPageSetupChanged(count === null ? 'page_steps_reset' : 'page_steps');
+    }
   }, []);
   const setStyle = useCallback((choice: DiagramStyleChoice) => {
     if (useWorkspaceStore.getState().setDiagramStyle(choice.style)) {
-      trackDiagramPageSetupChanged('style', choice.analytics);
+      trackDiagramPageSetupChanged('style', { style: choice.analytics });
     }
   }, []);
   const setHanStyle = useCallback((next: DiagramHanStyle) => {
     if (useWorkspaceStore.getState().setDiagramHanStyle(next)) trackDiagramPageSetupChanged('han_style');
   }, []);
-
-  // The path's width as it prints: the one chosen, or the one the steps give it, to the mm.
-  const pathWidth = useMemo(
-    () => ({ mm: Math.round(pathWidthMm(page, pageCellMm(page, title))), chosen: page.pathWidthMm !== null }),
-    [page, title]
-  );
-  const setPathWidth = useCallback((mm: number | null) => setPage({ pathWidthMm: mm }, 'path_width'), [setPage]);
 
   return {
     page,
@@ -64,10 +69,9 @@ export function useDiagramPageSetup() {
     stepCount: steps.length,
     perPage,
     pageCount,
-    pathWidth,
-    setPage,
+    setPage: setPageSetting,
+    setPageSteps,
     setStyle,
     setHanStyle,
-    setPathWidth,
   };
 }

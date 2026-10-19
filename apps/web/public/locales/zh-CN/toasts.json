@@ -44,6 +44,11 @@
       "someFailed_other": "有 {{count}} 个步骤无法从折叠采集，已略过。",
       "stepGone": "该步骤已不在折叠序列中。"
     },
+    "import": {
+      "otherWorkspaceFirst": "请先在另一个工作区中撤销或重做之后的编辑：此次导入同时更改了编辑和图解。",
+      "restoreFailed": "无法恢复导入的步骤。"
+    },
+    "placementsReflowed_other": "{{count}} 个已移动步骤回到了原来的单元格",
     "references": {
       "addedSteps": "已添加为第 {{first}}–{{last}} 步",
       "addedTurnOvers_other": "已添加 {{count}} 个翻面",
@@ -66,7 +71,15 @@
     "uploadRejected": "不是 Ori Studio 能安全读取的 SVG",
     "uploadTooLarge": "文件过大",
     "uploadUnreadable": "无法读取图片",
-    "uploadUnsupported": "不是图片文件"
+    "uploadUnsupported": "不是图片文件",
+    "zoom": {
+      "updatedList": "已更新放大步骤 {{numbers}}",
+      "updatedOne": "已更新放大步骤 {{number}}",
+      "updatedRange": "已更新放大步骤 {{first}}–{{last}}",
+      "updatedSome": "已更新 {{total}} 个放大步骤中的 {{placed}} 个",
+      "updatedSomeDetail": "其余步骤无法从此区域获取框。",
+      "updateFailed": "无法更新放大步骤"
+    }
   },
   "diagramExport": {
     "saved": "已导出 {{name}}"

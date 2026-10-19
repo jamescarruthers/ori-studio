@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef } from 'react';
+import { memo, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Compass,
@@ -7,6 +7,7 @@ import {
   Lock,
   PenLine,
   PenTool,
+  Pin,
   Rotate3d,
   RotateCcwSquare,
   RotateCw,
@@ -26,9 +27,11 @@ import {
 } from '../../diagram/document/diagramDocument';
 import { DIAGRAM_LINKS } from '../../diagram/capture/diagramLinks';
 import { linkedSourceOf, needsPose, type DiagramLinkStatus } from '../../diagram/capture/linkStatus';
+import type { StepPageFit } from '../../diagram/pages/pageOverflow';
 import { stepPictureSource, type StepPictureSource } from '../../diagram/pictures/paintDiagramStep';
 import { useStepPictureUrl } from '../../diagram/pictures/useStepPictureUrl';
 import { Button } from '../ui/Button';
+import { DiagramPicturePreview } from './DiagramPicturePreview';
 import {
   StepCard,
   StepCardBadge,
@@ -60,22 +63,28 @@ import { capturedStyleChange } from '../../diagram/pictures/lighting';
  * Every card a diagram can change has a Delete over its well's corner, beside
  * Adjust pose and Annotate (D24), and an empty one offers to be a turn instead
  * of a step: Turn over and Rotate, beside the ways to give it a picture.
+ *
+ * Memoized: the virtualized grid hands every card stable props, so an edit to
+ * one step repaints only its own card, not every dense picture beside it.
  */
-export function DiagramStepCard({
+export const DiagramStepCard = memo(function DiagramStepCard({
   step,
   assets,
   style,
   number,
   selected,
   tabStop,
+  position,
+  total,
   dropTarget,
   readOnly,
   onSelect,
   onOpen,
   onUpload,
   link,
-  textCut,
+  pageFit,
   enlargedFrom,
+  areaChanged = false,
   capture,
   patternOpen,
   onLink,
@@ -95,6 +104,9 @@ export function DiagramStepCard({
   selected: boolean;
   /** Whether this card is the grid's tab stop. */
   tabStop: boolean;
+  /** Its place among the grid's entries and how many there are, for a grid that mounts only some. */
+  position?: number;
+  total?: number;
   /** A picture dragged over the grid would land on this card. */
   dropTarget: boolean;
   readOnly: boolean;
@@ -105,13 +117,19 @@ export function DiagramStepCard({
   onUpload: (stepId: string) => void;
   /** How the step's link stands; null for a step that is not linked. */
   link: DiagramLinkStatus | null;
-  /** The pages cut the step's instruction with "…". */
-  textCut: boolean;
+  /** What the pages say of the step's place: its instruction cut with "…"; null where it fits. */
+  pageFit: StepPageFit | null;
   /**
    * An enlarged step (Revision 2): the number of the step its area is on,
    * or null once the area is gone; undefined for a step that is not enlarged.
    */
   enlargedFrom?: number | null;
+  /**
+   * An enlarged step whose area was edited by hand since its frame was
+   * captured from it (review fix 4): "Area changed", after the picture's
+   * own out of date.
+   */
+  areaChanged?: boolean;
   /** The step's capture while one runs, and whether its fold can be stopped. */
   capture: { stoppable: boolean } | null;
   /** A crease pattern is open to link an empty step to. */
@@ -132,11 +150,10 @@ export function DiagramStepCard({
 }) {
   const { t } = useTranslation();
   const labelId = useId();
-  const own = useRef<HTMLDivElement | null>(null);
   const locked = isLockedStep(step);
   const text = step.text.trim();
   const picture = stepPictureSource(step, assets);
-  const url = useStepPictureUrl(own, step, assets, style);
+  const url = useStepPictureUrl(step, assets, style);
   const linked = linkedSourceOf(step);
   const sent = linked?.kind === 'references-step';
   const restyled = capturedStyleChange(step, style);
@@ -154,22 +171,26 @@ export function DiagramStepCard({
         ? linked?.kind === 'fold-step'
           ? t('panels:diagram.fold.cardMissing', 'Step missing')
           : t('panels:diagram.card.missing', 'Pattern missing')
-        : restyled === 'light'
-          ? t('panels:diagram.card.lightingChanged', 'Lighting changed')
-          : restyled === 'style'
-            ? t('panels:diagram.card.styleChanged', 'Style changed')
-            : textCut
-            ? t('panels:diagram.card.textCut', 'Text doesn’t fit')
-            : null;
+        : areaChanged && !locked
+          ? // Its area was moved, resized or re-anchored by hand: the Step pane's Update places it again (review fix 4).
+            t('panels:diagram.card.areaChanged', 'Area changed')
+          : restyled === 'light'
+            ? t('panels:diagram.card.lightingChanged', 'Lighting changed')
+            : restyled === 'style'
+              ? t('panels:diagram.card.styleChanged', 'Style changed')
+              : pageFit === 'text-cut'
+                ? t('panels:diagram.card.textCut', 'Text doesn’t fit')
+                : null;
   // A press must not take focus from the card's keys.
   const keepFocus = (event: { preventDefault: () => void }) => event.preventDefault();
 
   return (
     <StepCard
-      ref={own}
       id={step.id}
       selected={selected}
       tabStop={tabStop}
+      position={position}
+      total={total}
       dropTarget={dropTarget}
       labelledBy={`${labelId}-number ${labelId}-kind${chip ? ` ${labelId}-chip` : ''}${enlargedFrom !== undefined ? ` ${labelId}-enlarged` : ''} ${labelId}-text`}
       title={t('panels:diagram.card.number', 'Step {{number}}', { number })}
@@ -188,6 +209,11 @@ export function DiagramStepCard({
               </span>
             </span>
           )}
+          {(step.place || step.placeNewer) && (
+            <span className={styles.placed} title={t('panels:diagram.placement.placed', 'Placed by hand')} data-placed-badge="">
+              <Pin size={12} aria-label={t('panels:diagram.placement.placed', 'Placed by hand')} />
+            </span>
+          )}
           {linked && (
             <span className={styles.pattern}>
               <PatternThumbnail thumbnail={linked.thumbnail} />
@@ -198,7 +224,7 @@ export function DiagramStepCard({
           </StepCardBadge>
         </>
       }
-      paper={picture !== null && !locked}
+      paper={picture !== null}
       verbs={
         !readOnly && (
           <>
@@ -253,13 +279,25 @@ export function DiagramStepCard({
       onSelect={onSelect}
       onOpen={onOpen}
     >
-      {locked ? (
+      {picture ? (
+        // A newer build's step shows its picture as far as this build reads it (decision 2), badged Newer.
+        url && (
+          <DiagramPicturePreview
+            className={styles.picture}
+            src={url}
+            width={256}
+            height={256}
+            scale={1}
+            autoSize
+            settleMs={0}
+            vectorWhileLoading={false}
+          />
+        )
+      ) : locked ? (
         <StepCardPlaceholder>
           <Lock size={18} aria-hidden="true" />
           {t('panels:diagram.card.locked', 'Made with a newer Ori Studio')}
         </StepCardPlaceholder>
-      ) : picture ? (
-        url && <img className={styles.picture} src={url} alt="" draggable={false} decoding="async" />
       ) : linked ? (
         <StepCardPlaceholder>{t('panels:diagram.card.notCaptured', 'Not captured yet')}</StepCardPlaceholder>
       ) : (
@@ -371,18 +409,20 @@ export function DiagramStepCard({
       )}
     </StepCard>
   );
-}
+});
 
 /**
  * A turn between two steps, in the Diagram's Steps grid (D24): the shared turn
  * card, its glyph drawn in the diagram's pens, as a page prints it.
  */
-export function DiagramTurnCard({
+export const DiagramTurnCard = memo(function DiagramTurnCard({
   turn,
   between,
   style,
   selected,
   tabStop,
+  position,
+  total,
   dropTarget,
   readOnly,
   onSelect,
@@ -395,6 +435,9 @@ export function DiagramTurnCard({
   style: DiagramStyle;
   selected: boolean;
   tabStop: boolean;
+  /** Its place among the grid's entries and how many there are, for a grid that mounts only some. */
+  position?: number;
+  total?: number;
   /** A picture dragged over the grid would land here: a new step after the turn. */
   dropTarget: boolean;
   readOnly: boolean;
@@ -413,18 +456,22 @@ export function DiagramTurnCard({
       glyph={glyph}
       selected={selected}
       tabStop={tabStop}
+      position={position}
+      total={total}
       dropTarget={dropTarget}
       onSelect={onSelect}
       onDelete={readOnly ? undefined : onDelete}
     />
   );
-}
+});
 
 /**
  * What the step is, for its badge: where a linked step comes from and how it
  * is shown, or what an upload is.
  */
 function stepKindLabel(step: DiagramStep, picture: StepPictureSource | null, t: TFunction): string {
+  if (step.importStatus === 'pending') return t('panels:diagram.card.badgePending', 'Fold pending');
+  if (step.importStatus === 'failed') return t('panels:diagram.card.badgeFailed', 'Fold unavailable');
   if (step.source?.kind === 'references-step') return t('panels:diagram.card.badgeReferences', 'References');
   if (step.source?.kind === 'fold-step') {
     // Where it comes from, by its link's descriptor, and how it shows it.
@@ -435,6 +482,8 @@ function stepKindLabel(step: DiagramStep, picture: StepPictureSource | null, t: 
   }
   if (step.source?.kind === 'cp') {
     switch (step.source.render.mode) {
+      case 'defox':
+        return t('panels:diagram.card.badgeDefox', 'Defox');
       case 'crease-pattern':
         return t('panels:diagram.card.badgeCreasePattern', 'Crease pattern');
       case 'folded-flat':

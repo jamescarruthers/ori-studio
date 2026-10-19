@@ -16,6 +16,6 @@ export function useZoomSplitNotice(pages: PreparedDiagramPages | null, document:
   const { language } = i18n;
   return useMemo(() => {
     if (!pages || !document) return null;
-    return zoomSplitSentence(zoomSplits(pages.layout, stepsOf(document)), t, language);
+    return zoomSplitSentence(zoomSplits(pages.layout, stepsOf(document), document.page.layout), t, language);
   }, [pages, document, t, language]);
 }

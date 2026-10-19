@@ -163,6 +163,8 @@
     "home": "Zu Hause",
     "homeHint": "Jede Seite auf ihrem eigenen Blatt.",
     "kind": "Exportieren als",
+    "marginStep": "Ein Teil von Schritt {{steps}} ragt in den Rand.",
+    "marginSteps": "Teile der Schritte {{steps}} ragen in den Rand.",
     "missingFiles": "Die Schriften des Diagramms haben kein {{characters}}: Die Dateien zeigen stattdessen je ein Kästchen.",
     "missingPdf": "Die Schriften des Diagramms haben kein {{characters}}, daher kann kein PDF erstellt werden. Ändere den Text oder exportiere die Schrittdateien.",
     "missingSvg": "Die Schriften des Diagramms haben kein {{characters}}: Das SVG überlässt sie den Schriften des Programms, das es öffnet.",
@@ -180,10 +182,13 @@
     "pagerLabel": "{{label}} · {{index}} von {{total}}",
     "pageSetup": "Seiteneinrichtung",
     "pageSetupSummary": "{{size}} {{orientation}} · {{layout}}, {{columns}} × {{rows}}",
+    "pageSetupSummaryFlow_one": "{{size}} {{orientation}} · {{layout}}, 1 Schritt pro Seite",
+    "pageSetupSummaryFlow_other": "{{size}} {{orientation}} · {{layout}}, {{count}} Schritte pro Seite",
     "pdf": "PDF",
     "pdfFailed": "Das PDF konnte nicht erstellt werden: {{message}}",
     "pdfHint": "Alle Seiten, fertig zum Drucken.",
     "pdfText": "Ein Teil des Textes lässt sich mit den Schriften des Diagramms nicht drucken.",
+    "placementLeftOut": "Die Platzierung und fixierte Größe auf der Seite wirken sich nicht auf Schrittdateien aus.",
     "pngFileTooLarge": "Schritt {{number}} wäre {{width}} × {{height}} px groß, zu groß für ein PNG. Verringere die Auflösung oder die Größe.",
     "pngTooLarge": "Zu groß für den Export als PNG: {{width}} × {{height}} px. Verringere die Auflösung oder die Größe.",
     "preparing": "Vorschau wird vorbereitet …",
@@ -216,6 +221,8 @@
     "turnsAndArrowsLeftOut": "Wendungen und Vergrößerungspfeile werden nur auf die Seiten gedruckt; die Schrittdateien lassen sie weg.",
     "turnsLeftOut_one": "Die Wendung zwischen den Schritten wird auf die Seiten gedruckt; die Schrittdateien lassen sie weg.",
     "turnsLeftOut_other": "Die {{count}} Wendungen zwischen den Schritten werden auf die Seiten gedruckt; die Schrittdateien lassen sie weg.",
+    "unfitPage": "Seite {{pages}} fasst ihre Schritte nicht, nicht einmal in der kleinsten Größe, und wird über ihre Ränder hinaus gedruckt.",
+    "unfitPages": "Die Seiten {{pages}} fassen ihre Schritte nicht, nicht einmal in der kleinsten Größe, und werden über ihre Ränder hinaus gedruckt.",
     "width": "Breite",
     "writingPdf": "PDF wird erstellt …"
   },
@@ -448,6 +455,10 @@
         "detail": "Die Box-Pleating-Autorenmethode ist eine Portierung von Mu-Tsun Tsais Box Pleating Studio nach Rust und WebAssembly.",
         "title": "Mu-Tsun Tsai und Box Pleating Studio"
       },
+      "defox": {
+        "detail": "Die affine Schichtspreizung im Diagramm-Arbeitsbereich basiert auf Kei Morisues affiner Verzerrungsmethode in DEFOX.",
+        "title": "Kei Morisue und DEFOX"
+      },
       "explori": {
         "detail": "Die Autorenmethode „22,5° durchsuchen“ sendet deinen Baum an ExplOri, ein durchsuchbares Archiv von 22,5°-Faltmustern, und zeigt die nächstliegenden Treffer an, die es zurückgibt.",
         "title": "Brandon Wong und ExplOri 22.5"
@@ -535,6 +546,7 @@
     "empty": "Nichts zu exportieren: Die Ansicht zeigt kein Papier.",
     "exporting": "Wird exportiert…",
     "exportingPages": "{{done}} von {{total}} wird exportiert…",
+    "exportObj": "OBJ exportieren",
     "exportStyle": "Exportstil · {{style}}",
     "figureMm": "Figurgröße",
     "figureSizeHint": "Die Figur misst an ihrer längeren Seite diese Größe. Linien behalten ihre Breiten.",
@@ -548,6 +560,12 @@
     "lettersHint": "Die Namen der Punkte, auf die sich ein Schritt bezieht.",
     "marks": "Markierungen",
     "nextPage": "Nächster Schritt",
+    "objExpired": "Diese Momentaufnahme der Simulation ist nicht mehr verfügbar. Schließe diesen Dialog und exportiere erneut.",
+    "objHint": "3D-Netz mit UV-Koordinaten des entfalteten Papiers, bereit zum Texturieren in deiner 3D-Software.",
+    "objMeshUnavailable": "Diese Simulation enthält kein gültiges Netz zum Exportieren.",
+    "objPreview": "Erfasste Form · OBJ enthält das vollständige Netz und UVs",
+    "objPreviewEmpty": "Keine Bildvorschau. Das erfasste 3D-Netz kann trotzdem exportiert werden.",
+    "objSheetUnavailable": "OBJ benötigt ein entfaltetes Blatt in der Papierebene des Simulators, um Texturkoordinaten zu erstellen.",
     "padding": "Rand",
     "page": "Seite",
     "pageMm": "{{width}} × {{height}} mm",

@@ -255,6 +255,20 @@ describe('ContextMenu', () => {
       expect(alias?.querySelector('[data-menu-icon]')?.childElementCount).toBe(0);
     });
 
+    it('draws a check row’s own icon where its check would be, and the check at its end', () => {
+      render(true, [
+        { kind: 'checkbox', id: 'on', label: 'Start a page', icon: <svg data-testid="on" />, checked: true, onToggle: () => {} },
+        { kind: 'checkbox', id: 'off', label: 'Start a page', icon: <svg data-testid="off" />, checked: false, onToggle: () => {} },
+      ]);
+      const [on, off] = checkboxes();
+      expect(on?.querySelector('[data-menu-icon] [data-testid="on"]')).not.toBeNull();
+      expect(on?.getAttribute('aria-checked')).toBe('true');
+      expect(on?.querySelector('[data-menu-check]')?.childElementCount).toBe(1);
+      expect(off?.querySelector('[data-menu-icon] [data-testid="off"]')).not.toBeNull();
+      expect(off?.getAttribute('aria-checked')).toBe('false');
+      expect(off?.querySelector('[data-menu-check]')).toBeNull();
+    });
+
     it('toggles and closes, unless asked to stay open', () => {
       const onToggle = vi.fn();
       const onOpenChange = vi.fn();

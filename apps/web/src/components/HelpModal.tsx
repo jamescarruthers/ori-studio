@@ -6,16 +6,17 @@ import { ISSUES_URL } from '../constants/release';
 import { useDesktopDownloads } from '../platform/useDesktopDownloads';
 import { useHelpStore, type HelpModalKind } from '../store/helpStore';
 import { DesktopDownloadButton } from './download/DesktopDownloadButton';
+import { ExternalAnchor } from './ui/ExternalAnchor';
 import { IconButton } from './ui/IconButton';
 
 function acknowledgements(t: TFunction): Array<{ title: string; href: string; detail: string }> {
   return [
     {
-      title: t('dialogs:help.acknowledgements.treemaker.title', 'Robert J. Lang and TreeMaker 5.0.1'),
-      href: 'https://langorigami.com/article/treemaker/',
+      title: t('dialogs:help.acknowledgements.oriedita.title', 'Oriedita'),
+      href: 'https://github.com/oriedita/oriedita',
       detail: t(
-        'dialogs:help.acknowledgements.treemaker.detail',
-        "TreeMaker's original model code and behavior are the canonical reference for this Rust, WebAssembly, and desktop port."
+        'dialogs:help.acknowledgements.oriedita.detail',
+        'The crease-pattern editor is a Rust and WebAssembly port of the Oriedita editor (itself a fork of Orihime), including its foldability diagnostics, repairs, and file formats.'
       ),
     },
     {
@@ -27,6 +28,14 @@ function acknowledgements(t: TFunction): Array<{ title: string; href: string; de
       ),
     },
     {
+      title: t('dialogs:help.acknowledgements.origamiSimulator.title', 'Amanda Ghassaei and Origami Simulator'),
+      href: 'https://github.com/amandaghassaei/OrigamiSimulator',
+      detail: t(
+        'dialogs:help.acknowledgements.origamiSimulator.detail',
+        "The Simulate workspace folds bases into an interactive 3D model using a TypeScript port of Amanda Ghassaei's Origami Simulator."
+      ),
+    },
+    {
       title: t('dialogs:help.acknowledgements.explori.title', 'Brandon Wong and ExplOri 22.5'),
       href: 'https://225.designorigami.net/',
       detail: t(
@@ -35,19 +44,19 @@ function acknowledgements(t: TFunction): Array<{ title: string; href: string; de
       ),
     },
     {
-      title: t('dialogs:help.acknowledgements.oriedita.title', 'Oriedita'),
-      href: 'https://github.com/oriedita/oriedita',
+      title: t('dialogs:help.acknowledgements.defox.title', 'Kei Morisue and DEFOX'),
+      href: 'https://kei-morisue.github.io/step-folder/',
       detail: t(
-        'dialogs:help.acknowledgements.oriedita.detail',
-        'The crease-pattern editor is a Rust and WebAssembly port of the Oriedita editor (itself a fork of Orihime), including its foldability diagnostics, repairs, and file formats.'
+        'dialogs:help.acknowledgements.defox.detail',
+        'Affine layer spreading in the Diagram workspace is based on Kei Morisue’s affine distortion method in DEFOX.'
       ),
     },
     {
-      title: t('dialogs:help.acknowledgements.origamiSimulator.title', 'Amanda Ghassaei and Origami Simulator'),
-      href: 'https://github.com/amandaghassaei/OrigamiSimulator',
+      title: t('dialogs:help.acknowledgements.treemaker.title', 'Robert J. Lang and TreeMaker 5.0.1'),
+      href: 'https://langorigami.com/article/treemaker/',
       detail: t(
-        'dialogs:help.acknowledgements.origamiSimulator.detail',
-        "The Simulate workspace folds bases into an interactive 3D model using a TypeScript port of Amanda Ghassaei's Origami Simulator."
+        'dialogs:help.acknowledgements.treemaker.detail',
+        "TreeMaker's original model code and behavior are the canonical reference for this Rust, WebAssembly, and desktop port."
       ),
     },
   ];
@@ -144,9 +153,7 @@ function AboutModal() {
               leans heavily on ports of existing origami tools created by the community — the
               Edit workspace, for instance, is a port of Oriedita to Rust, focused on usability
               and performance. If you have any suggestions, feel free to{' '}
-              <a href={ISSUES_URL} target="_blank" rel="noreferrer noopener">
-                open an issue on GitHub
-              </a>
+              <ExternalAnchor href={ISSUES_URL}>open an issue on GitHub</ExternalAnchor>
               .
             </Trans>
           </p>
@@ -160,19 +167,13 @@ function AboutModal() {
         <h3>{t('dialogs:help.about.acknowledgements', 'Acknowledgements')}</h3>
         <div className="about-modal__ack-list">
           {ackList.map((item) => (
-            <a
-              key={item.title}
-              className="about-modal__ack"
-              href={item.href}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
+            <ExternalAnchor key={item.title} className="about-modal__ack" href={item.href}>
               <strong>
                 {item.title}
                 <ExternalLink size={13} aria-hidden="true" />
               </strong>
               <p>{item.detail}</p>
-            </a>
+            </ExternalAnchor>
           ))}
         </div>
       </section>

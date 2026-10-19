@@ -226,6 +226,118 @@ describe('a crease pattern put on its back’s colour (Front | Back)', () => {
     expect(back.annotations).toEqual(marks);
     expect(back.annotatedPictureKey).toBe('scene-back');
   });
+
+});
+
+/** A scene mirrored side to side about its origin, as a crease pattern turned over is drawn. */
+function mirrored(scene: PaperScene): PaperScene {
+  const point = ([x, y]: ScenePoint): ScenePoint => [-x + 0, y];
+  const items = scene.items.map((item): PaperItem =>
+    item.kind === 'face'
+      ? { ...item, rings: item.rings.map((ring) => ring.map(point)) }
+      : item.kind === 'line'
+        ? { ...item, a: point(item.a), b: point(item.b) }
+        : item
+  );
+  const { minX, minY, maxX, maxY } = scene.bounds;
+  return { ...scene, items, bounds: { minX: -maxX + 0, minY, maxX: -minX + 0, maxY } };
+}
+
+// Zach, 2026-10-12: "the lines should also mirror... basically it's like flipping the paper over for real."
+describe('a crease pattern turned over on its back (Flip creases)', () => {
+  /** The crane's step 4, on its back, and turned over: its turn run the other way. */
+  const BACK = { mode: 'crease-pattern' as const, rotationDeg: 315, side: 'back' as const };
+  const OVER = { mode: 'crease-pattern' as const, rotationDeg: 45, side: 'back' as const, flipCreases: true as const };
+  const DRAWN: KnownDiagramAnnotation[] = [
+    { id: 'valley', kind: 'valley-line', from: [0.1, 0.3], to: [0.7, 0.3] },
+    { id: 'arrow', kind: 'mountain-arrow', from: [0.1, 0.6], to: [0.4, 0.6], bend: 0.1 },
+    { id: 'over', kind: 'turn-over', from: [0.5, 0.5], to: [0.5, 0.5], axis: 'vertical' },
+    { id: 'words', kind: 'label', from: [0.2, 0.8], to: [0.2, 0.8], text: 'Fold' },
+  ];
+
+  /** The two pictures: the turned-over one the first mirrored, as `creasePatternScene` draws it. */
+  function pictures() {
+    const before = scenePicture('scene-back');
+    const scene = storedScene(before)!;
+    const after = { ...before, sceneJson: storedSceneJson(mirrored(scene))!, key: 'scene-over' };
+    return { before, after, scene };
+  }
+
+  it('mirrors every mark with the picture, side to side as it is shown, and names its folds from the other side', () => {
+    const { before, after, scene } = pictures();
+    const over = stepsIn(
+      setLinkedPicture(annotated(cpStep('step-1', BACK, before), DRAWN), 'step-1', { source: cpSource(OVER), picture: after })
+    )[0]!;
+    const marks = over.annotations as KnownDiagramAnnotation[];
+    // A valley is a mountain from the back, and a mountain a valley; a turn-over and words keep their kind.
+    expect(marks.map((mark) => mark.kind)).toEqual(['mountain-line', 'valley-arrow', 'turn-over', 'label']);
+    // Where each was on the paper, mirrored within the picture's frame.
+    const { minX, minY, maxX, maxY } = scene.bounds;
+    const width = (maxX - minX) / Math.max(maxX - minX, maxY - minY);
+    marks.forEach((mark, index) => {
+      close(mark.from, [width - DRAWN[index]!.from[0], DRAWN[index]!.from[1]]);
+      close(mark.to, [width - DRAWN[index]!.to[0], DRAWN[index]!.to[1]]);
+    });
+    // An arc bulges the other way, and a mirror side to side turns no turn-over's axis — not even at an eighth.
+    expect(marks[1]!.bend).toBe(-0.1);
+    expect(marks[2]!.axis).toBe('vertical');
+    expect(marks[3]!.text).toBe('Fold');
+    expect(over.annotatedPictureKey).toBe('scene-over');
+    expect(annotationsOutOfStep(over)).toBe(false);
+  });
+
+  it('brings every mark back, named as it was drawn, when it is turned back', () => {
+    const { before, after } = pictures();
+    const document = annotated(cpStep('step-1', BACK, before), DRAWN);
+    const over = stepsIn(setLinkedPicture(document, 'step-1', { source: cpSource(OVER), picture: after }))[0]!;
+    const back = stepsIn(setLinkedPicture({ ...document, steps: [over] }, 'step-1', { source: cpSource(BACK), picture: before }))[0]!;
+    const marks = back.annotations as KnownDiagramAnnotation[];
+    expect(marks.map(({ from: _from, to: _to, ...rest }) => rest)).toEqual(DRAWN.map(({ from: _from, to: _to, ...rest }) => rest));
+    marks.forEach((mark, index) => {
+      close(mark.from, DRAWN[index]!.from);
+      close(mark.to, DRAWN[index]!.to);
+    });
+    expect(back.annotatedPictureKey).toBe('scene-back');
+  });
+
+  it('turns them over when the back brings back Flip creases kept on the front, and back when the front lets it go', () => {
+    const { before, after } = pictures();
+    // The front, Flip creases kept and drawing nothing, at the turn the back undoes.
+    const front = { mode: 'crease-pattern' as const, rotationDeg: 315, flipCreases: true as const };
+    const document = annotated(cpStep('step-1', front, before), DRAWN);
+    const over = stepsIn(setLinkedPicture(document, 'step-1', { source: cpSource(OVER), picture: after }))[0]!;
+    expect((over.annotations as KnownDiagramAnnotation[]).map((mark) => mark.kind)).toEqual([
+      'mountain-line',
+      'valley-arrow',
+      'turn-over',
+      'label',
+    ]);
+    const again = stepsIn(setLinkedPicture({ ...document, steps: [over] }, 'step-1', { source: cpSource(front), picture: before }))[0]!;
+    (again.annotations as KnownDiagramAnnotation[]).forEach((mark, index) => {
+      expect(mark.kind).toBe(DRAWN[index]!.kind);
+      close(mark.from, DRAWN[index]!.from);
+    });
+  });
+
+  it('turns no turn-over’s axis through a turn-over and back at any turn, and turns it with a quarter turn after', () => {
+    const { before, after, scene } = pictures();
+    const turn = { ...before, sceneJson: storedSceneJson(turned(mirrored(scene), 90))!, key: 'scene-over-turned' };
+    for (const rotationDeg of [0, 30, 45, 135, 225, 315]) {
+      const was = { ...BACK, rotationDeg };
+      const is = { ...OVER, rotationDeg: (360 - rotationDeg) % 360 };
+      const document = annotated(cpStep('step-1', was, before), [DRAWN[2]!]);
+      const over = stepsIn(setLinkedPicture(document, 'step-1', { source: cpSource(is), picture: after }))[0]!;
+      expect((over.annotations[0] as KnownDiagramAnnotation).axis).toBe('vertical');
+      // A quarter turn of the turned-over picture turns it as a quarter turn of any picture does.
+      const quarter = stepsIn(
+        setLinkedPicture({ ...document, steps: [over] }, 'step-1', {
+          source: cpSource({ ...is, rotationDeg: (is.rotationDeg + 90) % 360 }),
+          picture: turn,
+        })
+      )[0]!;
+      expect((quarter.annotations[0] as KnownDiagramAnnotation).axis).toBe('horizontal');
+    }
+  });
 });
 
 /** A scene turned clockwise about its origin, as a linked capture turns its pattern. */

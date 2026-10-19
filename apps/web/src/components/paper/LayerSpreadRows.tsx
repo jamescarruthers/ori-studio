@@ -18,6 +18,8 @@ import type {
   LayerSpreadToggle,
 } from '../../cp-workspace/folded/layerSpreadControls';
 import { SPREAD_AMOUNT_RANGE, SPREAD_AXIS_RANGE } from '../../cp-workspace/folded/layerSpreadSettings';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { AffineSpreadCredit } from './AffineSpreadCredit';
 import { IconButton } from '../ui/IconButton';
 import { FieldRow, SegmentedRow, SliderRow, ToggleRow } from '../ui/fieldRows';
 import styles from './LayerSpreadRows.module.css';
@@ -80,15 +82,19 @@ export function LayerSpreadRows({
       />
       {spread && shown && (
         <>
-          <SegmentedRow
-            label={t('panels:diagram.pose.spreadKind', 'Spread by')}
-            value={shown.kind}
-            options={spread.kinds.map(({ value, label }) => ({ id: value, label }))}
-            disabled={spread.disabled}
-            title={spread.hint}
-            // Waiting for a capture, a choice refuses, as the verb does.
-            onChange={(value) => choose(spread.kinds, value)}
-          />
+          <FieldRow label={t('panels:diagram.pose.spreadKind', 'Spread by')} kind="segmented" title={spread.hint}>
+            <span className={styles.kind}>
+              <SegmentedControl
+                size="sm"
+                aria-label={t('panels:diagram.pose.spreadKind', 'Spread by')}
+                value={shown.kind}
+                options={spread.kinds.map(({ value, label }) => ({ value, label }))}
+                disabled={spread.disabled}
+                onChange={(value) => choose(spread.kinds, value)}
+              />
+              <AffineSpreadCredit />
+            </span>
+          </FieldRow>
           <SliderRow
             label={t('panels:diagram.pose.spreadAmount', 'Amount')}
             ariaLabel={t('panels:diagram.pose.spreadAmountName', 'Spread amount')}

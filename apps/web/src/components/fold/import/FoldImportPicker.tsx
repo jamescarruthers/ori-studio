@@ -84,9 +84,9 @@ export function FoldImportPicker({
           <div className={styles.cards}>
             {sheets.sheets.map((sheet, index) => {
               const name = t('panels:diagram.picker.pattern', 'Pattern {{number}}', { number: index + 1 });
-              return <button key={sheet.segment.id} type="button" className={styles.card}
+              return <button key={sheet.sheet.id} type="button" className={styles.card}
                 aria-label={name} disabled={busy}
-                onClick={() => onRequest({ kind: 'project-cp', region: regionReferenceFor(sheet.segment) })}>
+                onClick={() => onRequest({ kind: 'project-cp', region: regionReferenceFor(sheet.sheet) })}>
                 <span className={styles.picture}>
                   {sheet.thumbnail && <PatternThumbnail thumbnail={sheet.thumbnail} auxInk="aux" />}
                 </span>

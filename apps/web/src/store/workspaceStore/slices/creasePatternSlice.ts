@@ -1,5 +1,6 @@
 import { flushPendingEdits } from '../../../lib/pendingEdits';
 import { patchTreemakerDesign, selectDesignViewportFitRequestId, selectProject } from '../designTabs';
+import { withCpHistoryEntry } from '../cpHistory';
 import {
   NO_CP_VERTEX_PINS,
   removeCpVertexPinsInBox,
@@ -34,7 +35,6 @@ import {
   buildSegmentSimulationFold,
   resolveCpSegments,
 } from '../../../lib/creasePatternSegmentation';
-import { segmentContainedLineIds } from '../../../lib/creasePatternSelectionSegment';
 import { MAX_CONCURRENT_SIMULATIONS } from '../../../simulator/simulatorLimits';
 import {
   createInlineSimulation,
@@ -50,11 +50,13 @@ import {
 } from '../../../cp-workspace/inlineSimulation/inlineSimulationRuntime';
 import { nextInlineSimulationId } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
 import { resolveInlineSimulationRegion } from '../../../cp-workspace/inlineSimulation/resolveSimulationRegion';
+import { regionReferenceFor } from '../../../cp-workspace/regions/regionReference';
+import { sheetRegions } from '../../../cp-workspace/sheets/cpSheetRegions';
+import { ensureCpSheetSimulationArtifacts } from '../../../cp-workspace/sheets/cpSheetArtifacts';
+import type { CpSheetRegion } from '../../../cp-workspace/sheets/cpSheetRegions';
+import { ensureCpSheetIndex } from '../../../cp-workspace/sheets/cpSheetIndex';
 import { DEFAULT_SIMULATOR_VIEW } from '../../../simulator/SimulatorViewport';
-import {
-  aabbInFrame,
-  boxAabbInFrame,
-} from '../../../cp-workspace/canvasObjects/placeBesideCp';
+import { occupiedModelSpace } from '../occupiedModelSpace';
 import { uprightRotationForView } from '../../../cp-workspace/annotations/annotationTransform';
 import { cpOverlayViewStore } from '../../../cp-workspace/cpOverlayViewStore';
 import {
@@ -63,9 +65,7 @@ import {
 } from '../../../cp-workspace/diagnostics/checkSuppression';
 import { countCpDiagnosticErrors } from '../../../cp-workspace/diagnostics/severity';
 import { visibleCpDiagnosticEntries } from '../../../cp-workspace/diagnostics/visibleEntries';
-import { foldedFigureUserAabb } from '../../../cp-workspace/adapters/cpFoldedToScene';
-import { cpSelectionSize, cpSvgToModel } from '../../../lib/creasePatternViewport';
-import type { Aabb } from '../../../cp-workspace/picking/lineHitIndex';
+import { cpSelectionSize } from '../../../lib/creasePatternViewport';
 import { foldArtifactsFromFold, warnIfFacesWereInferred } from '../../../lib/creasePatternImport';
 import {
   generatedCpLineage,
@@ -270,9 +270,6 @@ async function requestFold3dRefusal(notice: Fold3dRefusalNotice): Promise<Fold3d
   return picked === 'locate' || picked === 'simulate' ? picked : 'cancel';
 }
 
-/** Cap on the CP undo stack (matches historySlice's MAX_HISTORY). */
-const MAX_CP_HISTORY = 100;
-
 // Dedupe concurrent `ensureEditCreasePattern` calls (e.g. React StrictMode
 // double-invoking the seeding effect) so only one blank document is created.
 let ensureEditInFlight: Promise<void> | null = null;
@@ -282,57 +279,6 @@ let ensureEditInFlight: Promise<void> | null = null;
  * model key and the worker's prepared-model cache cannot serve the old mesh.
  */
 const inlineSimulationRevisions = new Map<string, number>();
-
-/**
- * What is already on the canvas, in crease-pattern model coordinates, so a new
- * window parks clear of all of it rather than only of its own kind.
- *
- * Folded figures are placed in SVG user space -- the space their render
- * primitives land in -- so their bounds are mapped back through the same affine
- * the flat pattern uses. It is positive and axis-preserving, so an axis-aligned
- * box stays axis-aligned and the corners are enough.
- */
-function occupiedModelSpace(state: WorkspaceState, frameAngle = 0): Aabb[] {
-  // Measured along the frame's axes, straight from each object's own box, so an
-  // object created upright under this view contributes its exact footprint
-  // rather than a bounding box inflated by its rotation.
-  const boxes = [
-    ...state.oristudioCpInlineSimulations.map((simulation) =>
-      boxAabbInFrame(simulation.box, frameAngle)
-    ),
-    ...state.oristudioCpAnnotations
-      .filter((annotation) => !annotation.hidden)
-      .map((annotation) =>
-        boxAabbInFrame(
-          {
-            center: annotation.center,
-            width: annotation.width,
-            height: annotation.height,
-            rotation: annotation.rotation,
-          },
-          frameAngle
-        )
-      ),
-  ];
-  for (const figure of state.oristudioCpFoldedFigures) {
-    const userAabb = foldedFigureUserAabb(figure);
-    if (!userAabb) continue;
-    const min = cpSvgToModel({ x: userAabb.minX, y: userAabb.minY });
-    const max = cpSvgToModel({ x: userAabb.maxX, y: userAabb.maxY });
-    boxes.push(
-      aabbInFrame(
-        {
-          minX: Math.min(min.x, max.x),
-          minY: Math.min(min.y, max.y),
-          maxX: Math.max(min.x, max.x),
-          maxY: Math.max(min.y, max.y),
-        },
-        frameAngle
-      )
-    );
-  }
-  return boxes;
-}
 
 /**
  * The rotation at which a newly created canvas object is upright on screen, in
@@ -691,32 +637,27 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     // The new entry keeps its figures' handles alive for as long as undo can
     // reach them; anything the cap or the cleared redo stack drops lets go.
     retainFoldedFigureHandles(input.foldedFigures);
-    const grown = [
-      ...get().oristudioCpHistoryPast,
-      {
-        document: document.document,
-        selection: get().oristudioCpSelection,
-        annotations: input.annotations,
-        foldedFigures: input.foldedFigures,
-        activeFoldedFigureId: input.activeFoldedFigureId,
-        // Captured on every overlay entry, not only the window ones. An
-        // annotation edit that omitted them would produce an entry whose undo
-        // leaves windows alone — which is right — but the field is also how a
-        // *later* undo past that point knows what the windows were, so a hole
-        // here would restore the wrong list.
-        inlineSimulations: input.inlineSimulations ?? get().oristudioCpInlineSimulations,
-        overlayOnly: true,
-        label: input.label,
-        timestamp: new Date().toISOString(),
-      },
-    ];
-    const evicted = grown.slice(0, Math.max(0, grown.length - MAX_CP_HISTORY));
-    for (const entry of evicted) releaseFoldedFigureHandles(entry.foldedFigures ?? []);
+    const past = withCpHistoryEntry(get().oristudioCpHistoryPast, {
+      document: document.document,
+      selection: get().oristudioCpSelection,
+      annotations: input.annotations,
+      foldedFigures: input.foldedFigures,
+      activeFoldedFigureId: input.activeFoldedFigureId,
+      // Captured on every overlay entry, not only the window ones. An
+      // annotation edit that omitted them would produce an entry whose undo
+      // leaves windows alone — which is right — but the field is also how a
+      // *later* undo past that point knows what the windows were, so a hole
+      // here would restore the wrong list.
+      inlineSimulations: input.inlineSimulations ?? get().oristudioCpInlineSimulations,
+      overlayOnly: true,
+      label: input.label,
+      timestamp: new Date().toISOString(),
+    });
     for (const entry of get().oristudioCpHistoryFuture) {
       releaseFoldedFigureHandles(entry.foldedFigures ?? []);
     }
     set({
-      oristudioCpHistoryPast: grown.slice(-MAX_CP_HISTORY),
+      oristudioCpHistoryPast: past,
       oristudioCpHistoryFuture: [],
       dirty: true,
     });
@@ -728,39 +669,56 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
   }
 
   /**
-   * Give each of `simulations` the fold its solver runs, built from `artifacts`.
-   * Returns how many got one.
+   * Give each of `simulations` the fold its solver runs: its sheet's own mesh
+   * (`sheetSimulationFold`), the sheet found by the window's outline. Returns
+   * how many got one.
    *
-   * Shared by loading a file and by undoing a delete, which want the same work
-   * from different artifacts — see each caller for why its choice differs.
+   * Shared by loading a file and by undoing a delete. Each sheet's mesh is
+   * built once per crease geometry and cached with its faces, so windows over
+   * one sheet share it, and nothing meshes the whole canvas.
    *
    * Deliberately writes no descriptor state. Recomputing `sourceFingerprint`
    * from the current document is the one change here that would look harmless
    * and disable staleness for good: a window can legitimately be out of date,
    * and both callers can be looking at one.
    */
-  function buildInlineSimulationSources(
-    simulations: InlineSimulation[],
-    artifacts: FoldArtifacts | null | undefined
-  ): number {
-    if (!artifacts || !get().oristudioCpDocument) return 0;
-    const segments = resolveCpSegments(artifacts);
+  async function buildInlineSimulationSources(simulations: InlineSimulation[]): Promise<number> {
+    const document = get().oristudioCpDocument?.document ?? null;
+    const index = await ensureCpSheetIndex(document);
+    if (!document || !index) return 0;
+    const sheets = sheetRegions(index);
 
     let built = 0;
     for (const simulation of simulations) {
-      const segment = resolveInlineSimulationSegment(simulation, segments);
+      const sheet = resolveInlineSimulationSegment(simulation, sheets);
       // A region that no longer resolves keeps its window and its provenance.
       // Dropping it would lose placement the user chose, and re-pointing it at
       // the nearest region would silently simulate something else — the rule
       // refresh already follows.
-      if (!segment) continue;
+      const fold = sheet ? await sheetSimulationFold(document, sheet) : null;
+      if (!fold) continue;
       setInlineSimulationSource(simulation.id, {
-        fold: buildSegmentSimulationFold(artifacts, segment),
+        fold,
         modelKey: `${simulation.id}:${inlineSimulationRevision(simulation.id)}`,
       });
       built += 1;
     }
     return built;
+  }
+
+  /**
+   * The fold a window over `sheet` solves: the sheet's own mesh, or null when it
+   * has none to give.
+   */
+  async function sheetSimulationFold(
+    document: OristudioCpDocumentSnapshot,
+    sheet: CpSheetRegion
+  ): Promise<FoldDocument | null> {
+    const artifacts = await ensureCpSheetSimulationArtifacts(document, sheet.id);
+    const [segment] = resolveCpSegments(artifacts);
+    if (!artifacts || !segment) return null;
+    const fold = buildSegmentSimulationFold(artifacts, segment);
+    return (fold.faces_vertices?.length ?? 0) > 0 ? fold : null;
   }
 
   /**
@@ -1276,6 +1234,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     oristudioCpSelectedAnnotationId: null,
     oristudioCpInlineSimulations: [],
     oristudioCpFocusedInlineSimulationId: null,
+    oristudioCpSimulateSheet: null,
     oristudioCpPinnedVertices: NO_CP_VERTEX_PINS,
     oristudioCpFocusedFoldedFigureId: null,
     ...emptyFoldArtifactResourceState(),
@@ -1573,18 +1532,17 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       set({ selectedSegmentId: id });
     },
 
-    simulateOristudioCpSegment: async (segmentId) => {
-      // Unlike the toolbar's fast path, the simulator needs the full artifacts
-      // (the triangulated simulation mesh). Ensure them *before* setting the scope
-      // so entering the panel finds them cached and does not reload — a reload
-      // resets selectedSegmentId, which would drop the chosen segment.
-      const artifacts = get().foldArtifacts ?? (await get().ensureFoldArtifacts());
-      const segments = resolveCpSegments(artifacts);
-      if (!segments.some((segment) => segment.id === segmentId)) return false;
-      // Then set the scope and switch workspace via the layout store (activatePanel
-      // resolves and activates the simulator's owning workspace), mirroring
+    setOristudioCpSimulateSheet: (oristudioCpSimulateSheet) => set({ oristudioCpSimulateSheet }),
+
+    simulateOristudioCpSheet: async (sheet) => {
+      const index = await ensureCpSheetIndex(get().oristudioCpDocument?.document);
+      const region = index ? sheetRegions(index)[sheet] : undefined;
+      if (!region) return false;
+      // By outline, so the Simulate workspace finds it again after an edit that
+      // renumbers the index; then switch workspace via the layout store
+      // (activatePanel resolves the simulator's owning workspace), mirroring
       // sendTreeCreasePatternToEdit.
-      set({ selectedSegmentId: segmentId });
+      set({ oristudioCpSimulateSheet: regionReferenceFor(region) });
       useLayoutStore.getState().activatePanel('simulator');
       return true;
     },
@@ -1602,11 +1560,17 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       // translated anyway. The caller says it, in the user's language.
       if (simulations.length >= MAX_CONCURRENT_SIMULATIONS) return 'at-capacity';
 
-      // The simulator needs the triangulated mesh, so the full artifacts, not
-      // the segmentation-only fast path the toolbar uses to decide it can offer
-      // this at all. The *region* is the caller's — resolving it again here from
-      // a second segmentation is what opened the wrong one.
-      const artifacts = get().foldArtifacts ?? (await get().ensureFoldArtifacts());
+      // The simulator needs the triangulated mesh. It is built for the region's
+      // sheet alone when the region is one — every caller's is, resolved from the
+      // sheet index — so a window on one pattern never meshes the whole canvas;
+      // the whole-canvas artifacts are the fallback. The *region* is the
+      // caller's: resolving it again here from a second segmentation is what
+      // opened the wrong one.
+      const sheet = (await ensureCpSheetIndex(document))?.sheetMadeBy(cpLineIds) ?? null;
+      const artifacts =
+        (sheet !== null ? await ensureCpSheetSimulationArtifacts(document, sheet) : null) ??
+        get().foldArtifacts ??
+        (await get().ensureFoldArtifacts());
       if (!artifacts) return 'unavailable';
 
       const fold = buildSegmentSimulationFold(artifacts, segment);
@@ -1742,15 +1706,10 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       const simulations = get().oristudioCpInlineSimulations;
       if (simulations.length === 0) return 0;
 
-      // Recomputed once for the whole document rather than once per window.
-      //
-      // The coordinate-space half of this is now handled upstream: a
-      // kernel-backed document no longer inherits the importer's unit-square
-      // artifacts, so a saved boundary and the artifacts it is matched against
-      // are in the same space either way. Refreshing still earns its keep --
-      // the file may have been opened over an edited document -- but it must
-      // not happen per window.
-      return buildInlineSimulationSources(simulations, await get().refreshFoldArtifacts());
+      // Each window's sheet is meshed alone, from the document as it is now:
+      // the sheet index and the per-sheet cache are keyed by its creases, so a
+      // file opened over an edited document is read as edited.
+      return buildInlineSimulationSources(simulations);
     },
 
     restoreOristudioCpInlineSimulationSources: async () => {
@@ -1763,16 +1722,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       );
       if (missing.length === 0) return 0;
 
-      // Warm artifacts first, unlike hydrate: deleting a window does not
-      // invalidate them, so the common delete-then-undo path recomputes nothing.
-      const cached = get().foldArtifacts ?? (await get().ensureFoldArtifacts());
-      const built = buildInlineSimulationSources(missing, cached);
-      if (built > 0) return built;
-
-      // Nothing resolved. The cache can predate edits that moved or merged the
-      // regions these windows were cut from, and resolving nothing is the only
-      // signal of it we get. One recompute before giving up, never per window.
-      return buildInlineSimulationSources(missing, await get().refreshFoldArtifacts());
+      // Deleting a window does not change the creases, so the common
+      // delete-then-undo path finds its sheet's mesh still cached.
+      return buildInlineSimulationSources(missing);
     },
 
     refreshOristudioCpInlineSimulation: async (id) => {
@@ -1782,11 +1734,10 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       );
       if (!document || !simulation) return false;
 
-      const artifacts = await get().refreshFoldArtifacts();
-      const segment = artifacts
-        ? resolveInlineSimulationSegment(simulation, resolveCpSegments(artifacts))
-        : null;
-      if (!artifacts || !segment) {
+      const index = await ensureCpSheetIndex(document);
+      const sheet = index ? resolveInlineSimulationSegment(simulation, sheetRegions(index)) : null;
+      const fold = sheet ? await sheetSimulationFold(document, sheet) : null;
+      if (!sheet || !fold) {
         // The region merged, split, or its rim stopped being all-border. Keep
         // the window rather than silently re-pointing it at whichever region
         // happens to be nearest — see 0b3b1ea6 for the same rule applied to a
@@ -1800,9 +1751,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         return false;
       }
 
-      const bounds = foldedSourceBounds(
-        cpLinesByIds(document, segmentContainedLineIds(document, artifacts, segment))
-      );
+      const bounds = foldedSourceBounds(cpLinesByIds(document, [...sheet.lineIds]));
       const revision = inlineSimulationRevision(id);
       // Recorded before the rewrite, and after the failure paths above so a
       // refresh that could not resolve its region leaves no entry behind.
@@ -1813,20 +1762,17 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           'Rebuild simulation region'
         )
       );
-      setInlineSimulationSource(id, {
-        fold: buildSegmentSimulationFold(artifacts, segment),
-        modelKey: `${id}:${revision}`,
-      });
+      setInlineSimulationSource(id, { fold, modelKey: `${id}:${revision}` });
       // Rewrites persisted provenance, so it dirties like the others.
       takeCanvasSelection('inline-simulation', {
         oristudioCpInlineSimulations: get().oristudioCpInlineSimulations.map((candidate) =>
           candidate.id === id
             ? {
                 ...candidate,
-                sourceBoundary: segment.boundary.map((ring) => ring.map((point) => ({ ...point }))),
+                sourceBoundary: sheet.boundary.map((ring) => ring.map((point) => ({ ...point }))),
                 sourceBounds: bounds,
                 sourceFingerprint: sourceFingerprintFor(document, bounds),
-                segmentIdHint: segment.id,
+                segmentIdHint: sheet.id,
               }
             : candidate
         ),

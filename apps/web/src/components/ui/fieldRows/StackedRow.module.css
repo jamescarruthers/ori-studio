@@ -1,0 +1,40 @@
+/* The stacked sibling of `FieldRow` (StackedRow.tsx): an instruction is prose,
+   and a field squeezed into the value column beside its label would hold a few
+   words a line. Same rhythm as the rows around it — padding, rule and label. */
+.row {
+  display: grid;
+  gap: 5px;
+  padding: 7px var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* A row that belongs to the one above it, a step in: `FieldRow`'s step-in,
+   the same token, so the two kinds of row line up under one toggle. */
+.row[data-nested] {
+  padding-left: var(--space-6);
+}
+
+.label {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+/* The label and its help mark, on one line as a `FieldRow`'s are, at the
+   label's size so the line is no taller than the label alone. */
+.head {
+  font-size: 0.74rem;
+}
+
+/* Named for assistive technology only; the section title shows it. */
+.labelHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.row[data-disabled] .label {
+  opacity: 0.5;
+}

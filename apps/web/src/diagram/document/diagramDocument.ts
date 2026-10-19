@@ -28,15 +28,35 @@ import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { randomId, type IdFactory } from '../../lib/documentFile';
-import type { BuiltInPaperPresetId } from '../../lib/paper/paperPresets';
+import { builtInPaperPreset, type BuiltInPaperPresetId } from '../../lib/paper/paperPresets';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { sameTurnKind, type TurnKind, type TurnRotation } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
 import { cleanAnnotation, MAX_STEP_ANNOTATIONS, sameAnnotation, withAnnotationReach } from '../annotate/annotationModel';
-import { marksIntoUnits } from '../zoom/zoomFrames';
+import { followAreaRecords, recordAreaBeforeEdit } from '../zoom/areaRecord';
+import { marksIntoUnits, startsWhole } from '../zoom/zoomFrames';
 import { stepReach } from '../zoom/zoomModel';
 import { authorMarksChanged, authorMarksOf, editedCardMarksGone, isCardMark, releaseCardMarks, withEditTags } from './cardMarks';
+import { samePageArrangements } from './pageArrangements';
+import {
+  FLOW_BANDS_RANGE,
+  FLOW_WEIGHT_RANGE,
+  PAGE_STEPS_RANGE,
+  STEPS_PER_PAGE_RANGE,
+  TITLE_BLOCK_ART_SIZE_DEFAULTS,
+  TITLE_BLOCK_ART_SIZE_RANGE,
+  TITLE_BLOCK_SHARE_RANGE,
+} from './pageRanges';
+import {
+  DEFAULT_FLOW_PACKING,
+  DEFAULT_PAGE_SETUP,
+  DEFAULT_PATH_COLOR,
+  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
+  PAGE_SETTING_KEYS,
+  legacyStepsPerPage,
+} from './pageSettings';
 
 /** The version of this document's own shape, inside the project file. */
 export const DIAGRAM_FORMAT_VERSION = 1;
@@ -61,39 +81,110 @@ export type DiagramPageLayout = 'grid' | 'flow';
 export type DiagramPageSide = 'left' | 'right';
 export const DIAGRAM_PAGE_SIDES: readonly DiagramPageSide[] = ['left', 'right'];
 
+/**
+ * How a diagram's pages are set up. Every setting is written to the file,
+ * always; one a file does not say reads as its legacy value, and a new
+ * diagram starts from each one's default: both are in one table
+ * (`PAGE_SETTINGS`, `pageSettings.ts`).
+ */
 export interface DiagramPageSetup {
   size: DiagramPaperSize;
   orientation: DiagramPageOrientation;
   /** 0–30 mm. */
   marginMm: number;
   layout: DiagramPageLayout;
-  /** 2–5. */
+  /** Grid layout only: 2–5. */
   columns: number;
-  /** 1–6. */
+  /** Grid layout only: 1–6. */
   rows: number;
+  /**
+   * Flow layout only: how many steps a page holds ({@link STEPS_PER_PAGE_RANGE})
+   * when it has no count of its own ({@link DiagramStep.pageSteps}): the
+   * default. The layout cuts each page into the rows that print the largest
+   * pictures (`flowRows` in `pages/pagePlan.ts`). Kept on a grid, for when it
+   * turns back to flow. A file without it reads `columns × rows`
+   * ({@link legacyStepsPerPage}), as every flow file before it could be chosen.
+   */
+  stepsPerPage: number;
   /** Flow layout only: the band that joins one step to the next. */
   showPath: boolean;
-  /**
-   * The band's printed width, mm ({@link PATH_WIDTH_MM_RANGE}); null, as in
-   * every file before it could be chosen, draws it in proportion to the steps
-   * (`pathWidthMm` in `diagramPageLayout.ts`). Written only when set.
-   */
-  pathWidthMm: number | null;
-  /** The band's colour, `#rrggbb`; written only when not {@link DEFAULT_PATH_COLOR}. */
+  /** The band's printed width, mm ({@link PATH_WIDTH_MM_RANGE}). */
+  pathWidthMm: number;
+  /** The band's colour, `#rrggbb`. */
   pathColor: string;
-  /** The side the first page prints on ({@link DiagramPageSide}); written to the file only when `right`. */
+  /** The side the first page prints on ({@link DiagramPageSide}). */
   firstPageSide: DiagramPageSide;
   /** Draws {@link DiagramDocument.title} in a tab at the top of every page. */
   showTitle: boolean;
   pageNumbers: { enabled: boolean; first: number };
+  /**
+   * Flow layout only, with the four after it: how a page is packed
+   * (`implementation-plans/diagram-flow-packing.md`, Decision 7), part of
+   * every flow page's signature. The bands a page's steps are packed
+   * into: `auto` tries each count and keeps the one that packs best, a number
+   * ({@link FLOW_BANDS_RANGE}) holds every page to it.
+   */
+  flowBands: DiagramFlowBands;
+  /** With {@link flowBands} `auto`: how strongly three bands are preferred, 0–1 ({@link FLOW_WEIGHT_RANGE}). */
+  flowPreferBands: number;
+  /** A step may stand in the bend between two bands, where that packs better. */
+  flowBendSteps: boolean;
+  /** How far a step rises or dips in its band to nest beside a taller one, 0–1. */
+  flowNesting: number;
+  /** How strongly a page's scale is held to the page before's, 0–1. */
+  flowSteadiness: number;
+  /**
+   * A title block at the top of the first page (`implementation-plans/
+   * diagram-title-block.md`): the title, the crease pattern and the finished
+   * model, in a band {@link DiagramTitleBlockSetup.heightShare} of the
+   * printable height tall. What it shows is the document's
+   * ({@link DiagramDocument.titleBlockContent}); this is the room it takes.
+   */
+  titleBlock: DiagramTitleBlockSetup;
 }
 
+/** The first page's title block, as the page setup says it ({@link DiagramPageSetup.titleBlock}). */
+export interface DiagramTitleBlockSetup {
+  enabled: boolean;
+  /**
+   * How tall it is, as a share of the printable height
+   * ({@link TITLE_BLOCK_SHARE_RANGE}): stored, so that no later build's
+   * proportions move a saved first page.
+   */
+  heightShare: number;
+}
+
+/** How many bands a flow page is packed into ({@link DiagramPageSetup.flowBands}): chosen per page, or fixed. */
+export type DiagramFlowBands = 'auto' | 2 | 3 | 4 | 5;
+
+// Every page setting's default and legacy value, in one table, and the defaults made of it.
+export {
+  DEFAULT_FLOW_PACKING,
+  DEFAULT_PAGE_SETUP,
+  DEFAULT_PATH_COLOR,
+  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
+  PAGE_SETTING_KEYS,
+  legacyStepsPerPage,
+};
+
+// A fixed band count, and the range of the packing's three weights: in the import-free module, for a stored arrangement's reader.
+export { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE };
+
 /**
- * The paper style every step is painted in. A built-in preset by id, or a
- * resolved style: a user preset or the export slot is resolved when it is
+ * The paper style every step is painted in. A built-in with its saved values,
+ * or a resolved style: a user preset or the export slot is resolved when it is
  * chosen, so a printed diagram never depends on the viewer's own settings.
  */
-export type DiagramStyle = { preset: BuiltInPaperPresetId } | { style: PaperStyle };
+export type ResolvedDiagramStyle = { preset: string; style: PaperStyle } | { style: PaperStyle };
+/** The id-only form is accepted from pre-launch files and callers. */
+export type DiagramStyle = ResolvedDiagramStyle | { preset: BuiltInPaperPresetId; style?: never };
+
+/** Freeze a legacy id-only style when saving or explicitly choosing it. */
+export function snapshotDiagramStyle(style: DiagramStyle): ResolvedDiagramStyle {
+  if (style.style) return style;
+  return { preset: style.preset, style: builtInPaperPreset(style.preset).style };
+}
 
 /** A quarter-turn count, clockwise. */
 export type QuarterTurns = 0 | 1 | 2 | 3;
@@ -124,6 +215,7 @@ export type DiagramCpScope = { kind: 'segment'; region: RegionReference };
  * flat folded model, or the folded model in 3D. Each keeps its own pose.
  */
 export type DiagramCpRender =
+  | { mode: 'defox'; snapshot: string }
   | {
       mode: 'crease-pattern';
       rotationDeg: number;
@@ -134,6 +226,16 @@ export type DiagramCpRender =
        * front, as every crease pattern was before.
        */
       side?: 'back';
+      /**
+       * On the back, the paper turned over side to side, as a real sheet is:
+       * the pattern mirrored, and its mountains drawn as valleys and its
+       * valleys as mountains — one pattern drawn from the front, read from
+       * the back (the Step pane's Flip creases; Zach, 2026-10-12). Its turn
+       * is the turned-over paper's, run the other way, as a flat fold's back
+       * is. Kept on the front, where it draws nothing, so the back brings it
+       * back. Written only when on.
+       */
+      flipCreases?: true;
     }
   | {
       mode: 'folded-flat';
@@ -154,7 +256,18 @@ export type DiagramCpRender =
       /** 0 to 100: 0 is the flat sheet, captured without Pose. */
       foldPercent: number;
       view: DiagramSimulatedView;
+      /**
+       * The mesh the picture was captured from, pins and all, as a build with
+       * Pose's tools stores it (`implementation-plans/diagram-pose-simulator-tools.md`,
+       * What a step stores). This build has no tools that read it: it is
+       * carried as it came while the render stands, and a capture here, which
+       * makes a new render, leaves it behind with the picture it was for.
+       */
+      shape?: DiagramSimulatedShape;
     };
+
+/** Pose's stored mesh: opaque to this build, which only carries it (see the simulated render). */
+export type DiagramSimulatedShape = Readonly<Record<string, unknown>>;
 
 /**
  * A flat fold's layers spread apart (`foldedLayerSpread.ts`), one of two
@@ -218,6 +331,23 @@ export function nearestEarlierSpread(
   return null;
 }
 
+/**
+ * The way the nearest posed step before `stepId` shows its pattern (D19) — a
+ * linked pattern or a Fold step — turns, uploads, References steps and a
+ * newer build's steps passed over: what the pattern picker offers a step with
+ * no link (review fix 3), so a step after a folded run links folded. Null when
+ * no step before it is posed.
+ */
+export function nearestEarlierShowAs(document: DiagramDocument, stepId: string): DiagramShowAs | null {
+  for (let index = stepIndex(document, stepId) - 1; index >= 0; index -= 1) {
+    const entry = document.steps[index]!;
+    if (isTurn(entry) || isLockedStep(entry)) continue;
+    const render = posedRenderOf(entry.source);
+    if (render) return showAsOf(render);
+  }
+  return null;
+}
+
 /** {@link DiagramSpreadStarts} for a step of `document`: the shared start rule over the steps before it. */
 export function spreadStartsFor(document: DiagramDocument, stepId: string): DiagramSpreadStarts {
   return spreadStartsAmong(earlierSpreads(document, stepId));
@@ -251,13 +381,35 @@ export function creasePatternSide(render: DiagramCreasePatternRender): 'front' |
   return render.side === 'back' ? 'back' : 'front';
 }
 
-/** A crease pattern on the colour of `side`, its turn as it was: the front written as no side at all. */
+/**
+ * A crease pattern on the colour of `side`, its turn and Flip creases as they
+ * were: the front written as no side at all.
+ */
 export function withCreasePatternSide(
   render: DiagramCreasePatternRender,
   side: 'front' | 'back'
 ): DiagramCreasePatternRender {
-  const { side: _was, ...front } = render;
-  return side === 'back' ? { ...front, side: 'back' } : front;
+  return creasePatternRender(render.rotationDeg, side, render.flipCreases === true);
+}
+
+/** Whether a crease pattern is drawn turned over, mirrored and its mountains and valleys swapped: Flip creases on, and its back shown. */
+export function creasesFlipped(render: DiagramCreasePatternRender): boolean {
+  return render.side === 'back' && render.flipCreases === true;
+}
+
+/** A crease pattern with Flip creases on or off, its turn and side as they were: off written as nothing. */
+export function withCreasesFlipped(render: DiagramCreasePatternRender, on: boolean): DiagramCreasePatternRender {
+  return creasePatternRender(render.rotationDeg, creasePatternSide(render), on);
+}
+
+/** A crease pattern's render, its fields in the order the file writes them, each optional one only when said. */
+function creasePatternRender(rotationDeg: number, side: 'front' | 'back', flipCreases: boolean): DiagramCreasePatternRender {
+  return {
+    mode: 'crease-pattern',
+    rotationDeg,
+    ...(side === 'back' ? { side: 'back' as const } : {}),
+    ...(flipCreases ? { flipCreases: true as const } : {}),
+  };
 }
 
 /** How a render shows its pattern. */
@@ -380,7 +532,8 @@ export function posedRenderOf(source: DiagramStepSource | null | undefined): Dia
  * start — a crease pattern or a flat fold lying as the step lies now, from the
  * front at the first layer order. A flat fold's back at a turn is its front at
  * the opposite turn, mirrored (Turn Over, 12d), so its front's turn is the one
- * carried; a crease pattern's back is only its paper's colour, so its own turn
+ * carried, and so is a crease pattern's turned over (Flip creases); a crease
+ * pattern's back alone is only its paper's colour, so its own turn
  * is. A flat fold asked of creases that fold in 3D becomes the 3D one where it
  * is captured (`renderForRoute`). A flat fold started here, not
  * remembered, has its layers spread by `spread` (13g: on by default — the
@@ -392,22 +545,23 @@ export function renderToShowAs(
   spread?: DiagramLayerSpread
 ): DiagramCpRender {
   const { render } = source;
-  if (showAsOf(render) === way) return render;
+  if (showAsOf(render) === way && render.mode !== 'defox') return render;
   const kept = source.remembered?.[way];
-  if (kept && showAsOf(kept) === way && kept.mode !== 'simulated') return kept;
+  if (kept && showAsOf(kept) === way && kept.mode !== 'simulated' && kept.mode !== 'defox') return kept;
   // Back to Simulated from another way: its camera is kept, its picture rebuilt
   // at 0%, the one fold % a picture can be taken at without Pose.
   if (way === 'simulated') {
     return { mode: 'simulated', foldPercent: 0, view: kept?.mode === 'simulated' ? kept.view : DEFAULT_SIMULATED_VIEW };
   }
+  const turnedOver =
+    (render.mode === 'crease-pattern' && creasesFlipped(render)) ||
+    (render.mode === 'folded-flat' && render.side === 'back');
   const turn =
-    render.mode === 'crease-pattern'
-      ? render.rotationDeg
-      : render.mode === 'folded-flat'
-        ? render.side === 'back'
-          ? (360 - render.rotationDeg) % 360
-          : render.rotationDeg
-        : 0;
+    render.mode === 'crease-pattern' || render.mode === 'folded-flat'
+      ? turnedOver
+        ? (360 - render.rotationDeg) % 360
+        : render.rotationDeg
+      : 0;
   return way === 'crease-pattern'
     ? { mode: 'crease-pattern', rotationDeg: turn }
     : { mode: 'folded-flat', side: 'front', rotationDeg: turn, foldCase: 1, ...(spread ? { spread } : {}) };
@@ -620,7 +774,13 @@ export type DiagramPicture =
  * divisions: a line set off from a line of the picture, cut into equal parts
  * by strokes across it, each part ticked, as a draftsman's dimension is
  * (Revision 2), and an enlarge area: a circle or a rounded rectangle marking
- * what a later step may show enlarged (Revision 2) — drawing one changes no
+ * what a later step may show enlarged (Revision 2), a star, filled or
+ * outlined, naming a point, an eye, in profile, saying where the next view
+ * is from, and an oval or a rectangle, an outline round an area of any size
+ * and proportion, as a diagram rings the places a repeat applies to, and an
+ * x-ray: a circular window cut into a flat fold's picture, inside which its
+ * top layers at one point are taken away and the faces beneath drawn in
+ * their side's colour with their edges (Revision 3) — drawing one changes no
  * other step.
  */
 export type DiagramAnnotationKind =
@@ -643,7 +803,12 @@ export type DiagramAnnotationKind =
   | 'angle-mark'
   | 'divisions'
   | 'close-up'
-  | 'zoom';
+  | 'zoom'
+  | 'star'
+  | 'eye'
+  | 'oval'
+  | 'rectangle'
+  | 'x-ray';
 
 /**
  * How an enlarged step draws its frame (Revision 2): only where it crosses
@@ -700,6 +865,29 @@ export interface DiagramStepZoom {
   scale?: number;
   /** As an area's: unsaid, the shape's own. */
   edge?: DiagramZoomEdge;
+  /**
+   * The area as it was when this step's frame was captured from it (review
+   * fix 4): what says the step is out of date once the area is moved,
+   * resized, reshaped, re-anchored, or given another Size or Edge by hand
+   * (`zoom/areaStatus.ts`). Unsaid in a file written before it: such a step
+   * is given one at the first hand edit of its area (`zoom/areaRecord.ts`).
+   */
+  areaWas?: DiagramZoomAreaWas;
+}
+
+/**
+ * An enlarge area as an enlarged step captured it (review fix 4): the step
+ * it was on — which names it once it is deleted — its outline there, in that
+ * step's picture units, a picked anchor, on the paper, and its Size and Edge,
+ * which the capture copied: a step whose own differ set them itself, and
+ * Update keeps them. Unsaid, as on the area: Fill, and the shape's own.
+ */
+export interface DiagramZoomAreaWas {
+  stepId: string;
+  outline: DiagramZoomOutline;
+  anchor?: [number, number];
+  scale?: number;
+  edge?: DiagramZoomEdge;
 }
 
 /**
@@ -712,12 +900,10 @@ export interface DiagramStepPlace {
   /**
    * The whole step, away from its cell, mm, in the page's reading terms:
    * `along` its row's reading direction (right on a row read left to right,
-   * left on one read right to left), and `across` toward the page's next row
-   * (down a page whose rows read downward, up a flow page whose rows read
-   * up from its foot). So a frame keeps its place among its neighbours when
-   * a page turns its rows or reads them the other way, as a page renumbered
-   * or the first page's side changed does. Kept only while the step stays in
-   * its cell (`pages/stepPlaces.ts`).
+   * left on one read right to left), and `across` always down the page.
+   * Kept only while the step keeps its place: its cell on a grid, its page,
+   * band and place along the band in the flow (`pages/stepPlaces.ts`,
+   * `pages/repackedFrames.ts`).
    */
   frame?: [along: number, across: number];
   /** Each part away from where the layout puts it in the frame: mm, on the page's axes (+x right, +y down). */
@@ -732,6 +918,14 @@ export interface DiagramStepPlace {
    * comes back. Finite and above zero.
    */
   scale?: DiagramPlaceScale;
+  /**
+   * The caption's measure, pinned: the width its lines are set at, mm, to a
+   * tenth (`implementation-plans/diagram-caption-resize.md`). Its height is
+   * always its text's. Not structure: a flow page holding its arrangement
+   * keeps it, and a re-pack sizes the step's box for it. Finite and above
+   * zero; how wide it may print is the layout's to hold.
+   */
+  textWidth?: number;
 }
 
 /** A pinned scale ({@link DiagramStepPlace.scale}): the `PictureMeasure` the layout passes around. */
@@ -741,11 +935,12 @@ export type DiagramPlaceScale = { mmPerUnit: number } | { frameMm: number };
 export type DiagramPlaceOffset = 'frame' | 'number' | 'picture' | 'text';
 
 /**
- * What a reset of a step's placement clears: one offset, the pinned scale,
- * every offset (`position`), or the lot (`all`), which drops a newer build's
- * record too.
+ * What a reset of a step's placement clears: one offset — the text's with
+ * the caption's pinned width — the pinned scale, the pinned caption width
+ * alone (`textWidth`), every offset (`position`), or the lot (`all`), which
+ * drops a newer build's record too.
  */
-export type DiagramPlaceReset = DiagramPlaceOffset | 'scale' | 'position' | 'all';
+export type DiagramPlaceReset = DiagramPlaceOffset | 'scale' | 'textWidth' | 'position' | 'all';
 
 /**
  * How many ticks an equality mark draws: across each half of an angle mark,
@@ -820,6 +1015,10 @@ export interface KnownDiagramAnnotation {
   other?: [number, number];
   /** An angle mark's ticks across each half, or equal divisions' on each part; one when unsaid (15b, Revision 2). */
   ticks?: DiagramTicks;
+  /** Equal-angle indicator radius in printed millimetres; absent keeps its original size. */
+  radiusMm?: number;
+  /** An equal-angle indicator kept in Layers but omitted from the drawing. */
+  hidden?: true;
   /** A pleat arrow's Zs; one when unsaid (15c). */
   kinks?: DiagramPleatKinks;
   /**
@@ -839,6 +1038,13 @@ export interface KnownDiagramAnnotation {
   offset?: number;
   /** Equal divisions that print their count beside their line; unsaid, they do not. Only ever written true. */
   numbered?: true;
+  /**
+   * Equal divisions whose dividers between their ends are short strokes
+   * across their line, 1.65 mm either side, rather than run to the line they
+   * measure, where they would draw over the fold they locate (Revision 3,
+   * R3-1 A, R3-2 A); unsaid, every divider runs there. Only ever written true.
+   */
+  shortDividers?: true;
   /**
    * The ends of a fold or pleat arrow, a valley, mountain or solid line, or a
    * circle that lie behind a flap (15e): drawn dotted from each until they
@@ -882,26 +1088,49 @@ export interface KnownDiagramAnnotation {
    * A close-up's area (15f): the radius of the ring round it, in picture
    * units. Its centre is `from`; the close-up's is `to`. An enlarge area's,
    * when it is a circle (Revision 2): its centre is `from`, and `to` again.
+   * An x-ray's window, a circle about `from`, and `to` again (Revision 3).
+   * A drawn circle's radius; absent on legacy, fixed-size point markers.
    */
   radius?: number;
+  /**
+   * How many steps an x-ray peels its window by (Revision 3, R3-34 A,
+   * `implementation-plans/diagram-xray-peel.md`): each takes away one face on
+   * top in the window, the window's whole top layer before anything under
+   * it, the face nearest its anchor first. A whole number from 1, always
+   * written; one past the window's steps is drawn at the deepest.
+   */
+  depth?: number;
   /**
    * How many times larger a close-up draws its area (15f): its ring is
    * `radius` times this. Two when unsaid. An enlarge area's Size, which the
    * steps enlarged from it copy: that many times the area as it prints,
-   * 1.25–6; unsaid, Fill (Revision 2).
+   * 1.25–6; unsaid, Fill (Revision 2). A star's or an eye's size, times its
+   * print size, 0.5–4; unsaid, 1 (Revision 3).
    */
   scale?: number;
   /**
    * An enlarge area that is a rounded rectangle: its width and height in
    * picture units, about its centre `from`. Exactly one of this and `radius`
-   * (Revision 2).
+   * (Revision 2). An oval's or a rectangle's, always written, so it rings the
+   * same part of the picture at any print size (Revision 3).
    */
   size?: [number, number];
-  /** An enlarge area's turn, in degrees clockwise, from a pose that carried it; unsaid, 0 (Revision 2). */
+  /**
+   * An enlarge area's turn, in degrees clockwise, from a pose that carried it;
+   * unsaid, 0 (Revision 2). A star's turn on the page, one point up at 0, and
+   * the way an eye looks, clockwise from looking right, each within
+   * [0, 360); an oval's or a rectangle's turn, by its handles or a pose that
+   * carried it, within [0, 180); unsaid, 0 (Revision 3).
+   */
   angle?: number;
   /** How the steps enlarged from an area draw their frame; unsaid, its shape's own (Revision 2). */
   edge?: DiagramZoomEdge;
-  /** An enlarge area's picked anchor: a point on the paper, in paper coordinates; unsaid, the default rule (Revision 2). */
+  /**
+   * An enlarge area's picked anchor: a point on the paper, in paper
+   * coordinates; unsaid, the default rule (Revision 2). An x-ray's: the point
+   * on the paper whose nearest face each step of its depth takes first
+   * (R3-35 A); unsaid, the window's centre (Revision 3).
+   */
   anchor?: [number, number];
   /**
    * A solid line's colour (17a), or a label's (17b): a `#rrggbb` string,
@@ -1005,6 +1234,8 @@ export function isKnownAsset(asset: DiagramAsset): asset is KnownDiagramAsset {
 }
 
 export interface DiagramStep {
+  /** Import kept a CP preview because folding was deferred or failed. */
+  importStatus?: 'pending' | 'failed';
   /** `step-<uuid>`. */
   id: string;
   /**
@@ -1023,6 +1254,16 @@ export interface DiagramStep {
   text: string;
   /** Start a new page at this step. */
   breakBefore: boolean;
+  /**
+   * Flow layout only: a page starts at this step and holds this many steps
+   * (`implementation-plans/diagram-flow-pages.md`), a whole number in
+   * {@link PAGE_STEPS_RANGE}. It starts a page as {@link breakBefore} does,
+   * and stands for {@link DiagramPageSetup.stepsPerPage} on that page alone.
+   * Unset on a page that fills with the default. A grid ignores it and keeps
+   * it, for when it turns back to flow. Kept up to date by the store as steps
+   * come and go (`retainPageCounts`), so later pages stay still.
+   */
+  pageSteps?: number;
   /** Set when the step is enlarged (Revision 2): the frame of its picture it shows. */
   zoom?: DiagramStepZoom;
   /** Set when the step is placed by hand on the printed pages; never empty. */
@@ -1033,8 +1274,10 @@ export interface DiagramStep {
    * prints where the layout puts it and stays editable. Never beside
    * {@link place}. Carried as it is through every edit but for its `frame`,
    * which this build knows belongs to the step's cell: it goes home when the
-   * step changes cell, as this build's does, and a duplicate does not copy
-   * it. A reset of the whole placement drops the lot.
+   * step changes cell — in the flow, when it does not keep its place
+   * (`pages/repackedFrames.ts`) — as this build's does, and a duplicate does
+   * not copy it. A reset of the whole placement
+   * drops the lot.
    */
   placeNewer?: Record<string, unknown>;
   /**
@@ -1099,6 +1342,199 @@ export interface DiagramDocument {
   steps: DiagramEntry[];
   /** Uploaded art, shared by id between steps, duplicates and undo snapshots. */
   assets: Record<string, DiagramAsset>;
+  /**
+   * How each flow page was packed, by the id of the step it starts with
+   * (`implementation-plans/diagram-flow-packing.md`, Decision 1): held while
+   * its signature matches the page's structure (`pages/pageSignature.ts`), so
+   * a picture or caption edit moves no step. Absent where none is stored; the
+   * layout packs such a page and the store adopts what it packed. A page whose
+   * structure changed, or that Re-pack Page let go, keeps the one it was last
+   * held in until then: not held, but saying which band each of its steps was
+   * in, which a frame moved by hand keeps its offset in
+   * (`pages/repackedFrames.ts`).
+   */
+  pageArrangements?: Readonly<Record<string, DiagramPageArrangement>>;
+  /**
+   * What the first page's title block shows (`implementation-plans/
+   * diagram-title-block.md`), each part set by hand; absent where none is.
+   * Never part of the page setup: what the block shows moves no step, but
+   * that its words may grow the flow's block, to the room the layout measured
+   * after the author's edit of them ({@link DiagramTitleBlockContent.room}).
+   */
+  titleBlockContent?: DiagramTitleBlockContent;
+  /** What a newer build wrote here that this build cannot read, written back as it came. */
+  newer?: DiagramNewerFields;
+}
+
+/**
+ * Where a part of the title block comes from, set by hand: a step of the
+ * diagram's, or none. A part not set is Auto (`pages/titleBlockContent.ts`),
+ * and so is a step that is gone.
+ */
+export type DiagramTitleBlockSource = { kind: 'step'; stepId: string } | { kind: 'none' };
+
+/**
+ * The parts of the first page's title block set by hand ({@link DiagramDocument.titleBlockContent};
+ * `implementation-plans/diagram-title-block.md`, Phase 1c). Plain text throughout. An unsaid subtitle,
+ * credits or note is none, for good; an unsaid size is the app's ({@link TITLE_BLOCK_ART_SIZE_DEFAULTS}).
+ */
+export interface DiagramTitleBlockContent {
+  /** The finished model: a step's picture. */
+  model?: DiagramTitleBlockSource;
+  /** The crease pattern: a linked step's pattern. */
+  pattern?: DiagramTitleBlockSource;
+  /** The small line over the title's band ("Subtitle" in a new diagram, for its author to type over): one line, never blank. */
+  subtitle?: string;
+  /** The credits under the band, in order; never empty. */
+  credits?: readonly DiagramTitleBlockCredit[];
+  /** Free text under the credits, its line breaks kept; never blank. */
+  note?: string;
+  /** The model's height, as a share of the block's, within {@link TITLE_BLOCK_ART_SIZE_RANGE}. */
+  modelSize?: number;
+  /** The crease pattern's side, as a share of the block's height, within {@link TITLE_BLOCK_ART_SIZE_RANGE}. */
+  patternSize?: number;
+  /**
+   * The band's colour as its author chose it, `#rrggbb` (Zach, 2026-10-15): the band, the subtitle's rule and the
+   * credits' dividers, and what the title's white or ink is chosen against. Unsaid, they follow the paper's colour
+   * (`pages/titleBlockColumn.ts`, `titleBlockInks`), so a new paper colour changes an untouched band.
+   */
+  bandColor?: string;
+  /**
+   * How tall its words stood, mm, as the layout measured them after the author's last edit of them, to half a
+   * millimetre (`pages/titleBlockGeometry.ts`, `titleBlockRoom`; Zach, 2026-10-15: the header reflows): layout,
+   * kept as the file says it, so a file opens as it was saved. The flow's block grows to it past its share, up to half
+   * the printable height (`grownTitleBlockMm`). Unsaid: the block at its share. Written by the store with the
+   * packing it adopts ({@link setTitleBlockRoom}), never by an edit of its own.
+   */
+  room?: number;
+}
+
+/** One credit: a label over its value, each one line. A credit with nothing in it is kept, half typed. */
+export interface DiagramTitleBlockCredit {
+  label: string;
+  value: DiagramTitleBlockCreditValue;
+}
+
+/** A credit's value: text, or the diagram's step count, kept up to date (the number its last numbered step prints). */
+export type DiagramTitleBlockCreditValue = string | { kind: 'step-count' };
+
+/** One change to the credits, by a credit's place in the list: added (at the end, or at `at`), removed, or a field of it set. */
+export type DiagramTitleBlockCreditEdit =
+  | { op: 'add'; credit?: DiagramTitleBlockCredit; at?: number }
+  | { op: 'remove'; at: number }
+  | { op: 'set'; at: number; label?: string; value?: DiagramTitleBlockCreditValue };
+
+/**
+ * The parts of the title block an edit sets ({@link setTitleBlockContent}): `auto` takes a part's source away, a
+ * blank subtitle or note takes it away, `default` a size, and `paper` the band's colour, which then follows the
+ * paper's.
+ */
+export interface DiagramTitleBlockContentPatch {
+  model?: DiagramTitleBlockSource | 'auto';
+  pattern?: DiagramTitleBlockSource | 'auto';
+  subtitle?: string;
+  credits?: DiagramTitleBlockCreditEdit;
+  note?: string;
+  modelSize?: number | 'default';
+  patternSize?: number | 'default';
+  bandColor?: string | 'paper';
+}
+
+/** The parts of the title block's content, in the order a file writes them. */
+export const TITLE_BLOCK_PARTS = ['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize', 'bandColor', 'room'] as const;
+
+export { TITLE_BLOCK_ART_SIZE_DEFAULTS, TITLE_BLOCK_ART_SIZE_RANGE };
+
+/**
+ * A flow page as it was packed (`diagram-flow-packing.md`, Decision 1): the
+ * structure it was packed for, its page scale, and each step's place. Its
+ * numbers are kept rounded (`document/pageArrangements.ts`): mm to a
+ * hundredth, scales to six significant digits.
+ */
+export interface DiagramPageArrangement {
+  /**
+   * The page's structure when it was packed (`pageSignature`): the arrangement
+   * holds while it matches. One Re-pack Page let go is signed for no page
+   * (`LET_GO_SIGNATURE` in `pages/pageArrangements.ts`).
+   */
+  signature: string;
+  /**
+   * The packer that packed it (`PACKER_VERSION` in `pages/flowArrangement.ts`),
+   * for a later build to offer a re-pack with a better one. Information only:
+   * it never decides whether the page holds. Absent on an arrangement saved
+   * before packers were recorded (every one that holds was packed by `pack-3`).
+   */
+  packer?: string;
+  /** The page scale it was packed at, which every step's reference scale was multiplied by. */
+  k: number;
+  /** Each of its steps' places, by step id. */
+  steps: Readonly<Record<string, DiagramArrangedStep>>;
+}
+
+/** One step's place on a packed flow page ({@link DiagramPageArrangement}). */
+export interface DiagramArrangedStep {
+  /** Its box on the page, mm: left, top, width and height, number, picture and caption inside it. */
+  box: [x: number, y: number, w: number, h: number];
+  /**
+   * The scale its picture prints at, absolute, in the measure a pin takes
+   * ({@link DiagramPlaceScale}), so another step's re-pose never resizes it.
+   */
+  scale: DiagramPlaceScale;
+  /** Its band, from 0 in reading order; a step standing in a bend, the band before that bend. */
+  band: number;
+  /** It stands in the bend after its band, between that band and the next. */
+  bend?: true;
+  /**
+   * An enlarged step's Size when it was packed (`DiagramStepZoom.scale`): so
+   * many times its area. Absent for Fill, and on a step that is not enlarged.
+   * What its printed scale was packed for, so a Size changed since resizes
+   * the step in its box rather than going unseen.
+   */
+  zoomScale?: number;
+}
+
+/**
+ * What a newer build wrote at the document's level that this build cannot
+ * read, each part as it came (decision 2 of the launch review). The document
+ * shows this build's own fallback in its place, and the file is written with
+ * what came until it is changed here: setting a field here lets go of the
+ * newer value that stood for it.
+ */
+export interface DiagramNewerFields {
+  /** Fields of the document this build has no name for. */
+  fields?: Readonly<Record<string, unknown>>;
+  /** A Han style this build has no name for. */
+  hanStyle?: string;
+  /** The whole style, when its preset, or a field of it, is one this build has no name for. */
+  style?: Readonly<Record<string, unknown>>;
+  /**
+   * Page fields this build has no name for, or whose value it does not read
+   * — a word it does not know, a colour in another notation, a number past
+   * the range it reads, page numbers with a field it has no name for — each
+   * under its key.
+   */
+  page?: Readonly<Record<string, unknown>>;
+  /**
+   * The entries of the file's thumbnails table that a newer build's steps
+   * name, as they came: written back while one of those steps is here.
+   */
+  thumbnails?: Readonly<Record<string, unknown>>;
+  /**
+   * Page arrangements with a field or a value this build has no name for,
+   * each under its page's first step id, as they came. The page is packed
+   * here as if none were stored; the newer one is written back in its place
+   * until the page is re-packed here.
+   */
+  pageArrangements?: Readonly<Record<string, unknown>>;
+  /**
+   * Parts of the title block's content with a kind or a field this build has
+   * no name for, or a size past its range, each under its part's key, as they
+   * came — and fields of the content it has no name for, under theirs. Each
+   * such part is shown as the nearest here (a source as Auto, the credits as
+   * this build reads them, a size held to its range), and is written back
+   * until that part is set here.
+   */
+  titleBlockContent?: Readonly<Record<string, unknown>>;
 }
 
 export type DiagramIdFactory = IdFactory<'diagram' | 'step' | 'turn' | 'annotation' | 'asset'>;
@@ -1108,36 +1544,14 @@ export const randomDiagramId: DiagramIdFactory = randomId;
 export const PAGE_MARGIN_MM_RANGE = { min: 0, max: 30 } as const;
 export const PAGE_COLUMNS_RANGE = { min: 2, max: 5 } as const;
 export const PAGE_ROWS_RANGE = { min: 1, max: 6 } as const;
+// How many steps a page holds, by default and by its own count, and the title block's share: a module of their own,
+// for the pagination.
+export { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE, TITLE_BLOCK_SHARE_RANGE };
 export const FIRST_PAGE_NUMBER_RANGE = { min: 1, max: 9999 } as const;
-/**
- * The flow band's width, mm: from a thin line to more than twice the 26 mm an
- * A4 page of 3 × 3 steps draws it by itself — as wide as the widest it draws
- * by itself, two steps to a landscape page.
- */
+/** The flow band's width, mm: from a thin line to three times the default. */
 export const PATH_WIDTH_MM_RANGE = { min: 4, max: 60 } as const;
-/** The flow band's colour: the mockup's light warm grey. */
-export const DEFAULT_PATH_COLOR = '#ecece8';
 
-/**
- * A new diagram's page setup. It starts in the flow layout; a page setup that
- * does not say its layout reads as the grid instead ({@link UNSAID_PAGE_LAYOUT}).
- */
-export const DEFAULT_PAGE_SETUP: DiagramPageSetup = {
-  size: 'a4',
-  orientation: 'portrait',
-  marginMm: 12,
-  layout: 'flow',
-  columns: 3,
-  rows: 3,
-  showPath: true,
-  pathWidthMm: null,
-  pathColor: DEFAULT_PATH_COLOR,
-  firstPageSide: 'left',
-  showTitle: true,
-  pageNumbers: { enabled: true, first: 1 },
-};
-
-export const DEFAULT_DIAGRAM_STYLE: DiagramStyle = { preset: 'diagram' };
+export const DEFAULT_DIAGRAM_STYLE: DiagramStyle = snapshotDiagramStyle({ preset: 'diagram' });
 
 /**
  * The Han style a new diagram starts in, from the author's interface language:
@@ -1155,9 +1569,12 @@ export function defaultHanStyle(locale: string | null | undefined): DiagramHanSt
 export function createDiagram(options: {
   title?: string;
   hanStyle?: DiagramHanStyle;
+  /** What its title block says from the start ({@link defaultTitleBlockContent}); none where unsaid. */
+  titleBlockContent?: DiagramTitleBlockContent;
   newId?: DiagramIdFactory;
 } = {}): DiagramDocument {
   const newId = options.newId ?? randomDiagramId;
+  const content = options.titleBlockContent;
   return {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: newId('diagram'),
@@ -1167,7 +1584,38 @@ export function createDiagram(options: {
     page: DEFAULT_PAGE_SETUP,
     steps: [],
     assets: {},
+    ...(content && Object.keys(content).length > 0 ? { titleBlockContent: content } : {}),
   };
+}
+
+/** The words a new diagram's title block starts with, in the author's language: each credit's label and value. */
+export interface TitleBlockDefaultWords {
+  /** The diagram's title ({@link DiagramDocument.title}): real text, printed as any title is, for the author to type over. */
+  title: string;
+  subtitle: string;
+  author: string;
+  /** Author's value: a stand-in for the author's name, which prints until they type theirs. */
+  authorName: string;
+  steps: string;
+  recommendedPaper: string;
+  /** Recommended paper's value. */
+  paperSize: string;
+}
+
+/**
+ * What a new diagram's title block says, written at its creation (Zach, 2026-10-15): the subtitle, and the credits
+ * Author, Steps — the live count — and Recommended paper, in that order, each with a value, so that the header
+ * prints whole from the start (an empty credit is not drawn). From then on they are the author's, in the file; a
+ * diagram that does not say them has none.
+ */
+export function defaultTitleBlockContent(words: Omit<TitleBlockDefaultWords, 'title'>): DiagramTitleBlockContent {
+  const credits: DiagramTitleBlockCredit[] = [
+    { label: titleBlockLine(words.author), value: titleBlockLine(words.authorName) },
+    { label: titleBlockLine(words.steps), value: { kind: 'step-count' } },
+    { label: titleBlockLine(words.recommendedPaper), value: titleBlockLine(words.paperSize) },
+  ];
+  const subtitle = titleBlockLine(words.subtitle);
+  return { ...(subtitle.trim() ? { subtitle } : {}), credits };
 }
 
 export function createStep(newId: DiagramIdFactory = randomDiagramId): DiagramStep {
@@ -1345,7 +1793,7 @@ export function duplicateStep(
   const original = document.steps[index];
   // A turn is not duplicated: two turns in a row are one turn, or none.
   if (isTurn(original) || isLockedStep(original)) return null;
-  const { place, placeNewer, ...kept } = original;
+  const { place, placeNewer, pageSteps: _pageSteps, ...kept } = original;
   // Its pin and its parts' offsets are the original's; a frame offset belongs
   // to the original's cell — a newer build's too, whose `frame` this one knows.
   const { frame: _cell, ...placed } = place ?? {};
@@ -1356,7 +1804,7 @@ export function duplicateStep(
     ...(Object.keys(newer).length > 0 ? { placeNewer: newer } : {}),
     id: newId('step'),
     revision: 0,
-    // A new page belongs to where the original starts one; the copy follows it.
+    // A new page, and its count, belong to where the original starts one; the copy follows it.
     breakBefore: false,
     annotations: original.annotations.map((annotation) => {
       const id = newId('annotation');
@@ -1376,7 +1824,7 @@ export function uploadPictureKey(assetId: string): string {
   return `asset:${assetId}`;
 }
 
-function uploadStepParts(asset: KnownDiagramAsset): Pick<DiagramStep, 'source' | 'picture'> {
+export function uploadStepParts(asset: KnownDiagramAsset): Pick<DiagramStep, 'source' | 'picture'> {
   return {
     source: { kind: 'upload', assetId: asset.id, rotationQuarterTurns: 0, mirrored: false },
     picture: { kind: 'asset', assetId: asset.id, paperScale: null, key: uploadPictureKey(asset.id) },
@@ -1410,7 +1858,9 @@ export function insertPictureSteps(
 /**
  * Give a step a picture: it becomes an upload of `asset`, in its upright pose,
  * and keeps its instruction and annotations. Annotations drawn on another
- * picture stay where they were, and Annotate says the picture changed.
+ * picture stay where they were, and Annotate says the picture changed. An
+ * upload never continues an enlarged run: a step given its first picture
+ * starts whole (`startsWhole`), and one that had a picture keeps its frame.
  */
 export function setStepPicture(
   document: DiagramDocument,
@@ -1419,13 +1869,20 @@ export function setStepPicture(
 ): DiagramDocument {
   const step = stepById(document, stepId);
   if (!step || isLockedStep(step)) return document;
+  const withAsset = withAssets(document, [asset]);
   // A card's marks are the author's once its picture is not the card (17d).
-  return updateStep(withAssets(document, [asset]), stepId, (step) =>
-    releaseCardMarks({
-      ...step,
-      ...uploadStepParts(asset),
-      revision: step.revision + 1,
-    })
+  return updateStep(withAsset, stepId, (step) =>
+    startsWhole(
+      step,
+      releaseCardMarks({
+        ...step,
+        // An import's fold notice is about the picture this replaces.
+        importStatus: undefined,
+        ...uploadStepParts(asset),
+        revision: step.revision + 1,
+      }),
+      withAsset.assets
+    )
   );
 }
 
@@ -1459,13 +1916,14 @@ export function setLinkedPicture(
     return document;
   }
   const withAsset = withAssets(document, link.asset ? [link.asset] : []);
-  return updateStep(withAsset, stepId, (current) =>
+  return updatePicture(withAsset, stepId, (current) =>
     // A card's marks are the author's once its picture is a capture (17d).
     releaseCardMarks(
       withCarriedAnnotations(
         current,
         {
           ...current,
+          importStatus: undefined,
           source: withRememberedPoses(current.source, link.source),
           picture: link.picture,
           revision: current.revision + 1,
@@ -1522,11 +1980,19 @@ export function setFoldStepPicture(
     showAsOf(was.render) === showAsOf(source.render) &&
     renderSide(was.render) === renderSide(source.render);
   let replaced = 0;
-  const next = updateStep(withAsset, stepId, (current) => {
+  const next = updatePicture(withAsset, stepId, (current) => {
     // Its words are Fold's while they are still the sentence it was captured with (D20's rule): they follow the step's.
     const own = was?.sentence;
     const text = own !== undefined && current.text === own ? xmlText(source.sentence ?? '') : current.text;
-    const captured: DiagramStep = { ...current, source, picture: link.picture, text, revision: current.revision + 1 };
+    const captured: DiagramStep = {
+      ...current,
+      // An import's fold notice is about the picture this replaces.
+      importStatus: undefined,
+      source,
+      picture: link.picture,
+      text,
+      revision: current.revision + 1,
+    };
     const carried = withCarriedAnnotations(current, captured, withAsset.assets);
     if (posedOnly) {
       // A Repeat's untouched callout names a screen direction. Recapture its
@@ -1547,10 +2013,10 @@ export function setFoldStepPicture(
   return { document: next, replaced };
 }
 
-/** The side of the paper a render shows: a flat fold's, or a crease pattern's paper colour. */
+/** The side of the paper a render shows: a flat fold's, or a crease pattern's paper colour; the front for a view that says none. */
 function renderSide(render: DiagramCpRender): 'front' | 'back' {
   if (render.mode === 'crease-pattern') return creasePatternSide(render);
-  return render.mode === 'simulated' ? 'front' : render.side;
+  return render.mode === 'simulated' || render.mode === 'defox' ? 'front' : render.side;
 }
 
 /**
@@ -1697,13 +2163,19 @@ export function pullReferencesSteps(
   const taken = updateStep(document, target.id, (step) => {
     const lifted = fits<DiagramPicture>(step, first.lifted) ? first.lifted : null;
     if (!lifted && first.lifted !== undefined) baked.push(step.id);
-    const next: DiagramStep = {
-      ...step,
-      source: first.source,
-      picture: lifted?.picture ?? first.picture,
-      text: words(step),
-      revision: step.revision + 1,
-    };
+    // A card never continues an enlarged run: an empty step it fills starts whole, before its marks arrive (review fix 3).
+    const next = startsWhole(
+      step,
+      {
+        ...step,
+        importStatus: undefined,
+        source: first.source,
+        picture: lifted?.picture ?? first.picture,
+        text: words(step),
+        revision: step.revision + 1,
+      },
+      document.assets
+    );
     const swapped = swapCardMarks(step, next, lifted?.annotations ?? [], document.assets);
     replaced = editedCardMarksGone(step, swapped);
     return swapped;
@@ -1860,7 +2332,7 @@ export function liftedStepDiagramKey(cardKey: string, mirrored: boolean): string
  * from.
  */
 export function setReferencesSide(document: DiagramDocument, stepId: string, mirrored: boolean): DiagramDocument {
-  return updateStep(document, stepId, (step) => {
+  return updatePicture(document, stepId, (step) => {
     if (step.source?.kind !== 'references-step' || step.picture?.kind !== 'step-diagram') return step;
     if (step.picture.mirrored === mirrored) return step;
     const turned: DiagramStep = {
@@ -1884,7 +2356,7 @@ export function setReferencesWay(
   stepId: string,
   way: { signature: string; picture: DiagramStepDiagramPicture; sentence: string; lifted?: LiftedCard | null }
 ): DiagramDocument {
-  return updateStep(document, stepId, (step) => {
+  return updatePicture(document, stepId, (step) => {
     if (step.source?.kind !== 'references-step' || step.picture?.kind !== 'step-diagram') return step;
     // The way it shows, baked or lifted: the same card.
     if (step.source.way === way.signature && stepDiagramCardKey(step.picture.key) === stepDiagramCardKey(way.picture.key)) {
@@ -1948,7 +2420,7 @@ export function setUploadPose(
   stepId: string,
   pose: UploadPose
 ): DiagramDocument {
-  return updateStep(document, stepId, (step) => {
+  return updatePicture(document, stepId, (step) => {
     if (poseBlocker(step) !== null || step.source?.kind !== 'upload') return step;
     const { rotationQuarterTurns, mirrored } = step.source;
     if (rotationQuarterTurns === pose.rotationQuarterTurns && mirrored === pose.mirrored) return step;
@@ -1974,7 +2446,8 @@ export function editStepAnnotations(
   stepId: string,
   edit: (annotations: readonly KnownDiagramAnnotation[]) => readonly KnownDiagramAnnotation[]
 ): DiagramDocument {
-  return updateStep(document, stepId, (step) => {
+  // A hand edit of an area tells a step enlarged from it with no record that it changed (review fix 4).
+  const edited = updateStep(document, stepId, (step) => {
     if (step.picture === null) return step;
     const known = step.annotations.filter(isKnownAnnotation);
     // As this build writes them, whoever made them: within the step's reach, a label's text clean;
@@ -1989,6 +2462,7 @@ export function editStepAnnotations(
     const touched = !annotationsOutOfStep(step) || authorMarksChanged(step, next);
     return touched ? { ...next, annotatedPictureKey: step.picture.key } : next;
   });
+  return recordAreaBeforeEdit(document, edited, stepId);
 }
 
 /**
@@ -2051,16 +2525,59 @@ function sameAnnotations(a: readonly KnownDiagramAnnotation[], b: readonly Known
 export function removeStepPicture(document: DiagramDocument, stepId: string): DiagramDocument {
   return updateStep(document, stepId, (step) =>
     stepHasPicture(step)
-      ? releaseCardMarks({ ...step, source: null, picture: null, revision: step.revision + 1 })
+      ? releaseCardMarks({ ...step, importStatus: undefined, source: null, picture: null, revision: step.revision + 1 })
       : step
   );
 }
 
-/** The asset a step's picture is drawn from, when it is one this build can draw. */
+/**
+ * The asset a step's picture is drawn from, when it is one this build can
+ * draw — a newer build's step's too, which is drawn as far as it reads.
+ */
 export function stepAsset(document: DiagramDocument, step: DiagramStep): KnownDiagramAsset | null {
-  if (isLockedStep(step) || step.picture?.kind !== 'asset') return null;
+  if (step.picture?.kind !== 'asset') return null;
   const asset = document.assets[step.picture.assetId];
   return asset && isKnownAsset(asset) ? asset : null;
+}
+
+/** Each carried value's JSON, made once: what a newer build wrote never changes here. */
+const carriedJsonOf = new WeakMap<object, string>();
+
+function jsonOnce(value: object): string {
+  let json = carriedJsonOf.get(value);
+  if (json === undefined) {
+    json = JSON.stringify(value);
+    carriedJsonOf.set(value, json);
+  }
+  return json;
+}
+
+/**
+ * Everything a newer build wrote that this build carries without reading, as
+ * JSON, one part each: its steps and turns, the annotations and assets this
+ * build cannot read, and the document's own fields, page fields, style, page
+ * arrangements and title block parts it does not read. An asset or a thumbnail named anywhere in it is kept, since
+ * only that newer build knows what the name is for. The thumbnails carried
+ * for those steps are no part of it: they are what it keeps.
+ */
+export function carriedJson(document: Pick<DiagramDocument, 'steps' | 'assets' | 'newer'>): string[] {
+  const parts: string[] = [];
+  for (const entry of document.steps) {
+    if (entry.unknown) parts.push(jsonOnce(entry.unknown));
+    else if (!isTurn(entry)) {
+      for (const annotation of entry.annotations) {
+        if (!isKnownAnnotation(annotation)) parts.push(jsonOnce(annotation.unknown));
+      }
+    }
+  }
+  for (const asset of Object.values(document.assets)) {
+    if (!isKnownAsset(asset)) parts.push(jsonOnce(asset.unknown));
+  }
+  const { newer } = document;
+  for (const part of [newer?.fields, newer?.page, newer?.style, newer?.pageArrangements, newer?.titleBlockContent]) {
+    if (part) parts.push(jsonOnce(part));
+  }
+  return parts;
 }
 
 /**
@@ -2068,35 +2585,27 @@ export function stepAsset(document: DiagramDocument, step: DiagramStep): KnownDi
  *
  * The store prunes as every edit lands, since each undo snapshot keeps its own
  * table, and the writer prunes again for a document from anywhere else (one
- * read from a hand-edited file). Three things keep an asset: a step's source or picture naming it; its id anywhere in a
- * newer build's step, annotation or asset, which this build cannot read but must not break; and
- * being of a kind this build does not know, since only that newer build knows
- * what refers to it. The same document comes back when nothing is dropped.
+ * read from a hand-edited file). Three things keep an asset: a step's source
+ * or picture naming it; its id anywhere a newer build wrote ({@link carriedJson}),
+ * which this build cannot read but must not break; and being of a kind this
+ * build does not know, since only that newer build knows what refers to it.
+ * The same document comes back when nothing is dropped.
  */
 export function withReferencedAssets(document: DiagramDocument): DiagramDocument {
   const kept = new Set<string>();
-  const carried: string[] = [];
   for (const step of stepsOf(document)) {
-    if (step.unknown) {
-      carried.push(JSON.stringify(step.unknown));
-      continue;
-    }
+    if (step.unknown) continue;
     if (step.source?.kind === 'upload') kept.add(step.source.assetId);
     if (step.picture?.kind === 'asset') kept.add(step.picture.assetId);
-    // A newer build's annotation may name an asset, as its step may.
-    for (const annotation of step.annotations) {
-      if (!isKnownAnnotation(annotation)) carried.push(JSON.stringify(annotation.unknown));
-    }
   }
-  for (const asset of Object.values(document.assets)) {
-    if (!isKnownAsset(asset)) carried.push(JSON.stringify(asset.unknown));
-  }
-  const unknownSteps = carried.join('\n');
+  // Read only for an asset no step of this build's names, which is rare.
+  let carried: string[] | undefined;
   let dropped = false;
   const assets: Record<string, DiagramAsset> = {};
   for (const [id, asset] of Object.entries(document.assets)) {
-    if (kept.has(id) || !isKnownAsset(asset) || unknownSteps.includes(id)) assets[id] = asset;
-    else dropped = true;
+    if (kept.has(id) || !isKnownAsset(asset) || (carried ??= carriedJson(document)).some((json) => json.includes(id))) {
+      assets[id] = asset;
+    } else dropped = true;
   }
   return dropped ? { ...document, assets } : document;
 }
@@ -2118,26 +2627,308 @@ export function setStepBreakBefore(
   );
 }
 
+/** What starts a page at a step: its own count ({@link DiagramStep.pageSteps}; null, none) and its page break. Each left as it is when unsaid. */
+export interface DiagramPageStart {
+  pageSteps?: number | null;
+  breakBefore?: boolean;
+}
+
+/**
+ * Steps' page starts set at once, by step id: a count clamped to
+ * {@link PAGE_STEPS_RANGE}, null taking it away. A turn, an id the diagram
+ * does not have and a newer build's step are left as they are, as every edit
+ * leaves them (`updateStep`); the same document when nothing changes.
+ */
+export function setPageStarts(document: DiagramDocument, starts: ReadonlyMap<string, DiagramPageStart>): DiagramDocument {
+  if (starts.size === 0) return document;
+  let changed = false;
+  const steps = document.steps.map((entry) => {
+    const start = starts.get(entry.id);
+    if (!start || isTurn(entry) || isLockedStep(entry)) return entry;
+    const next = withPageStart(entry, start);
+    if (next !== entry) changed = true;
+    return next;
+  });
+  return changed ? { ...document, steps } : document;
+}
+
+/** A step with its page start set; the same step when it already is. A count that is no number is no change. */
+function withPageStart(step: DiagramStep, start: DiagramPageStart): DiagramStep {
+  const asked = start.pageSteps;
+  const pageSteps =
+    asked === null
+      ? undefined
+      : asked === undefined || !Number.isFinite(asked)
+        ? step.pageSteps
+        : clampInteger(Math.round(asked), PAGE_STEPS_RANGE.min, PAGE_STEPS_RANGE.max);
+  const breakBefore = start.breakBefore ?? step.breakBefore;
+  if (pageSteps === step.pageSteps && breakBefore === step.breakBefore) return step;
+  const { pageSteps: _was, ...rest } = step;
+  return { ...rest, breakBefore, ...(pageSteps !== undefined ? { pageSteps } : {}) };
+}
+
 export function setDiagramTitle(document: DiagramDocument, title: string): DiagramDocument {
   const clean = xmlText(title);
   return document.title === clean ? document : { ...document, title: clean };
 }
 
+/**
+ * The title block's content with each part `patch` says set: a source, or
+ * `auto` taking it away; a subtitle or a note, a blank one taking it away; a
+ * size, held to its range, the default taking it away; the band's colour, a
+ * `#rrggbb` one (one that is no colour changing nothing), `paper` taking it
+ * away; the credits by one edit, an index past the list changing nothing and
+ * the last credit removed taking them away. A part it sets lets go of a newer
+ * build's value for it, even one shown as this value; the same document when
+ * nothing changes.
+ */
+export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTitleBlockContentPatch): DiagramDocument {
+  const was = document.titleBlockContent ?? {};
+  const source = (key: 'model' | 'pattern') => {
+    const asked = patch[key];
+    return asked === undefined ? was[key] : asked === 'auto' ? undefined : (titleBlockSource(asked) ?? undefined);
+  };
+  const text = (key: 'subtitle' | 'note', clean: (text: string) => string) => {
+    const asked = patch[key];
+    if (asked === undefined) return was[key];
+    const cleaned = clean(asked);
+    return cleaned.trim() ? cleaned : undefined;
+  };
+  const size = (key: 'modelSize' | 'patternSize') => {
+    const asked = patch[key];
+    if (asked === undefined || (asked !== 'default' && !Number.isFinite(asked))) return was[key];
+    return asked === 'default' ? undefined : titleBlockArtSize(key, asked);
+  };
+  const credits = patch.credits ? editedCredits(was.credits ?? [], patch.credits) : was.credits;
+  const bandColor = patch.bandColor === 'paper' ? undefined : (readHexColor(patch.bandColor) ?? was.bandColor);
+  const next = titleBlockContentOf({
+    model: source('model'),
+    pattern: source('pattern'),
+    subtitle: text('subtitle', titleBlockLine),
+    credits: credits && credits.length > 0 ? credits : undefined,
+    note: text('note', xmlText),
+    modelSize: size('modelSize'),
+    patternSize: size('patternSize'),
+    bandColor,
+    room: was.room,
+  });
+  const newer = withoutKeys(
+    document.newer?.titleBlockContent,
+    TITLE_BLOCK_PARTS.filter((key) => key !== 'room' && patch[key] !== undefined)
+  );
+  if (sameTitleBlockContent(was, next) && newer === document.newer?.titleBlockContent) return document;
+  const { titleBlockContent: _was, ...rest } = document;
+  const content = Object.keys(next).length > 0 ? { ...rest, titleBlockContent: next } : rest;
+  return withNewer(content, { ...document.newer, titleBlockContent: newer });
+}
+
+/**
+ * `document` with the room its title block's words were measured to (`DiagramTitleBlockContent.room`, mm): what
+ * the store keeps with a layout's packing after an edit of the words, no edit of its own. The same document where it
+ * says that already, and for a room that is no length.
+ */
+export function setTitleBlockRoom(document: DiagramDocument, roomMm: number): DiagramDocument {
+  if (!Number.isFinite(roomMm) || !(roomMm > 0) || document.titleBlockContent?.room === roomMm) return document;
+  return { ...document, titleBlockContent: titleBlockContentOf({ ...document.titleBlockContent, room: roomMm }) };
+}
+
+/**
+ * The first page's title block turned on or off by its toggle (`implementation-plans/diagram-title-block.md`,
+ * Phase 1c). On: at today's share ({@link DEFAULT_PAGE_SETUP}; with no control for the share, a file's is the
+ * default of its day) and, with `words`' — a new diagram's, in the author's language — the title where the diagram
+ * has none, and the subtitle and credits where the content says nothing of them, so that the header is never bare
+ * (Zach, 2026-10-15). Off: its share and its words kept. The author's own act, so the pages may move; the same
+ * document where the block is already so.
+ */
+export function setTitleBlockShown(document: DiagramDocument, enabled: boolean, words: TitleBlockDefaultWords): DiagramDocument {
+  const { titleBlock } = document.page;
+  if (titleBlock.enabled === enabled) return document;
+  const shown = setPageSetup(document, { titleBlock: enabled ? DEFAULT_PAGE_SETUP.titleBlock : { ...titleBlock, enabled } });
+  if (!enabled) return shown;
+  const titled = shown.title.trim() === '' ? setDiagramTitle(shown, words.title) : shown;
+  if (saysTitleBlockWords(document)) return titled;
+  const { subtitle, credits } = defaultTitleBlockContent(words);
+  return { ...titled, titleBlockContent: titleBlockContentOf({ ...titled.titleBlockContent, subtitle, credits }) };
+}
+
+/** Whether the title block's content, or a newer build's carried with it, says anything of its subtitle or credits. */
+function saysTitleBlockWords(document: DiagramDocument): boolean {
+  const own = document.titleBlockContent;
+  const newer = document.newer?.titleBlockContent;
+  return own?.subtitle !== undefined || own?.credits !== undefined || (newer !== undefined && ('subtitle' in newer || 'credits' in newer));
+}
+
+/** The content with only the parts that say something, in {@link TITLE_BLOCK_PARTS}' order. */
+function titleBlockContentOf(parts: { [K in keyof DiagramTitleBlockContent]: DiagramTitleBlockContent[K] | undefined }): DiagramTitleBlockContent {
+  return Object.fromEntries(
+    TITLE_BLOCK_PARTS.flatMap((key) => (parts[key] === undefined ? [] : [[key, parts[key]]]))
+  ) as DiagramTitleBlockContent;
+}
+
+/** The credits after one edit; the same list where it changes nothing. */
+function editedCredits(
+  credits: readonly DiagramTitleBlockCredit[],
+  edit: DiagramTitleBlockCreditEdit
+): readonly DiagramTitleBlockCredit[] {
+  const inList = (at: number) => Number.isInteger(at) && at >= 0 && at < credits.length;
+  if (edit.op === 'add') {
+    const credit = titleBlockCredit(edit.credit ?? { label: '', value: '' });
+    const at = edit.at !== undefined && Number.isInteger(edit.at) ? Math.min(Math.max(edit.at, 0), credits.length) : credits.length;
+    return [...credits.slice(0, at), credit, ...credits.slice(at)];
+  }
+  if (!inList(edit.at)) return credits;
+  if (edit.op === 'remove') return credits.filter((_, index) => index !== edit.at);
+  const was = credits[edit.at]!;
+  const credit = titleBlockCredit({ label: edit.label ?? was.label, value: edit.value ?? was.value });
+  if (sameCredit(credit, was)) return credits;
+  return credits.map((entry, index) => (index === edit.at ? credit : entry));
+}
+
+/**
+ * A line of the title block's text as stored — the subtitle, a credit's label or its text — cleaned as all typed
+ * text is, a line break a space. The one rule for the file and an edit.
+ */
+export function titleBlockLine(text: string): string {
+  return xmlText(text).replace(/[\r\n]+/g, ' ');
+}
+
+/** A credit as stored: its label and its text value each one line. */
+export function titleBlockCredit(credit: DiagramTitleBlockCredit): DiagramTitleBlockCredit {
+  const value = typeof credit.value === 'string' ? titleBlockLine(credit.value) : { kind: 'step-count' as const };
+  return { label: titleBlockLine(credit.label), value };
+}
+
+/** A size as stored: held to {@link TITLE_BLOCK_ART_SIZE_RANGE}, and none at its default. */
+export function titleBlockArtSize(key: 'modelSize' | 'patternSize', value: number): number | undefined {
+  const held = clampNumber(value, TITLE_BLOCK_ART_SIZE_RANGE, TITLE_BLOCK_ART_SIZE_DEFAULTS[key]);
+  return held === TITLE_BLOCK_ART_SIZE_DEFAULTS[key] ? undefined : held;
+}
+
+/**
+ * The model's and the pattern's sizes the block is laid out at: the content's, or the defaults — and the default for
+ * a part set to none, which draws nothing, so that a size kept for when it comes back moves nothing meanwhile.
+ */
+export function titleBlockArtSizes(content: DiagramTitleBlockContent | undefined): { modelSize: number; patternSize: number } {
+  const size = (key: 'modelSize' | 'patternSize', part: 'model' | 'pattern') =>
+    content?.[part]?.kind === 'none' ? TITLE_BLOCK_ART_SIZE_DEFAULTS[key] : (content?.[key] ?? TITLE_BLOCK_ART_SIZE_DEFAULTS[key]);
+  return { modelSize: size('modelSize', 'model'), patternSize: size('patternSize', 'pattern') };
+}
+
+/** The number a credit's live step count prints: the last numbered step's (turns are not numbered, D22). */
+export function titleBlockStepCount(document: DiagramDocument): number {
+  return stepNumbers(document).size;
+}
+
+/**
+ * A title block source as this build holds it, its own fields and no other;
+ * null for a kind it does not make, or a step without its id. The one rule
+ * for both the file (`readDiagram` drops such a part) and an edit (which
+ * takes it as Auto), so that what is set reads back the same.
+ */
+export function titleBlockSource(value: { readonly kind?: unknown; readonly stepId?: unknown }): DiagramTitleBlockSource | null {
+  if (value.kind === 'none') return { kind: 'none' };
+  return value.kind === 'step' && typeof value.stepId === 'string' && value.stepId.length > 0
+    ? { kind: 'step', stepId: value.stepId }
+    : null;
+}
+
+function sameTitleBlockContent(a: DiagramTitleBlockContent, b: DiagramTitleBlockContent): boolean {
+  return (
+    sameSource(a.model, b.model) &&
+    sameSource(a.pattern, b.pattern) &&
+    a.subtitle === b.subtitle &&
+    (a.credits ?? []).length === (b.credits ?? []).length &&
+    (a.credits ?? []).every((credit, index) => sameCredit(credit, b.credits![index]!)) &&
+    a.note === b.note &&
+    a.modelSize === b.modelSize &&
+    a.patternSize === b.patternSize &&
+    a.bandColor === b.bandColor &&
+    a.room === b.room
+  );
+}
+
+function sameCredit(a: DiagramTitleBlockCredit, b: DiagramTitleBlockCredit): boolean {
+  return a.label === b.label && (typeof a.value === 'string' ? a.value === b.value : typeof b.value !== 'string');
+}
+
+function sameSource(a: DiagramTitleBlockSource | undefined, b: DiagramTitleBlockSource | undefined): boolean {
+  if (a?.kind === 'step' || b?.kind === 'step') return a?.kind === 'step' && b?.kind === 'step' && a.stepId === b.stepId;
+  return a?.kind === b?.kind;
+}
+
 export function setHanStyle(document: DiagramDocument, hanStyle: DiagramHanStyle): DiagramDocument {
-  return document.hanStyle === hanStyle ? document : { ...document, hanStyle };
+  if (document.hanStyle === hanStyle && document.newer?.hanStyle === undefined) return document;
+  return withNewer({ ...document, hanStyle }, { ...document.newer, hanStyle: undefined });
 }
 
 export function setDiagramStyle(document: DiagramDocument, style: DiagramStyle): DiagramDocument {
-  return diagramStyleEquals(document.style, style) ? document : { ...document, style };
+  if (diagramStyleEquals(document.style, style) && document.newer?.style === undefined) return document;
+  return withNewer({ ...document, style: snapshotDiagramStyle(style) }, { ...document.newer, style: undefined });
 }
 
-/** Apply a partial page setup, clamped to the legal ranges. */
+/**
+ * Apply a partial page setup, clamped to the legal ranges. A field it sets
+ * lets go of a newer build's value for it, even one shown as this value.
+ */
 export function setPageSetup(
   document: DiagramDocument,
   patch: Partial<DiagramPageSetup>
 ): DiagramDocument {
   const next = normalizePageSetup({ ...document.page, ...patch });
-  return pageSetupEquals(document.page, next) ? document : { ...document, page: next };
+  const newerPage = withoutKeys(document.newer?.page, Object.keys(patch));
+  if (pageSetupEquals(document.page, next) && newerPage === document.newer?.page) return document;
+  return withNewer({ ...document, page: next }, { ...document.newer, page: newerPage });
+}
+
+/**
+ * The document with `arrangements` as its stored page arrangements
+ * ({@link DiagramDocument.pageArrangements}), and no field at all when there
+ * are none; the same document when they say what it holds. A newer build's
+ * carried arrangements stay as they are: this build's stand beside them,
+ * and theirs are what the file writes.
+ */
+export function withPageArrangements(
+  document: DiagramDocument,
+  arrangements: Readonly<Record<string, DiagramPageArrangement>>
+): DiagramDocument {
+  if (samePageArrangements(document.pageArrangements, arrangements)) return document;
+  const { pageArrangements: _was, ...rest } = document;
+  return Object.keys(arrangements).length > 0 ? { ...rest, pageArrangements: arrangements } : rest;
+}
+
+/**
+ * The arrangements stored for the pages `firstStepIds` start with dropped —
+ * or every one, for null — a newer build's carried ones among them, which a
+ * re-pack here lets go of: Re-pack Page and Re-pack All Pages. The same
+ * document when none is stored there.
+ */
+export function withoutPageArrangements(document: DiagramDocument, firstStepIds: readonly string[] | null): DiagramDocument {
+  const own = document.pageArrangements;
+  const newer = document.newer?.pageArrangements;
+  const keys = firstStepIds ?? [...Object.keys(own ?? {}), ...Object.keys(newer ?? {})];
+  const keptOwn = withoutKeys(own, keys);
+  const keptNewer = withoutKeys(newer, keys);
+  if (keptOwn === own && keptNewer === newer) return document;
+  const { pageArrangements: _was, ...rest } = document;
+  const next = keptOwn ? { ...rest, pageArrangements: keptOwn as Readonly<Record<string, DiagramPageArrangement>> } : rest;
+  return keptNewer === newer ? next : withNewer(next, { ...document.newer, pageArrangements: keptNewer });
+}
+
+/** A document with the newer build's values that still stand, and no `newer` at all when none does. */
+function withNewer(document: DiagramDocument, newer: DiagramNewerFields): DiagramDocument {
+  const { newer: _was, ...rest } = document;
+  const standing = Object.fromEntries(Object.entries(newer).filter(([, value]) => value !== undefined));
+  return Object.keys(standing).length > 0 ? { ...rest, newer: standing } : rest;
+}
+
+/** `record` without `keys`: the same record when it has none of them, and none when nothing is left. */
+function withoutKeys(
+  record: Readonly<Record<string, unknown>> | undefined,
+  keys: readonly string[]
+): Readonly<Record<string, unknown>> | undefined {
+  if (!record || !keys.some((key) => Object.hasOwn(record, key))) return record;
+  const rest = Object.fromEntries(Object.entries(record).filter(([key]) => !keys.includes(key)));
+  return Object.keys(rest).length > 0 ? rest : undefined;
 }
 
 /**
@@ -2188,6 +2979,21 @@ export function setTurn(document: DiagramDocument, turnId: string, kind: Diagram
   return { ...document, steps };
 }
 
+/**
+ * Edit one step's own picture — a capture, a relink, a re-pose, a References
+ * step's side or way — as {@link updateStep} does, its marks carried with it
+ * (`withCarriedAnnotations`): the records of the steps enlarged from an area
+ * on it go with an area the picture carried, so a carry says no enlarged step
+ * is out of date (review fix 4, `followAreaRecords`).
+ */
+function updatePicture(
+  document: DiagramDocument,
+  stepId: string,
+  edit: (step: DiagramStep) => DiagramStep
+): DiagramDocument {
+  return followAreaRecords(document, updateStep(document, stepId, edit), stepId);
+}
+
 /** Edit one step; a turn, an unknown id or a newer build's step is left as it is. */
 function updateStep(
   document: DiagramDocument,
@@ -2208,52 +3014,70 @@ function updateStep(
 export const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'];
 
 /**
- * The layout of a page setup that does not say: the grid, which every diagram
- * was in until the flow became a new one's (2026-10-06). Every file written
- * says its layout, so this reads a hand-edited or damaged one as it would have
- * read before — never a saved grid as a flow — and a new diagram says `flow`.
- */
-export const UNSAID_PAGE_LAYOUT: DiagramPageLayout = 'grid';
-
-/**
  * A page setup from anything, every field checked and clamped, each falling
- * back to its default on its own. Used by the edit above and by the file
- * reader, so a hand-edited file and a stepper reach the same legal values.
+ * back on its own to its legacy value (`PAGE_SETTINGS`) where it is missing or
+ * damaged: a file that does not say a setting was written by a build that did
+ * not know it, and is drawn as that build drew it — never as today's default.
+ * Used by the edit above, which says every field, and by the file reader, so
+ * a hand-edited file and a stepper reach the same legal values.
  */
 export function normalizePageSetup(value: unknown): DiagramPageSetup {
+  const legacy = <K extends Exclude<keyof DiagramPageSetup, 'stepsPerPage'>>(key: K) => PAGE_SETTINGS[key].legacy;
   const source = isRecord(value) ? value : {};
   const numbers = isRecord(source.pageNumbers) ? source.pageNumbers : {};
+  const columns = clampWhole(source.columns, PAGE_COLUMNS_RANGE, legacy('columns'));
+  const rows = clampWhole(source.rows, PAGE_ROWS_RANGE, legacy('rows'));
   return {
-    size: PAPER_SIZES.includes(source.size as DiagramPaperSize)
-      ? (source.size as DiagramPaperSize)
-      : DEFAULT_PAGE_SETUP.size,
+    size: PAPER_SIZES.includes(source.size as DiagramPaperSize) ? (source.size as DiagramPaperSize) : legacy('size'),
     orientation:
-      source.orientation === 'landscape' || source.orientation === 'portrait'
-        ? source.orientation
-        : DEFAULT_PAGE_SETUP.orientation,
-    marginMm: clampNumber(source.marginMm, PAGE_MARGIN_MM_RANGE, DEFAULT_PAGE_SETUP.marginMm),
-    layout: source.layout === 'flow' || source.layout === 'grid' ? source.layout : UNSAID_PAGE_LAYOUT,
-    columns: clampWhole(source.columns, PAGE_COLUMNS_RANGE, DEFAULT_PAGE_SETUP.columns),
-    rows: clampWhole(source.rows, PAGE_ROWS_RANGE, DEFAULT_PAGE_SETUP.rows),
-    showPath: typeof source.showPath === 'boolean' ? source.showPath : DEFAULT_PAGE_SETUP.showPath,
-    // Unsaid, or damaged: in proportion to the steps, as before there was a choice.
-    pathWidthMm:
-      typeof source.pathWidthMm === 'number' && Number.isFinite(source.pathWidthMm)
-        ? clampNumber(source.pathWidthMm, PATH_WIDTH_MM_RANGE, PATH_WIDTH_MM_RANGE.min)
-        : null,
-    pathColor: readHexColor(source.pathColor) ?? DEFAULT_PATH_COLOR,
-    // Unsaid, as in every file before there was a choice: the left.
-    firstPageSide: source.firstPageSide === 'right' ? 'right' : DEFAULT_PAGE_SETUP.firstPageSide,
-    showTitle:
-      typeof source.showTitle === 'boolean' ? source.showTitle : DEFAULT_PAGE_SETUP.showTitle,
+      source.orientation === 'landscape' || source.orientation === 'portrait' ? source.orientation : legacy('orientation'),
+    marginMm: clampNumber(source.marginMm, PAGE_MARGIN_MM_RANGE, legacy('marginMm')),
+    layout: source.layout === 'flow' || source.layout === 'grid' ? source.layout : legacy('layout'),
+    columns,
+    rows,
+    stepsPerPage: clampWhole(
+      source.stepsPerPage,
+      STEPS_PER_PAGE_RANGE,
+      PAGE_SETTINGS.stepsPerPage.legacy({ columns: wholeOr(source.columns, columns), rows: wholeOr(source.rows, rows) })
+    ),
+    showPath: typeof source.showPath === 'boolean' ? source.showPath : legacy('showPath'),
+    pathWidthMm: clampNumber(source.pathWidthMm, PATH_WIDTH_MM_RANGE, legacy('pathWidthMm')),
+    pathColor: readHexColor(source.pathColor) ?? legacy('pathColor'),
+    firstPageSide: DIAGRAM_PAGE_SIDES.includes(source.firstPageSide as DiagramPageSide)
+      ? (source.firstPageSide as DiagramPageSide)
+      : legacy('firstPageSide'),
+    showTitle: typeof source.showTitle === 'boolean' ? source.showTitle : legacy('showTitle'),
     pageNumbers: {
-      enabled:
-        typeof numbers.enabled === 'boolean'
-          ? numbers.enabled
-          : DEFAULT_PAGE_SETUP.pageNumbers.enabled,
-      first: clampWhole(numbers.first, FIRST_PAGE_NUMBER_RANGE, DEFAULT_PAGE_SETUP.pageNumbers.first),
+      enabled: typeof numbers.enabled === 'boolean' ? numbers.enabled : legacy('pageNumbers').enabled,
+      first: clampWhole(numbers.first, FIRST_PAGE_NUMBER_RANGE, legacy('pageNumbers').first),
     },
+    flowBands: readFlowBands(source.flowBands),
+    flowPreferBands: clampNumber(source.flowPreferBands, FLOW_WEIGHT_RANGE, legacy('flowPreferBands')),
+    flowBendSteps: typeof source.flowBendSteps === 'boolean' ? source.flowBendSteps : legacy('flowBendSteps'),
+    flowNesting: clampNumber(source.flowNesting, FLOW_WEIGHT_RANGE, legacy('flowNesting')),
+    flowSteadiness: clampNumber(source.flowSteadiness, FLOW_WEIGHT_RANGE, legacy('flowSteadiness')),
+    titleBlock: readTitleBlockSetup(source.titleBlock),
   };
+}
+
+/** The title block's setup from anything: whole, each field checked and clamped, or the legacy value where it is no object. */
+function readTitleBlockSetup(value: unknown): DiagramTitleBlockSetup {
+  const legacy = PAGE_SETTINGS.titleBlock.legacy;
+  if (!isRecord(value)) return legacy;
+  return {
+    enabled: typeof value.enabled === 'boolean' ? value.enabled : legacy.enabled,
+    heightShare: clampNumber(value.heightShare, TITLE_BLOCK_SHARE_RANGE, legacy.heightShare),
+  };
+}
+
+/**
+ * A flow page's band count from anything: `auto`, or a count rounded whole
+ * and clamped to {@link FLOW_BANDS_RANGE}; anything else, the legacy value.
+ */
+function readFlowBands(value: unknown): DiagramFlowBands {
+  if (value === 'auto') return 'auto';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return PAGE_SETTINGS.flowBands.legacy;
+  return clampWhole(value, FLOW_BANDS_RANGE, FLOW_BANDS_RANGE.min) as DiagramFlowBands;
 }
 
 export function pageSetupEquals(a: DiagramPageSetup, b: DiagramPageSetup): boolean {
@@ -2264,13 +3088,21 @@ export function pageSetupEquals(a: DiagramPageSetup, b: DiagramPageSetup): boole
     a.layout === b.layout &&
     a.columns === b.columns &&
     a.rows === b.rows &&
+    a.stepsPerPage === b.stepsPerPage &&
     a.showPath === b.showPath &&
     a.pathWidthMm === b.pathWidthMm &&
     a.pathColor === b.pathColor &&
     a.firstPageSide === b.firstPageSide &&
     a.showTitle === b.showTitle &&
     a.pageNumbers.enabled === b.pageNumbers.enabled &&
-    a.pageNumbers.first === b.pageNumbers.first
+    a.pageNumbers.first === b.pageNumbers.first &&
+    a.flowBands === b.flowBands &&
+    a.flowPreferBands === b.flowPreferBands &&
+    a.flowBendSteps === b.flowBendSteps &&
+    a.flowNesting === b.flowNesting &&
+    a.flowSteadiness === b.flowSteadiness &&
+    a.titleBlock.enabled === b.titleBlock.enabled &&
+    a.titleBlock.heightShare === b.titleBlock.heightShare
   );
 }
 
@@ -2281,7 +3113,8 @@ export function readHexColor(value: unknown): string | null {
 
 function diagramStyleEquals(a: DiagramStyle, b: DiagramStyle): boolean {
   if ('preset' in a || 'preset' in b) {
-    return 'preset' in a && 'preset' in b && a.preset === b.preset;
+    return 'preset' in a && 'preset' in b && a.preset === b.preset
+      && JSON.stringify(snapshotDiagramStyle(a).style) === JSON.stringify(snapshotDiagramStyle(b).style);
   }
   return JSON.stringify(a.style) === JSON.stringify(b.style);
 }
@@ -2298,6 +3131,11 @@ function clampNumber(
 function clampWhole(value: unknown, range: { min: number; max: number }, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return clampInteger(Math.round(value), range.min, range.max);
+}
+
+/** `value` as said, rounded whole, when it is a finite number; else `fallback`. */
+function wholeOr(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : fallback;
 }
 
 function clampInteger(value: number, min: number, max: number): number {

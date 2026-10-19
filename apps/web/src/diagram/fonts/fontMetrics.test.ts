@@ -22,6 +22,31 @@ describe('readFontMetrics', () => {
     for (const character of 'șțơưệ\u0301') expect(metrics.has(character.codePointAt(0)!)).toBe(true);
   });
 
+  it('reads how far each glyph’s ink reaches above and below the baseline, from its outline', () => {
+    // The glyf headers' yMax and yMin, as the bundled faces and the Chinese fixture have them.
+    const inks = (name: string, characters: string) => {
+      const metrics = readFontMetrics(font(name));
+      return [...characters].map((character) => metrics.ink(character.codePointAt(0)!));
+    };
+    const [C, É, Å, l, g] = inks('NotoSans-Bold.ttf', 'CÉÅlg');
+    expect(C!.top).toBe(724);
+    expect(É!.top).toBe(934);
+    expect(Å!.top).toBeGreaterThan(C!.top);
+    expect(l!.top).toBeGreaterThan(C!.top);
+    // Round letters overshoot the baseline a little; a descender reaches well under it.
+    expect(C!.bottom).toBeLessThan(0);
+    expect(C!.bottom).toBeGreaterThan(-20);
+    expect(g!.bottom).toBeLessThan(-200);
+    for (const ink of inks('fixtures/NotoSansSC-Bold.fixture.ttf', '将底角')) {
+      expect(ink!.top).toBeGreaterThan(820);
+      expect(ink!.top).toBeLessThan(900);
+      expect(ink!.bottom).toBeLessThan(0);
+      expect(ink!.bottom).toBeGreaterThan(-150);
+    }
+    // No ink for a space, nor for a glyph the font lacks.
+    expect(inks('NotoSans-Bold.ttf', ' 鶴')).toEqual([null, null]);
+  });
+
   it('knows what the bundled Latin font lacks', () => {
     const metrics = readFontMetrics(font('NotoSans-Regular.ttf'));
     expect(metrics.has('鶴'.codePointAt(0)!)).toBe(false);

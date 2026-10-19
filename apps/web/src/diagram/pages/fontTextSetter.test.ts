@@ -142,3 +142,60 @@ describe('fontTextSetter', () => {
     expect(line.runs.map((run) => run.font)).toEqual(['latin-400']);
   });
 });
+
+/**
+ * The title block's description (Zach, 2026-10-15: "if I like indent a paragraph it should stay indented"): its
+ * spaces kept as a text editor's pre-wrap keeps them, each kept space room before the next run.
+ */
+describe('fontTextSetter, its spaces kept (pre-wrap)', () => {
+  const S = 3.2;
+  const space = widthOf(' ', 'latin-400', S);
+  const kept = (text: string, widthMm = 200, maxLines = 99) => fontTextSetter(lookup, 'sc').paragraph(text, widthMm, S, maxLines, 400, 'pre-wrap');
+  const runs = (line: { runs: { text: string; xMm: number }[] }) => line.runs.map(({ text, xMm }) => [text, Number(xMm.toFixed(6))]);
+
+  it('keeps a paragraph’s indent, as room before its first letter', () => {
+    const [line] = kept('    Fold the corner up.').lines;
+    expect(line!.text).toBe('    Fold the corner up.');
+    expect(runs(line!)).toEqual([['Fold the corner up.', Number((4 * space).toFixed(6))]]);
+    expect(line!.widthMm).toBeCloseTo(4 * space + widthOf('Fold the corner up.', 'latin-400', S), 9);
+  });
+
+  it('keeps a run of spaces, a single space set as before', () => {
+    const [line] = kept('Fold   it up.').lines;
+    const fold = widthOf('Fold', 'latin-400', S);
+    expect(runs(line!)).toEqual([
+      ['Fold', 0],
+      ['it up.', Number((fold + 3 * space).toFixed(6))],
+    ]);
+  });
+
+  it('sets a tab as four spaces', () => {
+    expect(runs(kept('\tFold.').lines[0]!)).toEqual(runs(kept('    Fold.').lines[0]!));
+  });
+
+  it('keeps every blank line between paragraphs, and none at either end', () => {
+    expect(kept('\n\nFirst.\n\n\nSecond.\n\n').lines.map((line) => line.text)).toEqual(['First.', '', '', 'Second.']);
+  });
+
+  it('continues a wrapped line of an indented paragraph at the margin', () => {
+    const set = kept('    Fold the bottom corner up to the top corner and unfold.', 40);
+    expect(set.lines.length).toBeGreaterThan(1);
+    expect(set.lines[0]!.runs[0]!.xMm).toBeCloseTo(4 * space, 9);
+    for (const line of set.lines.slice(1)) expect(line.runs[0]!.xMm).toBe(0);
+    for (const line of set.lines) expect(line.widthMm).toBeLessThanOrEqual(40 + 1e-9);
+  });
+
+  it('cuts with "…" at its last line, blank lines and indents counted', () => {
+    const set = kept('  First.\n\n  Second, which is long enough to wrap onto a line of its own.\n\nThird.', 40, 4);
+    expect(set.lines).toHaveLength(4);
+    expect(set.linesNeeded).toBeGreaterThan(4);
+    expect(set.lines[1]!.text).toBe('');
+    expect(set.lines[2]!.runs[0]!.xMm).toBeCloseTo(2 * space, 9);
+    expect(set.lines[3]!.ellipsis).toBe(true);
+    expect(set.lines[3]!.widthMm).toBeLessThanOrEqual(40 + 1e-9);
+  });
+
+  it('leaves every other text as it was: runs of spaces one space, no indent', () => {
+    expect(fontTextSetter(lookup, 'sc').paragraph('    Fold   it.', 200, S, 99).lines.map((line) => line.text)).toEqual(['Fold it.']);
+  });
+});

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
-import type { PicturePoint } from '../annotate/annotationModel';
-import { cpDocument, fakeCaptureRuntime, twoSquaresSegmentation } from '../capture/capture.fixtures';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
+import { createAnnotation, type PicturePoint } from '../annotate/annotationModel';
+import { stepZoomStatus } from './zoomActions';
+import { cpDocument, fakeCaptureRuntime, twoSquaresIndex } from '../capture/capture.fixtures';
 import { captureStep } from '../capture/captureFolded';
 import {
   createDiagram,
@@ -21,7 +22,7 @@ import {
 } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { craneStep, imprintCase } from './zoom.fixtures';
-import { anchorOf, capture, captureSource, seededZoom, stepsFrom } from './zoomCapture';
+import { anchorOf, capture, captureSource, runShowAs, runSource, seededZoom, stepsFrom } from './zoomCapture';
 import { enlargeStep, relandFrame, reposeFrame, setFrameOutline, unenlargeStep, updateEnlargedSteps } from './zoomFrames';
 import { anchorPoint, defaultAnchor, facePlacement, paperFacesOf, toPicture, toScene } from './zoomImprint';
 import { zoomOutlineOf } from './zoomModel';
@@ -74,6 +75,17 @@ describe('where a capture is taken from', () => {
 });
 
 describe('capturing a frame', () => {
+  it('accepts a circle drawn wholly outside the model and keeps an empty enlarged window', () => {
+    const plain = craneStep('C.none');
+    const area = createAnnotation('zoom', [-1, -1], [-0.8, -0.8], { width: 1, height: 1 });
+    const s = withArea(plain, area);
+    const n = renamed(plain, 'step-n');
+    const { document, captured } = enlargeStep(diagramOf(s, n), 'step-n', NO_ASSETS);
+    expect(captured).not.toBeNull();
+    expect(zoomOf(document, 'step-n')?.frame?.centre).toEqual([expect.closeTo(-0.9, 9), expect.closeTo(-0.9, 9)]);
+    expect(stepZoomStatus(document, 'step-n')?.notices).toContainEqual({ kind: 'no-paper' });
+  });
+
   it('imprints the area through S’s default anchor, worked out afresh, and lands it on N through the face holding its point', () => {
     const s = withArea(craneStep('S.affine'), headArea(craneStep('S.affine'), 'affine'));
     const n = renamed(craneStep('C.affine'), 'step-n');
@@ -153,6 +165,51 @@ describe('capturing a frame', () => {
     expect(seeded).toMatchObject({ from: 'area-head', shape: 'circle' });
     expect(seeded.imprint).toBeDefined();
     expect(seeded.frame).toEqual(zoomOf(enlarged, 'step-n')!.frame);
+    // A newer build's enlarged step is drawn with its frame, but is no run this build continues.
+    const newer = {
+      ...enlarged,
+      steps: enlarged.steps.map((entry) => (entry.id === 'step-n' ? { ...entry, unknown: { id: 'step-n' } } : entry)),
+    };
+    expect(seededZoom(insertSteps(newer, [added], 2), 'step-added')).toBeNull();
+  });
+
+  it('names the run’s picture type: its source’s, past empty steps seeded before it; none from an upload, or with no source (review fix 3)', () => {
+    const s = withArea(craneStep('S.none'), headArea(craneStep('S.none'), 'none'));
+    const empty = (id: string): DiagramStep => ({ ...cpStep(id), picture: null, source: null });
+    let document = enlargeStep(diagramOf(s, renamed(craneStep('C.none'), 'step-n')), 'step-n', NO_ASSETS).document;
+    document = insertSteps(document, [empty('step-e1'), empty('step-e2')], 2);
+    document = enlargeStep(enlargeStep(document, 'step-e1', NO_ASSETS).document, 'step-e2', NO_ASSETS).document;
+    expect(runSource(document, 'step-e2')?.id).toBe('step-n');
+    expect(runShowAs(document, 'step-e2')).toBe('folded');
+    // Enlarged from the area itself: it starts a run, and continues none.
+    expect(runSource(document, 'step-n')).toBeNull();
+    expect(runShowAs(document, 'step-n')).toBeNull();
+    // A crease pattern's run.
+    const asPattern = (entry: DiagramEntry): DiagramEntry =>
+      entry.id === 'step-n' && 'source' in entry && entry.source?.kind === 'cp'
+        ? { ...entry, source: { ...entry.source, render: { mode: 'crease-pattern', rotationDeg: 0 } } }
+        : entry;
+    expect(runShowAs({ ...document, steps: document.steps.map(asPattern) }, 'step-e2')).toBe('crease-pattern');
+    // An upload's run, and a step with nothing before it to be enlarged from.
+    const asUpload = (entry: DiagramEntry): DiagramEntry =>
+      entry.id === 'step-n'
+        ? { ...(entry as DiagramStep), source: { kind: 'upload', assetId: 'asset-u', rotationQuarterTurns: 0, mirrored: false } }
+        : entry;
+    expect(runShowAs({ ...document, steps: document.steps.map(asUpload) }, 'step-e2')).toBeNull();
+    expect(runShowAs(document, s.id)).toBeNull();
+  });
+
+  it('names no run for a step whose run starts with no picture yet: past empty steps back to the area', () => {
+    const s = withArea(craneStep('S.none'), headArea(craneStep('S.none'), 'none'));
+    const empty = (id: string): DiagramStep => ({ ...cpStep(id), picture: null, source: null });
+    // Step N enlarged from the area, then its picture removed; an empty step enlarged after it.
+    let document = enlargeStep(diagramOf(s, renamed(craneStep('C.none'), 'step-n')), 'step-n', NO_ASSETS).document;
+    const removed = (entry: DiagramEntry): DiagramEntry => (entry.id === 'step-n' ? { ...(entry as DiagramStep), source: null, picture: null } : entry);
+    document = { ...document, steps: document.steps.map(removed) };
+    document = enlargeStep(insertSteps(document, [empty('step-e1')], 2), 'step-e1', NO_ASSETS).document;
+    expect(zoomOf(document, 'step-e1')).toBeDefined();
+    expect(runSource(document, 'step-e1')).toBeNull();
+    expect(runShowAs(document, 'step-e1')).toBeNull();
   });
 
   it('copies the frame in picture units where either step has no faces', () => {
@@ -183,12 +240,12 @@ describe('capturing a frame', () => {
 });
 
 describe('a crease pattern’s one face', () => {
-  const segmentation = twoSquaresSegmentation();
-  const [left] = resolveCpSegments(segmentation);
+  const sheets = twoSquaresIndex();
+  const [left] = sheetRegions(sheets);
   const scope = { kind: 'segment' as const, region: regionReferenceFor(left!) };
 
   async function patternStep(render: DiagramCpRender): Promise<DiagramStep> {
-    const result = await captureStep(fakeCaptureRuntime(), { document: cpDocument(), segmentation, scope, render, style: DEFAULT_DIAGRAM_STYLE });
+    const result = await captureStep(fakeCaptureRuntime(), { document: cpDocument(), sheets, scope, render, style: DEFAULT_DIAGRAM_STYLE });
     if (result.status !== 'captured' || result.captured.kind !== 'picture') throw new Error('expected a picture');
     return { ...cpStep('step-cp', render, result.captured.picture), source: result.source };
   }
@@ -238,6 +295,31 @@ describe('a crease pattern’s one face', () => {
     const there = paperFacesOf({ ...turned, id: 'step-turned' })!;
     const centre = toScene(there, captured.zoom.frame!).centre;
     expect(distance(facePlacement(there, 0)!.invert(centre), anchor.on)).toBeLessThan(1e-9);
+  });
+
+  // Zach, 2026-10-12: a pattern turned over on its back (Flip creases) is the paper seen from behind.
+  it('reads a pattern turned over as its paper seen from behind, and lands a frame on the same paper there', async () => {
+    // The crane's step 4 lies at 315°; turned over, its turn runs the other way.
+    const step = await patternStep({ mode: 'crease-pattern', rotationDeg: 315 });
+    const over = { ...(await patternStep({ mode: 'crease-pattern', rotationDeg: 45, side: 'back', flipCreases: true })), id: 'step-over' };
+    const [faces, overFaces] = [paperFacesOf(step)!, paperFacesOf(over)!];
+    // The same paper, corner for corner, placed reflected.
+    overFaces.paper[0]!.forEach((corner, index) => expect(distance(corner, faces.paper[0]![index]!)).toBeLessThan(0.01));
+    const placement = facePlacement(overFaces, 0)!;
+    expect(placement.reflected).toBe(true);
+    overFaces.paper[0]!.forEach((corner, index) =>
+      expect(distance(placement.apply(corner), overFaces.unspread[0]![index]!)).toBeLessThan(1e-6)
+    );
+    // A frame drawn on the pattern lands on the same paper turned over: mirrored side to side in its picture.
+    const frame = { centre: [0.4, 0.45] as PicturePoint, radius: 0.1 };
+    const anchor = anchorOf(faces, toScene(faces, frame))!;
+    const area: KnownDiagramAnnotation = { id: 'area-cp', kind: 'zoom', from: frame.centre, to: frame.centre, radius: 0.1 };
+    const captured = capture(diagramOf(withArea(step, area), over), 'step-over')!;
+    expect(captured.placed).toBe('sheet');
+    const centre = toScene(overFaces, captured.zoom.frame!).centre;
+    expect(distance(placement.invert(centre), anchor.on)).toBeLessThan(1e-6);
+    expect(captured.zoom.frame!.centre[0]).toBeCloseTo(1 - 0.4, 3);
+    expect(captured.zoom.frame!.centre[1]).toBeCloseTo(0.45, 3);
   });
 });
 

@@ -183,7 +183,7 @@ export type DiagramPictureUploadOutcome =
  * a double-click on an enlarge arrow in the Pages view, which opens the step
  * its area is on (Revision 2).
  */
-export type DiagramStepOpenedVia = 'keyboard' | 'double_click' | 'card' | 'command' | 'pose_again' | 'enlarge_arrow';
+export type DiagramStepOpenedVia = 'keyboard' | 'double_click' | 'card' | 'command' | 'pose_again';
 
 /** Which half of the detail a step opened in. */
 export type DiagramStepOpenedMode = 'pose' | 'annotate';
@@ -197,6 +197,7 @@ export type DiagramAnnotationTool =
   | 'push_arrow'
   | 'white_arrow'
   | 'solid_arrow'
+  // No tool draws these since turns became steps (D22): a sign kept from before can still be deleted, and a rotate flipped.
   | 'turn_over'
   | 'rotate'
   | 'valley_line'
@@ -205,6 +206,10 @@ export type DiagramAnnotationTool =
   | 'solid_line'
   | 'label'
   | 'circle'
+  | 'star'
+  | 'eye'
+  | 'oval'
+  | 'rectangle'
   | 'right_angle'
   | 'callout'
   | 'angle_mark'
@@ -212,7 +217,11 @@ export type DiagramAnnotationTool =
   | 'divisions'
   | 'close_up'
   | 'enlarge'
-  | 'enlarge_frame';
+  | 'enlarge_frame'
+  | 'x_ray';
+
+/** A star's fill, by name (Revision 3): filled with ink, or an outline, white inside. */
+export type DiagramStarFillName = 'filled' | 'outline';
 
 /**
  * How a new annotation was put down (decision 9): snapped to a point of the
@@ -249,6 +258,34 @@ export type DiagramTextSize = 'picture' | '7' | '9' | '12' | '16' | 'other';
 /** Which of a label's options the Layers pane changed (17b). */
 export type DiagramTextStyleOption = 'bold' | 'halo' | 'size';
 
+/**
+ * Which of a mark's own options changed (Revision 3): equal divisions' Short
+ * Dividers; a star's Fill; a star's, an eye's, an oval's or a rectangle's
+ * size or turn — by its transform box on the canvas, or its turn typed in
+ * the Layers pane's Rotation row; and an x-ray's Depth and Anchor.
+ */
+export type DiagramMarkStyleOption = 'short_dividers' | 'fill' | 'size' | 'rotation' | 'depth' | 'anchor' | 'radius' | 'visibility';
+
+/** An x-ray's depth, bucketed (Revision 3): one layer, two, or three and more. Never the count itself past that. */
+export type DiagramXRayDepthBucket = '1' | '2' | '3+';
+
+/**
+ * What a mark's option became, or how it was changed (Revision 3): a switch
+ * on or off; a star filled or an outline; a size or a turn set by the
+ * transform box's handles (`handle`) or typed in its row (`field`); an
+ * x-ray's depth, bucketed, and its anchor picked on the canvas or put back
+ * to the window's centre (`auto`).
+ */
+export type DiagramMarkStyleValue =
+  | 'on'
+  | 'off'
+  | DiagramStarFillName
+  | 'handle'
+  | 'field'
+  | DiagramXRayDepthBucket
+  | 'picked'
+  | 'auto';
+
 /** A fold arrow or a white arrow, which Edit Path shapes: its kind, in the event's own spelling. */
 export type DiagramShapedArrowKind = 'valley_arrow' | 'mountain_arrow' | 'fold_unfold_arrow' | 'white_arrow';
 
@@ -271,11 +308,17 @@ export type DiagramShapedArrowHalf = 'out' | 'return';
 export type DiagramBehindEnds = 'tail' | 'tip' | 'both' | 'whole';
 
 /**
- * How an enlarged step got its frame (Revision 2): Pose's Enlarged turned on,
- * a new step after an enlarged one whose first picture lands the frame it
- * was seeded with, or Update Enlarged Steps on the area it came from.
+ * How an enlarged step got its frame (Revision 2): the Enlarged toggle turned
+ * on (in Annotate's Step pane since 2026-10-08; Pose's before),
+ * a new empty step after an enlarged one whose first picture lands the frame
+ * it was seeded with (since 2026-10-08, a first link that keeps it:
+ * `landSeededFrame`),
+ * Update Enlarged Steps on the area it came from — Update All since
+ * 2026-10-08, which places only the steps out of date (`update`) — or Update
+ * on the step itself, once its area changed (`update_step`, since
+ * 2026-10-08).
  */
-export type DiagramStepEnlargedVia = 'toggle' | 'seeded' | 'update';
+export type DiagramStepEnlargedVia = 'toggle' | 'seeded' | 'update' | 'update_step';
 
 /**
  * Where a capture put an enlarged step's frame: through an anchor face, through
@@ -331,14 +374,15 @@ export type DiagramArrowShapeGesture =
  * Pose's simulator to rest at a fold % and camera, or spread a flat fold's
  * layers: on, off, the other kind, another amount or direction, or an affine
  * spread's other layer held still, skew or axis; or put a crease pattern's
- * paper on the colour of one side).
+ * paper on the colour of one side, or flip its creases on its back).
  */
 export type DiagramPoseAction =
   | 'rotate_left'
   | 'rotate_right'
   | 'flip'
   | 'reset'
-  // Pose's Enlarged turned off (Revision 2): turning it on is `diagram step enlarged`.
+  // The Enlarged toggle turned off (Revision 2; in Annotate's Step pane since 2026-10-08, Pose's before):
+  // turning it on is `diagram step enlarged`.
   | 'enlarge_off'
   | 'show_crease_pattern'
   | 'show_folded'
@@ -347,8 +391,6 @@ export type DiagramPoseAction =
   | 'previous_solution'
   | 'choose_way'
   | 'view_top'
-  | 'view_front'
-  | 'view_iso'
   | 'orbit'
   | 'rotate_to'
   | 'upright'
@@ -362,7 +404,10 @@ export type DiagramPoseAction =
   | 'spread_keep'
   | 'spread_skew'
   | 'spread_axis'
-  | 'paper_side';
+  | 'paper_side'
+  // A crease pattern on its back turned over side to side, or back (the Step pane's Flip creases).
+  | 'flip_creases_on'
+  | 'flip_creases_off';
 
 /**
  * A side of the paper, for `diagram picture posed`: the one a picture shows
@@ -418,7 +463,7 @@ export const DIAGRAM_SPREAD_AXIS_DEGREE_BUCKETS = [45, 90, 135] as const;
 export type DiagramPictureKind = 'svg' | 'raster' | 'references' | DiagramCaptureKind;
 
 /** How a captured picture shows its pattern. */
-export type DiagramCaptureKind = 'crease_pattern' | 'flat' | '3d' | 'simulated';
+export type DiagramCaptureKind = 'crease_pattern' | 'flat' | '3d' | 'simulated' | 'defox';
 
 /**
  * What became of a capture: kept (`rasterized` when too detailed to keep as
@@ -454,6 +499,13 @@ export type DiagramShowAsVia = 'pane' | 'picker' | 'card' | 'duplicate';
  * sheet in References, or its step in Fold.
  */
 export type DiagramSourceWorkspace = 'edit' | 'references' | 'fold';
+
+/**
+ * What became of a press on the empty Diagram's example: it opened, the
+ * unsaved-changes prompt was declined, the file did not open, or it could not
+ * be downloaded (offline, and not in the browser's cache).
+ */
+export type DiagramExampleOutcome = 'opened' | 'cancelled' | 'failed' | 'unavailable';
 
 /** The list the References browser pulled cards from: a planned pattern's sequence, or the Find answer. */
 export type DiagramPulledMode = 'sequence' | 'find';
@@ -493,7 +545,17 @@ export type DiagramPdfPreset = 'home' | 'print_shop';
 /** The Diagram's two views: the steps as cards, or the printed pages. */
 export type DiagramView = 'steps' | 'pages';
 
-/** Which page setting changed in the Page pane (D10). `scale` is retired: every diagram fits each since 2026-10-06. */
+/**
+ * Which page setting changed in the Page pane (D10). `scale` is retired: every diagram fits each since 2026-10-06.
+ * `columns` and `rows` are the grid's; the flow takes `steps_per_page` instead (since 2026-10-07).
+ * `page_steps` gives one flow page its own count of steps, and `page_steps_reset` returns it to the
+ * default (since 2026-10-11). The `flow_*` settings are the flow's packing, in the Page pane's
+ * Packing section (since 2026-10-12): Bands, Prefer three bands, Steps in bends, Nesting and
+ * Scale steadiness, set or reset to the default. The `title_block*` settings are the title block's,
+ * in Header & footer: the toggle, and what the block shows — its model and crease pattern and their
+ * sizes, its subtitle, credits and note (since 2026-10-15; until then a byline, `title_block_byline`,
+ * on preview builds only), and its band's colour (`title_block_band_color`, since 2026-10-15).
+ */
 export type DiagramPageSetting =
   | 'size'
   | 'orientation'
@@ -501,6 +563,14 @@ export type DiagramPageSetting =
   | 'layout'
   | 'columns'
   | 'rows'
+  | 'steps_per_page'
+  | 'page_steps'
+  | 'page_steps_reset'
+  | 'flow_bands'
+  | 'flow_prefer_bands'
+  | 'flow_bend_steps'
+  | 'flow_nesting'
+  | 'flow_steadiness'
   | 'path'
   | 'path_width'
   | 'path_color'
@@ -509,7 +579,45 @@ export type DiagramPageSetting =
   | 'page_numbers'
   | 'first_page'
   | 'style'
-  | 'han_style';
+  | 'han_style'
+  | 'title_block'
+  | 'title_block_model'
+  | 'title_block_pattern'
+  | 'title_block_model_size'
+  | 'title_block_pattern_size'
+  | 'title_block_subtitle'
+  | 'title_block_credits'
+  | 'title_block_note'
+  | 'title_block_band_color';
+
+/** Where the title block's model or crease pattern was set to come from: what Auto finds, a step chosen, or none. */
+export type DiagramTitleBlockChoice = 'auto' | 'step' | 'none';
+
+/**
+ * What changed in the title block's credits (`title_block_credits`): a credit added or removed, its
+ * label or its value typed, or its value made the live step count or typed instead of it.
+ */
+export type DiagramTitleBlockCreditChange = 'add' | 'remove' | 'label' | 'value' | 'step_count_on' | 'step_count_off';
+
+/** Whether the title block's subtitle or note prints after the change: it prints only with text. */
+export type DiagramTitleBlockTextShown = 'shown' | 'hidden';
+
+/** The title block's model or crease pattern size after the change: the app's default, or the author's own. */
+export type DiagramTitleBlockSize = 'default' | 'custom';
+
+/** The title block's band colour after the change: following the paper's colour, or one the author chose. */
+export type DiagramTitleBlockBand = 'paper' | 'custom';
+
+/** What Re-pack packed afresh: one flow page (Re-pack Page) or every one (Re-pack All Pages). */
+export type DiagramRepackScope = 'page' | 'all';
+
+/**
+ * Where Re-pack was pressed: the Page pane's Packing section, the Layers
+ * pane's page list, or a page's context menu. (`notice`, the notice over the
+ * Pages view that a step no longer fit its place, was sent until 2026-10-12,
+ * when that notice went.)
+ */
+export type DiagramRepackVia = 'page_pane' | 'layers_pane' | 'context_menu';
 
 /** A diagram style as chosen: a built-in by id, the Settings export style, or a saved preset (`custom`). */
 export type DiagramStyleChoiceName = 'default' | 'diagram' | 'export-style' | 'custom';
@@ -830,8 +938,9 @@ export type PaperExportSurface =
   | 'references'
   | 'fold';
 
-/** A paper export's image format — the file's kind only, never its name. */
-export type PaperExportFormat = 'svg' | 'png';
+/** A paper export's format — the file's kind only, never its name. */
+export type PaperImageExportFormat = 'svg' | 'png';
+export type PaperExportFormat = PaperImageExportFormat | 'obj';
 
 /** Whether an export kept the faces no pixel of the page shows (D4 in the plan). */
 export type PaperExportHiddenFaces = 'kept' | 'dropped';
@@ -1517,14 +1626,18 @@ export const ANALYTICS_EVENTS = {
    */
   simulatorPatternOpened: 'simulator pattern opened',
   /**
-   * The Simulate canvas's tool changed. `tool` is the catalogue's id and
-   * `source` where it was picked; a press on the tool already in hand changes
-   * nothing and sends nothing. Escape is a source of its own, because it is how
-   * people leave Pin, and how often they do says whether they want to.
+   * The simulator's tool changed. `tool` is the catalogue's id and `source`
+   * where it was picked; a press on the tool already in hand changes nothing
+   * and sends nothing. Escape is a source of its own, because it is how people
+   * leave Pin, and how often they do says whether they want to.
+   *
+   * This and the nine tool events after it carry `surface`, the host the tools
+   * ran in (`SimulatorToolSurface`): the Simulate workspace, or a Diagram
+   * step's Pose. Events from before it existed have none, and were Simulate's.
    */
   simulatorToolSelected: 'simulator tool selected',
   /**
-   * The phone layout's Simulate tool sheet was opened: whether people find the
+   * The phone layout's simulator tool sheet was opened: whether people find the
    * Tools pill that stands in for the rail. Kept apart from Edit's
    * `cp tool picker opened`, which dashboards compare across releases.
    */
@@ -1649,6 +1762,8 @@ export const ANALYTICS_EVENTS = {
   diagramAnnotationRecolored: 'diagram annotation recolored',
   /** A label's Bold, Halo or Size changed in the Layers pane (17b): which, and to what. */
   diagramTextStyled: 'diagram text styled',
+  /** One of a mark's own options changed in the Layers pane (Revision 3): the mark's kind, which option, and to what. */
+  diagramMarkStyled: 'diagram mark styled',
   /**
    * A mark a References card brought (17d) edited for the first time, or
    * taken away: its kind, and which. Whether people edit what they pull.
@@ -1666,6 +1781,8 @@ export const ANALYTICS_EVENTS = {
   diagramEnlargementChanged: 'diagram enlargement changed',
   /** Annotate's Snap switch flipped in the Step pane. */
   diagramAnnotateSnapChanged: 'diagram annotate snap changed',
+  /** A circular tool creation preference changed in the tool hint. */
+  diagramCircleDrawingModeChanged: 'diagram circle drawing mode changed',
   /**
    * An arrow shaped by hand for the first time (Edit Path): a fold arrow's arc
    * made a path, or a white arrow bent from the straight one it was laid as —
@@ -1690,6 +1807,13 @@ export const ANALYTICS_EVENTS = {
   diagramSourceOpened: 'diagram source opened',
   /** The Diagram switched between its steps and its pages: whether the pages are looked at. */
   diagramViewSwitched: 'diagram view switched',
+  /**
+   * The empty Diagram's example crane pressed, and what became of it: whether
+   * a finished diagram to look at is wanted, and how often it fails to arrive.
+   */
+  diagramExampleOpened: 'diagram example opened',
+  /** The empty Diagram's link to the video walkthrough followed. */
+  diagramTutorialOpened: 'diagram tutorial opened',
   /** A page setting changed in the Page pane: which ones are used, never their values. */
   diagramPageSetupChanged: 'diagram page setup changed',
   /**
@@ -1698,6 +1822,30 @@ export const ANALYTICS_EVENTS = {
    * and in which form.
    */
   diagramExported: 'diagram exported',
+  /**
+   * A step's frame, number, picture or text moved by hand on the Pages view,
+   * its picture's size set, or its caption's width set — by a width grip or
+   * the pane, or in lines by its bottom grip — and committed, by a drag, the
+   * arrow keys or the Step pane: whether hand placement is used, how, and on
+   * which layout.
+   */
+  diagramStepPlaced: 'diagram step placed',
+  /**
+   * A hand placement taken back — a part, a caption's width, a step, a page
+   * or the diagram — or a commit that left the part where the layout puts it:
+   * how often the automatic placement is returned to, and from where.
+   */
+  diagramPlacementReset: 'diagram placement reset',
+  /**
+   * An edit that put steps in other cells, and so sent frames moved by hand
+   * back to automatic placement: how often the reflow notice is seen.
+   */
+  diagramPlacementsReflowed: 'diagram placements reflowed',
+  /**
+   * A flow page, or every one, packed afresh on request (Re-pack Page, Re-pack
+   * All Pages): how often a held arrangement is let go, and from where.
+   */
+  diagramPagesRepacked: 'diagram pages repacked',
   /**
    * The References browser opened in the Diagram (D20), and for where: what
    * `diagram steps pulled from references` is read against.
@@ -1916,6 +2064,9 @@ export const DIAGRAM_PAGE_COUNT_BUCKETS = [1, 2, 5, 10, 25] as const;
 
 /** How many of a diagram's steps had no picture when it was exported: none, one, a few, many. */
 export const DIAGRAM_EMPTY_STEP_BUCKETS = [0, 1, 5, 20] as const;
+
+/** How many credits the title block holds: none, the three a new diagram starts with, a few more, many. */
+export const DIAGRAM_TITLE_BLOCK_CREDIT_BUCKETS = [0, 1, 2, 3, 5, 10] as const;
 
 /** Default threshold ladder for element counts (nodes, lines, etc.). */
 export const COUNT_BUCKETS = [1, 5, 10, 20, 50, 100, 200, 500] as const;

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -132,6 +133,9 @@ const UNCACHEABLE_PATTERNS: readonly RegExp[] = [
  * - The Diagram's PDF writer: its worker and its wasm (4.2 MB, 1.5 MB gzipped),
  *   fetched on the first PDF export (`diagram/export/browserPdfWriter.ts`). Few
  *   visitors will ever print a diagram.
+ * - The Diagram's font subsetter, HarfBuzz's (650 KB, 260 KB gzipped), fetched
+ *   when a diagram's pages are first set (`diagram/fonts/browserFontSubsetter.ts`):
+ *   few visitors will ever lay out a diagram.
  * - The Fold engine: its worker and its wasm (2.7 MB, 1 MB gzipped), fetched
  *   when the Fold workspace or a linked Diagram step first needs it
  *   (`store/workspaceStore/foldSequenceRuntime.ts`). Fold works offline after
@@ -140,6 +144,7 @@ const UNCACHEABLE_PATTERNS: readonly RegExp[] = [
 const UNWARMED_PATTERNS: readonly RegExp[] = [
   /^assets\/diagramPdfWorker-[^/]+\.js$/,
   /^assets\/oristudio_pdf_wasm_bg-[^/]+\.wasm$/,
+  /^assets\/harfbuzz-subset-[^/]+\.wasm$/,
   /^assets\/foldSequenceWorker-[^/]+\.js$/,
   /^assets\/oristudio_fold_wasm_bg-[^/]+\.wasm$/,
 ];
@@ -512,6 +517,7 @@ export default defineConfig({
     plugins: () => [dropUnreachableOrtRuntime()],
   },
   server: {
+    fs: { allow: [fileURLToPath(new URL('../..', import.meta.url))] },
     headers: crossOriginIsolationHeaders,
     /**
      * ExplOri search, in dev.

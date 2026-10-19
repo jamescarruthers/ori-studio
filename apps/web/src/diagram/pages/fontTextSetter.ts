@@ -19,7 +19,8 @@ import {
 } from '../fonts/diagramFontFaces';
 import type { FontMetrics } from '../fonts/fontMetrics';
 import { assignFonts, coverFonts, needsNoGlyph, textCjkKey } from '../fonts/fontScripts';
-import type { SetLine, TextSetter } from './diagramPageLayout';
+import type { LineInk, SetLine, TextSetter } from './diagramPageLayout';
+import { estimatedInk } from './estimateTextSetter';
 import { ELLIPSIS, setTextLines, type TextFaces } from './setText';
 
 /** The metrics of a loaded face, or null for one that could not be loaded. */
@@ -33,9 +34,17 @@ export interface FontTextSetter extends TextSetter {
 
 export function fontTextSetter(fonts: FontLookup, hanStyle: DiagramHanStyle): FontTextSetter {
   const missing = new Set<string>();
+  // A layout treats its loaded font set as immutable: each face is resolved
+  // once, rather than per grapheme.
+  const metricsByFace = new Map<string, FontMetrics | null>();
+  const lookup: FontLookup = (key, weight) => {
+    const id = `${key}:${weight}`;
+    if (!metricsByFace.has(id)) metricsByFace.set(id, fonts(key, weight));
+    return metricsByFace.get(id)!;
+  };
 
   const covers = (weight: DiagramFontWeight) => (key: DiagramFontKey, grapheme: string) => {
-    const metrics = fonts(key, weight);
+    const metrics = lookup(key, weight);
     if (!metrics) return false;
     for (const character of grapheme) {
       if (!needsNoGlyph(character) && !metrics.has(character.codePointAt(0)!)) return false;
@@ -45,7 +54,7 @@ export function fontTextSetter(fonts: FontLookup, hanStyle: DiagramHanStyle): Fo
 
   /** A grapheme's advance in mm, in its font at `sizeMm`. */
   const advanceOf = (grapheme: string, key: DiagramFontKey, weight: DiagramFontWeight, sizeMm: number) => {
-    const metrics = fonts(key, weight) ?? fonts('latin', weight);
+    const metrics = lookup(key, weight) ?? lookup('latin', weight);
     if (!metrics) return 0;
     let units = 0;
     for (const character of grapheme) {
@@ -78,11 +87,26 @@ export function fontTextSetter(fonts: FontLookup, hanStyle: DiagramHanStyle): Fo
 
   return {
     missing,
-    paragraph: (text, widthMm, sizeMm, maxLines) =>
-      setTextLines(text, widthMm, maxLines, facesFor(text, 400, sizeMm)),
+    paragraph: (text, widthMm, sizeMm, maxLines, weight = 400, spaces) =>
+      setTextLines(text, widthMm, maxLines, facesFor(text, weight, sizeMm), spaces),
     line(text, sizeMm, weight, maxWidthMm = Number.POSITIVE_INFINITY): SetLine {
       const set = setTextLines(text, maxWidthMm, 1, facesFor(text, weight, sizeMm));
       return set.lines[0] ?? { text: '', widthMm: 0, runs: [], ellipsis: false };
+    },
+    ink(line, sizeMm) {
+      const glyphs: LineInk[] = line.runs.flatMap((run) => {
+        const face = parseFontFaceId(run.font);
+        const metrics = face ? lookup(face.key, face.weight) : null;
+        if (!metrics) return [];
+        const mm = sizeMm / metrics.unitsPerEm;
+        return [...run.text].flatMap((character) => {
+          const glyph = metrics.ink(character.codePointAt(0)!);
+          return glyph ? [{ above: glyph.top * mm, below: -glyph.bottom * mm }] : [];
+        });
+      });
+      // A face whose outlines do not read, or no face loaded: as the estimate has it.
+      if (glyphs.length === 0) return estimatedInk(line.text, sizeMm);
+      return { above: Math.max(0, ...glyphs.map((glyph) => glyph.above)), below: Math.max(0, ...glyphs.map((glyph) => glyph.below)) };
     },
     runs(text, { key, weight }) {
       const graphemes = graphemesOf(text);

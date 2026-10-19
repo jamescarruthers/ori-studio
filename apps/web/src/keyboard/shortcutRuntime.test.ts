@@ -73,6 +73,7 @@ describe('shortcut runtime', () => {
       expect(shortcutScopeStackForContext({ activeEditingContext: 'diagram' })).toEqual([
         'simulator',
         'references',
+        'diagram-place',
         'diagram-path',
         'diagram',
         'viewport',
@@ -296,6 +297,7 @@ describe('shortcut runtime', () => {
       cleanupWith(registerConditionalScopeExecutor('diagram', () => true));
       // Edit Path's node keys ahead of the steps', on the same executor.
       expect(shortcutScopeStackForContext({ activeEditingContext: 'diagram' })).toEqual([
+        'diagram-place',
         'diagram-path',
         'diagram',
         'viewport',
@@ -312,7 +314,7 @@ describe('shortcut runtime', () => {
     it('sends the arrows to its executor, and on to the next scope when it declines', () => {
       // As the Diagram's does with no node selected: a nudge declines, and the step keys claim.
       let nodeSelected = false;
-      const diagram = vi.fn((id: string) => nodeSelected || !id.startsWith('diagram.nudge'));
+      const diagram = vi.fn((id: string) => !id.startsWith('diagram.nudgePlacement') && (nodeSelected || !id.startsWith('diagram.nudge')));
       cleanupWith(registerConditionalScopeExecutor('diagram', diagram));
       const viewport = vi.fn(() => false);
       cleanupWith(registerViewportShortcutExecutor('diagram', viewport));
@@ -320,14 +322,14 @@ describe('shortcut runtime', () => {
 
       const claimed = key({ key: 'ArrowRight' });
       expect(handleShortcutRuntimeKeyDown(claimed, { context, menu: vi.fn() })).toBe(true);
-      expect(diagram.mock.calls.map(([id]) => id)).toEqual(['diagram.nudgeNodeRight', 'diagram.nextStep']);
+      expect(diagram.mock.calls.map(([id]) => id)).toEqual(['diagram.nudgePlacementRight', 'diagram.nudgeNodeRight', 'diagram.nextStep']);
       expect(claimed.defaultPrevented).toBe(true);
 
       // With a node selected in Edit Path, the nudge claims it and the steps never see it.
       nodeSelected = true;
       diagram.mockClear();
       expect(handleShortcutRuntimeKeyDown(key({ key: 'ArrowUp', shiftKey: true }), { context, menu: vi.fn() })).toBe(true);
-      expect(diagram.mock.calls.map(([id]) => id)).toEqual(['diagram.nudgeNodeUpLarge']);
+      expect(diagram.mock.calls.map(([id]) => id)).toEqual(['diagram.nudgePlacementUpLarge', 'diagram.nudgeNodeUpLarge']);
       nodeSelected = false;
 
       expect(
@@ -346,7 +348,7 @@ describe('shortcut runtime', () => {
 
     it('leaves a focused field its Backspace and arrows, whatever Edit Path holds', () => {
       // An executor that would nudge, and a menu that would delete a node: neither may see a field's keys.
-      const diagram = vi.fn(() => true);
+      const diagram = vi.fn((id: string) => !id.startsWith('diagram.placement') && !id.startsWith('diagram.nudgePlacement'));
       cleanupWith(registerConditionalScopeExecutor('diagram', diagram));
       const menu = vi.fn();
       const context = { activeEditingContext: 'diagram' as const, activeViewportSurface: null };

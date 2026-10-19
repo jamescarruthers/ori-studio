@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { resetFoldedFigureHandles, setFoldedFigureHandleFree } from '../../cp-workspace/folded/foldedFigureHandles';
-import { resolveCpSegments } from '../../lib/creasePatternSegmentation';
+import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import type { DiagramLayerSpread } from '../document/diagramDocument';
+import type { DiagramCpRender, DiagramLayerSpread } from '../document/diagramDocument';
 import { stepsIn } from '../document/diagramSteps.fixtures';
-import { cpDocument, fakeCaptureRuntime, twoSquaresSegmentation } from './capture.fixtures';
+import { cpDocument, fakeCaptureRuntime, twoSquaresIndex } from './capture.fixtures';
 import type { CpCaptureRuntime } from './captureFolded';
 import { useDiagramLinkedPose, type DiagramLinkedPose } from './useDiagramLinkedPose';
-import { ensureCpSegmentationArtifacts } from '../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 
 /**
  * The Step pane's spread rows reach the controller only through this hook:
@@ -25,15 +25,16 @@ vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', async (importOrigina
   ...(await importOriginal<typeof import('../../store/workspaceStore/cpFoldRuntimeBindings')>()),
   createCpCaptureRuntime: () => bindings.runtime,
 }));
-vi.mock('../../cp-workspace/cpSegmentationArtifacts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../cp-workspace/cpSegmentationArtifacts')>()),
-  ensureCpSegmentationArtifacts: vi.fn(async () => segmentation),
-  peekCpSegmentationArtifacts: vi.fn(() => segmentation),
+vi.mock('../../cp-workspace/sheets/cpSheetIndex', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/sheets/cpSheetIndex')>()),
+  ensureCpSheetIndex: vi.fn(async () => sheets),
+  peekCpSheetIndex: vi.fn(() => sheets),
 }));
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), message: vi.fn() } }));
+const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn(), success: vi.fn() }));
+vi.mock('sonner', () => ({ toast: toasts }));
 
-const segmentation = twoSquaresSegmentation();
-const [left] = resolveCpSegments(segmentation);
+const sheets = twoSquaresIndex();
+const [left] = sheetRegions(sheets);
 const state = () => useWorkspaceStore.getState();
 const DEPTH = { kind: 'depth' as const, amount: 0.025, toward: 'down' as const };
 const AFFINE = { kind: 'affine' as const, amount: 0.03, keep: 'top' as const, skew: 1, axisDeg: 81 };
@@ -53,6 +54,11 @@ function Probe({ stepId }: { stepId: string }) {
 
 /** A step linked to the left square, shown folded flat with `spread`, the hook mounted on it. */
 async function flatStep(spread: DiagramLayerSpread): Promise<string> {
+  return linkedStep({ mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1, spread });
+}
+
+/** A step linked to the left square, shown as `render`, the hook mounted on it. */
+async function linkedStep(render: DiagramCpRender): Promise<string> {
   const stepId = state().addDiagramStep()!;
   await state().captureDiagramStep(stepId, {
     scope: { kind: 'segment', region: regionReferenceFor(left!) },
@@ -65,7 +71,7 @@ async function flatStep(spread: DiagramLayerSpread): Promise<string> {
       ...state().diagram!,
       steps: stepsIn(state().diagram!).map((step) =>
         step.id === stepId && step.source?.kind === 'cp'
-          ? { ...step, source: { ...step.source, render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1, spread } } }
+          ? { ...step, source: { ...step.source, render } }
           : step
       ),
     },
@@ -94,9 +100,9 @@ function holdTheLookup(): () => void {
   const gate = new Promise<void>((resolve) => {
     open = resolve;
   });
-  vi.mocked(ensureCpSegmentationArtifacts).mockImplementationOnce(async () => {
+  vi.mocked(ensureCpSheetIndex).mockImplementationOnce(async () => {
     await gate;
-    return segmentation;
+    return sheets;
   });
   return open;
 }
@@ -199,5 +205,33 @@ describe('the Step pane’s spread, through the hook', () => {
     expect(seen.pose!.spread!.start()).toBe(true);
     act(() => useWorkspaceStore.setState({ diagramReadOnly: true }));
     expect(seen.pose!.spread!.start()).toBe(false);
+  });
+});
+
+describe('Set Upright in Pose', () => {
+  const setUpright = () => seen.pose!.actions.find((action) => action.id === 'set-upright')!;
+
+  it('turns the live view that registered last, says so, and is held while none shows', async () => {
+    await linkedStep({ mode: 'simulated', foldPercent: 50, view: { yaw: 0.4, pitch: -0.6, zoom: 1 } });
+    expect(setUpright()).toMatchObject({ disabled: true });
+    const first = { setUpright: vi.fn() };
+    const second = { setUpright: vi.fn() };
+    let letGo = () => {};
+    act(() => {
+      letGo = seen.pose!.registerLiveView(first);
+    });
+    expect(setUpright()).toMatchObject({ disabled: false });
+    // The view remounting: the new one registers before the old one lets go, which leaves it.
+    let letGoSecond = () => {};
+    act(() => {
+      letGoSecond = seen.pose!.registerLiveView(second);
+    });
+    act(() => letGo());
+    act(() => setUpright().run());
+    expect(second.setUpright).toHaveBeenCalledOnce();
+    expect(first.setUpright).not.toHaveBeenCalled();
+    expect(toasts.success).toHaveBeenCalledWith('Up direction set — drag to turn around it');
+    act(() => letGoSecond());
+    expect(setUpright()).toMatchObject({ disabled: true });
   });
 });

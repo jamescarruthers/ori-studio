@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TurnKind } from '../../../lib/steps/turn';
 import { StepCard, StepCardBadge } from './StepCard';
 import { StepsGrid, type StepsGridDropTarget } from './StepsGrid';
@@ -24,11 +24,28 @@ const entries: Entry[] = [
 let root: Root | null = null;
 let host: HTMLDivElement | null = null;
 
+// Give the grid's virtualizer a viewport (`useVirtualStepRows`); jsdom otherwise measures every box as zero.
+beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.hasAttribute('data-index') ? 100 : 1000;
+  });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
+});
+
 afterEach(() => {
   act(() => root?.unmount());
   root = null;
   host?.remove();
   host = null;
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 function render(
@@ -150,7 +167,8 @@ describe('StepsGrid', () => {
     expect(host!.querySelector('[data-insert-before]')).toBeNull();
     expect(host!.querySelector('[data-add-step-tile]')).toBeNull();
     expect(host!.querySelector('button[data-danger]')).toBeNull();
-    expect(listbox().children).toHaveLength(entries.length);
+    // A slot for each entry, in the rows the grid mounts, and nothing after them.
+    expect(listbox().querySelectorAll('[data-index] > *')).toHaveLength(entries.length);
   });
 
   it('offers the gap before every card and a tile after the last, with the surface’s words', () => {

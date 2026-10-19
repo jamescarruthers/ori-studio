@@ -11,7 +11,7 @@
  * and the Pose session, which holds a figure open and reads it again as it is
  * turned over, rotated or stepped to another solution.
  */
-import type { FoldArtifacts } from '../../engine/types';
+import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type {
   OristudioCpDocumentSnapshot,
   OristudioCpFold3dFoldResult,
@@ -35,6 +35,7 @@ import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSp
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import {
   openFold,
+  hasFoldedLayerOrder,
   readFoldedPicture,
   type CpFoldRuntime,
   type FoldedFigureState,
@@ -45,6 +46,7 @@ import { DEFAULT_FOLDED_MODEL, foldedFigureModelFromOrieditaMetadata } from '../
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import {
   creasePatternSide,
+  creasesFlipped,
   type DiagramCpRender,
   type DiagramCpScope,
   type DiagramCpSource,
@@ -61,7 +63,7 @@ import { storedPaperFaces } from '../document/paperFacesFile';
 import { diagramPaperStyle } from '../pictures/diagramPaperStyle';
 import { simulatorSceneStyleKey } from '../../simulator/simulatorExportTarget';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
-import type { CpSegment } from '../../lib/creasePatternSegmentation';
+import type { CpSheetRegion } from '../../cp-workspace/sheets/cpSheetRegions';
 import { digest } from '../pictures/pictureKey';
 import { sanitizeSvg, SVG_STORED_MAX_BYTES, type SanitizeEnv } from '../upload/svgSanitize';
 import {
@@ -161,7 +163,7 @@ export type StillScene = (view: DiagramSimulatedView, style: PaperStyle) => Prom
 
 /** The flat sheet of a step's region, as a {@link StillScene}; absent with no simulator to ask. */
 export function flatStill(simulateFlat: SimulateFlat | undefined, creases: StepCreases): StillScene | undefined {
-  return simulateFlat && ((view, style) => simulateFlat(creases.segment, view, style));
+  return simulateFlat && ((view, style) => simulateFlat(creases.sheet, view, style));
 }
 
 /**
@@ -181,13 +183,19 @@ export async function captureSimulated(
   return scene ? storeScene(scene, null, simulatorSceneStyleKey(drawn)) : null;
 }
 
-/** A crease-pattern picture, from the document alone: no fold. Seen from the side its render says. */
+/**
+ * A crease-pattern picture, from the document alone: no fold. On the colour of
+ * the side its render says, its paper turned over when the render turns it.
+ */
 export function captureCreasePattern(
   document: OristudioCpDocumentSnapshot,
   creases: StepCreases,
   render: DiagramCreasePatternRender
 ): CapturedPicture {
-  const scene = creasePatternScene(document, creases, render.rotationDeg, creasePatternSide(render));
+  const scene = creasePatternScene(document, creases, render.rotationDeg, {
+    side: creasePatternSide(render),
+    flipped: creasesFlipped(render),
+  });
   return storeScene(scene, CAPTURE_PX_PER_UNIT, null);
 }
 
@@ -308,7 +316,7 @@ function renderForRoute(
   route: 'flat' | 'spatial',
   spread: DiagramLayerSpread | undefined
 ): DiagramCpRender {
-  if (render.mode === 'crease-pattern' || render.mode === 'simulated') return render;
+  if (render.mode === 'crease-pattern' || render.mode === 'simulated' || render.mode === 'defox') return render;
   if (route === 'flat') {
     return render.mode === 'folded-flat'
       ? render
@@ -324,21 +332,37 @@ export function defaultCaptureCamera(side: 'front' | 'back'): FoldedFigureCamera
 }
 
 /**
- * The simulator's flat sheet for a region, from a camera, in a style's light
- * (`SimulatorWorkerApi.flatScene`), bound to the store's simulator artifacts
- * and worker; null when the region has no model to simulate (D19).
+ * The simulator's flat sheet for a sheet, from a camera, in a style's light
+ * (`SimulatorWorkerApi.flatScene`), bound to the sheet's own simulation mesh
+ * and the store's worker; null when the sheet has no model to simulate (D19).
  */
 export type SimulateFlat = (
-  segment: CpSegment,
+  sheet: CpSheetRegion,
   view: DiagramSimulatedView,
   style: PaperStyle
 ) => Promise<PaperScene | null>;
 
+/**
+ * The paper a sheet's own faces cover: its outline, less any hole they leave —
+ * an empty border loop inside it, wherever the kernel certifies the faces.
+ * Null when the faces cannot be built, and the outline is the paper.
+ */
+export type SheetPaper = (sheet: CpSheetRegion) => Promise<Point[][] | null>;
+
+/** `creases` with the paper its sheet's faces cover, where it can be had. */
+export async function withSheetPaper(
+  creases: StepCreases,
+  sheetPaper: SheetPaper | undefined
+): Promise<StepCreases> {
+  const paper = sheetPaper ? await sheetPaper(creases.sheet) : null;
+  return paper && paper.length > 0 ? { ...creases, paper } : creases;
+}
+
 export interface CaptureStepRequest {
   /** The document snapshot the capture starts from, and is fingerprinted against. */
   document: OristudioCpDocumentSnapshot;
-  /** Kernel-space segmentation, for a segment scope; null while it is not ready. */
-  segmentation: FoldArtifacts | null;
+  /** The sheet index, for a segment scope; null while it is not ready. */
+  sheets: CpSheetIndex | null;
   scope: DiagramCpScope;
   /**
    * What the step remembers of its creases, so its sheet is found after a
@@ -349,6 +373,8 @@ export interface CaptureStepRequest {
   style: DiagramStyle;
   /** The simulator, for a step shown as Simulated; absent, it cannot be captured. */
   simulateFlat?: SimulateFlat;
+  /** A sheet's paper, holes included, for a crease-pattern picture; absent, its outline. */
+  sheetPaper?: SheetPaper;
   /**
    * The spread a flat fold started here takes — one asked as 3D whose creases
    * now fold flat (13g: on by default, `spreadStartsFor`); absent, none.
@@ -375,6 +401,17 @@ export type CaptureStepResult =
   | { status: 'unavailable' };
 
 /**
+ * A render as a capture stores it: without Pose's stored mesh, which a newer
+ * build wrote for the picture this capture replaces (Refresh and Refresh All
+ * ask with the step's render as it stands, Relink with it at 0%).
+ */
+function withoutPoseMesh(render: DiagramCpRender): DiagramCpRender {
+  if (render.mode !== 'simulated' || render.shape === undefined) return render;
+  const { shape: _mesh, ...fresh } = render;
+  return fresh;
+}
+
+/**
  * Capture a step's picture once, start to finish: choose its creases, fold
  * them if its render folds, read the picture, free the figure.
  *
@@ -388,13 +425,15 @@ export async function captureStep(
   runtime: CpCaptureRuntime,
   request: CaptureStepRequest
 ): Promise<CaptureStepResult> {
-  const { document, style, env, segmentation } = request;
-  // A region cannot be looked for before the segmentation is ready.
-  if (!segmentation) return { status: 'unknown' };
-  const choice = chooseStepCreases(document, request.scope, segmentation, request.known ?? null);
+  const { document, style, env, sheets } = request;
+  // Saved Defox layer orders cannot be refreshed from an edited CP. Show As explicitly replaces the saved view.
+  if (request.render.mode === 'defox') return { status: 'needs-pose' };
+  // A sheet cannot be looked for before the index is ready.
+  if (!sheets) return { status: 'unknown' };
+  const choice = chooseStepCreases(document, request.scope, sheets, request.known ?? null);
   if (choice.status !== 'found') return choice;
   const { creases } = choice;
-  const thumbnail = creasesThumbnail(creases, segmentation);
+  const thumbnail = creasesThumbnail(document, creases);
   // Found where it moved to, the link follows it.
   const scope = followedScope(request.scope, creases);
   const source = (render: DiagramCpRender): DiagramCpSource => {
@@ -403,14 +442,18 @@ export async function captureStep(
       scope,
       fingerprint: creasesFingerprint(creases, render),
       thumbnail,
-      render,
+      render: withoutPoseMesh(render),
     });
     if (!stored) throw new Error('The capture made a link the file cannot read');
     return stored;
   };
 
   if (request.render.mode === 'crease-pattern') {
-    const captured = captureCreasePattern(document, creases, request.render);
+    const captured = captureCreasePattern(
+      document,
+      await withSheetPaper(creases, request.sheetPaper),
+      request.render
+    );
     return { status: 'captured', source: source(request.render), captured, noLayerOrder: false };
   }
 
@@ -450,8 +493,9 @@ export async function captureStep(
       state = await runtime.foldToCase(folded.handle, render.foldCase);
       foldCase = Math.max(1, Math.min(render.foldCase, state.discoveredCases));
     }
-    const captured = await readFlatPicture(runtime, folded.handle, state, render.rotationDeg, env, render.spread);
-    const noLayerOrder = state.outcome === 'NoSolutions' || state.outcome === 'Contradiction';
+    const picture = await readFoldedPicture(runtime, folded.handle, state.displayStyle);
+    const captured = flatPicture(picture, render.rotationDeg, env, render.spread);
+    const noLayerOrder = !hasFoldedLayerOrder(state) || !picture.scene?.faces.length;
     return { status: 'captured', source: source({ ...render, foldCase }), captured, noLayerOrder };
   } finally {
     await runtime.free(folded.handle);

@@ -40,9 +40,11 @@ export type ShortcutScope = ConditionalShortcutScope | (typeof CONTEXT_SHORTCUT_
  * - `references` — the References workspace, so its arrows and zoom keys never
  *   reach the Edit canvas. It claims every chord: none of its verbs ever
  *   stands down.
- * - `diagram-path`, then `diagram` — the Diagram workspace, one executor for
- *   both, and only in the Diagram's own context, so neither ever stacks with
- *   `crease-pattern`. Annotate's Edit Path claims the arrows in `diagram-path`
+ * - `diagram-place`, `diagram-path`, then `diagram` — the Diagram workspace,
+ *   one executor for all three, and only in the Diagram's own context, so none
+ *   ever stacks with `crease-pattern`. The Pages view's placement claims the
+ *   arrows and Undo in `diagram-place` to nudge a placed part, and declines
+ *   them otherwise. Annotate's Edit Path claims the arrows in `diagram-path`
  *   to nudge a selected node (decision 6), and declines them otherwise, so they
  *   fall through to the steps. The steps' arrows and Enter decline in turn
  *   while a focused control uses the key — a tab strip its arrows, a button
@@ -56,6 +58,7 @@ export type ShortcutScope = ConditionalShortcutScope | (typeof CONTEXT_SHORTCUT_
 export const CONDITIONAL_SHORTCUT_SCOPES = [
   { scope: 'simulator', target: 'simulator', onlyIn: null },
   { scope: 'references', target: 'references', onlyIn: null },
+  { scope: 'diagram-place', target: 'diagram', onlyIn: 'diagram' },
   { scope: 'diagram-path', target: 'diagram', onlyIn: 'diagram' },
   { scope: 'diagram', target: 'diagram', onlyIn: 'diagram' },
   { scope: 'fold', target: 'fold', onlyIn: 'fold' },
@@ -139,7 +142,12 @@ export type DiagramShortcutId =
   | 'diagram.moveStepEarlier'
   | 'diagram.moveStepLater'
   | DiagramAnnotateShortcutId
-  | DiagramPathShortcutId;
+  | DiagramPathShortcutId
+  | DiagramPlacementShortcutId;
+
+export type DiagramPlacementShortcutId =
+  | `diagram.nudgePlacement${'Left' | 'Right' | 'Up' | 'Down'}${'' | 'Large'}`
+  | 'diagram.placementUndo';
 
 /** Annotate's tools and Flip arc: live only while a step is open in Annotate. */
 export type DiagramAnnotateShortcutId =
@@ -151,12 +159,15 @@ export type DiagramAnnotateShortcutId =
   | 'diagram.toolPushArrow'
   | 'diagram.toolWhiteArrow'
   | 'diagram.toolSolidArrow'
+  | 'diagram.toolLine'
   | 'diagram.toolValleyLine'
   | 'diagram.toolMountainLine'
   | 'diagram.toolHiddenLine'
   | 'diagram.toolSolidLine'
   | 'diagram.toolLabel'
   | 'diagram.toolCircle'
+  | 'diagram.toolStar'
+  | 'diagram.toolEye'
   | 'diagram.toolRightAngle'
   | 'diagram.toolCallout'
   | 'diagram.toolAngleBisector'
@@ -164,6 +175,9 @@ export type DiagramAnnotateShortcutId =
   | 'diagram.toolCloseUp'
   | 'diagram.toolEnlarge'
   | 'diagram.toolEnlargeFrame'
+  | 'diagram.toolOval'
+  | 'diagram.toolRectangle'
+  | 'diagram.toolXRay'
   | 'diagram.flipArc';
 
 /** Nudging the node Edit Path has selected: live only while it has one (`diagram-path`). */
@@ -649,7 +663,7 @@ function diagramShortcut(
   id: DiagramShortcutId,
   label: string,
   defaultChord: KeyChord | KeyChord[] | null,
-  scope: 'diagram' | 'diagram-path' = 'diagram'
+  scope: 'diagram' | 'diagram-path' | 'diagram-place' = 'diagram'
 ): ShortcutDefinition {
   const defaultChords = normalizeDefaultChords(defaultChord);
   return {
@@ -720,13 +734,17 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
   diagramShortcut('diagram.toolValleyLine', 'Valley Line', { shift: true, key: 'v' }),
   diagramShortcut('diagram.toolMountainLine', 'Mountain Line', { shift: true, key: 'm' }),
   diagramShortcut('diagram.toolHiddenLine', 'Hidden Line', { key: 'h' }),
-  // Shift+L for the solid line (17a), as Shift+V and Shift+M pick theirs: L
-  // alone is the label's. References' scope has a Shift+L of its own, and the
+  // Shift+L for the solid line, as Shift+V and Shift+M pick theirs.
+  // References' scope has a Shift+L of its own, and the
   // two scopes are never live together.
   diagramShortcut('diagram.toolSolidLine', 'Solid Line', { shift: true, key: 'l' }),
-  diagramShortcut('diagram.toolLabel', 'Label', { key: 'l' }),
+  diagramShortcut('diagram.toolLabel', 'Label', { key: 't' }),
+  diagramShortcut('diagram.toolLine', 'Line', { key: 'space' }),
   // O for the ring it draws.
   diagramShortcut('diagram.toolCircle', 'Circle', { key: 'o' }),
+  // K for the star (Revision 3, R3-25 A): S is the solid arrow's, and K is
+  // free in this scope. Zach plans a shortcut pass before merge.
+  diagramShortcut('diagram.toolStar', 'Star', { key: 'k' }),
   // Q for the square it draws in a corner.
   diagramShortcut('diagram.toolRightAngle', 'Right Angle', { key: 'q' }),
   // C for the callout: a line to a box of words.
@@ -738,11 +756,38 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
   diagramShortcut('diagram.toolDivisions', 'Equal Divisions', { key: 'd' }),
   // I for the inset a close-up draws (15f).
   diagramShortcut('diagram.toolCloseUp', 'Close-Up', { key: 'i' }),
+  // Y for the eye (Revision 3, R3-25 A): E is Enlarge's, and Y is free in
+  // this scope and the global one. Zach plans a shortcut pass before merge.
+  diagramShortcut('diagram.toolEye', 'Eye', { key: 'y' }),
   // E for enlarge, as Sturm and Lang name it (Revision 2, Z1): Edit's Extend
   // Line is in the crease pattern's scope, never live with this one.
   diagramShortcut('diagram.toolEnlarge', 'Enlarge', { key: 'e' }),
   diagramShortcut('diagram.toolEnlargeFrame', 'Enlarge in Frame', { shift: true, key: 'e' }),
+  // Shift+O for the oval, paired with the Circle's O as Shift+E pairs with E,
+  // and R for the rectangle (Revision 3, R3-25 A): both free in this scope,
+  // where R is otherwise only the simulator's and ⌘R. Zach plans a shortcut
+  // pass before merge.
+  diagramShortcut('diagram.toolOval', 'Oval', { shift: true, key: 'o' }),
+  diagramShortcut('diagram.toolRectangle', 'Rectangle', { key: 'r' }),
+  // X for the x-ray (Revision 3, R3-25 A): free in this scope, where X is
+  // otherwise only ⌘X. Zach plans a shortcut pass before merge.
+  diagramShortcut('diagram.toolXRay', 'X-Ray', { key: 'x' }),
   diagramShortcut('diagram.flipArc', 'Flip Arc', { key: 'f' }),
+  // The Pages view's nudges of a selected frame or part, and the Undo key that
+  // takes back a nudge still in its pause: in a scope of their own ahead of
+  // Edit Path's, whose executor claims a nudge only while a part of the
+  // selected step is selected on the pages, and Undo only while a nudge or a
+  // drag is in hand. Delete is not among them: it deletes the step, through
+  // `edit.delete`, as it does on the cards.
+  diagramShortcut('diagram.nudgePlacementLeft', 'Nudge Placement Left', { key: 'arrowleft' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementLeftLarge', 'Nudge Placement Left (Large)', { shift: true, key: 'arrowleft' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementRight', 'Nudge Placement Right', { key: 'arrowright' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementRightLarge', 'Nudge Placement Right (Large)', { shift: true, key: 'arrowright' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementUp', 'Nudge Placement Up', { key: 'arrowup' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementUpLarge', 'Nudge Placement Up (Large)', { shift: true, key: 'arrowup' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementDown', 'Nudge Placement Down', { key: 'arrowdown' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementDownLarge', 'Nudge Placement Down (Large)', { shift: true, key: 'arrowdown' }, 'diagram-place'),
+  diagramShortcut('diagram.placementUndo', 'Cancel Page Placement', { primary: true, key: 'z' }, 'diagram-place'),
   // Edit Path's nudges (decision 6), on the step keys' own arrows: in a scope
   // of their own ahead of `diagram`, whose executor claims them only while
   // Edit Path has a node selected. Anywhere else it declines, and the arrows
@@ -1432,6 +1477,8 @@ export function findShortcutConflict(
 function shortcutScopesOverlap(a: ShortcutScope, b: ShortcutScope): boolean {
   if (a === b) return true;
   if (a === 'global' || b === 'global') return false;
+  // Page placement exists only inside Diagram and declines otherwise.
+  if (a === 'diagram-place' || b === 'diagram-place') return false;
   return a === 'viewport' || b === 'viewport';
 }
 

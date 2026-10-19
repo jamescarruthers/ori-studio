@@ -1,23 +1,38 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FoldArtifacts, FoldDocument } from '../engine/types';
-import type { OristudioCpLineSegment } from '../engine/oristudioCpTypes';
 import { useWorkspaceStore } from '../store/workspaceStore/store';
 import { cpOverlayViewStore } from './cpOverlayViewStore';
 import { emptyOristudioCpSelection } from '../lib/creasePatternViewport';
-import { resolveSelectedSegment } from '../lib/creasePatternSelectionSegment';
 import { TooltipProvider } from '../components/ui/Tooltip';
 import { CpSelectionToolbar } from './CpSelectionToolbar';
+import { resolveInlineSimulationRegion } from './inlineSimulation/resolveSimulationRegion';
 import { selectionCoversEntireCp } from './references/useOpenReferences';
+import {
+  LEFT_SHEET,
+  twoSheetDocument,
+  twoSheetFold,
+  twoSheetIndex,
+} from './sheets/twoSheetsTestFixture';
 
-// The toolbar reads segments-only artifacts from the module cache (populated via
-// the kernel export); stub that source so the test drives the resolver with a
-// fixed fold, already "cached" so no async round trip is involved.
-vi.mock('./cpSegmentationArtifacts', () => ({
-  ensureCpSegmentationArtifacts: vi.fn(async () => ({ fold: makeFold(), simulation_model: null })),
-  peekCpSegmentationArtifacts: vi.fn(() => ({ fold: makeFold(), simulation_model: null })),
+// The toolbar reads the sheet index from its module cache (built by the
+// kernel); stub that source so the test drives the resolver with a fixed index,
+// already "cached" so no async round trip is involved. One sheet's faces are
+// stubbed the same way, for the actions that build them.
+vi.mock('./sheets/cpSheetIndex', () => ({
+  ensureCpSheetIndex: vi.fn(async () => twoSheetIndex()),
+  peekCpSheetIndex: vi.fn(() => twoSheetIndex()),
 }));
+vi.mock('./sheets/cpSheetArtifacts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./sheets/cpSheetArtifacts')>();
+  const artifacts = async (_document: unknown, sheet: number) =>
+    actual.sheetArtifactsFromFold(twoSheetFold(sheet), sheet);
+  return {
+    ...actual,
+    ensureCpSheetArtifacts: vi.fn(artifacts),
+    ensureCpSheetSimulationArtifacts: vi.fn(artifacts),
+  };
+});
 
 // Sharing is gated: web-only, and off in dev builds unless VITE_SHARE_API_URL opts in,
 // so a dev build cannot write into the production share namespace by accident. Under
@@ -44,81 +59,11 @@ class ResizeObserverStub {
 }
 vi.stubGlobal('ResizeObserver', ResizeObserverStub);
 
-// Two bordered squares sharing a middle wall; left region = line ids [1,3,5,7,8].
-function makeFold(): FoldDocument {
-  return {
-    vertices_coords: [
-      [0, 0],
-      [1, 0],
-      [2, 0],
-      [0, 1],
-      [1, 1],
-      [2, 1],
-    ],
-    edges_vertices: [
-      [0, 1],
-      [1, 2],
-      [0, 3],
-      [2, 5],
-      [3, 4],
-      [4, 5],
-      [1, 4],
-      [0, 4],
-      [1, 5],
-    ],
-    edges_assignment: ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'M', 'V'],
-    faces_vertices: [
-      [0, 1, 4],
-      [0, 4, 3],
-      [1, 2, 5],
-      [1, 5, 4],
-    ],
-  };
-}
-
-const LINES: Array<[number, number, number, number, string]> = [
-  [0, 0, 1, 0, 'Black0'],
-  [1, 0, 2, 0, 'Black0'],
-  [0, 0, 0, 1, 'Black0'],
-  [2, 0, 2, 1, 'Black0'],
-  [0, 1, 1, 1, 'Black0'],
-  [1, 1, 2, 1, 'Black0'],
-  [1, 0, 1, 1, 'Black0'],
-  [0, 0, 1, 1, 'Red1'],
-  [1, 0, 2, 1, 'Blue2'],
-];
-
-function makeLine(ax: number, ay: number, bx: number, by: number, color: string): OristudioCpLineSegment {
-  return {
-    a: { x: ax, y: ay },
-    b: { x: bx, y: by },
-    active: '',
-    color,
-    selected: 0,
-    customized: 0,
-    customized_color: { red: 0, green: 0, blue: 0 },
-  };
-}
-
 function seedStore(lines: number[]): void {
-  const artifacts: FoldArtifacts = { fold: makeFold(), simulation_model: null };
   useWorkspaceStore.setState({
     // Only the fields the toolbar reads; cast the document-state wrapper.
-    oristudioCpDocument: {
-      document: {
-        crease_pattern: {
-          line_segments: LINES.map((line) => makeLine(...line)),
-          circles: [],
-          points: [],
-          aux_line_segments: [],
-          texts: [],
-          grid: {},
-        },
-        metadata: {},
-      },
-    },
+    oristudioCpDocument: { document: twoSheetDocument() },
     oristudioCpSelection: { ...emptyOristudioCpSelection(), lines },
-    foldArtifacts: artifacts,
   } as unknown as Partial<ReturnType<typeof useWorkspaceStore.getState>>);
 }
 
@@ -154,14 +99,14 @@ describe('CpSelectionToolbar', () => {
     container.remove();
   });
 
-  it('renders nothing when the selection is not a complete enclosed segment', async () => {
-    seedStore([7, 8]); // interior-only, partial
+  it('renders nothing when the selection is not a whole sheet', async () => {
+    seedStore([5]); // the left sheet's diagonal alone
     await act(async () => renderToolbar(root, container));
     expect(document.querySelector('[role="toolbar"]')).toBeNull();
   });
 
-  it('renders the action toolbar when the selection matches one segment', async () => {
-    seedStore([1, 3, 5, 7, 8]); // the complete left region
+  it('renders the action toolbar when the selection is one whole sheet', async () => {
+    seedStore(LEFT_SHEET);
     await act(async () => renderToolbar(root, container));
     const toolbar = document.querySelector('[role="toolbar"]');
     expect(toolbar).not.toBeNull();
@@ -176,10 +121,10 @@ describe('CpSelectionToolbar', () => {
     expect(document.querySelector('button[aria-label="Create shareable link"]')).not.toBeNull();
   });
 
-  it('shares the segment the selection resolved to, not the whole document', async () => {
-    seedStore([1, 3, 5, 7, 8]);
-    const shareSegment = vi.fn(async () => true);
-    useWorkspaceStore.setState({ shareOristudioCpSegment: shareSegment } as unknown as Partial<
+  it('shares the sheet the selection resolved to, not the whole document', async () => {
+    seedStore(LEFT_SHEET);
+    const shareSheet = vi.fn(async () => true);
+    useWorkspaceStore.setState({ shareOristudioCpSheet: shareSheet } as unknown as Partial<
       ReturnType<typeof useWorkspaceStore.getState>
     >);
     await act(async () => renderToolbar(root, container));
@@ -188,9 +133,9 @@ describe('CpSelectionToolbar', () => {
     expect(share).not.toBeNull();
     await act(async () => share!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 
-    // Segment id, not line ids: a share link carries one bordered crease
+    // The sheet, not line ids: a share link carries one bordered crease
     // pattern, the same unit Fold / Export / Simulate operate on.
-    expect(shareSegment).toHaveBeenCalledWith(0);
+    expect(shareSheet).toHaveBeenCalledWith(0);
     // And like every sibling action it dismisses, so the toolbar cannot linger
     // over the modal it just opened.
     expect(document.querySelector('[role="toolbar"]')).toBeNull();
@@ -200,7 +145,7 @@ describe('CpSelectionToolbar', () => {
     // Desktop, and dev builds that have not opted in. Every sibling action still works;
     // only the share verb disappears.
     shareEnabled.value = false;
-    seedStore([1, 3, 5, 7, 8]);
+    seedStore(LEFT_SHEET);
     await act(async () => renderToolbar(root, container));
     const toolbar = document.querySelector('[role="toolbar"]');
     expect(toolbar?.querySelectorAll('button').length).toBe(5);
@@ -209,7 +154,7 @@ describe('CpSelectionToolbar', () => {
   });
 
   it('dismisses itself when an action is invoked', async () => {
-    seedStore([1, 3, 5, 7, 8]);
+    seedStore(LEFT_SHEET);
     await act(async () => renderToolbar(root, container));
     const save = document.querySelector<HTMLButtonElement>('button[aria-label="Save to image"]');
     expect(save).not.toBeNull();
@@ -219,22 +164,22 @@ describe('CpSelectionToolbar', () => {
     expect(document.querySelector('[role="toolbar"]')).toBeNull();
   });
 
-  it('survives a remount without refetching segmentation', async () => {
-    // Segmentation takes ~1s on a large document while the panel may unmount and
-    // remount this component; holding the result in component state meant it was
-    // discarded and refetched indefinitely, so the toolbar never appeared.
-    const { ensureCpSegmentationArtifacts } = await import('./cpSegmentationArtifacts');
-    seedStore([1, 3, 5, 7, 8]);
+  it('survives a remount without refetching the sheet index', async () => {
+    // The panel may unmount and remount this component; holding the index in
+    // component state meant it was discarded and refetched indefinitely, so the
+    // toolbar never appeared.
+    const { ensureCpSheetIndex } = await import('./sheets/cpSheetIndex');
+    seedStore(LEFT_SHEET);
     await act(async () => renderToolbar(root, container));
     expect(document.querySelector('[role="toolbar"]')).not.toBeNull();
 
     act(() => root.unmount());
-    vi.mocked(ensureCpSegmentationArtifacts).mockClear();
+    vi.mocked(ensureCpSheetIndex).mockClear();
     root = createRoot(host);
     await act(async () => renderToolbar(root, container));
     // Reads straight from the cache on the very first render after remounting.
     expect(document.querySelector('[role="toolbar"]')).not.toBeNull();
-    expect(vi.mocked(ensureCpSegmentationArtifacts)).not.toHaveBeenCalled();
+    expect(vi.mocked(ensureCpSheetIndex)).not.toHaveBeenCalled();
   });
 
   // Simulating a region deselects it, from the button *and* from Shift+S. The
@@ -270,7 +215,7 @@ describe('CpSelectionToolbar', () => {
 
     it('leaves nothing selected when the button runs it', async () => {
       const add = stubAdd();
-      seedStore([1, 3, 5, 7, 8]);
+      seedStore(LEFT_SHEET);
       await act(async () => renderToolbar(root, container));
       const button = document.querySelector<HTMLButtonElement>(
         'button[aria-label="Simulate inline"]'
@@ -284,16 +229,15 @@ describe('CpSelectionToolbar', () => {
     });
 
     it('is the store that deselects, so no caller has to remember to', async () => {
-      // The real action, not the stub: `foldArtifacts` is already seeded, which
+      // The real action, not the stub: the sheet's faces are stubbed above, which
       // is the only thing on its success path that needs the engine.
-      seedStore([1, 3, 5, 7, 8]);
+      seedStore(LEFT_SHEET);
       // The region itself, resolved the way the toolbar and the shortcut resolve
       // it — an id would name a different region in the store's own segmentation.
       const state = useWorkspaceStore.getState();
-      const match = resolveSelectedSegment(
+      const match = await resolveInlineSimulationRegion(
         state.oristudioCpDocument?.document,
-        state.oristudioCpSelection,
-        state.foldArtifacts
+        state.oristudioCpSelection.lines
       );
       expect(match).not.toBeNull();
       expect(
@@ -312,7 +256,7 @@ describe('CpSelectionToolbar', () => {
       // Shift+S dispatches straight to the shared hook, with no toolbar in the
       // loop to dismiss anything.
       const add = stubAdd();
-      seedStore([1, 3, 5, 7, 8]);
+      seedStore(LEFT_SHEET);
       const { useSimulateSelection } = await import('./inlineSimulation/useSimulateSelection');
       let simulate: (() => Promise<void>) | null = null;
       function Probe() {
@@ -334,26 +278,24 @@ describe('CpSelectionToolbar', () => {
   });
 
   describe('the References button', () => {
-    it('is absent for a region that is not the whole pattern', async () => {
+    it('is absent for a sheet that is not the whole pattern', async () => {
       // References opens on the whole pattern and carries nothing over, so a
       // button on a partial selection would promise a scope it does not deliver.
-      // The fixture's left region is five of the document's nine lines.
-      seedStore([1, 3, 5, 7, 8]);
+      // The fixture's left sheet is five of the document's ten lines.
+      seedStore(LEFT_SHEET);
       await act(async () => renderToolbar(root, container));
       expect(document.querySelector('[role="toolbar"]')).not.toBeNull();
       expect(document.querySelector('button[aria-label="Folding references"]')).toBeNull();
     });
 
-    it('is offered exactly when the matched segment covers every line', () => {
+    it('is offered exactly when the matched sheet covers every line', () => {
       // The predicate the toolbar renders on, driven directly: the fixture has no
-      // single segment that is the whole document, so the positive case is a
-      // shape test rather than a render.
-      const cpDocument = {
-        crease_pattern: { line_segments: LINES.map((line) => makeLine(...line)) },
-      };
-      const everyLine = LINES.map((_, index) => index + 1);
+      // single sheet that is the whole document, so the positive case is a shape
+      // test rather than a render.
+      const cpDocument = twoSheetDocument();
+      const everyLine = cpDocument.crease_pattern.line_segments.map((_, index) => index + 1);
       expect(selectionCoversEntireCp({ cpLineIds: everyLine }, cpDocument)).toBe(true);
-      expect(selectionCoversEntireCp({ cpLineIds: [1, 3, 5, 7, 8] }, cpDocument)).toBe(false);
+      expect(selectionCoversEntireCp({ cpLineIds: LEFT_SHEET }, cpDocument)).toBe(false);
       expect(selectionCoversEntireCp(null, cpDocument)).toBe(false);
       expect(selectionCoversEntireCp({ cpLineIds: everyLine }, null)).toBe(false);
     });
@@ -376,7 +318,7 @@ describe('CpSelectionToolbar', () => {
   });
 
   it('hides again when the selection is cleared', async () => {
-    seedStore([1, 3, 5, 7, 8]);
+    seedStore(LEFT_SHEET);
     await act(async () => renderToolbar(root, container));
     expect(document.querySelector('[role="toolbar"]')).not.toBeNull();
     await act(async () => {

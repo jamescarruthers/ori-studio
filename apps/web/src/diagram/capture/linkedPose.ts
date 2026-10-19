@@ -22,14 +22,16 @@ import {
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import {
   POSE_ROTATION_STEP_DEG,
-  type DiagramLinkedPoseActionId,
+  type DiagramLinkedPoseVerb,
 } from '../actions/diagramLinkedPoseActions';
 import {
   DEFAULT_SIMULATED_VIEW,
   DEFAULT_SPREAD_STARTS,
   creasePatternSide,
+  creasesFlipped,
   renderToShowAs,
   withCreasePatternSide,
+  withCreasesFlipped,
   type DiagramCpRender,
   type DiagramCreasePatternRender,
   type DiagramCpSource,
@@ -57,17 +59,19 @@ import { uprightTurn } from './mirrorAxes';
  * set to a kind, an amount or a direction, or an affine one's layer held
  * still, skew or axis (Phase 13), Pose's simulator come to rest (D19): its
  * model where the solver holds it, at a fold %, from a camera — or a crease
- * pattern's paper on the colour of one side (the Step pane's Front | Back).
+ * pattern's paper on the colour of one side (the Step pane's Front | Back),
+ * or turned over on its back (the Step pane's Flip creases).
  */
 export type LinkedPoseRequest =
-  | { verb: DiagramLinkedPoseActionId }
+  | { verb: DiagramLinkedPoseVerb }
   | { verb: 'orbit'; camera: FoldedFigureCamera }
   | { verb: 'rotate-to'; degrees: number }
   | { verb: 'spread-kind'; kind: SpreadKind }
   // One value of the spread, as every flat picture's spread is set (`layerSpreadSettings.ts`).
   | LayerSpreadEdit
   | { verb: 'simulate'; foldPercent: number; view: DiagramSimulatedView; still: StillScene }
-  | { verb: 'paper-side'; side: 'front' | 'back' };
+  | { verb: 'paper-side'; side: 'front' | 'back' }
+  | { verb: 'flip-creases'; on: boolean };
 
 /** The verbs that set one field of a spread: each a no-op on a fold with none, or of the other kind. */
 function isSpreadFieldRequest(request: LinkedPoseRequest): request is LayerSpreadEdit {
@@ -126,8 +130,6 @@ interface FlatPose {
 
 /** Straight down at the paper. */
 const VIEW_TOP: FoldedFigureCamera = { yaw: 0, pitch: 0, zoom: 1 };
-/** Along the paper, from the front edge. */
-const VIEW_FRONT: FoldedFigureCamera = { yaw: 0, pitch: -Math.PI / 2, zoom: 1 };
 
 export async function poseLinkedStep(
   session: CaptureSession,
@@ -246,6 +248,7 @@ export async function poseLinkedStep(
     const target = renderToShowAs({ render, remembered }, 'crease-pattern');
     return creasePattern(target.mode === 'crease-pattern' ? target : { mode: 'crease-pattern', rotationDeg: 0 });
   }
+  if (render.mode === 'defox') return verb === 'show-folded' ? foldedAsRemembered() : { status: 'unavailable' };
   if (render.mode === 'simulated') {
     switch (verb) {
       case 'show-folded':
@@ -257,8 +260,9 @@ export async function poseLinkedStep(
     }
   }
   if (render.mode === 'crease-pattern') {
-    // Every turn keeps the colour of the side its paper is on: a choice about
-    // the picture, as a flat fold's spread is, with its own field (Front | Back).
+    // Every turn keeps the colour of the side its paper is on, and its paper
+    // turned over or not: choices about the picture, as a flat fold's spread
+    // is, each with its own field (Front | Back, Flip creases).
     const at = (rotationDeg: number) => creasePattern({ ...render, rotationDeg });
     switch (verb) {
       case 'show-folded':
@@ -270,9 +274,17 @@ export async function poseLinkedStep(
       case 'rotate-to':
         return at(turned(request.verb === 'rotate-to' ? request.degrees : render.rotationDeg, 0));
       case 'paper-side': {
-        // The paper's colour alone (Zach, 2026-10-06): no mirror, no other turn, the same mountains and valleys.
+        // The paper's colour alone (Zach, 2026-10-06): no mirror, no other
+        // turn, the same mountains and valleys — but for Flip creases, kept
+        // on the front, where it draws nothing, and drawn again on the back.
         const side = request.verb === 'paper-side' ? request.side : creasePatternSide(render);
-        return creasePattern(withCreasePatternSide(render, side));
+        return creasePattern(turnedOverFrom(render, withCreasePatternSide(render, side)));
+      }
+      case 'flip-creases': {
+        // The back's alone: on the front it would draw nothing, and the pane offers it only there.
+        if (creasePatternSide(render) !== 'back') return creasePattern(render);
+        const on = request.verb === 'flip-creases' ? request.on : render.flipCreases === true;
+        return creasePattern(turnedOverFrom(render, withCreasesFlipped(render, on)));
       }
       case 'reset':
         return at(0);
@@ -343,15 +355,23 @@ export async function poseLinkedStep(
       return spatial(antipodalCamera(camera), side === 'back' ? 'front' : 'back');
     case 'view-top':
       return spatial(fromSide(VIEW_TOP), side);
-    case 'view-front':
-      return spatial(fromSide(VIEW_FRONT), side);
-    case 'view-iso':
-      return spatial(defaultCaptureCamera(side), side);
     case 'reset':
       return spatial(defaultCaptureCamera('front'), 'front');
     default:
       return spatial(camera, side);
   }
+}
+
+/**
+ * `posed`, a crease pattern drawn from `render`, its turn run the other way
+ * when one is turned over and the other is not (Flip creases): the paper
+ * turned over where it lies, as a flat fold's Turn Over turns it, so what
+ * shows is the mirror of what showed, side to side, and Rotate Left and Right
+ * still turn it the way they look. Turned back, the turn it had.
+ */
+function turnedOverFrom(render: DiagramCreasePatternRender, posed: DiagramCreasePatternRender): DiagramCreasePatternRender {
+  if (creasesFlipped(render) === creasesFlipped(posed)) return posed;
+  return { ...posed, rotationDeg: turned(-posed.rotationDeg, 0) };
 }
 
 /** A rotation turned by `delta` degrees, within one turn. */

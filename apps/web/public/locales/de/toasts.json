@@ -47,6 +47,12 @@
       "someFailed_other": "{{count}} Schritte ließen sich nicht aus Falten erfassen und wurden ausgelassen.",
       "stepGone": "Dieser Schritt ist nicht mehr in der Falten-Folge."
     },
+    "import": {
+      "otherWorkspaceFirst": "Machen Sie zuerst die späteren Änderungen im anderen Arbeitsbereich rückgängig oder wiederholen Sie sie: Der Import hat Bearbeiten und Diagramm geändert.",
+      "restoreFailed": "Die importierten Schritte konnten nicht wiederhergestellt werden."
+    },
+    "placementsReflowed_one": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",
+    "placementsReflowed_other": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",
     "references": {
       "addedSteps": "Als Schritte {{first}}–{{last}} hinzugefügt",
       "addedTurnOvers_one": "Umdrehen hinzugefügt",
@@ -78,7 +84,15 @@
     "uploadRejected": "es ist kein SVG, das Ori Studio sicher lesen kann",
     "uploadTooLarge": "es ist zu groß",
     "uploadUnreadable": "das Bild konnte nicht gelesen werden",
-    "uploadUnsupported": "es ist kein Bild"
+    "uploadUnsupported": "es ist kein Bild",
+    "zoom": {
+      "updatedList": "Vergrößerte Schritte {{numbers}} aktualisiert",
+      "updatedOne": "Vergrößerter Schritt {{number}} aktualisiert",
+      "updatedRange": "Vergrößerte Schritte {{first}}–{{last}} aktualisiert",
+      "updatedSome": "{{placed}} von {{total}} vergrößerten Schritten aktualisiert",
+      "updatedSomeDetail": "Die übrigen konnten keinen Rahmen aus diesem Bereich übernehmen.",
+      "updateFailed": "Die vergrößerten Schritte konnten nicht aktualisiert werden"
+    }
   },
   "diagramExport": {
     "saved": "{{name}} exportiert"

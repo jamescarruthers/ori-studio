@@ -13,6 +13,7 @@ import {
   createDiagram,
   createStep,
   insertSteps,
+  PAGE_SETTINGS,
   pullReferencesSteps,
   setPageSetup,
   stepById,
@@ -26,7 +27,6 @@ import { referencesSource } from '../document/diagramSteps.fixtures';
 import { layoutDiagram } from '../pages/diagramPages';
 import { estimateTextSetter } from '../pages/estimateTextSetter';
 import { cellPicture } from '../pages/pagePictures';
-import { seedNewSteps } from '../zoom/zoomFrames';
 import { markPaper, stepAsDrawn } from '../zoom/stepView';
 import { framedCard, liftFixtures, piecesCard } from './referencesCardMarks.fixtures';
 import { liftedCardPicture } from './referencesCardMarks';
@@ -54,13 +54,16 @@ function diagram(style: DiagramStyle, lifted: boolean, layout: 'grid' | 'flow'):
     })
   );
   const document = insertSteps({ ...createDiagram({ title: 'Pulled', newId: () => 'diagram-pulled' }), style }, steps, 0);
-  return setPageSetup(document, { layout });
+  // No title block: the two are compared on pages as packed before it.
+  return setPageSetup(document, { layout, titleBlock: PAGE_SETTINGS.titleBlock.legacy });
 }
 
 describe('a card pulled into an enlarged step, on its page', () => {
   // 17d review: crane's last step, enlarged, filled with a card — and a card pulled after it, enlarged with its frame —
   // drew the card's arrows whole across the steps beside them and off the page, where the baked card is cut at the frame.
-  it('paints none of the card’s marks outside its cell, filled into the step or pulled after it', () => {
+  // Since review fix 3 a card filling an empty enlarged step, or pulled after one, starts whole; a References step
+  // enlarged since still takes a new card into its window (Replace).
+  it('paints none of the card’s marks outside its cell, replaced into the enlarged step or pulled after it whole', () => {
     const style: DiagramStyle = { preset: 'diagram' };
     const card = (key: string): SentReferencesStep => {
       const picture: DiagramStepDiagramPicture = { kind: 'step-diagram', model: framedCard(), mirrored: false, key };
@@ -77,14 +80,17 @@ describe('a card pulled into an enlarged step, on its page', () => {
     const empty: DiagramStep = { ...createStep(() => 'step-filled'), zoom };
     const start = insertSteps({ ...createDiagram({ title: 'Head', newId: () => 'diagram-head' }), style }, [empty], 0);
     const filled = pullReferencesSteps(start, [card('steps-f')], { kind: 'fill', stepId: 'step-filled' }, { newId }).document;
-    const added = pullReferencesSteps(filled, [card('steps-g')], { kind: 'end' }, { newId });
-    const document = seedNewSteps(added.document, added.stepIds, added.document.assets).document;
+    expect(stepById(filled, 'step-filled')!.zoom).toBeUndefined();
+    // Enlarged again, then given another card: its marks in the frame pulled into the window.
+    const enlarged = { ...filled, steps: filled.steps.map((entry) => (entry.id === 'step-filled' ? { ...entry, zoom } : entry)) };
+    const replaced = pullReferencesSteps(enlarged, [card('steps-g')], { kind: 'replace', stepId: 'step-filled' }, { newId }).document;
+    // Cut into cells, whose rooms the marks are held to: a flow step's box hugs its picture as measured.
+    const document = setPageSetup(pullReferencesSteps(replaced, [card('steps-h')], { kind: 'end' }, { newId }).document, { layout: 'grid' });
     const cells = layoutDiagram(document, estimateTextSetter).pages.flatMap((page) => page.cells);
     expect(cells).toHaveLength(2);
     for (const cell of cells) {
       const step = stepById(document, cell.stepId)!;
-      // Enlarged, the card's marks in its frame pulled with it.
-      expect(step.zoom?.frame).toEqual(zoom.frame);
+      expect(step.zoom?.frame).toEqual(cell.stepId === 'step-filled' ? zoom.frame : undefined);
       expect(step.annotations.length).toBeGreaterThan(0);
       const placed = cellPicture(step, document.assets, style, cell, 'c-', { hanStyle: 'sc', runs: estimateTextSetter.runs })!;
       const framePx = Math.max(placed.framePt.width, placed.framePt.height) / PT_PER_CSS_PX;
@@ -112,7 +118,13 @@ describe('a diagram of pulled steps on its pages', () => {
         baked.pages.forEach((page, p) =>
           page.cells.forEach((cell, c) => {
             const other = pulled.pages[p]!.cells[c]!;
-            expect(other.cellMm).toEqual(cell.cellMm);
+            if (layout === 'grid') expect(other.cellMm).toEqual(cell.cellMm);
+            else {
+              // A flow step's box is packed round its picture as measured, which the two measure within 2%:
+              // the same band, its box within a couple of mm.
+              expect([other.band, other.bend]).toEqual([cell.band, cell.bend]);
+              for (const key of ['x', 'y', 'w', 'h'] as const) expect(Math.abs(other.cellMm[key] - cell.cellMm[key])).toBeLessThan(2);
+            }
             // A References sheet knows its size in the pattern's units: its scale is mm per unit.
             const scale = (of: typeof cell) => of.mmPerUnit ?? of.frameMm;
             expect(scale(cell)).not.toBeNull();

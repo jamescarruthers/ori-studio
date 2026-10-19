@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_PAGE_SETUP,
+  PAGE_SETTINGS,
+  TITLE_BLOCK_ART_SIZE_DEFAULTS,
+  snapshotDiagramStyle,
   createDiagram,
+  defaultTitleBlockContent,
+  titleBlockArtSizes,
+  titleBlockStepCount,
   createStep,
   defaultHanStyle,
   duplicateStep,
@@ -16,8 +22,10 @@ import {
   setDiagramTitle,
   setHanStyle,
   setPageSetup,
+  setPageStarts,
   setStepBreakBefore,
   setStepText,
+  setTitleBlockContent,
   stepHasContent,
   insertPictureSteps,
   setStepPicture,
@@ -40,7 +48,9 @@ import {
   setLinkedPicture,
   showAsOf,
   creasePatternSide,
+  creasesFlipped,
   withCreasePatternSide,
+  withCreasesFlipped,
   withRememberedPoses,
   anchorTakesCard,
   createTurn,
@@ -62,6 +72,7 @@ import {
   DEFAULT_DEPTH_SPREAD,
   DEFAULT_LAYER_SPREAD,
   DEFAULT_SPREAD_STARTS,
+  nearestEarlierShowAs,
   nearestEarlierSpread,
   sameSpread,
   SPREAD_AMOUNT_RANGE,
@@ -74,7 +85,7 @@ import {
   type DiagramStep,
   type KnownDiagramAsset,
 } from './diagramDocument';
-import { cpSource, referencesSource, referencesStep, scenePicture, stepDiagramPicture, stepsIn } from './diagramSteps.fixtures';
+import { cpSource, cpStep, referencesSource, referencesStep, scenePicture, stepDiagramPicture, stepsIn } from './diagramSteps.fixtures';
 
 function sequentialIds(): DiagramIdFactory {
   let next = 0;
@@ -189,6 +200,14 @@ describe('duplicateStep', () => {
     expect(stepsIn(document).map((step) => step.breakBefore)).toEqual([false, true, false]);
   });
 
+  it('keeps a page’s own count with the original: the copy is one more step on its page', () => {
+    const { diagram, ids } = diagramWith(2);
+    const counted = setPageStarts(diagram, new Map([['step-3', { pageSteps: 4 }]]));
+    const { document } = duplicateStep(counted, 'step-3', ids)!;
+    expect(stepsIn(document).map((step) => step.pageSteps)).toEqual([undefined, 4, undefined]);
+    expect('pageSteps' in stepsIn(document)[2]!).toBe(false);
+  });
+
   it('refuses a missing or locked step', () => {
     const { diagram } = diagramWith(1);
     expect(duplicateStep(diagram, 'missing')).toBeNull();
@@ -215,6 +234,31 @@ describe('step and document fields', () => {
     expect(isLockedStep(lockedStep)).toBe(true);
     expect(setStepText(locked, 'step-2', 'hello')).toBe(locked);
     expect(setStepBreakBefore(locked, 'step-2', true)).toBe(locked);
+    expect(setPageStarts(locked, new Map([['step-2', { pageSteps: 3, breakBefore: true }]]))).toBe(locked);
+  });
+
+  it('sets page starts at once — a count clamped to 1–30, null taking it away — and is a no-op when unchanged', () => {
+    const { diagram } = diagramWith(3);
+    const next = setPageStarts(
+      diagram,
+      new Map([
+        ['step-2', { pageSteps: 7 }],
+        ['step-3', { pageSteps: 40, breakBefore: true }],
+        ['step-4', { pageSteps: 0 }],
+        ['missing', { pageSteps: 3 }],
+      ])
+    );
+    expect(stepsIn(next).map((step) => [step.pageSteps, step.breakBefore])).toEqual([
+      [7, false],
+      [30, true],
+      [1, false],
+    ]);
+    expect(setPageStarts(next, new Map([['step-2', { pageSteps: 7 }], ['step-3', { breakBefore: true }]]))).toBe(next);
+    expect(setPageStarts(next, new Map([['step-2', { pageSteps: Number.NaN }]]))).toBe(next);
+    const cleared = setPageStarts(next, new Map([['step-2', { pageSteps: null }], ['step-3', { pageSteps: null, breakBefore: false }]]));
+    expect('pageSteps' in stepsIn(cleared)[0]!).toBe(false);
+    expect(stepsIn(cleared)[1]).toEqual(stepsIn(diagram)[1]);
+    expect(setPageStarts(diagram, new Map())).toBe(diagram);
   });
 
   it('sets the title, Han style, paper style and page break', () => {
@@ -224,7 +268,7 @@ describe('step and document fields', () => {
     expect(setHanStyle(diagram, 'jp').hanStyle).toBe('jp');
     expect(setHanStyle(diagram, 'sc')).toBe(diagram);
     expect(setDiagramStyle(diagram, { preset: 'diagram' })).toBe(diagram);
-    expect(setDiagramStyle(diagram, { preset: 'default' }).style).toEqual({ preset: 'default' });
+    expect(setDiagramStyle(diagram, { preset: 'default' }).style).toEqual(snapshotDiagramStyle({ preset: 'default' }));
     expect(stepsIn(setStepBreakBefore(diagram, 'step-2', true))[0].breakBefore).toBe(true);
   });
 });
@@ -232,9 +276,15 @@ describe('step and document fields', () => {
 describe('page setup', () => {
   it('clamps every field to its range and keeps the rest', () => {
     const { diagram } = diagramWith(0);
-    const next = setPageSetup(diagram, { columns: 9, rows: 0, marginMm: -4 });
-    expect(next.page).toMatchObject({ columns: 5, rows: 1, marginMm: 0, size: 'a4' });
+    const next = setPageSetup(diagram, { columns: 9, rows: 0, marginMm: -4, stepsPerPage: 40 });
+    expect(next.page).toMatchObject({ columns: 5, rows: 1, marginMm: 0, size: 'a4', stepsPerPage: 30 });
     expect(setPageSetup(diagram, { columns: 3 })).toBe(diagram);
+    expect(setPageSetup(diagram, { stepsPerPage: 9 })).toBe(diagram);
+    expect(setPageSetup(diagram, { stepsPerPage: 1 }).page.stepsPerPage).toBe(2);
+    // As many as a flow page's 5 × 6 held before it took a count.
+    expect(setPageSetup(diagram, { stepsPerPage: 30 }).page.stepsPerPage).toBe(30);
+    // Each is its own: the grid's columns leave the flow's steps per page as they were.
+    expect(setPageSetup(diagram, { columns: 4 }).page.stepsPerPage).toBe(9);
   });
 
   it('starts a new diagram in the flow layout', () => {
@@ -242,9 +292,33 @@ describe('page setup', () => {
     expect(createDiagram().page.layout).toBe('flow');
   });
 
+  it('gives a new diagram the title block, and a page that does not say it none', () => {
+    // J1b's shorter block (Zach, 2026-10-15); a page that says none reads as every first page before the block.
+    expect(createDiagram().page.titleBlock).toEqual({ enabled: true, heightShare: 0.23 });
+    expect(normalizePageSetup({ layout: 'flow' }).titleBlock).toEqual({ enabled: false, heightShare: 0.27 });
+    // A file saved with the block keeps its share.
+    expect(normalizePageSetup({ layout: 'flow', titleBlock: { enabled: true, heightShare: 0.27 } }).titleBlock.heightShare).toBe(0.27);
+  });
+
+  it('takes a new diagram’s page setup from each setting’s default, and an unsaid one from its legacy value', () => {
+    const settings = Object.entries(PAGE_SETTINGS);
+    expect(createDiagram().page).toEqual(Object.fromEntries(settings.map(([key, values]) => [key, values.default])));
+    const legacy = Object.fromEntries(
+      settings.map(([key, values]) => [key, typeof values.legacy === 'function' ? values.legacy({ columns: 3, rows: 3 }) : values.legacy])
+    );
+    expect(normalizePageSetup(null)).toEqual(legacy);
+    expect(normalizePageSetup({})).toEqual(legacy);
+  });
+
   it('reads anything, falling back field by field', () => {
-    // A layout not said is the grid, every diagram's before the flow was a new one's.
-    expect(normalizePageSetup(null)).toEqual({ ...DEFAULT_PAGE_SETUP, layout: 'grid' });
+    // A layout not said is the grid, every diagram's before the flow was a new one's; a title block not said is none;
+    // a steadiness not said is 0.85, every flow page's before a new diagram's was 0.5.
+    expect(normalizePageSetup(null)).toEqual({
+      ...DEFAULT_PAGE_SETUP,
+      layout: 'grid',
+      titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+      flowSteadiness: 0.85,
+    });
     expect(
       normalizePageSetup({
         size: 'letter',
@@ -256,7 +330,144 @@ describe('page setup', () => {
       size: 'letter',
       orientation: 'portrait',
       columns: 3,
+      // Unsaid: as many as the columns and rows hold.
+      stepsPerPage: 9,
       pageNumbers: { enabled: false, first: 1 },
+    });
+    expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2 }).stepsPerPage).toBe(8);
+    expect(normalizePageSetup({ layout: 'flow', columns: 5, rows: 6 }).stepsPerPage).toBe(30);
+    expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2, stepsPerPage: 5 }).stepsPerPage).toBe(5);
+  });
+
+  it('sets the title block whole, its share held to its range: the same document where it already is so', () => {
+    const { diagram } = diagramWith(0);
+    expect(PAGE_SETTINGS.titleBlock.legacy).toEqual({ enabled: false, heightShare: 0.27 });
+    const on = setPageSetup(diagram, { titleBlock: { enabled: true, heightShare: 0.27 } });
+    expect(on.page.titleBlock).toEqual({ enabled: true, heightShare: 0.27 });
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.27 } })).toBe(on);
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.3 } }).page.titleBlock.heightShare).toBe(0.3);
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.05 } }).page.titleBlock.heightShare).toBe(0.15);
+    expect(setPageSetup(on, { titleBlock: { enabled: false, heightShare: 0.27 } }).page.titleBlock.enabled).toBe(false);
+  });
+});
+
+describe('the title block’s content', () => {
+  const STEP = { kind: 'step', stepId: 'step-2' } as const;
+  /** A new diagram's words in Japanese. */
+  const JA_WORDS = { subtitle: '折り紙の図', author: '作者', authorName: 'お名前', steps: '工程数', recommendedPaper: '推奨用紙', paperSize: '15 cm × 15 cm' };
+
+  it('sets each part alone, and takes it away: a source by Auto, the subtitle and the note by blanks', () => {
+    const { diagram } = diagramWith(2);
+    const model = setTitleBlockContent(diagram, { model: STEP });
+    expect(model.titleBlockContent).toEqual({ model: STEP });
+    const all = setTitleBlockContent(model, { pattern: { kind: 'none' }, subtitle: '折り紙の図', note: '設計：笠原邦彦\n用紙：15 cm' });
+    expect(all.titleBlockContent).toEqual({ model: STEP, pattern: { kind: 'none' }, subtitle: '折り紙の図', note: '設計：笠原邦彦\n用紙：15 cm' });
+    expect(setTitleBlockContent(all, { note: ' \n ', subtitle: '  ' }).titleBlockContent).toEqual({ model: STEP, pattern: { kind: 'none' } });
+    // Nothing left set: no content at all.
+    const auto = setTitleBlockContent(all, { model: 'auto', pattern: 'auto', subtitle: '', note: '' });
+    expect(auto).not.toHaveProperty('titleBlockContent');
+    expect(auto).toEqual(diagram);
+  });
+
+  it('is the same document where nothing changes', () => {
+    const { diagram } = diagramWith(2);
+    expect(setTitleBlockContent(diagram, {})).toBe(diagram);
+    expect(setTitleBlockContent(diagram, { model: 'auto', note: '', subtitle: '', modelSize: 'default' })).toBe(diagram);
+    expect(setTitleBlockContent(diagram, { credits: { op: 'remove', at: 0 } })).toBe(diagram);
+    const set = setTitleBlockContent(diagram, { model: STEP, note: 'Design: Lang', credits: { op: 'add' }, patternSize: 0.5 });
+    expect(setTitleBlockContent(set, { model: { kind: 'step', stepId: 'step-2' } })).toBe(set);
+    expect(setTitleBlockContent(set, { note: 'Design: Lang', patternSize: 0.5 })).toBe(set);
+    expect(setTitleBlockContent(set, { credits: { op: 'set', at: 0, label: '', value: '' } })).toBe(set);
+    expect(setTitleBlockContent(set, { credits: { op: 'set', at: 1, label: 'Author' } })).toBe(set);
+    expect(setTitleBlockContent(set, { model: { kind: 'step', stepId: 'step-1' } })).not.toBe(set);
+  });
+
+  it('keeps the subtitle, a label and a text value on one line, and the note’s lines as typed', () => {
+    const { diagram } = diagramWith(0);
+    const set = setTitleBlockContent(
+      setTitleBlockContent(diagram, { subtitle: 'Origami\ndiagram', note: 'Design: Lang\r\nPaper: 15 cm' }),
+      { credits: { op: 'add', credit: { label: 'Recommended\nsize', value: '60 cm\n× 60 cm' } } }
+    );
+    expect(set.titleBlockContent).toEqual({
+      subtitle: 'Origami diagram',
+      credits: [{ label: 'Recommended size', value: '60 cm × 60 cm' }],
+      note: 'Design: Lang\r\nPaper: 15 cm',
+    });
+  });
+
+  it('edits the credits one at a time: added at the end or at a place, a label or value set, removed', () => {
+    const { diagram } = diagramWith(0);
+    const credits = (document: DiagramDocument) => document.titleBlockContent?.credits;
+    const author = setTitleBlockContent(diagram, { credits: { op: 'add', credit: { label: 'Author', value: '' } } });
+    expect(credits(author)).toEqual([{ label: 'Author', value: '' }]);
+    // A credit added with nothing said is empty, for the author to fill in.
+    const two = setTitleBlockContent(author, { credits: { op: 'add' } });
+    expect(credits(two)).toEqual([{ label: 'Author', value: '' }, { label: '', value: '' }]);
+    const named = setTitleBlockContent(two, { credits: { op: 'set', at: 1, label: 'Steps', value: { kind: 'step-count' } } });
+    expect(credits(named)).toEqual([{ label: 'Author', value: '' }, { label: 'Steps', value: { kind: 'step-count' } }]);
+    const first = setTitleBlockContent(named, { credits: { op: 'add', credit: { label: 'Paper', value: '15 cm' }, at: 0 } });
+    expect(credits(first)!.map((credit) => credit.label)).toEqual(['Paper', 'Author', 'Steps']);
+    // The live count turned off is text again; a value set leaves the label as it was.
+    const written = setTitleBlockContent(first, { credits: { op: 'set', at: 2, value: '28' } });
+    expect(credits(written)![2]).toEqual({ label: 'Steps', value: '28' });
+    expect(credits(setTitleBlockContent(written, { credits: { op: 'set', at: 1, value: 'Lang' } }))![1]).toEqual({ label: 'Author', value: 'Lang' });
+    // A place past the list changes nothing; an add past it goes at the end.
+    expect(setTitleBlockContent(written, { credits: { op: 'set', at: 3, label: 'X' } })).toBe(written);
+    expect(setTitleBlockContent(written, { credits: { op: 'remove', at: -1 } })).toBe(written);
+    expect(credits(setTitleBlockContent(written, { credits: { op: 'add', at: 9 } }))!.at(-1)).toEqual({ label: '', value: '' });
+    // The last one removed: none at all.
+    const removed = [0, 0, 0].reduce((document, at) => setTitleBlockContent(document, { credits: { op: 'remove', at } }), written);
+    expect(removed).not.toHaveProperty('titleBlockContent');
+  });
+
+  it('holds a size to its range, and takes it away at its default', () => {
+    const { diagram } = diagramWith(0);
+    expect(TITLE_BLOCK_ART_SIZE_DEFAULTS).toEqual({ modelSize: 0.59, patternSize: 0.79 });
+    expect(titleBlockArtSizes(diagram.titleBlockContent)).toEqual({ modelSize: 0.59, patternSize: 0.79 });
+    const set = setTitleBlockContent(diagram, { modelSize: 0.45, patternSize: 2 });
+    expect(set.titleBlockContent).toEqual({ modelSize: 0.45, patternSize: 1 });
+    expect(titleBlockArtSizes(set.titleBlockContent)).toEqual({ modelSize: 0.45, patternSize: 1 });
+    expect(setTitleBlockContent(set, { modelSize: 0.1 }).titleBlockContent?.modelSize).toBe(0.3);
+    expect(setTitleBlockContent(set, { modelSize: Number.NaN })).toBe(set);
+    expect(setTitleBlockContent(set, { modelSize: 0.59, patternSize: 'default' })).toEqual(diagram);
+  });
+
+  it('starts a new diagram with the words it is given — Author, Steps and Recommended paper, each with a value — and none where it is given none', () => {
+    expect(createDiagram()).not.toHaveProperty('titleBlockContent');
+    const content = defaultTitleBlockContent(JA_WORDS);
+    // Zach, 2026-10-15: no credit starts empty, and this order.
+    expect(content).toEqual({
+      subtitle: '折り紙の図',
+      credits: [
+        { label: '作者', value: 'お名前' },
+        { label: '工程数', value: { kind: 'step-count' } },
+        { label: '推奨用紙', value: '15 cm × 15 cm' },
+      ],
+    });
+    expect(createDiagram({ titleBlockContent: content }).titleBlockContent).toEqual(content);
+    expect(createDiagram({ titleBlockContent: {} })).not.toHaveProperty('titleBlockContent');
+  });
+
+  it('takes a step source without its id as Auto, as a file holding one reads', () => {
+    const { diagram } = diagramWith(2);
+    expect(setTitleBlockContent(diagram, { model: { kind: 'step', stepId: '' } })).toBe(diagram);
+    const chosen = setTitleBlockContent(diagram, { model: STEP, pattern: STEP });
+    expect(setTitleBlockContent(chosen, { pattern: { kind: 'step', stepId: '' } }).titleBlockContent).toEqual({ model: STEP });
+  });
+
+  it('keeps only a source’s own fields, and cleans its text as every string typed', () => {
+    const { diagram } = diagramWith(2);
+    const set = setTitleBlockContent(diagram, {
+      model: { ...STEP, pose: 'front' } as never,
+      subtitle: 'Origami\u000b diagram',
+      note: 'Design\u0000: Lang',
+      credits: { op: 'add', credit: { label: 'Au\u0001thor', value: 'La\u0000ng' } },
+    });
+    expect(set.titleBlockContent).toEqual({
+      model: STEP,
+      subtitle: 'Origami diagram',
+      credits: [{ label: 'Author', value: 'Lang' }],
+      note: 'Design: Lang',
     });
   });
 });
@@ -309,6 +520,42 @@ describe('pictures', () => {
     // The edit itself keeps the old asset; the store prunes it as the edit lands.
     expect(Object.keys(second.assets)).toEqual(['a', 'b']);
     expect(Object.keys(withReferencedAssets(second).assets)).toEqual(['b']);
+  });
+
+  it('starts an empty step enlarged before its picture whole, and keeps one that has a picture enlarged (review fix 3)', () => {
+    const zoom = { from: 'area-1', shape: 'circle' as const, frame: { centre: [0.25, 0.5] as [number, number], radius: 0.1 } };
+    const { diagram } = diagramWith(1);
+    const stepId = stepsIn(diagram)[0].id;
+    const enlarged = (document: DiagramDocument) => ({ ...document, steps: [{ ...stepsIn(document)[0], zoom }] });
+    expect(stepsIn(setStepPicture(enlarged(diagram), stepId, svgAsset('a')))[0].zoom).toBeUndefined();
+    const pictured = enlarged(setStepPicture(diagram, stepId, svgAsset('a')));
+    expect(stepsIn(setStepPicture(pictured, stepId, svgAsset('b')))[0].zoom).toEqual(zoom);
+    // A mark drawn in the window of the picture it had, given back: carried to the whole picture, in step as it was.
+    const label = { id: 'mark', kind: 'label' as const, from: [0.5, 0.5] as [number, number], to: [0.5, 0.5] as [number, number], text: 'A' };
+    const removed = {
+      ...diagram,
+      steps: [{ ...stepsIn(diagram)[0], zoom, annotations: [label], annotatedPictureKey: uploadPictureKey('a') }],
+    };
+    const given = stepsIn(setStepPicture(removed, stepId, svgAsset('a')))[0];
+    expect(given.zoom).toBeUndefined();
+    expect(given.annotations).toEqual([{ ...label, from: [0.25, 0.5], to: [0.25, 0.5] }]);
+    expect(given.annotatedPictureKey).toBe(uploadPictureKey('a'));
+  });
+
+  it('carries marks drawn on a removed linked picture to the whole of a different upload, out of step (item 3; review fix 5)', () => {
+    // Remove Picture, then Upload, on an enlarged linked step: a change of picture, not of units. The marks were
+    // drawn in the linked picture's window and mark nothing on the upload either way; item 3 accepted carrying
+    // them to its whole picture, as Enlarged turned off carries them, and they stay out of step with it.
+    const zoom = { from: 'area-1', shape: 'circle' as const, frame: { centre: [0.25, 0.5] as [number, number], radius: 0.1 } };
+    const label = { id: 'mark', kind: 'label' as const, from: [0.5, 0.5] as [number, number], to: [0.5, 0.5] as [number, number], text: 'A' };
+    const linked: DiagramStep = { ...cpStep('step-1'), zoom, annotations: [label], annotatedPictureKey: 'scene-1' };
+    const removed = removeStepPicture(insertSteps(createDiagram({ title: 'Crane' }), [linked], 0), 'step-1');
+    expect(stepsIn(removed)[0]).toMatchObject({ picture: null, zoom, annotatedPictureKey: 'scene-1' });
+    const given = stepsIn(setStepPicture(removed, 'step-1', svgAsset('a')))[0];
+    expect(given.picture?.key).toBe(uploadPictureKey('a'));
+    expect(given.zoom).toBeUndefined();
+    expect(given.annotations).toEqual([{ ...label, from: [0.25, 0.5], to: [0.25, 0.5] }]);
+    expect(given.annotatedPictureKey).toBe('scene-1');
   });
 
   it('removes a picture and its source, keeping the words, and is a no-op without one', () => {
@@ -632,6 +879,24 @@ describe('the ways a linked pattern is shown (D19)', () => {
     expect('side' in withCreasePatternSide(back, 'front')).toBe(false);
   });
 
+  // Zach, 2026-10-12: draw the pattern from the front, and flip its creases for the steps seen from the back.
+  it('flips a crease pattern’s creases on its back alone, and keeps the choice on the front, where it draws nothing', () => {
+    const back = withCreasePatternSide(pattern, 'back');
+    const flipped = withCreasesFlipped(back, true);
+    expect(flipped).toEqual({ mode: 'crease-pattern', rotationDeg: 45, side: 'back', flipCreases: true });
+    expect(creasesFlipped(back)).toBe(false);
+    expect(creasesFlipped(flipped)).toBe(true);
+    // Front again: kept, inert; the back again brings it back.
+    const front = withCreasePatternSide(flipped, 'front');
+    expect(front).toEqual({ mode: 'crease-pattern', rotationDeg: 45, flipCreases: true });
+    expect(creasesFlipped(front)).toBe(false);
+    expect(withCreasePatternSide(front, 'back')).toEqual(flipped);
+    // Off is written as nothing, in the file's own order.
+    expect(withCreasesFlipped(flipped, false)).toEqual(back);
+    expect('flipCreases' in withCreasesFlipped(flipped, false)).toBe(false);
+    expect(Object.keys(withCreasePatternSide(front, 'back'))).toEqual(['mode', 'rotationDeg', 'side', 'flipCreases']);
+  });
+
   it('keeps a crease pattern’s back through the other ways, and starts them from the front at its own turn', () => {
     const back = { mode: 'crease-pattern' as const, rotationDeg: 30, side: 'back' as const };
     // Nothing mirrored (Zach, 2026-10-06: the back is the paper's colour): the fold lies as the pattern does.
@@ -753,6 +1018,21 @@ describe('a flat fold’s spread (Phase 13)', () => {
     expect(spreadStartsFor(document, 'step-a')).toEqual(DEFAULT_SPREAD_STARTS);
   });
 
+  it('names the way the nearest linked step before shows its pattern, past turns, uploads, References steps and newer steps (review fix 3)', () => {
+    const document = spreadDiagram();
+    const upload: DiagramStep = {
+      ...createStep(() => 'step-u'),
+      source: { kind: 'upload', assetId: 'u', rotationQuarterTurns: 0, mirrored: false },
+      picture: { kind: 'asset', assetId: 'u', paperScale: null, key: uploadPictureKey('u') },
+    };
+    const after = insertSteps(document, [upload, referencesStep('step-r'), createStep(() => 'step-new')], document.steps.length);
+    expect(nearestEarlierShowAs(after, 'step-new')).toBe('folded');
+    expect(nearestEarlierShowAs(after, 'step-g')).toBe('crease-pattern');
+    expect(nearestEarlierShowAs(after, 'step-b')).toBe('folded');
+    expect(nearestEarlierShowAs(after, 'step-a')).toBeNull();
+    expect(nearestEarlierShowAs(after, 'step-gone')).toBeNull();
+  });
+
   it('defaults to affine, at the playground’s bird base; and depth to 2.5%, deeper layers down (Zach, 2026-10-05)', () => {
     expect(DEFAULT_LAYER_SPREAD).toEqual({ kind: 'affine', amount: 0.03, keep: 'top', skew: 1, axisDeg: 81 });
     expect(DEFAULT_AFFINE_SPREAD).toEqual({ kind: 'affine', amount: 0.03, keep: 'top', skew: 1, axisDeg: 81 });
@@ -844,6 +1124,11 @@ describe('turns between steps (D22)', () => {
     return { diagram: next, ids };
   }
 
+  it('gives the title block’s live step count as the last step’s number, the turns not counted', () => {
+    expect(titleBlockStepCount(turning().diagram)).toBe(3);
+    expect(titleBlockStepCount(diagramWith(0).diagram)).toBe(0);
+  });
+
   it('numbers the steps alone: the steps either side of a turn read 1 and 2', () => {
     const { diagram } = turning();
     expect(stepsOf(diagram).map((step) => step.id)).toEqual(['step-2', 'step-3', 'step-4']);
@@ -915,5 +1200,16 @@ describe('turns between steps (D22)', () => {
     const result = pullReferencesSteps(diagram, [{ kind: 'turn-over', axis: 'vertical' }], { kind: 'fill', stepId: empty! }, { newId: ids });
     expect(result.stepIds).toEqual([]);
     expect(result.document.steps.map((entry) => entry.id)).toEqual([result.turnIds[0], empty]);
+  });
+});
+
+describe('an import’s fold notice', () => {
+  const svg = { id: 'asset-new', kind: 'svg' as const, svg: '<svg/>', widthPx: 4, heightPx: 4, bytes: 6 };
+  const failed = { ...cpStep('step-import'), importStatus: 'failed' as const };
+  const diagram = insertSteps(createDiagram(), [failed], 0);
+
+  it('goes with the picture it was about, replaced or taken away', () => {
+    expect(stepById(setStepPicture(diagram, 'step-import', svg), 'step-import')?.importStatus).toBeUndefined();
+    expect(stepById(removeStepPicture(diagram, 'step-import'), 'step-import')?.importStatus).toBeUndefined();
   });
 });

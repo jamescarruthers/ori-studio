@@ -124,6 +124,12 @@ export interface WrapOptions {
   maxLines?: number;
   /** The width "…" adds after grapheme `end` on its line. Required with `maxLines`. */
   ellipsisWidth?: (end: number) => number;
+  /**
+   * Keep the text's leading spaces on its first line, as a text editor's
+   * `pre-wrap` does: an indented paragraph. A line after a break starts at its
+   * first letter either way.
+   */
+  keepIndent?: boolean;
 }
 
 export interface Wrapped {
@@ -137,11 +143,12 @@ const EPSILON = 1e-9;
 /**
  * Break graphemes into lines at most `width` wide: greedy, at the last
  * opportunity that fits. A unit wider than a line on its own breaks between
- * graphemes. Leading spaces on a line are skipped.
+ * graphemes. Leading spaces on a line are skipped, but for the first line's
+ * with `keepIndent`.
  */
 export function wrapGraphemes(graphemes: readonly string[], options: WrapOptions): Wrapped {
   const allowed = breakOpportunities(graphemes);
-  const { width, measure } = options;
+  const { width, measure, keepIndent = false } = options;
   const trimEnd = (start: number, end: number) => {
     let at = end;
     while (at > start && isBreakSpace(graphemes[at - 1]!)) at -= 1;
@@ -151,7 +158,7 @@ export function wrapGraphemes(graphemes: readonly string[], options: WrapOptions
   const n = graphemes.length;
   let start = 0;
   while (start < n) {
-    while (start < n && isBreakSpace(graphemes[start]!)) start += 1;
+    if (!(keepIndent && start === 0)) while (start < n && isBreakSpace(graphemes[start]!)) start += 1;
     if (start >= n) break;
     let fit = -1;
     for (let at = start + 1; at <= n; at += 1) {

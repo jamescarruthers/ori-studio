@@ -43,6 +43,18 @@ let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
   menu.handleMenuAction.mockClear();
+  // Give the Steps grid's virtualizer a viewport, as the Diagram's grid tests do; jsdom measures every box as zero.
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.hasAttribute('data-index') ? 100 : 1000;
+  });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -50,6 +62,8 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 /** Each card's id and what its corner's Delete says. */
@@ -108,7 +122,8 @@ describe('FoldStepsGrid', () => {
     const frames = view.entries.map(() => ({ pattern }) as unknown as NonNullable<FoldSequenceView['frames'][number]>);
     act(() => root.render(<FoldStepsGrid view={{ ...view, frames }} />));
     const card = host.querySelector('[data-step-id="a"]');
-    expect(card?.querySelector('svg[data-aux-ink="aux"] line[data-role="aux"]')).not.toBeNull();
+    // The thumbnail is painted on a canvas (`PatternThumbnail`), its aux lines in Edit's aux-line ink.
+    expect(card?.querySelector('canvas[data-sheet-thumbnail][data-aux-ink="aux"]')).not.toBeNull();
   });
 
   it('offers no Delete on a sequence a newer build wrote', () => {

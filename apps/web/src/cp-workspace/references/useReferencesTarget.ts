@@ -64,8 +64,6 @@ import {
   componentForSegment,
   componentForVertex,
   findSegmentByEndpoints,
-  paperFallbackRect,
-  precreaseInputFromTransport,
   segmentEndpoints,
   type PrecreaseComponent,
   type PrecreaseFrame,
@@ -73,6 +71,14 @@ import {
   type SheetAnalysis,
 } from './sheetFrames';
 import type { ReferencesViewState } from './useReferencesView';
+import { ensureReferencesSheetDetail, referencesFramesOf } from './referencesFrames';
+
+/** The open pattern's frames for `revision`, or why there are none. */
+async function framesOf(revision: string): Promise<SheetAnalysis> {
+  const analysis = await referencesFramesOf(revision);
+  if (!analysis) throw new Error('The crease pattern’s sheets could not be read.');
+  return analysis;
+}
 
 /**
  * Upstream's `goodEnoughError` when approximate answers are wanted. At this the
@@ -368,25 +374,22 @@ export function useReferencesTarget(view: ReferencesViewState): ReferencesTarget
     };
   }, [setReferencesRun]);
 
-  // Frames: recomputed on mount and on every revision (cheap), and the first
-  // sheet's ReferenceFinder database warmed so the first pick does not pay for
-  // the build. Results are *not* recomputed here — that is Recompute's job.
+  // Frames: the sheets as the workspace lists them (`referencesFrames`), on
+  // mount and on every revision, and the first sheet's ReferenceFinder database
+  // warmed so the first pick does not pay for the build. Results are *not*
+  // recomputed here — that is Recompute's job.
   //
   // Keyed on `revision`, deliberately *not* on the transport's identity: the
   // kernel returns a fresh transport object after every command, including the
-  // selection-only ones that leave the creases byte-identical, and re-running
-  // `sheetFrames` for those was a worker round trip per box-select. The
-  // geometry is read through its ref, which this render has already updated.
+  // selection-only ones that leave the creases byte-identical, and asking for
+  // the frames again for those was a worker round trip per box-select.
   useEffect(() => {
-    const geometry = geometryRef.current;
-    if (!geometry) {
+    if (!geometryRef.current) {
       setReferencesFrames(null);
       return;
     }
     let cancelled = false;
-    const input = precreaseInputFromTransport(geometry);
-    getPrecreaseClient()
-      .sheetFrames(input.segments, input.colors, paperFallbackRect())
+    framesOf(revision)
       .then((analysis) => {
         if (cancelled) return;
         setReferencesFrames({ revision, analysis });
@@ -603,22 +606,14 @@ export function useReferencesTarget(view: ReferencesViewState): ReferencesTarget
     [setReferencesCandidates, setReferencesRun, setReferencesView, superseded, t]
   );
 
-  /** The frames for `forRevision`, from the side table or computed now. */
-  const framesFor = useCallback(
-    async (geometry: CpGeometryTransport, forRevision: string): Promise<SheetAnalysis> => {
-      const known = referencesResultsSnapshot().frames;
-      if (known && known.revision === forRevision) return known.analysis;
-      const input = precreaseInputFromTransport(geometry);
-      const analysis = await getPrecreaseClient().sheetFrames(
-        input.segments,
-        input.colors,
-        paperFallbackRect()
-      );
-      if (revisionRef.current === forRevision) setReferencesFrames({ revision: forRevision, analysis });
-      return analysis;
-    },
-    []
-  );
+  /** The frames for `forRevision`, from the side table or asked for now. */
+  const framesFor = useCallback(async (forRevision: string): Promise<SheetAnalysis> => {
+    const known = referencesResultsSnapshot().frames;
+    if (known && known.revision === forRevision) return known.analysis;
+    const analysis = await framesOf(forRevision);
+    if (revisionRef.current === forRevision) setReferencesFrames({ revision: forRevision, analysis });
+    return analysis;
+  }, []);
 
   /**
    * Resolve a pick against the geometry and frames into a target record, or
@@ -629,7 +624,8 @@ export function useReferencesTarget(view: ReferencesViewState): ReferencesTarget
     async (
       hit: TargetRequest,
       geometry: CpGeometryTransport,
-      analysis: SheetAnalysis
+      analysis: SheetAnalysis,
+      forRevision: string
     ): Promise<
       | { ok: true; record: ReferencesTargetRecord; component: PrecreaseComponent }
       | { ok: false; message: string }
@@ -665,9 +661,12 @@ export function useReferencesTarget(view: ReferencesViewState): ReferencesTarget
           message: t('panels:references.targetGone', 'The picked crease is no longer in the pattern.'),
         };
       }
-      const [a, b] = await Promise.all([
+      // The crease's whole line is the sheet's merge's, which a listed sheet
+      // does not carry: asked for this one sheet now.
+      const [a, b, detail] = await Promise.all([
         client.modelToRf(frame, endpoints.a.x, endpoints.a.y),
         client.modelToRf(frame, endpoints.b.x, endpoints.b.y),
+        ensureReferencesSheetDetail(geometry, forRevision, component),
       ]);
       return {
         ok: true,
@@ -678,7 +677,7 @@ export function useReferencesTarget(view: ReferencesViewState): ReferencesTarget
           lineId: hit.id,
           a: endpoints.a,
           b: endpoints.b,
-          cpLineIds: collinearSegments(component, segmentIndex).map((i) => i + 1),
+          cpLineIds: collinearSegments(detail, segmentIndex).map((i) => i + 1),
           rf: [asRfPoint(a), asRfPoint(b)],
         },
       };
@@ -697,9 +696,9 @@ export function useReferencesTarget(view: ReferencesViewState): ReferencesTarget
       const abandoned = () =>
         revisionRef.current !== forRevision || referencesPickGeneration() !== generation;
       try {
-        const analysis = await framesFor(geometry, forRevision);
+        const analysis = await framesFor(forRevision);
         if (abandoned()) return;
-        const resolved = await resolve(hit, geometry, analysis);
+        const resolved = await resolve(hit, geometry, analysis, forRevision);
         if (abandoned()) return;
         if (!resolved.ok) {
           setReferencesTarget(null);

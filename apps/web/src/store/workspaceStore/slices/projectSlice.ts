@@ -36,6 +36,7 @@ import {
   referencesPlanCacheForSave,
 } from '../../../cp-workspace/references/referencesPlanCacheStore';
 import { referencesReaderStateFor } from '../../../cp-workspace/references/referencesReaderState';
+import { chosenSheet } from '../../../cp-workspace/references/referencesSheets';
 import { referencesResultsSnapshot } from '../../../cp-workspace/references/referencesResults';
 import { DEFAULT_REFERENCES_SETTINGS, restoredReferencesState } from './referencesSlice';
 import { reportError } from '../../../monitoring';
@@ -63,6 +64,8 @@ import {
 import {
   cpModelToFoldTransform,
   foldSegmentForExport,
+  IDENTITY_CP_MODEL_TO_FOLD,
+  type CpModelToFoldTransform,
   type CreaseExportFoldResult,
 } from '../../../lib/creaseExportFold';
 import { hexToRgbColor } from '../../../lib/rgbColor';
@@ -95,12 +98,12 @@ import {
   rememberAuthor,
   uploadCpShareThumbnail,
 } from '../../../cp-workspace/share/cpShareService';
-import { ensureCpSegmentationArtifacts } from '../../../cp-workspace/cpSegmentationArtifacts';
+import { ensureCpSheetArtifacts } from '../../../cp-workspace/sheets/cpSheetArtifacts';
 import {
   importedCreasePatternFormat,
   isCreasePatternFilename,
   parseImportedCreasePattern,
-  parseImportedCreasePatternFromFold,
+  storedImportedCreasePattern,
   type ImportedCreasePatternResult,
   type ImportedCreasePatternSource,
 } from '../../../lib/creasePatternImport';
@@ -146,6 +149,7 @@ import type { CanvasAnnotation } from '../../../cp-workspace/annotations/annotat
 import type { InlineSimulation } from '../../../cp-workspace/inlineSimulation/inlineSimulation';
 import { noteInlineSimulationIds } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
 import { discardCpDocumentState } from '../cpDocumentState';
+import { withCpHistoryEntry } from '../cpHistory';
 import {
   discardProjectDocuments,
   hasProjectDocument,
@@ -179,6 +183,7 @@ import type {
   OristudioCpViewportOptions,
 } from '../../../lib/creasePatternViewport';
 import {
+  resolveCpSegments,
   segmentFoldDocument,
   type CpSegment,
 } from '../../../lib/creasePatternSegmentation';
@@ -189,6 +194,7 @@ import { selectWorkspaceCapabilities } from '../capabilities';
 import { frameActiveCpDiagnostic } from '../cpDiagnosticFocus';
 import { freshEditableCpState } from '../freshCreasePattern';
 import { landingWorkspace } from '../landingWorkspace';
+import type { WorkspaceId } from '../../../workspaces/workspaces';
 import {
   ensureExtension,
   filesystemPathOrNull,
@@ -591,7 +597,8 @@ async function foldExportSegment(
   documentState: OristudioCpDocumentState | null,
   fold: FoldDocument,
   segment: CpSegment | null,
-  settings: CreaseExportFoldedFigureSettings
+  settings: CreaseExportFoldedFigureSettings,
+  transform?: CpModelToFoldTransform
 ): Promise<CreaseExportFoldResult> {
   if (!documentState) throw new Error('No editable crease-pattern document is loaded');
   try {
@@ -603,7 +610,7 @@ async function foldExportSegment(
       segment,
       exportFoldedFigureModel(documentState, settings),
       settings.foldCase,
-      cpModelToFoldTransform(fold, documentState.document)
+      transform ?? cpModelToFoldTransform(fold, documentState.document)
     );
   } catch (error) {
     // Kernel failures arrive as wasm error envelopes, not Errors; the dialog
@@ -663,6 +670,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
   const capabilities = () => selectWorkspaceCapabilities(get());
 
   const rejectDisabled = (id: WorkspaceCapabilityId) => {
+    if (get().diagramImportBusy) return true;
     const capability = capabilities()[id];
     if (capability.enabled) return false;
     set({
@@ -761,6 +769,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     label: string,
     mutate: () => Promise<OristudioCpDocumentState>
   ): Promise<boolean> => {
+    if (get().diagramImportBusy) return false;
     if (!get().oristudioCpDocument) {
       set({
         oristudioCpError: 'No editable crease-pattern document is loaded',
@@ -788,8 +797,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         oristudioCpSelection: selectedLineSelectionFromDocument(commandDocument.document),
         oristudioCpRevision: nextRevision,
         oristudioCpHistoryPast: previousDocument
-          ? [
-              ...get().oristudioCpHistoryPast,
+          ? withCpHistoryEntry(
+              get().oristudioCpHistoryPast,
               cpHistoryEntry(
                 previousDocument,
                 label,
@@ -798,8 +807,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
                 get().oristudioCpFoldedFigures,
                 get().oristudioCpActiveFoldedFigureId,
                 get().oristudioCpInlineSimulations
-              ),
-            ]
+              )
+            )
           : get().oristudioCpHistoryPast,
         oristudioCpHistoryFuture: [],
         ...staleFoldArtifactResourceState(get().foldArtifactRevision),
@@ -1239,8 +1248,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     const creasePattern = nativeDocument.creasePattern;
     const restoredDocument = await restoreOristudioCpDocument(creasePattern.document, nativeSource);
     // The engine now owns the crease-pattern snapshot; drop this (potentially large)
-    // parsed copy so it can be reclaimed before the FOLD projection is turned into
-    // simulator artifacts and uploaded to WebGL below, keeping peak memory lower.
+    // parsed copy so it can be reclaimed before the canvas uploads to WebGL below,
+    // keeping peak memory lower.
     (creasePattern as { document: unknown }).document = undefined;
     const checked = await refreshAlwaysOnCamvDiagnostics(restoredDocument);
     const documentState = checked.documentState;
@@ -1250,24 +1259,27 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       (await exportedEditableFoldProjection());
     if (!fold) throw new Error('Native crease-pattern project does not contain a FOLD projection');
 
-    // Parse straight from the live FOLD object — no stringify + re-parse round-trip.
-    const parsed = parseImportedCreasePatternFromFold(fold, {
+    // A record of what the file says, not a re-import: the document is already in
+    // the kernel, and whatever needs faces or a mesh builds them when it is used.
+    const stored = storedImportedCreasePattern(fold, {
       format: 'fold',
       filename: `${nativeDocument.title || source.filename}.fold`,
       path: null,
     });
-    // Simulation faces are inferred in JS (no flat-folding), so multi-pattern
-    // documents work.
-    const result = parsed;
     const originalSource = importedSourceFromNativeSource(nativeDocument.creasePattern.source);
-    const importedDocument = originalSource
-      ? { ...result.document, source: originalSource }
-      : result.document;
+    const importedDocument = {
+      ...stored,
+      ...(originalSource ? { source: originalSource } : {}),
+      // The FOLD this crease pattern was imported from, which only a project
+      // that kept one has. The projection is this document exported: kept as
+      // `sourceFold`, every save wrote it a second time.
+      sourceFold: creasePattern.sourceFold ?? null,
+    };
     set({
       ...nativeCpEditorState(nativeDocument, documentState, checked.camvResult, artifacts),
       // Everything below is the "this crease pattern is the whole project" part,
       // which the companion path must not apply — it would unclaim the design.
-      workspaceTitle: nativeDocument.title || result.project.title,
+      workspaceTitle: nativeDocument.title || stored.title,
       // A CP-only project establishes no design; keep the Design chooser.
       ...discardAllDesigns(),
       importedCreasePattern: importedDocument,
@@ -1743,7 +1755,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           settings: get().referencesSettings,
           defaults: DEFAULT_REFERENCES_SETTINGS,
           view: get().referencesView,
-          selectedSheet: get().referencesSelectedSheet,
+          selectedSheet: chosenSheet(side.frames?.analysis ?? null, get().referencesSelectedSheet),
           target: get().referencesTarget,
           restore: get().referencesRestore,
           loadSerial: documentState.loadSerial,
@@ -2049,9 +2061,14 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
   // pattern opened while Edit was already on screen left the pane reading
   // `design` over the CP canvas: the toolbar offered the BP verbs and every Edit
   // shortcut resolved to nothing.
-  const applyLandingWorkspace = () => {
+  //
+  // A caller may name the landing (`openProject`'s `landing`) when it knows the
+  // surface the file is for: the Diagram's example opens on its diagram, though
+  // it holds a crease pattern. Named here, not activated after the open, so the
+  // open makes one transition rather than passing through Edit on the way.
+  const applyLandingWorkspace = (landing?: WorkspaceId) => {
     if (get().status === 'error') return;
-    useLayoutStore.getState().activateWorkspace(landingWorkspace(get()));
+    useLayoutStore.getState().activateWorkspace(landing ?? landingWorkspace(get()));
   };
 
   // Route a native save/save-as by the documents that exist, NOT by the pane in
@@ -2397,6 +2414,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     },
 
     executeOristudioCpCommand: async (operationId, payload = {}) => {
+      if (get().diagramImportBusy) return false;
       if (!get().oristudioCpDocument) {
         set({
           oristudioCpError: 'No editable crease-pattern document is loaded',
@@ -2473,8 +2491,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           oristudioCpRevision: nextRevision,
           oristudioCpHistoryPast: previousDocument
             ? mutatesDocument
-              ? [
-                  ...get().oristudioCpHistoryPast,
+              ? withCpHistoryEntry(
+                  get().oristudioCpHistoryPast,
                   cpHistoryEntry(
                     previousDocument,
                     String(operationId),
@@ -2483,8 +2501,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
                     get().oristudioCpFoldedFigures,
                     get().oristudioCpActiveFoldedFigureId,
                     get().oristudioCpInlineSimulations
-                  ),
-                ]
+                  )
+                )
               : get().oristudioCpHistoryPast
             : get().oristudioCpHistoryPast,
           oristudioCpHistoryFuture: mutatesDocument ? [] : get().oristudioCpHistoryFuture,
@@ -2627,18 +2645,18 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           oristudioCpLineage: markCpLineageEdited(get().oristudioCpLineage),
           oristudioCpOperationDescriptors: nextDocument.operationDescriptors,
           oristudioCpError: null,
-          oristudioCpHistoryPast: [
-            ...get().oristudioCpHistoryPast,
+          oristudioCpHistoryPast: withCpHistoryEntry(
+            get().oristudioCpHistoryPast,
             cpHistoryEntry(
-                previousDocument,
-                label,
-                previousSelection,
-                get().oristudioCpAnnotations,
-                get().oristudioCpFoldedFigures,
-                get().oristudioCpActiveFoldedFigureId,
-                get().oristudioCpInlineSimulations
-              ),
-          ],
+              previousDocument,
+              label,
+              previousSelection,
+              get().oristudioCpAnnotations,
+              get().oristudioCpFoldedFigures,
+              get().oristudioCpActiveFoldedFigureId,
+              get().oristudioCpInlineSimulations
+            )
+          ),
           oristudioCpHistoryFuture: [],
           error: null,
           dirty: true,
@@ -2728,8 +2746,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         } else {
           await loadText(file.text, { filename: file.name, path: file.path });
         }
-        applyLandingWorkspace();
-        track('project opened', { source: 'file' });
+        applyLandingWorkspace(options.landing);
+        track('project opened', { source: options.source ?? 'file' });
         return true;
       } catch (error) {
         set({ status: 'error', error: annotateLargeSourceError(error, openedSourceLength) });
@@ -3078,15 +3096,15 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       }
     },
 
-    shareOristudioCpSegment: async (segmentId: number) => {
+    shareOristudioCpSheet: async (sheet: number) => {
       try {
         // Same artifacts and same sub-fold extraction the sibling Export verb
-        // uses, so a shared segment is byte-for-byte the pattern that Export
-        // would have written -- border creases included, since a segment is by
-        // construction a region enclosed by them.
-        const foldArtifacts = await ensureCpSegmentationArtifacts(get().oristudioCpDocument?.document);
+        // uses, so a shared sheet is byte-for-byte the pattern that Export would
+        // have written -- border creases included, since a sheet is by
+        // construction the region inside them.
+        const foldArtifacts = await ensureCpSheetArtifacts(get().oristudioCpDocument?.document, sheet);
         if (!foldArtifacts) return false;
-        const subFold = buildSegmentSubFold(foldArtifacts, segmentId);
+        const subFold = buildSegmentSubFold(foldArtifacts, sheet);
         if (!subFold) return false;
 
         // Encode now rather than at publish time: the payload is what decides
@@ -3095,13 +3113,17 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         const payload = await shareFoldFrameAsLink(JSON.stringify(subFold));
         set({
           oristudioCpShareDraft: {
-            segmentId,
+            segmentId: sheet,
             payload,
             fold: foldArtifacts.fold,
-            segments: segmentFoldDocument(foldArtifacts.fold),
+            segments: resolveCpSegments(foldArtifacts),
+            // A sheet's fold is the kernel's export of the document's own lines,
+            // so it already sits in model space: the extent fit, which assumes a
+            // whole-document fold, would only move it.
             grid: creaseExportGridSource(
               foldArtifacts.fold,
-              get().oristudioCpDocument?.document
+              get().oristudioCpDocument?.document,
+              IDENTITY_CP_MODEL_TO_FOLD
             ),
             url: null,
           },
@@ -3184,7 +3206,14 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       const draft = get().oristudioCpShareDraft;
       if (!draft) throw new Error('No share in progress');
       const segment = draft.segments.find((entry) => entry.id === draft.segmentId) ?? null;
-      return foldExportSegment(get().oristudioCpDocument, draft.fold, segment, settings);
+      // The draft's fold is one sheet's, in model space (see `shareOristudioCpSheet`).
+      return foldExportSegment(
+        get().oristudioCpDocument,
+        draft.fold,
+        segment,
+        settings,
+        IDENTITY_CP_MODEL_TO_FOLD
+      );
     },
 
     dismissOristudioCpShare: () => set({ oristudioCpShareDraft: null }),
@@ -3194,36 +3223,50 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     // provisions from it.
     setPendingSharedCp: (pending: PendingSharedCp) => set({ pendingSharedCp: pending }),
 
-    exportOristudioCpSegment: async (
+    exportOristudioCpSheet: async (
       format: SegmentExportFormat,
-      segmentId: number,
+      sheet: number,
       fileService = getFileService()
     ) => {
       try {
-        // Segments-only artifacts (no simulation mesh) keep per-region export off
-        // the multi-second prepareSimulationFold path; captured once so the segment
-        // id can't drift under a concurrent edit mid-export.
-        const foldArtifacts = await ensureCpSegmentationArtifacts(get().oristudioCpDocument?.document);
+        // This sheet's faces alone (no simulation mesh), built from its own
+        // lines; captured once so a concurrent edit cannot move them mid-export.
+        const foldArtifacts = await ensureCpSheetArtifacts(get().oristudioCpDocument?.document, sheet);
         if (!foldArtifacts) return false;
-        const patternTitle = `${get().workspaceTitle} pattern ${segmentId + 1}`;
+        const patternTitle = `${get().workspaceTitle} pattern ${sheet + 1}`;
 
         if (isSegmentImageFormat(format)) {
-          // Open the export-image modal pre-scoped to this segment.
+          // Open the export-image modal on this sheet. It is the only pattern the
+          // dialog is given, so it offers no picker: the toolbar chose the sheet.
           const fold = foldArtifacts.fold;
-          const segments = segmentFoldDocument(fold);
+          const segments = resolveCpSegments(foldArtifacts);
           const label = format.toUpperCase();
           const resolved = await requestCreasePatternExportOptions({
             title: `Export ${label}`,
             format,
             fold,
             segments,
-            initialOptions: { ...defaultCreaseExportOptions(get().oristudioCpViewport), segmentId },
-            grid: creaseExportGridSource(fold, get().oristudioCpDocument?.document),
+            initialOptions: {
+              ...defaultCreaseExportOptions(get().oristudioCpViewport),
+              segmentId: sheet,
+            },
+            // The sheet's fold is in model space already (see `shareOristudioCpSheet`).
+            grid: creaseExportGridSource(
+              fold,
+              get().oristudioCpDocument?.document,
+              IDENTITY_CP_MODEL_TO_FOLD
+            ),
             // Mirrors resolveCreaseExport: only an editable crease pattern has a
             // kernel handle to fold with, so a TreeMaker design disables it.
             foldSegment: get().oristudioCpDocument
               ? (segment, settings) =>
-                  foldExportSegment(get().oristudioCpDocument, fold, segment, settings)
+                  foldExportSegment(
+                    get().oristudioCpDocument,
+                    fold,
+                    segment,
+                    settings,
+                    IDENTITY_CP_MODEL_TO_FOLD
+                  )
               : null,
             confirmLabel: `Export ${label}`,
           });
@@ -3257,7 +3300,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         }
 
         // File formats: extract the sub-fold and serialize it through the kernel.
-        const subFold = buildSegmentSubFold(foldArtifacts, segmentId);
+        const subFold = buildSegmentSubFold(foldArtifacts, sheet);
         if (!subFold) return false;
         const contents = await exportFoldFrameAsFormat(JSON.stringify(subFold), format);
         const result = await fileService.saveTextFile({

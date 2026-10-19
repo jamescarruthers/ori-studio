@@ -65,13 +65,18 @@ export const NATIVE_PROJECT_MIME_TYPE = 'application/vnd.oristudio.project+json'
 export const NATIVE_PROJECT_SCHEMA_VERSION = 8;
 /**
  * The newest `minimumReaderSchemaVersion` this build can honour. Ahead of the
- * schema version on purpose: a file holding a diagram is still written as
- * schema 8 — nothing else about the format moved — but asks for reader 9, and
- * one holding fold sequences for reader 10, so an older build refuses it
- * ("update Ori Studio") instead of opening it and deleting the document on its
- * next save. Files without either stay readable by every build that read them
- * before. At least every project document's reader
- * ({@link NativeProjectDocumentValues}), or this build refuses its own files.
+ * schema version on purpose: a file holding diagrams or fold sequences is still
+ * written as schema 8 — nothing else about the format moved — but asks for a
+ * newer reader, so an older build refuses it ("update Ori Studio") instead of
+ * opening it and deleting the document on its next save. Files without a
+ * project document stay readable by every build that read them before. At
+ * least every project document's reader ({@link NativeProjectDocumentValues}),
+ * or this build refuses its own files.
+ *
+ * - 9: one diagram, `workspace.diagram`, as builds before the list wrote it.
+ * - 10: the list, `workspace.diagrams`. This build reads both and writes the
+ *   list, so a file from before the list is migrated on its next save. Also
+ *   Fold's sequences, `workspace.foldSequences`.
  */
 export const NATIVE_PROJECT_READER_VERSION = 10;
 
@@ -89,17 +94,26 @@ export type NativeProjectReaderVersion = 1 | 8 | 9 | 10;
  * Carried here, not interpreted: each is written by its own module and read
  * there, leniently, when the project is installed
  * (`store/workspaceStore/projectDocuments.ts`). The reader always sets every
- * key, `null` for none; the writers leave a key out when there is none, so a
+ * key, empty for none; the writers leave a key out when there is none, so a
  * project without the document is written byte for byte as it was before the
  * document existed. A file holding one asks for the reader its slot names.
  */
 export interface NativeProjectDocumentValues {
-  /** The Diagram workspace's document, as `diagram/document/diagramFile.ts` writes it. Reader 9. */
-  diagram: Record<string, unknown> | null;
+  /**
+   * The Diagram workspace's documents, in order, each as
+   * `diagram/document/diagramFile.ts` writes it. Reader 10.
+   *
+   * A list from the first build that wrote one, though a build may show one
+   * diagram at a time: it carries every one, so a later build can keep
+   * several in a project without older builds deleting all but one. The
+   * reader sets `[]` for none, and reads a file from before the list — its
+   * one diagram under `workspace.diagram`, reader 9 — as a list of one.
+   */
+  diagrams: Record<string, unknown>[];
   /**
    * The Fold workspace's sequences, as `fold/document/foldSequenceFile.ts`
-   * writes them: an array, each sequence with its own `formatVersion`. Reader
-   * 10 — the Diagram holds 9, and the two may ship in different releases.
+   * writes them: an array, each sequence with its own `formatVersion`; `null`
+   * for none. Reader 10.
    */
   foldSequences: Record<string, unknown>[] | null;
 }
@@ -128,8 +142,12 @@ interface NativeProjectDocumentSlot<V> {
    * document on its next save.
    */
   readerVersion: NativeProjectReaderVersion;
-  /** The value carried from whatever the file holds under the key: none for anything malformed. */
-  carry: (value: unknown) => V;
+  /**
+   * The value carried from whatever the file holds under the key — or, for a
+   * document whose key moved, under the key an older build wrote, which
+   * `workspace` holds: none for anything malformed.
+   */
+  carry: (value: unknown, workspace: Record<string, unknown>) => V;
   /** Whether there is one to write; the key is left out otherwise. */
   isPresent: (value: V) => boolean;
 }
@@ -137,8 +155,7 @@ interface NativeProjectDocumentSlot<V> {
 const PROJECT_DOCUMENT_SLOTS: {
   [K in NativeProjectDocumentKey]: NativeProjectDocumentSlot<NativeProjectDocumentValues[K]>;
 } = {
-  // Anything but an object is no diagram.
-  diagram: { readerVersion: 9, carry: (value) => (isRecord(value) ? value : null), isPresent: (value) => value !== null },
+  diagrams: { readerVersion: 10, carry: diagramList, isPresent: (value) => value.length > 0 },
   // Anything but an array is none, and so is an array holding no object: an
   // entry that is not one is no sequence.
   foldSequences: {
@@ -150,6 +167,20 @@ const PROJECT_DOCUMENT_SLOTS: {
     isPresent: (value) => value !== null && value.length > 0,
   },
 };
+
+/**
+ * The project's diagrams, in order: the list, or — in a file from before the
+ * list (reader 9) — its one diagram under `workspace.diagram`, as a list of
+ * one. That is the whole migration: the next save writes the list.
+ *
+ * An entry that is not an object is no diagram. No build writes both keys,
+ * since one that reads only `workspace.diagram` refuses a file asking for
+ * reader 10; the list wins.
+ */
+function diagramList(value: unknown, workspace: Record<string, unknown>): Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.filter(isRecord);
+  return isRecord(workspace.diagram) ? [workspace.diagram] : [];
+}
 
 const PROJECT_DOCUMENT_KEYS = Object.keys(PROJECT_DOCUMENT_SLOTS) as NativeProjectDocumentKey[];
 
@@ -165,7 +196,7 @@ function holdsProjectDocument<K extends NativeProjectDocumentKey>(
 /** Every project document a file's `workspace` holds, each as its slot carries none when absent or malformed. */
 function readProjectDocumentValues(workspace: Record<string, unknown>): NativeProjectDocumentValues {
   return Object.fromEntries(
-    PROJECT_DOCUMENT_KEYS.map((key) => [key, PROJECT_DOCUMENT_SLOTS[key].carry(workspace[key])])
+    PROJECT_DOCUMENT_KEYS.map((key) => [key, PROJECT_DOCUMENT_SLOTS[key].carry(workspace[key], workspace)])
   ) as unknown as NativeProjectDocumentValues;
 }
 
@@ -347,8 +378,9 @@ export interface NativeProjectFileV1 {
    *
    * `1` for anything a v1–v7 build could read losslessly; `8` once the file
    * holds more than the old format could express; raised to what each project
-   * document it holds needs — `9` for a diagram, `10` for fold sequences (see
-   * {@link NATIVE_PROJECT_READER_VERSION}). Declarative only in practice —
+   * document it holds needs — `10` for diagrams (`9` in files from before the
+   * list) and for fold sequences (see {@link NATIVE_PROJECT_READER_VERSION}).
+   * Declarative only in practice —
    * a v7 build already rejects `schemaVersion: 8` because 8 is not in its
    * enumerated list — but it is what makes the refusal say *why*.
    */
@@ -391,7 +423,7 @@ export interface NativeProjectFileV1 {
      * `{}` when there is none.
      */
     viewState: Record<string, unknown>;
-    // And a key per project document — the diagram, the fold sequences — set
+    // And a key per project document — the diagrams, the fold sequences — set
     // by the reader, left out by the writers when there is none:
     // `NativeProjectDocumentValues`.
   } & Partial<NativeProjectDocumentValues>;

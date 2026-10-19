@@ -14,6 +14,7 @@ import {
   stepAsset,
   stepsOf,
   type DiagramDocument,
+  type DiagramPageArrangement,
   type DiagramStep,
   type DiagramZoomOutline,
 } from '../document/diagramDocument';
@@ -21,7 +22,7 @@ import type { DiagramFontFace } from '../fonts/diagramFontFaces';
 import { loadDiagramFonts, type DiagramFontSource, type DiagramFontText, type DiagramFonts } from '../fonts/diagramFonts';
 import { embeddedFontFaces } from '../fonts/fontEmbedding';
 import type { FontSubsetter } from '../fonts/fontSubset';
-import { composeDiagramPage, type ComposedPage } from './composeDiagramPage';
+import { composeDiagramPage, type ComposedPage, type PageComposeOptions } from './composeDiagramPage';
 import {
   layoutDiagramPages,
   pictureFit,
@@ -35,15 +36,20 @@ import {
 } from './diagramPageLayout';
 import { fontTextSetter } from './fontTextSetter';
 import { uploadTextRuns, type UploadTextRun } from '../upload/uploadText';
-import { layoutPicture, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
+import { layoutPicture, measureKey, wholePictureRoom, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import { viewOfStep } from '../zoom/stepView';
-import { zoomAreas } from '../zoom/zoomCapture';
+import { enlargeArrowArea } from '../zoom/enlargeArrowArea';
 import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
 import { zoomOutlineOf, zoomShapeOf } from '../zoom/zoomModel';
 import { liftedZoomArrows, type PlacedZoomArrow } from './zoomArrows';
+import type { TitleBlockLook } from './titleBlockColumn';
+import { modelRoom, resolveTitleBlock, titleBlockLook, type ResolvedTitleBlock } from './titleBlockContent';
+import { measuresTitleBlock } from './titleBlockEdits';
+import type { PageBox } from './pagePlacement';
+import { hasTitleBlock } from './pagePlan';
 
 export interface DiagramPagesDependencies {
   fontSource: DiagramFontSource;
@@ -52,14 +58,35 @@ export interface DiagramPagesDependencies {
 
 export interface PreparedDiagramPages {
   layout: DiagramPagesLayout;
+  document?: DiagramDocument;
   /** The setter the layout set its text with: a page's numbers are set with it too. */
   setter: TextSetter;
+  withLayout?: (layout: DiagramPagesLayout) => PreparedDiagramPages;
+  /**
+   * These pages as the pages of `adopted`: their diagram with the
+   * arrangements they packed taken in (`adoptPageArrangements`), which lays
+   * out as these do, every page they packed held as they packed it. What
+   * spares the store's adoption a second layout (`useDiagramPages`).
+   */
+  adoptedAs?: (adopted: DiagramDocument) => PreparedDiagramPages;
   /** Characters no font has: drawn by the reader's own fonts on screen. */
   missing: string[];
   /** CJK faces the text needs that could not be loaded. */
   unavailableFonts: DiagramFontFace[];
   /** Page `index` (from 0) as an SVG document; `band: false` leaves the flow band out, for the Pages view. */
-  compose: (index: number, options?: { band?: boolean }) => ComposedPage;
+  compose: (index: number, options?: PageComposeOptions) => ComposedPage;
+  /**
+   * What the first page's title block shows (`resolveTitleBlock`), which the
+   * Pages view marks where a part is missing; null where the first page has
+   * no block.
+   */
+  titleBlock: ResolvedTitleBlock | null;
+  /**
+   * Where the first page's title block draws its model, in mm, as the page
+   * is composed: what the Pages view keeps its marks clear of. Null where it
+   * draws none. Worked out once.
+   */
+  titleBlockModel: () => PageBox | null;
   /**
    * The enlarge arrows on page `index` where it prints them (Revision 2),
    * lifted to their areas as the page lifts them: what the Pages view puts
@@ -74,8 +101,9 @@ export type PictureOf = (step: DiagramStep, measure: PictureMeasure) => LayoutSt
 /**
  * What the layout needs of each step, its marks measured at the size a first
  * layout found for it when known (`measureOf`), by `pictureOf`; each with
- * the turns between it and the step before (D22), the last with any after
- * it.
+ * the turns between it and the step before (D22) — a turn with no step on
+ * one side, before the first or after the last, is not drawn on the pages
+ * (Zach, 12 Oct), though the document keeps it.
  */
 export function diagramLayoutSteps(
   document: DiagramDocument,
@@ -98,8 +126,10 @@ export function diagramLayoutSteps(
       id: entry.id,
       text: entry.text,
       breakBefore: entry.breakBefore,
+      ...(entry.pageSteps !== undefined ? { pageSteps: entry.pageSteps } : {}),
       picture: pictureOf(entry, measureOf(entry.id)),
-      turnsBefore: turns,
+      // A turn is drawn only between two steps (Zach, 12 Oct): one before the first step has none before it.
+      turnsBefore: steps.length > 0 ? turns : [],
       turnsAfter: [],
       // Enlarged, with no window yet: in no run of enlarged steps, and parting none.
       ...(zoom ? { zoom } : entry.zoom ? { zoomPending: true as const } : {}),
@@ -108,8 +138,7 @@ export function diagramLayoutSteps(
     });
     turns = [];
   }
-  const last = steps.at(-1);
-  if (last && turns.length > 0) steps[steps.length - 1] = { ...last, turnsAfter: turns };
+  // Turns after the last step have no step after them: the pages leave them out, as the document keeps them.
   return steps;
 }
 
@@ -119,38 +148,26 @@ function outlineLonger(outline: DiagramZoomOutline): number {
 }
 
 /**
- * The area the enlarge arrow before `step` leaves where the pages print one
- * (Revision 2): read from the order as it is (`zoomIndex`), and only before a
- * step that shows its window — none before one seeded with no picture yet.
- */
-function arrowArea(step: DiagramStep, document: DiagramDocument, index: ZoomIndex) {
-  const from = viewOfStep(step).zoom ? (index.arrowFrom.get(step.id) ?? null) : null;
-  const areaStep = from ? stepsOf(document).find((each) => each.id === from.stepId) : undefined;
-  const area = areaStep ? zoomAreas(areaStep).find((each) => each.id === from!.areaId) : undefined;
-  return from && area ? { from, area } : null;
-}
-
-/**
  * How many enlarge arrows the diagram's pages print (Revision 2), by the
- * layout's own rule ({@link arrowArea}): what the export dialog says step
- * files leave out.
+ * layout's own rule ({@link enlargeArrowArea}): what the export dialog says
+ * step files leave out.
  */
 export function enlargeArrowCount(document: DiagramDocument): number {
   const index = zoomIndex(document);
-  return stepsOf(document).filter((step) => arrowArea(step, document, index) !== null).length;
+  return stepsOf(document).filter((step) => enlargeArrowArea(step, document, index) !== null).length;
 }
 
 /**
  * What the layout needs of an enlarged step that shows its window (Revision
- * 2): the area the arrow before it leaves ({@link arrowArea}) and the box the
- * arrow prints in, in the diagram's style; its frame and window against its
- * whole picture; and its Size. Undefined for a step that shows its whole
- * picture, or none yet.
+ * 2): the area the arrow before it leaves ({@link enlargeArrowArea}) and the
+ * box the arrow prints in, in the diagram's style; its frame and window
+ * against its whole picture; and its Size. Undefined for a step that shows
+ * its whole picture, or none yet.
  */
 function layoutZoom(step: DiagramStep, document: DiagramDocument, index: ZoomIndex): LayoutZoom | undefined {
   const view = viewOfStep(step).zoom;
   if (!view) return undefined;
-  const arrow = arrowArea(step, document, index);
+  const arrow = enlargeArrowArea(step, document, index);
   const units = wholeUnitsAcross(step, document.assets);
   return {
     arrowFrom: arrow
@@ -276,9 +293,35 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
  * marks may not shrink with them. Laid out last with each picture measured
  * at the scale it is drawn at, for how far it reaches there; its fits, and
  * so the scales, are the ones found. Every picture holds its room.
+ *
+ * A flow page is drawn from the arrangement the document holds for it, or
+ * packed (`implementation-plans/diagram-flow-packing.md`): once, by the
+ * first of these layouts, whose arrangement every later one holds, so the
+ * measuring never packs a page twice. The pages say what was packed
+ * (`DiagramPagesLayout.packed`); nothing is written back here. On a page
+ * packed afresh a frame moved by hand is drawn at its offset only where its
+ * step keeps its place, judged against the document's own arrangements in
+ * every pass (`repackedFrames.ts`).
  */
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
-  const layout = (steps: LayoutStep[]) => layoutDiagramPages(steps, document.page, document.title, setter);
+  let packed: Record<string, DiagramPageArrangement> = {};
+  const stored = document.pageArrangements ?? {};
+  // The block's words in the room the diagram says they stand in, or measured now after an edit of them.
+  const room = measuresTitleBlock(document) ? ('measure' as const) : document.titleBlockContent?.room;
+  const titles = { title: document.title, block: titleBlockLook(document), ...(room !== undefined ? { room } : {}) };
+  const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
+    const pages = layoutDiagramPages(steps, document.page, titles, setter, { ...stored, ...packed }, stored);
+    if (pages.packed) packed = { ...packed, ...pages.packed };
+    if (Object.keys(packed).length === 0) return pages;
+    // A page the first layout packed is held by the rest, and packed all the same.
+    const packedHere = (page: DiagramPagesLayout['pages'][number]) =>
+      page.packing && !page.packing.packed && page.cells[0] !== undefined && Object.hasOwn(packed, page.cells[0].stepId);
+    return {
+      ...pages,
+      pages: pages.pages.map((page) => (packedHere(page) ? { ...page, packing: { ...page.packing!, packed: true } } : page)),
+      packed,
+    };
+  };
   // An enlarged step's cut frame runs on past the paper by a length set in mm, as a mark's head is.
   const reaching = stepsOf(document).some(
     (step) => step.picture?.kind === 'step-diagram' || hasDrawnAnnotations(step.annotations) || viewOfStep(step).zoom !== null
@@ -288,7 +331,7 @@ export function layoutDiagram(document: DiagramDocument, setter: TextSetter): Di
   // layouts and the checks below ask for it.
   const measured = new Map<string, LayoutStep['picture']>();
   const pictureOf: PictureOf = (step, measure) => {
-    const key = `${step.id} ${measure === null ? '' : 'mmPerUnit' in measure ? `p${measure.mmPerUnit}` : `f${measure.frameMm}`}`;
+    const key = `${step.id} ${measureKey(measure)}`;
     if (!measured.has(key)) measured.set(key, layoutPicture(step, document.assets, document.style, measure));
     return measured.get(key)!;
   };
@@ -321,10 +364,20 @@ export function layoutDiagram(document: DiagramDocument, setter: TextSetter): Di
     });
   }
   const atMost = new Map<string, number>();
+  /** A step's picture measured at `scale`, as a flow page is packed by it. */
+  const pictureAt = (stepId: string) => (scale: number) => {
+    const entry = entries.get(stepId);
+    return entry ? pictureOf(entry, kinds.get(stepId) === 'paper' ? { mmPerUnit: scale } : { frameMm: scale }) : null;
+  };
   const fitted = (steps: LayoutStep[]) =>
     steps.map((step) => {
       const most = atMost.get(step.id);
-      return { ...step, fitIn: fitIn.get(step.id), ...(most !== undefined ? { atMost: most } : {}) };
+      return {
+        ...step,
+        fitIn: fitIn.get(step.id),
+        ...(step.picture ? { pictureAt: pictureAt(step.id) } : {}),
+        ...(most !== undefined ? { atMost: most } : {}),
+      };
     });
   /** The pages with each picture measured at the scale `pages` drew it at, for how far it reaches there. */
   const measuredAt = (pages: DiagramPagesLayout) => {
@@ -333,9 +386,13 @@ export function layoutDiagram(document: DiagramDocument, setter: TextSetter): Di
   };
   const pages = measuredAt(layout(fitted(stepsAt())));
   for (const cell of pages.pages.flatMap((page) => page.cells)) {
-    const scale = cell.mmPerUnit ?? cell.frameMm;
+    // A flow step keeps the scale its page's arrangement gives it: one that no longer fits prints past its box instead.
+    if (cell.band !== undefined) continue;
+    const auto = cell.placed?.auto;
+    const scale = auto ? auto.mmPerUnit ?? auto.frameMm : cell.mmPerUnit ?? cell.frameMm;
     if (scale === null || !(scale > 0)) continue;
-    const measure = measureAt(cell.stepId, cell.drawMm.w, cell.drawMm.h);
+    const room = auto?.drawMm ?? cell.drawMm;
+    const measure = measureAt(cell.stepId, room.w, room.h);
     const there = measure(scale);
     const holds = there?.fit !== null && there?.fit !== undefined && there.fit >= scale * (1 - MEASURE_SETTLED);
     if (holds && there!.overrun <= OVERRUN_SAME_MM) continue;
@@ -353,24 +410,39 @@ export function layoutDiagram(document: DiagramDocument, setter: TextSetter): Di
 function scalesOf(pages: DiagramPagesLayout): Map<string, { scale: number; measure: PictureMeasure }> {
   const scales = new Map<string, { scale: number; measure: PictureMeasure }>();
   for (const cell of pages.pages.flatMap((page) => page.cells)) {
-    if (cell.mmPerUnit !== null) scales.set(cell.stepId, { scale: cell.mmPerUnit, measure: { mmPerUnit: cell.mmPerUnit } });
-    else if (cell.frameMm !== null) scales.set(cell.stepId, { scale: cell.frameMm, measure: { frameMm: cell.frameMm } });
+    const scale = cell.placed?.auto ?? cell;
+    if (scale.mmPerUnit !== null) scales.set(cell.stepId, { scale: scale.mmPerUnit, measure: { mmPerUnit: scale.mmPerUnit } });
+    else if (scale.frameMm !== null) scales.set(cell.stepId, { scale: scale.frameMm, measure: { frameMm: scale.frameMm } });
   }
   return scales;
 }
 
 /**
- * Every text a diagram's pages set, at its weight: the title, the
- * instructions and the digits, and the runs of its uploads' text and its
+ * Every text a diagram's pages set, at its weight: the title, the title
+ * block's own words as it prints them where the first page has the block,
+ * the instructions and the digits, and the runs of its uploads' text and its
  * annotations' labels, each in the CJK face it was given.
  */
 export function diagramFontTexts(document: DiagramDocument): DiagramFontText[] {
   return [
     { text: document.title, weight: 700 },
+    ...(hasTitleBlock(document.page) ? titleBlockFontTexts(titleBlockLook(document)) : []),
     ...stepsOf(document).map((step) => ({ text: step.text, weight: 400 as const })),
     ...[...diagramUploadTexts(document), ...diagramLabelTexts(document)].map(({ face, text }) =>
       face.key === 'latin' ? { text, weight: face.weight } : { text, weight: face.weight, cjk: face.key }
     ),
+  ];
+}
+
+/** The title block's words at their weights: the subtitle and the labels bold, the values and the note regular. */
+function titleBlockFontTexts({ subtitle, credits, note }: TitleBlockLook): DiagramFontText[] {
+  return [
+    { text: subtitle, weight: 700 },
+    ...credits.flatMap(({ label, value }) => [
+      { text: label, weight: 700 as const },
+      { text: value, weight: 400 as const },
+    ]),
+    { text: note, weight: 400 },
   ];
 }
 
@@ -416,12 +488,30 @@ export function preparedPages(
     setter.runs(text, face);
   }
   const steps = new Map(stepsOf(document).map((step) => [step.id, step]));
-  const arrows = new Map<number, PlacedZoomArrow[]>();
-  return {
+  const titleBlock = hasTitleBlock(document.page) ? resolveTitleBlock(document) : null;
+  const make = (
+    layout: DiagramPagesLayout,
+    of: DiagramDocument = document,
+    arrows = new Map<number, PlacedZoomArrow[]>(),
+    model: { box?: PageBox | null } = {}
+  ): PreparedDiagramPages => ({
+    withLayout: (next) => make(next, of),
+    adoptedAs: (adopted) => make(layout, adopted, arrows, model),
     layout,
+    document: of,
     setter,
     missing: [...setter.missing],
     unavailableFonts: fonts.unavailable,
+    titleBlock,
+    titleBlockModel() {
+      if (model.box === undefined) {
+        const block = layout.pages[0]?.titleBlock;
+        const step = titleBlock?.model.step;
+        const room = block && titleBlock ? modelRoom(block.geometry, titleBlock) : null;
+        model.box = room && step ? wholePictureRoom(step, document.assets, document.style, room.box, room.align) : null;
+      }
+      return model.box;
+    },
     zoomArrows(index) {
       const page = layout.pages[index];
       if (!page) return [];
@@ -444,8 +534,10 @@ export function preparedPages(
         hanStyle: document.hanStyle,
         setter,
         embedFonts: (usage) => embeddedFontFaces(usage, fonts, subsetter),
-        band: options?.band,
+        titleBlock,
+        ...options,
       });
     },
-  };
+  });
+  return make(layout);
 }

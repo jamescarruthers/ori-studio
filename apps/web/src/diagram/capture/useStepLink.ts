@@ -55,13 +55,15 @@ export function useDiagramStepLink(step: DiagramStep | null): DiagramStepLink {
   );
   const sheets = useDiagramPatternSheets(pickerOpen);
 
-  // The way the picker links in: the step's own, or the session's last, until
-  // the reader picks another — and again from those each time it opens, so a
-  // way picked for one link is forgotten when the picker closes, whatever
-  // closed it (a link, Cancel, another step selected).
+  // The way the picker links in: the step's own, or the nearest linked step's
+  // before it, or the session's last (`pickerShowAs`), until the reader picks
+  // another — and again from those each time it opens, so a way picked for
+  // one link is forgotten when the picker closes, whatever closed it (a link,
+  // Cancel, another step selected).
   const [chosen, setChosen] = useState<{ stepId: string; way: DiagramShowAs } | null>(null);
   if (!pickerOpen && chosen !== null) setChosen(null);
-  const showAs = chosen && chosen.stepId === stepId && pickerOpen ? chosen.way : pickerShowAs(step);
+  const offered = useWorkspaceStore((state) => pickerShowAs(state.diagram, step));
+  const showAs = chosen && chosen.stepId === stepId && pickerOpen ? chosen.way : offered;
   const setShowAs = useCallback(
     (way: DiagramShowAs) => {
       if (stepId !== null) setChosen({ stepId, way });
@@ -74,7 +76,7 @@ export function useDiagramStepLink(step: DiagramStep | null): DiagramStepLink {
   }, [stepId]);
   const pick = useCallback(
     (sheet: DiagramPatternSheet) => {
-      if (stepId !== null) void linkDiagramStep(stepId, sheet.segment, showAs);
+      if (stepId !== null) void linkDiagramStep(stepId, sheet.sheet, showAs);
     },
     [stepId, showAs]
   );
@@ -87,7 +89,7 @@ export function useDiagramStepLink(step: DiagramStep | null): DiagramStepLink {
   const selectedId = useMemo(
     () =>
       step && sheets.status === 'ready'
-        ? (linkedSheet(step, sheets.sheets, cpDocument, sheets.artifacts)?.segment.id ?? null)
+        ? (linkedSheet(step, sheets.sheets, cpDocument, sheets.index)?.sheet.id ?? null)
         : null,
     [step, sheets, cpDocument]
   );

@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { SheetAnalysis } from './sheetFrames';
+import { chosenSheet, sheetChoice } from './referencesSheets';
 import { useReferencesMode } from './useReferencesMode';
 import { useReferencesSheetRequest } from './useReferencesSheetRequest';
 
@@ -29,7 +30,10 @@ const state = () => useWorkspaceStore.getState();
 /** The panel's wiring: the mode, its sheet select, and the request between them. */
 function Harness({ frames }: { frames: SheetAnalysis | null }) {
   const { setMode } = useReferencesMode('document-1', false, () => {});
-  const showSheet = useCallback((component: number) => state().setReferencesSelectedSheet(component), []);
+  const showSheet = useCallback(
+    (component: number) => state().setReferencesSelectedSheet(sheetChoice(frames, component)),
+    [frames]
+  );
   useReferencesSheetRequest(frames, showSheet, setMode);
   return null;
 }
@@ -52,12 +56,12 @@ afterEach(() => {
 
 describe('useReferencesSheetRequest', () => {
   it('opens the step’s sheet in its mode, though the sheet switch puts the workspace in Find', () => {
-    state().setReferencesSelectedSheet(5);
+    state().setReferencesSelectedSheet(sheetChoice(FRAMES, 5));
     state().setReferencesView({ mode: 'sequence' });
     act(() => root!.render(<Harness frames={null} />));
     act(() => useWorkspaceStore.setState({ referencesSheetRequest: { boundary: SHEET_TWO, mode: 'sequence' } }));
     act(() => root!.render(<Harness frames={FRAMES} />));
-    expect(state().referencesSelectedSheet).toBe(2);
+    expect(chosenSheet(FRAMES, state().referencesSelectedSheet)).toBe(2);
     expect(state().referencesView.mode).toBe('sequence');
     expect(tracked).toEqual([{ event: 'referencesModeChanged', properties: { mode: 'sequence', source: 'diagram' } }]);
     expect(state().referencesSheetRequest).toBeNull();
@@ -65,18 +69,18 @@ describe('useReferencesSheetRequest', () => {
 
   it('asks for the step’s card on the sheet it opened, after the switch', () => {
     const card = { number: 2, line: { n: [1, 0] as [number, number], d: 0.5 } };
-    state().setReferencesSelectedSheet(5);
+    state().setReferencesSelectedSheet(sheetChoice(FRAMES, 5));
     useWorkspaceStore.setState({ referencesSheetRequest: { boundary: SHEET_TWO, mode: 'sequence', card } });
     act(() => root!.render(<Harness frames={FRAMES} />));
-    expect(state().referencesSelectedSheet).toBe(2);
+    expect(chosenSheet(FRAMES, state().referencesSelectedSheet)).toBe(2);
     expect(state().referencesCardRequest).toEqual({ sheet: 2, card });
     // Another sheet chosen before the plan lands drops it.
-    act(() => state().setReferencesSelectedSheet(5));
+    act(() => state().setReferencesSelectedSheet(sheetChoice(FRAMES, 5)));
     expect(state().referencesCardRequest).toBeNull();
   });
 
   it('switches nothing, and counts nothing, when the sheet is already open in that mode', () => {
-    state().setReferencesSelectedSheet(2);
+    state().setReferencesSelectedSheet(sheetChoice(FRAMES, 2));
     state().setReferencesView({ mode: 'sequence' });
     useWorkspaceStore.setState({ referencesSheetRequest: { boundary: SHEET_TWO, mode: 'sequence' } });
     act(() => root!.render(<Harness frames={FRAMES} />));

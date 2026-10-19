@@ -66,6 +66,7 @@ function widthFor(element: HTMLElement): number {
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
+let offsetHeight: { mockRestore: () => void } | null = null;
 
 function stubPointer(coarse: boolean) {
   vi.stubGlobal(
@@ -122,6 +123,19 @@ beforeEach(() => {
   });
   Element.prototype.scrollTo ??= () => {};
   Element.prototype.scrollIntoView ??= () => {};
+  // The Steps grid's rows and the thumbnails watch their size; jsdom has no ResizeObserver,
+  // and measures every box as zero: the grid's virtualizer is given a viewport, as the Diagram's tests give it.
+  offsetHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.hasAttribute('data-index') ? 100 : 1000;
+  });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
   useLayoutStore.setState({ ...initialLayoutState, activeWorkspace: 'fold' }, true);
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   menu.handleMenuAction.mockClear();
@@ -145,6 +159,8 @@ afterEach(() => {
   root = null;
   container = null;
   vi.unstubAllGlobals();
+  offsetHeight?.mockRestore();
+  offsetHeight = null;
   if (realOffsetWidth) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', realOffsetWidth);
   app.session?.dispose();
   app.session = null;

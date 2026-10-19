@@ -160,6 +160,8 @@
     "home": "집에서",
     "homeHint": "페이지마다 한 장씩.",
     "kind": "내보낼 형식",
+    "marginStep": "{{steps}}단계의 일부가 여백을 침범합니다.",
+    "marginSteps": "{{steps}}단계의 일부가 여백을 침범합니다.",
     "missingFiles": "도해 글꼴에 {{characters}}이(가) 없어 파일에는 각각 네모로 표시됩니다.",
     "missingPdf": "도해 글꼴에 {{characters}}이(가) 없어 PDF를 만들 수 없습니다. 텍스트를 바꾸거나 단계 파일로 내보내세요.",
     "missingSvg": "도해 글꼴에 {{characters}}이(가) 없어 SVG에서는 여는 앱의 글꼴로 표시됩니다.",
@@ -175,10 +177,12 @@
     "pagerLabel": "{{label}} · {{total}}개 중 {{index}}",
     "pageSetup": "페이지 설정",
     "pageSetupSummary": "{{size}} {{orientation}} · {{layout}}, {{columns}} × {{rows}}",
+    "pageSetupSummaryFlow_other": "{{size}} {{orientation}} · {{layout}}, 페이지당 {{count}}단계",
     "pdf": "PDF",
     "pdfFailed": "PDF를 만들지 못했습니다: {{message}}",
     "pdfHint": "모든 페이지를 바로 인쇄할 수 있게.",
     "pdfText": "일부 텍스트는 도해 글꼴로 인쇄할 수 없습니다.",
+    "placementLeftOut": "페이지 배치와 고정 크기는 단계 파일에 영향을 주지 않습니다.",
     "pngFileTooLarge": "{{number}}단계는 {{width}} × {{height}}px로 PNG로 만들기에는 너무 큽니다. 해상도나 크기를 줄이세요.",
     "pngTooLarge": "PNG로 내보내기에는 너무 큽니다: {{width}} × {{height}}px. 해상도나 크기를 줄이세요.",
     "preparing": "미리보기 준비 중…",
@@ -209,6 +213,8 @@
     "transparent": "투명 배경",
     "turnsAndArrowsLeftOut": "뒤집기·회전과 확대 화살표는 페이지에만 인쇄되며 단계별 파일에는 들어가지 않습니다.",
     "turnsLeftOut_other": "단계 사이의 뒤집기·회전 {{count}}개는 페이지에 인쇄되지만 단계별 파일에는 들어가지 않습니다.",
+    "unfitPage": "{{pages}}페이지는 가장 작은 크기에서도 단계를 다 담을 수 없어 여백 밖으로 인쇄됩니다.",
+    "unfitPages": "{{pages}}페이지는 가장 작은 크기에서도 단계를 다 담을 수 없어 여백 밖으로 인쇄됩니다.",
     "width": "너비",
     "writingPdf": "PDF 만드는 중…"
   },
@@ -440,6 +446,10 @@
         "detail": "박스 플리츠 저작 방식은 Mu-Tsun Tsai의 Box Pleating Studio를 Rust와 WebAssembly로 포팅한 것입니다.",
         "title": "Mu-Tsun Tsai와 Box Pleating Studio"
       },
+      "defox": {
+        "detail": "다이어그램 작업 공간의 아핀 레이어 펼치기는 DEFOX의 Kei Morisue 아핀 왜곡 방식을 기반으로 합니다.",
+        "title": "Kei Morisue와 DEFOX"
+      },
       "explori": {
         "detail": "22.5° 검색 저작 방식은 트리를 22.5° 전개도를 검색할 수 있는 아카이브인 ExplOri로 보내고, 반환된 결과 중 가장 가까운 것들을 보여줍니다.",
         "title": "Brandon Wong과 ExplOri 22.5"
@@ -522,6 +532,7 @@
     "empty": "내보낼 것이 없습니다. 보기에 종이가 없습니다.",
     "exporting": "내보내는 중…",
     "exportingPages": "{{total}}개 중 {{done}}번째 내보내는 중…",
+    "exportObj": "OBJ 내보내기",
     "exportStyle": "내보내기 스타일 · {{style}}",
     "figureMm": "도형 크기",
     "figureSizeHint": "도형의 긴 변이 이 크기가 됩니다. 선 굵기는 그대로 유지됩니다.",
@@ -534,6 +545,12 @@
     "lettersHint": "단계가 가리키는 점의 이름입니다.",
     "marks": "표시",
     "nextPage": "다음 단계",
+    "objExpired": "이 시뮬레이션 캡처를 더 이상 사용할 수 없습니다. 대화 상자를 닫고 다시 내보내세요.",
+    "objHint": "펼친 종이를 기준으로 한 UV 좌표가 포함된 3D 메시입니다. 사용하는 3D 소프트웨어에서 텍스처를 적용할 수 있습니다.",
+    "objMeshUnavailable": "이 시뮬레이션에는 내보낼 수 있는 유효한 메시가 없습니다.",
+    "objPreview": "캡처한 형태 · OBJ에 전체 메시와 UV가 포함됩니다",
+    "objPreviewEmpty": "이미지 미리보기가 없습니다. 캡처한 3D 메시는 내보낼 수 있습니다.",
+    "objSheetUnavailable": "OBJ 텍스처 좌표를 만들려면 시뮬레이터의 종이 평면에 펼쳐진 종이가 필요합니다.",
     "padding": "여백",
     "page": "페이지",
     "pageMm": "{{width}} × {{height}} mm",

@@ -119,9 +119,36 @@ describe('createProjectDocumentHistory', () => {
 
     expect(add(1)).toEqual({ value: 10 });
 
-    // Given the base the edit started from — the created one — not the stored `null`.
-    expect(beforeCommit).toHaveBeenCalledWith({ value: 0 }, { value: 1 });
+    // Given the base the edit started from — the created one — and, last, the stored `null` it replaces.
+    expect(beforeCommit).toHaveBeenCalledWith({ value: 0 }, { value: 1 }, null);
     expect(state()).toMatchObject({ doc: { value: 10 }, docSelected: 1 });
+  });
+
+  it('changes nothing and travels nowhere while the document is busy', () => {
+    let busy = false;
+    const { kit, set, add } = harness({ busy: () => busy });
+    add(1);
+    busy = true;
+    set.mockClear();
+
+    expect(add(1)).toBeNull();
+    expect(kit.travel('undo')).toBe(false);
+    expect(set).not.toHaveBeenCalled();
+
+    busy = false;
+    expect(kit.travel('undo')).toBe(true);
+  });
+
+  it('flushes held work before a commit, a session and a travel read the history', () => {
+    const flush = vi.fn();
+    const { kit, add } = harness({ flush });
+
+    add(1);
+    expect(flush).toHaveBeenCalledTimes(1);
+    kit.session('field', 1);
+    expect(flush).toHaveBeenCalledTimes(2);
+    kit.travel('undo');
+    expect(flush).toHaveBeenCalledTimes(3);
   });
 
   it('brings view state into line with what an undo or a redo restores, in the same set', () => {

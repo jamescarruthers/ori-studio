@@ -1,4 +1,3 @@
-import { selectProject } from '../../store/workspaceStore/designTabs';
 import {
   useCallback,
   useEffect,
@@ -22,11 +21,8 @@ import {
   useSimulatorRuntime,
   type SimulatorFrameView,
 } from "../../simulator/useSimulatorRuntime";
-import {
-  buildSegmentSimulationFold,
-  resolveCpSegments,
-} from "../../lib/creasePatternSegmentation";
 import { SimulatorSegmentsSidebar } from "./SimulatorSegmentsPanel";
+import { useSimulateSource } from "../../simulator/useSimulateSource";
 import { simulatorRunConfig } from "../../lib/simulatorRunConfig";
 import {
   SimulatorViewport,
@@ -53,7 +49,11 @@ import { useWorkspaceStore } from "../../store/workspaceStore";
 import { Button } from "../ui/Button";
 import { IconButton } from "../ui/IconButton";
 import { NextDocumentAction } from "./NextDocumentAction";
-import { useSimulatorTools } from "../../simulator/useSimulatorTools";
+import {
+  simulatorToolsRuntime,
+  useSimulatorTools,
+  useViewportToolHooks,
+} from "../../simulator/useSimulatorTools";
 import { useSimulatorToolActions } from "../../simulator/useSimulatorToolActions";
 import { simulatorCanvasLabels } from "../../simulator/tools/actions";
 import { SimulatorToolRail } from "../../simulator/SimulatorToolRail";
@@ -94,38 +94,14 @@ export function SimulatorPanel() {
   const observeFrameRef = useRef<(frame: SimulatorFrameView) => void>(() => {});
   const phoneLayout = useIsPhoneLayout();
 
-  const creaseCount = useWorkspaceStore(
-    (state) => selectProject(state).creases.length,
-  );
-  // Editable (hand-drawn / imported) crease patterns live in the oristudio CP
-  // document, not `project.creases`, so they are a valid simulation source even
-  // when `creaseCount` is 0.
-  const hasEditableCp = useWorkspaceStore(
-    (state) => state.oristudioCpDocument !== null,
-  );
-  const foldArtifacts = useWorkspaceStore((state) => state.foldArtifacts);
+  // What to simulate: the rail's patterns, the one shown, and its fold — one
+  // sheet's mesh for an editable pattern, the whole canvas's artifacts for a
+  // design (`useSimulateSource`).
+  const source = useSimulateSource();
   const foldArtifactRevision = useWorkspaceStore(
     (state) => state.foldArtifactRevision,
   );
-  const selectedSegmentId = useWorkspaceStore(
-    (state) => state.selectedSegmentId,
-  );
-  const setSelectedSegment = useWorkspaceStore(
-    (state) => state.setSelectedSegment,
-  );
   const setViewDrawerSlot = useLayoutStore((state) => state.setViewDrawerSlot);
-  const foldArtifactError = useWorkspaceStore(
-    (state) => state.foldArtifactError,
-  );
-  const foldArtifactStatus = useWorkspaceStore(
-    (state) => state.foldArtifactStatus,
-  );
-  const ensureFoldArtifacts = useWorkspaceStore(
-    (state) => state.ensureFoldArtifacts,
-  );
-  const refreshFoldArtifacts = useWorkspaceStore(
-    (state) => state.refreshFoldArtifacts,
-  );
 
   const [foldPercent, setFoldPercent] = useState(INITIAL_FOLD_PERCENT);
   const [loadState, setLoadState] = useState<LoadState>("idle");
@@ -144,37 +120,14 @@ export function SimulatorPanel() {
   const shortcutOverrides = useShortcutStore((store) => store.overrides);
   const setSimulatorSetting = useWorkspaceStore((state) => state.setSimulatorSetting);
   const runConfig = simulatorRunConfig();
-  // Segment the whole document's fold and simulate only the selected pattern.
-  // Memoized so a new sub-fold object is not produced on every render (which
-  // would thrash the prepare/dispose effect).
-  const segments = useMemo(() => resolveCpSegments(foldArtifacts), [foldArtifacts]);
-  const activeSegmentId = useMemo(() => {
-    if (segments.length <= 1) return null;
-    const segment =
-      segments.find((candidate) => candidate.id === selectedSegmentId) ??
-      segments[0];
-    return segment?.id ?? null;
-  }, [segments, selectedSegmentId]);
   // A phone shows the rail and the simulator one at a time; every other layout
   // shows both, and the flow is inert there.
   const flow = useSimulatorPhoneFlow(
-    { segments: segments.length, revision: foldArtifactRevision },
-    setSelectedSegment,
+    { segments: source.patterns.length, revision: foldArtifactRevision },
+    source.select,
   );
-  const simulationFold = useMemo(() => {
-    const wholeFold =
-      foldArtifacts?.simulation_model?.fold ?? foldArtifacts?.fold ?? null;
-    if (!wholeFold) return null;
-    if (activeSegmentId !== null) {
-      const segment = resolveCpSegments(foldArtifacts).find(
-        (c) => c.id === activeSegmentId,
-      );
-      if (segment && foldArtifacts) return buildSegmentSimulationFold(foldArtifacts, segment);
-    }
-    return wholeFold;
-  }, [foldArtifacts, activeSegmentId]);
-  const simulationModelError = foldArtifacts?.simulation_model_error;
-  const simulationSourceKey = `whole:${foldArtifacts ? foldArtifactRevision : "empty"}:${activeSegmentId ?? "all"}`;
+  const simulationFold = source.fold;
+  const simulationSourceKey = source.sourceKey;
 
   const handleFrame = useCallback(
     (frame: SimulatorFrameView) => {
@@ -239,23 +192,13 @@ export function SimulatorPanel() {
 
   const exportView = useSimulatorExport(runtime.beginExport, { surface: "simulator" });
 
+  const viewportTools = useViewportToolHooks(viewportRef);
   const tools = useSimulatorTools({
-    runtime: {
-      model: runtimeModel,
-      gpuActive,
-      pickFaces: runtime.pickFaces,
-      setPinnedFaces: runtime.setPinnedFaces,
-      beginPull: runtime.beginPull,
-      movePull: runtime.movePull,
-      endPull: runtime.endPull,
-      releasePose: runtime.releasePose,
-    },
+    runtime: simulatorToolsRuntime(runtime),
     ready: loadState === "ready",
     revision: foldArtifactRevision,
     sourceKey: simulationSourceKey,
-    pickDrawn: (query) => viewportRef.current?.pickDrawnFaces(query) ?? null,
-    drawnCamera: () => viewportRef.current?.drawnCamera() ?? null,
-    cancelGesture: () => viewportRef.current?.cancelToolGesture() ?? false,
+    ...viewportTools,
   });
   const toolActions = useSimulatorToolActions(tools);
   const canvasLabels = simulatorCanvasLabels(t, tools.tool.id);
@@ -296,60 +239,28 @@ export function SimulatorPanel() {
     setPlaying(false);
   }, [simulationSourceKey, setPlaying]);
 
-  // Load/error state is derived from the runtime plus the surrounding document
-  // state; there is no separate solver lifecycle to track any more.
+  // Load/error state is derived from the runtime plus the source; there is no
+  // separate solver lifecycle to track any more.
   useEffect(() => {
-    if (creaseCount === 0 && !hasEditableCp) {
+    if (source.status === "empty") {
       setPlaying(false);
       setModelError(null);
       setLoadState("empty");
       return;
     }
-
     if (runtime.error) {
       setModelError(runtime.error);
       setLoadState("error");
       return;
     }
-
-    if (foldArtifacts) {
-      setModelError(simulationModelError ?? null);
-      if (simulationModelError) {
-        setLoadState("error");
-        return;
-      }
-      setLoadState(runtimeStatus === "ready" ? "ready" : "loading");
-      return;
-    }
-
-    setModelError(null);
-    if (foldArtifactStatus === "loading") {
-      setLoadState("loading");
-      return;
-    }
-    if (foldArtifactStatus === "error") {
-      setModelError(
-        foldArtifactError ??
-          t("panels:simulator.unavailable", "Simulator unavailable"),
-      );
+    if (source.status === "error") {
+      setModelError(source.error);
       setLoadState("error");
       return;
     }
-    setLoadState("loading");
-    void ensureFoldArtifacts();
-  }, [
-    creaseCount,
-    hasEditableCp,
-    foldArtifacts,
-    foldArtifactError,
-    foldArtifactStatus,
-    ensureFoldArtifacts,
-    simulationModelError,
-    runtimeStatus,
-    runtime.error,
-    setPlaying,
-    t,
-  ]);
+    setModelError(null);
+    setLoadState(source.status === "ready" && runtimeStatus === "ready" ? "ready" : "loading");
+  }, [source.status, source.error, runtimeStatus, runtime.error, setPlaying]);
 
   // Scrubbing the fold slider settles to the new target in the worker rather
   // than stepping a fixed batch here.
@@ -465,8 +376,8 @@ export function SimulatorPanel() {
     setPlaying(false);
     playheadRef.current.set(0);
     setFoldPercent(0);
-    void refreshFoldArtifacts();
-  }, [canRestart, loadState, resetView, rewindFold, setPlaying, refreshFoldArtifacts]);
+    source.rebuild();
+  }, [canRestart, loadState, resetView, rewindFold, setPlaying, source]);
 
   // Scrub the fold by a signed delta. setFoldTarget clamps 0-100 and pauses
   // playback, so a manual scrub always stops an in-progress play.
@@ -538,7 +449,7 @@ export function SimulatorPanel() {
 
   const errorDetail =
     modelError ??
-    foldArtifactError ??
+    source.error ??
     t("panels:simulator.unavailable", "Simulator unavailable");
   const statusLabel =
     loadState === "ready"
@@ -561,11 +472,10 @@ export function SimulatorPanel() {
   return (
     <div className="simulator-workspace">
       {/* A single pattern needs no picker; the rail hides to reclaim the space. */}
-      {flow.screen !== "detail" && foldArtifacts && segments.length > 1 && (
+      {flow.screen !== "detail" && source.patterns.length > 1 && (
         <SimulatorSegmentsSidebar
-          fold={foldArtifacts.fold}
-          segments={segments}
-          selected={activeSegmentId}
+          patterns={source.patterns}
+          selected={source.activeId}
           onSelect={flow.openSegment}
         />
       )}
@@ -603,7 +513,11 @@ export function SimulatorPanel() {
               */}
               {/* The rail's tools on a phone, left of the Settings pill. */}
               {phoneLayout && (
-                <SimulatorToolsTrigger buttons={toolActions.picker} disabled={!tools.enabled} />
+                <SimulatorToolsTrigger
+                  buttons={toolActions.picker}
+                  disabled={!tools.enabled}
+                  surface="simulate"
+                />
               )}
               <div className="panel-toolbar__pills" ref={setViewDrawerSlot} />
             </div>

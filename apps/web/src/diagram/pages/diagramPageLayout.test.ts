@@ -1,24 +1,37 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_DIAGRAM_STYLE, DEFAULT_PAGE_SETUP, type DiagramPageSetup } from '../document/diagramDocument';
+import {
+  DEFAULT_DIAGRAM_STYLE,
+  DEFAULT_PAGE_SETUP,
+  PAGE_SETTINGS,
+  STEPS_PER_PAGE_RANGE,
+  type DiagramPageArrangement,
+  type DiagramPageSetup,
+} from '../document/diagramDocument';
 import {
   FIT_RUN_BREAK,
+  FOOTER_MM,
+  HEADER_MM,
   FIT_SAME,
   FIT_ZOOM,
+  flowShape,
+  GLYPH_CLEAR_MM,
   layoutDiagramPages,
   MARKS_FLOOR,
   overrunFit,
+  pageGrid,
+  PICTURE_HEIGHT_SHARE,
   pictureFloor,
   pictureOverrun,
   runLevels,
   scaleRuns,
-  STEP_NUMBER_SIZE_MM,
   STEP_TEXT_LEADING_MM,
   STEP_TEXT_SIZE_MM,
   TURN_GUTTER_MM,
   TURN_STACK_CLEAR_MM,
   turnGlyphMm,
+  type DiagramPagesLayout,
   type LayoutCell,
   type LayoutPage,
   type LayoutStep,
@@ -30,14 +43,24 @@ import { zoomSplits } from './zoomArrows';
 import { readFontMetrics, type FontMetrics } from '../fonts/fontMetrics';
 import { curvePoint, curveStart, type Lane } from './flowLane';
 import { estimateTextSetter } from './estimateTextSetter';
+import { PACKED_TURN_GUTTER_MM, packingArea } from './flowPacking';
+import { pastItsBox } from './pageOverflow.fixtures';
+import { captionStartShift } from './captionMeasure';
 import { fontTextSetter } from './fontTextSetter';
+import { pageCapacity } from './pagePlan';
+import { partBox } from './pagePlacement';
 import { printPaper } from './printPaper';
+import { emptyTitleBlockLook, type DiagramTitles, type TitleBlockLook } from './titleBlockColumn';
 
 const SHORT = 'Fold in half.';
 const LONG =
   'Fold the bottom edge up to the top edge, crease firmly, unfold, then fold both sides in to meet the centre line and turn the model over carefully.';
 
 const NO_MARKS = { width: 0, height: 0 };
+/** The diagram's title alone. */
+const CRANE: DiagramTitles = { title: 'Crane' };
+/** A new diagram's page setup with no title block: but for the block's own cases, these are the pages as drawn before it. */
+const NO_BLOCK_SETUP: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, titleBlock: PAGE_SETTINGS.titleBlock.legacy };
 
 function step(index: number, patch: Partial<LayoutStep> = {}): LayoutStep {
   return {
@@ -56,7 +79,7 @@ const steps = (count: number, patch: (index: number) => Partial<LayoutStep> = ()
 
 /** The pages under a setup: the grid unless it says, as these cases were written for (a new diagram's is the flow). */
 function layout(list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, title = 'Crane') {
-  return layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', ...setup }, title, estimateTextSetter);
+  return layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'grid', ...setup }, { title }, estimateTextSetter);
 }
 
 const paper = (width: number, height: number = width): LayoutStep['picture'] => ({
@@ -95,6 +118,61 @@ function laneDistance(lane: Lane, point: { x: number; y: number }): number {
   return nearest;
 }
 
+/**
+ * Where a glyph stands along the lane between two steps, by arc length (mm): from where the lane last leaves the
+ * step before's picture, to where it first reaches the next's; and how far off the lane it stands. Sampled finely.
+ */
+function alongLane(lane: Lane, before: LayoutCell, next: LayoutCell, at: { x: number; y: number }) {
+  const points: { x: number; y: number; s: number }[] = [{ ...lane.from, s: 0 }];
+  lane.curves.forEach((curve, index) => {
+    const from = curveStart(lane, index);
+    for (let n = 1; n <= 2000; n += 1) {
+      const point = curvePoint(from, curve, n / 2000);
+      const last = points.at(-1)!;
+      points.push({ ...point, s: last.s + Math.hypot(point.x - last.x, point.y - last.y) });
+    }
+  });
+  const nearest = (p: { x: number; y: number }, from: number, to: number) => {
+    let best = from;
+    for (let i = from; i <= to; i += 1) {
+      if (Math.hypot(points[i]!.x - p.x, points[i]!.y - p.y) < Math.hypot(points[best]!.x - p.x, points[best]!.y - p.y)) best = i;
+    }
+    return best;
+  };
+  const centre = (cell: LayoutCell) => ({ x: cell.pictureMm.x + cell.pictureMm.size / 2, y: cell.drawMm.y + cell.drawMm.h / 2 });
+  const inside = (p: { x: number; y: number }, box: { x: number; y: number; w: number; h: number }) =>
+    p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h;
+  const a = nearest(centre(before), 0, points.length - 1);
+  const b = nearest(centre(next), a, points.length - 1);
+  let reach = b;
+  for (let i = a; i <= b; i += 1) {
+    if (inside(points[i]!, partBox(next, 'picture'))) {
+      reach = i;
+      break;
+    }
+  }
+  let leave = a;
+  for (let i = reach; i >= a; i -= 1) {
+    if (inside(points[i]!, partBox(before, 'picture'))) {
+      leave = i;
+      break;
+    }
+  }
+  const g = nearest(at, a, b);
+  const half = (points[leave]!.s + points[reach]!.s) / 2;
+  // The way the lane heads there, across the page: its tangent's x, from the points either side.
+  const [p, q] = [points[Math.max(0, g - 20)]!, points[Math.min(points.length - 1, g + 20)]!];
+  return {
+    fromBefore: points[g]!.s - points[leave]!.s,
+    toNext: points[reach]!.s - points[g]!.s,
+    offLane: Math.hypot(points[g]!.x - at.x, points[g]!.y - at.y),
+    midway: points.find((point) => point.s >= half)!,
+    stretch: points.slice(leave, reach + 1),
+    s: points[g]!.s,
+    across: (q.x - p.x) / Math.hypot(q.x - p.x, q.y - p.y),
+  };
+}
+
 /** Where a cell draws its picture, at its scale, centred in its room. */
 function drawnOf(cell: LayoutCell, picture: LayoutStep['picture']) {
   const scale = cell.mmPerUnit ?? cell.frameMm;
@@ -112,6 +190,467 @@ describe('printPaper', () => {
       marginMm: 12,
     });
     expect(printPaper({ size: 'b5-jis', orientation: 'portrait', marginMm: 0 })).toMatchObject({ widthMm: 182, heightMm: 257 });
+  });
+});
+
+describe('a flow page’s cells, from its steps per page (Phase 1b), where its pictures find their reference scales', () => {
+  /** The paper inside its margins, as `pageGrid` hands `flowShape` it. */
+  const area = (setup: Partial<DiagramPageSetup>) => {
+    const { widthMm, heightMm, marginMm } = printPaper({ ...DEFAULT_PAGE_SETUP, ...setup });
+    return { w: widthMm - 2 * marginMm, h: heightMm - 2 * marginMm };
+  };
+  const shape = (steps: number, setup: Partial<DiagramPageSetup> = {}) => {
+    const { columns, rows } = flowShape(steps, area(setup));
+    return `${columns}×${rows}`;
+  };
+  /** A picture box on that area, as the layout sizes one in a diagram with turns. */
+  const box = ({ w, h }: { w: number; h: number }, columns: number, rows: number) =>
+    Math.min(w / columns - TURN_GUTTER_MM, (h / rows) * PICTURE_HEIGHT_SHARE);
+  const PAPERS: Partial<DiagramPageSetup>[] = (['a4', 'letter', 'b5-jis', 'a5'] as const).flatMap((size) =>
+    (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation }))
+  );
+
+  it('takes the shape that prints the largest pictures: on A4 upright, 7 steps are 3 · 3 · 1, and 6, 9 and 12 are 2 × 3, 3 × 3 and 3 × 4', () => {
+    // Zach, 2026-10-07: 7 steps are 3·3·1, the short row last. The squarest cell made them 2 · 2 · 2 · 1, at 41 mm where 9 print at 48.
+    expect([6, 7, 8, 9, 12].map((steps) => shape(steps))).toEqual(['2×3', '3×3', '3×3', '3×3', '3×4']);
+    // 16 fill 4 × 4, not 3 · 3 · 3 · 3 · 3 · 1 at smaller pictures than 17 get.
+    expect([15, 16, 17].map((steps) => shape(steps))).toEqual(['3×5', '4×4', '4×5']);
+    // Letter, much the same.
+    expect([7, 9, 12, 16].map((steps) => shape(steps, { size: 'letter' }))).toEqual(['3×3', '3×3', '3×4', '4×4']);
+    // On its side, wider rows; 4 are 2 × 2, never 3 · 1.
+    expect([4, 6, 7, 12].map((steps) => shape(steps, { orientation: 'landscape' }))).toEqual(['2×2', '3×2', '4×2', '4×3']);
+    // The fewest and the most.
+    expect([shape(2), shape(2, { orientation: 'landscape' })]).toEqual(['1×2', '2×1']);
+    expect([shape(30), shape(30, { orientation: 'landscape' })]).toEqual(['5×6', '6×5']);
+  });
+
+  it('fills its rows, the last one short, and finds no larger picture, for 2 to 30 steps on every paper either way up', () => {
+    for (const paper of PAPERS) {
+      const room = area(paper);
+      let before = Infinity;
+      for (let steps = STEPS_PER_PAGE_RANGE.min; steps <= STEPS_PER_PAGE_RANGE.max; steps += 1) {
+        const label = `${JSON.stringify(paper)} ${steps}`;
+        const { columns, rows } = flowShape(steps, room);
+        // Every row holds steps, and only the last may be short: 7 in 3 columns are 3 · 3 · 1.
+        expect(rows, label).toBe(Math.ceil(steps / columns));
+        expect(columns * (rows - 1), label).toBeLessThan(steps);
+        const best = box(room, columns, rows);
+        for (let other = 1; other <= steps; other += 1) {
+          expect(box(room, other, Math.ceil(steps / other)), `${label} ${other}`).toBeLessThanOrEqual(best + 1e-9);
+        }
+        // So a page of more steps never prints larger pictures than one of fewer.
+        expect(best, label).toBeLessThanOrEqual(before + 1e-9);
+        before = best;
+      }
+    }
+    // A landscape page never takes fewer columns than the same paper upright.
+    for (const size of ['a4', 'letter', 'b5-jis', 'a5'] as const) {
+      for (let steps = STEPS_PER_PAGE_RANGE.min; steps <= STEPS_PER_PAGE_RANGE.max; steps += 1) {
+        expect(flowShape(steps, area({ size, orientation: 'landscape' })).columns, `${size} ${steps}`).toBeGreaterThanOrEqual(
+          flowShape(steps, area({ size, orientation: 'portrait' })).columns
+        );
+      }
+    }
+  });
+
+  it('gives a tie to fewer columns', () => {
+    // 4 steps on A4 on its side: 2 × 2 and 3 × 2 print the same pictures, the rows' height their limit.
+    const side = area({ orientation: 'landscape' });
+    expect(box(side, 3, 2)).toBeCloseTo(box(side, 2, 2), 9);
+    expect(flowShape(4, side)).toEqual({ columns: 2, rows: 2 });
+    // 9 on Letter on its side: 3 × 3 or 4 × 3.
+    expect(flowShape(9, area({ size: 'letter', orientation: 'landscape' }))).toEqual({ columns: 3, rows: 3 });
+  });
+
+  it('is what a flow page is cut by to find its pictures’ reference scales, from the steps per page, the paper and its margins alone', () => {
+    // The default: 9 steps, 3 × 3, as every flow page was before it could choose.
+    expect(DEFAULT_PAGE_SETUP.stepsPerPage).toBe(9);
+    expect(pageGrid({ ...DEFAULT_PAGE_SETUP, layout: 'flow' })).toEqual({ columns: 3, rows: 3 });
+    const seven: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, layout: 'flow', stepsPerPage: 7 };
+    expect([pageGrid(seven), pageCapacity(seven)]).toEqual([{ columns: 3, rows: 3 }, 7]);
+    // A flow page's columns and rows are the grid's: it does not read them.
+    expect(pageGrid({ ...seven, columns: 5, rows: 1 })).toEqual(pageGrid(seven));
+    // Nor the title or the page numbers, which take room from its cells but never re-cut them.
+    expect(pageGrid({ ...seven, showTitle: false, pageNumbers: { enabled: false, first: 1 } })).toEqual(pageGrid(seven));
+    // The paper and its margins do.
+    expect(pageGrid({ ...seven, size: 'letter' })).toEqual({ columns: 3, rows: 3 });
+    expect(pageGrid({ ...seven, orientation: 'landscape' })).toEqual({ columns: 4, rows: 2 });
+    expect(pageGrid({ ...seven, marginMm: 30 })).toEqual({ columns: 2, rows: 4 });
+    // A grid's are its own, and it holds every cell, whatever its steps per page say.
+    const grid: DiagramPageSetup = { ...seven, layout: 'grid', columns: 4, rows: 2 };
+    expect([pageGrid(grid), pageCapacity(grid)]).toEqual([{ columns: 4, rows: 2 }, 8]);
+  });
+});
+
+describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-packing.md`)', () => {
+  const flowLayout = (
+    list: LayoutStep[],
+    setup: Partial<DiagramPageSetup> = {},
+    arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}
+  ) => layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
+  const bandsOf = (page: LayoutPage) => [...new Set(page.cells.map((cell) => cell.band!))];
+  const bandCells = (page: LayoutPage, band: number) => page.cells.filter((cell) => cell.band === band && !cell.bend);
+  /** Where each step is at home: its box, its number and its caption's start. */
+  const homes = (result: DiagramPagesLayout) =>
+    result.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell.cellMm, cell.numberAt, cell.text.x]));
+  /** Where a page's bands may go, with its title and page numbers shown. */
+  const areaOf = (result: DiagramPagesLayout) => packingArea(result.paper, HEADER_MM, FOOTER_MM);
+  const lowest = (page: LayoutPage) => Math.max(...page.cells.map((cell) => cell.cellMm.y + cell.cellMm.h));
+
+  it('packs each page of its steps per page into bands, odd on a left page that hands over, step 1 at the top left', () => {
+    const result = flowLayout(steps(16), { stepsPerPage: 7 });
+    expect(result.pages.map((page) => page.cells.length)).toEqual([7, 7, 2]);
+    const [one] = result.pages;
+    // Page 1 hands over at its spine: odd bands, the first read left to right from the top left, the last on
+    // into the spine.
+    expect(bandsOf(one!).length % 2).toBe(1);
+    const first = one!.cells[0]!;
+    expect(first.band).toBe(0);
+    expect(first.rightToLeft).toBe(false);
+    expect(first.cellMm.x).toBe(Math.min(...bandCells(one!, 0).map((cell) => cell.cellMm.x)));
+    expect(one!.cells.at(-1)!.rightToLeft).toBe(false);
+    const area = areaOf(result);
+    for (const page of result.pages) {
+      // Each band reads the other way from the one before; every box inside the page's area.
+      for (const cell of page.cells) expect(cell.rightToLeft).toBe(cell.band! % 2 === 1);
+      page.cells.slice(1).forEach((b, index) => {
+        const a = page.cells[index]!;
+        if (a.band === b.band && !a.bend && !b.bend) expect((b.cellMm.x - a.cellMm.x) * (a.rightToLeft ? -1 : 1)).toBeGreaterThan(0);
+      });
+      for (const { cellMm: box } of page.cells) {
+        expect(box.x).toBeGreaterThanOrEqual(area.x - 0.01);
+        expect(box.x + box.w).toBeLessThanOrEqual(area.x + area.w + 0.01);
+        expect(box.y).toBeGreaterThanOrEqual(area.y - 0.01);
+        expect(box.y + box.h).toBeLessThanOrEqual(area.y + area.h + 0.01);
+      }
+      expect(page.packing).toMatchObject({ packed: true, fits: true });
+    }
+    // Packed afresh, each kept under the step its page starts with.
+    expect(Object.keys(result.packed!)).toEqual(result.pages.map((page) => page.cells[0]!.stepId));
+  });
+
+  it('keeps Fit each’s scale from step to step: pictures of one paper in one run print at one mm per unit, the page’s', () => {
+    const result = flowLayout(steps(9, (index) => ({ picture: paper(index % 2 ? 600 : 300, 400) })));
+    const page = result.pages[0]!;
+    const scales = new Set(page.cells.map((cell) => cell.mmPerUnit));
+    expect(scales.size).toBe(1);
+    // Wider by its units, wider by as much.
+    const [narrow, wide] = page.cells;
+    expect(wide!.drawMm.w / narrow!.drawMm.w).toBeCloseTo(2, 9);
+  });
+
+  it('finds every step’s reference scale in the diagram’s one cell, whichever side page 1 falls on, so a page turn changes a picture’s size only by its page’s scale and Fit each’s zooms', () => {
+    // The chipmunk (`artifacts/layout-review/chipmunk.osf`) as the layout reads it at a card's measure: each
+    // picture's extent and frame in units, its marks' reach in mm, its caption, and the turn before step 12.
+    const CHIPMUNK: readonly (readonly [number, number, number, number, number, number, string])[] = [
+      [400, 400, 400, 400, 0.26, 0.26, 'Fold diagonals and unfold'],
+      [400, 400, 400, 400, 0.26, 0.26, 'Mark on the center line by folding the top corner to the center point'],
+      [400, 400, 400, 400, 0.26, 0.26, 'Mark on the center line by folding the bottom corner to the mark made in step 2'],
+      [400, 400, 400, 400, 0.26, 0.26, ''],
+      [400, 400, 400, 400, 0.26, 0.26, ''],
+      [400, 400, 400, 400, 0.26, 0.26, ''],
+      [438.77, 522.52, 400, 400, 0.23, 0.23, 'Valley fold the flaps inward. Note that the top of each crease does not line up with the top corner of the paper'],
+      [237.5, 408.88, 237.5, 400, 0.26, 0.26, ''],
+      [237.5, 200, 237.5, 202.02, 0.26, 1.32, ''],
+      [168.33, 281.23, 168.33, 281.23, 0.26, 0.26, ''],
+      [168.33, 401.37, 168.33, 401.37, 0.26, 0.26, ''],
+      [168.33, 401.37, 168.33, 401.37, 0.26, 0.26, ''],
+      [233.86, 296.21, 170.19, 257.46, 0.23, 0.23, 'Unfold everything'],
+      [400, 400, 400, 400, 1.32, 0.26, 'Fold in half.'],
+      [400, 270.74, 400, 200, 0.26, 0.17, 'Fold at the existing crease line. Model will not lie flat.'],
+    ];
+    const chipmunk = CHIPMUNK.map(([width, height, frameW, frameH, marksW, marksH, text], index) =>
+      step(index, {
+        text,
+        picture: { kind: 'paper', width, height, frame: { width: frameW, height: frameH }, marks: { width: marksW, height: marksH } },
+        turnsBefore: index === 11 ? [{ id: 'turn-11', turn: { kind: 'turn-over', axis: 'vertical' } }] : [],
+      })
+    );
+    // The review's case (F2): A4 on its side, seven a page, page 1 on the left and on the right. Page 1 on the
+    // left hands over at its spine, so its own rows were odd and its references were cut from other cells than
+    // page 2's: step 7's reference was 0.6 times what it was with page 1 on the right, and steps 7 → 8 printed
+    // 3.14 times larger across the page turn, against 0.99 times.
+    const setup = { size: 'a4', orientation: 'landscape', stepsPerPage: 7 } as const;
+    const [left, right] = (['left', 'right'] as const).map((firstPageSide) => flowLayout(chipmunk, { ...setup, firstPageSide }));
+    /** Each step's printed scale, and its reference: that over its page's scale. */
+    const scalesOf = (result: DiagramPagesLayout) =>
+      new Map(
+        result.pages.flatMap((page) =>
+          page.cells.map((cell) => [cell.stepId, { printed: cell.mmPerUnit!, reference: cell.mmPerUnit! / page.packing!.k }] as const)
+        )
+      );
+    const [fromLeft, fromRight] = [scalesOf(left!), scalesOf(right!)];
+    expect(fromLeft.size).toBe(15);
+    // Whichever side page 1 falls on, every step's reference is the same (to the six figures a page keeps): the
+    // two sides print each picture alike but for their pages' scales.
+    for (const [id, { reference }] of fromLeft) expect(reference / fromRight.get(id)!.reference, id).toBeCloseTo(1, 4);
+    // Across a page turn, two steps of one Fit each run (one reference) print within a zoom of each other, the
+    // page scale's steadiness now the printed size's. Steps 7 → 8 are not one run: Fit each zooms in at step 8,
+    // where the model narrows from 400 units to 237, on whichever page the step falls.
+    for (const result of [left!, right!]) {
+      expect(result.pages.length).toBe(3);
+      const turns = result.pages.slice(1).map((page, index) => [result.pages[index]!.cells.at(-1)!, page.cells[0]!] as const);
+      const inOneRun = turns.filter(
+        ([before, after]) => Math.abs(fromLeft.get(after.stepId)!.reference / fromLeft.get(before.stepId)!.reference - 1) < 1e-4
+      );
+      expect(inOneRun.map(([before, after]) => `${before.number} → ${after.number}`)).toEqual(['14 → 15']);
+      for (const [before, after] of inOneRun) {
+        const change = after.mmPerUnit! / before.mmPerUnit!;
+        expect(Math.max(change, 1 / change), `${before.number} → ${after.number}`).toBeLessThan(FIT_ZOOM);
+      }
+    }
+  });
+
+  it('packs the automatic last page for its count, its few steps in the first places, room left under them', () => {
+    // Step 10 starts a page of four, which fills its page; the four left over are packed for the default nine.
+    const result = flowLayout(steps(17, (index) => (index === 9 ? { pageSteps: 4 } : {})));
+    expect(result.pages.map((page) => page.cells.length)).toEqual([9, 4, 4]);
+    const [, two, three] = result.pages;
+    const area = areaOf(result);
+    expect(two!.side).toBe('right');
+    expect(lowest(two!)).toBeGreaterThan(area.y + 0.85 * area.h);
+    expect(three!.cells[0]!.band).toBe(0);
+    expect(lowest(three!)).toBeLessThan(area.y + 0.75 * area.h);
+  });
+
+  it('nests a band’s steps: every other one rises and the rest dip, by the nesting share of the room the band leaves', () => {
+    const list = steps(9, (index) => ({ picture: paper(400, index % 3 === 1 ? 700 : 300) }));
+    const centred = flowLayout(list, { flowNesting: 0 }).pages[0]!;
+    const nested = flowLayout(list).pages[0]!;
+    const middle = (cell: LayoutCell) => cell.cellMm.y + cell.cellMm.h / 2;
+    let moved = 0;
+    for (const band of bandsOf(centred)) {
+      const flat = bandCells(centred, band);
+      // With no nesting a band's boxes stand on one middle line, to the hundredth of a mm a box is kept to.
+      for (const cell of flat) expect(Math.abs(middle(cell) - middle(flat[0]!))).toBeLessThanOrEqual(0.005 + 1e-9);
+      // Nested, the first rises, the next dips, and so on, the band where it was.
+      bandCells(nested, band).forEach((cell, index) => {
+        const shift = middle(cell) - middle(flat[index]!);
+        expect(Math.sign(shift) * (index % 2 === 0 ? -1 : 1)).toBeGreaterThanOrEqual(0);
+        if (Math.abs(shift) > 0.5) moved += 1;
+      });
+    }
+    expect(moved).toBeGreaterThan(0);
+  });
+
+  it('ends the band just past the diagram’s last step, at its box’s edge, the way its band reads', () => {
+    for (const count of [11, 13]) {
+      const result = flowLayout(steps(count));
+      const page = result.pages.at(-1)!;
+      const last = page.cells.at(-1)!;
+      const end = page.band!.curves.at(-1)!.to;
+      const half = result.bandWidthMm / 2;
+      expect(last.bend).toBeUndefined();
+      expect(end.y).toBeCloseTo(last.drawMm.y + last.drawMm.h / 2, 9);
+      if (last.rightToLeft) expect(end.x - half).toBeCloseTo(last.cellMm.x, 9);
+      else expect(end.x + half).toBeCloseTo(last.cellMm.x + last.cellMm.w, 9);
+      // A page the lane leaves runs it off the paper.
+      expect(result.pages[0]!.band!.curves.at(-1)!.to.x).toBeCloseTo(result.paper.widthMm + 10, 9);
+    }
+  });
+
+  it('holds every page as it was packed: an edit of a caption or a picture moves no step', () => {
+    const list = steps(16);
+    const first = flowLayout(list, { stepsPerPage: 7 });
+    const held = first.packed!;
+    // Held, a page draws as it was packed, and nothing is packed again.
+    const again = flowLayout(list, { stepsPerPage: 7 }, held);
+    expect(again.packed).toBeUndefined();
+    expect(again.pages.map((page) => page.packing!.packed)).toEqual([false, false, false]);
+    expect(again.pages.map((page) => [page.cells, page.band, page.turns])).toEqual(first.pages.map((page) => [page.cells, page.band, page.turns]));
+    // A caption that grows, one that empties, and a picture twice as wide: every step keeps its box, its number
+    // and its caption's start, the edited ones too.
+    const edited = list.map((step, index) =>
+      index === 4 ? { ...step, text: `${LONG} ${LONG}` } : index === 9 ? { ...step, text: '' } : index === 12 ? { ...step, picture: paper(800, 400) } : step
+    );
+    const after = flowLayout(edited, { stepsPerPage: 7 }, held);
+    expect(after.packed).toBeUndefined();
+    expect(homes(after)).toEqual(homes(first));
+    // Every step keeps its scale, the wider picture at it too.
+    expect(after.pages.flatMap((page) => page.cells.map((cell) => cell.mmPerUnit))).toEqual(
+      first.pages.flatMap((page) => page.cells.map((cell) => cell.mmPerUnit))
+    );
+    // Not held, the same edit packs the pages afresh.
+    expect(homes(flowLayout(edited, { stepsPerPage: 7 }))).not.toEqual(homes(first));
+  });
+
+  it('draws a held step whose own picture or caption no longer fits its box whole, past the box, and marks nothing of it', () => {
+    const list = steps(16);
+    const first = flowLayout(list, { stepsPerPage: 7 });
+    for (const cell of first.pages.flatMap((page) => page.cells)) expect(pastItsBox(cell), cell.stepId).toBeNull();
+    const edited = list.map((step, index) =>
+      index === 4 ? { ...step, text: `${LONG} ${LONG}` } : index === 9 ? { ...step, text: '' } : index === 12 ? { ...step, picture: paper(800, 400) } : step
+    );
+    const cells = new Map(flowLayout(edited, { stepsPerPage: 7 }, first.packed!).pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell])));
+    expect(pastItsBox(cells.get('step-4')!)).toBe('caption');
+    expect(pastItsBox(cells.get('step-12')!)).toBe('picture');
+    // An emptied caption leaves room to spare; every other step prints inside its box.
+    expect([...cells.values()].filter((cell) => pastItsBox(cell)).map((cell) => cell.stepId)).toEqual(['step-4', 'step-12']);
+    // Nothing is carried on a cell to say so (Zach, 2026-10-12): the page shows it.
+    for (const cell of cells.values()) expect(Object.keys(cell), cell.stepId).not.toContain('overflow');
+    // The caption in full, at the measure its box was packed for; the picture at its kept scale.
+    const grown = cells.get('step-4')!;
+    expect(grown.text.lines.length).toBe(estimateTextSetter.paragraph(`${LONG} ${LONG}`, grown.text.widthMm, STEP_TEXT_SIZE_MM, 99).lines.length);
+    expect(grown.textOverflow).toBe(false);
+    expect(cells.get('step-12')!.drawMm.w).toBeGreaterThan(cells.get('step-12')!.cellMm.w);
+  });
+
+  it('cuts each box a page packs to hold its picture measured at the scale it prints at, so no step it just packed prints past its box', () => {
+    // Pictures whose marks reach 2 mm further at any scale but the one they are packed by (their reference):
+    // a mark's pt-size part need not keep its reach as the picture's scale changes.
+    const reaching = (index: number): Partial<LayoutStep> => {
+      let reference: number | null = null;
+      return {
+        picture: marked(400, 400, { width: 2, height: 2 }),
+        pictureAt: (scale) => {
+          reference ??= scale;
+          return marked(400, 400, { width: 2, height: scale === reference ? 2 : 4 + (index % 3) });
+        },
+      };
+    };
+    const list = steps(16, reaching);
+    const first = flowLayout(list, { stepsPerPage: 7 });
+    const kept = (cell: LayoutCell) => cell.mmPerUnit!;
+    // Laid out again as every later layout measures it: each picture at the scale it prints at.
+    const measured = list.map((step) => {
+      const cell = first.pages.flatMap((page) => page.cells).find((each) => each.stepId === step.id)!;
+      expect(first.pages.flatMap((page) => page.packing!.k)).not.toContain(1);
+      return { ...step, picture: step.pictureAt!(kept(cell)) };
+    });
+    const held = flowLayout(measured, { stepsPerPage: 7 }, first.packed!);
+    expect(held.packed).toBeUndefined();
+    for (const cell of held.pages.flatMap((page) => page.cells)) expect(pastItsBox(cell), cell.stepId).toBeNull();
+    // Every box still inside its page's area.
+    expect(held.pages.map((page) => page.packing!.fits)).toEqual([true, true, true]);
+  });
+
+  it('fits a held step’s picture of another measure — a new one — to the room its box leaves it', () => {
+    const list = steps(9);
+    const first = flowLayout(list);
+    const swapped = list.map((step, index) => (index === 4 ? { ...step, picture: upload(300, 500) } : step));
+    const page = flowLayout(swapped, {}, first.packed!).pages[0]!;
+    const cell = page.cells[4]!;
+    expect(cell.mmPerUnit).toBeNull();
+    expect(cell.frameMm).toBeGreaterThan(0);
+    expect(pastItsBox(cell)).toBeNull();
+    expect(cell.cellMm).toEqual(first.pages[0]!.cells[4]!.cellMm);
+    expect(cell.drawMm.x).toBeGreaterThanOrEqual(cell.cellMm.x);
+    expect(cell.drawMm.x + cell.drawMm.w).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w + 1e-9);
+  });
+
+  it('packs a page afresh when its structure changes, and holds the rest', () => {
+    const list = steps(16);
+    const first = flowLayout(list, { stepsPerPage: 7 });
+    // A turn before step 9 changes page 2's structure, and no other's.
+    const turned = list.map((step, index) =>
+      index === 8 ? { ...step, turnsBefore: [{ id: 'turn-a', turn: { kind: 'turn-over', axis: 'vertical' } } as const] } : step
+    );
+    const after = flowLayout(turned, { stepsPerPage: 7 }, first.packed!);
+    expect(Object.keys(after.packed!)).toEqual(['step-7']);
+    expect(after.pages.map((page) => page.packing!.packed)).toEqual([false, true, false]);
+    // One that has lost a step's place is not held: it is packed afresh.
+    const { 'step-3': _gone, ...rest } = first.packed!['step-0']!.steps;
+    const lacking = { ...first.packed!, 'step-0': { ...first.packed!['step-0']!, steps: rest } };
+    expect(flowLayout(list, { stepsPerPage: 7 }, lacking).pages.map((page) => page.packing!.packed)).toEqual([true, false, false]);
+  });
+
+  it('says a page no plan fits, drawn at the least scale and overflowing', () => {
+    const result = flowLayout(steps(30, () => ({ text: `${LONG} ${LONG}` })), { stepsPerPage: 30, size: 'a5' });
+    expect(result.pages[0]!.packing).toMatchObject({ k: 0.25, fits: false });
+    expect(lowest(result.pages[0]!)).toBeGreaterThan(areaOf(result).y + areaOf(result).h);
+  });
+});
+
+describe('a caption’s pinned measure (`diagram-caption-resize.md`)', () => {
+  const flowLayout = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}) =>
+    layoutDiagramPages(list, { ...NO_BLOCK_SETUP, layout: 'flow', ...setup }, CRANE, estimateTextSetter, arrangements);
+  const pin = (list: readonly LayoutStep[], index: number, textWidth: number) =>
+    list.map((each, at) => (at === index ? { ...each, place: { ...each.place, textWidth } } : each));
+  const cellsById = (result: DiagramPagesLayout) => new Map(result.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell] as const)));
+  const setLines = (text: string, widthMm: number) =>
+    estimateTextSetter.paragraph(text, widthMm, STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines.map((line) => line.text);
+
+  it('sets a grid step’s caption at its pin, whole, from where its cell starts it, and changes nothing else', () => {
+    const list = steps(6, (index) => (index === 2 ? { text: LONG } : {}));
+    const before = cellsById(layout(list));
+    const at = before.get('step-2')!;
+    for (const textWidth of [70, 25]) {
+      const cells = cellsById(layout(pin(list, 2, textWidth)));
+      const cell = cells.get('step-2')!;
+      expect(cell.text).toMatchObject({ x: at.text.x, firstBaseline: at.text.firstBaseline, widthMm: textWidth });
+      expect(cell.text.lines.map((line) => line.text)).toEqual(setLines(LONG, textWidth));
+      // Its picture as the layout drew it, and what Auto would set it at.
+      expect([cell.drawMm, cell.inkMm, cell.pictureMm, cell.mmPerUnit]).toEqual([at.drawMm, at.inkMm, at.pictureMm, at.mmPerUnit]);
+      expect(cell.placed!.auto.textWidthMm).toBe(at.text.widthMm);
+      for (const [id, other] of before) if (id !== 'step-2') expect(cells.get(id), id).toEqual(other);
+    }
+    expect(cellsById(layout(pin(list, 2, 70))).get('step-2')!.text.lines.length).toBeLessThan(at.text.lines.length);
+  });
+
+  it('never cuts a grid caption it pins, which the cell cut with "…"', () => {
+    const list = steps(4, () => ({ text: `${LONG} ${LONG}` }));
+    const setup = { columns: 4, rows: 6 };
+    const cut = layout(list, setup).pages[0]!.cells[0]!;
+    expect(cut.textOverflow).toBe(true);
+    const pinned = layout(pin(list, 0, cut.text.widthMm), setup).pages[0]!.cells[0]!;
+    expect(pinned.textOverflow).toBe(false);
+    expect(pinned.text.lines.map((line) => line.text)).toEqual(setLines(`${LONG} ${LONG}`, cut.text.widthMm));
+    expect(pinned.text.lines.some((line) => line.ellipsis)).toBe(false);
+  });
+
+  it('holds a pin to the paper inside its margins and to a short word’s room', () => {
+    const list = steps(4);
+    const wide = layout(pin(list, 0, 5000));
+    expect(wide.pages[0]!.cells[0]!.text.widthMm).toBe(wide.paper.widthMm - 2 * wide.paper.marginMm);
+    expect(layout(pin(list, 0, 1)).pages[0]!.cells[0]!.text.widthMm).toBe(10);
+  });
+
+  it('sets a held flow step’s caption at its pin, keeps its box, picture and left edge, and moves no other step nor the band', () => {
+    const list = steps(16, (index) => (index === 4 ? { text: LONG } : {}));
+    const first = flowLayout(list, { stepsPerPage: 7 });
+    const before = cellsById(first);
+    const at = before.get('step-4')!;
+    for (const textWidth of [80, 20]) {
+      const after = flowLayout(pin(list, 4, textWidth), { stepsPerPage: 7 }, first.packed!);
+      expect(after.packed).toBeUndefined();
+      const cells = cellsById(after);
+      const cell = cells.get('step-4')!;
+      expect([cell.cellMm, cell.drawMm, cell.numberAt, cell.mmPerUnit]).toEqual([at.cellMm, at.drawMm, at.numberAt, at.mmPerUnit]);
+      expect(cell.text.widthMm).toBe(textWidth);
+      // Its left edge where its box's caption starts; under a picture wider than the automatic cap, a pin past the
+      // cap stands centred under it as far as the picture reaches (`captionCentreWidth`).
+      expect(cell.text.x).toBeCloseTo(at.text.x + captionStartShift(at, undefined, textWidth), 9);
+      expect(cell.text.firstBaseline).toBe(at.text.firstBaseline);
+      expect(cell.text.lines.map((line) => line.text)).toEqual(setLines(LONG, textWidth));
+      expect(cell.placed!.auto.textWidthMm).toBe(at.text.widthMm);
+      // Every other step byte for byte, and the band as it ran: the step's picture has not moved.
+      for (const [id, other] of before) if (id !== 'step-4') expect(JSON.stringify(cells.get(id)), id).toBe(JSON.stringify(other));
+      expect(after.pages.map((page) => page.band)).toEqual(first.pages.map((page) => page.band));
+    }
+    // Narrower than its box was cut for, its lines run past its box's foot: only a re-pack moves anything.
+    expect(pastItsBox(cellsById(flowLayout(pin(list, 4, 20), { stepsPerPage: 7 }, first.packed!)).get('step-4')!)).toBe('caption');
+    // In a box no wider than the automatic cap and the side room, its left edge never moves, whatever its pin.
+    const narrowBoxes = steps(16, (index) => ({ text: index === 4 ? LONG : SHORT, picture: paper(400, 400) }));
+    const packedNarrow = flowLayout(narrowBoxes, { stepsPerPage: 12 });
+    const home = cellsById(packedNarrow).get('step-4')!;
+    expect(home.cellMm.w).toBeLessThanOrEqual(54);
+    for (const textWidth of [18, 44, 96]) {
+      const cell = cellsById(flowLayout(pin(narrowBoxes, 4, textWidth), { stepsPerPage: 12 }, packedNarrow.packed!)).get('step-4')!;
+      expect(cell.text.x, String(textWidth)).toBe(home.text.x);
+    }
+  });
+
+  it('packs a flow step’s box for its pin, its caption inside it, and keeps it out of the page’s signature', () => {
+    const list = steps(16, (index) => (index === 4 ? { text: LONG } : {}));
+    const packed = flowLayout(pin(list, 4, 70), { stepsPerPage: 7 });
+    const cell = cellsById(packed).get('step-4')!;
+    expect(cell.text.widthMm).toBe(70);
+    expect(cell.text.lines.map((line) => line.text)).toEqual(setLines(LONG, 70));
+    expect(cell.cellMm.w).toBeGreaterThanOrEqual(74 - 0.01);
+    expect(cell.text.x).toBeGreaterThanOrEqual(cell.cellMm.x + 1.75 - 0.01);
+    expect(cell.text.x + 70).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w - 1.75 + 0.01);
+    expect(pastItsBox(cell)).toBeNull();
+    expect(packed.packed!['step-0']!.signature).toBe(flowLayout(list, { stepsPerPage: 7 }).packed!['step-0']!.signature);
   });
 });
 
@@ -491,9 +1030,10 @@ describe('layoutDiagramPages', () => {
                 expect(cell.drawMm.x).toBeGreaterThanOrEqual(cell.cellMm.x - 1e-9);
                 expect(cell.drawMm.x + cell.drawMm.w).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w + 1e-9);
                 expect(cell.drawMm.h).toBeGreaterThanOrEqual(cell.pictureMm.size - 1e-9);
-                // Never past the cell further than the box itself (12 mm at least) already is.
+                // Never past the cell further than the box itself (12 mm at least) already is: a flow step's box
+                // kept to a hundredth of a mm, as its page's arrangement keeps it.
                 const floor = Math.max(cell.cellMm.y + cell.cellMm.h, cell.pictureMm.y + cell.pictureMm.size);
-                expect(cell.drawMm.y + cell.drawMm.h).toBeLessThanOrEqual(floor + 1e-9);
+                expect(cell.drawMm.y + cell.drawMm.h).toBeLessThanOrEqual(floor + (layoutKind === 'flow' ? 0.01 : 1e-9));
                 if (cell.text.lines.length > 0) expect(cell.text.firstBaseline).toBeGreaterThan(cell.drawMm.y + cell.drawMm.h);
                 // Every line fits its slot.
                 for (const line of cell.text.lines) expect(line.widthMm).toBeLessThanOrEqual(cell.text.widthMm + 1e-9);
@@ -516,7 +1056,7 @@ describe('layoutDiagramPages', () => {
     const CJK = '将底角向上折至顶角，压实折痕后展开。将底角向上折至顶角，压实折痕后展开。';
     for (const [columns, rows] of [[2, 1], [3, 3], [5, 6]] as const) {
       const list = steps(12, (index) => ({ text: [SHORT, LONG, CJK][index % 3]! }));
-      const result = layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', columns, rows }, 'Crane', setter);
+      const result = layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'grid', columns, rows }, CRANE, setter);
       for (const cell of result.pages.flatMap((page) => page.cells)) {
         for (const line of cell.text.lines) expect(line.widthMm).toBeLessThanOrEqual(cell.text.widthMm + 1e-9);
         const last = cell.text.firstBaseline + (cell.text.lines.length - 1) * STEP_TEXT_LEADING_MM;
@@ -655,13 +1195,18 @@ describe('layoutDiagramPages', () => {
     }
   });
 
-  it('runs every other row back in flow, with a band that leaves the page where the sequence goes on', () => {
-    const result = layout(steps(10), { layout: 'flow', columns: 3, rows: 2 });
+  it('runs every other band back in flow, with a band that leaves the page where the sequence goes on', () => {
+    const result = layout(steps(10), { layout: 'flow', stepsPerPage: 6, orientation: 'landscape' });
     const [first, second] = result.pages;
-    const xs = (cells: LayoutCell[]) => cells.map((cell) => cell.cellMm.x);
-    // The left page ends its two rows at the spine: the first reads right to left, the second back.
-    expect(xs(first!.cells.slice(0, 3))).toEqual([...xs(first!.cells.slice(0, 3))].sort((a, b) => b - a));
-    expect(xs(first!.cells.slice(3, 6))).toEqual([...xs(first!.cells.slice(3, 6))].sort((a, b) => a - b));
+    // The left page ends its bands at the spine (`diagram-flow-packing.md`, odd bands on a page that hands
+    // over): the first read left to right from the top left, the next back, the last on to the spine.
+    const bands = [...new Set(first!.cells.map((cell) => cell.band!))];
+    expect(bands.length % 2).toBe(1);
+    for (const band of bands) {
+      const xs = first!.cells.filter((cell) => cell.band === band && !cell.bend).map((cell) => cell.cellMm.x);
+      expect(xs).toEqual([...xs].sort((a, b) => (band % 2 === 1 ? b - a : a - b)));
+    }
+    expect(first!.cells.map((cell) => cell.rightToLeft)).toEqual(first!.cells.map((cell) => cell.band! % 2 === 1));
     expect(first!.band?.curves.at(-1)?.to).toMatchObject({ x: result.paper.widthMm + 10 });
     expect(second!.band?.from).toMatchObject({ x: -10 });
     expect(layout(steps(3), { layout: 'flow', showPath: false }).pages[0]!.band).toBeNull();
@@ -724,12 +1269,133 @@ describe('layoutDiagramPages', () => {
   });
 });
 
+describe('the title block on the first page (`diagram-title-block.md`, section 2)', () => {
+  const ON = { enabled: true, heightShare: 0.27 } as const;
+  const flowLayout = (
+    list: LayoutStep[],
+    setup: Partial<DiagramPageSetup> = {},
+    titles = CRANE,
+    arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}
+  ) => layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: ON, ...setup }, titles, estimateTextSetter, arrangements);
+  const within = (box: { x: number; y: number; w: number; h: number }, area: { x: number; y: number; w: number; h: number }) =>
+    box.x >= area.x - 0.01 && box.x + box.w <= area.x + area.w + 0.01 && box.y >= area.y - 0.01 && box.y + box.h <= area.y + area.h + 0.01;
+
+  it('packs the first flow page under the block, step 1 at the top left of what is left, and the other pages as every page', () => {
+    const result = flowLayout(steps(20), { stepsPerPage: 9 });
+    const [one, ...rest] = result.pages;
+    const block = one!.titleBlock!.geometry.block;
+    // Seven steps under the block (`firstPageCapacity`), in an area that starts 3 mm under it.
+    expect(result.pages.map((page) => page.cells.length)).toEqual([7, 9, 4]);
+    const area = packingArea(result.paper, block.h, FOOTER_MM);
+    expect(area.y).toBeCloseTo(block.y + block.h + 3, 9);
+    for (const cell of one!.cells) expect(within(cell.cellMm, area), cell.stepId).toBe(true);
+    const first = one!.cells[0]!;
+    expect(first.band).toBe(0);
+    expect(first.cellMm.x).toBe(Math.min(...one!.cells.filter((cell) => cell.band === 0).map((cell) => cell.cellMm.x)));
+    expect(one!.packing).toMatchObject({ packed: true, fits: true });
+    // The other pages keep the area every page has, and no block.
+    for (const page of rest) {
+      expect(page.titleBlock).toBeUndefined();
+      for (const cell of page.cells) expect(within(cell.cellMm, packingArea(result.paper, HEADER_MM, FOOTER_MM)), cell.stepId).toBe(true);
+    }
+  });
+
+  it('leaves the title tab to the other pages: the block carries the title, set large', () => {
+    const result = flowLayout(steps(12), { stepsPerPage: 9 });
+    expect(result.title).not.toBeNull();
+    expect(result.pages.map((page) => Boolean(page.titleBlock))).toEqual([true, false]);
+    expect(result.pages[0]!.titleBlock!.title).toMatchObject({ sizeMm: 16, lines: [{ text: 'Crane' }] });
+    // Off, or in a grid of one row with no room for it, there is no block, and page 1 keeps its tab.
+    expect(flowLayout(steps(12), { titleBlock: { enabled: false, heightShare: 0.27 } }).pages[0]!.titleBlock).toBeUndefined();
+    expect(layout(steps(4), { rows: 1, columns: 4, titleBlock: ON }).pages[0]!.titleBlock).toBeUndefined();
+  });
+
+  it('sets the header it is handed in the block: the subtitle, the credits and the note, the art at its sizes', () => {
+    const block: TitleBlockLook = {
+      subtitle: 'ORIGAMI DIAGRAM',
+      credits: [{ label: 'AUTHOR', value: 'Traditional' }],
+      note: 'Traditional\nDiagrams: Zach',
+      sizes: { modelSize: 0.5, patternSize: 0.7 },
+    };
+    const set = flowLayout(steps(3), {}, { title: 'Crane', block }).pages[0]!.titleBlock!;
+    expect(set.subtitle!.line.text).toBe('ORIGAMI DIAGRAM');
+    expect(set.credits!.columns.map(({ label, value }) => [label.text, value.text])).toEqual([['AUTHOR', 'Traditional']]);
+    expect(set.note!.lines.map((line) => line.text)).toEqual(['Traditional', 'Diagrams: Zach']);
+    const { block: band, pattern, model } = set.geometry;
+    expect(pattern.w).toBeCloseTo(0.7 * band.h, 9);
+    expect(model.h).toBeCloseTo(0.5 * band.h, 9);
+  });
+
+  it('holds the first page as packed whatever the title and the header: the block’s parts never change its area', () => {
+    const list = steps(16);
+    const packed = flowLayout(list, { stepsPerPage: 9 }).packed!;
+    const cellsOf = (result: DiagramPagesLayout) => result.pages[0]!.cells.map((cell) => [cell.stepId, cell.cellMm]);
+    const header = (patch: Partial<TitleBlockLook>): TitleBlockLook => ({ ...emptyTitleBlockLook(), ...patch });
+    const looks = [
+      header({}),
+      header({ subtitle: 'ORIGAMI DIAGRAM', credits: [{ label: 'AUTHOR', value: 'Traditional' }], note: 'Design: traditional' }),
+      header({ credits: Array.from({ length: 9 }, () => ({ label: 'RECOMMENDED SIZE', value: '60 cm × 60 cm' })), note: LONG.repeat(6) }),
+      header({ sizes: { modelSize: 1, patternSize: 1 } }),
+      header({ sizes: { modelSize: 0.3, patternSize: 0.3 } }),
+    ];
+    for (const titles of [{ title: '' }, ...looks.map((block) => ({ title: 'Crane, folded', block }))]) {
+      const again = flowLayout(list, { stepsPerPage: 9 }, titles, packed);
+      expect(again.pages[0]!.packing!.packed, JSON.stringify(titles)).toBe(false);
+      expect(cellsOf(again)).toEqual(cellsOf(flowLayout(list, { stepsPerPage: 9 }, CRANE, packed)));
+      // Packed afresh, the same: the area is the band's alone.
+      expect(cellsOf(flowLayout(list, { stepsPerPage: 9 }, titles))).toEqual(cellsOf(flowLayout(list, { stepsPerPage: 9 })));
+      expect(again.pages[0]!.titleBlock!.geometry.block).toEqual(flowLayout(list, { stepsPerPage: 9 }).pages[0]!.titleBlock!.geometry.block);
+    }
+    // Without the block, clearing the title takes the tab's room away, and page 1 is packed again.
+    const off = { stepsPerPage: 9, titleBlock: { enabled: false, heightShare: 0.27 } };
+    const tabbed = flowLayout(list, off).packed!;
+    expect(flowLayout(list, off, { title: '' }, tabbed).pages[0]!.packing!.packed).toBe(true);
+  });
+
+  it('keeps an empty title’s room: the first page packs as it does under a title', () => {
+    const cellsOf = (result: DiagramPagesLayout) => result.pages[0]!.cells.map((cell) => cell.cellMm);
+    const untitled = flowLayout(steps(9), { stepsPerPage: 9 }, { title: '' });
+    expect(untitled.pages[0]!.titleBlock).toMatchObject({ title: null });
+    expect(cellsOf(untitled)).toEqual(cellsOf(flowLayout(steps(9), { stepsPerPage: 9 })));
+  });
+
+  it('cuts a grid’s first page under the rows the block takes, every cell the size of every page’s', () => {
+    for (const [rows, taken] of [[3, 1], [4, 1], [6, 2]] as const) {
+      const result = layout(steps(30), { columns: 3, rows, titleBlock: ON });
+      const [one, two] = result.pages;
+      const { block } = one!.titleBlock!.geometry;
+      const cellH = (result.paper.heightMm - 2 * 12 - HEADER_MM - FOOTER_MM) / rows;
+      expect(one!.cells).toHaveLength(3 * (rows - taken));
+      expect(block.h).toBeCloseTo(HEADER_MM + taken * cellH, 9);
+      // Its first row starts at the block's foot, under the rows it takes; each cell is every page's size.
+      expect(one!.cells[0]!.cellMm.y).toBeCloseTo(block.y + block.h, 9);
+      expect(one!.cells[0]!.cellMm.y).toBeCloseTo(two!.cells[0]!.cellMm.y + taken * cellH, 9);
+      for (const cell of [...one!.cells, ...two!.cells]) {
+        expect(cell.cellMm.w).toBeCloseTo(result.cellMm.w, 9);
+        expect(cell.cellMm.h).toBeCloseTo(cellH, 9);
+      }
+      // The last row's foot where every page's is.
+      expect(one!.cells.at(-1)!.cellMm.y).toBeCloseTo(two!.cells.at(-1)!.cellMm.y, 9);
+    }
+  });
+});
+
 describe('turns between steps on the page (D22)', () => {
   const over = (id: string): LayoutTurn => ({ id, turn: { kind: 'turn-over', axis: 'vertical' } });
   const centreOf = (cell: { pictureMm: { x: number; y: number; size: number } }) => ({
     x: cell.pictureMm.x + cell.pictureMm.size / 2,
     y: cell.pictureMm.y + cell.pictureMm.size / 2,
   });
+  /** Whether a glyph `box` centred at `at` comes nearer than {@link GLYPH_CLEAR_MM} to a step's number, picture or caption as drawn. */
+  const onAStep = (page: LayoutPage, at: { x: number; y: number }, box: { w: number; h: number }) =>
+    page.cells.some((cell) =>
+      (['number', 'picture', 'text'] as const).some((part) => {
+        if (part === 'text' && cell.text.lines.length === 0) return false;
+        const { x, y, w, h } = partBox(cell, part);
+        const clear = GLYPH_CLEAR_MM - 1e-6;
+        return !(at.x + box.w / 2 + clear <= x || at.x - box.w / 2 - clear >= x + w || at.y + box.h / 2 + clear <= y || at.y - box.h / 2 - clear >= y + h);
+      })
+    );
 
   it('keeps a gutter between all the pictures of a diagram with a turn: one scale, a little smaller', () => {
     // Landscape A4 at 5 × 2: cells narrow enough that their width, not their height, sets the box.
@@ -767,78 +1433,206 @@ describe('turns between steps on the page (D22)', () => {
     expect(byId.get('turn-end')!.at.x).toBeCloseTo(fourth.pictureMm.x + fourth.pictureMm.size + gutter / 2, 6);
   });
 
-  /** Where a cell's text ends, with its descenders; its picture's bottom when it has none. */
-  const textBottom = (cell: LayoutCell) =>
-    cell.text.lines.length > 0
-      ? cell.text.firstBaseline + (cell.text.lines.length - 1) * STEP_TEXT_LEADING_MM + 0.3 * STEP_TEXT_SIZE_MM
-      : cell.drawMm.y + cell.drawMm.h;
-  /** The top of a cell's number: its figures stand under three quarters of its size. */
-  const numberTop = (cell: LayoutCell) => cell.numberAt.y - 0.75 * STEP_NUMBER_SIZE_MM;
-  /** The turns' stack, top to bottom, as printed. */
-  const extent = (turns: LayoutPage['turns']) => ({
-    top: Math.min(...turns.map((turn) => turn.at.y - turn.box.h / 2)),
-    bottom: Math.max(...turns.map((turn) => turn.at.y + turn.box.h / 2)),
-  });
-
-  it('prints one across a flow row’s end in the band’s bend: under the step before’s text, over the next one’s number', () => {
+  it('prints one across a flow page’s bend on the band, inside the margin, going the way of the band it leads into', () => {
     // Zach, 2026-10-06, the X-ray Heart's page 1: "the turn over step between
     // 3 and 4 should be rendered in the flow lane between steps 3 and 4, not
-    // to the right of step 4."
-    const list = steps(9, (index) =>
-      index === 3 ? { turnsBefore: [over('turn-down-right')] } : index === 6 ? { turnsBefore: [over('turn-down-left')] } : {}
-    );
-    const result = layout(list, { layout: 'flow', columns: 3, rows: 3 });
+    // to the right of step 4." The prototype he chose stands it on the bend.
+    const list = steps(9, (index) => (index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}));
+    const result = layout(list, { layout: 'flow', stepsPerPage: 9 });
     const page = result.pages[0]!;
-    const byId = new Map(page.turns.map((turn) => [turn.id, turn]));
-    for (const [id, before] of [
-      ['turn-down-right', 2],
-      ['turn-down-left', 5],
-    ] as const) {
-      const turn = byId.get(id)!;
-      const [above, below] = [page.cells[before]!, page.cells[before + 1]!];
-      // On the lane itself, where it crosses the gap between the rows.
-      expect(laneDistance(page.band!, turn.at), id).toBeLessThan(0.05);
-      // Between the rows, clear of the words above and the number below, and centred there.
-      const { top, bottom } = extent([turn]);
-      expect(top, id).toBeGreaterThan(textBottom(above));
-      expect(bottom, id).toBeLessThan(numberTop(below));
-      expect(Math.abs(turn.at.y - (textBottom(above) + numberTop(below)) / 2), id).toBeLessThan(1);
+    const { widthMm: W, marginMm: m } = result.paper;
+    let bends = 0;
+    for (const turn of page.turns) {
+      const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+      const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+      expect(turn.rightToLeft, turn.id).toBe(Boolean(next.rightToLeft));
+      if (before.band === next.band || before.bend || next.bend) continue;
+      bends += 1;
+      // On the ribbon, whose band's edge comes no further out than the margin (Zach, 2026-10-13: the margin is kept
+      // for marks like it; 2026-10-14, "(b4)"), so its glyph stands inside the margin too. Where along it: below.
+      expect(laneDistance(page.band!, turn.at), turn.id).toBeLessThan(0.01);
+      expect(turn.at.x - turn.box.w / 2, turn.id).toBeGreaterThanOrEqual(m - 1e-9);
+      expect(turn.at.x + turn.box.w / 2, turn.id).toBeLessThanOrEqual(W - m + 1e-9);
     }
-    // The first bend is at the right, the second at the left.
-    expect(byId.get('turn-down-right')!.at.x).toBeGreaterThan(page.cells[2]!.pictureMm.x + page.cells[2]!.pictureMm.size);
-    expect(byId.get('turn-down-left')!.at.x).toBeLessThan(page.cells[5]!.pictureMm.x);
-    // Each goes the way of the row it leads into.
-    expect(byId.get('turn-down-right')!.rightToLeft).toBe(true);
-    expect(byId.get('turn-down-left')!.rightToLeft).toBe(false);
+    expect(bends).toBeGreaterThan(0);
   });
 
-  it('keeps a flow row’s end clear for the turns after it: the step before gives up its text’s room, or its picture’s', () => {
-    const upright: LayoutTurn = { id: 'turn-b', turn: { kind: 'turn-over', axis: 'horizontal' } };
-    const rotate: LayoutTurn = { id: 'turn-c', turn: { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } } };
-    const stacked = [over('turn-a'), upright, rotate];
-    // A text that fills its cell to the last line, and a tall picture with no text.
-    for (const before of [{ text: `${LONG} ${LONG} ${LONG}` }, { text: '', picture: paper(150, 600) }]) {
-      const list = steps(6, (index) => (index === 2 ? before : index === 3 ? { turnsBefore: stacked } : {}));
-      const result = layout(list, { layout: 'flow', columns: 3, rows: 3 });
-      const page = result.pages[0]!;
-      const [above, below] = [page.cells[2]!, page.cells[3]!];
-      const { top, bottom } = extent(page.turns);
-      const label = before.text === '' ? 'picture' : 'text';
-      expect(top, label).toBeGreaterThanOrEqual(textBottom(above) + TURN_STACK_CLEAR_MM - 1e-6);
-      expect(bottom, label).toBeLessThanOrEqual(numberTop(below) - TURN_STACK_CLEAR_MM + 1e-6);
-      // Only the step before the turns gives way: without them, it reaches further down.
-      const plain = layout(
-        steps(6, (index) => (index === 2 ? before : index === 3 ? {} : index === 4 ? { turnsBefore: [over('turn-row')] } : {})),
-        { layout: 'flow', columns: 3, rows: 3 }
-      ).pages[0]!;
-      expect(textBottom(plain.cells[2]!), label).toBeGreaterThan(top);
-      expect(plain.cells[0]!.pictureMm.size).toBeCloseTo(page.cells[0]!.pictureMm.size, 6);
+  it('stands one across a flow page’s bend midway along the ribbon between the two pictures, however unlike they are', () => {
+    // Zach, 2026-10-15, his crane's page 2: "it feels like the flip over / rotate symbol isn't placed correctly
+    // between step 14 and 15 ... its really close to 14 - it should be equidistant between the two steps along the
+    // ribbon path." Step 14, tall and narrow, ends its row hard by the margin; 15 starts the next further in. The
+    // turn's middle is the bend's deepest point, halfway between the two in height, not halfway along the ribbon.
+    const tall = paper(150, 600);
+    const wide = paper(700, 300);
+    const cases = [
+      [paper(400), paper(400), tall, wide, paper(400), paper(400), tall, wide, paper(400)],
+      [wide, paper(400), tall, paper(400), wide, tall, paper(400), wide, tall],
+      [tall, tall, tall, wide, wide, wide, tall, tall, tall],
+    ];
+    let [midway, slid] = [0, 0];
+    for (const [n, shapes] of cases.entries()) {
+      const list = steps(9, (index) => ({ picture: shapes[index]!, ...(index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}) }));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const turn of page.turns) {
+        const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        if (before.band === next.band || before.bend || next.bend) continue;
+        const along = alongLane(page.band!, before, next, turn.at);
+        const label = `case ${n} ${turn.id}: ${along.fromBefore.toFixed(2)} / ${along.toNext.toFixed(2)} mm`;
+        // On the ribbon, clear of every step.
+        expect(along.offLane, label).toBeLessThan(0.05);
+        expect(onAStep(page, turn.at, turn.box), label).toBe(false);
+        if (!onAStep(page, along.midway, turn.box)) {
+          // Midway along it, from where it leaves the one picture to where it reaches the other.
+          midway += 1;
+          expect(Math.abs(along.fromBefore - along.toNext), label).toBeLessThan(0.25);
+        } else {
+          // Midway would stand it on a step's number, picture or caption: it slides along the ribbon off it.
+          slid += 1;
+        }
+      }
     }
+    expect(midway).toBeGreaterThan(2);
+    expect(slid).toBeGreaterThan(0);
   });
 
-  it('prints one before a flow page’s first step at its leading edge, as on the page before there is no row to turn from', () => {
+  it('stands one between two steps on a flow row midway along the ribbon between their pictures, however unlike they are', () => {
+    // Zach, 2026-10-15: "equidistant between the two steps along the ribbon path", within a row as across a bend.
+    // The middle of the gutter between two boxes is that only where the two pictures fill their boxes alike: the
+    // crane's 19 → 20 stood 16.9 mm along the ribbon from 19's picture and 9.7 mm from 20's.
+    const tall = paper(150, 600);
+    const wide = paper(700, 300);
+    const cases = [
+      [paper(400), tall, wide, paper(400), wide, tall, paper(400), tall, wide],
+      [tall, wide, tall, wide, tall, wide, tall, wide, tall],
+    ];
+    let midway = 0;
+    for (const [n, shapes] of cases.entries()) {
+      const list = steps(9, (index) => ({ picture: shapes[index]!, text: index % 3 === 0 ? LONG : SHORT, ...(index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}) }));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const turn of page.turns) {
+        const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        if (before.band !== next.band || before.bend || next.bend) continue;
+        const along = alongLane(page.band!, before, next, turn.at);
+        const label = `case ${n} ${turn.id}: ${along.fromBefore.toFixed(2)} / ${along.toNext.toFixed(2)} mm`;
+        expect(along.offLane, label).toBeLessThan(0.05);
+        if (onAStep(page, along.midway, turn.box)) continue;
+        midway += 1;
+        expect(Math.abs(along.fromBefore - along.toNext), label).toBeLessThan(0.25);
+      }
+    }
+    expect(midway).toBeGreaterThan(4);
+  });
+
+  it('centres glyphs that stand clear nowhere along the ribbon on its middle all the same, over what they overlap', () => {
+    // Zach, 2026-10-15, the crane's enlarge arrow before step 24: "the middle of the arrow should kinda be sitting
+    // over the green centre", not moved off the ribbon to clear a caption and a number. Fourteen turn-overs stacked
+    // (98 mm) stand clear nowhere along most stretches between two pictures.
+    const stack = Array.from({ length: 14 }, (_, n) => over(`turn-${n}`));
+    const plain = layout(steps(9), { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+    const { widthMm: W, heightMm: H } = layout(steps(9), { layout: 'flow', stepsPerPage: 9 }).paper;
+    let centred = 0;
+    for (const k of plain.cells.keys()) {
+      if (k === 0) continue;
+      const list = steps(9, (index) => (index === k ? { turnsBefore: stack } : {}));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+      const [first, last] = [page.turns[0]!, page.turns.at(-1)!];
+      const size = { w: Math.max(...page.turns.map((turn) => turn.box.w)), h: last.at.y + last.box.h / 2 - (first.at.y - first.box.h / 2) };
+      const middle = { x: first.at.x, y: (first.at.y - first.box.h / 2 + last.at.y + last.box.h / 2) / 2 };
+      const along = alongLane(page.band!, before, next, middle);
+      const onPaper = (at: { x: number; y: number }) =>
+        at.x >= TURN_GUTTER_MM / 2 && at.x <= W - TURN_GUTTER_MM / 2 && at.y >= size.h / 2 && at.y <= H - size.h / 2;
+      if (along.stretch.some((point) => onPaper(point) && !onAStep(page, point, size))) continue;
+      centred += 1;
+      const label = `step ${k}: ${along.fromBefore.toFixed(2)} / ${along.toNext.toFixed(2)} mm, ${along.offLane.toFixed(2)} mm off`;
+      expect(along.offLane, label).toBeLessThan(0.05);
+      expect(Math.abs(along.fromBefore - along.toNext), label).toBeLessThan(0.25);
+    }
+    expect(centred).toBeGreaterThan(1);
+  });
+
+  it('faces a glyph across a bend the way the ribbon heads where it stands: the row it leaves before the bend’s deepest point, the next from there on', () => {
+    // Zach, 2026-10-15, the crane's 2 → 3 turn-over, moved midway along the ribbon to before the bend: "Now the
+    // turnover symbol between two and three is backwards". It faced the row it leads into, as it did at the bend's
+    // deepest point, where the ribbon runs upright and that is the way on; before that point the ribbon still heads
+    // the way of the row it leaves.
+    const tall = paper(150, 600);
+    const wide = paper(700, 300);
+    const cases = [
+      [paper(400), paper(400), tall, wide, paper(400), paper(400), tall, wide, paper(400)],
+      [wide, paper(400), tall, paper(400), wide, tall, paper(400), wide, tall],
+      [tall, tall, tall, wide, wide, wide, tall, tall, tall],
+      [wide, wide, paper(250), tall, tall, wide, wide, paper(250), tall],
+      [paper(250), paper(250), paper(250), tall, paper(400), tall, wide, wide, wide],
+    ];
+    let [leaving, entering] = [0, 0];
+    for (const [n, shapes] of cases.entries()) {
+      const list = steps(9, (index) => ({ picture: shapes[index]!, ...(index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}) }));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const turn of page.turns) {
+        const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        if (before.band === next.band || before.bend || next.bend) continue;
+        const along = alongLane(page.band!, before, next, turn.at);
+        // The bend's deepest point: where the lane stands furthest out toward the side the row before reads to.
+        const outward = before.rightToLeft ? -1 : 1;
+        const deepest = along.stretch.reduce((best, point) => (outward * point.x > outward * best.x ? point : best));
+        const label = `case ${n} ${turn.id}: ${(along.s - deepest.s).toFixed(2)} mm from the deepest point, heading ${along.across.toFixed(2)} across`;
+        if (along.s < deepest.s - 0.5) {
+          leaving += 1;
+          expect(turn.rightToLeft, label).toBe(Boolean(before.rightToLeft));
+        } else {
+          entering += 1;
+          expect(turn.rightToLeft, label).toBe(Boolean(next.rightToLeft));
+        }
+        // Never against a ribbon that runs more across the page than up or down it there.
+        if (Math.abs(along.across) > Math.SQRT1_2) expect(turn.rightToLeft, label).toBe(along.across < 0);
+      }
+    }
+    expect(leaving).toBeGreaterThan(0);
+    expect(entering).toBeGreaterThan(0);
+  });
+
+  it('stands one across a bend midway along the ribbon past a step dragged off its home, clear of the steps as drawn', () => {
+    // Zach's crane, page 2: every step placed by hand, step 15 dragged 32.5 mm in from where the layout put it. The
+    // ribbon follows the pictures as placed; the glyph on it keeps clear of them as drawn, not of where 15 would
+    // have stood, which is empty paper.
+    const list = steps(9, (index) => (index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}));
+    const plain = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+    const afterBends = plain.cells.flatMap((cell, k) => {
+      const before = plain.cells[k - 1];
+      return before && before.band !== cell.band && !before.bend && !cell.bend ? [k] : [];
+    });
+    expect(afterBends.length).toBeGreaterThan(0);
+    let homeInTheWay = 0;
+    for (const along of [20, 30, 40]) {
+      const placed = list.map((step, k) => (afterBends.includes(k) ? { ...step, place: { frame: [along, 0] as [number, number] } } : step));
+      const page = layout(placed, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const k of afterBends) {
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        const turn = page.turns.find((each) => each.beforeStepId === next.stepId)!;
+        const measured = alongLane(page.band!, before, next, turn.at);
+        const label = `${along} mm, ${turn.id}: ${measured.fromBefore.toFixed(2)} / ${measured.toNext.toFixed(2)} mm`;
+        expect(onAStep(page, turn.at, turn.box), label).toBe(false);
+        if (onAStep(page, measured.midway, turn.box)) continue;
+        // Where it stood at home, the step would have been in the way.
+        const home = plain.cells[k]!;
+        const { x, y, w, h } = partBox(home, 'picture');
+        const [hw, hh] = [turn.box.w / 2 + GLYPH_CLEAR_MM, turn.box.h / 2 + GLYPH_CLEAR_MM];
+        const { midway } = measured;
+        if (midway.x + hw > x && midway.x - hw < x + w && midway.y + hh > y && midway.y - hh < y + h) homeInTheWay += 1;
+        expect(measured.offLane, label).toBeLessThan(0.05);
+        expect(Math.abs(measured.fromBefore - measured.toNext), label).toBeLessThan(0.25);
+      }
+    }
+    expect(homeInTheWay).toBeGreaterThan(0);
+  });
+
+  it('prints one before a flow page’s first step at its leading edge, half a turn’s gutter out, as on the page before there is no row to turn from', () => {
     const list = steps(11, (index) => (index === 0 || index === 9 ? { turnsBefore: [over(`turn-${index}`)] } : {}));
-    const result = layout(list, { layout: 'flow', columns: 3, rows: 3 });
+    const result = layout(list, { layout: 'flow', stepsPerPage: 9 });
     for (const [pageIndex, id] of [
       [0, 'turn-0'],
       [1, 'turn-9'],
@@ -846,12 +1640,12 @@ describe('turns between steps on the page (D22)', () => {
       const page = result.pages[pageIndex]!;
       const first = page.cells[0]!;
       const turn = page.turns.find((each) => each.id === id)!;
-      expect(turn.at.x, id).toBeCloseTo(first.pictureMm.x - (first.cellMm.w - first.pictureMm.size) / 2, 6);
+      expect(turn.at.x, id).toBeCloseTo(Math.max(TURN_GUTTER_MM / 2, first.cellMm.x - PACKED_TURN_GUTTER_MM / 2), 6);
       expect(turn.at.y, id).toBeCloseTo(first.drawMm.y + first.drawMm.h / 2, 6);
     }
   });
 
-  it('reads a flow row that runs right to left from its right, and says which way each turn’s row reads', () => {
+  it('reads a flow band that runs right to left from its right, and says which way each turn’s band reads', () => {
     const list = steps(6, (index) =>
       index === 1
         ? { turnsBefore: [over('turn-first-row')] }
@@ -865,21 +1659,27 @@ describe('turns between steps on the page (D22)', () => {
                 ? { turnsAfter: [over('turn-end')] }
                 : {}
     );
-    const result = layout(list, { layout: 'flow', columns: 2, rows: 3 });
-    // Steps 3 and 4 share the second row, read right to left: the turn is between them.
-    const [, , third, fourth] = result.pages[0]!.cells;
-    expect(third!.pictureMm.x).toBeGreaterThan(fourth!.pictureMm.x);
-    const byId = new Map(result.pages[0]!.turns.map((turn) => [turn.id, turn]));
-    expect(byId.get('turn-a')!.at.x).toBeCloseTo((fourth!.pictureMm.x + fourth!.pictureMm.size + third!.pictureMm.x) / 2, 6);
-    // Each in the row of the step it comes before, or after the last: one
-    // across into a row reads as that row does.
-    expect(Object.fromEntries([...byId].map(([id, turn]) => [id, turn.rightToLeft]))).toEqual({
-      'turn-first-row': false,
-      'turn-into': true,
-      'turn-a': true,
-      'turn-across': false,
-      'turn-end': false,
-    });
+    const result = layout(list, { layout: 'flow', stepsPerPage: 6 });
+    const page = result.pages[0]!;
+    const byId = new Map(page.turns.map((turn) => [turn.id, turn]));
+    // Each in the band of the step it comes before, or after the last; one across a bend reads as the ribbon
+    // heads where it stands (`faces a glyph across a bend`). Between two steps of a band read right to left,
+    // between their boxes, the later on the left.
+    let backwards = 0;
+    for (const turn of page.turns) {
+      const k = turn.beforeStepId === null ? page.cells.length - 1 : page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+      const [before, next] = [page.cells[k - 1], page.cells[k]!];
+      const acrossBend = Boolean(before && turn.beforeStepId !== null && (before.band !== next.band || before.bend || next.bend));
+      if (!acrossBend) expect(turn.rightToLeft, turn.id).toBe(Boolean(next.rightToLeft));
+      else expect([Boolean(before!.rightToLeft), Boolean(next.rightToLeft)], turn.id).toContain(turn.rightToLeft);
+      if (turn.beforeStepId === null || !before || before.band !== next.band || before.bend || next.bend || !next.rightToLeft) continue;
+      backwards += 1;
+      expect(next.cellMm.x, turn.id).toBeLessThan(before.cellMm.x);
+      expect(turn.at.x, turn.id).toBeGreaterThan(next.cellMm.x + next.cellMm.w);
+      expect(turn.at.x, turn.id).toBeLessThan(before.cellMm.x);
+    }
+    expect(byId.size).toBe(5);
+    expect(backwards).toBeGreaterThan(0);
     // A grid reads every row left to right.
     expect(layout(list, { columns: 2, rows: 3 }).pages[0]!.turns.every((turn) => !turn.rightToLeft)).toBe(true);
   });
@@ -1052,20 +1852,49 @@ describe('enlarged steps on the page (Revision 2)', () => {
     expect(cells.get('step-4')!.mmPerUnit).toBe(cells.get('step-0')!.mmPerUnit);
   });
 
-  it('prints at a typed Size times the area, held to its room, and a new arrow starts a run of its own', () => {
-    const list = steps(4, (index) =>
-      index === 1 ? enlarged({ arrowFrom: from('step-0'), scale: 2 }) : index === 2 ? enlarged({ scale: 2 }) : index === 3 ? enlarged({ scale: 6 }) : {}
-    );
-    const cells = cellsOf(layout(list));
+  it('prints at a typed Size times the area, past its room as a pin is, every other step where it was', () => {
+    const sized = (last: number) =>
+      steps(4, (index) =>
+        index === 1 ? enlarged({ arrowFrom: from('step-0'), scale: 2 }) : index === 2 ? enlarged({ scale: 2 }) : index === 3 ? enlarged({ scale: last }) : {}
+      );
+    const cells = cellsOf(layout(sized(6)));
     const areaMm = 0.3 * 400 * cells[0]!.mmPerUnit!;
     expect(cells[1]!.frameMm).toBeCloseTo(2 * areaMm, 9);
     expect(cells[1]!.zoom).toEqual({ asked: 2, printed: expect.closeTo(2, 9), reduced: false });
     // The same Size after it: the same run, the same size.
     expect(cells[2]!.frameMm).toBeCloseTo(2 * areaMm, 9);
-    // Six times the run's area is more than its room holds: as large as it does, and reduced.
-    expect(cells[3]!.zoom!.asked).toBe(6);
-    expect(cells[3]!.zoom!.reduced).toBe(true);
-    expect(cells[3]!.frameMm).toBeCloseTo(cells[3]!.drawMm.w, 6);
+    // Six times the run's area is more than its room holds: drawn so all the same, as a size pinned by hand is
+    // (Zach, 2026-10-12) — wider than the room, its caption pushed down under it, and nothing said of a room.
+    expect(cells[3]!.frameMm).toBeCloseTo(6 * areaMm, 9);
+    expect(cells[3]!.zoom).toEqual({ asked: 6, printed: expect.closeTo(6, 9), reduced: false });
+    expect(cells[3]!.scaleReduced).toBe(false);
+    expect(cells[3]!.drawMm.w).toBeCloseTo(6 * areaMm, 6);
+    expect(cells[3]!.drawMm.w).toBeGreaterThan(cells[0]!.drawMm.w);
+    expect(cells[3]!.text.firstBaseline).toBeGreaterThan(cells[3]!.drawMm.y + cells[3]!.drawMm.h);
+    expect(cells[3]!.drawMm.y + cells[3]!.drawMm.h).toBeGreaterThan(cells[3]!.cellMm.y + cells[3]!.cellMm.h);
+    // Nothing else moves for it: every other step is drawn as with a Size its room holds.
+    const small = cellsOf(layout(sized(1.25)));
+    const smallAreaMm = 0.3 * 400 * small[0]!.mmPerUnit!;
+    expect(small[3]!.frameMm).toBeCloseTo(1.25 * smallAreaMm, 9);
+    expect(small[3]!.drawMm.h).toBeLessThan(cells[3]!.drawMm.h);
+    for (const at of [0, 1, 2]) expect(cells[at], `step ${at}`).toEqual(small[at]);
+  });
+
+  it('packs a fresh flow page for an enlarged step’s Size, however large: its box holds it as it prints', () => {
+    // Six times the area is more than the reference cell's room: packed at it all the same, so Re-pack Page,
+    // which packs as a fresh page does, gives a Size grown past its box room for it.
+    const list = steps(4, (index) => (index === 1 ? enlarged({ arrowFrom: from('step-0'), scale: 6 }) : {}));
+    const result = layout(list, { layout: 'flow', stepsPerPage: 4 });
+    expect(result.pages[0]!.packing!.packed).toBe(true);
+    const [area, zoomed] = cellsOf(result);
+    const areaMm = 0.3 * 400 * area!.mmPerUnit!;
+    // To the arrangement's rounding: a packed page keeps its scales to a ten-thousandth of a mm.
+    expect(zoomed!.frameMm).toBeCloseTo(6 * areaMm, 3);
+    expect(zoomed!.zoom).toEqual({ asked: 6, printed: expect.closeTo(6, 4), reduced: false });
+    const { cellMm: box, drawMm: drawn } = zoomed!;
+    expect(drawn.x).toBeGreaterThanOrEqual(box.x - 1e-6);
+    expect(drawn.x + drawn.w).toBeLessThanOrEqual(box.x + box.w + 1e-6);
+    expect(drawn.y + drawn.h).toBeLessThanOrEqual(box.y + box.h + 1e-6);
   });
 
   it('measures every step of a run against the run’s area, whatever Size it asks for', () => {
@@ -1166,54 +1995,65 @@ describe('enlarged steps on the page (Revision 2)', () => {
       expect(arrow!.at.y).toBeCloseTo((a!.drawMm.y + a!.drawMm.h / 2 + b!.drawMm.y + b!.drawMm.h / 2) / 2, 6);
     });
 
-    it('reads a flow row right to left: between the two pictures, mirrored', () => {
-      const result = layout(arrowed(4, 2), { layout: 'flow', columns: 2, rows: 3 });
-      const [, , third, fourth] = result.pages[0]!.cells;
-      const [arrow] = result.pages[0]!.zoomArrows;
-      expect(third!.pictureMm.x).toBeGreaterThan(fourth!.pictureMm.x);
+    /**
+     * A flow diagram of `count` steps, 9 a page, with an arrow before the step after `areaAt`: the first
+     * `areaAt` whose step lands, on page `pageIndex`, where `where` says the packing puts it — in a band read
+     * right to left, at a bend.
+     */
+    const flowArrowed = (count: number, where: (before: LayoutCell, next: LayoutCell) => boolean, pageIndex = 0) => {
+      for (let areaAt = 0; areaAt < count - 1; areaAt += 1) {
+        const result = layout(arrowed(count, areaAt), { layout: 'flow', stepsPerPage: 9 });
+        const page = result.pages[pageIndex]!;
+        const k = page.cells.findIndex((cell) => cell.stepId === `step-${areaAt + 1}`);
+        if (k > 0 && where(page.cells[k - 1]!, page.cells[k]!)) return { result, page, before: page.cells[k - 1]!, next: page.cells[k]!, areaAt };
+      }
+      throw new Error('no such place');
+    };
+    const inBand = (before: LayoutCell, next: LayoutCell) => before.band === next.band && !before.bend && !next.bend;
+    const atBend = (before: LayoutCell, next: LayoutCell) => before.band !== next.band && !before.bend && !next.bend;
+
+    it('reads a flow band right to left: between the two pictures, mirrored', () => {
+      const { page, before, next } = flowArrowed(9, (before, next) => inBand(before, next) && Boolean(next.rightToLeft));
+      const [arrow] = page.zoomArrows;
+      expect(before.cellMm.x).toBeGreaterThan(next.cellMm.x);
       expect(arrow!.rightToLeft).toBe(true);
       expect(arrow!.liftable).toBe(true);
-      expect(arrow!.at.x).toBeCloseTo((fourth!.pictureMm.x + fourth!.pictureMm.size + third!.pictureMm.x) / 2, 6);
+      // On the band between the two boxes, the later on the left.
+      expect(arrow!.at.x).toBeGreaterThan(next.cellMm.x + next.cellMm.w);
+      expect(arrow!.at.x).toBeLessThan(before.cellMm.x);
+      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(0.01);
     });
 
-    it('prints across a flow row’s end in the lane’s bend, where a turn would, clear of the words above and the number below', () => {
-      const result = layout(arrowed(6, 2), { layout: 'flow', columns: 3, rows: 3 });
-      const page = result.pages[0]!;
+    it('prints across a flow page’s bend on the band, where a turn would', () => {
+      const { page, areaAt } = flowArrowed(9, atBend);
       const [arrow] = page.zoomArrows;
-      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(0.05);
-      const [above, below] = [page.cells[2]!, page.cells[3]!];
-      const textFoot =
-        above.text.lines.length > 0
-          ? above.text.firstBaseline + (above.text.lines.length - 1) * STEP_TEXT_LEADING_MM + 0.3 * STEP_TEXT_SIZE_MM
-          : above.drawMm.y + above.drawMm.h;
-      expect(arrow!.at.y - arrow!.box.h / 2).toBeGreaterThan(textFoot);
-      expect(arrow!.at.y + arrow!.box.h / 2).toBeLessThan(below.numberAt.y - 0.75 * STEP_NUMBER_SIZE_MM);
+      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(0.01);
       expect(arrow!.liftable).toBe(false);
       // Where a turn there prints.
-      const turned = layout(steps(6, (index) => (index === 3 ? { turnsBefore: [over('turn-a')] } : {})), { layout: 'flow', columns: 3, rows: 3 });
+      const turned = layout(steps(9, (index) => (index === areaAt + 1 ? { turnsBefore: [over('turn-a')] } : {})), { layout: 'flow', stepsPerPage: 9 });
       expect(arrow!.at.x).toBeCloseTo(turned.pages[0]!.turns[0]!.at.x, 1);
+      expect(arrow!.at.y).toBeCloseTo(turned.pages[0]!.turns[0]!.at.y, 1);
     });
 
-    it('points across a flow row’s end at the enlarged step it leads to, its bow on the outside of the bend', () => {
+    it('points across a flow page’s bend at the enlarged step it leads to, its bow on the outside of the bend', () => {
       // Zach, 2026-10-07: in the lane's bend it is turned toward the step, not mirrored the next row's way.
-      const page = layout(arrowed(6, 2), { layout: 'flow', columns: 3, rows: 3 }).pages[0]!;
+      const { page, next } = flowArrowed(9, atBend);
       const [arrow] = page.zoomArrows;
-      const next = page.cells[3]!;
       const middle = { x: next.pictureMm.x + next.pictureMm.size / 2, y: next.drawMm.y + next.drawMm.h / 2 };
       expect(arrow!.aim).not.toBeNull();
       expect(arrow!.aim!.angle).toBeCloseTo(Math.atan2(middle.y - arrow!.at.y, middle.x - arrow!.at.x), 9);
-      // Down into the next row, which lies below the bend at the right-hand end of the first.
-      expect(Math.sin(arrow!.aim!.angle)).toBeGreaterThan(0.5);
-      // The row before read left to right: the bow on the bend's outside, the page's right, which a turn
+      // Down and in to the next band, which lies below the bend at the right-hand end of the first.
+      expect(Math.sin(arrow!.aim!.angle)).toBeGreaterThan(0);
+      expect(Math.cos(arrow!.aim!.angle)).toBeLessThan(0);
+      // The band before read left to right: the bow on the bend's outside, the page's right, which a turn
       // down puts the arrow's up on unflipped.
       expect(arrow!.aim!.flipped).toBe(false);
       expect(arrow!.box).toEqual(SIZES.aimedBox(arrow!.aim!));
-      expect(arrow!.box.h).toBeGreaterThan(ARROW.h);
-      // On a right page, read from the bottom up, the next row is above: up, and flipped to keep the bow outside.
-      const up = layout(arrowed(18, 11), { layout: 'flow', columns: 3, rows: 3 }).pages[1]!;
+      // On a right page, read from the bottom up, the next band is above: up, and flipped to keep the bow outside.
+      const { page: up } = flowArrowed(18, (before, next) => atBend(before, next), 1);
       expect(up.side).toBe('right');
       const [rising] = up.zoomArrows;
-      expect(Math.sin(rising!.aim!.angle)).toBeLessThan(-0.5);
+      expect(Math.sin(rising!.aim!.angle)).toBeLessThan(0);
       expect(rising!.aim!.flipped).toBe(true);
       // Along a row, in a grid's row break and across a page it points along its row, as before.
       expect(layout(arrowed(3, 0)).pages[0]!.zoomArrows[0]!.aim).toBeNull();
@@ -1237,9 +2077,9 @@ describe('enlarged steps on the page (Revision 2)', () => {
       const [arrow] = result.pages[1]!.zoomArrows;
       expect(arrow).toMatchObject({ beforeStepId: 'step-9', areaStepId: 'step-8', liftable: false });
       expect(arrow!.at.x).toBeCloseTo(first.pictureMm.x - (first.cellMm.w - first.pictureMm.size) / 2, 6);
-      expect(zoomSplits(result, arrowed(10, 8))).toEqual([{ step: 10, area: 9 }]);
+      expect(zoomSplits(result, arrowed(10, 8), 'grid')).toEqual([{ step: 10, area: 9 }]);
       // On one page, none.
-      expect(zoomSplits(layout(arrowed(4, 1)), arrowed(4, 1))).toEqual([]);
+      expect(zoomSplits(layout(arrowed(4, 1)), arrowed(4, 1), 'grid')).toEqual([]);
     });
 
     it('says only the splits Start a New Page Here on the area’s step would mend', () => {
@@ -1248,15 +2088,32 @@ describe('enlarged steps on the page (Revision 2)', () => {
       const asked = arrowed(5, 2, (index) => (index === 3 ? { breakBefore: true } : {}));
       const askedLayout = layout(asked, grid);
       expect(askedLayout.pages[1]!.zoomArrows).toHaveLength(1);
-      expect(zoomSplits(askedLayout, asked)).toEqual([]);
+      expect(zoomSplits(askedLayout, asked, 'grid')).toEqual([]);
       // The area's step starts its page already, one step to a page: no break brings them together.
       const single = arrowed(3, 1);
       const singleLayout = layout(single, { columns: 1, rows: 1 });
       expect(singleLayout.pages[2]!.zoomArrows).toHaveLength(1);
-      expect(zoomSplits(singleLayout, single)).toEqual([]);
+      expect(zoomSplits(singleLayout, single, 'grid')).toEqual([]);
       // Nine to a page, the area on its last cell: a break before it mends it, so it is said.
       const full = arrowed(10, 8);
-      expect(zoomSplits(layout(full, grid), full)).toEqual([{ step: 10, area: 9 }]);
+      expect(zoomSplits(layout(full, grid), full, 'grid')).toEqual([{ step: 10, area: 9 }]);
+    });
+
+    it('says no split where the enlarged step starts a flow page of its own count: that page was asked for', () => {
+      // Step 4 starts a page of three by its count, the area on step 3 before it.
+      const counted = arrowed(6, 2, (index) => (index === 3 ? { pageSteps: 3 } : {}));
+      const flow = { layout: 'flow', stepsPerPage: 9 } as const;
+      const countedLayout = layout(counted, flow);
+      expect(countedLayout.pages.map((page) => page.cells.length)).toEqual([3, 3]);
+      expect(countedLayout.pages[1]!.zoomArrows).toHaveLength(1);
+      expect(zoomSplits(countedLayout, counted, 'flow')).toEqual([]);
+      // Three to a page by default instead, the same pages: the split is said.
+      const plain = arrowed(6, 2);
+      expect(zoomSplits(layout(plain, { ...flow, stepsPerPage: 3 }), plain, 'flow')).toEqual([{ step: 4, area: 3 }]);
+      // A grid ignores the count: one page, nothing split, and the count asks for nothing there.
+      const grid = { columns: 3, rows: 3 } as const;
+      expect(layout(counted, grid).pages).toHaveLength(1);
+      expect(zoomSplits(layout(counted, grid), counted, 'grid')).toEqual([]);
     });
 
     it('stands after the turns before its step, each clear of the next, and then is not lifted', () => {
@@ -1269,15 +2126,6 @@ describe('enlarged steps on the page (Revision 2)', () => {
       // The stack centred where one glyph alone would be.
       const alone = layout(arrowed(3, 0)).pages[0]!.zoomArrows[0]!;
       expect((turn!.at.y - turn!.box.h / 2 + arrow!.at.y + arrow!.box.h / 2) / 2).toBeCloseTo(alone.at.y, 6);
-    });
-
-    it('keeps its room at a flow row’s end, as turns there keep theirs', () => {
-      const list = arrowed(6, 2, (index) => (index === 2 ? { text: `${LONG} ${LONG} ${LONG}` } : {}));
-      const page = layout(list, { layout: 'flow', columns: 3, rows: 3 }).pages[0]!;
-      const above = page.cells[2]!;
-      const [arrow] = page.zoomArrows;
-      const textFoot = above.text.firstBaseline + (above.text.lines.length - 1) * STEP_TEXT_LEADING_MM + 0.3 * STEP_TEXT_SIZE_MM;
-      expect(arrow!.at.y - arrow!.box.h / 2).toBeGreaterThanOrEqual(textFoot + TURN_STACK_CLEAR_MM - 1e-6);
     });
 
     it('keeps off every picture and on the paper, whatever the margin, grid or flow', () => {

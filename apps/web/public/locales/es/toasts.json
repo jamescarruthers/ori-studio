@@ -50,6 +50,13 @@
       "someFailed_other": "No se pudieron capturar {{count}} pasos desde Plegar, así que se omitieron.",
       "stepGone": "Ese paso ya no está en la secuencia de Plegar."
     },
+    "import": {
+      "otherWorkspaceFirst": "Primero deshaz o rehaz las ediciones posteriores en el otro espacio de trabajo: la importación cambió Edición y Diagrama.",
+      "restoreFailed": "No se pudieron restaurar los pasos importados."
+    },
+    "placementsReflowed_one": "{{count}} pasos movidos volvieron a sus celdas",
+    "placementsReflowed_many": "{{count}} pasos movidos volvieron a sus celdas",
+    "placementsReflowed_other": "{{count}} pasos movidos volvieron a sus celdas",
     "references": {
       "addedSteps": "Añadidos como pasos {{first}}–{{last}}",
       "addedTurnOvers_one": "Vuelta añadida",
@@ -90,7 +97,15 @@
     "uploadRejected": "no es un SVG que Ori Studio pueda leer con seguridad",
     "uploadTooLarge": "es demasiado grande",
     "uploadUnreadable": "no se pudo leer la imagen",
-    "uploadUnsupported": "no es una imagen"
+    "uploadUnsupported": "no es una imagen",
+    "zoom": {
+      "updatedList": "Pasos ampliados {{numbers}} actualizados",
+      "updatedOne": "Paso ampliado {{number}} actualizado",
+      "updatedRange": "Pasos ampliados {{first}}–{{last}} actualizados",
+      "updatedSome": "Se actualizaron {{placed}} de {{total}} pasos ampliados",
+      "updatedSomeDetail": "Los demás no pudieron tomar un marco de esta área.",
+      "updateFailed": "No se pudieron actualizar los pasos ampliados"
+    }
   },
   "diagramExport": {
     "saved": "Se exportó {{name}}"

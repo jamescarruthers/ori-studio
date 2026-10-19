@@ -32,9 +32,9 @@ import { useFoldImportUiStore } from '../../../fold/io/foldImportUiStore';
 import { FoldImportModal } from './FoldImportDialog';
 
 import { regionReferenceFor } from '../../../cp-workspace/regions/regionReference';
-import { resolveCpSegments } from '../../../lib/creasePatternSegmentation';
-import { twoSquaresSegmentation } from '../../../diagram/capture/capture.fixtures';
-const sheets = resolveCpSegments(twoSquaresSegmentation()).map(segment => ({ segment, thumbnail: null }));
+import { sheetRegions } from '../../../cp-workspace/sheets/cpSheetRegions';
+import { twoSquaresIndex } from '../../../diagram/capture/capture.fixtures';
+const sheets = sheetRegions(twoSquaresIndex()).map(sheet => ({ sheet, thumbnail: null }));
 vi.mock('../../../cp-workspace/sheets/useCpPatternSheets', () => ({
   useCpPatternSheets: () => ({ status: 'ready', sheets }),
 }));
@@ -110,7 +110,7 @@ describe('Import CP’s dialog', () => {
   it('links the selected Edit pattern as it is pressed', () => {
     open();
     click(button('Pattern 2'));
-    expect(harness.flow.open).toHaveBeenCalledExactlyOnceWith({ kind: 'project-cp', region: regionReferenceFor(sheets[1]!.segment) });
+    expect(harness.flow.open).toHaveBeenCalledExactlyOnceWith({ kind: 'project-cp', region: regionReferenceFor(sheets[1]!.sheet) });
   });
 
   it('says why an import was refused, with the fix the engine leaves open', () => {

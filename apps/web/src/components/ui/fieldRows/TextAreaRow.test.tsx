@@ -5,6 +5,7 @@ import {
   endOpenCanvasSessions,
   resetCanvasSessionEndersForTests,
 } from '../../../cp-workspace/canvasObjects/canvasSessions';
+import { TooltipProvider } from '../Tooltip';
 import { TextAreaRow } from './TextAreaRow';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -83,6 +84,26 @@ describe('TextAreaRow', () => {
     const label = container?.querySelector('label');
     expect(label?.textContent).toBe('Instruction');
     expect(label?.htmlFor).toBe(field().id);
+  });
+
+  it('steps in under the row it belongs to, where asked', () => {
+    render(<TextAreaRow label="Note" nested value="" onCommit={vi.fn()} />);
+    expect(field().closest('[data-nested]')).not.toBeNull();
+    rerender(<TextAreaRow label="Note" value="" onCommit={vi.fn()} />);
+    expect(field().closest('[data-nested]')).toBeNull();
+  });
+
+  it('explains itself behind a help mark beside its label, which stays out of the field’s name', () => {
+    render(
+      <TooltipProvider>
+        <TextAreaRow label="Note" help="Printed under the credits." value="" onCommit={vi.fn()} />
+      </TooltipProvider>
+    );
+    const help = container?.querySelector('[data-field-help]');
+    expect(help?.getAttribute('aria-label')).toBe('Printed under the credits.');
+    const label = container?.querySelector('label');
+    expect(label?.textContent).toBe('Note');
+    expect(label?.contains(help!)).toBe(false);
   });
 
   it('commits once typing pauses, and not on every keystroke', () => {

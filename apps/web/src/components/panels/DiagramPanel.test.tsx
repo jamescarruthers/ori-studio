@@ -2,16 +2,18 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { readDiagram } from '../../diagram/document/diagramFile';
+import { handleMenuAction } from '../../commands/menuActions';
 import { handleShortcutRuntimeKeyDown } from '../../keyboard/shortcutRuntime';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { CommandDialogModal } from '../CommandDialogModal';
 import { TooltipProvider } from '../ui/Tooltip';
+import { DiagramPagePanel } from './DiagramPagePanel';
 import { DiagramPanel } from './DiagramPanel';
 import { stepsIn } from '../../diagram/document/diagramSteps.fixtures';
 
 /**
  * The Diagram workspace through the store: what it shows for no diagram, what
- * Add step and the grid do to the store, and the header's title.
+ * Add step and the grid do to the store, and what the header holds.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -26,6 +28,15 @@ let root: Root | null = null;
 let host: HTMLDivElement | null = null;
 
 beforeEach(() => {
+  // Exercise the real virtualized grid with a viewport; jsdom has no layout.
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.hasAttribute('data-index') ? 100 : 1000;
+  });
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
   useWorkspaceStore.setState(initialState, true);
   host = document.createElement('div');
   document.body.append(host);
@@ -45,6 +56,8 @@ afterEach(() => {
   root = null;
   host?.remove();
   host = null;
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 const state = () => useWorkspaceStore.getState();
@@ -53,8 +66,6 @@ const buttonNamed = (name: string) =>
     | HTMLButtonElement
     | undefined;
 const options = () => [...(host?.querySelectorAll('[role="option"]') ?? [])] as HTMLElement[];
-const titleField = () => host?.querySelector('input[aria-label="Diagram title"]') as HTMLInputElement;
-const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
 
 /** A key as the app's one keydown listener hands it to the shortcut runtime. */
 function press(init: KeyboardEventInit, target: EventTarget = document.body) {
@@ -78,13 +89,6 @@ function addSteps(count: number) {
   return stepsIn(state().diagram!).map((step) => step.id);
 }
 
-function type(input: HTMLInputElement, value: string) {
-  act(() => {
-    setValue.call(input, value);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-}
-
 describe('DiagramPanel', () => {
   it('opens on an empty state without making a diagram', () => {
     expect(host?.textContent).toContain('Start a diagram');
@@ -93,7 +97,23 @@ describe('DiagramPanel', () => {
     expect(state().dirty).toBe(false);
   });
 
-  it('adds a step from the empty state, then from the header, each selected and counted', () => {
+  it('writes the title a new diagram starts with, “Add a title”, with its first edit (Zach, 2026-10-15)', () => {
+    act(() => buttonNamed('Add step')?.click());
+    expect(state().diagram?.title).toBe('Add a title');
+  });
+
+  it('holds the tabs and the verbs in its header: no title, which the Page pane sets, and no count (Zach, 2026-10-15)', () => {
+    addSteps(2);
+    // The header opens on Steps | Pages: nothing to type in, and nothing before the tabs.
+    expect(host?.querySelector('input, textarea')).toBeNull();
+    const first = host?.querySelector('input, textarea, button, [role="tab"]');
+    expect(first?.getAttribute('role')).toBe('tab');
+    expect(first?.textContent).toBe('Steps');
+    expect(host?.textContent).not.toContain('2 steps');
+    expect(host?.textContent).not.toContain('1 page');
+  });
+
+  it('adds a step from the empty state, then from the header, each selected', () => {
     // The empty state's own button, not the header's that precedes it.
     const heading = [...(host?.querySelectorAll('h2') ?? [])].find(
       (element) => element.textContent === 'Start a diagram'
@@ -107,13 +127,11 @@ describe('DiagramPanel', () => {
     expect(state().diagram?.steps).toHaveLength(1);
     expect(options()).toHaveLength(1);
     expect(options()[0].getAttribute('aria-selected')).toBe('true');
-    expect(host?.textContent).toContain('1 step');
 
     // The header's Add step: after the selected step.
     act(() => buttonNamed('Add step')?.click());
     expect(options()).toHaveLength(2);
     expect(options()[1].getAttribute('aria-selected')).toBe('true');
-    expect(host?.textContent).toContain('2 steps');
   });
 
   it('selects a card on click and drops the selection on a click between cards', () => {
@@ -126,21 +144,6 @@ describe('DiagramPanel', () => {
     expect(state().diagram?.steps).toHaveLength(2);
   });
 
-  it('renames the diagram on blur, and Escape keeps the old title', () => {
-    act(() => titleField().focus());
-    type(titleField(), 'Crane');
-    act(() => titleField().blur());
-    expect(state().diagram?.title).toBe('Crane');
-
-    act(() => titleField().focus());
-    type(titleField(), 'Crane, revised');
-    act(() => {
-      titleField().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    });
-    expect(state().diagram?.title).toBe('Crane');
-    expect(titleField().value).toBe('Crane');
-  });
-
   it('says a newer build’s diagram is read-only, and offers nothing that would change it', () => {
     act(() =>
       state().installDiagram(
@@ -149,7 +152,6 @@ describe('DiagramPanel', () => {
     );
     expect(host?.textContent).toContain('opens read-only');
     expect(buttonNamed('Add step')?.disabled).toBe(true);
-    expect(titleField().disabled).toBe(true);
   });
 
   describe('the views', () => {
@@ -167,7 +169,6 @@ describe('DiagramPanel', () => {
         vi.unstubAllGlobals();
       });
       addSteps(2);
-      expect(host?.textContent).toContain('2 steps · 1 page');
       const pages = [...(host?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find(
         (tab) => tab.textContent === 'Pages'
       )!;
@@ -177,6 +178,36 @@ describe('DiagramPanel', () => {
       expect(state().diagramView).toBe('pages');
       expect(analytics.trackDiagramViewSwitched).toHaveBeenCalledExactlyOnceWith('pages');
       // The cards are gone; the page view says what it is doing.
+      expect(options()).toHaveLength(0);
+      expect(host?.querySelector('[role="status"]')).not.toBeNull();
+    });
+
+    it('switches to the pages for a diagram of turns alone, which no step stands either side of', () => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        }
+      );
+      onTestFinished(() => {
+        vi.unstubAllGlobals();
+      });
+      act(() => {
+        state().insertDiagramTurn({ kind: 'turn-over', axis: 'vertical' });
+        state().insertDiagramTurn({ kind: 'turn-over', axis: 'horizontal' });
+      });
+      // In the Steps view the turns are cards.
+      expect(options()).toHaveLength(2);
+      const pages = [...(host?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find(
+        (tab) => tab.textContent === 'Pages'
+      )!;
+      act(() => {
+        pages.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+      });
+      expect(state().diagramView).toBe('pages');
+      // The page view, not the cards: and no turn drawn on it, with no step either side.
       expect(options()).toHaveLength(0);
       expect(host?.querySelector('[role="status"]')).not.toBeNull();
     });
@@ -221,12 +252,28 @@ describe('DiagramPanel', () => {
       expect(second).toBe(card.dataset.stepId);
     });
 
-    it('leaves the arrows, Home and End to the title field', () => {
+    it('leaves the arrows, Home and End to the title field, in the Page pane beside it', () => {
       const [first] = addSteps(2);
       act(() => state().selectDiagramStep(first));
-      act(() => titleField().focus());
+      const pane = document.createElement('div');
+      document.body.append(pane);
+      const paneRoot = createRoot(pane);
+      act(() =>
+        paneRoot.render(
+          <TooltipProvider>
+            <DiagramPagePanel />
+          </TooltipProvider>
+        )
+      );
+      onTestFinished(() => {
+        act(() => paneRoot.unmount());
+        pane.remove();
+      });
+      const label = [...pane.querySelectorAll('label')].find((each) => each.textContent === 'Title')!;
+      const titleField = document.getElementById(label.htmlFor) as HTMLTextAreaElement;
+      act(() => titleField.focus());
       for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) {
-        expect(press({ key }, titleField()), key).toBe(false);
+        expect(press({ key }, titleField), key).toBe(false);
       }
       expect(state().diagramSelectedStepId).toBe(first);
     });
@@ -268,30 +315,32 @@ describe('DiagramPanel', () => {
       });
       expect(state().diagramSelectedStepId).toBe(first);
       // Each row is its label, then the key that runs it where there is one.
+      // An empty step leads with the ways to give it a picture; the rest are submenus.
       const rows = menuItems();
-      expect(rows).toHaveLength(17);
+      expect(rows).toHaveLength(10);
       [
-        'Insert Step Before',
-        'Insert Step After',
-        'Insert Turn Over After',
-        'Insert Rotate After',
-        'Duplicate Step',
-        'Move Earlier',
-        'Move Later',
         'Upload Picture…',
         'Link Pattern…',
         'From References…',
         'Make Turn Over',
         'Make Rotate',
-        'Adjust Pose',
-        'Annotate',
-        'Export Picture…',
-        'Remove Picture',
+        'Duplicate Step',
+        'Insert',
+        'Move',
+        'Picture',
         'Delete Step',
       ].forEach((label, index) => expect(rows[index]).toMatch(new RegExp(`^${label}`)));
-      const moveLater = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
-        (item) => item.textContent?.startsWith('Move Later')
+      const move = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+        (item) => item.textContent === 'Move'
       );
+      act(() => {
+        move?.focus();
+        move?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      });
+      const moveLater = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+        (item) => item.textContent?.startsWith('Later')
+      );
+      expect(moveLater).toBeDefined();
       act(() => moveLater?.click());
       expect(stepsIn(state().diagram!).map((step) => step.id)).toEqual([second, first]);
     });
@@ -336,6 +385,54 @@ describe('DiagramPanel', () => {
       act(() => cancel?.click());
       expect(state().diagram?.steps).toHaveLength(2);
       expect((document.activeElement as HTMLElement | null)?.dataset.stepId).toBe(first);
+    });
+
+    it('deletes a step selected on the pages with Delete or Backspace, through its confirm, as on the cards', async () => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        }
+      );
+      onTestFinished(() => {
+        vi.unstubAllGlobals();
+      });
+      const [first] = addSteps(2);
+      act(() => state().setDiagramStepText(first, 'Fold in half.'));
+      // The Diagram's panel active, as the menu's Delete reads it.
+      useWorkspaceStore.setState({ activePanelId: 'diagram' });
+      // A click on a step on the pages selects it and its frame (Decision 7).
+      act(() => {
+        state().setDiagramView('pages');
+        state().selectDiagramStep(first);
+        state().selectDiagramPagesPart('frame');
+      });
+      const dialogTitle = () => document.querySelector('[role="dialog"]')?.getAttribute('aria-label');
+      const dialogButton = (name: string) =>
+        [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
+          (button) => button.textContent === name
+        );
+      for (const [key, answer] of [
+        ['Delete', 'Cancel'],
+        ['Backspace', 'Delete'],
+      ] as const) {
+        const menu = vi.fn(handleMenuAction);
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        let claimed = false;
+        act(() => {
+          claimed = handleShortcutRuntimeKeyDown(event, { context: { activeEditingContext: 'diagram' }, menu });
+        });
+        expect(claimed, key).toBe(true);
+        expect(menu).toHaveBeenCalledExactlyOnceWith('edit.delete');
+        await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+        expect(dialogTitle()).toBe('Delete step 1?');
+        act(() => dialogButton(answer)?.click());
+        await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      }
+      expect(stepsIn(state().diagram!).map((step) => step.id)).not.toContain(first);
+      expect(state().diagram?.steps).toHaveLength(1);
     });
 
     it('offers Add Step on the space between cards', () => {
@@ -385,7 +482,7 @@ describe('DiagramPanel', () => {
       expect(stepsIn(state().diagram!).map((step) => step.id)[1]).toBe(second);
       expect(state().diagram?.steps).toHaveLength(2);
       expect(state().diagramSelectedStepId).toBe(second);
-      await vi.waitFor(() => expect(options()[1].querySelector('img')).not.toBeNull());
+      await vi.waitFor(() => expect(options()[1].querySelector('[data-picture-preview]')).not.toBeNull());
     });
 
     it('adds several dropped pictures as steps after the card they land on', async () => {
@@ -428,7 +525,7 @@ describe('DiagramPanel', () => {
 
     it('takes a picture dropped on the header', async () => {
       addSteps(1);
-      drag('drop', titleField(), [svgFile('a.svg')]);
+      drag('drop', host!.querySelector('[role="tablist"]')!, [svgFile('a.svg')]);
       await vi.waitFor(() => expect(state().diagram?.steps).toHaveLength(1));
       await vi.waitFor(() => expect(stepsIn(state().diagram!)[0].picture).not.toBeNull());
     });

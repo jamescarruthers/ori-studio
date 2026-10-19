@@ -11,21 +11,22 @@ import {
 } from '../../analytics';
 import { fold3dRefusalMessage } from '../../cp-workspace/folded/foldedFigureNotice';
 import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
-import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
+import { regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
-import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramCaptureOutcome } from '../../store/workspaceStore/diagramCapture';
 import {
   isLockedStep,
+  nearestEarlierShowAs,
   renderToShowAs,
   showAsOf,
   DEFAULT_LAYER_SPREAD,
   spreadStartsFor,
   type DiagramLayerSpread,
   type DiagramCpRender,
+  type DiagramDocument,
   type DiagramShowAs,
   type DiagramStep,
   stepById,
@@ -51,13 +52,20 @@ export function openDiagramPatternPicker(stepId: string): void {
 
 /**
  * The way the pattern picker last linked a pattern, this session: what it
- * offers the next new link (D19). A relink offers the way the step is shown.
+ * offers a new link with no linked step before it (D19).
  */
 let lastLinkedAs: DiagramShowAs = 'crease-pattern';
 
-/** What the picker offers a step to be shown as, until the reader picks another way. */
-export function pickerShowAs(step: DiagramStep | null): DiagramShowAs {
-  return step?.source?.kind === 'cp' ? showAsOf(step.source.render) : lastLinkedAs;
+/**
+ * What the picker offers a step to be shown as, until the reader picks
+ * another way: a relink, the way the step is shown; a new link, the way the
+ * nearest linked step before it is (review fix 3, amending D19), so a step
+ * after a folded run links folded and stays in the run; with none before it,
+ * the way the picker last linked.
+ */
+export function pickerShowAs(document: DiagramDocument | null, step: DiagramStep | null): DiagramShowAs {
+  if (step?.source?.kind === 'cp') return showAsOf(step.source.render);
+  return (document && step && nearestEarlierShowAs(document, step.id)) ?? lastLinkedAs;
 }
 
 /**
@@ -65,10 +73,11 @@ export function pickerShowAs(step: DiagramStep | null): DiagramShowAs {
  * `way`, and capture its picture (D19): the picker links and chooses the way
  * in one pick. A relink in the way the step is shown keeps its pose, except a
  * Simulated fold %, which starts again at 0%. A first link starts at no turn,
- * but an enlarged step's in its frame's source's turn (`firstLinkPose`).
+ * but an enlarged step's shown as its run is in its run source's turn
+ * (`firstLinkPose`); shown another way, it starts whole (`landSeededFrame`).
  * Whether it was linked.
  */
-export async function linkDiagramStep(stepId: string, segment: CpSegment, way?: DiagramShowAs): Promise<boolean> {
+export async function linkDiagramStep(stepId: string, sheet: RegionLike, way?: DiagramShowAs): Promise<boolean> {
   const store = useWorkspaceStore.getState();
   const step = store.diagram ? stepById(store.diagram, stepId) : null;
   if (!step || !store.diagram) return false;
@@ -76,7 +85,7 @@ export async function linkDiagramStep(stepId: string, segment: CpSegment, way?: 
   const showAs = way ?? (linked ? showAsOf(linked.render) : 'crease-pattern');
   const spread = startingSpread(stepId);
   const asked = renderToShowAs(
-    linked ?? { render: firstLinkPose(store.diagram, stepId, spread) ?? { mode: 'crease-pattern', rotationDeg: 0 } },
+    linked ?? { render: firstLinkPose(store.diagram, stepId, showAs, spread) ?? { mode: 'crease-pattern', rotationDeg: 0 } },
     showAs,
     spread
   );
@@ -85,7 +94,7 @@ export async function linkDiagramStep(stepId: string, segment: CpSegment, way?: 
   const render: DiagramCpRender =
     asked.mode === 'simulated' && asked.foldPercent > 0 ? { ...asked, foldPercent: 0 } : asked;
   const outcome = await store.captureDiagramStep(stepId, {
-    scope: { kind: 'segment', region: regionReferenceFor(segment) },
+    scope: { kind: 'segment', region: regionReferenceFor(sheet) },
     render,
     kind: 'diagram-capture',
     label: linked ? 'Relink pattern' : 'Link pattern',
@@ -114,7 +123,8 @@ export async function showLinkedStepAs(
   const store = useWorkspaceStore.getState();
   const step = store.diagram ? stepById(store.diagram, stepId) : null;
   if (step?.source?.kind !== 'cp' || isLockedStep(step) || store.diagramReadOnly) return false;
-  if (showAsOf(step.source.render) === way && step.picture !== null) return true;
+  // A saved Defox view is none of the ways: choosing one replaces it, as Pose does.
+  if (step.source.render.mode !== 'defox' && showAsOf(step.source.render) === way && step.picture !== null) return true;
   const open = openLinkedPoseOf(stepId);
   if (open) {
     // The open step's controller says why, if it could not; only a way shown is counted.
@@ -151,7 +161,7 @@ export async function duplicateLinkedStepAs(stepId: string, way: DiagramShowAs):
   const copyId = store.duplicateDiagramStep(stepId);
   if (copyId === null) return null;
   // Shown the same way, it is a plain duplicate: no way chosen to count.
-  if (showAsOf(source.render) === way) return copyId;
+  if (source.render.mode !== 'defox' && showAsOf(source.render) === way) return copyId;
   const render = renderToShowAs(source, way, startingSpread(copyId));
   const duplicated = useWorkspaceStore.getState().diagramHistory.past.at(-1);
   const outcome = await useWorkspaceStore.getState().captureDiagramStep(copyId, {
@@ -232,6 +242,7 @@ export function openDiagramStepInEdit(stepId: string): void {
 /** How a captured picture shows its pattern, for analytics. */
 export function captureKind(render: DiagramCpRender): DiagramCaptureKind {
   switch (render.mode) {
+    case 'defox': return 'defox';
     case 'crease-pattern':
       return 'crease_pattern';
     case 'folded-flat':

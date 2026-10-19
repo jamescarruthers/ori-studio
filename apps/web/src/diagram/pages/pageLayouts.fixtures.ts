@@ -3,6 +3,7 @@ import {
   createStep,
   createTurn,
   insertSteps,
+  PAGE_SETTINGS,
   setPageSetup,
   uploadPictureKey,
   type DiagramDocument,
@@ -18,12 +19,14 @@ import { cpStep, referencesStep } from '../document/diagramSteps.fixtures';
 
 /**
  * Whole diagrams whose pages take every path the layout has for splitting
- * steps into pages and cells: the grid and the flow, a page break, turns at
- * a row's end and after the last step, spreads from either side, enlarged
- * steps (with their arrow, and one waiting for its picture), a newer build's
- * steps and turns, empty steps, uploads and References cards, and a diagram
- * of none. A `.fixtures.ts` module so the tests that hold `cellSlots` to the
- * layout's cells, and the page goldens, read the same diagrams.
+ * steps into pages and cells: the grid and the flow (its steps per page
+ * filling every cell, or shared out over rows of different lengths), a page
+ * break, pages with their own counts, turns at a row's end and after the last
+ * step, spreads from either side, enlarged steps (with their arrow, at a
+ * Size, and one waiting for its picture), a newer build's steps and turns,
+ * empty steps, uploads and References cards, and a diagram of none. A
+ * `.fixtures.ts` module so the tests that hold `cellSlots` to the layout's
+ * cells, and the page and homes goldens, read the same diagrams.
  */
 export interface PageLayoutFixture {
   name: string;
@@ -40,7 +43,8 @@ const WORDS = [
 
 function diagram(entries: readonly DiagramEntry[], page: Partial<DiagramPageSetup>, assets: DiagramDocument['assets'] = {}): DiagramDocument {
   const document = insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-fixture' }), entries, 0);
-  return setPageSetup({ ...document, assets }, page);
+  // No title block: the goldens hold these pages as they printed before it.
+  return setPageSetup({ ...document, assets }, { titleBlock: PAGE_SETTINGS.titleBlock.legacy, ...page });
 }
 
 /** A run of steps: crease patterns, References cards and empty steps in turn, each with its words. */
@@ -121,15 +125,44 @@ export function pageLayoutFixtures(): PageLayoutFixture[] {
     },
     {
       name: 'flow, a page break and turns at a row’s end',
-      document: diagram(withTurns(steps(14, 'step', [8]), [3, 5, 9]), { layout: 'flow', columns: 3, rows: 3 }),
+      document: diagram(withTurns(steps(14, 'step', [8]), [3, 5, 9]), { layout: 'flow', stepsPerPage: 9 }),
     },
     {
       name: 'flow from the right, across spreads, rows read upward',
-      document: diagram(steps(10), { layout: 'flow', columns: 2, rows: 2, firstPageSide: 'right', pageNumbers: { enabled: false, first: 1 } }),
+      document: diagram(steps(10), { layout: 'flow', stepsPerPage: 4, firstPageSide: 'right', pageNumbers: { enabled: false, first: 1 } }),
+    },
+    {
+      name: 'flow, seven steps a page: short last rows, across a spread and a page turn',
+      // 3 · 2 · 2 on Letter (`diagram-flow-pages.md`); the last page's three fill its first row.
+      document: diagram(withTurns(steps(17), [3, 6, 10]), { layout: 'flow', stepsPerPage: 7, size: 'letter' }),
+    },
+    {
+      name: 'flow, pages with their own counts',
+      // Step 4 starts a page of four and step 11 one of five: pages of 3, 4, 3, 5 and 5, the
+      // first and third cut short by the counted pages after them, the last automatic.
+      document: diagram(
+        withTurns(
+          steps(20).map((step, index) => (index === 3 ? { ...step, pageSteps: 4 } : index === 10 ? { ...step, pageSteps: 5 } : step)),
+          [5, 12]
+        ),
+        { layout: 'flow' }
+      ),
+    },
+    {
+      name: 'flow, a last page with its own count',
+      // Nine steps fill page 1; step 10 starts a last page of its own three, laid out for three, its
+      // one step in the first place: a count on the last page sizes it as the count says.
+      document: diagram(
+        withTurns(
+          steps(10).map((step, index) => (index === 9 ? { ...step, pageSteps: 3 } : step)),
+          [4]
+        ),
+        { layout: 'flow' }
+      ),
     },
     {
       name: 'flow landscape, an odd row count',
-      document: diagram(withTurns(steps(16), [7]), { layout: 'flow', columns: 4, rows: 3, orientation: 'landscape', size: 'letter', marginMm: 6 }),
+      document: diagram(withTurns(steps(16), [7]), { layout: 'flow', stepsPerPage: 12, orientation: 'landscape', size: 'letter', marginMm: 6 }),
     },
     {
       name: 'enlarged steps: a Fill run, a Size, and one waiting for its picture',
@@ -144,7 +177,24 @@ export function pageLayoutFixtures(): PageLayoutFixture[] {
           over('turn-1'),
           cpStep('step-c'),
         ],
-        { layout: 'flow', columns: 3, rows: 2 }
+        // 2 × 3: until Phase 1b, 3 × 2, which prints six steps smaller on A4 (48 mm, not 58).
+        { layout: 'flow', stepsPerPage: 6 }
+      ),
+    },
+    {
+      name: 'grid, enlarged steps at a Size of 2 and of 6',
+      // Twice the area fits its room; six times does not, and is drawn past it, as a size pin is.
+      document: diagram(
+        [
+          cpStep('step-a'),
+          areaStep('step-area-2'),
+          enlargedStep('step-zoom-2', 2),
+          cpStep('step-b'),
+          areaStep('step-area-6'),
+          enlargedStep('step-zoom-6', 6),
+          cpStep('step-c'),
+        ],
+        { layout: 'grid', columns: 3, rows: 3 }
       ),
     },
     {

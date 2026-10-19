@@ -163,6 +163,8 @@
     "home": "At home",
     "homeHint": "Each page on its own sheet.",
     "kind": "Export as",
+    "marginStep": "Part of step {{steps}} crosses the margin.",
+    "marginSteps": "Parts of steps {{steps}} cross the margin.",
     "missingFiles": "The diagram’s fonts have no {{characters}}: the files draw a box for each.",
     "missingPdf": "The diagram’s fonts have no {{characters}}, so a PDF can’t be made. Change the text, or export step files.",
     "missingSvg": "The diagram’s fonts have no {{characters}}: the SVG leaves them to the fonts of whatever opens it.",
@@ -180,10 +182,13 @@
     "pagerLabel": "{{label}} · {{index}} of {{total}}",
     "pageSetup": "Page setup",
     "pageSetupSummary": "{{size}} {{orientation}} · {{layout}}, {{columns}} × {{rows}}",
+    "pageSetupSummaryFlow_one": "{{size}} {{orientation}} · {{layout}}, 1 step per page",
+    "pageSetupSummaryFlow_other": "{{size}} {{orientation}} · {{layout}}, {{count}} steps per page",
     "pdf": "PDF",
     "pdfFailed": "The PDF couldn’t be written: {{message}}",
     "pdfHint": "Every page, ready to print.",
     "pdfText": "Some text can’t be printed in the diagram’s fonts.",
+    "placementLeftOut": "Page placements and size pins do not affect step files.",
     "pngFileTooLarge": "Step {{number}} would be {{width}} × {{height}} px, too large for a PNG. Lower the resolution or the size.",
     "pngTooLarge": "Too large to export as PNG: {{width}} × {{height}} px. Lower the resolution or the size.",
     "preparing": "Preparing preview…",
@@ -216,6 +221,8 @@
     "turnsAndArrowsLeftOut": "Turns and enlarge arrows print only on the pages; the step files leave them out.",
     "turnsLeftOut_one": "The turn between steps prints on the pages; the step files leave it out.",
     "turnsLeftOut_other": "The {{count}} turns between steps print on the pages; the step files leave them out.",
+    "unfitPage": "Page {{pages}} can’t hold its steps, even at the smallest size, and prints past its margins.",
+    "unfitPages": "Pages {{pages}} can’t hold their steps, even at the smallest size, and print past their margins.",
     "width": "Width",
     "writingPdf": "Writing PDF…"
   },
@@ -448,6 +455,10 @@
         "detail": "The box-pleated authoring method is a Rust and WebAssembly port of Mu-Tsun Tsai's Box Pleating Studio.",
         "title": "Mu-Tsun Tsai and Box Pleating Studio"
       },
+      "defox": {
+        "detail": "Affine layer spreading in the Diagram workspace is based on Kei Morisue’s affine distortion method in DEFOX.",
+        "title": "Kei Morisue and DEFOX"
+      },
       "explori": {
         "detail": "The Search 22.5° design method sends your tree to ExplOri, a searchable archive of 22.5° crease patterns, and shows the closest matches it returns.",
         "title": "Brandon Wong and ExplOri 22.5"
@@ -535,6 +546,7 @@
     "empty": "Nothing to export: the view shows no paper.",
     "exporting": "Exporting…",
     "exportingPages": "Exporting {{done}} of {{total}}…",
+    "exportObj": "Export OBJ",
     "exportStyle": "Export style · {{style}}",
     "figureMm": "Figure size",
     "figureSizeHint": "The figure spans this size across its longer side. Lines keep their widths.",
@@ -548,6 +560,12 @@
     "lettersHint": "The names of the points a step refers to.",
     "marks": "Marks",
     "nextPage": "Next step",
+    "objExpired": "This captured simulation is no longer available. Close this dialog and export again.",
+    "objHint": "3D mesh with UV coordinates from the unfolded paper, ready for texturing in your 3D software.",
+    "objMeshUnavailable": "This simulation has no valid mesh to export.",
+    "objPreview": "Captured pose · OBJ includes the complete mesh and UVs",
+    "objPreviewEmpty": "No image preview. The captured 3D mesh can still be exported.",
+    "objSheetUnavailable": "OBJ needs an unfolded sheet in the simulator’s paper plane to create texture coordinates.",
     "padding": "Margin",
     "page": "Page",
     "pageMm": "{{width}} × {{height}} mm",

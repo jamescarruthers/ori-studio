@@ -1,34 +1,20 @@
 import { useRef, type ReactNode } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import {
-  Compass,
-  Download,
-  FoldVertical,
-  ImageOff,
-  Link2,
-  PenTool,
-  RefreshCw,
-  Replace,
-  Rotate3d,
-  RotateCcwSquare,
-  RotateCw,
-  Ungroup,
-  Upload,
-  type LucideIcon,
-} from 'lucide-react';
+import { DIAGRAM_ACTION_ICONS } from '../../diagram/actions/diagramActionIcons';
 import {
   diagramStepCommand,
   type DiagramStepAction,
   type DiagramStepActionId,
 } from '../../diagram/actions/diagramActions';
 import type { DiagramLinkStatus } from '../../diagram/capture/linkStatus';
-import type {
-  DiagramCpSource,
-  DiagramFoldStepSource,
-  DiagramReferencesSource,
-  DiagramStep,
-  KnownDiagramAsset,
+import {
+  creasesFlipped,
+  type DiagramCpSource,
+  type DiagramFoldStepSource,
+  type DiagramReferencesSource,
+  type DiagramStep,
+  type KnownDiagramAsset,
 } from '../../diagram/document/diagramDocument';
 import { cameraDegrees } from '../../diagram/pictures/cameraDegrees';
 import type { SanitizeNotice } from '../../diagram/upload/svgSanitize';
@@ -41,35 +27,23 @@ import { PatternThumbnail } from '../ui/PatternThumbnail';
 import styles from './DiagramStepPicture.module.css';
 
 /** The picture's verbs, by what they are about: its pattern, then the picture itself. */
-const PATTERN_VERBS: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = [
-  { id: 'adjust-pose', icon: Rotate3d },
-  { id: 'refresh-picture', icon: RefreshCw },
-  { id: 'link-pattern', icon: Link2 },
-  { id: 'from-references', icon: Compass },
-  { id: 'open-in-edit', icon: PenTool },
-  { id: 'replace-from-references', icon: Replace },
+const PATTERN_VERBS: readonly DiagramStepActionId[] = [
+  'adjust-pose',
+  'refresh-picture',
+  'link-pattern',
+  'from-references',
+  'open-in-edit',
+  'replace-from-references',
   // A step made before marks were lifted: its card's marks out of its picture (17e).
-  { id: 'make-marks-editable', icon: Ungroup },
-  { id: 'open-in-references', icon: Compass },
-  { id: 'open-in-fold', icon: FoldVertical },
+  'make-marks-editable',
+  'open-in-references',
+  'open-in-fold',
 ];
-const FILE_VERBS: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = [
-  { id: 'upload-picture', icon: Upload },
-  { id: 'export-picture', icon: Download },
-  { id: 'remove-picture', icon: ImageOff },
-];
+const FILE_VERBS: readonly DiagramStepActionId[] = ['upload-picture', 'export-picture', 'remove-picture'];
 /** An empty step's: the ways to give it a picture. */
-const WAYS_IN: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = [
-  { id: 'upload-picture', icon: Upload },
-  { id: 'link-pattern', icon: Link2 },
-  { id: 'from-references', icon: Compass },
-  { id: 'from-fold', icon: FoldVertical },
-];
-/** Or to make it a turn instead (D24): the turn-over in Edit's Flip glyph, as Pose shows it. */
-const TURN_INSTEAD: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = [
-  { id: 'make-turn-over', icon: RotateCcwSquare },
-  { id: 'make-rotate', icon: RotateCw },
-];
+const WAYS_IN: readonly DiagramStepActionId[] = ['upload-picture', 'link-pattern', 'from-references', 'from-fold'];
+/** Or to make it a turn instead (D24). */
+const TURN_INSTEAD: readonly DiagramStepActionId[] = ['make-turn-over', 'make-rotate'];
 
 /**
  * The Step pane's Picture section: what the picture is — an upload, or a
@@ -124,8 +98,8 @@ export function DiagramStepPicture({
   const section = useRef<HTMLDivElement | null>(null);
   useReturnFocusOnClose(Boolean(picker), section, '[data-action="link-pattern"]');
   const empty = step.source === null && step.picture === null;
-  const items = (verbs: readonly { id: DiagramStepActionId; icon: LucideIcon }[]): ActionListItem[] =>
-    verbs.flatMap(({ id, icon }) => {
+  const items = (verbs: readonly DiagramStepActionId[]): ActionListItem[] =>
+    verbs.flatMap((id) => {
       const command = diagramStepCommand(actions, id);
       if (!command) return [];
       if (id === 'adjust-pose' && detailOpen) return [];
@@ -134,7 +108,7 @@ export function DiagramStepPicture({
       return [
         {
           id,
-          icon,
+          icon: DIAGRAM_ACTION_ICONS[id],
           label: command.label,
           disabled: command.disabled,
           hint: command.hint,
@@ -145,6 +119,8 @@ export function DiagramStepPicture({
     });
   return (
     <div ref={section} className={styles.picture}>
+      {source?.kind === 'cp' && source.render.mode === 'defox' && <Notice>{t('panels:diagram.import.savedViewNotice', 'This is the saved Defox view. Choosing a mode in Adjust Pose replaces it with an Ori Studio capture; Undo restores it.')}</Notice>}
+      {step.importStatus && <Notice>{t('panels:diagram.import.previewNotice', 'This step keeps its crease pattern preview. Choose Folded in Adjust Pose to try folding it.')}</Notice>}
       <FieldRow label={t('panels:diagram.picture.source', 'Source')} kind="text">
         {source?.kind === 'references-step'
           ? describeSent(source, step.picture, t)
@@ -179,7 +155,7 @@ export function DiagramStepPicture({
           </span>
         </FieldRow>
       )}
-      {source && step.picture?.kind === 'fixed' && (
+      {source?.kind === 'cp' && source.render.mode === 'folded-flat' && step.picture?.kind === 'fixed' && (
         <div className={styles.notice}>
           <Notice>
             {t(
@@ -218,7 +194,11 @@ function describeLinked(source: DiagramCpSource, posed: boolean, t: TFunction): 
   if (!posed) return t('panels:diagram.picture.linkedUnposed', 'A pattern, not captured yet');
   const { render } = source;
   switch (render.mode) {
+    case 'defox': return t('panels:diagram.picture.linkedDefox', 'Saved Defox view');
     case 'crease-pattern':
+      if (creasesFlipped(render)) {
+        return t('panels:diagram.picture.linkedCreasePatternFlipped', 'Crease pattern, turned over');
+      }
       return render.side === 'back'
         ? t('panels:diagram.picture.linkedCreasePatternBack', 'Crease pattern, back color')
         : t('panels:diagram.picture.linkedCreasePattern', 'Crease pattern');

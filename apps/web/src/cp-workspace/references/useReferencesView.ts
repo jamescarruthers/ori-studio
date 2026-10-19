@@ -11,7 +11,7 @@ import type { WheelGesturePreference } from '../../lib/wheelGesture';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
-import { creaseFingerprint } from '../cpSegmentationArtifacts';
+import { creaseFingerprint } from '../../lib/creaseFingerprint';
 import type { ReferencesSelection } from './ReferencesCpView';
 import type {
   ReferencesCandidateResult,
@@ -61,7 +61,7 @@ export interface ReferencesViewState {
    * selecting in Edit and coming back. And dropping only that one would break
    * the other direction: CP undo/redo bumps `foldArtifactRevision` *alone*
    * (`historySlice`), so a hash is what covers both. Same reasoning, and the
-   * same hash, as `cpSegmentationArtifacts`.
+   * same hash, as the sheet index's cache (`sheets/cpSheetIndex`).
    */
   revision: string;
   /** Refit the camera on a new document only — never on an edit. */

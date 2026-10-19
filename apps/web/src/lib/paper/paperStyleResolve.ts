@@ -107,8 +107,9 @@ export const PAPER_STYLE_POLICIES: Record<PaperSurface, SurfaceStylePolicy> = {
   fold: { surface: 'fold', applies: STEP_DIAGRAM_FIELDS },
   // Every field: a diagram puts every kind of picture on one page — a crease
   // pattern in the fold pens, a References step's instructions and arrows, a
-  // lit folded model, a simulation that may draw its folds as edges. The pens
-  // and the ink apply when a step is painted; the light when it is captured.
+  // lit folded model. A folded model's folds, flat, in 3D or simulated, are
+  // painted as edges (`foldedModelPens`). The pens and the ink apply when a
+  // step is painted; the light when it is captured.
   'diagram-workspace': { surface: 'diagram-workspace', applies: [...PAPER_STYLE_FIELDS] },
 };
 
@@ -249,6 +250,8 @@ export interface ResolvePaperStyleOptions {
   creaseWidthReferenceEdge?: number;
   /** See `RenderSettings.creaseWidthShrinkExponent`. */
   creaseWidthShrinkExponent?: number;
+  /** See `RenderSettings.creaseWidthGrows`. */
+  creaseWidthGrows?: boolean;
 }
 
 /**
@@ -308,6 +311,7 @@ export function resolvePaperStyle(
     valleyWidthPx: penWidthDevicePx(valley, dpr),
     creaseWidthReferenceEdge: options.creaseWidthReferenceEdge,
     creaseWidthShrinkExponent: options.creaseWidthShrinkExponent,
+    creaseWidthGrows: options.creaseWidthGrows,
     faceAlpha: options.faceAlpha,
     colorMode: options.colorMode,
     strainClip: options.strainClip,

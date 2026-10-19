@@ -29,7 +29,9 @@ export type WorkerName =
   /** The Fold engine's bridge; see store/workspaceStore/foldSequenceRuntime.ts. */
   | 'fold-sequence'
   /** One diagram PDF, spawned per export and terminated after it; see diagram/export/browserPdfWriter.ts. */
-  | 'diagram-pdf';
+  | 'diagram-pdf'
+  | 'cp-task'
+  | 'defox-import';
 
 export interface WorkerFailure {
   worker: WorkerName;

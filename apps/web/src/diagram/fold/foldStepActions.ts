@@ -36,6 +36,7 @@ import {
   spreadStartsFor,
   stepById,
   withCreasePatternSide,
+  withCreasesFlipped,
   type DiagramCpRender,
   type DiagramFoldStepSource,
   type DiagramShowAs,
@@ -232,6 +233,17 @@ export async function showFoldStepPaperSide(stepId: string, side: 'front' | 'bac
   if (!source || source.render.mode !== 'crease-pattern') return false;
   if (creasePatternSide(source.render) === side) return true;
   return poseAs(stepId, source, withCreasePatternSide(source.render, side), 'paper-side');
+}
+
+/**
+ * Turn Flip creases on or off for a Fold step shown as its crease pattern, as
+ * a linked pattern's is (`flipCreasePatternCreases`): captured again from its
+ * state, as one undo step. Whether it is on or off as asked now.
+ */
+export async function flipFoldStepCreases(stepId: string, on: boolean): Promise<boolean> {
+  const source = foldSourceOf(stepId);
+  if (!source || source.render.mode !== 'crease-pattern') return false;
+  return poseAs(stepId, source, withCreasesFlipped(source.render, on), 'flip-creases');
 }
 
 /**

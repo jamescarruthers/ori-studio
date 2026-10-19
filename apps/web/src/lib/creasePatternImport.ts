@@ -321,6 +321,15 @@ function parseFoldValue(
   filename: string,
   diagnostics: ImportedCreasePatternDiagnostics
 ): ParsedFoldSource {
+  const { frame, ...resolved } = resolveFoldSource(parsed, filename);
+  return { ...resolved, fold: normalizeFoldObject(frame, resolved.title, diagnostics) };
+}
+
+/** A FOLD object's frames, title, and the frame an import reads — nothing normalized yet. */
+function resolveFoldSource(
+  parsed: unknown,
+  filename: string
+): Omit<ParsedFoldSource, 'fold'> & { frame: Record<string, unknown> } {
   if (!isRecord(parsed)) throw new Error('FOLD file must contain a JSON object');
 
   const frames = resolveFoldFrames(parsed);
@@ -333,14 +342,48 @@ function parseFoldValue(
     stringField(chosen.frame.file_title) ??
     basenameWithoutExtension(filename);
 
-  const fold = normalizeFoldObject(chosen.frame, title, diagnostics);
   return {
     title,
     selectedFrame: foldFrameInfo(chosen),
     foldFrames: frameInfos,
     foldedFormFrames: frameInfos.filter((frame) => frame.foldedForm),
     sourceFold: parsed as FoldDocument,
-    fold,
+    frame: chosen.frame,
+  };
+}
+
+/**
+ * The import record for a crease pattern restored from an Ori Studio project:
+ * what the file says, with nothing inferred.
+ *
+ * A project open puts the editable document straight into the kernel, so
+ * nothing on that path reads what {@link parseImportedCreasePatternFromFold}
+ * spends its time on — inferred faces, a simulation mesh and a `TreeProject` of
+ * every crease, 26 s on the main thread for a 489k-crease canvas. The record is
+ * read for its title, source, `sourceFold` and frame list. Its `fold` is the
+ * chosen frame as stored, which only Export FOLD reads, and only when no kernel
+ * document exists.
+ */
+export function storedImportedCreasePattern(
+  fold: unknown,
+  source: ImportedCreasePatternSource
+): ImportedCreasePatternDocument {
+  const { frame, ...resolved } = resolveFoldSource(fold, source.filename);
+  const stored: FoldDocument = {
+    ...frame,
+    frame_title: resolved.title,
+    vertices_coords: arrayField(frame.vertices_coords) as number[][],
+    edges_vertices: arrayField(frame.edges_vertices) as [number, number][],
+    faces_vertices: arrayField(frame.faces_vertices) as number[][],
+  };
+  return {
+    source,
+    ...resolved,
+    fold: stored,
+    lineOnly: stored.faces_vertices.length === 0,
+    simulationModelError: null,
+    diagnostics: { warnings: [], errors: [] },
+    stats: statsFromFold(stored),
   };
 }
 
@@ -689,12 +732,15 @@ function splitSegments(segments: NormalizedSegment[]): {
   collectIntersectionCuts(segments, cuts);
 
   const vertices: RawPoint[] = [];
-  const vertexBuckets = new Map<string, number[]>();
-  const edgeMap = new Map<string, FoldAssignment>();
+  const vertexBuckets = new Map<number, number[]>();
+  // Keyed by the edge's two vertex ids as one number (`edgeKey`), not a string:
+  // building and hashing ~600k `low:high` strings was a fifth of inference on a
+  // canvas of 489k creases.
+  const edgeMap = new Map<number, FoldAssignment>();
   // The source segment whose assignment survived the merge for each output
   // edge, so per-edge extension data (line colours) follows the crease type it
   // belongs to rather than an arbitrary coincident segment.
-  const edgeSources = new Map<string, number>();
+  const edgeSources = new Map<number, number>();
 
   // Coincident endpoints merge by distance, not by a quantized key.
   //
@@ -719,7 +765,7 @@ function splitSegments(segments: NormalizedSegment[]): {
     let found: number | undefined;
     for (let dx = -1; dx <= 1; dx += 1) {
       for (let dy = -1; dy <= 1; dy += 1) {
-        const bucket = vertexBuckets.get(`${bx + dx}:${by + dy}`);
+        const bucket = vertexBuckets.get(bucketKey(bx + dx, by + dy));
         if (!bucket) continue;
         for (const candidate of bucket) {
           if (!(distance(vertices[candidate]!, point) <= EPSILON)) continue;
@@ -731,7 +777,7 @@ function splitSegments(segments: NormalizedSegment[]): {
 
     const id = vertices.length;
     vertices.push(point);
-    const key = `${bx}:${by}`;
+    const key = bucketKey(bx, by);
     const bucket = vertexBuckets.get(key);
     if (bucket) bucket.push(id);
     else vertexBuckets.set(key, [id]);
@@ -750,7 +796,7 @@ function splitSegments(segments: NormalizedSegment[]): {
       const va = vertexId(a);
       const vb = vertexId(b);
       if (va === vb) continue;
-      const key = va < vb ? `${va}:${vb}` : `${vb}:${va}`;
+      const key = va < vb ? edgeKey(va, vb) : edgeKey(vb, va);
       const previous = edgeMap.get(key);
       const merged = mergeAssignment(previous, segment.assignment);
       edgeMap.set(key, merged);
@@ -763,30 +809,57 @@ function splitSegments(segments: NormalizedSegment[]): {
     }
   });
 
+  // Edges in vertex order: by the lower vertex id, then the higher — which is
+  // the order of their keys, since a key is `low * EDGE_KEY_RADIX + high`.
+  const keys = Float64Array.from(edgeMap.keys()).sort();
   const edges: [number, number][] = [];
   const assignments: FoldAssignment[] = [];
   const sources: number[] = [];
-  [...edgeMap.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-    .forEach(([key, assignment]) => {
-      const [a, b] = key.split(':').map(Number);
-      if (a === undefined || b === undefined || !Number.isInteger(a) || !Number.isInteger(b)) return;
-      edges.push([a, b]);
-      assignments.push(assignment);
-      sources.push(edgeSources.get(key) ?? 0);
-    });
+  for (const key of keys) {
+    const low = Math.floor(key / EDGE_KEY_RADIX);
+    edges.push([low, key - low * EDGE_KEY_RADIX]);
+    assignments.push(edgeMap.get(key)!);
+    sources.push(edgeSources.get(key) ?? 0);
+  }
 
   return { vertices, edges, assignments, sources };
+}
+
+/**
+ * One number for an edge's two vertex ids, `low < high`, ordered as the pair
+ * is: exact while both are below the radix, the square root of the largest
+ * safe integer — some 95 million vertices, far past any pattern that fits in
+ * memory.
+ */
+const EDGE_KEY_RADIX = 94_906_265;
+
+function edgeKey(low: number, high: number): number {
+  return low * EDGE_KEY_RADIX + high;
+}
+
+/**
+ * One number for a vertex bucket's cell. Cells are 4e-8 wide in the pattern's
+ * own units, so on a canvas thousands of units across their indices outgrow
+ * the radix and two cells can share a key — harmless: a bucket then holds a
+ * few more candidates, and the distance test turns away every one that is not
+ * within `EPSILON`, so the vertex found is the same.
+ */
+function bucketKey(bx: number, by: number): number {
+  return bx * EDGE_KEY_RADIX + by;
 }
 
 /**
  * Accumulate the parameters at which segments cut one another.
  *
  * Testing every pair is O(n²) — ~20M intersection tests on a 6.3k-crease pattern,
- * around a second — even though nearly every pair lies far apart. Sorting by left
- * edge and sweeping keeps only segments whose x-extent still overlaps, so the
- * quadratic collapses to the genuinely nearby pairs (~1.1s → ~17ms on that
- * pattern, measured).
+ * around a second — even though nearly every pair lies far apart. So only pairs
+ * whose padded boxes overlap are tested. They are found through a grid of cells
+ * about a typical segment long: each segment is listed in every cell its box
+ * covers, and a pair is tested in the first cell the two share, so once. A
+ * sweep along x found the same pairs, but kept every segment whose x-extent
+ * still overlapped in its active list, and on a canvas of 204 sheets in rows a
+ * long border overlaps a whole column of sheets: three seconds of 489k creases'
+ * inference was that list being scanned.
  *
  * Two details make this produce *identical* output rather than merely similar:
  *
@@ -799,7 +872,7 @@ function splitSegments(segments: NormalizedSegment[]): {
  *   shrink, and dominates for short ones.
  * - **Argument order.** {@link segmentIntersectionParams} is asymmetric: its
  *   collinear test uses the *first* argument's direction vector. Visiting pairs
- *   in sweep order rather than index order therefore changes results, so pairs
+ *   in grid order rather than index order therefore changes results, so pairs
  *   are passed lower-index-first exactly as the original loop did.
  *
  * Cut order does not matter — `uniqueSorted` sorts and dedupes downstream.
@@ -831,30 +904,108 @@ function collectIntersectionCuts(segments: NormalizedSegment[], cuts: number[][]
     candidates.push(i);
   }
 
-  const order = candidates.sort((left, right) => minX[left]! - minX[right]!);
+  if (candidates.length < 2) return;
 
-  // Once a segment's right edge falls behind the sweep it cannot reach any later
-  // segment, so it leaves the active set as the set is scanned.
-  const active: number[] = [];
-  for (const index of order) {
-    const left = minX[index]!;
-    let keep = 0;
-    for (let k = 0; k < active.length; k += 1) {
-      const other = active[k]!;
-      if (maxX[other]! < left) continue;
-      active[keep] = other;
-      keep += 1;
-      if (maxY[other]! < minY[index]! || minY[other]! > maxY[index]!) continue;
-      const lower = other < index ? other : index;
-      const higher = other < index ? index : other;
-      const intersection = segmentIntersectionParams(segments[lower], segments[higher]);
-      intersection.a.forEach((value) => cuts[lower]?.push(value));
-      intersection.b.forEach((value) => cuts[higher]?.push(value));
+  const testPair = (one: number, other: number) => {
+    if (maxX[one]! < minX[other]! || maxX[other]! < minX[one]!) return;
+    if (maxY[one]! < minY[other]! || maxY[other]! < minY[one]!) return;
+    const lower = one < other ? one : other;
+    const higher = one < other ? other : one;
+    const intersection = segmentIntersectionParams(segments[lower], segments[higher]);
+    intersection.a.forEach((value) => cuts[lower]?.push(value));
+    intersection.b.forEach((value) => cuts[higher]?.push(value));
+  };
+
+  // A box no grid can hold — a coordinate that is infinite or not a number — is
+  // tested against every other segment, as the sweep tested it. No pattern the
+  // app reads has one (import drops such vertices); a raw FOLD handed straight
+  // in can, and one such segment must not turn the grid off for all the rest.
+  const boxed: number[] = [];
+  const unbounded: number[] = [];
+  for (const i of candidates) {
+    const finite =
+      Number.isFinite(minX[i]) &&
+      Number.isFinite(maxX[i]) &&
+      Number.isFinite(minY[i]) &&
+      Number.isFinite(maxY[i]);
+    (finite ? boxed : unbounded).push(i);
+  }
+  unbounded.forEach((one, k) => {
+    for (const other of boxed) testPair(one, other);
+    for (const other of unbounded.slice(k + 1)) testPair(one, other);
+  });
+  if (boxed.length < 2) return;
+
+  // Cells about as wide as a typical segment's box, and at most GRID_SIDE to a
+  // side, so a cell's two coordinates make one exact key.
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  let extent = 0;
+  for (const i of boxed) {
+    left = Math.min(left, minX[i]!);
+    top = Math.min(top, minY[i]!);
+    right = Math.max(right, maxX[i]!);
+    bottom = Math.max(bottom, maxY[i]!);
+    extent += Math.max(maxX[i]! - minX[i]!, maxY[i]! - minY[i]!);
+  }
+  const span = Math.max(right - left, bottom - top);
+  let cell = Math.max(extent / boxed.length, span / GRID_SIDE, Number.MIN_VALUE);
+  const column = (x: number) => Math.min(GRID_SIDE, Math.floor((x - left) / cell));
+  const row = (y: number) => Math.min(GRID_SIDE, Math.floor((y - top) / cell));
+  // Widened until the grid lists no more than GRID_COVERAGE cells a segment on
+  // average: a long diagonal's box covers a square of cells, and one across the
+  // whole canvas would otherwise be listed in millions of them.
+  for (;;) {
+    let listed = 0;
+    for (const i of boxed) {
+      listed +=
+        (column(maxX[i]!) - column(minX[i]!) + 1) * (row(maxY[i]!) - row(minY[i]!) + 1);
     }
-    active.length = keep;
-    active.push(index);
+    if (listed <= GRID_COVERAGE * boxed.length || cell >= span) break;
+    cell *= 2;
+  }
+
+  const firstColumn = new Int32Array(count);
+  const firstRow = new Int32Array(count);
+  const cells = new Map<number, number[]>();
+  for (const i of boxed) {
+    firstColumn[i] = column(minX[i]!);
+    firstRow[i] = row(minY[i]!);
+    const lastColumn = column(maxX[i]!);
+    const lastRow = row(maxY[i]!);
+    for (let cx = firstColumn[i]!; cx <= lastColumn; cx += 1) {
+      for (let cy = firstRow[i]!; cy <= lastRow; cy += 1) {
+        const key = cx * (GRID_SIDE + 1) + cy;
+        const listed = cells.get(key);
+        if (listed) listed.push(i);
+        else cells.set(key, [i]);
+      }
+    }
+  }
+
+  for (const [key, listed] of cells) {
+    const cx = Math.floor(key / (GRID_SIDE + 1));
+    const cy = key - cx * (GRID_SIDE + 1);
+    for (let p = 0; p < listed.length; p += 1) {
+      const one = listed[p]!;
+      for (let q = p + 1; q < listed.length; q += 1) {
+        const other = listed[q]!;
+        // Tested in the first cell the two share, and only there.
+        if (Math.max(firstColumn[one]!, firstColumn[other]!) !== cx) continue;
+        if (Math.max(firstRow[one]!, firstRow[other]!) !== cy) continue;
+        testPair(one, other);
+      }
+    }
   }
 }
+
+/** The most cells to a side of {@link collectIntersectionCuts}'s grid. */
+const GRID_SIDE = 4096;
+
+/** The most cells {@link collectIntersectionCuts}'s grid lists a segment in, on average. */
+const GRID_COVERAGE = 16;
 
 function segmentIntersectionParams(
   a: NormalizedSegment | undefined,
@@ -904,39 +1055,64 @@ function segmentIntersectionParams(
   return { a: [clamp01(t)], b: [clamp01(u)] };
 }
 
+/**
+ * The faces of a plane graph: from every half-edge not yet walked, turn to the
+ * next edge clockwise at each vertex until the walk closes.
+ *
+ * Edge `e` is two half-edges, `2e` (a → b) and `2e + 1` (b → a), and walks
+ * start from them in that order. Around each vertex its outgoing half-edges are
+ * held in angle order, each knowing its place there, so a turn is two array
+ * reads: the twin of the half-edge arrived on (`h ^ 1`) is where the walk came
+ * in, and the one before it is where it leaves.
+ */
 function buildPlanarFaces(vertices: RawPoint[], edges: [number, number][]): number[][] {
-  const neighbors = new Map<number, number[]>();
-  edges.forEach(([a, b]) => {
-    neighbors.set(a, [...(neighbors.get(a) ?? []), b]);
-    neighbors.set(b, [...(neighbors.get(b) ?? []), a]);
+  const halfEdges = edges.length * 2;
+  const tail = new Int32Array(halfEdges);
+  const head = new Int32Array(halfEdges);
+  const start = new Int32Array(vertices.length + 1);
+  edges.forEach(([a, b], e) => {
+    tail[2 * e] = a;
+    head[2 * e] = b;
+    tail[2 * e + 1] = b;
+    head[2 * e + 1] = a;
+    start[a + 1]! += 1;
+    start[b + 1]! += 1;
   });
-  for (const [vertex, list] of neighbors) {
-    const center = vertices[vertex];
-    if (!center) continue;
-    list.sort((a, b) => angle(center, vertices[a]) - angle(center, vertices[b]));
+  for (let vertex = 0; vertex < vertices.length; vertex += 1) start[vertex + 1]! += start[vertex]!;
+
+  // Each vertex's outgoing half-edges in edge order, then sorted by angle — a
+  // stable sort, so ties keep that order.
+  const around = new Int32Array(halfEdges);
+  const filled = start.slice(0, vertices.length);
+  for (let h = 0; h < halfEdges; h += 1) around[filled[tail[h]!]!++] = h;
+  const angles = new Float64Array(halfEdges);
+  for (let h = 0; h < halfEdges; h += 1) angles[h] = angle(vertices[tail[h]!]!, vertices[head[h]!]);
+  const place = new Int32Array(halfEdges);
+  for (let vertex = 0; vertex < vertices.length; vertex += 1) {
+    const from = start[vertex]!;
+    const to = start[vertex + 1]!;
+    if (to - from > 1) {
+      const sorted = Array.from(around.subarray(from, to)).sort((x, y) => angles[x]! - angles[y]!);
+      around.set(sorted, from);
+    }
+    for (let at = from; at < to; at += 1) place[around[at]!] = at - from;
   }
 
-  const visited = new Set<string>();
+  const visited = new Uint8Array(halfEdges);
   const faces: number[][] = [];
-  for (const [a, b] of directedEdges(edges)) {
-    const start = `${a}:${b}`;
-    if (visited.has(start)) continue;
+  for (let first = 0; first < halfEdges; first += 1) {
+    if (visited[first]) continue;
     const face: number[] = [];
-    let u = a;
-    let v = b;
+    let h = first;
     for (let guard = 0; guard < edges.length * 4; guard += 1) {
-      const key = `${u}:${v}`;
-      if (visited.has(key)) break;
-      visited.add(key);
-      face.push(u);
-      const outgoing = neighbors.get(v) ?? [];
-      const incomingIndex = outgoing.indexOf(u);
-      if (incomingIndex < 0 || outgoing.length === 0) break;
-      const w = outgoing[(incomingIndex - 1 + outgoing.length) % outgoing.length];
-      if (w === undefined) break;
-      u = v;
-      v = w;
-      if (u === a && v === b) break;
+      if (visited[h]) break;
+      visited[h] = 1;
+      face.push(tail[h]!);
+      const v = head[h]!;
+      const from = start[v]!;
+      const count = start[v + 1]! - from;
+      h = around[from + ((place[h ^ 1]! - 1 + count) % count)]!;
+      if (h === first) break;
     }
     if (face.length >= 3 && polygonArea(face, vertices) > EPSILON) {
       faces.push(face);
@@ -1143,12 +1319,15 @@ function projectParam(segment: NormalizedSegment, point: RawPoint): number {
  * so `+0` and `-0` already collapse to one entry.
  */
 function uniqueSorted(values: number[]): number[] {
-  return [...new Set(values.filter(inUnit).map(clamp01).map((value) => Number(value.toFixed(10))))]
-    .sort((a, b) => a - b);
-}
-
-function directedEdges(edges: [number, number][]): Array<[number, number]> {
-  return edges.flatMap(([a, b]) => [[a, b], [b, a]] as Array<[number, number]>);
+  const kept = new Set<number>();
+  for (const value of values) {
+    if (!inUnit(value)) continue;
+    const clamped = clamp01(value);
+    // `toFixed` is the slow part, and a segment's own ends, 0 and 1, are already
+    // what it would give back.
+    kept.add(clamped === 0 || clamped === 1 ? clamped : Number(clamped.toFixed(10)));
+  }
+  return [...kept].sort((a, b) => a - b);
 }
 
 function polygonArea(face: number[], vertices: RawPoint[]): number {
