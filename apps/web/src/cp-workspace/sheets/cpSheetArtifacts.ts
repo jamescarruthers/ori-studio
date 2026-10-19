@@ -40,15 +40,6 @@ function cachedSheets(fingerprint: string): Map<number, FoldArtifacts> {
   return cached.sheets;
 }
 
-/** Already-built artifacts for this sheet of these creases, if any. Never starts work. */
-export function peekCpSheetArtifacts(
-  document: OristudioCpDocumentSnapshot | null | undefined,
-  sheet: number
-): FoldArtifacts | null {
-  if (!document || cached?.fingerprint !== creaseFingerprint(document)) return null;
-  return cached.sheets.get(sheet) ?? null;
-}
-
 /**
  * The artifacts for one sheet of the open crease pattern, built once per crease
  * geometry. `null` without a document, for a sheet the index does not have, or
