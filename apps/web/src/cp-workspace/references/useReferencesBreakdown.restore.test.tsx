@@ -36,7 +36,7 @@ import { useReferencesBreakdown, type ReferencesBreakdownController } from './us
 // refused here so it ends at once.
 const client = vi.hoisted(() => ({
   rfToModelMany: vi.fn(async (_frame: unknown, points: Float64Array) => points),
-  plannerCreate: vi.fn(async () => {
+  plannerCreateForSheet: vi.fn(async () => {
     throw new Error('planner refused for the test');
   }),
   plannerDispose: vi.fn(async () => undefined),
@@ -104,6 +104,7 @@ const frames = {
       ],
       segment_indices: [4],
       border_segment_indices: [0, 1, 2, 3],
+      aux_segment_indices: [],
     } as unknown as PrecreaseComponent,
   ],
 } as unknown as SheetAnalysis;
@@ -178,7 +179,7 @@ beforeEach(() => {
   resetReferencesPlanCacheForTests();
   clearReferencesResults();
   client.rfToModelMany.mockClear();
-  client.plannerCreate.mockClear();
+  client.plannerCreateForSheet.mockClear();
   shownFrames = frames;
   container = document.createElement('div');
   document.body.append(container);
@@ -220,7 +221,7 @@ describe('opening the sequence on a reopened project', () => {
     act(() => controller?.open());
     await settle();
 
-    expect(client.plannerCreate).not.toHaveBeenCalled();
+    expect(client.plannerCreateForSheet).not.toHaveBeenCalled();
     expect(client.rfToModelMany).toHaveBeenCalledTimes(2);
     const shown = controller?.record?.components[0];
     expect(shown?.component).toBe(4);
@@ -238,7 +239,7 @@ describe('opening the sequence on a reopened project', () => {
     await cacheWith(referencesPlanCacheKey(input, SHEET, { ...SETTINGS, precreaseGrid: false }));
     act(() => controller?.open());
     await settle();
-    expect(client.plannerCreate).toHaveBeenCalledTimes(1);
+    expect(client.plannerCreateForSheet).toHaveBeenCalledTimes(1);
     expect(controller?.record).toBeNull();
   });
 
@@ -253,7 +254,7 @@ describe('opening the sequence on a reopened project', () => {
     });
     act(() => controller?.open());
     await settle();
-    expect(client.plannerCreate).toHaveBeenCalledTimes(1);
+    expect(client.plannerCreateForSheet).toHaveBeenCalledTimes(1);
     expect(controller?.record).toBeNull();
     expect(lookupReferencesPlan(LOAD, key)).toBeNull();
   });
@@ -267,7 +268,7 @@ describe('opening the sequence on a reopened project', () => {
     act(() => root?.unmount());
     root = null;
     await settle();
-    expect(client.plannerCreate).not.toHaveBeenCalled();
+    expect(client.plannerCreateForSheet).not.toHaveBeenCalled();
     expect(lookupReferencesPlan(LOAD, key)?.outcome).toBe('hit');
   });
 
@@ -279,13 +280,13 @@ describe('opening the sequence on a reopened project', () => {
     act(() => root?.render(createElement(Probe)));
     act(() => controller?.open());
     await settle();
-    expect(client.plannerCreate).toHaveBeenCalledTimes(1);
+    expect(client.plannerCreateForSheet).toHaveBeenCalledTimes(1);
   });
 
   it('plans when there is nothing cached', async () => {
     act(() => controller?.open());
     await settle();
-    expect(client.plannerCreate).toHaveBeenCalledTimes(1);
+    expect(client.plannerCreateForSheet).toHaveBeenCalledTimes(1);
   });
 });
 
