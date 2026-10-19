@@ -146,6 +146,7 @@ import type { CanvasAnnotation } from '../../../cp-workspace/annotations/annotat
 import type { InlineSimulation } from '../../../cp-workspace/inlineSimulation/inlineSimulation';
 import { noteInlineSimulationIds } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
 import { discardCpDocumentState } from '../cpDocumentState';
+import { withCpHistoryEntry } from '../cpHistory';
 import { diagramDataBytes, discardDiagramState, onlyPackedSince, pickDiagramState } from '../diagramState';
 import { readDiagram, writeDiagram } from '../../../diagram/document/diagramFile';
 import { createCpFoldRuntime } from '../cpFoldRuntimeBindings';
@@ -784,8 +785,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         oristudioCpSelection: selectedLineSelectionFromDocument(commandDocument.document),
         oristudioCpRevision: nextRevision,
         oristudioCpHistoryPast: previousDocument
-          ? [
-              ...get().oristudioCpHistoryPast,
+          ? withCpHistoryEntry(
+              get().oristudioCpHistoryPast,
               cpHistoryEntry(
                 previousDocument,
                 label,
@@ -794,8 +795,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
                 get().oristudioCpFoldedFigures,
                 get().oristudioCpActiveFoldedFigureId,
                 get().oristudioCpInlineSimulations
-              ),
-            ]
+              )
+            )
           : get().oristudioCpHistoryPast,
         oristudioCpHistoryFuture: [],
         ...staleFoldArtifactResourceState(get().foldArtifactRevision),
@@ -2490,8 +2491,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           oristudioCpRevision: nextRevision,
           oristudioCpHistoryPast: previousDocument
             ? mutatesDocument
-              ? [
-                  ...get().oristudioCpHistoryPast,
+              ? withCpHistoryEntry(
+                  get().oristudioCpHistoryPast,
                   cpHistoryEntry(
                     previousDocument,
                     String(operationId),
@@ -2500,8 +2501,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
                     get().oristudioCpFoldedFigures,
                     get().oristudioCpActiveFoldedFigureId,
                     get().oristudioCpInlineSimulations
-                  ),
-                ]
+                  )
+                )
               : get().oristudioCpHistoryPast
             : get().oristudioCpHistoryPast,
           oristudioCpHistoryFuture: mutatesDocument ? [] : get().oristudioCpHistoryFuture,
@@ -2644,18 +2645,18 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           oristudioCpLineage: markCpLineageEdited(get().oristudioCpLineage),
           oristudioCpOperationDescriptors: nextDocument.operationDescriptors,
           oristudioCpError: null,
-          oristudioCpHistoryPast: [
-            ...get().oristudioCpHistoryPast,
+          oristudioCpHistoryPast: withCpHistoryEntry(
+            get().oristudioCpHistoryPast,
             cpHistoryEntry(
-                previousDocument,
-                label,
-                previousSelection,
-                get().oristudioCpAnnotations,
-                get().oristudioCpFoldedFigures,
-                get().oristudioCpActiveFoldedFigureId,
-                get().oristudioCpInlineSimulations
-              ),
-          ],
+              previousDocument,
+              label,
+              previousSelection,
+              get().oristudioCpAnnotations,
+              get().oristudioCpFoldedFigures,
+              get().oristudioCpActiveFoldedFigureId,
+              get().oristudioCpInlineSimulations
+            )
+          ),
           oristudioCpHistoryFuture: [],
           error: null,
           dirty: true,
