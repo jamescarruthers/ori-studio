@@ -7,6 +7,7 @@ import init, {
   document_snapshot,
   document_summary,
   execute_cp_command,
+  execute_cp_selection_command,
   export_cp,
   export_fold,
   export_fold_lines,
@@ -43,6 +44,7 @@ import init, {
   replace_line_segments,
   restore_document,
   restore_from_compact,
+  set_selected_lines,
   set_texts,
   place_circles,
 } from '../generated/oristudio-cp-wasm/oristudio_cp_wasm';
@@ -70,6 +72,8 @@ import type {
   OristudioCpFoldedFigureSnapshot,
   OristudioCpLineSegment,
   OristudioCpOperationDescriptor,
+  OristudioCpSelectedLines,
+  OristudioCpSelectionCommandResult,
 } from '../engine/oristudioCpTypes';
 import type { OristudioCpOperationId } from '../lib/oristudioCpCommands';
 import type { WasmErrorEnvelope } from '../engine/types';
@@ -139,6 +143,11 @@ function geometryTransferables(geometry: CpGeometryTransport): Transferable[] {
     geometry.circleAttr,
     geometry.circleCustomColor,
   ].map((array) => array.buffer as ArrayBuffer);
+}
+
+function selectedLinesTransferables(lines: OristudioCpSelectedLines): Transferable[] {
+  // Each array is copied out of wasm memory into its own buffer.
+  return [lines.ids.buffer as ArrayBuffer, lines.values.buffer as ArrayBuffer];
 }
 
 async function call<T>(fn: () => T): Promise<T> {
@@ -217,6 +226,34 @@ const api = {
     payload: OristudioCpCommandPayload = {}
   ): Promise<OristudioCpCommandPreview> {
     return call(() => preview_cp_command(handle, operationId, payload) as OristudioCpCommandPreview);
+  },
+  /**
+   * A command that changes only which lines are selected, answered with the
+   * selected lines before and after it rather than with a new document.
+   */
+  async executeSelectionCommand(
+    handle: number,
+    operationId: OristudioCpOperationId,
+    payload: OristudioCpCommandPayload = {}
+  ): Promise<OristudioCpSelectionCommandResult> {
+    const outcome = await call(
+      () =>
+        execute_cp_selection_command(handle, operationId, payload) as OristudioCpSelectionCommandResult
+    );
+    return transfer(outcome, [
+      ...selectedLinesTransferables(outcome.before),
+      ...selectedLinesTransferables(outcome.after),
+    ]);
+  },
+  /** Make `lines` the selected lines exactly; answers with the ones replaced. */
+  async setSelectedLines(
+    handle: number,
+    lines: OristudioCpSelectedLines
+  ): Promise<OristudioCpSelectedLines> {
+    const replaced = await call(
+      () => set_selected_lines(handle, lines.ids, lines.values) as OristudioCpSelectedLines
+    );
+    return transfer(replaced, selectedLinesTransferables(replaced));
   },
   async insertLineSegments(
     handle: number,

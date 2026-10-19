@@ -1,6 +1,7 @@
 import { flushPendingEdits } from '../../../lib/pendingEdits';
 import { patchTreemakerDesign, selectDesignViewportFitRequestId, selectProject } from '../designTabs';
 import { withCpHistoryEntry } from '../cpHistory';
+import { documentStateAfterSelection } from '../cpSelectedLines';
 import {
   NO_CP_VERTEX_PINS,
   removeCpVertexPinsInBox,
@@ -789,15 +790,26 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
    * missed one.
    */
   function deselectCreasesInKernel(): void {
-    if (!get().oristudioCpDocument) return;
+    const started = get().oristudioCpDocument;
+    if (!started) return;
     void (async () => {
       try {
-        const refreshed = await deselectAllOristudioCp();
+        const cleared = await deselectAllOristudioCp();
+        if (!cleared) return;
+        // The kernel's flags are mirrored onto the store's snapshot whatever
+        // happened meanwhile; no new copy of the document is fetched.
+        const documentState = await documentStateAfterSelection(
+          started,
+          get().oristudioCpDocument,
+          cleared,
+          { ids: new Uint32Array(0), values: new Int32Array(0) },
+          null
+        );
         // Guard against a selection made while the round-trip was in flight:
-        // the refreshed document is only safe to adopt if nothing has since
+        // the deselected state is only safe to adopt if nothing has since
         // taken the canvas selection back for the creases.
-        if (refreshed && cpSelectionSize(get().oristudioCpSelection) === 0) {
-          set({ oristudioCpDocument: refreshed });
+        if (cpSelectionSize(get().oristudioCpSelection) === 0) {
+          set({ oristudioCpDocument: documentState });
         }
       } catch {
         // A deselect is best-effort UI state; ignore kernel errors.

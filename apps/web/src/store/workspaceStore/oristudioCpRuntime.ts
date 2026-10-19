@@ -24,6 +24,8 @@ import type {
   OristudioCpLineSegment,
   OristudioCpModel,
   OristudioCpOperationDescriptor,
+  OristudioCpSelectedLines,
+  OristudioCpSelectionCommandResult,
 } from '../../engine/oristudioCpTypes';
 import type { WasmErrorEnvelope } from '../../engine/types';
 import {
@@ -352,6 +354,40 @@ export async function previewOristudioCpCommand(
   return api.previewCommand(handle, operationId, payload);
 }
 
+/**
+ * Run a command that changes which lines are selected and nothing else (the
+ * kernel refuses any other), for the selected lines before and after it.
+ *
+ * Deliberately not a refresh: the geometry is unchanged, so fetching and
+ * decoding it again would only hand the store a new copy of the same creases —
+ * on a canvas of half a million, 150 ms of decoding and a rebuild of everything
+ * keyed on the old copy.
+ */
+export async function executeOristudioCpSelectionCommand(
+  operationId: OristudioCpOperationId,
+  payload: OristudioCpCommandPayload = {}
+): Promise<OristudioCpSelectionCommandResult> {
+  if (handle === null) {
+    throw new Error('No editable crease-pattern document is loaded');
+  }
+  const api = await getOristudioCpClient();
+  return api.executeSelectionCommand(handle, operationId, payload);
+}
+
+/**
+ * Make `lines` the kernel's selected lines exactly — undoing or redoing a
+ * selection — and answer with the selected lines they replaced.
+ */
+export async function setOristudioCpSelectedLines(
+  lines: OristudioCpSelectedLines
+): Promise<OristudioCpSelectedLines> {
+  if (handle === null) {
+    throw new Error('No editable crease-pattern document is loaded');
+  }
+  const api = await getOristudioCpClient();
+  return api.setSelectedLines(handle, lines);
+}
+
 export async function insertOristudioCpLineSegments(
   segments: OristudioCpLineSegment[]
 ): Promise<OristudioCpDocumentState> {
@@ -367,14 +403,15 @@ export async function insertOristudioCpLineSegments(
 
 /**
  * Clear the kernel document's selection flags (a UI deselect, not an undoable
- * edit). The frontend selection mirror is cleared separately; this keeps the
- * kernel in sync so a later select/deselect doesn't re-derive a stale selection.
+ * edit), answering with the selected lines it cleared, or null when no
+ * document is loaded. The frontend selection mirror is cleared separately; this
+ * keeps the kernel in sync so a later select/deselect doesn't re-derive a stale
+ * selection.
  */
-export async function deselectAllOristudioCp(): Promise<OristudioCpDocumentState | null> {
+export async function deselectAllOristudioCp(): Promise<OristudioCpSelectedLines | null> {
   if (handle === null) return null;
   const api = await getOristudioCpClient();
-  await api.deselectAll(handle);
-  return refreshOristudioCpDocument(null);
+  return api.setSelectedLines(handle, { ids: new Uint32Array(0), values: new Int32Array(0) });
 }
 
 /** An axis-aligned box in crease-pattern model (Oriedita 400-space) coordinates. */

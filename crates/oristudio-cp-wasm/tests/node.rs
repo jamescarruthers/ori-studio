@@ -736,6 +736,77 @@ fn command_dispatch_accepts_intersecting_selection_point_payloads() {
     oristudio_cp_wasm::free_document(handle).expect("document handle should free");
 }
 
+fn typed_ids(value: &JsValue, side: &str) -> (Vec<u32>, Vec<i32>) {
+    let lines = js_sys::Reflect::get(value, &JsValue::from_str(side)).expect("side should exist");
+    let ids = js_sys::Reflect::get(&lines, &JsValue::from_str("ids")).expect("ids should exist");
+    let values =
+        js_sys::Reflect::get(&lines, &JsValue::from_str("values")).expect("values should exist");
+    (
+        js_sys::Uint32Array::from(ids).to_vec(),
+        js_sys::Int32Array::from(values).to_vec(),
+    )
+}
+
+/// A selection crosses the bridge as typed arrays of the selected lines, not a
+/// document, and setting them back answers with the ones it replaced.
+#[wasm_bindgen_test]
+fn selection_commands_answer_with_the_selected_lines() {
+    let handle = oristudio_cp_wasm::load_cp("2 0 0 1 0\n2 0 1 1 1\n2 0 2 1 2\n", "parallel")
+        .expect("cp import should succeed");
+    let outcome = oristudio_cp_wasm::execute_cp_selection_command(
+        handle,
+        serde_wasm_bindgen::to_value("CreaseSelect").expect("operation id should serialize"),
+        serde_wasm_bindgen::to_value(&oristudio_cp::CreasePatternCommandPayload {
+            points: vec![
+                oristudio_cp::geometry::Point::new(-0.5, -0.5),
+                oristudio_cp::geometry::Point::new(1.5, 1.5),
+            ],
+            ..oristudio_cp::CreasePatternCommandPayload::default()
+        })
+        .expect("payload should serialize"),
+    )
+    .expect("box select should execute");
+    let result =
+        js_sys::Reflect::get(&outcome, &JsValue::from_str("result")).expect("result should exist");
+    let result: serde_json::Value =
+        serde_wasm_bindgen::from_value(result).expect("result should deserialize");
+    assert_eq!(result["operation"], "CreaseSelect");
+    assert_eq!(typed_ids(&outcome, "before"), (vec![], vec![]));
+    assert_eq!(typed_ids(&outcome, "after"), (vec![1, 2], vec![2, 2]));
+
+    let replaced = oristudio_cp_wasm::set_selected_lines(handle, &[3], &[2])
+        .expect("selected lines should set");
+    let replaced = js_sys::Object::from(replaced);
+    let holder = js_sys::Object::new();
+    js_sys::Reflect::set(&holder, &JsValue::from_str("lines"), &replaced)
+        .expect("holder should take the lines");
+    assert_eq!(typed_ids(&holder, "lines"), (vec![1, 2], vec![2, 2]));
+
+    let snapshot = oristudio_cp_wasm::document_snapshot(handle).expect("snapshot should serialize");
+    let snapshot: serde_json::Value =
+        serde_wasm_bindgen::from_value(snapshot).expect("snapshot should deserialize");
+    let selected = snapshot["crease_pattern"]["line_segments"]
+        .as_array()
+        .expect("line segments")
+        .iter()
+        .map(|line| line["selected"].as_i64())
+        .collect::<Vec<_>>();
+    assert_eq!(selected, vec![Some(0), Some(0), Some(2)]);
+
+    assert!(
+        oristudio_cp_wasm::execute_cp_selection_command(
+            handle,
+            serde_wasm_bindgen::to_value("CreaseMakeValley")
+                .expect("operation id should serialize"),
+            serde_wasm_bindgen::to_value(&oristudio_cp::CreasePatternCommandPayload::default())
+                .expect("payload should serialize"),
+        )
+        .is_err(),
+        "an edit is not a selection command"
+    );
+    oristudio_cp_wasm::free_document(handle).expect("document handle should free");
+}
+
 #[wasm_bindgen_test]
 fn command_dispatch_accepts_fix_inaccurate_line_payloads() {
     let handle = oristudio_cp_wasm::load_cp("1 0.1954 0 10 0\n", "sample")

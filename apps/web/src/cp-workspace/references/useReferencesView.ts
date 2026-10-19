@@ -54,14 +54,12 @@ export interface ReferencesViewState {
    * a content hash of the creases themselves.
    *
    * Deliberately *not* `oristudioCpRevision` / `foldArtifactRevision`. Neither
-   * counter means "the creases changed": `foldArtifactRevision` advances on a
-   * box-, lasso- or polygon-select (`SYNC_CP_LINE_SELECTION_AFTER_OPERATIONS`
-   * in `projectSlice`, which records history for a selection that changes no
-   * geometry), so keyed on it a valid answer was marked "Out of date" by
-   * selecting in Edit and coming back. And dropping only that one would break
-   * the other direction: CP undo/redo bumps `foldArtifactRevision` *alone*
-   * (`historySlice`), so a hash is what covers both. Same reasoning, and the
-   * same hash, as the sheet index's cache (`sheets/cpSheetIndex`).
+   * counter means "the creases changed": `foldArtifactRevision` used to advance
+   * on a box-, lasso- or polygon-select, so keyed on it a valid answer was
+   * marked "Out of date" by selecting in Edit and coming back. And it still
+   * advances on the undo or redo of any edit while `oristudioCpRevision` does
+   * not (`historySlice`), so a hash is what covers both. Same reasoning, and
+   * the same hash, as the sheet index's cache (`sheets/cpSheetIndex`).
    */
   revision: string;
   /** Refit the camera on a new document only — never on an edit. */

@@ -26,6 +26,8 @@ import type {
   OristudioCpFoldedRenderSnapshot,
   OristudioCpLineSegment,
   OristudioCpOperationDescriptor,
+  OristudioCpSelectedLines,
+  OristudioCpSelectionCommandResult,
 } from './oristudioCpTypes';
 import type { CpGeometryTransport } from './oristudioCpGeometry';
 import { decodeSheetIndexBytes, type CpSheetIndexTransport } from './oristudioCpSheetIndex';
@@ -185,6 +187,16 @@ function toPlainGeometry(geometry: CpGeometryTransport): PlainCompactGeometry {
   };
 }
 
+/** The kernel's `SelectedLines` as the native commands carry it: JSON arrays. */
+interface PlainSelectedLines {
+  ids: number[];
+  values: number[];
+}
+
+function selectedLinesFromPlain(lines: PlainSelectedLines): OristudioCpSelectedLines {
+  return { ids: Uint32Array.from(lines.ids), values: Int32Array.from(lines.values) };
+}
+
 async function setTextsNative(handle: number, texts: FlatText[]): Promise<void> {
   const coords = new Array<number>(texts.length * 2);
   for (let i = 0; i < texts.length; i += 1) {
@@ -280,6 +292,32 @@ export function createOristudioCpNativeClient(): OristudioCpWorkerApi {
       payload: OristudioCpCommandPayload = {}
     ): Promise<OristudioCpCommandPreview> {
       return call('cp_preview_command', { handle, operation: operationId, payload });
+    },
+    async executeSelectionCommand(
+      handle: number,
+      operationId: OristudioCpOperationId,
+      payload: OristudioCpCommandPayload = {}
+    ): Promise<OristudioCpSelectionCommandResult> {
+      const outcome = await call<{
+        result: OristudioCpCommandResult;
+        before: PlainSelectedLines;
+        after: PlainSelectedLines;
+      }>('cp_execute_selection_command', { handle, operation: operationId, payload });
+      return {
+        result: outcome.result,
+        before: selectedLinesFromPlain(outcome.before),
+        after: selectedLinesFromPlain(outcome.after),
+      };
+    },
+    async setSelectedLines(
+      handle: number,
+      lines: OristudioCpSelectedLines
+    ): Promise<OristudioCpSelectedLines> {
+      const replaced = await call<PlainSelectedLines>('cp_set_selected_lines', {
+        handle,
+        lines: { ids: Array.from(lines.ids), values: Array.from(lines.values) },
+      });
+      return selectedLinesFromPlain(replaced);
     },
     async insertLineSegments(handle: number, segments: OristudioCpLineSegment[]): Promise<number> {
       return call('cp_insert_line_segments', { handle, segments });

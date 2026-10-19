@@ -165,6 +165,27 @@ export interface OristudioCpCommandResult {
   checked_vertices?: number | null;
 }
 
+/**
+ * The line segments whose `selected` flag is set in the kernel (the kernel's
+ * `SelectedLines`): 1-based ids in ascending order, each with its flag's value
+ * — 2 for anything selected in Ori Studio or Oriedita, though a file can carry
+ * others and they are kept.
+ */
+export interface OristudioCpSelectedLines {
+  ids: Uint32Array;
+  values: Int32Array;
+}
+
+/**
+ * What a selection command answers instead of a document: its result, and the
+ * selected lines before and after it.
+ */
+export interface OristudioCpSelectionCommandResult {
+  result: OristudioCpCommandResult;
+  before: OristudioCpSelectedLines;
+  after: OristudioCpSelectedLines;
+}
+
 export interface OristudioCpDiagnosticEntry {
   id: string;
   kind: string;

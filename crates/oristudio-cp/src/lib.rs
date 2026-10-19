@@ -17,6 +17,7 @@ pub mod folding3d;
 pub mod geometry;
 pub mod geometry_transport;
 pub mod io;
+pub mod line_selection;
 pub(crate) mod meetings;
 pub mod model;
 pub mod operations;

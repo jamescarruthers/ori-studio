@@ -99,6 +99,7 @@ import type {
   OristudioCpGridMetadata,
   OristudioCpLineSegment,
   OristudioCpOperationDescriptor,
+  OristudioCpSelectedLines,
 } from '../../engine/oristudioCpTypes';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 import type { OristudioCpActionId } from '../../lib/oristudioCpActions';
@@ -164,6 +165,15 @@ export interface OristudioCpHistoryEntry {
    * without reloading the (unchanged) wasm document, keeping edits cheap.
    */
   overlayOnly?: boolean;
+  /**
+   * Set when the entry records a crease selection and nothing else: the
+   * kernel's selected lines at the captured moment, which undo and redo put
+   * back together with `selection`. The document is left alone, so `document`
+   * is only the snapshot the selection was made on, shared with the store and
+   * never a copy. The entry then costs the selection, not the document (Phase
+   * 3 of `implementation-plans/large-document-open-and-select.md`).
+   */
+  selectedLines?: OristudioCpSelectedLines;
   label: string;
   timestamp: string;
 }
