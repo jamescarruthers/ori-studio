@@ -334,6 +334,17 @@ T-junctions included — stay in the same sheet.
   export dropped. The whole-canvas paths go when the Diagram and Simulate stop
   reading them.
 
+  *Deleted, once they had:* nothing that asks about an editable sheet
+  segments the canvas any more. The whole-canvas segmentation artifacts went
+  with the Diagram's move, and the containment and selection matching
+  (`creasePatternSelectionSegment.ts`) went after References', its reading
+  kept only as the differential tests' reference (`regionsToday`). What still
+  infers the whole canvas does so because it is about the whole canvas or has
+  no sheet to read: a design's generated pattern, an editable pattern with no
+  closed border (Simulate falls back to the canvas), and the whole-document
+  export, whose dialog lists face regions to pick from (4.7). 2.4 made that
+  inference four times cheaper.
+
   Measured with the Edit toolbar on it (`large-osf-perf.mjs --action`, same
   boxes, main 89da66832 against the branch):
 
@@ -432,6 +443,11 @@ removes.
   `useStepPictureUrl` already waits for `useNearView` before painting, but
   the `viewGeometry(…).layers` and `xraySurfaceOf` memos above that check run
   for every card on mount. Gate them on the same `seen`.
+- **4.7 The whole-document export lists sheets.** File › Export to an
+  image format opens a dialog that lists the canvas's face regions to pick
+  from, so it infers the whole canvas first (2.3 s here since 2.4). Listing
+  the index's sheets, with faces only for the one picked or drawn, would make
+  it cost what the selection toolbar's export costs.
 - **4.6 Sheet cards draw cheaply.** The Simulate and References rails draw
   every line of every card as its own SVG `<line>`. On this file that is 204
   cards and about 489k elements: around 2 s of React commit, and a layout of
@@ -521,7 +537,7 @@ Phase 2
 - [x] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
 - [x] 2.2 Simulate rail on the index; mesh for the selected sheet only
 - [x] 2.3 Faces per sheet on demand (kernel when its lines meet only at their ends, else JS), cached per sheet
-- [ ] 2.3 Whole-canvas paths deleted (after the Diagram and Simulate move)
+- [x] 2.3 Whole-canvas paths deleted for every question about an editable sheet (the whole-document export's dialog: 4.7)
 - [ ] 2.4 Inference hot spots, output bit-identical
 
 Phase 3
@@ -536,3 +552,4 @@ Phase 4
 - [ ] 4.4 Desktop byte read (measure first)
 - [ ] 4.5 Diagram card picture geometry deferred to visible cards
 - [ ] 4.6 Sheet cards: one path per ink, pictures for cards in view
+- [ ] 4.7 The whole-document export dialog lists index sheets, faces only for the one picked

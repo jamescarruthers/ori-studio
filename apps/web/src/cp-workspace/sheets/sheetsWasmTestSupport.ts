@@ -3,12 +3,12 @@ import { basename, delimiter, extname, resolve } from 'node:path';
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
 import type { FoldArtifacts, FoldDocument } from '../../engine/types';
 import { segmentationFoldArtifactsFromFold } from '../../lib/creasePatternImport';
-import { type CpSegment, resolveCpSegments } from '../../lib/creasePatternSegmentation';
 import {
-  resolveSelectedSegment,
-  segmentContainedLineIds,
-} from '../../lib/creasePatternSelectionSegment';
-import { emptyOristudioCpSelection } from '../../lib/creasePatternViewport';
+  assignmentByKeyOf,
+  type CpSegment,
+  pointInSegment,
+  resolveCpSegments,
+} from '../../lib/creasePatternSegmentation';
 import type { Point } from '../../lib/geometry';
 import { outerRing } from '../regions/regionReference';
 
@@ -87,21 +87,87 @@ export interface Region {
   lines: number[];
 }
 
-/** Today's sheets: segmented by faces, kept only where the rim is all border. */
+/**
+ * The sheets every surface found before the sheet index, kept here as the
+ * differential tests' reference now that none does: the canvas segmented by
+ * faces, each region given the lines whose midpoint lies inside it or on its
+ * rim, and kept where its rim is all border and no earlier such region holds
+ * the same lines — what a selection of exactly those lines matched.
+ */
 export function regionsToday(
   document: OristudioCpDocumentSnapshot,
   artifacts: FoldArtifacts
 ): Region[] {
-  return resolveCpSegments(artifacts).flatMap((segment) => {
-    const lines = segmentContainedLineIds(document, artifacts, segment);
-    const match = resolveSelectedSegment(
-      document,
-      { ...emptyOristudioCpSelection(), lines },
-      artifacts
-    );
+  const fold = artifacts.fold;
+  const assignments = assignmentByKeyOf(fold);
+  const held = new Set<string>();
+  const regions: Region[] = [];
+  for (const segment of resolveCpSegments(artifacts)) {
+    if (!rimIsAllBorder(fold, segment, assignments)) continue;
+    const lines = linesInside(document, segment);
+    const key = lines.join();
+    if (lines.length === 0 || held.has(key)) continue;
+    held.add(key);
     const outline = outerRing(segment.boundary);
-    return match?.segmentId === segment.id && outline ? [{ segment, outline, lines }] : [];
+    if (outline) regions.push({ segment, outline, lines });
+  }
+  return regions;
+}
+
+/** Whether every edge used by just one of the region's faces — its rim — is a border. */
+function rimIsAllBorder(
+  fold: FoldDocument,
+  segment: CpSegment,
+  assignments: ReadonlyMap<string, string>
+): boolean {
+  const uses = new Map<string, number>();
+  for (const faceIndex of segment.faceIndices) {
+    const face = fold.faces_vertices[faceIndex] ?? [];
+    face.forEach((a, i) => {
+      const b = face[(i + 1) % face.length]!;
+      if (a === b) return;
+      const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+      uses.set(key, (uses.get(key) ?? 0) + 1);
+    });
+  }
+  for (const [key, count] of uses) {
+    if (count === 1 && assignments.get(key) !== 'B') return false;
+  }
+  return true;
+}
+
+/** 1-based ids of the lines whose midpoint lies inside the region or within 1e-6 of its rim. */
+function linesInside(document: OristudioCpDocumentSnapshot, segment: CpSegment): number[] {
+  const near = 1e-6;
+  const { minX, minY, maxX, maxY } = segment.bounds;
+  const ids: number[] = [];
+  document.crease_pattern.line_segments.forEach((line, index) => {
+    const midpoint = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
+    if (
+      midpoint.x < minX - near ||
+      midpoint.x > maxX + near ||
+      midpoint.y < minY - near ||
+      midpoint.y > maxY + near
+    ) {
+      return;
+    }
+    const onRim = segment.boundary.some((ring) =>
+      ring.some((a, i) => distanceToSegment(midpoint, a, ring[(i + 1) % ring.length]!) < near)
+    );
+    if (onRim || pointInSegment(segment, midpoint)) ids.push(index + 1);
   });
+  return ids;
+}
+
+function distanceToSegment(point: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSq = dx * dx + dy * dy;
+  const t =
+    lengthSq === 0
+      ? 0
+      : Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq));
+  return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
 }
 
 /** `[minX,minY..maxX,maxY]` of an outline, to name a region in a message. */
