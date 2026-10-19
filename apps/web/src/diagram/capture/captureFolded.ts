@@ -34,6 +34,7 @@ import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSp
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import {
   openFold,
+  hasFoldedLayerOrder,
   readFoldedPicture,
   type CpFoldRuntime,
   type FoldedFigureState,
@@ -300,7 +301,7 @@ function renderForRoute(
   route: 'flat' | 'spatial',
   spread: DiagramLayerSpread | undefined
 ): DiagramCpRender {
-  if (render.mode === 'crease-pattern' || render.mode === 'simulated') return render;
+  if (render.mode === 'crease-pattern' || render.mode === 'simulated' || render.mode === 'defox') return render;
   if (route === 'flat') {
     return render.mode === 'folded-flat'
       ? render
@@ -410,6 +411,8 @@ export async function captureStep(
   request: CaptureStepRequest
 ): Promise<CaptureStepResult> {
   const { document, style, env, sheets } = request;
+  // Saved Defox layer orders cannot be refreshed from an edited CP. Show As explicitly replaces the saved view.
+  if (request.render.mode === 'defox') return { status: 'needs-pose' };
   // A sheet cannot be looked for before the index is ready.
   if (!sheets) return { status: 'unknown' };
   const choice = chooseStepCreases(document, request.scope, sheets, request.known ?? null);
@@ -475,8 +478,9 @@ export async function captureStep(
       state = await runtime.foldToCase(folded.handle, render.foldCase);
       foldCase = Math.max(1, Math.min(render.foldCase, state.discoveredCases));
     }
-    const captured = await readFlatPicture(runtime, folded.handle, state, render.rotationDeg, env, render.spread);
-    const noLayerOrder = state.outcome === 'NoSolutions' || state.outcome === 'Contradiction';
+    const picture = await readFoldedPicture(runtime, folded.handle, state.displayStyle);
+    const captured = flatPicture(picture, render.rotationDeg, env, render.spread);
+    const noLayerOrder = !hasFoldedLayerOrder(state) || !picture.scene?.faces.length;
     return { status: 'captured', source: source({ ...render, foldCase }), captured, noLayerOrder };
   } finally {
     await runtime.free(folded.handle);

@@ -38,6 +38,11 @@ let host: HTMLDivElement | null = null;
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
   useWorkspaceStore.setState(initialState, true);
   host = document.createElement('div');
   document.body.append(host);
@@ -57,6 +62,7 @@ afterEach(() => {
   host?.remove();
   host = null;
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 const state = () => useWorkspaceStore.getState();

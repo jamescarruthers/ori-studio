@@ -663,7 +663,7 @@ function clearedCreasePattern(
  * starter border square. Endpoint pairs are compared unordered and the segments
  * in any order, because nothing promises the kernel round-trips either.
  */
-function creasePatternHoldsNothingOfItsOwn(document: OristudioCpDocumentSnapshot): boolean {
+export function creasePatternHoldsNothingOfItsOwn(document: OristudioCpDocumentSnapshot): boolean {
   const model = document.crease_pattern;
   if (
     model.circles.length > 0 ||

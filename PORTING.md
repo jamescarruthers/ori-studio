@@ -992,3 +992,29 @@ Two things to know before touching this area:
   because nothing fails: if the port and the harness both call the wrong
   function, the test passes while both diverge. Agreement between two of our own
   artifacts is not parity; only `third_party/` is authoritative.
+
+## Defox saved diagram import
+
+Defox/Step-Folder is an additional MIT upstream, pinned in `upstream-sync.json`
+and vendored unchanged under `third_party/step-folder`. The diagram importer
+uses its saved-state conversion, distortion, and symbol renderer directly in
+an isolated worker. A small inert DOM adapter produces SVG, which then passes
+Ori Studio's existing SVG sanitizer. The importer does not repeat the layer
+search for a saved Defox view. Defox's CP export is used as-is: it labels a
+`.cp`'s mountains "V" internally but swaps them back when writing, so its
+codes already match Oriedita's (2 = mountain, 3 = valley). The oracle checks a
+pleat's codes through that round trip.
+
+Compatibility covers the pinned JSON array format, both linear and cell saved
+states, saved view parameters, and symbol types 0–15. Unsupported or malformed
+entries are reported individually. Each linked saved view requires one paper
+region. Original render metadata is preserved with its fixed SVG; converting
+that view through Adjust Pose is explicit. Symbols remain vector pictures,
+not editable native annotations. See `tools/step-folder-oracle/README.md` for
+comparison tests and the external-corpus harness.
+
+Batch placement is an additive Ori Studio composition API (`append_disjoint`),
+not a replacement for Oriedita's `import_add`: all sheets are decoded and
+checked for disjoint bounds before a single mutation. Imported lines retain
+kernel order and auxiliary geometry. The fold engine is unchanged; import
+jobs own independent instances and cancellation state of the existing engine.

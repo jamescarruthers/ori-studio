@@ -153,14 +153,15 @@ export async function pickStepPictures(
   return addStepPictures(files, { ...options, anchorStepId, via: 'pick' });
 }
 
-function assetFrom(id: string, result: ImportedPicture & { ok: true }): KnownDiagramAsset {
+/** The stored asset for an imported picture, as the upload pipeline and the step importer both keep it. */
+export function assetFrom(id: string, result: ImportedPicture & { ok: true }): KnownDiagramAsset {
   const { content, bytes } = result;
   return content.kind === 'svg'
     ? { id, kind: 'svg', svg: content.svg, widthPx: content.widthPx, heightPx: content.heightPx, bytes }
     : { id, kind: 'raster', src: content.src, widthPx: content.widthPx, heightPx: content.heightPx, bytes };
 }
 
-function uploadOutcome(result: ImportedPicture): DiagramPictureUploadOutcome {
+export function uploadOutcome(result: ImportedPicture): DiagramPictureUploadOutcome {
   if (!result.ok) return result.reason;
   return result.notices.length > 0 ? 'flattened' : 'ok';
 }

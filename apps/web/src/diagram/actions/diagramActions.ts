@@ -156,8 +156,12 @@ export interface DiagramStepActionState {
   capturing: boolean;
   /** A crease pattern is open to link to. */
   patternOpen: boolean;
-  /** How a step linked to the pattern shows it (D19); null for any other step. */
-  showAs: DiagramShowAs | null;
+  /**
+   * How a step linked to the pattern shows it (D19); null for any other step.
+   * `'none'` for a saved Defox view, which is none of the three ways: each is
+   * offered, and choosing one replaces the view with Ori Studio's own picture.
+   */
+  showAs: DiagramShowAs | 'none' | null;
   /**
    * Shown Simulated above 0%: only Pose captures it again, so Refresh is
    * "Pose Again" and opens it (D19).
@@ -427,7 +431,14 @@ export function buildDiagramStepActions(
   const showAs =
     state.showAs === null
       ? []
-      : [choice('show-as', t('panels:diagram.actions.showAs', 'Show As'), (way) => () => deps.showAs(way), state.showAs)];
+      : [
+          choice(
+            'show-as',
+            t('panels:diagram.actions.showAs', 'Show As'),
+            (way) => () => deps.showAs(way),
+            state.showAs === 'none' ? null : state.showAs
+          ),
+        ];
 
   const move: DiagramStepGroup['items'] = [
     command(

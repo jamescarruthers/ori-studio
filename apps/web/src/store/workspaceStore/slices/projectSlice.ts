@@ -665,6 +665,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
   const capabilities = () => selectWorkspaceCapabilities(get());
 
   const rejectDisabled = (id: WorkspaceCapabilityId) => {
+    if (get().diagramImportBusy) return true;
     const capability = capabilities()[id];
     if (capability.enabled) return false;
     set({
@@ -763,6 +764,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     label: string,
     mutate: () => Promise<OristudioCpDocumentState>
   ): Promise<boolean> => {
+    if (get().diagramImportBusy) return false;
     if (!get().oristudioCpDocument) {
       set({
         oristudioCpError: 'No editable crease-pattern document is loaded',
@@ -2427,6 +2429,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     },
 
     executeOristudioCpCommand: async (operationId, payload = {}) => {
+      if (get().diagramImportBusy) return false;
       if (!get().oristudioCpDocument) {
         set({
           oristudioCpError: 'No editable crease-pattern document is loaded',

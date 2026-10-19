@@ -77,6 +77,17 @@ export class FileTooLargeError extends Error {
 /** The error string `read_binary_file` returns past `max_bytes` (`lib.rs`). */
 const DESKTOP_FILE_TOO_LARGE = 'FILE_TOO_LARGE';
 
+/** A folder past the entry cap; the dialog says so in the reader's language. */
+export class FolderTooLargeError extends Error {
+  constructor() {
+    super('The folder contains too many entries. Choose a smaller folder.');
+    this.name = 'FolderTooLargeError';
+  }
+}
+
+/** The error string `list_import_folder` returns past its entry cap (`lib.rs`). */
+const DESKTOP_FOLDER_TOO_LARGE = 'FOLDER_TOO_LARGE';
+
 export interface SaveFileResult {
   name: string;
   /**
@@ -824,4 +835,68 @@ export function createOpenedPathFileService(path: string): FileService {
 
 export function getFileService(): FileService {
   return createFileService(getRuntimeSurface());
+}
+
+/** A chosen folder's files, listed again whenever "Include subfolders" changes. */
+export type FolderReader = (includeSubfolders: boolean) => Promise<PickedFile[]>;
+
+/**
+ * Choose a folder to import. Its files share the capped lazy-file boundary with
+ * multi-file imports, and are named by their path from the chosen folder on every
+ * platform (`folder/sub/01.cp`, as the browser names them), so a recursive import
+ * sorts subfolder by subfolder and same-named files stay told apart.
+ */
+export async function pickImportFolder(title: string): Promise<FolderReader | null> {
+  if (getRuntimeSurface() === 'desktop') {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const folder = await open({ title, directory: true, multiple: false });
+    if (typeof folder !== 'string') return null;
+    return async (recursive) => {
+      try {
+        const paths = await invoke<string[]>('list_import_folder', { path: folder, recursive });
+        return paths.map((path) => ({ ...pickedFileFromPath(path), name: folderRelativeName(folder, path) }));
+      } catch (error) {
+        if (error === DESKTOP_FOLDER_TOO_LARGE) throw new FolderTooLargeError();
+        throw error;
+      }
+    };
+  }
+  const files = await new Promise<File[] | null>((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.setAttribute('webkitdirectory', '');
+    input.style.display = 'none';
+    document.body.append(input);
+    input.addEventListener(
+      'change',
+      () => {
+        input.remove();
+        resolve(Array.from(input.files ?? []));
+      },
+      { once: true }
+    );
+    input.addEventListener(
+      'cancel',
+      () => {
+        input.remove();
+        resolve(null);
+      },
+      { once: true }
+    );
+    input.click();
+  });
+  if (!files) return null;
+  // The browser hands over the whole tree at once; the toggle only filters it.
+  return async (recursive) =>
+    files
+      .filter((file) => recursive || file.webkitRelativePath.split('/').length <= 2)
+      .map((file) => ({ ...pickedFileFromFile(file), name: file.webkitRelativePath || file.name }));
+}
+
+/** A file's path from the chosen folder, the folder's own name first, as a browser's `webkitRelativePath`. */
+export function folderRelativeName(folder: string, path: string): string {
+  const root = folder.replace(/[\\/]+$/, '');
+  const parent = root.slice(0, Math.max(root.lastIndexOf('/'), root.lastIndexOf('\\')) + 1);
+  return path.startsWith(parent) ? path.slice(parent.length).replaceAll('\\', '/') : filenameFromPath(path);
 }

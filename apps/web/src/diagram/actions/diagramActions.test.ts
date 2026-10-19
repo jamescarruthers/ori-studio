@@ -353,6 +353,12 @@ describe('the diagram step verbs', () => {
     expect(diagramStepChoice(build({}), 'show-as')).toBeNull();
   });
 
+  it('offers every way for a saved Defox view, which shows none of them yet', () => {
+    const showAs = diagramStepChoice(build({ link: 'current', showAs: 'none' }), 'show-as');
+    expect(showAs?.options.map((option) => option.id)).toEqual(['crease-pattern', 'folded', 'simulated']);
+    expect(showAs?.options.some((option) => option.checked)).toBe(false);
+  });
+
   it('holds Show As while there is no pattern to capture from, or its region is gone', () => {
     expect(diagramStepChoice(build({ link: 'current', showAs: 'folded', patternOpen: false }), 'show-as')).toMatchObject({
       disabled: true,

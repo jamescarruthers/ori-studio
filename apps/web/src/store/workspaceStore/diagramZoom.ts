@@ -116,6 +116,8 @@ export function enlargedPictureKind(document: DiagramDocument, step: DiagramStep
         return '3d';
       case 'simulated':
         return 'simulated';
+      case 'defox':
+        return 'defox';
     }
   }
   return stepAsset(document, step)?.kind ?? null;

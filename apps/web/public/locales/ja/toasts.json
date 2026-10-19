@@ -34,6 +34,10 @@
       "unknown": "展開図の準備がまだできていません。少し待ってからもう一度お試しください。"
     },
     "dropReadOnly": "この折り図は新しい Ori Studio で作成されたため読み取り専用で開いています。図を追加することはできません。",
+    "import": {
+      "otherWorkspaceFirst": "先にもう一方のワークスペースで後の編集を元に戻すかやり直してください。インポートは編集と折り図の両方を変更しました。",
+      "restoreFailed": "インポートした手順を復元できませんでした。"
+    },
     "placementsReflowed_other": "移動した{{count}}ステップが元のセルに戻りました",
     "references": {
       "addedSteps": "ステップ {{first}}–{{last}} として追加しました",

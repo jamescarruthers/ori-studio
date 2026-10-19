@@ -233,8 +233,9 @@ function cardMarksGate(step: DiagramStep, style: DiagramDocument['style']): Diag
 }
 
 /** How a step linked to the pattern shows it, for Show as; null for any other step. */
-function showAsOfStep(step: DiagramStep | undefined): DiagramShowAs | null {
-  return step && !isLockedStep(step) && step.source?.kind === 'cp' ? showAsOf(step.source.render) : null;
+function showAsOfStep(step: DiagramStep | undefined): DiagramShowAs | 'none' | null {
+  if (!step || isLockedStep(step) || step.source?.kind !== 'cp') return null;
+  return step.source.render.mode === 'defox' ? 'none' : showAsOf(step.source.render);
 }
 
 /** What a step is linked to, for the verbs that follow a link. */
