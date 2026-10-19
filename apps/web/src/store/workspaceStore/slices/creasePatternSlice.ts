@@ -1,5 +1,6 @@
 import { flushPendingEdits } from '../../../lib/pendingEdits';
 import { patchTreemakerDesign, selectDesignViewportFitRequestId, selectProject } from '../designTabs';
+import { withCpHistoryEntry } from '../cpHistory';
 import {
   NO_CP_VERTEX_PINS,
   removeCpVertexPinsInBox,
@@ -264,9 +265,6 @@ async function requestFold3dRefusal(notice: Fold3dRefusalNotice): Promise<Fold3d
   });
   return picked === 'locate' || picked === 'simulate' ? picked : 'cancel';
 }
-
-/** Cap on the CP undo stack (matches historySlice's MAX_HISTORY). */
-const MAX_CP_HISTORY = 100;
 
 // Dedupe concurrent `ensureEditCreasePattern` calls (e.g. React StrictMode
 // double-invoking the seeding effect) so only one blank document is created.
@@ -635,32 +633,27 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     // The new entry keeps its figures' handles alive for as long as undo can
     // reach them; anything the cap or the cleared redo stack drops lets go.
     retainFoldedFigureHandles(input.foldedFigures);
-    const grown = [
-      ...get().oristudioCpHistoryPast,
-      {
-        document: document.document,
-        selection: get().oristudioCpSelection,
-        annotations: input.annotations,
-        foldedFigures: input.foldedFigures,
-        activeFoldedFigureId: input.activeFoldedFigureId,
-        // Captured on every overlay entry, not only the window ones. An
-        // annotation edit that omitted them would produce an entry whose undo
-        // leaves windows alone — which is right — but the field is also how a
-        // *later* undo past that point knows what the windows were, so a hole
-        // here would restore the wrong list.
-        inlineSimulations: input.inlineSimulations ?? get().oristudioCpInlineSimulations,
-        overlayOnly: true,
-        label: input.label,
-        timestamp: new Date().toISOString(),
-      },
-    ];
-    const evicted = grown.slice(0, Math.max(0, grown.length - MAX_CP_HISTORY));
-    for (const entry of evicted) releaseFoldedFigureHandles(entry.foldedFigures ?? []);
+    const past = withCpHistoryEntry(get().oristudioCpHistoryPast, {
+      document: document.document,
+      selection: get().oristudioCpSelection,
+      annotations: input.annotations,
+      foldedFigures: input.foldedFigures,
+      activeFoldedFigureId: input.activeFoldedFigureId,
+      // Captured on every overlay entry, not only the window ones. An
+      // annotation edit that omitted them would produce an entry whose undo
+      // leaves windows alone — which is right — but the field is also how a
+      // *later* undo past that point knows what the windows were, so a hole
+      // here would restore the wrong list.
+      inlineSimulations: input.inlineSimulations ?? get().oristudioCpInlineSimulations,
+      overlayOnly: true,
+      label: input.label,
+      timestamp: new Date().toISOString(),
+    });
     for (const entry of get().oristudioCpHistoryFuture) {
       releaseFoldedFigureHandles(entry.foldedFigures ?? []);
     }
     set({
-      oristudioCpHistoryPast: grown.slice(-MAX_CP_HISTORY),
+      oristudioCpHistoryPast: past,
       oristudioCpHistoryFuture: [],
       dirty: true,
     });

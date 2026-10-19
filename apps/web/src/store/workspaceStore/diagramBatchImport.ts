@@ -6,6 +6,7 @@ import {
   getEditableCpModelBounds,
 } from "../../lib/creasePatternViewport";
 import { occupiedModelSpace } from "./occupiedModelSpace";
+import { MAX_CP_HISTORY, withCpHistoryEntry } from "./cpHistory";
 import { useWorkspaceStore } from "../workspaceStore";
 import type { OristudioCpHistoryEntry, WorkspaceState } from "./types";
 import {
@@ -296,12 +297,6 @@ export async function commitDiagramImport(
     if (cpEntry)
       for (const entry of before.oristudioCpHistoryFuture)
         releaseFoldedFigureHandles(entry.foldedFigures);
-    const cpPast = cpEntry
-      ? [...before.oristudioCpHistoryPast, cpEntry]
-      : before.oristudioCpHistoryPast;
-    // Match ordinary Edit history's retention policy.
-    for (const evicted of cpPast.slice(0, Math.max(0, cpPast.length - 100)))
-      releaseFoldedFigureHandles(evicted.foldedFigures);
     set({
       diagram: next,
       diagramHistory: trimDiagramHistory(
@@ -314,7 +309,7 @@ export async function commitDiagramImport(
         ? {
             oristudioCpDocument: cp,
             oristudioCpRevision: before.oristudioCpRevision + 1,
-            oristudioCpHistoryPast: cpPast.slice(-100),
+            oristudioCpHistoryPast: withCpHistoryEntry(before.oristudioCpHistoryPast, cpEntry),
             oristudioCpSelection: emptyOristudioCpSelection(),
             oristudioCpActiveDiagnosticId: null,
             oristudioCpHistoryFuture: [],
@@ -400,10 +395,10 @@ export function compoundImportTravel(
         oristudioCpHistoryPast:
           direction === "undo"
             ? s.oristudioCpHistoryPast.slice(0, -1)
-            : [...s.oristudioCpHistoryPast, current],
+            : withCpHistoryEntry(s.oristudioCpHistoryPast, current),
         oristudioCpHistoryFuture:
           direction === "undo"
-            ? [current, ...s.oristudioCpHistoryFuture]
+            ? [current, ...s.oristudioCpHistoryFuture].slice(0, MAX_CP_HISTORY)
             : s.oristudioCpHistoryFuture.slice(1),
         diagram: result.restore.snapshot,
         diagramHistory: result.history,

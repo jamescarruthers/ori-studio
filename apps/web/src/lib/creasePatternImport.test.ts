@@ -73,6 +73,23 @@ describe('crease pattern import', () => {
     expect(viaObject).toEqual(viaText);
   });
 
+  it('orders inferred edges exactly as numeric collation of their keys did', () => {
+    // A 4x4 grid with both diagonals: 25 vertices, so edge keys run to two
+    // digits and plain string order ("10:11" before "2:10") would differ.
+    const lines = ['1 0 0 4 0', '1 4 0 4 4', '1 4 4 0 4', '1 0 4 0 0', '2 0 0 4 4', '3 4 0 0 4'];
+    for (const at of [1, 2, 3]) lines.push(`2 ${at} 0 ${at} 4`, `3 0 ${at} 4 ${at}`);
+    const { fold } = parseImportedCreasePattern(lines.join('\n'), {
+      format: 'cp',
+      filename: 'grid.cp',
+      path: null,
+    }).document;
+
+    const keys = fold.edges_vertices.map(([a, b]) => `${a}:${b}`);
+    expect(fold.vertices_coords.length).toBeGreaterThan(10);
+    expect([...keys].sort()).not.toEqual(keys);
+    expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })));
+  });
+
   it('parses ORIPA CP lines and infers simulatable faces', () => {
     const result = parseImportedCreasePattern(
       [

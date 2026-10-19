@@ -87,7 +87,6 @@ interface NormalizedSegment {
 }
 
 const EPSILON = 1e-8;
-const edgeOrder = new Intl.Collator(undefined, { numeric: true });
 
 /**
  * Bucket edge for the vertex index in {@link splitSegments}, four times the
@@ -808,18 +807,28 @@ function splitSegments(segments: NormalizedSegment[]): {
     }
   });
 
+  // Edges in vertex order: by the lower vertex id, then the higher. That is the
+  // order the keys' numeric collation gave, computed on the two numbers instead:
+  // collating ~600k `low:high` strings was over half of all face inference on a
+  // canvas of 489k creases.
+  const ordered: Array<[number, number, string, FoldAssignment]> = [];
+  for (const [key, assignment] of edgeMap) {
+    const colon = key.indexOf(':');
+    const a = Number(key.slice(0, colon));
+    const b = Number(key.slice(colon + 1));
+    if (!Number.isInteger(a) || !Number.isInteger(b)) continue;
+    ordered.push([a, b, key, assignment]);
+  }
+  ordered.sort((left, right) => left[0] - right[0] || left[1] - right[1]);
+
   const edges: [number, number][] = [];
   const assignments: FoldAssignment[] = [];
   const sources: number[] = [];
-  [...edgeMap.entries()]
-    .sort(([a], [b]) => edgeOrder.compare(a, b))
-    .forEach(([key, assignment]) => {
-      const [a, b] = key.split(':').map(Number);
-      if (a === undefined || b === undefined || !Number.isInteger(a) || !Number.isInteger(b)) return;
-      edges.push([a, b]);
-      assignments.push(assignment);
-      sources.push(edgeSources.get(key) ?? 0);
-    });
+  for (const [a, b, key, assignment] of ordered) {
+    edges.push([a, b]);
+    assignments.push(assignment);
+    sources.push(edgeSources.get(key) ?? 0);
+  }
 
   return { vertices, edges, assignments, sources };
 }
