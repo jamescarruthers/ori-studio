@@ -450,6 +450,11 @@ medium on the effort, since five consumers move.
   | Longest freeze per selection | 394–618 ms | 100–124 ms |
   | Heap per selection (its undo entry) | +92–94 MiB | +2–6 MiB |
 
+  Re-measured with the current-snapshot check (two runs each, alternating
+  with main and the branch before it): first sheet 299 / 294 ms, second
+  228 / 228 ms, heap +6 / +2 MiB, so a selection after an open still writes
+  in place; main 591 / 689 and 728 / 828 ms in the same runs.
+
   What is left of a selection is about 100 ms of the kernel's box select in
   the worker and one ~107 ms main-thread task of passes over every line keyed
   on the selection — the canvas's stroke scene for the highlight, the move-snap
