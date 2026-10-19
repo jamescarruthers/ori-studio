@@ -2,12 +2,18 @@ name: Deploy PR Preview
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    # `edited` is for a stacked PR: it is opened against another PR's branch, so nothing
+    # above runs, and when that PR merges and this one is retargeted to main, GitHub
+    # reports it as `edited`. `branches` filters on the new base. Title and body edits are
+    # `edited` too; `classify` skips them, and every other job with it.
+    types: [opened, reopened, synchronize, edited]
     branches:
       - main
 
+# A title or body edit gets a group of its own, so the run it starts (which does nothing)
+# never cancels a preview that is deploying.
 concurrency:
-  group: deploy-pr-preview-${{ github.event.pull_request.number }}
+  group: deploy-pr-preview-${{ github.event.pull_request.number }}${{ github.event.action == 'edited' && !github.event.changes.base && format('-edit-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 permissions:
@@ -19,6 +25,8 @@ jobs:
   classify:
     name: Classify Preview Requirement
     runs-on: ubuntu-latest
+    # An `edited` run deploys only when the base changed (a retarget to main).
+    if: github.event.action != 'edited' || github.event.changes.base
     outputs:
       should_deploy: ${{ steps.classify.outputs.should_deploy }}
       preview_url: ${{ steps.classify.outputs.preview_url }}
@@ -188,11 +196,14 @@ jobs:
   # posting the comment 403s. The only comment a fork could get is the "skipped, no secrets"
   # notice, which tells the contributor nothing they can act on — and it turned every green
   # fork PR into a red check. Skip the job instead, which reports as skipped rather than failed.
+  #
+  # `always()` would run this past a skipped `classify` too (a title or body edit) and
+  # overwrite the comment with an empty "skipped", so that is checked by name.
   comment:
     name: Publish Preview Comment
     runs-on: ubuntu-latest
     needs: [classify, deploy]
-    if: ${{ always() && !cancelled() && !github.event.pull_request.head.repo.fork }}
+    if: ${{ always() && !cancelled() && needs.classify.result != 'skipped' && !github.event.pull_request.head.repo.fork }}
     steps:
       - name: Create or update sticky comment
         uses: actions/github-script@v7
@@ -237,7 +248,9 @@ jobs:
 
             const body = lines.join('\n');
 
-            const { data: comments } = await github.rest.issues.listComments({
+            // Every page: a stacked PR gets its first comment at retarget, after the
+            // discussion, so the sticky one need not be among the first hundred.
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
