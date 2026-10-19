@@ -28,6 +28,15 @@ let root: Root | null = null;
 let host: HTMLDivElement | null = null;
 
 beforeEach(() => {
+  // Exercise the real virtualized grid with a viewport; jsdom has no layout.
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.hasAttribute('data-index') ? 100 : 1000;
+  });
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
   useWorkspaceStore.setState(initialState, true);
   host = document.createElement('div');
   document.body.append(host);
@@ -47,6 +56,8 @@ afterEach(() => {
   root = null;
   host?.remove();
   host = null;
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 const state = () => useWorkspaceStore.getState();
@@ -471,7 +482,7 @@ describe('DiagramPanel', () => {
       expect(stepsIn(state().diagram!).map((step) => step.id)[1]).toBe(second);
       expect(state().diagram?.steps).toHaveLength(2);
       expect(state().diagramSelectedStepId).toBe(second);
-      await vi.waitFor(() => expect(options()[1].querySelector('img')).not.toBeNull());
+      await vi.waitFor(() => expect(options()[1].querySelector('[data-picture-preview]')).not.toBeNull());
     });
 
     it('adds several dropped pictures as steps after the card they land on', async () => {

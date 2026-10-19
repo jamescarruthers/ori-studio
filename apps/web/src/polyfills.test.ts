@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { abortSignalTimeout, arrayAt, installPolyfills } from './polyfills';
+import { abortSignalAny, abortSignalTimeout, arrayAt, installPolyfills } from './polyfills';
 
 describe('arrayAt', () => {
   const list = ['a', 'b', 'c'];
@@ -46,13 +46,46 @@ describe('abortSignalTimeout', () => {
   });
 });
 
+describe('abortSignalAny', () => {
+  it('aborts with the reason of whichever input aborts first', () => {
+    const first = new AbortController();
+    const second = new AbortController();
+    const signal = abortSignalAny([first.signal, second.signal]);
+    expect(signal.aborted).toBe(false);
+    second.abort('finish now');
+    expect(signal.aborted).toBe(true);
+    expect(signal.reason).toBe('finish now');
+    first.abort('cancel');
+    expect(signal.reason).toBe('finish now');
+  });
+
+  it('is aborted at once when an input already is', () => {
+    const done = new AbortController();
+    done.abort('cancelled');
+    const signal = abortSignalAny([new AbortController().signal, done.signal]);
+    expect(signal.aborted).toBe(true);
+    expect(signal.reason).toBe('cancelled');
+  });
+});
+
 describe('installPolyfills', () => {
   it('leaves an engine that has the built-ins alone', () => {
     const nativeAt = Array.prototype.at;
     const nativeTimeout = AbortSignal.timeout;
+    const nativeAny = AbortSignal.any;
     installPolyfills();
     expect(Array.prototype.at).toBe(nativeAt);
     expect(AbortSignal.timeout).toBe(nativeTimeout);
+    expect(AbortSignal.any).toBe(nativeAny);
+  });
+
+  it('installs a non-enumerable `AbortSignal.any` where there is none', () => {
+    // WebKit before 17.4 (macOS before 14.4) has `timeout` and not `any`; the
+    // diagram importer joins its Cancel and Finish-now signals with it.
+    const realm = { Array: { prototype: {} }, AbortSignal: { timeout: () => undefined } as { any?: unknown } };
+    installPolyfills(realm);
+    expect(realm.AbortSignal.any).toBe(abortSignalAny);
+    expect(Object.keys(realm.AbortSignal)).not.toContain('any');
   });
 
   it('installs a non-enumerable `AbortSignal.timeout` where there is none', () => {

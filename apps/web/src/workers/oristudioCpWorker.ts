@@ -38,6 +38,7 @@ import init, {
   load_orh,
   load_ori,
   import_add,
+  append_disjoint,
   insert_line_segments,
   deselect_all,
   preview_cp_command,
@@ -263,6 +264,9 @@ const api = {
   },
   async deselectAll(handle: number): Promise<number> {
     return call(() => deselect_all(handle));
+  },
+  async appendDisjoint(handle: number, parts: CpGeometryTransport[], replaceStarter: boolean): Promise<[number, number][]> {
+    return call(() => append_disjoint(handle, parts, replaceStarter) as [number, number][]);
   },
   async importAdd(handle: number, importedHandle: number): Promise<number> {
     return call(() => import_add(handle, importedHandle));

@@ -47,10 +47,13 @@ export function DiagramPagesPlacement({
   page,
   index,
   placement,
+  landing = null,
 }: {
   page: LayoutPage;
   index: number;
   placement: Placement;
+  /** A dropped part still held over this page until its picture shows it (`useLandingPart`). */
+  landing?: Placement['draft'];
 }) {
   const { t, i18n } = useTranslation();
   // A length in the readout, to a tenth of a mm, as the language writes it: 1.5, or 1,5 in German.
@@ -62,6 +65,8 @@ export function DiagramPagesPlacement({
   const step = document && selected ? stepById(document, selected) : null;
   // The draft on this page, lifted whatever is selected; its readouts only on its own step.
   const lifted = draft?.page === index ? draft : null;
+  // The part over the page: the one in hand, or a dropped one until the page shows it.
+  const held = lifted ?? landing;
   const local = lifted?.cell.stepId === selected ? lifted : null;
   const editable = placement.enabled && step && !placementBlocker(step);
   const chosen = cell && part ? partBox(cell, part) : null;
@@ -82,7 +87,7 @@ export function DiagramPagesPlacement({
   };
   return (
     <>
-      {lifted && <LiftedPicture draft={lifted} pages={placement.pages} />}
+      {held && <LiftedPicture draft={held} pages={placement.pages} />}
       {/* The one thing said of a placement: a part past the margin (`markOutsideMargin`). */}
       {page.cells.map(
         (c) =>

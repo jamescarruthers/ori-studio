@@ -35,6 +35,10 @@
       "unknown": "Das Faltmuster ist noch nicht bereit. Versuche es gleich noch einmal."
     },
     "dropReadOnly": "Dieses Diagramm wurde mit einem neueren Ori Studio erstellt und ist schreibgeschützt geöffnet, daher lassen sich keine Bilder hinzufügen.",
+    "import": {
+      "otherWorkspaceFirst": "Machen Sie zuerst die späteren Änderungen im anderen Arbeitsbereich rückgängig oder wiederholen Sie sie: Der Import hat Bearbeiten und Diagramm geändert.",
+      "restoreFailed": "Die importierten Schritte konnten nicht wiederhergestellt werden."
+    },
     "placementsReflowed_one": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",
     "placementsReflowed_other": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",
     "references": {

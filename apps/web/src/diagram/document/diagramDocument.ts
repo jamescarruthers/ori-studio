@@ -212,6 +212,7 @@ export type DiagramCpScope = { kind: 'segment'; region: RegionReference };
  * flat folded model, or the folded model in 3D. Each keeps its own pose.
  */
 export type DiagramCpRender =
+  | { mode: 'defox'; snapshot: string }
   | {
       mode: 'crease-pattern';
       rotationDeg: number;
@@ -529,9 +530,9 @@ export function renderToShowAs(
   spread?: DiagramLayerSpread
 ): DiagramCpRender {
   const { render } = source;
-  if (showAsOf(render) === way) return render;
+  if (showAsOf(render) === way && render.mode !== 'defox') return render;
   const kept = source.remembered?.[way];
-  if (kept && showAsOf(kept) === way && kept.mode !== 'simulated') return kept;
+  if (kept && showAsOf(kept) === way && kept.mode !== 'simulated' && kept.mode !== 'defox') return kept;
   // Back to Simulated from another way: its camera is kept, its picture rebuilt
   // at 0%, the one fold % a picture can be taken at without Pose.
   if (way === 'simulated') {
@@ -1216,6 +1217,8 @@ export function isKnownAsset(asset: DiagramAsset): asset is KnownDiagramAsset {
 }
 
 export interface DiagramStep {
+  /** Import kept a CP preview because folding was deferred or failed. */
+  importStatus?: 'pending' | 'failed';
   /** `step-<uuid>`. */
   id: string;
   /**
@@ -1805,7 +1808,7 @@ export function uploadPictureKey(assetId: string): string {
   return `asset:${assetId}`;
 }
 
-function uploadStepParts(asset: KnownDiagramAsset): Pick<DiagramStep, 'source' | 'picture'> {
+export function uploadStepParts(asset: KnownDiagramAsset): Pick<DiagramStep, 'source' | 'picture'> {
   return {
     source: { kind: 'upload', assetId: asset.id, rotationQuarterTurns: 0, mirrored: false },
     picture: { kind: 'asset', assetId: asset.id, paperScale: null, key: uploadPictureKey(asset.id) },
@@ -1857,6 +1860,8 @@ export function setStepPicture(
       step,
       releaseCardMarks({
         ...step,
+        // An import's fold notice is about the picture this replaces.
+        importStatus: undefined,
         ...uploadStepParts(asset),
         revision: step.revision + 1,
       }),
@@ -1902,6 +1907,7 @@ export function setLinkedPicture(
         current,
         {
           ...current,
+          importStatus: undefined,
           source: withRememberedPoses(current.source, link.source),
           picture: link.picture,
           revision: current.revision + 1,
@@ -2037,6 +2043,7 @@ export function pullReferencesSteps(
       step,
       {
         ...step,
+        importStatus: undefined,
         source: first.source,
         picture: lifted?.picture ?? first.picture,
         text: words(step),
@@ -2384,7 +2391,7 @@ function sameAnnotations(a: readonly KnownDiagramAnnotation[], b: readonly Known
 export function removeStepPicture(document: DiagramDocument, stepId: string): DiagramDocument {
   return updateStep(document, stepId, (step) =>
     stepHasPicture(step)
-      ? releaseCardMarks({ ...step, source: null, picture: null, revision: step.revision + 1 })
+      ? releaseCardMarks({ ...step, importStatus: undefined, source: null, picture: null, revision: step.revision + 1 })
       : step
   );
 }

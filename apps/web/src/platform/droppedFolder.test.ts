@@ -1,0 +1,55 @@
+import { expect, it, vi } from 'vitest';
+import { readDroppedEntries } from './droppedFolder';
+
+const tauri = vi.hoisted(() => ({ invoke: vi.fn(), open: vi.fn() }));
+vi.mock('@tauri-apps/api/core', () => ({ invoke: tauri.invoke }));
+vi.mock('@tauri-apps/plugin-dialog', () => ({ open: tauri.open }));
+vi.mock('./runtime', async (original) => ({
+  ...(await original<typeof import('./runtime')>()),
+  getRuntimeSurface: () => 'desktop',
+}));
+
+const file = (name: string) =>
+  ({
+    name,
+    isFile: true,
+    isDirectory: false,
+    file: (resolve: (f: File) => void) => resolve(new File(['cp'], name)),
+  }) as FileSystemFileEntry;
+const dir = (name: string, children: FileSystemEntry[]) =>
+  ({
+    name,
+    isFile: false,
+    isDirectory: true,
+    createReader: () => {
+      let at = 0;
+      return {
+        readEntries: (resolve: (e: FileSystemEntry[]) => void) =>
+          resolve(at < children.length ? [children[at++]!] : []),
+      };
+    },
+  }) as FileSystemDirectoryEntry;
+it('exhausts directory-reader batches and only includes descendants when requested', async () => {
+  const root = dir('root', [file('2.cp'), dir('nested', [file('1.svg')]), file('10.cp')]);
+  expect((await readDroppedEntries([root], false)).map((f) => f.name)).toEqual(['root/2.cp', 'root/10.cp']);
+  const recursive = await readDroppedEntries([root], true);
+  expect(recursive.map((f) => f.name)).toEqual(['root/2.cp', 'root/nested/1.svg', 'root/10.cp']);
+  expect(recursive[0]?.size).toBe(2);
+});
+
+it('names a chosen folder\'s files by their path from it on desktop, as the browser does', async () => {
+  const { folderRelativeName } = await import('./fileService');
+  expect(folderRelativeName('/Users/a/Model', '/Users/a/Model/arms/01.cp')).toBe('Model/arms/01.cp');
+  expect(folderRelativeName('/Users/a/Model/', '/Users/a/Model/01.cp')).toBe('Model/01.cp');
+  expect(folderRelativeName('C:\\Work\\Model', 'C:\\Work\\Model\\legs\\02.cp')).toBe('Model/legs/02.cp');
+});
+
+it('tells a desktop folder past the entry cap apart, as a dropped one is', async () => {
+  const { FolderTooLargeError, pickImportFolder } = await import('./fileService');
+  tauri.open.mockResolvedValue('/Users/a/Model');
+  tauri.invoke.mockRejectedValue('FOLDER_TOO_LARGE');
+  const reader = await pickImportFolder('Choose a folder');
+  await expect(reader!(true)).rejects.toBeInstanceOf(FolderTooLargeError);
+  tauri.invoke.mockResolvedValue(['/Users/a/Model/arms/01.cp']);
+  expect((await reader!(true)).map((file) => file.name)).toEqual(['Model/arms/01.cp']);
+});

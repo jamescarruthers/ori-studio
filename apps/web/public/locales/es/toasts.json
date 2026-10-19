@@ -36,6 +36,10 @@
       "unknown": "El patrón de pliegues aún no está listo. Inténtalo de nuevo en un momento."
     },
     "dropReadOnly": "Este diagrama se creó con una versión más reciente de Ori Studio y se abre en solo lectura, así que no se le pueden añadir imágenes.",
+    "import": {
+      "otherWorkspaceFirst": "Primero deshaz o rehaz las ediciones posteriores en el otro espacio de trabajo: la importación cambió Edición y Diagrama.",
+      "restoreFailed": "No se pudieron restaurar los pasos importados."
+    },
     "placementsReflowed_one": "{{count}} pasos movidos volvieron a sus celdas",
     "placementsReflowed_many": "{{count}} pasos movidos volvieron a sus celdas",
     "placementsReflowed_other": "{{count}} pasos movidos volvieron a sus celdas",

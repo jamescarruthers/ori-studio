@@ -929,6 +929,17 @@ describe('a newer build’s work', () => {
     ['a step field', (step: Record<string, unknown>) => ({ ...step, hologram: { from: 'annotation-1', depth: 3 } })],
     ['a field of its scene picture', (step: Record<string, unknown>) => ({ ...step, picture: { ...(step.picture as object), depthMap: '{}' } })],
     ['a step field no build has written yet', (step: Record<string, unknown>) => ({ ...step, layers: [1, 2] })],
+    ['an import status word', (step: Record<string, unknown>) => ({ ...step, importStatus: 'queued' })],
+    [
+      'a Defox view past the snapshot this build keeps',
+      (step: Record<string, unknown>) => ({
+        ...step,
+        source: {
+          ...(step.source as object),
+          render: { mode: 'defox', snapshot: JSON.stringify({ pad: 'x'.repeat(2 * 1024 * 1024) }) },
+        },
+      }),
+    ],
   ])('carries a step with %s it has no name for, locked, and writes it back byte for byte', (_label, patch) => {
     const written = throughJson(writeDiagram(linkedDiagram()));
     const newer = patch(written.steps[0]);

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowUpRight, Bird, BookOpen, CirclePlay, Compass, Link2, PenTool, Plus, Upload } from 'lucide-react';
+import { ArrowUpRight, Bird, BookOpen, CirclePlay, Compass, Import, Link2, PenTool, Plus } from 'lucide-react';
 import { trackDiagramTutorialOpened } from '../../analytics';
 import { DIAGRAM_TUTORIAL_URL } from '../../diagram/example/diagramExample';
 import { useOpenDiagramExample } from '../../diagram/example/useOpenDiagramExample';
@@ -10,7 +10,7 @@ import styles from './DiagramEmptyState.module.css';
 /**
  * A diagram with no steps yet. Useful with no crease pattern at all: a step can
  * be written before it has a picture, or start from a drawing, so the ways in
- * are to add one or upload pictures — or drop them here — and, with a crease
+ * are to add one or import files — or drop them here — and, with a crease
  * pattern open, to link a step to one of its patterns or send steps from
  * References; with none open, Go to Edit stands in for those two (D12). The
  * diagram itself comes into being with that first step, never on open.
@@ -22,7 +22,7 @@ export function DiagramEmptyState({
   readOnly,
   dropTarget,
   onAddStep,
-  onUpload,
+  onImport,
   patternOpen,
   onLink,
   onFromReferences,
@@ -32,8 +32,8 @@ export function DiagramEmptyState({
   /** Pictures are being dragged over it. */
   dropTarget: boolean;
   onAddStep: () => void;
-  /** Pick pictures, each a step. Called from the click itself. */
-  onUpload: () => void;
+  /** Open the step import dialog. */
+  onImport: () => void;
   /** A crease pattern is open to link a step to. */
   patternOpen: boolean;
   /** Add a step and choose its pattern. */
@@ -54,7 +54,7 @@ export function DiagramEmptyState({
       <p className={styles.message}>
         {t(
           'panels:diagram.empty.message',
-          'A diagram is your folding sequence, one step at a time. Add a step, then give it a picture and an instruction — or upload your drawings, one step each.'
+          'A diagram is your folding sequence, one step at a time. Add a step, then give it a picture and an instruction — or import crease patterns, pictures or a Defox project.'
         )}
       </p>
       <div className={styles.actions}>
@@ -62,9 +62,9 @@ export function DiagramEmptyState({
           <Plus size={15} aria-hidden="true" />
           {t('panels:diagram.empty.addStep', 'Add step')}
         </Button>
-        <Button variant="secondary" disabled={readOnly} onClick={onUpload}>
-          <Upload size={15} aria-hidden="true" />
-          {t('panels:diagram.empty.upload', 'Upload pictures…')}
+        <Button variant="secondary" disabled={readOnly} onClick={onImport}>
+          <Import size={15} aria-hidden="true" />
+          {t('panels:diagram.empty.import', 'Import…')}
         </Button>
         {patternOpen && (
           <Button variant="secondary" disabled={readOnly} onClick={onLink}>

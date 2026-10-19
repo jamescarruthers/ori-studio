@@ -6,6 +6,8 @@ import type {
   OristudioCpDocumentSnapshot,
   OristudioCpSelectedLines,
 } from '../../engine/oristudioCpTypes';
+import type { CpGeometryTransport } from '../../engine/oristudioCpGeometry';
+import { createStep } from '../../diagram/document/diagramDocument';
 import { emptyOristudioCpSelection } from '../../lib/creasePatternViewport';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 
@@ -81,6 +83,8 @@ function inProcessClient(wasm: CpWasm) {
       answerLater(() => wasm.set_selected_lines(handle, lines.ids, lines.values)),
     restoreDocument: (handle: number, document: OristudioCpDocumentSnapshot) =>
       answerLater(() => wasm.restore_document(handle, document)),
+    appendDisjoint: (handle: number, parts: CpGeometryTransport[], replaceStarter: boolean) =>
+      answerLater(() => wasm.append_disjoint(handle, parts, replaceStarter) as [number, number][]),
     freeDocument: (handle: number) => answerLater(() => wasm.free_document(handle)),
   };
 }
@@ -329,6 +333,148 @@ describe.skipIf(!wasmAvailable)('selection commands against the kernel', () => {
       await select(boxOver(0, 1));
       expect(state().oristudioCpDocument?.document).toBe(document);
       expect([storeIds(), kernelIds(), snapshotIds()]).toEqual([[1, 2], [1, 2], [1, 2]]);
+    });
+  });
+
+  /**
+   * A diagram import appends its sheets to the Edit canvas and records one
+   * compound step across Edit and Diagram (`diagramBatchImport.ts`). Its CP
+   * entry holds the store's snapshot from before the import and puts it back
+   * whole, flags and all, so the selections on either side of it have to leave
+   * that snapshot holding the flags the store's ids agreed with.
+   */
+  describe('around a diagram import', () => {
+    /** A 2 x 2 square sheet, imported beside the four creases. */
+    const SHEET_CP = '1 0 0 2 0\n1 2 0 2 2\n1 2 2 0 2\n1 0 2 0 0\n';
+    let importBatch: typeof import('./diagramBatchImport');
+
+    beforeAll(async () => {
+      importBatch = await import('./diagramBatchImport');
+    });
+
+    beforeEach(() => {
+      store.setState({
+        diagram: null,
+        diagramHistory: { past: [], future: [] },
+        diagramImportBusy: false,
+      });
+    });
+
+    /** The sheet as the import prepares it: compact geometry, read in a session of its own. */
+    const sheetGeometry = (): CpGeometryTransport => {
+      const sheet = wasm.load_cp(SHEET_CP, 'sheet');
+      try {
+        return wasm.document_geometry(sheet) as CpGeometryTransport;
+      } finally {
+        wasm.free_document(sheet);
+      }
+    };
+    const runImport = () =>
+      importBatch.commitDiagramImport(
+        [{ geometry: sheetGeometry(), steps: [createStep()] }],
+        importBatch.importTarget(),
+        1,
+        10
+      );
+    const lineCount = () => state().oristudioCpDocument?.document.crease_pattern.line_segments.length;
+    const stepCount = () => state().diagram?.steps.length ?? 0;
+    /** A box drag over every line from `first` on: the imported sheet, wherever it was placed. */
+    const boxOverLinesFrom = (first: number): OristudioCpCommandPayload => {
+      const lines = state().oristudioCpDocument?.document.crease_pattern.line_segments.slice(first - 1) ?? [];
+      const xs = lines.flatMap((line) => [line.a.x, line.b.x]);
+      const ys = lines.flatMap((line) => [line.a.y, line.b.y]);
+      return {
+        points: [
+          { x: Math.min(...xs) - 0.5, y: Math.min(...ys) - 0.5 },
+          { x: Math.max(...xs) + 0.5, y: Math.max(...ys) + 0.5 },
+        ],
+        replace_selection: true,
+      };
+    };
+    const copies = () => [storeIds(), kernelIds(), snapshotIds()];
+
+    it('undoes and redoes a select, the import and a select, one step each', async () => {
+      await select(boxOver(0, 1));
+      await expect(runImport()).resolves.toBe(1);
+      // The import clears the store's selection and keeps the kernel's flags, as on main.
+      expect(copies()).toEqual([[], [1, 2], [1, 2]]);
+      expect([lineCount(), stepCount()]).toEqual([8, 1]);
+      await select(boxOverLinesFrom(5));
+      expect(copies()).toEqual([[5, 6, 7, 8], [5, 6, 7, 8], [5, 6, 7, 8]]);
+
+      const past = state().oristudioCpHistoryPast;
+      expect(past.map((entry) => entry.label)).toEqual(['CreaseSelect', 'Import steps', 'CreaseSelect']);
+      expect(past.map((entry) => Boolean(entry.selectedLines))).toEqual([true, false, true]);
+      expect(past[1]?.compoundId).toBeDefined();
+      expect(state().diagramHistory.past.at(-1)?.compoundId).toBe(past[1]?.compoundId);
+
+      // [store ids, kernel flags, snapshot flags], creases, steps — after each undo.
+      const undone = [
+        [[[], [1, 2], [1, 2]], 8, 1],
+        [[[1, 2], [1, 2], [1, 2]], 4, 0],
+        [[[], [], []], 4, 0],
+      ];
+      for (const [expected, lines, steps] of undone) {
+        await expect(state().undo()).resolves.toBeUndefined();
+        expect([copies(), lineCount(), stepCount()]).toEqual([expected, lines, steps]);
+      }
+      expect(state().oristudioCpHistoryPast).toHaveLength(0);
+      expect(state().oristudioCpHistoryFuture).toHaveLength(3);
+
+      const redone = [
+        [[[1, 2], [1, 2], [1, 2]], 4, 0],
+        [[[], [1, 2], [1, 2]], 8, 1],
+        [[[5, 6, 7, 8], [5, 6, 7, 8], [5, 6, 7, 8]], 8, 1],
+      ];
+      for (const [expected, lines, steps] of redone) {
+        await state().redo();
+        expect([copies(), lineCount(), stepCount()]).toEqual([expected, lines, steps]);
+      }
+      expect(state().oristudioCpHistoryPast.map((entry) => Boolean(entry.compoundId))).toEqual([
+        false,
+        true,
+        false,
+      ]);
+      expect(state().oristudioCpHistoryFuture).toHaveLength(0);
+      expect(state().diagramHistory.past).toHaveLength(1);
+      expect(state().status).not.toBe('error');
+    });
+
+    it('still undoes an edit after the import on its own', async () => {
+      await select(boxOver(0, 1));
+      await runImport();
+      await select(boxOverLinesFrom(5));
+      await expect(
+        state().executeOristudioCpCommand('CreaseSetLineColor', { line_ids: [5], line_color: 'Cyan3' })
+      ).resolves.toBe(true);
+
+      await state().undo();
+      expect(state().oristudioCpDocument?.document.crease_pattern.line_segments[4]?.color).not.toBe(
+        'Cyan3'
+      );
+      expect([copies(), lineCount(), stepCount()]).toEqual([
+        [[5, 6, 7, 8], [5, 6, 7, 8], [5, 6, 7, 8]],
+        8,
+        1,
+      ]);
+      expect(state().oristudioCpHistoryPast.at(-1)?.label).toBe('CreaseSelect');
+    });
+
+    /**
+     * The import takes the store's snapshot for its undo entry as it starts, so
+     * a selection that lands while it runs must not write its flags into that
+     * snapshot: undoing the import would put them back into the kernel under
+     * the store's ids from before it.
+     */
+    it('leaves the import its undo snapshot when a selection lands meanwhile', async () => {
+      const selecting = select(boxOver(2, 3));
+      const importing = runImport();
+      await Promise.all([selecting, importing]);
+      await settle();
+      expect([lineCount(), stepCount()]).toEqual([8, 1]);
+
+      await state().undo();
+      expect([copies(), lineCount(), stepCount()]).toEqual([[[], [], []], 4, 0]);
     });
   });
 

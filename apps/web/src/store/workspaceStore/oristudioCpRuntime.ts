@@ -56,7 +56,7 @@ let currentSource: OristudioCpDocumentState['source'] | null = null;
 // document was opened" and reset the viewport.
 let documentLoadSerial = 0;
 // How many changes to the open document have been asked for: every edit,
-// in-place restore, insert, replace and merge, but not a change in which lines
+// in-place restore, insert, replace, merge and batch append, but not a change in which lines
 // are selected. Each state is stamped with it as it is read (`changeSerial`),
 // which is how a selection knows whether it may write into the store's
 // snapshot. A load is not counted: it installs a snapshot of its own, and a
@@ -76,6 +76,16 @@ let documentChangeSerial = 0;
  */
 function countDocumentChange(): void {
   documentChangeSerial += 1;
+}
+
+/**
+ * Count a change that a caller makes through the client itself rather than
+ * through this module, at the same two moments as every change here
+ * (`countDocumentChange`). The diagram batch import is the one such caller: it
+ * appends its sheets, and rolls them back, with calls of its own.
+ */
+export function countOristudioCpDocumentChange(): void {
+  countDocumentChange();
 }
 
 /**
@@ -745,7 +755,7 @@ function clearedCreasePattern(
  * starter border square. Endpoint pairs are compared unordered and the segments
  * in any order, because nothing promises the kernel round-trips either.
  */
-function creasePatternHoldsNothingOfItsOwn(document: OristudioCpDocumentSnapshot): boolean {
+export function creasePatternHoldsNothingOfItsOwn(document: OristudioCpDocumentSnapshot): boolean {
   const model = document.crease_pattern;
   if (
     model.circles.length > 0 ||

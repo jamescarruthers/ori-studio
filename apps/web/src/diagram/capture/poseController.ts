@@ -125,7 +125,7 @@ function trackPose(verb: LinkedPoseRequest['verb'], render: DiagramCpRender): vo
 /** The side of the paper a render shows; none for a simulation, which has no side. */
 function renderSide(render: DiagramCpRender): 'front' | 'back' | undefined {
   if (render.mode === 'crease-pattern') return creasePatternSide(render);
-  return render.mode === 'simulated' ? undefined : render.side;
+  return render.mode === 'simulated' || render.mode === 'defox' ? undefined : render.side;
 }
 
 function spreadTracking(spread: LayerSpreadOptions): DiagramSpreadTracking {

@@ -455,6 +455,16 @@ medium on the effort, since five consumers move.
   228 / 228 ms, heap +6 / +2 MiB, so a selection after an open still writes
   in place; main 591 / 689 and 728 / 828 ms in the same runs.
 
+  Merged with main after #455 (the diagram batch import and its compound
+  undo across Edit and Diagram). The import appends its sheets, and rolls them
+  back, through the client directly, so it counts those as changes itself
+  (`countOristudioCpDocumentChange`): its compound entry holds the store's
+  snapshot from the moment it starts, and a selection landing meanwhile must
+  not write into it. Selection entries never carry a `compoundId`, so the
+  compound history's pruning passes them through; select, import, select
+  undoes and redoes one step at a time with the store's ids, the kernel's
+  flags and the snapshot's flags agreeing at each (kernel-backed test).
+
   What is left of a selection is about 100 ms of the kernel's box select in
   the worker and one ~107 ms main-thread task of passes over every line keyed
   on the selection — the canvas's stroke scene for the highlight, the move-snap
