@@ -28,7 +28,7 @@ export type WorkerName =
   | 'precrease'
   /** One diagram PDF, spawned per export and terminated after it; see diagram/export/browserPdfWriter.ts. */
   | 'diagram-pdf'
-  | 'cp-task' | 'cp-analysis'
+  | 'cp-task'
   | 'defox-import';
 
 export interface WorkerFailure {

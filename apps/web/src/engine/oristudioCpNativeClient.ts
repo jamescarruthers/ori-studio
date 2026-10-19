@@ -5,7 +5,6 @@
 // client in lockstep with the worker (add a method to one, the other fails
 // typecheck). See implementation-plans/desktop-native-cp-engine-migration.md.
 
-import { analyzeCpFold } from './cpAnalysisClient';
 import { invoke } from '@tauri-apps/api/core';
 
 import type {
@@ -224,10 +223,6 @@ async function exportWithTexts(
 }
 
   return {
-    analyzeFold: analyzeCpFold,
-    async segmentationArtifacts(handle: number) {
-      return analyzeCpFold(await callSession<string>('cp_export_fold', { handle }));
-    },
     /**
      * No-op: the native transport carries the run id on the fold command itself
      * and stops it through `cp_fold_cancel`, so there is no shared buffer to

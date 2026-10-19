@@ -93,8 +93,8 @@ not every historical or future `.defox` file.
 | Import CP task | One disposable instance of the existing `oristudioCpWorker.ts`/WASM engine; desktop uses an isolated existing Rust `CpSession` with its own mutex and cancellation channel. Same solver and capture API, no new fold algorithm. |
 | Task lifecycle | `engines/cpTaskSession.ts` binds client, timeout, diagnostics, cancellation and disposal. Numerical handles never escape into Edit's figure registry. Canceling a task cannot terminate Edit's worker. |
 | Defox adapter worker | A separate format renderer, not a fold worker. Its protocol returns validated CP/snapshot/vector records. |
-| Whole-document analysis | `engine/cpAnalysisClient.ts` runs the CP worker's pure TypeScript analysis entry point without initializing WASM. This serves ordinary live documents and native clients, and disposes after idle time. |
-| Shared segmentation cache | Existing `cpSegmentationArtifacts.ts` content-keyed cache remains authoritative. Superseded analysis is coalesced; completion checks current document identity before publication. |
+| Whole-document analysis | None of this PR's own. Main's sheet index (`cp-workspace/sheets/cpSheetIndex.ts`, built by the Edit engine's `sheetIndex` call and cached by crease fingerprint) answers sheet membership and source links. The analysis worker this PR first added was removed once main replaced whole-canvas segmentation. |
+| Link statuses | The Steps workspace checks source links against that sheet index in yielding batches (`diagram/capture/useLinkStatus.ts`), drops a pass when the document or steps change, and publishes one complete answer. Single-step inspectors check their own source immediately. |
 | Region/thumbnail acceleration | Shared immutable bounds indexes narrow candidates while callers retain exact predicates. Sheet assignments, loose-edge lookup and thumbnails are cached by immutable FOLD identity. All consumers benefit. |
 | Picture cache | Existing byte-bounded picture cache remains in place. Near-viewport gating now also skips expensive source/zoom/layer work. |
 | Import memo | A short-lived 64 MiB exact-input memo avoids repeated successful preparation within the same job. Duplicate inputs still get separate placements and step IDs. Failed folds are not memoized as intrinsic file properties. |
@@ -116,8 +116,9 @@ The shared geometry improvements address specific measured costs:
 - Closed pattern pickers do not build thumbnails for every sheet.
 - Consecutive equal-style thumbnail strokes use independent SVG path subpaths,
   preserving every segment and draw order while reducing React/DOM overhead.
-- Whole-document topology inference runs off the main thread. Exporting large
-  geometry, final publication and JSON persistence still have blocking costs.
+- Whole-document sheet detection is main's sheet index, built in the Edit
+  engine's worker. Exporting large geometry, final publication and JSON
+  persistence still have blocking costs.
 
 ### Transaction, placement and history
 
@@ -267,7 +268,7 @@ byte-for-byte comparison with the pinned checkout passed, so they are retained.
 | Shared geometry/segmentation and sheet modules | Spatial indexing, immutable lookup reuse and thumbnail costs |
 | `store/workspaceStore/diagramBatchImport.ts`, `compoundHistory.ts` | Atomic publication, source translation, coordinated undo/redo |
 | CP Rust/WASM/native clients and worker | Additive disjoint append and independent task sessions |
-| `engine/cpAnalysisClient.ts`, `engines/cpTaskSession.ts` | Shared background analysis and disposable engine lifecycle |
+| `engines/cpTaskSession.ts` | Disposable engine lifecycle |
 | `third_party/step-folder/`, `tools/step-folder-oracle/` | Pinned upstream and compatibility harness |
 | `scripts/diagram-import-check.mjs`, Rust benchmark example | External corpus validation and measurements |
 | Locales, analytics, `PORTING.md`, `upstream-sync.json` | Product integration and compatibility documentation |
@@ -469,11 +470,11 @@ not fix:
   step-count row now subscribes to that value.
 - When segmentation arrived, all source links were checked synchronously during
   rendering. The first check also constructed containment for the roughly 490k
-  Edit creases. Containment now uses the exact existing geometric predicate in
-  the existing CP analysis worker, with transferable midpoint input, and seeds
-  the existing selection/link cache. Bulk link checks yield between batches and
-  discard results when the document or steps change; single-step inspectors
-  retain immediate checks. There is no new worker type or duplicate cache.
+  Edit creases. Link checks now read main's sheet index, which the Edit engine
+  builds once per crease geometry, so no containment is built here. Bulk link
+  checks yield between batches and discard results when the document or steps
+  change; single-step inspectors retain immediate checks. There is no new
+  worker type or duplicate cache.
 
 Import rows have no drag handles, reorder buttons, drag hints or grab cursors.
 The unused importer-only edge-scrolling extension to the shared favorites hook
