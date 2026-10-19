@@ -260,9 +260,11 @@ function describeFoldStep(source: DiagramFoldStepSource, t: TFunction): string {
   const { render } = source;
   const shown =
     render.mode === 'crease-pattern'
-      ? render.side === 'back'
-        ? t('panels:diagram.picture.linkedCreasePatternBack', 'Crease pattern, back color')
-        : t('panels:diagram.picture.linkedCreasePattern', 'Crease pattern')
+      ? creasesFlipped(render)
+        ? t('panels:diagram.picture.linkedCreasePatternFlipped', 'Crease pattern, turned over')
+        : render.side === 'back'
+          ? t('panels:diagram.picture.linkedCreasePatternBack', 'Crease pattern, back color')
+          : t('panels:diagram.picture.linkedCreasePattern', 'Crease pattern')
       : render.mode === 'folded-flat' && render.side === 'back'
         ? t('panels:diagram.picture.linkedFoldedBack', 'Folded, from the back')
         : t('panels:diagram.picture.linkedFolded', 'Folded');

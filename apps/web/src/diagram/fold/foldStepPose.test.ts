@@ -1,9 +1,17 @@
 import type { TFunction } from 'i18next';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildDiagramFoldStepPoseActions } from '../actions/diagramPoseActions';
-import type { DiagramCpRender } from '../document/diagramDocument';
+import { createDiagram, insertSteps, type DiagramCpRender } from '../document/diagramDocument';
+import { foldStepStep } from '../document/diagramSteps.fixtures';
 import { DEFAULT_LAYER_SPREAD } from '../../cp-workspace/folded/layerSpreadSettings';
-import { posedFoldRender, rotatedFoldRender, spreadFoldRender } from './foldStepActions';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import {
+  flipFoldStepCreases,
+  posedFoldRender,
+  rotatedFoldRender,
+  showFoldStepPaperSide,
+  spreadFoldRender,
+} from './foldStepActions';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 
@@ -28,6 +36,12 @@ describe('a Fold step’s pose (D17)', () => {
   it('puts a crease pattern’s paper on its other side’s colour, nothing else', () => {
     expect(posedFoldRender(PATTERN, 'turn-over')).toEqual({ ...PATTERN, side: 'back' });
     expect(posedFoldRender({ ...PATTERN, side: 'back' }, 'turn-over')).toEqual(PATTERN);
+    // But a paper turned over by Flip creases is turned back with it, its turn too.
+    expect(posedFoldRender({ ...PATTERN, side: 'back', flipCreases: true }, 'turn-over')).toEqual({
+      mode: 'crease-pattern',
+      rotationDeg: 270,
+      flipCreases: true,
+    });
   });
 
   it('resets a flat fold upright and from the front, keeping its spread', () => {
@@ -69,6 +83,59 @@ describe('a Fold step’s spread and angle (Phase 13 on a Fold step)', () => {
   it('turns a crease pattern or a flat fold to an angle, kept in [0, 360)', () => {
     expect(rotatedFoldRender({ ...FLAT, spread: depth }, -45)).toEqual({ ...FLAT, spread: depth, rotationDeg: 315 });
     expect(rotatedFoldRender(PATTERN, 382.5)).toEqual({ mode: 'crease-pattern', rotationDeg: 22.5 });
+  });
+});
+
+/**
+ * Front | Back and Flip creases on a Fold step shown as its crease pattern,
+ * as a linked pattern's are (`creasePatternSide`, `linkedPose`): each a
+ * capture in the render asked for, which the store's capture is stood in for.
+ */
+describe('a Fold step’s crease pattern turned over (Flip creases)', () => {
+  const BACK: DiagramCpRender = { mode: 'crease-pattern', rotationDeg: 90, side: 'back' };
+  const capture = vi.fn();
+
+  beforeEach(() => {
+    useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
+    capture.mockReset();
+    capture.mockImplementation(async (_stepId: string, request: { render: DiagramCpRender }) => ({
+      status: 'captured',
+      changed: true,
+      render: request.render,
+      tooDetailed: false,
+      replaced: 0,
+    }));
+    useWorkspaceStore.setState({ captureDiagramFoldStep: capture });
+  });
+
+  function install(render: DiagramCpRender) {
+    const document = insertSteps(createDiagram(), [foldStepStep('s', { render })], 0);
+    useWorkspaceStore.getState().installDiagram({ document, readOnly: false, raw: {} });
+  }
+  const asked = () => (capture.mock.calls.at(-1)?.[1] as { render: DiagramCpRender } | undefined)?.render;
+
+  it('turns the paper over on its back, its turn run the other way, and back again', async () => {
+    install(BACK);
+    expect(await flipFoldStepCreases('s', true)).toBe(true);
+    expect(asked()).toEqual({ mode: 'crease-pattern', rotationDeg: 270, side: 'back', flipCreases: true });
+    install({ ...BACK, rotationDeg: 270, flipCreases: true });
+    expect(await flipFoldStepCreases('s', false)).toBe(true);
+    expect(asked()).toEqual(BACK);
+  });
+
+  it('does nothing on the front, where it would draw nothing', async () => {
+    install(PATTERN);
+    expect(await flipFoldStepCreases('s', true)).toBe(false);
+    expect(capture).not.toHaveBeenCalled();
+  });
+
+  it('turns a flipped paper back with its side, and changes only the colour of one that is not', async () => {
+    install({ ...BACK, rotationDeg: 270, flipCreases: true });
+    await showFoldStepPaperSide('s', 'front');
+    expect(asked()).toEqual({ mode: 'crease-pattern', rotationDeg: 90, flipCreases: true });
+    install(BACK);
+    await showFoldStepPaperSide('s', 'front');
+    expect(asked()).toEqual(PATTERN);
   });
 });
 

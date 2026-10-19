@@ -26,7 +26,7 @@ import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramFoldCaptureOutcome } from '../../store/workspaceStore/diagramFoldCapture';
-import type { LinkedPoseRequest } from '../capture/linkedPose';
+import { turnedOverFrom, type LinkedPoseRequest } from '../capture/linkedPose';
 import { trackPose } from '../capture/poseController';
 import {
   creasePatternSide,
@@ -141,7 +141,9 @@ export function posedFoldRender(render: DiagramCpRender, verb: FoldStepPoseVerb)
   switch (render.mode) {
     case 'crease-pattern':
       if (verb === 'reset') return { ...render, rotationDeg: 0 };
-      if (verb === 'turn-over') return withCreasePatternSide(render, creasePatternSide(render) === 'back' ? 'front' : 'back');
+      if (verb === 'turn-over') {
+        return turnedOverFrom(render, withCreasePatternSide(render, creasePatternSide(render) === 'back' ? 'front' : 'back'));
+      }
       return { ...render, rotationDeg: quarter(render.rotationDeg) };
     case 'folded-flat':
       if (verb === 'reset') {
@@ -227,23 +229,30 @@ export async function spreadDiagramFoldStep(stepId: string, request: FoldStepSpr
   return poseAs(stepId, source, spreadFoldRender(source.render, request, starts), request.verb);
 }
 
-/** A Fold step shown as its crease pattern, drawn on the colour of `side`: its paper, nothing else. */
+/**
+ * A Fold step shown as its crease pattern, drawn on the colour of `side`: its
+ * paper, nothing else — but for Flip creases, which draws only on the back,
+ * so a side change turns a flipped paper over or back, its turn with it, as a
+ * linked pattern's does (`turnedOverFrom`).
+ */
 export async function showFoldStepPaperSide(stepId: string, side: 'front' | 'back'): Promise<boolean> {
   const source = foldSourceOf(stepId);
   if (!source || source.render.mode !== 'crease-pattern') return false;
   if (creasePatternSide(source.render) === side) return true;
-  return poseAs(stepId, source, withCreasePatternSide(source.render, side), 'paper-side');
+  return poseAs(stepId, source, turnedOverFrom(source.render, withCreasePatternSide(source.render, side)), 'paper-side');
 }
 
 /**
- * Turn Flip creases on or off for a Fold step shown as its crease pattern, as
- * a linked pattern's is (`flipCreasePatternCreases`): captured again from its
- * state, as one undo step. Whether it is on or off as asked now.
+ * Turn Flip creases on or off for a Fold step shown as its crease pattern on
+ * its back, as a linked pattern's is (`flipCreasePatternCreases`): the paper
+ * turned over side to side, its turn run the other way (`turnedOverFrom`),
+ * captured again from its state as one undo step; nothing on its front,
+ * where it draws nothing. Whether it is on or off as asked now.
  */
 export async function flipFoldStepCreases(stepId: string, on: boolean): Promise<boolean> {
   const source = foldSourceOf(stepId);
-  if (!source || source.render.mode !== 'crease-pattern') return false;
-  return poseAs(stepId, source, withCreasesFlipped(source.render, on), 'flip-creases');
+  if (!source || source.render.mode !== 'crease-pattern' || creasePatternSide(source.render) !== 'back') return false;
+  return poseAs(stepId, source, turnedOverFrom(source.render, withCreasesFlipped(source.render, on)), 'flip-creases');
 }
 
 /**

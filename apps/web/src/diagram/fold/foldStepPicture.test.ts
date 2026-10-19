@@ -103,6 +103,32 @@ describe('a Fold step’s picture (D11, D17)', () => {
     expect(scene.items.find((item) => item.kind === 'face')).toMatchObject({ side: 'back' });
   });
 
+  it('turns its crease pattern over with Flip creases on the back: mirrored side to side, mountains and valleys swapped', () => {
+    const back: DiagramCpRender = { mode: 'crease-pattern', rotationDeg: 0, side: 'back' };
+    const flip: DiagramCpRender = { ...back, flipCreases: true };
+    const instruction = (scene: PaperScene) => lines(scene).find((line) => line.role.startsWith('diagram-'))!;
+    const plain = instruction(sceneOf(foldStepPicture(input('before'), back).captured).scene);
+    const flipped = instruction(sceneOf(foldStepPicture(input('before'), flip).captured).scene);
+    expect(plain.role).toBe('diagram-valley');
+    expect(flipped.role).toBe('diagram-mountain');
+    // The diagonal, mirrored about the sheet's vertical middle: the other diagonal.
+    for (const end of ['a', 'b'] as const) {
+      expect(flipped[end][0]).toBeCloseTo(-plain[end][0], 6);
+      expect(flipped[end][1]).toBeCloseTo(plain[end][1], 6);
+    }
+    expect(plain.a[0] * plain.a[1]).not.toBeCloseTo(0, 6);
+    // After the step, its fold the other way, and the paper still on the back's colour.
+    const after = sceneOf(foldStepPicture(input('after'), flip).captured).scene;
+    expect(lines(after).map((line) => line.role)).toContain('mountain');
+    expect(lines(after).map((line) => line.role)).not.toContain('valley');
+    expect(after.items.find((item) => item.kind === 'face')).toMatchObject({ side: 'back' });
+    // Kept on the front, where it draws nothing.
+    const front: DiagramCpRender = { mode: 'crease-pattern', rotationDeg: 0 };
+    expect(sceneOf(foldStepPicture(input('before'), { ...front, flipCreases: true }).captured).scene).toEqual(
+      sceneOf(foldStepPicture(input('before'), front).captured).scene
+    );
+  });
+
   it('draws the state it shows folded, with its faces on the paper for an enlarged step to anchor to', () => {
     const { picture, scene } = sceneOf(foldStepPicture(input('after'), FLAT).captured);
     expect(scene.items.some((item) => item.kind === 'face')).toBe(true);

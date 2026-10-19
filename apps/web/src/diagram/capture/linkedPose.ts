@@ -367,9 +367,10 @@ export async function poseLinkedStep(
  * when one is turned over and the other is not (Flip creases): the paper
  * turned over where it lies, as a flat fold's Turn Over turns it, so what
  * shows is the mirror of what showed, side to side, and Rotate Left and Right
- * still turn it the way they look. Turned back, the turn it had.
+ * still turn it the way they look. Turned back, the turn it had. A Fold
+ * step's crease pattern turns over by the same rule (`foldStepActions`).
  */
-function turnedOverFrom(render: DiagramCreasePatternRender, posed: DiagramCreasePatternRender): DiagramCreasePatternRender {
+export function turnedOverFrom(render: DiagramCreasePatternRender, posed: DiagramCreasePatternRender): DiagramCreasePatternRender {
   if (creasesFlipped(render) === creasesFlipped(posed)) return posed;
   return { ...posed, rotationDeg: turned(-posed.rotationDeg, 0) };
 }

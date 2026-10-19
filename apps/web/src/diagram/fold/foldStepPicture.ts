@@ -12,7 +12,8 @@
  *   Fold's own builder): the folds earlier steps made in the fold pens, the
  *   precreases in the aux pen, and — for the state before the step — the
  *   creases the step makes in the diagram pens, its instruction. About the
- *   sheet's middle, turned, on either side's colour.
+ *   sheet's middle, turned, on either side's colour; with Flip creases on
+ *   the back, turned over side to side as a linked pattern's is.
  * - **Folded.** The state shown — the one the step folds from (`before`), or
  *   the one it lands (`after`) — is the kernel scene's shape already
  *   (`FoldScene`), taken into pattern units and, for the back, turned over:
@@ -33,7 +34,7 @@ import type { FoldActionGeometry, FoldScene } from '../../fold/engine/foldEngine
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import { ORIEDITA_PAPER_SIZE } from '../../lib/creasePatternViewport';
 import { turnClockwise, type Point } from '../../lib/geometry';
-import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
+import type { PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { storedSheetThumbnail, type SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
 import { createAnnotation, MAX_BEHIND_LAYERS, type PictureFrame, type PicturePoint } from '../annotate/annotationModel';
@@ -41,6 +42,7 @@ import { flatScenePicture, storeScene, type CapturedPicture } from '../capture/c
 import { CAPTURE_PX_PER_UNIT } from '../capture/captureGeometry';
 import {
   creasePatternSide,
+  creasesFlipped,
   isKnownAnnotation,
   randomDiagramId,
   type DiagramAnnotationKind,
@@ -142,14 +144,22 @@ function sheetMiddle(sheet: FoldStepOwnState['sheet']): Point {
     : { x: 0, y: 0 };
 }
 
-/** The step's crease pattern, as `render` poses it: about the sheet's middle, turned, on its side's colour. */
+/**
+ * The step's crease pattern, as `render` poses it: about the sheet's middle,
+ * turned, on its side's colour. With Flip creases on the back the paper is
+ * turned over side to side, as a linked pattern's is (`creasePatternScene`):
+ * mirrored about the sheet's vertical middle before it is turned, and every
+ * mountain drawn as a valley and every valley as a mountain.
+ */
 function creasePatternPicture(input: FoldStepPictureInput, render: Extract<DiagramCpRender, { mode: 'crease-pattern' }>): CapturedPicture {
   const { own, moment } = input;
   const middle = sheetMiddle(own.sheet);
   const turn = turnClockwise(render.rotationDeg);
+  const flipped = creasesFlipped(render);
+  const across = flipped ? -1 : 1;
   const toScenePx = (point: Point): ScenePoint => {
     const placed = sheetToPattern(point);
-    const turned = turn({ x: placed.x - middle.x, y: placed.y - middle.y });
+    const turned = turn({ x: across * (placed.x - middle.x), y: placed.y - middle.y });
     return [turned.x * CAPTURE_PX_PER_UNIT, turned.y * CAPTURE_PX_PER_UNIT];
   };
   const scene = creasePatternPaperScene(own.scene, {
@@ -160,7 +170,25 @@ function creasePatternPicture(input: FoldStepPictureInput, render: Extract<Diagr
     place: { toScenePx, sheetPx: PATTERN_PER_SHEET_UNIT * CAPTURE_PX_PER_UNIT },
     side: creasePatternSide(render),
   });
-  return storeScene(scene, CAPTURE_PX_PER_UNIT, null);
+  return storeScene(flipped ? withFoldsTurnedOver(scene) : scene, CAPTURE_PX_PER_UNIT, null);
+}
+
+/** A fold's pen seen from the paper's other side: a mountain is a valley there, and a valley a mountain. */
+const TURNED_OVER_ROLE: Partial<Record<PaperLineRole, PaperLineRole>> = {
+  mountain: 'valley',
+  valley: 'mountain',
+  'diagram-mountain': 'diagram-valley',
+  'diagram-valley': 'diagram-mountain',
+};
+
+/** `scene` with every mountain and valley swapped, the instruction's with them; every item where it was. */
+function withFoldsTurnedOver(scene: PaperScene): PaperScene {
+  return {
+    ...scene,
+    items: scene.items.map((item) =>
+      item.kind === 'line' ? { ...item, role: TURNED_OVER_ROLE[item.role] ?? item.role } : item
+    ),
+  };
 }
 
 /** The stored scene a captured picture draws, for the frame its marks are in. */
