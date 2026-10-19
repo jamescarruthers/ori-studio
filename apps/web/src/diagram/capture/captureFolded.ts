@@ -326,6 +326,22 @@ export type SimulateFlat = (
   style: PaperStyle
 ) => Promise<PaperScene | null>;
 
+/**
+ * The paper a sheet's own faces cover: its outline, less any hole they leave —
+ * an empty border loop inside it, wherever the kernel certifies the faces.
+ * Null when the faces cannot be built, and the outline is the paper.
+ */
+export type SheetPaper = (sheet: CpSheetRegion) => Promise<Point[][] | null>;
+
+/** `creases` with the paper its sheet's faces cover, where it can be had. */
+export async function withSheetPaper(
+  creases: StepCreases,
+  sheetPaper: SheetPaper | undefined
+): Promise<StepCreases> {
+  const paper = sheetPaper ? await sheetPaper(creases.sheet) : null;
+  return paper && paper.length > 0 ? { ...creases, paper } : creases;
+}
+
 export interface CaptureStepRequest {
   /** The document snapshot the capture starts from, and is fingerprinted against. */
   document: OristudioCpDocumentSnapshot;
@@ -341,6 +357,8 @@ export interface CaptureStepRequest {
   style: DiagramStyle;
   /** The simulator, for a step shown as Simulated; absent, it cannot be captured. */
   simulateFlat?: SimulateFlat;
+  /** A sheet's paper, holes included, for a crease-pattern picture; absent, its outline. */
+  sheetPaper?: SheetPaper;
   /**
    * The spread a flat fold started here takes — one asked as 3D whose creases
    * now fold flat (13g: on by default, `spreadStartsFor`); absent, none.
@@ -413,7 +431,11 @@ export async function captureStep(
   };
 
   if (request.render.mode === 'crease-pattern') {
-    const captured = captureCreasePattern(document, creases, request.render);
+    const captured = captureCreasePattern(
+      document,
+      await withSheetPaper(creases, request.sheetPaper),
+      request.render
+    );
     return { status: 'captured', source: source(request.render), captured, noLayerOrder: false };
   }
 

@@ -110,6 +110,33 @@ describe('captureStep, a crease pattern', () => {
     expect(again.source.scope).toEqual(asked);
   });
 
+  // A sheet's paper is its outline until its own faces say otherwise: an empty
+  // border loop inside it is a hole wherever the kernel certifies the faces,
+  // and the picture leaves it unfilled, as the whole canvas's faces did.
+  it('fills the paper its sheet\'s faces cover, a hole left out', async () => {
+    const outline = left!.boundary[0]!;
+    const hole = [
+      { x: 30, y: 30 },
+      { x: 30, y: 60 },
+      { x: 60, y: 60 },
+      { x: 60, y: 30 },
+    ];
+    const rings = async (sheetPaper?: CaptureStepRequest['sheetPaper']) => {
+      const result = await captureStep(
+        fakeCaptureRuntime(),
+        request({ mode: 'crease-pattern', rotationDeg: 0 }, { sheetPaper })
+      );
+      if (result.status !== 'captured' || result.captured.kind !== 'picture') throw new Error('captured');
+      const picture = result.captured.picture;
+      if (picture.kind !== 'scene') throw new Error('a scene');
+      const scene = JSON.parse(picture.sceneJson) as { items: { kind: string; rings?: unknown[] }[] };
+      return scene.items.find((item) => item.kind === 'face')?.rings?.length;
+    };
+    expect(await rings()).toBe(1);
+    expect(await rings(async () => null)).toBe(1);
+    expect(await rings(async () => [outline, hole])).toBe(2);
+  });
+
   it('says why when there is nothing to capture', async () => {
     const runtime = fakeCaptureRuntime();
     expect(await captureStep(runtime, request(FLAT, { sheets: null }))).toEqual({ status: 'unknown' });

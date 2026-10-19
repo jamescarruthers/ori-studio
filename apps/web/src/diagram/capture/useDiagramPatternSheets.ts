@@ -26,15 +26,22 @@ export type DiagramPatternSheets =
       index: CpSheetIndex;
     };
 
+/** What the picker's sheets are while no picker is open: not worked out. */
+const NOT_WANTED: DiagramPatternSheets = { status: 'pending' };
+
 /**
  * The patterns of the open crease pattern, for the pattern picker: the sheets
  * of the index every link is made in (D3), each drawn from its own lines as
- * the References rail draws one. Asked for only while `wanted`.
+ * the References rail draws one. Worked out only while `wanted` — the Step
+ * pane asks whenever its step is selected, and drawing every sheet for a
+ * picker no one opened is work for nothing; on a 204-sheet canvas, drawing
+ * them from faces once froze each selection for over a minute.
  */
 export function useDiagramPatternSheets(wanted: boolean): DiagramPatternSheets {
   const state = useCpSheetIndexState(wanted);
   const document = useWorkspaceStore((store) => store.oristudioCpDocument?.document ?? null);
   return useMemo(() => {
+    if (!wanted) return NOT_WANTED;
     if (state.status !== 'ready') return state;
     return {
       status: 'ready',
@@ -44,7 +51,7 @@ export function useDiagramPatternSheets(wanted: boolean): DiagramPatternSheets {
       })),
       index: state.index,
     };
-  }, [state, document]);
+  }, [wanted, state, document]);
 }
 
 /**

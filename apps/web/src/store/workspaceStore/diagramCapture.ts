@@ -13,6 +13,7 @@ import {
   captureStep,
   type CapturedPicture,
   type CpCaptureRuntime,
+  type SheetPaper,
   type SimulateFlat,
 } from '../../diagram/capture/captureFolded';
 import type { KnownCreases } from '../../diagram/capture/captureCreases';
@@ -35,7 +36,10 @@ import {
 import { diagramScenePaintStyle, diagramStyleKey } from '../../diagram/pictures/diagramPaperStyle';
 import { sceneMeasure } from '../../diagram/pictures/paintDiagramStep';
 import { digest } from '../../diagram/pictures/pictureKey';
-import { ensureCpSheetSimulationArtifacts } from '../../cp-workspace/sheets/cpSheetArtifacts';
+import {
+  ensureCpSheetArtifacts,
+  ensureCpSheetSimulationArtifacts,
+} from '../../cp-workspace/sheets/cpSheetArtifacts';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import type { CpSheetRegion } from '../../cp-workspace/sheets/cpSheetRegions';
 import { cpAuxLinesKey, NO_AUX_LINES_KEY } from '../../cp-workspace/folded/foldedAuxSource';
@@ -271,6 +275,7 @@ export async function runDiagramCapture(
         render: request.render,
         style: start.style,
         simulateFlat: storeSimulateFlat(store),
+        sheetPaper: storeSheetPaper(store),
         spreadStart: diagram ? spreadStartsFor(diagram, stepId).any : DEFAULT_LAYER_SPREAD,
       });
     const result =
@@ -318,6 +323,19 @@ export function storeSimulateFlat(store: DiagramCaptureStore): SimulateFlat {
     } finally {
       releaseSimulatorClient();
     }
+  };
+}
+
+/**
+ * A sheet's paper, from the faces built for it alone (`ensureCpSheetArtifacts`):
+ * the rim of every face, so a hole the kernel left out is left out of the
+ * paper a crease-pattern picture fills, as it was when the paper came from
+ * the whole canvas's faces.
+ */
+export function storeSheetPaper(store: DiagramCaptureStore): SheetPaper {
+  return async (sheet) => {
+    const artifacts = await ensureCpSheetArtifacts(store.get().oristudioCpDocument?.document, sheet.id);
+    return resolveCpSegments(artifacts)[0]?.boundary ?? null;
   };
 }
 

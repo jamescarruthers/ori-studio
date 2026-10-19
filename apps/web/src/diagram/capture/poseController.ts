@@ -24,10 +24,12 @@ import {
   endStepCapture,
   runStepFold,
   stepCaptureRuntime,
+  storeSheetPaper,
   storeSimulateFlat,
   type DiagramCaptureOutcome,
   type StepCaptureStart,
 } from '../../store/workspaceStore/diagramCapture';
+import { withSheetPaper } from './captureFolded';
 import {
   creasePatternSide,
   creasesFlipped,
@@ -368,10 +370,12 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
   const creasesFor = async (begun: StepCaptureStart, linked: DiagramCpSource) => {
     const document = begun.cp.document;
     const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(document));
-    return {
-      document,
-      choice: chooseStepCreases(document, linked.scope, sheets, knownCreasesOf(linked)),
-    };
+    const choice = chooseStepCreases(document, linked.scope, sheets, knownCreasesOf(linked));
+    if (choice.status !== 'found') return { document, choice };
+    // A crease-pattern pose fills the sheet's paper: its faces' rim, holes and all.
+    const store = { get: useWorkspaceStore.getState, set: useWorkspaceStore.setState };
+    const creases = await abandonOnEngineLoss(withSheetPaper(choice.creases, storeSheetPaper(store)));
+    return { document, choice: { ...choice, creases } };
   };
 
   const run = async (request: LinkedPoseRequest, options?: { tracked?: boolean }): Promise<void> => {
