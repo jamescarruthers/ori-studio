@@ -99,15 +99,17 @@ export type FoldStepVertexForm =
 export type FoldStepPlayVia = 'space' | 'button' | 'replay';
 
 /**
- * Which choice the Fold engine offered: an axiom's roots, the stacks a depth
- * pick can take, the layer orders one part of an imported crease pattern
- * folds to (Import CP's chooser), or a compound fold's: the ways a flap opens
- * (`opening`), the orders its completion leaves (`order`), and the layers a
- * tuck can go against (`tuck_target`); a rabbit ear's fourth crease
- * (`emergent`), and a swivel's ridge — the crease of its four that folds
- * the other way (`ridge`); the pockets a closed sink's point can go into
- * (`pocket`). A rabbit ear's ridge was offered as `ridge` until its fourth
- * crease became its ridge.
+ * Which choice the Fold engine offered (`fold choice offered`'s
+ * `choice_kind`): the layer orders a valley or mountain fold can land in,
+ * when the folder reviews them (`placement`), an axiom's roots, the stacks a
+ * depth pick can take, the layer orders one part of an imported crease
+ * pattern folds to (Import CP's chooser), or a compound fold's: the ways a
+ * flap opens (`opening`), the orders its completion leaves (`order`), and
+ * the layers a tuck can go against (`tuck_target`); a rabbit ear's fourth
+ * crease (`emergent`), and a swivel's ridge — the crease of its four that
+ * folds the other way (`ridge`); the pockets a closed sink's point can go
+ * into (`pocket`). A rabbit ear's ridge was offered as `ridge` until its
+ * fourth crease became its ridge.
  */
 export type FoldChoiceKind =
   | 'placement'
@@ -136,6 +138,15 @@ export type FoldSpreadAction =
 
 /** Where a Fold step's spread was changed: the Step pane's Spread section, or the canvas bar's toggle. */
 export type FoldSpreadVia = 'step_pane' | 'canvas_bar';
+
+/** How the Divide line split the segment it marked (`fold mark added`): into equal parts, or at a ratio. */
+export type FoldMarkDivideMode = 'count' | 'ratio';
+
+/** Which of the sheet's settings a Fold sequence's Paper pane changed (`fold sheet changed`). */
+export type FoldSheetSetting = 'shape' | 'start_side';
+
+/** A Fold sheet's shape by kind, as the sequence document stores it: never a size, a proportion or a side count. */
+export type FoldSheetShape = 'square' | 'rectangle' | 'polygon';
 
 /**
  * Which control added a diagram step. `grid` is the Diagram workspace's own:
@@ -1730,9 +1741,18 @@ export const ANALYTICS_EVENTS = {
   foldStepAdded: 'fold step added',
   /** Explicit dependency refresh of a saved history return; no document content. */
   foldUnfoldRebuilt: 'fold unfold rebuilt',
+  /** A saved Repeat updated from its source steps, as `fold unfold rebuilt` is an Unfold's: an update, not a step added. */
+  foldRepeatRebuilt: 'fold repeat rebuilt',
+  /** A refusal shown to the folder, by the engine's stable `code`; a Repeat's also says `op_kind: repeat`. */
   foldRefused: 'fold refused',
+  /** More than one answer for the folder to choose between: `choice_kind`, and how many, bucketed. */
   foldChoiceOffered: 'fold choice offered',
+  /** A layer-order review ended: accepted or cancelled, from a tool or Import CP's chooser, with how many orders, bucketed. */
   foldOrderResolved: 'fold order resolved',
+  /** The Divide line marked a segment: how it divided it, never where or into how many parts. */
+  foldMarkAdded: 'fold mark added',
+  /** The Paper pane's sheet changed: which setting, and the sheet's shape and starting side after it. */
+  foldSheetChanged: 'fold sheet changed',
   /**
    * A Fold step's layer spread changed (Wave 5): turned on or off, its kind,
    * or one of its values — from the Step pane's Spread section or the

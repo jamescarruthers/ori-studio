@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { trackFoldSheetChanged } from '../../analytics/trackFold';
 import { SQUARE_PAPER } from '../../fold/document/foldSequenceDocument';
 import { documentShapeOf, paneShapeOf } from '../../fold/sequence/foldPaperShapes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -38,9 +39,11 @@ export function FoldPaperPanel() {
           readOnly={readOnly}
           onShapeChange={(shape) => {
             const stored = documentShapeOf(shape);
-            if (stored) setShape(stored);
+            if (stored && setShape(stored)) trackFoldSheetChanged('shape', { shape: stored.kind, startSide: paper.startSide });
           }}
-          onStartSideChange={setStartSide}
+          onStartSideChange={(side) => {
+            if (setStartSide(side)) trackFoldSheetChanged('start_side', { shape: paper.shape.kind, startSide: side });
+          }}
         />
       </div>
     </section>

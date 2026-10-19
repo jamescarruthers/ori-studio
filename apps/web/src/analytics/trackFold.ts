@@ -2,6 +2,9 @@ import type { LayerSpreadOptions } from '../cp-workspace/folded/foldedLayerSprea
 import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, FOLD_CHOICE_COUNT_BUCKETS } from './events';
 import type {
   FoldChoiceKind,
+  FoldMarkDivideMode,
+  FoldSheetSetting,
+  FoldSheetShape,
   FoldSpreadAction,
   FoldSpreadVia,
   FoldStepAddedOpKind,
@@ -60,9 +63,33 @@ function vertexFormProperties(form: FoldStepVertexForm): Record<string, string> 
   return { swivel_form: form.swivelForm, target: form.target };
 }
 
-/** A refusal shown to the folder, by the engine's stable code: never a face, a vertex or a line. */
-export function trackFoldRefused(code: string): void {
-  track(ANALYTICS_EVENTS.foldRefused, { code });
+/**
+ * A refusal shown to the folder, by the engine's stable code: never a face, a
+ * vertex or a line. A Repeat's refusal names its op (`op_kind: repeat`, as
+ * `fold step added` spells it), since the steps it mirrors refuse in the
+ * canvas tools' own codes; a canvas tool's carries none.
+ */
+export function trackFoldRefused(code: string, opKind?: FoldStepAddedOpKind): void {
+  track(ANALYTICS_EVENTS.foldRefused, { code, ...(opKind ? { op_kind: opKind } : {}) });
+}
+
+/** A saved Repeat updated from its source steps: no step, no range, no axis. */
+export function trackFoldRepeatRebuilt(): void {
+  track(ANALYTICS_EVENTS.foldRepeatRebuilt);
+}
+
+/** The Divide line marked a segment: how it divided it, never the segment, the parts or the ratio. */
+export function trackFoldMarkAdded(divideMode: FoldMarkDivideMode): void {
+  track(ANALYTICS_EVENTS.foldMarkAdded, { divide_mode: divideMode });
+}
+
+/**
+ * The sheet a Fold sequence starts from changed in the Paper pane: which
+ * setting, and the sheet after it — its shape by kind (never a size or a
+ * side count) and the side that starts up.
+ */
+export function trackFoldSheetChanged(setting: FoldSheetSetting, sheet: { shape: FoldSheetShape; startSide: 'front' | 'back' }): void {
+  track(ANALYTICS_EVENTS.foldSheetChanged, { setting, sheet_shape: sheet.shape, start_side: sheet.startSide });
 }
 
 /**
@@ -82,17 +109,28 @@ export function trackFoldSpreadChanged(
   });
 }
 
-/** The engine offered more than one answer to choose between: which kind, and how many, bucketed. */
-export function trackFoldChoiceOffered(kind: FoldChoiceKind, count: number): void {
+/**
+ * The engine offered more than one answer to choose between: which choice
+ * (`choice_kind` — a bare `kind` already names an optimizer, a design and a
+ * solve surface on other events), and how many, bucketed.
+ */
+export function trackFoldChoiceOffered(choiceKind: FoldChoiceKind, count: number): void {
   track(ANALYTICS_EVENTS.foldChoiceOffered, {
-    kind,
+    choice_kind: choiceKind,
     count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS),
   });
 }
 
-/** Explicit order review, without model data or candidate indices. */
+/**
+ * Explicit order review, without model data or candidate indices. The callers'
+ * `canceled` is sent as `cancelled`, as every other event spells it.
+ */
 export function trackFoldOrderResolved(result: 'accepted' | 'canceled', source: 'tool' | 'cp', count: number): void {
-  track(ANALYTICS_EVENTS.foldOrderResolved, { result, source, count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS) });
+  track(ANALYTICS_EVENTS.foldOrderResolved, {
+    result: result === 'canceled' ? 'cancelled' : result,
+    source,
+    count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS),
+  });
 }
 
 /** Only the setting's state is reported, never the selected references. */

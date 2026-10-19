@@ -932,12 +932,17 @@ values; this table is the plan's summary of it.
 |---|---|
 | `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth\|top, via: axiom\|crease\|free}` (`top`, the default top flap kept, since 2026-10-13); a turn, a rotation or a vertex fold (`squash` to `swivel`) carries `op_kind` alone |
 | `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
-| `fold refused` | `{code}` |
+| `fold refused` | `{code}`, and `op_kind: repeat` on a Repeat's refusal |
+| `fold unfold rebuilt` / `fold repeat rebuilt` | `{}`: a saved Unfold or Repeat updated in place, not a step added |
 | `fold spread changed` | `{action: spread_on\|spread_off\|spread_kind\|spread_amount\|spread_direction\|spread_keep\|spread_skew\|spread_axis, via: step_pane\|canvas_bar}`, plus the Diagram's bucketed spread properties when the layers stay spread |
-| `fold choice offered` | `{kind, count_bucket}` |
+| `fold choice offered` | `{choice_kind, count_bucket}` (`kind` until 2026-10-19, before launch) |
+| `fold order resolved` | `{result: accepted\|cancelled, source: tool\|cp, count_bucket}` |
+| `fold free line snapping changed` | `{state: on\|off}` |
+| `fold mark added` | `{divide_mode: count\|ratio}`: the Divide line |
+| `fold sheet changed` | `{setting: shape\|start_side, sheet_shape: square\|rectangle\|polygon, start_side: front\|back}` |
 | `fold view switched` | `{view: fold\|steps}` |
-| `fold sequence sent to edit` | `{variant: plain\|precreases-as-aux}` |
-| `fold cp imported` | `{origin}` (D16's enum) |
+| `fold sequence sent to edit` | `{}` (`variant` dropped 2026-10-12) |
+| `fold cp imported` | `{origin, action: insert\|update}` (D16's enum, plus `project_cp`) |
 | `fold step sent to diagram` | `{via: fold\|diagram_browser, scope: one\|many}`; each new step and turn also counts `diagram step added` / `diagram turn added` with `via: fold` |
 
 `op_kind` and `step_kind` name the plain kinds and every compound fold's
