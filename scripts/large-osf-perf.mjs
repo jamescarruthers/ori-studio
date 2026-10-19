@@ -437,14 +437,16 @@ async function main() {
     return result;
   });
 
-  /** Ms from `since` until the readout's line count is no longer `before`. */
-  let crashed = false;
-  page.on('crash', () => {
-    crashed = true;
+  // A tab out of memory crashes, and whatever was waiting on it then waits for
+  // ever, so everything the edits wait on races this.
+  const crashed = new Promise((_, reject) => {
+    page.once('crash', () => reject(new Error('the tab crashed')));
   });
+  crashed.catch(() => {});
+  const unlessCrashed = (promise) => Promise.race([promise, crashed]);
+  /** Ms from `since` until the readout's line count is no longer `before`. */
   const untilLinesChange = async (before, since) => {
     for (;;) {
-      if (crashed) throw new Error('the tab crashed');
       const { lines } = await readout();
       if (lines !== null && lines !== before) return Date.now() - since;
       if (Date.now() - since > PHASE_LIMIT_MS) throw new Error('the line count never changed');
@@ -494,21 +496,27 @@ async function main() {
     const edits = { memory: [] };
     let count = 0;
     try {
-      edits.edit = await timed('edit', () => draw(0));
+      edits.edit = await unlessCrashed(timed('edit', () => draw(0)));
       count = 1;
-      edits.undo = await timed('undo', () => page.keyboard.press('ControlOrMeta+z'));
-      edits.redo = await timed('redo', () => page.keyboard.press('ControlOrMeta+Shift+z'));
+      edits.undo = await unlessCrashed(timed('undo', () => page.keyboard.press('ControlOrMeta+z')));
+      edits.redo = await unlessCrashed(
+        timed('redo', () => page.keyboard.press('ControlOrMeta+Shift+z'))
+      );
       for (; count < options.edits; count += 1) {
-        const { lines } = await readout();
-        await untilLinesChange(lines, await draw(count));
-        if ((count + 1) % 10 === 0 || count + 1 === options.edits) {
-          await untilQuiet(Date.now(), 1000);
-          const sample = { edits: count + 1, ...(await memory()) };
-          log('edits', JSON.stringify(sample));
-          edits.memory.push(sample);
-        }
+        await unlessCrashed(
+          (async () => {
+            const { lines } = await readout();
+            await untilLinesChange(lines, await draw(count));
+            if ((count + 1) % 10 === 0 || count + 1 === options.edits) {
+              await untilQuiet(Date.now(), 1000);
+              const sample = { edits: count + 1, ...(await memory()) };
+              log('edits', JSON.stringify(sample));
+              edits.memory.push(sample);
+            }
+          })()
+        );
       }
-      await page.screenshot({ path: path.join(options.out, 'edits.png') });
+      await unlessCrashed(page.screenshot({ path: path.join(options.out, 'edits.png') }));
     } catch (error) {
       edits.stoppedAt = count + 1;
       edits.error = error instanceof Error ? error.message : String(error);
