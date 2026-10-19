@@ -1,7 +1,10 @@
 import type { FoldArtifacts, FoldDocument } from '../../engine/types';
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
 import { creaseFingerprint } from '../../lib/creaseFingerprint';
-import { segmentationFoldArtifactsFromFold } from '../../lib/creasePatternImport';
+import {
+  foldArtifactsFromFold,
+  segmentationFoldArtifactsFromFold,
+} from '../../lib/creasePatternImport';
 import { wholeFoldSegment } from '../../lib/creasePatternSegmentation';
 import { exportOristudioCpLinesAsFold } from '../../store/workspaceStore/oristudioCpRuntime';
 import { ensureCpSheetIndex } from './cpSheetIndex';
@@ -90,4 +93,26 @@ export function ensureCpSheetArtifacts(
     });
   inFlight.set(key, promise);
   return promise;
+}
+
+/**
+ * {@link ensureCpSheetArtifacts} with the simulation mesh as well — the
+ * triangulated fold an inline simulation window solves — built for this sheet
+ * alone and kept with its faces.
+ */
+export async function ensureCpSheetSimulationArtifacts(
+  document: OristudioCpDocumentSnapshot | null | undefined,
+  sheet: number
+): Promise<FoldArtifacts | null> {
+  const artifacts = await ensureCpSheetArtifacts(document, sheet);
+  if (!artifacts || artifacts.simulation_model || artifacts.simulation_model_error) {
+    return artifacts;
+  }
+  // The faces are already there, so this only builds the mesh over them.
+  const meshed: FoldArtifacts = {
+    ...foldArtifactsFromFold(artifacts.fold),
+    segments: artifacts.segments,
+  };
+  if (cached?.sheets.get(sheet) === artifacts) cached.sheets.set(sheet, meshed);
+  return meshed;
 }

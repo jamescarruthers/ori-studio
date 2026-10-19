@@ -454,23 +454,24 @@ export interface ProjectSliceActions {
   exportObj: (fileService?: FileService) => Promise<boolean>;
   exportStl: (fileService?: FileService) => Promise<boolean>;
   /**
-   * Export a single crease-pattern segment. File formats (cp/fold/ori/orh)
-   * download directly; image formats (svg/png) open the export-image modal
-   * pre-scoped to the segment.
+   * Export one sheet of the crease pattern, by its position in the sheet index.
+   * File formats (cp/fold/ori/orh) download directly; image formats (svg/png)
+   * open the export-image modal on that sheet.
    */
-  exportOristudioCpSegment: (
+  exportOristudioCpSheet: (
     format: SegmentExportFormat,
-    segmentId: number,
+    sheet: number,
     fileService?: FileService
   ) => Promise<boolean>;
   /**
-   * Encode one crease-pattern segment as a share link and open the share modal.
+   * Encode one sheet of the crease pattern as a share link and open the share
+   * modal.
    *
-   * Scoped to a segment rather than the whole document: a segment is a region
-   * enclosed by border creases, which is exactly "one crease pattern" and is the
+   * Scoped to a sheet rather than the whole document: a sheet is the region
+   * inside one closed border, which is exactly "one crease pattern" and is the
    * same unit the sibling Fold / Export / Simulate verbs operate on.
    */
-  shareOristudioCpSegment: (segmentId: number) => Promise<boolean>;
+  shareOristudioCpSheet: (sheet: number) => Promise<boolean>;
   publishOristudioCpShare: (args: {
     title: string;
     author: string | null;
@@ -889,11 +890,12 @@ export interface CreasePatternSliceActions {
   setCreaseColorMode: (mode: CreaseColorMode) => void;
   setSelectedSegment: (id: number | null) => void;
   /**
-   * Scope the simulator to one crease-pattern segment and switch to the Simulate
-   * workspace. Ensures the full fold artifacts first (the simulator needs the
-   * simulation mesh). Resolves false when the id no longer resolves to a segment.
+   * Scope the simulator to one sheet of the crease pattern, by its position in
+   * the sheet index, and switch to the Simulate workspace. Ensures the full fold
+   * artifacts first (the simulator needs the simulation mesh). Resolves false
+   * when no simulator segment is that sheet.
    */
-  simulateOristudioCpSegment: (segmentId: number) => Promise<boolean>;
+  simulateOristudioCpSheet: (sheet: number) => Promise<boolean>;
   /**
    * Open a simulation of one crease-pattern region as a window on the Edit
    * canvas.

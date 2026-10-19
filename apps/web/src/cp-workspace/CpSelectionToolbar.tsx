@@ -22,12 +22,9 @@ import { selectionCoversEntireCp, useOpenReferences } from './references/useOpen
 import type { AnnotationBox } from './annotations/annotationTransform';
 import { useWorkspaceStore } from '../store/workspaceStore/store';
 import { cpLineSelectionBounds, selectedCpLineSegments } from '../lib/creasePatternClipboard';
-import { resolveSelectedSegment } from '../lib/creasePatternSelectionSegment';
 import { SEGMENT_EXPORT_FORMATS, type SegmentExportFormat } from '../lib/creaseSegmentExport';
-import {
-  ensureCpSegmentationArtifacts,
-  peekCpSegmentationArtifacts,
-} from './cpSegmentationArtifacts';
+import { ensureCpSheetIndex, peekCpSheetIndex } from './sheets/cpSheetIndex';
+import { resolveSelectedSheet } from './sheets/selectedSheet';
 // Registers `__cpToolbarDebug()` in dev builds; no-op in production.
 import { toolbarRenderProbe } from './cpSelectionToolbarDebug';
 import { isShareEnabled } from './share/cpShareService';
@@ -80,20 +77,21 @@ function ExportMenu({
 }
 
 /**
- * Floating actions for a crease selection that forms one complete, border-enclosed
- * sub-pattern: fold, export (all per-region formats), save-to-image, and simulate.
- * Hovers above the selection via {@link FloatingToolbar}, mirroring
- * {@link CpImageInspector}. Renders nothing unless the current selection resolves
- * to exactly one segment (see {@link resolveSelectedSegment}).
+ * Floating actions for a crease selection that is one whole sheet — every line
+ * inside one closed outer border: fold, export (all per-sheet formats),
+ * save-to-image, and simulate. Hovers above the selection via
+ * {@link FloatingToolbar}, mirroring {@link CpImageInspector}. Renders nothing
+ * unless the selection resolves to exactly one sheet (see
+ * {@link resolveSelectedSheet}).
  */
 export function CpSelectionToolbar({ container }: { container: HTMLElement | null }) {
   const { t } = useTranslation();
   const selection = useWorkspaceStore((s) => s.oristudioCpSelection);
   const cpDocument = useWorkspaceStore((s) => s.oristudioCpDocument?.document ?? null);
   const foldOristudioCpDocument = useWorkspaceStore((s) => s.foldOristudioCpDocument);
-  const exportSegment = useWorkspaceStore((s) => s.exportOristudioCpSegment);
-  const simulateSegment = useWorkspaceStore((s) => s.simulateOristudioCpSegment);
-  const shareSegment = useWorkspaceStore((s) => s.shareOristudioCpSegment);
+  const exportSheet = useWorkspaceStore((s) => s.exportOristudioCpSheet);
+  const simulateSheet = useWorkspaceStore((s) => s.simulateOristudioCpSheet);
+  const shareSheet = useWorkspaceStore((s) => s.shareOristudioCpSheet);
   // Web-only, and off in dev unless opted in: a dev build points at the production share
   // API unless VITE_SHARE_API_URL says otherwise, and Tauri has no address bar for a
   // link to land in.
@@ -102,31 +100,32 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
   const simulateSelectionInline = useSimulateSelection();
   const openReferences = useOpenReferences();
 
-  // Segments-only artifacts (no simulation mesh — see ensureCpSegmentationArtifacts).
-  // Read from the module cache rather than held in state: segmentation takes ~1s on
-  // a large document, and this component is unmounted and remounted as tools change,
-  // so state-held results were discarded and refetched indefinitely. The cache is
-  // keyed by a fingerprint of the crease geometry, so it survives both remounts and
-  // the snapshot/revision churn that a deselect produces.
-  const [, bumpSegmentationVersion] = useState(0);
-  const segmentation = peekCpSegmentationArtifacts(cpDocument);
+  // The sheet index: which sheet each line is in, built by the engine in tens of
+  // milliseconds from the border lines alone, so a selection is matched in one
+  // pass over its ids and no faces are traced. Read from the module cache rather
+  // than held in state: this component is unmounted and remounted as tools
+  // change, and state-held results were discarded and refetched indefinitely.
+  // The cache is keyed by a fingerprint of the crease geometry, so it survives
+  // both remounts and the snapshot churn a deselect produces.
+  const [, bumpIndexVersion] = useState(0);
+  const sheetIndex = peekCpSheetIndex(cpDocument);
   const hasLineSelection = selection.lines.length > 0;
   useEffect(() => {
-    if (!hasLineSelection || !cpDocument || segmentation) return undefined;
+    if (!hasLineSelection || !cpDocument || sheetIndex) return undefined;
     let alive = true;
     // Even if this render is torn down first, the resolved value lands in the
     // cache, so the next render picks it up synchronously.
-    void ensureCpSegmentationArtifacts(cpDocument).then(() => {
-      if (alive) bumpSegmentationVersion((version) => version + 1);
+    void ensureCpSheetIndex(cpDocument).then(() => {
+      if (alive) bumpIndexVersion((version) => version + 1);
     });
     return () => {
       alive = false;
     };
-  }, [hasLineSelection, cpDocument, segmentation]);
+  }, [hasLineSelection, cpDocument, sheetIndex]);
 
   const match = useMemo(
-    () => resolveSelectedSegment(cpDocument, selection, segmentation),
-    [cpDocument, selection, segmentation]
+    () => resolveSelectedSheet(sheetIndex, selection.lines),
+    [sheetIndex, selection.lines]
   );
 
   const box: AnnotationBox | null = useMemo(() => {
@@ -146,7 +145,7 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
     toolbarRenderProbe.hasContainer = container !== null;
     toolbarRenderProbe.hasBox = box !== null;
     toolbarRenderProbe.hasAnchorRect = anchorRect !== null;
-    toolbarRenderProbe.hasSegmentation = segmentation !== null;
+    toolbarRenderProbe.hasSheetIndex = sheetIndex !== null;
   });
 
   if (!match) return null;
@@ -156,9 +155,9 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
   // the surface with nothing left to do. (It used to *have* to go — at
   // `--z-portaled-popover` it drew over the export modal it had just opened.
   // That is fixed at the tier now, so this is behaviour, not a workaround.)
-  // Actions capture their segment id / line ids up front, so clearing the live
+  // Actions capture their sheet / line ids up front, so clearing the live
   // selection cannot affect the operation in flight.
-  const { segmentId, cpLineIds } = match;
+  const { sheet, cpLineIds } = match;
   const runAndDismiss = (action: () => void) => {
     action();
     clearSelection();
@@ -179,19 +178,21 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
         size="sm"
         variant="toolbar"
         title={t('panels:creasePattern.selectionToolbar.fold', 'Fold')}
-        onClick={() => runAndDismiss(() => void foldOristudioCpDocument({ lineIds: cpLineIds }))}
+        onClick={() =>
+          runAndDismiss(() => void foldOristudioCpDocument({ lineIds: [...cpLineIds] }))
+        }
       >
         <Origami size={14} />
       </IconButton>
       <ExportMenu
         label={t('panels:creasePattern.selectionToolbar.export', 'Export…')}
-        onExport={(format) => runAndDismiss(() => void exportSegment(format, segmentId))}
+        onExport={(format) => runAndDismiss(() => void exportSheet(format, sheet))}
       />
       <IconButton
         size="sm"
         variant="toolbar"
         title={t('panels:creasePattern.selectionToolbar.saveImage', 'Save to image')}
-        onClick={() => runAndDismiss(() => void exportSegment('png', segmentId))}
+        onClick={() => runAndDismiss(() => void exportSheet('png', sheet))}
       >
         <ImageDown size={14} />
       </IconButton>
@@ -210,7 +211,7 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
         size="sm"
         variant="toolbar"
         title={t('panels:creasePattern.selectionToolbar.simulate', 'Simulate')}
-        onClick={() => runAndDismiss(() => void simulateSegment(segmentId))}
+        onClick={() => runAndDismiss(() => void simulateSheet(sheet))}
       >
         <Play size={14} />
       </IconButton>
@@ -229,7 +230,7 @@ export function CpSelectionToolbar({ container }: { container: HTMLElement | nul
           size="sm"
           variant="toolbar"
           title={t('panels:creasePattern.selectionToolbar.share', 'Create shareable link')}
-          onClick={() => runAndDismiss(() => void shareSegment(segmentId))}
+          onClick={() => runAndDismiss(() => void shareSheet(sheet))}
         >
           <Link2 size={14} />
         </IconButton>
