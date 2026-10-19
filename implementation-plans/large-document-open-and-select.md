@@ -217,20 +217,26 @@ keyed on a revision that every selection advances.
 | Face inference with 1.3's numeric sort (Node) | 11.0 s | 28 ms median, 79 ms max |
 | Border loops for all 204 sheets (native) | | 18 ms |
 | Membership of all 489,093 lines (native) | 426 ms, scanning every sheet | 10 ms, through a grid of sheet bounds |
+| The sheet index as built in 2.1: loops, membership and outlines | | 35 ms native, 44 ms wasm (median of 7) |
 | References' full analysis (native; adds merge and exactness for every sheet) | 1.4–2.5 s | |
 
 Inference one sheet at a time gives exactly the whole-canvas output (244,012
 vertices, 588,342 edges, 344,518 faces), as long as lines that touch —
-T-junctions included — stay in the same sheet. Wasm was not measured; expect
-it slower than native by a small factor.
+T-junctions included — stay in the same sheet.
 
-- **2.1 The sheet index.** One structure, built in Rust from the kernel
-  document in the CP worker, cached by a geometry revision that selection does
-  not advance, and handed to the main thread as typed arrays:
-  - per sheet: an id in reading order (top-left first), its outline ring,
-    bounds, member line ids (border, crease and aux), and whether the outline
-    is a rectangle (References' frame);
-  - per line: its sheet, or none.
+- **2.1 The sheet index.** *(Done: `oristudio-cp/src/sheets.rs`, the
+  `sheet_index` engine command, `cp-workspace/sheets/cpSheetIndex.ts`.)* One
+  structure, built in Rust from the kernel document by the CP engine (the
+  worker on the web, the native engine on desktop), cached on the main thread
+  by `creaseFingerprint` so a selection never rebuilds it, and handed over as
+  typed arrays, 1.9 MB here:
+  - per sheet: its position in reading order (top-left first), its outline
+    ring (corners only), bounds, and line count;
+  - per line: its sheet, or none. Member lists are derived from this on the
+    main thread, once, when first asked for.
+
+  No rectangle flag: a frame is a property of an outline (four corners,
+  axis-aligned), so References derives it where it needs it.
 
   A sheet is the **region inside a closed outer border**: border lines are
   chained where they meet or cross, each closed outer boundary is a sheet, and
@@ -241,9 +247,11 @@ it slower than native by a small factor.
   only at border lines — without tracing any of the 344,518 crease faces; the
   differential test in Verification is what confirms it. Precrease's simple
   loops are the same thing. It walks only the border lines (13,169 here), so it
-  should cost about what border loops cost: tens of milliseconds. It shares
-  code with `oristudio-precrease`'s outline rather than becoming a third copy;
-  which crate holds it is a decision for 2.1.
+  should cost about what border loops cost: tens of milliseconds — measured,
+  35 ms native and 44 ms in wasm. It lives in `oristudio-cp`, beside the
+  document it reads; `oristudio-precrease` depends on nothing, and References
+  takes its sheets from this index in 2.2, at which point precrease's own
+  border chaining is deleted rather than kept as a second copy.
 - **2.2 Every consumer reads the index.**
   - *Edit toolbar:* a selection is a sheet when its ids are exactly that
     sheet's members — O(selection) through the line → sheet array. No faces.
@@ -261,7 +269,13 @@ it slower than native by a small factor.
   face graph on that sheet's lines when it passes the Euler check, and
   otherwise the JS inference on those lines alone (28 ms median here). Run it in
   the worker, cached by the sheet's content fingerprint, so editing one sheet
-  re-infers only that sheet. The whole-canvas paths
+  re-infers only that sheet. **Passing the Euler check is not proof the faces
+  are right**: 2.1's differential test found that a line ending part-way along
+  an unsplit border (a T-junction) is certified as two self-touching faces
+  whose areas still sum to the sheet's — today's whole-canvas export has the
+  same flaw. 2.3 either splits lines at T-junctions before tracing or refuses
+  any face graph with a vertex inside an edge, and bodo's sheets, which are
+  full of T-junctions, are the measure of which. The whole-canvas paths
   (`ensureCpSegmentationArtifacts`, and `computeFoldArtifacts` for an Edit
   document) go away.
 - **2.4 Inference speed** still matters for one huge sheet: integer-keyed
@@ -273,10 +287,10 @@ disagreed on all of these; the last column is what the index does:
 
 | | Face segmentation today (Edit, Diagram, Simulate) | Border loops today (References) | Decided |
 | --- | --- | --- | --- |
-| Shape | any border-enclosed region; holes allowed | rectangle → frame; other closed loops kept as polygons without one | every closed outer border is a sheet; "rectangle" is a flag References reads |
+| Shape | any border-enclosed region; holes allowed | rectangle → frame; other closed loops kept as polygons without one | every closed outer border is a sheet; References derives a frame from a four-corner, axis-aligned outline |
 | A border line inside a sheet | a wall: two regions | outline "non-simple": refused, its lines unassigned | **ignored for now**: neither splits nor refuses the sheet; it is a member like any other line |
-| A border loop inside a sheet | an outer region with a hole, plus the inner region | two loops; lines inside both go to the first, with a warning | the same rule read the same way: ignored, so no hole and no inner sheet — *my reading of "ignored"; confirm when 2.1 starts* |
-| Closing a border | points within 1e-8 model units weld | within 1e-6 × the border's whole-canvas extent (7.4e-3 units here), so whether a sheet closes depends on what else is on the canvas | one fixed model-space tolerance; 2.1 picks the value |
+| A border loop inside a sheet | an outer region with a hole, plus the inner region — and an *empty* inner loop is its own region whenever the kernel cannot certify the faces | two loops; lines inside both go to the first, with a warning | the same rule read the same way: ignored, so no inner sheet, and its lines are the outer sheet's — *2.1 takes this reading; its PR asks for confirmation*. Faces are unchanged by it: an empty loop is still a hole wherever the kernel certifies the faces (`drop_hole_faces`) |
+| Closing a border | points within 1e-8 model units weld | within 1e-6 × the border's whole-canvas extent (7.4e-3 units here), so whether a sheet closes depends on what else is on the canvas | the kernel's own "same point", `Epsilon::POINT` (2.5e-4 model units), everywhere |
 | Which lines a sheet holds | midpoint inside the region or on its rim, every kind | both endpoints inside the frame (padded 1e-6 or 2e-3); aux lines only in rectangles; the rest unassigned | the midpoint rule for every kind — the rule saved Diagram fingerprints were taken with |
 | Areas closed only by creases | listed as regions in the Diagram picker and the Simulate rail; the toolbar refuses them | not sheets; one paper-rectangle fallback when the canvas has no border lines at all | **not sheets, and not shown**: the picker and the rail stop listing them |
 | Ids | position in a top-left sort | the order the border graph was walked | top-left reading order everywhere; stored ids are hints only |
@@ -289,14 +303,18 @@ of a sheet that a border line used to split: that half no longer exists as a
 sheet, so the step reads as missing and is relinked to the whole sheet. A
 differential test over the fixtures — index sheets against today's
 border-enclosed regions: same outlines, same members — makes every such change
-visible before it ships.
+visible before it ships. It is `cp-workspace/sheets/cpSheetIndex.wasm.test.ts`:
+every fixture agrees, the two decided differences (a wall, an inner loop) are
+pinned as named cases, and `CP_SHEET_INDEX_CORPUS` points it at files outside
+the repository. On this file all 204 sheets agree with today's regions on
+outline and on every one of the 489,093 lines.
 
 Expected on this file: the first selection's toolbar costs the index (tens of
 milliseconds in the worker, once per geometry change) plus a lookup; Diagram
 entry pays no segmentation at all; Simulate pays one sheet's faces and mesh;
 nothing in this phase blocks the main thread. Confidence: high on the costs,
-since each piece is measured natively or in Node (wasm is not); medium on the
-effort, since five consumers move and the table above needs answers first.
+since each piece is measured natively, in Node, and (the index) in wasm;
+medium on the effort, since five consumers move.
 
 ### Phase 3 — selection without a whole-document round trip
 
@@ -409,15 +427,16 @@ definitions table listed by name.
 ## Checklist
 
 Phase 1
-- [ ] 1.1 Metadata-only reader on the `.osf` open path; projection no longer adopted as `sourceFold`
-- [ ] 1.2 Assignment map built once; containment and diagram region caches keyed on crease geometry
-- [ ] 1.3 Numeric edge sort in `splitSegments`, ordering pinned by a test
-- [ ] 1.4 Every CP undo push capped at `MAX_CP_HISTORY`
-- [ ] Synthetic large fixture + harness script; before/after numbers in each PR
+- [x] 1.1 Metadata-only reader on the `.osf` open path (#458); projection no longer saved again as `sourceFold` (#461)
+- [x] 1.2 Assignment map built once; containment cache keyed on crease geometry (#459)
+- [ ] 1.2b Diagram region caches keyed on crease geometry — superseded if the Diagram moves to the index (2.2) first
+- [x] 1.3 Numeric edge sort in `splitSegments`, ordering pinned by a test (#460)
+- [x] 1.4 Every CP undo push capped at `MAX_CP_HISTORY` (#462)
+- [x] Harness script (`scripts/large-osf-perf.mjs`, #457); before/after numbers in each PR. No synthetic fixture: the measurements use the real file, kept outside the repository
 
 Phase 2
 - [x] Answers for the definitions table (2026-10-18; the inner-loop reading to confirm at 2.1)
-- [ ] 2.1 Sheet index in Rust from outer border loops, in the CP worker, cached by geometry revision; differential test against today's regions
+- [x] 2.1 Sheet index in Rust from outer border loops, in the CP engine, cached by crease fingerprint; differential test against today's regions
 - [ ] 2.2 Edit toolbar on the index
 - [ ] 2.2 Diagram links, picker and thumbnails on the index
 - [ ] 2.2 References on the index; merge and exactness per open sheet; sheet saved by outline
