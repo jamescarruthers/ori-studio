@@ -100,7 +100,7 @@ import {
   importedCreasePatternFormat,
   isCreasePatternFilename,
   parseImportedCreasePattern,
-  parseImportedCreasePatternFromFold,
+  storedImportedCreasePattern,
   type ImportedCreasePatternResult,
   type ImportedCreasePatternSource,
 } from '../../../lib/creasePatternImport';
@@ -1234,8 +1234,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     const creasePattern = nativeDocument.creasePattern;
     const restoredDocument = await restoreOristudioCpDocument(creasePattern.document, nativeSource);
     // The engine now owns the crease-pattern snapshot; drop this (potentially large)
-    // parsed copy so it can be reclaimed before the FOLD projection is turned into
-    // simulator artifacts and uploaded to WebGL below, keeping peak memory lower.
+    // parsed copy so it can be reclaimed before the canvas uploads to WebGL below,
+    // keeping peak memory lower.
     (creasePattern as { document: unknown }).document = undefined;
     const checked = await refreshAlwaysOnCamvDiagnostics(restoredDocument);
     const documentState = checked.documentState;
@@ -1245,24 +1245,20 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       (await exportedEditableFoldProjection());
     if (!fold) throw new Error('Native crease-pattern project does not contain a FOLD projection');
 
-    // Parse straight from the live FOLD object — no stringify + re-parse round-trip.
-    const parsed = parseImportedCreasePatternFromFold(fold, {
+    // A record of what the file says, not a re-import: the document is already in
+    // the kernel, and whatever needs faces or a mesh builds them when it is used.
+    const stored = storedImportedCreasePattern(fold, {
       format: 'fold',
       filename: `${nativeDocument.title || source.filename}.fold`,
       path: null,
     });
-    // Simulation faces are inferred in JS (no flat-folding), so multi-pattern
-    // documents work.
-    const result = parsed;
     const originalSource = importedSourceFromNativeSource(nativeDocument.creasePattern.source);
-    const importedDocument = originalSource
-      ? { ...result.document, source: originalSource }
-      : result.document;
+    const importedDocument = originalSource ? { ...stored, source: originalSource } : stored;
     set({
       ...nativeCpEditorState(nativeDocument, documentState, checked.camvResult, artifacts),
       // Everything below is the "this crease pattern is the whole project" part,
       // which the companion path must not apply — it would unclaim the design.
-      workspaceTitle: nativeDocument.title || result.project.title,
+      workspaceTitle: nativeDocument.title || stored.title,
       // A CP-only project establishes no design; keep the Design chooser.
       ...discardAllDesigns(),
       importedCreasePattern: importedDocument,
