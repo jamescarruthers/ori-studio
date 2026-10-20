@@ -217,9 +217,9 @@ function halvings(folds: number): FoldPlainOp[] {
 }
 
 describe.skipIf(!available)('the stacking cap over the built bridge', () => {
-  it('is the engine’s, and a single stack goes over it at 290 layers', () => {
-    expect(STACK_CAP).toBe(4_000_000);
-    expect(OVER_DEPTH).toBe(290);
+  it('is the engine’s, and a single stack goes over it at 418 layers', () => {
+    expect(STACK_CAP).toBe(12_000_000);
+    expect(OVER_DEPTH).toBe(418);
   });
 
   it('refuses a pattern stacked past it by its counts, before its order is looked for', async () => {
