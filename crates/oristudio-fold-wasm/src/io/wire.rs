@@ -7,8 +7,10 @@
 //! The one document shape here is the `cp-jump` op ([`CpJump`]), which a
 //! pick returns ready to store and every replay hands back unchanged.
 
-use oristudio_fold::complete::CompletionLimits;
-use oristudio_fold::{Broken, ChoiceCount, ImportRefusal, ImportSummary, SheetShape, StartSide};
+use oristudio_fold::complete::{BudgetLimit, CheckLimits, CompletionLimits, ConstraintFamily};
+use oristudio_fold::{
+    Broken, CheckStage, ChoiceCount, FaceId, ImportRefusal, ImportSummary, SheetShape, StartSide,
+};
 use serde::ser::Error as _;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::{Value, json};
@@ -165,6 +167,77 @@ pub struct Opened {
 pub struct Searched {
     pub opened: Opened,
     pub choice: Vec<usize>,
+}
+
+/// What a check on a held import may spend: `maxNodes` search nodes for
+/// the exhaustive search a fresh completion would run, `fastNodes` for each
+/// of the two quick searches before it. Each defaults to the engine's
+/// ([`CheckLimits::default`]). A check that needs more answers `undecided`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckWireLimits {
+    #[serde(default)]
+    pub max_nodes: Option<u64>,
+    #[serde(default)]
+    pub fast_nodes: Option<u64>,
+}
+
+impl CheckWireLimits {
+    pub fn check(&self) -> CheckLimits {
+        let defaults = CheckLimits::default();
+        CheckLimits {
+            max_nodes: self.max_nodes.or(defaults.max_nodes),
+            fast_nodes: self.fast_nodes.unwrap_or(defaults.fast_nodes),
+            deadline: None,
+        }
+    }
+}
+
+/// A held import's checking session, opened: how many pairs its letters
+/// force, and the search nodes its first order took. That order is the one
+/// shown, which the next check prefers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SessionOpened {
+    pub import: u32,
+    pub forced: usize,
+    pub nodes: u64,
+}
+
+/// A check's answer. Every verdict but `undecided` is final.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "verdict", rename_all = "snake_case")]
+pub enum Checked {
+    /// An order fits; it is now the order shown. `changed` is how many pairs
+    /// differ from the order shown before, `forced` how many pairs the
+    /// letters and the checked pairs force.
+    Fits {
+        nodes: u64,
+        stage: CheckStage,
+        changed: usize,
+        forced: usize,
+    },
+    /// A checked pair, `[upper, lower]`, is forced the other way; `traced`
+    /// is what forces it.
+    Forced {
+        pair: [FaceId; 2],
+        traced: Vec<FaceId>,
+    },
+    /// Two checked pairs order the same faces both ways.
+    Contradictory { pair: [FaceId; 2] },
+    /// The checked pairs break a constraint as they propagate.
+    Conflict {
+        family: ConstraintFamily,
+        faces: Vec<FaceId>,
+        traced: Vec<FaceId>,
+    },
+    /// A search proved that no order fits.
+    NoOrder {
+        faces: Vec<FaceId>,
+        traced: Vec<FaceId>,
+        nodes: u64,
+    },
+    /// No answer within the limits.
+    Undecided { limit: BudgetLimit, nodes: u64 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

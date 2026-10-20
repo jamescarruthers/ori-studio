@@ -11,6 +11,14 @@
 //!     Outcome<ImportOpened>;
 //!   /** Land one listed order per component as a step: its state and op. */
 //!   import_pick(import: number, choice: Uint32Array): Outcome<ImportLanded>;
+//!   /** Open a checking session on an import (the Layer order dialog; no
+//!    *  caller in apps/web yet): what its letters force, a first order. */
+//!   import_session(import: number, limits?: ImportLimits):
+//!     Outcome<{ import: number; forced: number; nodes: number }>;
+//!   /** Whether the letters and these [upper, lower] pairs leave an order;
+//!    *  a fit becomes the order shown, which the next check prefers. */
+//!   import_check(import: number, pairs: [number, number][],
+//!     limits?: { maxNodes?: number; fastNodes?: number }): ImportChecked;
 //!   /** Start from Edit's folded figure: the kernel's folded paper scene. */
 //!   import_edit_folded_figure(scene: FoldedPaperScene, target: ImportTarget,
 //!     limits?: ImportLimits): Outcome<ImportLanded>;
@@ -28,9 +36,11 @@ use oristudio_cp::folding::FoldedPaperScene;
 use serde::de::DeserializeOwned;
 use wasm_bindgen::prelude::*;
 
+use oristudio_fold::FaceId;
+
 use super::export::{export_fold, send_to_edit};
 use super::figure::import_figure;
-use super::wire::{CpFile, IoCallError, Limits, Target};
+use super::wire::{CheckWireLimits, CpFile, IoCallError, Limits, Target};
 use crate::{FoldEngine, js_error, parse, to_js_value};
 
 #[wasm_bindgen]
@@ -77,6 +87,33 @@ impl FoldEngine {
             &self
                 .imports
                 .search(import, &choice, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// Open a checking session on a held import (the Layer order dialog):
+    /// what its letters force and a first order, which becomes the order
+    /// shown. `limits` (`maxNodes`) may be `undefined` or `null`.
+    pub fn import_session(&mut self, import: u32, limits: JsValue) -> Result<JsValue, JsValue> {
+        let limits: Limits = optional("limits", limits)?;
+        to_js_value(&self.imports.open_session(import, &limits).map_err(thrown)?)
+    }
+
+    /// Whether the import's letters and `pairs` (`[upper, lower]` face ids)
+    /// leave an order. The search prefers the order shown; a fit becomes it.
+    /// `limits` (`maxNodes`, `fastNodes`) may be `undefined` or `null`.
+    pub fn import_check(
+        &mut self,
+        import: u32,
+        pairs: JsValue,
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let pairs: Vec<[FaceId; 2]> = parse("pairs", pairs)?;
+        let limits: CheckWireLimits = optional("limits", limits)?;
+        to_js_value(
+            &self
+                .imports
+                .check(import, &pairs, &limits)
                 .map_err(thrown)?,
         )
     }

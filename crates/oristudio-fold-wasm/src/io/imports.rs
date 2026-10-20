@@ -16,14 +16,16 @@ use std::collections::HashMap;
 
 use oristudio_fold::complete::Completions;
 use oristudio_fold::{
-    CreasePatternInput, ImportRefusal, ImportTarget, ImportedPattern, Sheet, StartSide, State,
+    Check, CompletionRefusal, CompletionSession, CreasePatternInput, FaceId, FixedKind, FixedPair,
+    ImportRefusal, ImportTarget, ImportedPattern, Sheet, StartSide, State,
 };
+use oristudio_layer_order::LayerOrder;
 
 use super::jump;
 use super::kernel::{cp_json, input_of_cp_json, load};
 use super::wire::{
-    AdoptedPaper, ComponentCount, CpFile, CpJump, CpOrigin, IoCallError, IoRefusal, JumpOp, Landed,
-    Limits, Opened, Target,
+    AdoptedPaper, CheckWireLimits, Checked, ComponentCount, CpFile, CpJump, CpOrigin, IoCallError,
+    IoRefusal, JumpOp, Landed, Limits, Opened, SessionOpened, Target,
 };
 use crate::bridge::Bridge;
 use crate::wire::{Choices, Op, Outcome, Paper};
@@ -43,6 +45,15 @@ struct Held {
     origin: CpOrigin,
     pattern: ImportedPattern,
     completions: Completions,
+    /// Opened by [`Imports::open_session`].
+    session: Option<Checking>,
+}
+
+/// A held import's checking session and the order it shows.
+#[derive(Debug)]
+struct Checking {
+    session: CompletionSession,
+    shown: LayerOrder,
 }
 
 /// A target whose state, if it names one, is held.
@@ -129,6 +140,7 @@ impl Imports {
             origin: file.origin(),
             pattern,
             completions,
+            session: None,
         });
         Ok(Outcome::Ok(Opened {
             import,
@@ -224,6 +236,110 @@ impl Imports {
             ),
             Err(refusal) => Ok(Outcome::Refused(refusal.into())),
         }
+    }
+
+    /// Open a checking session on a held import (the Layer order dialog):
+    /// propagate its letters, find what they force and a first order, which
+    /// becomes the order shown. A session already open is replaced.
+    pub fn open_session(
+        &mut self,
+        import: u32,
+        limits: &Limits,
+    ) -> Result<Outcome<SessionOpened>, IoCallError> {
+        let held = self
+            .held
+            .get_mut(&import)
+            .ok_or(IoCallError::UnknownImport(import))?;
+        let session = match held.pattern.session(&limits.completion()) {
+            Ok(session) => session,
+            Err(refusal) => return Ok(Outcome::Refused(IoRefusal::from(refusal).into())),
+        };
+        let opened = SessionOpened {
+            import,
+            forced: session.forced_pairs().len(),
+            nodes: session.nodes(),
+        };
+        held.session = Some(Checking {
+            shown: session.first_order(),
+            session,
+        });
+        Ok(Outcome::Ok(opened))
+    }
+
+    /// Whether the letters and `pairs` (each `[upper, lower]`) leave an
+    /// order. The search prefers the order shown, and a fit becomes it.
+    pub fn check(
+        &mut self,
+        import: u32,
+        pairs: &[[FaceId; 2]],
+        limits: &CheckWireLimits,
+    ) -> Result<Checked, IoCallError> {
+        let held = self
+            .held
+            .get_mut(&import)
+            .ok_or(IoCallError::UnknownImport(import))?;
+        let Some(checking) = held.session.as_mut() else {
+            return Err(IoCallError::invalid(format!(
+                "import {import} has no session: open one first"
+            )));
+        };
+        let fixed: Vec<FixedPair> = pairs
+            .iter()
+            .map(|&[upper, lower]| FixedPair {
+                upper,
+                lower,
+                kind: FixedKind::Seed,
+            })
+            .collect();
+        let check = checking
+            .session
+            .check(&fixed, Some(&checking.shown), &limits.check());
+        Ok(match check {
+            Ok(Check::Fits {
+                order,
+                forced,
+                nodes,
+                stage,
+            }) => {
+                let changed = order
+                    .pairs()
+                    .filter(|(pair, lo_above)| {
+                        checking.shown.above(pair.lo(), pair.hi()) != *lo_above
+                    })
+                    .count();
+                checking.shown = order;
+                Checked::Fits {
+                    nodes,
+                    stage,
+                    changed,
+                    forced: forced.len(),
+                }
+            }
+            Ok(Check::Forced { pair, traced }) => Checked::Forced { pair, traced },
+            Ok(Check::Conflict {
+                family,
+                faces,
+                traced,
+            }) => Checked::Conflict {
+                family,
+                faces,
+                traced,
+            },
+            Ok(Check::NoOrder {
+                faces,
+                traced,
+                nodes,
+            }) => Checked::NoOrder {
+                faces,
+                traced,
+                nodes,
+            },
+            Ok(Check::Undecided { limit, nodes }) => Checked::Undecided { limit, nodes },
+            Err(CompletionRefusal::FixedContradictory { pair }) => Checked::Contradictory {
+                pair: [pair.lo(), pair.hi()],
+            },
+            Err(refusal) => return Err(IoCallError::invalid(refusal.to_string())),
+        })
     }
 
     /// Let an import go; whether it was held.

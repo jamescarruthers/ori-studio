@@ -38,6 +38,9 @@ crate-type = ["cdylib", "rlib"]
 # and `.orh` with them, and Send to Edit and the FOLD export write with them
 # (`src/io.rs`). README.md records what that costs against its budget.
 oristudio-fold = { path = "../oristudio-fold", features = ["kernel"] }
+# The order a held import's checking session shows (`io::imports`), and
+# the independent checker the session harness runs every order through.
+oristudio-layer-order = { path = "../oristudio-layer-order" }
 oristudio-cp.workspace = true
 oristudio-geometry = { path = "../oristudio-geometry" }
 treemaker-fold.workspace = true
