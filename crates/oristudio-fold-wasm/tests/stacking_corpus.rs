@@ -1,12 +1,13 @@
 //! The stacking cap (`oristudio_layer_order::MAX_STACKED_TRIPLES`) against
 //! real models, through the bridge's own calls:
 //!
-//! - every Fold sequence in `tests/fixtures` folds far under it, step by
-//!   step, and its last state imports under it;
+//! - the five authored designs' Fold sequences (`fold-design-completion`),
+//!   and two fold examples, fold far under it, step by step, and their last
+//!   states import under it;
 //! - the fixtures' real crease patterns import under it, but for one: a
-//!   box-pleated iguana component that stacks 250 layers deep, which took 15 s
-//!   to open and 5 s to land before the cap, and is now refused as soon as its
-//!   overlaps are counted.
+//!   box-pleated iguana component that stacks 250 layers deep, which took
+//!   15 s to open and 6 s to land natively before the cap, and is now
+//!   refused as soon as its overlaps are counted.
 //!
 //! With `FOLD_STACKING_CORPUS_DIR` set, every `<case>/truth.fold` under it
 //! (the layout of the cpoogle cases) is weighed, and imported and landed
@@ -134,8 +135,8 @@ fn replay(name: &str, doc: &Value) -> (u64, State) {
 
 #[test]
 fn the_fixture_sequences_fold_far_under_the_cap() {
-    // The most triples of any step, on 2026-10-19: the crane's 36,548, a
-    // hundredth of the cap.
+    // The most triples of any step, on 2026-10-19: the crane's 10,440, under
+    // a three-hundredth of the cap.
     for name in [
         "fold-design-completion/crane.osf",
         "fold-design-completion/heart.osf",
@@ -164,6 +165,7 @@ fn the_fixture_sequences_fold_far_under_the_cap() {
                 weighed.as_ref().is_ok_and(|&(_, t)| t <= CAP / 100),
                 "{name}: {weighed:?}"
             );
+            println!("{name}: at most {most} triples a step; imported, {weighed:?}");
         }
     }
 }
@@ -178,8 +180,10 @@ fn the_fixture_patterns_import_under_the_cap_but_the_iguana() {
             "{name}: {weighed:?}"
         );
         assert!(import(CpFormat::Fold, &bytes).is_ok(), "{name}");
+        println!("{name}: (deepest, triples) {weighed:?}");
     }
-    // A component of a box-pleated iguana, 850 faces 250 layers deep.
+    // A component of a box-pleated iguana, 850 faces 250 layers deep:
+    // 10,233,200 triples.
     let bytes = std::fs::read(fixtures().join("precrease/iguana-c0.fold"))
         .unwrap_or_else(|e| panic!("{e}"));
     match weigh(CpFormat::Fold, &bytes) {
@@ -191,6 +195,7 @@ fn the_fixture_patterns_import_under_the_cap_but_the_iguana() {
             assert_eq!(deepest, 250);
             assert!(triples > limit, "{triples}");
             assert_eq!(limit, CAP);
+            println!("precrease/iguana-c0.fold: refused, {deepest} deep, {triples} triples");
         }
         other => panic!("the iguana: {other:?}"),
     }
