@@ -3,9 +3,12 @@ import { trackFoldRefused, trackFoldStepAdded } from '../../analytics';
 import { trackFoldRepeatRebuilt } from '../../analytics/trackFold';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
+import type { FoldToolStep } from '../canvas/useFoldToolPreview';
 import { canonicalJson } from '../document/foldDigest';
 import type { FoldRepeatOp } from '../document/foldSequenceDocument';
+import type { FoldIsometry } from '../engine/foldEngineWire';
 import { foldSearchTicket, type FoldSearchTicket } from '../engine/foldSearch';
+import { foldStepInputKey } from '../session/foldSessionEngine';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { useFoldSessionState } from '../session/useFoldSession';
 import { useFoldPath } from '../sequence/useFoldPath';
@@ -26,28 +29,37 @@ import type { RepeatStop } from './repeatWords';
 /** The source changed, or the worker failed: not a refusal, and not counted as one. */
 const UNAVAILABLE: RepeatStop = { code: 'repeat_unavailable' };
 
-/** What the canvas lights on the range's starting state while the axis is chosen or drawn. */
-export interface FoldRepeatMarks {
-  /** Every verified axis of the range's starting state. */
-  axes: readonly RepeatSymmetry[];
-  /** The one taken; -1 for none. */
-  axis: number;
-  /** A line drawn that is none of them, while it is shown refused. */
-  drawn: RepeatDrawnLine | null;
-}
+/** The range's starting state has no verified axis: Repeat's own refusal, counted as the axes come back. */
+const NO_AXIS: RepeatStop = { code: 'repeat_axis' };
 
-/** Repeat while it is in hand: its window, what the canvas lights, and what Enter and Escape do. */
+/**
+ * How long Repeat waits, after its range or axis changes, before it prepares
+ * the repeat: a run of changes — the axis stepped through, a range picked —
+ * prepares once, for the last.
+ */
+export const REPEAT_PREPARE_DELAY_MS = 250;
+
+/** Repeat while it is in hand: its window, what the canvas previews, and what Enter and Escape do. */
 export interface FoldRepeatTool {
   view: FoldRepeatWindowView;
   verbs: FoldRepeatWindowVerbs;
-  /** Null while the canvas shows a preview, or there are no axes to light. */
-  marks: FoldRepeatMarks | null;
-  /** Enter, and the window's commit: preview the repeat, take the layer order shown, or save. Whether it did anything. */
+  /**
+   * The repeat the session previews for the tool, keyed as any tool's step:
+   * what the canvas shows, and the creases it adds. Null while none is.
+   */
+  step: FoldToolStep | null;
+  /** A drawn line that is no verified axis, while its refusal is shown: the canvas draws it. */
+  drawn: RepeatDrawnLine | null;
+  /**
+   * Enter, and the window's commit: add the repeat previewed, take the layer
+   * order shown, or — once a preparation was stopped — prepare it again.
+   * Whether it did anything.
+   */
   primary: () => boolean;
   /**
    * Escape's rung, and the window's Cancel: stop a preparation under way; go
-   * back from a preview to choosing; let go of a line being drawn; else put
-   * Repeat down. Always true while it is in hand.
+   * back from a layer order being chosen; let go of a line being drawn; else
+   * put Repeat down. Always true while it is in hand.
    */
   cancel: () => boolean;
   /** Step through a source operation's matching layer orders, while one is being chosen. Whether there was one. */
@@ -69,18 +81,27 @@ function spanOf(sheet: readonly (readonly [number, number])[] | undefined): numb
  * from the first step chosen through the step on screen (`repeatRange`), the
  * verified symmetry axes of the state before it — asked of the worker once
  * per state — and the one taken: the axis last chosen or drawn while the
- * range has it (`repeatAxisIndex`), else the first. A free line drawn on the
- * starting state (the tools' picks) is taken when it is one of those axes,
- * and refused when it is not, the nearest axis offered in its place.
+ * range has it (`repeatAxisIndex`), else the first.
  *
- * Enter prepares the repeat in the worker — a search with its time limit
- * (`REPEAT_PREPARATION_MS`), which Escape stops — previews what it prepared,
- * steps through a source operation's matching layer orders when it has
- * several, and saves: one numbered step, an entry per operation, or a saved
- * repeat updated in place. Whatever changes the range or the axis lets go of
- * what was prepared. Null while another tool is in hand.
+ * It previews as every tool does, from the moment it is in hand: once the
+ * range and the axis settle (`REPEAT_PREPARE_DELAY_MS`) it prepares the
+ * repeat in the worker — a search with its time limit
+ * (`REPEAT_PREPARATION_MS`), which Escape stops — and previews it, its step
+ * (`step`) the canvas's to show. Whatever changes the range or the axis lets
+ * go of it and prepares anew. A source operation with several matching layer
+ * orders is chosen with the order chooser; Enter adds the repeat: one
+ * numbered step, an entry per operation, or a saved repeat updated in place.
+ *
+ * A free line drawn on the canvas (the tools' picks, `viewTransform` the
+ * view of the state they were drawn on) is taken when it is one of the
+ * verified axes, and refused when it is not, the nearest axis offered in its
+ * place. Null while another tool is in hand.
  */
-export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolState): FoldRepeatTool | null {
+export function useFoldRepeatTool(
+  session: FoldSessionSurface,
+  tools: FoldToolState,
+  viewTransform: FoldIsometry | null
+): FoldRepeatTool | null {
   const active = tools.tool === 'repeat';
   const { entries, cursor, cursorId } = useFoldPath(active);
   const loadId = useFoldSessionState((snapshot) => (active ? snapshot.loadId : 0));
@@ -129,8 +150,15 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
   const axis = axes ? repeatAxisIndex(axes, tools.repeatAxis) : -1;
   const axisLine = axes && axis >= 0 ? axes[axis]!.sheet : null;
 
-  // --- A line drawn on the starting state: taken when it is an axis, shown refused when not.
-  const drawn = useMemo(() => (active ? repeatDrawnLine(tools.picks) : null), [active, tools.picks]);
+  // --- A line drawn on the canvas: taken when it is an axis, shown refused when not.
+  // The view is read through its key: the preview landing shows another scene with the same view,
+  // which reads the line the same, and must not refuse it again.
+  const viewKey = viewTransform ? viewTransform.join(',') : null;
+  const drawn = useMemo(
+    () => (active ? repeatDrawnLine(tools.picks, viewTransform) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [active, tools.picks, viewKey]
+  );
   const drawnAxis = drawn && axes ? drawnRepeatAxis(axes, drawn) : -1;
   useEffect(() => {
     if (!drawn || !axes) return;
@@ -155,7 +183,10 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
   const [selections, setSelections] = useState<Record<number, string>>({});
   /** The preparation the worker is running, until it answers: what Stop and Escape cancel there. */
   const [searching, setSearching] = useState<FoldSearchTicket | null>(null);
+  /** Stopped, or backed out of an order choice: nothing is prepared again until something changes, or Enter asks. */
   const [stopped, setStopped] = useState(false);
+  /** The repeat last handed to the session to preview. */
+  const [previewed, setPreviewed] = useState<FoldRepeatOp | null>(null);
   const [preparedFor, setPreparedFor] = useState(context);
   if (preparedFor !== context) {
     // Another range, axis or step on screen: nothing prepared for it yet.
@@ -167,6 +198,7 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
     setSelections({});
     setSearching(null);
     setStopped(false);
+    setPreviewed(null);
   }
   const ticket = useRef(0);
   const search = useRef<FoldSearchTicket | null>(null);
@@ -187,7 +219,7 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
   // Whatever changes what is repeated — or puts Repeat down — lets go of what was prepared for it.
   useEffect(() => letGo, [context, letGo]);
 
-  /** Back to choosing: nothing prepared, the starting state on the canvas again. */
+  /** Nothing prepared, nothing previewed: the step on screen on the canvas again. */
   const reset = () => {
     letGo();
     setResult(null);
@@ -197,10 +229,12 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
     setSelections({});
     setSearching(null);
     setStopped(false);
+    setPreviewed(null);
   };
 
   const show = async (op: FoldRepeatOp, run: number) => {
     owns.current = true;
+    setPreviewed(op);
     const preview = await session.preview(op);
     if (ticket.current !== run) return;
     if (preview.status === 'refused') {
@@ -247,6 +281,7 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
     setError(null);
     setStopped(false);
     setChoice(null);
+    setPreviewed(null);
     const searched = foldSearchTicket();
     search.current = searched;
     setSearching(searched);
@@ -286,12 +321,10 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
     }
   };
 
-  /** Stop the preparation under way and keep the setup: nothing was prepared, nothing is added. */
-  const stop = () => {
-    if (!search.current) return false;
+  /** Back from a layer order being chosen: nothing prepared, and nothing prepared again until something changes. */
+  const backFromOrder = () => {
     reset();
     setStopped(true);
-    return true;
   };
 
   const acceptChoice = () => {
@@ -340,11 +373,22 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
     putDown();
   };
 
-  // The canvas shows the starting state, with its axes, until a preview lands in its place.
-  const previewing = session.pending.status === 'landed' && session.pending.request.op.kind === 'repeat';
-  const marks = useMemo<FoldRepeatMarks | null>(
-    () => (active && axes && axes.length > 0 && !previewing ? { axes, axis, drawn: refusedLine } : null),
-    [active, axes, axis, refusedLine, previewing]
+  // --- Prepared as soon as the range and the axis settle, as every tool previews from its first choice.
+  const settled = active && range !== null && (axes?.length ?? 0) > 0 && axis >= 0 && !readOnly;
+  const due = settled && result === null && error === null && !stopped && searching === null && !busy;
+  const prepareNow = useRef(prepare);
+  useEffect(() => {
+    prepareNow.current = prepare;
+  });
+  useEffect(() => {
+    if (!due || context === null) return undefined;
+    const timer = setTimeout(() => void prepareNow.current(), REPEAT_PREPARE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [due, context]);
+
+  const step = useMemo<FoldToolStep | null>(
+    () => (previewed ? { op: previewed, key: foldStepInputKey({ op: previewed }) } : null),
+    [previewed]
   );
 
   if (!active) return null;
@@ -354,21 +398,17 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
   if (!range) phase = { kind: 'unavailable', why: cursor < 1 ? 'sheet' : 'waiting' };
   else if (axes === undefined) phase = { kind: 'loading' };
   else if (axes === null) phase = { kind: 'failed', stop: UNAVAILABLE };
-  else if (searching) phase = { kind: 'preparing' };
+  else if (axes.length === 0) phase = { kind: 'failed', stop: NO_AXIS };
+  else if (searching || due) phase = { kind: 'preparing' };
   else if (result?.status === 'choice') {
     phase = { kind: 'choosing', step: result.step, count: result.candidates.length, index: choice, waiting: busy, failed: error !== null };
   } else if (error) phase = { kind: 'failed', stop: error };
   else if (result?.status === 'blocked') phase = { kind: 'blocked', step: result.step, stop: result };
-  else if (result?.status === 'ready') phase = { kind: 'ready', saving: busy };
+  else if (result?.status === 'ready') phase = { kind: 'ready', busy };
   else if (stopped) phase = { kind: 'stopped' };
-  else phase = { kind: 'picking' };
-  const canPreview = !readOnly && axis >= 0 && (phase.kind === 'picking' || phase.kind === 'stopped' || phase.kind === 'failed') && !busy;
-  // A refused or stopped repeat leaves the starting state on show: another axis may be drawn on it.
-  const drawing =
-    !readOnly &&
-    !previewing &&
-    (phase.kind === 'picking' || phase.kind === 'stopped' || phase.kind === 'failed' || phase.kind === 'blocked') &&
-    (axes?.length ?? 0) > 0;
+  else phase = { kind: 'preparing' };
+  // A line may be drawn on whatever the canvas shows, but not while an order is chosen or a repeat is added.
+  const drawing = !readOnly && (axes?.length ?? 0) > 0 && !choosing && !(phase.kind === 'ready' && phase.busy);
 
   const stepChoice = (delta: number): boolean => {
     if (result?.status !== 'choice' || choice === null) return false;
@@ -401,9 +441,10 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
       setIndividual: (individual) => foldTools().setRepeatIndividual(individual),
       stepOrder: (delta) => void stepChoice(delta),
       acceptOrder: acceptChoice,
-      backFromOrder: reset,
+      backFromOrder,
     },
-    marks,
+    step,
+    drawn: refusedLine,
     primary: () => {
       if (readOnly) return false;
       if (searching) return true;
@@ -416,14 +457,20 @@ export function useFoldRepeatTool(session: FoldSessionSurface, tools: FoldToolSt
         void commit();
         return true;
       }
-      if (!canPreview) return false;
+      // Stopped: Enter, as the window's Repeat, asks for the repeat again.
+      if (!stopped || !settled || busy) return false;
       void prepare();
       return true;
     },
     cancel: () => {
-      if (stop()) return true;
-      if (result) {
+      // A preparation under way, or about to start (`due`, shown as preparing): stopped, the setup kept.
+      if (search.current || due) {
         reset();
+        setStopped(true);
+        return true;
+      }
+      if (choosing) {
+        backFromOrder();
         return true;
       }
       if (tools.picks.length > 0) {

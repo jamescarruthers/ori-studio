@@ -1,4 +1,3 @@
-import { useFoldRepeatBaseline } from '../repeat/useFoldRepeatBaseline';
 import { isSequenceTool } from '../tools/foldToolCatalog';
 import { useFoldTools } from '../tools/foldToolState';
 import { useEffect, useMemo, useState } from 'react';
@@ -10,7 +9,7 @@ import type { FoldLandmarks, FoldScene, FoldStateSummary } from '../engine/foldE
 import type { FoldStateCall } from '../session/foldSession';
 import type { FoldSessionNode } from '../session/foldSessionState';
 import { FOLD_SCENE_QUERY, foldLandmarksQuery } from '../session/foldStateQueries';
-import { useFoldStateQuery, useFoldCursor, useFoldNodeQuery, useFoldSessionState } from '../session/useFoldSession';
+import { useFoldStateQuery, useFoldCursor, useFoldSessionState } from '../session/useFoldSession';
 import { foldPickIndex, type FoldMarkPoint, type FoldPickIndex } from './foldPicking';
 
 /** What the canvas knows about the state on screen, from the engine and the document. */
@@ -83,16 +82,12 @@ export function useFoldStateView(): FoldStateView {
   const cursor = useFoldCursor();
   const cursorId = useFoldSessionState((snapshot) => snapshot.cursor);
   const sequence = useFoldSessionState((snapshot) => snapshot.sequence);
-  // The sequence tools show another state than the step on screen: the pose
-  // Unfold to step returns to, or Repeat's result, once their preview lands;
-  // until Repeat's does, the state before its range, which its axis is
-  // chosen and drawn on (`useFoldRepeatBaseline`).
+  // The sequence tools show another state than the step on screen once their
+  // preview lands: the pose Unfold to step returns to, or Repeat's result.
   const tool = useFoldTools((state) => state.tool);
   const pending = useFoldSessionState((s) => s.pending);
   const returned = isSequenceTool(tool) && pending.status === 'landed' && pending.request.op.kind === tool ? pending : null;
-  const baseline = useFoldRepeatBaseline(tool === 'repeat' && returned === null);
-  const shownId = baseline ? baseline.id : cursorId;
-  const marks = useMemo(() => foldMarksAt(sequence, shownId), [sequence, shownId]);
+  const marks = useMemo(() => foldMarksAt(sequence, cursorId), [sequence, cursorId]);
   const points = useMemo(() => foldMarkPoints(marks), [marks]);
   // The landmarks with the marks as point landmarks: a new call when the
   // marks change, the same call (and no new ask) while they stay.
@@ -103,8 +98,9 @@ export function useFoldStateView(): FoldStateView {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pointsKey]
   );
-  const scene = useFoldStateQuery(returned?.state ?? baseline?.state ?? cursor.state, FOLD_SCENE_QUERY);
-  const landmarks = useFoldNodeQuery(shownId, landmarksQuery);
+  const shownState = returned?.state ?? cursor.state;
+  const scene = useFoldStateQuery(shownState, FOLD_SCENE_QUERY);
+  const landmarks = useFoldStateQuery(shownState, landmarksQuery);
   // A landed preview becomes the step on screen when it is committed, with
   // these marks: its landmarks are asked now, while the folder looks at it,
   // so the canvas can pick on the step the moment it is committed.
@@ -115,7 +111,7 @@ export function useFoldStateView(): FoldStateView {
       .query(landedPending, landmarksQuery)
       .catch((error: unknown) => reportError(error, { surface: 'fold:landed-landmarks' }));
   }, [landedPending, landmarksQuery]);
-  const summary = returned?.summary ?? baseline?.summary ?? cursor.summary;
+  const summary = returned?.summary ?? cursor.summary;
   const fresh = useMemo(() => (scene && summary ? { scene, summary } : null), [scene, summary]);
   const picture = usePicture(fresh, loading(cursor));
   const index = useMemo(() => (scene ? foldPickIndex(scene, landmarks, points) : null), [scene, landmarks, points]);
@@ -126,7 +122,7 @@ export function useFoldStateView(): FoldStateView {
     landmarks,
     marks,
     markPoints: points,
-    // Nothing is picked on a preview, nor by Unfold to step, which takes no clicks.
-    index: returned || tool === 'unfold-to' ? null : index,
+    // Unfold to step takes no clicks; Repeat's axis may be drawn on its own preview, as on the step before it.
+    index: tool === 'unfold-to' ? null : index,
   };
 }

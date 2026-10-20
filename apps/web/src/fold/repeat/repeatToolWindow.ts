@@ -3,20 +3,21 @@
  * (`components/fold/FoldToolWindow`).
  *
  * Repeat folds a range of steps — from the one chosen through the step on
- * screen — again on the other side of a symmetry axis. Its window holds what
- * the bar over the column held until Repeat became a tool:
+ * screen — again on the other side of a symmetry axis, and previews it as
+ * every tool previews its step, from the moment the range and the axis are
+ * set (`useFoldRepeatTool`). Its window:
  *
  * - **Start with**: the range's first step, among the ones it can start from;
  * - **Symmetry axis**: the verified symmetry axes of the range's starting
- *   state, by the way they run, which the canvas shows lit on that state; or
- *   one drawn on it as a free line, with Snap to points, accepted only when
- *   it is one of them;
- * - **Show as individual steps**, how the repeat is saved;
+ *   state, by the way they run; or one drawn on the model as a free line,
+ *   with Snap to points, taken only when it is one of them;
+ * - **Show as individual steps**, how the repeat is added;
  * - the preparation's progress, a layer order to choose when a source
  *   operation has several, and why a repeat stopped, in Repeat's own words
  *   (`repeatWords`);
- * - and its footer: Preview repeat (Stop while it prepares), then Save
- *   repeat — or, rebuilding a saved one, Update from source steps.
+ * - and its footer: Cancel (Stop while it prepares) and Repeat — or,
+ *   rebuilding a saved one, Update from source steps — which adds the
+ *   repeat previewed, and prepares it again once a preparation was stopped.
  *
  * React-free and store-free.
  */
@@ -41,12 +42,11 @@ export type FoldRepeatPhase =
   | { kind: 'unavailable'; why: 'sheet' | 'waiting' }
   /** The starting state's symmetry axes are being found. */
   | { kind: 'loading' }
-  /** The axis is chosen or drawn; nothing prepared. */
-  | { kind: 'picking' }
+  /** The repeat is being prepared, or is about to be. */
   | { kind: 'preparing' }
-  /** The last preparation was stopped before it answered: nothing was added. */
+  /** The last preparation was stopped, or an order choice backed out of: nothing is previewed, nothing was added. */
   | { kind: 'stopped' }
-  /** The source changed or the worker failed. */
+  /** No axis for the range, the source changed, the worker failed, or the engine refused the preview. */
   | { kind: 'failed'; stop: RepeatStop }
   /** Stopped at source operation `step` (0-based). */
   | { kind: 'blocked'; step: number; stop: RepeatStop }
@@ -55,8 +55,8 @@ export type FoldRepeatPhase =
    * one previewed, null before one is; `waiting` while it lands.
    */
   | { kind: 'choosing'; step: number; count: number; index: number | null; waiting: boolean; failed: boolean }
-  /** Prepared and previewed: ready to save. */
-  | { kind: 'ready'; saving: boolean };
+  /** Prepared and previewed: what the commit adds. `busy` while the preview lands, or the repeat is added. */
+  | { kind: 'ready'; busy: boolean };
 
 /** What Repeat's window is drawn from, beside every tool's view. */
 export interface FoldRepeatWindowView {
@@ -67,15 +67,14 @@ export interface FoldRepeatWindowView {
   /** The one taken; -1 for none. */
   axis: number;
   individual: boolean;
-  /** A saved repeat is being rebuilt in place: it is saved as it was. */
+  /** A saved repeat is being rebuilt in place: it is added as it was. */
   rebuilding: boolean;
   phase: FoldRepeatPhase;
-  /** The canvas takes a drawn axis now: the range's starting state is on show, its axes lit. */
+  /** The canvas takes a drawn axis now: there are axes to draw, and nothing is being chosen or added. */
   drawing: boolean;
   /**
-   * A line drawn on the starting state that is no verified axis, with the
-   * axis nearest it, offered in its place (-1 for none near); null while none
-   * was drawn.
+   * A drawn line that is no verified axis, with the axis nearest it, offered
+   * in its place (-1 for none near); null while none was drawn.
    */
   drawn: { nearest: number } | null;
 }
@@ -102,9 +101,9 @@ export interface FoldRepeatControls {
     disabled: boolean;
     set: (id: string) => void;
   };
-  /** How the repeat is saved; null while a saved one is rebuilt, which is saved as it was. */
+  /** How the repeat is added; null while a saved one is rebuilt, which is added as it was. */
   individual: { label: string; checked: boolean; disabled: boolean; set: (individual: boolean) => void } | null;
-  /** How many operations it repeats, and how they are saved. */
+  /** How many operations it repeats, and how they are added. */
   summary: string | null;
   /** A source operation's matching layer orders, while one is being chosen (the shared order chooser). */
   order: {
@@ -119,7 +118,7 @@ export interface FoldRepeatControls {
   } | null;
 }
 
-/** How many operations the range repeats, and how they will be saved. */
+/** How many operations the range repeats, and how they will be added. */
 function summaryOf(t: TFunction, count: number, individual: boolean): string {
   return individual
     ? t('panels:fold.repeat.individualCount', {
@@ -144,10 +143,6 @@ function statusNote(t: TFunction, repeat: FoldRepeatWindowView): string | null {
         : t('panels:fold.repeat.waiting', 'Waiting for the steps to finish folding…');
     case 'loading':
       return t('panels:fold.repeat.findingAxes', 'Finding the symmetry axes of the model before the range…');
-    case 'picking':
-      return repeat.axes?.length && !repeat.drawn
-        ? t('panels:fold.repeat.axesShown', 'The canvas shows the model before the range, with its symmetry axes.')
-        : null;
     case 'preparing':
       return t('panels:fold.repeat.preparing', 'Preparing repeated folds…');
     case 'stopped':
@@ -159,7 +154,7 @@ function statusNote(t: TFunction, repeat: FoldRepeatWindowView): string | null {
         { number: phase.step + 1, count: phase.count }
       );
     case 'ready':
-      return t('panels:fold.repeat.readyShown', 'The canvas shows the repeated folds. Ready to save.');
+      return t('panels:fold.repeat.previewShown', 'The canvas shows the repeated folds and the creases they add.');
     case 'failed':
     case 'blocked':
       return null;
@@ -195,13 +190,10 @@ function repeatNotice(
       actions: [],
     };
   }
-  if (phase.kind === 'picking' && repeat.axes && repeat.axes.length === 0) {
-    return { code: 'repeat_axis', title, text: repeatFailure(t, { code: 'repeat_axis' }), actions: [] };
-  }
   return null;
 }
 
-/** A line drawn on the starting state that is no verified axis: refused, the nearest axis offered in its place. */
+/** A drawn line that is no verified axis: refused, the nearest axis offered in its place. */
 function drawnNotice(
   t: TFunction,
   nearest: number,
@@ -230,7 +222,7 @@ function drawnNotice(
   };
 }
 
-/** Repeat's window: its range, axis and saving, then where the repeat stands, and its footer. */
+/** Repeat's window: its range, axis and how it is added, where the repeat stands, and its footer. */
 export function repeatToolWindow(
   t: TFunction,
   view: FoldToolWindowView,
@@ -242,15 +234,11 @@ export function repeatToolWindow(
   const own = verbs.repeat;
   const title = foldToolLabel(t, 'repeat');
   const { phase, range } = repeat;
-  const working = phase.kind === 'preparing' || (phase.kind === 'choosing' && phase.waiting) || (phase.kind === 'ready' && phase.saving);
-  const save = repeat.rebuilding
-    ? t('panels:fold.repeat.update', 'Update from source steps')
-    : t('panels:fold.repeat.save', 'Save repeat');
-  const previewLabel = t('panels:fold.repeat.preview', 'Preview repeat');
+  // The range and the axis may change while the repeat prepares, which prepares it anew; not while it is added.
+  const adding = (phase.kind === 'choosing' && phase.waiting) || (phase.kind === 'ready' && phase.busy);
+  const action = repeat.rebuilding ? t('panels:fold.repeat.update', 'Update from source steps') : t('panels:fold.repeat.label', 'Repeat');
   const axisNames = (repeat.axes ?? []).map((axis) => repeatAxisName(t, axis));
   const choosing = phase.kind === 'choosing' && phase.index !== null ? phase : null;
-  const canPreview =
-    !readOnly && range !== null && repeat.axis >= 0 && (phase.kind === 'picking' || phase.kind === 'stopped' || phase.kind === 'failed');
   const status = statusNote(t, repeat);
   return {
     phase: 'preview',
@@ -270,14 +258,11 @@ export function repeatToolWindow(
               'Choose the symmetry axis, or draw it on the model: click where it starts, then where it ends.'
             ),
         host.coarse
-          ? t('tools:fold.steps.repeatPreviewTouch', 'Tap {{action}} to see the repeated folds.', { action: previewLabel })
-          : t('tools:fold.steps.repeatPreview', 'Press Enter to preview the repeated folds.'),
-        host.coarse
-          ? t('tools:fold.steps.repeatSaveTouch', 'Tap {{action}} to add them.', { action: save })
-          : t('tools:fold.steps.repeatSave', 'Press Enter again to add them.'),
+          ? t('tools:fold.steps.repeatCommitTouch', 'Tap {{action}} to add the repeated folds.', { action })
+          : t('tools:fold.steps.repeatCommit', 'Press Enter to add the repeated folds.'),
       ],
-      current:
-        phase.kind === 'ready' ? 3 : phase.kind === 'preparing' || phase.kind === 'choosing' ? 2 : repeat.axis < 0 ? 1 : 2,
+      // The range and the axis are set from the start: both choices are optional.
+      current: repeat.axis < 0 ? 1 : 2,
       notes: status ? [status] : [],
     },
     lineMode: null,
@@ -291,7 +276,7 @@ export function repeatToolWindow(
           label: t('panels:fold.repeat.from', 'Start with'),
           value: range.first,
           options: range.starts.map((entry) => ({ id: entry.id ?? entry.key, label: foldReturnEntryLabel(t, entry, range.entries) })),
-          disabled: readOnly || working || choosing !== null,
+          disabled: readOnly || adding || choosing !== null,
           set: (id) => own?.setFirst(id),
         }
       : null,
@@ -301,7 +286,7 @@ export function repeatToolWindow(
         value: repeat.axis >= 0 ? String(repeat.axis) : null,
         placeholder: t('panels:fold.repeat.chooseAxis', 'Choose symmetry axis'),
         options: axisNames.map((label, index) => ({ id: String(index), label })),
-        disabled: readOnly || working || choosing !== null || axisNames.length === 0,
+        disabled: readOnly || adding || choosing !== null || axisNames.length === 0,
         set: (id) => {
           const index = Number(id);
           if (Number.isInteger(index) && index >= 0 && index < axisNames.length) own?.setAxis(index);
@@ -312,7 +297,7 @@ export function repeatToolWindow(
         : {
             label: t('panels:fold.repeat.individual', 'Show as individual steps'),
             checked: repeat.individual,
-            disabled: readOnly || working,
+            disabled: readOnly || adding,
             set: (individual) => own?.setIndividual(individual),
           },
       summary: range && !repeat.rebuilding ? summaryOf(t, range.count, repeat.individual) : null,
@@ -339,10 +324,13 @@ export function repeatToolWindow(
             disabled: false,
             run: verbs.cancel,
           },
-          commit:
-            phase.kind === 'ready'
-              ? { label: save, shortcut: 'fold.commit', disabled: readOnly || phase.saving, run: verbs.commit }
-              : { label: previewLabel, shortcut: 'fold.commit', disabled: !canPreview, run: verbs.commit },
+          // Adds the repeat previewed; once a preparation was stopped, prepares it again.
+          commit: {
+            label: action,
+            shortcut: 'fold.commit',
+            disabled: readOnly || !((phase.kind === 'ready' && !phase.busy) || phase.kind === 'stopped'),
+            run: verbs.commit,
+          },
         },
   };
 }

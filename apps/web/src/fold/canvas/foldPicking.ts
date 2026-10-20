@@ -270,13 +270,19 @@ function segmentIndex(portions: readonly [Point, Point][][]): { hits: LineHitInd
  * transforms agree there.
  */
 export function sheetToScene(scene: FoldScene, sheet: SheetPoint, epsilon = 1e-7): Point | null {
+  const face = sheetFaceAt(scene, sheet, epsilon);
+  const transform = face === null ? undefined : scene.face_transforms[face];
+  return transform ? applyIsometry(transform, toPoint(sheet)) : null;
+}
+
+/** The first face whose paper holds a sheet point, with a transform to place it by; null off the sheet. */
+export function sheetFaceAt(scene: FoldScene, sheet: SheetPoint, epsilon = 1e-7): number | null {
   const p = toPoint(sheet);
   for (const [face, { points }] of scene.faces.entries()) {
     const outline = points.map((vertex) => scene.sheet_points[vertex]);
     if (outline.some((corner) => corner === undefined)) continue;
     if (!insideConvex(outline as Point[], p, epsilon)) continue;
-    const transform = scene.face_transforms[face];
-    if (transform) return applyIsometry(transform, p);
+    if (scene.face_transforms[face]) return face;
   }
   return null;
 }

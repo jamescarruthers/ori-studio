@@ -135,7 +135,8 @@ export interface FoldToolPreview {
   unfold?: FoldUnfoldTool | null;
   /**
    * Repeat's, while it is in hand (`fold/repeat/useFoldRepeatTool`): it
-   * prepares and previews its own step, so `step` stays null.
+   * prepares its own step and asks the session to preview it; `step` is the
+   * one it previews, so its landed state is read here as any tool's is.
    */
   repeat?: FoldRepeatTool | null;
 }
@@ -277,17 +278,19 @@ export function useFoldToolPreview(
   const build = compoundStep ? compoundStep.build : vertexing ? UNLOCATED : plainBuild;
   const vertexBuilt = vertexStep.step;
   // The sequence tools: Unfold to step's step is built from its target, from
-  // the moment it is in hand; Repeat prepares and previews its own.
+  // the moment it is in hand; Repeat prepares its own and previews it (a line
+  // drawn on the canvas read through the view of the state it was drawn on).
   const unfold = useFoldUnfoldTool(session, tools);
-  const repeat = useFoldRepeatTool(session, tools);
+  const repeat = useFoldRepeatTool(session, tools, viewTransform);
   const unfolding = tools.tool === 'unfold-to';
   const repeating = tools.tool === 'repeat';
   const unfoldStep = unfold?.step ?? null;
+  const repeatStep = repeat?.step ?? null;
   // Rotate's step is its rotation, from the moment it is in hand: it locates nothing.
   const rotating = tools.tool === 'rotate';
   const rotation = tools.rotation;
   const baseStep = useMemo<FoldToolStep | null>(() => {
-    if (repeating) return null;
+    if (repeating) return repeatStep;
     if (unfolding) return unfoldStep;
     if (rotating) {
       const op = rotateStepOp(rotation);
@@ -303,7 +306,7 @@ export function useFoldToolPreview(
     const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [repeating, unfolding, unfoldStep, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingSeed, vertexBuilt]);
+  }, [repeating, repeatStep, unfolding, unfoldStep, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingSeed, vertexBuilt]);
   const resolvedOrders = useFoldOrderResolution(session, baseStep, foldToolInputKey(tools));
   const step = resolvedOrders.step;
   // The located line on each pane, while points are clicked along it.
@@ -343,7 +346,7 @@ export function useFoldToolPreview(
   const asked = useRef<string | null>(null);
   const [action, setAction] = useState<{ key: string; action: FoldActionGeometry | null } | null>(null);
   useEffect(() => {
-    // Repeat's previews are its own (`useFoldRepeatTool`): this asks for none, and lets none go.
+    // Repeat asks for its previews itself (`useFoldRepeatTool`): this asks for none, and lets none go.
     if (repeating) { asked.current = null; return undefined; }
     if (!step) {
       if (asked.current !== null) cancel();
@@ -450,9 +453,14 @@ export function useFoldToolPreview(
   // the render that brings the landed state, without asking.
   const heldScene = landedState ? peek(landedState.state, FOLD_SCENE_QUERY) : null;
   const heldSummary = landedState ? peek(landedState.state, FOLD_STEP_SUMMARY_QUERY) : null;
+  // The step the preview is folded from: what a step with no summary of its own added is what came after it.
+  const parentStep = session.cursor.summary?.step ?? null;
   const heldLanded = useMemo(
-    () => (landedState && heldScene && heldSummary ? landedPreviewOf(landedState.summary, heldScene.value, heldSummary.value) : null),
-    [landedState, heldScene, heldSummary]
+    () =>
+      landedState && heldScene && heldSummary
+        ? landedPreviewOf(landedState.summary, heldScene.value, heldSummary.value, parentStep)
+        : null,
+    [landedState, heldScene, heldSummary, parentStep]
   );
   useEffect(() => {
     if (!landedState || landedKey === null || heldLanded) return undefined;
@@ -463,7 +471,7 @@ export function useFoldToolPreview(
         if (!current || scene.status !== 'answered') return;
         setLanded({
           key: landedKey,
-          landed: landedPreviewOf(summary, scene.value, stepSummary.status === 'answered' ? stepSummary.value : null),
+          landed: landedPreviewOf(summary, scene.value, stepSummary.status === 'answered' ? stepSummary.value : null, parentStep),
         });
       },
       (error: unknown) => reportError(error, { surface: 'fold:landed-preview' })
@@ -471,11 +479,12 @@ export function useFoldToolPreview(
     return () => {
       current = false;
     };
-  }, [query, landedState, landedKey, heldLanded]);
+  }, [query, landedState, landedKey, heldLanded, parentStep]);
 
   // A tuck no layer takes is offered its flaps once its layers are analysed.
   const compoundRefused = tools.tool === 'tuck' ? tuckRefusedWithFlaps(tuckStep.refused, analysis) : compoundStep?.refused;
-  const refused =
+  // A repeat's refusals are its own, in Repeat's words, and counted with its op kind (`useFoldRepeatTool`).
+  const refused = repeating ? null :
     resolvedOrders.refused ??
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ?? secondRoots?.refused ??
@@ -533,9 +542,20 @@ export function useFoldToolPreview(
 const WHOLE: FoldExtentState = { status: 'whole' };
 
 /** A landed preview as the crease-pattern pane draws it: the creases the step adds or reverses are its instruction. */
-function landedPreviewOf(summary: FoldStateSummary, scene: FoldScene, stepSummary: FoldStepSummarised | null): FoldLandedPreview {
+export function landedPreviewOf(
+  summary: FoldStateSummary,
+  scene: FoldScene,
+  stepSummary: FoldStepSummarised | null,
+  parentStep: number | null = null
+): FoldLandedPreview {
   const diff = stepSummary?.summary ?? null;
-  return { scene, summary, added: new Set(diff ? [...diff.diff.added, ...diff.diff.reversed] : []) };
+  // A step the engine keeps no summary for — a repeat, whose operations the engine counts one by one — adds
+  // the creases made after the step it is folded from (`parentStep`); else, the ones made at its own.
+  const made = (at: number) => (parentStep === null ? at === summary.step : at > parentStep);
+  const added = diff
+    ? [...diff.diff.added, ...diff.diff.reversed]
+    : scene.creases.filter((crease) => crease.letter !== null && made(crease.made_at)).map((crease) => crease.id);
+  return { scene, summary, added: new Set(added) };
 }
 
 /**
