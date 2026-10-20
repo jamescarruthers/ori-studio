@@ -225,13 +225,37 @@ pub struct ComponentChoices {
 }
 
 /// How many complete orders a completion offers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+///
+/// Serialized for JavaScript, whose numbers are exact only up to
+/// [`ChoiceCount::MAX_SENT`]: a count past it is sent as that bound and
+/// inexact, "at least". (The bridge's JSON-compatible serializer refuses a
+/// larger integer outright, so an import whose count passed it threw: real
+/// designs with 10¹⁷ and more orders do.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChoiceCount {
     /// The product of the components' listed counts, saturating.
     pub orders: u64,
     /// Whether that is every order: no component truncated and nothing
     /// saturated. Otherwise it is a lower bound.
     pub exact: bool,
+}
+
+impl ChoiceCount {
+    /// JavaScript's `Number.MAX_SAFE_INTEGER`, 2^53 − 1.
+    pub const MAX_SENT: u64 = (1 << 53) - 1;
+}
+
+impl Serialize for ChoiceCount {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut out = serializer.serialize_struct("ChoiceCount", 2)?;
+        out.serialize_field("orders", &self.orders.min(ChoiceCount::MAX_SENT))?;
+        out.serialize_field(
+            "exact",
+            &(self.exact && self.orders <= ChoiceCount::MAX_SENT),
+        )?;
+        out.end()
+    }
 }
 
 /// Every order the fixed pairs and the constraints allow: the pairs they
@@ -1033,6 +1057,28 @@ mod tests {
             complete(&view, &problem, &[], &none),
             Err(CompletionRefusal::InvalidProblem { .. })
         ));
+    }
+
+    #[test]
+    fn a_count_past_javascripts_integers_is_sent_as_at_least_that() {
+        let sent = |orders, exact| {
+            serde_json::to_value(ChoiceCount { orders, exact }).unwrap_or_else(|e| panic!("{e}"))
+        };
+        assert_eq!(
+            sent(6, true),
+            serde_json::json!({ "orders": 6, "exact": true })
+        );
+        let max = ChoiceCount::MAX_SENT;
+        assert_eq!(
+            sent(max, true),
+            serde_json::json!({ "orders": max, "exact": true })
+        );
+        for orders in [max + 1, 65_302_194_596_872_192, u64::MAX] {
+            assert_eq!(
+                sent(orders, true),
+                serde_json::json!({ "orders": max, "exact": false })
+            );
+        }
     }
 
     #[test]
