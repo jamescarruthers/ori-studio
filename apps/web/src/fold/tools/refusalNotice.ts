@@ -9,7 +9,7 @@
  *
  * React-free and store-free.
  */
-import { foldFaceCapWords, foldFaceCountOf } from '../foldFaceCap';
+import { foldCapOf, foldCapWords } from '../foldCaps';
 import { foldReturnFailure } from '../return/foldReturnWords';
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
@@ -278,12 +278,15 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           'Unfold along a folded edge, and refold along a flat crease.'
         ),
       };
-    // Over the face cap: the fold being made, or a stored import's pattern
-    // (the import codes reach a notice only from a replay).
+    // Over a cap — too many faces, or stacked too deep: the fold being made,
+    // or a stored import's pattern (the import codes reach a notice only
+    // from a replay).
     case 'too_many_faces':
-    case 'import_too_many_faces': {
-      const counts = foldFaceCountOf(refusal);
-      if (counts) return foldFaceCapWords(t, counts, refusal.code === 'too_many_faces' ? 'fold' : 'step');
+    case 'stacked_too_deep':
+    case 'import_too_many_faces':
+    case 'import_stacked_too_deep': {
+      const cap = foldCapOf(refusal);
+      if (cap) return foldCapWords(t, cap, refusal.code.startsWith('import_') ? 'step' : 'fold');
       return {
         title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
         text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),

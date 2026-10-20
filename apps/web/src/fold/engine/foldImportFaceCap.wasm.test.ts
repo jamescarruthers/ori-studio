@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { createFoldReplayer } from '../document/foldReplay';
 import { sequenceOf, step, valleyAt } from '../document/foldSequence.fixtures';
-import type { FoldCpJumpOp } from '../document/foldSequenceDocument';
+import type { FoldCpJumpOp, FoldPlainOp } from '../document/foldSequenceDocument';
 import { FOLD_MAX_FACES } from '../foldFaceCap';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from './foldEngineIoCalls';
@@ -19,8 +19,15 @@ import { createFoldEnginePort, type FoldEngineSource } from './foldEnginePort';
  * out of memory — and a saved sequence holding such a step opens with that
  * step broken and the rest of it folding.
  *
- * Below the CI tests is the measurement the cap was chosen from, run only
- * with `FOLD_MEASURE=<file>` (rows are appended to the file):
+ * The stacking cap (`oristudio_layer_order::MAX_STACKED_TRIPLES`) the same
+ * way: a pattern whose layers stack too deeply is refused by its count of
+ * overlapping triples before any order is looked for, and so is a fold that
+ * would stack them so; a saved sequence holding either opens with that step
+ * broken and the rest of it folding.
+ *
+ * Below the CI tests is the measurement the face cap was chosen from, run
+ * only with `FOLD_MEASURE=<file>` (rows are appended to the file; the `map`
+ * family is the stacking cap's, every face on one stack):
  *
  *     FOLD_MEASURE=/tmp/rows.txt FOLD_MEASURE_SIZES=50,64,100 FOLD_MEASURE_FAMILIES=precrease,pleats \
  *       npm --workspace @treemaker/web exec -- vitest run src/fold/engine/foldImportFaceCap.wasm.test.ts
@@ -163,12 +170,118 @@ describe.skipIf(!available)('the face cap over the built bridge', () => {
     expect(done?.sheet.status).toBe('ok');
     expect(done?.steps.get('fstep-1')).toMatchObject({
       status: 'broken',
-      refusal: { at: 'fstep-1', code: 'import_too_many_faces', faces: { faceCount: OVER.faces, limit: FOLD_MAX_FACES } },
+      refusal: {
+        at: 'fstep-1',
+        code: 'import_too_many_faces',
+        cap: { kind: 'faces', faceCount: OVER.faces, limit: FOLD_MAX_FACES },
+      },
     });
     // Below it, broken from above; beside it, folded.
     expect(done?.steps.get('fstep-2')).toMatchObject({ status: 'broken', refusal: { at: 'fstep-1' } });
     expect(done?.steps.get('fstep-3')?.status).toBe('ok');
     expect(engine.heap()).toBeLessThan(32);
+    engine.free();
+  });
+});
+
+/** `oristudio_layer_order::MAX_STACKED_TRIPLES`, as the engine declares it. */
+const STACK_CAP = Number(
+  /pub const MAX_STACKED_TRIPLES: u64 = ([\d_]+);/
+    .exec(readFileSync(resolve(ROOT, '../../crates/oristudio-layer-order/src/problem.rs'), 'utf8'))?.[1]
+    ?.replaceAll('_', '')
+);
+const choose3 = (d: number) => (d * (d - 1) * (d - 2)) / 6;
+/** The shallowest single stack over the cap: every three of its layers overlap one another. */
+const OVER_DEPTH = (() => {
+  let d = 3;
+  while (choose3(d) <= STACK_CAP) d += 1;
+  return d;
+})();
+
+/** `strips` vertical strips folded back and forth along lines of alternating letters: one stack, `strips` deep. */
+function accordion(strips: number): string {
+  return grid(strips, 1, 'map');
+}
+
+/**
+ * The square folded in half `folds` times through every layer along
+ * horizontal lines, the part above moving down each time: one stack, `2^folds`
+ * deep. The bottom strip never moves, so a sheet point just above each line
+ * is on the moving side.
+ */
+function halvings(folds: number): FoldPlainOp[] {
+  return Array.from({ length: folds }, (_, k): FoldPlainOp => {
+    const y = 2 ** -(k + 1);
+    return { kind: 'valley', line: { via: 'free', through: [[0, y], [1, y]] }, moving: [0.5, 1.5 * y], seed: { scope: 'all' } };
+  });
+}
+
+describe.skipIf(!available)('the stacking cap over the built bridge', () => {
+  it('is the engine’s, and a single stack goes over it at 290 layers', () => {
+    expect(STACK_CAP).toBe(4_000_000);
+    expect(OVER_DEPTH).toBe(290);
+  });
+
+  it('refuses a pattern stacked past it by its counts, before its order is looked for', async () => {
+    const engine = await freshEngine();
+    const { calls, io } = engine;
+    const sheet = calls.sheet({ shape: { kind: 'square' }, startSide: 'front' });
+    if (sheet.status !== 'ok') throw new Error('no sheet');
+    // Into an empty sequence, and after a state, as a replay imports it.
+    for (const target of [{ kind: 'empty' } as const, { kind: 'after', state: sheet.state } as const]) {
+      const opened = io.importCp({ format: 'fold', text: accordion(OVER_DEPTH) }, target);
+      if (opened.status !== 'refused') throw new Error('imported');
+      expect(opened.refusal).toEqual({
+        code: 'import_stacked_too_deep',
+        deepest: OVER_DEPTH,
+        triples: choose3(OVER_DEPTH),
+        limit: STACK_CAP,
+      });
+    }
+    expect(io.liveImports()).toBe(0);
+    engine.free();
+  });
+
+  it('opens a saved sequence stacked past it: its import and its fold broken by their counts, the rest folding', async () => {
+    const engine = await freshEngine();
+    const over: FoldCpJumpOp = {
+      kind: 'cp-jump',
+      cpJson: accordion(OVER_DEPTH),
+      orderJson: JSON.stringify({ faces: [], orders: [] }),
+      origin: 'fold',
+    };
+    // Nine halvings: the eighth lands 256 layers deep, under the cap; the
+    // ninth would land 512.
+    const folds = halvings(9).map((op, k) => step(`fstep-h${k + 1}`, k === 0 ? null : `fstep-h${k}`, op));
+    const sequence = sequenceOf([
+      step('fstep-1', null, over),
+      step('fstep-2', 'fstep-1', valleyAt(0.5)),
+      ...folds,
+      // A branch beside them, from the flat sheet.
+      step('fstep-3', null, valleyAt(0.5)),
+    ]);
+    const replayer = createFoldReplayer(createFoldEnginePort(sourceOf(engine.calls), engine.version));
+    const done = await replayer.run({ loadId: 1, sequence });
+    expect(done?.done).toBe(true);
+    expect(done?.steps.get('fstep-1')).toMatchObject({
+      status: 'broken',
+      refusal: {
+        at: 'fstep-1',
+        code: 'import_stacked_too_deep',
+        cap: { kind: 'stack', deepest: OVER_DEPTH, triples: choose3(OVER_DEPTH), limit: STACK_CAP },
+      },
+    });
+    expect(done?.steps.get('fstep-2')).toMatchObject({ status: 'broken', refusal: { at: 'fstep-1' } });
+    expect(done?.steps.get('fstep-h8')?.status).toBe('ok');
+    expect(done?.steps.get('fstep-h9')).toMatchObject({
+      status: 'broken',
+      refusal: {
+        at: 'fstep-h9',
+        code: 'stacked_too_deep',
+        cap: { kind: 'stack', deepest: 512, triples: choose3(512), limit: STACK_CAP },
+      },
+    });
+    expect(done?.steps.get('fstep-3')?.status).toBe('ok');
     engine.free();
   });
 });

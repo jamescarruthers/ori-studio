@@ -19,7 +19,7 @@ import type { WasmErrorEnvelope } from '../../engine/types';
 import type { FoldStateFingerprint } from '../document/foldDigest';
 import type { FoldEngineOutcome, FoldEnginePort } from '../document/foldReplay';
 import type { FoldChoices, FoldPaper } from '../document/foldSequenceDocument';
-import { foldFaceCountOf } from '../foldFaceCap';
+import { foldCapOf } from '../foldCaps';
 import type {
   FoldEngineOp,
   FoldEngineOutcome as FoldEngineAnswer,
@@ -71,10 +71,10 @@ async function refusingInvalidInput<T>(
   }
 }
 
-/** A refusal as replay keeps it: its code, and the counts of one over the face cap. */
+/** A refusal as replay keeps it: its code, and the counts of one over a cap. */
 function refusedOutcome(refusal: { readonly code: string }): FoldEngineOutcome<never> {
-  const faces = foldFaceCountOf(refusal);
-  return { landed: false, code: refusal.code, ...(faces ? { faces } : {}) };
+  const cap = foldCapOf(refusal);
+  return { landed: false, code: refusal.code, ...(cap ? { cap } : {}) };
 }
 
 /**

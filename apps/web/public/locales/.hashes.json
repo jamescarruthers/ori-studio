@@ -6194,7 +6194,11 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12391,7 +12395,11 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18590,7 +18598,11 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24456,7 +24468,11 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30322,7 +30338,11 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36519,7 +36539,11 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -42716,7 +42740,11 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48582,6 +48610,10 @@
     "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
     "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
     "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
+    "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
+    "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
+    "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
   }
 }

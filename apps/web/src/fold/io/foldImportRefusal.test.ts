@@ -44,6 +44,17 @@ describe('an import that did not land, as the dialog says it', () => {
     expect(engine({ code: 'import_too_many_faces' }).title).toBe('Could not import');
   });
 
+  it('names how deep a pattern stacked past the cap stacks, with nothing to retry', () => {
+    const notice = engine({ code: 'import_stacked_too_deep', deepest: 290, triples: 4_022_880, limit: 4_000_000 });
+    expect(notice).toMatchObject({
+      code: 'import_stacked_too_deep',
+      title: 'Layers stacked too deep',
+      text: 'This crease pattern stacks its layers too deeply for Fold to work out their order, up to 290 on top of each other. Import a simpler pattern.',
+      actions: [],
+    });
+    expect(engine({ code: 'import_stacked_too_deep' }).title).toBe('Could not import');
+  });
+
   it('offers to search longer when the layer-order search ran out, and nothing else', () => {
     const searchLonger = vi.fn();
     const notice = foldImportNotice(
