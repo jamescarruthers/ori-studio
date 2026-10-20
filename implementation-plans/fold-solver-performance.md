@@ -91,6 +91,7 @@ differentially; the session is an addition beside it.
 - [x] Re-measure the stacking cap against the faster solver; raise it to
       12,000,000 (owner: "go with your gut"); fix the count overflow it exposed
 - [x] PORTING.md note
+- [x] Independent review (not refuted); its two hardening items fixed
 - [ ] Owner: review; push and open the draft PR (the base branch is not pushed)
 
 ## Results
@@ -281,3 +282,49 @@ since the open also counts up to 1,000 orders per component.
   reach must be searched to confirm the preferred order.
 - The wasm session binding has no web caller; its shape may change with
   the dialog's design.
+
+## Independent review
+
+An independent reviewer tried to refute "no answer changed" and could not:
+**not refuted**. Its harness is on `review/fold-solver-perf` (`1af131d0c`,
+`1258970a6`, under `tools/fold-solver-review/`), a crate built once against
+this branch and once against the baseline. It covered about 280,000
+session verdicts with 0 disagreements, 539 imports, 900 random fold
+sequences, 44 runs past 2,048 faces (the hashed tables), and a brute force
+written without the solver, checked against every session verdict.
+
+It raised two hardening items, both fixed:
+
+1. **The bucket contract** (`afb1276e7`). `VariableConstraints` says a
+   constraint is listed in the bucket of every variable it reads (as
+   upstream's `add_constraint` lists it), and the session's independent
+   components rest on it, but validation only checked that a constraint
+   reads the variable whose bucket holds it. On problems built to break
+   the contract (`asym` mode: each constraint kept only in its last
+   variable's bucket), a session said "fits" where completing from scratch
+   said "no" 515 times, and the reverse 404 times, in 29,970 questions. No
+   product path builds such a problem, but `CompletionSession` is public.
+   `CompletionSession::open` now refuses it with `InvalidProblem`, naming
+   the constraint and the variable that does not list it;
+   `complete_layer_order` is unchanged and still runs upstream's procedure
+   over the buckets as given. The review's smallest case (7 faces, two
+   stacks, seed variable 3) is a unit test. The check sorts each family's
+   listings, grouped by first face: about 21 ms on the iguana (553,056
+   taco-taco listings), whose session open went from a median of 999 ms to
+   1,023 ms (five alternated runs at load 4–5).
+2. **A component past a `u16`** (`20729befe`). The dense taco-tortilla
+   component table skipped a component number that did not fit its `u16`,
+   which then read as "no component"; only reachable with the test-only
+   unlimited dense setting and more than 65,535 faces. The table now goes
+   dense only up to `u16::MAX` faces, whatever the limit, and the per-face
+   rows (`u32`) keep every component past it; storing one past a `u16` is
+   a debug assertion. A test builds 65,536 tacos around one face.
+
+After both fixes:
+
+| Gate | Result |
+|---|---|
+| fmt, clippy `-D warnings`, tests of `treemaker-flatfold`, `oristudio-layer-order`, `oristudio-fold`, `oristudio-fold-wasm` | pass (63 test binaries) |
+| Differential against the baseline, the 10 fixtures and 100 cpoogle designs (every fifth, plus the four past 2,048 faces) | 0 differences; 2 refused by the 12M cap only, as before |
+| Session checks against the baseline's answers, the same cases | 384 + 940 questions, 3,972 answers, 0 failures; every one of the 104 importable cases opened |
+| The review's `asym` mode, built against this branch, 2,000 problems | every one refused at the open for a constraint missing from a bucket it reads (before: 999 opened, and 919 of their answers disagreed with completing from scratch) |
