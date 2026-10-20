@@ -1043,6 +1043,14 @@
       "empty": "折りでステップを折ると、シーケンスのステップがここに表示されます。",
       "finishedSentence": "ステップを終えたときのモデル。",
       "fromFold": "折りから…",
+      "mergedCard": "ステップ {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}}両側で同じようにします。",
+        "then": "{{first}}{{next}}"
+      },
+      "mergePrecreases": "対称な下折りをまとめる",
+      "mergePrecreasesHint": "下折りとその鏡像を 1 つのステップにし、本の図のように両方の折り筋を 1 枚の図に描きます。",
+      "mergePrecreasesNone": "この手順には、まとめられる鏡像を持つ下折りがありません。",
       "missing": "折りにステップがありません",
       "missingHint": "ステップが折りからなくなったか、もう折れません",
       "noStepsHint": "折りでステップを折ると、ここから取り込めます",

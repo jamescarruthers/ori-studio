@@ -1077,6 +1077,14 @@
       "empty": "Fold a step in Fold, and the sequence’s steps appear here.",
       "finishedSentence": "The model as the steps leave it.",
       "fromFold": "From Fold…",
+      "mergedCard": "Steps {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Do this on both sides.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Merge symmetric precreases",
+      "mergePrecreasesHint": "A precrease and its mirror image become one step, both creases on one picture, as a book draws them.",
+      "mergePrecreasesNone": "No precrease on this path has a mirror image to merge with.",
       "missing": "Step missing from Fold",
       "missingHint": "Its step is gone from Fold, or no longer folds",
       "noStepsHint": "Fold a step in Fold to take it from there",

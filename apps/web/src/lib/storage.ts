@@ -101,6 +101,12 @@ export const STORAGE_KEYS = {
    * marks are (`normalizePaperExportMarks`). Absent, both.
    */
   diagramReferencesMarks: 'diagram-references-marks',
+  /**
+   * Whether a pull from Fold — the Diagram's From Fold… browser, or Fold's
+   * Send steps to Diagram — makes a precrease and its mirror image one step
+   * (`diagram/fold/foldPrecreaseMerge.ts`). Absent, it does.
+   */
+  diagramFoldMergePrecreases: 'diagram-fold-merge-precreases',
   /** Whether Annotate's tool window is collapsed to its header (`ToolHintWindow`). */
   diagramToolHintCollapsed: 'diagram-tool-hint-collapsed',
   /** Whether the Fold workspace's tool window is collapsed to its header (`ToolHintWindow`). */

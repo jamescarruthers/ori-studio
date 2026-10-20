@@ -1043,6 +1043,14 @@
       "empty": "접기에서 단계를 접으면 시퀀스의 단계가 여기에 나타납니다.",
       "finishedSentence": "단계를 마친 뒤의 모형.",
       "fromFold": "접기에서…",
+      "mergedCard": "{{first}}–{{last}}단계",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} 양쪽에 똑같이 합니다.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "대칭인 사전 접기 합치기",
+      "mergePrecreasesHint": "사전 접기와 그 거울상을 한 단계로 만들어, 책처럼 두 접는 선을 한 그림에 그립니다.",
+      "mergePrecreasesNone": "이 경로에는 합칠 거울상이 있는 사전 접기가 없습니다.",
       "missing": "접기에 단계 없음",
       "missingHint": "단계가 접기에서 사라졌거나 더 이상 접히지 않습니다",
       "noStepsHint": "접기에서 단계를 접으면 여기로 가져올 수 있습니다",

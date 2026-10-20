@@ -35,11 +35,16 @@ import {
   type SentFoldStep,
 } from '../document/diagramDocument';
 import type { PullCard } from '../references/referencesBrowserSelection';
+import { mergedPrecreaseSentence, type FoldPrecreaseMerge } from './foldPrecreaseMerge';
 import { captureFoldStep } from './foldStepCapture';
 
-/** What pulling a Fold card adds: a step at a moment, or a turn between steps. */
+/**
+ * What pulling a Fold card adds: a step at a moment — or a run of steps drawn
+ * as one, from `step` through `through`, before the first folds
+ * (`foldPrecreaseMerge.ts`) — or a turn between steps.
+ */
 export type FoldPullTarget =
-  | { readonly kind: 'step'; readonly step: string; readonly moment: DiagramFoldMoment }
+  | { readonly kind: 'step'; readonly step: string; readonly through?: string; readonly moment: DiagramFoldMoment }
   | { readonly kind: 'turn'; readonly turn: TurnKind };
 
 /**
@@ -53,10 +58,12 @@ export type FoldBrowserPicture =
   | { readonly status: 'pending' }
   | { readonly status: 'none' };
 
-/** A card of the Fold browser: a step of the active path, a turn, or Finished. */
+/** A card of the Fold browser: a step of the active path, a run of them merged, a turn, or Finished. */
 export interface FoldBrowserCard extends PullCard<FoldPullTarget> {
-  /** The step's number on the path, as Fold numbers it; null for a turn or Finished. */
+  /** The step's number on the path, as Fold numbers it — a merged run's first; null for a turn or Finished. */
   readonly number: number | null;
+  /** A merged run's last step's number; absent for one step. */
+  readonly through?: number;
   /** The step's words, or the turn's. */
   readonly sentence: string;
   readonly picture: FoldBrowserPicture;
@@ -112,15 +119,42 @@ function landed(entry: FoldSequenceView['entries'][number]): boolean {
  * broken, a newer build's — is listed, and cannot be added; its picture says
  * which (`FoldBrowserPicture`). `failed` is the replay's having stopped short:
  * a step still pending then will not land.
+ *
+ * Each of `merges` — precreases and their mirror images, merged
+ * (`foldPrecreaseMerge.ts`) — is one card, the step it becomes: numbered
+ * from its first step to its last, the state its last lands as its picture,
+ * with every crease on it, its sentence the merged step's, added once every
+ * step of it has landed.
  */
 export function foldBrowserCards(
   t: TFunction,
-  { document, entries, words, failed }: Pick<FoldSequenceView, 'document' | 'entries' | 'words' | 'failed'>
+  { document, entries, words, failed }: Pick<FoldSequenceView, 'document' | 'entries' | 'words' | 'failed'>,
+  merges: readonly FoldPrecreaseMerge[] = []
 ): FoldBrowserCard[] {
   const cards: FoldBrowserCard[] = [];
-  entries.forEach((entry, index) => {
+  const mergeAt = new Map(merges.map((merge) => [merge.steps[0], merge]));
+  const sentenceAt = (index: number) => foldStepSentence(t, words[index] ?? { op: 'unknown' });
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index]!;
     const node = entry.node;
-    if (!node || entry.id === null) return;
+    if (!node || entry.id === null) continue;
+    const merge = mergeAt.get(entry.id);
+    const run = merge ? entries.slice(index, index + merge.steps.length) : [];
+    if (merge && run.length === merge.steps.length && run.every((step, k) => step.id === merge.steps[k])) {
+      const last = run.at(-1)!;
+      cards.push({
+        index: cards.length,
+        kind: 'fold',
+        number: entry.number,
+        ...(last.number !== null ? { through: last.number } : {}),
+        // The steps it is made from, the mirror left out: its words are said once, for both sides.
+        sentence: mergedPrecreaseSentence(t, run.slice(0, -1).map((_, k) => sentenceAt(index + k))),
+        picture: entryPicture(document, last, last.id!, failed),
+        step: run.every(landed) ? { kind: 'step', step: entry.id, through: last.id!, moment: 'before' } : null,
+      });
+      index += run.length - 1;
+      continue;
+    }
     const picture = entryPicture(document, entry, entry.id, failed);
     if (entry.kind === 'turn' && !isLockedStep(node) && (node.op.kind === 'turn' || node.op.kind === 'rotate')) {
       const turn = turnKindOf(node.op);
@@ -132,17 +166,17 @@ export function foldBrowserCards(
         picture,
         step: landed(entry) ? { kind: 'turn', turn } : null,
       });
-      return;
+      continue;
     }
     cards.push({
       index: cards.length,
       kind: 'fold',
       number: entry.number,
-      sentence: foldStepSentence(t, words[index] ?? { op: 'unknown' }),
+      sentence: sentenceAt(index),
       picture,
       step: landed(entry) ? { kind: 'step', step: entry.id, moment: 'before' } : null,
     });
-  });
+  }
   const tip = entries.at(-1);
   if (tip && tip.id !== null && entries.some((entry) => entry.kind === 'fold')) {
     cards.push({
@@ -189,9 +223,10 @@ export async function pullFoldTargets(
         continue;
       }
       const render = foldPullRender(session.store.getState().sequence, sequence, target);
+      const { through } = target;
       const result = await captureFoldStep(
         session,
-        { sequence, step: target.step, moment: target.moment, render },
+        { sequence, step: target.step, ...(through !== undefined ? { through } : {}), moment: target.moment, render },
         { t, newId }
       );
       if (result.status !== 'captured' || result.captured.kind !== 'picture' || result.captured.picture.kind !== 'scene') {

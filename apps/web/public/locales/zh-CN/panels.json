@@ -1043,6 +1043,14 @@
       "empty": "在折叠中折一步，序列的步骤就会显示在这里。",
       "finishedSentence": "完成这些步骤后的模型。",
       "fromFold": "来自折叠…",
+      "mergedCard": "第 {{first}}–{{last}} 步",
+      "mergedSentence": {
+        "bothSides": "{{sentence}}两侧同样操作。",
+        "then": "{{first}}{{next}}"
+      },
+      "mergePrecreases": "合并对称的预折",
+      "mergePrecreasesHint": "预折与其镜像合为一步，两条折痕画在同一张图上，就像书中那样。",
+      "mergePrecreasesNone": "此路径上没有可与镜像合并的预折。",
       "missing": "折叠中缺少该步骤",
       "missingHint": "其步骤已不在折叠中，或已无法折叠",
       "noStepsHint": "在折叠中折一步，即可从那里取用",

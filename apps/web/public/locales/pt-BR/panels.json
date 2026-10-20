@@ -1111,6 +1111,14 @@
       "empty": "Dobre um passo em Dobrar e os passos da sequência aparecerão aqui.",
       "finishedSentence": "O modelo como os passos o deixam.",
       "fromFold": "De Dobrar…",
+      "mergedCard": "Passos {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Faça isso dos dois lados.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Juntar pré-dobras simétricas",
+      "mergePrecreasesHint": "Uma pré-dobra e sua imagem espelhada viram um só passo, os dois vincos no mesmo desenho, como um livro os desenha.",
+      "mergePrecreasesNone": "Nenhuma pré-dobra deste caminho tem uma imagem espelhada com a qual se juntar.",
       "missing": "Passo ausente em Dobrar",
       "missingHint": "O passo não está mais em Dobrar ou não dobra mais",
       "noStepsHint": "Dobre um passo em Dobrar para trazê-lo de lá",

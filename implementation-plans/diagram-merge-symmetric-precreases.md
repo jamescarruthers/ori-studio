@@ -30,10 +30,15 @@ they leave the folded form as it was, so every crease belongs on the one
    verified its mirror when it was prepared.
 2. **Mirrored pair.** Two consecutive precreases where the second is the
    first mirrored across a verified symmetry axis of the state before them:
-   Repeat's own geometry, not a second test — the state's verified symmetries
-   (`repeatSymmetries`, what Repeat offers as axes) and Repeat's material and
-   crease check (`verifyMaterial`), asked of the scenes the session already
-   holds. Greedy left to right, a step in one group only, Repeat groups first.
+   Repeat's own geometry, not a second test (`mirroredStepAxis`). The axes
+   tried are the one or two reflections that take the first step's newest
+   crease line onto the second's, kept only where each step's creases,
+   reflected, lie along the other's — a cheap filter, so a run of grid
+   precreases costs next to nothing — and each is then checked as Repeat
+   checks the axis it is given (`verifiedSymmetry`) and as a prepared Repeat
+   checks each mirrored step (`verifyMaterial`), over the scenes the session
+   already holds. Greedy left to right, a step in one group only, Repeat
+   groups first.
 
 The browser draws a group as one card ("Steps 3–4", the last state's picture,
 the merged sentence), so the card list is the Diagram steps Add makes. The
@@ -112,14 +117,28 @@ References use it). Strings go through `i18n:extract`.
 - [x] (B) Remove the Steps tab, its view state, grid, entries, event, strings
 - [x] (B) Tests and docs updated; ratchet checked (no global block went: the
       grid's styles were a module)
-- [ ] (A) Range source: type, reader, `storedFoldStepSource`, round-trip tests
-- [ ] (A) Mirrored-step check over Repeat's geometry, with wasm tests
-- [ ] (A) Merge groups (pure) + verification (session), with tests
-- [ ] (A) Capture of a range: picture, marks, thumbnail, sentence
-- [ ] (A) Link status, refresh, Open in Fold, pose, carry for a range
-- [ ] (A) Browser cards merged, toggle, preference; Send steps uses it
-- [ ] (A) Analytics property + docs
-- [ ] i18n extract, translate 8 locales, stamp, check
-- [ ] Lint, typecheck, relevant vitest
-- [ ] Browser check: merge on/off via the browser and Send steps; save and
-      reopen; Fold without the Steps tab, light/dark, desktop/phone
+- [x] (A) Range source: type, reader, `storedFoldStepSource`, round-trip tests
+- [x] (A) Mirrored-step check over Repeat's geometry, with wasm tests
+- [x] (A) Merge groups (pure) + verification (session), with tests
+- [x] (A) Capture of a range: picture, marks, thumbnail, sentence
+      (`foldRunCapture.ts`; a Repeat's later steps are drawn on the states
+      the steps before them land, landed on the way and let go)
+- [x] (A) Link status, refresh, Open in Fold, pose, carry for a range
+- [x] (A) Browser cards merged, toggle, preference; Send steps uses it
+- [x] (A) Analytics property + docs
+- [x] i18n extract, translate 8 locales, stamp, check
+- [x] Lint, typecheck, relevant vitest
+- [x] Browser check: merge on/off via the browser and Send steps; save and
+      reopen (the save picker stubbed, the file opened by a synthetic drop);
+      Fold without the Steps tab, light/dark, desktop/phone —
+      `artifacts/fold-launch/merge-precreases/`
+
+## Notes
+
+- A Repeat is prepared on the state before it, by fingerprint; Front up /
+  Back up mirrors that state, so the Repeat no longer folds until it is
+  rebuilt, and a merged step drawn from it reads **missing** meanwhile, as a
+  single step linked to that Repeat does. A mirrored pair goes **stale** and
+  refreshes as one run.
+- Send step to Diagram (one step) sends that step alone, whatever the
+  option: merging it with the step before would send a step not on screen.

@@ -1111,6 +1111,14 @@
       "empty": "Pliez une étape dans Plier, et les étapes de la séquence apparaîtront ici.",
       "finishedSentence": "Le modèle tel que les étapes le laissent.",
       "fromFold": "Depuis Plier…",
+      "mergedCard": "Étapes {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Faites-le des deux côtés.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Fusionner les prépliages symétriques",
+      "mergePrecreasesHint": "Un prépliage et son image miroir deviennent une seule étape, les deux plis sur un même dessin, comme dans un livre.",
+      "mergePrecreasesNone": "Aucun prépliage de ce chemin n’a d’image miroir avec laquelle fusionner.",
       "missing": "Étape introuvable dans Plier",
       "missingHint": "Son étape a disparu de Plier ou ne se plie plus",
       "noStepsHint": "Pliez une étape dans Plier pour la reprendre ici",

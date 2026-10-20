@@ -1111,6 +1111,14 @@
       "empty": "Pliega un paso en Plegar y los pasos de la secuencia aparecerán aquí.",
       "finishedSentence": "El modelo tal como lo dejan los pasos.",
       "fromFold": "Desde Plegar…",
+      "mergedCard": "Pasos {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Hazlo en ambos lados.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Unir prepliegues simétricos",
+      "mergePrecreasesHint": "Un prepliegue y su imagen especular pasan a ser un solo paso, con los dos pliegues en un mismo dibujo, como los dibuja un libro.",
+      "mergePrecreasesNone": "Ningún prepliegue de este camino tiene una imagen especular con la que unirse.",
       "missing": "Falta el paso en Plegar",
       "missingHint": "Su paso ya no está en Plegar o ya no se puede plegar",
       "noStepsHint": "Pliega un paso en Plegar para tomarlo desde allí",

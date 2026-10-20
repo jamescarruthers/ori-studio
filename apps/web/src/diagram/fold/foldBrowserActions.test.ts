@@ -29,6 +29,7 @@ vi.mock('../../analytics/trackFoldIo', async (importOriginal) => ({
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() } }));
 
 const { useWorkspaceStore } = await import('../../store/workspaceStore');
+const { useSettingsStore } = await import('../../store/settingsStore');
 const { pullFromFold } = await import('./foldBrowserActions');
 
 const state = () => useWorkspaceStore.getState();
@@ -53,7 +54,8 @@ describe('a pull from Fold, counted (plan D17)', () => {
   it('counts each step and each turn it adds, as a References pull does, the turn by its kind', async () => {
     sent.entries = [foldStep('fstep-1'), TURN_OVER, foldStep('fstep-2'), ROTATE];
     expect(await pullFromFold(TARGETS, { kind: 'end' }, { via: 'fold' })).toBe(4);
-    expect(foldIo.trackFoldStepSentToDiagram).toHaveBeenCalledWith('fold', 'many');
+    // Merge symmetric precreases is on by default; these steps are not runs.
+    expect(foldIo.trackFoldStepSentToDiagram).toHaveBeenCalledWith('fold', 'many', { option: 'on', merged: 'none' });
     expect(analytics.trackDiagramStepAdded.mock.calls).toEqual([
       ['fold', 'fold'],
       ['fold', 'fold'],
@@ -72,6 +74,20 @@ describe('a pull from Fold, counted (plan D17)', () => {
     expect(state().diagram!.steps.map((entry) => entry.id)).toContain(empty);
     expect(analytics.trackDiagramStepAdded).toHaveBeenCalledTimes(1);
     expect(analytics.trackDiagramTurnAdded).toHaveBeenCalledWith('turn-over', 'fold');
+  });
+
+  it('says whether the option was on and whether a run of precreases became one step', async () => {
+    useSettingsStore.getState().setDiagramFoldMergePrecreases(false);
+    sent.entries = [foldStep('fstep-1')];
+    await pullFromFold(TARGETS, { kind: 'end' }, { via: 'diagram_browser' });
+    expect(foldIo.trackFoldStepSentToDiagram).toHaveBeenLastCalledWith('diagram_browser', 'one', { option: 'off', merged: 'none' });
+    useSettingsStore.getState().setDiagramFoldMergePrecreases(true);
+    const picture = scenePicture('scene-run');
+    sent.entries = [
+      { source: foldStepSource({ step: 'fstep-1', through: 'fstep-2' }), picture, lifted: { picture, annotations: [] }, text: 'Both.' },
+    ];
+    await pullFromFold(TARGETS, { kind: 'end' }, { via: 'diagram_browser' });
+    expect(foldIo.trackFoldStepSentToDiagram).toHaveBeenLastCalledWith('diagram_browser', 'one', { option: 'on', merged: 'some' });
   });
 
   it('counts nothing when nothing lands', async () => {

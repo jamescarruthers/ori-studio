@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DiagramPullAnchor } from '../../diagram/document/diagramDocument';
 import type { FoldBrowserCard, FoldBrowserPicture } from '../../diagram/fold/foldPull';
 import type { FoldBrowserCardsState, FoldBrowserProvider } from '../../diagram/fold/useFoldBrowser';
+import { useSettingsStore } from '../../store/settingsStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { DiagramFoldBrowser } from './DiagramFoldBrowser';
 
@@ -171,6 +172,77 @@ describe('the Fold browser (D17)', () => {
     const open = [...(host?.querySelectorAll('button') ?? [])].filter((candidate) => candidate.textContent === 'Open Fold');
     act(() => open.at(-1)!.click());
     expect(provider.openFold).toHaveBeenCalledOnce();
+  });
+
+  describe('Merge symmetric precreases', () => {
+    /** Steps 2 and 3 a precrease and its mirror image: one card while the option is on, two while it is off. */
+    function mergingProvider() {
+      const separate = cards(THUMBNAIL).map((card) =>
+        card.index === 3 ? { ...card, step: { kind: 'step' as const, step: 'fstep-4', moment: 'before' as const } } : card
+      );
+      const merged: FoldBrowserCard[] = [
+        separate[0]!,
+        separate[1]!,
+        {
+          index: 2,
+          kind: 'fold',
+          number: 2,
+          through: 3,
+          sentence: 'Valley fold the corner. Do this on both sides.',
+          picture: THUMBNAIL,
+          step: { kind: 'step', step: 'fstep-3', through: 'fstep-4', moment: 'before' },
+        },
+        { ...separate[4]!, index: 3 },
+      ];
+      return {
+        useCards: (merge: boolean): FoldBrowserCardsState => ({
+          status: 'ready',
+          sequence: 'fold-1',
+          cards: merge ? merged : separate,
+          mergeable: true,
+        }),
+        pull: vi.fn<FoldBrowserProvider['pull']>(async () => 1),
+        openFold: vi.fn(),
+      } satisfies FoldBrowserProvider;
+    }
+    const toggle = () => host?.querySelector<HTMLInputElement>('label input[type="checkbox"]') ?? null;
+
+    beforeEach(() => useSettingsStore.getState().setDiagramFoldMergePrecreases(true));
+
+    it('is on by default, and draws a precrease and its mirror image as the one step it adds', async () => {
+      const provider = mergingProvider();
+      render(provider);
+      expect(toggle()).toMatchObject({ checked: true, disabled: false });
+      expect(text()).toContain('Merge symmetric precreases');
+      expect(options().map((option) => option.querySelector('span:nth-child(2)')?.textContent)).toEqual([
+        'Step 1',
+        'Turn',
+        'Steps 2–3',
+        'Finished',
+      ]);
+      press(2);
+      expect(button('Add step')).toBeTruthy();
+      await act(async () => button('Add step')!.click());
+      expect(provider.pull.mock.calls[0]![0]).toEqual([
+        { kind: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } },
+        { kind: 'step', step: 'fstep-3', through: 'fstep-4', moment: 'before' },
+      ]);
+    });
+
+    it('lists the steps apart when turned off, and remembers it', () => {
+      render(mergingProvider());
+      act(() => toggle()!.click());
+      expect(useSettingsStore.getState().diagramFoldMergePrecreases).toBe(false);
+      expect(toggle()!.checked).toBe(false);
+      expect(options()).toHaveLength(5);
+      expect(text()).not.toContain('Steps 2–3');
+    });
+
+    it('is offered only when something on the path would merge, its choice still shown', () => {
+      render(fakeProvider());
+      expect(toggle()).toMatchObject({ checked: true, disabled: true });
+      expect(toggle()!.closest('label')!.title).toContain('No precrease on this path');
+    });
   });
 
   it('fills an empty step with the first step, and says so', () => {

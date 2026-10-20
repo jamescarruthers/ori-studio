@@ -83,9 +83,9 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Which picture a Fold step shows: its state and moment, which a pose leaves as they are. */
+/** Which picture a Fold step shows: its state and moment — and a run's last step — which a pose leaves as they are. */
 function pictureKey(stepId: string, source: DiagramFoldStepSource): string {
-  return JSON.stringify([stepId, source.sequence, source.step, source.moment, source.path, source.state]);
+  return JSON.stringify([stepId, source.sequence, source.step, source.through ?? null, source.moment, source.path, source.state]);
 }
 
 /** The picture `source` would show with `spread`, from what it is drawn from; null when that is not read yet. */

@@ -108,6 +108,13 @@ export interface FoldStepOwnState {
   step: number;
   /** The sheet's outline, counter-clockwise, in sheet coordinates. */
   sheet: readonly (readonly [number, number])[];
+  /**
+   * A run of steps drawn as one (`foldPrecreaseMerge.ts`), its last step's
+   * state `own`: how many steps led to the state its first folds from. Every
+   * crease made since is the run's, and its crease pattern draws them all as
+   * the instruction. Absent for one step.
+   */
+  since?: number;
 }
 
 export interface FoldStepPictureInput {
@@ -115,10 +122,16 @@ export interface FoldStepPictureInput {
   shown: FoldScene;
   own: FoldStepOwnState;
   moment: DiagramFoldMoment;
-  /** What the step does, on the state it folds from; null for a turn, a rotation or an import. */
+  /** What the step does — a run's first — on the state it folds from; null for a turn, a rotation or an import. */
   action: FoldActionGeometry | null;
   /** Repeat's affected material in the starting pose, with localized callout words. */
   repeat?: FoldRepeatCallout;
+  /**
+   * What a run's later steps do, each in the frame `shown` is drawn in
+   * (`foldPrecreaseMerge.ts`): their lines and arrows join the first's, on
+   * the one picture. Absent for one step.
+   */
+  merged?: readonly FoldActionGeometry[];
 }
 
 export interface FoldStepPicture {
@@ -162,7 +175,7 @@ function creasePatternPicture(input: FoldStepPictureInput, render: Extract<Diagr
     const turned = turn({ x: across * (placed.x - middle.x), y: placed.y - middle.y });
     return [turned.x * CAPTURE_PX_PER_UNIT, turned.y * CAPTURE_PX_PER_UNIT];
   };
-  const scene = creasePatternPaperScene(own.scene, {
+  const scene = creasePatternPaperScene(own.since === undefined ? own.scene : withRunCreases(own.scene, own.since, own.step), {
     // Before the step its creases are its instruction; after it, folds like any.
     display: { stepCreases: moment === 'before', precreases: true },
     sheet: own.sheet,
@@ -171,6 +184,20 @@ function creasePatternPicture(input: FoldStepPictureInput, render: Extract<Diagr
     side: creasePatternSide(render),
   });
   return storeScene(flipped ? withFoldsTurnedOver(scene) : scene, CAPTURE_PX_PER_UNIT, null);
+}
+
+/**
+ * `scene` with every crease and crease mark made after `since` — a run's —
+ * as made by the run's last step, `step`: so the crease pattern draws them
+ * all as the one step's instruction, as it draws a step's own.
+ */
+function withRunCreases(scene: FoldScene, since: number, step: number): FoldScene {
+  const made = (at: number) => (at > since && at <= step ? step : at);
+  return {
+    ...scene,
+    creases: scene.creases.map((crease) => ({ ...crease, made_at: made(crease.made_at) })),
+    ...(scene.crease_marks ? { crease_marks: scene.crease_marks.map((mark) => ({ ...mark, made_at: made(mark.made_at) })) } : {}),
+  };
 }
 
 /** A fold's pen seen from the paper's other side: a mountain is a valley there, and a valley a mountain. */
@@ -283,11 +310,19 @@ export function foldStepPicture(
   if (render.mode !== 'folded-flat') throw new Error(`A Fold step is not shown ${render.mode}`);
   const pattern = foldScenePattern(input.shown, render.side);
   const captured = flatScenePicture(pattern, render.rotationDeg, render.spread);
-  if (input.moment !== 'before' || (!input.action && !input.repeat)) return { captured, marks: [], thumbnail };
-  if (!render.spread) return { captured, marks: foldStepMarks(input.action, captured, render, newId, input.repeat), thumbnail };
+  const merged = input.merged ?? [];
+  if (input.moment !== 'before' || (!input.action && !input.repeat && merged.length === 0)) {
+    return { captured, marks: [], thumbnail };
+  }
+  // A run's later steps' lines and arrows join the first's, on the one picture.
+  const marksOn = (picture: CapturedPicture, pose: Extract<DiagramCpRender, { mode: 'folded-flat' }>) => [
+    ...foldStepMarks(input.action, picture, pose, newId, input.repeat),
+    ...merged.flatMap((action) => foldStepMarks(action, picture, pose, newId)),
+  ];
+  if (!render.spread) return { captured, marks: marksOn(captured, render), thumbnail };
   const { spread: _spread, ...flatRender } = render;
   const flat = flatScenePicture(pattern, render.rotationDeg);
-  const marks = foldStepMarks(input.action, flat, flatRender, newId, input.repeat);
+  const marks = marksOn(flat, flatRender);
   return { captured, marks: marksCarriedOntoSpread(marks, { flat, flatRender }, { captured, render }, thumbnail), thumbnail };
 }
 

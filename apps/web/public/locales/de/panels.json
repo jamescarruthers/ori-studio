@@ -1077,6 +1077,14 @@
       "empty": "Falte einen Schritt in Falten, dann erscheinen die Schritte der Folge hier.",
       "finishedSentence": "Das Modell, wie die Schritte es hinterlassen.",
       "fromFold": "Aus Falten…",
+      "mergedCard": "Schritte {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Mache das auf beiden Seiten.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Symmetrische Vorfalten zusammenführen",
+      "mergePrecreasesHint": "Eine Vorfalte und ihr Spiegelbild werden ein Schritt, beide Falten auf einem Bild, wie ein Buch sie zeichnet.",
+      "mergePrecreasesNone": "Keine Vorfalte auf diesem Pfad hat ein Spiegelbild, mit dem sie zusammengeführt werden kann.",
       "missing": "Schritt fehlt in Falten",
       "missingHint": "Sein Schritt ist aus Falten verschwunden oder lässt sich nicht mehr falten",
       "noStepsHint": "Falte einen Schritt in Falten, um ihn von dort zu übernehmen",

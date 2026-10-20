@@ -109,6 +109,29 @@ describe('the Fold browser’s cards (D17)', () => {
     ]);
   });
 
+  it('draws a merge as one card, the step it becomes: numbered first to last, the last state’s picture, said for both sides', () => {
+    const merges = [{ steps: ['fstep-3', 'fstep-4'], kind: 'mirror' as const }];
+    const cards = foldBrowserCards(t, view(true), merges);
+    expect(cards.map((card) => [card.index, card.kind, card.number, card.through])).toEqual([
+      [0, 'fold', 1, undefined],
+      [1, 'turn-over', null, undefined],
+      [2, 'fold', 2, 3],
+      [3, 'done', null, undefined],
+    ]);
+    expect(cards[2]!.step).toEqual({ kind: 'step', step: 'fstep-3', through: 'fstep-4', moment: 'before' });
+    expect(cards[2]!.picture).toEqual({ status: 'landed', source: { state: { generation: 0, id: 4 }, key: 'fs1:4', spread: null } });
+    // The first step's words, once, for both sides: the mirror's are not said again.
+    const first = foldBrowserCards(t, view(true))[2]!.sentence;
+    expect(cards[2]!.sentence).toBe(`${first} Do this on both sides.`);
+    // Added only once every step of it has landed.
+    expect(foldBrowserCards(t, view(false), merges)[2]!.step).toBeNull();
+  });
+
+  it('draws a merge whose steps are not all on the path as its steps', () => {
+    const cards = foldBrowserCards(t, view(true), [{ steps: ['fstep-3', 'fstep-gone'], kind: 'mirror' }]);
+    expect(cards.map((card) => card.number)).toEqual([1, null, 2, 3, null]);
+  });
+
   it('has no Finished for a path that only turns', () => {
     const turnOnly = sequenceOf([{ ...TURN, parent: null }]);
     const entries = foldPathEntries(turnOnly, ['fstep-2'], landed(0), new Map([['fstep-2', landed(2)]]), FOLD_PENDING_NODE);
