@@ -1774,6 +1774,12 @@
       "stepForward": "向前一点"
     },
     "repeat": {
+      "advice": {
+        "axis": "请尝试其他轴，或用工具折叠另一侧。",
+        "axisOrLater": "请尝试其他轴，或从此操作之后开始范围。",
+        "later": "请从此操作之后开始范围，或用工具折叠另一侧。",
+        "tools": "请改用工具折叠另一侧。"
+      },
       "axis": "对称轴",
       "axisAngle": "{{degrees}}° 的轴",
       "axisCanvas": "在起始模型上指定对称轴",
@@ -1793,6 +1799,7 @@
       "from": "起始步骤",
       "goSource": "转到原步骤",
       "groupCount_other": "将截至当前步骤的 {{count}} 个操作作为一个编号步骤重复。",
+      "headlineAdvice": "{{reason}}。{{advice}}",
       "individual": "显示为单独步骤",
       "individualCount_other": "将截至当前步骤的 {{count}} 个操作作为单独条目重复。",
       "invalidAxis": "这条线无法在起始模型中配对相应的纸张区域和纸层。",
@@ -1800,6 +1807,20 @@
       "limit": "此次重复超出搜索上限。请缩短范围。",
       "locate": "指定轴",
       "materialConflict": "重复会改变其他纸张区域或折痕。此范围内的两侧无法独立折叠。",
+      "mirror": {
+        "budget": "求解镜像各层如何叠放耗时过长，因此无法确定它们是否可行。",
+        "closureAddsFlaps": "折叠镜像的层还会带动其他翼片。",
+        "emptySeed": "镜像折叠没有选中任何要移动的层。",
+        "moverStays": "带着要移动的点的那一层不在镜像折叠移动的层里。",
+        "noMovingSide": "镜像折线会移动的那一侧没有纸。",
+        "noRoot": "在纸现在折好的样子上，镜像的参考得不出任何折线。",
+        "noSide": "没有指明镜像折线的哪一侧移动。",
+        "nothingStays": "所有层都在镜像折线移动的一侧，没有任何部分会留在原处。",
+        "offPaper": "用来确定镜像折线的某个点或边，已不在纸现在折好的样子上。",
+        "pickAgain": "镜像折叠选取的位置不在移动一侧的某一层内。",
+        "pointsTooClose": "镜像折线的两个点落在折好的纸上的同一位置，连不成线。",
+        "wrongCrease": "镜像折线既不沿着可展开的折起的边，也不沿着可重新折叠的平的折痕。"
+      },
       "noAxis": "尚未验证此起始模型有匹配的两侧。请选择其他范围。",
       "open": "在另一侧重复…",
       "orderConflict": "无法在另一侧保留原有的纸层关系。",
@@ -1807,6 +1828,7 @@
       "preparing": "正在准备重复折叠…",
       "preview": "预览重复",
       "ready": "下方显示折叠结果和折痕图。可以保存。",
+      "reasonAdvice": "{{reason}}{{advice}}",
       "rebuildRequired": "已保存的重复与当前状态不再匹配。请从原步骤更新。",
       "reference": "某个参考点在另一侧没有对应点。",
       "refusedPlain": "无法折叠镜像操作。未添加任何步骤。",

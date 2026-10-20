@@ -56,6 +56,8 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
   const m = useFoldRepeat(opening, locating);
   const blocked = m.result?.status === 'blocked' ? m.result : null;
   const choice = m.result?.status === 'choice' ? m.result : null;
+  // What a refusal's advice may offer: another axis, and a range starting after the operation that stopped.
+  const otherAxis = m.axes.length > 1;
   return (
     <section className={styles.bar} aria-label={t('panels:fold.repeat.title', 'Repeat on the other side')}>
       {m.baseline && <AxisPicture scene={m.baseline} axis={m.axes[m.axis]?.display} />}
@@ -136,11 +138,11 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
         {/* A preparation under way speaks over the last one's block, which it is about to replace. */}
         <p className={`${styles.message} ${m.error || (blocked && !m.preparing) ? styles.error : ''}`} role="status">
           {m.error
-            ? repeatFailure(t, m.error)
+            ? repeatFailure(t, m.error, { otherAxis, laterStart: false })
             : blocked && !m.preparing
               ? t('panels:fold.repeat.blockedAt', 'Stopped at source operation {{number}}: {{reason}}', {
                   number: blocked.step + 1,
-                  reason: repeatFailure(t, blocked),
+                  reason: repeatFailure(t, blocked, { otherAxis, laterStart: blocked.step < m.count - 1 }),
                 })
               : m.busy
                 ? t('panels:fold.repeat.preparing', 'Preparing repeated folds…')

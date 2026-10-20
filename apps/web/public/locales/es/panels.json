@@ -1874,6 +1874,12 @@
       "stepForward": "Avanzar un poco"
     },
     "repeat": {
+      "advice": {
+        "axis": "Prueba otro eje o pliega el otro lado con las herramientas.",
+        "axisOrLater": "Prueba otro eje o empieza el intervalo después de esta operación.",
+        "later": "Empieza el intervalo después de esta operación o pliega el otro lado con las herramientas.",
+        "tools": "En su lugar, pliega el otro lado con las herramientas."
+      },
       "axis": "Eje de simetría",
       "axisAngle": "Eje a {{degrees}}°",
       "axisCanvas": "Definir el eje de simetría en el modelo inicial",
@@ -1897,6 +1903,7 @@
       "groupCount_one": "Repetir {{count}} operación como un paso numerado.",
       "groupCount_many": "Repetir {{count}} operaciones hasta el paso actual como un único paso numerado.",
       "groupCount_other": "Repetir {{count}} operaciones hasta el paso actual como un único paso numerado.",
+      "headlineAdvice": "{{reason}}. {{advice}}",
       "individual": "Mostrar como pasos individuales",
       "individualCount_one": "Repetir {{count}} operación como una entrada individual.",
       "individualCount_many": "Repetir {{count}} operaciones hasta el paso actual como entradas individuales.",
@@ -1906,6 +1913,20 @@
       "limit": "Esta repetición supera el límite de búsqueda. Prueba un intervalo más corto.",
       "locate": "Definir eje",
       "materialConflict": "La repetición cambiaría más papel o pliegues. Los dos lados no se pueden plegar independientemente en este intervalo.",
+      "mirror": {
+        "budget": "Averiguar cómo se apilan las capas reflejadas tardó demasiado, así que no se sabe si encajan.",
+        "closureAddsFlaps": "Plegar las capas reflejadas movería también otras solapas.",
+        "emptySeed": "El pliegue reflejado no elige ninguna capa para mover.",
+        "moverStays": "La capa que lleva el punto que hay que mover no está entre las capas que mueve el pliegue reflejado.",
+        "noMovingSide": "No hay papel en el lado de la línea reflejada que se movería.",
+        "noRoot": "Las referencias reflejadas no dan ninguna línea de pliegue en el papel tal como está plegado.",
+        "noSide": "Nada indica qué lado de la línea reflejada se mueve.",
+        "nothingStays": "Todas las capas están en el lado que se mueve de la línea reflejada, así que nada se quedaría quieto.",
+        "offPaper": "Un punto o un borde a partir del cual se sitúa la línea reflejada no está sobre el papel tal como está plegado ahora.",
+        "pickAgain": "El lugar que elige el pliegue reflejado no está dentro de una capa del lado que se mueve.",
+        "pointsTooClose": "Los dos puntos de la línea reflejada caen en el mismo sitio del papel plegado, así que no forman ninguna línea.",
+        "wrongCrease": "La línea reflejada no sigue un borde plegado que desplegar ni un pliegue plano que volver a plegar."
+      },
       "noAxis": "No se ha verificado un par de lados coincidentes en este modelo inicial. Elige otro intervalo.",
       "open": "Repetir en el otro lado…",
       "orderConflict": "No se pueden conservar las relaciones originales entre capas en el otro lado.",
@@ -1915,6 +1936,7 @@
       "preparing": "Preparando los pliegues repetidos…",
       "preview": "Previsualizar repetición",
       "ready": "El resultado plegado y el patrón de pliegues se muestran abajo. Listo para guardar.",
+      "reasonAdvice": "{{reason}} {{advice}}",
       "rebuildRequired": "La repetición guardada ya no coincide con este estado. Actualízala desde sus pasos de origen.",
       "reference": "Una referencia no tiene un punto coincidente en el otro lado.",
       "refusedPlain": "La operación reflejada no se puede plegar. No se añadieron pasos.",
