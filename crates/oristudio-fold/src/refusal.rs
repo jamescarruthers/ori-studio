@@ -62,6 +62,19 @@ pub enum FoldRefusal {
     /// derived, since its tables grow with the square of the faces.
     #[error("the state has {face_count} faces, over the {limit} cap")]
     TooManyFaces { face_count: usize, limit: usize },
+    /// Layers stacked too deeply for their order to be worked out in time
+    /// (`oristudio_layer_order::MAX_STACKED_TRIPLES`): `triples` faces
+    /// overlapping one another three at a time, the deepest stack `deepest`
+    /// layers. Checked once the faces' overlaps are known, before any
+    /// constraint or order is derived from them.
+    #[error(
+        "the state stacks up to {deepest} layers deep, {triples} overlapping triples over the {limit} cap"
+    )]
+    StackedTooDeep {
+        deepest: usize,
+        triples: u64,
+        limit: u64,
+    },
     #[error("{what} {id} appears more than once")]
     DuplicateId { what: &'static str, id: u32 },
     #[error("face {face} names vertex {vertex}, which does not exist")]
@@ -425,6 +438,7 @@ impl FoldRefusal {
             FoldRefusal::InvalidRectangle => "invalid_rectangle",
             FoldRefusal::InvalidSides { .. } => "invalid_sides",
             FoldRefusal::TooManyFaces { .. } => "too_many_faces",
+            FoldRefusal::StackedTooDeep { .. } => "stacked_too_deep",
             FoldRefusal::DuplicateId { .. } => "duplicate_id",
             FoldRefusal::UnknownVertex { .. } => "unknown_vertex",
             FoldRefusal::CreaseUnknownVertex { .. } => "crease_unknown_vertex",

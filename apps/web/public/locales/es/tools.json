@@ -710,6 +710,12 @@
         "text": "Un punto de las capas que se mueven quedaría a un pelo por dentro del borde de otra capa.",
         "title": "Un punto cae justo dentro de un borde"
       },
+      "stackedTooDeep": {
+        "fold": "Este pliegue apilaría las capas demasiado como para determinar su orden: hasta {{deepest, number}} unas sobre otras. Pliega menos capas.",
+        "pattern": "Este patrón de pliegues apila sus capas demasiado como para determinar su orden: hasta {{deepest, number}} unas sobre otras. Importa un patrón más sencillo.",
+        "step": "Este paso apila sus capas demasiado como para determinar su orden: hasta {{deepest, number}} unas sobre otras. Este paso y los siguientes solo se pueden eliminar.",
+        "title": "Capas demasiado apiladas"
+      },
       "tipNotFree": {
         "text": "Hay otras capas donde giraría la punta. Incluye sus solapas en el pliegue o invierte en otro sitio.",
         "title": "Hay capas en medio"

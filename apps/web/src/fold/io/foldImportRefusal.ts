@@ -1,7 +1,8 @@
 /**
  * An Import CP that did not land, as the dialog says it (plan D16): the
  * engine's refusal — the sheet it found, the faces and how many there are,
- * flat-foldability, the layer-order search — or the dialog's own reason, as a
+ * how deeply they stack, flat-foldability, the layer-order search — or the
+ * dialog's own reason, as a
  * title and a sentence a folder reads, with the one fix the engine leaves
  * open: a search that ran out of budget may be asked again with more.
  *
@@ -16,7 +17,7 @@ import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
 import type { FoldImportRefusalCode } from '../engine/foldEngineIoWire';
 import type { FoldEngineRefused } from '../engine/foldEngineWire';
-import { foldFaceCapWords, foldFaceCountOf } from '../foldFaceCap';
+import { foldCapOf, foldCapWords } from '../foldCaps';
 
 /**
  * The dialog's own reasons, before the engine is asked:
@@ -151,9 +152,10 @@ function engineWords(t: TFunction, refusal: FoldEngineRefused['refusal']): { tit
           'One of the pattern’s faces bends inward at a corner. Fold folds faces that are convex.'
         ),
       };
-    case 'import_too_many_faces': {
-      const counts = foldFaceCountOf(refusal);
-      if (counts) return foldFaceCapWords(t, counts, 'pattern');
+    case 'import_too_many_faces':
+    case 'import_stacked_too_deep': {
+      const cap = foldCapOf(refusal);
+      if (cap) return foldCapWords(t, cap, 'pattern');
       break;
     }
     case 'import_not_flat_foldable':

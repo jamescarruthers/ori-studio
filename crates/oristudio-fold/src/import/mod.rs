@@ -16,7 +16,10 @@
 //!    tables grow with the square of the faces, so the cap is checked before
 //!    anything is derived from them.
 //! 4. Derive the isometries from a root, the folded view and its constraints
-//!    ([`Unordered`]).
+//!    ([`Unordered`]), refusing a pattern whose layers stack too deeply for
+//!    their order to be worked out (`oristudio_layer_order::MAX_STACKED_TRIPLES`)
+//!    as soon as its overlaps are counted, before its constraints and its
+//!    completion.
 //! 5. Complete the order seeded by the imported letters
 //!    ([`ImportedPattern::complete`]): a true ‹ n of m ›, since the
 //!    constraints are Fold's own (D8). Every order offered reproduces the
@@ -255,6 +258,18 @@ pub enum ImportRefusal {
     #[serde(rename = "import_too_many_faces")]
     #[error("the crease pattern has {face_count} faces, over the {limit} cap")]
     TooManyFaces { face_count: usize, limit: usize },
+    /// Layers stacked too deeply for Fold to work out their order
+    /// (`oristudio_layer_order::MAX_STACKED_TRIPLES`): refused as soon as
+    /// the folded faces' overlaps are known, before any constraint or order.
+    #[serde(rename = "import_stacked_too_deep")]
+    #[error(
+        "the crease pattern stacks up to {deepest} layers deep, {triples} overlapping triples over the {limit} cap"
+    )]
+    StackedTooDeep {
+        deepest: usize,
+        triples: u64,
+        limit: u64,
+    },
     /// The pattern does not fold flat with its kinds: a vertex lands in two
     /// places, a hinge has the wrong orientations, or the folded image is
     /// malformed. `points` are the vertices and face witnesses it names.
@@ -309,6 +324,7 @@ impl ImportRefusal {
             ImportRefusal::DisconnectedCreases { .. } => "import_disconnected_creases",
             ImportRefusal::NonConvexFace { .. } => "import_non_convex_face",
             ImportRefusal::TooManyFaces { .. } => "import_too_many_faces",
+            ImportRefusal::StackedTooDeep { .. } => "import_stacked_too_deep",
             ImportRefusal::NotFlatFoldable { .. } => "import_not_flat_foldable",
             ImportRefusal::AmbiguousOverlap { .. } => "import_ambiguous_overlap",
             ImportRefusal::NoOrder { .. } => "import_no_order",
@@ -743,15 +759,29 @@ fn root_face(arrangement: &arrangement::Arrangement, p: Point) -> usize {
 }
 
 /// The gate's refusal of the imported parts as Import CP says it: the face
-/// cap under its own code, anything else as not folding flat, with the points
-/// it names in the input's coordinates.
+/// cap and the stacking cap under their own codes, anything else as not
+/// folding flat, with the points it names in the input's coordinates.
 fn not_flat_foldable(
     refusal: FoldRefusal,
     parts: &StateParts,
     placement: &Placement,
 ) -> ImportRefusal {
-    if let FoldRefusal::TooManyFaces { face_count, limit } = refusal {
-        return ImportRefusal::TooManyFaces { face_count, limit };
+    match refusal {
+        FoldRefusal::TooManyFaces { face_count, limit } => {
+            return ImportRefusal::TooManyFaces { face_count, limit };
+        }
+        FoldRefusal::StackedTooDeep {
+            deepest,
+            triples,
+            limit,
+        } => {
+            return ImportRefusal::StackedTooDeep {
+                deepest,
+                triples,
+                limit,
+            };
+        }
+        _ => {}
     }
     ImportRefusal::NotFlatFoldable {
         points: points_of(&refusal, parts)

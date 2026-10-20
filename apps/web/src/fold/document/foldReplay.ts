@@ -46,7 +46,7 @@ import {
   replayOrder,
   type FoldActiveChildren,
 } from './foldStepTree';
-import type { FoldFaceCount } from '../foldFaceCap';
+import type { FoldCap } from '../foldCaps';
 
 /** What the engine made of one step, or of the sheet. */
 export type FoldEngineOutcome<S> =
@@ -54,9 +54,9 @@ export type FoldEngineOutcome<S> =
   /**
    * The inputs no longer resolve, or a stored choice conflicts or is
    * ambiguous: the engine's refusal code, and its counts when the state would
-   * have had more faces than Fold folds.
+   * have been over one of Fold's caps (too many faces, or stacked too deep).
    */
-  | { landed: false; code: string; faces?: FoldFaceCount };
+  | { landed: false; code: string; cap?: FoldCap };
 
 /**
  * The engine as replay drives it: the one declaration of the port, which
@@ -101,8 +101,8 @@ export type FoldStepStatus = 'pending' | 'ok' | 'changed' | 'broken' | 'locked';
 export interface FoldReplayRefusal {
   at: string | null;
   code: string;
-  /** Over the face cap: how many faces, and the cap, for the step's notice to name. */
-  faces?: FoldFaceCount;
+  /** Over one of Fold's caps: its counts, for the step's notice to name. */
+  cap?: FoldCap;
 }
 
 /** A node's replay, or the sheet's. */
@@ -336,7 +336,7 @@ function landing<S>(
   at: string | null
 ): FoldNodeReplay<S> {
   if (!outcome.landed) {
-    return unlanded('broken', path, { at, code: outcome.code, ...(outcome.faces ? { faces: outcome.faces } : {}) });
+    return unlanded('broken', path, { at, code: outcome.code, ...(outcome.cap ? { cap: outcome.cap } : {}) });
   }
   const { state, fingerprint } = outcome;
   const status = foldDrift(expect, fingerprint) === 'changed' ? 'changed' : 'ok';

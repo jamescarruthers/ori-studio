@@ -47,3 +47,18 @@ it('buckets how many faces a pattern over the cap had', () => {
     });
   }
 });
+
+it('buckets how deep a pattern stacked past the cap stacks, never its exact counts', () => {
+  for (const [deepest, bucket] of [
+    [150, '<=200'],
+    [290, '<=300'],
+    [480, '<=500'],
+    [604, '>500'],
+  ] as const) {
+    trackFoldImportRefused(engine({ code: 'import_stacked_too_deep', deepest, triples: 68_288_441, limit: 4_000_000 }));
+    expect(runtime.track).toHaveBeenLastCalledWith('fold refused', {
+      code: 'import_stacked_too_deep',
+      stack_depth_bucket: bucket,
+    });
+  }
+});

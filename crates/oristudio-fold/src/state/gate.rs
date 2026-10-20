@@ -19,13 +19,17 @@
 //!    that broke this (the squash spike, research §3.3).
 //! 5. The folded image as the layer order sees it: convex face images, every
 //!    crease on the boundary of both its faces with the sides its kind says.
-//! 6. The layer order through `oristudio-layer-order`'s checker: complete on
+//! 6. The constraint problem, built within the stacking cap
+//!    (`oristudio_layer_order::MAX_STACKED_TRIPLES`): layers stacked too
+//!    deeply for their order to be worked out are refused once their
+//!    overlaps are counted, before a constraint is enumerated.
+//! 7. The layer order through `oristudio-layer-order`'s checker: complete on
 //!    overlapping pairs, transitive in every cell, the taco-taco,
 //!    taco-tortilla and tortilla-tortilla families, and every letter derived
 //!    from the order.
 //!
 //! Steps 1–5 are [`before_order`], which `Unordered` also runs on parts whose
-//! order is still to be decided.
+//! order is still to be decided, and step 6 with them.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -33,7 +37,7 @@ use std::sync::Arc;
 use oristudio_geometry::convex;
 use oristudio_layer_order::{
     ConstraintProblem, Edge, EdgeKind, Face as ViewFace, FacePair, FoldedView, LayerOrder,
-    LayerOrderError, MAX_FACES, Scope, Violation, check_problem,
+    LayerOrderError, MAX_FACES, MAX_STACKED_TRIPLES, Scope, Violation, check_problem,
 };
 
 use crate::numerics::TOL;
@@ -62,29 +66,40 @@ pub(super) fn run(
     } = before_order(parts, &BTreeSet::new())?;
 
     let prebuilt = prebuilt.filter(|problem| problem.is_for(&view));
+    let refused = |e: LayerOrderError| folded_image(&e, parts, &topology, &edge_creases);
     let (problem, scope_faces) = match previous {
         Some((previous, touched)) => {
             let touched = touched_scope(parts, previous, touched);
             let problem = match prebuilt {
                 Some(problem) => problem,
-                None => Arc::new(previous.derived.problem.rebuild(&view, &touched)),
+                None => Arc::new(
+                    previous
+                        .derived
+                        .problem
+                        .rebuild_within(&view, &touched, MAX_STACKED_TRIPLES)
+                        .map_err(refused)?,
+                ),
             };
             // Not only the touched faces: a constraint can be new over faces
             // it does not name (an unfold beside a folded crease's line).
             let scope = problem.scope_for(&touched);
             (problem, Some(scope))
         }
-        None => (
-            prebuilt.unwrap_or_else(|| Arc::new(ConstraintProblem::build(&view))),
-            None,
-        ),
+        None => match prebuilt {
+            Some(problem) => (problem, None),
+            None => (
+                Arc::new(
+                    ConstraintProblem::build_within(&view, MAX_STACKED_TRIPLES).map_err(refused)?,
+                ),
+                None,
+            ),
+        },
     };
     let scope = match &scope_faces {
         Some(faces) => Scope::Faces(faces),
         None => Scope::All,
     };
-    let report = check_problem(&problem, &view, &parts.order, scope)
-        .map_err(|e| folded_image(&e, parts, &topology, &edge_creases))?;
+    let report = check_problem(&problem, &view, &parts.order, scope).map_err(refused)?;
     let mut violations: BTreeSet<Violation> = report.violations.into_iter().collect();
     if scope_faces.is_some() {
         violations.extend(pair_completeness(&problem, &parts.order));
@@ -328,9 +343,10 @@ fn pair_completeness(problem: &ConstraintProblem, order: &LayerOrder) -> Vec<Vio
     out
 }
 
-/// A malformed folded image, with the faces it involves. `edge_creases` maps
-/// the folded view's edges to crease positions.
-fn folded_image(
+/// A malformed folded image, with the faces it involves, or a view over one
+/// of the layer order's caps under its own refusal. `edge_creases` maps the
+/// folded view's edges to crease positions.
+pub(crate) fn folded_image(
     error: &LayerOrderError,
     parts: &StateParts,
     topology: &Topology,
@@ -340,6 +356,17 @@ fn folded_image(
         // `before_order` refuses it first; a view is never asked for one.
         &LayerOrderError::TooManyFaces { face_count, limit } => {
             return FoldRefusal::TooManyFaces { face_count, limit };
+        }
+        &LayerOrderError::StackedTooDeep {
+            deepest,
+            triples,
+            limit,
+        } => {
+            return FoldRefusal::StackedTooDeep {
+                deepest,
+                triples,
+                limit,
+            };
         }
         LayerOrderError::DuplicateFace(f)
         | LayerOrderError::NonConvexFace(f)

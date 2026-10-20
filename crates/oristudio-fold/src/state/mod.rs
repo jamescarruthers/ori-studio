@@ -32,7 +32,7 @@ use crate::sheet::Sheet;
 use crate::view::{StartSide, View};
 
 pub(crate) use derive::{Geometry, Topology, ring_position};
-pub(crate) use gate::{BeforeOrder, before_order, touched_scope};
+pub(crate) use gate::{BeforeOrder, before_order, folded_image, touched_scope};
 
 type Point = [f64; 2];
 
@@ -457,6 +457,58 @@ mod tests {
             assert_eq!(s.front_up(FaceId(0)), Some(true));
             assert_eq!(s.next_ids().0, 1);
         }
+    }
+
+    /// The square folded in half through every layer, across x and y in
+    /// turn, until a fold is refused: each landed state's face count, and
+    /// the refusal.
+    fn halve_until_refused(folds: usize) -> (Vec<usize>, Option<FoldRefusal>) {
+        use crate::fold::PlainFold;
+        let mut state =
+            State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+        let mut landed = Vec::new();
+        for k in 0..folds {
+            let images: Vec<Point> = (0..state.vertices().len())
+                .filter_map(|v| state.vertex_image(VertexId(v as u32)))
+                .collect();
+            let [x0, y0, x1, y1] = convex::bounding_box(&images);
+            let centre = [(x0 + x1) / 2.0, (y0 + y1) / 2.0];
+            let across = if k % 2 == 0 { [0.0, 1.0] } else { [1.0, 0.0] };
+            let line = Line::from_point_direction(centre, across)
+                .unwrap_or_else(|| panic!("no line through {centre:?}"));
+            let op = PlainFold::new(
+                line,
+                crate::refusal::Side::Positive,
+                crate::view::Direction::Valley,
+            );
+            match state.fold(&op) {
+                Ok(folded) => {
+                    state = folded.state;
+                    landed.push(state.faces().len());
+                }
+                Err(refused) => return (landed, Some(refused.refusal)),
+            }
+        }
+        (landed, None)
+    }
+
+    #[test]
+    fn a_fold_that_stacks_past_the_cap_is_refused_and_one_short_of_it_lands() {
+        // 256 layers on one stack are 2,763,520 triples, under the cap; the
+        // next fold doubles them to 512, over it. Their counts are the
+        // state's own, so a replay of the fold is refused alike.
+        let (landed, refused) = halve_until_refused(10);
+        assert_eq!(landed, vec![2, 4, 8, 16, 32, 64, 128, 256]);
+        let refused = refused.unwrap_or_else(|| panic!("the ninth fold landed"));
+        assert_eq!(
+            refused,
+            FoldRefusal::StackedTooDeep {
+                deepest: 512,
+                triples: 512 * 511 * 510 / 6,
+                limit: oristudio_layer_order::MAX_STACKED_TRIPLES,
+            }
+        );
+        assert_eq!(refused.code(), "stacked_too_deep");
     }
 
     #[test]

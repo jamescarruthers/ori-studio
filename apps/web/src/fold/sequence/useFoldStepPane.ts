@@ -56,7 +56,7 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
     const imported = node !== null && !isLockedStep(node) && node.op.kind === 'cp-jump' ? node.op : null;
     const compound = entry ? foldCompoundPaneRows(entry.session.compound) : undefined;
     // Its own refusal only: a step broken above it says so instead.
-    const faceCap = entry?.status === 'broken' ? entry.session.refusal?.faces : undefined;
+    const cap = entry?.status === 'broken' ? entry.session.refusal?.cap : undefined;
     const step: FoldStepPaneStep | null =
       entry && node
         ? {
@@ -68,7 +68,7 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
             // its pattern is the counts, and there is no change to list.
             diff: summary && !imported ? foldCreaseDiff(summary, frame?.creases ?? null) : null,
             status: paneStatus(entry.status),
-            ...(faceCap ? { faceCap } : {}),
+            ...(cap ? { cap } : {}),
             ...(imported ? { origin: imported.origin } : {}),
             ...(compound ? { compound } : {}),
           }

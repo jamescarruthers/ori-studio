@@ -692,6 +692,12 @@
         "text": "A point of the moving layers would land a hair’s breadth inside another layer’s edge.",
         "title": "A point lands just inside an edge"
       },
+      "stackedTooDeep": {
+        "fold": "This fold would stack the layers too deeply for Fold to work out their order, up to {{deepest, number}} on top of each other. Fold fewer layers.",
+        "pattern": "This crease pattern stacks its layers too deeply for Fold to work out their order, up to {{deepest, number}} on top of each other. Import a simpler pattern.",
+        "step": "This step stacks its layers too deeply for Fold to work out their order, up to {{deepest, number}} on top of each other. It and the steps after it can only be deleted.",
+        "title": "Layers stacked too deep"
+      },
       "tipNotFree": {
         "text": "Other layers lie where the tip would turn. Include their flaps in the fold, or reverse it somewhere else.",
         "title": "Layers are in the way"

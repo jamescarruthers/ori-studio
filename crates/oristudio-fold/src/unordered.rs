@@ -24,7 +24,8 @@ use std::sync::Arc;
 
 use oristudio_geometry::convex;
 use oristudio_layer_order::{
-    ConstraintProblem, EdgeKind, FoldedView, LayerOrder, Letter, derived_letter,
+    ConstraintProblem, EdgeKind, FoldedView, LayerOrder, Letter, MAX_STACKED_TRIPLES,
+    derived_letter,
 };
 
 use crate::complete::{
@@ -34,7 +35,9 @@ use crate::isometry::Isometry;
 use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, EdgeId, FaceId};
 use crate::refusal::FoldRefusal;
-use crate::state::{BeforeOrder, Geometry, State, StateParts, before_order, touched_scope};
+use crate::state::{
+    BeforeOrder, Geometry, State, StateParts, before_order, folded_image, touched_scope,
+};
 use crate::witness::{Broken, WitnessOrder};
 
 type Point = [f64; 2];
@@ -119,18 +122,24 @@ impl Unordered {
             })
             .collect();
         let BeforeOrder {
+            topology,
             geometry,
             view,
             edge_creases,
-            ..
         } = before_order(&parts, &unknown)?;
+        // Bounded as the gate is: a stack too deep is refused here, before a
+        // completion could start on it.
         let problem = match &after {
             Some(after) => {
                 let scope = touched_scope(&parts, &after.previous, &after.touched);
-                after.previous.problem().rebuild(&view, &scope)
+                after
+                    .previous
+                    .problem()
+                    .rebuild_within(&view, &scope, MAX_STACKED_TRIPLES)
             }
-            None => ConstraintProblem::build(&view),
-        };
+            None => ConstraintProblem::build_within(&view, MAX_STACKED_TRIPLES),
+        }
+        .map_err(|e| folded_image(&e, &parts, &topology, &edge_creases))?;
         Ok(Unordered {
             parts,
             unknown,

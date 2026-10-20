@@ -710,6 +710,12 @@
         "text": "Un point des couches qui bougent se poserait à un cheveu à l’intérieur du bord d’une autre couche.",
         "title": "Un point tombe juste à l’intérieur d’un bord"
       },
+      "stackedTooDeep": {
+        "fold": "Ce pli empilerait les couches trop profondément pour que leur ordre puisse être déterminé : jusqu’à {{deepest, number}} les unes sur les autres. Pliez moins de couches.",
+        "pattern": "Ce patron de plis empile ses couches trop profondément pour que leur ordre puisse être déterminé : jusqu’à {{deepest, number}} les unes sur les autres. Importez un patron plus simple.",
+        "step": "Cette étape empile ses couches trop profondément pour que leur ordre puisse être déterminé : jusqu’à {{deepest, number}} les unes sur les autres. Elle et les étapes suivantes ne peuvent qu’être supprimées.",
+        "title": "Couches trop empilées"
+      },
       "tipNotFree": {
         "text": "D’autres couches se trouvent là où la pointe tournerait. Incluez leurs rabats dans le pli, ou faites l’inversion ailleurs.",
         "title": "Des couches gênent"

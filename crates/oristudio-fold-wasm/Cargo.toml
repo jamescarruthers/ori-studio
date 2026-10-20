@@ -55,5 +55,7 @@ wasm-bindgen.workspace = true
 # `tests/io.rs`: the round trip through Send to Edit and Import CP over
 # seeded random states.
 oristudio-fold = { path = "../oristudio-fold", features = ["kernel", "random-sequences"] }
+# `tests/stacking_corpus.rs`: the stacking cap real models are weighed against.
+oristudio-layer-order = { path = "../oristudio-layer-order" }
 serde_json.workspace = true
 wasm-bindgen-test.workspace = true

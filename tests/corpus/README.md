@@ -115,6 +115,29 @@ The corpus harness fails on Rust/JavaScript status mismatches, constraint count
 mismatches, component-size or solution-count mismatches, and first-solution
 `faceOrders` hash mismatches.
 
+## Fold Stacking-Cap Corpus Testing
+
+Fold refuses a state whose faces overlap one another in more than
+`oristudio_layer_order::MAX_STACKED_TRIPLES` triples, since working out its
+layer order costs about a microsecond a triple. The fixtures' models are
+weighed against the cap on every run; an external corpus laid out as
+`<case>/truth.fold` (the cpoogle cases of the CP-detect corpus below) is
+weighed, imported and landed when it is under the cap, a row per case:
+
+```sh
+cargo test -p oristudio-fold-wasm --test stacking_corpus
+FOLD_STACKING_CORPUS_DIR=/path/to/real_benchmark/cpoogle \
+  cargo test -p oristudio-fold-wasm --release --test stacking_corpus -- --nocapture
+```
+
+Last cpoogle run on October 19, 2026, before the cap, natively on an Apple
+Silicon Mac: 471 of 484 cases import; median 54,000 triples, 25 over 4
+million (stacks 130–600 layers deep). Under the cap, landing an import — the
+work every replay of its step repeats — took at most 3.0 s, and opening one at
+most 18.7 s (rat-skeleton, whose search lists many components' orders); over
+it, landing took 2.9–21.6 s and opening up to 67 s, and four cases at 51–80
+million triples were not tried.
+
 ## FOLD Frame-Shape Corpus Testing
 
 `file_frames` makes a FOLD document a tree of frames, and the importer has to
