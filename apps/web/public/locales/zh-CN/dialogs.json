@@ -312,6 +312,7 @@
   },
   "foldImport": {
     "browse": "或点击浏览",
+    "browseTouch": "或轻点浏览",
     "collapseTitle": "从展开图收拢",
     "drop": "拖放 .cp、.fold、.ori 或 .orh 文件",
     "editFigure": "编辑中的折叠模型",

@@ -9,6 +9,7 @@ import { foldStartingFigure } from '../../../fold/io/foldEditFigure';
 import { FOLD_IMPORT_EXTENSIONS, foldImportFileSource } from '../../../fold/io/foldImportFiles';
 import type { FoldImportRequest } from '../../../fold/io/foldImportFlow';
 import { getFileService } from '../../../platform/fileService';
+import { useIsCoarsePointerSurface } from '../../../platform/pointerSurface';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { PatternThumbnail } from '../../ui/PatternThumbnail';
 import styles from './FoldImportPicker.module.css';
@@ -44,6 +45,8 @@ export function FoldImportPicker({
   onRequest: (request: FoldImportRequest) => void;
 }) {
   const { t } = useTranslation();
+  // A finger taps, as the tool window's touch instructions say.
+  const coarse = useIsCoarsePointerSurface();
   const sheets = useCpPatternSheets(true);
   const hasFigure = useWorkspaceStore((state) => foldStartingFigure(state) !== null);
   // Its faces are the import's: said here, before the press, when there are too many.
@@ -78,7 +81,11 @@ export function FoldImportPicker({
         <span className={styles.dropTitle}>
           {t('dialogs:foldImport.drop', 'Drop a .cp, .fold, .ori or .orh file')}
         </span>
-        <span className={styles.dropHint}>{t('dialogs:foldImport.browse', 'or click to browse')}</span>
+        <span className={styles.dropHint}>
+          {coarse
+            ? t('dialogs:foldImport.browseTouch', 'or tap to browse')
+            : t('dialogs:foldImport.browse', 'or click to browse')}
+        </span>
       </button>
 
       <section className={styles.section} aria-labelledby="fold-import-patterns">

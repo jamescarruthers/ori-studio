@@ -339,6 +339,7 @@
   },
   "foldImport": {
     "browse": "или нажмите, чтобы выбрать",
+    "browseTouch": "или коснитесь, чтобы выбрать",
     "collapseTitle": "Сложить из CP",
     "drop": "Перетащите файл .cp, .fold, .ori или .orh",
     "editFigure": "Сложенная модель из Правки",
