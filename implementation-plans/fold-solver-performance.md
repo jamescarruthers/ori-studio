@@ -13,7 +13,8 @@ Sources: `research/2026-10-19-layer-order-constraints/fold-solver-profile.md`
 (where the time goes, the spike, the ranked opportunities) and
 `product-spec.md` (the dialog), in the `fold-layer-order-constraints`
 worktree. Base: `claude/fold-workspace-launch-b42eba` at `ef1e1343e`, later
-merged up to `8279dd9d6` (which added the stacking cap).
+merged up to `8279dd9d6` (which added the stacking cap) and then to
+`4d54b4f90` (no crate or Cargo changes since `8279dd9d6`).
 
 ## Approach
 
@@ -117,6 +118,7 @@ baseline worktree `.claude/worktrees/fold-solver-baseline`.
 | Flat-Folder oracle: `flat_folder_oracle`, `flat_folder_verify`, `flat_folder_controls` | fixtures | pass |
 | Flat-Folder corpus (`cp_training_mix_v1`, 4 shards) | 13,999 files checked | 8,394 of the 8,396 the JS oracle answers agree; the 2 others (taco-tortilla 591 vs 593, 2,871 vs 2,873) differ identically before the rework; the oracle throws on 5,603; one more file, left out of the shard, does not finish its arrangement in 20 min before or after (nor in the oracle in 60 s) |
 | Web fold and worker tests (Node 22) through the rebuilt bridge | 165 files (1 skipped) | 1,203 pass, 5 skipped |
+| The same after merging the launch branch at `4d54b4f90` (no engine changes), every test file matching `fold` | 315 files (1 skipped) | 2,994 pass, 5 skipped |
 
 The widened corpus also found a pre-existing crash: a design whose count
 passes 2^53 (rat-skeleton, 1.9 million triples, 8.2 × 10¹⁷ orders, under
