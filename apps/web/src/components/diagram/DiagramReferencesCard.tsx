@@ -116,7 +116,10 @@ export const DiagramPullCard = forwardRef<
     title: string;
     /** What a card that is not an ordinary fold is, or must tell; empty for none. */
     badge: string;
-    /** The picture it would become, drawn; null while it is not (or cannot be). */
+    /**
+     * The picture it would become: drawn, or the loading state while it is
+     * on its way; null while it is not asked for yet, or cannot be drawn.
+     */
     picture: ReactNode;
     /**
      * The picture is on the paper it prints on, white in either theme (a
@@ -124,7 +127,7 @@ export const DiagramPullCard = forwardRef<
      * True by default.
      */
     onPaper?: boolean;
-    /** It cannot be drawn: a press does nothing, and the well says so. */
+    /** It cannot be added: a press does nothing; with no picture, the well says it cannot be drawn. */
     unreadable: boolean;
     /** Why it cannot be added, as its tooltip; absent when it can. */
     why?: string;
@@ -195,10 +198,7 @@ export const DiagramPullCard = forwardRef<
         {badge && <span className={styles.badge}>{badge}</span>}
       </div>
       <div className={styles.well} data-picture={(picture !== null && onPaper) || undefined}>
-        {picture ??
-          (unreadable ? (
-            <span className={styles.placeholder}>{t('panels:diagram.references.cantDraw', 'Can’t be drawn')}</span>
-          ) : null)}
+        {picture ?? (unreadable ? <DiagramPullCardCantDraw /> : null)}
       </div>
       <p className={styles.sentence}>{sentence}</p>
       {/* Under the sentence, off the picture: on it, the flag covered a letter in the sheet's corner (17d review). */}
@@ -229,4 +229,10 @@ export const DiagramPullCard = forwardRef<
 /** A Fold step's picture in a pull card: its folded form, as Fold's strip draws it, in the card's well. */
 export function DiagramPullCardThumbnail({ children }: { children: ReactNode }) {
   return <span className={styles.thumbnail}>{children}</span>;
+}
+
+/** What a pull card's well says when its picture failed to draw, or there is nothing to draw it from. */
+export function DiagramPullCardCantDraw() {
+  const { t } = useTranslation();
+  return <span className={styles.placeholder}>{t('panels:diagram.references.cantDraw', 'Can’t be drawn')}</span>;
 }

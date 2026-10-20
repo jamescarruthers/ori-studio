@@ -54,8 +54,14 @@ const SLICE_MS = 8;
 /** How long a card's spread holds still before its new picture is asked for: a slider's ticks come faster. */
 export const SPREAD_SETTLE_MS = 160;
 
-/** Painted pictures by key: a data URL, or null for a state with nothing to draw. */
-const pictures = createStore<{ byKey: ReadonlyMap<string, string | null> }>(() => ({ byKey: new Map() }));
+/**
+ * Painted pictures by key: a data URL, or null for a state with nothing to
+ * draw; and the keys whose paint or ask failed, while a card wants them.
+ */
+const pictures = createStore<{ byKey: ReadonlyMap<string, string | null>; failed: ReadonlySet<string> }>(() => ({
+  byKey: new Map(),
+  failed: new Set(),
+}));
 
 interface PaintJob {
   key: string;
@@ -97,8 +103,26 @@ function want(key: string): void {
 
 function release(key: string): void {
   const count = (wanted.get(key) ?? 0) - 1;
-  if (count > 0) wanted.set(key, count);
-  else wanted.delete(key);
+  if (count > 0) {
+    wanted.set(key, count);
+    return;
+  }
+  wanted.delete(key);
+  // No card says it failed any more: one that wants it later asks again.
+  if (pictures.getState().failed.has(key)) pictures.setState({ failed: without(pictures.getState().failed, [key]) });
+}
+
+/** Mark the keys a card wants as failed: those cards stop waiting for them. */
+function fail(keys: readonly string[]): void {
+  const failing = keys.filter((key) => wanted.has(key));
+  if (failing.length === 0) return;
+  pictures.setState({ failed: new Set([...pictures.getState().failed, ...failing]) });
+}
+
+function without(set: ReadonlySet<string>, keys: readonly string[]): ReadonlySet<string> {
+  const next = new Set(set);
+  for (const key of keys) next.delete(key);
+  return next;
 }
 
 /** Forget a key that is neither painted nor wanted. */
@@ -136,13 +160,15 @@ function keep(painted: readonly { key: string; url: string | null }[]): void {
     forget(oldest);
     chars -= url?.length ?? 0;
   }
-  pictures.setState({ byKey: next });
+  const { failed } = pictures.getState();
+  pictures.setState({ byKey: next, failed: painted.some(({ key }) => failed.has(key)) ? without(failed, [...fresh]) : failed });
 }
 
 function drain(): void {
   scheduled = false;
   const start = performance.now();
   const painted: { key: string; url: string | null }[] = [];
+  const failed: string[] = [];
   while (performance.now() - start < SLICE_MS) {
     const job = queue.shift();
     if (!job) break;
@@ -154,11 +180,13 @@ function drain(): void {
     try {
       painted.push({ key: job.key, url: foldStatePictureUrl(job.scene, job.style, job.display, job.spread) });
     } catch (error) {
-      // Not the user's to act on: the card keeps its blank, and asks again when it next mounts.
+      // Not the user's to act on: the card says it can't be drawn, and asks again when it next mounts.
+      failed.push(job.key);
       reportError(error, { surface: 'fold:card-picture' });
     }
   }
   if (painted.length > 0) keep(painted);
+  fail(failed);
   if (queue.length > 0) schedule();
 }
 
@@ -206,6 +234,7 @@ export function requestFoldCardPicture(
     (error: unknown) => {
       asked.delete(key);
       forget(key);
+      fail([key]);
       reportError(error, { surface: 'fold:card-picture' });
     }
   );
@@ -227,7 +256,7 @@ export function clearFoldCardPictures(): void {
   currentLook = '';
   wanted.clear();
   carded.clear();
-  pictures.setState({ byKey: new Map() });
+  pictures.setState({ byKey: new Map(), failed: new Set() });
 }
 
 /** The picture a card shows, kept by the state and the look it is of. */
@@ -238,9 +267,9 @@ interface ShownPicture {
 
 /**
  * A card's picture, in the style the app shows paper in and under the panes'
- * display switches: a data URL; null for a state with nothing to draw, or no
- * state; undefined while it is being painted. Asks for it as the card mounts,
- * and again when the style or the switches change.
+ * display switches: a data URL; null for a state with nothing to draw, no
+ * state, or a paint that failed; undefined while it is being painted. Asks
+ * for it as the card mounts, and again when the style or the switches change.
  *
  * A new spread of the state on the card is no new picture to wait blank for:
  * the card keeps its last one of that state in this look, and asks for the
@@ -253,6 +282,7 @@ export function useFoldCardPicture(source: FoldCardPictureSource | null): string
   const key = source ? pictureKey(source, foldStatePictureKey(style, display)) : null;
   const stateLook = key === null ? null : stateLookOf(key);
   const picture = useStore(pictures, (snapshot) => (key === null ? null : snapshot.byKey.get(key)));
+  const failed = useStore(pictures, (snapshot) => key !== null && snapshot.failed.has(key));
   const [shown, setShown] = useState<ShownPicture | null>(null);
   // Adjusted during render, so the frame that brings the new picture shows it.
   if (stateLook !== null && picture !== undefined && (shown?.stateLook !== stateLook || shown.url !== picture)) {
@@ -275,5 +305,7 @@ export function useFoldCardPicture(source: FoldCardPictureSource | null): string
     const settled = setTimeout(ask, SPREAD_SETTLE_MS);
     return () => clearTimeout(settled);
   }, [session, source, style, display, picture, respread]);
-  return picture !== undefined ? picture : last ? last.url : undefined;
+  if (picture !== undefined) return picture;
+  if (failed) return null;
+  return last ? last.url : undefined;
 }
