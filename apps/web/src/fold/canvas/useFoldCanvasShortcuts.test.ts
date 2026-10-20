@@ -160,8 +160,8 @@ describe('the Fold canvas’s keys', () => {
 
   it('gives every rail tool, line mode and sequence verb a key under the left hand', () => {
     const key = (id: Parameters<typeof shortcutLabelForAction>[0]) => shortcutLabelForAction(id);
-    // The folds, as Edit's line types: A mountain, S valley; D precrease.
-    expect([key('fold.toolMountain'), key('fold.toolValley'), key('fold.toolPrecrease')]).toEqual(['A', 'S', 'D']);
+    // The folds, in the rail's order: A valley, S mountain; D precrease.
+    expect([key('fold.toolValley'), key('fold.toolMountain'), key('fold.toolPrecrease')]).toEqual(['A', 'S', 'D']);
     expect(
       Object.fromEntries(
         (
@@ -230,7 +230,7 @@ describe('the fold scope’s shared executor', () => {
     const steps = vi.fn((id: string) => id === 'fold.commit');
     const offTools = registerFoldKeyHandler(tools);
     const offSteps = registerFoldKeyHandler(steps);
-    expect(press('s')).toBe(true);
+    expect(press('a')).toBe(true);
     expect(tools).toHaveBeenCalledWith('fold.toolValley');
     expect(press('Enter')).toBe(true);
     expect(steps).toHaveBeenCalledWith('fold.commit');
@@ -239,7 +239,7 @@ describe('the fold scope’s shared executor', () => {
     expect(press('Enter')).toBe(true);
     offSteps();
     // With none left to claim it, the key falls through.
-    expect(press('s')).toBe(false);
+    expect(press('a')).toBe(false);
     offScope();
   });
 });

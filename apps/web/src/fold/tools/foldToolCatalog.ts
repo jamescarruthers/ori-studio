@@ -262,7 +262,7 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Partial<Record<FoldToolId, FoldShortc
   unsink: 'fold.toolUnsink',
   // Rotate, on R as the rotation was when it was done at once.
   rotate: 'fold.rotate',
-  // The sequence tools, unbound until the user gives them a key.
+  // The sequence tools, on Shift+E and Shift+R.
   'unfold-to': 'fold.toolUnfoldTo',
   repeat: 'fold.toolRepeat',
 };

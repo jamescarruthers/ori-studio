@@ -5,7 +5,13 @@ import type { FoldOrderResolution } from '../../fold/orders/useFoldOrderResoluti
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, RotateCcw, RotateCw } from 'lucide-react';
 import type { TurnDirection, TurnRotationPreset } from '../../lib/steps/turn';
-import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
+import {
+  FOLD_TOOL_SHORTCUTS,
+  type FoldKeyLabel,
+  type FoldKind,
+  type FoldShortcutId,
+  type FoldToolId,
+} from '../../fold/tools/foldToolCatalog';
 import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
 import type { FoldExtentMode } from '../../fold/tools/precrease/precreaseExtent';
 import type { FoldKindChoice } from '../../fold/tools/reverse/reverseToolWindow';
@@ -133,6 +139,10 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
+  // The tool's own key beside its name, so a key that took another tool is seen at once. Not on a phone: no keys.
+  const toolShortcut = tool !== undefined && tool in FOLD_TOOL_SHORTCUTS ? FOLD_TOOL_SHORTCUTS[tool as FoldToolId] : undefined;
+  const toolKey = !phone && toolShortcut ? keyLabel?.(toolShortcut) : undefined;
+  const windowTitle = toolKey ? `${model.title} · ${toolKey}` : model.title;
   const {
     instructions,
     lineMode,
@@ -158,7 +168,7 @@ export function FoldToolWindow({
     <ToolHintWindow
       container={container}
       collapseKey={STORAGE_KEYS.foldToolHintCollapsed}
-      title={model.title}
+      title={windowTitle}
       meta={model.meta}
       ariaLabel={t('tools:fold.window.label', 'Fold tool options')}
       // A phone's pane is the paper the tool picks points on: the open window

@@ -38,9 +38,9 @@ describe('web menu definition', () => {
       );
     };
     expect(rows()).toMatchObject({
-      // Edit's line types: A mountain, S valley; D the precrease.
-      'fold.valley': 'S',
-      'fold.mountain': 'A',
+      // The rail's order: A valley, S mountain; D the precrease.
+      'fold.valley': 'A',
+      'fold.mountain': 'S',
       'fold.precrease': 'D',
       'fold.turn-over': 'T',
       // Rotate takes its tool in hand, as R does.

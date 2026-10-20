@@ -837,8 +837,10 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   // The canvas's tools, every one under the left hand while the right holds
   // the pointer, as Edit's layout is (`ORIEDITA_DEFAULTS`):
   //
-  // - the home row the folds made most: A mountain, S valley, as Edit's line
-  //   types; D precrease; F reverse fold; G squash fold;
+  // - the home row the folds made most, in the rail's order: A valley,
+  //   S mountain, D precrease; F reverse fold; G squash fold. The keys follow
+  //   the buttons on screen, so A is the first: Edit's line types run
+  //   mountain first, and its A and S follow its own order (owner, 2026-10-20);
   // - the row above: Q pleat, W swivel, E a precrease's extent, R Rotate,
   //   T Turn over;
   // - the row below: Z a free line, as Edit's free line is; X swaps the moving
@@ -854,8 +856,8 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   // shadow the viewport's digit keys (pan, rotate, zoom), whose verbs the
   // canvas reaches by ⌘= / ⌘−, the toolbar and a pinch — the shadowing D14
   // left to the design, which numbers the line modes.
-  foldShortcut('fold.toolMountain', 'Mountain Fold', { key: 'a' }),
-  foldShortcut('fold.toolValley', 'Valley Fold', { key: 's' }),
+  foldShortcut('fold.toolValley', 'Valley Fold', { key: 'a' }),
+  foldShortcut('fold.toolMountain', 'Mountain Fold', { key: 's' }),
   foldShortcut('fold.toolPrecrease', 'Precrease', { key: 'd' }),
   foldShortcut('fold.toolInsideReverse', 'Reverse Fold', { key: 'f' }),
   foldShortcut('fold.toolSquash', 'Squash Fold', { key: 'g' }),
