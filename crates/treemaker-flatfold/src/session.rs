@@ -26,7 +26,12 @@
 //!    variables of two of them is dead (all its completions are valid), and
 //!    stays dead whatever else is assigned. A seed's propagation therefore
 //!    stays inside its component, and only the components it reached are
-//!    searched again; the others keep their order.
+//!    searched again; the others keep their order. This rests on every
+//!    constraint being listed in the bucket of every variable it reads, as
+//!    upstream lists it: a constraint missing from one variable's bucket is
+//!    never seen from that variable, and could join two components that
+//!    look independent. The open refuses such a problem
+//!    ([`VariableConstraints`](crate::VariableConstraints)).
 //! 4. Each reached component is searched for one order, first with its new
 //!    seeds' faces' pairs first, then in the open's order, each within a
 //!    small node budget, and each with the preferred order's values and then
@@ -199,6 +204,10 @@ enum Attempt {
 impl CompletionSession {
     /// Validate `problem`, propagate its fixed orders, split what is left
     /// and find a first order, one per component, within `budget`.
+    ///
+    /// Besides what [`complete_layer_order`](crate::complete_layer_order)
+    /// validates, refuses a constraint missing from the bucket of a variable
+    /// it reads (the module docs, step 3).
     pub fn open(
         problem: CompletionProblem,
         budget: SearchBudget,
@@ -213,6 +222,7 @@ impl CompletionSession {
         dense_limit: usize,
     ) -> CompletionResult<SessionStart> {
         let input = SearchInput::with_dense_limit(&problem, dense_limit)?;
+        input.check_every_bucket()?;
         let fixed = fixed_orders(&problem)?;
         let CompletionProblem {
             faces_cells,
@@ -1025,6 +1035,121 @@ mod tests {
             panic!("expected a fit");
         };
         assert_eq!(cold.order, session.first());
+    }
+
+    /// `problem` with every constraint also listed in the bucket of each
+    /// variable it reads.
+    fn in_every_bucket(problem: &CompletionProblem) -> CompletionProblem {
+        fn spread<const N: usize>(
+            variables: &[[usize; 2]],
+            family: usize,
+            constraints: &mut [VariableConstraints],
+            bucket: fn(&mut VariableConstraints) -> &mut Vec<[usize; N]>,
+        ) {
+            let listed: Vec<[usize; N]> = constraints
+                .iter_mut()
+                .flat_map(|buckets| bucket(buckets).clone())
+                .collect();
+            for faces in listed {
+                for &[a, b] in crate::tables::pairs_for_type(family, &faces).as_slice() {
+                    let pair = [a.min(b), a.max(b)];
+                    let variable = variables
+                        .iter()
+                        .position(|p| *p == pair)
+                        .unwrap_or_else(|| panic!("no {pair:?}"));
+                    let into = bucket(&mut constraints[variable]);
+                    if !into.contains(&faces) {
+                        into.push(faces);
+                    }
+                }
+            }
+        }
+        let mut whole = problem.clone();
+        let variables = whole.variables.clone();
+        let buckets = &mut whole.constraints;
+        spread(&variables, constraints::TACO_TACO, buckets, |b| {
+            &mut b.taco_taco
+        });
+        spread(&variables, constraints::TACO_TORTILLA, buckets, |b| {
+            &mut b.taco_tortilla
+        });
+        spread(&variables, constraints::TORTILLA_TORTILLA, buckets, |b| {
+            &mut b.tortilla_tortilla
+        });
+        whole
+    }
+
+    /// The independent review's smallest case (`review/fold-solver-perf`,
+    /// `asym` mode): each constraint listed only in the bucket of the last
+    /// variable it reads. Opened anyway, a session took the two stacks for
+    /// independent and answered "no" to seeding variable 3, where completing
+    /// from scratch over the same buckets finds an order.
+    #[test]
+    fn a_constraint_missing_from_a_bucket_it_reads_is_refused() {
+        let problem: CompletionProblem = serde_json::from_str(
+            r#"{
+                "variables": [[0, 1], [0, 2], [1, 2], [3, 4], [3, 5], [3, 6], [4, 5], [4, 6], [5, 6]],
+                "constraints": [
+                    {"taco_taco": [], "taco_tortilla": [], "tortilla_tortilla": []},
+                    {"taco_taco": [], "taco_tortilla": [[2, 1, 0]], "tortilla_tortilla": []},
+                    {"taco_taco": [], "taco_tortilla": [[0, 1, 2]], "tortilla_tortilla": []},
+                    {"taco_taco": [], "taco_tortilla": [], "tortilla_tortilla": []},
+                    {"taco_taco": [], "taco_tortilla": [], "tortilla_tortilla": []},
+                    {"taco_taco": [], "taco_tortilla": [], "tortilla_tortilla": []},
+                    {"taco_taco": [], "taco_tortilla": [],
+                     "tortilla_tortilla": [[0, 5, 2, 4], [5, 1, 4, 2]]},
+                    {"taco_taco": [], "taco_tortilla": [],
+                     "tortilla_tortilla": [[1, 6, 0, 4], [4, 4, 3, 6], [5, 4, 3, 6]]},
+                    {"taco_taco": [[6, 5, 4, 3], [3, 6, 5, 4], [5, 4, 6, 3], [4, 3, 6, 5]],
+                     "taco_tortilla": [[6, 3, 5]],
+                     "tortilla_tortilla": [[6, 2, 5, 0], [0, 5, 2, 6]]}
+                ],
+                "faces_cells": [[0], [0], [0], [1], [1], [1], [1]],
+                "cells_faces": [[0, 1, 2], [3, 4, 5, 6]],
+                "fixed": []
+            }"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let seed = [(3, PairOrder::FirstAbove)];
+        // Completing runs upstream's procedure over the buckets as given,
+        // as before.
+        assert!(feasible_from_scratch(&problem, &seed));
+        for dense_limit in [usize::MAX, 0] {
+            match CompletionSession::open_with_tables(
+                problem.clone(),
+                SearchBudget::default(),
+                dense_limit,
+            ) {
+                Err(CompletionError::InvalidProblem(message)) => assert!(
+                    message.starts_with("taco-taco [3, 6, 5, 4] reads variable 5 ([3, 6])"),
+                    "{message}"
+                ),
+                other => panic!("expected a refusal, got {other:?}"),
+            }
+        }
+        // A constraint listed twice in one bucket is still listed in each.
+        let mut twice = two_stacks();
+        let zero_two = twice.variables.iter().position(|p| *p == [0, 2]);
+        let bucket = &mut twice.constraints[zero_two.unwrap_or_else(|| panic!("no [0, 2]"))];
+        bucket.tortilla_tortilla.push(bucket.tortilla_tortilla[0]);
+        open(&twice, usize::MAX);
+        // Listed in every bucket they read, the same constraints open, and a
+        // check agrees with completing from scratch on every seed.
+        let whole = in_every_bucket(&problem);
+        let session = open(&whole, usize::MAX);
+        for variable in 0..whole.variables.len() {
+            for order in [PairOrder::FirstAbove, PairOrder::SecondAbove] {
+                let fits = matches!(
+                    session.check(&[(variable, order)], &CheckOptions::default()),
+                    Ok(CheckOutcome::Fits(_))
+                );
+                assert_eq!(
+                    fits,
+                    feasible_from_scratch(&whole, &[(variable, order)]),
+                    "{variable} {order:?}"
+                );
+            }
+        }
     }
 
     #[test]

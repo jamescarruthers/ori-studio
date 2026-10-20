@@ -17,7 +17,7 @@ use crate::constraints::{
     self, ImplicationMaps, InitialPropagation, Key, NodeMeter, SearchTables, SeedConflict,
     TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TransitivityCounts, TransitivitySource,
 };
-use crate::tables::{DENSE_FACE_LIMIT, SearchData, SearchDataBuilder};
+use crate::tables::{DENSE_FACE_LIMIT, OneSided, SearchData, SearchDataBuilder, faces_vec};
 use crate::{Analysis, FlatFoldError, SolutionLimit, math};
 
 /// Which of Flat-Folder's constraint families a constraint belongs to.
@@ -103,7 +103,12 @@ pub struct FixedAssignment {
 
 /// The constraints one variable takes part in, by family, in Flat-Folder's
 /// face conventions (`constraints.js` `pair_maps`). A constraint is listed in
-/// the bucket of every variable it reads.
+/// the bucket of every variable it reads, as upstream's `add_constraint`
+/// lists it. [`complete_layer_order`] runs upstream's procedure over the
+/// buckets as given and does not check this;
+/// [`CompletionSession::open`](crate::CompletionSession::open) refuses a
+/// problem that breaks it, because its components are only independent when
+/// it holds.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VariableConstraints {
     /// `[A, B, C, D]`: tacos A–B and C–D whose creases cross. Reads A–B, C–D,
@@ -559,6 +564,27 @@ impl SearchInput {
         Ok(Self {
             data: builder.finish(),
         })
+    }
+
+    /// Refuse a constraint missing from the bucket of a variable it reads
+    /// (see [`VariableConstraints`]): what a session needs on top of what
+    /// [`complete_layer_order`] checks.
+    pub(crate) fn check_every_bucket(&self) -> CompletionResult<()> {
+        let Some(OneSided {
+            family,
+            faces,
+            variable,
+        }) = self.data.one_sided_constraint()
+        else {
+            return Ok(());
+        };
+        let [a, b] = self.data.faces(variable);
+        Err(invalid(format!(
+            "{} {:?} reads variable {variable} ([{a}, {b}]) but is not in its bucket; \
+             a session needs every constraint in the bucket of every variable it reads",
+            ConstraintKind::from_type(family).name(),
+            faces_vec(family, &faces),
+        )))
     }
 
     pub(crate) fn tables<'a>(

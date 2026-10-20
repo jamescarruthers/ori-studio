@@ -381,6 +381,94 @@ impl SearchData {
     pub(crate) fn components(&self) -> &TacoComponents {
         &self.components
     }
+
+    /// The first constraint, by family and then by faces, that a variable it
+    /// reads does not list in its bucket, or `None` when every constraint is
+    /// listed by all of its variables, as upstream's `add_constraint` lists
+    /// it. Each family's listings are sorted by faces, then by the variable
+    /// listing them; a listing repeated in one bucket counts once.
+    pub(crate) fn one_sided_constraint(&self) -> Option<OneSided> {
+        // A listing: the faces as two keys that sort as the faces do, and
+        // the variable whose bucket lists them.
+        let pack = |faces: &Faces| {
+            (
+                (u64::from(faces[0]) << 32) | u64::from(faces[1]),
+                (u64::from(faces[2]) << 32) | u64::from(faces[3]),
+            )
+        };
+        let unpack = |(high, low): (u64, u64)| -> Faces {
+            [
+                (high >> 32) as u32,
+                high as u32,
+                (low >> 32) as u32,
+                low as u32,
+            ]
+        };
+        let mut listed: Vec<(u64, u64, usize)> = Vec::new();
+        let mut starts: Vec<usize> = Vec::new();
+        for family in [TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA] {
+            let listings = (0..self.pairs.len())
+                .flat_map(|v| self.bucket(v, family).iter().map(move |faces| (faces, v)));
+            // Group by first face (count, then place), so that one sort per
+            // group puts the whole family in order: half the time of one
+            // sort over all of it on the iguana.
+            let groups = listings
+                .clone()
+                .map(|(faces, _)| faces[0] as usize + 1)
+                .max()
+                .unwrap_or(0);
+            starts.clear();
+            starts.resize(groups + 1, 0);
+            for (faces, _) in listings.clone() {
+                starts[faces[0] as usize + 1] += 1;
+            }
+            for group in 1..starts.len() {
+                starts[group] += starts[group - 1];
+            }
+            listed.clear();
+            listed.resize(starts[groups], (0, 0, 0));
+            let mut next = starts.clone();
+            for (faces, v) in listings {
+                let at = &mut next[faces[0] as usize];
+                let (high, low) = pack(faces);
+                listed[*at] = (high, low, v);
+                *at += 1;
+            }
+            for group in starts.windows(2) {
+                let group = &mut listed[group[0]..group[1]];
+                group.sort_unstable();
+                for same in group.chunk_by(|x, y| (x.0, x.1) == (y.0, y.1)) {
+                    let faces = unpack((same[0].0, same[0].1));
+                    for &[a, b] in pairs_of(family, &faces).as_slice() {
+                        let Some(variable) = self.lookup.get(a, b) else {
+                            continue;
+                        };
+                        if same
+                            .binary_search_by_key(&variable, |&(_, _, v)| v)
+                            .is_err()
+                        {
+                            return Some(OneSided {
+                                family,
+                                faces,
+                                variable,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+/// A constraint missing from the bucket of a variable it reads
+/// ([`SearchData::one_sided_constraint`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct OneSided {
+    pub(crate) family: usize,
+    pub(crate) faces: Faces,
+    /// A variable the constraint reads whose bucket does not list it.
+    pub(crate) variable: usize,
 }
 
 /// A constraint's faces as upstream decodes its key: the family's arity.

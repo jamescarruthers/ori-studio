@@ -1115,6 +1115,16 @@ same node budget; past that it answers "undecided", never "no order". Its
 verdicts are checked against completing from scratch with the seeds added
 (`solver_session_check`, the module's randomized unit test).
 
+The open also refuses (`InvalidProblem`) a problem with a constraint
+missing from the bucket of a variable it reads. `complete_layer_order`
+accepts such a problem and runs upstream's procedure over the buckets as
+given, as before; but the session's components are only independent when
+every constraint is listed by all of its variables, as upstream's
+`add_constraint` lists it. No product path builds such a problem; an
+independent review built them on purpose, and a session opened over them
+disagreed with completing from scratch. The check costs about 21 ms of the
+iguana's 1 s open.
+
 That caller-built constraints avoid both arrangement failures above is still
 **[derived]**: neither goes through Flat-Folder's arrangement. The `verify`
 oracle is the check.
