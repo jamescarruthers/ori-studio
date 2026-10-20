@@ -82,8 +82,12 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
   const title = t('panels:fold.repeat.title', 'Repeat on the other side');
   const startWith = t('panels:fold.repeat.from', 'Start with');
 
-  const picture = m.baseline && (
-    <AxisPicture scene={m.baseline} axis={m.axes[m.axis]?.display} size={phone ? 'thumb' : 'full'} />
+  const pictureSize = phone ? 'thumb' : 'full';
+  const picture = m.baseline ? (
+    <AxisPicture scene={m.baseline} axis={m.axes[m.axis]?.display} size={pictureSize} />
+  ) : (
+    // Holds the picture's room while the model loads, so the controls beside it stay under the pointer.
+    <span className={styles.picture} data-size={pictureSize} aria-hidden="true" />
   );
   const firstSelect = (
     <Select value={m.first} onValueChange={m.setFirst} disabled={m.busy}>
