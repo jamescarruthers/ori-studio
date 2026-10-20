@@ -40,6 +40,7 @@ import { useFoldFanMarks } from '../../../fold/canvas/vertex/useFoldFanMarks';
 import { useFoldPetalMarks } from '../../../fold/canvas/vertex/useFoldPetalMarks';
 import { useFoldSwivelMarks } from '../../../fold/canvas/vertex/useFoldSwivelMarks';
 import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
+import { swivelMeetingMarks } from '../../../fold/canvas/vertex/swivelMeeting';
 import { foldPaneOverlay, joinFills } from '../../../fold/canvas/foldPaneOverlays';
 import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
@@ -202,7 +203,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     () => (repeatDrawn && inks ? repeatDrawnOverlay(view.index, sheetOutline, repeatDrawn, inks.overlay) : null),
     [repeatDrawn, inks, view.index, sheetOutline]
   );
-  const vertexMarks = drawnMarks?.folded ?? previewMarks ?? swivelMarks.marks;
+  // Where a swivel's valley meets a folded edge, while its mountain is located from there.
+  const meetingMarks = useMemo(
+    () => swivelMeetingMarks(paneSpread.index, toolState, inks?.overlay ?? null),
+    [paneSpread.index, toolState, inks]
+  );
+  const vertexMarks = drawnMarks?.folded ?? previewMarks ?? swivelMarks.marks ?? meetingMarks;
   const swivelOffered = swivelMarks.offered;
   // A partial precrease's line on each pane, and its points along it.
   const along = useMemo(

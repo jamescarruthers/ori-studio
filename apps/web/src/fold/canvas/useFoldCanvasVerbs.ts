@@ -93,6 +93,7 @@ import {
 } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 import type { FoldStateView } from './useFoldStateView';
+import { swivelMeetingPick, swivelMeetings } from './vertex/swivelMeeting';
 
 /** A free point: Alt held, or on a touch screen its latch. */
 export function freePointHeld(): boolean {
@@ -641,6 +642,14 @@ export function useFoldCanvasVerbs(
           return interval === null ? { pane, at, pick: null } : { pane, at, pick: null, interval };
         }
         const free = freePointHeld();
+        // A swivel's mountain runs from where its valley meets a folded
+        // edge: near there, a point the mountain's line takes is that point
+        // exactly, unless a free point is asked for, or a free line's end
+        // snaps to nothing.
+        const valley = tool.tool === 'swivel' ? tool.swivelValley : undefined;
+        const snaps = !free && (step.snap !== 'free' || (step.snapFree === true && tool.freeLineSnap));
+        const meeting = valley && snaps ? swivelMeetingPick(swivelMeetings(index, valley.sceneLine), pane, at, radii.point, step.snap) : null;
+        if (meeting) return { pane, at, pick: meeting };
         // A swivel's meeting point from which nothing can swing: a click
         // picks another point in its place, as its first click would.
         const reach = live.current.preview.vertex?.reach ?? null;
