@@ -198,7 +198,8 @@ describe.skipIf(!available)('merging a precrease and its mirror image into one D
     expect(a![0]).toBeCloseTo(1 - b![1], 3);
     expect(a![1]).toBeCloseTo(1 - b![0], 3);
     expect(merged.annotations.every((mark) => !mark.unknown && mark.imported === 'untouched')).toBe(true);
-    expect(merged.text).toBe(`${single.text} Do this on both sides.`);
+    expect(single.text).toBe('Fold and unfold.');
+    expect(merged.text).toBe('Fold and unfold on both sides.');
     expect(statusOf(merged)).toBe('current');
 
     // As a crease pattern, both creases are the instruction.
@@ -216,9 +217,8 @@ describe.skipIf(!available)('merging a precrease and its mirror image into one D
     expect(await pullFromFold([target], { kind: 'end' }, { via: 'diagram_browser' })).toBe(1);
     const merged = diagramSteps()[0]!;
     expect(kinds(merged).filter((kind) => kind === 'fold-unfold-arrow')).toHaveLength(4);
-    // Both precreases said, once each, for both sides.
-    expect(merged.text.split('. ').length).toBeGreaterThanOrEqual(3);
-    expect(merged.text.endsWith(' Do this on both sides.')).toBe(true);
+    // Precreases of one kind, said once, for both sides.
+    expect(merged.text).toBe('Fold and unfold on both sides.');
     // The states the Repeat's later steps were drawn on are let go.
     const live = await held.session!.withNode(null, (engine) => engine.live());
     await pullFromFold([target], { kind: 'end' }, { via: 'diagram_browser' });
@@ -231,7 +231,7 @@ describe.skipIf(!available)('merging a precrease and its mirror image into one D
     expect(await pullFromFold([target], { kind: 'end' }, { via: 'diagram_browser' })).toBe(1);
     const merged = diagramSteps()[0]!;
     expect(kinds(merged).filter((kind) => kind === 'fold-unfold-arrow')).toHaveLength(2);
-    expect(merged.text.endsWith(' Do this on both sides.')).toBe(true);
+    expect(merged.text).toBe('Fold and unfold on both sides.');
     expect(statusOf(merged)).toBe('current');
   });
 

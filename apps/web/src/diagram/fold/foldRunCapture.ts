@@ -30,9 +30,9 @@ import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import type { FoldSession } from '../../fold/session/foldSession';
 import { FOLD_SCENE_QUERY } from '../../fold/session/foldStateQueries';
-import { foldStepSentence } from '../../fold/stepSentence';
 import type { Point } from '../../lib/geometry';
-import { isMergeableRun, isPrecreaseStep, mergedPrecreaseSentence } from './foldPrecreaseMerge';
+import { foldDiagramMergedSentence } from './foldDiagramSentence';
+import { isMergeableRun, isPrecreaseStep } from './foldPrecreaseMerge';
 import { foldStepAction, type FoldStepAction } from './foldStepMarkPlan';
 import { captureRefusal, type FoldStepCaptureInput, type FoldStepCaptureRefusal } from './foldStepCapture';
 
@@ -148,15 +148,12 @@ export async function readFoldRunCapture(
     actions.push(...seen.map(({ action, view }) => actionSeenIn(action, view, shown.view_transform)));
   }
   // Its words: each step it is made from, the mirror — the last — left out, said once for both sides.
-  const sentences = run.slice(0, -1).map((node, index) =>
-    foldStepSentence(
-      t,
-      foldNodeSentenceStep(node, {
-        parent: foldStateFrame(scenes[index]!),
-        child: foldStateFrame(scenes[index + 1]!),
-        report: readies[index]!.folded,
-      })
-    )
+  const words = run.slice(0, -1).map((node, index) =>
+    foldNodeSentenceStep(node, {
+      parent: foldStateFrame(scenes[index]!),
+      child: foldStateFrame(scenes[index + 1]!),
+      report: readies[index]!.folded,
+    })
   );
   const { summary, engineVersion } = facts.value;
   return {
@@ -173,7 +170,7 @@ export async function readFoldRunCapture(
       parent: shown,
       node: run[0]!,
       engineVersion,
-      run: { last, sentence: mergedPrecreaseSentence(t, sentences) },
+      run: { last, sentence: foldDiagramMergedSentence(t, words) },
     },
   };
 }

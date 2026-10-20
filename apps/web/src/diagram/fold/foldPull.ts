@@ -4,8 +4,8 @@
  * path as cards, and what each adds.
  *
  * - **A fold** becomes a step showing the state before it, folded, its line
- *   and arrow as the step's marks, its sentence as the step's words — as a
- *   References card shows its step.
+ *   and arrow as the step's marks, its kind as the step's words
+ *   (`foldDiagramSentence`) — as a References card shows its step.
  * - **A turn or a rotation** becomes a turn between steps (D22), as a
  *   References turn-over card does.
  * - **Finished**, after the last fold, is the state the path ends at, with no
@@ -23,7 +23,6 @@ import { foldStateSpread, foldStepSpread } from '../../fold/document/foldStepSpr
 import { foldCardPictureSource, type FoldCardPictureSource } from '../../fold/sequence/foldCardPictureSource';
 import type { FoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
 import type { FoldSession } from '../../fold/session/foldSession';
-import { foldStepSentence } from '../../fold/stepSentence';
 import type { TurnKind } from '../../lib/steps/turn';
 import { turnName } from '../../lib/steps/turnWords';
 import {
@@ -35,7 +34,8 @@ import {
   type SentFoldStep,
 } from '../document/diagramDocument';
 import type { PullCard } from '../references/referencesBrowserSelection';
-import { mergedPrecreaseSentence, type FoldPrecreaseMerge } from './foldPrecreaseMerge';
+import { foldDiagramMergedSentence, foldDiagramSentence } from './foldDiagramSentence';
+import type { FoldPrecreaseMerge } from './foldPrecreaseMerge';
 import { captureFoldStep } from './foldStepCapture';
 
 /**
@@ -133,7 +133,8 @@ export function foldBrowserCards(
 ): FoldBrowserCard[] {
   const cards: FoldBrowserCard[] = [];
   const mergeAt = new Map(merges.map((merge) => [merge.steps[0], merge]));
-  const sentenceAt = (index: number) => foldStepSentence(t, words[index] ?? { op: 'unknown' });
+  // The words each card's step will take: the Diagram's (`foldDiagramSentence`), not the strip's lettered ones.
+  const wordsAt = (index: number) => words[index] ?? { op: 'unknown' as const };
   for (let index = 0; index < entries.length; index += 1) {
     const entry = entries[index]!;
     const node = entry.node;
@@ -148,7 +149,7 @@ export function foldBrowserCards(
         number: entry.number,
         ...(last.number !== null ? { through: last.number } : {}),
         // The steps it is made from, the mirror left out: its words are said once, for both sides.
-        sentence: mergedPrecreaseSentence(t, run.slice(0, -1).map((_, k) => sentenceAt(index + k))),
+        sentence: foldDiagramMergedSentence(t, run.slice(0, -1).map((_, k) => wordsAt(index + k))),
         picture: entryPicture(document, last, last.id!, failed),
         step: run.every(landed) ? { kind: 'step', step: entry.id, through: last.id!, moment: 'before' } : null,
       });
@@ -172,7 +173,7 @@ export function foldBrowserCards(
       index: cards.length,
       kind: 'fold',
       number: entry.number,
-      sentence: sentenceAt(index),
+      sentence: foldDiagramSentence(t, wordsAt(index)),
       picture,
       step: landed(entry) ? { kind: 'step', step: entry.id, moment: 'before' } : null,
     });
@@ -201,7 +202,7 @@ export interface FoldPulled {
 /**
  * What pulling `targets` adds, in order: each step captured from the
  * session's replay folded, as Fold shows it, spread as Fold spreads it
- * ({@link foldPullRender}) — its marks lifted, its words Fold's — and each
+ * ({@link foldPullRender}) — its marks lifted, its words the Diagram's — and each
  * turn as a turn. A step whose capture fails is left out
  * and counted; so is one too detailed to keep as a drawing, which a pull
  * has no bitmap for.

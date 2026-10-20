@@ -22,7 +22,7 @@ import { foldStepReady, type FoldStepReady, type FoldStepWaitRefusal } from '../
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import type { FoldSession } from '../../fold/session/foldSession';
-import { foldStepSentence } from '../../fold/stepSentence';
+import type { FoldSentenceStep } from '../../fold/stepSentence';
 import { xmlText } from '../../lib/xmlEscape';
 import type { CapturedPicture } from '../capture/captureFolded';
 import {
@@ -34,6 +34,7 @@ import {
   type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { storedFoldStepSource } from '../document/diagramFile';
+import { foldDiagramSentence } from './foldDiagramSentence';
 import { foldStepAction } from './foldStepMarkPlan';
 import { foldStepPicture, type FoldStepPictureInput } from './foldStepPicture';
 import { foldRepeatCallout } from './foldRepeatCallout';
@@ -68,16 +69,13 @@ export type FoldStepCaptureResult =
   | { status: 'unknown'; why: 'not-shown' | 'locked' | 'unavailable' };
 
 /**
- * The step's sentence, as Fold words it in its strip: from the states either
- * side of it and what the fold did. Absent for the state after the step,
- * whose words are the author's (the Finished step a pull ends with).
+ * The step's instruction, as the Diagram words it (`foldDiagramSentence`):
+ * the fold's kind, read from the states either side of it and what the fold
+ * did. Absent for the state after the step, whose words are the author's
+ * (the Finished step a pull ends with).
  */
-function sentenceOf(
-  t: TFunction,
-  moment: DiagramFoldMoment,
-  words: Parameters<typeof foldStepSentence>[1]
-): string | undefined {
-  return moment === 'before' ? xmlText(foldStepSentence(t, words)) : undefined;
+function sentenceOf(t: TFunction, moment: DiagramFoldMoment, words: FoldSentenceStep): string | undefined {
+  return moment === 'before' ? xmlText(foldDiagramSentence(t, words)) : undefined;
 }
 
 /**

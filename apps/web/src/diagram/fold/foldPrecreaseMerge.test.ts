@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 
 import { step, valleyAt } from '../../fold/document/foldSequence.fixtures';
@@ -6,14 +5,10 @@ import type { FoldOp, FoldPrecreaseOp, FoldRepeatOp, FoldStepNode } from '../../
 import type { FoldPullTarget } from './foldPull';
 import {
   isMergeableRun,
-  mergedPrecreaseSentence,
   mergedPullTargets,
   precreaseMergeCandidates,
   resolvePrecreaseMerges,
 } from './foldPrecreaseMerge';
-
-const t = ((_key: string, fallback: string, options?: Record<string, unknown>) =>
-  fallback.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(options?.[name] ?? ''))) as unknown as TFunction;
 
 /** A precrease of the vertical line at `x`, the part left of it moving. */
 const precreaseAt = (x: number, extent?: FoldPrecreaseOp['extent']): FoldPrecreaseOp => ({
@@ -117,12 +112,5 @@ describe('a merge as Send steps to Diagram sends it', () => {
     const targets = [before('s1')];
     expect(mergedPullTargets(targets, [{ steps: ['s1', 's2'], kind: 'mirror' }])).toEqual(targets);
     expect(mergedPullTargets([before('s2')], [{ steps: ['s1', 's2'], kind: 'mirror' }])).toEqual([before('s2')]);
-  });
-});
-
-describe('a merged step’s words', () => {
-  it('says each step it is made from once, then that it is done on both sides', () => {
-    expect(mergedPrecreaseSentence(t, ['Valley fold and unfold.'])).toBe('Valley fold and unfold. Do this on both sides.');
-    expect(mergedPrecreaseSentence(t, ['Crease A.', 'Crease B.'])).toBe('Crease A. Crease B. Do this on both sides.');
   });
 });
