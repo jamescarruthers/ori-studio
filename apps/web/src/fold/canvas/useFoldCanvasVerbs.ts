@@ -603,8 +603,9 @@ export function useFoldCanvasVerbs(
         const index = drawn === undefined ? shown.index : drawn;
         if (!index) return null;
         const tool = state();
-        // Repeat's axis, drawn as a free line on the range's starting state
-        // while it is on show: a line drawn and refused gives way to the next.
+        // Repeat's axis, drawn as a free line on whatever the canvas shows —
+        // the step on screen, or the repeat it previews — while one may be
+        // drawn: a line drawn and refused gives way to the next.
         if (tool.tool === 'repeat') {
           if (!live.current.preview.repeat?.view.drawing) return { pane, at, pick: null };
           const pick = resolveFoldPick(index, pane, at, radii, {

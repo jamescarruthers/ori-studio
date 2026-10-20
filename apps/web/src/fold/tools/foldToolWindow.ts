@@ -20,7 +20,7 @@ import { pleatToolWindow } from './pleat/pleatToolWindow';
  * The Divide line's window says how to use it. Rotate's previews from the
  * start: its amount, exact angle and direction (`tools/rotate/rotateToolWindow`).
  * So do the sequence tools': Unfold to step's step to return to
- * (`fold/return/unfoldToolWindow`), Repeat's range, axis and how it is saved
+ * (`fold/return/unfoldToolWindow`), Repeat's range, axis and how it is added
  * (`fold/repeat/repeatToolWindow`).
  *
  * React-free and store-free: it takes a view and bound verbs and returns data.
@@ -629,7 +629,7 @@ export function foldToolWindow(
   const model = toolWindow(t, view, verbs, host);
   const freeLine = (usesLineMode(view.tool, view.vertex?.swivelInput) && view.lineMode === 'free') ||
     ((view.tool === 'crimp' || view.tool === 'pleat') && (view.lineMode === 'free' || (view.secondLineMode ?? 'free') === 'free')) ||
-    // Repeat's axis, drawn as a free line while the canvas shows the range's starting state.
+    // Repeat's axis, drawn as a free line while one may be drawn.
     (view.tool === 'repeat' && view.repeat?.drawing === true);
   if (!model || !freeLine || view.freeLineSnap === undefined || !verbs.setFreeLineSnap) return model;
   return { ...model, freeLineSnap: {

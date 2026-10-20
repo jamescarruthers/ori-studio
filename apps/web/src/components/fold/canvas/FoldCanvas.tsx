@@ -55,7 +55,8 @@ import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
 import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
-import { repeatAxisOverlay } from '../../../fold/repeat/repeatAxisOverlay';
+import { repeatDrawnOverlay } from '../../../fold/repeat/repeatCanvas';
+import { useFoldRepeatCreases } from '../../../fold/repeat/useFoldRepeatCreases';
 import { isSequenceTool } from '../../../fold/tools/foldToolCatalog';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
@@ -166,7 +167,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const petalMarks = useFoldPetalMarks(session, view.index, toolState);
   // A swivel's edges that can swing, then the lines its edge lands on, and the swivel under the pointer.
   const swivelMarks = useFoldSwivelMarks(view.index, toolState, preview.vertex?.reach ?? null, inks);
-  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending;
+  // Repeat's preview: the creases it adds, where its folded result puts them.
+  const repeatCreases = useFoldRepeatCreases(toolState.tool === 'repeat' ? preview.landed : null);
+  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? repeatCreases;
   const regions = fanMarks?.regions ?? petalMarks.regions;
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending, orderScene);
   const componentPairs = importChoice?.opened.components[importChoice.component]?.pairs ?? [];
@@ -206,14 +209,14 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     [toolState.tool, preview.action, crimpLines, view.index, toolState.swivelFirst, preview.swivelLine]
   );
   const previewMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
-  // Repeat's axes, lit on the range's starting state while one is chosen or drawn.
-  const repeatMarks = preview.repeat?.marks ?? null;
+  // A line drawn for Repeat that is no symmetry axis, while its refusal is shown.
+  const repeatDrawn = preview.repeat?.drawn ?? null;
   const sheetOutline = view.summary?.sheet ?? null;
-  const axisMarks = useMemo(
-    () => (repeatMarks && inks ? repeatAxisOverlay(view.index, sheetOutline, repeatMarks, inks.overlay) : null),
-    [repeatMarks, inks, view.index, sheetOutline]
+  const drawnMarks = useMemo(
+    () => (repeatDrawn && inks ? repeatDrawnOverlay(view.index, sheetOutline, repeatDrawn, inks.overlay) : null),
+    [repeatDrawn, inks, view.index, sheetOutline]
   );
-  const vertexMarks = axisMarks?.folded ?? previewMarks ?? swivelMarks.marks;
+  const vertexMarks = drawnMarks?.folded ?? previewMarks ?? swivelMarks.marks;
   const swivelOffered = swivelMarks.offered;
   // A partial precrease's line on each pane, and its points along it.
   const along = useMemo(
@@ -234,14 +237,14 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             located,
             marks: view.marks,
             inks: inks.overlay,
-            tool: pane === 'folded' ? vertexMarks : (axisMarks?.creasePattern ?? null),
+            tool: pane === 'folded' ? vertexMarks : (drawnMarks?.creasePattern ?? null),
             spread: paneSpread.map,
             along: along?.[pane] ?? null,
             regions: regions?.[pane] ?? null,
             offered: swivelOffered?.[pane] ?? null,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, axisMarks, paneSpread.map, along, regions, swivelOffered]
+    [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, drawnMarks, paneSpread.map, along, regions, swivelOffered]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);

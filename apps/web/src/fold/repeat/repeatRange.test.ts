@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FoldPick } from '../canvas/foldPicking';
+import type { FoldIsometry } from '../engine/foldEngineWire';
 import { FOLD_PENDING_NODE, type FoldSessionNode } from '../session/foldSessionState';
 import type { FoldPathEntry } from '../sequence/foldSequencePath';
 import type { RepeatSymmetry } from './repeatGeometry';
@@ -16,6 +17,8 @@ function entry(id: string | null, pending = false): FoldPathEntry {
 const vertical: RepeatSymmetry = { sheet: { n: [1, 0], d: 0.5 }, model: { n: [1, 0], d: 0.5 }, display: { n: [1, 0], d: 0.5 } };
 /** Seen through a view that turns the model upside down: on screen it runs at y = −0.5. */
 const horizontal: RepeatSymmetry = { sheet: { n: [0, 1], d: 0.5 }, model: { n: [0, 1], d: 0.5 }, display: { n: [0, 1], d: -0.5 } };
+/** That view: y mirrored. */
+const UPSIDE_DOWN: FoldIsometry = [1, 0, 0, 0, -1, 0];
 
 describe('repeatRange', () => {
   const path = [entry(null), entry('s1'), entry('s2'), entry('s3')];
@@ -65,21 +68,24 @@ describe('a drawn axis', () => {
     sheet,
   });
 
-  it('is read on the folded pane in the scene, on the crease pattern on the sheet', () => {
-    expect(repeatDrawnLine([free('folded', 0, -0.5)])).toBeNull();
-    const scene = repeatDrawnLine([free('folded', 0, -0.5), free('folded', 1, -0.5)]);
-    expect(scene?.frame).toBe('scene');
-    expect(drawnRepeatAxis([vertical, horizontal], scene!)).toBe(1);
-    const sheet = repeatDrawnLine([free('crease-pattern', 9, 9, [0.5, 0]), free('crease-pattern', 9, 9, [0.5, 1])]);
+  it('is read on the folded pane through the view it was drawn on, on the crease pattern on the sheet', () => {
+    expect(repeatDrawnLine([free('folded', 0, -0.5)], UPSIDE_DOWN)).toBeNull();
+    // Drawn at y = −0.5 on a view that turns the model upside down: the model's y = 0.5.
+    const drawn = repeatDrawnLine([free('folded', 0, -0.5), free('folded', 1, -0.5)], UPSIDE_DOWN);
+    expect(drawn?.frame).toBe('model');
+    expect(drawnRepeatAxis([vertical, horizontal], drawn!)).toBe(1);
+    // With no view to read it through, a line on the folded pane is none.
+    expect(repeatDrawnLine([free('folded', 0, -0.5), free('folded', 1, -0.5)], null)).toBeNull();
+    const sheet = repeatDrawnLine([free('crease-pattern', 9, 9, [0.5, 0]), free('crease-pattern', 9, 9, [0.5, 1])], null);
     expect(sheet?.frame).toBe('sheet');
     expect(drawnRepeatAxis([vertical, horizontal], sheet!)).toBe(0);
   });
 
   it('is refused when it is no axis, the nearest offered only when it is near', () => {
-    const near = repeatDrawnLine([free('folded', 0.51, 0), free('folded', 0.5, 1)])!;
+    const near = repeatDrawnLine([free('folded', 0.51, 0), free('folded', 0.5, 1)], UPSIDE_DOWN)!;
     expect(drawnRepeatAxis([vertical, horizontal], near)).toBe(-1);
     expect(nearestRepeatAxis([vertical, horizontal], near, Math.SQRT2)).toBe(0);
-    const far = repeatDrawnLine([free('folded', 0, 0), free('folded', 1, 1)])!;
+    const far = repeatDrawnLine([free('folded', 0, 0), free('folded', 1, 1)], UPSIDE_DOWN)!;
     expect(drawnRepeatAxis([vertical, horizontal], far)).toBe(-1);
     expect(nearestRepeatAxis([vertical, horizontal], far, Math.SQRT2)).toBe(-1);
   });

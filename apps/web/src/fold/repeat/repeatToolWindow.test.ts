@@ -31,7 +31,7 @@ function repeat(phase: FoldRepeatPhase, extra: Partial<FoldRepeatWindowView> = {
     individual: false,
     rebuilding: false,
     phase,
-    drawing: phase.kind === 'picking',
+    drawing: true,
     drawn: null,
     ...extra,
   };
@@ -65,9 +65,9 @@ function windowOf(state: FoldRepeatWindowView, calls = verbs()) {
 }
 
 describe("Repeat's window", () => {
-  it('offers the range start, the verified axes by name and how it is saved, then Preview repeat', () => {
+  it('offers the range start, the verified axes by name and how it is added, and adds the repeat previewed', () => {
     const calls = verbs();
-    const model = windowOf(repeat({ kind: 'picking' }), calls);
+    const model = windowOf(repeat({ kind: 'ready', busy: false }), calls);
     expect(model.title).toBe('Repeat on the other side');
     expect(model.steps).toMatchObject({ label: 'Start with', value: 's1', options: [{ id: 's1', label: 'Step 1' }, { id: 's2', label: 'Step 2' }] });
     expect(model.repeat?.axis).toMatchObject({
@@ -82,7 +82,11 @@ describe("Repeat's window", () => {
     expect(model.repeat?.summary).toBe('Repeat 2 operations through the current step as one numbered step.');
     // A free line draws the axis: the window offers its snapping, as every free line's.
     expect(model.freeLineSnap).toMatchObject({ label: 'Snap to points', checked: true });
-    expect(model.footer?.commit).toMatchObject({ label: 'Preview repeat', disabled: false });
+    // One confirm: the preview is on the canvas, and the commit adds it.
+    expect(model.instructions.items.at(-1)).toBe('Press Enter to add the repeated folds.');
+    expect(model.instructions.current).toBe(2);
+    expect(model.instructions.notes).toEqual(['The canvas shows the repeated folds and the creases they add.']);
+    expect(model.footer?.commit).toMatchObject({ label: 'Repeat', disabled: false });
     expect(model.footer?.cancel.label).toBe('Cancel');
     model.repeat?.axis.set('1');
     model.steps?.set('s2');
@@ -92,20 +96,35 @@ describe("Repeat's window", () => {
     expect(calls.repeat.setIndividual).toHaveBeenCalledWith(true);
   });
 
-  it('turns its cancel into Stop while the preparation runs, and offers Save repeat once it is ready', () => {
+  it('turns its cancel into Stop while the preview prepares, the range and axis still free to change', () => {
     const preparing = windowOf(repeat({ kind: 'preparing' }));
     expect(preparing.footer?.cancel.label).toBe('Stop');
-    expect(preparing.footer?.commit.disabled).toBe(true);
-    expect(preparing.instructions.notes).toContain('Preparing repeated folds…');
-    // No line is drawn on a state that is not on show.
-    expect(preparing.freeLineSnap).toBeUndefined();
-    const ready = windowOf(repeat({ kind: 'ready', saving: false }));
-    expect(ready.footer?.commit).toMatchObject({ label: 'Save repeat', disabled: false });
-    expect(windowOf(repeat({ kind: 'ready', saving: false }), verbs()).instructions.current).toBe(3);
-    const rebuilt = windowOf(repeat({ kind: 'ready', saving: false }, { rebuilding: true }));
+    expect(preparing.footer?.commit).toMatchObject({ label: 'Repeat', disabled: true });
+    expect(preparing.instructions.notes).toEqual(['Preparing repeated folds…']);
+    expect(preparing.steps?.disabled).toBe(false);
+    expect(preparing.repeat?.axis.disabled).toBe(false);
+    // An axis may be drawn while it prepares: a new one prepares anew.
+    expect(preparing.freeLineSnap).toMatchObject({ label: 'Snap to points' });
+    // While the repeat is added, nothing changes under it.
+    const adding = windowOf(repeat({ kind: 'ready', busy: true }, { drawing: false }));
+    expect(adding.footer?.commit.disabled).toBe(true);
+    expect(adding.steps?.disabled).toBe(true);
+    expect(adding.repeat?.axis.disabled).toBe(true);
+    expect(adding.freeLineSnap).toBeUndefined();
+    // Stopped, the commit prepares it again.
+    const stopped = windowOf(repeat({ kind: 'stopped' }));
+    expect(stopped.footer?.commit).toMatchObject({ label: 'Repeat', disabled: false });
+    expect(stopped.instructions.notes).toEqual(['Stopped before the repeat was ready. No steps were added.']);
+    const rebuilt = windowOf(repeat({ kind: 'ready', busy: false }, { rebuilding: true }));
     expect(rebuilt.footer?.commit.label).toBe('Update from source steps');
-    // A rebuild saves as the repeat was saved.
+    // A rebuild adds as the repeat was added.
     expect(rebuilt.repeat?.individual).toBeNull();
+  });
+
+  it('says to tap the commit on a touch screen', () => {
+    const view: FoldToolWindowView = { tool: 'repeat', lineMode: 'axiom-2', readOnly: null, picks: 0, preview: null, freeLineSnap: true, repeat: repeat({ kind: 'ready', busy: false }) };
+    const model = foldToolWindow(t, view, verbs(), { coarse: true, alt: 'Option' });
+    expect(model?.instructions.items.at(-1)).toBe('Tap Repeat to add the repeated folds.');
   });
 
   it('says why a repeat stopped in its own words, with its advice', () => {
@@ -118,14 +137,14 @@ describe("Repeat's window", () => {
       text: 'Stopped at source operation 1: The spot the mirrored fold picks is not inside a layer on the moving side. Try another axis, or start the range after this operation.',
     });
     expect(blocked.footer?.commit.disabled).toBe(true);
-    const none = windowOf(repeat({ kind: 'picking' }, { axes: [], axis: -1, drawing: false }));
+    const none = windowOf(repeat({ kind: 'failed', stop: { code: 'repeat_axis' } }, { axes: [], axis: -1, drawing: false }));
     expect(none.refusal?.code).toBe('repeat_axis');
     expect(none.footer?.commit.disabled).toBe(true);
   });
 
   it('refuses a drawn line that is no axis, offering the nearest in its place', () => {
     const calls = verbs();
-    const model = windowOf(repeat({ kind: 'picking' }, { drawn: { nearest: 1 } }), calls);
+    const model = windowOf(repeat({ kind: 'ready', busy: false }, { drawn: { nearest: 1 } }), calls);
     expect(model.refusal).toMatchObject({
       code: 'repeat_axis_drawn',
       title: 'Not a symmetry axis',
@@ -134,7 +153,7 @@ describe("Repeat's window", () => {
     expect(model.refusal?.actions.map((action) => action.label)).toEqual(['Use Horizontal axis']);
     model.refusal?.actions[0]?.run();
     expect(calls.repeat.setAxis).toHaveBeenCalledWith(1);
-    expect(windowOf(repeat({ kind: 'picking' }, { drawn: { nearest: -1 } })).refusal?.actions).toEqual([]);
+    expect(windowOf(repeat({ kind: 'preparing' }, { drawn: { nearest: -1 } })).refusal?.actions).toEqual([]);
   });
 
   it('chooses a layer order with the shared chooser, its own buttons in place of the footer', () => {

@@ -14,9 +14,9 @@ the column and everything only they used. Import CP stays a modal.
 - **A rail group of their own, "Sequence"**: both act on the sequence's
   earlier steps (return to one, fold a range of them again) rather than
   folding the paper along a line, and "Steps" is already the header's view.
-  Unfold to step keeps its icon (`Undo2`). Repeat takes Edit's "Reflect
-  selection over line" glyph: it reflects steps over an axis, and the icon it
-  had (`RotateCw`) is the Rotate tool's, a different concept on the same rail.
+  Unfold to step keeps its icon (`Undo2`). Repeat takes the diagram's repeat
+  arrow, the mark a diagram uses for "repeat behind": the icon it had
+  (`RotateCw`) is the Rotate tool's, a different concept on the same rail.
 - **Tool state** (`foldToolState`): the tool ids, and what each keeps from
   one use to the next — Unfold's target, Repeat's range start, its last axis
   (by its sheet line) and "Show as individual steps", and a step being rebuilt
@@ -28,15 +28,21 @@ the column and everything only they used. Import CP stays a modal.
   the canvas shows the landed pose, the window offers only the earlier steps
   of this path that have a state.
 - **Repeat**: the window has the range start, the axis select (only the
-  verified axes) and the individual-steps switch. While no preview is shown
-  the canvas shows the range's starting state with the verified axes lit, the
-  chosen one in the accent; a free line drawn on it (Snap to points on or off)
-  is accepted only when it is one of those axes within Repeat's tolerance,
-  otherwise refused in Repeat's words (with the nearest axis offered as a fix
-  when one is close). Enter previews (the preparation, its 5 s limit and Stop
-  unchanged), a layer-order choice shows the shared order chooser, Enter again
-  saves. The default axis is the last one chosen or drawn, while it is valid
-  for the range, else the first valid one.
+  verified axes) and the individual-steps switch. It previews as every tool
+  does (owner feedback, 2026-10-20: no axes lit, no separate Preview stage):
+  as soon as the range and the axis are set — and again, after a short pause
+  (`REPEAT_PREPARE_DELAY_MS`), whenever either changes — it prepares the
+  repeat (its 5 s limit and Stop unchanged) and the session previews it: the
+  folded pane shows the result, and the creases it adds are drawn in the
+  diagram pens on both panes, as a pending fold's are. A free line drawn on
+  the canvas (Snap to points on or off) is read through the view it was drawn
+  on and taken when it is one of the verified axes within Repeat's
+  tolerance; otherwise it stays drawn, refused in Repeat's words (with the
+  nearest axis offered as a fix when one is close). A layer-order choice
+  shows the shared order chooser. One confirm: the window's Repeat, or
+  Enter, adds the repeat previewed. Escape stops a preparation, then lets go
+  of a line drawn, then puts Repeat down. The default axis is the last one
+  chosen or drawn, while it is valid for the range, else the first valid one.
 - **Saved steps**: the Step pane keeps a saved Repeat's and Unfold's facts and
   their Update / Rebuild buttons, which now take the tool in hand in rebuild
   mode; the stored ops and their replay do not change.
@@ -60,7 +66,9 @@ the column and everything only they used. Import CP stays a modal.
 - [x] Tool state: settings, rebuild, put down after commit / Escape
 - [x] Unfold to step: step, preview, window, commit, rebuild
 - [x] Repeat: range, axes, drawn axis, preview, order choice, save, rebuild
-- [x] Canvas: state shown, axes lit, letters, Escape ladder, Enter
+- [x] Canvas: state shown, letters, Escape ladder, Enter
+- [x] Repeat previews as other tools do: prepared automatically (debounced),
+      result and added creases on the canvas, one confirm, no axes lit
 - [x] Menus, step cards, header buttons and the step strip select the tools
 - [x] Step pane: saved-step facts route Update / Rebuild into the tools
 - [x] Delete the bars, `useFoldToolWindowYields`, their CSS, tests and strings

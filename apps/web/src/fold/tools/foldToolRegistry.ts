@@ -142,7 +142,7 @@ export function crimpInput(mode: FoldLineModeId, second: FoldSecondLineModeId): 
  * — a crimp's, its two lines' —; a vertex fold, its own, a petal fold's hinge
  * and a swivel's target named as `vertex` says (`tools/vertex/vertexInputs`);
  * the Divide line's, its segment; Rotate's and Unfold to step's, none; Repeat's,
- * a free line, its mirror axis drawn on the range's starting state.
+ * a free line, its mirror axis drawn on what the canvas shows.
  */
 export function toolInput(
   tool: FoldToolId,

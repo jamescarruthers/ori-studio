@@ -2,13 +2,14 @@
  * What the Repeat tool repeats, and across which axis (plan
  * `fold-sequence-tools`): the range — from a step the folder chooses through
  * the step on screen — the state before it, which its symmetry axes are found
- * and drawn on, and which of those axes is taken.
+ * on, which of those axes is taken, and which a drawn line is.
  *
  * Pure.
  */
-import { lineThrough, toPoint } from '../canvas/foldCanvasGeometry';
+import { lineThrough, modelLineOf, toPoint } from '../canvas/foldCanvasGeometry';
 import type { FoldPick } from '../canvas/foldPicking';
 import type { FoldModelLine } from '../document/foldSequenceDocument';
+import type { FoldIsometry } from '../engine/foldEngineWire';
 import type { FoldPathEntry } from '../sequence/foldSequencePath';
 import { REPEAT_TOL, type RepeatSymmetry } from './repeatGeometry';
 
@@ -23,7 +24,7 @@ export interface RepeatRange {
   first: FoldPathEntry;
   /** Its index in the path. */
   start: number;
-  /** The state before the range — the flat sheet, or a step — on which its axes are found and drawn. */
+  /** The state before the range — the flat sheet, or a step — on which its axes are found. */
   baseline: FoldPathEntry;
   /** How many operations the range holds, the step on screen's included. */
   count: number;
@@ -65,30 +66,36 @@ export function repeatAxisIndex(axes: readonly RepeatSymmetry[], remembered: Fol
 }
 
 /**
- * A line drawn on the range's starting state: on the folded pane, in the
- * scene's frame, where the axes run as `display` says; on the crease pattern,
- * on the sheet, where they run as `sheet` says.
+ * A line drawn on the model as the canvas shows it — the step on screen, or
+ * the repeat it previews: on the folded pane, taken into the model's frame,
+ * where the axes run as `model` says (the view turns the model, not the
+ * paper's place in it); on the crease pattern, on the sheet, where they run
+ * as `sheet` says.
  */
 export interface RepeatDrawnLine {
   line: FoldModelLine;
-  frame: 'scene' | 'sheet';
+  frame: 'model' | 'sheet';
 }
 
-/** The drawn line's two ends — both on the crease pattern, or else as the folded pane places them — as a line. */
-export function repeatDrawnLine(picks: readonly FoldPick[]): RepeatDrawnLine | null {
+/**
+ * The drawn line's two ends — both on the crease pattern, or else as the
+ * folded pane places them, under `viewTransform`, the view of the state they
+ * were drawn on — as a line.
+ */
+export function repeatDrawnLine(picks: readonly FoldPick[], viewTransform: FoldIsometry | null): RepeatDrawnLine | null {
   const [p, q] = picks;
   if (picks.length !== 2 || p?.kind !== 'free' || q?.kind !== 'free') return null;
   if (p.pane === 'crease-pattern' && q.pane === 'crease-pattern' && p.sheet && q.sheet) {
     const line = lineThrough(toPoint(p.sheet), toPoint(q.sheet));
     return line ? { line, frame: 'sheet' } : null;
   }
-  const line = lineThrough(p.scene, q.scene);
-  return line ? { line, frame: 'scene' } : null;
+  const line = viewTransform ? lineThrough(p.scene, q.scene) : null;
+  return line && viewTransform ? { line: modelLineOf(viewTransform, line), frame: 'model' } : null;
 }
 
-const lineIn = (axis: RepeatSymmetry, frame: RepeatDrawnLine['frame']) => (frame === 'sheet' ? axis.sheet : axis.display);
+const lineIn = (axis: RepeatSymmetry, frame: RepeatDrawnLine['frame']) => (frame === 'sheet' ? axis.sheet : axis.model);
 
-/** The verified axis a line drawn on the range's starting state is, within Repeat's tolerance; -1 for none. */
+/** The verified axis a drawn line is, within Repeat's tolerance; -1 for none. */
 export function drawnRepeatAxis(axes: readonly RepeatSymmetry[], drawn: RepeatDrawnLine): number {
   return axes.findIndex((axis) => sameRepeatLine(lineIn(axis, drawn.frame), drawn.line));
 }
