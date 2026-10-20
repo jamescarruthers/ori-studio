@@ -284,11 +284,11 @@ function layOut(initial: { width: number; height: number }) {
     }
   );
   return {
-    /** The canvas gets a new box, and the observer says so. */
-    resize(width: number, height: number) {
+    /** The canvas gets a new box, and the observer says so — or, `quiet`, has yet to. */
+    resize(width: number, height: number, quiet = false) {
       box.width = width;
       box.height = height;
-      act(() => observers.forEach((notify) => notify()));
+      if (!quiet) act(() => observers.forEach((notify) => notify()));
     },
   };
 }
@@ -318,6 +318,18 @@ describe('useCpSurface opening fit', () => {
     layout.resize(400, 400);
     expect(onZoomPercentChange).toHaveBeenLastCalledWith(FIT_400);
     expect(surface().cssPerUserUnit()).toBeCloseTo((400 / 200) * 0.7);
+  });
+
+  it('fits a new inset to the box the canvas has now, before its observer has said', () => {
+    // A phone's pane squeezed under a bar, then given back its height in the
+    // same commit as a window comes back over its bottom half.
+    const layout = layOut({ width: 400, height: 100 });
+    mount({ inset: null });
+    layout.resize(400, 400, true);
+    mount({ inset: { top: 0, right: 0, bottom: 200, left: 0 } });
+    // Fitted to the 400 × 200 left above the window (the 200 × 100 sheet's
+    // height decides), not to the old 400 × 100 box the window covers whole.
+    expect(surface().cssPerUserUnit()).toBeCloseTo((200 / 100) * 0.7);
   });
 
   it('fits content that arrives before the box once the box does', () => {
