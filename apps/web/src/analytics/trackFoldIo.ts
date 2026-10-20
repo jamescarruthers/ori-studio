@@ -1,6 +1,27 @@
 import type { FoldCpOrigin } from '../fold/document/foldSequenceDocument';
-import { ANALYTICS_EVENTS } from './events';
+import { foldFaceCountOf } from '../fold/foldFaceCap';
+import type { FoldImportRefusal } from '../fold/io/foldImportRefusal';
+import { ANALYTICS_EVENTS, bucketCount, FOLD_FACE_COUNT_BUCKETS } from './events';
 import { track } from './runtime';
+
+/**
+ * An Import CP the dialog refused (plan D16, D18), as `fold refused`: the
+ * engine's stable code (`import_*`), or the dialog's own (`unsupported_file`,
+ * `no_folded_figure`, …) — never a file name, a point or a crease. A refusal
+ * of the face cap also says how far over it was, bucketed.
+ */
+export function trackFoldImportRefused(refusal: FoldImportRefusal): void {
+  if (refusal.kind === 'local') {
+    track(ANALYTICS_EVENTS.foldRefused, { code: refusal.code });
+    return;
+  }
+  const body = refusal.refused.refusal;
+  const counts = foldFaceCountOf(body);
+  track(ANALYTICS_EVENTS.foldRefused, {
+    code: body.code,
+    ...(counts ? { face_count_bucket: bucketCount(counts.faceCount, FOLD_FACE_COUNT_BUCKETS) } : {}),
+  });
+}
 
 /**
  * A crease pattern became a Fold step (plan D16, D18). `origin` is the step's
