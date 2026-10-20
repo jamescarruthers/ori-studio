@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-10-20
+
+Diagram steps imported from Defox projects and from batches of crease patterns and pictures, an example crane to start from, a redesigned Layers pane, very large crease patterns that open, select and simulate in seconds instead of minutes, and external links that open from the desktop app.
+
+### Added
+
+- Import steps into a diagram with **File ▸ Import Diagram Steps…**, the empty Diagram's **Import…** button, or by dropping files or a folder on the Diagram. Bring in a batch of crease patterns and pictures (SVG, PNG, JPEG or WebP), or a **Defox** project. Each crease pattern is folded into a step and added to Edit beside what is already there, in a grid whose columns and gap you choose; one that doesn't fold keeps its crease pattern as the step's picture. A Defox project keeps each saved view as Defox drew it, symbols included, linked to its crease pattern. **Finish import now** stops folding and keeps the remaining crease patterns as previews, and one Undo takes the whole import back out of both Edit and the Diagram.
+- Open an example from an empty Diagram: under **New to diagrams?**, **Open the example crane** opens a 28-step crane diagram with its crease pattern and title block, and **Watch the walkthrough** links to a video tour.
+
+### Improved
+
+- Open and work in very large crease patterns in seconds instead of minutes. On a project of 489,093 creases in 204 sheets (measured in the web app), opening takes under 6 seconds where it took 29; selecting a sheet brings up its toolbar in under a second where it took 68; Simulate opens on the sheet in under 3 seconds where it took 85; and the toolbar's Save to image and inline simulation take under a second where they took 13 and 15. Export PNG… and Export SVG… of the whole canvas run about four times faster, with identical results.
+- Move through large diagrams without stalls. The Steps and Pages views draw only what is near the view, and the Pages view pans and zooms a cached picture of each page, sharpened once the zoom settles; exports are still drawn from the vectors. Scrolling a 205-step, 23-page diagram no longer stalls for seconds at a time.
+- Read a crease pattern's sheets the same way in Edit, Diagram, Simulate and References: a sheet is the area inside a closed outer border, and a border line drawn inside it belongs to the sheet instead of splitting it. A sheet with such a wall now gets the selection toolbar and is planned in References instead of refused. Simulate and References list only closed sheets, and Simulate's list counts each sheet's creases, as References does. A Diagram step linked to one half of a walled sheet now reads as missing; relink it to the whole sheet.
+- Lay out the Diagram's **Layers** pane, in the Pages view and in Annotate, as one-line rows with Delete at the end of each, under a header that says what the list holds ("Page 1 · 7 steps"). The inspector sits below in its own scrolling region; drag the divider to resize it, or double-click it to reset. In the Pages view a step's inspector also sets its picture and its instruction. A mark drawn more than once is numbered ("Circle 2"), and a hand-placed step is marked with a dot instead of a MOVED badge.
+- Join an auxiliary line left in pieces with **Delete Extra Vertices**. A vertex where two collinear auxiliary lines meet and nothing else does is now removed, while one that a crease ends on stays. Creases are treated exactly as before.
+
+### Fixed
+
+- In the desktop app, open external links in your web browser: the toolbar's Discord button, the About dialog's links, Open in ExplOri, Visit DEFOX, the design attribution bars, the error screen's Report an issue, and the Linux update card's download link. They did nothing, and the start screen's Discord and GitHub buttons replaced the app's own window with the website. On the web, those two buttons now open a new tab instead of leaving the app.
+- Fold a sheet in Simulate and in inline simulations when a crease ends part-way along a border side that isn't split there. The sheet was read as one bare face and stayed flat. Exporting, saving to an image or sharing such a sheet from the selection toolbar now also keeps auxiliary lines that end the same way; they were left out.
+- Draw auxiliary lines under a flat folded figure's edges in exports and Diagram pictures. Their grey ends were painted over the black outline.
+- Save a project without a second copy of its crease pattern. A project that wasn't imported from a FOLD file gained a duplicate of its pattern the first time it was saved after reopening. A file already saved with the copy keeps it.
+- Keep memory in check over a long editing session. Crease edits, selections and grid changes each kept a full copy of the pattern in the undo history with no limit; the history now keeps the last 100, as it already did for annotations and folded figures.
+
 ## [0.6.1] - 2026-10-20
 
 Diagram steps imported from Defox projects and from batches of crease patterns and pictures, an example crane to start from, a redesigned Layers pane, very large crease patterns that open, select and simulate in seconds instead of minutes, and external links that open from the desktop app.
