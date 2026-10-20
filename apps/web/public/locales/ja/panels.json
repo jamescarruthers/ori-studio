@@ -2460,6 +2460,7 @@
       "sheetSquareFront": "正方形を、表を上にして始めます。",
       "stepCount_other": "{{count}} ステップ",
       "stripLabel": "ステップ",
+      "switchBranch": "分岐を切り替え",
       "tagBranch": "新しい分岐",
       "tagNext": "次"
     },

@@ -3235,6 +3235,7 @@
       "stepCount_many": "{{count}} шагов",
       "stepCount_other": "{{count}} шага",
       "stripLabel": "Шаги",
+      "switchBranch": "Сменить ветку",
       "tagBranch": "Новая ветка",
       "tagNext": "Далее"
     },

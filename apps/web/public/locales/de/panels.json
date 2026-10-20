@@ -2717,6 +2717,7 @@
       "stepCount_one": "{{count}} Schritt",
       "stepCount_other": "{{count}} Schritte",
       "stripLabel": "Schritte",
+      "switchBranch": "Zweig wechseln",
       "tagBranch": "Neuer Zweig",
       "tagNext": "Nächster"
     },

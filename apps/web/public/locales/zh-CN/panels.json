@@ -2460,6 +2460,7 @@
       "sheetSquareFront": "从一张正方形纸开始，正面朝上。",
       "stepCount_other": "{{count}} 个步骤",
       "stripLabel": "步骤",
+      "switchBranch": "切换分支",
       "tagBranch": "新分支",
       "tagNext": "下一步"
     },

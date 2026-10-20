@@ -2460,6 +2460,7 @@
       "sheetSquareFront": "정사각형을 앞면이 위로 오게 놓고 시작합니다.",
       "stepCount_other": "{{count}}단계",
       "stripLabel": "단계",
+      "switchBranch": "분기 전환",
       "tagBranch": "새 분기",
       "tagNext": "다음"
     },

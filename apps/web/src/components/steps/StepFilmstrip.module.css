@@ -320,6 +320,32 @@
   white-space: nowrap;
 }
 
+/* The phone's readout as its switch (`onCycleWay`): a pill, so it reads as one
+   to tap, with its target reaching past its edges so the row keeps its height. */
+button.waysReadout {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.waysReadout::after {
+  content: '';
+  position: absolute;
+  inset: -8px -10px;
+}
+
+button.waysReadout:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 /* A vertical swipe switches a card's way (`useVerticalSwipe`), so the browser
    must not take one for a scroll wherever a swipe means that: on a card that
    offers ways, and under the active one's sentence and readout. `pan-x` keeps

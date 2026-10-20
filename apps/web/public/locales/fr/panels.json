@@ -2976,6 +2976,7 @@
       "stepCount_many": "{{count}} étapes",
       "stepCount_other": "{{count}} étapes",
       "stripLabel": "Étapes",
+      "switchBranch": "Changer de branche",
       "tagBranch": "Nouvelle branche",
       "tagNext": "Suivante"
     },
