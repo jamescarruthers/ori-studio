@@ -677,6 +677,13 @@
         "text": "尖端要翻转的地方有其他层。请把它们的翼片加入折叠，或在别处翻折。",
         "title": "有层挡住了"
       },
+      "tooManyFaces": {
+        "fold": "这次折叠会产生 {{faceCount, number}} 个面，超过可折叠的 {{limit, number}} 个。请折叠更少的层。",
+        "note": "{{faceCount, number}} 个面，超过可折叠的 {{limit, number}} 个",
+        "pattern": "此折痕图有 {{faceCount, number}} 个面，只能折叠最多 {{limit, number}} 个面的折痕图。请导入更简单的折痕图。",
+        "step": "此步骤有 {{faceCount, number}} 个面，超过可折叠的 {{limit, number}} 个。此步骤及之后的步骤只能删除。",
+        "title": "面太多"
+      },
       "tooSmall": {
         "text": "这次折叠会留下比纸本身还细的折痕或纸条。",
         "title": "太小，无法折叠"

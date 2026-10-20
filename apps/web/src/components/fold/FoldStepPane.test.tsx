@@ -327,6 +327,22 @@ describe('FoldStepPane', () => {
     expect(section('Creases')).toBeUndefined();
   });
 
+  it('says a step broke on the face cap by its count and the cap, keeping its delete', () => {
+    const remove = vi.fn();
+    render({
+      step: { ...VALLEY_STEP, layers: null, creases: null, diff: null, status: 'broken', faceCap: { faceCount: 4160, limit: 4096 } },
+      startSide: 'front',
+      fixes: [{ id: 'delete', label: 'Delete this step and what follows', run: remove }],
+    });
+    const notice = host.querySelector('[role="status"]');
+    expect(notice?.getAttribute('data-tone')).toBe('warning');
+    expect(notice?.textContent).toContain(
+      'This step has 4,160 faces, more than the 4,096 Fold folds. It and the steps after it can only be deleted.'
+    );
+    act(() => notice?.querySelector('button')?.click());
+    expect(remove).toHaveBeenCalledOnce();
+  });
+
   it('says why a step cannot be read: one before it broke, a newer build, or a changed engine', () => {
     render({ step: { ...VALLEY_STEP, status: 'brokenAbove' }, startSide: 'front' });
     expect(notices()).toEqual(['A step before this one no longer folds, so this one cannot be shown.']);

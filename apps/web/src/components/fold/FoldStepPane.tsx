@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { foldFaceCapWords, type FoldFaceCount } from '../../fold/foldFaceCap';
 import type { FoldStartSide } from '../../fold/paperShape';
 import { foldStepSentence, type FoldSentenceStep } from '../../fold/stepSentence';
 import {
@@ -51,6 +52,8 @@ export interface FoldStepPaneStep {
   /** What the step changed; null when it did not replay. */
   diff: FoldCreaseDiff | null;
   status: FoldStepStatus;
+  /** Broken because it has more faces than Fold folds: how many, and the cap. */
+  faceCap?: FoldFaceCount;
   /** For Import CP: where the pattern came from. */
   origin?: FoldCpOrigin;
   /** For a compound fold: what it chose and how its paper moved (`foldCompoundPaneRows`). */
@@ -289,10 +292,12 @@ function StatusNotices({
       case 'broken':
         return (
           <Notice tone="warning" actions={fixes}>
-            {t(
-              'panels:fold.step.broken',
-              'This step no longer folds: what it was made from is not on the paper before it. It and the steps after it can only be deleted.'
-            )}
+            {step.faceCap
+              ? foldFaceCapWords(t, step.faceCap, 'step').text
+              : t(
+                  'panels:fold.step.broken',
+                  'This step no longer folds: what it was made from is not on the paper before it. It and the steps after it can only be deleted.'
+                )}
           </Notice>
         );
       case 'brokenAbove':

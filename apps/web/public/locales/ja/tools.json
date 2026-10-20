@@ -677,6 +677,13 @@
         "text": "先端が返る位置にほかの層があります。それらのフラップを折りに含めるか、別の場所で折ってください。",
         "title": "層がじゃまです"
       },
+      "tooManyFaces": {
+        "fold": "この折りでは面が {{faceCount, number}} 個になり、折れる上限の {{limit, number}} 個を超えます。折る層を減らしてください。",
+        "note": "{{faceCount, number}} 個の面（折れる上限は {{limit, number}} 個）",
+        "pattern": "この展開図には {{faceCount, number}} 個の面があります。折れるのは {{limit, number}} 個までの展開図です。より単純な展開図をインポートしてください。",
+        "step": "このステップには {{faceCount, number}} 個の面があり、折れる上限の {{limit, number}} 個を超えています。このステップと以降のステップは削除のみできます。",
+        "title": "面が多すぎます"
+      },
       "tooSmall": {
         "text": "紙そのものより細い折り線や紙の帯が残ってしまいます。",
         "title": "小さすぎて折れません"

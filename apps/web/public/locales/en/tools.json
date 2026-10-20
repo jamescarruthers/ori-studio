@@ -695,6 +695,13 @@
         "text": "Other layers lie where the tip would turn. Include their flaps in the fold, or reverse it somewhere else.",
         "title": "Layers are in the way"
       },
+      "tooManyFaces": {
+        "fold": "This fold would make {{faceCount, number}} faces, more than the {{limit, number}} Fold folds. Fold fewer layers.",
+        "note": "{{faceCount, number}} faces, more than the {{limit, number}} Fold folds",
+        "pattern": "This crease pattern has {{faceCount, number}} faces, and Fold folds patterns of up to {{limit, number}}. Import a simpler pattern.",
+        "step": "This step has {{faceCount, number}} faces, more than the {{limit, number}} Fold folds. It and the steps after it can only be deleted.",
+        "title": "Too many faces"
+      },
       "tooSmall": {
         "text": "The fold would leave a crease or a strip of paper thinner than the paper itself.",
         "title": "Too small to fold"

@@ -713,6 +713,13 @@
         "text": "D’autres couches se trouvent là où la pointe tournerait. Incluez leurs rabats dans le pli, ou faites l’inversion ailleurs.",
         "title": "Des couches gênent"
       },
+      "tooManyFaces": {
+        "fold": "Ce pli donnerait {{faceCount, number}} faces, plus que les {{limit, number}} qui peuvent être pliées. Pliez moins de couches.",
+        "note": "{{faceCount, number}} faces, plus que les {{limit, number}} qui peuvent être pliées",
+        "pattern": "Ce patron de plis a {{faceCount, number}} faces, et seuls les patrons d’au plus {{limit, number}} faces se plient. Importez un patron plus simple.",
+        "step": "Cette étape a {{faceCount, number}} faces, plus que les {{limit, number}} qui peuvent être pliées. Elle et les étapes suivantes ne peuvent qu’être supprimées.",
+        "title": "Trop de faces"
+      },
       "tooSmall": {
         "text": "Le pli laisserait un pli ou une bande de papier plus fine que le papier lui-même.",
         "title": "Trop petit pour être plié"

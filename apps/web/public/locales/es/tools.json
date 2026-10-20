@@ -713,6 +713,13 @@
         "text": "Hay otras capas donde giraría la punta. Incluye sus solapas en el pliegue o invierte en otro sitio.",
         "title": "Hay capas en medio"
       },
+      "tooManyFaces": {
+        "fold": "Este pliegue daría {{faceCount, number}} caras, más de las {{limit, number}} que se pueden plegar. Pliega menos capas.",
+        "note": "{{faceCount, number}} caras, más de las {{limit, number}} que se pueden plegar",
+        "pattern": "Este patrón de pliegues tiene {{faceCount, number}} caras, y solo se pliegan patrones de hasta {{limit, number}}. Importa un patrón más sencillo.",
+        "step": "Este paso tiene {{faceCount, number}} caras, más de las {{limit, number}} que se pueden plegar. Este paso y los siguientes solo se pueden eliminar.",
+        "title": "Demasiadas caras"
+      },
       "tooSmall": {
         "text": "El pliegue dejaría un pliegue o una tira de papel más fina que el propio papel.",
         "title": "Demasiado pequeño para plegar"
