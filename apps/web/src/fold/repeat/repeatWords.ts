@@ -1,6 +1,50 @@
 import type { TFunction } from 'i18next';
-export function repeatFailure(t: TFunction, code: string): string {
-  switch (code) {
+import type { FoldOpKind } from '../document/foldSequenceDocument';
+import { FOLD_VERTEX_OP_KINDS } from '../document/foldSequenceDocument';
+import type { FoldRefusalBody } from '../engine/foldEngineWire';
+import type { FoldSinkToolId } from '../tools/foldToolCatalog';
+import { foldRefusalWords, type FoldRefusalContext } from '../tools/refusalNotice';
+
+/**
+ * Why a repeat stopped: Repeat's own code, or the engine's refusal of a
+ * source step's mirror — its code, the refusal itself and the kind of step
+ * it was, when the engine said. The code is analytics' (`fold refused`); the
+ * words never show it.
+ */
+export interface RepeatStop {
+  code: string;
+  refusal?: FoldRefusalBody;
+  op?: FoldOpKind;
+}
+
+/** What a refused step's words are read against: the fold family of the step whose mirror was refused. */
+function refusalKindOf(op: FoldOpKind | undefined): Pick<FoldRefusalContext, 'kind' | 'sink'> {
+  switch (op) {
+    case 'mountain':
+    case 'precrease':
+    case 'pleat':
+    case 'crimp':
+    case 'tuck':
+      return { kind: op };
+    case 'inside-reverse':
+    case 'outside-reverse':
+      return { kind: 'reverse' };
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
+      return { kind: 'sink', sink: { tool: op satisfies FoldSinkToolId } };
+    default:
+      return (FOLD_VERTEX_OP_KINDS as readonly string[]).includes(op ?? '') ? { kind: 'vertex' } : { kind: 'valley' };
+  }
+}
+
+/**
+ * Why a repeat stopped, in a sentence: Repeat's own reasons in its words, and
+ * a source step's mirror the engine refused in the words the tool window
+ * says that refusal in (`foldRefusalWords`).
+ */
+export function repeatFailure(t: TFunction, stop: RepeatStop): string {
+  switch (stop.code) {
     case 'repeat_return_target':
       return t(
         'panels:fold.repeat.returnTarget',
@@ -47,10 +91,8 @@ export function repeatFailure(t: TFunction, code: string): string {
         'The source states are unavailable or changed. Wait for replay, then reopen Repeat.',
       );
     default:
-      return t(
-        'panels:fold.repeat.refused',
-        'The mirrored operation was refused by the fold engine ({{code}}). No steps were added.',
-        { code },
-      );
+      return stop.refusal
+        ? foldRefusalWords(t, stop.refusal, refusalKindOf(stop.op)).text
+        : t('panels:fold.repeat.refusedPlain', 'The mirrored operation cannot be folded. No steps were added.');
   }
 }

@@ -1907,7 +1907,7 @@
       "ready": "El resultado plegado y el patrón de pliegues se muestran abajo. Listo para guardar.",
       "rebuildRequired": "La repetición guardada ya no coincide con este estado. Actualízala desde sus pasos de origen.",
       "reference": "Una referencia no tiene un punto coincidente en el otro lado.",
-      "refused": "El motor de plegado rechazó la operación reflejada ({{code}}). No se añadieron pasos.",
+      "refusedPlain": "La operación reflejada no se puede plegar. No se añadieron pasos.",
       "returnTarget": "Este desplegado vuelve a un paso anterior al intervalo seleccionado. Incluye esa parte de la secuencia en la repetición.",
       "save": "Guardar repetición",
       "savedCount_one": "Una operación guardada como un paso de repetición.",

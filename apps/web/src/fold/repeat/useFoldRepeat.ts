@@ -15,6 +15,10 @@ import { foldSearchTicket, type FoldSearchTicket } from '../engine/foldSearch';
 import type { RepeatPrepared, RepeatRequest, RepeatSourceStep } from './repeatPreparation';
 import type { RepeatSymmetry } from './repeatGeometry';
 import { useFoldRepeatUi, type FoldRepeatOpening } from './foldRepeatUi';
+import type { RepeatStop } from './repeatWords';
+
+/** The source changed, or the worker failed: not a refusal, and not counted as one. */
+const UNAVAILABLE: RepeatStop = { code: 'repeat_unavailable' };
 
 export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
   const session = foldSession();
@@ -27,7 +31,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
   const [axis, setAxis] = useState(-1);
   const [baseline, setBaseline] = useState<FoldScene | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RepeatStop | null>(null);
   const [result, setResult] = useState<RepeatPrepared | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
   const [selections, setSelections] = useState<Record<number, string>>({});
@@ -119,7 +123,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
       .then((answer) => {
         if (!active) return;
         if (answer.status !== 'answered') {
-          setError('repeat_unavailable');
+          setError(UNAVAILABLE);
           return;
         }
         setAxes(answer.value.axes);
@@ -133,7 +137,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
         setAxis(old >= 0 ? old : answer.value.axes.length === 1 ? 0 : -1);
       })
       .catch(() => {
-        if (active) setError('repeat_unavailable');
+        if (active) setError(UNAVAILABLE);
       });
     return () => {
       active = false;
@@ -152,9 +156,9 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
   const show = async (op: FoldRepeatOp) => {
     const preview = await session.preview(op);
     if (preview.status === 'refused') {
-      setError(preview.refused.refusal.code);
+      setError({ code: preview.refused.refusal.code, refusal: preview.refused.refusal });
       trackFoldRefused(preview.refused.refusal.code, 'repeat');
-    } else if (preview.status !== 'landed' && preview.status !== 'superseded') setError('repeat_unavailable');
+    } else if (preview.status !== 'landed' && preview.status !== 'superseded') setError(UNAVAILABLE);
   };
   const prepare = async (accepted = selections) => {
     if (!valid || !parent?.state || !axes[axis] || start < 1) return;
@@ -170,7 +174,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
         before.generation !== parent.state.generation ||
         entry.session.state.generation !== parent.state.generation
       ) {
-        setError('repeat_unavailable');
+        setError(UNAVAILABLE);
         return;
       }
       steps.push({
@@ -208,7 +212,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
       }
       if (ticket.current !== run) return;
       if (answer.status !== 'answered') {
-        setError('repeat_unavailable');
+        setError(UNAVAILABLE);
         return;
       }
       setResult(answer.value);
@@ -218,7 +222,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
       else if (answer.value.prefix?.steps.length) await show(answer.value.prefix);
     } catch {
       // A preparation stopped here (`stop`, `close`) rejects as cancelled, its run already superseded.
-      if (ticket.current === run) setError('repeat_unavailable');
+      if (ticket.current === run) setError(UNAVAILABLE);
     } finally {
       if (search.current === searched) {
         search.current = null;
@@ -237,7 +241,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
     try {
       await show({ ...result.prefix, steps: [...result.prefix.steps, result.candidates[selected]!] });
     } catch {
-      if (ticket.current === run) setError('repeat_unavailable');
+      if (ticket.current === run) setError(UNAVAILABLE);
     } finally {
       if (ticket.current === run) setBusy(false);
     }
@@ -284,7 +288,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
           repeat: { mode: individual ? 'individual' : 'grouped', count: op.steps.length },
         });
       close();
-    } else setError('repeat_unavailable');
+    } else setError(UNAVAILABLE);
     setBusy(false);
   };
   // Escape stops a preparation under way and keeps the setup; otherwise it closes Repeat.

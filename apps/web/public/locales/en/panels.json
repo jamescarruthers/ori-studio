@@ -1852,7 +1852,7 @@
       "ready": "The final folded result and CP are shown below. Ready to save.",
       "rebuildRequired": "The saved repeat no longer matches this state. Update it from its source steps.",
       "reference": "A reference does not have a matching point on the other side.",
-      "refused": "The mirrored operation was refused by the fold engine ({{code}}). No steps were added.",
+      "refusedPlain": "The mirrored operation cannot be folded. No steps were added.",
       "returnTarget": "This unfold returns to a step before the selected range. Include that part of the sequence in the repeat.",
       "save": "Save repeat",
       "savedCount_one": "One operation, saved as a Repeat step.",

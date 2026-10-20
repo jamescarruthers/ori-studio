@@ -1907,7 +1907,7 @@
       "ready": "Le résultat plié et le patron de plis sont affichés ci-dessous. Prêt à enregistrer.",
       "rebuildRequired": "La répétition enregistrée ne correspond plus à cet état. Mettez-la à jour depuis ses étapes sources.",
       "reference": "Une référence n’a pas de point correspondant de l’autre côté.",
-      "refused": "Le moteur de pliage a refusé l’opération réfléchie ({{code}}). Aucune étape n’a été ajoutée.",
+      "refusedPlain": "L’opération réfléchie ne peut pas être pliée. Aucune étape n’a été ajoutée.",
       "returnTarget": "Ce dépliage revient à une étape antérieure à la plage sélectionnée. Incluez cette partie de la séquence dans la répétition.",
       "save": "Enregistrer la répétition",
       "savedCount_one": "Une opération enregistrée en une étape de répétition.",

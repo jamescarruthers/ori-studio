@@ -140,7 +140,7 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
             : blocked && !m.preparing
               ? t('panels:fold.repeat.blockedAt', 'Stopped at source operation {{number}}: {{reason}}', {
                   number: blocked.step + 1,
-                  reason: repeatFailure(t, blocked.code),
+                  reason: repeatFailure(t, blocked),
                 })
               : m.busy
                 ? t('panels:fold.repeat.preparing', 'Preparing repeated folds…')
@@ -158,7 +158,7 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
                         'The final folded result and CP are shown below. Ready to save.',
                       )
                     : m.baseline && !m.axes.length
-                      ? repeatFailure(t, 'repeat_axis')
+                      ? repeatFailure(t, { code: 'repeat_axis' })
                       : t(
                           'panels:fold.repeat.axisHint',
                           'The axis is shown on the model before the selected range.',

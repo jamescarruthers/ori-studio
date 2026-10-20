@@ -5870,7 +5870,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_one": "77392a956b2c",
@@ -6198,7 +6197,8 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12071,7 +12071,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_one": "77392a956b2c",
@@ -12399,7 +12398,8 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18274,7 +18274,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_one": "77392a956b2c",
@@ -18602,7 +18601,8 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24151,7 +24151,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_other": "dcff0107fc3b",
@@ -24472,7 +24471,8 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30021,7 +30021,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_other": "dcff0107fc3b",
@@ -30342,7 +30341,8 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36215,7 +36215,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_one": "77392a956b2c",
@@ -36543,7 +36542,8 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -42416,7 +42416,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_one": "77392a956b2c",
@@ -42744,7 +42743,8 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48293,7 +48293,6 @@
     "panels:fold.repeat.ready": "e17a9902ba63",
     "panels:fold.repeat.rebuildRequired": "a13bc70ad331",
     "panels:fold.repeat.reference": "783bc1070ab4",
-    "panels:fold.repeat.refused": "b42b330dd03b",
     "panels:fold.repeat.returnTarget": "98f19925f2a4",
     "panels:fold.repeat.save": "dda2df0d5580",
     "panels:fold.repeat.savedCount_other": "dcff0107fc3b",
@@ -48614,6 +48613,7 @@
     "tools:fold.refusal.stackedTooDeep.fold": "7b95e328fe5f",
     "tools:fold.refusal.stackedTooDeep.pattern": "b0573b9e1266",
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
-    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f"
+    "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
+    "panels:fold.repeat.refusedPlain": "ec21fc1e3271"
   }
 }

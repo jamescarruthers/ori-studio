@@ -1907,7 +1907,7 @@
       "ready": "O resultado dobrado e o padrão de vincos são mostrados abaixo. Pronto para salvar.",
       "rebuildRequired": "A repetição salva não corresponde mais a este estado. Atualize-a a partir dos passos de origem.",
       "reference": "Uma referência não tem um ponto correspondente do outro lado.",
-      "refused": "O mecanismo de dobra recusou a operação espelhada ({{code}}). Nenhum passo foi adicionado.",
+      "refusedPlain": "A operação espelhada não pode ser dobrada. Nenhum passo foi adicionado.",
       "returnTarget": "Este desdobramento retorna a um passo anterior ao intervalo selecionado. Inclua essa parte da sequência na repetição.",
       "save": "Salvar repetição",
       "savedCount_one": "Uma operação salva como um passo de repetição.",
