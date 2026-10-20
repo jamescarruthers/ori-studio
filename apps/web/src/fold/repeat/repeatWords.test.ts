@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
 import type { FoldRefusalBody } from '../engine/foldEngineWire';
 import { foldRefusalNotice } from '../tools/refusalNotice';
-import { repeatFailure } from './repeatWords';
+import { repeatAxisName, repeatFailure } from './repeatWords';
 
 const t = i18n.t.bind(i18n);
 
@@ -39,6 +39,21 @@ describe("Repeat's refusal words", () => {
 
   it("keeps Repeat's own reasons in its own words", () => {
     expect(repeatFailure(t, { code: 'repeat_limit' })).toBe('This repeat exceeds the search limit. Try a shorter range.');
+  });
+
+  it('names a symmetry axis by the way it runs on screen, whichever way its normal points', () => {
+    const s = Math.SQRT1_2;
+    const name = (n: [number, number]) => repeatAxisName(t, { n, d: 0.5 });
+    expect(name([1, 0])).toBe('Vertical axis');
+    expect(name([-1, 0])).toBe('Vertical axis');
+    expect(name([0, 1])).toBe('Horizontal axis');
+    expect(name([0, -1])).toBe('Horizontal axis');
+    // y up: the line y = x rises to the right.
+    expect(name([s, -s])).toBe('Rising diagonal');
+    expect(name([-s, s])).toBe('Rising diagonal');
+    expect(name([s, s])).toBe('Falling diagonal');
+    // Any other, by its angle from the horizontal.
+    expect(name([-Math.sin(Math.PI / 6), Math.cos(Math.PI / 6)])).toBe('Axis at 30°');
   });
 
   it("words a sink's refusal as the sink tool does", () => {

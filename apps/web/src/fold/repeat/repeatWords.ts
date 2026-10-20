@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { FoldOpKind } from '../document/foldSequenceDocument';
+import type { FoldModelLine, FoldOpKind } from '../document/foldSequenceDocument';
 import { FOLD_VERTEX_OP_KINDS } from '../document/foldSequenceDocument';
 import type { FoldRefusalBody } from '../engine/foldEngineWire';
 import type { FoldSinkToolId } from '../tools/foldToolCatalog';
@@ -15,6 +15,27 @@ export interface RepeatStop {
   code: string;
   refusal?: FoldRefusalBody;
   op?: FoldOpKind;
+}
+
+/** How near a named direction an axis is, in degrees, to be called by it. */
+const AXIS_TOLERANCE_DEG = 0.01;
+
+/**
+ * A symmetry axis by the way it runs on screen (its `display` line, y up):
+ * vertical, horizontal, the rising or the falling diagonal, or else its angle
+ * from the horizontal, counter-clockwise. A shape's axes all cross its
+ * middle, so no two run the same way and each name is the one axis.
+ */
+export function repeatAxisName(t: TFunction, line: FoldModelLine): string {
+  // The line runs along (−n.y, n.x); its angle is taken modulo a half turn.
+  const raw = (Math.atan2(line.n[0], -line.n[1]) * 180) / Math.PI;
+  const angle = ((raw % 180) + 180) % 180;
+  const near = (target: number) => Math.abs(angle - target) <= AXIS_TOLERANCE_DEG || Math.abs(angle - target - 180) <= AXIS_TOLERANCE_DEG;
+  if (near(90)) return t('panels:fold.repeat.axisVertical', 'Vertical axis');
+  if (near(0)) return t('panels:fold.repeat.axisHorizontal', 'Horizontal axis');
+  if (near(45)) return t('panels:fold.repeat.axisRising', 'Rising diagonal');
+  if (near(135)) return t('panels:fold.repeat.axisFalling', 'Falling diagonal');
+  return t('panels:fold.repeat.axisAngle', 'Axis at {{degrees}}°', { degrees: Math.round(angle) });
 }
 
 /** What a refused step's words are read against: the fold family of the step whose mirror was refused. */

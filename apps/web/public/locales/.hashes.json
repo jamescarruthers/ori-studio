@@ -5839,7 +5839,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_one": "6e0a5a1b02b7",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
@@ -6199,7 +6198,12 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12041,7 +12045,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_one": "6e0a5a1b02b7",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
@@ -12401,7 +12404,12 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18245,7 +18253,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_one": "6e0a5a1b02b7",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
@@ -18605,7 +18612,12 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24127,7 +24139,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
     "panels:fold.repeat.chooseAxis": "9bd5115a5bcb",
@@ -24476,7 +24487,12 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -29998,7 +30014,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
     "panels:fold.repeat.chooseAxis": "9bd5115a5bcb",
@@ -30347,7 +30362,12 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36189,7 +36209,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_one": "6e0a5a1b02b7",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
@@ -36549,7 +36568,12 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -42391,7 +42415,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_one": "6e0a5a1b02b7",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
@@ -42751,7 +42774,12 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48273,7 +48301,6 @@
     "panels:fold.repeat.axisCanvas": "0dc052799be0",
     "panels:fold.repeat.axisHint": "833f0ade9327",
     "panels:fold.repeat.axisLocated": "c806508e4ee3",
-    "panels:fold.repeat.axisNumber": "9e8199fb4000",
     "panels:fold.repeat.blockedAt": "ce32d488e9d4",
     "panels:fold.repeat.choiceAt_other": "6e0a5a1b02b7",
     "panels:fold.repeat.chooseAxis": "9bd5115a5bcb",
@@ -48622,6 +48649,11 @@
     "tools:fold.refusal.stackedTooDeep.step": "d87c9b73f097",
     "tools:fold.refusal.stackedTooDeep.title": "dbca0b71aa7f",
     "panels:fold.repeat.refusedPlain": "ec21fc1e3271",
-    "panels:fold.sequence.switchBranch": "5051902c7b6a"
+    "panels:fold.sequence.switchBranch": "5051902c7b6a",
+    "panels:fold.repeat.axisAngle": "747483f1a538",
+    "panels:fold.repeat.axisFalling": "32ccf33347b5",
+    "panels:fold.repeat.axisHorizontal": "b2095a4e84e8",
+    "panels:fold.repeat.axisRising": "c683b0c75c79",
+    "panels:fold.repeat.axisVertical": "423f060096eb"
   }
 }

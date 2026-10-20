@@ -4,7 +4,7 @@ import { FoldRepeatAxis } from './FoldRepeatAxis';
 import { useTranslation } from 'react-i18next';
 import { useFoldRepeatUi, type FoldRepeatOpening } from '../../../fold/repeat/foldRepeatUi';
 import { useFoldRepeat } from '../../../fold/repeat/useFoldRepeat';
-import { repeatFailure } from '../../../fold/repeat/repeatWords';
+import { repeatAxisName, repeatFailure } from '../../../fold/repeat/repeatWords';
 import { foldReturnEntryLabel } from '../../../fold/return/foldReturnWords';
 import type { FoldScene } from '../../../fold/engine/foldEngineWire';
 import type { FoldModelLine } from '../../../fold/document/foldSequenceDocument';
@@ -90,9 +90,9 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
               <SelectValue placeholder={t('panels:fold.repeat.chooseAxis', 'Choose symmetry axis')} />
             </SelectTrigger>
             <SelectContent>
-              {m.axes.map((_, i) => (
+              {m.axes.map((axis, i) => (
                 <SelectItem key={i} value={String(i)}>
-                  {t('panels:fold.repeat.axisNumber', 'Axis {{number}}', { number: i + 1 })}
+                  {repeatAxisName(t, axis.display)}
                 </SelectItem>
               ))}
             </SelectContent>
