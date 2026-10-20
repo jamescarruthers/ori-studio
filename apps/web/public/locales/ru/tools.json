@@ -524,6 +524,7 @@
       "mountainInstruction": "Линия горы: {{instruction}}",
       "mountainLine": "Линия горы",
       "refusedTitle": "Здесь нельзя выполнить складку-молнию",
+      "searching": "Определяется, как могут лечь слои складки-молнии…",
       "valleyInstruction": "Линия долины: {{instruction}}",
       "valleyLine": "Линия долины"
     },

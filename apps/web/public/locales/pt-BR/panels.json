@@ -1917,6 +1917,8 @@
       "sentence_many": "Repetir as {{count}} operações anteriores do outro lado.",
       "sentence_other": "Repetir as {{count}} operações anteriores do outro lado.",
       "sourceChanged": "Os passos de origem mudaram. Atualize esta repetição.",
+      "stop": "Parar",
+      "stopped": "Parou antes de a repetição ficar pronta. Nenhum passo foi adicionado.",
       "title": "Repetir do outro lado",
       "unavailable": "Os estados de origem estão indisponíveis ou mudaram. Aguarde a reprodução e abra Repetir novamente.",
       "unsupported": "Este intervalo contém um colapso ou outra repetição que ainda não pode ser espelhada. Escolha um intervalo de operações de dobra.",

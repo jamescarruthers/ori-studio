@@ -476,6 +476,7 @@
       "mountainInstruction": "山折り線：{{instruction}}",
       "mountainLine": "山折り線",
       "refusedTitle": "ここでは段折りできません",
+      "searching": "段折りの層の重なり方を調べています…",
       "valleyInstruction": "谷折り線：{{instruction}}",
       "valleyLine": "谷折り線"
     },

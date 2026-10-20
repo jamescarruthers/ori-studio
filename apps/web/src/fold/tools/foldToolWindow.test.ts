@@ -432,3 +432,16 @@ it('offers every construction separately for the mountain and valley lines of a 
   model.lineMode?.set('axiom-1');
   expect(calls.selectLineMode).toHaveBeenCalledWith('axiom-1', 'first');
 });
+
+it('says while a pleat’s layer orders are searched for, beside the Escape that stops it, and that a confirmation made meanwhile waits', () => {
+  const pleat = { tool: 'pleat', lineMode: 'free', secondLineMode: 'free', picks: 4 } as const;
+  const found = foldToolWindow(t, view({ ...pleat, preview: preview() }), verbs(), mouse)!;
+  expect(found.instructions.notes).toContain('Esc clears the picks.');
+  const searching = foldToolWindow(t, view({ ...pleat, preview: preview({ searching: true, queued: true }) }), verbs(), mouse)!;
+  expect(searching.instructions.notes).toEqual([
+    ...found.instructions.notes,
+    'Working out how the pleat’s layers can stack…',
+    'Folding as soon as the preview is ready…',
+  ]);
+  expect(searching.footer?.cancel.shortcut).toBe('viewport.cancel');
+});

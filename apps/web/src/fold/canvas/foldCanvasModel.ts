@@ -87,6 +87,7 @@ export function foldWindowPreview(
     landing: preview.landing,
     acrossLayers: preview.build.status === 'built' && preview.build.acrossLayers === true && !tools.override,
     ...(queued ? { queued } : {}),
+    ...(preview.orderResolution?.waiting && !preview.orderResolution.active ? { searching: true } : {}),
     ...(preview.extent?.state.status === 'incomplete' ? { incomplete: true } : {}),
   };
 }

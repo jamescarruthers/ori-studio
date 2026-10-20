@@ -10,6 +10,7 @@ import { currentFoldPath } from '../sequence/foldCommands';
 import { registerFoldCancel, registerFoldKeyHandler } from '../sequence/foldKeys';
 import { useFoldSessionState } from '../session/useFoldSession';
 import { canonicalJson } from '../document/foldDigest';
+import { foldSearchTicket, type FoldSearchTicket } from '../engine/foldSearch';
 import type { RepeatPrepared, RepeatRequest, RepeatSourceStep } from './repeatPreparation';
 import type { RepeatSymmetry } from './repeatGeometry';
 import { useFoldRepeatUi, type FoldRepeatOpening } from './foldRepeatUi';
@@ -29,7 +30,17 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
   const [result, setResult] = useState<RepeatPrepared | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
   const [selections, setSelections] = useState<Record<number, string>>({});
+  /** The preparation the worker is running, until it answers: what Stop and Escape cancel there. */
+  const [searching, setSearching] = useState<FoldSearchTicket | null>(null);
+  const [stopped, setStopped] = useState(false);
   const ticket = useRef(0);
+  const search = useRef<FoldSearchTicket | null>(null);
+  /** Stop the preparation in the worker: it lets go of every state it landed, and its answer is dropped. */
+  const stopSearch = () => {
+    if (search.current) session.cancelSearch(search.current);
+    search.current = null;
+    setSearching(null);
+  };
   const start = path.entries.findIndex((e) => e.id === first);
   const base = path.entries[start - 1]?.session.state;
   const baselineId = path.entries[start - 1]?.id ?? null;
@@ -53,6 +64,7 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
 
   const close = () => {
     ticket.current++;
+    stopSearch();
     session.cancel();
     useFoldRepeatUi.getState().close();
     if (opening.rebuild && session.store.getState().loadId === opening.loadId)
@@ -60,12 +72,21 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
   };
   const invalidate = () => {
     ticket.current++;
+    stopSearch();
     session.cancel();
     setResult(null);
     setChoice(null);
     setError(null);
+    setStopped(false);
     setBusy(false);
     setSelections({});
+  };
+  /** Stop the preparation under way and keep the setup: nothing was prepared, nothing is added. */
+  const stop = () => {
+    if (!search.current) return false;
+    invalidate();
+    setStopped(true);
+    return true;
   };
   useEffect(() => {
     if (!valid) {
@@ -75,10 +96,14 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
     if (!base) return;
     // Timeline clicks can change the range as well as the setup control.
     ticket.current++;
+    if (search.current) session.cancelSearch(search.current);
+    search.current = null;
+    setSearching(null);
     session.cancel();
     setResult(null);
     setChoice(null);
     setSelections({});
+    setStopped(false);
     setBusy(false);
     let active = true;
     setAxes([]);
@@ -114,6 +139,8 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
   useEffect(
     () => () => {
       ticket.current++;
+      if (search.current) session.cancelSearch(search.current);
+      search.current = null;
       session.cancel();
     },
     [session],
@@ -152,8 +179,13 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
     const run = ++ticket.current;
     setBusy(true);
     setError(null);
+    setStopped(false);
     setChoice(null);
     session.cancel();
+    stopSearch();
+    const searched = foldSearchTicket();
+    search.current = searched;
+    setSearching(searched);
     try {
       const answer = await session.withState(parent.state, (engine, state) =>
         engine.prepareRepeat({
@@ -163,8 +195,12 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
           axis: axes[axis]!.sheet,
           selections: accepted,
           baseline: baselineId,
-        } satisfies RepeatRequest),
+        } satisfies RepeatRequest, searched),
       );
+      if (search.current === searched) {
+        search.current = null;
+        setSearching(null);
+      }
       if (ticket.current !== run) return;
       if (answer.status !== 'answered') {
         setError('repeat_unavailable');
@@ -174,8 +210,13 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
       if (answer.value.status === 'ready') await show(answer.value.op);
       else if (answer.value.prefix?.steps.length) await show(answer.value.prefix);
     } catch {
+      // A preparation stopped here (`stop`, `close`) rejects as cancelled, its run already superseded.
       if (ticket.current === run) setError('repeat_unavailable');
     } finally {
+      if (search.current === searched) {
+        search.current = null;
+        setSearching(null);
+      }
       if (ticket.current === run) setBusy(false);
     }
   };
@@ -236,9 +277,10 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
     } else setError('repeat_unavailable');
     setBusy(false);
   };
+  // Escape stops a preparation under way and keeps the setup; otherwise it closes Repeat.
   useEffect(() =>
     registerFoldCancel(() => {
-      close();
+      if (!stop()) close();
       return true;
     }),
   );
@@ -283,6 +325,11 @@ export function useFoldRepeat(opening: FoldRepeatOpening, locating = false) {
     base,
     axisMarks,
     busy,
+    /** The worker is preparing the repeat: Stop (and Escape) cancels it there. */
+    preparing: searching !== null,
+    /** The last preparation was stopped before it answered. */
+    stopped,
+    stop,
     error,
     result,
     choice,

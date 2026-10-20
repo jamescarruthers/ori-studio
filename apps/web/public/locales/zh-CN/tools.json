@@ -476,6 +476,7 @@
       "mountainInstruction": "山折线：{{instruction}}",
       "mountainLine": "山折线",
       "refusedTitle": "此处无法褶折",
+      "searching": "正在计算褶折各层的叠放方式…",
       "valleyInstruction": "谷折线：{{instruction}}",
       "valleyLine": "谷折线"
     },

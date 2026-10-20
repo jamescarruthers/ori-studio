@@ -492,6 +492,7 @@
       "mountainInstruction": "Mountain line: {{instruction}}",
       "mountainLine": "Mountain line",
       "refusedTitle": "The pleat cannot fold here",
+      "searching": "Working out how the pleat’s layers can stack…",
       "valleyInstruction": "Valley line: {{instruction}}",
       "valleyLine": "Valley line"
     },

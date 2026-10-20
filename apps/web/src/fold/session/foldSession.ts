@@ -44,6 +44,7 @@ import type { HeldFoldSequence } from '../document/foldSequenceFile';
 import type { FoldStepDraft } from '../document/foldSequenceEdits';
 import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
+import type { FoldSearchTicket } from '../engine/foldSearch';
 import type { FoldEngineOp, FoldEngineRefused, FoldStateSummary } from '../engine/foldEngineWire';
 import { createFoldSessionAnswers } from './foldSessionAnswers';
 import { createFoldSessionEngine, foldStepInputKey, type FoldSessionEngine } from './foldSessionEngine';
@@ -229,6 +230,13 @@ export interface FoldSession {
   commitLanded(landed: FoldLandedStep): Promise<FoldCommitOutcome>;
   /** Let go of the pending step and the analysis. */
   cancel(): void;
+  /**
+   * Stop a search asked with this ticket (`engine/foldSearch.ts`) — a pleat's
+   * orders, a repeat's preparation — at its next slice, letting go of every
+   * state it landed. Its call rejects with `fold_search_cancelled`. Nothing
+   * to stop is no error.
+   */
+  cancelSearch(ticket: FoldSearchTicket): void;
   /** Ask the engine about a landed state. */
   withState<T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>>;
   /**
@@ -1017,6 +1025,13 @@ export function createFoldSession({
       dropPending();
       dropAnalysis();
       render();
+    },
+
+    cancelSearch(ticket) {
+      // With no holder there is no worker, and no search on it.
+      if (holders === 0) return;
+      // An engine that has gone took its searches with it.
+      runtime.ask((worker) => worker.cancelSearch?.(ticket.id) ?? Promise.resolve()).catch(() => undefined);
     },
 
     withState,

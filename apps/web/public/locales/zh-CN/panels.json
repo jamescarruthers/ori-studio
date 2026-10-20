@@ -1805,6 +1805,8 @@
       "savedCount_other": "将 {{count}} 个操作保存为一个重复步骤。",
       "sentence_other": "在另一侧重复前面的 {{count}} 个操作。",
       "sourceChanged": "原步骤已更改。请更新此次重复。",
+      "stop": "停止",
+      "stopped": "在重复准备就绪前已停止。未添加任何步骤。",
       "title": "在另一侧重复",
       "unavailable": "原状态不可用或已更改。请等待重放完成后重新打开重复。",
       "unsupported": "此范围包含尚不能镜像执行的塌折或另一次重复。请选择折叠操作范围。",

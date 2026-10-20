@@ -5,6 +5,7 @@ import {
   layersSection,
   lineModeNotes,
   lineModeSelect,
+  queuedNote,
   settingsMeta,
   type FoldToolHost,
   type FoldToolWindowModel,
@@ -71,12 +72,13 @@ export function pleatToolWindow(
       current: preview
         ? 0
         : Math.min(view.picks, firstCount + lineModeInput(second).steps.length),
-      notes: lineModeNotes(
-        t,
-        view.picks < firstCount ? view.lineMode : second,
-        host,
-        view.freeLineSnap,
-      ),
+      notes: [
+        ...lineModeNotes(t, view.picks < firstCount ? view.lineMode : second, host, view.freeLineSnap),
+        // Both folds are tried for every way each lands: seconds on a busy
+        // model. Escape, which the notes above name, stops it with the picks.
+        ...(preview?.searching ? [t('tools:fold.pleat.searching', 'Working out how the pleat’s layers can stack…')] : []),
+        ...(preview ? queuedNote(t, preview) : []),
+      ],
     },
     lineMode: preview
       ? null

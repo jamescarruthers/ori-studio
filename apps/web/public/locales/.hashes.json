@@ -6184,7 +6184,10 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12371,7 +12374,10 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18560,7 +18566,10 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24416,7 +24425,10 @@
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30272,7 +30284,10 @@
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36459,7 +36474,10 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -42646,7 +42664,10 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48502,6 +48523,9 @@
     "panels:diagram.empty.openingExample": "4d4e21f5db9e",
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
-    "panels:simulatorSegments.creases_other": "059cbfda69b1"
+    "panels:simulatorSegments.creases_other": "059cbfda69b1",
+    "panels:fold.repeat.stop": "cae7d57bc067",
+    "panels:fold.repeat.stopped": "47be525b34f5",
+    "tools:fold.pleat.searching": "e100f7f21528"
   }
 }

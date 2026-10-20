@@ -94,6 +94,14 @@ describe('the Fold canvas model', () => {
     expect(picked?.seed).toEqual([1]);
   });
 
+  it('says the orders are still being searched for while the order search has not answered and is not under review', () => {
+    const resolution = (waiting: boolean, active = false) => ({ waiting, active }) as FoldToolPreview['orderResolution'];
+    expect(foldWindowPreview(located, preview({ orderResolution: resolution(true) }))?.searching).toBe(true);
+    expect(foldWindowPreview(located, preview({ orderResolution: resolution(false) }))?.searching).toBeUndefined();
+    expect(foldWindowPreview(located, preview({ orderResolution: resolution(true, true) }))?.searching).toBeUndefined();
+    expect(foldWindowPreview(located, preview())?.searching).toBeUndefined();
+  });
+
   it('presses the top flap the step was built with while the tools hold the default (owner request, 2026-10-13)', () => {
     // The tools hold `top`; the preview's seed is the section's top flap, the step's flaps seed its witness.
     expect(located.seed).toEqual({ scope: 'top' });

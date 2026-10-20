@@ -11,8 +11,10 @@ const witness = { faces: [[0.1, 0.1]], orders: [[0, 1, 1]] };
 let activeBase = base;
 const releaseOrderSearch = vi.fn();
 const orderSelection = vi.fn();
+const cancelSearch = vi.fn();
 const session = { cursor: { state: { generation: 1, id: 1 } },
   withCursor: async (call: (e: unknown, at: number) => Promise<unknown>) => ({ status: 'answered', value: await call({ orderSelection, releaseOrderSearch }, 1) }),
+  cancelSearch,
 } as unknown as FoldSessionSurface;
 let seen: ReturnType<typeof useFoldOrderResolution>;
 let root: ReturnType<typeof createRoot>;
@@ -20,6 +22,7 @@ function Probe({ input = 'a' }: { input?: string }) { const result = useFoldOrde
 beforeEach(() => {
   activeBase = base;
   releaseOrderSearch.mockReset();
+  cancelSearch.mockReset();
   root = createRoot(document.createElement('div'));
   orderSelection.mockReset().mockResolvedValue({ status: 'ok', count: { orders: 2, exact: true }, index: 0, completion: witness });
 });
@@ -65,6 +68,22 @@ it('waits for confirmation, backs out with inputs intact, and stays in the tool 
   expect(seen.resolution?.active).toBe(false);
   await render('different layers');
   expect(seen.resolution?.active).toBe(false);
+});
+
+it('stops a pleat’s order search in the worker once its input changes, and asks no other fold’s with a ticket', async () => {
+  activeBase = { op: { kind: 'pleat', line: { via: 'free', through: [[0.5, 0], [0.5, 1]] }, second: { via: 'free', through: [[0.75, 0], [0.75, 1]] }, moving: [0.9, 0.5], seed: { scope: 'all' } }, key: 'pleat' };
+  // Still searching when the line moves.
+  orderSelection.mockImplementationOnce(() => new Promise(() => {}));
+  await render();
+  const ticket: unknown = orderSelection.mock.lastCall?.[4];
+  expect(ticket).toEqual({ id: expect.any(Number) });
+  expect(seen.resolution?.waiting).toBe(true);
+  expect(cancelSearch).not.toHaveBeenCalled();
+  await render('moved line');
+  expect(cancelSearch).toHaveBeenCalledWith(ticket);
+  activeBase = base;
+  await render('a squash');
+  expect(orderSelection.mock.lastCall?.[4]).toBeUndefined();
 });
 
 it('offers a bounded retry for a search limit without calling the fold impossible', async () => {

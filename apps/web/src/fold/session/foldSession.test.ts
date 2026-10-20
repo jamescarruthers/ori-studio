@@ -617,3 +617,32 @@ describe('the Fold session: the step a tool folds', () => {
     expect(engine().log).toEqual([]);
   });
 });
+
+describe('the Fold session: searches', () => {
+  it('sends a search’s cancel to the engine it runs on, and nothing while no surface holds it', async () => {
+    const cancelled: number[] = [];
+    const document = branching();
+    const runtime = inProcessFoldRuntime(() => Object.assign(fakeFoldEngine(), { cancelSearch: (id: number) => void cancelled.push(id) }));
+    const session = createFoldSession({
+      document: memoryFoldDocument({ held: { document, readOnlyRaw: null }, reader: readerOn(document, 'c') }),
+      runtime,
+    });
+    sessions.push(session);
+    session.cancelSearch({ id: 7 });
+    await settle();
+    expect(cancelled).toEqual([]);
+    session.retain();
+    await settle();
+    session.cancelSearch({ id: 8 });
+    await settle();
+    expect(cancelled).toEqual([8]);
+  });
+
+  it('takes an engine that has no searches to cancel as nothing to stop', async () => {
+    const { session } = setup();
+    session.retain();
+    await settle();
+    expect(() => session.cancelSearch({ id: 9 })).not.toThrow();
+    await settle();
+  });
+});

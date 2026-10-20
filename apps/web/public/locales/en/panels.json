@@ -1860,6 +1860,8 @@
       "sentence_one": "Repeat the previous operation on the other side.",
       "sentence_other": "Repeat the previous {{count}} operations on the other side.",
       "sourceChanged": "Source steps changed. Update to rebuild this Repeat.",
+      "stop": "Stop",
+      "stopped": "Stopped before the repeat was ready. No steps were added.",
       "title": "Repeat on the other side",
       "unavailable": "The source states are unavailable or changed. Wait for replay, then reopen Repeat.",
       "unsupported": "This range includes a Collapse or another Repeat that cannot yet be mirrored. Choose a range of fold operations.",
