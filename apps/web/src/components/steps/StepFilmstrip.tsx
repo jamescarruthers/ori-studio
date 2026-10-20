@@ -213,6 +213,13 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
   // React Compiler cannot memoize a component that uses `useVirtualizer`, so
   // this one re-renders on every scroll frame. Nothing below it is expensive as
   // long as `renderThumbnail` draws something pure and keyed by step.
+  //
+  // The rule's real warning is about handing this API's functions to memoized
+  // children, which would keep a stale one. None leaves this component:
+  // `measureElement` goes to a card's own `div` as its ref, and the rest are
+  // called here — as `CpDiagnosticHud` and `useVirtualStepRows` note for
+  // their own virtualizers.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     horizontal: true,
     count: steps.length,
