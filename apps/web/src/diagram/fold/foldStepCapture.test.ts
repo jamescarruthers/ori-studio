@@ -9,7 +9,7 @@
  * engine as the bridge lands a compound fold: no plain report, the line in
  * the compound one.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { initialFoldReaderState, withFoldCursor } from '../../fold/document/foldReaderState';
 import { sequenceOf, step } from '../../fold/document/foldSequence.fixtures';
@@ -24,7 +24,13 @@ import { diagonalHalfScene, squareScene } from '../../fold/sequence/foldScene.fi
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import { createFoldSession, type FoldSession } from '../../fold/session/foldSession';
-import { fakeFoldEngine, inProcessFoldRuntime, memoryFoldDocument, settle } from '../../fold/session/foldSession.fixtures';
+import {
+  fakeFoldEngine,
+  inProcessFoldRuntime,
+  memoryFoldDocument,
+  settle,
+  type FakeFoldEngine,
+} from '../../fold/session/foldSession.fixtures';
 import { selectFoldNode } from '../../fold/session/foldSessionState';
 import { foldStepSentence, type FoldSentenceStep } from '../../fold/stepSentence';
 import { foldDiagramSentence } from './foldDiagramSentence';
@@ -104,17 +110,26 @@ function reportOf(op: FoldEngineOp): FoldCompoundReport | null {
 }
 
 let sessions: FoldSession[] = [];
+/** Every fake engine the sessions' runtimes made, the newest last. */
+let fakes: FakeFoldEngine[] = [];
 
 afterEach(() => {
   for (const session of sessions) session.dispose();
   sessions = [];
+  fakes = [];
+  vi.useRealTimers();
 });
 
-/** A session showing a sequence of one step, `op`, folded from the flat square to the square folded on its diagonal. */
-async function sessionOf(op: FoldOp, report?: Partial<FoldReport>): Promise<FoldSession> {
+/**
+ * A session showing a sequence of one step, `op`, folded from the flat square
+ * to the square folded on its diagonal: held and replayed, or with `linger`,
+ * held by nothing until a capture holds it.
+ */
+async function sessionOf(op: FoldOp, report?: Partial<FoldReport>, { linger }: { linger?: number } = {}): Promise<FoldSession> {
   const document = sequenceOf([step('fstep-1', null, op)]);
   const runtime = inProcessFoldRuntime(() => {
     const fake = fakeFoldEngine({ compound: reportOf, ...(report ? { report: () => report } : {}) });
+    fakes.push(fake);
     const folded = (state: number) => (fake.trail(state)?.length ?? 0) > 1;
     return {
       ...fake,
@@ -127,9 +142,9 @@ async function sessionOf(op: FoldOp, report?: Partial<FoldReport>): Promise<Fold
     held: { document, readOnlyRaw: null },
     reader: withFoldCursor(initialFoldReaderState(document.id), document, 'fstep-1'),
   });
-  const session = createFoldSession({ document: source, runtime });
+  const session = createFoldSession({ document: source, runtime, linger });
   sessions.push(session);
-  session.retain();
+  if (linger === undefined) session.retain();
   await settle();
   return session;
 }
@@ -189,5 +204,26 @@ describe('a Fold step captured for the Diagram, worded by its kind (D17)', () =>
     const sentence = await capturedSentence(session);
     expect(sentence).toBe('Unfold.');
     expect(sentence).toBe(foldDiagramSentence(t, stripWords(session, UNFOLD)));
+  });
+});
+
+describe('a Fold step captured while the session lingers', () => {
+  it('captures again from the states the last capture left, replaying nothing, until the linger runs out', async () => {
+    const LINGER = 60_000;
+    const session = await sessionOf(REVERSE, undefined, { linger: LINGER });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const replayed = () => fakes.flatMap((fake) => fake.log).filter((call) => call === 'sheet' || call.startsWith('step:'));
+
+    expect(await capturedSentence(session)).toBe('Inside reverse fold.');
+    expect(replayed()).toEqual(['sheet', 'step:inside-reverse']);
+    // The capture let go; the engine lingers, and the next capture finds every state where it was.
+    expect(session.store.getState().live).toBe(false);
+    expect(await capturedSentence(session)).toBe('Inside reverse fold.');
+    expect(replayed()).toEqual(['sheet', 'step:inside-reverse']);
+
+    // Once it runs out, a capture replays into a fresh engine, as every capture did before.
+    await vi.advanceTimersByTimeAsync(LINGER);
+    expect(await capturedSentence(session)).toBe('Inside reverse fold.');
+    expect(replayed()).toEqual(['sheet', 'step:inside-reverse', 'sheet', 'step:inside-reverse']);
   });
 });

@@ -292,6 +292,32 @@ export function foldSheetPath(paper: FoldPaper): FoldPathDigest {
 }
 
 /**
+ * What of `progress` still holds for `document`, which changed while nothing
+ * replayed it: a step keeps its state only while its path is the one that
+ * state was landed for. An edit that rewrites a step in place (a repeat's or
+ * an import's refresh, a rebuilt return) or an undo of one leaves that step
+ * and every step after it pending until a replay lands them again, rather
+ * than showing the state they had before. `progress` itself when every step
+ * it holds is still there, and for another sequence or another paper, of
+ * which {@link deriveFoldSessionNodes} shows no step anyway.
+ */
+export function foldProgressStillValid(
+  progress: FoldReplayProgress<FoldEngineStateHandle>,
+  document: FoldSequenceDocument
+): FoldReplayProgress<FoldEngineStateHandle> {
+  if (progress.sequenceId !== document.id || progress.sheet.path !== foldSheetPath(document.paper)) return progress;
+  const tree = foldStepTree(document.steps);
+  const steps = new Map<string, FoldNodeReplay<FoldEngineStateHandle>>();
+  for (const node of document.steps) {
+    const replay = progress.steps.get(node.id);
+    if (replay && replay.path === foldPathDigest(document.paper, pathTo(tree, node.id) ?? [node])) {
+      steps.set(node.id, replay);
+    }
+  }
+  return steps.size === progress.steps.size ? progress : { ...progress, steps, done: false };
+}
+
+/**
  * Every node of `document` from the newest replay progress of its load.
  *
  * Every path begins with the paper, so progress made for another paper holds

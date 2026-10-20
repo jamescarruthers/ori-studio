@@ -9,6 +9,11 @@
  *   undo or a note edit asks the engine nothing; a run for a document since
  *   replaced is superseded by the run its replacement starts, and its
  *   progress, which names the load it replayed, is never shown for another.
+ * - **Kept a while after the last surface** (`linger`): leaving Fold for the
+ *   Diagram and coming back finds every state where it was, so the step on
+ *   screen is shown at once and nothing is replayed — or, after an edit made
+ *   meanwhile, only what it changed. Nothing runs while it waits, and a load
+ *   or a lost engine ends it at once.
  * - **Handles die with their engine.** A worker that is terminated or crashes
  *   takes every state with it, and its successor numbers states from 1 again
  *   (the generation rule, `foldEnginePort`). The session forgets every handle
@@ -75,6 +80,7 @@ import {
   FOLD_BLANK_SEQUENCE,
   FOLD_IDLE,
   foldLandedAhead,
+  foldProgressStillValid,
   foldSessionProgress,
   foldStateDetailsOf,
   sameFoldState,
@@ -170,6 +176,13 @@ export interface FoldSessionOptions {
   onEngineCrash?: (restart: FoldEngineRestart) => void;
   /** The replay cache's room beyond the states on screen (`createFoldReplayer`). */
   capacity?: number;
+  /**
+   * How long, in milliseconds, the engine and every state it landed are kept
+   * once the last surface lets go, so a surface that holds the session again
+   * within it shows the replayed sequence at once ({@link FoldSession.retain}).
+   * 0, the default, stops the engine at once.
+   */
+  linger?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,7 +261,11 @@ export interface FoldSession {
   /**
    * Hold the engine while a surface is open: the first hold starts it and
    * replays. Returns the release; the last one stops the engine and lets
-   * every state go.
+   * every state go — after the session's `linger`, when it has one. A hold
+   * taken within it finds every state where it was and asks the engine
+   * nothing, unless the document changed meanwhile, when the replay asks only
+   * for what changed. Nothing runs while it lingers, and it stops at once
+   * when the sequences are replaced (a load) or the engine goes away.
    */
   retain(): () => void;
   /**
@@ -399,9 +416,18 @@ export function createFoldSession({
   reportError,
   onEngineCrash,
   capacity,
+  linger: lingerMs = 0,
 }: FoldSessionOptions): FoldSession {
   let input = source.read();
   let holders = 0;
+  /** No surface holds the session, but the engine is kept until this runs out (`linger`). */
+  let lingering: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * What the session shows may not be all the document asks for — a replay
+   * was cut short, or the document changed while nothing replayed it — so
+   * the next hold replays. Kept states answer every path that did not change.
+   */
+  let replayOwed = false;
   let engine: FoldSessionEngine | null = null;
   let replayer: FoldReplayer<FoldEngineStateHandle> | null = null;
   /** Bumped to drop an engine-version answer that outlived the start that asked for it. */
@@ -580,6 +606,7 @@ export function createFoldSession({
   const replay = () => {
     const current = replayer;
     if (!current || holders === 0 || halted) return;
+    replayOwed = false;
     const ticket = ++runTicket;
     const sequence = input.held?.document ?? FOLD_BLANK_SEQUENCE;
     const activeChild = input.reader?.sequenceId === sequence.id ? input.reader.activeChild : undefined;
@@ -692,6 +719,9 @@ export function createFoldSession({
   };
 
   const stop = () => {
+    if (lingering !== null) clearTimeout(lingering);
+    lingering = null;
+    replayOwed = false;
     settleRestart('left');
     forgetStates();
     // Released through the port's batch, which an engine stopped meanwhile drops.
@@ -701,9 +731,49 @@ export function createFoldSession({
     render();
   };
 
+  /**
+   * The last surface let go: keep the engine, every state it landed and what
+   * the surfaces asked of them for `lingerMs`, then stop. Nothing is left
+   * running meanwhile: the replay under way stops after the step it is
+   * folding (what it landed stays cached), and the step a tool was folding
+   * goes with the tool.
+   */
+  const startLingering = () => {
+    settleRestart('left');
+    const shown = progress?.done === true && progress.loadId === input.loadId;
+    if (replaying || replayScheduled || starting || !shown) replayOwed = true;
+    dropPending();
+    dropOffer();
+    dropAnalysis();
+    runTicket += 1;
+    replaying = false;
+    replayer?.cancel();
+    lingering = setTimeout(stop, lingerMs);
+    render();
+  };
+
+  /** A surface holds the session again within its linger: everything it kept is there. */
+  const stopLingering = () => {
+    if (lingering !== null) clearTimeout(lingering);
+    lingering = null;
+  };
+
+  /** The session holds the engine — a surface does, or it is lingering after the last one — so its states can be asked. */
+  const holdsEngine = () => holders > 0 || lingering !== null;
+
   const unsubscribeDocument = source.subscribe(() => {
     const before = input;
     input = source.read();
+    if (lingering !== null && input.loadId !== before.loadId) {
+      // A load: nothing kept is the new sequences', so nothing is worth keeping.
+      stop();
+      return;
+    }
+    if (lingering !== null && input.held !== before.held) {
+      // Replayed when a surface comes back; until then a step the change rewrote shows no stale state.
+      replayOwed = true;
+      if (progress) progress = foldProgressStillValid(progress, input.held?.document ?? FOLD_BLANK_SEQUENCE);
+    }
     const changed = input.loadId !== before.loadId || input.held !== before.held;
     // Another branch while a run is under way: put its path first.
     const rerouted = input.reader?.activeChild !== before.reader?.activeChild;
@@ -725,6 +795,11 @@ export function createFoldSession({
     engine?.clear();
     if (holders > 0 && reason === 'crashed') crashed(cause ?? 'worker_error');
     else if (holders > 0 && reason === 'stopped') start();
+    else if (lingering !== null) {
+      // Nothing is left to keep, and no surface to restart it for: the next hold starts afresh.
+      stop();
+      return;
+    }
     render();
   });
 
@@ -875,11 +950,11 @@ export function createFoldSession({
   /** Keep the step an order resolution folded from `parent`, until the tool previews it. */
   const keepOffer = (parent: FoldEngineStateHandle, previewed: FoldPreviewed) => {
     // The engine that landed it is gone, and its states with it.
-    if (holders === 0 || parent.generation !== runtime.generation()) return;
+    if (!holdsEngine() || parent.generation !== runtime.generation()) return;
     const request = requestOf(previewed.op, previewed.choices);
     const here = selectFoldCursorNode(store.getState()).state;
-    if (!sameFoldState(here, parent)) {
-      // The cursor moved meanwhile: nobody will preview it.
+    if (holders === 0 || !sameFoldState(here, parent)) {
+      // The tool has gone, or the cursor moved meanwhile: nobody will preview it.
       if (previewed.landed.status === 'ok') engine?.release({ generation: parent.generation, id: previewed.landed.state });
       return;
     }
@@ -1204,8 +1279,11 @@ export function createFoldSession({
     return committed(() => source.commit(draft, loadId), landed.state, fingerprint, withdraw);
   };
 
+  // A query is answered while the engine is kept, so a surface coming back
+  // asks before its hold is taken (an effect of a child runs first) and is
+  // answered rather than told the session is not live.
   const withState = async <T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>> => {
-    if (holders === 0) return unavailable('not-live');
+    if (!holdsEngine()) return unavailable('not-live');
     if (state.generation !== runtime.generation()) return unavailable('no-state');
     try {
       return { status: 'answered', value: await runtime.ask((worker) => guarded(state, () => call(worker, state.id))) };
@@ -1225,13 +1303,13 @@ export function createFoldSession({
   };
 
   const query = <T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>> => {
-    if (holders === 0) return Promise.resolve(unavailable('not-live'));
+    if (!holdsEngine()) return Promise.resolve(unavailable('not-live'));
     if (state.generation !== runtime.generation()) return Promise.resolve(unavailable('no-state'));
     return answers.get<T, FoldStateQuery<T>>(state, call as FoldStateCall<unknown>, () => withState(state, call));
   };
 
   const peek = <T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): { value: T } | null =>
-    holders > 0 && state.generation === runtime.generation()
+    holdsEngine() && state.generation === runtime.generation()
       ? answers.peek<T>(state, call as FoldStateCall<unknown>)
       : null;
 
@@ -1241,11 +1319,13 @@ export function createFoldSession({
     retain() {
       holders += 1;
       if (holders === 1) {
-        runtime.retain();
+        const kept = lingering !== null;
+        stopLingering();
+        if (!kept) runtime.retain();
         halted = false;
         restarts = 0;
         error = null;
-        start();
+        if (!kept || replayOwed) start();
         render();
       }
       let held = true;
@@ -1253,7 +1333,10 @@ export function createFoldSession({
         if (!held) return;
         held = false;
         holders -= 1;
-        if (holders === 0) stop();
+        if (holders > 0) return;
+        // A halted engine is not worth keeping: the next hold starts it afresh.
+        if (lingerMs > 0 && !halted) startLingering();
+        else stop();
       };
     },
 
@@ -1298,8 +1381,9 @@ export function createFoldSession({
     },
 
     cancelSearch(ticket) {
-      // With no holder there is no worker, and no search on it.
-      if (holders === 0) return;
+      // With no hold there is no worker, and no search on it. A lingering one
+      // hears the cancel a tool sends as it goes, so nothing runs while it waits.
+      if (!holdsEngine()) return;
       // An engine that has gone took its searches with it.
       runtime.ask((worker) => worker.cancelSearch?.(ticket.id) ?? Promise.resolve()).catch(() => undefined);
     },
@@ -1319,7 +1403,7 @@ export function createFoldSession({
     },
 
     dispose() {
-      if (holders > 0) {
+      if (holdsEngine()) {
         holders = 0;
         stop();
       }
