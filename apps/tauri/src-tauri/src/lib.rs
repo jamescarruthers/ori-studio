@@ -419,6 +419,8 @@ pub fn run() {
             cp_detect::cp_detect_solve_cancel,
             cp_detect::cp_detect_exact_solve_input_from_fold,
             cp_engine::cp_preview_command,
+            cp_engine::cp_execute_selection_command,
+            cp_engine::cp_set_selected_lines,
             cp_engine::cp_insert_line_segments,
             cp_engine::cp_deselect_all,
             cp_engine::cp_import_add,

@@ -7,9 +7,9 @@ const COORD_QUANTIZE = 1e6;
  * segmentation, and to which creases each segmented region contains.
  *
  * Both obvious proxies for "the creases changed" are wrong here. The document
- * snapshot is a fresh object after every kernel command, and
- * `foldArtifactRevision` advances on the deselect that precedes a new selection
- * (it records history, which marks fold artifacts stale). Keyed on either, the
+ * snapshot is a fresh object after every undo or redo of an edit, whatever the
+ * edit touched (and, until selections stopped replacing it, after every
+ * selection too); `foldArtifactRevision` advances with it. Keyed on either, the
  * cache missed on every selection and re-paid the ~1s segmentation.
  *
  * Hashing the endpoints, colours and fold magnitudes is O(creases) — well under a
@@ -91,8 +91,8 @@ const lineContentFingerprints = new WeakMap<OristudioCpDocumentSnapshot, string>
  * fingerprint (`relativeCreaseFingerprint`, `cs1:`) reads, and so the key for
  * caching one. {@link creaseFingerprint} leaves out `active`, the custom colour
  * and the direction hint, which no geometry depends on but a fingerprint
- * does; the snapshot itself is replaced by every kernel command, a selection
- * included. Memoized per snapshot.
+ * does; the snapshot itself is replaced by every undo and redo of an edit, even
+ * one these do not read. Memoized per snapshot.
  */
 export function lineContentFingerprint(document: OristudioCpDocumentSnapshot): string {
   const cached = lineContentFingerprints.get(document);

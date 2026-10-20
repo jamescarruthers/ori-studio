@@ -24,6 +24,8 @@ import type {
   OristudioCpLineSegment,
   OristudioCpModel,
   OristudioCpOperationDescriptor,
+  OristudioCpSelectedLines,
+  OristudioCpSelectionCommandResult,
 } from '../../engine/oristudioCpTypes';
 import type { WasmErrorEnvelope } from '../../engine/types';
 import {
@@ -53,6 +55,50 @@ let currentSource: OristudioCpDocumentState['source'] | null = null;
 // keys its auto-fit on this so restoring history does not read as "a new
 // document was opened" and reset the viewport.
 let documentLoadSerial = 0;
+// How many changes to the open document have been asked for: every edit,
+// in-place restore, insert, replace, merge and batch append, but not a change in which lines
+// are selected. Each state is stamped with it as it is read (`changeSerial`),
+// which is how a selection knows whether it may write into the store's
+// snapshot. A load is not counted: it installs a snapshot of its own, and a
+// selection already refuses to write into one it did not start on.
+let documentChangeSerial = 0;
+
+/**
+ * Count a change to the open document. Each change is counted twice:
+ *
+ * - when it is asked for, before anything is awaited. From then on the caller
+ *   may hold the store's snapshot for its undo entry (an edit holds the one it
+ *   replaces, an undo the one it pushes for redo), and a selection must not
+ *   write into it.
+ * - again right before its call is posted, with nothing awaited in between, so
+ *   that a state read while it waited for the client, which is of the document
+ *   before the change, is not taken for current.
+ */
+function countDocumentChange(): void {
+  documentChangeSerial += 1;
+}
+
+/**
+ * Count a change that a caller makes through the client itself rather than
+ * through this module, at the same two moments as every change here
+ * (`countDocumentChange`). The diagram batch import is the one such caller: it
+ * appends its sheets, and rolls them back, with calls of its own.
+ */
+export function countOristudioCpDocumentChange(): void {
+  countDocumentChange();
+}
+
+/**
+ * Whether the kernel's document is still the one `state` was read from, apart
+ * from which lines are selected: no edit, restore, insert, replace or merge has
+ * been asked for since. Only then may a selection write the kernel's selected
+ * lines into the state's snapshot in place (`mirrorSelectedLines`), because
+ * only then do its line ids name the same lines, and only then is no edit or
+ * undo in flight holding that snapshot for an undo entry.
+ */
+export function isCurrentOristudioCpDocumentState(state: OristudioCpDocumentState): boolean {
+  return state.changeSerial === documentChangeSerial;
+}
 
 export function oristudioCpError(error: unknown): WasmErrorEnvelope {
   if (
@@ -301,7 +347,9 @@ export async function restoreOristudioCpDocumentInPlace(
       lastCommandResult
     );
   }
+  countDocumentChange();
   const api = await getOristudioCpClient();
+  countDocumentChange();
   await api.restoreDocument(handle, document);
   const nextSource = source ?? currentSource ?? { format: 'cp', filename: 'Untitled.cp', path: null };
   const nextState = await buildDocumentState(api, handle, nextSource, lastCommandResult);
@@ -316,7 +364,9 @@ export async function executeOristudioCpCommand(
   if (handle === null) {
     throw new Error('No editable crease-pattern document is loaded');
   }
+  countDocumentChange();
   const api = await getOristudioCpClient();
+  countDocumentChange();
   const result = await api.executeCommand(handle, operationId, payload);
   const refreshed = await refreshOristudioCpDocument(result);
   if (!refreshed) throw new Error('Editable crease-pattern document was released');
@@ -352,13 +402,49 @@ export async function previewOristudioCpCommand(
   return api.previewCommand(handle, operationId, payload);
 }
 
+/**
+ * Run a command that changes which lines are selected and nothing else (the
+ * kernel refuses any other), for the selected lines before and after it.
+ *
+ * Deliberately not a refresh: the geometry is unchanged, so fetching and
+ * decoding it again would only hand the store a new copy of the same creases —
+ * on a canvas of half a million, 150 ms of decoding and a rebuild of everything
+ * keyed on the old copy.
+ */
+export async function executeOristudioCpSelectionCommand(
+  operationId: OristudioCpOperationId,
+  payload: OristudioCpCommandPayload = {}
+): Promise<OristudioCpSelectionCommandResult> {
+  if (handle === null) {
+    throw new Error('No editable crease-pattern document is loaded');
+  }
+  const api = await getOristudioCpClient();
+  return api.executeSelectionCommand(handle, operationId, payload);
+}
+
+/**
+ * Make `lines` the kernel's selected lines exactly — undoing or redoing a
+ * selection — and answer with the selected lines they replaced.
+ */
+export async function setOristudioCpSelectedLines(
+  lines: OristudioCpSelectedLines
+): Promise<OristudioCpSelectedLines> {
+  if (handle === null) {
+    throw new Error('No editable crease-pattern document is loaded');
+  }
+  const api = await getOristudioCpClient();
+  return api.setSelectedLines(handle, lines);
+}
+
 export async function insertOristudioCpLineSegments(
   segments: OristudioCpLineSegment[]
 ): Promise<OristudioCpDocumentState> {
   if (handle === null) {
     throw new Error('No editable crease-pattern document is loaded');
   }
+  countDocumentChange();
   const api = await getOristudioCpClient();
+  countDocumentChange();
   await api.insertLineSegments(handle, segments);
   const refreshed = await refreshOristudioCpDocument(null);
   if (!refreshed) throw new Error('Editable crease-pattern document was released');
@@ -367,14 +453,15 @@ export async function insertOristudioCpLineSegments(
 
 /**
  * Clear the kernel document's selection flags (a UI deselect, not an undoable
- * edit). The frontend selection mirror is cleared separately; this keeps the
- * kernel in sync so a later select/deselect doesn't re-derive a stale selection.
+ * edit), answering with the selected lines it cleared, or null when no
+ * document is loaded. The frontend selection mirror is cleared separately; this
+ * keeps the kernel in sync so a later select/deselect doesn't re-derive a stale
+ * selection.
  */
-export async function deselectAllOristudioCp(): Promise<OristudioCpDocumentState | null> {
+export async function deselectAllOristudioCp(): Promise<OristudioCpSelectedLines | null> {
   if (handle === null) return null;
   const api = await getOristudioCpClient();
-  await api.deselectAll(handle);
-  return refreshOristudioCpDocument(null);
+  return api.setSelectedLines(handle, { ids: new Uint32Array(0), values: new Int32Array(0) });
 }
 
 /** An axis-aligned box in crease-pattern model (Oriedita 400-space) coordinates. */
@@ -469,6 +556,7 @@ export async function importAddOristudioCpDocumentFromText(
   if (handle === null) {
     throw new Error('No editable crease-pattern document is loaded');
   }
+  countDocumentChange();
   const api = await getOristudioCpClient();
   const targetHandle = handle;
   lastImportAddPlacement = null;
@@ -488,15 +576,18 @@ export async function importAddOristudioCpDocumentFromText(
       await api.placeCircles(importedHandle, source.circleSourceBounds, source.circles);
     }
     if (target.blank) {
+      countDocumentChange();
       await api.restoreDocument(targetHandle, clearedCreasePattern(target.blank));
     }
     try {
+      countDocumentChange();
       await api.importAdd(targetHandle, importedHandle);
     } catch (error) {
       // Put the sheet back. Clearing it is justified only by the merge that
       // replaces it, and a merge that threw leaves the user staring at a canvas
       // with no paper on it and no idea why.
       if (target.blank) {
+        countDocumentChange();
         await api.restoreDocument(targetHandle, target.blank).catch(() => undefined);
       }
       throw error;
@@ -605,6 +696,7 @@ async function runOnAddedLines(
   operationId: OristudioCpOperationId,
   payload: OristudioCpCommandPayload
 ): Promise<OristudioCpDocumentState> {
+  countDocumentChange();
   const result = await api.executeCommand(targetHandle, operationId, payload);
   const refreshed = await refreshOristudioCpDocument(result);
   if (!refreshed) throw new Error('Editable crease-pattern document was released');
@@ -749,7 +841,9 @@ export async function replaceOristudioCpLineSegments(
   if (handle === null) {
     throw new Error('No editable crease-pattern document is loaded');
   }
+  countDocumentChange();
   const api = await getOristudioCpClient();
+  countDocumentChange();
   await api.replaceLineSegments(handle, lineIds, segments);
   const refreshed = await refreshOristudioCpDocument(null);
   if (!refreshed) throw new Error('Editable crease-pattern document was released');
@@ -1046,6 +1140,10 @@ export async function shareFoldFrameAsLink(foldJson: string): Promise<string> {
  * a loaded file's kernel texts are inflated into annotations the kernel copy is
  * cleared — otherwise a later re-snapshot would carry them back and they would
  * be double-counted on `.osf` save (once as kernel texts, once as annotations).
+ *
+ * Not counted as a change to the document (`countDocumentChange`): texts name
+ * no line and carry no selection, and this runs inside a load, on a state the
+ * load patches to match before the store sees it.
  */
 export async function clearOristudioCpKernelTexts(): Promise<void> {
   if (handle === null) return;
@@ -1077,6 +1175,9 @@ async function buildDocumentState(
   source: OristudioCpDocumentState['source'] | null,
   lastCommandResult: OristudioCpCommandResult | null
 ): Promise<OristudioCpDocumentState> {
+  // Read in the tick the geometry is asked for, so a change posted after it
+  // makes this state stale and one posted before it does not.
+  const changeSerial = documentChangeSerial;
   const [{ document, geometry }, summary, operationDescriptors] = await Promise.all([
     fetchDocumentAndGeometry(api, documentHandle),
     api.summary(documentHandle),
@@ -1091,6 +1192,7 @@ async function buildDocumentState(
   return {
     handle: documentHandle,
     loadSerial: documentLoadSerial,
+    changeSerial,
     document,
     geometry,
     summary: { ...summary, title },

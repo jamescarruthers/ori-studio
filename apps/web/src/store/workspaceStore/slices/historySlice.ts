@@ -12,7 +12,9 @@ import { staleFoldArtifactResourceState } from '../foldArtifactResource';
 import {
   oristudioCpError,
   restoreOristudioCpDocumentInPlace,
+  setOristudioCpSelectedLines,
 } from '../oristudioCpRuntime';
+import { documentStateAfterSelection } from '../cpSelectedLines';
 import {
   exportOristudioBpProjectAsSessionBps,
   oristudioBpError,
@@ -35,6 +37,7 @@ import type {
   OristudioCpCommandResult,
   OristudioCpDocumentSnapshot,
   OristudioCpDocumentState,
+  OristudioCpSelectedLines,
 } from '../../../engine/oristudioCpTypes';
 import type { OristudioCpSelection } from '../../../lib/creasePatternViewport';
 import { bpDocumentSymmetry } from '../../../lib/bpTreeSymmetry';
@@ -151,6 +154,51 @@ function retainedCpHistoryEntry(
 function releasedFrom<T extends OristudioCpHistoryEntry[]>(remaining: T, leaving: OristudioCpHistoryEntry): T {
   releaseFoldedFigureHandles(leaving.foldedFigures ?? []);
   return remaining;
+}
+
+/**
+ * Put back the crease pattern a history entry recorded. Answers the document
+ * state to install and, for a selection entry, the selected lines it replaced,
+ * which the entry for the opposite direction records in turn.
+ *
+ * A selection entry (`selectedLines`) changed nothing but which lines are
+ * selected, so only those go back into the kernel, and the store keeps its
+ * snapshot and geometry (`mirrorSelectedLines`). Any other entry restores its
+ * whole document.
+ */
+async function restoreCpHistoryDocument(
+  entry: OristudioCpHistoryEntry,
+  current: OristudioCpDocumentState,
+  live: () => OristudioCpDocumentState | null
+): Promise<{
+  restored: OristudioCpDocumentState;
+  replacedLines: OristudioCpSelectedLines | undefined;
+}> {
+  if (!entry.selectedLines) {
+    return {
+      restored: await restoreOristudioCpDocumentInPlace(entry.document, current.source, null),
+      replacedLines: undefined,
+    };
+  }
+  const replacedLines = await setOristudioCpSelectedLines(entry.selectedLines);
+  return {
+    restored: await documentStateAfterSelection(
+      current,
+      live(),
+      replacedLines,
+      entry.selectedLines,
+      null
+    ),
+    replacedLines,
+  };
+}
+
+/** `entry` as a selection entry when `lines` are given; as it is otherwise. */
+function withSelectedLines(
+  entry: OristudioCpHistoryEntry,
+  lines: OristudioCpSelectedLines | undefined
+): OristudioCpHistoryEntry {
+  return lines ? { ...entry, selectedLines: lines } : entry;
 }
 
 function setRestoredCreasePatternState(
@@ -362,10 +410,8 @@ export const createHistorySlice: WorkspaceSliceCreator<HistorySlice> = (set, get
           void get().restoreOristudioCpInlineSimulationSources();
           return true;
         }
-        const restored = await restoreOristudioCpDocumentInPlace(
-          previous.document,
-          current.source,
-          null
+        const { restored, replacedLines } = await restoreCpHistoryDocument(previous, current, () =>
+          get().oristudioCpDocument
         );
         // Apply immediately; the always-on CAMV overlay recomputes off the critical
         // path (keeps the previous result until the deferred refresh lands).
@@ -385,21 +431,24 @@ export const createHistorySlice: WorkspaceSliceCreator<HistorySlice> = (set, get
           ...restoredInlineSimulationState(previous),
           oristudioCpHistoryPast: releasedFrom(past.slice(0, -1), previous),
           oristudioCpHistoryFuture: [
-            retainedCpHistoryEntry(
-              current.document,
-              currentSelection,
-              currentAnnotations,
-              currentFoldedFigures,
-              currentActiveFoldedId,
-              currentInlineSimulations,
-              previous.label,
-              false
+            withSelectedLines(
+              retainedCpHistoryEntry(
+                current.document,
+                currentSelection,
+                currentAnnotations,
+                currentFoldedFigures,
+                currentActiveFoldedId,
+                currentInlineSimulations,
+                previous.label,
+                false
+              ),
+              replacedLines
             ),
             ...get().oristudioCpHistoryFuture,
           ].slice(0, MAX_HISTORY),
-          ...staleFoldArtifactResourceState(get().foldArtifactRevision),
+          ...(replacedLines ? {} : staleFoldArtifactResourceState(get().foldArtifactRevision)),
           projectMessage: `Undid ${previous.label}`});
-        get().scheduleOristudioCamvRefresh();
+        if (!replacedLines) get().scheduleOristudioCamvRefresh();
         // Windows restored by a document-level undo need their folds too; see
         // the overlay branch above for why this is not awaited.
         void get().restoreOristudioCpInlineSimulationSources();
@@ -543,10 +592,8 @@ export const createHistorySlice: WorkspaceSliceCreator<HistorySlice> = (set, get
           void get().restoreOristudioCpInlineSimulationSources();
           return true;
         }
-        const restored = await restoreOristudioCpDocumentInPlace(
-          next.document,
-          current.source,
-          null
+        const { restored, replacedLines } = await restoreCpHistoryDocument(next, current, () =>
+          get().oristudioCpDocument
         );
         set({
       oristudioCpHistoryBusy: false,
@@ -560,21 +607,24 @@ export const createHistorySlice: WorkspaceSliceCreator<HistorySlice> = (set, get
           ...restoredInlineSimulationState(next),
           oristudioCpHistoryPast: [
             ...get().oristudioCpHistoryPast,
-            retainedCpHistoryEntry(
-              current.document,
-              currentSelection,
-              currentAnnotations,
-              currentFoldedFigures,
-              currentActiveFoldedId,
-              currentInlineSimulations,
-              next.label,
-              false
+            withSelectedLines(
+              retainedCpHistoryEntry(
+                current.document,
+                currentSelection,
+                currentAnnotations,
+                currentFoldedFigures,
+                currentActiveFoldedId,
+                currentInlineSimulations,
+                next.label,
+                false
+              ),
+              replacedLines
             ),
           ].slice(-MAX_HISTORY),
           oristudioCpHistoryFuture: releasedFrom(future.slice(1), next),
-          ...staleFoldArtifactResourceState(get().foldArtifactRevision),
+          ...(replacedLines ? {} : staleFoldArtifactResourceState(get().foldArtifactRevision)),
           projectMessage: `Redid ${next.label}`});
-        get().scheduleOristudioCamvRefresh();
+        if (!replacedLines) get().scheduleOristudioCamvRefresh();
         // Windows restored by a document-level undo need their folds too; see
         // the overlay branch above for why this is not awaited.
         void get().restoreOristudioCpInlineSimulationSources();

@@ -165,6 +165,27 @@ export interface OristudioCpCommandResult {
   checked_vertices?: number | null;
 }
 
+/**
+ * The line segments whose `selected` flag is set in the kernel (the kernel's
+ * `SelectedLines`): 1-based ids in ascending order, each with its flag's value
+ * — 2 for anything selected in Ori Studio or Oriedita, though a file can carry
+ * others and they are kept.
+ */
+export interface OristudioCpSelectedLines {
+  ids: Uint32Array;
+  values: Int32Array;
+}
+
+/**
+ * What a selection command answers instead of a document: its result, and the
+ * selected lines before and after it.
+ */
+export interface OristudioCpSelectionCommandResult {
+  result: OristudioCpCommandResult;
+  before: OristudioCpSelectedLines;
+  after: OristudioCpSelectedLines;
+}
+
 export interface OristudioCpDiagnosticEntry {
   id: string;
   kind: string;
@@ -1449,6 +1470,14 @@ export interface OristudioCpDocumentState {
    * its viewport auto-fit on this rather than the kernel handle.
    */
   loadSerial: number;
+  /**
+   * How many changes to the kernel's document had been asked for when this
+   * state was read from the kernel. A selection writes its flags into this
+   * state's snapshot only while no change has been asked for since
+   * (`isCurrentOristudioCpDocumentState`). Absent on a state that was not read
+   * from the kernel, such as a test fixture, which never counts as current.
+   */
+  changeSerial?: number;
   document: OristudioCpDocumentSnapshot;
   /**
    * Compact geometry transport for the same kernel state as `document`. This is the
