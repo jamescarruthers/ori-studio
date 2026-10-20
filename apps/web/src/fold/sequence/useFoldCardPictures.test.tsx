@@ -196,6 +196,47 @@ describe('useFoldCardPicture', () => {
     expect(query).toHaveBeenCalledTimes(2);
   });
 
+  it('shows a step just committed with the picture its preview’s card painted under its handle, painting nothing', async () => {
+    const { session, query } = fakeSession(new Map([[4, bookScene()]]), new Set([4]));
+    app.session = session;
+    const spread = { kind: 'depth' as const, amount: 0.1, toward: 'down' as const };
+    // The step a tool is folding: no fingerprint, so its handle names it.
+    const previewing = foldCardPictureSource(handle(4), null, spread);
+    if (!previewing) throw new Error('no source');
+    requestFoldCardPicture(session, previewing, DEFAULT_PAPER_STYLE, DISPLAY);
+    await settle();
+    const painted = heldFoldCardPicture(previewing, DEFAULT_PAPER_STYLE, DISPLAY);
+    expect(painted).toMatch(/^data:image\/svg\+xml/);
+
+    // Committed: the same state, now with its fingerprint, in the same spread.
+    const committed = foldCardPictureSource(handle(4), 'fs1:committed', spread);
+    const seen: (string | null | undefined)[] = [];
+    function Probe({ source }: { source: typeof committed }) {
+      seen.push(useFoldCardPicture(source));
+      return null;
+    }
+    host = document.createElement('div');
+    root = createRoot(host);
+    act(() => root?.render(<Probe source={committed} />));
+    expect(seen[0]).toBe(painted);
+    expect(heldFoldCardPicture(committed!, DEFAULT_PAPER_STYLE, DISPLAY)).toBeUndefined();
+    act(() => root?.unmount());
+
+    // Another spread is another picture: a card of the state without it is painted, as ever.
+    const unspread: (string | null | undefined)[] = [];
+    function Unspread() {
+      unspread.push(useFoldCardPicture(foldCardPictureSource(handle(4), 'fs1:committed')));
+      return null;
+    }
+    root = createRoot(host);
+    act(() => root?.render(<Unspread />));
+    expect(unspread[0]).toBeUndefined();
+    await settle();
+    expect(unspread.at(-1)).toMatch(/^data:image\/svg\+xml/);
+    expect(unspread.at(-1)).not.toBe(painted);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it('is null for a card with no state', () => {
     app.session = fakeSession(new Map()).session;
     let seen: string | null | undefined;

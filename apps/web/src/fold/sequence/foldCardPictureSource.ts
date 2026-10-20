@@ -11,6 +11,11 @@ export interface FoldCardPictureSource {
   readonly spread: LayerSpreadOptions | null;
 }
 
+/** What names a state with no fingerprint yet — the step a tool is folding — in a picture's key. */
+export function foldCardHandleKey(state: FoldEngineStateHandle): string {
+  return `handle:${state.generation}:${state.id}`;
+}
+
 /** A state's picture source: by its fingerprint when it has one, spread by `spread`. Null for no state. */
 export function foldCardPictureSource(
   state: FoldEngineStateHandle | null,
@@ -18,6 +23,6 @@ export function foldCardPictureSource(
   spread: LayerSpreadOptions | null = null
 ): FoldCardPictureSource | null {
   if (!state) return null;
-  return { state, key: fingerprint ?? `handle:${state.generation}:${state.id}`, spread };
+  return { state, key: fingerprint ?? foldCardHandleKey(state), spread };
 }
 

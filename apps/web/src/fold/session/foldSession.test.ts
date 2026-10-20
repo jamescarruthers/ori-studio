@@ -548,6 +548,26 @@ describe('the Fold session: the step a tool folds', () => {
     expect(statuses()[committed.stepId]).toBe('ok');
   });
 
+  it('publishes a commit on its own, the replay it causes waiting for a task of its own', async () => {
+    const { session, snapshot } = setup();
+    session.retain();
+    await settle();
+    const preview = await session.preview(valleyAt(0.9));
+    if (preview.status !== 'landed') throw new Error(preview.status);
+    await settle();
+    const published: FoldSessionSnapshot[] = [];
+    session.store.subscribe((state) => published.push(state));
+    const committed = await session.commitStep(valleyAt(0.9));
+    if (committed.status !== 'committed') throw new Error(committed.status);
+    // Every microtask the commit queued has run: only the commit is published, so it is painted first.
+    for (let k = 0; k < 10; k += 1) await Promise.resolve();
+    expect(published).toHaveLength(1);
+    expect(published[0]).toMatchObject({ cursor: committed.stepId, pending: { status: 'idle' } });
+    await settle();
+    expect(published.length).toBeGreaterThan(1);
+    expect(snapshot().progress).toBe(published.at(-1)?.progress);
+  });
+
   it('keeps the preview on screen while it commits, then shows the step at its state at once', async () => {
     const { session, runtime, snapshot, cursor, engine } = setup();
     session.retain();

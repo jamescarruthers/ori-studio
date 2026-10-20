@@ -1,12 +1,14 @@
 import { useFoldRepeatUi } from '../repeat/foldRepeatUi';
 import { useFoldReturnUi } from '../return/foldReturnUi';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { reportError } from '../../monitoring';
+import { foldSession } from '../../store/workspaceStore/foldSession';
 import { visibleMarks } from '../document/foldStepTree';
 import { markPoints, type FoldMark, type FoldSequenceDocument } from '../document/foldSequenceDocument';
 import type { FoldLandmarks, FoldScene, FoldStateSummary } from '../engine/foldEngineWire';
 import type { FoldStateCall } from '../session/foldSession';
 import type { FoldSessionNode } from '../session/foldSessionState';
-import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
+import { FOLD_SCENE_QUERY, foldLandmarksQuery } from '../session/foldStateQueries';
 import { useFoldStateQuery, useFoldCursor, useFoldNodeQuery, useFoldSessionState } from '../session/useFoldSession';
 import { foldPickIndex, type FoldMarkPoint, type FoldPickIndex } from './foldPicking';
 
@@ -86,7 +88,7 @@ export function useFoldStateView(): FoldStateView {
   // marks change, the same call (and no new ask) while they stay.
   const pointsKey = points.map(({ at }) => `${at[0]},${at[1]}`).join(';');
   const landmarksQuery = useMemo<FoldStateCall<FoldLandmarks>>(
-    () => (engine, state) => engine.landmarks(state, points.map(({ at }) => at)),
+    () => foldLandmarksQuery(points.map(({ at }) => at)),
     // `points` is read through its key: an equal list must not ask again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pointsKey]
@@ -98,6 +100,16 @@ export function useFoldStateView(): FoldStateView {
   const returned = returning && pending.status === 'landed' && (pending.request.op.kind === 'unfold-to' || pending.request.op.kind === 'repeat') ? pending : null;
   const scene = useFoldStateQuery(returned?.state ?? cursor.state, FOLD_SCENE_QUERY);
   const landmarks = useFoldNodeQuery(cursorId, landmarksQuery);
+  // A landed preview becomes the step on screen when it is committed, with
+  // these marks: its landmarks are asked now, while the folder looks at it,
+  // so the canvas can pick on the step the moment it is committed.
+  const landedPending = pending.status === 'landed' ? pending.state : null;
+  useEffect(() => {
+    if (!landedPending) return;
+    foldSession()
+      .query(landedPending, landmarksQuery)
+      .catch((error: unknown) => reportError(error, { surface: 'fold:landed-landmarks' }));
+  }, [landedPending, landmarksQuery]);
   const summary = returned?.summary ?? cursor.summary;
   const fresh = useMemo(() => (scene && summary ? { scene, summary } : null), [scene, summary]);
   const picture = usePicture(fresh, loading(cursor));

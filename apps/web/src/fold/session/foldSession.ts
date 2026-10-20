@@ -49,7 +49,7 @@ import type { FoldStepDraft } from '../document/foldSequenceEdits';
 import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineCrashCause } from '../engine/foldEngineTrap';
-import type { FoldSearchTicket } from '../engine/foldSearch';
+import { nextFoldTask, type FoldSearchTicket } from '../engine/foldSearch';
 import type { FoldOrderQuery, FoldOrderSelection } from '../engine/foldEngineCompoundCalls';
 import { foldPreviewWants, type FoldPreviewed, type FoldPreviewWants } from '../engine/foldEnginePreview';
 import type { FoldRootSectionHint } from '../engine/foldEngineRoots';
@@ -617,13 +617,15 @@ export function createFoldSession({
   };
 
   /**
-   * Replay once the current turn's changes are all in: a commit sets the
-   * sequences and the reader one after the other.
+   * Replay once the current turn's changes are all in — a commit sets the
+   * sequences and the reader one after the other — in a task of its own, so
+   * what the change publishes (a committed step, at the state its preview
+   * landed) is painted before the replay's own publishes are rendered.
    */
   const scheduleReplay = () => {
     if (replayScheduled || !replayer || holders === 0 || halted) return;
     replayScheduled = true;
-    queueMicrotask(() => {
+    void nextFoldTask().then(() => {
       replayScheduled = false;
       replay();
     });

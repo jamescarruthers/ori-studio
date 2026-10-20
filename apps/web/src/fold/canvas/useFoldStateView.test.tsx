@@ -41,13 +41,16 @@ const document = sequenceOf([
   step('c', 'a', { ...valleyAt(0.75), kind: 'mountain' }),
 ]);
 
+/** Every landmarks call the engine answers. */
+const landmarks = vi.fn(() => ({ points: [], lines: [], segments: [] }));
+
 /** A scene per state, each its own object: the sheet's flat, every fold's a half. */
 function engine(): FoldEngineCalls {
   const fake = fakeFoldEngine({ refuse: (op) => (op.kind === 'mountain' ? 'layer_order' : null) });
   return {
     ...fake,
     scene: (state) => (fake.trail(state)?.length === 1 ? squareScene() : diagonalHalfScene()),
-    landmarks: () => ({ points: [], lines: [], segments: [] }),
+    landmarks,
   };
 }
 
@@ -123,6 +126,27 @@ describe('the Fold canvas’s state view', () => {
     expect(view().scene).not.toBe(atA.scene);
     expect(view().summary?.step).toBe(2);
     expect(view().index).not.toBeNull();
+  });
+
+  it('asks a landed preview’s landmarks while it shows, so the step a commit makes of it can be picked on at once', async () => {
+    const session = app.session!;
+    await act(async () => {
+      await session.preview(valleyAt(0.1));
+      await settle();
+    });
+    const asked = landmarks.mock.calls.length;
+    // Committed: the step is on screen with its landmarks in hand, and none asked for it.
+    runtime.hold();
+    await act(async () => {
+      await session.commitStep(valleyAt(0.1));
+    });
+    const committed = seen.find((shown) => shown.cursorId !== 'a');
+    expect(committed?.landmarks).not.toBeNull();
+    expect(committed?.index).not.toBeNull();
+    await act(async () => {
+      await runtime.open();
+    });
+    expect(landmarks.mock.calls.length).toBe(asked);
   });
 
   it('shows no picture for a step that cannot have one', async () => {

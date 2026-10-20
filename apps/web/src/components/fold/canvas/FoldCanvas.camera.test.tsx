@@ -37,9 +37,12 @@ const session = vi.hoisted(() => {
     withNode: unavailable,
     withCursor: unavailable,
     query: unavailable,
+    peek: () => null,
+    resolveOrders: unavailable,
+    axiomRoots: unavailable,
     retry: () => undefined,
   };
-  const snapshot = { readOnly: false, cursor: null, sequence: null, sheet: node, nodes: new Map(), activePath: [] };
+  const snapshot = { readOnly: false, cursor: null, sequence: null, sheet: node, nodes: new Map(), activePath: [], pending: { status: 'idle' as const } };
   return { node, surface, snapshot };
 });
 

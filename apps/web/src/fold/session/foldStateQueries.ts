@@ -7,7 +7,7 @@
  * answers are the committed step's.
  */
 import { canonicalJson } from '../document/foldDigest';
-import type { FoldChoices, FoldModelLine } from '../document/foldSequenceDocument';
+import type { FoldChoices, FoldModelLine, SheetPoint } from '../document/foldSequenceDocument';
 import { foldStepSummaryAnswer } from '../engine/foldEnginePreview';
 import {
   isFoldParentReleased,
@@ -15,6 +15,7 @@ import {
   type FoldActionGeometry,
   type FoldEngineOp,
   type FoldEngineOutcome,
+  type FoldLandmarks,
   type FoldScene,
   type FoldSectioned,
   type FoldSide,
@@ -100,6 +101,18 @@ const actionQueries = argumentQueries<FoldEngineOutcome<FoldActed>>();
  */
 export function foldActionQuery(op: FoldEngineOp, choices?: FoldChoices): FoldStateCall<FoldEngineOutcome<FoldActed>> {
   return actionQueries(foldStepInputKey({ op, choices }), () => (engine, state) => engine.action(state, op, choices));
+}
+
+const landmarkQueries = argumentQueries<FoldLandmarks>();
+
+/**
+ * A state's landmarks, with the Divide-line marks at `marks` (sheet points)
+ * as point landmarks: what the canvas picks among (`useFoldStateView`). A
+ * landed preview's are asked ahead with the marks on screen — the step it
+ * becomes shows the same marks — so a commit finds them in.
+ */
+export function foldLandmarksQuery(marks: readonly SheetPoint[]): FoldStateCall<FoldLandmarks> {
+  return landmarkQueries(canonicalJson(marks), () => (engine, state) => engine.landmarks(state, marks));
 }
 
 const sectionQueries = argumentQueries<FoldEngineOutcome<FoldSectioned>>();
