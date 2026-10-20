@@ -45,6 +45,7 @@ import type { FoldStateFingerprint } from '../fold/document/foldDigest';
 import type { FoldChoices, FoldModelLine, FoldPaper, SheetPoint } from '../fold/document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../fold/engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../fold/engine/foldEngineCompoundCalls';
+import { isFoldPlacementOp } from '../fold/engine/foldPlacementSearch';
 import {
   axiomRootsWithSections,
   type FoldRootSectionHint,
@@ -208,7 +209,11 @@ function changing<T>(fn: (calls: FoldWorkerCalls) => T | Promise<T>): Promise<T>
 /** This worker's searches, which a ticket cancels. */
 const searches = createFoldSearchRunner();
 
-/** A fold's orders: a pleat's as a search in slices, any other fold's in one call. */
+/**
+ * A fold's orders: a pleat's, and a valley's or mountain's placements for
+ * as long as the query asks, as a search in slices; any other fold's in one
+ * call.
+ */
 function selectOrders(
   calls: FoldWorkerCalls,
   state: number,
@@ -217,9 +222,15 @@ function selectOrders(
   query: FoldOrderQuery,
   search: FoldSearchTicket | undefined
 ): FoldEngineOutcome<FoldOrderSelection> | Promise<FoldEngineOutcome<FoldOrderSelection>> {
-  if (op.kind !== 'pleat') return calls.orderSelection(state, op, choices, query);
-  const pleat = calls.pleatOrderSearch(state, op, choices, query);
-  return searches.run(pleat.search, pleat.budgetMs, search);
+  if (op.kind === 'pleat') {
+    const pleat = calls.pleatOrderSearch(state, op, choices, query);
+    return searches.run(pleat.search, pleat.budgetMs, search);
+  }
+  if (query.searchMs !== undefined && isFoldPlacementOp(op)) {
+    const placing = calls.placementOrderSearch(state, op, choices, query);
+    return searches.run(placing.search, placing.budgetMs, search);
+  }
+  return calls.orderSelection(state, op, choices, query);
 }
 
 const api = {

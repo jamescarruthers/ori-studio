@@ -1,6 +1,6 @@
 import { pleatOrderSearch, pleatOrders, pleatSearchBudget, type PleatInput } from '../tools/pleat/pleatEngine';
 import type { FoldWasmEngine } from './foldEngineCalls';
-import type { FoldSearch } from './foldSearch';
+import { runFoldSearch, type FoldSearch } from './foldSearch';
 import type { FoldPleatOp } from '../document/foldSequenceDocument';
 /**
  * The compound folds' one question on the Fold engine's bridge
@@ -29,10 +29,13 @@ import type { FoldChoices, FoldCompletionChoice, FoldLanding } from '../document
 import { invalidInput, requireHandle, requireObject } from './foldEngineCalls';
 import { isFoldCompoundOp, type FoldCompoundAnalysis, type FoldEngineCompoundOp } from './foldEngineCompoundWire';
 import type { FoldEngineOp, FoldEngineOutcome } from './foldEngineWire';
+import { foldPlacementSearch, foldPlacementSearchBudget, isFoldPlacementOp } from './foldPlacementSearch';
 
 /** The wasm class's compound surface, as the generated `FoldEngine` has it. */
 export interface FoldOrderQuery {
-  batch?: number; prefer?: readonly (readonly [number, number])[]; index: number; perComponent?: number; maxNodes?: number }
+  batch?: number; prefer?: readonly (readonly [number, number])[]; index: number; perComponent?: number; maxNodes?: number;
+  /** A plain fold's placement search: how long this batch may search in all (`foldPlacementSearch.ts`). */
+  searchMs?: number }
 export interface FoldOrderSelection {
   pleat?: FoldPleatOp['resolved'];
   landing?: FoldLanding;
@@ -41,6 +44,8 @@ export interface FoldOrderSelection {
   count: { orders: number; exact: boolean };
   index: number;
   completion: FoldCompletionChoice | null;
+  /** A placement search with time left in its batch: the same query searches further. */
+  searching?: boolean;
 }
 
 export interface FoldWasmCompoundEngine {
@@ -65,6 +70,17 @@ export interface FoldEngineCompoundCalls {
   pleatOrderSearch(
     state: number,
     op: PleatInput,
+    choices: FoldChoices | undefined,
+    query: FoldOrderQuery
+  ): FoldBudgetedSearch<FoldEngineOutcome<FoldOrderSelection>>;
+  /**
+   * A valley or mountain fold's placements as a search the worker runs in
+   * slices, one press's `searchMs` long: what `orderSelection` runs to the
+   * end in one go when the query names a time.
+   */
+  placementOrderSearch(
+    state: number,
+    op: FoldEngineOp,
     choices: FoldChoices | undefined,
     query: FoldOrderQuery
   ): FoldBudgetedSearch<FoldEngineOutcome<FoldOrderSelection>>;
@@ -101,6 +117,9 @@ export function createFoldEngineCompoundCalls(engine: FoldWasmCompoundEngine): F
     orderSelection(state, op, choices, query) {
       requireIndex(query);
       if (op.kind === 'pleat') return pleatOrders(engine as FoldWasmEngine & FoldWasmCompoundEngine, requireHandle('state', state), op, choices, query);
+      if (query.searchMs !== undefined && isFoldPlacementOp(requireObject('op', op))) {
+        return runFoldSearch(foldPlacementSearch(engine, requireHandle('state', state), op, choices, query), foldPlacementSearchBudget(query));
+      }
       return engine.order_selection(requireHandle('state', state), requireObject('op', op), choices, query) as FoldEngineOutcome<FoldOrderSelection>;
     },
     pleatOrderSearch(state, op, choices, query) {
@@ -109,6 +128,14 @@ export function createFoldEngineCompoundCalls(engine: FoldWasmCompoundEngine): F
       return {
         search: pleatOrderSearch(engine as FoldWasmEngine & FoldWasmCompoundEngine, requireHandle('state', state), op, choices, query),
         budgetMs: pleatSearchBudget(query),
+      };
+    },
+    placementOrderSearch(state, op, choices, query) {
+      requireIndex(query);
+      if (!isFoldPlacementOp(requireObject('op', op))) throw invalidInput(`op must be a valley or mountain fold, got ${String(op.kind)}`);
+      return {
+        search: foldPlacementSearch(engine, requireHandle('state', state), op, choices, query),
+        budgetMs: foldPlacementSearchBudget(query),
       };
     },
     compoundAnalysis(state, op, choices) {

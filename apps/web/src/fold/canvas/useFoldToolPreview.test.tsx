@@ -107,6 +107,8 @@ const verbs = {
     status: 'answered',
     value: await (engine.orderSelection as (...args: unknown[]) => Promise<unknown>)(PARENT, ...asked.filter((arg, k) => k < 3 || arg !== undefined)),
   })),
+  // A plain fold's placements are a search with a ticket, stopped when no longer wanted.
+  cancelSearch: vi.fn(),
   // The roots alone: no layers come with them here, so the line's section is asked for.
   axiomRoots: vi.fn(async (line: unknown) => ({
     status: 'answered',

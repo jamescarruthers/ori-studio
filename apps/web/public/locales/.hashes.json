@@ -6274,7 +6274,10 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12551,7 +12554,10 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18830,7 +18836,10 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24775,7 +24784,10 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30720,7 +30732,10 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36997,7 +37012,10 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43274,7 +43292,10 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49219,6 +49240,9 @@
     "tools:fold.steps.unfoldCommitTouch": "bb374c3d86ba",
     "tools:fold.steps.unfoldTarget": "ba4c31bdf758",
     "tools:fold.tool.repeatHelp": "c614c1851089",
-    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94"
+    "tools:fold.tool.unfoldToHelp": "7ad45cb97b94",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   }
 }

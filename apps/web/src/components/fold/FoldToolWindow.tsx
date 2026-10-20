@@ -122,8 +122,10 @@ export function FoldToolWindow({
       <FoldOrderChooser index={resolution.index} count={resolution.count} exact={resolution.exact}
         error={resolution.failed} movingVaries={resolution.movingVaries}
         ready={orderReady && !resolution.waiting && !resolution.failed} waiting={resolution.waiting}
+        searching={resolution.searching} searched={resolution.searched}
         onStep={resolution.step} onBack={resolution.back} onAccept={acceptOrder ?? (() => {})}
-        onSearch={!resolution.exact && resolution.canSearch ? resolution.search : undefined} />
+        onSearch={!resolution.exact && resolution.canSearch ? resolution.search : undefined}
+        onStop={resolution.searching ? resolution.stop : undefined} />
       {inspection && <FoldOrderStacks inspection={inspection} />}
     </ToolHintWindow>
   );

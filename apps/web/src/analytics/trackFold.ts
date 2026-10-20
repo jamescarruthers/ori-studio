@@ -133,6 +133,20 @@ export function trackFoldOrderResolved(result: 'accepted' | 'canceled', source: 
   });
 }
 
+/**
+ * A press of Find more orders ended: the search finished (`exhausted`), ran
+ * out of the press's time (`incomplete`), or was stopped; whether it found
+ * orders the review did not have before it (`found`), and how many there are
+ * now, bucketed. Never which orders.
+ */
+export function trackFoldOrdersSearched(result: 'exhausted' | 'incomplete' | 'stopped', foundMore: boolean, count: number): void {
+  track(ANALYTICS_EVENTS.foldOrdersSearched, {
+    result,
+    found: foundMore ? 'more' : 'none',
+    count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS),
+  });
+}
+
 /** Only the setting's state is reported, never the selected references. */
 export function trackFoldFreeLineSnapChanged(enabled: boolean): void {
   track(ANALYTICS_EVENTS.foldFreeLineSnapChanged, { state: enabled ? 'on' : 'off' });

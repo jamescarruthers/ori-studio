@@ -16,6 +16,7 @@ const {
   trackFoldChoiceOffered,
   trackFoldMarkAdded,
   trackFoldOrderResolved,
+  trackFoldOrdersSearched,
   trackFoldRefused,
   trackFoldRepeatRebuilt,
   trackFoldSheetChanged,
@@ -46,6 +47,13 @@ describe('trackFoldRefused', () => {
 it('spells a cancelled order review as every other event does', () => {
   trackFoldOrderResolved('canceled', 'tool', 3);
   expect(runtime.track).toHaveBeenCalledWith('fold order resolved', { result: 'cancelled', source: 'tool', count_bucket: '<=3' });
+});
+
+it('says how a press of Find more orders ended and whether it found more, never which orders', () => {
+  trackFoldOrdersSearched('exhausted', false, 1);
+  expect(runtime.track).toHaveBeenLastCalledWith('fold orders searched', { result: 'exhausted', found: 'none', count_bucket: '<=2' });
+  trackFoldOrdersSearched('stopped', true, 9);
+  expect(runtime.track).toHaveBeenLastCalledWith('fold orders searched', { result: 'stopped', found: 'more', count_bucket: '>8' });
 });
 
 it('counts a Repeat updated in place apart from a step added, with nothing about it', () => {

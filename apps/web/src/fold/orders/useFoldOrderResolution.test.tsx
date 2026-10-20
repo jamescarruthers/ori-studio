@@ -122,3 +122,47 @@ it('cycles complete M/V recipes, preserves the selected index during extension, 
   await render('new line');
   expect(releaseOrderSearch).toHaveBeenCalledWith(1);
 });
+
+const placement: FoldToolStep = { op: { kind: 'mountain', line: { via: 'free', through: [[0, 0], [1, 1]] }, moving: [0.9, 0.1], seed: { scope: 'all' }, landing: { kind: 'outer' } }, key: 'mountain' };
+const incomplete = { status: 'ok', count: { orders: 1, exact: false }, index: 0, landing: { kind: 'outer' }, completion: null };
+
+it('searches a plain fold’s placements four times longer on each press, as a search the worker can stop', async () => {
+  activeBase = placement;
+  orderSelection.mockResolvedValue(incomplete);
+  await render();
+  expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ batch: 0, searchMs: 150 });
+  expect(orderSelection.mock.lastCall?.[4]).toEqual({ id: expect.any(Number) });
+  await act(async () => seen.resolution?.resume());
+  const asked: unknown[] = [];
+  for (let press = 0; press < 5; press++) {
+    expect(seen.resolution).toMatchObject({ exact: false, canSearch: true });
+    await act(async () => seen.resolution?.search());
+    asked.push(orderSelection.mock.lastCall?.[3]);
+  }
+  // Each press goes on from where the last stopped, so it always finds more time; one is capped at 64 times the first.
+  expect(asked).toMatchObject([600, 2400, 9600, 9600, 9600].map((searchMs, i) => ({ batch: i + 1, searchMs })));
+});
+
+it('names a running press as searching, stops it keeping what it found, and says when there are no other orders', async () => {
+  activeBase = placement;
+  orderSelection.mockResolvedValueOnce(incomplete);
+  await render();
+  await act(async () => seen.resolution?.resume());
+  expect(seen.resolution).toMatchObject({ searching: false, searched: false });
+  // A press still running: what was found stays on screen.
+  orderSelection.mockImplementationOnce(() => new Promise(() => {}));
+  await act(async () => seen.resolution?.search());
+  const ticket: unknown = orderSelection.mock.lastCall?.[4];
+  expect(seen.resolution).toMatchObject({ searching: true, waiting: true, count: 1, exact: false });
+  // Stop cancels it in the worker and reads what the search holds, searching no further.
+  orderSelection.mockResolvedValueOnce({ ...incomplete, count: { orders: 2, exact: false } });
+  await act(async () => seen.resolution?.stop());
+  expect(cancelSearch).toHaveBeenCalledWith(ticket);
+  expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ batch: 2, searchMs: 0 });
+  expect(seen.resolution).toMatchObject({ searching: false, waiting: false, count: 2, exact: false, canSearch: true });
+  // The next press searches longer than the stopped one, and this one finishes: no other orders.
+  orderSelection.mockResolvedValueOnce({ ...incomplete, count: { orders: 3, exact: true } });
+  await act(async () => seen.resolution?.search());
+  expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ batch: 3, searchMs: 2400 });
+  expect(seen.resolution).toMatchObject({ searching: false, searched: true, count: 3, exact: true, canSearch: false });
+});
