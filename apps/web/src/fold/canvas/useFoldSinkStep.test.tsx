@@ -80,6 +80,16 @@ const verbs = {
     status: 'answered',
     value: await call(engine, PARENT),
   })),
+  query: vi.fn(async (state: unknown, call: (e: unknown, at: unknown) => Promise<unknown>) => ({
+    status: 'answered',
+    value: await call(engine, state),
+  })),
+  peek: vi.fn(() => null),
+  resolveOrders: vi.fn(async (op: unknown, choices: { pocket?: unknown }, query: { index: number }) => ({
+    status: 'answered',
+    value: await engine.orderSelection(PARENT, op, choices, query),
+  })),
+  axiomRoots: vi.fn(async () => ({ status: 'answered', value: await engine.axiomCandidates() })),
 };
 const session = (): FoldSessionSurface =>
   ({

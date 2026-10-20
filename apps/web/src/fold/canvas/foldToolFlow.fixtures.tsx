@@ -97,6 +97,8 @@ function useSurface(session: FoldSession): FoldSessionSurface {
       error,
       analyse: session.analyse,
       preview: session.preview,
+      resolveOrders: session.resolveOrders,
+      axiomRoots: session.axiomRoots,
       commitStep: session.commitStep,
       cancel: session.cancel,
       cancelSearch: session.cancelSearch,
@@ -104,6 +106,7 @@ function useSurface(session: FoldSession): FoldSessionSurface {
       withNode: session.withNode,
       withCursor: session.withCursor,
       query: session.query,
+      peek: session.peek,
       retry: session.retry,
     }),
     [session, cursor, cursorId, readOnly, pending, analysis, error]

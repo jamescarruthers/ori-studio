@@ -14,6 +14,11 @@ const orderSelection = vi.fn();
 const cancelSearch = vi.fn();
 const session = { cursor: { state: { generation: 1, id: 1 } },
   withCursor: async (call: (e: unknown, at: number) => Promise<unknown>) => ({ status: 'answered', value: await call({ orderSelection, releaseOrderSearch }, 1) }),
+  // The session's orders, asked of the state on screen as the worker's are: a ticket only for a search.
+  resolveOrders: async (...[op, choices, query, search]: unknown[]) => ({
+    status: 'answered',
+    value: await (search ? orderSelection(1, op, choices, query, search) : orderSelection(1, op, choices, query)),
+  }),
   cancelSearch,
 } as unknown as FoldSessionSurface;
 let seen: ReturnType<typeof useFoldOrderResolution>;

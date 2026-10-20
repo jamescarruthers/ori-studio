@@ -7,7 +7,9 @@ import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldRefused } from '../../analytics';
 import { reportError } from '../../monitoring';
-import { isVertexOp, type FoldChoices, type FoldOp } from '../document/foldSequenceDocument';
+import type { FoldChoices, FoldOp } from '../document/foldSequenceDocument';
+import { foldPreviewWants } from '../engine/foldEnginePreview';
+import type { FoldRootSectionHint } from '../engine/foldEngineRoots';
 import type {
   FoldActionGeometry,
   FoldAnalysis,
@@ -17,9 +19,15 @@ import type {
   FoldEngineRefused,
   FoldScene,
   FoldStateSummary,
+  FoldStepSummarised,
 } from '../engine/foldEngineWire';
 import { foldStepInputKey } from '../session/foldSessionEngine';
-import { FOLD_PINCH_LENGTH_QUERY, FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
+import {
+  FOLD_PINCH_LENGTH_QUERY,
+  FOLD_SCENE_QUERY,
+  FOLD_STEP_SUMMARY_QUERY,
+  foldActionQuery,
+} from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, locate, buildFoldStep, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind, isSinkTool, isVertexTool, usesLineMode } from '../tools/foldToolCatalog';
@@ -155,7 +163,7 @@ export function useFoldToolPreview(
   // The session's verbs keep their identity across renders; the surface
   // object does not (its snapshot fields change with every answer), so the
   // effects below depend on the verbs alone, or each answer would ask again.
-  const { analyse, preview, cancel, withCursor, query } = session;
+  const { analyse, preview, cancel, withCursor, query, peek } = session;
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
 
@@ -164,7 +172,15 @@ export function useFoldToolPreview(
   // identity only with a pick or a restart.
   const { tool, lineMode, picks, swivelInput } = tools;
   const axiomLine = useMemo(() => axiomLineOf({ tool, lineMode, picks, swivelInput }), [tool, lineMode, picks, swivelInput]);
-  const ownRoots = useFoldAxiomCandidates(session, axiomLine);
+  // A fold that takes the top flap asks the layers at the root it takes next
+  // (`useFoldLineSection`): they are asked with the roots.
+  const viewTransform = index?.scene.view_transform ?? null;
+  const hinted = viewTransform !== null && (isFoldKind(tool) || tool === 'tuck') && !tools.override;
+  const sectionHint = useMemo<FoldRootSectionHint | null>(
+    () => (hinted && viewTransform ? { viewTransform, root: tools.root, swapped: tools.swapped } : null),
+    [hinted, viewTransform, tools.root, tools.swapped]
+  );
+  const ownRoots = useFoldAxiomCandidates(session, axiomLine, sectionHint);
   const candidate = ownRoots?.candidates?.[tools.root] ?? ownRoots?.candidates?.[0] ?? null;
   const { secondLineMode } = tools;
   const secondAxiom = useMemo(() => tool === 'pleat'
@@ -293,6 +309,22 @@ export function useFoldToolPreview(
   );
 
   // --- Tier 2 and 3, asked whenever the step changes; let go when there is none.
+  // A rotation moves no paper: nothing to analyse, no line or arrow to
+  // picture. The folded pane shows the model turned instead (`turned`). A
+  // vertex fold folds along no one line: there is no plain fold's analysis
+  // to ask of it (its tool draws its own creases). Its picture — along the
+  // one crease that tells it best — it has, like every fold
+  // (`foldPreviewWants`, which a preview's turn in the worker reads too).
+  const wants = step ? foldPreviewWants(step.op) : null;
+  // The picture is a pure query on the state on screen: an order
+  // resolution's turn may have answered it already (`FoldSession.resolveOrders`).
+  const actionQuery = useMemo(
+    () => (step && wants?.action ? foldActionQuery(step.op, step.choices) : null),
+    // The step is read through its key: an equal step is the same query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [step?.key, wants?.action]
+  );
+  const heldAction = state && actionQuery ? peek(state, actionQuery) : null;
   const asked = useRef<string | null>(null);
   const [action, setAction] = useState<{ key: string; action: FoldActionGeometry | null } | null>(null);
   useEffect(() => {
@@ -304,15 +336,10 @@ export function useFoldToolPreview(
     }
     asked.current = step.key;
     void preview(step.op, step.choices);
-    // A rotation moves no paper: nothing to analyse, no line or arrow to
-    // picture. The folded pane shows the model turned instead (`turned`).
-    if (step.op.kind === 'rotate') return undefined;
-    // A vertex fold folds along no one line: there is no plain fold's
-    // analysis to ask of it (its tool draws its own creases). Its picture —
-    // along the one crease that tells it best — it has, like every fold.
-    if (!isVertexOp(step.op)) void analyse(step.op, step.choices);
+    if (wants?.analysis) void analyse(step.op, step.choices);
+    if (!actionQuery || !state || peek(state, actionQuery)) return undefined;
     let current = true;
-    void withCursor((engine, at) => engine.action(at, step.op, step.choices)).then(
+    void query(state, actionQuery).then(
       (answer) => {
         if (!current || answer.status !== 'answered') return;
         setAction({ key: step.key, action: answer.value.status === 'ok' ? answer.value.action : null });
@@ -324,7 +351,14 @@ export function useFoldToolPreview(
     };
     // The step is read through its key: an equal step must not ask again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [returning, analyse, preview, cancel, withCursor, step?.key, stateKey]);
+  }, [returning, analyse, preview, cancel, query, actionQuery, step?.key, stateKey]);
+  const shownAction = heldAction
+    ? heldAction.value.status === 'ok'
+      ? heldAction.value.action
+      : null
+    : action && step && action.key === step.key
+      ? action.action
+      : null;
 
   // --- With no step, a compound tool's refused fold may still show its
   // layers (`FoldCompoundStepAnswer.layers`), and a precrease whose extent's
@@ -396,17 +430,24 @@ export function useFoldToolPreview(
   const landedState = pendingFor?.status === 'landed' ? pendingFor : null;
   const [landed, setLanded] = useState<{ key: string; landed: FoldLandedPreview } | null>(null);
   const landedKey = landedState ? `${landedState.state.generation}:${landedState.state.id}` : null;
+  // Answered in the preview's own turn, as a preview's always are: shown on
+  // the render that brings the landed state, without asking.
+  const heldScene = landedState ? peek(landedState.state, FOLD_SCENE_QUERY) : null;
+  const heldSummary = landedState ? peek(landedState.state, FOLD_STEP_SUMMARY_QUERY) : null;
+  const heldLanded = useMemo(
+    () => (landedState && heldScene && heldSummary ? landedPreviewOf(landedState.summary, heldScene.value, heldSummary.value) : null),
+    [landedState, heldScene, heldSummary]
+  );
   useEffect(() => {
-    if (!landedState || landedKey === null) return undefined;
+    if (!landedState || landedKey === null || heldLanded) return undefined;
     let current = true;
     const { state: handle, summary } = landedState;
     void Promise.all([query(handle, FOLD_SCENE_QUERY), query(handle, FOLD_STEP_SUMMARY_QUERY)]).then(
       ([scene, stepSummary]) => {
         if (!current || scene.status !== 'answered') return;
-        const diff = stepSummary.status === 'answered' ? stepSummary.value.summary : null;
         setLanded({
           key: landedKey,
-          landed: { scene: scene.value, summary, added: new Set(diff ? [...diff.diff.added, ...diff.diff.reversed] : []) },
+          landed: landedPreviewOf(summary, scene.value, stepSummary.status === 'answered' ? stepSummary.value : null),
         });
       },
       (error: unknown) => reportError(error, { surface: 'fold:landed-preview' })
@@ -414,7 +455,7 @@ export function useFoldToolPreview(
     return () => {
       current = false;
     };
-  }, [query, landedState, landedKey]);
+  }, [query, landedState, landedKey, heldLanded]);
 
   // A tuck no layer takes is offered its flaps once its layers are analysed.
   const compoundRefused = tools.tool === 'tuck' ? tuckRefusedWithFlaps(tuckStep.refused, analysis) : compoundStep?.refused;
@@ -444,7 +485,7 @@ export function useFoldToolPreview(
     trackFoldRefused(refused.refusal.code);
   }, [refused, stateKey, tools]);
 
-  const landedPreview = landed && landed.key === landedKey ? landed.landed : null;
+  const landedPreview = heldLanded ?? (landed && landed.key === landedKey ? landed.landed : null);
   return {
     pleatLines: pleatDrawing,
     swivelLine,
@@ -456,7 +497,7 @@ export function useFoldToolPreview(
     step,
     analysis,
     section: shownSection,
-    action: action && step && action.key === step.key ? action.action : null,
+    action: shownAction,
     // A rotation's landed state is the folded pane's, not the crease pattern's: the pattern does not turn.
     landed: rotating ? null : landedPreview,
     turned: rotating ? (landedPreview?.scene ?? null) : null,
@@ -472,6 +513,12 @@ export function useFoldToolPreview(
 }
 
 const WHOLE: FoldExtentState = { status: 'whole' };
+
+/** A landed preview as the crease-pattern pane draws it: the creases the step adds or reverses are its instruction. */
+function landedPreviewOf(summary: FoldStateSummary, scene: FoldScene, stepSummary: FoldStepSummarised | null): FoldLandedPreview {
+  const diff = stepSummary?.summary ?? null;
+  return { scene, summary, added: new Set(diff ? [...diff.diff.added, ...diff.diff.reversed] : []) };
+}
 
 /**
  * The pinch length the engine offers on the sheet of the state on screen

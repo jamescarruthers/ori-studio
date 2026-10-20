@@ -12,7 +12,7 @@ import { foldSpreadPictureKey, foldStatePictureKey, foldStatePictureUrl } from '
 import type { FoldScene } from '../engine/foldEngineWire';
 import type { FoldSession } from '../session/foldSession';
 import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
-import type { FoldCardPictureSource } from './foldCardPictureSource';
+import { foldCardHandleKey, type FoldCardPictureSource } from './foldCardPictureSource';
 export { foldCardPictureSource, type FoldCardPictureSource } from './foldCardPictureSource';
 
 /**
@@ -279,9 +279,17 @@ export function useFoldCardPicture(source: FoldCardPictureSource | null): string
   const session = foldSession();
   const style = useInheritedPaperStyle();
   const display = useFoldPaneDisplay();
-  const key = source ? pictureKey(source, foldStatePictureKey(style, display)) : null;
+  const look = foldStatePictureKey(style, display);
+  const key = source ? pictureKey(source, look) : null;
+  // A step just committed is the state its preview's card pictured under its
+  // handle, before it had a fingerprint: the same state, look and spread are
+  // the same picture, shown at once rather than painted again.
+  const handleKey = source ? foldCardHandleKey(source.state) : null;
+  const previewed = source && handleKey !== null && handleKey !== source.key ? pictureKey({ ...source, key: handleKey }, look) : null;
   const stateLook = key === null ? null : stateLookOf(key);
-  const picture = useStore(pictures, (snapshot) => (key === null ? null : snapshot.byKey.get(key)));
+  const picture = useStore(pictures, (snapshot) =>
+    key === null ? null : (snapshot.byKey.get(key) ?? (previewed === null ? undefined : snapshot.byKey.get(previewed)))
+  );
   const failed = useStore(pictures, (snapshot) => key !== null && snapshot.failed.has(key));
   const [shown, setShown] = useState<ShownPicture | null>(null);
   // Adjusted during render, so the frame that brings the new picture shows it.

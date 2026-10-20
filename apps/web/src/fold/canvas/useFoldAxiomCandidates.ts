@@ -2,13 +2,22 @@ import { useEffect, useRef, useState } from 'react';
 import { trackFoldChoiceOffered } from '../../analytics';
 import { reportError } from '../../monitoring';
 import { canonicalJson } from '../document/foldDigest';
+import type { FoldRootSectionHint } from '../engine/foldEngineRoots';
 import type { FoldAxiomCandidate, FoldAxiomLine, FoldEngineRefused } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { clientRefusal } from '../tools/foldStepBuilder';
 
-/** Independently keyed roots for one construction on the current pose. */
-export function useFoldAxiomCandidates(session: FoldSessionSurface, axiomLine: FoldAxiomLine | null) {
-  const { withCursor } = session;
+/**
+ * Independently keyed roots for one construction on the current pose. With a
+ * `hint`, the layers at the root it names come back with them, kept where
+ * the line's section is asked for (`FoldSession.axiomRoots`).
+ */
+export function useFoldAxiomCandidates(
+  session: FoldSessionSurface,
+  axiomLine: FoldAxiomLine | null,
+  hint: FoldRootSectionHint | null = null
+) {
+  const { axiomRoots } = session;
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
   const axiomKey = axiomLine && stateKey ? `${stateKey}|${canonicalJson(axiomLine)}` : null;
@@ -22,7 +31,7 @@ export function useFoldAxiomCandidates(session: FoldSessionSurface, axiomLine: F
   useEffect(() => {
     if (!axiomLine || axiomKey === null || roots?.key === axiomKey) return undefined;
     let current = true;
-    void withCursor((engine, at) => engine.axiomCandidates(at, axiomLine)).then(
+    void axiomRoots(axiomLine, hint).then(
       (answer) => {
         if (!current || answer.status !== 'answered') return;
         const outcome = answer.value;
@@ -46,7 +55,8 @@ export function useFoldAxiomCandidates(session: FoldSessionSurface, axiomLine: F
     return () => {
       current = false;
     };
-  }, [withCursor, axiomLine, axiomKey, roots?.key]);
+    // The hint only says which layers to ask with the roots: a new one is no new question.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [axiomRoots, axiomLine, axiomKey, roots?.key]);
   return roots && roots.key === axiomKey ? roots : null;
-
 }
