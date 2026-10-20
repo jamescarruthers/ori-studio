@@ -303,10 +303,23 @@ export interface FoldPaneCreaseOptions {
   /** Which step the state is: the creases it made are its own (`made_at`). */
   step: number;
   /**
+   * How many steps led to the state the step folds from (`since` < `made_at`
+   * ≤ `step` are its own): a Repeat lands several operations as one step, so
+   * every crease made after the state before it is the Repeat's, and so is
+   * every precrease of a run a Diagram step draws as one. One step before
+   * `step` when unsaid.
+   */
+  since?: number;
+  /**
    * The creases a previewed fold would add, by the landed state's edge ids:
    * the instruction in place of the step's own. Null when nothing is previewed.
    */
   instruction: ReadonlySet<number> | null;
+}
+
+/** Whether a crease or a crease mark made at `madeAt` is the step's own: made after the state it folds from. */
+export function madeByStep(madeAt: number, { step, since }: Pick<FoldPaneCreaseOptions, 'step' | 'since'>): boolean {
+  return step > 0 && madeAt > (since ?? step - 1) && madeAt <= step;
 }
 
 /**
@@ -324,14 +337,12 @@ export type FoldPaneCrease =
   | { as: 'fold'; letter: FoldLetter }
   | { as: 'flat'; letter: FoldLetter | null };
 
-export function foldPaneCrease(
-  crease: FoldSceneCrease,
-  { display, step, instruction }: FoldPaneCreaseOptions
-): FoldPaneCrease | null {
+export function foldPaneCrease(crease: FoldSceneCrease, options: FoldPaneCreaseOptions): FoldPaneCrease | null {
+  const { display, instruction } = options;
   if (crease.kind === 'border') return { as: 'edge' };
   // The step's own creases are its instruction: the ink of what they are now
   // would say the same line twice.
-  const instructs = instruction ? instruction.has(crease.id) : display.stepCreases && crease.made_at === step && step > 0;
+  const instructs = instruction ? instruction.has(crease.id) : display.stepCreases && madeByStep(crease.made_at, options);
   if (instructs && crease.letter) return { as: 'instruction', letter: crease.letter };
   // A folded crease always has a letter; one without is drawn as context, as a flat one is.
   if (crease.kind === 'flat' || !crease.letter) return display.precreases ? { as: 'flat', letter: crease.letter } : null;
@@ -348,10 +359,11 @@ export function foldPaneCrease(
  */
 export function foldPaneMark(
   mark: FoldSceneCreaseMark,
-  { display, step, instruction }: FoldPaneCreaseOptions
+  options: FoldPaneCreaseOptions
 ): Extract<FoldPaneCrease, { as: 'instruction' | 'flat' }> | null {
+  const { display, step, instruction } = options;
   // A previewed fold's marks are the landed state's newest, whatever the switch.
-  const instructs = instruction ? mark.made_at === step : display.stepCreases && mark.made_at === step && step > 0;
+  const instructs = instruction ? mark.made_at === step : display.stepCreases && madeByStep(mark.made_at, options);
   if (instructs) return { as: 'instruction', letter: mark.letter };
   return display.precreases ? { as: 'flat', letter: mark.letter } : null;
 }
@@ -405,8 +417,9 @@ export interface CreasePatternPaperOptions extends Omit<FoldPaneCreaseOptions, '
  * (`creasePatternPaneLines`).
  */
 export function creasePatternPaperScene(scene: FoldScene, options: CreasePatternPaperOptions): PaperScene {
-  const { display, step } = options;
+  const { display, step, since } = options;
   const instruction = options.instruction ?? null;
+  const shown: FoldPaneCreaseOptions = { display, step, instruction, ...(since !== undefined ? { since } : {}) };
   const toScenePx = options.place?.toScenePx ?? foldUnitToScenePx;
   const ring: ScenePoint[] = options.sheet.map(([x, y]) => toScenePx({ x, y }));
   const side = options.side ?? 'front';
@@ -415,7 +428,7 @@ export function creasePatternPaperScene(scene: FoldScene, options: CreasePattern
   const aux: PaperLineItem[] = [];
   const folds: PaperLineItem[] = [];
   for (const crease of scene.creases) {
-    const role = creaseRole(crease, { display, step, instruction });
+    const role = creaseRole(crease, shown);
     if (!role) continue;
     const item = lineItem(role, crease.from, crease.to, 0, ORIGIN, toScenePx);
     if (role === 'edge') border.push(item);
@@ -424,7 +437,7 @@ export function creasePatternPaperScene(scene: FoldScene, options: CreasePattern
   }
   // The crease marks, in the aux pen as the flat creases they are, or the instruction they are.
   for (const mark of scene.crease_marks ?? []) {
-    const role = paneCreaseRole(foldPaneMark(mark, { display, step, instruction }));
+    const role = paneCreaseRole(foldPaneMark(mark, shown));
     if (!role) continue;
     const item = lineItem(role, mark.from, mark.to, 0, ORIGIN, toScenePx);
     if (role === 'aux') aux.push(item);

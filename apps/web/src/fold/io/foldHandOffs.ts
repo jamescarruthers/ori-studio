@@ -21,6 +21,7 @@ import type { PaperStyle } from '../../lib/paper/paperStyle';
 import type { PaperExportScope, PaperExportTarget } from '../../paperExport/paperExportTarget';
 import { exportFilename } from '../../platform/exportFilename';
 import type { FileService } from '../../platform/fileService';
+import { foldOpSteps } from '../document/foldSequenceDocument';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import { foldSendToEditPayload } from '../engine/foldEngineIoSendToEdit';
 import type { FoldEngineRefused } from '../engine/foldEngineWire';
@@ -177,7 +178,8 @@ export async function openFoldStepsExport(deps: FoldHandOffDeps, scope: PaperExp
       if (foldStepIsNumbered(step.op)) {
         const drawn = await ask(deps, step.state, async (engine, id) => {
           const [scene, summary] = await Promise.all([engine.scene(id), engine.summary(id)]);
-          return foldStepCreaseDiagram(scene.creases, summary.sheet, summary.step);
+          // Every crease the step made: a Repeat's every operation's.
+          return foldStepCreaseDiagram(scene.creases, summary.sheet, summary.step, summary.step - foldOpSteps(step.op));
         });
         if (drawn === null) return false;
         pages.push({ number: pages.length + 1, diagram: drawn });

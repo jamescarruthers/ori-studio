@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { reportError } from '../../monitoring';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { visibleMarks } from '../document/foldStepTree';
-import { markPoints, type FoldMark, type FoldSequenceDocument } from '../document/foldSequenceDocument';
+import { foldOpSteps, isLockedStep, markPoints, type FoldMark, type FoldSequenceDocument } from '../document/foldSequenceDocument';
 import type { FoldLandmarks, FoldScene, FoldStateSummary } from '../engine/foldEngineWire';
 import type { FoldStateCall } from '../session/foldSession';
 import type { FoldSessionNode } from '../session/foldSessionState';
@@ -22,6 +22,13 @@ export interface FoldStateView {
    * (see {@link FoldStateView.scene}).
    */
   summary: FoldStateSummary | null;
+  /**
+   * How many steps led to the state the step on screen folds from, in the
+   * count `summary.step` keeps: the creases made after it are the step's own
+   * — every operation's of a Repeat (`foldOpSteps`). Of the same state as
+   * `summary`; null with it.
+   */
+  since: number | null;
   /**
    * The scene the panes show. While the step on screen has yet to land, or
    * its scene is on its way, the last one shown stays up rather than leaving
@@ -41,10 +48,11 @@ export interface FoldStateView {
   index: FoldPickIndex | null;
 }
 
-/** A state the panes can show: its scene and its summary, together. */
+/** A state the panes can show: its scene and its summary, together, and the step count of the state before it. */
 interface FoldPicture {
   scene: FoldScene;
   summary: FoldStateSummary;
+  since: number;
 }
 
 const NO_MARKS: readonly FoldMark[] = [];
@@ -112,12 +120,19 @@ export function useFoldStateView(): FoldStateView {
       .catch((error: unknown) => reportError(error, { surface: 'fold:landed-landmarks' }));
   }, [landedPending, landmarksQuery]);
   const summary = returned?.summary ?? cursor.summary;
-  const fresh = useMemo(() => (scene && summary ? { scene, summary } : null), [scene, summary]);
+  // The operation that landed the state shown: the sequence tool's preview, or the step on screen.
+  const node = cursorId === null ? undefined : sequence?.steps.find((step) => step.id === cursorId);
+  const op = returned ? returned.request.op : node && !isLockedStep(node) ? node.op : null;
+  const fresh = useMemo(
+    () => (scene && summary ? { scene, summary, since: summary.step - (op ? foldOpSteps(op) : 1) } : null),
+    [scene, summary, op]
+  );
   const picture = usePicture(fresh, loading(cursor));
   const index = useMemo(() => (scene ? foldPickIndex(scene, landmarks, points) : null), [scene, landmarks, points]);
   return {
     cursorId,
     summary: picture?.summary ?? summary,
+    since: picture?.since ?? null,
     scene: picture?.scene ?? null,
     landmarks,
     marks,

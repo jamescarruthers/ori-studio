@@ -5,6 +5,7 @@ import type { PaperLineItem } from '../../lib/paper/paperScene';
 import { DEFAULT_PAPER_STYLE, type PaperStyle } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import { bookScene, flatSquareScene } from './foldCanvas.fixtures';
+import { foldOpSteps, type FoldRepeatOp } from '../document/foldSequenceDocument';
 import { FOLD_USER_PER_UNIT } from './foldCanvasGeometry';
 import {
   creasePatternPaperScene,
@@ -13,6 +14,8 @@ import {
   foldedDisplayOffset,
   foldedPaneScene,
   foldFrameSpread,
+  foldPaneMark,
+  madeByStep,
   withFoldCreases,
   withFoldLine,
   withPreviewCreases,
@@ -43,6 +46,27 @@ describe('the Fold panes’ paper scenes', () => {
     const flat = { ...fold, kind: 'flat' as const, made_at: 0 };
     expect(creaseRole(flat, { display, step: 1, instruction: null })).toBe('aux');
     expect(creaseRole(flat, { display: { ...display, precreases: false }, step: 1, instruction: null })).toBeNull();
+  });
+
+  it('draws every crease made since the state a step folds from as its instruction: a Repeat’s every operation’s', () => {
+    const [, , , , , , fold] = bookScene().creases;
+    if (!fold) throw new Error('no fold');
+    const display = FOLD_PANE_DISPLAY_DEFAULT;
+    // A Repeat of three operations landed at step 5: what steps 3, 4 and 5 made is its own.
+    for (const madeAt of [3, 4, 5]) {
+      expect(creaseRole({ ...fold, made_at: madeAt }, { display, step: 5, since: 2, instruction: null })).toBe('diagram-valley');
+      expect(foldPaneMark({ from: fold.from, to: fold.to, letter: 'valley', made_at: madeAt, pieces: [] }, { display, step: 5, since: 2, instruction: null })).toEqual({
+        as: 'instruction',
+        letter: 'valley',
+      });
+    }
+    expect(creaseRole({ ...fold, made_at: 2 }, { display, step: 5, since: 2, instruction: null })).toBe('valley');
+    // Unsaid, a step is one operation, as before.
+    expect(creaseRole({ ...fold, made_at: 4 }, { display, step: 5, instruction: null })).toBe('valley');
+    expect(madeByStep(5, { step: 5 })).toBe(true);
+    expect(madeByStep(0, { step: 0, since: -1 })).toBe(false);
+    expect(foldOpSteps({ kind: 'valley' })).toBe(1);
+    expect(foldOpSteps({ kind: 'repeat', steps: [{}, {}, {}] } as unknown as FoldRepeatOp)).toBe(3);
   });
 
   it('lays the crease pattern front up, the folds under the border, in user space', () => {

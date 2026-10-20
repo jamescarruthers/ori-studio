@@ -209,14 +209,21 @@ export function useFoldCanvasPaint(
   const landed = preview.landed;
   const cpSource = resolvedScene ?? landed?.scene ?? view.scene;
   const cpSummary = landed?.summary ?? summary;
+  // The step on screen's own creases: all a Repeat made, not only its last operation's.
+  const since = landed ? null : view.since;
   const cpLines = useMemo(() => {
     if (!cpSource || !cpSummary) return null;
-    const lines = creasePatternPaneLines(cpSource, { display, step: cpSummary.step, instruction: landed?.added ?? null });
+    const lines = creasePatternPaneLines(cpSource, {
+      display,
+      step: cpSummary.step,
+      ...(since !== null ? { since } : {}),
+      instruction: landed?.added ?? null,
+    });
     // Until a fold lands and draws its own, a vertex tool's pending creases
     // are the instruction: on each layer, by the letter each has from the front.
     if (landed || !pendingSheet || pendingSheet.length === 0) return lines;
     return { ...lines, instruction: [...lines.instruction, ...pendingSheet] };
-  }, [cpSource, cpSummary, display, landed, pendingSheet]);
+  }, [cpSource, cpSummary, since, display, landed, pendingSheet]);
   const cpBounds = useMemo(() => (sheetBounds ? boundsToUser(sheetBounds) : null), [sheetBounds]);
 
   // A turned preview is another form: the pane keeps it in view as it keeps a new step's.

@@ -29,13 +29,14 @@ import type { PaperStyle } from '../../lib/paper/paperStyle';
 import type { PaperExportTarget } from '../../paperExport/paperExportTarget';
 import type { DiagramSheet } from '../../lib/stepDiagram/stepDiagramGeometry';
 import type { DiagramLineStyleName, StepDiagramModel, StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
+import { madeByStep } from '../canvas/foldPaneScenes';
 import type { FoldOp } from '../document/foldSequenceDocument';
 import type { FoldSceneCrease } from '../engine/foldEngineWire';
 
-/** A crease's role on its step's page. */
-function lineStyle(crease: FoldSceneCrease, step: number): DiagramLineStyleName | null {
+/** A crease's role on its step's page: its letter when it is the step's own, its instruction. */
+function lineStyle(crease: FoldSceneCrease, own: boolean): DiagramLineStyleName | null {
   if (crease.kind === 'border') return null;
-  if (crease.made_at === step && crease.letter) return crease.letter;
+  if (own && crease.letter) return crease.letter;
   if (crease.kind === 'fold' && crease.letter) return crease.letter === 'mountain' ? 'fold-mountain' : 'fold-valley';
   return 'crease';
 }
@@ -61,20 +62,24 @@ function pageSheet(outline: readonly (readonly [number, number])[]): DiagramShee
 /**
  * A step's page: the crease pattern of the state it lands, its own creases
  * the instruction. `step` is the step's number in the state (`summary.step`),
- * what each crease's `made_at` counts in; `outline` is the sheet's
- * (`summary.sheet`).
+ * what each crease's `made_at` counts in, and `since` the number of the state
+ * it folds from — every crease made after it is the step's, a Repeat's every
+ * operation's (`foldOpSteps`); one before `step` when unsaid. `outline` is the
+ * sheet's (`summary.sheet`).
  */
 export function foldStepCreaseDiagram(
   creases: readonly FoldSceneCrease[],
   outline: readonly (readonly [number, number])[],
-  step: number
+  step: number,
+  since: number = step - 1
 ): StepDiagramModel {
   const sheet = pageSheet(outline);
   const primitives: StepDiagramPrimitive[] = [{ kind: 'sheet', width: sheet.width, height: sheet.height }];
   const lines: StepDiagramPrimitive[] = [];
   const instructions: StepDiagramPrimitive[] = [];
   for (const crease of creases) {
-    const style = lineStyle(crease, step);
+    const own = crease.letter !== null && madeByStep(crease.made_at, { step, since });
+    const style = lineStyle(crease, own);
     if (!style) continue;
     const line: StepDiagramPrimitive = {
       kind: 'line',
@@ -83,7 +88,7 @@ export function foldStepCreaseDiagram(
       style,
     };
     // The instruction over the paper as it stands.
-    (crease.made_at === step && crease.letter ? instructions : lines).push(line);
+    (own ? instructions : lines).push(line);
   }
   return { sheet, primitives: [...primitives, ...lines, ...instructions] };
 }

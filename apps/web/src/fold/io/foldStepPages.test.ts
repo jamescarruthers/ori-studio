@@ -45,6 +45,17 @@ describe('a Fold step as a page', () => {
     expect(foldStepCreaseDiagram(CREASES, SQUARE, 2).primitives.at(-1)).toMatchObject({ style: 'valley', to: [1, 1] });
   });
 
+  it('draws every crease a Repeat made as its page’s instruction: all made since the state before it', () => {
+    // A Repeat of steps 2 and 3, landing at step 3 from step 1.
+    const instructions = foldStepCreaseDiagram(CREASES, SQUARE, 3, 1).primitives.filter(
+      (primitive) => primitive.kind === 'line' && (primitive.style === 'valley' || primitive.style === 'mountain')
+    );
+    expect(instructions).toEqual([
+      { kind: 'line', from: [0, 0], to: [1, 1], style: 'valley' },
+      { kind: 'line', from: [0, 0.5], to: [1, 0.5], style: 'valley' },
+    ]);
+  });
+
   it('carries a polygon sheet’s outline, and not a rectangle’s', () => {
     const rectangle: [number, number][] = [[0, 0], [1, 0], [1, 0.5], [0, 0.5]];
     expect(foldStepCreaseDiagram([], rectangle, 0).sheet).toEqual({ width: 1, height: 0.5, centre: [0.5, 0.25] });
