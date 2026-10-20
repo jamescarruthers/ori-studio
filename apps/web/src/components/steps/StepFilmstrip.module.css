@@ -244,6 +244,21 @@
   white-space: nowrap;
 }
 
+/* A phone's narrow card (`compact`): the badge a size smaller and unspaced, so
+   a one-word kind ("Precrease", "Collapse") fits whole beside the number, and
+   a two-word one ("Outside reverse") takes a second line rather than being cut
+   to "Outsi…". */
+.filmstrip[data-compact] .card[data-kind='fold'] .badge {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.56rem;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-align: right;
+  white-space: normal;
+}
+
 /* A card that offers more than one way: a dot per way along its foot, the one
    it shows filled, so a card left on another way reads so in the strip before
    its sentence does. */
