@@ -85,8 +85,9 @@ import styles from './FoldCanvas.module.css';
  * a phone, one pane at a time, and the rail's tools in a sheet opened from
  * the bar, beside the pane switch (`FoldPhoneBarControls`); the tool window
  * starts as its title bar, so the paper stays in view while points are
- * picked (`FoldToolWindow`), and gives way to Repeat's and Unfold to step's
- * bars while either is open (`useFoldToolWindowYields`).
+ * picked (`FoldToolWindow`). On any layout the tool window gives way to
+ * Repeat's and Unfold to step's bars while either is open
+ * (`useFoldToolWindowYields`).
  *
  * A composition site: what the tools do is `fold/tools` (the state, the
  * registry, the step builder) and `fold/canvas` (picking, the pipeline to the
@@ -121,8 +122,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   useEffect(() => registerFoldKindControl(foldToolKindControl(tools)), [tools]);
 
   const phone = useIsPhoneLayout();
-  // A phone's tool window gives way to Repeat's and Unfold to step's bars.
-  const toolWindowYields = useFoldToolWindowYields(phone);
+  // The tool window gives way to Repeat's and Unfold to step's bars.
+  const toolWindowYields = useFoldToolWindowYields();
   const coarse = useIsCoarsePointerSurface();
   const phonePane = useFoldPhonePane();
   const readOnly = useFoldReadOnly();

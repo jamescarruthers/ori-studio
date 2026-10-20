@@ -295,14 +295,20 @@ describe("the Fold canvas", () => {
     expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
   });
 
-  it("gives a phone's tool window up while Repeat's or Unfold to step's bar is open, and only a phone's", () => {
+  it("gives the tool window up while Repeat's or Unfold to step's bar is open, on a phone and off one", () => {
     const opening = { id: 1, loadId: 1, sequenceId: "s", parent: "a", path: "p", fingerprint: "f" };
     const shown = () => toolWindowModels.at(-1) !== null;
     try {
-      // Off a phone the window sits in the canvas's corner, clear of both bars.
+      // Off a phone the window would sit in the canvas's corner, offering picks the canvas no longer takes.
       mount();
-      act(() => useFoldRepeatUi.setState({ opening }));
       expect(shown()).toBe(true);
+      act(() => useFoldRepeatUi.setState({ opening }));
+      expect(shown()).toBe(false);
+      act(() => useFoldRepeatUi.setState({ opening: null }));
+      expect(shown()).toBe(true);
+      act(() => useFoldReturnUi.setState({ opening: { ...opening, target: null, lastOnly: false, rebuild: null } }));
+      expect(shown()).toBe(false);
+      act(() => useFoldReturnUi.setState({ opening: null }));
       act(() => root?.unmount());
       host?.remove();
       vi.stubGlobal(
