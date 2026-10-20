@@ -773,7 +773,7 @@
         "exportLinked": "내보내기 스타일 · 연결됨",
         "title": "스타일"
       },
-      "stepsHint": "참조 전용",
+      "stepsHintFold": "참조 및 접기",
       "stepsTitle": "단계",
       "unsaved": {
         "custom": "이 스타일은 프리셋으로 저장되어 있지 않습니다. {{next}} 프리셋을 적용하면 이 스타일이 대체됩니다.",

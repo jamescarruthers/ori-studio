@@ -789,7 +789,7 @@
         "exportLinked": "Exportstil · verknüpft",
         "title": "Stil"
       },
-      "stepsHint": "Nur Referenzen",
+      "stepsHintFold": "Referenzen und Falten",
       "stepsTitle": "Schritte",
       "unsaved": {
         "custom": "Dieser Stil ist nicht als Voreinstellung gespeichert. Wenn du {{next}} anwendest, wird er ersetzt.",

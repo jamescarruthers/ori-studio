@@ -14,8 +14,9 @@
  *   the border, a folded crease by its (front-relative) letter, a flat crease.
  *   The creases the step on show made — or, while a fold is previewed, the
  *   creases it would add — are its instruction. The canvas's crease-pattern
- *   pane draws them in Edit's inks (`creasePatternPaneLines`); a Diagram
- *   step keeps them as paper, the instruction in the diagram-crease pens
+ *   pane draws the pattern in Edit's inks (`creasePatternPaneLines`) and the
+ *   instruction in the diagram-crease pens (`foldInstructionStrokes`); a
+ *   Diagram step keeps them as paper, the instruction in the same pens
  *   (`creasePatternPaperScene`).
  *
  * Coordinates: a scene's points are in user space, through

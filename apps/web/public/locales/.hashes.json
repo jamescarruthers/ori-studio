@@ -1642,7 +1642,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -6250,7 +6249,8 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -7895,7 +7895,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -12503,7 +12502,8 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -14148,7 +14148,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -18758,7 +18757,8 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -20390,7 +20390,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -24680,7 +24679,8 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -26312,7 +26312,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -30602,7 +30601,8 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -32247,7 +32247,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -36855,7 +36854,8 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -38500,7 +38500,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -43108,7 +43107,8 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -44740,7 +44740,6 @@
     "dialogs:settings.paper.slot.exportHint": "fe5995ddab3b",
     "dialogs:settings.paper.slot.exportLinked": "b175abfacb52",
     "dialogs:settings.paper.slot.title": "7e744141b40e",
-    "dialogs:settings.paper.stepsHint": "607a2c720d6b",
     "dialogs:settings.paper.stepsTitle": "1de3df70ddf4",
     "dialogs:settings.paper.unsaved.custom": "a50843974a56",
     "dialogs:settings.paper.unsaved.discard": "f9bfa3dc7c8f",
@@ -49030,6 +49029,7 @@
     "panels:fold.paper.keptStyle": "816c57fbeb01",
     "panels:fold.paper.look": "a0de5719f595",
     "panels:fold.paper.style": "7e744141b40e",
-    "panels:fold.paper.styleHint": "f4306c02fa6f"
+    "panels:fold.paper.styleHint": "f4306c02fa6f",
+    "dialogs:settings.paper.stepsHintFold": "4d8c2331f37d"
   }
 }

@@ -789,7 +789,7 @@
         "exportLinked": "Export style · linked",
         "title": "Style"
       },
-      "stepsHint": "References only",
+      "stepsHintFold": "References and Fold",
       "stepsTitle": "Steps",
       "unsaved": {
         "custom": "This style isn’t saved as a preset. Applying {{next}} replaces it.",

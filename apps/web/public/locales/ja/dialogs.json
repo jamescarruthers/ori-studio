@@ -773,7 +773,7 @@
         "exportLinked": "書き出しスタイル · 連動",
         "title": "スタイル"
       },
-      "stepsHint": "リファレンスのみ",
+      "stepsHintFold": "リファレンスと折り",
       "stepsTitle": "手順",
       "unsaved": {
         "custom": "このスタイルはプリセットとして保存されていません。「{{next}}」を適用すると置き換えられます。",

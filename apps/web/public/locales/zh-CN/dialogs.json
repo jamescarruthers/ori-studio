@@ -773,7 +773,7 @@
         "exportLinked": "导出样式 · 已关联",
         "title": "样式"
       },
-      "stepsHint": "仅参考",
+      "stepsHintFold": "参考和折叠",
       "stepsTitle": "步骤",
       "unsaved": {
         "custom": "此样式尚未保存为预设。应用“{{next}}”会替换它。",

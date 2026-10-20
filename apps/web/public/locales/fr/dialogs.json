@@ -805,7 +805,7 @@
         "exportLinked": "Style d'exportation · lié",
         "title": "Style"
       },
-      "stepsHint": "Références uniquement",
+      "stepsHintFold": "Références et Plier",
       "stepsTitle": "Étapes",
       "unsaved": {
         "custom": "Ce style n’est pas enregistré comme préréglage. Appliquer {{next}} le remplace.",

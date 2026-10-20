@@ -805,7 +805,7 @@
         "exportLinked": "Estilo de exportación · vinculado",
         "title": "Estilo"
       },
-      "stepsHint": "Solo referencias",
+      "stepsHintFold": "Referencias y Plegar",
       "stepsTitle": "Pasos",
       "unsaved": {
         "custom": "Este estilo no está guardado como predefinido. Aplicar {{next}} lo reemplaza.",
