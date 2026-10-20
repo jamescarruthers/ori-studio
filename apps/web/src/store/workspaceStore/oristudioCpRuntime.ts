@@ -554,8 +554,8 @@ export async function importAddOristudioCpDocumentFromText(
  * own history entry.
  *
  * The sweep goes first: two unassigned collinear pieces still merge as one
- * unassigned crease, and would not once recoloured, because the sweep leaves
- * auxiliary lines alone. The sweep keeps the added creases past
+ * unassigned crease, and would not once recoloured, because the cleanup keeps
+ * auxiliary lines out of the sweep. The sweep keeps the added creases past
  * `existingCount` — it removes only among them and appends what it merges —
  * so the same range names them for the recolour.
  */

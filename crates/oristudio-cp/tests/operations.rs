@@ -518,7 +518,7 @@ fn del_v_pair_uses_oriedita_color_matrix() {
 }
 
 #[test]
-fn del_v_all_merges_same_color_non_cyan_vertex_pairs() {
+fn del_v_all_merges_same_color_crease_pairs() {
     let mut model = CreasePatternModel::default();
     model.add_line(Point::new(0.0, 0.0), Point::new(10.0, 0.0), LineColor::Red1);
     model.add_line(
@@ -536,6 +536,177 @@ fn del_v_all_merges_same_color_non_cyan_vertex_pairs() {
         Point::new(20.0, 0.0),
         LineColor::Red1,
     );
+}
+
+/// The shape of the report: a square sheet with an aux diagonal left in five
+/// pieces, nothing else meeting it between the corners. Upstream's sweep never
+/// sees aux lines, so this used to be a no-op.
+#[test]
+fn del_v_all_merges_a_collinear_chain_of_aux_lines() {
+    let third = 800.0 / 7.0;
+    let mut model = CreasePatternModel::default();
+    for (a, b) in [
+        ((-200.0, 200.0), (200.0, 200.0)),
+        ((200.0, 200.0), (200.0, -200.0)),
+        ((200.0, -200.0), (-200.0, -200.0)),
+        ((-200.0, -200.0), (-200.0, 200.0)),
+    ] {
+        model.add_line(
+            Point::new(a.0, a.1),
+            Point::new(b.0, b.1),
+            LineColor::Black0,
+        );
+    }
+    for (a, b) in [
+        ((-200.0, -200.0), (0.0, 0.0)),
+        ((0.0, 0.0), (80.0, 80.0)),
+        ((150.0, 150.0), (200.0, 200.0)),
+        ((third, third), (150.0, 150.0)),
+        ((80.0, 80.0), (third, third)),
+    ] {
+        model.add_line(Point::new(a.0, a.1), Point::new(b.0, b.1), LineColor::Cyan3);
+    }
+
+    del_v_all(&mut model);
+
+    assert_eq!(model.line_segments.len(), 5);
+    assert!(contains_span(
+        &model,
+        Point::new(-200.0, -200.0),
+        Point::new(200.0, 200.0),
+        LineColor::Cyan3,
+    ));
+}
+
+#[test]
+fn del_v_all_color_change_merges_aux_runs_too() {
+    let mut model = CreasePatternModel::default();
+    model.add_line(
+        Point::new(0.0, 0.0),
+        Point::new(10.0, 0.0),
+        LineColor::Cyan3,
+    );
+    model.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Cyan3,
+    );
+
+    del_v_all_color_change(&mut model);
+
+    assert_eq!(model.line_segments.len(), 1);
+    assert!(contains_span(
+        &model,
+        Point::new(0.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Cyan3,
+    ));
+}
+
+/// The aux pass counts every line at a vertex, as Delete Vertex does at one
+/// point: a crease ending on the aux line keeps it split there.
+#[test]
+fn del_v_all_keeps_an_aux_vertex_a_crease_ends_on() {
+    let mut model = CreasePatternModel::default();
+    model.add_line(
+        Point::new(0.0, 0.0),
+        Point::new(10.0, 0.0),
+        LineColor::Cyan3,
+    );
+    model.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Cyan3,
+    );
+    model.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(10.0, 10.0),
+        LineColor::Red1,
+    );
+    let before = model.line_segments.clone();
+
+    del_v_all(&mut model);
+    assert_eq!(model.line_segments, before);
+
+    del_v_all_color_change(&mut model);
+    assert_eq!(model.line_segments, before);
+}
+
+#[test]
+fn del_v_all_keeps_an_aux_corner_and_an_aux_line_meeting_a_crease() {
+    let mut corner = CreasePatternModel::default();
+    corner.add_line(
+        Point::new(0.0, 0.0),
+        Point::new(10.0, 0.0),
+        LineColor::Cyan3,
+    );
+    corner.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(10.0, 10.0),
+        LineColor::Cyan3,
+    );
+    let corner_before = corner.line_segments.clone();
+    del_v_all(&mut corner);
+    assert_eq!(corner.line_segments, corner_before);
+
+    // Collinear, but an aux line and a crease are never one line, in either
+    // variant.
+    let mut mixed = CreasePatternModel::default();
+    mixed.add_line(
+        Point::new(0.0, 0.0),
+        Point::new(10.0, 0.0),
+        LineColor::Cyan3,
+    );
+    mixed.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Red1,
+    );
+    let mixed_before = mixed.line_segments.clone();
+    del_v_all(&mut mixed);
+    assert_eq!(mixed.line_segments, mixed_before);
+    del_v_all_color_change(&mut mixed);
+    assert_eq!(mixed.line_segments, mixed_before);
+}
+
+/// Upstream's crease pass merges a crease through an aux line that crosses it,
+/// since it never sees the aux line. The aux pass runs on what that leaves, so
+/// the aux line finds only its own two pieces there and merges as well.
+#[test]
+fn del_v_all_unsplits_both_lines_where_a_crease_crosses_an_aux_line() {
+    let mut model = CreasePatternModel::default();
+    model.add_line(Point::new(0.0, 0.0), Point::new(10.0, 0.0), LineColor::Red1);
+    model.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Red1,
+    );
+    model.add_line(
+        Point::new(10.0, -10.0),
+        Point::new(10.0, 0.0),
+        LineColor::Cyan3,
+    );
+    model.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(10.0, 10.0),
+        LineColor::Cyan3,
+    );
+
+    del_v_all(&mut model);
+
+    assert_eq!(model.line_segments.len(), 2);
+    assert!(contains_span(
+        &model,
+        Point::new(0.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Red1,
+    ));
+    assert!(contains_span(
+        &model,
+        Point::new(10.0, -10.0),
+        Point::new(10.0, 10.0),
+        LineColor::Cyan3,
+    ));
 }
 
 #[test]
@@ -557,6 +728,50 @@ fn del_v_among_lines_merges_a_pair_inside_the_set() {
         Point::new(20.0, 0.0),
         LineColor::Red1,
     );
+}
+
+/// The crease pass removes the red pair and appends its merge, which shifts the
+/// aux pieces down to indices 0 and 1, where the red pair's flags used to be.
+/// The scope has to shift with them, or the aux pair would inherit "in set".
+#[test]
+fn del_v_among_lines_scope_follows_the_segments_into_the_aux_pass() {
+    let mut model = CreasePatternModel::default();
+    model.add_line(Point::new(0.0, 0.0), Point::new(10.0, 0.0), LineColor::Red1);
+    model.add_line(
+        Point::new(10.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Red1,
+    );
+    model.add_line(
+        Point::new(0.0, 5.0),
+        Point::new(10.0, 5.0),
+        LineColor::Cyan3,
+    );
+    model.add_line(
+        Point::new(10.0, 5.0),
+        Point::new(20.0, 5.0),
+        LineColor::Cyan3,
+    );
+
+    let mut creases_only = model.clone();
+    del_v_among_lines(&mut creases_only, &[0, 1]);
+    assert_eq!(creases_only.line_segments.len(), 3);
+    assert!(contains_span(
+        &creases_only,
+        Point::new(0.0, 0.0),
+        Point::new(20.0, 0.0),
+        LineColor::Red1,
+    ));
+
+    let mut everything = model;
+    del_v_among_lines(&mut everything, &[0, 1, 2, 3]);
+    assert_eq!(everything.line_segments.len(), 2);
+    assert!(contains_span(
+        &everything,
+        Point::new(0.0, 5.0),
+        Point::new(20.0, 5.0),
+        LineColor::Cyan3,
+    ));
 }
 
 #[test]
@@ -976,6 +1191,12 @@ fn assert_segment(segment: &LineSegment, a: Point, b: Point, color: LineColor) {
     assert_eq!(segment.a, a);
     assert_eq!(segment.b, b);
     assert_eq!(segment.color, color);
+}
+
+/// [`contains_segment`] in either direction, for merges whose endpoint order is
+/// not what the test is about.
+fn contains_span(model: &CreasePatternModel, a: Point, b: Point, color: LineColor) -> bool {
+    contains_segment(model, a, b, color) || contains_segment(model, b, a, color)
 }
 
 fn contains_segment(model: &CreasePatternModel, a: Point, b: Point, color: LineColor) -> bool {

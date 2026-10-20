@@ -782,12 +782,14 @@ pub fn del_v_at_point_color_change(
     del_v_at_point_impl(model, point, snap_radius, vertex_radius, true)
 }
 
-/// Oriedita `FoldLineSet.del_V_all()`.
+/// Oriedita `FoldLineSet.del_V_all()`, then a pass upstream does not have that
+/// merges collinear auxiliary pieces too ([`SweepPass::Auxiliary`]).
 pub fn del_v_all(model: &mut CreasePatternModel) {
     del_v_all_impl(model, false);
 }
 
-/// Oriedita `FoldLineSet.del_V_all_cc()`.
+/// Oriedita `FoldLineSet.del_V_all_cc()`, with the same auxiliary pass as
+/// [`del_v_all`].
 pub fn del_v_all_color_change(model: &mut CreasePatternModel) {
     del_v_all_impl(model, true);
 }
@@ -1023,7 +1025,8 @@ fn apply_line_segment_divide_for_fix2(model: &mut CreasePatternModel, point: Poi
 ///
 /// Walks each vertex in `PointLineMap` insertion order and, where exactly two
 /// non-auxiliary creases meet, merges them if they are collinear (and, for the
-/// same-colour variant, the same colour).
+/// same-colour variant, the same colour). Ori Studio then walks the auxiliary
+/// lines the same way ([`SweepPass::Auxiliary`]).
 ///
 /// Tracked by segment index rather than by segment value. The value-based
 /// version this replaces re-scanned every segment to delete a merged pair and
@@ -1042,20 +1045,65 @@ fn del_v_all_impl(model: &mut CreasePatternModel, allow_color_change: bool) {
     del_v_sweep(model, allow_color_change, None);
 }
 
-/// The sweep behind [`del_v_all_impl`] and [`del_v_among_lines`].
+/// The sweep behind [`del_v_all_impl`] and [`del_v_among_lines`]: upstream's
+/// crease pass, then Ori Studio's auxiliary pass over what it leaves.
 ///
 /// `scope`, when given, is one flag per segment: a pair merges only when both
 /// flags are set, and the merged segment's flag is pushed set. Without it the
-/// walk is upstream's exactly.
+/// crease pass is upstream's walk exactly. A document with no auxiliary lines
+/// never reaches the second pass.
 fn del_v_sweep(
     model: &mut CreasePatternModel,
     allow_color_change: bool,
     mut scope: Option<Vec<bool>>,
 ) {
+    del_v_pass(model, SweepPass::Creases { allow_color_change }, &mut scope);
+    if model
+        .line_segments
+        .iter()
+        .any(|segment| segment.color == LineColor::Cyan3)
+    {
+        del_v_pass(model, SweepPass::Auxiliary, &mut scope);
+    }
+}
+
+/// One walk of [`del_v_sweep`]: which lines count toward a vertex's degree, and
+/// which pair meeting at a degree-2 vertex may merge.
+#[derive(Clone, Copy)]
+enum SweepPass {
+    /// Oriedita's `del_V_all` / `del_V_all_cc`. Auxiliary lines are invisible
+    /// to it: `PointLineMap` skips them, so no cyan pair is ever offered.
+    Creases { allow_color_change: bool },
+    /// Ori Studio: collinear auxiliary pieces merge as well, which upstream
+    /// never does. Here a vertex counts every line, so an aux vertex goes only
+    /// where two aux lines meet and nothing else does, the rule Delete Vertex
+    /// already applies at one point. An aux line a crease ends on stays split.
+    Auxiliary,
+}
+
+impl SweepPass {
+    fn counts(self, segment: &LineSegment) -> bool {
+        match self {
+            Self::Creases { .. } => segment.color != LineColor::Cyan3,
+            Self::Auxiliary => true,
+        }
+    }
+
+    fn may_merge(self, first: LineColor, second: LineColor) -> bool {
+        match self {
+            Self::Creases { allow_color_change } => {
+                allow_color_change || (first == second && first != LineColor::Cyan3)
+            }
+            Self::Auxiliary => first == LineColor::Cyan3 && second == LineColor::Cyan3,
+        }
+    }
+}
+
+fn del_v_pass(model: &mut CreasePatternModel, pass: SweepPass, scope: &mut Option<Vec<bool>>) {
     let VertexIndex {
         mut groups,
         exact_vertex,
-    } = vertex_index(model);
+    } = vertex_index(model, |segment| pass.counts(segment));
     let mut alive = vec![true; model.line_segments.len()];
 
     for group_index in 0..groups.len() {
@@ -1068,7 +1116,7 @@ fn del_v_sweep(
         if !alive[i] || !alive[j] {
             continue;
         }
-        if let Some(scope) = &scope
+        if let Some(scope) = scope
             && (!scope[i] || !scope[j])
         {
             continue;
@@ -1076,7 +1124,7 @@ fn del_v_sweep(
 
         let first = model.line_segments[i].clone();
         let second = model.line_segments[j].clone();
-        if !allow_color_change && (first.color != second.color || first.color == LineColor::Cyan3) {
+        if !pass.may_merge(first.color, second.color) {
             continue;
         }
 
@@ -1103,7 +1151,7 @@ fn del_v_sweep(
             ..LineSegment::with_color(a, b, color)
         });
         alive.push(true);
-        if let Some(scope) = &mut scope {
+        if let Some(scope) = scope {
             scope.push(true);
         }
 
@@ -1111,6 +1159,12 @@ fn del_v_sweep(
         replace_line_in_vertex_groups(&mut groups, &exact_vertex, &second, j, merged);
     }
 
+    // The scope is index-aligned with the segments, so it drops the same
+    // entries, ready for the next pass.
+    if let Some(scope) = scope {
+        let mut keep = alive.iter().copied();
+        scope.retain(|_| keep.next().unwrap_or(true));
+    }
     let mut keep = alive.iter().copied();
     model.line_segments.retain(|_| keep.next().unwrap_or(true));
 }
@@ -1158,15 +1212,16 @@ struct VertexIndex {
     exact_vertex: HashMap<(u64, u64), usize>,
 }
 
-/// Port of Oriedita `PointLineMap`, including its skip of auxiliary (cyan)
-/// creases: an aux line ending at a vertex does not raise that vertex's degree,
-/// so two collinear creases still merge there and the aux endpoint is left
-/// dangling mid-crease.
+/// Port of Oriedita `PointLineMap`, over the segments `counts` admits.
+/// Upstream's map skips auxiliary (cyan) creases ([`SweepPass::Creases`]): an
+/// aux line ending at a vertex does not raise that vertex's degree, so two
+/// collinear creases still merge there and the aux endpoint is left dangling
+/// mid-crease.
 ///
 /// Endpoints within `UNKNOWN_1EN4` share a vertex. Candidates come from the
 /// eps-sized cell neighbourhood rather than a scan of every vertex seen so far;
 /// taking the lowest-index match reproduces the scan's first-match exactly.
-fn vertex_index(model: &CreasePatternModel) -> VertexIndex {
+fn vertex_index(model: &CreasePatternModel, counts: impl Fn(&LineSegment) -> bool) -> VertexIndex {
     let eps = Epsilon::UNKNOWN_1EN4;
     let eps_squared = eps * eps;
     let mut points: Vec<Point> = Vec::new();
@@ -1175,7 +1230,7 @@ fn vertex_index(model: &CreasePatternModel) -> VertexIndex {
     let mut cells: HashMap<(i64, i64), Vec<usize>> = HashMap::new();
 
     for (index, segment) in model.line_segments.iter().enumerate() {
-        if segment.color == LineColor::Cyan3 {
+        if !counts(segment) {
             continue;
         }
         for endpoint in [segment.a, segment.b] {
