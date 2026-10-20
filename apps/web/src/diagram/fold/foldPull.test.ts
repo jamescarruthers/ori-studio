@@ -33,13 +33,15 @@ const landed = (id: number): FoldSessionNode => ({
   refusal: null,
 });
 
-/** The path as the session has it: every step landed but the last, still folding. */
-function view(lastLanded = false) {
+const broken: FoldSessionNode = { ...FOLD_PENDING_NODE, status: 'broken', refusal: { at: 'fstep-4', code: 'no_fold' } };
+
+/** The path as the session has it: every step landed but the last — still folding, unless given. */
+function view(last: boolean | FoldSessionNode = false, failed = false) {
   const nodes = new Map<string, FoldSessionNode>([
     ['fstep-1', landed(1)],
     ['fstep-2', landed(2)],
     ['fstep-3', landed(3)],
-    ['fstep-4', lastLanded ? landed(4) : FOLD_PENDING_NODE],
+    ['fstep-4', last === true ? landed(4) : last === false ? FOLD_PENDING_NODE : last],
   ]);
   const entries = foldPathEntries(SEQUENCE, NODES.map((node) => node.id), landed(0), nodes, FOLD_PENDING_NODE);
   return {
@@ -48,6 +50,7 @@ function view(lastLanded = false) {
     words: entries.map((entry) =>
       entry.node ? foldNodeSentenceStep(entry.node, { parent: null, child: null, report: null }) : { op: 'unknown' as const }
     ),
+    failed,
   };
 }
 
@@ -73,10 +76,24 @@ describe('the Fold browser’s cards (D17)', () => {
 
   it('lists a step Fold has not landed, and offers nothing for it — nor Finished after it', () => {
     const cards = foldBrowserCards(t, view(false));
-    expect(cards[3]!.picture).toBeNull();
-    expect(cards[4]!.picture).toBeNull();
     expect(cards[3]!.step).toBeNull();
     expect(cards[4]!.step).toBeNull();
+  });
+
+  it('has the picture of a step still replaying on its way, not missing', () => {
+    const cards = foldBrowserCards(t, view(false));
+    expect(cards[3]!.picture).toEqual({ status: 'pending' });
+    expect(cards[4]!.picture).toEqual({ status: 'pending' });
+  });
+
+  it('has no picture to wait for when nothing will land: the step broke, or the replay stopped short', () => {
+    const brokenCards = foldBrowserCards(t, view(broken));
+    expect(brokenCards[3]!.picture).toEqual({ status: 'none' });
+    expect(brokenCards[4]!.picture).toEqual({ status: 'none' });
+    const stopped = foldBrowserCards(t, view(false, true));
+    expect(stopped[3]!.picture).toEqual({ status: 'none' });
+    // What landed before the replay stopped is still pictured.
+    expect(stopped[2]!.picture.status).toBe('landed');
   });
 
   it('pictures each landed state and its inherited spread, including turns and Finished', () => {
@@ -84,18 +101,23 @@ describe('the Fold browser’s cards (D17)', () => {
     const document = sequenceOf(NODES.map((node, index) => index === 1 ? { ...node, spread } : node));
     const cards = foldBrowserCards(t, { ...view(true), document });
     expect(cards.map((card) => card.picture)).toEqual([
-      { state: { generation: 0, id: 1 }, key: 'fs1:1', spread: null },
-      { state: { generation: 0, id: 2 }, key: 'fs1:2', spread },
-      { state: { generation: 0, id: 3 }, key: 'fs1:3', spread },
-      { state: { generation: 0, id: 4 }, key: 'fs1:4', spread },
-      { state: { generation: 0, id: 4 }, key: 'fs1:4', spread },
+      { status: 'landed', source: { state: { generation: 0, id: 1 }, key: 'fs1:1', spread: null } },
+      { status: 'landed', source: { state: { generation: 0, id: 2 }, key: 'fs1:2', spread } },
+      { status: 'landed', source: { state: { generation: 0, id: 3 }, key: 'fs1:3', spread } },
+      { status: 'landed', source: { state: { generation: 0, id: 4 }, key: 'fs1:4', spread } },
+      { status: 'landed', source: { state: { generation: 0, id: 4 }, key: 'fs1:4', spread } },
     ]);
   });
 
   it('has no Finished for a path that only turns', () => {
     const turnOnly = sequenceOf([{ ...TURN, parent: null }]);
     const entries = foldPathEntries(turnOnly, ['fstep-2'], landed(0), new Map([['fstep-2', landed(2)]]), FOLD_PENDING_NODE);
-    const cards = foldBrowserCards(t, { document: turnOnly, entries, words: entries.map(() => ({ op: 'unknown' as const })) });
+    const cards = foldBrowserCards(t, {
+      document: turnOnly,
+      entries,
+      words: entries.map(() => ({ op: 'unknown' as const })),
+      failed: false,
+    });
     expect(cards.map((card) => card.kind)).toEqual(['turn-over']);
   });
 });

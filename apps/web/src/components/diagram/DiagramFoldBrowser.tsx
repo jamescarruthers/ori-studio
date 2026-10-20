@@ -119,11 +119,9 @@ function FoldCards({ browser }: { browser: FoldBrowser }) {
           }
           badge=""
           picture={
-            card.picture ? (
-              <DiagramPullCardThumbnail>
-                <DiagramFoldPicture source={card.picture} />
-              </DiagramPullCardThumbnail>
-            ) : null
+            <DiagramPullCardThumbnail>
+              <DiagramFoldPicture picture={card.picture} />
+            </DiagramPullCardThumbnail>
           }
           onPaper={false}
           unreadable={card.step === null}

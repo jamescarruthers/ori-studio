@@ -4,13 +4,16 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DiagramPullAnchor } from '../../diagram/document/diagramDocument';
-import type { FoldBrowserCard } from '../../diagram/fold/foldPull';
+import type { FoldBrowserCard, FoldBrowserPicture } from '../../diagram/fold/foldPull';
 import type { FoldBrowserCardsState, FoldBrowserProvider } from '../../diagram/fold/useFoldBrowser';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { DiagramFoldBrowser } from './DiagramFoldBrowser';
 
+/** What a landed card's paint has come to: painted, still painting (undefined), or failed (null). */
+const paint = vi.hoisted(() => ({ result: 'data:image/svg+xml,test-paper' as string | null | undefined }));
+
 vi.mock('../../fold/sequence/useFoldCardPictures', () => ({
-  useFoldCardPicture: (source: unknown) => source ? 'data:image/svg+xml,test-paper' : null,
+  useFoldCardPicture: (source: unknown) => (source ? paint.result : null),
 }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -27,17 +30,18 @@ afterEach(() => {
 
 beforeEach(() => {
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
+  paint.result = 'data:image/svg+xml,test-paper';
 });
 
-const THUMBNAIL = { state: { generation: 0, id: 1 }, key: 'fs1:1', spread: null };
+const THUMBNAIL: FoldBrowserPicture = { status: 'landed', source: { state: { generation: 0, id: 1 }, key: 'fs1:1', spread: null } };
 
 /** A sequence's path as the browser lists it: two folds with a turn between them, and Finished; step 3 still folding. */
-function cards(): FoldBrowserCard[] {
+function cards(third: FoldBrowserPicture = { status: 'pending' }): FoldBrowserCard[] {
   return [
     { index: 0, kind: 'fold', number: 1, sentence: 'Valley fold in half.', picture: THUMBNAIL, step: { kind: 'step', step: 'fstep-1', moment: 'before' } },
     { index: 1, kind: 'turn-over', number: null, sentence: 'Turn over', picture: THUMBNAIL, step: { kind: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } } },
     { index: 2, kind: 'fold', number: 2, sentence: 'Valley fold the corner.', picture: THUMBNAIL, step: { kind: 'step', step: 'fstep-3', moment: 'before' } },
-    { index: 3, kind: 'fold', number: 3, sentence: 'Fold the flap up.', picture: null, step: null },
+    { index: 3, kind: 'fold', number: 3, sentence: 'Fold the flap up.', picture: third, step: null },
     { index: 4, kind: 'done', number: null, sentence: 'The model as the steps leave it.', picture: THUMBNAIL, step: { kind: 'step', step: 'fstep-4', moment: 'after' } },
   ];
 }
@@ -82,6 +86,33 @@ describe('the Fold browser (D17)', () => {
     // A step Fold has not folded yet cannot be chosen, and says why.
     expect(options()[3]!.getAttribute('aria-disabled')).toBe('true');
     expect(options()[3]!.title).toContain('can’t be added yet');
+  });
+
+  it('shows a step still replaying as loading, not as one that can’t be drawn', () => {
+    render(fakeProvider());
+    const replaying = options()[3]!;
+    expect(replaying.querySelector('[data-picture-loading]')).not.toBeNull();
+    expect(replaying.textContent).not.toContain('Can’t be drawn');
+  });
+
+  it('shows a landed step still being painted as loading', () => {
+    paint.result = undefined;
+    render(fakeProvider());
+    expect(options()[0]!.querySelector('[data-picture-loading]')).not.toBeNull();
+    expect(text()).not.toContain('Can’t be drawn');
+  });
+
+  it('says a step can’t be drawn when nothing will land: it broke, or the replay stopped', () => {
+    render(fakeProvider({ status: 'ready', sequence: 'fold-1', cards: cards({ status: 'none' }) }));
+    expect(options()[3]!.textContent).toContain('Can’t be drawn');
+    expect(options()[3]!.querySelector('[data-picture-loading]')).toBeNull();
+  });
+
+  it('says a landed step can’t be drawn when its paint failed', () => {
+    paint.result = null;
+    render(fakeProvider());
+    expect(options()[0]!.textContent).toContain('Can’t be drawn');
+    expect(options()[0]!.querySelector('[data-picture-loading]')).toBeNull();
   });
 
   it('adds what is chosen, in order, where it was opened for, through its provider', async () => {

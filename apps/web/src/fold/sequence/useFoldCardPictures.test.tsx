@@ -172,6 +172,30 @@ describe('useFoldCardPicture', () => {
     expect(seen.at(-1)).toMatch(/^data:image\/svg\+xml/);
   });
 
+  it('is null once its paint failed, not painting for ever, and asked again by a card that mounts later', async () => {
+    const query = vi.fn(() => Promise.reject(new Error('no scene')));
+    app.session = { peek: () => null, query } as unknown as FoldSession;
+    const source = foldCardPictureSource(handle(3), 'fs1:fails');
+    const seen: (string | null | undefined)[] = [];
+    function Probe() {
+      seen.push(useFoldCardPicture(source));
+      return null;
+    }
+    host = document.createElement('div');
+    root = createRoot(host);
+    act(() => root?.render(<Probe />));
+    expect(seen.at(-1)).toBeUndefined();
+    await settle();
+    expect(seen.at(-1)).toBeNull();
+    expect(query).toHaveBeenCalledTimes(1);
+
+    // Let go by every card, then shown again: on its way once more, and asked again.
+    act(() => root?.render(null));
+    act(() => root?.render(<Probe />));
+    expect(seen.at(-1)).toBeUndefined();
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
   it('is null for a card with no state', () => {
     app.session = fakeSession(new Map()).session;
     let seen: string | null | undefined;

@@ -42,14 +42,39 @@ export type FoldPullTarget =
   | { readonly kind: 'step'; readonly step: string; readonly moment: DiagramFoldMoment }
   | { readonly kind: 'turn'; readonly turn: TurnKind };
 
+/**
+ * A Fold browser card's picture: the state it lands, as Fold's strip draws
+ * it, once landed; `pending` while the replay has still to land it; `none`
+ * when nothing will — the step broke, is a newer build's, or the replay
+ * stopped short.
+ */
+export type FoldBrowserPicture =
+  | { readonly status: 'landed'; readonly source: FoldCardPictureSource }
+  | { readonly status: 'pending' }
+  | { readonly status: 'none' };
+
 /** A card of the Fold browser: a step of the active path, a turn, or Finished. */
 export interface FoldBrowserCard extends PullCard<FoldPullTarget> {
   /** The step's number on the path, as Fold numbers it; null for a turn or Finished. */
   readonly number: number | null;
   /** The step's words, or the turn's. */
   readonly sentence: string;
-  /** The state it lands, as Fold's strip draws it; null while it has not landed. */
-  readonly picture: FoldCardPictureSource | null;
+  readonly picture: FoldBrowserPicture;
+}
+
+const PICTURE_PENDING: FoldBrowserPicture = Object.freeze({ status: 'pending' });
+const PICTURE_NONE: FoldBrowserPicture = Object.freeze({ status: 'none' });
+
+/** A path entry's picture: its state's once landed, else whether one is still to come. */
+function entryPicture(
+  document: FoldSequenceDocument,
+  entry: FoldSequenceView['entries'][number],
+  id: string,
+  replayFailed: boolean
+): FoldBrowserPicture {
+  const source = foldCardPictureSource(entry.session.state, entry.session.fingerprint, foldStepSpread(document, id));
+  if (source) return { status: 'landed', source };
+  return entry.status === 'pending' && !replayFailed ? PICTURE_PENDING : PICTURE_NONE;
 }
 
 /** How a pulled Fold step is shown: folded, as Fold shows it, from the front at no turn. */
@@ -84,17 +109,19 @@ function landed(entry: FoldSequenceView['entries'][number]): boolean {
  * The cards of the sequence's active path, in order: every step after the
  * sheet, a turn or rotation as a turn card, and Finished after the last when
  * the path folds at all. A step that has not landed — still replaying,
- * broken, a newer build's — is listed, and cannot be added.
+ * broken, a newer build's — is listed, and cannot be added; its picture says
+ * which (`FoldBrowserPicture`). `failed` is the replay's having stopped short:
+ * a step still pending then will not land.
  */
 export function foldBrowserCards(
   t: TFunction,
-  { document, entries, words }: Pick<FoldSequenceView, 'document' | 'entries' | 'words'>
+  { document, entries, words, failed }: Pick<FoldSequenceView, 'document' | 'entries' | 'words' | 'failed'>
 ): FoldBrowserCard[] {
   const cards: FoldBrowserCard[] = [];
   entries.forEach((entry, index) => {
     const node = entry.node;
     if (!node || entry.id === null) return;
-    const picture = foldCardPictureSource(entry.session.state, entry.session.fingerprint, foldStepSpread(document, entry.id));
+    const picture = entryPicture(document, entry, entry.id, failed);
     if (entry.kind === 'turn' && !isLockedStep(node) && (node.op.kind === 'turn' || node.op.kind === 'rotate')) {
       const turn = turnKindOf(node.op);
       cards.push({
@@ -123,7 +150,7 @@ export function foldBrowserCards(
       kind: 'done',
       number: null,
       sentence: t('panels:diagram.fold.finishedSentence', 'The model as the steps leave it.'),
-      picture: foldCardPictureSource(tip.session.state, tip.session.fingerprint, foldStepSpread(document, tip.id)),
+      picture: entryPicture(document, tip, tip.id, failed),
       step: landed(tip) ? { kind: 'step', step: tip.id, moment: 'after' } : null,
     });
   }
