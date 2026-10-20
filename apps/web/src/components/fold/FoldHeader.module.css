@@ -29,11 +29,13 @@
 
 /*
  * Repeat, a verb the rail and the phone's tool sheet offer too: on the header
- * only while the window leaves the row room for it beside the others, with
- * the rail and the side pane at their default widths; narrower, the row would
- * wrap (the 720 px rule below), and Repeat would only make it wrap sooner.
+ * only while the window leaves the row room for it beside the others. With
+ * the rail and the side pane at their default widths the verbs, Repeat
+ * included, need about 615 px: 647 px are there at a 1100 px window, 567 px
+ * at 1000 px. Narrower, Repeat would only make the row wrap sooner (the
+ * 720 px rule below).
  */
-@media (max-width: 1399px) {
+@media (max-width: 1099px) {
   /* Scoped to the row, so it outranks the button's own display rather than tying with it. */
   .actions > .wideOnly {
     display: none;
