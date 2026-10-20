@@ -1,12 +1,14 @@
 //! Authoring search over ordinary and inserted M/V landings. Replay uses the
 //! returned recipe directly; it never enumerates or substitutes another result.
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 
+use oristudio_layer_order::LayerOrder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ChoiceCount, ClosurePolicy, CompletionLimits, CompoundRefused, CreaseKind, Direction, FaceId,
-    FoldRefusal, PlainFold, Refused, State, TuckChoice, TuckFold, TuckOutcome, WitnessOrder,
+    ChoiceCount, ClosurePolicy, CompletionLimits, Completions, CompoundRefused, CreaseKind,
+    Direction, FaceId, FoldRefusal, PlainFold, Refused, State, TuckChoice, TuckFold, TuckOutcome,
+    WitnessOrder,
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -38,6 +40,13 @@ struct Pending {
 /// exactly the seed's material-connected flaps, regardless of the legacy
 /// recipe's closure policy. Candidate indices never change: duplicates are
 /// discarded before appending, and found results persist.
+///
+/// The search is over when it has tried every set of targets, or as soon
+/// as its candidates cover every order the selection can land in (counted
+/// once, up front, without a clock: [`State::placement_scope`]). The pool
+/// holds one target per stationary face the flaps land on, so on precreased
+/// paper the sets of targets are far too many to try; counting decides a
+/// forced fold — a flat sheet folded in half lands one way — before any is.
 #[derive(Debug)]
 pub struct FoldPlacementSearch {
     parent: State,
@@ -51,6 +60,45 @@ pub struct FoldPlacementSearch {
     pending: VecDeque<Pending>,
     candidates: Vec<FoldPlacement>,
     refusal: Option<Refused>,
+    /// Every order the selection can land in, when counted exactly, and
+    /// which of them a candidate has landed.
+    landings: Option<Landings>,
+}
+
+/// The orders a selection can land in, and the ones found so far.
+#[derive(Debug)]
+struct Landings {
+    orders: Completions,
+    /// `[upper, lower]`, as every one of them has it.
+    forced: Vec<[FaceId; 2]>,
+    found: BTreeSet<Vec<usize>>,
+}
+
+impl Landings {
+    fn new(orders: Completions) -> Self {
+        Self {
+            forced: orders.forced_pairs(),
+            orders,
+            found: BTreeSet::new(),
+        }
+    }
+
+    /// Record the order a candidate landed in; one that is none of them
+    /// (which the count's construction rules out) counts toward nothing.
+    fn record(&mut self, order: &LayerOrder) {
+        if self
+            .forced
+            .iter()
+            .all(|&[upper, lower]| order.above(upper, lower) == Some(true))
+            && let Some(choice) = self.orders.choice_of(order)
+        {
+            self.found.insert(choice);
+        }
+    }
+
+    fn all_found(&self) -> bool {
+        self.found.len() as u64 == self.orders.count().orders
+    }
 }
 
 impl FoldPlacementSearch {
@@ -65,12 +113,14 @@ impl FoldPlacementSearch {
             pending: VecDeque::new(),
             candidates: Vec::new(),
             refusal: None,
+            landings: None,
         };
         let probe = search.tuck(&[[0., 0.]]);
         match parent.placement_scope(&probe) {
             Ok(scope) => {
                 search.moving = scope.moving;
                 search.pool = scope.targets;
+                search.landings = scope.orders.map(Landings::new);
             }
             Err(refused) => {
                 search.refusal = Some(refused);
@@ -103,8 +153,19 @@ impl FoldPlacementSearch {
     pub fn count(&self) -> ChoiceCount {
         ChoiceCount {
             orders: self.candidates.len() as u64,
-            exact: self.combination.is_none() && self.retry.is_empty() && self.pending.is_empty(),
+            exact: self.finished(),
         }
+    }
+
+    /// Every set of targets tried, or every order the selection can land in
+    /// found.
+    fn finished(&self) -> bool {
+        (self.combination.is_none() && self.retry.is_empty() && self.pending.is_empty())
+            || self.all_landed()
+    }
+
+    fn all_landed(&self) -> bool {
+        self.landings.as_ref().is_some_and(Landings::all_found)
     }
 
     fn tuck(&self, targets: &[[f64; 2]]) -> TuckFold {
@@ -129,6 +190,9 @@ impl FoldPlacementSearch {
         if !self.candidates.iter().any(|old| {
             old.moving == candidate.moving && old.state.parts() == candidate.state.parts()
         }) {
+            if let Some(landings) = &mut self.landings {
+                landings.record(candidate.state.order());
+            }
             self.candidates.push(candidate);
         }
     }
@@ -191,6 +255,9 @@ impl FoldPlacementSearch {
     /// cannot trigger unmetered diagnostic searches. The common deadline also
     /// bounds preparation/propagation between calls. Truncation remains pending.
     pub fn advance(&mut self, limits: &CompletionLimits, attempts: usize, results: usize) {
+        if self.finished() {
+            return;
+        }
         let attempts = attempts.max(1);
         let quota = limits
             .max_nodes
@@ -208,7 +275,7 @@ impl FoldPlacementSearch {
         let mut left = results;
         for _ in 0..attempts {
             self.drain(limits, &mut left);
-            if limits.out_of_time() || left == 0 {
+            if limits.out_of_time() || left == 0 || self.all_landed() {
                 break;
             }
             let Some(targets) = retry.pop_front().or_else(|| self.next_targets()) else {
@@ -241,7 +308,7 @@ impl FoldPlacementSearch {
     }
 
     fn drain(&mut self, limits: &CompletionLimits, left: &mut usize) {
-        while *left > 0 && !limits.out_of_time() {
+        while *left > 0 && !limits.out_of_time() && !self.all_landed() {
             let Some(mut pending) = self.pending.pop_front() else {
                 break;
             };

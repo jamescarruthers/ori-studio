@@ -1,7 +1,8 @@
 mod support;
 
 use oristudio_fold::{
-    CompletionLimits, Direction, FoldLanding, FoldPlacementSearch, Seed, Sheet, StartSide, State,
+    ChoiceCount, CompletionLimits, Direction, FaceId, FoldLanding, FoldPlacementSearch, Seed,
+    Sheet, StartSide, State,
 };
 use support::*;
 
@@ -321,6 +322,134 @@ fn a_corner_fold_on_a_precreased_sheet_has_only_its_requested_direction() {
                     }
                 }
             }
+        }
+    }
+}
+
+/// A flat sheet precreased along whole lines at `xs` and `ys`, and along
+/// both diagonals when `diagonals`.
+fn precreased(start: StartSide, xs: &[f64], ys: &[f64], diagonals: bool) -> State {
+    let mut sheet = State::flat(Sheet::square(), start).unwrap();
+    for &c in xs {
+        sheet = precrease(&sheet, &all(x_eq(c), [0.99, 0.5], Direction::Valley)).state;
+    }
+    for &c in ys {
+        sheet = precrease(&sheet, &all(y_eq(c), [0.5, 0.99], Direction::Valley)).state;
+    }
+    if diagonals {
+        for (line, toward) in [
+            (through([0., 0.], [1., 1.]), [0.9, 0.1]),
+            (through([1., 0.], [0., 1.]), [0.1, 0.1]),
+        ] {
+            sheet = precrease(&sheet, &all(line, toward, Direction::Mountain)).state;
+        }
+    }
+    sheet
+}
+
+/// Every face of `landed` turned over from `parent`, which a single fold moved.
+fn turned(parent: &State, landed: &State) -> Vec<FaceId> {
+    landed
+        .faces()
+        .iter()
+        .filter(|f| {
+            let before = parent
+                .front_up(f.id)
+                .or_else(|| f.parent.and_then(|id| parent.front_up(id)))
+                .unwrap();
+            landed.front_up(f.id).unwrap() != before
+        })
+        .map(|f| f.id)
+        .collect()
+}
+
+#[test]
+fn folding_a_precreased_flat_sheet_in_half_needs_no_search() {
+    // The pool holds one target per stationary face the half lands on whole
+    // — a dozen and more here — so the sets of targets run to the thousands,
+    // more than a batch tries, and every one turns a tuck the wrong way round
+    // at the hinge. One order exists, and the search knows it before trying
+    // any. The first sheet folds along its own precreases, as a precreased
+    // base does; the second's creases cross the line and land between the
+    // other half's.
+    let symmetric = [0.25, 0.5, 0.75];
+    let xs = [0.15, 0.3, 0.45, 0.6, 0.8, 0.9];
+    let ys = [0.1, 0.2, 0.35, 0.55, 0.7, 0.85];
+    for start in [StartSide::Front, StartSide::Back] {
+        for grid in [
+            precreased(start, &symmetric, &symmetric, true),
+            precreased(start, &xs, &ys, false),
+        ] {
+            for parent in [&grid, &grid.turn_over(), &grid.rotate(0.7)] {
+                for direction in [Direction::Valley, Direction::Mountain] {
+                    for op in [
+                        all(through([0., 0.], [1., 1.]), [0.9, 0.1], direction),
+                        all(through([1., 0.], [0., 1.]), [0.1, 0.1], direction),
+                        all(x_eq(0.5), [0.9, 0.5], direction),
+                    ] {
+                        let mut search = FoldPlacementSearch::new(parent, &op);
+                        let what = format!("{start:?} {:?} {op:?}", parent.view());
+                        let forced = ChoiceCount {
+                            orders: 1,
+                            exact: true,
+                        };
+                        let before = search.count();
+                        // One batch, as the bridge runs one per question.
+                        search.advance(&CompletionLimits::default(), 128, 1024);
+                        assert_eq!(search.count(), forced, "after a batch: {what}");
+                        assert_eq!(before, forced, "before any: {what}");
+                        let only = &search.candidates()[0];
+                        assert_eq!(only.landing, FoldLanding::Outer, "{what}");
+                        assert_eq!(
+                            only.state.parts(),
+                            fold(parent, &op).state.parts(),
+                            "{what}"
+                        );
+                        // The half lies wholly on the side the fold names:
+                        // in front for a valley, behind for a mountain.
+                        let on_top = parent.view().model_direction(direction) == Direction::Valley;
+                        let moved = turned(parent, &only.state);
+                        assert!(!moved.is_empty(), "{what}");
+                        let mut across = 0;
+                        for pair in only.state.problem().variables() {
+                            let [a, b] = pair.faces();
+                            let (m, s) = match (moved.contains(&a), moved.contains(&b)) {
+                                (true, false) => (a, b),
+                                (false, true) => (b, a),
+                                _ => continue,
+                            };
+                            across += 1;
+                            assert_eq!(only.state.above(m, s), Some(on_top), "{what}");
+                        }
+                        assert!(across >= moved.len(), "{what}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn a_fold_with_two_landings_on_precreased_paper_still_asks_and_then_finishes() {
+    // Two separate flaps, one folded over the other's region: outer, or
+    // between the base and the first flap. Precreases multiply the targets,
+    // not the landings; the search ends once it has found both.
+    for start in [StartSide::Front, StartSide::Back] {
+        let grid = precreased(start, &[0.25, 0.5, 0.75], &[0.2, 0.5, 0.9], false);
+        let parent = fold(&grid, &all(y_eq(0.35), [0.5, 0.1], Direction::Valley)).state;
+        let mut search =
+            FoldPlacementSearch::new(&parent, &all(y_eq(0.8), [0.5, 0.95], Direction::Valley));
+        assert_eq!(
+            search.count(),
+            ChoiceCount {
+                orders: 1,
+                exact: false
+            }
+        );
+        complete(&mut search);
+        assert_eq!(search.count().orders, 2);
+        for candidate in search.candidates() {
+            assert_valid(&candidate.state);
         }
     }
 }

@@ -140,3 +140,51 @@ fn both_moving_directions_select_save_and_replay_insertions() {
         assert!(changed.count.exact);
     }
 }
+
+#[test]
+fn a_precreased_flat_sheet_folded_in_half_lands_without_a_chooser() {
+    // A grid and both diagonals, as a precreased base is creased: the half
+    // lands on dozens of faces, one order exists, and the first answer says
+    // so — the tool then commits without asking.
+    let mut bridge = Bridge::new();
+    let mut state = ok(bridge.sheet(
+        &serde_json::from_value(json!({"shape":{"kind":"square"},"startSide":"front"})).unwrap(),
+    ))
+    .state;
+    let lines = [0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875]
+        .iter()
+        .flat_map(|&c| {
+            [
+                ([[c, 0.], [c, 1.]], [0.99, 0.5]),
+                ([[0., c], [1., c]], [0.5, 0.99]),
+            ]
+        })
+        .chain([
+            ([[0., 0.], [1., 1.]], [0.9, 0.1]),
+            ([[1., 0.], [0., 1.]], [0.1, 0.1]),
+        ]);
+    for (through, moving) in lines {
+        let precrease = op(
+            json!({"kind":"precrease","line":{"via":"free","through":through},
+            "moving":moving,"direction":"valley","seed":{"scope":"all"}}),
+        );
+        state = ok(bridge
+            .apply(state, &precrease, &Choices::default())
+            .unwrap())
+        .state;
+    }
+    assert_eq!(bridge.state(state).unwrap().faces().len(), 80);
+    for (direction, moving) in [("mountain", [0.9, 0.1]), ("valley", [0.1, 0.9])] {
+        let half = op(
+            json!({"kind":direction,"line":{"via":"free","through":[[0.,0.],[1.,1.]]},
+            "moving":moving,"seed":{"scope":"all"},"landing":{"kind":"outer"}}),
+        );
+        let answer = ok(bridge
+            .order_selection(state, &half, &Choices::default(), &OrderQuery::default())
+            .unwrap());
+        assert_eq!((answer.count.orders, answer.count.exact), (1, true));
+        assert_eq!(answer.landing, Some(oristudio_fold::FoldLanding::Outer));
+        assert!(answer.completion.is_none());
+        assert!(!answer.moving_varies);
+    }
+}

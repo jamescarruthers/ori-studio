@@ -41,7 +41,7 @@
 use std::collections::VecDeque;
 
 use oristudio_geometry::{Line, convex};
-use oristudio_layer_order::{FacePair, Violation};
+use oristudio_layer_order::{EdgeKind, FacePair, Violation};
 use serde::{Deserialize, Serialize};
 
 use crate::complete::{ChoiceCount, CompletionLimits, Completions};
@@ -70,7 +70,21 @@ type Point = [f64; 2];
 pub(crate) struct PlacementScope {
     pub moving: Vec<FaceId>,
     pub targets: Vec<Point>,
+    /// Every order those flaps can land in, outer or inserted (see
+    /// `State::placement_scope`); none when it was not counted exactly.
+    pub orders: Option<Completions>,
 }
+
+/// What counting a selection's landings may spend. Nodes only, never a
+/// clock, so every machine counts the same; a fold that needs no search
+/// (every pair forced, as when a flat sheet folds in half) uses none. The
+/// count only ends a search that has found every landing, so a fold with
+/// more than a chooser could step through is not worth counting.
+const LANDINGS_LIMITS: CompletionLimits = CompletionLimits {
+    per_component: 64,
+    max_nodes: Some(4_096),
+    deadline: None,
+};
 
 /// The most other targets a refusal tries, and offers, as its fixes.
 const MAX_FIX_TARGETS_TRIED: usize = 8;
@@ -376,6 +390,43 @@ impl Tuck {
                 across: Across::Keep,
             },
         )
+    }
+
+    /// Every order the block `moving` can land in with each hinge folded in
+    /// the tuck's direction, placed against nothing; none when it is not
+    /// counted exactly within [`LANDINGS_LIMITS`] or has no order at all.
+    /// A hinge is a crease between the block and paper that stays: valley,
+    /// the block's face lies above the other, mountain below — the hinge
+    /// test the placement search admits a landing by.
+    fn landings(&self, state: &State, moving: &[bool]) -> Option<Completions> {
+        let mut prepared = self.prepare(state, moving).ok()?;
+        let on_top = self.direction == Direction::Valley;
+        let (parts, blocks) = prepared.landed();
+        let in_block = |id: FaceId| {
+            parts
+                .faces
+                .binary_search_by_key(&id, |f| f.id)
+                .ok()
+                .map(|at| blocks[at].is_some())
+        };
+        let hinges: Vec<[FaceId; 2]> = prepared
+            .unordered()
+            .view()
+            .edges()
+            .iter()
+            .filter(|edge| matches!(edge.kind, EdgeKind::Folded(_)))
+            .filter_map(|edge| {
+                let [f, g] = edge.faces;
+                match (in_block(f)?, in_block(g)?) {
+                    (true, false) => Some(if on_top { [f, g] } else { [g, f] }),
+                    (false, true) => Some(if on_top { [g, f] } else { [f, g] }),
+                    _ => None,
+                }
+            })
+            .collect();
+        prepared.place(hinges);
+        let orders = prepared.complete(&[], &LANDINGS_LIMITS).ok()?;
+        orders.count().exact.then_some(orders)
     }
 
     /// Whether the face at position `f` stays whole and the block, landed,
@@ -688,6 +739,14 @@ impl State {
     /// Material adjacency resolves the selection independently of placement.
     /// Only these pieces can move in a layer-order search, so a target must
     /// overlap their reflected images, not those of unselected flaps.
+    ///
+    /// The scope also counts every order the selection can land in: the
+    /// same block turned over as every landing turns it (the tuck's own
+    /// preparation), with each hinge folded in `op.direction` and placed
+    /// against nothing. Every landing the search can find, outer or
+    /// inserted, is one of these orders, so once it has found them all
+    /// there is nothing left to search; when there is one, the fold is
+    /// forced and the search is over before it starts.
     pub(crate) fn placement_scope(&self, op: &TuckFold) -> Result<PlacementScope, Refused> {
         let tuck = self.tuck(op)?;
         let mut mandatory = vec![false; self.faces().len()];
@@ -728,7 +787,12 @@ impl State {
             .filter(|(i, _)| mandatory[*i])
             .map(|(_, face)| face.id)
             .collect();
-        Ok(PlacementScope { moving, targets })
+        let orders = tuck.landings(self, &mandatory);
+        Ok(PlacementScope {
+            moving,
+            targets,
+            orders,
+        })
     }
 
     fn tuck(&self, op: &TuckFold) -> Result<Tuck, Refused> {
