@@ -38,7 +38,7 @@ export type RepeatPrepared =
   /**
    * Stopped at source step `step`: by Repeat's own code, or by the engine's
    * refusal of that step's mirror — the refusal, and the kind of step it was,
-   * so the bar words it as the tool window would.
+   * so Repeat's window words it as the folding tool's window would.
    */
   | { status: 'blocked'; step: number; code: string; refusal?: FoldRefusalBody; op?: FoldOpKind; prefix?: FoldRepeatOp };
 

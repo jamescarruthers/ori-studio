@@ -18,8 +18,8 @@ import type { FoldIsometry, FoldRefusalBody, FoldScene } from '../engine/foldEng
 export const REPEAT_TOL = 1e-6;
 /**
  * Why a repeat stopped: Repeat's own code, or the engine's refusal of a
- * mirrored step — its code, and the refusal itself, which the bar words as
- * the tool window would (`repeatWords`).
+ * mirrored step — its code, and the refusal itself, which Repeat's window
+ * words as the folding tool's window would (`repeatWords`).
  */
 export class RepeatFailure extends Error {
   constructor(

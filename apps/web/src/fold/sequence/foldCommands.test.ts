@@ -189,6 +189,6 @@ describe('running the verbs', () => {
     // On the canvas, where the tool previews.
     expect(foldView()).toBe('fold');
     expect(shownSteps()).toHaveLength(2);
-    foldTools().putDownRotate();
+    foldTools().putDown();
   });
 });

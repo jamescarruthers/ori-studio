@@ -402,6 +402,7 @@
       "locate": "Localizar a linha",
       "model": "Modelo",
       "reference": "Pontos de referência",
+      "sequence": "Sequência",
       "sink": "Afundamentos"
     },
     "key": {
@@ -455,6 +456,8 @@
       "severalSunk_many": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
       "severalSunk_other": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
       "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas.",
+      "unfoldCancel": "Esc larga a ferramenta Desdobrar até uma etapa sem adicionar o passo.",
+      "unfoldPreview": "A tela mostra o papel de volta nessa forma. Todos os vincos são mantidos.",
       "unsinkRing": "A linha é um vinco do anel que o afundamento deixou, ao longo do topo da ponta afundada."
     },
     "op": {
@@ -872,6 +875,13 @@
       "pinchAtTouch": "Toque ao longo da linha onde beliscar.",
       "pointToMove": "Clique no ponto a mover.",
       "pointToMoveTouch": "Toque no ponto a mover.",
+      "repeatAxis": "Escolha o eixo de simetria ou desenhe-o no modelo: clique onde ele começa e depois onde termina.",
+      "repeatAxisTouch": "Escolha o eixo de simetria ou desenhe-o no modelo: toque onde ele começa e depois onde termina.",
+      "repeatPreview": "Pressione Enter para ver a prévia das dobras repetidas.",
+      "repeatPreviewTouch": "Toque em {{action}} para ver as dobras repetidas.",
+      "repeatSave": "Pressione Enter de novo para adicioná-las.",
+      "repeatSaveTouch": "Toque em {{action}} para adicioná-las.",
+      "repeatStart": "Escolha o primeiro passo a repetir. O intervalo termina no passo mostrado na tela.",
       "reverseFinish": "Escolha quais abas se invertem e pressione Enter.",
       "reverseFinishTouch": "Escolha quais abas se invertem e toque em {{action}}.",
       "rotateCommit": "Pressione Enter para adicionar o giro.",
@@ -885,7 +895,10 @@
       "sinkFinish": "Escolha a ponta e pressione Enter.",
       "sinkFinishTouch": "Escolha a ponta e toque em {{action}}.",
       "tuckFinish": "Escolha as abas e a camada onde encaixar, e pressione Enter.",
-      "tuckFinishTouch": "Escolha as abas e a camada onde encaixar, e toque em {{action}}."
+      "tuckFinishTouch": "Escolha as abas e a camada onde encaixar, e toque em {{action}}.",
+      "unfoldCommit": "Pressione Enter para adicionar o passo.",
+      "unfoldCommitTouch": "Toque em {{action}} para adicionar o passo.",
+      "unfoldTarget": "Escolha o passo para onde voltar."
     },
     "tool": {
       "closedSinkHelp": "Empurrar a extremidade de uma ponta fechada para dentro de um bolso, mantendo as camadas juntas.",
@@ -899,10 +912,12 @@
       "pleatHelp": "Faça uma dobra sanfona: localize a linha de montanha e depois a de vale.",
       "precrease": "Pré-vincar",
       "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
+      "repeatHelp": "Dobrar de novo uma série de passos do outro lado de um eixo de simetria, primeiro em prévia e depois como um passo.",
       "reverse": "Dobra reversa",
       "reverseHelp": "Inverta uma aba para dentro ou envolva-a por fora, invertendo seu vinco central.",
       "rotateHelp": "Girar o modelo uma fração de volta ou um ângulo exato, primeiro em prévia e depois como um passo próprio.",
       "tuckHelp": "Dobrar uma aba e deslizá-la por baixo, ou por cima, de uma camada que fica parada.",
+      "unfoldToHelp": "Voltar o papel à forma de um passo anterior, mantendo todos os vincos feitos desde então, primeiro em prévia e depois como um passo.",
       "unsinkHelp": "Puxar de volta a extremidade de uma ponta afundada.",
       "valley": "Dobra vale",
       "valleyHelp": "Dobrar o lado que se move na sua direção, para que fique por cima."

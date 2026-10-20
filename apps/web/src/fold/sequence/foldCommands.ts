@@ -20,8 +20,6 @@
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
 import { trackFoldStepAdded } from '../../analytics/trackFold';
-import { openFoldRepeat } from '../repeat/foldRepeatUi';
-import { openFoldReturn } from '../return/foldReturnUi';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import type { TurnKind } from '../../lib/steps/turn';
@@ -174,8 +172,20 @@ export function foldActionsAt(
       foldTools().selectTool('rotate');
       setFoldView('fold');
     },
-    repeat: () => { fromHere(); openFoldRepeat(); },
-    unfold: (last) => { fromHere(); openFoldReturn(last); },
+    // Unfold to step and Repeat are tools too, taken in hand where they are asked for. Unfold last
+    // step is Unfold to step at the step before this one: the target the tool takes by default.
+    repeat: () => {
+      fromHere();
+      foldTools().selectTool('repeat');
+      setFoldView('fold');
+    },
+    unfold: (last) => {
+      fromHere();
+      foldTools().selectTool('unfold-to');
+      // Taken up again while in hand, the tool keeps its target: the last step is asked for by name.
+      if (last) foldTools().setUnfoldTarget(entries[at - 1]?.id ?? null);
+      setFoldView('fold');
+    },
     deleteStep: (id) => {
       useWorkspaceStore.getState().deleteFoldStep(id);
     },
@@ -191,6 +201,27 @@ export function foldActionsAt(
         }
       : action
   );
+}
+
+/**
+ * Rebuild a saved Unfold to step or Repeat step in place (the Step pane's
+ * Rebuild unfold, and Update from source steps): its tool taken in hand at
+ * the step's parent, set as the step was made — its target, or its range and
+ * axis — so the preview is reviewed before it replaces the step. Escape, or
+ * the commit, brings the reader back to the step.
+ */
+export function rebuildFoldStep(stepId: string): void {
+  const node = foldSession().store.getState().sequence?.steps.find((step) => step.id === stepId);
+  const op = node?.op;
+  if (!node || !op || (op.kind !== 'unfold-to' && op.kind !== 'repeat')) return;
+  useWorkspaceStore.getState().moveFoldCursor(node.parent);
+  if (foldSession().store.getState().cursor !== node.parent) return;
+  foldTools().rebuildStep(
+    op.kind === 'unfold-to'
+      ? { tool: 'unfold-to', id: node.id, parent: node.parent, expected: op }
+      : { tool: 'repeat', id: node.id, parent: node.parent, expected: op }
+  );
+  setFoldView('fold');
 }
 
 /**

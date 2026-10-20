@@ -1,9 +1,9 @@
 import { useFoldAxiomCandidates } from './useFoldAxiomCandidates';
 import { buildPleatStep, pleatLines } from '../tools/pleat/pleatStep';
 import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
-import { useFoldRepeatUi } from '../repeat/foldRepeatUi';
+import { useFoldRepeatTool, type FoldRepeatTool } from '../repeat/useFoldRepeatTool';
 import { useFoldOrderResolution, type FoldOrderResolution } from '../orders/useFoldOrderResolution';
-import { useFoldReturnUi } from '../return/foldReturnUi';
+import { useFoldUnfoldTool, type FoldUnfoldTool } from '../return/useFoldUnfoldTool';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldRefused } from '../../analytics';
 import { reportError } from '../../monitoring';
@@ -128,6 +128,16 @@ export interface FoldToolPreview {
    * front up, does not turn: a rotation leaves `landed` null.
    */
   turned: FoldScene | null;
+  /**
+   * Unfold to step's, while it is in hand (`fold/return/useFoldUnfoldTool`):
+   * its step is this preview's, previewed as any tool's.
+   */
+  unfold?: FoldUnfoldTool | null;
+  /**
+   * Repeat's, while it is in hand (`fold/repeat/useFoldRepeatTool`): it
+   * prepares and previews its own step, so `step` stays null.
+   */
+  repeat?: FoldRepeatTool | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -266,14 +276,19 @@ export function useFoldToolPreview(
   const compounding = compoundStep !== null || tools.tool === 'pleat';
   const build = compoundStep ? compoundStep.build : vertexing ? UNLOCATED : plainBuild;
   const vertexBuilt = vertexStep.step;
+  // The sequence tools: Unfold to step's step is built from its target, from
+  // the moment it is in hand; Repeat prepares and previews its own.
+  const unfold = useFoldUnfoldTool(session, tools);
+  const repeat = useFoldRepeatTool(session, tools);
+  const unfolding = tools.tool === 'unfold-to';
+  const repeating = tools.tool === 'repeat';
+  const unfoldStep = unfold?.step ?? null;
   // Rotate's step is its rotation, from the moment it is in hand: it locates nothing.
-  const unfolding = useFoldReturnUi((s) => s.opening !== null);
-  const repeating = useFoldRepeatUi((s) => s.opening !== null);
-  const returning = unfolding || repeating;
   const rotating = tools.tool === 'rotate';
   const rotation = tools.rotation;
   const baseStep = useMemo<FoldToolStep | null>(() => {
-    if (returning) return null;
+    if (repeating) return null;
+    if (unfolding) return unfoldStep;
     if (rotating) {
       const op = rotateStepOp(rotation);
       return { op, key: foldStepInputKey({ op }) };
@@ -288,7 +303,7 @@ export function useFoldToolPreview(
     const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [returning, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingSeed, vertexBuilt]);
+  }, [repeating, unfolding, unfoldStep, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingSeed, vertexBuilt]);
   const resolvedOrders = useFoldOrderResolution(session, baseStep, foldToolInputKey(tools));
   const step = resolvedOrders.step;
   // The located line on each pane, while points are clicked along it.
@@ -328,7 +343,8 @@ export function useFoldToolPreview(
   const asked = useRef<string | null>(null);
   const [action, setAction] = useState<{ key: string; action: FoldActionGeometry | null } | null>(null);
   useEffect(() => {
-    if (returning) { asked.current = null; return undefined; }
+    // Repeat's previews are its own (`useFoldRepeatTool`): this asks for none, and lets none go.
+    if (repeating) { asked.current = null; return undefined; }
     if (!step) {
       if (asked.current !== null) cancel();
       asked.current = null;
@@ -351,7 +367,7 @@ export function useFoldToolPreview(
     };
     // The step is read through its key: an equal step must not ask again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [returning, analyse, preview, cancel, query, actionQuery, step?.key, stateKey]);
+  }, [repeating, analyse, preview, cancel, query, actionQuery, step?.key, stateKey]);
   const shownAction = heldAction
     ? heldAction.value.status === 'ok'
       ? heldAction.value.action
@@ -509,6 +525,8 @@ export function useFoldToolPreview(
     vertex: vertexStep.vertex,
     sink: sinkStep.sink,
     extent,
+    unfold,
+    repeat,
   };
 }
 

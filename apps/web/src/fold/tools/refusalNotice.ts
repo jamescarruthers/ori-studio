@@ -950,7 +950,7 @@ function fixActions(
 /** The notice for a refused fold: its words, and a button per fix the engine offers. */
 /**
  * A refusal's words where nothing on screen can fix it — no flaps numbered,
- * no fixes offered: Repeat's bar, when the engine refuses a source step's
+ * no fixes offered: Repeat's window, when the engine refuses a source step's
  * mirror. The words the tool window says it in, for a fold of `kind` (and a
  * sink's tool, for a sink's).
  */

@@ -222,6 +222,9 @@ export type FoldShortcutId =
   | 'fold.toolUnsink'
   | 'fold.turnOver'
   | 'fold.rotate'
+  // The sequence tools.
+  | 'fold.toolUnfoldTo'
+  | 'fold.toolRepeat'
   | 'fold.lineAxiom1'
   | 'fold.lineAxiom2'
   | 'fold.lineAxiom3'
@@ -862,6 +865,11 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.turnOver', 'Turn Over', { key: 't' }),
   // R takes the Rotate tool in hand: its window sets how far and which way, Enter applies.
   foldShortcut('fold.rotate', 'Rotate', { key: 'r' }),
+  // Unfold to step and Repeat take no key until the user gives them one, as
+  // the compound folds take none: U is a pull in Simulate and the Diagram's
+  // fold-and-unfold arrow, and neither tool is used every few folds.
+  foldShortcut('fold.toolUnfoldTo', 'Unfold to Step', null),
+  foldShortcut('fold.toolRepeat', 'Repeat on the Other Side', null),
   foldShortcut('fold.lineAxiom1', 'Axiom 1', { key: '1' }),
   foldShortcut('fold.lineAxiom2', 'Axiom 2', { key: '2' }),
   foldShortcut('fold.lineAxiom3', 'Axiom 3', { key: '3' }),

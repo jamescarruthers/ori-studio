@@ -9,7 +9,8 @@ import { foldStripCards, type FoldStripCard } from './foldStripCards';
 import { moveFoldReader } from './foldKeys';
 import { foldCardPictureSource } from './useFoldCardPictures';
 import type { FoldSequenceView } from './useFoldSequenceView';
-import { useFoldRepeatUi } from '../repeat/foldRepeatUi';
+import { repeatRange } from '../repeat/repeatRange';
+import { useFoldTools } from '../tools/foldToolState';
 
 /** Everything the strip takes but its pictures: the cards, which is active, the moves and their words. */
 export interface FoldStepStripModel {
@@ -52,10 +53,11 @@ const nextBranch = () => void moveFoldReader('nextBranch');
 export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
   const { t } = useTranslation();
   const { document, paper, entries, words, cursor, pending, progress, failed } = view;
-  const repeating = useFoldRepeatUi((s) => s.opening);
-  const repeatFirst = useFoldRepeatUi((s) => s.first);
-  const rangeStart = repeating ? entries.findIndex((entry) => entry.id === repeatFirst) : -1;
-  const rangeEnd = repeating ? entries.findIndex((entry) => entry.id === repeating.parent) : -1;
+  // Repeat's range, lit on its cards while the tool is in hand: its first step through the step on screen.
+  const repeating = useFoldTools((state) => state.tool === 'repeat');
+  const repeatFirst = useFoldTools((state) => state.repeatFirst);
+  const range = repeating ? repeatRange(entries, cursor, repeatFirst) : null;
+  const rangeStart = range?.start ?? -1;
   // Each card pictures its landed state, kept by its fingerprint across replays, with
   // the layer spread the folded pane shows it with.
   const pictures = useMemo(
@@ -96,20 +98,16 @@ export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
       const entry = cards[index]?.entry;
       // The step being folded is not a step yet: there is nothing to go to.
       if (entry === null || entry === undefined) return;
-      if (repeating) {
-        if (entry > 0 && entry <= rangeEnd) useFoldRepeatUi.getState().setFirst(entries[entry]!.id!);
-        return;
-      }
       useWorkspaceStore.getState().moveFoldCursor(entries[entry]?.id ?? null);
     },
-    [cards, entries, repeating, rangeEnd]
+    [cards, entries]
   );
   const onShiftWay = useCallback(
     // The strip has put the reader on the card first.
     (_index: number, delta: -1 | 1) => {
-      if (!repeating) void moveFoldReader(delta > 0 ? 'nextBranch' : 'previousBranch');
+      void moveFoldReader(delta > 0 ? 'nextBranch' : 'previousBranch');
     },
-    [repeating]
+    []
   );
   const wayReadout = useCallback(
     (ways: StepFilmstripWays, short: boolean) => branchReadout(t, ways.index, ways.count, short),
@@ -117,13 +115,14 @@ export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
   );
   const cycled = cycledBranch(entries, cursor);
   const onCycleWay = useCallback(() => {
-    if (!repeating && cycled !== undefined) useWorkspaceStore.getState().moveFoldCursor(cycled);
-  }, [repeating, cycled]);
+    if (cycled !== undefined) useWorkspaceStore.getState().moveFoldCursor(cycled);
+  }, [cycled]);
 
   return {
-    cards: repeating ? cards.map((card) => ({ ...card,
-      repeatSource: card.entry !== null && rangeStart > 0 && card.entry >= rangeStart && card.entry <= rangeEnd,
-    })) : cards,
+    cards:
+      rangeStart > 0
+        ? cards.map((card) => ({ ...card, repeatSource: card.entry !== null && card.entry >= rangeStart && card.entry <= cursor }))
+        : cards,
     active,
     label: stripLabel(t),
     note: replayNote(t, progress, failed),
@@ -132,19 +131,19 @@ export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
     onNext: next,
     previousLabel: moveLabel(t, 'previous'),
     nextLabel: moveLabel(t, 'next'),
-    previousDisabled: !!repeating || moves.previous === undefined,
-    nextDisabled: !!repeating || moves.next === undefined,
+    previousDisabled: moves.previous === undefined,
+    nextDisabled: moves.next === undefined,
     onPreviousWay: previousBranch,
     onNextWay: nextBranch,
     onShiftWay,
     previousWayLabel: moveLabel(t, 'previousBranch'),
     nextWayLabel: moveLabel(t, 'nextBranch'),
-    previousWayDisabled: !!repeating || moves.previousBranch === undefined,
-    nextWayDisabled: !!repeating || moves.nextBranch === undefined,
+    previousWayDisabled: moves.previousBranch === undefined,
+    nextWayDisabled: moves.nextBranch === undefined,
     waysLabel: branchesLabel(t),
     wayReadout,
     onCycleWay,
     cycleWayLabel: t('panels:fold.sequence.switchBranch', 'Switch branch'),
-    cycleWayDisabled: !!repeating || cycled === undefined,
+    cycleWayDisabled: cycled === undefined,
   };
 }

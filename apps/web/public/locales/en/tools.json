@@ -389,6 +389,7 @@
       "locate": "Locate line",
       "model": "Model",
       "reference": "Reference points",
+      "sequence": "Sequence",
       "sink": "Sinks"
     },
     "key": {
@@ -441,6 +442,8 @@
       "severalSunk_one": "{{count}} sunk point lies here: the first is taken.",
       "severalSunk_other": "{{count}} sunk points lie here: the first is taken.",
       "snap": "Points snap to corners, marks, crease crossings, midpoints and edges.",
+      "unfoldCancel": "Esc puts Unfold to step down without adding the step.",
+      "unfoldPreview": "The canvas shows the paper back in that pose. Every crease is kept.",
       "unsinkRing": "The line is a crease of the ring the sink left, along the sunk point’s top."
     },
     "op": {
@@ -854,6 +857,13 @@
       "pinchAtTouch": "Tap where to pinch along the line.",
       "pointToMove": "Click the point to move.",
       "pointToMoveTouch": "Tap the point to move.",
+      "repeatAxis": "Choose the symmetry axis, or draw it on the model: click where it starts, then where it ends.",
+      "repeatAxisTouch": "Choose the symmetry axis, or draw it on the model: tap where it starts, then where it ends.",
+      "repeatPreview": "Press Enter to preview the repeated folds.",
+      "repeatPreviewTouch": "Tap {{action}} to see the repeated folds.",
+      "repeatSave": "Press Enter again to add them.",
+      "repeatSaveTouch": "Tap {{action}} to add them.",
+      "repeatStart": "Choose the first step to repeat. The range ends at the step on screen.",
       "reverseFinish": "Pick which flaps reverse, then press Enter.",
       "reverseFinishTouch": "Pick which flaps reverse, then tap {{action}}.",
       "rotateCommit": "Press Enter to add the turn.",
@@ -867,7 +877,10 @@
       "sinkFinish": "Pick the point, then press Enter.",
       "sinkFinishTouch": "Pick the point, then tap {{action}}.",
       "tuckFinish": "Pick the flaps and the layer to tuck against, then press Enter.",
-      "tuckFinishTouch": "Pick the flaps and the layer to tuck against, then tap {{action}}."
+      "tuckFinishTouch": "Pick the flaps and the layer to tuck against, then tap {{action}}.",
+      "unfoldCommit": "Press Enter to add the step.",
+      "unfoldCommitTouch": "Tap {{action}} to add the step.",
+      "unfoldTarget": "Choose the step to return to."
     },
     "tool": {
       "closedSinkHelp": "Push a closed point’s tip into a pocket, its layers kept together.",
@@ -881,10 +894,12 @@
       "pleatHelp": "Make a pleat: locate the mountain line, then the valley line.",
       "precrease": "Precrease",
       "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
+      "repeatHelp": "Fold a range of steps again on the other side of a symmetry axis, previewed, then added as a step.",
       "reverse": "Reverse fold",
       "reverseHelp": "Reverse a flap inside itself or wrap it around the outside, reversing its spine.",
       "rotateHelp": "Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.",
       "tuckHelp": "Fold a flap and slide it under, or over, a layer that stays.",
+      "unfoldToHelp": "Return the paper to an earlier step’s pose, keeping every crease made since, previewed, then added as a step.",
       "unsinkHelp": "Pull a sunk point’s tip back out.",
       "valley": "Valley fold",
       "valleyHelp": "Fold the moving side toward you, so it lands on top."

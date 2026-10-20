@@ -19,6 +19,9 @@ import { pleatToolWindow } from './pleat/pleatToolWindow';
  *
  * The Divide line's window says how to use it. Rotate's previews from the
  * start: its amount, exact angle and direction (`tools/rotate/rotateToolWindow`).
+ * So do the sequence tools': Unfold to step's step to return to
+ * (`fold/return/unfoldToolWindow`), Repeat's range, axis and how it is saved
+ * (`fold/repeat/repeatToolWindow`).
  *
  * React-free and store-free: it takes a view and bound verbs and returns data.
  */
@@ -82,6 +85,13 @@ import {
 } from './reverse/reverseToolWindow';
 import { sinkToolWindow, type FoldSinkControls, type FoldSinkWindowView } from './sink/sinkToolWindow';
 import { rotateToolWindow, type FoldRotateControls, type FoldRotateWindowView } from './rotate/rotateToolWindow';
+import {
+  repeatToolWindow,
+  type FoldRepeatControls,
+  type FoldRepeatWindowVerbs,
+  type FoldRepeatWindowView,
+} from '../repeat/repeatToolWindow';
+import { unfoldToolWindow, type FoldUnfoldWindowVerbs, type FoldUnfoldWindowView } from '../return/unfoldToolWindow';
 import type { TurnRotation } from '../../lib/steps/turn';
 import { tuckToolWindow, type FoldTuckControls, type FoldTuckWindowView } from './tuck/tuckToolWindow';
 import {
@@ -154,6 +164,11 @@ export interface FoldToolWindowView extends FoldToolsView {
   extent?: FoldExtentWindowView;
   /** The Rotate tool's rotation (`tools/rotate`); absent where the surface offers none. */
   rotate?: FoldRotateWindowView;
+  // The sequence tools' (`fold/return`, `fold/repeat`); absent where the surface offers none.
+  /** Unfold to step's targets and the one taken. */
+  unfold?: FoldUnfoldWindowView;
+  /** Repeat's range, axes and where its preparation stands. */
+  repeat?: FoldRepeatWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -202,6 +217,9 @@ export interface FoldToolWindowVerbs
   setExtent?: (mode: FoldExtentMode) => void;
   /** How far and which way Rotate turns the model (`tools/rotate`). */
   setRotation?: (rotation: TurnRotation) => void;
+  // The sequence tools'.
+  unfold?: FoldUnfoldWindowVerbs;
+  repeat?: FoldRepeatWindowVerbs;
 }
 
 /** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
@@ -286,6 +304,25 @@ export interface FoldWindowButton {
   run: () => void;
 }
 
+/**
+ * A step of the path to choose, by its key: Unfold to step's step to return
+ * to, Repeat's first step. Only the steps the tool can take are offered.
+ */
+export interface FoldStepChoice {
+  label: string;
+  value: string | null;
+  options: readonly { id: string; label: string }[];
+  disabled: boolean;
+  set: (id: string) => void;
+}
+
+/**
+ * Why the tool in hand cannot do what it was asked, in the window's dock: an
+ * engine refusal with its fixes (`refusalNotice`), or a sequence tool's own
+ * (`repeat_axis_drawn`, `return_source_changed`, …), under a code of its own.
+ */
+export type FoldWindowNotice = Omit<FoldRefusalNoticeModel, 'code'> & { code: string };
+
 export interface FoldToolWindowModel {
   freeLineSnap?: { label: string; help: string; checked: boolean; disabled: boolean; set: (enabled: boolean) => void };
   reversePreference?: FoldKindChoice<FoldReversePreference>;
@@ -297,7 +334,7 @@ export interface FoldToolWindowModel {
   kind: FoldKindControl | null;
   movingSide: FoldMovingSideControl | null;
   layers: FoldLayersSection | null;
-  refusal: FoldRefusalNoticeModel | null;
+  refusal: FoldWindowNotice | null;
   /** The Divide line's settings; null for every other tool, or where the surface offers none. */
   divide: FoldDivideControls | null;
   /**
@@ -317,6 +354,10 @@ export interface FoldToolWindowModel {
   extent?: FoldKindChoice<FoldExtentMode> | null;
   /** Rotate's amount, exact angle and direction (`tools/rotate`); absent for every other tool. */
   rotate?: FoldRotateControls;
+  /** The step a sequence tool acts toward: Unfold to step's target, Repeat's first step. */
+  steps?: FoldStepChoice | null;
+  /** Repeat's axis, how it is saved, and a layer order to choose (`fold/repeat`); absent for every other tool. */
+  repeat?: FoldRepeatControls;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
 }
 
@@ -587,7 +628,9 @@ export function foldToolWindow(
 ): FoldToolWindowModel | null {
   const model = toolWindow(t, view, verbs, host);
   const freeLine = (usesLineMode(view.tool, view.vertex?.swivelInput) && view.lineMode === 'free') ||
-    ((view.tool === 'crimp' || view.tool === 'pleat') && (view.lineMode === 'free' || (view.secondLineMode ?? 'free') === 'free'));
+    ((view.tool === 'crimp' || view.tool === 'pleat') && (view.lineMode === 'free' || (view.secondLineMode ?? 'free') === 'free')) ||
+    // Repeat's axis, drawn as a free line while the canvas shows the range's starting state.
+    (view.tool === 'repeat' && view.repeat?.drawing === true);
   if (!model || !freeLine || view.freeLineSnap === undefined || !verbs.setFreeLineSnap) return model;
   return { ...model, freeLineSnap: {
     label: t('tools:fold.window.snapFreeLine', 'Snap to points'),
@@ -639,6 +682,8 @@ function toolWindow(
   if (isVertexTool(view.tool)) return view.vertex ? vertexToolWindow(t, view, view.vertex, verbs, host) : null;
   if (isSinkTool(view.tool)) return sinkToolWindow(t, view, verbs, host);
   if (view.tool === 'rotate') return view.rotate ? rotateToolWindow(t, view, view.rotate, verbs, host) : null;
+  if (view.tool === 'unfold-to') return view.unfold ? unfoldToolWindow(t, view, view.unfold, verbs, host) : null;
+  if (view.tool === 'repeat') return view.repeat ? repeatToolWindow(t, view, view.repeat, verbs, host) : null;
   if (!isFoldKind(view.tool)) return null;
   const kind = view.tool;
   const title = foldToolLabel(t, kind);

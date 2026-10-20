@@ -16,6 +16,7 @@ import {
   FOLD_LINE_MODE_SHORTCUTS,
   FOLD_MODEL_TURNS,
   FOLD_MODEL_VERB_SHORTCUTS,
+  FOLD_SEQUENCE_TOOLS,
   FOLD_SINK_TOOLS,
   FOLD_TOOL_SHORTCUTS,
   FOLD_VERTEX_TOOLS,
@@ -42,6 +43,8 @@ export interface FoldToolsView {
   swivelInput?: 'edge' | 'creases';
   /** Set while nothing on the sequence can change, and why. */
   readOnly: FoldReadOnlyReason | null;
+  /** The flat sheet is on screen: there is no step to unfold, or to repeat. */
+  atSheet?: boolean;
 }
 
 /** The calls the rail and the tool sheet make; the store binds them. */
@@ -52,7 +55,7 @@ export interface FoldRailVerbs {
   turn: (turn: TurnKind) => void;
 }
 
-export type FoldRailGroupId = 'fold' | 'sink' | 'reference' | 'locate' | 'model';
+export type FoldRailGroupId = 'fold' | 'sink' | 'reference' | 'locate' | 'model' | 'sequence';
 
 /** Taken in hand; a way of locating the line; or done at once. */
 export type FoldRailItemKind = 'tool' | 'line-mode' | 'verb';
@@ -102,27 +105,32 @@ function groupLabel(t: TFunction, id: FoldRailGroupId): string {
       return t('tools:fold.group.locate', 'Locate line');
     case 'model':
       return t('tools:fold.group.model', 'Model');
+    case 'sequence':
+      return t('tools:fold.group.sequence', 'Sequence');
   }
 }
 
 /**
  * The rail's groups, in order: the folds; the sinks; Reference points; Locate
- * line; and the model — Turn over, done at once, and the Rotate tool.
+ * line; the model — Turn over, done at once, and the Rotate tool; and the
+ * sequence — Unfold to step and Repeat, which act on the steps folded so far.
  * Every surface that shows the Fold tools reads this list.
  */
 export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRailVerbs): FoldRailGroup[] {
   const locked = view.readOnly === null ? null : foldReadOnlyReason(t, view.readOnly);
-  const tool = (id: FoldToolId): FoldRailItem => ({
+  const tool = (id: FoldToolId, reason = locked): FoldRailItem => ({
     id,
     kind: 'tool',
     label: foldToolLabel(t, id),
     description: foldToolDescription(t, id),
-    reason: locked,
+    reason,
     shortcut: FOLD_TOOL_SHORTCUTS[id] ?? null,
     active: view.tool === id,
-    available: locked === null,
+    available: reason === null,
     select: () => verbs.selectTool(id),
   });
+  // The flat sheet has no step to return from, nor one to repeat.
+  const sequenceReason = locked ?? (view.atSheet ? t('panels:fold.return.empty', 'Fold a step first.') : null);
 
   const lineMode = (id: FoldLineModeId): FoldRailItem => ({
     id,
@@ -152,12 +160,13 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
   });
 
   const groups: [FoldRailGroupId, readonly FoldRailItem[]][] = [
-    ['fold', FOLD_GROUP_TOOLS.map(tool)],
-    ['sink', FOLD_SINK_TOOLS.map(tool)],
+    ['fold', FOLD_GROUP_TOOLS.map((id) => tool(id))],
+    ['sink', FOLD_SINK_TOOLS.map((id) => tool(id))],
     ['reference', [tool('divide-line')]],
     ['locate', FOLD_LINE_MODES.map(lineMode)],
     // Turn over at once; Rotate a tool, its amount and direction to choose.
     ['model', [verb('turn-over'), tool('rotate')]],
+    ['sequence', FOLD_SEQUENCE_TOOLS.map((id) => tool(id, sequenceReason))],
   ];
   return groups.map(([id, items]) => ({
     id,

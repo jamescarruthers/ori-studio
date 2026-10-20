@@ -18,7 +18,7 @@ export interface RepeatStop {
 }
 
 /**
- * What Repeat's bar lets the user change about a stopped repeat, which its
+ * What Repeat's window lets the user change about a stopped repeat, which its
  * advice offers: another of the starting model's symmetry axes, and a range
  * that starts after the operation that stopped it (the range always ends at
  * the step on screen). Showing the steps individually is no remedy: it
@@ -157,7 +157,7 @@ function mirrorReason(t: TFunction, code: FoldRefusalCode): string | null {
   }
 }
 
-/** What to try instead, from what the bar lets the user change (`RepeatRemedies`). */
+/** What to try instead, from what the window lets the user change (`RepeatRemedies`). */
 function repeatAdvice(t: TFunction, { otherAxis, laterStart }: RepeatRemedies): string {
   if (otherAxis && laterStart)
     return t('panels:fold.repeat.advice.axisOrLater', 'Try another axis, or start the range after this operation.');
@@ -181,7 +181,8 @@ function withAdvice(t: TFunction, reason: string, remedies: RepeatRemedies): str
  * its words. A source step's mirror the engine refused keeps the engine's
  * reason — the tool window's words when they are a reason alone, else
  * Repeat's sentence about the mirror or the window's headline — and ends in
- * advice for what the bar can change (`RepeatRemedies`), never the tool's.
+ * advice for what Repeat's window can change (`RepeatRemedies`), never the
+ * advice of the tool the step was folded with.
  */
 export function repeatFailure(t: TFunction, stop: RepeatStop, remedies: RepeatRemedies = NO_REMEDIES): string {
   switch (stop.code) {

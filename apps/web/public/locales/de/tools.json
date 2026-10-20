@@ -389,6 +389,7 @@
       "locate": "Linie bestimmen",
       "model": "Modell",
       "reference": "Bezugspunkte",
+      "sequence": "Abfolge",
       "sink": "Versenken"
     },
     "key": {
@@ -441,6 +442,8 @@
       "severalSunk_one": "Hier liegt {{count}} versenkte Spitze: Die erste wird genommen.",
       "severalSunk_other": "Hier liegen {{count}} versenkte Spitzen: Die erste wird genommen.",
       "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein.",
+      "unfoldCancel": "Esc legt das Werkzeug „Bis zu Schritt entfalten“ weg, ohne den Schritt hinzuzufügen.",
+      "unfoldPreview": "Die Arbeitsfläche zeigt das Papier wieder in dieser Form. Alle Falten bleiben erhalten.",
       "unsinkRing": "Die Linie ist eine Faltlinie des Rings, den das Versenken hinterlassen hat, entlang der Oberkante der versenkten Spitze."
     },
     "op": {
@@ -854,6 +857,13 @@
       "pinchAtTouch": "Tippe entlang der Linie dorthin, wo gekniffen werden soll.",
       "pointToMove": "Klicke auf den Punkt, der bewegt werden soll.",
       "pointToMoveTouch": "Tippe auf den Punkt, der bewegt werden soll.",
+      "repeatAxis": "Wähle die Symmetrieachse oder zeichne sie auf dem Modell: Klicke dorthin, wo sie beginnt, dann dorthin, wo sie endet.",
+      "repeatAxisTouch": "Wähle die Symmetrieachse oder zeichne sie auf dem Modell: Tippe dorthin, wo sie beginnt, dann dorthin, wo sie endet.",
+      "repeatPreview": "Drücke die Eingabetaste, um die wiederholten Faltungen in der Vorschau zu sehen.",
+      "repeatPreviewTouch": "Tippe auf {{action}}, um die wiederholten Faltungen zu sehen.",
+      "repeatSave": "Drücke die Eingabetaste erneut, um sie hinzuzufügen.",
+      "repeatSaveTouch": "Tippe auf {{action}}, um sie hinzuzufügen.",
+      "repeatStart": "Wähle den ersten Schritt, der wiederholt wird. Der Bereich endet beim angezeigten Schritt.",
       "reverseFinish": "Wähle die Laschen für den Gegenbruch, dann drücke die Eingabetaste.",
       "reverseFinishTouch": "Wähle die Laschen für den Gegenbruch, dann tippe auf {{action}}.",
       "rotateCommit": "Drücke die Eingabetaste, um die Drehung hinzuzufügen.",
@@ -867,7 +877,10 @@
       "sinkFinish": "Wähle die Spitze, dann drücke die Eingabetaste.",
       "sinkFinishTouch": "Wähle die Spitze, dann tippe auf {{action}}.",
       "tuckFinish": "Wähle die Laschen und die Lage, an der eingesteckt wird, dann drücke die Eingabetaste.",
-      "tuckFinishTouch": "Wähle die Laschen und die Lage, an der eingesteckt wird, dann tippe auf {{action}}."
+      "tuckFinishTouch": "Wähle die Laschen und die Lage, an der eingesteckt wird, dann tippe auf {{action}}.",
+      "unfoldCommit": "Drücke die Eingabetaste, um den Schritt hinzuzufügen.",
+      "unfoldCommitTouch": "Tippe auf {{action}}, um den Schritt hinzuzufügen.",
+      "unfoldTarget": "Wähle den Schritt, zu dem zurückgekehrt wird."
     },
     "tool": {
       "closedSinkHelp": "Das Ende einer geschlossenen Spitze in eine Tasche drücken, ihre Lagen bleiben zusammen.",
@@ -881,10 +894,12 @@
       "pleatHelp": "Eine Zickzackfalte erstellen: zuerst die Berglinie, dann die Tallinie festlegen.",
       "precrease": "Vorfalten",
       "precreaseHelp": "Falten und wieder öffnen: eine Faltlinie für später.",
+      "repeatHelp": "Eine Folge von Schritten auf der anderen Seite einer Symmetrieachse wiederholen: erst als Vorschau, dann als Schritt.",
       "reverse": "Umkehrfaltung",
       "reverseHelp": "Falte eine Klappe nach innen oder stülpe sie nach außen um und kehre dabei ihre Rückenkante um.",
       "rotateHelp": "Das Modell um einen Teil einer Umdrehung oder einen genauen Winkel drehen: erst als Vorschau, dann als eigener Schritt.",
       "tuckHelp": "Eine Lasche falten und unter oder über eine liegen bleibende Lage stecken.",
+      "unfoldToHelp": "Das Papier in die Form eines früheren Schritts zurückbringen und alle seither entstandenen Falten behalten: erst als Vorschau, dann als Schritt.",
       "unsinkHelp": "Das Ende einer versenkten Spitze wieder herausziehen.",
       "valley": "Talfalte",
       "valleyHelp": "Die bewegte Seite zu dir hin falten, sodass sie oben landet."

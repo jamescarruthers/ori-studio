@@ -54,8 +54,9 @@ import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
 import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
-import { useFoldToolWindowYields } from '../../../fold/canvas/useFoldToolWindowYields';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
+import { repeatAxisOverlay } from '../../../fold/repeat/repeatAxisOverlay';
+import { isSequenceTool } from '../../../fold/tools/foldToolCatalog';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
 import { FoldToolWindow } from '../FoldToolWindow';
@@ -85,9 +86,7 @@ import styles from './FoldCanvas.module.css';
  * a phone, one pane at a time, and the rail's tools in a sheet opened from
  * the bar, beside the pane switch (`FoldPhoneBarControls`); the tool window
  * starts as its title bar, so the paper stays in view while points are
- * picked (`FoldToolWindow`). On any layout the tool window gives way to
- * Repeat's and Unfold to step's bars while either is open
- * (`useFoldToolWindowYields`).
+ * picked (`FoldToolWindow`).
  *
  * A composition site: what the tools do is `fold/tools` (the state, the
  * registry, the step builder) and `fold/canvas` (picking, the pipeline to the
@@ -104,9 +103,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const toolState = useFoldTools((state) => state);
   const preview = useFoldToolPreview(session, view, toolState);
   // The folded form's layers spread as the step on screen says, its switch on
-  // the bar — at rest: flat once a tool picks, or locates a fold. Spread, the
-  // paper is picked, hovered and lettered where it is drawn.
-  const picking = toolState.picks.length > 0;
+  // the bar — at rest: flat once a tool picks, or locates a fold, and while a
+  // sequence tool shows another state than the step's. Spread, the paper is
+  // picked, hovered and lettered where it is drawn.
+  const picking = toolState.picks.length > 0 || isSequenceTool(toolState.tool);
   const stepSpread = useFoldStepSpreadShown(view.cursorId);
   const importChoice = useFoldImportOrderUi((s) => s.choosing);
   const importPreview = importChoice?.previews.get(foldOrderChoiceKey(importChoice.choice));
@@ -122,8 +122,6 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   useEffect(() => registerFoldKindControl(foldToolKindControl(tools)), [tools]);
 
   const phone = useIsPhoneLayout();
-  // The tool window gives way to Repeat's and Unfold to step's bars.
-  const toolWindowYields = useFoldToolWindowYields();
   const coarse = useIsCoarsePointerSurface();
   const phonePane = useFoldPhonePane();
   const readOnly = useFoldReadOnly();
@@ -208,7 +206,14 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     [toolState.tool, preview.action, crimpLines, view.index, toolState.swivelFirst, preview.swivelLine]
   );
   const previewMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
-  const vertexMarks = previewMarks ?? swivelMarks.marks;
+  // Repeat's axes, lit on the range's starting state while one is chosen or drawn.
+  const repeatMarks = preview.repeat?.marks ?? null;
+  const sheetOutline = view.summary?.sheet ?? null;
+  const axisMarks = useMemo(
+    () => (repeatMarks && inks ? repeatAxisOverlay(view.index, sheetOutline, repeatMarks, inks.overlay) : null),
+    [repeatMarks, inks, view.index, sheetOutline]
+  );
+  const vertexMarks = axisMarks?.folded ?? previewMarks ?? swivelMarks.marks;
   const swivelOffered = swivelMarks.offered;
   // A partial precrease's line on each pane, and its points along it.
   const along = useMemo(
@@ -229,14 +234,14 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             located,
             marks: view.marks,
             inks: inks.overlay,
-            tool: pane === 'folded' ? vertexMarks : null,
+            tool: pane === 'folded' ? vertexMarks : (axisMarks?.creasePattern ?? null),
             spread: paneSpread.map,
             along: along?.[pane] ?? null,
             regions: regions?.[pane] ?? null,
             offered: swivelOffered?.[pane] ?? null,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, paneSpread.map, along, regions, swivelOffered]
+    [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, axisMarks, paneSpread.map, along, regions, swivelOffered]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
@@ -291,6 +296,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       ...(sinkView ? { sink: sinkView } : {}),
       extent: { mode: toolState.extent, picked: toolState.extentPicks.length },
       rotate: { rotation: toolState.rotation },
+      ...(preview.unfold ? { unfold: preview.unfold.view } : {}),
+      ...(preview.repeat ? { repeat: preview.repeat.view } : {}),
     },
     {
       ...verbs,
@@ -298,6 +305,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       otherKind: verbs.setReverseKind,
       tuckTarget: verbs.tuckTarget,
       setRotation: tools.setRotation,
+      ...(preview.unfold ? { unfold: preview.unfold.verbs } : {}),
+      ...(preview.repeat ? { repeat: preview.repeat.verbs } : {}),
     },
     { coarse, alt: altModifierLabel(), keyLabel }
   );
@@ -405,7 +414,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           sendToEdit={sendToEdit}
         />
       </div>
-      {importChoice ? <FoldImportOrderChooser container={viewport} inspection={inspection} onFrame={setToolWindowFrame} /> : <FoldToolWindow inspection={inspection} resolution={preview.orderResolution} acceptOrder={verbs.acceptOrder} orderReady={!!preview.step && !!preview.landed && !preview.landing && !preview.refused && !session.readOnly} container={viewport} model={toolWindowYields ? null : windowModel} tool={toolState.tool} keyLabel={keyLabel} onFrame={setToolWindowFrame} />}
+      {importChoice ? <FoldImportOrderChooser container={viewport} inspection={inspection} onFrame={setToolWindowFrame} /> : <FoldToolWindow inspection={inspection} resolution={preview.orderResolution} acceptOrder={verbs.acceptOrder} orderReady={!!preview.step && !!preview.landed && !preview.landing && !preview.refused && !session.readOnly} container={viewport} model={windowModel} tool={toolState.tool} keyLabel={keyLabel} onFrame={setToolWindowFrame} />}
     </div>
   );
 }

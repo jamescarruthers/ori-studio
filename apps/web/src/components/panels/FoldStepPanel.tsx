@@ -43,7 +43,7 @@ export function FoldStepPanel() {
         )}
         <FoldCollapseControls />
         <FoldReturnControls />
-          <FoldRepeatControls />
+        <FoldRepeatControls />
         <FoldImportSpread atSheet={session.cursorId === null} />
         <FoldStepPane
           step={pane.step}

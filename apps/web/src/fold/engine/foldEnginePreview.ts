@@ -42,9 +42,9 @@ import {
 
 /** What a preview needs besides the landed state itself. */
 export interface FoldPreviewWants {
-  /** What the fold moves, analysed on the parent: not for a rotation or a vertex fold. */
+  /** What the fold moves, analysed on the parent: not for a rotation, an unfold to a step, a repeat or a vertex fold. */
   analysis: boolean;
-  /** The fold's picture on the parent: not for a rotation. */
+  /** The fold's picture on the parent: not for a rotation, an unfold to a step or a repeat. */
   action: boolean;
 }
 
@@ -53,8 +53,9 @@ export interface FoldPreviewWants {
  * predicate, read by the tool's preview and the session alike.
  */
 export function foldPreviewWants(op: FoldEngineOp): FoldPreviewWants {
-  const rotation = op.kind === 'rotate';
-  return { analysis: !rotation && !isVertexOp(op as FoldOp), action: !rotation };
+  // A rotation moves no paper; an unfold to an earlier step and a repeat fold along no one line.
+  const lineless = op.kind === 'rotate' || op.kind === 'unfold-to' || op.kind === 'repeat';
+  return { analysis: !lineless && !isVertexOp(op as FoldOp), action: !lineless };
 }
 
 /** One answer of a preview: the call's value, or the envelope it failed with. */
