@@ -1836,6 +1836,12 @@
       "stepsHint": "Cada paso del recorrido como una tarjeta",
       "views": "Vista"
     },
+    "load": {
+      "failed": "El espacio de trabajo de plegado no se cargó",
+      "loading": "Cargando el espacio de trabajo de plegado…",
+      "offline": "El espacio de trabajo de plegado aún no se ha descargado y estás sin conexión. Conéctate una vez y funcionará sin conexión a partir de entonces.",
+      "retry": "Reintentar"
+    },
     "paper": {
       "backUp": "Reverso arriba",
       "colors": "Colores",

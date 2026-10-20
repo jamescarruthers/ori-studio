@@ -6234,7 +6234,11 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12471,7 +12475,11 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18710,7 +18718,11 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24616,7 +24628,11 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30522,7 +30538,11 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36759,7 +36779,11 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -42996,7 +43020,11 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48902,6 +48930,10 @@
     "tools:fold.steps.segmentFromTouch": "9583c7df9f13",
     "tools:fold.steps.segmentToTouch": "16e964a7c5e7",
     "tools:fold.window.layersHelpTouch": "6f7e6371608a",
-    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c"
+    "tools:fold.window.layersHelpWovenTouch": "a3634b9c782c",
+    "panels:fold.load.failed": "1b374a021704",
+    "panels:fold.load.loading": "44423faceb21",
+    "panels:fold.load.offline": "dd218456d5dc",
+    "panels:fold.load.retry": "d8b8392e2c54"
   }
 }

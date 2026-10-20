@@ -1786,6 +1786,12 @@
       "stepsHint": "Jeder Schritt des Pfads als Karte",
       "views": "Ansicht"
     },
+    "load": {
+      "failed": "Der Falten-Arbeitsbereich konnte nicht geladen werden",
+      "loading": "Falten-Arbeitsbereich wird geladen…",
+      "offline": "Der Falten-Arbeitsbereich wurde noch nicht heruntergeladen, und Sie sind offline. Verbinden Sie sich einmal, danach funktioniert er auch offline.",
+      "retry": "Erneut versuchen"
+    },
     "paper": {
       "backUp": "Rückseite oben",
       "colors": "Farben",
