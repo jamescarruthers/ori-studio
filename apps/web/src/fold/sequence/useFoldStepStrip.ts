@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { StepFilmstripWays } from '../../components/steps/StepFilmstrip';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import { foldStepSpread } from '../document/foldStepSpread';
-import { foldPathMoves } from './foldSequencePath';
+import { cycledBranch, foldPathMoves } from './foldSequencePath';
 import { branchReadout, branchesLabel, moveLabel, replayNote, stripLabel } from './foldSequenceWords';
 import { foldStripCards, type FoldStripCard } from './foldStripCards';
 import { moveFoldReader } from './foldKeys';
@@ -33,6 +33,10 @@ export interface FoldStepStripModel {
   nextWayDisabled: boolean;
   waysLabel: string;
   wayReadout: (ways: StepFilmstripWays, short: boolean) => string;
+  /** A phone's tap on the branch readout: the next branch, the first after the last (`cycledBranch`). */
+  onCycleWay: () => void;
+  cycleWayLabel: string;
+  cycleWayDisabled: boolean;
 }
 
 const previous = () => void moveFoldReader('previous');
@@ -111,6 +115,10 @@ export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
     (ways: StepFilmstripWays, short: boolean) => branchReadout(t, ways.index, ways.count, short),
     [t]
   );
+  const cycled = cycledBranch(entries, cursor);
+  const onCycleWay = useCallback(() => {
+    if (!repeating && cycled !== undefined) useWorkspaceStore.getState().moveFoldCursor(cycled);
+  }, [repeating, cycled]);
 
   return {
     cards: repeating ? cards.map((card) => ({ ...card,
@@ -135,5 +143,8 @@ export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
     nextWayDisabled: !!repeating || moves.nextBranch === undefined,
     waysLabel: branchesLabel(t),
     wayReadout,
+    onCycleWay,
+    cycleWayLabel: t('panels:fold.sequence.switchBranch', 'Switch branch'),
+    cycleWayDisabled: !!repeating || cycled === undefined,
   };
 }

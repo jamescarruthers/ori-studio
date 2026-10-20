@@ -110,7 +110,26 @@ describe('foldToolWindow while the line is located', () => {
       'Points snap to corners, marks, crease crossings, midpoints and edges.',
     ]);
     const free = foldToolWindow(t, view({ lineMode: 'free' }), verbs(), finger);
-    expect(free?.instructions.notes).toEqual(['No snapping: the line runs exactly through the points you click.']);
+    expect(free?.instructions.notes).toEqual(['No snapping: the line runs exactly through the points you tap.']);
+  });
+
+  it('says tap to a finger, at every step and in every note, and click to a mouse', () => {
+    const words = (host: typeof finger, lineMode: FoldToolWindowView['lineMode']) => {
+      const model = foldToolWindow(t, view({ lineMode }), verbs(), host);
+      return [...(model?.instructions.items ?? []), ...(model?.instructions.notes ?? [])].join(' ');
+    };
+    for (const lineMode of ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'] as const) {
+      expect(words(finger, lineMode), lineMode).not.toMatch(/\bclick/i);
+      expect(words(finger, lineMode), lineMode).toMatch(/\bTap\b/);
+      expect(words(mouse, lineMode), lineMode).not.toMatch(/\btap\b/i);
+    }
+    expect(foldToolWindow(t, view({ lineMode: 'axiom-2' }), verbs(), finger)?.instructions.items.slice(0, 2)).toEqual([
+      'Tap the point to move.',
+      'Tap where it should land.',
+    ]);
+    // The layers' help, once there is a fold to pick them for.
+    expect(foldToolWindow(t, view({ preview: preview() }), verbs(), finger)?.layers?.help).toMatch(/^Tap a layer/);
+    expect(foldToolWindow(t, view({ preview: preview() }), verbs(), mouse)?.layers?.help).toMatch(/^Click a layer/);
   });
 
   it('says when a line drawn on the crease pattern runs through its points as they lie folded', () => {

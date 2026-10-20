@@ -2,12 +2,14 @@ import type {
   FoldChoices,
   FoldModelLine,
   FoldOp,
+  FoldOpKind,
   FoldRepeatEntry,
   FoldRepeatOp,
   SheetPoint,
 } from '../document/foldSequenceDocument';
 import type { FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
+import type { FoldRefusalBody } from '../engine/foldEngineWire';
 import { FoldSearchStopped, runFoldSearch, type FoldSearch } from '../engine/foldSearch';
 import { reflection, RepeatFailure, verifiedSymmetry } from './repeatGeometry';
 import { mirrorOperation } from './repeatOperation';
@@ -33,7 +35,12 @@ export interface RepeatRequest {
 export type RepeatPrepared =
   | { status: 'ready'; op: FoldRepeatOp }
   | { status: 'choice'; step: number; prefix: FoldRepeatOp; candidates: FoldRepeatEntry[] }
-  | { status: 'blocked'; step: number; code: string; prefix?: FoldRepeatOp };
+  /**
+   * Stopped at source step `step`: by Repeat's own code, or by the engine's
+   * refusal of that step's mirror — the refusal, and the kind of step it was,
+   * so the bar words it as the tool window would.
+   */
+  | { status: 'blocked'; step: number; code: string; refusal?: FoldRefusalBody; op?: FoldOpKind; prefix?: FoldRepeatOp };
 
 /**
  * How long a preparation may run. Every range of the design fixtures
@@ -99,7 +106,7 @@ export function* prepareRepeatSearch(
         const history = [request.parent, ...preparedStates];
         const targetState = history[targetIndex]!;
         const returned = engine.returnTo(current, targetState, history);
-        if (returned.status !== 'ok') throw new RepeatFailure(returned.refusal.code);
+        if (returned.status !== 'ok') throw RepeatFailure.refused(returned.refusal);
         owned.push(returned.state);
         verifyMaterial(before, after, target, engine.scene(returned.state), map);
         entries.push({
@@ -128,19 +135,19 @@ export function* prepareRepeatSearch(
         item.op.kind === 'refold'
       ) {
         const analysis = engine.analyse(item.before, item.op, item.choices);
-        if (analysis.status !== 'ok') throw new RepeatFailure(analysis.refusal.code);
+        if (analysis.status !== 'ok') throw RepeatFailure.refused(analysis.refusal);
         material = [...new Set([...analysis.analysis.picked, ...analysis.analysis.added])].map(
           (f) => analysis.analysis.flaps[f]!.witness,
         );
       }
       const mapped = mirrorOperation(item.op, item.choices, before, target, map, material);
       const candidates: { entry: FoldRepeatEntry; state: number }[] = [];
-      let reason = 'repeat_order';
+      let reason = new RepeatFailure('repeat_order');
       let unresolved = false;
       const tryCandidate = (op: FoldOp, choices?: FoldChoices) => {
         const result = engine.step(current, op, choices);
         if (result.status !== 'ok') {
-          reason = result.refusal.code;
+          reason = RepeatFailure.refused(result.refusal);
           // Native replay refuses unresolved choices; it never chooses an order.
           unresolved =
             (result.refusal.code === 'choice_needed' && result.refusal.choice === 'completion') ||
@@ -152,7 +159,7 @@ export function* prepareRepeatSearch(
           verifyMaterial(before, after, target, engine.scene(result.state), map);
         } catch (error) {
           if (error instanceof RepeatFailure) {
-            reason = error.code;
+            reason = error;
             engine.release([result.state]);
             owned.pop();
             return;
@@ -196,13 +203,13 @@ export function* prepareRepeatSearch(
           yield;
           first = engine.orderSelection(current, queryOp, mapped.choices, { index: 0, batch });
         }
-        if (first.status !== 'ok') throw new RepeatFailure(first.refusal.code);
+        if (first.status !== 'ok') throw RepeatFailure.refused(first.refusal);
         if (!first.count.exact || first.count.orders > 64) throw new RepeatFailure('repeat_order_limit');
         for (let n = 0; n < first.count.orders; n++) {
           yield;
           const order =
             n === 0 ? first : engine.orderSelection(current, queryOp, mapped.choices, { index: n, batch: 8 });
-          if (order.status !== 'ok') throw new RepeatFailure(order.refusal.code);
+          if (order.status !== 'ok') throw RepeatFailure.refused(order.refusal);
           const choices: FoldChoices = {
             ...mapped.choices,
             ...(order.completion ? { completion: order.completion } : {}),
@@ -211,7 +218,7 @@ export function* prepareRepeatSearch(
         }
       }
       engine.releaseOrderSearch?.(current);
-      if (!candidates.length) throw new RepeatFailure(reason);
+      if (!candidates.length) throw reason;
       const selected = candidates.find((c) => c.entry.expect === request.selections?.[index]);
       if (candidates.length > 1 && !selected)
         return {
@@ -238,6 +245,7 @@ export function* prepareRepeatSearch(
         status: 'blocked',
         step: index,
         code: failure.code,
+        ...(failure.refusal ? { refusal: failure.refusal, op: request.steps[index]?.op.kind } : {}),
         ...(recipe && entries.length ? { prefix: { ...recipe, steps: entries } } : {}),
       };
     throw error;

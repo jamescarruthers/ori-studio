@@ -160,18 +160,37 @@ export function compoundFoldLineOf(
 }
 
 /**
+ * What a landed step folded, as its words read it: the line and the side
+ * that moved, and — for a plain fold that only laid folded creases flat,
+ * making and refolding none — that it was an unfold. The Valley and Mountain
+ * tools store a fold along a bend that unfolds its flap as a valley or
+ * mountain fold (plan D3); only the engine's report says it unfolded.
+ */
+export interface FoldedLine extends Pick<FoldReport, 'line' | 'side'> {
+  readonly unfolds?: true;
+}
+
+/** The fold only laid folded creases flat: it made no crease and refolded none. */
+export function onlyUnfolds(report: Pick<FoldReport, 'created' | 'unfolded' | 'refolded'>): boolean {
+  return report.unfolded.length > 0 && report.created.length === 0 && report.refolded.length === 0;
+}
+
+/**
  * The line any landed step folded along and the side that moved, in the
  * parent's model frame: a plain fold's report, or else a compound fold's
- * ({@link compoundFoldLineOf}), which a compound step holds in place of one.
- * Null for a turn, a rotation, an import and a vertex fold. Every reader of a
- * landed step's line — Fold's strip, the Diagram's capture — reads it here,
- * so a step is worded alike wherever it appears.
+ * ({@link compoundFoldLineOf}), which a compound step holds in place of one;
+ * and whether a plain fold only unfolded. Null for a turn, a rotation, an
+ * import and a vertex fold. Every reader of a landed step's line — Fold's
+ * strip, the Diagram's capture — reads it here, so a step is worded alike
+ * wherever it appears.
  */
 export function foldedLineOf(landed: {
   readonly report: FoldReport | null;
   readonly compound?: FoldCompoundReport;
-}): Pick<FoldReport, 'line' | 'side'> | null {
-  return landed.report ?? compoundFoldLineOf(landed.compound);
+}): FoldedLine | null {
+  const { report } = landed;
+  if (!report) return compoundFoldLineOf(landed.compound);
+  return { line: report.line, side: report.side, ...(onlyUnfolds(report) ? { unfolds: true as const } : {}) };
 }
 
 /**

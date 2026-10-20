@@ -146,6 +146,18 @@ export function foldPathMoves(entries: readonly FoldPathEntry[], index: number):
   };
 }
 
+/**
+ * The branch a tap on a phone's branch readout switches to from the entry at
+ * `index`: the next, and the first after the last — one control that steps
+ * through them all, where the keys and chevrons stop at the ends. Undefined
+ * where the entry has no other branch.
+ */
+export function cycledBranch(entries: readonly FoldPathEntry[], index: number): string | undefined {
+  const branches = entries[index]?.branches;
+  if (!branches || branches.ids.length < 2) return undefined;
+  return branches.ids[(branches.index + 1) % branches.ids.length];
+}
+
 /** The step at the path's tip; null for the sheet when there is none. */
 export function foldPathTip(entries: readonly FoldPathEntry[]): string | null {
   return entries[entries.length - 1]?.id ?? null;

@@ -312,6 +312,7 @@
   },
   "foldImport": {
     "browse": "またはクリックして選択",
+    "browseTouch": "またはタップして選択",
     "collapseTitle": "展開図から折りたたむ",
     "drop": ".cp、.fold、.ori、.orh ファイルをドロップ",
     "editFigure": "編集の折り図",

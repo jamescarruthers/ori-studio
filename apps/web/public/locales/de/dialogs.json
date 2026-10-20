@@ -321,6 +321,7 @@
   },
   "foldImport": {
     "browse": "oder zum Durchsuchen klicken",
+    "browseTouch": "oder zum Durchsuchen tippen",
     "collapseTitle": "Aus CP zusammenfalten",
     "drop": "Eine .cp-, .fold-, .ori- oder .orh-Datei hier ablegen",
     "editFigure": "Gefaltetes Modell aus Bearbeiten",

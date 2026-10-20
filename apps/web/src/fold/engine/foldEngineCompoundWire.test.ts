@@ -149,7 +149,9 @@ describe('the compound folds’ one wire', () => {
       refolded: [],
       split: 1,
     };
-    expect(foldedLineOf({ report: plain })).toBe(plain);
+    expect(foldedLineOf({ report: plain })).toEqual({ line: SECOND, side: 'positive' });
+    // A plain fold that only laid creases flat says so: an unfold, as its words read it.
+    expect(foldedLineOf({ report: { ...plain, created: [], unfolded: [2] } })).toEqual({ line: SECOND, side: 'positive', unfolds: true });
     // A compound step holds no plain report: its line is its compound report's, a crimp's first.
     expect(foldedLineOf({ report: null, compound: REPORTS.reverse() })).toEqual({ line: LINE, side: 'negative' });
     expect(foldedLineOf({ report: null, compound: REPORTS.crimp() })).toEqual({ line: LINE, side: 'positive' });

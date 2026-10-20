@@ -187,7 +187,7 @@ export function tuckToolWindow(
       disabled: readOnly,
       swap: verbs.swapSide,
     },
-    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly) : null,
+    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly, host.coarse) : null,
     tuck: controls,
     refusal: preview.refused
       ? foldRefusalNotice(

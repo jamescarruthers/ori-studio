@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, Crosshair } from 'lucide-react';
+import { setFoldAltLatched, useFoldAltLatched } from '../../../fold/canvas/foldAltLatch';
 import { showFoldPhonePane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldRailGroups } from '../../../fold/canvas/useFoldRailGroups';
 import type { FoldPaneId } from '../../../fold/canvas/foldPicking';
@@ -25,6 +26,11 @@ import { FoldAltLatchToggle } from './FoldAltLatchToggle';
  * phone bar carries its tools. The bar's own buttons, so the row reads as
  * one bar. Renders nothing off the phone layout, where the rail and both
  * panes are on screen.
+ *
+ * While the free-point latch is on, it is on the bar too, beside the tools,
+ * pressed: a mode left on with nothing where the folding happens saying so
+ * turns every tap on a corner into a free point, so the bar says it, and a
+ * tap there lets it go. Off, it is the sheet's alone.
  */
 export function FoldPhoneBarControls() {
   const { t } = useTranslation();
@@ -32,6 +38,8 @@ export function FoldPhoneBarControls() {
   const pane = useFoldPhonePane();
   const groups = useFoldRailGroups();
   const tool = useFoldTools((state) => state.tool);
+  // Never on for a fine pointer (`isFoldAltLatched`): a keyboard holds Alt instead.
+  const latched = useFoldAltLatched();
   const { open, pickerId, openPicker, close, triggerRef } = useToolPickerSheet({ available: phone });
   if (!phone) return null;
   const panes: { id: FoldPaneId; title: string }[] = [
@@ -40,6 +48,7 @@ export function FoldPhoneBarControls() {
   ];
   const other = panes.find((each) => each.id !== pane) ?? panes[0]!;
   const tools = t('tools:fold.picker.trigger', 'Tools');
+  const freePoint = t('tools:fold.latch.freePoint', 'Free point');
   return (
     <>
       <ViewportToolbarButton
@@ -54,6 +63,18 @@ export function FoldPhoneBarControls() {
       >
         <FoldToolGlyph id={tool} compact />
       </ViewportToolbarButton>
+      {latched && (
+        <ViewportToolbarButton
+          aria-label={freePoint}
+          title={freePoint}
+          aria-pressed
+          isActive
+          data-fold-alt-latch-bar=""
+          onClick={() => setFoldAltLatched(false)}
+        >
+          <Crosshair size={14} aria-hidden="true" />
+        </ViewportToolbarButton>
+      )}
       <ViewportToolbarButton
         aria-label={other.title}
         title={other.title}

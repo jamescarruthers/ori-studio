@@ -401,17 +401,25 @@ export function settingsMeta(t: TFunction, count: number): string {
   });
 }
 
+/** What a drawn line's points snap to while Snap to points is on: the note, and the switch's help. */
+function freeSnapNote(t: TFunction, coarse: boolean): string {
+  return coarse
+    ? t('tools:fold.note.freeSnapTouch', 'Snap to nearby point targets; otherwise use exactly where you tap.')
+    : t('tools:fold.note.freeSnap', 'Snap to nearby point targets; otherwise use exactly where you click.');
+}
+
 /** What snaps under each line mode, and on a pointer with keys, the keys that change it. */
 export function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldToolHost, snapFree = false): string[] {
   const clear = t('tools:fold.note.clear', 'Esc clears the picks.');
   if (mode === 'free') {
     if (snapFree) {
-      const note = t('tools:fold.note.freeSnap', 'Snap to nearby point targets; otherwise use exactly where you click.');
-      return host.coarse ? [note] : [note,
+      if (host.coarse) return [freeSnapNote(t, true)];
+      return [freeSnapNote(t, false),
         t('tools:fold.note.freePoint', 'Hold {{modifier}} to put a point down anywhere, without snapping.', { modifier: host.alt }), clear];
     }
-    const free = t('tools:fold.note.free', 'No snapping: the line runs exactly through the points you click.');
-    return host.coarse ? [free] : [free, clear];
+    return host.coarse
+      ? [t('tools:fold.note.freeTouch', 'No snapping: the line runs exactly through the points you tap.')]
+      : [t('tools:fold.note.free', 'No snapping: the line runs exactly through the points you click.'), clear];
   }
   if (mode === 'crease') {
     return [t('tools:fold.note.crease', 'Folding along a precrease refolds it; along a folded edge, it unfolds the flap.')];
@@ -447,7 +455,7 @@ export function locateInstructions(
       : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.'));
   // A precrease of part of its line: its points along the line, once it is located.
   const extent = view.tool === 'precrease' ? view.extent : undefined;
-  const items = [...lineModeSteps(t, view.lineMode), ...extentLocateSteps(t, extent), finish];
+  const items = [...lineModeSteps(t, view.lineMode, host.coarse), ...extentLocateSteps(t, extent, host.coarse), finish];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items,
@@ -465,7 +473,7 @@ function previewInstructions(
   action: string
 ): FoldToolInstructions {
   // A precrease of part of its line: its points along the line first.
-  const along = extent ? extentPreviewItems(t, extent) : null;
+  const along = extent ? extentPreviewItems(t, extent, host.coarse) : null;
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
@@ -522,7 +530,8 @@ export function layersSection(
   t: TFunction,
   preview: FoldPreview,
   verbs: FoldToolWindowVerbs,
-  disabled: boolean
+  disabled: boolean,
+  coarse = false
 ): FoldLayersSection {
   const { section } = preview;
   const seed = {
@@ -533,16 +542,26 @@ export function layersSection(
     needed: neededFlaps(preview.refused),
   };
   const picker = section ? foldSectionPicker(t, section, seed, { interval: preview.interval }) : null;
-  const help =
-    section && isWoven(section)
-    ? t(
-        'tools:fold.window.layersHelpWoven',
-        'These layers weave through each other, so the stack shown is the one under the pointer. Click a layer to include or exclude its flap.'
-      )
-    : t(
-        'tools:fold.window.layersHelp',
-        'Click a layer to include or exclude its flap. Brackets show where a fold joins two layers.'
-      );
+  const woven = section !== null && isWoven(section);
+  const help = coarse
+    ? woven
+      ? t(
+          'tools:fold.window.layersHelpWovenTouch',
+          'These layers weave through each other, so the stack shown is the one where you last touched the line. Tap a layer to include or exclude its flap.'
+        )
+      : t(
+          'tools:fold.window.layersHelpTouch',
+          'Tap a layer to include or exclude its flap. Brackets show where a fold joins two layers.'
+        )
+    : woven
+      ? t(
+          'tools:fold.window.layersHelpWoven',
+          'These layers weave through each other, so the stack shown is the one under the pointer. Click a layer to include or exclude its flap.'
+        )
+      : t(
+          'tools:fold.window.layersHelp',
+          'Click a layer to include or exclude its flap. Brackets show where a fold joins two layers.'
+        );
   return {
     title: t('tools:fold.window.layers', 'Layers'),
     summary: picker ? foldLayersSummary(t, picker) : null,
@@ -572,7 +591,7 @@ export function foldToolWindow(
   if (!model || !freeLine || view.freeLineSnap === undefined || !verbs.setFreeLineSnap) return model;
   return { ...model, freeLineSnap: {
     label: t('tools:fold.window.snapFreeLine', 'Snap to points'),
-    help: t('tools:fold.note.freeSnap', 'Snap to nearby point targets; otherwise use exactly where you click.'),
+    help: freeSnapNote(t, host.coarse),
     checked: view.freeLineSnap,
     disabled: view.readOnly !== null,
     set: verbs.setFreeLineSnap,
@@ -595,7 +614,9 @@ function toolWindow(
       instructions: {
         heading: t('tools:fold.window.instructions', 'Instructions'),
         items: [
-          t('tools:fold.steps.divide', 'Click an edge or crease to divide it.'),
+          host.coarse
+            ? t('tools:fold.steps.divideTouch', 'Tap an edge or crease to divide it.')
+            : t('tools:fold.steps.divide', 'Click an edge or crease to divide it.'),
           t('tools:fold.steps.divideUse', 'Use the new points as references for any fold.'),
         ],
         current: 0,
@@ -625,7 +646,7 @@ function toolWindow(
   // A precrease's extent: the control in both phases, so a pinch can be
   // chosen before its line is located, and its points along the line after.
   const extentView = kind === 'precrease' ? view.extent : undefined;
-  const extent = extentView ? extentControl(t, extentView, verbs.setExtent, readOnly) : null;
+  const extent = extentView ? extentControl(t, extentView, verbs.setExtent, readOnly, host.coarse) : null;
   const action = extentCommitLabel(t, extentView, title);
 
   if (!preview) {
@@ -667,7 +688,7 @@ function toolWindow(
     },
     // A fold refused before its layers were found has none to show: the
     // refusal says why, and "finding the layers" would never end.
-    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly) : null,
+    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly, host.coarse) : null,
     refusal: preview.refused
       ? foldRefusalNotice(
           t,

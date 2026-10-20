@@ -53,14 +53,14 @@ export function pleatToolWindow(
             finish,
           ]
         : [
-            ...lineModeSteps(t, view.lineMode).map((instruction) =>
+            ...lineModeSteps(t, view.lineMode, host.coarse).map((instruction) =>
               t(
                 'tools:fold.pleat.mountainInstruction',
                 'Mountain line: {{instruction}}',
                 { instruction },
               ),
             ),
-            ...lineModeSteps(t, second).map((instruction) =>
+            ...lineModeSteps(t, second, host.coarse).map((instruction) =>
               t(
                 'tools:fold.pleat.valleyInstruction',
                 'Valley line: {{instruction}}',
@@ -103,7 +103,7 @@ export function pleatToolWindow(
           swap: verbs.swapSide,
         }
       : null,
-    layers: preview ? layersSection(t, preview, verbs, disabled) : null,
+    layers: preview ? layersSection(t, preview, verbs, disabled, host.coarse) : null,
     refusal: preview?.refused
       ? foldRefusalNotice(
           t,

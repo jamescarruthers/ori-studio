@@ -226,6 +226,8 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
   /** The camera the last fit made, copied: the live one is moved in place, so a match means nobody has. */
   const lastFitRef = useRef<UserCamera | null>(null);
   const renderNowRef = useRef<() => void>(() => undefined);
+  /** Measure the canvas's box, apply it to the drawing buffer, then render. */
+  const applySizeRef = useRef<() => void>(() => undefined);
   const [rendererStatus, setRendererStatus] = useState<CpRendererStatus | null>(null);
   const [rendererGeneration, setRendererGeneration] = useState(0);
   // What the pointer is over, and whether it is dragging — what the cursor
@@ -394,6 +396,7 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
       renderer.resize({ width, height, dpr: ratio });
       renderNow();
     };
+    applySizeRef.current = applySize;
     // jsdom has no ResizeObserver; the size is then applied once.
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(applySize);
     observer?.observe(canvas);
@@ -444,6 +447,7 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
       observer?.disconnect();
       unbindInput();
       renderNowRef.current = () => undefined;
+      applySizeRef.current = () => undefined;
       rendererRef.current = null;
       renderer.dispose();
     };
@@ -462,7 +466,11 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
     const camera = cameraRef.current;
     const fit = lastFitRef.current;
     if (camera && fit && userCamerasEqual(camera, fit)) fitRequestedRef.current = true;
-    renderNowRef.current();
+    // Measured first: an inset can arrive in the commit that resizes the canvas,
+    // before its own observer has applied the size, and a fit to the old box
+    // under the new inset has no room left — Fold's tool window coming back as
+    // Repeat's bar closes, over a pane still at the bar's height.
+    applySizeRef.current();
   }, [insetKey]);
 
   // Content of another kind that has left what shows is fitted, while the
