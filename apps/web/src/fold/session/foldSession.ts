@@ -50,8 +50,25 @@ import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineCrashCause } from '../engine/foldEngineTrap';
 import type { FoldSearchTicket } from '../engine/foldSearch';
-import type { FoldEngineOp, FoldEngineRefused, FoldStateSummary } from '../engine/foldEngineWire';
+import type { FoldOrderQuery, FoldOrderSelection } from '../engine/foldEngineCompoundCalls';
+import { foldPreviewWants, type FoldPreviewed, type FoldPreviewWants } from '../engine/foldEnginePreview';
+import type { FoldRootSectionHint } from '../engine/foldEngineRoots';
+import type {
+  FoldAxiomCandidates,
+  FoldAxiomLine,
+  FoldEngineOp,
+  FoldEngineOutcome,
+  FoldEngineRefused,
+  FoldStateSummary,
+  FoldStepFingerprinted,
+} from '../engine/foldEngineWire';
 import { createFoldSessionAnswers } from './foldSessionAnswers';
+import {
+  FOLD_SCENE_QUERY,
+  FOLD_STEP_SUMMARY_QUERY,
+  foldActionQuery,
+  foldCrossSectionQuery,
+} from './foldStateQueries';
 import { createFoldSessionEngine, foldStepInputKey, type FoldSessionEngine } from './foldSessionEngine';
 import {
   deriveFoldSessionNodes,
@@ -241,6 +258,28 @@ export interface FoldSession {
   analyse(op: FoldEngineOp, choices?: FoldChoices): Promise<FoldAnalyseOutcome>;
   /** Fold a step from the step on screen without committing it (D14 tier 3). */
   preview(op: FoldEngineOp, choices?: FoldChoices): Promise<FoldPreviewOutcome>;
+  /**
+   * The layer orders a fold leaves from the step on screen (`orderSelection`).
+   * The step they resolve is folded in the same turn of the engine and kept
+   * for the {@link FoldSession.preview} that asks for it next, which then asks
+   * the engine nothing; its analysis and picture are kept as the tool would
+   * ask them (`foldEnginePreview.ts`).
+   */
+  resolveOrders(
+    op: FoldEngineOp,
+    choices: FoldChoices | undefined,
+    query: FoldOrderQuery,
+    search?: FoldSearchTicket
+  ): Promise<FoldStateQuery<FoldEngineOutcome<FoldOrderSelection>>>;
+  /**
+   * An axiom line's roots on the step on screen (`axiomCandidates`), with the
+   * layers at the root `hint` names asked in the same turn and kept for the
+   * tool's `foldCrossSectionQuery` (`foldEngineRoots.ts`).
+   */
+  axiomRoots(
+    line: FoldAxiomLine,
+    hint: FoldRootSectionHint | null
+  ): Promise<FoldStateQuery<FoldEngineOutcome<FoldAxiomCandidates>>>;
   /** Fold a step from the step on screen and append it to the shown sequence, the cursor moved onto it. */
   commitStep(op: FoldOp, choices?: FoldChoices): Promise<FoldCommitOutcome>;
   /**
@@ -330,6 +369,12 @@ function requestOf(op: FoldEngineOp, choices: FoldChoices | undefined): FoldStep
 /** An analysis the engine answered, which a later ask of the same line from the same state can reuse. */
 type FoldAnalysisAnswer = Extract<FoldPendingAnalysis, { status: 'analysed' | 'refused' }>;
 
+/** A preview the engine answered: landed, or refused. */
+type FoldSettledPreview = Extract<FoldPendingStep, { status: 'landed' | 'refused' }>;
+
+/** What a plain preview's turn reads besides the landed state: the tool asks the parent's own answers beside it. */
+const LANDED_ONLY: FoldPreviewWants = { analysis: false, action: false };
+
 /** How many analyses the session keeps. */
 const ANALYSES_KEPT = 64;
 
@@ -378,6 +423,17 @@ export function createFoldSession({
   /** Bumped whenever the pending step is let go, so an answer for the one let go lands nothing. */
   let pendingTicket = 0;
   let pendingAnswer: Promise<FoldPreviewOutcome> | null = null;
+  /**
+   * The landed pending step's fingerprint, asked for the moment it landed, so
+   * a commit of it expects it without asking: null when it could not be read.
+   */
+  let pendingFingerprint: { state: FoldEngineStateHandle; fingerprint: Promise<FoldStateFingerprint | null> } | null = null;
+  /**
+   * The step an order resolution folded in its own turn (`resolveOrders`),
+   * kept until the tool previews it — or the cursor moves, the tool lets go,
+   * or a newer resolution replaces it, when its state is released.
+   */
+  let offer: { key: string; settled: FoldSettledPreview } | null = null;
   let analysis: FoldPendingAnalysis = FOLD_IDLE;
   let analysisTicket = 0;
   /**
@@ -444,6 +500,13 @@ export function createFoldSession({
     if (pending.status === 'landed' && !sameFoldState(pending.state, taken)) engine?.release(pending.state);
     pending = FOLD_IDLE;
     pendingAnswer = null;
+    pendingFingerprint = null;
+  };
+
+  /** Let go of the step an order resolution folded, unpreviewed: its state is released. */
+  const dropOffer = () => {
+    if (offer?.settled.status === 'landed') engine?.release(offer.settled.state);
+    offer = null;
   };
 
   const dropAnalysis = () => {
@@ -466,6 +529,7 @@ export function createFoldSession({
     const previous = store.getState();
     let next = snapshotOf(previous);
     const here = selectFoldCursorNode(next).state;
+    if (offer && outgrown(offer.settled, here)) dropOffer();
     if (outgrown(pending, here) || outgrown(analysis, here)) {
       if (outgrown(pending, here)) dropPending();
       if (outgrown(analysis, here)) dropAnalysis();
@@ -493,6 +557,7 @@ export function createFoldSession({
   /** Forget every state, and everything folded from one: the engine lost them, or is being let go. */
   const forgetStates = () => {
     dropPending();
+    dropOffer();
     dropAnalysis();
     analyses.clear();
     answers.clear();
@@ -704,9 +769,9 @@ export function createFoldSession({
   const guarded = <T>(state: FoldEngineStateHandle, call: () => Promise<T>): Promise<T> =>
     state.generation === runtime.generation() ? call() : Promise.reject(foldStateLostError(state));
 
-  const applyStep = (worker: FoldSessionWorker, parent: FoldEngineStateHandle, parentId: string | null,
-    op: FoldEngineOp, choices?: FoldChoices) => {
-    if (op.kind !== 'unfold-to') return worker.apply(parent.id, op, choices);
+  /** An unfold back to an earlier step: the states it returns through are the replay's (`resolveFoldReturn`). */
+  const returnStep = (worker: FoldSessionWorker, parent: FoldEngineStateHandle, parentId: string | null,
+    op: Extract<FoldEngineOp, { kind: 'unfold-to' }>): Promise<FoldEngineOutcome<FoldStepFingerprinted>> => {
     const snapshot = store.getState();
     const dependency = snapshot.sequence
       ? resolveFoldReturn(snapshot.sequence, parentId, op, snapshot.sheet, snapshot.nodes)
@@ -717,6 +782,140 @@ export function createFoldSession({
       if (state.generation !== parent.generation) return Promise.reject(foldStateLostError(state));
     }
     return worker.returnTo(parent.id, dependency.target.id, dependency.history.map((s) => s.id));
+  };
+
+  /** A step folded for a commit, with the fingerprint the commit expects: one call. */
+  const foldStep = (worker: FoldSessionWorker, parent: FoldEngineStateHandle, parentId: string | null,
+    op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineOutcome<FoldStepFingerprinted>> =>
+    op.kind === 'unfold-to' ? returnStep(worker, parent, parentId, op) : worker.step(parent.id, op, choices);
+
+  /**
+   * A step folded for a preview, in one turn of the engine: what the preview
+   * shows of it is read with it (`previewStep`). An unfold answers with its
+   * fingerprint as well, and nothing more.
+   */
+  const previewTurn = async (worker: FoldSessionWorker, parent: FoldEngineStateHandle, parentId: string | null,
+    op: FoldEngineOp, choices?: FoldChoices): Promise<{ previewed: FoldPreviewed; fingerprint?: FoldStateFingerprint }> => {
+    if (op.kind !== 'unfold-to') return { previewed: await worker.previewStep(parent.id, op, choices, LANDED_ONLY) };
+    const landed = await returnStep(worker, parent, parentId, op);
+    return {
+      previewed: { op, ...(choices ? { choices } : {}), landed },
+      ...(landed.status === 'ok' ? { fingerprint: landed.fingerprint } : {}),
+    };
+  };
+
+  const analysisKeyOf = (parent: FoldEngineStateHandle, op: FoldEngineOp, choices: FoldChoices | undefined) =>
+    `${parent.generation}:${parent.id}:${foldStepInputKey({ op, choices })}`;
+
+  /**
+   * What a preview's turn read of the parent — the fold's analysis and its
+   * picture — kept where the tool asks for them (`analyse`, `foldActionQuery`).
+   */
+  const keepParentAnswers = (parent: FoldEngineStateHandle, request: FoldStepRequest, previewed: FoldPreviewed) => {
+    const { op, choices } = request;
+    if (previewed.analysis && 'value' in previewed.analysis) {
+      const key = analysisKeyOf(parent, op, choices);
+      const value = previewed.analysis.value;
+      if (!analyses.has(key)) {
+        remember(
+          key,
+          value.status === 'ok'
+            ? { status: 'analysed', ...request, parent, analysis: value.analysis }
+            : { status: 'refused', ...request, parent, refused: value }
+        );
+      }
+    }
+    if (previewed.action && 'value' in previewed.action) {
+      answers.put(parent, foldActionQuery(op, choices) as FoldStateCall<unknown>, previewed.action.value);
+    }
+  };
+
+  /**
+   * A preview the engine answered, as the pending step shows it, with what
+   * its turn read kept for the surfaces that ask: the landed state's scene
+   * and step summary (`FOLD_SCENE_QUERY`, `FOLD_STEP_SUMMARY_QUERY`), and the
+   * parent's answers.
+   */
+  const settlePreviewed = (parent: FoldEngineStateHandle, request: FoldStepRequest, previewed: FoldPreviewed): FoldSettledPreview => {
+    keepParentAnswers(parent, request, previewed);
+    const { landed } = previewed;
+    if (landed.status !== 'ok') return { status: 'refused', request, parent, refused: landed };
+    const state = { generation: parent.generation, id: landed.state };
+    if (previewed.scene && 'value' in previewed.scene) {
+      answers.put(state, FOLD_SCENE_QUERY as FoldStateCall<unknown>, previewed.scene.value);
+    }
+    if (previewed.stepSummary && 'value' in previewed.stepSummary) {
+      answers.put(state, FOLD_STEP_SUMMARY_QUERY as FoldStateCall<unknown>, previewed.stepSummary.value);
+    }
+    return { status: 'landed', request, parent, state, ...foldStateDetailsOf(landed) };
+  };
+
+  /**
+   * Ask the landed pending step's fingerprint now, so a commit of it asks
+   * nothing; or keep the one its turn answered with. A failure is the
+   * commit's to meet, when it asks again.
+   */
+  const askFingerprint = (state: FoldEngineStateHandle, known?: FoldStateFingerprint) => {
+    const fingerprint = known
+      ? Promise.resolve(known)
+      : runtime.ask((worker) => guarded(state, () => worker.fingerprint(state.id))).catch(() => null);
+    pendingFingerprint = { state, fingerprint };
+  };
+
+  /** The step an order resolution folded, when it is this one from this parent: taken, so nothing releases it. */
+  const takeOffer = (parent: FoldEngineStateHandle, key: string): FoldSettledPreview | null => {
+    if (!offer || offer.key !== key || !sameFoldState(offer.settled.parent, parent)) return null;
+    const { settled } = offer;
+    offer = null;
+    return settled;
+  };
+
+  /** Keep the step an order resolution folded from `parent`, until the tool previews it. */
+  const keepOffer = (parent: FoldEngineStateHandle, previewed: FoldPreviewed) => {
+    // The engine that landed it is gone, and its states with it.
+    if (holders === 0 || parent.generation !== runtime.generation()) return;
+    const request = requestOf(previewed.op, previewed.choices);
+    const here = selectFoldCursorNode(store.getState()).state;
+    if (!sameFoldState(here, parent)) {
+      // The cursor moved meanwhile: nobody will preview it.
+      if (previewed.landed.status === 'ok') engine?.release({ generation: parent.generation, id: previewed.landed.state });
+      return;
+    }
+    dropOffer();
+    offer = { key: foldStepInputKey(request), settled: settlePreviewed(parent, request, previewed) };
+  };
+
+  const resolveOrders = async (
+    op: FoldEngineOp,
+    choices: FoldChoices | undefined,
+    query: FoldOrderQuery,
+    search?: FoldSearchTicket
+  ): Promise<FoldStateQuery<FoldEngineOutcome<FoldOrderSelection>>> => {
+    const parent = selectFoldCursorNode(store.getState()).state;
+    if (!parent) return unavailable('no-state');
+    // The step is folded with the orders only where a preview of it could be.
+    const from = foldingFrom();
+    const wants = !('status' in from) && sameFoldState(from.parent, parent) ? foldPreviewWants(op) : null;
+    const answer = await withState(parent, (worker, at) => worker.resolveOrders(at, op, choices, query, search, wants));
+    if (answer.status !== 'answered') return answer;
+    const { selection, preview: previewed } = answer.value;
+    if (previewed) keepOffer(parent, previewed);
+    return { status: 'answered', value: selection };
+  };
+
+  const axiomRoots = async (
+    line: FoldAxiomLine,
+    hint: FoldRootSectionHint | null
+  ): Promise<FoldStateQuery<FoldEngineOutcome<FoldAxiomCandidates>>> => {
+    const parent = selectFoldCursorNode(store.getState()).state;
+    if (!parent) return unavailable('no-state');
+    const answer = await withState(parent, (worker, at) => worker.axiomRoots(at, line, hint));
+    if (answer.status !== 'answered') return answer;
+    // The layers at the root the tool takes, where it will ask for them.
+    for (const { line: at, side, section } of answer.value.sections) {
+      if ('value' in section) answers.put(parent, foldCrossSectionQuery(at, side) as FoldStateCall<unknown>, section.value);
+    }
+    return { status: 'answered', value: answer.value.candidates };
   };
 
   const preview = (op: FoldEngineOp, choices?: FoldChoices): Promise<FoldPreviewOutcome> => {
@@ -734,40 +933,40 @@ export function createFoldSession({
     choices: FoldChoices | undefined
   ): Promise<FoldPreviewOutcome> => {
     if ('status' in from) return Promise.resolve(from);
-    dropPending();
-    const ticket = pendingTicket;
     const { parent } = from;
     const request = requestOf(op, choices);
+    // Folded already, in the turn that resolved its orders: nothing to ask.
+    const offered = takeOffer(parent, foldStepInputKey(request));
+    dropPending();
+    if (offered) {
+      pending = { ...offered, request };
+      if (pending.status === 'landed') askFingerprint(pending.state);
+      render();
+      return Promise.resolve(pending);
+    }
+    const ticket = pendingTicket;
     pending = { status: 'working', request, parent };
     render();
     const answer = previewChannel
       .request(
-        (worker) => guarded(parent, () => applyStep(worker, parent, from.parentId, op, choices)),
+        (worker) => guarded(parent, () => previewTurn(worker, parent, from.parentId, op, choices)),
         // Superseded on its way back: nobody will see it.
-        (late) => {
+        ({ previewed: { landed: late } }) => {
           if (late.status === 'ok') engine?.release({ generation: parent.generation, id: late.state });
         }
       )
       .then(
         (result): FoldPreviewOutcome => {
           if (result.status === 'superseded') return SUPERSEDED;
-          const value = result.value;
+          const { previewed, fingerprint } = result.value;
           if (ticket !== pendingTicket) {
-            if (value.status === 'ok') engine?.release({ generation: parent.generation, id: value.state });
+            if (previewed.landed.status === 'ok') engine?.release({ generation: parent.generation, id: previewed.landed.state });
             return SUPERSEDED;
           }
-          const settled: FoldPreviewOutcome =
-            value.status === 'ok'
-              ? {
-                  status: 'landed',
-                  request,
-                  parent,
-                  state: { generation: parent.generation, id: value.state },
-                  ...foldStateDetailsOf(value),
-                }
-              : { status: 'refused', request, parent, refused: value };
+          const settled = settlePreviewed(parent, request, previewed);
           pending = settled;
           pendingAnswer = null;
+          if (settled.status === 'landed') askFingerprint(settled.state, fingerprint);
           render();
           return settled;
         },
@@ -810,7 +1009,7 @@ export function createFoldSession({
     dropAnalysis();
     const ticket = analysisTicket;
     const { parent } = from;
-    const key = `${parent.generation}:${parent.id}:${foldStepInputKey({ op, choices })}`;
+    const key = analysisKeyOf(parent, op, choices);
     const known = analyses.get(key);
     if (known) {
       analysis = known;
@@ -860,11 +1059,14 @@ export function createFoldSession({
     if (pendingNow().status === 'working' && isThis(pendingNow())) await pendingAnswer;
     const shown = pendingNow();
     let landed: { state: FoldEngineStateHandle; details: FoldStateDetails } | null = null;
+    /** The fingerprint already asked for: the preview's, or the fold's own answer's. */
+    let known: Promise<FoldStateFingerprint | null> | null = null;
     if (shown.status === 'landed' && isThis(shown)) {
       // Taken, not released: the commit hands it to the replay. It stays on
       // screen meanwhile, so nothing goes back to the step it folds from.
       landed = { state: shown.state, details: foldStateDetailsOf(shown) };
       taken = shown.state;
+      if (pendingFingerprint && sameFoldState(pendingFingerprint.state, shown.state)) known = pendingFingerprint.fingerprint;
     } else if (shown.status === 'refused' && isThis(shown)) {
       return { status: 'refused', refused: shown.refused };
     }
@@ -872,7 +1074,7 @@ export function createFoldSession({
     let fingerprint: FoldStateFingerprint;
     try {
       if (!landed) {
-        const answer = await runtime.ask((worker) => guarded(parent, () => applyStep(worker, parent, parentId, op, choices)));
+        const answer = await runtime.ask((worker) => guarded(parent, () => foldStep(worker, parent, parentId, op, choices)));
         if (answer.status !== 'ok') {
           // Shown as a preview's refusal is, with its fixes.
           dropPending();
@@ -884,9 +1086,11 @@ export function createFoldSession({
           state: { generation: parent.generation, id: answer.state },
           details: foldStateDetailsOf(answer),
         };
+        known = Promise.resolve(answer.fingerprint);
       }
       const { state } = landed;
-      fingerprint = await runtime.ask((worker) => guarded(state, () => worker.fingerprint(state.id)));
+      fingerprint =
+        (await known) ?? (await runtime.ask((worker) => guarded(state, () => worker.fingerprint(state.id))));
     } catch (failure) {
       if (landed) letGo(landed.state);
       const envelope = envelopeOf(failure);
@@ -1053,6 +1257,8 @@ export function createFoldSession({
 
     analyse,
     preview,
+    resolveOrders,
+    axiomRoots,
 
     async commitStep(op, choices) {
       if (committing) return unavailable('busy');
@@ -1084,6 +1290,7 @@ export function createFoldSession({
 
     cancel() {
       dropPending();
+      dropOffer();
       dropAnalysis();
       render();
     },

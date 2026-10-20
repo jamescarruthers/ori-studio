@@ -18,6 +18,9 @@ import { initialFoldReaderState, withFoldCursor } from '../document/foldReaderSt
 import { createFoldSequence, SQUARE_PAPER, type FoldIdFactory } from '../document/foldSequenceDocument';
 import { appendFoldStep, type FoldStepDraft } from '../document/foldSequenceEdits';
 import type { FoldEngineCalls } from '../engine/foldEngineCalls';
+import type { FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
+import { previewStep, resolveOrdersWithPreview } from '../engine/foldEnginePreview';
+import { axiomRootsWithSections } from '../engine/foldEngineRoots';
 import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import type {
   FoldAnalysis,
@@ -289,6 +292,19 @@ function workerOver(calls: FoldEngineCalls, version: number): FoldSessionWorker 
     // An axiom's root is a choice: dropped, the engine refuses the analysis (`root_missing`), as the worker never does.
     analyse: async (state, op, choices) => calls.analyse(state, op, choices),
     apply: async (state, op, choices) => calls.apply(state, op, choices),
+    previewStep: async (state, op, choices, wants) => previewStep(calls, state, op, choices, wants),
+    axiomRoots: async (state, line, hint) => axiomRootsWithSections(calls, state, line, hint),
+    resolveOrders: async (state, op, choices, query, _search, wants) => {
+      const { orderSelection } = calls as Partial<FoldEngineCompoundCalls>;
+      return resolveOrdersWithPreview(
+        calls,
+        () => (orderSelection ? orderSelection(state, op, choices, query) : notFaked('orderSelection')),
+        state,
+        op,
+        choices,
+        wants
+      );
+    },
     step: async (state, op, choices) => calls.step(state, op, choices),
     returnTo: async (current, target, history) => calls.returnTo(current, target, history),
     summary: async (state) => calls.summary(state),

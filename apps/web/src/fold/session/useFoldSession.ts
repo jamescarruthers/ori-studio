@@ -43,6 +43,8 @@ export interface FoldSessionSurface {
   error: WasmErrorEnvelope | null;
   analyse: FoldSession['analyse'];
   preview: FoldSession['preview'];
+  resolveOrders: FoldSession['resolveOrders'];
+  axiomRoots: FoldSession['axiomRoots'];
   commitStep: FoldSession['commitStep'];
   cancel: FoldSession['cancel'];
   cancelSearch: FoldSession['cancelSearch'];
@@ -50,6 +52,7 @@ export interface FoldSessionSurface {
   withNode: FoldSession['withNode'];
   withCursor: FoldSession['withCursor'];
   query: FoldSession['query'];
+  peek: FoldSession['peek'];
   retry: FoldSession['retry'];
 }
 
@@ -83,6 +86,8 @@ export function useFoldSession({ retain = true }: UseFoldSessionOptions = {}): F
       error,
       analyse: session.analyse,
       preview: session.preview,
+      resolveOrders: session.resolveOrders,
+      axiomRoots: session.axiomRoots,
       commitStep: session.commitStep,
       cancel: session.cancel,
       cancelSearch: session.cancelSearch,
@@ -90,6 +95,7 @@ export function useFoldSession({ retain = true }: UseFoldSessionOptions = {}): F
       withNode: session.withNode,
       withCursor: session.withCursor,
       query: session.query,
+      peek: session.peek,
       retry: session.retry,
     }),
     [session, cursor, cursorId, readOnly, pending, analysis, error]

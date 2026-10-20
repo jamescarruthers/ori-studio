@@ -51,10 +51,10 @@ import {
   pointOnLine,
   polygonArea,
   polygonCentroid,
+  sceneLineOf,
   sideOf,
   toPair,
   toPoint,
-  transformLine,
 } from '../canvas/foldCanvasGeometry';
 import {
   pickRef,
@@ -346,7 +346,7 @@ export function locate(intent: FoldLocateIntent, index: FoldPickIndex): Located 
       line,
       // The engine's line and side are the model frame's; the view turns
       // both alike, so the side is the same sign against the scene's line.
-      sceneLine: transformLine(index.scene.view_transform, candidate.line),
+      sceneLine: sceneLineOf(index.scene.view_transform, candidate.line),
       implied: candidate.side === null ? null : candidate.side === 'positive' ? 1 : -1,
       choices: { root: candidate.line },
     };

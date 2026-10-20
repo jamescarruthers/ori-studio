@@ -26,7 +26,7 @@ import { locatePleatFirst } from './pleat/pleatStep';
  */
 import type { FoldModelLine } from '../document/foldSequenceDocument';
 import type { FoldAxiomCandidate, FoldCrossSection, FoldSide } from '../engine/foldEngineWire';
-import { invertIsometry, transformLine } from '../canvas/foldCanvasGeometry';
+import { modelLineOf } from '../canvas/foldCanvasGeometry';
 import type { FoldPickIndex } from '../canvas/foldPicking';
 import { topFlapOf } from './crossSection';
 import { isFoldKind, type FoldToolId } from './foldToolCatalog';
@@ -113,7 +113,7 @@ export function lineSectionProbe(
   return {
     key: lineSideKeyOf(sceneLine, movingSign),
     // The view turns the model's line and side alike: the side is the same sign against either.
-    line: transformLine(invertIsometry(index.scene.view_transform), sceneLine),
+    line: modelLineOf(index.scene.view_transform, sceneLine),
     side: movingSign === 1 ? 'positive' : 'negative',
   };
 }

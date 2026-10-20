@@ -539,8 +539,9 @@ describe('the Fold session: the step a tool folds', () => {
     expect(snapshot().pending.status).toBe('idle');
     await settle();
 
-    // Fingerprinted once, never folded again: the replay adopted the preview's state.
-    expect(engine().log).toEqual(['fingerprint']);
+    // Fingerprinted as the preview landed, never folded again: the commit asked
+    // the engine nothing, and the replay adopted the preview's state.
+    expect(engine().log).toEqual([]);
     expect(snapshot().cursor).toBe(committed.stepId);
     expect(cursor()).toMatchObject({ status: 'ok', state: preview.state, fingerprint: committed.fingerprint });
     expect(cursor().summary).toBe(preview.summary);
@@ -548,11 +549,18 @@ describe('the Fold session: the step a tool folds', () => {
   });
 
   it('keeps the preview on screen while it commits, then shows the step at its state at once', async () => {
-    const { session, runtime, snapshot, cursor } = setup();
+    const { session, runtime, snapshot, cursor, engine } = setup();
     session.retain();
     await settle();
+    // The fingerprint asked as the preview landed did not come: the commit asks it again.
+    const { fingerprint } = engine();
+    engine().fingerprint = () => {
+      throw { code: 'busy', message: 'not now' };
+    };
     const preview = await session.preview(valleyAt(0.9));
     if (preview.status !== 'landed') throw new Error(preview.status);
+    await settle();
+    engine().fingerprint = fingerprint;
 
     // The fingerprint is on its way: what the folder saw stays up.
     runtime.hold();
@@ -598,8 +606,8 @@ describe('the Fold session: the step a tool folds', () => {
       status: 'answered',
       value: preview.summary,
     });
-    // One summary for three asks; the commit asked only the fingerprint.
-    expect(engine().log).toEqual(['summary', 'fingerprint']);
+    // One summary for three asks; the commit asked nothing (the preview's fingerprint was in).
+    expect(engine().log).toEqual(['summary']);
   });
 
   it('folds a step it has no preview for, and committing where a step follows makes a branch', async () => {
@@ -610,7 +618,8 @@ describe('the Fold session: the step a tool folds', () => {
     const committed = await session.commitStep(valleyAt(0.6));
     if (committed.status !== 'committed') throw new Error(committed.status);
     await settle();
-    expect(engine().log).toEqual(['apply:valley@0.6', 'fingerprint']);
+    // Folded with its fingerprint, in one call.
+    expect(engine().log).toEqual(['step:valley@0.6']);
     expect(source.commits[0]).toMatchObject({ parent: 'a' });
     // a now has three children; the active path runs through the new one.
     expect(snapshot().activePath).toEqual(['a', committed.stepId]);

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { reportError } from '../../monitoring';
 import type { FoldAxiomCandidate, FoldCrossSection } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
+import { foldCrossSectionQuery } from '../session/foldStateQueries';
 import { FOLD_EVERY_LAYER, type FoldResolvedSeed, type FoldToolState } from '../tools/foldToolState';
 import { lineSectionProbe, seedForTool, topFlapSeed } from '../tools/topFlapSeed';
 import { reverseMaterialPoint, reverseMaterialSeed } from '../tools/reverse/reverseMaterialSeed';
@@ -44,7 +45,7 @@ export function useFoldLineSection(
   candidate: FoldAxiomCandidate | null,
   secondCandidate: FoldAxiomCandidate | null = null
 ): FoldLineSection {
-  const { withCursor } = session;
+  const { query, peek } = session;
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
   const { tool, lineMode, secondLineMode, picks, swapped, override } = tools;
@@ -53,11 +54,15 @@ export function useFoldLineSection(
     [index, tool, lineMode, secondLineMode, picks, swapped, override, candidate, secondCandidate]
   );
   const key = probe && stateKey ? `${stateKey}|${probe.key}` : null;
+  // A pure query on the state on screen: an axiom's roots may have brought
+  // its answer with them (`FoldSession.axiomRoots`), read here as it renders.
+  const sectionQuery = useMemo(() => (probe ? foldCrossSectionQuery(probe.line, probe.side) : null), [probe]);
+  const held = state && sectionQuery ? peek(state, sectionQuery) : null;
   const [answer, setAnswer] = useState<{ key: string; section: FoldCrossSection | null } | null>(null);
   useEffect(() => {
-    if (!probe || key === null || answer?.key === key) return undefined;
+    if (!state || !sectionQuery || key === null || answer?.key === key || held) return undefined;
     let current = true;
-    void withCursor((engine, at) => engine.crossSection(at, probe.line, probe.side)).then(
+    void query(state, sectionQuery).then(
       (reply) => {
         if (!current || reply.status !== 'answered') return;
         setAnswer({ key, section: reply.value.status === 'ok' ? reply.value.section : null });
@@ -73,9 +78,18 @@ export function useFoldLineSection(
     };
     // The probe is read through its key: an equal line and side must not ask again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [withCursor, key, answer?.key]);
+  }, [query, key, answer?.key, held]);
 
-  const own = answer && answer.key === key ? answer : null;
+  const heldValue = held?.value;
+  const own = useMemo(
+    () =>
+      key !== null && heldValue
+        ? { key, section: heldValue.status === 'ok' ? heldValue.section : null }
+        : answer && answer.key === key
+          ? answer
+          : null,
+    [key, heldValue, answer]
+  );
   const asked = seedForTool(tool, tools.seed);
   const material = reverseMaterialPoint(tools) ?? (index ? pleatMaterialPoint(tools, index) : null);
   const seed = useMemo<FoldResolvedSeed | null>(() => {
