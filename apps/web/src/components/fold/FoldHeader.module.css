@@ -42,6 +42,21 @@
 }
 
 /*
+ * Repeat, a verb the rail and the phone's tool sheet offer too: on the header
+ * only while the window leaves the row room for it beside the others. With
+ * the rail and the side pane at their default widths, the verbs and the tabs
+ * share one row from a 1300 px window without it, and from 1400 px with it;
+ * narrower, the row wraps under the tabs (the 720 px rule below), and Repeat
+ * would only make it wrap sooner.
+ */
+@media (max-width: 1399px) {
+  /* Scoped to the row, so it outranks the button's own display rather than tying with it. */
+  .actions > .wideOnly {
+    display: none;
+  }
+}
+
+/*
  * A pane too narrow for the tabs and the verbs together, short of a phone: the
  * tabs share a row of their own, then the verbs, wrapping within theirs rather
  * than off the pane's edge.

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LayoutGrid, Origami } from 'lucide-react';
 import type { SendToEditButtonModel } from '../../designKinds/sendToEditActions';
 import { foldCommand, type FoldAction, type FoldCommand } from '../../fold/foldActions';
+import { useFoldTools } from '../../fold/tools/foldToolState';
 import type { FoldView } from '../../fold/sequence/foldViewMode';
 import { stepCountLabel } from '../../fold/sequence/foldSequenceWords';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
@@ -15,12 +16,36 @@ import { WorkspaceTab, WorkspaceTabStrip } from '../ui/WorkspaceTabStrip';
 import { FoldActionIcon } from './FoldActionIcon';
 import styles from './FoldHeader.module.css';
 
-/** A catalog command as a header button: its icon, label and gating. */
-function CommandButton({ command }: { command: FoldCommand }) {
+/**
+ * A catalog command as a header button: its icon, label and gating. One that
+ * takes a tool in hand is shown pressed while that tool is (`active`), in the
+ * border and fill alone, so nothing beside it moves.
+ */
+function CommandButton({
+  command,
+  active,
+  label = command.label,
+  className,
+}: {
+  command: FoldCommand;
+  active?: boolean;
+  /** A shorter name than the menus give it, with the full one as its tooltip. */
+  label?: string;
+  className?: string;
+}) {
   return (
-    <Button size="sm" variant="secondary" disabled={command.disabled} title={command.hint} onClick={command.run}>
+    <Button
+      size="sm"
+      variant="secondary"
+      className={className}
+      disabled={command.disabled}
+      title={command.hint ?? (label === command.label ? undefined : command.label)}
+      isActive={active}
+      aria-pressed={active === undefined ? undefined : active}
+      onClick={command.run}
+    >
       <FoldActionIcon icon={command.icon} />
-      {command.label}
+      {label}
     </Button>
   );
 }
@@ -78,7 +103,8 @@ function phoneVerbGroups(
         ]
       : [commandRow(sendToEdit, false)];
   const groups: { id: string; items: (ViewportToolbarAction | null)[] }[] = [
-    { id: 'return', items: [commandRow(foldCommand(actions, 'unfold-to'), false), commandRow(foldCommand(actions, 'repeat'), false)] },
+    // Repeat is the wide header's alone: on a phone the tool sheet beside this menu offers it.
+    { id: 'return', items: [commandRow(foldCommand(actions, 'unfold-to'), false)] },
     { id: 'in', items: [commandRow(foldCommand(actions, 'import-cp'), true)] },
     { id: 'send', items: send },
     {
@@ -94,9 +120,11 @@ function phoneVerbGroups(
 /**
  * The Fold workspace's header (plan D14, shot-0): the canvas and the Steps
  * grid as two tabs with the count of steps, then the verbs that act on the
- * whole sequence — Import CP, Send to Edit, and the exports — as the action
- * catalog words and gates them (`fold/foldActions`), so they read here as they
- * do in the menus.
+ * whole sequence — Unfold to step and Repeat, which take their tools in hand
+ * and show pressed while they are; Import CP, Send to Edit, and the exports —
+ * as the action catalog words and gates them (`fold/foldActions`), so they
+ * read here as they do in the menus. Repeat is left to the rail where the
+ * header is narrow (`wideOnly`).
  *
  * Send to Edit is the design kinds' split button when `sendToEdit` is given
  * (its variants behind the caret), and the catalog's plain button otherwise.
@@ -108,7 +136,8 @@ function phoneVerbGroups(
  * icons alone, the count left to the strip's numbers, and the verbs in one
  * `⋯` menu — so the paper keeps the height; the canvas's own pills (its tools,
  * the pane switch) are on the canvas's bar. Presentation only: the view, the
- * verbs and every call are props.
+ * verbs and every call are props, and the tool in hand is read to show its
+ * button pressed.
  */
 export function FoldHeader({
   view,
@@ -136,6 +165,9 @@ export function FoldHeader({
   const { t } = useTranslation();
   const phone = useIsPhoneLayout();
   const unfold = foldCommand(actions, 'unfold-to');
+  const repeat = foldCommand(actions, 'repeat');
+  // Unfold to step and Repeat take their tools in hand: pressed while they are.
+  const tool = useFoldTools((state) => state.tool);
   const importCp = foldCommand(actions, 'import-cp');
   const sendToEdit = foldCommand(actions, 'send-to-edit');
   const exportFold = foldCommand(actions, 'export-fold');
@@ -178,7 +210,15 @@ export function FoldHeader({
           />
         ) : (
           <>
-            {unfold && <CommandButton command={unfold} />}
+            {unfold && <CommandButton command={unfold} active={tool === 'unfold-to'} />}
+            {repeat && (
+              <CommandButton
+                command={repeat}
+                active={tool === 'repeat'}
+                label={t('panels:fold.repeat.label', 'Repeat')}
+                className={styles.wideOnly}
+              />
+            )}
             {importCp && <CommandButton command={importCp} />}
             {sendToEdit &&
               (sendToEditButton ? (
