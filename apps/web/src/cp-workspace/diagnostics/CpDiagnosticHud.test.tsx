@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   OristudioCpCommandResult,
   OristudioCpDiagnosticEntry,
@@ -24,10 +24,23 @@ if (!globalThis.ResizeObserver) {
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
+// A scroll arms the virtualizer's 150 ms "scrolling ended" timer, which
+// unmounting does not cancel before virtual-core 3.17.8. Under Vitest it is a
+// Node timer, so a test that scrolls within 150 ms of the file ending leaves it
+// to fire after jsdom is gone, where React throws "window is not defined" into
+// the run. Faked, it is drained below while the HUD is still mounted.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+});
+
 afterEach(() => {
+  act(() => {
+    vi.runOnlyPendingTimers();
+  });
   act(() => {
     root?.unmount();
   });
+  vi.useRealTimers();
   root = null;
   container?.remove();
   container = null;
