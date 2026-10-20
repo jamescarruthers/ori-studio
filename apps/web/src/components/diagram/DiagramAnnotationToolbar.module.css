@@ -1,0 +1,16 @@
+/* The selected mark's verbs (DiagramAnnotationToolbar.tsx): flips, then words. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2) var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--space-1);
+  background: var(--border-default);
+}

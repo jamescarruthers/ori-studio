@@ -7,7 +7,6 @@ import {
   Lock,
   PenLine,
   PenTool,
-  Pin,
   Rotate3d,
   RotateCcwSquare,
   RotateCw,
@@ -222,11 +221,6 @@ export const DiagramStepCard = forwardRef<
                   ? t('panels:diagram.card.enlarged', 'Enlarged')
                   : t('panels:diagram.card.enlargedFrom', 'Enlarged · {{number}}', { number: enlargedFrom })}
               </span>
-            </span>
-          )}
-          {(step.place || step.placeNewer) && (
-            <span className={styles.placed} title={t('panels:diagram.placement.placed', 'Placed by hand')} data-placed-badge="">
-              <Pin size={12} aria-label={t('panels:diagram.placement.placed', 'Placed by hand')} />
             </span>
           )}
           {linked && (

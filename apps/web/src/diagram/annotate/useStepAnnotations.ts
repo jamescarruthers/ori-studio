@@ -23,7 +23,7 @@ import {
   type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { EDIT_PATH } from './annotateTools';
-import { buildAnnotationActions, type AnnotationEdit } from './annotationActions';
+import { annotationActionEdit, buildAnnotationActions, type AnnotationEdit } from './annotationActions';
 import { annotationEventColor, annotationEventKind, starFillName, textSizeName, textToggleName } from './annotationEventKind';
 import {
   hasTicks,
@@ -127,6 +127,14 @@ export function useStepAnnotations(step: DiagramStep | null) {
        * A row of the list, pressed: its annotation selected, with Select in
        * hand to move it — or Edit Path kept, to shape it.
        */
+      /**
+       * A row's own Delete (Zach, 2026-10-18): the catalog's Delete, made on
+       * any mark — the selection left alone unless it is the mark deleted.
+       */
+      remove: (id: string) => {
+        const { select, ...edit } = annotationActionEdit('delete', id);
+        apply(store().diagramSelectedAnnotationId === id ? { ...edit, select } : edit);
+      },
       select: (id: string | null) => {
         store().selectDiagramAnnotation(id);
         if (id !== null && store().diagramAnnotateTool !== EDIT_PATH) store().setDiagramAnnotateTool(null);

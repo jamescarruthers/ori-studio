@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlipHorizontal2, FlipVertical2, RotateCcw, RotateCwSquare, Trash2, type LucideIcon } from 'lucide-react';
-import type { AnnotationAction, AnnotationActionId } from '../../diagram/annotate/annotationActions';
+import type { AnnotationAction } from '../../diagram/annotate/annotationActions';
 import { annotationLabel, lineTypeLabel } from '../../diagram/annotate/annotateTools';
 import { DIAGRAM_LINE_TYPES, lineTypeOf, type DiagramLineType } from '../../diagram/annotate/lineTypes';
 import { annotationInkColor } from '../../diagram/annotate/annotationPrimitives';
@@ -19,9 +18,10 @@ import {
   PLEAT_KINKS,
   pleatKinks,
 } from '../../diagram/annotate/annotationModel';
+import { layerNames } from '../../diagram/annotate/layerNames';
 import { useFieldFocusRequest } from '../../diagram/annotate/useFieldFocusRequest';
 import { useStepAnnotations } from '../../diagram/annotate/useStepAnnotations';
-import { DEFAULT_DIAGRAM_STYLE, type DiagramStep, type KnownDiagramAnnotation } from '../../diagram/document/diagramDocument';
+import { DEFAULT_DIAGRAM_STYLE, stepNumber, type DiagramStep, type KnownDiagramAnnotation } from '../../diagram/document/diagramDocument';
 import { marksTouchingWindow, viewOfStep } from '../../diagram/zoom/stepView';
 import { useAreaSubtitle } from '../../diagram/zoom/useZoomControls';
 import { areaStatus } from '../../diagram/zoom/areaStatus';
@@ -30,18 +30,18 @@ import { ZOOM_FRAME_ID, zoomShapeOf } from '../../diagram/zoom/zoomModel';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { shortcutLabelForAction } from '../../keyboard/shortcuts';
 import { useShortcutResolution } from '../../store/shortcutStore';
-import { Button } from '../ui/Button';
-import { IconButton } from '../ui/IconButton';
 import { FieldRow, NumberRow, SegmentedRow, TextAreaRow } from '../ui/fieldRows';
 import { Notice } from '../ui/Notice';
 import { SegmentedControl } from '../ui/SegmentedControl';
-import { Badge } from '../ui/Badge';
 import { DiagramAnnotationGlyph, EnlargeGlyph, SolidArrowGlyph } from './DiagramAnnotateToolGlyph';
+import { DiagramAnnotationIconVerb, DiagramAnnotationToolbar } from './DiagramAnnotationToolbar';
 import { DiagramBehindControls } from './DiagramBehindControls';
 import { DiagramCardMarksNotice } from './DiagramCardMarksNotice';
 import { DiagramColorSelect } from './DiagramColorSelect';
 import { DiagramDivisionsControls } from './DiagramDivisionsControls';
-import { DiagramLayerControls, DiagramLayerList, DiagramLayerRow } from './DiagramLayerList';
+import { DiagramInspectorHeader } from './DiagramInspectorHeader';
+import { DiagramLayerList, DiagramLayerRow, DiagramLayersHeader } from './DiagramLayerList';
+import { DiagramLayersSplit } from './DiagramLayersSplit';
 import { DiagramLineTypeMark } from './DiagramLineTypeMark';
 import { DiagramPathNodeControls } from './DiagramPathNodeControls';
 import { DiagramTextStyleRows } from './DiagramTextStyleRows';
@@ -55,42 +55,33 @@ import { DiagramZoomControls } from './DiagramZoomControls';
 import { DiagramXRayControls } from './DiagramXRayControls';
 import styles from './DiagramLayers.module.css';
 
-/** The icon of each of the catalog's verbs the annotation row shows (`annotationActions.ts`). */
-const ACTION_ICONS: Readonly<Partial<Record<AnnotationActionId, LucideIcon>>> = {
-  'flip-horizontal': FlipHorizontal2,
-  'flip-vertical': FlipVertical2,
-  'flip-arc': FlipVertical2,
-  'reset-path': RotateCcw,
-  'turn-right-angle': RotateCwSquare,
-  delete: Trash2,
-};
-
 /**
- * The Layers pane's body (Zach, 2026-10-05): what is drawn on the step open in
- * Annotate, and the selected one's own controls — on a References step whose
- * card's marks are still part of its picture, which the list cannot show,
- * Annotate's notice that says so, with Make Editable (17e); a notice when some were made
- * by a newer Ori Studio, which the list leaves out; the list, in the order they
- * were drawn, a press selecting one as a press on the canvas does; and under
- * it the selected one's text, turn, type, a solid line's or a label's colour (17a, 17b), a label's
- * Bold, Halo and Size (17b), ticks, equal divisions' parts,
- * offset, ticks and count, kinks, scale, white arrow look, place in the
- * folds, axis, Flip Horizontal and Vertical, its verbs
- * (Flip Arc, Reset, Turn 90°, Delete), and in Edit Path a fold or white
- * arrow's node verbs. The Snap switch and the notice that the picture changed
- * stay in the Step pane, with the step (`DiagramStepAnnotations`).
+ * The Layers pane's body (Zach, 2026-10-05; redesign, 2026-10-18): what is
+ * drawn on the step open in Annotate and the selected one's inspector, in two
+ * regions (`DiagramLayersSplit`).
  *
- * An enlarged step's frame is its first row (Revision 2): selected, its
- * controls (`DiagramZoomControls`); an x-ray's, its Depth and Anchor
- * (`DiagramXRayControls`, Revision 3); a mark lying wholly outside its window,
- * which it keeps but sizes nothing by — and far off it, no longer draws — is
- * badged so. An enlarge area's row says which steps were enlarged from it.
+ * Over the list, the step and how many marks it holds; on a References step
+ * whose card's marks are still part of its picture, which the list cannot
+ * show, Annotate's notice that says so, with Make Editable (17e); and a notice
+ * when some were made by a newer Ori Studio, which the list leaves out. The
+ * list, one line a mark in the order they were drawn, a kind drawn twice
+ * numbered (`layerNames`); a press selects one as a press on the canvas does.
+ * An enlarged step's frame is its first row (Revision 2); a mark lying wholly
+ * outside its window, which it keeps but sizes nothing by — and far off it, no
+ * longer draws — is greyed; an enlarge area's row says which steps were
+ * enlarged from it.
+ *
+ * Under the separator, the selection's inspector: the frame's controls
+ * (`DiagramZoomControls`), or a mark's (`SelectedAnnotation`). The Snap switch
+ * and the notice that the picture changed stay in the Step pane, with the
+ * step (`DiagramStepAnnotations`).
  */
 export function DiagramLayers({ step }: { step: DiagramStep }) {
   const { t } = useTranslation();
   const annotations = useStepAnnotations(step);
   const { known, selected, editable } = annotations;
   const selectedId = useWorkspaceStore((state) => state.diagramSelectedAnnotationId);
+  const number = useWorkspaceStore((state) => (state.diagram ? stepNumber(state.diagram, step.id) : null));
   const view = useMemo(() => viewOfStep(step), [step]);
   const frame = view.zoom;
   // The marks an enlarged step keeps but is not sized by: wholly outside its window (Zach, 2026-10-07).
@@ -99,10 +90,39 @@ export function DiagramLayers({ step }: { step: DiagramStep }) {
     const touching = new Set(marksTouchingWindow(view.window, step.annotations).map((mark) => mark.id));
     return new Set(step.annotations.filter((mark) => !touching.has(mark.id)).map((mark) => mark.id));
   }, [view.window, step.annotations]);
+  const names = useMemo(
+    () =>
+      layerNames(
+        known,
+        (index) => {
+          const annotation = known[index]!;
+          return carriesText(annotation.kind) && annotation.text
+            ? { name: annotation.text, generic: false }
+            : { name: annotationLabel(t, annotation), generic: true };
+        },
+        (name, count) => t('panels:diagram.layers.numbered', '{{name}} {{number}}', { name, number: count })
+      ),
+    [known, t]
+  );
   const frameSelected = frame !== null && selectedId === ZOOM_FRAME_ID;
+  const stepName = t('panels:diagram.pages.step', 'Step {{number}}', { number: number ?? '' });
+  const instruction = step.text.trim();
+  const place = instruction
+    ? t('panels:diagram.layers.markPlace', '{{step}} · {{text}}', { step: stepName, text: instruction })
+    : stepName;
 
-  return (
-    <div className={styles.layers}>
+  const header = (
+    <DiagramLayersHeader
+      title={stepName}
+      count={t('panels:diagram.layers.markCount', {
+        count: known.length + (frame ? 1 : 0),
+        defaultValue_one: '{{count}} mark',
+        defaultValue_other: '{{count}} marks',
+      })}
+    />
+  );
+  const list = (
+    <>
       {annotations.cardMarks && (
         <div className={styles.notice}>
           <DiagramCardMarksNotice
@@ -135,29 +155,41 @@ export function DiagramLayers({ step }: { step: DiagramStep }) {
           <li key={annotation.id}>
             <AnnotationRow
               annotation={annotation}
+              name={names.get(annotation.id) ?? annotationLabel(t, annotation)}
               selected={annotation.id === selected?.id}
               outside={outside?.has(annotation.id) ?? false}
               onSelect={annotations.select}
+              onRemove={editable ? annotations.remove : null}
             />
           </li>
         ))}
       </DiagramLayerList>
-      {frameSelected && (
-        <DiagramLayerControls>
-          <DiagramZoomControls step={step} target={FRAME_TARGET} />
-        </DiagramLayerControls>
-      )}
-      {selected && <SelectedAnnotation step={step} annotation={selected} editable={editable} annotations={annotations} />}
-    </div>
+    </>
   );
+  const inspector = frameSelected ? (
+    <>
+      <DiagramInspectorHeader title={t('panels:diagram.annotations.enlargedFrame', 'Enlarged frame')} detail={place} />
+      <DiagramZoomControls step={step} target={FRAME_TARGET} />
+    </>
+  ) : selected ? (
+    <SelectedAnnotation
+      step={step}
+      annotation={selected}
+      name={names.get(selected.id) ?? annotationLabel(t, selected)}
+      place={place}
+      editable={editable}
+      annotations={annotations}
+    />
+  ) : null;
+  return <DiagramLayersSplit header={header} list={list} inspector={inspector} />;
 }
 
 const FRAME_TARGET = { kind: 'frame' } as const;
 
 /**
  * An enlarged step's frame, as the first row of its list (Revision 2, Z10):
- * "Enlarged frame", and where it came from. Pressed, it selects the frame, as
- * a click on its boundary on the canvas does.
+ * "Enlarged frame", and after it where it came from. Pressed, it selects the
+ * frame, as a click on its boundary on the canvas does.
  */
 function FrameRow({
   step,
@@ -189,20 +221,26 @@ function FrameRow({
 const FRAME_ROW = { 'data-zoom-frame-row': '' } as const;
 
 /**
- * A mark's row: its glyph, its text or its kind, and under it — for an
- * enlarge area — which steps were enlarged from it, and a badge when it lies
- * wholly outside an enlarged step's frame. Pressed again, it lets the mark go.
+ * A mark's row: its glyph, its name, and after it — for an enlarge area —
+ * which steps were enlarged from it; greyed, saying why on hover, when it
+ * lies wholly outside an enlarged step's frame; and at its end its own
+ * Delete. Pressed again, it lets the mark go.
  */
 function AnnotationRow({
   annotation,
+  name,
   selected,
   outside,
   onSelect,
+  onRemove,
 }: {
   annotation: KnownDiagramAnnotation;
+  name: string;
   selected: boolean;
   outside: boolean;
   onSelect: (id: string | null) => void;
+  /** Its own Delete; null where the step's marks cannot change. */
+  onRemove: ((id: string) => void) | null;
 }) {
   const { t } = useTranslation();
   const subtitle = useAreaSubtitle(annotation.kind === 'zoom' ? annotation : null);
@@ -217,26 +255,46 @@ function AnnotationRow({
           <DiagramAnnotationGlyph kind={annotation.kind} color={annotation.color} fill={annotation.fill} />
         )
       }
-      name={carriesText(annotation.kind) && annotation.text ? annotation.text : annotationLabel(t, annotation)}
+      name={name}
       note={subtitle || null}
-      badge={
-        outside ? <Badge tone="neutral">{t('panels:diagram.annotations.outsideFrame', 'Outside the enlarged frame')}</Badge> : null
+      dimmed={outside}
+      title={outside ? t('panels:diagram.annotations.outsideFrame', 'Outside the enlarged frame') : undefined}
+      remove={
+        onRemove
+          ? {
+              label: t('panels:diagram.layers.deleteMark', 'Delete {{name}}', { name }),
+              onRemove: () => onRemove(annotation.id),
+            }
+          : undefined
       }
       pressed={selected}
       onPress={() => onSelect(selected ? null : annotation.id)}
+      data={outside ? OUTSIDE_ROW : undefined}
     />
   );
 }
 
-/** The selected annotation's own controls, by its kind, and Delete. */
+const OUTSIDE_ROW = { 'data-outside-frame': '' } as const;
+
+/**
+ * The selected annotation's inspector: its name over its step, its verbs
+ * (`DiagramAnnotationToolbar`), Edit Path's node verbs, its own controls by
+ * its kind, and its place in the folds.
+ */
 function SelectedAnnotation({
   step,
   annotation,
+  name,
+  place,
   editable,
   annotations,
 }: {
   step: DiagramStep;
   annotation: KnownDiagramAnnotation;
+  /** Its name in the list: numbered among marks of its kind. */
+  name: string;
+  /** Its step, and the step's instruction. */
+  place: string;
   editable: boolean;
   annotations: ReturnType<typeof useStepAnnotations>;
 }) {
@@ -251,7 +309,8 @@ function SelectedAnnotation({
     return key ? `${label} (${key})` : label;
   };
   const nodeActions = annotations.actions.filter((action) => action.group === 'node');
-  const flipActions = annotations.actions.filter((action) => action.group === 'flip');
+  // Delete beside the mark's name, so a mark with no other verb takes no line for them (Zach, 2026-10-18).
+  const remove = annotations.actions.find((action) => action.id === 'delete');
   // A star's turn, and its Rotation row: a mark with a transform box (Revision 3).
   const boxed = boxedMarkOf(annotation);
   const lineType = lineTypeOf(annotation.kind);
@@ -260,7 +319,17 @@ function SelectedAnnotation({
   const style = useWorkspaceStore((state) => state.diagram?.style ?? DEFAULT_DIAGRAM_STYLE);
 
   return (
-    <DiagramLayerControls>
+    <>
+      <DiagramInspectorHeader
+        title={name}
+        detail={place}
+        action={remove ? <DiagramAnnotationIconVerb action={remove} keyed={keyed} /> : null}
+      />
+      <DiagramAnnotationToolbar
+        label={name}
+        actions={annotations.actions.filter((action) => action.group !== 'node' && action.id !== 'delete')}
+        keyed={keyed}
+      />
       {nodeActions.length > 0 && (
         <DiagramPathNodeControls
           actions={nodeActions}
@@ -436,55 +505,6 @@ function SelectedAnnotation({
           onChange={(axis) => annotations.setAxis(id, axis as 'vertical' | 'horizontal')}
         />
       )}
-      {flipActions.length > 0 && (
-        // Two mirrors, side by side however narrow the pane: each named in full by its tooltip.
-        <FieldRow label={t('panels:diagram.annotations.flipRow', 'Flip')} kind="text">
-          <span className={styles.verbs}>
-            {flipActions.map((action) => {
-              const Icon = ACTION_ICONS[action.id]!;
-              return (
-                <IconButton
-                  key={action.id}
-                  size="sm"
-                  title={keyed(action)}
-                  aria-label={action.label}
-                  aria-disabled={action.disabled || undefined}
-                  onClick={() => {
-                    if (!action.disabled) action.run();
-                  }}
-                >
-                  <Icon size={14} aria-hidden="true" />
-                </IconButton>
-              );
-            })}
-          </span>
-        </FieldRow>
-      )}
-      <FieldRow label={annotationLabel(t, annotation)} kind="text">
-        <span className={styles.verbs}>
-          {annotations.actions
-            .filter((action) => action.group === 'annotation')
-            .map((action) => {
-              const Icon = ACTION_ICONS[action.id];
-              return (
-                <Button
-                  key={action.id}
-                  size="sm"
-                  variant="ghost"
-                  // Refusing keeps the focus: Reset Shape refuses once it has run.
-                  aria-disabled={action.disabled || undefined}
-                  title={keyed(action)}
-                  onClick={() => {
-                    if (!action.disabled) action.run();
-                  }}
-                >
-                  {Icon && <Icon size={14} aria-hidden="true" />}
-                  {action.label}
-                </Button>
-              );
-            })}
-        </span>
-      </FieldRow>
-    </DiagramLayerControls>
+    </>
   );
 }

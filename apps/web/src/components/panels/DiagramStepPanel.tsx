@@ -18,22 +18,15 @@ import { DiagramPatternPicker } from '../diagram/DiagramPatternPicker';
 import { DiagramStepAnnotations } from '../diagram/DiagramStepAnnotations';
 import { DiagramStepEnlarged } from '../diagram/DiagramStepEnlarged';
 import { DiagramStepHeader } from '../diagram/DiagramStepHeader';
+import { DiagramStepInstruction } from '../diagram/DiagramStepInstruction';
 import { DiagramStepPicture } from '../diagram/DiagramStepPicture';
 import { DiagramStepPose } from '../diagram/DiagramStepPose';
 import { DiagramStepShowAs } from '../diagram/DiagramStepShowAs';
 import { DiagramStepZoomStatus } from '../diagram/DiagramStepZoomStatus';
 import { DiagramTurnPane } from '../diagram/DiagramTurnPane';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
-import { TextAreaRow } from '../ui/fieldRows';
 import { Notice } from '../ui/Notice';
 import styles from './DiagramStepPanel.module.css';
-
-/**
- * Longest instruction the field takes. A guard against a paste of something
- * that was never an instruction, not a format rule: a page shows five lines of
- * one, and a longer one is cut there with a notice (Phase 5).
- */
-const INSTRUCTION_MAX_LENGTH = 1000;
 
 const NO_NOTICES: readonly SanitizeNotice[] = [];
 
@@ -73,8 +66,6 @@ export function DiagramStepPanel() {
   const entryCount = useWorkspaceStore((state) => state.diagram?.steps.length ?? 0);
   const turn = useDiagramTurn(stepId);
   const readOnly = useWorkspaceStore((state) => state.diagramReadOnly);
-  const loadId = useWorkspaceStore((state) => state.diagramLoadId);
-  const setStepText = useWorkspaceStore((state) => state.setDiagramStepText);
   const moveStep = useWorkspaceStore((state) => state.moveDiagramStep);
   const selectStep = useWorkspaceStore((state) => state.selectDiagramStep);
   const asset = useWorkspaceStore((state) =>
@@ -197,20 +188,7 @@ export function DiagramStepPanel() {
             <DiagramStepAnnotations step={step} />
           </CollapsibleSection>
         )}
-        <CollapsibleSection title={t('panels:diagram.stepPane.instruction', 'Instruction')}>
-          <TextAreaRow
-            // One field per step: a draft never carries over to the next one.
-            key={step.id}
-            label={t('panels:diagram.stepPane.instructionLabel', 'Instruction')}
-            labelHidden
-            value={step.text}
-            placeholder={t('panels:diagram.stepPane.instructionPlaceholder', 'Describe this step…')}
-            rows={4}
-            maxLength={INSTRUCTION_MAX_LENGTH}
-            disabled={readOnly || locked}
-            onCommit={(text, session) => setStepText(step.id, text, { loadId, session })}
-          />
-        </CollapsibleSection>
+        <DiagramStepInstruction step={step} />
       </div>
     </section>
   );

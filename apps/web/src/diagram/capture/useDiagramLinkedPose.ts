@@ -111,7 +111,10 @@ export interface DiagramLinkedPose {
  * the Step pane (`openLinkedPose.ts`), so the pane's verbs are this
  * controller's.
  */
-export function useDiagramLinkedPose(step: DiagramStep | null): DiagramLinkedPose | null {
+export function useDiagramLinkedPose(
+  step: DiagramStep | null,
+  { live = true }: { live?: boolean } = {}
+): DiagramLinkedPose | null {
   const { t } = useTranslation();
   const source = step && !step.unknown && step.source?.kind === 'cp' ? step.source : null;
   const stepId = source ? step!.id : null;
@@ -154,12 +157,14 @@ export function useDiagramLinkedPose(step: DiagramStep | null): DiagramLinkedPos
     };
   }, [controller]);
 
-  // A step shown in 3D: fold it for the live view as its detail opens.
+  // A step shown in 3D: fold it for the live view as its detail opens — not
+  // for a step only selected on the pages (`live` false), whose verbs fold it
+  // when one runs.
   const showsSpatial = source?.render.mode === 'folded-3d';
   const view = showsSpatial && spatial !== null && spatial.key === foldKey ? spatial.view : null;
   useEffect(() => {
-    if (controller && showsSpatial && !view) void controller.prepareSpatial();
-  }, [controller, showsSpatial, view]);
+    if (controller && live && showsSpatial && !view) void controller.prepareSpatial();
+  }, [controller, live, showsSpatial, view]);
 
   const storedCamera = source?.render.mode === 'folded-3d' ? source.render.camera : null;
   const onCamera = useCallback(

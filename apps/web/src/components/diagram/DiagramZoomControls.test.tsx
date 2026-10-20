@@ -94,7 +94,8 @@ function crane({ readOnly = false } = {}) {
 }
 
 const area = (stepId: string) => stepById(state().diagram!, stepId)!.annotations[0] as KnownDiagramAnnotation;
-const rows = () => [...(host?.querySelectorAll<HTMLButtonElement>('ul button') ?? [])];
+/** The rows' own buttons: what a press on a row presses, its Delete aside. */
+const rows = () => [...(host?.querySelectorAll<HTMLButtonElement>('ul button[aria-pressed]') ?? [])];
 const buttonNamed = (name: string) =>
   [...(host?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((candidate) => candidate.textContent?.trim() === name)!;
 const labelled = (label: string) => host?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`) ?? null;
@@ -328,20 +329,21 @@ describe('an enlarged step’s frame in Layers', () => {
     expect(tracked.trackDiagramEnlargementChanged.mock.calls.at(-1)).toEqual(['frame', 'size', 'fixed', 1.25]);
   });
 
-  it('badges a mark lying wholly outside its window, which sizes nothing, drawn just off it or not drawn far off', async () => {
+  it('greys a mark lying wholly outside its window, which sizes nothing, drawn just off it or not drawn far off', async () => {
     await enlarged();
     act(() =>
       state().editDiagramAnnotations('step-2', 'Add annotation', () => [
         { id: 'near', kind: 'valley-line', from: [0.2, 0.5], to: [0.8, 0.5] },
-        // Reaching out of the window: in it, so not badged.
+        // Reaching out of the window: in it, so not greyed.
         { id: 'across', kind: 'valley-line', from: [0.5, 0.2], to: [0.5, 3] },
-        // Off it, within a window of it: still drawn, but badged (Zach, 2026-10-07).
+        // Off it, within a window of it: still drawn, but greyed, and saying why on hover (Zach, 2026-10-07; 2026-10-18).
         { id: 'beside', kind: 'valley-line', from: [1.3, 0.5], to: [1.6, 0.5] },
         { id: 'far', kind: 'valley-line', from: [5, 0.5], to: [5.5, 0.5] },
       ])
     );
-    const badged = rows().filter((row) => row.textContent?.includes('Outside the enlarged frame'));
-    expect(badged).toHaveLength(2);
+    const greyed = rows().filter((row) => row.closest('[data-dimmed]'));
+    expect(greyed).toHaveLength(2);
+    expect(greyed.map((row) => row.title)).toEqual(['Outside the enlarged frame', 'Outside the enlarged frame']);
     expect(rows()).toHaveLength(5);
   });
 });

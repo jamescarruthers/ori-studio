@@ -1,0 +1,5 @@
+/* The placed-by-hand dot (DiagramPlacedMark.tsx): its own box, centred on the line it sits in. */
+.mark {
+  display: inline-flex;
+  align-items: center;
+}

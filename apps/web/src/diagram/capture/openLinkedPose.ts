@@ -1,6 +1,7 @@
 /**
  * The open step's linked Pose, passed on to the surfaces beside the step
- * detail that offer its verbs too — the Step pane in Pose (D13).
+ * detail that offer its verbs too — the Step pane in Pose (D13). With no
+ * detail open, the Pages view's selected step's, for its Layers pane.
  *
  * There is one pose controller per open step, and it holds the fold between
  * verbs (`useDiagramLinkedPose`, owned by the Diagram panel, which draws the
