@@ -10,7 +10,11 @@ export interface FoldCanvasInks {
   /** A refused fold's faces. */
   danger: Rgba;
   overlay: FoldOverlayInks;
-  /** The canvas's ground, as a CSS colour: what a mark off the paper is inked against. */
+  /**
+   * The canvas's ground, as `#rrggbb`: what a mark off the paper is inked
+   * against. Hex, because the ground ink's contrast test (`wcagContrast`)
+   * reads only hex, and an `rgb()` there reads as black.
+   */
   ground: string;
 }
 
@@ -18,7 +22,8 @@ const ACCENT_FALLBACK: Rgba = [0.33, 0.69, 0.64, 1];
 const DANGER_FALLBACK: Rgba = [0.86, 0.33, 0.36, 1];
 const GROUND_FALLBACK: Rgba = [0.07, 0.08, 0.09, 1];
 
-const css = ([r, g, b]: Rgba) => `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+const hex = ([r, g, b]: Rgba) =>
+  `#${[r, g, b].map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0')).join('')}`;
 
 /**
  * The canvas's theme inks: the accent a theme gives what is picked and what
@@ -36,7 +41,7 @@ export function useFoldCanvasInks(element: Element | null, themeKey: string): Fo
       accent,
       danger,
       overlay: { accent, mark: accent, outline: ground },
-      ground: css(ground),
+      ground: hex(ground),
     };
     // The theme is read off the element: its key is what says it changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
