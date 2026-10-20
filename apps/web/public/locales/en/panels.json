@@ -1748,10 +1748,10 @@
     "canvas": {
       "creasePattern": "Crease pattern",
       "creasePatternLabel": "The crease pattern so far, front up. Click its points and creases to locate a fold.",
+      "flatCreases": "Flat creases",
+      "flatCreasesTitle": "Draw the flat creases on the paper: precreases, and folds unfolded again",
       "folded": "Folded",
       "foldedLabel": "The folded form. Click its points and creases to locate a fold; drag to pan, scroll to zoom.",
-      "precreases": "Precreases",
-      "precreasesTitle": "Draw the flat creases: precreases, and folds undone",
       "spreadLayers": "Spread layers",
       "spreadLayersTitle": "Spread the folded layers apart, as a diagram draws them, on this step and the ones after it",
       "stepCreases": "Step creases",

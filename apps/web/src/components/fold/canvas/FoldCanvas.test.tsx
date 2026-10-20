@@ -151,10 +151,13 @@ describe("the Fold canvas", () => {
     const toggle = (label: string) =>
       canvas.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
     expect(toggle("Step creases")?.hasAttribute("data-active")).toBe(true);
-    expect(toggle("Precreases")?.hasAttribute("data-active")).toBe(true);
-    act(() => toggle("Precreases")?.click());
-    expect(toggle("Precreases")?.hasAttribute("data-active")).toBe(false);
+    expect(toggle("Flat creases")?.hasAttribute("data-active")).toBe(true);
+    act(() => toggle("Flat creases")?.click());
+    expect(toggle("Flat creases")?.hasAttribute("data-active")).toBe(false);
     expect(toggle("Step creases")?.hasAttribute("data-active")).toBe(true);
+    // Flat creases and Spread layers are told apart at a glance: different icons.
+    const glyph = (label: string) => toggle(label)?.querySelector("svg")?.innerHTML;
+    expect(glyph("Flat creases")).not.toBe(glyph("Spread layers"));
     // The switches are shared: the step strip's cards read the same ones.
     expect(foldPaneDisplay()).toEqual({ stepCreases: true, precreases: false });
     expect(
@@ -182,7 +185,7 @@ describe("the Fold canvas", () => {
     // The tools, then the pane the switch shows next; the menu.
     expect(names.slice(0, 2)).toEqual(["Tools", "Crease pattern"]);
     expect(names).not.toContain("Step creases");
-    expect(names).not.toContain("Precreases");
+    expect(names).not.toContain("Flat creases");
     // One pane at a time, the folded form first; the switch shows the other.
     expect(canvas.querySelector('[data-fold-pane="crease-pattern"]')).toBeNull();
     act(() =>

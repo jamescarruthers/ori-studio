@@ -1748,10 +1748,10 @@
     "canvas": {
       "creasePattern": "Faltmuster",
       "creasePatternLabel": "Das bisherige Faltmuster, Vorderseite oben. Klicke seine Punkte und Faltlinien an, um eine Faltung festzulegen.",
+      "flatCreases": "Flache Faltlinien",
+      "flatCreasesTitle": "Die flachen Faltlinien auf das Papier zeichnen: Vorfalten und wieder geöffnete Falten",
       "folded": "Gefaltet",
       "foldedLabel": "Die gefaltete Form. Klicke ihre Punkte und Faltlinien an, um eine Faltung festzulegen; ziehen zum Verschieben, scrollen zum Zoomen.",
-      "precreases": "Vorfalten",
-      "precreasesTitle": "Die flachen Faltlinien zeigen: Vorfalten und wieder geöffnete Falten",
       "spreadLayers": "Lagen auffächern",
       "spreadLayersTitle": "Die gefalteten Lagen auffächern, wie ein Diagramm sie zeichnet, in diesem Schritt und den folgenden",
       "stepCreases": "Schritt-Faltlinien",

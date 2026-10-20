@@ -1798,10 +1798,10 @@
     "canvas": {
       "creasePattern": "Patron de plis",
       "creasePatternLabel": "Le patron de plis jusqu’ici, recto en haut. Cliquez sur ses points et ses plis pour situer un pliage.",
+      "flatCreases": "Plis à plat",
+      "flatCreasesTitle": "Dessiner les plis à plat sur le papier : prépliages et plis défaits",
       "folded": "Plié",
       "foldedLabel": "La forme pliée. Cliquez sur ses points et ses plis pour situer un pliage ; faites glisser pour vous déplacer, défilez pour zoomer.",
-      "precreases": "Prépliages",
-      "precreasesTitle": "Afficher les plis à plat : prépliages et plis défaits",
       "spreadLayers": "Écarter les couches",
       "spreadLayersTitle": "Écarte les couches pliées, comme un diagramme les dessine, à cette étape et aux suivantes",
       "stepCreases": "Plis de l’étape",

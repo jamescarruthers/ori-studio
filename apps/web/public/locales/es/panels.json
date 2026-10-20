@@ -1798,10 +1798,10 @@
     "canvas": {
       "creasePattern": "Patrón de pliegues",
       "creasePatternLabel": "El patrón de pliegues hasta ahora, anverso arriba. Haz clic en sus puntos y pliegues para situar un pliegue.",
+      "flatCreases": "Pliegues planos",
+      "flatCreasesTitle": "Dibujar los pliegues planos sobre el papel: premarcados y pliegues deshechos",
       "folded": "Plegado",
       "foldedLabel": "La forma plegada. Haz clic en sus puntos y pliegues para situar un pliegue; arrastra para desplazar, desplázate para hacer zoom.",
-      "precreases": "Premarcados",
-      "precreasesTitle": "Mostrar los pliegues planos: premarcados y pliegues deshechos",
       "spreadLayers": "Separar capas",
       "spreadLayersTitle": "Separa las capas plegadas, como las dibuja un diagrama, en este paso y los siguientes",
       "stepCreases": "Pliegues del paso",
