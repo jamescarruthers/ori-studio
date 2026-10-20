@@ -376,6 +376,7 @@
       "locate": "确定折线",
       "model": "模型",
       "reference": "参考点",
+      "sequence": "序列",
       "sink": "沉折"
     },
     "key": {
@@ -427,6 +428,8 @@
       "rotateRefused": "无法在此处添加这次旋转。",
       "severalSunk_other": "这里有 {{count}} 个已沉入的角：使用第一个。",
       "snap": "点会吸附到角、标记、折痕交点、中点和边。",
+      "unfoldCancel": "按 Esc 放下“展开到指定步骤”工具，不添加该步骤。",
+      "unfoldPreview": "画布会显示纸张回到那个形态。所有折痕都会保留。",
       "unsinkRing": "这条线是沉折留下的环上的一条折痕，沿着已沉入角的顶边。"
     },
     "op": {
@@ -836,6 +839,13 @@
       "pinchAtTouch": "沿线轻点要捏折的位置。",
       "pointToMove": "单击要移动的点。",
       "pointToMoveTouch": "轻点要移动的点。",
+      "repeatAxis": "选择对称轴，或在模型上画出它：先单击起点，再单击终点。",
+      "repeatAxisTouch": "选择对称轴，或在模型上画出它：先轻点起点，再轻点终点。",
+      "repeatPreview": "按 Enter 预览重复的折叠。",
+      "repeatPreviewTouch": "轻点“{{action}}”查看重复的折叠。",
+      "repeatSave": "再按一次 Enter 添加它们。",
+      "repeatSaveTouch": "轻点“{{action}}”添加它们。",
+      "repeatStart": "选择要重复的第一个步骤。范围在屏幕上显示的步骤处结束。",
       "reverseFinish": "选择要翻折的翼片，然后按 Enter。",
       "reverseFinishTouch": "选择要翻折的翼片，然后轻点“{{action}}”。",
       "rotateCommit": "按 Enter 添加这次旋转。",
@@ -849,7 +859,10 @@
       "sinkFinish": "选择角，然后按 Enter。",
       "sinkFinishTouch": "选择角，然后轻点“{{action}}”。",
       "tuckFinish": "选择要塞入的翼片和塞入的那一层，然后按 Enter。",
-      "tuckFinishTouch": "选择要塞入的翼片和塞入的那一层，然后轻点“{{action}}”。"
+      "tuckFinishTouch": "选择要塞入的翼片和塞入的那一层，然后轻点“{{action}}”。",
+      "unfoldCommit": "按 Enter 添加这一步。",
+      "unfoldCommitTouch": "轻点“{{action}}”添加这一步。",
+      "unfoldTarget": "选择要返回的步骤。"
     },
     "tool": {
       "closedSinkHelp": "把闭合角的尖端推入夹层，各层保持在一起。",
@@ -863,10 +876,12 @@
       "pleatHelp": "进行褶折：先确定山折线，再确定谷折线。",
       "precrease": "预折",
       "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
+      "repeatHelp": "在对称轴的另一侧再次折叠一组步骤，先预览，再作为一步添加。",
       "reverse": "反折",
       "reverseHelp": "将折翼向内折入或向外包折，反转脊线折痕。",
       "rotateHelp": "将模型旋转一部分圈数或精确角度，先预览，再作为单独的一步添加。",
       "tuckHelp": "折叠翼片，并把它滑到留在原处的层下面或上面。",
+      "unfoldToHelp": "将纸张恢复到较早步骤的形态，并保留此后的所有折痕，先预览，再作为一步添加。",
       "unsinkHelp": "把沉入的角的尖端拉回来。",
       "valley": "谷折",
       "valleyHelp": "把移动的一侧朝你折，使它落在上面。"

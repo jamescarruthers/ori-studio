@@ -489,3 +489,66 @@ it('keeps the first swivel line while changing the second construction, and clea
   expect(tools.store.getState().swivelFirst).toBeUndefined();
   expect(hasToolInput(tools.store.getState())).toBe(false);
 });
+
+describe('the sequence tools in hand', () => {
+  it('are held for one step, as Rotate is: put down, the tool they were taken up from is back', () => {
+    const tools = createFoldTools();
+    tools.selectTool('mountain');
+    tools.selectTool('unfold-to');
+    expect(tools.store.getState()).toMatchObject({ tool: 'unfold-to', resume: 'mountain' });
+    // From one such tool to another, what they were taken up from stays.
+    tools.selectTool('rotate');
+    tools.selectTool('repeat');
+    expect(tools.store.getState()).toMatchObject({ tool: 'repeat', resume: 'mountain' });
+    expect(tools.putDown()).toBe(true);
+    expect(tools.store.getState().tool).toBe('mountain');
+    expect(tools.putDown()).toBe(false);
+  });
+
+  it("start from the step on screen each time they are taken up, keeping Repeat's axis and saving", () => {
+    const tools = createFoldTools();
+    tools.selectTool('unfold-to');
+    tools.setUnfoldTarget(null);
+    expect(tools.store.getState().unfoldTarget).toEqual({ id: null });
+    tools.selectTool('repeat');
+    tools.setRepeatFirst('s1');
+    tools.setRepeatAxis({ n: [1, 0], d: 0.5 });
+    tools.setRepeatIndividual(true);
+    // Escape's rung lets the picks go, not the settings.
+    tools.clear();
+    expect(tools.store.getState()).toMatchObject({ repeatFirst: 's1', repeatIndividual: true });
+    tools.putDown();
+    tools.selectTool('repeat');
+    tools.selectTool('unfold-to');
+    expect(tools.store.getState()).toMatchObject({
+      unfoldTarget: null,
+      repeatFirst: null,
+      repeatAxis: { n: [1, 0], d: 0.5 },
+      repeatIndividual: true,
+    });
+  });
+
+  it('rebuild a saved step with its own settings, let go once another tool is taken', () => {
+    const tools = createFoldTools();
+    tools.rebuildStep({
+      tool: 'repeat',
+      id: 'r',
+      parent: 's2',
+      expected: { kind: 'repeat', source: { first: 's1', last: 's2', revision: 'fh1:x' }, parentState: 'p', axis: { n: [0, 1], d: 0.5 }, steps: [] },
+    });
+    expect(tools.store.getState()).toMatchObject({ tool: 'repeat', repeatFirst: 's1', repeatAxis: { n: [0, 1], d: 0.5 }, rebuild: { id: 'r' } });
+    // A rebuild's op is the store's to check, never part of what the tools are asked to fold.
+    expect(foldToolInputKey(tools.store.getState())).toContain('"rebuild":"r"');
+    tools.selectTool('valley');
+    expect(tools.store.getState().rebuild).toBeNull();
+    tools.rebuildStep({
+      tool: 'unfold-to',
+      id: 'u',
+      parent: 's2',
+      expected: { kind: 'unfold-to', target: 's1', source: { path: 'p', state: 'f', targetState: 't' } },
+    });
+    expect(tools.store.getState()).toMatchObject({ tool: 'unfold-to', unfoldTarget: { id: 's1' }, rebuild: { id: 'u' } });
+    tools.dropRebuild();
+    expect(tools.store.getState()).toMatchObject({ tool: 'unfold-to', rebuild: null });
+  });
+});

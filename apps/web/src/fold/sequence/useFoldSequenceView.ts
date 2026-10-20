@@ -3,13 +3,14 @@ import type { FoldPaper, FoldSequenceDocument } from '../document/foldSequenceDo
 import { foldedLineOf } from '../engine/foldEngineCompoundWire';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineOp, FoldReport } from '../engine/foldEngineWire';
-import { useFoldReturnUi } from '../return/foldReturnUi';
 import { useFoldSessionState } from '../session/useFoldSession';
-import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionProgress } from '../session/foldSessionState';
+import type { FoldSessionProgress } from '../session/foldSessionState';
 import type { FoldSentenceStep } from '../stepSentence';
+import { useFoldTools } from '../tools/foldToolState';
 import { foldNodeSentenceStep, foldSentenceStepOf } from './foldSentenceStep';
-import { cursorIndex, foldPathEntries, type FoldPathEntry } from './foldSequencePath';
+import type { FoldPathEntry } from './foldSequencePath';
 import type { FoldStateFrame } from './foldStateFrame';
+import { useFoldPath } from './useFoldPath';
 import { useFoldStateFrames } from './useFoldStateFrames';
 
 /** The step a tool is folding, as the sequence chrome shows it. */
@@ -48,21 +49,6 @@ export interface FoldSequenceView {
   failed: boolean;
 }
 
-/** The shown sequence and its active path, numbered, with the step on screen. */
-function useFoldPath() {
-  const sequence = useFoldSessionState((snapshot) => snapshot.sequence);
-  const activePath = useFoldSessionState((snapshot) => snapshot.activePath);
-  const sheet = useFoldSessionState((snapshot) => snapshot.sheet);
-  const nodes = useFoldSessionState((snapshot) => snapshot.nodes);
-  const cursorId = useFoldSessionState((snapshot) => snapshot.cursor);
-  const document = sequence ?? FOLD_BLANK_SEQUENCE;
-  const entries = useMemo(
-    () => foldPathEntries(document, activePath, sheet, nodes, FOLD_PENDING_NODE),
-    [document, activePath, sheet, nodes]
-  );
-  return { sequence, document, entries, cursor: cursorIndex(entries, cursorId) };
-}
-
 /**
  * The shown sequence, its active path, each step's picture and words, and the
  * step a tool is folding (plan D14). Every Fold surface that lists steps reads
@@ -72,7 +58,8 @@ export function useFoldSequenceView(): FoldSequenceView {
   const { sequence, document, entries, cursor } = useFoldPath();
   const readOnly = useFoldSessionState((snapshot) => snapshot.readOnly);
   const pendingStep = useFoldSessionState((snapshot) => snapshot.pending);
-  const rebuildingReturn = useFoldReturnUi((state) => state.opening?.rebuild != null);
+  // A step rebuilt in place — an unfold's, a repeat's — replaces its step: it starts no branch.
+  const rebuilding = useFoldTools((state) => state.rebuild?.tool ?? null);
   const progress = useFoldSessionState((snapshot) => snapshot.progress);
   const failed = useFoldSessionState((snapshot) => snapshot.error !== null);
   const pendingState = pendingStep.status === 'landed' ? pendingStep.state : null;
@@ -111,9 +98,9 @@ export function useFoldSequenceView(): FoldSequenceView {
       state: pendingStep.status === 'landed' ? pendingStep.state : null,
       frame: pendingFrame,
       report,
-      branch: cursor !== entries.length - 1 && !(op.kind === 'unfold-to' && rebuildingReturn),
+      branch: cursor !== entries.length - 1 && op.kind !== rebuilding,
     };
-  }, [pendingStep, frames, cursor, pendingFrame, entries, rebuildingReturn]);
+  }, [pendingStep, frames, cursor, pendingFrame, entries, rebuilding]);
 
   return {
     document,

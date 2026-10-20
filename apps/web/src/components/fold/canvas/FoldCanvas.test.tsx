@@ -95,8 +95,6 @@ vi.mock("../FoldToolWindow", async (importOriginal) => {
 
 import { isFoldAltLatched, resetFoldAltLatch, setFoldAltLatched } from "../../../fold/canvas/foldAltLatch";
 import { foldPaneDisplay, resetFoldPaneDisplay } from "../../../fold/canvas/foldPaneDisplay";
-import { useFoldRepeatUi } from "../../../fold/repeat/foldRepeatUi";
-import { useFoldReturnUi } from "../../../fold/return/foldReturnUi";
 import { foldPhonePane, showFoldPhonePane } from "../../../fold/canvas/foldPhonePane";
 import { foldTools } from "../../../fold/tools/foldToolState";
 import {
@@ -300,44 +298,37 @@ describe("the Fold canvas", () => {
     expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
   });
 
-  it("gives the tool window up while Repeat's or Unfold to step's bar is open, on a phone and off one", () => {
-    const opening = { id: 1, loadId: 1, sequenceId: "s", parent: "a", path: "p", fingerprint: "f" };
-    const shown = () => toolWindowModels.at(-1) !== null;
+  it("draws Unfold to step and Repeat in the tool window as any tool, on a phone and off one", () => {
+    type Model = { title: string; footer: { commit: { label: string; disabled: boolean } } | null } | null;
+    const shown = () => toolWindowModels.at(-1) as Model;
     try {
-      // Off a phone the window would sit in the canvas's corner, offering picks the canvas no longer takes.
-      mount();
-      expect(shown()).toBe(true);
-      act(() => useFoldRepeatUi.setState({ opening }));
-      expect(shown()).toBe(false);
-      act(() => useFoldRepeatUi.setState({ opening: null }));
-      expect(shown()).toBe(true);
-      act(() => useFoldReturnUi.setState({ opening: { ...opening, target: null, lastOnly: false, rebuild: null } }));
-      expect(shown()).toBe(false);
-      act(() => useFoldReturnUi.setState({ opening: null }));
-      act(() => root?.unmount());
-      host?.remove();
-      vi.stubGlobal(
-        "matchMedia",
-        vi.fn((query: string) => ({
-          matches: query === PHONE_MEDIA_QUERY,
-          addEventListener: () => {},
-          removeEventListener: () => {},
-        })),
-      );
-      act(() => useFoldRepeatUi.setState({ opening: null }));
-      mount();
-      expect(shown()).toBe(true);
-      act(() => useFoldRepeatUi.setState({ opening }));
-      expect(shown()).toBe(false);
-      act(() => useFoldRepeatUi.setState({ opening: null }));
-      expect(shown()).toBe(true);
-      act(() => useFoldReturnUi.setState({ opening: { ...opening, target: null, lastOnly: false, rebuild: null } }));
-      expect(shown()).toBe(false);
+      for (const phone of [false, true]) {
+        vi.stubGlobal(
+          "matchMedia",
+          vi.fn((query: string) => ({
+            matches: phone && query === PHONE_MEDIA_QUERY,
+            addEventListener: () => {},
+            removeEventListener: () => {},
+          })),
+        );
+        mount();
+        act(() => foldTools().selectTool("unfold-to"));
+        // The flat sheet on screen: nothing to return from, so nothing to commit.
+        expect(shown()).toMatchObject({ title: "Unfold to step", footer: { commit: { label: "Unfold to step", disabled: true } } });
+        act(() => foldTools().selectTool("repeat"));
+        expect(shown()).toMatchObject({ title: "Repeat on the other side", footer: { commit: { label: "Preview repeat", disabled: true } } });
+        // Put down, the tool they were taken up from is back in hand.
+        act(() => {
+          foldTools().putDown();
+        });
+        expect(foldTools().store.getState().tool).toBe("valley");
+        act(() => root?.unmount());
+        root = null;
+        host?.remove();
+        host = null;
+      }
     } finally {
-      act(() => {
-        useFoldRepeatUi.setState({ opening: null });
-        useFoldReturnUi.setState({ opening: null });
-      });
+      foldTools().putDown();
     }
   });
 

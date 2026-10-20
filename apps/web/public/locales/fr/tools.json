@@ -402,6 +402,7 @@
       "locate": "Placer la ligne",
       "model": "Modèle",
       "reference": "Points de repère",
+      "sequence": "Séquence",
       "sink": "Enfoncements"
     },
     "key": {
@@ -455,6 +456,8 @@
       "severalSunk_many": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
       "severalSunk_other": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
       "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords.",
+      "unfoldCancel": "Échap repose Déplier jusqu’à une étape sans ajouter l’étape.",
+      "unfoldPreview": "Le canevas montre le papier revenu dans cette forme. Tous les plis sont conservés.",
       "unsinkRing": "La ligne est un pli de l’anneau laissé par l’enfoncement, le long du haut de la pointe enfoncée."
     },
     "op": {
@@ -872,6 +875,13 @@
       "pinchAtTouch": "Touchez la ligne là où pincer.",
       "pointToMove": "Cliquez sur le point à déplacer.",
       "pointToMoveTouch": "Touchez le point à déplacer.",
+      "repeatAxis": "Choisissez l’axe de symétrie, ou tracez-le sur le modèle : cliquez là où il commence, puis là où il se termine.",
+      "repeatAxisTouch": "Choisissez l’axe de symétrie, ou tracez-le sur le modèle : touchez là où il commence, puis là où il se termine.",
+      "repeatPreview": "Appuyez sur Entrée pour afficher l’aperçu des plis répétés.",
+      "repeatPreviewTouch": "Touchez {{action}} pour voir les plis répétés.",
+      "repeatSave": "Appuyez de nouveau sur Entrée pour les ajouter.",
+      "repeatSaveTouch": "Touchez {{action}} pour les ajouter.",
+      "repeatStart": "Choisissez la première étape à répéter. La plage se termine à l’étape affichée.",
       "reverseFinish": "Choisissez les rabats à inverser, puis appuyez sur Entrée.",
       "reverseFinishTouch": "Choisissez les rabats à inverser, puis touchez {{action}}.",
       "rotateCommit": "Appuyez sur Entrée pour ajouter la rotation.",
@@ -885,7 +895,10 @@
       "sinkFinish": "Choisissez la pointe, puis appuyez sur Entrée.",
       "sinkFinishTouch": "Choisissez la pointe, puis touchez {{action}}.",
       "tuckFinish": "Choisissez les rabats et la couche contre laquelle rentrer, puis appuyez sur Entrée.",
-      "tuckFinishTouch": "Choisissez les rabats et la couche contre laquelle rentrer, puis touchez {{action}}."
+      "tuckFinishTouch": "Choisissez les rabats et la couche contre laquelle rentrer, puis touchez {{action}}.",
+      "unfoldCommit": "Appuyez sur Entrée pour ajouter l’étape.",
+      "unfoldCommitTouch": "Touchez {{action}} pour ajouter l’étape.",
+      "unfoldTarget": "Choisissez l’étape à laquelle revenir."
     },
     "tool": {
       "closedSinkHelp": "Enfoncer l’extrémité d’une pointe fermée dans une poche, ses couches restant ensemble.",
@@ -899,10 +912,12 @@
       "pleatHelp": "Réaliser un pli en accordéon : placer la ligne montagne, puis la ligne vallée.",
       "precrease": "Pré-plier",
       "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
+      "repeatHelp": "Plier de nouveau une série d’étapes de l’autre côté d’un axe de symétrie, d’abord en aperçu, puis en une étape.",
       "reverse": "Pli inversé",
       "reverseHelp": "Inversez un rabat vers l’intérieur ou enveloppez-le par l’extérieur, en inversant son pli central.",
       "rotateHelp": "Tourner le modèle d’une fraction de tour ou d’un angle exact, d’abord en aperçu, puis en une étape à part.",
       "tuckHelp": "Plier un rabat et le glisser sous, ou sur, une couche qui reste en place.",
+      "unfoldToHelp": "Ramener le papier à la forme d’une étape antérieure, en conservant tous les plis faits depuis, d’abord en aperçu, puis en une étape.",
       "unsinkHelp": "Ressortir l’extrémité d’une pointe enfoncée.",
       "valley": "Pli vallée",
       "valleyHelp": "Plier le côté qui bouge vers vous, pour qu’il passe dessus."

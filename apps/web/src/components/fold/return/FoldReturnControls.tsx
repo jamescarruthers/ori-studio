@@ -1,12 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import { useFoldSessionState } from '../../../fold/session/useFoldSession';
-import { openFoldReturn } from '../../../fold/return/foldReturnUi';
 import { foldReturnEntryLabel, foldReturnFailure } from '../../../fold/return/foldReturnWords';
 import { useWorkspaceStore } from '../../../store/workspaceStore/store';
-import { currentFoldPath } from '../../../fold/sequence/foldCommands';
+import { currentFoldPath, rebuildFoldStep } from '../../../fold/sequence/foldCommands';
 import { Button } from '../../ui/Button';
 import styles from './FoldReturn.module.css';
 
+/**
+ * A saved Unfold to step step on screen, in the Step pane: what it does, or
+ * why it no longer replays; the way to the step it returns to; and Rebuild
+ * unfold — the Unfold to step tool taken in hand to rebuild it in place
+ * (`rebuildFoldStep`). Nothing for any other step.
+ */
 export function FoldReturnControls() {
   const { t } = useTranslation();
   const snapshot = useFoldSessionState((s) => s);
@@ -23,7 +28,7 @@ export function FoldReturnControls() {
     <Button size="sm" disabled={!entry} onClick={() => useWorkspaceStore.getState().moveFoldCursor(target)}>
       {t('panels:fold.return.viewTarget', 'View target: {{target}}', { target: entry ? foldReturnEntryLabel(t, entry, entries) : '—' })}
     </Button>
-    <Button size="sm" disabled={snapshot.readOnly || !parent?.state} onClick={() => openFoldReturn(false, node.id)}>
+    <Button size="sm" disabled={snapshot.readOnly || !parent?.state} onClick={() => rebuildFoldStep(node.id)}>
       {t('panels:fold.return.rebuild', 'Rebuild unfold')}
     </Button>
   </div>;

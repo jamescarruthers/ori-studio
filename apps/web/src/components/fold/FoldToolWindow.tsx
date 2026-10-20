@@ -147,6 +147,8 @@ export function FoldToolWindow({
     vertex,
     sink,
     rotate,
+    steps,
+    repeat,
     footer,
   } = model;
 
@@ -182,6 +184,32 @@ export function FoldToolWindow({
           </p>
         ))}
       </div>
+      {/* The sequence tools: the step Unfold to step returns to, or the range Repeat starts with, then Repeat's axis. */}
+      {(steps || repeat) && (
+        <div className={styles.section} data-fold-sequence="">
+          {steps && (
+            <SelectRow
+              label={steps.label}
+              value={steps.value}
+              options={steps.options}
+              disabled={steps.disabled}
+              divider={false}
+              onChange={steps.set}
+            />
+          )}
+          {repeat && (
+            <SelectRow
+              label={repeat.axis.label}
+              value={repeat.axis.value}
+              placeholder={repeat.axis.placeholder}
+              options={repeat.axis.options}
+              disabled={repeat.axis.disabled}
+              divider={false}
+              onChange={repeat.axis.set}
+            />
+          )}
+        </div>
+      )}
       {/* A petal fold's hinge, or a swivel's target: how it is named, which its steps above follow. */}
       {vertex?.input && <ChoiceSegments choice={vertex.input} section="swivelInput" />}
       {vertex?.lineBy && <ChoiceSegments choice={vertex.lineBy} section="lineBy" />}
@@ -255,6 +283,37 @@ export function FoldToolWindow({
         <div className={styles.section}>
           <ToggleRow label={freeLineSnap.label} help={freeLineSnap.help} checked={freeLineSnap.checked}
             disabled={freeLineSnap.disabled} divider={false} onChange={freeLineSnap.set} />
+        </div>
+      )}
+      {/* How Repeat is saved, and how many operations it repeats. */}
+      {repeat && (repeat.individual || repeat.summary) && (
+        <div className={styles.section} data-fold-repeat-saving="">
+          {repeat.individual && (
+            <ToggleRow
+              label={repeat.individual.label}
+              checked={repeat.individual.checked}
+              disabled={repeat.individual.disabled}
+              divider={false}
+              onChange={repeat.individual.set}
+            />
+          )}
+          {repeat.summary && <p className={styles.note}>{repeat.summary}</p>}
+        </div>
+      )}
+      {/* A source operation's matching layer orders: the chooser every fold's orders are chosen with. */}
+      {repeat?.order && (
+        <div className={styles.section} data-fold-repeat-order="">
+          <FoldOrderChooser
+            index={repeat.order.index}
+            count={repeat.order.count}
+            exact
+            ready={repeat.order.ready}
+            waiting={repeat.order.waiting}
+            error={repeat.order.failed}
+            onStep={repeat.order.step}
+            onBack={repeat.order.back}
+            onAccept={repeat.order.accept}
+          />
         </div>
       )}
       {kind && (

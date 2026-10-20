@@ -56,10 +56,10 @@ describe('the Rotate tool in hand', () => {
     // Taken again while in hand, it keeps what it was taken up from.
     tools.selectTool('rotate');
     expect(tools.store.getState().resume).toBe('mountain');
-    expect(tools.putDownRotate()).toBe(true);
+    expect(tools.putDown()).toBe(true);
     expect(tools.store.getState().tool).toBe('mountain');
     // Not in hand: nothing to put down.
-    expect(tools.putDownRotate()).toBe(false);
+    expect(tools.putDown()).toBe(false);
     expect(tools.store.getState().tool).toBe('mountain');
   });
 
@@ -72,7 +72,7 @@ describe('the Rotate tool in hand', () => {
     tools.setRotation(exact(30, 'ccw'));
     // The same rotation is no change.
     expect(tools.store.getState()).toBe(before);
-    tools.putDownRotate();
+    tools.putDown();
     tools.selectTool('rotate');
     expect(tools.store.getState().rotation).toEqual(exact(30, 'ccw'));
   });

@@ -402,6 +402,7 @@
       "locate": "Situar la línea",
       "model": "Modelo",
       "reference": "Puntos de referencia",
+      "sequence": "Secuencia",
       "sink": "Hundidos"
     },
     "key": {
@@ -455,6 +456,8 @@
       "severalSunk_many": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
       "severalSunk_other": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
       "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes.",
+      "unfoldCancel": "Esc suelta la herramienta Desplegar hasta un paso sin añadir el paso.",
+      "unfoldPreview": "El lienzo muestra el papel de vuelta en esa forma. Se conservan todos los pliegues.",
       "unsinkRing": "La línea es un pliegue del anillo que dejó el hundido, a lo largo de la parte superior de la punta hundida."
     },
     "op": {
@@ -872,6 +875,13 @@
       "pinchAtTouch": "Toca donde pellizcar a lo largo de la línea.",
       "pointToMove": "Haz clic en el punto que se mueve.",
       "pointToMoveTouch": "Toca el punto que se mueve.",
+      "repeatAxis": "Elige el eje de simetría o dibújalo sobre el modelo: haz clic donde empieza y luego donde termina.",
+      "repeatAxisTouch": "Elige el eje de simetría o dibújalo sobre el modelo: toca donde empieza y luego donde termina.",
+      "repeatPreview": "Pulsa Intro para previsualizar los pliegues repetidos.",
+      "repeatPreviewTouch": "Toca {{action}} para ver los pliegues repetidos.",
+      "repeatSave": "Pulsa Intro de nuevo para añadirlos.",
+      "repeatSaveTouch": "Toca {{action}} para añadirlos.",
+      "repeatStart": "Elige el primer paso que se repite. El rango termina en el paso que está en pantalla.",
       "reverseFinish": "Elige qué solapas se invierten y pulsa Intro.",
       "reverseFinishTouch": "Elige qué solapas se invierten y toca {{action}}.",
       "rotateCommit": "Pulsa Intro para añadir el giro.",
@@ -885,7 +895,10 @@
       "sinkFinish": "Elige la punta y pulsa Intro.",
       "sinkFinishTouch": "Elige la punta y toca {{action}}.",
       "tuckFinish": "Elige las solapas y la capa contra la que remeter, y pulsa Intro.",
-      "tuckFinishTouch": "Elige las solapas y la capa contra la que remeter, y toca {{action}}."
+      "tuckFinishTouch": "Elige las solapas y la capa contra la que remeter, y toca {{action}}.",
+      "unfoldCommit": "Pulsa Intro para añadir el paso.",
+      "unfoldCommitTouch": "Toca {{action}} para añadir el paso.",
+      "unfoldTarget": "Elige el paso al que volver."
     },
     "tool": {
       "closedSinkHelp": "Empujar el extremo de una punta cerrada dentro de un bolsillo, con sus capas juntas.",
@@ -899,10 +912,12 @@
       "pleatHelp": "Haz un pliegue escalonado: sitúa la línea de montaña y luego la de valle.",
       "precrease": "Premarcar",
       "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
+      "repeatHelp": "Plegar de nuevo una serie de pasos al otro lado de un eje de simetría, primero en vista previa y luego como un paso.",
       "reverse": "Pliegue inverso",
       "reverseHelp": "Invierte una solapa hacia dentro o envuélvela por fuera, invirtiendo su pliegue central.",
       "rotateHelp": "Girar el modelo una parte de vuelta o un ángulo exacto, primero en vista previa y luego como un paso propio.",
       "tuckHelp": "Plegar una solapa y deslizarla bajo, o sobre, una capa que se queda quieta.",
+      "unfoldToHelp": "Devolver el papel a la forma de un paso anterior, conservando todos los pliegues hechos desde entonces, primero en vista previa y luego como un paso.",
       "unsinkHelp": "Sacar de nuevo el extremo de una punta hundida.",
       "valley": "Pliegue de valle",
       "valleyHelp": "Plegar el lado que se mueve hacia ti, para que quede encima."

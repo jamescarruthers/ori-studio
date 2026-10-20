@@ -6,6 +6,7 @@ vi.mock('../../store/workspaceStore/useWorkspaceCapabilities', () => ({ useWorks
 
 import i18n from '../../i18n';
 import { buildFoldActions, type FoldActionContext, type FoldActionDeps } from '../../fold/foldActions';
+import { foldTools } from '../../fold/tools/foldToolState';
 import { TooltipProvider } from '../ui/Tooltip';
 import { FoldHeader } from './FoldHeader';
 
@@ -111,6 +112,36 @@ describe('FoldHeader', () => {
     expect(host.querySelector('button[aria-label="More ways to export"]')).not.toBeNull();
   });
 
+  it('takes Unfold to step and Repeat in hand from their buttons, each pressed while its tool is', () => {
+    const bound = { ...deps(), repeat: vi.fn() };
+    render({ bound });
+    const unfold = button('Unfold to step…')!;
+    const repeat = button('Repeat')!;
+    // The menus' long name, as its tooltip.
+    expect(repeat.title).toBe('Repeat on the other side…');
+    for (const each of [unfold, repeat]) expect(each.getAttribute('aria-pressed')).toBe('false');
+    act(() => unfold.click());
+    act(() => repeat.click());
+    expect(bound.unfold).toHaveBeenCalledOnce();
+    expect(bound.repeat).toHaveBeenCalledOnce();
+    act(() => foldTools().selectTool('repeat'));
+    expect(button('Repeat')?.getAttribute('aria-pressed')).toBe('true');
+    expect(button('Repeat')?.hasAttribute('data-active')).toBe(true);
+    expect(button('Unfold to step…')?.getAttribute('aria-pressed')).toBe('false');
+    act(() => foldTools().selectTool('unfold-to'));
+    expect(button('Unfold to step…')?.getAttribute('aria-pressed')).toBe('true');
+    expect(button('Repeat')?.getAttribute('aria-pressed')).toBe('false');
+    act(() => {
+      foldTools().putDown();
+    });
+  });
+
+  it('refuses Repeat on the flat sheet, as Unfold to step', () => {
+    render({ bound: { ...deps(), repeat: vi.fn() }, context: { ...CONTEXT, step: null } });
+    expect(button('Repeat')?.disabled).toBe(true);
+    expect(button('Unfold to step…')?.disabled).toBe(true);
+  });
+
   it('says why a verb cannot run', () => {
     render({ context: { ...CONTEXT, path: 'broken', sheet: 'regular', stepCount: 2 } });
     expect(button('Send to Edit')).toMatchObject({ disabled: true, title: 'A step on this path no longer folds.' });
@@ -154,9 +185,9 @@ describe('FoldHeader', () => {
       more?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
     });
     const rows = [...document.querySelectorAll<HTMLElement>('[role="menu"] [role^="menuitem"]')];
+    // Repeat is the wide header's alone: the phone's tool sheet offers it.
     expect(rows.map((row) => row.textContent)).toEqual([
       'Unfold to step…',
-      'Repeat on the other side…',
       'Import CP…',
       'Send to Edit',
       'Export FOLD…',

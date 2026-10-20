@@ -22,7 +22,7 @@ const item = (groups: ReturnType<typeof foldRailGroups>, id: string) => {
 };
 
 describe('foldRailGroups', () => {
-  it('lists the folds, the sinks, Reference points, Locate line, the model verbs, in that order', () => {
+  it('lists the folds, the sinks, Reference points, Locate line, the model verbs, the sequence tools, in that order', () => {
     const groups = foldRailGroups(t, view(), verbs());
     expect(groups.map((group) => [group.id, group.label])).toEqual([
       ['fold', 'Fold'],
@@ -30,6 +30,7 @@ describe('foldRailGroups', () => {
       ['reference', 'Reference points'],
       ['locate', 'Locate line'],
       ['model', 'Model'],
+      ['sequence', 'Sequence'],
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
       ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'pleat', 'squash', 'petal', 'rabbit-ear', 'swivel'],
@@ -37,6 +38,7 @@ describe('foldRailGroups', () => {
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
       ['turn-over', 'rotate'],
+      ['unfold-to', 'repeat'],
     ]);
     // Only usable tool groups are shown, all open initially.
     expect(groups.filter((group) => group.collapsedByDefault).map((group) => group.id)).toEqual([]);
@@ -68,6 +70,37 @@ describe('foldRailGroups', () => {
     // Every compound fold is a tool now: none is planned.
     for (const id of ['crimp', 'squash', 'swivel', 'unsink']) expect(item(groups, id).kind).toBe('tool');
     expect(groups.flatMap((group) => group.items.map((each) => each.id))).toContain('pleat');
+  });
+
+  it('takes Unfold to step and Repeat as tools, keyless, refused at the flat sheet and while read-only', () => {
+    const calls = verbs();
+    const groups = foldRailGroups(t, view({ tool: 'repeat' }), calls);
+    expect(item(groups, 'unfold-to')).toMatchObject({
+      kind: 'tool',
+      label: 'Unfold to step',
+      shortcut: 'fold.toolUnfoldTo',
+      available: true,
+      active: false,
+    });
+    expect(item(groups, 'repeat')).toMatchObject({
+      kind: 'tool',
+      label: 'Repeat on the other side',
+      shortcut: 'fold.toolRepeat',
+      available: true,
+      active: true,
+    });
+    item(groups, 'unfold-to').select();
+    expect(calls.selectTool).toHaveBeenLastCalledWith('unfold-to');
+    // No line mode is what the canvas is doing while either is in hand.
+    expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual(['repeat']);
+    const sheet = foldRailGroups(t, view({ atSheet: true }), verbs());
+    for (const id of ['unfold-to', 'repeat']) {
+      expect(item(sheet, id)).toMatchObject({ available: false, reason: 'Fold a step first.' });
+    }
+    // The other tools fold the flat sheet as ever.
+    expect(item(sheet, 'valley').available).toBe(true);
+    const locked = foldRailGroups(t, view({ readOnly: 'newer' }), verbs());
+    expect(item(locked, 'repeat').available).toBe(false);
   });
 
   it('keeps Crimp and removes standalone Tuck from the Fold group', () => {

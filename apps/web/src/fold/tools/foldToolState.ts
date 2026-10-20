@@ -29,6 +29,8 @@ import {
   type FoldModelLine,
   type FoldModelDirection,
   type FoldOp,
+  type FoldRepeatOp,
+  type FoldReturnOp,
   type FoldSwivelKind,
   type SheetPoint,
 } from '../document/foldSequenceDocument';
@@ -36,6 +38,7 @@ import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
 import {
   isLineTool,
+  isOneStepTool,
   locatesLine,
   type FoldLineBy,
   type FoldLineModeId,
@@ -153,6 +156,16 @@ export interface FoldCompoundToolChoices {
   pocket: number;
 }
 
+/**
+ * A saved step its tool rebuilds in place, from the step's parent (the Step
+ * pane's Rebuild unfold, and Update from source steps): its id, its parent,
+ * and the op it held when the rebuild began, which the store checks it still
+ * holds before replacing it.
+ */
+export type FoldToolRebuild =
+  | { tool: 'unfold-to'; id: string; parent: string | null; expected: FoldReturnOp }
+  | { tool: 'repeat'; id: string; parent: string | null; expected: FoldRepeatOp };
+
 export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
   reverseKind: null,
   opening: 0,
@@ -218,8 +231,34 @@ export interface FoldToolState {
   // The Rotate tool's (`tools/rotate`).
   /** How far and which way Rotate turns the model: kept from one rotation to the next, as the line mode is. */
   rotation: TurnRotation;
-  /** The tool Rotate was taken up from: what applying a rotation, or Escape, puts back in hand. */
+  /**
+   * The tool Rotate, Unfold to step or Repeat was taken up from: what adding
+   * its step, or Escape, puts back in hand.
+   */
   resume: FoldToolId;
+  // The sequence tools' (`fold/return`, `fold/repeat`), each kept while it is valid.
+  /**
+   * Unfold to step's target, an earlier entry of the path by id (null for the
+   * flat sheet); null for the default, the entry before the step on screen.
+   * Let go each time the tool is taken up.
+   */
+  unfoldTarget: { id: string | null } | null;
+  /**
+   * Repeat's range start, by id; null for the step on screen, a range of one.
+   * The range always ends at the step on screen. Let go each time the tool is
+   * taken up.
+   */
+  repeatFirst: string | null;
+  /**
+   * The symmetry axis the folder last chose or drew, by its sheet line:
+   * Repeat's axis whenever it is one of the range's verified axes. Kept for
+   * the session, never saved.
+   */
+  repeatAxis: FoldModelLine | null;
+  /** Repeat saves a step per operation instead of one numbered step: kept from one repeat to the next. */
+  repeatIndividual: boolean;
+  /** A saved step its tool is rebuilding in place; null while the tool adds a step. */
+  rebuild: FoldToolRebuild | null;
 }
 
 /** The tools' state with the seed resolved (`useFoldLineSection`): what every step is built from. */
@@ -248,6 +287,11 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   compound: FOLD_COMPOUND_CHOICES_INITIAL,
   rotation: FOLD_ROTATION_DEFAULT,
   resume: 'valley',
+  unfoldTarget: null,
+  repeatFirst: null,
+  repeatAxis: null,
+  repeatIndividual: false,
+  rebuild: null,
 };
 
 /** What a new locate starts from: the tool, the line mode, the extent and the Divide settings stay. */
@@ -300,8 +344,9 @@ export function foldToolInput(
  * nothing. Any change to it is another fold.
  */
 export function foldToolInputKey(state: FoldToolState): string {
-  const { hoveredFlap: _hovered, freeLineSnap: _snap, ...input } = state;
-  return JSON.stringify(input);
+  // A rebuild by its step alone: the op it held is the store's to check, and may be long.
+  const { hoveredFlap: _hovered, freeLineSnap: _snap, rebuild, ...input } = state;
+  return JSON.stringify({ ...input, rebuild: rebuild?.id ?? null });
 }
 
 /** Toolbar construction changes follow the line currently being drawn. */
@@ -418,10 +463,27 @@ export interface FoldTools {
   /** Turn the model by this rotation instead: a preset, a direction, an exact angle. */
   setRotation(rotation: TurnRotation): void;
   /**
-   * Put Rotate down, the tool it was taken up from back in hand: what
-   * applying a rotation and Escape do. Whether it was in hand.
+   * Put down a tool held for one step — Rotate, Unfold to step, Repeat — the
+   * tool it was taken up from back in hand: what adding its step and Escape
+   * do. Whether one was in hand.
    */
-  putDownRotate(): boolean;
+  putDown(): boolean;
+  // The sequence tools' (`fold/return`, `fold/repeat`).
+  /** Unfold to this entry of the path (null for the flat sheet). */
+  setUnfoldTarget(id: string | null): void;
+  /** Start Repeat's range at this step. */
+  setRepeatFirst(id: string): void;
+  /** Mirror across this axis, by its sheet line: what Repeat remembers as the last axis chosen. */
+  setRepeatAxis(axis: FoldModelLine): void;
+  setRepeatIndividual(individual: boolean): void;
+  /**
+   * Take up the tool that rebuilds `rebuild`'s step in place, its settings
+   * read from the step: an unfold's target, a repeat's range start and axis.
+   * The step's parent must be on screen.
+   */
+  rebuildStep(rebuild: FoldToolRebuild): void;
+  /** Let go of a rebuild under way: the tool goes on adding a step. */
+  dropRebuild(): void;
 }
 
 /**
@@ -494,9 +556,20 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
             compound: anotherTip(state.compound),
           };
         }
-        // Rotate remembers the tool it was taken up from, to give it back.
-        if (tool === 'rotate') return { ...restart(state), tool, resume: state.tool };
-        return { ...restart(state), tool };
+        // A tool held for one step remembers the tool it was taken up from, to
+        // give it back — the one before it, when it was another such tool.
+        // Unfold to step and Repeat start again from the step on screen.
+        if (isOneStepTool(tool)) {
+          return {
+            ...restart(state),
+            tool,
+            resume: isOneStepTool(state.tool) ? state.resume : state.tool,
+            rebuild: null,
+            ...(tool === 'unfold-to' ? { unfoldTarget: null } : {}),
+            ...(tool === 'repeat' ? { repeatFirst: null } : {}),
+          };
+        }
+        return { ...restart(state), tool, rebuild: null };
       });
     },
 
@@ -777,11 +850,48 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => (sameTurnRotation(state.rotation, rotation) ? state : { ...state, rotation }));
     },
 
-    putDownRotate() {
+    putDown() {
       const now = store.getState();
-      if (now.tool !== 'rotate') return false;
-      api.selectTool(now.resume === 'rotate' ? 'valley' : now.resume);
+      if (!isOneStepTool(now.tool)) return false;
+      api.selectTool(isOneStepTool(now.resume) ? 'valley' : now.resume);
       return true;
+    },
+
+    // The sequence tools'.
+    setUnfoldTarget(id) {
+      set((state) => (state.unfoldTarget?.id === id ? state : { ...state, unfoldTarget: { id } }));
+    },
+
+    setRepeatFirst(repeatFirst) {
+      set((state) => (state.repeatFirst === repeatFirst ? state : { ...state, repeatFirst }));
+    },
+
+    setRepeatAxis(repeatAxis) {
+      set((state) =>
+        state.repeatAxis &&
+        state.repeatAxis.d === repeatAxis.d &&
+        state.repeatAxis.n[0] === repeatAxis.n[0] &&
+        state.repeatAxis.n[1] === repeatAxis.n[1]
+          ? state
+          : { ...state, repeatAxis }
+      );
+    },
+
+    setRepeatIndividual(repeatIndividual) {
+      set((state) => (state.repeatIndividual === repeatIndividual ? state : { ...state, repeatIndividual }));
+    },
+
+    rebuildStep(rebuild) {
+      api.selectTool(rebuild.tool);
+      set((state) =>
+        rebuild.tool === 'unfold-to'
+          ? { ...state, rebuild, unfoldTarget: { id: rebuild.expected.target } }
+          : { ...state, rebuild, repeatFirst: rebuild.expected.source.first, repeatAxis: rebuild.expected.axis }
+      );
+    },
+
+    dropRebuild() {
+      set((state) => (state.rebuild === null ? state : { ...state, rebuild: null }));
     },
   };
   return api;

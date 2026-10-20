@@ -109,7 +109,7 @@ const EXISTING_CREASE: FoldInputModel = { steps: [{ snap: 'crease-required', slo
 /** The Divide line: one edge, fold or crease to divide. */
 const DIVIDE_LINE: FoldInputModel = { steps: [{ snap: 'crease-required', slot: null, edges: true }] };
 
-/** Rotate: no clicks. The model turns about the sheet's middle, by what the window sets. */
+/** Rotate and Unfold to step: no clicks. The window sets everything they take. */
 const NO_CLICKS: FoldInputModel = { steps: [] };
 
 /** The clicks a line mode collects. */
@@ -141,7 +141,8 @@ export function crimpInput(mode: FoldLineModeId, second: FoldSecondLineModeId): 
  * The clicks the tool in hand collects: a fold along a line, its line mode's
  * — a crimp's, its two lines' —; a vertex fold, its own, a petal fold's hinge
  * and a swivel's target named as `vertex` says (`tools/vertex/vertexInputs`);
- * the Divide line's, its segment; Rotate's, none.
+ * the Divide line's, its segment; Rotate's and Unfold to step's, none; Repeat's,
+ * a free line, its mirror axis drawn on the range's starting state.
  */
 export function toolInput(
   tool: FoldToolId,
@@ -151,7 +152,10 @@ export function toolInput(
 ): FoldInputModel {
   switch (tool) {
     case 'rotate':
+    case 'unfold-to':
       return NO_CLICKS;
+    case 'repeat':
+      return FREE_LINE;
     case 'valley':
     case 'mountain':
     case 'precrease':

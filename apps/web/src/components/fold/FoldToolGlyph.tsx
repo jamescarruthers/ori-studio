@@ -9,6 +9,7 @@ import {
   Rabbit,
   RotateCcwSquare,
   RotateCw,
+  Undo2,
   type LucideIcon,
 } from 'lucide-react';
 import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
@@ -18,6 +19,7 @@ import type {
   FoldRailItemId,
   FoldSinkToolId,
 } from '../../fold/tools/foldToolCatalog';
+import { FoldRepeatGlyph } from './FoldActionIcon';
 import { FoldKindMark } from './FoldKindMark';
 
 const SIZE = 20;
@@ -150,8 +152,9 @@ const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
 
 /**
  * Every Fold rail item's icon: a fold's symbol in the control's ink; a line
- * mode's picture of what it locates; Edit's own glyph for the rabbit ear; the
- * app's own icons for the tuck, the Divide line, the model
+ * mode's picture of what it locates; Edit's own glyphs for the rabbit ear and
+ * for Repeat (Edit's Reflect selection over line); the
+ * app's own icons for the tuck, the Divide line, Unfold to step, the model
  * verbs (Turn over is the turn-over icon of Edit's Flip and the Diagram's
  * turns), the other vertex folds and the sinks.
  * `compact`: beside text in a toolbar button, at the text's scale, as Edit's
@@ -183,6 +186,11 @@ export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; com
       return <RotateCcwSquare size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'rotate':
       return <RotateCw size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+    // The sequence tools, by the icons their header buttons and menu rows wear.
+    case 'unfold-to':
+      return <Undo2 size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+    case 'repeat':
+      return <FoldRepeatGlyph size={SIZE} strokeWidth={1.5} compact={compact} />;
     case 'axiom-1':
     case 'axiom-2':
     case 'axiom-3':

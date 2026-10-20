@@ -8,6 +8,8 @@
  * - **a tool** is taken in hand: a fold (valley, mountain, precrease), the
  *   Divide line, or Rotate, which previews the model turned by the amount
  *   its window sets and adds the turn as a step once applied (`tools/rotate`);
+ *   Unfold to step and Repeat preview the same way, from the step and the
+ *   range their windows set (`fold/return`, `fold/repeat`);
  * - **a line mode** says how a fold's line is located — an axiom, a free line,
  *   or an existing crease — and stays chosen across fold tools;
  * - **a model verb** (turn over) is a step of its own, done at once: it has
@@ -58,7 +60,31 @@ export type FoldToolId =
   | 'divide-line'
   | FoldSinkToolId
   // The model turned round, by a preset or an exact angle (`tools/rotate`).
-  | 'rotate';
+  | 'rotate'
+  | FoldSequenceToolId;
+
+/**
+ * The tools that act on the sequence's earlier steps rather than along a
+ * line: Unfold to step returns to one (`fold/return`), Repeat folds a range
+ * of them again on the other side of a symmetry axis (`fold/repeat`). Each
+ * previews from the moment it is in hand, as Rotate does, and is put down
+ * once its step is added.
+ */
+export type FoldSequenceToolId = 'unfold-to' | 'repeat';
+
+export const FOLD_SEQUENCE_TOOLS: readonly FoldSequenceToolId[] = ['unfold-to', 'repeat'];
+
+export function isSequenceTool(id: FoldToolId): id is FoldSequenceToolId {
+  return id === 'unfold-to' || id === 'repeat';
+}
+
+/**
+ * The tools held for one step and put down once it is added, the tool they
+ * were taken up from back in hand: Rotate, and the sequence tools.
+ */
+export function isOneStepTool(id: FoldToolId): id is 'rotate' | FoldSequenceToolId {
+  return id === 'rotate' || isSequenceTool(id);
+}
 
 /** The compound folds along a located line that are tools of their own, beside inside reverse. */
 export type FoldCompoundLineToolId = 'crimp' | 'tuck' | 'pleat';
@@ -236,6 +262,9 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Partial<Record<FoldToolId, FoldShortc
   unsink: 'fold.toolUnsink',
   // Rotate, on R as the rotation was when it was done at once.
   rotate: 'fold.rotate',
+  // The sequence tools, unbound until the user gives them a key.
+  'unfold-to': 'fold.toolUnfoldTo',
+  repeat: 'fold.toolRepeat',
 };
 
 export const FOLD_LINE_MODE_SHORTCUTS: Readonly<Record<FoldLineModeId, FoldShortcutId>> = {
@@ -255,10 +284,9 @@ export const FOLD_MODEL_VERB_SHORTCUTS: Readonly<Record<FoldModelVerbId, FoldSho
 };
 
 /** Why nothing on the sequence can change: a newer build wrote it (D7), or the step is locked (D6). */
-export type FoldReadOnlyReason = 'newer' | 'locked' | 'preview';
+export type FoldReadOnlyReason = 'newer' | 'locked';
 
 export function foldReadOnlyReason(t: TFunction, reason: FoldReadOnlyReason): string {
-  if (reason === 'preview') return t('panels:fold.return.finishPreview', 'Finish or cancel the unfold preview first.');
   switch (reason) {
     case 'newer':
       return t('tools:fold.readOnly.newer', 'This sequence is from a newer Ori Studio, so it opens read-only.');
@@ -304,6 +332,11 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
     case 'rotate':
       // The turn's own word, so the tool, its step and the Diagram it is linked to name it alike.
       return turnCardWords({ kind: 'rotate', rotate: FOLD_ROTATION_DEFAULT }, t).title;
+    // The sequence tools by their steps' names, so a tool and the step it adds are named alike.
+    case 'unfold-to':
+      return t('panels:fold.return.label', 'Unfold to step');
+    case 'repeat':
+      return t('panels:fold.repeat.title', 'Repeat on the other side');
   }
 }
 
@@ -348,6 +381,16 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t(
         'tools:fold.tool.rotateHelp',
         'Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.'
+      );
+    case 'unfold-to':
+      return t(
+        'tools:fold.tool.unfoldToHelp',
+        'Return the paper to an earlier step’s pose, keeping every crease made since, previewed, then added as a step.'
+      );
+    case 'repeat':
+      return t(
+        'tools:fold.tool.repeatHelp',
+        'Fold a range of steps again on the other side of a symmetry axis, previewed, then added as a step.'
       );
   }
 }

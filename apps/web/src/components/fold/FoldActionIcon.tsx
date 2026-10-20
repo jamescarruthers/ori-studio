@@ -1,6 +1,21 @@
-import { Undo2, BookImage, Download, Images, RotateCcwSquare, RotateCw, Send, Trash2, Upload } from 'lucide-react';
+import { Undo2, BookImage, Download, FlipHorizontal, Images, RotateCcwSquare, RotateCw, Send, Trash2, Upload } from 'lucide-react';
+import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
 import type { FoldActionIcon as FoldActionIconName } from '../../fold/foldActions';
+import { cpActionByOperation } from '../../lib/oristudioCpActions';
 import { FoldKindMark } from './FoldKindMark';
+
+/**
+ * Edit's Reflect selection over line (Oriedita's `reflectAction`): Repeat
+ * reflects a range of steps over an axis as Edit reflects creases over a line,
+ * so the one concept wears the one icon in both workspaces.
+ */
+const EDIT_REFLECT = cpActionByOperation('DrawCreaseSymmetric');
+
+/** Repeat on the other side's icon, on the rail (`compact` off) and beside a label. */
+export function FoldRepeatGlyph({ size, strokeWidth, compact = false }: { size: number; strokeWidth?: number; compact?: boolean }) {
+  if (EDIT_REFLECT) return <CpToolGlyph action={EDIT_REFLECT} size={size} compact={compact} />;
+  return <FlipHorizontal size={size} strokeWidth={strokeWidth} aria-hidden="true" />;
+}
 
 /**
  * The icon of a Fold verb (`fold/foldActions`' `FoldActionIcon`), wherever a
@@ -23,7 +38,10 @@ export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; 
       return <RotateCw size={size} aria-hidden="true" />;
     case 'unfold-to':
     case 'unfold-last':
+      // The rail's Unfold to step tool: one icon for the one concept.
       return <Undo2 size={size} aria-hidden="true" />;
+    case 'repeat':
+      return <FoldRepeatGlyph size={size} compact />;
     case 'import-cp':
       return <Upload size={size} aria-hidden="true" />;
     case 'send-to-edit':

@@ -334,6 +334,11 @@ export function refusedFaceInks(
  * `useFoldPetalMarks`.)
  */
 export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | FoldPointPick | null {
+  // Repeat's axis, drawn as a free line.
+  if (tools.tool === 'repeat') {
+    const pick = tools.picks.length === 1 ? tools.picks[0] : undefined;
+    return pick?.kind === 'free' ? pick : null;
+  }
   if (tools.tool === 'swivel' && tools.swivelInput !== 'creases') {
     const pick = tools.swivelTarget === 'points' && tools.picks.length === SWIVEL_TARGET_FROM + 1 ? tools.picks.at(-1) : undefined;
     return pick?.kind === 'point' ? pick : null;

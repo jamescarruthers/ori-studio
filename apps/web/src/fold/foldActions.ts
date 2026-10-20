@@ -39,6 +39,7 @@ export type FoldActionIcon =
   | 'rotate'
   | 'unfold-to'
   | 'unfold-last'
+  | 'repeat'
   | 'import-cp'
   | 'send-to-edit'
   | 'send-to-diagram'
@@ -138,7 +139,9 @@ export interface FoldActionDeps {
   turn: (turn: TurnKind) => void;
   /** Take the Rotate tool in hand at the context's step: its window sets how far and which way. */
   rotate: () => void;
+  /** Take Unfold to step in hand at the context's step, to the step before it when `last`. */
   unfold: (last: boolean) => void;
+  /** Take Repeat in hand at the context's step. */
   repeat?: () => void;
   /** Delete a step and its subtree, locked ones included (plan D6). */
   deleteStep: (stepId: string) => void;
@@ -335,6 +338,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       note: branchNote,
       run: deps.rotate,
     },
+    // Unfold to step and Repeat take their tools in hand, which preview what their windows set.
     ...(['unfold-last', 'unfold-to'] as const).map((id): FoldCommand => ({
       kind: 'command', id, icon: 'unfold-to',
       label: id === 'unfold-last'
@@ -345,7 +349,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       note: branchNote,
       run: () => deps.unfold(id === 'unfold-last'),
     })),
-    { kind: 'command', id: 'repeat', icon: 'rotate', label: t('panels:fold.repeat.open', 'Repeat on the other side…'),
+    { kind: 'command', id: 'repeat', icon: 'repeat', label: t('panels:fold.repeat.open', 'Repeat on the other side…'),
       disabled: addBlock !== null || step === null || !deps.repeat, hint: addBlock ?? undefined, note: branchNote, run: () => deps.repeat?.() },
     { kind: 'separator', id: 'after-turns' },
     {

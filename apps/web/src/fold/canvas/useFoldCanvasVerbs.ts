@@ -463,7 +463,7 @@ export function useFoldCanvasVerbs(
         tools.clear();
         // A rotation applied puts Rotate down, as Turn over is done at once:
         // left in hand, it would preview another turn on the step just made.
-        if (op.kind === 'rotate') tools.putDownRotate();
+        if (op.kind === 'rotate') tools.putDown();
       }, (error: unknown) => {
         committing.current = false;
         reportError(error, { surface: 'fold:commit' });
@@ -603,6 +603,18 @@ export function useFoldCanvasVerbs(
         const index = drawn === undefined ? shown.index : drawn;
         if (!index) return null;
         const tool = state();
+        // Repeat's axis, drawn as a free line on the range's starting state
+        // while it is on show: a line drawn and refused gives way to the next.
+        if (tool.tool === 'repeat') {
+          if (!live.current.preview.repeat?.view.drawing) return { pane, at, pick: null };
+          const pick = resolveFoldPick(index, pane, at, radii, {
+            snap: 'free',
+            edges: false,
+            free: freePointHeld(),
+            snapFree: tool.freeLineSnap,
+          });
+          return { pane, at, pick };
+        }
         // A fan's hinge region, or a petal fold's flap, picked or picked
         // again: the paper under the pointer, whose region the panes light —
         // off it, nothing.
@@ -655,6 +667,13 @@ export function useFoldCanvasVerbs(
         // Nothing can be folded or marked on a newer build's sequence, or from a step locked behind one.
         if (!hit || live.current.session.readOnly || live.current.session.cursor.status === 'locked') return;
         const tool = state();
+        if (tool.tool === 'repeat') {
+          if (!hit.pick || !live.current.preview.repeat?.view.drawing) return;
+          // A line drawn and refused: the next click starts another.
+          if (isLocated(tool)) tools.clear();
+          tools.pick(hit.pick);
+          return;
+        }
         if (isLocated(tool)) {
           if (picksAlongLine(tool)) {
             // A point along the line, for a segment's end or a pinch's centre;
@@ -926,7 +945,10 @@ export function useFoldCanvasVerbs(
         tools.setOverride({ op: { ...rest, line: { via: 'free', through }, ...seed } });
       },
 
-      choosingOrder: () => !!useFoldImportOrderUi.getState().choosing || live.current.preview.orderResolution?.active === true,
+      choosingOrder: () =>
+        !!useFoldImportOrderUi.getState().choosing ||
+        live.current.preview.orderResolution?.active === true ||
+        live.current.preview.repeat?.choosing === true,
 
       stepChoice: (delta) => {
         const imported = useFoldImportOrderUi.getState();
@@ -938,6 +960,8 @@ export function useFoldCanvasVerbs(
           imported.flow?.choose(component, part?.truncated ? Math.max(0, Math.min(count - 1, next)) : (next + count) % count);
           return true;
         }
+        // A source operation's matching layer orders, while Repeat has one chosen.
+        if (state().tool === 'repeat') return live.current.preview.repeat?.stepChoice(delta) ?? false;
         const resolution = live.current.preview.orderResolution;
         if (resolution?.active) { resolution.step(delta); return true; }
         const choice = foldCanvasChoice(live.current.preview, state());
@@ -980,6 +1004,10 @@ export function useFoldCanvasVerbs(
       commit: () => {
         if (useFoldImportOrderUi.getState().choosing) return true;
         const current = state();
+        // The sequence tools commit their own steps: Repeat prepares, chooses
+        // and saves; Unfold to step adds its step, or rebuilds a saved one.
+        if (current.tool === 'repeat') return live.current.preview.repeat?.primary() ?? false;
+        if (current.tool === 'unfold-to') return live.current.preview.unfold?.commit() ?? false;
         if (current.tool === 'swivel' && current.swivelInput === 'creases' && !current.swivelFirst) {
           const { swivelLine, refused } = live.current.preview;
           if (!swivelLine || refused || live.current.session.readOnly) return false;
@@ -1022,8 +1050,19 @@ export function useFoldCanvasVerbs(
           setQueued(null);
           return true;
         }
+        // Repeat steps back on its own ladder (`useFoldRepeatTool`); Unfold
+        // to step is put down, back to a saved step it was rebuilding.
+        if (state().tool === 'repeat') {
+          setQueued(null);
+          return live.current.preview.repeat?.cancel() ?? false;
+        }
+        if (state().tool === 'unfold-to') {
+          setQueued(null);
+          live.current.preview.unfold?.putDown();
+          return true;
+        }
         // Rotate holds its preview from the moment it is in hand: Escape puts it down, and the turn with it.
-        if (tools.putDownRotate()) {
+        if (tools.putDown()) {
           setQueued(null);
           live.current.session.cancel();
           return true;
