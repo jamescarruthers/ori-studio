@@ -1874,6 +1874,12 @@
       "stepForward": "Avançar um pouco"
     },
     "repeat": {
+      "advice": {
+        "axis": "Tente outro eixo ou dobre o outro lado com as ferramentas.",
+        "axisOrLater": "Tente outro eixo ou comece o intervalo depois desta operação.",
+        "later": "Comece o intervalo depois desta operação ou dobre o outro lado com as ferramentas.",
+        "tools": "Em vez disso, dobre o outro lado com as ferramentas."
+      },
       "axis": "Eixo de simetria",
       "axisAngle": "Eixo a {{degrees}}°",
       "axisCanvas": "Definir o eixo de simetria no modelo inicial",
@@ -1897,6 +1903,7 @@
       "groupCount_one": "Repetir {{count}} operação como uma etapa numerada.",
       "groupCount_many": "Repetir {{count}} operações até o passo atual como um único passo numerado.",
       "groupCount_other": "Repetir {{count}} operações até o passo atual como um único passo numerado.",
+      "headlineAdvice": "{{reason}}. {{advice}}",
       "individual": "Mostrar como passos individuais",
       "individualCount_one": "Repetir {{count}} operação como uma entrada individual.",
       "individualCount_many": "Repetir {{count}} operações até o passo atual como entradas individuais.",
@@ -1906,8 +1913,23 @@
       "limit": "Esta repetição excede o limite de busca. Tente um intervalo menor.",
       "locate": "Definir eixo",
       "materialConflict": "A repetição alteraria mais papel ou vincos. Os dois lados não podem ser dobrados independentemente neste intervalo.",
+      "mirror": {
+        "budget": "Descobrir como as camadas espelhadas se empilham demorou demais, então não se sabe se elas se encaixam.",
+        "closureAddsFlaps": "Dobrar as camadas espelhadas também moveria outras abas.",
+        "emptySeed": "A dobra espelhada não escolhe nenhuma camada para mover.",
+        "moverStays": "A camada que leva o ponto a mover não está entre as camadas que a dobra espelhada move.",
+        "noMovingSide": "Não há papel do lado da linha espelhada que se moveria.",
+        "noRoot": "As referências espelhadas não dão nenhuma linha de dobra no papel como ele está dobrado.",
+        "noSide": "Nada indica qual lado da linha espelhada se move.",
+        "nothingStays": "Todas as camadas estão do lado da linha espelhada que se move, então nada ficaria parado.",
+        "offPaper": "Um ponto ou uma borda usado para posicionar a linha espelhada não está sobre o papel como ele está dobrado agora.",
+        "pickAgain": "O lugar que a dobra espelhada escolhe não está dentro de uma camada do lado que se move.",
+        "pointsTooClose": "Os dois pontos da linha espelhada caem no mesmo lugar do papel dobrado, então não formam nenhuma linha.",
+        "wrongCrease": "A linha espelhada não segue uma borda dobrada para desdobrar nem um vinco plano para redobrar."
+      },
       "noAxis": "Não foi verificado um par de lados correspondentes neste modelo inicial. Escolha outro intervalo.",
       "open": "Repetir do outro lado…",
+      "options": "Opções",
       "orderConflict": "As relações originais entre as camadas não podem ser preservadas do outro lado.",
       "orderCount_one": "{{number}} de {{count}}",
       "orderCount_many": "{{number}} de {{count}}",
@@ -1915,6 +1937,7 @@
       "preparing": "Preparando as dobras repetidas…",
       "preview": "Prévia da repetição",
       "ready": "O resultado dobrado e o padrão de vincos são mostrados abaixo. Pronto para salvar.",
+      "reasonAdvice": "{{reason}} {{advice}}",
       "rebuildRequired": "A repetição salva não corresponde mais a este estado. Atualize-a a partir dos passos de origem.",
       "reference": "Uma referência não tem um ponto correspondente do outro lado.",
       "refusedPlain": "A operação espelhada não pode ser dobrada. Nenhum passo foi adicionado.",

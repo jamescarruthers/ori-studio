@@ -1874,6 +1874,12 @@
       "stepForward": "Avancer un peu"
     },
     "repeat": {
+      "advice": {
+        "axis": "Essayez un autre axe, ou pliez l’autre côté avec les outils.",
+        "axisOrLater": "Essayez un autre axe, ou commencez la plage après cette opération.",
+        "later": "Commencez la plage après cette opération, ou pliez l’autre côté avec les outils.",
+        "tools": "Pliez plutôt l’autre côté avec les outils."
+      },
       "axis": "Axe de symétrie",
       "axisAngle": "Axe à {{degrees}}°",
       "axisCanvas": "Définir l’axe de symétrie sur le modèle initial",
@@ -1897,6 +1903,7 @@
       "groupCount_one": "Répéter {{count}} opération en une étape numérotée.",
       "groupCount_many": "Répéter {{count}} opérations jusqu’à l’étape actuelle en une seule étape numérotée.",
       "groupCount_other": "Répéter {{count}} opérations jusqu’à l’étape actuelle en une seule étape numérotée.",
+      "headlineAdvice": "{{reason}}. {{advice}}",
       "individual": "Afficher comme étapes individuelles",
       "individualCount_one": "Répéter {{count}} opération comme entrée individuelle.",
       "individualCount_many": "Répéter {{count}} opérations jusqu’à l’étape actuelle comme entrées individuelles.",
@@ -1906,8 +1913,23 @@
       "limit": "Cette répétition dépasse la limite de recherche. Essayez une plage plus courte.",
       "locate": "Définir l’axe",
       "materialConflict": "La répétition modifierait d’autres zones de papier ou d’autres plis. Les deux côtés ne peuvent pas être pliés indépendamment dans cette plage.",
+      "mirror": {
+        "budget": "Déterminer comment les couches réfléchies s’empilent a pris trop de temps : on ne sait donc pas si elles conviennent.",
+        "closureAddsFlaps": "Plier les couches réfléchies déplacerait aussi d’autres rabats.",
+        "emptySeed": "Le pli réfléchi ne choisit aucune couche à déplacer.",
+        "moverStays": "La couche qui porte le point à déplacer ne fait pas partie des couches que le pli réfléchi déplace.",
+        "noMovingSide": "Aucun papier ne se trouve du côté de la ligne réfléchie qui bougerait.",
+        "noRoot": "Les repères réfléchis ne donnent aucune ligne de pli sur le papier tel qu’il est plié.",
+        "noSide": "Rien n’indique quel côté de la ligne réfléchie bouge.",
+        "nothingStays": "Toutes les couches sont du côté de la ligne réfléchie qui bouge : rien ne resterait en place.",
+        "offPaper": "Un point ou un bord à partir duquel la ligne réfléchie est placée ne se trouve pas sur le papier tel qu’il est plié maintenant.",
+        "pickAgain": "L’endroit que choisit le pli réfléchi n’est dans aucune couche du côté qui bouge.",
+        "pointsTooClose": "Les deux points de la ligne réfléchie tombent au même endroit du papier plié, ils ne forment donc aucune ligne.",
+        "wrongCrease": "La ligne réfléchie ne suit ni un bord plié à déplier, ni un pli à plat à replier."
+      },
       "noAxis": "Aucune paire de côtés correspondants n’a été vérifiée pour ce modèle initial. Choisissez une autre plage.",
       "open": "Répéter de l’autre côté…",
+      "options": "Options",
       "orderConflict": "Les relations initiales entre les couches ne peuvent pas être conservées de l’autre côté.",
       "orderCount_one": "{{number}} sur {{count}}",
       "orderCount_many": "{{number}} sur {{count}}",
@@ -1915,6 +1937,7 @@
       "preparing": "Préparation des plis répétés…",
       "preview": "Aperçu de la répétition",
       "ready": "Le résultat plié et le patron de plis sont affichés ci-dessous. Prêt à enregistrer.",
+      "reasonAdvice": "{{reason}} {{advice}}",
       "rebuildRequired": "La répétition enregistrée ne correspond plus à cet état. Mettez-la à jour depuis ses étapes sources.",
       "reference": "Une référence n’a pas de point correspondant de l’autre côté.",
       "refusedPlain": "L’opération réfléchie ne peut pas être pliée. Aucune étape n’a été ajoutée.",
