@@ -59,12 +59,25 @@ export const foldSequenceSessionRuntime: FoldSessionRuntime = {
   source: foldSequenceEngineSource,
 };
 
+/**
+ * How long the worker and its states outlive the last Fold surface: ten
+ * minutes. Long enough to lay out a Diagram page, or fix a crease in Edit,
+ * and come back to the step on screen without a replay. Measured on a
+ * 67-step model in a dev build: coming back replayed every step, about 3 s
+ * before the step on screen was drawn again (0.2–0.3 s kept), while keeping
+ * them costs about 2.4 MB of wasm heap and no CPU — the idle worker receives
+ * no messages. The web offers no cheap memory-pressure signal, and the timer
+ * runs while the page is hidden, so a hidden tab lets go when it runs out (a
+ * frozen one runs nothing at all).
+ */
+export const FOLD_SESSION_LINGER_MS = 10 * 60 * 1000;
+
 let session: FoldSession | null = null;
 
 /**
  * The app's one Fold session, made on first use. It listens to the store from
  * then on, but starts the worker and replays only while a Fold surface holds
- * it (`useFoldSession`).
+ * it (`useFoldSession`), and for {@link FOLD_SESSION_LINGER_MS} after.
  */
 export function foldSession(): FoldSession {
   session ??= createFoldSession({
@@ -72,6 +85,7 @@ export function foldSession(): FoldSession {
     runtime: foldSequenceSessionRuntime,
     reportError: (error) => useWorkspaceStore.setState({ error }),
     onEngineCrash: trackFoldEngineCrashed,
+    linger: FOLD_SESSION_LINGER_MS,
   });
   return session;
 }

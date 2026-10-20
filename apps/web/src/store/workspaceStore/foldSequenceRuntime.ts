@@ -31,9 +31,10 @@ export type FoldSequenceClientLossListener = (
 ) => void;
 
 // Owns the Fold engine's worker, following `precreaseRuntime.ts`: a
-// reference-counted singleton the Fold workspace retains on entry and releases
-// on leaving, so the wasm module and every state it holds are not resident for
-// the life of the tab.
+// reference-counted singleton the Fold session retains while a surface holds
+// it and releases once it has let go — after its linger, so a visit to another
+// workspace does not cost a replay (`foldSession.ts`) — so the wasm module and
+// every state it holds are not resident for the life of the tab.
 //
 // Not an `engineHost` engine: the document is TypeScript's (the Fold slice's),
 // and the worker only lands states for it, by handle. On desktop it runs as
