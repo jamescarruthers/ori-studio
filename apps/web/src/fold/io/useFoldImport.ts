@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { trackFoldChoiceOffered, trackFoldOrderResolved } from '../../analytics/trackFold';
-import { trackFoldCpImported } from '../../analytics/trackFoldIo';
+import { trackFoldCpImported, trackFoldImportRefused } from '../../analytics/trackFoldIo';
 import { reportError } from '../../monitoring';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { foldSession } from '../../store/workspaceStore/foldSession';
@@ -28,6 +28,7 @@ export function createAppFoldImportFlow(): FoldImportFlow {
     onImported: trackFoldCpImported,
     onChoiceOffered: (orders) => trackFoldChoiceOffered('import_order', orders),
     onOrderResolved: (result, count) => trackFoldOrderResolved(result, 'cp', count),
+    onRefused: trackFoldImportRefused,
   });
 }
 

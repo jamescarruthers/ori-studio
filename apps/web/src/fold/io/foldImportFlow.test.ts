@@ -12,6 +12,7 @@ import { sequenceOf, step, valleyAt } from '../document/foldSequence.fixtures';
 import type { FoldCpJumpOp, FoldSequenceDocument } from '../document/foldSequenceDocument';
 import type { FoldImportOpened, FoldImportSource, FoldImportTarget } from '../engine/foldEngineIoWire';
 import type { FoldEngineOutcome, FoldScene } from '../engine/foldEngineWire';
+import { FOLD_MAX_FACES } from '../foldFaceCap';
 import { createFoldSession, type FoldSession } from '../session/foldSession';
 import {
   fakeFoldEngine,
@@ -144,9 +145,17 @@ function setup(
   sessions.push(session);
   const imported = vi.fn();
   const offered = vi.fn();
-  const flow = createFoldImportFlow({ session, editFoldedFigure, projectCp, onImported: imported, onChoiceOffered: offered });
+  const refused = vi.fn();
+  const flow = createFoldImportFlow({
+    session,
+    editFoldedFigure,
+    projectCp,
+    onImported: imported,
+    onChoiceOffered: offered,
+    onRefused: refused,
+  });
   flows.push(flow);
-  return { session, source, runtime, flow, imported, offered, io: () => engines[engines.length - 1]! };
+  return { session, source, runtime, flow, imported, offered, refused, io: () => engines[engines.length - 1]! };
 }
 
 const SAMPLE: FoldImportRequest = { kind: 'sample', sample: 'waterbomb-base' };
@@ -294,6 +303,36 @@ describe('Import CP’s flow', () => {
     expect(flow.store.getState()).toMatchObject({ phase: 'done', origin: 'edit_folded_figure' });
     expect(source.commits).toHaveLength(1);
     expect(imported).toHaveBeenCalledWith('edit_folded_figure');
+  });
+
+  it('refuses Edit’s folded figure over the face cap before the engine is asked, as the engine would', async () => {
+    const faces = Array.from({ length: FOLD_MAX_FACES + 1 }, () => ({}));
+    const figure = { faces } as unknown as OristudioCpFoldedPaperScene;
+    const { flow, io, refused } = setup(sequenceOf([step('a', null)]), 'a', {}, async () => figure);
+    await flow.open({ kind: 'edit-folded-figure' });
+    const refusal = { code: 'import_too_many_faces', face_count: FOLD_MAX_FACES + 1, limit: FOLD_MAX_FACES };
+    expect(flow.store.getState()).toMatchObject({ phase: 'refused', refusal: { kind: 'engine', refused: { refusal } } });
+    expect(io().calls).toEqual([]);
+    expect(refused).toHaveBeenCalledOnce();
+    expect(refused).toHaveBeenCalledWith({ kind: 'engine', refused: { refusal } });
+
+    // At the cap, it goes to the engine.
+    const atCap = { faces: faces.slice(1) } as unknown as OristudioCpFoldedPaperScene;
+    const second = setup(sequenceOf([step('a', null)]), 'a', {}, async () => atCap);
+    await second.flow.open({ kind: 'edit-folded-figure' });
+    await settle();
+    expect(second.io().calls).toContain('importEditFoldedFigure:after');
+    expect(second.refused).not.toHaveBeenCalled();
+  });
+
+  it('hears every refusal once, the engine’s and its own', async () => {
+    const { flow, refused } = setup(sequenceOf([step('a', null)]), 'a', { refuse: 'import_no_order' });
+    await flow.open(FILE);
+    await flow.open({ kind: 'file', name: 'photo.png', source: null });
+    expect(refused.mock.calls).toEqual([
+      [{ kind: 'engine', refused: expect.objectContaining({ refusal: { code: 'import_no_order' } }) }],
+      [{ kind: 'local', code: 'unsupported_file', name: 'photo.png' }],
+    ]);
   });
 
   it('says when Edit has no folded figure to start from', async () => {

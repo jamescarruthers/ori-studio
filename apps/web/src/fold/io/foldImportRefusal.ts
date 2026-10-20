@@ -1,9 +1,9 @@
 /**
  * An Import CP that did not land, as the dialog says it (plan D16): the
- * engine's refusal — the sheet it found, the faces, flat-foldability, the
- * layer-order search — or the dialog's own reason, as a title and a sentence
- * a folder reads, with the one fix the engine leaves open: a search that ran
- * out of budget may be asked again with more.
+ * engine's refusal — the sheet it found, the faces and how many there are,
+ * flat-foldability, the layer-order search — or the dialog's own reason, as a
+ * title and a sentence a folder reads, with the one fix the engine leaves
+ * open: a search that ran out of budget may be asked again with more.
  *
  * The step tools word a refused fold (`fold/tools/refusalNotice.ts`); a
  * stored `cp-jump` that no longer replays is theirs to word as well. These
@@ -16,6 +16,7 @@ import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
 import type { FoldImportRefusalCode } from '../engine/foldEngineIoWire';
 import type { FoldEngineRefused } from '../engine/foldEngineWire';
+import { foldFaceCapWords, foldFaceCountOf } from '../foldFaceCap';
 
 /**
  * The dialog's own reasons, before the engine is asked:
@@ -150,6 +151,11 @@ function engineWords(t: TFunction, refusal: FoldEngineRefused['refusal']): { tit
           'One of the pattern’s faces bends inward at a corner. Fold folds faces that are convex.'
         ),
       };
+    case 'import_too_many_faces': {
+      const counts = foldFaceCountOf(refusal);
+      if (counts) return foldFaceCapWords(t, counts, 'pattern');
+      break;
+    }
     case 'import_not_flat_foldable':
     case 'import_ambiguous_overlap':
       return {

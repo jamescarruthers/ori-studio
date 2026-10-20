@@ -142,6 +142,7 @@ export const FOLD_IMPORT_REFUSAL_CODES = [
   'import_crease_not_chord',
   'import_disconnected_creases',
   'import_non_convex_face',
+  'import_too_many_faces',
   'import_not_flat_foldable',
   'import_ambiguous_overlap',
   'import_no_order',

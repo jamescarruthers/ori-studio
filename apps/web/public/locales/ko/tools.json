@@ -677,6 +677,13 @@
         "text": "끝이 돌아갈 자리에 다른 겹이 있습니다. 그 플랩들을 접기에 포함하거나 다른 곳에서 뒤집어 접으세요.",
         "title": "겹이 가로막고 있습니다"
       },
+      "tooManyFaces": {
+        "fold": "이렇게 접으면 면이 {{faceCount, number}}개가 되어, 접을 수 있는 {{limit, number}}개를 넘습니다. 더 적은 층을 접으세요.",
+        "note": "면 {{faceCount, number}}개, 접을 수 있는 {{limit, number}}개 초과",
+        "pattern": "이 전개도에는 면이 {{faceCount, number}}개 있습니다. 접을 수 있는 전개도는 면이 {{limit, number}}개까지입니다. 더 단순한 전개도를 가져오세요.",
+        "step": "이 단계에는 면이 {{faceCount, number}}개 있어, 접을 수 있는 {{limit, number}}개를 넘습니다. 이 단계와 이후 단계는 삭제만 할 수 있습니다.",
+        "title": "면이 너무 많습니다"
+      },
       "tooSmall": {
         "text": "종이 자체보다 얇은 접는 선이나 종이 띠가 남습니다.",
         "title": "너무 작아서 접을 수 없습니다"

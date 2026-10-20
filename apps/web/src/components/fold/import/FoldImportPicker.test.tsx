@@ -6,6 +6,9 @@ import { FoldImportPicker } from './FoldImportPicker';
 import { regionReferenceFor } from '../../../cp-workspace/regions/regionReference';
 import { sheetRegions } from '../../../cp-workspace/sheets/cpSheetRegions';
 import { twoSquaresIndex } from '../../../diagram/capture/capture.fixtures';
+import type { OristudioCpFoldedFigureEntry } from '../../../engine/oristudioCpTypes';
+import { FOLD_MAX_FACES } from '../../../fold/foldFaceCap';
+import { useWorkspaceStore } from '../../../store/workspaceStore';
 const sheets = sheetRegions(twoSquaresIndex()).map(sheet => ({ sheet, thumbnail: null }));
 vi.mock('../../../cp-workspace/sheets/useCpPatternSheets', () => ({
   useCpPatternSheets: () => ({ status: 'ready', sheets }),
@@ -49,6 +52,42 @@ describe('FoldImportPicker', () => {
     act(() => browse?.click());
     expect(accepts).toHaveLength(1);
     expect(accepts[0]?.split(',')).toEqual(['.cp', '.fold', '.ori', '.orh', 'application/octet-stream']);
+  });
+});
+
+/** Edit with one solved flat figure of `faces` faces, as its wireframe has them. */
+function editFigureOf(faces: number) {
+  const figure = {
+    id: 'figure-1',
+    handle: 7,
+    folded3d: null,
+    snapshot: { outcome: 'Solved', wireframe: { faces: Array.from({ length: faces }, () => [0, 1, 2]) } },
+  } as unknown as OristudioCpFoldedFigureEntry;
+  useWorkspaceStore.setState({ oristudioCpFoldedFigures: [figure], oristudioCpActiveFoldedFigureId: 'figure-1' });
+}
+
+describe('Edit’s folded figure in the picker', () => {
+  afterEach(() => useWorkspaceStore.setState({ oristudioCpFoldedFigures: [], oristudioCpActiveFoldedFigureId: null }));
+  const row = () =>
+    [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Edit’s folded figure'));
+
+  it('is offered at the face cap', () => {
+    const onRequest = vi.fn();
+    editFigureOf(FOLD_MAX_FACES);
+    act(() => root.render(<FoldImportPicker dragging={false} busy={false} onRequest={onRequest} />));
+    expect(row()?.disabled).toBe(false);
+    act(() => row()?.click());
+    expect(onRequest).toHaveBeenCalledExactlyOnceWith({ kind: 'edit-folded-figure' });
+  });
+
+  it('says how many faces it has over the cap, and is not offered', () => {
+    const onRequest = vi.fn();
+    editFigureOf(5000);
+    act(() => root.render(<FoldImportPicker dragging={false} busy={false} onRequest={onRequest} />));
+    expect(row()?.disabled).toBe(true);
+    expect(row()?.textContent).toContain('5,000 faces, more than the 4,096 Fold folds');
+    act(() => row()?.click());
+    expect(onRequest).not.toHaveBeenCalled();
   });
 });
 

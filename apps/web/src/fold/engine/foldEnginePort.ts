@@ -19,6 +19,7 @@ import type { WasmErrorEnvelope } from '../../engine/types';
 import type { FoldStateFingerprint } from '../document/foldDigest';
 import type { FoldEngineOutcome, FoldEnginePort } from '../document/foldReplay';
 import type { FoldChoices, FoldPaper } from '../document/foldSequenceDocument';
+import { foldFaceCountOf } from '../foldFaceCap';
 import type {
   FoldEngineOp,
   FoldEngineOutcome as FoldEngineAnswer,
@@ -70,6 +71,12 @@ async function refusingInvalidInput<T>(
   }
 }
 
+/** A refusal as replay keeps it: its code, and the counts of one over the face cap. */
+function refusedOutcome(refusal: { readonly code: string }): FoldEngineOutcome<never> {
+  const faces = foldFaceCountOf(refusal);
+  return { landed: false, code: refusal.code, ...(faces ? { faces } : {}) };
+}
+
 /**
  * The port over `source`. Releases are batched: every handle released in one
  * turn of the event loop goes to the engine in one call, which is what a
@@ -97,7 +104,7 @@ export function createFoldEnginePort(
   ): FoldEngineOutcome<FoldEngineStateHandle> =>
     answer.status === 'ok'
       ? { landed: true, state: { generation, id: answer.state }, fingerprint: answer.fingerprint }
-      : { landed: false, code: answer.refusal.code };
+      : refusedOutcome(answer.refusal);
 
   return {
     engineVersion,

@@ -4,6 +4,7 @@ import { FileUp, Layers } from 'lucide-react';
 import { regionReferenceFor } from '../../../cp-workspace/regions/regionReference';
 import { useCpPatternSheets } from '../../../cp-workspace/sheets/useCpPatternSheets';
 import { type FoldSampleId } from '../../../fold/engine/foldEngineIoSamples';
+import { foldFaceCapNote, foldOverFaceCap } from '../../../fold/foldFaceCap';
 import { foldStartingFigure } from '../../../fold/io/foldEditFigure';
 import { FOLD_IMPORT_EXTENSIONS, foldImportFileSource } from '../../../fold/io/foldImportFiles';
 import type { FoldImportRequest } from '../../../fold/io/foldImportFlow';
@@ -28,7 +29,8 @@ export function foldSampleName(t: TFunction, id: FoldSampleId): string {
  * What Import CP can bring in (plan D16): a crease-pattern file, by the
  * platform's picker or a drop on the dialog; a linked pattern from Edit;
  * or, when Edit has a flat folded figure, that figure with the layer order
- * Edit found. Each is one press; the dialog runs the import.
+ * Edit found — said to have too many faces, and not offered, when it has
+ * more than Fold folds. Each is one press; the dialog runs the import.
  */
 export function FoldImportPicker({
   dragging,
@@ -44,6 +46,9 @@ export function FoldImportPicker({
   const { t } = useTranslation();
   const sheets = useCpPatternSheets(true);
   const hasFigure = useWorkspaceStore((state) => foldStartingFigure(state) !== null);
+  // Its faces are the import's: said here, before the press, when there are too many.
+  const figureFaces = useWorkspaceStore((state) => foldStartingFigure(state)?.snapshot?.wireframe?.faces.length ?? null);
+  const figureOverCap = figureFaces === null ? null : foldOverFaceCap(figureFaces);
 
   // Inside the press: a browser allows a picker only from a gesture.
   const pick = async () => {
@@ -110,17 +115,19 @@ export function FoldImportPicker({
           <button
             type="button"
             className={styles.row}
-            disabled={busy}
+            disabled={busy || figureOverCap !== null}
             onClick={() => onRequest({ kind: 'edit-folded-figure' })}
           >
             <Layers size={18} aria-hidden="true" />
             <span className={styles.rowText}>
               <span className={styles.name}>{t('dialogs:foldImport.editFigure', 'Edit’s folded figure')}</span>
               <span className={styles.note}>
-                {t(
-                  'dialogs:foldImport.editFigureNote',
-                  'The crease pattern Edit folded, with the layer order it found'
-                )}
+                {figureOverCap
+                  ? foldFaceCapNote(t, figureOverCap)
+                  : t(
+                      'dialogs:foldImport.editFigureNote',
+                      'The crease pattern Edit folded, with the layer order it found'
+                    )}
               </span>
             </span>
           </button>

@@ -11,7 +11,10 @@
 //!    Fold does); crease marks stay flat beside the graph, and aux annotations
 //!    remain guides. Edit's cyan/F lines arrive as crease marks.
 //! 3. Build the planar graph and its convex faces (`arrangement`), refusing a
-//!    crease that is no full chord of its face.
+//!    crease that is no full chord of its face, and a pattern of more faces
+//!    than the layer order's cap (`oristudio_layer_order::MAX_FACES`): its
+//!    tables grow with the square of the faces, so the cap is checked before
+//!    anything is derived from them.
 //! 4. Derive the isometries from a root, the folded view and its constraints
 //!    ([`Unordered`]).
 //! 5. Complete the order seeded by the imported letters
@@ -43,7 +46,7 @@ mod placement;
 
 use oristudio_geometry::RefusalReason;
 use oristudio_geometry::convex;
-use oristudio_layer_order::{LayerOrder, LayerOrderError, OrieditaRelation};
+use oristudio_layer_order::{LayerOrder, LayerOrderError, MAX_FACES, OrieditaRelation};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -246,6 +249,12 @@ pub enum ImportRefusal {
     #[serde(rename = "import_non_convex_face")]
     #[error("a face has a reflex corner at {point:?}")]
     NonConvexFace { point: Point },
+    /// More faces than Fold folds (`oristudio_layer_order::MAX_FACES`):
+    /// refused as soon as the faces are counted, before anything is derived
+    /// from them.
+    #[serde(rename = "import_too_many_faces")]
+    #[error("the crease pattern has {face_count} faces, over the {limit} cap")]
+    TooManyFaces { face_count: usize, limit: usize },
     /// The pattern does not fold flat with its kinds: a vertex lands in two
     /// places, a hinge has the wrong orientations, or the folded image is
     /// malformed. `points` are the vertices and face witnesses it names.
@@ -299,6 +308,7 @@ impl ImportRefusal {
             ImportRefusal::CreaseNotChord { .. } => "import_crease_not_chord",
             ImportRefusal::DisconnectedCreases { .. } => "import_disconnected_creases",
             ImportRefusal::NonConvexFace { .. } => "import_non_convex_face",
+            ImportRefusal::TooManyFaces { .. } => "import_too_many_faces",
             ImportRefusal::NotFlatFoldable { .. } => "import_not_flat_foldable",
             ImportRefusal::AmbiguousOverlap { .. } => "import_ambiguous_overlap",
             ImportRefusal::NoOrder { .. } => "import_no_order",
@@ -431,6 +441,12 @@ impl ImportedPattern {
         }
         let arrangement = arrangement::arrange(&placed, &sheet)
             .map_err(|r| r.map_points(|p| placement.to_input(p)))?;
+        if arrangement.faces.len() > MAX_FACES {
+            return Err(ImportRefusal::TooManyFaces {
+                face_count: arrangement.faces.len(),
+                limit: MAX_FACES,
+            });
+        }
 
         let step = target.step();
         let mut summary = ImportSummary {
@@ -517,15 +533,8 @@ impl ImportedPattern {
             step,
             marks,
         };
-        let unordered = Unordered::new(parts.clone(), unknown).map_err(|refusal| {
-            ImportRefusal::NotFlatFoldable {
-                points: points_of(&refusal, &parts)
-                    .into_iter()
-                    .map(|p| placement.to_input(p))
-                    .collect(),
-                refusal,
-            }
-        })?;
+        let unordered = Unordered::new(parts.clone(), unknown)
+            .map_err(|refusal| not_flat_foldable(refusal, &parts, &placement))?;
         Ok(ImportedPattern {
             unordered,
             placement,
@@ -578,13 +587,7 @@ impl ImportedPattern {
     pub fn state(&self, order: LayerOrder) -> Result<State, ImportRefusal> {
         self.unordered
             .state(order)
-            .map_err(|refusal| ImportRefusal::NotFlatFoldable {
-                points: points_of(&refusal, self.unordered.parts())
-                    .into_iter()
-                    .map(|p| self.placement.to_input(p))
-                    .collect(),
-                refusal,
-            })
+            .map_err(|refusal| not_flat_foldable(refusal, self.unordered.parts(), &self.placement))
     }
 
     /// Replay a stored `orderJson` against this pattern (plan D6): its
@@ -728,6 +731,26 @@ fn root_face(arrangement: &arrangement::Arrangement, p: Point) -> usize {
         .filter(|&f| convex::contains_point(&polygons[f], p, -TOL))
         .min_by(|&f, &g| bearing(f).total_cmp(&bearing(g)))
         .unwrap_or(0)
+}
+
+/// The gate's refusal of the imported parts as Import CP says it: the face
+/// cap under its own code, anything else as not folding flat, with the points
+/// it names in the input's coordinates.
+fn not_flat_foldable(
+    refusal: FoldRefusal,
+    parts: &StateParts,
+    placement: &Placement,
+) -> ImportRefusal {
+    if let FoldRefusal::TooManyFaces { face_count, limit } = refusal {
+        return ImportRefusal::TooManyFaces { face_count, limit };
+    }
+    ImportRefusal::NotFlatFoldable {
+        points: points_of(&refusal, parts)
+            .into_iter()
+            .map(|p| placement.to_input(p))
+            .collect(),
+        refusal,
+    }
 }
 
 /// The sheet points a refusal names: its vertices and its faces' centroids.

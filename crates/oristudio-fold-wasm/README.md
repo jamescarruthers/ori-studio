@@ -139,6 +139,13 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
     writes it; `orderJson`, the order by sheet-point witnesses — is applied
     like any op: imported after its parent, its witnesses deciding the
     order, or refused (`import_*`) and the step broken.
+  - **The face cap.** A pattern of more than
+    `oristudio_layer_order::MAX_FACES` (4,096) faces is refused
+    `import_too_many_faces` (`face_count`, `limit`) as soon as its faces are
+    counted, by every one of these calls, a replay's included; any other
+    state over it is refused `too_many_faces`. The layer order's tables are
+    over every pair of faces, about `7n²` bytes, and a wasm heap never gives
+    them back: 10,000 faces took 700 MB and 25,600 trapped at wasm32's 4 GB.
 - **Sinks** (`src/ops_sinks.rs`; plan Phase 11): `open-sink`, `closed-sink`
   and `unsink` ops land through `apply`, their line resolved as a fold's,
   the seed naming the point (or the sunk tip), and `choices.pocket` (a

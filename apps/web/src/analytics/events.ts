@@ -1733,7 +1733,9 @@ export const ANALYTICS_EVENTS = {
    * turn, a crimp or a tuck — with how much it took (`layer_scope`) and how its line was located
    * (`via`), and a rotation how far it turned (`amount`, a preset or `other`); never the axiom (per-step axiom codes would add up to the axiom
    * histogram this document forbids). `fold refused` is a refusal shown to the
-   * folder, by the engine's stable `code`, once per fold asked for; `fold
+   * folder, by the engine's stable `code`, once per fold asked for, and once
+   * per Import CP the dialog refused (an `import_*` code or the dialog's own,
+   * with `face_count_bucket` when it was over the face cap); `fold
    * choice offered` is the engine handing back more than one answer the folder
    * then chooses between — an axiom's roots, or the stacks a depth pick can
    * take — with how many, bucketed.
@@ -2103,6 +2105,13 @@ export const COUNT_BUCKETS = [1, 5, 10, 20, 50, 100, 200, 500] as const;
  * would put every choice in its first bucket.
  */
 export const FOLD_CHOICE_COUNT_BUCKETS = [2, 3, 4, 8] as const;
+
+/**
+ * Threshold ladder for a face count Fold refused as over its cap (4,096,
+ * `fold refused`'s `face_count_bucket`): just over, a few times over, or far
+ * past anything Fold could fold.
+ */
+export const FOLD_FACE_COUNT_BUCKETS = [8192, 16384, 32768] as const;
 
 /**
  * Threshold ladder for how many designs are open at once.

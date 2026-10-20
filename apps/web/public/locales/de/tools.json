@@ -695,6 +695,13 @@
         "text": "Wo die Spitze umschlagen würde, liegen andere Lagen. Nimm ihre Laschen in die Faltung auf oder setze den Gegenbruch an einer anderen Stelle.",
         "title": "Lagen sind im Weg"
       },
+      "tooManyFaces": {
+        "fold": "Diese Faltung ergäbe {{faceCount, number}} Flächen, mehr als die {{limit, number}}, die gefaltet werden können. Falte weniger Lagen.",
+        "note": "{{faceCount, number}} Flächen, mehr als die {{limit, number}}, die gefaltet werden können",
+        "pattern": "Dieses Faltmuster hat {{faceCount, number}} Flächen; gefaltet werden Muster mit bis zu {{limit, number}}. Importiere ein einfacheres Muster.",
+        "step": "Dieser Schritt hat {{faceCount, number}} Flächen, mehr als die {{limit, number}}, die gefaltet werden können. Er und die folgenden Schritte können nur noch gelöscht werden.",
+        "title": "Zu viele Flächen"
+      },
       "tooSmall": {
         "text": "Die Faltung hinterließe eine Faltlinie oder einen Papierstreifen, der dünner ist als das Papier selbst.",
         "title": "Zu klein zum Falten"

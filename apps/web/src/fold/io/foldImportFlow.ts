@@ -39,6 +39,7 @@ import type {
 } from '../engine/foldEngineIoWire';
 import type { FoldEngineOutcome, FoldScene } from '../engine/foldEngineWire';
 import type { FoldSession, FoldSessionWorker } from '../session/foldSession';
+import { foldImportFaceCapRefusal, foldOverFaceCap } from '../foldFaceCap';
 import { foldSample, foldSampleSource } from './foldImportFiles';
 import type { FoldImportLocalCode, FoldImportRefusal } from './foldImportRefusal';
 import { sameFoldState, selectFoldCursorNode } from '../session/foldSessionState';
@@ -110,6 +111,8 @@ export interface FoldImportFlowOptions {
   /** The chooser asks about a part with `orders` layer orders: once per such part, as the import opens. */
   onChoiceOffered?: (orders: number) => void;
   onOrderResolved?: (result: 'accepted' | 'canceled', count: number) => void;
+  /** An import was refused: the dialog now says why. Once per refusal, whichever step of the flow made it. */
+  onRefused?: (refusal: FoldImportRefusal) => void;
 }
 
 export interface FoldImportFlow {
@@ -190,8 +193,13 @@ export function createFoldImportFlow({
   onImported,
   onChoiceOffered,
   onOrderResolved,
+  onRefused,
 }: FoldImportFlowOptions): FoldImportFlow {
   const store = createStore<FoldImportFlowState>(() => IDLE);
+  // Every refusal is a new state, set once: heard here rather than at each place that sets one.
+  const unsubscribeRefused = store.subscribe((next, before) => {
+    if (next.phase === 'refused' && next !== before) onRefused?.(next.refusal);
+  });
   const releaseHold = session.retain();
   let disposed = false;
   /** Bumped by every request, reset and dispose: work for an older one lands nothing. */
@@ -379,6 +387,13 @@ export function createFoldImportFlow({
           store.setState(local(request, 'no_folded_figure'), true);
           return;
         }
+        // Its faces are the import's: over the cap, refused here as the
+        // engine would refuse it, before the figure crosses to the worker.
+        const over = foldOverFaceCap(scene.faces.length);
+        if (over) {
+          store.setState({ phase: 'refused', request, refusal: { kind: 'engine', refused: { refusal: foldImportFaceCapRefusal(over) } } }, true);
+          return;
+        }
         const landed = await ask(where.state, (engine, id) =>
           engine.importEditFoldedFigure(scene, targetOf(where, id), limits)
         );
@@ -531,6 +546,7 @@ export function createFoldImportFlow({
       ticket += 1;
       letGo();
       unsubscribe();
+      unsubscribeRefused();
       releaseHold();
     },
   };

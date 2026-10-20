@@ -713,6 +713,13 @@
         "text": "Há outras camadas onde a ponta viraria. Inclua as abas delas na dobra ou inverta em outro lugar.",
         "title": "Há camadas no caminho"
       },
+      "tooManyFaces": {
+        "fold": "Esta dobra daria {{faceCount, number}} faces, mais do que as {{limit, number}} que podem ser dobradas. Dobre menos camadas.",
+        "note": "{{faceCount, number}} faces, mais do que as {{limit, number}} que podem ser dobradas",
+        "pattern": "Este padrão de vincos tem {{faceCount, number}} faces, e só se dobram padrões de até {{limit, number}}. Importe um padrão mais simples.",
+        "step": "Este passo tem {{faceCount, number}} faces, mais do que as {{limit, number}} que podem ser dobradas. Ele e os passos seguintes só podem ser excluídos.",
+        "title": "Faces demais"
+      },
       "tooSmall": {
         "text": "A dobra deixaria um vinco ou uma tira de papel mais fina que o próprio papel.",
         "title": "Pequeno demais para dobrar"

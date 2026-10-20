@@ -9,6 +9,7 @@
  *
  * React-free and store-free.
  */
+import { foldFaceCapWords, foldFaceCountOf } from '../foldFaceCap';
 import { foldReturnFailure } from '../return/foldReturnWords';
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
@@ -277,6 +278,17 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           'Unfold along a folded edge, and refold along a flat crease.'
         ),
       };
+    // Over the face cap: the fold being made, or a stored import's pattern
+    // (the import codes reach a notice only from a replay).
+    case 'too_many_faces':
+    case 'import_too_many_faces': {
+      const counts = foldFaceCountOf(refusal);
+      if (counts) return foldFaceCapWords(t, counts, refusal.code === 'too_many_faces' ? 'fold' : 'step');
+      return {
+        title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
+        text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),
+      };
+    }
     // A stored step this build cannot fold as it is, an Import CP step among
     // them: nothing a folder asked for. The Import CP picker words its own
     // refusals; the import codes reach a notice only from a replay.

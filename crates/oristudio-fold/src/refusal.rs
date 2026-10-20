@@ -57,6 +57,11 @@ pub enum FoldRefusal {
     InvalidSides { sides: u32 },
 
     // --- The state (State::make) -----------------------------------------
+    /// More faces than the layer order's cap
+    /// (`oristudio_layer_order::MAX_FACES`): checked before anything is
+    /// derived, since its tables grow with the square of the faces.
+    #[error("the state has {face_count} faces, over the {limit} cap")]
+    TooManyFaces { face_count: usize, limit: usize },
     #[error("{what} {id} appears more than once")]
     DuplicateId { what: &'static str, id: u32 },
     #[error("face {face} names vertex {vertex}, which does not exist")]
@@ -419,6 +424,7 @@ impl FoldRefusal {
             FoldRefusal::SheetNotInUnitFrame => "sheet_not_in_unit_frame",
             FoldRefusal::InvalidRectangle => "invalid_rectangle",
             FoldRefusal::InvalidSides { .. } => "invalid_sides",
+            FoldRefusal::TooManyFaces { .. } => "too_many_faces",
             FoldRefusal::DuplicateId { .. } => "duplicate_id",
             FoldRefusal::UnknownVertex { .. } => "unknown_vertex",
             FoldRefusal::CreaseUnknownVertex { .. } => "crease_unknown_vertex",

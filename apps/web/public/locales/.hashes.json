@@ -6185,8 +6185,13 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12374,8 +12379,13 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18565,8 +18575,13 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24423,8 +24438,13 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30281,8 +30301,13 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36470,8 +36495,13 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -42659,8 +42689,13 @@
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_one": "4b88310a50d6",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -48517,7 +48552,12 @@
     "panels:diagram.empty.tutorial": "02828a9187a3",
     "errors:diagramExample.unavailable": "93078836af10",
     "panels:simulatorSegments.creases_other": "059cbfda69b1",
-    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e",
-    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2"
+    "tools:fold.refusal.tooManyFaces.fold": "0380e578fa27",
+    "tools:fold.refusal.tooManyFaces.note": "10ed027a820a",
+    "tools:fold.refusal.tooManyFaces.pattern": "04a754962287",
+    "tools:fold.refusal.tooManyFaces.step": "6bafbee9235c",
+    "tools:fold.refusal.tooManyFaces.title": "d17c6f210ad8",
+    "common:capability.repeatOnOtherSide": "cb1c28c1aaa2",
+    "errors:worker.foldSequenceKeptStopping": "7c3b0c7cfb8e"
   }
 }

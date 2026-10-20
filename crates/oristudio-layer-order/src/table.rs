@@ -7,7 +7,7 @@
 use std::collections::BTreeSet;
 
 use crate::order::LayerOrder;
-use crate::view::{FaceId, FoldedView};
+use crate::view::{FaceId, FoldedView, MAX_FACES};
 
 /// A set of face ids: a table on the id when its largest id is small enough
 /// for one (the engine's and FOLD's are), else the ordered set.
@@ -56,7 +56,10 @@ impl<T: Copy + Default> PairTable<T> {
 }
 
 impl<T: Copy> PairTable<T> {
+    /// `n` is a view's face count, which [`FoldedView::new`] keeps to
+    /// [`MAX_FACES`]: what bounds the `n²` entries.
     pub(crate) fn filled(n: usize, value: T) -> PairTable<T> {
+        debug_assert!(n <= MAX_FACES, "a table over {n} faces");
         PairTable {
             n,
             entries: vec![value; n * n],

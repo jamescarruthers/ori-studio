@@ -10,6 +10,11 @@ use crate::view::FaceId;
 /// Everything the view constructor and the order conversions refuse.
 #[derive(Debug, Clone, PartialEq, Error)]
 pub enum LayerOrderError {
+    /// More faces than [`crate::view::MAX_FACES`]: the tables over their
+    /// pairs would not fit.
+    #[error("the view has {face_count} faces, over the {limit} cap")]
+    TooManyFaces { face_count: usize, limit: usize },
+
     /// Two faces share an id.
     #[error("face {0} appears more than once")]
     DuplicateFace(FaceId),

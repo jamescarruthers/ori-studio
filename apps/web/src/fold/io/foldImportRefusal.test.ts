@@ -4,9 +4,9 @@ import { FOLD_IMPORT_REFUSAL_CODES } from '../engine/foldEngineIoWire';
 import type { FoldRefusalBody } from '../engine/foldEngineWire';
 import { foldImportNotice, type FoldImportLocalCode } from './foldImportRefusal';
 
-/** `t` as the catalog reads it: the English default, its placeholders filled. */
+/** `t` as the catalog reads it: the English default, its placeholders filled (a format, `{{n, number}}`, left unapplied). */
 const t = ((_key: string, english: string, values?: Record<string, unknown>) =>
-  english.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values?.[name] ?? ''))) as unknown as TFunction;
+  english.replace(/\{\{(\w+)(?:, *\w+)?\}\}/g, (_match, name: string) => String(values?.[name] ?? ''))) as unknown as TFunction;
 
 const engine = (refusal: Record<string, unknown>) =>
   foldImportNotice(t, { kind: 'engine', refused: { refusal: refusal as FoldRefusalBody } }, { searchLonger: vi.fn() });
@@ -30,6 +30,18 @@ describe('an import that did not land, as the dialog says it', () => {
     );
     // Without the sheets, it still says what to do.
     expect(engine({ code: 'import_shape_mismatch' }).text).toMatch(/empty sequence/);
+  });
+
+  it('names how many faces a pattern over the cap has, and the cap, with nothing to retry', () => {
+    const notice = engine({ code: 'import_too_many_faces', face_count: 10000, limit: 4096 });
+    expect(notice).toMatchObject({
+      code: 'import_too_many_faces',
+      title: 'Too many faces',
+      text: 'This crease pattern has 10000 faces, and Fold folds patterns of up to 4096. Import a simpler pattern.',
+      actions: [],
+    });
+    // Without its counts, it is still refused plainly.
+    expect(engine({ code: 'import_too_many_faces' }).title).toBe('Could not import');
   });
 
   it('offers to search longer when the layer-order search ran out, and nothing else', () => {

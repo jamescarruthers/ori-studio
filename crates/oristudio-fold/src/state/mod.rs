@@ -460,6 +460,38 @@ mod tests {
     }
 
     #[test]
+    fn a_state_over_the_face_cap_is_refused_before_anything_else() {
+        // The flat sheet's face, many times over: duplicate ids and faces
+        // covering the sheet many times, which the gate would refuse anyway,
+        // but the count is checked first, before a table is built.
+        let flat = State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+        let at = oristudio_layer_order::MAX_FACES;
+        let mut parts = flat.parts().clone();
+        parts.faces = vec![parts.faces[0].clone(); at + 1];
+        assert_eq!(
+            State::make(parts.clone()).err(),
+            Some(FoldRefusal::TooManyFaces {
+                face_count: at + 1,
+                limit: at
+            })
+        );
+        assert_eq!(
+            FoldRefusal::TooManyFaces {
+                face_count: at + 1,
+                limit: at
+            }
+            .code(),
+            "too_many_faces"
+        );
+        // At the cap, the count lets it through to the gate's other checks.
+        parts.faces.truncate(at);
+        assert_eq!(
+            State::make(parts).err().map(|r| r.code()),
+            Some("duplicate_id")
+        );
+    }
+
+    #[test]
     fn a_back_up_start_is_seen_from_behind() {
         let s = State::flat(Sheet::square(), StartSide::Back).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(s.front_up(FaceId(0)), Some(true));
