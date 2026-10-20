@@ -17,6 +17,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::LayerOrderError;
 
+/// The most faces a view takes. The problem, the checker and the painters
+/// build tables over every pair of a view's faces (`table.rs`): about seven
+/// bytes a pair at their peak, so `n` faces cost about `7n²` bytes however
+/// few of them overlap, and a wasm heap never gives that memory back.
+///
+/// Measured through the built bridge in Node (`foldImportFaceCap.wasm.test.ts`),
+/// importing an `n × n` grid of precreases: 4,096 faces opened in 1.2 s at
+/// 122 MB, and pleated 64 deep in 1.9 s, landing at 203 MB; 10,000 faces took
+/// 8.6 s and 700 MB, 19,600 took 68 s and 2.6 GB, and 25,600 ran out of
+/// wasm32's 4 GB and trapped, which in the browser kills the worker.
+pub const MAX_FACES: usize = 4096;
+
 /// A face's identity. The caller chooses it; keeping it stable for faces an
 /// operation did not touch is what lets [`crate::problem::ConstraintProblem`]
 /// rebuild incrementally.
@@ -92,8 +104,15 @@ pub struct FoldedView {
 impl FoldedView {
     /// Validate a state. Face polygons are normalised (counter-clockwise,
     /// near-duplicate points merged); everything else is kept as given, in
-    /// order.
+    /// order. More than [`MAX_FACES`] faces are refused before anything is
+    /// built, so no table over the view's pairs is ever larger than that.
     pub fn new(faces: Vec<Face>, edges: Vec<Edge>) -> Result<FoldedView, LayerOrderError> {
+        if faces.len() > MAX_FACES {
+            return Err(LayerOrderError::TooManyFaces {
+                face_count: faces.len(),
+                limit: MAX_FACES,
+            });
+        }
         let mut index = BTreeMap::new();
         let mut checked = Vec::with_capacity(faces.len());
         for face in faces {
@@ -351,6 +370,25 @@ mod tests {
         assert_eq!(
             refuse(vec![face(0, sliver, true)]),
             Some(LayerOrderError::DegenerateFace(FaceId(0)))
+        );
+    }
+
+    #[test]
+    fn a_view_takes_up_to_the_face_cap_and_no_more() {
+        // A row of unit squares side by side: nothing overlaps, so only the
+        // count can refuse it.
+        let row = |n: usize| -> Vec<Face> {
+            (0..n)
+                .map(|k| face(k as u32, square(k as f64, k as f64 + 1.0), true))
+                .collect()
+        };
+        assert!(FoldedView::new(row(MAX_FACES), Vec::new()).is_ok());
+        assert_eq!(
+            FoldedView::new(row(MAX_FACES + 1), Vec::new()).err(),
+            Some(LayerOrderError::TooManyFaces {
+                face_count: MAX_FACES + 1,
+                limit: MAX_FACES
+            })
         );
     }
 

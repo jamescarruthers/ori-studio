@@ -1,8 +1,10 @@
 //! The gate every state passes (research §3.3, plan D4): the checks
 //! [`super::State::make`] runs, in order, each refusal naming what failed.
 //!
-//! 1. Structure: a view at a finite angle, unique ids, a root, every ring
-//!    side a crease, every crease bounding one face (border) or two.
+//! 1. Structure: no more faces than the layer order's cap
+//!    (`oristudio_layer_order::MAX_FACES`), a view at a finite angle, unique
+//!    ids, a root, every ring side a crease, every crease bounding one face
+//!    (border) or two.
 //! 2. Faces convex and counter-clockwise in sheet coordinates, covering the
 //!    sheet: every vertex finite and on it, every border crease along one of
 //!    its sides, every crease mark on it and along no crease or other mark
@@ -31,7 +33,7 @@ use std::sync::Arc;
 use oristudio_geometry::convex;
 use oristudio_layer_order::{
     ConstraintProblem, Edge, EdgeKind, Face as ViewFace, FacePair, FoldedView, LayerOrder,
-    LayerOrderError, Scope, Violation, check_problem,
+    LayerOrderError, MAX_FACES, Scope, Violation, check_problem,
 };
 
 use crate::numerics::TOL;
@@ -137,6 +139,14 @@ pub(crate) fn before_order(
     parts: &StateParts,
     unknown: &BTreeSet<EdgeId>,
 ) -> Result<BeforeOrder, FoldRefusal> {
+    // Before anything is derived: every table the layer order builds is over
+    // the faces' pairs.
+    if parts.faces.len() > MAX_FACES {
+        return Err(FoldRefusal::TooManyFaces {
+            face_count: parts.faces.len(),
+            limit: MAX_FACES,
+        });
+    }
     if !parts.view.rotation.is_finite() {
         return Err(FoldRefusal::ViewNotFinite);
     }
@@ -327,6 +337,10 @@ fn folded_image(
     edge_creases: &[usize],
 ) -> FoldRefusal {
     let faces = match error {
+        // `before_order` refuses it first; a view is never asked for one.
+        &LayerOrderError::TooManyFaces { face_count, limit } => {
+            return FoldRefusal::TooManyFaces { face_count, limit };
+        }
         LayerOrderError::DuplicateFace(f)
         | LayerOrderError::NonConvexFace(f)
         | LayerOrderError::DegenerateFace(f)

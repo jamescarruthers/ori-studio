@@ -754,6 +754,57 @@ fn import_refusals_serialize_with_their_code() {
     }
 }
 
+/// A `cells × cells` grid of valley precreases on the unit square, every
+/// line whole from border to border: `cells²` faces, none folded, so nothing
+/// overlaps and the count alone is what an import weighs.
+fn precrease_grid(cells: usize) -> Vec<ImportSegment> {
+    let mut segments = border(1.0, 1.0);
+    for k in 1..cells {
+        let at = k as f64 / cells as f64;
+        segments.push(segment([at, 0.0], [at, 1.0], flat(Letter::Valley)));
+        segments.push(segment([0.0, at], [1.0, at], flat(Letter::Valley)));
+    }
+    segments
+}
+
+#[test]
+fn a_pattern_over_the_face_cap_is_refused_once_its_faces_are_counted() {
+    let cap = oristudio_layer_order::MAX_FACES;
+    assert_eq!(cap, 64 * 64, "the grid below sits at the cap");
+    // At the cap: the pattern's faces are built, and its order with them.
+    let at = imported(&sheet_input(precrease_grid(64)), empty());
+    assert_eq!(at.summary().faces, cap);
+    assert_eq!(at.unordered().view().faces().len(), cap);
+
+    // One diagonal more splits a cell: one face over. Into an empty
+    // sequence and after a state alike, as a replay imports it.
+    let mut over = precrease_grid(64);
+    over.push(segment(
+        [0.0, 0.0],
+        [1.0 / 64.0, 1.0 / 64.0],
+        flat(Letter::Valley),
+    ));
+    let over = sheet_input(over);
+    let square = State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    for target in [empty(), ImportTarget::After(&square)] {
+        let refusal = ImportedPattern::new(&over, target).err();
+        assert_eq!(
+            refusal,
+            Some(ImportRefusal::TooManyFaces {
+                face_count: cap + 1,
+                limit: cap
+            })
+        );
+        let json = refusal.map(|r| serde_json::to_value(&r).unwrap_or_default());
+        assert_eq!(
+            json,
+            Some(serde_json::json!({
+                "code": "import_too_many_faces", "face_count": cap + 1, "limit": cap
+            }))
+        );
+    }
+}
+
 /// A plain fold of all layers along a line through a vertex image at a
 /// sixteenth of a turn, or through two vertex images.
 fn random_fold(state: &State, rng: &mut Rng) -> Option<oristudio_fold::PlainFold> {

@@ -36,4 +36,4 @@ pub use overlay::{Cell, Overlay};
 pub use problem::{
     Ambiguity, AmbiguityCause, Buckets, Constraint, ConstraintKind, ConstraintProblem,
 };
-pub use view::{Edge, EdgeKind, Face, FaceId, FoldedView, Letter};
+pub use view::{Edge, EdgeKind, Face, FaceId, FoldedView, Letter, MAX_FACES};
