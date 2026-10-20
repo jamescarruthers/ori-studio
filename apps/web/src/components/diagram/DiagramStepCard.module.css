@@ -6,6 +6,13 @@
  */
 .card {
   display: grid;
+  /*
+   * One column, the card's width. An auto column holds the square well's
+   * width, and WebKit derives the well's minimum width from its height, so a
+   * card narrowed in place (the Steps grid's columns are set after its rows
+   * mount) kept its wide column and grew as tall: minmax(0, …) lets it shrink.
+   */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
   min-width: 0;
   overflow: hidden;
