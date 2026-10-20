@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { IconButton } from '../ui/IconButton';
 import { useVerticalSwipe } from '../../hooks/useVerticalSwipe';
@@ -158,6 +158,14 @@ export interface StepFilmstripProps<Card extends StepFilmstripCard> {
    * row's readout, and the `short` form ("2 / 3") for the phone's row.
    */
   wayReadout: (ways: StepFilmstripWays, short: boolean) => string;
+  /**
+   * Without the chevrons (`navigation` off), a tap on the readout: the active
+   * card's next way, the first after the last — the one control a phone's row
+   * has, beside the swipe. Without it the readout is only read.
+   */
+  onCycleWay?: () => void;
+  cycleWayLabel?: string;
+  cycleWayDisabled?: boolean;
 }
 
 /**
@@ -196,12 +204,22 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
   onShiftWay,
   waysLabel,
   wayReadout,
+  onCycleWay,
+  cycleWayLabel = '',
+  cycleWayDisabled = true,
 }: StepFilmstripProps<Card>) {
   const listRef = useRef<HTMLDivElement | null>(null);
 
   // React Compiler cannot memoize a component that uses `useVirtualizer`, so
   // this one re-renders on every scroll frame. Nothing below it is expensive as
   // long as `renderThumbnail` draws something pure and keyed by step.
+  //
+  // The rule's real warning is about handing this API's functions to memoized
+  // children, which would keep a stale one. None leaves this component:
+  // `measureElement` goes to a card's own `div` as its ref, and the rest are
+  // called here — as `CpDiagnosticHud` and `useVirtualStepRows` note for
+  // their own virtualizers.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     horizontal: true,
     count: steps.length,
@@ -374,9 +392,24 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
           role="group"
           aria-label={waysLabel}
         >
-          <span className={styles.waysReadout} aria-live="polite">
-            {wayReadout(active.ways, !navigation)}
-          </span>
+          {!navigation && onCycleWay ? (
+            // The phone's row: the readout is the switch, its chevrons hidden from sight.
+            <button
+              type="button"
+              className={styles.waysReadout}
+              data-cycle=""
+              title={cycleWayLabel}
+              disabled={cycleWayDisabled}
+              onClick={onCycleWay}
+            >
+              <span aria-live="polite">{wayReadout(active.ways, true)}</span>
+              <ChevronsUpDown size={12} aria-hidden="true" />
+            </button>
+          ) : (
+            <span className={styles.waysReadout} aria-live="polite">
+              {wayReadout(active.ways, !navigation)}
+            </span>
+          )}
           <IconButton
             size="sm"
             variant="toolbar"

@@ -13,12 +13,25 @@ import {
   transformLine,
 } from '../canvas/foldCanvasGeometry';
 import type { FoldModelLine, SheetPoint } from '../document/foldSequenceDocument';
-import type { FoldIsometry, FoldScene } from '../engine/foldEngineWire';
+import type { FoldIsometry, FoldRefusalBody, FoldScene } from '../engine/foldEngineWire';
 
 export const REPEAT_TOL = 1e-6;
+/**
+ * Why a repeat stopped: Repeat's own code, or the engine's refusal of a
+ * mirrored step — its code, and the refusal itself, which the bar words as
+ * the tool window would (`repeatWords`).
+ */
 export class RepeatFailure extends Error {
-  constructor(readonly code: string) {
+  constructor(
+    readonly code: string,
+    readonly refusal?: FoldRefusalBody,
+  ) {
     super(code);
+  }
+
+  /** The engine refused a mirrored step. */
+  static refused(refusal: FoldRefusalBody): RepeatFailure {
+    return new RepeatFailure(refusal.code, refusal);
   }
 }
 export interface RepeatSymmetry {

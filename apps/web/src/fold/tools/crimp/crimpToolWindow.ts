@@ -105,7 +105,7 @@ export function crimpLocateInstructions(
   const finish = host.coarse
     ? t('tools:fold.steps.crimpFinishTouch', 'Choose Inside or Outside, then tap {{action}}.', { action })
     : t('tools:fold.steps.crimpFinish', 'Choose Inside or Outside, then press Enter.');
-  const items = [...crimpFirstLineSteps(t, view.lineMode), ...secondLineSteps(t, second), finish];
+  const items = [...crimpFirstLineSteps(t, view.lineMode, host.coarse), ...secondLineSteps(t, second, host.coarse), finish];
   const onSecond = view.picks >= lineModeInput(view.lineMode).steps.length;
   const byAxiom = view.lineMode !== 'free' && view.lineMode !== 'crease';
   return {
@@ -214,7 +214,7 @@ export function crimpToolWindow(
       disabled: readOnly,
       swap: verbs.swapSide,
     },
-    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly) : null,
+    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly, host.coarse) : null,
     refusal: preview.refused
       ? foldRefusalNotice(
           t,

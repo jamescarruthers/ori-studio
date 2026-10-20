@@ -390,57 +390,97 @@ export function lineModeDescription(t: TFunction, mode: FoldLineModeId): string 
 /**
  * The clicks that locate a line in this mode, one step each in click order —
  * the tool's slots, which the step stores in the axiom's own input order
- * (plan D6), so the order here is free to read naturally.
+ * (plan D6), so the order here is free to read naturally. Taps, on a finger
+ * (`coarse`), as every touch instruction in the window says them.
  */
-export function lineModeSteps(t: TFunction, mode: FoldLineModeId): string[] {
+export function lineModeSteps(t: TFunction, mode: FoldLineModeId, coarse = false): string[] {
+  const pointToMove = coarse
+    ? t('tools:fold.steps.pointToMoveTouch', 'Tap the point to move.')
+    : t('tools:fold.steps.pointToMove', 'Click the point to move.');
+  const landOnLine = coarse
+    ? t('tools:fold.steps.landOnLineTouch', 'Tap the edge or crease it should land on.')
+    : t('tools:fold.steps.landOnLine', 'Click the edge or crease it should land on.');
+  const perpendicularTo = coarse
+    ? t('tools:fold.steps.perpendicularToTouch', 'Tap the edge or crease the fold is perpendicular to.')
+    : t('tools:fold.steps.perpendicularTo', 'Click the edge or crease the fold is perpendicular to.');
   switch (mode) {
     case 'axiom-1':
-      return [
-        t('tools:fold.steps.axiom1First', 'Click the first point the fold passes through.'),
-        t('tools:fold.steps.axiom1Second', 'Click the second point.'),
-      ];
+      return coarse
+        ? [
+            t('tools:fold.steps.axiom1FirstTouch', 'Tap the first point the fold passes through.'),
+            t('tools:fold.steps.axiom1SecondTouch', 'Tap the second point.'),
+          ]
+        : [
+            t('tools:fold.steps.axiom1First', 'Click the first point the fold passes through.'),
+            t('tools:fold.steps.axiom1Second', 'Click the second point.'),
+          ];
     case 'axiom-2':
       return [
-        t('tools:fold.steps.pointToMove', 'Click the point to move.'),
-        t('tools:fold.steps.axiom2Land', 'Click where it should land.'),
+        pointToMove,
+        coarse
+          ? t('tools:fold.steps.axiom2LandTouch', 'Tap where it should land.')
+          : t('tools:fold.steps.axiom2Land', 'Click where it should land.'),
       ];
     case 'axiom-3':
-      return [
-        t('tools:fold.steps.axiom3Move', 'Click the edge or crease to move.'),
-        t('tools:fold.steps.axiom3Onto', 'Click the edge or crease to lay it on.'),
-      ];
+      return coarse
+        ? [
+            t('tools:fold.steps.axiom3MoveTouch', 'Tap the edge or crease to move.'),
+            t('tools:fold.steps.axiom3OntoTouch', 'Tap the edge or crease to lay it on.'),
+          ]
+        : [
+            t('tools:fold.steps.axiom3Move', 'Click the edge or crease to move.'),
+            t('tools:fold.steps.axiom3Onto', 'Click the edge or crease to lay it on.'),
+          ];
     case 'axiom-4':
       return [
-        t('tools:fold.steps.perpendicularTo', 'Click the edge or crease the fold is perpendicular to.'),
-        t('tools:fold.steps.axiom4Through', 'Click the point the fold passes through.'),
+        perpendicularTo,
+        coarse
+          ? t('tools:fold.steps.axiom4ThroughTouch', 'Tap the point the fold passes through.')
+          : t('tools:fold.steps.axiom4Through', 'Click the point the fold passes through.'),
       ];
     case 'axiom-5':
       return [
-        t('tools:fold.steps.pointToMove', 'Click the point to move.'),
-        t('tools:fold.steps.axiom5Pivot', 'Click the pivot the fold passes through.'),
-        t('tools:fold.steps.landOnLine', 'Click the edge or crease it should land on.'),
+        pointToMove,
+        coarse
+          ? t('tools:fold.steps.axiom5PivotTouch', 'Tap the pivot the fold passes through.')
+          : t('tools:fold.steps.axiom5Pivot', 'Click the pivot the fold passes through.'),
+        landOnLine,
       ];
     case 'axiom-6':
-      return [
-        t('tools:fold.steps.axiom6FirstPoint', 'Click the first point to move.'),
-        t('tools:fold.steps.landOnLine', 'Click the edge or crease it should land on.'),
-        t('tools:fold.steps.axiom6SecondPoint', 'Click the second point to move.'),
-        t('tools:fold.steps.axiom6SecondLine', 'Click the edge or crease that one should land on.'),
-      ];
+      return coarse
+        ? [
+            t('tools:fold.steps.axiom6FirstPointTouch', 'Tap the first point to move.'),
+            landOnLine,
+            t('tools:fold.steps.axiom6SecondPointTouch', 'Tap the second point to move.'),
+            t('tools:fold.steps.axiom6SecondLineTouch', 'Tap the edge or crease that one should land on.'),
+          ]
+        : [
+            t('tools:fold.steps.axiom6FirstPoint', 'Click the first point to move.'),
+            landOnLine,
+            t('tools:fold.steps.axiom6SecondPoint', 'Click the second point to move.'),
+            t('tools:fold.steps.axiom6SecondLine', 'Click the edge or crease that one should land on.'),
+          ];
     case 'axiom-7':
-      return [
-        t('tools:fold.steps.pointToMove', 'Click the point to move.'),
-        t('tools:fold.steps.landOnLine', 'Click the edge or crease it should land on.'),
-        t('tools:fold.steps.perpendicularTo', 'Click the edge or crease the fold is perpendicular to.'),
-      ];
+      return [pointToMove, landOnLine, perpendicularTo];
     case 'free':
       return [
-        t('tools:fold.steps.freeStart', 'Click where the fold line starts.'),
-        t('tools:fold.steps.freeEnd', 'Click where it ends.'),
+        coarse
+          ? t('tools:fold.steps.freeStartTouch', 'Tap where the fold line starts.')
+          : t('tools:fold.steps.freeStart', 'Click where the fold line starts.'),
+        freeEnd(t, coarse),
       ];
     case 'crease':
-      return [t('tools:fold.steps.crease', 'Click the crease or folded edge to fold along.')];
+      return [
+        coarse
+          ? t('tools:fold.steps.creaseTouch', 'Tap the crease or folded edge to fold along.')
+          : t('tools:fold.steps.crease', 'Click the crease or folded edge to fold along.'),
+      ];
   }
+}
+
+/** A drawn line's second step, every tool's: where it ends. */
+function freeEnd(t: TFunction, coarse: boolean): string {
+  return coarse ? t('tools:fold.steps.freeEndTouch', 'Tap where it ends.') : t('tools:fold.steps.freeEnd', 'Click where it ends.');
 }
 
 /** A crimp's second line mode, as its control names it. */
@@ -453,37 +493,50 @@ export function secondLineModeLabel(t: TFunction, mode: FoldSecondLineModeId): s
  * free line's and a crease's in a crimp's words, an axiom's as the axiom
  * says them.
  */
-export function crimpFirstLineSteps(t: TFunction, mode: FoldLineModeId): string[] {
+export function crimpFirstLineSteps(t: TFunction, mode: FoldLineModeId, coarse = false): string[] {
   switch (mode) {
     case 'free':
       return [
-        t('tools:fold.steps.crimpFirstStart', 'Click where the first line starts, nearer the body: where the flap turns in.'),
-        t('tools:fold.steps.freeEnd', 'Click where it ends.'),
+        coarse
+          ? t('tools:fold.steps.crimpFirstStartTouch', 'Tap where the first line starts, nearer the body: where the flap turns in.')
+          : t('tools:fold.steps.crimpFirstStart', 'Click where the first line starts, nearer the body: where the flap turns in.'),
+        freeEnd(t, coarse),
       ];
     case 'crease':
-      return [t('tools:fold.steps.crimpFirstCrease', 'Click the crease or folded edge where the flap turns in.')];
+      return [
+        coarse
+          ? t('tools:fold.steps.crimpFirstCreaseTouch', 'Tap the crease or folded edge where the flap turns in.')
+          : t('tools:fold.steps.crimpFirstCrease', 'Click the crease or folded edge where the flap turns in.'),
+      ];
     default:
-      return lineModeSteps(t, mode);
+      return lineModeSteps(t, mode, coarse);
   }
 }
 
 /** The clicks that locate a crimp's second line, after its first line's: one step each. */
-export function secondLineSteps(t: TFunction, mode: FoldSecondLineModeId): string[] {
+export function secondLineSteps(t: TFunction, mode: FoldSecondLineModeId, coarse = false): string[] {
   switch (mode) {
     case 'free':
       return [
-        t(
-          'tools:fold.steps.crimpSecondStart',
-          'Click where the second line starts, beyond the first toward the tip: where the flap turns back out.'
-        ),
-        t('tools:fold.steps.freeEnd', 'Click where it ends.'),
+        coarse
+          ? t(
+              'tools:fold.steps.crimpSecondStartTouch',
+              'Tap where the second line starts, beyond the first toward the tip: where the flap turns back out.'
+            )
+          : t(
+              'tools:fold.steps.crimpSecondStart',
+              'Click where the second line starts, beyond the first toward the tip: where the flap turns back out.'
+            ),
+        freeEnd(t, coarse),
       ];
     case 'crease':
       return [
-        t('tools:fold.steps.crimpSecondCrease', 'Click the crease or folded edge beyond the first line where the flap turns back out.'),
+        coarse
+          ? t('tools:fold.steps.crimpSecondCreaseTouch', 'Tap the crease or folded edge beyond the first line where the flap turns back out.')
+          : t('tools:fold.steps.crimpSecondCrease', 'Click the crease or folded edge beyond the first line where the flap turns back out.'),
       ];
     default:
-      return lineModeSteps(t, mode);
+      return lineModeSteps(t, mode, coarse);
   }
 }
 

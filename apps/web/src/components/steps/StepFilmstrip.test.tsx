@@ -194,4 +194,20 @@ describe('the caller’s words', () => {
     expect(waysRow()?.textContent).toContain('1/2');
     expect(readouts).toContainEqual(['1/2', true]);
   });
+
+  it('makes the phone’s readout the switch when the caller can cycle the ways, and only there', () => {
+    let cycled = 0;
+    const cycle = () => void cycled++;
+    show({ navigation: false, onCycleWay: cycle, cycleWayLabel: 'Switch branch', cycleWayDisabled: false });
+    const readout = waysRow()?.querySelector<HTMLButtonElement>('button[data-cycle]');
+    expect(readout?.textContent).toBe('1/2');
+    expect(readout?.title).toBe('Switch branch');
+    act(() => readout?.click());
+    expect(cycled).toBe(1);
+    // Read only beside the chevrons, and without the verb.
+    show({ onCycleWay: cycle });
+    expect(waysRow()?.querySelector('button[data-cycle]')).toBeNull();
+    show({ navigation: false, onCycleWay: undefined });
+    expect(waysRow()?.querySelector('button[data-cycle]')).toBeNull();
+  });
 });

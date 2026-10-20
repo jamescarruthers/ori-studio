@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
 import type { FoldLockedStep, FoldPlainOp } from '../document/foldSequenceDocument';
+import { foldedLineOf } from '../engine/foldEngineCompoundWire';
 import type { FoldReport } from '../engine/foldEngineWire';
 import { foldStepSentence } from '../stepSentence';
+import { operationBadge, operationLabel } from '../stepWords';
 import { diagonalHalfScene, squareScene } from './foldScene.fixtures';
 import { foldNodeSentenceStep, foldSentenceStepOf, foldsInHalf, movingInputs, referenceOf } from './foldSentenceStep';
 import { foldStateFrame } from './foldStateFrame';
@@ -160,6 +162,32 @@ describe('a stored step as its sentence reads it', () => {
     );
     // The whole line says nothing of an extent.
     expect(foldSentenceStepOf(op, none)).not.toHaveProperty('extent');
+  });
+
+  it('reads a fold along a bend that only laid its flap flat as the unfold it was, as the engine reported it', () => {
+    // The Valley tool along a folded edge, the top flap taken: stored as a valley fold (plan D3).
+    const along: FoldPlainOp = {
+      kind: 'valley',
+      landing: { kind: 'outer' },
+      line: { via: 'crease', at: [0.5, 0.5] },
+      seed: { scope: 'depth', at: [0.25, 0.75], layers: 1 },
+    };
+    const unfolded = { ...DIAGONAL, created: [], unfolded: [3], refolded: [] };
+    const words = foldSentenceStepOf(along, { parent: half, child: square, report: foldedLineOf({ report: unfolded }) });
+    expect(words).toEqual({ op: 'unfold', direction: 'valley', scope: { kind: 'depth', layers: 1 } });
+    expect(foldStepSentence(t, words)).toBe('Unfold the top layer.');
+    expect(operationLabel(t, words)).toBe('Unfold');
+    expect(operationBadge(t, words)).toBe('Unfold');
+    // A fold that also made a crease, or refolded a flat one, is the fold it says.
+    for (const report of [
+      { ...unfolded, created: [5] },
+      { ...unfolded, refolded: [{ edge: 2, remembered: 'valley' as const, letter: 'valley' as const }] },
+      { ...unfolded, unfolded: [] },
+    ]) {
+      expect(foldSentenceStepOf(along, { parent: half, child: square, report: foldedLineOf({ report }) })).toMatchObject({ op: 'fold' });
+    }
+    // Before the engine has said, it reads as stored.
+    expect(foldSentenceStepOf(along, { parent: half, child: null, report: null })).toMatchObject({ op: 'fold' });
   });
 
   it('reads a line a tool gives in the model frame as one the user placed', () => {

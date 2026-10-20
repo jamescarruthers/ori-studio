@@ -4,6 +4,7 @@ import type { FoldLockedStep } from '../document/foldSequenceDocument';
 import { FOLD_PENDING_NODE, type FoldSessionNode } from '../session/foldSessionState';
 import {
   cursorIndex,
+  cycledBranch,
   foldedStepCount,
   foldPathEntries,
   foldPathMoves,
@@ -89,6 +90,12 @@ describe('the moves from the cursor', () => {
     expect(foldPathMoves(entries, 3)).toMatchObject({ previousBranch: 'b', nextBranch: undefined });
     expect(foldPathMoves(entriesOf(['a', 't', 'b']), 3)).toMatchObject({ previousBranch: undefined, nextBranch: 'c' });
     expect(foldPathMoves(entries, 1)).toMatchObject({ previousBranch: undefined, nextBranch: undefined });
+  });
+
+  it('cycles a phone’s readout through the branches, the first after the last', () => {
+    expect(cycledBranch(entriesOf(['a', 't', 'b']), 3)).toBe('c');
+    expect(cycledBranch(entries, 3)).toBe('b');
+    expect(cycledBranch(entries, 1)).toBeUndefined();
   });
 
   it('finds the cursor in the path, and the sheet for a cursor on none', () => {

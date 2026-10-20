@@ -105,7 +105,7 @@ describe('the crimp tool’s window', () => {
     // An axiom's first line, a crease's second: its one click after the axiom's.
     const second = foldToolWindow(t, view({ lineMode: 'axiom-2', secondLineMode: 'crease', picks: 2 }), verbs(), finger);
     expect(second?.instructions.items.slice(2)).toEqual([
-      'Click the crease or folded edge beyond the first line where the flap turns back out.',
+      'Tap the crease or folded edge beyond the first line where the flap turns back out.',
       'Choose Inside or Outside, then tap Crimp.',
     ]);
     expect(second?.instructions.current).toBe(2);

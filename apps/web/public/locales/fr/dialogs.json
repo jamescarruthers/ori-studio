@@ -330,6 +330,7 @@
   },
   "foldImport": {
     "browse": "ou cliquez pour parcourir",
+    "browseTouch": "ou touchez pour parcourir",
     "collapseTitle": "Mettre en forme depuis le CP",
     "drop": "Déposez un fichier .cp, .fold, .ori ou .orh",
     "editFigure": "Modèle plié d’Édition",

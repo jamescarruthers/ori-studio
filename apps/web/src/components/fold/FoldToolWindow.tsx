@@ -12,6 +12,7 @@ import type { FoldKindChoice } from '../../fold/tools/reverse/reverseToolWindow'
 import { STORAGE_KEYS } from '../../lib/storage';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { Button } from '../ui/Button';
+import { FloatingPanelDock } from '../ui/FloatingPanel';
 import { FieldRow } from '../ui/fieldRows/FieldRow';
 import { NumberRow } from '../ui/fieldRows/NumberRow';
 import { SegmentedRow } from '../ui/fieldRows/SegmentedRow';
@@ -91,7 +92,13 @@ export function FoldToolWindow({
   acceptOrder,
   orderReady = false,
   inspection,
+  tool,
 }: {
+  /**
+   * The tool in hand: with the step the window is at (`model.phase`), what it
+   * shows from its top when either changes, its first instruction in view.
+   */
+  tool?: string;
   /** The viewport cell the window anchors to. */
   resolution?: FoldOrderResolution | null;
   acceptOrder?: () => void;
@@ -110,7 +117,8 @@ export function FoldToolWindow({
   if (resolution?.active) return (
     <ToolHintWindow container={container} collapseKey={STORAGE_KEYS.foldToolHintCollapsed}
       title={t('tools:fold.order.choose', 'Choose layer order')} meta=""
-      ariaLabel={t('tools:fold.order.choose', 'Choose layer order')} collapsible={false} height={phone ? 'capped' : 'default'} onFrame={onFrame}>
+      ariaLabel={t('tools:fold.order.choose', 'Choose layer order')} collapsible={false} height={phone ? 'capped' : 'default'} onFrame={onFrame}
+      {...(tool !== undefined ? { startKey: `${tool}:order` } : {})}>
       <FoldOrderChooser index={resolution.index} count={resolution.count} exact={resolution.exact}
         error={resolution.failed} movingVaries={resolution.movingVaries}
         ready={orderReady && !resolution.waiting && !resolution.failed} waiting={resolution.waiting}
@@ -158,6 +166,7 @@ export function FoldToolWindow({
       // previews stays in view above it.
       height={phone ? 'capped' : 'default'}
       onFrame={onFrame}
+      {...(tool !== undefined ? { startKey: `${tool}:${model.phase}` } : {})}
     >
       <div className={styles.section}>
         <ToolHintInstructions
@@ -423,34 +432,41 @@ export function FoldToolWindow({
           <FoldSinkChoices controls={resolution ? { ...sink, order: null } : sink} />
         </div>
       )}
-      {refusal && (
-        <div className={styles.section}>
-          <FoldRefusalNotice notice={refusal} />
-        </div>
-      )}
-      {footer && (
-        <div className={styles.section} data-footer="">
-          <div className={styles.footer}>
-            <Button
-              size="sm"
-              variant="secondary"
-              title={titled(footer.cancel.label, footer.cancel.shortcut)}
-              disabled={footer.cancel.disabled}
-              onClick={footer.cancel.run}
-            >
-              {footer.cancel.label}
-            </Button>
-            <Button
-              size="sm"
-              variant="primary"
-              title={titled(footer.commit.label, footer.commit.shortcut)}
-              disabled={footer.commit.disabled}
-              onClick={footer.commit.run}
-            >
-              {footer.commit.label}
-            </Button>
-          </div>
-        </div>
+      {/* Docked to the window's bottom edge, the body scrolling under it: the
+          refusal is read whole, and the fold is a press away, however much
+          the window holds above them. */}
+      {(refusal || footer) && (
+        <FloatingPanelDock data-fold-window-dock="">
+          {refusal && (
+            <div className={styles.section}>
+              <FoldRefusalNotice notice={refusal} />
+            </div>
+          )}
+          {footer && (
+            <div className={styles.section} data-footer="">
+              <div className={styles.footer}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  title={titled(footer.cancel.label, footer.cancel.shortcut)}
+                  disabled={footer.cancel.disabled}
+                  onClick={footer.cancel.run}
+                >
+                  {footer.cancel.label}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  title={titled(footer.commit.label, footer.commit.shortcut)}
+                  disabled={footer.commit.disabled}
+                  onClick={footer.commit.run}
+                >
+                  {footer.commit.label}
+                </Button>
+              </div>
+            </div>
+          )}
+        </FloatingPanelDock>
       )}
     </ToolHintWindow>
   );

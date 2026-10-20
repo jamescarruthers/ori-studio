@@ -1,6 +1,71 @@
 import type { TFunction } from 'i18next';
-export function repeatFailure(t: TFunction, code: string): string {
-  switch (code) {
+import type { FoldModelLine, FoldOpKind } from '../document/foldSequenceDocument';
+import { FOLD_VERTEX_OP_KINDS } from '../document/foldSequenceDocument';
+import type { FoldRefusalBody } from '../engine/foldEngineWire';
+import type { FoldSinkToolId } from '../tools/foldToolCatalog';
+import { foldRefusalWords, type FoldRefusalContext } from '../tools/refusalNotice';
+
+/**
+ * Why a repeat stopped: Repeat's own code, or the engine's refusal of a
+ * source step's mirror — its code, the refusal itself and the kind of step
+ * it was, when the engine said. The code is analytics' (`fold refused`); the
+ * words never show it.
+ */
+export interface RepeatStop {
+  code: string;
+  refusal?: FoldRefusalBody;
+  op?: FoldOpKind;
+}
+
+/** How near a named direction an axis is, in degrees, to be called by it. */
+const AXIS_TOLERANCE_DEG = 0.01;
+
+/**
+ * A symmetry axis by the way it runs on screen (its `display` line, y up):
+ * vertical, horizontal, the rising or the falling diagonal, or else its angle
+ * from the horizontal, counter-clockwise. A shape's axes all cross its
+ * middle, so no two run the same way and each name is the one axis.
+ */
+export function repeatAxisName(t: TFunction, line: FoldModelLine): string {
+  // The line runs along (−n.y, n.x); its angle is taken modulo a half turn.
+  const raw = (Math.atan2(line.n[0], -line.n[1]) * 180) / Math.PI;
+  const angle = ((raw % 180) + 180) % 180;
+  const near = (target: number) => Math.abs(angle - target) <= AXIS_TOLERANCE_DEG || Math.abs(angle - target - 180) <= AXIS_TOLERANCE_DEG;
+  if (near(90)) return t('panels:fold.repeat.axisVertical', 'Vertical axis');
+  if (near(0)) return t('panels:fold.repeat.axisHorizontal', 'Horizontal axis');
+  if (near(45)) return t('panels:fold.repeat.axisRising', 'Rising diagonal');
+  if (near(135)) return t('panels:fold.repeat.axisFalling', 'Falling diagonal');
+  return t('panels:fold.repeat.axisAngle', 'Axis at {{degrees}}°', { degrees: Math.round(angle) });
+}
+
+/** What a refused step's words are read against: the fold family of the step whose mirror was refused. */
+function refusalKindOf(op: FoldOpKind | undefined): Pick<FoldRefusalContext, 'kind' | 'sink'> {
+  switch (op) {
+    case 'mountain':
+    case 'precrease':
+    case 'pleat':
+    case 'crimp':
+    case 'tuck':
+      return { kind: op };
+    case 'inside-reverse':
+    case 'outside-reverse':
+      return { kind: 'reverse' };
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
+      return { kind: 'sink', sink: { tool: op satisfies FoldSinkToolId } };
+    default:
+      return (FOLD_VERTEX_OP_KINDS as readonly string[]).includes(op ?? '') ? { kind: 'vertex' } : { kind: 'valley' };
+  }
+}
+
+/**
+ * Why a repeat stopped, in a sentence: Repeat's own reasons in its words, and
+ * a source step's mirror the engine refused in the words the tool window
+ * says that refusal in (`foldRefusalWords`).
+ */
+export function repeatFailure(t: TFunction, stop: RepeatStop): string {
+  switch (stop.code) {
     case 'repeat_return_target':
       return t(
         'panels:fold.repeat.returnTarget',
@@ -47,10 +112,8 @@ export function repeatFailure(t: TFunction, code: string): string {
         'The source states are unavailable or changed. Wait for replay, then reopen Repeat.',
       );
     default:
-      return t(
-        'panels:fold.repeat.refused',
-        'The mirrored operation was refused by the fold engine ({{code}}). No steps were added.',
-        { code },
-      );
+      return stop.refusal
+        ? foldRefusalWords(t, stop.refusal, refusalKindOf(stop.op)).text
+        : t('panels:fold.repeat.refusedPlain', 'The mirrored operation cannot be folded. No steps were added.');
   }
 }

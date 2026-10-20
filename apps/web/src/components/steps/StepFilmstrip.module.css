@@ -244,6 +244,21 @@
   white-space: nowrap;
 }
 
+/* A phone's narrow card (`compact`): the badge a size smaller and unspaced, so
+   a one-word kind ("Precrease", "Collapse") fits whole beside the number, and
+   a two-word one ("Outside reverse") takes a second line rather than being cut
+   to "Outsi…". */
+.filmstrip[data-compact] .card[data-kind='fold'] .badge {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.56rem;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-align: right;
+  white-space: normal;
+}
+
 /* A card that offers more than one way: a dot per way along its foot, the one
    it shows filled, so a card left on another way reads so in the strip before
    its sentence does. */
@@ -318,6 +333,32 @@
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* The phone's readout as its switch (`onCycleWay`): a pill, so it reads as one
+   to tap, with its target reaching past its edges so the row keeps its height. */
+button.waysReadout {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.waysReadout::after {
+  content: '';
+  position: absolute;
+  inset: -8px -10px;
+}
+
+button.waysReadout:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 /* A vertical swipe switches a card's way (`useVerticalSwipe`), so the browser

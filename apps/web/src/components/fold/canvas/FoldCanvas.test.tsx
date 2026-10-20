@@ -48,6 +48,7 @@ const session = vi.hoisted(() => {
     sheet: node,
     nodes: new Map(),
     activePath: [],
+    pending: { status: "idle" as const },
   };
   return { node, surface, snapshot };
 });
@@ -75,7 +76,22 @@ vi.mock("../../../fold/canvas/useFoldPanePlayback", async (importOriginal) => {
   };
 });
 
+/** The model each render hands the tool window, the real window rendering it. */
+const toolWindowModels = vi.hoisted(() => [] as unknown[]);
+vi.mock("../FoldToolWindow", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../FoldToolWindow")>();
+  return {
+    FoldToolWindow: (props: Parameters<typeof actual.FoldToolWindow>[0]) => {
+      toolWindowModels.push(props.model);
+      return actual.FoldToolWindow(props);
+    },
+  };
+});
+
+import { isFoldAltLatched, resetFoldAltLatch, setFoldAltLatched } from "../../../fold/canvas/foldAltLatch";
 import { foldPaneDisplay, resetFoldPaneDisplay } from "../../../fold/canvas/foldPaneDisplay";
+import { useFoldRepeatUi } from "../../../fold/repeat/foldRepeatUi";
+import { useFoldReturnUi } from "../../../fold/return/foldReturnUi";
 import { foldPhonePane, showFoldPhonePane } from "../../../fold/canvas/foldPhonePane";
 import { foldTools } from "../../../fold/tools/foldToolState";
 import {
@@ -193,6 +209,36 @@ describe("the Fold canvas", () => {
     expect(document.getElementById(tools?.getAttribute("aria-controls") ?? "")).not.toBeNull();
   });
 
+  it("shows a touch phone's free-point latch on the bar while it is on, and lets it go from there", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === PHONE_MEDIA_QUERY || query.includes("pointer: coarse"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    try {
+      const canvas = mount();
+      const latch = () => canvas.querySelector<HTMLButtonElement>("[data-fold-alt-latch-bar]");
+      // Off, it is the sheet's alone.
+      expect(latch()).toBeNull();
+      act(() => setFoldAltLatched(true));
+      expect(latch()?.getAttribute("aria-label")).toBe("Free point");
+      expect(latch()?.getAttribute("aria-pressed")).toBe("true");
+      // Beside the tools.
+      const names = [...(canvas.querySelector("[data-viewport-toolbar]")?.querySelectorAll("button") ?? [])].map(
+        (button) => button.getAttribute("aria-label"),
+      );
+      expect(names.slice(0, 3)).toEqual(["Tools", "Free point", "Crease pattern"]);
+      act(() => latch()?.click());
+      expect(isFoldAltLatched()).toBe(false);
+      expect(latch()).toBeNull();
+    } finally {
+      resetFoldAltLatch();
+    }
+  });
+
   it("puts the step’s transport on the bar, waiting while the sheet has no step to play", () => {
     const canvas = mount();
     const transport = byRole(canvas, "group", "Step playback");
@@ -247,6 +293,41 @@ describe("the Fold canvas", () => {
     act(() => reveal?.());
     expect(foldPhonePane()).toBe("folded");
     expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
+  });
+
+  it("gives a phone's tool window up while Repeat's or Unfold to step's bar is open, and only a phone's", () => {
+    const opening = { id: 1, loadId: 1, sequenceId: "s", parent: "a", path: "p", fingerprint: "f" };
+    const shown = () => toolWindowModels.at(-1) !== null;
+    try {
+      // Off a phone the window sits in the canvas's corner, clear of both bars.
+      mount();
+      act(() => useFoldRepeatUi.setState({ opening }));
+      expect(shown()).toBe(true);
+      act(() => root?.unmount());
+      host?.remove();
+      vi.stubGlobal(
+        "matchMedia",
+        vi.fn((query: string) => ({
+          matches: query === PHONE_MEDIA_QUERY,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        })),
+      );
+      act(() => useFoldRepeatUi.setState({ opening: null }));
+      mount();
+      expect(shown()).toBe(true);
+      act(() => useFoldRepeatUi.setState({ opening }));
+      expect(shown()).toBe(false);
+      act(() => useFoldRepeatUi.setState({ opening: null }));
+      expect(shown()).toBe(true);
+      act(() => useFoldReturnUi.setState({ opening: { ...opening, target: null, lastOnly: false, rebuild: null } }));
+      expect(shown()).toBe(false);
+    } finally {
+      act(() => {
+        useFoldRepeatUi.setState({ opening: null });
+        useFoldReturnUi.setState({ opening: null });
+      });
+    }
   });
 
   it("brings no pane forward where both are on screen", () => {

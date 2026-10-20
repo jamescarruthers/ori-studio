@@ -948,6 +948,24 @@ function fixActions(
 }
 
 /** The notice for a refused fold: its words, and a button per fix the engine offers. */
+/**
+ * A refusal's words where nothing on screen can fix it — no flaps numbered,
+ * no fixes offered: Repeat's bar, when the engine refuses a source step's
+ * mirror. The words the tool window says it in, for a fold of `kind` (and a
+ * sink's tool, for a sink's).
+ */
+export function foldRefusalWords(
+  t: TFunction,
+  refusal: FoldRefused['refusal'],
+  { kind, sink }: Pick<FoldRefusalContext, 'kind' | 'sink'>
+): { title: string; text: string } {
+  return words(
+    t,
+    { refusal, fixes: [] },
+    { kind, ...(sink ? { sink } : {}), flapNumber: (flap) => flap + 1, flapOf: null, readOnly: true }
+  );
+}
+
 export function foldRefusalNotice(
   t: TFunction,
   refused: FoldRefused,

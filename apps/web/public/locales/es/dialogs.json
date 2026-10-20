@@ -330,6 +330,7 @@
   },
   "foldImport": {
     "browse": "o haz clic para buscar",
+    "browseTouch": "o toca para buscar",
     "collapseTitle": "Colapsar desde CP",
     "drop": "Suelta un archivo .cp, .fold, .ori u .orh",
     "editFigure": "Figura plegada de Editar",

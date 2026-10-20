@@ -312,6 +312,7 @@
   },
   "foldImport": {
     "browse": "또는 클릭하여 찾아보기",
+    "browseTouch": "또는 탭하여 찾아보기",
     "collapseTitle": "전개도에서 접기",
     "drop": ".cp, .fold, .ori, .orh 파일을 끌어다 놓으세요",
     "editFigure": "편집의 접힌 모델",

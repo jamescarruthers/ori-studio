@@ -327,7 +327,7 @@ function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
 }
 
 function swivelLineInstructions(t: TFunction, view: FoldToolWindowView, vertex: FoldVertexWindowView, host: FoldToolHost): FoldToolInstructions {
-  const items = [...lineModeSteps(t, view.lineMode), vertex.firstLineSet
+  const items = [...lineModeSteps(t, view.lineMode, host.coarse), vertex.firstLineSet
     ? commitStepPlain(t, 'swivel', host)
     : host.coarse ? t('tools:fold.vertex.lines.confirmTouch', 'Tap Use first line to continue.') : t('tools:fold.vertex.lines.confirm', 'Press Enter to use the first line and locate the second.')];
   return {

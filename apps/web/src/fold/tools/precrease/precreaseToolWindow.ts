@@ -54,7 +54,8 @@ export function extentControl(
   t: TFunction,
   extent: FoldExtentWindowView,
   set: ((mode: FoldExtentMode) => void) | undefined,
-  readOnly: boolean
+  readOnly: boolean,
+  coarse = false
 ): FoldKindChoice<FoldExtentMode> | null {
   if (!set) return null;
   return {
@@ -63,12 +64,12 @@ export function extentControl(
     options: FOLD_EXTENT_MODES.map((mode) => ({
       value: mode,
       short: foldExtentLabel(t, mode),
-      label: foldExtentDescription(t, mode),
+      label: foldExtentDescription(t, mode, coarse),
       disabled: false,
       reason: null,
     })),
     disabled: readOnly,
-    note: extent.mode === 'whole' ? null : foldExtentDescription(t, extent.mode),
+    note: extent.mode === 'whole' ? null : foldExtentDescription(t, extent.mode, coarse),
     set,
   };
 }
@@ -80,8 +81,8 @@ export function extentKeyNote(t: TFunction, host: FoldExtentHost): string[] {
 }
 
 /** The clicks along the line, after the line mode's: none for the whole line. */
-export function extentLocateSteps(t: TFunction, extent: FoldExtentWindowView | undefined): string[] {
-  return extent ? foldExtentSteps(t, extent.mode) : [];
+export function extentLocateSteps(t: TFunction, extent: FoldExtentWindowView | undefined, coarse = false): string[] {
+  return extent ? foldExtentSteps(t, extent.mode, coarse) : [];
 }
 
 /**
@@ -92,10 +93,11 @@ export function extentLocateSteps(t: TFunction, extent: FoldExtentWindowView | u
  */
 export function extentPreviewItems(
   t: TFunction,
-  extent: FoldExtentWindowView
+  extent: FoldExtentWindowView,
+  coarse = false
 ): { along: string[]; current: number | null } | null {
   if (extent.mode === 'whole') return null;
-  const along = foldExtentSteps(t, extent.mode);
+  const along = foldExtentSteps(t, extent.mode, coarse);
   return { along, current: extentComplete(extent) ? null : Math.min(extent.picked, along.length - 1) };
 }
 

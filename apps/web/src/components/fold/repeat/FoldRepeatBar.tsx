@@ -4,7 +4,7 @@ import { FoldRepeatAxis } from './FoldRepeatAxis';
 import { useTranslation } from 'react-i18next';
 import { useFoldRepeatUi, type FoldRepeatOpening } from '../../../fold/repeat/foldRepeatUi';
 import { useFoldRepeat } from '../../../fold/repeat/useFoldRepeat';
-import { repeatFailure } from '../../../fold/repeat/repeatWords';
+import { repeatAxisName, repeatFailure } from '../../../fold/repeat/repeatWords';
 import { foldReturnEntryLabel } from '../../../fold/return/foldReturnWords';
 import type { FoldScene } from '../../../fold/engine/foldEngineWire';
 import type { FoldModelLine } from '../../../fold/document/foldSequenceDocument';
@@ -90,9 +90,9 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
               <SelectValue placeholder={t('panels:fold.repeat.chooseAxis', 'Choose symmetry axis')} />
             </SelectTrigger>
             <SelectContent>
-              {m.axes.map((_, i) => (
+              {m.axes.map((axis, i) => (
                 <SelectItem key={i} value={String(i)}>
-                  {t('panels:fold.repeat.axisNumber', 'Axis {{number}}', { number: i + 1 })}
+                  {repeatAxisName(t, axis.display)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -140,7 +140,7 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
             : blocked && !m.preparing
               ? t('panels:fold.repeat.blockedAt', 'Stopped at source operation {{number}}: {{reason}}', {
                   number: blocked.step + 1,
-                  reason: repeatFailure(t, blocked.code),
+                  reason: repeatFailure(t, blocked),
                 })
               : m.busy
                 ? t('panels:fold.repeat.preparing', 'Preparing repeated folds…')
@@ -158,7 +158,7 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
                         'The final folded result and CP are shown below. Ready to save.',
                       )
                     : m.baseline && !m.axes.length
-                      ? repeatFailure(t, 'repeat_axis')
+                      ? repeatFailure(t, { code: 'repeat_axis' })
                       : t(
                           'panels:fold.repeat.axisHint',
                           'The axis is shown on the model before the selected range.',

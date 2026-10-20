@@ -321,6 +321,7 @@
   },
   "foldImport": {
     "browse": "or click to browse",
+    "browseTouch": "or tap to browse",
     "collapseTitle": "Collapse from CP",
     "drop": "Drop a .cp, .fold, .ori or .orh file",
     "editFigure": "Edit’s folded figure",

@@ -85,29 +85,42 @@ export function foldExtentLabel(t: TFunction, mode: FoldExtentMode): string {
   return extentName(t, mode);
 }
 
-/** What each extent creases, in a line: the control's tooltip, after its name. */
-export function foldExtentDescription(t: TFunction, mode: FoldExtentMode): string {
+/** What each extent creases, in a line: the control's tooltip, after its name; taps on a finger (`coarse`). */
+export function foldExtentDescription(t: TFunction, mode: FoldExtentMode, coarse = false): string {
   switch (mode) {
     case 'whole':
       return t('tools:fold.extent.wholeHelp', 'Crease the line from edge to edge.');
     case 'segment':
-      return t('tools:fold.extent.segmentHelp', 'Crease the line only between two points you click along it.');
+      return coarse
+        ? t('tools:fold.extent.segmentHelpTouch', 'Crease the line only between two points you tap along it.')
+        : t('tools:fold.extent.segmentHelp', 'Crease the line only between two points you click along it.');
     case 'pinch':
-      return t('tools:fold.extent.pinchHelp', 'Crease only a short mark, centred on a point you click along the line.');
+      return coarse
+        ? t('tools:fold.extent.pinchHelpTouch', 'Crease only a short mark, centred on a point you tap along the line.')
+        : t('tools:fold.extent.pinchHelp', 'Crease only a short mark, centred on a point you click along the line.');
   }
 }
 
 /** The clicks along the located line an extent takes, one step each: none for the whole line. */
-export function foldExtentSteps(t: TFunction, mode: FoldExtentMode): string[] {
+export function foldExtentSteps(t: TFunction, mode: FoldExtentMode, coarse = false): string[] {
   switch (mode) {
     case 'whole':
       return [];
     case 'segment':
-      return [
-        t('tools:fold.steps.segmentFrom', 'Click where the crease starts along the line.'),
-        t('tools:fold.steps.segmentTo', 'Click where it ends.'),
-      ];
+      return coarse
+        ? [
+            t('tools:fold.steps.segmentFromTouch', 'Tap where the crease starts along the line.'),
+            t('tools:fold.steps.segmentToTouch', 'Tap where it ends.'),
+          ]
+        : [
+            t('tools:fold.steps.segmentFrom', 'Click where the crease starts along the line.'),
+            t('tools:fold.steps.segmentTo', 'Click where it ends.'),
+          ];
     case 'pinch':
-      return [t('tools:fold.steps.pinchAt', 'Click where to pinch along the line.')];
+      return [
+        coarse
+          ? t('tools:fold.steps.pinchAtTouch', 'Tap where to pinch along the line.')
+          : t('tools:fold.steps.pinchAt', 'Click where to pinch along the line.'),
+      ];
   }
 }

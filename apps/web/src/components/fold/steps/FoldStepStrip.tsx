@@ -36,7 +36,8 @@ function renderStepPicture(card: FoldStripCard) {
  * The shared `StepFilmstrip` with Fold's pictures and words in it; a
  * right-click on a card offers that step's verbs. On a phone the chevrons go,
  * the cards are smaller so the paper keeps the height, and a swipe up or down
- * on a card chooses its branch.
+ * on a card chooses its branch, or a tap on the "2 / 3" readout steps to the
+ * next, the first after the last.
  */
 export function FoldStepStrip({ view }: { view: FoldSequenceView }) {
   const { t } = useTranslation();
@@ -82,6 +83,9 @@ export function FoldStepStrip({ view }: { view: FoldSequenceView }) {
         nextWayDisabled={strip.nextWayDisabled}
         waysLabel={strip.waysLabel}
         wayReadout={strip.wayReadout}
+        onCycleWay={strip.onCycleWay}
+        cycleWayLabel={strip.cycleWayLabel}
+        cycleWayDisabled={strip.cycleWayDisabled}
       />
       <ContextMenu
         open={menu.controller.open}

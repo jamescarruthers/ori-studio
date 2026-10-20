@@ -278,7 +278,7 @@ export function sinkToolWindow(
       disabled: readOnly,
       swap: verbs.swapSide,
     },
-    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly) : null,
+    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly, host.coarse) : null,
     refusal: preview.refused
       ? foldRefusalNotice(
           t,
