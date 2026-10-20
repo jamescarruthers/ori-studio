@@ -20,6 +20,9 @@
  * layer is a face an editor can delete to reveal the one beneath. A whole face
  * draws its outline itself (`PaperFaceItem.outline`) unless it carries aux
  * lines: those go between the fill and a separate outline, beneath its edges.
+ * A flat crease on an outline erodes as the crease it is a piece of, and a
+ * face erode can reach that way draws its outline as lines too
+ * (`foldedCreaseRuns.ts`).
  *
  * # A layer at a time
  *
@@ -77,7 +80,6 @@
 
 import type { PaperScene } from '@treemaker/origami-simulator';
 import type {
-  OristudioCpFoldedPaperAuxLine,
   OristudioCpFoldedPaperEdgeKind,
   OristudioCpFoldedPaperFace,
   OristudioCpFoldedPaperFaceEdge,
@@ -85,6 +87,7 @@ import type {
   OristudioCpFoldedPaperSubface,
 } from '../../engine/oristudioCpTypes';
 import type { Point } from '../../lib/geometry';
+import { auxLineRuns, flatEdgeRuns, runEnds, runRetreats, type CreaseRun } from './foldedCreaseRuns';
 import { foldedDisplayLayers, type FoldedDisplayLayers } from './foldedDisplayLayers';
 import { affineSpread, layerSpread, type LayerSpreadOptions } from './foldedLayerSpread';
 import type {
@@ -135,6 +138,8 @@ export function foldedFlatPaperScene(
     markHidden: options.markHidden,
     top: topFaces(kernel.subfaces),
     epsilon,
+    flatRuns: flatEdgeRuns(kernel, epsilon),
+    auxRuns: auxLineRuns(kernel, epsilon),
     ...placement(kernel, order, options, epsilon),
   };
   const position = new Int32Array(kernel.faces.length);
@@ -251,19 +256,6 @@ function placement(
  */
 export function foldedSceneEpsilon(kernel: Pick<OristudioCpFoldedPaperScene, 'sheet'>): number {
   return Math.max(kernel.sheet, 1) * 1e-5;
-}
-
-/**
- * Which ends of a folded aux line lie on its face's outline — the ends erode
- * retreats (D8). The canvas overlay and the export read the same answer.
- */
-export function auxLineOnBoundary(
-  kernel: Pick<OristudioCpFoldedPaperScene, 'faces'>,
-  aux: OristudioCpFoldedPaperAuxLine,
-  epsilon: number
-): [boolean, boolean] {
-  const outline = kernel.faces[aux.face]?.outline ?? [];
-  return [onOutline(outline, aux.from, epsilon), onOutline(outline, aux.to, epsilon)];
 }
 
 /* --------------------------------------------------------------------------
@@ -817,19 +809,25 @@ interface EmitContext {
   at: (face: number, point: Point) => ScenePoint;
   /** The point `t` of the way along a straight line on a face, in the scene: on the line {@link at} places. */
   along: (face: number, from: Point, to: Point, t: number) => ScenePoint;
+  /** Per face, per outline edge, the flat crease it is a piece of (`flatEdgeRuns`). */
+  flatRuns: readonly (readonly (CreaseRun | null)[])[];
+  /** Per aux line, the crease mark it is a piece of (`auxLineRuns`). */
+  auxRuns: readonly CreaseRun[];
 }
 
 /**
  * A face once, then AUX, then its edges. A uniform outline stays on the face
- * itself when no aux lines need to go between its fill and outline. Otherwise
- * it is a line per edge, retaining the closed outline's round joins.
+ * itself when no aux lines need to go between its fill and outline, and erode
+ * cannot reach it. Otherwise it is a line per edge, retaining the closed
+ * outline's round joins.
  */
 function emitWholeFace(items: PaperItem[], context: EmitContext, face: number): void {
   const { kernel } = context;
   const source = kernel.faces[face]!;
   const hidden = context.markHidden && !context.top.has(face);
   const uniformOutline = outlineRole(source);
-  const outline = kernel.aux_lines.some((aux) => aux.face === face) ? undefined : uniformOutline;
+  const lined = kernel.aux_lines.some((aux) => aux.face === face) || context.flatRuns[face]!.some(runRetreats);
+  const outline = lined ? undefined : uniformOutline;
   const ring = source.outline.map((point) => context.at(face, point));
   items.push(faceItem(face, source, [ring], hidden, outline));
   emitAuxLines(items, context, face, hidden);
@@ -853,8 +851,8 @@ function emitOutlineLines(items: PaperItem[], lines: readonly PaperLineItem[]): 
 
 /**
  * The role every edge of a face's outline takes, or undefined when they
- * differ. A loop of one role never erodes — an aux end retreats only where a
- * border or fold of the same outline meets it ({@link outlineLine}) — so the
+ * differ. A loop of edges never erodes, and a loop of flat creases none of
+ * whose creases reach a border or fold ({@link outlineLine}) neither, so the
  * face's own stroke draws exactly the lines it replaces.
  */
 function outlineRole(source: OristudioCpFoldedPaperFace): PaperLineRole | undefined {
@@ -888,12 +886,12 @@ function emitPatches(
   }
   for (const subface of batch) {
     const { polygon, faces_top_to_bottom: stack } = kernel.subfaces[subface]!;
-    for (const aux of kernel.aux_lines) {
-      if (aux.face !== stack[0]) continue;
-      for (const portion of auxPortionsIn(context, aux, polygon)) {
+    kernel.aux_lines.forEach((aux, index) => {
+      if (aux.face !== stack[0]) return;
+      for (const portion of auxPortionsIn(context, index, polygon)) {
         items.push({ ...auxLine(context, portion, false), group });
       }
-    }
+    });
   }
   const carried = new Set<string>();
   const lines: PaperLineItem[] = [];
@@ -925,7 +923,8 @@ function emitPatches(
 
 /** A stretch of one aux line, as parameters along it. */
 interface AuxPortion {
-  aux: OristudioCpFoldedPaperAuxLine;
+  /** The line's index in the kernel's `aux_lines`. */
+  index: number;
   span: [number, number];
 }
 
@@ -934,12 +933,9 @@ interface AuxPortion {
  * boundary, the cuts a slack apart and clear of its ends, so no stretch is a
  * sliver and its own ends stay its ends.
  */
-function auxPortionsIn(
-  context: EmitContext,
-  aux: OristudioCpFoldedPaperAuxLine,
-  polygon: readonly Point[]
-): AuxPortion[] {
+function auxPortionsIn(context: EmitContext, index: number, polygon: readonly Point[]): AuxPortion[] {
   const { epsilon } = context;
+  const aux = context.kernel.aux_lines[index]!;
   const slack = epsilon / edgeLength(aux);
   const crossings: number[] = [];
   for (let i = 0; i < polygon.length; i += 1) {
@@ -955,29 +951,29 @@ function auxPortionsIn(
   for (let i = 0; i + 1 < cuts.length; i += 1) {
     const span: [number, number] = [cuts[i]!, cuts[i + 1]!];
     if (insideOrOn(polygon, lerp(aux.from, aux.to, (span[0] + span[1]) / 2), epsilon)) {
-      portions.push({ aux, span });
+      portions.push({ index, span });
     }
   }
   return portions;
 }
 
 /**
- * A stretch of an aux line as a line. Only an end the whole line has retreats
- * under erode, and a stretch carries the whole crease, so the pull is measured
- * on the crease as the canvas measures it: a stretch near a retreating end
- * keeps what the pull leaves of it, and gives up what the pull takes.
+ * A stretch of an aux line as a line. Only an end the whole crease has
+ * retreats under erode — the line's own, or past the faces its mark goes on
+ * into (`auxLineRuns`) — and a stretch carries the whole crease, so the pull
+ * is measured on the crease as the canvas measures it: a stretch near a
+ * retreating end keeps what the pull leaves of it, and gives up what the pull
+ * takes.
  */
-function auxLine(context: EmitContext, { aux, span }: AuxPortion, hidden: boolean): PaperLineItem {
-  const place = (point: Point) => context.at(aux.face, point);
-  const [atFrom, atTo] = auxLineOnBoundary(context.kernel, aux, context.epsilon);
-  const whole = span[0] === 0 && span[1] === 1;
+function auxLine(context: EmitContext, { index, span }: AuxPortion, hidden: boolean): PaperLineItem {
+  const aux = context.kernel.aux_lines[index]!;
+  const ends = runEnds(context.at(aux.face, aux.from), context.at(aux.face, aux.to), context.auxRuns[index]!, span);
   return {
     kind: 'line',
     role: 'aux',
     a: context.along(aux.face, aux.from, aux.to, span[0]),
     b: context.along(aux.face, aux.from, aux.to, span[1]),
-    onBoundary: [atFrom && span[0] === 0, atTo && span[1] === 1],
-    ...(whole ? {} : { whole: { a: place(aux.from), b: place(aux.to), onBoundary: [atFrom, atTo] } }),
+    ...ends,
     face: aux.face,
     hidden,
   };
@@ -989,19 +985,12 @@ function emitAuxLines(
   face: number,
   hidden: boolean
 ): void {
-  const { kernel } = context;
-  for (const aux of kernel.aux_lines) {
-    if (aux.face !== face) continue;
-    items.push({
-      kind: 'line',
-      role: 'aux',
-      a: context.at(face, aux.from),
-      b: context.at(face, aux.to),
-      onBoundary: auxLineOnBoundary(kernel, aux, context.epsilon),
-      face,
-      hidden,
-    });
-  }
+  context.kernel.aux_lines.forEach((aux, index) => {
+    if (aux.face !== face) return;
+    const a = context.at(face, aux.from);
+    const b = context.at(face, aux.to);
+    items.push({ kind: 'line', role: 'aux', a, b, ...runEnds(a, b, context.auxRuns[index]!), face, hidden });
+  });
 }
 
 function faceItem(
@@ -1017,9 +1006,12 @@ function faceItem(
 
 /**
  * A portion of a face's outline edge as a line. A paper edge or a fold is the
- * outline itself and never retreats under erode; a flat crease on the outline
- * retreats at an end where a border or fold of the same outline meets it —
- * the mesh producer's rule, read off the outline instead of a vertex count.
+ * outline itself and never retreats under erode. A flat crease on the outline
+ * is a piece of a crease that runs on through every crossing
+ * (`flatEdgeRuns`), and retreats where a border or fold meets that crease —
+ * the mesh producer's rule, on the vertices the face names. A face the kernel
+ * could not name reads it off its own outline: an end retreats where a border
+ * or fold of the same outline meets it.
  */
 function outlineLine(
   context: EmitContext,
@@ -1032,6 +1024,17 @@ function outlineLine(
   const { edges } = context.kernel.faces[face]!;
   const own = edges[edge]!;
   const role = roleOf(own.kind);
+  const run = context.flatRuns[face]![edge];
+  if (run) {
+    // A patch carries a stretch of the edge, between where subface edges cut it.
+    const { epsilon } = context;
+    const span: [number, number] = [
+      samePoint(from, own.from, epsilon) ? 0 : (parameterOn(own.from, own.to, from, epsilon) ?? 0),
+      samePoint(to, own.to, epsilon) ? 1 : (parameterOn(own.from, own.to, to, epsilon) ?? 1),
+    ];
+    const ends = runEnds(context.at(face, own.from), context.at(face, own.to), run, span);
+    return { kind: 'line', role, a: context.at(face, from), b: context.at(face, to), ...ends, face, hidden };
+  }
   const count = edges.length;
   const previous = edges[(edge + count - 1) % count]!;
   const following = edges[(edge + 1) % count]!;

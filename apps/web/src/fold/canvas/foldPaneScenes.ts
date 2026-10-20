@@ -25,6 +25,7 @@
  */
 import type { Point } from '../../lib/geometry';
 import type { PaperItem, PaperLineItem, PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
+import { creaseRuns, runEnds, type CreaseRun } from '../../cp-workspace/folded/foldedCreaseRuns';
 import { foldedFlatPaperScene, type FoldedFlatPaperSceneOptions } from '../../cp-workspace/folded/foldedFlatScene';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import type { FoldDirection } from '../document/foldSequenceDocument';
@@ -400,20 +401,22 @@ export function creasePatternPaperScene(scene: FoldScene, options: CreasePattern
   const border: PaperLineItem[] = [];
   const aux: PaperLineItem[] = [];
   const folds: PaperLineItem[] = [];
-  for (const crease of scene.creases) {
-    const role = creaseRole(crease, shown);
-    if (!role) continue;
+  const roles = scene.creases.map((crease) => creaseRole(crease, shown));
+  const runs = sheetCreaseRuns(scene.creases, roles, options.sheet);
+  scene.creases.forEach((crease, k) => {
+    const role = roles[k];
+    if (!role) return;
     const item = lineItem(role, crease.from, crease.to, 0, ORIGIN, toScenePx);
     if (role === 'edge') border.push(item);
-    else if (role === 'aux') aux.push({ ...item, onBoundary: onSheetEnds(crease, options.sheet) });
+    else if (role === 'aux') aux.push({ ...item, ...runEnds(item.a, item.b, runs[k]!) });
     else folds.push(item);
-  }
+  });
   // The crease marks, in the aux pen as the flat creases they are, or the instruction they are.
   for (const mark of scene.crease_marks ?? []) {
     const role = paneCreaseRole(foldPaneMark(mark, shown));
     if (!role) continue;
     const item = lineItem(role, mark.from, mark.to, 0, ORIGIN, toScenePx);
-    if (role === 'aux') aux.push(item);
+    if (role === 'aux') aux.push({ ...item, onBoundary: onSheetEnds(mark, options.sheet) });
     else folds.push(item);
   }
   // Context under the folds, the instruction's dashes over both.
@@ -436,17 +439,44 @@ function isDiagram(item: PaperLineItem): boolean {
   return item.role === 'diagram-mountain' || item.role === 'diagram-valley';
 }
 
+/** How far off a line, in sheet units, a point still lies on it: the engine's points are exact to far better. */
+const ON_LINE = 1e-9;
+
 /** Which ends of an aux crease lie on the sheet's edge, where erode pulls them back. */
-function onSheetEnds(crease: FoldSceneCrease, sheet: readonly (readonly [number, number])[]): [boolean, boolean] {
-  const on = (point: Point) =>
-    sheet.some((corner, k) => {
-      const next = sheet[(k + 1) % sheet.length]!;
-      const a = toPoint(corner);
-      const b = toPoint(next);
-      const length = Math.hypot(b.x - a.x, b.y - a.y);
-      if (length === 0) return false;
-      const cross = ((b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x)) / length;
-      return Math.abs(cross) < 1e-9;
-    });
-  return [on(crease.from), on(crease.to)];
+function onSheetEnds(crease: { from: Point; to: Point }, sheet: readonly (readonly [number, number])[]): [boolean, boolean] {
+  return [onSheetEdge(crease.from, sheet), onSheetEdge(crease.to, sheet)];
+}
+
+function onSheetEdge(point: Point, sheet: readonly (readonly [number, number])[]): boolean {
+  return sheet.some((corner, k) => {
+    const next = sheet[(k + 1) % sheet.length]!;
+    const a = toPoint(corner);
+    const b = toPoint(next);
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length === 0) return false;
+    const cross = ((b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x)) / length;
+    return Math.abs(cross) < ON_LINE;
+  });
+}
+
+/**
+ * Per crease of a crease pattern, the run of flat creases it is a piece of,
+ * for each drawn in the aux pen; null for the rest. The pattern's creases are
+ * cut at every vertex, but erode pulls back the crease — one straight line
+ * from end to end, through every crossing, as References draws it — and only
+ * where it meets the sheet's edge (`onSheetEnds`), so a piece between the
+ * edge and a crossing keeps what the pull leaves of it.
+ */
+function sheetCreaseRuns(
+  creases: readonly FoldSceneCrease[],
+  roles: readonly (PaperLineRole | null)[],
+  sheet: readonly (readonly [number, number])[]
+): (CreaseRun | null)[] {
+  const at = new Map<number, Point>();
+  for (const { vertices, from, to } of creases) {
+    at.set(vertices[0], from);
+    at.set(vertices[1], to);
+  }
+  const edges = creases.map(({ vertices: [u, v], from, to }, k) => ({ u, v, from, to, joins: roles[k] === 'aux' }));
+  return creaseRuns(edges, (vertex) => onSheetEdge(at.get(vertex)!, sheet), ON_LINE);
 }
