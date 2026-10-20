@@ -15,6 +15,18 @@ pub enum LayerOrderError {
     #[error("the view has {face_count} faces, over the {limit} cap")]
     TooManyFaces { face_count: usize, limit: usize },
 
+    /// More triples of faces overlapping one another than a bounded build
+    /// takes ([`crate::problem::MAX_STACKED_TRIPLES`]): their order would
+    /// take too long to work out.
+    #[error(
+        "the view stacks up to {deepest} faces deep, {triples} overlapping triples over the {limit} cap"
+    )]
+    StackedTooDeep {
+        deepest: usize,
+        triples: u64,
+        limit: u64,
+    },
+
     /// Two faces share an id.
     #[error("face {0} appears more than once")]
     DuplicateFace(FaceId),

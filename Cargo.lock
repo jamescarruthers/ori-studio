@@ -3490,6 +3490,7 @@ dependencies = [
  "oristudio-cp",
  "oristudio-fold",
  "oristudio-geometry",
+ "oristudio-layer-order",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",

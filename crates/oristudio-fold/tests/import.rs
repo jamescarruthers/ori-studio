@@ -805,6 +805,64 @@ fn a_pattern_over_the_face_cap_is_refused_once_its_faces_are_counted() {
     }
 }
 
+/// `strips` vertical strips of the unit square folded back and forth along
+/// lines of alternating letters: every face on one stack, `strips` deep.
+fn accordion(strips: usize) -> CreasePatternInput {
+    let mut segments = border(1.0, 1.0);
+    for k in 1..strips {
+        let at = k as f64 / strips as f64;
+        let letter = if k % 2 == 0 { MOUNTAIN } else { VALLEY };
+        segments.push(segment([at, 0.0], [at, 1.0], letter));
+    }
+    sheet_input(segments)
+}
+
+fn choose3(d: u64) -> u64 {
+    d * (d - 1) * (d - 2) / 6
+}
+
+#[test]
+fn a_pattern_stacked_past_the_cap_is_refused_before_its_order_is_looked_for() {
+    let cap = oristudio_layer_order::MAX_STACKED_TRIPLES;
+    // The deepest single stack the cap takes: every three of its layers
+    // overlap one another.
+    let deepest = (3..).take_while(|&d| choose3(d) <= cap).last().unwrap_or(3);
+    assert_eq!(deepest, 289, "the accordions below sit at the cap");
+
+    // At the cap: the pattern's faces, view and constraints are built.
+    let at = imported(&accordion(289), empty());
+    let unordered = at.unordered();
+    assert_eq!(unordered.view().faces().len(), 289);
+    let depth = unordered.problem().stack_depth(unordered.view());
+    assert_eq!((depth.deepest, depth.triples), (289, choose3(289)));
+
+    // One strip more is over: refused as the overlaps are counted, into an
+    // empty sequence and after a state alike, as a replay imports it.
+    let over = accordion(290);
+    let square = State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    for target in [empty(), ImportTarget::After(&square)] {
+        let refusal = ImportedPattern::new(&over, target).err();
+        assert_eq!(
+            refusal,
+            Some(ImportRefusal::StackedTooDeep {
+                deepest: 290,
+                triples: choose3(290),
+                limit: cap
+            })
+        );
+        let json = refusal.map(|r| serde_json::to_value(&r).unwrap_or_default());
+        assert_eq!(
+            json,
+            Some(serde_json::json!({
+                "code": "import_stacked_too_deep",
+                "deepest": 290,
+                "triples": choose3(290),
+                "limit": cap
+            }))
+        );
+    }
+}
+
 /// A plain fold of all layers along a line through a vertex image at a
 /// sixteenth of a turn, or through two vertex images.
 fn random_fold(state: &State, rng: &mut Rng) -> Option<oristudio_fold::PlainFold> {

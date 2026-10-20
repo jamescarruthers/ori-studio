@@ -1,14 +1,15 @@
 import type { FoldCpOrigin } from '../fold/document/foldSequenceDocument';
-import { foldFaceCountOf } from '../fold/foldFaceCap';
+import { foldCapOf, type FoldCap } from '../fold/foldCaps';
 import type { FoldImportRefusal } from '../fold/io/foldImportRefusal';
-import { ANALYTICS_EVENTS, bucketCount, FOLD_FACE_COUNT_BUCKETS } from './events';
+import { ANALYTICS_EVENTS, bucketCount, FOLD_FACE_COUNT_BUCKETS, FOLD_STACK_DEPTH_BUCKETS } from './events';
 import { track } from './runtime';
 
 /**
  * An Import CP the dialog refused (plan D16, D18), as `fold refused`: the
  * engine's stable code (`import_*`), or the dialog's own (`unsupported_file`,
  * `no_folded_figure`, …) — never a file name, a point or a crease. A refusal
- * of the face cap also says how far over it was, bucketed.
+ * of a cap also says how far over it was, bucketed: the face count over the
+ * face cap, the deepest stack over the stacking cap.
  */
 export function trackFoldImportRefused(refusal: FoldImportRefusal): void {
   if (refusal.kind === 'local') {
@@ -16,11 +17,15 @@ export function trackFoldImportRefused(refusal: FoldImportRefusal): void {
     return;
   }
   const body = refusal.refused.refusal;
-  const counts = foldFaceCountOf(body);
-  track(ANALYTICS_EVENTS.foldRefused, {
-    code: body.code,
-    ...(counts ? { face_count_bucket: bucketCount(counts.faceCount, FOLD_FACE_COUNT_BUCKETS) } : {}),
-  });
+  const cap = foldCapOf(body);
+  track(ANALYTICS_EVENTS.foldRefused, { code: body.code, ...(cap ? capBucket(cap) : {}) });
+}
+
+/** How far over its cap a refusal was, as one bucketed property. */
+function capBucket(cap: FoldCap): Record<string, string> {
+  return cap.kind === 'faces'
+    ? { face_count_bucket: bucketCount(cap.faceCount, FOLD_FACE_COUNT_BUCKETS) }
+    : { stack_depth_bucket: bucketCount(cap.deepest, FOLD_STACK_DEPTH_BUCKETS) };
 }
 
 /**

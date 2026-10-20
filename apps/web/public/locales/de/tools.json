@@ -692,6 +692,12 @@
         "text": "Ein Punkt der bewegten Lagen käme um Haaresbreite innerhalb der Kante einer anderen Lage zu liegen.",
         "title": "Ein Punkt landet knapp innerhalb einer Kante"
       },
+      "stackedTooDeep": {
+        "fold": "Diese Faltung würde die Lagen zu tief stapeln, als dass sich ihre Reihenfolge bestimmen ließe: bis zu {{deepest, number}} übereinander. Falte weniger Lagen.",
+        "pattern": "Dieses Faltmuster stapelt seine Lagen zu tief, als dass sich ihre Reihenfolge bestimmen ließe: bis zu {{deepest, number}} übereinander. Importiere ein einfacheres Muster.",
+        "step": "Dieser Schritt stapelt seine Lagen zu tief, als dass sich ihre Reihenfolge bestimmen ließe: bis zu {{deepest, number}} übereinander. Er und die folgenden Schritte können nur noch gelöscht werden.",
+        "title": "Lagen zu tief gestapelt"
+      },
       "tipNotFree": {
         "text": "Wo die Spitze umschlagen würde, liegen andere Lagen. Nimm ihre Laschen in die Faltung auf oder setze den Gegenbruch an einer anderen Stelle.",
         "title": "Lagen sind im Weg"

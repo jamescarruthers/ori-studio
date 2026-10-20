@@ -330,7 +330,14 @@ describe('FoldStepPane', () => {
   it('says a step broke on the face cap by its count and the cap, keeping its delete', () => {
     const remove = vi.fn();
     render({
-      step: { ...VALLEY_STEP, layers: null, creases: null, diff: null, status: 'broken', faceCap: { faceCount: 4160, limit: 4096 } },
+      step: {
+        ...VALLEY_STEP,
+        layers: null,
+        creases: null,
+        diff: null,
+        status: 'broken',
+        cap: { kind: 'faces', faceCount: 4160, limit: 4096 },
+      },
       startSide: 'front',
       fixes: [{ id: 'delete', label: 'Delete this step and what follows', run: remove }],
     });
@@ -338,6 +345,29 @@ describe('FoldStepPane', () => {
     expect(notice?.getAttribute('data-tone')).toBe('warning');
     expect(notice?.textContent).toContain(
       'This step has 4,160 faces, more than the 4,096 Fold folds. It and the steps after it can only be deleted.'
+    );
+    act(() => notice?.querySelector('button')?.click());
+    expect(remove).toHaveBeenCalledOnce();
+  });
+
+  it('says a step broke on the stacking cap by its deepest stack, keeping its delete', () => {
+    const remove = vi.fn();
+    render({
+      step: {
+        ...VALLEY_STEP,
+        layers: null,
+        creases: null,
+        diff: null,
+        status: 'broken',
+        cap: { kind: 'stack', deepest: 1290, triples: 357_349_080, limit: 4_000_000 },
+      },
+      startSide: 'front',
+      fixes: [{ id: 'delete', label: 'Delete this step and what follows', run: remove }],
+    });
+    const notice = host.querySelector('[role="status"]');
+    expect(notice?.getAttribute('data-tone')).toBe('warning');
+    expect(notice?.textContent).toContain(
+      'This step stacks its layers too deeply for Fold to work out their order, up to 1,290 on top of each other. It and the steps after it can only be deleted.'
     );
     act(() => notice?.querySelector('button')?.click());
     expect(remove).toHaveBeenCalledOnce();

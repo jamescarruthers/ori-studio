@@ -132,6 +132,7 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'invalid_rectangle',
   'invalid_sides',
   'too_many_faces',
+  'stacked_too_deep',
   'duplicate_id',
   'unknown_vertex',
   'crease_unknown_vertex',

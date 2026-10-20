@@ -710,6 +710,12 @@
         "text": "Um ponto das camadas que se movem cairia por um fio dentro da borda de outra camada.",
         "title": "Um ponto cai logo dentro de uma borda"
       },
+      "stackedTooDeep": {
+        "fold": "Esta dobra empilharia as camadas demais para que a ordem delas seja determinada: até {{deepest, number}} umas sobre as outras. Dobre menos camadas.",
+        "pattern": "Este padrão de vincos empilha suas camadas demais para que a ordem delas seja determinada: até {{deepest, number}} umas sobre as outras. Importe um padrão mais simples.",
+        "step": "Este passo empilha suas camadas demais para que a ordem delas seja determinada: até {{deepest, number}} umas sobre as outras. Ele e os passos seguintes só podem ser excluídos.",
+        "title": "Camadas empilhadas demais"
+      },
       "tipNotFree": {
         "text": "Há outras camadas onde a ponta viraria. Inclua as abas delas na dobra ou inverta em outro lugar.",
         "title": "Há camadas no caminho"
