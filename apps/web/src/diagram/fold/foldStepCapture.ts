@@ -16,7 +16,7 @@
  */
 
 import type { TFunction } from 'i18next';
-import type { FoldStepNode } from '../../fold/document/foldSequenceDocument';
+import { isLockedStep, type FoldStepNode } from '../../fold/document/foldSequenceDocument';
 import type { FoldScene } from '../../fold/engine/foldEngineWire';
 import { foldStepReady, type FoldStepReady, type FoldStepWaitRefusal } from '../../fold/io/foldSessionWaits';
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
@@ -34,6 +34,7 @@ import {
   type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { storedFoldStepSource } from '../document/diagramFile';
+import { foldStepAction } from './foldStepMarkPlan';
 import { foldStepPicture, type FoldStepPictureInput } from './foldStepPicture';
 import { foldRepeatCallout } from './foldRepeatCallout';
 import { readFoldRunCapture } from './foldRunCapture';
@@ -140,29 +141,33 @@ export async function readFoldStepCapture(
     ]);
     return { scene, summary, action: acted.status === 'ok' ? acted.action : null, engineVersion };
   });
-  const parent = await session.withState(ready.parentState, (engine, id) => engine.scene(id));
+  const parent = await session.withState(ready.parentState, async (engine, id) => {
+    const [scene, summary] = await Promise.all([engine.scene(id), engine.summary(id)]);
+    return { scene, step: summary.step };
+  });
   if (own.status !== 'answered' || parent.status !== 'answered') return { status: 'unknown', why: 'unavailable' };
   const { scene, summary, action, engineVersion } = own.value;
   const node = session.store.getState().sequence?.steps.find((step) => step.id === request.step);
   if (!node) return { status: 'missing' };
+  const op = isLockedStep(node) ? null : node.op;
   let repeat: FoldStepPictureInput['repeat'];
-  if (request.moment === 'before' && node.op?.kind === 'repeat') {
-    const parentSummary = await session.withState(ready.parentState, (engine, id) => engine.summary(id));
-    if (parentSummary.status !== 'answered') return { status: 'unknown', why: 'unavailable' };
-    repeat = foldRepeatCallout(parent.value, scene, parentSummary.value.step, node.op.axis, t);
+  if (request.moment === 'before' && op?.kind === 'repeat') {
+    repeat = foldRepeatCallout(parent.value.scene, scene, parent.value.step, op.axis, t);
   }
   return {
     status: 'ready',
     input: {
       picture: {
-        shown: request.moment === 'after' ? scene : parent.value,
-        own: { scene, step: summary.step, sheet: summary.sheet },
+        shown: request.moment === 'after' ? scene : parent.value.scene,
+        // Every crease made since the state it folds from is the step's: a Repeat's every operation's.
+        own: { scene, step: summary.step, sheet: summary.sheet, since: parent.value.step },
         moment: request.moment,
-        action: request.moment === 'before' ? action : null,
+        action:
+          request.moment === 'before' && action ? foldStepAction(action, { op, parent: parent.value.scene, child: scene }) : null,
         ...(repeat ? { repeat } : {}),
       },
       ready,
-      parent: parent.value,
+      parent: parent.value.scene,
       node,
       engineVersion,
     },

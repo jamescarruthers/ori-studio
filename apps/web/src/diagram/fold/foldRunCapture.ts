@@ -23,7 +23,7 @@ import type { TFunction } from 'i18next';
 import { applyIsometry, invertIsometry } from '../../fold/canvas/foldCanvasGeometry';
 import { foldStepTree, pathBetween } from '../../fold/document/foldStepTree';
 import type { FoldStepNode } from '../../fold/document/foldSequenceDocument';
-import type { FoldActionGeometry, FoldIsometry, FoldScene } from '../../fold/engine/foldEngineWire';
+import type { FoldIsometry, FoldScene } from '../../fold/engine/foldEngineWire';
 import { foldStepReady, type FoldStepReady } from '../../fold/io/foldSessionWaits';
 import { compose } from '../../fold/repeat/repeatGeometry';
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
@@ -33,18 +33,19 @@ import { FOLD_SCENE_QUERY } from '../../fold/session/foldStateQueries';
 import { foldStepSentence } from '../../fold/stepSentence';
 import type { Point } from '../../lib/geometry';
 import { isMergeableRun, isPrecreaseStep, mergedPrecreaseSentence } from './foldPrecreaseMerge';
+import { foldStepAction, type FoldStepAction } from './foldStepMarkPlan';
 import { captureRefusal, type FoldStepCaptureInput, type FoldStepCaptureRefusal } from './foldStepCapture';
 
 const UNAVAILABLE: FoldStepCaptureRefusal = { status: 'unknown', why: 'unavailable' };
 
-/** A step's picture, and the view of the state it is drawn on. */
+/** A step's picture, its marks placed (`foldStepMarkPlan.ts`), and the view of the state it is drawn on. */
 interface SeenAction {
-  action: FoldActionGeometry;
+  action: FoldStepAction;
   view: FoldIsometry;
 }
 
 /** `action`, drawn in the frame of a state with view `from`, as the frame of one with view `to` draws it. */
-function actionSeenIn(action: FoldActionGeometry, from: FoldIsometry, to: FoldIsometry): FoldActionGeometry {
+function actionSeenIn(action: FoldStepAction, from: FoldIsometry, to: FoldIsometry): FoldStepAction {
   const map = compose(to, invertIsometry(from));
   const at = (point: Point): Point => applyIsometry(map, point);
   return {
@@ -54,6 +55,7 @@ function actionSeenIn(action: FoldActionGeometry, from: FoldIsometry, to: FoldIs
     grip: action.grip ? { ...action.grip, at: at(action.grip.at), image: at(action.grip.image) } : null,
     ...(action.push ? { push: { at: at(action.push.at), toward: at(action.push.toward) } } : {}),
     ...(action.pleat ? { pleat: { ...action.pleat, from: at(action.pleat.from), to: at(action.pleat.to) } } : {}),
+    ...(action.rings ? { rings: action.rings.map((ring) => ({ ...ring, at: at(ring.at) })) } : {}),
   };
 }
 
@@ -73,7 +75,7 @@ async function stepActions(
     const acted = await session.withState(ready.state, (engine, id) => engine.stepAction(id));
     if (acted.status !== 'answered') return null;
     const action = acted.value.status === 'ok' ? acted.value.action : null;
-    return action ? [{ action, view: before.view_transform }] : [];
+    return action ? [{ action: foldStepAction(action, { op: node.op, parent: before }), view: before.view_transform }] : [];
   }
   if (node.op?.kind !== 'repeat') return [];
   const entries = node.op.steps;
@@ -81,18 +83,18 @@ async function stepActions(
     const seen: SeenAction[] = [];
     const landed: number[] = [];
     let current = id;
-    let view = before.view_transform;
+    let scene = before;
     try {
       for (const [index, entry] of entries.entries()) {
         const acted = await engine.action(current, entry.op, entry.choices);
         if (acted.status !== 'ok') return null;
-        seen.push({ action: acted.action, view });
+        seen.push({ action: foldStepAction(acted.action, { op: entry.op, parent: scene }), view: scene.view_transform });
         if (index === entries.length - 1) break;
         const next = await engine.apply(current, entry.op, entry.choices);
         if (next.status !== 'ok') return null;
         landed.push(next.state);
         current = next.state;
-        view = (await engine.scene(current)).view_transform;
+        scene = await engine.scene(current);
       }
       return seen;
     } finally {
@@ -139,7 +141,7 @@ export async function readFoldRunCapture(
   }
   const scenes = asked.map((scene) => (scene as Extract<typeof scene, { status: 'answered' }>).value);
   const shown = scenes[0]!;
-  const actions: FoldActionGeometry[] = [];
+  const actions: FoldStepAction[] = [];
   for (const [index, node] of run.entries()) {
     const seen = await stepActions(session, node, readies[index]!, scenes[index]!);
     if (seen === null) return UNAVAILABLE;

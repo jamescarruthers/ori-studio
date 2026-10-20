@@ -30,14 +30,14 @@
 
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
 import { creasePatternPaperScene } from '../../fold/canvas/foldPaneScenes';
-import type { FoldActionGeometry, FoldScene } from '../../fold/engine/foldEngineWire';
+import type { FoldScene } from '../../fold/engine/foldEngineWire';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import { ORIEDITA_PAPER_SIZE } from '../../lib/creasePatternViewport';
 import { turnClockwise, type Point } from '../../lib/geometry';
 import type { PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { storedSheetThumbnail, type SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
-import { createAnnotation, MAX_BEHIND_LAYERS, type PictureFrame, type PicturePoint } from '../annotate/annotationModel';
+import { arrowApex, createAnnotation, MAX_BEHIND_LAYERS, type PictureFrame, type PicturePoint } from '../annotate/annotationModel';
 import { flatScenePicture, storeScene, type CapturedPicture } from '../capture/captureFolded';
 import { CAPTURE_PX_PER_UNIT } from '../capture/captureGeometry';
 import {
@@ -57,6 +57,7 @@ import {
 import { storedAnnotations } from '../document/diagramFile';
 import { storedScene } from '../pictures/pictureFrame';
 import { repeatCalloutMark, type FoldRepeatCallout } from './foldRepeatCallout';
+import type { FoldStepAction } from './foldStepMarkPlan';
 
 /** Pattern units per Fold sheet unit: a Fold sheet the size Edit draws its paper. */
 export const PATTERN_PER_SHEET_UNIT = ORIEDITA_PAPER_SIZE;
@@ -109,10 +110,12 @@ export interface FoldStepOwnState {
   /** The sheet's outline, counter-clockwise, in sheet coordinates. */
   sheet: readonly (readonly [number, number])[];
   /**
-   * A run of steps drawn as one (`foldPrecreaseMerge.ts`), its last step's
-   * state `own`: how many steps led to the state its first folds from. Every
-   * crease made since is the run's, and its crease pattern draws them all as
-   * the instruction. Absent for one step.
+   * How many steps led to the state the step folds from — for a run of steps
+   * drawn as one (`foldPrecreaseMerge.ts`), its last step's state `own`, the
+   * state its first folds from. Every crease made since is the step's own (a
+   * Repeat's every operation's, a run's every precrease's), and its crease
+   * pattern draws them all as the instruction. One step before `step` when
+   * absent.
    */
   since?: number;
 }
@@ -122,8 +125,12 @@ export interface FoldStepPictureInput {
   shown: FoldScene;
   own: FoldStepOwnState;
   moment: DiagramFoldMoment;
-  /** What the step does — a run's first — on the state it folds from; null for a turn, a rotation or an import. */
-  action: FoldActionGeometry | null;
+  /**
+   * What the step does — a run's first — on the state it folds from, its
+   * marks placed by its references (`foldStepMarkPlan.ts`); null for a turn,
+   * a rotation or an import.
+   */
+  action: FoldStepAction | null;
   /** Repeat's affected material in the starting pose, with localized callout words. */
   repeat?: FoldRepeatCallout;
   /**
@@ -131,7 +138,7 @@ export interface FoldStepPictureInput {
    * (`foldPrecreaseMerge.ts`): their lines and arrows join the first's, on
    * the one picture. Absent for one step.
    */
-  merged?: readonly FoldActionGeometry[];
+  merged?: readonly FoldStepAction[];
 }
 
 export interface FoldStepPicture {
@@ -175,29 +182,16 @@ function creasePatternPicture(input: FoldStepPictureInput, render: Extract<Diagr
     const turned = turn({ x: across * (placed.x - middle.x), y: placed.y - middle.y });
     return [turned.x * CAPTURE_PX_PER_UNIT, turned.y * CAPTURE_PX_PER_UNIT];
   };
-  const scene = creasePatternPaperScene(own.since === undefined ? own.scene : withRunCreases(own.scene, own.since, own.step), {
+  const scene = creasePatternPaperScene(own.scene, {
     // Before the step its creases are its instruction; after it, folds like any.
     display: { stepCreases: moment === 'before', precreases: true },
     sheet: own.sheet,
     step: own.step,
+    ...(own.since !== undefined ? { since: own.since } : {}),
     place: { toScenePx, sheetPx: PATTERN_PER_SHEET_UNIT * CAPTURE_PX_PER_UNIT },
     side: creasePatternSide(render),
   });
   return storeScene(flipped ? withFoldsTurnedOver(scene) : scene, CAPTURE_PX_PER_UNIT, null);
-}
-
-/**
- * `scene` with every crease and crease mark made after `since` — a run's —
- * as made by the run's last step, `step`: so the crease pattern draws them
- * all as the one step's instruction, as it draws a step's own.
- */
-function withRunCreases(scene: FoldScene, since: number, step: number): FoldScene {
-  const made = (at: number) => (at > since && at <= step ? step : at);
-  return {
-    ...scene,
-    creases: scene.creases.map((crease) => ({ ...crease, made_at: made(crease.made_at) })),
-    ...(scene.crease_marks ? { crease_marks: scene.crease_marks.map((mark) => ({ ...mark, made_at: made(mark.made_at) })) } : {}),
-  };
 }
 
 /** A fold's pen seen from the paper's other side: a mountain is a valley there, and a valley a mountain. */
@@ -224,17 +218,87 @@ function capturedScene(captured: CapturedPicture): PaperScene | null {
   return captured.picture.kind === 'scene' ? storedScene(captured.picture) : null;
 }
 
+/** Whether a point of the picture, in its units, lies on its paper: on a face of the scene it is drawn from. */
+function paperTest(scene: PaperScene, longer: number): (point: PicturePoint) => boolean {
+  const { minX, minY } = scene.bounds;
+  const rings = scene.items.flatMap((item) => (item.kind === 'face' ? item.rings : []));
+  return ([u, v]) => {
+    const [x, y] = [minX + u * longer, minY + v * longer];
+    let inside = false;
+    for (const ring of rings) {
+      for (let k = 0, j = ring.length - 1; k < ring.length; j = k, k += 1) {
+        const [ax, ay] = ring[k]!;
+        const [bx, by] = ring[j]!;
+        if (ay > y !== by > y && x < ax + ((y - ay) / (by - ay)) * (bx - ax)) inside = !inside;
+      }
+      if (inside) return true;
+    }
+    return false;
+  };
+}
+
+/** How close to a line, in picture units, an arrow's arc runs along it rather than past it. */
+const ALONG_A_LINE = 0.012;
+
+function distanceToSegment([x, y]: PicturePoint, [ax, ay]: PicturePoint, [bx, by]: PicturePoint): number {
+  const length2 = (bx - ax) ** 2 + (by - ay) ** 2;
+  const t = length2 > 0 ? Math.min(1, Math.max(0, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / length2)) : 0;
+  return Math.hypot(x - (ax + (bx - ax) * t), y - (ay + (by - ay) * t));
+}
+
+/**
+ * A fold arrow bowed the way that keeps more of it over the paper, and then
+ * the way that runs along fewer of the step's lines: the way a new arrow bows
+ * (away from the picture's middle), unless the other way does better. Over
+ * the paper means its arc's apex and the stretch beyond it, and beside its
+ * ends on the bowed side, where a fold-and-unfold arrow's return runs; along
+ * a line, the points of its arc that lie on one of `lines`.
+ */
+function bowedOverPaper(
+  arrow: KnownDiagramAnnotation,
+  onPaper: (point: PicturePoint) => boolean,
+  lines: readonly (readonly [PicturePoint, PicturePoint])[]
+): KnownDiagramAnnotation {
+  const { bend, from, to } = arrow;
+  if (bend === undefined) return arrow;
+  const chord = Math.hypot(to[0] - from[0], to[1] - from[1]);
+  const middle: PicturePoint = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2];
+  const score = (sagitta: number) => {
+    const apex = arrowApex(from, to, sagitta);
+    const out: PicturePoint = [apex[0] - middle[0], apex[1] - middle[1]];
+    const length = Math.hypot(out[0], out[1]);
+    if (!(length > 0) || !(chord > 0)) return 0;
+    const beside = (end: PicturePoint): PicturePoint => [end[0] + (out[0] / length) * chord * 0.12, end[1] + (out[1] / length) * chord * 0.12];
+    const kept = [apex, [middle[0] + out[0] * 1.6, middle[1] + out[1] * 1.6] as PicturePoint, beside(from), beside(to)].filter(onPaper).length;
+    // The arc, near enough: the parabola through its ends and its apex.
+    const control: PicturePoint = [2 * apex[0] - middle[0], 2 * apex[1] - middle[1]];
+    let along = 0;
+    for (let k = 1; k < 10; k += 1) {
+      const t = k / 10;
+      const point: PicturePoint = [
+        (1 - t) ** 2 * from[0] + 2 * t * (1 - t) * control[0] + t ** 2 * to[0],
+        (1 - t) ** 2 * from[1] + 2 * t * (1 - t) * control[1] + t ** 2 * to[1],
+      ];
+      if (lines.some(([a, b]) => distanceToSegment(point, a, b) < ALONG_A_LINE)) along += 1;
+    }
+    return kept * 10 - along;
+  };
+  return score(-bend) > score(bend) ? { ...arrow, bend: -bend } : arrow;
+}
+
 /**
  * The step's marks on the flat picture `captured` is: its fold's line — the
  * stretches of it the moving paper is creased along, a stretch under a layer
- * that stays drawn hidden — and its arrow from the paper it moves to where it
- * lands, dotted from an end under layers (15e); a precrease's arrow comes back.
- * A compound fold's push or pleat arrow too. Seen from the back, every fold is
- * named from there (RM7) and its layers are not the front's, so no end is
+ * that stays drawn hidden; every crease of a rabbit ear — the points it names
+ * circled (`foldStepMarkPlan.ts`), and its arrow from the paper it moves to
+ * where it lands, dotted from an end under layers (15e), bowed over the
+ * paper rather than off it where it can be; a precrease's arrow comes back.
+ * A compound fold's push or pleat arrow too. Seen from the back, every fold
+ * is named from there (RM7) and its layers are not the front's, so no end is
  * marked behind.
  */
 export function foldStepMarks(
-  action: FoldActionGeometry | null,
+  action: FoldStepAction | null,
   captured: CapturedPicture,
   render: Extract<DiagramCpRender, { mode: 'folded-flat' }>,
   newId: DiagramIdFactory = randomDiagramId,
@@ -262,17 +326,25 @@ export function foldStepMarks(
   const valley = (action.direction === 'valley') !== back;
   const mark = (kind: DiagramAnnotationKind, from: Point, to: Point): KnownDiagramAnnotation =>
     createAnnotation(kind, toPicture(from), toPicture(to), frame, newId);
+  const onPaper = paperTest(scene, longer);
   const marks: KnownDiagramAnnotation[] = [];
   const spans = action.spans.length > 0 ? action.spans : action.line ? [{ from: action.line[0], to: action.line[1], hidden: false }] : [];
   for (const span of spans) {
     const spanValley = ((span.direction ?? action.direction) === 'valley') !== back;
     marks.push(mark(span.hidden ? 'hidden-line' : spanValley ? 'valley-line' : 'mountain-line', span.from, span.to));
   }
+  // The points it names — a crease's ends, the points a fold brings together — as the Diagram's point circles.
+  for (const ring of action.rings ?? []) {
+    const circle = mark('circle', ring.at, ring.at);
+    const behind = back ? 0 : Math.min(ring.behind, MAX_BEHIND_LAYERS);
+    marks.push(behind > 0 ? { ...circle, behind: { from: behind } } : circle);
+  }
   if (action.grip) {
     const { at, image, hidden_at: over, hidden_image: overImage } = action.grip;
     const kind: DiagramAnnotationKind =
       action.kind === 'precrease' ? 'fold-unfold-arrow' : valley ? 'valley-arrow' : 'mountain-arrow';
-    const arrow = mark(kind, at, image);
+    const lines = marks.filter((each) => each.kind.endsWith('-line')).map((each) => [each.from, each.to] as const);
+    const arrow = bowedOverPaper(mark(kind, at, image), onPaper, lines);
     const from = back ? 0 : Math.min(over, MAX_BEHIND_LAYERS);
     const to = back || overImage === null ? 0 : Math.min(overImage, MAX_BEHIND_LAYERS);
     marks.push(from > 0 || to > 0 ? { ...arrow, behind: { ...(from > 0 ? { from } : {}), ...(to > 0 ? { to } : {}) } } : arrow);
