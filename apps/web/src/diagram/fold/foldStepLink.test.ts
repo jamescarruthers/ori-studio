@@ -104,6 +104,44 @@ describe('a Fold step link’s status (D17)', () => {
   });
 });
 
+describe('the status of a link to a run of steps drawn as one', () => {
+  /** Steps 2 and 3 as one: the state before step 2, along step 3's path. */
+  const runOf = (document: FoldSequenceDocument, patch: Partial<DiagramFoldStepSource> = {}) =>
+    linkTo(document, { through: 'fstep-3', path: foldNodeDigest(document, 'fstep-3')!, ...patch });
+  /** `document` with step `id` folding another way: a Repeat rebuilt, a Collapse updated in place. */
+  const edited = (document: FoldSequenceDocument, id: string) =>
+    sequenceOf(document.steps.map((node) => (node.id === id ? step(node.id, node.parent, valleyAt(0.6)) : node)));
+
+  it('is current while the run lands what it was captured showing: the state before its first step', () => {
+    expect(foldStepLinkStatus(runOf(SEQUENCE), context(SEQUENCE))).toBe('current');
+    const replay = replayOf(SEQUENCE, { 'fstep-1': { status: 'changed', fingerprint: 'fs1:new' } });
+    expect(foldStepLinkStatus(runOf(SEQUENCE), context(SEQUENCE, replay))).toBe('stale');
+  });
+
+  it('is stale when either step of it changes: the last step’s path names both', () => {
+    for (const id of ['fstep-2', 'fstep-3']) {
+      const document = edited(SEQUENCE, id);
+      expect(foldNodeDigest(document, 'fstep-3')).not.toBe(foldNodeDigest(SEQUENCE, 'fstep-3'));
+      expect(foldStepLinkStatus(runOf(SEQUENCE), context(document, replayOf(document)))).toBe('stale');
+    }
+  });
+
+  it('is missing when its last step is gone, or no longer folds from its first', () => {
+    const gone = sequenceOf(SEQUENCE.steps.filter((node) => node.id !== 'fstep-3'));
+    expect(foldStepLinkStatus(runOf(SEQUENCE), context(gone))).toBe('missing');
+    const backwards = linkTo(SEQUENCE, { step: 'fstep-3', through: 'fstep-2' });
+    expect(foldStepLinkStatus(backwards, context(SEQUENCE))).toBe('missing');
+    const broken: FoldReplayedNode = { status: 'broken', fingerprint: null };
+    expect(foldStepLinkStatus(runOf(SEQUENCE), context(SEQUENCE, replayOf(SEQUENCE, { 'fstep-3': broken })))).toBe('missing');
+  });
+
+  it('is unknown until its last step has landed', () => {
+    const pending: FoldReplayedNode = { status: 'pending', fingerprint: null };
+    expect(foldStepLinkStatus(runOf(SEQUENCE), context(SEQUENCE, replayOf(SEQUENCE, { 'fstep-3': pending })))).toBe('unknown');
+    expect(foldLinkNeedsReplay(runOf(SEQUENCE), [{ document: SEQUENCE }])).toBe(true);
+  });
+});
+
 describe('whether a Fold step link needs the session’s replay (D17)', () => {
   const OTHER = sequenceOf(SEQUENCE.steps, undefined, 'fold-other');
   const LOCKED = sequenceOf([

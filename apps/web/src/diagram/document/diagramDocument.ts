@@ -470,15 +470,27 @@ export const DIAGRAM_FOLD_MOMENTS: readonly DiagramFoldMoment[] = ['before', 'af
  * the sequence's, never a choice, so `foldCase` is always 1. A fold's `side`
  * is the paper's as Fold shows it: `front` is the model as the sequence's
  * view has it, `back` the same model turned over.
+ *
+ * A link may name a run of steps drawn as one (`through`): precreases and
+ * their mirror images — a precrease and a Repeat of it on the other side, or
+ * two precreases that mirror each other — which a book draws on one picture
+ * (`diagram/fold/foldPrecreaseMerge.ts`). `step` is then the run's first
+ * step and `through` its last, always `before`: the picture is the state the
+ * first folds from, the marks every step's. `path` is the last step's `fh1`,
+ * which names every step above it, so a change to any of them is a change to
+ * the link; `state` is still the state shown. A single step has no
+ * `through`, and reads as it always did.
  */
 export interface DiagramFoldStepSource {
   kind: 'fold-step';
   /** The sequence, `fold-<uuid>`. */
   sequence: string;
-  /** The step whose fold the picture shows, `fstep-<uuid>`. */
+  /** The step whose fold the picture shows — a run's first — `fstep-<uuid>`. */
   step: string;
+  /** A run's last step, when the picture draws more than one; absent for one step. */
+  through?: string;
   moment: DiagramFoldMoment;
-  /** The step's path as captured: `fh1:…`. */
+  /** The step's path as captured — a run's last step's: `fh1:…`. */
   path: string;
   /** The state shown as captured: `fs1:…`. */
   state: string;
@@ -497,6 +509,11 @@ export interface DiagramFoldStepSource {
    * reader's. Absent for a step whose fold says nothing (the flat sheet).
    */
   sentence?: string;
+}
+
+/** The last Fold step a link draws: a run's last (`through`), or its one step. */
+export function lastFoldStepOf(source: Pick<DiagramFoldStepSource, 'step' | 'through'>): string {
+  return source.through ?? source.step;
 }
 
 /** The ways a Fold step is shown: its crease pattern or its folded form, never simulated. */
@@ -1975,6 +1992,7 @@ export function setFoldStepPicture(
     was !== null &&
     was.sequence === source.sequence &&
     was.step === source.step &&
+    was.through === source.through &&
     was.moment === source.moment &&
     was.state === source.state &&
     showAsOf(was.render) === showAsOf(source.render) &&

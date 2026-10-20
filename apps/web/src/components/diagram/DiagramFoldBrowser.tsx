@@ -19,6 +19,7 @@ import {
   type PullBrowserList,
 } from './DiagramReferencesBrowser';
 import { DiagramPullCard, DiagramPullCardThumbnail } from './DiagramReferencesCard';
+import styles from './DiagramFoldBrowser.module.css';
 
 /**
  * The Fold browser (fold-workspace plan D17): a modal over the Diagram, from
@@ -67,14 +68,44 @@ export function DiagramFoldBrowser({
       // A Fold turn is a turn over or a rotation.
       turnLabel={t('panels:diagram.fold.withTurn', 'With the turn before it')}
       tools={
-        <Button size="sm" variant="ghost" onClick={browser.openFold}>
-          <FoldVertical size={14} aria-hidden="true" />
-          {t('panels:diagram.fold.openFold', 'Open Fold')}
-        </Button>
+        <>
+          <MergeToggle browser={browser} />
+          <Button size="sm" variant="ghost" onClick={browser.openFold}>
+            <FoldVertical size={14} aria-hidden="true" />
+            {t('panels:diagram.fold.openFold', 'Open Fold')}
+          </Button>
+        </>
       }
     >
       <FoldCards browser={browser} />
     </PullBrowserFrame>
+  );
+}
+
+/**
+ * Merge symmetric precreases: a precrease and its mirror image become one
+ * step, both creases on the picture before them, as a book draws them — the
+ * list shows each such run as one card. Remembered, and followed by Fold's
+ * Send steps to Diagram; offered only while some run on the path would merge.
+ */
+function MergeToggle({ browser }: { browser: FoldBrowser }) {
+  const { t } = useTranslation();
+  const hint = browser.mergeable
+    ? t(
+        'panels:diagram.fold.mergePrecreasesHint',
+        'A precrease and its mirror image become one step, both creases on one picture, as a book draws them.'
+      )
+    : t('panels:diagram.fold.mergePrecreasesNone', 'No precrease on this path has a mirror image to merge with.');
+  return (
+    <label className={styles.merge} title={hint} data-disabled={!browser.mergeable || undefined}>
+      <input
+        type="checkbox"
+        checked={browser.merge}
+        disabled={!browser.mergeable}
+        onChange={(event) => browser.setMerge(event.currentTarget.checked)}
+      />
+      {t('panels:diagram.fold.mergePrecreases', 'Merge symmetric precreases')}
+    </label>
   );
 }
 
@@ -102,7 +133,13 @@ function FoldCards({ browser }: { browser: FoldBrowser }) {
           kind={card.kind}
           title={
             card.kind === 'fold'
-              ? t('panels:diagram.fold.card', 'Step {{number}}', { number: card.number ?? '' })
+              ? card.through !== undefined
+                ? // A merged run: the steps it joins, which become one.
+                  t('panels:diagram.fold.mergedCard', 'Steps {{first}}–{{last}}', {
+                    first: card.number ?? '',
+                    last: card.through,
+                  })
+                : t('panels:diagram.fold.card', 'Step {{number}}', { number: card.number ?? '' })
               : card.kind === 'turn-over'
                 ? t('panels:diagram.fold.turnCard', 'Turn')
                 : t('panels:diagram.references.finished', 'Finished')

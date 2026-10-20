@@ -20,7 +20,7 @@ export interface FoldDrop {
 
 /**
  * Crease patterns dropped anywhere on the Fold workspace (plan D14, D16) —
- * its panes, its step strip, its header or the Steps view: Import CP, as a
+ * its panes, its step strip or its header: Import CP, as a
  * step after the step on screen, through the import dialog — which reads the
  * file, offers its layer orders and says why one is refused. One target for
  * the whole panel, so a file means the same a few pixels either side of the

@@ -833,6 +833,7 @@ const SOURCE_KEYS: Readonly<Record<DiagramStepSource['kind'], ReadonlySet<string
     'kind',
     'sequence',
     'step',
+    'through',
     'moment',
     'path',
     'state',
@@ -1389,13 +1390,18 @@ export function storedFoldStepSource(source: DiagramFoldStepSource): DiagramFold
  * this was reached. A remembered pose that does not read is dropped alone,
  * as a linked pattern's is; so is a sentence that is not a string. Its
  * thumbnail is the table's entry the link names, read once
- * (`readThumbnailOnce`), as a linked pattern's is.
+ * (`readThumbnailOnce`), as a linked pattern's is. A run of steps names its
+ * last as `through`: another step than its first, shown before the first
+ * folds; one that is not is damage, as a step that does not read is.
  */
 function readFoldStepSource(value: Record<string, unknown>): DiagramFoldStepSource | null {
-  const { sequence, step, moment, path, state } = value;
+  const { sequence, step, through, moment, path, state } = value;
   const ids = [sequence, step, path, state];
   if (ids.some((id) => typeof id !== 'string' || id.length === 0)) return null;
   if (typeof moment !== 'string' || !(DIAGRAM_FOLD_MOMENTS as readonly string[]).includes(moment)) return null;
+  if (through !== undefined && (typeof through !== 'string' || through.length === 0 || through === step || moment !== 'before')) {
+    return null;
+  }
   const engine = wholeNumber(value.engine);
   const thumbnail = readThumbnailOnce(value.thumbnail);
   const render = readFoldStepRender(value.render);
@@ -1408,6 +1414,7 @@ function readFoldStepSource(value: Record<string, unknown>): DiagramFoldStepSour
     kind: 'fold-step',
     sequence: sequence as string,
     step: step as string,
+    ...(typeof through === 'string' ? { through } : {}),
     moment: moment as DiagramFoldMoment,
     path: path as string,
     state: state as string,

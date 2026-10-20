@@ -940,10 +940,13 @@ values; this table is the plan's summary of it.
 | `fold free line snapping changed` | `{state: on\|off}` |
 | `fold mark added` | `{divide_mode: count\|ratio}`: the Divide line |
 | `fold sheet changed` | `{setting: shape\|start_side, sheet_shape: square\|rectangle\|polygon, start_side: front\|back}` |
-| `fold view switched` | `{view: fold\|steps}` |
 | `fold sequence sent to edit` | `{}` (`variant` dropped 2026-10-12) |
 | `fold cp imported` | `{origin, action: insert\|update}` (D16's enum, plus `project_cp`) |
-| `fold step sent to diagram` | `{via: fold\|diagram_browser, scope: one\|many}`; each new step and turn also counts `diagram step added` / `diagram turn added` with `via: fold` |
+| `fold step sent to diagram` | `{via: fold\|diagram_browser, scope: one\|many, merge_precreases: on\|off, merged: none\|some}`; each new step and turn also counts `diagram step added` / `diagram turn added` with `via: fold` |
+
+(`fold view switched` went with the Steps tab, 2026-10-20, before launch:
+Fold has one view. Merge symmetric precreases is
+`implementation-plans/diagram-merge-symmetric-precreases.md`.)
 
 `op_kind` and `step_kind` name the plain kinds and every compound fold's
 (`inside_reverse` … `unsink`); `step_kind` adds `import` for an Import CP

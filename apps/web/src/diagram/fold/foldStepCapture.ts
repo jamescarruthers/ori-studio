@@ -8,8 +8,9 @@
  *
  * Never folds anything itself: what a step lands is the session's replay of
  * the sequence, cached by its path, so a capture asks the engine only about
- * states it has landed. The session is injected, so this is tested over a
- * fake one; the app binds it in `foldStepActions.ts`.
+ * states it has landed — but for the steps inside a Repeat a merged run of
+ * precreases draws (`foldRunCapture.ts`). The session is injected, so this
+ * is tested over a fake one; the app binds it in `foldStepActions.ts`.
  *
  * React-free and store-free.
  */
@@ -17,7 +18,7 @@
 import type { TFunction } from 'i18next';
 import type { FoldStepNode } from '../../fold/document/foldSequenceDocument';
 import type { FoldScene } from '../../fold/engine/foldEngineWire';
-import { foldStepReady, type FoldStepReady } from '../../fold/io/foldSessionWaits';
+import { foldStepReady, type FoldStepReady, type FoldStepWaitRefusal } from '../../fold/io/foldSessionWaits';
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import type { FoldSession } from '../../fold/session/foldSession';
@@ -35,11 +36,14 @@ import {
 import { storedFoldStepSource } from '../document/diagramFile';
 import { foldStepPicture, type FoldStepPictureInput } from './foldStepPicture';
 import { foldRepeatCallout } from './foldRepeatCallout';
+import { readFoldRunCapture } from './foldRunCapture';
 
 /** Which Fold step a picture is captured from, at which moment, in which pose. */
 export interface FoldStepCaptureRequest {
   sequence: string;
   step: string;
+  /** The last of a run of steps drawn as one, from `step`, before it folds (`foldPrecreaseMerge.ts`). */
+  through?: string;
   moment: DiagramFoldMoment;
   /** A crease pattern, or a flat fold at `foldCase` 1. */
   render: DiagramCpRender;
@@ -84,32 +88,48 @@ function sentenceOf(
  */
 export interface FoldStepCaptureInput {
   picture: FoldStepPictureInput;
+  /** The step's replay — a run's first's. */
   ready: FoldStepReady;
   /** The state the step folds from. */
   parent: FoldScene;
   node: FoldStepNode;
   engineVersion: number;
+  /**
+   * A run of steps drawn as one (`foldRunCapture.ts`): its last step's
+   * replay, whose path names every step of the run, and the merged step's
+   * sentence. Absent for one step.
+   */
+  run?: { last: FoldStepReady; sentence: string };
 }
 
-/** Read what a Fold step's picture is made from, or why it cannot be. */
+/** Why a capture cannot be made from a step, as one that is not ready says. */
+export type FoldStepCaptureRefusal = Exclude<FoldStepCaptureResult, { status: 'captured' }>;
+
+/** What a capture says of a step the session cannot give it (`foldStepReady`'s refusal). */
+export function captureRefusal(reason: FoldStepWaitRefusal['reason']): FoldStepCaptureRefusal {
+  switch (reason) {
+    case 'missing':
+    case 'broken':
+      return { status: 'missing' };
+    case 'not-shown':
+      return { status: 'unknown', why: 'not-shown' };
+    case 'locked':
+      return { status: 'unknown', why: 'locked' };
+    case 'not-live':
+      return { status: 'unknown', why: 'unavailable' };
+  }
+}
+
+/** Read what a Fold step's picture is made from — or a run's, drawn as one — or why it cannot be. */
 export async function readFoldStepCapture(
   session: FoldSession,
-  request: Pick<FoldStepCaptureRequest, 'sequence' | 'step' | 'moment'>,
+  request: Pick<FoldStepCaptureRequest, 'sequence' | 'step' | 'through' | 'moment'>,
   t: TFunction,
-): Promise<{ status: 'ready'; input: FoldStepCaptureInput } | Exclude<FoldStepCaptureResult, { status: 'captured' }>> {
+): Promise<{ status: 'ready'; input: FoldStepCaptureInput } | FoldStepCaptureRefusal> {
   const ready = await foldStepReady(session, request.sequence, request.step);
-  if (ready.status !== 'ready') {
-    switch (ready.reason) {
-      case 'missing':
-      case 'broken':
-        return { status: 'missing' };
-      case 'not-shown':
-        return { status: 'unknown', why: 'not-shown' };
-      case 'locked':
-        return { status: 'unknown', why: 'locked' };
-      case 'not-live':
-        return { status: 'unknown', why: 'unavailable' };
-    }
+  if (ready.status !== 'ready') return captureRefusal(ready.reason);
+  if (request.through !== undefined) {
+    return readFoldRunCapture(session, { ...request, through: request.through }, ready, t);
   }
   const own = await session.withState(ready.state, async (engine, id) => {
     const [scene, summary, acted, engineVersion] = await Promise.all([
@@ -159,23 +179,27 @@ export async function captureFoldStep(
   try {
     const read = await readFoldStepCapture(session, request, t);
     if (read.status !== 'ready') return read;
-    const { picture: input, ready, parent, node, engineVersion } = read.input;
+    const { picture: input, ready, parent, node, engineVersion, run } = read.input;
     const picture = foldStepPicture(input, request.render, newId);
-    const sentence = sentenceOf(
-      t,
-      request.moment,
-      foldNodeSentenceStep(node, {
-        parent: foldStateFrame(parent),
-        child: foldStateFrame(input.own.scene),
-        report: ready.folded,
-      })
-    );
+    const sentence = run
+      ? xmlText(run.sentence)
+      : sentenceOf(
+          t,
+          request.moment,
+          foldNodeSentenceStep(node, {
+            parent: foldStateFrame(parent),
+            child: foldStateFrame(input.own.scene),
+            report: ready.folded,
+          })
+        );
     const source = storedFoldStepSource({
       kind: 'fold-step',
       sequence: request.sequence,
       step: request.step,
+      ...(run && request.through !== undefined ? { through: request.through } : {}),
       moment: request.moment,
-      path: ready.path,
+      // A run's last step's path, which names every step of it.
+      path: (run?.last ?? ready).path,
       state: request.moment === 'after' ? ready.fingerprint : ready.parentFingerprint,
       engine: engineVersion,
       thumbnail: picture.thumbnail,

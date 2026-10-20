@@ -1,8 +1,8 @@
 /**
  * Waiting for the Fold session to have the states a hand-off needs: the step
  * on screen, for an import after it, and the whole active path, for Send to
- * Edit and the exports (plan D6: the active path is what exports, the Steps
- * grid and Send to Edit follow).
+ * Edit and the exports (plan D6: the active path is what exports and Send to
+ * Edit follow).
  *
  * A hold on the session starts a replay; these resolve once it has landed
  * what they ask for, or as soon as it cannot: the session is not held, the

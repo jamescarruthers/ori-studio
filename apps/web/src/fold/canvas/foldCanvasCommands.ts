@@ -48,32 +48,13 @@ export function foldCanvasVerbs(): FoldCanvasVerbs | null {
   return current;
 }
 
-/** How long a verb asked for before the canvas is up waits for it: a view switch mounts it in the same commit. */
-const CANVAS_PATIENCE_MS = 2000;
-
 /**
- * Run `act` on the canvas's verbs: at once while a canvas is mounted, or as
- * soon as one registers — the rail beside the Steps view opens the canvas
- * and then turns the model on it. Dropped if no canvas comes within
- * `patienceMs`, so a press never lands on a canvas opened much later.
+ * Run `act` on the canvas's verbs while a canvas is mounted — always, beside
+ * the rail, which mounts with it. With none there is nothing to press, and a
+ * press never waits for a canvas opened later.
  */
-export function withFoldCanvasVerbs(act: (verbs: FoldCanvasVerbs) => void, patienceMs = CANVAS_PATIENCE_MS): void {
-  if (current) {
-    act(current);
-    return;
-  }
-  const stop = () => {
-    clearTimeout(timer);
-    listeners.delete(listener);
-  };
-  const listener = () => {
-    if (!current) return;
-    const verbs = current;
-    stop();
-    act(verbs);
-  };
-  const timer = setTimeout(stop, patienceMs);
-  listeners.add(listener);
+export function withFoldCanvasVerbs(act: (verbs: FoldCanvasVerbs) => void): void {
+  if (current) act(current);
 }
 
 /** Hear when a canvas comes or goes: shaped for `useSyncExternalStore`, with {@link foldCanvasVerbs}. */

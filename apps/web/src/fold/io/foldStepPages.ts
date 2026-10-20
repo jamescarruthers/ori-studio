@@ -95,7 +95,7 @@ export function foldStepIsNumbered(op: FoldOp): boolean {
 
 /** One page: its diagram, and the step's number on the active path. */
 export interface FoldStepPage {
-  /** 1-based, as the strip and the Steps grid number it. */
+  /** 1-based, as the strip numbers it. */
   number: number;
   diagram: StepDiagramModel;
 }

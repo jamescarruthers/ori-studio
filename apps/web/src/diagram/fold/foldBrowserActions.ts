@@ -4,8 +4,11 @@
  * (D2's insertion rule, as From References… is) — and Fold's own Send to
  * Diagram, which sends the step on screen, or the active path up to it, to
  * the end of the diagram. Both capture through the Fold session's replay
- * (`pullFoldTargets`) and land as one undo step in the diagram. The session
- * and the capture are Fold's code (`foldGateway`), loaded by the pull.
+ * (`pullFoldTargets`) and land as one undo step in the diagram; both make a
+ * precrease and its mirror image one step while Merge symmetric precreases
+ * is on (`foldPrecreaseMerge.ts`, the setting the browser remembers). The
+ * session and the capture are Fold's code (`foldGateway`), loaded by the
+ * pull.
  *
  * Store-bound, React-free.
  */
@@ -16,10 +19,12 @@ import { foldStepTree, pathTo } from '../../fold/document/foldStepTree';
 import { isLockedStep, turnKindOf, type FoldStepNode } from '../../fold/document/foldSequenceDocument';
 import i18n from '../../i18n';
 import { useLayoutStore } from '../../store/layoutStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { shownFoldSequence } from '../../store/workspaceStore/foldState';
 import { loadFold } from '../../workspaces/foldGateway';
 import { anchorTakesCard, isTurn, stepIndex, type DiagramPullAnchor } from '../document/diagramDocument';
+import { mergedPullTargets, type FoldPrecreaseMerge } from './foldPrecreaseMerge';
 import type { FoldPullTarget } from './foldPull';
 
 /** From Fold… for the diagram, by the insertion rule: an empty selected step takes the first step, the rest after it. */
@@ -76,7 +81,13 @@ export async function pullFromFold(
     .pullFoldDiagramSteps(sent, anchor, { loadId, label: 'Add steps from Fold', ...(opening !== undefined ? { opening } : {}) });
   if (!pulled) return 0;
   const added = pulled.stepIds.length + pulled.turnIds.length;
-  trackFoldStepSentToDiagram(via, added > 1 ? 'many' : 'one');
+  trackFoldStepSentToDiagram(via, added > 1 ? 'many' : 'one', {
+    option: useSettingsStore.getState().diagramFoldMergePrecreases ? 'on' : 'off',
+    // A run captured as one step: one that could not be is left out, and merged nothing.
+    merged: sent.some((entry) => !('kind' in entry) && entry.source.kind === 'fold-step' && entry.source.through !== undefined)
+      ? 'some'
+      : 'none',
+  });
   trackPulledEntries(pulled, anchor);
   return added;
 }
@@ -125,6 +136,18 @@ export function foldSendTargets(path: readonly FoldStepNode[], scope: FoldSendTo
     : targets;
 }
 
+/** The precreases and mirror images that merge along `path`, told by the Fold session while it is held. */
+async function pathMerges(sequence: string, path: readonly FoldStepNode[]): Promise<FoldPrecreaseMerge[]> {
+  const fold = await loadFold();
+  const session = fold.foldSession();
+  const release = session.retain();
+  try {
+    return await fold.foldPrecreaseMerges(session, sequence, path);
+  } finally {
+    release();
+  }
+}
+
 /**
  * Fold's Send to Diagram: the step on screen — or the path to it — added at
  * the end of the diagram, which is made if the project has none, as one undo
@@ -142,11 +165,14 @@ export async function sendFoldStepsToDiagram(scope: FoldSendToDiagramScope): Pro
   const cursor = store.foldReader?.cursor ?? null;
   const path = shown && cursor !== null ? (pathTo(foldStepTree(shown.document.steps), cursor) ?? []) : [];
   const targets = foldSendTargets(path, scope);
-  if (targets.length === 0) {
+  if (!shown || targets.length === 0) {
     toast.error(t('common:capability.foldNoSteps', 'Fold a step first'));
     return false;
   }
-  const added = await pullFromFold(targets, { kind: 'end' }, { via: 'fold' });
+  // The path, with Merge symmetric precreases as the From Fold… browser last left it: one step sends that step alone.
+  const merging = scope === 'path' && useSettingsStore.getState().diagramFoldMergePrecreases;
+  const sent = merging ? mergedPullTargets(targets, await pathMerges(shown.document.id, path)) : targets;
+  const added = await pullFromFold(sent, { kind: 'end' }, { via: 'fold' });
   if (added === 0) return false;
   toast.success(
     t('toasts:diagram.fold.sent', {

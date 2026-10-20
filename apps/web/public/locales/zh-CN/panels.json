@@ -1043,6 +1043,14 @@
       "empty": "在折叠中折一步，序列的步骤就会显示在这里。",
       "finishedSentence": "完成这些步骤后的模型。",
       "fromFold": "来自折叠…",
+      "mergedCard": "第 {{first}}–{{last}} 步",
+      "mergedSentence": {
+        "bothSides": "{{sentence}}两侧同样操作。",
+        "then": "{{first}}{{next}}"
+      },
+      "mergePrecreases": "合并对称的预折",
+      "mergePrecreasesHint": "预折与其镜像合为一步，两条折痕画在同一张图上，就像书中那样。",
+      "mergePrecreasesNone": "此路径上没有可与镜像合并的预折。",
       "missing": "折叠中缺少该步骤",
       "missingHint": "其步骤已不在折叠中，或已无法折叠",
       "noStepsHint": "在折叠中折一步，即可从那里取用",
@@ -1728,25 +1736,9 @@
       "unavailable": "源展开图不可用。已保存的快照仍可重放。",
       "update": "从展开图更新"
     },
-    "grid": {
-      "broken": "这一步已无法折叠",
-      "brokenAbove": "之前的某一步已无法折叠",
-      "flat": "平折痕",
-      "folding": "正在折叠…",
-      "label": "步骤",
-      "locked": "由更新版本的 Ori Studio 创建",
-      "mountain": "山折",
-      "title": "逐步折痕图",
-      "valley": "谷折"
-    },
     "header": {
-      "fold": "折叠",
-      "foldHint": "屏幕上的步骤：折叠后的样子和折痕图",
       "moreExports": "更多导出方式",
-      "moreVerbs": "导入、发送和导出",
-      "steps": "步骤",
-      "stepsHint": "路径上的每一步都显示为卡片",
-      "views": "视图"
+      "moreVerbs": "导入、发送和导出"
     },
     "load": {
       "failed": "折叠工作区未能加载",

@@ -39,7 +39,6 @@ import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionSnapshot } from
 import { foldTools } from '../tools/foldToolState';
 import { rotationBucket } from '../tools/rotate/rotateTool';
 import { paneShapeOf } from './foldPaperShapes';
-import { setFoldView } from './foldViewMode';
 import { cursorIndex, foldPathEntries, followerCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
 
 /**
@@ -170,21 +169,18 @@ export function foldActionsAt(
     rotate: () => {
       fromHere();
       foldTools().selectTool('rotate');
-      setFoldView('fold');
     },
     // Unfold to step and Repeat are tools too, taken in hand where they are asked for. Unfold last
     // step is Unfold to step at the step before this one: the target the tool takes by default.
     repeat: () => {
       fromHere();
       foldTools().selectTool('repeat');
-      setFoldView('fold');
     },
     unfold: (last) => {
       fromHere();
       foldTools().selectTool('unfold-to');
       // Taken up again while in hand, the tool keeps its target: the last step is asked for by name.
       if (last) foldTools().setUnfoldTarget(entries[at - 1]?.id ?? null);
-      setFoldView('fold');
     },
     deleteStep: (id) => {
       useWorkspaceStore.getState().deleteFoldStep(id);
@@ -221,7 +217,6 @@ export function rebuildFoldStep(stepId: string): void {
       ? { tool: 'unfold-to', id: node.id, parent: node.parent, expected: op }
       : { tool: 'repeat', id: node.id, parent: node.parent, expected: op }
   );
-  setFoldView('fold');
 }
 
 /**

@@ -1043,6 +1043,14 @@
       "empty": "折りでステップを折ると、シーケンスのステップがここに表示されます。",
       "finishedSentence": "ステップを終えたときのモデル。",
       "fromFold": "折りから…",
+      "mergedCard": "ステップ {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}}両側で同じようにします。",
+        "then": "{{first}}{{next}}"
+      },
+      "mergePrecreases": "対称な下折りをまとめる",
+      "mergePrecreasesHint": "下折りとその鏡像を 1 つのステップにし、本の図のように両方の折り筋を 1 枚の図に描きます。",
+      "mergePrecreasesNone": "この手順には、まとめられる鏡像を持つ下折りがありません。",
       "missing": "折りにステップがありません",
       "missingHint": "ステップが折りからなくなったか、もう折れません",
       "noStepsHint": "折りでステップを折ると、ここから取り込めます",
@@ -1728,25 +1736,9 @@
       "unavailable": "元の展開図は利用できません。保存済みのスナップショットは引き続き再生できます。",
       "update": "展開図から更新"
     },
-    "grid": {
-      "broken": "このステップはもう折れません",
-      "brokenAbove": "前のステップがもう折れません",
-      "flat": "平ら",
-      "folding": "折っています…",
-      "label": "ステップ",
-      "locked": "新しい Ori Studio で作成",
-      "mountain": "山",
-      "title": "ステップごとの展開図",
-      "valley": "谷"
-    },
     "header": {
-      "fold": "折り",
-      "foldHint": "表示中のステップを、折った形と展開図で",
       "moreExports": "その他の書き出し方法",
-      "moreVerbs": "読み込み・送信・書き出し",
-      "steps": "ステップ",
-      "stepsHint": "経路のすべてのステップをカードで",
-      "views": "表示"
+      "moreVerbs": "読み込み・送信・書き出し"
     },
     "load": {
       "failed": "折りワークスペースを読み込めませんでした",

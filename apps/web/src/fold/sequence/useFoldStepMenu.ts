@@ -9,7 +9,7 @@ import { currentFoldActions } from './foldCommands';
 import { foldStepMenuItems } from './foldStepMenu';
 
 /**
- * A step card's context menu, in the strip or the Steps grid: the catalog's
+ * A step card's context menu, in the strip: the catalog's
  * verbs for the step it lands on. A right-click puts the reader on that step
  * first, so the panes, the canvas and the menu are about the same step.
  * `stepAt` says which step a press landed on — a key from the card it is in

@@ -2055,8 +2055,6 @@ export const ANALYTICS_EVENTS = {
   appUpdateRelaunched: 'app update relaunched',
   appUpdateFailed: 'app update failed',
   appUpdateDismissed: 'app update dismissed',
-  /** The Fold workspace switched between the fold on screen and its Steps grid: whether the grid is used. */
-  foldViewSwitched: 'fold view switched',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

@@ -1,6 +1,7 @@
 /** Compare material effects, including flat precreases and internal layer order. */
 import type { Point } from '../../lib/geometry';
 import { applyIsometry, polygonArea, polygonCentroid, toPair } from '../canvas/foldCanvasGeometry';
+import type { FoldModelLine } from '../document/foldSequenceDocument';
 import type { FoldIsometry, FoldScene } from '../engine/foldEngineWire';
 import {
   compose,
@@ -10,9 +11,13 @@ import {
   modelMap,
   orderPairs,
   overlap,
+  reflection,
+  REPEAT_TOL,
   RepeatFailure,
   sameImages,
   sheetRing,
+  verifiedSymmetry,
+  type RepeatSymmetry,
 } from './repeatGeometry';
 
 const AREA = 1e-12;
@@ -150,6 +155,94 @@ function verifyCreases(before: FoldScene, after: FoldScene, tb: FoldScene, ta: F
       if (old !== next ? was !== old || now !== next : was !== now) throw new RepeatFailure('repeat_creases');
     }
   }
+}
+
+/** The creases the step that landed `scene` made — the newest — as sheet segments. */
+function newestCreases(scene: FoldScene): Segment[] {
+  const all = [...scene.creases.filter((crease) => crease.kind !== 'border'), ...(scene.crease_marks ?? [])];
+  const newest = all.reduce((latest, crease) => Math.max(latest, crease.made_at), 0);
+  return newest > 0
+    ? all.filter((crease) => crease.made_at === newest).map((crease) => ({ a: crease.from, b: crease.to, value: '' }))
+    : [];
+}
+
+/**
+ * The reflections that could take line `a` onto line `b`, in sheet
+ * coordinates: across either bisector where they cross; across the line
+ * midway between them where they are parallel; across the perpendicular
+ * midway between the two where they are one line (two pinches on it).
+ */
+function axesBetween(a: Segment, b: Segment): FoldModelLine[] {
+  const unit = (s: Segment): Point => {
+    const x = s.b.x - s.a.x,
+      y = s.b.y - s.a.y,
+      l = Math.hypot(x, y);
+    return { x: x / l, y: y / l };
+  };
+  const u = unit(a),
+    v = unit(b);
+  const across = u.x * v.y - u.y * v.x;
+  const through = (n: Point, p: Point): FoldModelLine => ({ n: [n.x, n.y], d: n.x * p.x + n.y * p.y });
+  if (Math.abs(across) < REPEAT_TOL) {
+    const n = { x: -u.y, y: u.x };
+    const da = n.x * a.a.x + n.y * a.a.y,
+      db = n.x * b.a.x + n.y * b.a.y;
+    if (Math.abs(da - db) > REPEAT_TOL) return [{ n: [n.x, n.y], d: (da + db) / 2 }];
+    const mid = (s: Segment): Point => ({ x: (s.a.x + s.b.x) / 2, y: (s.a.y + s.b.y) / 2 });
+    const [ma, mb] = [mid(a), mid(b)];
+    return [through(u, { x: (ma.x + mb.x) / 2, y: (ma.y + mb.y) / 2 })];
+  }
+  // Where the lines cross: a.a + s·u, solved against b's line.
+  const s = ((b.a.x - a.a.x) * v.y - (b.a.y - a.a.y) * v.x) / across;
+  const at = { x: a.a.x + s * u.x, y: a.a.y + s * u.y };
+  return [
+    { x: u.x + v.x, y: u.y + v.y },
+    { x: u.x - v.x, y: u.y - v.y },
+  ].map((direction) => {
+    const l = Math.hypot(direction.x, direction.y);
+    return through({ x: -direction.y / l, y: direction.x / l }, at);
+  });
+}
+
+/** Whether every segment of `from`, reflected by `map`, lies along `onto`'s: its middle on one of them. */
+function liesAlong(from: readonly Segment[], onto: readonly Segment[], map: FoldIsometry): boolean {
+  return from.every((segment) => {
+    const middle = applyIsometry(map, { x: (segment.a.x + segment.b.x) / 2, y: (segment.a.y + segment.b.y) / 2 });
+    return onto.some((target) => {
+      const t = parameter(target, middle);
+      return t !== null && t > -1e-7 && t < 1 + 1e-7;
+    });
+  });
+}
+
+/**
+ * The symmetry a step mirrors the one before it across, both landed one
+ * after the other from `before` (`first`, then `second`): Repeat's own test
+ * of a mirrored step, asked of two steps the author made by hand. The axes
+ * tried are the ones that take the first step's newest crease onto the
+ * second's, and only where each step's creases, mirrored, lie along the
+ * other's; each is then the whole state's symmetry (`verifiedSymmetry`, as
+ * Repeat checks the axis it is given) across which the first's effect,
+ * mirrored, is the second's (`verifyMaterial`, as a prepared Repeat checks
+ * each step it mirrors). Null when no axis is, or the states are past what
+ * Repeat checks.
+ */
+export function mirroredStepAxis(before: FoldScene, first: FoldScene, second: FoldScene): RepeatSymmetry | null {
+  const [made, mirrored] = [newestCreases(first), newestCreases(second)];
+  if (made.length === 0 || mirrored.length === 0) return null;
+  for (const axis of axesBetween(made[0]!, mirrored[0]!)) {
+    try {
+      const map = reflection(axis);
+      if (!liesAlong(made, mirrored, map) || !liesAlong(mirrored, made, map)) continue;
+      const symmetry = verifiedSymmetry(before, axis);
+      if (!symmetry) continue;
+      verifyMaterial(before, first, first, second, map);
+      return symmetry;
+    } catch (error) {
+      if (!(error instanceof RepeatFailure)) throw error;
+    }
+  }
+  return null;
 }
 
 /** Interior witnesses of material that moved, for compounds whose API has no plain analysis. */

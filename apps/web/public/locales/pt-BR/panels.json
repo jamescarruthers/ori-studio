@@ -1111,6 +1111,14 @@
       "empty": "Dobre um passo em Dobrar e os passos da sequência aparecerão aqui.",
       "finishedSentence": "O modelo como os passos o deixam.",
       "fromFold": "De Dobrar…",
+      "mergedCard": "Passos {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Faça isso dos dois lados.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Juntar pré-dobras simétricas",
+      "mergePrecreasesHint": "Uma pré-dobra e sua imagem espelhada viram um só passo, os dois vincos no mesmo desenho, como um livro os desenha.",
+      "mergePrecreasesNone": "Nenhuma pré-dobra deste caminho tem uma imagem espelhada com a qual se juntar.",
       "missing": "Passo ausente em Dobrar",
       "missingHint": "O passo não está mais em Dobrar ou não dobra mais",
       "noStepsHint": "Dobre um passo em Dobrar para trazê-lo de lá",
@@ -1830,25 +1838,9 @@
       "unavailable": "CP de origem indisponível. A cópia salva continua sendo reproduzida.",
       "update": "Atualizar a partir do CP"
     },
-    "grid": {
-      "broken": "Este passo não dobra mais",
-      "brokenAbove": "Um passo anterior não dobra mais",
-      "flat": "Planos",
-      "folding": "Dobrando…",
-      "label": "Passos",
-      "locked": "Criado com uma versão mais recente do Ori Studio",
-      "mountain": "Monte",
-      "title": "Padrão de vincos por passo",
-      "valley": "Vale"
-    },
     "header": {
-      "fold": "Dobrar",
-      "foldHint": "O passo na tela, dobrado e como padrão de vincos",
       "moreExports": "Mais formas de exportar",
-      "moreVerbs": "Importar, enviar e exportar",
-      "steps": "Passos",
-      "stepsHint": "Cada passo do caminho como um cartão",
-      "views": "Visualização"
+      "moreVerbs": "Importar, enviar e exportar"
     },
     "load": {
       "failed": "O workspace de Dobra não carregou",

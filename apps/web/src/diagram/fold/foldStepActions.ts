@@ -31,6 +31,7 @@ import { trackPose } from '../capture/poseController';
 import {
   creasePatternSide,
   isLockedStep,
+  lastFoldStepOf,
   renderToShowAs,
   showAsOf,
   spreadStartsFor,
@@ -60,10 +61,17 @@ async function captureAs(
   label: string,
   joinEntry?: object
 ): Promise<DiagramFoldCaptureOutcome> {
-  const { sequence, step, moment } = source;
-  const outcome = await useWorkspaceStore
-    .getState()
-    .captureDiagramFoldStep(stepId, { sequence, step, moment, render, label, ...(joinEntry ? { joinEntry } : {}) });
+  const { sequence, step, through, moment } = source;
+  const outcome = await useWorkspaceStore.getState().captureDiagramFoldStep(stepId, {
+    sequence,
+    step,
+    // A run of steps drawn as one is captured again as one.
+    ...(through !== undefined ? { through } : {}),
+    moment,
+    render,
+    label,
+    ...(joinEntry ? { joinEntry } : {}),
+  });
   sayFoldCaptureOutcome(outcome);
   return outcome;
 }
@@ -257,14 +265,16 @@ export async function flipFoldStepCreases(stepId: string, on: boolean): Promise<
 
 /**
  * Open a step's Fold step in Fold: the sequence's cursor on it — the active
- * path through it — and Fold on screen. Says why not when the sequence is not
- * the one Fold shows, or the step is gone.
+ * path through it — and Fold on screen; for a run of steps drawn as one, its
+ * last, the state the instruction leaves. Says why not when the sequence is
+ * not the one Fold shows, or the step is gone.
  */
 export function openDiagramStepInFold(stepId: string): void {
   const store = useWorkspaceStore.getState();
   const step = store.diagram ? stepById(store.diagram, stepId) : null;
   if (!step || isLockedStep(step) || step.source?.kind !== 'fold-step') return;
-  const { sequence, step: foldStepId } = step.source;
+  const { sequence } = step.source;
+  const foldStepId = lastFoldStepOf(step.source);
   const t = i18n.t.bind(i18n);
   const document = linkedFoldSequence({ sequence }, store.foldSequences);
   // One sequence is shown (plan D7): the first.

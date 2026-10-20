@@ -1043,6 +1043,14 @@
       "empty": "접기에서 단계를 접으면 시퀀스의 단계가 여기에 나타납니다.",
       "finishedSentence": "단계를 마친 뒤의 모형.",
       "fromFold": "접기에서…",
+      "mergedCard": "{{first}}–{{last}}단계",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} 양쪽에 똑같이 합니다.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "대칭인 사전 접기 합치기",
+      "mergePrecreasesHint": "사전 접기와 그 거울상을 한 단계로 만들어, 책처럼 두 접는 선을 한 그림에 그립니다.",
+      "mergePrecreasesNone": "이 경로에는 합칠 거울상이 있는 사전 접기가 없습니다.",
       "missing": "접기에 단계 없음",
       "missingHint": "단계가 접기에서 사라졌거나 더 이상 접히지 않습니다",
       "noStepsHint": "접기에서 단계를 접으면 여기로 가져올 수 있습니다",
@@ -1728,25 +1736,9 @@
       "unavailable": "원본 전개도를 사용할 수 없습니다. 저장된 스냅샷은 계속 재생할 수 있습니다.",
       "update": "전개도에서 업데이트"
     },
-    "grid": {
-      "broken": "이 단계는 더 이상 접히지 않습니다",
-      "brokenAbove": "앞 단계가 더 이상 접히지 않습니다",
-      "flat": "평평함",
-      "folding": "접는 중…",
-      "label": "단계",
-      "locked": "최신 Ori Studio에서 만듦",
-      "mountain": "산",
-      "title": "단계별 전개도",
-      "valley": "골"
-    },
     "header": {
-      "fold": "접기",
-      "foldHint": "화면의 단계를 접은 모습과 전개도로",
       "moreExports": "다른 내보내기 방법",
-      "moreVerbs": "가져오기, 보내기, 내보내기",
-      "steps": "단계",
-      "stepsHint": "경로의 모든 단계를 카드로",
-      "views": "보기"
+      "moreVerbs": "가져오기, 보내기, 내보내기"
     },
     "load": {
       "failed": "접기 작업 공간을 불러오지 못했습니다",

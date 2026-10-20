@@ -17,8 +17,8 @@ import { foldCreaseDiff } from './foldStepDiff';
 
 /**
  * The sequence chrome's reading of real states: the session over the real
- * bridge, in-process, and the real Fold slice — what the strip, the grid and
- * the Step pane say of a step, from the scenes and summaries the engine
+ * bridge, in-process, and the real Fold slice — what the strip and the Step
+ * pane say of a step, from the scenes and summaries the engine
  * actually gives.
  *
  * Skipped when the bridge has not been built (a fresh worktree before

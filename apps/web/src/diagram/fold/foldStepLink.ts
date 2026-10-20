@@ -28,9 +28,9 @@
 import { foldNodeDigest } from '../../fold/document/foldDigest';
 import type { FoldStepStatus } from '../../fold/document/foldReplay';
 import type { FoldSequenceDocument, FoldStepNode } from '../../fold/document/foldSequenceDocument';
-import { foldStepTree, lockedIds } from '../../fold/document/foldStepTree';
+import { foldStepTree, lockedIds, pathBetween } from '../../fold/document/foldStepTree';
 import type { DiagramLinkStatus } from '../capture/linkStatus';
-import type { DiagramFoldStepSource } from '../document/diagramDocument';
+import { lastFoldStepOf, type DiagramFoldStepSource } from '../document/diagramDocument';
 
 /** A replayed node as a link reads it: its status, and the `fs1` it landed once it has. */
 export interface FoldReplayedNode {
@@ -81,20 +81,24 @@ export function shownFoldNode(
 }
 
 /**
- * The step a link names and its sequence, when this build can fold to it;
- * otherwise the status no replay can change — gone (`missing`), or a newer
- * build's (`unknown`).
+ * The step a link names and its sequence, when this build can fold to it —
+ * for a run of steps (`through`), its first and its last, which must fold
+ * from the first; otherwise the status no replay can change — gone
+ * (`missing`), or a newer build's (`unknown`).
  */
 function linkedFoldNode(
   source: DiagramFoldStepSource,
   sequences: FoldLinkContext['sequences']
-): { document: FoldSequenceDocument; node: FoldStepNode } | 'missing' | 'unknown' {
+): { document: FoldSequenceDocument; first: FoldStepNode; last: FoldStepNode } | 'missing' | 'unknown' {
   const document = linkedFoldSequence(source, sequences);
   if (!document) return 'missing';
   const tree = foldStepTree(document.steps);
-  const node = tree.byId.get(source.step);
-  if (!node) return 'missing';
-  return lockedIds(tree).has(node.id) ? 'unknown' : { document, node };
+  const run = pathBetween(tree, source.step, lastFoldStepOf(source));
+  const first = run?.[0];
+  const last = run?.at(-1);
+  if (!first || !last) return 'missing';
+  // A step locked behind a newer build's locks every step after it, the run's last too.
+  return lockedIds(tree).has(last.id) ? 'unknown' : { document, first, last };
 }
 
 /**
@@ -112,10 +116,11 @@ export function foldLinkNeedsReplay(source: DiagramFoldStepSource, sequences: Fo
 export function foldStepLinkStatus(source: DiagramFoldStepSource, context: FoldLinkContext): DiagramLinkStatus {
   const linked = linkedFoldNode(source, context.sequences);
   if (typeof linked === 'string') return linked;
-  const { document, node } = linked;
+  const { document, first, last } = linked;
   const { replay } = context;
   if (!replay || replay.sequenceId !== document.id) return 'unknown';
-  const replayed = replay.nodes.get(node.id);
+  // A run has landed when its last step has: every step before it landed first.
+  const replayed = replay.nodes.get(last.id);
   if (!replayed) return 'unknown';
   switch (replayed.status) {
     case 'pending':
@@ -127,8 +132,10 @@ export function foldStepLinkStatus(source: DiagramFoldStepSource, context: FoldL
     case 'changed':
       break;
   }
-  const shown = shownFoldNode(source, node.parent, replayed, replay);
+  // Before a run, the state its first step folds from.
+  const shown = shownFoldNode(source, first.parent, replayed, replay);
   if (!shown?.fingerprint) return 'unknown';
-  const samePath = foldNodeDigest(document, node.id) === source.path;
+  // The last step's path names every step of the run: a change to any of them changes it.
+  const samePath = foldNodeDigest(document, last.id) === source.path;
   return samePath && shown.fingerprint === source.state ? 'current' : 'stale';
 }

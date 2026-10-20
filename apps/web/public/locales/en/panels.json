@@ -1077,6 +1077,14 @@
       "empty": "Fold a step in Fold, and the sequence’s steps appear here.",
       "finishedSentence": "The model as the steps leave it.",
       "fromFold": "From Fold…",
+      "mergedCard": "Steps {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Do this on both sides.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Merge symmetric precreases",
+      "mergePrecreasesHint": "A precrease and its mirror image become one step, both creases on one picture, as a book draws them.",
+      "mergePrecreasesNone": "No precrease on this path has a mirror image to merge with.",
       "missing": "Step missing from Fold",
       "missingHint": "Its step is gone from Fold, or no longer folds",
       "noStepsHint": "Fold a step in Fold to take it from there",
@@ -1778,25 +1786,9 @@
       "unavailable": "Source CP unavailable. The saved snapshot still replays.",
       "update": "Update from CP"
     },
-    "grid": {
-      "broken": "This step no longer folds",
-      "brokenAbove": "A step before this one no longer folds",
-      "flat": "Flat",
-      "folding": "Folding…",
-      "label": "Steps",
-      "locked": "Made with a newer Ori Studio",
-      "mountain": "Mountain",
-      "title": "Crease pattern by step",
-      "valley": "Valley"
-    },
     "header": {
-      "fold": "Fold",
-      "foldHint": "The step on screen, folded and as a crease pattern",
       "moreExports": "More ways to export",
-      "moreVerbs": "Import, send and export",
-      "steps": "Steps",
-      "stepsHint": "Every step of the path as a card",
-      "views": "View"
+      "moreVerbs": "Import, send and export"
     },
     "load": {
       "failed": "Fold did not load",

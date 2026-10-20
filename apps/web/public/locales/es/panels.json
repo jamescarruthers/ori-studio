@@ -1111,6 +1111,14 @@
       "empty": "Pliega un paso en Plegar y los pasos de la secuencia aparecerán aquí.",
       "finishedSentence": "El modelo tal como lo dejan los pasos.",
       "fromFold": "Desde Plegar…",
+      "mergedCard": "Pasos {{first}}–{{last}}",
+      "mergedSentence": {
+        "bothSides": "{{sentence}} Hazlo en ambos lados.",
+        "then": "{{first}} {{next}}"
+      },
+      "mergePrecreases": "Unir prepliegues simétricos",
+      "mergePrecreasesHint": "Un prepliegue y su imagen especular pasan a ser un solo paso, con los dos pliegues en un mismo dibujo, como los dibuja un libro.",
+      "mergePrecreasesNone": "Ningún prepliegue de este camino tiene una imagen especular con la que unirse.",
       "missing": "Falta el paso en Plegar",
       "missingHint": "Su paso ya no está en Plegar o ya no se puede plegar",
       "noStepsHint": "Pliega un paso en Plegar para tomarlo desde allí",
@@ -1830,25 +1838,9 @@
       "unavailable": "El CP de origen no está disponible. La copia guardada sigue reproduciéndose.",
       "update": "Actualizar desde CP"
     },
-    "grid": {
-      "broken": "Este paso ya no se puede plegar",
-      "brokenAbove": "Un paso anterior ya no se puede plegar",
-      "flat": "Planos",
-      "folding": "Plegando…",
-      "label": "Pasos",
-      "locked": "Creado con una versión más reciente de Ori Studio",
-      "mountain": "Monte",
-      "title": "Patrón de pliegues por paso",
-      "valley": "Valle"
-    },
     "header": {
-      "fold": "Plegar",
-      "foldHint": "El paso en pantalla, plegado y como patrón de pliegues",
       "moreExports": "Más formas de exportar",
-      "moreVerbs": "Importar, enviar y exportar",
-      "steps": "Pasos",
-      "stepsHint": "Cada paso del recorrido como una tarjeta",
-      "views": "Vista"
+      "moreVerbs": "Importar, enviar y exportar"
     },
     "load": {
       "failed": "El espacio de trabajo de plegado no se cargó",

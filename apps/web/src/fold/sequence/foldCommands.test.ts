@@ -36,7 +36,6 @@ import {
   turnOp,
 } from './foldCommands';
 import { foldPathEntries } from './foldSequencePath';
-import { foldView, setFoldView } from './foldViewMode';
 import { foldTools } from '../tools/foldToolState';
 
 const t = i18n.t.bind(i18n);
@@ -132,7 +131,7 @@ describe('running the verbs', () => {
 
   it('says why, in the catalog’s words, when the catalog turns down a verb the menu bar or a key ran', () => {
     const refused = vi.fn();
-    // No tools on screen (the Steps view): no kind to arm.
+    // No tools on screen (no canvas mounted): no kind to arm.
     expect(runFoldMenuVerb(t, { kind: 'fold-kind', id: 'valley' }, refused)).toBe(false);
     expect(refused).toHaveBeenLastCalledWith('Take a fold tool on the canvas to choose its kind.');
     // The flat sheet on screen: no step to delete.
@@ -181,13 +180,10 @@ describe('running the verbs', () => {
     const [first] = shownSteps();
     const rotate = currentFoldActions(t, first!.id).find((action) => action.kind === 'command' && action.id === 'rotate');
     expect(rotate).toMatchObject({ label: 'Rotate…', note: 'Starts a new branch' });
-    setFoldView('steps');
     if (rotate?.kind === 'command') rotate.run();
     await settle();
     expect(state().foldReader?.cursor).toBe(first!.id);
     expect(foldTools().store.getState().tool).toBe('rotate');
-    // On the canvas, where the tool previews.
-    expect(foldView()).toBe('fold');
     expect(shownSteps()).toHaveLength(2);
     foldTools().putDown();
   });
