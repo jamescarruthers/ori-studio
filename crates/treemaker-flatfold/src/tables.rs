@@ -33,19 +33,26 @@ pub(crate) const ARITY: [usize; 4] = [4, 3, 4, 3];
 /// per ordered pair, 8.4 MB), a fraction of what the constraint problem of
 /// a model that size already holds. At Import CP's cap of 4,096 faces they
 /// would take 100 MB whether the faces overlap or not, too much to hold for
-/// the lifetime of a session in a browser tab; the hash maps there take
-/// about 20 bytes per overlapping pair and per taco-tortilla membership.
-/// The iguana (850 faces) takes 4.3 MB.
+/// the lifetime of a session in a browser tab. Above the limit pairs are
+/// hashed (about 20 bytes per overlapping pair) and components are kept per
+/// face as upstream keeps them (8 bytes per taco-tortilla membership). The
+/// iguana (850 faces) takes 4.3 MB.
 pub(crate) const DENSE_FACE_LIMIT: usize = 2048;
 
-/// FxHash's multiply-rotate: the keys are two face numbers, never chosen by
-/// an adversary, and the default SipHash would cost more than the lookup.
+/// SplitMix64's finalizer over the one `u64` key. The keys are two face
+/// numbers, never chosen by an adversary, and SipHash would cost more than
+/// the lookup; but the table picks a bucket by the hash's low bits, which a
+/// bare multiply (FxHash) leaves depending on the key's low bits alone,
+/// that is on one face: every pair of a face would share a probe chain.
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct PairHasher(u64);
 
 impl Hasher for PairHasher {
     fn finish(&self) -> u64 {
-        self.0
+        let mut z = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        z ^ (z >> 31)
     }
 
     fn write(&mut self, bytes: &[u8]) {
@@ -55,7 +62,7 @@ impl Hasher for PairHasher {
     }
 
     fn write_u64(&mut self, value: u64) {
-        self.0 = (self.0.rotate_left(5) ^ value).wrapping_mul(0x517c_c1b7_2722_0a95);
+        self.0 = self.0.rotate_left(32) ^ value;
     }
 }
 
@@ -149,8 +156,9 @@ impl PairLookup {
 pub(crate) enum TacoComponents {
     /// `table[c * faces + f]`.
     Dense { faces: usize, table: Vec<u16> },
-    /// Keyed by `(c, f)`.
-    Hashed(FastMap<u32>),
+    /// Per face `c`, its `(f, component)` by ascending `f`, as upstream's
+    /// per-face map: most faces have none, which answers at once.
+    Rows(Vec<Vec<(u32, u32)>>),
 }
 
 impl TacoComponents {
@@ -176,7 +184,7 @@ impl TacoComponents {
                 table: vec![0; faces * faces],
             }
         } else {
-            TacoComponents::Hashed(FastMap::default())
+            TacoComponents::Rows(vec![Vec::new(); faces])
         };
         for (c, graph) in graphs.iter().enumerate() {
             let mut component_by_face = BTreeMap::new();
@@ -219,9 +227,13 @@ impl TacoComponents {
                     *slot = value;
                 }
             }
-            TacoComponents::Hashed(map) => {
-                if let (Some(key), Ok(value)) = (key(c, f), u32::try_from(component)) {
-                    map.insert(key, value);
+            // Set in ascending `f` for each `c` (`build` walks a `BTreeMap`).
+            TacoComponents::Rows(rows) => {
+                if let (Some(row), Ok(f), Ok(value)) =
+                    (rows.get_mut(c), u32::try_from(f), u32::try_from(component))
+                {
+                    debug_assert!(row.last().is_none_or(|&(last, _)| last < f));
+                    row.push((f, value));
                 }
             }
         }
@@ -237,8 +249,15 @@ impl TacoComponents {
                 }
                 table.get(c * *faces + f).map_or(0, |&v| u32::from(v))
             }
-            TacoComponents::Hashed(map) => {
-                key(c, f).and_then(|k| map.get(&k).copied()).unwrap_or(0)
+            TacoComponents::Rows(rows) => {
+                let Some(row) = rows.get(c).filter(|row| !row.is_empty()) else {
+                    return 0;
+                };
+                let Ok(f) = u32::try_from(f) else {
+                    return 0;
+                };
+                row.binary_search_by_key(&f, |&(face, _)| face)
+                    .map_or(0, |at| row[at].1)
             }
         }
     }
