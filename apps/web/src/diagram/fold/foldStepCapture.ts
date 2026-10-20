@@ -16,13 +16,13 @@
  */
 
 import type { TFunction } from 'i18next';
-import type { FoldStepNode } from '../../fold/document/foldSequenceDocument';
+import { isLockedStep, type FoldStepNode } from '../../fold/document/foldSequenceDocument';
 import type { FoldScene } from '../../fold/engine/foldEngineWire';
 import { foldStepReady, type FoldStepReady, type FoldStepWaitRefusal } from '../../fold/io/foldSessionWaits';
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import type { FoldSession } from '../../fold/session/foldSession';
-import { foldStepSentence } from '../../fold/stepSentence';
+import type { FoldSentenceStep } from '../../fold/stepSentence';
 import { xmlText } from '../../lib/xmlEscape';
 import type { CapturedPicture } from '../capture/captureFolded';
 import {
@@ -34,6 +34,8 @@ import {
   type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { storedFoldStepSource } from '../document/diagramFile';
+import { foldDiagramSentence } from './foldDiagramSentence';
+import { foldStepAction } from './foldStepMarkPlan';
 import { foldStepPicture, type FoldStepPictureInput } from './foldStepPicture';
 import { foldRepeatCallout } from './foldRepeatCallout';
 import { readFoldRunCapture } from './foldRunCapture';
@@ -67,16 +69,13 @@ export type FoldStepCaptureResult =
   | { status: 'unknown'; why: 'not-shown' | 'locked' | 'unavailable' };
 
 /**
- * The step's sentence, as Fold words it in its strip: from the states either
- * side of it and what the fold did. Absent for the state after the step,
- * whose words are the author's (the Finished step a pull ends with).
+ * The step's instruction, as the Diagram words it (`foldDiagramSentence`):
+ * the fold's kind, read from the states either side of it and what the fold
+ * did. Absent for the state after the step, whose words are the author's
+ * (the Finished step a pull ends with).
  */
-function sentenceOf(
-  t: TFunction,
-  moment: DiagramFoldMoment,
-  words: Parameters<typeof foldStepSentence>[1]
-): string | undefined {
-  return moment === 'before' ? xmlText(foldStepSentence(t, words)) : undefined;
+function sentenceOf(t: TFunction, moment: DiagramFoldMoment, words: FoldSentenceStep): string | undefined {
+  return moment === 'before' ? xmlText(foldDiagramSentence(t, words)) : undefined;
 }
 
 /**
@@ -140,29 +139,33 @@ export async function readFoldStepCapture(
     ]);
     return { scene, summary, action: acted.status === 'ok' ? acted.action : null, engineVersion };
   });
-  const parent = await session.withState(ready.parentState, (engine, id) => engine.scene(id));
+  const parent = await session.withState(ready.parentState, async (engine, id) => {
+    const [scene, summary] = await Promise.all([engine.scene(id), engine.summary(id)]);
+    return { scene, step: summary.step };
+  });
   if (own.status !== 'answered' || parent.status !== 'answered') return { status: 'unknown', why: 'unavailable' };
   const { scene, summary, action, engineVersion } = own.value;
   const node = session.store.getState().sequence?.steps.find((step) => step.id === request.step);
   if (!node) return { status: 'missing' };
+  const op = isLockedStep(node) ? null : node.op;
   let repeat: FoldStepPictureInput['repeat'];
-  if (request.moment === 'before' && node.op?.kind === 'repeat') {
-    const parentSummary = await session.withState(ready.parentState, (engine, id) => engine.summary(id));
-    if (parentSummary.status !== 'answered') return { status: 'unknown', why: 'unavailable' };
-    repeat = foldRepeatCallout(parent.value, scene, parentSummary.value.step, node.op.axis, t);
+  if (request.moment === 'before' && op?.kind === 'repeat') {
+    repeat = foldRepeatCallout(parent.value.scene, scene, parent.value.step, op.axis, t);
   }
   return {
     status: 'ready',
     input: {
       picture: {
-        shown: request.moment === 'after' ? scene : parent.value,
-        own: { scene, step: summary.step, sheet: summary.sheet },
+        shown: request.moment === 'after' ? scene : parent.value.scene,
+        // Every crease made since the state it folds from is the step's: a Repeat's every operation's.
+        own: { scene, step: summary.step, sheet: summary.sheet, since: parent.value.step },
         moment: request.moment,
-        action: request.moment === 'before' ? action : null,
+        action:
+          request.moment === 'before' && action ? foldStepAction(action, { op, parent: parent.value.scene, child: scene }) : null,
         ...(repeat ? { repeat } : {}),
       },
       ready,
-      parent: parent.value,
+      parent: parent.value.scene,
       node,
       engineVersion,
     },

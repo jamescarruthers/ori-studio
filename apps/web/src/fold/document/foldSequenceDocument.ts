@@ -665,6 +665,15 @@ export interface FoldRepeatEntry {
   returnTo?: number;
 }
 
+/**
+ * How many steps the engine counts a stored operation as (`FoldStateSummary.step`,
+ * what a crease's `made_at` counts in): a Repeat each operation it lands, any
+ * other one. So a step's own creases are those made after `step − foldOpSteps(op)`.
+ */
+export function foldOpSteps(op: Pick<FoldOp, 'kind'> | FoldRepeatOp): number {
+  return op.kind === 'repeat' && 'steps' in op ? Math.max(op.steps.length, 1) : 1;
+}
+
 /** Two lines in the starting pose: mountain, then valley. */
 export interface FoldPleatPlacement {
   landing: FoldLanding;

@@ -24,7 +24,6 @@
  * Pure: no React, no store, no engine.
  */
 
-import type { TFunction } from 'i18next';
 import {
   isLockedStep,
   type FoldPrecreaseOp,
@@ -154,20 +153,4 @@ export function mergedPullTargets(
     index += merge.steps.length - 1;
   }
   return out;
-}
-
-/**
- * A merged step's instruction: the sentences of the steps it is made from —
- * every step of the run but its mirror, the last — each whole, then "Do this
- * on both sides." One key joins two sentences and one ends them, each taking
- * the sentences whole, as a partial precrease's extent sentence does, so each
- * language joins them its own way.
- */
-export function mergedPrecreaseSentence(t: TFunction, sentences: readonly string[]): string {
-  const said = sentences.reduce(
-    (all, next) =>
-      all === '' ? next : t('panels:diagram.fold.mergedSentence.then', '{{first}} {{next}}', { first: all, next }),
-    ''
-  );
-  return t('panels:diagram.fold.mergedSentence.bothSides', '{{sentence}} Do this on both sides.', { sentence: said });
 }

@@ -1,9 +1,9 @@
 /**
- * A Fold step captured for the Diagram is worded as Fold's strip words it
- * (plan D17): the capture reads the line a step folded along — a plain fold's
- * report, or a compound fold's — through the strip's own reading, so the
- * inputs an axiom brings together are named mover first in both, and the
- * card the author picks says what the step it adds says.
+ * A Fold step captured for the Diagram is worded by its kind
+ * (`foldDiagramSentence`), from the strip's own reading of it (plan D17):
+ * the capture reads the line a step folded along — a plain fold's report, or
+ * a compound fold's — so an unfold the engine reported reads as one in both,
+ * and the card the author picks says what the step it adds says.
  *
  * Over the session itself, its replay landing each step through a fake
  * engine as the bridge lands a compound fold: no plain report, the line in
@@ -26,7 +26,8 @@ import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import { createFoldSession, type FoldSession } from '../../fold/session/foldSession';
 import { fakeFoldEngine, inProcessFoldRuntime, memoryFoldDocument, settle } from '../../fold/session/foldSession.fixtures';
 import { selectFoldNode } from '../../fold/session/foldSessionState';
-import { foldStepSentence } from '../../fold/stepSentence';
+import { foldStepSentence, type FoldSentenceStep } from '../../fold/stepSentence';
+import { foldDiagramSentence } from './foldDiagramSentence';
 import { FOLD_PULL_RENDER } from './foldPull';
 import { captureFoldStep } from './foldStepCapture';
 
@@ -133,16 +134,15 @@ async function sessionOf(op: FoldOp, report?: Partial<FoldReport>): Promise<Fold
   return session;
 }
 
-/** The step's sentence as Fold's strip words it: from the states either side and the line it folded along. */
-function stripSentence(session: FoldSession, op: FoldOp): string {
+/** The step as Fold's strip reads it: from the states either side and the line it folded along. */
+function stripWords(session: FoldSession, op: FoldOp): FoldSentenceStep {
   const node = selectFoldNode(session.store.getState(), 'fstep-1');
   if (!node) throw new Error('no node');
-  const words = foldNodeSentenceStep(step('fstep-1', null, op), {
+  return foldNodeSentenceStep(step('fstep-1', null, op), {
     parent: foldStateFrame(squareScene()),
     child: foldStateFrame(diagonalHalfScene()),
     report: foldedLineOf(node),
   });
-  return foldStepSentence(t, words);
 }
 
 async function capturedSentence(session: FoldSession): Promise<string | undefined> {
@@ -155,8 +155,8 @@ async function capturedSentence(session: FoldSession): Promise<string | undefine
   return result.source.sentence;
 }
 
-describe('a Fold step captured for the Diagram, worded as Fold words it (D17)', () => {
-  it('names an inside reverse fold’s mover first, from the line its compound report folded along', async () => {
+describe('a Fold step captured for the Diagram, worded by its kind (D17)', () => {
+  it('words an inside reverse fold as the Diagram does, from the strip’s reading of its compound report', async () => {
     const session = await sessionOf(REVERSE);
     // The session holds the line in the compound report alone, as the bridge lands one.
     expect(selectFoldNode(session.store.getState(), 'fstep-1')).toMatchObject({
@@ -165,15 +165,17 @@ describe('a Fold step captured for the Diagram, worded as Fold words it (D17)', 
       compound: { family: 'reverse' },
     });
     const sentence = await capturedSentence(session);
-    expect(sentence).toBe('Inside reverse fold, bringing the top-left corner onto the bottom-right corner, through all layers.');
-    expect(sentence).toBe(stripSentence(session, REVERSE));
+    expect(sentence).toBe('Inside reverse fold.');
+    expect(sentence).toBe(foldDiagramSentence(t, stripWords(session, REVERSE)));
+    // Fold's strip still names the corners it brings together; the Diagram's picture has no letters to name.
+    expect(foldStepSentence(t, stripWords(session, REVERSE))).toContain('bringing the top-left corner onto the bottom-right corner');
   });
 
-  it('names a crimp’s mover first, from its first line', async () => {
+  it('words a crimp by its kind', async () => {
     const session = await sessionOf(CRIMP);
     const sentence = await capturedSentence(session);
-    expect(sentence).toContain('bringing the top-left corner onto the bottom-right corner');
-    expect(sentence).toBe(stripSentence(session, CRIMP));
+    expect(sentence).toBe('Inside crimp.');
+    expect(sentence).toBe(foldDiagramSentence(t, stripWords(session, CRIMP)));
   });
 
   it('says an unfold stored as a valley fold along a bend unfolds, as the engine reported', async () => {
@@ -185,7 +187,7 @@ describe('a Fold step captured for the Diagram, worded as Fold words it (D17)', 
     };
     const session = await sessionOf(UNFOLD, { created: [], unfolded: [4], refolded: [] });
     const sentence = await capturedSentence(session);
-    expect(sentence).toBe('Unfold the top layer.');
-    expect(sentence).toBe(stripSentence(session, UNFOLD));
+    expect(sentence).toBe('Unfold.');
+    expect(sentence).toBe(foldDiagramSentence(t, stripWords(session, UNFOLD)));
   });
 });

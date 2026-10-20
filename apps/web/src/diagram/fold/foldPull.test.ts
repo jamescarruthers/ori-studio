@@ -120,9 +120,10 @@ describe('the Fold browser’s cards (D17)', () => {
     ]);
     expect(cards[2]!.step).toEqual({ kind: 'step', step: 'fstep-3', through: 'fstep-4', moment: 'before' });
     expect(cards[2]!.picture).toEqual({ status: 'landed', source: { state: { generation: 0, id: 4 }, key: 'fs1:4', spread: null } });
-    // The first step's words, once, for both sides: the mirror's are not said again.
+    // The first step's kind, once, for both sides: the mirror's are not said again.
     const first = foldBrowserCards(t, view(true))[2]!.sentence;
-    expect(cards[2]!.sentence).toBe(`${first} Do this on both sides.`);
+    expect(first).toBe('Valley fold.');
+    expect(cards[2]!.sentence).toBe('Valley fold on both sides.');
     // Added only once every step of it has landed.
     expect(foldBrowserCards(t, view(false), merges)[2]!.step).toBeNull();
   });

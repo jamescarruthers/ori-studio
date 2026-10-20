@@ -6,6 +6,7 @@ import type { FoldActionGeometry } from '../../fold/engine/foldEngineWire';
 import { diagonalHalfScene, squareScene } from '../../fold/sequence/foldScene.fixtures';
 import type { PaperLineItem, PaperScene } from '../../lib/paper/paperScene';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
+import { arrowApex, defaultBend } from '../annotate/annotationModel';
 import type {
   DiagramCpRender,
   DiagramIdFactory,
@@ -17,6 +18,7 @@ import { readPaperFaces } from '../document/paperFacesFile';
 import { storedScene } from '../pictures/pictureFrame';
 import { flatScenePicture, type CapturedPicture } from '../capture/captureFolded';
 import { CAPTURE_PX_PER_UNIT } from '../capture/captureGeometry';
+import type { FoldStepAction } from './foldStepMarkPlan';
 import { foldScenePattern, foldStepPicture, PATTERN_PER_SHEET_UNIT, type FoldStepPictureInput } from './foldStepPicture';
 
 const SQUARE = [
@@ -45,7 +47,7 @@ const VALLEY: FoldActionGeometry = {
 };
 
 /** Step 1 of a square: the diagonal valley, seen before it folds (the flat sheet) or after. */
-function input(moment: 'before' | 'after', action: FoldActionGeometry | null = VALLEY): FoldStepPictureInput {
+function input(moment: 'before' | 'after', action: FoldStepAction | null = VALLEY): FoldStepPictureInput {
   return {
     shown: moment === 'before' ? squareScene() : diagonalHalfScene(),
     own: { scene: diagonalHalfScene(), step: 1, sheet: SQUARE },
@@ -168,6 +170,59 @@ describe('a Fold step’s picture (D11, D17)', () => {
   it('draws a precrease’s arrow coming back', () => {
     const precrease = foldStepPicture(input('before', { ...VALLEY, kind: 'precrease' }), FLAT).marks;
     expect(precrease.map((mark) => mark.kind)).toEqual(['valley-line', 'fold-unfold-arrow']);
+  });
+
+  it('circles the points the step names with the Diagram’s point circle, dotted under the layers over it', () => {
+    const rings = [
+      { at: { x: 0, y: 1 }, behind: 0 },
+      { at: { x: 1, y: 0 }, behind: 2 },
+    ];
+    const marks = foldStepPicture(input('before', { ...VALLEY, rings }), FLAT, sequentialIds()).marks;
+    expect(marks.map((mark) => mark.kind)).toEqual(['valley-line', 'circle', 'circle', 'valley-arrow']);
+    const [first, second] = marks.filter((mark) => mark.kind === 'circle');
+    // The fixed-size point marker References' rings lift to: a centre, no radius.
+    expect(first).toMatchObject({ from: [0, 0], to: [0, 0], imported: 'untouched' });
+    expect(first!.radius).toBeUndefined();
+    expect(first!.behind).toBeUndefined();
+    expect(second).toMatchObject({ from: [1, 1], behind: { from: 2 } });
+    // Seen from the back, no end is marked behind.
+    const back = foldStepPicture(input('before', { ...VALLEY, rings }), { ...FLAT, side: 'back' }, sequentialIds()).marks;
+    expect(back.filter((mark) => mark.kind === 'circle').every((mark) => mark.behind === undefined)).toBe(true);
+  });
+
+  it('bows an arrow along the paper’s edge over the paper, not off it', () => {
+    // Along the bottom edge: bowed away from the picture's middle, as a new arrow is, it would leave the paper.
+    const alongEdge: FoldActionGeometry = {
+      ...VALLEY,
+      kind: 'precrease',
+      grip: { at: { x: 0.1, y: 0.04 }, image: { x: 0.9, y: 0.04 }, hidden_at: 0, hidden_image: null },
+    };
+    const arrow = foldStepPicture(input('before', alongEdge), FLAT, sequentialIds()).marks.find((mark) => mark.kind === 'fold-unfold-arrow')!;
+    const apex = arrowApex(arrow.from, arrow.to, arrow.bend!);
+    expect(apex[1]).toBeLessThan(1);
+    expect(apex[1]).toBeLessThan(arrow.from[1]);
+    expect(arrow.bend).toBe(-defaultBend(arrow.from, arrow.to, { width: 1, height: 1 }));
+  });
+
+  it('draws every crease a Repeat made as its crease pattern’s instruction, not only its last operation’s', () => {
+    // Two creases made by a Repeat of two operations: the state before it was step 0.
+    const scene = diagonalHalfScene();
+    scene.creases = [
+      ...scene.creases.filter((crease) => crease.kind === 'border'),
+      { id: 4, vertices: [0, 0], from: { x: 0, y: 0 }, to: { x: 1, y: 1 }, kind: 'fold', letter: 'valley', made_at: 1 },
+      { id: 5, vertices: [0, 0], from: { x: 0, y: 1 }, to: { x: 1, y: 0 }, kind: 'flat', letter: 'mountain', made_at: 2 },
+    ];
+    const own = { scene, step: 2, sheet: SQUARE };
+    const drawn = (since?: number) =>
+      lines(
+        sceneOf(
+          foldStepPicture({ ...input('before'), own: { ...own, ...(since !== undefined ? { since } : {}) } }, { mode: 'crease-pattern', rotationDeg: 0 })
+            .captured
+        ).scene
+      ).filter((line) => line.role.startsWith('diagram-'));
+    expect(drawn(0).map((line) => line.role).sort()).toEqual(['diagram-mountain', 'diagram-valley']);
+    // A step of one operation, as before: its own crease alone.
+    expect(drawn().map((line) => line.role)).toEqual(['diagram-mountain']);
   });
 
   it('spreads the state’s layers, and carries the fold’s marks onto them as a spread pose would', () => {
