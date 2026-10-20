@@ -1844,15 +1844,14 @@
     },
     "paper": {
       "backUp": "Verso para cima",
-      "colors": "Cores",
       "custom": "Personalizado",
-      "editStyle": "Editar estilo do papel…",
       "frontUp": "Frente para cima",
       "height": "Altura",
+      "keptStyle": "O estilo próprio desta sequência",
+      "look": "Aparência",
       "polygon": "Polígono",
       "proportions": "Proporções",
       "rectangle": "Retângulo",
-      "resetColors": "Redefinir cores",
       "shape": "Forma",
       "sheet": "Folha",
       "sides": "Lados",
@@ -1862,6 +1861,8 @@
       "startsOver_one": "Mudar a forma recomeça do zero: {{count}} passo da sequência é apagado. Desfazer o traz de volta.",
       "startsOver_many": "Mudar a forma recomeça do zero: os {{count}} passos da sequência são apagados. Desfazer os traz de volta.",
       "startsOver_other": "Mudar a forma recomeça do zero: os {{count}} passos da sequência são apagados. Desfazer os traz de volta.",
+      "style": "Estilo",
+      "styleHint": "O papel, as canetas e os vincos de diagrama com que esta sequência é desenhada. Um estilo das Configurações é copiado para a sequência quando você o escolhe.",
       "width": "Largura"
     },
     "repeat": {

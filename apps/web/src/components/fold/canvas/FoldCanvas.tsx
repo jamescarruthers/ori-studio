@@ -9,7 +9,7 @@ import type { CpSurfaceControls } from '../../../cp-workspace/surface/useCpSurfa
 import { ToolOptionLayer } from '../../../cp-workspace/toolOptions/ToolOptionLayer';
 import type { CpToolOptionWindow } from '../../../cp-workspace/toolOptions/toolOptionWindow';
 import { altModifierLabel } from '../../../lib/platform';
-import { useInheritedPaperStyle } from '../../../cp-workspace/paper/objectPaperStyle';
+import { useFoldPaperStyle } from '../../../fold/sequence/useFoldPaperStyle';
 import { useIsCoarsePointerSurface } from '../../../platform/pointerSurface';
 import { useIsPhoneLayout } from '../../../platform/phoneLayout';
 import { useSettingsStore } from '../../../store/settingsStore';
@@ -121,7 +121,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const coarse = useIsCoarsePointerSurface();
   const phonePane = useFoldPhonePane();
   const readOnly = useFoldReadOnly();
-  const style = useInheritedPaperStyle();
+  // The sequence's own paper style (its Paper tab's), the Diagram style by default.
+  const style = useFoldPaperStyle();
   const wheelGesture = useSettingsStore((state) => state.cpWheelGesture);
   const snapRadius = useSettingsStore((state) => state.cpSnapRadius);
   const { keyLabel } = useFoldShortcutLabels();

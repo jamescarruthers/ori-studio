@@ -1746,15 +1746,14 @@
     },
     "paper": {
       "backUp": "뒷면이 위로",
-      "colors": "색상",
       "custom": "사용자 지정",
-      "editStyle": "종이 스타일 편집…",
       "frontUp": "앞면이 위로",
       "height": "높이",
+      "keptStyle": "이 시퀀스 고유의 스타일",
+      "look": "모양",
       "polygon": "다각형",
       "proportions": "비율",
       "rectangle": "직사각형",
-      "resetColors": "색상 재설정",
       "shape": "모양",
       "sheet": "종이",
       "sides": "변의 수",
@@ -1762,6 +1761,8 @@
       "start": "시작",
       "startHelp": "첫 번째 접기 전에 종이의 어느 면이 나를 향하는지입니다. 전개도는 항상 앞면에서 그려집니다.",
       "startsOver_other": "모양을 바꾸면 처음부터 다시 시작합니다. 시퀀스의 단계 {{count}}개가 지워지며, 실행 취소로 되돌릴 수 있습니다.",
+      "style": "스타일",
+      "styleHint": "이 시퀀스를 그리는 종이, 펜, 도해 접는 선입니다. 설정의 스타일은 고를 때 시퀀스에 복사됩니다.",
       "width": "너비"
     },
     "repeat": {

@@ -1746,15 +1746,14 @@
     },
     "paper": {
       "backUp": "背面朝上",
-      "colors": "颜色",
       "custom": "自定义",
-      "editStyle": "编辑纸张样式…",
       "frontUp": "正面朝上",
       "height": "高",
+      "keptStyle": "此序列自己的样式",
+      "look": "外观",
       "polygon": "多边形",
       "proportions": "比例",
       "rectangle": "长方形",
-      "resetColors": "重置颜色",
       "shape": "形状",
       "sheet": "纸张",
       "sides": "边数",
@@ -1762,6 +1761,8 @@
       "start": "开始",
       "startHelp": "第一次折叠前纸的哪一面朝向你。折痕图始终从正面绘制。",
       "startsOver_other": "更改形状会从头开始：序列中的 {{count}} 个步骤将被清除。撤销可以恢复。",
+      "style": "样式",
+      "styleHint": "绘制此序列所用的纸张、笔和图解折痕。从设置中选择的样式会在选择时复制到序列中。",
       "width": "宽"
     },
     "repeat": {

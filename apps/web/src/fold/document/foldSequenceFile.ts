@@ -57,8 +57,10 @@ import {
   type TurnRotation,
 } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
+import { isNewerDocumentPaperStyle, readDocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
 import {
   AXIOM_SLOTS,
+  FOLD_DEFAULT_PAPER_STYLE,
   FOLD_CP_ORIGINS,
   FOLD_CRIMP_KINDS,
   FOLD_DIRECTIONS,
@@ -177,16 +179,20 @@ function readTuckTargets(value: unknown): readonly SheetPoint[] | null {
   return points.every((point): point is SheetPoint => point !== null) ? points : null;
 }
 
-const SEQUENCE_KEYS = new Set(['formatVersion', 'id', 'title', 'paper', 'appearance', 'sheetMarks', 'steps']);
+const SEQUENCE_KEYS = new Set(['formatVersion', 'id', 'title', 'paper', 'style', 'appearance', 'sheetMarks', 'steps']);
 
 function readDocument(value: Record<string, unknown>, newId: FoldIdFactory): FoldSequenceDocument {
   const sheetMarks = readMarks(value.sheetMarks);
   const carried = Object.fromEntries(Object.entries(value).filter(([key]) => !SEQUENCE_KEYS.has(key)));
+  // A style a newer build wrote is drawn as this build reads it, and written back as it came.
+  if (isRecord(value.style) && isNewerDocumentPaperStyle(value.style)) carried.style = value.style;
   return {
     formatVersion: FOLD_SEQUENCE_FORMAT_VERSION,
     id: typeof value.id === 'string' && value.id.length > 0 ? value.id : newId('fold'),
     title: typeof value.title === 'string' ? xmlText(value.title) : '',
     paper: readPaper(value.paper),
+    // A file from before there was a style draws in the default, and is written with it.
+    style: readDocumentPaperStyle(value.style, FOLD_DEFAULT_PAPER_STYLE),
     ...(isRecord(value.appearance) ? { appearance: value.appearance } : {}),
     ...(sheetMarks.length > 0 ? { sheetMarks } : {}),
     steps: readSteps(value.steps),
@@ -1011,6 +1017,8 @@ function writeSequenceFields(document: FoldSequenceDocument): Record<string, unk
     id: document.id,
     title: document.title,
     paper: writeFoldPaper(document.paper),
+    // Written always, so a later default never changes what a saved sequence is drawn in.
+    style: document.style ?? FOLD_DEFAULT_PAPER_STYLE,
     ...(appearance ? { appearance } : {}),
     ...(sheetMarks && sheetMarks.length > 0 ? { sheetMarks: sheetMarks.map(writeMark) } : {}),
     steps: document.steps.map(writeStep),

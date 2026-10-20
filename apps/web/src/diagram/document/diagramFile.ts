@@ -68,9 +68,8 @@ import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { readRegionReference } from '../../cp-workspace/regions/regionReference';
 import { isNewerSheetThumbnail, readSheetThumbnail, type SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { NEWER, finiteNumber, hasNewerKey, isRecord, readEntries } from '../../lib/documentFile';
-import { isBuiltInPaperPresetId } from '../../lib/paper/paperPresets';
+import { isNewerDocumentPaperStyle, readDocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
 import { isNewerPaperScene, readPaperScene } from '../../lib/paper/paperSceneValidate';
-import { normalizePaperStyle } from '../../lib/paper/paperStyle';
 import { readTurnRotation, TURN_ROTATION_KEYS, writeTurnRotation } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 import {
@@ -309,7 +308,6 @@ const PAGE_RANGES: Readonly<Record<string, { readonly min: number; readonly max:
 };
 const PAGE_NUMBERS_KEYS: ReadonlySet<string> = new Set(['enabled', 'first']);
 const TITLE_BLOCK_KEYS: ReadonlySet<string> = new Set(['enabled', 'heightShare']);
-const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
 
 /**
  * What a newer build wrote at the document's level that this build cannot
@@ -334,7 +332,7 @@ function readNewerFields(
   const newer: DiagramNewerFields = {
     ...(Object.keys(fields).length > 0 ? { fields } : {}),
     ...(typeof value.hanStyle === 'string' && !HAN_STYLES.includes(value.hanStyle) ? { hanStyle: value.hanStyle } : {}),
-    ...(isRecord(value.style) && isNewerStyle(value.style) ? { style: value.style } : {}),
+    ...(isRecord(value.style) && isNewerDocumentPaperStyle(value.style) ? { style: value.style } : {}),
     ...(page ? { page } : {}),
     ...(Object.keys(pageArrangements).length > 0 ? { pageArrangements } : {}),
     ...(Object.keys(titleBlockContent).length > 0 ? { titleBlockContent } : {}),
@@ -342,17 +340,6 @@ function readNewerFields(
   return Object.keys(newer).length > 0 ? newer : undefined;
 }
 
-/**
- * A style a newer build wrote: with a field this build has no name for, a
- * preset it does not have, or a paper style it would write back other than
- * it came — a field, a pen or a light it does not read.
- */
-function isNewerStyle(value: Record<string, unknown>): boolean {
-  if (hasNewerKey(value, STYLE_KEYS)) return true;
-  // A complete snapshot is drawable even when its built-in name is from a newer build.
-  if (!isRecord(value.style)) return typeof value.preset === 'string' && !isBuiltInPaperPresetId(value.preset);
-  return !sameJson(JSON.parse(JSON.stringify(normalizePaperStyle(value.style))), value.style);
-}
 
 /** The page fields of {@link readNewerFields}, under their keys; none when every one reads. */
 function readNewerPage(value: unknown): Record<string, unknown> | undefined {
@@ -475,16 +462,6 @@ function isPastRange(value: unknown, range: { readonly min: number; readonly max
   return typeof value === 'number' && Number.isFinite(value) && (value < range.min || value > range.max);
 }
 
-/** Two JSON values alike, whatever the order of their keys. */
-function sameJson(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((entry, index) => sameJson(entry, b[index]));
-  }
-  if (!isRecord(a) || !isRecord(b)) return false;
-  const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && sameJson(a[key], b[key]));
-}
 
 const HAN_STYLES: readonly string[] = ['sc', 'tc', 'jp', 'kr'];
 
@@ -2692,13 +2669,7 @@ function readHanStyle(value: unknown): DiagramHanStyle {
 }
 
 function readStyle(value: unknown): DiagramStyle {
-  if (!isRecord(value)) return DEFAULT_DIAGRAM_STYLE;
-  if (isRecord(value.style)) {
-    const style = normalizePaperStyle(value.style);
-    return typeof value.preset === 'string' ? { preset: value.preset, style } : { style };
-  }
-  if (isBuiltInPaperPresetId(value.preset)) return snapshotDiagramStyle({ preset: value.preset });
-  return DEFAULT_DIAGRAM_STYLE;
+  return readDocumentPaperStyle(value, snapshotDiagramStyle(DEFAULT_DIAGRAM_STYLE));
 }
 
 function wholeNumber(value: unknown): number | null {

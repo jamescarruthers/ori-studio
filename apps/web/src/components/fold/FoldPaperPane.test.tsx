@@ -2,6 +2,12 @@ import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FoldPaperShape, FoldStartSide } from '../../fold/paperShape';
+import {
+  DEFAULT_DOCUMENT_PAPER_STYLE,
+  type DocumentPaperStyle,
+  type DocumentPaperStyleChoice,
+} from '../../lib/paper/documentPaperStyle';
+import { builtInPaperPreset } from '../../lib/paper/paperPresets';
 import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import { useSettingsStore } from '../../store/settingsStore';
 import { TooltipProvider } from '../ui/Tooltip';
@@ -26,22 +32,31 @@ let host: HTMLDivElement;
 let root: Root;
 const onShapeChange = vi.fn<(shape: FoldPaperShape) => void>();
 const onStartSideChange = vi.fn<(side: FoldStartSide) => void>();
+const onStyleChange = vi.fn<(choice: DocumentPaperStyleChoice) => void>();
 
 /** The tab over document state it owns, as the store will hold it. */
 function Harness({
   initial,
   stepCount = 0,
   readOnly = false,
+  initialStyle = DEFAULT_DOCUMENT_PAPER_STYLE,
 }: {
   initial: FoldPaperShape;
   stepCount?: number;
   readOnly?: boolean;
+  initialStyle?: DocumentPaperStyle;
 }) {
   const [shape, setShape] = useState(initial);
   const [side, setSide] = useState<FoldStartSide>('front');
+  const [style, setStyle] = useState(initialStyle);
   return (
     <TooltipProvider>
       <FoldPaperPane
+        style={style}
+        onStyleChange={(choice) => {
+          onStyleChange(choice);
+          setStyle(choice.style);
+        }}
         shape={shape}
         startSide={side}
         stepCount={stepCount}
@@ -63,6 +78,7 @@ beforeEach(() => {
   tracked.length = 0;
   onShapeChange.mockReset();
   onStartSideChange.mockReset();
+  onStyleChange.mockReset();
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -74,10 +90,6 @@ afterEach(() => {
 });
 
 const render = (props: Parameters<typeof Harness>[0]) => act(() => root.render(<Harness {...props} />));
-const button = (name: string) =>
-  [...host.querySelectorAll<HTMLButtonElement>('button')].find(
-    (element) => element.textContent?.trim() === name || element.getAttribute('aria-label') === name
-  );
 const segment = (group: string, name: string) =>
   host.querySelector<HTMLButtonElement>(`[role="group"][aria-label="${group}"] button[aria-label="${name}"]`) ??
   [...host.querySelectorAll<HTMLButtonElement>(`[role="group"][aria-label="${group}"] button`)].find(
@@ -90,6 +102,7 @@ const pressed = (group: string) =>
 const input = (name: string) => host.querySelector<HTMLInputElement>(`input[aria-label="${name}"]`);
 const notice = () => host.querySelector('[role="status"]')?.textContent ?? null;
 const display = () => useSettingsStore.getState().paperStyle.display;
+const styleShown = () => host.querySelector('button[aria-label="Style"]')?.textContent ?? null;
 
 /** Type into a number field and leave it, which commits. */
 function typeAndCommit(field: HTMLInputElement | null, value: string) {
@@ -101,17 +114,6 @@ function typeAndCommit(field: HTMLInputElement | null, value: string) {
     field.dispatchEvent(new Event('input', { bubbles: true }));
   });
   act(() => field.blur());
-}
-
-/** Pick a colour the way React sees a native colour input do it. */
-function pick(name: string, value: string) {
-  const swatch = host.querySelector<HTMLInputElement>(`input[type="color"][aria-label="${name}"]`);
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-  if (!swatch || !setter) throw new Error(`no ${name} swatch`);
-  act(() => {
-    setter.call(swatch, value);
-    swatch.dispatchEvent(new Event('input', { bubbles: true }));
-  });
 }
 
 async function choose(selectLabel: string, option: string) {
@@ -127,43 +129,42 @@ async function choose(selectLabel: string, option: string) {
 }
 
 describe('FoldPaperPane', () => {
-  describe('colours', () => {
-    it('edits the app’s display style, counted as Fold’s', () => {
+  describe('style', () => {
+    it('picks the sequence’s own style as the Diagram picks a diagram’s, the Diagram style first', async () => {
       render({ initial: { shape: 'square' } });
-      pick('Front', '#123456');
-      expect(display().paper.front).toBe('#123456');
-      expect(tracked).toEqual([{ source: 'fold', slot: 'display', field: 'paper.front' }]);
+      // No colour pickers: the look is a style, chosen whole.
+      expect(host.querySelector('input[type="color"]')).toBeNull();
+      expect(styleShown()).toBe('Diagram');
+      await choose('Style', 'Default');
+      expect(onStyleChange).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'builtin:default', analytics: 'default' }));
+      expect(styleShown()).toBe('Default');
     });
 
-    it('resets only the colours it shows', () => {
-      act(() => useSettingsStore.getState().setPaperStyleField('display', 'paper.back', '#224466'));
-      act(() =>
-        useSettingsStore
-          .getState()
-          .setPaperStyleField('display', 'edges', { ...DEFAULT_PAPER_STYLE.edges, color: '#ff0000' })
-      );
+    it('copies the Settings export style into the sequence as it is when chosen', async () => {
       render({ initial: { shape: 'square' } });
-      act(() => button('Reset colors')?.click());
-      expect(display().paper).toEqual(DEFAULT_PAPER_STYLE.paper);
-      // A pen is Settings ▸ Paper's: the tab's reset never touches it.
-      expect(display().edges.color).toBe('#ff0000');
+      await choose('Style', 'Export style from Settings');
+      expect(onStyleChange.mock.lastCall?.[0].style).toEqual({ style: display() });
+      expect(onStyleChange.mock.lastCall?.[0].analytics).toBe('export-style');
     });
 
-    it('opens Settings on the Paper tab for everything else', () => {
-      render({ initial: { shape: 'square' } });
-      act(() => button('Edit paper style…')?.click());
-      expect(useSettingsStore.getState()).toMatchObject({ isSettingsOpen: true, settingsInitialTab: 'paper' });
+    it('names a style no choice holds the sequence’s own', () => {
+      render({ initial: { shape: 'square' }, initialStyle: { style: { ...DEFAULT_PAPER_STYLE, erode: 0.2 } } });
+      expect(styleShown()).toBe('This sequence’s own');
     });
   });
 
   describe('start side', () => {
-    it('is Front up or Back up, each with its face’s colour', () => {
+    it('is Front up or Back up, each with its face’s colour in the sequence’s style', () => {
       render({ initial: { shape: 'square' } });
       expect(pressed('Start')).toEqual(['Front up']);
       const swatches = [...host.querySelectorAll<HTMLElement>('[role="group"][aria-label="Start"] button span')]
         .map((element) => element.style.background)
         .filter(Boolean);
-      expect(swatches).toEqual(['rgb(255, 255, 50)', 'rgb(233, 233, 233)']);
+      // The Diagram style's: white, with a grey colour side.
+      const { front, back } = builtInPaperPreset('diagram').style.paper;
+      expect(front).toBe('#ffffff');
+      expect(back).toBe('#b3b3b3');
+      expect(swatches).toEqual(['rgb(255, 255, 255)', 'rgb(179, 179, 179)']);
       act(() => segment('Start', 'Back up')?.click());
       expect(onStartSideChange).toHaveBeenCalledWith('back');
       expect(pressed('Start')).toEqual(['Back up']);
@@ -237,14 +238,13 @@ describe('FoldPaperPane', () => {
     });
   });
 
-  it('keeps a read-only sequence’s sheet as it is, and its colours editable', () => {
+  it('keeps a read-only sequence’s sheet and style as they are', () => {
     render({ initial: { shape: 'regular', sides: 5 }, stepCount: 3, readOnly: true });
     expect(segment('Shape', 'Rectangle')?.disabled).toBe(true);
     expect(segment('Start', 'Back up')?.disabled).toBe(true);
     expect(input('Sides')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('button[aria-label="Style"]')?.disabled).toBe(true);
     // Nothing to warn about: the shape cannot change.
     expect(notice()).toBeNull();
-    pick('Back', '#010203');
-    expect(display().paper.back).toBe('#010203');
   });
 });

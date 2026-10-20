@@ -12,3 +12,14 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 export function finiteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
+
+/** Two JSON values alike, whatever the order of their keys. */
+export function sameJson(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((entry, index) => sameJson(entry, b[index]));
+  }
+  if (!isRecord(a) || !isRecord(b)) return false;
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && sameJson(a[key], b[key]));
+}

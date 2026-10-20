@@ -1844,15 +1844,14 @@
     },
     "paper": {
       "backUp": "Verso dessus",
-      "colors": "Couleurs",
       "custom": "Personnalisé",
-      "editStyle": "Modifier le style du papier…",
       "frontUp": "Recto dessus",
       "height": "Hauteur",
+      "keptStyle": "Le style propre à cette séquence",
+      "look": "Apparence",
       "polygon": "Polygone",
       "proportions": "Proportions",
       "rectangle": "Rectangle",
-      "resetColors": "Réinitialiser les couleurs",
       "shape": "Forme",
       "sheet": "Feuille",
       "sides": "Côtés",
@@ -1862,6 +1861,8 @@
       "startsOver_one": "Changer de forme fait tout recommencer\u00a0: {{count}} étape de la séquence est effacée. Annuler la rétablit.",
       "startsOver_many": "Changer de forme fait tout recommencer\u00a0: les {{count}} étapes de la séquence sont effacées. Annuler les rétablit.",
       "startsOver_other": "Changer de forme fait tout recommencer\u00a0: les {{count}} étapes de la séquence sont effacées. Annuler les rétablit.",
+      "style": "Style",
+      "styleHint": "Le papier, les plumes et les plis de diagramme avec lesquels cette séquence est dessinée. Un style des Réglages est copié dans la séquence quand vous le choisissez.",
       "width": "Largeur"
     },
     "repeat": {

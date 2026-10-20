@@ -1,6 +1,7 @@
 import type { LayerSpreadOptions } from '../cp-workspace/folded/foldedLayerSpread';
 import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, FOLD_CHOICE_COUNT_BUCKETS } from './events';
 import type {
+  DiagramStyleChoiceName,
   FoldChoiceKind,
   FoldMarkDivideMode,
   FoldSheetSetting,
@@ -90,6 +91,15 @@ export function trackFoldMarkAdded(divideMode: FoldMarkDivideMode): void {
  */
 export function trackFoldSheetChanged(setting: FoldSheetSetting, sheet: { shape: FoldSheetShape; startSide: 'front' | 'back' }): void {
   track(ANALYTICS_EVENTS.foldSheetChanged, { setting, sheet_shape: sheet.shape, start_side: sheet.startSide });
+}
+
+/**
+ * The sequence's paper style was picked in the Paper pane: which kind of
+ * choice, as the Diagram names its style (`DiagramStyleChoiceName`) — never a
+ * preset's name or a colour.
+ */
+export function trackFoldPaperStyleChanged(style: DiagramStyleChoiceName): void {
+  track(ANALYTICS_EVENTS.foldPaperStyleChanged, { style });
 }
 
 /**

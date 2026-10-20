@@ -1844,15 +1844,14 @@
     },
     "paper": {
       "backUp": "Reverso arriba",
-      "colors": "Colores",
       "custom": "Personalizado",
-      "editStyle": "Editar el estilo del papel…",
       "frontUp": "Anverso arriba",
       "height": "Alto",
+      "keptStyle": "El propio de esta secuencia",
+      "look": "Aspecto",
       "polygon": "Polígono",
       "proportions": "Proporciones",
       "rectangle": "Rectángulo",
-      "resetColors": "Restablecer colores",
       "shape": "Forma",
       "sheet": "Hoja",
       "sides": "Lados",
@@ -1862,6 +1861,8 @@
       "startsOver_one": "Cambiar la forma empieza de nuevo: se borra {{count}} paso de la secuencia. Deshacer lo recupera.",
       "startsOver_many": "Cambiar la forma empieza de nuevo: se borran los {{count}} pasos de la secuencia. Deshacer los recupera.",
       "startsOver_other": "Cambiar la forma empieza de nuevo: se borran los {{count}} pasos de la secuencia. Deshacer los recupera.",
+      "style": "Estilo",
+      "styleHint": "El papel, las plumas y los pliegues de diagrama con que se dibuja esta secuencia. Un estilo de Ajustes se copia en la secuencia al elegirlo.",
       "width": "Ancho"
     },
     "repeat": {

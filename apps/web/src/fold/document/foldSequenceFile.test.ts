@@ -1,7 +1,9 @@
 import { normalizeFoldLandingOp } from './foldLandingMigration';
 import { describe, expect, it } from 'vitest';
 
-import { isLockedStep, type FoldStep, type FoldStepNode } from './foldSequenceDocument';
+import { builtInPaperPreset } from '../../lib/paper/paperPresets';
+import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
+import { FOLD_DEFAULT_PAPER_STYLE, isLockedStep, type FoldStep, type FoldStepNode } from './foldSequenceDocument';
 import {
   readFoldSequence,
   readFoldSequences,
@@ -37,8 +39,34 @@ describe('readFoldSequence and writeFoldSequence', () => {
     const held = readFoldSequence(JSON.parse(JSON.stringify(value)));
     expect(held?.readOnlyRaw).toBeNull();
     expect(held?.document.steps.every((node) => !isLockedStep(node))).toBe(true);
-    const migrated = { ...value, formatVersion: 2, steps: (value.steps as { op: unknown }[]).map((node) => ({ ...node, op: normalizeFoldLandingOp(node.op) })) };
+    const migrated = {
+      ...value,
+      formatVersion: 2,
+      steps: (value.steps as { op: unknown }[]).map((node) => ({ ...node, op: normalizeFoldLandingOp(node.op) })),
+    };
     expect(JSON.parse(JSON.stringify(writeFoldSequence(held!)))).toEqual(JSON.parse(JSON.stringify(migrated)));
+  });
+
+  it('reads a sequence’s paper style, draws one with none in the Diagram style, and carries a newer one back', () => {
+    // None: the default, written explicitly so a later default never changes it.
+    const none = readSteps([]);
+    expect(none.document.style).toEqual(FOLD_DEFAULT_PAPER_STYLE);
+    expect(writeFoldSequence(none).style).toEqual(FOLD_DEFAULT_PAPER_STYLE);
+    // A built-in by id only (as a hand-written file may say it): its values.
+    const byId = readSteps([], { style: { preset: 'default' } });
+    expect(byId.document.style).toEqual({ preset: 'default', style: builtInPaperPreset('default').style });
+    // A resolved style, as the Paper tab stores a Settings one: kept as it is.
+    const red = { ...DEFAULT_PAPER_STYLE, paper: { front: '#ff0000', back: '#ffffff' } };
+    const resolved = readSteps([], { style: { style: red } });
+    expect(resolved.document.style).toEqual({ style: red });
+    expect(writeFoldSequence(resolved).style).toEqual({ style: red });
+    // A newer build's style: drawn as this build reads it, written back as it came.
+    const newer = { style: { ...red, glitter: 1 }, finish: 'satin' };
+    const carried = readSteps([], { style: newer });
+    expect(carried.document.style).toEqual({ style: red });
+    expect(writeFoldSequence(carried).style).toEqual(newer);
+    // Damaged: the default.
+    expect(readSteps([], { style: 'blue' }).document.style).toEqual(FOLD_DEFAULT_PAPER_STYLE);
   });
 
   it('reads what it writes', () => {

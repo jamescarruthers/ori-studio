@@ -169,6 +169,9 @@ export const createFoldSlice: WorkspaceSliceCreator<FoldSlice> = (set, get) => {
     setFoldPaperShape: (shape) =>
       commitShown('Change paper', (document) => foldEdits.setFoldPaperShape(document, shape)) !== null,
 
+    setFoldPaperStyle: (style) =>
+      commitShown('Change paper style', (document) => foldEdits.setFoldPaperStyle(document, style)) !== null,
+
     setFoldSequenceTitle: (title) =>
       commitShown('Rename sequence', (document) => foldEdits.setFoldSequenceTitle(document, title)) !== null,
 

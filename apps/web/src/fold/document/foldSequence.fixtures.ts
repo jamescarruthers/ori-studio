@@ -4,7 +4,9 @@
  * op kind, choice and mark this build reads, in the order it writes them.
  */
 
+import { builtInPaperPreset } from '../../lib/paper/paperPresets';
 import {
+  FOLD_DEFAULT_PAPER_STYLE,
   FOLD_SEQUENCE_FORMAT_VERSION,
   SQUARE_PAPER,
   type FoldIdFactory,
@@ -41,7 +43,7 @@ export function sequenceOf(
   paper: FoldPaper = SQUARE_PAPER,
   id = 'fold-a'
 ): FoldSequenceDocument {
-  return { formatVersion: FOLD_SEQUENCE_FORMAT_VERSION, id, title: 'Test', paper, steps };
+  return { formatVersion: FOLD_SEQUENCE_FORMAT_VERSION, id, title: 'Test', paper, style: FOLD_DEFAULT_PAPER_STYLE, steps };
 }
 
 /**
@@ -54,6 +56,7 @@ export function writtenSequence(): Record<string, unknown> {
     id: 'fold-full',
     title: 'Every kind',
     paper: { shape: { kind: 'rectangle', aspect: [1, 0.5] }, startSide: 'back' },
+    style: { preset: 'default', style: builtInPaperPreset('default').style },
     appearance: { front: '#336699' },
     sheetMarks: [{ id: 'fmark-1', from: [0, 0], to: [1, 0], divide: { mode: 'count', parts: 3 } }],
     steps: [

@@ -10,6 +10,7 @@ import type {
 import type { Point } from '../../lib/geometry';
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { PaperStyleField, PaperStyleValue } from '../../lib/paper/paperStyle';
+import type { DocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
 import type { CpVertexPin } from '../../cp-workspace/pins/vertexPins';
 import type { PinSet } from '../../simulator/tools/pinSet';
 import type {
@@ -2593,6 +2594,12 @@ export interface FoldSliceActions {
    * step, creating the sequence when there is none. Whether it changed.
    */
   setFoldPaperShape: (shape: FoldPaperShape) => boolean;
+  /**
+   * Draw the shown sequence in another paper style (the Paper tab's Style),
+   * keeping its steps, as one undo step, creating the sequence when there is
+   * none. Whether it changed.
+   */
+  setFoldPaperStyle: (style: DocumentPaperStyle) => boolean;
   /** Rename the shown sequence, as one undo step, creating it when there is none. Whether it changed. */
   setFoldSequenceTitle: (title: string) => boolean;
   /**

@@ -1794,15 +1794,14 @@
     },
     "paper": {
       "backUp": "Rückseite oben",
-      "colors": "Farben",
       "custom": "Benutzerdefiniert",
-      "editStyle": "Papierstil bearbeiten…",
       "frontUp": "Vorderseite oben",
       "height": "Höhe",
+      "keptStyle": "Der eigene Stil dieser Sequenz",
+      "look": "Aussehen",
       "polygon": "Vieleck",
       "proportions": "Seitenverhältnis",
       "rectangle": "Rechteck",
-      "resetColors": "Farben zurücksetzen",
       "shape": "Form",
       "sheet": "Blatt",
       "sides": "Seiten",
@@ -1811,6 +1810,8 @@
       "startHelp": "Welche Seite des Papiers vor der ersten Faltung zu dir zeigt. Das Faltmuster wird immer von der Vorderseite gezeigt.",
       "startsOver_one": "Eine neue Form fängt von vorn an: {{count}} Schritt der Folge wird gelöscht. Rückgängig holt ihn zurück.",
       "startsOver_other": "Eine neue Form fängt von vorn an: Die {{count}} Schritte der Folge werden gelöscht. Rückgängig holt sie zurück.",
+      "style": "Stil",
+      "styleHint": "Papier, Stifte und Diagrammfaltlinien, in denen diese Sequenz gezeichnet wird. Ein Stil aus den Einstellungen wird beim Auswählen in die Sequenz kopiert.",
       "width": "Breite"
     },
     "repeat": {

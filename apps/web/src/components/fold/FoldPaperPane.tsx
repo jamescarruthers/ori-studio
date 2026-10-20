@@ -13,78 +13,80 @@ import {
   type FoldPaperShapeKind,
   type FoldStartSide,
 } from '../../fold/paperShape';
-import { usePaperDisplayStyle, type PaperDisplayRow } from '../../lib/paper/usePaperDisplayStyle';
-import { useSettingsStore } from '../../store/settingsStore';
-import { PaperColorRows } from '../paper/PaperColorRows';
-import { Button } from '../ui/Button';
+import { documentPaperStyleOf, type DocumentPaperStyle, type DocumentPaperStyleChoice } from '../../lib/paper/documentPaperStyle';
+import { PaperStyleChoiceRow } from '../paper/PaperStyleChoiceRow';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { FieldRow, NumberRow, SegmentedRow, SelectRow } from '../ui/fieldRows';
 import { Notice } from '../ui/Notice';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './FoldPaperPane.module.css';
 
-/**
- * The display-style rows this tab shows, and so all its reset touches: the
- * paper's two colours. Every pen is Settings ▸ Paper's, reached by the link.
- */
-const FOLD_PAPER_ROWS: readonly PaperDisplayRow[] = ['paper.front', 'paper.back'];
-
 /** The Proportions select's entry for a rectangle that is none of the presets. */
 const CUSTOM = 'custom';
 
 /**
- * The Paper tab: how the paper looks, and the sheet the sequence starts from
- * (plan D11).
+ * The Paper tab: the paper style the sequence is drawn in, and the sheet it
+ * starts from (plan D11).
  *
- * The colours are the app's display style, as Simulate's pane edits them
- * (`usePaperDisplayStyle`, counted as `paper style changed` with `source:
- * 'fold'`): a sequence has no colours of its own, and the folded form, the
- * crease pattern and an export all paint from the same style.
+ * The style is the sequence's own, picked as the Diagram's Page pane picks a
+ * diagram's (`PaperStyleChoiceRow`): a built-in — the Diagram style, which a
+ * new sequence is drawn in — the export style from Settings, or a preset
+ * saved there, copied into the sequence when chosen. The folded form and the
+ * step cards paint from it; the crease pattern pane is drawn as Edit draws a
+ * crease pattern, but for the step's own fold lines, in the style's diagram
+ * crease pens.
  *
- * The sheet is the sequence's document state, so it arrives in props and
- * leaves through callbacks. Which side starts up is labelled Front and Back
- * rather than by colour, because the presets disagree about which face is the
- * coloured one. A new shape starts the sequence over (plan D7): the store
- * replaces the shape and empties the steps as one undoable edit, and the tab
- * says so beforehand rather than asking.
+ * The style and the sheet are the sequence's document state, so they arrive
+ * in props and leave through callbacks. Which side starts up is labelled
+ * Front and Back rather than by colour, because the presets disagree about
+ * which face is the coloured one. A new shape starts the sequence over (plan
+ * D7): the store replaces the shape and empties the steps as one undoable
+ * edit, and the tab says so beforehand rather than asking.
  */
 export function FoldPaperPane({
+  style,
   shape,
   startSide,
   stepCount,
   readOnly = false,
+  onStyleChange,
   onShapeChange,
   onStartSideChange,
 }: {
+  /** The paper style the sequence keeps. */
+  style: DocumentPaperStyle;
   shape: FoldPaperShape;
   startSide: FoldStartSide;
   /** Every step of the sequence, on every branch: what a new shape clears. */
   stepCount: number;
   /** A sequence from a newer build: its sheet cannot change. */
   readOnly?: boolean;
+  /** Draw the sequence in another style. */
+  onStyleChange: (choice: DocumentPaperStyleChoice) => void;
   /** Start over on a new sheet. Called only with a shape that differs from `shape`. */
   onShapeChange: (shape: FoldPaperShape) => void;
   onStartSideChange: (side: FoldStartSide) => void;
 }) {
   const { t } = useTranslation();
-  const paper = usePaperDisplayStyle('fold', FOLD_PAPER_ROWS);
-  const openSettings = useSettingsStore((state) => state.openSettings);
+  const paper = documentPaperStyleOf(style).paper;
   const change = (next: FoldPaperShape | null) => {
     if (next && !sameShape(next, shape)) onShapeChange(next);
   };
 
   return (
     <div className={styles.pane}>
-      <CollapsibleSection title={t('panels:fold.paper.colors', 'Colors')}>
-        <PaperColorRows paper={paper} />
-        <div className={styles.styleActions}>
-          <Button variant="ghost" size="sm" onClick={() => openSettings('paper')}>
-            {t('panels:fold.paper.editStyle', 'Edit paper style…')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={paper.reset}>
-            {t('panels:fold.paper.resetColors', 'Reset colors')}
-          </Button>
-        </div>
+      <CollapsibleSection title={t('panels:fold.paper.look', 'Look')}>
+        <PaperStyleChoiceRow
+          value={style}
+          disabled={readOnly}
+          label={t('panels:fold.paper.style', 'Style')}
+          help={t(
+            'panels:fold.paper.styleHint',
+            'The paper, pens and diagram creases this sequence is drawn in. A style from Settings is copied into the sequence when you pick it.'
+          )}
+          keptLabel={t('panels:fold.paper.keptStyle', 'This sequence’s own')}
+          onChange={onStyleChange}
+        />
       </CollapsibleSection>
 
       <CollapsibleSection title={t('panels:fold.paper.sheet', 'Sheet')}>
@@ -101,14 +103,14 @@ export function FoldPaperPane({
               id: 'front',
               label: t('panels:fold.paper.frontUp', 'Front up'),
               icon: (
-                <span className={styles.swatch} style={{ background: paper.style.paper.front }} aria-hidden="true" />
+                <span className={styles.swatch} style={{ background: paper.front }} aria-hidden="true" />
               ),
             },
             {
               id: 'back',
               label: t('panels:fold.paper.backUp', 'Back up'),
               icon: (
-                <span className={styles.swatch} style={{ background: paper.style.paper.back }} aria-hidden="true" />
+                <span className={styles.swatch} style={{ background: paper.back }} aria-hidden="true" />
               ),
             },
           ]}

@@ -296,10 +296,10 @@ describe('what it counts', () => {
   });
 
   it('counts under the source its surface names', () => {
-    act(() => root?.render(<Probe source="fold" rows={PAPER_ROWS} />));
+    act(() => root?.render(<Probe source="simulator" rows={PAPER_ROWS} />));
     act(() => current().setPaperColor('paper.back', '#123456'));
     expect(events()).toEqual([
-      ['paperStyleChanged', { source: 'fold', slot: 'display', field: 'paper.back' }],
+      ['paperStyleChanged', { source: 'simulator', slot: 'display', field: 'paper.back' }],
     ]);
   });
 });

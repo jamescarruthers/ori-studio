@@ -17,7 +17,7 @@
 export { readEntries } from './entries';
 export { randomId, type IdFactory } from './ids';
 export { NEWER, hasNewerKey } from './newer';
-export { finiteNumber, isRecord } from './values';
+export { finiteNumber, isRecord, sameJson } from './values';
 export {
   readVersioned,
   writeVersioned,

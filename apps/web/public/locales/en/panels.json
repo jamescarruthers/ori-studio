@@ -1794,15 +1794,14 @@
     },
     "paper": {
       "backUp": "Back up",
-      "colors": "Colors",
       "custom": "Custom",
-      "editStyle": "Edit paper style…",
       "frontUp": "Front up",
       "height": "Height",
+      "keptStyle": "This sequence’s own",
+      "look": "Look",
       "polygon": "Polygon",
       "proportions": "Proportions",
       "rectangle": "Rectangle",
-      "resetColors": "Reset colors",
       "shape": "Shape",
       "sheet": "Sheet",
       "sides": "Sides",
@@ -1811,6 +1810,8 @@
       "startHelp": "Which side of the paper faces you before the first fold. The crease pattern is always drawn from the front.",
       "startsOver_one": "Changing the shape starts over: the sequence’s {{count}} step is cleared. Undo brings it back.",
       "startsOver_other": "Changing the shape starts over: the sequence’s {{count}} steps are cleared. Undo brings them back.",
+      "style": "Style",
+      "styleHint": "The paper, pens and diagram creases this sequence is drawn in. A style from Settings is copied into the sequence when you pick it.",
       "width": "Width"
     },
     "repeat": {

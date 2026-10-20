@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDiagram } from '../../diagram/document/diagramDocument';
 import { initialFoldReaderState, withFoldCursor } from '../../fold/document/foldReaderState';
-import { FOLD_SEQUENCE_FORMAT_VERSION } from '../../fold/document/foldSequenceDocument';
+import { FOLD_DEFAULT_PAPER_STYLE, FOLD_SEQUENCE_FORMAT_VERSION } from '../../fold/document/foldSequenceDocument';
 import { readFoldSequences } from '../../fold/document/foldSequenceFile';
 import { DIAGRAM_SCOPED_KEYS, discardDiagramState } from './diagramState';
 import { FOLD_SCOPED_KEYS, discardFoldState, type FoldSequences } from './foldState';
@@ -27,6 +27,7 @@ const sequenceValue = {
   id: 'fold-1',
   title: 'Crane',
   paper: { shape: { kind: 'square' }, startSide: 'front' },
+  style: FOLD_DEFAULT_PAPER_STYLE,
   steps: [
     { id: 'fstep-1', parent: null, op: { kind: 'turn', axis: 'vertical' } },
     { id: 'fstep-2', parent: 'fstep-1', op: { kind: 'cp-jump', cpJson: '[1,2,3]', orderJson: '[4]', origin: 'cp' } },
