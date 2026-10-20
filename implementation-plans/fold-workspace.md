@@ -783,13 +783,24 @@ The UI may auto-include or explain.
 | `[` / `]` | Aliases for ←/→ (the Diagram's) |
 | ↑/↓ | The active step's branch, as References' ways |
 | Shift+←/→ | Candidate roots |
-| Space | Play the step |
 | Enter | Commit; declines when a focused control owns the key (Diagram precedent) |
 | Escape | Through the viewport cancel ladder |
 
-- Rotate takes another key.
-- Axioms on bare digits would shadow the viewport's digit keys; the UI designer
-  picks Shift+digits or accepts the shadowing.
+The tools, under the left hand (owner, 2026-10-20: "mountain valley,
+precrease … A, S, D", as Edit's line types put mountain and valley):
+
+| Key | Tool | Key | Tool | Key | Tool |
+|---|---|---|---|---|---|
+| A | Mountain fold | Q | Pleat | Z | Free line |
+| S | Valley fold | W | Swivel fold | X | Swap moving side |
+| D | Precrease | E | Precrease extent | C | Existing crease |
+| F | Reverse fold | R | Rotate | V | Divide line |
+| G | Squash fold | T | Turn over | B | Rabbit ear (Edit's Ctrl+B) |
+| Shift+F | Crimp | Shift+E | Unfold to step | Shift+Z/X/C | Open sink / Closed sink / Unsink |
+| Shift+G | Petal fold | Shift+R | Repeat on the other side | 1–7 | Axioms 1–7 |
+
+- Space played the step until the animation was removed (D15).
+- Axioms on bare digits shadow the viewport's digit keys; accepted.
 - The scope declines while focus owns the arrow keys, as the Diagram's does.
 
 **Interaction cost**, in three tiers:

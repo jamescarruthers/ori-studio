@@ -38,12 +38,16 @@ describe('web menu definition', () => {
       );
     };
     expect(rows()).toMatchObject({
-      'fold.valley': 'V',
-      'fold.mountain': 'M',
-      'fold.precrease': 'P',
+      // Edit's line types: A mountain, S valley; D the precrease.
+      'fold.valley': 'S',
+      'fold.mountain': 'A',
+      'fold.precrease': 'D',
       'fold.turn-over': 'T',
       // Rotate takes its tool in hand, as R does.
       'fold.rotate': 'R',
+      // The sequence verbs, through their rows.
+      'fold.unfold-to': 'Shift+E',
+      'fold.repeat': 'Shift+R',
     });
     // The quarter turns done at once are gone: Rotate's window sets how far and which way.
     expect(rows()['fold.rotate-cw']).toBeUndefined();

@@ -12,6 +12,16 @@ vi.mock('../../store/workspaceStore/foldSession', async (importOriginal) => ({
   },
 }));
 
+/** The menu rows a key runs, as the chokepoint is asked for them. */
+const menu = vi.hoisted(() => ({ actions: [] as string[] }));
+vi.mock('../../commands/menuActions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../commands/menuActions')>()),
+  handleMenuAction: (id: string) => {
+    menu.actions.push(id);
+    return Promise.resolve(true);
+  },
+}));
+
 import { installAppKeyboardListener } from '../../lib/appKeyboard';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { foldSessionDocumentSource } from '../../store/workspaceStore/foldSession';
@@ -134,6 +144,15 @@ describe('Fold’s keys', () => {
     press('ArrowLeft');
     expect(handler).toHaveBeenCalledWith('fold.previousStep');
     release();
+  });
+
+  it('runs Unfold to step on Shift+E and Repeat on the other side on Shift+R, through their menu rows', () => {
+    menu.actions.length = 0;
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'E', shiftKey: true, bubbles: true, cancelable: true }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'R', shiftKey: true, bubbles: true, cancelable: true }));
+    });
+    expect(menu.actions).toEqual(['fold.unfold-to', 'fold.repeat']);
   });
 
   it('runs Escape through the rungs surfaces arm, newest first, then lets go of the step being folded', async () => {

@@ -54,9 +54,10 @@ function shortcut(id: MenuActionId, resolution?: ShortcutResolutionInput): strin
 
 /**
  * The Fold menu's rows a key of the `fold` scope also runs — the same verb by
- * another route (`fold/canvas/useFoldCanvasShortcuts`): V, M and P take the
- * fold in hand as the menu's kinds arm it, T adds the turn-over its row adds,
- * and R takes the Rotate tool as its row does. Their hint is that key, as the user's layout
+ * another route (`fold/canvas/useFoldCanvasShortcuts`, `fold/sequence/foldKeys`):
+ * S, A and D take the fold in hand as the menu's kinds arm it, T adds the
+ * turn-over its row adds, R takes the Rotate tool as its row does, and
+ * Shift+E and Shift+R run Unfold to step and Repeat through their rows. Their hint is that key, as the user's layout
  * resolves it. The hint only: the native menu reads its accelerators by the
  * row's own id, which binds nothing, so a bare letter is never taken from a
  * text field there.
@@ -67,6 +68,8 @@ const FOLD_ROW_KEYS: Partial<Record<MenuActionId, FoldShortcutId>> = {
   'fold.precrease': 'fold.toolPrecrease',
   'fold.turn-over': 'fold.turnOver',
   'fold.rotate': 'fold.rotate',
+  'fold.unfold-to': 'fold.toolUnfoldTo',
+  'fold.repeat': 'fold.toolRepeat',
 };
 
 function foldRowKey(id: MenuActionId, resolution?: ShortcutResolutionInput): string | undefined {
@@ -344,8 +347,8 @@ export function getMenuBarDef(
         { type: 'action', id: 'fold.rotate', label: t('menu:fold.rotate', 'Rotate...'), shortcut: foldRowKey('fold.rotate', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.unfold-last', label: t('panels:fold.return.last', 'Unfold last step') },
-        { type: 'action', id: 'fold.unfold-to', label: t('panels:fold.return.open', 'Unfold to step…') },
-        { type: 'action', id: 'fold.repeat', label: t('panels:fold.repeat.open', 'Repeat on the other side…') },
+        { type: 'action', id: 'fold.unfold-to', label: t('panels:fold.return.open', 'Unfold to step…'), shortcut: foldRowKey('fold.unfold-to', resolution) },
+        { type: 'action', id: 'fold.repeat', label: t('panels:fold.repeat.open', 'Repeat on the other side…'), shortcut: foldRowKey('fold.repeat', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.delete-step', label: t('menu:fold.delete-step', 'Delete Step'), shortcut: shortcut('fold.delete-step', resolution) },
         { type: 'separator' },

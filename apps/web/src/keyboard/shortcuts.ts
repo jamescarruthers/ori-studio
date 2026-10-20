@@ -236,7 +236,11 @@ export type FoldShortcutId =
   | 'fold.cycleExtent'
   | 'fold.previousCandidate'
   | 'fold.nextCandidate'
-  | 'fold.commit';
+  | 'fold.commit'
+  // The sequence verbs a key runs through their menu rows (`fold.repeat`,
+  // `fold.unfold-to`): Repeat on the other side, Unfold to step.
+  | 'fold.toolRepeat'
+  | 'fold.toolUnfoldTo';
 export type ShortcutActionId =
   | MenuActionId
   | OristudioCpActionId
@@ -830,33 +834,40 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.nextStep', 'Next Step', [{ key: 'arrowright' }, { key: ']' }]),
   foldShortcut('fold.previousBranch', 'Previous Branch', { key: 'arrowup' }),
   foldShortcut('fold.nextBranch', 'Next Branch', { key: 'arrowdown' }),
-  // The canvas's tools. The folds by their letters, the Divide line by D, as
-  // the rail shows them. The axioms on the bare digits, as the rail numbers
-  // them: in Fold they shadow the viewport's digit keys (pan, rotate, zoom),
-  // whose verbs the canvas reaches by ⌘= / ⌘−, the toolbar and a pinch — the
-  // shadowing D14 left to the design, which numbers the line modes. Inside
-  // reverse is planned (V0.5) and takes no key until it lands. Rotate is R,
-  // since `[` and `]` are the steps'.
-  foldShortcut('fold.toolValley', 'Valley Fold', { key: 'v' }),
-  foldShortcut('fold.toolMountain', 'Mountain Fold', { key: 'm' }),
-  foldShortcut('fold.toolPrecrease', 'Precrease', { key: 'p' }),
-  foldShortcut('fold.toolInsideReverse', 'Inside Reverse Fold', null),
-  // The crimp and the tuck, unbound as inside reverse is: C is the existing
-  // crease's line mode and T the turn over, and neither is used often enough
-  // to take a letter from another tool. A user binds one in Settings.
-  foldShortcut('fold.toolCrimp', 'Crimp', null),
-  foldShortcut('fold.toolPleat', 'Pleat', null),
-  // The vertex folds take no key by default, as the reverse fold takes none:
-  // the letters a folder would look for are the plain folds' and Swap's.
-  foldShortcut('fold.toolSquash', 'Squash Fold', null),
-  foldShortcut('fold.toolPetal', 'Petal Fold', null),
-  foldShortcut('fold.toolRabbitEar', 'Rabbit Ear', null),
-  foldShortcut('fold.toolSwivel', 'Swivel Fold', null),
-  foldShortcut('fold.toolDivideLine', 'Divide Line', { key: 'd' }),
-  // The sinks take no key until the user gives them one, as the reverse fold.
-  foldShortcut('fold.toolOpenSink', 'Open Sink', null),
-  foldShortcut('fold.toolClosedSink', 'Closed Sink', null),
-  foldShortcut('fold.toolUnsink', 'Unsink', null),
+  // The canvas's tools, every one under the left hand while the right holds
+  // the pointer, as Edit's layout is (`ORIEDITA_DEFAULTS`):
+  //
+  // - the home row the folds made most: A mountain, S valley, as Edit's line
+  //   types; D precrease; F reverse fold; G squash fold;
+  // - the row above: Q pleat, W swivel, E a precrease's extent, R Rotate,
+  //   T Turn over;
+  // - the row below: Z a free line, as Edit's free line is; X swaps the moving
+  //   side; C an existing crease; V the Divide line; B the rabbit ear, Edit's
+  //   Ctrl+B without the modifier, which Fold leaves to the app (⌘B is Build);
+  // - Shift for a fold's relations: Shift+F the crimp (two reverse folds),
+  //   Shift+G the petal fold (the squash's), and the three sinks in the
+  //   rail's order on Shift+Z, X, C;
+  // - the sequence verbs beside each other: Shift+E Unfold to step, Shift+R
+  //   Repeat on the other side.
+  //
+  // The axioms on the bare digits, as the rail numbers them: in Fold they
+  // shadow the viewport's digit keys (pan, rotate, zoom), whose verbs the
+  // canvas reaches by ⌘= / ⌘−, the toolbar and a pinch — the shadowing D14
+  // left to the design, which numbers the line modes.
+  foldShortcut('fold.toolMountain', 'Mountain Fold', { key: 'a' }),
+  foldShortcut('fold.toolValley', 'Valley Fold', { key: 's' }),
+  foldShortcut('fold.toolPrecrease', 'Precrease', { key: 'd' }),
+  foldShortcut('fold.toolInsideReverse', 'Reverse Fold', { key: 'f' }),
+  foldShortcut('fold.toolSquash', 'Squash Fold', { key: 'g' }),
+  foldShortcut('fold.toolPleat', 'Pleat', { key: 'q' }),
+  foldShortcut('fold.toolSwivel', 'Swivel Fold', { key: 'w' }),
+  foldShortcut('fold.toolCrimp', 'Crimp', { shift: true, key: 'f' }),
+  foldShortcut('fold.toolPetal', 'Petal Fold', { shift: true, key: 'g' }),
+  foldShortcut('fold.toolRabbitEar', 'Rabbit Ear', { key: 'b' }),
+  foldShortcut('fold.toolDivideLine', 'Divide Line', { key: 'v' }),
+  foldShortcut('fold.toolOpenSink', 'Open Sink', { shift: true, key: 'z' }),
+  foldShortcut('fold.toolClosedSink', 'Closed Sink', { shift: true, key: 'x' }),
+  foldShortcut('fold.toolUnsink', 'Unsink', { shift: true, key: 'c' }),
   foldShortcut('fold.turnOver', 'Turn Over', { key: 't' }),
   // R takes the Rotate tool in hand: its window sets how far and which way, Enter applies.
   foldShortcut('fold.rotate', 'Rotate', { key: 'r' }),
@@ -867,12 +878,16 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.lineAxiom5', 'Axiom 5', { key: '5' }),
   foldShortcut('fold.lineAxiom6', 'Axiom 6', { key: '6' }),
   foldShortcut('fold.lineAxiom7', 'Axiom 7', { key: '7' }),
-  foldShortcut('fold.lineFree', 'Free Line', { key: 'f' }),
+  foldShortcut('fold.lineFree', 'Free Line', { key: 'z' }),
   foldShortcut('fold.lineCrease', 'Existing Crease', { key: 'c' }),
-  foldShortcut('fold.swapSide', 'Swap Moving Side', { key: 's' }),
+  foldShortcut('fold.swapSide', 'Swap Moving Side', { key: 'x' }),
   // A precrease's extent, on E: the whole line, a segment, a pinch, round
   // again. Only with the Precrease tool in hand; otherwise E falls through.
   foldShortcut('fold.cycleExtent', 'Next Precrease Extent', { key: 'e' }),
+  // Through their menu rows (`fold.unfold-to`, `fold.repeat`), so the key, the
+  // row and the header run the one verb, gated as the catalog gates it.
+  foldShortcut('fold.toolUnfoldTo', 'Unfold to Step', { shift: true, key: 'e' }),
+  foldShortcut('fold.toolRepeat', 'Repeat on the Other Side', { shift: true, key: 'r' }),
   // The axiom's roots, on Shift+arrows: the arrows alone are the steps'.
   foldShortcut('fold.previousCandidate', 'Previous Root', { shift: true, key: 'arrowleft' }),
   foldShortcut('fold.nextCandidate', 'Next Root', { shift: true, key: 'arrowright' }),

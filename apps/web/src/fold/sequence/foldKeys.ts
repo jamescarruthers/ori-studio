@@ -1,5 +1,6 @@
 import { foldCanvasVerbs } from '../canvas/foldCanvasCommands';
 import { useCallback, useEffect } from 'react';
+import { handleMenuAction, type MenuActionId } from '../../commands/menuActions';
 import { focusOwnsArrowKeys } from '../../keyboard/arrowKeyOwners';
 import {
   registerConditionalScopeExecutor,
@@ -18,8 +19,9 @@ import { foldPathMoves, type FoldPathMoves } from './foldSequencePath';
  * components: never a `keydown` listener on the panel).
  *
  * - **One executor for the `fold` scope**, the panel's, which hands each id
- *   to the surfaces that answer Fold's keys — the step moves here, the tools
- *   with their own handler ({@link registerFoldKeyHandler}).
+ *   to the surfaces that answer Fold's keys — the step moves and the
+ *   sequence verbs' keys here ({@link FOLD_MENU_KEYS}), the tools with their
+ *   own handler ({@link registerFoldKeyHandler}).
  *   A scope has one executor, so surfaces that each registered their own
  *   would take the keyboard from one another.
  * - **The `fold` viewport surface**, the Diagram's route: Escape runs one
@@ -115,6 +117,23 @@ const stepKeys: FoldKeyHandler = (id) => {
 };
 
 /**
+ * The sequence verbs a key runs as their menu rows do, through the
+ * chokepoint (`handleMenuAction`), so the key, the Fold menu's row and the
+ * header are one verb, gated as the catalog gates it (`runFoldMenuVerb`).
+ */
+export const FOLD_MENU_KEYS: Readonly<Partial<Record<FoldShortcutId, MenuActionId>>> = {
+  'fold.toolUnfoldTo': 'fold.unfold-to',
+  'fold.toolRepeat': 'fold.repeat',
+};
+
+const menuKeys: FoldKeyHandler = (id) => {
+  const action = FOLD_MENU_KEYS[id];
+  if (!action) return false;
+  void handleMenuAction(action);
+  return true;
+};
+
+/**
  * Bind Fold's keys while its panel is mounted: the scope's executor, the
  * viewport surface's, and the step moves. The panel claims the viewport
  * surface on mount and on every press inside it (`onPointerDownCapture`), and
@@ -129,10 +148,12 @@ export function useFoldKeyboard(): { onPointerDownCapture: () => void } {
       id === 'viewport.cancel' ? runFoldCancel() : (viewCamera?.(id) ?? false)
     );
     const offSteps = registerFoldKeyHandler(stepKeys);
+    const offMenuKeys = registerFoldKeyHandler(menuKeys);
     return () => {
       offScope();
       offViewport();
       offSteps();
+      offMenuKeys();
       releaseShortcutViewportSurface('fold');
     };
   }, []);
