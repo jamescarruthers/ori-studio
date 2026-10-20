@@ -83,16 +83,54 @@ export function faceAt(scene: FoldScene, p: SheetPoint): number {
   if (f < 0) throw new RepeatFailure('repeat_reference');
   return f;
 }
+/**
+ * The isometry taking the source state's model frame to the target's for the
+ * paper at sheet point `at`: read through a source face holding `at`, and the
+ * target face that holds the mirror of that face's paper there.
+ *
+ * A point on a crease or at a vertex is held by several faces, each placed
+ * differently. Reading each state through whichever face it lists first can
+ * pair a face with the mirror of its neighbour, and the frame then comes out
+ * turned by the fold between them.
+ */
 export function correspondingFrame(
   source: FoldScene,
   target: FoldScene,
   map: FoldIsometry,
   at: SheetPoint,
 ): FoldIsometry {
+  const face = faceAt(source, at);
   return compose(
-    modelMap(target, faceAt(target, mappedPoint(map, at))),
-    compose(map, invertIsometry(modelMap(source, faceAt(source, at)))),
+    modelMap(target, mirroredFaceAt(source, face, target, map, mappedPoint(map, at))),
+    compose(map, invertIsometry(modelMap(source, face))),
   );
+}
+/** Less shared area than this is a touch along a boundary, not shared paper. */
+const SHARED_AREA = 1e-12;
+/** The face of `target` holding `at` that shares the most paper with source face `face` mirrored by `map`. */
+function mirroredFaceAt(
+  source: FoldScene,
+  face: number,
+  target: FoldScene,
+  map: FoldIsometry,
+  at: SheetPoint,
+): number {
+  const holding = target.faces.flatMap((_, i) =>
+    insideConvex(sheetRing(target, i), toPoint(at), REPEAT_TOL) ? [i] : [],
+  );
+  if (!holding.length) throw new RepeatFailure('repeat_reference');
+  if (holding.length === 1) return holding[0]!;
+  const mirrored = sheetRing(source, face).map((p) => applyIsometry(map, p));
+  let best = holding[0]!,
+    most = SHARED_AREA;
+  for (const i of holding) {
+    const shared = Math.abs(polygonArea(overlap(mirrored, sheetRing(target, i))));
+    if (shared > most) {
+      best = i;
+      most = shared;
+    }
+  }
+  return best;
 }
 export function sameImages(a: FoldIsometry, b: FoldIsometry, points: readonly Point[]): boolean {
   return points.every((p) => {
