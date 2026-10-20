@@ -84,6 +84,16 @@ export function pathTo(tree: FoldStepTree, id: string): FoldStepNode[] | null {
   return path.reverse();
 }
 
+/**
+ * The steps from `first` to `last` on one path, both included, `first`
+ * first; null when either is no node, or `last` does not fold from `first`.
+ */
+export function pathBetween(tree: FoldStepTree, first: string, last: string): FoldStepNode[] | null {
+  const path = pathTo(tree, last);
+  const from = path?.findIndex((node) => node.id === first) ?? -1;
+  return path && from >= 0 ? path.slice(from) : null;
+}
+
 /** `id` and every node that folds from it; empty for no such node. */
 export function subtreeIds(tree: FoldStepTree, id: string): Set<string> {
   const ids = new Set<string>();

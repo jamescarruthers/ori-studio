@@ -57,6 +57,8 @@ function foldDiagram() {
     { ...foldStepStep('step-quiet', { sentence: undefined }), text: '' },
     // Not captured yet.
     foldStepStep('step-unposed', {}, null),
+    // A precrease and its mirror image, drawn as one.
+    foldStepStep('step-run', { through: 'fstep-3', sentence: 'Valley fold and unfold. Do this on both sides.' }),
   ];
   return insertSteps(createDiagram({ title: 'Crane' }), steps, 0);
 }
@@ -97,6 +99,35 @@ describe('a Fold step in the file (D17)', () => {
       'remembered',
     ]);
     expect(stored).toEqual(source);
+    // A run names its last step after its first.
+    const run = storedFoldStepSource({ ...shuffled, through: 'fstep-3' })!;
+    expect(Object.keys(run).slice(0, 5)).toEqual(['kind', 'sequence', 'step', 'through', 'moment']);
+  });
+
+  it('reads a run of steps drawn as one back as it was written, and a single step with no `through`', () => {
+    const steps = stepsIn(readDiagram(throughJson(writeDiagram(foldDiagram())))!.document);
+    expect((steps[4]!.source as DiagramFoldStepSource).through).toBe('fstep-3');
+    expect(steps[4]!.unknown).toBeUndefined();
+    expect(steps.slice(0, 4).every((step) => !('through' in step.source!))).toBe(true);
+  });
+
+  it.each([
+    ['a last step that is its first', (source: Record<string, unknown>) => ({ ...source, through: source.step })],
+    ['an empty last step', (source: Record<string, unknown>) => ({ ...source, through: '' })],
+    ['a last step that is not a string', (source: Record<string, unknown>) => ({ ...source, through: 3 })],
+    ['a run shown after it folds', (source: Record<string, unknown>) => ({ ...source, moment: 'after' })],
+  ])('drops a run’s source with %s as damage, and keeps the step’s words', (_label, patch) => {
+    const step = stepsIn(readDiagram(writtenWith(4, patch))!.document)[4]!;
+    expect(step.unknown).toBeUndefined();
+    expect(step.source).toBeNull();
+    expect(step.text).toBe('Valley fold and unfold. Do this on both sides.');
+  });
+
+  it('carries a run with a field it has no name for, locked, as any Fold step is', () => {
+    const written = writtenWith(4, (source) => ({ ...source, mirror: 'axis' }));
+    const read = readDiagram(written)!;
+    expect(stepsIn(read.document)[4]!.unknown).toEqual(written.steps[4]);
+    expect(JSON.stringify(writeDiagram(read.document))).toBe(JSON.stringify(written));
   });
 
   it('reads a step shown another way back as it was captured, so the same capture again is no edit', () => {

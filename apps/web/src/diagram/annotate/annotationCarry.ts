@@ -164,7 +164,8 @@ function sameRegion(from: DiagramCpSource, to: DiagramCpSource): boolean {
 /**
  * Whether two posed captures are of one thing, so a change of pose alone
  * moves what they show by a known amount: a linked pattern's same region and
- * creases, or a Fold step's same state seen at the same moment.
+ * creases, or a Fold step's — or run of steps' — same state seen at the same
+ * moment.
  */
 function samePosedLink(from: DiagramPosedSource, to: DiagramPosedSource): boolean {
   if (from.kind === 'fold-step' || to.kind === 'fold-step') {
@@ -173,6 +174,7 @@ function samePosedLink(from: DiagramPosedSource, to: DiagramPosedSource): boolea
       to.kind === 'fold-step' &&
       from.sequence === to.sequence &&
       from.step === to.step &&
+      from.through === to.through &&
       from.moment === to.moment &&
       from.state === to.state
     );
