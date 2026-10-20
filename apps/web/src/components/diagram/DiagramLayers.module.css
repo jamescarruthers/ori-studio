@@ -1,16 +1,4 @@
-/* The Layers pane's body (DiagramLayers.tsx): the notices over the list, the list (DiagramLayerList), and the selected one's controls. */
-.layers {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-}
-
+/* The Layers pane's body (DiagramLayers.tsx): the notices over the list. */
 .notice {
-  padding: 0 var(--space-3);
-}
-
-.verbs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+  padding: 0 var(--space-3) var(--space-2);
 }

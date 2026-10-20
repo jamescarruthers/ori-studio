@@ -1,27 +1,15 @@
 /* The Layers pane in the Pages view (DiagramPageLayers.tsx): the page's steps, and the selection's placement under them. */
-.layers {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-}
 
 /* A step row's glyph: its number, as wide as a mark's glyph. */
 .number {
-  flex: none;
-  min-width: 17px;
-  color: var(--text-tertiary);
+  min-width: 16px;
   font-size: 0.7rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  text-align: center;
+  text-align: right;
 }
 
-.partIcon {
-  flex: none;
-}
-
-/* Under the list, the page's own verb: Re-pack Page, on a flow page. */
-.pageActions {
-  display: flex;
-  padding: 0 var(--space-3);
+/* A part of the step past the margin: the one mark at a row's end that warns. */
+.warning {
+  color: var(--status-warning);
 }

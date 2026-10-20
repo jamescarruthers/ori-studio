@@ -1,22 +1,65 @@
-.controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
+/* The Pages view's Layers inspector (DiagramStepPlacement.tsx): the selected step's placement. */
 .inset {
-  padding-inline: var(--space-3);
+  padding: 0 var(--space-3) var(--space-2);
 }
-/* Reset of the selected part, and Reset Layout. */
-.actions {
+
+/* A row's fields, X and Y side by side — Y under X, at the row's end, when the pane is too narrow for both. */
+.fields {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The reset and the first field, kept together: the reset never strays from what it resets. */
+.lead {
+  display: flex;
+  flex: none;
+  align-items: center;
   gap: var(--space-1);
 }
+
+/* The reset's room, held while there is nothing to reset, so the fields never move as it comes and goes. */
+.slot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+@media (pointer: coarse) {
+  .slot {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+}
+
+/*
+ * One width for every placement field, so X, Y, Size and Width line up down
+ * the pane. A floor rather than a basis: the row's column is sized to what
+ * its fields need, so X and Y stay side by side until the pane is too narrow
+ * for both, and only then does Y go under X.
+ */
+.axis {
+  flex: none;
+  min-width: 96px;
+}
+
+/* What Auto would give, and why a size is kept: under their row, which they finish with its rule. */
+.notes {
+  display: grid;
+  gap: 2px;
+  padding: 0 var(--space-3) 7px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .note {
   margin: 0;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.5;
+  color: var(--text-tertiary);
+  font-size: 0.66rem;
+  line-height: 1.4;
+  text-align: right;
 }
 
 /*

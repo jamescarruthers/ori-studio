@@ -55,12 +55,6 @@
   text-overflow: ellipsis;
 }
 
-/* A step placed by hand on the pages: its pin, beside the kind, kept whole as the kind's badge is. */
-.placed {
-  display: inline-flex;
-  flex: none;
-}
-
 /* A linked step's pattern, small: on the canvas's ground, where the theme's crease inks read. */
 .pattern {
   flex: none;

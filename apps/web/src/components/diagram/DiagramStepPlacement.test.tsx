@@ -136,6 +136,8 @@ describe('DiagramStepPlacement › the part selected', () => {
   const field = (label: string) => host!.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
   const button = (name: string) =>
     [...host!.querySelectorAll<HTMLButtonElement>('button')].find((each) => each.textContent === name);
+  /** A row's reset, by its name: there only while it has something to reset. */
+  const reset = (name: string) => host!.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
 
   it('offers X and Y of the frame with the step selected alone, and of a part once one is, and resets that part', () => {
     act(() => {
@@ -145,26 +147,31 @@ describe('DiagramStepPlacement › the part selected', () => {
     });
     show('s1');
     expect([field('X (mm)').value, field('Y (mm)').value]).toEqual(['0', '0']);
-    expect(button('Reset Frame')?.disabled).toBe(true);
-    expect(button('Reset Picture')).toBeUndefined();
+    expect(reset('Reset Frame')).toBeNull();
+    expect(reset('Reset Picture')).toBeNull();
     // No Select buttons: the Layers list's rows select the part.
     expect(button('Select')).toBeUndefined();
     act(() => state().selectDiagramPagesPart('picture'));
     show('s1');
     expect([field('X (mm)').value, field('Y (mm)').value]).toEqual(['2', '3']);
-    act(() => button('Reset Picture')!.click());
+    // Its reset sits beside X, before it, in room kept for it: neither field moves as it comes and goes.
+    const lead = reset('Reset Picture')!.parentElement!;
+    expect([...lead.children].map((child) => child === reset('Reset Picture') || child.contains(field('X (mm)')))).toEqual([true, true]);
+    act(() => reset('Reset Picture')!.click());
     expect(stepById(state().diagram!, 's1')!.place).toBeUndefined();
     show('s1');
-    expect(button('Reset Picture')?.disabled).toBe(true);
-    expect(button('Reset Layout')?.disabled).toBe(true);
+    expect(reset('Reset Picture')).toBeNull();
+    const held = field('X (mm)').closest('[data-field-value]')!.querySelector('[data-reset-slot]')!;
+    expect(held.nextElementSibling?.contains(field('X (mm)'))).toBe(true);
   });
 });
 
 describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.md`)', () => {
   const LONG = 'Valley fold the flaps inward. Note that the top of each crease does not line up with the top corner of the paper';
   const width = () => host!.querySelector<HTMLInputElement>('input[aria-label="Text width (mm)"]');
-  const reset = () => host!.querySelector<HTMLButtonElement>('button[aria-label="Reset Text width (mm) to default"]');
-  const button = (name: string) => [...host!.querySelectorAll<HTMLButtonElement>('button')].find((each) => each.textContent === name);
+  const reset = () => host!.querySelector<HTMLButtonElement>('button[aria-label="Reset Width to default"]');
+  /** The text's own reset, its offset and its width: on the Position row. */
+  const resetText = () => host!.querySelector<HTMLButtonElement>('button[aria-label="Reset Text"]');
   const type = (input: HTMLInputElement, value: string) => {
     const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
     act(() => {
@@ -190,7 +197,7 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
     expect(width()!.value).toBe('36');
     expect(host!.textContent).toContain('Auto: 36.0 mm');
     expect(reset()).toBeNull();
-    expect(button('Reset Text')?.disabled).toBe(true);
+    expect(resetText()).toBeNull();
     // Typed: pinned, and counted as the pane's; Reset Text now has something to take back.
     type(width()!, '62.5');
     expect(placeOf()).toEqual({ textWidth: 62.5 });
@@ -198,7 +205,7 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
     expect(width()!.value).toBe('62.5');
     expect(host!.textContent).toContain('Auto: 36.0 mm');
     expect(reset()).not.toBeNull();
-    expect(button('Reset Text')?.disabled).toBe(false);
+    expect(resetText()?.disabled).toBe(false);
     // Typed as the automatic width, the pin goes; so does its reset.
     type(width()!, '36');
     expect(placeOf()).toBeUndefined();
@@ -212,7 +219,7 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
     // Reset Text takes both.
     act(() => state().setDiagramStepPlace('s1', { textWidth: 50 }));
     show('s1');
-    act(() => button('Reset Text')!.click());
+    act(() => resetText()!.click());
     expect(placeOf()).toBeUndefined();
   });
 

@@ -1,0 +1,71 @@
+/* The Layers pane's two regions (DiagramLayersSplit.tsx): the list over the inspector, a separator between. */
+/* Positioned: the separator measures the list from here (`useLayersSplit`). */
+.split {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* As tall as its rows, up to half the pane, until the separator is dragged. */
+.list {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 50%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.list[data-alone] {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+.list[data-sized] {
+  flex: none;
+  max-height: none;
+}
+
+/* A rule with a grip on it: the whole band takes the drag. */
+.separator {
+  position: relative;
+  flex: none;
+  height: var(--space-2);
+  border-top: 1px solid var(--border-default);
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.separator::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border-default);
+  transform: translateX(-50%);
+}
+
+.separator:hover::after {
+  background: var(--text-tertiary);
+}
+
+.inspector {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (pointer: coarse) {
+  .separator {
+    height: var(--space-4);
+  }
+
+  .separator::after {
+    top: 6px;
+  }
+}
