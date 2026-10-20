@@ -19,7 +19,7 @@ import { foldPathMoves, type FoldPathMoves } from './foldSequencePath';
  *
  * - **One executor for the `fold` scope**, the panel's, which hands each id
  *   to the surfaces that answer Fold's keys — the step moves here, the tools
- *   and the playback with their own handlers ({@link registerFoldKeyHandler}).
+ *   with their own handler ({@link registerFoldKeyHandler}).
  *   A scope has one executor, so surfaces that each registered their own
  *   would take the keyboard from one another.
  * - **The `fold` viewport surface**, the Diagram's route: Escape runs one

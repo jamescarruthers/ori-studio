@@ -502,7 +502,6 @@
       "title": "Outils de pliage",
       "trigger": "Outils"
     },
-    "playStep": "Lire l’étape",
     "pleat": {
       "blocked": "Les deux plis doivent tenir dans le volet sélectionné sans déplacer le reste du papier. Vérifiez les lignes et les couches sélectionnées.",
       "intro": "Placez d’abord la ligne montagne, puis la ligne vallée, sur le modèle avant le pliage.",

@@ -5,8 +5,7 @@
  *
  * Shared by every surface that animates a fold. References' precrease flap
  * curls over a bend whose radius-zero case is exactly this hinge
- * (`cp-workspace/references/fold/foldSurface.ts`); the Fold workspace turns
- * whole groups of layers on it rigidly (`fold/animation/`).
+ * (`cp-workspace/references/fold/foldSurface.ts`).
  *
  * In the hinge's frame — `s` along the line, `u` across it into the moving
  * paper, `z` toward the reader — a point swung by `θ` goes to

@@ -1864,15 +1864,6 @@
       "startsOver_other": "Cambiar la forma empieza de nuevo: se borran los {{count}} pasos de la secuencia. Deshacer los recupera.",
       "width": "Ancho"
     },
-    "playback": {
-      "label": "Reproducción del paso",
-      "pause": "Pausa",
-      "percent": "{{value}}%",
-      "play": "Reproducir paso",
-      "replay": "Repetir paso",
-      "scrub": "Progreso del paso",
-      "stepForward": "Avanzar un poco"
-    },
     "repeat": {
       "advice": {
         "axis": "Prueba otro eje o pliega el otro lado con las herramientas.",

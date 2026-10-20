@@ -1864,15 +1864,6 @@
       "startsOver_other": "Mudar a forma recomeça do zero: os {{count}} passos da sequência são apagados. Desfazer os traz de volta.",
       "width": "Largura"
     },
-    "playback": {
-      "label": "Reprodução do passo",
-      "pause": "Pausar",
-      "percent": "{{value}}%",
-      "play": "Reproduzir passo",
-      "replay": "Repetir passo",
-      "scrub": "Progresso do passo",
-      "stepForward": "Avançar um pouco"
-    },
     "repeat": {
       "advice": {
         "axis": "Tente outro eixo ou dobre o outro lado com as ferramentas.",

@@ -4,7 +4,7 @@ import { trackFoldSpreadChanged, type FoldSpreadVia } from '../../analytics';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { shownFoldSequence } from '../../store/workspaceStore/foldState';
-import { foldEffectiveSpread, foldSpreadStarts, foldStateSpread, foldStepSpread } from '../document/foldStepSpread';
+import { foldEffectiveSpread, foldSpreadStarts, foldStepSpread } from '../document/foldStepSpread';
 import { foldStepTree, lockedIds } from '../document/foldStepTree';
 import {
   foldStepSpreadControls,
@@ -35,30 +35,6 @@ export function useFoldStepSpreadShown(stepId: string | null): LayerSpreadOption
     const shown = shownFoldSequence(state);
     return shown ? foldStepSpread(shown.document, stepId) : null;
   });
-}
-
-/** The spreads of the two states a step plays between, as the folded pane shows each at rest. */
-export interface FoldStepPlaySpreads {
-  /** Its parent's (`foldStateSpread(…, 'before')`): what a play starts from. */
-  before: LayerSpreadOptions | null;
-  /** Its own (`foldStateSpread(…, 'after')`): what a play lands on. */
-  after: LayerSpreadOptions | null;
-}
-
-/**
- * The spreads step `stepId` of the shown sequence plays between: its
- * parent's and its own. Null for the sheet, which plays nothing.
- */
-export function useFoldStepPlaySpreads(stepId: string | null): FoldStepPlaySpreads | null {
-  const before = useWorkspaceStore((state) => {
-    const shown = shownFoldSequence(state);
-    return shown && stepId !== null ? foldStateSpread(shown.document, stepId, 'before') : null;
-  });
-  const after = useWorkspaceStore((state) => {
-    const shown = shownFoldSequence(state);
-    return shown && stepId !== null ? foldStateSpread(shown.document, stepId, 'after') : null;
-  });
-  return useMemo(() => (stepId === null ? null : { before, after }), [stepId, before, after]);
 }
 
 /**

@@ -9,8 +9,7 @@
  *   (`FoldStepLanded`), tagged by its `family` ({@link FoldCompoundReport}),
  *   whether `step` landed it or its family's own call did. Every family's
  *   report carries what every compound fold did
- *   ({@link FoldCompoundReportBase}), its motion's legs among it, read
- *   through {@link stepMotionLegsOf}.
+ *   ({@link FoldCompoundReportBase}).
  * - **Before it lands** a tool asks one question of any family,
  *   `compoundAnalysis`, and gets its family's answer tagged by `family`
  *   ({@link FoldCompoundAnalysis}).
@@ -92,7 +91,7 @@ export function isFoldCompoundOp<O extends { readonly kind: string }>(
 
 /**
  * What every compound fold did (the engine's `CompoundReport`, flattened into
- * each family's report), and the legs its animation plays (plan D15).
+ * each family's report).
  */
 export interface FoldCompoundReportBase {
   /** The parent's faces that move. */
@@ -109,7 +108,7 @@ export interface FoldCompoundReportBase {
   reversed: number[];
   /** How many faces were split. */
   split: number;
-  /** What the animation plays: every compound fold's legs, one type. */
+  /** The engine's motion legs for the step, one type for every compound fold. Sent by the engine; nothing in the app plays them. */
   motion: FoldStepMotionLegs;
 }
 
@@ -131,11 +130,6 @@ export type FoldCompoundLanded<F extends FoldCompoundFamily = FoldCompoundFamily
 export type FoldCompoundFingerprinted<F extends FoldCompoundFamily = FoldCompoundFamily> = FoldStepFingerprinted & {
   compound: FoldCompoundReportOf<F>;
 };
-
-/** The legs a compound step's animation plays, whatever its family; null for no report. */
-export function stepMotionLegsOf(report: FoldCompoundReport | null | undefined): FoldStepMotionLegs | null {
-  return report?.motion ?? null;
-}
 
 /**
  * The line a compound fold folded along and the side that moved, in the

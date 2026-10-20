@@ -486,7 +486,6 @@
       "title": "Falt-Werkzeuge",
       "trigger": "Werkzeuge"
     },
-    "playStep": "Schritt abspielen",
     "pleat": {
       "blocked": "Beide Faltungen müssen in die ausgewählte Klappe passen, ohne anderes Papier zu bewegen. Prüfe die Linien und ausgewählten Lagen.",
       "intro": "Lege am noch ungefalteten Modell zuerst die Berglinie und dann die Tallinie fest.",

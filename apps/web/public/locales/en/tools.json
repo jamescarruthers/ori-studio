@@ -486,7 +486,6 @@
       "title": "Fold tools",
       "trigger": "Tools"
     },
-    "playStep": "Play Step",
     "pleat": {
       "blocked": "Both folds must fit within the selected flap without moving other paper. Check the lines and selected layers.",
       "intro": "Locate the mountain line first, then the valley line, on the model before it folds.",

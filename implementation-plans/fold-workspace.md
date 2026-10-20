@@ -818,6 +818,13 @@ The UI may auto-include or explain.
 
 ### D15 — Animation
 
+> **Removed before launch (owner, 2026-10-20):** the step animation did not
+> work right and is out of scope. The Fold canvas has no transport, no Space
+> to play, and no `fold step played` event; moving to another step shows it.
+> The References workspace keeps its own fold playback (`lib/foldMotion`).
+> The engine still reports compound folds' motion legs on the wire; nothing
+> plays them. What follows is the design as it was.
+
 - **A plain fold is two rigid groups.** Pose the `PaperScene` itself:
   - rotate the moving faces' rings about ℓ;
   - flip the side and **reverse the moving group's draw order** past edge-on
@@ -931,7 +938,6 @@ values; this table is the plan's summary of it.
 | Event | Properties |
 |---|---|
 | `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth\|top, via: axiom\|crease\|free}` (`top`, the default top flap kept, since 2026-10-13); a turn, a rotation or a vertex fold (`squash` to `swivel`) carries `op_kind` alone |
-| `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}`, and `op_kind: repeat` on a Repeat's refusal |
 | `fold unfold rebuilt` / `fold repeat rebuilt` | `{}`: a saved Unfold or Repeat updated in place, not a step added |
 | `fold spread changed` | `{action: spread_on\|spread_off\|spread_kind\|spread_amount\|spread_direction\|spread_keep\|spread_skew\|spread_axis, via: step_pane\|canvas_bar}`, plus the Diagram's bucketed spread properties when the layers stay spread |

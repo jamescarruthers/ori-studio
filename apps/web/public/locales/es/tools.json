@@ -502,7 +502,6 @@
       "title": "Herramientas de plegado",
       "trigger": "Herramientas"
     },
-    "playStep": "Reproducir paso",
     "pleat": {
       "blocked": "Ambos pliegues deben caber en la solapa seleccionada sin mover otro papel. Revisa las líneas y las capas seleccionadas.",
       "intro": "Sitúa primero la línea de montaña y luego la de valle sobre el modelo antes de plegarlo.",

@@ -50,7 +50,7 @@ export type ShortcutScope = ConditionalShortcutScope | (typeof CONTEXT_SHORTCUT_
  *   while a focused control uses the key — a tab strip its arrows, a button
  *   its Enter — instead of taking it away.
  * - `fold` — the Fold workspace, only in its own context, as the Diagram's:
- *   its steps' arrows, Space and Enter (`implementation-plans/fold-workspace.md`,
+ *   its steps' arrows, tool letters and Enter (`implementation-plans/fold-workspace.md`,
  *   D14) never stack with `crease-pattern`, and its executor declines while a
  *   focused control owns the key. Registered before its bindings, which land
  *   with the Fold panel ({@link FOLD_SHORTCUTS}).
@@ -236,9 +236,7 @@ export type FoldShortcutId =
   | 'fold.cycleExtent'
   | 'fold.previousCandidate'
   | 'fold.nextCandidate'
-  | 'fold.commit'
-  // Playback (D15): the step on screen played from its parent.
-  | 'fold.playStep';
+  | 'fold.commit';
 export type ShortcutActionId =
   | MenuActionId
   | OristudioCpActionId
@@ -821,7 +819,7 @@ function foldShortcut(id: FoldShortcutId, label: string, defaultChord: KeyChord 
  * pushed only in Fold's own context, so its letters never meet the
  * crease-pattern tools' bound to the same keys. The steps on ←/→ and `[`/`]`
  * as the Diagram's, the active step's branches on ↑/↓ as References' ways,
- * candidate roots on Shift+←/→, Space to play the step, Enter to commit.
+ * candidate roots on Shift+←/→, Enter to commit.
  * Escape stays `viewport.cancel`, through Fold's cancel ladder, as it is in
  * the Diagram. The steps' and branches' keys decline while a focused control
  * owns the arrows (`focusOwnsArrowKeys`), as the Diagram's do.
@@ -880,10 +878,6 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.nextCandidate', 'Next Root', { shift: true, key: 'arrowright' }),
   // Declines while a focused control owns Enter, as the Diagram's does.
   foldShortcut('fold.commit', 'Commit Fold', { key: 'enter' }),
-  // Space plays the step on screen (D15), as References' Play Fold: the two
-  // scopes are never in the stack together, and space-to-pan belongs to the
-  // crease-pattern scope, which Fold's context never stacks.
-  foldShortcut('fold.playStep', 'Play Step', { key: ' ' }),
 ];
 
 /**

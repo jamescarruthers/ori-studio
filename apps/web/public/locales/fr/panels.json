@@ -1864,15 +1864,6 @@
       "startsOver_other": "Changer de forme fait tout recommencer\u00a0: les {{count}} étapes de la séquence sont effacées. Annuler les rétablit.",
       "width": "Largeur"
     },
-    "playback": {
-      "label": "Lecture de l’étape",
-      "pause": "Pause",
-      "percent": "{{value}} %",
-      "play": "Lire l’étape",
-      "replay": "Rejouer l’étape",
-      "scrub": "Progression de l’étape",
-      "stepForward": "Avancer un peu"
-    },
     "repeat": {
       "advice": {
         "axis": "Essayez un autre axe, ou pliez l’autre côté avec les outils.",

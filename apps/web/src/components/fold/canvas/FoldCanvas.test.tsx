@@ -68,19 +68,6 @@ vi.mock("../../../fold/session/useFoldSession", () => ({
   useFoldStateQuery: () => null,
 }));
 
-/** What the canvas hands its playback, the real hook running under it. */
-const playbackInputs = vi.hoisted(() => [] as ({ reveal?: () => void } | null)[]);
-vi.mock("../../../fold/canvas/useFoldPanePlayback", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../fold/canvas/useFoldPanePlayback")>();
-  return {
-    ...actual,
-    useFoldPanePlayback: (...args: Parameters<typeof actual.useFoldPanePlayback>) => {
-      playbackInputs.push(args[0]);
-      return actual.useFoldPanePlayback(...args);
-    },
-  };
-});
-
 /** The model each render hands the tool window, the real window rendering it. */
 const toolWindowModels = vi.hoisted(() => [] as unknown[]);
 vi.mock("../FoldToolWindow", async (importOriginal) => {
@@ -97,7 +84,6 @@ import { isFoldAltLatched, resetFoldAltLatch, setFoldAltLatched } from "../../..
 import { foldPaneDisplay, resetFoldPaneDisplay } from "../../../fold/canvas/foldPaneDisplay";
 import { useFoldRepeatUi } from "../../../fold/repeat/foldRepeatUi";
 import { useFoldReturnUi } from "../../../fold/return/foldReturnUi";
-import { foldPhonePane, showFoldPhonePane } from "../../../fold/canvas/foldPhonePane";
 import { foldTools } from "../../../fold/tools/foldToolState";
 import {
   clearHeldModifiers,
@@ -105,7 +91,6 @@ import {
   syncHeldModifiersFromEvent,
 } from "../../../keyboard/heldModifiers";
 import { PHONE_MEDIA_QUERY } from "../../../platform/phoneLayout";
-import { byRole } from "../../../test/roleQueries";
 import { TooltipProvider } from "../../ui/Tooltip";
 import { FoldCanvas } from "./FoldCanvas";
 
@@ -194,7 +179,7 @@ describe("the Fold canvas", () => {
     const names = [...(bar?.querySelectorAll("button") ?? [])].map(
       (button) => button.getAttribute("aria-label") ?? button.textContent,
     );
-    // The tools, then the pane the switch shows next; the transport; the menu.
+    // The tools, then the pane the switch shows next; the menu.
     expect(names.slice(0, 2)).toEqual(["Tools", "Crease pattern"]);
     expect(names).not.toContain("Step creases");
     expect(names).not.toContain("Precreases");
@@ -244,14 +229,10 @@ describe("the Fold canvas", () => {
     }
   });
 
-  it("puts the step’s transport on the bar, waiting while the sheet has no step to play", () => {
+  it("puts no step transport on the bar: a step is shown, never played", () => {
     const canvas = mount();
-    const transport = byRole(canvas, "group", "Step playback");
-    expect(transport).toBeTruthy();
-    expect(
-      transport?.querySelector<HTMLButtonElement>('button[aria-label="Play step"]')
-        ?.disabled,
-    ).toBe(true);
+    expect(canvas.querySelector('[role="group"][aria-label="Step playback"]')).toBeNull();
+    expect(canvas.querySelector('button[aria-label="Play step"]')).toBeNull();
   });
 
   it("reads the keys held off every pointer event over a pane, so a modifier whose key-up was missed lets go", () => {
@@ -278,26 +259,6 @@ describe("the Fold canvas", () => {
     const canvas = mount();
     expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
     expect(canvas.querySelector("[data-viewport-status-readout]")).toBeNull();
-  });
-
-  it("turns a phone to the folded pane when the step is played, where its frames are drawn", () => {
-    vi.stubGlobal(
-      "matchMedia",
-      vi.fn((query: string) => ({
-        matches: query === PHONE_MEDIA_QUERY,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      })),
-    );
-    playbackInputs.length = 0;
-    showFoldPhonePane("crease-pattern");
-    const canvas = mount();
-    expect(canvas.querySelector('[data-fold-pane="folded"]')).toBeNull();
-    const reveal = playbackInputs.at(-1)?.reveal;
-    expect(reveal).toBeTypeOf("function");
-    act(() => reveal?.());
-    expect(foldPhonePane()).toBe("folded");
-    expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
   });
 
   it("gives the tool window up while Repeat's or Unfold to step's bar is open, on a phone and off one", () => {
@@ -339,11 +300,5 @@ describe("the Fold canvas", () => {
         useFoldReturnUi.setState({ opening: null });
       });
     }
-  });
-
-  it("brings no pane forward where both are on screen", () => {
-    playbackInputs.length = 0;
-    mount();
-    expect(playbackInputs.at(-1)?.reveal).toBeUndefined();
   });
 });

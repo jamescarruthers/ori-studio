@@ -1813,15 +1813,6 @@
       "startsOver_other": "Eine neue Form fängt von vorn an: Die {{count}} Schritte der Folge werden gelöscht. Rückgängig holt sie zurück.",
       "width": "Breite"
     },
-    "playback": {
-      "label": "Wiedergabe des Schritts",
-      "pause": "Pause",
-      "percent": "{{value}} %",
-      "play": "Schritt abspielen",
-      "replay": "Schritt erneut abspielen",
-      "scrub": "Fortschritt des Schritts",
-      "stepForward": "Ein Stück weiter"
-    },
     "repeat": {
       "advice": {
         "axis": "Versuche eine andere Achse oder falte die andere Seite mit den Werkzeugen.",

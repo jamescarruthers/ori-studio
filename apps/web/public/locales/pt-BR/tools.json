@@ -502,7 +502,6 @@
       "title": "Ferramentas de dobra",
       "trigger": "Ferramentas"
     },
-    "playStep": "Reproduzir passo",
     "pleat": {
       "blocked": "As duas dobras devem caber na aba selecionada sem mover outras partes do papel. Verifique as linhas e as camadas selecionadas.",
       "intro": "Localize primeiro a linha de montanha e depois a de vale no modelo antes de dobrá-lo.",

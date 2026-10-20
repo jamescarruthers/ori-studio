@@ -1813,15 +1813,6 @@
       "startsOver_other": "Changing the shape starts over: the sequence’s {{count}} steps are cleared. Undo brings them back.",
       "width": "Width"
     },
-    "playback": {
-      "label": "Step playback",
-      "pause": "Pause",
-      "percent": "{{value}}%",
-      "play": "Play step",
-      "replay": "Replay step",
-      "scrub": "Step progress",
-      "stepForward": "Step forward"
-    },
     "repeat": {
       "advice": {
         "axis": "Try another axis, or fold the other side with the tools.",
