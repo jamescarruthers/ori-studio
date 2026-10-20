@@ -18,7 +18,7 @@ import type { TFunction } from 'i18next';
 import { sendToEditPrimary, type SendToEditSurfaceSource } from '../designKinds/sendToEditActions';
 import type { TurnKind } from '../lib/steps/turn';
 import { turnName } from '../lib/steps/turnWords';
-import type { FoldPaperShapeKind } from './paperShape';
+import type { FoldPaperShapeKind } from './document/foldSequenceDocument';
 
 /** The plain fold tools: valley, mountain, and fold-and-unfold precrease. */
 export type FoldKind = 'valley' | 'mountain' | 'precrease';
@@ -260,7 +260,7 @@ function importBlock(t: TFunction, context: FoldActionContext): string | null {
   if (blocked) return blocked;
   // A crease pattern brings a square or rectangle sheet. An empty sequence
   // takes its shape; one already folding a polygon cannot (plan D16).
-  if (context.sheet === 'regular' && context.stepCount > 0) {
+  if (context.sheet === 'polygon' && context.stepCount > 0) {
     return t('panels:fold.actions.importPolygonHint', 'Import CP needs a square or rectangle sheet.');
   }
   return null;

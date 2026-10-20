@@ -77,9 +77,11 @@ export const FOLD_MODEL_LINE_MIN_NORMAL = 1e-6;
  *
  * - a rectangle's `aspect` is `[width, height]` normalised to longer side 1
  *   ({@link rectangleShape});
- * - a polygon is stored as its points in the unit frame — a regular polygon
- *   of 3 to 8 sides with its first vertex at −π/2 ({@link regularPolygonShape})
- *   — and its side count is derived from them.
+ * - a polygon is stored as its points in the unit frame — any convex outline
+ *   of 3 to 8 sides an Import starting sheet found (`io/foldStartingSheet.ts`),
+ *   or, in files from before it, a regular polygon with its first vertex at
+ *   −π/2 ({@link regularPolygonShape}) — and its side count is derived from
+ *   them.
  */
 export type FoldPaperShape =
   | { kind: 'square' }

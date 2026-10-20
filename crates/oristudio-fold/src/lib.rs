@@ -155,7 +155,7 @@ pub use fold::{
 };
 pub use import::{
     CreasePatternInput, ImportKind, ImportRefusal, ImportSegment, ImportSpace, ImportSummary,
-    ImportTarget, ImportedPattern,
+    ImportTarget, ImportedPattern, starting_sheet,
 };
 pub use isometry::Isometry;
 pub use landmarks::{

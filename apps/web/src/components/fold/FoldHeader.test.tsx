@@ -112,7 +112,7 @@ describe('FoldHeader', () => {
   });
 
   it('says why a verb cannot run', () => {
-    render({ context: { ...CONTEXT, path: 'broken', sheet: 'regular', stepCount: 2 } });
+    render({ context: { ...CONTEXT, path: 'broken', sheet: 'polygon', stepCount: 2 } });
     expect(button('Send to Edit')).toMatchObject({ disabled: true, title: 'A step on this path no longer folds.' });
     expect(button('Import CP…')).toMatchObject({ disabled: true, title: 'Import CP needs a square or rectangle sheet.' });
   });

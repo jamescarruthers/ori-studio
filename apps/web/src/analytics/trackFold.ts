@@ -1,4 +1,5 @@
 import type { LayerSpreadOptions } from '../cp-workspace/folded/foldedLayerSpread';
+import type { FoldCpOrigin } from '../fold/document/foldSequenceDocument';
 import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, FOLD_CHOICE_COUNT_BUCKETS } from './events';
 import type {
   DiagramStyleChoiceName,
@@ -87,10 +88,21 @@ export function trackFoldMarkAdded(divideMode: FoldMarkDivideMode): void {
 /**
  * The sheet a Fold sequence starts from changed in the Paper pane: which
  * setting, and the sheet after it — its shape by kind (never a size or a
- * side count) and the side that starts up.
+ * side count) and the side that starts up. A new shape comes from Import
+ * starting sheet, and says where its outline came from (`origin`, the closed
+ * enum `fold cp imported` names a pattern's by: a format or `project_cp`).
  */
-export function trackFoldSheetChanged(setting: FoldSheetSetting, sheet: { shape: FoldSheetShape; startSide: 'front' | 'back' }): void {
-  track(ANALYTICS_EVENTS.foldSheetChanged, { setting, sheet_shape: sheet.shape, start_side: sheet.startSide });
+export function trackFoldSheetChanged(
+  setting: FoldSheetSetting,
+  sheet: { shape: FoldSheetShape; startSide: 'front' | 'back' },
+  origin?: FoldCpOrigin
+): void {
+  track(ANALYTICS_EVENTS.foldSheetChanged, {
+    setting,
+    sheet_shape: sheet.shape,
+    start_side: sheet.startSide,
+    ...(origin ? { origin } : {}),
+  });
 }
 
 /**

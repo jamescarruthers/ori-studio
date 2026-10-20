@@ -11,10 +11,11 @@ import type { PaperExportTarget } from '../../paperExport/paperExportTarget';
 import { createFoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineIoCalls } from '../engine/foldEngineIoCalls';
 import { FOLD_SAMPLES } from '../engine/foldEngineIoSamples';
-import { withFoldCursor } from '../document/foldReaderState';
+import { initialFoldReaderState, withFoldCursor } from '../document/foldReaderState';
 import { updateFoldCollapse } from '../document/foldSequenceEdits';
 import { readFoldSequence, writeFoldSequence } from '../document/foldSequenceFile';
-import type { FoldSequenceDocument } from '../document/foldSequenceDocument';
+import { createFoldSequence, type FoldPaperShape, type FoldSequenceDocument } from '../document/foldSequenceDocument';
+import { createFoldStartingSheetFlow } from './foldStartingSheet';
 import { createFoldSession, type FoldSession } from '../session/foldSession';
 import { inProcessFoldRuntime, memoryFoldDocument, settle } from '../session/foldSession.fixtures';
 import { selectFoldCursorNode } from '../session/foldSessionState';
@@ -273,5 +274,50 @@ describe.skipIf(!available)('Import CP and the hand-offs over the built bridge',
     const state = await settled(flow);
     expect(state).toMatchObject({ phase: 'refused', refusal: { kind: 'engine' } });
     expect(source.commits).toEqual([]);
+  });
+});
+
+describe.skipIf(!available)('Import starting sheet over the built bridge', () => {
+  /** A FOLD file of `corners` as its border, with a crease across it no fold could make. */
+  const outline = (corners: [number, number][]) =>
+    JSON.stringify({
+      vertices_coords: [...corners, [0.1, 0.1], [0.2, 0.9]],
+      edges_vertices: [...corners.map((_, i) => [i, (i + 1) % corners.length]), [corners.length, corners.length + 1]],
+      edges_assignment: [...corners.map(() => 'B'), 'M'],
+    });
+
+  it('takes a hexagon’s outline as a sheet the engine then starts a sequence on', async () => {
+    const { session, source } = await setup();
+    const adopted: FoldPaperShape[] = [];
+    const flow = createFoldStartingSheetFlow({ session, adopt: (shape) => (adopted.push(shape), true) });
+    const h = Math.sqrt(3) / 2;
+    await flow.open({
+      kind: 'file',
+      name: 'hexagon.fold',
+      source: { format: 'fold', text: outline([[-1, 0], [-0.5, -h], [0.5, -h], [1, 0], [0.5, h], [-0.5, h]]) },
+    });
+    await settle();
+    expect(flow.store.getState()).toMatchObject({ phase: 'done', changed: true });
+    const [shape] = adopted;
+    expect(shape?.kind).toBe('polygon');
+    if (shape?.kind !== 'polygon') throw new Error('a polygon sheet');
+    expect(shape.points).toHaveLength(6);
+    // The sheet replays: a sequence on it lands its flat sheet.
+    const document = { ...createFoldSequence({ shape, startSide: 'front' }, 'Hexagon'), steps: [] };
+    source.set({ held: { document, readOnlyRaw: null }, reader: withFoldCursor(initialFoldReaderState(document.id), document, null) });
+    await settle(20);
+    expect(session.store.getState().sheet.status).toBe('ok');
+    flow.dispose();
+  });
+
+  it('refuses an L, which the engine folds no sheet of, before anything changes', async () => {
+    const { session } = await setup();
+    const adopt = vi.fn(() => true);
+    const flow = createFoldStartingSheetFlow({ session, adopt });
+    await flow.open({ kind: 'file', name: 'ell.fold', source: { format: 'fold', text: outline([[0, 0], [2, 0], [2, 1], [1, 1], [1, 2], [0, 2]]) } });
+    await settle();
+    expect(flow.store.getState()).toMatchObject({ phase: 'refused', refusal: { code: 'sheet_not_convex' } });
+    expect(adopt).not.toHaveBeenCalled();
+    flow.dispose();
   });
 });

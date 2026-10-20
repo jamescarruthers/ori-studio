@@ -187,10 +187,10 @@ describe('buildFoldActions', () => {
 
   it('imports a crease pattern into a square or rectangle, or an empty polygon sequence (plan D16)', () => {
     expect(command(buildFoldActions(at({ sheet: 'rectangle' }), deps()), 'import-cp').disabled).toBe(false);
-    expect(command(buildFoldActions(at({ sheet: 'regular', stepCount: 0 }), deps()), 'import-cp').disabled).toBe(
+    expect(command(buildFoldActions(at({ sheet: 'polygon', stepCount: 0 }), deps()), 'import-cp').disabled).toBe(
       false
     );
-    expect(command(buildFoldActions(at({ sheet: 'regular', stepCount: 1 }), deps()), 'import-cp')).toMatchObject({
+    expect(command(buildFoldActions(at({ sheet: 'polygon', stepCount: 1 }), deps()), 'import-cp')).toMatchObject({
       disabled: true,
       hint: 'Import CP needs a square or rectangle sheet.',
     });

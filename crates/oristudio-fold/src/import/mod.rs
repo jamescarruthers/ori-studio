@@ -398,6 +398,32 @@ pub struct ImportedPattern {
     summary: ImportSummary,
 }
 
+/// The sheet a crease pattern's border outlines, for a sequence to start
+/// from ("Import starting sheet"): a square, a rectangle, or any other outline
+/// as a polygon in the unit sheet frame, validated as a sheet the engine
+/// folds — convex, no side shorter than the minimum feature
+/// ([`Sheet::new`]). Only the border is read; the creases are left alone,
+/// so a pattern that does not fold flat still gives its sheet.
+pub fn starting_sheet(
+    input: &CreasePatternInput,
+) -> Result<Result<SheetShape, FoldRefusal>, ImportRefusal> {
+    if let Some(segment) = input
+        .segments
+        .iter()
+        .position(|s| s.from.iter().chain(&s.to).any(|c| !c.is_finite()))
+    {
+        return Err(ImportRefusal::NotFinite { segment });
+    }
+    let shape = placement::starting_sheet(input)?;
+    Ok(Sheet::new(&shape).map(|sheet| match shape {
+        // As the sheet stores it: counter-clockwise.
+        SheetShape::Polygon { .. } => SheetShape::Polygon {
+            points: sheet.outline().to_vec(),
+        },
+        other => other,
+    }))
+}
+
 impl ImportedPattern {
     /// Recover the sheet, build the faces and derive everything but the
     /// order.

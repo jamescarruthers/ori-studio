@@ -40,7 +40,6 @@ import { FOLD_IO_ACTION_DEPS } from '../io/foldIoActions';
 import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionSnapshot } from '../session/foldSessionState';
 import { foldTools } from '../tools/foldToolState';
 import { rotationBucket } from '../tools/rotate/rotateTool';
-import { paneShapeOf } from './foldPaperShapes';
 import { setFoldView } from './foldViewMode';
 import { cursorIndex, foldPathEntries, followerCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
 
@@ -106,7 +105,7 @@ export function foldActionContext(
     atTip: at === entries.length - 1,
     readOnly,
     foldKind,
-    sheet: paneShapeOf(document.paper.shape).shape,
+    sheet: document.paper.shape.kind,
     stepCount: document.steps.length,
   };
 }

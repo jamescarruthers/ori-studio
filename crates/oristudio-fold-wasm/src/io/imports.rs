@@ -23,7 +23,7 @@ use super::jump;
 use super::kernel::{cp_json, input_of_cp_json, load};
 use super::wire::{
     AdoptedPaper, ComponentCount, CpFile, CpJump, CpOrigin, IoCallError, IoRefusal, JumpOp, Landed,
-    Limits, Opened, Target,
+    Limits, Opened, SheetFound, Target,
 };
 use crate::bridge::Bridge;
 use crate::wire::{Choices, Op, Outcome, Paper};
@@ -255,6 +255,24 @@ impl Imports {
         }
         self.held.insert(self.last, held);
         self.last
+    }
+}
+
+/// "Import starting sheet": the sheet the border of the crease pattern in
+/// `bytes` outlines, for a sequence to start from — read as an import reads
+/// it (the stored text, read back), but only its border: a pattern that does
+/// not fold flat, or has too many faces, still gives its sheet. Refused with
+/// the import's own codes for a file or a border that does not read, and the
+/// sheet's (`sheet_not_convex`, …) for an outline the engine does not fold.
+pub fn starting_sheet(file: CpFile, bytes: &[u8]) -> Outcome<SheetFound> {
+    let found = (|| -> Result<_, IoRefusal> {
+        let input = input_of_cp_json(&cp_json(&load(file.format, bytes)?)?)?;
+        Ok(oristudio_fold::starting_sheet(&input)?)
+    })();
+    match found {
+        Ok(Ok(sheet)) => Outcome::Ok(SheetFound { sheet }),
+        Ok(Err(refusal)) => Outcome::Refused(refusal.into()),
+        Err(refusal) => Outcome::Refused(refusal.into()),
     }
 }
 

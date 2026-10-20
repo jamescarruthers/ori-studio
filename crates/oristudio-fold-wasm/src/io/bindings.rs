@@ -9,6 +9,10 @@
 //!   import_cp(file: { format: 'cp' | 'fold' | 'ori' | 'orh'; sample?: boolean },
 //!     bytes: Uint8Array, target: ImportTarget, limits?: ImportLimits):
 //!     Outcome<ImportOpened>;
+//!   /** Import starting sheet: the sheet the pattern's border outlines
+//!    *  (square, rectangle or polygon); only the border is read. */
+//!   import_sheet(file: { format: 'cp' | 'fold' | 'ori' | 'orh' }, bytes: Uint8Array):
+//!     Outcome<{ sheet: SheetShape }>;
 //!   /** Land one listed order per component as a step: its state and op. */
 //!   import_pick(import: number, choice: Uint32Array): Outcome<ImportLanded>;
 //!   /** Start from Edit's folded figure: the kernel's folded paper scene. */
@@ -30,6 +34,7 @@ use wasm_bindgen::prelude::*;
 
 use super::export::{export_fold, send_to_edit};
 use super::figure::import_figure;
+use super::imports::starting_sheet;
 use super::wire::{CpFile, IoCallError, Limits, Target};
 use crate::{FoldEngine, js_error, parse, to_js_value};
 
@@ -53,6 +58,14 @@ impl FoldEngine {
             .open(&self.inner, file, bytes, target, &limits)
             .map_err(thrown)?;
         to_js_value(&opened)
+    }
+
+    /// Import starting sheet: the sheet the border of the crease pattern in
+    /// `bytes` outlines, for a sequence to start from. Only the border is
+    /// read; nothing is held.
+    pub fn import_sheet(&self, file: JsValue, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        let file: CpFile = parse("file", file)?;
+        to_js_value(&starting_sheet(file, bytes))
     }
 
     /// Land the order `choice` picks, one listed order per component.

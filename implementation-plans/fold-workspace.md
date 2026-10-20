@@ -396,11 +396,22 @@ FoldSequenceDocument { formatVersion: 1, id: 'fold-<uuid>', title,
 - **Shapes:**
   - rectangle `aspect` is normalised to longer side 1 (the design's presets
     1:√2, 3:4, 2:1, and custom w:h with both positive);
-  - a polygon is stored as points (regular, 3–8 sides, first vertex at −π/2);
+  - a polygon is stored as points (convex, 3–8 sides; the regular ones the
+    Paper pane used to offer start at −π/2);
   - the side count is derived from the points.
 - **Changing the shape** of a sequence with steps replaces `paper.shape` and
   empties `steps`, as one undoable edit. It never appends a hidden sequence.
   Whether it asks first is a UI call.
+- **Since 2026-10-20 the shape is changed only by Import starting sheet…**
+  (the Paper pane's Square / Rectangle / Regular polygon choices are gone; the
+  owner: "you can't edit the polygon or anything"). It opens the Import CP
+  dialog in a sheet mode that reads only the pattern's border loop
+  (`oristudio_fold::starting_sheet`, `import_sheet` over the bridge): a
+  rectangle becomes `square`/`rectangle`, any other convex outline of 3–8
+  sides a `polygon`; the creases are ignored, and a non-convex outline, a side
+  too short to tell its corners apart, or more than 8 sides is refused in the
+  dialog before anything is committed. Files with the old regular polygons
+  read unchanged.
 - **Lenient reading for a tree:**
   - a node with a malformed structure (id or parent) is dropped with its
     subtree;
@@ -956,7 +967,7 @@ values; this table is the plan's summary of it.
 | `fold order resolved` | `{result: accepted\|cancelled, source: tool\|cp, count_bucket}` |
 | `fold free line snapping changed` | `{state: on\|off}` |
 | `fold mark added` | `{divide_mode: count\|ratio}`: the Divide line |
-| `fold sheet changed` | `{setting: shape\|start_side, sheet_shape: square\|rectangle\|polygon, start_side: front\|back}` |
+| `fold sheet changed` | `{setting: shape\|start_side, sheet_shape: square\|rectangle\|polygon, start_side: front\|back, origin?}` (`origin`, D16's enum, on a shape from Import starting sheet; since 2026-10-20) |
 | `fold view switched` | `{view: fold\|steps}` |
 | `fold sequence sent to edit` | `{}` (`variant` dropped 2026-10-12) |
 | `fold cp imported` | `{origin, action: insert\|update}` (D16's enum, plus `project_cp`) |

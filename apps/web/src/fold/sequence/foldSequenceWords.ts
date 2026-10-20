@@ -10,8 +10,54 @@
  * extractor sees them. Pure.
  */
 import type { TFunction } from 'i18next';
-import type { FoldPaper } from '../document/foldSequenceDocument';
+import type { FoldPaper, FoldPaperShape, SheetPoint } from '../document/foldSequenceDocument';
 import type { FoldEntryStatus } from './foldSequencePath';
+
+/**
+ * Whether a polygon sheet is a regular one: every side the same length and
+ * every corner the same distance from its middle, within a millionth of the
+ * sheet. The Paper tab made only regular ones; an imported outline may be any.
+ */
+export function isRegularSheet(points: readonly SheetPoint[]): boolean {
+  const n = points.length;
+  if (n < 3) return false;
+  const cx = points.reduce((sum, [x]) => sum + x, 0) / n;
+  const cy = points.reduce((sum, [, y]) => sum + y, 0) / n;
+  const sides = points.map(([x, y], i) => {
+    const [nx, ny] = points[(i + 1) % n]!;
+    return Math.hypot(nx - x, ny - y);
+  });
+  const radii = points.map(([x, y]) => Math.hypot(x - cx, y - cy));
+  const near = (values: number[]) => Math.max(...values) - Math.min(...values) <= 1e-6;
+  return near(sides) && near(radii);
+}
+
+/** The sheet's shape in a few words, as the Paper tab shows it: "Square", "Rectangle, 1 : 1.414", "Hexagon"… */
+export function sheetShapeName(t: TFunction, shape: FoldPaperShape): string {
+  switch (shape.kind) {
+    case 'square':
+      return t('panels:fold.paper.sheetSquare', 'Square');
+    case 'rectangle': {
+      const [width, height] = shape.aspect;
+      const ratio = Math.round((Math.max(width, height) / Math.min(width, height)) * 1000) / 1000;
+      return t('panels:fold.paper.sheetRectangle', 'Rectangle, 1 : {{ratio}}', { ratio });
+    }
+    case 'polygon': {
+      const count = shape.points.length;
+      return isRegularSheet(shape.points)
+        ? t('panels:fold.paper.sheetRegular', {
+            count,
+            defaultValue_one: 'Regular polygon, {{count}} side',
+            defaultValue_other: 'Regular polygon, {{count}} sides',
+          })
+        : t('panels:fold.paper.sheetPolygon', {
+            count,
+            defaultValue_one: 'Polygon, {{count}} side',
+            defaultValue_other: 'Polygon, {{count}} sides',
+          });
+    }
+  }
+}
 
 /** "Start with a square, front side up." */
 export function sheetSentence(t: TFunction, paper: FoldPaper): string {
@@ -27,6 +73,20 @@ export function sheetSentence(t: TFunction, paper: FoldPaper): string {
         : t('panels:fold.sequence.sheetRectangleFront', 'Start with a rectangle, front side up.');
     case 'polygon': {
       const count = paper.shape.points.length;
+      // An imported outline need not be regular: said as the polygon it is.
+      if (!isRegularSheet(paper.shape.points)) {
+        return back
+          ? t('panels:fold.sequence.sheetIrregularBack', {
+              count,
+              defaultValue_one: 'Start with a polygon of {{count}} side, back side up.',
+              defaultValue_other: 'Start with a polygon of {{count}} sides, back side up.',
+            })
+          : t('panels:fold.sequence.sheetIrregularFront', {
+              count,
+              defaultValue_one: 'Start with a polygon of {{count}} side, front side up.',
+              defaultValue_other: 'Start with a polygon of {{count}} sides, front side up.',
+            });
+      }
       return back
         ? t('panels:fold.sequence.sheetPolygonBack', {
             count,

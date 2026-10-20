@@ -8,10 +8,11 @@ import { useFoldSessionState } from '../../../fold/session/useFoldSession';
 import type { FoldSessionSnapshot } from '../../../fold/session/foldSessionState';
 import type { FoldImportFlowState, FoldImportRequest } from '../../../fold/io/foldImportFlow';
 import { foldImportFileSource, foldImportFormatOf } from '../../../fold/io/foldImportFiles';
-import { foldImportNotice } from '../../../fold/io/foldImportRefusal';
+import { foldImportNotice, type FoldImportNoticeModel } from '../../../fold/io/foldImportRefusal';
 import { foldStepIsNumbered } from '../../../fold/io/foldStepPages';
 import { useFoldImportUiStore, type FoldImportOpening } from '../../../fold/io/foldImportUiStore';
 import { useFoldImportFlow } from '../../../fold/io/useFoldImport';
+import { useFoldStartingSheetFlow } from '../../../fold/io/useFoldStartingSheet';
 import { IconButton } from '../../ui/IconButton';
 import { useModalDialog } from '../../ui/useModalDialog';
 import { FoldRefusalNotice } from '../FoldRefusalNotice';
@@ -20,13 +21,19 @@ import styles from './FoldImportDialog.module.css';
 
 /**
  * Import CP's dialog (plan D16), mounted at the app root while Fold is the
- * workspace on screen and the store says it is open (`foldImportUiStore`).
+ * workspace on screen and the store says it is open (`foldImportUiStore`):
+ * a pattern as a step, or — opened from the Paper tab — only its outline, as
+ * the sheet the sequence starts from.
  */
 export function FoldImportModal() {
   const opening = useFoldImportUiStore((store) => store.opening);
   const shown = useLayoutStore((store) => store.activeWorkspace === 'fold');
   if (!opening || !shown) return null;
-  return <FoldImportDialog key={opening.id} opening={opening} />;
+  return opening.mode === 'sheet' ? (
+    <FoldStartingSheetDialog key={opening.id} opening={opening} />
+  ) : (
+    <FoldImportDialog key={opening.id} opening={opening} />
+  );
 }
 
 /** A file read off a pick or a drop, as the flow imports it. */
@@ -103,22 +110,145 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
   const { t } = useTranslation();
   const close = useFoldImportUiStore((store) => store.close);
   const { flow, state } = useFoldImportFlow(opening.request);
-  const { rootRef, documentRef, keepFocus } = useModalDialog(close, opening.returnFocus);
   const sequence = useFoldSessionState((snapshot) => snapshot.sequence);
   const cursor = useFoldSessionState((snapshot) => snapshot.cursor);
   const activePath = useFoldSessionState((snapshot) => snapshot.activePath);
-  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     if (state.phase === 'done') close();
   }, [state.phase, close]);
 
+  const request = state.phase === 'idle' ? opening.request : state.request;
+  const projectCp = request?.kind === 'project-cp';
+  const updating = projectCp && !!request.stepId;
+  const title = updating
+    ? t('dialogs:foldImport.updateTitle', 'Update from CP')
+    : projectCp ? t('dialogs:foldImport.collapseTitle', 'Collapse from CP')
+      : t('dialogs:foldImport.title', 'Import crease pattern');
+  const verbs = { searchLonger: () => void flow?.searchLonger() };
+  const notice =
+    state.phase === 'refused'
+      ? foldImportNotice(t, state.refusal, verbs)
+      : state.phase === 'failed'
+        ? // A failure is no refusal the user can act on: said plainly, reported by the flow's hook.
+          foldImportNotice(t, { kind: 'engine', refused: { refusal: { code: 'import_internal' } } }, verbs)
+        : null;
+
+  const shownNotice = notice && state.phase === 'refused' && state.searchLimited
+    ? { ...notice, actions: notice.actions.filter((action) => action.id !== 'search-longer') }
+    : notice;
+  if (state.phase === 'choosing') return null;
+
+  return (
+    <ImportDialogFrame
+      title={title}
+      opening={opening}
+      onClose={close}
+      onRequest={(next) => void flow?.open(next)}
+      busy={state.phase === 'working'}
+      offerFigure
+      status={state.phase === 'working' ? workingLabel(t, state) : null}
+      notice={shownNotice}
+      footer={
+        state.phase !== 'idle' && state.request.kind === 'project-cp' && state.request.stepId
+          ? t('dialogs:foldImport.placement.update', 'Updates this Collapse step. Later steps and branches are kept and replayed; affected folds are marked Changed or Broken.')
+          : placement(t, { sequence, cursor, activePath })
+      }
+    />
+  );
+}
+
+/**
+ * Import starting sheet, the dialog in its sheet mode (`foldStartingSheet`):
+ * a file or a linked Edit pattern, of which only the outline is taken, as
+ * the sheet the sequence starts from — starting it over, which the foot says
+ * beforehand. Edit's folded figure is no sheet and is not offered. It closes
+ * itself once the sheet is the sequence's.
+ */
+function FoldStartingSheetDialog({ opening }: { opening: FoldImportOpening }) {
+  const { t } = useTranslation();
+  const close = useFoldImportUiStore((store) => store.close);
+  const { flow, state } = useFoldStartingSheetFlow();
+  const steps = useFoldSessionState((snapshot) => snapshot.sequence?.steps.length ?? 0);
+
+  useEffect(() => {
+    if (state.phase === 'done') close();
+  }, [state.phase, close]);
+
+  const title = t('dialogs:foldImport.sheetTitle', 'Import starting sheet');
+  const verbs = { searchLonger: () => undefined };
+  const notice =
+    state.phase === 'refused'
+      ? foldImportNotice(t, state.refusal, verbs)
+      : state.phase === 'failed'
+        ? foldImportNotice(t, { kind: 'engine', refused: { refusal: { code: 'import_internal' } } }, verbs)
+        : null;
+  const outline = t(
+    'dialogs:foldImport.placement.sheet',
+    'Takes the pattern’s outline as the sheet the sequence starts from: any convex shape of 3 to 8 sides. Its creases are not imported; use Import CP to fold from them.'
+  );
+  const startsOver =
+    steps > 0
+      ? ` ${t('dialogs:foldImport.placement.sheetStartsOver', {
+          count: steps,
+          defaultValue_one: 'The sequence starts over: its {{count}} step is cleared. Undo brings it back.',
+          defaultValue_other: 'The sequence starts over: its {{count}} steps are cleared. Undo brings them back.',
+        })}`
+      : '';
+
+  return (
+    <ImportDialogFrame
+      title={title}
+      opening={opening}
+      onClose={close}
+      onRequest={(next) => void flow?.open(next)}
+      busy={state.phase === 'working'}
+      offerFigure={false}
+      status={state.phase === 'working' ? t('dialogs:foldImport.working.sheet', 'Reading the sheet…') : null}
+      notice={notice}
+      footer={`${outline}${startsOver}`}
+    />
+  );
+}
+
+/**
+ * The dialog's frame, both modes': a modal over Fold with a title bar, the
+ * picker, the status and a refusal's notice, and a foot that says what the
+ * import does. A file dropped anywhere on it is imported. A shortcut barrier
+ * (`useModalDialog`): Escape, the close button and a press on the backdrop
+ * close it.
+ */
+function ImportDialogFrame({
+  title,
+  opening,
+  onClose,
+  onRequest,
+  busy,
+  offerFigure,
+  status,
+  notice,
+  footer,
+}: {
+  title: string;
+  opening: FoldImportOpening;
+  onClose: () => void;
+  onRequest: (request: FoldImportRequest) => void;
+  busy: boolean;
+  /** Offer Edit's folded figure: a step can start from it, a sheet cannot. */
+  offerFigure: boolean;
+  status: string | null;
+  notice: FoldImportNoticeModel | null;
+  footer: string;
+}) {
+  const { t } = useTranslation();
+  const { rootRef, documentRef, keepFocus } = useModalDialog(onClose, opening.returnFocus);
+  const [dragging, setDragging] = useState(false);
+
   const importFile = useCallback(
     async (file: File) => {
-      const request = await fileRequest(file);
-      void flow?.open(request);
+      onRequest(await fileRequest(file));
     },
-    [flow]
+    [onRequest]
   );
 
   // A file dropped anywhere on the dialog is imported: the dialog covers the
@@ -144,27 +274,6 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
     void importFile(file);
   };
 
-  const request = state.phase === 'idle' ? opening.request : state.request;
-  const projectCp = request?.kind === 'project-cp';
-  const updating = projectCp && !!request.stepId;
-  const title = updating
-    ? t('dialogs:foldImport.updateTitle', 'Update from CP')
-    : projectCp ? t('dialogs:foldImport.collapseTitle', 'Collapse from CP')
-      : t('dialogs:foldImport.title', 'Import crease pattern');
-  const verbs = { searchLonger: () => void flow?.searchLonger() };
-  const notice =
-    state.phase === 'refused'
-      ? foldImportNotice(t, state.refusal, verbs)
-      : state.phase === 'failed'
-        ? // A failure is no refusal the user can act on: said plainly, reported by the flow's hook.
-          foldImportNotice(t, { kind: 'engine', refused: { refusal: { code: 'import_internal' } } }, verbs)
-        : null;
-
-  const shownNotice = notice && state.phase === 'refused' && state.searchLimited
-    ? { ...notice, actions: notice.actions.filter((action) => action.id !== 'search-longer') }
-    : notice;
-  if (state.phase === 'choosing') return null;
-
   return (
     <div
       ref={rootRef}
@@ -173,7 +282,7 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
       aria-label={title}
       data-shortcut-barrier=""
       className={styles.backdrop}
-      onMouseDown={close}
+      onMouseDown={onClose}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -188,22 +297,19 @@ function FoldImportDialog({ opening }: { opening: FoldImportOpening }) {
       >
         <div className={styles.bar}>
           <span className={styles.title}>{title}</span>
-          <IconButton size="sm" aria-label={t('dialogs:common.closeNamed', 'Close {{name}}', { name: title })} onClick={close}>
+          <IconButton size="sm" aria-label={t('dialogs:common.closeNamed', 'Close {{name}}', { name: title })} onClick={onClose}>
             <X size={15} />
           </IconButton>
         </div>
         <div className={styles.body}>
-          <FoldImportPicker dragging={dragging} busy={state.phase === 'working'} onRequest={(request) => void flow?.open(request)} />
+          <FoldImportPicker dragging={dragging} busy={busy} offerFigure={offerFigure} onRequest={onRequest} />
           <div className={styles.status} role="status">
-            {state.phase === 'working' ? workingLabel(t, state) : null}
+            {status}
           </div>
-          {shownNotice && <FoldRefusalNotice notice={shownNotice} />}
+          {notice && <FoldRefusalNotice notice={notice} />}
         </div>
         <div className={styles.footer}>
-          <p className={styles.placement}>{state.phase !== 'idle' && state.request.kind === 'project-cp' && state.request.stepId
-            ? t('dialogs:foldImport.placement.update', 'Updates this Collapse step. Later steps and branches are kept and replayed; affected folds are marked Changed or Broken.')
-            : placement(t, { sequence, cursor, activePath })}</p>
-
+          <p className={styles.placement}>{footer}</p>
         </div>
       </div>
     </div>

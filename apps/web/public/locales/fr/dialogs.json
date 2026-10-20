@@ -345,6 +345,10 @@
       "afterStep": "Ajoute une étape après l’étape {{number}}, son état plié calculé à partir des plis.",
       "branch": "Elle commence une nouvelle branche.",
       "empty": "Commence la séquence sur la feuille du patron de plis, pliée selon ses plis. Utilisez-le quand un état ne peut pas être atteint pli après pli.",
+      "sheet": "Prend le contour du motif comme feuille de départ de la séquence : toute forme convexe de 3 à 8 côtés. Ses plis ne sont pas importés ; utilisez Importer un CP pour plier à partir d’eux.",
+      "sheetStartsOver_one": "La séquence recommence : son {{count}} pas est effacé. Annuler le rétablit.",
+      "sheetStartsOver_many": "La séquence recommence : ses {{count}} pas sont effacés. Annuler les rétablit.",
+      "sheetStartsOver_other": "La séquence recommence : ses {{count}} pas sont effacés. Annuler les rétablit.",
       "update": "Met à jour cette étape de mise en forme. Les étapes suivantes et les branches sont conservées et recalculées ; les plis concernés sont signalés comme modifiés ou impossibles à plier.",
       "why": "Utilisez-le quand l’état suivant ne peut pas être atteint pli après pli."
     },
@@ -418,6 +422,20 @@
         "text": "Les patrons de plis s’importent sur une feuille carrée ou rectangulaire. La feuille de celui-ci a une autre forme.",
         "title": "Feuilles carrées et rectangulaires uniquement"
       },
+      "sheetNotConvex": {
+        "text": "Le contour du motif a un coin qui pointe vers l’intérieur du papier. Plier part de feuilles dont tous les coins pointent vers l’extérieur : un carré, un rectangle, un polygone régulier ou toute autre forme convexe.",
+        "title": "La feuille rentre vers l’intérieur"
+      },
+      "sheetSides": {
+        "text_one": "Plier part de feuilles de 3 à 8 côtés. Ce contour a {{count}} côté.",
+        "text_many": "Plier part de feuilles de 3 à 8 côtés. Ce contour a {{count}} côtés.",
+        "text_other": "Plier part de feuilles de 3 à 8 côtés. Ce contour a {{count}} côtés.",
+        "title": "Feuilles de 3 à 8 côtés seulement"
+      },
+      "sheetSideShort": {
+        "text": "Un côté du contour du motif est trop court pour que Plier en distingue les coins. Redressez-le ou supprimez-le, puis importez de nouveau la feuille.",
+        "title": "Un côté trop court pour plier"
+      },
       "unreadable": {
         "text": "Le fichier n’a pas pu être lu comme un patron de plis {{extension}}.",
         "title": "Pas un patron de plis"
@@ -436,13 +454,15 @@
       "preliminaryBase": "Base carrée",
       "waterbombBase": "Base de la bombe à eau"
     },
+    "sheetTitle": "Importer une feuille de départ",
     "title": "Importer un patron de plis",
     "updateTitle": "Mettre à jour depuis le CP",
     "working": {
       "figure": "Import du modèle plié d’Édition…",
       "file": "Import de {{name}}…",
       "projectCp": "Résolution du canevas de plis du projet…",
-      "sample": "Import de l’exemple…"
+      "sample": "Import de l’exemple…",
+      "sheet": "Lecture de la feuille…"
     }
   },
   "foldWarning": {

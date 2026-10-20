@@ -345,6 +345,10 @@
       "afterStep": "Adiciona um passo depois do passo {{number}}, com o estado dobrado calculado a partir dos vincos.",
       "branch": "Ele começa um novo ramo.",
       "empty": "Começa a sequência na folha do padrão de vincos, dobrada pelos seus vincos. Use quando um estado não puder ser alcançado uma dobra de cada vez.",
+      "sheet": "Usa o contorno do padrão como a folha com que a sequência começa: qualquer forma convexa de 3 a 8 lados. Seus vincos não são importados; use Importar CP para dobrar a partir deles.",
+      "sheetStartsOver_one": "A sequência recomeça: seu {{count}} passo é apagado. Desfazer o traz de volta.",
+      "sheetStartsOver_many": "A sequência recomeça: seus {{count}} passos são apagados. Desfazer os traz de volta.",
+      "sheetStartsOver_other": "A sequência recomeça: seus {{count}} passos são apagados. Desfazer os traz de volta.",
       "update": "Atualiza este passo de colapso. Os passos seguintes e as ramificações são mantidos e recalculados; as dobras afetadas são marcadas como alteradas ou impossíveis de dobrar.",
       "why": "Use quando o próximo estado não puder ser alcançado uma dobra de cada vez."
     },
@@ -418,6 +422,20 @@
         "text": "São importados padrões de vincos em folhas quadradas ou retangulares. A folha deste tem outro formato.",
         "title": "Somente folhas quadradas e retangulares"
       },
+      "sheetNotConvex": {
+        "text": "O contorno do padrão tem um canto que aponta para dentro do papel. Dobrar começa com folhas cujos cantos apontam todos para fora: um quadrado, um retângulo, um polígono regular ou qualquer outra forma convexa.",
+        "title": "A folha se curva para dentro"
+      },
+      "sheetSides": {
+        "text_one": "Dobrar começa com folhas de 3 a 8 lados. Este contorno tem {{count}} lado.",
+        "text_many": "Dobrar começa com folhas de 3 a 8 lados. Este contorno tem {{count}} lados.",
+        "text_other": "Dobrar começa com folhas de 3 a 8 lados. Este contorno tem {{count}} lados.",
+        "title": "Apenas folhas de 3 a 8 lados"
+      },
+      "sheetSideShort": {
+        "text": "Um lado do contorno do padrão é curto demais para Dobrar distinguir seus cantos. Endireite-o ou remova-o e importe a folha de novo.",
+        "title": "Um lado curto demais para dobrar"
+      },
       "unreadable": {
         "text": "Não foi possível ler o arquivo como um padrão de vincos {{extension}}.",
         "title": "Não é um padrão de vincos"
@@ -436,13 +454,15 @@
       "preliminaryBase": "Base quadrada",
       "waterbombBase": "Base da bomba d’água"
     },
+    "sheetTitle": "Importar folha inicial",
     "title": "Importar padrão de vincos",
     "updateTitle": "Atualizar a partir do CP",
     "working": {
       "figure": "Importando o modelo dobrado da Edição…",
       "file": "Importando {{name}}…",
       "projectCp": "Resolvendo o padrão de dobras do projeto…",
-      "sample": "Importando o exemplo…"
+      "sample": "Importando o exemplo…",
+      "sheet": "Lendo a folha…"
     }
   },
   "foldWarning": {

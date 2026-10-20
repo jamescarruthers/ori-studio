@@ -142,6 +142,14 @@ impl Limits {
 // ---------------------------------------------------------------------------
 // Outputs
 
+/// "Import starting sheet"'s answer: the sheet a crease pattern's border
+/// outlines, as a sequence's paper names it — a square, a rectangle, or a
+/// polygon counter-clockwise in the unit sheet frame.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SheetFound {
+    pub sheet: SheetShape,
+}
+
 /// A crease pattern imported and its orders completed, held until an order
 /// is picked ([`crate::io::Imports::pick`]).
 #[derive(Debug, Clone, PartialEq, Serialize)]

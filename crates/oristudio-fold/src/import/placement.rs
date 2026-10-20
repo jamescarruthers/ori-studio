@@ -47,12 +47,9 @@ pub(super) struct Recovered {
     pub(super) shape: SheetShape,
 }
 
-/// Recover the sheet from the border, and match it against `sequence`'s
-/// sheet, or adopt it when there is none.
-pub(super) fn recover(
-    input: &CreasePatternInput,
-    sequence: Option<&Sheet>,
-) -> Result<Recovered, ImportRefusal> {
+/// The input's border segments chained into loops, in model space (y-down,
+/// as the outline code reads it): what a sheet is found from.
+fn border_loops(input: &CreasePatternInput) -> Result<Vec<outline::BorderLoop>, ImportRefusal> {
     let flip_y = input.space == ImportSpace::Sheet;
     let to_model = |p: Point| if flip_y { [p[0], -p[1]] } else { p };
     let segments: Vec<[f64; 4]> = input
@@ -82,7 +79,67 @@ pub(super) fn recover(
     if !(scale.is_finite() && scale > 0.0) {
         return Err(ImportRefusal::NoBorder);
     }
-    let loops = outline::detect_border_loops(&segments, &border, scale).loops;
+    Ok(outline::detect_border_loops(&segments, &border, scale).loops)
+}
+
+/// The sheet a pattern's border outlines, whatever its shape, as a sequence
+/// would start from it: a square or a rectangle in the frame the outline
+/// code chooses for a rectangular loop (as an import into an empty sequence
+/// adopts one), any other outline as its corners — collinear vertices
+/// dropped — in the unit sheet frame, y-up as the pattern is drawn, its
+/// bounding box at the origin and its longer side 1. Only the border is
+/// read: the creases are not. Whether a polygon is a sheet Fold folds
+/// (convex, no side too short) is [`Sheet::polygon`]'s to say.
+pub(super) fn starting_sheet(input: &CreasePatternInput) -> Result<SheetShape, ImportRefusal> {
+    let flip_y = input.space == ImportSpace::Sheet;
+    let loops = border_loops(input)?;
+    let count = loops.len();
+    let mut loops = loops.into_iter();
+    let (Some(border_loop), None) = (loops.next(), loops.next()) else {
+        return Err(ImportRefusal::OutlineLoops { count });
+    };
+    match border_loop.sheet {
+        Ok(rect) => {
+            let rf = rect.frame.rf_rect();
+            Ok(if (rf.width - rf.height).abs() <= TOL {
+                SheetShape::Square
+            } else {
+                SheetShape::Rectangle {
+                    width: rf.width,
+                    height: rf.height,
+                }
+            })
+        }
+        Err(RefusalReason::NonRectangular { vertices }) => {
+            // Model space is y-down: the picture as drawn is y-up in the sheet frame.
+            let up: Vec<Point> = vertices.into_iter().map(|[x, y]| [x, -y]).collect();
+            let [x0, y0, x1, y1] = convex::bounding_box(&up);
+            let longer = (x1 - x0).max(y1 - y0);
+            if !(longer.is_finite() && longer > 0.0) {
+                return Err(ImportRefusal::NoBorder);
+            }
+            Ok(SheetShape::Polygon {
+                points: up
+                    .into_iter()
+                    .map(|[x, y]| [(x - x0) / longer, (y - y0) / longer])
+                    .collect(),
+            })
+        }
+        Err(reason) => Err(ImportRefusal::OutlineInvalid {
+            reason: unflip(reason, flip_y),
+        }),
+    }
+}
+
+/// Recover the sheet from the border, and match it against `sequence`'s
+/// sheet, or adopt it when there is none.
+pub(super) fn recover(
+    input: &CreasePatternInput,
+    sequence: Option<&Sheet>,
+) -> Result<Recovered, ImportRefusal> {
+    let flip_y = input.space == ImportSpace::Sheet;
+    let to_model = |p: Point| if flip_y { [p[0], -p[1]] } else { p };
+    let loops = border_loops(input)?;
     let count = loops.len();
     let mut loops = loops.into_iter();
     let (Some(border_loop), None) = (loops.next(), loops.next()) else {
@@ -255,6 +312,7 @@ fn unflip(reason: RefusalReason, flip_y: bool) -> RefusalReason {
 mod tests {
     use super::*;
     use crate::import::ImportSegment;
+    use crate::refusal::FoldRefusal;
 
     fn outline(space: ImportSpace, corners: &[Point]) -> CreasePatternInput {
         let n = corners.len();
@@ -401,5 +459,121 @@ mod tests {
             recover(&none, None).map(|_| ()).err(),
             Some(ImportRefusal::NoBorder)
         );
+    }
+
+    #[test]
+    fn a_starting_sheet_is_the_border_whatever_its_shape() {
+        // A rectangle, as the import adopts one; a square turned 45° is still the square.
+        let wide = outline(
+            ImportSpace::Sheet,
+            &[[0.0, 0.0], [2.0, 0.0], [2.0, 1.0], [0.0, 1.0]],
+        );
+        assert_eq!(
+            starting_sheet(&wide),
+            Ok(SheetShape::Rectangle {
+                width: 1.0,
+                height: 0.5
+            })
+        );
+        let diamond = outline(
+            ImportSpace::Sheet,
+            &[[1.0, 0.0], [2.0, 1.0], [1.0, 2.0], [0.0, 1.0]],
+        );
+        assert_eq!(starting_sheet(&diamond), Ok(SheetShape::Square));
+        // A hexagon, in Oriedita's y-down model space: its corners in the
+        // unit frame, the picture as drawn (its flat top stays at the top).
+        let h = 3f64.sqrt() / 2.0;
+        let hexagon = outline(
+            ImportSpace::Model,
+            &[
+                [-1.0, 0.0],
+                [-0.5, -h],
+                [0.5, -h],
+                [1.0, 0.0],
+                [0.5, h],
+                [-0.5, h],
+            ],
+        );
+        let Ok(SheetShape::Polygon { points }) = starting_sheet(&hexagon) else {
+            panic!("a hexagon is a polygon sheet");
+        };
+        assert_eq!(points.len(), 6);
+        assert!(points.iter().any(|&p| close(p, [0.25, 2.0 * h / 2.0])));
+        assert!(points.iter().any(|&p| close(p, [0.0, h / 2.0])));
+        // A vertex along a side is no corner.
+        let mut split = outline(
+            ImportSpace::Sheet,
+            &[[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [1.0, 1.0]],
+        );
+        split.segments.truncate(4);
+        let Ok(SheetShape::Polygon { points }) = starting_sheet(&split) else {
+            panic!("a triangle is a polygon sheet");
+        };
+        assert_eq!(points.len(), 3);
+        // Two loops are no one sheet.
+        let mut two = wide.clone();
+        two.segments.extend(
+            outline(
+                ImportSpace::Sheet,
+                &[[3.0, 0.0], [4.0, 0.0], [4.0, 1.0], [3.0, 1.0]],
+            )
+            .segments,
+        );
+        assert_eq!(
+            starting_sheet(&two),
+            Err(ImportRefusal::OutlineLoops { count: 2 })
+        );
+    }
+
+    #[test]
+    fn a_starting_sheet_is_one_the_engine_folds_and_ignores_the_creases() {
+        // An L: a loop, but no sheet the engine folds.
+        let ell = outline(
+            ImportSpace::Sheet,
+            &[
+                [0.0, 0.0],
+                [2.0, 0.0],
+                [2.0, 1.0],
+                [1.0, 1.0],
+                [1.0, 2.0],
+                [0.0, 2.0],
+            ],
+        );
+        assert_eq!(
+            crate::import::starting_sheet(&ell),
+            Ok(Err(FoldRefusal::SheetNotConvex))
+        );
+        // A crease no fold could make — off the paper, alone — is never read.
+        let mut creased = outline(
+            ImportSpace::Sheet,
+            &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+        );
+        creased.segments.push(ImportSegment {
+            from: [0.2, 0.2],
+            to: [5.0, 0.3],
+            kind: ImportKind::Mountain,
+        });
+        assert_eq!(
+            crate::import::starting_sheet(&creased),
+            Ok(Ok(SheetShape::Square))
+        );
+        // The hexagon's outline comes back counter-clockwise, as the sheet stores it.
+        let h = 3f64.sqrt() / 2.0;
+        let clockwise = outline(
+            ImportSpace::Sheet,
+            &[
+                [-1.0, 0.0],
+                [-0.5, h],
+                [0.5, h],
+                [1.0, 0.0],
+                [0.5, -h],
+                [-0.5, -h],
+            ],
+        );
+        let Ok(Ok(SheetShape::Polygon { points })) = crate::import::starting_sheet(&clockwise)
+        else {
+            panic!("a hexagon is a polygon sheet");
+        };
+        assert!(convex::signed_area(&points) > 0.0);
     }
 }

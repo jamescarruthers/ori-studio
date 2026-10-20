@@ -1,7 +1,11 @@
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FoldPaperShape, FoldStartSide } from '../../fold/paperShape';
+import {
+  regularPolygonShape,
+  type FoldPaperShape,
+  type FoldStartSide,
+} from '../../fold/document/foldSequenceDocument';
 import {
   DEFAULT_DOCUMENT_PAPER_STYLE,
   type DocumentPaperStyle,
@@ -15,14 +19,6 @@ import { FoldPaperPane } from './FoldPaperPane';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const tracked: Record<string, unknown>[] = [];
-vi.mock('../../analytics', () => ({
-  ANALYTICS_EVENTS: new Proxy({}, { get: (_t, key) => String(key) }),
-  track: (_event: string, properties: Record<string, unknown>) => {
-    tracked.push(properties);
-  },
-}));
-
 // Radix Select scrolls the selected option into view as it opens.
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
@@ -30,23 +26,22 @@ if (!Element.prototype.scrollIntoView) {
 
 let host: HTMLDivElement;
 let root: Root;
-const onShapeChange = vi.fn<(shape: FoldPaperShape) => void>();
+const onImportSheet = vi.fn<() => void>();
 const onStartSideChange = vi.fn<(side: FoldStartSide) => void>();
 const onStyleChange = vi.fn<(choice: DocumentPaperStyleChoice) => void>();
 
 /** The tab over document state it owns, as the store will hold it. */
 function Harness({
-  initial,
+  shape = { kind: 'square' },
   stepCount = 0,
   readOnly = false,
   initialStyle = DEFAULT_DOCUMENT_PAPER_STYLE,
 }: {
-  initial: FoldPaperShape;
+  shape?: FoldPaperShape;
   stepCount?: number;
   readOnly?: boolean;
   initialStyle?: DocumentPaperStyle;
 }) {
-  const [shape, setShape] = useState(initial);
   const [side, setSide] = useState<FoldStartSide>('front');
   const [style, setStyle] = useState(initialStyle);
   return (
@@ -61,10 +56,7 @@ function Harness({
         startSide={side}
         stepCount={stepCount}
         readOnly={readOnly}
-        onShapeChange={(next) => {
-          onShapeChange(next);
-          setShape(next);
-        }}
+        onImportSheet={onImportSheet}
         onStartSideChange={(next) => {
           onStartSideChange(next);
           setSide(next);
@@ -75,8 +67,7 @@ function Harness({
 }
 
 beforeEach(() => {
-  tracked.length = 0;
-  onShapeChange.mockReset();
+  onImportSheet.mockReset();
   onStartSideChange.mockReset();
   onStyleChange.mockReset();
   host = document.createElement('div');
@@ -89,7 +80,7 @@ afterEach(() => {
   useSettingsStore.setState(useSettingsStore.getInitialState(), true);
 });
 
-const render = (props: Parameters<typeof Harness>[0]) => act(() => root.render(<Harness {...props} />));
+const render = (props: Parameters<typeof Harness>[0] = {}) => act(() => root.render(<Harness {...props} />));
 const segment = (group: string, name: string) =>
   host.querySelector<HTMLButtonElement>(`[role="group"][aria-label="${group}"] button[aria-label="${name}"]`) ??
   [...host.querySelectorAll<HTMLButtonElement>(`[role="group"][aria-label="${group}"] button`)].find(
@@ -99,22 +90,16 @@ const pressed = (group: string) =>
   [...host.querySelectorAll<HTMLButtonElement>(`[role="group"][aria-label="${group}"] button`)]
     .filter((element) => element.getAttribute('aria-pressed') === 'true')
     .map((element) => element.getAttribute('aria-label') ?? element.textContent?.trim());
-const input = (name: string) => host.querySelector<HTMLInputElement>(`input[aria-label="${name}"]`);
+const button = (name: string) =>
+  [...host.querySelectorAll<HTMLButtonElement>('button')].find((element) => element.textContent?.trim() === name);
 const notice = () => host.querySelector('[role="status"]')?.textContent ?? null;
 const display = () => useSettingsStore.getState().paperStyle.display;
 const styleShown = () => host.querySelector('button[aria-label="Style"]')?.textContent ?? null;
-
-/** Type into a number field and leave it, which commits. */
-function typeAndCommit(field: HTMLInputElement | null, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-  if (!field || !setter) throw new Error('no field to type into');
-  act(() => {
-    field.focus();
-    setter.call(field, value);
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  act(() => field.blur());
-}
+/** The Shape row's text: what the sheet is. */
+const shapeShown = () =>
+  [...host.querySelectorAll('*')].find((element) => element.textContent?.trim().startsWith('Shape') && element.children.length >= 2)
+    ?.textContent?.replace(/^Shape/, '')
+    .trim() ?? null;
 
 async function choose(selectLabel: string, option: string) {
   const trigger = host.querySelector<HTMLButtonElement>(`button[aria-label="${selectLabel}"]`);
@@ -131,7 +116,7 @@ async function choose(selectLabel: string, option: string) {
 describe('FoldPaperPane', () => {
   describe('style', () => {
     it('picks the sequence’s own style as the Diagram picks a diagram’s, the Diagram style first', async () => {
-      render({ initial: { shape: 'square' } });
+      render();
       // No colour pickers: the look is a style, chosen whole.
       expect(host.querySelector('input[type="color"]')).toBeNull();
       expect(styleShown()).toBe('Diagram');
@@ -141,21 +126,21 @@ describe('FoldPaperPane', () => {
     });
 
     it('copies the Settings export style into the sequence as it is when chosen', async () => {
-      render({ initial: { shape: 'square' } });
+      render();
       await choose('Style', 'Export style from Settings');
       expect(onStyleChange.mock.lastCall?.[0].style).toEqual({ style: display() });
       expect(onStyleChange.mock.lastCall?.[0].analytics).toBe('export-style');
     });
 
     it('names a style no choice holds the sequence’s own', () => {
-      render({ initial: { shape: 'square' }, initialStyle: { style: { ...DEFAULT_PAPER_STYLE, erode: 0.2 } } });
+      render({ initialStyle: { style: { ...DEFAULT_PAPER_STYLE, erode: 0.2 } } });
       expect(styleShown()).toBe('This sequence’s own');
     });
   });
 
   describe('start side', () => {
     it('is Front up or Back up, each with its face’s colour in the sequence’s style', () => {
-      render({ initial: { shape: 'square' } });
+      render();
       expect(pressed('Start')).toEqual(['Front up']);
       const swatches = [...host.querySelectorAll<HTMLElement>('[role="group"][aria-label="Start"] button span')]
         .map((element) => element.style.background)
@@ -171,80 +156,41 @@ describe('FoldPaperPane', () => {
     });
   });
 
-  describe('shape', () => {
-    it('offers the three kinds by name, and starts a new one at its first offer', () => {
-      render({ initial: { shape: 'square' } });
-      expect(pressed('Shape')).toEqual(['Square']);
-      act(() => segment('Shape', 'Square')?.click());
-      // The same sheet is no change, so nothing starts over.
-      expect(onShapeChange).not.toHaveBeenCalled();
-
-      act(() => segment('Shape', 'Polygon')?.click());
-      expect(onShapeChange).toHaveBeenLastCalledWith({ shape: 'regular', sides: 6 });
-      act(() => segment('Shape', 'Rectangle')?.click());
-      expect(onShapeChange).toHaveBeenLastCalledWith({ shape: 'rectangle', width: Math.SQRT1_2, height: 1 });
-      expect(host.querySelector('button[aria-label="Proportions"]')?.textContent).toBe('1:√2');
+  describe('sheet', () => {
+    it('shows the sheet’s shape, and offers no shape controls: only Import starting sheet', () => {
+      render();
+      expect(shapeShown()).toBe('Square');
+      expect(host.querySelector('[role="group"][aria-label="Shape"]')).toBeNull();
+      expect(host.querySelector('input[aria-label="Sides"]')).toBeNull();
+      act(() => button('Import starting sheet…')?.click());
+      expect(onImportSheet).toHaveBeenCalledTimes(1);
     });
 
-    it('takes a polygon’s sides, 3 to 8', () => {
-      render({ initial: { shape: 'regular', sides: 6 } });
-      typeAndCommit(input('Sides'), '5');
-      expect(onShapeChange).toHaveBeenLastCalledWith({ shape: 'regular', sides: 5 });
-      // Clamped to the range the tab offers.
-      typeAndCommit(input('Sides'), '12');
-      expect(onShapeChange).toHaveBeenLastCalledWith({ shape: 'regular', sides: 8 });
+    it('names a rectangle by its ratio and a polygon by its sides, regular or not', () => {
+      render({ shape: { kind: 'rectangle', aspect: [Math.SQRT1_2, 1] } });
+      expect(shapeShown()).toBe('Rectangle, 1 : 1.414');
+      render({ shape: regularPolygonShape(6)! });
+      expect(shapeShown()).toBe('Regular polygon, 6 sides');
+      render({ shape: { kind: 'polygon', points: [[0, 0], [1, 0], [0.8, 0.6], [0.1, 0.4]] } });
+      expect(shapeShown()).toBe('Polygon, 4 sides');
     });
 
-    it('picks a rectangle preset, or keeps a custom width and height as typed', async () => {
-      render({ initial: { shape: 'rectangle', width: Math.SQRT1_2, height: 1 } });
-      expect(input('Width')).toBeNull();
-      await choose('Proportions', '2:1');
-      expect(onShapeChange).toHaveBeenLastCalledWith({ shape: 'rectangle', width: 1, height: 0.5 });
-
-      await choose('Proportions', 'Custom');
-      expect(input('Width')?.value).toBe('1');
-      expect(input('Height')?.value).toBe('0.5');
-      typeAndCommit(input('Width'), '3');
-      typeAndCommit(input('Height'), '4');
-      expect(onShapeChange).toHaveBeenLastCalledWith({ shape: 'rectangle', width: 0.75, height: 1 });
-      // The fields keep what was typed, though the sheet is stored at longer side 1.
-      expect([input('Width')?.value, input('Height')?.value]).toEqual(['3', '4']);
-      // 3:4 is a preset; the select names it once Custom is put down.
-      await choose('Proportions', '3:4');
-      expect(host.querySelector('button[aria-label="Proportions"]')?.textContent).toBe('3:4');
-      expect(input('Width')).toBeNull();
-    });
-
-    it('turns a custom rectangle with equal sides into the square', async () => {
-      render({ initial: { shape: 'rectangle', width: 0.75, height: 1 } });
-      expect(host.querySelector('button[aria-label="Proportions"]')?.textContent).toBe('3:4');
-      await choose('Proportions', 'Custom');
-      typeAndCommit(input('Width'), '1');
-      expect(onShapeChange).toHaveBeenLastCalledWith({ shape: 'square' });
-      expect(pressed('Shape')).toEqual(['Square']);
-    });
-
-    it('says beforehand that a new shape starts the sequence over', () => {
-      render({ initial: { shape: 'square' } });
+    it('says beforehand that a new sheet starts the sequence over', () => {
+      render();
       expect(notice()).toBeNull();
-      render({ initial: { shape: 'square' }, stepCount: 1 });
-      expect(notice()).toBe(
-        'Changing the shape starts over: the sequence’s 1 step is cleared. Undo brings it back.'
-      );
-      render({ initial: { shape: 'square' }, stepCount: 7 });
-      expect(notice()).toBe(
-        'Changing the shape starts over: the sequence’s 7 steps are cleared. Undo brings them back.'
-      );
+      render({ stepCount: 1 });
+      expect(notice()).toBe('A new starting sheet starts over: the sequence’s 1 step is cleared. Undo brings it back.');
+      render({ stepCount: 7 });
+      expect(notice()).toBe('A new starting sheet starts over: the sequence’s 7 steps are cleared. Undo brings them back.');
     });
   });
 
   it('keeps a read-only sequence’s sheet and style as they are', () => {
-    render({ initial: { shape: 'regular', sides: 5 }, stepCount: 3, readOnly: true });
-    expect(segment('Shape', 'Rectangle')?.disabled).toBe(true);
+    render({ shape: regularPolygonShape(5)!, stepCount: 3, readOnly: true });
+    expect(button('Import starting sheet…')?.disabled).toBe(true);
     expect(segment('Start', 'Back up')?.disabled).toBe(true);
-    expect(input('Sides')?.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('button[aria-label="Style"]')?.disabled).toBe(true);
-    // Nothing to warn about: the shape cannot change.
+    // Nothing to warn about: the sheet cannot change.
     expect(notice()).toBeNull();
   });
 });
