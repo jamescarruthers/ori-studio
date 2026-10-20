@@ -1735,7 +1735,8 @@ export const ANALYTICS_EVENTS = {
    * histogram this document forbids). `fold refused` is a refusal shown to the
    * folder, by the engine's stable `code`, once per fold asked for, and once
    * per Import CP the dialog refused (an `import_*` code or the dialog's own,
-   * with `face_count_bucket` when it was over the face cap); `fold
+   * with `face_count_bucket` when it was over the face cap, and
+   * `stack_depth_bucket` when it stacked too deep); `fold
    * choice offered` is the engine handing back more than one answer the folder
    * then chooses between — an axiom's roots, or the stacks a depth pick can
    * take — with how many, bucketed.
@@ -2112,6 +2113,15 @@ export const FOLD_CHOICE_COUNT_BUCKETS = [2, 3, 4, 8] as const;
  * past anything Fold could fold.
  */
 export const FOLD_FACE_COUNT_BUCKETS = [8192, 16384, 32768] as const;
+
+/**
+ * Threshold ladder for the deepest stack, in layers, of a crease pattern Fold
+ * refused as stacked too deep (`fold refused`'s `stack_depth_bucket`). The cap
+ * is on triples of overlapping layers, not on one stack, so a pattern of many
+ * stacks 150 deep can be refused as well as one stack of 300: real designs
+ * refused in the cpoogle corpus stacked 130–600 deep.
+ */
+export const FOLD_STACK_DEPTH_BUCKETS = [200, 300, 500] as const;
 
 /**
  * Threshold ladder for how many designs are open at once.
