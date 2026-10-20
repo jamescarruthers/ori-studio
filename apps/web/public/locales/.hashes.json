@@ -6269,7 +6269,10 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12541,7 +12544,10 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18815,7 +18821,10 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24754,7 +24763,10 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30693,7 +30705,10 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36965,7 +36980,10 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43237,7 +43255,10 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49176,6 +49197,9 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "tools:fold.order.noOthers": "889286cf4087",
+    "tools:fold.order.searching": "6ef4c3497de5",
+    "tools:fold.order.stop": "c48cf724a3f1"
   }
 }

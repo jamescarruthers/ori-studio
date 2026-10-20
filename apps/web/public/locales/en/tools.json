@@ -474,12 +474,15 @@
       "movingVaries": "These orders move different layers. Check the highlighted paper.",
       "next": "Next layer order",
       "noneFound": "No order found yet",
+      "noOthers": "Search finished. There are no other orders.",
       "previous": "Previous layer order",
       "region": "Region {{number}}",
       "regions": "Independent regions",
       "search": "Find more orders",
+      "searching": "Searching for more orders…",
       "stack": "Region {{number}}: {{layers}}",
-      "stackHelp": "Select a region to highlight it. Layers are listed from front to back; highlighted differences are relative to the first preview."
+      "stackHelp": "Select a region to highlight it. Layers are listed from front to back; highlighted differences are relative to the first preview.",
+      "stop": "Stop searching"
     },
     "picker": {
       "close": "Close tool list",

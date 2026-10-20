@@ -1752,6 +1752,8 @@ export const ANALYTICS_EVENTS = {
   foldChoiceOffered: 'fold choice offered',
   /** A layer-order review ended: accepted or cancelled, from a tool or Import CP's chooser, with how many orders, bucketed. */
   foldOrderResolved: 'fold order resolved',
+  /** A press of Find more orders ended: finished, out of time or stopped, whether it found more, and the orders after it, bucketed. */
+  foldOrdersSearched: 'fold orders searched',
   /** The Divide line marked a segment: how it divided it, never where or into how many parts. */
   foldMarkAdded: 'fold mark added',
   /** The Paper pane's sheet changed: which setting, and the sheet's shape and starting side after it. */

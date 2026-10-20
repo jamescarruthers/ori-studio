@@ -490,12 +490,15 @@
       "movingVaries": "Estas ordens movem camadas diferentes. Confira o papel destacado.",
       "next": "Próxima ordem das camadas",
       "noneFound": "Nenhuma ordem encontrada ainda",
+      "noOthers": "Busca concluída. Não há outras ordens.",
       "previous": "Ordem das camadas anterior",
       "region": "Região {{number}}",
       "regions": "Regiões independentes",
       "search": "Buscar mais ordens",
+      "searching": "Buscando mais ordens…",
       "stack": "Região {{number}}: {{layers}}",
-      "stackHelp": "Selecione uma região para destacá-la. As camadas são listadas da frente para trás; as diferenças destacadas são relativas à primeira prévia."
+      "stackHelp": "Selecione uma região para destacá-la. As camadas são listadas da frente para trás; as diferenças destacadas são relativas à primeira prévia.",
+      "stop": "Parar a busca"
     },
     "picker": {
       "close": "Fechar a lista de ferramentas",

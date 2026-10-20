@@ -490,12 +490,15 @@
       "movingVaries": "Estos órdenes mueven distintas capas. Comprueba el papel resaltado.",
       "next": "Siguiente orden de capas",
       "noneFound": "Aún no se ha encontrado ningún orden",
+      "noOthers": "Búsqueda terminada. No hay más órdenes.",
       "previous": "Orden de capas anterior",
       "region": "Región {{number}}",
       "regions": "Regiones independientes",
       "search": "Buscar más órdenes",
+      "searching": "Buscando más órdenes…",
       "stack": "Región {{number}}: {{layers}}",
-      "stackHelp": "Selecciona una región para resaltarla. Las capas se enumeran de delante hacia atrás; las diferencias resaltadas se comparan con la primera vista previa."
+      "stackHelp": "Selecciona una región para resaltarla. Las capas se enumeran de delante hacia atrás; las diferencias resaltadas se comparan con la primera vista previa.",
+      "stop": "Detener la búsqueda"
     },
     "picker": {
       "close": "Cerrar la lista de herramientas",

@@ -474,12 +474,15 @@
       "movingVaries": "Bei diesen Reihenfolgen werden unterschiedliche Lagen bewegt. Prüfe das hervorgehobene Papier.",
       "next": "Nächste Lagenreihenfolge",
       "noneFound": "Noch keine Reihenfolge gefunden",
+      "noOthers": "Suche abgeschlossen. Es gibt keine weiteren Reihenfolgen.",
       "previous": "Vorherige Lagenreihenfolge",
       "region": "Bereich {{number}}",
       "regions": "Unabhängige Bereiche",
       "search": "Weitere Reihenfolgen suchen",
+      "searching": "Weitere Reihenfolgen werden gesucht…",
       "stack": "Bereich {{number}}: {{layers}}",
-      "stackHelp": "Wähle einen Bereich zum Hervorheben. Die Lagen sind von vorne nach hinten aufgelistet; hervorgehobene Unterschiede beziehen sich auf die erste Vorschau."
+      "stackHelp": "Wähle einen Bereich zum Hervorheben. Die Lagen sind von vorne nach hinten aufgelistet; hervorgehobene Unterschiede beziehen sich auf die erste Vorschau.",
+      "stop": "Suche beenden"
     },
     "picker": {
       "close": "Werkzeugliste schließen",

@@ -26,7 +26,19 @@ pub struct OrderQuery {
     pub per_component: Option<usize>,
     #[serde(default)]
     pub max_nodes: Option<u64>,
+    /// A plain fold's placement search: how long one `batch` may search in
+    /// all, in calls of at most [`PLACEMENT_SLICE_MS`] each, asked again
+    /// while the answer says it is `searching`, so a caller can stop between
+    /// them. Zero reads what is found. Absent, a batch is one call's search.
+    #[serde(default)]
+    pub search_ms: Option<f64>,
 }
+
+/// The longest a single placement call searches.
+pub const PLACEMENT_SLICE_MS: f64 = 150.0;
+
+/// The longest one batch of a placement search may search in all.
+const PLACEMENT_BATCH_MAX_MS: f64 = 60_000.0;
 
 impl OrderQuery {
     pub fn limits(&self) -> CompletionLimits {
@@ -35,6 +47,22 @@ impl OrderQuery {
             max_nodes: Some(self.max_nodes.unwrap_or(200_000).clamp(1, 12_800_000)),
             deadline: None,
         }
+    }
+
+    /// How long this batch may search in all, and what a call that searched
+    /// for `elapsed` costs it: at least a millisecond, so a call that cannot
+    /// advance still spends it; without `search_ms`, all of it.
+    fn search_time(&self) -> (f64, impl Fn(f64) -> f64) {
+        let asked = self
+            .search_ms
+            .filter(|ms| ms.is_finite())
+            .map(|ms| ms.clamp(0.0, PLACEMENT_BATCH_MAX_MS));
+        let allowed = asked.unwrap_or(PLACEMENT_SLICE_MS);
+        let cost = move |elapsed: f64| match asked {
+            Some(_) => elapsed.max(1.0),
+            None => allowed,
+        };
+        (allowed, cost)
     }
 }
 
@@ -48,6 +76,10 @@ pub struct OrderSelection {
     pub landing: Option<FoldLanding>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub moving_varies: bool,
+    /// A placement search with time left in this batch: ask again, with the
+    /// same query, to search further.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub searching: bool,
 }
 
 impl OrderSelection {
@@ -62,6 +94,7 @@ impl OrderSelection {
             relations: Vec::new(),
             landing: None,
             moving_varies: false,
+            searching: false,
         }
     }
 
@@ -121,15 +154,21 @@ impl OrderSelection {
             relations,
             landing: None,
             moving_varies: false,
+            searching: false,
         })
     }
 }
+
+/// A batch of a placement search: its number and its limits.
+type BatchKey = (u64, usize, Option<u64>);
 
 #[derive(Debug)]
 pub(crate) struct PlacementSession {
     pub parent: u32,
     fold: PlainFold,
-    last_batch: Option<(u64, usize, Option<u64>)>,
+    /// The batch searched last, and how long it has searched so far, across
+    /// calls.
+    batch: Option<(BatchKey, f64)>,
     search: FoldPlacementSearch,
 }
 
@@ -169,7 +208,7 @@ impl Bridge {
             self.placements = Some(PlacementSession {
                 parent: state,
                 fold: fold.clone(),
-                last_batch: None,
+                batch: None,
                 search: FoldPlacementSearch::new(parent, &fold),
             });
         }
@@ -179,16 +218,27 @@ impl Bridge {
             ));
         };
         let mut limits = query.limits();
-        let key = (query.batch, limits.per_component, limits.max_nodes);
-        if session.last_batch != Some(key) {
+        let key: BatchKey = (query.batch, limits.per_component, limits.max_nodes);
+        // A new batch starts its time afresh; asking again with the same
+        // query searches on until the batch's time is spent.
+        let (allowed, cost) = query.search_time();
+        let mut spent = match session.batch {
+            Some((searched, spent)) if searched == key => spent,
+            _ => 0.0,
+        };
+        if spent < allowed && !session.search.count().exact {
+            let now_ms = crate::ops_crimp_tuck::clock::now_ms;
+            let start = now_ms();
             limits.deadline = Some(oristudio_fold::complete::Deadline {
-                now_ms: crate::ops_crimp_tuck::clock::now_ms,
-                at_ms: crate::ops_crimp_tuck::clock::now_ms() + 150.0,
+                now_ms,
+                at_ms: start + (allowed - spent).min(PLACEMENT_SLICE_MS),
             });
             session.search.advance(&limits, 128, 1024);
-            session.last_batch = Some(key);
+            spent += cost(now_ms() - start);
         }
+        session.batch = Some((key, spent));
         let count = session.search.count();
+        let searching = !count.exact && spent < allowed;
         if count.exact
             && count.orders == 0
             && let Some(refused) = session.search.refusal()
@@ -209,6 +259,7 @@ impl Bridge {
             index,
             relations: Vec::new(),
             moving_varies,
+            searching,
             landing: candidate.map(|c| c.landing.clone()),
             completion: candidate.and_then(|c| c.completion.clone()),
         }))

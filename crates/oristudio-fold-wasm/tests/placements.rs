@@ -188,3 +188,69 @@ fn a_precreased_flat_sheet_folded_in_half_lands_without_a_chooser() {
         assert!(!answer.moving_varies);
     }
 }
+
+#[test]
+fn a_longer_press_searches_on_and_finds_what_a_shorter_one_could_not() {
+    // Two separate flaps on paper precreased into many columns: outer, or
+    // between the base and the first flap. The inserted landing is many
+    // sets of targets into the search.
+    let mut bridge = Bridge::new();
+    let mut state = ok(bridge.sheet(
+        &serde_json::from_value(json!({"shape":{"kind":"square"},"startSide":"front"})).unwrap(),
+    ))
+    .state;
+    let columns = (1..16).map(|k| ([[k as f64 / 16., 0.], [k as f64 / 16., 1.]], [0.99, 0.5]));
+    let rows = [0.62, 0.66, 0.7, 0.74].map(|c| ([[0., c], [1., c]], [0.5, 0.99]));
+    for (through, moving) in columns.chain(rows) {
+        let precrease = op(
+            json!({"kind":"precrease","line":{"via":"free","through":through},
+            "moving":moving,"direction":"valley","seed":{"scope":"all"}}),
+        );
+        state = ok(bridge
+            .apply(state, &precrease, &Choices::default())
+            .unwrap())
+        .state;
+    }
+    let first = op(
+        json!({"kind":"valley","line":{"via":"free","through":[[0.,0.35],[1.,0.35]]},"moving":[0.5,0.1],"seed":{"scope":"all"}}),
+    );
+    let parent = ok(bridge.apply(state, &first, &Choices::default()).unwrap()).state;
+    let fold = op(
+        json!({"kind":"valley","line":{"via":"free","through":[[0.,0.8],[1.,0.8]]},"moving":[0.5,0.9],"seed":{"scope":"all"},"landing":{"kind":"outer"}}),
+    );
+    let mut ask = |batch: u64, search_ms: f64| {
+        ok(bridge
+            .order_selection(
+                parent,
+                &fold,
+                &Choices::default(),
+                &OrderQuery {
+                    batch,
+                    search_ms: Some(search_ms),
+                    ..Default::default()
+                },
+            )
+            .unwrap())
+    };
+    // A millisecond's press tries a set or two: only the outer landing, and
+    // asking again within the same press searches no further.
+    let short = ask(0, 1.0);
+    assert_eq!((short.count.orders, short.count.exact), (1, false));
+    assert!(!short.searching);
+    let again = ask(0, 1.0);
+    assert_eq!((again.count.orders, again.searching), (1, false));
+    // Nothing at all for a press with no time.
+    assert_eq!(ask(1, 0.0).count.orders, 1);
+    // A longer press, asked again while it says it is searching, as the
+    // worker asks between slices: it finds the inserted landing, and then
+    // says there is nothing more.
+    let mut long = ask(2, 30_000.0);
+    let mut calls = 1;
+    while long.searching {
+        assert!(!long.count.exact);
+        long = ask(2, 30_000.0);
+        calls += 1;
+        assert!(calls < 1000, "the press never ended");
+    }
+    assert_eq!((long.count.orders, long.count.exact), (2, true));
+}

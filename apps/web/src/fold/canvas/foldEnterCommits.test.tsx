@@ -323,8 +323,8 @@ describe('Enter at each focus', () => {
 describe('explicit layer-order acceptance', () => {
   function resolution(overrides = {}) {
     return { key: 'decision', inputKey: foldToolInputKey(tools.store.getState()), active: true, required: true,
-      waiting: false, failed: false, index: 0, count: 2, exact: true, canSearch: true,
-      step: vi.fn(), search: vi.fn(), back: vi.fn(), resume: vi.fn(), ...overrides };
+      waiting: false, searching: false, searched: false, failed: false, index: 0, count: 2, exact: true, canSearch: true,
+      step: vi.fn(), search: vi.fn(), stop: vi.fn(), back: vi.fn(), resume: vi.fn(), ...overrides };
   }
   it('opens review when a queued confirmation discovers ambiguity, without committing', () => {
     render(landed(FOLDS[0]!.op, null, { landing: true }));
