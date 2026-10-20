@@ -397,3 +397,26 @@ Local evidence (not committed):
 - `cargo test --workspace` stops at `fold_vertex_oracle`: its two existing vertex
   fixtures require a unique order but receive six from the earlier swivel/order
   changes. This work does not change vertex operations or those fixtures.
+
+## Follow-up — October 20, 2026: forced folds and Find more orders
+
+A plain mountain fold in half of a precreased flat sheet (69 faces) asked for
+a layer order it did not have a choice of: "Order 1 of 1 found", search
+incomplete, on every press of Find more orders. The target pool held one
+target per stationary face the half landed on (33–51), the search tried their
+subsets 128 a batch, and every one turned the hinge the wrong way and was
+discarded, so the search could never call itself exhaustive.
+
+- The search now counts, up front and without a clock, every order its exact
+  selection can land in: the tuck preparation of those flaps, each hinge
+  seeded in the requested direction, placed against nothing, under a node
+  budget. Every landing the search can find is one of them, so it is
+  exhaustive once its candidates cover them all, and a forced fold (one order;
+  the precreased half above needs no search node) before any target is tried.
+  Replay is unchanged: it never searches.
+- A query names how long its batch may search (`searchMs`); the bridge spends
+  it in calls of at most 150 ms and says while it is still searching. The
+  worker runs those calls as a cancellable search in slices. Each press of
+  Find more orders asks four times longer than the last (150 ms up to 9.6 s,
+  then 9.6 s more each press), shows that it is searching with Stop, and says
+  there are no other orders once a search for more finishes.
