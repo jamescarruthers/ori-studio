@@ -1836,6 +1836,12 @@
       "stepsHint": "Cada passo do caminho como um cartão",
       "views": "Visualização"
     },
+    "load": {
+      "failed": "O workspace de Dobra não carregou",
+      "loading": "Carregando o workspace de Dobra…",
+      "offline": "O workspace de Dobra ainda não foi baixado e você está off-line. Conecte-se uma vez e ele funcionará off-line a partir de então.",
+      "retry": "Tentar novamente"
+    },
     "paper": {
       "backUp": "Verso para cima",
       "colors": "Cores",
