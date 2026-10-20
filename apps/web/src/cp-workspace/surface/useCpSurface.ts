@@ -15,6 +15,7 @@ import {
   modelViewFromCamera,
   unprojectDevicePoint,
   userBoundsInView,
+  userBoundsVisibleShare,
   userCamerasEqual,
   userCameraToView,
   zoomUserCameraAt,
@@ -100,14 +101,27 @@ export interface UseCpSurfaceOptions<Hit> {
   framingKey: string;
   /**
    * What the content is, for a surface whose content changes in kind rather
-   * than by edits alone — Fold's folded pane names the step on screen. When
-   * it changes and the new content does not lie wholly in the part of the
-   * canvas that shows, a camera still where the surface last fitted it fits
-   * the content again; a camera the user has moved stays where it was put,
-   * until Fit hands it back. The same content growing, or other content that
-   * still shows, moves nothing. Absent or null, never.
+   * than by edits alone — Fold's panes name the step on screen. When it
+   * changes, the camera keeps its view while the new content still shows
+   * there, and fits the content again where it would not:
+   *
+   * - a camera still where the surface last fitted it refits once the new
+   *   content does not lie wholly in the part of the canvas that shows;
+   * - a camera the user has moved — panned, zoomed — keeps their view while
+   *   at least {@link KEEP_IN_VIEW_SHARE} of {@link keepInViewBounds} shows
+   *   (`userBoundsVisibleShare`: most of it on screen, or it fills most of
+   *   the screen), and refits once it would be mostly off screen.
+   *
+   * The same content growing moves nothing. Absent or null, never.
    */
   keepInViewKey?: string | null;
+  /**
+   * What must show of the content when {@link keepInViewKey} changes under a
+   * camera the user has moved: the content's own extent where `contentBounds`
+   * frames more (Fold's folded form, framed with the sheet it came from).
+   * `contentBounds` when absent.
+   */
+  keepInViewBounds?: UserBounds | null;
   /**
    * How far in from each edge of the canvas something drawn over it covers
    * it, CSS px: a tool window across the bottom of a phone's pane. A fit
@@ -179,6 +193,14 @@ export interface CpSurface<Hit> {
   cssPerUserUnit: () => number | null;
   controls: CpSurfaceControls;
 }
+
+/**
+ * How much of the content a camera the user has moved must still show for a
+ * new step to keep their view (`userBoundsVisibleShare`): half — most of the
+ * content on screen, or the content over most of the screen. Less, and the
+ * content would arrive mostly off screen, so it is fitted instead.
+ */
+export const KEEP_IN_VIEW_SHARE = 0.5;
 
 const CANVAS_BG_VAR = '--bg-primary';
 const FALLBACK_CLEAR: Rgba = [0.157, 0.172, 0.204, 1];
@@ -473,19 +495,25 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
     applySizeRef.current();
   }, [insetKey]);
 
-  // Content of another kind that has left what shows is fitted, while the
-  // camera is the last fit's: the user's own camera is never taken back.
+  // Content of another kind keeps the view it arrives in while it shows
+  // there, and is fitted where it would not: wholly, under the surface's own
+  // fit; mostly, under a camera the user has moved.
   const keepInViewKey = options.keepInViewKey ?? null;
   useEffect(() => {
     if (keepInViewKey === null) return;
     const canvas = canvasRef.current;
     const camera = cameraRef.current;
-    const fit = lastFitRef.current;
-    const { contentBounds: bounds, inset: covered } = liveRef.current;
-    if (!canvas || !camera || !fit || !bounds || !userCamerasEqual(camera, fit)) return;
+    const { contentBounds: bounds, keepInViewBounds, inset: covered } = liveRef.current;
+    if (!canvas || !camera || !bounds) return;
     const viewport = cpCanvasViewport(canvas, dpr());
     if (viewport.width === 0 || viewport.height === 0) return;
-    if (userBoundsInView(bounds, camera, viewport, covered ? deviceInset(covered, viewport) : null)) return;
+    const inset = covered ? deviceInset(covered, viewport) : null;
+    const fit = lastFitRef.current;
+    const shows =
+      fit !== null && userCamerasEqual(camera, fit)
+        ? userBoundsInView(bounds, camera, viewport, inset)
+        : userBoundsVisibleShare(keepInViewBounds ?? bounds, camera, viewport, inset) >= KEEP_IN_VIEW_SHARE;
+    if (shows) return;
     fitRequestedRef.current = true;
     renderNowRef.current();
   }, [keepInViewKey]);

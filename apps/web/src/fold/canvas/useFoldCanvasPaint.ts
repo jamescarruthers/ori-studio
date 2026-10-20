@@ -31,6 +31,8 @@ export interface FoldCanvasPaint {
     ink: FoldedSceneInk;
     /** In user space: the sheet and the folded form. */
     contentBounds: UserBounds | null;
+    /** In user space: the folded form alone, what must still show across a new step (`FoldPane`'s `keepInViewBounds`). */
+    formBounds: UserBounds | null;
     /**
      * The step whose form `contentBounds` frames — the sheet's key for the
      * sheet — once the step on screen's own picture is in; null while the
@@ -47,6 +49,8 @@ export interface FoldCanvasPaint {
     lines: FoldCreasePatternLines | null;
     /** In user space: the sheet. */
     contentBounds: UserBounds | null;
+    /** The step on screen, once its own picture is in: the pane keeps the sheet in view across a new step. */
+    keepInView: string | null;
   };
 }
 
@@ -198,12 +202,12 @@ export function useFoldCanvasPaint(
     );
     return joinFills(targets, moving);
   }, [index, inks, analysis, refused, section, hoveredFlap, opening, tuck, swivel]);
-  const foldedBounds = useMemo(() => {
+  const { foldedBounds, formBounds } = useMemo(() => {
     const form = scene
       ? boundsOf(scene.subfaces.flatMap((cell) => cell.polygon.map((p) => ({ x: p.x + offset.x, y: p.y + offset.y }))))
       : null;
     const framed = union(sheetBounds, form);
-    return framed ? boundsToUser(framed) : null;
+    return { foldedBounds: framed ? boundsToUser(framed) : null, formBounds: form ? boundsToUser(form) : null };
   }, [scene, offset, sheetBounds]);
 
   const landed = preview.landed;
@@ -225,7 +229,7 @@ export function useFoldCanvasPaint(
   const keepInView = formKey !== null && turned ? `${formKey}|turned:${turned.view_transform.join(',')}` : formKey;
 
   return {
-    folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, keepInView, offset, tint: resolvedScene ? null : tint },
-    creasePattern: { lines: cpLines, contentBounds: cpBounds },
+    folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, formBounds, keepInView, offset, tint: resolvedScene ? null : tint },
+    creasePattern: { lines: cpLines, contentBounds: cpBounds, keepInView: formKey },
   };
 }

@@ -152,9 +152,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   );
   useFoldCanvasShortcuts(camera);
 
-  // --- What each pane paints, and frames: the camera fits on a new sequence or sheet, and the folded
-  // pane fits again when the step on screen changes to a form that has left it — never a camera the
-  // user has moved.
+  // --- What each pane paints, and frames: the camera fits on a new sequence or sheet; on a new step it
+  // keeps the view it had while the step still shows there, and fits again where the step would
+  // arrive off screen — a view the user panned, zoomed or turned included (`useCpSurface`).
   const summary = view.summary;
   const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
   // A rabbit ear's given creases, and the regions its paper that stays is picked among, from its clicks;
@@ -324,6 +324,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               offset={paint.folded.offset}
               contentBounds={paint.folded.contentBounds}
               keepInViewKey={paint.folded.keepInView}
+              keepInViewBounds={paint.folded.formBounds}
               hitTest={(at, radii) => verbs.hitTest('folded', at, radii)}
               overlay={resolvingOrder ? () => ({ points: null, strokes: null }) : foldedOverlay}
               onHover={onFoldedHover}
@@ -362,6 +363,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               scene={null}
               creases={cpStrokes}
               contentBounds={paint.creasePattern.contentBounds}
+              keepInViewKey={paint.creasePattern.keepInView}
               hitTest={(at, radii) => verbs.hitTest('crease-pattern', at, radii)}
               overlay={creaseOverlay}
               onHover={onCreaseHover}
