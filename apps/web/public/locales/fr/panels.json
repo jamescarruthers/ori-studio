@@ -1929,6 +1929,7 @@
       },
       "noAxis": "Aucune paire de côtés correspondants n’a été vérifiée pour ce modèle initial. Choisissez une autre plage.",
       "open": "Répéter de l’autre côté…",
+      "options": "Options",
       "orderConflict": "Les relations initiales entre les couches ne peuvent pas être conservées de l’autre côté.",
       "orderCount_one": "{{number}} sur {{count}}",
       "orderCount_many": "{{number}} sur {{count}}",

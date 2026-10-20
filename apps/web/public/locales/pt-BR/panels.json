@@ -1929,6 +1929,7 @@
       },
       "noAxis": "Não foi verificado um par de lados correspondentes neste modelo inicial. Escolha outro intervalo.",
       "open": "Repetir do outro lado…",
+      "options": "Opções",
       "orderConflict": "As relações originais entre as camadas não podem ser preservadas do outro lado.",
       "orderCount_one": "{{number}} de {{count}}",
       "orderCount_many": "{{number}} de {{count}}",

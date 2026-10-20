@@ -1929,6 +1929,7 @@
       },
       "noAxis": "No se ha verificado un par de lados coincidentes en este modelo inicial. Elige otro intervalo.",
       "open": "Repetir en el otro lado…",
+      "options": "Opciones",
       "orderConflict": "No se pueden conservar las relaciones originales entre capas en el otro lado.",
       "orderCount_one": "{{number}} de {{count}}",
       "orderCount_many": "{{number}} de {{count}}",

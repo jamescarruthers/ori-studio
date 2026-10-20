@@ -1875,6 +1875,7 @@
       },
       "noAxis": "Für dieses Ausgangsmodell wurde kein passendes Seitenpaar bestätigt. Wähle einen anderen Bereich.",
       "open": "Auf der anderen Seite wiederholen…",
+      "options": "Optionen",
       "orderConflict": "Die ursprünglichen Lagenbeziehungen lassen sich auf der anderen Seite nicht erhalten.",
       "orderCount_one": "{{number}} von {{count}}",
       "orderCount_other": "{{number}} von {{count}}",

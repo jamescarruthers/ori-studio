@@ -6256,7 +6256,8 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12515,7 +12516,8 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18776,7 +18778,8 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24704,7 +24707,8 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30632,7 +30636,8 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -36891,7 +36896,8 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43150,7 +43156,8 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49078,6 +49085,7 @@
     "panels:fold.repeat.mirror.pickAgain": "01b313dbbdb5",
     "panels:fold.repeat.mirror.pointsTooClose": "12d81efbabc7",
     "panels:fold.repeat.mirror.wrongCrease": "24fb929ffd69",
-    "panels:fold.repeat.reasonAdvice": "520c85006b76"
+    "panels:fold.repeat.reasonAdvice": "520c85006b76",
+    "panels:fold.repeat.options": "d0db8b5e364b"
   }
 }

@@ -1823,6 +1823,7 @@
       },
       "noAxis": "尚未验证此起始模型有匹配的两侧。请选择其他范围。",
       "open": "在另一侧重复…",
+      "options": "选项",
       "orderConflict": "无法在另一侧保留原有的纸层关系。",
       "orderCount_other": "第 {{number}} 个，共 {{count}} 个",
       "preparing": "正在准备重复折叠…",

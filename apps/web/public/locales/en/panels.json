@@ -1875,6 +1875,7 @@
       },
       "noAxis": "This starting model has no verified matching pair of sides. Choose a different range.",
       "open": "Repeat on the other side…",
+      "options": "Options",
       "orderConflict": "The original layer relationships cannot be preserved on the other side.",
       "orderCount_one": "{{number}} of {{count}}",
       "orderCount_other": "{{number}} of {{count}}",
