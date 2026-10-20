@@ -235,8 +235,15 @@ fn named() -> Vec<Landed> {
         left.op.edge,
         [0.5, 0.5],
     );
-    let both = cases::landed(first.swivel_by_edge(&second, &VertexChoices::default()));
-    push("kite narrowed at c, both".to_string(), both.state);
+    // The second swivel offers an order where the flaps overlap (the engine's
+    // `matching_swivels_offer_orders_without_reordering_stationary_paper`):
+    // every one of them.
+    for (k, both) in cases::every(first.swivel_by_edge(&second, &VertexChoices::default()))
+        .into_iter()
+        .enumerate()
+    {
+        push(format!("kite narrowed at c, both c{k}"), both.state);
+    }
     out
 }
 
