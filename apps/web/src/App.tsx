@@ -15,8 +15,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { PaperExportModal } from './components/paperExport/PaperExportModal';
 import { DiagramExportModal } from './components/diagram/DiagramExportModal';
 import { DiagramReferencesModal } from './components/diagram/DiagramReferencesBrowser';
-import { DiagramFoldModal } from './components/diagram/DiagramFoldBrowser';
-import { FoldImportModal } from './components/fold/import/FoldImportDialog';
+import { DiagramFoldModal } from './components/diagram/DiagramFoldModal';
+import { FoldImportOverlay } from './components/fold/FoldGate';
 import { SheetLayer } from './components/SheetLayer';
 import { TooltipProvider } from './components/ui/Tooltip';
 import { handleMenuAction } from './commands/menuActions';
@@ -187,7 +187,7 @@ export default function App() {
       </OverlayErrorBoundary>
       {/* Fold's Import CP, under every other modal for the same reason. */}
       <OverlayErrorBoundary id="fold-import">
-        <FoldImportModal />
+        <FoldImportOverlay />
       </OverlayErrorBoundary>
       <OverlayErrorBoundary id="help">
         <HelpModal />

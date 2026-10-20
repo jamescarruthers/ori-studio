@@ -9,11 +9,17 @@
  * when the diagram was replaced while it ran, or the step is gone or its
  * source changed under it. Nothing is folded here — the session lands every
  * state — so there is no fold run to show or stop.
+ *
+ * The capture and the session are Fold's code, loaded the first time a step
+ * is captured from Fold (`foldGateway`): the store holds every workspace's
+ * slices, and Diagram's capture from Fold is not a reason for all of them to
+ * download it.
  */
 import i18n from '../../i18n';
-import { captureFoldStep, type FoldStepCaptureRequest } from '../../diagram/fold/foldStepCapture';
+import type { FoldStepCaptureRequest } from '../../diagram/fold/foldStepCapture';
 import type { DiagramCpRender } from '../../diagram/document/diagramDocument';
 import type { FoldSession } from '../../fold/session/foldSession';
+import { loadFold } from '../../workspaces/foldGateway';
 import {
   beginCaptureRun,
   commitStepCapture,
@@ -21,7 +27,6 @@ import {
   type DiagramCaptureStore,
   type DiagramCommit,
 } from './diagramCapture';
-import { foldSession } from './foldSession';
 
 export interface DiagramFoldCaptureRequest extends FoldStepCaptureRequest {
   /** The undo step's name. */
@@ -48,18 +53,19 @@ export type DiagramFoldCaptureOutcome =
   | { status: 'read-only' }
   | { status: 'failed'; code: string; message: string };
 
-/** Capture a step's picture from its Fold step as it is now, and commit it. */
+/** Capture a step's picture from its Fold step as it is now, and commit it. `session` defaults to the app's. */
 export async function runDiagramFoldCapture(
   store: DiagramCaptureStore,
   commit: DiagramCommit,
   stepId: string,
   request: DiagramFoldCaptureRequest,
-  session: FoldSession = foldSession()
+  session?: FoldSession
 ): Promise<DiagramFoldCaptureOutcome> {
   const start = beginCaptureRun(store, stepId);
   if ('status' in start) return start;
   try {
-    const result = await captureFoldStep(session, request, { t: i18n.t.bind(i18n) });
+    const fold = await loadFold();
+    const result = await fold.captureFoldStep(session ?? fold.foldSession(), request, { t: i18n.t.bind(i18n) });
     if (result.status !== 'captured') return result;
     const committed = await commitStepCapture(
       store,

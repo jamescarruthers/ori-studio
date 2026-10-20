@@ -9,7 +9,7 @@ import {
 } from '../../cp-workspace/folded/layerSpreadControls';
 import { withSpreadField, type LayerSpreadEdit } from '../../cp-workspace/folded/layerSpreadSettings';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { foldSession } from '../../store/workspaceStore/foldSession';
+import { loadedFold, loadFold } from '../../workspaces/foldGateway';
 import {
   buildDiagramLinkedPoseActions,
   buildDiagramSpreadControls,
@@ -18,8 +18,7 @@ import {
 } from '../actions/diagramLinkedPoseActions';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
 import type { DiagramFoldStepSource, DiagramScenePicture, DiagramStep } from '../document/diagramDocument';
-import { readFoldStepCapture, type FoldStepCaptureInput } from './foldStepCapture';
-import { foldStepPicture } from './foldStepPicture';
+import type { FoldStepCaptureInput } from './foldStepCapture';
 import { rotateDiagramFoldStepTo, spreadDiagramFoldStep } from './foldStepActions';
 
 /**
@@ -36,6 +35,8 @@ import { rotateDiagramFoldStepTo, spreadDiagramFoldStep } from './foldStepAction
  * from them with no call to the engine; the drag's end captures it. The Step
  * pane, which has the sliders, and the step detail, which shows the picture,
  * each call this; the drag and what it is drawn from are shared between them.
+ * Reading them is Fold's code (`foldGateway`), loaded as the first drag
+ * starts: until it has been read there is nothing to draw from.
  *
  * Null for a step that is not a Fold step's.
  */
@@ -90,8 +91,10 @@ function pictureKey(stepId: string, source: DiagramFoldStepSource): string {
 /** The picture `source` would show with `spread`, from what it is drawn from; null when that is not read yet. */
 function drawWith(key: string, source: DiagramFoldStepSource, spread: LayerSpreadOptions): DiagramScenePicture | null {
   const input = inputs.get(key);
-  if (!input || input === 'reading' || source.render.mode !== 'folded-flat') return null;
-  const { captured } = foldStepPicture(input.picture, { ...source.render, spread });
+  // An input is only ever read once Fold's code has loaded (`readInput`).
+  const fold = loadedFold();
+  if (!fold || !input || input === 'reading' || source.render.mode !== 'folded-flat') return null;
+  const { captured } = fold.foldStepPicture(input.picture, { ...source.render, spread });
   return captured.kind === 'picture' && captured.picture.kind === 'scene' ? captured.picture : null;
 }
 
@@ -122,9 +125,12 @@ function readInput(key: string, source: DiagramFoldStepSource, t: TFunction): vo
   // The oldest let go first: a Map keeps the order its keys came in.
   if (inputs.size >= INPUTS_KEPT) inputs.delete(inputs.keys().next().value!);
   inputs.set(key, 'reading');
-  const session = foldSession();
-  const release = session.retain();
-  void readFoldStepCapture(session, source, t)
+  void loadFold()
+    .then((fold) => {
+      const session = fold.foldSession();
+      const release = session.retain();
+      return fold.readFoldStepCapture(session, source, t).finally(release);
+    })
     .then((read) => {
       if (read.status !== 'ready') {
         inputs.delete(key);
@@ -133,8 +139,7 @@ function readInput(key: string, source: DiagramFoldStepSource, t: TFunction): vo
       inputs.set(key, read.input);
       if (drag?.key === key) publish({ ...drag, picture: drawWith(key, source, drag.spread) });
     })
-    .catch(() => inputs.delete(key))
-    .finally(release);
+    .catch(() => inputs.delete(key));
 }
 
 /** The step's Fold source, if it is a Fold step's and this build may pose it. */

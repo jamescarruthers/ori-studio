@@ -8,8 +8,6 @@ import {
   type FoldBrowser,
   type FoldBrowserProvider,
 } from '../../diagram/fold/useFoldBrowser';
-import { useLayoutStore } from '../../store/layoutStore';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramFoldBrowserState } from '../../store/workspaceStore/types';
 import { Button } from '../ui/Button';
 import { DiagramFoldPicture } from './DiagramFoldPicture';
@@ -25,17 +23,9 @@ import { DiagramPullCard, DiagramPullCardThumbnail } from './DiagramReferencesCa
 /**
  * The Fold browser (fold-workspace plan D17): a modal over the Diagram, from
  * which a Fold sequence's steps are pulled — as References' cards are (D20),
- * in the same frame — or sent from Fold. Mounted at the App root while the
- * Diagram is the workspace on screen and the store says it is open.
- */
-export function DiagramFoldModal() {
-  const state = useWorkspaceStore((store) => store.diagramFoldBrowser);
-  const shown = useLayoutStore((store) => store.activeWorkspace === 'diagram');
-  if (!state || !shown) return null;
-  return <DiagramFoldBrowser key={state.opening} state={state} />;
-}
-
-/**
+ * in the same frame — or sent from Fold. Fold's code, mounted by
+ * `DiagramFoldModal` once it has loaded.
+ *
  * The browser itself: the shown sequence's active path as cards — each step
  * that folds, the turns between them, and Finished — each the step it would
  * become, its sentence Fold's own; under them what is selected and the one
