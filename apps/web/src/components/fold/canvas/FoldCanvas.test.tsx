@@ -88,6 +88,7 @@ vi.mock("../FoldToolWindow", async (importOriginal) => {
   };
 });
 
+import { isFoldAltLatched, resetFoldAltLatch, setFoldAltLatched } from "../../../fold/canvas/foldAltLatch";
 import { foldPaneDisplay, resetFoldPaneDisplay } from "../../../fold/canvas/foldPaneDisplay";
 import { useFoldRepeatUi } from "../../../fold/repeat/foldRepeatUi";
 import { useFoldReturnUi } from "../../../fold/return/foldReturnUi";
@@ -206,6 +207,36 @@ describe("the Fold canvas", () => {
     act(() => tools?.click());
     expect(tools?.getAttribute("aria-expanded")).toBe("true");
     expect(document.getElementById(tools?.getAttribute("aria-controls") ?? "")).not.toBeNull();
+  });
+
+  it("shows a touch phone's free-point latch on the bar while it is on, and lets it go from there", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === PHONE_MEDIA_QUERY || query.includes("pointer: coarse"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    try {
+      const canvas = mount();
+      const latch = () => canvas.querySelector<HTMLButtonElement>("[data-fold-alt-latch-bar]");
+      // Off, it is the sheet's alone.
+      expect(latch()).toBeNull();
+      act(() => setFoldAltLatched(true));
+      expect(latch()?.getAttribute("aria-label")).toBe("Free point");
+      expect(latch()?.getAttribute("aria-pressed")).toBe("true");
+      // Beside the tools.
+      const names = [...(canvas.querySelector("[data-viewport-toolbar]")?.querySelectorAll("button") ?? [])].map(
+        (button) => button.getAttribute("aria-label"),
+      );
+      expect(names.slice(0, 3)).toEqual(["Tools", "Free point", "Crease pattern"]);
+      act(() => latch()?.click());
+      expect(isFoldAltLatched()).toBe(false);
+      expect(latch()).toBeNull();
+    } finally {
+      resetFoldAltLatch();
+    }
   });
 
   it("puts the step’s transport on the bar, waiting while the sheet has no step to play", () => {
