@@ -1976,6 +1976,7 @@
       "sourceChanged": "Os passos de origem mudaram. Atualize esta repetição.",
       "stop": "Parar",
       "stopped": "Parou antes de a repetição ficar pronta. Nenhum passo foi adicionado.",
+      "swivelBehind": "Do outro lado, o vale e a montanha desta dobra giratória ficam na camada de trás. Vire o modelo e faça a dobra giratória lá.",
       "title": "Repetir do outro lado",
       "unavailable": "Os estados de origem estão indisponíveis ou mudaram. Aguarde a reprodução e abra Repetir novamente.",
       "unsupported": "Este intervalo contém um colapso ou outra repetição que ainda não pode ser espelhada. Escolha um intervalo de operações de dobra.",
@@ -2774,10 +2775,10 @@
       "swivelEdgeLine": "Gire a borda sobre a linha, pivotando no ponto.",
       "swivelFoldCrease": "Gire a borda sobre o vinco, com os vincos se encontrando na borda dobrada.",
       "swivelFoldLine": "Gire a borda sobre a linha, com os vincos se encontrando na borda dobrada.",
-      "swivelHinges": "Gire ao longo das duas dobradiças definidas.",
       "swivelInsideCrease": "Gire a borda sobre o vinco com um giro interno, com os vincos se encontrando na borda dobrada.",
-      "swivelInsideHinges": "Gire para dentro ao longo das duas dobradiças definidas, inserindo a faixa entre as camadas.",
       "swivelInsideLine": "Gire a borda sobre a linha com um giro interno, com os vincos se encontrando na borda dobrada.",
+      "swivelInsideValleyMountain": "Gire a aba com um giro interno ao longo do vale e da montanha.",
+      "swivelValleyMountain": "Gire a aba com uma dobra giratória ao longo do vale e da montanha.",
       "tuckMountain": "Dobre em monte e encaixe a aba por trás, sobre a camada escolhida.",
       "tuckValley": "Dobre em vale e encaixe a aba sob a camada escolhida.",
       "turn": "{{turn}}.",
@@ -3095,6 +3096,7 @@
       "swivelKindOpenHelp": "A faixa da outra camada dobra por cima do resto da sua camada, com o verso à mostra.",
       "title": "Passo {{number}}",
       "valley": "Vale",
+      "valleyMountainHelp": "Na camada que você vê, o vale e a montanha que delimitam a aba e se encontram na borda dobrada. O vinco na camada de trás decorre deles.",
       "vertex": {
         "blocksHelp": "Pedaços de papel que giram juntos: cada um gira em torno dos mesmos vincos, na mesma ordem, até onde pousa."
       }
@@ -3184,7 +3186,6 @@
       "targetLine": "Linha por dois pontos",
       "tuckMountain": "Dobra monte e encaixar",
       "tuckValley": "Dobra vale e encaixar",
-      "twoHinges": "Ponto de encontro e duas dobradiças",
       "unfold": "Desdobrar",
       "unfolds_one": "Desdobra {{count}} vinco",
       "unfolds_many": "Desdobra {{count}} vincos",
@@ -3192,6 +3193,7 @@
       "unknown": "De uma versão mais recente do Ori Studio",
       "unsink": "Desfazer afundamento",
       "valleyFold": "Dobra vale",
+      "valleyMountain": "Vale e montanha",
       "valleyPrecrease": "Dobra vale e desdobra"
     }
   },

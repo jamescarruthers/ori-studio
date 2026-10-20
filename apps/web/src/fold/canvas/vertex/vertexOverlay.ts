@@ -30,6 +30,9 @@
  *   underneath drawn only past the one on top) and the other layer's second
  *   crease, the other layer's swivel crease the odd one out
  *   (`compound/swivel_on_edge.rs`).
+ * - **Swivel by its valley and mountain**: the two named on the layer in
+ *   front, by their letters, and the crease computed on the layer behind,
+ *   dotted where the front layer hides it (`compound/swivel_valley_mountain.rs`).
  *
  * **The marks** stay the tool's feedback, never a pen, since none of them is
  * a crease the fold makes:
@@ -182,14 +185,18 @@ export function vertexCreaseLines(
       if (taken) add(ray(index, analysis.center, taken), other(direction));
       break;
     }
-    case 'swivel-by-creases':
+    case 'swivel-valley-mountain':
     case 'swivel-by-edge':
       // Each from where it is seen to where it leaves the last layer it
       // cuts, by the engine's letter as seen: on a folded edge, the swivel
-      // crease of the layer underneath shows only past the one on top.
+      // crease of the layer underneath shows only past the one on top. By
+      // its valley and mountain, the crease behind is drawn where it is
+      // hidden too, dotted, as a diagram draws it.
       for (const crease of analysis.creases) {
         const [a, b] = segment(index, crease.from, crease.to);
-        if (Math.hypot(b.x - a.x, b.y - a.y) > 1e-9) add([a, b], crease.letter);
+        if (Math.hypot(b.x - a.x, b.y - a.y) <= 1e-9) continue;
+        if (crease.hidden) creases.push({ line: [a, b], letter: crease.letter, hidden: true });
+        else add([a, b], crease.letter);
       }
       break;
   }
@@ -249,7 +256,7 @@ export function vertexOverlayMarks(
       strokes.push(...fanChoices(index, analysis, input, accent));
       dot(analysis.center);
       break;
-    case 'swivel-by-creases':
+    case 'swivel-valley-mountain':
       dot(analysis.vertex);
       break;
     case 'swivel-by-edge':
@@ -275,20 +282,21 @@ const SWIVEL_MOVING_TINT = 0.2;
 const SWIVEL_TURN_TINT = 0.36;
 
 /**
- * A swivel by its edge's paper that moves (`FoldSwivelEdgeAnalysis.regions`),
- * lit over the folded pane in the theme's accent: every piece, and the part
- * that carries the edge onto its target brighter — the wedge that turns
- * about the vertex, or on a folded edge the one that swivels across the
- * swivel crease. Null when the engine lists none.
+ * A swivel's paper that moves (`FoldSwivelEdgeAnalysis.regions`), lit over
+ * the folded pane in the theme's accent: every piece, and the part that
+ * carries it brighter — by its edge, the wedge that turns about the vertex,
+ * or on a folded edge the one that swivels across the swivel crease; by its
+ * valley and mountain, the flap between them, which folds across the hinge.
+ * Null when the engine lists none.
  */
 export function swivelRegionsTint(
   index: FoldPickIndex,
-  analysis: Pick<FoldSwivelEdgeAnalysis, 'regions' | 'fold'>,
+  analysis: Pick<FoldSwivelEdgeAnalysis, 'regions' | 'fold'> & { kind?: FoldVertexAnalysis['kind'] },
   accent: Rgba
 ): FillGeometry | null {
   const triangles: number[] = [];
   const colors: number[] = [];
-  const carrier = analysis.fold ? 'near' : 'turn';
+  const carrier = analysis.kind === 'swivel-valley-mountain' ? 'beyond' : analysis.fold ? 'near' : 'turn';
   for (const region of analysis.regions) {
     const ring = region.polygon.map((p) => index.toScene(toPoint(p)));
     const color = withAlpha(accent, region.wedge === carrier ? SWIVEL_TURN_TINT : SWIVEL_MOVING_TINT);

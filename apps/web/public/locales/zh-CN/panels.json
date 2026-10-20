@@ -1856,6 +1856,7 @@
       "sourceChanged": "原步骤已更改。请更新此次重复。",
       "stop": "停止",
       "stopped": "在重复准备就绪前已停止。未添加任何步骤。",
+      "swivelBehind": "在另一侧，这个旋转折的谷与山位于后面一层。请把模型翻面，在那里做旋转折。",
       "title": "在另一侧重复",
       "unavailable": "原状态不可用或已更改。请等待重放完成后重新打开重复。",
       "unsupported": "此范围包含尚不能镜像执行的塌折或另一次重复。请选择折叠操作范围。",
@@ -2350,10 +2351,10 @@
       "swivelEdgeLine": "以该点为支点，将边旋转到线上。",
       "swivelFoldCrease": "让折痕交于折边，将边旋转到折痕上。",
       "swivelFoldLine": "让折痕交于折边，将边旋转到线上。",
-      "swivelHinges": "沿两条指定的铰链旋转折叠。",
       "swivelInsideCrease": "让折痕交于折边，以内旋转折将边旋转到折痕上。",
-      "swivelInsideHinges": "沿两条指定的铰链向内旋转折叠，将条状部分藏入纸层之间。",
       "swivelInsideLine": "让折痕交于折边，以内旋转折将边旋转到线上。",
+      "swivelInsideValleyMountain": "沿谷与山将翼片做内旋转折。",
+      "swivelValleyMountain": "沿谷与山将翼片做旋转折。",
       "tuckMountain": "山折，在背面把翼片塞到所选层的上面。",
       "tuckValley": "谷折，把翼片塞到所选层的下面。",
       "turn": "{{turn}}。",
@@ -2567,6 +2568,7 @@
       "swivelKindOpenHelp": "另一层的窄条折到该层其余部分的上面，露出背面。",
       "title": "第 {{number}} 步",
       "valley": "谷折",
+      "valleyMountainHelp": "可见层上界定翼片、交于折边的谷与山。后面一层的折痕由它们决定。",
       "vertex": {
         "blocksHelp": "作为整体一起转动的纸块：每块都绕同样的折痕、按同样的顺序转到它落下的位置。"
       }
@@ -2644,12 +2646,12 @@
       "targetLine": "经过两点的线",
       "tuckMountain": "山折并塞入",
       "tuckValley": "谷折并塞入",
-      "twoHinges": "交点与两条铰链",
       "unfold": "展开",
       "unfolds_other": "展开 {{count}} 条折痕",
       "unknown": "来自更新版本的 Ori Studio",
       "unsink": "反沉折",
       "valleyFold": "谷折",
+      "valleyMountain": "谷与山",
       "valleyPrecrease": "谷折后展开"
     }
   },

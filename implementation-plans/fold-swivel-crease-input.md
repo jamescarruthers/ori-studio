@@ -1,6 +1,6 @@
 # Swivel crease input and participating-paper guards
 
-The three-point UI is superseded by [two-line construction](swivel-two-line-workflow.md). The engine and guard fixes remain.
+The three-point UI, and the two-line construction that followed it, are superseded by the [swivel by its valley and mountain](swivel-valley-mountain.md). The guard fixes remain.
 
 ## Goal
 

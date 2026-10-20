@@ -103,6 +103,7 @@ import {
   type FoldStepNode,
   type FoldStepSpreadEntry,
   type FoldSwivelEdgeOp,
+  type FoldSwivelValleyMountainOp,
   type FoldVertexOp,
   type FoldVertexOpKind,
   type SheetPoint,
@@ -396,11 +397,13 @@ const SWIVEL_EDGE_KEYS = new Set([
   'swivel',
 ]);
 
-const SWIVEL_CREASES_KEYS = new Set(['kind', 'via', 'fold', 'first', 'second', 'direction', 'swivel']);
+/** A swivel by its valley and mountain's keys (`FoldSwivelValleyMountainOp`): no direction. */
+const SWIVEL_VALLEY_MOUNTAIN_KEYS = new Set(['kind', 'via', 'valley', 'mountain', 'swivel']);
 
-/** The keys this build knows for an op: its kind's, or its form's when its kind has two. */
+/** The keys this build knows for an op: its kind's, or its form's when its kind has several. */
 function opKeys(value: Record<string, unknown>, kind: string): ReadonlySet<string> | undefined {
-  return kind === 'swivel' && value.via === 'lines' ? new Set(['kind', 'via', 'first', 'second', 'direction', 'swivel']) : kind === 'swivel' && value.via === 'creases' ? SWIVEL_CREASES_KEYS : kind === 'swivel' && value.via !== undefined ? SWIVEL_EDGE_KEYS : OP_KEYS.get(kind);
+  if (kind !== 'swivel' || value.via === undefined) return OP_KEYS.get(kind);
+  return value.via === 'valley-mountain' ? SWIVEL_VALLEY_MOUNTAIN_KEYS : SWIVEL_EDGE_KEYS;
 }
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
@@ -566,6 +569,8 @@ export function readBackFoldStep(
 // read.
 
 function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): FoldVertexOp | null {
+  // The one vertex op with no direction: its letters are the viewer's.
+  if (kind === 'swivel' && value.via === 'valley-mountain') return readSwivelValleyMountainOp(value);
   const direction = readDirection(value.direction);
   if (!direction) return null;
   const optional = (key: string): FoldModelDirection | undefined | null =>
@@ -600,16 +605,6 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
         : null;
     }
     case 'swivel': {
-      if (value.via === 'lines') {
-        const first = readLocatedLine(value.first), second = readLocatedLine(value.second);
-        if (!first || !second || (value.swivel !== undefined && value.swivel !== 'inside')) return null;
-        return { kind, via: 'lines', first, second, direction, ...(value.swivel === 'inside' ? { swivel: 'inside' as const } : {}) };
-      }
-      if (value.via === 'creases') {
-        const fold = readPoint(value.fold), first = readPoint(value.first), second = readPoint(value.second);
-        if (!fold || !first || !second || (value.swivel !== undefined && value.swivel !== 'inside')) return null;
-        return { kind, via: 'creases', fold, first, second, direction, ...(value.swivel === 'inside' ? { swivel: 'inside' as const } : {}) };
-      }
       if (value.via !== undefined) return readSwivelEdgeOp(value, direction);
       const vertex = readPoint(value.vertex);
       const toward = readTriple(value.toward);
@@ -621,6 +616,18 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
         : null;
     }
   }
+}
+
+/**
+ * A swivel by its valley and mountain (`via: 'valley-mountain'`): each line
+ * as a fold's line is located, an axiom's with its root; `swivel: 'inside'`
+ * for the inside swivel, the only value it is written with. No direction.
+ */
+function readSwivelValleyMountainOp(value: Record<string, unknown>): FoldSwivelValleyMountainOp | null {
+  const valley = readLocatedLine(value.valley);
+  const mountain = readLocatedLine(value.mountain);
+  if (!valley || !mountain || (value.swivel !== undefined && value.swivel !== 'inside')) return null;
+  return { kind: 'swivel', via: 'valley-mountain', valley, mountain, ...(value.swivel === 'inside' ? { swivel: 'inside' as const } : {}) };
 }
 
 /**
@@ -1153,11 +1160,14 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
         ...optional('ridge', op.ridge),
       };
     case 'swivel':
-      if ('via' in op && op.via === 'lines') {
-        return { kind: op.kind, via: op.via, first: writeLocatedLine(op.first), second: writeLocatedLine(op.second), direction: op.direction, ...(op.swivel === 'inside' ? { swivel: op.swivel } : {}) };
-      }
-      if ('via' in op && op.via === 'creases') {
-        return { kind: op.kind, via: op.via, fold: writePoint(op.fold), first: writePoint(op.first), second: writePoint(op.second), direction: op.direction, ...(op.swivel === 'inside' ? { swivel: op.swivel } : {}) };
+      if ('via' in op && op.via === 'valley-mountain') {
+        return {
+          kind: op.kind,
+          via: op.via,
+          valley: writeLocatedLine(op.valley),
+          mountain: writeLocatedLine(op.mountain),
+          ...(op.swivel === 'inside' ? { swivel: op.swivel } : {}),
+        };
       }
       if ('via' in op && 'fold' in op) {
         // On a folded edge: `fold` where the free form has its pivot, and

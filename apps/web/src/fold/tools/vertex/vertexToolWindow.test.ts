@@ -392,7 +392,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(blocked?.refusal?.text).toMatch(/^A crease would run into a fold before it reaches the paper’s edge/);
   });
 
-  it('offers a swivel on a folded edge its kind, Open or Inside, only when both land', () => {
+  it('offers a swivel on a folded edge its kind, Open or Inside, when the other kind lands', () => {
     const calls = { ...verbs(), setSwivelKind: vi.fn() };
     const onFold = vertex({
       tool: 'swivel',
@@ -420,11 +420,16 @@ describe('a vertex fold’s window while it previews', () => {
     // Inside taken: shown as taken.
     const inside = foldToolWindow(t, view({ ...onFold, swivelKind: 'inside' }, { preview: preview() }), calls, mouse);
     expect(inside?.vertex?.kind?.value).toBe('inside');
-    // Only one kind lands: no control, the one that lands folded.
-    for (const swivelKinds of [['inside'], ['open'], []] as const) {
+    // Only the kind asked lands, or none: no control. Only the other: offered, the one asked disabled.
+    for (const swivelKinds of [['open'], []] as const) {
       const one = foldToolWindow(t, view({ ...onFold, swivelKinds }, { preview: preview() }), calls, mouse);
       expect(one?.vertex?.kind, swivelKinds.join()).toBeNull();
     }
+    const other = foldToolWindow(t, view({ ...onFold, swivelKinds: ['inside'] }, { preview: preview() }), calls, mouse);
+    expect(other?.vertex?.kind?.options.map((option) => [option.value, option.disabled])).toEqual([
+      ['open', true],
+      ['inside', false],
+    ]);
     // Not while clicking, nor before the engine has described it, nor at a free vertex.
     expect(foldToolWindow(t, view(onFold, { picks: 3 }), calls, mouse)?.vertex?.kind).toBeNull();
     const asking = foldToolWindow(t, view({ ...onFold, described: false }, { preview: preview() }), calls, mouse);
@@ -507,6 +512,7 @@ describe('a vertex fold’s refusals', () => {
       swivel_edge_short: { code: 'swivel_edge_short', faces: [0] },
       swivel_edge_stays: { code: 'swivel_edge_stays', faces: [0] },
       swivel_line_meeting: { code: 'swivel_line_meeting' },
+      swivel_no_flap: { code: 'swivel_no_flap', faces: [17, 18] },
       swivel_not_a_fold: { code: 'swivel_not_a_fold', point: [0.75, 0.6] },
       swivel_misses_fold: { code: 'swivel_misses_fold', faces: [17, 18] },
       swivel_fold_wide: { code: 'swivel_fold_wide', faces: [17, 18] },
@@ -643,17 +649,66 @@ describe('a vertex fold’s refusals', () => {
   });
 });
 
-it('uses the normal line instructions for each swivel line and confirms the first without folding', () => {
-  const first=vertex({tool:'swivel',swivelInput:'creases',firstLineSet:false,lineReady:true,described:false,known:false});
-  const actions=verbs();
-  const window=foldToolWindow(t,view(first,{picks:2,lineMode:'axiom-1',preview:preview()}),actions,mouse)!;
-  expect(window.lineMode?.value).toBe('axiom-1');
-  expect(window.instructions.items).toEqual(['Click the first point the fold passes through.','Click the second point.','Press Enter to use the first line and locate the second.']);
-  expect(window.footer?.commit).toMatchObject({label:'Use first line',disabled:false});
-  window.footer!.commit.run();expect(actions.commit).toHaveBeenCalledOnce();
-  const second=foldToolWindow(t,view({...first,firstLineSet:true},{lineMode:'crease'}),actions,mouse)!;
-  expect(second.lineMode?.value).toBe('crease');
-  expect(second.instructions.intro).toContain('second fold line');
-  expect(second.instructions.items[0]).toContain('crease');
-  expect(second.instructions.items.join(' ')).not.toContain('point along');
+describe('a swivel by its valley and mountain', () => {
+  const valleyStep = vertex({ tool: 'swivel', swivelInput: 'valley-mountain', valleyTaken: false, lineLocated: true, described: false, known: false });
+
+  it('names each line by its letter, the line modes’ own clicks under it, and takes the valley with Enter', () => {
+    const actions = verbs();
+    const window = foldToolWindow(t, view(valleyStep, { picks: 2, lineMode: 'axiom-1', preview: preview() }), actions, mouse)!;
+    expect(window.lineMode).toMatchObject({ value: 'axiom-1', label: 'Valley line' });
+    expect(window.instructions.intro).toBe('Pick the valley line: the flap’s hinge, on the layer you see, from a point on a folded edge into the paper.');
+    expect(window.instructions.items).toEqual([
+      'Valley line: Click the first point the fold passes through.',
+      'Valley line: Click the second point.',
+      'Press Enter to take it as the valley.',
+    ]);
+    expect(window.footer?.commit).toMatchObject({ label: 'Use as the valley', disabled: false });
+    window.footer!.commit.run();
+    expect(actions.commit).toHaveBeenCalledOnce();
+    // Not until a line is located.
+    const none = foldToolWindow(t, view({ ...valleyStep, lineLocated: false }, { lineMode: 'crease' }), actions, mouse)!;
+    expect(none.footer?.commit.disabled).toBe(true);
+  });
+
+  it('locates the mountain next, offers no direction, and folds with Enter', () => {
+    const taken = { ...valleyStep, valleyTaken: true };
+    const mountain = foldToolWindow(t, view(taken, { lineMode: 'crease' }), verbs(), mouse)!;
+    expect(mountain.lineMode).toMatchObject({ value: 'crease', label: 'Mountain line' });
+    expect(mountain.instructions.intro).toContain('mountain line');
+    expect(mountain.instructions.items[0]).toMatch(/^Mountain line: /);
+    expect(mountain.instructions.items.at(-1)).toBe('Press Enter to fold.');
+    expect(mountain.vertex?.direction).toBeNull();
+    // Previewed: still no direction, its kinds offered where both land.
+    const previewed = foldToolWindow(
+      t,
+      view({ ...taken, onFold: true, described: true, known: true, swivelKind: 'open', swivelKinds: ['open', 'inside'], directions: [true, false] }, { preview: preview() }),
+      verbs(),
+      mouse
+    )!;
+    expect(previewed.vertex?.direction).toBeNull();
+    expect(previewed.vertex?.kind?.options.map((option) => option.disabled)).toEqual([false, false]);
+    expect(previewed.vertex?.lineBy).toBeNull();
+  });
+});
+
+describe('a swivel never folds another way or kind than the one asked', () => {
+  const onFold = vertex({ tool: 'swivel', onFold: true, described: true, known: false, swivelKind: 'open' });
+
+  it('offers the other way when only that lands, the way asked disabled', () => {
+    const window = foldToolWindow(t, view({ ...onFold, direction: 'valley', directions: [false, true] }, { picks: 3, preview: preview() }), verbs(), mouse)!;
+    expect(window.vertex?.direction?.value).toBe('valley');
+    expect(window.vertex?.direction?.options.map((option) => option.disabled === true)).toEqual([true, false]);
+    // Only the way asked lands: no choice, no control.
+    const only = foldToolWindow(t, view({ ...onFold, direction: 'valley', directions: [true, false] }, { picks: 3, preview: preview() }), verbs(), mouse)!;
+    expect(only.vertex?.direction).toBeNull();
+  });
+
+  it('offers the other kind when only that lands, the kind asked disabled', () => {
+    const window = foldToolWindow(t, view({ ...onFold, swivelKinds: ['inside'] }, { picks: 3, preview: preview() }), verbs(), mouse)!;
+    expect(window.vertex?.kind?.value).toBe('open');
+    expect(window.vertex?.kind?.options.map((option) => option.disabled)).toEqual([true, false]);
+    // Only the kind asked lands: no control.
+    const only = foldToolWindow(t, view({ ...onFold, swivelKinds: ['open'] }, { picks: 3, preview: preview() }), verbs(), mouse)!;
+    expect(only.vertex?.kind).toBeNull();
+  });
 });

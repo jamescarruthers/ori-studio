@@ -60,7 +60,7 @@ const refused: FoldEngineOutcome<FoldCompoundAnalysis> = {
 const lines = (...ids: number[]) => ids.map((id) => ({ id, at: [id / 10, 0] as [number, number] }));
 
 describe('a swivel’s reach', () => {
-  it('asks every edge against every other line, and keeps on a folded edge the way that lands', () => {
+  it('asks every edge against every other line, and offers on a folded edge a pair that lands another way, folded the folder’s', () => {
     const ask = vi.fn((op: FoldVertexOp) => {
       // Edge 1 onto line 2 folds only as a mountain; every other pair is refused.
       if (!('edge' in op) || op.edge[0] !== 0.1 || op.target.via !== 'crease' || op.target.at[0] !== 0.2) return refused;
@@ -68,20 +68,32 @@ describe('a swivel’s reach', () => {
     });
     const request: FoldSwivelReachAsk = { at: { fold: [0.5, 0.5] }, direction: 'valley', edges: lines(1, 3), targets: lines(1, 2, 3) };
     const reach = swivelReach(ask, request);
-    // An edge is never asked onto its own line.
-    expect(ask).toHaveBeenCalledTimes(2 * 2 + 1);
+    // An edge is never asked onto its own line, and a pair once: kept as asked, nothing to ask again.
+    expect(ask).toHaveBeenCalledTimes(2 * 2);
     expect(reach.landings).toHaveLength(1);
     const [landing] = reach.landings;
     expect(landing).toMatchObject({ edge: 1, target: 2, directions: [false, true] });
-    // The folder's way does not land: kept the other way, as the click will fold it.
-    expect(landing?.op).toMatchObject({ fold: [0.5, 0.5], direction: 'mountain' });
+    // The folder's way does not land: kept the folder's way all the same. The
+    // click previews it refused, and the refusal offers the other way: never
+    // the other way folded without a word (owner feedback, 2026-10-20).
+    expect(landing?.op).toMatchObject({ fold: [0.5, 0.5], direction: 'valley' });
+  });
+
+  it('offers a free vertex that lands only the other way, kept the folder’s way', () => {
+    const ask = vi.fn((op: FoldVertexOp) =>
+      'direction' in op && op.direction === 'mountain' ? answered({ emergents: [true, false] }) : answered({ emergents: [false, false] })
+    );
+    const reach = swivelReach(ask, { at: { pivot: [0.5, 0.5] }, direction: 'valley', edges: lines(1), targets: lines(2) });
+    expect(reach.landings).toHaveLength(1);
+    expect(reach.landings[0]?.directions).toEqual([false, true]);
+    expect(reach.landings[0]?.op).toMatchObject({ direction: 'valley' });
   });
 
   it('asks a free vertex both ways, keeps the folder’s when it lands, and takes the first ridge that lands', () => {
     const ask = vi.fn((op: FoldVertexOp) => {
       if (!('ridge' in op) || op.ridge === undefined) {
         // As asked, only the end's ridge lands, and only as a valley.
-        return op.direction === 'valley' ? answered({ emergents: [false, true] }) : answered({ emergents: [false, false] });
+        return 'direction' in op && op.direction === 'valley' ? answered({ emergents: [false, true] }) : answered({ emergents: [false, false] });
       }
       return answered({ emergents: [false, true], analysis: { kind: 'swivel-by-edge', ...analysis(), ridge: 1 } });
     });

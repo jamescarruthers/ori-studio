@@ -21,7 +21,9 @@
  *   engine refuses; only one that can swing from there is offered
  *   (`swivelReach`) — and the line it lands on, as
  *   {@link FoldVertexLines.swivelTarget} names it: a crease or an edge it
- *   lands on, or two points. A swivel stored by its rays still replays; the
+ *   lands on, or two points. By its valley and mountain, it takes no clicks
+ *   of its own: each line is located with the line modes, as a valley fold's
+ *   is (`foldToolRegistry`). A swivel stored by its rays still replays; the
  *   tool no longer makes one.
  *
  * Which layer a flap click names is not decided by the click: it depends on
@@ -43,8 +45,13 @@ const EDGE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: true,
 /** The line a swivel lays its edge on: any crease or edge. */
 const LINE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: true };
 
-/** How a petal fold's hinge and a swivel's target are named: what the window's control switches. */
-export type FoldSwivelInput = 'edge' | 'creases';
+/**
+ * How a swivel is constructed, as the window's Construct by control switches
+ * it: by the edge that swings onto a line (the clicks below), or by its
+ * valley and mountain on the layer that faces the viewer, each located with
+ * the line modes, the valley first (`FoldSwivelValleyMountainOp`).
+ */
+export type FoldSwivelInput = 'edge' | 'valley-mountain';
 
 export interface FoldVertexLines {
   swivelInput?: FoldSwivelInput;

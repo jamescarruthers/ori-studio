@@ -477,6 +477,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'swivel_edge_short':
     case 'swivel_edge_stays':
     case 'swivel_line_meeting':
+    case 'swivel_no_flap':
     case 'swivel_not_a_fold':
     case 'swivel_misses_fold':
     case 'swivel_fold_wide':

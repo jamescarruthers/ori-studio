@@ -173,7 +173,7 @@ export function useFoldCanvasPaint(
   const swivel = preview.vertex?.answer?.analysis ?? preview.vertex?.base?.analysis ?? null;
   const tint = useMemo(() => {
     if (!index || !inks) return null;
-    if (swivel?.kind === 'swivel-by-edge' || swivel?.kind === 'swivel-by-creases') return swivelRegionsTint(index, swivel, inks.accent);
+    if (swivel?.kind === 'swivel-by-edge' || swivel?.kind === 'swivel-valley-mountain') return swivelRegionsTint(index, swivel, inks.accent);
     const targets = tuck
       ? foldTargetsTint(
           index,

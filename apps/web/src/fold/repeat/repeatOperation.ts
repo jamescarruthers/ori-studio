@@ -61,8 +61,8 @@ export function mirrorOperation(
                 ? op.pivot
                 : 'vertex' in op
                   ? op.vertex
-                  : op.kind === 'swivel' && op.via === 'lines'
-                    ? linePoint(op.first.line)
+                  : op.kind === 'swivel' && op.via === 'valley-mountain'
+                    ? linePoint(op.valley.line)
                     : toPair(polygonCentroid(sheetRing(source, 0)));
   const frame = correspondingFrame(source, target, map, anchor);
   const seen = compose(target.view_transform, compose(frame, invertIsometry(source.view_transform)));
@@ -173,9 +173,13 @@ export function mirrorOperation(
           emergent: vector(op.emergent),
           seed: seed(op.seed),
         };
-      else if (op.via === 'lines') next = { ...op, first: located(op.first), second: located(op.second) };
-      else if (op.via === 'creases')
-        next = { ...op, fold: p(op.fold), first: p(op.first), second: p(op.second) };
+      else if (op.via === 'valley-mountain') {
+        // Its letters are the viewer's, on the layer that faces them: seen
+        // from the other side, its pair lies on the layer behind, which only
+        // a turn over brings in front.
+        if (source.view.flipped !== target.view.flipped) throw new RepeatFailure('repeat_swivel_behind');
+        next = { ...op, valley: located(op.valley), mountain: located(op.mountain) };
+      }
       else if ('fold' in op)
         next = { ...op, fold: p(op.fold), edge: p(op.edge), target: line(op.target) as typeof op.target };
       else

@@ -6,7 +6,7 @@ import { foldSessionDocumentSource } from '../../../store/workspaceStore/foldSes
 import { useWorkspaceStore } from '../../../store/workspaceStore/store';
 import { sequenceOf } from '../../document/foldSequence.fixtures';
 import { initialFoldReaderState, withFoldCursor } from '../../document/foldReaderState';
-import type { FoldOp, FoldStep, FoldSwivelKind, SheetPoint } from '../../document/foldSequenceDocument';
+import type { FoldDirection, FoldOp, FoldStep, FoldSwivelKind, SheetPoint } from '../../document/foldSequenceDocument';
 import { createFoldSession, type FoldSession } from '../../session/foldSession';
 import { settle } from '../../session/foldSession.fixtures';
 import { selectFoldCursorNode } from '../../session/foldSessionState';
@@ -116,8 +116,8 @@ function readyReach(seen: { current: Seen | null }): FoldSwivelReachView | null 
   return reach?.status === 'ready' ? reach : null;
 }
 
-/** The README's three clicks, the lit edges and lines checked as each is offered. */
-async function threeClicks(seen: { current: Seen | null }, index: FoldPickIndex, stored: FoldStep) {
+/** The README's three clicks, the lit edges and lines checked as each is offered, kept the folder's way. */
+async function threeClicks(seen: { current: Seen | null }, index: FoldPickIndex, stored: FoldStep, direction: FoldDirection = 'valley') {
   if (stored.op.kind !== 'swivel' || !('fold' in stored.op) || stored.op.via !== 'edge') throw new Error('not a swivel on a folded edge');
   const edge = lineThrough(index, stored.op.edge);
   const line = stored.op.target.via === 'crease' ? lineThrough(index, stored.op.target.at) : -1;
@@ -129,7 +129,7 @@ async function threeClicks(seen: { current: Seen | null }, index: FoldPickIndex,
   // The edge that swings is lit, and the centre line among the lines it lands on, open.
   expect(reach.edges.has(edge)).toBe(true);
   const landing = reach.targets.get(edge)?.get(line);
-  expect(landing?.op).toMatchObject({ kind: 'swivel', via: 'edge', direction: 'valley' });
+  expect(landing?.op).toMatchObject({ kind: 'swivel', via: 'edge', direction });
   expect(landing && 'swivel' in landing.op).toBe(false);
   expect(landing?.kinds).toEqual([true, true]);
 
@@ -169,7 +169,7 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     session.dispose();
   });
 
-  it('constructs two independent lines with normal Locate line tools, selects Inside, saves and freshly replays', async () => {
+  it('takes a valley and a mountain located with the line modes, previews the crease behind, saves and freshly replays', async () => {
     const document = sequenceOf([]);
     useWorkspaceStore.getState().installFoldSequences([{ document, readOnlyRaw: null }], initialFoldReaderState(document.id));
     await until(() => cursor().status === 'ok', 'the sheet');
@@ -179,38 +179,45 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     const tools = createFoldTools(); tools.selectTool('swivel');
     const seen: { current: Seen | null } = { current: null };
     await act(async () => { root.render(<Canvas session={session} tools={tools} view={{ index } as FoldStateView} seenRef={seen} />); await settle(); });
-    await act(async () => { seen.current!.verbs.setSwivelInput('creases'); await settle(); });
+    await act(async () => { seen.current!.verbs.setSwivelInput('valley-mountain'); await settle(); });
     await act(async () => { seen.current!.verbs.selectLineMode('axiom-1'); await settle(); });
     expect(tools.store.getState().tool).toBe('swivel');
     syncHeldModifiersFromEvent({ altKey:true,ctrlKey:false,metaKey:false,shiftKey:false });
+    // The valley: the line through the point on the folded edge and one up the paper.
     const meet = await clickPane(seen, { x:0.5,y:0.5 }, 'crease-pattern');
     expect(meet?.pick).toMatchObject({ kind: 'point' });
     expect(meet?.pick).not.toHaveProperty('fold');
-    await clickPane(seen, { x:0.05,y:0.1 }, 'crease-pattern');
-    await until(() => seen.current?.preview.swivelLine, 'the first line');
+    await clickPane(seen, { x:0.1,y:0.8 }, 'crease-pattern');
+    await until(() => seen.current?.preview.swivelLocated, 'the valley line');
     expect(seen.current?.preview.step).toBeNull();
     const before = snapshot().sequence!.steps.length;
+    // Enter takes it as the valley: no step yet, and the picks go on to the mountain.
     await act(async () => { expect(seen.current!.verbs.commit()).toBe(true); await settle(); });
     expect(snapshot().sequence!.steps).toHaveLength(before);
     expect(tools.store.getState().picks).toHaveLength(0);
-    expect(tools.store.getState().swivelFirst?.root).toBeDefined();
-    // Each line is a full independent construction, with its own root.
+    expect(tools.store.getState().swivelValley?.root).toBeDefined();
+    // The mountain, a construction of its own with its own root.
     await clickPane(seen, { x:0.5,y:0.5 }, 'crease-pattern');
-    await clickPane(seen, { x:0.1,y:0.8 }, 'crease-pattern');
+    await clickPane(seen, { x:0.05,y:0.1 }, 'crease-pattern');
     clearHeldModifiers();
-    await until(() => seen.current?.preview.landed, 'the two-line preview');
-    expect(seen.current?.preview.step?.op).toMatchObject({ kind:'swivel',via:'lines',first:{line:{via:'axiom',axiom:1}},second:{line:{via:'axiom',axiom:1}} });
+    await until(() => seen.current?.preview.landed, 'the valley-and-mountain preview');
+    const asked = seen.current?.preview.step?.op;
+    expect(asked).toMatchObject({ kind:'swivel',via:'valley-mountain',valley:{line:{via:'axiom',axiom:1}},mountain:{line:{via:'axiom',axiom:1}} });
+    // Its letters are the viewer's: no direction is stored, and none offered.
+    expect(asked).not.toHaveProperty('direction');
     const window = foldVertexWindowView(tools.store.getState(),seen.current!.preview)!;
     expect(window.lineBy).toBeUndefined();
-    expect(window.swivelKinds).toEqual(['open','inside']);
-    await act(async () => { seen.current!.verbs.setSwivelKind('inside'); await settle(); });
-    await until(() => previewed(seen,'inside') && seen.current?.preview.landed, 'the inside preview');
+    expect(window.valleyTaken).toBe(true);
+    // The crease behind is previewed, dotted where the front layer hides it.
+    const analysis = seen.current!.preview.vertex?.base?.analysis;
+    expect(analysis?.kind).toBe('swivel-valley-mountain');
+    expect(analysis && 'creases' in analysis ? analysis.creases[0]?.hidden : undefined).toBe(true);
     await commit(seen);
     const saved = snapshot().sequence!.steps.at(-1) as FoldStep;
-    expect(saved.op).toMatchObject({ via:'lines',swivel:'inside' });
+    expect(saved.op).toMatchObject({ via:'valley-mountain' });
     session.dispose();
     session=createFoldSession({ document:foldSessionDocumentSource(useWorkspaceStore),runtime:await bridge() });session.retain();
-    await until(() => cursor().status==='ok' && cursor().fingerprint===saved.expect,'fresh replay of the located hinges');
+    await until(() => cursor().status==='ok' && cursor().fingerprint===saved.expect,'fresh replay of the valley and mountain');
   });
 
   it('requires a saved order for a matching swivel and cycles before committing', async () => {
@@ -334,20 +341,30 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     expect(committed.fingerprint).toBe(stored.expect);
   });
 
-  it('commits the open swivel with the folder’s way left at Mountain by another fold: only valley lands, so valley is taken', async () => {
+  it('refuses the swivel asked as a mountain, which lands only as a valley, and folds it the other way only at the fix', async () => {
     const stored = storedSwivel('swivel-on-edge.osf');
     const { tools, index, seen } = await squashWithSwivel();
     await act(async () => {
       tools.setVertexDirection('mountain');
       await settle();
     });
-    await threeClicks(seen, index, stored);
-    const step = await until(() => previewed(seen, 'open'), 'the open preview');
-    expect(step.op).toMatchObject({ direction: 'valley' });
+    await threeClicks(seen, index, stored, 'mountain');
+    // Asked as a mountain, it is previewed as a mountain, and refused: never valley without a word.
+    const refused = await until(() => seen.current?.preview.refused, 'the mountain refused');
+    expect(seen.current?.preview.vertex?.direction).toBe('mountain');
+    expect(seen.current?.preview.step).toBeNull();
+    expect(refused.fixes).toContainEqual({ fix: 'opposite_direction' });
     expect(foldVertexWindowView(tools.store.getState(), seen.current!.preview)).toMatchObject({
-      swivelKind: 'open',
-      swivelKinds: ['open', 'inside'],
+      direction: 'mountain',
+      directions: [true, false],
     });
+    // The fix folds it the other way: the folder's own press.
+    await act(async () => {
+      seen.current!.verbs.vertexOtherWay();
+      await settle();
+    });
+    const step = await until(() => !seen.current?.preview.refused && previewed(seen, 'open'), 'the valley preview');
+    expect(step.op).toMatchObject({ direction: 'valley' });
     const committed = await commit(seen);
     expect('swivel' in committed.op).toBe(false);
     expect(committed.fingerprint).toBe(stored.expect);

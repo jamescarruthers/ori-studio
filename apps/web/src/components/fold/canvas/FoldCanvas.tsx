@@ -34,6 +34,7 @@ import {
   foldTuckWindowView,
   foldVertexWindowView,
   foldWindowPreview,
+  swivelLinesPending,
 } from '../../../fold/canvas/foldCanvasModel';
 import { useFoldFanMarks } from '../../../fold/canvas/vertex/useFoldFanMarks';
 import { useFoldPetalMarks } from '../../../fold/canvas/vertex/useFoldPetalMarks';
@@ -164,7 +165,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const swivelMarks = useFoldSwivelMarks(view.index, toolState, preview.vertex?.reach ?? null, inks);
   // Repeat's preview: the creases it adds, where its folded result puts them.
   const repeatCreases = useFoldRepeatCreases(toolState.tool === 'repeat' ? preview.landed : null);
-  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? repeatCreases;
+  // A swivel by its valley and mountain's lines in their pens, until its fold draws its own.
+  const swivelLines = useMemo(
+    () => swivelLinesPending(view.index, toolState, preview.swivelLocated ?? null),
+    [view.index, toolState, preview.swivelLocated]
+  );
+  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? swivelLines ?? repeatCreases;
   const regions = fanMarks?.regions ?? petalMarks.regions;
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending, orderScene);
   const componentPairs = importChoice?.opened.components[importChoice.component]?.pairs ?? [];
@@ -185,8 +191,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const freeFrom = foldFreeLineStart(toolState);
   const crimpLines = preview.crimp?.lines ?? preview.pleatLines ?? null;
   const located = useMemo(
-    () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines, { index: view.index, first: toolState.swivelFirst, current: preview.swivelLine }),
-    [toolState.tool, preview.action, crimpLines, view.index, toolState.swivelFirst, preview.swivelLine]
+    () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines),
+    [toolState.tool, preview.action, crimpLines]
   );
   const previewMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
   // A line drawn for Repeat that is no symmetry axis, while its refusal is shown.

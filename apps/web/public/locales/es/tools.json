@@ -964,11 +964,10 @@
         "edge": "Borde sobre línea",
         "edgeHelp": "Elegir un borde y la línea sobre la que debe quedar",
         "label": "Construir por",
-        "lines": "Dos líneas de pliegue",
-        "linesHelp": "Define dos líneas de pliegue; su intersección determina el punto de encuentro"
+        "valleyMountain": "Valle y monte",
+        "valleyMountainHelp": "Elegir el valle y el monte en la capa que ves, que se juntan en un borde plegado; el pliegue de detrás resulta de ellos"
       },
       "intro": {
-        "creases": "Define las dos bisagras; el pliegue restante se calcula para mantener el papel plano.",
         "petalLift": "Levanta la punta de una solapa a lo largo de una bisagra.",
         "swivelSwing": "Gira un borde del papel sobre una línea."
       },
@@ -994,13 +993,6 @@
         "twoPoints": "Dos puntos",
         "twoPointsHelp": "Haz clic en dos puntos de la línea"
       },
-      "lines": {
-        "confirm": "Pulsa Intro para usar la primera línea y definir la segunda.",
-        "confirmTouch": "Toca Usar primera línea para continuar.",
-        "first": "Define la primera línea de pliegue. Selecciona un pliegue existente o construye una línea con Localizar línea.",
-        "second": "Define la segunda línea de pliegue. Su intersección con la primera determina el punto de encuentro; la bisagra restante se calcula.",
-        "useFirst": "Usar primera línea"
-      },
       "mountain": "Monte",
       "mountainTitle": "Monte: el papel gira alejándose de ti",
       "note": {
@@ -1014,14 +1006,15 @@
         "snapOrFree": "Los puntos se ajustan a esquinas, cruces, marcas y puntos medios: mantén {{modifier}} para poner uno en cualquier lugar.",
         "snapOrFreeTouch": "Los puntos se ajustan a esquinas, cruces, marcas y puntos medios: activa Punto libre para poner uno en cualquier sitio.",
         "squashFlap": "Una solapa se aplasta cuando sus dos capas solo están unidas por su bisagra y no tiene nada encima.",
-        "swivelCreasesPicture": "Los pliegues se encuentran en el punto. El papel resaltado se mueve; el pliegue restante lo mantiene plano.",
-        "swivelPicture": "Los pliegues se juntan en el punto, el borde cae sobre la línea gruesa y el papel iluminado se mueve."
+        "swivelPicture": "Los pliegues se juntan en el punto, el borde cae sobre la línea gruesa y el papel iluminado se mueve.",
+        "swivelValleyMountainPicture": "Los pliegues se juntan en el punto. El pliegue punteado está en la capa de detrás y resulta del valle y el monte; el papel iluminado se mueve."
       },
       "refusal": {
         "blocked": {
           "steppers": "Un pliegue chocaría con papel que no se pliega con él, o el papel sujetaría juntas dos partes del pliegue. Cambia Capas para plegar más capas, o Cuarto pliegue para pasar a otro.",
           "swivelEdge": "Un pliegue chocaría con papel que no se pliega con él, o el papel sujetaría juntas dos partes del pliegue. Elige otro pivote, u otra línea sobre la que caiga el borde.",
           "swivelOnFold": "Un pliegue chocaría con un doblez antes de llegar al borde del papel, o el papel sujetaría juntas dos partes del pliegue pivotante. Elige otro borde plegado, u otra línea sobre la que caiga el borde.",
+          "swivelValleyMountain": "Un pliegue chocaría con un doblez antes de llegar al borde del papel, o el papel sujetaría juntas dos partes del pliegue pivotante. Elige otro valle u otro monte.",
           "title": "Hay papel en medio"
         },
         "center": {
@@ -1052,8 +1045,8 @@
           "titleHinge": "Premarca antes la bisagra"
         },
         "lineMeeting": {
-          "text": "Elige dos líneas de pliegue que se crucen en un único borde plegado visible.",
-          "title": "Las líneas necesitan un punto de encuentro"
+          "textValleyMountain": "El valle y el monte se juntan en un punto de un borde plegado que ves, lejos de sus extremos. Elige dos líneas que se crucen ahí.",
+          "titleValleyMountain": "Las líneas no se juntan en un borde plegado"
         },
         "noFlap": {
           "noHinge": "La solapa no se pliega sobre ninguna bisagra en ningún extremo de su lomo, así que no hay contra qué aplastarla.",
@@ -1127,6 +1120,10 @@
           "text": "El pliegue pivotante sigue la línea a medio camino entre el borde y la línea sobre la que cae, y esa línea no cruza este borde plegado entre sus extremos. Pulsa Esc y elige el borde plegado que cruza, u otra línea.",
           "title": "Los pliegues no pueden juntarse en ese borde"
         },
+        "swivelNoFlap": {
+          "text": "El valle y el monte salen del borde plegado hacia el papel, en dos direcciones, con la solapa entre ellos. Una de estas líneas va a lo largo del borde plegado, o las dos están en una misma línea: elige otra.",
+          "title": "No hay solapa entre las líneas"
+        },
         "swivelNotAFold": {
           "text": "Los pliegues solo pueden juntarse en un borde plegado donde el papel está doblado, y el punto elegido no está en ningún doblez. Pulsa Esc y vuelve a hacer clic en el borde plegado.",
           "title": "Eso no es un borde plegado"
@@ -1199,12 +1196,25 @@
       "swivelInside": "Interior",
       "swivelInsideHelp": "Pliegue giratorio interior: la tira se mete entre las capas",
       "swivelKind": "Tipo",
+      "swivelKindCannot": "Este tipo no puede quedar plano aquí.",
       "swivelOpen": "Abierto",
       "swivelOpenHelp": "Pliegue giratorio abierto: la tira se pliega por encima",
       "target": "El lomo cae en",
       "targetHinge": "La línea de la bisagra",
       "targetPoint": "El punto pulsado",
       "valley": "Valle",
+      "valleyMountain": {
+        "mountainLine": "Línea de monte",
+        "mountainStep": "Línea de monte: {{instruction}}",
+        "pickMountain": "Elige la línea de monte, desde el mismo punto del borde plegado. El pliegue de la capa de detrás resulta de ellas, punteado donde queda oculto.",
+        "pickValley": "Elige la línea de valle: la bisagra de la solapa, en la capa que ves, desde un punto de un borde plegado hacia el papel.",
+        "pickValleyInside": "Elige la línea de valle: en la capa que ves, desde un punto de un borde plegado hacia el papel.",
+        "takeValley": "Pulsa Enter para tomarla como valle.",
+        "takeValleyTouch": "Toca Usar como valle.",
+        "useValley": "Usar como valle",
+        "valleyLine": "Línea de valle",
+        "valleyStep": "Línea de valle: {{instruction}}"
+      },
       "valleyTitle": "Valle: el papel gira hacia ti"
     },
     "window": {

@@ -20,6 +20,7 @@ import {
   foldVertexWindowView,
   foldWindowPreview,
   refusedFaceInks,
+  swivelLinesPending,
 } from './foldCanvasModel';
 import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
 
@@ -181,6 +182,22 @@ describe('the Fold canvas model', () => {
     // Once the fold's picture is in, it draws both lines itself.
     expect(foldLocatedLines('crimp', true, lines)).toEqual([]);
     expect(foldLocatedLines('valley', false, lines)).toEqual([]);
+  });
+
+  it('draws a swivel’s valley taken and the line located now in their own pens: the valley, then the mountain', () => {
+    const index = foldPickIndex(bookScene(), null, []);
+    const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel', swivelInput: 'valley-mountain' };
+    const line = (d: number) => ({ line: { via: 'free' as const, through: [[0, d], [1, d]] as [[number, number], [number, number]] }, sceneLine: { n: [0, 1] as [number, number], d } });
+    const letters = (state: FoldToolState, located: ReturnType<typeof line> | null) =>
+      swivelLinesPending(index, state, located)?.folded.map((crease) => crease.letter) ?? null;
+    // Locating the valley: drawn as a valley.
+    expect(letters(swivel, line(0.3))).toEqual(['valley']);
+    // Taken: the valley stays, and the line located now is the mountain.
+    expect(letters({ ...swivel, swivelValley: line(0.3) }, line(0.6))).toEqual(['valley', 'mountain']);
+    expect(letters({ ...swivel, swivelValley: line(0.3) }, null)).toEqual(['valley']);
+    // Nothing for the swivel by its edge, or with nothing located.
+    expect(letters({ ...swivel, swivelInput: 'edge' }, line(0.3))).toBeNull();
+    expect(letters(swivel, null)).toBeNull();
   });
 
   it('runs a live line from a swivel’s first target point, never from a petal fold’s hinge', () => {

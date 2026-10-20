@@ -172,7 +172,8 @@ export function toolInput(
     case 'petal':
     case 'rabbit-ear':
     case 'swivel':
-      return tool === 'swivel' && vertex.swivelInput === 'creases' ? lineModeInput(mode) : vertexToolInput(tool, vertex);
+      // By its valley and mountain, each line is located in the line mode chosen.
+      return tool === 'swivel' && vertex.swivelInput === 'valley-mountain' ? lineModeInput(mode) : vertexToolInput(tool, vertex);
     case 'divide-line':
       return DIVIDE_LINE;
   }

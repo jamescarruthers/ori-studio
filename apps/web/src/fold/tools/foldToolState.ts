@@ -49,7 +49,7 @@ import { sameFlap } from './crossSection';
 import { lineModeInput, locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
 import { extentClicks, type FoldExtentMode } from './precrease/precreaseExtent';
 import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
-import { SWIVEL_TARGET_FROM } from './vertex/vertexInputs';
+import { SWIVEL_TARGET_FROM, type FoldSwivelInput } from './vertex/vertexInputs';
 
 /** Wrap without adding two potentially MAX_SAFE_INTEGER-sized indices. */
 function wrappedOpening(index: number, delta: number, count: number): number {
@@ -148,8 +148,9 @@ export interface FoldCompoundToolChoices {
   fanLayers: number | null;
   /**
    * The kind the folder chose for a swivel on a folded edge — its strip on
-   * top, or tucked between the two layers — null while the tool takes the
-   * one that lands (open when both do).
+   * top, or tucked between the two layers — null for open, the kind asked
+   * until another is chosen. Never changed for the folder: a kind that does
+   * not land is refused, and the window offers the other.
    */
   swivelKind: FoldSwivelKind | null;
   /** A closed sink's pocket, by index into the pockets the engine lists for the point (`tools/sink`). */
@@ -221,8 +222,13 @@ export interface FoldToolState {
    */
   petalHinge: FoldLineBy;
   swivelTarget: FoldLineBy;
-  swivelInput?: 'edge' | 'creases';
-  swivelFirst?: FoldLocatedLine & { sceneLine: FoldModelLine };
+  /** How a swivel is constructed: by its edge onto a line, or by its valley and mountain. Kept from fold to fold. */
+  swivelInput?: FoldSwivelInput;
+  /**
+   * A swivel by its valley and mountain's valley, once taken: the line as it
+   * was located, and on the folded pane. The picks then locate its mountain.
+   */
+  swivelValley?: FoldLocatedLine & { sceneLine: FoldModelLine };
   override: FoldToolOverride | null;
   divide: FoldDivideSettings;
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
@@ -299,7 +305,7 @@ function located(state: FoldToolState): FoldToolState {
   return {
     ...state,
     picks: [],
-    swivelFirst: undefined,
+    swivelValley: undefined,
     extentPicks: [],
     root: 0,
     secondRoot: 0,
@@ -366,7 +372,7 @@ export function isLocated(state: FoldToolState): boolean {
 
 /** Whether anything is under way that Escape would let go. */
 export function hasToolInput(state: FoldToolState): boolean {
-  return state.picks.length > 0 || state.extentPicks.length > 0 || state.override !== null || state.swivelFirst !== undefined;
+  return state.picks.length > 0 || state.extentPicks.length > 0 || state.override !== null || state.swivelValley !== undefined;
 }
 
 /**
@@ -445,9 +451,11 @@ export interface FoldTools {
   setVertexDirection(direction: FoldDirection): void;
   /** Name a petal fold's hinge by a crease or by its two ends: its clicks start again. */
   setPetalHinge(hinge: FoldLineBy): void;
+  /** Construct a swivel by its edge onto a line, or by its valley and mountain: its picks start again. */
+  setSwivelInput(mode: FoldSwivelInput): void;
+  /** Take the line located as a swivel's valley: the picks start again, for its mountain. */
+  takeSwivelValley(line: NonNullable<FoldToolState['swivelValley']>): void;
   /** Name a swivel's target by a crease or edge, or by two points: its pivot and edge stay, its target is clicked anew. */
-  setSwivelInput(mode: 'edge' | 'creases'): void;
-  acceptSwivelLine(line: NonNullable<FoldToolState['swivelFirst']>): void;
   setSwivelTarget(target: FoldLineBy): void;
   /** Where a squash's spine lands; null for the hinge line. */
   setSquashTarget(target: FoldModelDirection | null): void;
@@ -585,10 +593,12 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => {
         // A line mode belongs to the folds along a line: choosing one from
         // any other tool takes a fold in hand.
-        const twoLines = state.tool === 'swivel' && state.swivelInput === 'creases';
+        // A swivel by its valley and mountain locates its lines in a line
+        // mode too: it stays in hand, and the valley taken stays taken.
+        const twoLines = state.tool === 'swivel' && state.swivelInput === 'valley-mountain';
         const tool = twoLines ? 'swivel' : locatesLine(state.tool) ? state.tool : 'valley';
         if (state.lineMode === lineMode && state.tool === tool) return state;
-        return { ...restart(state), tool, lineMode, ...(twoLines ? { swivelFirst: state.swivelFirst } : {}) };
+        return { ...restart(state), tool, lineMode, ...(twoLines ? { swivelValley: state.swivelValley } : {}) };
       });
     },
 
@@ -786,8 +796,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       });
     },
 
-    acceptSwivelLine(line) {
-      set(state => ({ ...restart(state), swivelFirst: line }));
+    takeSwivelValley(line) {
+      set(state => ({ ...restart(state), swivelValley: line }));
     },
     setSwivelInput(swivelInput) {
       set(state => (state.swivelInput ?? 'edge') === swivelInput ? state : { ...restart(state), swivelInput });

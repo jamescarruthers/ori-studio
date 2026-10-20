@@ -83,7 +83,11 @@ export interface FoldExtentPreview {
 /** Everything the canvas knows of the fold the tools describe, tier by tier (plan D14). */
 export interface FoldToolPreview {
   pleatLines?: FoldCrimpLines | null;
-  swivelLine?: NonNullable<FoldToolState['swivelFirst']> | null;
+  /**
+   * A swivel by its valley and mountain's line the picks locate: its valley
+   * until that is taken, then its mountain. Null while none is located.
+   */
+  swivelLocated?: NonNullable<FoldToolState['swivelValley']> | null;
   orderResolution?: FoldOrderResolution | null;
   /** The axiom's roots for the picks, once the engine has named them; null for no axiom, or not yet. */
   candidates: readonly FoldAxiomCandidate[] | null;
@@ -235,14 +239,19 @@ export function useFoldToolPreview(
             : null;
   // A vertex fold's, once the engine has described its flap, line or fan.
   const vertexing = isVertexTool(tools.tool);
-  const locatedSwivel = useMemo(() => index && tool === 'swivel' && swivelInput === 'creases'
+  // A swivel by its valley and mountain locates each line as a fold's line is.
+  const locatedSwivel = useMemo(() => index && tool === 'swivel' && swivelInput === 'valley-mountain'
     ? locate({ lineMode, picks, candidate, swapped: false, seed: FOLD_EVERY_LAYER }, index) : null,
     [index, tool, swivelInput, lineMode, picks, candidate]);
-  const swivelLine = useMemo(() => locatedSwivel && !('status' in locatedSwivel)
+  const swivelLocated = useMemo(() => locatedSwivel && !('status' in locatedSwivel)
     ? { line: locatedSwivel.line, ...(locatedSwivel.choices?.root ? { root: locatedSwivel.choices.root } : {}), sceneLine: locatedSwivel.sceneLine } : null,
     [locatedSwivel]);
-  const savedSwivelLine = useMemo(() => swivelLine ? { line: swivelLine.line, ...(swivelLine.root ? { root: swivelLine.root } : {}) } : undefined, [swivelLine]);
-  const vertexStep = useFoldVertexStep(session, index, tools, vertexing, savedSwivelLine);
+  // Its mountain, once the valley is taken: the line located now, as the op stores it.
+  const swivelMountain = useMemo(
+    () => (tools.swivelValley && swivelLocated ? { line: swivelLocated.line, ...(swivelLocated.root ? { root: swivelLocated.root } : {}) } : undefined),
+    [tools.swivelValley, swivelLocated]
+  );
+  const vertexStep = useFoldVertexStep(session, index, tools, vertexing, swivelMountain);
   // A precrease of part of its line: its points along the line, and a pinch's
   // length, which the engine names for the state's sheet.
   const along = picksAlongLine(tools);
@@ -513,7 +522,7 @@ export function useFoldToolPreview(
   const landedPreview = heldLanded ?? (landed && landed.key === landedKey ? landed.landed : null);
   return {
     pleatLines: pleatDrawing,
-    swivelLine,
+    swivelLocated,
     orderResolution: resolvedOrders.resolution,
     candidates,
     rootLine,

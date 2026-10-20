@@ -477,16 +477,16 @@ it('steps the largest indexed opening list without losing a choice to integer ro
   expect(tools.store.getState().compound.opening).toBe(0);
 });
 
-it('keeps the first swivel line while changing the second construction, and clears both on Escape', () => {
+it('keeps a swivel’s valley taken while the mountain’s line mode changes, and clears both on Escape', () => {
   const tools=createFoldTools();
-  tools.selectTool('swivel');tools.setSwivelInput('creases');tools.selectLineMode('axiom-3');
-  const first={line:{via:'free' as const,through:[[0,0],[1,1]] as [[number,number],[number,number]]},sceneLine:{n:[1,-1] as [number,number],d:0}};
-  tools.acceptSwivelLine(first);
+  tools.selectTool('swivel');tools.setSwivelInput('valley-mountain');tools.selectLineMode('axiom-3');
+  const valley={line:{via:'free' as const,through:[[0,0],[1,1]] as [[number,number],[number,number]]},sceneLine:{n:[1,-1] as [number,number],d:0}};
+  tools.takeSwivelValley(valley);
   expect(hasToolInput(tools.store.getState())).toBe(true);
   tools.selectLineMode('crease');
-  expect(tools.store.getState()).toMatchObject({tool:'swivel',swivelFirst:first,lineMode:'crease',picks:[],root:0});
+  expect(tools.store.getState()).toMatchObject({tool:'swivel',swivelValley:valley,lineMode:'crease',picks:[],root:0});
   tools.clear();
-  expect(tools.store.getState().swivelFirst).toBeUndefined();
+  expect(tools.store.getState().swivelValley).toBeUndefined();
   expect(hasToolInput(tools.store.getState())).toBe(false);
 });
 

@@ -15,19 +15,27 @@
  * target by a crease or edge or by two points: a control switches each
  * (`lineBy`), in both phases, so the window keeps its shape.
  *
- * A swivel offers no direction while its clicks are made: the canvas lights
- * only the edges and lines that land either way (`swivelReach`), and it
- * folds the folder's way when that lands, else the other. Once previewed
- * its steps stay, the last in hand, and a control is shown only where there
- * is a choice (owner feedback, 2026-10-12).
+ * A swivel is constructed by its edge onto a line or by its valley and
+ * mountain (Construct by). By its edge, it offers no direction while its
+ * clicks are made: the canvas lights only the edges and lines that land
+ * some way (`swivelReach`). By its valley and mountain, its two lines are
+ * located with the line modes, each named by its letter on the layer that
+ * faces the viewer — the valley taken with Enter, then the mountain — and it
+ * has no direction at all: its letters are the viewer's. Either way it
+ * folds the folder's way and kind and never another (owner feedback,
+ * 2026-10-20): one that does not land is refused, and the notice offers the
+ * other way when that lands. Once previewed its steps stay, the last in
+ * hand, and a control is shown only where there is a choice (owner
+ * feedback, 2026-10-12).
  *
  * Once every click is in, previewing:
  *
  * - a swivel on a folded edge's **kind**, open (the strip folded up on top)
- *   or inside (tucked between the two layers) — only when both land, the
- *   one that lands taken otherwise;
+ *   or inside (tucked between the two layers) — when the other kind lands
+ *   too, or the one asked does not; a kind that does not land disabled;
  * - **the direction**, valley or mountain, as the viewer sees it — a
- *   swivel's only when it lands both ways;
+ *   swivel by its edge's when the other way lands too, or the one asked
+ *   does not; a way that does not land disabled;
  * - a squash's **spine target**: its hinge line until a point is clicked on
  *   the folded pane, drawn there either way (the bold line its step names),
  *   with a way back to the hinge;
@@ -78,9 +86,12 @@ export interface FoldPetalScores {
 /** What a vertex tool's window is drawn from, beside every tool's view. */
 export interface FoldVertexWindowView {
   tool: FoldVertexToolId;
+  /** How a swivel is constructed: by its edge onto a line, or by its valley and mountain. */
   swivelInput?: FoldSwivelInput;
-  firstLineSet?: boolean;
-  lineReady?: boolean;
+  /** A swivel by its valley and mountain's valley is taken: its picks locate the mountain. */
+  valleyTaken?: boolean;
+  /** A swivel by its valley and mountain's picks have located a line: the valley can be taken. */
+  lineLocated?: boolean;
   direction: FoldDirection;
   /** The engine has described the flap, line or fan the clicks name: there is something to choose about. */
   described: boolean;
@@ -120,9 +131,9 @@ export interface FoldVertexWindowView {
    * Absent when unknown.
    */
   directions?: readonly boolean[];
-  /** A swivel on a folded edge's kind as it folds: the folder's, or the one that lands. */
+  /** A swivel on a folded edge's kind as it folds: the folder's, always. */
   swivelKind?: FoldSwivelKind;
-  /** The kinds a swivel on a folded edge lands one way or the other, once known: offered only when both do. */
+  /** The kinds a swivel on a folded edge lands one way or the other, once known: the others are offered disabled. */
   swivelKinds?: readonly FoldSwivelKind[];
   /** What a petal fold creases itself, once the engine has described its flap. */
   petalScores?: FoldPetalScores | null;
@@ -326,15 +337,51 @@ function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
   }
 }
 
-function swivelLineInstructions(t: TFunction, view: FoldToolWindowView, vertex: FoldVertexWindowView, host: FoldToolHost): FoldToolInstructions {
-  const items = [...lineModeSteps(t, view.lineMode, host.coarse), vertex.firstLineSet
-    ? commitStepPlain(t, 'swivel', host)
-    : host.coarse ? t('tools:fold.vertex.lines.confirmTouch', 'Tap Use first line to continue.') : t('tools:fold.vertex.lines.confirm', 'Press Enter to use the first line and locate the second.')];
+/** Whether the vertex tool in hand is a swivel by its valley and mountain. */
+function isValleyMountain(vertex: FoldVertexWindowView): boolean {
+  return vertex.tool === 'swivel' && vertex.swivelInput === 'valley-mountain';
+}
+
+/**
+ * A swivel by its valley and mountain's steps: its valley, then its
+ * mountain, each the line mode's own clicks named by the line they locate
+ * (as a pleat's are), and what comes after — Enter takes the valley, then
+ * Enter folds. On the layer that faces the viewer, so the intro says so.
+ */
+function valleyMountainInstructions(
+  t: TFunction,
+  view: FoldToolWindowView,
+  vertex: FoldVertexWindowView,
+  host: FoldToolHost,
+  commit: string
+): FoldToolInstructions {
+  const valley = !vertex.valleyTaken;
+  const clicks = lineModeSteps(t, view.lineMode, host.coarse).map((instruction) =>
+    valley
+      ? t('tools:fold.vertex.valleyMountain.valleyStep', 'Valley line: {{instruction}}', { instruction })
+      : t('tools:fold.vertex.valleyMountain.mountainStep', 'Mountain line: {{instruction}}', { instruction })
+  );
+  const take = host.coarse
+    ? t('tools:fold.vertex.valleyMountain.takeValleyTouch', 'Tap Use as the valley.')
+    : t('tools:fold.vertex.valleyMountain.takeValley', 'Press Enter to take it as the valley.');
+  const items = [...clicks, valley ? take : commit];
+  const inside = vertex.swivelKind === 'inside';
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    intro: vertex.firstLineSet
-      ? t('tools:fold.vertex.lines.second', 'Locate the second fold line. Its intersection with the first sets the meeting point; the remaining hinge is computed.')
-      : t('tools:fold.vertex.lines.first', 'Locate the first fold line. Select an existing crease or construct a line with Locate line.'),
+    intro: valley
+      ? inside
+        ? t(
+            'tools:fold.vertex.valleyMountain.pickValleyInside',
+            'Pick the valley line: on the layer you see, from a point on a folded edge into the paper.'
+          )
+        : t(
+            'tools:fold.vertex.valleyMountain.pickValley',
+            'Pick the valley line: the flap’s hinge, on the layer you see, from a point on a folded edge into the paper.'
+          )
+      : t(
+          'tools:fold.vertex.valleyMountain.pickMountain',
+          'Pick the mountain line, from the same point on the folded edge. The crease on the layer behind follows, dotted where it is hidden.'
+        ),
     items,
     current: Math.min(view.picks, items.length - 1),
     notes: lineModeNotes(t, view.lineMode, host, view.freeLineSnap),
@@ -348,12 +395,12 @@ function locateInstructions(
   host: FoldToolHost
 ): FoldToolInstructions {
   const { tool } = vertex;
-  if (tool === 'swivel' && vertex.swivelInput === 'creases') return swivelLineInstructions(t, view, vertex, host);
+  if (isValleyMountain(vertex)) return valleyMountainInstructions(t, view, vertex, host, commitStepPlain(t, 'swivel', host));
   const lines = { petalHinge: vertex.lineBy ?? 'crease', swivelTarget: vertex.lineBy ?? 'crease', swivelInput: vertex.swivelInput };
   const items = [...vertexToolSteps(t, tool, lines, host, vertex.nothingSwings === true), finishStep(t, tool, host)];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    intro: vertex.swivelInput === 'creases' ? t('tools:fold.vertex.intro.creases', 'Locate the two hinges; the remaining crease is computed to keep the paper flat.') : vertexIntro(t, tool),
+    intro: vertexIntro(t, tool),
     items,
     current: Math.min(Math.max(0, view.picks), items.length - 1),
     notes: locateNotes(t, view, vertex, host),
@@ -412,7 +459,7 @@ function swivelPreviewSteps(
   ];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    intro: vertex.swivelInput === 'creases' ? t('tools:fold.vertex.intro.creases', 'Locate the two hinges; the remaining crease is computed to keep the paper flat.') : vertexIntro(t, 'swivel'),
+    intro: vertexIntro(t, 'swivel'),
     items,
     current: items.length - 1,
     notes: [],
@@ -445,8 +492,13 @@ function previewInstructions(
       notes: [],
     };
   }
-  if (tool === 'swivel' && vertex.swivelInput === 'creases') return swivelLineInstructions(t, view, vertex, host);
   const queued = view.preview ? queuedNote(t, view.preview) : [];
+  if (isValleyMountain(vertex)) {
+    // The kind or the order to choose sits above the button, which may hold the focus.
+    const choice = controls.kind !== null || controls.order !== null;
+    const steps = valleyMountainInstructions(t, view, vertex, host, choice ? commitStep(t, 'swivel', host) : commitStepPlain(t, 'swivel', host));
+    return { ...steps, current: steps.items.length - 1, notes: [...steps.notes, ...queued] };
+  }
   if (tool === 'swivel') {
     const steps = swivelPreviewSteps(t, vertex, host, controls);
     return { ...steps, notes: queued };
@@ -501,7 +553,7 @@ function lineByControl(
   readOnly: boolean
 ): FoldKindChoice<FoldLineBy> | null {
   const { tool } = vertex;
-  if ((tool !== 'petal' && tool !== 'swivel') || (tool === 'swivel' && vertex.swivelInput === 'creases')) return null;
+  if ((tool !== 'petal' && tool !== 'swivel') || isValleyMountain(vertex)) return null;
   const option = (value: FoldLineBy) => {
     const petal = tool === 'petal';
     const short =
@@ -539,7 +591,14 @@ function lineByControl(
  */
 function previewNote(t: TFunction, vertex: FoldVertexWindowView): string | null {
   if (vertex.tool === 'petal') return vertex.petalScores ? petalScoresNote(t, vertex.petalScores) : null;
-  if (vertex.tool === 'swivel' && vertex.swivelInput === 'creases') return vertex.described ? t('tools:fold.vertex.note.swivelCreasesPicture', 'The creases meet at the dot. The lit paper moves; the remaining crease keeps it flat.') : null;
+  if (isValleyMountain(vertex)) {
+    return vertex.described
+      ? t(
+          'tools:fold.vertex.note.swivelValleyMountainPicture',
+          'The creases meet at the dot. The dotted crease is on the layer behind, and follows from the valley and the mountain; the lit paper moves.'
+        )
+      : null;
+  }
   if (vertex.tool === 'swivel') {
     return vertex.described
       ? t('tools:fold.vertex.note.swivelPicture', 'The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.')
@@ -549,26 +608,32 @@ function previewNote(t: TFunction, vertex: FoldVertexWindowView): string | null 
 }
 
 /**
- * Whether a vertex fold offers its direction: always, but a swivel — whose
- * clicks are offered only what lands, and which folds the folder's way when
- * it lands, else the other — only once the engine has described it, and
- * then only when it lands both ways, or which ways land is not known (a
- * target named by two points). Owner feedback, 2026-10-12: a control with no
- * choice in it is not shown.
+ * Whether a vertex fold offers its direction: always, but a swivel by its
+ * edge — whose clicks are offered only what lands some way — only once the
+ * engine has described it, and then when the other way lands, with the way
+ * asked or in its place (it folds the way asked, and is refused when that
+ * does not land: the control then offers the way that does), or which ways
+ * land is not known (a target named by two points). A swivel by its valley and
+ * mountain never: its letters are the viewer's. Owner feedback, 2026-10-12:
+ * a control with no choice in it is not shown.
  */
 function offersDirection(vertex: FoldVertexWindowView, clicked: boolean): boolean {
   if (vertex.tool !== 'swivel') return true;
-  if (!clicked || !vertex.described) return false;
+  if (isValleyMountain(vertex) || !clicked || !vertex.described) return false;
   const ways = vertex.directions;
-  return !ways || ways.length !== 2 || (ways[0] === true && ways[1] === true);
+  if (!ways || ways.length !== 2) return true;
+  // A choice only when the other way lands: with the way asked too, or in its place.
+  const asked = vertex.direction === 'valley' ? 0 : 1;
+  return ways[1 - asked] === true;
 }
 
 /**
  * A swivel on a folded edge's kind, Open or Inside, each saying in its
- * tooltip where the strip goes: only once it is previewed and the engine
- * says both land (owner feedback, 2026-10-12: offer only what lands, and no
- * control without a choice in it). Null otherwise: it folds the kind that
- * lands, which its step and its picture name.
+ * tooltip where the strip goes: once it is previewed, when the other kind
+ * lands too or the one asked does not — a kind that does not land offered
+ * disabled, its tooltip saying why (owner feedback, 2026-10-12: offer only
+ * what lands, and no control without a choice in it). Null otherwise: it
+ * folds the kind asked, which its step and its picture name.
  */
 function swivelKindControl(
   t: TFunction,
@@ -577,13 +642,16 @@ function swivelKindControl(
   readOnly: boolean,
   located: boolean
 ): FoldKindChoice<FoldSwivelKind> | null {
-  const kinds = vertex.swivelKinds ?? [];
-  if (vertex.tool !== 'swivel' || !vertex.onFold || !located || !FOLD_SWIVEL_KINDS.every((k) => kinds.includes(k))) {
-    return null;
-  }
+  const kinds = vertex.swivelKinds;
+  if (vertex.tool !== 'swivel' || !vertex.onFold || !located || !kinds) return null;
+  const asked = vertex.swivelKind ?? 'open';
+  const other: FoldSwivelKind = asked === 'open' ? 'inside' : 'open';
+  // No choice in it: only the kind asked lands, or none does.
+  if (!kinds.includes(other)) return null;
+  const cannot = t('tools:fold.vertex.swivelKindCannot', 'This kind cannot fold flat here.');
   return {
     label: t('tools:fold.vertex.swivelKind', 'Kind'),
-    value: vertex.swivelKind ?? 'open',
+    value: asked,
     options: FOLD_SWIVEL_KINDS.map((value) => ({
       value,
       short:
@@ -592,8 +660,8 @@ function swivelKindControl(
         value === 'open'
           ? t('tools:fold.vertex.swivelOpenHelp', 'Open swivel: the strip folds up on top')
           : t('tools:fold.vertex.swivelInsideHelp', 'Inside swivel: the strip tucks between the layers'),
-      disabled: false,
-      reason: null,
+      disabled: !kinds.includes(value),
+      reason: kinds.includes(value) ? null : cannot,
     })),
     disabled: readOnly || !verbs.setSwivelKind,
     note: null,
@@ -629,7 +697,16 @@ export function vertexControls(
       value: vertex.swivelInput ?? 'edge',
       options: [
         { value: 'edge', short: t('tools:fold.vertex.input.edge', 'Edge onto line'), label: t('tools:fold.vertex.input.edgeHelp', 'Choose an edge and the line it should land on'), disabled: false, reason: null },
-        { value: 'creases', short: t('tools:fold.vertex.input.lines', 'Two fold lines'), label: t('tools:fold.vertex.input.linesHelp', 'Locate two fold lines; their intersection sets the meeting point'), disabled: false, reason: null },
+        {
+          value: 'valley-mountain',
+          short: t('tools:fold.vertex.input.valleyMountain', 'Valley and mountain'),
+          label: t(
+            'tools:fold.vertex.input.valleyMountainHelp',
+            'Pick the valley and the mountain on the layer you see, meeting on a folded edge; the crease behind follows'
+          ),
+          disabled: false,
+          reason: null,
+        },
       ],
       disabled: readOnly || !verbs.setSwivelInput,
       note: null,
@@ -708,27 +785,44 @@ export function vertexToolWindow(
   const { tool } = vertex;
   const title = foldToolLabel(t, tool);
   const { preview } = view;
-  const twoLines = tool === 'swivel' && vertex.swivelInput === 'creases';
-  const firstLine = twoLines && !vertex.firstLineSet;
-  if (!preview || firstLine) {
+  // A swivel by its valley and mountain locates its lines with the line
+  // modes, the select named by the line it locates now.
+  const valleyMountain = isValleyMountain(vertex);
+  const locatingValley = valleyMountain && !vertex.valleyTaken;
+  const lineMode = valleyMountain
+    ? {
+        ...lineModeSelect(t, view, verbs),
+        label: locatingValley
+          ? t('tools:fold.vertex.valleyMountain.valleyLine', 'Valley line')
+          : t('tools:fold.vertex.valleyMountain.mountainLine', 'Mountain line'),
+      }
+    : null;
+  const swivelForm = valleyMountain ? ('valley-mountain' as const) : vertex.onFold ? ('fold' as const) : ('edge' as const);
+  if (!preview || locatingValley) {
     const controls = vertexControls(t, vertex, verbs, readOnly, host, false);
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, [controls.direction, controls.lineBy, controls.input, twoLines].filter(Boolean).length),
+      meta: settingsMeta(t, [controls.direction, controls.lineBy, controls.input, lineMode].filter(Boolean).length),
       instructions: locateInstructions(t, view, vertex, host),
-      lineMode: twoLines ? lineModeSelect(t, view, verbs) : null,
+      lineMode,
       kind: null,
       movingSide: null,
       layers: null,
       refusal: preview?.refused ? foldRefusalNotice(t, preview.refused, {
-        kind: 'vertex', readOnly, ...sectionFlapNames(null), vertex: { tool, swivel: 'fold' },
+        kind: 'vertex', readOnly, ...sectionFlapNames(null), vertex: { tool, ...(tool === 'swivel' ? { swivel: swivelForm } : {}) },
       }, verbs) : null,
       divide: null,
       vertex: controls,
-      footer: firstLine ? {
+      // The valley is taken with Enter, or this button, once a line is located.
+      footer: locatingValley ? {
         cancel: { label: t('tools:fold.window.cancel', 'Cancel'), shortcut: 'viewport.cancel', disabled: false, run: verbs.cancel },
-        commit: { label: t('tools:fold.vertex.lines.useFirst', 'Use first line'), shortcut: 'fold.commit', disabled: readOnly || !vertex.lineReady || preview?.refused != null, run: verbs.commit },
+        commit: {
+          label: t('tools:fold.vertex.valleyMountain.useValley', 'Use as the valley'),
+          shortcut: 'fold.commit',
+          disabled: readOnly || !vertex.lineLocated || preview?.refused != null,
+          run: verbs.commit,
+        },
       } : null,
     };
   }
@@ -756,8 +850,8 @@ export function vertexToolWindow(
             tool,
             ...(vertex.emergentNumber ? { emergentNumber: vertex.emergentNumber } : {}),
             ...(tool === 'petal' && vertex.lineBy ? { hinge: vertex.lineBy } : {}),
-            // The tool makes a swivel by its edge, at a pivot or on a folded edge.
-            ...(tool === 'swivel' ? { swivel: vertex.onFold ? ('fold' as const) : ('edge' as const) } : {}),
+            // The tool makes a swivel by its edge, at a pivot or on a folded edge, or by its valley and mountain.
+            ...(tool === 'swivel' ? { swivel: swivelForm } : {}),
           },
         },
         verbs
@@ -766,9 +860,9 @@ export function vertexToolWindow(
   return {
     phase: 'preview',
     title,
-    meta: settingsMeta(t, settings.filter(Boolean).length + (twoLines ? 1 : 0)),
+    meta: settingsMeta(t, [...settings, lineMode].filter(Boolean).length),
     instructions: previewInstructions(t, vertex, host, view, (refusal?.actions.length ?? 0) > 0, controls),
-    lineMode: twoLines ? lineModeSelect(t, view, verbs) : null,
+    lineMode,
     kind: null,
     movingSide: null,
     layers: null,

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FillGeometry } from '../../../cp-workspace/renderer/types';
+import { vertexDirectionOf } from '../../document/foldSequenceDocument';
 import type { FoldToolState } from '../../tools/foldToolState';
 import {
   swivelImpliedLanding,
@@ -91,7 +92,7 @@ export function useFoldSwivelMarks(
     const analysis = hovered?.answer.analysis;
     if (!hovered || !index || analysis?.kind !== 'swivel-by-edge') return { pending: null, tint: null, marks: null };
     const pending: FoldPendingCreases = {
-      folded: vertexCreaseLines(index, { analysis, emergent: null }, hovered.op.direction),
+      folded: vertexCreaseLines(index, { analysis, emergent: null }, vertexDirectionOf(hovered.op)),
       creasePattern: [],
     };
     if (!inks) return { pending, tint: null, marks: null };

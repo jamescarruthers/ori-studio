@@ -1976,6 +1976,7 @@
       "sourceChanged": "Los pasos de origen cambiaron. Actualiza esta repetición.",
       "stop": "Detener",
       "stopped": "Se detuvo antes de que la repetición estuviera lista. No se añadió ningún paso.",
+      "swivelBehind": "En el otro lado, el valle y el monte de este pliegue giratorio quedan en la capa de detrás. Da la vuelta al modelo y haz el pliegue giratorio allí.",
       "title": "Repetir en el otro lado",
       "unavailable": "Los estados de origen no están disponibles o cambiaron. Espera a que termine la reproducción y vuelve a abrir Repetir.",
       "unsupported": "Este intervalo contiene un colapsado u otra repetición que aún no se puede reflejar. Elige un intervalo de operaciones de plegado.",
@@ -2774,10 +2775,10 @@
       "swivelEdgeLine": "Gira el borde sobre la línea, pivotando en el punto.",
       "swivelFoldCrease": "Gira el borde sobre el pliegue, con los pliegues juntándose en el borde plegado.",
       "swivelFoldLine": "Gira el borde sobre la línea, con los pliegues juntándose en el borde plegado.",
-      "swivelHinges": "Girar a lo largo de las dos bisagras definidas.",
       "swivelInsideCrease": "Gira el borde sobre el pliegue con un giro interior, con los pliegues juntándose en el borde plegado.",
-      "swivelInsideHinges": "Girar hacia dentro a lo largo de las dos bisagras definidas, metiendo la tira entre las capas.",
       "swivelInsideLine": "Gira el borde sobre la línea con un giro interior, con los pliegues juntándose en el borde plegado.",
+      "swivelInsideValleyMountain": "Haz girar la solapa con un giro interior a lo largo del valle y el monte.",
+      "swivelValleyMountain": "Haz girar la solapa con un pliegue giratorio a lo largo del valle y el monte.",
       "tuckMountain": "Pliega en monte y remete la solapa por detrás, sobre la capa elegida.",
       "tuckValley": "Pliega en valle y remete la solapa bajo la capa elegida.",
       "turn": "{{turn}}.",
@@ -3095,6 +3096,7 @@
       "swivelKindOpenHelp": "La tira de la otra capa se pliega por encima del resto de su capa, con el reverso a la vista.",
       "title": "Paso {{number}}",
       "valley": "Valle",
+      "valleyMountainHelp": "En la capa que ves, el valle y el monte que delimitan la solapa y se juntan en el borde plegado. El pliegue de la capa de detrás resulta de ellos.",
       "vertex": {
         "blocksHelp": "Trozos de papel que giran juntos: cada uno gira sobre los mismos pliegues, en el mismo orden, hasta donde queda."
       }
@@ -3184,7 +3186,6 @@
       "targetLine": "Línea por dos puntos",
       "tuckMountain": "Pliegue monte y remeter",
       "tuckValley": "Pliegue valle y remeter",
-      "twoHinges": "Punto de encuentro y dos bisagras",
       "unfold": "Desdoblar",
       "unfolds_one": "Desdobla {{count}} pliegue",
       "unfolds_many": "Desdobla {{count}} pliegues",
@@ -3192,6 +3193,7 @@
       "unknown": "De una versión más reciente de Ori Studio",
       "unsink": "Deshacer hundido",
       "valleyFold": "Pliegue valle",
+      "valleyMountain": "Valle y monte",
       "valleyPrecrease": "Pliegue valle y desdoblar"
     }
   },

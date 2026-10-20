@@ -59,7 +59,7 @@ function detailProperties(details: FoldStepAddedDetails | undefined): Record<str
 /** A vertex fold's form as `fold step added`'s properties: enums only. */
 function vertexFormProperties(form: FoldStepVertexForm): Record<string, string> {
   if ('hinge' in form) return { hinge: form.hinge };
-  if (form.swivelForm === 'creases') return { swivel_form: 'creases', swivel_kind: form.swivelKind };
+  if (form.swivelForm === 'valley_mountain') return { swivel_form: 'valley_mountain', swivel_kind: form.swivelKind };
   if (form.swivelForm === 'rays') return { swivel_form: 'rays' };
   if (form.swivelForm === 'fold') return { swivel_form: 'fold', target: form.target, swivel_kind: form.swivelKind };
   return { swivel_form: form.swivelForm, target: form.target };

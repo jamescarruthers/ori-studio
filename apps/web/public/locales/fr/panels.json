@@ -1976,6 +1976,7 @@
       "sourceChanged": "Les étapes sources ont changé. Mettez cette répétition à jour.",
       "stop": "Arrêter",
       "stopped": "Arrêté avant que la répétition soit prête. Aucune étape n’a été ajoutée.",
+      "swivelBehind": "De l’autre côté, la vallée et la montagne de ce pli pivot sont sur la couche de derrière. Retournez le modèle et faites le pli pivot là-bas.",
       "title": "Répéter de l’autre côté",
       "unavailable": "Les états sources sont indisponibles ou ont changé. Attendez la fin de la lecture, puis rouvrez Répéter.",
       "unsupported": "Cette plage contient un effondrement ou une autre répétition qui ne peut pas encore être réfléchie. Choisissez une plage d’opérations de pliage.",
@@ -2774,10 +2775,10 @@
       "swivelEdgeLine": "Faites pivoter le bord sur la ligne, autour du point.",
       "swivelFoldCrease": "Faites pivoter le bord sur le pli, les plis se rejoignant sur le bord plié.",
       "swivelFoldLine": "Faites pivoter le bord sur la ligne, les plis se rejoignant sur le bord plié.",
-      "swivelHinges": "Faire pivoter le long des deux charnières définies.",
       "swivelInsideCrease": "Faites pivoter le bord sur le pli en pli pivot intérieur, les plis se rejoignant sur le bord plié.",
-      "swivelInsideHinges": "Faire pivoter vers l’intérieur le long des deux charnières définies, en glissant la bande entre les couches.",
       "swivelInsideLine": "Faites pivoter le bord sur la ligne en pli pivot intérieur, les plis se rejoignant sur le bord plié.",
+      "swivelInsideValleyMountain": "Faites pivoter le rabat en pli pivot intérieur le long de la vallée et de la montagne.",
+      "swivelValleyMountain": "Faites pivoter le rabat par un pli pivot le long de la vallée et de la montagne.",
       "tuckMountain": "Pliez en montagne et rentrez le rabat par l’arrière, sur la couche choisie.",
       "tuckValley": "Pliez en vallée et rentrez le rabat sous la couche choisie.",
       "turn": "{{turn}}.",
@@ -3095,6 +3096,7 @@
       "swivelKindOpenHelp": "La bande de l’autre couche se plie par-dessus le reste de sa couche, son revers visible.",
       "title": "Étape {{number}}",
       "valley": "Vallée",
+      "valleyMountainHelp": "Sur la couche visible, la vallée et la montagne qui bordent le rabat et se rejoignent sur le bord plié. Le pli sur la couche de derrière en découle.",
       "vertex": {
         "blocksHelp": "Morceaux de papier qui tournent d’un seul tenant : chacun tourne autour des mêmes plis, dans le même ordre, jusqu’à l’endroit où il se pose."
       }
@@ -3184,7 +3186,6 @@
       "targetLine": "Ligne passant par deux points",
       "tuckMountain": "Pli montagne et rentrer",
       "tuckValley": "Pli vallée et rentrer",
-      "twoHinges": "Point de rencontre et deux charnières",
       "unfold": "Déplier",
       "unfolds_one": "Déplie {{count}} pli",
       "unfolds_many": "Déplie {{count}} plis",
@@ -3192,6 +3193,7 @@
       "unknown": "D’une version plus récente d’Ori Studio",
       "unsink": "Désenfoncer",
       "valleyFold": "Pli vallée",
+      "valleyMountain": "Vallée et montagne",
       "valleyPrecrease": "Pli vallée puis dépli"
     }
   },

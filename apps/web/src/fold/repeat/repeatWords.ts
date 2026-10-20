@@ -201,6 +201,11 @@ export function repeatFailure(t: TFunction, stop: RepeatStop, remedies: RepeatRe
         'panels:fold.repeat.noAxis',
         'This starting model has no verified matching pair of sides. Choose a different range.',
       );
+    case 'repeat_swivel_behind':
+      return t(
+        'panels:fold.repeat.swivelBehind',
+        'On the other side, this swivel’s valley and mountain lie on the layer behind. Turn the model over and make the swivel there.',
+      );
     case 'repeat_unsupported':
       return t(
         'panels:fold.repeat.unsupported',

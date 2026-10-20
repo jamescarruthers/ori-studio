@@ -521,39 +521,37 @@ describe('tucks with several stationary targets', () => {
 });
 
 
-describe('a swivel located by its hinges', () => {
-  const op = { kind: 'swivel', via: 'creases', fold: [0.5, 0.5], first: [0.05, 0.1], second: [0.1, 0.8], direction: 'mountain', swivel: 'inside' };
-  it('round-trips all anchors, the kind, choices and notes', () => {
-    const held = readSteps([raw('a', null, { op, note: 'Two located hinges' })]);
+describe('a swivel by its valley and mountain', () => {
+  const valley = { line: { via:'axiom', axiom:1, inputs:[{kind:'point',at:[0.5,0.5]},{kind:'point',at:[0.1,0.8]}] }, root:{n:[0.6,0.8],d:0.7} };
+  const mountain = { line:{via:'crease',at:[0.05,0.1]} };
+  const op = { kind:'swivel', via:'valley-mountain', valley, mountain, swivel:'inside' };
+  it('preserves both lines and each chosen root through save and open, and stores no direction', () => {
+    const held=readSteps([raw('a',null,{op, note:'The dragon’s step 35'})]);
     expect(isLockedStep(held.document.steps[0]!)).toBe(false);
-    expect((writeFoldSequence(held).steps as { op: unknown }[])[0]!.op).toEqual(op);
+    const written = (writeFoldSequence(held).steps as {op:Record<string, unknown>}[])[0]!.op;
+    expect(written).toEqual(op);
+    expect(written).not.toHaveProperty('direction');
     expect(readFoldSequence(writeFoldSequence(held))!.document).toEqual(held.document);
+    // Open spells no kind.
+    const { swivel: _inside, ...open } = op;
+    const openHeld = readSteps([raw('a',null,{op:open})]);
+    expect((writeFoldSequence(openHeld).steps as {op:unknown}[])[0]!.op).toEqual(open);
   });
-  it('locks incomplete or mixed constructions instead of changing their meaning', () => {
-    for (const bad of [{ ...op, first: null }, { ...op, second: [NaN, 0] }, { ...op, swivel:'outside' }, { ...op, edge:[0,0] }, { ...op, target:{ via:'crease',at:[0,0] } }]) {
-      const held=readSteps([raw('a',null,{op:bad})]);
-      expect(isLockedStep(held.document.steps[0]!)).toBe(true);
-      expect((writeFoldSequence(held).steps as { op: unknown }[])[0]!.op).toEqual(bad);
-    }
-  });
-});
-
-describe('a swivel built from two line constructions', () => {
-  const first = { line: { via:'axiom', axiom:1, inputs:[{kind:'point',at:[0.5,0.5]},{kind:'point',at:[0.05,0.1]}] }, root:{n:[0.4,-0.45],d:-0.025} };
-  const second = { line:{via:'crease',at:[0.1,0.8]} };
-  const op = {kind:'swivel',via:'lines',first,second,direction:'mountain',swivel:'inside'};
-  it('preserves both line inputs and each chosen root through save and open', () => {
-    const held=readSteps([raw('a',null,{op})]);
-    expect(isLockedStep(held.document.steps[0]!)).toBe(false);
-    expect((writeFoldSequence(held).steps as {op:unknown}[])[0]!.op).toEqual(op);
-    expect(readFoldSequence(writeFoldSequence(held))!.document).toEqual(held.document);
-  });
-  it('locks incomplete roots, extra fields, and mixed old constructions', () => {
+  it('locks incomplete roots, extra fields, a direction and the two located hinges it replaced', () => {
     for(const bad of [
-      {...op,first:{line:first.line}},
-      {...op,second:{...second,root:first.root}},
-      {...op,first:{...first,other:true}},
+      {...op,valley:{line:valley.line}},
+      {...op,mountain:{...mountain,root:valley.root}},
+      {...op,valley:{...valley,other:true}},
+      {...op,direction:'valley'},
+      {...op,swivel:'outside'},
       {...op,fold:[0.5,0.5]},
-    ]) expect(isLockedStep(readSteps([raw('a',null,{op:bad})]).document.steps[0]!)).toBe(true);
+      // The construction it replaced, which no saved file holds: a form this build does not know, locked.
+      { kind:'swivel', via:'lines', first:valley, second:mountain, direction:'mountain' },
+      { kind:'swivel', via:'creases', fold:[0.5,0.5], first:[0.05,0.1], second:[0.1,0.8], direction:'mountain' },
+    ]) {
+      const held = readSteps([raw('a',null,{op:bad})]);
+      expect(isLockedStep(held.document.steps[0]!)).toBe(true);
+      expect((writeFoldSequence(held).steps as {op:unknown}[])[0]!.op).toEqual(bad);
+    }
   });
 });
