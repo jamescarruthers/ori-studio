@@ -178,7 +178,11 @@ impl TacoComponents {
                 graph.entry(b).or_default().insert(a);
             }
         }
-        let mut out = if faces <= dense_limit {
+        // The dense table holds a component in a `u16`. A face's components
+        // number fewer than the faces, so that fits up to `u16::MAX` faces;
+        // past it the rows hold every component, whatever `dense_limit`
+        // says (only tests raise it past `DENSE_FACE_LIMIT`).
+        let mut out = if faces <= dense_limit && faces <= usize::from(u16::MAX) {
             TacoComponents::Dense {
                 faces,
                 table: vec![0; faces * faces],
@@ -219,9 +223,11 @@ impl TacoComponents {
     fn set(&mut self, c: usize, f: usize, component: usize) {
         match self {
             TacoComponents::Dense { faces, table } => {
-                // A face has fewer components than there are faces, and the
-                // dense table is only used below `u16::MAX` faces.
-                if let (true, Ok(value)) = (f < *faces, u16::try_from(component))
+                // `build` keeps this table to at most `u16::MAX` faces, and a
+                // face has fewer components than there are faces.
+                let value = u16::try_from(component);
+                debug_assert!(value.is_ok(), "component {component} past a u16");
+                if let (true, Ok(value)) = (f < *faces, value)
                     && let Some(slot) = table.get_mut(c * *faces + f)
                 {
                     *slot = value;
@@ -610,5 +616,23 @@ mod tests {
             assert_eq!(cc.get(1, 0), 0);
             assert_eq!(cc.get(5, 9), 0);
         }
+    }
+
+    #[test]
+    fn a_component_past_u16_is_kept_whatever_the_dense_limit() {
+        // Around face 0, 65,536 separate tacos: the last one's component is
+        // 65,536, one past what the dense table's `u16` holds.
+        let tacos = 1usize << 16;
+        let tuples: Vec<Faces> = (0..tacos as u32)
+            .map(|k| [2 * k + 1, 2 * k + 2, 0, 0])
+            .collect();
+        let faces = 2 * tacos + 1;
+        let cc = TacoComponents::build(faces, &tuples, usize::MAX);
+        assert!(matches!(cc, TacoComponents::Rows(_)));
+        let (first, last) = (cc.get(0, 1), cc.get(0, faces - 1));
+        assert_eq!(last, 1 << 16);
+        assert_eq!(cc.get(0, faces - 2), last);
+        assert_ne!(first, 0);
+        assert_ne!(first, last);
     }
 }
