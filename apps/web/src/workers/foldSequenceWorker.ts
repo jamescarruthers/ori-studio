@@ -1,6 +1,7 @@
-import { prepareRepeat, type RepeatRequest } from '../fold/repeat/repeatPreparation';
+import { prepareRepeatSearch, REPEAT_PREPARATION_MS, type RepeatPrepared, type RepeatRequest } from '../fold/repeat/repeatPreparation';
 import { repeatSymmetries } from '../fold/repeat/repeatGeometry';
 import type { FoldOrderQuery, FoldOrderSelection } from '../fold/engine/foldEngineCompoundCalls';
+import { createFoldEngineTurns, createFoldSearchRunner, type FoldSearchTicket } from '../fold/engine/foldSearch';
 /**
  * The Fold engine's bridge (`crates/oristudio-fold-wasm`), alone in a worker.
  *
@@ -11,9 +12,17 @@ import type { FoldOrderQuery, FoldOrderSelection } from '../fold/engine/foldEngi
  * and sixteen hex digits however large the state. Errors leave as
  * `{ code, message }` envelopes like every other bridge; refusals are values.
  *
- * The worker cannot be interrupted mid-call, so the runtime that owns it
- * (`store/workspaceStore/foldSequenceRuntime.ts`) stops work by terminating
- * it, and every handle goes with it.
+ * An engine call cannot be interrupted. The searches written over the calls —
+ * a pleat's orders, a repeat's preparation (`fold/engine/foldSearch.ts`) — run
+ * in slices instead, giving the thread back between engine calls: a cancel
+ * for one ({@link api.cancelSearch}) stops it there, and the calls that only
+ * read the engine (`&self` in the bridge) are answered meanwhile, so the
+ * canvas keeps drawing. Every call that changes the engine waits its turn
+ * behind the search ({@link changing}), as it always waited behind any call:
+ * nothing lands, lets a state go or replaces the engine's order search under
+ * a search between its slices. The runtime that owns the worker
+ * (`store/workspaceStore/foldSequenceRuntime.ts`) can still stop everything
+ * by terminating it, and every handle goes with it.
  *
  * Same shape as `precreaseWorker.ts`: lazy `init()`, one `call()` wrapper.
  */
@@ -129,20 +138,40 @@ function normalizeError(error: unknown): WasmErrorEnvelope {
   };
 }
 
-async function call<T>(fn: (calls: FoldWorkerCalls) => T): Promise<T> {
+/** A call that only reads the engine: answered at once, between a search's slices too. */
+async function call<T>(fn: (calls: FoldWorkerCalls) => T | Promise<T>): Promise<T> {
   try {
-    return fn(await ensureReady());
+    return await fn(await ensureReady());
   } catch (error) {
     throw normalizeError(error);
   }
 }
 
+const turns = createFoldEngineTurns();
+
+/**
+ * A call that changes the engine — lands a state, lets one go, moves its
+ * order search — or runs a search over it: run after every such call before
+ * it has finished, in the order they came.
+ */
+function changing<T>(fn: (calls: FoldWorkerCalls) => T | Promise<T>): Promise<T> {
+  return turns(() => call(fn));
+}
+
+/** This worker's searches, which a ticket cancels. */
+const searches = createFoldSearchRunner();
+
 const api = {
   async repeatAxes(state: number) {
     return call((calls) => repeatSymmetries(calls.scene(state), calls.summary(state).sheet));
   },
-  async prepareRepeat(request: RepeatRequest) {
-    return call((calls) => prepareRepeat(calls, request));
+  /** A repeat's preparation, in slices; rejects with `fold_search_cancelled` once its ticket is cancelled. */
+  async prepareRepeat(request: RepeatRequest, search?: FoldSearchTicket): Promise<RepeatPrepared> {
+    return changing((calls) => searches.run(prepareRepeatSearch(calls, request), REPEAT_PREPARATION_MS, search));
+  },
+  /** Stop the ticket's search at its next slice, or before it starts. Not queued behind it. */
+  async cancelSearch(id: number): Promise<void> {
+    searches.cancel(id);
   },
   /** `FOLD_ENGINE_VERSION`, stored beside every cached state. */
   async engineVersion(): Promise<number> {
@@ -151,16 +180,16 @@ const api = {
 
   /** The flat sheet a sequence starts from, with its fingerprint. */
   async sheet(paper: FoldPaper): Promise<FoldEngineOutcome<FoldSheetLanded>> {
-    return call((calls) => calls.sheet(paper));
+    return changing((calls) => calls.sheet(paper));
   },
 
   async returnTo(current: number, target: number, history: readonly number[]): Promise<FoldEngineOutcome<FoldStepFingerprinted>> {
-    return call((calls) => calls.returnTo(current, target, history));
+    return changing((calls) => calls.returnTo(current, target, history));
   },
 
   /** One step for a preview (D14 tier 3): a new handle, no fingerprint. */
   async apply(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineOutcome<FoldStepLanded>> {
-    return call((calls) => calls.apply(state, op, choices));
+    return changing((calls) => calls.apply(state, op, choices));
   },
 
   /** One step with its fingerprint: what a replay and a commit take. */
@@ -169,7 +198,7 @@ const api = {
     op: FoldEngineOp,
     choices?: FoldChoices
   ): Promise<FoldEngineOutcome<FoldStepFingerprinted>> {
-    return call((calls) => calls.step(state, op, choices));
+    return changing((calls) => calls.step(state, op, choices));
   },
 
   async summary(state: number): Promise<FoldStateSummary> {
@@ -182,12 +211,12 @@ const api = {
 
   /** Let states go; how many were held. */
   async release(states: readonly number[]): Promise<number> {
-    return call((calls) => calls.release(states));
+    return changing((calls) => calls.release(states));
   },
 
   /** Let every state go. */
   async clear(): Promise<void> {
-    return call((calls) => calls.clear());
+    return changing((calls) => calls.clear());
   },
 
   /** How many states are held, for diagnostics and tests. */
@@ -269,19 +298,19 @@ const api = {
     target: FoldImportTarget,
     limits?: FoldImportLimits
   ): Promise<FoldEngineOutcome<FoldImportOpened>> {
-    return call((calls) => calls.importCp(source, target, limits));
+    return changing((calls) => calls.importCp(source, target, limits));
   },
 
   /** Land one listed order per component as a step, with its fingerprint and op. */
   async importSearch(importHandle: number, choice: readonly number[], limits?: import('../fold/engine/foldEngineIoWire').FoldImportLimits) {
-    return call((calls) => calls.importSearch(importHandle, choice, limits));
+    return changing((calls) => calls.importSearch(importHandle, choice, limits));
   },
 
   async importPick(
     importHandle: number,
     choice: readonly number[]
   ): Promise<FoldEngineOutcome<FoldImportFingerprinted>> {
-    return call((calls) => calls.importPick(importHandle, choice));
+    return changing((calls) => calls.importPick(importHandle, choice));
   },
 
   /** Start from Edit's folded figure: the kernel's paper scene of it. */
@@ -290,12 +319,12 @@ const api = {
     target: FoldImportTarget,
     limits?: FoldImportLimits
   ): Promise<FoldEngineOutcome<FoldImportFingerprinted>> {
-    return call((calls) => calls.importEditFoldedFigure(scene, target, limits));
+    return changing((calls) => calls.importEditFoldedFigure(scene, target, limits));
   },
 
   /** Let imports go; how many were held. */
   async releaseImports(imports: readonly number[]): Promise<number> {
-    return call((calls) => calls.releaseImports(imports));
+    return changing((calls) => calls.releaseImports(imports));
   },
 
   async liveImports(): Promise<number> {
@@ -317,11 +346,26 @@ const api = {
 
   /** What a compound fold is before it lands, as its family's tools ask; tagged by `family`. */
   async releaseOrderSearch(state: number): Promise<void> {
-    return call((calls) => calls.releaseOrderSearch?.(state));
+    return changing((calls) => calls.releaseOrderSearch?.(state));
   },
 
-  async orderSelection(state: number, op: FoldEngineOp, choices: FoldChoices | undefined, query: FoldOrderQuery): Promise<FoldEngineOutcome<FoldOrderSelection>> {
-    return call((calls) => calls.orderSelection(state, op, choices, query));
+  /**
+   * The orders a fold leaves. A pleat's are a search over the engine's calls,
+   * run in slices: with a ticket, cancelling it rejects this with
+   * `fold_search_cancelled`.
+   */
+  async orderSelection(
+    state: number,
+    op: FoldEngineOp,
+    choices: FoldChoices | undefined,
+    query: FoldOrderQuery,
+    search?: FoldSearchTicket
+  ): Promise<FoldEngineOutcome<FoldOrderSelection>> {
+    return changing((calls) => {
+      if (op.kind !== 'pleat') return calls.orderSelection(state, op, choices, query);
+      const pleat = calls.pleatOrderSearch(state, op, choices, query);
+      return searches.run(pleat.search, pleat.budgetMs, search);
+    });
   },
 
   async compoundAnalysis(
@@ -336,12 +380,12 @@ const api = {
 
   /** Fold a crimp: landed, an opening to choose, or the orders to choose from. */
   async crimp(state: number, op: FoldEngineCrimpOp, choices?: FoldChoices): Promise<FoldCrimpTuckOutcome<'crimp'>> {
-    return call((calls) => calls.crimp(state, op, choices));
+    return changing((calls) => calls.crimp(state, op, choices));
   },
 
   /** Fold a tuck: landed, or the orders to choose from. */
   async tuck(state: number, op: FoldEngineTuckOp, choices?: FoldChoices): Promise<FoldCrimpTuckOutcome<'tuck'>> {
-    return call((calls) => calls.tuck(state, op, choices));
+    return changing((calls) => calls.tuck(state, op, choices));
   },
 
   // The vertex folds: squash, petal fold, rabbit ear, swivel
@@ -353,17 +397,17 @@ const api = {
     op: FoldVertexOp,
     choices?: FoldChoices
   ): Promise<FoldEngineOutcome<FoldVertexTried>> {
-    return call((calls) => calls.vertexFold(state, op, choices));
+    return changing((calls) => calls.vertexFold(state, op, choices));
   },
 
   /** Land one listed order per component, with the choices the step stores. */
   async vertexPick(pending: number, choice: readonly number[]): Promise<FoldEngineOutcome<FoldVertexFingerprinted>> {
-    return call((calls) => calls.vertexPick(pending, choice));
+    return changing((calls) => calls.vertexPick(pending, choice));
   },
 
   /** Let pending choices go; how many were held. */
   async releaseVertexChoices(pending: readonly number[]): Promise<number> {
-    return call((calls) => calls.releaseVertexChoices(pending));
+    return changing((calls) => calls.releaseVertexChoices(pending));
   },
 
   /**
