@@ -664,6 +664,16 @@ prints the same digest before and after, `fold_compound_oracle` still
 verifies every state, and `treemaker-flatfold`'s parity and verify tests
 pass unchanged.
 
+A second rework (2026-10-19) replaced `PairIndex` and the per-face
+`BTreeMap`s with flat face × face tables and skips work that cannot change
+an answer, and added `CompletionSession` for the Layer order dialog: open
+once, then check many choices. The 850-face iguana's completion went from
+11.0 s to 1.04 s natively (back to back, load 5); the evidence that no
+answer changed (a differential
+harness over the fixtures and 484 real crease patterns, the campaign digests
+above, the Flat-Folder oracle) is in
+`implementation-plans/fold-solver-performance.md`.
+
 `cargo run -p oristudio-fold --release --example crimp_tuck`: on the same
 random sequences, each state takes a crimp drawn as the spike's crimp
 campaign draws them (inside, each flap at its first opening) and a tuck

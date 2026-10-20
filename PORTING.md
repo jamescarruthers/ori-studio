@@ -1021,7 +1021,8 @@ again behaviour-preserving for `solve_flat_fold`:
 - The propagation and the search look a pair's variable up by its faces in a
   `PairIndex` (per smaller face, its larger faces in sorted order) instead of
   building a key into the `variable_index` `BTreeMap`. Constraint generation
-  still builds that map.
+  still builds that map. (`PairIndex` has since given way to the face × face
+  table under "Performance-only divergences" below.)
 - `propagate_initial_assignments` ticks a `NodeMeter` once per variable it
   visits; `complete_layer_order`'s meter reads the deadline on every 32nd tick
   (the Budget item above), and the pipeline's `Unmetered` ignores them.
@@ -1033,6 +1034,86 @@ The evidence is the one `crates/oristudio-fold/README.md` gives under "The
 completion's rework": `tests/compound_digest.rs` prints the same reverse
 campaign digest before and after, `fold_compound_oracle` still verifies every
 state, and this crate's parity and verify tests pass unchanged.
+
+### Performance-only divergences (2026-10-19)
+
+For the Layer order dialog the propagation, the split into components and
+the search were made about ten times faster on deep stacks (the 850-face
+iguana's completion 11.0 s → 1.04 s natively, back to back at load 5).
+Every change keeps the output identical; only how the solver finds what
+upstream finds changed (`implementation-plans/fold-solver-performance.md`):
+
+- **Tables** (`tables.rs`). Upstream's `BF` (each variable's faces), `BT`
+  (its constraints), `BI` (the variable of a pair) and `CC` (each face's
+  taco-tortilla components) are flat arrays instead of `Vec<u16>` keys, a
+  binary search per lookup and `BTreeMap`s: a face × face table of
+  variables and one of components (component numbers from 1, 0 for none,
+  as only their equality is read), dense up to `DENSE_FACE_LIMIT` (2,048
+  faces, 25 MB). Above it pairs are hashed (with SplitMix64's finalizer: a
+  bare multiply put every pair of a face in one probe chain, which made the
+  four cpoogle models past the limit slower than before until it was fixed) and
+  components are kept per face as upstream keeps them. A constraint's faces
+  are held inline, so no constraint, inference or transitivity triple
+  allocates.
+- **Transitivity** (`FC_CF_CC_Bf_2_Bt3`) marks the first face's cells and
+  the faces met in a reused scratch, in the order upstream meets them.
+- **`get_components`** (`variable_groups`) marks seen variables in a
+  `Vec<bool>`. A constraint none of whose pairs is an open variable not yet
+  reached adds nothing whatever it infers, so it is not inferred; and,
+  where nothing counts the triples (only `solve_flat_fold`'s summary does),
+  such a transitivity triple is not run through the taco-tortilla filter
+  either.
+- **`propagate`** (`propagate_assignment`, the search's propagation, which
+  names no constraint) does not filter or infer a transitivity triple whose
+  other two pairs are both open: every `x00` state of the family's table is
+  alive.
+- A transitivity triple's first pair is the visited variable, so its
+  inference does not look it up.
+- `complete_layer_order`'s validation checks pairs against the same table
+  rather than a `HashSet` and a `BTreeMap`, reporting the same first error.
+
+How identity is proven:
+
+- A differential harness (`crates/oristudio-fold-wasm/examples/solver_differential.rs`)
+  runs the same file against the code before (`ef1e1343e`) and after and
+  writes, per crease pattern through Import CP's own path, the forced pairs,
+  every component, its orders (one and 1,000 per component), counts,
+  search nodes and refusals at fixed node budgets. They are byte for byte
+  equal on the profile's ten fixtures and on all 484 crease patterns of the
+  local cpoogle benchmark (471 import; the other 13 are refused the same
+  way).
+- `solve_flat_fold` keeps its JS oracle parity: `flat_folder_oracle`,
+  `flat_folder_verify` and `flat_folder_controls` pass, and on the
+  synthetic `flat_folder_corpus` (13,999 files in four shards) 8,394 of
+  the 8,396 files the oracle answers agree; the other two differ in their
+  taco-tortilla counts by two, exactly as before the rework (591 against
+  593, 2,871 against 2,873). The JS oracle itself throws on 5,603 of the
+  files, and one more file's arrangement does not finish in 20 minutes
+  before or after, nor in the oracle, so the corpus test fails on that
+  corpus with any build.
+- Unit tests run `complete_layer_order` with dense and with hashed tables
+  and compare (`dense_and_hashed_tables_give_the_same_completions`).
+- `oristudio-fold`'s campaign digests (`tests/compound_digest.rs`,
+  `tests/random.rs`) print the same values before and after.
+
+### The completion session (an addition)
+
+`CompletionSession` (`session.rs`) is not a port: it answers many questions
+about one problem, each the problem's fixed orders plus a few seeds, without
+repeating what they share. The open propagates the problem's fixed orders
+once (keeping upstream's parent pointers), splits what is left as
+`get_components` does and finds a first order (upstream's search, one
+solution per component: the first order `complete_layer_order` lists). A
+check refuses a seed against a forced pair before any work, propagates the
+other seeds from the open's state, and searches only the components they
+reach, first with the seeds' pairs first and then in the open's order, each
+within a small node budget, preferring a given order's value at each guess
+and then again with upstream's values. If none answers, it runs exactly
+upstream's split and search over what is
+left, so it decides whenever a fresh `complete_layer_order` would within the
+same node budget; past that it answers "undecided", never "no order". Its
+verdicts are checked against completing from scratch with the seeds added
+(`solver_session_check`, the module's randomized unit test).
 
 That caller-built constraints avoid both arrangement failures above is still
 **[derived]**: neither goes through Flat-Folder's arrangement. The `verify`
