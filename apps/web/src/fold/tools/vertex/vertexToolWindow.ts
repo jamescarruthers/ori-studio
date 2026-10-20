@@ -642,12 +642,18 @@ function swivelKindControl(
   readOnly: boolean,
   located: boolean
 ): FoldKindChoice<FoldSwivelKind> | null {
-  const kinds = vertex.swivelKinds;
-  if (vertex.tool !== 'swivel' || !vertex.onFold || !located || !kinds) return null;
+  if (vertex.tool !== 'swivel' || !vertex.onFold) return null;
+  // By its valley and mountain, the kind is part of what the folder asks for,
+  // as a diagram names it: offered from the first pick, and still offered
+  // when the kind asked is refused before the engine could say which land.
+  const asking = vertex.swivelInput === 'valley-mountain';
+  const kinds = located ? (vertex.swivelKinds ?? null) : null;
+  if (!asking && !kinds) return null;
   const asked = vertex.swivelKind ?? 'open';
   const other: FoldSwivelKind = asked === 'open' ? 'inside' : 'open';
   // No choice in it: only the kind asked lands, or none does.
-  if (!kinds.includes(other)) return null;
+  if (!asking && !kinds?.includes(other)) return null;
+  const lands = (kind: FoldSwivelKind) => !kinds || kinds.includes(kind);
   const cannot = t('tools:fold.vertex.swivelKindCannot', 'This kind cannot fold flat here.');
   return {
     label: t('tools:fold.vertex.swivelKind', 'Kind'),
@@ -660,8 +666,8 @@ function swivelKindControl(
         value === 'open'
           ? t('tools:fold.vertex.swivelOpenHelp', 'Open swivel: the strip folds up on top')
           : t('tools:fold.vertex.swivelInsideHelp', 'Inside swivel: the strip tucks between the layers'),
-      disabled: !kinds.includes(value),
-      reason: kinds.includes(value) ? null : cannot,
+      disabled: !lands(value),
+      reason: lands(value) ? null : cannot,
     })),
     disabled: readOnly || !verbs.setSwivelKind,
     note: null,

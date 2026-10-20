@@ -232,7 +232,8 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
         }
       : {}),
     ...(directions && directions.length === 2 ? { directions } : {}),
-    ...(onFold && vertex?.kind ? { swivelKind: vertex.kind } : {}),
+    // The kind asked, before the engine has answered (or when it refused it) too.
+    ...(onFold ? { swivelKind: vertex?.kind ?? tools.compound.swivelKind ?? 'open' } : {}),
     ...(swivelKinds ? { swivelKinds } : {}),
     ...(nothingSwings ? { nothingSwings } : {}),
     described: vertex?.base != null,

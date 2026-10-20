@@ -37,7 +37,19 @@ way when that one lands.
   "Mountain line: …", each the line mode's own clicks, the select named by
   the line it locates; Enter (or Use as the valley) takes the valley; the two
   lines drawn in their pens as they are located; the preview draws the crease
-  behind dotted; Kind offered when the other kind lands; no direction.
+  behind dotted; no direction.
+- **Where the lines meet**: the valley is often constructed (an axiom), so V
+  is seldom a landmark, and the engine meets the two lines only on a folded
+  edge, within its tolerance. Once the valley is taken, its crossings with the
+  folded edges the viewer sees are dotted on the folded pane, and a click near
+  one takes that exact point for the mountain's line
+  (`canvas/vertex/swivelMeeting`).
+- **Kind from the first pick**: the kind is part of what the folder asks for,
+  as a diagram names it ("inside swivel"), and the analysis depends on it:
+  asked open, an inside pair is refused before the engine can say which kinds
+  land. So Kind is offered from the first pick, kept through the valley taken,
+  another line mode and Esc, and disabled only for a kind the engine has said
+  does not land.
 - **No silent switch**: `vertexChosenOp` folds the way and kind asked;
   `directionToFold`, `swivelWayToFold` and the reach's "the other way when the
   folder's does not land" are gone. The direction and kind controls are shown
@@ -66,8 +78,13 @@ way when that one lands.
 - [x] The tool: picks, previews, Kind, refusals; no direction switched or
       kind swapped for the folder, by either construction.
 - [x] Words in all 8 locales; analytics enum and docs.
-- [ ] Browser: three cases through the real tool, the dragon's step 34 and
-      Repeat among them, beside their after pictures.
+- [x] Where the lines meet: the valley's crossings with the folded edges
+      dotted, and taken exactly for the mountain.
+- [x] Kind offered from the first pick, and kept through the valley's locates.
+- [x] Browser: three cases through the real tool, the dragon's step 34 and
+      Repeat among them, beside their after pictures (the open and inside
+      kite swivels at their saved fingerprints; the dragon's swivel and its
+      Repeat).
 
 ## Validation
 

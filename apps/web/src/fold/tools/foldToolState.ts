@@ -317,6 +317,19 @@ function located(state: FoldToolState): FoldToolState {
   };
 }
 
+/**
+ * A swivel by its valley and mountain is asked for by its kind as well as
+ * its lines, from the first pick (`vertexToolWindow`'s kind control): a new
+ * locate — another line mode, the valley taken, Esc, the next fold — keeps
+ * the kind chosen. A swivel by its edge chooses its kind once its picks are
+ * in, so its locate starts the kind again with them.
+ */
+function keepAskedKind(state: FoldToolState, next: FoldToolState): FoldToolState {
+  const { swivelKind } = state.compound;
+  const asked = state.tool === 'swivel' && state.swivelInput === 'valley-mountain';
+  return asked && swivelKind !== null ? { ...next, compound: { ...next.compound, swivelKind } } : next;
+}
+
 /** A new tip — another side, another seed, another root — opens, sinks and stacks anew: the kind stays chosen. */
 function anotherTip(compound: FoldCompoundToolChoices): FoldCompoundToolChoices {
   return compound.opening === 0 && compound.order === 0 && compound.pocket === 0 && !compound.tuckPinned?.length
@@ -531,7 +544,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
   };
   const restart = (state: FoldToolState): FoldToolState => {
     runtime?.reset();
-    return located(state);
+    return keepAskedKind(state, located(state));
   };
 
   const api: FoldTools = {
@@ -800,7 +813,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set(state => ({ ...restart(state), swivelValley: line }));
     },
     setSwivelInput(swivelInput) {
-      set(state => (state.swivelInput ?? 'edge') === swivelInput ? state : { ...restart(state), swivelInput });
+      // Another construction asks anew: its kind too.
+      set(state => (state.swivelInput ?? 'edge') === swivelInput ? state : { ...restart(state), swivelInput, compound: FOLD_COMPOUND_CHOICES_INITIAL });
     },
 
     setSwivelTarget(swivelTarget) {

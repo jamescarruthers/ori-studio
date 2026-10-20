@@ -490,6 +490,28 @@ it('keeps a swivel’s valley taken while the mountain’s line mode changes, an
   expect(hasToolInput(tools.store.getState())).toBe(false);
 });
 
+it('keeps the kind a swivel by its valley and mountain asks for across its locates, and asks anew by its edge', () => {
+  const tools = createFoldTools();
+  tools.selectTool('swivel');
+  tools.setSwivelInput('valley-mountain');
+  tools.setSwivelKind('inside');
+  const valley = { line: { via: 'free' as const, through: [[0, 0], [1, 1]] as [[number, number], [number, number]] }, sceneLine: { n: [1, -1] as [number, number], d: 0 } };
+  // Another line mode, the valley taken, Escape: still the inside swivel asked.
+  tools.selectLineMode('axiom-3');
+  tools.takeSwivelValley(valley);
+  tools.clear();
+  expect(tools.store.getState().compound.swivelKind).toBe('inside');
+  // Another construction asks anew.
+  tools.setSwivelInput('edge');
+  expect(tools.store.getState().compound.swivelKind).toBeNull();
+  // By its edge, the kind is chosen once the picks are in, and a new locate starts it again.
+  tools.setSwivelKind('inside');
+  tools.clear();
+  tools.pick(point(0.5, 0.5));
+  tools.clear();
+  expect(tools.store.getState().compound.swivelKind).toBeNull();
+});
+
 describe('the sequence tools in hand', () => {
   it('are held for one step, as Rotate is: put down, the tool they were taken up from is back', () => {
     const tools = createFoldTools();

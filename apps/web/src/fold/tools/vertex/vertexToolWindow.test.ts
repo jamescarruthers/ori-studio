@@ -678,6 +678,21 @@ describe('a swivel by its valley and mountain', () => {
     expect(mountain.instructions.items[0]).toMatch(/^Mountain line: /);
     expect(mountain.instructions.items.at(-1)).toBe('Press Enter to fold.');
     expect(mountain.vertex?.direction).toBeNull();
+    // Its kind is the folder's to ask from the first pick: both offered until the engine says which land.
+    const asking = foldToolWindow(t, view({ ...taken, onFold: true, swivelKind: 'open' }, { lineMode: 'crease' }), verbs(), mouse)!;
+    expect(asking.vertex?.kind?.value).toBe('open');
+    expect(asking.vertex?.kind?.options.map((option) => option.disabled)).toEqual([false, false]);
+    // The kind asked refused before any answer said which land: the other still offered.
+    const refused = foldToolWindow(t, view({ ...taken, onFold: true, swivelKind: 'open', described: false }, { preview: preview() }), verbs(), mouse)!;
+    expect(refused.vertex?.kind?.options.map((option) => option.disabled)).toEqual([false, false]);
+    // Answered: the kind that does not land offered disabled, the kind asked among them.
+    const answered = foldToolWindow(
+      t,
+      view({ ...taken, onFold: true, described: true, known: false, swivelKind: 'open', swivelKinds: ['inside'] }, { preview: preview() }),
+      verbs(),
+      mouse
+    )!;
+    expect(answered.vertex?.kind?.options.map((option) => option.disabled)).toEqual([true, false]);
     // Previewed: still no direction, its kinds offered where both land.
     const previewed = foldToolWindow(
       t,

@@ -220,6 +220,41 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     await until(() => cursor().status==='ok' && cursor().fingerprint===saved.expect,'fresh replay of the valley and mountain');
   });
 
+  it('makes both saved swivels on the kite again by their valley and mountain, the mountain from where the valley meets the folded edge', async () => {
+    // The flap's right corner, where the hinge ends, and the model's bottom tip.
+    const CORNER = { x: 0.2071067811865476, y: 0.2071067811865476 };
+    const TIP = { x: 0, y: 0 };
+    // Where the hinge, square to the kite's upper-left edge through the corner, meets that edge.
+    const V = { x: -0.1464466094067262, y: 0.3535533905932738 };
+    for (const [name, kind] of [['swivel-on-edge.osf', 'open'], ['swivel-inside.osf', 'inside']] as const) {
+      const stored = storedSwivel(name);
+      const { seen } = await squashWithSwivel();
+      await act(async () => { seen.current!.verbs.setSwivelInput('valley-mountain'); await settle(); });
+      // Inside is asked before any pick: asked open, these lines are refused, and the kind stays through every locate.
+      if (kind === 'inside') await act(async () => { seen.current!.verbs.setSwivelKind('inside'); await settle(); });
+      // The valley, constructed: open, the hinge square to the kite's edge through the corner (Axiom 4);
+      // inside, the lower-left edge laid on the centre line (Axiom 3), through the tip.
+      await act(async () => { seen.current!.verbs.selectLineMode(kind === 'open' ? 'axiom-4' : 'axiom-3'); await settle(); });
+      for (const at of kind === 'open' ? [MEET, CORNER] : [EDGE, CENTRE_LINE]) await click(seen, at);
+      await until(() => seen.current?.preview.swivelLocated, 'the valley line');
+      await act(async () => { expect(seen.current!.verbs.commit()).toBe(true); await settle(); });
+      // The mountain through two points, the first where the valley meets the folded edge: that point exactly.
+      await act(async () => { seen.current!.verbs.selectLineMode('axiom-1'); await settle(); });
+      const near = { x: V.x + 0.004, y: V.y - 0.003 };
+      const meeting = await click(seen, near);
+      expect(meeting?.pick).toMatchObject({ kind: 'point', provenance: 'fold' });
+      const scene = meeting?.pick?.kind === 'point' ? meeting.pick.scene : null;
+      expect(Math.hypot((scene?.x ?? NaN) - V.x, (scene?.y ?? NaN) - V.y)).toBeLessThan(1e-12);
+      await click(seen, kind === 'open' ? TIP : CORNER);
+      const step = await until(() => previewed(seen, kind), `the ${kind} preview`);
+      expect(step.op).toMatchObject({ kind: 'swivel', via: 'valley-mountain', mountain: { line: { via: 'axiom', axiom: 1 } } });
+      const committed = await commit(seen);
+      expect(committed.fingerprint, name).toBe(stored.expect);
+      act(() => root.unmount());
+      root = createRoot(host);
+    }
+  });
+
   it('requires a saved order for a matching swivel and cycles before committing', async () => {
     const t = Math.tan(Math.PI / 8);
     const document = sequenceOf([]);
