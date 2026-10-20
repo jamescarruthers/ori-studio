@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.1] - 2026-10-20
+## [0.6.2] - 2026-10-20
 
 Diagram steps imported from Defox projects and from batches of crease patterns and pictures, an example crane to start from, a redesigned Layers pane, very large crease patterns that open, select and simulate in seconds instead of minutes, and external links that open from the desktop app.
 
@@ -29,6 +29,13 @@ Diagram steps imported from Defox projects and from batches of crease patterns a
 - Draw auxiliary lines under a flat folded figure's edges in exports and Diagram pictures. Their grey ends were painted over the black outline.
 - Save a project without a second copy of its crease pattern. A project that wasn't imported from a FOLD file gained a duplicate of its pattern the first time it was saved after reopening. A file already saved with the copy keeps it.
 - Keep memory in check over a long editing session. Crease edits, selections and grid changes each kept a full copy of the pattern in the undo history with no limit; the history now keeps the last 100, as it already did for annotations and folded figures.
+
+## [0.6.1] - 2026-10-20
+
+Not released. In the tagged build, a step added in the Diagram's Steps view
+stretched to the full height of the pane in Safari and the desktop app, so it
+was withdrawn before it was offered as an update. Everything intended for it
+shipped in 0.6.2.
 
 ## [0.6.0] - 2026-10-16
 
