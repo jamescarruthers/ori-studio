@@ -5,8 +5,16 @@ import type { FoldOp } from '../../fold/document/foldSequenceDocument';
 import { createFoldEngineCalls } from '../../fold/engine/foldEngineCalls';
 import { createFoldSession, type FoldSession } from '../../fold/session/foldSession';
 import { inProcessFoldRuntime, settle } from '../../fold/session/foldSession.fixtures';
-import { DEFAULT_DIAGRAM_STYLE, isStep, type DiagramFoldStepSource, type DiagramStep } from '../document/diagramDocument';
+import type { PaperScene } from '../../lib/paper/paperScene';
+import {
+  DEFAULT_DIAGRAM_STYLE,
+  isStep,
+  setTitleBlockContent,
+  type DiagramFoldStepSource,
+  type DiagramStep,
+} from '../document/diagramDocument';
 import { readDiagram, writeDiagram } from '../document/diagramFile';
+import { resolveTitleBlock } from '../pages/titleBlockContent';
 import { paintScene, stepPictureSource } from '../pictures/paintDiagramStep';
 
 /**
@@ -36,7 +44,7 @@ vi.mock('../../store/workspaceStore/foldSession', async (importOriginal) => ({
 const { useWorkspaceStore } = await import('../../store/workspaceStore/store');
 const { foldSessionDocumentSource } = await import('../../store/workspaceStore/foldSession');
 const { useLayoutStore } = await import('../../store/layoutStore');
-const { pullFromFold } = await import('./foldBrowserActions');
+const { pullFromFold, sendFoldStepsToDiagram } = await import('./foldBrowserActions');
 const { openDiagramStepInFold, refreshDiagramFoldStep, spreadDiagramFoldStep } = await import('./foldStepActions');
 const { foldLinkContextNow } = await import('./useFoldLinkContext');
 const { foldStepLinkStatus } = await import('./foldStepLink');
@@ -164,6 +172,27 @@ describe.skipIf(!available)('a Fold step in the Diagram, over the real bridge (D
     expect(statusOf(posed)).toBe('current');
     // Its marks went with the paper, and are still Fold's.
     expect(posed.annotations.every((mark) => !mark.unknown && mark.imported === 'untouched')).toBe(true);
+  });
+
+  it('gives the title block the crease pattern of the last step sent, every crease so far, and of a step chosen', async () => {
+    const [, second, third] = state().foldSequences[0]!.document.steps;
+    state().moveFoldCursor(third!.id);
+    expect(await sendFoldStepsToDiagram('path')).toBe(true);
+    const diagram = state().diagram!;
+    const sent = diagram.steps.filter(isStep);
+    const roles = (scene: PaperScene | null) =>
+      (scene?.items ?? []).flatMap((item) => (item.kind === 'line' ? [item.role] : [])).filter((role) => role !== 'edge');
+
+    // Auto: the Finished step, the kite: both valleys folded, the diagonal lying flat in the aux pen.
+    const auto = resolveTitleBlock(diagram).pattern;
+    expect([auto.from, auto.step?.id]).toEqual(['auto', sent.at(-1)!.id]);
+    expect(roles(auto.scene).sort()).toEqual(['aux', 'valley', 'valley']);
+
+    // The second step's diagram step: the state it lands, the diagonal and one valley.
+    const step = sent.find((each) => (each.source as DiagramFoldStepSource).step === second!.id)!;
+    const chosen = resolveTitleBlock(setTitleBlockContent(diagram, { pattern: { kind: 'step', stepId: step.id } })).pattern;
+    expect(chosen.step?.id).toBe(step.id);
+    expect(roles(chosen.scene).sort()).toEqual(['aux', 'valley']);
   });
 
   it('goes back to its step in Fold, and is missing once the step is deleted there', async () => {

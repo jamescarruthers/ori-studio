@@ -11,6 +11,7 @@ import { inProcessFoldRuntime, settle } from '../../fold/session/foldSession.fix
 import type { PaperScene } from '../../lib/paper/paperScene';
 import { isKnownAnnotation, isStep, type DiagramFoldStepSource, type DiagramStep } from '../document/diagramDocument';
 import { readDiagram, writeDiagram } from '../document/diagramFile';
+import { resolveTitleBlock } from '../pages/titleBlockContent';
 import { storedScene } from '../pictures/pictureFrame';
 
 /**
@@ -233,6 +234,11 @@ describe.skipIf(!available)('merging a precrease and its mirror image into one D
     expect(kinds(merged).filter((kind) => kind === 'fold-unfold-arrow')).toHaveLength(2);
     expect(merged.text).toBe('Fold and unfold on both sides.');
     expect(statusOf(merged)).toBe('current');
+    // The title block's pattern is the state the run's last step lands: all three precreases, lying flat.
+    const { pattern } = resolveTitleBlock(state().diagram!);
+    expect(pattern.step?.id).toBe(merged.id);
+    const lines = (pattern.scene?.items ?? []).flatMap((item) => (item.kind === 'line' && item.role !== 'edge' ? [item.role] : []));
+    expect(lines).toEqual(['aux', 'aux', 'aux']);
   });
 
   it('keeps the run through a save and an open, opens its last step in Fold, and is missing once the Repeat no longer folds', async () => {
