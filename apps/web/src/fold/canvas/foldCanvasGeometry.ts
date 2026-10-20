@@ -77,6 +77,16 @@ export function transformLine(iso: FoldIsometry, line: FoldModelLine): FoldModel
   return { n: [n.x, n.y], d: n.x * on.x + n.y * on.y };
 }
 
+/** A model-frame line — the engine's — as the scene shows it: `view_transform` is model → scene. */
+export function sceneLineOf(viewTransform: FoldIsometry, modelLine: FoldModelLine): FoldModelLine {
+  return transformLine(viewTransform, modelLine);
+}
+
+/** A scene line in the model frame, where the engine takes lines (a cross-section's, an analysis's). */
+export function modelLineOf(viewTransform: FoldIsometry, sceneLine: FoldModelLine): FoldModelLine {
+  return transformLine(invertIsometry(viewTransform), sceneLine);
+}
+
 // ---------------------------------------------------------------------------
 // Lines
 

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { reportError } from '../../monitoring';
 import { canonicalJson } from '../document/foldDigest';
 import { isFoldCompoundOp } from '../engine/foldEngineCompoundWire';
+import { orderResolvedStep } from '../engine/foldEnginePreview';
 import { foldSearchTicket } from '../engine/foldSearch';
 import type { FoldOrderSelection } from '../engine/foldEngineCompoundCalls';
 import type { FoldEngineRefused } from '../engine/foldEngineWire';
@@ -40,7 +41,7 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
   if (navigation.key !== (key ?? '')) setNavigation(nav);
   const queryKey = key ? `${key}|${nav.index}|${nav.budget}|${nav.batch}|${canonicalJson(nav.prefer ?? null)}` : null;
   const [answer, setAnswer] = useState<{ key: string; value: FoldOrderSelection | null; refused: FoldEngineRefused | null; failed: boolean } | null>(null);
-  const { withCursor, cancelSearch } = session;
+  const { withCursor, cancelSearch, resolveOrders } = session;
   useEffect(() => {
     if (!placing || !key) return;
     return () => { void withCursor((engine, at) => engine.releaseOrderSearch?.(at)).catch((error: unknown) => reportError(error, { surface: 'fold:order-release' })); };
@@ -52,9 +53,8 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
     // wanted — the lines moved, Escape put the tool down — stops in the worker.
     const search = compound.kind === 'pleat' ? foldSearchTicket() : undefined;
     const query = { index: nav.index, batch: nav.batch, prefer: nav.prefer, perComponent: 1000 * nav.budget, maxNodes: 200_000 * nav.budget };
-    void withCursor((engine, at) => search
-      ? engine.orderSelection(at, compound, choices, query, search)
-      : engine.orderSelection(at, compound, choices, query)).then((reply) => {
+    // The step the orders resolve is folded in the same turn, for the preview that follows.
+    void resolveOrders(compound, choices, query, search).then((reply) => {
       if (!current || reply.status !== 'answered') return;
       const value = reply.value;
       setAnswer({ key: queryKey, value: value.status === 'ok' ? value : null, refused: value.status === 'ok' ? null : value, failed: false });
@@ -69,7 +69,7 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
     };
     // All semantic input is covered by queryKey; a new object is not a new question.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [withCursor, cancelSearch, queryKey, answer?.key]);
+  }, [resolveOrders, cancelSearch, queryKey, answer?.key]);
   const own = answer?.key === queryKey ? answer : null;
   const value = own?.value ?? (answer?.key.startsWith(`${key}|`) ? answer.value : null);
   const limited = own?.refused?.refusal.code === 'budget_exceeded';
@@ -101,14 +101,8 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
   } : null;
   const step = useMemo(() => {
     if (!key) return base;
-    if (!base || !value || value.count.orders === 0) return null;
-    const choices = { ...base.choices };
-    delete choices.completion;
-    if (value.completion) choices.completion = value.completion;
-    const stored = Object.keys(choices).length ? choices : undefined;
-    const op = (base.op.kind === 'valley' || base.op.kind === 'mountain') && value.landing
-      ? { ...base.op, landing: value.landing } : base.op.kind === 'pleat' && value.pleat ? { ...base.op, resolved: value.pleat } : base.op;
-    return { op, ...(stored ? { choices: stored } : {}), key: foldStepInputKey({ op, choices: stored }) };
+    const resolved = base && value ? orderResolvedStep(base.op, base.choices, value) : null;
+    return resolved ? { ...resolved, key: foldStepInputKey(resolved) } : null;
   }, [base, key, value]);
   // Search exhaustion belongs to order review, not a geometric refusal that
   // disables the tool confirmation needed to reach that review.

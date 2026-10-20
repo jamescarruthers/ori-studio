@@ -143,4 +143,21 @@ describe('FoldRepeatBar', () => {
     expect(bar.querySelector('svg[data-size]')?.getAttribute('data-size')).toBe('full');
     expect(bar.querySelector('[role="status"]')?.textContent).toContain('Try another axis');
   });
+
+  it('keeps the picture\'s place while the model before the range loads', () => {
+    // A real design takes a moment to replay; the controls must not slide over when it lands.
+    for (const phone of [false, true]) {
+      stubPhone(phone);
+      model.current = { ...model.current, baseline: null };
+      const bar = mount().querySelector('section')!;
+      const held = bar.querySelector('[data-size]');
+      expect(held?.tagName).toBe('SPAN');
+      expect(held?.getAttribute('data-size')).toBe(phone ? 'thumb' : 'full');
+      expect(held?.getAttribute('aria-hidden')).toBe('true');
+      act(() => root?.unmount());
+      root = null;
+      host?.remove();
+      host = null;
+    }
+  });
 });

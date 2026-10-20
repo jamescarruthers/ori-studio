@@ -30,6 +30,12 @@ export interface FoldSessionAnswers<Q extends object> {
   peek<T>(state: FoldEngineStateHandle, query: Q): { value: T } | null;
   /** The answer, asked through `ask` only when nobody has asked it yet. */
   get<T, A extends FoldAnswer<T>>(state: FoldEngineStateHandle, query: Q, ask: () => Promise<A>): Promise<A>;
+  /**
+   * Keep an answer the engine gave with another call (a preview's turn reads
+   * its landed state's scene with it): what `get` would have asked for. An
+   * answer already in, or on its way, stands.
+   */
+  put<T>(state: FoldEngineStateHandle, query: Q, value: T): void;
   /** Forget every answer: the engine that held the states is gone, or is being let go. */
   clear(): void;
 }
@@ -104,6 +110,15 @@ export function createFoldSessionAnswers<Q extends object>(kept: number): FoldSe
       const entry: Entry = { asked, answer: null };
       entries.set(key, entry);
       return asked;
+    },
+
+    put<T>(state: FoldEngineStateHandle, query: Q, value: T) {
+      const entries = entriesOf(query);
+      const key = keyOf(state);
+      if (entries.has(key)) return;
+      const answered: FoldAnswer<T> = { status: 'answered', value };
+      entries.set(key, { asked: Promise.resolve(answered), answer: { value } });
+      trim(entries);
     },
 
     clear() {

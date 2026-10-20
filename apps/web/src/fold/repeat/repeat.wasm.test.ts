@@ -478,6 +478,113 @@ describe('sequential Repeat through the public engine', () => {
     expect(e.step(one.state, prepared.op)).toMatchObject({ status: 'ok' });
   });
 
+  // A kite base mirrored across its diagonal. The axiom's first input starts
+  // at the tip, where the body and both flaps meet, and both its roots cross
+  // the paper: a frame read through the wrong flap there took the other root.
+  it.each([
+    ['bottom flap first', 0],
+    ['bottom flap first', 1],
+    ['left flap first', 0],
+    ['left flap first', 1],
+  ] as const)(
+    'mirrors an axiom root read at a vertex of differently placed faces (%s, root %i)',
+    async (order, root) => {
+      const e = await engine();
+      const sheet = e.sheet({ shape: { kind: 'square' }, startSide: 'front' });
+      if (sheet.status !== 'ok') throw new Error('sheet');
+      const t = Math.SQRT2 - 1;
+      const bottom: FoldOp = {
+        kind: 'valley',
+        line: { via: 'free', through: [[0, 0], [1, t]] },
+        moving: [0.9, 0.1],
+        seed: { scope: 'all' },
+      };
+      const left: FoldOp = {
+        kind: 'valley',
+        line: { via: 'free', through: [[0, 0], [t, 1]] },
+        moving: [0.1, 0.9],
+        seed: { scope: 'all' },
+      };
+      const across: FoldOp = {
+        kind: 'precrease',
+        direction: 'valley',
+        line: { via: 'free', through: [[0.9, 0.3], [0.3, 0.9]] },
+        moving: [0.9, 0.9],
+        seed: { scope: 'all' },
+      };
+      let base = sheet.state;
+      for (const op of order === 'bottom flap first' ? [bottom, left, across] : [left, bottom, across]) {
+        const landed = e.step(base, op);
+        if (landed.status !== 'ok') throw new Error(JSON.stringify(landed));
+        base = landed.state;
+      }
+      // Sheet ↔ model is the identity on the kite's body, so the diagonal
+      // mirrors sheet points and model lines alike.
+      const swap = ([x, y]: readonly [number, number]) => [y, x] as const;
+      const axis = { n: [-Math.SQRT1_2, Math.SQRT1_2] as const, d: 0 };
+      const crossing = [1.2 / (1 + t), (1.2 * t) / (1 + t)] as const;
+      const line = (s: (p: readonly [number, number]) => readonly [number, number]) =>
+        ({
+          via: 'axiom',
+          axiom: 3,
+          inputs: [
+            { kind: 'edge', a: s([0, 0]), b: s(crossing) },
+            { kind: 'edge', a: s(crossing), b: s([0.6, 0.6]) },
+          ],
+        }) as const;
+      const roots = e.axiomCandidates(base, line((p) => p));
+      if (roots.status !== 'ok') throw new Error(JSON.stringify(roots));
+      expect(roots.candidates).toHaveLength(2);
+      const chosen = roots.candidates[root]!.line;
+      // A segment from the crossing, 0.2 along the root into the kite's body below the diagonal.
+      const end = [0.2, -0.2]
+        .map((k) => [crossing[0] - k * chosen.n[1], crossing[1] + k * chosen.n[0]] as const)
+        .find(([x, y]) => y > t * x && y < x)!;
+      const precrease = (s: (p: readonly [number, number]) => readonly [number, number]): FoldOp => ({
+        kind: 'precrease',
+        direction: 'valley',
+        line: line(s),
+        moving: s([0.9, 0.2]),
+        seed: { scope: 'all' },
+        extent: { kind: 'segment', from: { kind: 'point', at: s(crossing) }, to: { kind: 'point', at: s(end) } },
+      });
+      const op = precrease((p) => p);
+      const source = e.step(base, op, { root: chosen });
+      if (source.status !== 'ok') throw new Error(JSON.stringify(source));
+      const prepared = prepareRepeat(e, {
+        parent: source.state,
+        axis,
+        source: { first: 'a', last: 'a', revision: 'test' },
+        steps: [{ id: 'a', before: base, after: source.state, op, choices: { root: chosen } }],
+      });
+      expect(prepared, JSON.stringify(prepared)).toMatchObject({ status: 'ready' });
+      if (prepared.status !== 'ready') return;
+      expect(prepared.op.steps[0]!.choices?.root).toMatchObject({
+        n: [expect.closeTo(chosen.n[1], 9), expect.closeTo(chosen.n[0], 9)],
+        d: expect.closeTo(chosen.d, 9),
+      });
+      // The same state as folding the mirror by hand.
+      const byHand = e.step(source.state, precrease(swap), { root: { n: swap(chosen.n), d: chosen.d } });
+      if (byHand.status !== 'ok') throw new Error(JSON.stringify(byHand));
+      expect(prepared.op.steps[0]!.expect).toBe(byHand.fingerprint);
+      // Its marks are the source's, mirrored.
+      const key = (letter: string, ends: (readonly [number, number])[]) =>
+        `${letter} ${ends.map((p) => p.map((v) => (Math.abs(v) < 1e-9 ? 0 : v).toFixed(9)).join(',')).sort().join(' ')}`;
+      const added = (from: number, to: number, s: (p: readonly [number, number]) => readonly [number, number]) => {
+        const old = new Set((e.scene(from).crease_marks ?? []).map((m) => key(m.letter, [[m.from.x, m.from.y], [m.to.x, m.to.y]])));
+        return (e.scene(to).crease_marks ?? [])
+          .filter((m) => !old.has(key(m.letter, [[m.from.x, m.from.y], [m.to.x, m.to.y]])))
+          .map((m) => key(m.letter, [s([m.from.x, m.from.y]), s([m.to.x, m.to.y])]))
+          .sort();
+      };
+      const mirrored = added(base, source.state, swap);
+      expect(mirrored.length).toBeGreaterThan(0);
+      const grouped = e.step(source.state, prepared.op);
+      if (grouped.status !== 'ok') throw new Error(JSON.stringify(grouped));
+      expect(added(source.state, grouped.state, (p) => p)).toEqual(mirrored);
+    },
+  );
+
   it('rejects an otherwise symmetric silhouette with incompatible hidden layer relationships', async () => {
     const e = await engine();
     const sheet = e.sheet({ shape: { kind: 'square' }, startSide: 'front' });

@@ -45,6 +45,18 @@ import type { FoldStateFingerprint } from '../fold/document/foldDigest';
 import type { FoldChoices, FoldModelLine, FoldPaper, SheetPoint } from '../fold/document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../fold/engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../fold/engine/foldEngineCompoundCalls';
+import {
+  axiomRootsWithSections,
+  type FoldRootSectionHint,
+  type FoldRootsAnswered,
+} from '../fold/engine/foldEngineRoots';
+import {
+  previewStep,
+  resolveOrdersWithPreview,
+  type FoldOrdersPreviewed,
+  type FoldPreviewed,
+  type FoldPreviewWants,
+} from '../fold/engine/foldEnginePreview';
 import type { FoldCompoundAnalysis, FoldEngineCompoundOp } from '../fold/engine/foldEngineCompoundWire';
 import {
   createFoldEngineCrimpTuckCalls,
@@ -196,6 +208,20 @@ function changing<T>(fn: (calls: FoldWorkerCalls) => T | Promise<T>): Promise<T>
 /** This worker's searches, which a ticket cancels. */
 const searches = createFoldSearchRunner();
 
+/** A fold's orders: a pleat's as a search in slices, any other fold's in one call. */
+function selectOrders(
+  calls: FoldWorkerCalls,
+  state: number,
+  op: FoldEngineOp,
+  choices: FoldChoices | undefined,
+  query: FoldOrderQuery,
+  search: FoldSearchTicket | undefined
+): FoldEngineOutcome<FoldOrderSelection> | Promise<FoldEngineOutcome<FoldOrderSelection>> {
+  if (op.kind !== 'pleat') return calls.orderSelection(state, op, choices, query);
+  const pleat = calls.pleatOrderSearch(state, op, choices, query);
+  return searches.run(pleat.search, pleat.budgetMs, search);
+}
+
 const api = {
   async repeatAxes(state: number) {
     return call((calls) => repeatSymmetries(calls.scene(state), calls.summary(state).sheet));
@@ -225,6 +251,14 @@ const api = {
   /** One step for a preview (D14 tier 3): a new handle, no fingerprint. */
   async apply(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineOutcome<FoldStepLanded>> {
     return changing((calls) => calls.apply(state, op, choices));
+  },
+
+  /**
+   * One step for a preview, with what the preview shows of it read in the
+   * same turn (`fold/engine/foldEnginePreview.ts`): one round trip.
+   */
+  async previewStep(state: number, op: FoldEngineOp, choices: FoldChoices | undefined, wants: FoldPreviewWants): Promise<FoldPreviewed> {
+    return changing((calls) => previewStep(calls, state, op, choices, wants));
   },
 
   /** One step with its fingerprint: what a replay and a commit take. */
@@ -293,6 +327,14 @@ const api = {
   /** An axiom line's folds here, for the candidate chooser. */
   async axiomCandidates(state: number, line: FoldAxiomLine): Promise<FoldEngineOutcome<FoldAxiomCandidates>> {
     return call((calls) => calls.axiomCandidates(state, line));
+  },
+
+  /**
+   * An axiom line's folds here, with the layers at the one the tool takes,
+   * which it asks for next (`fold/engine/foldEngineRoots.ts`): one round trip.
+   */
+  async axiomRoots(state: number, line: FoldAxiomLine, hint: FoldRootSectionHint | null): Promise<FoldRootsAnswered> {
+    return call((calls) => axiomRootsWithSections(calls, state, line, hint));
   },
 
   /** The summary of the step that landed `state`, while its parent is held. */
@@ -396,11 +438,25 @@ const api = {
     query: FoldOrderQuery,
     search?: FoldSearchTicket
   ): Promise<FoldEngineOutcome<FoldOrderSelection>> {
-    return changing((calls) => {
-      if (op.kind !== 'pleat') return calls.orderSelection(state, op, choices, query);
-      const pleat = calls.pleatOrderSearch(state, op, choices, query);
-      return searches.run(pleat.search, pleat.budgetMs, search);
-    });
+    return changing((calls) => selectOrders(calls, state, op, choices, query, search));
+  },
+
+  /**
+   * The orders a fold leaves, as {@link api.orderSelection} answers them,
+   * and — when `wants` is given — the step they resolve previewed in the same
+   * turn (`resolveOrdersWithPreview`), which the tool asks for next.
+   */
+  async resolveOrders(
+    state: number,
+    op: FoldEngineOp,
+    choices: FoldChoices | undefined,
+    query: FoldOrderQuery,
+    search: FoldSearchTicket | undefined,
+    wants: FoldPreviewWants | null
+  ): Promise<FoldOrdersPreviewed> {
+    return changing((calls) =>
+      resolveOrdersWithPreview(calls, () => selectOrders(calls, state, op, choices, query, search), state, op, choices, wants)
+    );
   },
 
   async compoundAnalysis(

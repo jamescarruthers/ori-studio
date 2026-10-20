@@ -39,6 +39,11 @@ const session = vi.hoisted(() => {
       Promise.resolve({ status: "unavailable", reason: "no-state" }),
     query: () =>
       Promise.resolve({ status: "unavailable", reason: "no-state" }),
+    peek: () => null,
+    resolveOrders: () =>
+      Promise.resolve({ status: "unavailable", reason: "no-state" }),
+    axiomRoots: () =>
+      Promise.resolve({ status: "unavailable", reason: "no-state" }),
     retry: () => undefined,
   };
   const snapshot = {

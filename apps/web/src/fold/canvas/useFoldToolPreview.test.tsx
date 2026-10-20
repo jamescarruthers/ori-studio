@@ -72,6 +72,8 @@ const engine = {
   })),
   crossSection: vi.fn(async () => ({ status: 'ok', section: SECTION })),
   action: vi.fn(async () => ({ status: 'refused' })),
+  scene: vi.fn(async () => TURNED),
+  stepSummary: vi.fn(async () => ({ status: 'ok', summary: null })),
   compoundAnalysis: vi.fn(tipCannotOpen),
   orderSelection: vi.fn(async () => ({ status: 'ok', count: { orders: 1, exact: true }, index: 0, completion: null })),
   // A crimp's and a tuck's own calls, which list the orders they leave.
@@ -95,7 +97,21 @@ const verbs = {
     status: 'answered',
     value: await call(engine, PARENT),
   })),
-  query: vi.fn(async () => ({ status: 'answered', value: TURNED })),
+  // A pure query, asked of the engine for the state it names (as `withCursor` names it here); nothing is held between asks.
+  query: vi.fn(async (state: unknown, call: (e: unknown, at: unknown) => Promise<unknown>) => ({
+    status: 'answered',
+    value: await call(engine, state),
+  })),
+  peek: vi.fn(() => null),
+  resolveOrders: vi.fn(async (...asked: unknown[]) => ({
+    status: 'answered',
+    value: await (engine.orderSelection as (...args: unknown[]) => Promise<unknown>)(PARENT, ...asked.filter((arg, k) => k < 3 || arg !== undefined)),
+  })),
+  // The roots alone: no layers come with them here, so the line's section is asked for.
+  axiomRoots: vi.fn(async (line: unknown) => ({
+    status: 'answered',
+    value: await (engine.axiomCandidates as (...args: unknown[]) => Promise<unknown>)(PARENT, line),
+  })),
 };
 /** The session as the hook reads it: stable verbs, a snapshot that is new each render. */
 const session = (): FoldSessionSurface =>
