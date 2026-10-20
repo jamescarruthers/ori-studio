@@ -417,27 +417,35 @@ fn campaign_digest() {
 #[test]
 fn every_crease_kind_is_reached() {
     // The campaign exercises unfolds and refolds, not only new creases.
-    let mut rng = Rng::new(7);
-    let mut state =
-        State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    // The random lines go through `sin_cos` and `hypot`, whose last bits
+    // differ between the platforms' native maths libraries, so one seed's
+    // walk is not the same on Linux and macOS: look over a few seeds.
     let mut kinds = BTreeSet::new();
-    for _ in 0..200 {
-        if state.faces().len() > 40 {
-            state =
-                State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
-        }
-        let Some(op) = random::plain_fold(&state, &mut rng) else {
-            continue;
-        };
-        if let Ok(folded) = state.fold(&op) {
-            for c in folded.state.creases() {
-                kinds.insert(match c.kind {
-                    CreaseKind::Border => 0,
-                    CreaseKind::Folded(_) => 1,
-                    CreaseKind::Flat(_) => 2,
-                });
+    for seed in 7..19 {
+        let mut rng = Rng::new(seed);
+        let mut state =
+            State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+        for _ in 0..200 {
+            if state.faces().len() > 40 {
+                state = State::flat(Sheet::square(), StartSide::Front)
+                    .unwrap_or_else(|e| panic!("{e}"));
             }
-            state = folded.state;
+            let Some(op) = random::plain_fold(&state, &mut rng) else {
+                continue;
+            };
+            if let Ok(folded) = state.fold(&op) {
+                for c in folded.state.creases() {
+                    kinds.insert(match c.kind {
+                        CreaseKind::Border => 0,
+                        CreaseKind::Folded(_) => 1,
+                        CreaseKind::Flat(_) => 2,
+                    });
+                }
+                state = folded.state;
+            }
+        }
+        if kinds.len() == 3 {
+            break;
         }
     }
     assert_eq!(kinds.len(), 3, "{kinds:?}");
