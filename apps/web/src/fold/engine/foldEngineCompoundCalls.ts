@@ -1,5 +1,6 @@
-import { pleatOrders } from '../tools/pleat/pleatEngine';
+import { pleatOrderSearch, pleatOrders, pleatSearchBudget, type PleatInput } from '../tools/pleat/pleatEngine';
 import type { FoldWasmEngine } from './foldEngineCalls';
+import type { FoldSearch } from './foldSearch';
 import type { FoldPleatOp } from '../document/foldSequenceDocument';
 /**
  * The compound folds' one question on the Fold engine's bridge
@@ -48,9 +49,25 @@ export interface FoldWasmCompoundEngine {
   compound_analysis(state: number, op: unknown, choices: unknown): unknown;
 }
 
+/** A search the worker runs in slices (`foldSearch.ts`), with the budget it runs within. */
+export interface FoldBudgetedSearch<T> {
+  search: FoldSearch<T>;
+  budgetMs: number;
+}
+
 export interface FoldEngineCompoundCalls {
   releaseOrderSearch?(state: number): void;
   orderSelection(state: number, op: FoldEngineOp, choices: FoldChoices | undefined, query: FoldOrderQuery): FoldEngineOutcome<FoldOrderSelection>;
+  /**
+   * A pleat's orders as a search the worker runs in slices: what
+   * `orderSelection` runs to the end in one go for a pleat.
+   */
+  pleatOrderSearch(
+    state: number,
+    op: PleatInput,
+    choices: FoldChoices | undefined,
+    query: FoldOrderQuery
+  ): FoldBudgetedSearch<FoldEngineOutcome<FoldOrderSelection>>;
   /**
    * What a compound fold from `state` is before it lands, as its family's
    * tools ask: a reverse fold's tip and the kinds that land, a crimp's tip
@@ -63,6 +80,10 @@ export interface FoldEngineCompoundCalls {
     op: FoldEngineCompoundOp,
     choices?: FoldChoices
   ): FoldEngineOutcome<FoldCompoundAnalysis>;
+}
+
+function requireIndex(query: FoldOrderQuery) {
+  if (!Number.isSafeInteger(query.index) || query.index < 0) throw invalidInput('order index must be a nonnegative safe integer');
 }
 
 function requireCompoundOp(op: FoldEngineCompoundOp): FoldEngineCompoundOp {
@@ -78,9 +99,17 @@ export function createFoldEngineCompoundCalls(engine: FoldWasmCompoundEngine): F
   return {
     releaseOrderSearch(state) { engine.release_order_search?.(requireHandle('state', state)); },
     orderSelection(state, op, choices, query) {
-      if (!Number.isSafeInteger(query.index) || query.index < 0) throw invalidInput('order index must be a nonnegative safe integer');
+      requireIndex(query);
       if (op.kind === 'pleat') return pleatOrders(engine as FoldWasmEngine & FoldWasmCompoundEngine, requireHandle('state', state), op, choices, query);
       return engine.order_selection(requireHandle('state', state), requireObject('op', op), choices, query) as FoldEngineOutcome<FoldOrderSelection>;
+    },
+    pleatOrderSearch(state, op, choices, query) {
+      requireIndex(query);
+      requireObject('op', op);
+      return {
+        search: pleatOrderSearch(engine as FoldWasmEngine & FoldWasmCompoundEngine, requireHandle('state', state), op, choices, query),
+        budgetMs: pleatSearchBudget(query),
+      };
     },
     compoundAnalysis(state, op, choices) {
       return engine.compound_analysis(

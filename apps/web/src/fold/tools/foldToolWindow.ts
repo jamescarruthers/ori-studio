@@ -120,6 +120,8 @@ export interface FoldPreview {
   acrossLayers?: boolean;
   /** Enter was pressed while the preview was landing: the fold commits as soon as it has. */
   queued?: boolean;
+  /** The ways its layers can stack are still being searched for; Escape stops the search with the tool. */
+  searching?: boolean;
   /** A precrease of part of its line whose points along it are still to be clicked: nothing to commit yet. */
   incomplete?: boolean;
 }

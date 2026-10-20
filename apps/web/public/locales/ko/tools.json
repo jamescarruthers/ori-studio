@@ -476,6 +476,7 @@
       "mountainInstruction": "산접기 선: {{instruction}}",
       "mountainLine": "산접기 선",
       "refusedTitle": "여기서는 계단접기를 할 수 없습니다",
+      "searching": "계단접기의 층이 쌓일 수 있는 방식을 찾는 중…",
       "valleyInstruction": "골접기 선: {{instruction}}",
       "valleyLine": "골접기 선"
     },

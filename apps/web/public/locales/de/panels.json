@@ -1860,6 +1860,8 @@
       "sentence_one": "Die vorherige Operation auf der anderen Seite wiederholen.",
       "sentence_other": "Die vorherigen {{count}} Operationen auf der anderen Seite wiederholen.",
       "sourceChanged": "Die Quellschritte haben sich geändert. Aktualisiere die Wiederholung.",
+      "stop": "Anhalten",
+      "stopped": "Angehalten, bevor die Wiederholung bereit war. Es wurden keine Schritte hinzugefügt.",
       "title": "Auf der anderen Seite wiederholen",
       "unavailable": "Die Quellzustände sind nicht verfügbar oder wurden geändert. Warte auf die Wiedergabe und öffne Wiederholen erneut.",
       "unsupported": "Dieser Bereich enthält ein Zusammenfalten oder eine weitere Wiederholung, die noch nicht gespiegelt werden kann. Wähle einen Bereich aus Faltoperationen.",

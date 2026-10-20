@@ -508,6 +508,7 @@
       "mountainInstruction": "Linha de montanha: {{instruction}}",
       "mountainLine": "Linha de montanha",
       "refusedTitle": "Não é possível fazer a dobra sanfona aqui",
+      "searching": "Calculando como as camadas da dobra sanfona podem se empilhar…",
       "valleyInstruction": "Linha de vale: {{instruction}}",
       "valleyLine": "Linha de vale"
     },

@@ -508,6 +508,7 @@
       "mountainInstruction": "Ligne montagne : {{instruction}}",
       "mountainLine": "Ligne montagne",
       "refusedTitle": "Ce pli ne peut pas être réalisé ici",
+      "searching": "Recherche des façons dont les couches du pli peuvent s’empiler…",
       "valleyInstruction": "Ligne vallée : {{instruction}}",
       "valleyLine": "Ligne vallée"
     },

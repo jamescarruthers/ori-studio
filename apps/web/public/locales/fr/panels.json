@@ -1917,6 +1917,8 @@
       "sentence_many": "Répéter les {{count}} opérations précédentes de l’autre côté.",
       "sentence_other": "Répéter les {{count}} opérations précédentes de l’autre côté.",
       "sourceChanged": "Les étapes sources ont changé. Mettez cette répétition à jour.",
+      "stop": "Arrêter",
+      "stopped": "Arrêté avant que la répétition soit prête. Aucune étape n’a été ajoutée.",
       "title": "Répéter de l’autre côté",
       "unavailable": "Les états sources sont indisponibles ou ont changé. Attendez la fin de la lecture, puis rouvrez Répéter.",
       "unsupported": "Cette plage contient un effondrement ou une autre répétition qui ne peut pas encore être réfléchie. Choisissez une plage d’opérations de pliage.",

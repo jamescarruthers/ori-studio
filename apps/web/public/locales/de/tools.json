@@ -492,6 +492,7 @@
       "mountainInstruction": "Berglinie: {{instruction}}",
       "mountainLine": "Berglinie",
       "refusedTitle": "Hier lässt sich die Zickzackfalte nicht falten",
+      "searching": "Es wird ermittelt, wie sich die Lagen der Zickzackfalte stapeln können…",
       "valleyInstruction": "Tallinie: {{instruction}}",
       "valleyLine": "Tallinie"
     },

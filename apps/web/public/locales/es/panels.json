@@ -1917,6 +1917,8 @@
       "sentence_many": "Repetir las {{count}} operaciones anteriores en el otro lado.",
       "sentence_other": "Repetir las {{count}} operaciones anteriores en el otro lado.",
       "sourceChanged": "Los pasos de origen cambiaron. Actualiza esta repetición.",
+      "stop": "Detener",
+      "stopped": "Se detuvo antes de que la repetición estuviera lista. No se añadió ningún paso.",
       "title": "Repetir en el otro lado",
       "unavailable": "Los estados de origen no están disponibles o cambiaron. Espera a que termine la reproducción y vuelve a abrir Repetir.",
       "unsupported": "Este intervalo contiene un colapsado u otra repetición que aún no se puede reflejar. Elige un intervalo de operaciones de plegado.",

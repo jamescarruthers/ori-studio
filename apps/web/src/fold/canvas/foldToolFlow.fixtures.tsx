@@ -99,6 +99,7 @@ function useSurface(session: FoldSession): FoldSessionSurface {
       preview: session.preview,
       commitStep: session.commitStep,
       cancel: session.cancel,
+      cancelSearch: session.cancelSearch,
       withState: session.withState,
       withNode: session.withNode,
       withCursor: session.withCursor,

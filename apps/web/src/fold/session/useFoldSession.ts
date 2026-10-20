@@ -45,6 +45,7 @@ export interface FoldSessionSurface {
   preview: FoldSession['preview'];
   commitStep: FoldSession['commitStep'];
   cancel: FoldSession['cancel'];
+  cancelSearch: FoldSession['cancelSearch'];
   withState: FoldSession['withState'];
   withNode: FoldSession['withNode'];
   withCursor: FoldSession['withCursor'];
@@ -84,6 +85,7 @@ export function useFoldSession({ retain = true }: UseFoldSessionOptions = {}): F
       preview: session.preview,
       commitStep: session.commitStep,
       cancel: session.cancel,
+      cancelSearch: session.cancelSearch,
       withState: session.withState,
       withNode: session.withNode,
       withCursor: session.withCursor,

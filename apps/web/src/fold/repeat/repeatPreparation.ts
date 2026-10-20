@@ -8,6 +8,7 @@ import type {
 } from '../document/foldSequenceDocument';
 import type { FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
+import { FoldSearchStopped, runFoldSearch, type FoldSearch } from '../engine/foldSearch';
 import { reflection, RepeatFailure, verifiedSymmetry } from './repeatGeometry';
 import { mirrorOperation } from './repeatOperation';
 import { movingWitnesses, verifyMaterial } from './repeatVerification';
@@ -34,11 +35,35 @@ export type RepeatPrepared =
   | { status: 'choice'; step: number; prefix: FoldRepeatOp; candidates: FoldRepeatEntry[] }
   | { status: 'blocked'; step: number; code: string; prefix?: FoldRepeatOp };
 
-/** Transactional preparation. The caller owns source states; this owns and releases all trial states. */
+/**
+ * How long a preparation may run. Every range of the design fixtures
+ * prepares within 0.11 s (1,082 ranges, `engine/foldSearchTiming.wasm.test.ts`);
+ * a synthetic range of sixteen precreases on a 136-face model takes 1.1 s,
+ * and the longest the caps allow, 128 turn-overs of a 256-face grid, 11.7 s,
+ * nearly all of it this module's own geometry. Five seconds is over four
+ * times the slowest realistic range; past it the range is refused as too
+ * long, whose words say to try a shorter one.
+ */
+export const REPEAT_PREPARATION_MS = 5000;
+
+/** Transactional preparation, run to the end within {@link REPEAT_PREPARATION_MS}: for the synchronous calls. */
 export function prepareRepeat(
   engine: FoldEngineCalls & FoldEngineCompoundCalls,
   request: RepeatRequest,
 ): RepeatPrepared {
+  return runFoldSearch(prepareRepeatSearch(engine, request), REPEAT_PREPARATION_MS);
+}
+
+/**
+ * Transactional preparation, as a search (`engine/foldSearch.ts`) that yields
+ * between engine calls. The caller owns source states; this owns and
+ * releases all trial states, however it ends. Out of time, it is blocked as
+ * too long (`repeat_limit`) at the source operation it had reached.
+ */
+export function* prepareRepeatSearch(
+  engine: FoldEngineCalls & FoldEngineCompoundCalls,
+  request: RepeatRequest,
+): FoldSearch<RepeatPrepared> {
   const owned: number[] = [];
   let index = 0;
   let recipe: FoldRepeatOp | undefined;
@@ -58,6 +83,7 @@ export function prepareRepeat(
     const preparedStates: number[] = [];
     let current = request.parent;
     for (index = 0; index < request.steps.length; index++) {
+      yield;
       const item = request.steps[index]!;
       const before = engine.scene(item.before),
         after = engine.scene(item.after),
@@ -146,6 +172,7 @@ export function prepareRepeat(
       // The landing/opening already chosen in the source is part of the
       // operation. A successful native replay has a unique result under those
       // choices. Do not enumerate alternate tuck positions or moving sets.
+      yield;
       tryCandidate(mapped.op, mapped.choices);
       if (!candidates.length && unresolved) {
         // Inserted M/V is resolved by the bridge through this same public tuck
@@ -166,11 +193,13 @@ export function prepareRepeat(
             : mapped.op;
         let first = engine.orderSelection(current, queryOp, mapped.choices, { index: 0, batch: 0 });
         for (let batch = 1; first.status === 'ok' && !first.count.exact && batch <= 8; batch++) {
+          yield;
           first = engine.orderSelection(current, queryOp, mapped.choices, { index: 0, batch });
         }
         if (first.status !== 'ok') throw new RepeatFailure(first.refusal.code);
         if (!first.count.exact || first.count.orders > 64) throw new RepeatFailure('repeat_order_limit');
         for (let n = 0; n < first.count.orders; n++) {
+          yield;
           const order =
             n === 0 ? first : engine.orderSelection(current, queryOp, mapped.choices, { index: n, batch: 8 });
           if (order.status !== 'ok') throw new RepeatFailure(order.refusal.code);
@@ -203,11 +232,12 @@ export function prepareRepeat(
     }
     return { status: 'ready', op: { ...recipe, steps: entries } };
   } catch (error) {
-    if (error instanceof RepeatFailure)
+    const failure = error instanceof FoldSearchStopped && error.reason === 'budget' ? new RepeatFailure('repeat_limit') : error;
+    if (failure instanceof RepeatFailure)
       return {
         status: 'blocked',
         step: index,
-        code: error.code,
+        code: failure.code,
         ...(recipe && entries.length ? { prefix: { ...recipe, steps: entries } } : {}),
       };
     throw error;

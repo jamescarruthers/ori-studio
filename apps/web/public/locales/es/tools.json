@@ -508,6 +508,7 @@
       "mountainInstruction": "Línea de montaña: {{instruction}}",
       "mountainLine": "Línea de montaña",
       "refusedTitle": "El pliegue no puede realizarse aquí",
+      "searching": "Calculando cómo pueden apilarse las capas del pliegue…",
       "valleyInstruction": "Línea de valle: {{instruction}}",
       "valleyLine": "Línea de valle"
     },

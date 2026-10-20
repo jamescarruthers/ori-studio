@@ -7,6 +7,7 @@ import type {
   SheetPoint,
 } from '../../document/foldSequenceDocument';
 import type { FoldWasmEngine } from '../../engine/foldEngineCalls';
+import { FoldSearchStopped, runFoldSearch, type FoldSearch } from '../../engine/foldSearch';
 import type {
   FoldOrderQuery,
   FoldOrderSelection,
@@ -225,13 +226,14 @@ function placed(op: FoldEngineOp, p: FoldPleatPlacement): FoldEngineOp {
     throw new Error('A pleat leg must be a plain fold');
   return { ...op, landing: p.landing };
 }
-function placements(
+/** One leg's placements: the engine's placement search, one batch (at most 150 ms) between yields. */
+function* placements(
   raw: Raw,
   state: number,
   op: FoldEngineOp,
   choices: FoldChoices | undefined,
   query: FoldOrderQuery,
-): FoldPleatPlacement[] {
+): FoldSearch<FoldPleatPlacement[]> {
   let result = take(
     raw.order_selection(state, op, choices, {
       ...query,
@@ -239,7 +241,8 @@ function placements(
       batch: 0,
     }) as FoldEngineOutcome<FoldOrderSelection>,
   );
-  for (let batch = 1; !result.count.exact && batch <= 8; batch++)
+  for (let batch = 1; !result.count.exact && batch <= 8; batch++) {
+    yield;
     result = take(
       raw.order_selection(state, op, choices, {
         ...query,
@@ -247,10 +250,12 @@ function placements(
         batch,
       }) as FoldEngineOutcome<FoldOrderSelection>,
     );
+  }
   if (!result.count.exact || result.count.orders > 64)
     throw new Refused(fail('limit'));
   const entries: FoldPleatPlacement[] = [];
   for (let i = 0; i < result.count.orders; i++) {
+    if (i > 0) yield;
     const item =
       i === 0
         ? result
@@ -282,6 +287,43 @@ function verifySecond(
   if (a.moving.some((face) => !allowed.has(face)))
     throw new Refused(fail('material'));
 }
+/**
+ * How long a pleat's order search may run: two legs whose placement searches
+ * each run all nine of the engine's 150 ms batches (2.7 s), and the folds
+ * between them. Of 740 pleats across every state of the design fixtures
+ * (`engine/foldSearchTiming.wasm.test.ts`) the slowest took 2.5 s (heart, 52
+ * faces, refused by the count cap) and the slowest that landed 1.3 s; the
+ * counts alone allow sixty-five legs, about 90 s. A search for more orders
+ * (`FoldOrderQuery.maxNodes`, four times as many each time) gets as many
+ * times as long.
+ */
+export const PLEAT_SEARCH_MS = 4000;
+
+/** The order search's budget for a query: {@link PLEAT_SEARCH_MS}, times how much more it asks to search. */
+export function pleatSearchBudget(query: FoldOrderQuery): number {
+  const asked = query.maxNodes ?? DEFAULT_MAX_NODES;
+  return PLEAT_SEARCH_MS * Math.max(1, Math.min(64, asked / DEFAULT_MAX_NODES));
+}
+
+/** The engine's own default search size (`OrderQuery::limits`), which a search for more orders multiplies. */
+const DEFAULT_MAX_NODES = 200_000;
+
+/**
+ * A search that ran out of time: whether the pleat fits is not known. The
+ * engine's own refusal for one (`CompletionRefusal::BudgetExceeded`), which
+ * the order review answers with a search for more.
+ */
+function outOfTime(): FoldEngineRefused {
+  return {
+    status: 'refused',
+    refusal: { code: 'budget_exceeded', limit: 'deadline', nodes: 0 },
+    fixes: [],
+    faces: [],
+    vertices: [],
+  };
+}
+
+/** The pleat's orders, run to the end within {@link pleatSearchBudget}: for the synchronous calls. */
 export function pleatOrders(
   raw: Raw,
   parent: number,
@@ -289,17 +331,46 @@ export function pleatOrders(
   choices: FoldChoices | undefined,
   query: FoldOrderQuery,
 ): FoldEngineOutcome<FoldOrderSelection> {
+  return runFoldSearch(pleatOrderSearch(raw, parent, op, choices, query), pleatSearchBudget(query));
+}
+
+type PleatFound = { resolved: NonNullable<FoldPleatOp['resolved']>; key: string }[];
+
+function pleatAnswer(results: PleatFound, query: FoldOrderQuery, exact: boolean): FoldEngineOutcome<FoldOrderSelection> {
+  const index = query.index % results.length;
+  return {
+    status: 'ok',
+    index,
+    count: { orders: results.length, exact },
+    completion: null,
+    pleat: results[index]!.resolved,
+  };
+}
+
+/**
+ * Every way the pleat lands: each placement of its mountain, then each of
+ * the valley that returns it, as a search (`engine/foldSearch.ts`) that
+ * yields between engine calls. Every state it lands is let go however it
+ * ends. Out of time, it answers with the ways found so far as an incomplete
+ * count, as the engine's own order searches do, or with {@link outOfTime}
+ * when it has found none.
+ */
+export function* pleatOrderSearch(
+  raw: Raw,
+  parent: number,
+  op: PleatInput,
+  choices: FoldChoices | undefined,
+  query: FoldOrderQuery,
+): FoldSearch<FoldEngineOutcome<FoldOrderSelection>> {
   const owned: number[] = [];
+  const results: PleatFound = [];
   try {
     const input = { ...op, resolved: undefined },
       g = geometry(raw, parent, input, choices);
-    const results: {
-      resolved: NonNullable<FoldPleatOp['resolved']>;
-      key: string;
-    }[] = [];
     let refusal = fail('placement'),
       attempts = 0;
-    for (const p of placements(raw, parent, g.first, g.rooted, query)) {
+    for (const p of yield* placements(raw, parent, g.first, g.rooted, query)) {
+      yield;
       const one = take(
         raw.apply(
           parent,
@@ -317,8 +388,10 @@ export function pleatOrders(
           choices,
           one,
         );
-        for (const q of placements(raw, one.state, second, undefined, query)) {
+        yield;
+        for (const q of yield* placements(raw, one.state, second, undefined, query)) {
           if (++attempts > 256) throw new Refused(fail('limit'));
+          yield;
           try {
             const twoOp = placed(second, q),
               twoChoices = choiceFor(undefined, q);
@@ -351,18 +424,12 @@ export function pleatOrders(
         refusal = fail('return');
       }
     }
-    if (!results.length) return refusal;
-    const index = query.index % results.length;
-    return {
-      status: 'ok',
-      index,
-      count: { orders: results.length, exact: true },
-      completion: null,
-      pleat: results[index]!.resolved,
-    };
+    return results.length ? pleatAnswer(results, query, true) : refusal;
   } catch (error) {
     if (error instanceof Refused) return error.result;
     if (error instanceof RepeatFailure) return fail('reference');
+    if (error instanceof FoldSearchStopped && error.reason === 'budget')
+      return results.length ? pleatAnswer(results, query, false) : outOfTime();
     throw error;
   } finally {
     raw.release_order_search?.(parent);
@@ -382,7 +449,8 @@ export function applyPleat(
     let op = input;
     if (!op.resolved) {
       const result = take(pleatOrders(raw, parent, op, choices, { index: 0 }));
-      if (result.count.orders !== 1)
+      // One way found before the time ran out is not the only way.
+      if (result.count.orders !== 1 || !result.count.exact)
         return {
           status: 'refused',
           refusal: { code: 'choice_needed', choice: 'completion' },

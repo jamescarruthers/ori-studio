@@ -133,17 +133,20 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
                 defaultValue_other: 'Repeat {{count}} operations through the current step as one numbered step.',
               })}
         </p>
-        <p className={`${styles.message} ${m.error || blocked ? styles.error : ''}`} role="status">
+        {/* A preparation under way speaks over the last one's block, which it is about to replace. */}
+        <p className={`${styles.message} ${m.error || (blocked && !m.preparing) ? styles.error : ''}`} role="status">
           {m.error
             ? repeatFailure(t, m.error)
-            : blocked
+            : blocked && !m.preparing
               ? t('panels:fold.repeat.blockedAt', 'Stopped at source operation {{number}}: {{reason}}', {
                   number: blocked.step + 1,
                   reason: repeatFailure(t, blocked.code),
                 })
               : m.busy
                 ? t('panels:fold.repeat.preparing', 'Preparing repeated folds…')
-                : choice
+                : m.stopped
+                  ? t('panels:fold.repeat.stopped', 'Stopped before the repeat was ready. No steps were added.')
+                  : choice
                   ? t(
                       'panels:fold.repeat.choiceAt',
                       'Source operation {{number}} has {{count}} matching layer orders. Choose one to continue.',
@@ -180,11 +183,16 @@ function Picker({ opening }: { opening: FoldRepeatOpening }) {
               onAccept={m.acceptChoice}
             />
           )}
-          {!choice && m.result?.status !== 'ready' && (
+          {!choice && m.result?.status !== 'ready' && (m.preparing ? (
+            // In Preview repeat's place while the worker prepares; Escape stops it too.
+            <Button size="sm" onClick={() => m.stop()}>
+              {t('panels:fold.repeat.stop', 'Stop')}
+            </Button>
+          ) : (
             <Button size="sm" variant="primary" disabled={!m.canPreview} onClick={() => void m.prepare()}>
               {t('panels:fold.repeat.preview', 'Preview repeat')}
             </Button>
-          )}
+          ))}
           {m.result?.status === 'ready' && (
             <Button
               size="sm"
