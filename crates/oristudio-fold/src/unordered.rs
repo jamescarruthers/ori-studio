@@ -28,7 +28,7 @@ use oristudio_layer_order::{
 };
 
 use crate::complete::{
-    self, CompletionLimits, CompletionRefusal, Completions, FixedKind, FixedPair,
+    self, CompletionLimits, CompletionRefusal, CompletionSession, Completions, FixedKind, FixedPair,
 };
 use crate::isometry::Isometry;
 use crate::numerics::TOL;
@@ -244,6 +244,17 @@ impl Unordered {
             }
             None => complete::complete(&self.view, &self.problem, fixed, limits),
         }
+    }
+
+    /// A session for checking many choices against `fixed` (the Layer order
+    /// dialog): what they force and a first order now, each check later.
+    /// It covers the whole problem, as [`Unordered::complete`]'s answer does.
+    pub fn session(
+        &self,
+        fixed: &[FixedPair],
+        limits: &CompletionLimits,
+    ) -> Result<CompletionSession, CompletionRefusal> {
+        CompletionSession::open(&self.view, &self.problem, fixed, limits)
     }
 
     /// The state with this order: each unknown letter derived from it, then

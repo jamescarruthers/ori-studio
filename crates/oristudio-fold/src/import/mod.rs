@@ -51,8 +51,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::complete::{
-    BudgetLimit, ChoiceCount, CompletionLimits, CompletionRefusal, Completions, FixedKind,
-    FixedPair,
+    BudgetLimit, ChoiceCount, CompletionLimits, CompletionRefusal, CompletionSession, Completions,
+    FixedKind, FixedPair,
 };
 use crate::crease_marks::{self, CreaseMark};
 use crate::isometry::Isometry;
@@ -580,6 +580,15 @@ impl ImportedPattern {
         all.extend_from_slice(fixed);
         self.unordered
             .complete(&all, limits)
+            .map_err(|r| self.refused_order(r))
+    }
+
+    /// A session over the imported letters, for checking choices one after
+    /// another (the Layer order dialog). Each check's pairs are added to the
+    /// letters, as [`ImportedPattern::complete_with`] adds them.
+    pub fn session(&self, limits: &CompletionLimits) -> Result<CompletionSession, ImportRefusal> {
+        self.unordered
+            .session(&self.unordered.letter_seeds(), limits)
             .map_err(|r| self.refused_order(r))
     }
 
