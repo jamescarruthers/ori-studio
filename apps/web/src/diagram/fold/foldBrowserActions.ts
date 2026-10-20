@@ -4,7 +4,8 @@
  * (D2's insertion rule, as From References… is) — and Fold's own Send to
  * Diagram, which sends the step on screen, or the active path up to it, to
  * the end of the diagram. Both capture through the Fold session's replay
- * (`pullFoldTargets`) and land as one undo step in the diagram.
+ * (`pullFoldTargets`) and land as one undo step in the diagram. The session
+ * and the capture are Fold's code (`foldGateway`), loaded by the pull.
  *
  * Store-bound, React-free.
  */
@@ -16,10 +17,10 @@ import { isLockedStep, turnKindOf, type FoldStepNode } from '../../fold/document
 import i18n from '../../i18n';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { foldSession } from '../../store/workspaceStore/foldSession';
 import { shownFoldSequence } from '../../store/workspaceStore/foldState';
+import { loadFold } from '../../workspaces/foldGateway';
 import { anchorTakesCard, isTurn, stepIndex, type DiagramPullAnchor } from '../document/diagramDocument';
-import { pullFoldTargets, type FoldPullTarget } from './foldPull';
+import type { FoldPullTarget } from './foldPull';
 
 /** From Fold… for the diagram, by the insertion rule: an empty selected step takes the first step, the rest after it. */
 export function openFoldBrowser(): void {
@@ -59,7 +60,8 @@ export async function pullFromFold(
   if (!shown || targets.length === 0 || store.diagramReadOnly) return 0;
   const loadId = store.diagramLoadId;
   const t = i18n.t.bind(i18n);
-  const { sent, failed } = await pullFoldTargets(foldSession(), shown.document.id, targets, { t });
+  const fold = await loadFold();
+  const { sent, failed } = await fold.pullFoldTargets(fold.foldSession(), shown.document.id, targets, { t });
   if (failed > 0) {
     toast.error(
       t('toasts:diagram.fold.someFailed', {

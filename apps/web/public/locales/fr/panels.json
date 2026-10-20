@@ -1836,6 +1836,12 @@
       "stepsHint": "Chaque étape du parcours sous forme de carte",
       "views": "Vue"
     },
+    "load": {
+      "failed": "L'espace de travail Plier n'a pas pu être chargé",
+      "loading": "Chargement de l'espace de travail Plier…",
+      "offline": "L'espace de travail Plier n'a pas encore été téléchargé et vous êtes hors ligne. Connectez-vous une fois et il fonctionnera hors ligne ensuite.",
+      "retry": "Réessayer"
+    },
     "paper": {
       "backUp": "Verso dessus",
       "colors": "Couleurs",

@@ -34,7 +34,7 @@ import type {
 } from '../store/workspaceStore/types';
 import type { EditingContext } from '../workspaces/editingContext';
 import type { FoldIoCommand } from '../fold/io/foldIoCommands';
-import type { FoldSendToDiagramScope } from '../diagram/fold/foldBrowserActions';
+import { sendFoldStepsToDiagram, type FoldSendToDiagramScope } from '../diagram/fold/foldBrowserActions';
 import type {
 } from '../engine/oristudioBpTypes';
 import type { CreaseExportOptions } from '../lib/creaseExport';
@@ -43,7 +43,8 @@ import i18n from '../i18n';
 import { runUpdateCheck } from '../lib/updateController';
 import { announceUpdateCheck } from '../lib/updateFeedback';
 import { endOpenCanvasSessions } from '../cp-workspace/canvasObjects/canvasSessions';
-import { runFoldMenuVerb, type FoldMenuVerb } from '../fold/sequence/foldCommands';
+import type { FoldMenuVerb } from '../fold/sequence/foldCommands';
+import { loadFold } from '../workspaces/foldGateway';
 
 export const MENU_ACTION_IDS = [
   'file.importDiagramSteps',
@@ -414,6 +415,8 @@ const VIEW_PANEL_ACTIONS: Partial<Record<MenuActionId, string>> = {
  * The Fold sequence's verbs, by the catalog command or fold kind each runs.
  * Run as the catalog offers them when they run (`runFoldMenuVerb`), so a
  * verb the header shows disabled is a no-op from the menu bar or a key too.
+ * The catalog is Fold's code (`workspaces/foldGateway`), loaded already whenever
+ * Fold is on screen, which is the only time these are offered.
  */
 const FOLD_SEQUENCE_ACTIONS: Partial<Record<MenuActionId, FoldMenuVerb>> = {
   'fold.valley': { kind: 'fold-kind', id: 'valley' },
@@ -429,8 +432,8 @@ const FOLD_SEQUENCE_ACTIONS: Partial<Record<MenuActionId, FoldMenuVerb>> = {
 
 /**
  * Fold's imports and hand-offs, by the verb each runs (`fold/io/foldIoCommands`,
- * loaded when one is first asked for: the engine bridge and the dialogs behind
- * it stay out of the shell's chunk).
+ * Fold's code, loaded through `workspaces/foldGateway` when one is first asked for:
+ * the engine bridge and the dialogs behind it stay out of the shell's chunk).
  */
 const FOLD_IO_ACTIONS: Partial<Record<MenuActionId, FoldIoCommand>> = {
   'fold.import-cp': { kind: 'import-cp' },
@@ -446,9 +449,9 @@ const FOLD_IO_ACTIONS: Partial<Record<MenuActionId, FoldIoCommand>> = {
 
 /**
  * Fold's Send to Diagram, by what it sends: the Diagram's own pull run from
- * Fold's side (plan D17, `diagram/fold/foldBrowserActions`, loaded when first
- * asked for). Dispatched here rather than through Fold's io verbs, so Fold
- * names the verb by its menu id and never imports the Diagram.
+ * Fold's side (plan D17, `diagram/fold/foldBrowserActions`). Dispatched here
+ * rather than through Fold's io verbs, so Fold names the verb by its menu id
+ * and never imports the Diagram.
  */
 const FOLD_TO_DIAGRAM_ACTIONS: Partial<Record<MenuActionId, FoldSendToDiagramScope>> = {
   'fold.send-to-diagram': 'step',
@@ -606,7 +609,7 @@ export function createMenuActionHandler(deps: MenuActionDependencies) {
 
     const foldVerb = FOLD_SEQUENCE_ACTIONS[id];
     if (foldVerb) {
-      return runFoldMenuVerb(i18n.t.bind(i18n), foldVerb);
+      return (await loadFold()).runFoldMenuVerb(i18n.t.bind(i18n), foldVerb);
     }
 
     const viewPanel = VIEW_PANEL_ACTIONS[id];
@@ -618,12 +621,12 @@ export function createMenuActionHandler(deps: MenuActionDependencies) {
 
     const foldIo = FOLD_IO_ACTIONS[id];
     if (foldIo) {
-      return (await import('../fold/io/foldIoCommands')).runFoldIoCommand(foldIo, deps.fileService);
+      return (await loadFold()).runFoldIoCommand(foldIo, deps.fileService);
     }
 
     const toDiagram = FOLD_TO_DIAGRAM_ACTIONS[id];
     if (toDiagram) {
-      return (await import('../diagram/fold/foldBrowserActions')).sendFoldStepsToDiagram(toDiagram);
+      return sendFoldStepsToDiagram(toDiagram);
     }
 
     switch (id) {

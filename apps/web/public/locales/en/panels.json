@@ -1786,6 +1786,12 @@
       "stepsHint": "Every step of the path as a card",
       "views": "View"
     },
+    "load": {
+      "failed": "Fold did not load",
+      "loading": "Loading Fold…",
+      "offline": "Fold has not been downloaded yet, and you are offline. Connect once and it will work offline from then on.",
+      "retry": "Try again"
+    },
     "paper": {
       "backUp": "Back up",
       "colors": "Colors",

@@ -24,9 +24,12 @@ vi.mock('./panels/ReferencesViewControlsPanel', () => ({
 vi.mock('./panels/DiagramStepPanel', () => ({ DiagramStepPanel: () => <p>diagram step</p> }));
 vi.mock('./panels/DiagramPagePanel', () => ({ DiagramPagePanel: () => <p>diagram page</p> }));
 vi.mock('./panels/DiagramLayersPanel', () => ({ DiagramLayersPanel: () => <p>diagram layers</p> }));
-// Fold's panes read its session and the paper style; their sections are what the drawer seats.
-vi.mock('./panels/FoldStepPanel', () => ({ FoldStepPanel: () => <section aria-label="Step">fold step</section> }));
-vi.mock('./panels/FoldPaperPanel', () => ({ FoldPaperPanel: () => <section aria-label="Paper">fold paper</section> }));
+// Fold's panes are its code, loaded as they mount (`FoldGate`), and read its session and
+// the paper style; their sections are what the drawer seats.
+vi.mock('./fold/FoldGate', () => ({
+  LazyFoldStepPanel: () => <section aria-label="Step">fold step</section>,
+  LazyFoldPaperPanel: () => <section aria-label="Paper">fold paper</section>,
+}));
 
 const analytics = vi.hoisted(() => ({ track: vi.fn() }));
 
