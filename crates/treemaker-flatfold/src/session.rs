@@ -29,7 +29,8 @@
 //!    searched again; the others keep their order.
 //! 4. Each reached component is searched for one order, first with its new
 //!    seeds' faces' pairs first, then in the open's order, each within a
-//!    small node budget. Exhausting either order is a proof that the
+//!    small node budget, and each with the preferred order's values and then
+//!    with upstream's (1 first). Exhausting any of them is a proof that the
 //!    component, and so the question, has no order.
 //! 5. If neither answers within its budget, the check falls back to exactly
 //!    Flat-Folder's procedure on what is left of those components: split
@@ -43,8 +44,12 @@
 //!
 //! A preferred order ([`CheckOptions::prefer`], the order on screen) only
 //! changes which value each guess of step 4 tries first, so the order found
-//! changes as little as possible. Step 5 never uses it, so it never changes
-//! a verdict that step 5 reaches.
+//! changes as little as possible. Every step-4 search it steers is followed
+//! by the same search without it, and step 5 never uses it, so within the
+//! same node budgets a check with a preference decides every question the
+//! check without one decides, the same way (a deadline can still run out
+//! sooner, since it searches more). The components nothing reached keep the preferred order
+//! where it is the open's, and are searched with it otherwise.
 
 use std::collections::BTreeMap;
 
@@ -97,7 +102,8 @@ pub struct CheckOptions<'a> {
     /// `max_nodes` bounds the exhaustive fallback (step 5 of the module
     /// docs); the deadline bounds the whole check.
     pub budget: SearchBudget,
-    /// Search nodes for each of the two quick attempts (step 4).
+    /// Search nodes for each quick attempt (step 4): two, or four with a
+    /// preferred order.
     pub fast_nodes: u64,
     /// One order per variable: each guess tries this order's value first.
     pub prefer: Option<&'a [PairOrder]>,
@@ -483,13 +489,16 @@ impl CompletionSession {
             }
             if !touched[k] {
                 // Unchanged: the open's order, or the preferred one where it
-                // still fits.
-                let Some(_) = prefer else {
+                // still fits. Where the preferred order is the open's, it
+                // is known to fit without a search.
+                let keeps_first =
+                    prefer.is_none_or(|p| remaining.iter().all(|&v| p[v].value() == self.first[v]));
+                if keeps_first {
                     for &v in &remaining {
                         assignments[v] = self.first[v];
                     }
                     continue;
-                };
+                }
                 match self.attempt(
                     &tables,
                     &remaining,
@@ -523,16 +532,28 @@ impl CompletionSession {
             };
             let mut seeds_first = remaining.clone();
             seeds_first.sort_by_key(|&v| rank(v));
-            let mut settled = false;
+            // Each order with the preferred values, then, when there are
+            // any, with upstream's: a preference can mislead a quick search,
+            // and must never lose an answer the check without it finds.
+            let preferred: &dyn Fn(usize) -> u8 = &first_value;
+            let upstream: &dyn Fn(usize) -> u8 = &|_| 1;
+            let mut tries = Vec::with_capacity(4);
             for (order, attempt_stage) in [
                 (&seeds_first, CheckStage::SeedsFirst),
                 (&remaining, CheckStage::OpenOrder),
             ] {
+                tries.push((order, preferred, attempt_stage));
+                if prefer.is_some() {
+                    tries.push((order, upstream, attempt_stage));
+                }
+            }
+            let mut settled = false;
+            for (order, values, attempt_stage) in tries {
                 match self.attempt(
                     &tables,
                     order,
                     &mut assignments,
-                    &first_value,
+                    values,
                     options.fast_nodes,
                     options,
                     &mut nodes,
@@ -628,7 +649,7 @@ impl CompletionSession {
         tables: &SearchTables<'_>,
         order: &[usize],
         assignments: &mut Vec<u8>,
-        first_value: &impl Fn(usize) -> u8,
+        first_value: &dyn Fn(usize) -> u8,
         max_nodes: u64,
         options: &CheckOptions<'_>,
         nodes: &mut u64,
