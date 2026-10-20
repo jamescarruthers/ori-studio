@@ -404,7 +404,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           sendToEdit={sendToEdit}
         />
       </div>
-      {importChoice ? <FoldImportOrderChooser container={viewport} inspection={inspection} onFrame={setToolWindowFrame} /> : <FoldToolWindow inspection={inspection} resolution={preview.orderResolution} acceptOrder={verbs.acceptOrder} orderReady={!!preview.step && !!preview.landed && !preview.landing && !preview.refused && !session.readOnly} container={viewport} model={toolWindowYields ? null : windowModel} keyLabel={keyLabel} onFrame={setToolWindowFrame} />}
+      {importChoice ? <FoldImportOrderChooser container={viewport} inspection={inspection} onFrame={setToolWindowFrame} /> : <FoldToolWindow inspection={inspection} resolution={preview.orderResolution} acceptOrder={verbs.acceptOrder} orderReady={!!preview.step && !!preview.landed && !preview.landing && !preview.refused && !session.readOnly} container={viewport} model={toolWindowYields ? null : windowModel} tool={toolState.tool} keyLabel={keyLabel} onFrame={setToolWindowFrame} />}
     </div>
   );
 }

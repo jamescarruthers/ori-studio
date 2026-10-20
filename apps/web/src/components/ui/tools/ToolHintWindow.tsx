@@ -51,6 +51,7 @@ export function ToolHintWindow({
   needsAttention = false,
   height = 'default',
   onFrame,
+  startKey,
   children,
 }: {
   /**
@@ -108,6 +109,13 @@ export function ToolHintWindow({
    * again on every render.
    */
   onFrame?: (frame: HTMLElement | null) => void;
+  /**
+   * What the window is showing — Fold's tool and the step it is at. A new
+   * one, and the window opening, show the body from its top, its first
+   * instruction in view (`useAnimatedHeight`). Without one, a body that
+   * outgrows the window keeps its bottom in view, as it always has.
+   */
+  startKey?: string;
   children: ReactNode;
 }) {
   const [preferCollapsed, setPreferCollapsed] = useToolHintCollapsed(collapseKey, startsCollapsed);
@@ -129,6 +137,7 @@ export function ToolHintWindow({
   const placement = useToolHintAnchor(container, inside);
   const { attachFrame, attachContent, attachScroller, closing } = useAnimatedHeight({
     collapsed,
+    ...(startKey !== undefined ? { startKey } : {}),
   });
   const frameRef = useCallback(
     (frame: HTMLElement | null) => {

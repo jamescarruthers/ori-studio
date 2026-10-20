@@ -703,6 +703,11 @@ describe('FoldToolWindow', () => {
     const alert = byRole(window, 'alert', /^Collision/);
     act(() => byRole(alert, 'button', 'Mountain fold instead').click());
     expect(calls.foldOtherWay).toHaveBeenCalledTimes(1);
+    // The refusal and the footer are docked together, clear of the scrolling rest.
+    const dock = window.querySelector('[data-fold-window-dock]');
+    expect(dock?.contains(alert)).toBe(true);
+    expect(dock?.contains(footer())).toBe(true);
+    expect(dock?.contains(byRole(window, 'button', 'Swap'))).toBe(false);
   });
 
   it('says it is finding the layers until the section arrives', () => {
