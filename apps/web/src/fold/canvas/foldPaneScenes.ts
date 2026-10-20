@@ -14,8 +14,9 @@
  *   the border, a folded crease by its (front-relative) letter, a flat crease.
  *   The creases the step on show made — or, while a fold is previewed, the
  *   creases it would add — are its instruction. The canvas's crease-pattern
- *   pane draws them in Edit's inks (`creasePatternPaneLines`); a Diagram
- *   step keeps them as paper, the instruction in the diagram-crease pens
+ *   pane draws the pattern in Edit's inks (`creasePatternPaneLines`) and the
+ *   instruction in the diagram-crease pens (`foldInstructionStrokes`); a
+ *   Diagram step keeps them as paper, the instruction in the same pens
  *   (`creasePatternPaperScene`).
  *
  * Coordinates: a scene's points are in user space, through
@@ -27,7 +28,6 @@ import type { Point } from '../../lib/geometry';
 import type { PaperItem, PaperLineItem, PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { foldedFlatPaperScene, type FoldedFlatPaperSceneOptions } from '../../cp-workspace/folded/foldedFlatScene';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
-import type { FoldStepPane } from '../animation/foldStepMotion';
 import type { FoldDirection } from '../document/foldSequenceDocument';
 import type {
   FoldActionGeometry,
@@ -106,10 +106,7 @@ export function foldFrameSpread(spread: LayerSpreadOptions | null): LayerSpreadO
 /**
  * Where the folded pane places a state's folded form: `foldedFlatPaperScene`'s
  * options at the pane's display offset, its layers spread by `spread` — the
- * step's (`foldStepSpread`), none for null. A step's motion is built with the
- * same placement, so its first and last frames are the pane's own pictures; a
- * motion that eases a spread in passes it part of the way on
- * (`weightedSpread`).
+ * step's (`foldStepSpread`), none for null.
  */
 export function foldedPanePlacement(
   offset: Point = ORIGIN,
@@ -138,29 +135,6 @@ export function foldedPaneScene(
 ): PaperScene {
   const painted = foldedFlatPaperScene(scene, foldedPanePlacement(offset, spread));
   return display.precreases ? painted : withoutFlatCreases(painted);
-}
-
-/**
- * How the folded pane pictures each state of a sheet (`FoldStepPane`): at the
- * state's own display offset, which a turn changes, painted as the pane
- * paints it under its display switches. A step's motion pictures its parent
- * and itself with this, so its first frame is the pane's picture of the
- * parent and its last the pane's of the step — a turn starts where the
- * parent lies, and with Precreases off no frame between draws one.
- *
- * The pictures are unspread: a spread is a picture of a state at rest, and a
- * motion's frames lie between two. A motion that eases the step's spread in
- * as it lands (or the parent's out as it starts) places those frames with
- * `foldedPanePlacement(offset, weightedSpread(spread, weight))`.
- */
-export function foldedPanePictures(
-  sheet: readonly (readonly [number, number])[],
-  display: FoldPaneDisplay = FOLD_PANE_DISPLAY_DEFAULT
-): FoldStepPane {
-  return (scene) => {
-    const offset = foldedDisplayOffset(scene, sheet);
-    return { place: foldedPanePlacement(offset), scene: foldedPaneScene(scene, display, offset) };
-  };
 }
 
 /** How far a fold line runs past the paper, as a share of its length: enough to read past the edge. */

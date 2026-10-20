@@ -3,7 +3,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { DEFAULT_LAYER_SPREAD } from '../../cp-workspace/folded/layerSpreadSettings';
-import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
+import { documentPaperStyleOf } from '../../lib/paper/documentPaperStyle';
+import { FOLD_DEFAULT_PAPER_STYLE } from '../document/foldSequenceDocument';
 import { bookScene } from '../canvas/foldCanvas.fixtures';
 import { FOLD_PANE_DISPLAY_DEFAULT } from '../canvas/foldPaneScenes';
 import type { FoldSession } from '../session/foldSession';
@@ -31,6 +32,8 @@ const { SPREAD_SETTLE_MS, clearFoldCardPictures, foldCardPictureSource, heldFold
 
 /** Every state's scene in hand, as the canvas and the frames have usually asked for it already. */
 const scene = bookScene();
+/** What a sequence with no style of its own is drawn in, and so what the cards here are painted in. */
+const FOLD_STYLE = documentPaperStyleOf(FOLD_DEFAULT_PAPER_STYLE);
 app.session = {
   peek: () => ({ value: scene }),
   query: () => Promise.resolve({ status: 'answered', value: scene }),
@@ -85,7 +88,7 @@ describe('a spread dragged over the step strip', () => {
     await wait(SPREAD_SETTLE_MS);
     const before = sources(spreadAt(0));
     for (const source of [...before.early, ...before.inheriting]) {
-      expect(heldFoldCardPicture(source, DEFAULT_PAPER_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toMatch(/^data:image/);
+      expect(heldFoldCardPicture(source, FOLD_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toMatch(/^data:image/);
     }
 
     paints.count = 0;
@@ -102,18 +105,18 @@ describe('a spread dragged over the step strip', () => {
     // One picture per inheriting card: the spread it was let go at.
     expect(paints.count).toBe(INHERITING);
     for (const source of after.inheriting) {
-      expect(heldFoldCardPicture(source, DEFAULT_PAPER_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toMatch(/^data:image/);
+      expect(heldFoldCardPicture(source, FOLD_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toMatch(/^data:image/);
     }
     // No card was ever blank on the way: each showed its last picture until the new one came.
     for (const renders of shown) expect(renders.every((picture) => typeof picture === 'string')).toBe(true);
     for (let k = 0; k < INHERITING; k += 1) {
-      expect(shown[EARLY + k]?.at(-1)).toBe(heldFoldCardPicture(after.inheriting[k]!, DEFAULT_PAPER_STYLE, FOLD_PANE_DISPLAY_DEFAULT));
+      expect(shown[EARLY + k]?.at(-1)).toBe(heldFoldCardPicture(after.inheriting[k]!, FOLD_STYLE, FOLD_PANE_DISPLAY_DEFAULT));
     }
     // The cards the drag never touched kept theirs.
     for (const source of after.early) {
-      expect(heldFoldCardPicture(source, DEFAULT_PAPER_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toMatch(/^data:image/);
+      expect(heldFoldCardPicture(source, FOLD_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toMatch(/^data:image/);
     }
     // And the spreads let go of are gone with the drag: no card wants them.
-    expect(heldFoldCardPicture(before.inheriting[0]!, DEFAULT_PAPER_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toBeUndefined();
+    expect(heldFoldCardPicture(before.inheriting[0]!, FOLD_STYLE, FOLD_PANE_DISPLAY_DEFAULT)).toBeUndefined();
   });
 });

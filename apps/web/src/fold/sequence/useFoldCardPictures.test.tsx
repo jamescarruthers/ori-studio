@@ -1,7 +1,8 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
+import { documentPaperStyleOf } from '../../lib/paper/documentPaperStyle';
+import { FOLD_DEFAULT_PAPER_STYLE } from '../document/foldSequenceDocument';
 import { bookScene, flatSquareScene } from '../canvas/foldCanvas.fixtures';
 import { resetFoldPaneDisplay, setFoldPaneDisplay } from '../canvas/foldPaneDisplay';
 import { FOLD_PANE_DISPLAY_DEFAULT } from '../canvas/foldPaneScenes';
@@ -43,6 +44,8 @@ const {
 
 const handle = (id: number, generation = 1): FoldEngineStateHandle => ({ generation, id });
 const DISPLAY = FOLD_PANE_DISPLAY_DEFAULT;
+/** What a sequence with no style of its own is drawn in, and so what the cards here are painted in. */
+const FOLD_STYLE = documentPaperStyleOf(FOLD_DEFAULT_PAPER_STYLE);
 
 /** Let the asks answer and the paint slices run. */
 async function settle(): Promise<void> {
@@ -65,16 +68,16 @@ describe('the step strip’s card pictures', () => {
     const inHand = foldCardPictureSource(handle(1), 'fs1:aaaa');
     const asked = foldCardPictureSource(handle(2), 'fs1:bbbb');
     if (!inHand || !asked) throw new Error('no source');
-    requestFoldCardPicture(session, inHand, DEFAULT_PAPER_STYLE, DISPLAY);
-    requestFoldCardPicture(session, asked, DEFAULT_PAPER_STYLE, DISPLAY);
+    requestFoldCardPicture(session, inHand, FOLD_STYLE, DISPLAY);
+    requestFoldCardPicture(session, asked, FOLD_STYLE, DISPLAY);
     // Painted a slice later, never during the ask.
-    expect(heldFoldCardPicture(inHand, DEFAULT_PAPER_STYLE, DISPLAY)).toBeUndefined();
+    expect(heldFoldCardPicture(inHand, FOLD_STYLE, DISPLAY)).toBeUndefined();
     await settle();
-    expect(heldFoldCardPicture(inHand, DEFAULT_PAPER_STYLE, DISPLAY)).toMatch(/^data:image\/svg\+xml/);
-    expect(heldFoldCardPicture(asked, DEFAULT_PAPER_STYLE, DISPLAY)).toMatch(/^data:image\/svg\+xml/);
+    expect(heldFoldCardPicture(inHand, FOLD_STYLE, DISPLAY)).toMatch(/^data:image\/svg\+xml/);
+    expect(heldFoldCardPicture(asked, FOLD_STYLE, DISPLAY)).toMatch(/^data:image\/svg\+xml/);
     expect(query).toHaveBeenCalledTimes(1);
     // Asked again: kept, so nothing is asked of the session.
-    requestFoldCardPicture(session, asked, DEFAULT_PAPER_STYLE, DISPLAY);
+    requestFoldCardPicture(session, asked, FOLD_STYLE, DISPLAY);
     expect(query).toHaveBeenCalledTimes(1);
   });
 
@@ -83,11 +86,11 @@ describe('the step strip’s card pictures', () => {
     const first = foldCardPictureSource(handle(1), 'fs1:same');
     const replayed = foldCardPictureSource(handle(7, 2), 'fs1:same');
     if (!first || !replayed) throw new Error('no source');
-    requestFoldCardPicture(session, first, DEFAULT_PAPER_STYLE, DISPLAY);
+    requestFoldCardPicture(session, first, FOLD_STYLE, DISPLAY);
     await settle();
     // The same state under the next engine's handle: its picture is already painted.
-    expect(heldFoldCardPicture(replayed, DEFAULT_PAPER_STYLE, DISPLAY)).toBe(heldFoldCardPicture(first, DEFAULT_PAPER_STYLE, DISPLAY));
-    requestFoldCardPicture(session, replayed, DEFAULT_PAPER_STYLE, DISPLAY);
+    expect(heldFoldCardPicture(replayed, FOLD_STYLE, DISPLAY)).toBe(heldFoldCardPicture(first, FOLD_STYLE, DISPLAY));
+    requestFoldCardPicture(session, replayed, FOLD_STYLE, DISPLAY);
     expect(query).toHaveBeenCalledTimes(1);
     // The step being folded has no fingerprint yet: its handle names it.
     expect(foldCardPictureSource(handle(9, 3))?.key).toBe('handle:3:9');
@@ -103,16 +106,16 @@ describe('the step strip’s card pictures', () => {
     if (!flat || !spreadOut || !again) throw new Error('no source');
     expect(spreadOut.spread).toBe(spread);
     // Both asked in one look: neither is a look no longer shown.
-    requestFoldCardPicture(session, flat, DEFAULT_PAPER_STYLE, DISPLAY);
-    requestFoldCardPicture(session, spreadOut, DEFAULT_PAPER_STYLE, DISPLAY);
+    requestFoldCardPicture(session, flat, FOLD_STYLE, DISPLAY);
+    requestFoldCardPicture(session, spreadOut, FOLD_STYLE, DISPLAY);
     await settle();
-    const unspread = heldFoldCardPicture(flat, DEFAULT_PAPER_STYLE, DISPLAY);
-    const spreadPicture = heldFoldCardPicture(spreadOut, DEFAULT_PAPER_STYLE, DISPLAY);
+    const unspread = heldFoldCardPicture(flat, FOLD_STYLE, DISPLAY);
+    const spreadPicture = heldFoldCardPicture(spreadOut, FOLD_STYLE, DISPLAY);
     expect(unspread).toMatch(/^data:image\/svg\+xml/);
     expect(spreadPicture).toMatch(/^data:image\/svg\+xml/);
     expect(spreadPicture).not.toBe(unspread);
     // The same spread from another step is the same picture.
-    expect(heldFoldCardPicture(again, DEFAULT_PAPER_STYLE, DISPLAY)).toBe(spreadPicture);
+    expect(heldFoldCardPicture(again, FOLD_STYLE, DISPLAY)).toBe(spreadPicture);
     expect(query).not.toHaveBeenCalled();
   });
 
@@ -123,16 +126,16 @@ describe('the step strip’s card pictures', () => {
     if (!source || !gone) throw new Error('no source');
     const bare = { ...DISPLAY, precreases: false };
     // The switch flipped before the first slice ran: the first look is never painted.
-    requestFoldCardPicture(session, source, DEFAULT_PAPER_STYLE, DISPLAY);
-    requestFoldCardPicture(session, source, DEFAULT_PAPER_STYLE, bare);
+    requestFoldCardPicture(session, source, FOLD_STYLE, DISPLAY);
+    requestFoldCardPicture(session, source, FOLD_STYLE, bare);
     await settle();
-    expect(heldFoldCardPicture(source, DEFAULT_PAPER_STYLE, DISPLAY)).toBeUndefined();
-    expect(heldFoldCardPicture(source, DEFAULT_PAPER_STYLE, bare)).toMatch(/^data:image\/svg\+xml/);
+    expect(heldFoldCardPicture(source, FOLD_STYLE, DISPLAY)).toBeUndefined();
+    expect(heldFoldCardPicture(source, FOLD_STYLE, bare)).toMatch(/^data:image\/svg\+xml/);
 
-    requestFoldCardPicture(session, gone, DEFAULT_PAPER_STYLE, bare);
+    requestFoldCardPicture(session, gone, FOLD_STYLE, bare);
     await settle();
-    expect(heldFoldCardPicture(gone, DEFAULT_PAPER_STYLE, bare)).toBeUndefined();
-    requestFoldCardPicture(session, gone, DEFAULT_PAPER_STYLE, bare);
+    expect(heldFoldCardPicture(gone, FOLD_STYLE, bare)).toBeUndefined();
+    requestFoldCardPicture(session, gone, FOLD_STYLE, bare);
     await settle();
     expect(query.mock.calls.filter(([state]) => state.id === 5)).toHaveLength(2);
   });
@@ -203,9 +206,9 @@ describe('useFoldCardPicture', () => {
     // The step a tool is folding: no fingerprint, so its handle names it.
     const previewing = foldCardPictureSource(handle(4), null, spread);
     if (!previewing) throw new Error('no source');
-    requestFoldCardPicture(session, previewing, DEFAULT_PAPER_STYLE, DISPLAY);
+    requestFoldCardPicture(session, previewing, FOLD_STYLE, DISPLAY);
     await settle();
-    const painted = heldFoldCardPicture(previewing, DEFAULT_PAPER_STYLE, DISPLAY);
+    const painted = heldFoldCardPicture(previewing, FOLD_STYLE, DISPLAY);
     expect(painted).toMatch(/^data:image\/svg\+xml/);
 
     // Committed: the same state, now with its fingerprint, in the same spread.
@@ -219,7 +222,7 @@ describe('useFoldCardPicture', () => {
     root = createRoot(host);
     act(() => root?.render(<Probe source={committed} />));
     expect(seen[0]).toBe(painted);
-    expect(heldFoldCardPicture(committed!, DEFAULT_PAPER_STYLE, DISPLAY)).toBeUndefined();
+    expect(heldFoldCardPicture(committed!, FOLD_STYLE, DISPLAY)).toBeUndefined();
     act(() => root?.unmount());
 
     // Another spread is another picture: a card of the state without it is painted, as ever.

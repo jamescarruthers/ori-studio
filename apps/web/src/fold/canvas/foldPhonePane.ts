@@ -21,11 +21,6 @@ export function showFoldPhonePane(pane: FoldPaneId): void {
   for (const listener of listeners) listener();
 }
 
-/** Show the folded form: where a step plays, the one pane its frames are drawn on. */
-export function revealFoldedPane(): void {
-  showFoldPhonePane('folded');
-}
-
 function subscribe(onChange: () => void): () => void {
   listeners.add(onChange);
   return () => {

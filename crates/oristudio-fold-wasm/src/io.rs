@@ -55,9 +55,9 @@ pub mod wire;
 
 pub use export::{export_fold, send_to_edit, send_to_edit_text};
 pub use figure::{EditFigure, import_figure, read_figure};
-pub use imports::Imports;
+pub use imports::{Imports, starting_sheet};
 pub use jump::land;
 pub use wire::{
     AdoptedPaper, ComponentCount, CpFile, CpFormat, CpJump, CpOrigin, Exported, FigureGap,
-    IoCallError, IoRefusal, JumpOp, Landed, Limits, Opened, StoredField, Target,
+    IoCallError, IoRefusal, JumpOp, Landed, Limits, Opened, SheetFound, StoredField, Target,
 };

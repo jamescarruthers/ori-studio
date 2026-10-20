@@ -3,7 +3,7 @@ import {
   readFoldSequence,
   writeFoldSequence,
 } from '../../document/foldSequenceFile';
-import { isLockedStep } from '../../document/foldSequenceDocument';
+import { FOLD_DEFAULT_PAPER_STYLE, isLockedStep } from '../../document/foldSequenceDocument';
 const op = {
   kind: 'pleat',
   line: {
@@ -41,6 +41,7 @@ const doc = {
   id: 'pleat',
   title: '',
   paper: { shape: { kind: 'square' }, startSide: 'front' },
+  style: FOLD_DEFAULT_PAPER_STYLE,
   steps: [{ id: 'one', parent: null, op }],
 };
 describe('Pleat file format', () => {

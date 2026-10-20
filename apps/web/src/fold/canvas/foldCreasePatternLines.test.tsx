@@ -8,11 +8,9 @@ import type { FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
 import { bookScene } from './foldCanvas.fixtures';
 import { creasePatternPaneLines, type FoldCreasePatternLines } from './foldCreasePatternLines';
 import { FOLD_PANE_DISPLAY_DEFAULT } from './foldPaneScenes';
-import {
-  FOLD_INSTRUCTION_WIDTH_MUL,
-  useFoldCreasePatternStrokes,
-  type FoldCreasePatternStrokes,
-} from './useFoldCreasePatternStrokes';
+import { useFoldCreasePatternStrokes, type FoldCreasePatternStrokes } from './useFoldCreasePatternStrokes';
+import { builtInPaperPreset } from '../../lib/paper/paperPresets';
+import { DEFAULT_PAPER_STYLE, type PaperStyle } from '../../lib/paper/paperStyle';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -105,8 +103,16 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
   let themed: HTMLDivElement;
   let latest: FoldCreasePatternStrokes | null = null;
 
-  function Probe({ lines }: { lines: FoldCreasePatternLines }) {
-    latest = useFoldCreasePatternStrokes(lines, themed, 'theme');
+  function Probe({
+    lines,
+    style = DEFAULT_PAPER_STYLE,
+    ground = '#ffffff',
+  }: {
+    lines: FoldCreasePatternLines;
+    style?: PaperStyle;
+    ground?: string;
+  }) {
+    latest = useFoldCreasePatternStrokes(lines, themed, 'theme', style, ground);
     return null;
   }
 
@@ -134,7 +140,7 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
   const rgb = (color: Float32Array, at: number) =>
     [0, 1, 2].map((k) => Math.round((color[at * 4 + k] ?? 0) * 255).toString(16).padStart(2, '0')).join('');
 
-  it('inks the pattern as Edit does and draws the instruction solid in its crease colour, wider', () => {
+  it('inks the pattern as Edit does and draws the instruction in the style’s diagram-crease pen', () => {
     const lines = creasePatternPaneLines(bookWithPrecrease(), {
       display: FOLD_PANE_DISPLAY_DEFAULT,
       step: 1,
@@ -151,12 +157,37 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
     // No second stroke for a letter: the precrease and the six edges of the border, and nothing else.
     expect(strokes.creases.count).toBe(7);
     expect([...Array(strokes.creases.count).keys()].map((at) => rgb(strokes.creases.color, at))).not.toContain('ff4d5d');
-    // The step's valley: the tool's line, solid, in the valley colour.
+    // The step's valley in the style's Valley diagram creases pen: its colour and its dash, 4:2 of
+    // its width, at no less than the view's floor for an instruction (2 CSS px at line width 1).
     const instruction = strokes.instruction!;
     expect(instruction.count).toBe(1);
-    expect(rgb(instruction.color, 0)).toBe('60a5fa');
-    expect(instruction.dashSlot?.[0]).toBe(0);
-    expect(instruction.widthMul[0]).toBe(FOLD_INSTRUCTION_WIDTH_MUL);
+    expect(`#${rgb(instruction.color, 0)}`).toBe(DEFAULT_PAPER_STYLE.valleyDiagramCreases.color);
+    expect(instruction.dashSlot?.[0]).toBe(1);
+    expect(instruction.dashPatterns?.[0]?.map((run) => Number(run.toFixed(6)))).toEqual([8, 4]);
+    expect(instruction.widthMul[0]! * strokes.widthCss).toBeCloseTo(2, 6);
+  });
+
+  it('draws the Diagram style’s near-black pens as they are on a light ground, and in white on a dark one', () => {
+    const lines = creasePatternPaneLines(bookWithPrecrease(), { display: FOLD_PANE_DISPLAY_DEFAULT, step: 1, instruction: null });
+    const diagram = builtInPaperPreset('diagram').style;
+    act(() => root.render(<Probe lines={lines} style={diagram} ground="#ffffff" />));
+    expect(`#${rgb(latest!.instruction!.color, 0)}`).toBe(diagram.valleyDiagramCreases.color);
+    act(() => root.render(<Probe lines={lines} style={diagram} ground="#1b1d22" />));
+    expect(rgb(latest!.instruction!.color, 0)).toBe('ffffff');
+  });
+
+  it('takes a pen’s width past the floor, its round cap folded into the dash, and a solid pen solid', () => {
+    const lines = creasePatternPaneLines(bookWithPrecrease(), { display: FOLD_PANE_DISPLAY_DEFAULT, step: 1, instruction: null });
+    // 3 pt is 4 CSS px: past the floor, drawn as wide as the pen says.
+    const heavy = { ...DEFAULT_PAPER_STYLE, valleyDiagramCreases: { width: 3, color: '#00aa00', dash: [4, 2], cap: 'round' as const } };
+    act(() => root.render(<Probe lines={lines} style={heavy} />));
+    const strokes = latest!;
+    expect(strokes.instruction!.widthMul[0]! * strokes.widthCss).toBeCloseTo(4, 6);
+    // 16 on, 8 off at 4 px wide; a round cap reaches 2 px past each end of every dash.
+    expect(strokes.instruction!.dashPatterns?.[0]?.map((run) => Number(run.toFixed(6)))).toEqual([20, 4]);
+    const solid = { ...DEFAULT_PAPER_STYLE, valleyDiagramCreases: { ...DEFAULT_PAPER_STYLE.valleyDiagramCreases, dash: null } };
+    act(() => root.render(<Probe lines={lines} style={solid} />));
+    expect(latest!.instruction!.dashSlot?.[0]).toBe(0);
   });
 
   it('follows the line style and width Edit’s view is set to', () => {

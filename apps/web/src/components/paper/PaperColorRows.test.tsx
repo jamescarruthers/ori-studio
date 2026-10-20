@@ -20,7 +20,7 @@ const PAPER_ROWS: readonly PaperDisplayRow[] = ['paper.front', 'paper.back'];
 
 /** The rows over a real binding, as a pane mounts them. */
 function Pane() {
-  const paper = usePaperDisplayStyle('fold', PAPER_ROWS);
+  const paper = usePaperDisplayStyle('simulator-view-controls', PAPER_ROWS);
   return <PaperColorRows paper={paper} />;
 }
 
@@ -78,7 +78,7 @@ describe('PaperColorRows', () => {
     pick(swatch('Front'), '#111111');
     pick(swatch('Front'), '#222222');
     expect(display().paper).toEqual({ ...DEFAULT_PAPER_STYLE.paper, front: '#222222' });
-    expect(tracked).toEqual([{ source: 'fold', slot: 'display', field: 'paper.front' }]);
+    expect(tracked).toEqual([{ source: 'simulator-view-controls', slot: 'display', field: 'paper.front' }]);
 
     // Closing the picker blurs the swatch, which ends the run: the next pick counts again.
     act(() => swatch('Front').dispatchEvent(new FocusEvent('focusout', { bubbles: true })));

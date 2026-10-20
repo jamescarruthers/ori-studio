@@ -31,6 +31,7 @@
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { randomId, type IdFactory } from '../../lib/documentFile';
+import { DEFAULT_DOCUMENT_PAPER_STYLE, type ResolvedDocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import {
   evaluateOrieditaRatioExpression,
@@ -76,9 +77,11 @@ export const FOLD_MODEL_LINE_MIN_NORMAL = 1e-6;
  *
  * - a rectangle's `aspect` is `[width, height]` normalised to longer side 1
  *   ({@link rectangleShape});
- * - a polygon is stored as its points in the unit frame — a regular polygon
- *   of 3 to 8 sides with its first vertex at −π/2 ({@link regularPolygonShape})
- *   — and its side count is derived from them.
+ * - a polygon is stored as its points in the unit frame — any convex outline
+ *   of 3 to 8 sides an Import starting sheet found (`io/foldStartingSheet.ts`),
+ *   or, in files from before it, a regular polygon with its first vertex at
+ *   −π/2 ({@link regularPolygonShape}) — and its side count is derived from
+ *   them.
  */
 export type FoldPaperShape =
   | { kind: 'square' }
@@ -905,6 +908,15 @@ export interface FoldSequenceDocument {
   title: string;
   paper: FoldPaper;
   /**
+   * The paper style the sequence is drawn in, picked in the Paper tab: a
+   * document's own style, as a diagram's is (`lib/paper/documentPaperStyle`)
+   * — a built-in with its values, or a Settings style resolved when chosen.
+   * Every sequence this build reads or makes has one ({@link FOLD_DEFAULT_PAPER_STYLE}
+   * for a file written before there was one), and every file it writes holds it.
+   * Optional only for documents built by hand, which draw in the default.
+   */
+  style?: ResolvedDocumentPaperStyle;
+  /**
    * Reserved for per-sequence `PaperStyleOverrides` (plan D7, D11): never
    * written by this build, carried verbatim when a file holds one.
    */
@@ -917,11 +929,25 @@ export interface FoldSequenceDocument {
   carried?: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * What a sequence is drawn in until its Paper tab picks another: the built-in
+ * Diagram style (a step of a sequence reads as a step of a diagram), as a new
+ * diagram is.
+ */
+export const FOLD_DEFAULT_PAPER_STYLE: ResolvedDocumentPaperStyle = DEFAULT_DOCUMENT_PAPER_STYLE;
+
 /** A new, empty sequence. */
 export function createFoldSequence(
   paper: FoldPaper = SQUARE_PAPER,
   title = '',
   newId: FoldIdFactory = randomFoldId
 ): FoldSequenceDocument {
-  return { formatVersion: FOLD_SEQUENCE_FORMAT_VERSION, id: newId('fold'), title, paper, steps: [] };
+  return {
+    formatVersion: FOLD_SEQUENCE_FORMAT_VERSION,
+    id: newId('fold'),
+    title,
+    paper,
+    style: FOLD_DEFAULT_PAPER_STYLE,
+    steps: [],
+  };
 }

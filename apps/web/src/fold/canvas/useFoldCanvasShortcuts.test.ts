@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleShortcutRuntimeKeyDown, registerConditionalScopeExecutor } from '../../keyboard/shortcutRuntime';
-import { getResolvedShortcuts, SHORTCUT_DEFINITIONS } from '../../keyboard/shortcuts';
+import { getResolvedShortcuts, shortcutLabelForAction, SHORTCUT_DEFINITIONS } from '../../keyboard/shortcuts';
+import { FOLD_LINE_MODE_SHORTCUTS, FOLD_TOOL_SHORTCUTS } from '../tools/foldToolCatalog';
 import { registerFoldKeyHandler, runFoldKey } from '../sequence/foldKeys';
 import { registerFoldCanvasVerbs } from './foldCanvasCommands';
 import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
@@ -81,7 +82,7 @@ describe('the Fold canvas’s keys', () => {
     expect(bound.selectTool).toHaveBeenCalledWith('inside-reverse');
   });
 
-  it('swaps the side on S only while there is one to swap', () => {
+  it('swaps the side on X only while there is one to swap', () => {
     const bound = verbs();
     release = registerFoldCanvasVerbs(bound);
     expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(true);
@@ -153,8 +154,65 @@ describe('the Fold canvas’s keys', () => {
     const rows = SHORTCUT_DEFINITIONS.filter((definition) => definition.scope === 'fold');
     const chords = rows.flatMap((row) => getResolvedShortcuts(row.id).map((chord) => JSON.stringify(chord)));
     expect(new Set(chords).size).toBe(chords.length);
-    expect(getResolvedShortcuts('fold.lineFree')).toEqual([{ key: 'f' }]);
+    expect(getResolvedShortcuts('fold.lineFree')).toEqual([{ key: 'z' }]);
     expect(getResolvedShortcuts('fold.commit')).toEqual([{ key: 'enter' }]);
+  });
+
+  it('gives every rail tool, line mode and sequence verb a key under the left hand', () => {
+    const key = (id: Parameters<typeof shortcutLabelForAction>[0]) => shortcutLabelForAction(id);
+    // The folds, as Edit's line types: A mountain, S valley; D precrease.
+    expect([key('fold.toolMountain'), key('fold.toolValley'), key('fold.toolPrecrease')]).toEqual(['A', 'S', 'D']);
+    expect(
+      Object.fromEntries(
+        (
+          [
+            'fold.toolInsideReverse',
+            'fold.toolSquash',
+            'fold.toolPleat',
+            'fold.toolSwivel',
+            'fold.toolCrimp',
+            'fold.toolPetal',
+            'fold.toolRabbitEar',
+            'fold.toolDivideLine',
+            'fold.toolOpenSink',
+            'fold.toolClosedSink',
+            'fold.toolUnsink',
+            'fold.rotate',
+            'fold.turnOver',
+            'fold.lineFree',
+            'fold.lineCrease',
+            'fold.swapSide',
+            'fold.cycleExtent',
+            'fold.toolUnfoldTo',
+            'fold.toolRepeat',
+          ] as const
+        ).map((id) => [id, key(id)])
+      )
+    ).toEqual({
+      'fold.toolInsideReverse': 'F',
+      'fold.toolSquash': 'G',
+      'fold.toolPleat': 'Q',
+      'fold.toolSwivel': 'W',
+      'fold.toolCrimp': 'Shift+F',
+      'fold.toolPetal': 'Shift+G',
+      'fold.toolRabbitEar': 'B',
+      'fold.toolDivideLine': 'V',
+      'fold.toolOpenSink': 'Shift+Z',
+      'fold.toolClosedSink': 'Shift+X',
+      'fold.toolUnsink': 'Shift+C',
+      'fold.rotate': 'R',
+      'fold.turnOver': 'T',
+      'fold.lineFree': 'Z',
+      'fold.lineCrease': 'C',
+      'fold.swapSide': 'X',
+      'fold.cycleExtent': 'E',
+      'fold.toolUnfoldTo': 'Shift+E',
+      'fold.toolRepeat': 'Shift+R',
+    });
+    // Every tool and line mode on the rail has a key.
+    for (const id of [...Object.values(FOLD_TOOL_SHORTCUTS), ...Object.values(FOLD_LINE_MODE_SHORTCUTS)]) {
+      expect(getResolvedShortcuts(id), id).not.toEqual([]);
+    }
   });
 });
 
@@ -172,7 +230,7 @@ describe('the fold scope’s shared executor', () => {
     const steps = vi.fn((id: string) => id === 'fold.commit');
     const offTools = registerFoldKeyHandler(tools);
     const offSteps = registerFoldKeyHandler(steps);
-    expect(press('v')).toBe(true);
+    expect(press('s')).toBe(true);
     expect(tools).toHaveBeenCalledWith('fold.toolValley');
     expect(press('Enter')).toBe(true);
     expect(steps).toHaveBeenCalledWith('fold.commit');
@@ -181,7 +239,7 @@ describe('the fold scope’s shared executor', () => {
     expect(press('Enter')).toBe(true);
     offSteps();
     // With none left to claim it, the key falls through.
-    expect(press('v')).toBe(false);
+    expect(press('s')).toBe(false);
     offScope();
   });
 });

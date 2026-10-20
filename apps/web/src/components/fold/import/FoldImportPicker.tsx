@@ -36,12 +36,15 @@ export function foldSampleName(t: TFunction, id: FoldSampleId): string {
 export function FoldImportPicker({
   dragging,
   busy,
+  offerFigure = true,
   onRequest,
 }: {
   /** A file is being dragged over the dialog. */
   dragging: boolean;
   /** An import is under way: nothing new starts until it settles. */
   busy: boolean;
+  /** Offer Edit's folded figure: a step can start from it, a starting sheet cannot. */
+  offerFigure?: boolean;
   onRequest: (request: FoldImportRequest) => void;
 }) {
   const { t } = useTranslation();
@@ -114,7 +117,7 @@ export function FoldImportPicker({
         }</p>}
       </section>
 
-      {hasFigure && (
+      {offerFigure && hasFigure && (
         <section className={styles.section} aria-labelledby="fold-import-edit">
           <h3 id="fold-import-edit" className={styles.heading}>
             {t('dialogs:foldImport.fromEdit', 'From Edit')}

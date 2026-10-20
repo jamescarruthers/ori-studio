@@ -84,6 +84,7 @@ import type {
   FoldImportLimits,
   FoldImportOpened,
   FoldImportSource,
+  FoldSheetFound,
   FoldImportTarget,
 } from '../fold/engine/foldEngineIoWire';
 import type {
@@ -387,6 +388,11 @@ const api = {
     limits?: FoldImportLimits
   ): Promise<FoldEngineOutcome<FoldImportOpened>> {
     return changing((calls) => calls.importCp(source, target, limits));
+  },
+
+  /** Import starting sheet: the sheet the pattern's border outlines; nothing is held. */
+  async importSheet(source: FoldImportSource): Promise<FoldEngineOutcome<FoldSheetFound>> {
+    return call((calls) => calls.importSheet(source));
   },
 
   /** Land one listed order per component as a step, with its fingerprint and op. */

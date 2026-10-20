@@ -93,6 +93,23 @@ export interface FoldImportSummary {
 /** The sheet an empty sequence adopts, as the document stores its paper. */
 export type FoldImportAdoptedPaper = { kind: 'square' } | { kind: 'rectangle'; aspect: [number, number] };
 
+/**
+ * The sheet a pattern's border outlines ("Import starting sheet",
+ * `import_sheet`), as the engine names a sheet (`SheetShape`): a square, a
+ * rectangle by its sides in the frame the outline code chose, or any other
+ * outline as its corners, counter-clockwise in the unit sheet frame. Checked
+ * by the engine as a sheet it folds: convex, no side too short.
+ */
+export type FoldFoundSheet =
+  | { shape: 'square' }
+  | { shape: 'rectangle'; width: number; height: number }
+  | { shape: 'polygon'; points: [number, number][] };
+
+/** `import_sheet`'s answer. */
+export interface FoldSheetFound {
+  sheet: FoldFoundSheet;
+}
+
 /** An import opened: its orders completed, held until one is picked or it is released. */
 export interface FoldImportOpened {
   /** The handle `importPick` and `releaseImports` take. */

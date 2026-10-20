@@ -27,12 +27,14 @@ import type {
   FoldImportOpened,
   FoldImportSource,
   FoldImportTarget,
+  FoldSheetFound,
 } from './foldEngineIoWire';
 import type { FoldEngineOutcome } from './foldEngineWire';
 
 /** The wasm class's io surface, as the generated `FoldEngine` has it. */
 export interface FoldWasmIoEngine {
   import_cp(file: unknown, bytes: Uint8Array, target: unknown, limits: unknown): unknown;
+  import_sheet(file: unknown, bytes: Uint8Array): unknown;
   import_search(importHandle: number, choice: Uint32Array, limits: unknown): unknown;
   import_pick(importHandle: number, choice: Uint32Array): unknown;
   import_edit_folded_figure(scene: unknown, target: unknown, limits: unknown): unknown;
@@ -90,6 +92,11 @@ export interface FoldEngineIoCalls {
     target: FoldImportTarget,
     limits?: FoldImportLimits
   ): FoldEngineOutcome<FoldImportOpened>;
+  /**
+   * Import starting sheet: the sheet the pattern's border outlines, read with
+   * the same loader, the creases left alone. Nothing is held.
+   */
+  importSheet(source: FoldImportSource): FoldEngineOutcome<FoldSheetFound>;
   importSearch(importHandle: number, choice: readonly number[], limits?: FoldImportLimits): FoldEngineOutcome<{ opened: FoldImportOpened; choice: number[] }>;
   /** Land one listed order per component as a step: its state, fingerprint and op. */
   importPick(importHandle: number, choice: readonly number[]): FoldEngineOutcome<FoldImportFingerprinted>;
@@ -125,6 +132,11 @@ export function createFoldEngineIoCalls(engine: FoldWasmIoEngine): FoldEngineIoC
       return engine.import_cp(file, requireBytes(source), target(to), limits(within)) as FoldEngineOutcome<
         FoldImportOpened
       >;
+    },
+
+    importSheet(source) {
+      requireObject('source', source);
+      return engine.import_sheet({ format: source.format }, requireBytes(source)) as FoldEngineOutcome<FoldSheetFound>;
     },
 
     importSearch(importHandle, choice, within) {

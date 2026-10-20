@@ -221,6 +221,44 @@ export function userBoundsInView(
   });
 }
 
+/**
+ * How much of `bounds` shows at `camera`, in the part of the viewport an inset
+ * leaves: the area of their overlap on screen over the smaller of the two —
+ * the bounds' own area on screen, or the part of the viewport that shows. So
+ * 1 for bounds that lie wholly in view and for bounds that fill it (a camera
+ * zoomed in on part of the content), 0 for bounds wholly off it, and between
+ * for content that has slid part of the way off an edge. Measured on the
+ * screen box round the bounds' four projected corners, which a turned view
+ * makes a little larger than the bounds.
+ */
+export function userBoundsVisibleShare(
+  bounds: UserBounds,
+  camera: UserCamera,
+  viewport: Viewport,
+  inset: ViewportInset | null = null
+): number {
+  const [left, right] = insetPair(inset?.left ?? 0, inset?.right ?? 0, viewport.width);
+  const [top, bottom] = insetPair(inset?.top ?? 0, inset?.bottom ?? 0, viewport.height);
+  const view = userCameraToView(camera, viewport);
+  const corners = [
+    projectModelPoint(view, bounds.minX, bounds.minY),
+    projectModelPoint(view, bounds.maxX, bounds.minY),
+    projectModelPoint(view, bounds.maxX, bounds.maxY),
+    projectModelPoint(view, bounds.minX, bounds.maxY),
+  ];
+  const xs = corners.map((at) => at.x);
+  const ys = corners.map((at) => at.y);
+  const box = { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+  const shown = { minX: left, maxX: viewport.width - right, minY: top, maxY: viewport.height - bottom };
+  const overlap =
+    Math.max(0, Math.min(box.maxX, shown.maxX) - Math.max(box.minX, shown.minX)) *
+    Math.max(0, Math.min(box.maxY, shown.maxY) - Math.max(box.minY, shown.minY));
+  const own = (box.maxX - box.minX) * (box.maxY - box.minY);
+  const room = (shown.maxX - shown.minX) * (shown.maxY - shown.minY);
+  const smaller = Math.min(own, room);
+  return smaller > 0 ? Math.min(1, overlap / smaller) : 0;
+}
+
 /** How tightly {@link frameUserCameraOnBounds} packs its target into the viewport. */
 const FRAME_PADDING = 0.5;
 /**

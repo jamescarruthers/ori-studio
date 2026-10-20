@@ -10,6 +10,7 @@ import {
   projectModelPoint,
   unprojectDevicePoint,
   userBoundsInView,
+  userBoundsVisibleShare,
   userCameraToView,
   userCamerasEqual,
   validateUserCamera,
@@ -354,6 +355,36 @@ describe('userBoundsInView', () => {
     expect(userBoundsInView(square, turned, viewport)).toBe(true);
     // The unturned fit's zoom leaves the turned square's corners off the canvas.
     expect(userBoundsInView(square, { ...fitUserCamera(square, viewport, 0.95), rotation: Math.PI / 4 }, viewport)).toBe(false);
+  });
+});
+
+describe('userBoundsVisibleShare', () => {
+  const viewport: Viewport = { width: 400, height: 400, dpr: 1 };
+  const square = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+  const fitted = fitUserCamera(square, viewport);
+
+  it('is whole for bounds in view, and for bounds that fill the view', () => {
+    expect(userBoundsVisibleShare(square, fitted, viewport)).toBe(1);
+    // Zoomed in on the middle: the square covers the whole screen.
+    expect(userBoundsVisibleShare(square, { ...fitted, zoom: fitted.zoom * 10 }, viewport)).toBe(1);
+  });
+
+  it('is the share that shows of bounds slid part of the way off an edge, and none of bounds off it', () => {
+    // The fit shows x −21.4…121.4: a square from 71.4 to 171.4 is half on screen.
+    expect(userBoundsVisibleShare({ minX: 71.43, minY: 0, maxX: 171.43, maxY: 100 }, fitted, viewport)).toBeCloseTo(0.5, 2);
+    expect(userBoundsVisibleShare({ minX: 300, minY: 0, maxX: 400, maxY: 100 }, fitted, viewport)).toBe(0);
+  });
+
+  it('counts only the part an inset leaves', () => {
+    // A window over the lower half of the canvas: the fitted square (y 60…340 px) is half under it.
+    const covered = { top: 0, right: 0, bottom: 200, left: 0 };
+    expect(userBoundsVisibleShare(square, fitted, viewport, covered)).toBeCloseTo(0.5, 6);
+    expect(userBoundsVisibleShare(square, fitted, viewport, { ...covered, bottom: 300 })).toBeLessThan(0.5);
+  });
+
+  it('measures a turned view by the screen box round the bounds', () => {
+    const turned = fitUserCamera(square, viewport, 0.7, Math.PI / 4);
+    expect(userBoundsVisibleShare(square, turned, viewport)).toBe(1);
   });
 });
 

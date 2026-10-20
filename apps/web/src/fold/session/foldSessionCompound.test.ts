@@ -18,7 +18,6 @@ import type {
 } from '../document/foldSequenceDocument';
 import {
   compoundFamilyOf,
-  stepMotionLegsOf,
   type FoldCompoundFamily,
   type FoldCompoundReport,
   type FoldCompoundReportBase,
@@ -156,9 +155,9 @@ describe('the Fold session: every compound family on one path', () => {
     expect(node('a')?.compound).toBeUndefined();
     expect(node('b')).toMatchObject({ status: 'ok', report: null, compound: { family: 'vertex', kind: 'squash' } });
     expect(node('c')).toMatchObject({ status: 'ok', report: null, compound: { family: 'sink', step: 'open' } });
-    // Every family's legs, read through the one accessor.
-    expect(stepMotionLegsOf(node('b')?.compound)?.legs[0]?.groups[0]?.faces).toEqual(['vertex'.length]);
-    expect(stepMotionLegsOf(node('c')?.compound)?.legs[0]?.groups[0]?.faces).toEqual(['sink'.length]);
+    // Every family's report is kept whole on its node, its motion legs among it.
+    expect(node('b')?.compound?.motion.legs[0]?.groups[0]?.faces).toEqual(['vertex'.length]);
+    expect(node('c')?.compound?.motion.legs[0]?.groups[0]?.faces).toEqual(['sink'.length]);
   });
 
   it('previews a compound step with its report, and commits it without folding it again', async () => {

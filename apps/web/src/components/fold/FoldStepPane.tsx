@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { foldCapWords, type FoldCap } from '../../fold/foldCaps';
-import type { FoldStartSide } from '../../fold/paperShape';
+import type { FoldStartSide } from '../../fold/document/foldSequenceDocument';
 import { foldStepSentence, type FoldSentenceStep } from '../../fold/stepSentence';
 import {
   cpOriginLabel,

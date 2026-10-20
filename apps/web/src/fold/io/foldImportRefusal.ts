@@ -29,7 +29,11 @@ import { foldCapOf, foldCapWords } from '../foldCaps';
  *   broken, locked, or the replay stopped);
  * - `read_only`: the sequence is a newer build's;
  * - `changed`: the sequence or the step on screen changed while the pattern
- *   was being imported, so it no longer goes where it was landed.
+ *   was being imported, so it no longer goes where it was landed;
+ * - for Import starting sheet (`foldStartingSheet`), an outline that is no
+ *   sheet Fold starts from: `sheet_not_convex` (it bends inward),
+ *   `sheet_side_short` (a side under the minimum feature), `sheet_sides`
+ *   (fewer than 3 or more than 8 corners, with how many it has).
  */
 export type FoldImportLocalCode =
   | 'unsupported_file'
@@ -38,14 +42,17 @@ export type FoldImportLocalCode =
   | 'no_project_cp'
   | 'no_state'
   | 'read_only'
-  | 'changed';
+  | 'changed'
+  | 'sheet_not_convex'
+  | 'sheet_side_short'
+  | 'sheet_sides';
 
 export type FoldImportNoticeCode = FoldImportRefusalCode | FoldImportLocalCode;
 
 /** Why an import did not land: the engine's refusal, or the dialog's own reason. */
 export type FoldImportRefusal =
   | { readonly kind: 'engine'; readonly refused: Pick<FoldEngineRefused, 'refusal'> }
-  | { readonly kind: 'local'; readonly code: FoldImportLocalCode; readonly name?: string };
+  | { readonly kind: 'local'; readonly code: FoldImportLocalCode; readonly name?: string; readonly sides?: number };
 
 export interface FoldImportNoticeModel {
   code: FoldImportNoticeCode;
@@ -220,9 +227,35 @@ function engineWords(t: TFunction, refusal: FoldEngineRefused['refusal']): { tit
 function localWords(
   t: TFunction,
   code: FoldImportLocalCode,
-  name: string | undefined
+  name: string | undefined,
+  sides: number | undefined
 ): { title: string; text: string } {
   switch (code) {
+    case 'sheet_not_convex':
+      return {
+        title: t('dialogs:foldImport.refusal.sheetNotConvex.title', 'The sheet bends inward'),
+        text: t(
+          'dialogs:foldImport.refusal.sheetNotConvex.text',
+          'The pattern’s outline has a corner that points into the paper. Fold starts from sheets whose every corner points out: a square, a rectangle, a regular polygon, or any other convex shape.'
+        ),
+      };
+    case 'sheet_side_short':
+      return {
+        title: t('dialogs:foldImport.refusal.sheetSideShort.title', 'A side too short to fold'),
+        text: t(
+          'dialogs:foldImport.refusal.sheetSideShort.text',
+          'One side of the pattern’s outline is too short for Fold to tell its corners apart. Straighten or remove it, then import the sheet again.'
+        ),
+      };
+    case 'sheet_sides':
+      return {
+        title: t('dialogs:foldImport.refusal.sheetSides.title', 'Sheets of 3 to 8 sides only'),
+        text: t('dialogs:foldImport.refusal.sheetSides.text', {
+          count: sides ?? 0,
+          defaultValue_one: 'Fold starts from sheets of 3 to 8 sides. This outline has {{count}} side.',
+          defaultValue_other: 'Fold starts from sheets of 3 to 8 sides. This outline has {{count}} sides.',
+        }),
+      };
     case 'unsupported_file':
       return {
         title: t('dialogs:foldImport.refusal.unsupportedFile.title', 'Not a crease pattern'),
@@ -284,7 +317,7 @@ export function foldImportNotice(
   verbs: FoldImportFixVerbs
 ): FoldImportNoticeModel {
   if (refusal.kind === 'local') {
-    return { code: refusal.code, ...localWords(t, refusal.code, refusal.name), actions: [] };
+    return { code: refusal.code, ...localWords(t, refusal.code, refusal.name, refusal.sides), actions: [] };
   }
   const { refusal: body } = refusal.refused;
   const code = body.code as FoldImportRefusalCode;

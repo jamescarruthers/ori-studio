@@ -336,6 +336,9 @@
       "afterStep": "Adds a step after step {{number}}, its folded state computed from the creases.",
       "branch": "It starts a new branch.",
       "empty": "Starts the sequence on the crease pattern’s sheet, folded along its creases. Use it when a state can’t be reached one fold at a time.",
+      "sheet": "Takes the pattern’s outline as the sheet the sequence starts from: any convex shape of 3 to 8 sides. Its creases are not imported; use Import CP to fold from them.",
+      "sheetStartsOver_one": "The sequence starts over: its {{count}} step is cleared. Undo brings it back.",
+      "sheetStartsOver_other": "The sequence starts over: its {{count}} steps are cleared. Undo brings them back.",
       "update": "Updates this Collapse step. Later steps and branches are kept and replayed; affected folds are marked Changed or Broken.",
       "why": "Use it when the next state can’t be reached one fold at a time."
     },
@@ -409,6 +412,19 @@
         "text": "Fold imports crease patterns on a square or rectangle sheet. This one’s sheet is another shape.",
         "title": "Square and rectangle sheets only"
       },
+      "sheetNotConvex": {
+        "text": "The pattern’s outline has a corner that points into the paper. Fold starts from sheets whose every corner points out: a square, a rectangle, a regular polygon, or any other convex shape.",
+        "title": "The sheet bends inward"
+      },
+      "sheetSides": {
+        "text_one": "Fold starts from sheets of 3 to 8 sides. This outline has {{count}} side.",
+        "text_other": "Fold starts from sheets of 3 to 8 sides. This outline has {{count}} sides.",
+        "title": "Sheets of 3 to 8 sides only"
+      },
+      "sheetSideShort": {
+        "text": "One side of the pattern’s outline is too short for Fold to tell its corners apart. Straighten or remove it, then import the sheet again.",
+        "title": "A side too short to fold"
+      },
       "unreadable": {
         "text": "The file could not be read as a {{extension}} crease pattern.",
         "title": "Not a crease pattern"
@@ -427,13 +443,15 @@
       "preliminaryBase": "Square base",
       "waterbombBase": "Waterbomb base"
     },
+    "sheetTitle": "Import starting sheet",
     "title": "Import crease pattern",
     "updateTitle": "Update from CP",
     "working": {
       "figure": "Importing Edit’s folded figure…",
       "file": "Importing {{name}}…",
       "projectCp": "Resolving the project crease pattern…",
-      "sample": "Importing the sample…"
+      "sample": "Importing the sample…",
+      "sheet": "Reading the sheet…"
     }
   },
   "foldWarning": {
@@ -789,7 +807,7 @@
         "exportLinked": "Export style · linked",
         "title": "Style"
       },
-      "stepsHint": "References only",
+      "stepsHintFold": "References and Fold",
       "stepsTitle": "Steps",
       "unsaved": {
         "custom": "This style isn’t saved as a preset. Applying {{next}} replaces it.",

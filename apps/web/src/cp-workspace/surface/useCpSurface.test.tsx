@@ -223,16 +223,40 @@ describe('useCpSurface camera', () => {
     mount({ contentBounds: { minX: -400, minY: 0, maxX: 100, maxY: 100 }, keepInViewKey: 'step-3' });
     expect(zoom()).toBe(refitted);
 
-    // Once the user has zoomed, content leaving the view leaves the camera theirs.
+    // Once the user has zoomed, their view stays while the new content mostly shows in it —
+    // x −168…118, y −93…193 shows now — even with a sliver of it off the edge.
     act(() => surface().controls.zoomIn());
     const theirs = zoom();
-    mount({ contentBounds: { minX: 0, minY: -300, maxX: 100, maxY: 100 }, keepInViewKey: 'step-4' });
+    mount({ contentBounds: { minX: 0, minY: -100, maxX: 100, maxY: 100 }, keepInViewKey: 'step-4' });
     expect(zoom()).toBe(theirs);
+
+    // Content that would arrive mostly off screen is fitted, however the user left the camera.
+    mount({ contentBounds: { minX: 300, minY: 0, maxX: 400, maxY: 100 }, keepInViewKey: 'step-5' });
+    expect(zoom()).toBeCloseTo((400 / 100) * 0.7);
 
     // Fit hands the camera back: the next content that leaves the view is fitted again.
     act(() => surface().controls.fit());
-    mount({ contentBounds: { minX: 0, minY: 0, maxX: 600, maxY: 100 }, keepInViewKey: 'step-5' });
+    mount({ contentBounds: { minX: 0, minY: 0, maxX: 600, maxY: 100 }, keepInViewKey: 'step-6' });
     expect(zoom()).toBeCloseTo((400 / 600) * 0.7);
+  });
+
+  it('keeps a view zoomed in on part of the content, and judges a moved camera by the content’s own extent', () => {
+    const zoom = () => surface().cssPerUserUnit();
+    const square: UserBounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    mount({ contentBounds: square, keepInViewKey: 'step-1' });
+    // Zoomed far in on the square's middle: it fills the screen, so a new step keeps the view.
+    for (let press = 0; press < 6; press += 1) act(() => surface().controls.zoomIn());
+    const close = zoom();
+    mount({ contentBounds: square, keepInViewKey: 'step-2' });
+    expect(zoom()).toBe(close);
+
+    // A frame that still covers the view, round content that has gone: what must show is the content.
+    mount({
+      contentBounds: { minX: -100, minY: -100, maxX: 1000, maxY: 200 },
+      keepInViewBounds: { minX: 800, minY: 0, maxX: 1000, maxY: 100 },
+      keepInViewKey: 'step-3',
+    });
+    expect(zoom()).toBeCloseTo((400 / 1100) * 0.7);
   });
 
   it('keeps nothing in view without a key, as before', () => {

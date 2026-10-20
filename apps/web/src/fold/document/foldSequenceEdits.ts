@@ -25,8 +25,11 @@
 import { foldReturnPath } from './foldReturn';
 import { sameSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import { xmlText } from '../../lib/xmlEscape';
+import { snapshotDocumentPaperStyle, type DocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
+import { paperStyleEquals } from '../../lib/paper/paperStyle';
 import { canonicalJson, foldPaperKey, foldPathDigest } from './foldDigest';
 import {
+  FOLD_DEFAULT_PAPER_STYLE,
   isKnownSpread,
   isLockedStep,
   randomFoldId,
@@ -222,6 +225,21 @@ export function setFoldPaperShape(document: FoldSequenceDocument, shape: FoldPap
   if (foldPaperKey(paper) === foldPaperKey(document.paper)) return document;
   const { sheetMarks: _marks, ...rest } = document;
   return { ...rest, paper, steps: [] };
+}
+
+/**
+ * Set the paper style the sequence is drawn in, keeping its steps: a style
+ * paints, it never folds. A style drawn the same as the one it has changes
+ * nothing — a carried newer style is dropped once another is chosen.
+ */
+export function setFoldPaperStyle(document: FoldSequenceDocument, style: DocumentPaperStyle): FoldSequenceDocument {
+  const next = snapshotDocumentPaperStyle(style);
+  const current = document.style ?? FOLD_DEFAULT_PAPER_STYLE;
+  const samePreset = ('preset' in next ? next.preset : null) === ('preset' in current ? current.preset : null);
+  if (samePreset && paperStyleEquals(next.style, current.style) && !document.carried?.style) return document;
+  const { style: _carried, ...carried } = document.carried ?? {};
+  const { carried: _previous, ...rest } = document;
+  return { ...rest, style: next, ...(Object.keys(carried).length > 0 ? { carried } : {}) };
 }
 
 /** Set the sequence's title; surrounding space is dropped, and the same title changes nothing. */

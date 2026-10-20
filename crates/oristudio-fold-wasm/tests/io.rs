@@ -1012,3 +1012,79 @@ fn a_path_exports_as_one_fold_file_with_a_frame_per_state() {
         Some("unknown_state")
     );
 }
+
+/// A FOLD file of `corners` as its border, and `creases` (a, b, assignment) besides.
+fn fold_file(corners: &[Point], creases: &[(Point, Point, &str)]) -> Vec<u8> {
+    let mut vertices: Vec<Point> = corners.to_vec();
+    let mut edges: Vec<[usize; 2]> = (0..corners.len())
+        .map(|i| [i, (i + 1) % corners.len()])
+        .collect();
+    let mut assignments: Vec<&str> = vec!["B"; corners.len()];
+    for &(a, b, assignment) in creases {
+        vertices.push(a);
+        vertices.push(b);
+        edges.push([vertices.len() - 2, vertices.len() - 1]);
+        assignments.push(assignment);
+    }
+    json!({
+        "file_spec": 1.1,
+        "frame_classes": ["creasePattern"],
+        "vertices_coords": vertices,
+        "edges_vertices": edges,
+        "edges_assignment": assignments,
+    })
+    .to_string()
+    .into_bytes()
+}
+
+#[test]
+fn import_sheet_gives_the_border_whatever_the_creases() {
+    let fold = CpFile::of(CpFormat::Fold);
+    let sheet = |bytes: &[u8]| json_of(&oristudio_fold_wasm::io::starting_sheet(fold, bytes));
+    // A square with a crease no fold could make: the sheet all the same.
+    let square = fold_file(
+        &[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+        &[([0.2, 0.2], [0.3, 0.9], "M")],
+    );
+    assert_eq!(
+        sheet(&square),
+        json!({ "status": "ok", "sheet": { "shape": "square" } })
+    );
+    // A hexagon: a polygon, counter-clockwise in the unit frame.
+    let h = 3f64.sqrt() / 2.0;
+    let hexagon = fold_file(
+        &[
+            [-1.0, 0.0],
+            [-0.5, -h],
+            [0.5, -h],
+            [1.0, 0.0],
+            [0.5, h],
+            [-0.5, h],
+        ],
+        &[],
+    );
+    let found = sheet(&hexagon);
+    assert_eq!(found["status"], "ok");
+    assert_eq!(found["sheet"]["shape"], "polygon");
+    let points: Vec<Point> =
+        serde_json::from_value(found["sheet"]["points"].clone()).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(points.len(), 6);
+    assert!(convex::signed_area(&points) > 0.0);
+    // An L is no sheet the engine folds; a file that does not read is no pattern.
+    let ell = fold_file(
+        &[
+            [0.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 1.0],
+            [1.0, 1.0],
+            [1.0, 2.0],
+            [0.0, 2.0],
+        ],
+        &[],
+    );
+    assert_eq!(sheet(&ell)["refusal"]["code"], "sheet_not_convex");
+    assert_eq!(
+        sheet(b"not a fold file")["refusal"]["code"],
+        "import_unreadable"
+    );
+}

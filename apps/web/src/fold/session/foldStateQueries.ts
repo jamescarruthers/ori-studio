@@ -1,8 +1,8 @@
 /**
  * The pure queries every Fold surface asks of a landed state, one function
  * each, so the session asks the engine once per state however many surfaces
- * want the answer (`FoldSession.query`): the canvas and the step playback
- * read the same scene, the strip builds its frames from it, and the Step pane
+ * want the answer (`FoldSession.query`): the canvas reads the scene, the
+ * strip builds its frames from it, and the Step pane
  * and the tool's preview read the same step summary — a committed preview's
  * answers are the committed step's.
  */
@@ -10,9 +10,7 @@ import { canonicalJson } from '../document/foldDigest';
 import type { FoldChoices, FoldModelLine, SheetPoint } from '../document/foldSequenceDocument';
 import { foldStepSummaryAnswer } from '../engine/foldEnginePreview';
 import {
-  isFoldParentReleased,
   type FoldActed,
-  type FoldActionGeometry,
   type FoldEngineOp,
   type FoldEngineOutcome,
   type FoldLandmarks,
@@ -43,22 +41,6 @@ export const FOLD_STEP_SUMMARY_QUERY: FoldStateCall<FoldStepSummarised> = async 
     }
   );
   return foldStepSummaryAnswer(read);
-};
-
-/**
- * The picture of the step that landed a state, on its parent, wrapped so an
- * answer of "none" (a turn, a rotation, an import) is told from no answer
- * yet. A fold whose parent is no longer held has none either, and its motion
- * crossfades.
- */
-export const FOLD_STEP_ACTION_QUERY: FoldStateCall<{ action: FoldActionGeometry | null }> = async (engine, state) => {
-  try {
-    const acted = await engine.stepAction(state);
-    return { action: acted.status === 'ok' ? acted.action : null };
-  } catch (error) {
-    if (isFoldParentReleased(error)) return { action: null };
-    throw error;
-  }
 };
 
 /**

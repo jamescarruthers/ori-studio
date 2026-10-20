@@ -1,22 +1,24 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, Layers2, PenLine } from 'lucide-react';
+import { Layers, PenLine } from 'lucide-react';
 import type { LayerSpreadToggle } from '../../../cp-workspace/folded/layerSpreadControls';
 import type { FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/ViewportToolbar';
+import { FoldFlatCreasesIcon } from './FoldFlatCreasesIcon';
 
 /**
  * The floating bar along the bottom of the Fold canvas (plan D14, the
  * design's): the shared zoom cluster and Fit, for both panes at once, the
  * panes' two display switches — the step's own creases drawn as its
- * instruction, and the precreases — beside them the step's Spread Layers
+ * instruction (a pen), and the flat creases (a creased sheet,
+ * `FoldFlatCreasesIcon`) — beside them the step's Spread Layers (the
+ * Diagram's layers icon)
  * (`spread`, the Step pane's switch: a setting of the step, not of the view),
- * the step's transport (`playback`), and a slot for Send to Edit, which the
- * panel supplies.
+ * and a slot for Send to Edit, which the panel supplies.
  *
  * A phone's bar leads with the canvas's own controls (`phoneControls`: the
- * tools and the pane switch), then the transport; the display switches and
- * Fit are in its `⋯` menu, the zoom left to a pinch.
+ * tools and the pane switch); the display switches and Fit are in its `⋯`
+ * menu, the zoom left to a pinch.
  */
 export function FoldViewportToolbar({
   zoomPercent,
@@ -24,7 +26,6 @@ export function FoldViewportToolbar({
   display,
   onDisplay,
   spread = null,
-  playback,
   phoneControls,
   sendToEdit,
 }: {
@@ -39,8 +40,6 @@ export function FoldViewportToolbar({
   onDisplay: (display: FoldPaneDisplay) => void;
   /** The step on screen's Spread Layers (`useFoldStepSpread`); null at the flat sheet, which has none. */
   spread?: LayerSpreadToggle | null;
-  /** The step's transport controls (`FoldPlaybackControls`). */
-  playback?: ReactNode;
   /** A phone's: the tools and the pane switch (`FoldPhoneBarControls`), at the head of the bar. */
   phoneControls?: ReactNode;
   sendToEdit?: ReactNode;
@@ -62,16 +61,19 @@ export function FoldViewportToolbar({
           icon: <PenLine size={14} />,
           checked: display.stepCreases,
           pinned: true,
-          // A phone's bar is the tools' and the transport's: this goes to its menu.
+          // A phone's bar is the tools': this goes to its menu.
           onPhone: 'collapse',
           onSelect: () => onDisplay({ ...display, stepCreases: !display.stepCreases }),
         },
         {
           kind: 'action',
           id: 'precreases',
-          label: t('panels:fold.canvas.precreases', 'Precreases'),
-          title: t('panels:fold.canvas.precreasesTitle', 'Draw the flat creases: precreases, and folds undone'),
-          icon: <Layers size={14} />,
+          label: t('panels:fold.canvas.flatCreases', 'Flat creases'),
+          title: t(
+            'panels:fold.canvas.flatCreasesTitle',
+            'Draw the flat creases on the paper: precreases, and folds unfolded again'
+          ),
+          icon: <FoldFlatCreasesIcon size={14} />,
           checked: display.precreases,
           pinned: true,
           onPhone: 'collapse',
@@ -88,7 +90,8 @@ export function FoldViewportToolbar({
                   'panels:fold.canvas.spreadLayersTitle',
                   'Spread the folded layers apart, as a diagram draws them, on this step and the ones after it'
                 ),
-          icon: <Layers2 size={14} />,
+          // The Diagram's Spread Layers icon: one verb, one icon.
+          icon: <Layers size={14} />,
           checked: spread?.pressed ?? false,
           // The flat sheet has no step to set it on, and no layers to spread.
           disabled: !spread || spread.disabled,
@@ -98,7 +101,6 @@ export function FoldViewportToolbar({
         },
       ],
     },
-    { id: 'playback', items: [playback ? { kind: 'node', id: 'fold-playback', node: playback } : null] },
     { id: 'send', items: [sendToEdit ? { kind: 'node', id: 'send-to-edit', node: sendToEdit } : null] },
   ];
   return (
@@ -110,7 +112,7 @@ export function FoldViewportToolbar({
       fitToView={camera.fit}
       setZoomLevel={(scale) => camera.setZoomPercent(scale * 100)}
       groups={groups}
-      // A phone's bar is the canvas's tools and the step's transport, with
+      // A phone's bar is the canvas's tools, with
       // the zoom buttons left to a pinch, and Fit and the display switches in
       // the overflow menu. Inline, they wrapped the bar onto a second row.
       phoneViewControls="collapsed"

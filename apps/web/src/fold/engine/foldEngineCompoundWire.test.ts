@@ -8,7 +8,6 @@ import {
   compoundStoredChoices,
   foldedLineOf,
   isFoldCompoundOp,
-  stepMotionLegsOf,
   type FoldCompoundFamily,
   type FoldCompoundReport,
   type FoldCompoundReportBase,
@@ -114,15 +113,6 @@ describe('the compound folds’ one wire', () => {
     expect(compoundFamilyOf({ kind: 'toString' })).toBeNull();
   });
 
-  it('reads every family’s legs through one accessor', () => {
-    for (const family of Object.keys(REPORTS) as FoldCompoundFamily[]) {
-      const report = REPORTS[family]();
-      expect(stepMotionLegsOf(report)).toBe(report.motion);
-      expect(stepMotionLegsOf(report)?.legs[0]?.groups[0]?.faces).toEqual([family.length]);
-    }
-    expect(stepMotionLegsOf(undefined)).toBeNull();
-    expect(stepMotionLegsOf(null)).toBeNull();
-  });
 
   it('names the line a family folded along and its moving side, a crimp’s first, none for a vertex fold', () => {
     expect(compoundFoldLineOf(REPORTS.reverse())).toEqual({ line: LINE, side: 'negative' });

@@ -28,8 +28,12 @@ import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { randomId, type IdFactory } from '../../lib/documentFile';
-import { builtInPaperPreset, type BuiltInPaperPresetId } from '../../lib/paper/paperPresets';
-import type { PaperStyle } from '../../lib/paper/paperStyle';
+import {
+  DEFAULT_DOCUMENT_PAPER_STYLE,
+  snapshotDocumentPaperStyle,
+  type DocumentPaperStyle,
+  type ResolvedDocumentPaperStyle,
+} from '../../lib/paper/documentPaperStyle';
 import { sameTurnKind, type TurnKind, type TurnRotation } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
@@ -172,19 +176,18 @@ export {
 export { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE };
 
 /**
- * The paper style every step is painted in. A built-in with its saved values,
- * or a resolved style: a user preset or the export slot is resolved when it is
- * chosen, so a printed diagram never depends on the viewer's own settings.
+ * The paper style every step is painted in: a document's own paper style
+ * (`lib/paper/documentPaperStyle`), as a Fold sequence keeps one too. A
+ * built-in with its saved values, or a resolved style: a user preset or the
+ * export slot is resolved when it is chosen, so a printed diagram never
+ * depends on the viewer's own settings.
  */
-export type ResolvedDiagramStyle = { preset: string; style: PaperStyle } | { style: PaperStyle };
+export type ResolvedDiagramStyle = ResolvedDocumentPaperStyle;
 /** The id-only form is accepted from pre-launch files and callers. */
-export type DiagramStyle = ResolvedDiagramStyle | { preset: BuiltInPaperPresetId; style?: never };
+export type DiagramStyle = DocumentPaperStyle;
 
 /** Freeze a legacy id-only style when saving or explicitly choosing it. */
-export function snapshotDiagramStyle(style: DiagramStyle): ResolvedDiagramStyle {
-  if (style.style) return style;
-  return { preset: style.preset, style: builtInPaperPreset(style.preset).style };
-}
+export const snapshotDiagramStyle: (style: DiagramStyle) => ResolvedDiagramStyle = snapshotDocumentPaperStyle;
 
 /** A quarter-turn count, clockwise. */
 export type QuarterTurns = 0 | 1 | 2 | 3;
@@ -1568,7 +1571,7 @@ export const FIRST_PAGE_NUMBER_RANGE = { min: 1, max: 9999 } as const;
 /** The flow band's width, mm: from a thin line to three times the default. */
 export const PATH_WIDTH_MM_RANGE = { min: 4, max: 60 } as const;
 
-export const DEFAULT_DIAGRAM_STYLE: DiagramStyle = snapshotDiagramStyle({ preset: 'diagram' });
+export const DEFAULT_DIAGRAM_STYLE: DiagramStyle = DEFAULT_DOCUMENT_PAPER_STYLE;
 
 /**
  * The Han style a new diagram starts in, from the author's interface language:

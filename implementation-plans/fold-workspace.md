@@ -396,11 +396,22 @@ FoldSequenceDocument { formatVersion: 1, id: 'fold-<uuid>', title,
 - **Shapes:**
   - rectangle `aspect` is normalised to longer side 1 (the design's presets
     1:√2, 3:4, 2:1, and custom w:h with both positive);
-  - a polygon is stored as points (regular, 3–8 sides, first vertex at −π/2);
+  - a polygon is stored as points (convex, 3–8 sides; the regular ones the
+    Paper pane used to offer start at −π/2);
   - the side count is derived from the points.
 - **Changing the shape** of a sequence with steps replaces `paper.shape` and
   empties `steps`, as one undoable edit. It never appends a hidden sequence.
   Whether it asks first is a UI call.
+- **Since 2026-10-20 the shape is changed only by Import starting sheet…**
+  (the Paper pane's Square / Rectangle / Regular polygon choices are gone; the
+  owner: "you can't edit the polygon or anything"). It opens the Import CP
+  dialog in a sheet mode that reads only the pattern's border loop
+  (`oristudio_fold::starting_sheet`, `import_sheet` over the bridge): a
+  rectangle becomes `square`/`rectangle`, any other convex outline of 3–8
+  sides a `polygon`; the creases are ignored, and a non-convex outline, a side
+  too short to tell its corners apart, or more than 8 sides is refused in the
+  dialog before anything is committed. Files with the old regular polygons
+  read unchanged.
 - **Lenient reading for a tree:**
   - a node with a malformed structure (id or parent) is dropped with its
     subtree;
@@ -783,13 +794,24 @@ The UI may auto-include or explain.
 | `[` / `]` | Aliases for ←/→ (the Diagram's) |
 | ↑/↓ | The active step's branch, as References' ways |
 | Shift+←/→ | Candidate roots |
-| Space | Play the step |
 | Enter | Commit; declines when a focused control owns the key (Diagram precedent) |
 | Escape | Through the viewport cancel ladder |
 
-- Rotate takes another key.
-- Axioms on bare digits would shadow the viewport's digit keys; the UI designer
-  picks Shift+digits or accepts the shadowing.
+The tools, under the left hand (owner, 2026-10-20: "mountain valley,
+precrease … A, S, D", as Edit's line types put mountain and valley):
+
+| Key | Tool | Key | Tool | Key | Tool |
+|---|---|---|---|---|---|
+| A | Mountain fold | Q | Pleat | Z | Free line |
+| S | Valley fold | W | Swivel fold | X | Swap moving side |
+| D | Precrease | E | Precrease extent | C | Existing crease |
+| F | Reverse fold | R | Rotate | V | Divide line |
+| G | Squash fold | T | Turn over | B | Rabbit ear (Edit's Ctrl+B) |
+| Shift+F | Crimp | Shift+E | Unfold to step | Shift+Z/X/C | Open sink / Closed sink / Unsink |
+| Shift+G | Petal fold | Shift+R | Repeat on the other side | 1–7 | Axioms 1–7 |
+
+- Space played the step until the animation was removed (D15).
+- Axioms on bare digits shadow the viewport's digit keys; accepted.
 - The scope declines while focus owns the arrow keys, as the Diagram's does.
 
 **Interaction cost**, in three tiers:
@@ -817,6 +839,13 @@ The UI may auto-include or explain.
   word order in ja/ko.
 
 ### D15 — Animation
+
+> **Removed before launch (owner, 2026-10-20):** the step animation did not
+> work right and is out of scope. The Fold canvas has no transport, no Space
+> to play, and no `fold step played` event; moving to another step shows it.
+> The References workspace keeps its own fold playback (`lib/foldMotion`).
+> The engine still reports compound folds' motion legs on the wire; nothing
+> plays them. What follows is the design as it was.
 
 - **A plain fold is two rigid groups.** Pose the `PaperScene` itself:
   - rotate the moving faces' rings about ℓ;
@@ -931,7 +960,6 @@ values; this table is the plan's summary of it.
 | Event | Properties |
 |---|---|
 | `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth\|top, via: axiom\|crease\|free}` (`top`, the default top flap kept, since 2026-10-13); a turn, a rotation or a vertex fold (`squash` to `swivel`) carries `op_kind` alone |
-| `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}`, and `op_kind: repeat` on a Repeat's refusal |
 | `fold unfold rebuilt` / `fold repeat rebuilt` | `{}`: a saved Unfold or Repeat updated in place, not a step added |
 | `fold spread changed` | `{action: spread_on\|spread_off\|spread_kind\|spread_amount\|spread_direction\|spread_keep\|spread_skew\|spread_axis, via: step_pane\|canvas_bar}`, plus the Diagram's bucketed spread properties when the layers stay spread |
@@ -939,7 +967,7 @@ values; this table is the plan's summary of it.
 | `fold order resolved` | `{result: accepted\|cancelled, source: tool\|cp, count_bucket}` |
 | `fold free line snapping changed` | `{state: on\|off}` |
 | `fold mark added` | `{divide_mode: count\|ratio}`: the Divide line |
-| `fold sheet changed` | `{setting: shape\|start_side, sheet_shape: square\|rectangle\|polygon, start_side: front\|back}` |
+| `fold sheet changed` | `{setting: shape\|start_side, sheet_shape: square\|rectangle\|polygon, start_side: front\|back, origin?}` (`origin`, D16's enum, on a shape from Import starting sheet; since 2026-10-20) |
 | `fold sequence sent to edit` | `{}` (`variant` dropped 2026-10-12) |
 | `fold cp imported` | `{origin, action: insert\|update}` (D16's enum, plus `project_cp`) |
 | `fold step sent to diagram` | `{via: fold\|diagram_browser, scope: one\|many, merge_precreases: on\|off, merged: none\|some}`; each new step and turn also counts `diagram step added` / `diagram turn added` with `via: fold` |

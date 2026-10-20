@@ -1,7 +1,7 @@
 /*
- * The Fold Paper tab (FoldPaperPane.tsx): the paper's colours with the way to
- * Settings ▸ Paper, then the sheet. The rows are the shared field rows; this
- * places the tab's own buttons, notice and swatches.
+ * The Fold Paper tab (FoldPaperPane.tsx): the sequence's paper style, then
+ * the sheet. The rows are the shared field rows; this places the tab's own
+ * notice and swatches.
  */
 .pane {
   display: flex;
@@ -9,12 +9,10 @@
   min-width: 0;
 }
 
-/* "Edit paper style…" and the colours' reset, under the colour rows. */
-.styleActions {
+/* Import starting sheet…, under the shape it replaces. */
+.sheetActions {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2) var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-2);
 }
 
 .notice {

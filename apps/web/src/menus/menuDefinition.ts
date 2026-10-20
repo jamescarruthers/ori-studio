@@ -54,9 +54,10 @@ function shortcut(id: MenuActionId, resolution?: ShortcutResolutionInput): strin
 
 /**
  * The Fold menu's rows a key of the `fold` scope also runs — the same verb by
- * another route (`fold/canvas/useFoldCanvasShortcuts`): V, M and P take the
- * fold in hand as the menu's kinds arm it, T adds the turn-over its row adds,
- * and R takes the Rotate tool as its row does. Their hint is that key, as the user's layout
+ * another route (`fold/canvas/useFoldCanvasShortcuts`, `fold/sequence/foldKeys`):
+ * S, A and D take the fold in hand as the menu's kinds arm it, T adds the
+ * turn-over its row adds, R takes the Rotate tool as its row does, and
+ * Shift+E and Shift+R run Unfold to step and Repeat through their rows. Their hint is that key, as the user's layout
  * resolves it. The hint only: the native menu reads its accelerators by the
  * row's own id, which binds nothing, so a bare letter is never taken from a
  * text field there.
@@ -67,7 +68,6 @@ const FOLD_ROW_KEYS: Partial<Record<MenuActionId, FoldShortcutId>> = {
   'fold.precrease': 'fold.toolPrecrease',
   'fold.turn-over': 'fold.turnOver',
   'fold.rotate': 'fold.rotate',
-  // Unbound by default: a key the user gives the tool is shown here.
   'fold.unfold-to': 'fold.toolUnfoldTo',
   'fold.repeat': 'fold.toolRepeat',
 };

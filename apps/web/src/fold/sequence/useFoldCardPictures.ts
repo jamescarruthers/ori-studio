@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
-import { useInheritedPaperStyle } from '../../cp-workspace/paper/objectPaperStyle';
+import { useFoldPaperStyle } from './useFoldPaperStyle';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { reportError } from '../../monitoring';
 import { foldSession } from '../../store/workspaceStore/foldSession';
@@ -266,8 +266,8 @@ interface ShownPicture {
 }
 
 /**
- * A card's picture, in the style the app shows paper in and under the panes'
- * display switches: a data URL; null for a state with nothing to draw, no
+ * A card's picture, in the sequence's paper style (`useFoldPaperStyle`) and
+ * under the panes' display switches: a data URL; null for a state with nothing to draw, no
  * state, or a paint that failed; undefined while it is being painted. Asks
  * for it as the card mounts, and again when the style or the switches change.
  *
@@ -277,7 +277,7 @@ interface ShownPicture {
  */
 export function useFoldCardPicture(source: FoldCardPictureSource | null): string | null | undefined {
   const session = foldSession();
-  const style = useInheritedPaperStyle();
+  const style = useFoldPaperStyle();
   const display = useFoldPaneDisplay();
   const look = foldStatePictureKey(style, display);
   const key = source ? pictureKey(source, look) : null;

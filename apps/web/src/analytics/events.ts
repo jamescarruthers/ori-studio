@@ -907,10 +907,12 @@ export type PaperPresetExportSource = 'button' | 'card';
 /**
  * Where an edit to the app-wide paper style was made: Settings ▸ Paper, the
  * Simulate options pane (docked, or in the touch View drawer — the name
- * `view drawer opened` gives it), the Simulate viewport's own verbs, its
- * lighting key binding and context-menu row, or the Fold workspace's Paper tab.
+ * `view drawer opened` gives it), the Simulate viewport's own verbs, or its
+ * lighting key binding and context-menu row. (The Fold workspace's Paper tab
+ * edited the colours until 2026-10-20, as `fold`; it picks a sequence's own
+ * style now, counted as `fold paper style changed`.)
  */
-export type PaperStyleEditSource = 'settings' | 'simulator-view-controls' | 'simulator' | 'fold';
+export type PaperStyleEditSource = 'settings' | 'simulator-view-controls' | 'simulator';
 
 /**
  * The style a slot runs, for the population rather than for an edit: a
@@ -1333,21 +1335,6 @@ export const ANALYTICS_EVENTS = {
    */
   referencesFoldPlayed: 'references fold played',
   /**
-   * A step of a Fold sequence was set moving on the folded pane: replayed from
-   * its parent's picture to its landing. `trigger` is `user` (the Play button,
-   * Space) or `auto` (arriving at a step under auto-play); `step_kind` is the
-   * step's kind — `valley`, `mountain`, `precrease`, `unfold`, `refold`,
-   * `turn`, `rotate`, `import` (Import CP, a crossfade), or a compound
-   * fold's — `inside_reverse`, `outside_reverse`, `crimp`, `tuck`, `squash`,
-   * `petal`, `rabbit_ear`, `swivel`, `open_sink`, `closed_sink`, `unsink`
-   * (each plays the engine's motion legs; one whose legs are not in yet
-   * crossfades, as `import` does); and on a `user`
-   * play, `via` is how — `space`, `button`, or `replay` for a step already
-   * played through, by either. A pause, a scrub or a Step is not counted;
-   * carrying on after a pause is. Nothing about the step itself.
-   */
-  foldStepPlayed: 'fold step played',
-  /**
    * The reader looked at the other ways to fold a card of the sequence and
    * moved on: once per visit to a card on which they changed the way, sent as
    * they leave it, and never again for the same card of the same plan unless
@@ -1758,6 +1745,12 @@ export const ANALYTICS_EVENTS = {
   foldMarkAdded: 'fold mark added',
   /** The Paper pane's sheet changed: which setting, and the sheet's shape and starting side after it. */
   foldSheetChanged: 'fold sheet changed',
+  /**
+   * The Paper pane's Style picked another paper style for the sequence:
+   * `style` as the Diagram's Page pane names its choice — a built-in by id,
+   * the Settings export style, or `custom` for a saved preset, never its name.
+   */
+  foldPaperStyleChanged: 'fold paper style changed',
   /**
    * A Fold step's layer spread changed (Wave 5): turned on or off, its kind,
    * or one of its values — from the Step pane's Spread section or the

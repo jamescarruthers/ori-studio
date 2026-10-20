@@ -208,6 +208,8 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return foldToolLabel(t, 'inside-reverse');
     case 'fold.toolCrimp':
       return foldToolLabel(t, 'crimp');
+    case 'fold.toolPleat':
+      return foldToolLabel(t, 'pleat');
     // The vertex folds.
     case 'fold.toolSquash':
       return foldToolLabel(t, 'squash');
@@ -261,9 +263,6 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:fold.key.nextRoot', 'Next root');
     case 'fold.commit':
       return t('tools:fold.key.commit', 'Commit fold');
-    // The Fold workspace's playback.
-    case 'fold.playStep':
-      return t('tools:fold.playStep', 'Play Step');
     // The Pages view's placement keys.
     case 'diagram.nudgePlacementLeft':
       return t('tools:diagram.nudgePlacementLeft', 'Nudge Placement Left');

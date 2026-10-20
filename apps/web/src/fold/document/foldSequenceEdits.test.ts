@@ -15,10 +15,12 @@ import {
   deleteFoldStep,
   setFoldMarks,
   setFoldPaperShape,
+  setFoldPaperStyle,
   setFoldSequenceTitle,
   setFoldStartSide,
   setFoldStepNote,
 } from './foldSequenceEdits';
+import { builtInPaperPreset } from '../../lib/paper/paperPresets';
 import { sequenceOf, sequentialIds, step, valleyAt, writtenSequence } from './foldSequence.fixtures';
 
 const locked: FoldLockedStep = { id: 'l', parent: 'a', unknown: { id: 'l', parent: 'a', op: { kind: 'sink' } } };
@@ -163,6 +165,31 @@ describe('setFoldPaperShape', () => {
   it('changes nothing for the same shape', () => {
     const original = document();
     expect(setFoldPaperShape(original, { kind: 'square' })).toBe(original);
+  });
+});
+
+describe('setFoldPaperStyle', () => {
+  it('draws the sequence in another style and keeps its steps', () => {
+    const original = document();
+    const changed = setFoldPaperStyle(original, { preset: 'default' });
+    expect(changed.style).toEqual({ preset: 'default', style: builtInPaperPreset('default').style });
+    expect(changed.steps).toBe(original.steps);
+    expect(changed.paper).toBe(original.paper);
+  });
+
+  it('changes nothing for the style it has, the default included', () => {
+    const original = document();
+    // A sequence with no style is drawn in the default, the Diagram style: picking it changes nothing.
+    expect(setFoldPaperStyle(original, { preset: 'diagram' })).toBe(original);
+    const styled = setFoldPaperStyle(original, { preset: 'default' });
+    expect(setFoldPaperStyle(styled, { preset: 'default' })).toBe(styled);
+  });
+
+  it('lets go of a newer build’s style once another is chosen', () => {
+    const held = { ...document(), carried: { style: { preset: 'satin' }, other: 1 } };
+    const changed = setFoldPaperStyle(held, { preset: 'diagram' });
+    expect(changed.carried).toEqual({ other: 1 });
+    expect(changed.style).toEqual({ preset: 'diagram', style: builtInPaperPreset('diagram').style });
   });
 });
 

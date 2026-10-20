@@ -336,6 +336,9 @@
       "afterStep": "Fügt nach Schritt {{number}} einen Schritt hinzu; sein gefalteter Zustand wird aus den Falten berechnet.",
       "branch": "Er beginnt einen neuen Zweig.",
       "empty": "Beginnt die Folge auf dem Blatt des Faltmusters, entlang seiner Falten gefaltet. Nutze es, wenn sich ein Zustand nicht Faltung für Faltung erreichen lässt.",
+      "sheet": "Übernimmt den Umriss des Faltmusters als Blatt, mit dem die Folge beginnt: jede konvexe Form mit 3 bis 8 Seiten. Seine Falten werden nicht importiert; nutze „CP importieren“, um aus ihnen zu falten.",
+      "sheetStartsOver_one": "Die Folge beginnt von vorn: ihr {{count}} Schritt wird entfernt. Rückgängig holt ihn zurück.",
+      "sheetStartsOver_other": "Die Folge beginnt von vorn: ihre {{count}} Schritte werden entfernt. Rückgängig holt sie zurück.",
       "update": "Aktualisiert diesen Zusammenfalten-Schritt. Spätere Schritte und Verzweigungen bleiben erhalten und werden erneut berechnet; betroffene Faltungen werden als geändert oder nicht mehr ausführbar markiert.",
       "why": "Nutze es, wenn sich der nächste Zustand nicht Faltung für Faltung erreichen lässt."
     },
@@ -409,6 +412,19 @@
         "text": "Importiert werden Faltmuster auf einem quadratischen oder rechteckigen Blatt. Das Blatt dieses Musters hat eine andere Form.",
         "title": "Nur quadratische und rechteckige Blätter"
       },
+      "sheetNotConvex": {
+        "text": "Der Umriss des Faltmusters hat eine Ecke, die ins Papier zeigt. Falten beginnt mit Blättern, deren Ecken alle nach außen zeigen: ein Quadrat, ein Rechteck, ein regelmäßiges Vieleck oder jede andere konvexe Form.",
+        "title": "Das Blatt biegt sich nach innen"
+      },
+      "sheetSides": {
+        "text_one": "Falten beginnt mit Blättern mit 3 bis 8 Seiten. Dieser Umriss hat {{count}} Seite.",
+        "text_other": "Falten beginnt mit Blättern mit 3 bis 8 Seiten. Dieser Umriss hat {{count}} Seiten.",
+        "title": "Nur Blätter mit 3 bis 8 Seiten"
+      },
+      "sheetSideShort": {
+        "text": "Eine Seite des Umrisses ist zu kurz, als dass Falten ihre Ecken unterscheiden könnte. Begradige oder entferne sie und importiere das Blatt erneut.",
+        "title": "Eine Seite zu kurz zum Falten"
+      },
       "unreadable": {
         "text": "Die Datei konnte nicht als {{extension}}-Faltmuster gelesen werden.",
         "title": "Kein Faltmuster"
@@ -427,13 +443,15 @@
       "preliminaryBase": "Quadratische Grundform",
       "waterbombBase": "Wasserbomben-Grundform"
     },
+    "sheetTitle": "Startblatt importieren",
     "title": "Faltmuster importieren",
     "updateTitle": "Aus CP aktualisieren",
     "working": {
       "figure": "Gefaltetes Modell aus Bearbeiten wird importiert…",
       "file": "{{name}} wird importiert…",
       "projectCp": "Faltmuster des Projekts wird gelöst…",
-      "sample": "Beispiel wird importiert…"
+      "sample": "Beispiel wird importiert…",
+      "sheet": "Blatt wird gelesen…"
     }
   },
   "foldWarning": {
@@ -789,7 +807,7 @@
         "exportLinked": "Exportstil · verknüpft",
         "title": "Stil"
       },
-      "stepsHint": "Nur Referenzen",
+      "stepsHintFold": "Referenzen und Falten",
       "stepsTitle": "Schritte",
       "unsaved": {
         "custom": "Dieser Stil ist nicht als Voreinstellung gespeichert. Wenn du {{next}} anwendest, wird er ersetzt.",
