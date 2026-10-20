@@ -126,13 +126,8 @@ function lineModeGlyph(mode: FoldLineModeId): ReactElement {
         </Glyph>
       );
     case 'crease':
-      // A crease already there, solid, with the fold swinging over it.
-      return (
-        <Glyph>
-          <path d="M3 17 17 3" />
-          <path d="M5 8Q8 4 12 5M10.2 3.9 12 5l-1.1 1.8" />
-        </Glyph>
-      );
+      // A crease already there: the solid line, where a precrease is dashed.
+      return <FoldKindMark kind="crease" size={SIZE} />;
   }
 }
 
@@ -152,9 +147,8 @@ const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
 
 /**
  * Every Fold rail item's icon: a fold's symbol in the control's ink; a line
- * mode's picture of what it locates; Edit's own glyphs for the rabbit ear and
- * for Repeat (Edit's Reflect selection over line); the
- * app's own icons for the tuck, the Divide line, Unfold to step, the model
+ * mode's picture of what it locates; Edit's own glyph for the rabbit ear; the
+ * diagram's repeat symbol for Repeat; the app's own icons for the tuck, the Divide line, Unfold to step, the model
  * verbs (Turn over is the turn-over icon of Edit's Flip and the Diagram's
  * turns), the other vertex folds and the sinks.
  * `compact`: beside text in a toolbar button, at the text's scale, as Edit's
@@ -190,7 +184,7 @@ export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; com
     case 'unfold-to':
       return <Undo2 size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'repeat':
-      return <FoldRepeatGlyph size={SIZE} strokeWidth={1.5} compact={compact} />;
+      return <FoldRepeatGlyph size={compact ? 16 : SIZE} />;
     case 'axiom-1':
     case 'axiom-2':
     case 'axiom-3':

@@ -11,7 +11,7 @@ export function FoldKindMark({
   size = 20,
   strokeWidth = 1.7,
 }: {
-  kind: FoldKind | 'inside-reverse' | 'crimp' | 'squash' | 'swivel';
+  kind: FoldKind | 'inside-reverse' | 'crimp' | 'squash' | 'swivel' | 'crease' | 'repeat';
   size?: number;
   strokeWidth?: number;
 }) {
@@ -31,7 +31,11 @@ export function FoldKindMark({
     >
       {kind === 'valley' && <path d="M5 6 12 18 19 6" />}
       {kind === 'mountain' && <path d="M5 18 12 6 19 18" />}
-      {kind === 'precrease' && <path d="M5 19 19 5" />}
+      {/* A precrease is the fold line, dashed; an existing crease is the line already there, solid. */}
+      {kind === 'precrease' && <path d="M5 19 19 5" strokeDasharray="2.9 2.7" />}
+      {kind === 'crease' && <path d="M5 19 19 5" />}
+      {/* The diagram's repeat symbol: an arrow with a stroke across it. */}
+      {kind === 'repeat' && <path d="M12 3v17.5M6.5 7.5h11M6.5 15l5.5 5.5 5.5-5.5" />}
       {kind === 'crimp' && (
         <>
           <path d="M9 5.5h12M9 18.5h12" />
