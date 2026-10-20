@@ -174,8 +174,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   }, null, inks.accent) : null;
   const foldedTint = resolvingOrder ? orderTint : joinFills(paint.folded.tint, swivelMarks.tint);
   // The crease pattern as Edit's canvas draws one, not as paper.
-  // The step's own fold lines on it in the sequence's diagram-crease pens.
-  const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name, style, inks?.ground ?? null);
+  const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name);
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
   const sheetKey = summary ? summary.sheet.map(([x, y]) => `${x},${y}`).join(';') : 'none';
   const framingKey = `${sequenceId}:${sheetKey}`;

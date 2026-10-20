@@ -60,7 +60,7 @@ export interface PaperStyle {
   valleyFolds: Pen;
   /**
    * A diagram crease is the instruction on a step: fold here, this way.
-   * References steps, Fold's steps (both panes) and the Diagram's draw one.
+   * References steps, Fold's folded pane and the Diagram's draw one.
    * "Crease" and "fold" alone are used
    * interchangeably in origami, so the names carry the distinction — the
    * *diagram* crease is the instruction, the fold is the pattern's line.

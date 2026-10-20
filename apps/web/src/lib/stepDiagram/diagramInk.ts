@@ -620,21 +620,3 @@ export function diagramDashSlot(style: DiagramLineStyleName): number {
 export function diagramDashPatterns(inkCss: number, pens: DiagramPens = DIAGRAM_LINE_INK): number[][] {
   return DIAGRAM_DASH_SLOTS.map((style) => (pens[style].dash ?? []).map((run) => run * inkCss));
 }
-
-/** The least a gap keeps of its width once a round cap's reach is taken out of it, as a share of the stroke. */
-const ROUND_CAP_GAP_FLOOR = 0.5;
-
-/**
- * A stroke's dash as the runs the canvas's stroke program draws, in CSS px:
- * the pen's runs at `inkCss` px per ink. The program draws every dash with
- * butt ends, so a round cap's reach — half the width past each end of each
- * dash — is folded into the runs: each dash a width longer, each gap a width
- * shorter (never closed), which spaces the line as an SVG round-capped dash
- * is. Empty for a solid stroke.
- */
-export function canvasDashRuns(ink: DiagramStrokeInk, inkCss: number): number[] {
-  const runs = (ink.dash ?? []).map((run) => run * inkCss);
-  if (ink.cap !== 'round' || runs.length === 0) return runs;
-  const width = ink.width * inkCss;
-  return runs.map((run, index) => (index % 2 === 0 ? run + width : Math.max(run - width, width * ROUND_CAP_GAP_FLOOR)));
-}

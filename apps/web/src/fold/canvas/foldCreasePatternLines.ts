@@ -12,9 +12,9 @@
  *   (`foldEngineIoSendToEdit`): auxiliary lines, Edit's `Cyan3`, in the ink
  *   and line style Edit draws its auxiliary lines in.
  * - The instruction — the step's own creases and marks, or the ones a
- *   previewed fold would add — is kept apart for the pane to draw over the
- *   pattern in the sequence's diagram-crease pens, as the folded pane draws
- *   a located fold's line (`foldInstructionStrokes`).
+ *   previewed fold would add — is the line a tool is drawing, kept apart for
+ *   the pane to draw as Edit draws a tool's preview: in the crease colour it
+ *   would make, solid (`useFoldCreasePatternStrokes`).
  *
  * Which creases are shown, and which are the instruction, is the pane's one
  * rule (`foldPaneCrease`), shared with the paper picture of the same state
