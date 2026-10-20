@@ -65,6 +65,8 @@ export interface FakeFoldEngineOptions {
   fail?: (op: FoldEngineOp) => { code: string; message: string } | null;
   /** A compound fold's report for a step, landed in place of a plain fold's, as the bridge lands one; null for none. */
   compound?: (op: FoldEngineOp) => FoldCompoundReport | null;
+  /** What a plain fold's report changes from the stock one — an unfold's creases, say; null for none. */
+  report?: (op: FoldEngineOp) => Partial<FoldReport> | null;
 }
 
 const REPORT: FoldReport = {
@@ -142,7 +144,7 @@ const fingerprintOf = (trail: readonly string[]) =>
   foldStateFingerprint({ keys: trail.map((label, k) => `${k}:${label}`) });
 
 /** States that are the labels of the steps that landed them: a step's state is its path, as the engine's is. */
-export function fakeFoldEngine({ refuse, fail, compound }: FakeFoldEngineOptions = {}): FakeFoldEngine {
+export function fakeFoldEngine({ refuse, fail, compound, report: plain }: FakeFoldEngineOptions = {}): FakeFoldEngine {
   const states = new Map<number, readonly string[]>();
   const log: string[] = [];
   let next = 0;
@@ -181,7 +183,7 @@ export function fakeFoldEngine({ refuse, fail, compound }: FakeFoldEngineOptions
     if (code) return refused(code);
     const trail = [...parent, foldOpLabel(op)];
     const folded = compound?.(op) ?? null;
-    const report = op.kind === 'turn' || op.kind === 'rotate' || folded ? null : REPORT;
+    const report = op.kind === 'turn' || op.kind === 'rotate' || folded ? null : { ...REPORT, ...plain?.(op) };
     return {
       status: 'ok' as const,
       state: land(trail),

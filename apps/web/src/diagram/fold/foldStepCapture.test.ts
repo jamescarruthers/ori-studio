@@ -19,7 +19,7 @@ import {
   type FoldCompoundReport,
   type FoldCompoundReportBase,
 } from '../../fold/engine/foldEngineCompoundWire';
-import type { FoldEngineOp } from '../../fold/engine/foldEngineWire';
+import type { FoldEngineOp, FoldReport } from '../../fold/engine/foldEngineWire';
 import { diagonalHalfScene, squareScene } from '../../fold/sequence/foldScene.fixtures';
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
@@ -110,10 +110,10 @@ afterEach(() => {
 });
 
 /** A session showing a sequence of one step, `op`, folded from the flat square to the square folded on its diagonal. */
-async function sessionOf(op: FoldOp): Promise<FoldSession> {
+async function sessionOf(op: FoldOp, report?: Partial<FoldReport>): Promise<FoldSession> {
   const document = sequenceOf([step('fstep-1', null, op)]);
   const runtime = inProcessFoldRuntime(() => {
-    const fake = fakeFoldEngine({ compound: reportOf });
+    const fake = fakeFoldEngine({ compound: reportOf, ...(report ? { report: () => report } : {}) });
     const folded = (state: number) => (fake.trail(state)?.length ?? 0) > 1;
     return {
       ...fake,
@@ -174,5 +174,18 @@ describe('a Fold step captured for the Diagram, worded as Fold words it (D17)', 
     const sentence = await capturedSentence(session);
     expect(sentence).toContain('bringing the top-left corner onto the bottom-right corner');
     expect(sentence).toBe(stripSentence(session, CRIMP));
+  });
+
+  it('says an unfold stored as a valley fold along a bend unfolds, as the engine reported', async () => {
+    const UNFOLD: FoldOp = {
+      kind: 'valley',
+      landing: { kind: 'outer' },
+      line: { via: 'crease', at: [0.5, 0.5] },
+      seed: { scope: 'depth', at: [0.25, 0.75], layers: 1 },
+    };
+    const session = await sessionOf(UNFOLD, { created: [], unfolded: [4], refolded: [] });
+    const sentence = await capturedSentence(session);
+    expect(sentence).toBe('Unfold the top layer.');
+    expect(sentence).toBe(stripSentence(session, UNFOLD));
   });
 });

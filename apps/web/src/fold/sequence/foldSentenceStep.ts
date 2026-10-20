@@ -11,6 +11,9 @@
  *   other when the folded silhouette has half the area it had: the union of
  *   the part that stays and the part that lands is at least the larger of the
  *   two, with equality only when they are equal and coincide.
+ * - **Unfolds.** A valley or mountain fold along a bend that laid its flap
+ *   flat is stored as the fold it was made with (plan D3); the engine's
+ *   report says it only unfolded (`foldedLineOf`), and it reads as an unfold.
  * - **Names.** The sheet's own corners, edges and diagonals are named by
  *   description only where a reader agrees they are those: on a silhouette
  *   that is an upright rectangle (the flat sheet, or one folded to a
@@ -35,7 +38,8 @@ import {
   type FoldStepNode,
   type SheetPoint,
 } from '../document/foldSequenceDocument';
-import type { FoldEngineLine, FoldEngineOp, FoldReport } from '../engine/foldEngineWire';
+import type { FoldedLine } from '../engine/foldEngineCompoundWire';
+import type { FoldEngineLine, FoldEngineOp } from '../engine/foldEngineWire';
 import type {
   FoldLayerScope,
   FoldSentenceExtent,
@@ -54,9 +58,10 @@ export interface FoldSentenceContext {
   child: FoldStateFrame | null;
   /**
    * What the fold did: its line and moving side, in the parent's model frame
-   * — a plain fold's report, or a compound fold's (a reverse fold's tip side).
+   * — a plain fold's report, or a compound fold's (a reverse fold's tip side)
+   * — and whether a plain fold only unfolded (`foldedLineOf`).
    */
-  report: Pick<FoldReport, 'line' | 'side'> | null;
+  report: FoldedLine | null;
 }
 
 /** How close a point is to a corner or a side, in sheet units, to be named as one. */
@@ -76,6 +81,8 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
     case 'valley':
     case 'mountain':
       if (op.landing?.kind === 'against') return { op: 'fold', direction: op.kind, line: sentenceLine(op.line, null, context), scope: scopeOf(op.seed), inserted: true };
+      // A fold along a bend that laid its flap flat, as the tools store one (plan D3): an unfold.
+      if (context.report?.unfolds) return { op: 'unfold', direction: op.kind, scope: scopeOf(op.seed) };
       return { op: 'fold', direction: op.kind, line: sentenceLine(op.line, op.seed, context), scope: scopeOf(op.seed) };
     case 'precrease':
       return {
