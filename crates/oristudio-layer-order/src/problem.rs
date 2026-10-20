@@ -45,6 +45,7 @@ use oristudio_geometry::convex;
 use oristudio_geometry::tol::TOL;
 use serde::{Deserialize, Serialize};
 
+use crate::error::LayerOrderError;
 use crate::order::{FacePair, LayerOrder};
 use crate::overlay::Overlay;
 use crate::shape::Shape;
@@ -211,6 +212,104 @@ impl Buckets {
     }
 }
 
+/// The most [`StackDepth::triples`] a bounded build takes
+/// ([`ConstraintProblem::build_within`]): one stack 289 layers deep, or
+/// several shallower ones.
+///
+/// Completing and replaying an order costs about a microsecond a triple,
+/// whatever the face count. Through the built bridge in Node, a map fold of
+/// 400 faces, every face on one stack, has 10.6 million triples and took
+/// 3.7 s to open and as long again to land; 1,600 faces, 682 million, did
+/// not finish. Natively, through the bridge's own calls
+/// (`oristudio-fold-wasm`'s `tests/stacking_corpus.rs`, which runs the
+/// synthetic stacks as fast as Node's wasm does), of the 471 real designs of
+/// the cpoogle corpus that import, the median has 54,000 triples and 446 are
+/// under this cap; landing any of those — what every replay of its step
+/// does — took at most 3.0 s. The 25 over it stack 130 to 600 layers deep:
+/// 21 took 2.9–21.6 s to land, after 3.9–67 s to open, and 4, at 51–80
+/// million triples, were not tried. A count, not a clock, so a saved step is
+/// refused, or not, alike on every machine.
+pub const MAX_STACKED_TRIPLES: u64 = 4_000_000;
+
+/// How deeply a view's layers stack: what completing and checking its order
+/// cost, where its face count does not say.
+///
+/// Every three faces that overlap one another are a transitivity constraint
+/// the order must keep — in the cells the three share, which the search
+/// visits over and over — so the search's work grows with
+/// [`StackDepth::triples`]: a stack `d` layers deep has `d(d-1)(d-2)/6` of
+/// them however few faces the view has.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StackDepth {
+    /// The most faces covering one cell: the deepest stack.
+    pub deepest: usize,
+    /// The triples of faces that overlap one another pairwise.
+    pub triples: u64,
+}
+
+impl StackDepth {
+    /// How deeply `view`, whose overlay is `overlay`, stacks.
+    pub fn of(view: &FoldedView, overlay: &Overlay) -> StackDepth {
+        let deepest = overlay
+            .cells()
+            .iter()
+            .map(|c| c.faces.len())
+            .max()
+            .unwrap_or(0);
+        StackDepth {
+            deepest,
+            triples: overlapping_triples(view, overlay.pairs()),
+        }
+    }
+
+    /// Refused when there are more triples than `limit`.
+    fn within(self, limit: u64) -> Result<(), LayerOrderError> {
+        if self.triples > limit {
+            return Err(LayerOrderError::StackedTooDeep {
+                deepest: self.deepest,
+                triples: self.triples,
+                limit,
+            });
+        }
+        Ok(())
+    }
+}
+
+/// The triples of the view's faces among `pairs` that overlap one another
+/// pairwise: the triangles of the graph the pairs make, each counted once,
+/// by bitsets over view positions (`n²/8` bytes, 2 MB at
+/// [`crate::view::MAX_FACES`]).
+fn overlapping_triples(view: &FoldedView, pairs: &[FacePair]) -> u64 {
+    let n = view.faces().len();
+    let words = n.div_ceil(64);
+    let mut adjacent = vec![0u64; n * words];
+    let mut edges = Vec::with_capacity(pairs.len());
+    for pair in pairs {
+        if let (Some(a), Some(b)) = (view.index_of(pair.lo()), view.index_of(pair.hi()))
+            && a != b
+        {
+            let (i, j) = (a.min(b), a.max(b));
+            adjacent[i * words + j / 64] |= 1 << (j % 64);
+            adjacent[j * words + i / 64] |= 1 << (i % 64);
+            edges.push((i, j));
+        }
+    }
+    let mut triples = 0u64;
+    for (i, j) in edges {
+        // The third faces past `j`, so each triple is counted at its two
+        // smallest positions only.
+        let (first, below) = (j / 64, (j % 64) as u32 + 1);
+        for w in first..words {
+            let mut common = adjacent[i * words + w] & adjacent[j * words + w];
+            if w == first {
+                common &= u64::MAX.checked_shl(below).unwrap_or(0);
+            }
+            triples += u64::from(common.count_ones());
+        }
+    }
+    triples
+}
+
 /// A pair the tolerance cannot decide (see the module docs).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Ambiguity {
@@ -316,12 +415,32 @@ impl ConstraintProblem {
     pub fn build(view: &FoldedView) -> ConstraintProblem {
         let shapes = Shape::of_view(view);
         let overlay = Overlay::build_from(view, &shapes);
+        ConstraintProblem::built(view, &shapes, overlay)
+    }
+
+    /// [`ConstraintProblem::build`], refused once the overlay shows more
+    /// [`StackDepth::triples`] than `limit`, before a constraint is enumerated
+    /// or an order searched for ([`MAX_STACKED_TRIPLES`] is the engine's).
+    /// The count is the state's own, so a state is refused, or not, the same
+    /// way every time it is built.
+    pub fn build_within(
+        view: &FoldedView,
+        limit: u64,
+    ) -> Result<ConstraintProblem, LayerOrderError> {
+        let shapes = Shape::of_view(view);
+        let overlay = Overlay::build_from(view, &shapes);
+        StackDepth::of(view, &overlay).within(limit)?;
+        Ok(ConstraintProblem::built(view, &shapes, overlay))
+    }
+
+    /// The constraints of `view` over its overlay, enumerated in full.
+    fn built(view: &FoldedView, shapes: &[Shape<'_>], overlay: Overlay) -> ConstraintProblem {
         let mut found = Found::new(view, overlay.pairs());
         let segments = segments(view);
         let (n, edges) = (shapes.len(), segments.len());
         for e in 0..edges {
             for h in 0..n {
-                found.add(edge_face(view, &shapes, &segments, e, h));
+                found.add(edge_face(view, shapes, &segments, e, h));
             }
             for e2 in e + 1..edges {
                 found.add_made(edge_edge(view, &segments, e, e2));
@@ -342,10 +461,38 @@ impl ConstraintProblem {
         let shapes = Shape::of_view(view);
         let touched = self.overlay.touched_in(view, touched);
         let overlay = self.overlay.rebuild_from(view, &shapes, &touched);
+        self.rebuilt(view, &shapes, &touched, overlay)
+    }
+
+    /// [`ConstraintProblem::rebuild`], refused as
+    /// [`ConstraintProblem::build_within`] refuses: the rebuilt overlay is
+    /// the one a build makes, so the verdict is a build's.
+    pub fn rebuild_within(
+        &self,
+        view: &FoldedView,
+        touched: &BTreeSet<FaceId>,
+        limit: u64,
+    ) -> Result<ConstraintProblem, LayerOrderError> {
+        let shapes = Shape::of_view(view);
+        let touched = self.overlay.touched_in(view, touched);
+        let overlay = self.overlay.rebuild_from(view, &shapes, &touched);
+        StackDepth::of(view, &overlay).within(limit)?;
+        Ok(self.rebuilt(view, &shapes, &touched, overlay))
+    }
+
+    /// The rest of a rebuild, over its overlay; `touched` holds the new and
+    /// gone faces.
+    fn rebuilt(
+        &self,
+        view: &FoldedView,
+        shapes: &[Shape<'_>],
+        touched: &BTreeSet<FaceId>,
+        overlay: Overlay,
+    ) -> ConstraintProblem {
         // A taco-tortilla depends on the face across its flat crease, which
         // its tuple does not name: where that face was touched, its named
         // face is made again as if it had been.
-        let reach = reach(&self.hidden, &touched);
+        let reach = reach(&self.hidden, touched);
         let reach = IdSet::new(&reach);
         let untouched = |faces: &[FaceId]| !reach.any(faces);
         let mut found = Found::new(view, overlay.pairs());
@@ -381,7 +528,7 @@ impl ConstraintProblem {
         for (e, &edge_reached) in reached_edge.iter().enumerate() {
             let faces = if edge_reached { &all_faces } else { &reached };
             for &h in faces {
-                found.add(edge_face(view, &shapes, &segments, e, h));
+                found.add(edge_face(view, shapes, &segments, e, h));
             }
         }
         for e in (0..reached_edge.len()).filter(|&e| reached_edge[e]) {
@@ -524,6 +671,12 @@ impl ConstraintProblem {
                 .iter()
                 .zip(view.faces())
                 .all(|(id, face)| *id == face.id)
+    }
+
+    /// How deeply `view`'s layers stack, by this problem's overlay: what
+    /// [`ConstraintProblem::build_within`] weighs.
+    pub fn stack_depth(&self, view: &FoldedView) -> StackDepth {
+        StackDepth::of(view, &self.overlay)
     }
 
     /// The overlapping pairs, ascending.
@@ -719,6 +872,112 @@ mod tests {
 
     fn f(id: u32) -> FaceId {
         FaceId(id)
+    }
+
+    /// Faces with these ids and `[x0, x1] × [0, 1]` images, alternately
+    /// front-up, and no edges.
+    fn strips(faces: &[(u32, f64, f64)]) -> FoldedView {
+        use crate::view::Face;
+        let faces = faces
+            .iter()
+            .map(|&(id, x0, x1)| Face {
+                id: f(id),
+                polygon: vec![[x0, 0.0], [x1, 0.0], [x1, 1.0], [x0, 1.0]],
+                front_up: id.is_multiple_of(2),
+            })
+            .collect();
+        FoldedView::new(faces, Vec::new()).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    /// `d` coincident unit squares, ids from `first`, at `x`.
+    fn stack(first: u32, d: u32, x: f64) -> Vec<(u32, f64, f64)> {
+        (first..first + d).map(|id| (id, x, x + 1.0)).collect()
+    }
+
+    fn choose3(d: u64) -> u64 {
+        d * (d - 1) * (d - 2) / 6
+    }
+
+    #[test]
+    fn the_stack_depth_counts_every_three_faces_that_overlap_one_another() {
+        let depth = |faces: &[(u32, f64, f64)]| {
+            let view = strips(faces);
+            ConstraintProblem::build(&view).stack_depth(&view)
+        };
+        assert_eq!(
+            depth(&stack(0, 5, 0.0)),
+            StackDepth {
+                deepest: 5,
+                triples: 10
+            }
+        );
+        // Two stacks apart: their triples add, the deepest is the deeper.
+        let mut two = stack(0, 4, 0.0);
+        two.extend(stack(10, 6, 5.0));
+        assert_eq!(
+            depth(&two),
+            StackDepth {
+                deepest: 6,
+                triples: 4 + 20
+            }
+        );
+        // A row where each face overlaps only the next: pairs, no triple.
+        let row = [(0, 0.0, 1.0), (1, 0.5, 1.5), (2, 1.0, 2.0), (3, 1.5, 2.5)];
+        assert_eq!(
+            depth(&row),
+            StackDepth {
+                deepest: 2,
+                triples: 0
+            }
+        );
+        // Past one 64-bit word of positions, with ids out of order: a stack
+        // of 130, and a face over half of it.
+        let mut deep: Vec<(u32, f64, f64)> = stack(0, 130, 0.0).into_iter().rev().collect();
+        deep.push((500, 0.5, 1.5));
+        assert_eq!(
+            depth(&deep),
+            StackDepth {
+                deepest: 131,
+                triples: choose3(131)
+            }
+        );
+    }
+
+    #[test]
+    fn a_bounded_build_takes_a_stack_up_to_its_limit_and_no_more() {
+        let view = strips(&stack(0, 70, 0.0));
+        let at = choose3(70);
+        let built = ConstraintProblem::build_within(&view, at);
+        assert_eq!(built.as_ref().ok(), Some(&ConstraintProblem::build(&view)));
+        let over = LayerOrderError::StackedTooDeep {
+            deepest: 70,
+            triples: at,
+            limit: at - 1,
+        };
+        assert_eq!(
+            ConstraintProblem::build_within(&view, at - 1).err(),
+            Some(over.clone())
+        );
+
+        // A rebuild weighs the state it lands, as a build would: one face
+        // more on the stack goes over a limit the stack was at.
+        let previous = ConstraintProblem::build(&strips(&stack(0, 69, 0.0)));
+        let touched = BTreeSet::from([f(69)]);
+        let at69 = choose3(69);
+        let rebuilt = previous.rebuild_within(&view, &touched, at);
+        assert_eq!(
+            rebuilt.as_ref().ok(),
+            Some(&ConstraintProblem::build(&view))
+        );
+        assert_eq!(
+            previous.rebuild_within(&view, &touched, at69).err(),
+            Some(LayerOrderError::StackedTooDeep {
+                deepest: 70,
+                triples: at,
+                limit: at69,
+            })
+        );
+        assert_eq!(MAX_STACKED_TRIPLES, 4_000_000);
     }
 
     /// Every one of the 64 assignments of a taco-taco's six pairs, valid iff

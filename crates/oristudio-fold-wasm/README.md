@@ -146,6 +146,17 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
     state over it is refused `too_many_faces`. The layer order's tables are
     over every pair of faces, about `7n²` bytes, and a wasm heap never gives
     them back: 10,000 faces took 700 MB and 25,600 trapped at wasm32's 4 GB.
+  - **The stacking cap.** A pattern whose faces overlap one another in more
+    than `oristudio_layer_order::MAX_STACKED_TRIPLES` (4,000,000) triples —
+    one stack 290 layers deep, or several shallower — is refused
+    `import_stacked_too_deep` (`deepest`, `triples`, `limit`) as soon as its
+    overlaps are counted, before its constraints or any order, by every one
+    of these calls, a replay's included; any other state over it, a fold's,
+    is refused `stacked_too_deep`. Working out the order costs about a
+    microsecond a triple whatever the face count: a 400-face map fold took
+    3.7 s to open, 1,600 faces did not finish. A count, not a clock, so a
+    saved step is refused alike on every machine. `tests/stacking_corpus.rs`
+    weighs the fixtures' models, and an external corpus, against it.
 - **Sinks** (`src/ops_sinks.rs`; plan Phase 11): `open-sink`, `closed-sink`
   and `unsink` ops land through `apply`, their line resolved as a fold's,
   the seed naming the point (or the sunk tip), and `choices.pocket` (a
