@@ -54,6 +54,7 @@ import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
 import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
+import { useFoldToolWindowYields } from '../../../fold/canvas/useFoldToolWindowYields';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
@@ -84,7 +85,8 @@ import styles from './FoldCanvas.module.css';
  * a phone, one pane at a time, and the rail's tools in a sheet opened from
  * the bar, beside the pane switch (`FoldPhoneBarControls`); the tool window
  * starts as its title bar, so the paper stays in view while points are
- * picked (`FoldToolWindow`).
+ * picked (`FoldToolWindow`), and gives way to Repeat's and Unfold to step's
+ * bars while either is open (`useFoldToolWindowYields`).
  *
  * A composition site: what the tools do is `fold/tools` (the state, the
  * registry, the step builder) and `fold/canvas` (picking, the pipeline to the
@@ -119,6 +121,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   useEffect(() => registerFoldKindControl(foldToolKindControl(tools)), [tools]);
 
   const phone = useIsPhoneLayout();
+  // A phone's tool window gives way to Repeat's and Unfold to step's bars.
+  const toolWindowYields = useFoldToolWindowYields(phone);
   const coarse = useIsCoarsePointerSurface();
   const phonePane = useFoldPhonePane();
   const readOnly = useFoldReadOnly();
@@ -400,7 +404,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           sendToEdit={sendToEdit}
         />
       </div>
-      {importChoice ? <FoldImportOrderChooser container={viewport} inspection={inspection} onFrame={setToolWindowFrame} /> : <FoldToolWindow inspection={inspection} resolution={preview.orderResolution} acceptOrder={verbs.acceptOrder} orderReady={!!preview.step && !!preview.landed && !preview.landing && !preview.refused && !session.readOnly} container={viewport} model={windowModel} keyLabel={keyLabel} onFrame={setToolWindowFrame} />}
+      {importChoice ? <FoldImportOrderChooser container={viewport} inspection={inspection} onFrame={setToolWindowFrame} /> : <FoldToolWindow inspection={inspection} resolution={preview.orderResolution} acceptOrder={verbs.acceptOrder} orderReady={!!preview.step && !!preview.landed && !preview.landing && !preview.refused && !session.readOnly} container={viewport} model={toolWindowYields ? null : windowModel} keyLabel={keyLabel} onFrame={setToolWindowFrame} />}
     </div>
   );
 }
