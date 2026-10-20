@@ -14,6 +14,12 @@ mod completion;
 mod constraints;
 mod conversion;
 mod math;
+mod session;
+mod tables;
+
+pub use session::{
+    CheckFit, CheckNoOrder, CheckOptions, CheckOutcome, CheckStage, CompletionSession, SessionStart,
+};
 
 pub use completion::{
     BudgetLimit, Completion, CompletionConflict, CompletionError, CompletionOptions,
