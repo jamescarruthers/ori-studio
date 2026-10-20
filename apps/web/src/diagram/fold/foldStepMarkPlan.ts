@@ -7,12 +7,9 @@
  * moving paper to where it lands — with its arrow placed by the references
  * the step was made from, and the points it names circled.
  *
- * - **A crease's ends.** A segment stops inside the paper, which dashes
- *   alone leave unclear: each end is circled. A pinch is not: it is a few
- *   millimetres long as a page prints it, and two circles the Diagram's size
- *   would cover it.
- * - **Through two points** (O1), a segment: the circles at its ends and the
- *   line between them say it all; no arrow.
+ * - **Through two points** (O1), a segment: the two points circled and the
+ *   line between them say it all; no arrow. A segment's ends are otherwise
+ *   left uncircled (owner, 2026-10-20).
  * - **Point onto point** (O2): both points circled, the arrow from the one
  *   that moves to the one it lands on.
  * - **Line onto line** (O3): the arrow from the line that moves to the one
@@ -89,8 +86,6 @@ export function foldStepAction(action: FoldActionGeometry, context: FoldStepMark
   if ((op.kind === 'valley' || op.kind === 'mountain' || op.kind === 'precrease') && op.line.via === 'axiom') {
     placed = axiomPlaced(placed, op, frame, context);
   }
-  // A segment's two ends. A pinch is too short for two: their circles would cover it.
-  if (op.kind === 'precrease' && op.extent?.kind === 'segment') placed = withRings(placed, extentEnds(placed));
   return placed;
 }
 
@@ -126,19 +121,6 @@ function earSwung(
   };
 }
 
-/** The two ends of a segment's or a pinch's crease on the paper, each circled, dotted where a layer covers it. */
-function extentEnds(action: FoldActionGeometry): FoldStepRing[] {
-  const first = action.spans[0];
-  const last = action.spans.at(-1);
-  if (first && last) {
-    return [
-      { at: first.from, behind: first.hidden ? 1 : 0 },
-      { at: last.to, behind: last.hidden ? 1 : 0 },
-    ];
-  }
-  return action.line ? action.line.map((at) => ({ at, behind: 0 })) : [];
-}
-
 /** `action` with `rings` added, none twice. */
 function withRings(action: FoldStepAction, rings: readonly FoldStepRing[]): FoldStepAction {
   const all = [...(action.rings ?? [])];
@@ -157,8 +139,15 @@ function axiomPlaced(
   const fold = action.line ? lineThrough(action.line[0], action.line[1]) : null;
   if (!fold) return action;
   const { axiom, inputs } = op.line;
-  // Through two points, a segment: its circled ends and the line between them; an arrow would add nothing.
-  if (axiom === 1 && op.kind === 'precrease' && op.extent?.kind === 'segment') return { ...action, grip: null };
+  // Through two points, a segment: the two points circled and the line between them; an arrow would add nothing.
+  if (axiom === 1 && op.kind === 'precrease' && op.extent?.kind === 'segment') {
+    const points = inputs.flatMap((input) => {
+      if (input.kind === 'edge') return [];
+      const at = scenePoint(frame, input.at);
+      return at ? [{ at, behind: layersOver(parent, frame, input.at, at) }] : [];
+    });
+    return withRings({ ...action, grip: null }, points);
+  }
   // Which side of the line moves: the engine's grip is on the moving paper; the op's own moving point otherwise.
   const movingPoint = action.grip?.at ?? (op.moving ? scenePoint(frame, op.moving) : null);
   const moving = movingPoint ? Math.sign(sideOf(fold, movingPoint)) : 0;

@@ -57,15 +57,15 @@ describe('where a Fold step’s marks go in the Diagram', () => {
     expect(foldStepAction(action, { op: precrease(1, [pt(0.2, 0.2), pt(0.8, 0.8)]), parent: squareScene() }).grip).toEqual(action.grip);
   });
 
-  it('circles the ends of any segment, whatever found its line, and not a pinch’s', () => {
+  it('leaves the ends of a segment or a pinch uncircled, circling only the points its axiom names', () => {
     // O2, the bottom-left corner onto the top-right, creased from the middle to the bottom-right corner only.
     const action = engineAction([0.5, 0.5], [1, 0], [0.6, 0.2], [0.8, 0.4]);
     const segment = foldStepAction(action, {
       op: precrease(2, [pt(0, 0), pt(1, 1)], { kind: 'segment', from: pt(0.5, 0.5), to: pt(1, 0) }),
       parent: squareScene(),
     });
-    // The corners it brings together, and the segment's two ends.
-    expect(segment.rings!.map((ring) => [ring.at.x, ring.at.y])).toEqual([[0, 0], [1, 1], [0.5, 0.5], [1, 0]]);
+    // The corners it brings together; the segment's own ends are not circled.
+    expect(segment.rings!.map((ring) => [ring.at.x, ring.at.y])).toEqual([[0, 0], [1, 1]]);
     const pinch = foldStepAction(engineAction([0.48, 0.52], [0.52, 0.48], [0.45, 0.45], [0.55, 0.55]), {
       op: precrease(2, [pt(0, 0), pt(1, 1)], { kind: 'pinch', at: pt(0.5, 0.5), length: 0.0625 }),
       parent: squareScene(),
@@ -112,7 +112,8 @@ describe('where a Fold step’s marks go in the Diagram', () => {
     const placed = foldStepAction(action, { op, parent: squareScene() });
     close(placed.grip!.at, 0, 0.25);
     close(placed.grip!.image, 1, 0.25);
-    expect(placed.rings!.map((ring) => [ring.at.x, ring.at.y])).toEqual([[0.5, 0], [0.5, 0.5]]);
+    // Its ends are not circled: line onto line names no point.
+    expect(placed.rings).toBeUndefined();
   });
 
   it('keeps the engine’s picture of a line it cannot place by: a free line, a newer build’s step', () => {
