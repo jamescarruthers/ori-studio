@@ -2,7 +2,7 @@
  * The words the sequence chrome says a path with, beyond each step's own
  * (`fold/stepWords`, `fold/stepSentence`): the sheet's sentence, the strip's
  * badges for a step's standing, its branches, and the moves between steps.
- * One place, so the strip, the Steps grid, the keys and the menus name each
+ * One place, so the strip, the keys and the menus name each
  * the same way.
  *
  * Whole sentences per case where word order differs (the sheet's shape and

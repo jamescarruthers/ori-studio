@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import type { FoldReturnOp } from '../document/foldSequenceDocument';
-import { setFoldView } from '../sequence/foldViewMode';
 import { foldTools } from '../tools/foldToolState';
 
 export interface FoldReturnOpening {
@@ -43,5 +42,4 @@ export function openFoldReturn(lastOnly = false, rebuildId?: string) {
     target: existing?.op?.kind === 'unfold-to' ? existing.op.target : node?.parent ?? null,
     rebuild: existing?.op?.kind === 'unfold-to' ? { id: existing.id, expected: existing.op } : null,
   } });
-  setFoldView('fold');
 }

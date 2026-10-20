@@ -1778,25 +1778,9 @@
       "unavailable": "Source CP unavailable. The saved snapshot still replays.",
       "update": "Update from CP"
     },
-    "grid": {
-      "broken": "This step no longer folds",
-      "brokenAbove": "A step before this one no longer folds",
-      "flat": "Flat",
-      "folding": "Folding…",
-      "label": "Steps",
-      "locked": "Made with a newer Ori Studio",
-      "mountain": "Mountain",
-      "title": "Crease pattern by step",
-      "valley": "Valley"
-    },
     "header": {
-      "fold": "Fold",
-      "foldHint": "The step on screen, folded and as a crease pattern",
       "moreExports": "More ways to export",
-      "moreVerbs": "Import, send and export",
-      "steps": "Steps",
-      "stepsHint": "Every step of the path as a card",
-      "views": "View"
+      "moreVerbs": "Import, send and export"
     },
     "load": {
       "failed": "Fold did not load",

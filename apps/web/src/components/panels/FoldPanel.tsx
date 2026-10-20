@@ -7,7 +7,6 @@ import { FOLD_DROP_POLICY, useFoldDrop } from '../../fold/io/useFoldDrop';
 import { foldActionsAt } from '../../fold/sequence/foldCommands';
 import { useFoldKeyboard } from '../../fold/sequence/foldKeys';
 import { foldedStepCount } from '../../fold/sequence/foldSequencePath';
-import { setFoldView, useFoldView } from '../../fold/sequence/foldViewMode';
 import { useFoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
 import { useFoldSession } from '../../fold/session/useFoldSession';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
@@ -18,38 +17,32 @@ import { FoldReturnBar } from '../fold/return/FoldReturnBar';
 import { FoldHeader } from '../fold/FoldHeader';
 import { FoldWorkspaceRail } from '../fold/FoldWorkspaceRail';
 import { FoldStepStrip } from '../fold/steps/FoldStepStrip';
-import { FoldStepsGrid } from '../fold/steps/FoldStepsGrid';
 import styles from './FoldPanel.module.css';
 
 /**
  * The Fold workspace's dock panel: the composition site for the tool rail
- * down its whole left side, and beside it the header, the step strip over the
- * split canvas, and the Steps grid (`implementation-plans/fold-workspace.md`,
- * D14). The rail stays when the view is the Steps grid, so the header's tabs
- * do not move as they switch; a phone has none, its tools a sheet on the
- * canvas's bar.
+ * down its whole left side, and beside it the header and the step strip over
+ * the split canvas (`implementation-plans/fold-workspace.md`, D14). A phone
+ * has no rail, its tools a sheet on the canvas's bar.
  *
  * It holds the Fold session while mounted (`useFoldSession`), so the worker
  * runs and the sequence is replayed while the workspace is open, and the keys
  * (`useFoldKeyboard`): the registry's `fold` scope and viewport surface,
- * never a `keydown` listener here (AGENTS.md › Panel components). The header's
- * Fold | Steps tabs switch the body between the canvas (`FoldCanvas`), under
- * the strip, and the grid. The verbs are the action catalog's, at the step on
- * screen (`foldActionsAt`), as the menus and the keys build it, so the three
- * agree; Send to Edit is the split button every design kind's is
- * (`useFoldSendToEditButton`), its variants behind the caret. On a phone the
- * header keeps to one row, seating the drawer's pill (the canvas pill lane
- * would sit over it, as it would over the Diagram's), and the canvas's own
- * controls are on its bar. A crease pattern dropped anywhere on the panel —
- * the panes, the strip, the header or the Steps view — is Import CP
- * (`useFoldDrop`).
+ * never a `keydown` listener here (AGENTS.md › Panel components). The verbs
+ * are the action catalog's, at the step on screen (`foldActionsAt`), as the
+ * menus and the keys build it, so the three agree; Send to Edit is the split
+ * button every design kind's is (`useFoldSendToEditButton`), its variants
+ * behind the caret. On a phone the header keeps to one row, seating the
+ * drawer's pill (the canvas pill lane would sit over it, as it would over the
+ * Diagram's), and the canvas's own controls are on its bar. A crease pattern
+ * dropped anywhere on the panel — the panes, the strip or the header — is
+ * Import CP (`useFoldDrop`).
  */
 export function FoldPanel() {
   const { t } = useTranslation();
   const setViewDrawerSlot = useLayoutStore((state) => state.setViewDrawerSlot);
   useFoldSession();
   const keys = useFoldKeyboard();
-  const view = useFoldView();
   const sequence = useFoldSequenceView();
   const { document, entries, cursor, readOnly } = sequence;
   const actions = useMemo(
@@ -73,8 +66,6 @@ export function FoldPanel() {
         {!phone && <FoldWorkspaceRail />}
         <div className={styles.column}>
           <FoldHeader
-            view={view}
-            onViewChange={setFoldView}
             stepCount={foldedStepCount(sequence.entries)}
             actions={actions}
             sendToEdit={sendToEdit}
@@ -82,18 +73,10 @@ export function FoldPanel() {
           />
           <FoldReturnBar />
           <FoldRepeatBar />
-          {view === 'steps' ? (
-            <div className={`panel-body ${styles.steps}`}>
-              <FoldStepsGrid view={sequence} />
-            </div>
-          ) : (
-            <>
-              <FoldStepStrip view={sequence} />
-              <div className={`panel-body ${styles.body}`}>
-                <FoldCanvas />
-              </div>
-            </>
-          )}
+          <FoldStepStrip view={sequence} />
+          <div className={`panel-body ${styles.body}`}>
+            <FoldCanvas />
+          </div>
         </div>
       </div>
     </section>

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FOLD_MODEL_TURNS } from '../tools/foldToolCatalog';
 import { createFoldTools } from '../tools/foldToolState';
 import { foldCanvasVerbs, foldToolKindControl, registerFoldCanvasVerbs, withFoldCanvasVerbs } from './foldCanvasCommands';
@@ -10,33 +10,24 @@ const QUARTER = { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' }
 /** A canvas's verbs as far as a turn needs them. */
 const canvas = () => ({ turn: vi.fn() }) as unknown as FoldCanvasVerbs & { turn: ReturnType<typeof vi.fn> };
 
-describe('the canvas’s verbs, asked for before the canvas is up', () => {
-  afterEach(() => vi.useRealTimers());
-
-  it('runs at once on a mounted canvas, and on the next one to mount otherwise — once', () => {
+describe('the canvas’s verbs, as the rail asks for them', () => {
+  it('runs at once on the mounted canvas, the newest one registered', () => {
     const mounted = canvas();
     const release = registerFoldCanvasVerbs(mounted);
     withFoldCanvasVerbs((verbs) => verbs.turn(OVER));
     expect(mounted.turn).toHaveBeenCalledWith(OVER);
-    release();
-    expect(foldCanvasVerbs()).toBeNull();
-
-    // The rail beside the Steps view: the canvas mounts in the same commit.
-    withFoldCanvasVerbs((verbs) => verbs.turn(QUARTER));
     const next = canvas();
     const releaseNext = registerFoldCanvasVerbs(next);
+    withFoldCanvasVerbs((verbs) => verbs.turn(QUARTER));
     expect(next.turn.mock.calls).toEqual([[QUARTER]]);
+    expect(mounted.turn).toHaveBeenCalledOnce();
     releaseNext();
-    const later = canvas();
-    const releaseLater = registerFoldCanvasVerbs(later);
-    expect(later.turn).not.toHaveBeenCalled();
-    releaseLater();
+    release();
+    expect(foldCanvasVerbs()).toBeNull();
   });
 
-  it('drops a press no canvas came for, rather than landing it on one opened much later', () => {
-    vi.useFakeTimers();
+  it('drops a press with no canvas, rather than landing it on one mounted later', () => {
     withFoldCanvasVerbs((verbs) => verbs.turn(OVER));
-    vi.advanceTimersByTime(5000);
     const late = canvas();
     const release = registerFoldCanvasVerbs(late);
     expect(late.turn).not.toHaveBeenCalled();

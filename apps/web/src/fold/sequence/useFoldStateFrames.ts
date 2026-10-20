@@ -11,8 +11,8 @@ import { foldStateFrame, type FoldStateFrame } from './foldStateFrame';
 
 /**
  * Each landed state's frame (`foldStateFrame`), built once per state from its
- * scene and kept for every surface: the strip, the Steps grid and the Step
- * pane read the same states, and a state never changes under its handle. The
+ * scene and kept for every surface: the strip and the Step pane read the
+ * same states, and a state never changes under its handle. The
  * scene is the one the canvas asks for (`FOLD_SCENE_QUERY` through
  * `FoldSession.query`), so the engine is asked it once, and a state whose
  * scene is already in — a committed preview's — has its frame at once.

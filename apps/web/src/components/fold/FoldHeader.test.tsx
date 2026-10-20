@@ -63,8 +63,6 @@ const render = (props: Partial<ComponentProps<typeof FoldHeader>> & { bound?: Fo
     root.render(
       <TooltipProvider>
         <FoldHeader
-          view="fold"
-          onViewChange={() => {}}
           stepCount={1}
           actions={buildFoldActions(context, bound)}
           drawerSlot={() => {}}
@@ -78,25 +76,11 @@ const render = (props: Partial<ComponentProps<typeof FoldHeader>> & { bound?: Fo
 
 const button = (name: string) =>
   [...host.querySelectorAll('button')].find((each) => each.textContent === name) as HTMLButtonElement | undefined;
-const tabs = () => [...host.querySelectorAll('[role="tab"]')];
-
 describe('FoldHeader', () => {
-  it('offers the two views as tabs, the one on show selected, and counts the steps', () => {
-    render({ view: 'steps', stepCount: 3 });
-    expect(tabs().map((tab) => [tab.textContent, tab.getAttribute('aria-selected')])).toEqual([
-      ['Fold', 'false'],
-      ['Steps', 'true'],
-    ]);
+  it('counts the steps, with no views to switch between', () => {
+    render({ stepCount: 3 });
+    expect(host.querySelectorAll('[role="tab"]')).toHaveLength(0);
     expect(host.textContent).toContain('3 steps');
-  });
-
-  it('switches the view from a tab', () => {
-    const onViewChange = vi.fn();
-    render({ onViewChange });
-    act(() => {
-      tabs()[1]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
-    });
-    expect(onViewChange).toHaveBeenCalledWith('steps');
   });
 
   it('runs the catalog’s verbs for the whole sequence, as it words and gates them', () => {
@@ -117,7 +101,7 @@ describe('FoldHeader', () => {
     expect(button('Import CP…')).toMatchObject({ disabled: true, title: 'Import CP needs a square or rectangle sheet.' });
   });
 
-  it('keeps to one row on a phone: the tabs their icons, no count, and the verbs in one menu', async () => {
+  it('keeps to one row on a phone: no count, and the verbs in one menu', async () => {
     const { PHONE_MEDIA_QUERY } = await import('../../platform/phoneLayout');
     vi.stubGlobal(
       'matchMedia',
@@ -140,9 +124,6 @@ describe('FoldHeader', () => {
       },
     });
     expect(host.querySelector('[data-phone]')).not.toBeNull();
-    // Named still, by their titles, out of sight.
-    expect(tabs().map((tab) => tab.textContent)).toEqual(['Fold', 'Steps']);
-    expect(host.querySelector('[role="tab"] [data-hidden]')).not.toBeNull();
     expect(host.textContent).not.toContain('3 steps');
     // No verb on the row itself.
     for (const name of ['Import CP…', 'Send to Edit', 'Export FOLD…']) {

@@ -1830,25 +1830,9 @@
       "unavailable": "Le CP source est indisponible. La copie enregistrée peut toujours être rejouée.",
       "update": "Mettre à jour depuis le CP"
     },
-    "grid": {
-      "broken": "Cette étape ne se plie plus",
-      "brokenAbove": "Une étape précédente ne se plie plus",
-      "flat": "À plat",
-      "folding": "Pliage…",
-      "label": "Étapes",
-      "locked": "Créée avec une version plus récente d’Ori Studio",
-      "mountain": "Montagne",
-      "title": "Patron de plis par étape",
-      "valley": "Vallée"
-    },
     "header": {
-      "fold": "Plier",
-      "foldHint": "L’étape affichée, pliée et en patron de plis",
       "moreExports": "Autres façons d’exporter",
-      "moreVerbs": "Importer, envoyer et exporter",
-      "steps": "Étapes",
-      "stepsHint": "Chaque étape du parcours sous forme de carte",
-      "views": "Vue"
+      "moreVerbs": "Importer, envoyer et exporter"
     },
     "load": {
       "failed": "L'espace de travail Plier n'a pas pu être chargé",

@@ -41,7 +41,6 @@ import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionSnapshot } from
 import { foldTools } from '../tools/foldToolState';
 import { rotationBucket } from '../tools/rotate/rotateTool';
 import { paneShapeOf } from './foldPaperShapes';
-import { setFoldView } from './foldViewMode';
 import { cursorIndex, foldPathEntries, followerCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
 
 /**
@@ -172,7 +171,6 @@ export function foldActionsAt(
     rotate: () => {
       fromHere();
       foldTools().selectTool('rotate');
-      setFoldView('fold');
     },
     repeat: () => { fromHere(); openFoldRepeat(); },
     unfold: (last) => { fromHere(); openFoldReturn(last); },

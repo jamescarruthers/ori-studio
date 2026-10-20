@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import type { FoldRepeatOp } from '../document/foldSequenceDocument';
-import { setFoldView } from '../sequence/foldViewMode';
 import { foldTools } from '../tools/foldToolState';
 import { useFoldReturnUi } from '../return/foldReturnUi';
 
@@ -50,5 +49,4 @@ export function openFoldRepeat(rebuildId?: string) {
       ...(old?.op?.kind === 'repeat' ? { rebuild: { id: old.id, expected: old.op } } : {}),
     },
   });
-  setFoldView('fold');
 }

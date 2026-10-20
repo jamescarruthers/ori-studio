@@ -2,10 +2,10 @@
  * What the sequence chrome reads off a state's scene (plan D12), once per
  * state: where each face's sheet goes on screen, the silhouette's box and
  * area, the crease letters, and the two thumbnails — the folded form for the
- * step strip and the crease pattern for the Steps grid.
+ * step strip and the crease pattern for a Diagram step's thumbnail.
  *
  * A scene is the state's whole picture and can run to thousands of points;
- * this is what the strip, the grid, the sentences and the Step pane need of
+ * this is what the strip, the sentences and the Step pane need of
  * it, small enough to keep for every step of a path. Every coordinate is in
  * the frame the step's picture is drawn in, the scene frame (the view
  * applied, y-up), except the faces' rings, which are on the sheet.

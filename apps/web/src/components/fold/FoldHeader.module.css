@@ -1,27 +1,13 @@
 /*
  * What the Fold header (FoldHeader.tsx) adds to the shared toolbar frame: the
- * Fold | Steps tabs and the count on the left, the sequence's verbs on the
- * right. A row too narrow for both wraps, the verbs right-aligned under the
- * tabs, rather than squeezing either — except on a phone, where the header
- * has made itself one row's worth (`data-phone`).
+ * count of steps on the left, the sequence's verbs on the right. A row too
+ * narrow for both wraps, the verbs right-aligned under the count, rather than
+ * squeezing either — except on a phone, where the header has made itself one
+ * row's worth (`data-phone`).
  */
 .header {
   flex-wrap: wrap;
   column-gap: var(--space-2);
-}
-
-/* The tabs, then the count. Stretched, so the tabs keep the bar's full height. */
-.lead {
-  display: flex;
-  flex: 0 1 auto;
-  align-self: stretch;
-  align-items: stretch;
-  min-width: 0;
-  column-gap: var(--space-2);
-}
-
-.views {
-  flex: 0 0 auto;
 }
 
 .count {
@@ -42,20 +28,10 @@
 }
 
 /*
- * A pane too narrow for the tabs and the verbs together, short of a phone: the
- * tabs share a row of their own, then the verbs, wrapping within theirs rather
- * than off the pane's edge.
+ * A pane too narrow for the count and the verbs together, short of a phone:
+ * the verbs wrap within their own row rather than off the pane's edge.
  */
 @media (max-width: 720px) {
-  .header:not([data-phone]) .lead {
-    flex: 1 1 100%;
-    padding-block: var(--space-1);
-  }
-
-  .header:not([data-phone]) .views {
-    flex: 1 1 auto;
-  }
-
   .header:not([data-phone]) .actions {
     flex-basis: 100%;
     flex-wrap: wrap;
@@ -65,15 +41,11 @@
 }
 
 /*
- * A phone: one row. The tabs are their icons, the verbs one `⋯` menu, and the
- * row ends in undo, redo and the drawer's pill — what fits at 375 px.
+ * A phone: one row. The verbs are one `⋯` menu, and the row ends in undo,
+ * redo and the drawer's pill — what fits at 375 px.
  */
 .header[data-phone] {
   flex-wrap: nowrap;
-}
-
-.header[data-phone] .lead {
-  flex: 0 0 auto;
 }
 
 .header[data-phone] .actions {

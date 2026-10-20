@@ -1,9 +1,7 @@
 import type { Ref } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutGrid, Origami } from 'lucide-react';
 import type { SendToEditButtonModel } from '../../designKinds/sendToEditActions';
 import { foldCommand, type FoldAction, type FoldCommand } from '../../fold/foldActions';
-import type { FoldView } from '../../fold/sequence/foldViewMode';
 import { stepCountLabel } from '../../fold/sequence/foldSequenceWords';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { ViewportToolbarOverflowMenu } from '../panels/ViewportToolbarOverflowMenu';
@@ -11,7 +9,6 @@ import type { ViewportToolbarAction, ViewportToolbarOverflowGroup } from '../pan
 import { Button } from '../ui/Button';
 import { SplitButton } from '../ui/SplitButton';
 import { TouchHistoryButtons } from '../ui/TouchHistoryButtons';
-import { WorkspaceTab, WorkspaceTabStrip } from '../ui/WorkspaceTabStrip';
 import { FoldActionIcon } from './FoldActionIcon';
 import styles from './FoldHeader.module.css';
 
@@ -92,11 +89,10 @@ function phoneVerbGroups(
 }
 
 /**
- * The Fold workspace's header (plan D14, shot-0): the canvas and the Steps
- * grid as two tabs with the count of steps, then the verbs that act on the
- * whole sequence — Import CP, Send to Edit, and the exports — as the action
- * catalog words and gates them (`fold/foldActions`), so they read here as they
- * do in the menus.
+ * The Fold workspace's header (plan D14, shot-0): the count of steps, then
+ * the verbs that act on the whole sequence — Import CP, Send to Edit, and the
+ * exports — as the action catalog words and gates them (`fold/foldActions`),
+ * so they read here as they do in the menus.
  *
  * Send to Edit is the design kinds' split button when `sendToEdit` is given
  * (its variants behind the caret), and the catalog's plain button otherwise.
@@ -104,22 +100,17 @@ function phoneVerbGroups(
  * It wears the shared `panel-toolbar` frame, so it meets the Step pane's tab
  * bar at the same height. On a coarse pointer it carries undo and redo and the
  * slot the touch drawer seats its pill in (`drawerSlot`): the canvas pill lane
- * would sit over this header. On a phone it keeps to one row — the tabs their
- * icons alone, the count left to the strip's numbers, and the verbs in one
- * `⋯` menu — so the paper keeps the height; the canvas's own pills (its tools,
- * the pane switch) are on the canvas's bar. Presentation only: the view, the
- * verbs and every call are props.
+ * would sit over this header. On a phone it keeps to one row — the count left
+ * to the strip's numbers, and the verbs in one `⋯` menu — so the paper keeps
+ * the height; the canvas's own pills (its tools, the pane switch) are on the
+ * canvas's bar. Presentation only: the verbs and every call are props.
  */
 export function FoldHeader({
-  view,
-  onViewChange,
   stepCount,
   actions,
   sendToEdit: sendToEditButton,
   drawerSlot,
 }: {
-  view: FoldView;
-  onViewChange: (view: FoldView) => void;
   /** The steps that fold on the path shown: turns are not counted. */
   stepCount: number;
   /** The catalog, for the step on screen. */
@@ -142,32 +133,7 @@ export function FoldHeader({
   const exportSteps = foldCommand(actions, 'export-steps');
   return (
     <div className={`panel-toolbar ${styles.header}`} data-phone={phone || undefined}>
-      <div className={styles.lead}>
-        <WorkspaceTabStrip
-          className={styles.views}
-          value={view}
-          onValueChange={(value) => onViewChange(value === 'steps' ? 'steps' : 'fold')}
-          label={t('panels:fold.header.views', 'View')}
-          embedded
-          tone="peers"
-        >
-          <WorkspaceTab
-            value="fold"
-            icon={<Origami size={phone ? 16 : 13} aria-hidden="true" />}
-            title={t('panels:fold.header.fold', 'Fold')}
-            hint={t('panels:fold.header.foldHint', 'The step on screen, folded and as a crease pattern')}
-            iconOnly={phone}
-          />
-          <WorkspaceTab
-            value="steps"
-            icon={<LayoutGrid size={phone ? 16 : 13} aria-hidden="true" />}
-            title={t('panels:fold.header.steps', 'Steps')}
-            hint={t('panels:fold.header.stepsHint', 'Every step of the path as a card')}
-            iconOnly={phone}
-          />
-        </WorkspaceTabStrip>
-        {!phone && <span className={styles.count}>{stepCountLabel(t, stepCount)}</span>}
-      </div>
+      {!phone && <span className={styles.count}>{stepCountLabel(t, stepCount)}</span>}
       <div className={`panel-toolbar__group ${styles.actions}`}>
         <TouchHistoryButtons />
         {phone ? (

@@ -1830,25 +1830,9 @@
       "unavailable": "El CP de origen no está disponible. La copia guardada sigue reproduciéndose.",
       "update": "Actualizar desde CP"
     },
-    "grid": {
-      "broken": "Este paso ya no se puede plegar",
-      "brokenAbove": "Un paso anterior ya no se puede plegar",
-      "flat": "Planos",
-      "folding": "Plegando…",
-      "label": "Pasos",
-      "locked": "Creado con una versión más reciente de Ori Studio",
-      "mountain": "Monte",
-      "title": "Patrón de pliegues por paso",
-      "valley": "Valle"
-    },
     "header": {
-      "fold": "Plegar",
-      "foldHint": "El paso en pantalla, plegado y como patrón de pliegues",
       "moreExports": "Más formas de exportar",
-      "moreVerbs": "Importar, enviar y exportar",
-      "steps": "Pasos",
-      "stepsHint": "Cada paso del recorrido como una tarjeta",
-      "views": "Vista"
+      "moreVerbs": "Importar, enviar y exportar"
     },
     "load": {
       "failed": "El espacio de trabajo de plegado no se cargó",

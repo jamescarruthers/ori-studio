@@ -1,5 +1,5 @@
 /**
- * A step card's context menu, in the strip and the Steps grid: the action
+ * A step card's context menu, in the strip: the action
  * catalog's verbs for that step, as rows. Each row runs its verb by its
  * command id (`fold/sequence/foldCommands`), through the chokepoint, so a verb
  * from a card's menu is counted as one from the menu bar is.

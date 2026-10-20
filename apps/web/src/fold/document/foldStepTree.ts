@@ -113,8 +113,7 @@ export function activeChildOf(
 
 /**
  * The active path: from the sheet, through each node's active child, to a
- * tip. It is what exports, the Steps grid, the step strip and Send to Edit
- * follow.
+ * tip. It is what exports, the step strip and Send to Edit follow.
  */
 export function activePath(tree: FoldStepTree, activeChild: FoldActiveChildren): FoldStepNode[] {
   const path: FoldStepNode[] = [];

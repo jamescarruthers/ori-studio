@@ -26,7 +26,7 @@ export interface FoldSequencePending {
   branch: boolean;
 }
 
-/** The sequence on screen as the strip, the Steps grid and the Step pane read it. */
+/** The sequence on screen as the strip, the Step pane and the Diagram's From Fold… read it. */
 export interface FoldSequenceView {
   /** The shown sequence, or the blank square before the first edit. */
   document: FoldSequenceDocument;

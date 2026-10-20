@@ -1728,25 +1728,9 @@
       "unavailable": "원본 전개도를 사용할 수 없습니다. 저장된 스냅샷은 계속 재생할 수 있습니다.",
       "update": "전개도에서 업데이트"
     },
-    "grid": {
-      "broken": "이 단계는 더 이상 접히지 않습니다",
-      "brokenAbove": "앞 단계가 더 이상 접히지 않습니다",
-      "flat": "평평함",
-      "folding": "접는 중…",
-      "label": "단계",
-      "locked": "최신 Ori Studio에서 만듦",
-      "mountain": "산",
-      "title": "단계별 전개도",
-      "valley": "골"
-    },
     "header": {
-      "fold": "접기",
-      "foldHint": "화면의 단계를 접은 모습과 전개도로",
       "moreExports": "다른 내보내기 방법",
-      "moreVerbs": "가져오기, 보내기, 내보내기",
-      "steps": "단계",
-      "stepsHint": "경로의 모든 단계를 카드로",
-      "views": "보기"
+      "moreVerbs": "가져오기, 보내기, 내보내기"
     },
     "load": {
       "failed": "접기 작업 공간을 불러오지 못했습니다",

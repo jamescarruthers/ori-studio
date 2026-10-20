@@ -32,7 +32,6 @@ vi.mock('../../store/workspaceStore/foldSession', async (importOriginal) => ({
 
 import { valleyAt } from '../../fold/document/foldSequence.fixtures';
 import { useFoldImportUiStore } from '../../fold/io/foldImportUiStore';
-import { setFoldView } from '../../fold/sequence/foldViewMode';
 import { clearFoldStateFrames } from '../../fold/sequence/useFoldStateFrames';
 import { squareScene } from '../../fold/sequence/foldScene.fixtures';
 import { createFoldSession } from '../../fold/session/foldSession';
@@ -66,7 +65,6 @@ function widthFor(element: HTMLElement): number {
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
-let offsetHeight: { mockRestore: () => void } | null = null;
 
 function stubPointer(coarse: boolean) {
   vi.stubGlobal(
@@ -98,21 +96,7 @@ const button = (label: string) =>
   [...(container?.querySelectorAll('button') ?? [])].find(
     (each) => each.getAttribute('aria-label') === label || each.textContent === label
   );
-const tab = (name: string) =>
-  [...(container?.querySelectorAll('[role="tab"]') ?? [])].find((each) => each.textContent === name) as
-    | HTMLElement
-    | undefined;
 const stripCards = () => [...(container?.querySelectorAll('[role="list"] [role="listitem"] button') ?? [])];
-const gridCards = () => [...(container?.querySelectorAll('[role="listbox"] [role="option"]') ?? [])];
-
-/** Radix tabs switch on pointer down, not on click. */
-function press(element: Element | undefined) {
-  act(() => {
-    element?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
-    element?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
-    element?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
-  });
-}
 
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
@@ -123,11 +107,7 @@ beforeEach(() => {
   });
   Element.prototype.scrollTo ??= () => {};
   Element.prototype.scrollIntoView ??= () => {};
-  // The Steps grid's rows and the thumbnails watch their size; jsdom has no ResizeObserver,
-  // and measures every box as zero: the grid's virtualizer is given a viewport, as the Diagram's tests give it.
-  offsetHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
-    return this.hasAttribute('data-index') ? 100 : 1000;
-  });
+  // The thumbnails watch their size; jsdom has no ResizeObserver.
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -150,7 +130,6 @@ beforeEach(() => {
     runtime: inProcessFoldRuntime(engine),
   });
   clearFoldStateFrames();
-  setFoldView('fold');
 });
 
 afterEach(() => {
@@ -159,8 +138,6 @@ afterEach(() => {
   root = null;
   container = null;
   vi.unstubAllGlobals();
-  offsetHeight?.mockRestore();
-  offsetHeight = null;
   if (realOffsetWidth) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', realOffsetWidth);
   app.session?.dispose();
   app.session = null;
@@ -204,6 +181,8 @@ describe('the Fold panel', () => {
   it('shows the strip over the canvas, the sheet first, and each step as it is committed', async () => {
     stubPointer(false);
     await render();
+    // One view: the fold on screen under the strip, with no tabs to switch it.
+    expect(container?.querySelectorAll('[role="tab"]')).toHaveLength(0);
     expect(panel()?.textContent).toContain('0 steps');
     expect(stripCards().map((card) => card.textContent)).toEqual(['0Sheet']);
     expect(panel()?.textContent).toContain('Start with a square, front side up.');
@@ -222,53 +201,22 @@ describe('the Fold panel', () => {
     expect(useWorkspaceStore.getState().foldReader?.cursor).toBeNull();
   });
 
-  it('switches its body to the Steps grid and back, a double-click going to the step', async () => {
-    stubPointer(false);
-    await render();
-    await act(async () => {
-      await app.session!.commitStep(valleyAt(0.5));
-      await settle();
-    });
-
-    press(tab('Steps'));
-    expect(stripCards()).toEqual([]);
-    expect(gridCards().map((card) => card.getAttribute('data-step-id'))).toEqual([
-      '',
-      useWorkspaceStore.getState().foldReader?.cursor,
-    ]);
-    expect(panel()?.textContent).toContain('Crease pattern by step');
-
-    act(() => gridCards()[0]?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
-    expect(useWorkspaceStore.getState().foldReader?.cursor).toBeNull();
-    expect(gridCards()).toEqual([]);
-    expect(stripCards()).toHaveLength(2);
-  });
-
-  it('runs the tool rail down its whole side, beside the header — and beside the Steps view, where a press opens the canvas with the tool', async () => {
+  it('runs the tool rail down its whole side, beside the header', async () => {
     stubPointer(false);
     foldTools().selectTool('valley');
     await render();
     const rail = () => panel()?.querySelector<HTMLElement>('aside[aria-label="Fold tools"]') ?? null;
     const railButton = (label: string) => rail()?.querySelector<HTMLButtonElement>(`button[aria-label^="${label}"]`);
-    // Beside the header, not under it: the tabs come after the rail, outside it.
+    // Beside the header, not under it: the header's verbs come after the rail, outside it.
+    const importCp = button('Import CP…');
     expect(rail()).not.toBeNull();
-    expect(rail()?.contains(tab('Fold') ?? null)).toBe(false);
-    expect(rail()!.compareDocumentPosition(tab('Fold')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(rail()?.contains(importCp ?? null)).toBe(false);
+    expect(rail()!.compareDocumentPosition(importCp!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // The tool in hand is marked; a press takes another.
     expect(railButton('Valley fold')?.hasAttribute('data-active')).toBe(true);
     act(() => railButton('Divide line')?.click());
     expect(foldTools().store.getState().tool).toBe('divide-line');
     expect(railButton('Divide line')?.hasAttribute('data-active')).toBe(true);
-
-    // The Steps view keeps the rail, so the tabs stay where they were.
-    press(tab('Steps'));
-    expect(gridCards().length).toBeGreaterThan(0);
-    expect(rail()).not.toBeNull();
-    // A tool is for the canvas: picking one there goes back to it, the tool in hand.
-    act(() => railButton('Mountain fold')?.click());
-    expect(foldTools().store.getState().tool).toBe('mountain');
-    expect(gridCards()).toEqual([]);
-    expect(stripCards().length).toBeGreaterThan(0);
   });
 
   it('has no rail on a phone, whose tools are a sheet on the canvas’s bar', async () => {
@@ -300,7 +248,7 @@ describe('the Fold panel', () => {
     expect(menu.handleMenuAction).toHaveBeenCalledWith('fold.send-to-edit');
   });
 
-  it('imports a crease pattern dropped anywhere on it — the strip, the header, the Steps view — as the panes do', async () => {
+  it('imports a crease pattern dropped anywhere on it — the strip, the header — as the panes do', async () => {
     stubPointer(false);
     await render();
     /** A drag event carrying `files`, as a browser sends one. */
@@ -328,8 +276,6 @@ describe('the Fold panel', () => {
     };
 
     await dropOn(stripCards()[0]);
-    await dropOn(tab('Fold'));
-    press(tab('Steps'));
-    await dropOn(gridCards()[0]);
+    await dropOn(button('Import CP…'));
   });
 });

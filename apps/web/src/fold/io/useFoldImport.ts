@@ -1,7 +1,6 @@
 import { foldTools } from '../tools/foldToolState';
 import { useFoldImportUiStore } from './foldImportUiStore';
 import { useFoldImportOrderUi } from '../orders/foldImportOrderUi';
-import { setFoldView } from '../sequence/foldViewMode';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
@@ -68,7 +67,6 @@ export function useFoldImportFlow(initial: FoldImportRequest | null): {
   }, [state]);
   useEffect(() => {
     const choosing = state.phase === 'choosing' ? state : null;
-    if (choosing) setFoldView('fold');
     useFoldImportOrderUi.setState({ flow, choosing });
     return () => {
       if (useFoldImportOrderUi.getState().flow === flow) useFoldImportOrderUi.setState({ flow: null, choosing: null });
