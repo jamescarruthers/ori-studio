@@ -341,6 +341,11 @@ pub struct SwivelCrease {
     pub letter: Letter,
     /// Whether it is the ridge.
     pub ridge: bool,
+    /// Whether this stretch of it lies behind paper the viewer sees: a swivel
+    /// by its valley and mountain's crease on the layer behind, which a tool
+    /// draws dotted there. Written only when it is.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
 }
 
 /// A piece of paper a swivel moves, in the parent's model frame.
@@ -817,6 +822,7 @@ impl State {
                     to: reach(direction),
                     letter: if is_ridge { opposite(given) } else { given },
                     ridge: is_ridge,
+                    hidden: false,
                 }
             })
             .collect();

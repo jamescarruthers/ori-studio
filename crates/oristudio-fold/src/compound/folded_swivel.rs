@@ -1,4 +1,5 @@
-//! Flat swivel geometry shared by edge-to-line and independently located hinges.
+//! Flat swivel geometry shared by the swivel by its edge onto a line and the
+//! swivel by its valley and mountain.
 use crate::compound::Against;
 use crate::compound::pieces::{Cut, score_cuts};
 use crate::compound::swivel::{SwivelKind, SwivelWedge, dot, internal, sub};
@@ -14,8 +15,9 @@ use std::collections::HashMap;
 type Point = [f64; 2];
 
 /// Three new crease rays around an existing folded edge. The old tip opens.
-/// In the edge-to-line construction `counter == swivel`; independently
-/// located hinges need a separate counter ray to close the same motions.
+/// In the edge-to-line construction `counter == swivel`; a swivel by its
+/// valley and mountain names `counter` and `second` and computes `swivel`
+/// from them, which closes the same motions.
 #[derive(Debug, Clone)]
 pub(super) struct FoldFan {
     pub vertex: Point,
@@ -73,7 +75,7 @@ pub(super) struct FoldCompiled {
 
 /// The subdivisions of one coplanar material layer. A folded attachment
 /// remains a boundary even when its paper overlaps this layer.
-fn flat_region(state: &State, start: usize) -> Vec<bool> {
+pub(super) fn flat_region(state: &State, start: usize) -> Vec<bool> {
     let topology = state.topology();
     let mut region = vec![false; state.faces().len()];
     region[start] = true;

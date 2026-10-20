@@ -1366,8 +1366,17 @@ fn a_swivel_on_a_folded_edge_is_refused_by_code_or_thrown() {
     ));
 }
 
+/// A swivel by its valley and mountain, each a located line.
+fn valley_mountain(valley: Value, mountain: Value, kind: &str) -> Value {
+    let mut step = json!({ "kind": "swivel", "via": "valley-mountain", "valley": valley, "mountain": mountain });
+    if kind == "inside" {
+        step["swivel"] = json!("inside");
+    }
+    step
+}
+
 #[test]
-fn swivel_lines_resolve_both_stored_roots_and_existing_precreases() {
+fn a_swivel_by_its_valley_and_mountain_resolves_stored_roots_and_existing_precreases() {
     let mut bridge = Bridge::default();
     let flat = square(&mut bridge);
     let mut state = land(
@@ -1375,29 +1384,166 @@ fn swivel_lines_resolve_both_stored_roots_and_existing_precreases() {
         flat,
         valley([[0.5, 0.0], [0.5, 1.0]], [0.8, 0.5]),
     );
-    let first = [[0.5, 0.5], [0.05, 0.1]];
-    let second = [[0.5, 0.5], [0.1, 0.8]];
+    let low = [[0.5, 0.5], [0.05, 0.1]];
+    let high = [[0.5, 0.5], [0.1, 0.8]];
     let located = |points: [Point; 2]| {
         let line = oristudio_geometry::Line::from_points(points[0], points[1]).unwrap();
         json!({"line":{"via":"axiom","axiom":1,"inputs":[{"kind":"point","at":points[0]},{"kind":"point","at":points[1]}]},"root":line})
     };
-    let base = json!({"kind":"swivel","via":"lines","first":located(first),"second":located(second),"direction":"mountain","swivel":"inside"});
+    let base = valley_mountain(located(high), located(low), "open");
     let described = analysis(&bridge, state, base.clone());
-    assert_eq!(described["analysis"]["kind"], "swivel-by-creases");
-    for side in ["first", "second"] {
+    let a = &described["analysis"];
+    assert_eq!(a["kind"], "swivel-valley-mountain", "{described}");
+    // The crease behind first, hidden; the two named after it, by their letters.
+    assert_eq!(a["creases"][0]["hidden"], true);
+    let named: Vec<&Value> = a["creases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| c.get("hidden").is_none())
+        .map(|c| &c["letter"])
+        .collect();
+    assert_eq!(
+        named[named.len() - 2..],
+        [&json!("mountain"), &json!("valley")]
+    );
+    // No direction to offer: per kind, only the valley column.
+    for row in described["kinds"].as_array().unwrap() {
+        assert_eq!(row[1], false);
+    }
+    assert_eq!(described["directions"][1], false);
+    for side in ["valley", "mountain"] {
         let mut missing = base.clone();
         missing[side].as_object_mut().unwrap().remove("root");
         let rejected = apply(&mut bridge, state, missing, json!({}));
         assert_eq!(rejected["refusal"]["code"], "root_missing");
     }
-    for points in [first, second] {
+    // A direction is no part of it: a step that names one is the caller's mistake.
+    let mut directed = base.clone();
+    directed["direction"] = json!("valley");
+    assert!(serde_json::from_value::<Op>(directed).is_err());
+    for points in [low, high] {
         state = land(
             &mut bridge,
             state,
             json!({"kind":"precrease","direction":"valley","line":{"via":"free","through":points},"moving":[0.1,0.5],"seed":{"scope":"all"}}),
         );
     }
-    let existing = json!({"kind":"swivel","via":"lines","first":{"line":{"via":"crease","at":[0.275,0.3]}},"second":{"line":{"via":"crease","at":[0.3,0.65]}},"direction":"mountain","swivel":"inside"});
+    let existing = valley_mountain(
+        json!({"line":{"via":"crease","at":[0.3,0.65]}}),
+        json!({"line":{"via":"crease","at":[0.275,0.3]}}),
+        "inside",
+    );
     let a = analysis(&bridge, state, existing);
-    assert_eq!(a["analysis"]["kind"], "swivel-by-creases");
+    assert_eq!(a["analysis"]["kind"], "swivel-valley-mountain");
+}
+
+#[test]
+fn a_swivel_by_its_valley_and_mountain_is_refused_by_code() {
+    let mut bridge = Bridge::default();
+    let flat = square(&mut bridge);
+    let state = land(
+        &mut bridge,
+        flat,
+        valley([[0.5, 0.0], [0.5, 1.0]], [0.8, 0.5]),
+    );
+    let free = |a: Point, b: Point| json!({ "line": { "via": "free", "through": [a, b] } });
+    let refused = |bridge: &mut Bridge, step: Value| {
+        let applied = apply(bridge, state, step, json!({}));
+        assert_eq!(applied["status"], "refused", "{applied}");
+        applied["refusal"]["code"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string()
+    };
+    // Lines that meet away from the folded edge, and one along it.
+    let apart = valley_mountain(
+        free([0.2, 0.0], [0.2, 1.0]),
+        free([0.0, 0.2], [0.4, 0.2]),
+        "open",
+    );
+    assert_eq!(refused(&mut bridge, apart), "swivel_line_meeting");
+    let along = valley_mountain(
+        free([0.5, 0.0], [0.5, 1.0]),
+        free([0.5, 0.5], [0.05, 0.1]),
+        "open",
+    );
+    assert_eq!(refused(&mut bridge, along), "swivel_no_flap");
+}
+
+/// Every saved swivel on a folded edge (the example projects) is made again,
+/// to the same state, by the valley and the mountain it makes on the layer
+/// in front: read off its own question, named by two sheet points each, and
+/// folded with the step's own stored choices.
+#[test]
+fn every_saved_swivel_on_a_folded_edge_is_made_again_by_its_valley_and_mountain() {
+    use oristudio_fold_wasm::canonical::canonical_keys;
+    let root =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/fold-examples");
+    let mut made = 0;
+    for name in ["swivel-on-edge.osf", "swivel-inside.osf"] {
+        let file: Value =
+            serde_json::from_str(&std::fs::read_to_string(root.join(name)).unwrap()).unwrap();
+        let doc = &file["workspace"]["foldSequences"][0];
+        let mut bridge = Bridge::new();
+        let paper: Paper = serde_json::from_value(doc["paper"].clone()).unwrap();
+        let Outcome::Ok(sheet) = bridge.sheet(&paper) else {
+            panic!("{name}: no sheet")
+        };
+        let mut at = std::collections::BTreeMap::<String, u32>::new();
+        for step in doc["steps"].as_array().unwrap() {
+            let parent = step["parent"].as_str().map_or(sheet.state, |id| at[id]);
+            let chosen = step.get("choices").cloned().unwrap_or(json!({}));
+            let applied = apply(&mut bridge, parent, step["op"].clone(), chosen.clone());
+            assert_eq!(applied["status"], "ok", "{name}: {applied}");
+            let landed = applied["state"].as_u64().unwrap() as u32;
+            at.insert(step["id"].as_str().unwrap().to_string(), landed);
+            if step["op"]["kind"] != "swivel" {
+                continue;
+            }
+            let asked = analysis(&bridge, parent, step["op"].clone());
+            let a = &asked["analysis"];
+            let vertex: Point = serde_json::from_value(a["vertex"].clone()).unwrap();
+            let front = oristudio_fold::FaceId(a["layers"][0].as_u64().unwrap() as u32);
+            let isometry = bridge
+                .state(parent)
+                .unwrap()
+                .isometry(front)
+                .unwrap()
+                .inverse();
+            let sheet_of = |p: Point| isometry.apply(p);
+            // The other layer's two creases, the swivel crease and the second.
+            let line_of = |k: usize| {
+                let d: Point =
+                    serde_json::from_value(a["creases"][k]["direction"].clone()).unwrap();
+                let p = [vertex[0] + 0.05 * d[0], vertex[1] + 0.05 * d[1]];
+                json!({ "line": { "via": "free", "through": [sheet_of(vertex), sheet_of(p)] } })
+            };
+            let (v, m) = if a["creases"][1]["letter"] == "valley" {
+                (1, 2)
+            } else {
+                (2, 1)
+            };
+            let kind = step["op"]["swivel"].as_str().unwrap_or("open");
+            let again = apply(
+                &mut bridge,
+                parent,
+                valley_mountain(line_of(v), line_of(m), kind),
+                chosen,
+            );
+            assert_eq!(again["status"], "ok", "{name}: {again}");
+            let again = again["state"].as_u64().unwrap() as u32;
+            assert_eq!(
+                canonical_keys(bridge.state(again).unwrap())
+                    .into_iter()
+                    .collect::<std::collections::BTreeSet<_>>(),
+                canonical_keys(bridge.state(landed).unwrap())
+                    .into_iter()
+                    .collect(),
+                "{name}"
+            );
+            made += 1;
+        }
+    }
+    assert_eq!(made, 2);
 }

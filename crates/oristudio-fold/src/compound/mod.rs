@@ -67,8 +67,8 @@ pub(crate) mod pieces;
 pub mod rabbit;
 pub mod squash;
 pub mod swivel;
-pub mod swivel_by_creases;
 pub mod swivel_on_edge;
+pub mod swivel_valley_mountain;
 pub mod vertex;
 
 use std::collections::HashSet;

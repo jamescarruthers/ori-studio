@@ -519,6 +519,7 @@ impl State {
             to,
             letter,
             ridge,
+            hidden: false,
         };
         // The odd letter out of the three: open, the other layer's swivel
         // crease (the little wedge folds back over the strip); inside, its
