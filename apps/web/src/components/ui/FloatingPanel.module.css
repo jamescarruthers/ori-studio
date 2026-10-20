@@ -115,15 +115,16 @@ button.bar:focus-visible {
 
 /* The end of the body that stays put while the rest scrolls under it
    (FloatingPanelDock): docked to the window's bottom edge in the window's own
-   fill, over the body's padding — the negative inset and margin — so nothing
-   shows below it. */
+   fill, its inset reaching over the body's padding so nothing scrolls by
+   below it. No negative margin to match: it left the body overflowing where
+   the content fit, and the scrollbar that flickered raised a ResizeObserver
+   loop in useAnimatedHeight. */
 .dock {
   position: sticky;
   z-index: 1;
   bottom: calc(-1 * var(--body-pad));
   display: grid;
   gap: 8px;
-  margin-bottom: calc(-1 * var(--body-pad));
   padding-block: var(--body-pad);
   border-top: 1px solid var(--border-subtle);
   background: var(--panel-fill);
