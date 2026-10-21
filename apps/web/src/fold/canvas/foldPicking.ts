@@ -12,7 +12,8 @@
  *   point landmarks — corners, crease crossings and marks, with the sheet
  *   point that names each — and to the midpoints of its segment landmarks;
  *   lines to the segment landmarks' visible parts. A landmark nothing shows
- *   is not there to click.
+ *   is not there to click. Where several layers' points lie together, a
+ *   click takes the one on the paper on top there.
  * - **The crease-pattern pane** picks in sheet coordinates: the crease
  *   pattern's vertices and marks, the crease marks' ends and crossings, and
  *   its creases by Fold's edge ids, in a `LineHitIndex` over the scene's
@@ -34,7 +35,7 @@
 import { LineHitIndex, type IndexedSegment } from '../../cp-workspace/picking/lineHitIndex';
 import type { Point } from '../../lib/geometry';
 import type { FoldRef, SheetPoint } from '../document/foldSequenceDocument';
-import type { FoldLandmarks, FoldPointSource, FoldScene, FoldSegmentLandmark } from '../engine/foldEngineWire';
+import type { FoldIsometry, FoldLandmarks, FoldPointSource, FoldScene, FoldSegmentLandmark } from '../engine/foldEngineWire';
 import {
   applyIsometry,
   boundsOf,
@@ -302,11 +303,15 @@ function stackAt(subfaces: readonly IndexedSubface[], p: Point, epsilon = 0): re
 /** Two drawn points the pane cannot tell apart: one target, the first named. */
 const SAME_DRAWN = 1e-9;
 
+/** Two sheet points that name the same paper. */
+const SAME_SHEET = 1e-7;
+
 /**
  * The folded pane's point targets for one landmark: where the viewer sees it,
- * named by the first sheet point the viewer sees there (vertices first, then
- * crossings, then marks: the engine's order). Spread, each sheet point the
- * viewer sees there is a target of its own where the spread draws it — a
+ * one per sheet point the viewer sees there, the first the viewer sees first
+ * (vertices first, then crossings, then marks: the engine's order). Folded,
+ * they lie together, and {@link onTopAtEachSpot} keeps the one on the paper on
+ * top. Spread, each is a target of its own where the spread draws it — a
  * corner of one layer and a crease of another, together on the folded paper,
  * are apart on the spread picture.
  */
@@ -324,14 +329,152 @@ function landmarkTargets(
   });
   const first = landmark.sources.find((each) => each.visible) ?? landmark.sources[0];
   if (!first) return [];
-  if (!spread) return [candidate(first)];
+  const seen = [first, ...landmark.sources.filter((each) => each.visible && each !== first)];
   const targets: PointCandidate[] = [];
-  for (const source of [first, ...landmark.sources.filter((each) => each.visible && each !== first)]) {
+  for (const source of seen) {
+    if (!spread) {
+      if (!targets.some((target) => sameSheet(target.sheet, source.sheet))) targets.push(candidate(source));
+      continue;
+    }
     const drawn = spread.sheet(source.sheet) ?? at;
     if (targets.some((target) => Math.hypot(target.at.x - drawn.x, target.at.y - drawn.y) <= SAME_DRAWN)) continue;
     targets.push({ ...candidate(source), at: drawn, scene: at });
   }
   return targets;
+}
+
+function sameSheet(a: SheetPoint, b: SheetPoint): boolean {
+  return Math.abs(a[0] - b[0]) <= SAME_SHEET && Math.abs(a[1] - b[1]) <= SAME_SHEET;
+}
+
+/**
+ * The folded pane's point targets with one kept at each spot: of the sheet
+ * points that lie together there — a corner of the flap on top and the
+ * layer under it showing past that corner, say — the one on the paper the
+ * viewer sees on top, by the stacks of the cells around the spot: one is
+ * above another where a cell holds both and lists its face first. Where no
+ * cell holds both, the earlier stays (the engine's order, then the edges'
+ * middles). The spread pane parts such points, so it never asks this.
+ */
+function onTopAtEachSpot(points: readonly PointCandidate[], scene: FoldScene, subfaces: readonly IndexedSubface[]): PointCandidate[] {
+  const spots = new Map<string, number[]>();
+  points.forEach((point, k) => {
+    const key = `${Math.round(point.at.x / SAME_SHEET)},${Math.round(point.at.y / SAME_SHEET)}`;
+    const spot = spots.get(key);
+    if (spot) spot.push(k);
+    else spots.set(key, [k]);
+  });
+  const paper = paperOf(scene, subfaces);
+  const kept: PointCandidate[] = [];
+  for (const spot of spots.values()) {
+    const here = spot.map((k) => points[k]!);
+    const [first] = here;
+    if (!first) continue;
+    if (here.every((point) => sameSheet(point.sheet, first.sheet))) {
+      kept.push(...here);
+      continue;
+    }
+    const top = paper.at(first.at).order(here.map((point) => point.sheet))[0] ?? 0;
+    const sheet = here[top]!.sheet;
+    kept.push(...here.filter((point) => sameSheet(point.sheet, sheet)));
+  }
+  return kept;
+}
+
+/** How the paper stacks at a spot of the folded scene: which of its sheet points lie there, and which lies above which. */
+interface PaperAtSpot {
+  /** Every sheet point the paper has there, one per layer, as the cells around the spot list their faces. */
+  sheets: () => SheetPoint[];
+  /**
+   * Indices into `sheets`, the paper on top first: one is above another
+   * where a cell around the spot holds both and lists its face first. Where
+   * no cell holds both, the earlier comes first.
+   */
+  order: (sheets: readonly SheetPoint[]) => number[];
+}
+
+/** The scene's paper, asked about spot by spot ({@link PaperAtSpot}), each face's inverse taken once. */
+function paperOf(scene: FoldScene, subfaces: readonly IndexedSubface[]): { at: (at: Point) => PaperAtSpot } {
+  const inverses: (FoldIsometry | null)[] = [];
+  // The face's sheet point at a spot of the scene: one of its corners exactly, where it is one.
+  const sheetOf = (face: number, at: Point): SheetPoint | null => {
+    if (inverses[face] === undefined) {
+      const transform = scene.face_transforms[face];
+      inverses[face] = transform ? invertIsometry(transform) : null;
+    }
+    const back = inverses[face];
+    if (!back) return null;
+    const sheet = toPair(applyIsometry(back, at));
+    for (const vertex of scene.faces[face]?.points ?? []) {
+      const corner = scene.sheet_points[vertex];
+      if (corner && sameSheet(toPair(corner), sheet)) return toPair(corner);
+    }
+    return sheet;
+  };
+  return {
+    at: (at) => {
+      const cells = subfaces.filter(
+        ({ box, polygon }) =>
+          at.x >= box.minX - SAME_SHEET &&
+          at.x <= box.maxX + SAME_SHEET &&
+          at.y >= box.minY - SAME_SHEET &&
+          at.y <= box.maxY + SAME_SHEET &&
+          insideConvex(polygon, at, SAME_SHEET)
+      );
+      return {
+        sheets: () => {
+          const sheets: SheetPoint[] = [];
+          for (const { stack } of cells) {
+            for (const face of stack) {
+              const sheet = sheetOf(face, at);
+              if (sheet && !sheets.some((each) => sameSheet(each, sheet))) sheets.push(sheet);
+            }
+          }
+          return sheets;
+        },
+        order: (sheets) => {
+          // Per sheet point, per cell: how deep its paper lies in the cell's stack, top 0; Infinity where the cell does not hold it.
+          const depths = sheets.map((point) =>
+            cells.map(({ stack }) => {
+              const k = stack.findIndex((face) => {
+                const sheet = sheetOf(face, at);
+                return sheet !== null && sameSheet(sheet, point);
+              });
+              return k < 0 ? Infinity : k;
+            })
+          );
+          const above = (a: number, b: number) =>
+            cells.some((_, cell) => depths[a]![cell]! < depths[b]![cell]! && depths[b]![cell]! < Infinity);
+          const left = sheets.map((_, k) => k);
+          const order: number[] = [];
+          while (left.length > 0) {
+            let top = 0;
+            for (let k = 1; k < left.length; k += 1) {
+              if (above(left[k]!, left[top]!) && !above(left[top]!, left[k]!)) top = k;
+            }
+            order.push(...left.splice(top, 1));
+          }
+          return order;
+        },
+      };
+    },
+  };
+}
+
+/**
+ * Every other sheet point that lies where `sheet` does on the folded paper,
+ * the paper on top there first: what a point a step refused as staying put
+ * can be swapped for, the same spot on another layer. Empty off the paper.
+ */
+export function sheetPointsTogether(index: FoldPickIndex, sheet: SheetPoint): SheetPoint[] {
+  const at = sheetToScene(index.scene, sheet);
+  if (!at) return [];
+  const spot = paperOf(index.scene, index.subfaces).at(at);
+  const sheets = spot.sheets();
+  return spot
+    .order(sheets)
+    .map((k) => sheets[k]!)
+    .filter((each) => !sameSheet(each, sheet));
 }
 
 /**
@@ -399,6 +542,7 @@ export function foldPickIndex(
     }
   }
   const folded = segmentIndex(foldedPortions);
+  const foldedTargets = spread ? foldedPoints : onTopAtEachSpot(foldedPoints, scene, subfaces);
 
   // --- The crease-pattern pane: the sheet, every crease and vertex on it.
   const cpPoints: PointCandidate[] = [];
@@ -476,8 +620,8 @@ export function foldPickIndex(
     toModel,
     subfaces,
     folded: {
-      points: foldedPoints,
-      pointHits: pointIndex(foldedPoints),
+      points: foldedTargets,
+      pointHits: pointIndex(foldedTargets),
       segments: foldedSegments,
       portions: foldedPortions,
       portionOf: folded.portionOf,

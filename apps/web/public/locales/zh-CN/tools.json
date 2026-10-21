@@ -360,6 +360,7 @@
       "tuckUnderAnother": "改为塞到合适的层下面",
       "turnToEdge": "转动折线，让该点正好落在边上",
       "useLine": "使用参考线",
+      "useMovingPoint": "使用移动翼片上的点",
       "useSquareLine": "使用垂直线",
       "useWholeLine": "使用整条线",
       "valleyInstead": "改为谷折"

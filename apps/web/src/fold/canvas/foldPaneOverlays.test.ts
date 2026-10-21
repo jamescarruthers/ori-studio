@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Rgba } from '../../cp-workspace/renderer/types';
 import { bookScene } from './foldCanvas.fixtures';
 import type { Point } from '../../lib/geometry';
-import { foldPaneOverlay, type FoldOverlayInks } from './foldPaneOverlays';
+import { foldHoverEcho, foldPaneOverlay, type FoldOverlayInks } from './foldPaneOverlays';
 import type { FoldPaneSpreadMap } from './foldPaneSpreadMap';
 import {
   foldPickIndex,
@@ -231,5 +231,24 @@ describe('a free line drawn on the crease-pattern pane', () => {
         expect(drawn.strokes).toBeNull();
       }
     }
+  });
+
+  it('marks on the crease pattern the point a click on the folded pane would take, before the click', () => {
+    // The book's corner on the folded pane is the right half's (1, 0), lying over the left half's (0, 0).
+    const corner: FoldPick = { kind: 'point', pane: 'folded', provenance: 'vertex', sheet: [1, 0], mark: null, scene: { x: 0, y: 0 } };
+    const hit = { pane: 'folded' as const, at: { x: 0.01, y: 0.01 }, pick: corner };
+    const echo = foldHoverEcho(hit, null);
+    expect(echo).toBe(corner);
+    const drawn = foldPaneOverlay({ pane: 'crease-pattern', scene, picks: [], hovered: null, freeFrom: null, marks: [], inks: INKS, echo });
+    expect(dots(drawn)).toEqual([[1, 0]]);
+    // As a picked point is marked: the accent's dot, outlined.
+    expect(drawn.points?.radius[0]).toBe(4.5);
+    expect(Array.from(drawn.points?.fill ?? [])).toEqual(INKS.accent);
+    // The same point a frame later is the echo it was; a line, bare paper or none echoes nothing.
+    expect(foldHoverEcho({ ...hit, pick: { ...corner } }, echo)).toBe(echo);
+    expect(foldHoverEcho({ ...hit, pick: null }, echo)).toBeNull();
+    expect(foldHoverEcho(null, echo)).toBeNull();
+    const bend = index.creasePattern.segments.find((segment) => segment.segment === 'bend')!;
+    expect(foldHoverEcho({ ...hit, pick: bend }, echo)).toBeNull();
   });
 });

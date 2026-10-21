@@ -19,6 +19,7 @@ import type { FoldMark, FoldModelLine, SheetPoint } from '../document/foldSequen
 import { markPoints } from '../document/foldSequenceDocument';
 import type { FoldPaneSpreadMap } from './foldPaneSpreadMap';
 import {
+  samePick,
   sheetToScene,
   type FoldFreePick,
   type FoldHit,
@@ -340,6 +341,25 @@ export interface FoldPaneOverlayInput {
    * the one under the pointer lit as brightly as a pick.
    */
   offered?: readonly FoldSegmentPick[] | null;
+  /**
+   * The point a click on the other pane would take, from its pointer
+   * ({@link foldHoverEcho}): marked where it lies on this pane as a picked
+   * point is, so the crease pattern shows which paper a click on the folded
+   * pane takes before the click.
+   */
+  echo?: FoldPick | null;
+}
+
+/**
+ * The point a hit on the folded pane would take, for the crease pattern to
+ * mark (`FoldPaneOverlayInput.echo`): a point, or a free point on the paper;
+ * null for a line, bare paper or off it. `was` comes back while the hit
+ * takes the same point, so a move along one point re-renders nothing.
+ */
+export function foldHoverEcho(hit: FoldHit | null, was: FoldPick | null): FoldPick | null {
+  const pick = hit?.pick ?? null;
+  const echo = pick && (pick.kind === 'point' || (pick.kind === 'free' && pick.sheet !== null)) ? pick : null;
+  return echo && was && samePick(echo, was) ? was : echo;
 }
 
 /** A partial precrease's located line on one pane, and its points along it (`foldAlongOverlay`). */
@@ -425,6 +445,7 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   }
   for (const pick of input.picks) draw(pick, false);
   for (const pick of along?.picks ?? []) draw(pick, false);
+  if (input.echo) draw(input.echo, false);
 
   const hovered = input.hovered;
   if (hovered?.pick) draw(hovered.pick, true);

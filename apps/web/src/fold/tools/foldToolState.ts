@@ -426,6 +426,13 @@ export interface FoldTools {
    * previewed — its fourth creases are listed anew.
    */
   repick(pick: FoldPick): void;
+  /**
+   * The point picked at sheet point `from` named by `to` instead, the same
+   * spot on another layer, every other choice kept: a fold refused as its
+   * point staying put, taking the point on paper that folds (`moverStays`).
+   * Whether a point was picked there.
+   */
+  swapPoint(from: SheetPoint, to: SheetPoint): boolean;
   /** Let go of the clicks and every choice made since: Escape's rung, and what a commit leaves. */
   clear(): void;
   /**
@@ -655,6 +662,19 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
               compound: { ...state.compound, emergent: null, order: 0, tuckPinned: [] },
             }
       );
+    },
+
+    swapPoint(from, to) {
+      const state = store.getState();
+      const at = state.picks.findIndex(
+        (pick) => pick.kind === 'point' && Math.abs(pick.sheet[0] - from[0]) <= 1e-9 && Math.abs(pick.sheet[1] - from[1]) <= 1e-9
+      );
+      const picked = state.picks[at];
+      if (picked?.kind !== 'point') return false;
+      const picks = state.picks.slice();
+      picks[at] = { ...picked, sheet: to, mark: null };
+      store.setState({ ...state, picks, override: null }, true);
+      return true;
     },
 
     clear() {

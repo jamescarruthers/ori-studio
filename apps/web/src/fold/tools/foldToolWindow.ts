@@ -124,6 +124,8 @@ export interface FoldPreview {
   added: readonly number[];
   /** Why it does not land; null while it does, or has not been asked. */
   refused: FoldRefused | null;
+  /** Refused as its point staying put, and a point at the same spot on paper that folds lands it: the refusal offers it. */
+  movingPoint?: boolean;
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
   /** A free line drawn on the crease pattern across layers the folded form puts apart (`FoldBuiltStep.acrossLayers`). */
@@ -746,6 +748,7 @@ function toolWindow(
             readOnly,
             ...sectionFlapNames(preview.section),
             ...(extentView ? { extent: { mode: extentView.mode, allLayers: preview.seed === 'all' } } : {}),
+            ...(preview.movingPoint ? { movingPoint: true } : {}),
           },
           verbs
         )

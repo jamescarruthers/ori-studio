@@ -360,6 +360,7 @@
       "tuckUnderAnother": "대신 맞는 겹 아래로 끼워 넣기",
       "turnToEdge": "선을 돌려 점을 변에 정확히 놓기",
       "useLine": "기준선 사용",
+      "useMovingPoint": "움직이는 플랩의 점 사용",
       "useSquareLine": "직각인 선 사용",
       "useWholeLine": "선 전체 사용",
       "valleyInstead": "대신 골접기"

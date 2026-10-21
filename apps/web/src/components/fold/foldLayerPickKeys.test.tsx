@@ -89,6 +89,7 @@ function verbs(): FoldCanvasVerbs {
     useWholeLine: vi.fn(),
     pinchInstead: vi.fn(),
     throughAllLayers: vi.fn(),
+    useMovingPoint: vi.fn(),
     commit: vi.fn(() => true),
     cancel: vi.fn(() => true),
     clearMarks: vi.fn(),

@@ -6343,7 +6343,8 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12689,7 +12690,8 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19037,7 +19039,8 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25044,7 +25047,8 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31051,7 +31055,8 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37397,7 +37402,8 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43743,7 +43749,8 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49750,6 +49757,7 @@
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
     "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
     "panels:diagram.turns.angle": "1968034b13f8",
-    "panels:diagram.turns.custom": "494ca78f7374"
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "tools:fold.fix.useMovingPoint": "9b4f826cd210"
   }
 }

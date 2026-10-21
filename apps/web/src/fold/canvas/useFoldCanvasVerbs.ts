@@ -213,6 +213,8 @@ export interface FoldCanvasVerbs {
   pinchInstead: () => void;
   /** Mark through every layer at the line, not the ones picked. */
   throughAllLayers: () => void;
+  /** A point that stays put, swapped for the one at its spot on paper that folds (`FoldToolPreview.moverFix`). */
+  useMovingPoint: () => void;
 }
 
 /** The verbs, and whether a commit waits for the preview to land. */
@@ -907,6 +909,11 @@ export function useFoldCanvasVerbs(
       },
 
       throughAllLayers: () => tools.setSeed({ scope: 'all' }),
+
+      useMovingPoint: () => {
+        const fix = live.current.preview.moverFix;
+        if (fix) tools.swapPoint(fix.from, fix.to);
+      },
 
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),
 

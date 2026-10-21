@@ -225,6 +225,27 @@ describe('foldRefusalNotice', () => {
     expect(neither.actions).toEqual([]);
   });
 
+  it('offers the point on the moving flap for a point that stays put, only when the tools found one that lands', () => {
+    const refused: FoldRefused = { refusal: { code: 'mover_stays', point: [0, 1] }, fixes: [] };
+    const useMovingPoint = vi.fn();
+    const offered = foldRefusalNotice(t, refused, context({ kind: 'precrease', movingPoint: true }), { ...verbs(), useMovingPoint });
+    expect(offered.title).toBe('The point would stay put');
+    expect(offered.actions.map((action) => action.label)).toEqual(['Use the point on the moving flap']);
+    offered.actions[0]?.run();
+    expect(useMovingPoint).toHaveBeenCalledTimes(1);
+    // None found to land, none bound, or nothing can change: no button, or none to press.
+    expect(foldRefusalNotice(t, refused, context({ kind: 'precrease' }), { ...verbs(), useMovingPoint }).actions).toEqual([]);
+    expect(foldRefusalNotice(t, refused, context({ kind: 'precrease', movingPoint: true }), verbs()).actions).toEqual([]);
+    expect(
+      foldRefusalNotice(t, refused, context({ kind: 'precrease', movingPoint: true, readOnly: true }), { ...verbs(), useMovingPoint })
+        .actions[0]?.disabled
+    ).toBe(true);
+    // Another refusal never offers it.
+    expect(
+      foldRefusalNotice(t, { refusal: { code: 'no_side' }, fixes: [] }, context({ movingPoint: true }), { ...verbs(), useMovingPoint }).actions
+    ).toEqual([]);
+  });
+
   it('says a sink or a vertex fold no order lands in its own words, pointing to the fix the engine offers', () => {
     const generic = foldRefusalNotice(t, { refusal: { code: 'internal' }, fixes: [] }, context(), verbs());
     const noOrder = { code: 'no_order', faces: [1, 2] } as FoldRefusalBody;

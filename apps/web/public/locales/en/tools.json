@@ -370,6 +370,7 @@
       "tuckUnderAnother": "Tuck under the layer that fits instead",
       "turnToEdge": "Turn the line to land the point on the edge",
       "useLine": "Use the landmark line",
+      "useMovingPoint": "Use the point on the moving flap",
       "useSquareLine": "Use the square line",
       "useWholeLine": "Use the whole line",
       "valleyInstead": "Valley fold instead"
