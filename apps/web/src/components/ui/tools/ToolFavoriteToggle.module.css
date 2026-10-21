@@ -1,4 +1,4 @@
-/* The star beside a tool row (CpToolFavoriteToggle.tsx). Touch-only, as the sheet is. */
+/* The star beside a tool row (ToolFavoriteToggle.tsx). Touch-only, as the sheet is. */
 @media (pointer: coarse) {
   /* Its own touch target, so the row's tap area starts after it and a thumb
      aiming at the tool cannot land on the star by a few pixels. */
