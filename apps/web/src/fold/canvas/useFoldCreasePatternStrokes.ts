@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import { resolveCpLineColor } from '../../cp-workspace/adapters/cpLineColor';
 import { createCpLineAppearanceResolver } from '../../cp-workspace/adapters/cpLineStyle';
 import { cpSnapshotToScene } from '../../cp-workspace/adapters/cpSnapshotToScene';
+import { cpCreaseStrokeWidthPx } from '../../cp-workspace/cpSizingScales';
 import { previewGroupsToStrokes, type PreviewStrokeGroup } from '../../cp-workspace/renderer/previewStrokes';
 import type { StrokeGeometry } from '../../cp-workspace/renderer/types';
 import { DEFAULT_ORISTUDIO_CP_LINE_STYLE } from '../../lib/creasePatternViewport';
 import { cpLineStyleDashPatterns } from '../../lib/oristudioCpLineStyle';
-import { CP_CREASE_WIDTH_FACTOR } from '../../lib/stepDiagram/diagramInk';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { FoldLetter } from '../engine/foldEngineWire';
 import { foldLetterLineColor, type FoldCreasePatternLines } from './foldCreasePatternLines';
@@ -24,11 +24,33 @@ export interface FoldCreasePatternStrokes {
   creases: StrokeGeometry;
   /** The instruction, for the preview channel under the tool's feedback; null for none. */
   instruction: StrokeGeometry | null;
-  /** The CSS width a crease is drawn at: Edit's width law over its line width. */
-  widthCss: number;
+  /**
+   * The line width Edit's view is set to: a crease is drawn at Edit's crease
+   * width over it (`cpCreaseStrokeWidthPx`), the instruction at
+   * {@link FOLD_INSTRUCTION_WIDTH_MUL} times that.
+   */
+  lineWidth: number;
 }
 
 const LETTERS: readonly FoldLetter[] = ['valley', 'mountain'];
+
+/** What the tool's feedback is measured from on a pane with no crease pattern, CSS px: the edge pen's at the default style. */
+const OVERLAY_STROKE_CSS = 1.2;
+
+/**
+ * The width a Fold pane strokes at in one frame, device px. On the
+ * crease-pattern pane it is Edit's crease width over the line width Edit's
+ * view is set to (`cpCreaseStrokeWidthPx`, the call Edit's canvas makes), so
+ * a crease is as wide as Edit draws it at the same zoom, and the instruction
+ * {@link FOLD_INSTRUCTION_WIDTH_MUL} times that. The folded pane draws no
+ * creases of its own: the edge pen's, for the tool's feedback.
+ */
+export function foldPaneStrokeWidthPx(
+  creases: FoldCreasePatternStrokes | null,
+  frame: { ratio: number; widthBoost: number }
+): number {
+  return creases ? cpCreaseStrokeWidthPx(creases.lineWidth, frame) : OVERLAY_STROKE_CSS * frame.ratio * frame.widthBoost;
+}
 
 /**
  * The crease-pattern pane drawn through Edit's renderer path: each line's ink
@@ -64,7 +86,7 @@ export function useFoldCreasePatternStrokes(
       instruction = previewGroupsToStrokes(groups);
       instruction.widthMul.fill(FOLD_INSTRUCTION_WIDTH_MUL);
     }
-    return { creases, instruction, widthCss: CP_CREASE_WIDTH_FACTOR * lineWidth };
+    return { creases, instruction, lineWidth };
     // The theme is read off the element: its key is what says it changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lines, element, themeKey, lineStyle, lineWidth]);

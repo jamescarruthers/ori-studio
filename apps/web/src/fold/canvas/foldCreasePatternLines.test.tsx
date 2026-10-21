@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { cpCreaseStrokeWidthPx, cpSizingScales } from '../../cp-workspace/cpSizingScales';
 import { SOLID_DASH_SLOT } from '../../lib/oristudioCpLineStyle';
 import { CP_CREASE_WIDTH_FACTOR } from '../../lib/stepDiagram/diagramInk';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -10,6 +11,7 @@ import { creasePatternPaneLines, type FoldCreasePatternLines } from './foldCreas
 import { FOLD_PANE_DISPLAY_DEFAULT } from './foldPaneScenes';
 import {
   FOLD_INSTRUCTION_WIDTH_MUL,
+  foldPaneStrokeWidthPx,
   useFoldCreasePatternStrokes,
   type FoldCreasePatternStrokes,
 } from './useFoldCreasePatternStrokes';
@@ -142,8 +144,8 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
     });
     act(() => root.render(<Probe lines={lines} />));
     const strokes = latest!;
-    // Edit's crease width law over Edit's default line width.
-    expect(strokes.widthCss).toBe(CP_CREASE_WIDTH_FACTOR);
+    // Edit's default line width.
+    expect(strokes.lineWidth).toBe(1);
     // The precrease in Edit's auxiliary ink, solid, as Edit draws an aux line; the border in Edit's ink.
     expect(rgb(strokes.creases.color, 0)).toBe('64c8c8');
     expect(strokes.creases.dashSlot?.[0]).toBe(SOLID_DASH_SLOT);
@@ -170,10 +172,37 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
     });
     act(() => root.render(<Probe lines={lines} />));
     const strokes = latest!;
-    expect(strokes.widthCss).toBe(CP_CREASE_WIDTH_FACTOR * 2);
+    expect(strokes.lineWidth).toBe(2);
     // The valley fold, in the monochrome style's ink and its valley dash.
     expect(rgb(strokes.creases.color, 0)).toBe('111417');
     expect(strokes.creases.dashSlot?.[0]).not.toBe(0);
     expect(strokes.instruction).toBeNull();
+  });
+
+  it('strokes a crease as wide as Edit’s canvas does at the same zoom, and the step’s own at twice that', () => {
+    useWorkspaceStore.setState((state) => ({
+      oristudioCpViewport: { ...state.oristudioCpViewport, lineWidth: 1.5 },
+    }));
+    const lines = creasePatternPaneLines(bookWithPrecrease(), {
+      display: FOLD_PANE_DISPLAY_DEFAULT,
+      step: 1,
+      instruction: null,
+    });
+    act(() => root.render(<Probe lines={lines} />));
+    const strokes = latest!;
+    // One frame, sized as both canvases size theirs: a retina display, zoomed in past the fit.
+    const ratio = 2;
+    const { widthBoost } = cpSizingScales({ camZoom: 8, fitZoom: 2, ratio });
+    expect(widthBoost).toBeGreaterThan(1);
+    const frame = { ratio, widthBoost };
+    // Edit's canvas: its crease width law over the line width its view is set to.
+    const edit = cpCreaseStrokeWidthPx(useWorkspaceStore.getState().oristudioCpViewport.lineWidth ?? 1, frame);
+    expect(edit).toBeCloseTo(CP_CREASE_WIDTH_FACTOR * 1.5 * ratio * widthBoost, 9);
+    // Fold's pane: the same width on its crease channel, every crease of the pattern at 1×...
+    const fold = foldPaneStrokeWidthPx(strokes, frame);
+    expect(fold).toBe(edit);
+    expect([...strokes.creases.widthMul]).toEqual(Array(strokes.creases.count).fill(1));
+    // ...and the step's own valley, on the preview channel, at twice Edit's.
+    expect(fold * strokes.instruction!.widthMul[0]!).toBe(2 * edit);
   });
 });

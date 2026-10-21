@@ -14,7 +14,10 @@ import type { PaperScene } from '../../../lib/paper/paperScene';
 import type { PaperStyle } from '../../../lib/paper/paperStyle';
 import { ptToDevicePx } from '../../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../../lib/paper/paperStyleResolve';
-import type { FoldCreasePatternStrokes } from '../../../fold/canvas/useFoldCreasePatternStrokes';
+import {
+  foldPaneStrokeWidthPx,
+  type FoldCreasePatternStrokes,
+} from '../../../fold/canvas/useFoldCreasePatternStrokes';
 import type { WheelGesturePreference } from '../../../lib/wheelGesture';
 import { syncHeldModifiersFromEvent } from '../../../keyboard/heldModifiers';
 import { FOLD_UNITS_PER_CP_UNIT, foldUnitToUser } from '../../../fold/canvas/foldCanvasGeometry';
@@ -37,9 +40,6 @@ const EMPTY_FOLDED: FoldedGeometry = {
 };
 
 const FOLD_INK: FoldedSceneInk = { policy: PAPER_STYLE_POLICIES.fold };
-
-/** The crease width the preview channel's strokes are measured from, CSS px: the edge pen's at the default style. */
-const OVERLAY_STROKE_CSS = 1.2;
 
 export interface FoldPaneProps {
   pane: FoldPaneId;
@@ -165,7 +165,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       onPick,
       strokeWidths: ({ ratio, widthBoost }) => ({
         // A crease pattern's crease width, as Edit's canvas draws it; the edge pen's otherwise.
-        strokeWidthPx: (creases?.widthCss ?? OVERLAY_STROKE_CSS) * ratio * widthBoost,
+        strokeWidthPx: foldPaneStrokeWidthPx(creases, { ratio, widthBoost }),
         // A stroke multiplier on the folded channel is pt: device px per pt
         // is the unit, as Edit's canvas draws its figures.
         foldedStrokeWidthPx: ptToDevicePx(1, ratio),

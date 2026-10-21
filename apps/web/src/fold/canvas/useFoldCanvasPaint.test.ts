@@ -65,10 +65,10 @@ describe('Rotate’s preview on the panes', () => {
   /** The book turned a quarter counterclockwise about the origin: its middle lands at (−0.5, 0.5). */
   const turned: FoldScene = { ...book, view: { flipped: false, rotation: Math.PI / 2 }, view_transform: [0, -1, 0, 1, 0, 0] };
 
-  function paintOf(preview: FoldToolPreview): FoldCanvasPaint {
+  function paintOf(preview: FoldToolPreview, shown: FoldStateView = view): FoldCanvasPaint {
     let painted: FoldCanvasPaint | null = null;
     function Probe() {
-      const paint = useFoldCanvasPaint(view, preview, FOLD_PANE_DISPLAY_DEFAULT, null, null);
+      const paint = useFoldCanvasPaint(shown, preview, FOLD_PANE_DISPLAY_DEFAULT, null, null);
       useEffect(() => {
         painted = paint;
       });
@@ -95,5 +95,26 @@ describe('Rotate’s preview on the panes', () => {
 
   it('leaves the crease pattern as it is: front up, the state on screen’s', () => {
     expect(paintOf({ ...idle, turned }).creasePattern.lines).toEqual(paintOf(idle).creasePattern.lines);
+  });
+
+  describe('an Import CP step', () => {
+    const imported = { ...view, since: 0, imported: true } as FoldStateView;
+    const creasesOf = (shown: FoldStateView, preview: FoldToolPreview) => paintOf(preview, shown).creasePattern.lines!;
+
+    it('draws its own creases as the pattern, not as an instruction drawn wider over it', () => {
+      // A fold step's own valley is its instruction...
+      const folded = creasesOf({ ...view, since: 0, imported: false } as FoldStateView, idle);
+      expect(folded.instruction.map((line) => line.letter)).toEqual(['valley']);
+      // ...an import's is the pattern it collapses along, inked as Edit inks it.
+      const lines = creasesOf(imported, idle);
+      expect(lines.instruction).toEqual([]);
+      expect(lines.creases.map((line) => line.color)).toContain('Blue2');
+    });
+
+    it('still draws a fold previewed from it as that fold’s instruction', () => {
+      const landed = { scene: book, summary: view.summary!, added: new Set([6]) };
+      const lines = creasesOf(imported, { ...idle, landed });
+      expect(lines.instruction.map((line) => line.letter)).toEqual(['valley']);
+    });
   });
 });

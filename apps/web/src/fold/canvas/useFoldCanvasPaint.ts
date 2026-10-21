@@ -215,10 +215,14 @@ export function useFoldCanvasPaint(
   const cpSummary = landed?.summary ?? summary;
   // The step on screen's own creases: all a Repeat made, not only its last operation's.
   const since = landed ? null : view.since;
+  // An Import CP step's own creases are the whole pattern: there is nothing
+  // for them to stand out of, so they are drawn as the pattern is, at Edit's
+  // width, rather than as an instruction over it.
+  const pattern = !landed && view.imported;
   const cpLines = useMemo(() => {
     if (!cpSource || !cpSummary) return null;
     const lines = creasePatternPaneLines(cpSource, {
-      display,
+      display: pattern ? { ...display, stepCreases: false } : display,
       step: cpSummary.step,
       ...(since !== null ? { since } : {}),
       instruction: landed?.added ?? null,
@@ -227,7 +231,7 @@ export function useFoldCanvasPaint(
     // are the instruction: on each layer, by the letter each has from the front.
     if (landed || !pendingSheet || pendingSheet.length === 0) return lines;
     return { ...lines, instruction: [...lines.instruction, ...pendingSheet] };
-  }, [cpSource, cpSummary, since, display, landed, pendingSheet]);
+  }, [cpSource, cpSummary, since, display, pattern, landed, pendingSheet]);
   const cpBounds = useMemo(() => (sheetBounds ? boundsToUser(sheetBounds) : null), [sheetBounds]);
 
   // A turned preview is another form: the pane keeps it in view as it keeps a new step's.
