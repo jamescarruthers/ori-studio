@@ -33,6 +33,8 @@ import { creasePatternPaperScene } from '../../fold/canvas/foldPaneScenes';
 import type { FoldScene } from '../../fold/engine/foldEngineWire';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import { ORIEDITA_PAPER_SIZE } from '../../lib/creasePatternViewport';
+import { DIAGRAM_PUSH_INK } from '../../lib/stepDiagram/diagramInk';
+import { INK_UNITS } from '../annotate/canvasInk';
 import { turnClockwise, type Point } from '../../lib/geometry';
 import type { PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { storedSheetThumbnail, type SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
@@ -287,13 +289,31 @@ function bowedOverPaper(
 }
 
 /**
+ * A push arrow's length from tail to tip, in picture units: two and a
+ * quarter times its head's width, the short hollow arrow Yoshizawa–Randlett
+ * diagrams push a point or a spine in with — its head, and a shaft not much
+ * longer. The engine says where the push lands and which way it comes from;
+ * how long it is drawn is the diagram's.
+ */
+export const FOLD_PUSH_ARROW_LENGTH = 2.25 * 2 * DIAGRAM_PUSH_INK.headHalf * INK_UNITS;
+
+/** A push arrow's tail: on the way from `from` to `tip`, {@link FOLD_PUSH_ARROW_LENGTH} back from the tip. */
+function pushTail(from: PicturePoint, tip: PicturePoint): PicturePoint {
+  const length = Math.hypot(from[0] - tip[0], from[1] - tip[1]);
+  if (!(length > 0)) return from;
+  const scale = FOLD_PUSH_ARROW_LENGTH / length;
+  return [tip[0] + (from[0] - tip[0]) * scale, tip[1] + (from[1] - tip[1]) * scale];
+}
+
+/**
  * The step's marks on the flat picture `captured` is: its fold's line — the
  * stretches of it the moving paper is creased along, a stretch under a layer
  * that stays drawn hidden; every crease of a rabbit ear — the points it names
  * circled (`foldStepMarkPlan.ts`), and its arrow from the paper it moves to
  * where it lands, dotted from an end under layers (15e), bowed over the
  * paper rather than off it where it can be; a precrease's arrow comes back.
- * A compound fold's push or pleat arrow too. Seen from the back, every fold
+ * A compound fold's push — its tip where the engine puts it, its length the
+ * diagram's own ({@link FOLD_PUSH_ARROW_LENGTH}) — or pleat arrow too. Seen from the back, every fold
  * is named from there (RM7) and its layers are not the front's, so no end is
  * marked behind.
  */
@@ -349,7 +369,10 @@ export function foldStepMarks(
     const to = back || overImage === null ? 0 : Math.min(overImage, MAX_BEHIND_LAYERS);
     marks.push(from > 0 || to > 0 ? { ...arrow, behind: { ...(from > 0 ? { from } : {}), ...(to > 0 ? { to } : {}) } } : arrow);
   }
-  if (action.push) marks.push(mark('push-arrow', action.push.at, action.push.toward));
+  if (action.push) {
+    const tip = toPicture(action.push.toward);
+    marks.push(createAnnotation('push-arrow', pushTail(toPicture(action.push.at), tip), tip, frame, newId));
+  }
   if (action.pleat) {
     const kinks = Math.min(5, Math.max(1, Math.round(action.pleat.kinks))) as DiagramPleatKinks;
     marks.push({ ...mark('pleat-arrow', action.pleat.from, action.pleat.to), ...(kinks > 1 ? { kinks } : {}) });
