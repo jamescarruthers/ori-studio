@@ -89,8 +89,11 @@ the top layer under it.
 - [x] Analytics properties and docs
 - [x] Proof: crane_new and petal-fold, engine vs by hand
 - [x] Regression fixture `tests/fixtures/fold-regressions/repeat-behind-diagonal.osf`
-- [ ] Fixture fingerprints: every saved step replays to its stored fingerprint
-- [ ] Browser proof, screenshots, saved .osf
+- [x] Fixture fingerprints: every saved step replays to its stored fingerprint
+      (435 steps, 47 Repeats; only crane.osf's 4 later steps and
+      layer_order_choice.osf's swivel differ, as before)
+- [x] Browser proof, screenshots (`artifacts/repeat-axis/`), saved .osf
+      (`artifacts/repeat-behind.osf`, `artifacts/crane-new-repeat-behind.osf`)
 
 ### Notes
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { FoldOverlayInks } from '../canvas/foldPaneOverlays';
-import type { FoldHit, FoldPickIndex } from '../canvas/foldPicking';
+import type { FoldHit, FoldPaneId, FoldPickIndex } from '../canvas/foldPicking';
 import type { SheetPoint } from '../document/foldSequenceDocument';
 import { repeatOverlay, type FoldRepeatOverlay } from './repeatCanvas';
 import type { FoldRepeatTool } from './useFoldRepeatTool';
@@ -17,7 +17,11 @@ export function useFoldRepeatMarks(
   outline: readonly SheetPoint[] | null,
   repeat: FoldRepeatTool | null | undefined,
   inks: FoldOverlayInks | null
-): { overlay: FoldRepeatOverlay | null; onHover: (hit: FoldHit | null) => void } {
+): {
+  overlay: FoldRepeatOverlay | null;
+  onFoldedHover: (hit: FoldHit | null) => void;
+  onCreaseHover: (hit: FoldHit | null) => void;
+} {
   const marks = repeat?.marks ?? null;
   // The marks are made anew each render: read through what they say.
   const marksKey = marks ? JSON.stringify(marks) : null;
@@ -26,11 +30,19 @@ export function useFoldRepeatMarks(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [marksKey, inks, index, outline]
   );
-  // The hover's verb, read when the pointer moves: the handler keeps its identity across renders.
+  // The hover's verb, read when the pointer moves: the handlers keep their identity across renders.
   const hoverAxis = useRef(repeat?.verbs.hoverAxis);
   useEffect(() => {
     hoverAxis.current = repeat?.verbs.hoverAxis;
   });
-  const onHover = useCallback((hit: FoldHit | null) => hoverAxis.current?.(hit?.repeatAxis ?? null), []);
-  return { overlay, onHover };
+  // Each pane says what is under the pointer on it, the one it left saying nothing: the axis is the
+  // one under the pointer on either pane, so a pane the pointer is not on never lets go of the other's.
+  const under = useRef<Record<FoldPaneId, number | null>>({ folded: null, 'crease-pattern': null });
+  const onHover = useCallback((pane: FoldPaneId, hit: FoldHit | null) => {
+    under.current[pane] = hit?.repeatAxis ?? null;
+    hoverAxis.current?.(under.current['crease-pattern'] ?? under.current.folded);
+  }, []);
+  const onFoldedHover = useCallback((hit: FoldHit | null) => onHover('folded', hit), [onHover]);
+  const onCreaseHover = useCallback((hit: FoldHit | null) => onHover('crease-pattern', hit), [onHover]);
+  return { overlay, onFoldedHover, onCreaseHover };
 }

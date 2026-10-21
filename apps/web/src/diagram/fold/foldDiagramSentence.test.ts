@@ -57,6 +57,9 @@ const CASES: [FoldSentenceStep, string][] = [
   [{ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'valley-mountain', inside: true } }, 'Inside swivel fold.'],
   [{ op: 'repeat', count: 1 }, 'Repeat on the other side.'],
   [{ op: 'repeat', count: 3 }, 'Repeat the last 3 steps on the other side.'],
+  // Its mirror reversed the layers: the steps were folded on the back.
+  [{ op: 'repeat', count: 1, behind: true }, 'Repeat behind.'],
+  [{ op: 'repeat', count: 3, behind: true }, 'Repeat the last 3 steps behind.'],
   [{ op: 'unfold-to', sheet: true }, 'Unfold completely.'],
   [{ op: 'unfold-to', sheet: false, number: 4 }, 'Unfold to step 4.'],
   [{ op: 'unfold-to', sheet: false }, 'Unfold.'],

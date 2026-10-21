@@ -254,24 +254,24 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const { onHover: onPetalHover } = petalMarks;
   const { onHover: onSwivelHover } = swivelMarks;
   const { onHover: onSquashHover } = squashMarks;
-  const { onHover: onRepeatHover } = repeatMarks;
+  const { onFoldedHover: onRepeatFoldedHover, onCreaseHover: onRepeatCreaseHover } = repeatMarks;
   const onFoldedHover = useCallback(
     (hit: FoldHit | null) => {
       onWovenHover(hit);
       onPetalHover(hit);
       onSwivelHover(hit);
       onSquashHover(hit);
-      onRepeatHover(hit);
+      onRepeatFoldedHover(hit);
     },
-    [onWovenHover, onPetalHover, onSwivelHover, onSquashHover, onRepeatHover]
+    [onWovenHover, onPetalHover, onSwivelHover, onSquashHover, onRepeatFoldedHover]
   );
   const onCreaseHover = useCallback(
     (hit: FoldHit | null) => {
       onPetalHover(hit);
       onSwivelHover(hit);
-      onRepeatHover(hit);
+      onRepeatCreaseHover(hit);
     },
-    [onPetalHover, onSwivelHover, onRepeatHover]
+    [onPetalHover, onSwivelHover, onRepeatCreaseHover]
   );
   const reverseView = foldReverseWindowView(toolState, preview);
   const crimpView = foldCrimpWindowView(toolState, preview);

@@ -504,8 +504,10 @@ export function useFoldRepeatTool(
     // A refused line drawn gives way to the axis taken.
     if (tools.picks.length > 0) foldTools().clear();
   };
+  // While an axis cannot be taken — an order chosen, the repeat added — the one hovered stays as it is.
   const hoverAxis = (index: number | null) => {
-    const next = index !== null && index >= 0 && drawing ? index : -1;
+    if (!drawing) return;
+    const next = index !== null && index >= 0 ? index : -1;
     if (next !== hovered) setHover(next >= 0 ? { key: baseKey, axis: next } : null);
   };
   const sheetOutline = range?.baseline.session.summary?.sheet ?? null;
