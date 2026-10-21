@@ -239,12 +239,14 @@ export interface FoldCanvasVerbBinding {
  */
 export function queuedCommit(
   queued: string | null,
-  preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'> & Partial<Pick<FoldToolPreview, 'vertex' | 'orderResolution'>>,
+  preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'> & Partial<Pick<FoldToolPreview, 'vertex' | 'orderResolution' | 'held'>>,
   readOnly: boolean,
   input: string
 ): 'idle' | 'wait' | 'review' | 'commit' | 'drop' {
   if (queued === null) return 'idle';
-  const { step, refused, landing } = preview;
+  const { step, landing } = preview;
+  // A refusal held over from the last seed (`foldShownPreview`) is not this step's.
+  const refused = preview.held ? null : preview.refused;
   if (input !== queued || readOnly) return 'drop';
   const resolution = preview.orderResolution;
   if (resolution && (resolution.inputKey !== input || resolution.waiting)) return 'wait';
@@ -1048,8 +1050,9 @@ export function useFoldCanvasVerbs(
         }
         if (resolution?.required) { setQueued(null); resolution.resume(); return true; }
         if (resolution?.failed) return false;
-        const { step, refused, landing, extent, vertex } = live.current.preview;
-        if (refused || live.current.session.readOnly) return false;
+        const { step, refused, landing, extent, vertex, held } = live.current.preview;
+        // A refusal held over from the last seed is not this step's: it waits for its own answer.
+        if ((refused && !held) || live.current.session.readOnly) return false;
         // A fan none of whose fourth creases lands: nothing to fold, or to wait for, until another hinge region is picked.
         if (!step && fanHasNoFourth(vertex?.base ?? null)) return false;
         // A partial precrease whose points along the line are still to be clicked has nothing to commit.

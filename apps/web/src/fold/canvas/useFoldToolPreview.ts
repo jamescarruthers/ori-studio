@@ -38,6 +38,7 @@ import { rotateStepOp } from '../tools/rotate/rotateTool';
 import {
   FOLD_EVERY_LAYER,
   foldToolInputKey,
+  foldToolLineKey,
   picksAlongLine,
   type FoldResolvedSeed,
   type FoldSeededToolState,
@@ -52,6 +53,7 @@ import { useFoldMoverFix } from './useFoldMoverFix';
 import { useFoldReverseSeedFix } from './useFoldReverseSeedFix';
 import type { FoldReverseSeedFix } from '../tools/reverse/reverseSeedFix';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
+import type { FoldHeldAnswer } from './foldHeldPreview';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldLineSection } from './useFoldLineSection';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
@@ -133,6 +135,14 @@ export interface FoldToolPreview {
   seedFix?: FoldReverseSeedFix | null;
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
+  /**
+   * The last answer for the same line on the same state, while a new seed's
+   * step — or another kind, opening or order — is still being worked out or
+   * landing: what the panes and the window show in place of the answers not
+   * in yet (`foldShownPreview`). Null once this preview has its own answer,
+   * and for another line.
+   */
+  held?: FoldHeldAnswer | null;
   /** The reverse tool's: the tip as the engine described it, and the kind, opening and order taken. */
   reverse: FoldReversePreview | null;
   /** The crimp tool's: its tip at ℓ1 and both lines, and the kind, opening and order taken. */
@@ -346,6 +356,19 @@ export function useFoldToolPreview(
   }, [repeating, repeatStep, unfolding, unfoldStep, rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingSeed, vertexBuilt]);
   const resolvedOrders = useFoldOrderResolution(session, baseStep, foldToolInputKey(tools));
   const step = resolvedOrders.step;
+  // --- The last answer for the tools' line, which stands in while a new
+  // seed's is on its way (`held`): a flap picked or unpicked asks for another
+  // step along the same line, and until that one is answered the last stays —
+  // on the panes, in the window, and with the session.
+  const toolLine = stateKey !== null ? `${stateKey}|${foldToolLineKey(tools)}` : null;
+  const [answered, setAnswered] = useState<{ line: string; answer: FoldHeldAnswer } | null>(null);
+  const sameLine = answered !== null && answered.line === toolLine;
+  // No step yet, but one coming for that line: its orders being resolved, a compound fold's tip described.
+  const stepComing =
+    step === null &&
+    sameLine &&
+    ((baseStep !== null && resolvedOrders.resolution?.waiting === true) ||
+      (compoundStep !== null && compoundStep.build.status === 'unlocated' && compoundStep.refused === null));
   // The located line on each pane, while points are clicked along it.
   const sceneLine = along && plainBuild.status === 'built' ? plainBuild.sceneLine : null;
   const lineKey = sceneLine ? `${sceneLine.n[0]},${sceneLine.n[1]},${sceneLine.d}` : null;
@@ -386,6 +409,9 @@ export function useFoldToolPreview(
     // Repeat asks for its previews itself (`useFoldRepeatTool`): this asks for none, and lets none go.
     if (repeating) { asked.current = null; return undefined; }
     if (!step) {
+      // The next step for this line is coming: the session keeps the last
+      // until that one supersedes it (`FoldSession.preview`).
+      if (stepComing) return undefined;
       if (asked.current !== null) cancel();
       asked.current = null;
       return undefined;
@@ -407,7 +433,7 @@ export function useFoldToolPreview(
     };
     // The step is read through its key: an equal step must not ask again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repeating, analyse, preview, cancel, query, actionQuery, step?.key, stateKey]);
+  }, [repeating, analyse, preview, cancel, query, actionQuery, step?.key, stateKey, stepComing]);
   const shownAction = heldAction
     ? heldAction.value.status === 'ok'
       ? heldAction.value.action
@@ -552,6 +578,37 @@ export function useFoldToolPreview(
   }, [refused, stateKey, tools]);
 
   const landedPreview = heldLanded ?? (landed && landed.key === landedKey ? landed.landed : null);
+  const landing = step !== null && (pendingFor === null || pendingFor.status === 'working');
+  const answer: FoldHeldAnswer = {
+    analysis,
+    section: shownSection,
+    action: shownAction,
+    // A rotation's landed state is the folded pane's, not the crease pattern's: the pattern does not turn.
+    landed: rotating ? null : landedPreview,
+    refused,
+    moverFix,
+    seedFix,
+    reverse: reverseStep.reverse,
+    crimp: crimpStep.crimp,
+    tuck: tuckStep.tuck,
+    vertex: vertexStep.vertex,
+    sink: sinkStep.sink,
+  };
+  // Its own answer is in once it lands or is refused: kept for its line, and
+  // let go when the line changes before the next is.
+  const settled = refused !== null || (step !== null && !landing);
+  // A refusal by what it says: a tuck no layer takes is refused anew on every render.
+  const refusal = refused ? JSON.stringify(refused.refusal) : null;
+  useEffect(() => {
+    if (settled && toolLine !== null) setAnswered({ line: toolLine, answer });
+    else setAnswered((was) => (was && was.line !== toolLine ? null : was));
+    // An answer is kept by its step and what each surface shows of it; the
+    // compound and vertex descriptions, rebuilt on every render, are final
+    // once their step is.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled, toolLine, step?.key, analysis, shownSection, shownAction, landedPreview, refusal, moverFix, seedFix]);
+  const held = !settled && (step !== null || stepComing) && answered !== null && answered.line === toolLine ? answered.answer : null;
+
   return {
     pleatLines: pleatDrawing,
     locatedLine,
@@ -561,21 +618,10 @@ export function useFoldToolPreview(
     build,
     seed: lineSection.seed,
     step,
-    analysis,
-    section: shownSection,
-    action: shownAction,
-    // A rotation's landed state is the folded pane's, not the crease pattern's: the pattern does not turn.
-    landed: rotating ? null : landedPreview,
+    ...answer,
     turned: rotating ? (landedPreview?.scene ?? null) : null,
-    refused,
-    moverFix,
-    seedFix,
-    landing: step !== null && (pendingFor === null || pendingFor.status === 'working'),
-    reverse: reverseStep.reverse,
-    crimp: crimpStep.crimp,
-    tuck: tuckStep.tuck,
-    vertex: vertexStep.vertex,
-    sink: sinkStep.sink,
+    landing,
+    held,
     extent,
     unfold,
     repeat,

@@ -516,8 +516,9 @@ export function FoldToolWindow({
           the window holds above them. */}
       {(refusal || footer) && (
         <FloatingPanelDock data-fold-window-dock="">
+          {/* The last seed's refusal keeps its place, dimmed, until this one's answer is in. */}
           {refusal && (
-            <div className={styles.section}>
+            <div className={styles.section} data-held={model.held ? '' : undefined}>
               <FoldRefusalNotice notice={refusal} />
             </div>
           )}
