@@ -2,6 +2,11 @@
  * A plain fold's placement search (`oristudio-fold-wasm/src/order_selection.rs`)
  * as a search the worker runs in slices (`foldSearch.ts`).
  *
+ * The bridge answers a valley or mountain with the solver's listing of every
+ * order, per part, at once, and never says it is searching; the slices below
+ * run only for the recipe search it falls back to when the solver cannot
+ * finish within its limits.
+ *
  * The bridge keeps one search per fold and spends a query's `searchMs` on
  * it in calls of at most 150 ms, answering `searching` while that time is
  * not spent and the search is not over. This asks again until it is, giving

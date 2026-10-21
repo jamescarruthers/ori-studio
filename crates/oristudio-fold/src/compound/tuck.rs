@@ -82,6 +82,22 @@ pub(crate) struct PlacementScope {
     pub orders: Option<Completions>,
 }
 
+/// A plain fold of exactly the seed's material-connected flaps, prepared up
+/// to its order (`State::selection_block`).
+#[derive(Debug)]
+pub(crate) struct SelectionBlock {
+    pub prepared: Prepared,
+    /// The parent's faces that move, in id order.
+    pub moving: Vec<FaceId>,
+    pub line: Line,
+    pub side: Side,
+    pub snap: Snap,
+    /// In the model frame.
+    pub direction: Direction,
+    /// The moving side's flaps.
+    pub flaps: Vec<crate::refusal::Flap>,
+}
+
 /// What counting a selection's landings may spend. Nodes only, never a
 /// clock, so every machine counts the same; a fold that needs no search
 /// (every pair forced, as when a flat sheet folds in half) uses none. The
@@ -413,11 +429,21 @@ impl Tuck {
     /// Every order the block `moving` can land in with each hinge folded in
     /// the tuck's direction, placed against nothing; none when it is not
     /// counted exactly within [`LANDINGS_LIMITS`] or has no order at all.
-    /// A hinge is a crease between the block and paper that stays: valley,
-    /// the block's face lies above the other, mountain below — the hinge
-    /// test the placement search admits a landing by.
     fn landings(&self, state: &State, moving: &[bool]) -> Option<Completions> {
-        let mut prepared = self.prepare(state, moving).ok()?;
+        let prepared = self.hinged(state, moving).ok()?;
+        let orders = prepared.complete(&[], &LANDINGS_LIMITS).ok()?;
+        orders.count().exact.then_some(orders)
+    }
+
+    /// The block `moving` reflected across ℓ with each hinge folded in the
+    /// tuck's direction, placed against nothing: what every order of the
+    /// plain fold of that block completes from. A hinge is a crease between
+    /// the block and paper that stays: valley, the block's face lies above
+    /// the other, mountain below — the hinge test the placement search admits
+    /// a landing by. Pairs of faces that both stay are carried, so the
+    /// parent's order of the paper the fold does not move is fixed.
+    fn hinged(&self, state: &State, moving: &[bool]) -> Result<Prepared, FoldRefusal> {
+        let mut prepared = self.prepare(state, moving)?;
         let on_top = self.direction == Direction::Valley;
         let (parts, blocks) = prepared.landed();
         let in_block = |id: FaceId| {
@@ -443,8 +469,7 @@ impl Tuck {
             })
             .collect();
         prepared.place(hinges);
-        let orders = prepared.complete(&[], &LANDINGS_LIMITS).ok()?;
-        orders.count().exact.then_some(orders)
+        Ok(prepared)
     }
 
     /// Whether the face at position `f` stays whole and the block, landed,
@@ -767,15 +792,7 @@ impl State {
     /// forced and the search is over before it starts.
     pub(crate) fn placement_scope(&self, op: &TuckFold) -> Result<PlacementScope, Refused> {
         let tuck = self.tuck(op)?;
-        let mut mandatory = vec![false; self.faces().len()];
-        let mut queue: VecDeque<usize> = tuck.seed.iter().copied().collect();
-        while let Some(f) = queue.pop_front() {
-            if mandatory[f] {
-                continue;
-            }
-            mandatory[f] = true;
-            queue.extend(tuck.side.adjacent[f].iter().copied());
-        }
+        let mandatory = self.selected(&tuck);
         let reflection = tuck.classified.axis.reflection();
         let images: Vec<Vec<Point>> = tuck
             .side
@@ -810,6 +827,59 @@ impl State {
             moving,
             targets,
             orders,
+        })
+    }
+
+    /// The seed's material-connected flaps, per face position: the seed
+    /// grown across every crease with an end on the moving side, and nothing
+    /// else. What a plain fold's layer-order choice moves, whichever order it
+    /// lands in.
+    fn selected(&self, tuck: &Tuck) -> Vec<bool> {
+        let mut selected = vec![false; self.faces().len()];
+        let mut queue: VecDeque<usize> = tuck.seed.iter().copied().collect();
+        while let Some(f) = queue.pop_front() {
+            if selected[f] {
+                continue;
+            }
+            selected[f] = true;
+            queue.extend(tuck.side.adjacent[f].iter().copied());
+        }
+        selected
+    }
+
+    /// The plain fold `op` names (its target is not read) of exactly the
+    /// seed's material-connected flaps, before its order: the block reflected
+    /// across ℓ, its hinges folded in `op.direction`, the parent's order of
+    /// every pair that stays carried. What [`State::fold_orders`] completes
+    /// and a solved landing replays (`fold::solved`).
+    pub(crate) fn selection_block(&self, op: &TuckFold) -> Result<SelectionBlock, Refused> {
+        let tuck = self.tuck(op)?;
+        let selected = self.selected(&tuck);
+        let moving: Vec<FaceId> = self
+            .faces()
+            .iter()
+            .zip(&selected)
+            .filter(|(_, m)| **m)
+            .map(|(face, _)| face.id)
+            .collect();
+        let stays = |f: usize| {
+            self.faces()[f]
+                .ring
+                .iter()
+                .any(|v| tuck.classified.classes[v.index()] == -1)
+        };
+        if (0..selected.len()).all(|f| selected[f] && !stays(f)) {
+            return Err(FoldRefusal::NothingStays.into());
+        }
+        let prepared = tuck.hinged(self, &selected)?;
+        Ok(SelectionBlock {
+            prepared,
+            moving,
+            line: tuck.line(),
+            side: tuck.side(),
+            snap: tuck.classified.snap,
+            direction: tuck.direction,
+            flaps: tuck.side.flaps.clone(),
         })
     }
 

@@ -16,6 +16,35 @@
   gap: var(--space-2);
   font-size: 0.8rem;
 }
+/* One row per independent part: its name (which makes it the active one),
+   and its own orders stepped in place. The count keeps its width, so a pick
+   never moves the arrows. */
+.parts {
+  display: grid;
+  gap: var(--space-1);
+}
+.part {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius);
+  box-shadow: inset 2px 0 0 transparent;
+  font-size: 0.8rem;
+}
+.part[data-active] {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent-primary);
+}
+.part > :first-child {
+  justify-self: start;
+}
+.count {
+  min-width: 7ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 .actions {
   display: flex;
   justify-content: flex-end;

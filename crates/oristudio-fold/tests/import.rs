@@ -601,6 +601,7 @@ fn a_stored_pick_replays_to_the_order_it_chose() {
     let nothing = WitnessOrder {
         faces: Vec::new(),
         orders: Vec::new(),
+        up: None,
     };
     assert!(matches!(
         open.replay(&nothing, &limits()),

@@ -420,3 +420,27 @@ discarded, so the search could never call itself exhaustive.
   Find more orders asks four times longer than the last (150 ms up to 9.6 s,
   then 9.6 s more each press), shows that it is searching with Stop, and says
   there are no other orders once a search for more finishes.
+
+## Follow-up — October 21, 2026: the solved landing
+
+The recipes cannot reach every order: a tuck pins one side and leaves the rest
+free, so no recipe leaves two independent parts both free except the outer
+one. The envelope's book move has 9 orders (3 × 3); the recipes found 6, and
+the book's (both sides between) was among the 3 missing. The listing now comes
+from the solver (`implementation-plans/fold-solved-orders.md`), part by part,
+and the saved form gains a third landing:
+
+```ts
+landing:
+  | { kind: 'outer' }
+  | { kind: 'against'; targets: SheetPoint[] }
+  | { kind: 'solved' }; // the order itself: choices.completion pins every pair of every part
+```
+
+`outer` and `against` steps replay as before. A pick that is the outer
+landing itself still saves `outer`, however many orders there are; every
+other new step saves `solved`. A `solved` completion also stores each
+witness's orientation (`up`), so replay breaks rather than reads a pair the
+other way when an earlier step turned one of its faces. The recipe search is
+the fallback only, exact once it has nothing left to try.
+

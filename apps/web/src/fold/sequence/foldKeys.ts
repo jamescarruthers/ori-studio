@@ -53,6 +53,12 @@ export function runFoldKey(id: FoldShortcutId): boolean {
     const canvas = foldCanvasVerbs();
     if (canvas?.choosingOrder?.()) return canvas.stepChoice(id === 'fold.nextStep' ? 1 : -1);
   }
+  // Up and down go from part to part while a fold's orders are chosen in
+  // several, before they would change branch.
+  if ((id === 'fold.previousBranch' || id === 'fold.nextBranch') && !focusOwnsArrowKeys(document.activeElement)) {
+    const canvas = foldCanvasVerbs();
+    if (canvas?.choosingOrder?.() && canvas.stepOrderPart?.(id === 'fold.nextBranch' ? 1 : -1)) return true;
+  }
   for (let at = handlers.length - 1; at >= 0; at -= 1) if (handlers[at]!(id)) return true;
   return false;
 }

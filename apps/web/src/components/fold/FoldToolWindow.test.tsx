@@ -113,7 +113,8 @@ describe('FoldToolWindow', () => {
     const model = foldToolWindow(t, { tool: 'mountain', lineMode: 'free', readOnly: null, picks: 2, preview: preview() }, calls, { coarse: false, alt: 'Alt' });
     const resolution: FoldOrderResolution = { key: 'order', inputKey: 'input', active: false, required: true,
       waiting: false, searching: false, searched: false, failed: false, index: 0, count: 2, exact: true, canSearch: false,
-      step: vi.fn(), search: vi.fn(), stop: vi.fn(), back: vi.fn(), resume: vi.fn() };
+      parts: [], part: 0, step: vi.fn(), stepPart: vi.fn(), nextPart: vi.fn(), selectPart: vi.fn(),
+      search: vi.fn(), stop: vi.fn(), back: vi.fn(), resume: vi.fn() };
     const show = (active: boolean) => act(() => root.render(<TooltipProvider><FoldToolWindow container={viewport} model={model} resolution={{ ...resolution, active }} /></TooltipProvider>));
     show(false);
     expect(fold()).not.toBeNull();

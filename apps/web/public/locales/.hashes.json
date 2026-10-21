@@ -6364,7 +6364,13 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12731,7 +12737,13 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19100,7 +19112,13 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25122,7 +25140,13 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31144,7 +31168,13 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37511,7 +37541,13 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43878,7 +43914,13 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49900,6 +49942,12 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   }
 }
