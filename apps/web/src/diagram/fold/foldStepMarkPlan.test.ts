@@ -132,6 +132,8 @@ describe('where a Fold step’s marks go in the Diagram', () => {
     const action = { ...engineAction([0, 0.5], [1, 0.5], [0.5, 0.15], [0.5, 0.85]), push: { at: { x: 0.5, y: 0.4 }, toward: { x: 0.5, y: 0.5 } } };
     const placed = foldStepAction(action, { op, parent: squareScene(), child: diagonalHalfScene() });
     expect(placed.spans).toEqual(stepFoldedCreases(squareScene(), diagonalHalfScene()));
+    expect(placed.spans.length).toBeGreaterThan(0);
+    expect(placed.spans.some((span) => span.hidden)).toBe(false);
     expect(placed.grip).toEqual(action.grip);
     expect(placed.push).toEqual(action.push);
   }
@@ -178,6 +180,20 @@ describe('the creases a step folds, as the state before it shows them', () => {
     const back = squareScene();
     back.faces[0] = { ...back.faces[0]!, front_up: false };
     expect(stepFoldedCreases(back, diagonalHalfScene())[0]!.direction).toBe('mountain');
+  });
+
+  it('draws only what the viewer sees: a crease under a layer is left out, not drawn behind', () => {
+    // Folded in half, then both layers creased at one place: the bottom-right half under the top-left.
+    const child = diagonalHalfScene();
+    const folded = { kind: 'fold' as const, letter: 'valley' as const, made_at: 2, vertices: [0, 0] as [number, number] };
+    const under = { ...folded, id: 5, from: { x: 0.5, y: 0 }, to: { x: 1, y: 0.5 } };
+    const over = { ...folded, id: 6, from: { x: 0, y: 0.5 }, to: { x: 0.5, y: 1 } };
+    // The layer on top shows its back: its valley is a mountain as the viewer sees it.
+    expect(stepFoldedCreases(diagonalHalfScene(), { ...child, creases: [...child.creases, under, over] })).toEqual([
+      { from: { x: 0.5, y: 0 }, to: { x: 1, y: 0.5 }, direction: 'mountain', hidden: false },
+    ]);
+    // The one underneath alone: nothing to draw.
+    expect(stepFoldedCreases(diagonalHalfScene(), { ...child, creases: [...child.creases, under] })).toEqual([]);
   });
 
   it('leaves out a crease that was folded the same way already', () => {
