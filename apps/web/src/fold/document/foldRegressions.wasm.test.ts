@@ -7,6 +7,7 @@ import { toPoint } from '../canvas/foldCanvasGeometry';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
 import { createFoldEnginePort } from '../engine/foldEnginePort';
+import { orderResolvedStep } from '../engine/foldEnginePreview';
 import { findMoverFix, withMoverSwapped } from '../tools/moverStays';
 import { createFoldReplayer, type FoldReplayProgress } from './foldReplay';
 import { isLockedStep, type FoldOp, type FoldSequenceDocument, type FoldStep, type SheetPoint } from './foldSequenceDocument';
@@ -196,10 +197,14 @@ describe.skipIf(!available)('the fold-regression fixtures', () => {
     const analysed = calls.analyse(parent, op, tuck.choices);
     expect(analysed.status).toBe('ok');
     if (analysed.status === 'ok') expect(analysed.analysis.moving).toHaveLength(1);
-    // Folded by the tool, the placement search offers that landing alone; it used to drop it.
+    // Folded by the tool, the chooser offers that landing alone, whatever form it stores it in; it used to drop it.
     const { landing: _landing, ...asked } = op;
     const search = calls.orderSelection(parent, asked as FoldOp, tuck.choices, { index: 0, searchMs: 2_000 });
-    expect(search).toMatchObject({ status: 'ok', landing: { kind: 'against' }, count: { orders: 1 } });
+    expect(search).toMatchObject({ status: 'ok', count: { orders: 1 } });
+    const offered = search.status === 'ok' ? orderResolvedStep(asked as FoldOp, tuck.choices, search) : null;
+    expect(offered).not.toBeNull();
+    const landed = calls.step(parent, offered!.op, offered!.choices);
+    expect(landed).toMatchObject({ status: 'ok', fingerprint: tuck.expect });
     // The corner lies tucked: its tip at the precrease's mirror, the back layer's corner piece where it was.
     expectNear(imageOf(calls, stateOf(tuck), [0.95, 0.05]), [0.25, 0.25], 'the tucked tip');
     expectNear(imageOf(calls, stateOf(tuck), [0.05, 0.05]), [0.05, 0.05], 'the back layer’s corner');
