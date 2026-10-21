@@ -115,6 +115,61 @@ fn a_neighboring_panel_cannot_cover_or_hold_the_moving_part() {
     ));
 }
 
+/// The owner's case (`squash_failure.osf`, not committed): a triangle folded
+/// on its diagonal, its right corner folded over on top of it along the
+/// hinge. That corner's two layers are joined to the flap along the hinge
+/// alone, the upper one folded inside the lower's, so they cannot stay
+/// while the flap's top layer opens across the hinge: they ride with it,
+/// back to where they were, under the squashed layer.
+fn corner_over_triangle() -> State {
+    let half = cases::valley(&cases::square(), [0.0, 0.0], [1.0, 1.0], [0.0, 1.0]);
+    cases::valley(&half, [0.75, 0.75], [0.875, 0.0], [1.0, 0.0])
+}
+
+#[test]
+fn a_corner_folded_over_the_hinge_rides_with_the_squashed_layer() {
+    let parent = corner_over_triangle();
+    let op = squash_op(&parent, [0.3, 0.1], None);
+    let result = landed(parent.squash(&op, &VertexChoices::default()));
+    check(&parent, &result);
+    let state = &result.state;
+    // The corner is back where the diagonal fold left it, both layers.
+    for sheet in [[0.95, 0.3], [0.3, 0.95]] {
+        let face = state.face_at(sheet).unwrap();
+        let at = state.isometry(face).unwrap().apply(sheet);
+        assert!(
+            (at[0] - 0.95).abs() < 1e-9 && (at[1] - 0.3).abs() < 1e-9,
+            "{sheet:?} at {at:?}"
+        );
+    }
+    // The squashed layer lies on top of it there, the corner's stationary
+    // half at the bottom.
+    let stack = state.stack_at([0.84, 0.38]).unwrap();
+    let sheet = |id: FaceId| state.isometry(id).unwrap().inverse().apply([0.84, 0.38]);
+    let (top, bottom) = (sheet(stack[0]), sheet(stack[stack.len() - 1]));
+    let upper = parent.analyse_squash(&op).unwrap().upper;
+    assert!(
+        parent.face_at(top).is_some_and(|f| upper.contains(&f)),
+        "{top:?} is not the squashed layer"
+    );
+    assert!(bottom[1] < bottom[0], "{bottom:?}");
+    let replay = landed(parent.squash(&op, &result.report.stored));
+    assert_eq!(replay.state.parts(), result.state.parts());
+}
+
+#[test]
+fn a_cover_the_hinge_does_not_hold_still_covers() {
+    // The panel over the moving part is joined to the body, not folded
+    // over the flap's hinge: it stays, and refuses the squash.
+    let covered = neighboring_panels(0.8, false, false);
+    let FoldRefusal::SquashFlapCovered { faces, .. } =
+        refusal(&covered, &squash_op(&covered, [0.3, 0.9], None))
+    else {
+        panic!("not covered");
+    };
+    assert!(!faces.is_empty());
+}
+
 /// Preparation creases divide a pocket's faces, not the pocket. Every exposed
 /// subdivision must name the same material, hinge, motion and layer order.
 #[test]
