@@ -79,12 +79,22 @@ the top layer under it.
 ## Checklist
 
 - [x] Confirm the root cause on the user's model
-- [ ] Accept behind symmetries (identity/half-turn, reversed) and carry the side
-- [ ] Invariant with side; mirroring by matching; explicit refusals
-- [ ] `side` on the saved op, read and written
-- [ ] Words: axis names, window, step and Diagram sentences, 8 locales
-- [ ] Axes on both panes, hover preview, click pick
-- [ ] Draw an axis with the line modes on either pane
-- [ ] Analytics properties and docs
-- [ ] Proof: crane_new and petal-fold, engine vs by hand; fixture fingerprints
+- [x] Accept behind symmetries (identity/half-turn, reversed) and carry the side
+- [x] Invariant with side; mirroring by matching; explicit refusals
+- [x] A crease on the axis turns by the source's fold-angle change (squash beside the axis)
+- [x] `side` on the saved op, read and written
+- [x] Words: axis names, window, step and Diagram sentences, 8 locales
+- [x] Axes on both panes, hover preview, click pick
+- [x] Draw an axis with the line modes on either pane
+- [x] Analytics properties and docs
+- [x] Proof: crane_new and petal-fold, engine vs by hand
+- [x] Regression fixture `tests/fixtures/fold-regressions/repeat-behind-diagonal.osf`
+- [ ] Fixture fingerprints: every saved step replays to its stored fingerprint
 - [ ] Browser proof, screenshots, saved .osf
+
+### Notes
+
+- Diagram's merge of mirrored precreases (`mirroredStepAxis`) stays same-side
+  only: a front and a back precrease are still two Diagram steps.
+- The Repeat tool's name is now "Repeat" (rail, menus, window title); the
+  commit and the sentences say "on the other side" or "behind".

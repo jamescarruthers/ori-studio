@@ -13,12 +13,15 @@ import {
   type FoldStep,
 } from '../document/foldSequenceDocument';
 import { readFoldSequences } from '../document/foldSequenceFile';
+import { polygonCentroid, toPair } from '../canvas/foldCanvasGeometry';
 import { prepareRepeat, type RepeatSourceStep } from './repeatPreparation';
-import { repeatSymmetries } from './repeatGeometry';
+import { correspondingFrame, reflection, repeatSymmetries, sheetRing, verifiedSymmetry } from './repeatGeometry';
+import { verifyMaterial } from './repeatVerification';
 
 const ROOT = process.cwd();
 const WASM = resolve(ROOT, 'src/generated/oristudio-fold-wasm/oristudio_fold_wasm_bg.wasm');
 const EXAMPLES = resolve(ROOT, '../../tests/fixtures/fold-examples');
+const REGRESSION = resolve(ROOT, '../../tests/fixtures/fold-regressions/repeat-behind-diagonal.osf');
 const CRANE = '/Users/zacharymarion/Documents/open source/origami-designer/test_files/folding/crane_new.osf';
 
 type Engine = Awaited<ReturnType<typeof engine>>;
@@ -81,6 +84,45 @@ const behindAxis = (e: Engine, state: number): FoldModelLine => {
   expect(behind).toHaveLength(1);
   return behind[0]!.sheet;
 };
+
+describe.skipIf(!existsSync(WASM))('the repeat-behind regression (tests/fixtures/fold-regressions)', () => {
+  it('replays the saved repeat behind across the diagonal, and prepares it again the same, every mirrored step passing', async () => {
+    const e = await engine();
+    const document = opened(REGRESSION);
+    const { steps, states } = replayed(e, document);
+    const saved = steps.at(-1)!.op;
+    if (saved.kind !== 'repeat') throw new Error('the last step is no repeat');
+    expect(saved.side).toBe('behind');
+    // The diagonal from the bottom left corner to the top right, as the crease pattern shows the sheet.
+    expect(Math.abs(saved.axis.n[0] + saved.axis.n[1]) < 1e-9 && Math.abs(saved.axis.d) < 1e-9).toBe(true);
+    // What Repeat refused before: the diagonal takes the model to itself, every layer pair reversed — no reflection.
+    const start = states[5]!;
+    const frame = correspondingFrame(e.scene(start), e.scene(start), reflection(saved.axis), toPair(polygonCentroid(sheetRing(e.scene(start), 0))));
+    expect(frame.map((v) => Math.round(v * 1e9) / 1e9 + 0)).toEqual([1, 0, 0, 0, 1, 0]);
+    expect(verifiedSymmetry(e.scene(start), saved.axis)).toEqual({ sheet: saved.axis, side: 'behind' });
+    // Offered, and prepared again from its source steps: behind, each mirror as predicted and passing Repeat's test.
+    const prepared = prepareRepeat(e, {
+      parent: states[8]!,
+      axis: behindAxis(e, start),
+      steps: source(steps, states, 5, 7),
+      source: saved.source,
+    });
+    if (prepared.status !== 'ready') throw new Error(JSON.stringify(prepared));
+    expect(prepared.op.side).toBe('behind');
+    expect(prepared.matched).toEqual([0, 0, 0]);
+    expect(prepared.op.steps.map((step) => step.expect)).toEqual(saved.steps.map((step) => step.expect));
+    // Each saved step, folded again from the one before it, is the mirror of its source on the paper.
+    let before = states[8]!;
+    for (const [k, entry] of saved.steps.entries()) {
+      const landed = e.step(before, entry.op, entry.choices);
+      if (landed.status !== 'ok') throw new Error(JSON.stringify(landed));
+      expect(() =>
+        verifyMaterial(e.scene(states[5 + k]!), e.scene(states[6 + k]!), e.scene(before), e.scene(landed.state), reflection(saved.axis), 'behind')
+      ).not.toThrow();
+      before = landed.state;
+    }
+  });
+});
 
 describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
   it.skipIf(!existsSync(CRANE))(
@@ -245,5 +287,3 @@ function sameSegments(a: readonly Segment[], b: readonly Segment[]): boolean {
   const same = (s: Segment, t: Segment) => (near(s[0], t[0]) && near(s[1], t[1])) || (near(s[0], t[1]) && near(s[1], t[0]));
   return a.length === b.length && a.every((s) => b.some((t) => same(s, t)));
 }
-
-void EXAMPLES;
