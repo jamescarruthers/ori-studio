@@ -19,7 +19,7 @@
 //! order (a pleat's legs, Repeat) step through.
 use oristudio_fold::{
     ChoiceCount, ClosurePolicy, CompletionLimits, Completions, FaceId, FoldLanding, FoldOrders,
-    FoldPlacementSearch, FoldRefusal, PlainFold, State, Unlisted, WitnessOrder,
+    FoldPlacementSearch, FoldRefusal, PlainFold, State, Unfinished, Unlisted, WitnessOrder,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -322,6 +322,9 @@ struct Listing {
     /// For a fold with one order: whether its outer recipe lands that order,
     /// so the step keeps storing `outer`.
     outer: Option<bool>,
+    /// For a listing that did not finish: the outer recipe's refusal, none
+    /// when it lands.
+    outer_refusal: Option<Option<oristudio_fold::Refused>>,
 }
 
 #[derive(Debug)]
@@ -365,6 +368,7 @@ impl PlacementSession {
             max_nodes: limits.max_nodes,
             result: parent.fold_orders(&self.fold, &timed),
             outer: None,
+            outer_refusal: None,
         });
     }
 }
@@ -468,23 +472,38 @@ fn placement_answer(
                 "placement listing missing".into(),
             ));
         };
+        // A selection with no order, or no block to list, is refused as the
+        // outer recipe refuses it: that refusal names the flaps the closure
+        // would add, with the fix that includes them, or the line's own
+        // fault. Only a fold the outer recipe lands falls back.
+        let mut refused_outer = || {
+            listing
+                .outer_refusal
+                .get_or_insert_with(|| {
+                    parent
+                        .fold(&fold.clone().with_closure(ClosurePolicy::Refuse))
+                        .err()
+                })
+                .clone()
+        };
+        let fallback = match &listing.result {
+            Ok(_) => false,
+            Err(Unlisted::Unfinished(Unfinished::Budget(_) | Unfinished::Truncated)) => true,
+            Err(Unlisted::NoOrder(_) | Unlisted::Unfinished(Unfinished::Prepare(_))) => {
+                match refused_outer() {
+                    Some(refused) => return Ok(Outcome::Refused(refused.into())),
+                    None => true,
+                }
+            }
+        };
         match &listing.result {
-            Ok(orders) => {
+            Ok(orders) if !fallback => {
                 let outer = *listing.outer.get_or_insert_with(|| {
                     orders.count().orders == 1 && outer_lands(parent, &fold, orders)
                 });
                 Ok(solved_selection(orders, query, outer))
             }
-            Err(Unlisted::NoOrder(no_order)) => {
-                // The outer fold's refusal names the flaps the closure would
-                // add, with the fix that includes them; the listing's names
-                // the faces no order fits.
-                match parent.fold(&fold.clone().with_closure(ClosurePolicy::Refuse)) {
-                    Err(refused) => Ok(Outcome::Refused(refused.into())),
-                    Ok(_) => Ok(Outcome::Refused(no_order.clone().into())),
-                }
-            }
-            Err(Unlisted::Unfinished(_)) => {
+            _ => {
                 let search = session
                     .search
                     .get_or_insert_with(|| FoldPlacementSearch::new(parent, &fold));

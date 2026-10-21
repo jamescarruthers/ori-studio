@@ -35,6 +35,15 @@
 //! completes ([`State::fold_solved`]): exactly one order lands, anything else
 //! breaks the step ([`Broken`]), never a guess.
 //!
+//! # Every listed order lands — almost
+//!
+//! The completion searches around the moving faces (`complete_around`); the
+//! gate a pick lands through checks the whole state. On rare folds (3 of
+//! 1,123 listed in the seeded campaign, none in the corpora) the completion's
+//! one order is one the gate refuses: such a fold is listed as having no
+//! order. A listing of several orders is not landed whole up front, so a pick
+//! the gate refuses is refused when it is picked (never seen in either).
+//!
 //! # When it cannot list
 //!
 //! [`State::fold_orders`] says why it could not ([`Unlisted`]): no order at
@@ -245,6 +254,14 @@ impl State {
         }
         if !orders.completions.count().exact {
             return Err(Unlisted::Unfinished(Unfinished::Truncated));
+        }
+        // The completion searches around the moving faces only; the gate checks
+        // everything. A fold with one order is landed here, so one the gate
+        // refuses is no order at all rather than a choice that cannot land.
+        if orders.completions.is_unique()
+            && let Err(refusal) = orders.pick(&vec![0; orders.completions.components().len()])
+        {
+            return Err(Unlisted::NoOrder(refusal.into()));
         }
         Ok(orders)
     }
