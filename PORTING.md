@@ -271,6 +271,21 @@ are unchanged:
   not touch the parallel test, the intersection solve, or any accepted output,
   and `lengthen_crease_matches_oriedita_oracle` remains the gate.
 
+- **Reflecting across a point is refused.** `operations::construction::mirror_selected_lines`
+  adds nothing, and keeps the selection, when its axis has no length. Upstream
+  does not guard it: `MouseHandlerDrawCreaseSymmetric.move_drag_select_2p` takes
+  the point closest to the press with no check against `point1`, so clicking
+  the first point again hands `mirrorSelections` a one-point axis, and
+  `OritaCalc.findLineSymmetryPoint` over `StraightLine(t1, t1)` divides zero by
+  zero — every reflected endpoint NaN. Those creases are never drawn and can
+  never be picked, survive a `.cp` round trip as `NaN`, and made the precrease
+  planner refuse the pattern that held them ("coordinate N is not finite",
+  Sentry ORI-STUDIO-Q). The four-point transforms refuse a coincident pair the
+  same way, though there because upstream's own handlers gate it. Pinned by
+  `mirror_selected_lines_refuses_an_axis_with_no_length` and
+  `reflect_selection_command_across_one_point_leaves_the_pattern_unchanged`;
+  `draw_symmetric_matches_oriedita_oracle` still gates an axis with a length.
+
 - **The flat-foldability check is evaluated with orientation-invariant
   arithmetic.** `checks::check4` and `checks::check3` default to
   `CamvAngleArithmetic::Refined`, which differs from upstream in two evaluations

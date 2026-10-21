@@ -533,7 +533,16 @@ pub fn angle_system_draw_to_destination(
 }
 
 /// Oriedita `DRAW_CREASE_SYMMETRIC_12` mutation after the mirror axis is known.
+///
+/// An axis with no length — its first point picked again — is refused and the
+/// selection kept. Upstream mirrors across it and writes every endpoint as NaN
+/// (PORTING.md, "Reflecting across a point is refused"). `gt0(NaN)` is false, so
+/// a non-finite axis is refused too.
 pub fn mirror_selected_lines(model: &mut CreasePatternModel, axis: &LineSegment) -> usize {
+    if !Epsilon::HIGH.gt0(axis.determine_length()) {
+        return 0;
+    }
+
     let selected: Vec<_> = model
         .line_segments
         .iter()

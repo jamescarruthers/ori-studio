@@ -105,6 +105,54 @@ fn mirror_selected_lines_reflects_across_axis_and_unselects() {
     );
 }
 
+/// An axis with no length used to add the mirrored creases with every endpoint
+/// NaN, as upstream does. The kernel refuses it — and a non-finite axis — adding
+/// nothing and leaving the selection where it was.
+#[test]
+fn mirror_selected_lines_refuses_an_axis_with_no_length() {
+    let selected = || {
+        model_from_segments(&[
+            segment(1.0, 0.0, 1.0, 1.0, LineColor::Red1).with_selected(2),
+            segment(3.0, 0.0, 3.0, 1.0, LineColor::Blue2),
+        ])
+    };
+    let point = Point::new(2.0, 0.0);
+    for axis in [
+        LineSegment::new(point, point),
+        LineSegment::new(point, Point::new(f64::NAN, f64::NAN)),
+    ] {
+        let mut model = selected();
+        assert_eq!(mirror_selected_lines(&mut model, &axis), 0);
+        assert_eq!(model.line_segments, selected().line_segments);
+    }
+}
+
+/// Reflect selection over line with the axis's second point clicked on its
+/// first, as the canvas sends it: the gesture that left a NaN crease in the
+/// pattern, which the References workspace then could not read at all.
+#[test]
+fn reflect_selection_command_across_one_point_leaves_the_pattern_unchanged() {
+    let mut document = CreasePatternDocument {
+        crease_pattern: model_from_segments(&[
+            segment(0.0, 0.0, 4.0, 0.0, LineColor::Black0),
+            segment(1.0, 0.0, 1.0, 1.0, LineColor::Red1).with_selected(2),
+        ]),
+        ..Default::default()
+    };
+    let before = document.crease_pattern.line_segments.clone();
+    let command = CreasePatternCommand::new(OperationId::DrawCreaseSymmetric).with_payload(
+        CreasePatternCommandPayload {
+            line_ids: vec![2],
+            points: vec![Point::new(2.0, 0.0), Point::new(2.0, 0.0)],
+            ..Default::default()
+        },
+    );
+
+    execute_command(&mut document, command).expect("a refused reflection is not an error");
+
+    assert_eq!(document.crease_pattern.line_segments, before);
+}
+
 #[test]
 fn parallel_draw_adds_parallel_segment_to_destination() {
     let mut model = model_from_segments(&[segment(2.0, -1.0, 2.0, 1.0, LineColor::Black0)]);
