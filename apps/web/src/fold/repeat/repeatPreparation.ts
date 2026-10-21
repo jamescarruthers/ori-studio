@@ -10,6 +10,7 @@ import type {
 import type { FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
 import type { FoldRefusalBody } from '../engine/foldEngineWire';
+import { foldReturnHistory } from '../document/foldReturn';
 import { FoldSearchStopped, runFoldSearch, type FoldSearch } from '../engine/foldSearch';
 import { insideConvex, toPoint } from '../canvas/foldCanvasGeometry';
 import type { FoldEngineCompoundOp } from '../engine/foldEngineCompoundWire';
@@ -115,9 +116,9 @@ export function* prepareRepeatSearch(
             : request.steps.slice(0, index).findIndex((step) => step.id === returnTarget) + 1;
         if (targetIndex === 0 && item.op.target !== request.baseline)
           throw new RepeatFailure('repeat_return_target');
-        const history = [request.parent, ...preparedStates];
-        const targetState = history[targetIndex]!;
-        const returned = engine.returnTo(current, targetState, history);
+        const states = [request.parent, ...preparedStates];
+        const targetState = states[targetIndex]!;
+        const returned = engine.returnTo(current, targetState, foldReturnHistory(states, targetIndex));
         if (returned.status !== 'ok') throw RepeatFailure.refused(returned.refusal);
         owned.push(returned.state);
         verifyMaterial(before, after, target, engine.scene(returned.state), map, side);

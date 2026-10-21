@@ -98,25 +98,31 @@ fn partial_marks_survive_and_opposite_precreases_remember_the_latest_letter() {
 }
 
 #[test]
-fn cp_graph_replacement_keeps_omitted_history() {
+fn cp_graph_replacement_starts_the_history() {
     let sheet = State::flat(Sheet::square(), StartSide::Front).unwrap();
     let old = precrease(&sheet, &all(x_eq(0.5), [0.75, 0.5], Valley)).state;
     // A replacement graph has its own identities and omits the vertical crease.
     let replacement = fold(&sheet, &all(y_eq(0.5), [0.5, 0.75], Mountain)).state;
-    let result = restore_pose(&replacement, &old, &[&sheet, &old, &replacement])
+    // A target from before the replacement brings its own creases: its pose
+    // is made of them. The history starts at the replacement.
+    let result = restore_pose(&replacement, &old, &[&replacement])
         .unwrap()
         .state;
     assert_pose(&result, &old);
     assert_eq!(result.faces().len(), 4);
     assert!(result.creases().iter().all(|c| !c.kind.is_folded()));
-    let back = restore_pose(
-        &result,
-        &replacement,
-        &[&sheet, &old, &replacement, &result],
-    )
-    .unwrap()
-    .state;
+    let back = restore_pose(&result, &replacement, &[&replacement, &result])
+        .unwrap()
+        .state;
     assert_pose(&back, &replacement);
+    // Back to the replacement from a fold made on it: the crease it omitted
+    // stays gone.
+    let after = fold(&replacement, &all(x_eq(0.25), [0.1, 0.25], Valley)).state;
+    let unfolded = restore_pose(&after, &replacement, &[&replacement, &after])
+        .unwrap()
+        .state;
+    assert_pose(&unfolded, &replacement);
+    assert_eq!(unfolded.faces().len(), after.faces().len());
 }
 
 mod sinks;

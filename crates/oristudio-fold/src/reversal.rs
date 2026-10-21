@@ -69,9 +69,13 @@ struct Segment {
     revision: usize,
 }
 
-/// History is chronological, on one sheet. Include all preceding states when
-/// CP replacements may have omitted earlier physical creases. Current and
-/// target are always included. No document/worker identity enters this API.
+/// History is chronological, on one sheet: the states from the target, or from
+/// the last CP replacement (Import CP) when that is later, through current.
+/// Never a state before that replacement: it replaced the model, so its
+/// creases are no longer on the paper, and passing them brings them back.
+/// Current and target are always included; a target from before the
+/// replacement supplies its own creases, which its pose is made of. No
+/// document/worker identity enters this API.
 pub fn restore_pose(
     current: &State,
     target: &State,
