@@ -1160,7 +1160,10 @@ changed: the seed's flaps prepared as one block, the parent's order of every
 pair that stays carried, each hinge seeded in the fold's direction, and the
 completion's components offered as independent parts. A chosen order is saved
 as a `solved` landing pinned by `choices.completion` (every pair of every
-part); replay fixes those pairs and must complete to exactly one order. Steps
+part, each witness's orientation beside it); replay fixes those pairs and
+must complete to exactly one order, and breaks where an earlier step turned
+one face of a stored pair apart from the other. A pick that is the outer
+recipe's own landing is saved as `outer`. Steps
 saved with `outer` or `against` landings replay through their own paths,
 unchanged. Fold sequences were unreleased when the landing was added, so the
 reader version did not move. The recipe search the listing replaces is kept

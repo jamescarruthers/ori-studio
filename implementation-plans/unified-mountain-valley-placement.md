@@ -437,8 +437,10 @@ landing:
   | { kind: 'solved' }; // the order itself: choices.completion pins every pair of every part
 ```
 
-`outer` and `against` steps replay as before. A fold with one order whose
-outer landing gives it still saves `outer`; every other new step saves
-`solved`. The recipe search is the fallback only, and its count is exact only
-when it found every counted order.
+`outer` and `against` steps replay as before. A pick that is the outer
+landing itself still saves `outer`, however many orders there are; every
+other new step saves `solved`. A `solved` completion also stores each
+witness's orientation (`up`), so replay breaks rather than reads a pair the
+other way when an earlier step turned one of its faces. The recipe search is
+the fallback only, exact once it has nothing left to try.
 

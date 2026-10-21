@@ -20,7 +20,14 @@ byte-identical.
   reflected across the line, is one folded geometry; only the order differs.
   A landing that moves other paper — a closure that adds flaps, an old tuck's
   target-bounded closure — is a fold of more flaps, reached by naming them
-  in the seed (the closure refusal's fix does), never a layer-order choice.
+  in the seed, never a layer-order choice. Where the seed's flaps have no
+  order of their own, the chooser refuses and its "include flaps" fix names
+  them in one click (christmas-tree, cicada and santa in the corpora). Where
+  they do have orders, nothing is refused and the folder names the extra
+  flaps in the layer chips: Heart step 10 needs flaps 0 and 1 picked, then
+  its second order. The chooser could offer that as an option of its own
+  ("Also move flaps 0 and 1"), the outer recipe's closure beside the
+  listing; not built.
 - **The parent's order is never re-asked.** Every pair of faces where
   neither face moves keeps the parent's order, fixed (the compound pipeline's
   carry). Pairs inside the moving block keep their order, reversed by the
@@ -40,16 +47,24 @@ byte-identical.
   through the compound pipeline (the tuck's preparation, no targets), places
   the hinges and completes. Its `FoldOrders` lists parts (component, size,
   faces) and `pick(choice)` lands one, with the `WitnessOrder` the step
-  stores: every pair of every part (the full assignment of the open pairs,
-  more than the minimum, so replay is pinned robustly).
+  stores: every pair of every component, the search's own included (the
+  full assignment of the open pairs, so replay never searches again).
+- Every listing of up to 64 combinations is landed before it is offered:
+  none landing is no order (refused as the outer recipe refuses, with its
+  fix); some landing makes the listing those, as one flat part.
 - `State::fold_solved(op, stored, limits)`: replay — prepare, fix the stored
   pairs, complete; exactly one order or `Broken`.
+- A stored choice records each witness face's orientation (`up`); replay
+  breaks when one face of a stored pair now turns the other way from the
+  other (an earlier step shifted), rather than read the sign as the other
+  stacking. Tucks and every compound completion store it too; Import CP's
+  whole order does not (no earlier step can turn its faces).
 - `FoldLanding::Solved` beside `Outer` and `Against`.
 - Fallback: the recipe search (`FoldPlacementSearch`) runs only when the
-  enumeration cannot finish: the preparation refuses (face cap, stacking
-  cap, a gate the compound pipeline enforces), or the completion hits its
-  node budget or deadline, or truncates a part. Its count is then never
-  exact. An enumeration that proves no order refuses as the outer fold does.
+  enumeration cannot finish: the completion hits its node budget or its
+  2 s, or truncates a part, or the preparation refuses a fold the outer
+  recipe lands. Its count is exact once it has nothing left to try. An
+  enumeration that proves no order refuses as the outer fold does.
 
 ### Bridge (`crates/oristudio-fold-wasm`)
 
@@ -59,8 +74,9 @@ byte-identical.
 - `order_selection` for valley and mountain: the enumeration, with
   `choice` (per part) beside the flat `index` (mixed radix, last part
   fastest, which the pleat and Repeat keep using), and per part its size, its
-  pick and its landed faces for the canvas tint. Forced folds whose outer
-  recipe lands keep writing `outer`.
+  pick and its landed faces for the canvas tint. A pick that is the outer
+  recipe's own landing writes `outer`, however many orders there are: it
+  replays where an earlier step shifts and stored pairs would not.
 
 ### Web
 
@@ -105,13 +121,28 @@ byte-identical.
       (`unified-mountain-valley-placement.md`)
 - [x] cargo test/clippy/fmt, vitest, tsc, eslint, i18n:check
 
+## Review fixes (2026-10-21)
+
+- [x] A listing the gate refuses whole is no order: refused with the outer
+      recipe's fix (`a_listing_the_gate_refuses_whole_is_no_order`)
+- [x] A pick equal to the outer landing saves `outer`; a witness whose face
+      turned apart from its pair's breaks replay (`BrokenWitness::Turned`)
+- [x] The listing's one call is capped at 2 s; an exhausted recipe search is
+      exact again; a single-order `solved` step stores its pairs
+- [x] A refused pick keeps the part rows; Repeat's fallback listing applies
+      each order's landing
+- [x] Regression fixture: two independent sides, every combination listed
+      (`tests/fixtures/fold-regressions/independent-sides-orders.osf`, built
+      from scratch; the old chooser listed 6 of its 9, never both sides
+      between; `independentSidesOrders.wasm.test.ts`)
+
 ## Known limits
 
 - The completion searches around the moving faces; the gate checks the whole
-  state. In the seeded campaign 3 of 1,123 listed folds had one order the gate
-  refused: such a fold is listed as having none. A listing of several orders
-  is not landed whole up front, so a pick the gate refuses is refused when
-  picked (seen in neither the campaign nor the corpora).
+  state, and on rare folds refuses some of the orders the completion allows.
+  A listing of up to 64 combinations is landed whole before it is offered; a
+  larger one lands its first only, and a later pick the gate refuses shows
+  as a failed preview.
 - A tuck names its placement, not its hinge: of 375 seeded tuck states, 268
   land by folding the other way (that direction's listing has them) and 10
   fold some hinges each way, which no valley or mountain lists and the recipe
