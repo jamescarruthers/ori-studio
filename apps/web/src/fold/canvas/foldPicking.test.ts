@@ -7,9 +7,11 @@ import {
   resolveFoldEdgePoint,
   resolveFoldPick,
   sameFoldHit,
+  sheetPointsTogether,
   sheetToScene,
   topSheetPointAt,
 } from './foldPicking';
+import type { FoldLandmarks } from '../engine/foldEngineWire';
 
 const RADII = { point: 0.03, line: 0.03 };
 const point = { snap: 'point', edges: true, free: false } as const;
@@ -122,6 +124,33 @@ describe('Fold picking', () => {
     const corner = resolveFoldPick(index, 'crease-pattern', { x: 0.99, y: 0.99 }, RADII, point);
     expect(resolveFoldEdgePoint(index, 'crease-pattern', { x: 0.99, y: 0.99 }, RADII, corner)).toBe(corner);
     expect(resolveFoldEdgePoint(index, 'crease-pattern', { x: 0.8, y: 0.4 }, RADII, null)).toBeNull();
+  });
+
+  it('takes the paper on top where several layers’ points lie together, whatever order the engine lists them in', () => {
+    // The book's bottom-left corner: the left half's corner under the right half's, both seen, the lower listed first.
+    const landmarks: FoldLandmarks = {
+      points: [
+        {
+          at: [0, 0],
+          visible: true,
+          sources: [
+            { kind: 'vertex', vertex: 0, sheet: [0, 0], visible: true },
+            { kind: 'vertex', vertex: 2, sheet: [1, 0], visible: true },
+          ],
+        },
+      ],
+      lines: [],
+      segments: [],
+    };
+    const index = foldPickIndex(bookScene(), landmarks, []);
+    expect(resolveFoldPick(index, 'folded', { x: 0.01, y: 0.01 }, RADII, point)).toMatchObject({ provenance: 'vertex', sheet: [1, 0] });
+    // On the crease pattern each is where it is.
+    expect(resolveFoldPick(index, 'crease-pattern', { x: 0.01, y: 0.01 }, RADII, point)).toMatchObject({ sheet: [0, 0] });
+    // Every other layer's point at that spot, top first: what a point that stays put may be swapped for.
+    expect(sheetPointsTogether(index, [0, 0])).toEqual([[1, 0]]);
+    expect(sheetPointsTogether(index, [1, 0])).toEqual([[0, 0]]);
+    expect(sheetPointsTogether(index, [0.25, 0.5])).toEqual([[0.75, 0.5]]);
+    expect(sheetPointsTogether(index, [3, 3])).toEqual([]);
   });
 
   it('maps a sheet point to the scene through a face that holds it', () => {
