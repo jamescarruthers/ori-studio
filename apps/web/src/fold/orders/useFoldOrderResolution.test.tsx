@@ -200,3 +200,28 @@ it('chooses in each independent part: the active part steps, Up and Down change 
   expect(seen.step?.choices?.completion).toEqual(witness);
   orderSelection.mockReset();
 });
+
+it('keeps the parts when a pick is refused: that pick shows as failed, with no step to commit, and stepping goes on', async () => {
+  activeBase = placement;
+  orderSelection.mockImplementation(async (...[, , , query]: unknown[]) => {
+    const choice = (query as { choice?: [number, number] }).choice ?? [0, 0];
+    return choice[1] === 1
+      ? { status: 'refused', refusal: { code: 'layer_order' }, fixes: [], faces: [], vertices: [] }
+      : solved(choice);
+  });
+  await render();
+  await act(async () => seen.resolution?.resume());
+  await act(async () => seen.resolution?.nextPart(1));
+  await act(async () => seen.resolution?.step(1));
+  expect(seen.resolution).toMatchObject({ failed: true, waiting: false, part: 1 });
+  expect(seen.resolution?.parts.map((p) => p.pick)).toEqual([0, 1]);
+  expect(seen.step).toBeNull();
+  expect(seen.refused).toBeNull();
+  // On to the next order of the part: listed again, and committable.
+  await act(async () => seen.resolution?.step(1));
+  expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ choice: [0, 2] });
+  expect(seen.resolution).toMatchObject({ failed: false });
+  expect(seen.resolution?.parts.map((p) => p.pick)).toEqual([0, 2]);
+  expect(seen.step?.op).toMatchObject({ landing: { kind: 'solved' } });
+  orderSelection.mockReset();
+});

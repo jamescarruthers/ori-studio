@@ -9,6 +9,7 @@ import type {
 } from '../document/foldSequenceDocument';
 import type { FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
+import { orderResolvedStep } from '../engine/foldEnginePreview';
 import type { FoldRefusalBody } from '../engine/foldEngineWire';
 import { FoldSearchStopped, runFoldSearch, type FoldSearch } from '../engine/foldSearch';
 import { reflection, RepeatFailure, verifiedSymmetry } from './repeatGeometry';
@@ -210,11 +211,10 @@ export function* prepareRepeatSearch(
           const order =
             n === 0 ? first : engine.orderSelection(current, queryOp, mapped.choices, { index: n, batch: 8 });
           if (order.status !== 'ok') throw RepeatFailure.refused(order.refusal);
-          const choices: FoldChoices = {
-            ...mapped.choices,
-            ...(order.completion ? { completion: order.completion } : {}),
-          };
-          tryCandidate(mapped.op.kind === 'pleat' && order.pleat ? { ...mapped.op, resolved: order.pleat } : mapped.op, Object.keys(choices).length ? choices : undefined);
+          // The order as the step stores it: its completion, and a valley's or
+          // mountain's landing (`outer` or `solved`) or a pleat's legs.
+          const resolved = orderResolvedStep(mapped.op, mapped.choices, order);
+          if (resolved) tryCandidate(resolved.op, resolved.choices);
         }
       }
       engine.releaseOrderSearch?.(current);

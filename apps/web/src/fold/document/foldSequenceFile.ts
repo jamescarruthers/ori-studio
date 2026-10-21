@@ -866,7 +866,7 @@ function readRef(value: unknown, slot: ReferenceKind): FoldRef | null {
 
 const CHOICE_KEYS = new Set(['root', 'completion', 'pocket', 'opening']);
 const MODEL_LINE_KEYS = new Set(['n', 'd']);
-const COMPLETION_KEYS = new Set(['faces', 'orders']);
+const COMPLETION_KEYS = new Set(['faces', 'orders', 'up']);
 const OPENING_KEYS = new Set(['upper']);
 
 /**
@@ -920,7 +920,10 @@ function readCompletion(value: unknown): FoldCompletionChoice | null {
   if (!isRecord(value) || hasNewerKey(value, COMPLETION_KEYS)) return null;
   const faces = readPoints(value.faces);
   const orders = readList(value.orders, readFaceOrder);
-  return faces && orders && { faces, orders };
+  // One orientation per witness, or none (a choice stored before them).
+  const up = value.up === undefined ? undefined : readList(value.up, (b) => (typeof b === 'boolean' ? b : null));
+  if (up === null || (up && faces && up.length !== faces.length)) return null;
+  return faces && orders && { faces, orders, ...(up ? { up } : {}) };
 }
 
 /** `[f, g, s]`: two witness indices and a sign of 1 or -1. */
@@ -1276,6 +1279,7 @@ export function writeFoldChoices(choices: FoldChoices): Record<string, unknown> 
           completion: {
             faces: completion.faces.map(writePoint),
             orders: completion.orders.map(([f, g, s]) => [f, g, s]),
+            ...(completion.up ? { up: [...completion.up] } : {}),
           },
         }
       : {}),

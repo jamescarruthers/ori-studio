@@ -791,6 +791,13 @@ export type FoldFaceOrder = readonly [number, number, 1 | -1];
 export interface FoldCompletionChoice {
   faces: readonly SheetPoint[];
   orders: readonly FoldFaceOrder[];
+  /**
+   * Per witness, whether its face showed its front when the choice was
+   * made. Replay breaks the step when one face of a stored pair now turns
+   * the other way from the other, rather than read the sign as the other
+   * stacking. Absent in choices stored before it.
+   */
+  up?: readonly boolean[];
 }
 
 /** One flap's opening of a reverse fold, crimp or tuck: the faces of its upper block, by witnesses. */

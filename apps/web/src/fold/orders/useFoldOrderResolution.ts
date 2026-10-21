@@ -149,11 +149,22 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
     // All semantic input is covered by queryKey; a new object is not a new question.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolveOrders, cancelSearch, queryKey, answer?.key]);
+  // The last listing this fold answered: what the rows keep showing when a
+  // pick after it is refused, so the folder can step on to another.
+  const [shown, setShown] = useState<{ key: string; value: FoldOrderSelection } | null>(null);
   const own = answer?.key === queryKey ? answer : null;
-  const value = own?.value ?? (answer?.key.startsWith(`${key}|`) ? answer.value : null);
+  const latest = own?.value ?? (answer?.key.startsWith(`${key}|`) ? answer.value : null);
+  if (latest && key && (shown?.key !== key || shown.value !== latest)) setShown({ key, value: latest });
+  const value = latest ?? (shown?.key === key ? shown.value : null);
   const limited = own?.refused?.refusal.code === 'budget_exceeded';
+  // A pick refused once the orders were listed: that order's preview failed.
+  const pickRefused = !!own?.refused && !limited && nav.reviewing && !!value;
   const required = own?.failed === true || limited || (!!value && (!value.count.exact || value.count.orders > 1));
-  const parts = useMemo(() => (value?.parts ?? []).map(partView), [value]);
+  // Each part's pick as asked: a refused pick's answer lists none.
+  const parts = useMemo(
+    () => (value?.parts ?? []).map((p) => partView({ ...p, pick: nav.choice?.[p.component] ?? p.pick })),
+    [value, nav.choice]
+  );
   const part = Math.max(0, Math.min(parts.length - 1, nav.part));
   const listing: FoldOrderListing | undefined = value?.source ? { source: value.source, parts: parts.length } : undefined;
   const offered = useRef<string | null>(null);
@@ -175,17 +186,18 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
     trackFoldOrdersSearched(result, found.count.orders > (nav.before ?? 0), found.count.orders);
   }, [key, own, nav.pressed, nav.stopped, nav.batch, nav.before]);
   const searching = placing && own === null && !!nav.pressed && !nav.stopped;
-  // Step part `at`'s pick, as the answer last listed it: a new choice, the other parts' picks kept.
+  // Step part `at`'s pick from the one asked: a new choice, the other parts' picks kept.
   const stepIn = (at: number, delta: number) => {
     const listed = value?.parts?.[at];
-    if (!nav.reviewing || !value?.choice || !listed) return;
-    const choice = [...value.choice];
-    choice[listed.component] = stepped(listed.pick, delta, listed.orders, !listed.truncated);
+    const current = nav.choice ?? value?.choice;
+    if (!nav.reviewing || !current || !listed) return;
+    const choice = [...current];
+    choice[listed.component] = stepped(current[listed.component] ?? listed.pick, delta, listed.orders, !listed.truncated);
     setNavigation({ ...nav, choice, part: at, prefer: undefined });
   };
   const resolution: FoldOrderResolution | null = key ? {
     key, inputKey, movingVaries: value?.moving_varies, active: nav.reviewing, required,
-    waiting: own === null, failed: (own?.failed ?? false) || limited,
+    waiting: own === null, failed: (own?.failed ?? false) || limited || pickRefused,
     searching,
     searched: nav.batch > 0,
     index: value?.index ?? nav.index,
@@ -218,10 +230,12 @@ export function useFoldOrderResolution(session: FoldSessionSurface, base: FoldTo
   } : null;
   const step = useMemo(() => {
     if (!key) return base;
+    // A refused pick has no step: the listing shown is another order's.
+    if (pickRefused) return null;
     const resolved = base && value ? orderResolvedStep(base.op, base.choices, value) : null;
     return resolved ? { ...resolved, key: foldStepInputKey(resolved) } : null;
-  }, [base, key, value]);
-  // Search exhaustion belongs to order review, not a geometric refusal that
-  // disables the tool confirmation needed to reach that review.
-  return { step, resolution, refused: limited ? null : own?.refused ?? null };
+  }, [base, key, value, pickRefused]);
+  // Search exhaustion, and a pick refused in review, belong to order review,
+  // not a geometric refusal that disables the tool confirmation.
+  return { step, resolution, refused: limited || pickRefused ? null : own?.refused ?? null };
 }

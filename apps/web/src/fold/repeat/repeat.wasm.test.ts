@@ -245,7 +245,8 @@ describe('sequential Repeat through the public engine', () => {
     for (let index = 0; index < first.count.orders; index++) {
       const chosen = e.orderSelection(strip.state, corner, undefined, { index });
       if (chosen.status !== 'ok') throw new Error(JSON.stringify(chosen));
-      expect(chosen.landing).toEqual({ kind: 'solved' });
+      // The outer recipe's own landing is saved as `outer`, every other as `solved`.
+      expect(['outer', 'solved']).toContain(chosen.landing?.kind);
       const op = { ...corner, landing: chosen.landing! } as FoldOp;
       const choices = chosen.completion ? { completion: chosen.completion } : undefined;
       const one = e.step(strip.state, op, choices);
@@ -258,7 +259,7 @@ describe('sequential Repeat through the public engine', () => {
       // The stored pairs, mirrored, pin the mirrored order: no choice is asked.
       expect(prepared, JSON.stringify(prepared)).toMatchObject({ status: 'ready' });
       if (prepared.status !== 'ready') continue;
-      expect(prepared.op.steps[0]!.op).toMatchObject({ kind: 'valley', landing: { kind: 'solved' } });
+      expect(prepared.op.steps[0]!.op).toMatchObject({ kind: 'valley', landing: { kind: chosen.landing!.kind } });
       expect(e.step(one.state, prepared.op)).toMatchObject({ status: 'ok' });
       mirrored.add(prepared.op.steps[0]!.expect);
     }
