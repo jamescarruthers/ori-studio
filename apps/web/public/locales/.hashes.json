@@ -6370,7 +6370,8 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12743,7 +12744,8 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19118,7 +19120,8 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25146,7 +25149,8 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31174,7 +31178,8 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37547,7 +37552,8 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43920,7 +43926,8 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49948,6 +49955,7 @@
     "tools:fold.order.partNext": "0d932c582b40",
     "tools:fold.order.partPrevious": "a1b49155220a",
     "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd"
+    "tools:fold.order.partsHelp": "291d547a78fd",
+    "panels:references.warning.nonFiniteSegments": "d6300696e654"
   }
 }
