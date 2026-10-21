@@ -5,12 +5,15 @@
 //! - **A valley or mountain** lists its orders through the solver
 //!   (`oristudio_fold::fold::solved`): every order its moving paper can land
 //!   in, per independent part, a part never made only of paper that stays.
-//!   A pick stores a `solved` landing pinned by `choices.completion`; a fold
-//!   with one order whose outer recipe lands it stores `outer`, as before.
-//!   Only when the solver cannot finish — the block does not prepare, the
-//!   completion runs out of nodes or time, or a part truncates — does the
-//!   recipe search ([`FoldPlacementSearch`]) list what it can, never exact
-//!   unless it found every counted order.
+//!   A pick stores a `solved` landing pinned by `choices.completion`; a pick
+//!   that is the outer recipe's landing stores `outer`, however many orders
+//!   there are, since it replays where an earlier step shifts. A fold none of
+//!   whose orders lands is refused as the outer recipe refuses it. Only when
+//!   the solver cannot finish — the completion runs out of nodes or its
+//!   [`LISTING_MS`], a part truncates, or the block does not prepare for a
+//!   fold the outer recipe lands — does the recipe search
+//!   ([`FoldPlacementSearch`]) list what it can, exact once it has nothing
+//!   left to try.
 //! - **A compound fold** lists its completion's orders, per part, as its
 //!   family lands them.
 //!
@@ -62,11 +65,11 @@ pub const PLACEMENT_SLICE_MS: f64 = 150.0;
 /// The longest one batch of a placement search may search in all.
 const PLACEMENT_BATCH_MAX_MS: f64 = 60_000.0;
 
-/// The least time the solver lists a fold's orders in, whatever the press's
-/// own time: a listing is one call, finished or not, so it gets enough to
-/// finish the folds of the design fixtures (`tests/solved_orders.rs`
-/// times them) before the recipe search is the fallback.
-const LISTING_MIN_MS: f64 = 2_000.0;
+/// The longest the solver lists a fold's orders in, whatever the press's own
+/// time: a listing is one call, which Stop cannot interrupt, so it is capped.
+/// The slowest first answer across the corpora took 37 ms. A listing that
+/// needs longer falls back to the recipe search, which runs in slices.
+const LISTING_MS: f64 = 2_000.0;
 
 impl OrderQuery {
     pub fn limits(&self) -> CompletionLimits {
@@ -93,66 +96,81 @@ impl OrderQuery {
         (allowed, cost)
     }
 
-    /// The choice this query names in `completions`, and its index: `choice`
-    /// when it names one listed order per component, else the order that
-    /// keeps `prefer`'s relations, else `index` (clamped to the count).
+    /// The choice this query names in `completions`, and its index.
     fn choose(&self, completions: &Completions) -> (Vec<usize>, u64) {
-        let components = completions.components();
+        let sizes: Vec<usize> = completions
+            .components()
+            .iter()
+            .map(|c| c.orders.len())
+            .collect();
+        self.choose_in(&sizes, |prefer| keeping(completions, prefer))
+    }
+
+    /// The choice this query names among choices of `sizes` (one listed
+    /// order per position), and its index: `choice` when it names one, else
+    /// the one `preserved` finds keeping `prefer`'s relations, else `index`
+    /// (clamped to the count), the last position stepping fastest.
+    fn choose_in(
+        &self,
+        sizes: &[usize],
+        preserved: impl FnOnce(&[[FaceId; 2]]) -> Option<Vec<usize>>,
+    ) -> (Vec<usize>, u64) {
         let index_of = |choice: &[usize]| {
-            components
-                .iter()
-                .zip(choice)
-                .fold(0u64, |index, (component, pick)| {
-                    index
-                        .saturating_mul(component.orders.len() as u64)
-                        .saturating_add(*pick as u64)
-                })
+            sizes.iter().zip(choice).fold(0u64, |index, (&size, pick)| {
+                index
+                    .saturating_mul(size as u64)
+                    .saturating_add(*pick as u64)
+            })
         };
         if let Some(choice) = &self.choice
-            && choice.len() == components.len()
-            && components
-                .iter()
-                .zip(choice)
-                .all(|(component, &pick)| pick < component.orders.len())
+            && choice.len() == sizes.len()
+            && sizes.iter().zip(choice).all(|(&size, &pick)| pick < size)
         {
             return (choice.clone(), index_of(choice));
         }
-        let count = completions.count();
+        let count = sizes
+            .iter()
+            .fold(1u64, |n, &size| n.saturating_mul(size as u64));
         // A changed search may list fewer choices. This only chooses a preview;
         // the UI must still accept the witness it actually sees.
-        let index = self.index.min(count.orders.saturating_sub(1));
+        let index = self.index.min(count.saturating_sub(1));
         let mut remainder = index;
-        let mut indices = vec![0; components.len()];
-        for (i, component) in components.iter().enumerate().rev() {
-            let size = component.orders.len() as u64;
+        let mut indices = vec![0; sizes.len()];
+        for (i, &size) in sizes.iter().enumerate().rev() {
+            let size = size as u64;
             if size > 0 {
                 indices[i] = (remainder % size) as usize;
                 remainder /= size;
             }
         }
-        if let Some(prefer) = &self.prefer {
-            let preserved: Option<Vec<usize>> = components
-                .iter()
-                .map(|component| {
-                    component.orders.iter().position(|order| {
-                        component.pairs.iter().zip(order).all(|(pair, above)| {
-                            let expected = if *above {
-                                [pair.lo(), pair.hi()]
-                            } else {
-                                [pair.hi(), pair.lo()]
-                            };
-                            prefer.contains(&expected)
-                        })
-                    })
-                })
-                .collect();
-            if let Some(preserved) = preserved {
-                let index = index_of(&preserved);
-                return (preserved, index);
-            }
+        if let Some(prefer) = &self.prefer
+            && let Some(preserved) = preserved(prefer)
+        {
+            let index = index_of(&preserved);
+            return (preserved, index);
         }
         (indices, index)
     }
+}
+
+/// The choice of `completions` whose every pair is one of `prefer`'s.
+fn keeping(completions: &Completions, prefer: &[[FaceId; 2]]) -> Option<Vec<usize>> {
+    completions
+        .components()
+        .iter()
+        .map(|component| {
+            component.orders.iter().position(|order| {
+                component.pairs.iter().zip(order).all(|(pair, above)| {
+                    let expected = if *above {
+                        [pair.lo(), pair.hi()]
+                    } else {
+                        [pair.hi(), pair.lo()]
+                    };
+                    prefer.contains(&expected)
+                })
+            })
+        })
+        .collect()
 }
 
 /// How the orders a selection names were listed.
@@ -319,9 +337,10 @@ struct Listing {
     per_component: usize,
     max_nodes: Option<u64>,
     result: Result<FoldOrders, Unlisted>,
-    /// For a fold with one order: whether its outer recipe lands that order,
-    /// so the step keeps storing `outer`.
-    outer: Option<bool>,
+    /// The outer recipe's landing, by its `fs1` keys; none when it refuses.
+    /// A pick that is that landing stores `outer`, which replays where an
+    /// earlier step shifts and the pick's stored pairs would not.
+    outer: Option<Option<Vec<String>>>,
     /// For a listing that did not finish: the outer recipe's refusal, none
     /// when it lands.
     outer_refusal: Option<Option<oristudio_fold::Refused>>,
@@ -342,7 +361,7 @@ pub(crate) struct PlacementSession {
 impl PlacementSession {
     /// List the fold's orders at `limits` unless they are listed, or a
     /// listing at limits as large did not finish.
-    fn list(&mut self, parent: &State, limits: &CompletionLimits, allowed_ms: f64) {
+    fn list(&mut self, parent: &State, limits: &CompletionLimits) {
         let larger = |listing: &Listing| {
             limits.per_component > listing.per_component || limits.max_nodes > listing.max_nodes
         };
@@ -359,7 +378,7 @@ impl PlacementSession {
         let timed = CompletionLimits {
             deadline: Some(oristudio_fold::complete::Deadline {
                 now_ms,
-                at_ms: now_ms() + allowed_ms.max(LISTING_MIN_MS),
+                at_ms: now_ms() + LISTING_MS,
             }),
             ..*limits
         };
@@ -466,7 +485,7 @@ fn placement_answer(
     {
         let limits = query.limits();
         let (allowed, cost) = query.search_time();
-        session.list(parent, &limits, allowed);
+        session.list(parent, &limits);
         let Some(listing) = &mut session.listing else {
             return Err(BridgeError::InvalidInput(
                 "placement listing missing".into(),
@@ -498,10 +517,13 @@ fn placement_answer(
         };
         match &listing.result {
             Ok(orders) if !fallback => {
-                let outer = *listing.outer.get_or_insert_with(|| {
-                    orders.count().orders == 1 && outer_lands(parent, &fold, orders)
+                let outer = listing.outer.get_or_insert_with(|| {
+                    parent
+                        .fold(&fold.clone().with_closure(ClosurePolicy::Refuse))
+                        .ok()
+                        .map(|outer| sorted_keys(&outer.state))
                 });
-                Ok(solved_selection(orders, query, outer))
+                Ok(solved_selection(orders, query, outer.as_deref()))
             }
             _ => {
                 let search = session
@@ -534,62 +556,67 @@ fn placement_answer(
     }
 }
 
-/// Whether the plain fold's outer recipe, moving only what the seed names,
-/// lands the one order `orders` has.
-fn outer_lands(parent: &State, fold: &PlainFold, orders: &FoldOrders) -> bool {
-    let Ok(outer) = parent.fold(&fold.clone().with_closure(ClosurePolicy::Refuse)) else {
-        return false;
-    };
-    let Ok(only) = orders.pick(&vec![0; orders.completions().components().len()]) else {
-        return false;
-    };
-    let keys = |state: &State| {
-        let mut keys = canonical_keys(state);
-        keys.sort_unstable();
-        keys
-    };
-    keys(&outer.state) == keys(&only.folded.state)
+fn sorted_keys(state: &State) -> Vec<String> {
+    let mut keys = canonical_keys(state);
+    keys.sort_unstable();
+    keys
 }
 
-/// A valley's or mountain's choice among the orders the solver listed.
+/// A valley's or mountain's choice among the orders the solver listed. A
+/// pick that is the outer recipe's landing (`outer`, its keys) stores
+/// `outer`, however many orders there are; any other stores `solved`.
 fn solved_selection(
     orders: &FoldOrders,
     query: &OrderQuery,
-    outer: bool,
+    outer: Option<&[String]>,
 ) -> Outcome<OrderSelection> {
-    let completions = orders.completions();
-    let (choice, index) = query.choose(completions);
+    let sizes = orders.choice_sizes();
+    let (choice, index) = query.choose_in(&sizes, |prefer| orders.choice_keeping(prefer));
     let picked = match orders.pick(&choice) {
         Ok(picked) => picked,
         Err(refusal) => return Outcome::Refused(Refusal::from(refusal)),
     };
-    let (landing, completion) = if outer {
-        (FoldLanding::Outer, None)
-    } else {
-        (FoldLanding::Solved, picked.stored)
-    };
+    let (landing, completion) =
+        if outer.is_some_and(|keys| keys == sorted_keys(&picked.folded.state)) {
+            (FoldLanding::Outer, None)
+        } else {
+            (FoldLanding::Solved, picked.stored)
+        };
     let mut moving = orders.moving_landed();
     moving.sort_unstable();
+    let faces = orders.landed_faces();
+    let parts = orders
+        .parts()
+        .into_iter()
+        .map(|part| PartSelection {
+            pick: choice.get(part.component).copied().unwrap_or(0),
+            moves: part.faces.iter().any(|id| moving.binary_search(id).is_ok()),
+            faces: part
+                .faces
+                .iter()
+                .filter_map(|id| faces.binary_search(id).ok())
+                .collect(),
+            component: part.component,
+            orders: part.orders,
+            truncated: part.truncated,
+        })
+        .collect();
     Outcome::Ok(OrderSelection {
         count: orders.count(),
         index,
         completion,
-        relations: completions.chosen_pairs(&choice).unwrap_or_default(),
+        relations: orders.relations(&choice),
         landing: Some(landing),
         moving_varies: false,
         searching: false,
-        parts: parts_of(completions, &choice, &orders.landed_faces(), &moving),
-        choice: if completions.components().is_empty() {
-            Vec::new()
-        } else {
-            choice
-        },
+        parts,
+        choice: if sizes.is_empty() { Vec::new() } else { choice },
         source: Some(OrderSource::Solved),
     })
 }
 
 /// The recipe search's candidate at `query.index`: a flat list, its count
-/// exact only when it found every counted order.
+/// exact once the search has nothing left to try.
 fn recipe_selection(
     search: &FoldPlacementSearch,
     query: &OrderQuery,

@@ -120,6 +120,7 @@ impl Frame {
         WitnessOrder {
             faces: self.witnesses(),
             orders: self.orders.clone(),
+            up: None,
         }
     }
 }
@@ -384,6 +385,7 @@ pub fn replay(frame: &Frame) -> Result<Replayed, Refusal> {
     let stored = WitnessOrder {
         faces: witnesses.clone(),
         orders: frame.orders.clone(),
+        up: None,
     };
     let state = imported
         .replay(&stored, &CompletionLimits::default())

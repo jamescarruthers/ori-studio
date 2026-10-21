@@ -273,6 +273,7 @@ fn an_older_step_s_ridge_and_order_are_moot() {
                 completion: Some(WitnessOrder {
                     faces,
                     orders: vec![(0, 1, s)],
+                    up: None,
                 }),
             };
             let replayed = landed(case.state.rabbit_ear(&op, &stored));

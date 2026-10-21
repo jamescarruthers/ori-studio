@@ -44,9 +44,10 @@ fn an_explicit_single_flap_selection_cannot_offer_an_expanded_outer_fold() {
     assert_eq!(answer.count.orders, 1);
     assert!(!answer.moving_varies);
     // The one order lies inside the book, which the outer recipe cannot
-    // land without the other flap: it is stored as itself.
+    // land without the other flap: it is stored as itself, with the pairs
+    // the search decided, so replay need not search again.
     assert_eq!(answer.landing, Some(oristudio_fold::FoldLanding::Solved));
-    assert!(answer.completion.is_none());
+    assert!(answer.completion.is_some());
     raw["landing"] = serde_json::to_value(answer.landing).unwrap();
     let choices = Choices {
         completion: answer.completion,

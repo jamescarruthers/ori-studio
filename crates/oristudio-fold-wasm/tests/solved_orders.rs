@@ -18,11 +18,11 @@
 
 use std::collections::BTreeSet;
 
-use oristudio_fold::random::{self, Rng};
+use oristudio_fold::random::{self, Rng, Sequence};
 use oristudio_fold::{
-    Broken, ClosurePolicy, CompletionLimits, CompoundRefused, Direction, FoldOrders,
-    FoldPlacementSearch, PlainFold, Seed, State, TuckChoices, TuckOutcome, Unfinished, Unlisted,
-    WitnessOrder,
+    Broken, BrokenWitness, ClosurePolicy, CompletionLimits, CompoundRefused, Direction, Fix,
+    FoldOrders, FoldPlacementSearch, PlainFold, ReverseChoices, ReverseOutcome, Seed, Sheet,
+    StartSide, State, TuckChoices, TuckOutcome, Unfinished, Unlisted, WitnessOrder,
 };
 use oristudio_fold_wasm::canonical::canonical_keys;
 
@@ -76,7 +76,7 @@ fn listed(
     what: &str,
     tally: &mut Tally,
 ) -> BTreeSet<Keys> {
-    let (choices, _) = orders.completions().picks(MAX_PICKS);
+    let (choices, _) = orders.choices(MAX_PICKS);
     let moving = orders.moving_landed();
     for part in orders.parts() {
         if !part.faces.iter().any(|f| moving.binary_search(f).is_ok()) {
@@ -279,6 +279,126 @@ fn the_solver_lists_every_order_a_recipe_or_a_tuck_lands() {
     assert!(tally.tuck_missing.is_empty(), "{tally:#?}");
 }
 
+/// A reverse fold's state, folded again (an adversarial review's seed): the
+/// completion allows six orders and the gate refuses all six. The listing
+/// says there is no order, so the fold is refused as the outer recipe
+/// refuses it — the closure adds a flap — with the fix that lands.
+#[test]
+fn a_listing_the_gate_refuses_whole_is_no_order() {
+    let seed = 12270u64;
+    let mut sequence =
+        Sequence::new(seed, 3 + (seed % 7) as usize, 64).unwrap_or_else(|e| panic!("{e}"));
+    for _ in sequence.by_ref() {}
+    let mut parent = sequence.state().clone();
+    let mut rng = Rng::new(seed ^ 0x9e37_79b9_7f4a_7c15);
+    let reverse =
+        random::reverse_fold(&parent, &mut rng, 0.5).unwrap_or_else(|| panic!("no reverse"));
+    parent = match parent.reverse_fold_within(&reverse, &ReverseChoices::default(), &LIMITS) {
+        Ok(ReverseOutcome::Landed(folded)) => folded.state,
+        Ok(ReverseOutcome::ChooseOrder(choice)) => {
+            let (picks, _) = choice.completions().picks(16);
+            let pick = &picks[rng.below(picks.len())];
+            choice.pick(pick).unwrap_or_else(|e| panic!("{e}")).state
+        }
+        other => panic!("{other:?}"),
+    };
+    if rng.chance(0.3) {
+        parent = parent.turn_over();
+    }
+    let mut op = None;
+    for _ in 0..2 {
+        op = random::plain_fold(&parent, &mut rng);
+    }
+    let op = op.unwrap_or_else(|| panic!("no fold"));
+    assert!(matches!(
+        parent.fold_orders(&op, &LIMITS),
+        Err(Unlisted::NoOrder(_))
+    ));
+    let outer = parent
+        .fold(&op.clone().with_closure(ClosurePolicy::Refuse))
+        .map(|_| ())
+        .unwrap_err();
+    let Some(Fix::IncludeFlaps { flaps }) = outer.fixes.first() else {
+        panic!("{outer:?}");
+    };
+    let analysis = parent.analyse_fold(&op).unwrap_or_else(|e| panic!("{e:?}"));
+    let mut at: Vec<[f64; 2]> = analysis
+        .picked
+        .iter()
+        .map(|&k| analysis.flaps[k].witness)
+        .collect();
+    at.extend(flaps.iter().map(|&k| analysis.flaps[k].witness));
+    let wide = parent
+        .fold_orders(&op.with_seed(Seed::Flaps { at }), &LIMITS)
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(wide.count().orders, 1);
+}
+
+/// An earlier fold moved a hundredth (an adversarial review's seed): a face
+/// a stored pair names now turns the other way from the other, so the pair's
+/// sign would name the other stacking. Replay breaks instead; and the pick,
+/// being the outer recipe's own landing, is what the chooser saves as
+/// `outer`, which lands on the shifted parent.
+#[test]
+fn a_pair_whose_faces_turned_apart_breaks_rather_than_flips() {
+    let built = |seed: u64, shift: f64| -> (State, Rng) {
+        let mut rng = Rng::new(seed);
+        let sheet =
+            State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+        let mut state = sheet.clone();
+        let want = 2 + rng.below(4);
+        let mut ops = Vec::new();
+        for _ in 0..10 {
+            if ops.len() >= want {
+                break;
+            }
+            let Some(op) = random::plain_fold(&state, &mut rng) else {
+                continue;
+            };
+            if let Ok(folded) = state.fold(&op) {
+                state = folded.state;
+                ops.push(op);
+            }
+        }
+        let mut again = sheet;
+        for (k, op) in ops.iter().enumerate() {
+            let mut op = op.clone();
+            if k == 0 {
+                op.line.d += shift;
+            }
+            again = again.fold(&op).unwrap_or_else(|e| panic!("{e:?}")).state;
+        }
+        (again, rng)
+    };
+    let (parent, mut rng) = built(3352, 0.0);
+    let op = random::plain_fold(&parent, &mut rng).unwrap_or_else(|| panic!("no fold"));
+    let (shifted, _) = built(3352, 0.01);
+    let orders = parent
+        .fold_orders(&op, &LIMITS)
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(orders.count().orders, 2);
+    let outer = parent
+        .fold(&op.clone().with_closure(ClosurePolicy::Refuse))
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    let pick = orders.pick(&[0]).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(keys(&pick.folded.state), keys(&outer.state));
+    let replay = shifted.fold_solved(&op, pick.stored.as_ref(), &CompletionLimits::default());
+    assert!(
+        matches!(
+            replay,
+            Err(CompoundRefused::Broken(Broken::Witness {
+                witness: BrokenWitness::Turned { .. }
+            }))
+        ),
+        "{replay:?}"
+    );
+    assert!(
+        shifted
+            .fold(&op.clone().with_closure(ClosurePolicy::Refuse))
+            .is_ok()
+    );
+}
+
 /// Two folds of the campaign whose orders fall into two independent parts
 /// (2 × 5 and 2 × 2, as the envelope's book move is 3 × 3): every
 /// combination is listed, lands distinct, and replays; the recipe search
@@ -322,10 +442,9 @@ fn independent_parts_reach_every_combination() {
         // Each part's second order: the stored pairs run part by part, so the
         // first part's alone leave the second open.
         let choice: Vec<usize> = orders
-            .completions()
-            .components()
+            .choice_sizes()
             .iter()
-            .map(|c| 1.min(c.orders.len() - 1))
+            .map(|&n| 1.min(n - 1))
             .collect();
         let stored = orders
             .pick(&choice)
@@ -340,6 +459,7 @@ fn independent_parts_reach_every_combination() {
         let partial = WitnessOrder {
             faces: stored.faces.clone(),
             orders: stored.orders[..pairs].to_vec(),
+            up: stored.up.clone(),
         };
         let half = parent.fold_solved(&op, Some(&partial), &CompletionLimits::default());
         assert!(

@@ -606,6 +606,7 @@ fn stored_choices_replay_or_break() {
     let empty = WitnessOrder {
         faces: Vec::new(),
         orders: Vec::new(),
+        up: None,
     };
     assert!(matches!(broken(empty), Broken::NotUnique { .. }));
     // A pair the seeds force, stored the other way round.

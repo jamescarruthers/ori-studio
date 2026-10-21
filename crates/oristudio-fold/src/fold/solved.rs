@@ -36,14 +36,17 @@
 //! completes ([`State::fold_solved`]): exactly one order lands, anything else
 //! breaks the step ([`Broken`]), never a guess.
 //!
-//! # Every listed order lands — almost
+//! # Every listed order lands
 //!
 //! The completion searches around the moving faces (`complete_around`); the
-//! gate a pick lands through checks the whole state. On rare folds (3 of
-//! 1,123 listed in the seeded campaign, none in the corpora) the completion's
-//! one order is one the gate refuses: such a fold is listed as having no
-//! order. A listing of several orders is not landed whole up front, so a pick
-//! the gate refuses is refused when it is picked (never seen in either).
+//! gate a pick lands through checks the whole state, and on rare folds it
+//! refuses orders the completion allows. So a listing of up to
+//! [`LANDED_UP_FRONT`] combinations is landed whole before it is offered:
+//! none landing is no order at all (the fold is refused as the outer recipe
+//! refuses it, with its fixes); some landing makes the listing those
+//! combinations, as one flat part, since what the gate refuses need not
+//! respect the parts. A larger listing lands its first combination only, and
+//! a later pick the gate refuses is refused when it is picked.
 //!
 //! # When it cannot list
 //!
@@ -52,7 +55,8 @@
 //! preparation refused (a face or stacking cap, a gate only the compound
 //! pipeline runs), the completion ran out of nodes or time, or a part listed
 //! fewer orders than it has. Only then does a tool fall back to the recipe
-//! search, whose count is never exact.
+//! search, exact once it has nothing left to try — which, unlike this
+//! listing, need not be every order.
 
 use serde::Serialize;
 
@@ -101,6 +105,11 @@ pub enum Unfinished {
     Truncated,
 }
 
+/// The most combinations a listing lands before it is offered (see the
+/// module docs): every listing of the corpora and the seeded campaign but
+/// the largest.
+pub const LANDED_UP_FRONT: usize = 64;
+
 /// Every order a plain fold of the seed's flaps can land in.
 #[derive(Debug)]
 pub struct FoldOrders {
@@ -110,20 +119,31 @@ pub struct FoldOrders {
     /// Pairs `[upper, lower]` of faces that do not move, left open by the
     /// completion and pinned to the parent's order (see the module docs).
     pins: Vec<[FaceId; 2]>,
+    /// When the gate refuses some of the completion's combinations: the ones
+    /// that land, one per component each. The listing is then these, as one
+    /// flat part.
+    flat: Option<Vec<Vec<usize>>>,
 }
 
 /// A solved fold landed, with what its step stores.
 #[derive(Debug, Clone)]
 pub struct SolvedFolded {
     pub folded: Folded,
-    /// The open pairs it took; none when there was one order.
+    /// The open pairs it took; none when there was nothing to choose.
     pub stored: Option<WitnessOrder>,
 }
 
 impl FoldOrders {
-    /// The true ‹ n of m ›: the product of the parts' counts.
+    /// The true ‹ n of m ›: the product of the parts' counts, or the
+    /// combinations that land.
     pub fn count(&self) -> ChoiceCount {
-        self.completions.count()
+        match &self.flat {
+            Some(flat) => ChoiceCount {
+                orders: flat.len() as u64,
+                exact: true,
+            },
+            None => self.completions.count(),
+        }
     }
 
     /// The completion: every component, a part or not.
@@ -131,24 +151,109 @@ impl FoldOrders {
         &self.completions
     }
 
-    /// The parts the folder chooses in: the components with more than one
-    /// order, in component order.
-    pub fn parts(&self) -> Vec<OrderPart> {
-        self.completions
+    /// What a choice gives at each position: one listed order per
+    /// component, or the one combination of a flat listing.
+    pub fn choice_sizes(&self) -> Vec<usize> {
+        match &self.flat {
+            Some(flat) => vec![flat.len()],
+            None => self
+                .completions
+                .components()
+                .iter()
+                .map(|c| c.orders.len())
+                .collect(),
+        }
+    }
+
+    /// The first `cap` choices, the first position stepping slowest, and
+    /// whether there are more.
+    pub fn choices(&self, cap: usize) -> (Vec<Vec<usize>>, bool) {
+        match &self.flat {
+            Some(flat) => (
+                (0..flat.len().min(cap)).map(|k| vec![k]).collect(),
+                flat.len() > cap,
+            ),
+            None => self.completions.picks(cap),
+        }
+    }
+
+    /// The completion's combination a choice names.
+    fn combination<'a>(&'a self, choice: &'a [usize]) -> Option<&'a [usize]> {
+        match &self.flat {
+            Some(flat) => match choice {
+                [k] => flat.get(*k).map(Vec::as_slice),
+                _ => None,
+            },
+            None => Some(choice),
+        }
+    }
+
+    /// The pairs a choice decides beyond the forced ones, `[upper, lower]`.
+    pub fn relations(&self, choice: &[usize]) -> Vec<[FaceId; 2]> {
+        self.combination(choice)
+            .and_then(|c| self.completions.chosen_pairs(c))
+            .unwrap_or_default()
+    }
+
+    /// The choice that keeps every relation of `prefer` its completion
+    /// decides, when one does: what a wider search keeps its place by.
+    pub fn choice_keeping(&self, prefer: &[[FaceId; 2]]) -> Option<Vec<usize>> {
+        let combination: Option<Vec<usize>> = self
+            .completions
             .components()
+            .iter()
+            .map(|component| {
+                component.orders.iter().position(|order| {
+                    component.pairs.iter().zip(order).all(|(pair, &above)| {
+                        let expected = if above {
+                            [pair.lo(), pair.hi()]
+                        } else {
+                            [pair.hi(), pair.lo()]
+                        };
+                        prefer.contains(&expected)
+                    })
+                })
+            })
+            .collect();
+        let combination = combination?;
+        match &self.flat {
+            Some(flat) => flat.iter().position(|c| *c == combination).map(|k| vec![k]),
+            None => Some(combination),
+        }
+    }
+
+    /// The parts the folder chooses in: the components with more than one
+    /// order, in component order; a flat listing's one part.
+    pub fn parts(&self) -> Vec<OrderPart> {
+        let components = self.completions.components();
+        let faces_of = |picked: &mut dyn Iterator<Item = &crate::ComponentChoices>| {
+            let mut faces: Vec<FaceId> = picked
+                .flat_map(|c| c.pairs.iter().flat_map(|p| p.faces()))
+                .collect();
+            faces.sort_unstable();
+            faces.dedup();
+            faces
+        };
+        if let Some(flat) = &self.flat {
+            if flat.len() < 2 {
+                return Vec::new();
+            }
+            return vec![OrderPart {
+                component: 0,
+                orders: flat.len(),
+                truncated: false,
+                faces: faces_of(&mut components.iter().filter(|c| c.orders.len() > 1)),
+            }];
+        }
+        components
             .iter()
             .enumerate()
             .filter(|(_, c)| c.orders.len() > 1 || c.truncated)
-            .map(|(k, c)| {
-                let mut faces: Vec<FaceId> = c.pairs.iter().flat_map(|p| p.faces()).collect();
-                faces.sort_unstable();
-                faces.dedup();
-                OrderPart {
-                    component: k,
-                    orders: c.orders.len(),
-                    truncated: c.truncated,
-                    faces,
-                }
+            .map(|(k, c)| OrderPart {
+                component: k,
+                orders: c.orders.len(),
+                truncated: c.truncated,
+                faces: faces_of(&mut std::iter::once(c)),
             })
             .collect()
     }
@@ -188,18 +293,20 @@ impl FoldOrders {
         &self.pins
     }
 
-    /// Land the order `choice` names, one listed order per component, and
-    /// what its step stores.
+    /// Land the order `choice` names ([`FoldOrders::choice_sizes`]) and what
+    /// its step stores: every pair its components decide, the search's own
+    /// as well as the folder's, so replay never has to search again — a
+    /// listing a larger budget found replays within the default one.
     pub fn pick(&self, choice: &[usize]) -> Result<SolvedFolded, FoldRefusal> {
         let no_such = || FoldRefusal::NoSuchChoice {
             choice: choice.to_vec(),
         };
-        let order = self.completions.order(choice).ok_or_else(no_such)?;
-        let mut pairs = if self.completions.is_unique() {
-            Vec::new()
-        } else {
-            self.completions.chosen_pairs(choice).ok_or_else(no_such)?
-        };
+        let combination = self.combination(choice).ok_or_else(no_such)?;
+        let order = self.completions.order(combination).ok_or_else(no_such)?;
+        let mut pairs = self
+            .completions
+            .chosen_pairs(combination)
+            .ok_or_else(no_such)?;
         pairs.extend_from_slice(&self.pins);
         let stored = if pairs.is_empty() {
             None
@@ -243,6 +350,7 @@ impl State {
             completions,
             block,
             pins: Vec::new(),
+            flat: None,
         };
         let pins = orders.unmoved_pairs(self);
         if !pins.is_empty() {
@@ -256,14 +364,7 @@ impl State {
         if !orders.completions.count().exact {
             return Err(Unlisted::Unfinished(Unfinished::Truncated));
         }
-        // The completion searches around the moving faces only; the gate checks
-        // everything. A fold with one order is landed here, so one the gate
-        // refuses is no order at all rather than a choice that cannot land.
-        if orders.completions.is_unique()
-            && let Err(refusal) = orders.pick(&vec![0; orders.completions.components().len()])
-        {
-            return Err(Unlisted::NoOrder(refusal.into()));
-        }
+        orders.land_up_front(limits)?;
         Ok(orders)
     }
 
@@ -317,6 +418,53 @@ impl State {
 }
 
 impl FoldOrders {
+    /// Land the listing before it is offered (see the module docs): every
+    /// combination of one of at most [`LANDED_UP_FRONT`], else the first.
+    /// None landing is no order; some, a flat listing of those. Out of time
+    /// part way, the listing did not finish.
+    fn land_up_front(&mut self, limits: &CompletionLimits) -> Result<(), Unlisted> {
+        let lands = |combination: &[usize]| {
+            self.completions
+                .order(combination)
+                .ok_or(FoldRefusal::Internal {
+                    message: "a listed combination names no order".to_string(),
+                })
+                .and_then(|order| self.block.prepared.land(order))
+        };
+        let total = self.completions.count().orders;
+        let combinations = if total <= LANDED_UP_FRONT as u64 {
+            self.completions.picks(LANDED_UP_FRONT).0
+        } else {
+            vec![vec![0; self.completions.components().len()]]
+        };
+        let mut landing = Vec::with_capacity(combinations.len());
+        let mut refused = None;
+        for combination in combinations {
+            if limits.out_of_time() {
+                return Err(Unlisted::Unfinished(Unfinished::Budget(
+                    FoldRefusal::BudgetExceeded {
+                        limit: crate::complete::BudgetLimit::Deadline,
+                        nodes: self.completions.nodes(),
+                    },
+                )));
+            }
+            match lands(&combination) {
+                Ok(_) => landing.push(combination),
+                Err(refusal) => {
+                    refused.get_or_insert(refusal);
+                }
+            }
+        }
+        if landing.is_empty() {
+            let refusal = refused.unwrap_or(FoldRefusal::NoOrder { faces: Vec::new() });
+            return Err(Unlisted::NoOrder(refusal.into()));
+        }
+        if total <= LANDED_UP_FRONT as u64 && (landing.len() as u64) < total {
+            self.flat = Some(landing);
+        }
+        Ok(())
+    }
+
     /// The pairs of every component with no moving face, `[upper, lower]`
     /// as the parent orders their faces (see the module docs).
     fn unmoved_pairs(&self, parent: &State) -> Vec<[FaceId; 2]> {

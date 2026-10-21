@@ -157,16 +157,17 @@ impl FoldPlacementSearch {
     pub fn refusal(&self) -> Option<&Refused> {
         self.refusal.as_ref()
     }
-    /// The candidates found, exact only when they are every order the
-    /// selection can land in: counted up front and all found. A search that
-    /// has tried every recipe is not exact by that alone — a recipe pins a
-    /// target and leaves the rest free, so no set of recipes reaches every
-    /// combination of independent parts (`fold::solved` lists those). That
-    /// is [`FoldPlacementSearch::exhausted`].
+    /// The candidates found, exact once the search is over
+    /// ([`FoldPlacementSearch::exhausted`]): every recipe tried, or every
+    /// counted order found. A recipe pins a target and leaves the rest free,
+    /// so no set of recipes reaches every combination of independent parts
+    /// (`fold::solved` lists those): the search runs only as the solver's
+    /// fallback, and a search with nothing left to try says so, as the
+    /// chooser, a pleat's legs and Repeat need it to.
     pub fn count(&self) -> ChoiceCount {
         ChoiceCount {
             orders: self.candidates.len() as u64,
-            exact: self.all_landed(),
+            exact: self.finished(),
         }
     }
 
