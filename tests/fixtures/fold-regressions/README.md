@@ -42,6 +42,13 @@ precrease through the tools, clicks and all.
   model map is the identity with every layer pair reversed, and Repeat took
   only a 2D reflection that kept the layer order. It now carries a side and
   repeats behind (`apps/web/src/fold/repeat/repeatBehind.wasm.test.ts`).
+- `unfold-to-after-import.osf`: a diagonal precrease and a fold in half,
+  then an Import CP of the half fold alone, which drops the diagonal; a fold
+  in half the other way; and Unfold to step back to the import. The unfold
+  rebuilt its creases from every state since the sheet, so the diagonal came
+  back (two creases added) beside the one fold it opened. Fixed by 73fb0959e:
+  a return's creases come from its target, or from the last import on its
+  path when that is later, through the step it unfolds.
 - `independent-sides-orders.osf` (KNOWN GAP, open): a square with two flaps
   folded in at the bottom left (the corner onto (5/8, 1/4), then that flap's
   point (1/4, 0) onto (9/16, 1/8)) and the same mirrored at the top right.

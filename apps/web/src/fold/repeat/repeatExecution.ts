@@ -1,4 +1,5 @@
 /** Sequential composite replay over the ordinary public engine operations. */
+import { foldReturnHistory } from '../document/foldReturn';
 import type { FoldChoices, FoldRepeatOp } from '../document/foldSequenceDocument';
 import type {
   FoldEngineOp,
@@ -64,7 +65,7 @@ export function createRepeatExecution(
               ? (engine.return_to(
                   current,
                   [parent, ...owned][entry.returnTo!]!,
-                  Uint32Array.from([parent, ...owned].flatMap(history)),
+                  Uint32Array.from(foldReturnHistory([parent, ...owned], entry.returnTo!).flatMap(history)),
                 ) as FoldEngineOutcome<FoldStepLanded>)
               : apply(current, entry.op, entry.choices);
           if (answer.status !== 'ok') {

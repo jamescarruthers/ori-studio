@@ -7,6 +7,7 @@ import { toPoint } from '../canvas/foldCanvasGeometry';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
 import { createFoldEnginePort } from '../engine/foldEnginePort';
+import type { FoldSceneCrease } from '../engine/foldEngineWire';
 import { orderResolvedStep } from '../engine/foldEnginePreview';
 import { findMoverFix, withMoverSwapped } from '../tools/moverStays';
 import { createFoldReplayer, type FoldReplayProgress } from './foldReplay';
@@ -30,7 +31,7 @@ const FIXTURES = resolve(ROOT, '../../tests/fixtures/fold-regressions');
 const available = existsSync(WASM) && existsSync(FIXTURES);
 
 /** The fixtures this file asserts; others in the folder have tests of their own, which the README names. */
-const NAMES = ['edge-crossing.osf', 'ghost-precrease.osf', 'squash-covered.osf', 'squash-drawn-hinge.osf', 'tuck-target-layer.osf'];
+const NAMES = ['edge-crossing.osf', 'ghost-precrease.osf', 'squash-covered.osf', 'squash-drawn-hinge.osf', 'tuck-target-layer.osf', 'unfold-to-after-import.osf'];
 
 /** Every fixture the README lists, by its bullet's file name. */
 function readmeNames(): string[] {
@@ -78,6 +79,7 @@ async function replayed(name: string) {
       generation: () => 0,
       sheet: async (paper) => calls.sheet(paper),
       step: async (state, op, choices) => calls.step(state, op, choices),
+      returnTo: async (current, target, history) => calls.returnTo(current, target, history),
       release: async (states) => calls.release(states),
     },
     version
@@ -278,5 +280,29 @@ describe.skipIf(!available)('the fold-regression fixtures', () => {
       const shown = index.toScene(toPoint(crossing!.at));
       expect(resolveFoldPick(index, 'folded', shown, RADII, POINT_RULE)).toMatchObject({ kind: 'point', provenance: 'crossing' });
     }
+  });
+
+  it('unfold-to-after-import: unfolding to an Import CP brings back no crease from before it, and opens only the fold made since', async () => {
+    const { calls, steps: all, stateOf } = await replayed('unfold-to-after-import.osf');
+    const [, , imported, after, unfold] = all;
+    if (imported?.op.kind !== 'cp-jump' || unfold?.op.kind !== 'unfold-to' || unfold.op.target !== imported.id || !after) {
+      throw new Error('step 3 is the import and step 5 unfolds to it');
+    }
+    const creases = (state: number) => calls.scene(state).creases.filter((crease) => crease.kind !== 'border');
+    const onX = (x: number) => (crease: FoldSceneCrease) => Math.abs(crease.from.x - x) < 1e-9 && Math.abs(crease.to.x - x) < 1e-9;
+    const onDiagonal = (crease: FoldSceneCrease) => Math.abs(crease.from.x - crease.from.y) < 1e-9 && Math.abs(crease.to.x - crease.to.y) < 1e-9;
+    expect(creases(stateOf(all[0])).some(onDiagonal), 'step 1 precreased the diagonal').toBe(true);
+    expect(creases(stateOf(imported)).some(onDiagonal), 'the import dropped it').toBe(false);
+    const returned = stateOf(unfold);
+    const summary = calls.stepSummary(returned);
+    if (summary.status !== 'ok' || !summary.summary) throw new Error('the unfold has a summary');
+    // Nothing added: the creases come from the import on, never from the steps it replaced.
+    expect(summary.summary.diff.added).toEqual([]);
+    expect(creases(returned).filter(onDiagonal)).toEqual([]);
+    expect(calls.scene(returned).faces).toHaveLength(calls.scene(stateOf(after)).faces.length);
+    // Opened: step 4's fold along x = 1/2, every piece of it, and nothing else.
+    const opened = creases(returned).filter((crease) => summary.summary!.diff.unfolded.includes(crease.id));
+    expect(opened.length).toBe(creases(stateOf(after)).filter(onX(0.5)).length);
+    expect(opened.every(onX(0.5))).toBe(true);
   });
 });
