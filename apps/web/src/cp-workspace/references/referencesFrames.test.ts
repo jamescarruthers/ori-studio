@@ -5,11 +5,18 @@ import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import type { PrecreaseComponent, PrecreaseTolerances } from './sheetFrames';
 
 // The two engines, stood in for: the kernel's index and the planner's frames.
+// And what reached the monitoring layer.
 const engines = vi.hoisted(() => ({
   index: null as unknown,
   indexCalls: 0,
   outlineCalls: 0,
   framed: [] as unknown[],
+  reports: [] as unknown[][],
+}));
+vi.mock('../../monitoring', () => ({
+  reportError: (...args: unknown[]) => {
+    engines.reports.push(args);
+  },
 }));
 vi.mock('../sheets/cpSheetIndex', () => ({
   ensureCpSheetIndex: async () => {
@@ -242,6 +249,43 @@ describe('ensureReferencesFrames', () => {
     engines.framed = [framed(0), framed(1)];
     engines.indexCalls = 0;
     engines.outlineCalls = 0;
+    engines.reports = [];
+  });
+
+  it('reports creases left out for having no position, once per document', async () => {
+    engines.index = indexOf([0, 0, -1], 1);
+    const withUnplaced = (seed: number, loadSerial: number) =>
+      ({
+        ...state(seed),
+        loadSerial,
+        geometry: geometryOf([
+          [0, 0, 40, 0, 0],
+          [0, 0, 40, 40, 1],
+          [NaN, NaN, NaN, NaN, 1],
+        ]),
+      }) as OristudioCpDocumentState;
+
+    await ensureReferencesFrames(withUnplaced(0, 1));
+    // An edit is another revision of the same document: said already.
+    await ensureReferencesFrames(withUnplaced(7, 1));
+    expect(engines.reports).toHaveLength(1);
+    // Another document is said again.
+    await ensureReferencesFrames(withUnplaced(0, 2));
+    expect(engines.reports).toHaveLength(2);
+
+    const [error, context] = engines.reports[0]!;
+    expect(context).toEqual({
+      surface: 'references:non-finite-creases',
+      handled: true,
+      tags: { count_bucket: '<=1' },
+    });
+    // A bucket is all that leaves: no count, no coordinate, in the message.
+    expect((error as Error).message).not.toMatch(/\d|NaN/);
+  });
+
+  it('reports nothing when every crease has a position', async () => {
+    await ensureReferencesFrames(state(0));
+    expect(engines.reports).toEqual([]);
   });
 
   it('reads one revision of the creases once', async () => {

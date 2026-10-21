@@ -23,10 +23,12 @@
  * With no border line on the canvas at all, the pattern is planned on the
  * default paper, as it always was (`paperFallbackRect`).
  */
+import { bucketCount, COUNT_BUCKETS } from '../../analytics';
 import type { CpGeometryTransport } from '../../engine/oristudioCpGeometry';
 import { SEG_ATTR_STRIDE } from '../../engine/oristudioCpGeometry';
 import type { CpSheetIndex } from '../../engine/oristudioCpSheetIndex';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
+import { reportError } from '../../monitoring';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { getPrecreaseClient } from '../../store/workspaceStore/precreaseRuntime';
 import { ensureCpSheetIndex } from '../sheets/cpSheetIndex';
@@ -251,6 +253,7 @@ export function ensureReferencesFrames(
   promise.then(
     (frames) => {
       if (!frames && framesCache?.promise === promise) framesCache = null;
+      if (frames) reportUnplacedCreases(state.loadSerial, frames.analysis);
     },
     () => {
       if (framesCache?.promise === promise) framesCache = null;
@@ -260,6 +263,28 @@ export function ensureReferencesFrames(
 }
 
 let framesCache: { revision: string; promise: Promise<ReferencesFrames | null> } | null = null;
+
+/**
+ * Creases left out for having no position, reported once per document: no
+ * tool should write one, so each is a bug somewhere, and the sidebar line alone
+ * would hide it. A bucketed count is all that is sent.
+ */
+function reportUnplacedCreases(loadSerial: number, analysis: SheetAnalysis): void {
+  if (reportedLoadSerial === loadSerial) return;
+  const unplaced = analysis.warnings.find(
+    (warning): warning is Extract<PrecreaseWarning, { kind: 'non_finite_segments' }> =>
+      warning.kind === 'non_finite_segments'
+  );
+  if (!unplaced) return;
+  reportedLoadSerial = loadSerial;
+  reportError(new Error('References left out creases with non-finite coordinates'), {
+    surface: 'references:non-finite-creases',
+    handled: true,
+    tags: { count_bucket: bucketCount(unplaced.count, COUNT_BUCKETS) },
+  });
+}
+
+let reportedLoadSerial: number | null = null;
 
 /**
  * The open pattern's sheets for `revision` of its creases; null when they could
@@ -308,8 +333,9 @@ export function ensureReferencesSheetDetail(
 const DETAIL_SLOTS = 4;
 const detailCache = new Map<string, Promise<PrecreaseComponent>>();
 
-/** Forget every revision's frames and details: for tests. */
+/** Forget every revision's frames and details, and what was reported: for tests. */
 export function resetReferencesFrames(): void {
   framesCache = null;
   detailCache.clear();
+  reportedLoadSerial = null;
 }
