@@ -30,6 +30,12 @@ export interface FoldStateView {
    */
   since: number | null;
   /**
+   * Whether an Import CP step landed the state shown: its own creases are
+   * then the whole pattern, collapsed along at once, not an instruction
+   * over one. Of the same state as `summary`.
+   */
+  imported: boolean;
+  /**
    * The scene the panes show. While the step on screen has yet to land, or
    * its scene is on its way, the last one shown stays up rather than leaving
    * the panes blank; null once the step on screen can have none (broken,
@@ -48,11 +54,12 @@ export interface FoldStateView {
   index: FoldPickIndex | null;
 }
 
-/** A state the panes can show: its scene and its summary, together, and the step count of the state before it. */
+/** A state the panes can show: its scene and its summary, together, the step count of the state before it, and whether an import landed it. */
 interface FoldPicture {
   scene: FoldScene;
   summary: FoldStateSummary;
   since: number;
+  imported: boolean;
 }
 
 const NO_MARKS: readonly FoldMark[] = [];
@@ -124,7 +131,10 @@ export function useFoldStateView(): FoldStateView {
   const node = cursorId === null ? undefined : sequence?.steps.find((step) => step.id === cursorId);
   const op = returned ? returned.request.op : node && !isLockedStep(node) ? node.op : null;
   const fresh = useMemo(
-    () => (scene && summary ? { scene, summary, since: summary.step - (op ? foldOpSteps(op) : 1) } : null),
+    () =>
+      scene && summary
+        ? { scene, summary, since: summary.step - (op ? foldOpSteps(op) : 1), imported: op?.kind === 'cp-jump' }
+        : null,
     [scene, summary, op]
   );
   const picture = usePicture(fresh, loading(cursor));
@@ -133,6 +143,7 @@ export function useFoldStateView(): FoldStateView {
     cursorId,
     summary: picture?.summary ?? summary,
     since: picture?.since ?? null,
+    imported: picture?.imported ?? false,
     scene: picture?.scene ?? null,
     landmarks,
     marks,
