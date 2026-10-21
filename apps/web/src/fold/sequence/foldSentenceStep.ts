@@ -101,7 +101,7 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
     case 'rotate':
       return { op: 'turn', turn: turnKindOf(op) };
     case 'repeat':
-      return { op: 'repeat', count: op.steps.length };
+      return { op: 'repeat', count: op.steps.length, ...(op.side === 'behind' ? { behind: true } : {}) };
     case 'unfold-to':
       return { op: 'unfold-to', sheet: op.target === null, number: context.returnStep ?? undefined };
     case 'cp-jump':

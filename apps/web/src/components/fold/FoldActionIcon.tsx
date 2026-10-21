@@ -2,7 +2,7 @@ import { Undo2, BookImage, Download, Images, RotateCcwSquare, RotateCw, Send, Tr
 import type { FoldActionIcon as FoldActionIconName } from '../../fold/foldActions';
 import { FoldKindMark } from './FoldKindMark';
 
-/** Repeat on the other side's icon, on the rail and beside a label: the diagram's repeat symbol. */
+/** Repeat's icon, on the rail and beside a label: the diagram's repeat symbol. */
 export function FoldRepeatGlyph({ size }: { size: number }) {
   return <FoldKindMark kind="repeat" size={size} />;
 }

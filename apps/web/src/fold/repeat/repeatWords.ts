@@ -37,21 +37,23 @@ const NO_REMEDIES: RepeatRemedies = { otherAxis: false, laterStart: false };
 const AXIS_TOLERANCE_DEG = 0.01;
 
 /**
- * A symmetry axis by the way it runs on screen (its `display` line, y up):
- * vertical, horizontal, the rising or the falling diagonal, or else its angle
- * from the horizontal, counter-clockwise. A shape's axes all cross its
- * middle, so no two run the same way and each name is the one axis.
+ * A symmetry axis by where it runs on the paper, as the crease pattern pane
+ * shows the sheet (front up, y up, never turned with the view): a diagonal
+ * from corner to corner, a center line from edge to edge, or else the line
+ * through the center at its angle from the horizontal, counter-clockwise. A
+ * sheet's axes all cross its middle, so no two run the same way and each
+ * name is the one axis.
  */
 export function repeatAxisName(t: TFunction, line: FoldModelLine): string {
   // The line runs along (−n.y, n.x); its angle is taken modulo a half turn.
   const raw = (Math.atan2(line.n[0], -line.n[1]) * 180) / Math.PI;
   const angle = ((raw % 180) + 180) % 180;
   const near = (target: number) => Math.abs(angle - target) <= AXIS_TOLERANCE_DEG || Math.abs(angle - target - 180) <= AXIS_TOLERANCE_DEG;
-  if (near(90)) return t('panels:fold.repeat.axisVertical', 'Vertical axis');
-  if (near(0)) return t('panels:fold.repeat.axisHorizontal', 'Horizontal axis');
-  if (near(45)) return t('panels:fold.repeat.axisRising', 'Rising diagonal');
-  if (near(135)) return t('panels:fold.repeat.axisFalling', 'Falling diagonal');
-  return t('panels:fold.repeat.axisAngle', 'Axis at {{degrees}}°', { degrees: Math.round(angle) });
+  if (near(45)) return t('panels:fold.repeat.axisName.rising', 'Diagonal, bottom left to top right');
+  if (near(135)) return t('panels:fold.repeat.axisName.falling', 'Diagonal, top left to bottom right');
+  if (near(90)) return t('panels:fold.repeat.axisName.vertical', 'Center line, top to bottom');
+  if (near(0)) return t('panels:fold.repeat.axisName.horizontal', 'Center line, left to right');
+  return t('panels:fold.repeat.axisName.angle', 'Line through the center at {{degrees}}°', { degrees: Math.round(angle) });
 }
 
 /** What a refused step's words are read against: the fold family of the step whose mirror was refused. */
@@ -172,7 +174,8 @@ function repeatAdvice(t: TFunction, { otherAxis, laterStart }: RepeatRemedies): 
 }
 
 /** A reason said in a full sentence, then what to try instead. */
-function withAdvice(t: TFunction, reason: string, remedies: RepeatRemedies): string {
+function withAdvice(t: TFunction, reason: string, remedies: RepeatRemedies | null): string {
+  if (remedies === null) return reason;
   return t('panels:fold.repeat.reasonAdvice', '{{reason}} {{advice}}', { reason, advice: repeatAdvice(t, remedies) });
 }
 
@@ -184,7 +187,7 @@ function withAdvice(t: TFunction, reason: string, remedies: RepeatRemedies): str
  * advice for what Repeat's window can change (`RepeatRemedies`), never the
  * advice of the tool the step was folded with.
  */
-export function repeatFailure(t: TFunction, stop: RepeatStop, remedies: RepeatRemedies = NO_REMEDIES): string {
+export function repeatFailure(t: TFunction, stop: RepeatStop, remedies: RepeatRemedies | null = NO_REMEDIES): string {
   switch (stop.code) {
     case 'repeat_return_target':
       return t(
@@ -205,6 +208,25 @@ export function repeatFailure(t: TFunction, stop: RepeatStop, remedies: RepeatRe
       return t(
         'panels:fold.repeat.swivelBehind',
         'On the other side, this swivel’s valley and mountain lie on the layer behind. Turn the model over and make the swivel there.',
+      );
+    case 'repeat_pleat_behind':
+      return t(
+        'panels:fold.repeat.pleatBehind',
+        'Seen from the other side, this pleat’s mountain and valley trade places, which a pleat step cannot record. Turn the model over and make the pleat there.',
+      );
+    case 'repeat_ambiguous':
+      return withAdvice(
+        t,
+        t(
+          'panels:fold.repeat.ambiguous',
+          'The mirrored operation lands two different ways that both match the original, so which one is meant is not known.',
+        ),
+        remedies,
+      );
+    case 'repeat_nothing':
+      return t(
+        'panels:fold.repeat.nothing',
+        'Every operation in the range is its own mirror across this axis, so repeating it changes nothing. Choose another axis or range.',
       );
     case 'repeat_unsupported':
       return t(
@@ -252,15 +274,28 @@ export function repeatFailure(t: TFunction, stop: RepeatStop, remedies: RepeatRe
 }
 
 /** The engine's refusal of a source step's mirror: its reason, then Repeat's advice. */
-function mirrorRefusal(t: TFunction, refusal: FoldRefusalBody, op: FoldOpKind | undefined, remedies: RepeatRemedies): string {
+function mirrorRefusal(t: TFunction, refusal: FoldRefusalBody, op: FoldOpKind | undefined, remedies: RepeatRemedies | null): string {
   const own = mirrorReason(t, refusal.code);
   if (own) return withAdvice(t, own, remedies);
   const words = foldRefusalWords(t, refusal, refusalKindOf(op));
   if (REASON_ONLY.has(refusal.code)) return withAdvice(t, words.text, remedies);
   // A headline has no full stop of its own, unless it asks a question.
   if (/[.?!。？！]$/.test(words.title)) return withAdvice(t, words.title, remedies);
+  if (remedies === null) return t('panels:fold.repeat.headlineReason', '{{reason}}.', { reason: words.title });
   return t('panels:fold.repeat.headlineAdvice', '{{reason}}. {{advice}}', {
     reason: words.title,
     advice: repeatAdvice(t, remedies),
   });
+}
+
+/**
+ * Why the repeat across an axis is refused, in a line, with no advice: what
+ * the axis list says under an axis it offers disabled. `step` is the source
+ * operation it stopped at (0-based), when it stopped at one.
+ */
+export function repeatAxisRefusal(t: TFunction, stop: RepeatStop, step: number | null): string {
+  const reason = repeatFailure(t, stop, null);
+  return step === null || stop.code === 'repeat_nothing'
+    ? reason
+    : t('panels:fold.repeat.axisStopsAt', 'Stops at operation {{number}}: {{reason}}', { number: step + 1, reason });
 }

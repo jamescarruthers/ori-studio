@@ -635,7 +635,7 @@ export function foldToolWindow(
   const freeLine = (usesLineMode(view.tool, construction) && view.lineMode === 'free') ||
     ((view.tool === 'crimp' || view.tool === 'pleat') && (view.lineMode === 'free' || (view.secondLineMode ?? 'free') === 'free')) ||
     // Repeat's axis, drawn as a free line while one may be drawn.
-    (view.tool === 'repeat' && view.repeat?.drawing === true);
+    (view.tool === 'repeat' && view.repeat?.drawing === true && view.lineMode === 'free');
   if (!model || !freeLine || view.freeLineSnap === undefined || !verbs.setFreeLineSnap) return model;
   return { ...model, freeLineSnap: {
     label: t('tools:fold.window.snapFreeLine', 'Snap to points'),

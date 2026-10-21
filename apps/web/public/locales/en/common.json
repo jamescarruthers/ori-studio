@@ -251,7 +251,7 @@
     "renormalizeToEdge": "Renormalize To Edge",
     "renormalizeToUnitScale": "Renormalize To Unit Scale",
     "repairOverlaps": "Repair Overlaps",
-    "repeatOnOtherSide": "Repeat the steps through this one on the other side",
+    "repeatOnOtherSide": "Repeat the steps through this one across a symmetry axis, on the other side or behind",
     "replaceSelectedLineType": "Replace Selected Line Type...",
     "resetLayout": "Reset Layout",
     "resetPaneLayout": "Reset pane layout",

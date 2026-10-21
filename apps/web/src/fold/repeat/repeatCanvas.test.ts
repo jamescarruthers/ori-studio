@@ -1,13 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { bookScene, flatSquareScene } from '../canvas/foldCanvas.fixtures';
+import { foldPickIndex } from '../canvas/foldPicking';
 import { landedPreviewOf } from '../canvas/useFoldToolPreview';
 import type { FoldIsometry, FoldStateSummary } from '../engine/foldEngineWire';
-import { repeatDrawnOverlay, repeatPreviewCreases } from './repeatCanvas';
+import { repeatAxisAt, repeatAxisLines, repeatOverlay, repeatPreviewCreases } from './repeatCanvas';
 
 const summary = (step: number) => ({ step }) as unknown as FoldStateSummary;
 /** x ↦ 1 − x: the paper there shown back up. */
 const TURNED: FoldIsometry = [-1, 0, 1, 0, 1, 0];
-const INKS = { accent: [0, 0, 1, 1] } as unknown as Parameters<typeof repeatDrawnOverlay>[3];
+const INKS = { accent: [0, 0, 1, 1] } as unknown as Parameters<typeof repeatOverlay>[7];
+const SHEET: [number, number][] = [
+  [0, 0],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+];
+const VERTICAL = { n: [1, 0] as const, d: 0.5 };
+const HORIZONTAL = { n: [0, 1] as const, d: 0.5 };
 
 describe("Repeat's preview on the canvas", () => {
   it('adds the creases made after the step it is folded from, when the engine keeps no summary of it', () => {
@@ -34,19 +43,39 @@ describe("Repeat's preview on the canvas", () => {
   });
 
   it('draws a refused line across the sheet it was drawn on, and none on a pane it was not', () => {
-    const sheet: [number, number][] = [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-    ];
-    const drawn = repeatDrawnOverlay(null, sheet, { line: { n: [1, 0], d: 0.25 }, frame: 'sheet' }, INKS);
+    const line = { n: [1, 0] as const, d: 0.25 };
+    const drawn = repeatOverlay(null, SHEET, [], -1, -1, [], { sheet: line, pane: 'crease-pattern', drawn: line }, INKS);
     expect(drawn.folded.strokes).toEqual([]);
     expect(drawn.creasePattern.strokes).toHaveLength(1);
     const [stroke] = drawn.creasePattern.strokes;
     expect([stroke!.a.x, stroke!.b.x]).toEqual([0.25, 0.25]);
     expect([stroke!.a.y, stroke!.b.y].sort()).toEqual([0, 1]);
     // Drawn on the folded pane with nothing indexed there: nothing to draw it across.
-    expect(repeatDrawnOverlay(null, sheet, { line: { n: [1, 0], d: 0.25 }, frame: 'model' }, INKS).folded.strokes).toEqual([]);
+    expect(repeatOverlay(null, SHEET, [], -1, -1, [], { sheet: line, pane: 'folded', drawn: line }, INKS).folded.strokes).toEqual([]);
+  });
+
+  it('draws every axis across the sheet and through each face it crosses, the taken one brightest and the hovered one brighter', () => {
+    const index = foldPickIndex(bookScene(), null, []);
+    const overlay = repeatOverlay(index, SHEET, [VERTICAL, HORIZONTAL], 1, 0, [], null, INKS);
+    expect(overlay.creasePattern.strokes).toHaveLength(2);
+    // The book's two halves, each crossed by both lines: four stretches where the folded form lays them.
+    expect(overlay.folded.strokes).toHaveLength(4);
+    const alpha = (stroke: { color: readonly number[] }) => stroke.color[3]!;
+    // Offered faint, hovered brighter, taken brightest: drawn in that order, the brightest on top.
+    const [hovered, taken] = overlay.creasePattern.strokes;
+    expect(alpha(taken!)).toBeGreaterThan(alpha(hovered!));
+    const lines = repeatAxisLines(bookScene(), SHEET, VERTICAL);
+    expect(lines.folded.every(([a, b]) => Math.abs(a.x - 0.5) < 1e-12 && Math.abs(b.x - 0.5) < 1e-12)).toBe(true);
+  });
+
+  it('finds the axis under the pointer: the nearest across the sheet, and on the folded pane the one on the top layer', () => {
+    const index = foldPickIndex(bookScene(), null, []);
+    const axes = [VERTICAL, HORIZONTAL];
+    expect(repeatAxisAt(index, SHEET, axes, 'crease-pattern', { x: 0.52, y: 0.9 }, 0.05)).toBe(0);
+    expect(repeatAxisAt(index, SHEET, axes, 'crease-pattern', { x: 0.2, y: 0.2 }, 0.05)).toBe(-1);
+    // The right half lies on top, mirrored: the pointer at x = 0.45 is on its paper at x = 0.55.
+    expect(repeatAxisAt(index, SHEET, axes, 'folded', { x: 0.45, y: 0.1 }, 0.06)).toBe(0);
+    expect(repeatAxisAt(index, SHEET, axes, 'folded', { x: 0.25, y: 0.51 }, 0.05)).toBe(1);
+    expect(repeatAxisAt(index, SHEET, axes, 'folded', { x: 0.2, y: 0.2 }, 0.05)).toBe(-1);
   });
 });

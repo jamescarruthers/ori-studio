@@ -28,6 +28,12 @@ const valley = (line: FoldSentenceLine, scope: FoldLayerScope = ALL): FoldSenten
 });
 
 describe('foldStepSentence', () => {
+  it('says a repeat on the other side or behind, as its mirror kept or reversed the layers', () => {
+    expect(foldStepSentence(t, { op: 'repeat', count: 1 })).toBe('Repeat the previous operation on the other side.');
+    expect(foldStepSentence(t, { op: 'repeat', count: 3, behind: true })).toBe('Repeat the previous 3 operations behind.');
+    expect(foldStepSentence(t, { op: 'repeat', count: 1, behind: true })).toBe('Repeat the previous operation behind.');
+  });
+
   it('says a half fold corner to corner as the design writes it, mover first', () => {
     const halfDiagonal: FoldSentenceLine = {
       via: 'axiom',

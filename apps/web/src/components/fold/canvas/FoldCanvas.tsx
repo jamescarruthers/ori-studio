@@ -58,8 +58,8 @@ import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
 import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
-import { repeatDrawnOverlay } from '../../../fold/repeat/repeatCanvas';
 import { useFoldRepeatCreases } from '../../../fold/repeat/useFoldRepeatCreases';
+import { useFoldRepeatMarks } from '../../../fold/repeat/useFoldRepeatMarks';
 import { isSequenceTool } from '../../../fold/tools/foldToolCatalog';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
@@ -200,13 +200,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     [toolState.tool, preview.action, crimpLines]
   );
   const previewMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
-  // A line drawn for Repeat that is no symmetry axis, while its refusal is shown.
-  const repeatDrawn = preview.repeat?.drawn ?? null;
-  const sheetOutline = view.summary?.sheet ?? null;
-  const drawnMarks = useMemo(
-    () => (repeatDrawn && inks ? repeatDrawnOverlay(view.index, sheetOutline, repeatDrawn, inks.overlay) : null),
-    [repeatDrawn, inks, view.index, sheetOutline]
-  );
+  // Repeat's axes on both panes, the one under the pointer previewed, and a line drawn that is none.
+  const repeatMarks = useFoldRepeatMarks(view.index, view.summary?.sheet ?? null, preview.repeat, inks?.overlay ?? null);
+  const drawnMarks = repeatMarks.overlay;
   // Where a swivel's valley meets a folded edge, while its mountain is located from there.
   const meetingMarks = useMemo(
     () => swivelMeetingMarks(paneSpread.index, toolState, inks?.overlay ?? null),
@@ -261,6 +257,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const { onHover: onPetalHover } = petalMarks;
   const { onHover: onSwivelHover } = swivelMarks;
   const { onHover: onSquashHover } = squashMarks;
+  const { onFoldedHover: onRepeatFoldedHover, onCreaseHover: onRepeatCreaseHover } = repeatMarks;
   const onFoldedHover = useCallback(
     (hit: FoldHit | null) => {
       onWovenHover(hit);
@@ -268,15 +265,17 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       onSwivelHover(hit);
       onSquashHover(hit);
       setFoldedEcho((was) => foldHoverEcho(hit, was));
+      onRepeatFoldedHover(hit);
     },
-    [onWovenHover, onPetalHover, onSwivelHover, onSquashHover]
+    [onWovenHover, onPetalHover, onSwivelHover, onSquashHover, onRepeatFoldedHover]
   );
   const onCreaseHover = useCallback(
     (hit: FoldHit | null) => {
       onPetalHover(hit);
       onSwivelHover(hit);
+      onRepeatCreaseHover(hit);
     },
-    [onPetalHover, onSwivelHover]
+    [onPetalHover, onSwivelHover, onRepeatCreaseHover]
   );
   const reverseView = foldReverseWindowView(toolState, preview);
   const crimpView = foldCrimpWindowView(toolState, preview);

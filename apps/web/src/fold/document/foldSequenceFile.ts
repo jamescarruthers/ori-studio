@@ -352,7 +352,7 @@ function withinTree(nodes: FoldStepNode[]): FoldStepNode[] {
 
 const ALONG_LINE_KEYS = new Set(['kind', 'line', 'moving', 'seed']);
 const OP_KEYS = new Map<string, ReadonlySet<string>>([
-  ['repeat', new Set(['kind', 'source', 'parentState', 'axis', 'steps'])],
+  ['repeat', new Set(['kind', 'source', 'parentState', 'axis', 'side', 'steps'])],
   ['valley', new Set([...ALONG_LINE_KEYS, 'landing'])],
   ['mountain', new Set([...ALONG_LINE_KEYS, 'landing'])],
   ['precrease', new Set([...ALONG_LINE_KEYS, 'direction', 'extent'])],
@@ -424,6 +424,8 @@ function readOp(value: unknown, depth = 0, budget = { remaining: 256 }): FoldOp 
     case 'repeat': {
       const { source, parentState } = value;
       const axis = readModelLine(value.axis);
+      // Absent is the other side, as every repeat before it.
+      if (value.side !== undefined && value.side !== 'behind') return null;
       if (!axis || !isRecord(source) || hasNewerKey(source, new Set(['first', 'last', 'revision'])) ||
         ![source.first, source.last, source.revision].every((s) => typeof s === 'string' && s.length > 0) ||
         typeof parentState !== 'string' || !parentState.startsWith('fs1:') ||
@@ -439,7 +441,7 @@ function readOp(value: unknown, depth = 0, budget = { remaining: 256 }): FoldOp 
         if (op.kind === 'unfold-to' ? typeof step.returnTo !== 'number' || !Number.isInteger(step.returnTo) || step.returnTo < 0 || step.returnTo > steps.length : step.returnTo !== undefined) return null;
         steps.push({ op, ...(choices ? { choices } : {}), expect: step.expect, sourceStep: step.sourceStep, ...(typeof step.returnTo === 'number' ? { returnTo: step.returnTo } : {}) });
       }
-      return { kind, source: { first: source.first as string, last: source.last as string, revision: source.revision as string }, parentState, axis, steps };
+      return { kind, source: { first: source.first as string, last: source.last as string, revision: source.revision as string }, parentState, axis, ...(value.side === 'behind' ? { side: 'behind' as const } : {}), steps };
     }
     case 'valley':
     case 'mountain': {
@@ -1078,6 +1080,7 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
   switch (op.kind) {
     case 'repeat':
       return { kind: op.kind, source: { ...op.source }, parentState: op.parentState, axis: op.axis,
+        ...(op.side === 'behind' ? { side: op.side } : {}),
         steps: op.steps.map((step) => ({ op: writeFoldOp(step.op), ...(step.choices && writeFoldChoices(step.choices) ? { choices: writeFoldChoices(step.choices) } : {}), expect: step.expect, sourceStep: step.sourceStep, ...(step.returnTo !== undefined ? { returnTo: step.returnTo } : {}) })) };
     case 'valley':
     case 'mountain':

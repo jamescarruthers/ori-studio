@@ -265,6 +265,8 @@ export interface FoldToolState {
    * the session, never saved.
    */
   repeatAxis: FoldModelLine | null;
+  /** Where that axis came from: offered and taken (`listed`), or drawn on a pane — what analytics says of a repeat. */
+  repeatAxisSource: 'listed' | 'drawn_cp' | 'drawn_folded';
   /** Repeat saves a step per operation instead of one numbered step: kept from one repeat to the next. */
   repeatIndividual: boolean;
   /** A saved step its tool is rebuilding in place; null while the tool adds a step. */
@@ -300,6 +302,7 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   unfoldTarget: null,
   repeatFirst: null,
   repeatAxis: null,
+  repeatAxisSource: 'listed',
   repeatIndividual: false,
   rebuild: null,
 };
@@ -519,8 +522,8 @@ export interface FoldTools {
   setUnfoldTarget(id: string | null): void;
   /** Start Repeat's range at this step. */
   setRepeatFirst(id: string): void;
-  /** Mirror across this axis, by its sheet line: what Repeat remembers as the last axis chosen. */
-  setRepeatAxis(axis: FoldModelLine): void;
+  /** Mirror across this axis, by its sheet line: what Repeat remembers as the last axis chosen, and how it was (offered, by default). */
+  setRepeatAxis(axis: FoldModelLine, source?: FoldToolState['repeatAxisSource']): void;
   setRepeatIndividual(individual: boolean): void;
   /**
    * Take up the tool that rebuilds `rebuild`'s step in place, its settings
@@ -635,7 +638,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         // mode too: it stays in hand, and the valley taken stays taken.
         // So does a squash about a drawn hinge.
         const twoLines = locatesTakenLine(state);
-        const tool = twoLines ? state.tool : locatesLine(state.tool) ? state.tool : 'valley';
+        // So does Repeat, whose axis may be drawn in any line mode.
+        const tool = twoLines || state.tool === 'repeat' ? state.tool : locatesLine(state.tool) ? state.tool : 'valley';
         if (state.lineMode === lineMode && state.tool === tool) return state;
         return { ...restart(state), tool, lineMode, ...(twoLines ? { takenLine: state.takenLine } : {}) };
       });
@@ -932,14 +936,15 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => (state.repeatFirst === repeatFirst ? state : { ...state, repeatFirst }));
     },
 
-    setRepeatAxis(repeatAxis) {
+    setRepeatAxis(repeatAxis, repeatAxisSource = 'listed') {
       set((state) =>
         state.repeatAxis &&
         state.repeatAxis.d === repeatAxis.d &&
         state.repeatAxis.n[0] === repeatAxis.n[0] &&
-        state.repeatAxis.n[1] === repeatAxis.n[1]
+        state.repeatAxis.n[1] === repeatAxis.n[1] &&
+        state.repeatAxisSource === repeatAxisSource
           ? state
-          : { ...state, repeatAxis }
+          : { ...state, repeatAxis, repeatAxisSource }
       );
     },
 
@@ -952,7 +957,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) =>
         rebuild.tool === 'unfold-to'
           ? { ...state, rebuild, unfoldTarget: { id: rebuild.expected.target } }
-          : { ...state, rebuild, repeatFirst: rebuild.expected.source.first, repeatAxis: rebuild.expected.axis }
+          : { ...state, rebuild, repeatFirst: rebuild.expected.source.first, repeatAxis: rebuild.expected.axis, repeatAxisSource: 'listed' }
       );
     },
 

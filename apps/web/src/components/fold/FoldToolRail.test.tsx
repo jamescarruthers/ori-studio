@@ -72,7 +72,7 @@ describe('FoldToolRail', () => {
     expect(queryByRole(rail, 'button', 'Planned')).toBeNull();
     // Unfold to step and Repeat are tools on the rail, as every other.
     expect(byRole(rail, 'button', 'Unfold to step').getAttribute('aria-disabled')).not.toBe('true');
-    expect(byRole(rail, 'button', 'Repeat on the other side').getAttribute('aria-disabled')).not.toBe('true');
+    expect(byRole(rail, 'button', 'Repeat').getAttribute('aria-disabled')).not.toBe('true');
     expect(byRole(rail, 'button', 'Pleat').getAttribute('aria-disabled')).not.toBe('true');
     expect(byRole(rail, 'button', 'Precrease').getAttribute('aria-disabled')).not.toBe('true');
     // The crimp, the tuck, the vertex folds and the sinks are tools, open with the other folds.

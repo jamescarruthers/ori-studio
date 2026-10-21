@@ -251,7 +251,7 @@
     "renormalizeToEdge": "按边重新归一化",
     "renormalizeToUnitScale": "按单位比例重新归一化",
     "repairOverlaps": "修复重叠",
-    "repeatOnOtherSide": "在另一侧重复到此为止的步骤",
+    "repeatOnOtherSide": "沿对称轴在另一侧或背面重复到此为止的步骤",
     "replaceSelectedLineType": "替换所选线型...",
     "resetLayout": "重置布局",
     "resetPaneLayout": "重置窗格布局",

@@ -341,7 +341,8 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
     case 'unfold-to':
       return t('panels:fold.return.label', 'Unfold to step');
     case 'repeat':
-      return t('panels:fold.repeat.title', 'Repeat on the other side');
+      // On the other side or behind, as the axis taken says: the window and the step say which.
+      return t('panels:fold.repeat.label', 'Repeat');
   }
 }
 
@@ -394,8 +395,8 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       );
     case 'repeat':
       return t(
-        'tools:fold.tool.repeatHelp',
-        'Fold a range of steps again on the other side of a symmetry axis, previewed, then added as a step.'
+        'tools:fold.tool.repeatAxisHelp',
+        'Fold a range of steps again across a symmetry axis, on the other side or behind, previewed, then added as a step.'
       );
   }
 }

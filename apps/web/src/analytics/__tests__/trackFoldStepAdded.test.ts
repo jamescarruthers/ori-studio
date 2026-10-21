@@ -25,6 +25,11 @@ it('counts Repeat mode and a bucketed range size without source content', () => 
   expect(runtime.track).toHaveBeenCalledWith('fold step added', {
     op_kind: 'repeat', repeat_mode: 'individual', count_bucket: '<=10',
   });
+  // Where its axis came from and which side it repeated on: enums only, never the axis.
+  trackFoldStepAdded('repeat', { repeat: { mode: 'grouped', count: 3, axisSource: 'drawn_cp', side: 'behind' } });
+  expect(runtime.track).toHaveBeenLastCalledWith('fold step added', {
+    op_kind: 'repeat', repeat_mode: 'grouped', count_bucket: '<=5', axis_source: 'drawn_cp', side: 'behind',
+  });
 });
 
 it('counts tuck targets only in buckets, distinguishing a single target from multiple targets', () => {

@@ -98,6 +98,13 @@ export function foldDiagramSentence(t: TFunction, step: FoldSentenceStep): strin
     case 'unfold':
       return t('panels:diagram.fold.instruction.unfold', 'Unfold.');
     case 'repeat':
+      // The diagrammer's standard words for the steps folded again on the back.
+      if (step.behind)
+        return t('panels:diagram.fold.instruction.repeatBehind', {
+          count: step.count,
+          defaultValue_one: 'Repeat behind.',
+          defaultValue_other: 'Repeat the last {{count}} steps behind.',
+        });
       return t('panels:diagram.fold.instruction.repeat', {
         count: step.count,
         defaultValue_one: 'Repeat on the other side.',

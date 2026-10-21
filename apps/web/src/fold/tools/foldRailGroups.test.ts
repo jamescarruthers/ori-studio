@@ -84,7 +84,7 @@ describe('foldRailGroups', () => {
     });
     expect(item(groups, 'repeat')).toMatchObject({
       kind: 'tool',
-      label: 'Repeat on the other side',
+      label: 'Repeat',
       shortcut: 'fold.toolRepeat',
       available: true,
       active: true,

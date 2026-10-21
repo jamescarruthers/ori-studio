@@ -16,12 +16,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import { foldSessionDocumentSource } from '../../store/workspaceStore/foldSession';
 import { sceneLineOf } from '../canvas/foldCanvasGeometry';
-import type { FoldPick } from '../canvas/foldPicking';
+import { foldPickIndex, type FoldPick, type FoldPickIndex } from '../canvas/foldPicking';
 import { initialFoldReaderState, withFoldCursor } from '../document/foldReaderState';
 import type { FoldModelLine, FoldOp, FoldSequenceDocument } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
-import type { FoldIsometry } from '../engine/foldEngineWire';
 import { createFoldSearchRunner, type FoldSearchTicket } from '../engine/foldSearch';
 import { createFoldSession, type FoldSession } from '../session/foldSession';
 import { inProcessFoldRuntime, settle } from '../session/foldSession.fixtures';
@@ -35,6 +34,11 @@ import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQ
 import { repeatPreviewCreases } from './repeatCanvas';
 import { sameRepeatLine } from './repeatRange';
 import { REPEAT_PREPARE_DELAY_MS, useFoldRepeatTool } from './useFoldRepeatTool';
+import i18n from '../../i18n';
+import { parseNativeProjectFile } from '../../lib/nativeProjectFile';
+import { isLockedStep } from '../document/foldSequenceDocument';
+import { readFoldSequences } from '../document/foldSequenceFile';
+import { foldToolWindow, type FoldToolWindowVerbs, type FoldToolWindowView } from '../tools/foldToolWindow';
 
 let session: FoldSession;
 vi.mock('../../store/workspaceStore/foldSession', async (original) => ({
@@ -63,8 +67,8 @@ const document: FoldSequenceDocument = {
 const MIDDLE: FoldModelLine = { n: [1, 0], d: 0.5 };
 const isMiddle = (axis: RepeatSymmetry) => sameRepeatLine(axis.sheet, MIDDLE);
 
-/** The view the folded pane is drawn through here: the model turned upside down. */
-const VIEW: FoldIsometry = [1, 0, 0, 0, -1, 0];
+/** What the folded pane picks on: the step on screen's scene, indexed once it has landed. */
+let picking: FoldPickIndex | null = null;
 
 /**
  * The worker's calls in-process, its searches run by a runner that pauses
@@ -93,6 +97,7 @@ async function bridge() {
   return {
     runtime,
     live: () => raw.live(),
+    scene: (state: number) => calls.scene(state),
     axes: () => found,
     pause: (on: boolean) => (paused = on),
     /** The search is waiting between two slices. */
@@ -120,7 +125,7 @@ let seen: ReturnType<typeof useFoldRepeatTool> | null = null;
 function Probe() {
   const surface = useFoldSession();
   const tools = useFoldTools((state) => state);
-  const repeat = useFoldRepeatTool(surface, tools, VIEW);
+  const repeat = useFoldRepeatTool(surface, tools, picking);
   useEffect(() => {
     seen = repeat;
   });
@@ -139,6 +144,8 @@ beforeEach(async () => {
     .getState()
     .installFoldSequences([{ document, readOnlyRaw: null }], withFoldCursor(initialFoldReaderState(document.id), document, 's1'));
   await until(() => session.store.getState().cursor === 's1' && selectFoldCursorNode(session.store.getState()).status === 'ok', 'the replay');
+  const onScreen = selectFoldCursorNode(session.store.getState()).state;
+  picking = onScreen ? foldPickIndex(engine.scene(onScreen.id), null, []) : null;
   root = createRoot(window.document.createElement('div'));
   seen = null;
   act(() => {
@@ -185,8 +192,10 @@ const previewed = () => {
   return pending.status === 'landed' && pending.request.op.kind === 'repeat' ? pending.request.op : null;
 };
 
-/** A free line clicked on the folded pane through two scene points. */
+/** A free line clicked on the folded pane through two scene points, Locate line set to Free line (Repeat stays in hand). */
 function draw(a: { x: number; y: number }, b: { x: number; y: number }) {
+  act(() => foldTools().selectLineMode('free'));
+  expect(foldTools().store.getState().tool).toBe('repeat');
   for (const scene of [a, b]) {
     const pick: FoldPick = { kind: 'free', pane: 'folded', scene, sheet: null };
     act(() => {
@@ -262,9 +271,12 @@ describe('the Repeat tool', () => {
 
   it('takes the axis last chosen from one repeat to the next', async () => {
     const axes = await taken();
-    // Before any is chosen, the first verified axis.
+    // Before any is chosen, the first verified axis whose repeat lands: here the first.
+    await until(() => seen?.view.states?.every((state) => state.kind !== 'unknown'), 'every axis prepared');
     expect(seen!.view.axis).toBe(0);
-    const other = axes.length - 1;
+    // Another axis whose repeat lands.
+    const other = seen!.view.states!.findIndex((state, k) => k > 0 && state.kind === 'lands');
+    expect(other).toBeGreaterThan(0);
     act(() => seen!.verbs.setAxis(other));
     await until(() => seen?.view.axis === other, 'the axis chosen');
     const chosen = axes[other]!.sheet;
@@ -281,18 +293,20 @@ describe('the Repeat tool', () => {
     expect(seen!.view.axis).toBe(other);
   });
 
-  it('takes a line drawn along a verified axis, read through the view it was drawn on, and refuses one that is none', async () => {
+  it('takes a line drawn along a verified axis, read on the top layer under it, and refuses one that is none', async () => {
     const axes = await taken();
     const middle = axes.findIndex(isMiddle);
     const other = axes.findIndex((axis) => !isMiddle(axis));
     act(() => seen!.verbs.setAxis(other));
     await until(() => seen?.view.axis === other, 'another axis');
-    // Along the middle axis, as the folded pane shows it through its view: taken, and the line let go.
-    const shown = sceneLineOf(VIEW, axes[middle]!.model);
+    expect(foldTools().store.getState().repeatAxisSource).toBe('listed');
+    // Along the middle axis, as the folded pane shows it: taken, drawn on the folded pane, and the line let go.
+    const shown = sceneLineOf(picking!.scene.view_transform, MIDDLE);
     draw(...along(shown));
     await until(() => seen?.view.axis === middle && foldTools().store.getState().picks.length === 0, 'the drawn axis');
+    expect(foldTools().store.getState().repeatAxisSource).toBe('drawn_folded');
     expect(seen!.view.drawn).toBeNull();
-    expect(seen!.drawn).toBeNull();
+    expect(seen!.marks?.drawn).toBeNull();
     // A degree off the middle: no axis, so refused, and the middle offered in its place.
     const tilt = Math.PI / 180;
     const tilted: FoldModelLine = {
@@ -301,10 +315,27 @@ describe('the Repeat tool', () => {
     };
     draw(...along(tilted));
     await until(() => seen?.view.drawn, 'the refusal');
-    expect(seen!.view.drawn).toEqual({ nearest: middle });
-    // The canvas draws the refused line; the axis taken stays.
-    expect(seen!.drawn?.frame).toBe('model');
+    expect(seen!.view.drawn).toEqual({ nearest: middle, line: true });
+    // The canvas draws the refused line where it was drawn; the axis taken stays.
+    expect(seen!.marks?.drawn?.pane).toBe('folded');
     expect(seen!.view.axis).toBe(middle);
+  });
+
+  it('previews an axis under the pointer in the taken one’s place, and takes it back when the pointer leaves', async () => {
+    const axes = await taken(MIDDLE);
+    const middle = axes.findIndex(isMiddle);
+    const other = axes.findIndex((axis) => !isMiddle(axis));
+    const first = await until(() => seen?.view.phase.kind === 'ready' && previewed(), 'the preview of the middle');
+    expect(sameRepeatLine(first.axis, MIDDLE)).toBe(true);
+    act(() => seen!.verbs.hoverAxis(other));
+    expect(seen!.view.hovered).toBe(other);
+    expect(seen!.marks).toMatchObject({ taken: middle, hovered: other });
+    const hovered = await until(() => previewed() && !sameRepeatLine(previewed()!.axis, MIDDLE) && previewed(), 'the hovered preview');
+    expect(sameRepeatLine(hovered.axis, axes[other]!.sheet)).toBe(true);
+    // The axis taken stays the one chosen.
+    expect(seen!.view.axis).toBe(middle);
+    act(() => seen!.verbs.hoverAxis(null));
+    await until(() => previewed() && sameRepeatLine(previewed()!.axis, MIDDLE), 'the middle again');
   });
 
   it('on Escape stops the preparation in the engine, then lets go of a line drawn, then is put down', async () => {
@@ -316,7 +347,7 @@ describe('the Repeat tool', () => {
     await untilHolding(live);
     expect(seen?.view.phase.kind).toBe('preparing');
     // A line drawn while it prepares, that is no axis.
-    draw({ x: 0.1, y: -0.1 }, { x: 0.9, y: -0.3 });
+    draw({ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.3 });
     await until(() => seen?.view.drawn, 'the refused line');
 
     act(() => {
@@ -347,19 +378,25 @@ describe('the Repeat tool', () => {
     expect(foldTools().store.getState().tool).toBe('valley');
   });
 
-  it('stops on Escape before the preparation has begun, as the window shows it preparing', async () => {
+  it('stops on Escape while the axes are still being prepared, as the window shows it preparing', async () => {
+    const live = engine.live();
+    engine.pause(true);
     await taken(MIDDLE);
-    // Within the pause before it prepares: shown as preparing, and stopped by Escape, not put down.
+    // The axes prepared up front, the remembered one first, held between engine calls: shown as preparing,
+    // and stopped by Escape, not put down.
     expect(seen!.view.phase.kind).toBe('preparing');
     act(() => {
       expect(seen!.cancel()).toBe(true);
     });
     expect(seen!.view.phase.kind).toBe('stopped');
     expect(foldTools().store.getState().tool).toBe('repeat');
-    // Past the pause: still nothing prepared.
+    engine.pause(false);
+    engine.resume();
+    // Past the pause: nothing prepared, nothing previewed, every trial state let go.
     await act(async () => new Promise((done) => setTimeout(done, 2 * REPEAT_PREPARE_DELAY_MS)));
     expect(seen!.view.phase.kind).toBe('stopped');
     expect(previewed()).toBeNull();
+    await until(() => engine.live() === live, 'the trial states to go');
   });
 
   it('prepares again on Enter once stopped', async () => {
@@ -389,5 +426,46 @@ describe('the Repeat tool', () => {
     engine.resume();
     await until(() => engine.live() === live, 'the trial states to go');
     expect(seen).toBeNull();
+  });
+
+  it('opens on the one axis whose repeat lands — behind — the other offered disabled, with why, on the list and the panes', async () => {
+    // The repeat-behind regression: a preliminary base, the front flap's kites and petal fold. Across the
+    // other diagonal the range mirrors the front flap onto itself, and is refused at its first operation.
+    const project = parseNativeProjectFile(readFileSync(resolve(process.cwd(), '../../tests/fixtures/fold-regressions/repeat-behind-diagonal.osf'), 'utf8'));
+    const saved = readFoldSequences(project.workspace.foldSequences)[0]!.document;
+    const bird: FoldSequenceDocument = { ...saved, steps: saved.steps.filter((step) => !isLockedStep(step) && step.op.kind !== 'repeat') };
+    const petal = bird.steps.at(-1)!.id;
+    act(() => {
+      useWorkspaceStore.getState().installFoldSequences([{ document: bird, readOnlyRaw: null }], withFoldCursor(initialFoldReaderState(bird.id), bird, petal));
+    });
+    await until(() => session.store.getState().cursor === petal && selectFoldCursorNode(session.store.getState()).status === 'ok', 'the bird base replay');
+    // The same-side axis remembered from before: it is not the one taken, since its repeat does not land.
+    act(() => {
+      foldTools().setRepeatAxis({ n: [Math.SQRT1_2, Math.SQRT1_2], d: Math.SQRT1_2 });
+      foldTools().selectTool('repeat');
+    });
+    await act(async () => root.render(<Probe />));
+    act(() => foldTools().setRepeatFirst(bird.steps.at(-3)!.id));
+    await until(() => seen?.view.range?.count === 3 && seen.view.states?.length === 2 && seen.view.states.every((state) => state.kind !== 'unknown'), 'both axes prepared');
+    const behind = seen!.view.axes!.findIndex((axis) => axis.side === 'behind');
+    const same = 1 - behind;
+    expect(seen!.view.states![behind]!.kind).toBe('lands');
+    expect(seen!.view.states![same]!).toMatchObject({ kind: 'refused', step: 0 });
+    expect(seen!.view.axis).toBe(behind);
+    await until(() => seen?.view.phase.kind === 'ready' && previewed(), 'the repeat behind previewed');
+    expect(previewed()!.side).toBe('behind');
+    // The window: the axis taken is the one that lands, the other there but disabled, with its reason.
+    const view: FoldToolWindowView = { tool: 'repeat', lineMode: 'crease', readOnly: null, picks: 0, preview: null, freeLineSnap: false, repeat: seen!.view };
+    const model = foldToolWindow(i18n.t.bind(i18n), view, { repeat: seen!.verbs } as unknown as FoldToolWindowVerbs, { coarse: false, alt: 'Option' })!;
+    expect(model.repeat?.axis.value).toBe(String(behind));
+    expect(model.repeat?.axis.options[behind]).toEqual({ id: String(behind), label: 'Diagonal, bottom left to top right' });
+    expect(model.repeat?.axis.options[same]).toMatchObject({ id: String(same), label: 'Diagonal, top left to bottom right', disabled: true });
+    expect(model.repeat?.axis.options[same]!.description).toMatch(/^Stops at operation 1: /);
+    expect(model.footer?.commit.label).toBe('Repeat behind');
+    expect(model.refusal).toBeNull();
+    // Taking the refused axis does nothing; on the panes it is drawn dimmer, and never under the pointer.
+    act(() => seen!.verbs.setAxis(same));
+    expect(seen!.view.axis).toBe(behind);
+    expect(seen!.marks).toMatchObject({ taken: behind, refused: [same] });
   });
 });

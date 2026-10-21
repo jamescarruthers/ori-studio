@@ -78,6 +78,7 @@ import { swivelOffered, swivelReachesNothing, type FoldSwivelReachView } from '.
 import type { FoldLineBy } from '../tools/foldToolCatalog';
 import { isFoldAltLatched } from './foldAltLatch';
 import { resolveAlongPick } from './foldAlongLine';
+import { repeatHit } from '../repeat/repeatDrawn';
 import { toPair, transformLine } from './foldCanvasGeometry';
 import {
   resolveFoldEdgePoint,
@@ -610,19 +611,9 @@ export function useFoldCanvasVerbs(
         const index = drawn === undefined ? shown.index : drawn;
         if (!index) return null;
         const tool = state();
-        // Repeat's axis, drawn as a free line on whatever the canvas shows —
-        // the step on screen, or the repeat it previews — while one may be
-        // drawn: a line drawn and refused gives way to the next.
-        if (tool.tool === 'repeat') {
-          if (!live.current.preview.repeat?.view.drawing) return { pane, at, pick: null };
-          const pick = resolveFoldPick(index, pane, at, radii, {
-            snap: 'free',
-            edges: false,
-            free: freePointHeld(),
-            snapFree: tool.freeLineSnap,
-          });
-          return { pane, at, pick };
-        }
+        // Repeat: its axes, drawn on both panes, and an axis of the folder's
+        // own located with the line modes, while one may be taken.
+        if (tool.tool === 'repeat') return repeatHit(index, pane, at, radii, tool, live.current.preview.repeat ?? null, freePointHeld());
         // A fan's hinge region, or a petal fold's flap, picked or picked
         // again: the paper under the pointer, whose region the panes light —
         // off it, nothing.
@@ -685,7 +676,14 @@ export function useFoldCanvasVerbs(
         if (!hit || live.current.session.readOnly || live.current.session.cursor.status === 'locked') return;
         const tool = state();
         if (tool.tool === 'repeat') {
-          if (!hit.pick || !live.current.preview.repeat?.view.drawing) return;
+          const repeat = live.current.preview.repeat;
+          if (!repeat?.view.drawing) return;
+          // An axis drawn on the paper: taken.
+          if (!hit.pick && hit.repeatAxis !== undefined) {
+            repeat.verbs.setAxis(hit.repeatAxis);
+            return;
+          }
+          if (!hit.pick) return;
           // A line drawn and refused: the next click starts another.
           if (isLocated(tool)) tools.clear();
           tools.pick(hit.pick);

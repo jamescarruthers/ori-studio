@@ -16,7 +16,9 @@ import {
   RepeatFailure,
   sameImages,
   sheetRing,
+  sideSign,
   verifiedSymmetry,
+  type RepeatSide,
   type RepeatSymmetry,
 } from './repeatGeometry';
 
@@ -34,12 +36,29 @@ export function changedFaces(before: FoldScene, after: FoldScene): number[] {
   });
 }
 
+/**
+ * Repeat's test of a mirrored step, whatever its family: the step that
+ * landed `ta` from `tb` did to the mirrored paper what the source step did
+ * from `before` to `after`, reflected by the sheet map `map`.
+ *
+ * - **Pose**: the paper the source moved lands where its mirror says, and no
+ *   other paper moves.
+ * - **Layer order**: every pair the source's moved paper takes part in is
+ *   ordered among the mirrored faces as the source's, kept on the same side
+ *   and reversed behind (`side`), as the viewer sees each state.
+ * - **Creases**: the step's new creases are the source's reflected through
+ *   the axis, each with the same assignment on the paper, and it changes no
+ *   other crease.
+ *
+ * A mirrored step that lands any other way is refused.
+ */
 export function verifyMaterial(
   before: FoldScene,
   after: FoldScene,
   tb: FoldScene,
   ta: FoldScene,
   map: FoldIsometry,
+  side: RepeatSide = 'same',
 ): void {
   const changed = new Set(changedFaces(before, after));
   for (const i of changed) {
@@ -74,7 +93,7 @@ export function verifyMaterial(
     const polygon = sheetRing(after, i).map((p) => applyIsometry(map, p));
     return ta.faces.flatMap((__, j) => (polygonArea(overlap(polygon, sheetRing(ta, j))) > AREA ? [j] : []));
   });
-  const flip = after.view.flipped === ta.view.flipped ? 1 : -1;
+  const flip = (after.view.flipped === ta.view.flipped ? 1 : -1) * sideSign(side);
   for (const [key, sign] of orderPairs(after)) {
     const [a, b] = key.split(':').map(Number) as [number, number];
     if (!changed.has(a) && !changed.has(b)) continue;
@@ -120,6 +139,18 @@ function valueAt(all: Segment[], p: Point): string {
     .sort()
     .join('|');
 }
+/**
+ * A crease's fold angle on the paper, front-relative, from its value at a
+ * point (`valueAt`): +180 folded valley, −180 folded mountain, 0 flat or no
+ * crease; null for anything else (an edge, or several creases at once).
+ */
+function foldAngle(value: string): number | null {
+  if (value === '' || value === 'flat:valley' || value === 'flat:mountain') return 0;
+  if (value === 'fold:valley') return 180;
+  if (value === 'fold:mountain') return -180;
+  return null;
+}
+
 function verifyCreases(before: FoldScene, after: FoldScene, tb: FoldScene, ta: FoldScene, map: FoldIsometry) {
   const mapped = (scene: FoldScene) =>
     segments(scene).map((s) => ({ ...s, a: applyIsometry(map, s.a), b: applyIsometry(map, s.b) }));
@@ -143,6 +174,20 @@ function verifyCreases(before: FoldScene, after: FoldScene, tb: FoldScene, ta: F
       }
       group.sets[setIndex]!.push(segment);
     }
+  // A crease on the axis is its own mirror, the hinge between the two sides:
+  // the source step turns the paper on its side about it and the repeated
+  // step the paper on the other, so where the source changed it, the
+  // repeated step changes it again — a squash beside the axis lays it flat,
+  // its mirror folds it the other way. What carries over is the change of
+  // its fold angle (`foldAngle`): the repeated step must turn it as far, and
+  // the same way, as the source did (a valley folded flat, then folded on to
+  // a mountain). A fold the source made along the axis cannot be turned as
+  // far again, so its mirror — its own paper folded back over — is refused;
+  // a precrease the source made along it is its own mirror, left as it is.
+  const onAxis = (p: Point) => {
+    const q = applyIsometry(map, p);
+    return Math.hypot(q.x - p.x, q.y - p.y) < 1e-7;
+  };
   for (const { basis, sets } of groups) {
     const ts = sets
       .flatMap((set) => set.flatMap((s) => [parameter(basis, s.a)!, parameter(basis, s.b)!]))
@@ -151,7 +196,15 @@ function verifyCreases(before: FoldScene, after: FoldScene, tb: FoldScene, ta: F
       if (ts[i]! - ts[i - 1]! < 1e-7) continue;
       const t = (ts[i]! + ts[i - 1]!) / 2;
       const p = { x: basis.a.x + t * (basis.b.x - basis.a.x), y: basis.a.y + t * (basis.b.y - basis.a.y) };
-      const [old, next, was, now] = sets.map((set) => valueAt(set, p));
+      const [old, next, was, now] = sets.map((set) => valueAt(set, p)) as [string, string, string, string];
+      if (old !== next && onAxis(p)) {
+        const turned = [old, next, was, now].map(foldAngle);
+        if (turned.some((angle) => angle === null)) throw new RepeatFailure('repeat_creases');
+        const [o, n, w, a] = turned as [number, number, number, number];
+        // Not turned, only made or relettered flat: its own mirror, left as it is.
+        if (n === o ? now !== was : a - w !== n - o) throw new RepeatFailure('repeat_creases');
+        continue;
+      }
       if (old !== next ? was !== old || now !== next : was !== now) throw new RepeatFailure('repeat_creases');
     }
   }
@@ -235,7 +288,9 @@ export function mirroredStepAxis(before: FoldScene, first: FoldScene, second: Fo
       const map = reflection(axis);
       if (!liesAlong(made, mirrored, map) || !liesAlong(mirrored, made, map)) continue;
       const symmetry = verifiedSymmetry(before, axis);
-      if (!symmetry) continue;
+      // Two precreases mirrored on one side merge into one Diagram step; a
+      // pair front and back stays two, as it always has.
+      if (!symmetry || symmetry.side !== 'same') continue;
       verifyMaterial(before, first, first, second, map);
       return symmetry;
     } catch (error) {

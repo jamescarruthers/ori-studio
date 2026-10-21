@@ -1,4 +1,16 @@
-/** Translate inputs and choices; never implement a second folding algorithm. */
+/**
+ * A source step's mirror: its inputs translated across the axis, never a
+ * second folding algorithm.
+ *
+ * Every sheet point maps through the sheet reflection, every model-frame
+ * direction and root through the frame the mirror's paper is placed in. What
+ * the step says as the viewer sees it — a valley or a mountain, the layers on
+ * top — turns where the viewer sees the mirrored paper from the other side:
+ * behind, or after a turn-over between the source and the repeat, but not
+ * both (`flipsView`). That is the prediction `mirrorOperation` makes; the
+ * preparation also tries the other way (`otherDirection`) and keeps the one
+ * whose result passes Repeat's test of a mirrored step (`verifyMaterial`).
+ */
 import { invertIsometry, polygonCentroid, toPair, transformLine } from '../canvas/foldCanvasGeometry';
 import type {
   FoldPleatPlacement,
@@ -11,7 +23,37 @@ import type {
   SheetPoint,
 } from '../document/foldSequenceDocument';
 import type { FoldIsometry, FoldScene } from '../engine/foldEngineWire';
-import { compose, correspondingFrame, mappedPoint, RepeatFailure, sheetRing } from './repeatGeometry';
+import { compose, correspondingFrame, mappedPoint, RepeatFailure, sheetRing, sideSign, type RepeatSide } from './repeatGeometry';
+
+/** A mirrored step: its op and choices, as the engine is asked to fold them. */
+export interface RepeatMirrored {
+  op: FoldOp;
+  choices?: FoldChoices;
+}
+
+/**
+ * Whether the viewer sees the mirrored paper from the other side than the
+ * source's: behind, or across a turn-over between the two states, but not
+ * both.
+ */
+export function flipsView(source: FoldScene, target: FoldScene, side: RepeatSide): boolean {
+  return (side === 'behind') !== (source.view.flipped !== target.view.flipped);
+}
+
+/**
+ * The same mirrored step folded the other way as the viewer sees it — a
+ * valley for a mountain — or null for an op that has no way to turn: a
+ * reverse fold, a crimp or a sink, whose kind is the paper's own; a turn or a
+ * rotation; a pleat or a swivel by its valley and mountain, which turn by
+ * trading their lines and are refused instead (`mirrorOperation`).
+ */
+export function otherDirection(mirrored: RepeatMirrored): RepeatMirrored | null {
+  const { op } = mirrored;
+  if (op.kind === 'valley' || op.kind === 'mountain')
+    return { ...mirrored, op: { ...op, kind: op.kind === 'valley' ? 'mountain' : 'valley' } };
+  if ('direction' in op) return { ...mirrored, op: { ...op, direction: op.direction === 'valley' ? 'mountain' : 'valley' } };
+  return null;
+}
 
 export function mirrorOperation(
   op: FoldOp,
@@ -19,8 +61,10 @@ export function mirrorOperation(
   source: FoldScene,
   target: FoldScene,
   map: FoldIsometry,
+  side: RepeatSide,
   material?: readonly SheetPoint[],
-): { op: FoldOp; choices?: FoldChoices } {
+): RepeatMirrored {
+  const turned = flipsView(source, target, side);
   const p = (at: SheetPoint) => mappedPoint(map, at);
   const seed = (s: FoldSeed): FoldSeed =>
     material?.length
@@ -127,7 +171,10 @@ export function mirrorOperation(
         landing: value.landing.kind === 'against' ? { kind: 'against', targets: value.landing.targets.map(p) } : value.landing,
         ...(value.completion ? { completion: { faces: value.completion.faces.map(p), orders: value.completion.orders } } : {}),
       });
-      if (source.view.flipped !== target.view.flipped) throw new RepeatFailure('repeat_unsupported');
+      // Its first line is the mountain and its second the valley, as the
+      // viewer sees them: seen from the other side they trade places, which
+      // a pleat cannot store without trading its lines and moving side.
+      if (turned) throw new RepeatFailure('repeat_pleat_behind');
       next = { ...motion(op), line: line(op.line), second: line(op.second),
         ...(op.secondRoot ? { secondRoot: located({ line: op.second, root: op.secondRoot }).root } : {}),
         ...(op.resolved ? { resolved: [placement(op.resolved[0]), placement(op.resolved[1])] as const } : {}) };
@@ -182,7 +229,7 @@ export function mirrorOperation(
         // Its letters are the viewer's, on the layer that faces them: seen
         // from the other side, its pair lies on the layer behind, which only
         // a turn over brings in front.
-        if (source.view.flipped !== target.view.flipped) throw new RepeatFailure('repeat_swivel_behind');
+        if (turned) throw new RepeatFailure('repeat_swivel_behind');
         next = { ...op, valley: located(op.valley), mountain: located(op.mountain) };
       }
       else if ('fold' in op)
@@ -198,8 +245,10 @@ export function mirrorOperation(
         };
       break;
     case 'rotate':
+      // A turn of the view about the line of sight: the mirror in the plane
+      // turns its sense, and so does seeing it from the other side.
       next =
-        seen[0] * seen[4] - seen[1] * seen[3] < 0
+        (seen[0] * seen[4] - seen[1] * seen[3]) * sideSign(side) < 0
           ? { ...op, rotate: { ...op.rotate, direction: op.rotate.direction === 'cw' ? 'ccw' : 'cw' } }
           : op;
       break;
@@ -215,14 +264,13 @@ export function mirrorOperation(
     case 'unfold-to':
       throw new RepeatFailure('repeat_unsupported');
   }
-  // Directions are viewer-relative. Turning one side of the sequence over
-  // before repeating does not change the physical mountain/valley intent.
-  if (source.view.flipped !== target.view.flipped) {
-    if (next.kind === 'valley' || next.kind === 'mountain')
-      next = { ...next, kind: next.kind === 'valley' ? 'mountain' : 'valley' };
-    else if ('direction' in next)
-      next = { ...next, direction: next.direction === 'valley' ? 'mountain' : 'valley' };
-  }
+  // Directions are the viewer's: seen from the other side, a valley on the
+  // paper is a mountain. The letter on the paper stays what it was.
+  if (turned) next = otherDirection({ op: next })?.op ?? next;
+  // The completion's pairs say which side of a face's front another lies on:
+  // the paper's own, which a repeat on either side keeps (its mirror is
+  // front to front). A reverse fold's opening, by its upper block in the
+  // model, is the lower one behind; the preparation finds it (`repeatPreparation`).
   const mapped: FoldChoices = {
     ...choices,
     ...(choices?.root ? { root: transformLine(frame, choices.root) } : {}),
