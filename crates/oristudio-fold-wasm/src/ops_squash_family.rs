@@ -122,13 +122,17 @@ use crate::{FoldEngine, bridge_error, parse, parse_choices, to_js_value};
 
 /// `FoldSquashOp`: the flap by a sheet point on its upper layer as the
 /// viewer sees it; where its spine lands, a model-frame direction from the
-/// vertex (absent: the hinge line); valley or mountain as seen.
+/// vertex (absent: the hinge line); valley or mountain as seen; and a drawn
+/// hinge, located as a fold's line is (absent: the hinge the lower layer
+/// folds over), only the flap's end on the flap point's side squashing.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct SquashOp {
     pub flap: Point,
     #[serde(default)]
     pub target: Option<Point>,
     pub direction: Direction,
+    #[serde(default)]
+    pub hinge: Option<LocatedLine>,
 }
 
 /// `FoldPetalOp`: H by a sheet point inside its precrease's sheet segment
@@ -280,7 +284,7 @@ fn located_line(parent: &State, located: &LocatedLine) -> Result<Line, Rejection
             Err(BridgeRefusal::UnexpectedChoice { choice: "root" }.into())
         }
         LineInput::Model { .. } => Err(BridgeError::InvalidInput(
-            "a saved swivel line needs sheet references".into(),
+            "a saved located line needs sheet references".into(),
         )
         .into()),
         _ => swivel_target(parent, &located.line),
@@ -332,6 +336,11 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                 flap: op.flap,
                 target: op.target.map(|t| direction("target", t)).transpose()?,
                 direction: op.direction,
+                hinge: op
+                    .hinge
+                    .as_ref()
+                    .map(|hinge| located_line(parent, hinge))
+                    .transpose()?,
             })
         }
         Op::Petal(op) => {
