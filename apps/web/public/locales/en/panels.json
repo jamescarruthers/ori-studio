@@ -1823,7 +1823,8 @@
     },
     "header": {
       "moreExports": "More ways to export",
-      "moreVerbs": "Import, send and export"
+      "moreVerbs": "Import, send and export",
+      "moreVerbsButExport": "Unfold, import and send"
     },
     "load": {
       "failed": "Fold did not load",

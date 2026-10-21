@@ -1876,7 +1876,8 @@
     },
     "header": {
       "moreExports": "Mais formas de exportar",
-      "moreVerbs": "Importar, enviar e exportar"
+      "moreVerbs": "Importar, enviar e exportar",
+      "moreVerbsButExport": "Desdobrar, importar e enviar"
     },
     "load": {
       "failed": "O workspace de Dobra não carregou",

@@ -1772,7 +1772,8 @@
     },
     "header": {
       "moreExports": "다른 내보내기 방법",
-      "moreVerbs": "가져오기, 보내기, 내보내기"
+      "moreVerbs": "가져오기, 보내기, 내보내기",
+      "moreVerbsButExport": "펼치기, 가져오기, 보내기"
     },
     "load": {
       "failed": "접기 작업 공간을 불러오지 못했습니다",

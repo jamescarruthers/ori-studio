@@ -6317,7 +6317,12 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12637,7 +12642,12 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -18959,7 +18969,12 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -24940,7 +24955,12 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -30921,7 +30941,12 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37241,7 +37266,12 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43561,7 +43591,12 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49542,6 +49577,11 @@
     "tools:fold.vertex.valleyMountain.takeValleyTouch": "4e09fcf94a1f",
     "tools:fold.vertex.valleyMountain.useValley": "04ae396d7c7d",
     "tools:fold.vertex.valleyMountain.valleyLine": "43eb30b3deda",
-    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0"
+    "tools:fold.vertex.valleyMountain.valleyStep": "fd44d9697fe0",
+    "panels:fold.header.moreVerbsButExport": "5a3f267fa856",
+    "tools:fold.picker.addFavorite": "5689f26d59cf",
+    "tools:fold.picker.favorites": "7a1f2a83aca9",
+    "tools:fold.picker.favoritesHint": "8cb735bd2f9c",
+    "tools:fold.picker.removeFavorite": "b589cbd61d68"
   }
 }
