@@ -220,8 +220,24 @@ interface FoldAlongLine {
   seed: FoldSeed;
 }
 
-/** A valley or mountain fold: the direction is the kind. */
-export type FoldLanding = { kind: 'outer' } | { kind: 'against'; targets: readonly SheetPoint[] };
+/**
+ * Where a valley or mountain fold's moving paper lands:
+ *
+ * - `outer`: on top (a valley) or underneath (a mountain), moving what the
+ *   closure moves — the plain fold's own landing, and what a fold with one
+ *   order whose outer landing gives it stores;
+ * - `against`: a tuck's recipe against these targets, as files from before
+ *   `solved` store a chosen order, and the recipe search still does for a fold
+ *   whose orders the solver cannot list;
+ * - `solved`: the seed's flaps in the order the step's `choices.completion`
+ *   pins (every pair of every part the folder chose in), or in their one
+ *   order without it. Replay fixes those pairs: exactly one order lands, or
+ *   the step is broken.
+ */
+export type FoldLanding =
+  | { kind: 'outer' }
+  | { kind: 'against'; targets: readonly SheetPoint[] }
+  | { kind: 'solved' };
 
 export interface FoldPlainOp extends FoldAlongLine {
   /** Absent only on legacy/in-memory outer folds. Writers make it explicit. */

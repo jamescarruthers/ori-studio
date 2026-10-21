@@ -138,7 +138,8 @@ export function FoldToolWindow({
         searching={resolution.searching} searched={resolution.searched}
         onStep={resolution.step} onBack={resolution.back} onAccept={acceptOrder ?? (() => {})}
         onSearch={!resolution.exact && resolution.canSearch ? resolution.search : undefined}
-        onStop={resolution.searching ? resolution.stop : undefined} />
+        onStop={resolution.searching ? resolution.stop : undefined}
+        parts={resolution.parts} part={resolution.part} onStepPart={resolution.stepPart} onSelectPart={resolution.selectPart} />
       {inspection && <FoldOrderStacks inspection={inspection} />}
     </ToolHintWindow>
   );

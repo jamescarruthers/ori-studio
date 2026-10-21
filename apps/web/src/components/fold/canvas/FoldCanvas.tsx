@@ -1,4 +1,4 @@
-import { useFoldOrderInspection } from '../../../fold/orders/useFoldOrderInspection';
+import { orderTintRows, useFoldOrderInspection } from '../../../fold/orders/useFoldOrderInspection';
 import { foldRegionTint } from '../../../fold/canvas/foldPaneOverlays';
 import { useFoldImportOrderUi } from '../../../fold/orders/foldImportOrderUi';
 import { foldOrderChoiceKey } from '../../../fold/io/foldImportFlow';
@@ -178,9 +178,13 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? takenLines ?? repeatCreases;
   const regions = fanMarks?.regions ?? petalMarks.regions ?? squashMarks.regions;
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending, orderScene);
-  const componentPairs = importChoice?.opened.components[importChoice.component]?.pairs ?? [];
+  // The part being chosen in: an import's component, or a fold's part.
+  const resolution = preview.orderResolution;
+  const tinted = orderTintRows(inspection, importChoice
+    ? { pairs: importChoice.opened.components[importChoice.component]?.pairs ?? [] }
+    : { faces: resolution?.parts[resolution.part]?.faces ?? [] });
   const orderTint = inks && resolvingOrder && !shownSpread ? foldRegionTint({
-    polygons: [inspection.rows.filter((row) => inspection.selected === null ? row.changed || componentPairs.some(([a, b]) => row.faces_top_to_bottom.includes(a) && row.faces_top_to_bottom.includes(b)) : row.index === inspection.selected).map((row) => row.polygon)],
+    polygons: [tinted.map((row) => row.polygon)],
     picked: 0, at: () => null,
   }, null, inks.accent) : null;
   const foldedTint = resolvingOrder ? orderTint : joinFills(paint.folded.tint, swivelMarks.tint);

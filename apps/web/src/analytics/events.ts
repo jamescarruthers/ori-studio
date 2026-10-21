@@ -2126,6 +2126,12 @@ export const COUNT_BUCKETS = [1, 5, 10, 20, 50, 100, 200, 500] as const;
 export const FOLD_CHOICE_COUNT_BUCKETS = [2, 3, 4, 8] as const;
 
 /**
+ * Threshold ladder for how many independent parts a fold's layer orders are
+ * chosen in: one is the common case, and the envelope's book order needs two.
+ */
+export const FOLD_ORDER_PART_BUCKETS = [0, 1, 2, 3, 4] as const;
+
+/**
  * Threshold ladder for a face count Fold refused as over its cap (4,096,
  * `fold refused`'s `face_count_bucket`): just over, a few times over, or far
  * past anything Fold could fold.

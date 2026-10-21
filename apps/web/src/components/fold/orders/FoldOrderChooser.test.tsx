@@ -42,6 +42,35 @@ it('keeps the orders found named while a search for more runs, offers Stop in pl
   expect(host.textContent).not.toContain('no other orders');
 });
 
+it('steps each independent part in its own row, the active one marked, every combination named', () => {
+  const p = {
+    ...props(), index: 3, count: 9, onStepPart: vi.fn(), onSelectPart: vi.fn(),
+    parts: [{ pick: 1, orders: 3, exact: true, faces: [0, 1] }, { pick: 0, orders: 3, exact: true, faces: [2, 3] }], part: 0,
+  };
+  act(() => root.render(<FoldOrderChooser {...p} />));
+  const rows = [...host.querySelectorAll<HTMLElement>('[data-fold-order-part]')];
+  expect(rows).toHaveLength(2);
+  expect(rows[0]!.hasAttribute('data-active')).toBe(true);
+  expect(rows[1]!.hasAttribute('data-active')).toBe(false);
+  expect(rows.map((row) => row.textContent)).toEqual(['Part 12 of 3', 'Part 21 of 3']);
+  expect(host.textContent).toContain('Order 4 of 9');
+  // The flat stepper gives way to the rows.
+  expect(host.querySelector('[aria-label="Next layer order"]')).toBeNull();
+  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Next order of part 2"]')!.click());
+  expect(p.onStepPart).toHaveBeenCalledWith(1, 1);
+  act(() => [...rows[1]!.querySelectorAll('button')].find((b) => b.textContent === 'Part 2')!.click());
+  expect(p.onSelectPart).toHaveBeenCalledWith(1);
+  expect(p.onStep).not.toHaveBeenCalled();
+});
+
+it('keeps one stepper for a fold with one part', () => {
+  const p = { ...props(), onStepPart: vi.fn(), parts: [{ pick: 0, orders: 3, exact: true, faces: [0, 1] }], part: 0 };
+  act(() => root.render(<FoldOrderChooser {...p} />));
+  expect(host.querySelector('[data-fold-order-part]')).toBeNull();
+  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Next layer order"]')!.click());
+  expect(p.onStep).toHaveBeenCalledWith(1);
+});
+
 it('cannot accept a candidate while it is loading, and names incomplete searches honestly', () => {
   const p = { ...props(), count: 1, exact: false, ready: false, waiting: true, onSearch: vi.fn() };
   act(() => root.render(<FoldOrderChooser {...p} />));

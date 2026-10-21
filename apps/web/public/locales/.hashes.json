@@ -6341,7 +6341,13 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12685,7 +12691,13 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19031,7 +19043,13 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25036,7 +25054,13 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31041,7 +31065,13 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37385,7 +37415,13 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43729,7 +43765,13 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49734,6 +49776,12 @@
     "tools:fold.vertex.squashHinge.takeTouch": "7e305cba5964",
     "tools:fold.vertex.squashHinge.use": "fc971e8254b1",
     "tools:fold.vertex.steps.squashEnd": "688873896ad2",
-    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858"
+    "tools:fold.vertex.steps.squashEndTouch": "5b3a0dbf2858",
+    "tools:fold.order.part": "1ce6fc02818e",
+    "tools:fold.order.partCount": "8faa0c3bbb3a",
+    "tools:fold.order.partNext": "0d932c582b40",
+    "tools:fold.order.partPrevious": "a1b49155220a",
+    "tools:fold.order.parts": "efbcd674b4f4",
+    "tools:fold.order.partsHelp": "291d547a78fd"
   }
 }

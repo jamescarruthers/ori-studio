@@ -43,3 +43,25 @@ describe('explicit M/V landing migration', () => {
     expect(sentence).toMatchObject({ op: 'fold', direction: 'mountain', inserted: true });
   });
 });
+
+describe('a solved landing', () => {
+  const solved: FoldOp = { ...valleyAt(0.4), landing: { kind: 'solved' } };
+  const completion = { faces: [[0.2, 0.2], [0.8, 0.2]] as const, orders: [[0, 1, 1]] as const };
+  it('reads and writes as itself, its completion beside it, and names its own history op', () => {
+    const raw = { formatVersion: 2, id: 'solved', paper: SQUARE_PAPER, steps: [step('a', null, solved, { choices: { completion } })] };
+    const held = readFoldSequence(raw)!;
+    expect(held.document.steps[0]).toMatchObject({ op: { landing: { kind: 'solved' } }, choices: { completion } });
+    expect(readFoldSequence(writeFoldSequence(held))?.document).toEqual(held.document);
+    expect(foldHistoryOp(solved)).toEqual(solved);
+  });
+  it('locks a solved landing that carries more than its kind', () => {
+    const node = { ...step('a', null), op: { ...valleyAt(0.4), landing: { kind: 'solved', targets: [[0.2, 0.2]] } } };
+    const held = readFoldSequence({ formatVersion: 2, id: 'bad', paper: SQUARE_PAPER, steps: [node] })!;
+    expect(held.document.steps[0]).toHaveProperty('unknown');
+  });
+  it('reads as a tuck only where its order lies between layers that stay', () => {
+    const line = { line: { n: [1, 0] as const, d: 0.4 }, side: 'positive' as const };
+    expect(foldSentenceStepOf(solved, { parent: null, child: null, report: { ...line, inserted: true } })).toMatchObject({ op: 'fold', inserted: true });
+    expect(foldSentenceStepOf(solved, { parent: null, child: null, report: line })).not.toHaveProperty('inserted');
+  });
+});

@@ -166,3 +166,37 @@ it('names a running press as searching, stops it keeping what it found, and says
   expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ batch: 3, searchMs: 2400 });
   expect(seen.resolution).toMatchObject({ searching: false, searched: true, count: 3, exact: true, canSearch: false });
 });
+
+/** The solver's answer for two parts of three orders each, as the bridge lists them, picking `choice`. */
+function solved(choice: [number, number]) {
+  const part = (component: number, faces: number[]) => ({ component, orders: 3, truncated: false, pick: choice[component], faces, moves: true });
+  return {
+    status: 'ok', count: { orders: 9, exact: true }, index: choice[0] * 3 + choice[1], landing: { kind: 'solved' }, completion: witness,
+    choice, parts: [part(0, [1, 2]), part(1, [3, 4])], source: 'solved',
+  };
+}
+
+it('chooses in each independent part: the active part steps, Up and Down change part, every combination is asked', async () => {
+  activeBase = placement;
+  orderSelection.mockImplementation(async (...[, , , query]: unknown[]) => solved(((query as { choice?: [number, number] }).choice ?? [0, 0])));
+  await render();
+  expect(seen.resolution).toMatchObject({ required: true, exact: true, canSearch: false, source: 'solved', part: 0 });
+  expect(seen.resolution?.parts.map((p) => [p.pick, p.orders])).toEqual([[0, 3], [0, 3]]);
+  await act(async () => seen.resolution?.resume());
+  // Left and Right step the active part, round.
+  await act(async () => seen.resolution?.step(-1));
+  expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ choice: [2, 0] });
+  // Down makes the second part the active one; its own steps keep the first part's pick.
+  await act(async () => seen.resolution?.nextPart(1));
+  expect(seen.resolution?.part).toBe(1);
+  await act(async () => seen.resolution?.step(1));
+  expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ choice: [2, 1] });
+  expect(seen.resolution?.parts.map((p) => p.pick)).toEqual([2, 1]);
+  // A row's own arrows step that part, and make it the active one.
+  await act(async () => seen.resolution?.stepPart(0, 1));
+  expect(orderSelection.mock.lastCall?.[3]).toMatchObject({ choice: [0, 1] });
+  expect(seen.resolution?.part).toBe(0);
+  expect(seen.step?.op).toMatchObject({ kind: 'mountain', landing: { kind: 'solved' } });
+  expect(seen.step?.choices?.completion).toEqual(witness);
+  orderSelection.mockReset();
+});

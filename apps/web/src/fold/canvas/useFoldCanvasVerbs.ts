@@ -150,6 +150,12 @@ export interface FoldCanvasVerbs {
   stepChoice: (delta: number) => boolean;
   choosingOrder?: () => boolean;
   /**
+   * While a fold's orders are chosen in independent parts, make the part
+   * `delta` on the active one (the Up and Down keys); whether there was
+   * another part to go to.
+   */
+  stepOrderPart?: (delta: number) => boolean;
+  /**
    * Commit the fold previewed; whether there was one to commit. Pressed while
    * the preview is still landing, it commits once it lands (or lets go if it
    * is refused), and says so.
@@ -958,6 +964,13 @@ export function useFoldCanvasVerbs(
         live.current.preview.orderResolution?.active === true ||
         live.current.preview.repeat?.choosing === true,
 
+      stepOrderPart: (delta) => {
+        const resolution = live.current.preview.orderResolution;
+        if (!resolution?.active || resolution.parts.length < 2) return false;
+        resolution.nextPart(delta);
+        return true;
+      },
+
       stepChoice: (delta) => {
         const imported = useFoldImportOrderUi.getState();
         if (imported.choosing) {
@@ -1005,7 +1018,8 @@ export function useFoldCanvasVerbs(
         const resolution = preview.orderResolution;
         if (!resolution?.active || resolution.waiting || resolution.failed || !preview.step || !preview.landed || preview.landing || preview.refused || session.readOnly || committing.current || resolution.inputKey !== foldToolInputKey(state())) return false;
         setQueued(null);
-        trackFoldOrderResolved('accepted', 'tool', resolution.count);
+        trackFoldOrderResolved('accepted', 'tool', resolution.count,
+          resolution.source ? { source: resolution.source, parts: resolution.parts.length } : undefined);
         commitOp(preview.step.op, preview.step.choices);
         return true;
       },
