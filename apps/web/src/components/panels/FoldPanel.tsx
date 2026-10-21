@@ -70,7 +70,7 @@ export function FoldPanel() {
             actions={actions}
             sendToEdit={sendToEdit}
             drawerSlot={setViewDrawerSlot}
-            tools={<FoldToolsTrigger />}
+            tools={({ compact }) => <FoldToolsTrigger compact={compact} />}
           />
           <FoldStepStrip view={sequence} />
           <div className={`panel-body ${styles.body}`}>

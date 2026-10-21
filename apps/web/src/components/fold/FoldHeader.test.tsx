@@ -2,7 +2,12 @@ import { act, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../store/workspaceStore/useWorkspaceCapabilities', () => ({ useWorkspaceCapabilities: () => ({}) }));
+vi.mock('../../store/workspaceStore/useWorkspaceCapabilities', () => ({
+  useWorkspaceCapabilities: () => ({
+    'edit.undo': { label: 'Undo', enabled: false },
+    'edit.redo': { label: 'Redo', enabled: false },
+  }),
+}));
 
 import i18n from '../../i18n';
 import { buildFoldActions, type FoldActionContext, type FoldActionDeps } from '../../fold/foldActions';
@@ -176,6 +181,59 @@ describe('FoldHeader', () => {
     ]);
     act(() => rows.find((row) => row.textContent === 'Import CP…')?.click());
     expect(bound.importCp).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the header to one row on a tablet: what does not fit goes into the menu, Export last', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        // The pointer alone: the phone layout's query names it too.
+        matches: query === '(pointer: coarse)',
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }))
+    );
+    // jsdom lays nothing out: each button is 100px, the row as wide as `rowWidth`.
+    let rowWidth = 0;
+    const spies = [
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.matches('[data-fit-level] > *') ? 100 * this.querySelectorAll('button').length : 0;
+      }),
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(() => 0),
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.matches('[data-fit-level]') ? rowWidth : 0;
+      }),
+      vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockImplementation(() => document.body),
+    ];
+    try {
+      const shown = () => [...host.querySelectorAll('button')].map((each) => each.getAttribute('aria-label') ?? each.textContent);
+      // Wide enough: every verb on the row, as on a desktop.
+      rowWidth = 2000;
+      render({});
+      expect(host.querySelector('[data-fit-level]')?.getAttribute('data-fit-level')).toBe('0');
+      expect(shown()).toContain('Import CP…');
+      act(() => root.unmount());
+      root = createRoot(host);
+      // Narrower: the verbs but Export in the menu.
+      rowWidth = 600;
+      render({});
+      expect(host.querySelector('[data-fit-level]')?.getAttribute('data-fit-level')).toBe('1');
+      expect(shown()).not.toContain('Import CP…');
+      expect(shown()).toContain('Export FOLD…');
+      expect(shown()).toContain('Unfold, import and send');
+      act(() => root.unmount());
+      root = createRoot(host);
+      // Narrower still: Export too, as a phone has it.
+      rowWidth = 300;
+      render({});
+      expect(host.querySelector('[data-fit-level]')?.getAttribute('data-fit-level')).toBe('2');
+      expect(shown()).not.toContain('Export FOLD…');
+      expect(shown()).toContain('Import, send and export');
+      // The count stays: a tablet has no strip numbers to leave it to.
+      expect(host.textContent).toContain('1 step');
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
   });
 
   it('makes Send to Edit the shared button when given its model, with no caret: there is one Send to Edit', () => {
