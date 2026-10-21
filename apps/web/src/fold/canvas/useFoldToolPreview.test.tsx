@@ -11,7 +11,8 @@ vi.mock('../../analytics', () => ({
 import i18n from '../../i18n';
 import type { FoldAnalysis, FoldCrossSection, FoldFlap } from '../engine/foldEngineWire';
 import { foldToolWindow } from '../tools/foldToolWindow';
-import { foldTuckWindowView } from './foldCanvasModel';
+import { foldTuckWindowView, foldWindowPreview } from './foldCanvasModel';
+import { foldShownPreview } from './foldHeldPreview';
 import type { FoldPendingAnalysis } from '../session/foldSessionState';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
@@ -771,5 +772,139 @@ describe('Rotate’s turn', () => {
     expect(seen?.turned).toBe(TURNED);
     // The crease pattern does not turn: no landed state for its pane.
     expect(seen?.landed).toBeNull();
+  });
+});
+
+describe('a flap picked or unpicked on a fold already answered (owner report, 2026-10-21)', () => {
+  /** The session's answer for the step the hook last asked to preview: landed, or refused as too close to a point. */
+  function settle(outcome: 'landed' | 'refused'): void {
+    const step = seen?.step;
+    if (!step) throw new Error('no step');
+    const request = step.choices ? { op: step.op, choices: step.choices } : { op: step.op };
+    pending =
+      outcome === 'landed'
+        ? { status: 'landed', request, parent: PARENT, state: { generation: 1, id: 9 }, summary: { step: 20 } }
+        : { status: 'refused', request, parent: PARENT, refused: { refusal: { code: 'near_miss' }, fixes: [] } };
+  }
+
+  /** The next layer orders the engine is asked for, answered when the test says. */
+  function deferredOrders(): () => void {
+    let answerIt: () => void = () => {};
+    engine.orderSelection.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerIt = () => resolve({ status: 'ok', count: { orders: 1, exact: true }, index: 0, completion: null });
+        })
+    );
+    return () => answerIt();
+  }
+
+  /** The window the shown preview draws: its layers and refusal, as the folder sees them. */
+  const windowOf = (tools: FoldToolState) =>
+    foldToolWindow(
+      i18n.t.bind(i18n),
+      {
+        tool: 'valley',
+        lineMode: 'free',
+        readOnly: null,
+        picks: 2,
+        preview: foldWindowPreview(tools, foldShownPreview(seen!)),
+      },
+      {
+        selectTool: vi.fn(),
+        selectLineMode: vi.fn(),
+        includeFlaps: vi.fn(),
+        foldOtherWay: vi.fn(),
+        pickFlap: vi.fn(),
+        useLine: vi.fn(),
+        swapSide: vi.fn(),
+        toggleFlap: vi.fn(),
+        cancel: vi.fn(),
+        commit: vi.fn(),
+      },
+      { coarse: false, alt: 'Alt' }
+    );
+
+  const BOTH: FoldToolState = { ...FREE_LINE, seed: { scope: 'flaps', flaps: [FLAPS[0]!, FLAPS[1]!] } };
+
+  it('keeps the last fold on show, and with the session, until the new seed’s lands', async () => {
+    await render(FREE_LINE);
+    answer('analysed');
+    settle('landed');
+    await render(FREE_LINE);
+    const last = seen!;
+    expect(last.landed).not.toBeNull();
+    expect(last.held).toBeNull();
+
+    // Flap 2 picked: its orders are asked, and not in yet. No step, but one coming.
+    const orders = deferredOrders();
+    await render(BOTH);
+    expect(seen?.step).toBeNull();
+    // The session keeps the last preview, for the strip and the panes, until the next supersedes it.
+    expect(verbs.cancel).not.toHaveBeenCalled();
+    const shown = foldShownPreview(seen!);
+    expect(shown.landed).toBe(last.landed);
+    expect(shown.analysis).toBe(last.analysis);
+    expect(shown.section).toBe(SECTION);
+    expect(shown.action).toBe(last.action);
+    // Nothing to commit until it has its own answer.
+    expect(shown.landing).toBe(true);
+    // The chips say what was pressed at once; the layers stay where they were.
+    expect(windowOf(BOTH)?.layers?.chips.map((chip) => chip.pressed)).toEqual([true, true]);
+    expect(windowOf(BOTH)?.held).toBe(true);
+
+    // Its orders in: the new step is previewed, and the last fold stands in while it lands.
+    orders();
+    await render(BOTH);
+    expect(seen?.step?.op).toMatchObject({ seed: { scope: 'flaps', at: [FLAPS[0]!.witness, FLAPS[1]!.witness] } });
+    expect(verbs.preview).toHaveBeenLastCalledWith(seen?.step?.op, seen?.step?.choices);
+    expect(foldShownPreview(seen!).landed).toBe(last.landed);
+
+    // Landed: its own fold, nothing held.
+    settle('landed');
+    await render(BOTH);
+    expect(seen?.held).toBeNull();
+    expect(seen?.landing).toBe(false);
+    expect(foldShownPreview(seen!)).toBe(seen);
+  });
+
+  it('keeps a refusal in its place, dimmed, until the new seed’s answer replaces it', async () => {
+    await render(FREE_LINE);
+    answer('analysed');
+    settle('refused');
+    await render(FREE_LINE);
+    expect(windowOf(FREE_LINE)?.refusal?.title).toBe('Too close to a point');
+
+    const orders = deferredOrders();
+    await render(BOTH);
+    // Not this seed's refusal yet, so the commit waits for it (`queuedCommit`), but it keeps its slot in the window.
+    expect(seen?.refused).toBeNull();
+    const held = windowOf(BOTH);
+    expect(held?.refusal?.title).toBe('Too close to a point');
+    expect(held?.held).toBe(true);
+    expect(held?.layers?.picker).not.toBeNull();
+    expect(held?.footer?.commit.disabled).toBe(true);
+
+    orders();
+    await render(BOTH);
+    settle('landed');
+    await render(BOTH);
+    expect(windowOf(BOTH)?.refusal).toBeNull();
+    expect(windowOf(BOTH)?.held).toBeUndefined();
+  });
+
+  it('lets the last fold go when the line itself changes', async () => {
+    await render(FREE_LINE);
+    answer('analysed');
+    settle('landed');
+    await render(FREE_LINE);
+
+    // Another line, its section still being asked: no step, and nothing of the last line's held.
+    deferredSection();
+    const other: FoldToolState = { ...FREE_LINE, picks: [free(0, 0.25), free(1, 0.25)] };
+    await render(other);
+    expect(seen?.step).toBeNull();
+    expect(seen?.held).toBeNull();
+    expect(verbs.cancel).toHaveBeenCalled();
   });
 });

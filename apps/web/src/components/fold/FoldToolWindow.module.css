@@ -14,6 +14,16 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/*
+ * The last seed's refusal, in its place while this one's answer is on its
+ * way: dimmed only once the wait is long enough to notice, so a quick answer
+ * changes nothing on screen until it is in.
+ */
+.section[data-held] {
+  opacity: 0.55;
+  transition: opacity 120ms ease 150ms;
+}
+
 /* What snaps and the keys that change it, under the steps; and the layers' help. */
 .note {
   margin: 0;

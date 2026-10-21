@@ -55,6 +55,7 @@ import { useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
 import { useFoldPaneSpread } from '../../../fold/canvas/useFoldPaneSpread';
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
+import { foldShownPreview } from '../../../fold/canvas/foldHeldPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
 import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
@@ -99,7 +100,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const view = useFoldStateView();
   const tools = foldTools();
   const toolState = useFoldTools((state) => state);
-  const preview = useFoldToolPreview(session, view, toolState);
+  // While a new seed's step is on its way, the last answer stays on show: nothing goes and comes back under a click.
+  const preview = foldShownPreview(useFoldToolPreview(session, view, toolState));
   // The folded form's layers spread as the step on screen says, its switch on
   // the bar — at rest: flat once a tool picks, or locates a fold, and while a
   // sequence tool shows another state than the step's. Spread, the paper is

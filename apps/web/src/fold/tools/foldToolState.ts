@@ -389,6 +389,16 @@ export function foldToolInputKey(state: FoldToolState): string {
   return JSON.stringify({ ...input, rebuild: rebuild?.id ?? null });
 }
 
+/**
+ * The fold's line as the tools hold it, as a key: their input
+ * (`foldToolInputKey`) but the seed and a compound fold's choices — what a
+ * flap picked or unpicked, or another kind, opening or order, leaves alone.
+ */
+export function foldToolLineKey(state: FoldToolState): string {
+  const { seed: _seed, compound: _compound, ...line } = state;
+  return foldToolInputKey({ ...line, seed: FOLD_TOOL_INITIAL.seed, compound: FOLD_TOOL_INITIAL.compound });
+}
+
 /** Toolbar construction changes follow the line currently being drawn. */
 export function pleatDrawingValley(state: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): boolean {
   return state.tool === 'pleat' && state.picks.length >= lineModeInput(state.lineMode).steps.length;

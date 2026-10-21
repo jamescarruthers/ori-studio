@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { FoldPaper, FoldSequenceDocument } from '../document/foldSequenceDocument';
 import { foldedLineOf } from '../engine/foldEngineCompoundWire';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineOp, FoldReport } from '../engine/foldEngineWire';
 import { useFoldSessionState } from '../session/useFoldSession';
-import type { FoldSessionProgress } from '../session/foldSessionState';
+import { sameFoldState, type FoldPendingStep, type FoldSessionProgress } from '../session/foldSessionState';
 import type { FoldSentenceStep } from '../stepSentence';
 import { useFoldTools } from '../tools/foldToolState';
 import { foldNodeSentenceStep, foldSentenceStepOf } from './foldSentenceStep';
@@ -57,7 +57,7 @@ export interface FoldSequenceView {
 export function useFoldSequenceView(): FoldSequenceView {
   const { sequence, document, entries, cursor } = useFoldPath();
   const readOnly = useFoldSessionState((snapshot) => snapshot.readOnly);
-  const pendingStep = useFoldSessionState((snapshot) => snapshot.pending);
+  const pendingStep = useAnsweredPendingStep(useFoldSessionState((snapshot) => snapshot.pending));
   // A step rebuilt in place — an unfold's, a repeat's — replaces its step: it starts no branch.
   const rebuilding = useFoldTools((state) => state.rebuild?.tool ?? null);
   const progress = useFoldSessionState((snapshot) => snapshot.progress);
@@ -115,4 +115,21 @@ export function useFoldSequenceView(): FoldSequenceView {
     progress,
     failed,
   };
+}
+
+type AnsweredPendingStep = Extract<FoldPendingStep, { status: 'landed' | 'refused' }>;
+
+/**
+ * The session's pending step, or — while the next is folding from the same
+ * state, a new seed's or another order's — the last one answered: the
+ * strip's card, the sentence over the canvas and the Step pane's pending
+ * fold stay as they were until the new one lands, rather than going and
+ * coming back under the folder's click. Let go the moment nothing is folding.
+ */
+export function useAnsweredPendingStep(pending: FoldPendingStep): FoldPendingStep {
+  const [answered, setAnswered] = useState<AnsweredPendingStep | null>(null);
+  const settled = pending.status === 'landed' || pending.status === 'refused' ? pending : null;
+  // Adjusted during render, so the frame that brings the new answer shows it.
+  if (settled ? answered !== settled : pending.status !== 'working' && answered !== null) setAnswered(settled);
+  return pending.status === 'working' && answered && sameFoldState(answered.parent, pending.parent) ? answered : pending;
 }

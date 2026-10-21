@@ -89,6 +89,8 @@ export function foldWindowPreview(
     ...(preview.refused && preview.moverFix ? { movingPoint: true } : {}),
     ...(narrower.length > 0 && narrower.every((index) => index >= 0) ? { narrowerSeed: narrower } : {}),
     landing: preview.landing,
+    // The last seed's answers, standing in while this one's are on their way (`foldShownPreview`).
+    ...(preview.held ? { held: true } : {}),
     acrossLayers: preview.build.status === 'built' && preview.build.acrossLayers === true && !tools.override,
     ...(queued ? { queued } : {}),
     ...(preview.orderResolution?.waiting && !preview.orderResolution.active ? { searching: true } : {}),

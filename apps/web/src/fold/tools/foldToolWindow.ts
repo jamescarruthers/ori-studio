@@ -134,6 +134,12 @@ export interface FoldPreview {
   narrowerSeed?: readonly number[];
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
+  /**
+   * The layers and the refusal shown are the last seed's, standing in while
+   * this one's are on their way (`foldShownPreview`): the window keeps its
+   * height, and says they are not yet this fold's by dimming them.
+   */
+  held?: boolean;
   /** A free line drawn on the crease pattern across layers the folded form puts apart (`FoldBuiltStep.acrossLayers`). */
   acrossLayers?: boolean;
   /** Enter was pressed while the preview was landing: the fold commits as soon as it has. */
@@ -367,6 +373,8 @@ export interface FoldToolWindowModel {
   /** Repeat's axis, how it is saved, and a layer order to choose (`fold/repeat`); absent for every other tool. */
   repeat?: FoldRepeatControls;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
+  /** The layers and the refusal are the last seed's, until this one's are in (`FoldPreview.held`). */
+  held?: boolean;
 }
 
 /** A crimp's second line mode: a free line or an existing crease. */
@@ -634,7 +642,8 @@ export function foldToolWindow(
   verbs: FoldToolWindowVerbs,
   host: FoldToolHost
 ): FoldToolWindowModel | null {
-  const model = toolWindow(t, view, verbs, host);
+  const shown = toolWindow(t, view, verbs, host);
+  const model = shown && view.preview?.held ? { ...shown, held: true } : shown;
   const construction = view.vertex
     ? { swivelInput: view.vertex.swivelInput, squashHinge: view.vertex.squashHinge, lineTaken: view.vertex.lineTaken }
     : {};
