@@ -3469,7 +3469,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-fold"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "oristudio-cp",
  "oristudio-fold",
@@ -3484,7 +3484,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-fold-wasm"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "console_error_panic_hook",
  "oristudio-cp",
@@ -3502,7 +3502,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-geometry"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -3511,7 +3511,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-layer-order"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "oristudio-geometry",
  "serde",
