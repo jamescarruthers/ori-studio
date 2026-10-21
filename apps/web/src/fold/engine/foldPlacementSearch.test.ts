@@ -34,6 +34,22 @@ describe('foldPlacementSearch', () => {
     await expect(runner.run(foldPlacementSearch(engine(answer(1, true)), 7, op, undefined, { index: 0 }), 1_000, ticket)).rejects.toMatchObject({ code: FOLD_SEARCH_CANCELLED });
   });
 
+  it('searches on, a press’s time at a call, while its time is spent with no placement found', () => {
+    const unfound = { ...answer(0, false), count: { orders: 0, exact: false } };
+    const bridge = engine(unfound, unfound, answer(1, true), answer(3, false));
+    const query = { index: 0, batch: 0, searchMs: 150 };
+    expect(runFoldSearch(foldPlacementSearch(bridge, 7, op, undefined, query), foldPlacementSearchBudget(query))).toMatchObject({ count: { orders: 3 } });
+    expect(bridge.order_selection.mock.calls.map((call) => call[3].searchMs)).toEqual([150, 300, 450, 450]);
+    // A stopped press reads what was found; a bounded one answers none found at its bound.
+    const stopped = engine(unfound);
+    expect(runFoldSearch(foldPlacementSearch(stopped, 7, op, undefined, { index: 0, searchMs: 0 }), 1_000)).toMatchObject({ count: { orders: 0 } });
+    expect(stopped.order_selection).toHaveBeenCalledTimes(1);
+    const never = engine(...Array.from({ length: 50 }, () => unfound));
+    runFoldSearch(foldPlacementSearch(never, 7, op, undefined, query), foldPlacementSearchBudget(query));
+    expect(never.order_selection.mock.calls.at(-1)?.[3].searchMs).toBe(1_150);
+    expect(never.order_selection.mock.calls.length).toBeLessThan(50);
+  });
+
   it('gives the driver the press’s own time and a bound beyond it', () => {
     expect(foldPlacementSearchBudget({ index: 0, searchMs: 9_600 })).toBeGreaterThan(9_600);
     expect(foldPlacementSearchBudget({ index: 0 })).toBeGreaterThan(150);
