@@ -155,7 +155,7 @@ describe('a rabbit ear’s marks from its clicks', () => {
     render(ear(CORNERS));
     const regions = seen?.fan?.regions;
     if (!regions) throw new Error('no regions');
-    const inks: FoldOverlayInks = { accent: [0, 0, 1, 1], mark: [0, 0, 0, 1], outline: [1, 1, 1, 1] };
+    const inks: FoldOverlayInks = { accent: [0, 0, 1, 1], mark: [0, 0, 0, 1], outline: [1, 1, 1, 1], selection: [1, 0.8, 0.4, 1] };
     const hit = (pick: FoldPick | null, pane: 'folded' | 'crease-pattern' = 'folded'): FoldHit => ({ pane, at: { x: 0, y: 0 }, pick });
     const overlay = (pane: 'folded' | 'crease-pattern', hovered: FoldHit | null) =>
       foldPaneOverlay({ pane, scene, picks: [], hovered, freeFrom: null, marks: [], inks, regions: regions[pane] });

@@ -39,6 +39,12 @@ export interface FoldOverlayInks {
   mark: Rgba;
   /** What a dot is outlined in against the paper. */
   outline: Rgba;
+  /**
+   * Lines a tool offers that are no crease: Repeat's axes. Edit's selection
+   * colour (`--cp-selection`), chosen to be confusable with no fold colour —
+   * the accent may be a valley's blue.
+   */
+  selection: Rgba;
 }
 
 /** CSS px: a picked point's dot, the ring round the one under the pointer, a mark's dot. */
