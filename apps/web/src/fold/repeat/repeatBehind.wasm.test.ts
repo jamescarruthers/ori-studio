@@ -41,8 +41,10 @@ function opened(path: string): FoldSequenceDocument {
 }
 
 /** The sequence's one path, folded: its steps, each with the states before and after it. */
-function replayed(e: Engine, document: FoldSequenceDocument): { steps: FoldStep[]; states: number[] } {
-  const steps = document.steps.filter((s): s is FoldStep => !isLockedStep(s));
+/** Replays the document's steps, through index `last` when given (an owner's copy may go on past what a test needs). */
+function replayed(e: Engine, document: FoldSequenceDocument, last?: number): { steps: FoldStep[]; states: number[] } {
+  const all = document.steps.filter((s): s is FoldStep => !isLockedStep(s));
+  const steps = last === undefined ? all : all.slice(0, last + 1);
   const sheet = e.sheet(document.paper);
   if (sheet.status !== 'ok') throw new Error('sheet');
   const states = [sheet.state];
@@ -129,10 +131,13 @@ describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
     "repeats crane_new's front kite precreases and petal fold behind, across the bottom-left to top-right diagonal, as the same steps folded on the back by hand",
     async () => {
       const e = await engine();
-      const { steps, states } = replayed(e, opened(CRANE));
-      // The front flap's kites and petal, wherever the owner's copy has them now (it is edited over time).
-      const k = steps.findIndex((_, i) => steps.slice(i, i + 3).map((step) => step.op.kind).join() === 'precrease,precrease,petal');
+      // The front flap's kites and petal, wherever the owner's copy has them now (it is edited over time),
+      // replayed through the petal only: later steps are the owner's, not this test's.
+      const document = opened(CRANE);
+      const listed = document.steps.filter((s): s is FoldStep => !isLockedStep(s));
+      const k = listed.findIndex((_, i) => listed.slice(i, i + 3).map((step) => step.op.kind).join() === 'precrease,precrease,petal');
       expect(k).toBeGreaterThanOrEqual(0);
+      const { steps, states } = replayed(e, document, k + 2);
       const start = states[k]!;
       const axes = repeatSymmetries(e.scene(start), e.summary(start).sheet);
       const diagonal = axes.find((axis) => Math.abs(axis.sheet.n[0] + axis.sheet.n[1]) < 1e-9 && Math.abs(axis.sheet.d) < 1e-9);
@@ -217,7 +222,7 @@ describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
 
     it('repeats a valley on the front flap behind as the same valley folded on the back by hand', async () => {
       const e = await engine();
-      const { states } = replayed(e, opened(CRANE));
+      const { states } = replayed(e, opened(CRANE), 9); // through the preliminary base (states[10])
       const prelim = states[10]!;
       const op = corner('valley');
       const after = fold(e, prelim, [op]);
@@ -231,7 +236,7 @@ describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
 
     it('repeats a mountain on the back flap behind, onto the front flap, as the valley folded there by hand', async () => {
       const e = await engine();
-      const { states } = replayed(e, opened(CRANE));
+      const { states } = replayed(e, opened(CRANE), 9); // through the preliminary base (states[10])
       const prelim = states[10]!;
       const op = corner('mountain', true);
       const after = fold(e, prelim, [op]);
@@ -247,7 +252,7 @@ describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
     "repeats an inside reverse fold of a waterbomb base's front flap behind as the same reverse fold made on the back by hand",
     async () => {
       const e = await engine();
-      const { states } = replayed(e, opened(CRANE));
+      const { states } = replayed(e, opened(CRANE), 9); // through the preliminary base (states[10])
       // crane_new's precreases, then a book fold and its two top corners reversed in: a waterbomb base.
       const waterbomb = fold(e, states[7]!, [
         { kind: 'valley', line: { via: 'free', through: [[0, 0.5], [1, 0.5]] }, moving: [0.5, 0.9], seed: { scope: 'all' }, landing: { kind: 'outer' } },
