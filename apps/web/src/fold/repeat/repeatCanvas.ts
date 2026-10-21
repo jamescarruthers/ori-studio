@@ -9,11 +9,14 @@
  *   (`FoldLandedPreview.added`), so they are the folded pane's alone here;
  * - **the axes it can repeat across**: each a line on the sheet, drawn across
  *   the crease pattern, and on the folded pane where the folded form puts
- *   it — through every face it crosses. In the theme's accent, as tool
- *   feedback, never a crease's pen and never dashed: faint while it is only
- *   offered, brighter under the pointer, brightest once taken;
+ *   it — through every face it crosses. In Edit's selection colour
+ *   (`--cp-selection`), which a theme keeps clear of the fold colours, so no
+ *   axis reads as a valley; never a crease's pen and never dashed: dimmest
+ *   where its repeat is refused, faint while it is only offered, brighter
+ *   under the pointer, brightest once taken;
  * - **a line drawn that is no symmetry axis**, while its refusal is shown:
- *   across the paper of the pane it was drawn on, fainter than a pick.
+ *   across the paper of the pane it was drawn on, in the pick's accent,
+ *   fainter than a pick.
  *
  * Which axis a point of the canvas is on (`repeatAxisAt`): on the crease
  * pattern, the one it is nearest; on the folded pane, read on the top layer
@@ -176,10 +179,15 @@ export function repeatOverlay(
 ): FoldRepeatOverlay {
   const folded: FoldOverlayStroke[] = [];
   const creasePattern: FoldOverlayStroke[] = [];
-  const stroke = (ends: readonly [Point, Point], style: { widthMul: number; alpha: number }): FoldOverlayStroke => ({
+  // The axes in Edit's selection colour, so none reads as a valley crease; a refused drawn line in the pick's accent.
+  const stroke = (
+    ends: readonly [Point, Point],
+    style: { widthMul: number; alpha: number },
+    ink: FoldOverlayInks['accent'] = inks.selection
+  ): FoldOverlayStroke => ({
     a: ends[0],
     b: ends[1],
-    color: withAlpha(inks.accent, style.alpha),
+    color: withAlpha(ink, style.alpha),
     widthMul: style.widthMul,
   });
   const order = axes.map((_, k) => k).sort((a, b) => rank(a) - rank(b));
@@ -196,10 +204,10 @@ export function repeatOverlay(
   if (drawn) {
     if (drawn.pane === 'folded' && index) {
       const ends = lineAcrossPaper(index, drawn.drawn);
-      if (ends) folded.push(stroke(ends, DRAWN));
+      if (ends) folded.push(stroke(ends, DRAWN, inks.accent));
     } else if (drawn.pane === 'crease-pattern' && outline && outline.length > 2) {
       const ends = across(outline.map(toPoint), drawn.drawn);
-      if (ends) creasePattern.push(stroke(ends, DRAWN));
+      if (ends) creasePattern.push(stroke(ends, DRAWN, inks.accent));
     }
   }
   return { folded: { dots: [], strokes: folded }, creasePattern: { dots: [], strokes: creasePattern } };

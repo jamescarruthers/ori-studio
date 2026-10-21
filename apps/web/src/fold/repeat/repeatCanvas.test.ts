@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bookScene, flatSquareScene } from '../canvas/foldCanvas.fixtures';
+import type { FoldOverlayInks } from '../canvas/foldPaneOverlays';
 import { foldPickIndex } from '../canvas/foldPicking';
 import { landedPreviewOf } from '../canvas/useFoldToolPreview';
 import type { FoldIsometry, FoldStateSummary } from '../engine/foldEngineWire';
@@ -8,7 +9,9 @@ import { repeatAxisAt, repeatAxisLines, repeatOverlay, repeatPreviewCreases } fr
 const summary = (step: number) => ({ step }) as unknown as FoldStateSummary;
 /** x ↦ 1 − x: the paper there shown back up. */
 const TURNED: FoldIsometry = [-1, 0, 1, 0, 1, 0];
-const INKS = { accent: [0, 0, 1, 1] } as unknown as Parameters<typeof repeatOverlay>[7];
+const INKS: FoldOverlayInks = { accent: [0, 0, 1, 1], mark: [0, 0, 0, 1], outline: [1, 1, 1, 1], selection: [1, 0.8, 0.4, 1] };
+/** A stroke's colour without its alpha: which ink it is in. */
+const ink = (stroke: { color: readonly number[] } | undefined) => stroke?.color.slice(0, 3);
 const SHEET: [number, number][] = [
   [0, 0],
   [1, 0],
@@ -50,6 +53,8 @@ describe("Repeat's preview on the canvas", () => {
     const [stroke] = drawn.creasePattern.strokes;
     expect([stroke!.a.x, stroke!.b.x]).toEqual([0.25, 0.25]);
     expect([stroke!.a.y, stroke!.b.y].sort()).toEqual([0, 1]);
+    // In the pick's accent: a refusal, not an axis.
+    expect(ink(stroke)).toEqual([0, 0, 1]);
     // Drawn on the folded pane with nothing indexed there: nothing to draw it across.
     expect(repeatOverlay(null, SHEET, [], -1, -1, [], { sheet: line, pane: 'folded', drawn: line }, INKS).folded.strokes).toEqual([]);
   });
@@ -64,6 +69,10 @@ describe("Repeat's preview on the canvas", () => {
     // Offered faint, hovered brighter, taken brightest: drawn in that order, the brightest on top.
     const [hovered, taken] = overlay.creasePattern.strokes;
     expect(alpha(taken!)).toBeGreaterThan(alpha(hovered!));
+    // Every axis, on both panes and in every state, in Edit's selection colour: never the accent a valley might share.
+    const refused = repeatOverlay(index, SHEET, [VERTICAL, HORIZONTAL], -1, -1, [0], null, INKS);
+    const strokes = [overlay, refused].flatMap((each) => [...each.creasePattern.strokes, ...each.folded.strokes]);
+    expect(strokes.every((each) => ink(each)?.join() === '1,0.8,0.4')).toBe(true);
     const lines = repeatAxisLines(bookScene(), SHEET, VERTICAL);
     expect(lines.folded.every(([a, b]) => Math.abs(a.x - 0.5) < 1e-12 && Math.abs(b.x - 0.5) < 1e-12)).toBe(true);
   });

@@ -19,6 +19,7 @@ const INKS: FoldOverlayInks = {
   accent: [1, 0, 0, 1] as Rgba,
   mark: [0, 1, 0, 1] as Rgba,
   outline: [0, 0, 0, 1] as Rgba,
+  selection: [1, 0.8, 0.4, 1] as Rgba,
 };
 
 /** A float32 channel's value, back to the decimals it was given in. */

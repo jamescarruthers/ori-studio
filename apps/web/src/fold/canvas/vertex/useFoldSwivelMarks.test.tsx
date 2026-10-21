@@ -15,7 +15,7 @@ import { useFoldSwivelReach } from './useFoldSwivelReach';
 
 const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
 const INK = [0.2, 0.5, 0.9, 1] as const;
-const inks: FoldCanvasInks = { accent: [...INK], danger: [...INK], overlay: { accent: [...INK], mark: [...INK], outline: [...INK] }, ground: 'black' };
+const inks: FoldCanvasInks = { accent: [...INK], danger: [...INK], overlay: { accent: [...INK], mark: [...INK], outline: [...INK], selection: [...INK] }, ground: 'black' };
 
 /** A swivel the engine described: its vertex, where its edge lands, a piece that turns. */
 const analysis = (d: number): FoldSwivelEdgeAnalysis => ({
