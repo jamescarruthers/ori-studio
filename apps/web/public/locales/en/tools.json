@@ -1033,7 +1033,7 @@
         "noFlap": {
           "hingeOffSpine": "The hinge line must cross the flap’s folded edge, with the end you click on one side of it.",
           "noHinge": "The flap folds over no hinge at either end of its spine, so there is nothing to press it flat against.",
-          "noSpine": "The two layers here are not joined by a fold, so the flap has no spine to open along.",
+          "noSpine": "These layers are not joined by a single folded edge, so there is no spine to open. A closed flap, joined through folded-in sides, cannot be squashed yet.",
           "singleLayer": "Only one layer lies here. Click a flap of two layers joined along a folded edge.",
           "title": "No flap to squash here",
           "upperNotHinged": "The flap’s top layer is held by its spine alone: pressed flat, its hinge side would lie loose."

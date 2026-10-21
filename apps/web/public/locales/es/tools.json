@@ -1056,7 +1056,7 @@
         "noFlap": {
           "hingeOffSpine": "La línea de bisagra debe cruzar el borde plegado de la solapa, con el extremo en el que haces clic a un lado.",
           "noHinge": "La solapa no se pliega sobre ninguna bisagra en ningún extremo de su lomo, así que no hay contra qué aplastarla.",
-          "noSpine": "Las dos capas de aquí no están unidas por un pliegue, así que la solapa no tiene lomo por el que abrirse.",
+          "noSpine": "Estas capas no están unidas por un único borde plegado, así que no hay lomo que abrir. Una solapa cerrada, unida por lados plegados hacia dentro, aún no se puede aplastar.",
           "singleLayer": "Aquí solo hay una capa. Haz clic en una solapa de dos capas unidas por un borde plegado.",
           "title": "No hay solapa que aplastar aquí",
           "upperNotHinged": "La capa superior de la solapa solo está sujeta por su lomo: aplastada, su lado de la bisagra quedaría suelto."

@@ -1033,7 +1033,7 @@
         "noFlap": {
           "hingeOffSpine": "Die Scharnierlinie muss die gefaltete Kante der Lasche kreuzen, mit dem angeklickten Ende auf einer Seite.",
           "noHinge": "Die Lasche faltet sich an keinem Ende ihres Rückens über ein Scharnier, also gibt es nichts, wogegen sie flach gedrückt werden kann.",
-          "noSpine": "Die beiden Lagen hier sind durch keine Faltung verbunden, also hat die Lasche keinen Rücken, an dem sie sich öffnen kann.",
+          "noSpine": "Diese Lagen sind nicht durch eine einzige Faltkante verbunden, daher gibt es keinen Rücken zum Öffnen. Eine geschlossene Klappe, die über eingefaltete Seiten verbunden ist, lässt sich noch nicht quetschen.",
           "singleLayer": "Hier liegt nur eine Lage. Klicke auf eine Lasche aus zwei Lagen, die an einer gefalteten Kante verbunden sind.",
           "title": "Hier ist keine Lasche zum Quetschen",
           "upperNotHinged": "Die oberste Lage der Lasche hängt nur an ihrem Rücken: flach gedrückt, läge ihre Scharnierseite lose."

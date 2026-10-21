@@ -1056,7 +1056,7 @@
         "noFlap": {
           "hingeOffSpine": "La ligne de charnière doit croiser le bord plié du rabat, l’extrémité cliquée d’un côté.",
           "noHinge": "Le rabat ne se plie sur aucune charnière à l’une ou l’autre extrémité de son dos : rien contre quoi l’aplatir.",
-          "noSpine": "Les deux couches ici ne sont reliées par aucun pli : le rabat n’a pas de dos le long duquel s’ouvrir.",
+          "noSpine": "Ces couches ne sont pas reliées par un seul bord plié : il n’y a pas d’arête à ouvrir. Un rabat fermé, relié par des côtés repliés vers l’intérieur, ne peut pas encore être écrasé.",
           "singleLayer": "Une seule couche ici. Cliquez sur un rabat de deux couches reliées par un bord plié.",
           "title": "Aucun rabat à écraser ici",
           "upperNotHinged": "La couche du dessus du rabat ne tient que par son dos : aplatie, son côté charnière resterait libre."

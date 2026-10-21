@@ -116,7 +116,7 @@ function noFlap(t: TFunction, cause: FoldNoFlap): string {
     case 'no_spine':
       return t(
         'tools:fold.vertex.refusal.noFlap.noSpine',
-        'The two layers here are not joined by a fold, so the flap has no spine to open along.'
+        'These layers are not joined by a single folded edge, so there is no spine to open. A closed flap, joined through folded-in sides, cannot be squashed yet.'
       );
     case 'no_hinge':
       return t(
