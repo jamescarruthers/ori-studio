@@ -70,6 +70,7 @@ fn a_squash_leaves_neighboring_attachments_and_their_cover_stationary() {
                     } else {
                         Direction::Valley
                     },
+                    hinge: None,
                 };
                 let result = landed(parent.squash(&op, &VertexChoices::default()));
                 check(&parent, &result);
@@ -155,6 +156,148 @@ fn a_corner_folded_over_the_hinge_rides_with_the_squashed_layer() {
     assert!(bottom[1] < bottom[0], "{bottom:?}");
     let replay = landed(parent.squash(&op, &result.report.stored));
     assert_eq!(replay.state.parts(), result.state.parts());
+}
+
+/// The owner's case with a drawn hinge: across the triangle's tip, square
+/// to its diagonal, x + y = 0.6 — precreased first, or a free line.
+fn tip_hinge() -> oristudio_geometry::Line {
+    oristudio_geometry::Line::from_points([0.6, 0.0], [0.0, 0.6]).unwrap()
+}
+
+fn tip_squash(parent: &State, hinge: oristudio_geometry::Line) -> Squash {
+    Squash {
+        hinge: Some(hinge),
+        ..squash_op(parent, [0.1, 0.05], None)
+    }
+}
+
+fn image(state: &State, sheet: [f64; 2]) -> [f64; 2] {
+    let face = state
+        .face_at(sheet)
+        .unwrap_or_else(|| panic!("no face at {sheet:?}"));
+    state.isometry(face).unwrap().apply(sheet)
+}
+
+#[test]
+fn a_drawn_hinge_squashes_only_the_end_beyond_it() {
+    for precreased in [true, false] {
+        let mut parent = corner_over_triangle();
+        if precreased {
+            parent = cases::precrease(&parent, [0.6, 0.0], [0.0, 0.6], [0.1, 0.1], Seed::All);
+        }
+        let op = tip_squash(&parent, tip_hinge());
+        let result = landed(parent.squash(&op, &VertexChoices::default()));
+        check(&parent, &result);
+        let state = &result.state;
+        // O is (0.3, 0.3); the lower layer creases on x = 0.3, its tip
+        // laid over its hinge side; the upper one turns across the hinge.
+        for (sheet, expected) in [
+            // The lower layer's tip, and its hinge side, which stays.
+            ([0.1, 0.05], [0.5, 0.05]),
+            ([0.4, 0.1], [0.4, 0.1]),
+            // The upper layer's hinge side, across the hinge; its tip too.
+            ([0.1, 0.4], [0.5, 0.2]),
+            ([0.05, 0.1], [0.55, 0.1]),
+            // By the spine beyond O, which lies on the hinge: (0.4, 0.2).
+            ([0.2, 0.19], [0.4, 0.19]),
+            ([0.19, 0.2], [0.41, 0.2]),
+            // The rest of the flap, both layers, and the corner stay.
+            ([0.6, 0.4], [0.6, 0.4]),
+            ([0.4, 0.6], [0.6, 0.4]),
+            ([0.95, 0.3], image(&parent, [0.95, 0.3])),
+        ] {
+            let actual = image(state, sheet);
+            assert!(
+                actual
+                    .iter()
+                    .zip(expected)
+                    .all(|(a, b)| (a - b).abs() < 1e-9),
+                "precreased {precreased}, {sheet:?}: {actual:?} != {expected:?}"
+            );
+        }
+        // Only the upper layer folds along the hinge.
+        let folded_at = |sheet: [f64; 2]| state.crease_at(sheet).map(|c| c.kind.is_folded());
+        assert_eq!(
+            folded_at([0.25, 0.35]),
+            Some(true),
+            "upper, precreased {precreased}"
+        );
+        if precreased {
+            assert_eq!(folded_at([0.35, 0.25]), Some(false), "lower");
+        }
+        let replay = landed(parent.squash(&op, &result.report.stored));
+        assert_eq!(replay.state.parts(), result.state.parts());
+    }
+}
+
+#[test]
+fn a_drawn_hinge_that_is_the_folded_one_squashes_as_the_inferred_one() {
+    let parent = corner_over_triangle();
+    let inferred = squash_op(&parent, [0.3, 0.1], None);
+    let hinge = oristudio_geometry::Line::from_points([0.75, 0.75], [0.875, 0.0]).unwrap();
+    let drawn = Squash {
+        hinge: Some(hinge),
+        ..inferred.clone()
+    };
+    let (a, b) = (
+        landed(parent.squash(&inferred, &VertexChoices::default())),
+        landed(parent.squash(&drawn, &VertexChoices::default())),
+    );
+    assert_eq!(a.state.parts(), b.state.parts());
+}
+
+#[test]
+fn a_drawn_hinge_off_the_spine_is_refused() {
+    let parent = corner_over_triangle();
+    let line = |a, b| oristudio_geometry::Line::from_points(a, b).unwrap();
+    for hinge in [
+        // Along the spine, beyond its end, and through the flap point.
+        line([0.3, 0.0], [0.6, 0.3]),
+        line([1.8, 0.0], [0.0, 1.8]),
+        line([0.1, 0.05], [0.2, -0.2]),
+    ] {
+        assert!(
+            matches!(
+                refusal(&parent, &tip_squash(&parent, hinge)),
+                FoldRefusal::SquashNoFlap {
+                    cause: NoFlap::HingeOffSpine,
+                    ..
+                }
+            ),
+            "{hinge:?}"
+        );
+    }
+    // One layer where the flap point is: no flap, whatever the hinge.
+    let corner = cases::valley(&cases::square(), [0.25, 0.0], [0.25, 1.0], [0.0, 0.5]);
+    let op = Squash {
+        hinge: Some(line([0.0, 0.5], [1.0, 0.5])),
+        ..squash_op(&corner, [0.8, 0.2], None)
+    };
+    assert!(matches!(
+        refusal(&corner, &op),
+        FoldRefusal::SquashNoFlap {
+            cause: NoFlap::SingleLayer,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn a_drawn_hinge_keeps_the_cover_and_free_flap_checks() {
+    // The flap's end beyond a line near the folded corner: the corner lies
+    // over it, folded to it off the line.
+    let parent = corner_over_triangle();
+    let hinge = oristudio_geometry::Line::from_points([0.0, 1.2], [1.2, 0.0]).unwrap();
+    let op = Squash {
+        flap: [0.55, 0.7],
+        target: None,
+        direction: Direction::Valley,
+        hinge: Some(hinge),
+    };
+    assert!(matches!(
+        refusal(&parent, &op),
+        FoldRefusal::SquashFlapNotFree { .. } | FoldRefusal::SquashFlapCovered { .. }
+    ));
 }
 
 #[test]
@@ -395,6 +538,7 @@ fn a_squash_needs_a_free_uncovered_two_layer_flap() {
         flap: under,
         target: None,
         direction: Direction::Valley,
+        hinge: None,
     };
     assert_eq!(
         refusal(&tri, &op),

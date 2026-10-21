@@ -24,7 +24,7 @@ import { pocketNames } from '../tools/sink/sinkStep';
 import type { FoldSinkWindowView } from '../tools/sink/sinkToolWindow';
 import { isSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldTuckWindowView } from '../tools/tuck/tuckToolWindow';
-import { isLocated, type FoldToolState } from '../tools/foldToolState';
+import { isLocated, locatesTakenLine, type FoldToolState } from '../tools/foldToolState';
 import type { FoldExtentMode } from '../tools/precrease/precreaseExtent';
 import { isLineTool, isSinkTool, isVertexTool, type FoldKeyLabel } from '../tools/foldToolCatalog';
 import { SWIVEL_TARGET_FROM } from '../tools/vertex/vertexInputs';
@@ -227,8 +227,15 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
     ...(tool === 'swivel'
       ? {
           swivelInput: tools.swivelInput ?? 'edge',
-          valleyTaken: tools.swivelValley !== undefined,
-          lineLocated: preview.swivelLocated != null,
+          lineTaken: tools.takenLine !== undefined,
+          lineLocated: preview.locatedLine != null,
+        }
+      : {}),
+    ...(tool === 'squash'
+      ? {
+          squashHinge: tools.squashHinge ?? 'folded',
+          lineTaken: tools.takenLine !== undefined,
+          lineLocated: preview.locatedLine != null,
         }
       : {}),
     ...(directions && directions.length === 2 ? { directions } : {}),
@@ -394,22 +401,28 @@ export function foldLocatedLines(
 }
 
 /**
- * A swivel by its valley and mountain's lines before the engine has
- * described its fold: the valley taken, and the line the picks locate now —
- * the valley until it is taken, then the mountain — across the paper on the
- * folded pane, each in its letter's diagram pen, as the fold will crease
- * them. Null for any other tool, and with no line in.
+ * The lines a construction locates with the line modes, before the engine
+ * has described its fold, across the paper on the folded pane, each in its
+ * letter's diagram pen, as the fold will crease them. A swivel by its valley
+ * and mountain: the valley taken, and the line the picks locate now — the
+ * valley until it is taken, then the mountain. A squash's drawn hinge, as it
+ * is located and once taken, in its direction's pen: the flap's upper layer
+ * folds along it. Null for any other tool, and with no line in.
  */
-export function swivelLinesPending(
+export function takenLinesPending(
   index: FoldPickIndex | null,
-  tools: Pick<FoldToolState, 'tool' | 'swivelInput' | 'swivelValley'>,
-  located: FoldToolPreview['swivelLocated']
+  tools: Pick<FoldToolState, 'tool' | 'swivelInput' | 'squashHinge' | 'takenLine' | 'vertexDirection'>,
+  located: FoldToolPreview['locatedLine']
 ): FoldPendingCreases | null {
-  if (!index || tools.tool !== 'swivel' || tools.swivelInput !== 'valley-mountain') return null;
-  const lines: [FoldToolState['swivelValley'] | null | undefined, FoldLetter][] = [
-    [tools.swivelValley, 'valley'],
-    [located, tools.swivelValley ? 'mountain' : 'valley'],
-  ];
+  if (!index || !locatesTakenLine(tools)) return null;
+  const { takenLine } = tools;
+  const lines: [FoldToolState['takenLine'] | null | undefined, FoldLetter][] =
+    tools.tool === 'squash'
+      ? [[takenLine ?? located, tools.vertexDirection]]
+      : [
+          [takenLine, 'valley'],
+          [located, takenLine ? 'mountain' : 'valley'],
+        ];
   const folded = lines.flatMap(([line, letter]) => {
     const segment = line ? lineAcrossPaper(index, line.sceneLine) : null;
     return segment ? [{ line: segment, letter }] : [];

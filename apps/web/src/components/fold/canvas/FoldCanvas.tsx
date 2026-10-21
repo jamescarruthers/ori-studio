@@ -34,10 +34,11 @@ import {
   foldTuckWindowView,
   foldVertexWindowView,
   foldWindowPreview,
-  swivelLinesPending,
+  takenLinesPending,
 } from '../../../fold/canvas/foldCanvasModel';
 import { useFoldFanMarks } from '../../../fold/canvas/vertex/useFoldFanMarks';
 import { useFoldPetalMarks } from '../../../fold/canvas/vertex/useFoldPetalMarks';
+import { useFoldSquashMarks } from '../../../fold/canvas/vertex/useFoldSquashMarks';
 import { useFoldSwivelMarks } from '../../../fold/canvas/vertex/useFoldSwivelMarks';
 import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
 import { swivelMeetingMarks } from '../../../fold/canvas/vertex/swivelMeeting';
@@ -167,13 +168,15 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const swivelMarks = useFoldSwivelMarks(view.index, toolState, preview.vertex?.reach ?? null, inks);
   // Repeat's preview: the creases it adds, where its folded result puts them.
   const repeatCreases = useFoldRepeatCreases(toolState.tool === 'repeat' ? preview.landed : null);
-  // A swivel by its valley and mountain's lines in their pens, until its fold draws its own.
-  const swivelLines = useMemo(
-    () => swivelLinesPending(view.index, toolState, preview.swivelLocated ?? null),
-    [view.index, toolState, preview.swivelLocated]
+  // A swivel by its valley and mountain's lines in their pens, until its fold draws its own; a squash's drawn hinge.
+  const takenLines = useMemo(
+    () => takenLinesPending(view.index, toolState, preview.locatedLine ?? null),
+    [view.index, toolState, preview.locatedLine]
   );
-  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? swivelLines ?? repeatCreases;
-  const regions = fanMarks?.regions ?? petalMarks.regions;
+  // A squash's flap under the pointer, before it is clicked.
+  const squashMarks = useFoldSquashMarks(session, view.index, toolState);
+  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? takenLines ?? repeatCreases;
+  const regions = fanMarks?.regions ?? petalMarks.regions ?? squashMarks.regions;
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending, orderScene);
   const componentPairs = importChoice?.opened.components[importChoice.component]?.pairs ?? [];
   const orderTint = inks && resolvingOrder && !shownSpread ? foldRegionTint({
@@ -254,13 +257,15 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const { onHover: onWovenHover } = woven;
   const { onHover: onPetalHover } = petalMarks;
   const { onHover: onSwivelHover } = swivelMarks;
+  const { onHover: onSquashHover } = squashMarks;
   const onFoldedHover = useCallback(
     (hit: FoldHit | null) => {
       onWovenHover(hit);
       onPetalHover(hit);
       onSwivelHover(hit);
+      onSquashHover(hit);
     },
-    [onWovenHover, onPetalHover, onSwivelHover]
+    [onWovenHover, onPetalHover, onSwivelHover, onSquashHover]
   );
   const onCreaseHover = useCallback(
     (hit: FoldHit | null) => {

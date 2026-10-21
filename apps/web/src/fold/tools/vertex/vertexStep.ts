@@ -83,7 +83,7 @@ import { applyIsometry, invertIsometry, lineThrough, polygonArea, sideOf, toPair
 import { foldStackAt, type FoldPick, type FoldPickIndex, type FoldSegmentPick } from '../../canvas/foldPicking';
 import { isVertexTool, type FoldLineBy, type FoldToolId, type FoldVertexToolId } from '../foldToolCatalog';
 import { fanHingeRay, fanLayerProbe, fanRegionAt, fanRegionOnFolded, fanStayer, fanToward, type FoldFanGiven } from './fanGeometry';
-import { lineByClicks, SWIVEL_TARGET_FROM, type FoldSwivelInput } from './vertexInputs';
+import { lineByClicks, SWIVEL_TARGET_FROM, type FoldSquashHinge, type FoldSwivelInput } from './vertexInputs';
 
 /** What the tools have picked for a vertex fold, and every choice made of what the engine lists. */
 export interface FoldVertexIntent {
@@ -97,6 +97,9 @@ export interface FoldVertexIntent {
   /** A swivel by its valley and mountain's valley, once taken, and its mountain, once located. */
   swivelValley?: FoldLocatedLine;
   swivelMountain?: FoldLocatedLine;
+  /** A squash's hinge: the folded edge, or a line drawn; and that line, once taken. */
+  squashHinge?: FoldSquashHinge;
+  hinge?: FoldLocatedLine;
   /** In click order (`vertexInputs`). */
   picks: readonly FoldPick[];
   /** As the viewer sees it. */
@@ -230,6 +233,52 @@ export function petalOpAt(
   const hinge = petalHingeOf(intent);
   const petal = layerSheetPointAt(index, scene, intent.direction);
   return hinge && petal ? petalOp(hinge, petal, intent.direction) : null;
+}
+
+// ---------------------------------------------------------------------------
+// A squash's flap
+
+/** A line the tools took (`FoldToolState.takenLine`) as a step stores it: without its line on the folded pane. */
+export function storedLine(line: (FoldLocatedLine & { sceneLine?: FoldModelLine }) | undefined): FoldLocatedLine | undefined {
+  return line ? { line: line.line, ...(line.root ? { root: line.root } : {}) } : undefined;
+}
+
+/** A squash of the flap a sheet point names, about the hinge the intent takes: the drawn one, when it is. */
+function squashOp(flap: SheetPoint, intent: Pick<FoldVertexIntent, 'direction' | 'hinge'>): FoldVertexOp {
+  return { kind: 'squash', flap, direction: intent.direction, ...(intent.hinge ? { hinge: intent.hinge } : {}) };
+}
+
+/**
+ * The squash whose flap is the paper at a point of the folded pane — the
+ * layer the viewer sees there, on the direction's side — about the hinge the
+ * intent takes; null off the paper, or while a drawn hinge is not yet taken.
+ */
+export function squashOpAt(
+  index: FoldPickIndex,
+  intent: Pick<FoldVertexIntent, 'direction' | 'squashHinge' | 'hinge'>,
+  scene: Point
+): FoldVertexOp | null {
+  if (intent.squashHinge === 'line' && !intent.hinge) return null;
+  const flap = layerSheetPointAt(index, scene, intent.direction);
+  return flap ? squashOp(flap, intent) : null;
+}
+
+/**
+ * Which flap a point of the folded pane names for a squash, as a key: the
+ * face the viewer sees there, and about a drawn hinge (its line on the
+ * folded pane, `hingeScene`) the side of it the point is on — each side's
+ * end is another flap. Null off the paper.
+ */
+export function squashFlapKey(
+  index: FoldPickIndex,
+  direction: FoldDirection,
+  hingeScene: FoldModelLine | null,
+  scene: Point
+): string | null {
+  const stack = foldStackAt(index, scene);
+  const face = direction === 'valley' ? stack[0] : stack[stack.length - 1];
+  if (face === undefined) return null;
+  return hingeScene ? `${face}${sideOf(hingeScene, scene) >= 0 ? '+' : '-'}` : `${face}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -383,10 +432,12 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
   };
   switch (intent.tool) {
     case 'squash': {
+      // About a drawn hinge, nothing until it is taken: the picks before then locate it.
+      if (intent.squashHinge === 'line' && !intent.hinge) return null;
       if (picks.length < 1) return null;
       const flap = layer(picks[0]);
       if (!flap) return offPaper(null);
-      return { kind: 'squash', flap, direction };
+      return squashOp(flap, intent);
     }
     case 'petal': {
       const clicks = petalHingeClicks(intent);

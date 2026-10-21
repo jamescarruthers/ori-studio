@@ -29,13 +29,15 @@ export function useFoldRailGroups(): readonly FoldRailGroup[] {
   const tool = useFoldTools((state) => state.tool);
   const lineMode = useFoldTools(activeFoldLineMode);
   const swivelInput = useFoldTools((state) => state.swivelInput);
+  const squashHinge = useFoldTools((state) => state.squashHinge);
+  const lineTaken = useFoldTools((state) => state.takenLine !== undefined);
   const readOnly = useFoldReadOnly();
   const atSheet = useFoldSessionState((snapshot) => snapshot.cursor === null);
   return useMemo(() => {
     const tools = foldTools();
     return foldRailGroups(
       t,
-      { tool, lineMode, swivelInput, readOnly, atSheet },
+      { tool, lineMode, construction: { swivelInput, squashHinge, lineTaken }, readOnly, atSheet },
       {
         selectTool: (id) => tools.selectTool(id),
         selectLineMode: (id) => tools.selectLineMode(id),
@@ -44,5 +46,5 @@ export function useFoldRailGroups(): readonly FoldRailGroup[] {
         turn: (turn) => withFoldCanvasVerbs((verbs) => verbs.turn(turn)),
       }
     );
-  }, [t, tool, lineMode, swivelInput, readOnly, atSheet]);
+  }, [t, tool, lineMode, swivelInput, squashHinge, lineTaken, readOnly, atSheet]);
 }

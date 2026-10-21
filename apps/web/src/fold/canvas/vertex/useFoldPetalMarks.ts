@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Point } from '../../../lib/geometry';
-import { reportError } from '../../../monitoring';
 import { canonicalJson } from '../../document/foldDigest';
-import type { FoldPetalAnalysis } from '../../engine/foldEngineSquashWire';
+import type { FoldPetalAnalysis, FoldVertexAnalysis } from '../../engine/foldEngineSquashWire';
 import type { FoldSessionSurface } from '../../session/useFoldSession';
 import type { FoldToolState } from '../../tools/foldToolState';
 import { petalRegionOnFolded, petalRegionOnSheet, sameKite } from '../../tools/vertex/petalGeometry';
@@ -17,6 +16,7 @@ import {
 import type { FoldOverlayRegions } from '../foldPaneOverlays';
 import type { FoldPaneCreaseLine, FoldPendingCreases } from '../foldPaneScenes';
 import type { FoldHit, FoldPaneId, FoldPickIndex } from '../foldPicking';
+import { useFoldFlapAnswers } from './useFoldFlapAnswers';
 import { vertexCreaseLines } from './vertexOverlay';
 
 /** What a petal fold's clicks draw on the panes before its flap is folded, and the hover that feeds them. */
@@ -35,16 +35,8 @@ export interface FoldPetalMarks {
   onHover: (hit: FoldHit | null) => void;
 }
 
-/** What the engine said of the flap at a key: being asked, a flap it describes, or none. */
-type FlapAnswer = { status: 'asking' } | { status: 'flap'; analysis: FoldPetalAnalysis } | { status: 'none' };
-
-interface Answers {
-  /** The state, the hinge and the direction they were asked for. */
-  scope: string;
-  byKey: Readonly<Record<string, FlapAnswer>>;
-}
-
-const NO_ANSWERS: Answers = { scope: '', byKey: {} };
+/** A petal the engine describes, from its answer: none for another kind's. */
+const readPetal = (analysis: FoldVertexAnalysis): FoldPetalAnalysis | null => (analysis.kind === 'petal' ? analysis : null);
 
 /** A distinct flap the engine described, and its pieces on each pane. */
 interface Flap {
@@ -82,7 +74,6 @@ export function useFoldPetalMarks(
   index: FoldPickIndex | null,
   tools: Pick<FoldToolState, 'tool' | 'petalHinge' | 'picks' | 'vertexDirection'>
 ): FoldPetalMarks {
-  const { withCursor } = session;
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
   const { tool, petalHinge, picks, vertexDirection: direction } = tools;
@@ -96,42 +87,16 @@ export function useFoldPetalMarks(
   const hinge = useMemo(() => (choosing ? petalHingeOf(intent) : null), [choosing, intent]);
   const scope = hinge && stateKey ? `${stateKey}|${canonicalJson(hinge)}|${direction}` : null;
 
-  const [answers, setAnswers] = useState<Answers>(NO_ANSWERS);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [liveEnd, setLiveEnd] = useState<Point | null>(null);
-  const byKey = answers.scope === scope ? answers.byKey : NO_ANSWERS.byKey;
-  // The keys asked in this scope: read and written as the pointer moves, never rendered.
-  const asked = useRef<{ scope: string | null; keys: Set<string> }>({ scope: null, keys: new Set() });
+  const { byKey, ask: askOp } = useFoldFlapAnswers(session, scope, readPetal, 'fold:petal-region');
 
   /** Ask the engine about the flap at a point of the folded pane, once per key. */
   const ask = useCallback(
     (key: string, at: Point) => {
-      if (!scope || !index) return;
-      if (asked.current.scope !== scope) asked.current = { scope, keys: new Set() };
-      if (asked.current.keys.has(key)) return;
-      asked.current.keys.add(key);
-      const settle = (answer: FlapAnswer) =>
-        setAnswers((current) => {
-          const known = current.scope === scope ? current.byKey : {};
-          return { scope, byKey: { ...known, [key]: answer } };
-        });
-      const op = petalOpAt(index, intent, at);
-      if (!op) {
-        settle({ status: 'none' });
-        return;
-      }
-      settle({ status: 'asking' });
-      void withCursor((engine, handle) => engine.compoundAnalysis(handle, op)).then(
-        (reply) => {
-          if (reply.status !== 'answered') return;
-          const value = reply.value;
-          const analysis = value.status === 'ok' && value.family === 'vertex' ? value.analysis : null;
-          settle(analysis?.kind === 'petal' ? { status: 'flap', analysis } : { status: 'none' });
-        },
-        (error: unknown) => reportError(error, { surface: 'fold:petal-region' })
-      );
+      if (index) askOp(key, petalOpAt(index, intent, at));
     },
-    [scope, index, intent, withCursor]
+    [index, intent, askOp]
   );
 
   const onHover = useCallback(

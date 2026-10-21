@@ -72,6 +72,7 @@ function verbs(): FoldCanvasVerbs {
     setVertexDirection: vi.fn(),
     setSwivelKind: vi.fn(),
     setSwivelInput: vi.fn(),
+    setSquashHinge: vi.fn(),
     vertexOtherWay: vi.fn(),
     stepEmergent: vi.fn(),
     takeEmergent: vi.fn(),

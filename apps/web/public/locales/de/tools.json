@@ -1030,6 +1030,7 @@
           "titleValleyMountain": "Die Linien treffen sich nicht auf einer gefalteten Kante"
         },
         "noFlap": {
+          "hingeOffSpine": "Die Scharnierlinie muss die gefaltete Kante der Lasche kreuzen, mit dem angeklickten Ende auf einer Seite.",
           "noHinge": "Die Lasche faltet sich an keinem Ende ihres Rückens über ein Scharnier, also gibt es nichts, wogegen sie flach gedrückt werden kann.",
           "noSpine": "Die beiden Lagen hier sind durch keine Faltung verbunden, also hat die Lasche keinen Rücken, an dem sie sich öffnen kann.",
           "singleLayer": "Hier liegt nur eine Lage. Klicke auf eine Lasche aus zwei Lagen, die an einer gefalteten Kante verbunden sind.",
@@ -1128,6 +1129,18 @@
       },
       "reset": "Zurück auf das Scharnier",
       "ridge": "Grat",
+      "squashHinge": {
+        "folded": "Gefaltete Kante",
+        "foldedHelp": "Die Falte, um die die untere Lage der Lasche umschlägt: die ganze Lasche wird gequetscht",
+        "intro": "Zeichne das Scharnier quer über die gefaltete Kante der Lasche. Nur das Ende jenseits davon wird gequetscht.",
+        "label": "Scharnier",
+        "line": "Linie",
+        "lineHelp": "Eine gezeichnete Linie: nur das Ende der Lasche jenseits davon wird gequetscht",
+        "lineMode": "Scharnierlinie",
+        "take": "Drücke Enter, um sie als Scharnier zu übernehmen.",
+        "takeTouch": "Tippe auf Als Scharnier verwenden.",
+        "use": "Als Scharnier verwenden"
+      },
       "steps": {
         "earChoose": "Wähle die Lagen oder klicke auf einen anderen Bereich für den Scharnierfalz.",
         "earChooseTouch": "Wähle die Lagen oder tippe auf einen anderen Bereich für den Scharnierfalz.",
@@ -1157,6 +1170,8 @@
         "petalWayTouch": "Wähle, in welche Richtung sie sich hebt, oder tippe auf eine andere Lasche, um diese anzuheben.",
         "pickAgainRead": "Drücke Esc und wähle neu: Der Hinweis unten sagt, was zu ändern ist.",
         "pickAgainReadTouch": "Tippe auf Abbrechen und wähle neu: Der Hinweis unten sagt, was zu ändern ist.",
+        "squashEnd": "Klicke auf das Ende der Lasche, das gequetscht werden soll, auf einer Seite der Linie.",
+        "squashEndTouch": "Tippe auf das Ende der Lasche, das gequetscht werden soll, auf einer Seite der Linie.",
         "squashFlap": "Klicke auf die Lasche, die gequetscht werden soll.",
         "squashFlapTouch": "Tippe auf die Lasche, die gequetscht werden soll.",
         "squashSpine": "Der Rücken landet auf der fetten Linie: Klicke auf das Papier, um ihn woanders landen zu lassen.",

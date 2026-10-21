@@ -94,10 +94,14 @@ export function vertexSentence(
     return swivelFoldSentence(t, direction, form.target, form.inside === true);
   }
   const scores = form !== undefined && 'hinge' in form && form.hinge === 'points';
+  // About a drawn hinge, only the flap's end beyond it squashes.
+  const end = form !== undefined && 'squashHinge' in form;
   if (direction === 'mountain') {
     switch (fold) {
       case 'squash':
-        return t('panels:fold.sentence.behind.squash', 'Squash-fold the flap behind.');
+        return end
+          ? t('panels:fold.sentence.behind.squashEnd', 'Squash-fold the end of the flap behind, lifting it along the line.')
+          : t('panels:fold.sentence.behind.squash', 'Squash-fold the flap behind.');
       case 'petal':
         return scores
           ? t('panels:fold.sentence.behind.petalScores', 'Petal-fold the flap behind, creasing its hinge as it lifts.')
@@ -110,7 +114,9 @@ export function vertexSentence(
   }
   switch (fold) {
     case 'squash':
-      return t('panels:fold.sentence.squash', 'Squash-fold the flap.');
+      return end
+        ? t('panels:fold.sentence.squashEnd', 'Squash-fold the end of the flap, lifting it along the line.')
+        : t('panels:fold.sentence.squash', 'Squash-fold the flap.');
     case 'petal':
       return scores
         ? t('panels:fold.sentence.petalScores', 'Petal-fold the flap, creasing its hinge as it lifts.')
@@ -213,6 +219,18 @@ function swivelKindRow(t: TFunction, inside: boolean): FoldVertexRow {
  */
 export function vertexRows(t: TFunction, form: FoldVertexSentenceForm | undefined): FoldVertexRow[] {
   if (!form) return [];
+  if ('squashHinge' in form) {
+    return [
+      {
+        label: t('panels:fold.step.hinge', 'Hinge'),
+        value: t('panels:fold.words.squashHingeLine', 'Drawn line'),
+        help: t(
+          'panels:fold.step.squashHingeHelp',
+          'Only the flap’s end beyond the line squashes: lifted along it, opened and pressed flat, its folded edge laid on the line.'
+        ),
+      },
+    ];
+  }
   if ('hinge' in form) {
     return [
       {

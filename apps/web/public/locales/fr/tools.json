@@ -1053,6 +1053,7 @@
           "titleValleyMountain": "Les lignes ne se rejoignent pas sur un bord plié"
         },
         "noFlap": {
+          "hingeOffSpine": "La ligne de charnière doit croiser le bord plié du rabat, l’extrémité cliquée d’un côté.",
           "noHinge": "Le rabat ne se plie sur aucune charnière à l’une ou l’autre extrémité de son dos : rien contre quoi l’aplatir.",
           "noSpine": "Les deux couches ici ne sont reliées par aucun pli : le rabat n’a pas de dos le long duquel s’ouvrir.",
           "singleLayer": "Une seule couche ici. Cliquez sur un rabat de deux couches reliées par un bord plié.",
@@ -1151,6 +1152,18 @@
       },
       "reset": "Revenir à la charnière",
       "ridge": "Arête",
+      "squashHinge": {
+        "folded": "Bord plié",
+        "foldedHelp": "Le pli autour duquel tourne la couche inférieure du rabat : tout le rabat est écrasé",
+        "intro": "Tracez la charnière en travers du bord plié du rabat. Seule l’extrémité au-delà est écrasée.",
+        "label": "Charnière",
+        "line": "Ligne",
+        "lineHelp": "Une ligne que vous tracez : seule l’extrémité du rabat au-delà est écrasée",
+        "lineMode": "Ligne de charnière",
+        "take": "Appuyez sur Entrée pour la prendre comme charnière.",
+        "takeTouch": "Touchez Utiliser comme charnière.",
+        "use": "Utiliser comme charnière"
+      },
       "steps": {
         "earChoose": "Choisissez les couches ou cliquez sur une autre région pour le pli de charnière.",
         "earChooseTouch": "Choisissez les couches ou touchez une autre région pour le pli de charnière.",
@@ -1180,6 +1193,8 @@
         "petalWayTouch": "Choisissez de quel côté il se soulève, ou touchez un autre rabat pour soulever celui-là.",
         "pickAgainRead": "Appuyez sur Échap et choisissez de nouveau : l’avis ci-dessous dit quoi changer.",
         "pickAgainReadTouch": "Touchez Annuler et choisissez de nouveau : l’avis ci-dessous dit quoi changer.",
+        "squashEnd": "Cliquez sur l’extrémité du rabat à écraser, d’un côté de la ligne.",
+        "squashEndTouch": "Touchez l’extrémité du rabat à écraser, d’un côté de la ligne.",
         "squashFlap": "Cliquez sur le rabat à écraser.",
         "squashFlapTouch": "Touchez le rabat à écraser.",
         "squashSpine": "Le dos se pose sur le trait gras : cliquez sur le papier pour le poser ailleurs.",

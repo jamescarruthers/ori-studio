@@ -20,7 +20,7 @@ import {
   foldVertexWindowView,
   foldWindowPreview,
   refusedFaceInks,
-  swivelLinesPending,
+  takenLinesPending,
 } from './foldCanvasModel';
 import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
 
@@ -189,12 +189,17 @@ describe('the Fold canvas model', () => {
     const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel', swivelInput: 'valley-mountain' };
     const line = (d: number) => ({ line: { via: 'free' as const, through: [[0, d], [1, d]] as [[number, number], [number, number]] }, sceneLine: { n: [0, 1] as [number, number], d } });
     const letters = (state: FoldToolState, located: ReturnType<typeof line> | null) =>
-      swivelLinesPending(index, state, located)?.folded.map((crease) => crease.letter) ?? null;
+      takenLinesPending(index, state, located)?.folded.map((crease) => crease.letter) ?? null;
     // Locating the valley: drawn as a valley.
     expect(letters(swivel, line(0.3))).toEqual(['valley']);
     // Taken: the valley stays, and the line located now is the mountain.
-    expect(letters({ ...swivel, swivelValley: line(0.3) }, line(0.6))).toEqual(['valley', 'mountain']);
-    expect(letters({ ...swivel, swivelValley: line(0.3) }, null)).toEqual(['valley']);
+    expect(letters({ ...swivel, takenLine: line(0.3) }, line(0.6))).toEqual(['valley', 'mountain']);
+    expect(letters({ ...swivel, takenLine: line(0.3) }, null)).toEqual(['valley']);
+    // A squash's drawn hinge, located and then taken, in its direction's pen.
+    const squash: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'squash', squashHinge: 'line' };
+    expect(letters(squash, line(0.3))).toEqual(['valley']);
+    expect(letters({ ...squash, takenLine: line(0.3), vertexDirection: 'mountain' }, null)).toEqual(['mountain']);
+    expect(letters({ ...squash, squashHinge: 'folded' }, line(0.3))).toBeNull();
     // Nothing for the swivel by its edge, or with nothing located.
     expect(letters({ ...swivel, swivelInput: 'edge' }, line(0.3))).toBeNull();
     expect(letters(swivel, null)).toBeNull();

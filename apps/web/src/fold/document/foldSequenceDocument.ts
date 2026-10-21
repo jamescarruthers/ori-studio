@@ -387,12 +387,20 @@ export type FoldModelDirection = readonly [number, number];
  * its spine lands — a direction from the flap's vertex, absent for its hinge
  * line (the symmetric squash). The engine creases each layer on a line of
  * its own.
+ *
+ * Its hinge is the one the flap's lower layer folds over, unless `hinge`
+ * draws one, located as a fold's line is: then only the flap's end on the
+ * flap point's side of it squashes, lifted along it, the spine landing on
+ * it. Only a drawn hinge is spelled, so every other squash reads and writes
+ * as it always did; a build before it reads `hinge` as a key it does not
+ * know and locks the step rather than squash the whole flap.
  */
 export interface FoldSquashOp {
   kind: 'squash';
   flap: SheetPoint;
   target?: FoldModelDirection;
   direction: FoldDirection;
+  hinge?: FoldLocatedLine;
 }
 
 /**

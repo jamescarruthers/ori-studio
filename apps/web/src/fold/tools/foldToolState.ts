@@ -49,7 +49,7 @@ import { sameFlap } from './crossSection';
 import { lineModeInput, locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
 import { extentClicks, type FoldExtentMode } from './precrease/precreaseExtent';
 import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
-import { SWIVEL_TARGET_FROM, type FoldSwivelInput } from './vertex/vertexInputs';
+import { SWIVEL_TARGET_FROM, type FoldSquashHinge, type FoldSwivelInput } from './vertex/vertexInputs';
 
 /** Wrap without adding two potentially MAX_SAFE_INTEGER-sized indices. */
 function wrappedOpening(index: number, delta: number, count: number): number {
@@ -224,11 +224,15 @@ export interface FoldToolState {
   swivelTarget: FoldLineBy;
   /** How a swivel is constructed: by its edge onto a line, or by its valley and mountain. Kept from fold to fold. */
   swivelInput?: FoldSwivelInput;
+  /** A squash's hinge: the folded edge it infers, or a line drawn with the line modes. Kept from fold to fold. */
+  squashHinge?: FoldSquashHinge;
   /**
-   * A swivel by its valley and mountain's valley, once taken: the line as it
-   * was located, and on the folded pane. The picks then locate its mountain.
+   * The line a construction takes before its picks go on, once taken: the
+   * line as it was located, and on the folded pane. A swivel by its valley
+   * and mountain's valley, its picks then locating the mountain; a squash's
+   * drawn hinge, its pick then the flap's end.
    */
-  swivelValley?: FoldLocatedLine & { sceneLine: FoldModelLine };
+  takenLine?: FoldLocatedLine & { sceneLine: FoldModelLine };
   override: FoldToolOverride | null;
   divide: FoldDivideSettings;
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
@@ -305,7 +309,7 @@ function located(state: FoldToolState): FoldToolState {
   return {
     ...state,
     picks: [],
-    swivelValley: undefined,
+    takenLine: undefined,
     extentPicks: [],
     root: 0,
     secondRoot: 0,
@@ -348,13 +352,25 @@ function isSinkKindTool(tool: FoldToolId): boolean {
  */
 export function foldToolInput(
   state: Pick<FoldToolState, 'tool' | 'lineMode'> &
-    Partial<Pick<FoldToolState, 'secondLineMode' | 'petalHinge' | 'swivelTarget' | 'swivelInput'>>
+    Partial<Pick<FoldToolState, 'secondLineMode' | 'petalHinge' | 'swivelTarget' | 'swivelInput' | 'squashHinge' | 'takenLine'>>
 ): FoldInputModel | null {
   return toolInput(state.tool, state.lineMode, state.secondLineMode, {
     petalHinge: state.petalHinge ?? 'crease',
     swivelTarget: state.swivelTarget ?? 'crease',
     swivelInput: state.swivelInput ?? 'edge',
+    squashHinge: state.squashHinge ?? 'folded',
+    lineTaken: state.takenLine !== undefined,
   });
+}
+
+/**
+ * Whether the tool in hand locates a line of its own with the line modes,
+ * taken before its picks go on (`takenLine`): a swivel by its valley and
+ * mountain, both of its lines; a squash about a drawn hinge, until it is
+ * taken.
+ */
+export function locatesTakenLine(state: Pick<FoldToolState, 'tool' | 'swivelInput' | 'squashHinge'>): boolean {
+  return (state.tool === 'swivel' && state.swivelInput === 'valley-mountain') || (state.tool === 'squash' && state.squashHinge === 'line');
 }
 
 /**
@@ -385,7 +401,7 @@ export function isLocated(state: FoldToolState): boolean {
 
 /** Whether anything is under way that Escape would let go. */
 export function hasToolInput(state: FoldToolState): boolean {
-  return state.picks.length > 0 || state.extentPicks.length > 0 || state.override !== null || state.swivelValley !== undefined;
+  return state.picks.length > 0 || state.extentPicks.length > 0 || state.override !== null || state.takenLine !== undefined;
 }
 
 /**
@@ -466,8 +482,10 @@ export interface FoldTools {
   setPetalHinge(hinge: FoldLineBy): void;
   /** Construct a swivel by its edge onto a line, or by its valley and mountain: its picks start again. */
   setSwivelInput(mode: FoldSwivelInput): void;
-  /** Take the line located as a swivel's valley: the picks start again, for its mountain. */
-  takeSwivelValley(line: NonNullable<FoldToolState['swivelValley']>): void;
+  /** Take the line located (`locatesTakenLine`): a swivel's valley, or a squash's hinge. The picks start again, for what comes next. */
+  takeLine(line: NonNullable<FoldToolState['takenLine']>): void;
+  /** Squash about the folded edge, or a drawn line: its picks start again. */
+  setSquashHinge(hinge: FoldSquashHinge): void;
   /** Name a swivel's target by a crease or edge, or by two points: its pivot and edge stay, its target is clicked anew. */
   setSwivelTarget(target: FoldLineBy): void;
   /** Where a squash's spine lands; null for the hinge line. */
@@ -608,10 +626,11 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         // any other tool takes a fold in hand.
         // A swivel by its valley and mountain locates its lines in a line
         // mode too: it stays in hand, and the valley taken stays taken.
-        const twoLines = state.tool === 'swivel' && state.swivelInput === 'valley-mountain';
-        const tool = twoLines ? 'swivel' : locatesLine(state.tool) ? state.tool : 'valley';
+        // So does a squash about a drawn hinge.
+        const twoLines = locatesTakenLine(state);
+        const tool = twoLines ? state.tool : locatesLine(state.tool) ? state.tool : 'valley';
         if (state.lineMode === lineMode && state.tool === tool) return state;
-        return { ...restart(state), tool, lineMode, ...(twoLines ? { swivelValley: state.swivelValley } : {}) };
+        return { ...restart(state), tool, lineMode, ...(twoLines ? { takenLine: state.takenLine } : {}) };
       });
     },
 
@@ -809,8 +828,11 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       });
     },
 
-    takeSwivelValley(line) {
-      set(state => ({ ...restart(state), swivelValley: line }));
+    takeLine(line) {
+      set(state => ({ ...restart(state), takenLine: line }));
+    },
+    setSquashHinge(squashHinge) {
+      set(state => (state.squashHinge ?? 'folded') === squashHinge ? state : { ...restart(state), squashHinge });
     },
     setSwivelInput(swivelInput) {
       // Another construction asks anew: its kind too.

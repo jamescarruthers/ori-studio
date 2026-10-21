@@ -368,7 +368,7 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['pleat', new Set([...ALONG_LINE_KEYS, 'second', 'secondRoot', 'resolved'])],
   ['crimp', new Set([...ALONG_LINE_KEYS, 'second', 'crimp'])],
   ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target', 'additionalTargets'])],
-  ['squash', new Set(['kind', 'flap', 'target', 'direction'])],
+  ['squash', new Set(['kind', 'flap', 'target', 'direction', 'hinge'])],
   // H by `crease` or by `ends`, one of the two (`FoldPetalOp`).
   ['petal', new Set(['kind', 'crease', 'ends', 'petal', 'direction'])],
   ['rabbit-ear', new Set(['kind', 'corners', 'emergent', 'seed', 'stayer', 'direction', 'ridge'])],
@@ -579,7 +579,10 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
     case 'squash': {
       const flap = readPoint(value.flap);
       const target = optional('target');
-      return flap && target !== null ? { kind, flap, ...(target ? { target } : {}), direction } : null;
+      // A drawn hinge, when one is spelled; one that does not read locks the step.
+      const hinge = value.hinge === undefined ? undefined : readLocatedLine(value.hinge);
+      if (!flap || target === null || hinge === null) return null;
+      return { kind, flap, ...(target ? { target } : {}), direction, ...(hinge ? { hinge } : {}) };
     }
     case 'petal': {
       const petal = readPoint(value.petal);
@@ -1142,7 +1145,13 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
     direction ? { [key]: writePoint(direction) } : {};
   switch (op.kind) {
     case 'squash':
-      return { kind: op.kind, flap: writePoint(op.flap), ...optional('target', op.target), direction: op.direction };
+      return {
+        kind: op.kind,
+        flap: writePoint(op.flap),
+        ...optional('target', op.target),
+        direction: op.direction,
+        ...(op.hinge ? { hinge: writeLocatedLine(op.hinge) } : {}),
+      };
     case 'petal':
       // The precrease form exactly as it was always written; the ends form
       // in the same place.

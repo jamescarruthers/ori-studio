@@ -11,7 +11,7 @@
  */
 import type { TFunction } from 'i18next';
 import type { TurnKind } from '../../lib/steps/turn';
-import type { FoldSwivelInput } from './vertex/vertexInputs';
+import type { FoldVertexLines } from './vertex/vertexInputs';
 import {
   FOLD_LINE_MODES,
   FOLD_LINE_MODE_SHORTCUTS,
@@ -41,8 +41,12 @@ import {
 export interface FoldToolsView {
   tool: FoldToolId;
   lineMode: FoldLineModeId;
-  /** How the swivel in hand is constructed: by its valley and mountain, it locates lines with the line modes. */
-  swivelInput?: FoldSwivelInput;
+  /**
+   * How the vertex fold in hand is constructed: a swivel by its valley and
+   * mountain, or a squash about a drawn hinge not yet taken, locates lines
+   * with the line modes.
+   */
+  construction?: Partial<FoldVertexLines>;
   /** Set while nothing on the sequence can change, and why. */
   readOnly: FoldReadOnlyReason | null;
   /** The flat sheet is on screen: there is no step to unfold, or to repeat. */
@@ -143,7 +147,7 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
     shortcut: FOLD_LINE_MODE_SHORTCUTS[id],
     // A line mode stays chosen under the Divide line, but is not what the
     // canvas is doing then; a petal fold locates its line H through it.
-    active: view.lineMode === id && usesLineMode(view.tool, view.swivelInput),
+    active: view.lineMode === id && usesLineMode(view.tool, view.construction),
     available: locked === null,
     select: () => verbs.selectLineMode(id),
   });

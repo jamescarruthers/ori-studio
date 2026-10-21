@@ -84,10 +84,12 @@ export type FoldStepRotationAmount = 'eighth' | 'quarter' | 'half' | 'other';
  * by its valley and mountain (`valley_mountain`, since 2026-10-20) or by its
  * rays (`swivel_form`), the edge forms' target a crease or edge, or the line
  * through two points (`target`); and on a folded edge its kind, open or
- * inside (`swivel_kind`, since 2026-10-12).
+ * inside (`swivel_kind`, since 2026-10-12); and a squash's hinge, the
+ * folded edge it infers or a line drawn (`squash_hinge`, since 2026-10-21).
  */
 export type FoldStepVertexForm =
   | { hinge: 'crease' | 'points' }
+  | { squashHinge: 'folded' | 'line' }
   | { swivelForm: 'edge'; target: 'crease' | 'free' }
   | { swivelForm: 'fold'; target: 'crease' | 'free'; swivelKind: 'open' | 'inside' }
   | { swivelForm: 'rays' }

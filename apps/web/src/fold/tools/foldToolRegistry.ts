@@ -29,7 +29,7 @@ import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import { AXIOM_SLOTS } from '../document/foldSequenceDocument';
 import type { FoldSegmentPick } from '../canvas/foldPicking';
 import { lineModeAxiom, type FoldLineModeId, type FoldSecondLineModeId, type FoldToolId } from './foldToolCatalog';
-import { FOLD_VERTEX_LINES_DEFAULT, vertexToolInput, type FoldVertexLines } from './vertex/vertexInputs';
+import { FOLD_VERTEX_LINES_DEFAULT, locatesWithLineModes, vertexToolInput, type FoldVertexLines } from './vertex/vertexInputs';
 
 /** How one click snaps: Edit's vocabulary, and the raw point a free line takes. */
 export type FoldStepSnap = CpStepSnap | 'free';
@@ -172,8 +172,9 @@ export function toolInput(
     case 'petal':
     case 'rabbit-ear':
     case 'swivel':
-      // By its valley and mountain, each line is located in the line mode chosen.
-      return tool === 'swivel' && vertex.swivelInput === 'valley-mountain' ? lineModeInput(mode) : vertexToolInput(tool, vertex);
+      // By its valley and mountain, each line is located in the line mode
+      // chosen; a squash's drawn hinge too, until it is taken.
+      return locatesWithLineModes(tool, vertex) ? lineModeInput(mode) : vertexToolInput(tool, vertex);
     case 'divide-line':
       return DIVIDE_LINE;
   }

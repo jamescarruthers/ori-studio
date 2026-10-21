@@ -21,6 +21,7 @@ import {
   fanLayerCount,
   fanAnchorAlternative,
   landingFourths,
+  storedLine,
   swivelDirectionsOf,
   swivelKindsLanding,
   vertexAskedOp,
@@ -123,7 +124,7 @@ export function useFoldVertexStep(
 ): FoldVertexStepAnswer {
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
-  const { tool, petalHinge, swivelTarget, swivelInput, swivelValley, picks, vertexDirection, compound } = tools;
+  const { tool, petalHinge, swivelTarget, swivelInput, squashHinge, takenLine, picks, vertexDirection, compound } = tools;
   const { squashTarget, fanLayers, emergent: chosenEmergent, order: chosenOrder } = compound;
 
   // --- A swivel by its edge's reach from where its creases meet: what its
@@ -133,18 +134,27 @@ export function useFoldVertexStep(
   const landing = swivelPickedLanding(reach, picks);
   const direction = vertexDirection;
   const swivelKind = compound.swivelKind ?? 'open';
-  // The valley taken, as the op stores it: its scene line is the canvas's.
-  const valley = useMemo(
-    () => (swivelValley ? { line: swivelValley.line, ...(swivelValley.root ? { root: swivelValley.root } : {}) } : undefined),
-    [swivelValley]
-  );
+  // The line taken — a swivel's valley, a squash's drawn hinge — as the op stores it: its scene line is the canvas's.
+  const line = useMemo(() => storedLine(takenLine), [takenLine]);
 
   const intent = useMemo<FoldVertexIntent | null>(
     () =>
       enabled && isVertexTool(tool)
-        ? { tool, petalHinge, swivelTarget, swivelInput, swivelValley: valley, swivelMountain, picks, direction, fanLayers, swivelKind }
+        ? {
+            tool,
+            petalHinge,
+            swivelTarget,
+            swivelInput,
+            swivelValley: tool === 'swivel' ? line : undefined,
+            swivelMountain,
+            ...(tool === 'squash' ? { squashHinge: squashHinge ?? 'folded', hinge: squashHinge === 'line' ? line : undefined } : {}),
+            picks,
+            direction,
+            fanLayers,
+            swivelKind,
+          }
         : null,
-    [enabled, tool, petalHinge, swivelTarget, swivelInput, valley, swivelMountain, picks, direction, fanLayers, swivelKind]
+    [enabled, tool, petalHinge, swivelTarget, swivelInput, squashHinge, line, swivelMountain, picks, direction, fanLayers, swivelKind]
   );
   const taken = useMemo<FoldVertexTaken>(
     () => ({ squashTarget, emergent: chosenEmergent, order: chosenOrder }),

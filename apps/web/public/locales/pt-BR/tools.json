@@ -1053,6 +1053,7 @@
           "titleValleyMountain": "As linhas não se encontram em uma borda dobrada"
         },
         "noFlap": {
+          "hingeOffSpine": "A linha da dobradiça precisa cruzar a borda dobrada da aba, com a ponta clicada de um lado dela.",
           "noHinge": "A aba não se dobra sobre nenhuma dobradiça em nenhuma ponta da lombada, então não há contra o que achatá-la.",
           "noSpine": "As duas camadas aqui não estão unidas por uma dobra, então a aba não tem lombada por onde se abrir.",
           "singleLayer": "Aqui há só uma camada. Clique numa aba de duas camadas unidas por uma borda dobrada.",
@@ -1151,6 +1152,18 @@
       },
       "reset": "Voltar à dobradiça",
       "ridge": "Crista",
+      "squashHinge": {
+        "folded": "Borda dobrada",
+        "foldedHelp": "A dobra em que a camada de baixo da aba vira: a aba inteira é esmagada",
+        "intro": "Desenhe a dobradiça atravessando a borda dobrada da aba. Só a ponta além dela é esmagada.",
+        "label": "Dobradiça",
+        "line": "Linha",
+        "lineHelp": "Uma linha que você desenha: só a ponta da aba além dela é esmagada",
+        "lineMode": "Linha da dobradiça",
+        "take": "Pressione Enter para usá-la como dobradiça.",
+        "takeTouch": "Toque em Usar como dobradiça.",
+        "use": "Usar como dobradiça"
+      },
       "steps": {
         "earChoose": "Escolha as camadas ou clique em outra região para o vinco de articulação.",
         "earChooseTouch": "Escolha as camadas ou toque em outra região para o vinco de articulação.",
@@ -1180,6 +1193,8 @@
         "petalWayTouch": "Escolha para que lado ela sobe, ou toque em outra aba para levantar essa.",
         "pickAgainRead": "Pressione Esc e escolha de novo: o aviso abaixo diz o que mudar.",
         "pickAgainReadTouch": "Toque em Cancelar e escolha de novo: o aviso abaixo diz o que mudar.",
+        "squashEnd": "Clique na ponta da aba a achatar, de um lado da linha.",
+        "squashEndTouch": "Toque na ponta da aba a achatar, de um lado da linha.",
         "squashFlap": "Clique na aba a achatar.",
         "squashFlapTouch": "Toque na aba a achatar.",
         "squashSpine": "A lombada cai na linha grossa: clique no papel para que ela caia em outro lugar.",

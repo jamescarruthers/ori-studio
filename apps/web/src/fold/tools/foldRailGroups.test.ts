@@ -218,7 +218,7 @@ describe('foldRailGroups', () => {
  describe('swivel line toolbar', () => {
   it('highlights the chosen line mode only for a swivel by its valley and mountain', () => {
     for (const swivelInput of ['edge', 'valley-mountain'] as const) {
-      const groups = foldRailGroups(t, view({ tool: 'swivel', lineMode: 'axiom-1', swivelInput }), verbs());
+      const groups = foldRailGroups(t, view({ tool: 'swivel', lineMode: 'axiom-1', construction: { swivelInput } }), verbs());
       expect(groups.find(g => g.id === 'locate')!.items.filter(i => i.active).map(i => i.id))
         .toEqual(swivelInput === 'valley-mountain' ? ['axiom-1'] : []);
     }

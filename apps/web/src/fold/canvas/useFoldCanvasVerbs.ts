@@ -52,6 +52,7 @@ import {
   foldToolInput,
   foldToolInputKey,
   isLocated,
+  locatesTakenLine,
   picksAlongLine,
   type FoldTools,
   type FoldToolState,
@@ -72,7 +73,7 @@ import {
   steppedFourth,
   swivelEdgePick,
 } from '../tools/vertex/vertexStep';
-import { SWIVEL_TARGET_FROM, type FoldSwivelInput } from '../tools/vertex/vertexInputs';
+import { SWIVEL_TARGET_FROM, type FoldSquashHinge, type FoldSwivelInput } from '../tools/vertex/vertexInputs';
 import { swivelOffered, swivelReachesNothing, type FoldSwivelReachView } from '../tools/vertex/swivelReach';
 import type { FoldLineBy } from '../tools/foldToolCatalog';
 import { isFoldAltLatched } from './foldAltLatch';
@@ -178,6 +179,8 @@ export interface FoldCanvasVerbs {
   setVertexDirection: (direction: FoldDirection) => void;
   /** How a swivel is constructed: by its edge onto a line, or by its valley and mountain. */
   setSwivelInput: (mode: FoldSwivelInput) => void;
+  /** A squash's hinge: the folded edge, or a line drawn. */
+  setSquashHinge: (hinge: FoldSquashHinge) => void;
   /** A swivel on a folded edge's kind: its strip on top, or tucked between the layers. */
   setSwivelKind: (kind: FoldSwivelKind) => void;
   /** The same vertex fold, the other direction. */
@@ -346,6 +349,7 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
  */
 function vertexFormOf(op: FoldOp): FoldStepVertexForm | undefined {
   if (op.kind === 'petal') return { hinge: 'ends' in op ? 'points' : 'crease' };
+  if (op.kind === 'squash') return { squashHinge: op.hinge ? 'line' : 'folded' };
   if (op.kind !== 'swivel') return undefined;
   if (isSwivelValleyMountainOp(op)) return { swivelForm: 'valley_mountain', swivelKind: swivelKindOf(op) };
   if (!isSwivelEdgeOp(op)) return { swivelForm: 'rays' };
@@ -646,7 +650,7 @@ export function useFoldCanvasVerbs(
         // edge: near there, a point the mountain's line takes is that point
         // exactly, unless a free point is asked for, or a free line's end
         // snaps to nothing.
-        const valley = tool.tool === 'swivel' ? tool.swivelValley : undefined;
+        const valley = tool.tool === 'swivel' ? tool.takenLine : undefined;
         const snaps = !free && (step.snap !== 'free' || (step.snapFree === true && tool.freeLineSnap));
         const meeting = valley && snaps ? swivelMeetingPick(swivelMeetings(index, valley.sceneLine), pane, at, radii.point, step.snap) : null;
         if (meeting) return { pane, at, pick: meeting };
@@ -809,6 +813,7 @@ export function useFoldCanvasVerbs(
       setVertexDirection: (direction) => tools.setVertexDirection(direction),
 
       setSwivelInput: tools.setSwivelInput,
+      setSquashHinge: tools.setSquashHinge,
       setSwivelKind: (kind) => tools.setSwivelKind(kind),
 
       vertexOtherWay,
@@ -1011,13 +1016,14 @@ export function useFoldCanvasVerbs(
         // and saves; Unfold to step adds its step, or rebuilds a saved one.
         if (current.tool === 'repeat') return live.current.preview.repeat?.primary() ?? false;
         if (current.tool === 'unfold-to') return live.current.preview.unfold?.commit() ?? false;
-        // A swivel by its valley and mountain: Enter takes the line located
-        // as its valley, and the picks go on to its mountain.
-        if (current.tool === 'swivel' && current.swivelInput === 'valley-mountain' && !current.swivelValley) {
-          const { swivelLocated, refused } = live.current.preview;
-          if (!swivelLocated || refused || live.current.session.readOnly) return false;
+        // A swivel by its valley and mountain, or a squash about a drawn
+        // hinge: Enter takes the line located — the valley, or the hinge —
+        // and the picks go on to the mountain, or the flap's end.
+        if (locatesTakenLine(current) && !current.takenLine) {
+          const { locatedLine, refused } = live.current.preview;
+          if (!locatedLine || refused || live.current.session.readOnly) return false;
           setQueued(null);
-          tools.takeSwivelValley(swivelLocated);
+          tools.takeLine(locatedLine);
           return true;
         }
         const resolution = live.current.preview.orderResolution;
@@ -1073,7 +1079,7 @@ export function useFoldCanvasVerbs(
           return true;
         }
         const tool = state();
-        const held = tool.swivelValley !== undefined || tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'top' || tool.swapped;
+        const held = tool.takenLine !== undefined || tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'top' || tool.swapped;
         if (!held) return false;
         setQueued(null);
         tools.clear();

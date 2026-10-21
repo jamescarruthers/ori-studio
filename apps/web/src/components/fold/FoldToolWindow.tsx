@@ -43,13 +43,20 @@ import styles from './FoldToolWindow.module.css';
  * fit across the window: a precrease's extent (`data-fold-extent`), a petal
  * fold's hinge or a swivel's target (`data-fold-line-by`).
  */
-function ChoiceSegments<K extends string>({ choice, section }: { choice: FoldKindChoice<K>; section: 'extent' | 'lineBy' | 'swivelInput' }) {
+function ChoiceSegments<K extends string>({
+  choice,
+  section,
+}: {
+  choice: FoldKindChoice<K>;
+  section: 'extent' | 'lineBy' | 'swivelInput' | 'squashHinge';
+}) {
   return (
     <div
       className={styles.section}
       data-fold-extent={section === 'extent' ? '' : undefined}
       data-fold-line-by={section === 'lineBy' ? '' : undefined}
       data-fold-swivel-input={section === 'swivelInput' ? '' : undefined}
+      data-fold-squash-hinge={section === 'squashHinge' ? '' : undefined}
     >
       <span className={styles.heading}>{choice.label}</span>
       <SegmentedControl<K>
@@ -224,6 +231,7 @@ export function FoldToolWindow({
       )}
       {/* A petal fold's hinge, or a swivel's target: how it is named, which its steps above follow. */}
       {vertex?.input && <ChoiceSegments choice={vertex.input} section="swivelInput" />}
+      {vertex?.hinge && <ChoiceSegments choice={vertex.hinge} section="squashHinge" />}
       {vertex?.lineBy && <ChoiceSegments choice={vertex.lineBy} section="lineBy" />}
       {/* No dividers: the window divides its own sections. */}
       {divide && (
