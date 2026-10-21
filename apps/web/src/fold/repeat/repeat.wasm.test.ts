@@ -228,6 +228,44 @@ describe('sequential Repeat through the public engine', () => {
     },
   );
 
+  it('mirrors a solved fold’s chosen order: each order of the corner tucked or laid over the strip repeats as its mirror', async () => {
+    const e = await engine();
+    const sheet = e.sheet({ shape: { kind: 'square' }, startSide: 'front' });
+    if (sheet.status !== 'ok') throw new Error('sheet');
+    // A strip folded up across the whole width: symmetric about x = 0.5.
+    const strip = e.step(sheet.state, { kind: 'valley', line: { via: 'free', through: [[0, 0.35], [1, 0.35]] }, moving: [0.5, 0.1], seed: { scope: 'all' } });
+    if (strip.status !== 'ok') throw new Error(JSON.stringify(strip));
+    // The top-left corner folded down onto the strip: over it, or into its pocket.
+    const corner: FoldOp = { kind: 'valley', line: { via: 'free', through: [[0, 0.75], [0.5, 1]] }, moving: [0.05, 0.95], seed: { scope: 'all' }, landing: { kind: 'outer' } };
+    const first = e.orderSelection(strip.state, corner, undefined, { index: 0 });
+    if (first.status !== 'ok') throw new Error(JSON.stringify(first));
+    expect(first).toMatchObject({ source: 'solved', count: { exact: true } });
+    expect(first.count.orders).toBeGreaterThan(1);
+    const mirrored = new Set<string>();
+    for (let index = 0; index < first.count.orders; index++) {
+      const chosen = e.orderSelection(strip.state, corner, undefined, { index });
+      if (chosen.status !== 'ok') throw new Error(JSON.stringify(chosen));
+      expect(chosen.landing).toEqual({ kind: 'solved' });
+      const op = { ...corner, landing: chosen.landing! } as FoldOp;
+      const choices = chosen.completion ? { completion: chosen.completion } : undefined;
+      const one = e.step(strip.state, op, choices);
+      if (one.status !== 'ok') throw new Error(JSON.stringify(one));
+      const prepared = prepareRepeat(e, {
+        parent: one.state, axis,
+        steps: [{ id: 'corner', before: strip.state, after: one.state, op, ...(choices ? { choices } : {}) }],
+        source: { first: 'corner', last: 'corner', revision: 'test' },
+      });
+      // The stored pairs, mirrored, pin the mirrored order: no choice is asked.
+      expect(prepared, JSON.stringify(prepared)).toMatchObject({ status: 'ready' });
+      if (prepared.status !== 'ready') continue;
+      expect(prepared.op.steps[0]!.op).toMatchObject({ kind: 'valley', landing: { kind: 'solved' } });
+      expect(e.step(one.state, prepared.op)).toMatchObject({ status: 'ok' });
+      mirrored.add(prepared.op.steps[0]!.expect);
+    }
+    // Each order repeats as its own mirror.
+    expect(mirrored.size).toBe(first.count.orders);
+  });
+
   it('refuses a range that already folds across the destination, without changing source states', async () => {
     const e = await engine();
     const sheet = e.sheet({ shape: { kind: 'square' }, startSide: 'front' });
