@@ -386,10 +386,11 @@ function landedCover(child: FoldScene, sheet: SheetPoint, image: Point): number 
  * Every crease a step folds, as the state it folds from shows it: each crease
  * folded in the state it lands that was not folded — flat, or not there — in
  * the state before, where that state puts it, in the letter the viewer sees
- * (a face showing its back shows a crease's other letter), drawn behind
- * where a layer that stays covers it. Read off the two states' scenes, so a
- * fold along creases precreased before — a rabbit ear's bisectors, often —
- * is drawn whole, not only along the crease it made.
+ * (a face showing its back shows a crease's other letter), and only where
+ * the viewer sees it: a stretch a layer covers is not drawn. Read off the
+ * two states' scenes, so a fold along creases precreased before — a rabbit
+ * ear's bisectors, often — is drawn whole, not only along the crease it
+ * made.
  */
 export function stepFoldedCreases(parent: FoldScene, child: FoldScene): FoldLineSpan[] {
   const frame = foldStateFrame(parent);
@@ -408,7 +409,7 @@ export function stepFoldedCreases(parent: FoldScene, child: FoldScene): FoldLine
     const [a, b] = [applyIsometry(transform, from), applyIsometry(transform, to)];
     const at = (t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
     for (const [t0, t1, shown] of seenStretches(parent, frame, from, to, a, b)) {
-      spans.push({ from: at(t0), to: at(t1), direction: seen, hidden: !shown });
+      if (shown) spans.push({ from: at(t0), to: at(t1), direction: seen, hidden: false });
     }
   }
   return joinedSpans(spans);
@@ -489,18 +490,14 @@ function seenStretches(
 }
 
 /**
- * The creases as lines to draw: those that lie end to end on one line in one
- * letter and are seen alike joined into one, and one under another — the
- * layers of a flap creased together — drawn once, the one seen.
+ * The seen stretches as lines to draw: those that lie end to end on one line
+ * in one letter joined into one, and one along another drawn once.
  */
 function joinedSpans(spans: readonly FoldLineSpan[]): FoldLineSpan[] {
-  const shown = spans.filter((span) => !span.hidden);
-  // A layer's crease under one the viewer sees, where it is: drawn by the one seen.
-  const behind = spans.filter((span) => span.hidden && !shown.some((over) => covers(over.from, over.to, span.from, span.to)));
   const lines: FoldLineSpan[] = [];
-  for (const span of [...shown, ...behind]) {
-    if (lines.some((had) => had.hidden === span.hidden && covers(had.from, had.to, span.from, span.to))) continue;
-    const joined = lines.findIndex((had) => had.hidden === span.hidden && had.direction === span.direction && endToEnd(had, span));
+  for (const span of spans) {
+    if (lines.some((had) => covers(had.from, had.to, span.from, span.to))) continue;
+    const joined = lines.findIndex((had) => had.direction === span.direction && endToEnd(had, span));
     if (joined < 0) {
       lines.push({ ...span });
       continue;

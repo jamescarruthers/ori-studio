@@ -163,6 +163,21 @@ describe('a Fold step’s picture (D11, D17)', () => {
     expect(faces && typeof faces !== 'symbol' ? faces.faces.rings.length : 0).toBe(2);
   });
 
+  it('draws only the stretches of a fold’s line the viewer sees, none under a layer that stays', () => {
+    const action: FoldActionGeometry = {
+      ...VALLEY,
+      spans: [
+        { from: { x: 0, y: 0 }, to: { x: 0.5, y: 0.5 }, hidden: false },
+        { from: { x: 0.5, y: 0.5 }, to: { x: 1, y: 1 }, hidden: true },
+      ],
+    };
+    const marks = foldStepPicture(input('before', action), FLAT, sequentialIds()).marks;
+    expect(marks.map((mark) => mark.kind)).toEqual(['valley-line', 'valley-arrow']);
+    // Every stretch hidden: no line at all, the arrow alone.
+    const covered = { ...action, spans: action.spans.map((span) => ({ ...span, hidden: true })) };
+    expect(foldStepPicture(input('before', covered), FLAT, sequentialIds()).marks.map((mark) => mark.kind)).toEqual(['valley-arrow']);
+  });
+
   it('brings the fold’s line and arrow, tagged as the source’s, before a fold — and none after it', () => {
     const before = foldStepPicture(input('before'), FLAT, sequentialIds());
     expect(before.marks.map((mark) => mark.kind)).toEqual(['valley-line', 'valley-arrow']);

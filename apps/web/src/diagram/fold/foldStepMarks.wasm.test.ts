@@ -221,6 +221,24 @@ describe.skipIf(!available)('a Fold step’s marks in the Diagram, from the real
     expect(inside.find((span) => along(span, V, CORNER))?.direction).toBe('mountain');
   });
 
+  it('draws no crease the viewer cannot see, in any step of the examples', async () => {
+    const calls = await engine();
+    let lines = 0;
+    for (const name of ['petal-fold.osf', 'swivel-fold.osf', 'swivel-on-edge.osf', 'swivel-inside.osf', 'crimp.osf']) {
+      for (const step of exampleSteps(calls, name)) {
+        const placed = step.action && foldStepAction(step.action, { op: step.op, parent: step.parent, child: step.child });
+        expect(placed?.spans.some((span) => span.hidden) ?? false).toBe(false);
+        const marks = foldStepPicture(
+          { shown: step.parent, own: { scene: step.child, step: step.summary.step, sheet: step.summary.sheet }, moment: 'before', action: placed },
+          FOLD_PULL_RENDER
+        ).marks;
+        expect(marks.some((mark) => mark.kind === 'hidden-line'), `${name} step ${step.summary.step}`).toBe(false);
+        lines += marks.filter((mark) => mark.kind === 'valley-line' || mark.kind === 'mountain-line').length;
+      }
+    }
+    expect(lines).toBeGreaterThan(20);
+  });
+
   it('circles a segment through two points at its ends and draws no arrow; a point onto a point circled and joined', async () => {
     const calls = await engine();
     const sheet = landed(calls.sheet(SQUARE_PAPER)).state;
