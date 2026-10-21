@@ -300,9 +300,9 @@ export function useFoldToolPreview(
   const vertexBuilt = vertexStep.step;
   // The sequence tools: Unfold to step's step is built from its target, from
   // the moment it is in hand; Repeat prepares its own and previews it (a line
-  // drawn on the canvas read through the view of the state it was drawn on).
+  // drawn on the folded pane read on the top layer of the state on screen).
   const unfold = useFoldUnfoldTool(session, tools);
-  const repeat = useFoldRepeatTool(session, tools, viewTransform);
+  const repeat = useFoldRepeatTool(session, tools, index);
   const unfolding = tools.tool === 'unfold-to';
   const repeating = tools.tool === 'repeat';
   const unfoldStep = unfold?.step ?? null;

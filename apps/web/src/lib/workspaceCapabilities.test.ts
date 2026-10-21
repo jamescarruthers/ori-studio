@@ -399,7 +399,7 @@ describe('workspace capabilities', () => {
     expect(capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true })['fold.repeat']).toMatchObject({
       visible: true,
       enabled: true,
-      label: 'Repeat on the other side…',
+      label: 'Repeat…',
     });
 
     const newer = capabilities({

@@ -24,7 +24,16 @@ type FoldStepAddedDetails =
   | { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent; targetCount?: number }
   | { amount: FoldStepRotationAmount }
   | { vertex: FoldStepVertexForm }
-  | { repeat: { mode: 'grouped' | 'individual'; count: number } };
+  | {
+      repeat: {
+        mode: 'grouped' | 'individual';
+        count: number;
+        /** Where its axis came from: offered and taken, or drawn on the crease pattern or the folded pane. */
+        axisSource?: 'listed' | 'drawn_cp' | 'drawn_folded';
+        /** Whether the mirror kept the layer order (the other side) or reversed it (behind). */
+        side?: 'same' | 'behind';
+      };
+    };
 
 /**
  * A step committed from the Fold canvas (plan D18). Hand-placed: a commit is
@@ -46,7 +55,15 @@ export function trackFoldStepAdded(opKind: FoldStepAddedOpKind, details?: FoldSt
 
 function detailProperties(details: FoldStepAddedDetails | undefined): Record<string, string> {
   if (!details) return {};
-  if ('repeat' in details) return { repeat_mode: details.repeat.mode, count_bucket: bucketCount(details.repeat.count, COUNT_BUCKETS) };
+  if ('repeat' in details) {
+    const { mode, count, axisSource, side } = details.repeat;
+    return {
+      repeat_mode: mode,
+      count_bucket: bucketCount(count, COUNT_BUCKETS),
+      ...(axisSource ? { axis_source: axisSource } : {}),
+      ...(side ? { side } : {}),
+    };
+  }
   if ('amount' in details) return { amount: details.amount };
   if ('vertex' in details) return vertexFormProperties(details.vertex);
   return {

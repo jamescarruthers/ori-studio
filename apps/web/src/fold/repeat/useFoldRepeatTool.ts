@@ -1,28 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Point } from '../../lib/geometry';
 import { trackFoldRefused, trackFoldStepAdded } from '../../analytics';
 import { trackFoldRepeatRebuilt } from '../../analytics/trackFold';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
+import type { FoldPaneId, FoldPickIndex } from '../canvas/foldPicking';
 import type { FoldToolStep } from '../canvas/useFoldToolPreview';
 import { canonicalJson } from '../document/foldDigest';
 import type { FoldRepeatOp } from '../document/foldSequenceDocument';
-import type { FoldIsometry } from '../engine/foldEngineWire';
 import { foldSearchTicket, type FoldSearchTicket } from '../engine/foldSearch';
 import { foldStepInputKey } from '../session/foldSessionEngine';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { useFoldSessionState } from '../session/useFoldSession';
 import { useFoldPath } from '../sequence/useFoldPath';
+import { axiomLineOfPicks } from '../tools/foldStepBuilder';
 import { foldTools, type FoldToolState } from '../tools/foldToolState';
-import type { RepeatSymmetry } from './repeatGeometry';
-import type { RepeatPrepared, RepeatRequest, RepeatSourceStep } from './repeatPreparation';
+import { repeatAxisAt } from './repeatCanvas';
 import {
+  drawnAxisSource,
+  drawnOnCreasePattern,
   drawnRepeatAxis,
   nearestRepeatAxis,
-  repeatAxisIndex,
-  repeatDrawnLine,
-  repeatRange,
+  repeatDrawnLines,
+  sheetOfFlatModel,
+  type RepeatAxiomRoots,
+  type RepeatAxisSource,
   type RepeatDrawnLine,
-} from './repeatRange';
+} from './repeatDrawn';
+import type { RepeatSide, RepeatSymmetry } from './repeatGeometry';
+import type { RepeatPrepared, RepeatRequest, RepeatSourceStep } from './repeatPreparation';
+import { repeatAxisIndex, repeatRange } from './repeatRange';
 import type { FoldRepeatPhase, FoldRepeatWindowVerbs, FoldRepeatWindowView } from './repeatToolWindow';
 import type { RepeatStop } from './repeatWords';
 
@@ -48,8 +55,18 @@ export interface FoldRepeatTool {
    * what the canvas shows, and the creases it adds. Null while none is.
    */
   step: FoldToolStep | null;
-  /** A drawn line that is no verified axis, while its refusal is shown: the canvas draws it. */
-  drawn: RepeatDrawnLine | null;
+  /**
+   * What the canvas draws of the axes (`repeatOverlay`): every verified one,
+   * by its sheet line, the one taken and the one under the pointer (-1 for
+   * none), and a drawn line that is no verified axis, while its refusal is
+   * shown. Null while there are no axes.
+   */
+  marks: { axes: readonly RepeatSymmetry['sheet'][]; taken: number; hovered: number; drawn: RepeatDrawnLine | null } | null;
+  /**
+   * The verified axis under a point of a pane, within `radius` (`repeatAxisAt`);
+   * -1 for none, and while none may be taken.
+   */
+  axisAt: (pane: FoldPaneId, at: Point, radius: number) => number;
   /**
    * Enter, and the window's commit: add the repeat previewed, take the layer
    * order shown, or — once a preparation was stopped — prepare it again.
@@ -76,31 +93,37 @@ function spanOf(sheet: readonly (readonly [number, number])[] | undefined): numb
   return Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
 }
 
+/** How many prepared repeats are kept, by what they were prepared for: an axis hovered again shows at once. */
+const PREPARED_KEPT = 8;
+
 /**
- * Repeat on the other side, the tool (plan `fold-sequence-tools`): the range
+ * Repeat, the tool (plans `fold-sequence-tools`, `repeat-axis`): the range
  * from the first step chosen through the step on screen (`repeatRange`), the
  * verified symmetry axes of the state before it — asked of the worker once
- * per state — and the one taken: the axis last chosen or drawn while the
- * range has it (`repeatAxisIndex`), else the first.
+ * per state, each a line on the sheet that repeats on the other side or
+ * behind — and the one taken: the axis last chosen or drawn while the range
+ * has it (`repeatAxisIndex`), else the first.
  *
  * It previews as every tool does, from the moment it is in hand: once the
  * range and the axis settle (`REPEAT_PREPARE_DELAY_MS`) it prepares the
  * repeat in the worker — a search with its time limit
  * (`REPEAT_PREPARATION_MS`), which Escape stops — and previews it, its step
  * (`step`) the canvas's to show. Whatever changes the range or the axis lets
- * go of it and prepares anew. A source operation with several matching layer
- * orders is chosen with the order chooser; Enter adds the repeat: one
- * numbered step, an entry per operation, or a saved repeat updated in place.
+ * go of it and prepares anew; an axis under the pointer (`hoverAxis`) is
+ * previewed in the taken one's place until the pointer leaves it. A source
+ * operation with several matching layer orders is chosen with the order
+ * chooser; Enter adds the repeat: one numbered step, an entry per operation,
+ * or a saved repeat updated in place.
  *
- * A free line drawn on the canvas (the tools' picks, `viewTransform` the
- * view of the state they were drawn on) is taken when it is one of the
- * verified axes, and refused when it is not, the nearest axis offered in its
- * place. Null while another tool is in hand.
+ * An axis may be drawn on either pane with the line modes (`repeatDrawn`):
+ * taken when it is one of the verified axes, and refused when it is not, the
+ * nearest axis offered in its place. `index` is what the folded pane picks
+ * on — the step on screen. Null while another tool is in hand.
  */
 export function useFoldRepeatTool(
   session: FoldSessionSurface,
   tools: FoldToolState,
-  viewTransform: FoldIsometry | null
+  index: FoldPickIndex | null
 ): FoldRepeatTool | null {
   const active = tools.tool === 'repeat';
   const { entries, cursor, cursorId } = useFoldPath(active);
@@ -148,34 +171,68 @@ export function useFoldRepeatTool(
   /** Undefined while they are asked; null when they could not be. */
   const axes = found && found.key === baseKey ? found.axes : undefined;
   const axis = axes ? repeatAxisIndex(axes, tools.repeatAxis) : -1;
-  const axisLine = axes && axis >= 0 ? axes[axis]!.sheet : null;
+  // The axis under the pointer, previewed in the taken one's place while it is there.
+  const [hover, setHover] = useState<{ key: string | null; axis: number } | null>(null);
+  const hovered = hover && hover.key === baseKey && axes && hover.axis < axes.length ? hover.axis : -1;
+  const shown = hovered >= 0 ? hovered : axis;
+  const axisLine = axes && shown >= 0 ? axes[shown]!.sheet : null;
 
-  // --- A line drawn on the canvas: taken when it is an axis, shown refused when not.
-  // The view is read through its key: the preview landing shows another scene with the same view,
-  // which reads the line the same, and must not refuse it again.
-  const viewKey = viewTransform ? viewTransform.join(',') : null;
-  const drawn = useMemo(
-    () => (active ? repeatDrawnLine(tools.picks, viewTransform) : null),
+  // --- A line drawn with the line modes: taken when it is an axis, shown refused when not.
+  const { lineMode, picks } = tools;
+  const axiomLine = useMemo(() => (active ? axiomLineOfPicks(lineMode, picks) : null), [active, lineMode, picks]);
+  const onCreasePattern = drawnOnCreasePattern(picks);
+  // An axiom's roots: on the crease pattern, the flat sheet's; on the folded pane, the step on screen's.
+  const rootsFrom = onCreasePattern ? (entries[0]?.session.state ?? null) : (session.cursor.state ?? null);
+  const rootsKey = axiomLine && rootsFrom ? `${rootsFrom.generation}:${rootsFrom.id}|${onCreasePattern}|${canonicalJson(axiomLine)}` : null;
+  const [asked, setAsked] = useState<{ key: string; roots: RepeatAxiomRoots } | null>(null);
+  useEffect(() => {
+    if (!axiomLine || !rootsFrom || rootsKey === null || asked?.key === rootsKey) return undefined;
+    let current = true;
+    const flat = onCreasePattern;
+    void withState(rootsFrom, async (engine, state) => {
+      const [candidates, scene] = await Promise.all([engine.axiomCandidates(state, axiomLine), flat ? engine.scene(state) : null]);
+      return {
+        lines: candidates.status === 'ok' ? candidates.candidates.map((candidate) => candidate.line) : [],
+        sheetOfModel: scene ? sheetOfFlatModel(scene) : null,
+      };
+    }).then(
+      (answer) => {
+        if (current && answer.status === 'answered') setAsked({ key: rootsKey, roots: answer.value });
+      },
+      () => {}
+    );
+    return () => {
+      current = false;
+    };
+    // The state and the line are read through the key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [active, tools.picks, viewKey]
+  }, [withState, rootsKey]);
+  const roots = asked && asked.key === rootsKey ? asked.roots : null;
+  const drawn = useMemo(
+    () => (active ? repeatDrawnLines(lineMode, picks, index, roots) : null),
+    // The index is read for the picks it was made on: a new one alone draws no new line.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [active, lineMode, picks, roots]
   );
   const drawnAxis = drawn && axes ? drawnRepeatAxis(axes, drawn) : -1;
   useEffect(() => {
     if (!drawn || !axes) return;
     if (drawnAxis >= 0) {
-      foldTools().setRepeatAxis(axes[drawnAxis]!.sheet);
+      foldTools().setRepeatAxis(axes[drawnAxis]!.sheet, drawnAxisSource(drawn[0]!));
       foldTools().clear();
     } else {
       trackFoldRefused('repeat_axis_drawn', 'repeat');
     }
   }, [drawn, axes, drawnAxis]);
-  const refusedLine = drawn && axes && drawnAxis < 0 ? drawn : null;
+  const refused = drawn && axes && drawnAxis < 0 ? drawn : null;
 
   // --- What was prepared, for the range and axis it was prepared for.
   const context =
     active && range && parent
       ? [loadId, sequenceId, cursorId, parent.path, range.first.id, baseKey, axisLine ? canonicalJson(axisLine) : '', rebuilding ? rebuild!.id : ''].join('|')
       : null;
+  /** Repeats prepared ready with no order chosen, by their context: shown again at once. */
+  const kept = useRef(new Map<string, Extract<RepeatPrepared, { status: 'ready' }>>());
   const [result, setResult] = useState<RepeatPrepared | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<RepeatStop | null>(null);
@@ -262,7 +319,7 @@ export function useFoldRepeatTool(
   };
 
   const prepare = async (accepted = selections) => {
-    if (!range || !parent?.state || !parent.path || !cursorId || !axes || axis < 0 || readOnly) return;
+    if (!range || !parent?.state || !parent.path || !cursorId || !axes || shown < 0 || readOnly) return;
     const generation = parent.state.generation;
     const steps: RepeatSourceStep[] = [];
     for (let at = range.start; at <= cursor; at++) {
@@ -282,6 +339,19 @@ export function useFoldRepeatTool(
     setStopped(false);
     setChoice(null);
     setPreviewed(null);
+    // Prepared before for this very range and axis — an axis hovered, then left — and nothing chosen since: shown again.
+    const preparedBefore = context !== null && Object.keys(accepted).length === 0 ? kept.current.get(context) : undefined;
+    if (preparedBefore) {
+      setResult(preparedBefore);
+      try {
+        await show(preparedBefore.op, run);
+      } catch {
+        if (ticket.current === run) setError(UNAVAILABLE);
+      } finally {
+        if (ticket.current === run) setBusy(false);
+      }
+      return;
+    }
     const searched = foldSearchTicket();
     search.current = searched;
     setSearching(searched);
@@ -289,7 +359,7 @@ export function useFoldRepeatTool(
       parent: parent.state.id,
       source: { first: range.first.id!, last: cursorId, revision: parent.path },
       steps,
-      axis: axes[axis]!.sheet,
+      axis: axes[shown]!.sheet,
       selections: accepted,
       baseline: range.baseline.id,
     };
@@ -304,6 +374,11 @@ export function useFoldRepeatTool(
       }
       const prepared = answer.value;
       setResult(prepared);
+      if (prepared.status === 'ready' && context !== null && Object.keys(accepted).length === 0) {
+        kept.current.delete(context);
+        kept.current.set(context, prepared);
+        while (kept.current.size > PREPARED_KEPT) kept.current.delete(kept.current.keys().next().value!);
+      }
       // Refusals are counted by their closed code; `repeat_unavailable` is the source changing or the worker failing, not one.
       if (prepared.status === 'blocked') trackFoldRefused(prepared.code, 'repeat');
       if (prepared.status === 'ready') await show(prepared.op, run);
@@ -353,6 +428,10 @@ export function useFoldRepeatTool(
     const pending = now.pending;
     if (pending.status !== 'landed' || canonicalJson(pending.request.op) !== canonicalJson(op)) return;
     const individual = tools.repeatIndividual;
+    // An axis under the pointer is the one previewed, and so the one added: taken, as a click takes it.
+    const source: RepeatAxisSource = hovered >= 0 && hovered !== axis ? 'listed' : tools.repeatAxisSource;
+    const side: RepeatSide = op.side === 'behind' ? 'behind' : 'same';
+    if (hovered >= 0 && axes?.[hovered]) foldTools().setRepeatAxis(axes[hovered]!.sheet, source);
     setBusy(true);
     let done: boolean;
     if (rebuilding && rebuild) {
@@ -369,12 +448,12 @@ export function useFoldRepeatTool(
     }
     // An update in place is no step added, as an Unfold's rebuild is not.
     if (rebuilding) trackFoldRepeatRebuilt();
-    else trackFoldStepAdded('repeat', { repeat: { mode: individual ? 'individual' : 'grouped', count: op.steps.length } });
+    else trackFoldStepAdded('repeat', { repeat: { mode: individual ? 'individual' : 'grouped', count: op.steps.length, axisSource: source, side } });
     putDown();
   };
 
   // --- Prepared as soon as the range and the axis settle, as every tool previews from its first choice.
-  const settled = active && range !== null && (axes?.length ?? 0) > 0 && axis >= 0 && !readOnly;
+  const settled = active && range !== null && (axes?.length ?? 0) > 0 && shown >= 0 && !readOnly;
   const due = settled && result === null && error === null && !stopped && searching === null && !busy;
   const prepareNow = useRef(prepare);
   useEffect(() => {
@@ -382,7 +461,8 @@ export function useFoldRepeatTool(
   });
   useEffect(() => {
     if (!due || context === null) return undefined;
-    const timer = setTimeout(() => void prepareNow.current(), REPEAT_PREPARE_DELAY_MS);
+    // One prepared before shows at once; a new one waits for the range and axis to settle.
+    const timer = setTimeout(() => void prepareNow.current(), kept.current.has(context) ? 0 : REPEAT_PREPARE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [due, context]);
 
@@ -419,32 +499,44 @@ export function useFoldRepeatTool(
   const setAxis = (index: number) => {
     const taken = axes?.[index];
     if (!taken) return;
-    foldTools().setRepeatAxis(taken.sheet);
+    foldTools().setRepeatAxis(taken.sheet, 'listed');
+    setHover(null);
     // A refused line drawn gives way to the axis taken.
     if (tools.picks.length > 0) foldTools().clear();
   };
+  const hoverAxis = (index: number | null) => {
+    const next = index !== null && index >= 0 && drawing ? index : -1;
+    if (next !== hovered) setHover(next >= 0 ? { key: baseKey, axis: next } : null);
+  };
+  const sheetOutline = range?.baseline.session.summary?.sheet ?? null;
+  const axisLines = (axes ?? []).map((each) => each.sheet);
 
   return {
     view: {
       range: range ? { entries, starts: range.starts, first: range.first.id!, count: range.count } : null,
-      axes: axes === undefined ? null : (axes ?? []).map((each) => each.display),
+      axes: axes === undefined ? null : (axes ?? []),
       axis,
+      hovered,
+      side: shown >= 0 && axes?.[shown] ? axes[shown]!.side : null,
       individual: tools.repeatIndividual,
       rebuilding,
       phase,
       drawing,
-      drawn: refusedLine ? { nearest: nearestRepeatAxis(axes ?? [], refusedLine, spanOf(range?.baseline.session.summary?.sheet)) } : null,
+      drawn: refused ? { nearest: nearestRepeatAxis(axes ?? [], refused, spanOf(sheetOutline ?? undefined)), line: refused.length > 0 } : null,
     },
     verbs: {
       setFirst: (id) => foldTools().setRepeatFirst(id),
       setAxis,
+      hoverAxis,
       setIndividual: (individual) => foldTools().setRepeatIndividual(individual),
       stepOrder: (delta) => void stepChoice(delta),
       acceptOrder: acceptChoice,
       backFromOrder,
     },
     step,
-    drawn: refusedLine,
+    marks: axes && axes.length > 0 ? { axes: axisLines, taken: axis, hovered, drawn: refused?.[0] ?? null } : null,
+    axisAt: (pane, at, radius) =>
+      drawing && index && sheetOutline ? repeatAxisAt(index, sheetOutline, axisLines, pane, at, radius) : -1,
     primary: () => {
       if (readOnly) return false;
       if (searching) return true;

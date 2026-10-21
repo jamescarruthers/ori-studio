@@ -251,7 +251,7 @@
     "renormalizeToEdge": "Renormalizar para a aresta",
     "renormalizeToUnitScale": "Renormalizar para escala unitária",
     "repairOverlaps": "Reparar sobreposições",
-    "repeatOnOtherSide": "Repetir as etapas até esta do outro lado",
+    "repeatOnOtherSide": "Repetir as etapas até esta em relação a um eixo de simetria, do outro lado ou atrás",
     "replaceSelectedLineType": "Substituir tipo de linha selecionado...",
     "resetLayout": "Redefinir layout",
     "resetPaneLayout": "Redefinir layout dos painéis",

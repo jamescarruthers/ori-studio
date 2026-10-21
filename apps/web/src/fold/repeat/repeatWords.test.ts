@@ -101,19 +101,19 @@ describe("Repeat's refusal words", () => {
     );
   });
 
-  it('names a symmetry axis by the way it runs on screen, whichever way its normal points', () => {
+  it('names a symmetry axis by where it runs on the paper, as the crease pattern shows it, whichever way its normal points', () => {
     const s = Math.SQRT1_2;
     const name = (n: [number, number]) => repeatAxisName(t, { n, d: 0.5 });
-    expect(name([1, 0])).toBe('Vertical axis');
-    expect(name([-1, 0])).toBe('Vertical axis');
-    expect(name([0, 1])).toBe('Horizontal axis');
-    expect(name([0, -1])).toBe('Horizontal axis');
-    // y up: the line y = x rises to the right.
-    expect(name([s, -s])).toBe('Rising diagonal');
-    expect(name([-s, s])).toBe('Rising diagonal');
-    expect(name([s, s])).toBe('Falling diagonal');
+    expect(name([1, 0])).toBe('Center line, top to bottom');
+    expect(name([-1, 0])).toBe('Center line, top to bottom');
+    expect(name([0, 1])).toBe('Center line, left to right');
+    expect(name([0, -1])).toBe('Center line, left to right');
+    // y up, as the crease pattern pane shows the sheet: the line y = x runs from the bottom left corner to the top right.
+    expect(name([s, -s])).toBe('Diagonal, bottom left to top right');
+    expect(name([-s, s])).toBe('Diagonal, bottom left to top right');
+    expect(name([s, s])).toBe('Diagonal, top left to bottom right');
     // Any other, by its angle from the horizontal.
-    expect(name([-Math.sin(Math.PI / 6), Math.cos(Math.PI / 6)])).toBe('Axis at 30°');
+    expect(name([-Math.sin(Math.PI / 6), Math.cos(Math.PI / 6)])).toBe('Line through the center at 30°');
   });
 
   it("says a sink's refusal by the sink tool's headline", () => {

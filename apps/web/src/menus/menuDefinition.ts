@@ -348,7 +348,7 @@ export function getMenuBarDef(
         { type: 'separator' },
         { type: 'action', id: 'fold.unfold-last', label: t('panels:fold.return.last', 'Unfold last step') },
         { type: 'action', id: 'fold.unfold-to', label: t('panels:fold.return.open', 'Unfold to step…'), shortcut: foldRowKey('fold.unfold-to', resolution) },
-        { type: 'action', id: 'fold.repeat', label: t('panels:fold.repeat.open', 'Repeat on the other side…'), shortcut: foldRowKey('fold.repeat', resolution) },
+        { type: 'action', id: 'fold.repeat', label: t('panels:fold.repeat.open', 'Repeat…'), shortcut: foldRowKey('fold.repeat', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.delete-step', label: t('menu:fold.delete-step', 'Delete Step'), shortcut: shortcut('fold.delete-step', resolution) },
         { type: 'separator' },

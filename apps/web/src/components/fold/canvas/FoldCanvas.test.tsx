@@ -292,7 +292,7 @@ describe("the Fold canvas", () => {
         // The flat sheet on screen: nothing to return from, so nothing to commit.
         expect(shown()).toMatchObject({ title: "Unfold to step", footer: { commit: { label: "Unfold to step", disabled: true } } });
         act(() => foldTools().selectTool("repeat"));
-        expect(shown()).toMatchObject({ title: "Repeat on the other side", footer: { commit: { label: "Repeat", disabled: true } } });
+        expect(shown()).toMatchObject({ title: "Repeat", footer: { commit: { label: "Repeat", disabled: true } } });
         // Put down, the tool they were taken up from is back in hand.
         act(() => {
           foldTools().putDown();

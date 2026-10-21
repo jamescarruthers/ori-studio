@@ -143,7 +143,8 @@ export type FoldSentenceExtent =
 
 /** A step as its sentence reads it. */
 export type FoldSentenceStep =
-  | { op: 'repeat'; count: number }
+  /** `behind`: its mirror reversed the layers, so the range was folded on the back. */
+  | { op: 'repeat'; count: number; behind?: true }
   | { op: 'unfold-to'; sheet: boolean; number?: number }
   | { op: 'fold'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope; inserted?: boolean }
   /**
@@ -345,6 +346,12 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       // sentence by a key of its own so the full stop is the language's.
       return t('panels:fold.sentence.turn', '{{turn}}.', { turn: turnName(step.turn, t) });
     case 'repeat':
+      if (step.behind)
+        return t('panels:fold.repeat.sentenceBehind', {
+          count: step.count,
+          defaultValue_one: 'Repeat the previous operation behind.',
+          defaultValue_other: 'Repeat the previous {{count}} operations behind.',
+        });
       return t('panels:fold.repeat.sentence', {
         count: step.count,
         defaultValue_one: 'Repeat the previous operation on the other side.',

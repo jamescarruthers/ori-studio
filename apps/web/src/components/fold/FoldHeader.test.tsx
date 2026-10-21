@@ -107,7 +107,7 @@ describe('FoldHeader', () => {
     const unfold = button('Unfold to step…')!;
     const repeat = button('Repeat')!;
     // The menus' long name, as its tooltip.
-    expect(repeat.title).toBe('Repeat on the other side…');
+    expect(repeat.title).toBe('Repeat…');
     for (const each of [unfold, repeat]) expect(each.getAttribute('aria-pressed')).toBe('false');
     act(() => unfold.click());
     act(() => repeat.click());

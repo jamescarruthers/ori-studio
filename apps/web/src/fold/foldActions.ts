@@ -349,7 +349,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       note: branchNote,
       run: () => deps.unfold(id === 'unfold-last'),
     })),
-    { kind: 'command', id: 'repeat', icon: 'repeat', label: t('panels:fold.repeat.open', 'Repeat on the other side…'),
+    { kind: 'command', id: 'repeat', icon: 'repeat', label: t('panels:fold.repeat.open', 'Repeat…'),
       disabled: addBlock !== null || step === null || !deps.repeat, hint: addBlock ?? undefined, note: branchNote, run: () => deps.repeat?.() },
     { kind: 'separator', id: 'after-turns' },
     {

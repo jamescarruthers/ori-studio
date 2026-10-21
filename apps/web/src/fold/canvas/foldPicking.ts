@@ -91,6 +91,8 @@ export interface FoldPointPick {
 /** A line reference: an edge, a fold or a crease, by its sheet ends. */
 export interface FoldSegmentPick {
   kind: 'segment';
+  /** Where it was picked, when a tool asks (Repeat's drawn axis); omitted otherwise, never saved. */
+  pane?: FoldPaneId;
   /** Fold's edge id; negative local pick identity for a crease mark. */
   edge: number;
   /** A flat line beside the face graph, stored by its sheet stretch. */
@@ -131,6 +133,8 @@ export interface FoldHit {
    * under the pointer, whose stack the layer picker shows (`wovenIntervalAt`).
    */
   interval?: number;
+  /** With Repeat in hand: the symmetry axis under the pointer, by its index among the verified ones (`repeatAxisAt`). */
+  repeatAxis?: number;
 }
 
 /**
@@ -141,7 +145,7 @@ export interface FoldHit {
  * a move along one crease does not.
  */
 export function sameFoldHit(a: FoldHit, b: FoldHit): boolean {
-  if (a.pane !== b.pane) return false;
+  if (a.pane !== b.pane || a.repeatAxis !== b.repeatAxis) return false;
   if (a.pick === null || b.pick === null) return a.pick === b.pick && a.interval === b.interval;
   return samePick(a.pick, b.pick);
 }

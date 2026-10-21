@@ -1,27 +1,36 @@
 /**
  * What Repeat draws over the canvas beside the paper (plan
- * `fold-sequence-tools`):
+ * `fold-sequence-tools`, `repeat-axis`):
  *
  * - **the creases the repeat adds**, on the folded pane its preview shows:
  *   each in the diagram-crease pen of its letter as the viewer sees it, as
  *   every tool draws the fold it previews (`withPreviewCreases`). The crease
  *   pattern draws them as every previewed step's instruction already
  *   (`FoldLandedPreview.added`), so they are the folded pane's alone here;
+ * - **the axes it can repeat across**: each a line on the sheet, drawn across
+ *   the crease pattern, and on the folded pane where the folded form puts
+ *   it — through every face it crosses. In the theme's accent, as tool
+ *   feedback, never a crease's pen and never dashed: faint while it is only
+ *   offered, brighter under the pointer, brightest once taken;
  * - **a line drawn that is no symmetry axis**, while its refusal is shown:
- *   across the paper of the pane it was drawn on, fainter than a pick, in the
- *   theme's accent — tool feedback, never a crease's pen.
+ *   across the paper of the pane it was drawn on, fainter than a pick.
+ *
+ * Which axis a point of the canvas is on (`repeatAxisAt`): on the crease
+ * pattern, the one it is nearest; on the folded pane, read on the top layer
+ * under it, as a drawn line is (`repeatDrawn`).
  *
  * Pure.
  */
 import type { Point } from '../../lib/geometry';
-import { chordOfConvex, pointOnLine, sceneLineOf, toPoint } from '../canvas/foldCanvasGeometry';
+import { applyIsometry, chordOfConvex, pointOnLine, sideOf, toPoint } from '../canvas/foldCanvasGeometry';
 import type { FoldOverlayInks, FoldOverlayMarks, FoldOverlayStroke } from '../canvas/foldPaneOverlays';
 import type { FoldPaneCreaseLine, FoldPendingCreases } from '../canvas/foldPaneScenes';
-import { sheetFaceAt, sheetToScene, type FoldPickIndex } from '../canvas/foldPicking';
+import { sheetFaceAt, sheetToScene, topSheetPointAt, type FoldPaneId, type FoldPickIndex } from '../canvas/foldPicking';
 import type { FoldModelLine, SheetPoint } from '../document/foldSequenceDocument';
 import type { FoldLetter, FoldScene } from '../engine/foldEngineWire';
 import { lineAcrossPaper } from '../tools/foldStepBuilder';
-import type { RepeatDrawnLine } from './repeatRange';
+import { sheetRing } from './repeatGeometry';
+import type { RepeatDrawnLine } from './repeatDrawn';
 
 const OTHER: Readonly<Record<FoldLetter, FoldLetter>> = { mountain: 'valley', valley: 'mountain' };
 
@@ -62,6 +71,13 @@ export function repeatPreviewCreases(scene: FoldScene, added: ReadonlySet<number
 /** A drawn line that is no axis: a pick's accent, fainter, and a little narrower. */
 const DRAWN = { widthMul: 1.6, alpha: 0.55 };
 
+/** The axes: offered faint and fine, under the pointer brighter, taken brightest and as wide as a pick. */
+const AXIS = {
+  offered: { widthMul: 1.4, alpha: 0.4 },
+  hovered: { widthMul: 2.6, alpha: 0.7 },
+  taken: { widthMul: 2.6, alpha: 0.95 },
+};
+
 const withAlpha = ([r, g, b, a]: FoldOverlayInks['accent'], alpha: number): FoldOverlayInks['accent'] => [r, g, b, a * alpha];
 
 /** A line's stretch across a convex outline, or null when it misses it. */
@@ -70,26 +86,115 @@ function across(outline: readonly Point[], line: FoldModelLine): [Point, Point] 
   return chord ? [pointOnLine(line, chord[0]), pointOnLine(line, chord[1])] : null;
 }
 
-export interface FoldRepeatDrawnOverlay {
+/** An axis where each pane draws it: across the sheet on the crease pattern, through each face it crosses on the folded pane. */
+export interface RepeatAxisLines {
+  creasePattern: [Point, Point] | null;
+  folded: [Point, Point][];
+}
+
+/** A sheet line on both panes: across the sheet's outline, and through every face of the scene it crosses, where the face lies. */
+export function repeatAxisLines(scene: FoldScene, outline: readonly SheetPoint[], line: FoldModelLine): RepeatAxisLines {
+  const folded: [Point, Point][] = [];
+  for (let face = 0; face < scene.faces.length; face++) {
+    const transform = scene.face_transforms[face];
+    const ends = transform ? across(sheetRing(scene, face), line) : null;
+    if (ends && transform) folded.push([applyIsometry(transform, ends[0]), applyIsometry(transform, ends[1])]);
+  }
+  return { creasePattern: outline.length > 2 ? across(outline.map(toPoint), line) : null, folded };
+}
+
+const distanceTo = (p: Point, [a, b]: readonly [Point, Point]) => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length2 = dx * dx + dy * dy;
+  const t = length2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / length2)) : 0;
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+};
+
+/**
+ * The axis under a point of a pane, within `radius` of it; -1 for none. On
+ * the crease pattern (`at` a sheet point), the nearest axis across the sheet.
+ * On the folded pane (`at` in the scene), read on the top layer there, as a
+ * line drawn on it is: the axis nearest the sheet point of the face on top,
+ * where it runs through that face — several axes the folded form lays on one
+ * line are told apart by the paper the viewer sees.
+ */
+export function repeatAxisAt(
+  index: FoldPickIndex,
+  outline: readonly SheetPoint[],
+  axes: readonly FoldModelLine[],
+  pane: FoldPaneId,
+  at: Point,
+  radius: number
+): number {
+  let best = -1;
+  let nearest = radius;
+  if (pane === 'crease-pattern') {
+    for (const [k, line] of axes.entries()) {
+      const ends = across(outline.map(toPoint), line);
+      const d = ends ? distanceTo(at, ends) : Infinity;
+      if (d <= nearest) [best, nearest] = [k, d];
+    }
+    return best;
+  }
+  const sheet = topSheetPointAt(index, at);
+  if (!sheet) return -1;
+  const point = toPoint(sheet);
+  for (const [k, line] of axes.entries()) {
+    const d = Math.abs(sideOf(line, point));
+    if (d <= nearest) [best, nearest] = [k, d];
+  }
+  return best;
+}
+
+export interface FoldRepeatOverlay {
   folded: FoldOverlayMarks;
   creasePattern: FoldOverlayMarks;
 }
 
 /**
- * A refused drawn line on the pane it was drawn on: across the paper the
- * folded pane shows (`index`), or across the sheet (`sheet`).
+ * The axes on both panes, the one taken and the one under the pointer lit
+ * (`taken`, `hovered`: indices into `axes`, -1 for none), and a refused
+ * drawn line on the pane it was drawn on. Under the folded pane's lines of
+ * the taken and hovered axes, the offered ones are drawn first, so the
+ * brighter ones lie over them where the folded form lays several on one line.
  */
-export function repeatDrawnOverlay(
+export function repeatOverlay(
   index: FoldPickIndex | null,
-  sheet: readonly SheetPoint[] | null,
-  drawn: RepeatDrawnLine,
+  outline: readonly SheetPoint[] | null,
+  axes: readonly FoldModelLine[],
+  taken: number,
+  hovered: number,
+  drawn: RepeatDrawnLine | null,
   inks: FoldOverlayInks
-): FoldRepeatDrawnOverlay {
-  const stroke = (ends: [Point, Point] | null): FoldOverlayStroke[] =>
-    ends ? [{ a: ends[0], b: ends[1], color: withAlpha(inks.accent, DRAWN.alpha), widthMul: DRAWN.widthMul }] : [];
-  const outline = (sheet ?? []).map(toPoint);
-  const folded =
-    drawn.frame === 'model' && index ? stroke(lineAcrossPaper(index, sceneLineOf(index.scene.view_transform, drawn.line))) : [];
-  const creasePattern = drawn.frame === 'sheet' && outline.length > 2 ? stroke(across(outline, drawn.line)) : [];
+): FoldRepeatOverlay {
+  const folded: FoldOverlayStroke[] = [];
+  const creasePattern: FoldOverlayStroke[] = [];
+  const stroke = (ends: readonly [Point, Point], style: { widthMul: number; alpha: number }): FoldOverlayStroke => ({
+    a: ends[0],
+    b: ends[1],
+    color: withAlpha(inks.accent, style.alpha),
+    widthMul: style.widthMul,
+  });
+  const order = axes.map((_, k) => k).sort((a, b) => rank(a) - rank(b));
+  function rank(k: number) {
+    return k === taken ? 2 : k === hovered ? 1 : 0;
+  }
+  for (const k of order) {
+    const style = k === taken ? AXIS.taken : k === hovered ? AXIS.hovered : AXIS.offered;
+    const lines = index ? repeatAxisLines(index.scene, outline ?? [], axes[k]!) : null;
+    if (!lines) continue;
+    if (lines.creasePattern) creasePattern.push(stroke(lines.creasePattern, style));
+    for (const each of lines.folded) folded.push(stroke(each, style));
+  }
+  if (drawn) {
+    if (drawn.pane === 'folded' && index) {
+      const ends = lineAcrossPaper(index, drawn.drawn);
+      if (ends) folded.push(stroke(ends, DRAWN));
+    } else if (drawn.pane === 'crease-pattern' && outline && outline.length > 2) {
+      const ends = across(outline.map(toPoint), drawn.drawn);
+      if (ends) creasePattern.push(stroke(ends, DRAWN));
+    }
+  }
   return { folded: { dots: [], strokes: folded }, creasePattern: { dots: [], strokes: creasePattern } };
 }

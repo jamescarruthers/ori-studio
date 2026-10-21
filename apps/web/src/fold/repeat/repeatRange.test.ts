@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { FoldPick } from '../canvas/foldPicking';
-import type { FoldIsometry } from '../engine/foldEngineWire';
 import { FOLD_PENDING_NODE, type FoldSessionNode } from '../session/foldSessionState';
 import type { FoldPathEntry } from '../sequence/foldSequencePath';
 import type { RepeatSymmetry } from './repeatGeometry';
-import { drawnRepeatAxis, nearestRepeatAxis, repeatAxisIndex, repeatDrawnLine, repeatRange, sameRepeatLine } from './repeatRange';
+import { repeatAxisIndex, repeatRange, sameRepeatLine } from './repeatRange';
 
 /** A path entry, landed unless `pending`: the sheet for a null id. */
 function entry(id: string | null, pending = false): FoldPathEntry {
@@ -14,11 +12,8 @@ function entry(id: string | null, pending = false): FoldPathEntry {
   return { id, key: id ?? 'sheet', node: null, kind: id === null ? 'sheet' : 'fold', number: null, status: session.status, session, branches: null };
 }
 
-const vertical: RepeatSymmetry = { sheet: { n: [1, 0], d: 0.5 }, model: { n: [1, 0], d: 0.5 }, display: { n: [1, 0], d: 0.5 } };
-/** Seen through a view that turns the model upside down: on screen it runs at y = −0.5. */
-const horizontal: RepeatSymmetry = { sheet: { n: [0, 1], d: 0.5 }, model: { n: [0, 1], d: 0.5 }, display: { n: [0, 1], d: -0.5 } };
-/** That view: y mirrored. */
-const UPSIDE_DOWN: FoldIsometry = [1, 0, 0, 0, -1, 0];
+const vertical: RepeatSymmetry = { sheet: { n: [1, 0], d: 0.5 }, side: 'same' };
+const horizontal: RepeatSymmetry = { sheet: { n: [0, 1], d: 0.5 }, side: 'behind' };
 
 describe('repeatRange', () => {
   const path = [entry(null), entry('s1'), entry('s2'), entry('s3')];
@@ -57,36 +52,5 @@ describe('the axis Repeat takes', () => {
   it('compares lines within Repeat’s tolerance, whichever way each is written', () => {
     expect(sameRepeatLine({ n: [1, 0], d: 0.5 }, { n: [-1, 0], d: -0.5 })).toBe(true);
     expect(sameRepeatLine({ n: [1, 0], d: 0.5 }, { n: [1, 0], d: 0.5 + 1e-4 })).toBe(false);
-  });
-});
-
-describe('a drawn axis', () => {
-  const free = (pane: 'folded' | 'crease-pattern', x: number, y: number, sheet: [number, number] | null = null): FoldPick => ({
-    kind: 'free',
-    pane,
-    scene: { x, y },
-    sheet,
-  });
-
-  it('is read on the folded pane through the view it was drawn on, on the crease pattern on the sheet', () => {
-    expect(repeatDrawnLine([free('folded', 0, -0.5)], UPSIDE_DOWN)).toBeNull();
-    // Drawn at y = −0.5 on a view that turns the model upside down: the model's y = 0.5.
-    const drawn = repeatDrawnLine([free('folded', 0, -0.5), free('folded', 1, -0.5)], UPSIDE_DOWN);
-    expect(drawn?.frame).toBe('model');
-    expect(drawnRepeatAxis([vertical, horizontal], drawn!)).toBe(1);
-    // With no view to read it through, a line on the folded pane is none.
-    expect(repeatDrawnLine([free('folded', 0, -0.5), free('folded', 1, -0.5)], null)).toBeNull();
-    const sheet = repeatDrawnLine([free('crease-pattern', 9, 9, [0.5, 0]), free('crease-pattern', 9, 9, [0.5, 1])], null);
-    expect(sheet?.frame).toBe('sheet');
-    expect(drawnRepeatAxis([vertical, horizontal], sheet!)).toBe(0);
-  });
-
-  it('is refused when it is no axis, the nearest offered only when it is near', () => {
-    const near = repeatDrawnLine([free('folded', 0.51, 0), free('folded', 0.5, 1)], UPSIDE_DOWN)!;
-    expect(drawnRepeatAxis([vertical, horizontal], near)).toBe(-1);
-    expect(nearestRepeatAxis([vertical, horizontal], near, Math.SQRT2)).toBe(0);
-    const far = repeatDrawnLine([free('folded', 0, 0), free('folded', 1, 1)], UPSIDE_DOWN)!;
-    expect(drawnRepeatAxis([vertical, horizontal], far)).toBe(-1);
-    expect(nearestRepeatAxis([vertical, horizontal], far, Math.SQRT2)).toBe(-1);
   });
 });
