@@ -130,19 +130,21 @@ describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
     async () => {
       const e = await engine();
       const { steps, states } = replayed(e, opened(CRANE));
-      expect(steps.slice(10).map((step) => step.op.kind)).toEqual(['precrease', 'precrease', 'petal']);
-      const start = states[10]!;
+      // The front flap's kites and petal, wherever the owner's copy has them now (it is edited over time).
+      const k = steps.findIndex((_, i) => steps.slice(i, i + 3).map((step) => step.op.kind).join() === 'precrease,precrease,petal');
+      expect(k).toBeGreaterThanOrEqual(0);
+      const start = states[k]!;
       const axes = repeatSymmetries(e.scene(start), e.summary(start).sheet);
       const diagonal = axes.find((axis) => Math.abs(axis.sheet.n[0] + axis.sheet.n[1]) < 1e-9 && Math.abs(axis.sheet.d) < 1e-9);
       expect(diagonal?.side).toBe('behind');
       // The other diagonal mirrors the front flap onto itself: the other side of it.
       expect(axes.find((axis) => axis !== diagonal)?.side).toBe('same');
-      const parent = states.at(-1)!;
+      const parent = states[k + 3]!;
       const prepared = prepareRepeat(e, {
         parent,
         axis: diagonal!.sheet,
-        steps: source(steps, states, 10, 12),
-        source: { first: steps[10]!.id, last: steps[12]!.id, revision: 'test' },
+        steps: source(steps, states, k, k + 2),
+        source: { first: steps[k]!.id, last: steps[k + 2]!.id, revision: 'test' },
       });
       if (prepared.status !== 'ready') throw new Error(JSON.stringify(prepared));
       expect(prepared.op.side).toBe('behind');
@@ -152,7 +154,7 @@ describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
 
       // By hand: turn over, the same three folds on the back flap, turn back.
       const mirror = ([x, y]: readonly [number, number]) => [y, x] as const;
-      const [kiteA, kiteB, petal] = steps.slice(10).map((step) => step.op);
+      const [kiteA, kiteB, petal] = steps.slice(k, k + 3).map((step) => step.op);
       if (kiteA?.kind !== 'precrease' || kiteB?.kind !== 'precrease' || petal?.kind !== 'petal' || !('ends' in petal)) throw new Error('kinds');
       const turned = fold(e, parent, [{ kind: 'turn', axis: 'vertical' }]);
       /** A kite precrease on the back, its root the one whose crease is the mirrored one. */
@@ -169,8 +171,8 @@ describe.skipIf(!existsSync(WASM))('Repeat behind', () => {
         }
         throw new Error('no root folds the mirrored kite');
       };
-      const a = kite(kiteA, turned, states[11]!);
-      const b = kite(kiteB, a, states[12]!);
+      const a = kite(kiteA, turned, states[k + 1]!);
+      const b = kite(kiteB, a, states[k + 2]!);
       const petalled = fold(e, b, [{ kind: 'petal', ends: [mirror(petal.ends[0]), mirror(petal.ends[1])], petal: mirror(petal.petal), direction: 'valley' }]);
       const byHand = fold(e, petalled, [{ kind: 'turn', axis: 'vertical' }]);
       expect(e.fingerprint(byHand)).toBe(prepared.op.steps.at(-1)!.expect);
