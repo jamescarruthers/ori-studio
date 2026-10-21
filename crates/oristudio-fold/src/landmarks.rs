@@ -271,8 +271,8 @@ impl State {
             );
         }
         for (i, j, at, [ui, uj]) in crossings(&segments) {
-            let visible = covers(&segments[i].visible, ui, &segments[i].at)
-                && covers(&segments[j].visible, uj, &segments[j].at);
+            let (si, sj) = (&segments[i], &segments[j]);
+            let visible = crossing_seen((si.at, &si.visible, ui), (sj.at, &sj.visible, uj));
             for (segment, other, u) in [(i, j, ui), (j, i, uj)] {
                 points.add(
                     at,
@@ -426,7 +426,7 @@ impl State {
                     continue;
                 }
                 let visible =
-                    covers(&piece.visible, u, &piece.at) && covers(other_visible, v, &other_at);
+                    crossing_seen((piece.at, &piece.visible, u), (other_at, other_visible, v));
                 let on = Feature::CreaseMark(mark);
                 for (where_, crossed, sheet) in [
                     (on, feature, piece.sheet.at(u)),
@@ -708,9 +708,35 @@ fn interior(at: [Point; 2], x: Point) -> Option<f64> {
     (along > TOL && along < length - TOL).then(|| along / length)
 }
 
-/// Whether the fraction `u` of the way along `at` is in a visible part.
-fn covers(spans: &[[f64; 2]], u: f64, at: &[Point; 2]) -> bool {
-    let slack = TOL / distance(at[0], at[1]).max(f64::MIN_POSITIVE);
+/// Whether the viewer sees where two segments (or crease mark parts) cross,
+/// each given by its image, its visible parts and the crossing's fraction
+/// along it: the crossing is in, or at the end of, a visible part of both.
+///
+/// So a crossing at a flap's edge, where the edge on top runs over the
+/// other segment and hides the rest of it, is seen: the corner the two make
+/// is in view. One under other paper, or where either is covered on both
+/// sides, is not.
+///
+/// A visible part's end is measured on the segment moved [`PROBE`] into its
+/// face ([`Cover::visible_spans`]), so where the covering face's edge (the
+/// other segment) crosses it at the angle θ, the end is `PROBE·cot θ` along
+/// it from the crossing, and `TOL / sin θ` more for the margin: far beyond
+/// the tolerance. The end is allowed that far, and never more than the half
+/// minimum feature the parts are resolved to.
+fn crossing_seen(a: ([Point; 2], &[[f64; 2]], f64), b: ([Point; 2], &[[f64; 2]], f64)) -> bool {
+    let d = |at: [Point; 2]| [at[1][0] - at[0][0], at[1][1] - at[0][1]];
+    let (da, db) = (d(a.0), d(b.0));
+    let norms = (distance(a.0[0], a.0[1]) * distance(b.0[0], b.0[1])).max(f64::MIN_POSITIVE);
+    let sin = (da[0] * db[1] - da[1] * db[0]).abs() / norms;
+    let cos = (da[0] * db[0] + da[1] * db[1]).abs() / norms;
+    let slack = ((PROBE * cos + 2.0 * TOL) / sin.max(f64::MIN_POSITIVE)).min(MIN_FEATURE / 2.0);
+    covers(a.1, a.2, &a.0, slack) && covers(b.1, b.2, &b.0, slack)
+}
+
+/// Whether the fraction `u` of the way along `at` is in a visible part, or
+/// within `slack` (a distance) of one.
+fn covers(spans: &[[f64; 2]], u: f64, at: &[Point; 2], slack: f64) -> bool {
+    let slack = slack.max(TOL) / distance(at[0], at[1]).max(f64::MIN_POSITIVE);
     spans
         .iter()
         .any(|&[u0, u1]| u >= u0 - slack && u <= u1 + slack)
@@ -1009,6 +1035,48 @@ mod tests {
         let ends = [lerp(under.at, u0)[0], lerp(under.at, u1)[0]];
         assert!(ends.iter().any(|x| x.abs() < 1e-12), "{ends:?}");
         assert!(ends.iter().any(|x| (x - 0.4).abs() < 1e-5), "{ends:?}");
+    }
+
+    /// The owner's intersection.osf in small: a triangle, and a flap folded
+    /// over it whose edge crosses the triangle's edges at slants. Where the
+    /// triangle's edge goes under the flap, the two make a corner the viewer
+    /// sees, so a point; it was not one, because a visible part's end is
+    /// measured a probe into its face, which at a slant moves it along the
+    /// edge, short of the crossing when the flap lies over that face. Once
+    /// paper is folded over one of the crossings, that one is not seen.
+    #[test]
+    fn a_crossing_at_a_flaps_edge_is_seen_and_one_under_paper_is_not() {
+        let through =
+            |a: Point, b: Point| Line::from_points(a, b).unwrap_or_else(|| unreachable!());
+        let crossing_near = |l: &Landmarks, at: Point| -> bool {
+            let p = l
+                .points
+                .iter()
+                .find(|p| {
+                    distance(p.at, at) < 2e-3
+                        && p.sources
+                            .iter()
+                            .any(|s| matches!(s.kind, PointKind::Crossing { .. }))
+                })
+                .unwrap_or_else(|| panic!("no crossing near {at:?}: {:?}", l.points));
+            p.visible
+        };
+        // The triangle (0, 0), (1, 0), (1, 1), two layers.
+        let s = fold(&square(), line([1.0, -1.0], 0.0), [0.1, 0.9]);
+        // Its right corner over to the left: the flap's edge, the image of
+        // x = 1, runs from about (0.503, -0.036) to (0.360, 0.954), crossing
+        // the bottom at about (0.497, 0) and the bend y = x at (0.435, 0.435).
+        let s = fold(&s, through([0.75, 0.0], [0.7, 0.7]), [0.9, 0.1]);
+        let (bottom, bend) = ([0.4974, 0.0], [0.4350, 0.4350]);
+        let l = s.landmarks(&[]);
+        assert!(crossing_near(&l, bottom));
+        assert!(crossing_near(&l, bend));
+        // Everything above y = 0.6 folded down: the flap's top lands over
+        // the crossing on the bend; the one on the bottom stays in view.
+        let s = fold(&s, line([0.0, 1.0], 0.6), [0.5, 0.9]);
+        let l = s.landmarks(&[]);
+        assert!(crossing_near(&l, bottom));
+        assert!(!crossing_near(&l, bend));
     }
 
     #[test]
