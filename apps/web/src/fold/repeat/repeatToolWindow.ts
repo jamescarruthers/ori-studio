@@ -305,6 +305,7 @@ export function repeatToolWindow(
         ? t('panels:fold.repeat.commitSame', 'Repeat on the other side')
         : t('panels:fold.repeat.label', 'Repeat');
   const axisNames = (repeat.axes ?? []).map((axis) => repeatAxisName(t, axis.sheet));
+  const refusedAll = axisNames.length > 0 && axisNames.every((_, index) => repeat.states?.[index]?.kind === 'refused');
   const choosing = phase.kind === 'choosing' && phase.index !== null ? phase : null;
   const status = statusNote(t, repeat);
   return {
@@ -354,12 +355,15 @@ export function repeatToolWindow(
         value: repeat.axis >= 0 ? String(repeat.axis) : null,
         placeholder: t('panels:fold.repeat.chooseAxis', 'Choose symmetry axis'),
         // An axis whose repeat is refused is there, disabled, with why; one still being prepared is a choice.
-        options: axisNames.map((label, index) => {
-          const state = repeat.states?.[index];
-          return state?.kind === 'refused' && state.stop
-            ? { id: String(index), label, disabled: true, description: repeatAxisRefusal(t, state.stop, state.step ?? null) }
-            : { id: String(index), label };
-        }),
+        // Where every one is refused there is no choice to offer: only the one taken, its refusal said below.
+        options: refusedAll
+          ? axisNames.flatMap((label, index) => (index === repeat.axis ? [{ id: String(index), label }] : []))
+          : axisNames.map((label, index) => {
+              const state = repeat.states?.[index];
+              return state?.kind === 'refused' && state.stop
+                ? { id: String(index), label, disabled: true, description: repeatAxisRefusal(t, state.stop, state.step ?? null) }
+                : { id: String(index), label };
+            }),
         disabled: readOnly || adding || choosing !== null || axisNames.length === 0,
         set: (id) => {
           const index = Number(id);
