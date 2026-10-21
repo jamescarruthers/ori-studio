@@ -19,7 +19,15 @@ import { storedScene } from '../pictures/pictureFrame';
 import { flatScenePicture, type CapturedPicture } from '../capture/captureFolded';
 import { CAPTURE_PX_PER_UNIT } from '../capture/captureGeometry';
 import type { FoldStepAction } from './foldStepMarkPlan';
-import { foldScenePattern, foldStepPicture, PATTERN_PER_SHEET_UNIT, type FoldStepPictureInput } from './foldStepPicture';
+import { DIAGRAM_PUSH_INK } from '../../lib/stepDiagram/diagramInk';
+import { INK_UNITS } from '../annotate/canvasInk';
+import {
+  FOLD_PUSH_ARROW_LENGTH,
+  foldScenePattern,
+  foldStepPicture,
+  PATTERN_PER_SHEET_UNIT,
+  type FoldStepPictureInput,
+} from './foldStepPicture';
 
 const SQUARE = [
   [0, 0],
@@ -85,6 +93,23 @@ describe('a Fold step’s picture (D11, D17)', () => {
         expect(arrow.from[rotationDeg === 0 ? 0 : 1]).toBeCloseTo(arrow.to[rotationDeg === 0 ? 0 : 1]);
       }
     }
+  });
+
+  it('draws a push arrow its own short length — about twice its head’s width — its tip where the engine puts it', () => {
+    // The engine's push: a long way down onto the middle of the top edge.
+    const action: FoldActionGeometry = { ...VALLEY, grip: null, push: { at: { x: 0.5, y: 1.6 }, toward: { x: 0.5, y: 1 } } };
+    const [push] = foldStepPicture(input('before', action), FLAT, sequentialIds()).marks.filter((mark) => mark.kind === 'push-arrow');
+    if (push?.kind !== 'push-arrow') throw new Error('a push arrow');
+    const length = Math.hypot(push.to[0] - push.from[0], push.to[1] - push.from[1]);
+    const headWidth = 2 * DIAGRAM_PUSH_INK.headHalf * INK_UNITS;
+    expect(length).toBeCloseTo(FOLD_PUSH_ARROW_LENGTH, 9);
+    expect(length / headWidth).toBeGreaterThanOrEqual(2);
+    expect(length / headWidth).toBeLessThanOrEqual(2.5);
+    // The tip on the top edge's middle, the arrow coming straight down onto it, as the engine's did.
+    expect(push.to[0]).toBeCloseTo(0.5, 9);
+    expect(push.to[1]).toBeCloseTo(0, 9);
+    expect(push.from[0]).toBeCloseTo(0.5, 9);
+    expect(push.from[1]).toBeCloseTo(-FOLD_PUSH_ARROW_LENGTH, 9);
   });
 
   it('draws its crease pattern before the step with the step’s creases as its instruction, and after it as folds', () => {

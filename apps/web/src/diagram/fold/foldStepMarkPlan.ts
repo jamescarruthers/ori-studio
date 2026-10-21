@@ -22,6 +22,9 @@
  *   its own line, read off the states either side of it
  *   ({@link stepFoldedCreases}), and the arrow of the flap swung over, from
  *   the ear's tip to where the fold lays it.
+ * - **A petal fold** draws every crease it folds the same way: the hinge
+ *   and the two kite creases its sides fold in along, the triangle the petal
+ *   lifts from, each in its own line. Its arrow is the engine's.
  *
  * Anything else keeps the engine's picture. Every point is in the scene
  * frame of the state the step folds from — the picture's, before it is
@@ -77,9 +80,11 @@ export function foldStepAction(action: FoldActionGeometry, context: FoldStepMark
   if (!op) return action;
   const frame = foldStateFrame(parent);
   let placed: FoldStepAction = action;
-  if (op.kind === 'rabbit-ear' && context.child) {
+  if ((op.kind === 'rabbit-ear' || op.kind === 'petal') && context.child) {
     const creases = stepFoldedCreases(parent, context.child);
     if (creases.length > 0) placed = { ...placed, spans: creases };
+  }
+  if (op.kind === 'rabbit-ear' && context.child) {
     const swung = earSwung(op.corners, frame, parent, context.child);
     if (swung) placed = { ...placed, grip: swung };
   }
