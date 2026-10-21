@@ -16,7 +16,9 @@
 //!   beside it once an earlier squash has unfolded it); the flap is *free*,
 //!   its moving portion attached to the rest only along h; and it is
 //!   *uncovered*, with no other paper over its moving portion, or inside it,
-//!   on the side it squashes toward. Each
+//!   on the side it squashes toward. Paper folded over the upper layer at
+//!   the hinge and held by the flap there alone is no cover: it rides with
+//!   that layer's hinge side, uncovered in turn. Each
 //!   is a refusal naming the faces in the way. An upper layer held by its
 //!   spine alone has no squash: its hinge side would lie loose, both ways
 //!   round (2 of 67 seeded draws, before this was checked).
@@ -111,6 +113,9 @@ pub struct SquashAnalysis {
 struct Flap {
     upper: Vec<usize>,
     lower: Vec<usize>,
+    /// Paper outside the flap that turns with the upper layer's hinge side
+    /// (see [`State::squash_riders`]).
+    riders: Vec<usize>,
     vertex: Point,
     /// The spine's far end from the vertex.
     spine_end: Point,
@@ -196,7 +201,7 @@ impl State {
             }
             mask
         };
-        let (lower, upper) = (mask(&flap.lower), mask(&flap.upper));
+        let (lower, upper, riders) = (mask(&flap.lower), mask(&flap.upper), mask(&flap.riders));
         let scoring = score_cuts(
             self,
             &[
@@ -235,6 +240,8 @@ impl State {
                     (false, _, true) => Some(1),
                     (false, _, false) => Some(2),
                 }
+            } else if riders[old] {
+                Some(2)
             } else {
                 None
             };
@@ -480,22 +487,44 @@ impl State {
                 }
             })
             .collect();
-        let mut covering = BTreeSet::new();
-        for (pair, _) in self.order().pairs() {
-            let (Some(f), Some(g)) = (self.face_position(pair.lo()), self.face_position(pair.hi()))
-            else {
-                continue;
-            };
-            let (x, y) = match (in_flap[f], in_flap[g]) {
-                (true, false) => (g, f),
-                (false, true) => (f, g),
-                _ => continue,
-            };
-            if toward(self, x, y, direction) == Some(true)
-                && convex::overlaps(&geometry.images[x], &moving_images[y])
-            {
-                covering.insert(x);
+        // The faces outside `moves` over what moves, toward `direction`.
+        let covering_of = |moves: &[bool], moving_images: &[Vec<Point>]| {
+            let mut covering = BTreeSet::new();
+            for (pair, _) in self.order().pairs() {
+                let (Some(f), Some(g)) =
+                    (self.face_position(pair.lo()), self.face_position(pair.hi()))
+                else {
+                    continue;
+                };
+                let (x, y) = match (moves[f], moves[g]) {
+                    (true, false) => (g, f),
+                    (false, true) => (f, g),
+                    _ => continue,
+                };
+                if toward(self, x, y, direction) == Some(true)
+                    && convex::overlaps(&geometry.images[x], &moving_images[y])
+                {
+                    covering.insert(x);
+                }
             }
+            covering
+        };
+        let mut covering = covering_of(&in_flap, &moving_images);
+        // A cover folded over the upper layer at the hinge, and held by the
+        // flap there alone, rides with that layer instead: it is uncovered
+        // in turn, nothing else over it.
+        let mut riders = Vec::new();
+        if !covering.is_empty()
+            && let Some(riding) = self.squash_riders(&in_flap, &hinge_line, up, direction)
+            && covering.iter().all(|&x| riding[x])
+        {
+            let moves: Vec<bool> = (0..faces.len()).map(|f| in_flap[f] || riding[f]).collect();
+            let mut images = moving_images.clone();
+            for f in (0..faces.len()).filter(|&f| riding[f]) {
+                images[f] = geometry.images[f].clone();
+            }
+            covering = covering_of(&moves, &images);
+            riders = (0..faces.len()).filter(|&f| riding[f]).collect();
         }
         if !covering.is_empty() {
             let covering: Vec<usize> = covering.into_iter().collect();
@@ -512,6 +541,7 @@ impl State {
         Ok(Flap {
             upper,
             lower,
+            riders,
             vertex,
             spine_end: images[other],
             hinge: hinge_dir,
@@ -543,6 +573,7 @@ impl State {
             .upper
             .iter()
             .chain(&flap.lower)
+            .chain(&flap.riders)
             .map(|&f| self.faces()[f].id)
             .collect();
         moving.sort_unstable();
@@ -590,6 +621,73 @@ impl State {
             }
         }
         region
+    }
+
+    /// The paper that rides with a flap's upper layer: what is folded over
+    /// that layer at the hinge, with all it is joined to outside the flap.
+    /// The upper layer's hinge side turns across the hinge and carries it,
+    /// so it must be held by the flap only along the hinge, and lie over
+    /// the flap toward `direction` wherever they meet: a cover, never paper
+    /// under the flap. None otherwise, when it stays and covers.
+    fn squash_riders(
+        &self,
+        in_flap: &[bool],
+        hinge: &Line,
+        up: bool,
+        direction: Direction,
+    ) -> Option<Vec<bool>> {
+        let faces = self.faces();
+        let geometry = self.geometry();
+        let topology = self.topology();
+        let creases = self.creases();
+        let images = &geometry.vertex_images;
+        let on_hinge = |k: usize| {
+            creases[k]
+                .vertices
+                .iter()
+                .all(|v| hinge.distance_to_point(images[v.index()]) <= TOL)
+        };
+        let mut riding = vec![false; faces.len()];
+        let mut queue = Vec::new();
+        for f in (0..faces.len()).filter(|&f| in_flap[f] && geometry.isometries[f].front_up() == up)
+        {
+            for &k in &topology.face_creases[f] {
+                if let Some(g) = topology.across(k, f)
+                    && !in_flap[g]
+                    && !riding[g]
+                    && creases[k].kind.is_folded()
+                    && on_hinge(k)
+                {
+                    riding[g] = true;
+                    queue.push(g);
+                }
+            }
+        }
+        while let Some(f) = queue.pop() {
+            for &k in &topology.face_creases[f] {
+                let Some(g) = topology.across(k, f) else {
+                    continue;
+                };
+                if in_flap[g] {
+                    if !on_hinge(k) {
+                        return None;
+                    }
+                } else if !riding[g] {
+                    riding[g] = true;
+                    queue.push(g);
+                }
+            }
+        }
+        for f in (0..faces.len()).filter(|&f| riding[f]) {
+            for g in (0..faces.len()).filter(|&g| in_flap[g]) {
+                if convex::overlaps(&geometry.images[f], &geometry.images[g])
+                    && toward(self, f, g, direction) != Some(true)
+                {
+                    return None;
+                }
+            }
+        }
+        Some(riding)
     }
 
     /// Where the lower layer `q` folds over a hinge at its vertex `v`, an end
