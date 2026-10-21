@@ -42,3 +42,15 @@ precrease through the tools, clicks and all.
   model map is the identity with every layer pair reversed, and Repeat took
   only a 2D reflection that kept the layer order. It now carries a side and
   repeats behind (`apps/web/src/fold/repeat/repeatBehind.wasm.test.ts`).
+- `independent-sides-orders.osf` (KNOWN GAP, open): a square with two flaps
+  folded in at the bottom left (the corner onto (5/8, 1/4), then that flap's
+  point (1/4, 0) onto (9/16, 1/8)) and the same mirrored at the top right.
+  Folding the bottom-right corner up along x - y = 9/16 lands across both
+  sides, three ways each (under both of a side's flaps, between them, or on
+  top): nine orders. The chooser builds its list from tuck recipes, each of
+  which pins one side, so it lists six and never both sides between. A
+  listing of every flat stacking (fold-launch/solved-orders) was reverted for
+  the launch: it also offered stackings a fold cannot reach by moving.
+  `apps/web/src/fold/orders/independentSidesOrders.wasm.test.ts` checks the six
+  today and holds the nine as an expected failure until each side's reachable
+  orders are combined. Built by a script over the engine on 2026-10-21.
