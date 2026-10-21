@@ -3,7 +3,9 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { creasePatternPaperScene, FOLD_PANE_DISPLAY_DEFAULT } from '../../fold/canvas/foldPaneScenes';
 import type { FoldOp, FoldPointRef, FoldRef } from '../../fold/document/foldSequenceDocument';
-import { SQUARE_PAPER } from '../../fold/document/foldSequenceDocument';
+import { isLockedStep, SQUARE_PAPER } from '../../fold/document/foldSequenceDocument';
+import { readFoldSequences } from '../../fold/document/foldSequenceFile';
+import { parseNativeProjectFile } from '../../lib/nativeProjectFile';
 import { createFoldEngineCalls } from '../../fold/engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls } from '../../fold/engine/foldEngineCompoundCalls';
 import type { FoldActionGeometry, FoldScene } from '../../fold/engine/foldEngineWire';
@@ -18,7 +20,7 @@ import { foldStepPicture } from './foldStepPicture';
 /**
  * A Fold step's marks in the Diagram drawn from the real engine's picture of
  * it and the real states either side: a rabbit ear's every crease and the
- * flap swung over, the circles and arrows the axioms place, and a Repeat's
+ * flap swung over, a petal fold's every crease, the circles and arrows the axioms place, and a Repeat's
  * every crease as its crease pattern's instruction. Skipped when the bridge
  * has not been built.
  */
@@ -96,6 +98,35 @@ describe.skipIf(!available)('a Fold step’s marks in the Diagram, from the real
     ).marks;
     // Seen from the back of the paper, as the whale starts: valleys and the mountain, as Lang draws a rabbit ear.
     expect(marks.map((mark) => mark.kind).sort()).toEqual(['mountain-line', 'valley-arrow', 'valley-line', 'valley-line', 'valley-line']);
+  });
+
+  it('draws every crease of a petal fold — the hinge and the two kite creases its sides fold in along — and keeps the engine’s arrow', async () => {
+    const calls = await engine();
+    const project = parseNativeProjectFile(readFileSync(resolve(FIXTURES, 'petal-fold.osf'), 'utf8'));
+    const [held] = readFoldSequences(project.workspace.foldSequences);
+    const steps = held!.document.steps.flatMap((node) => (isLockedStep(node) ? [] : [node]));
+    const index = steps.findIndex((step) => step.op.kind === 'petal');
+    let state = landed(calls.sheet(held!.document.paper)).state;
+    for (const step of steps.slice(0, index)) state = landed(calls.step(state, step.op, step.choices)).state;
+    const { op } = steps[index]!;
+    const petal = stepOf(calls, state, op);
+    // The engine draws the hinge alone.
+    expect(petal.action.spans).toHaveLength(1);
+    const placed = foldStepAction(petal.action, { op, parent: petal.parent, child: petal.child });
+    expect(placed.grip).toEqual(petal.action.grip);
+    // The hinge a valley, as the petal lifts toward the viewer; the kite creases mountains, its sides folding in behind it.
+    expect(placed.spans.map((span) => span.direction).sort()).toEqual(['mountain', 'mountain', 'valley']);
+    expect(placed.spans.every((span) => !span.hidden)).toBe(true);
+    const [hinge] = placed.spans.filter((span) => span.direction === 'valley');
+    const kites = placed.spans.filter((span) => span.direction === 'mountain');
+    // The triangle the petal lifts from: each kite crease runs from an end of the hinge to the corner the two share.
+    for (const kite of kites) expect([hinge!.from, hinge!.to].some((end) => near(end, kite.from) || near(end, kite.to))).toBe(true);
+    expect([kites[0]!.from, kites[0]!.to].some((end) => near(end, kites[1]!.from) || near(end, kites[1]!.to))).toBe(true);
+    const marks = foldStepPicture(
+      { shown: petal.parent, own: { scene: petal.child, step: petal.summary.step, sheet: petal.summary.sheet }, moment: 'before', action: placed },
+      FOLD_PULL_RENDER
+    ).marks;
+    expect(marks.map((mark) => mark.kind).sort()).toEqual(['mountain-line', 'mountain-line', 'valley-arrow', 'valley-line']);
   });
 
   it('circles a segment through two points at its ends and draws no arrow; a point onto a point circled and joined', async () => {

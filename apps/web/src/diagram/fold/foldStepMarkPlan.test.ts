@@ -116,6 +116,17 @@ describe('where a Fold step’s marks go in the Diagram', () => {
     expect(placed.rings).toBeUndefined();
   });
 
+  it('draws every crease a petal fold folds, each in its letter, and keeps the engine’s arrow', () => {
+    // The engine's picture names one line; the states either side say what was folded.
+    const action = engineAction([0, 0.5], [1, 0.5], [0.5, 0.15], [0.5, 0.85]);
+    const op: FoldOp = { kind: 'petal', ends: [[0, 0.5], [1, 0.5]], petal: [0.5, 0.2], direction: 'valley' };
+    const placed = foldStepAction(action, { op, parent: squareScene(), child: diagonalHalfScene() });
+    expect(placed.spans).toEqual(stepFoldedCreases(squareScene(), diagonalHalfScene()));
+    expect(placed.grip).toEqual(action.grip);
+    // Without the state it lands, the engine's own line.
+    expect(foldStepAction(action, { op, parent: squareScene() })).toEqual(action);
+  });
+
   it('keeps the engine’s picture of a line it cannot place by: a free line, a newer build’s step', () => {
     const action = engineAction([0, 0.5], [1, 0.5], [0.5, 0.15], [0.5, 0.85]);
     const free: FoldOp = { kind: 'precrease', direction: 'valley', line: { via: 'free', through: [[0, 0.5], [1, 0.5]] }, seed: all };
