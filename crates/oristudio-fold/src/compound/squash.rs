@@ -10,6 +10,15 @@
 //!   the end of the spine where the lower layer folds over a hinge is the
 //!   **vertex** O, and that crease's line is the **hinge** h. Each layer is
 //!   its face grown across flat creases off h and folded ones on s.
+//! - **A drawn hinge** ([`Squash::hinge`]) is h instead: O is where it
+//!   crosses the spine, within it, and only the flap's end on the flap
+//!   point's side of h squashes, lifted along h and pressed flat, the
+//!   spine beyond O landing on h. Each layer grows as above, but only by
+//!   creases reaching that side; paper beyond h stays, and the upper layer
+//!   is cut along h where it runs on across it. The motions below are the
+//!   same: the lower layer turns up and back down at h, so only the upper
+//!   one folds there. A line that misses the spine is
+//!   [`NoFlap::HingeOffSpine`]; it never falls back to the inferred hinge.
 //! - **Preconditions, checked up front** (research §5.3: every free flap
 //!   closed, 491 of 491; every free, uncovered one was unique, 416 of 416):
 //!   both layers are held along h (the upper one folded over it, or flat
@@ -70,6 +79,11 @@ pub struct Squash {
     pub target: Option<Point>,
     /// As the viewer sees it.
     pub direction: Direction,
+    /// A drawn hinge, in the parent's model frame: only the flap's end on
+    /// the flap point's side of it squashes, lifted along it. None for the
+    /// hinge the lower layer folds over.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hinge: Option<Line>,
 }
 
 /// Why there is no flap to squash at a point.
@@ -84,6 +98,9 @@ pub enum NoFlap {
     NoHinge,
     /// The upper layer is held by the spine alone, not along the hinge.
     UpperNotHinged,
+    /// A drawn hinge crosses the spine nowhere within it, or leaves none of
+    /// it on the flap point's side, or runs through the flap point.
+    HingeOffSpine,
 }
 
 /// A squash's flap and its creases, before it lands: what a tool previews.
@@ -121,6 +138,8 @@ struct Flap {
     spine_end: Point,
     /// The hinge's direction from the vertex.
     hinge: Point,
+    /// A drawn hinge's side the flap is on: the paper beyond it stays.
+    clicked: Option<convex::HalfPlane>,
     wedge: f64,
     share: f64,
     lines: [Line; 4],
@@ -202,19 +221,29 @@ impl State {
             mask
         };
         let (lower, upper, riders) = (mask(&flap.lower), mask(&flap.upper), mask(&flap.riders));
-        let scoring = score_cuts(
-            self,
-            &[
+        let mut cuts = vec![
+            Cut {
+                axis: Axis::new(&flap.lower_crease(), Side::Positive),
+                faces: lower.clone(),
+            },
+            Cut {
+                axis: Axis::new(&flap.upper_crease(), Side::Positive),
+                faces: upper.clone(),
+            },
+        ];
+        // The upper layer folds along a drawn hinge, first: the lower one
+        // turns there and back, so it is not cut. Each layer's crease
+        // enters its paper only on the flap's side, from O.
+        if flap.clicked.is_some() {
+            cuts.insert(
+                0,
                 Cut {
-                    axis: Axis::new(&flap.lower_crease(), Side::Positive),
-                    faces: lower.clone(),
-                },
-                Cut {
-                    axis: Axis::new(&flap.upper_crease(), Side::Positive),
+                    axis: Axis::new(&flap.hinge_line(), Side::Positive),
                     faces: upper.clone(),
                 },
-            ],
-        )?;
+            );
+        }
+        let scoring = score_cuts(self, &cuts)?;
         // Which side of a layer's crease a piece is on: the spine's, or
         // the hinge's.
         let on_spine_side = |c: Point, crease: Point| {
@@ -230,15 +259,20 @@ impl State {
                 let c = piece_centroid(self, &scoring, a).ok_or(FoldRefusal::Internal {
                     message: "a squashed piece has no centroid".to_string(),
                 })?;
+                let beyond = flap
+                    .clicked
+                    .is_some_and(|side| side.signed_distance(c) < 0.0);
                 match (
+                    beyond,
                     lower[old],
                     on_spine_side(c, lower_dir),
                     on_spine_side(c, upper_dir),
                 ) {
-                    (true, true, _) => Some(0),
-                    (true, false, _) => None,
-                    (false, _, true) => Some(1),
-                    (false, _, false) => Some(2),
+                    (true, ..) => None,
+                    (false, true, true, _) => Some(0),
+                    (false, true, false, _) => None,
+                    (false, false, _, true) => Some(1),
+                    (false, false, _, false) => Some(2),
                 }
             } else if riders[old] {
                 Some(2)
@@ -349,24 +383,42 @@ impl State {
             return Err(no_flap(NoFlap::NoSpine));
         };
 
-        // The vertex: the end where the lower layer folds over a hinge. Start
-        // from the lower face actually incident to that end of the spine, not
-        // the picked subdivision (which need not reach either endpoint).
-        let Some((o, other, hinge)) = [(lo, hi), (hi, lo)].into_iter().find_map(|(v, w)| {
-            spine.iter().find_map(|&k| {
-                if !creases[k].vertices.iter().any(|end| end.index() == v) {
-                    return None;
-                }
-                let &lower = topology.crease_faces[k]
-                    .iter()
-                    .find(|&&f| lower_region[f])?;
-                self.hinge_at(lower, v, &spine_line).map(|h| (v, w, h))
-            })
-        }) else {
-            return Err(no_flap(NoFlap::NoHinge));
+        // The vertex, the spine's far end from it, a point along the hinge
+        // from it, and a drawn hinge's side the flap is on.
+        let (vertex, spine_end, hinge, clicked) = match &op.hinge {
+            // The end where the lower layer folds over a hinge. Start from
+            // the lower face actually incident to that end of the spine, not
+            // the picked subdivision (which need not reach either endpoint).
+            None => {
+                let Some((o, other, hinge)) =
+                    [(lo, hi), (hi, lo)].into_iter().find_map(|(v, w)| {
+                        spine.iter().find_map(|&k| {
+                            if !creases[k].vertices.iter().any(|end| end.index() == v) {
+                                return None;
+                            }
+                            let &lower = topology.crease_faces[k]
+                                .iter()
+                                .find(|&&f| lower_region[f])?;
+                            self.hinge_at(lower, v, &spine_line).map(|h| (v, w, h))
+                        })
+                    })
+                else {
+                    return Err(no_flap(NoFlap::NoHinge));
+                };
+                (images[o], images[other], hinge, None)
+            }
+            Some(line) => {
+                let drawn = drawn_hinge(line, &spine_line, [images[lo], images[hi]], at)
+                    .ok_or(no_flap(NoFlap::HingeOffSpine))?;
+                (
+                    drawn.vertex,
+                    drawn.spine_end,
+                    drawn.along,
+                    Some(drawn.clicked),
+                )
+            }
         };
-        let vertex = images[o];
-        let spine_dir = unit([images[other][0] - vertex[0], images[other][1] - vertex[1]])
+        let spine_dir = unit([spine_end[0] - vertex[0], spine_end[1] - vertex[1]])
             .ok_or(no_flap(NoFlap::NoSpine))?;
         let hinge_dir =
             unit([hinge[0] - vertex[0], hinge[1] - vertex[1]]).ok_or(no_flap(NoFlap::NoHinge))?;
@@ -416,6 +468,16 @@ impl State {
                 .iter()
                 .all(|v| line.distance_to_point(images[v.index()]) <= TOL)
         };
+        // A drawn hinge bounds the flap: a crease is the flap's only where
+        // it reaches the flap's side of it.
+        let reaches = |k: usize| {
+            clicked.as_ref().is_none_or(|side| {
+                creases[k]
+                    .vertices
+                    .iter()
+                    .any(|v| side.signed_distance(images[v.index()]) > TOL)
+            })
+        };
         let mut in_flap = vec![false; faces.len()];
         in_flap[p] = true;
         in_flap[q] = true;
@@ -425,11 +487,12 @@ impl State {
                 let Some(g) = topology.across(k, f) else {
                     continue;
                 };
-                let joins = match creases[k].kind {
-                    CreaseKind::Flat(_) => !on(&hinge_line, k),
-                    CreaseKind::Folded(_) => on(&spine_line, k),
-                    CreaseKind::Border => false,
-                };
+                let joins = reaches(k)
+                    && match creases[k].kind {
+                        CreaseKind::Flat(_) => !on(&hinge_line, k),
+                        CreaseKind::Folded(_) => on(&spine_line, k),
+                        CreaseKind::Border => false,
+                    };
                 if joins && !in_flap[g] {
                     in_flap[g] = true;
                     queue.push(g);
@@ -447,6 +510,7 @@ impl State {
             .filter(|&(f, k, g)| {
                 !in_flap[g]
                     && !on(&hinge_line, k)
+                    && reaches(k)
                     && (upper_face(f)
                         || creases[k]
                             .vertices
@@ -464,24 +528,37 @@ impl State {
         }
         // The upper layer must be held along the hinge too (folded over it,
         // or flat beside it): one held by its spine alone has no squash, its
-        // hinge side lying loose.
+        // hinge side lying loose. Across a drawn hinge, it may run on as
+        // one face.
+        let crosses = |f: usize| {
+            clicked.as_ref().is_some_and(|side| {
+                geometry.images[f]
+                    .iter()
+                    .any(|&v| side.signed_distance(v) < -TOL)
+            })
+        };
         let hinged = flap.iter().any(|&f| {
             geometry.isometries[f].front_up() == up
-                && topology.face_creases[f].iter().any(|&k| {
-                    topology.across(k, f).is_some_and(|g| !in_flap[g]) && on(&hinge_line, k)
-                })
+                && (crosses(f)
+                    || topology.face_creases[f].iter().any(|&k| {
+                        topology.across(k, f).is_some_and(|g| !in_flap[g]) && on(&hinge_line, k)
+                    }))
         });
         if !hinged {
             return Err(no_flap(NoFlap::UpperNotHinged));
         }
         // Uncovered where the paper moves. Cover over the stationary part
-        // of a lower face is harmless, even when no precrease divides it.
+        // of a lower face is harmless, even when no precrease divides it,
+        // and so is cover beyond a drawn hinge.
         let moving_images: Vec<Vec<Point>> = (0..faces.len())
             .map(|f| {
                 if !in_flap[f] {
                     Vec::new()
                 } else if upper_face(f) {
-                    geometry.images[f].clone()
+                    match &clicked {
+                        Some(side) => convex::split(&geometry.images[f], side, TOL).inside,
+                        None => geometry.images[f].clone(),
+                    }
                 } else {
                     convex::split(&geometry.images[f], &moving_lower, TOL).inside
                 }
@@ -543,8 +620,9 @@ impl State {
             lower,
             riders,
             vertex,
-            spine_end: images[other],
+            spine_end,
             hinge: hinge_dir,
+            clicked,
             wedge,
             share,
             lines: [hinge_line, spine_line, lower_crease, upper_crease],
@@ -732,6 +810,56 @@ impl State {
         }
         None
     }
+}
+
+/// A drawn hinge where it crosses a spine (see [`drawn_hinge`]).
+struct DrawnHinge {
+    vertex: Point,
+    spine_end: Point,
+    along: Point,
+    clicked: convex::HalfPlane,
+}
+
+/// The drawn `hinge` on a spine along `spine` between `ends`, the flap
+/// point's image `at` naming the side that squashes: O where the line
+/// crosses the spine, within it; the spine's end on that side, beyond the
+/// minimum feature; a point along the hinge from O on the flap's side of
+/// the spine; and that side of the hinge. None when the line misses the
+/// spine, leaves none of it on that side, or runs through `at`.
+fn drawn_hinge(hinge: &Line, spine: &Line, ends: [Point; 2], at: Point) -> Option<DrawnHinge> {
+    let side = hinge.signed_distance(at);
+    if side.abs() <= TOL {
+        return None;
+    }
+    let vertex = hinge.intersect(spine)?;
+    let t = spine.parameter(vertex);
+    let [a, b] = ends.map(|e| spine.parameter(e));
+    if t < a.min(b) - TOL || t > a.max(b) + TOL {
+        return None;
+    }
+    let spine_end = ends.into_iter().find(|&e| {
+        hinge.signed_distance(e) * side.signum() > TOL
+            && (e[0] - vertex[0]).hypot(e[1] - vertex[1]) > MIN_FEATURE
+    })?;
+    let spine_dir = unit([spine_end[0] - vertex[0], spine_end[1] - vertex[1]])?;
+    // The flap lies on one side of its spine: the hinge's ray there.
+    let material = cross(spine_dir, [at[0] - vertex[0], at[1] - vertex[1]]);
+    if material.abs() <= TOL {
+        return None;
+    }
+    let d = hinge.direction();
+    let d = if cross(spine_dir, d) * material > 0.0 {
+        d
+    } else {
+        [-d[0], -d[1]]
+    };
+    let s = side.signum();
+    Some(DrawnHinge {
+        vertex,
+        spine_end,
+        along: [vertex[0] + d[0], vertex[1] + d[1]],
+        clicked: convex::HalfPlane::new([hinge.n[0] * s, hinge.n[1] * s], hinge.d * s)?,
+    })
 }
 
 /// Where along the spine its push lands, and how long the push's shaft is,

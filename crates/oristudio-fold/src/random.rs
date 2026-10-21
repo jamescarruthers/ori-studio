@@ -516,6 +516,7 @@ pub fn squash(state: &State, rng: &mut Rng) -> Option<Squash> {
         flap,
         target: None,
         direction: Direction::Valley,
+        hinge: None,
     };
     if !symmetric && let Ok(analysis) = state.analyse_squash(&op) {
         let (s, c) = (share * analysis.wedge).sin_cos();

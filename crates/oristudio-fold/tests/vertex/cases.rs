@@ -124,6 +124,7 @@ pub fn squash_op(state: &State, p: Point, target: Option<Point>) -> Squash {
         flap: seen_top(state, p),
         target,
         direction: Direction::Valley,
+        hinge: None,
     }
 }
 
@@ -676,6 +677,7 @@ pub fn abrashi_squash() -> State {
             flap: [0.8521078475219173, 0.5697560410122267],
             target: None,
             direction: Direction::Valley,
+            hinge: None,
         },
         &VertexChoices::default(),
     ))
