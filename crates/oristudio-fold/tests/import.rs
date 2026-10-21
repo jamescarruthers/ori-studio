@@ -827,26 +827,26 @@ fn a_pattern_stacked_past_the_cap_is_refused_before_its_order_is_looked_for() {
     // The deepest single stack the cap takes: every three of its layers
     // overlap one another.
     let deepest = (3..).take_while(|&d| choose3(d) <= cap).last().unwrap_or(3);
-    assert_eq!(deepest, 289, "the accordions below sit at the cap");
+    assert_eq!(deepest, 417, "the accordions below sit at the cap");
 
     // At the cap: the pattern's faces, view and constraints are built.
-    let at = imported(&accordion(289), empty());
+    let at = imported(&accordion(417), empty());
     let unordered = at.unordered();
-    assert_eq!(unordered.view().faces().len(), 289);
+    assert_eq!(unordered.view().faces().len(), 417);
     let depth = unordered.problem().stack_depth(unordered.view());
-    assert_eq!((depth.deepest, depth.triples), (289, choose3(289)));
+    assert_eq!((depth.deepest, depth.triples), (417, choose3(417)));
 
     // One strip more is over: refused as the overlaps are counted, into an
     // empty sequence and after a state alike, as a replay imports it.
-    let over = accordion(290);
+    let over = accordion(418);
     let square = State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
     for target in [empty(), ImportTarget::After(&square)] {
         let refusal = ImportedPattern::new(&over, target).err();
         assert_eq!(
             refusal,
             Some(ImportRefusal::StackedTooDeep {
-                deepest: 290,
-                triples: choose3(290),
+                deepest: 418,
+                triples: choose3(418),
                 limit: cap
             })
         );
@@ -855,8 +855,8 @@ fn a_pattern_stacked_past_the_cap_is_refused_before_its_order_is_looked_for() {
             json,
             Some(serde_json::json!({
                 "code": "import_stacked_too_deep",
-                "deepest": 290,
-                "triples": choose3(290),
+                "deepest": 418,
+                "triples": choose3(418),
                 "limit": cap
             }))
         );

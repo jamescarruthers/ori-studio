@@ -4,10 +4,10 @@
 //! - the five authored designs' Fold sequences (`fold-design-completion`),
 //!   and two fold examples, fold far under it, step by step, and their last
 //!   states import under it;
-//! - the fixtures' real crease patterns import under it, but for one: a
-//!   box-pleated iguana component that stacks 250 layers deep, which took
-//!   15 s to open and 6 s to land natively before the cap, and is now
-//!   refused as soon as its overlaps are counted.
+//! - the fixtures' real crease patterns import under it, the deepest a
+//!   box-pleated iguana component that stacks 250 layers deep (10.2 million
+//!   triples), which the cap of 4 million refused before the solver's
+//!   rework.
 //!
 //! With `FOLD_STACKING_CORPUS_DIR` set, every `<case>/truth.fold` under it
 //! (the layout of the cpoogle cases) is weighed, and imported and landed
@@ -171,7 +171,7 @@ fn the_fixture_sequences_fold_far_under_the_cap() {
 }
 
 #[test]
-fn the_fixture_patterns_import_under_the_cap_but_the_iguana() {
+fn the_fixture_patterns_import_under_the_cap() {
     for name in ["flat-folder/kabuto.fold", "beloch/crane.fold"] {
         let bytes = std::fs::read(fixtures().join(name)).unwrap_or_else(|e| panic!("{e}"));
         let weighed = weigh(CpFormat::Fold, &bytes);
@@ -183,26 +183,17 @@ fn the_fixture_patterns_import_under_the_cap_but_the_iguana() {
         println!("{name}: (deepest, triples) {weighed:?}");
     }
     // A component of a box-pleated iguana, 850 faces 250 layers deep:
-    // 10,233,200 triples.
+    // 10,233,200 triples. It was over the cap of 4 million before the
+    // solver's rework, when it took 15 s to open and 6 s to land natively;
+    // now it opens in about 1.3 s and is under the cap. Weighed only:
+    // landing it is the release-mode measurement's (`MAX_STACKED_TRIPLES`'s
+    // docs), not a debug test's.
     let bytes = std::fs::read(fixtures().join("precrease/iguana-c0.fold"))
         .unwrap_or_else(|e| panic!("{e}"));
-    match weigh(CpFormat::Fold, &bytes) {
-        Err(ImportRefusal::StackedTooDeep {
-            deepest,
-            triples,
-            limit,
-        }) => {
-            assert_eq!(deepest, 250);
-            assert!(triples > limit, "{triples}");
-            assert_eq!(limit, CAP);
-            println!("precrease/iguana-c0.fold: refused, {deepest} deep, {triples} triples");
-        }
-        other => panic!("the iguana: {other:?}"),
-    }
-    assert!(
-        import(CpFormat::Fold, &bytes).is_err_and(|refused| refused.contains("StackedTooDeep")),
-        "the iguana imported"
-    );
+    // Weighed at all means under the cap: over it, `weigh` is the refusal.
+    let weighed = weigh(CpFormat::Fold, &bytes);
+    assert_eq!(weighed, Ok((250, 10_233_200)));
+    println!("precrease/iguana-c0.fold: (deepest, triples) {weighed:?}, under {CAP}");
 }
 
 /// The external corpus, when `FOLD_STACKING_CORPUS_DIR` names one: a row per

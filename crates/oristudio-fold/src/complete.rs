@@ -466,81 +466,20 @@ fn complete_in(
         Some(focus) => Region::around(view, problem, &assignments, focus),
         None => Region::whole(view, problem),
     };
-    let faces = FaceIndex {
-        ids: region.faces.clone(),
-    };
-    let local_variable = region.local_variables(problem);
-    let search = CompletionProblem {
-        variables: region
-            .variables
-            .iter()
-            .map(|&v| faces.pair(problem.variables()[v]))
-            .collect::<Result<_, _>>()?,
-        constraints: region
-            .variables
-            .iter()
-            .map(|&v| buckets(problem, v, &faces, &region))
-            .collect::<Result<_, _>>()?,
-        faces_cells: region.faces_cells(problem),
-        cells_faces: region
-            .cells
-            .iter()
-            .map(|&c| {
-                problem.overlay().cells()[c]
-                    .faces
-                    .iter()
-                    .map(|&f| faces.of(f))
-                    .collect()
-            })
-            .collect::<Result<_, _>>()?,
-        fixed: assignments
-            .iter()
-            .filter_map(|a| {
-                local_variable[a.variable].map(|variable| FixedAssignment { variable, ..*a })
-            })
-            .collect(),
-    };
+    let (search, faces) = search_problem(problem, &region, &assignments)?;
     let options = CompletionOptions {
         solution_limit: SolutionLimit::Count(limits.per_component),
-        budget: SearchBudget {
-            max_nodes: limits.max_nodes,
-            deadline: limits.deadline.map(|d| flatfold::Deadline {
-                now_ms: d.now_ms,
-                at_ms: d.at_ms,
-            }),
-        },
+        budget: search_budget(limits.max_nodes, limits.deadline),
     };
     let solution = match flatfold::complete_layer_order(&search, &options) {
         Ok(Completion::Solved(solution)) => solution,
-        Ok(Completion::Conflict(conflict)) => {
-            return Err(CompletionRefusal::Conflict {
-                family: match conflict.constraint {
-                    flatfold::ConstraintKind::TacoTaco => ConstraintFamily::TacoTaco,
-                    flatfold::ConstraintKind::TacoTortilla => ConstraintFamily::TacoTortilla,
-                    flatfold::ConstraintKind::TortillaTortilla => {
-                        ConstraintFamily::TortillaTortilla
-                    }
-                    flatfold::ConstraintKind::Transitivity => ConstraintFamily::Transitivity,
-                },
-                faces: faces.ids_of(&conflict.faces)?,
-                traced: faces.ids_of(&conflict.error_faces)?,
-            });
-        }
+        Ok(Completion::Conflict(conflict)) => return Err(conflict_refusal(&conflict, &faces)?),
         Ok(Completion::UnsatisfiedComponent(component)) => {
             return Err(CompletionRefusal::NoOrder {
                 faces: faces.ids_of(&component.faces)?,
             });
         }
-        Err(CompletionError::BudgetExceeded { limit, nodes }) => {
-            return Err(CompletionRefusal::BudgetExceeded {
-                limit: match limit {
-                    flatfold::BudgetLimit::Nodes => BudgetLimit::Nodes,
-                    flatfold::BudgetLimit::Deadline => BudgetLimit::Deadline,
-                },
-                nodes,
-            });
-        }
-        Err(e) => return Err(invalid(&e.to_string())),
+        Err(e) => return Err(search_refusal(e)),
     };
     let variables = problem.variables().to_vec();
     let lo_above = |order: PairOrder| order == PairOrder::FirstAbove;
@@ -585,6 +524,93 @@ fn complete_in(
         components,
         nodes: solution.nodes,
     })
+}
+
+/// The search's problem over `region`, with the `assignments` that fall in
+/// it, and the search's face numbers.
+fn search_problem(
+    problem: &ConstraintProblem,
+    region: &Region,
+    assignments: &[FixedAssignment],
+) -> Result<(CompletionProblem, FaceIndex), CompletionRefusal> {
+    let faces = FaceIndex {
+        ids: region.faces.clone(),
+    };
+    let local_variable = region.local_variables(problem);
+    let search = CompletionProblem {
+        variables: region
+            .variables
+            .iter()
+            .map(|&v| faces.pair(problem.variables()[v]))
+            .collect::<Result<_, _>>()?,
+        constraints: region
+            .variables
+            .iter()
+            .map(|&v| buckets(problem, v, &faces, region))
+            .collect::<Result<_, _>>()?,
+        faces_cells: region.faces_cells(problem),
+        cells_faces: region
+            .cells
+            .iter()
+            .map(|&c| {
+                problem.overlay().cells()[c]
+                    .faces
+                    .iter()
+                    .map(|&f| faces.of(f))
+                    .collect()
+            })
+            .collect::<Result<_, _>>()?,
+        fixed: assignments
+            .iter()
+            .filter_map(|a| {
+                local_variable[a.variable].map(|variable| FixedAssignment { variable, ..*a })
+            })
+            .collect(),
+    };
+    Ok((search, faces))
+}
+
+fn search_budget(max_nodes: Option<u64>, deadline: Option<Deadline>) -> SearchBudget {
+    SearchBudget {
+        max_nodes,
+        deadline: deadline.map(|d| flatfold::Deadline {
+            now_ms: d.now_ms,
+            at_ms: d.at_ms,
+        }),
+    }
+}
+
+fn budget_limit(limit: flatfold::BudgetLimit) -> BudgetLimit {
+    match limit {
+        flatfold::BudgetLimit::Nodes => BudgetLimit::Nodes,
+        flatfold::BudgetLimit::Deadline => BudgetLimit::Deadline,
+    }
+}
+
+fn conflict_refusal(
+    conflict: &flatfold::CompletionConflict,
+    faces: &FaceIndex,
+) -> Result<CompletionRefusal, CompletionRefusal> {
+    Ok(CompletionRefusal::Conflict {
+        family: match conflict.constraint {
+            flatfold::ConstraintKind::TacoTaco => ConstraintFamily::TacoTaco,
+            flatfold::ConstraintKind::TacoTortilla => ConstraintFamily::TacoTortilla,
+            flatfold::ConstraintKind::TortillaTortilla => ConstraintFamily::TortillaTortilla,
+            flatfold::ConstraintKind::Transitivity => ConstraintFamily::Transitivity,
+        },
+        faces: faces.ids_of(&conflict.faces)?,
+        traced: faces.ids_of(&conflict.error_faces)?,
+    })
+}
+
+fn search_refusal(error: CompletionError) -> CompletionRefusal {
+    match error {
+        CompletionError::BudgetExceeded { limit, nodes } => CompletionRefusal::BudgetExceeded {
+            limit: budget_limit(limit),
+            nodes,
+        },
+        e => invalid(&e.to_string()),
+    }
 }
 
 /// The part of a problem a search runs over: faces by ascending id (the
@@ -736,6 +762,7 @@ impl Region {
 }
 
 /// The search's face numbers: a region's faces by ascending id.
+#[derive(Debug, Clone)]
 struct FaceIndex {
     ids: Vec<FaceId>,
 }
@@ -852,6 +879,326 @@ fn fixed_assignments(
 fn invalid(message: &str) -> CompletionRefusal {
     CompletionRefusal::InvalidProblem {
         message: message.to_string(),
+    }
+}
+
+/// What one check may spend (the Layer order dialog's bound per choice).
+#[derive(Debug, Clone, Copy)]
+pub struct CheckLimits {
+    /// Nodes for the exhaustive fallback, Flat-Folder's own search over what
+    /// the quick attempts left; `None` is unbounded.
+    pub max_nodes: Option<u64>,
+    /// Nodes for each of the two quick attempts (the new pairs' faces
+    /// first, then the open's order).
+    pub fast_nodes: u64,
+    /// Read before each search node and every few propagated pairs, over the
+    /// whole check.
+    pub deadline: Option<Deadline>,
+}
+
+impl Default for CheckLimits {
+    fn default() -> CheckLimits {
+        CheckLimits {
+            max_nodes: Some(CompletionLimits::DEFAULT_MAX_NODES),
+            fast_nodes: flatfold::CheckOptions::DEFAULT_FAST_NODES,
+            deadline: None,
+        }
+    }
+}
+
+/// Which part of a check settled it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CheckStage {
+    /// Nothing new to search.
+    Unchanged,
+    /// A quick search with the new pairs' faces first.
+    SeedsFirst,
+    /// A quick search in the open's order.
+    OpenOrder,
+    /// Flat-Folder's own split and search, what a fresh completion runs.
+    Exhaustive,
+}
+
+/// A check's answer. Only [`Check::Undecided`] is not a verdict.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Check {
+    /// An order fits the fixed pairs and the checked ones. `forced` is what
+    /// they force before any search, each `[upper, lower]`.
+    Fits {
+        order: LayerOrder,
+        forced: Vec<[FaceId; 2]>,
+        nodes: u64,
+        stage: CheckStage,
+    },
+    /// The pair `[upper, lower]` asks the opposite of a pair the fixed pairs
+    /// force; `traced` is what that pair traces back to.
+    Forced {
+        pair: [FaceId; 2],
+        traced: Vec<FaceId>,
+    },
+    /// The checked pairs break a constraint as they propagate; `traced` is
+    /// every face it traces back to (Flat-Folder's `error_faces`).
+    Conflict {
+        family: ConstraintFamily,
+        faces: Vec<FaceId>,
+        traced: Vec<FaceId>,
+    },
+    /// A search proved no order fits: `faces` have no order, given the
+    /// pairs `traced` leads back to.
+    NoOrder {
+        faces: Vec<FaceId>,
+        traced: Vec<FaceId>,
+        nodes: u64,
+    },
+    /// No answer within the limits: neither a fit nor a proof.
+    Undecided { limit: BudgetLimit, nodes: u64 },
+}
+
+impl Check {
+    /// Whether an order fits, when the check decided it.
+    pub fn verdict(&self) -> Option<bool> {
+        match self {
+            Check::Fits { .. } => Some(true),
+            Check::Undecided { .. } => None,
+            _ => Some(false),
+        }
+    }
+}
+
+/// A completion kept open for many checks (the Layer order dialog): the
+/// fixed pairs' propagation, what they force and a first order are found
+/// once by [`CompletionSession::open`]; each [`CompletionSession::check`]
+/// then asks whether some more pairs leave an order, from that state
+/// (`treemaker_flatfold::CompletionSession`). A check's verdict is the one
+/// [`complete`] gives with the same pairs added, and it decides whenever
+/// `complete` would within the same node budget.
+#[derive(Debug, Clone)]
+pub struct CompletionSession {
+    /// The problem's variables, ascending: the search's variable `k` is
+    /// `variables[k]`.
+    variables: Vec<FacePair>,
+    faces: FaceIndex,
+    search: Box<flatfold::CompletionSession>,
+}
+
+impl CompletionSession {
+    /// Propagate `fixed`, find what it forces and a first order, within
+    /// `limits.max_nodes` and its deadline (`per_component` is not read).
+    pub fn open(
+        view: &FoldedView,
+        problem: &ConstraintProblem,
+        fixed: &[FixedPair],
+        limits: &CompletionLimits,
+    ) -> Result<CompletionSession, CompletionRefusal> {
+        if !problem.is_for(view) {
+            return Err(invalid("the problem was built from another view"));
+        }
+        if !problem.ambiguities().is_empty() {
+            return Err(CompletionRefusal::AmbiguousOverlap {
+                ambiguities: problem.ambiguities().to_vec(),
+            });
+        }
+        if limits.out_of_time() {
+            return Err(CompletionRefusal::BudgetExceeded {
+                limit: BudgetLimit::Deadline,
+                nodes: 0,
+            });
+        }
+        let assignments = fixed_assignments(problem, fixed)?;
+        let region = Region::whole(view, problem);
+        let (search, faces) = search_problem(problem, &region, &assignments)?;
+        let budget = search_budget(limits.max_nodes, limits.deadline);
+        match flatfold::CompletionSession::open(search, budget) {
+            Ok(flatfold::SessionStart::Open(search)) => Ok(CompletionSession {
+                variables: problem.variables().to_vec(),
+                faces,
+                search,
+            }),
+            Ok(flatfold::SessionStart::Conflict(conflict)) => {
+                Err(conflict_refusal(&conflict, &faces)?)
+            }
+            Ok(flatfold::SessionStart::UnsatisfiedComponent(component)) => {
+                Err(CompletionRefusal::NoOrder {
+                    faces: faces.ids_of(&component.faces)?,
+                })
+            }
+            Err(e) => Err(search_refusal(e)),
+        }
+    }
+
+    /// The pairs the fixed pairs force, each `[upper, lower]`: what a
+    /// dialog greys out.
+    pub fn forced_pairs(&self) -> Vec<[FaceId; 2]> {
+        self.variables
+            .iter()
+            .zip(self.search.forced())
+            .filter_map(|(&pair, order)| {
+                order.map(|o| upper_lower(pair, o == PairOrder::FirstAbove))
+            })
+            .collect()
+    }
+
+    /// Whether `upper` is forced above `lower` (`Some(true)`), forced below
+    /// it (`Some(false)`), or open or not overlapping (`None`).
+    pub fn forced(&self, upper: FaceId, lower: FaceId) -> Option<bool> {
+        let pair = FacePair::new(upper, lower)?;
+        let v = self.variables.binary_search(&pair).ok()?;
+        let lo_above = self.search.forced()[v]? == PairOrder::FirstAbove;
+        Some(lo_above == (pair.lo() == upper))
+    }
+
+    /// Why a pair is forced: the faces it traces back to through the fixed
+    /// pairs' propagation. Empty when it is not forced.
+    pub fn forced_by(&self, a: FaceId, b: FaceId) -> Vec<FaceId> {
+        let Some(v) = FacePair::new(a, b).and_then(|p| self.variables.binary_search(&p).ok())
+        else {
+            return Vec::new();
+        };
+        self.faces
+            .ids_of(&self.search.forced_by(v))
+            .unwrap_or_default()
+    }
+
+    /// The first order the open found: each component's first, as
+    /// [`complete`] lists it.
+    pub fn first_order(&self) -> LayerOrder {
+        self.order_of(&self.search.first())
+    }
+
+    /// Search nodes the open used.
+    pub fn nodes(&self) -> u64 {
+        self.search.nodes()
+    }
+
+    fn order_of(&self, orders: &[PairOrder]) -> LayerOrder {
+        let mut order = LayerOrder::new();
+        for (&pair, &o) in self.variables.iter().zip(orders) {
+            let [upper, lower] = upper_lower(pair, o == PairOrder::FirstAbove);
+            // Every pair once, so no pair is set both ways.
+            let _ = order.set_above(upper, lower);
+        }
+        order
+    }
+
+    /// Whether the fixed pairs and `pairs` (seeds, each `upper` above
+    /// `lower`) leave an order, and one, as close to `prefer` as the quick
+    /// searches find (the order on screen, so the preview changes as little
+    /// as possible). `prefer` never changes a verdict.
+    pub fn check(
+        &self,
+        pairs: &[FixedPair],
+        prefer: Option<&LayerOrder>,
+        limits: &CheckLimits,
+    ) -> Result<Check, CompletionRefusal> {
+        let mut seen: BTreeMap<usize, bool> = BTreeMap::new();
+        let mut seeds = Vec::with_capacity(pairs.len());
+        for p in pairs {
+            if p.kind != FixedKind::Seed {
+                return Err(invalid("a check adds seeds, not carried pairs"));
+            }
+            let Some(pair) = FacePair::new(p.upper, p.lower) else {
+                return Err(invalid(&format!(
+                    "face {} is ordered against itself",
+                    p.upper
+                )));
+            };
+            let Ok(variable) = self.variables.binary_search(&pair) else {
+                return Err(CompletionRefusal::FixedNotOverlapping { pair });
+            };
+            let lo_above = pair.lo() == p.upper;
+            if seen.insert(variable, lo_above) == Some(!lo_above) {
+                return Err(CompletionRefusal::FixedContradictory { pair });
+            }
+            seeds.push((
+                variable,
+                if lo_above {
+                    PairOrder::FirstAbove
+                } else {
+                    PairOrder::SecondAbove
+                },
+            ));
+        }
+        let preferred: Option<Vec<PairOrder>> = prefer.map(|order| {
+            let first = self.search.first();
+            self.variables
+                .iter()
+                .zip(first)
+                .map(|(pair, first)| match order.above(pair.lo(), pair.hi()) {
+                    Some(true) => PairOrder::FirstAbove,
+                    Some(false) => PairOrder::SecondAbove,
+                    None => first,
+                })
+                .collect()
+        });
+        let options = flatfold::CheckOptions {
+            budget: search_budget(limits.max_nodes, limits.deadline),
+            fast_nodes: limits.fast_nodes,
+            prefer: preferred.as_deref(),
+        };
+        let outcome = self
+            .search
+            .check(&seeds, &options)
+            .map_err(search_refusal)?;
+        let stage = |stage: flatfold::CheckStage| match stage {
+            flatfold::CheckStage::Unchanged => CheckStage::Unchanged,
+            flatfold::CheckStage::SeedsFirst => CheckStage::SeedsFirst,
+            flatfold::CheckStage::OpenOrder => CheckStage::OpenOrder,
+            flatfold::CheckStage::Exhaustive => CheckStage::Exhaustive,
+        };
+        Ok(match outcome {
+            flatfold::CheckOutcome::Fits(fit) => Check::Fits {
+                order: self.order_of(&fit.order),
+                forced: self
+                    .variables
+                    .iter()
+                    .zip(&fit.forced)
+                    .filter_map(|(&pair, order)| {
+                        order.map(|o| upper_lower(pair, o == PairOrder::FirstAbove))
+                    })
+                    .collect(),
+                nodes: fit.nodes,
+                stage: stage(fit.stage),
+            },
+            flatfold::CheckOutcome::Forced {
+                variable,
+                error_faces,
+            } => {
+                let pair = self.variables[variable];
+                let asked = seeds
+                    .iter()
+                    .find(|(v, _)| *v == variable)
+                    .map_or(PairOrder::FirstAbove, |&(_, o)| o);
+                Check::Forced {
+                    pair: upper_lower(pair, asked == PairOrder::FirstAbove),
+                    traced: self.faces.ids_of(&error_faces)?,
+                }
+            }
+            flatfold::CheckOutcome::Conflict(conflict) => {
+                let CompletionRefusal::Conflict {
+                    family,
+                    faces,
+                    traced,
+                } = conflict_refusal(&conflict, &self.faces)?
+                else {
+                    return Err(invalid("a conflict mapped to another refusal"));
+                };
+                Check::Conflict {
+                    family,
+                    faces,
+                    traced,
+                }
+            }
+            flatfold::CheckOutcome::NoOrder(none) => Check::NoOrder {
+                faces: self.faces.ids_of(&none.faces)?,
+                traced: self.faces.ids_of(&none.error_faces)?,
+                nodes: none.nodes,
+            },
+            flatfold::CheckOutcome::Undecided { limit, nodes } => Check::Undecided {
+                limit: budget_limit(limit),
+                nodes,
+            },
+        })
     }
 }
 
@@ -1055,6 +1402,91 @@ mod tests {
         };
         assert!(matches!(
             complete(&view, &problem, &[], &none),
+            Err(CompletionRefusal::InvalidProblem { .. })
+        ));
+    }
+
+    #[test]
+    fn a_session_checks_choices_as_completing_them_would() {
+        let view = zigzag(4, None);
+        let problem = ConstraintProblem::build(&view);
+        let limits = CompletionLimits::default();
+        let session = CompletionSession::open(&view, &problem, &[seed(1, 0)], &limits)
+            .unwrap_or_else(|e| panic!("{e}"));
+        let completed = complete(
+            &view,
+            &problem,
+            &[seed(1, 0)],
+            &CompletionLimits {
+                per_component: 1,
+                ..limits
+            },
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(session.forced_pairs(), completed.forced_pairs());
+        assert_eq!(
+            Some(session.first_order()),
+            completed.order(&vec![0; completed.components().len()])
+        );
+        assert_eq!(session.forced(FaceId(1), FaceId(0)), Some(true));
+        assert_eq!(session.forced(FaceId(0), FaceId(1)), Some(false));
+        assert_eq!(session.forced(FaceId(2), FaceId(3)), None);
+        assert_eq!(
+            session.forced_by(FaceId(0), FaceId(1)),
+            vec![FaceId(0), FaceId(1)]
+        );
+
+        let checks = CheckLimits::default();
+        // Every single choice and pair of choices: the session's verdict is
+        // completing's, and a fitting order has the choices and is valid.
+        let pairs: Vec<FixedPair> = (0..4)
+            .flat_map(|a| (0..4).filter(move |&b| b != a).map(move |b| seed(a, b)))
+            .collect();
+        let mut asked = 0;
+        for (i, a) in pairs.iter().enumerate() {
+            for b in pairs.iter().skip(i) {
+                let chosen = [*a, *b];
+                let mut all = vec![seed(1, 0)];
+                all.extend(chosen);
+                let expected = complete(&view, &problem, &all, &limits);
+                let checked = session.check(&chosen, None, &checks);
+                match (&expected, &checked) {
+                    (Ok(_), Ok(Check::Fits { order, .. })) => {
+                        assert!(oristudio_layer_order::check(&view, order).is_valid());
+                        for p in &chosen {
+                            assert_eq!(order.above(p.upper, p.lower), Some(true));
+                        }
+                    }
+                    (Err(_), Ok(check)) => assert_eq!(check.verdict(), Some(false), "{chosen:?}"),
+                    (
+                        Err(CompletionRefusal::FixedContradictory { .. }),
+                        Err(CompletionRefusal::FixedContradictory { .. }),
+                    ) => {}
+                    other => panic!("{chosen:?}: {other:?}"),
+                }
+                asked += 1;
+            }
+        }
+        assert!(asked > 50);
+        // The preferred order is kept when nothing asks to change it.
+        let other =
+            complete(&view, &problem, &[seed(1, 0)], &limits).unwrap_or_else(|e| panic!("{e}"));
+        let last = vec![other.components()[0].orders.len() - 1];
+        let preferred = other.order(&last).unwrap_or_default();
+        match session.check(&[], Some(&preferred), &checks) {
+            Ok(Check::Fits { order, .. }) => assert_eq!(order, preferred),
+            other => panic!("{other:?}"),
+        }
+        assert!(matches!(
+            session.check(&[seed(0, 7)], None, &checks),
+            Err(CompletionRefusal::FixedNotOverlapping { .. })
+        ));
+        let carried = FixedPair {
+            kind: FixedKind::Carried,
+            ..seed(2, 3)
+        };
+        assert!(matches!(
+            session.check(&[carried], None, &checks),
             Err(CompletionRefusal::InvalidProblem { .. })
         ));
     }

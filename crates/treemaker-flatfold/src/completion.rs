@@ -8,16 +8,16 @@
 //! `error_faces`). Transitivity is still derived inside the search, from the
 //! caller's cells, exactly as Flat-Folder derives it from its own.
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
 use crate::constraints::{
-    self, ConstraintBuckets, ImplicationMaps, InitialPropagation, Key, NodeMeter, PairIndex,
-    SearchTables, SeedConflict, TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TransitivityCounts,
-    TransitivitySource,
+    self, ImplicationMaps, InitialPropagation, Key, NodeMeter, SearchTables, SeedConflict,
+    TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TransitivityCounts, TransitivitySource,
 };
+use crate::tables::{DENSE_FACE_LIMIT, OneSided, SearchData, SearchDataBuilder, faces_vec};
 use crate::{Analysis, FlatFoldError, SolutionLimit, math};
 
 /// Which of Flat-Folder's constraint families a constraint belongs to.
@@ -31,7 +31,7 @@ pub enum ConstraintKind {
 
 impl ConstraintKind {
     /// The solver's type index; transitivity is the last of the four.
-    fn from_type(constraint_type: usize) -> Self {
+    pub(crate) fn from_type(constraint_type: usize) -> Self {
         match constraint_type {
             TACO_TACO => Self::TacoTaco,
             TACO_TORTILLA => Self::TacoTortilla,
@@ -66,14 +66,14 @@ pub enum PairOrder {
 }
 
 impl PairOrder {
-    fn value(self) -> u8 {
+    pub(crate) fn value(self) -> u8 {
         match self {
             Self::FirstAbove => 1,
             Self::SecondAbove => 2,
         }
     }
 
-    fn from_value(value: u8) -> Option<Self> {
+    pub(crate) fn from_value(value: u8) -> Option<Self> {
         match value {
             1 => Some(Self::FirstAbove),
             2 => Some(Self::SecondAbove),
@@ -103,7 +103,12 @@ pub struct FixedAssignment {
 
 /// The constraints one variable takes part in, by family, in Flat-Folder's
 /// face conventions (`constraints.js` `pair_maps`). A constraint is listed in
-/// the bucket of every variable it reads.
+/// the bucket of every variable it reads, as upstream's `add_constraint`
+/// lists it. [`complete_layer_order`] runs upstream's procedure over the
+/// buckets as given and does not check this;
+/// [`CompletionSession::open`](crate::CompletionSession::open) refuses a
+/// problem that breaks it, because its components are only independent when
+/// it holds.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VariableConstraints {
     /// `[A, B, C, D]`: tacos A–B and C–D whose creases cross. Reads A–B, C–D,
@@ -283,13 +288,22 @@ pub enum CompletionError {
     Solver(#[from] FlatFoldError),
 }
 
-type CompletionResult<T> = std::result::Result<T, CompletionError>;
+pub(crate) type CompletionResult<T> = std::result::Result<T, CompletionError>;
 
 /// Propagate the seeds, then enumerate each independent component of what is
 /// left, through Flat-Folder's own propagation and search.
 pub fn complete_layer_order(
     problem: &CompletionProblem,
     options: &CompletionOptions,
+) -> CompletionResult<Completion> {
+    complete_with_tables(problem, options, DENSE_FACE_LIMIT)
+}
+
+/// [`complete_layer_order`] with its tables dense up to `dense_limit` faces.
+fn complete_with_tables(
+    problem: &CompletionProblem,
+    options: &CompletionOptions,
+    dense_limit: usize,
 ) -> CompletionResult<Completion> {
     let limit = match options.solution_limit {
         SolutionLimit::All => None,
@@ -298,7 +312,7 @@ pub fn complete_layer_order(
         }
         SolutionLimit::Count(limit) => Some(limit),
     };
-    let input = SearchInput::new(problem)?;
+    let input = SearchInput::with_dense_limit(problem, dense_limit)?;
     let FixedOrders {
         assignments: fixed,
         seeds,
@@ -328,7 +342,8 @@ pub fn complete_layer_order(
             });
         }
     };
-    let groups = constraints::variable_groups(&tables, &assignments, &mut counts);
+    // Nothing here reports the transitivity counts.
+    let groups = constraints::variable_groups(&tables, &assignments, None);
     // One solution past the limit tells a truncated component from one that
     // has exactly `limit` solutions.
     let search_limit = limit.map_or(usize::MAX, |limit| limit.saturating_add(1));
@@ -353,7 +368,7 @@ pub fn complete_layer_order(
         if solutions.is_empty() {
             return Ok(Completion::UnsatisfiedComponent(UnsatisfiedComponent {
                 component,
-                faces: group_faces(input.variables.as_slice(), group),
+                faces: group_faces(&input.data, group),
             }));
         }
         let truncated = limit.is_some_and(|limit| solutions.len() > limit);
@@ -437,24 +452,22 @@ pub fn flat_folder_completion_problem(analysis: &Analysis) -> crate::Result<Comp
 }
 
 /// A validated problem's tables in the solver's encoding.
-struct SearchInput {
-    variables: Vec<Key>,
-    pairs: PairIndex,
-    constraints: Vec<ConstraintBuckets>,
-    connected_components: Vec<BTreeMap<usize, usize>>,
+#[derive(Debug, Clone)]
+pub(crate) struct SearchInput {
+    pub(crate) data: SearchData,
 }
 
 /// The fixed orders in the solver's encoding.
-struct FixedOrders {
+pub(crate) struct FixedOrders {
     /// Every variable's fixed value, 0 where none is.
-    assignments: Vec<u8>,
+    pub(crate) assignments: Vec<u8>,
     /// The seeds among them in index order, as upstream's first propagation
     /// level visits them.
-    seeds: Vec<(usize, u8)>,
+    pub(crate) seeds: Vec<(usize, u8)>,
 }
 
 /// A variable fixed twice to the same order is a seed if either entry is.
-fn fixed_orders(problem: &CompletionProblem) -> CompletionResult<FixedOrders> {
+pub(crate) fn fixed_orders(problem: &CompletionProblem) -> CompletionResult<FixedOrders> {
     let mut assignments = vec![0u8; problem.variables.len()];
     let mut seeded = vec![false; problem.variables.len()];
     for fixed in &problem.fixed {
@@ -482,12 +495,15 @@ fn fixed_orders(problem: &CompletionProblem) -> CompletionResult<FixedOrders> {
 }
 
 impl SearchInput {
-    fn new(problem: &CompletionProblem) -> CompletionResult<Self> {
+    /// Validate `problem` and build its tables, dense up to `dense_limit`
+    /// faces (`DENSE_FACE_LIMIT` outside tests, which run both forms).
+    pub(crate) fn with_dense_limit(
+        problem: &CompletionProblem,
+        dense_limit: usize,
+    ) -> CompletionResult<Self> {
         let face_count = problem.faces_cells.len();
         check_incidence(problem)?;
-        let mut variables = Vec::with_capacity(problem.variables.len());
-        let mut variable_index = BTreeMap::new();
-        let mut pairs = HashSet::with_capacity(problem.variables.len());
+        let mut builder = SearchDataBuilder::new(face_count, problem.variables.len(), dense_limit);
         for (index, &[a, b]) in problem.variables.iter().enumerate() {
             if a >= b {
                 return Err(invalid(format!(
@@ -499,14 +515,14 @@ impl SearchInput {
                     "variable {index} names face {b}, but faces_cells has {face_count} faces"
                 )));
             }
-            let key = math::encode(&[a, b]);
-            if let Some(previous) = variable_index.insert(key.clone(), index) {
+            if u32::try_from(b).is_err() {
+                return Err(invalid(format!("variable {index} names face {b}")));
+            }
+            if let Some(previous) = builder.variable(a, b) {
                 return Err(invalid(format!(
                     "variables {previous} and {index} are both [{a}, {b}]"
                 )));
             }
-            variables.push(key);
-            pairs.insert([a, b]);
         }
         if problem.constraints.len() != problem.variables.len() {
             return Err(invalid(format!(
@@ -518,7 +534,7 @@ impl SearchInput {
         for (cell, faces) in problem.cells_faces.iter().enumerate() {
             for (offset, &a) in faces.iter().enumerate() {
                 for &b in &faces[offset + 1..] {
-                    if a != b && !pairs.contains(&[a.min(b), a.max(b)]) {
+                    if a != b && builder.pair(a, b).is_none() {
                         return Err(invalid(format!(
                             "faces {a} and {b} share cell {cell} but are not a variable; \
                              transitivity needs every such pair"
@@ -527,44 +543,60 @@ impl SearchInput {
                 }
             }
         }
-        let mut constraints = Vec::with_capacity(problem.variables.len());
         for (index, buckets) in problem.constraints.iter().enumerate() {
             let owner = problem.variables[index];
-            constraints.push([
-                encode_bucket(TACO_TACO, &buckets.taco_taco, index, owner, &pairs)?,
-                encode_bucket(TACO_TORTILLA, &buckets.taco_tortilla, index, owner, &pairs)?,
-                encode_bucket(
-                    TORTILLA_TORTILLA,
-                    &buckets.tortilla_tortilla,
-                    index,
-                    owner,
-                    &pairs,
-                )?,
-            ]);
+            encode_bucket(&mut builder, TACO_TACO, &buckets.taco_taco, index, owner)?;
+            encode_bucket(
+                &mut builder,
+                TACO_TORTILLA,
+                &buckets.taco_tortilla,
+                index,
+                owner,
+            )?;
+            encode_bucket(
+                &mut builder,
+                TORTILLA_TORTILLA,
+                &buckets.tortilla_tortilla,
+                index,
+                owner,
+            )?;
         }
-        let connected_components =
-            constraints::build_connected_components(face_count, &constraints);
         Ok(Self {
-            variables,
-            pairs: PairIndex::of_pairs(problem.variables.iter().copied()),
-            constraints,
-            connected_components,
+            data: builder.finish(),
         })
     }
 
-    fn tables<'a>(
+    /// Refuse a constraint missing from the bucket of a variable it reads
+    /// (see [`VariableConstraints`]): what a session needs on top of what
+    /// [`complete_layer_order`] checks.
+    pub(crate) fn check_every_bucket(&self) -> CompletionResult<()> {
+        let Some(OneSided {
+            family,
+            faces,
+            variable,
+        }) = self.data.one_sided_constraint()
+        else {
+            return Ok(());
+        };
+        let [a, b] = self.data.faces(variable);
+        Err(invalid(format!(
+            "{} {:?} reads variable {variable} ([{a}, {b}]) but is not in its bucket; \
+             a session needs every constraint in the bucket of every variable it reads",
+            ConstraintKind::from_type(family).name(),
+            faces_vec(family, &faces),
+        )))
+    }
+
+    pub(crate) fn tables<'a>(
         &'a self,
         problem: &'a CompletionProblem,
         implications: &'a ImplicationMaps,
     ) -> SearchTables<'a> {
         SearchTables {
-            variables: &self.variables,
-            pairs: &self.pairs,
-            constraints: &self.constraints,
+            data: &self.data,
             transitivity: TransitivitySource {
                 faces_cells: &problem.faces_cells,
                 cells_faces: &problem.cells_faces,
-                connected_components: &self.connected_components,
             },
             implications,
         }
@@ -577,7 +609,7 @@ impl SearchInput {
 fn check_incidence(problem: &CompletionProblem) -> CompletionResult<()> {
     let face_count = problem.faces_cells.len();
     let cell_count = problem.cells_faces.len();
-    let mut by_face = BTreeSet::new();
+    let mut by_face = Vec::new();
     for (face, cells) in problem.faces_cells.iter().enumerate() {
         for &cell in cells {
             if cell >= cell_count {
@@ -585,10 +617,10 @@ fn check_incidence(problem: &CompletionProblem) -> CompletionResult<()> {
                     "face {face} names cell {cell}, but cells_faces has {cell_count} cells"
                 )));
             }
-            by_face.insert((face, cell));
+            by_face.push((face, cell));
         }
     }
-    let mut by_cell = BTreeSet::new();
+    let mut by_cell = Vec::new();
     for (cell, faces) in problem.cells_faces.iter().enumerate() {
         for &face in faces {
             if face >= face_count {
@@ -596,10 +628,15 @@ fn check_incidence(problem: &CompletionProblem) -> CompletionResult<()> {
                     "cell {cell} names face {face}, but faces_cells has {face_count} faces"
                 )));
             }
-            by_cell.insert((face, cell));
+            by_cell.push((face, cell));
         }
     }
-    if let Some((face, cell)) = by_face.symmetric_difference(&by_cell).next() {
+    // As sets: the smallest (face, cell) in one and not the other.
+    by_face.sort_unstable();
+    by_face.dedup();
+    by_cell.sort_unstable();
+    by_cell.dedup();
+    if let Some((face, cell)) = first_difference(&by_face, &by_cell) {
         return Err(invalid(format!(
             "faces_cells and cells_faces disagree on whether face {face} covers cell {cell}"
         )));
@@ -607,56 +644,82 @@ fn check_incidence(problem: &CompletionProblem) -> CompletionResult<()> {
     Ok(())
 }
 
-/// One bucket in the solver's encoding, after checking that every constraint
-/// reads only variables and reads the variable whose bucket it is in.
+/// The smallest element of two sorted, deduplicated lists' symmetric
+/// difference: what `BTreeSet::symmetric_difference` yields first.
+fn first_difference(a: &[(usize, usize)], b: &[(usize, usize)]) -> Option<(usize, usize)> {
+    let (mut i, mut j) = (0, 0);
+    loop {
+        match (a.get(i), b.get(j)) {
+            (Some(x), Some(y)) if x == y => {
+                i += 1;
+                j += 1;
+            }
+            (Some(x), Some(y)) => return Some(*x.min(y)),
+            (Some(x), None) => return Some(*x),
+            (None, Some(y)) => return Some(*y),
+            (None, None) => return None,
+        }
+    }
+}
+
+/// One bucket into the solver's tables, after checking that every
+/// constraint reads only variables and reads the variable whose bucket it is
+/// in.
 fn encode_bucket<const N: usize>(
+    builder: &mut SearchDataBuilder,
     constraint_type: usize,
     bucket: &[[usize; N]],
     index: usize,
     owner: [usize; 2],
-    pairs: &HashSet<[usize; 2]>,
-) -> CompletionResult<Vec<Key>> {
+) -> CompletionResult<()> {
     let name = ConstraintKind::from_type(constraint_type).name();
-    bucket
-        .iter()
-        .map(|faces| {
-            let mut reads_owner = false;
-            for [a, b] in constraints::pairs_for_type(constraint_type, faces) {
-                let pair = [a.min(b), a.max(b)];
-                if !pairs.contains(&pair) {
-                    return Err(invalid(format!(
-                        "{name} {faces:?} in variable {index}'s bucket reads faces {a} and {b}, \
-                         which are not a variable"
-                    )));
-                }
-                reads_owner |= pair == owner;
-            }
-            if !reads_owner {
+    for faces in bucket {
+        let mut reads_owner = false;
+        for &[a, b] in constraints::pairs_for_type(constraint_type, faces).as_slice() {
+            let pair = [a.min(b), a.max(b)];
+            if builder.pair(a, b).is_none() {
                 return Err(invalid(format!(
-                    "{name} {faces:?} is in variable {index}'s bucket but does not read it"
+                    "{name} {faces:?} in variable {index}'s bucket reads faces {a} and {b}, \
+                     which are not a variable"
                 )));
             }
-            Ok(math::encode(faces))
-        })
-        .collect()
+            reads_owner |= pair == owner;
+        }
+        if !reads_owner {
+            return Err(invalid(format!(
+                "{name} {faces:?} is in variable {index}'s bucket but does not read it"
+            )));
+        }
+        builder.push_constraint(faces);
+    }
+    builder.end_family();
+    Ok(())
 }
 
 /// Search nodes against a [`SearchBudget`], and the propagation before the
 /// search against its deadline.
-struct BudgetMeter {
-    budget: SearchBudget,
-    nodes: u64,
+pub(crate) struct BudgetMeter {
+    pub(crate) budget: SearchBudget,
+    pub(crate) nodes: u64,
     /// Variables the initial propagation has visited.
-    ticks: u64,
+    pub(crate) ticks: u64,
 }
 
 impl BudgetMeter {
+    pub(crate) fn new(budget: SearchBudget) -> BudgetMeter {
+        BudgetMeter {
+            budget,
+            nodes: 0,
+            ticks: 0,
+        }
+    }
+
     /// How many propagated variables share one reading of the clock: a
     /// variable costs microseconds, a reading in a browser a call into
     /// JavaScript.
     const TICKS_PER_READING: u64 = 32;
 
-    fn past_deadline(&self) -> bool {
+    pub(crate) fn past_deadline(&self) -> bool {
         self.budget
             .deadline
             .is_some_and(|deadline| (deadline.now_ms)() >= deadline.at_ms)
@@ -690,7 +753,7 @@ impl NodeMeter for BudgetMeter {
     }
 }
 
-fn public_conflict(conflict: SeedConflict) -> CompletionConflict {
+pub(crate) fn public_conflict(conflict: SeedConflict) -> CompletionConflict {
     CompletionConflict {
         constraint: ConstraintKind::from_type(conflict.constraint_type),
         faces: conflict.faces,
@@ -700,11 +763,11 @@ fn public_conflict(conflict: SeedConflict) -> CompletionConflict {
 
 /// The faces of a component's variables, deduplicated in first-seen order
 /// (upstream `compute.js` `solve`).
-fn group_faces(variables: &[Key], group: &[usize]) -> Vec<usize> {
+pub(crate) fn group_faces(data: &SearchData, group: &[usize]) -> Vec<usize> {
     let mut seen = BTreeSet::new();
     group
         .iter()
-        .flat_map(|variable| math::decode(&variables[*variable]))
+        .flat_map(|&variable| data.faces(variable))
         .filter(|face| seen.insert(*face))
         .collect()
 }
@@ -737,7 +800,7 @@ fn decode_bucket<const N: usize>(bucket: &[Key]) -> crate::Result<Vec<[usize; N]
     bucket.iter().map(|key| decode_faces::<N>(key)).collect()
 }
 
-fn invalid(message: String) -> CompletionError {
+pub(crate) fn invalid(message: String) -> CompletionError {
     CompletionError::InvalidProblem(message)
 }
 
@@ -1070,6 +1133,41 @@ mod tests {
                 nodes: 0,
             })
         );
+    }
+
+    /// The hashed tables a problem above `DENSE_FACE_LIMIT` faces gets give
+    /// the dense tables' answers, on kabuto with every single seed.
+    #[test]
+    fn dense_and_hashed_tables_give_the_same_completions() {
+        let document: treemaker_fold::FoldDocument = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/flat-folder/kabuto.fold"
+        ))
+        .unwrap_or_else(|e| panic!("{e}"));
+        let analysis = crate::analyze_flat_fold(&document, crate::AnalyzeOptions::default())
+            .unwrap_or_else(|e| panic!("{e}"));
+        let kabuto = flat_folder_completion_problem(&analysis).unwrap_or_else(|e| panic!("{e}"));
+        let options = CompletionOptions {
+            solution_limit: SolutionLimit::Count(100),
+            ..CompletionOptions::default()
+        };
+        let mut problems = vec![one_cell(4), chain(), kabuto.clone()];
+        for variable in 0..kabuto.variables.len() {
+            for order in [PairOrder::FirstAbove, PairOrder::SecondAbove] {
+                let mut seeded = kabuto.clone();
+                seeded.fixed.push(FixedAssignment {
+                    variable,
+                    order,
+                    kind: FixedKind::Seed,
+                });
+                problems.push(seeded);
+            }
+        }
+        for problem in &problems {
+            assert_eq!(
+                complete_with_tables(problem, &options, usize::MAX),
+                complete_with_tables(problem, &options, 0)
+            );
+        }
     }
 
     #[test]

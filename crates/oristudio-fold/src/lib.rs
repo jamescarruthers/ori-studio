@@ -110,8 +110,8 @@ pub use anchor::SheetSegment;
 pub use anchored::{AnchoredFold, AnchoredRefused, FoldLine, LineRefusal, Resolved};
 pub use axioms::{Axiom, AxiomCandidate, AxiomReplay};
 pub use complete::{
-    ChoiceCount, CompletionLimits, CompletionRefusal, Completions, ComponentChoices, FixedKind,
-    FixedPair,
+    Check, CheckLimits, CheckStage, ChoiceCount, CompletionLimits, CompletionRefusal,
+    CompletionSession, Completions, ComponentChoices, FixedKind, FixedPair,
 };
 pub use compound::crimp::{
     CrimpAnalysis, CrimpChoice, CrimpFold, CrimpFolded, CrimpOutcome, CrimpReport,

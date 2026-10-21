@@ -213,23 +213,26 @@ impl Buckets {
 }
 
 /// The most [`StackDepth::triples`] a bounded build takes
-/// ([`ConstraintProblem::build_within`]): one stack 289 layers deep, or
+/// ([`ConstraintProblem::build_within`]): one stack 417 layers deep, or
 /// several shallower ones.
 ///
-/// Completing and replaying an order costs about a microsecond a triple,
-/// whatever the face count. Through the built bridge in Node, a map fold of
-/// 400 faces, every face on one stack, has 10.6 million triples and took
-/// 3.7 s to open and as long again to land; 1,600 faces, 682 million, did
-/// not finish; natively the same stacks took about as long. Natively,
-/// through the bridge's own calls (`oristudio-fold-wasm`'s
-/// `tests/stacking_corpus.rs`), of the 471 real designs of the cpoogle
-/// corpus that import, the median has 54,000 triples and 446 are under this
-/// cap; landing any of those — what every replay of its step does — took at
-/// most 3.0 s. The 25 over it stack 130 to 600 layers deep:
-/// 21 took 2.9–21.6 s to land, after 3.9–67 s to open, and 4, at 51–80
-/// million triples, were not tried. A count, not a clock, so a saved step is
-/// refused, or not, alike on every machine.
-pub const MAX_STACKED_TRIPLES: u64 = 4_000_000;
+/// Completing and replaying an order grows with the triples, whatever the
+/// face count. Chosen so that a step this admits replays in about 3 s in the
+/// browser: through the built bridge in Node (`import_cp`, then
+/// `import_pick`, which lands the step as every replay of its `cp-jump`
+/// does), of the 471 real designs of the cpoogle corpus that import, the 463
+/// under this cap — up to 11.3 million triples, and the fixtures' 850-face
+/// iguana at 10.2 million — replay in at most 2.7 s and open in at most
+/// 5.6 s; the first two over it, at 12.6 and 12.8 million, replay in
+/// 3.3–3.8 s. Of the other 6 over it, two at 18–19 million replay in 2.9
+/// and 8.7 s, and four at 51–80 million in 36–57 s natively (the bridge
+/// takes 1.1–1.4 times as long as native). It was 4,000,000 before the
+/// solver's rework, when the
+/// designs between the two replayed in 2.4–7.0 s
+/// (`implementation-plans/fold-solver-performance.md` has the tables). A
+/// count, not a clock, so a saved step is refused, or not, alike on every
+/// machine; raising it never refuses a step that was admitted.
+pub const MAX_STACKED_TRIPLES: u64 = 12_000_000;
 
 /// How deeply a view's layers stack: what completing and checking its order
 /// cost, where its face count does not say.
@@ -977,7 +980,7 @@ mod tests {
                 limit: at69,
             })
         );
-        assert_eq!(MAX_STACKED_TRIPLES, 4_000_000);
+        assert_eq!(MAX_STACKED_TRIPLES, 12_000_000);
     }
 
     /// Every one of the 64 assignments of a taco-taco's six pairs, valid iff
