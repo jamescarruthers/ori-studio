@@ -82,6 +82,7 @@ vi.mock("../FoldToolWindow", async (importOriginal) => {
 
 import { isFoldAltLatched, resetFoldAltLatch, setFoldAltLatched } from "../../../fold/canvas/foldAltLatch";
 import { foldPaneDisplay, resetFoldPaneDisplay } from "../../../fold/canvas/foldPaneDisplay";
+import { resetFoldToolFavorites, toggleFoldToolFavorite } from "../../../fold/tools/foldToolFavorites";
 import { foldTools } from "../../../fold/tools/foldToolState";
 import {
   clearHeldModifiers,
@@ -134,6 +135,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   // The switches are the view's, shared with the step strip: put them back.
   resetFoldPaneDisplay();
+  resetFoldToolFavorites();
 });
 
 describe("the Fold canvas", () => {
@@ -180,24 +182,34 @@ describe("the Fold canvas", () => {
     const names = [...(bar?.querySelectorAll("button") ?? [])].map(
       (button) => button.getAttribute("aria-label") ?? button.textContent,
     );
-    // The tools, then the pane the switch shows next; the menu.
-    expect(names.slice(0, 2)).toEqual(["Tools", "Crease pattern"]);
+    // The starred tools, the one in hand pressed, then the pane the switch
+    // shows next; the menu. The Tools pill is the header's, not the bar's.
+    expect(names.slice(0, 5)).toEqual(["Valley fold", "Mountain fold", "Precrease", "Turn over", "Crease pattern"]);
+    expect(names).not.toContain("Tools");
     expect(names).not.toContain("Step creases");
     expect(names).not.toContain("Flat creases");
+    const button = (label: string) => bar?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+    expect(button("Valley fold")?.hasAttribute("data-active")).toBe(true);
+    expect(button("Mountain fold")?.hasAttribute("data-active")).toBe(false);
+    // A favorite on the bar takes its tool in hand.
+    act(() => button("Mountain fold")?.click());
+    expect(foldTools().store.getState().tool).toBe("mountain");
+    expect(button("Mountain fold")?.hasAttribute("data-active")).toBe(true);
+    // A star in the sheet reaches the bar, in the user's order, up to its four.
+    act(() => {
+      toggleFoldToolFavorite("turn-over");
+      toggleFoldToolFavorite("squash");
+    });
+    expect(button("Turn over")).toBeNull();
+    expect(button("Squash fold")).not.toBeNull();
+    act(() => toggleFoldToolFavorite("petal"));
+    expect(button("Petal fold")).toBeNull();
     // One pane at a time, the folded form first; the switch shows the other.
     expect(canvas.querySelector('[data-fold-pane="crease-pattern"]')).toBeNull();
-    act(() =>
-      bar?.querySelector<HTMLButtonElement>('button[aria-label="Crease pattern"]')?.click(),
-    );
+    act(() => button("Crease pattern")?.click());
     expect(canvas.querySelector('[data-fold-pane="crease-pattern"]')).not.toBeNull();
     expect(canvas.querySelector('[data-fold-pane="folded"]')).toBeNull();
-    act(() => bar?.querySelector<HTMLButtonElement>('button[aria-label="Folded"]')?.click());
-    // The tools open as a sheet, from the bar.
-    const tools = bar?.querySelector<HTMLButtonElement>('button[aria-label="Tools"]');
-    expect(tools?.getAttribute("aria-haspopup")).toBe("dialog");
-    act(() => tools?.click());
-    expect(tools?.getAttribute("aria-expanded")).toBe("true");
-    expect(document.getElementById(tools?.getAttribute("aria-controls") ?? "")).not.toBeNull();
+    act(() => button("Folded")?.click());
   });
 
   it("shows a touch phone's free-point latch on the bar while it is on, and lets it go from there", () => {
@@ -217,11 +229,11 @@ describe("the Fold canvas", () => {
       act(() => setFoldAltLatched(true));
       expect(latch()?.getAttribute("aria-label")).toBe("Free point");
       expect(latch()?.getAttribute("aria-pressed")).toBe("true");
-      // Beside the tools.
+      // After the starred tools, in the last one's place, so the bar stays one row.
       const names = [...(canvas.querySelector("[data-viewport-toolbar]")?.querySelectorAll("button") ?? [])].map(
         (button) => button.getAttribute("aria-label"),
       );
-      expect(names.slice(0, 3)).toEqual(["Tools", "Free point", "Crease pattern"]);
+      expect(names.slice(0, 5)).toEqual(["Valley fold", "Mountain fold", "Precrease", "Free point", "Crease pattern"]);
       act(() => latch()?.click());
       expect(isFoldAltLatched()).toBe(false);
       expect(latch()).toBeNull();

@@ -1,4 +1,4 @@
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SendToEditButtonModel } from '../../designKinds/sendToEditActions';
 import { foldCommand, type FoldAction, type FoldCommand } from '../../fold/foldActions';
@@ -129,16 +129,18 @@ function phoneVerbGroups(
  * bar at the same height. On a coarse pointer it carries undo and redo and the
  * slot the touch drawer seats its pill in (`drawerSlot`): the canvas pill lane
  * would sit over this header. On a phone it keeps to one row — the count left
- * to the strip's numbers, and the verbs in one `⋯` menu — so the paper keeps
- * the height; the canvas's own pills (its tools, the pane switch) are on the
- * canvas's bar. Presentation only: the verbs and every call are props, and
- * the tool in hand is read to show its button pressed.
+ * to the strip's numbers, the verbs in one `⋯` menu, and the Tools pill
+ * (`tools`) beside the drawer's — so the paper keeps the height; the starred
+ * tools and the pane switch are on the canvas's bar. Presentation only: the
+ * verbs and every call are props, and the tool in hand is read to show its
+ * button pressed.
  */
 export function FoldHeader({
   stepCount,
   actions,
   sendToEdit: sendToEditButton,
   drawerSlot,
+  tools,
 }: {
   /** The steps that fold on the path shown: turns are not counted. */
   stepCount: number;
@@ -152,6 +154,11 @@ export function FoldHeader({
   sendToEdit?: SendToEditButtonModel;
   /** Where the touch layer seats the Step pane's pill (`viewDrawerSlot`). */
   drawerSlot: Ref<HTMLDivElement>;
+  /**
+   * A phone's Tools pill (`FoldToolsTrigger`), left of the drawer's: the two
+   * pills at the top of the screen, as Edit's Tools and View float over its canvas.
+   */
+  tools?: ReactNode;
 }) {
   const { t } = useTranslation();
   const phone = useIsPhoneLayout();
@@ -230,6 +237,7 @@ export function FoldHeader({
             )}
           </>
         )}
+        {tools}
         <div className="panel-toolbar__pills" ref={drawerSlot} />
       </div>
     </div>

@@ -2009,6 +2009,28 @@ export const ANALYTICS_EVENTS = {
    */
   cpToolFavoritesReordered: 'cp tool favorites reordered',
   /**
+   * The phone layout's Fold tool sheet was opened, from the Tools pill in the
+   * Fold header that stands in for the rail there. Kept apart from Edit's
+   * `cp tool picker opened`, which dashboards compare across releases, as
+   * Simulate's is.
+   */
+  foldToolPickerOpened: 'fold tool picker opened',
+  /**
+   * A Fold tool was starred or un-starred, in the phone tool sheet. Edit's
+   * `cp tool favorited` for Fold's own list (`foldToolFavorites`), apart from
+   * it for the same reason as the picker's event, and both ways for the same
+   * reason as Edit's: whether the shipped defaults were the right ones.
+   *
+   * `tool` is a Fold rail item id — a tool, a line mode or a model verb — an
+   * enum from the shipped catalogue, never user content.
+   */
+  foldToolFavorited: 'fold tool favorited',
+  /**
+   * A Fold favorite was moved by long press and drag: once per completed
+   * gesture, as Edit's `cp tool favorites reordered` is.
+   */
+  foldToolFavoritesReordered: 'fold tool favorites reordered',
+  /**
    * The phone layout moved between a design's panes.
    *
    * Phone-only, because that layout is the only one that shows a design's panes
@@ -2143,6 +2165,14 @@ export const CP_FAVORITE_COUNT_BUCKETS = [0, 2, 5, 10, 20] as const;
 
 /** Which surface a favorite was starred or moved from. */
 export type CpFavoriteSurface = 'picker-sheet';
+
+/**
+ * Threshold ladder for how many Fold tools someone has starred: Edit's ladder
+ * (`CP_FAVORITE_COUNT_BUCKETS`) moved to straddle Fold's four defaults
+ * (`FOLD_DEFAULT_FAVORITE_IDS`), so pruned, as shipped and curating stay three
+ * answers.
+ */
+export const FOLD_FAVORITE_COUNT_BUCKETS = [0, 3, 4, 10, 20] as const;
 
 /**
  * Where a simulator tool was picked: Escape is the way back to Orbit, and the

@@ -113,6 +113,12 @@ export const STORAGE_KEYS = {
   foldToolHintCollapsed: 'fold-tool-hint-collapsed',
   /** Which of the Fold rail's groups are open — the Planned folds' among them (`ToolRail`). */
   foldToolRailGroups: 'fold-tool-rail-groups',
+  /**
+   * Which Fold tools are starred, in the user's order: Edit's `cpToolFavorites`
+   * for Fold's tools, under a key of its own. Absent means the shipped defaults
+   * (`foldToolFavorites`).
+   */
+  foldToolFavorites: 'fold-tool-favorites',
   /** Play a step's fold on arriving at its card in the References workspace. */
   referencesAutoPlayFolds: 'references-auto-play-folds',
   /**
