@@ -559,7 +559,8 @@ function compileAnnotation(annotation: KnownDiagramAnnotation): CompiledAnnotati
     case 'rotate':
       return {
         kind: 'mark',
-        // A part of a turn or an exact angle, either way round: the rotation's own fields.
+        // A part of a turn or an angle of the author's own, either way round: the rotation's own fields.
+        // A preset prints its fraction, an angle its degrees.
         primitive: { kind: 'rotate', at: up(from), ...(annotation.rotate ?? DEFAULT_ROTATION) },
       };
     case 'circle':

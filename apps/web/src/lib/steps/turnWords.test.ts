@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 import type { TurnKind } from './turn';
-import { turnAmountOptions, turnCardWords, turnDegreesLabel, turnLabel, turnName, turnPlace } from './turnWords';
+import { turnCardWords, turnDegreesLabel, turnLabel, turnName, turnPlace } from './turnWords';
 
 const t = ((_key: string, fallback: string, values?: Record<string, unknown>) =>
   fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''))) as unknown as TFunction;
@@ -46,18 +46,8 @@ describe('turn words', () => {
     expect(turnLabel(thirtyCw, { before: 3, after: 4 }, t)).toBe('Rotate 30° clockwise, between steps 3 and 4');
   });
 
-  it('offers a rotation’s amounts as the presets, and an exact angle after them while it is one', () => {
-    expect(turnAmountOptions({ amount: 'quarter', direction: 'cw' }, t)).toEqual([
-      { id: 'eighth', label: '1/8' },
-      { id: 'quarter', label: '1/4' },
-      { id: 'half', label: '1/2' },
-    ]);
-    expect(turnAmountOptions({ amount: 'degrees', degrees: 30, direction: 'cw' }, t).map((option) => option.label)).toEqual([
-      '1/8',
-      '1/4',
-      '1/2',
-      '30°',
-    ]);
+  it('labels an exact angle as a choice beside the presets, as its card says it', () => {
+    expect(turnDegreesLabel(30, t)).toBe('30°');
     expect(turnDegreesLabel(100 / 3, t)).toBe('33.33°');
   });
 });

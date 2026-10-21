@@ -207,6 +207,14 @@ describe('carrying one through its picture’s move', () => {
       rotate: { amount: 'half', direction: 'cw' },
     };
     expect(carryAnnotation(rotate, mirror).rotate).toEqual({ amount: 'half', direction: 'ccw' });
+    // An angle of its own is carried as far as it turned, the other way; a move that does not mirror leaves it.
+    const angled: KnownDiagramAnnotation = { ...rotate, rotate: { amount: 'degrees', degrees: 22.5, direction: 'cw' } };
+    expect(carryAnnotation(angled, mirror).rotate).toEqual({ amount: 'degrees', degrees: 22.5, direction: 'ccw' });
+    expect(carryAnnotation(angled, { point: (point: [number, number]) => point, mirrors: false, turnDeg: 90 }).rotate).toEqual({
+      amount: 'degrees',
+      degrees: 22.5,
+      direction: 'cw',
+    });
     const turnOver: KnownDiagramAnnotation = { id: 't', kind: 'turn-over', from: [0, 0], to: [0, 0], axis: 'vertical' };
     const quarter = { point: (point: [number, number]) => point, mirrors: false, turnDeg: 90 };
     expect(carryAnnotation(turnOver, quarter).axis).toBe('horizontal');

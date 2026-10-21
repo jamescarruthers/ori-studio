@@ -79,6 +79,7 @@ import {
   rightAngleReach,
   rightAngleShape,
   rotateGlyph,
+  rotateLabelScale,
   strokedOutlinePoints,
   offPaperPathData,
   onSheetBoundary,
@@ -90,6 +91,7 @@ import {
   type SvgPoint,
 } from './stepDiagramGeometry';
 import { markRingWidth } from './labelLayout';
+import { turnRotationGlyphText } from '../steps/turn';
 
 const UNIT = { width: 1, height: 1 };
 const CENTRE: readonly [number, number] = [0.5, 0.5];
@@ -1163,6 +1165,27 @@ describe('the Diagram’s glyphs', () => {
         expect(Math.hypot(r.x, r.y)).toBeCloseTo(12, 6);
       }
     }
+  });
+
+  it('prints a preset as its fraction, and an angle of a diagram’s own as its degrees (`turnRotationGlyphText`)', () => {
+    expect(turnRotationGlyphText({ amount: 'eighth', direction: 'cw' })).toBe('1/8');
+    expect(turnRotationGlyphText({ amount: 'quarter', direction: 'cw' })).toBe('1/4');
+    expect(turnRotationGlyphText({ amount: 'half', direction: 'cw' })).toBe('1/2');
+    expect(turnRotationGlyphText({ amount: 'degrees', degrees: 135, direction: 'cw' })).toBe('135°');
+    expect(turnRotationGlyphText({ amount: 'degrees', degrees: 22.5, direction: 'cw' })).toBe('22.5°');
+    // An angle that is a preset's is still an angle, and no ".0" trails a whole one.
+    expect(turnRotationGlyphText({ amount: 'degrees', degrees: 90, direction: 'cw' })).toBe('90°');
+    expect(turnRotationGlyphText({ amount: 'degrees', degrees: 45.0, direction: 'cw' })).toBe('45°');
+    expect(turnRotationGlyphText({ amount: 'degrees', degrees: 0.1 + 0.2, direction: 'cw' })).toBe('0.3°');
+  });
+
+  it('sets an angle as wide as "135°" at the fraction’s size, and a wider one smaller to fit', () => {
+    for (const label of ['1/8', '45°', '90°', '135°', '359°']) expect(rotateLabelScale(label), label).toBe(1);
+    const wide = ['22.5°', '157.5°', '359.9°'].map(rotateLabelScale);
+    for (const scale of wide) expect(scale).toBeLessThan(1);
+    // The wider, the smaller: each set to the same width.
+    expect(wide[0]).toBeGreaterThan(wide[1]!);
+    expect(wide[1]).toBeCloseTo(wide[2]!, 9);
   });
 });
 

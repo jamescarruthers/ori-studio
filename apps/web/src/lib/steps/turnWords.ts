@@ -2,11 +2,8 @@ import type { TFunction } from 'i18next';
 import {
   formatTurnDegrees,
   TURN_FRACTION,
-  TURN_ROTATION_PRESETS,
   type TurnBetween,
   type TurnKind,
-  type TurnRotation,
-  type TurnRotationAmount,
 } from './turn';
 
 /**
@@ -111,22 +108,11 @@ export function turnCardWords(turn: TurnKind & { unknown?: unknown }, t: TFuncti
 }
 
 /**
- * An exact angle as a choice beside the presets' fractions — a segment of the
- * Diagram's amount control, a row of its menu: "30°". Its words, so a control
- * that shows an exact turn reads it as the turn's card does.
+ * An exact angle as a choice beside the presets' fractions — a row of the
+ * Diagram's turn menu: "30°". Its words, so a control that shows an exact
+ * turn reads it as the turn's card does. (The Step pane shows one as Custom,
+ * its Angle field under it: `DiagramRotationControls`.)
  */
 export function turnDegreesLabel(degrees: number, t: TFunction): string {
   return t('panels:diagram.turns.degrees', '{{degrees}}°', { degrees: formatTurnDegrees(degrees) });
-}
-
-/**
- * The amounts a rotation's control offers, by `amount`: the presets' fractions,
- * and — for a rotation by an exact angle — that angle after them, chosen, so
- * the control reads the turn as it is rather than showing no amount at all.
- */
-export function turnAmountOptions(rotation: TurnRotation, t: TFunction): { id: TurnRotationAmount; label: string }[] {
-  const presets = TURN_ROTATION_PRESETS.map((id) => ({ id, label: TURN_FRACTION[id] }));
-  return rotation.amount === 'degrees'
-    ? [...presets, { id: 'degrees' as const, label: turnDegreesLabel(rotation.degrees, t) }]
-    : presets;
 }

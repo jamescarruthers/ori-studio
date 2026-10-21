@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { diagramStepMenuItems } from './diagramContextMenu';
-import { turnName } from '../../lib/steps/turnWords';
+import { turnCardWords, turnName } from '../../lib/steps/turnWords';
 import { buildDiagramTurnActions, type DiagramTurnActionState } from './diagramTurnActions';
 
 const t = ((_key: string, fallback: string, values?: Record<string, unknown>) =>
@@ -63,7 +63,7 @@ describe('a turn’s verbs (D22)', () => {
       if (found?.kind !== 'command') throw new Error(`no ${id}`);
       return found;
     };
-    expect(command('rotate-degrees')).toMatchObject({ label: '30°', checked: true });
+    expect(command('rotate-custom')).toMatchObject({ label: '30°', checked: true });
     for (const preset of ['rotate-eighth', 'rotate-quarter', 'rotate-half']) expect(command(preset).checked).toBe(false);
     command('rotate-ccw').run();
     expect(deps.set).toHaveBeenLastCalledWith({ kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'ccw' } });
@@ -71,7 +71,7 @@ describe('a turn’s verbs (D22)', () => {
     expect(deps.set).toHaveBeenLastCalledWith({ kind: 'rotate', rotate: { amount: 'half', direction: 'cw' } });
     // A preset turn lists no angle of its own.
     const preset = build({ turn: { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } } }).actions;
-    expect(preset.some((action) => action.kind === 'command' && action.id === 'rotate-degrees')).toBe(false);
+    expect(preset.some((action) => action.kind === 'command' && action.id === 'rotate-custom')).toBe(false);
   });
 
   it('cannot move past either end, and changes nothing on a read-only diagram', () => {
@@ -121,5 +121,56 @@ describe('a turn’s verbs (D22)', () => {
   it('names itself by how it turns', () => {
     expect(turnName({ kind: 'turn-over', axis: 'horizontal' }, t)).toBe('Turn over, top to bottom');
     expect(turnName({ kind: 'rotate', rotate: { amount: 'half', direction: 'cw' } }, t)).toBe('Rotate 1/2 turn clockwise');
+  });
+
+  describe('an angle of its own', () => {
+    const angle = (degrees: number, direction: 'cw' | 'ccw' = 'cw') => ({ kind: 'rotate' as const, rotate: { amount: 'degrees' as const, degrees, direction } });
+
+    it('names itself, and says how on its card, by its degrees', () => {
+      expect(turnName(angle(135), t)).toBe('Rotate 135° clockwise');
+      expect(turnName(angle(22.5, 'ccw'), t)).toBe('Rotate 22.5° counterclockwise');
+      expect(turnCardWords(angle(135), t)).toEqual({ title: 'Rotate', how: '135° clockwise' });
+      expect(turnCardWords(angle(90, 'ccw'), t)).toEqual({ title: 'Rotate', how: '90° counterclockwise' });
+      // A preset keeps its words.
+      expect(turnCardWords({ kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } }, t)).toEqual({
+        title: 'Rotate',
+        how: '1/4 turn clockwise',
+      });
+    });
+
+    it('shows its angle in its menu as one more of the set, checked, after the presets', () => {
+      const { actions, deps } = build({ turn: angle(135, 'ccw') });
+      const rows = diagramStepMenuItems(actions).flatMap((item) =>
+        item.kind === 'radio' ? [`${item.id} ${item.label}${item.checked ? ' ✓' : ''}`] : []
+      );
+      expect(rows).toEqual([
+        'turn-over Turn Over',
+        'rotate Rotate ✓',
+        'rotate-eighth 1/8 Turn',
+        'rotate-quarter 1/4 Turn',
+        'rotate-half 1/2 Turn',
+        'rotate-custom 135° ✓',
+        'rotate-cw Clockwise',
+        'rotate-ccw Counterclockwise ✓',
+      ]);
+      // A preset is still chosen from it, and drops the angle; the other way keeps it.
+      const command = (id: string) => {
+        const found = actions.find((action) => action.kind === 'command' && action.id === id);
+        if (found?.kind !== 'command') throw new Error(`no ${id}`);
+        return found;
+      };
+      command('rotate-half').run();
+      expect(deps.set).toHaveBeenLastCalledWith({ kind: 'rotate', rotate: { amount: 'half', direction: 'ccw' } });
+      command('rotate-cw').run();
+      expect(deps.set).toHaveBeenLastCalledWith({ kind: 'rotate', rotate: { amount: 'degrees', degrees: 135, direction: 'cw' } });
+    });
+
+    it('has no such row while it is a preset', () => {
+      const ids = build({ turn: { kind: 'rotate', rotate: { amount: 'half', direction: 'cw' } } }).actions.flatMap((action) =>
+        action.kind === 'command' ? [action.id] : []
+      );
+      expect(ids).not.toContain('rotate-custom');
+      expect(ids).toEqual(expect.arrayContaining(['rotate-eighth', 'rotate-quarter', 'rotate-half']));
+    });
   });
 });

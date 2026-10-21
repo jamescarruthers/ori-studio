@@ -39,6 +39,7 @@ import {
   reversedStretches,
   ringPieces,
   rotateGlyphDrawn,
+  rotateLabelScale,
   sheetCorners,
   starDrawn,
   eyeDrawn,
@@ -97,13 +98,6 @@ export const INLINE_LABEL_FONT = 'Inter, ui-sans-serif, system-ui, sans-serif';
 
 /** Where the fraction's baseline sits below the glyph's centre, in ems: a figure's middle on the centre. */
 const ROTATE_FRACTION_BASELINE = 0.36;
-
-/**
- * How many characters the rotate glyph's middle takes at its full size: a
- * fraction ("1/8") or a whole angle ("30°") with room to spare. A longer
- * angle ("22.5°") is set smaller, so it stays inside the circle.
- */
-const ROTATE_TEXT_ROOM = 4;
 
 /** Four decimals is under a device pixel at any size this is drawn at. */
 const round = (value: number) => Number(value.toFixed(4));
@@ -893,8 +887,10 @@ function diagramPrimitiveShape(
       const glyph = rotateGlyphDrawn(primitive.at, primitive.direction, project);
       const { centre } = glyph;
       const stroke = strokeAttributes('arrow', project.ink, 1, project.pens);
-      const text = turnRotationGlyphText(primitive);
-      const size = DIAGRAM_ROTATE_INK.fraction * project.ink * Math.min(1, ROTATE_TEXT_ROOM / text.length);
+      // A fraction at its own size, as every References step prints it; a wide angle a little smaller, to fit.
+      const label = turnRotationGlyphText(primitive);
+      const fit = primitive.amount === 'degrees' ? rotateLabelScale(label) : 1;
+      const size = DIAGRAM_ROTATE_INK.fraction * project.ink * fit;
       return onAndOffPaper(context, index, (inks) => {
         const arrowInk = inked(inks, 'step-diagram__arc step-diagram__line--arrow', (ink) =>
           strokeInk(ink.lines.arrow, stroke.strokeOpacity)
@@ -919,7 +915,7 @@ function diagramPrimitiveShape(
                 fontWeight: 700,
               }))}
             >
-              {text}
+              {label}
             </text>
           </g>
         );

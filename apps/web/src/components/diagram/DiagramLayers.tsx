@@ -22,8 +22,6 @@ import { layerNames } from '../../diagram/annotate/layerNames';
 import { useFieldFocusRequest } from '../../diagram/annotate/useFieldFocusRequest';
 import { useStepAnnotations } from '../../diagram/annotate/useStepAnnotations';
 import { DEFAULT_DIAGRAM_STYLE, stepNumber, type DiagramStep, type KnownDiagramAnnotation } from '../../diagram/document/diagramDocument';
-import { TURN_ROTATION_PRESETS, withTurnDirection, withTurnPreset } from '../../lib/steps/turn';
-import { turnAmountOptions } from '../../lib/steps/turnWords';
 import { marksTouchingWindow, viewOfStep } from '../../diagram/zoom/stepView';
 import { useAreaSubtitle } from '../../diagram/zoom/useZoomControls';
 import { areaStatus } from '../../diagram/zoom/areaStatus';
@@ -51,6 +49,7 @@ import { DiagramAngleMarkControls } from './DiagramAngleMarkControls';
 import { DiagramTicksRow } from './DiagramTicksRow';
 import { DiagramWhiteArrowControls } from './DiagramWhiteArrowControls';
 import { DiagramStarControls } from './DiagramStarControls';
+import { DiagramRotationControls } from './DiagramRotationControls';
 import { DiagramRotationRow } from './DiagramRotationRow';
 import { boxedMarkOf } from '../../diagram/annotate/transformGrips';
 import { DiagramZoomControls } from './DiagramZoomControls';
@@ -356,31 +355,15 @@ function SelectedAnnotation({
         />
       )}
       {annotation.kind === 'rotate' && annotation.rotate && (
-        <>
-          <SegmentedRow
-            label={t('panels:diagram.annotations.turn', 'Turn')}
-            value={annotation.rotate.amount}
-            disabled={!editable}
-            options={turnAmountOptions(annotation.rotate, t)}
-            onChange={(amount) => {
-              // An exact angle's segment is the glyph as it is: only a preset changes it.
-              const preset = TURN_ROTATION_PRESETS.find((each) => each === amount);
-              if (preset) annotations.setRotation(id, withTurnPreset(annotation.rotate!, preset));
-            }}
-          />
-          <SegmentedRow
-            label={t('panels:diagram.annotations.direction', 'Direction')}
-            value={annotation.rotate.direction}
-            disabled={!editable}
-            options={[
-              { id: 'cw', label: t('panels:diagram.annotations.clockwise', 'Clockwise') },
-              { id: 'ccw', label: t('panels:diagram.annotations.counterclockwise', 'Counterclockwise') },
-            ]}
-            onChange={(direction) =>
-              annotations.setRotation(id, withTurnDirection(annotation.rotate!, direction === 'ccw' ? 'ccw' : 'cw'))
-            }
-          />
-        </>
+        <DiagramRotationControls
+          // One field per mark: an uncommitted angle never carries over to the next one.
+          key={id}
+          rotation={annotation.rotate}
+          amountLabel={t('panels:diagram.annotations.turn', 'Turn')}
+          target="mark"
+          disabled={!editable}
+          onChange={(rotate) => annotations.setRotation(id, rotate)}
+        />
       )}
       {lineType !== null && (
         <FieldRow label={typeName} kind="segmented" disabled={!editable}>

@@ -3,6 +3,7 @@ import { TURN_DIRECTIONS, TURN_ROTATION_PRESETS, withTurnDirection, withTurnPres
 import { turnDegreesLabel } from '../../lib/steps/turnWords';
 import { DEFAULT_ROTATION } from '../annotate/annotationModel';
 import type { DiagramRotation, DiagramTurnKind } from '../document/diagramDocument';
+import { isCustomRotation } from '../document/diagramRotation';
 import type { DiagramStepAction, DiagramStepCommand } from './diagramActions';
 
 /**
@@ -21,8 +22,11 @@ export type DiagramTurnActionId =
   | 'rotate-eighth'
   | 'rotate-quarter'
   | 'rotate-half'
-  /** A rotation by an exact angle (made in Fold): its angle, chosen, beside the presets. */
-  | 'rotate-degrees'
+  /**
+   * A rotation by an angle of its own — the author's (Custom, in the Step
+   * pane), or a Fold rotation's pulled in: its angle, chosen, beside the presets.
+   */
+  | 'rotate-custom'
   | 'rotate-cw'
   | 'rotate-ccw';
 
@@ -59,6 +63,9 @@ export function turnLabels(t: TFunction) {
       quarter: t('panels:diagram.turns.quarter', '1/4 Turn'),
       half: t('panels:diagram.turns.half', '1/2 Turn'),
     },
+    /** The Step pane's fourth Amount, an angle of the author's own, and its field. */
+    custom: t('panels:diagram.turns.custom', 'Custom'),
+    angle: t('panels:diagram.turns.angle', 'Angle'),
     direction: {
       cw: t('panels:diagram.annotations.clockwise', 'Clockwise'),
       ccw: t('panels:diagram.annotations.counterclockwise', 'Counterclockwise'),
@@ -101,9 +108,10 @@ export function buildDiagramTurnActions(
               rotate: withTurnPreset(rotation, amount),
             })
           ),
-          // An exact angle is what the turn is already: listed, chosen, so the menu says how far it turns.
-          ...(rotation.amount === 'degrees'
-            ? [choose('rotate-degrees', turnDegreesLabel(rotation.degrees, t), true, { kind: 'rotate', rotate: rotation })]
+          // A menu takes no number: an angle of the turn's own is what it is already — listed, chosen,
+          // so the menu says how far it turns — and is set in the Step pane.
+          ...(isCustomRotation(rotation)
+            ? [choose('rotate-custom', turnDegreesLabel(rotation.degrees, t), true, { kind: 'rotate', rotate: rotation })]
             : []),
           { kind: 'separator', id: 'after-amount' },
           ...TURN_DIRECTIONS.map((direction) =>

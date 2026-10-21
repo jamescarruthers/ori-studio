@@ -174,6 +174,9 @@ export type DiagramTurnAddedKind = 'turn_over' | 'rotate';
  */
 export type DiagramTurnAddedVia = 'add_menu' | 'card_menu' | 'references' | 'empty_step' | 'fold';
 
+/** What a rotation given an angle of its own is on: a turn between steps (D22), or a rotate mark on a step's picture. */
+export type DiagramRotationTarget = 'turn' | 'mark';
+
 /** An uploaded picture's file type, by its reported type and extension: never its name. */
 export type DiagramPictureFormat = 'svg' | 'png' | 'jpeg' | 'webp' | 'other';
 
@@ -1717,6 +1720,12 @@ export const ANALYTICS_EVENTS = {
    * `via` where: whether turns are made by hand or come from References.
    */
   diagramTurnAdded: 'diagram turn added',
+  /**
+   * A rotation's Amount set to Custom, an angle of its own rather than 1/8,
+   * 1/4 or 1/2 of a turn — on a turn or a rotate mark: whether the presets
+   * are enough. Never the angle.
+   */
+  diagramRotationCustomized: 'diagram rotation customized',
   /**
    * The Fold workspace's canvas tools (plan D18). `fold step added` is a step
    * committed from the canvas — a fold, a precrease, an unfold or refold, a

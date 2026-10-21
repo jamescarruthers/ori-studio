@@ -189,6 +189,9 @@ function isNewerPrimitive(value: unknown): boolean {
   const arc = value.kind === 'fold-arrow' || value.kind === 'one-way-arrow' ? value.out : null;
   if (isRecord(arc) && hasOtherKey(arc, ARC_KEYS)) return true;
   if (value.kind === 'label' && typeof value.text === 'string' && value.text.length > STEP_DIAGRAM_MAX_LABEL) return true;
+  // An angle as a diagram file writes a mark's, `degrees` with no `amount`: no stored model names one (References
+  // emits presets, a turn's exact angle is `amount: 'degrees'`), so it is a newer build's.
+  if (value.kind === 'rotate' && value.degrees !== undefined && value.amount === undefined) return true;
   const enums = PRIMITIVE_ENUMS[value.kind];
   if (enums) {
     for (const [field, values] of Object.entries(enums)) {

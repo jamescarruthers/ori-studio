@@ -32,6 +32,7 @@ import {
   type DiagramWhiteArrowWidth,
 } from '../../lib/stepDiagram/diagramInk';
 import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
+import { withTurnDirection } from '../../lib/steps/turn';
 import {
   randomDiagramId,
   type DiagramTicks,
@@ -2598,8 +2599,9 @@ function carriedOnPicture(annotation: KnownDiagramAnnotation, move: PictureMove)
   if (move.mirrors && (annotation.kind === 'pleat-arrow' || annotation.kind === 'divisions')) {
     return withSide(carried, annotation.mirrored !== true);
   }
+  // A mirror turns a rotation the other way, as far as it turned: a preset's, or an angle's own.
   if (move.mirrors && annotation.rotate) {
-    carried.rotate = { ...annotation.rotate, direction: annotation.rotate.direction === 'cw' ? 'ccw' : 'cw' };
+    carried.rotate = withTurnDirection(annotation.rotate, annotation.rotate.direction === 'cw' ? 'ccw' : 'cw');
   }
   const quarters = move.quarterTurns ?? Math.round(move.turnDeg / 90);
   if (annotation.axis && Math.abs(quarters) % 2 === 1) {

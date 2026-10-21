@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { DIAGRAM_ACTION_ICONS } from '../../diagram/actions/diagramActionIcons';
 import { turnLabels } from '../../diagram/actions/diagramTurnActions';
-import { TURN_ROTATION_PRESETS, withTurnDirection, withTurnPreset } from '../../lib/steps/turn';
-import { turnAmountOptions, turnName, turnPlace } from '../../lib/steps/turnWords';
+import { turnName, turnPlace } from '../../lib/steps/turnWords';
 import type { DiagramStepAction } from '../../diagram/actions/diagramActions';
 import { DEFAULT_ROTATION } from '../../diagram/annotate/annotationModel';
 import { isLockedTurn, type DiagramTurn, type DiagramTurnKind } from '../../diagram/document/diagramDocument';
 import { ActionList, type ActionListItem } from '../ui/ActionList';
 import { SegmentedRow } from '../ui/fieldRows';
+import { DiagramRotationControls } from './DiagramRotationControls';
 import styles from './DiagramTurnPane.module.css';
 
 /** The turn's verbs this pane lists, drawn as the step's same verbs are. */
@@ -67,15 +67,18 @@ export function DiagramTurnPane({
         </p>
       </div>
       {!isLockedTurn(turn) && <TurnControls turn={turn} readOnly={readOnly} onSet={onSet} />}
-      <ActionList groups={[verbs]} aria-label={t('panels:diagram.turns.actions', 'Turn actions')} />
+      <div className={styles.verbs}>
+        <ActionList groups={[verbs]} aria-label={t('panels:diagram.turns.actions', 'Turn actions')} />
+      </div>
     </div>
   );
 }
 
 /**
  * What a turn is and how it turns, as controls: a turn-over's axis, a
- * rotation's amount and direction. A rotation by an exact angle (made in
- * Fold) shows its angle beside the presets, chosen; a preset replaces it.
+ * rotation's amount and direction. A rotation by an angle of its own — the
+ * author's, or a Fold rotation's pulled in — is Custom, its Angle under it; a
+ * preset replaces it.
  */
 function TurnControls({
   turn,
@@ -116,31 +119,13 @@ function TurnControls({
           onChange={(value) => onSet({ kind: 'turn-over', axis: value as 'vertical' | 'horizontal' })}
         />
       ) : (
-        <>
-          <SegmentedRow
-            label={t('panels:diagram.turns.amount', 'Amount')}
-            value={turn.rotate.amount}
-            disabled={readOnly}
-            options={turnAmountOptions(turn.rotate, t)}
-            onChange={(amount) => {
-              // The exact angle's own segment is what the turn is already: only a preset changes it.
-              const preset = TURN_ROTATION_PRESETS.find((each) => each === amount);
-              if (preset) onSet({ kind: 'rotate', rotate: withTurnPreset(turn.rotate, preset) });
-            }}
-          />
-          <SegmentedRow
-            label={t('panels:diagram.annotations.direction', 'Direction')}
-            value={turn.rotate.direction}
-            disabled={readOnly}
-            options={[
-              { id: 'cw', label: labels.direction.cw },
-              { id: 'ccw', label: labels.direction.ccw },
-            ]}
-            onChange={(direction) =>
-              onSet({ kind: 'rotate', rotate: withTurnDirection(turn.rotate, direction === 'ccw' ? 'ccw' : 'cw') })
-            }
-          />
-        </>
+        <DiagramRotationControls
+          rotation={turn.rotate}
+          amountLabel={t('panels:diagram.turns.amount', 'Amount')}
+          target="turn"
+          disabled={readOnly}
+          onChange={(rotate) => onSet({ kind: 'rotate', rotate })}
+        />
       )}
     </>
   );

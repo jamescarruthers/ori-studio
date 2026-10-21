@@ -2377,6 +2377,29 @@ export function rotateGlyph(
 const ROTATE_ARC_START = (200 * Math.PI) / 180;
 const ROTATE_ARC_SWEEP = (140 * Math.PI) / 180;
 
+/**
+ * The characters an angle's label holds, and each one's advance in ems, a
+ * little over the widest of the faces it is set in — the app's Inter on
+ * screen, the diagram's Noto Sans in print, both bold: a digit's, and the
+ * narrower point and degree sign.
+ */
+const ROTATE_LABEL_ADVANCE_EM: Readonly<Record<string, number>> = { '.': 0.3, '°': 0.45 };
+const ROTATE_LABEL_DIGIT_EM = 0.62;
+
+/** The widest label set at the fraction's full size, in its ems: "135°" fits between the arcs, "22.5°" does not. */
+const ROTATE_LABEL_ROOM_EM = 2.4;
+
+/**
+ * How much smaller than a fraction an angle's label is set, so it stays in
+ * the glyph's middle, clear of its arcs and heads: 1 for one as narrow as
+ * "135°", less for a wider one. A fraction is never set by this; it prints
+ * at the size it always has.
+ */
+export function rotateLabelScale(label: string): number {
+  const width = [...label].reduce((sum, character) => sum + (ROTATE_LABEL_ADVANCE_EM[character] ?? ROTATE_LABEL_DIGIT_EM), 0);
+  return width > ROTATE_LABEL_ROOM_EM ? ROTATE_LABEL_ROOM_EM / width : 1;
+}
+
 /** A cubic Bézier's four control points. */
 type Cubic = readonly [SvgPoint, SvgPoint, SvgPoint, SvgPoint];
 

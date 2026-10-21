@@ -53,6 +53,19 @@ describe('annotations on the clipboard', () => {
     expect(pastedAnnotations(clipboard, 'step-2', () => 'annotation-4')[0]).toEqual({ ...divisions, id: 'annotation-4' });
   });
 
+  it('keeps a rotate mark’s angle of its own on a paste, on its own step and on another', () => {
+    const rotate: KnownDiagramAnnotation = {
+      id: 'r',
+      kind: 'rotate',
+      from: [0.4, 0.4],
+      to: [0.4, 0.4],
+      rotate: { amount: 'degrees', degrees: 135, direction: 'ccw' },
+    };
+    const clipboard = annotationClipboard([rotate], 'step-1');
+    expect(pastedAnnotations(clipboard, 'step-1', () => 'annotation-1')[0]).toMatchObject({ rotate: { amount: 'degrees', degrees: 135, direction: 'ccw' } });
+    expect(pastedAnnotations(clipboard, 'step-2', () => 'annotation-2')[0]).toEqual({ ...rotate, id: 'annotation-2' });
+  });
+
   it('keeps equal divisions’ short dividers on a paste, on their own step and on another (Revision 3)', () => {
     const short: KnownDiagramAnnotation = { id: 'd', kind: 'divisions', from: [0, 0], to: [1, 0], parts: 3, offset: 10, shortDividers: true };
     const clipboard = annotationClipboard([short], 'step-1');

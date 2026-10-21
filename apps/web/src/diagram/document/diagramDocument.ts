@@ -982,7 +982,11 @@ export interface DiagramBehind {
   to?: number;
 }
 
-/** How far, and which way, a rotate glyph turns the model: a turn's rotation (`lib/steps/turn.ts`). */
+/**
+ * How far, and which way, a rotate glyph turns the model: a turn's rotation
+ * (`lib/steps/turn.ts`) — one of the presets, or an angle of the author's own
+ * (`diagramRotation.ts`), written `{ degrees, direction }` (`diagramFile.ts`).
+ */
 export type DiagramRotation = TurnRotation;
 
 /**

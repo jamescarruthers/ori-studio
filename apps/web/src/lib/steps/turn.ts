@@ -23,11 +23,18 @@ export const TURN_DIRECTIONS: readonly TurnDirection[] = ['cw', 'ccw'];
 
 /**
  * How far, and which way, a rotation turns the model: a part of a turn, or an
- * exact angle. An exact angle is in degrees, more than 0 and at most 180 —
- * further one way is less the other — and never a preset's own (45, 90 or
- * 180), which is that preset ({@link turnRotationOfDegrees}). So every
- * rotation has one spelling, and a file written before exact angles reads
- * and writes exactly as it did.
+ * exact angle in degrees, more than 0 and less than a whole turn, kept to a
+ * millionth ({@link isTurnDegreesPrecise}).
+ *
+ * Fold's angles are normalised: at most 180 — further one way is less the
+ * other — and never a preset's own (45, 90 or 180), which is that preset
+ * ({@link turnRotationOfDegrees}). So a Fold rotation has one spelling, and
+ * Fold's file and the engine's wire take only those ({@link readTurnRotation}).
+ * A Diagram's angle of the author's own (Custom, `diagram/document/
+ * diagramRotation.ts`) is printed as typed — 270° clockwise, or 90° rather
+ * than 1/4 — so it is any angle in that range; a Diagram turn never goes back
+ * to Fold. A file written before exact angles reads and writes exactly as it
+ * did.
  *
  * A build that knows only the presets reads `amount: 'degrees'`, or the
  * `degrees` key, as a newer build's turn, never as a preset.
@@ -59,6 +66,11 @@ export const TURN_PRESET_DEGREES: Readonly<Record<TurnRotationPreset, number>> =
 
 /** An exact angle is kept to a millionth of a degree: what is typed, without the float noise of reducing it. */
 const DEGREES_PRECISION = 1e6;
+
+/** Whether an angle is kept as a rotation keeps one: to a millionth of a degree. A finer one is a newer build's. */
+export function isTurnDegreesPrecise(degrees: number): boolean {
+  return Math.round(degrees * DEGREES_PRECISION) / DEGREES_PRECISION === degrees;
+}
 
 /** How far a rotation turns, in degrees: more than 0, at most 180. */
 export function turnRotationDegrees(rotation: TurnRotation): number {

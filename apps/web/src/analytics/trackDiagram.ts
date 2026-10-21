@@ -58,6 +58,7 @@ import type {
   DiagramStepAddedVia,
   DiagramTurnAddedKind,
   DiagramTurnAddedVia,
+  DiagramRotationTarget,
   DiagramStepOpenedMode,
   DiagramStepOpenedVia,
   DiagramStyleChoiceName,
@@ -86,6 +87,15 @@ export function trackDiagramStepAdded(picture: DiagramStepAddedSource, via: Diag
 export function trackDiagramTurnAdded(kind: 'turn-over' | 'rotate', via: DiagramTurnAddedVia): void {
   const turn: DiagramTurnAddedKind = kind === 'turn-over' ? 'turn_over' : 'rotate';
   track(ANALYTICS_EVENTS.diagramTurnAdded, { turn, via });
+}
+
+/**
+ * A rotation's Amount set to Custom in the Step pane or the Layers pane: on
+ * a turn or a rotate mark. Placed by hand: the segmented control is no menu
+ * action, and a menu cannot set an angle. Never the angle itself.
+ */
+export function trackDiagramRotationCustomized(target: DiagramRotationTarget): void {
+  track(ANALYTICS_EVENTS.diagramRotationCustomized, { target });
 }
 
 /**

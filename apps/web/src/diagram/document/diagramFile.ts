@@ -70,7 +70,7 @@ import { isNewerSheetThumbnail, readSheetThumbnail, type SheetThumbnail } from '
 import { NEWER, finiteNumber, hasNewerKey, isRecord, readEntries } from '../../lib/documentFile';
 import { isNewerDocumentPaperStyle, readDocumentPaperStyle } from '../../lib/paper/documentPaperStyle';
 import { isNewerPaperScene, readPaperScene } from '../../lib/paper/paperSceneValidate';
-import { readTurnRotation, TURN_ROTATION_KEYS, writeTurnRotation } from '../../lib/steps/turn';
+import { isTurnDegreesPrecise, readTurnRotation, TURN_DIRECTIONS, TURN_ROTATION_KEYS } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 import {
   PICTURE_REACH,
@@ -614,7 +614,7 @@ function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<stri
   if (isTurn(step)) {
     if (step.unknown) return step.unknown;
     return step.kind === 'rotate'
-      ? { id: step.id, kind: step.kind, rotate: writeTurnRotation(step.rotate) }
+      ? { id: step.id, kind: step.kind, rotate: writeRotation(step.rotate) }
       : { id: step.id, kind: step.kind, axis: step.axis };
   }
   if (step.unknown) return step.unknown;
@@ -721,7 +721,7 @@ function writeAnnotation(annotation: DiagramAnnotation): Record<string, unknown>
     ...(halo ? { halo } : {}),
     ...(sizePt !== undefined ? { sizePt } : {}),
     ...(offsetPt !== undefined ? { offsetPt: [offsetPt[0], offsetPt[1]] } : {}),
-    ...(rotate !== undefined ? { rotate: writeTurnRotation(rotate) } : {}),
+    ...(rotate !== undefined ? { rotate: writeRotation(rotate) } : {}),
     ...(axis !== undefined ? { axis } : {}),
     ...(other !== undefined ? { other } : {}),
     ...(ticks !== undefined ? { ticks } : {}),
@@ -2534,19 +2534,45 @@ function readPreset<T extends string>(value: unknown, known: readonly T[], fallb
 }
 
 /**
- * How far and which way a rotation turns: a quarter clockwise when unsaid. Shared by the glyph and the turn (D22).
- * A part of a turn, or an exact angle (`lib/steps/turn`); one this build cannot read as either — a value it has no
- * name for, an angle not as this build writes one — is a newer build's, kept as it came.
+ * How far and which way a rotation turns: a quarter clockwise when unsaid.
+ * Shared by the glyph and the turn (D22). A preset (`lib/steps/turn`), or an
+ * angle — never both. An angle is written `{ degrees, direction }`; the Fold
+ * launch build's `amount: 'degrees'` beside it reads the same. It is the
+ * author's own as typed (`diagramRotation.ts`) or a Fold rotation's pulled in,
+ * so any angle above none and below a whole turn, to a millionth. A build
+ * before angles had no name for `degrees`, so it carries an angle's mark or
+ * turn whole and locked by the first rule here; a whole turn or more, or
+ * finer than a millionth, is news again.
  */
 function readRotation(value: unknown): DiagramRotation | typeof NEWER | null {
   if (value === undefined) return DEFAULT_ROTATION;
   if (!isRecord(value)) return null;
   // A field it has no name for is news before a missing one is damage, as for a whole annotation.
   if (Object.keys(value).some((key) => !TURN_ROTATION_KEYS.has(key))) return NEWER;
-  // An angle is the newest thing a rotation says: one this build cannot read is a newer build's, never damage.
-  if (value.degrees !== undefined) return readTurnRotation(value) ?? NEWER;
-  if (typeof value.amount !== 'string' || typeof value.direction !== 'string') return null;
-  return readTurnRotation(value) ?? NEWER;
+  if (typeof value.direction !== 'string') return null;
+  if (value.degrees === undefined) {
+    if (typeof value.amount !== 'string') return null;
+    // A preset, or an amount or direction this build has no name for: a newer build's.
+    return readTurnRotation(value) ?? NEWER;
+  }
+  // Both a preset and an angle says two things at once: damage, not news.
+  if (value.amount !== undefined && value.amount !== 'degrees') return null;
+  const degrees = finiteNumber(value.degrees);
+  if (degrees === null || degrees <= 0) return null;
+  const direction = TURN_DIRECTIONS.find((known) => known === value.direction);
+  if (degrees >= 360 || !isTurnDegreesPrecise(degrees) || !direction) return NEWER;
+  return { amount: 'degrees', degrees, direction };
+}
+
+/**
+ * A rotation as a diagram writes it: a preset as every build has written one,
+ * `amount` first, or an angle `{ degrees, direction }` — the shape a build
+ * before angles carries whole, rather than Fold's `amount: 'degrees'`.
+ */
+function writeRotation(rotation: DiagramRotation): Record<string, unknown> {
+  return rotation.amount === 'degrees'
+    ? { degrees: rotation.degrees, direction: rotation.direction }
+    : { amount: rotation.amount, direction: rotation.direction };
 }
 
 /** The axis a turn-over turns about: the vertical one, side to side, when unsaid. */
