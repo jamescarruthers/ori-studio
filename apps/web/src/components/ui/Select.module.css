@@ -43,6 +43,26 @@
   color: var(--menu-highlight-text);
 }
 
+/* An option offered as no choice: there, dimmed, never highlighted. */
+.item[data-disabled] {
+  color: var(--text-tertiary);
+}
+
+/* An option with a line under it (`description`): the label, then why. */
+.described {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.description {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 /* The current value's check, in a column every option keeps so the labels line
    up, as a menu's radio rows do. The highlight follows the pointer, so this is
    what still says which value is chosen. */

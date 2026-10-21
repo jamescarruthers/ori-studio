@@ -1932,6 +1932,7 @@
         "rising": "Diagonale, du bas à gauche au haut à droite",
         "vertical": "Ligne médiane, de haut en bas"
       },
+      "axisStopsAt": "S’arrête à l’opération {{number}} : {{reason}}",
       "blockedAt": "Arrêt à l’opération source {{number}} : {{reason}}",
       "choiceAt_one": "L’opération source {{number}} admet {{count}} ordres de couches correspondants. Choisissez-en un pour continuer.",
       "choiceAt_many": "L’opération source {{number}} admet {{count}} ordres de couches correspondants. Choisissez-en un pour continuer.",
@@ -1939,6 +1940,7 @@
       "chooseAxis": "Choisir l’axe de symétrie",
       "commitBehind": "Répéter derrière",
       "commitSame": "Répéter de l’autre côté",
+      "drawnAxisRefused": "La répétition par rapport à cet axe est refusée. {{reason}}",
       "failureTitle": "Répétition impossible",
       "findingAxes": "Recherche des axes de symétrie du modèle avant la plage…",
       "from": "Commencer par",
@@ -1953,6 +1955,7 @@
       "groupCountSame_many": "Répéter {{count}} opérations jusqu’à l’étape actuelle de l’autre côté, en une seule étape numérotée.",
       "groupCountSame_other": "Répéter {{count}} opérations jusqu’à l’étape actuelle de l’autre côté, en une seule étape numérotée.",
       "headlineAdvice": "{{reason}}. {{advice}}",
+      "headlineReason": "{{reason}}.",
       "individual": "Afficher comme étapes individuelles",
       "individualCount_one": "Répéter {{count}} opération comme entrée individuelle.",
       "individualCount_many": "Répéter {{count}} opérations jusqu’à l’étape actuelle comme entrées individuelles.",

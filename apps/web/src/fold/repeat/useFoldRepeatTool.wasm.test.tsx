@@ -34,6 +34,11 @@ import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQ
 import { repeatPreviewCreases } from './repeatCanvas';
 import { sameRepeatLine } from './repeatRange';
 import { REPEAT_PREPARE_DELAY_MS, useFoldRepeatTool } from './useFoldRepeatTool';
+import i18n from '../../i18n';
+import { parseNativeProjectFile } from '../../lib/nativeProjectFile';
+import { isLockedStep } from '../document/foldSequenceDocument';
+import { readFoldSequences } from '../document/foldSequenceFile';
+import { foldToolWindow, type FoldToolWindowVerbs, type FoldToolWindowView } from '../tools/foldToolWindow';
 
 let session: FoldSession;
 vi.mock('../../store/workspaceStore/foldSession', async (original) => ({
@@ -266,9 +271,12 @@ describe('the Repeat tool', () => {
 
   it('takes the axis last chosen from one repeat to the next', async () => {
     const axes = await taken();
-    // Before any is chosen, the first verified axis.
+    // Before any is chosen, the first verified axis whose repeat lands: here the first.
+    await until(() => seen?.view.states?.every((state) => state.kind !== 'unknown'), 'every axis prepared');
     expect(seen!.view.axis).toBe(0);
-    const other = axes.length - 1;
+    // Another axis whose repeat lands.
+    const other = seen!.view.states!.findIndex((state, k) => k > 0 && state.kind === 'lands');
+    expect(other).toBeGreaterThan(0);
     act(() => seen!.verbs.setAxis(other));
     await until(() => seen?.view.axis === other, 'the axis chosen');
     const chosen = axes[other]!.sheet;
@@ -370,19 +378,25 @@ describe('the Repeat tool', () => {
     expect(foldTools().store.getState().tool).toBe('valley');
   });
 
-  it('stops on Escape before the preparation has begun, as the window shows it preparing', async () => {
+  it('stops on Escape while the axes are still being prepared, as the window shows it preparing', async () => {
+    const live = engine.live();
+    engine.pause(true);
     await taken(MIDDLE);
-    // Within the pause before it prepares: shown as preparing, and stopped by Escape, not put down.
+    // The axes prepared up front, the remembered one first, held between engine calls: shown as preparing,
+    // and stopped by Escape, not put down.
     expect(seen!.view.phase.kind).toBe('preparing');
     act(() => {
       expect(seen!.cancel()).toBe(true);
     });
     expect(seen!.view.phase.kind).toBe('stopped');
     expect(foldTools().store.getState().tool).toBe('repeat');
-    // Past the pause: still nothing prepared.
+    engine.pause(false);
+    engine.resume();
+    // Past the pause: nothing prepared, nothing previewed, every trial state let go.
     await act(async () => new Promise((done) => setTimeout(done, 2 * REPEAT_PREPARE_DELAY_MS)));
     expect(seen!.view.phase.kind).toBe('stopped');
     expect(previewed()).toBeNull();
+    await until(() => engine.live() === live, 'the trial states to go');
   });
 
   it('prepares again on Enter once stopped', async () => {
@@ -412,5 +426,46 @@ describe('the Repeat tool', () => {
     engine.resume();
     await until(() => engine.live() === live, 'the trial states to go');
     expect(seen).toBeNull();
+  });
+
+  it('opens on the one axis whose repeat lands — behind — the other offered disabled, with why, on the list and the panes', async () => {
+    // The repeat-behind regression: a preliminary base, the front flap's kites and petal fold. Across the
+    // other diagonal the range mirrors the front flap onto itself, and is refused at its first operation.
+    const project = parseNativeProjectFile(readFileSync(resolve(process.cwd(), '../../tests/fixtures/fold-regressions/repeat-behind-diagonal.osf'), 'utf8'));
+    const saved = readFoldSequences(project.workspace.foldSequences)[0]!.document;
+    const bird: FoldSequenceDocument = { ...saved, steps: saved.steps.filter((step) => !isLockedStep(step) && step.op.kind !== 'repeat') };
+    const petal = bird.steps.at(-1)!.id;
+    act(() => {
+      useWorkspaceStore.getState().installFoldSequences([{ document: bird, readOnlyRaw: null }], withFoldCursor(initialFoldReaderState(bird.id), bird, petal));
+    });
+    await until(() => session.store.getState().cursor === petal && selectFoldCursorNode(session.store.getState()).status === 'ok', 'the bird base replay');
+    // The same-side axis remembered from before: it is not the one taken, since its repeat does not land.
+    act(() => {
+      foldTools().setRepeatAxis({ n: [Math.SQRT1_2, Math.SQRT1_2], d: Math.SQRT1_2 });
+      foldTools().selectTool('repeat');
+    });
+    await act(async () => root.render(<Probe />));
+    act(() => foldTools().setRepeatFirst(bird.steps.at(-3)!.id));
+    await until(() => seen?.view.range?.count === 3 && seen.view.states?.length === 2 && seen.view.states.every((state) => state.kind !== 'unknown'), 'both axes prepared');
+    const behind = seen!.view.axes!.findIndex((axis) => axis.side === 'behind');
+    const same = 1 - behind;
+    expect(seen!.view.states![behind]!.kind).toBe('lands');
+    expect(seen!.view.states![same]!).toMatchObject({ kind: 'refused', step: 0 });
+    expect(seen!.view.axis).toBe(behind);
+    await until(() => seen?.view.phase.kind === 'ready' && previewed(), 'the repeat behind previewed');
+    expect(previewed()!.side).toBe('behind');
+    // The window: the axis taken is the one that lands, the other there but disabled, with its reason.
+    const view: FoldToolWindowView = { tool: 'repeat', lineMode: 'crease', readOnly: null, picks: 0, preview: null, freeLineSnap: false, repeat: seen!.view };
+    const model = foldToolWindow(i18n.t.bind(i18n), view, { repeat: seen!.verbs } as unknown as FoldToolWindowVerbs, { coarse: false, alt: 'Option' })!;
+    expect(model.repeat?.axis.value).toBe(String(behind));
+    expect(model.repeat?.axis.options[behind]).toEqual({ id: String(behind), label: 'Diagonal, bottom left to top right' });
+    expect(model.repeat?.axis.options[same]).toMatchObject({ id: String(same), label: 'Diagonal, top left to bottom right', disabled: true });
+    expect(model.repeat?.axis.options[same]!.description).toMatch(/^Stops at operation 1: /);
+    expect(model.footer?.commit.label).toBe('Repeat behind');
+    expect(model.refusal).toBeNull();
+    // Taking the refused axis does nothing; on the panes it is drawn dimmer, and never under the pointer.
+    act(() => seen!.verbs.setAxis(same));
+    expect(seen!.view.axis).toBe(behind);
+    expect(seen!.marks).toMatchObject({ taken: behind, refused: [same] });
   });
 });

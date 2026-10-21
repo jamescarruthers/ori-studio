@@ -26,7 +26,7 @@ export function useFoldRepeatMarks(
   // The marks are made anew each render: read through what they say.
   const marksKey = marks ? JSON.stringify(marks) : null;
   const overlay = useMemo(
-    () => (marks && inks ? repeatOverlay(index, outline, marks.axes, marks.taken, marks.hovered, marks.drawn, inks) : null),
+    () => (marks && inks ? repeatOverlay(index, outline, marks.axes, marks.taken, marks.hovered, marks.refused, marks.drawn, inks) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [marksKey, inks, index, outline]
   );

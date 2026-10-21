@@ -5,6 +5,10 @@ import { FieldRow, FieldRowSelectTrigger } from './FieldRow';
 export interface SelectRowOption {
   id: string;
   label: string;
+  /** Offered as no choice: there, dimmed, not picked. */
+  disabled?: boolean;
+  /** A line under it in the list: why it is disabled, say. */
+  description?: string;
 }
 
 /**
@@ -67,7 +71,7 @@ export function SelectRow({
         </FieldRowSelectTrigger>
         <SelectContent {...contentProps}>
           {options.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
+            <SelectItem key={option.id} value={option.id} disabled={option.disabled} description={option.description}>
               {option.label}
             </SelectItem>
           ))}

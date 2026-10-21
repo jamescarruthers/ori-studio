@@ -95,6 +95,12 @@ the top layer under it.
 - [x] Browser proof, screenshots (`artifacts/repeat-axis/`), saved .osf
       (`artifacts/repeat-behind.osf`, `artifacts/crane-new-repeat-behind.osf`)
 
+- [x] Offer only axes that land: every listed axis prepared up front, one at a
+      time (`repeatPrepared`); the remembered axis while it lands, else the
+      first that lands; a refused one disabled in the list with its reason,
+      drawn dimmest on the panes and never under the pointer. Measured in Node:
+      crane_new 1–15 ms per axis, plantient_dragon (87 faces) 12–14 ms per axis.
+
 ### Notes
 
 - Diagram's merge of mirrored precreases (`mirroredStepAxis`) stays same-side

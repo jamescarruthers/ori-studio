@@ -8,7 +8,7 @@ import { repeatAxisAt, repeatAxisLines, repeatOverlay, repeatPreviewCreases } fr
 const summary = (step: number) => ({ step }) as unknown as FoldStateSummary;
 /** x ↦ 1 − x: the paper there shown back up. */
 const TURNED: FoldIsometry = [-1, 0, 1, 0, 1, 0];
-const INKS = { accent: [0, 0, 1, 1] } as unknown as Parameters<typeof repeatOverlay>[6];
+const INKS = { accent: [0, 0, 1, 1] } as unknown as Parameters<typeof repeatOverlay>[7];
 const SHEET: [number, number][] = [
   [0, 0],
   [1, 0],
@@ -44,19 +44,19 @@ describe("Repeat's preview on the canvas", () => {
 
   it('draws a refused line across the sheet it was drawn on, and none on a pane it was not', () => {
     const line = { n: [1, 0] as const, d: 0.25 };
-    const drawn = repeatOverlay(null, SHEET, [], -1, -1, { sheet: line, pane: 'crease-pattern', drawn: line }, INKS);
+    const drawn = repeatOverlay(null, SHEET, [], -1, -1, [], { sheet: line, pane: 'crease-pattern', drawn: line }, INKS);
     expect(drawn.folded.strokes).toEqual([]);
     expect(drawn.creasePattern.strokes).toHaveLength(1);
     const [stroke] = drawn.creasePattern.strokes;
     expect([stroke!.a.x, stroke!.b.x]).toEqual([0.25, 0.25]);
     expect([stroke!.a.y, stroke!.b.y].sort()).toEqual([0, 1]);
     // Drawn on the folded pane with nothing indexed there: nothing to draw it across.
-    expect(repeatOverlay(null, SHEET, [], -1, -1, { sheet: line, pane: 'folded', drawn: line }, INKS).folded.strokes).toEqual([]);
+    expect(repeatOverlay(null, SHEET, [], -1, -1, [], { sheet: line, pane: 'folded', drawn: line }, INKS).folded.strokes).toEqual([]);
   });
 
   it('draws every axis across the sheet and through each face it crosses, the taken one brightest and the hovered one brighter', () => {
     const index = foldPickIndex(bookScene(), null, []);
-    const overlay = repeatOverlay(index, SHEET, [VERTICAL, HORIZONTAL], 1, 0, null, INKS);
+    const overlay = repeatOverlay(index, SHEET, [VERTICAL, HORIZONTAL], 1, 0, [], null, INKS);
     expect(overlay.creasePattern.strokes).toHaveLength(2);
     // The book's two halves, each crossed by both lines: four stretches where the folded form lays them.
     expect(overlay.folded.strokes).toHaveLength(4);

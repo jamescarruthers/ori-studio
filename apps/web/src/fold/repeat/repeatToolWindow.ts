@@ -39,7 +39,8 @@ import {
   type FoldWindowNotice,
 } from '../tools/foldToolWindow';
 import type { RepeatSide, RepeatSymmetry } from './repeatGeometry';
-import { repeatAxisName, repeatFailure, type RepeatStop } from './repeatWords';
+import type { RepeatAxisView } from './repeatPrepared';
+import { repeatAxisName, repeatAxisRefusal, repeatFailure, type RepeatStop } from './repeatWords';
 
 /** Where a repeat stands, as the window says it. */
 export type FoldRepeatPhase =
@@ -69,6 +70,8 @@ export interface FoldRepeatWindowView {
   range: { entries: readonly FoldPathEntry[]; starts: readonly FoldPathEntry[]; first: string; count: number } | null;
   /** The range's verified axes, each a line on the sheet and the side it repeats on; null while they are being found. */
   axes: readonly RepeatSymmetry[] | null;
+  /** Per axis, whether its repeat lands, as far as it is prepared (`repeatPrepared`): a refused one is offered disabled, with why. */
+  states?: readonly RepeatAxisView[];
   /** The one taken; -1 for none. */
   axis: number;
   /** The one under the pointer, previewed in its place; -1 for none. */
@@ -86,7 +89,7 @@ export interface FoldRepeatWindowView {
    * in its place (-1 for none near), and whether the picks located a line at
    * all (an axiom may have no root through them); null while none was drawn.
    */
-  drawn: { nearest: number; line: boolean } | null;
+  drawn: { nearest: number; line: boolean; refused?: RepeatAxisView } | null;
 }
 
 /** Repeat's own calls, beside every tool's. */
@@ -109,7 +112,8 @@ export interface FoldRepeatControls {
     label: string;
     value: string | null;
     placeholder: string;
-    options: readonly { id: string; label: string }[];
+    /** `disabled` with its `description`, why: an axis whose repeat is refused. */
+    options: readonly { id: string; label: string; disabled?: boolean; description?: string }[];
     disabled: boolean;
     set: (id: string) => void;
   };
@@ -233,29 +237,50 @@ function repeatNotice(
 /** A drawn line that is no verified axis: refused, the nearest axis offered in its place. */
 function drawnNotice(
   t: TFunction,
-  { nearest, line }: { nearest: number; line: boolean },
+  { nearest, line, refused }: NonNullable<FoldRepeatWindowView['drawn']>,
   axisNames: readonly string[],
   setAxis: (index: number) => void,
   readOnly: boolean
 ): FoldWindowNotice {
+  // An axis, but one whose repeat is refused: offered disabled in the list, it is no choice drawn either.
+  if (refused?.stop) {
+    return {
+      code: 'repeat_axis_drawn',
+      title: t('panels:fold.repeat.failureTitle', 'Cannot repeat'),
+      text: t('panels:fold.repeat.drawnAxisRefused', 'Repeating across this axis is refused. {{reason}}', {
+        reason: repeatAxisRefusal(t, refused.stop, refused.step ?? null),
+      }),
+      actions: nearestAction(t, nearest, axisNames, setAxis, readOnly),
+    };
+  }
   return {
     code: 'repeat_axis_drawn',
     title: t('panels:fold.repeat.notAnAxis', 'Not a symmetry axis'),
     text: line
       ? t('panels:fold.repeat.invalidAxis', 'This line does not pair matching material and layers in the starting model.')
       : t('panels:fold.repeat.noDrawnLine', 'These picks locate no line here. Pick again, or choose an axis.'),
-    actions:
-      nearest >= 0 && axisNames[nearest]
-        ? [
-            {
-              id: 'nearest-axis',
-              label: t('panels:fold.repeat.useNearest', 'Use {{axis}}', { axis: axisNames[nearest] }),
-              disabled: readOnly,
-              run: () => setAxis(nearest),
-            },
-          ]
-        : [],
+    actions: nearestAction(t, nearest, axisNames, setAxis, readOnly),
   };
+}
+
+/** The axis nearest a refused line, offered in its place. */
+function nearestAction(
+  t: TFunction,
+  nearest: number,
+  axisNames: readonly string[],
+  setAxis: (index: number) => void,
+  readOnly: boolean
+): FoldWindowNotice['actions'] {
+  return nearest >= 0 && axisNames[nearest]
+    ? [
+        {
+          id: 'nearest-axis',
+          label: t('panels:fold.repeat.useNearest', 'Use {{axis}}', { axis: axisNames[nearest] }),
+          disabled: readOnly,
+          run: () => setAxis(nearest),
+        },
+      ]
+    : [];
 }
 
 /** Repeat's window: its range, axis and how it is added, where the repeat stands, and its footer. */
@@ -328,7 +353,13 @@ export function repeatToolWindow(
         label: t('panels:fold.repeat.axis', 'Symmetry axis'),
         value: repeat.axis >= 0 ? String(repeat.axis) : null,
         placeholder: t('panels:fold.repeat.chooseAxis', 'Choose symmetry axis'),
-        options: axisNames.map((label, index) => ({ id: String(index), label })),
+        // An axis whose repeat is refused is there, disabled, with why; one still being prepared is a choice.
+        options: axisNames.map((label, index) => {
+          const state = repeat.states?.[index];
+          return state?.kind === 'refused' && state.stop
+            ? { id: String(index), label, disabled: true, description: repeatAxisRefusal(t, state.stop, state.step ?? null) }
+            : { id: String(index), label };
+        }),
         disabled: readOnly || adding || choosing !== null || axisNames.length === 0,
         set: (id) => {
           const index = Number(id);

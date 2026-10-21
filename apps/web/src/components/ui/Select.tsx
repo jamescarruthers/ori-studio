@@ -55,15 +55,28 @@ SelectContent.displayName = 'SelectContent';
 
 export const SelectItem = forwardRef<
   HTMLDivElement,
-  Omit<ComponentPropsWithoutRef<typeof RadixSelect.Item>, 'className'>
->(({ children, ...props }, ref) => (
+  Omit<ComponentPropsWithoutRef<typeof RadixSelect.Item>, 'className'> & {
+    /**
+     * A line under the option in the list, never in the trigger: why a
+     * disabled option is offered as no choice, say.
+     */
+    description?: string;
+  }
+>(({ children, description, ...props }, ref) => (
   <RadixSelect.Item ref={ref} className={styles.item} {...props}>
     <span className={styles.indicator} aria-hidden>
       <RadixSelect.ItemIndicator>
         <Check size={12} />
       </RadixSelect.ItemIndicator>
     </span>
-    <RadixSelect.ItemText>{children}</RadixSelect.ItemText>
+    {description ? (
+      <span className={styles.described}>
+        <RadixSelect.ItemText>{children}</RadixSelect.ItemText>
+        <span className={styles.description}>{description}</span>
+      </span>
+    ) : (
+      <RadixSelect.ItemText>{children}</RadixSelect.ItemText>
+    )}
   </RadixSelect.Item>
 ));
 

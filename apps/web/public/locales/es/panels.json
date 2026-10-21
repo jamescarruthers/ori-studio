@@ -1932,6 +1932,7 @@
         "rising": "Diagonal, de abajo a la izquierda a arriba a la derecha",
         "vertical": "Línea central, de arriba abajo"
       },
+      "axisStopsAt": "Se detiene en la operación {{number}}: {{reason}}",
       "blockedAt": "Se detuvo en la operación de origen {{number}}: {{reason}}",
       "choiceAt_one": "La operación de origen {{number}} tiene {{count}} órdenes de capas compatibles. Elige uno para continuar.",
       "choiceAt_many": "La operación de origen {{number}} tiene {{count}} órdenes de capas compatibles. Elige uno para continuar.",
@@ -1939,6 +1940,7 @@
       "chooseAxis": "Elegir eje de simetría",
       "commitBehind": "Repetir detrás",
       "commitSame": "Repetir en el otro lado",
+      "drawnAxisRefused": "No se puede repetir respecto a este eje. {{reason}}",
       "failureTitle": "No se puede repetir",
       "findingAxes": "Buscando los ejes de simetría del modelo antes del rango…",
       "from": "Empezar por",
@@ -1953,6 +1955,7 @@
       "groupCountSame_many": "Repetir {{count}} operaciones hasta el paso actual en el otro lado, como un único paso numerado.",
       "groupCountSame_other": "Repetir {{count}} operaciones hasta el paso actual en el otro lado, como un único paso numerado.",
       "headlineAdvice": "{{reason}}. {{advice}}",
+      "headlineReason": "{{reason}}.",
       "individual": "Mostrar como pasos individuales",
       "individualCount_one": "Repetir {{count}} operación como una entrada individual.",
       "individualCount_many": "Repetir {{count}} operaciones hasta el paso actual como entradas individuales.",

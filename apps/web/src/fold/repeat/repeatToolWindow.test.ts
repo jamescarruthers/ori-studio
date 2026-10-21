@@ -103,6 +103,30 @@ describe("Repeat's window", () => {
     expect(calls.repeat.setIndividual).toHaveBeenCalledWith(true);
   });
 
+  it('offers an axis whose repeat is refused disabled, with why under it', () => {
+    const model = windowOf(
+      repeat({ kind: 'ready', busy: false }, {
+        axis: 1,
+        side: 'behind',
+        states: [
+          { kind: 'refused', stop: { code: 'repeat_creases' }, step: 0 },
+          { kind: 'lands' },
+        ],
+      })
+    );
+    expect(model.repeat?.axis.value).toBe('1');
+    expect(model.repeat?.axis.options).toEqual([
+      {
+        id: '0',
+        label: 'Center line, top to bottom',
+        disabled: true,
+        description:
+          'Stops at operation 1: Repeating would change additional paper or creases. The two sides cannot be folded independently in this range.',
+      },
+      { id: '1', label: 'Center line, left to right' },
+    ]);
+  });
+
   it('says it repeats behind when the axis previewed reverses the layers: the summary and the commit', () => {
     const behind = windowOf(repeat({ kind: 'ready', busy: false }, { side: 'behind', hovered: 1 }));
     expect(behind.repeat?.summary).toBe('Repeat 2 operations through the current step behind, as one numbered step.');

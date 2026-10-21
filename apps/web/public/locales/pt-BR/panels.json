@@ -1932,6 +1932,7 @@
         "rising": "Diagonal, de baixo à esquerda para cima à direita",
         "vertical": "Linha central, de cima para baixo"
       },
+      "axisStopsAt": "Para na operação {{number}}: {{reason}}",
       "blockedAt": "Parou na operação de origem {{number}}: {{reason}}",
       "choiceAt_one": "A operação de origem {{number}} tem {{count}} ordens de camadas compatíveis. Escolha uma para continuar.",
       "choiceAt_many": "A operação de origem {{number}} tem {{count}} ordens de camadas compatíveis. Escolha uma para continuar.",
@@ -1939,6 +1940,7 @@
       "chooseAxis": "Escolher eixo de simetria",
       "commitBehind": "Repetir atrás",
       "commitSame": "Repetir do outro lado",
+      "drawnAxisRefused": "Não é possível repetir em relação a este eixo. {{reason}}",
       "failureTitle": "Não é possível repetir",
       "findingAxes": "Procurando os eixos de simetria do modelo antes do intervalo…",
       "from": "Começar por",
@@ -1953,6 +1955,7 @@
       "groupCountSame_many": "Repetir {{count}} operações até o passo atual do outro lado, como um único passo numerado.",
       "groupCountSame_other": "Repetir {{count}} operações até o passo atual do outro lado, como um único passo numerado.",
       "headlineAdvice": "{{reason}}. {{advice}}",
+      "headlineReason": "{{reason}}.",
       "individual": "Mostrar como passos individuais",
       "individualCount_one": "Repetir {{count}} operação como uma entrada individual.",
       "individualCount_many": "Repetir {{count}} operações até o passo atual como entradas individuais.",

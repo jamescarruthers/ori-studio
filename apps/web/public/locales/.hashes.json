@@ -6360,7 +6360,10 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12723,7 +12726,10 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19088,7 +19094,10 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25106,7 +25115,10 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31124,7 +31136,10 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37487,7 +37502,10 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43850,7 +43868,10 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49868,6 +49889,9 @@
     "panels:fold.repeat.sentenceBehind_other": "2de15e0fce0a",
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
-    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17"
+    "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
+    "panels:fold.repeat.axisStopsAt": "85228acac16e",
+    "panels:fold.repeat.drawnAxisRefused": "1758983dec0e",
+    "panels:fold.repeat.headlineReason": "769dd4c411d1"
   }
 }

@@ -73,6 +73,8 @@ const DRAWN = { widthMul: 1.6, alpha: 0.55 };
 
 /** The axes: offered faint and fine, under the pointer brighter, taken brightest and as wide as a pick. */
 const AXIS = {
+  /** Its repeat refused: there, but no choice. */
+  refused: { widthMul: 1.2, alpha: 0.16 },
   offered: { widthMul: 1.4, alpha: 0.4 },
   hovered: { widthMul: 2.6, alpha: 0.7 },
   taken: { widthMul: 2.6, alpha: 0.95 },
@@ -125,12 +127,14 @@ export function repeatAxisAt(
   axes: readonly FoldModelLine[],
   pane: FoldPaneId,
   at: Point,
-  radius: number
+  radius: number,
+  offered: (k: number) => boolean = () => true
 ): number {
   let best = -1;
   let nearest = radius;
   if (pane === 'crease-pattern') {
     for (const [k, line] of axes.entries()) {
+      if (!offered(k)) continue;
       const ends = across(outline.map(toPoint), line);
       const d = ends ? distanceTo(at, ends) : Infinity;
       if (d <= nearest) [best, nearest] = [k, d];
@@ -141,6 +145,7 @@ export function repeatAxisAt(
   if (!sheet) return -1;
   const point = toPoint(sheet);
   for (const [k, line] of axes.entries()) {
+    if (!offered(k)) continue;
     const d = Math.abs(sideOf(line, point));
     if (d <= nearest) [best, nearest] = [k, d];
   }
@@ -154,10 +159,10 @@ export interface FoldRepeatOverlay {
 
 /**
  * The axes on both panes, the one taken and the one under the pointer lit
- * (`taken`, `hovered`: indices into `axes`, -1 for none), and a refused
- * drawn line on the pane it was drawn on. Under the folded pane's lines of
- * the taken and hovered axes, the offered ones are drawn first, so the
- * brighter ones lie over them where the folded form lays several on one line.
+ * (`taken`, `hovered`: indices into `axes`, -1 for none), the ones whose
+ * repeat is refused (`refused`) dimmest, and a refused drawn line on the pane
+ * it was drawn on. The dimmer lines are drawn first, so the brighter ones lie
+ * over them where the folded form lays several on one line.
  */
 export function repeatOverlay(
   index: FoldPickIndex | null,
@@ -165,6 +170,7 @@ export function repeatOverlay(
   axes: readonly FoldModelLine[],
   taken: number,
   hovered: number,
+  refused: readonly number[],
   drawn: RepeatDrawnLine | null,
   inks: FoldOverlayInks
 ): FoldRepeatOverlay {
@@ -178,10 +184,10 @@ export function repeatOverlay(
   });
   const order = axes.map((_, k) => k).sort((a, b) => rank(a) - rank(b));
   function rank(k: number) {
-    return k === taken ? 2 : k === hovered ? 1 : 0;
+    return k === taken ? 3 : k === hovered ? 2 : refused.includes(k) ? 0 : 1;
   }
   for (const k of order) {
-    const style = k === taken ? AXIS.taken : k === hovered ? AXIS.hovered : AXIS.offered;
+    const style = k === taken ? AXIS.taken : k === hovered ? AXIS.hovered : refused.includes(k) ? AXIS.refused : AXIS.offered;
     const lines = index ? repeatAxisLines(index.scene, outline ?? [], axes[k]!) : null;
     if (!lines) continue;
     if (lines.creasePattern) creasePattern.push(stroke(lines.creasePattern, style));
