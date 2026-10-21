@@ -167,18 +167,22 @@ function lineItem(
 /**
  * A crease a tool previews on the folded pane, in the scene frame: a stretch
  * of paper and the letter it folds by as the viewer sees it, which picks its
- * pen — the user's mountain or valley diagram crease (`withFoldCreases`).
+ * pen — the user's mountain or valley diagram crease (`withFoldCreases`) —
+ * or, when it lies behind paper the viewer sees, the diagram's hidden-line
+ * pen, dotted.
  */
 export interface FoldPaneCreaseLine {
   line: readonly [Point, Point];
   letter: FoldLetter;
+  hidden?: true;
 }
 
 /**
  * A scene with a tool's creases over the paper, each in the diagram-crease
- * pen of its letter as the viewer sees it — the instruction, drawn with the
- * pens the Diagram and References draw theirs with. Each runs as given, from
- * end to end; shown at `offset`, as the scene is.
+ * pen of its letter as the viewer sees it, a hidden one in the hidden-line
+ * pen — the instruction, drawn with the pens the Diagram and References draw
+ * theirs with. Each runs as given, from end to end; shown at `offset`, as the
+ * scene is.
  */
 export function withFoldCreases(
   scene: PaperScene,
@@ -186,7 +190,9 @@ export function withFoldCreases(
   offset: Point = ORIGIN
 ): PaperScene {
   if (creases.length === 0) return scene;
-  const items = creases.map(({ line: [a, b], letter }) => lineItem(diagramRole(letter), a, b, undefined, offset));
+  const items = creases.map(({ line: [a, b], letter, hidden }) =>
+    lineItem(hidden ? 'diagram-hidden' : diagramRole(letter), a, b, undefined, offset)
+  );
   return { ...scene, items: [...scene.items, ...items] };
 }
 

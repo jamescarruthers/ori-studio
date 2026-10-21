@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import { trackFoldChoiceOffered } from '../../../analytics';
 import {
   isFoldedSwivelOp,
-  isSwivelLinesOp,
   swivelKindOf,
   type FoldChoices,
   type FoldCompletionChoice,
@@ -60,7 +59,7 @@ export interface FoldVertexPreview {
    * that is asked, and whenever one lands.
    */
   elsewhere: boolean | null;
-  /** The way it folds, as the viewer sees it: what its creases' letters are read from (`vertexCreaseLines`). */
+  /** The way it folds, as the viewer sees it — the folder's, always: what its creases' letters are read from (`vertexCreaseLines`). */
   direction: FoldDirection;
   /** The orders the step leaves, when more than one; the one taken. */
   orders: readonly FoldCompletionChoice[];
@@ -81,9 +80,8 @@ export interface FoldVertexPreview {
    */
   directions?: readonly boolean[] | null;
   /**
-   * A swivel on a folded edge's kind as it folds: the folder's, or the one
-   * that lands when only that one does. Absent for the other folds, and
-   * before the engine has described it.
+   * A swivel on a folded edge's kind as it folds: the folder's, always.
+   * Absent for the other folds, and before the engine has described it.
    */
   kind?: FoldSwivelKind;
   /** Open, then inside: whether a swivel on a folded edge lands that kind one way or the other, once known. */
@@ -121,28 +119,32 @@ export function useFoldVertexStep(
   index: FoldPickIndex | null,
   tools: FoldToolState,
   enabled: boolean,
-  swivelLine?: FoldLocatedLine
+  swivelMountain?: FoldLocatedLine
 ): FoldVertexStepAnswer {
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
-  const { tool, petalHinge, swivelTarget, swivelInput, swivelFirst, picks, vertexDirection, compound } = tools;
+  const { tool, petalHinge, swivelTarget, swivelInput, swivelValley, picks, vertexDirection, compound } = tools;
   const { squashTarget, fanLayers, emergent: chosenEmergent, order: chosenOrder } = compound;
 
-  // --- A swivel's reach from where its creases meet: what its next clicks
-  // are offered, and the way and kind its edge and line land — the folder's,
-  // or the ones that do when those do not.
-  const reach = useFoldSwivelReach(session, stateKey, index, tools, enabled && tool === 'swivel' && swivelInput !== 'creases');
+  // --- A swivel by its edge's reach from where its creases meet: what its
+  // next clicks are offered, and which ways and kinds its edge and line land.
+  // It folds the folder's way and kind whatever the reach says.
+  const reach = useFoldSwivelReach(session, stateKey, index, tools, enabled && tool === 'swivel' && swivelInput !== 'valley-mountain');
   const landing = swivelPickedLanding(reach, picks);
-  const direction = landing?.op.direction ?? vertexDirection;
-  const swivelKind =
-    compound.swivelKind ?? (landing && isFoldedSwivelOp(landing.op) ? swivelKindOf(landing.op) : 'open');
+  const direction = vertexDirection;
+  const swivelKind = compound.swivelKind ?? 'open';
+  // The valley taken, as the op stores it: its scene line is the canvas's.
+  const valley = useMemo(
+    () => (swivelValley ? { line: swivelValley.line, ...(swivelValley.root ? { root: swivelValley.root } : {}) } : undefined),
+    [swivelValley]
+  );
 
   const intent = useMemo<FoldVertexIntent | null>(
     () =>
       enabled && isVertexTool(tool)
-        ? { tool, petalHinge, swivelTarget, swivelInput, swivelFirst: swivelFirst ? { line: swivelFirst.line, ...(swivelFirst.root ? { root: swivelFirst.root } : {}) } : undefined, swivelLine, picks, direction, fanLayers, swivelKind }
+        ? { tool, petalHinge, swivelTarget, swivelInput, swivelValley: valley, swivelMountain, picks, direction, fanLayers, swivelKind }
         : null,
-    [enabled, tool, petalHinge, swivelTarget, swivelInput, swivelFirst, swivelLine, picks, direction, fanLayers, swivelKind]
+    [enabled, tool, petalHinge, swivelTarget, swivelInput, valley, swivelMountain, picks, direction, fanLayers, swivelKind]
   );
   const taken = useMemo<FoldVertexTaken>(
     () => ({ squashTarget, emergent: chosenEmergent, order: chosenOrder }),
@@ -155,17 +157,10 @@ export function useFoldVertexStep(
   const told = asked && 'status' in asked ? asked : null;
   const first = useFoldCompoundAsk(session, stateKey, initial ? { op: initial } : null, 'vertex', 'fold:vertex');
   const needsAnchor = initial?.kind === 'rabbit-ear' && (first?.refused != null || fanHasNoFourth(first?.asked ?? null));
-  // The two lines describe the same pair regardless of click order. Their
-  // order otherwise chooses which end of the folded edge opens. If that end
-  // is physically blocked, ask about the other interpretation; store the
-  // resolved order so replay never needs to guess or retry a saved operation.
-  const needsOtherEnd = initial && isSwivelLinesOp(initial) && first?.refused?.refusal.code === 'fan_ray_blocked';
-  const alternative = useMemo(() => {
-    if (needsOtherEnd && initial && isSwivelLinesOp(initial)) {
-      return { ...initial, first: initial.second, second: initial.first };
-    }
-    return needsAnchor && intent && index && initial ? fanAnchorAlternative(intent, index, initial) : null;
-  }, [needsOtherEnd, needsAnchor, intent, index, initial]);
+  const alternative = useMemo(
+    () => (needsAnchor && intent && index && initial ? fanAnchorAlternative(intent, index, initial) : null),
+    [needsAnchor, intent, index, initial]
+  );
   const alternate = useFoldCompoundAsk(session, stateKey, alternative ? { op: alternative } : null, 'vertex', 'fold:vertex');
   const useAlternate = alternative !== null && alternate?.asked != null && !fanHasNoFourth(alternate.asked);
   const resolvingAnchor = alternative !== null && alternate === null;
@@ -239,7 +234,6 @@ export function useFoldVertexStep(
       emergent: chosen?.emergent ?? null,
       fourths,
       elsewhere: null,
-      // The folder's, or the other when only that one lands.
       direction: chosen?.direction ?? intent.direction,
       orders: built?.orders ?? [],
       order: built?.order ?? null,

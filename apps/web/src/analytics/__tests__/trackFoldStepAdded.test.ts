@@ -60,5 +60,12 @@ describe('trackFoldStepAdded for a swivel', () => {
     });
     trackFoldStepAdded('swivel', { vertex: { swivelForm: 'rays' } });
     expect(runtime.track).toHaveBeenLastCalledWith('fold step added', { op_kind: 'swivel', swivel_form: 'rays' });
+    // By its valley and mountain: no target, and its kind.
+    trackFoldStepAdded('swivel', { vertex: { swivelForm: 'valley_mountain', swivelKind: 'inside' } });
+    expect(runtime.track).toHaveBeenLastCalledWith('fold step added', {
+      op_kind: 'swivel',
+      swivel_form: 'valley_mountain',
+      swivel_kind: 'inside',
+    });
   });
 });

@@ -964,11 +964,10 @@
         "edge": "Bord sur ligne",
         "edgeHelp": "Choisir un bord et la ligne sur laquelle il doit se poser",
         "label": "Construire par",
-        "lines": "Deux lignes de pli",
-        "linesHelp": "Définissez deux lignes de pli ; leur intersection fixe le point de rencontre"
+        "valleyMountain": "Vallée et montagne",
+        "valleyMountainHelp": "Choisir la vallée et la montagne sur la couche visible, qui se rejoignent sur un bord plié ; le pli de derrière en découle"
       },
       "intro": {
-        "creases": "Définissez les deux charnières ; le pli restant est calculé pour garder le papier à plat.",
         "petalLift": "Soulève la pointe d’un rabat le long d’une charnière.",
         "swivelSwing": "Fait pivoter un bord du papier sur une ligne."
       },
@@ -994,13 +993,6 @@
         "twoPoints": "Deux points",
         "twoPointsHelp": "Cliquez sur deux points de la ligne"
       },
-      "lines": {
-        "confirm": "Appuyez sur Entrée pour utiliser la première ligne et définir la seconde.",
-        "confirmTouch": "Touchez Utiliser la première ligne pour continuer.",
-        "first": "Définissez la première ligne de pli. Sélectionnez un pli existant ou construisez une ligne avec Localiser la ligne.",
-        "second": "Définissez la seconde ligne de pli. Son intersection avec la première fixe le point de rencontre ; la charnière restante est calculée.",
-        "useFirst": "Utiliser la première ligne"
-      },
       "mountain": "Montagne",
       "mountainTitle": "Montagne : le papier tourne en s’éloignant de vous",
       "note": {
@@ -1014,14 +1006,15 @@
         "snapOrFree": "Les points s’accrochent aux coins, aux croisements, aux repères et aux milieux : maintenez {{modifier}} pour en poser un n’importe où.",
         "snapOrFreeTouch": "Les points s’accrochent aux coins, aux croisements, aux repères et aux milieux : activez Point libre pour en poser un n’importe où.",
         "squashFlap": "Un rabat s’écrase quand ses deux couches ne sont reliées que par sa charnière et que rien ne repose dessus.",
-        "swivelCreasesPicture": "Les plis se rejoignent au point. Le papier en surbrillance se déplace ; le pli restant le maintient à plat.",
-        "swivelPicture": "Les plis se rejoignent au point, le bord se pose sur le trait gras, et le papier éclairé bouge."
+        "swivelPicture": "Les plis se rejoignent au point, le bord se pose sur le trait gras, et le papier éclairé bouge.",
+        "swivelValleyMountainPicture": "Les plis se rejoignent au point. Le pli en pointillé est sur la couche de derrière et découle de la vallée et de la montagne ; le papier éclairé bouge."
       },
       "refusal": {
         "blocked": {
           "steppers": "Un pli buterait sur du papier qui ne plie pas avec lui, ou le papier retiendrait ensemble deux parties du pliage. Faites défiler Couches pour plier plus de couches, ou Quatrième pli pour en prendre un autre.",
           "swivelEdge": "Un pli buterait sur du papier qui ne plie pas avec lui, ou le papier retiendrait ensemble deux parties du pliage. Choisissez un autre pivot, ou une autre ligne où poser le bord.",
           "swivelOnFold": "Un pli buterait sur une pliure avant d’atteindre le bord du papier, ou le papier retiendrait ensemble deux parties du pli pivoté. Choisissez un autre bord plié, ou une autre ligne où poser le bord.",
+          "swivelValleyMountain": "Un pli buterait sur une pliure avant d’atteindre le bord du papier, ou le papier retiendrait ensemble deux parties du pli pivoté. Choisissez une autre vallée ou une autre montagne.",
           "title": "Du papier gêne"
         },
         "center": {
@@ -1052,8 +1045,8 @@
           "titleHinge": "Pré-pliez d’abord la charnière"
         },
         "lineMeeting": {
-          "text": "Choisissez deux lignes de pli qui se croisent sur un seul bord plié visible.",
-          "title": "Les lignes doivent avoir un point de rencontre"
+          "textValleyMountain": "La vallée et la montagne se rejoignent en un point d’un bord plié visible, loin de ses extrémités. Choisissez deux lignes qui s’y croisent.",
+          "titleValleyMountain": "Les lignes ne se rejoignent pas sur un bord plié"
         },
         "noFlap": {
           "noHinge": "Le rabat ne se plie sur aucune charnière à l’une ou l’autre extrémité de son dos : rien contre quoi l’aplatir.",
@@ -1127,6 +1120,10 @@
           "text": "Le pli pivoté suit la ligne à mi-chemin entre le bord et la ligne où il se pose, et cette ligne ne croise pas ce bord plié entre ses extrémités. Appuyez sur Échap et choisissez le bord plié qu’elle croise, ou une autre ligne.",
           "title": "Les plis ne peuvent pas se rejoindre sur ce bord"
         },
+        "swivelNoFlap": {
+          "text": "La vallée et la montagne partent du bord plié vers l’intérieur du papier, dans deux directions, avec le rabat entre elles. L’une d’elles longe le bord plié, ou les deux sont sur une même ligne : choisissez-en une autre.",
+          "title": "Aucun rabat entre les lignes"
+        },
         "swivelNotAFold": {
           "text": "Les plis ne peuvent se rejoindre sur un bord plié que là où le papier est plié, et le point choisi n’est sur aucune pliure. Appuyez sur Échap et cliquez de nouveau sur le bord plié.",
           "title": "Ce n’est pas un bord plié"
@@ -1199,12 +1196,25 @@
       "swivelInside": "Intérieur",
       "swivelInsideHelp": "Pli pivot intérieur : la bande se glisse entre les couches",
       "swivelKind": "Type",
+      "swivelKindCannot": "Ce type ne peut pas se plier à plat ici.",
       "swivelOpen": "Ouvert",
       "swivelOpenHelp": "Pli pivot ouvert : la bande se replie par-dessus",
       "target": "Le dos se pose sur",
       "targetHinge": "La ligne de charnière",
       "targetPoint": "Le point cliqué",
       "valley": "Vallée",
+      "valleyMountain": {
+        "mountainLine": "Ligne de montagne",
+        "mountainStep": "Ligne de montagne : {{instruction}}",
+        "pickMountain": "Choisissez la ligne de montagne, depuis le même point du bord plié. Le pli sur la couche de derrière en découle, en pointillé là où il est caché.",
+        "pickValley": "Choisissez la ligne de vallée : la charnière du rabat, sur la couche visible, depuis un point d’un bord plié vers l’intérieur du papier.",
+        "pickValleyInside": "Choisissez la ligne de vallée : sur la couche visible, depuis un point d’un bord plié vers l’intérieur du papier.",
+        "takeValley": "Appuyez sur Entrée pour la prendre comme vallée.",
+        "takeValleyTouch": "Touchez Utiliser comme vallée.",
+        "useValley": "Utiliser comme vallée",
+        "valleyLine": "Ligne de vallée",
+        "valleyStep": "Ligne de vallée : {{instruction}}"
+      },
       "valleyTitle": "Vallée : le papier tourne vers vous"
     },
     "window": {

@@ -964,11 +964,10 @@
         "edge": "Borda sobre linha",
         "edgeHelp": "Escolher uma borda e a linha sobre a qual ela deve ficar",
         "label": "Construir por",
-        "lines": "Duas linhas de dobra",
-        "linesHelp": "Defina duas linhas de dobra; a interseção determina o ponto de encontro"
+        "valleyMountain": "Vale e montanha",
+        "valleyMountainHelp": "Escolher o vale e a montanha na camada que você vê, que se encontram em uma borda dobrada; o vinco de trás decorre deles"
       },
       "intro": {
-        "creases": "Defina as duas dobradiças; o vinco restante é calculado para manter o papel plano.",
         "petalLift": "Levanta a ponta de uma aba ao longo de uma dobradiça.",
         "swivelSwing": "Gira uma borda do papel sobre uma linha."
       },
@@ -994,13 +993,6 @@
         "twoPoints": "Dois pontos",
         "twoPointsHelp": "Clique em dois pontos da linha"
       },
-      "lines": {
-        "confirm": "Pressione Enter para usar a primeira linha e definir a segunda.",
-        "confirmTouch": "Toque em Usar primeira linha para continuar.",
-        "first": "Defina a primeira linha de dobra. Selecione um vinco existente ou construa uma linha com Localizar linha.",
-        "second": "Defina a segunda linha de dobra. A interseção com a primeira determina o ponto de encontro; a articulação restante é calculada.",
-        "useFirst": "Usar primeira linha"
-      },
       "mountain": "Montanha",
       "mountainTitle": "Montanha: o papel gira para longe de você",
       "note": {
@@ -1014,14 +1006,15 @@
         "snapOrFree": "Os pontos se ajustam a cantos, cruzamentos, marcas e pontos médios: segure {{modifier}} para colocar um em qualquer lugar.",
         "snapOrFreeTouch": "Os pontos se ajustam a cantos, cruzamentos, marcas e pontos médios: ative Ponto livre para colocar um em qualquer lugar.",
         "squashFlap": "Uma aba se achata quando suas duas camadas estão unidas só pela dobradiça e nada está por cima dela.",
-        "swivelCreasesPicture": "Os vincos se encontram no ponto. O papel destacado se move; o vinco restante o mantém plano.",
-        "swivelPicture": "Os vincos se encontram no ponto, a borda pousa na linha grossa e o papel aceso se move."
+        "swivelPicture": "Os vincos se encontram no ponto, a borda pousa na linha grossa e o papel aceso se move.",
+        "swivelValleyMountainPicture": "Os vincos se encontram no ponto. O vinco pontilhado está na camada de trás e decorre do vale e da montanha; o papel aceso se move."
       },
       "refusal": {
         "blocked": {
           "steppers": "Um vinco esbarraria em papel que não dobra junto, ou o papel prenderia duas partes da dobra. Passe Camadas para dobrar mais camadas, ou Quarto vinco para outro.",
           "swivelEdge": "Um vinco esbarraria em papel que não dobra junto, ou o papel prenderia duas partes da dobra. Escolha outro pivô, ou outra linha para a borda pousar.",
           "swivelOnFold": "Um vinco esbarraria em uma dobra antes de chegar à borda do papel, ou o papel prenderia duas partes da dobra pivotante. Escolha outra borda dobrada, ou outra linha para a borda pousar.",
+          "swivelValleyMountain": "Um vinco esbarraria em uma dobra antes de chegar à borda do papel, ou o papel prenderia duas partes da dobra pivotante. Escolha outro vale ou outra montanha.",
           "title": "Há papel no caminho"
         },
         "center": {
@@ -1052,8 +1045,8 @@
           "titleHinge": "Pré-vinque antes a dobradiça"
         },
         "lineMeeting": {
-          "text": "Escolha duas linhas de dobra que se cruzem em uma única borda dobrada visível.",
-          "title": "As linhas precisam de um ponto de encontro"
+          "textValleyMountain": "O vale e a montanha se encontram em um ponto de uma borda dobrada que você vê, longe das pontas dela. Escolha duas linhas que se cruzem ali.",
+          "titleValleyMountain": "As linhas não se encontram em uma borda dobrada"
         },
         "noFlap": {
           "noHinge": "A aba não se dobra sobre nenhuma dobradiça em nenhuma ponta da lombada, então não há contra o que achatá-la.",
@@ -1127,6 +1120,10 @@
           "text": "A dobra pivotante segue a linha a meio caminho entre a borda e a linha onde ela pousa, e essa linha não cruza esta borda dobrada entre as pontas. Pressione Esc e escolha a borda dobrada que ela cruza, ou outra linha.",
           "title": "Os vincos não podem se encontrar nessa borda"
         },
+        "swivelNoFlap": {
+          "text": "O vale e a montanha saem da borda dobrada para dentro do papel, em duas direções, com a aba entre eles. Uma dessas linhas corre ao longo da borda dobrada, ou as duas estão numa mesma linha: escolha outra.",
+          "title": "Não há aba entre as linhas"
+        },
         "swivelNotAFold": {
           "text": "Os vincos só podem se encontrar em uma borda dobrada onde o papel está dobrado, e o ponto escolhido não fica em nenhuma dobra. Pressione Esc e clique de novo na borda dobrada.",
           "title": "Isso não é uma borda dobrada"
@@ -1199,12 +1196,25 @@
       "swivelInside": "Interna",
       "swivelInsideHelp": "Dobra giratória interna: a faixa entra entre as camadas",
       "swivelKind": "Tipo",
+      "swivelKindCannot": "Este tipo não fica plano aqui.",
       "swivelOpen": "Aberta",
       "swivelOpenHelp": "Dobra giratória aberta: a faixa dobra por cima",
       "target": "A lombada cai em",
       "targetHinge": "A linha da dobradiça",
       "targetPoint": "O ponto clicado",
       "valley": "Vale",
+      "valleyMountain": {
+        "mountainLine": "Linha de montanha",
+        "mountainStep": "Linha de montanha: {{instruction}}",
+        "pickMountain": "Escolha a linha de montanha, a partir do mesmo ponto na borda dobrada. O vinco na camada de trás decorre delas, pontilhado onde fica escondido.",
+        "pickValley": "Escolha a linha de vale: a dobradiça da aba, na camada que você vê, de um ponto numa borda dobrada para dentro do papel.",
+        "pickValleyInside": "Escolha a linha de vale: na camada que você vê, de um ponto numa borda dobrada para dentro do papel.",
+        "takeValley": "Pressione Enter para usá-la como vale.",
+        "takeValleyTouch": "Toque em Usar como vale.",
+        "useValley": "Usar como vale",
+        "valleyLine": "Linha de vale",
+        "valleyStep": "Linha de vale: {{instruction}}"
+      },
       "valleyTitle": "Vale: o papel gira na sua direção"
     },
     "window": {

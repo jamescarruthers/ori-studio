@@ -34,11 +34,13 @@ import {
   foldTuckWindowView,
   foldVertexWindowView,
   foldWindowPreview,
+  swivelLinesPending,
 } from '../../../fold/canvas/foldCanvasModel';
 import { useFoldFanMarks } from '../../../fold/canvas/vertex/useFoldFanMarks';
 import { useFoldPetalMarks } from '../../../fold/canvas/vertex/useFoldPetalMarks';
 import { useFoldSwivelMarks } from '../../../fold/canvas/vertex/useFoldSwivelMarks';
 import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
+import { swivelMeetingMarks } from '../../../fold/canvas/vertex/swivelMeeting';
 import { foldPaneOverlay, joinFills } from '../../../fold/canvas/foldPaneOverlays';
 import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
@@ -164,7 +166,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const swivelMarks = useFoldSwivelMarks(view.index, toolState, preview.vertex?.reach ?? null, inks);
   // Repeat's preview: the creases it adds, where its folded result puts them.
   const repeatCreases = useFoldRepeatCreases(toolState.tool === 'repeat' ? preview.landed : null);
-  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? repeatCreases;
+  // A swivel by its valley and mountain's lines in their pens, until its fold draws its own.
+  const swivelLines = useMemo(
+    () => swivelLinesPending(view.index, toolState, preview.swivelLocated ?? null),
+    [view.index, toolState, preview.swivelLocated]
+  );
+  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending ?? swivelLines ?? repeatCreases;
   const regions = fanMarks?.regions ?? petalMarks.regions;
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending, orderScene);
   const componentPairs = importChoice?.opened.components[importChoice.component]?.pairs ?? [];
@@ -185,8 +192,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const freeFrom = foldFreeLineStart(toolState);
   const crimpLines = preview.crimp?.lines ?? preview.pleatLines ?? null;
   const located = useMemo(
-    () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines, { index: view.index, first: toolState.swivelFirst, current: preview.swivelLine }),
-    [toolState.tool, preview.action, crimpLines, view.index, toolState.swivelFirst, preview.swivelLine]
+    () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines),
+    [toolState.tool, preview.action, crimpLines]
   );
   const previewMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
   // A line drawn for Repeat that is no symmetry axis, while its refusal is shown.
@@ -196,7 +203,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     () => (repeatDrawn && inks ? repeatDrawnOverlay(view.index, sheetOutline, repeatDrawn, inks.overlay) : null),
     [repeatDrawn, inks, view.index, sheetOutline]
   );
-  const vertexMarks = drawnMarks?.folded ?? previewMarks ?? swivelMarks.marks;
+  // Where a swivel's valley meets a folded edge, while its mountain is located from there.
+  const meetingMarks = useMemo(
+    () => swivelMeetingMarks(paneSpread.index, toolState, inks?.overlay ?? null),
+    [paneSpread.index, toolState, inks]
+  );
+  const vertexMarks = drawnMarks?.folded ?? previewMarks ?? swivelMarks.marks ?? meetingMarks;
   const swivelOffered = swivelMarks.offered;
   // A partial precrease's line on each pane, and its points along it.
   const along = useMemo(

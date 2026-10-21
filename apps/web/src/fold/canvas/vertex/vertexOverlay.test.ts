@@ -280,3 +280,41 @@ describe('a swivel by its edge on the folded pane', () => {
     expect(alpha(3)).toBeGreaterThan(alpha(0));
   });
 });
+
+describe('a swivel by its valley and mountain on the folded pane', () => {
+  const byLines: FoldVertexAnalysis = {
+    kind: 'swivel-valley-mountain',
+    vertex: [0.5, 0.5],
+    creases: [
+      // The crease behind: hidden as far as the front layer reaches, then seen.
+      { ray: 'meet', direction: [-0.6, -0.8], from: [0.5, 0.5], to: [0.38, 0.34], letter: 'valley', ridge: false, hidden: true },
+      { ray: 'meet', direction: [-0.6, -0.8], from: [0.38, 0.34], to: [0.2, 0.1], letter: 'valley', ridge: false },
+      { ray: 'meet', direction: [-0.8, -0.6], from: [0.5, 0.5], to: [0, 0.125], letter: 'mountain', ridge: true },
+      { ray: 'hinge', direction: [-0.6, 0.8], from: [0.5, 0.5], to: [0.2, 0.9], letter: 'valley', ridge: false },
+    ],
+    layers: [2, 1],
+    regions: [
+      { wedge: 'beyond', polygon: [[0.5, 0.5], [0, 0.125], [0, 0.6]] },
+      { wedge: 'near', polygon: [[0.5, 0.5], [0.2, 0.1], [0.5, 0]] },
+    ],
+    fold: { edge: [[0.5, 0], [0.5, 1]], opens: [[0.5, 0.5], [0.5, 0]], faces: [1, 2] },
+  };
+
+  it('draws the two named by their letters and the crease behind dotted where it is hidden', () => {
+    const creases = vertexCreaseLines(index, { analysis: byLines, emergent: null }, 'valley');
+    expect(creases.map((crease) => [crease.letter, crease.hidden === true])).toEqual([
+      ['valley', true],
+      ['valley', false],
+      ['mountain', false],
+      ['valley', false],
+    ]);
+    // Its vertex is marked, and nothing else: its two lines are the folder's.
+    expect(vertexOverlayMarks(index, { analysis: byLines, emergent: null, emergents: [] }, inks).dots).toHaveLength(1);
+  });
+
+  it('lights the flap between the valley and the mountain brightest', () => {
+    const tint = swivelRegionsTint(index, byLines, accent);
+    const alpha = (k: number) => tint!.color[k * 3 * 4 + 3]!;
+    expect(alpha(0)).toBeGreaterThan(alpha(1));
+  });
+});

@@ -167,6 +167,12 @@ export interface FoldSwivelCrease {
   letter: FoldLetter;
   /** Whether it is the ridge, the odd letter out. */
   ridge: boolean;
+  /**
+   * This stretch lies behind paper the viewer sees, drawn dotted as a
+   * diagram draws it: a swivel by its valley and mountain's crease on the
+   * layer behind. Absent when it is seen.
+   */
+  hidden?: true;
 }
 
 /** A piece of paper a swivel by its edge moves, in the parent's model frame (`SwivelRegion`). */
@@ -221,13 +227,28 @@ export interface FoldSwivelFold {
   faces: number[];
 }
 
+/**
+ * A swivel by its valley and mountain before it folds
+ * (`SwivelValleyMountainAnalysis`): where its creases meet, the crease on
+ * the layer behind (split where the layer in front hides it, `hidden`), then
+ * the front layer's two, each by its letter as seen; the two layers, the one
+ * in front first; the paper that moves; the folded edge.
+ */
+export interface FoldSwivelValleyMountainAnalysis {
+  vertex: FoldModelPoint;
+  creases: FoldSwivelCrease[];
+  layers: number[];
+  regions: FoldSwivelRegion[];
+  fold: FoldSwivelFold;
+}
+
 export type FoldVertexAnalysis =
   | ({ kind: 'squash' } & FoldSquashAnalysis)
   | ({ kind: 'petal' } & FoldPetalAnalysis)
   | ({ kind: 'rabbit-ear' } & FoldFanAnalysis)
   | ({ kind: 'swivel' } & FoldFanAnalysis)
   | ({ kind: 'swivel-by-edge' } & FoldSwivelEdgeAnalysis)
-  | ({ kind: 'swivel-by-creases' } & Pick<FoldSwivelEdgeAnalysis, 'vertex' | 'creases' | 'layers' | 'regions'> & { fold: FoldSwivelFold });
+  | ({ kind: 'swivel-valley-mountain' } & FoldSwivelValleyMountainAnalysis);
 
 /** The orders a vertex fold leaves to choose from (`VertexOrders`), as a reverse fold's question lists its own. */
 export interface FoldVertexOrders {
@@ -298,8 +319,8 @@ export type FoldNoPetal = 'no_ends' | 'no_corner';
 export type FoldNoPetalDetail = { kind: 'misses_flap' } | { kind: 'past_corner'; corner: FoldModelPoint };
 
 /**
- * A swivel by its edge's own refusals, in `FoldRefusal::code`'s order, each
- * naming the edge's faces (but `swivel_not_an_edge`, which names its
+ * A swivel's own refusals, in `FoldRefusal::code`'s order. By its edge, each
+ * names the edge's faces (but `swivel_not_an_edge`, which names its
  * `point`): no raw or folded edge at the sheet point, a target parallel to
  * the edge, a vertex on the edge's line, an edge that ends before its foot
  * (with a `use_line` fix along the bisector), and an edge whose paper the
@@ -308,10 +329,15 @@ export type FoldNoPetalDetail = { kind: 'misses_flap' } | { kind: 'past_corner';
  * crosses the folded edge nowhere, and a swivel crease meeting it at a right
  * angle or wider, each naming the two faces it joins. An inside swivel at a
  * free vertex, which has no two layers to tuck its strip between, naming
- * the edge's faces. The fan's own follow (`fan_*`, `no_order`), and a
- * `use_emergent` fix names the other ridge, to store as the op's `ridge`.
+ * the edge's faces. By its valley and mountain
+ * (`compound::swivel_valley_mountain`): lines that meet on no folded edge
+ * the viewer sees (`swivel_line_meeting`, naming nothing), and lines that
+ * bound no flap, one along the folded edge or both along one line
+ * (`swivel_no_flap`, naming the two faces it joins). The fan's own follow
+ * (`fan_*`, `no_order`), and a `use_emergent` fix names the other ridge, to
+ * store as the op's `ridge`.
  */
-export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
+export const FOLD_SWIVEL_REFUSAL_CODES = [
   'swivel_not_an_edge',
   'swivel_target_parallel',
   'swivel_pivot_on_edge',
@@ -319,6 +345,7 @@ export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
   'swivel_edge_stays',
   'swivel_not_a_fold',
   'swivel_line_meeting',
+  'swivel_no_flap',
   'swivel_misses_fold',
   'swivel_fold_wide',
   'swivel_inside_free',

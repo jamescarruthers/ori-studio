@@ -29,7 +29,7 @@
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../../components/ui/Notice';
 import {
-  FOLD_SWIVEL_EDGE_REFUSAL_CODES,
+  FOLD_SWIVEL_REFUSAL_CODES,
   type FoldNoFlap,
   type FoldNoPetal,
   type FoldNoPetalDetail,
@@ -51,7 +51,7 @@ export const FOLD_VERTEX_REFUSAL_CODES = [
   'fan_fourth_beside_stayer',
   'fan_fourth_cannot_rise',
   'fan_stayer_detached',
-  ...FOLD_SWIVEL_EDGE_REFUSAL_CODES,
+  ...FOLD_SWIVEL_REFUSAL_CODES,
 ] as const;
 
 export type FoldVertexRefusalCode = (typeof FOLD_VERTEX_REFUSAL_CODES)[number];
@@ -65,12 +65,12 @@ export interface FoldVertexRefusalContext {
   /** How a petal fold's hinge was named: a crease already there, or its two ends. A crease when unknown. */
   hinge?: FoldLineBy;
   /**
-   * A swivel's form: by its edge — what the tool makes, whose creases are
-   * computed and whose fourth is its ridge — by its edge with its creases
-   * meeting on a folded edge (`fold`), or by its rays (a stored step's). By
-   * its rays when unknown.
+   * A swivel's form: by its edge — whose creases are computed and whose
+   * fourth is its ridge — by its edge with its creases meeting on a folded
+   * edge (`fold`), by its valley and mountain (`valley-mountain`), or by its
+   * rays (a stored step's). By its rays when unknown.
    */
-  swivel?: 'edge' | 'fold' | 'rays';
+  swivel?: 'edge' | 'fold' | 'valley-mountain' | 'rays';
 }
 
 /**
@@ -84,6 +84,8 @@ export function vertexContextOf(code: string): FoldVertexRefusalContext {
   if (code === 'swivel_not_a_fold' || code === 'swivel_misses_fold' || code === 'swivel_fold_wide') {
     return { tool: 'swivel', swivel: 'fold' };
   }
+  // A swivel by its valley and mountain's own name its two lines.
+  if (code === 'swivel_line_meeting' || code === 'swivel_no_flap') return { tool: 'swivel', swivel: 'valley-mountain' };
   if (code.startsWith('swivel')) return { tool: 'swivel', swivel: 'edge' };
   return code.startsWith('fan') ? { tool: 'swivel' } : { tool: 'squash' };
 }
@@ -173,20 +175,31 @@ function noPetal(t: TFunction, cause: FoldNoPetal, detail: FoldNoPetalDetail | u
 }
 
 /**
- * A swivel by its edge's own refusals (`FOLD_SWIVEL_EDGE_REFUSAL_CODES`), in
- * its words: at a pivot, or with its creases meeting on a folded edge
- * (`onFold`).
+ * A swivel's own refusals (`FOLD_SWIVEL_REFUSAL_CODES`), in its words: by its
+ * edge at a pivot, or with its creases meeting on a folded edge (`onFold`),
+ * or by its valley and mountain.
  */
-function swivelEdgeWords(
+function swivelWords(
   t: TFunction,
-  code: (typeof FOLD_SWIVEL_EDGE_REFUSAL_CODES)[number],
+  code: (typeof FOLD_SWIVEL_REFUSAL_CODES)[number],
   onFold: boolean
 ): { title: string; text: string } {
   switch (code) {
     case 'swivel_line_meeting':
       return {
-        title: t('tools:fold.vertex.refusal.lineMeeting.title', 'The lines need one meeting point'),
-        text: t('tools:fold.vertex.refusal.lineMeeting.text', 'Choose two intersecting fold lines that meet on one visible folded edge.'),
+        title: t('tools:fold.vertex.refusal.lineMeeting.titleValleyMountain', 'The lines do not meet on a folded edge'),
+        text: t(
+          'tools:fold.vertex.refusal.lineMeeting.textValleyMountain',
+          'The valley and the mountain meet at a point of a folded edge you can see, away from its ends. Pick two lines that cross there.'
+        ),
+      };
+    case 'swivel_no_flap':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelNoFlap.title', 'No flap between the lines'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelNoFlap.text',
+          'The valley and the mountain leave the folded edge into the paper, in two directions, with the flap between them. One of these runs along the folded edge, or both lie on one line: pick another.'
+        ),
       };
     case 'swivel_not_a_fold':
       return {
@@ -341,11 +354,12 @@ export function vertexRefusalWords(
     case 'swivel_edge_short':
     case 'swivel_edge_stays':
     case 'swivel_line_meeting':
+    case 'swivel_no_flap':
     case 'swivel_not_a_fold':
     case 'swivel_misses_fold':
     case 'swivel_fold_wide':
     case 'swivel_inside_free':
-      return swivelEdgeWords(t, refusal.code, context.swivel === 'fold');
+      return swivelWords(t, refusal.code, context.swivel === 'fold');
     case 'fan_center':
       return {
         title: t('tools:fold.vertex.refusal.center.title', 'The creases cannot meet there'),
@@ -370,7 +384,12 @@ export function vertexRefusalWords(
         title: t('tools:fold.vertex.refusal.blocked.title', 'Paper is in the way'),
         // The steppers that change it, by the names the window gives them.
         text:
-          context.swivel === 'fold'
+          context.swivel === 'valley-mountain'
+            ? t(
+                'tools:fold.vertex.refusal.blocked.swivelValleyMountain',
+                'A crease would run into a fold before it reaches the paper’s edge, or paper would hold two parts of the swivel together. Pick another valley or another mountain.'
+              )
+            : context.swivel === 'fold'
             ? t(
                 'tools:fold.vertex.refusal.blocked.swivelOnFold',
                 'A crease would run into a fold before it reaches the paper’s edge, or paper would hold two parts of the swivel together. Pick another folded edge, or another line for the edge to land on.'

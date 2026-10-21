@@ -139,13 +139,22 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
     case 'petal':
       return { op: 'vertex', fold: 'petal', direction: op.direction, form: { hinge: 'ends' in op ? 'points' : 'crease' } };
     case 'swivel':
+      // By its valley and mountain, the swivel folds the viewer's way: its letters are theirs.
+      if ('via' in op && op.via === 'valley-mountain') {
+        return {
+          op: 'vertex',
+          fold: 'swivel',
+          direction: 'valley',
+          form: { swivel: 'valley-mountain', ...(op.swivel === 'inside' ? { inside: true as const } : {}) },
+        };
+      }
       return {
         op: 'vertex',
         fold: 'swivel',
         direction: op.direction,
         form: !('via' in op)
           ? { swivel: 'rays' }
-          : (op.via === 'creases' || op.via === 'lines') ? { swivel: op.via, ...(op.swivel === 'inside' ? { inside: true as const } : {}) } : 'fold' in op
+          : 'fold' in op
             ? { swivel: 'fold', target: op.target.via, ...(op.swivel === 'inside' ? { inside: true as const } : {}) }
             : { swivel: 'edge', target: op.target.via, ridge: op.ridge ? 'end' : 'foot' },
       };

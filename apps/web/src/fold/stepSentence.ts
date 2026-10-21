@@ -109,15 +109,19 @@ export type FoldSinkSentenceKind = 'open' | 'closed' | 'unsink';
 /**
  * How a vertex fold named what it takes: a petal fold's hinge — a crease
  * already there, or two points the fold creases — and a swivel's form: by
- * its rays, or by its edge, with the line it lands on (a crease or edge, or
- * the line through two points) and the ridge it rose along (square to the
- * edge, or toward its end).
+ * its rays, by its valley and mountain, or by its edge, with the line it
+ * lands on (a crease or edge, or the line through two points) and the ridge
+ * it rose along (square to the edge, or toward its end).
  */
 export type FoldVertexSentenceForm =
   | { hinge: 'crease' | 'points' }
   | { swivel: 'rays' }
-  | { swivel: 'creases'; inside?: true }
-  | { swivel: 'lines'; inside?: true }
+  /**
+   * A swivel by its valley and mountain on the layer that faces the viewer:
+   * its letters are the viewer's, so it never folds behind. `inside` for the
+   * inside swivel, its strip tucked under.
+   */
+  | { swivel: 'valley-mountain'; inside?: true }
   | { swivel: 'edge'; target: 'crease' | 'free'; ridge: 'foot' | 'end' }
   /**
    * A swivel by its edge whose creases meet on a folded edge: no ridge to

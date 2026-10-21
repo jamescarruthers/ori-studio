@@ -12,9 +12,8 @@ import { shownFoldSequence } from '../../store/workspaceStore/foldState';
 import {
   isLockedStep,
   isSwivelEdgeOp,
-  isSwivelCreasesOp,
-  isSwivelLinesOp,
   isSwivelOnFoldOp,
+  isSwivelValleyMountainOp,
   isVertexOp,
   randomFoldId,
   swivelKindOf,
@@ -73,7 +72,7 @@ import {
   steppedFourth,
   swivelEdgePick,
 } from '../tools/vertex/vertexStep';
-import { SWIVEL_TARGET_FROM } from '../tools/vertex/vertexInputs';
+import { SWIVEL_TARGET_FROM, type FoldSwivelInput } from '../tools/vertex/vertexInputs';
 import { swivelOffered, swivelReachesNothing, type FoldSwivelReachView } from '../tools/vertex/swivelReach';
 import type { FoldLineBy } from '../tools/foldToolCatalog';
 import { isFoldAltLatched } from './foldAltLatch';
@@ -94,6 +93,7 @@ import {
 } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 import type { FoldStateView } from './useFoldStateView';
+import { swivelMeetingPick, swivelMeetings } from './vertex/swivelMeeting';
 
 /** A free point: Alt held, or on a touch screen its latch. */
 export function freePointHeld(): boolean {
@@ -176,8 +176,9 @@ export interface FoldCanvasVerbs {
   tuckTarget: (face: number) => void;
   // The vertex folds (`tools/vertex`), and what their refusals' buttons do.
   setVertexDirection: (direction: FoldDirection) => void;
+  /** How a swivel is constructed: by its edge onto a line, or by its valley and mountain. */
+  setSwivelInput: (mode: FoldSwivelInput) => void;
   /** A swivel on a folded edge's kind: its strip on top, or tucked between the layers. */
-  setSwivelInput: (mode: 'edge' | 'creases') => void;
   setSwivelKind: (kind: FoldSwivelKind) => void;
   /** The same vertex fold, the other direction. */
   vertexOtherWay: () => void;
@@ -346,7 +347,7 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
 function vertexFormOf(op: FoldOp): FoldStepVertexForm | undefined {
   if (op.kind === 'petal') return { hinge: 'ends' in op ? 'points' : 'crease' };
   if (op.kind !== 'swivel') return undefined;
-  if (isSwivelCreasesOp(op) || isSwivelLinesOp(op)) return { swivelForm: 'creases', swivelKind: swivelKindOf(op) };
+  if (isSwivelValleyMountainOp(op)) return { swivelForm: 'valley_mountain', swivelKind: swivelKindOf(op) };
   if (!isSwivelEdgeOp(op)) return { swivelForm: 'rays' };
   if (isSwivelOnFoldOp(op)) return { swivelForm: 'fold', target: op.target.via, swivelKind: swivelKindOf(op) };
   return { swivelForm: 'edge', target: op.target.via };
@@ -399,7 +400,7 @@ const SWIVEL_MEET_RULE = { snap: 'point', edges: true } as const;
  * turn lays it on. Nothing to add for any other tool.
  */
 function swivelOffer(tool: FoldToolState, reach: FoldSwivelReachView | null): Pick<FoldPickRule, 'accept'> {
-  if (tool.tool !== 'swivel' || tool.swivelInput === 'creases') return {};
+  if (tool.tool !== 'swivel' || tool.swivelInput === 'valley-mountain') return {};
   const offered = swivelOffered(reach, tool.picks);
   if (offered) return { accept: (segment: FoldSegmentPick) => offered(segment.edge) };
   const edge = swivelEdgePick(tool);
@@ -641,10 +642,19 @@ export function useFoldCanvasVerbs(
           return interval === null ? { pane, at, pick: null } : { pane, at, pick: null, interval };
         }
         const free = freePointHeld();
+        // A swivel's mountain runs from where its valley meets a folded
+        // edge: near there, a point the mountain's line takes is that point
+        // exactly, unless a free point is asked for, or a free line's end
+        // snaps to nothing.
+        const valley = tool.tool === 'swivel' ? tool.swivelValley : undefined;
+        const snaps = !free && (step.snap !== 'free' || (step.snapFree === true && tool.freeLineSnap));
+        const meeting = valley && snaps ? swivelMeetingPick(swivelMeetings(index, valley.sceneLine), pane, at, radii.point, step.snap) : null;
+        if (meeting) return { pane, at, pick: meeting };
         // A swivel's meeting point from which nothing can swing: a click
         // picks another point in its place, as its first click would.
         const reach = live.current.preview.vertex?.reach ?? null;
-        const remeet = tool.tool === 'swivel' && tool.swivelInput !== 'creases' && tool.picks.length === 1 && swivelReachesNothing(reach);
+        const byEdge = tool.swivelInput !== 'valley-mountain';
+        const remeet = tool.tool === 'swivel' && byEdge && tool.picks.length === 1 && swivelReachesNothing(reach);
         const pick = resolveFoldPick(index, pane, at, radii, {
           ...(remeet ? SWIVEL_MEET_RULE : { snap: step.snap, edges: step.edges, ...(step.kinds ? { kinds: step.kinds } : {}) }),
           free,
@@ -656,8 +666,8 @@ export function useFoldCanvasVerbs(
         // too — the engine finds where along it they meet, so a point placed
         // freely there would only make a pivot through every layer, which
         // no folder means on a folded edge (owner feedback, 2026-10-13).
-        // Two-line construction uses the normal line-mode picks instead.
-        if ((tool.swivelInput !== 'creases' && picksSwivelPivot(tool.tool, tool.picks.length)) || remeet) {
+        // By its valley and mountain, a swivel takes the line modes' picks instead.
+        if ((byEdge && picksSwivelPivot(tool.tool, tool.picks.length)) || remeet) {
           const onFold = free ? resolveFoldEdgePoint(index, pane, at, radii, null) : null;
           return { pane, at, pick: onFold ?? (free ? pick : resolveFoldEdgePoint(index, pane, at, radii, pick)) };
         }
@@ -777,14 +787,6 @@ export function useFoldCanvasVerbs(
       // The layer orders the compound fold previewed lists: a reverse fold's,
       // a crimp's, a tuck's, a sink's or a vertex fold's.
       stepOrder: (delta) => {
-        const current = state();
-        if (current.tool === 'swivel' && current.swivelInput === 'creases' && !current.swivelFirst) {
-          const { swivelLine, refused } = live.current.preview;
-          if (!swivelLine || refused || live.current.session.readOnly) return false;
-          setQueued(null);
-          tools.acceptSwivelLine(swivelLine);
-          return true;
-        }
         const resolution = live.current.preview.orderResolution;
         if (resolution?.active) resolution.step(delta);
         else if (!resolution) tools.stepOrder(delta, compoundListed(live.current.preview).orders || (live.current.preview.vertex?.orders.length ?? 0));
@@ -1009,11 +1011,13 @@ export function useFoldCanvasVerbs(
         // and saves; Unfold to step adds its step, or rebuilds a saved one.
         if (current.tool === 'repeat') return live.current.preview.repeat?.primary() ?? false;
         if (current.tool === 'unfold-to') return live.current.preview.unfold?.commit() ?? false;
-        if (current.tool === 'swivel' && current.swivelInput === 'creases' && !current.swivelFirst) {
-          const { swivelLine, refused } = live.current.preview;
-          if (!swivelLine || refused || live.current.session.readOnly) return false;
+        // A swivel by its valley and mountain: Enter takes the line located
+        // as its valley, and the picks go on to its mountain.
+        if (current.tool === 'swivel' && current.swivelInput === 'valley-mountain' && !current.swivelValley) {
+          const { swivelLocated, refused } = live.current.preview;
+          if (!swivelLocated || refused || live.current.session.readOnly) return false;
           setQueued(null);
-          tools.acceptSwivelLine(swivelLine);
+          tools.takeSwivelValley(swivelLocated);
           return true;
         }
         const resolution = live.current.preview.orderResolution;
@@ -1069,7 +1073,7 @@ export function useFoldCanvasVerbs(
           return true;
         }
         const tool = state();
-        const held = tool.swivelFirst !== undefined || tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'top' || tool.swapped;
+        const held = tool.swivelValley !== undefined || tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'top' || tool.swapped;
         if (!held) return false;
         setQueued(null);
         tools.clear();

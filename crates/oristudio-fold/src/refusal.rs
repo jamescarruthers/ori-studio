@@ -338,9 +338,17 @@ pub enum FoldRefusal {
     /// folded crease.
     #[error("no folded edge passes through the sheet point {point:?}")]
     SwivelNotAFold { point: Point },
-    /// Two specified fold lines must meet inside one visible folded edge.
-    #[error("the two swivel lines do not identify one folded-edge meeting point")]
+    /// A swivel by its valley and mountain (`compound::swivel_valley_mountain`):
+    /// the two lines meet on no folded edge the viewer sees, or on several
+    /// stacked ones that name different paper, or within the minimum feature
+    /// of a folded edge's end; or they do not meet at all.
+    #[error("the valley and the mountain do not meet on one folded edge")]
     SwivelLineMeeting,
+    /// A swivel by its valley and mountain whose lines bound no flap: one of
+    /// them runs along the folded edge they meet on, or the two lie along one
+    /// line. `faces` are the two the folded edge joins.
+    #[error("the valley and the mountain bound no flap")]
+    SwivelNoFlap { faces: Vec<FaceId> },
     /// The line halfway between the edge and the target crosses the folded
     /// edge nowhere inside one of its creases, away from their ends (or
     /// runs parallel to it): the creases cannot meet on it. `faces` are the
@@ -503,6 +511,7 @@ impl FoldRefusal {
             FoldRefusal::SwivelEdgeStays { .. } => "swivel_edge_stays",
             FoldRefusal::SwivelNotAFold { .. } => "swivel_not_a_fold",
             FoldRefusal::SwivelLineMeeting => "swivel_line_meeting",
+            FoldRefusal::SwivelNoFlap { .. } => "swivel_no_flap",
             FoldRefusal::SwivelMissesFold { .. } => "swivel_misses_fold",
             FoldRefusal::SwivelFoldWide { .. } => "swivel_fold_wide",
             FoldRefusal::SwivelInsideFree { .. } => "swivel_inside_free",
@@ -560,6 +569,7 @@ impl FoldRefusal {
             | FoldRefusal::SwivelPivotOnEdge { faces }
             | FoldRefusal::SwivelEdgeShort { faces }
             | FoldRefusal::SwivelEdgeStays { faces }
+            | FoldRefusal::SwivelNoFlap { faces }
             | FoldRefusal::SwivelMissesFold { faces }
             | FoldRefusal::SwivelFoldWide { faces }
             | FoldRefusal::SwivelInsideFree { faces }

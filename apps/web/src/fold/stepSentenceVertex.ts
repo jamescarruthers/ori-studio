@@ -83,10 +83,11 @@ export function vertexSentence(
   direction: FoldDirection,
   form?: FoldVertexSentenceForm
 ): string {
-  if (form && 'swivel' in form && (form.swivel === 'creases' || form.swivel === 'lines')) {
+  // By its valley and mountain: on the layer that faces the viewer, never behind.
+  if (form && 'swivel' in form && form.swivel === 'valley-mountain') {
     return form.inside
-      ? t('panels:fold.sentence.swivelInsideHinges', 'Inside-swivel along the two located hinges, tucking the strip between the layers.')
-      : t('panels:fold.sentence.swivelHinges', 'Swivel along the two located hinges.');
+      ? t('panels:fold.sentence.swivelInsideValleyMountain', 'Inside-swivel the flap along the valley and the mountain.')
+      : t('panels:fold.sentence.swivelValleyMountain', 'Swivel-fold the flap along the valley and the mountain.');
   }
   if (form && 'swivel' in form && form.swivel === 'edge') return swivelEdgeSentence(t, direction, form.target);
   if (form && 'swivel' in form && form.swivel === 'fold') {
@@ -123,7 +124,7 @@ export function vertexSentence(
 
 /** Whether a vertex fold's form is the inside swivel. */
 function isInsideSwivel(form: FoldVertexSentenceForm | undefined): boolean {
-  return form !== undefined && 'swivel' in form && (form.swivel === 'fold' || (form.swivel === 'creases' || form.swivel === 'lines')) && form.inside === true;
+  return form !== undefined && 'swivel' in form && (form.swivel === 'fold' || form.swivel === 'valley-mountain') && form.inside === true;
 }
 
 /** What the operation is called: "Squash fold", "Squash fold behind", "Inside swivel". */
@@ -191,6 +192,20 @@ export interface FoldVertexRow {
   help?: string;
 }
 
+/** A swivel on a folded edge's kind, open or inside, as the Step pane names it. */
+function swivelKindRow(t: TFunction, inside: boolean): FoldVertexRow {
+  return {
+    label: t('panels:fold.step.swivelKind', 'Kind'),
+    value: inside ? t('panels:fold.words.swivelKindInside', 'Inside') : t('panels:fold.words.swivelKindOpen', 'Open'),
+    help: inside
+      ? t(
+          'panels:fold.step.swivelKindInsideHelp',
+          'The other layer’s strip folds under the rest of its layer, tucked between the two layers.'
+        )
+      : t('panels:fold.step.swivelKindOpenHelp', 'The other layer’s strip folds up over the rest of its layer, its back on show.'),
+  };
+}
+
 /**
  * A vertex fold's own rows in the Step pane: a petal fold's hinge, as it was
  * named; a swivel by its edge's target and ridge. None for the other folds,
@@ -214,7 +229,19 @@ export function vertexRows(t: TFunction, form: FoldVertexSentenceForm | undefine
     ];
   }
   if (form.swivel === 'rays') return [];
-  if ((form.swivel === 'creases' || form.swivel === 'lines')) return [{ label: t('panels:fold.step.construction', 'Construction'), value: form.swivel === 'lines' ? t('tools:fold.vertex.input.lines', 'Two fold lines') : t('panels:fold.words.twoHinges', 'Meeting point and two hinges') }];
+  if (form.swivel === 'valley-mountain') {
+    return [
+      {
+        label: t('panels:fold.step.construction', 'Construction'),
+        value: t('panels:fold.words.valleyMountain', 'Valley and mountain'),
+        help: t(
+          'panels:fold.step.valleyMountainHelp',
+          'On the layer you see, the valley and the mountain that bound the flap, meeting on the folded edge. The crease on the layer behind follows from them.'
+        ),
+      },
+      swivelKindRow(t, form.inside === true),
+    ];
+  }
   const landsOn: FoldVertexRow = {
     label: t('panels:fold.step.landsOn', 'Lands on'),
     value:
@@ -233,18 +260,7 @@ export function vertexRows(t: TFunction, form: FoldVertexSentenceForm | undefine
           'Where the line halfway between the edge and the line it lands on crosses the folded edge. The other layer at that edge folds along a second crease too.'
         ),
       },
-      {
-        label: t('panels:fold.step.swivelKind', 'Kind'),
-        value: form.inside
-          ? t('panels:fold.words.swivelKindInside', 'Inside')
-          : t('panels:fold.words.swivelKindOpen', 'Open'),
-        help: form.inside
-          ? t(
-              'panels:fold.step.swivelKindInsideHelp',
-              'The other layer’s strip folds under the rest of its layer, tucked between the two layers.'
-            )
-          : t('panels:fold.step.swivelKindOpenHelp', 'The other layer’s strip folds up over the rest of its layer, its back on show.'),
-      },
+      swivelKindRow(t, form.inside === true),
     ];
   }
   return [

@@ -24,6 +24,7 @@ import type { TurnKind } from '../../lib/steps/turn';
 import { turnCardWords } from '../../lib/steps/turnWords';
 import type { FoldVertexOpKind } from '../document/foldSequenceDocument';
 import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
+import type { FoldSwivelInput } from './vertex/vertexInputs';
 
 /** A plain fold's kind, as the tool window's V / M / P control offers it. */
 export type FoldKind = 'valley' | 'mountain' | 'precrease';
@@ -124,9 +125,9 @@ export type FoldSecondLineModeId = FoldLineModeId;
 
 export const FOLD_SECOND_LINE_MODES: readonly FoldSecondLineModeId[] = ['free', 'crease'];
 
-/** Whether the active construction uses the shared Locate line tools. */
-export function usesLineMode(id: FoldToolId, swivelInput?: 'edge' | 'creases'): boolean {
-  return locatesLine(id) || (id === 'swivel' && swivelInput === 'creases');
+/** Whether the active construction uses the shared Locate line tools: a swivel's by its valley and mountain does. */
+export function usesLineMode(id: FoldToolId, swivelInput?: FoldSwivelInput): boolean {
+  return locatesLine(id) || (id === 'swivel' && swivelInput === 'valley-mountain');
 }
 
 /** Tools folded along one line; the type guard excludes multi-line constructions. */

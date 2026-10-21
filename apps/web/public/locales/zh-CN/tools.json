@@ -924,11 +924,10 @@
         "edge": "边对齐线",
         "edgeHelp": "选择一条边及其要对齐的线",
         "label": "构造方式",
-        "lines": "两条折线",
-        "linesHelp": "确定两条折线；它们的交点决定汇合点"
+        "valleyMountain": "谷与山",
+        "valleyMountainHelp": "在可见的层上选择交于一条折边的谷与山；后面的折痕随之确定"
       },
       "intro": {
-        "creases": "指定两条铰链；系统会计算剩余折痕，使纸张保持平整。",
         "petalLift": "沿铰链抬起翼片的尖端。",
         "swivelSwing": "把纸的一条边旋转到一条线上。"
       },
@@ -948,13 +947,6 @@
         "twoPoints": "两个点",
         "twoPointsHelp": "单击这条线上的两个点"
       },
-      "lines": {
-        "confirm": "按 Enter 确认第一条线，然后确定第二条线。",
-        "confirmTouch": "点击“使用第一条线”继续。",
-        "first": "确定第一条折线。选择现有折痕，或使用“定位直线”构造一条线。",
-        "second": "确定第二条折线。它与第一条线的交点决定汇合点，其余铰接折线会自动计算。",
-        "useFirst": "使用第一条线"
-      },
       "mountain": "山",
       "mountainTitle": "山：纸朝远离你的方向转",
       "note": {
@@ -968,14 +960,15 @@
         "snapOrFree": "点会吸附到角、交点、标记和中点：按住 {{modifier}} 可把点放在任意位置。",
         "snapOrFreeTouch": "点会吸附到角、交点、标记和中点：打开“自由点”可把点放在任意位置。",
         "squashFlap": "翼片的两层只由铰链连着、且上面没有任何东西时，才能压平。",
-        "swivelCreasesPicture": "折痕交于标记点。高亮的纸张会移动；剩余折痕使其保持平整。",
-        "swivelPicture": "折痕交于圆点，边落在粗线上，高亮的纸会移动。"
+        "swivelPicture": "折痕交于圆点，边落在粗线上，高亮的纸会移动。",
+        "swivelValleyMountainPicture": "折痕交于圆点。虚线折痕位于后面一层，由谷与山决定；高亮的纸会移动。"
       },
       "refusal": {
         "blocked": {
           "steppers": "有一条折痕会碰到不随之折叠的纸，或者纸会把折叠的两部分连在一起。切换“层”以折更多层，或把“第四折痕”换成另一条。",
           "swivelEdge": "有一条折痕会碰到不随之折叠的纸，或者纸会把折叠的两部分连在一起。请另选支点，或另选边要落到的线。",
           "swivelOnFold": "有一条折痕在到达纸边之前会碰到折叠处，或者纸会把旋转折的两部分连在一起。请另选折边，或另选边要落到的线。",
+          "swivelValleyMountain": "有一条折痕在到达纸边之前会碰到折叠处，或者纸会把旋转折的两部分连在一起。请另选谷或另选山。",
           "title": "有纸挡住"
         },
         "center": {
@@ -1006,8 +999,8 @@
           "titleHinge": "请先预折铰链"
         },
         "lineMeeting": {
-          "text": "选择两条在同一条可见的已折边上相交的折线。",
-          "title": "两条线需要一个汇合点"
+          "textValleyMountain": "谷与山交于一条可见折边上的一点，且远离折边两端。请选择在那里相交的两条线。",
+          "titleValleyMountain": "这些线没有交于折边"
         },
         "noFlap": {
           "noHinge": "翼片的脊两端都没有翻过铰链，因此没有可以压向的地方。",
@@ -1081,6 +1074,10 @@
           "text": "旋转折沿边与目标线正中间的那条线折叠，而这条线在这条折边的两端之间并不与其相交。按 Esc，选择这条线经过的折边，或另选一条线。",
           "title": "折痕无法在这条边上相交"
         },
+        "swivelNoFlap": {
+          "text": "谷与山从折边出发，朝两个方向伸入纸内，翼片夹在两者之间。其中一条沿着折边，或者两条在同一直线上：请另选一条。",
+          "title": "两线之间没有翼片"
+        },
         "swivelNotAFold": {
           "text": "折痕只能在纸被折叠之处的折边上相交，而所选的点不在任何折叠处。按 Esc，重新点击折边。",
           "title": "那不是折边"
@@ -1153,12 +1150,25 @@
       "swivelInside": "向内",
       "swivelInsideHelp": "内旋转折：窄条塞进两层之间",
       "swivelKind": "类型",
+      "swivelKindCannot": "这种类型在这里无法折平。",
       "swivelOpen": "敞开",
       "swivelOpenHelp": "敞开旋转折：窄条折到上面",
       "target": "脊落在",
       "targetHinge": "铰链线",
       "targetPoint": "单击的点",
       "valley": "谷",
+      "valleyMountain": {
+        "mountainLine": "山线",
+        "mountainStep": "山线：{{instruction}}",
+        "pickMountain": "从折边上的同一点选择山线。后面一层的折痕随之确定，被遮住的部分以虚线显示。",
+        "pickValley": "选择谷线：翼片的铰链，位于可见的层上，从折边上的一点伸入纸内。",
+        "pickValleyInside": "选择谷线：位于可见的层上，从折边上的一点伸入纸内。",
+        "takeValley": "按 Enter 键将其用作谷。",
+        "takeValleyTouch": "轻点“用作谷”。",
+        "useValley": "用作谷",
+        "valleyLine": "谷线",
+        "valleyStep": "谷线：{{instruction}}"
+      },
       "valleyTitle": "谷：纸朝你的方向转"
     },
     "window": {

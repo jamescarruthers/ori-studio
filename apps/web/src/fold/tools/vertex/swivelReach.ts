@@ -9,19 +9,19 @@
  * the lines the edge picked can land on, and previews a swivel under the
  * pointer before it is clicked.
  *
- * A pair lands when the engine folds it flat one way or the other — on a
- * folded edge, open or inside. It is kept as it will be folded
- * (`vertexChosenOp`): the folder's way and kind when they land, else the
- * ones that do — a swivel on a folded edge says which kinds and ways land in
- * its answer, a swivel at a free vertex is asked both ways — and the first
- * ridge that lands. So the swivel previewed under the pointer is the one a
- * click previews and a commit folds.
+ * A pair is offered when the engine folds it flat one way or the other — on a
+ * folded edge, open or inside: a swivel on a folded edge says which kinds and
+ * ways land in its answer, a swivel at a free vertex is asked both ways. It
+ * is kept as it will be folded (`vertexChosenOp`): the folder's way and kind,
+ * whether or not they land — a pair that lands only another way is folded
+ * as asked and refused, and the refusal offers the other way (owner
+ * feedback, 2026-10-20: never fold another way than the one asked without
+ * saying so) — and the first ridge that lands. So the swivel previewed under
+ * the pointer is the one a click previews and a commit folds.
  *
  * Pure: the compound question is handed in.
  */
 import {
-  isSwivelOnFoldOp,
-  swivelKindOf,
   withSwivelKind,
   type FoldDirection,
   type FoldModelLine,
@@ -68,7 +68,7 @@ export interface FoldSwivelReachAsk {
   targets: readonly FoldSwivelReachLine[];
 }
 
-/** A swivel that lands: an edge and the line it lands on, by id, as it will be folded. */
+/** A swivel that lands some way: an edge and the line it lands on, by id, as it will be folded. */
 export interface FoldSwivelLanding {
   edge: number;
   target: number;
@@ -76,7 +76,7 @@ export interface FoldSwivelLanding {
   directions: readonly [boolean, boolean];
   /** On a folded edge, open then inside: whether it lands that kind either way. Absent at a free vertex. */
   kinds?: readonly [boolean, boolean];
-  /** The op as it will be folded: its way, its kind on a folded edge, and its ridge (`vertexChosenOp`). */
+  /** The op as it will be folded: the folder's way and kind on a folded edge, and its ridge (`vertexChosenOp`). */
   op: FoldVertexOp;
   /** What the engine said of that op: what its preview draws. */
   answer: FoldVertexAnalysed;
@@ -90,7 +90,7 @@ export interface FoldSwivelReach {
 /** The compound question, for one op on the state asked about. */
 export type FoldSwivelAsk = (op: FoldVertexOp) => FoldEngineOutcome<FoldCompoundAnalysis>;
 
-/** No choice made yet: the first ridge that lands, the folder's way when it lands. */
+/** No choice made yet: the first ridge that lands. */
 const UNCHOSEN: FoldVertexTaken = { squashTarget: null, emergent: null, order: 0 };
 
 const OTHER: Readonly<Record<FoldDirection, FoldDirection>> = { valley: 'mountain', mountain: 'valley' };
@@ -99,26 +99,17 @@ function vertexAnswer(reply: FoldEngineOutcome<FoldCompoundAnalysis>): FoldVerte
   return reply.status === 'ok' && reply.family === 'vertex' && reply.analysis.kind === 'swivel-by-edge' ? reply : null;
 }
 
-/** Whether a swivel by its edge lands as `op` names it: on a folded edge, its kind and way; at a free vertex, any ridge. */
-function lands(op: FoldVertexOp, answer: FoldVertexAnalysed): boolean {
-  if (isSwivelOnFoldOp(op)) {
-    const kind = swivelKindOf(op);
-    return swivelDirectionsOf(answer, kind, kind)?.[op.direction === 'valley' ? 0 : 1] === true;
-  }
-  return landingFourths(answer).length > 0;
-}
-
-/** One way of one pair: as it will be folded, when it lands. */
-function landingOf(ask: FoldSwivelAsk, op: FoldVertexOp): { op: FoldVertexOp; answer: FoldVertexAnalysed; first: FoldVertexAnalysed } | null {
+/** One way of one pair, described: as it will be folded, whether or not it lands. */
+function describedOf(ask: FoldSwivelAsk, op: FoldVertexOp): { op: FoldVertexOp; answer: FoldVertexAnalysed; first: FoldVertexAnalysed } | null {
   const first = vertexAnswer(ask(op));
   if (!first) return null;
   const chosen = vertexChosenOp(op, first, UNCHOSEN);
   if (!chosen) return null;
   const answer = chosen.again ? vertexAnswer(ask(chosen.op)) : first;
-  return answer && lands(chosen.op, answer) ? { op: chosen.op, answer, first } : null;
+  return answer ? { op: chosen.op, answer, first } : null;
 }
 
-/** Every pair asked, what lands kept (see the module docs). */
+/** Every pair asked, what lands some way kept (see the module docs). */
 export function swivelReach(ask: FoldSwivelAsk, request: FoldSwivelReachAsk): FoldSwivelReach {
   const { at, direction, kind = 'open', edges, targets } = request;
   const landings: FoldSwivelLanding[] = [];
@@ -127,37 +118,37 @@ export function swivelReach(ask: FoldSwivelAsk, request: FoldSwivelReachAsk): Fo
       if (target.id === edge.id) continue;
       const base = { kind: 'swivel', via: 'edge', edge: edge.at, target: { via: 'crease', at: target.at } } as const;
       if ('fold' in at) {
-        // On a folded edge the answer says which kinds and ways land, and the choice takes one that does.
-        const landed = landingOf(ask, withSwivelKind({ ...base, fold: at.fold, direction }, kind));
-        if (landed) {
-          const folded = isSwivelOnFoldOp(landed.op) ? swivelKindOf(landed.op) : kind;
-          const ways = swivelDirectionsOf(landed.first, folded, kind);
-          const kinds = swivelKindsLanding(landed.first);
+        // On a folded edge the answer says which kinds and ways land.
+        const described = describedOf(ask, withSwivelKind({ ...base, fold: at.fold, direction }, kind));
+        const ways = described ? swivelDirectionsOf(described.first, kind, kind) : null;
+        const kinds = described ? swivelKindsLanding(described.first) : null;
+        if (described && (kinds ?? ways)?.some(Boolean)) {
           landings.push({
             edge: edge.id,
             target: target.id,
             directions: [ways?.[0] === true, ways?.[1] === true],
             ...(kinds ? { kinds } : {}),
-            op: landed.op,
-            answer: landed.answer,
+            op: described.op,
+            answer: described.answer,
           });
         }
         continue;
       }
       // At a free vertex each way is its own fold, asked on its own.
       const op = (way: FoldDirection): FoldVertexOp => ({ ...base, pivot: at.pivot, seed: { scope: 'all' }, direction: way });
-      const preferred = landingOf(ask, op(direction));
-      const other = landingOf(ask, op(OTHER[direction]));
-      const taken = preferred ?? other;
-      if (!taken) continue;
-      const valley = direction === 'valley' ? preferred : other;
-      const mountain = direction === 'valley' ? other : preferred;
+      const preferred = describedOf(ask, op(direction));
+      const other = describedOf(ask, op(OTHER[direction]));
+      const lands = (way: typeof preferred) => way !== null && landingFourths(way.answer).length > 0;
+      if (!lands(preferred) && !lands(other)) continue;
+      // Drawn as the folder's way when it describes; the other's picture only stands in for its geometry.
+      const shown = preferred ?? other;
+      if (!shown) continue;
       landings.push({
         edge: edge.id,
         target: target.id,
-        directions: [valley !== null, mountain !== null],
-        op: taken.op,
-        answer: taken.answer,
+        directions: direction === 'valley' ? [lands(preferred), lands(other)] : [lands(other), lands(preferred)],
+        op: preferred?.op ?? op(direction),
+        answer: shown.answer,
       });
     }
   }

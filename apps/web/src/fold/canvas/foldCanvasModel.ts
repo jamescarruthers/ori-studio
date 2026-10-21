@@ -11,7 +11,8 @@ import type { Rgba } from '../../cp-workspace/renderer/types';
 import type { CpToolOptionBounds } from '../../cp-workspace/toolOptions/toolOptionWindow';
 import type { Point } from '../../lib/geometry';
 import { FOLD_SWIVEL_KINDS, isVertexOp } from '../document/foldSequenceDocument';
-import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
+import type { FoldFlap, FoldLetter, FoldScene } from '../engine/foldEngineWire';
+import type { FoldPendingCreases } from './foldPaneScenes';
 import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
 import { sameFlap } from '../tools/crossSection';
 import { lineAcrossPaper } from '../tools/foldStepBuilder';
@@ -207,24 +208,32 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   const { orders = [], order = null } = vertex ?? {};
   // What the petal fold creases itself, as the engine describes the flap folded.
   const petal = vertex?.answer?.analysis ?? analysis;
-  const lineBy = tool === 'petal' ? tools.petalHinge : tool === 'swivel' && tools.swivelInput !== 'creases' ? tools.swivelTarget : null;
-  // A swivel whose creases meet on a folded edge has no ridge; any swivel
-  // folds only a way that lands, and offers the other only when it lands too.
-  const onFold = (tool === 'swivel' && tools.swivelInput === 'creases') || swivelFoldPick(tools) !== null;
+  const valleyMountain = tool === 'swivel' && tools.swivelInput === 'valley-mountain';
+  const lineBy = tool === 'petal' ? tools.petalHinge : tool === 'swivel' && !valleyMountain ? tools.swivelTarget : null;
+  // A swivel whose creases meet on a folded edge has no ridge; every swivel
+  // folds the way and kind asked, and offers the others that land.
+  const onFold = valleyMountain || swivelFoldPick(tools) !== null;
   const directions = vertex?.directions;
   // A swivel on a folded edge's kind folded, and the kinds that land either way.
   const kinds = vertex?.kinds;
   const swivelKinds = onFold && kinds ? FOLD_SWIVEL_KINDS.filter((_, k) => kinds[k]) : null;
   // A swivel's meeting point nothing can swing from: its next click takes another.
-  const nothingSwings = tool === 'swivel' && tools.picks.length === 1 && swivelReachesNothing(vertex?.reach ?? null);
+  const nothingSwings = tool === 'swivel' && !valleyMountain && tools.picks.length === 1 && swivelReachesNothing(vertex?.reach ?? null);
   return {
     tool,
-    // The way it folds: the folder's, or the other when only that lands.
+    // The way it folds: the folder's, always.
     direction: vertex?.direction ?? tools.vertexDirection,
     ...(onFold ? { onFold } : {}),
-    ...(tool === 'swivel' ? { swivelInput: tools.swivelInput ?? 'edge', firstLineSet: tools.swivelFirst !== undefined, lineReady: preview.swivelLine != null } : {}),
+    ...(tool === 'swivel'
+      ? {
+          swivelInput: tools.swivelInput ?? 'edge',
+          valleyTaken: tools.swivelValley !== undefined,
+          lineLocated: preview.swivelLocated != null,
+        }
+      : {}),
     ...(directions && directions.length === 2 ? { directions } : {}),
-    ...(onFold && vertex?.kind ? { swivelKind: vertex.kind } : {}),
+    // The kind asked, before the engine has answered (or when it refused it) too.
+    ...(onFold ? { swivelKind: vertex?.kind ?? tools.compound.swivelKind ?? 'open' } : {}),
     ...(swivelKinds ? { swivelKinds } : {}),
     ...(nothingSwings ? { nothingSwings } : {}),
     described: vertex?.base != null,
@@ -339,14 +348,15 @@ export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | FoldPoin
     const pick = tools.picks.length === 1 ? tools.picks[0] : undefined;
     return pick?.kind === 'free' ? pick : null;
   }
-  if (tools.tool === 'swivel' && tools.swivelInput !== 'creases') {
+  const valleyMountain = tools.tool === 'swivel' && tools.swivelInput === 'valley-mountain';
+  if (tools.tool === 'swivel' && !valleyMountain) {
     const pick = tools.swivelTarget === 'points' && tools.picks.length === SWIVEL_TARGET_FROM + 1 ? tools.picks.at(-1) : undefined;
     return pick?.kind === 'point' ? pick : null;
   }
   const first = lineModeInput(tools.lineMode).steps.length;
   const [mode, from] =
     (tools.tool === 'crimp' || tools.tool === 'pleat') && tools.picks.length > first ? [tools.secondLineMode, first] : [tools.lineMode, 0];
-  const pick = (isLineTool(tools.tool) || (tools.tool === 'swivel' && tools.swivelInput === 'creases')) && mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
+  const pick = (isLineTool(tools.tool) || valleyMountain) && mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
   return pick?.kind === 'free' ? pick : null;
 }
 
@@ -377,18 +387,34 @@ export function foldShownPicks(
 export function foldLocatedLines(
   tool: FoldToolState['tool'],
   pictured: boolean,
-  lines: FoldCrimpLines | null,
-  swivel?: { index: FoldPickIndex | null; first?: FoldToolState['swivelFirst']; current?: FoldToolPreview['swivelLine'] }
+  lines: FoldCrimpLines | null
 ): readonly (readonly [Point, Point])[] {
-  if (tool === 'swivel' && swivel?.index) {
-    const index = swivel.index;
-    return [swivel.first, swivel.current].flatMap(line => {
-      const segment = line ? lineAcrossPaper(index, line.sceneLine) : null;
-      return segment ? [segment] : [];
-    });
-  }
   if ((tool !== 'crimp' && tool !== 'pleat') || pictured || !lines) return [];
   return [lines.first, lines.second].filter((line): line is [Point, Point] => line !== null);
+}
+
+/**
+ * A swivel by its valley and mountain's lines before the engine has
+ * described its fold: the valley taken, and the line the picks locate now —
+ * the valley until it is taken, then the mountain — across the paper on the
+ * folded pane, each in its letter's diagram pen, as the fold will crease
+ * them. Null for any other tool, and with no line in.
+ */
+export function swivelLinesPending(
+  index: FoldPickIndex | null,
+  tools: Pick<FoldToolState, 'tool' | 'swivelInput' | 'swivelValley'>,
+  located: FoldToolPreview['swivelLocated']
+): FoldPendingCreases | null {
+  if (!index || tools.tool !== 'swivel' || tools.swivelInput !== 'valley-mountain') return null;
+  const lines: [FoldToolState['swivelValley'] | null | undefined, FoldLetter][] = [
+    [tools.swivelValley, 'valley'],
+    [located, tools.swivelValley ? 'mountain' : 'valley'],
+  ];
+  const folded = lines.flatMap(([line, letter]) => {
+    const segment = line ? lineAcrossPaper(index, line.sceneLine) : null;
+    return segment ? [{ line: segment, letter }] : [];
+  });
+  return folded.length > 0 ? { folded, creasePattern: [] } : null;
 }
 
 /**

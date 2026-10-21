@@ -51,7 +51,10 @@ const CASES: [FoldSentenceStep, string][] = [
   [{ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'edge', target: 'crease', ridge: 'foot' } }, 'Swivel fold.'],
   [{ op: 'vertex', fold: 'swivel', direction: 'mountain', form: { swivel: 'rays' } }, 'Swivel fold behind.'],
   [{ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'fold', target: 'free', inside: true } }, 'Inside swivel fold.'],
-  [{ op: 'vertex', fold: 'swivel', direction: 'mountain', form: { swivel: 'lines', inside: true } }, 'Inside swivel fold behind.'],
+  [{ op: 'vertex', fold: 'swivel', direction: 'mountain', form: { swivel: 'fold', target: 'crease', inside: true } }, 'Inside swivel fold behind.'],
+  // By its valley and mountain, on the layer that faces the viewer: never behind.
+  [{ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'valley-mountain' } }, 'Swivel fold.'],
+  [{ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'valley-mountain', inside: true } }, 'Inside swivel fold.'],
   [{ op: 'repeat', count: 1 }, 'Repeat on the other side.'],
   [{ op: 'repeat', count: 3 }, 'Repeat the last 3 steps on the other side.'],
   [{ op: 'unfold-to', sheet: true }, 'Unfold completely.'],

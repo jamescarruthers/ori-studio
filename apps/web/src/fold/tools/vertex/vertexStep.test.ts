@@ -7,7 +7,6 @@ import type { FoldScene } from '../../engine/foldEngineWire';
 import { toPoint } from '../../canvas/foldCanvasGeometry';
 import { fanRegionAt } from './fanGeometry';
 import {
-  directionToFold,
   emergentToFold,
   fanCenterScene,
   fanGiven,
@@ -31,7 +30,6 @@ import {
   swivelDirectionsOf,
   swivelFoldPick,
   swivelKindsLanding,
-  swivelWayToFold,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
@@ -168,6 +166,28 @@ describe('a petal fold’s hinge', () => {
     // Off the paper, or before the hinge: none.
     expect(petalRegionKey(index, hinged, p(1.5, 0.2))).toBeNull();
     expect(petalRegionKey(index, intent({ tool: 'petal' }), p(0.3, 0.2))).toBeNull();
+  });
+});
+
+describe('a swivel by its valley and mountain', () => {
+  const index = book();
+  const valley = { line: { via: 'crease' as const, at: [0.3, 0.6] as const } };
+  const mountain = { line: { via: 'free' as const, through: [[0.5, 0.5], [0.05, 0.1]] as const } };
+
+  it('is asked once both lines are in, with the kind asked and no direction', () => {
+    const byLines = { tool: 'swivel' as const, swivelInput: 'valley-mountain' as const };
+    expect(vertexAskedOp(intent({ ...byLines }), index)).toBeNull();
+    expect(vertexAskedOp(intent({ ...byLines, swivelValley: valley }), index)).toBeNull();
+    const open = vertexAskedOp(intent({ ...byLines, swivelValley: valley, swivelMountain: mountain, direction: 'mountain' }), index);
+    // The direction asked of other folds is no part of it: its letters are the viewer's.
+    expect(open).toEqual({ kind: 'swivel', via: 'valley-mountain', valley, mountain });
+    expect(vertexAskedOp(intent({ ...byLines, swivelValley: valley, swivelMountain: mountain, swivelKind: 'inside' }), index)).toEqual({
+      kind: 'swivel',
+      via: 'valley-mountain',
+      valley,
+      mountain,
+      swivel: 'inside',
+    });
   });
 });
 
@@ -442,10 +462,6 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     });
     // No ridge to store, whatever is taken.
     expect(withEmergent(onFold, answer([true, false]), 1)).toEqual(onFold);
-    expect(directionToFold('valley', answer([true, false]))).toBe('valley');
-    expect(directionToFold('mountain', answer([true, false]))).toBe('valley');
-    expect(directionToFold('valley', answer([false, false]))).toBe('valley');
-    expect(directionToFold('mountain', answer())).toBe('mountain');
     expect(vertexChosenOp(onFold, answer([true, false]), NONE)).toEqual({
       op: onFold,
       emergent: 0,
@@ -453,17 +469,19 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       kind: 'open',
       again: false,
     });
-    // Only the other way lands: that way is folded, and asked again.
-    expect(vertexChosenOp({ ...onFold, direction: 'mountain' }, answer([true, false]), NONE)).toEqual({
-      op: onFold,
+    // Only the other way lands: still the way asked, which the engine
+    // refuses with the other way as a fix (owner feedback, 2026-10-20).
+    const mountain = { ...onFold, direction: 'mountain' as const };
+    expect(vertexChosenOp(mountain, answer([true, false]), NONE)).toEqual({
+      op: mountain,
       emergent: 0,
-      direction: 'valley',
+      direction: 'mountain',
       kind: 'open',
-      again: true,
+      again: false,
     });
   });
 
-  it('folds a swivel on a folded edge of the kind that lands, the one asked while it does', () => {
+  it('folds a swivel on a folded edge of the kind and the way asked, whichever land', () => {
     const open = {
       kind: 'swivel' as const,
       via: 'edge' as const,
@@ -491,7 +509,7 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     expect(swivelKindsLanding(both)).toEqual([true, true]);
     expect(vertexChosenOp(open, both, NONE)).toMatchObject({ op: open, kind: 'open', again: false });
     expect(vertexChosenOp(inside, both, NONE)).toMatchObject({ op: inside, kind: 'inside', again: false });
-    // Only inside lands: asked open, it folds inside, asked again.
+    // Only inside lands: asked open, it is still open, never inside without a word.
     const onlyInside = answer(
       [
         [false, false],
@@ -500,12 +518,12 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       [false, false]
     );
     expect(vertexChosenOp(open, onlyInside, NONE)).toMatchObject({
-      op: inside,
+      op: open,
       direction: 'valley',
-      kind: 'inside',
-      again: true,
+      kind: 'open',
+      again: false,
     });
-    // Only open lands, and only the other way: asked inside valley, it folds open mountain.
+    // Only open lands, and only the other way: asked inside valley, it stays inside valley.
     const onlyOpenMountain = answer(
       [
         [false, true],
@@ -513,14 +531,11 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       ],
       [false, false]
     );
-    expect(swivelWayToFold({ kind: 'inside', direction: 'valley' }, 'inside', onlyOpenMountain)).toEqual({
-      kind: 'open',
-      direction: 'mountain',
-    });
     expect(vertexChosenOp(inside, onlyOpenMountain, NONE)).toMatchObject({
-      op: { ...open, direction: 'mountain' },
-      kind: 'open',
-      again: true,
+      op: inside,
+      direction: 'valley',
+      kind: 'inside',
+      again: false,
     });
     // None lands: the way asked, which the engine refuses.
     const none = answer(

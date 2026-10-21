@@ -273,6 +273,14 @@ describe('a tool’s preview on the folded pane, every crease in the diagram-cre
     expect(withFoldCreases(base(), [])).toEqual(base());
   });
 
+  it('draws a crease behind the paper in the diagram’s hidden-line pen, dotted, whatever its letter', () => {
+    const behind: FoldPaneCreaseLine[] = [
+      { line: [{ x: 0.5, y: 0.5 }, { x: 0.2, y: 0.1 }], letter: 'valley', hidden: true },
+      { line: [{ x: 0.5, y: 0.5 }, { x: 0, y: 0.2 }], letter: 'mountain' },
+    ];
+    expect(added({ action: null, second: null, vertex: behind })).toEqual(['diagram-hidden', 'diagram-mountain']);
+  });
+
   it('strokes each in the user’s own mountain and valley diagram crease pens, not the fold pens', () => {
     const style: PaperStyle = {
       ...DEFAULT_PAPER_STYLE,

@@ -944,11 +944,10 @@
         "edge": "Edge onto line",
         "edgeHelp": "Choose an edge and the line it should land on",
         "label": "Construct by",
-        "lines": "Two fold lines",
-        "linesHelp": "Locate two fold lines; their intersection sets the meeting point"
+        "valleyMountain": "Valley and mountain",
+        "valleyMountainHelp": "Pick the valley and the mountain on the layer you see, meeting on a folded edge; the crease behind follows"
       },
       "intro": {
-        "creases": "Locate the two hinges; the remaining crease is computed to keep the paper flat.",
         "petalLift": "Lifts a flap’s point up along a hinge.",
         "swivelSwing": "Swings an edge of the paper onto a line."
       },
@@ -971,13 +970,6 @@
         "twoPoints": "Two points",
         "twoPointsHelp": "Click two points on the line"
       },
-      "lines": {
-        "confirm": "Press Enter to use the first line and locate the second.",
-        "confirmTouch": "Tap Use first line to continue.",
-        "first": "Locate the first fold line. Select an existing crease or construct a line with Locate line.",
-        "second": "Locate the second fold line. Its intersection with the first sets the meeting point; the remaining hinge is computed.",
-        "useFirst": "Use first line"
-      },
       "mountain": "Mountain",
       "mountainTitle": "Mountain: the paper turns away from you",
       "note": {
@@ -991,14 +983,15 @@
         "snapOrFree": "Points snap to corners, crossings, marks and midpoints: hold {{modifier}} to put one anywhere.",
         "snapOrFreeTouch": "Points snap to corners, crossings, marks and midpoints: turn on Free point to put one anywhere.",
         "squashFlap": "A flap squashes when its two layers are joined only at its hinge and nothing lies on top of it.",
-        "swivelCreasesPicture": "The creases meet at the dot. The lit paper moves; the remaining crease keeps it flat.",
-        "swivelPicture": "The creases meet at the dot, the edge lands on the bold line, and the lit paper moves."
+        "swivelPicture": "The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.",
+        "swivelValleyMountainPicture": "The creases meet at the dot. The dotted crease is on the layer behind, and follows from the valley and the mountain; the lit paper moves."
       },
       "refusal": {
         "blocked": {
           "steppers": "A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Step Layers to fold more layers, or Fourth crease to another one.",
           "swivelEdge": "A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Pick another pivot, or another line for the edge to land on.",
           "swivelOnFold": "A crease would run into a fold before it reaches the paper’s edge, or paper would hold two parts of the swivel together. Pick another folded edge, or another line for the edge to land on.",
+          "swivelValleyMountain": "A crease would run into a fold before it reaches the paper’s edge, or paper would hold two parts of the swivel together. Pick another valley or another mountain.",
           "title": "Paper is in the way"
         },
         "center": {
@@ -1029,8 +1022,8 @@
           "titleHinge": "Precrease the hinge first"
         },
         "lineMeeting": {
-          "text": "Choose two intersecting fold lines that meet on one visible folded edge.",
-          "title": "The lines need one meeting point"
+          "textValleyMountain": "The valley and the mountain meet at a point of a folded edge you can see, away from its ends. Pick two lines that cross there.",
+          "titleValleyMountain": "The lines do not meet on a folded edge"
         },
         "noFlap": {
           "noHinge": "The flap folds over no hinge at either end of its spine, so there is nothing to press it flat against.",
@@ -1104,6 +1097,10 @@
           "text": "The swivel folds along the line halfway between the edge and the line it lands on, and that line does not cross this folded edge between its ends. Press Esc and pick the folded edge it crosses, or another line.",
           "title": "The creases cannot meet on that edge"
         },
+        "swivelNoFlap": {
+          "text": "The valley and the mountain leave the folded edge into the paper, in two directions, with the flap between them. One of these runs along the folded edge, or both lie on one line: pick another.",
+          "title": "No flap between the lines"
+        },
         "swivelNotAFold": {
           "text": "The creases can meet on a folded edge only where the paper is folded, and the point picked lies on no fold. Press Esc and click the folded edge again.",
           "title": "That is no folded edge"
@@ -1176,12 +1173,25 @@
       "swivelInside": "Inside",
       "swivelInsideHelp": "Inside swivel: the strip tucks between the layers",
       "swivelKind": "Kind",
+      "swivelKindCannot": "This kind cannot fold flat here.",
       "swivelOpen": "Open",
       "swivelOpenHelp": "Open swivel: the strip folds up on top",
       "target": "Spine lands on",
       "targetHinge": "The hinge line",
       "targetPoint": "The point clicked",
       "valley": "Valley",
+      "valleyMountain": {
+        "mountainLine": "Mountain line",
+        "mountainStep": "Mountain line: {{instruction}}",
+        "pickMountain": "Pick the mountain line, from the same point on the folded edge. The crease on the layer behind follows, dotted where it is hidden.",
+        "pickValley": "Pick the valley line: the flap’s hinge, on the layer you see, from a point on a folded edge into the paper.",
+        "pickValleyInside": "Pick the valley line: on the layer you see, from a point on a folded edge into the paper.",
+        "takeValley": "Press Enter to take it as the valley.",
+        "takeValleyTouch": "Tap Use as the valley.",
+        "useValley": "Use as the valley",
+        "valleyLine": "Valley line",
+        "valleyStep": "Valley line: {{instruction}}"
+      },
       "valleyTitle": "Valley: the paper turns toward you"
     },
     "window": {

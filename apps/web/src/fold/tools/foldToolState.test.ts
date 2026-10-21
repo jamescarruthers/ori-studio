@@ -477,17 +477,39 @@ it('steps the largest indexed opening list without losing a choice to integer ro
   expect(tools.store.getState().compound.opening).toBe(0);
 });
 
-it('keeps the first swivel line while changing the second construction, and clears both on Escape', () => {
+it('keeps a swivel’s valley taken while the mountain’s line mode changes, and clears both on Escape', () => {
   const tools=createFoldTools();
-  tools.selectTool('swivel');tools.setSwivelInput('creases');tools.selectLineMode('axiom-3');
-  const first={line:{via:'free' as const,through:[[0,0],[1,1]] as [[number,number],[number,number]]},sceneLine:{n:[1,-1] as [number,number],d:0}};
-  tools.acceptSwivelLine(first);
+  tools.selectTool('swivel');tools.setSwivelInput('valley-mountain');tools.selectLineMode('axiom-3');
+  const valley={line:{via:'free' as const,through:[[0,0],[1,1]] as [[number,number],[number,number]]},sceneLine:{n:[1,-1] as [number,number],d:0}};
+  tools.takeSwivelValley(valley);
   expect(hasToolInput(tools.store.getState())).toBe(true);
   tools.selectLineMode('crease');
-  expect(tools.store.getState()).toMatchObject({tool:'swivel',swivelFirst:first,lineMode:'crease',picks:[],root:0});
+  expect(tools.store.getState()).toMatchObject({tool:'swivel',swivelValley:valley,lineMode:'crease',picks:[],root:0});
   tools.clear();
-  expect(tools.store.getState().swivelFirst).toBeUndefined();
+  expect(tools.store.getState().swivelValley).toBeUndefined();
   expect(hasToolInput(tools.store.getState())).toBe(false);
+});
+
+it('keeps the kind a swivel by its valley and mountain asks for across its locates, and asks anew by its edge', () => {
+  const tools = createFoldTools();
+  tools.selectTool('swivel');
+  tools.setSwivelInput('valley-mountain');
+  tools.setSwivelKind('inside');
+  const valley = { line: { via: 'free' as const, through: [[0, 0], [1, 1]] as [[number, number], [number, number]] }, sceneLine: { n: [1, -1] as [number, number], d: 0 } };
+  // Another line mode, the valley taken, Escape: still the inside swivel asked.
+  tools.selectLineMode('axiom-3');
+  tools.takeSwivelValley(valley);
+  tools.clear();
+  expect(tools.store.getState().compound.swivelKind).toBe('inside');
+  // Another construction asks anew.
+  tools.setSwivelInput('edge');
+  expect(tools.store.getState().compound.swivelKind).toBeNull();
+  // By its edge, the kind is chosen once the picks are in, and a new locate starts it again.
+  tools.setSwivelKind('inside');
+  tools.clear();
+  tools.pick(point(0.5, 0.5));
+  tools.clear();
+  expect(tools.store.getState().compound.swivelKind).toBeNull();
 });
 
 describe('the sequence tools in hand', () => {

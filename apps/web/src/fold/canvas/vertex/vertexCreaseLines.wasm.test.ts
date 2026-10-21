@@ -3,7 +3,13 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../../../lib/geometry';
 import { parseNativeProjectFile } from '../../../lib/nativeProjectFile';
-import { isLockedStep, type FoldSequenceDocument, type FoldStep, type FoldVertexOp } from '../../document/foldSequenceDocument';
+import {
+  isLockedStep,
+  vertexDirectionOf,
+  type FoldSequenceDocument,
+  type FoldStep,
+  type FoldVertexOp,
+} from '../../document/foldSequenceDocument';
 import { readFoldSequences } from '../../document/foldSequenceFile';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../../engine/foldEngineCompoundCalls';
@@ -137,7 +143,7 @@ function drawn({ calls, compound }: Engine, state: number, op: FoldVertexOp): Fo
   if (answer.family !== 'vertex') throw new Error(`answered for ${answer.family}`);
   const analysis: FoldVertexAnalysis = answer.analysis;
   const emergent = analysis.kind === 'rabbit-ear' || analysis.kind === 'swivel' ? analysis.emergent : null;
-  return vertexCreaseLines(foldPickIndex(calls.scene(state), calls.landmarks(state, []), []), { analysis, emergent }, op.direction);
+  return vertexCreaseLines(foldPickIndex(calls.scene(state), calls.landmarks(state, []), []), { analysis, emergent }, vertexDirectionOf(op));
 }
 
 /** The step as the file stores it, landed on its parent: what it shows the viewer, and what the pane draws. */
@@ -176,7 +182,8 @@ describe.skipIf(!available)('a vertex fold’s creases on the folded pane, again
       const [sx, sy] = answer.analysis.spine_direction;
       return { ...stored, kind: 'squash', target: [hx + 0.3 * sx, hy + 0.3 * sy] } as FoldVertexOp;
     });
-    expect(aimed.drawn.map((line) => line.letter)).toEqual([aimed.op.direction, other(aimed.op.direction)]);
+    const way = vertexDirectionOf(aimed.op);
+    expect(aimed.drawn.map((line) => line.letter)).toEqual([way, other(way)]);
     expect(aimed.seen.some((crease) => crease.depth === 0)).toBe(true);
     expect(aimed.seen.some((crease) => crease.depth === 1)).toBe(true);
     for (const crease of aimed.seen) {
@@ -189,8 +196,8 @@ describe.skipIf(!available)('a vertex fold’s creases on the folded pane, again
     const { state, op, seen, drawn: lines } = compare(engined, 'petal-fold.osf', 3);
     expect(lines).toHaveLength(1);
     // The two layers crease on one line: the lower one the direction's way, the upper — on top — the other.
-    expect(seen.find((crease) => crease.depth === 1)?.letter).toBe(op.direction);
-    expect(seen.find((crease) => crease.depth === 0)?.letter).toBe(other(op.direction));
+    expect(seen.find((crease) => crease.depth === 1)?.letter).toBe(vertexDirectionOf(op));
+    expect(seen.find((crease) => crease.depth === 0)?.letter).toBe(other(vertexDirectionOf(op)));
     // The pane draws the line as the step's picture (the Diagram's too) does: the lower crease.
     expect(lines[0]!.letter).toBe(landed(engined.calls.action(state, op)).action.direction);
   });

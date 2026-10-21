@@ -35,6 +35,30 @@ describe('a vertex fold’s words', () => {
     ]);
   });
 
+  it('say a swivel by its valley and mountain as folders do: toward the viewer, its kind and its construction', () => {
+    const context = { paper: { kind: 'square' }, marks: [] } as unknown as Parameters<typeof foldSentenceStepOf>[1];
+    const lines = { valley: { line: { via: 'crease' as const, at: [0.3, 0.6] as const } }, mountain: { line: { via: 'crease' as const, at: [0.2, 0.7] as const } } };
+    const open = foldSentenceStepOf({ kind: 'swivel', via: 'valley-mountain', ...lines }, context);
+    const inside = foldSentenceStepOf({ kind: 'swivel', via: 'valley-mountain', ...lines, swivel: 'inside' }, context);
+    expect(open).toEqual({ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'valley-mountain' } });
+    expect([foldStepSentence(t, open), operationLabel(t, open), operationBadge(t, open)]).toEqual([
+      'Swivel-fold the flap along the valley and the mountain.',
+      'Swivel fold',
+      'Swivel',
+    ]);
+    expect([foldStepSentence(t, inside), operationLabel(t, inside), operationBadge(t, inside)]).toEqual([
+      'Inside-swivel the flap along the valley and the mountain.',
+      'Inside swivel',
+      'Inside swivel',
+    ]);
+    if (open.op !== 'vertex' || inside.op !== 'vertex') throw new Error('no vertex fold');
+    expect(vertexRows(t, open.form).map((row) => [row.label, row.value])).toEqual([
+      ['Construction', 'Valley and mountain'],
+      ['Kind', 'Open'],
+    ]);
+    expect(vertexRows(t, inside.form).map((row) => row.value)).toEqual(['Valley and mountain', 'Inside']);
+  });
+
   it('come from the stored op, its direction kept', () => {
     const context = { paper: { kind: 'square' }, marks: [] } as unknown as Parameters<typeof foldSentenceStepOf>[1];
     expect(foldSentenceStepOf({ kind: 'squash', flap: [0.2, 0.1], direction: 'mountain' }, context)).toEqual({

@@ -39,7 +39,7 @@ import type { FoldCompoundReport } from './foldEngineCompoundWire';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 import type { FoldNoOpening, FoldReverseKind } from './foldEngineReverseWire';
 import {
-  FOLD_SWIVEL_EDGE_REFUSAL_CODES,
+  FOLD_SWIVEL_REFUSAL_CODES,
   type FoldNoFlap,
   type FoldNoPetal,
   type FoldNoPetalDetail,
@@ -193,8 +193,9 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'fan_fourth_beside_stayer',
   'fan_fourth_cannot_rise',
   'fan_stayer_detached',
-  // The swivel by its edge (`compound::swivel`), before its fan's own.
-  ...FOLD_SWIVEL_EDGE_REFUSAL_CODES,
+  // The swivel by its edge (`compound::swivel`) and by its valley and
+  // mountain (`compound::swivel_valley_mountain`), before its fan's own.
+  ...FOLD_SWIVEL_REFUSAL_CODES,
   // Sinks (plan Phase 11).
   ...FOLD_SINK_REFUSAL_CODES,
   ...FOLD_PARTIAL_PRECREASE_REFUSAL_CODES,

@@ -6,6 +6,7 @@ import { foldPickIndex, sheetToScene, type FoldPick, type FoldPickIndex } from '
 import {
   FOLD_SWIVEL_KINDS,
   isLockedStep,
+  vertexDirectionOf,
   withSwivelKind,
   type FoldDirection,
   type FoldSequenceDocument,
@@ -130,18 +131,21 @@ function expectExactlyWhatFolds(e: Engine, state: number, ask: FoldSwivelReachAs
     for (const target of ask.targets) {
       if (edge.id === target.id) continue;
       const landing = offered.get(`${edge.id}:${target.id}`);
+      const base = { kind: 'swivel', via: 'edge', edge: edge.at, target: { via: 'crease', at: target.at } } as const;
+      const ways = (['valley', 'mountain'] as FoldDirection[]).flatMap((direction): FoldVertexOp[] =>
+        'fold' in ask.at
+          ? FOLD_SWIVEL_KINDS.map((kind) => withSwivelKind({ ...base, fold: (ask.at as { fold: SheetPoint }).fold, direction }, kind))
+          : [{ ...base, pivot: ask.at.pivot, seed: { scope: 'all' }, direction }]
+      );
       if (landing) {
-        expect(folds(e, state, landing.op), `${edge.id} onto ${target.id}`).toBe(true);
+        // Offered: some way folds it, and it is kept as the folder asked it,
+        // folding when that way does (and refused, with the other way, when not).
+        expect(vertexDirectionOf(landing.op), `${edge.id} onto ${target.id}`).toBe(ask.direction);
+        expect(landing.directions[ask.direction === 'valley' ? 0 : 1], `${edge.id} onto ${target.id}`).toBe(folds(e, state, landing.op));
+        expect(ways.some((op) => folds(e, state, op)), `${edge.id} onto ${target.id}`).toBe(true);
         continue;
       }
-      const base = { kind: 'swivel', via: 'edge', edge: edge.at, target: { via: 'crease', at: target.at } } as const;
-      for (const direction of ['valley', 'mountain'] as FoldDirection[]) {
-        const ops: FoldVertexOp[] =
-          'fold' in ask.at
-            ? FOLD_SWIVEL_KINDS.map((kind) => withSwivelKind({ ...base, fold: (ask.at as { fold: SheetPoint }).fold, direction }, kind))
-            : [{ ...base, pivot: ask.at.pivot, seed: { scope: 'all' }, direction }];
-        for (const op of ops) expect(folds(e, state, op), `${edge.id} onto ${target.id}, ${direction}`).toBe(false);
-      }
+      for (const op of ways) expect(folds(e, state, op), `${edge.id} onto ${target.id}`).toBe(false);
       refused += 1;
     }
   }
@@ -241,7 +245,7 @@ describe.skipIf(!available)('a swivel’s reach over the real bridge', () => {
       );
       // A flat sheet folds the swivel either way; the folder's way is the one kept.
       expect(his?.directions).toEqual([true, true]);
-      expect(his?.op.direction).toBe(direction);
+      expect(his && vertexDirectionOf(his.op)).toBe(direction);
       if (direction === 'valley') expect(his && landed(e.calls.step(state, his.op)).fingerprint).toBe(step.expect);
     }
   });

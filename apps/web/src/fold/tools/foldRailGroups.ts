@@ -11,6 +11,7 @@
  */
 import type { TFunction } from 'i18next';
 import type { TurnKind } from '../../lib/steps/turn';
+import type { FoldSwivelInput } from './vertex/vertexInputs';
 import {
   FOLD_LINE_MODES,
   FOLD_LINE_MODE_SHORTCUTS,
@@ -40,7 +41,8 @@ import {
 export interface FoldToolsView {
   tool: FoldToolId;
   lineMode: FoldLineModeId;
-  swivelInput?: 'edge' | 'creases';
+  /** How the swivel in hand is constructed: by its valley and mountain, it locates lines with the line modes. */
+  swivelInput?: FoldSwivelInput;
   /** Set while nothing on the sequence can change, and why. */
   readOnly: FoldReadOnlyReason | null;
   /** The flat sheet is on screen: there is no step to unfold, or to repeat. */

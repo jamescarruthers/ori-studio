@@ -944,11 +944,10 @@
         "edge": "Kante auf Linie",
         "edgeHelp": "Eine Kante und die Linie wählen, auf der sie landen soll",
         "label": "Konstruieren über",
-        "lines": "Zwei Faltlinien",
-        "linesHelp": "Zwei Faltlinien bestimmen; ihr Schnittpunkt legt den Treffpunkt fest"
+        "valleyMountain": "Tal und Berg",
+        "valleyMountainHelp": "Tal und Berg auf der sichtbaren Lage wählen, die sich auf einer gefalteten Kante treffen; die Faltlinie dahinter ergibt sich daraus"
       },
       "intro": {
-        "creases": "Die beiden Scharniere festlegen; die übrige Faltlinie wird so berechnet, dass das Papier flach bleibt.",
         "petalLift": "Hebt die Spitze einer Lasche entlang eines Scharniers an.",
         "swivelSwing": "Schwenkt eine Kante des Papiers auf eine Linie."
       },
@@ -971,13 +970,6 @@
         "twoPoints": "Zwei Punkte",
         "twoPointsHelp": "Klicke auf zwei Punkte der Linie"
       },
-      "lines": {
-        "confirm": "Drücke Eingabe, um die erste Linie zu übernehmen und die zweite zu bestimmen.",
-        "confirmTouch": "Tippe auf Erste Linie verwenden, um fortzufahren.",
-        "first": "Bestimme die erste Faltlinie. Wähle einen vorhandenen Falz oder konstruiere eine Linie mit Linie bestimmen.",
-        "second": "Bestimme die zweite Faltlinie. Ihr Schnittpunkt mit der ersten legt den Treffpunkt fest; das verbleibende Scharnier wird berechnet.",
-        "useFirst": "Erste Linie verwenden"
-      },
       "mountain": "Berg",
       "mountainTitle": "Berg: das Papier dreht sich von dir weg",
       "note": {
@@ -991,14 +983,15 @@
         "snapOrFree": "Punkte rasten an Ecken, Kreuzungen, Markierungen und Mittelpunkten ein: Halte {{modifier}} gedrückt, um einen beliebig zu setzen.",
         "snapOrFreeTouch": "Punkte rasten an Ecken, Kreuzungen, Markierungen und Mittelpunkten ein: Schalte Freier Punkt ein, um einen beliebig zu setzen.",
         "squashFlap": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen nur an ihrem Scharnier verbunden sind und nichts auf ihr liegt.",
-        "swivelCreasesPicture": "Die Faltlinien treffen sich am Punkt. Das hervorgehobene Papier bewegt sich; die übrige Faltlinie hält es flach.",
-        "swivelPicture": "Die Faltlinien treffen sich am Punkt, die Kante landet auf der fetten Linie, und das hervorgehobene Papier bewegt sich."
+        "swivelPicture": "Die Faltlinien treffen sich am Punkt, die Kante landet auf der fetten Linie, und das hervorgehobene Papier bewegt sich.",
+        "swivelValleyMountainPicture": "Die Faltlinien treffen sich am Punkt. Die gepunktete Faltlinie liegt auf der Lage dahinter und ergibt sich aus Tal und Berg; das hervorgehobene Papier bewegt sich."
       },
       "refusal": {
         "blocked": {
           "steppers": "Eine Faltlinie würde auf Papier treffen, das nicht mitfaltet, oder Papier würde zwei Teile der Faltung zusammenhalten. Blättere bei Lagen, um mehr Lagen zu falten, oder bei Vierte Faltlinie zu einer anderen.",
           "swivelEdge": "Eine Faltlinie würde auf Papier treffen, das nicht mitfaltet, oder Papier würde zwei Teile der Faltung zusammenhalten. Wähle einen anderen Drehpunkt oder eine andere Linie, auf der die Kante landen soll.",
           "swivelOnFold": "Eine Faltlinie würde auf eine Faltung treffen, bevor sie die Papierkante erreicht, oder Papier würde zwei Teile der Schwenkfalte zusammenhalten. Wähle eine andere gefaltete Kante oder eine andere Linie, auf der die Kante landen soll.",
+          "swivelValleyMountain": "Eine Faltlinie würde auf eine Faltung treffen, bevor sie die Papierkante erreicht, oder Papier würde zwei Teile der Schwenkfalte zusammenhalten. Wähle eine andere Tallinie oder eine andere Berglinie.",
           "title": "Papier ist im Weg"
         },
         "center": {
@@ -1029,8 +1022,8 @@
           "titleHinge": "Zuerst das Scharnier vorfalten"
         },
         "lineMeeting": {
-          "text": "Wähle zwei Faltlinien, die sich auf genau einer sichtbaren Faltkante schneiden.",
-          "title": "Die Linien brauchen einen Treffpunkt"
+          "textValleyMountain": "Tal und Berg treffen sich an einem Punkt einer sichtbaren gefalteten Kante, abseits ihrer Enden. Wähle zwei Linien, die sich dort kreuzen.",
+          "titleValleyMountain": "Die Linien treffen sich nicht auf einer gefalteten Kante"
         },
         "noFlap": {
           "noHinge": "Die Lasche faltet sich an keinem Ende ihres Rückens über ein Scharnier, also gibt es nichts, wogegen sie flach gedrückt werden kann.",
@@ -1104,6 +1097,10 @@
           "text": "Die Schwenkfalte faltet entlang der Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet, und diese Linie kreuzt diese gefaltete Kante nicht zwischen ihren Enden. Drücke Esc und wähle die gefaltete Kante, die sie kreuzt, oder eine andere Linie.",
           "title": "Die Faltlinien können sich auf dieser Kante nicht treffen"
         },
+        "swivelNoFlap": {
+          "text": "Tal und Berg verlaufen von der gefalteten Kante aus ins Papier, in zwei Richtungen, mit der Lasche dazwischen. Eine davon läuft entlang der gefalteten Kante, oder beide liegen auf einer Linie: Wähle eine andere.",
+          "title": "Keine Lasche zwischen den Linien"
+        },
         "swivelNotAFold": {
           "text": "Die Faltlinien können sich nur dort auf einer gefalteten Kante treffen, wo das Papier gefaltet ist, und der gewählte Punkt liegt auf keiner Faltung. Drücke Esc und klicke erneut auf die gefaltete Kante.",
           "title": "Das ist keine gefaltete Kante"
@@ -1176,12 +1173,25 @@
       "swivelInside": "Innen",
       "swivelInsideHelp": "Innere Drehfalte: der Streifen steckt zwischen den Lagen",
       "swivelKind": "Art",
+      "swivelKindCannot": "Diese Art lässt sich hier nicht flach falten.",
       "swivelOpen": "Offen",
       "swivelOpenHelp": "Offene Drehfalte: der Streifen faltet sich obenauf",
       "target": "Rücken landet auf",
       "targetHinge": "Der Scharnierlinie",
       "targetPoint": "Dem geklickten Punkt",
       "valley": "Tal",
+      "valleyMountain": {
+        "mountainLine": "Berglinie",
+        "mountainStep": "Berglinie: {{instruction}}",
+        "pickMountain": "Wähle die Berglinie, vom selben Punkt auf der gefalteten Kante aus. Die Faltlinie auf der Lage dahinter ergibt sich daraus, gepunktet, wo sie verdeckt ist.",
+        "pickValley": "Wähle die Tallinie: das Scharnier der Lasche, auf der sichtbaren Lage, von einem Punkt auf einer gefalteten Kante ins Papier.",
+        "pickValleyInside": "Wähle die Tallinie: auf der sichtbaren Lage, von einem Punkt auf einer gefalteten Kante ins Papier.",
+        "takeValley": "Drücke Enter, um sie als Tal zu übernehmen.",
+        "takeValleyTouch": "Tippe auf Als Tal verwenden.",
+        "useValley": "Als Tal verwenden",
+        "valleyLine": "Tallinie",
+        "valleyStep": "Tallinie: {{instruction}}"
+      },
       "valleyTitle": "Tal: das Papier dreht sich zu dir hin"
     },
     "window": {

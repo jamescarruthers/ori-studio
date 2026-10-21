@@ -1915,6 +1915,7 @@
       "sourceChanged": "Die Quellschritte haben sich geändert. Aktualisiere die Wiederholung.",
       "stop": "Anhalten",
       "stopped": "Angehalten, bevor die Wiederholung bereit war. Es wurden keine Schritte hinzugefügt.",
+      "swivelBehind": "Auf der anderen Seite liegen Tal und Berg dieser Drehfalte auf der Lage dahinter. Dreh das Modell um und mache die Drehfalte dort.",
       "title": "Auf der anderen Seite wiederholen",
       "unavailable": "Die Quellzustände sind nicht verfügbar oder wurden geändert. Warte auf die Wiedergabe und öffne Wiederholen erneut.",
       "unsupported": "Dieser Bereich enthält ein Zusammenfalten oder eine weitere Wiederholung, die noch nicht gespiegelt werden kann. Wähle einen Bereich aus Faltoperationen.",
@@ -2561,10 +2562,10 @@
       "swivelEdgeLine": "Drehe die Kante um den Punkt auf die Linie.",
       "swivelFoldCrease": "Drehe die Kante auf die Faltlinie; die Faltlinien treffen sich auf der gefalteten Kante.",
       "swivelFoldLine": "Drehe die Kante auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante.",
-      "swivelHinges": "Entlang der beiden festgelegten Scharniere schwenken.",
       "swivelInsideCrease": "Drehe die Kante mit einer inneren Drehfalte auf die Faltlinie; die Faltlinien treffen sich auf der gefalteten Kante.",
-      "swivelInsideHinges": "Entlang der beiden festgelegten Scharniere nach innen schwenken und den Streifen zwischen die Lagen stecken.",
       "swivelInsideLine": "Drehe die Kante mit einer inneren Drehfalte auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante.",
+      "swivelInsideValleyMountain": "Drehe die Klappe mit einer inneren Drehfalte entlang der Tal- und der Berglinie.",
+      "swivelValleyMountain": "Drehe die Klappe mit einer Drehfalte entlang der Tal- und der Berglinie.",
       "tuckMountain": "Falte als Bergfalte und stecke die Lasche hinten über die gewählte Lage.",
       "tuckValley": "Falte als Talfalte und stecke die Lasche unter die gewählte Lage.",
       "turn": "{{turn}}.",
@@ -2830,6 +2831,7 @@
       "swivelKindOpenHelp": "Der Streifen der anderen Lage faltet sich über den Rest seiner Lage, seine Rückseite sichtbar.",
       "title": "Schritt {{number}}",
       "valley": "Tal",
+      "valleyMountainHelp": "Auf der sichtbaren Lage Tal und Berg, die die Klappe begrenzen und sich auf der gefalteten Kante treffen. Die Faltlinie auf der Lage dahinter ergibt sich aus ihnen.",
       "vertex": {
         "blocksHelp": "Papierstücke, die sich als Ganzes drehen: jedes dreht sich um dieselben Faltlinien, in derselben Reihenfolge, dorthin, wo es landet."
       }
@@ -2913,13 +2915,13 @@
       "targetLine": "Linie durch zwei Punkte",
       "tuckMountain": "Bergfalte und einstecken",
       "tuckValley": "Talfalte und einstecken",
-      "twoHinges": "Treffpunkt und zwei Scharniere",
       "unfold": "Auffalten",
       "unfolds_one": "Faltet {{count}} Faltlinie auf",
       "unfolds_other": "Faltet {{count}} Faltlinien auf",
       "unknown": "Aus einem neueren Ori Studio",
       "unsink": "Versenken aufheben",
       "valleyFold": "Talfalte",
+      "valleyMountain": "Tal und Berg",
       "valleyPrecrease": "Talfalte vorfalten"
     }
   },

@@ -548,30 +548,27 @@ export interface FoldSwivelOnFoldOp {
   swivel?: 'inside';
 }
 
-/** A swivel located by its meeting point and each layer's hinge direction. */
-export interface FoldSwivelCreasesOp {
-  kind: 'swivel';
-  via: 'creases';
-  fold: SheetPoint;
-  first: SheetPoint;
-  second: SheetPoint;
-  direction: FoldDirection;
-  swivel?: 'inside';
-}
-
-/** A complete line construction, including the chosen axiom solution. */
+/** A line as a step stores it to locate it again: how it was located, and an axiom's root taken. */
 export interface FoldLocatedLine {
   line: FoldLineInput;
   root?: FoldModelLine;
 }
 
-/** Two independently constructed fold lines; their meeting point is derived. */
-export interface FoldSwivelLinesOp {
+/**
+ * A swivel on a folded edge as folders diagram it (engine
+ * `compound::swivel_valley_mountain`): on the layer that faces the viewer,
+ * the valley and the mountain bounding the flap, meeting at a point on the
+ * folded edge, each located as a fold's line is. The crease on the layer
+ * behind is computed. Its letters are the viewer's, so it has no direction:
+ * a swivel whose pair lies behind is made by turning the model over first.
+ * Open, its strip folding up across the valley, unless `swivel` says
+ * `'inside'`: the strip tucks under across the mountain.
+ */
+export interface FoldSwivelValleyMountainOp {
   kind: 'swivel';
-  via: 'lines';
-  first: FoldLocatedLine;
-  second: FoldLocatedLine;
-  direction: FoldDirection;
+  via: 'valley-mountain';
+  valley: FoldLocatedLine;
+  mountain: FoldLocatedLine;
   swivel?: 'inside';
 }
 
@@ -582,12 +579,12 @@ export type FoldSwivelKind = 'open' | 'inside';
 export const FOLD_SWIVEL_KINDS: readonly FoldSwivelKind[] = ['open', 'inside'];
 
 /** A swivel op's kind: inside only on a folded edge that says so. */
-export function swivelKindOf(op: FoldSwivelOp | FoldSwivelEdgeOp | FoldSwivelCreasesOp | FoldSwivelLinesOp): FoldSwivelKind {
+export function swivelKindOf(op: FoldSwivelOp | FoldSwivelEdgeOp | FoldSwivelValleyMountainOp): FoldSwivelKind {
   return 'swivel' in op && op.swivel === 'inside' ? 'inside' : 'open';
 }
 
 /** A swivel on a folded edge of the kind given: `swivel` spelled only when inside. */
-export function withSwivelKind<T extends FoldSwivelOnFoldOp | FoldSwivelCreasesOp | FoldSwivelLinesOp>(op: T, kind: FoldSwivelKind): T {
+export function withSwivelKind<T extends FoldSwivelOnFoldOp | FoldSwivelValleyMountainOp>(op: T, kind: FoldSwivelKind): T {
   const { swivel: _spelled, ...open } = op;
   return (kind === 'inside' ? { ...open, swivel: 'inside' } : open) as T;
 }
@@ -602,19 +599,32 @@ export function isSwivelOnFoldOp(op: FoldOp): op is FoldSwivelOnFoldOp {
   return isSwivelEdgeOp(op) && 'fold' in op;
 }
 
-export function isSwivelLinesOp(op: FoldOp): op is FoldSwivelLinesOp {
-  return op.kind === 'swivel' && 'via' in op && op.via === 'lines';
+/** Whether a swivel op names its swivel by its valley and mountain. */
+export function isSwivelValleyMountainOp(op: FoldOp): op is FoldSwivelValleyMountainOp {
+  return op.kind === 'swivel' && 'via' in op && op.via === 'valley-mountain';
 }
 
-export function isSwivelCreasesOp(op: FoldOp): op is FoldSwivelCreasesOp {
-  return op.kind === 'swivel' && 'via' in op && op.via === 'creases';
+/** Whether a swivel op's creases meet on a folded edge: by its edge there, or by its valley and mountain. */
+export function isFoldedSwivelOp(op: FoldOp): op is FoldSwivelOnFoldOp | FoldSwivelValleyMountainOp {
+  return isSwivelOnFoldOp(op) || isSwivelValleyMountainOp(op);
 }
 
-export function isFoldedSwivelOp(op: FoldOp): op is FoldSwivelOnFoldOp | FoldSwivelCreasesOp | FoldSwivelLinesOp {
-  return isSwivelOnFoldOp(op) || isSwivelCreasesOp(op) || isSwivelLinesOp(op);
-}
+export type FoldVertexOp =
+  | FoldSquashOp
+  | FoldPetalOp
+  | FoldRabbitEarOp
+  | FoldSwivelOp
+  | FoldSwivelEdgeOp
+  | FoldSwivelValleyMountainOp;
 
-export type FoldVertexOp = FoldSquashOp | FoldPetalOp | FoldRabbitEarOp | FoldSwivelOp | FoldSwivelEdgeOp | FoldSwivelCreasesOp | FoldSwivelLinesOp;
+/**
+ * The way a vertex op folds, as the viewer sees it: its own direction, or for
+ * a swivel by its valley and mountain, whose letters are the viewer's, toward
+ * the viewer.
+ */
+export function vertexDirectionOf(op: FoldVertexOp): FoldDirection {
+  return 'direction' in op ? op.direction : 'valley';
+}
 
 export type FoldVertexOpKind = FoldVertexOp['kind'];
 

@@ -1915,6 +1915,7 @@
       "sourceChanged": "Source steps changed. Update to rebuild this Repeat.",
       "stop": "Stop",
       "stopped": "Stopped before the repeat was ready. No steps were added.",
+      "swivelBehind": "On the other side, this swivel’s valley and mountain lie on the layer behind. Turn the model over and make the swivel there.",
       "title": "Repeat on the other side",
       "unavailable": "The source states are unavailable or changed. Wait for replay, then reopen Repeat.",
       "unsupported": "This range includes a Collapse or another Repeat that cannot yet be mirrored. Choose a range of fold operations.",
@@ -2561,10 +2562,10 @@
       "swivelEdgeLine": "Swivel the edge onto the line, pivoting at the point.",
       "swivelFoldCrease": "Swivel the edge onto the crease, the creases meeting on the folded edge.",
       "swivelFoldLine": "Swivel the edge onto the line, the creases meeting on the folded edge.",
-      "swivelHinges": "Swivel along the two located hinges.",
       "swivelInsideCrease": "Inside-swivel the edge onto the crease, the creases meeting on the folded edge.",
-      "swivelInsideHinges": "Inside-swivel along the two located hinges, tucking the strip between the layers.",
       "swivelInsideLine": "Inside-swivel the edge onto the line, the creases meeting on the folded edge.",
+      "swivelInsideValleyMountain": "Inside-swivel the flap along the valley and the mountain.",
+      "swivelValleyMountain": "Swivel-fold the flap along the valley and the mountain.",
       "tuckMountain": "Mountain fold and tuck the flap in at the back, over the chosen layer.",
       "tuckValley": "Valley fold and tuck the flap in, under the chosen layer.",
       "turn": "{{turn}}.",
@@ -2830,6 +2831,7 @@
       "swivelKindOpenHelp": "The other layer’s strip folds up over the rest of its layer, its back on show.",
       "title": "Step {{number}}",
       "valley": "Valley",
+      "valleyMountainHelp": "On the layer you see, the valley and the mountain that bound the flap, meeting on the folded edge. The crease on the layer behind follows from them.",
       "vertex": {
         "blocksHelp": "Pieces of paper that turn as one: each turns about the same creases, in the same order, to where it lands."
       }
@@ -2913,13 +2915,13 @@
       "targetLine": "Line through two points",
       "tuckMountain": "Mountain fold and tuck",
       "tuckValley": "Valley fold and tuck",
-      "twoHinges": "Meeting point and two hinges",
       "unfold": "Unfold",
       "unfolds_one": "Unfolds {{count}} crease",
       "unfolds_other": "Unfolds {{count}} creases",
       "unknown": "From a newer Ori Studio",
       "unsink": "Unsink",
       "valleyFold": "Valley fold",
+      "valleyMountain": "Valley and mountain",
       "valleyPrecrease": "Valley fold and unfold"
     }
   },
