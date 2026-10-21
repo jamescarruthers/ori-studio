@@ -65,7 +65,7 @@ import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
 import { FoldToolWindow } from '../FoldToolWindow';
 import { FoldActionLayer } from './FoldActionLayer';
 import { FoldPane } from './FoldPane';
-import { FoldPhoneBarControls } from './FoldPhoneBarControls';
+import { useFoldPhoneBarGroups } from './useFoldPhoneBarGroups';
 import { FoldViewportToolbar } from './FoldViewportToolbar';
 import { useFoldStepSpread, useFoldStepSpreadShown } from '../../../fold/sequence/useFoldStepSpread';
 import styles from './FoldCanvas.module.css';
@@ -80,8 +80,8 @@ import styles from './FoldCanvas.module.css';
  * transition. The tool rail
  * is the panel's, down its whole side (`FoldWorkspaceRail`). A crease pattern
  * dropped on it is the panel's to import (`useFoldDrop`, in `FoldPanel`). On
- * a phone, one pane at a time, and the rail's tools in a sheet opened from
- * the bar, beside the pane switch (`FoldPhoneBarControls`); the tool window
+ * a phone, one pane at a time: the starred tools and the pane switch on the
+ * bar (`useFoldPhoneBarGroups`), the rest in the header's sheet; the tool window
  * starts as its title bar, so the paper stays in view while points are
  * picked (`FoldToolWindow`).
  *
@@ -119,6 +119,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   useEffect(() => registerFoldKindControl(foldToolKindControl(tools)), [tools]);
 
   const phone = useIsPhoneLayout();
+  const phoneGroups = useFoldPhoneBarGroups(phone);
   const coarse = useIsCoarsePointerSurface();
   const phonePane = useFoldPhonePane();
   const readOnly = useFoldReadOnly();
@@ -405,7 +406,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           display={display}
           onDisplay={setFoldPaneDisplay}
           spread={spread?.toggle ?? null}
-          phoneControls={phone ? <FoldPhoneBarControls /> : undefined}
+          phoneGroups={phoneGroups}
           sendToEdit={sendToEdit}
         />
       </div>

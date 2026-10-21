@@ -10,7 +10,8 @@ import { FoldToolRail } from './FoldToolRail';
  * user's keys, with a touch tablet's free-point latch at its head. The panel
  * seats it beside the header, the strip and the canvas — and beside the Steps
  * view, where a press opens the canvas with the tool in hand. A phone has no
- * rail: its tools are a sheet on the canvas's bar (`FoldPhoneBarControls`).
+ * rail: its tools are the header's Tools sheet (`FoldToolsTrigger`) and its
+ * starred ones the canvas's bar (`useFoldPhoneBarGroups`).
  */
 export function FoldWorkspaceRail() {
   const groups = useFoldRailGroups();

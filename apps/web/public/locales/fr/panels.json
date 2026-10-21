@@ -1876,7 +1876,8 @@
     },
     "header": {
       "moreExports": "Autres façons d’exporter",
-      "moreVerbs": "Importer, envoyer et exporter"
+      "moreVerbs": "Importer, envoyer et exporter",
+      "moreVerbsButExport": "Déplier, importer et envoyer"
     },
     "load": {
       "failed": "L'espace de travail Plier n'a pas pu être chargé",

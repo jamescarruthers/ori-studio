@@ -13,6 +13,7 @@ import { useLayoutStore } from '../../store/layoutStore';
 import { FileDropOverlay } from '../FileDropOverlay';
 import { FoldCanvas } from '../fold/canvas/FoldCanvas';
 import { FoldHeader } from '../fold/FoldHeader';
+import { FoldToolsTrigger } from '../fold/FoldToolsTrigger';
 import { FoldWorkspaceRail } from '../fold/FoldWorkspaceRail';
 import { FoldStepStrip } from '../fold/steps/FoldStepStrip';
 import styles from './FoldPanel.module.css';
@@ -21,7 +22,8 @@ import styles from './FoldPanel.module.css';
  * The Fold workspace's dock panel: the composition site for the tool rail
  * down its whole left side, and beside it the header and the step strip over
  * the split canvas (`implementation-plans/fold-workspace.md`, D14). A phone
- * has no rail, its tools a sheet on the canvas's bar.
+ * has no rail: its tools are a sheet behind the header's Tools pill, the
+ * starred ones on the canvas's bar.
  *
  * It holds the Fold session while mounted (`useFoldSession`), so the worker
  * runs and the sequence is replayed while the workspace is open, and the keys
@@ -68,6 +70,7 @@ export function FoldPanel() {
             actions={actions}
             sendToEdit={sendToEdit}
             drawerSlot={setViewDrawerSlot}
+            tools={({ compact }) => <FoldToolsTrigger compact={compact} />}
           />
           <FoldStepStrip view={sequence} />
           <div className={`panel-body ${styles.body}`}>

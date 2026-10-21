@@ -10,8 +10,15 @@ import {
   type FoldShortcutId,
 } from '../../fold/tools/foldToolCatalog';
 import { foldRailGroups, type FoldToolsView } from '../../fold/tools/foldRailGroups';
+import {
+  FOLD_DEFAULT_FAVORITE_IDS,
+  foldToolFavoriteIds,
+  resetFoldToolFavorites,
+} from '../../fold/tools/foldToolFavorites';
+import { cpToolFavoriteIds, CP_DEFAULT_FAVORITE_ACTION_IDS } from '../../cp-workspace/toolCatalog/cpToolFavorites';
 import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
 import { cpActionByOperation } from '../../lib/oristudioCpActions';
+import { STORAGE_KEYS, storageKey } from '../../lib/storage';
 import { allByRole, byRole, queryByRole } from '../../test/roleQueries';
 import { TooltipProvider } from '../ui/Tooltip';
 import { FoldActionIcon } from './FoldActionIcon';
@@ -32,6 +39,7 @@ afterEach(() => {
   host?.remove();
   host = null;
   localStorage.clear();
+  resetFoldToolFavorites();
 });
 
 function mount(node: React.ReactNode): HTMLDivElement {
@@ -107,9 +115,11 @@ describe('FoldToolPickerSheet', () => {
     const groups = foldRailGroups(t, view, calls);
     const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={groups} close={close} />);
     expect(byRole(sheet, 'dialog', 'Fold tools')).toBeTruthy();
-    expect([...sheet.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual(
-      groups.map((group) => group.label)
-    );
+    // The starred tools first, then the rail's groups.
+    expect([...sheet.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual([
+      'Favorites',
+      ...groups.map((group) => group.label),
+    ]);
     // The same items as the rail, one row each.
     expect([...sheet.querySelectorAll('[data-fold-tool]')].map((row) => row.getAttribute('data-fold-tool'))).toEqual(
       groups.flatMap((group) => group.items.map((item) => item.id))
@@ -123,12 +133,44 @@ describe('FoldToolPickerSheet', () => {
     const calls = verbs();
     const close = vi.fn();
     const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, { ...view, readOnly: 'locked' }, calls)} close={close} />);
-    const row = byRole(sheet, 'button', /^Valley fold/);
+    const row = sheet.querySelector<HTMLButtonElement>('[data-fold-tool="valley"] [data-tool-item]');
+    if (!row) throw new Error('no Valley fold row');
     expect(row.getAttribute('aria-disabled')).toBe('true');
     act(() => row.click());
     expect(calls.selectTool).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
     expect(sheet.textContent).not.toContain('Planned');
+  });
+
+  it('heads the sheet with the starred tools, and a star adds one there without moving its row', () => {
+    const calls = verbs();
+    const close = vi.fn();
+    const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, view, calls)} close={close} />);
+    const favorites = () =>
+      [...sheet.querySelectorAll('[data-fold-favorite]')].map((row) => row.getAttribute('data-fold-favorite'));
+    expect(favorites()).toEqual(FOLD_DEFAULT_FAVORITE_IDS);
+    // Starring is a shortcut, not a move: Squash fold keeps its row in Fold.
+    const star = byRole(sheet, 'button', 'Add Squash fold to favorites');
+    expect(star.getAttribute('aria-pressed')).toBe('false');
+    act(() => star.click());
+    expect(favorites()).toEqual([...FOLD_DEFAULT_FAVORITE_IDS, 'squash']);
+    expect(sheet.querySelector('[data-fold-tool="squash"]')).not.toBeNull();
+    // A star is not a pick: the sheet stays open.
+    expect(close).not.toHaveBeenCalled();
+    expect(calls.selectTool).not.toHaveBeenCalled();
+    // Un-starred from Favorites, it leaves them.
+    const unstar = sheet.querySelector<HTMLButtonElement>('[data-fold-favorite="valley"] [data-favorite-toggle]');
+    act(() => unstar?.click());
+    expect(favorites()).toEqual(['mountain', 'precrease', 'turn-over', 'squash']);
+    expect(foldToolFavoriteIds()).toEqual(['mountain', 'precrease', 'turn-over', 'squash']);
+  });
+
+  it('keeps Fold’s favorites apart from Edit’s', () => {
+    const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, view, verbs())} close={vi.fn()} />);
+    act(() => byRole(sheet, 'button', 'Add Squash fold to favorites').click());
+    expect(cpToolFavoriteIds()).toEqual(CP_DEFAULT_FAVORITE_ACTION_IDS);
+    expect(localStorage.getItem(storageKey(STORAGE_KEYS.foldToolFavorites))).toContain('squash');
+    expect(localStorage.getItem(storageKey(STORAGE_KEYS.cpToolFavorites))).toBeNull();
   });
 });
 

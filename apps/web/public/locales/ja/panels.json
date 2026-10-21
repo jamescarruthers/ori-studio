@@ -1772,7 +1772,8 @@
     },
     "header": {
       "moreExports": "その他の書き出し方法",
-      "moreVerbs": "読み込み・送信・書き出し"
+      "moreVerbs": "読み込み・送信・書き出し",
+      "moreVerbsButExport": "展開・読み込み・送信"
     },
     "load": {
       "failed": "折りワークスペースを読み込めませんでした",

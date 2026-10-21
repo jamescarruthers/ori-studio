@@ -1,5 +1,6 @@
 /**
- * The star beside a tool row.
+ * The star beside a tool row in the phone tool sheet (`ToolPickerRow`'s
+ * `leading`), for a workspace whose tools can be favorited: Edit's and Fold's.
  *
  * # Not an `IconButton`
  *
@@ -22,35 +23,29 @@
  * begins on the star is not the beginning of a drag.
  */
 import { Star } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import styles from './CpToolFavoriteToggle.module.css';
+import styles from './ToolFavoriteToggle.module.css';
 
-export function CpToolFavoriteToggle({
-  /** The tool's already-localized name, for the label this button has no room to show. */
-  toolLabel,
+export function ToolFavoriteToggle({
+  label,
   favorited,
   onToggle,
 }: {
-  toolLabel: string;
+  /**
+   * The button's name, already localized and naming the tool ("Add Valley fold
+   * to favorites"). Interpolated by the workspace, because icon-only means this
+   * label is the only name the button has — and a sheet of rows would otherwise
+   * hold a button per row all announcing "Add to favorites".
+   */
+  label: string;
   favorited: boolean;
   onToggle: () => void;
 }) {
-  const { t } = useTranslation();
   return (
     <button
       type="button"
       className={styles.star}
       data-favorite-toggle=""
-      // Interpolated, because icon-only means this label is the only name the
-      // button has — and a sheet of 52 rows would otherwise hold 52 buttons all
-      // announcing "Add to favorites".
-      aria-label={
-        favorited
-          ? t('tools:cpToolPicker.removeFavorite', 'Remove {{tool}} from favorites', {
-              tool: toolLabel,
-            })
-          : t('tools:cpToolPicker.addFavorite', 'Add {{tool}} to favorites', { tool: toolLabel })
-      }
+      aria-label={label}
       aria-pressed={favorited}
       data-favorited={favorited || undefined}
       onPointerDown={(event) => event.stopPropagation()}

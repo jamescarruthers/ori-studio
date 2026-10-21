@@ -134,7 +134,10 @@ export type { AnalyticsApi, AnalyticsErrorContext } from './runtime';
 export {
   trackCpToolFavorited,
   trackCpToolFavoritesReordered,
-} from './trackCpToolFavorites';
+  trackFoldToolFavorited,
+  trackFoldToolFavoritesReordered,
+  trackFoldToolPickerOpened,
+} from './trackToolFavorites';
 export { trackCommunityLink } from './trackCommunityLink';
 export { trackDesignSentToEdit } from './trackSendToEdit';
 export {

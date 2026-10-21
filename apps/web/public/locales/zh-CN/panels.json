@@ -1772,7 +1772,8 @@
     },
     "header": {
       "moreExports": "更多导出方式",
-      "moreVerbs": "导入、发送和导出"
+      "moreVerbs": "导入、发送和导出",
+      "moreVerbsButExport": "展开、导入和发送"
     },
     "load": {
       "failed": "折叠工作区未能加载",

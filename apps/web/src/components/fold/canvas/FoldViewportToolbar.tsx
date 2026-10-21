@@ -16,9 +16,9 @@ import { FoldFlatCreasesIcon } from './FoldFlatCreasesIcon';
  * (`spread`, the Step pane's switch: a setting of the step, not of the view),
  * and a slot for Send to Edit, which the panel supplies.
  *
- * A phone's bar leads with the canvas's own controls (`phoneControls`: the
- * tools and the pane switch); the display switches and Fit are in its `⋯`
- * menu, the zoom left to a pinch.
+ * A phone's bar leads with the canvas's own controls (`phoneGroups`: the
+ * starred tools and the pane switch); the display switches and Fit are in its
+ * `⋯` menu, the zoom left to a pinch.
  */
 export function FoldViewportToolbar({
   zoomPercent,
@@ -26,7 +26,7 @@ export function FoldViewportToolbar({
   display,
   onDisplay,
   spread = null,
-  phoneControls,
+  phoneGroups = [],
   sendToEdit,
 }: {
   zoomPercent: number;
@@ -40,13 +40,13 @@ export function FoldViewportToolbar({
   onDisplay: (display: FoldPaneDisplay) => void;
   /** The step on screen's Spread Layers (`useFoldStepSpread`); null at the flat sheet, which has none. */
   spread?: LayerSpreadToggle | null;
-  /** A phone's: the tools and the pane switch (`FoldPhoneBarControls`), at the head of the bar. */
-  phoneControls?: ReactNode;
+  /** A phone's: the starred tools and the pane switch (`useFoldPhoneBarGroups`), at the head of the bar. */
+  phoneGroups?: readonly ViewportToolbarGroupSpec[];
   sendToEdit?: ReactNode;
 }) {
   const { t } = useTranslation();
   const groups: ViewportToolbarGroupSpec[] = [
-    { id: 'phone', items: [phoneControls ? { kind: 'node', id: 'fold-phone-controls', node: phoneControls } : null] },
+    ...phoneGroups,
     {
       id: 'display',
       items: [

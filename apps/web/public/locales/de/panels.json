@@ -1823,7 +1823,8 @@
     },
     "header": {
       "moreExports": "Weitere Exportmöglichkeiten",
-      "moreVerbs": "Importieren, senden und exportieren"
+      "moreVerbs": "Importieren, senden und exportieren",
+      "moreVerbsButExport": "Entfalten, importieren und senden"
     },
     "load": {
       "failed": "Der Falten-Arbeitsbereich konnte nicht geladen werden",

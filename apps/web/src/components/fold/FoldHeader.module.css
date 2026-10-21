@@ -1,12 +1,12 @@
 /*
  * What the Fold header (FoldHeader.tsx) adds to the shared toolbar frame: the
- * count of steps on the left, the sequence's verbs on the right. A row too
- * narrow for both wraps, the verbs right-aligned under the count, rather than
- * squeezing either — except on a phone, where the header has made itself one
- * row's worth (`data-phone`).
+ * count of steps on the left, the sequence's verbs on the right, in one row.
+ * The row is measured (`useFitLevel`): what does not fit goes into its `⋯`
+ * menu rather than wrapping or off the row's start — where, under the rail,
+ * undo and redo would be out of reach.
  */
 .header {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   column-gap: var(--space-2);
 }
 
@@ -21,10 +21,14 @@
   white-space: nowrap;
 }
 
-/* The verbs: the rest of the row, at its right end. */
+/*
+ * The verbs, at the row's right end and at their natural width, so what they
+ * need is what they take: the width the header measures them by.
+ */
 .actions {
-  flex: 1 1 auto;
+  flex: none;
   justify-content: flex-end;
+  margin-inline-start: auto;
 }
 
 /*
@@ -32,37 +36,11 @@
  * only while the window leaves the row room for it beside the others. With
  * the rail and the side pane at their default widths the verbs, Repeat
  * included, need about 615 px: 647 px are there at a 1100 px window, 567 px
- * at 1000 px. Narrower, Repeat would only make the row wrap sooner (the
- * 720 px rule below).
+ * at 1000 px. Narrower, Repeat would only make the row collapse sooner.
  */
 @media (max-width: 1099px) {
   /* Scoped to the row, so it outranks the button's own display rather than tying with it. */
   .actions > .wideOnly {
     display: none;
   }
-}
-
-/*
- * A pane too narrow for the count and the verbs together, short of a phone:
- * the verbs wrap within their own row rather than off the pane's edge.
- */
-@media (max-width: 720px) {
-  .header:not([data-phone]) .actions {
-    flex-basis: 100%;
-    flex-wrap: wrap;
-    row-gap: var(--space-1);
-    padding-block: var(--space-1);
-  }
-}
-
-/*
- * A phone: one row. The verbs are one `⋯` menu, and the row ends in undo,
- * redo and the drawer's pill — what fits at 375 px.
- */
-.header[data-phone] {
-  flex-wrap: nowrap;
-}
-
-.header[data-phone] .actions {
-  min-width: 0;
 }

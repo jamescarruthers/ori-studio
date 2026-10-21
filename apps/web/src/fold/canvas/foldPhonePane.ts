@@ -4,7 +4,7 @@ import type { FoldPaneId } from './foldPicking';
 /**
  * Which of the Fold canvas's two panes a phone shows (plan D14): one at a
  * time, swapped by the pane switch on the canvas's bar
- * (`FoldPhoneBarControls`). Held here rather than in a component: it is the
+ * (`useFoldPhoneBarGroups`). Held here rather than in a component: it is the
  * view's, never the document's, and a reload starts on the folded form,
  * where folding happens.
  */

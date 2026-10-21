@@ -1876,7 +1876,8 @@
     },
     "header": {
       "moreExports": "Más formas de exportar",
-      "moreVerbs": "Importar, enviar y exportar"
+      "moreVerbs": "Importar, enviar y exportar",
+      "moreVerbsButExport": "Desplegar, importar y enviar"
     },
     "load": {
       "failed": "El espacio de trabajo de plegado no se cargó",
