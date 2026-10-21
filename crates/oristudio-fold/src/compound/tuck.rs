@@ -13,6 +13,12 @@
 //!   spike's hinges-only closure leaves such a layer inside the taco (its
 //!   case 4d). T itself never moves: a seed or a crease that would take it
 //!   is refused.
+//! - **T is a layer.** The faces joined to T across unfolded creases, the
+//!   cross-section's display layer, are T too: they stay, and bound the
+//!   closure as T does. A precrease splits one layer into faces, and a piece
+//!   of T's layer that meets no face of T is no layer between the block and
+//!   T. The layer never reaches through the seed's flaps, whose crease with
+//!   T is the fold itself.
 //! - **The order** reads "immediately under T" strictly (the spike's H1):
 //!   pairs that stay are kept and the block turns over as one; the block lies
 //!   under T; a layer G that meets T lies beyond T where it is under every
@@ -52,6 +58,7 @@ use crate::compound::{
 };
 use crate::fold::closure::{MovingSide, moving_side, resolve_seed};
 use crate::fold::line::{self, Axis, Classified};
+use crate::fold::section::flat_components_within;
 use crate::fold::{
     ActionKind, FoldActionGeometry, FoldAnalysis, PlainFold, ResolvedSeed, Seed, Snap,
 };
@@ -263,6 +270,10 @@ struct Tuck {
     /// Per face position, its moving piece's box (an empty box for none).
     boxes: Vec<[f64; 4]>,
     index: BoxIndex,
+    /// Per face position, its display layer (the cross-section's rows),
+    /// never joined through the seed's flaps: a target's layer is the paper
+    /// that stays with it.
+    layer: Vec<usize>,
 }
 
 impl Tuck {
@@ -285,12 +296,19 @@ impl Tuck {
         self.classified.axis.line_and_side().1
     }
 
-    /// The faces that move for a tuck against the face at position `target`
-    /// (or against no face yet, for the targets' listing), per face position
-    /// (see the module docs). Refused when everything would move, or T
-    /// would.
+    /// The faces that move for a tuck against the faces at positions
+    /// `targets` (or against no face yet, for the targets' listing), per face
+    /// position (see the module docs). Refused when everything would move, or
+    /// a target's layer would.
     fn closure(&self, state: &State, targets: &[usize]) -> Result<Vec<bool>, Refused> {
         let faces = state.faces();
+        // Each target with its whole flat layer: a layer is between the
+        // block and T only where it lies short of every face of that layer
+        // it meets, and none of the layer moves.
+        let targets: Vec<usize> = (0..faces.len())
+            .filter(|&f| targets.iter().any(|&t| self.layer[t] == self.layer[f]))
+            .collect();
+        let targets = &targets[..];
         let target_moves =
             |f: usize| -> Refused { FoldRefusal::TuckTargetMoves { face: faces[f].id }.into() };
         let under = self.under();
@@ -813,6 +831,12 @@ impl State {
             .map(|p| convex::bounding_box(p.as_deref().unwrap_or(&[])))
             .collect();
         let index = BoxIndex::new(boxes.clone());
+        // The seed's flaps fold: their F crease with T, if any, is the fold
+        // itself, so T's layer stops at them.
+        let seed_flaps: Vec<usize> = seed.iter().filter_map(|&f| side.flap_of[f]).collect();
+        let layer = flat_components_within(self, |f| {
+            side.flap_of[f].is_none_or(|k| !seed_flaps.contains(&k))
+        });
         Ok(Tuck {
             classified,
             side,
@@ -820,6 +844,7 @@ impl State {
             seed,
             boxes,
             index,
+            layer,
         })
     }
 

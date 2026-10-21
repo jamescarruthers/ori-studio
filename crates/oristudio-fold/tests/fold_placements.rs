@@ -72,6 +72,49 @@ fn selecting_one_flap_offers_only_landings_of_that_flap() {
     assert!(both.candidates().iter().all(|c| c.moving.len() == 2));
 }
 
+/// The envelope's top flaps: a precrease on the fold line splits the layer
+/// the flap tucks against into the piece the flap lies on and the piece it
+/// lands on. The piece it lies on meets no face of the target, but it is the
+/// target's own flat layer, not a layer between them: it stays, and the
+/// selected corner still lands inside the book, alone.
+#[test]
+fn a_precrease_on_the_line_does_not_split_the_target_layer() {
+    let line = through([0., 0.3], [0.3, 0.]);
+    // The precrease lies under the corner that folds: in the top layer for
+    // a valley (the bottom corner tucks up under it), in the bottom layer
+    // for a mountain (the top corner tucks down over it).
+    for (direction, precrease_at, flap) in [
+        (
+            Direction::Valley,
+            through([1., 0.3], [0.7, 0.]),
+            [0.05, 0.05],
+        ),
+        (Direction::Mountain, line, [0.95, 0.05]),
+    ] {
+        let sheet = State::flat(Sheet::square(), StartSide::Front).unwrap();
+        let toward = if direction == Direction::Valley {
+            [0.98, 0.02]
+        } else {
+            [0.02, 0.02]
+        };
+        let creased = precrease(&sheet, &all(precrease_at, toward, Direction::Valley)).state;
+        let book = fold(&creased, &all(x_eq(0.5), [0.75, 0.5], Direction::Valley)).state;
+        let op = all(line, [0.02, 0.02], direction).with_seed(Seed::Flaps { at: vec![flap] });
+        let mut search = FoldPlacementSearch::new(&book, &op);
+        complete(&mut search);
+        assert_eq!(
+            search.count().orders,
+            1,
+            "{direction:?}: {:?}",
+            search.refusal()
+        );
+        let only = &search.candidates()[0];
+        assert!(matches!(only.landing, FoldLanding::Against { .. }));
+        assert_eq!(only.moving, vec![book.face_at(flap).unwrap()]);
+        assert_valid(&only.state);
+    }
+}
+
 #[test]
 fn a_limited_search_does_not_claim_its_outer_result_is_unique() {
     let sheet = State::flat(Sheet::square(), StartSide::Front).unwrap();

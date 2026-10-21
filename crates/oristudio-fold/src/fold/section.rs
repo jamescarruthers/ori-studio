@@ -535,6 +535,13 @@ fn section(state: &State, along: &Along) -> CrossSection {
 /// Per face position, its display layer: the least position joined to it
 /// across F creases.
 fn flat_components(state: &State) -> Vec<usize> {
+    flat_components_within(state, |_| true)
+}
+
+/// [`flat_components`] joined only across F creases between two faces
+/// `within` admits: a face it refuses is a layer of its own, and no layer
+/// reaches through it.
+pub(crate) fn flat_components_within(state: &State, within: impl Fn(usize) -> bool) -> Vec<usize> {
     let n = state.faces().len();
     let mut parent: Vec<usize> = (0..n).collect();
     fn root(parent: &mut [usize], mut x: usize) -> usize {
@@ -548,7 +555,10 @@ fn flat_components(state: &State) -> Vec<usize> {
         if !matches!(crease.kind, CreaseKind::Flat(_)) {
             continue;
         }
-        if let [f, g] = state.topology().crease_faces[k][..] {
+        if let [f, g] = state.topology().crease_faces[k][..]
+            && within(f)
+            && within(g)
+        {
             let (a, b) = (root(&mut parent, f), root(&mut parent, g));
             parent[a.max(b)] = a.min(b);
         }
