@@ -21,8 +21,9 @@
 //! - **Parts** are the completion's independent components. A part made only
 //!   of faces that do not move is never offered: its pairs are pinned to the
 //!   parent's order before anything is listed ([`FoldOrders::pins`]). The
-//!   carry already fixes every such pair, so the pin is a guard; the corpus
-//!   probe (`tests/solved_orders.rs`) checks it never fires.
+//!   carry already fixes every such pair, so the pin is a guard: the seeded
+//!   campaign (`oristudio-fold-wasm/tests/solved_orders.rs`) and every
+//!   corpus on disk (2,959 replayed steps) list no part without a moving face.
 //! - **A choice** is one listed order per part. The fold asks only when the
 //!   moving paper has more than one valid order ([`FoldOrders::count`]).
 //!

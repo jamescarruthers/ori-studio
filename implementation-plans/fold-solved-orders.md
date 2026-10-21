@@ -84,21 +84,35 @@ byte-identical.
 
 ## Checklist
 
-- [ ] Engine: `fold_orders`, `fold_solved`, `FoldLanding::Solved`, parts never
+- [x] Engine: `fold_orders`, `fold_solved`, `FoldLanding::Solved`, parts never
       of non-moving faces (doc + pin)
-- [ ] Engine tests: envelope-like 3×3 case, replay pinned, broken on
-      ambiguity, fallback rule
-- [ ] Bridge: resolve, apply, analysis, order selection per part
-- [ ] Bridge tests
-- [ ] Web: document reader/writer, resolution per part, chooser rows, canvas
+- [x] Engine tests: two seeded multi-part folds (2 × 5, 2 × 2) reach every
+      combination, replay pinned, broken without its pairs or with one part's
+- [x] Bridge: resolve, apply, analysis, order selection per part; a fold with
+      no order refused as the outer recipe refuses it; fallback otherwise
+- [x] Bridge tests
+- [x] Web: document reader/writer, resolution per part, chooser rows, canvas
       tint, keys, Repeat, analytics, i18n (8 locales)
-- [ ] Web tests
-- [ ] Proof: reachability of every saved outer/against step (fixtures, owner
-      folder, Repeat-nested), superset of the recipe search, randomized
-      breadth, envelope 9/9, fingerprints of old files, timings
-- [ ] Corpus probe: at every chooser step, new ask vs old ask, parts with no
+- [x] Web tests
+- [x] Proof: reachability of every saved outer/against step (fixtures, owner
+      folder, research corpora, Repeat-nested), superset of the recipe search,
+      randomized breadth, envelope 9/9, fingerprints of old files, timings
+- [x] Corpus probe: at every chooser step, new ask vs old ask, parts with no
       moving face (must be 0), across fixtures, owner folder and research
       corpora
-- [ ] Browser: envelope book order through the tool, screenshots, saved copy
-- [ ] PORTING.md, docs/analytics.md
-- [ ] cargo test/clippy/fmt, vitest, tsc, eslint, i18n:check
+- [x] Browser: envelope book order through the tool, screenshots, saved copy
+- [x] PORTING.md, docs/analytics.md, the landing format
+      (`unified-mountain-valley-placement.md`)
+- [x] cargo test/clippy/fmt, vitest, tsc, eslint, i18n:check
+
+## Known limits
+
+- The completion searches around the moving faces; the gate checks the whole
+  state. In the seeded campaign 3 of 1,123 listed folds had one order the gate
+  refused: such a fold is listed as having none. A listing of several orders
+  is not landed whole up front, so a pick the gate refuses is refused when
+  picked (seen in neither the campaign nor the corpora).
+- A tuck names its placement, not its hinge: of 375 seeded tuck states, 268
+  land by folding the other way (that direction's listing has them) and 10
+  fold some hinges each way, which no valley or mountain lists and the recipe
+  search refuses too.
