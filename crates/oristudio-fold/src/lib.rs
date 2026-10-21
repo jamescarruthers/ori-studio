@@ -148,6 +148,7 @@ pub use compound::vertex::{
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use crease_marks::{CreaseMark, Extent, PINCH_FRACTION, default_pinch_length};
 pub use fold::placements::{FoldLanding, FoldPlacement, FoldPlacementSearch};
+pub use fold::solved::{FoldOrders, OrderPart, SolvedFolded, Unfinished, Unlisted};
 pub use fold::{
     ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,
     FoldLineSpan, FoldReport, Folded, Grip, Placement, PlainFold, Pleat, Push, Refold, RowOrder,

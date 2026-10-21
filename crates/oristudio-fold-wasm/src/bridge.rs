@@ -19,8 +19,8 @@
 use std::collections::HashMap;
 
 use oristudio_fold::{
-    ActionKind, AnchoredRefused, CreaseDiff, CreaseKind, FoldAnalysis, Folded, Letter, Sheet, Side,
-    State, StepSummary,
+    ActionKind, AnchoredRefused, CompletionLimits, CreaseDiff, CreaseKind, FoldAnalysis, Folded,
+    Letter, Sheet, Side, State, StepSummary,
 };
 use oristudio_geometry::Line;
 
@@ -277,6 +277,15 @@ impl Bridge {
             }
             .map(|folded| fold(folded, kind))
             .map_err(Refusal::from),
+            // A solved landing is a plain fold in the order its step chose:
+            // held, pictured and summarised as one.
+            Ok(Resolved::Solved {
+                fold: plain,
+                stored,
+            }) => parent
+                .fold_solved(&plain, stored.as_ref(), &CompletionLimits::default())
+                .map(|folded| fold(folded, ActionKind::Fold))
+                .map_err(crate::compound::compound_refusal),
             Ok(Resolved::View(landed)) => Ok(Held::View {
                 state: landed,
                 parent: state,
@@ -534,6 +543,10 @@ fn analysis_of(
             .analysis(parent)
             .ok_or_else(|| asks_its_own(op))?
             .map(|analysis| (analysis, ActionKind::Fold)),
+        Ok(Resolved::Solved { fold, .. }) => parent
+            .analyse_solved(&fold)
+            .map(|analysis| (analysis, ActionKind::Fold))
+            .map_err(Refusal::from),
         Ok(Resolved::View(_) | Resolved::Jump(_)) => return Err(no_plain_fold(op)),
         Err(refusal) => Err(refusal),
     })

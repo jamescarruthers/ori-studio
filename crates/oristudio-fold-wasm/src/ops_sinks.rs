@@ -263,7 +263,7 @@ impl CompoundOp for SinkResolved {
         parent: &State,
         query: &crate::order_selection::OrderQuery,
     ) -> Result<crate::order_selection::OrderSelection, Refusal> {
-        use crate::order_selection::OrderSelection;
+        use crate::order_selection::{OrderSelection, Picked};
         match match self {
             Self::Sink { op, choices } => parent.sink_within(op, choices, &query.limits()),
             Self::Unsink { op, choices } => parent.unsink_within(op, choices, &query.limits()),
@@ -273,7 +273,13 @@ impl CompoundOp for SinkResolved {
             }
             Ok(SinkOutcome::ChooseOrder(choice)) => {
                 OrderSelection::pick(choice.completions(), query, |pick| {
-                    choice.pick(pick).map(|folded| folded.report.stored.order)
+                    choice.pick(pick).map(|folded| {
+                        Picked::new(
+                            folded.report.stored.order,
+                            &folded.state,
+                            &folded.report.fold,
+                        )
+                    })
                 })
             }
             Ok(SinkOutcome::ChoosePocket(_)) => Err(crate::compound::choice_needed(

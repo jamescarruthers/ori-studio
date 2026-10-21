@@ -757,16 +757,20 @@ impl CompoundOp for VertexFold {
         parent: &State,
         query: &crate::order_selection::OrderQuery,
     ) -> Result<crate::order_selection::OrderSelection, Refusal> {
-        use crate::order_selection::OrderSelection;
+        use crate::order_selection::{OrderSelection, Picked};
         match fold_within(parent, self, &query.limits()) {
             Ok(VertexOutcome::Landed(folded)) => {
                 Ok(OrderSelection::unique(folded.report.stored.completion))
             }
             Ok(VertexOutcome::ChooseOrder(choice)) => {
                 OrderSelection::pick(choice.completions(), query, |pick| {
-                    choice
-                        .pick(pick)
-                        .map(|folded| folded.report.stored.completion)
+                    choice.pick(pick).map(|folded| {
+                        Picked::new(
+                            folded.report.stored.completion,
+                            &folded.state,
+                            &folded.report.fold,
+                        )
+                    })
                 })
             }
 

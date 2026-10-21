@@ -400,14 +400,20 @@ impl CompoundOp for CrimpStep {
         parent: &State,
         query: &crate::order_selection::OrderQuery,
     ) -> Result<crate::order_selection::OrderSelection, Refusal> {
-        use crate::order_selection::OrderSelection;
+        use crate::order_selection::{OrderSelection, Picked};
         match parent.crimp_fold_within(&self.fold, &self.choices, &query.limits()) {
             Ok(CrimpOutcome::Landed(folded)) => {
                 Ok(OrderSelection::unique(folded.report.stored.order))
             }
             Ok(CrimpOutcome::ChooseOrder(choice)) => {
                 OrderSelection::pick(choice.completions(), query, |pick| {
-                    choice.pick(pick).map(|folded| folded.report.stored.order)
+                    choice.pick(pick).map(|folded| {
+                        Picked::new(
+                            folded.report.stored.order,
+                            &folded.state,
+                            &folded.report.fold,
+                        )
+                    })
                 })
             }
             Ok(CrimpOutcome::ChooseOpening(_)) => Err(crate::compound::choice_needed(
@@ -465,14 +471,20 @@ impl CompoundOp for TuckStep {
         parent: &State,
         query: &crate::order_selection::OrderQuery,
     ) -> Result<crate::order_selection::OrderSelection, Refusal> {
-        use crate::order_selection::OrderSelection;
+        use crate::order_selection::{OrderSelection, Picked};
         match parent.tuck_fold_within(&self.fold, &self.choices, &query.limits()) {
             Ok(TuckOutcome::Landed(folded)) => {
                 Ok(OrderSelection::unique(folded.report.stored.order))
             }
             Ok(TuckOutcome::ChooseOrder(choice)) => {
                 OrderSelection::pick(choice.completions(), query, |pick| {
-                    choice.pick(pick).map(|folded| folded.report.stored.order)
+                    choice.pick(pick).map(|folded| {
+                        Picked::new(
+                            folded.report.stored.order,
+                            &folded.state,
+                            &folded.report.fold,
+                        )
+                    })
                 })
             }
 
