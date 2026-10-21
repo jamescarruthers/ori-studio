@@ -46,6 +46,9 @@ import {
 import { foldExtentState, type FoldExtentState } from '../tools/precrease/precreaseExtent';
 import { lineSideKeyOf } from '../tools/topFlapSeed';
 import { foldAlongLine, type FoldAlongLine } from './foldAlongLine';
+import type { FoldPick } from './foldPicking';
+import type { FoldMoverFix } from '../tools/moverStays';
+import { useFoldMoverFix } from './useFoldMoverFix';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldLineSection } from './useFoldLineSection';
@@ -115,6 +118,11 @@ export interface FoldToolPreview {
   landed: FoldLandedPreview | null;
   /** Why it does not land; null while it does, or has not been asked. */
   refused: FoldEngineRefused | null;
+  /**
+   * Refused as its point staying put: the point at the same spot on paper
+   * that folds, which lands it (`useFoldMoverFix`); null while none is known.
+   */
+  moverFix?: FoldMoverFix | null;
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
   /** The reverse tool's: the tip as the engine described it, and the kind, opening and order taken. */
@@ -514,6 +522,8 @@ export function useFoldToolPreview(
     vertexStep.refused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
+  // A point that stays put, swapped for one at its spot that folds: a plain fold's, from its picks.
+  const moverFix = useFoldMoverFix(session, index, step, refused, tools.override ? NO_PICKS : picks);
 
   // Each refusal shown is counted once, by what the tools asked for — a
   // vertex fold or a tuck refused before any step is built has no step to
@@ -548,6 +558,7 @@ export function useFoldToolPreview(
     landed: rotating ? null : landedPreview,
     turned: rotating ? (landedPreview?.scene ?? null) : null,
     refused,
+    moverFix,
     landing: step !== null && (pendingFor === null || pendingFor.status === 'working'),
     reverse: reverseStep.reverse,
     crimp: crimpStep.crimp,
@@ -561,6 +572,7 @@ export function useFoldToolPreview(
 }
 
 const WHOLE: FoldExtentState = { status: 'whole' };
+const NO_PICKS: readonly FoldPick[] = [];
 
 /** A landed preview as the crease-pattern pane draws it: the creases the step adds or reverses are its instruction. */
 export function landedPreviewOf(

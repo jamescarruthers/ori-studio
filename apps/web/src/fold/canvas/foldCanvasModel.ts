@@ -85,6 +85,7 @@ export function foldWindowPreview(
     seed,
     added,
     refused: preview.refused,
+    ...(preview.refused && preview.moverFix ? { movingPoint: true } : {}),
     landing: preview.landing,
     acrossLayers: preview.build.status === 'built' && preview.build.acrossLayers === true && !tools.override,
     ...(queued ? { queued } : {}),

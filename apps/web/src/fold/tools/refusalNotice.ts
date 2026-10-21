@@ -62,6 +62,8 @@ export interface FoldFixVerbs extends FoldVertexFixVerbs, FoldExtentFixVerbs {
   tuckTarget?: (face: number) => void;
   /** The same point sunk the other way: closed for open, open for closed. */
   otherSink?: (kind: FoldSinkKind) => void;
+  /** The point that stays put swapped for the one at its spot on paper that folds (`moverStays`). */
+  useMovingPoint?: () => void;
 }
 
 export interface FoldRefusalNoticeModel {
@@ -101,6 +103,11 @@ export interface FoldRefusalContext {
   sink?: { tool: FoldSinkToolId };
   /** A precrease's: how much of its line it creases, and whether through every layer (`precrease/precreaseRefusal`). */
   extent?: FoldExtentRefusalContext;
+  /**
+   * Refused as its point staying put, and a point at the same spot on paper
+   * that folds lands it (`moverStays`): the notice offers that point.
+   */
+  movingPoint?: boolean;
 }
 
 /**
@@ -982,8 +989,24 @@ export function foldRefusalNotice(
       ...(context.vertex ? vertexExtraActions(t, refused.refusal, context.readOnly, context.vertex, verbs) : []),
       // And what the Precrease tool can do with part of a line.
       ...(context.extent ? extentExtraActions(t, refused.refusal.code, context.extent, context.readOnly, verbs) : []),
+      // And a point that stays put, where paper that folds lies at its spot.
+      ...movingPointActions(t, refused, context, verbs),
     ],
   };
+}
+
+/** A point that stays put: the button that takes the point at its spot on paper that folds, when one lands the fold. */
+function movingPointActions(t: TFunction, refused: FoldRefused, context: FoldRefusalContext, verbs: FoldFixVerbs): NoticeAction[] {
+  const { useMovingPoint } = verbs;
+  if (refused.refusal.code !== 'mover_stays' || !context.movingPoint || !useMovingPoint) return [];
+  return [
+    {
+      id: 'moving-point',
+      label: t('tools:fold.fix.useMovingPoint', 'Use the point on the moving flap'),
+      run: useMovingPoint,
+      disabled: context.readOnly,
+    },
+  ];
 }
 
 /** The flaps a refusal's fixes say are in the way: the chips mark them. */

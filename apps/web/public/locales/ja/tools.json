@@ -360,6 +360,7 @@
       "tuckUnderAnother": "代わりに合う層の下に差し込む",
       "turnToEdge": "線を回して点を辺にぴったり乗せる",
       "useLine": "基準線を使う",
+      "useMovingPoint": "動くフラップ上の点を使う",
       "useSquareLine": "直角の線を使う",
       "useWholeLine": "線全体を使う",
       "valleyInstead": "代わりに谷折り"

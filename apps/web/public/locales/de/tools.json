@@ -370,6 +370,7 @@
       "tuckUnderAnother": "Stattdessen unter die passende Lage stecken",
       "turnToEdge": "Die Linie drehen, bis der Punkt auf der Kante liegt",
       "useLine": "Die Bezugslinie verwenden",
+      "useMovingPoint": "Den Punkt auf der beweglichen Lasche verwenden",
       "useSquareLine": "Die rechtwinklige Linie verwenden",
       "useWholeLine": "Die ganze Linie verwenden",
       "valleyInstead": "Stattdessen Talfalte"

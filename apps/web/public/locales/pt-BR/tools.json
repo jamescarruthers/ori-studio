@@ -380,6 +380,7 @@
       "tuckUnderAnother": "Encaixar sob a camada que cabe em vez disso",
       "turnToEdge": "Girar a linha até o ponto ficar na borda",
       "useLine": "Usar a linha de referência",
+      "useMovingPoint": "Usar o ponto da aba que se move",
       "useSquareLine": "Usar a linha perpendicular",
       "useWholeLine": "Usar a linha inteira",
       "valleyInstead": "Dobra vale em vez disso"
