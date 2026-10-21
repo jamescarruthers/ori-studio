@@ -127,6 +127,19 @@ describe("Repeat's window", () => {
     ]);
   });
 
+  it('lists only the axis taken, as a plain choice, when no axis repeat lands', () => {
+    const refused = { kind: 'refused', stop: { code: 'repeat_creases' }, step: 0 } as const;
+    const blocked = windowOf(repeat({ kind: 'blocked', step: 0, stop: { code: 'repeat_creases' } }, { axis: 1, side: 'behind', states: [refused, refused] }));
+    expect(blocked.repeat?.axis.value).toBe('1');
+    expect(blocked.repeat?.axis.options).toEqual([{ id: '1', label: 'Center line, left to right' }]);
+    // Why stays said, below the list.
+    expect(blocked.refusal?.title).toBe('Cannot repeat');
+    // One still being prepared may land: all are listed, the refused one disabled.
+    const preparing = windowOf(repeat({ kind: 'preparing' }, { axis: 1, states: [refused, { kind: 'unknown' }] }));
+    expect(preparing.repeat?.axis.options).toHaveLength(2);
+    expect(preparing.repeat?.axis.options[0]).toMatchObject({ disabled: true });
+  });
+
   it('says it repeats behind when the axis previewed reverses the layers: the summary and the commit', () => {
     const behind = windowOf(repeat({ kind: 'ready', busy: false }, { side: 'behind', hovered: 1 }));
     expect(behind.repeat?.summary).toBe('Repeat 2 operations through the current step behind, as one numbered step.');
@@ -152,9 +165,9 @@ describe("Repeat's window", () => {
     expect(adding.freeLineSnap).toBeUndefined();
     expect(adding.lineMode).toBeNull();
     // Stopped, the commit prepares it again.
-    const stopped = windowOf(repeat({ kind: 'stopped' }));
-    expect(stopped.footer?.commit).toMatchObject({ label: 'Repeat on the other side', disabled: false });
-    expect(stopped.instructions.notes).toEqual(['Stopped before the repeat was ready. No steps were added.']);
+    const blocked = windowOf(repeat({ kind: 'stopped' }));
+    expect(blocked.footer?.commit).toMatchObject({ label: 'Repeat on the other side', disabled: false });
+    expect(blocked.instructions.notes).toEqual(['Stopped before the repeat was ready. No steps were added.']);
     const rebuilt = windowOf(repeat({ kind: 'ready', busy: false }, { rebuilding: true }));
     expect(rebuilt.footer?.commit.label).toBe('Update from source steps');
     // A rebuild adds as the repeat was added.
