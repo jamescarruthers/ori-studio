@@ -28,7 +28,14 @@ const WASM = resolve(ROOT, 'src/generated/oristudio-fold-wasm/oristudio_fold_was
 const FIXTURES = resolve(ROOT, '../../tests/fixtures/fold-regressions');
 const available = existsSync(WASM) && existsSync(FIXTURES);
 
+/** The fixtures this file asserts; others in the folder have tests of their own, which the README names. */
 const NAMES = ['edge-crossing.osf', 'ghost-precrease.osf', 'squash-covered.osf', 'squash-drawn-hinge.osf', 'tuck-target-layer.osf'];
+
+/** Every fixture the README lists, by its bullet's file name. */
+function readmeNames(): string[] {
+  const readme = readFileSync(resolve(FIXTURES, 'README.md'), 'utf8');
+  return [...readme.matchAll(/^- `([^`]+\.osf)`/gm)].map((match) => match[1]!).sort();
+}
 
 /** A click's reach on the folded pane, in its scene units. */
 const RADII = { point: 0.02, line: 0.02 };
@@ -116,7 +123,9 @@ function stepOk(done: FoldReplayProgress<unknown>, step: FoldStep, name: string)
 
 describe.skipIf(!available)('the fold-regression fixtures', () => {
   it('holds one fixture per bug the README names', () => {
-    expect(readdirSync(FIXTURES).filter((name) => name.endsWith('.osf')).sort()).toEqual(NAMES);
+    const files = readdirSync(FIXTURES).filter((name) => name.endsWith('.osf')).sort();
+    expect(files).toEqual(readmeNames());
+    for (const name of NAMES) expect(files).toContain(name);
   });
 
   it.each(NAMES)('opens %s and replays every step to its stored fingerprint', async (name) => {
