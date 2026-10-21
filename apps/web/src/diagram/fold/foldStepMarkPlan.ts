@@ -22,9 +22,12 @@
  *   its own line, read off the states either side of it
  *   ({@link stepFoldedCreases}), and the arrow of the flap swung over, from
  *   the ear's tip to where the fold lays it.
- * - **A petal fold** draws every crease it folds the same way: the hinge
- *   and the two kite creases its sides fold in along, the triangle the petal
- *   lifts from, each in its own line. Its arrow is the engine's.
+ * - **A petal fold, a squash and a swivel** draw every crease they fold the
+ *   same way, where the engine's picture names one line of several: a
+ *   petal's hinge and the two kite creases its sides fold in along, a
+ *   squash's crease on each layer and its spine, a swivel's creases meeting
+ *   at its vertex — each in its own line. Their arrows, and a squash's
+ *   push, are the engine's.
  *
  * Anything else keeps the engine's picture. Every point is in the scene
  * frame of the state the step folds from — the picture's, before it is
@@ -74,13 +77,16 @@ const unit = (v: Point): Point | null => {
 const dot = (a: Point, b: Point) => a.x * b.x + a.y * b.y;
 const along = (from: Point, direction: Point, by: number): Point => ({ x: from.x + direction.x * by, y: from.y + direction.y * by });
 
+/** The steps drawn by every crease they fold, read off the states either side (see the module docs): every form of each. */
+const DRAWN_BY_FOLDED_CREASES: ReadonlySet<FoldOp['kind']> = new Set(['rabbit-ear', 'petal', 'squash', 'swivel']);
+
 /** `action` with its marks placed by the step's own references (see the module docs). */
 export function foldStepAction(action: FoldActionGeometry, context: FoldStepMarkContext): FoldStepAction {
   const { op, parent } = context;
   if (!op) return action;
   const frame = foldStateFrame(parent);
   let placed: FoldStepAction = action;
-  if ((op.kind === 'rabbit-ear' || op.kind === 'petal') && context.child) {
+  if (DRAWN_BY_FOLDED_CREASES.has(op.kind) && context.child) {
     const creases = stepFoldedCreases(parent, context.child);
     if (creases.length > 0) placed = { ...placed, spans: creases };
   }
@@ -399,12 +405,11 @@ export function stepFoldedCreases(parent: FoldScene, child: FoldScene): FoldLine
     const transform = face < 0 ? undefined : parent.face_transforms[face];
     if (!transform) continue;
     const seen = parent.faces[face]!.front_up ? crease.letter : crease.letter === 'valley' ? 'mountain' : 'valley';
-    spans.push({
-      from: applyIsometry(transform, from),
-      to: applyIsometry(transform, to),
-      direction: seen,
-      hidden: !shownAt(parent, frame, from, to),
-    });
+    const [a, b] = [applyIsometry(transform, from), applyIsometry(transform, to)];
+    const at = (t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    for (const [t0, t1, shown] of seenStretches(parent, frame, from, to, a, b)) {
+      spans.push({ from: at(t0), to: at(t1), direction: seen, hidden: !shown });
+    }
   }
   return joinedSpans(spans);
 }
@@ -422,25 +427,65 @@ function covers(a: Point, b: Point, c: Point, d: Point): boolean {
 }
 
 /**
- * Whether the viewer sees the sheet segment from–to in a state: its paper is
- * on top beside its middle, on either side of it — a crease lies where two
- * faces meet, or across a flat crease's two.
+ * The stretches of the sheet segment from–to, drawn a–b in a state, the
+ * viewer sees and does not, in order along it, as `[t0, t1, shown]`: split
+ * where it crosses the edge of a stack of layers, each shown where its paper
+ * is on top beside the stretch's middle, on either side of it — a crease
+ * lies where two faces meet, or across a flat crease's two. So a crease a
+ * layer covers only part of — a swivel's on the layer behind, past where
+ * the layer in front ends — is behind only there.
  */
-function shownAt(scene: FoldScene, frame: FoldStateFrame, from: Point, to: Point): boolean {
+function seenStretches(
+  scene: FoldScene,
+  frame: FoldStateFrame,
+  from: Point,
+  to: Point,
+  a: Point,
+  b: Point
+): [number, number, boolean][] {
   const length = distance(from, to);
-  if (!(length > EPSILON)) return false;
-  const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  if (!(length > EPSILON)) return [];
+  const ab = { x: b.x - a.x, y: b.y - a.y };
+  // Where a–b crosses an edge of a stack, along it.
+  const cuts = [0, 1];
+  for (const { polygon } of scene.subfaces) {
+    for (const [index, p] of polygon.entries()) {
+      const q = polygon[(index + 1) % polygon.length]!;
+      const pq = { x: q.x - p.x, y: q.y - p.y };
+      const denominator = ab.x * pq.y - ab.y * pq.x;
+      if (Math.abs(denominator) < 1e-12) continue;
+      const ap = { x: p.x - a.x, y: p.y - a.y };
+      const t = (ap.x * pq.y - ap.y * pq.x) / denominator;
+      const u = (ap.x * ab.y - ap.y * ab.x) / denominator;
+      if (t > 0 && t < 1 && u > -1e-9 && u < 1 + 1e-9) cuts.push(t);
+    }
+  }
+  cuts.sort((x, y) => x - y);
   const normal = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
   const step = Math.min(1e-4, length / 8);
-  return [1, -1].some((side) => {
-    const sheet: SheetPoint = [middle.x + normal.x * side * step, middle.y + normal.y * side * step];
-    const face = faceOf(frame, sheet);
-    const transform = face < 0 ? undefined : scene.face_transforms[face];
-    if (!transform) return false;
-    const at = applyIsometry(transform, { x: sheet[0], y: sheet[1] });
-    const cell = scene.subfaces.find((each) => insideConvex(each.polygon, at, 1e-12));
-    return cell?.faces_top_to_bottom[0] === face;
-  });
+  const shownBeside = (t: number) => {
+    const middle = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
+    return [1, -1].some((side) => {
+      const sheet: SheetPoint = [middle.x + normal.x * side * step, middle.y + normal.y * side * step];
+      const face = faceOf(frame, sheet);
+      const transform = face < 0 ? undefined : scene.face_transforms[face];
+      if (!transform) return false;
+      const at = applyIsometry(transform, { x: sheet[0], y: sheet[1] });
+      const cell = scene.subfaces.find((each) => insideConvex(each.polygon, at, 1e-12));
+      return cell?.faces_top_to_bottom[0] === face;
+    });
+  };
+  const stretches: [number, number, boolean][] = [];
+  for (const [index, t0] of cuts.entries()) {
+    const t1 = cuts[index + 1];
+    // A stretch shorter than a feature is where two cuts are one.
+    if (t1 === undefined || (t1 - t0) * length < 1e-6) continue;
+    const shown = shownBeside((t0 + t1) / 2);
+    const last = stretches.at(-1);
+    if (last && last[2] === shown) last[1] = t1;
+    else stretches.push([last ? last[1] : t0, t1, shown]);
+  }
+  return stretches;
 }
 
 /**

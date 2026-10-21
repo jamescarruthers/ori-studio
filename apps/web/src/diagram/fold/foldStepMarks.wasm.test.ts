@@ -55,6 +55,27 @@ function stepOf(calls: Engine, state: number, op: FoldOp, near?: readonly [numbe
   return { state: child.state, parent, child: calls.scene(child.state), action, summary: child.summary };
 }
 
+/**
+ * Every step of an example project replayed from its parent with its stored
+ * choices: its op, the engine's picture of it, and the states either side.
+ */
+function exampleSteps(calls: Engine, name: string) {
+  const project = parseNativeProjectFile(readFileSync(resolve(FIXTURES, name), 'utf8'));
+  const [held] = readFoldSequences(project.workspace.foldSequences);
+  const sheet = landed(calls.sheet(held!.document.paper)).state;
+  const states = new Map<string, number>();
+  return held!.document.steps.map((node) => {
+    if (isLockedStep(node)) throw new Error(`${name}: ${node.id} is locked`);
+    const before = node.parent ? states.get(node.parent)! : sheet;
+    const parent = calls.scene(before);
+    const child = landed(calls.step(before, node.op, node.choices));
+    states.set(node.id, child.state);
+    const acted = calls.stepAction(child.state);
+    const action = acted.status === 'ok' ? (acted.action as FoldActionGeometry | null) : null;
+    return { op: node.op, parent, child: calls.scene(child.state), action: action!, summary: child.summary };
+  });
+}
+
 const pt = (x: number, y: number): FoldPointRef => ({ kind: 'point', at: [x, y] });
 const edge = (a: [number, number], b: [number, number]): FoldRef => ({ kind: 'edge', a, b });
 const all = { scope: 'all' } as const;
@@ -102,14 +123,8 @@ describe.skipIf(!available)('a Fold step’s marks in the Diagram, from the real
 
   it('draws every crease of a petal fold — the hinge and the two kite creases its sides fold in along — and keeps the engine’s arrow', async () => {
     const calls = await engine();
-    const project = parseNativeProjectFile(readFileSync(resolve(FIXTURES, 'petal-fold.osf'), 'utf8'));
-    const [held] = readFoldSequences(project.workspace.foldSequences);
-    const steps = held!.document.steps.flatMap((node) => (isLockedStep(node) ? [] : [node]));
-    const index = steps.findIndex((step) => step.op.kind === 'petal');
-    let state = landed(calls.sheet(held!.document.paper)).state;
-    for (const step of steps.slice(0, index)) state = landed(calls.step(state, step.op, step.choices)).state;
-    const { op } = steps[index]!;
-    const petal = stepOf(calls, state, op);
+    const petal = exampleSteps(calls, 'petal-fold.osf').find((step) => step.op.kind === 'petal')!;
+    const { op } = petal;
     // The engine draws the hinge alone.
     expect(petal.action.spans).toHaveLength(1);
     const placed = foldStepAction(petal.action, { op, parent: petal.parent, child: petal.child });
@@ -127,6 +142,83 @@ describe.skipIf(!available)('a Fold step’s marks in the Diagram, from the real
       FOLD_PULL_RENDER
     ).marks;
     expect(marks.map((mark) => mark.kind).sort()).toEqual(['mountain-line', 'mountain-line', 'valley-arrow', 'valley-line']);
+  });
+
+  it('draws every crease of a squash — the top layer’s, the one under it hidden there, and a hinge it folds — and keeps the engine’s arrows', async () => {
+    const calls = await engine();
+    const squashes = [...exampleSteps(calls, 'petal-fold.osf'), ...exampleSteps(calls, 'swivel-on-edge.osf')].filter((step) => step.op.kind === 'squash');
+    expect(squashes).toHaveLength(3);
+    const letters: string[][] = [];
+    for (const squash of squashes) {
+      // The engine draws one line: where the flap's layers crease.
+      expect(squash.action.spans).toHaveLength(1);
+      const placed = foldStepAction(squash.action, { op: squash.op, parent: squash.parent, child: squash.child });
+      expect(placed.grip).toEqual(squash.action.grip);
+      expect(placed.push).toEqual(squash.action.push);
+      expect(placed.spans.every((span) => !span.hidden)).toBe(true);
+      // That line is the top layer's crease, its front outside the fold: a mountain as the viewer sees it. The
+      // lower layer's, a valley, lies under it there, so it is not drawn.
+      const [engineLine] = squash.action.spans;
+      const line = placed.spans.find((span) => [span.from, span.to].every((end) => near(end, engineLine!.from) || near(end, engineLine!.to)));
+      expect(line?.direction).toBe('mountain');
+      letters.push(placed.spans.map((span) => span.direction!).sort());
+    }
+    // A hinge an earlier squash left flat is folded again: a valley.
+    expect(letters).toEqual([['mountain'], ['mountain', 'valley'], ['mountain', 'valley']]);
+  });
+
+  it('draws every crease of a swivel by its edge: the four meeting at its vertex, its ridge the other way', async () => {
+    const calls = await engine();
+    const swivels = exampleSteps(calls, 'swivel-fold.osf').filter((step) => step.op.kind === 'swivel');
+    // Two branches: the ridge square to the edge, and toward its end.
+    const ridges: Point[] = [];
+    for (const swivel of swivels) {
+      expect(swivel.action.spans).toHaveLength(1);
+      const placed = foldStepAction(swivel.action, { op: swivel.op, parent: swivel.parent, child: swivel.child });
+      expect(placed.grip).toEqual(swivel.action.grip);
+      expect(placed.spans).toHaveLength(4);
+      expect(placed.spans.map((span) => span.direction).sort()).toEqual(['mountain', 'valley', 'valley', 'valley']);
+      const vertex = placed.spans[0]!.from;
+      expect(placed.spans.every((span) => near(span.from, vertex) || near(span.to, vertex))).toBe(true);
+      const ridge = placed.spans.find((span) => span.direction === 'mountain')!;
+      ridges.push(near(ridge.from, vertex) ? ridge.to : ridge.from);
+    }
+    expect(ridges).toHaveLength(2);
+    expect(near(ridges[0]!, ridges[1]!)).toBe(false);
+  });
+
+  it('draws a swivel on a folded edge by its valley and mountain, and the crease of the layer behind only past the one in front', async () => {
+    const calls = await engine();
+    // Where its creases meet on the kite's folded edge, the flap's corner and the model's tip.
+    const V = { x: -0.1464466094067262, y: 0.3535533905932738 };
+    const CORNER = { x: 0.2071067811865476, y: 0.2071067811865476 };
+    const TIP = { x: 0, y: 0 };
+    const along = (span: { from: Point; to: Point }, a: Point, b: Point) =>
+      [span.from, span.to].every((end) => Math.abs((end.x - a.x) * (b.y - a.y) - (end.y - a.y) * (b.x - a.x)) < 1e-9);
+    const drawn = (name: string) => {
+      const swivel = exampleSteps(calls, name).find((step) => step.op.kind === 'swivel')!;
+      const placed = foldStepAction(swivel.action, { op: swivel.op, parent: swivel.parent, child: swivel.child });
+      expect(placed.grip).toEqual(swivel.action.grip);
+      expect(placed.spans.every((span) => !span.hidden)).toBe(true);
+      return placed.spans;
+    };
+    // Open: the valley to the flap's corner and the mountain toward the tip, on the layer in front; past where
+    // that layer ends, the valley of the layer behind runs on to the tip. Under the mountain it is not drawn.
+    const open = drawn('swivel-on-edge.osf');
+    expect(open.map((span) => span.direction).sort()).toEqual(['mountain', 'valley', 'valley']);
+    const corner = open.find((span) => along(span, V, CORNER))!;
+    expect(corner.direction).toBe('valley');
+    const toTip = open.filter((span) => along(span, V, TIP));
+    const mountain = toTip.find((span) => span.direction === 'mountain')!;
+    const behind = toTip.find((span) => span.direction === 'valley')!;
+    const end = near(mountain.from, V) ? mountain.to : mountain.from;
+    expect([behind.from, behind.to].some((point) => near(point, end))).toBe(true);
+    expect([behind.from, behind.to].some((point) => near(point, TIP))).toBe(true);
+    // Inside: the valley through the tip, both layers' as one line, and the mountain to the corner.
+    const inside = drawn('swivel-inside.osf');
+    expect(inside).toHaveLength(2);
+    expect(inside.find((span) => along(span, V, TIP))?.direction).toBe('valley');
+    expect(inside.find((span) => along(span, V, CORNER))?.direction).toBe('mountain');
   });
 
   it('circles a segment through two points at its ends and draws no arrow; a point onto a point circled and joined', async () => {
