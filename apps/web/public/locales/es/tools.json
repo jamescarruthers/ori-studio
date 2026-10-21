@@ -364,6 +364,7 @@
       "pickThisFlap": "Plegar solo esta solapa",
       "pinchInstead": "Pellizcar ahí en su lugar",
       "precreaseOtherWay": "Premarcar en el otro sentido",
+      "reverseCrossedFlaps": "Invertir solo las solapas que cruza la línea",
       "reverseFlap": "Invertir solo la solapa {{number}}",
       "reverseThisFlap": "Invertir solo esta solapa",
       "sinkFlap": "Hundir solo la solapa {{number}}",

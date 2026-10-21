@@ -49,6 +49,8 @@ import { foldAlongLine, type FoldAlongLine } from './foldAlongLine';
 import type { FoldPick } from './foldPicking';
 import type { FoldMoverFix } from '../tools/moverStays';
 import { useFoldMoverFix } from './useFoldMoverFix';
+import { useFoldReverseSeedFix } from './useFoldReverseSeedFix';
+import type { FoldReverseSeedFix } from '../tools/reverse/reverseSeedFix';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldLineSection } from './useFoldLineSection';
@@ -123,6 +125,12 @@ export interface FoldToolPreview {
    * that folds, which lands it (`useFoldMoverFix`); null while none is known.
    */
   moverFix?: FoldMoverFix | null;
+  /**
+   * A reverse fold refused for its tip with more flaps than its drawn line
+   * crosses: those flaps alone, which land it (`useFoldReverseSeedFix`);
+   * null while none is known.
+   */
+  seedFix?: FoldReverseSeedFix | null;
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
   /** The reverse tool's: the tip as the engine described it, and the kind, opening and order taken. */
@@ -524,6 +532,8 @@ export function useFoldToolPreview(
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
   // A point that stays put, swapped for one at its spot that folds: a plain fold's, from its picks.
   const moverFix = useFoldMoverFix(session, index, step, refused, tools.override ? NO_PICKS : picks);
+  // A reverse fold's tip refused with more flaps than its drawn line crosses: those alone, when they land.
+  const seedFix = useFoldReverseSeedFix(session, index, seeded, candidate, shownSection, refused);
 
   // Each refusal shown is counted once, by what the tools asked for — a
   // vertex fold or a tuck refused before any step is built has no step to
@@ -559,6 +569,7 @@ export function useFoldToolPreview(
     turned: rotating ? (landedPreview?.scene ?? null) : null,
     refused,
     moverFix,
+    seedFix,
     landing: step !== null && (pendingFor === null || pendingFor.status === 'working'),
     reverse: reverseStep.reverse,
     crimp: crimpStep.crimp,

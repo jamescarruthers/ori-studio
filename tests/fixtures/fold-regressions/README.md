@@ -42,6 +42,19 @@ precrease through the tools, clicks and all.
   model map is the identity with every layer pair reversed, and Repeat took
   only a 2D reflection that kept the layer order. It now carries a side and
   repeats behind (`apps/web/src/fold/repeat/repeatBehind.wasm.test.ts`).
+- `reverse-seed-segment.osf`: a strip folded in half along its length, then
+  turned up at 45° into an L of two arms, each two layers joined along a
+  folded edge; an inside reverse fold of the left arm's end along a free line
+  drawn across that arm only. Extended, the line crosses the up arm's end
+  too, and the tool's default seed was every layer on it: refused, as
+  "Neither kind of reverse fold fits here", since the arms turn only as
+  opposite kinds. A free or Axiom 1 line's default seed is now every layer on
+  the stretch drawn between its picks (`reverseSegmentSeed`), and a reverse
+  fold refused for its tip with more flaps offers the drawn ones when they
+  land. `foldRegressions.wasm.test.ts` checks both seeds on the replayed
+  state; `apps/web/src/fold/canvas/reverseSeedSegmentFlow.wasm.test.tsx`
+  draws the free line and the Axiom 1 line through the tools. Built by a
+  script over the engine on 2026-10-21.
 - `independent-sides-orders.osf` (KNOWN GAP, open): a square with two flaps
   folded in at the bottom left (the corner onto (5/8, 1/4), then that flap's
   point (1/4, 0) onto (9/16, 1/8)) and the same mirrored at the top right.

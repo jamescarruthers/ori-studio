@@ -354,6 +354,7 @@
       "pickThisFlap": "Fold this flap only",
       "pinchInstead": "Pinch there instead",
       "precreaseOtherWay": "Precrease the other way",
+      "reverseCrossedFlaps": "Reverse only the flaps the line crosses",
       "reverseFlap": "Reverse flap {{number}} only",
       "reverseThisFlap": "Reverse this flap only",
       "sinkFlap": "Sink flap {{number}} only",

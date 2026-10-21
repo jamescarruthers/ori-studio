@@ -344,6 +344,7 @@
       "pickThisFlap": "只折这个翼片",
       "pinchInstead": "改为在该处捏折",
       "precreaseOtherWay": "向另一方向预折",
+      "reverseCrossedFlaps": "只翻折线条穿过的翼片",
       "reverseFlap": "只翻折翼片 {{number}}",
       "reverseThisFlap": "只翻折这个翼片",
       "sinkFlap": "只沉折翼片 {{number}}",

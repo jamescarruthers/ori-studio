@@ -7,6 +7,7 @@ import { foldCrossSectionQuery } from '../session/foldStateQueries';
 import { FOLD_EVERY_LAYER, type FoldResolvedSeed, type FoldToolState } from '../tools/foldToolState';
 import { lineSectionProbe, seedForTool, topFlapSeed } from '../tools/topFlapSeed';
 import { reverseMaterialPoint, reverseMaterialSeed } from '../tools/reverse/reverseMaterialSeed';
+import { reverseDrawnSegment, reverseSegmentSeed } from '../tools/reverse/reverseSegmentSeed';
 import type { FoldPickIndex } from './foldPicking';
 
 /** The section at the line the picks locate, and the seed a step is built with. */
@@ -18,8 +19,9 @@ export interface FoldLineSection {
    */
   section: FoldCrossSection | null;
   /**
-   * The tools' default seed resolved: the top flap, or a reverse fold's
-   * material picked on the CP. Null while the section that seed is read
+   * The tools' default seed resolved: the top flap, a reverse fold's
+   * material picked on the CP, or the flaps its drawn line crosses
+   * (`reverseSegmentSeed`). Null while the section that seed is read
    * from is still being asked: there is no step to build yet.
    */
   seed: FoldResolvedSeed | null;
@@ -92,10 +94,15 @@ export function useFoldLineSection(
   );
   const asked = seedForTool(tool, tools.seed);
   const material = reverseMaterialPoint(tools) ?? (index ? pleatMaterialPoint(tools, index) : null);
+  const drawn = useMemo(() => reverseDrawnSegment({ tool, lineMode, picks, override }), [tool, lineMode, picks, override]);
   const seed = useMemo<FoldResolvedSeed | null>(() => {
     if (tools.seed.scope === 'top' && material && index && probe) {
       if (!own) return null;
       return own.section ? reverseMaterialSeed(index.scene, own.section, material) : FOLD_EVERY_LAYER;
+    }
+    if (tools.seed.scope === 'top' && drawn && probe) {
+      if (!own) return null;
+      return own.section ? reverseSegmentSeed(own.section, drawn) : FOLD_EVERY_LAYER;
     }
     if (asked.scope !== 'top') return asked;
     // No line to read a top flap at: the step, if any, is every layer's — a
@@ -104,6 +111,6 @@ export function useFoldLineSection(
     if (!probe) return FOLD_EVERY_LAYER;
     if (!own) return null;
     return own.section ? topFlapSeed(own.section) : FOLD_EVERY_LAYER;
-  }, [asked, probe, own, tools.seed.scope, material, index]);
+  }, [asked, probe, own, tools.seed.scope, material, drawn, index]);
   return { section: own?.section ?? null, seed };
 }

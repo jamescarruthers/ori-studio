@@ -354,6 +354,7 @@
       "pickThisFlap": "Nur diese Lasche falten",
       "pinchInstead": "Stattdessen dort kneifen",
       "precreaseOtherWay": "Andersherum vorfalten",
+      "reverseCrossedFlaps": "Nur die Laschen als Gegenbruch falten, die die Linie kreuzt",
       "reverseFlap": "Nur Lasche {{number}} als Gegenbruch falten",
       "reverseThisFlap": "Nur diese Lasche als Gegenbruch falten",
       "sinkFlap": "Nur Lasche {{number}} versenken",

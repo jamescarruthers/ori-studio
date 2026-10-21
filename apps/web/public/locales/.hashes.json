@@ -6365,7 +6365,8 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12733,7 +12734,8 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19103,7 +19105,8 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25126,7 +25129,8 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31149,7 +31153,8 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37517,7 +37522,8 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43885,7 +43891,8 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49908,6 +49915,7 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "panels:references.warning.nonFiniteSegments": "d6300696e654"
+    "panels:references.warning.nonFiniteSegments": "d6300696e654",
+    "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b"
   }
 }

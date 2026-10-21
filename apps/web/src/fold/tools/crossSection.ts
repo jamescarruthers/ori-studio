@@ -96,13 +96,49 @@ export function isWoven(section: Pick<FoldCrossSection, 'order'>): boolean {
  */
 export function wovenIntervalAt(section: FoldCrossSection | null, at: { x: number; y: number }): number | null {
   if (!section || !isWoven(section)) return null;
+  const along = distanceAlong(section, at);
+  if (along === null) return null;
+  const index = section.intervals.findIndex((interval) => along >= interval.start && along <= interval.end);
+  return index >= 0 ? index : null;
+}
+
+/**
+ * A point of the scene frame taken square onto the section's line, as a
+ * distance from its start: how its intervals and spans are measured. Null
+ * for a section with no length.
+ */
+function distanceAlong(section: Pick<FoldCrossSection, 'from' | 'to'>, at: { x: number; y: number }): number | null {
   const dx = section.to.x - section.from.x;
   const dy = section.to.y - section.from.y;
   const length = Math.hypot(dx, dy);
   if (!(length > 0)) return null;
-  const along = ((at.x - section.from.x) * dx + (at.y - section.from.y) * dy) / length;
-  const index = section.intervals.findIndex((interval) => along >= interval.start && along <= interval.end);
-  return index >= 0 ? index : null;
+  return ((at.x - section.from.x) * dx + (at.y - section.from.y) * dy) / length;
+}
+
+/** How far a stretch of the line must run over a row's span to cross it: a touch at an end does not. */
+const CROSSES = 1e-7;
+
+/**
+ * The flaps whose paper a stretch of the section's line runs over, between
+ * two points of the scene frame (taken square onto the line), as indices
+ * into the section's flaps in their order: every row there, at any depth,
+ * not only the top one. A row whose span the stretch only touches at an end
+ * is not crossed.
+ */
+export function flapsAlong(
+  section: Pick<FoldCrossSection, 'from' | 'to' | 'rows' | 'flaps'>,
+  a: { x: number; y: number },
+  b: { x: number; y: number }
+): number[] {
+  const ta = distanceAlong(section, a);
+  const tb = distanceAlong(section, b);
+  if (ta === null || tb === null) return [];
+  const [lo, hi] = ta <= tb ? [ta, tb] : [tb, ta];
+  const crossed = new Set<number>();
+  for (const row of section.rows) {
+    if (row.spans.some(([start, end]) => Math.min(hi, end) - Math.max(lo, start) > CROSSES)) crossed.add(row.flap);
+  }
+  return [...crossed].filter((flap) => flap < section.flaps.length).sort((x, y) => x - y);
 }
 
 /**

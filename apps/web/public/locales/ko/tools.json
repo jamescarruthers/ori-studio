@@ -344,6 +344,7 @@
       "pickThisFlap": "이 플랩만 접기",
       "pinchInstead": "대신 그곳을 집기",
       "precreaseOtherWay": "반대 방향으로 미리 접기",
+      "reverseCrossedFlaps": "선이 지나는 플랩만 뒤집어 접기",
       "reverseFlap": "플랩 {{number}}만 뒤집어 접기",
       "reverseThisFlap": "이 플랩만 뒤집어 접기",
       "sinkFlap": "플랩 {{number}}만 가라앉히기",

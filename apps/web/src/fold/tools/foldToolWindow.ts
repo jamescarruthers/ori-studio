@@ -126,6 +126,12 @@ export interface FoldPreview {
   refused: FoldRefused | null;
   /** Refused as its point staying put, and a point at the same spot on paper that folds lands it: the refusal offers it. */
   movingPoint?: boolean;
+  /**
+   * A reverse fold refused for its tip, and only the flaps its drawn line
+   * crosses land it: those flaps (indices into the section's flaps), which
+   * the refusal offers.
+   */
+  narrowerSeed?: readonly number[];
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
   /** A free line drawn on the crease pattern across layers the folded form puts apart (`FoldBuiltStep.acrossLayers`). */

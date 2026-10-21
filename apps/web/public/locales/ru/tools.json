@@ -374,6 +374,7 @@
       "pickThisFlap": "Сложить только этот клапан",
       "pinchInstead": "Вместо этого защипнуть там",
       "precreaseOtherWay": "Наметить в другую сторону",
+      "reverseCrossedFlaps": "Вывернуть только клапаны, которые пересекает линия",
       "reverseFlap": "Вывернуть только клапан {{number}}",
       "reverseThisFlap": "Вывернуть только этот клапан",
       "sinkFlap": "Утопить только клапан {{number}}",

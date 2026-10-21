@@ -253,7 +253,12 @@ export function reverseToolWindow(
       ? foldRefusalNotice(
           t,
           preview.refused,
-          { kind: 'reverse', readOnly, ...sectionFlapNames(preview.section) },
+          {
+            kind: 'reverse',
+            readOnly,
+            ...sectionFlapNames(preview.section),
+            ...(preview.narrowerSeed ? { narrowerSeed: preview.narrowerSeed } : {}),
+          },
           verbs
         )
       : null,

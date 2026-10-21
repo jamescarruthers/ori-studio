@@ -344,6 +344,7 @@
       "pickThisFlap": "このフラップだけを折る",
       "pinchInstead": "代わりにそこをつまむ",
       "precreaseOtherWay": "逆向きに折り筋をつける",
+      "reverseCrossedFlaps": "線が横切るフラップだけを反転して折る",
       "reverseFlap": "フラップ {{number}} だけを反転して折る",
       "reverseThisFlap": "このフラップだけを反転して折る",
       "sinkFlap": "フラップ {{number}} だけを沈める",

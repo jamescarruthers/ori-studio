@@ -364,6 +364,7 @@
       "pickThisFlap": "Dobrar só esta aba",
       "pinchInstead": "Beliscar ali em vez disso",
       "precreaseOtherWay": "Pré-vincar no outro sentido",
+      "reverseCrossedFlaps": "Inverter só as abas que a linha cruza",
       "reverseFlap": "Inverter só a aba {{number}}",
       "reverseThisFlap": "Inverter só esta aba",
       "sinkFlap": "Afundar só a aba {{number}}",

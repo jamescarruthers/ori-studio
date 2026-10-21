@@ -71,8 +71,10 @@ function wrappedOpening(index: number, delta: number, count: number): number {
  * and the section is the line's and the side's. It is resolved where the
  * section is known (`tools/topFlapSeed`, `useFoldLineSection`), before any
  * step is built, so no step is ever built with it. For a reverse fold it
- * instead resolves to every layer, or the material named by an Axiom 2
- * moving point picked on the CP (`reverseMaterialSeed`).
+ * instead resolves to every layer, the material named by an Axiom 2
+ * moving point picked on the CP (`reverseMaterialSeed`), or every layer on
+ * the stretch of a free or Axiom 1 line drawn between its picks
+ * (`reverseSegmentSeed`).
  */
 export type FoldToolSeed =
   | { scope: 'top' }
