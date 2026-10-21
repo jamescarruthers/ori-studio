@@ -671,6 +671,14 @@ export interface FoldRepeatOp {
   parentState: string;
   /** Original-sheet reflection; independent of the current viewport. */
   axis: FoldModelLine;
+  /**
+   * `'behind'` when the axis reverses the layers, so the steps were folded on
+   * the back (`fold/repeat`): the words say "Repeat behind". Only behind is
+   * spelled, so a repeat on the other side reads and writes as it always
+   * did. Words only — the steps are stored mirrored already, and replay never
+   * reads it.
+   */
+  side?: 'behind';
   steps: readonly FoldRepeatEntry[];
 }
 

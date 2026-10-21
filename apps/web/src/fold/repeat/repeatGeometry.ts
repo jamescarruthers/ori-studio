@@ -10,7 +10,6 @@ import {
   polygonCentroid,
   toPair,
   toPoint,
-  transformLine,
 } from '../canvas/foldCanvasGeometry';
 import type { FoldModelLine, SheetPoint } from '../document/foldSequenceDocument';
 import type { FoldIsometry, FoldRefusalBody, FoldScene } from '../engine/foldEngineWire';
@@ -34,10 +33,23 @@ export class RepeatFailure extends Error {
     return new RepeatFailure(refusal.code, refusal);
   }
 }
+/**
+ * Which side a sheet reflection repeats on, as the folded state at the
+ * range's start says: `same` where the mirror keeps every layer pair's order
+ * (the model is mirrored across a line in its plane), `behind` where it
+ * reverses every one (the model is mirrored through its plane, so the front
+ * flap's mirror is the back one). Either way each crease keeps its mountain
+ * or valley on the paper; only what the viewer sees of it turns behind.
+ */
+export type RepeatSide = 'same' | 'behind';
+
+/** +1 on the same side, −1 behind: how a mirrored pair of layers is ordered against the source's. */
+export const sideSign = (side: RepeatSide): 1 | -1 => (side === 'same' ? 1 : -1);
+
 export interface RepeatSymmetry {
+  /** The axis: a line on the sheet, as the crease pattern shows it. */
   sheet: FoldModelLine;
-  model: FoldModelLine;
-  display: FoldModelLine;
+  side: RepeatSide;
 }
 export function compose(a: FoldIsometry, b: FoldIsometry): FoldIsometry {
   return [
@@ -139,20 +151,27 @@ export function sameImages(a: FoldIsometry, b: FoldIsometry, points: readonly Po
     return Math.hypot(x.x - y.x, x.y - y.y) < REPEAT_TOL;
   });
 }
-function reflectionLine(m: FoldIsometry): FoldModelLine | null {
-  if (Math.abs(m[0] + m[4]) > REPEAT_TOL || Math.abs(m[1] - m[3]) > REPEAT_TOL) return null;
-  let n: [number, number] = [1 - m[0], -m[1]];
-  if (Math.hypot(...n) < REPEAT_TOL) n = [-m[3], 1 - m[4]];
-  const l = Math.hypot(...n);
-  n = [n[0] / l, n[1] / l];
-  const line = { n, d: (n[0] * m[2] + n[1] * m[5]) / 2 };
-  return sameImages(reflection(line), m, [
-    { x: 0, y: 0 },
-    { x: 1, y: 0 },
-    { x: 0, y: 1 },
-  ])
-    ? line
-    : null;
+const UNIT: readonly Point[] = [
+  { x: 0, y: 0 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+];
+const IDENTITY: FoldIsometry = [1, 0, 0, 0, 1, 0];
+
+/**
+ * The side a model map repeats on, or null when it is no mirror of a sheet
+ * reflection: it must undo itself (`m∘m` the identity — a reflection, a
+ * half-turn or the identity). A reflection keeps the paper's front up where
+ * its mirror's was, with the layers in their order: the same side. The
+ * identity or a half-turn turns the front to face the other way, so the
+ * layers must reverse for each crease to keep its letter on the paper:
+ * behind. (A reflection with the layers reversed — a half-turn about a line
+ * in the plane — would turn every crease's letter on the paper; it is no
+ * repeat, and the layer check refuses it.)
+ */
+function mirrorSide(m: FoldIsometry): RepeatSide | null {
+  if (!sameImages(compose(m, m), IDENTITY, UNIT)) return null;
+  return m[0] * m[4] - m[1] * m[3] < 0 ? 'same' : 'behind';
 }
 export function orderPairs(scene: FoldScene): Map<string, number> {
   const pairs = new Map<string, number>();
@@ -165,20 +184,27 @@ export function orderPairs(scene: FoldScene): Map<string, number> {
       }
   return pairs;
 }
-/** Prove whole-region coverage and pose, allowing extra flat subdivisions. */
+/**
+ * Whether the sheet reflection across `sheet` is a symmetry of the folded
+ * state, and on which side it repeats: one model map takes every face's pose
+ * to its mirror's — whole-region coverage, allowing extra flat subdivisions —
+ * and every overlapping pair of layers keeps its order (the same side) or
+ * every one reverses (behind), as that map says it must (`mirrorSide`).
+ */
 export function verifiedSymmetry(scene: FoldScene, sheet: FoldModelLine): RepeatSymmetry | null {
   if (scene.faces.length > 512) throw new RepeatFailure('repeat_limit');
   const map = reflection(sheet),
     first = toPair(polygonCentroid(sheetRing(scene, 0)));
-  let model: FoldModelLine | null;
+  let h: FoldIsometry;
   try {
-    model = reflectionLine(correspondingFrame(scene, scene, map, first));
+    h = correspondingFrame(scene, scene, map, first);
   } catch {
     return null;
   }
-  if (!model) return null;
-  const h = reflection(model),
-    owners: number[][] = [];
+  const side = mirrorSide(h);
+  if (!side) return null;
+  const order = sideSign(side);
+  const owners: number[][] = [];
   for (let i = 0; i < scene.faces.length; i++) {
     const polygon = sheetRing(scene, i).map((p) => applyIsometry(map, p));
     const expected = compose(h, compose(modelMap(scene, i), map));
@@ -201,10 +227,10 @@ export function verifiedSymmetry(scene: FoldScene, sheet: FoldModelLine): Repeat
     for (const x of owners[a]!)
       for (const y of owners[b]!) {
         const actual = pairs.get(`${Math.min(x, y)}:${Math.max(x, y)}`);
-        if (actual !== undefined && actual !== sign * (x < y ? 1 : -1)) return null;
+        if (actual !== undefined && actual !== order * sign * (x < y ? 1 : -1)) return null;
       }
   }
-  return { sheet, model, display: transformLine(scene.view_transform, model) };
+  return { sheet, side };
 }
 /** Every reflection of a convex polygon permutes its vertices. */
 export function repeatSymmetries(scene: FoldScene, outline: readonly SheetPoint[]): RepeatSymmetry[] {
@@ -227,16 +253,7 @@ export function repeatSymmetries(scene: FoldScene, outline: readonly SheetPoint[
         )
       )
         continue;
-      if (
-        found.some((s) =>
-          sameImages(reflection(s.sheet), m, [
-            { x: 0, y: 0 },
-            { x: 1, y: 0 },
-            { x: 0, y: 1 },
-          ]),
-        )
-      )
-        continue;
+      if (found.some((s) => sameImages(reflection(s.sheet), m, UNIT))) continue;
       const valid = verifiedSymmetry(scene, axis);
       if (valid) found.push(valid);
     }

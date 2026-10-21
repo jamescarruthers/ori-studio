@@ -11,8 +11,11 @@ import type { FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
 import type { FoldRefusalBody } from '../engine/foldEngineWire';
 import { FoldSearchStopped, runFoldSearch, type FoldSearch } from '../engine/foldSearch';
-import { reflection, RepeatFailure, verifiedSymmetry } from './repeatGeometry';
-import { mirrorOperation } from './repeatOperation';
+import { insideConvex, toPoint } from '../canvas/foldCanvasGeometry';
+import type { FoldEngineCompoundOp } from '../engine/foldEngineCompoundWire';
+import type { FoldScene } from '../engine/foldEngineWire';
+import { reflection, REPEAT_TOL, RepeatFailure, sheetRing, verifiedSymmetry, type RepeatSide } from './repeatGeometry';
+import { mirrorOperation, otherDirection, type RepeatMirrored } from './repeatOperation';
 import { movingWitnesses, verifyMaterial } from './repeatVerification';
 
 export interface RepeatSourceStep {
@@ -33,7 +36,11 @@ export interface RepeatRequest {
   selections?: Readonly<Record<number, string>>;
 }
 export type RepeatPrepared =
-  | { status: 'ready'; op: FoldRepeatOp }
+  /**
+   * `matched`: per source operation, which way of its mirror passed — 0 the
+   * predicted one, else the one `mirrorVariants` lists at that index.
+   */
+  | { status: 'ready'; op: FoldRepeatOp; matched: readonly number[] }
   | { status: 'choice'; step: number; prefix: FoldRepeatOp; candidates: FoldRepeatEntry[] }
   /**
    * Stopped at source step `step`: by Repeat's own code, or by the engine's
@@ -75,14 +82,19 @@ export function* prepareRepeatSearch(
   let index = 0;
   let recipe: FoldRepeatOp | undefined;
   const entries: FoldRepeatEntry[] = [];
+  /** Per source operation, the variant of its mirror that passed: 0 the predicted one (`mirrorVariants`). */
+  const matched: number[] = [];
   try {
     if (!request.steps.length || request.steps.length > 128) throw new RepeatFailure('repeat_limit');
-    if (!verifiedSymmetry(engine.scene(request.steps[0]!.before), request.axis))
-      throw new RepeatFailure('repeat_axis');
+    const symmetry = verifiedSymmetry(engine.scene(request.steps[0]!.before), request.axis);
+    if (!symmetry) throw new RepeatFailure('repeat_axis');
+    const { side } = symmetry;
     const map = reflection(request.axis);
     recipe = {
       kind: 'repeat',
       axis: request.axis,
+      // Said, never folded: the steps are mirrored already.
+      ...(side === 'behind' ? { side } : {}),
       source: request.source,
       parentState: engine.fingerprint(request.parent),
       steps: [],
@@ -108,7 +120,8 @@ export function* prepareRepeatSearch(
         const returned = engine.returnTo(current, targetState, history);
         if (returned.status !== 'ok') throw RepeatFailure.refused(returned.refusal);
         owned.push(returned.state);
-        verifyMaterial(before, after, target, engine.scene(returned.state), map);
+        verifyMaterial(before, after, target, engine.scene(returned.state), map, side);
+        matched.push(0);
         entries.push({
           op: {
             ...item.op,
@@ -140,8 +153,14 @@ export function* prepareRepeatSearch(
           (f) => analysis.analysis.flaps[f]!.witness,
         );
       }
-      const mapped = mirrorOperation(item.op, item.choices, before, target, map, material);
-      const candidates: { entry: FoldRepeatEntry; state: number }[] = [];
+      // The mirror as predicted, then the ways it could turn as the viewer
+      // sees it: each is folded and tested (`verifyMaterial`), and only one
+      // way may pass.
+      const variants = mirrorVariants(engine, current, target, mirrorOperation(item.op, item.choices, before, target, map, side, material), side);
+      const candidates: { entry: FoldRepeatEntry; state: number; variant: number }[] = [];
+      /** Why the predicted mirror failed: the reason a refusal gives. */
+      let predictedReason: RepeatFailure | null = null;
+      for (const [variant, mapped] of variants.entries()) {
       let reason = new RepeatFailure('repeat_order');
       let unresolved = false;
       const tryCandidate = (op: FoldOp, choices?: FoldChoices) => {
@@ -156,7 +175,7 @@ export function* prepareRepeatSearch(
         }
         owned.push(result.state);
         try {
-          verifyMaterial(before, after, target, engine.scene(result.state), map);
+          verifyMaterial(before, after, target, engine.scene(result.state), map, side);
         } catch (error) {
           if (error instanceof RepeatFailure) {
             reason = error;
@@ -169,6 +188,7 @@ export function* prepareRepeatSearch(
         if (!candidates.some((c) => c.entry.expect === result.fingerprint))
           candidates.push({
             state: result.state,
+            variant,
             entry: { op, ...(choices ? { choices } : {}), expect: result.fingerprint, sourceStep: item.id },
           });
         else {
@@ -181,7 +201,7 @@ export function* prepareRepeatSearch(
       // choices. Do not enumerate alternate tuck positions or moving sets.
       yield;
       tryCandidate(mapped.op, mapped.choices);
-      if (!candidates.length && unresolved) {
+      if (!candidates.some((c) => c.variant === variant) && unresolved) {
         // Inserted M/V is resolved by the bridge through this same public tuck
         // operation. Query its remaining orders with the saved targets fixed;
         // the general M/V authoring query intentionally searches all landings.
@@ -218,7 +238,13 @@ export function* prepareRepeatSearch(
         }
       }
       engine.releaseOrderSearch?.(current);
-      if (!candidates.length) throw reason;
+      if (variant === 0) predictedReason = reason;
+      }
+      if (!candidates.length) throw predictedReason ?? new RepeatFailure('repeat_order');
+      // Two ways of turning the mirror both pass, landing differently: which
+      // one the source means is not known, and Repeat does not guess.
+      if (new Set(candidates.map((c) => c.variant)).size > 1) throw new RepeatFailure('repeat_ambiguous');
+      matched.push(candidates[0]!.variant);
       const selected = candidates.find((c) => c.entry.expect === request.selections?.[index]);
       if (candidates.length > 1 && !selected)
         return {
@@ -237,7 +263,7 @@ export function* prepareRepeatSearch(
       current = chosen.state;
       preparedStates.push(current);
     }
-    return { status: 'ready', op: { ...recipe, steps: entries } };
+    return { status: 'ready', op: { ...recipe, steps: entries }, matched };
   } catch (error) {
     const failure = error instanceof FoldSearchStopped && error.reason === 'budget' ? new RepeatFailure('repeat_limit') : error;
     if (failure instanceof RepeatFailure)
@@ -253,4 +279,64 @@ export function* prepareRepeatSearch(
     engine.releaseOrderSearch?.(request.parent);
     engine.release(owned);
   }
+}
+
+/**
+ * The ways a source step's mirror may be folded, the predicted one first
+ * (`mirrorOperation`): then the other direction, as the viewer sees it
+ * (`otherDirection`); and behind, a reverse fold's or crimp's openings by the
+ * upper block the target's analysis lists over the mirrored source's (in the
+ * model, the source's upper block is the lower one behind). The preparation
+ * folds each and keeps the one Repeat's test passes.
+ */
+export function mirrorVariants(
+  engine: FoldEngineCompoundCalls,
+  state: number,
+  target: FoldScene,
+  predicted: RepeatMirrored,
+  side: RepeatSide,
+): RepeatMirrored[] {
+  const variants = [predicted];
+  const other = otherDirection(predicted);
+  if (other) variants.push(other);
+  if (side === 'behind') {
+    const lowered = openingsBehind(engine, state, target, predicted);
+    if (lowered) variants.push(lowered);
+  }
+  return variants;
+}
+
+/**
+ * A reverse fold's or crimp's openings behind: per opening stored, the one
+ * opening of the target's whose lower block holds the mirrored witnesses of
+ * the source's upper block, and whose upper block holds none; null when the
+ * step stores none, or any has no such opening, or more than one.
+ */
+function openingsBehind(
+  engine: FoldEngineCompoundCalls,
+  state: number,
+  target: FoldScene,
+  mirrored: RepeatMirrored,
+): RepeatMirrored | null {
+  const { op, choices } = mirrored;
+  if (!choices?.opening?.length || (op.kind !== 'inside-reverse' && op.kind !== 'outside-reverse' && op.kind !== 'crimp')) return null;
+  const { opening: stored, ...rest } = choices;
+  const asked = engine.compoundAnalysis(state, op as FoldEngineCompoundOp, Object.keys(rest).length ? rest : undefined);
+  if (asked.status !== 'ok') return null;
+  const flaps = asked.family === 'reverse' ? asked.analysis.flaps : asked.family === 'crimp' ? asked.analysis.tip.flaps : null;
+  if (!flaps) return null;
+  const at = new Map(target.lineage.map((face, index) => [face.id, index]));
+  const holds = (faces: readonly number[], point: SheetPoint) =>
+    faces.some((id) => {
+      const index = at.get(id);
+      return index !== undefined && insideConvex(sheetRing(target, index), toPoint(point), REPEAT_TOL);
+    });
+  const openings = flaps.flatMap((flap) => flap.openings);
+  const lowered = [];
+  for (const { upper } of stored ?? []) {
+    const matching = openings.filter((each) => upper.every((p) => holds(each.lower, p)) && !upper.some((p) => holds(each.upper, p)));
+    if (matching.length !== 1) return null;
+    lowered.push(matching[0]!.stored);
+  }
+  return { op, choices: { ...rest, opening: lowered } };
 }
