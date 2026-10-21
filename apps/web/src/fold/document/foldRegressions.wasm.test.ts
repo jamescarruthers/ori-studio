@@ -10,8 +10,13 @@ import { createFoldEnginePort } from '../engine/foldEnginePort';
 import type { FoldSceneCrease } from '../engine/foldEngineWire';
 import { orderResolvedStep } from '../engine/foldEnginePreview';
 import { findMoverFix, withMoverSwapped } from '../tools/moverStays';
+import { FOLD_EVERY_LAYER, type FoldResolvedSeed } from '../tools/foldToolState';
+import { findReverseSeedFix, narrowerReverseFlaps } from '../tools/reverse/reverseSeedFix';
+import { reverseDrawnSegment, reverseSegmentSeed } from '../tools/reverse/reverseSegmentSeed';
+import { buildReverseStep } from '../tools/reverse/reverseStep';
+import { lineSectionProbe } from '../tools/topFlapSeed';
 import { createFoldReplayer, type FoldReplayProgress } from './foldReplay';
-import { isLockedStep, type FoldOp, type FoldSequenceDocument, type FoldStep, type SheetPoint } from './foldSequenceDocument';
+import { isLockedStep, type FoldChoices, type FoldOp, type FoldSequenceDocument, type FoldStep, type SheetPoint } from './foldSequenceDocument';
 import { readFoldSequences } from './foldSequenceFile';
 
 /**
@@ -31,7 +36,15 @@ const FIXTURES = resolve(ROOT, '../../tests/fixtures/fold-regressions');
 const available = existsSync(WASM) && existsSync(FIXTURES);
 
 /** The fixtures this file asserts; others in the folder have tests of their own, which the README names. */
-const NAMES = ['edge-crossing.osf', 'ghost-precrease.osf', 'squash-covered.osf', 'squash-drawn-hinge.osf', 'tuck-target-layer.osf', 'unfold-to-after-import.osf'];
+const NAMES = [
+  'edge-crossing.osf',
+  'ghost-precrease.osf',
+  'reverse-seed-segment.osf',
+  'squash-covered.osf',
+  'squash-drawn-hinge.osf',
+  'tuck-target-layer.osf',
+  'unfold-to-after-import.osf',
+];
 
 /** Every fixture the README lists, by its bullet's file name. */
 function readmeNames(): string[] {
@@ -42,6 +55,7 @@ function readmeNames(): string[] {
 /** A click's reach on the folded pane, in its scene units. */
 const RADII = { point: 0.02, line: 0.02 };
 const POINT_RULE = { snap: 'point', edges: true, free: false } as const;
+const FREE_RULE = { snap: 'free', edges: false, free: false } as const;
 
 type Calls = FoldEngineCalls & FoldEngineCompoundCalls;
 
@@ -257,6 +271,76 @@ describe.skipIf(!available)('the fold-regression fixtures', () => {
       [0.6, 0.4],
       [0.4, 0.6],
       [0.95, 0.3],
+    ] as SheetPoint[]) {
+      expectNear(imageOf(calls, landed, sheet), imageOf(calls, parent, sheet), `${sheet.join(', ')} stays`);
+    }
+  });
+
+  it('reverse-seed-segment: a line drawn across one arm reverses that arm, where every layer on the line was refused', async () => {
+    const { calls, steps: all, parentOf, stateOf } = await replayed('reverse-seed-segment.osf');
+    const reverse = all.at(-1)!;
+    expect(reverse.op.kind).toBe('inside-reverse');
+    const [parent, landed] = [parentOf(reverse), stateOf(reverse)];
+    const index = pickIndex(calls, parent);
+    // A free line drawn across the left arm only, along the line the step folds.
+    const picks = [
+      { x: 0.12, y: 0.018 },
+      { x: 0.22, y: 0.108 },
+    ].map((at) => {
+      const pick = resolveFoldPick(index, 'folded', at, RADII, FREE_RULE);
+      if (!pick) throw new Error('no pick');
+      return pick;
+    });
+    const tools = { tool: 'inside-reverse' as const, lineMode: 'free' as const, picks, swapped: false, override: null };
+    const probe = lineSectionProbe(tools, index, null);
+    if (!probe) throw new Error('no section asked');
+    const sectioned = calls.crossSection(parent, probe.line, probe.side);
+    if (sectioned.status !== 'ok') throw new Error('no section');
+    const { section } = sectioned;
+    const drawn = reverseDrawnSegment(tools);
+    if (!drawn) throw new Error('no segment');
+    // Extended, the line crosses both arms' ends: two flaps on the tip side, the stretch drawn crossing one.
+    expect(section.flaps).toHaveLength(2);
+    const seed = reverseSegmentSeed(section, drawn);
+    expect(seed).toMatchObject({ scope: 'flaps', flaps: [{ faces: expect.any(Array) }] });
+    const build = (asked: FoldResolvedSeed) =>
+      buildReverseStep({ lineMode: 'free', picks, candidate: null, swapped: false, seed: asked, kind: 'inside', openings: [], completion: null }, index);
+    const drawnStep = build(seed);
+    if (drawnStep.status !== 'built') throw new Error('not built');
+    expect(drawnStep.op).toEqual(reverse.op);
+    // The old default, every layer on the line: neither kind lands, and the engine offers no fix.
+    const everyLayer = build(FOLD_EVERY_LAYER);
+    if (everyLayer.status !== 'built') throw new Error('not built');
+    for (const kind of ['inside-reverse', 'outside-reverse'] as const) {
+      expect(calls.step(parent, { ...everyLayer.op, kind } as FoldOp, everyLayer.choices)).toMatchObject({
+        status: 'refused',
+        refusal: { code: 'reverse_kind_infeasible' },
+        fixes: [],
+      });
+    }
+    // The tools' fix for that refusal: the flap the drawn stretch crosses, which lands.
+    const refused = calls.step(parent, everyLayer.op, everyLayer.choices);
+    const narrower = refused.status === 'refused' ? narrowerReverseFlaps(refused, FOLD_EVERY_LAYER, section, drawn) : null;
+    expect(narrower).toEqual(seed.scope === 'flaps' ? seed.flaps : null);
+    const ask = async (op: FoldOp, choices: FoldChoices | undefined) => {
+      if (op.kind !== 'inside-reverse' && op.kind !== 'outside-reverse') return null;
+      const asked = calls.compoundAnalysis(parent, op, choices);
+      return asked.status === 'ok' && asked.family === 'reverse' ? asked : null;
+    };
+    const fix = narrower ? await findReverseSeedFix(narrower, drawnStep, ask, null) : null;
+    expect(fix).toEqual({ flaps: narrower, opening: 0, ways: 0 });
+    // The drawn arm's flap alone lands, as the fixture stores it: the left arm's end turns, the up arm stays.
+    expect(calls.step(parent, drawnStep.op, drawnStep.choices)).toMatchObject({ status: 'ok', fingerprint: reverse.expect });
+    for (const sheet of [
+      [0.02, 0.06],
+      [0.02, 0.19],
+    ] as SheetPoint[]) {
+      expect(Math.hypot(...minus(imageOf(calls, landed, sheet), imageOf(calls, parent, sheet))), `${sheet.join(', ')} turns`).toBeGreaterThan(0.05);
+    }
+    for (const sheet of [
+      [0.98, 0.06],
+      [0.98, 0.19],
+      [0.6, 0.06],
     ] as SheetPoint[]) {
       expectNear(imageOf(calls, landed, sheet), imageOf(calls, parent, sheet), `${sheet.join(', ')} stays`);
     }

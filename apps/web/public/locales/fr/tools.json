@@ -364,6 +364,7 @@
       "pickThisFlap": "Plier seulement ce rabat",
       "pinchInstead": "Pincer à cet endroit à la place",
       "precreaseOtherWay": "Pré-plier dans l’autre sens",
+      "reverseCrossedFlaps": "Inverser seulement les rabats que la ligne traverse",
       "reverseFlap": "Inverser seulement le rabat {{number}}",
       "reverseThisFlap": "Inverser seulement ce rabat",
       "sinkFlap": "Enfoncer seulement le rabat {{number}}",

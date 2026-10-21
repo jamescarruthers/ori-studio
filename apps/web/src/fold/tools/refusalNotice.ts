@@ -64,6 +64,8 @@ export interface FoldFixVerbs extends FoldVertexFixVerbs, FoldExtentFixVerbs {
   otherSink?: (kind: FoldSinkKind) => void;
   /** The point that stays put swapped for the one at its spot on paper that folds (`moverStays`). */
   useMovingPoint?: () => void;
+  /** A reverse fold with only the flaps its drawn line crosses (`reverse/reverseSeedFix`). */
+  useNarrowerSeed?: () => void;
 }
 
 export interface FoldRefusalNoticeModel {
@@ -108,6 +110,12 @@ export interface FoldRefusalContext {
    * that folds lands it (`moverStays`): the notice offers that point.
    */
   movingPoint?: boolean;
+  /**
+   * A reverse fold refused for its tip, where only the flaps its drawn line
+   * crosses land it (`reverse/reverseSeedFix`): those flaps, as indices into
+   * the section's flaps. The notice offers them.
+   */
+  narrowerSeed?: readonly number[];
 }
 
 /**
@@ -991,8 +999,29 @@ export function foldRefusalNotice(
       ...(context.extent ? extentExtraActions(t, refused.refusal.code, context.extent, context.readOnly, verbs) : []),
       // And a point that stays put, where paper that folds lies at its spot.
       ...movingPointActions(t, refused, context, verbs),
+      // And a reverse fold that took more flaps than its drawn line crosses.
+      ...narrowerSeedActions(t, context, verbs),
     ],
   };
+}
+
+/** A reverse fold's button that folds only the flaps its drawn line crosses, when those land it. */
+function narrowerSeedActions(t: TFunction, context: FoldRefusalContext, verbs: FoldFixVerbs): NoticeAction[] {
+  const { useNarrowerSeed } = verbs;
+  const flaps = context.narrowerSeed ?? [];
+  const [only] = flaps;
+  if (only === undefined || !useNarrowerSeed) return [];
+  return [
+    {
+      id: 'narrower-seed',
+      label:
+        flaps.length === 1
+          ? pickFlapLabel(t, context.kind, context.flapNumber(only))
+          : t('tools:fold.fix.reverseCrossedFlaps', 'Reverse only the flaps the line crosses'),
+      run: useNarrowerSeed,
+      disabled: context.readOnly,
+    },
+  ];
 }
 
 /** A point that stays put: the button that takes the point at its spot on paper that folds, when one lands the fold. */

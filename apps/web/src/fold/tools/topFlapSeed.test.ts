@@ -76,12 +76,15 @@ describe('lineSectionProbe', () => {
     const swapped = lineSectionProbe({ ...located, swapped: true }, index, null);
     expect(swapped).toMatchObject({ side: 'positive' });
     expect(swapped!.key).not.toBe(probe!.key);
-    // A tuck's line is a fold's.
+    // A tuck's line is a fold's, and so is a reverse fold's drawn between two picks.
     expect(lineSectionProbe({ ...located, tool: 'tuck' }, index, null)).toEqual(probe);
+    expect(lineSectionProbe({ ...located, tool: 'inside-reverse' }, index, null)).toEqual(probe);
   });
 
   it('asks nothing for a fold of a whole point, a fix’s line, or a line not yet located', () => {
-    expect(lineSectionProbe({ ...located, tool: 'inside-reverse' }, index, null)).toBeNull();
+    // A reverse fold by a constructed line takes every layer on it, and a crimp every layer at its first.
+    expect(lineSectionProbe({ ...located, tool: 'inside-reverse', lineMode: 'axiom-2' }, index, null)).toBeNull();
+    expect(lineSectionProbe({ ...located, tool: 'crimp' }, index, null)).toBeNull();
     expect(lineSectionProbe({ ...located, tool: 'squash' }, index, null)).toBeNull();
     const op = { kind: 'valley' as const, line: { via: 'free' as const, through: [[0, 0.4], [1, 0.4]] as [[number, number], [number, number]] }, seed: { scope: 'all' as const } };
     expect(lineSectionProbe({ ...located, override: { op } }, index, null)).toBeNull();

@@ -246,6 +246,27 @@ describe('foldRefusalNotice', () => {
     ).toEqual([]);
   });
 
+  it('offers a reverse fold only the flaps its drawn line crosses, only when the tools found that they land', () => {
+    const refused: FoldRefused = { refusal: { code: 'reverse_kind_infeasible', kind: 'inside', faces: [1] }, fixes: [] };
+    const useNarrowerSeed = vi.fn();
+    const one = foldRefusalNotice(t, refused, context({ kind: 'reverse', narrowerSeed: [0] }), { ...verbs(), useNarrowerSeed });
+    expect(one.text).toBe(
+      'Neither kind of reverse fold fits here: no way of stacking the layers lets the tip turn. Move the line, or reverse other flaps.'
+    );
+    expect(one.actions.map((action) => action.label)).toEqual(['Reverse flap 2 only']);
+    one.actions[0]?.run();
+    expect(useNarrowerSeed).toHaveBeenCalledTimes(1);
+    const two = foldRefusalNotice(t, refused, context({ kind: 'reverse', narrowerSeed: [0, 2] }), { ...verbs(), useNarrowerSeed });
+    expect(two.actions.map((action) => action.label)).toEqual(['Reverse only the flaps the line crosses']);
+    // None found to land, none bound, or nothing can change: no button, or none to press.
+    expect(foldRefusalNotice(t, refused, context({ kind: 'reverse' }), { ...verbs(), useNarrowerSeed }).actions).toEqual([]);
+    expect(foldRefusalNotice(t, refused, context({ kind: 'reverse', narrowerSeed: [0] }), verbs()).actions).toEqual([]);
+    expect(
+      foldRefusalNotice(t, refused, context({ kind: 'reverse', narrowerSeed: [0], readOnly: true }), { ...verbs(), useNarrowerSeed }).actions[0]
+        ?.disabled
+    ).toBe(true);
+  });
+
   it('says a sink or a vertex fold no order lands in its own words, pointing to the fix the engine offers', () => {
     const generic = foldRefusalNotice(t, { refusal: { code: 'internal' }, fixes: [] }, context(), verbs());
     const noOrder = { code: 'no_order', faces: [1, 2] } as FoldRefusalBody;

@@ -216,6 +216,8 @@ export interface FoldCanvasVerbs {
   throughAllLayers: () => void;
   /** A point that stays put, swapped for the one at its spot on paper that folds (`FoldToolPreview.moverFix`). */
   useMovingPoint: () => void;
+  /** A reverse fold with only the flaps its drawn line crosses, opened the way that lands (`FoldToolPreview.seedFix`). */
+  useNarrowerSeed: () => void;
 }
 
 /** The verbs, and whether a commit waits for the preview to land. */
@@ -911,6 +913,13 @@ export function useFoldCanvasVerbs(
       useMovingPoint: () => {
         const fix = live.current.preview.moverFix;
         if (fix) tools.swapPoint(fix.from, fix.to);
+      },
+
+      useNarrowerSeed: () => {
+        const fix = live.current.preview.seedFix;
+        if (!fix) return;
+        tools.setSeed({ scope: 'flaps', flaps: fix.flaps });
+        if (fix.opening > 0) tools.stepOpening(fix.opening, fix.ways);
       },
 
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),

@@ -369,9 +369,22 @@ describe('the top flap a fold takes by default (owner request, 2026-10-13)', () 
     expect(engine.crossSection).toHaveBeenCalledTimes(1);
   });
 
-  it('asks no section first for a fold of a whole point: a reverse fold takes every layer', async () => {
+  it('asks the section first for a reverse fold drawn as a free line: it takes every layer on the stretch drawn', async () => {
+    // The line runs on past the stretch drawn, from (0, 0.5) to (0.5, 0.5), over a second flap.
+    const beyond = { ...SECTION, rows: [SECTION.rows[0]!, { faces: [1], spans: [[0.6, 1]], flap: 1 }] } as FoldCrossSection;
+    engine.crossSection.mockImplementationOnce(async () => ({ status: 'ok', section: beyond }));
+    await render({ ...FREE_LINE, tool: 'inside-reverse', picks: [free(0, 0.5), free(0.5, 0.5)] });
+    expect(engine.crossSection).toHaveBeenCalledTimes(1);
+    expect(seen?.seed).toEqual({ scope: 'flaps', flaps: [FLAPS[0]] });
+    expect(engine.compoundAnalysis).toHaveBeenLastCalledWith(
+      PARENT,
+      expect.objectContaining({ kind: 'inside-reverse', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } }),
+      undefined
+    );
+  });
+
+  it('takes every layer for a reverse fold whose stretch drawn crosses every flap', async () => {
     await render({ ...FREE_LINE, tool: 'inside-reverse' });
-    expect(engine.crossSection).not.toHaveBeenCalled();
     expect(seen?.seed).toEqual({ scope: 'all' });
     expect(engine.compoundAnalysis).toHaveBeenLastCalledWith(
       PARENT,

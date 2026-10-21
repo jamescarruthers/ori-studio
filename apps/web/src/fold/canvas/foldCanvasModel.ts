@@ -79,6 +79,7 @@ export function foldWindowPreview(
     const at = flap ? sectionIndex(flaps, flap) : -1;
     return at >= 0 ? [at] : [];
   });
+  const narrower = preview.refused && preview.seedFix ? preview.seedFix.flaps.map((flap) => sectionIndex(flaps, flap)) : [];
   return {
     section,
     interval,
@@ -86,6 +87,7 @@ export function foldWindowPreview(
     added,
     refused: preview.refused,
     ...(preview.refused && preview.moverFix ? { movingPoint: true } : {}),
+    ...(narrower.length > 0 && narrower.every((index) => index >= 0) ? { narrowerSeed: narrower } : {}),
     landing: preview.landing,
     acrossLayers: preview.build.status === 'built' && preview.build.acrossLayers === true && !tools.override,
     ...(queued ? { queued } : {}),

@@ -52,6 +52,7 @@ function verbs(roots = 1, extents = true): FoldCanvasVerbs {
     pinchInstead: vi.fn(),
     throughAllLayers: vi.fn(),
     useMovingPoint: vi.fn(),
+    useNarrowerSeed: vi.fn(),
     commit: vi.fn(() => true),
     cancel: vi.fn(() => true),
     clearMarks: vi.fn(),
