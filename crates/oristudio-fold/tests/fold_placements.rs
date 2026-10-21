@@ -9,7 +9,7 @@ use support::*;
 fn complete(search: &mut FoldPlacementSearch) {
     for _ in 0..100 {
         search.advance(&CompletionLimits::default(), 128, 1024);
-        if search.exhausted() {
+        if search.count().exact {
             return;
         }
     }

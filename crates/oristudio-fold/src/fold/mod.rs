@@ -33,7 +33,6 @@ mod partial_existing;
 pub mod placements;
 pub(crate) mod score;
 pub(crate) mod section;
-pub mod solved;
 
 use oristudio_geometry::Line;
 use serde::Serialize;
@@ -196,11 +195,6 @@ pub struct FoldReport {
     pub refolded: Vec<Refold>,
     /// How many faces were split.
     pub split: usize,
-    /// A solved fold whose moving paper does not all lie outside what stays
-    /// (`solved`): some paper that stays lies on the far side of a moving
-    /// face, as a tuck's does. Never for any other fold.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub inserted: bool,
 }
 
 /// A landed fold.
@@ -317,7 +311,6 @@ impl State {
                 unfolded: landed.unfolded,
                 refolded: landed.refolded,
                 split: landed.split,
-                inserted: false,
             },
             extent: None,
         })

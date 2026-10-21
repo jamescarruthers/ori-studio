@@ -1,7 +1,5 @@
-//! Authoring search over ordinary and inserted M/V landings: the fallback
-//! for a fold whose orders the solver cannot list within its limits
-//! ([`super::solved`] lists them). Replay uses the returned recipe directly;
-//! it never enumerates or substitutes another result.
+//! Authoring search over ordinary and inserted M/V landings. Replay uses the
+//! returned recipe directly; it never enumerates or substitutes another result.
 use std::collections::{BTreeSet, VecDeque};
 
 use oristudio_layer_order::LayerOrder;
@@ -16,16 +14,11 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum FoldLanding {
-    /// The block on top (a valley) or underneath (a mountain), moving what
-    /// the closure moves: the plain fold's own landing.
     #[default]
     Outer,
-    /// The recipe of a tuck against these targets.
-    Against { targets: Vec<[f64; 2]> },
-    /// The order itself: the seed's flaps landed in the order the step's
-    /// `choices.completion` pins, or in their one order without it
-    /// ([`crate::fold::solved`]).
-    Solved,
+    Against {
+        targets: Vec<[f64; 2]>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -157,24 +150,11 @@ impl FoldPlacementSearch {
     pub fn refusal(&self) -> Option<&Refused> {
         self.refusal.as_ref()
     }
-    /// The candidates found, exact once the search is over
-    /// ([`FoldPlacementSearch::exhausted`]): every recipe tried, or every
-    /// counted order found. A recipe pins a target and leaves the rest free,
-    /// so no set of recipes reaches every combination of independent parts
-    /// (`fold::solved` lists those): the search runs only as the solver's
-    /// fallback, and a search with nothing left to try says so, as the
-    /// chooser, a pleat's legs and Repeat need it to.
     pub fn count(&self) -> ChoiceCount {
         ChoiceCount {
             orders: self.candidates.len() as u64,
             exact: self.finished(),
         }
-    }
-
-    /// Nothing left to search: every set of targets tried, or every order
-    /// found.
-    pub fn exhausted(&self) -> bool {
-        self.finished()
     }
 
     /// Every set of targets tried, or every order the selection can land in

@@ -220,24 +220,8 @@ interface FoldAlongLine {
   seed: FoldSeed;
 }
 
-/**
- * Where a valley or mountain fold's moving paper lands:
- *
- * - `outer`: on top (a valley) or underneath (a mountain), moving what the
- *   closure moves — the plain fold's own landing, and what a fold with one
- *   order whose outer landing gives it stores;
- * - `against`: a tuck's recipe against these targets, as files from before
- *   `solved` store a chosen order, and the recipe search still does for a fold
- *   whose orders the solver cannot list;
- * - `solved`: the seed's flaps in the order the step's `choices.completion`
- *   pins (every pair of every part the folder chose in), or in their one
- *   order without it. Replay fixes those pairs: exactly one order lands, or
- *   the step is broken.
- */
-export type FoldLanding =
-  | { kind: 'outer' }
-  | { kind: 'against'; targets: readonly SheetPoint[] }
-  | { kind: 'solved' };
+/** A valley or mountain fold: the direction is the kind. */
+export type FoldLanding = { kind: 'outer' } | { kind: 'against'; targets: readonly SheetPoint[] };
 
 export interface FoldPlainOp extends FoldAlongLine {
   /** Absent only on legacy/in-memory outer folds. Writers make it explicit. */
@@ -799,13 +783,6 @@ export type FoldFaceOrder = readonly [number, number, 1 | -1];
 export interface FoldCompletionChoice {
   faces: readonly SheetPoint[];
   orders: readonly FoldFaceOrder[];
-  /**
-   * Per witness, whether its face showed its front when the choice was
-   * made. Replay breaks the step when one face of a stored pair now turns
-   * the other way from the other, rather than read the sign as the other
-   * stacking. Absent in choices stored before it.
-   */
-  up?: readonly boolean[];
 }
 
 /** One flap's opening of a reverse fold, crimp or tuck: the faces of its upper block, by witnesses. */

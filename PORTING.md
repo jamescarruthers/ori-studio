@@ -1190,23 +1190,6 @@ That caller-built constraints avoid both arrangement failures above is still
 **[derived]**: neither goes through Flat-Folder's arrangement. The `verify`
 oracle is the check.
 
-### A plain fold's orders, listed by the solver (a use, 2026-10-21)
-
-Fold's valley and mountain list their layer orders through the same entry
-point (`oristudio-fold`'s `fold::solved`), with nothing in the ported search
-changed: the seed's flaps prepared as one block, the parent's order of every
-pair that stays carried, each hinge seeded in the fold's direction, and the
-completion's components offered as independent parts. A chosen order is saved
-as a `solved` landing pinned by `choices.completion` (every pair of every
-part, each witness's orientation beside it); replay fixes those pairs and
-must complete to exactly one order, and breaks where an earlier step turned
-one face of a stored pair apart from the other. A pick that is the outer
-recipe's own landing is saved as `outer`. Steps
-saved with `outer` or `against` landings replay through their own paths,
-unchanged. Fold sequences were unreleased when the landing was added, so the
-reader version did not move. The recipe search the listing replaces is kept
-only as its fallback, for a fold the solver cannot list within its limits.
-
 ## Origami Simulator (`packages/origami-simulator`)
 
 The vendored reference is `third_party/origami-simulator` at commit

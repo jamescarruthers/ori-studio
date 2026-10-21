@@ -43,11 +43,10 @@ fn an_explicit_single_flap_selection_cannot_offer_an_expanded_outer_fold() {
     assert!(answer.count.exact);
     assert_eq!(answer.count.orders, 1);
     assert!(!answer.moving_varies);
-    // The one order lies inside the book, which the outer recipe cannot
-    // land without the other flap: it is stored as itself, with the pairs
-    // the search decided, so replay need not search again.
-    assert_eq!(answer.landing, Some(oristudio_fold::FoldLanding::Solved));
-    assert!(answer.completion.is_some());
+    assert!(matches!(
+        answer.landing,
+        Some(oristudio_fold::FoldLanding::Against { .. })
+    ));
     raw["landing"] = serde_json::to_value(answer.landing).unwrap();
     let choices = Choices {
         completion: answer.completion,
@@ -191,82 +190,10 @@ fn a_precreased_flat_sheet_folded_in_half_lands_without_a_chooser() {
 }
 
 #[test]
-fn the_solver_lists_what_the_recipe_search_finds_many_targets_in() {
-    // Two separate flaps on paper precreased into many columns: outer, or
-    // between the base and the first flap. The inserted landing is many sets
-    // of targets into the recipe search; the solver lists both at once.
-    let (mut bridge, parent, fold) = precreased_columns();
-    let answer = ok(bridge
-        .order_selection(
-            parent,
-            &fold,
-            &Choices::default(),
-            &OrderQuery {
-                search_ms: Some(1.0),
-                ..Default::default()
-            },
-        )
-        .unwrap());
-    assert_eq!((answer.count.orders, answer.count.exact), (2, true));
-    assert!(!answer.searching);
-    assert_eq!(answer.parts.len(), 1);
-    assert_eq!(
-        answer.source,
-        Some(oristudio_fold_wasm::order_selection::OrderSource::Solved)
-    );
-}
-
-/// The recipe search is the fallback for a listing that cannot finish: here
-/// one order per part, so the listing truncates.
-#[test]
 fn a_longer_press_searches_on_and_finds_what_a_shorter_one_could_not() {
-    let (mut bridge, parent, fold) = precreased_columns();
-    let mut ask = |batch: u64, search_ms: f64| {
-        ok(bridge
-            .order_selection(
-                parent,
-                &fold,
-                &Choices::default(),
-                &OrderQuery {
-                    batch,
-                    search_ms: Some(search_ms),
-                    per_component: Some(1),
-                    ..Default::default()
-                },
-            )
-            .unwrap())
-    };
-    // A millisecond's press tries a set or two: only the outer landing, and
-    // asking again within the same press searches no further.
-    let short = ask(0, 1.0);
-    assert_eq!((short.count.orders, short.count.exact), (1, false));
-    assert!(!short.searching);
-    assert_eq!(
-        short.source,
-        Some(oristudio_fold_wasm::order_selection::OrderSource::Recipes)
-    );
-    let again = ask(0, 1.0);
-    assert_eq!((again.count.orders, again.searching), (1, false));
-    // Nothing at all for a press with no time.
-    assert_eq!(ask(1, 0.0).count.orders, 1);
-    // A longer press, asked again while it says it is searching, as the
-    // worker asks between slices: it finds the inserted landing, and then
-    // says there is nothing more — exact, since the selection's two orders
-    // were counted and both found.
-    let mut long = ask(2, 30_000.0);
-    let mut calls = 1;
-    while long.searching {
-        assert!(!long.count.exact);
-        long = ask(2, 30_000.0);
-        calls += 1;
-        assert!(calls < 1000, "the press never ended");
-    }
-    assert_eq!((long.count.orders, long.count.exact), (2, true));
-}
-
-/// Paper precreased into sixteen columns and four rows near the top, a
-/// strip folded up, and the top folded down over it: the parent and the fold.
-fn precreased_columns() -> (Bridge, u32, Op) {
+    // Two separate flaps on paper precreased into many columns: outer, or
+    // between the base and the first flap. The inserted landing is many
+    // sets of targets into the search.
     let mut bridge = Bridge::new();
     let mut state = ok(bridge.sheet(
         &serde_json::from_value(json!({"shape":{"kind":"square"},"startSide":"front"})).unwrap(),
@@ -291,5 +218,39 @@ fn precreased_columns() -> (Bridge, u32, Op) {
     let fold = op(
         json!({"kind":"valley","line":{"via":"free","through":[[0.,0.8],[1.,0.8]]},"moving":[0.5,0.9],"seed":{"scope":"all"},"landing":{"kind":"outer"}}),
     );
-    (bridge, parent, fold)
+    let mut ask = |batch: u64, search_ms: f64| {
+        ok(bridge
+            .order_selection(
+                parent,
+                &fold,
+                &Choices::default(),
+                &OrderQuery {
+                    batch,
+                    search_ms: Some(search_ms),
+                    ..Default::default()
+                },
+            )
+            .unwrap())
+    };
+    // A millisecond's press tries a set or two: only the outer landing, and
+    // asking again within the same press searches no further.
+    let short = ask(0, 1.0);
+    assert_eq!((short.count.orders, short.count.exact), (1, false));
+    assert!(!short.searching);
+    let again = ask(0, 1.0);
+    assert_eq!((again.count.orders, again.searching), (1, false));
+    // Nothing at all for a press with no time.
+    assert_eq!(ask(1, 0.0).count.orders, 1);
+    // A longer press, asked again while it says it is searching, as the
+    // worker asks between slices: it finds the inserted landing, and then
+    // says there is nothing more.
+    let mut long = ask(2, 30_000.0);
+    let mut calls = 1;
+    while long.searching {
+        assert!(!long.count.exact);
+        long = ask(2, 30_000.0);
+        calls += 1;
+        assert!(calls < 1000, "the press never ended");
+    }
+    assert_eq!((long.count.orders, long.count.exact), (2, true));
 }

@@ -80,10 +80,7 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
   switch (op.kind) {
     case 'valley':
     case 'mountain':
-      // A tuck's recipe, or an order chosen between layers that stay: a tuck's words.
-      if (op.landing?.kind === 'against' || (op.landing?.kind === 'solved' && context.report?.inserted)) {
-        return { op: 'fold', direction: op.kind, line: sentenceLine(op.line, null, context), scope: scopeOf(op.seed), inserted: true };
-      }
+      if (op.landing?.kind === 'against') return { op: 'fold', direction: op.kind, line: sentenceLine(op.line, null, context), scope: scopeOf(op.seed), inserted: true };
       // A fold along a bend that laid its flap flat, as the tools store one (plan D3): an unfold.
       if (context.report?.unfolds) return { op: 'unfold', direction: op.kind, scope: scopeOf(op.seed) };
       return { op: 'fold', direction: op.kind, line: sentenceLine(op.line, op.seed, context), scope: scopeOf(op.seed) };

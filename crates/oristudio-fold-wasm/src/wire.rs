@@ -169,7 +169,7 @@ impl Op {
         match self {
             Op::Valley(a) | Op::Mountain(a) => Takes {
                 root: a.line.is_axiom(),
-                completion: !matches!(a.landing, oristudio_fold::FoldLanding::Outer),
+                completion: matches!(a.landing, oristudio_fold::FoldLanding::Against { .. }),
                 ..Takes::default()
             },
             Op::Precrease(p) => Takes {

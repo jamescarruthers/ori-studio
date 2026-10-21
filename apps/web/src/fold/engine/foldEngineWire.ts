@@ -415,12 +415,6 @@ export interface FoldReport extends FoldAnalysis {
   refolded: FoldRefold[];
   /** How many faces were split. */
   split: number;
-  /**
-   * A `solved` landing whose moving paper does not all lie outside the paper
-   * that stays: some of it lies beyond a moving face, as a tuck's does.
-   * Absent for every other fold.
-   */
-  inserted?: boolean;
 }
 
 /** How the viewer sees the model frame: turned over (seen from −z), and rotated, radians counter-clockwise. */

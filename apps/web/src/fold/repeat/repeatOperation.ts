@@ -169,7 +169,7 @@ export function mirrorOperation(
     case 'pleat': {
       const placement = (value: FoldPleatPlacement): FoldPleatPlacement => ({
         landing: value.landing.kind === 'against' ? { kind: 'against', targets: value.landing.targets.map(p) } : value.landing,
-        ...(value.completion ? { completion: { ...value.completion, faces: value.completion.faces.map(p) } } : {}),
+        ...(value.completion ? { completion: { faces: value.completion.faces.map(p), orders: value.completion.orders } } : {}),
       });
       // Its first line is the mountain and its second the valley, as the
       // viewer sees them: seen from the other side they trade places, which
@@ -274,11 +274,8 @@ export function mirrorOperation(
   const mapped: FoldChoices = {
     ...choices,
     ...(choices?.root ? { root: transformLine(frame, choices.root) } : {}),
-    // The witnesses mirrored, their orders and orientations as they are: a
-    // symmetry of the state turns every face alike, so each stored pair's
-    // two faces still turn as they did relative to each other.
     ...(choices?.completion
-      ? { completion: { ...choices.completion, faces: choices.completion.faces.map(p) } }
+      ? { completion: { faces: choices.completion.faces.map(p), orders: choices.completion.orders } }
       : {}),
     ...(choices?.opening ? { opening: choices.opening.map((o) => ({ upper: o.upper.map(p) })) } : {}),
     ...(choices?.pocket ? { pocket: [p(choices.pocket[0]), p(choices.pocket[1])] as const } : {}),

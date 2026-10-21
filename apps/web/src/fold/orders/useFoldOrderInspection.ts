@@ -11,26 +11,6 @@ export function orderStackRegions(scene: FoldScene, baseline: FoldScene | null) 
 
 export type FoldOrderInspection = ReturnType<typeof useFoldOrderInspection>;
 
-/**
- * The stacks the canvas tints while orders are reviewed: the region picked in
- * the inspector; else the part being chosen in — the stacks where two of its
- * faces lie, which are what its orders change — given as its faces, or as an
- * import component's pairs; else the stacks that differ from the first preview.
- */
-export function orderTintRows(
-  inspection: Pick<FoldOrderInspection, 'rows' | 'selected'>,
-  part: { faces?: readonly number[]; pairs?: readonly (readonly [number, number])[] }
-): FoldOrderInspection['rows'] {
-  const { rows, selected } = inspection;
-  if (selected !== null) return rows.filter((row) => row.index === selected);
-  if (part.faces?.length) {
-    const faces = new Set(part.faces);
-    return rows.filter((row) => row.faces_top_to_bottom.filter((f) => faces.has(f)).length >= 2);
-  }
-  const pairs = part.pairs ?? [];
-  return rows.filter((row) => row.changed || pairs.some(([a, b]) => row.faces_top_to_bottom.includes(a) && row.faces_top_to_bottom.includes(b)));
-}
-
 /** Compare local overlap stacks, never infer a global stack from a silhouette. */
 export function useFoldOrderInspection(key: string | null, scene: FoldScene | null) {
   const [baseline, setBaseline] = useState<{ key: string; scene: FoldScene } | null>(null);

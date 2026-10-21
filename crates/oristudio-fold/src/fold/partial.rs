@@ -77,7 +77,6 @@ impl State {
                 unfolded: Vec::new(),
                 refolded: Vec::new(),
                 split: 0,
-                inserted: false,
             },
             extent: Some([line.point_at(t0), line.point_at(t1)]),
         })

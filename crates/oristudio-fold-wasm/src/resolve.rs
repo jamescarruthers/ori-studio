@@ -73,13 +73,6 @@ pub enum Resolved {
     Jump(State),
     /// A compound fold, any family's (`crate::compound`).
     Compound(Box<dyn CompoundOp>),
-    /// A valley or mountain landed in the order its step chose
-    /// (`FoldLanding::Solved`): the seed's flaps, the stored pairs fixed,
-    /// exactly one order, or broken (`oristudio_fold::fold::solved`).
-    Solved {
-        fold: PlainFold,
-        stored: Option<oristudio_fold::WitnessOrder>,
-    },
 }
 
 impl Resolved {
@@ -91,7 +84,6 @@ impl Resolved {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
             Resolved::Compound(op) => op.plain().map(Ok),
-            Resolved::Solved { fold, .. } => Some(Ok(fold.clone())),
             Resolved::View(_) | Resolved::Jump(_) => None,
         }
     }
@@ -472,8 +464,7 @@ pub fn precrease_extent(op: &Op) -> Result<oristudio_fold::Extent, BridgeError> 
 }
 
 /// Saved insertion recipes use the compound tuck validator, including its
-/// target-bounded moving set; a solved landing, the seed's flaps in the
-/// stored order. Authoring search never runs during replay.
+/// target-bounded moving set. Authoring search never runs during replay.
 fn resolved_landing(
     parent: &State,
     a: &crate::wire::AlongLine,
@@ -505,32 +496,6 @@ fn resolved_landing(
                 additional_targets: targets[1..].to_vec(),
             };
             compound(crate::ops_crimp_tuck::resolve_tuck(parent, &op, choices))
-        }
-        oristudio_fold::FoldLanding::Solved => {
-            let resolved = along_line(
-                parent,
-                a,
-                direction,
-                ActionKind::Fold,
-                choices.root.as_ref(),
-            )?;
-            let fold = match resolved.plain(parent) {
-                Some(Ok(fold)) => fold,
-                Some(Err(refusal)) => return Err(refusal.into()),
-                None => {
-                    return Err(BridgeError::InvalidInput(
-                        "a solved landing needs a fold along a line".into(),
-                    )
-                    .into());
-                }
-            };
-            Ok(Resolved::Solved {
-                fold,
-                stored: choices
-                    .completion
-                    .clone()
-                    .filter(|o| !o.faces.is_empty() || !o.orders.is_empty()),
-            })
         }
     }
 }

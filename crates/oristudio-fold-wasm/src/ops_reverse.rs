@@ -161,20 +161,14 @@ impl CompoundOp for ReverseStep {
         parent: &State,
         query: &crate::order_selection::OrderQuery,
     ) -> Result<crate::order_selection::OrderSelection, Refusal> {
-        use crate::order_selection::{OrderSelection, Picked};
+        use crate::order_selection::OrderSelection;
         match parent.reverse_fold_within(&self.op, &self.choices, &query.limits()) {
             Ok(ReverseOutcome::Landed(folded)) => {
                 Ok(OrderSelection::unique(folded.report.stored.order))
             }
             Ok(ReverseOutcome::ChooseOrder(choice)) => {
                 OrderSelection::pick(choice.completions(), query, |pick| {
-                    choice.pick(pick).map(|folded| {
-                        Picked::new(
-                            folded.report.stored.order,
-                            &folded.state,
-                            &folded.report.fold,
-                        )
-                    })
+                    choice.pick(pick).map(|folded| folded.report.stored.order)
                 })
             }
             Ok(ReverseOutcome::ChooseOpening(_)) => Err(crate::compound::choice_needed(

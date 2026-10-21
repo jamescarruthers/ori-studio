@@ -6365,12 +6365,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "es": {
@@ -12739,12 +12733,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "fr": {
@@ -19115,12 +19103,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "ja": {
@@ -25144,12 +25126,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "ko": {
@@ -31173,12 +31149,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "pt-BR": {
@@ -37547,12 +37517,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "ru": {
@@ -43921,12 +43885,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   },
   "zh-CN": {
@@ -49950,12 +49908,6 @@
     "tools:fold.steps.repeatAxes": "0ea9a062bceb",
     "tools:fold.steps.repeatAxesTouch": "8e7e94652e2e",
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
-    "tools:fold.order.part": "1ce6fc02818e",
-    "tools:fold.order.partCount": "8faa0c3bbb3a",
-    "tools:fold.order.partNext": "0d932c582b40",
-    "tools:fold.order.partPrevious": "a1b49155220a",
-    "tools:fold.order.parts": "efbcd674b4f4",
-    "tools:fold.order.partsHelp": "291d547a78fd",
     "panels:references.warning.nonFiniteSegments": "d6300696e654"
   }
 }

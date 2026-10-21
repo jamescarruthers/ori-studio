@@ -465,7 +465,6 @@ mod tests {
         let stored = WitnessOrder {
             faces: vec![[0.25, 0.5], [0.75, 0.5]],
             orders: vec![(0, 1, -1)],
-            up: None,
         };
         let limits = CompletionLimits::default();
         let state = u
@@ -495,7 +494,6 @@ mod tests {
         let empty = WitnessOrder {
             faces: Vec::new(),
             orders: Vec::new(),
-            up: None,
         };
         assert!(matches!(
             u.replay(&empty, &[], &limits),
@@ -505,7 +503,6 @@ mod tests {
         let on_crease = WitnessOrder {
             faces: vec![[0.5, 0.5], [0.75, 0.5]],
             orders: vec![(0, 1, -1)],
-            up: None,
         };
         assert!(matches!(
             u.replay(&on_crease, &[], &limits),

@@ -162,8 +162,6 @@ export function compoundFoldLineOf(
  */
 export interface FoldedLine extends Pick<FoldReport, 'line' | 'side'> {
   readonly unfolds?: true;
-  /** A solved landing that lies between layers that stay, as a tuck does: it reads as one. */
-  readonly inserted?: boolean;
 }
 
 /** The fold only laid folded creases flat: it made no crease and refolded none. */
@@ -186,11 +184,7 @@ export function foldedLineOf(landed: {
 }): FoldedLine | null {
   const { report } = landed;
   if (!report) return compoundFoldLineOf(landed.compound);
-  return {
-    line: report.line, side: report.side,
-    ...(onlyUnfolds(report) ? { unfolds: true as const } : {}),
-    ...(report.inserted ? { inserted: true as const } : {}),
-  };
+  return { line: report.line, side: report.side, ...(onlyUnfolds(report) ? { unfolds: true as const } : {}) };
 }
 
 /**

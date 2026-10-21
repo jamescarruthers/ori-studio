@@ -39,12 +39,6 @@ pub struct WitnessOrder {
     /// FOLD `faceOrders` over `faces`: `(f, g, s)` with `s = 1` when f lies
     /// on the side g's front faces, `-1` when it lies on g's back side.
     pub orders: Vec<(u32, u32, i8)>,
-    /// Per witness, whether its face showed its front when the choice was
-    /// made: what replay checks a pair's two faces still turn alike by
-    /// ([`BrokenWitness::Turned`]). Absent in choices stored before it, and
-    /// in Import CP's whole order, whose faces no earlier step can turn.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub up: Option<Vec<bool>>,
 }
 
 /// Why a stored choice's witnesses no longer name faces.
@@ -65,15 +59,6 @@ pub enum BrokenWitness {
     SelfPair { order: usize },
     #[error("order {order} has the sign {sign}, not 1 or -1")]
     InvalidSign { order: usize, sign: i8 },
-    /// One face of a stored pair now faces the other way from the other,
-    /// relative to when the choice was made: an earlier step changed which
-    /// way it turns. The pair's sign names a side of a face, so it would now
-    /// name the other stacking; the step breaks rather than flip it.
-    #[error("order {order}'s witnesses {witnesses:?} no longer turn as they did")]
-    Turned { order: usize, witnesses: [u32; 2] },
-    /// The stored orientations do not number one per witness.
-    #[error("{count} stored orientations for {witnesses} witnesses")]
-    Orientations { count: usize, witnesses: usize },
 }
 
 /// Why a stored choice no longer resolves (plan D6): its node is broken.
@@ -113,13 +98,11 @@ impl WitnessOrder {
     ) -> Option<WitnessOrder> {
         let mut named: Vec<FaceId> = Vec::new();
         let mut faces = Vec::new();
-        let mut up = Vec::new();
         let mut index = |face: FaceId| -> Option<u32> {
             if let Some(i) = named.iter().position(|&f| f == face) {
                 return u32::try_from(i).ok();
             }
             faces.push(witness(face)?);
-            up.push(front_up(face)?);
             named.push(face);
             u32::try_from(named.len() - 1).ok()
         };
@@ -129,11 +112,7 @@ impl WitnessOrder {
             let sign = if front_up(lower)? { 1 } else { -1 };
             orders.push((index(upper)?, index(lower)?, sign));
         }
-        Some(WitnessOrder {
-            faces,
-            orders,
-            up: Some(up),
-        })
+        Some(WitnessOrder { faces, orders })
     }
 
     /// Every determined pair of `order`, in pair order.
@@ -157,27 +136,17 @@ impl WitnessOrder {
         WitnessOrder::new(&pairs, witness, front_up)
     }
 
-    /// The state's whole order: what Import CP stores. Without orientations:
-    /// an import's faces are its own crease pattern's, which no earlier step
-    /// can turn, and its stored text stays what it was.
+    /// The state's whole order: what Import CP stores.
     pub fn of_state(state: &State) -> Option<WitnessOrder> {
         WitnessOrder::of_order(
             state.order(),
             |f| state.face_witness(f),
             |f| state.front_up(f),
         )
-        .map(|order| WitnessOrder { up: None, ..order })
     }
 
     /// The pairs `[upper, lower]`, each witness mapped to the face `face_at`
     /// finds for it, with `front_up` that face's orientation now.
-    ///
-    /// With stored orientations, every pair's two faces must have turned
-    /// alike since: both as they were, or both the other way (a root of the
-    /// other orientation turns every face, and a part of the model turned
-    /// over as one keeps its pairs). One turned without the other would make
-    /// the sign name the other stacking, so that is broken
-    /// ([`BrokenWitness::Turned`]), never read as the other order.
     pub fn resolve(
         &self,
         face_at: impl Fn(Point) -> Option<FaceId>,
@@ -199,36 +168,10 @@ impl WitnessOrder {
             }
             faces.push(face);
         }
-        // Per witness, whether it turned since the choice was made.
-        let turned: Option<Vec<bool>> = match &self.up {
-            Some(up) if up.len() != faces.len() => {
-                return Err(BrokenWitness::Orientations {
-                    count: up.len(),
-                    witnesses: faces.len(),
-                });
-            }
-            Some(up) => Some(
-                faces
-                    .iter()
-                    .zip(up)
-                    .map(|(&(_, now), &was)| now != was)
-                    .collect(),
-            ),
-            None => None,
-        };
         self.orders
             .iter()
             .enumerate()
             .map(|(order, &(f, g, sign))| {
-                if let Some(turned) = &turned
-                    && let (Some(a), Some(b)) = (turned.get(f as usize), turned.get(g as usize))
-                    && a != b
-                {
-                    return Err(BrokenWitness::Turned {
-                        order,
-                        witnesses: [f, g],
-                    });
-                }
                 let face = |index: u32| {
                     faces
                         .get(index as usize)
@@ -329,44 +272,6 @@ mod tests {
     }
 
     #[test]
-    fn one_face_of_a_pair_turned_alone_breaks_rather_than_flips_the_pair() {
-        let pairs = [[f(0), f(1)], [f(2), f(1)]];
-        let stored = WitnessOrder::new(&pairs, witness, even_up).unwrap_or_else(|| unreachable!());
-        assert_eq!(stored.up, Some(vec![true, false, true]));
-        // Face 1 now shows its front, faces 0 and 2 as they did: either sign
-        // would now name the other stacking.
-        let one_turned = |face: FaceId| Some(face.0 != 3);
-        assert_eq!(
-            stored.resolve(strip, one_turned),
-            Err(BrokenWitness::Turned {
-                order: 0,
-                witnesses: [0, 1]
-            })
-        );
-        // A choice stored before orientations were reads as it always did.
-        let older = WitnessOrder {
-            up: None,
-            ..stored.clone()
-        };
-        assert_eq!(
-            older.resolve(strip, one_turned),
-            Ok(vec![[f(1), f(0)], [f(1), f(2)]])
-        );
-        // Orientations that do not match the witnesses break.
-        let short = WitnessOrder {
-            up: Some(vec![true]),
-            ..stored
-        };
-        assert_eq!(
-            short.resolve(strip, even_up),
-            Err(BrokenWitness::Orientations {
-                count: 1,
-                witnesses: 3
-            })
-        );
-    }
-
-    #[test]
     fn an_order_is_stored_by_its_determined_pairs() {
         let mut order = LayerOrder::new();
         assert!(order.set_above(f(1), f(0)).is_ok());
@@ -378,11 +283,8 @@ mod tests {
 
     #[test]
     fn witnesses_that_name_no_face_or_one_face_twice_break() {
-        let stored = |faces: Vec<Point>, orders: Vec<(u32, u32, i8)>| WitnessOrder {
-            faces,
-            orders,
-            up: None,
-        };
+        let stored =
+            |faces: Vec<Point>, orders: Vec<(u32, u32, i8)>| WitnessOrder { faces, orders };
         let resolve = |s: WitnessOrder| s.resolve(strip, even_up);
         assert_eq!(
             resolve(stored(vec![[0.5, 0.5], [1.0, 0.5]], vec![(0, 1, 1)])),

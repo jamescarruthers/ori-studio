@@ -1,6 +1,6 @@
 import type { LayerSpreadOptions } from '../cp-workspace/folded/foldedLayerSpread';
 import type { FoldCpOrigin } from '../fold/document/foldSequenceDocument';
-import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, FOLD_CHOICE_COUNT_BUCKETS, FOLD_ORDER_PART_BUCKETS } from './events';
+import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, FOLD_CHOICE_COUNT_BUCKETS } from './events';
 import type {
   DiagramStyleChoiceName,
   FoldChoiceKind,
@@ -155,39 +155,22 @@ export function trackFoldSpreadChanged(
  * (`choice_kind` — a bare `kind` already names an optimizer, a design and a
  * solve surface on other events), and how many, bucketed.
  */
-export function trackFoldChoiceOffered(choiceKind: FoldChoiceKind, count: number, listing?: FoldOrderListing): void {
+export function trackFoldChoiceOffered(choiceKind: FoldChoiceKind, count: number): void {
   track(ANALYTICS_EVENTS.foldChoiceOffered, {
     choice_kind: choiceKind,
     count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS),
-    ...(listing ? orderListingProperties(listing) : {}),
   });
-}
-
-/**
- * How a fold's layer orders were listed for the review: by the solver
- * (`solved`, every order, per independent part) or by the recipe search's
- * fallback (`recipes`, a fold the solver could not list), and how many parts
- * the folder chose in.
- */
-export interface FoldOrderListing {
-  source: 'solved' | 'recipes';
-  parts: number;
-}
-
-function orderListingProperties({ source, parts }: FoldOrderListing) {
-  return { order_source: source, part_count_bucket: bucketCount(parts, FOLD_ORDER_PART_BUCKETS) };
 }
 
 /**
  * Explicit order review, without model data or candidate indices. The callers'
  * `canceled` is sent as `cancelled`, as every other event spells it.
  */
-export function trackFoldOrderResolved(result: 'accepted' | 'canceled', source: 'tool' | 'cp', count: number, listing?: FoldOrderListing): void {
+export function trackFoldOrderResolved(result: 'accepted' | 'canceled', source: 'tool' | 'cp', count: number): void {
   track(ANALYTICS_EVENTS.foldOrderResolved, {
     result: result === 'canceled' ? 'cancelled' : result,
     source,
     count_bucket: bucketCount(count, FOLD_CHOICE_COUNT_BUCKETS),
-    ...(listing ? orderListingProperties(listing) : {}),
   });
 }
 

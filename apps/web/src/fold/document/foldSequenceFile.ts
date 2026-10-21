@@ -868,7 +868,7 @@ function readRef(value: unknown, slot: ReferenceKind): FoldRef | null {
 
 const CHOICE_KEYS = new Set(['root', 'completion', 'pocket', 'opening']);
 const MODEL_LINE_KEYS = new Set(['n', 'd']);
-const COMPLETION_KEYS = new Set(['faces', 'orders', 'up']);
+const COMPLETION_KEYS = new Set(['faces', 'orders']);
 const OPENING_KEYS = new Set(['upper']);
 
 /**
@@ -922,10 +922,7 @@ function readCompletion(value: unknown): FoldCompletionChoice | null {
   if (!isRecord(value) || hasNewerKey(value, COMPLETION_KEYS)) return null;
   const faces = readPoints(value.faces);
   const orders = readList(value.orders, readFaceOrder);
-  // One orientation per witness, or none (a choice stored before them).
-  const up = value.up === undefined ? undefined : readList(value.up, (b) => (typeof b === 'boolean' ? b : null));
-  if (up === null || (up && faces && up.length !== faces.length)) return null;
-  return faces && orders && { faces, orders, ...(up ? { up } : {}) };
+  return faces && orders && { faces, orders };
 }
 
 /** `[f, g, s]`: two witness indices and a sign of 1 or -1. */
@@ -1282,7 +1279,6 @@ export function writeFoldChoices(choices: FoldChoices): Record<string, unknown> 
           completion: {
             faces: completion.faces.map(writePoint),
             orders: completion.orders.map(([f, g, s]) => [f, g, s]),
-            ...(completion.up ? { up: [...completion.up] } : {}),
           },
         }
       : {}),
@@ -1313,7 +1309,6 @@ function readLanding(value: unknown): import('./foldSequenceDocument').FoldLandi
   if (value === undefined) return { kind: 'outer' };
   if (!isRecord(value)) return null;
   if (value.kind === 'outer' && !hasNewerKey(value, new Set(['kind']))) return { kind: 'outer' };
-  if (value.kind === 'solved' && !hasNewerKey(value, new Set(['kind']))) return { kind: 'solved' };
   if (value.kind !== 'against' || hasNewerKey(value, new Set(['kind', 'targets'])) || !Array.isArray(value.targets)
     || value.targets.length < 1 || value.targets.length > 65) return null;
   const targets = value.targets.map(readPoint);

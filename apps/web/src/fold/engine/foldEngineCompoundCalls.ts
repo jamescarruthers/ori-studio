@@ -34,31 +34,8 @@ import { foldPlacementSearch, foldPlacementSearchBudget, isFoldPlacementOp } fro
 /** The wasm class's compound surface, as the generated `FoldEngine` has it. */
 export interface FoldOrderQuery {
   batch?: number; prefer?: readonly (readonly [number, number])[]; index: number; perComponent?: number; maxNodes?: number;
-  /** One listed order per component (`FoldOrderSelection.choice`): the per-part chooser's pick, which beats `index`. */
-  choice?: readonly number[];
   /** A plain fold's placement search: how long this batch may search in all (`foldPlacementSearch.ts`). */
   searchMs?: number }
-
-/**
- * One part a fold's orders are chosen in: an independent component of the
- * completion with more than one order (`order_selection.rs`'s
- * `PartSelection`). Never made only of paper that stays: such pairs keep the
- * parent's order and are never asked.
- */
-export interface FoldOrderPart {
-  /** Its component: where `choice` holds its pick. */
-  component: number;
-  orders: number;
-  /** More orders exist than are listed. */
-  truncated: boolean;
-  /** The order picked in it. */
-  pick: number;
-  /** Its faces, as the landed scene's face indices. */
-  faces: number[];
-  /** Whether any of its faces moves: always, for a part the engine lists. */
-  moves: boolean;
-}
-
 export interface FoldOrderSelection {
   pleat?: FoldPleatOp['resolved'];
   landing?: FoldLanding;
@@ -69,12 +46,6 @@ export interface FoldOrderSelection {
   completion: FoldCompletionChoice | null;
   /** A placement search with time left in its batch: the same query searches further. */
   searching?: boolean;
-  /** The pick in every component; absent for a fold with one order. */
-  choice?: number[];
-  /** The parts the folder chooses in, in component order. */
-  parts?: FoldOrderPart[];
-  /** How the orders were listed: by the solver, or by the recipe search's fallback. */
-  source?: 'solved' | 'recipes';
 }
 
 export interface FoldWasmCompoundEngine {

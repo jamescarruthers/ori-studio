@@ -98,11 +98,10 @@ describe.skipIf(!FOLD_FLOW_AVAILABLE)('flat design completion through the canvas
     }
     expect(await matches()).toBe(true);
     expect(seen.current!.preview.analysis?.moving).toBeDefined();
-    expect(seen.current!.preview.step?.choices?.completion?.orders.length).toBeGreaterThan(0);
     const landed = await commitPreviewed(session, seen);
-    // The insertion beneath both side triangles, a tuck's two-target recipe
-    // when it was saved, is now one of the listed orders: saved as itself.
-    expect(landed.op).toMatchObject({ kind: 'valley', landing: { kind: 'solved' } });
+    expect(landed.op).toMatchObject({ kind: 'valley', landing: { kind: 'against' } });
+    if (landed.op.kind !== 'valley' || landed.op.landing?.kind !== 'against') throw new Error('no insertion');
+    expect(landed.op.landing.targets.length).toBeGreaterThanOrEqual(2);
     expect(landed.fingerprint).toBe(expected);
   }, 30_000);
 
