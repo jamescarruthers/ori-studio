@@ -42,9 +42,9 @@ import { useFoldSquashMarks } from '../../../fold/canvas/vertex/useFoldSquashMar
 import { useFoldSwivelMarks } from '../../../fold/canvas/vertex/useFoldSwivelMarks';
 import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
 import { swivelMeetingMarks } from '../../../fold/canvas/vertex/swivelMeeting';
-import { foldPaneOverlay, joinFills } from '../../../fold/canvas/foldPaneOverlays';
+import { foldHoverEcho, foldPaneOverlay, joinFills } from '../../../fold/canvas/foldPaneOverlays';
 import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
-import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
+import type { FoldHit, FoldPaneId, FoldPick } from '../../../fold/canvas/foldPicking';
 import { useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
 import { restingSpread, useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
@@ -221,14 +221,17 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   );
   // A swivel's pivot once its vertex is drawn in its place.
   const shownPicks = foldShownPicks(toolState, preview, swivelMarks.hovered !== null);
+  // The point a click on the folded pane would take, marked on the crease pattern before the click.
+  const [foldedEcho, setFoldedEcho] = useState<FoldPick | null>(null);
   const overlayFor = useCallback(
-    (pane: FoldPaneId) => (hovered: FoldHit | null) =>
+    (pane: FoldPaneId, echo: FoldPick | null = null) => (hovered: FoldHit | null) =>
       inks
         ? foldPaneOverlay({
             pane,
             scene: view.scene,
             picks: shownPicks,
             hovered: hovered?.pane === pane ? hovered : null,
+            echo,
             freeFrom,
             located,
             marks: view.marks,
@@ -243,7 +246,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, drawnMarks, paneSpread.map, along, regions, swivelOffered]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
-  const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
+  const creaseOverlay = useMemo(() => overlayFor('crease-pattern', foldedEcho), [overlayFor, foldedEcho]);
 
   // --- The letters the step's sentence names its references by, on the folded pane.
   const letters = useFoldStepLetters(session, view, preview, picking, paneSpread.map);
@@ -264,6 +267,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       onPetalHover(hit);
       onSwivelHover(hit);
       onSquashHover(hit);
+      setFoldedEcho((was) => foldHoverEcho(hit, was));
     },
     [onWovenHover, onPetalHover, onSwivelHover, onSquashHover]
   );
