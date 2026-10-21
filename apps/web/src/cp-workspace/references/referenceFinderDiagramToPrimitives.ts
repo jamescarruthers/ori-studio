@@ -21,6 +21,7 @@ import type {
   DiagramSheet,
   HiddenStretches,
   PathArrowFold,
+  RotateAmount,
   WhiteArrowTail,
 } from './stepDiagramGeometry';
 
@@ -169,16 +170,16 @@ export type StepDiagramPrimitive =
     }
   /**
    * Turn the model round in its plane, centred on `at`: a circle of two
-   * arrows going the way it turns, and how far, as a fraction of a turn. Its
-   * size is the drawing's, and it is drawn in screen space, as the turn-over
-   * glyph is.
+   * arrows going the way it turns, and how far — as a fraction of a turn,
+   * every References step's, or as a diagram mark's own angle in degrees
+   * (`RotateAmount`). Its size is the drawing's, and it is drawn in screen
+   * space, as the turn-over glyph is.
    */
-  | {
+  | ({
       kind: 'rotate';
       at: readonly [number, number];
-      amount: 'eighth' | 'quarter' | 'half';
       direction: 'cw' | 'ccw';
-    }
+    } & RotateAmount)
   /**
    * The turn-over glyph, centred on `at`.
    *

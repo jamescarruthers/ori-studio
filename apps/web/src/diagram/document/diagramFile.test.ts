@@ -17,6 +17,7 @@ import {
   setPageStarts,
   setStepText,
   setTitleBlockContent,
+  setTurn,
   createTurn,
   isLockedTurn,
   isTurn,
@@ -28,9 +29,12 @@ import {
   type DiagramCpRender,
   type DiagramCpSource,
   type DiagramPageSetup,
+  type DiagramRotation,
   type DiagramTitleBlockContentPatch,
+  type KnownDiagramAnnotation,
 } from './diagramDocument';
 import { readDiagram, storedSceneJson, writeDiagram } from './diagramFile';
+import { withRotationAmount, withRotationDegrees } from './diagramRotation';
 import { SVG_STORED_MAX_BYTES, sanitizeSvg } from '../upload/svgSanitize';
 import { SCENE_JSON_MAX_BYTES } from './paperFacesFile';
 import { MAX_STORED_STROKES } from '../../cp-workspace/sheets/sheetThumbnail';
@@ -1466,8 +1470,84 @@ describe('annotations in the file', () => {
   });
 
   it('carries a rotation of a shape it does not know, even one it would call incomplete', () => {
-    const newer = { id: 'n-8', kind: 'rotate', from: [0, 0], to: [0, 0], rotate: { degrees: 30, direction: 'cw' } };
+    const newer = { id: 'n-8', kind: 'rotate', from: [0, 0], to: [0, 0], rotate: { turns: 0.3, direction: 'cw' } };
     expect(withAnnotations([newer])).toEqual([{ id: 'n-8', unknown: newer }]);
+  });
+
+  describe('a rotation of its own angle', () => {
+    const rotate = (rotation: unknown, id = 'r-1') => ({ id, kind: 'rotate', from: [0.2, 0.8], to: [0.2, 0.8], rotate: rotation });
+
+    it('round-trips an angle, to a tenth, written `{ degrees, direction }`', () => {
+      const every = [rotate({ degrees: 135, direction: 'cw' }), rotate({ degrees: 22.5, direction: 'ccw' }, 'r-2'), rotate({ degrees: 359.9, direction: 'cw' }, 'r-3')];
+      const read = withAnnotations(every);
+      expect(read).toEqual(every);
+      const document = { ...sampleDiagram() };
+      document.steps = [{ ...stepsIn(document)[0]!, annotations: read }, stepsIn(document)[1]!];
+      const written = throughJson(writeDiagram(document)).steps[0].annotations;
+      expect(written).toEqual(every);
+      expect(JSON.stringify(written[1].rotate)).toBe('{"degrees":22.5,"direction":"ccw"}');
+    });
+
+    it('writes a preset as every build before angles wrote one, even after it was an angle', () => {
+      const preset = { amount: 'eighth', direction: 'ccw' };
+      const document = { ...sampleDiagram() };
+      const withRotation = (rotation: DiagramRotation) => {
+        const step = { ...stepsIn(document)[0]!, annotations: [rotate(rotation) as KnownDiagramAnnotation] };
+        return writeDiagram({ ...document, steps: [step, stepsIn(document)[1]!] });
+      };
+      const asWritten = JSON.stringify(withRotation(preset as DiagramRotation));
+      expect(asWritten).toContain('"rotate":{"amount":"eighth","direction":"ccw"}');
+      // Made an angle and given its preset back, it is written as if it had never been one.
+      const back = withRotationAmount(withRotationDegrees({ amount: 'eighth', direction: 'ccw' }, 135), 'eighth');
+      expect(JSON.stringify(withRotation(back))).toBe(asWritten);
+    });
+
+    it('drops one that says both a preset and an angle, or an angle that is no number above none', () => {
+      const read = withAnnotations([
+        rotate({ amount: 'quarter', degrees: 90, direction: 'cw' }, 'd-1'),
+        rotate({ degrees: 0, direction: 'cw' }, 'd-2'),
+        rotate({ degrees: -45, direction: 'cw' }, 'd-3'),
+        rotate({ degrees: '135', direction: 'cw' }, 'd-4'),
+        rotate({ degrees: Number.POSITIVE_INFINITY, direction: 'cw' }, 'd-5'),
+        rotate({ degrees: Number.NaN, direction: 'cw' }, 'd-6'),
+        rotate({ degrees: 135 }, 'd-7'),
+        rotate({ amount: 'quarter', direction: 'cw' }, 'kept'),
+      ]);
+      expect(read.map((annotation) => annotation.id)).toEqual(['kept']);
+    });
+
+    it('carries, locked, an angle past a whole turn or finer than a tenth: a later build may allow it', () => {
+      const newer = [
+        rotate({ degrees: 360, direction: 'cw' }, 'n-1'),
+        rotate({ degrees: 720, direction: 'ccw' }, 'n-2'),
+        rotate({ degrees: 22.55, direction: 'cw' }, 'n-3'),
+        rotate({ degrees: 45, direction: 'spin' }, 'n-4'),
+      ];
+      expect(withAnnotations(newer)).toEqual(newer.map((entry) => ({ id: entry.id, unknown: entry })));
+    });
+
+    it('is carried, verbatim and locked, by a build before angles: `degrees` is a key it has no name for', () => {
+      // v0.6.2's `readRotation` (diagramFile.ts at bae1821a8), its first
+      // rule word for word: a key other than `amount` and `direction` is a
+      // newer build's, before a missing `amount` is damage — so it carries
+      // the mark whole (`readAnnotations` keeps `{ id, unknown: entry }`)
+      // and writes it back as it came, rather than dropping it.
+      const v062CallsNewer = (rotation: Record<string, unknown>) =>
+        Object.keys(rotation).some((key) => key !== 'amount' && key !== 'direction');
+      const angle = rotate({ degrees: 135, direction: 'cw' });
+      const document = { ...sampleDiagram() };
+      document.steps = [{ ...stepsIn(document)[0]!, annotations: withAnnotations([angle]) }, stepsIn(document)[1]!];
+      const written = throughJson(writeDiagram(document)).steps[0].annotations[0];
+      expect(written.rotate).toEqual({ degrees: 135, direction: 'cw' });
+      expect(v062CallsNewer(written.rotate)).toBe(true);
+      expect(v062CallsNewer({ amount: 'quarter', direction: 'cw' })).toBe(false);
+      // That carry is this reader's too, unchanged: `turns` stands for a key it has no name for.
+      const later = rotate({ turns: 0.375, direction: 'cw' });
+      const carried = withAnnotations([later]);
+      expect(carried).toEqual([{ id: 'r-1', unknown: later }]);
+      document.steps = [{ ...stepsIn(document)[0]!, annotations: carried }, stepsIn(document)[1]!];
+      expect(stepsIn(throughJson(writeDiagram(document)))[0].annotations).toEqual([later]);
+    });
   });
 
   describe('a solid line (17a)', () => {
@@ -3623,5 +3703,34 @@ describe('turns between steps (D22)', () => {
     written.steps[3] = { kind: 'rotate' };
     const read = readDiagram(written)!.document;
     expect(read.steps.map((entry) => entry.id)).toEqual(['step-2', 'step-4']);
+  });
+
+  it('writes a preset turn byte for byte as before angles, and round-trips one of its own angle', () => {
+    const diagram = turning();
+    expect(JSON.stringify(throughJson(writeDiagram(diagram)).steps[3])).toBe(
+      '{"id":"turn-5","kind":"rotate","rotate":{"amount":"eighth","direction":"ccw"}}'
+    );
+    const angled = setTurn(diagram, 'turn-5', { kind: 'rotate', rotate: { degrees: 135, direction: 'cw' } });
+    const written = throughJson(writeDiagram(angled));
+    expect(JSON.stringify(written.steps[3])).toBe('{"id":"turn-5","kind":"rotate","rotate":{"degrees":135,"direction":"cw"}}');
+    expect(readDiagram(written)!.document).toEqual(angled);
+    // Given its preset back, the file is the one it was.
+    const back = setTurn(angled, 'turn-5', { kind: 'rotate', rotate: withRotationAmount({ degrees: 135, direction: 'ccw' }, 'eighth') });
+    expect(JSON.stringify(writeDiagram(back))).toBe(JSON.stringify(writeDiagram(diagram)));
+  });
+
+  it('carries, locked, a turn past a whole turn, and leaves out one that says both or no angle above none', () => {
+    for (const rotate of [{ degrees: 360, direction: 'cw' }, { degrees: 0.05, direction: 'cw' }]) {
+      const written = throughJson(writeDiagram(turning()));
+      written.steps[3] = { id: 'turn-5', kind: 'rotate', rotate };
+      const carried = readDiagram(written)!.document.steps[3]!;
+      expect(isTurn(carried) && isLockedTurn(carried)).toBe(true);
+      expect(throughJson(writeDiagram(readDiagram(written)!.document)).steps[3]).toEqual(written.steps[3]);
+    }
+    for (const rotate of [{ amount: 'half', degrees: 180, direction: 'cw' }, { degrees: -90, direction: 'cw' }, { degrees: 0, direction: 'ccw' }]) {
+      const written = throughJson(writeDiagram(turning()));
+      written.steps[3] = { id: 'turn-5', kind: 'rotate', rotate };
+      expect(readDiagram(written)!.document.steps.map((entry) => entry.id)).toEqual(['step-2', 'turn-3', 'step-4']);
+    }
   });
 });

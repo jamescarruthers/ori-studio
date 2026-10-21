@@ -18,6 +18,7 @@ export function NumberRow({
   disabled,
   title,
   normalize,
+  minChars,
   fieldRef,
   divider,
   onCommit,
@@ -35,6 +36,8 @@ export function NumberRow({
   disabled?: boolean;
   title?: string;
   normalize?: (value: number) => number;
+  /** The fewest characters the number makes room for (`NumberField.minChars`), so a field whose values run longer keeps one width. */
+  minChars?: number;
   /** The input itself, for a caller that puts the focus in it. */
   fieldRef?: Ref<HTMLInputElement>;
   /** The rule under the row (`FieldRow.divider`). */
@@ -64,6 +67,7 @@ export function NumberRow({
         suffix={suffix}
         disabled={disabled}
         normalize={normalize}
+        minChars={minChars}
         inputRef={fieldRef}
         onCommit={onCommit}
       />

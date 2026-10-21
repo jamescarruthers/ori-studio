@@ -143,6 +143,7 @@ import {
   closeUpFrame,
   closeUpShape,
   DEFAULT_PLEAT_KINKS,
+  DEFAULT_ROTATION,
   divisionsOffsetOf,
   divisionsPartsOf,
   DEFAULT_WHITE_ARROW,
@@ -555,16 +556,19 @@ function compileAnnotation(annotation: KnownDiagramAnnotation): CompiledAnnotati
     }
     case 'turn-over':
       return { kind: 'mark', primitive: { kind: 'turn-over', at: up(from), axis: annotation.axis ?? 'vertical' } };
-    case 'rotate':
+    case 'rotate': {
+      // A preset prints its fraction, an angle of the author's own its degrees.
+      const rotation = annotation.rotate ?? DEFAULT_ROTATION;
+      const { direction } = rotation;
+      const at = up(from);
       return {
         kind: 'mark',
-        primitive: {
-          kind: 'rotate',
-          at: up(from),
-          amount: annotation.rotate?.amount ?? 'quarter',
-          direction: annotation.rotate?.direction ?? 'cw',
-        },
+        primitive:
+          rotation.degrees === undefined
+            ? { kind: 'rotate', at, amount: rotation.amount, direction }
+            : { kind: 'rotate', at, degrees: rotation.degrees, direction },
       };
+    }
     case 'circle':
       // No letter (decision 8): a label names it, if anything does.
       return { kind: 'mark', primitive: { kind: 'point', at: up(from), style: 'highlight', ...(annotation.radius !== undefined ? { radius: annotation.radius } : {}) } };

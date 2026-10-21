@@ -4544,7 +4544,13 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9091,7 +9097,13 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13640,7 +13652,13 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -18089,7 +18107,13 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22538,7 +22562,13 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -27085,7 +27115,13 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -31632,7 +31668,13 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -36081,6 +36123,12 @@
     "panels:diagram.placement.position": "6d031af10da7",
     "panels:diagram.placement.section": "4df9939944a7",
     "panels:diagram.placement.sizeLabel": "1af851907331",
-    "panels:diagram.placement.widthLabel": "3019947b6daf"
+    "panels:diagram.placement.widthLabel": "3019947b6daf",
+    "panels:diagram.turns.angle": "1968034b13f8",
+    "panels:diagram.turns.custom": "494ca78f7374",
+    "panels:diagram.turns.howAngleClockwise": "d11731ee982f",
+    "panels:diagram.turns.howAngleCounterclockwise": "35edc223d8b7",
+    "panels:diagram.turns.rotateAngleClockwise": "6b10ef241eaa",
+    "panels:diagram.turns.rotateAngleCounterclockwise": "15d23e81c99c"
   }
 }

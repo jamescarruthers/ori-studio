@@ -68,7 +68,12 @@ describe('validateStepDiagramModel', () => {
       ...EVERY_KIND,
       primitives: [{ kind: 'rotate', at: [0, 0], amount: 'third', direction: 'cw' }],
     };
-    for (const model of [newerKind, newerLine, newerPoint, newerAndBroken, newerAxis, newerTurn]) {
+    // A diagram mark's own angle is never a References model's: its stored form names none.
+    const angledTurn = {
+      ...EVERY_KIND,
+      primitives: [{ kind: 'rotate', at: [0, 0], degrees: 135, direction: 'cw' }],
+    };
+    for (const model of [newerKind, newerLine, newerPoint, newerAndBroken, newerAxis, newerTurn, angledTurn]) {
       expect(read(model)).toEqual({ status: 'unknown' });
     }
   });

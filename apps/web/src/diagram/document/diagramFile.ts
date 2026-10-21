@@ -157,6 +157,7 @@ import {
   type DiagramPathNode,
   type DiagramPleatKinks,
   type DiagramRotation,
+  type DiagramRotationAmount,
   type KnownDiagramAnnotation,
   type DiagramAsset,
   type KnownDiagramAsset,
@@ -643,7 +644,7 @@ function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<stri
   if (isTurn(step)) {
     if (step.unknown) return step.unknown;
     return step.kind === 'rotate'
-      ? { id: step.id, kind: step.kind, rotate: step.rotate }
+      ? { id: step.id, kind: step.kind, rotate: writeRotation(step.rotate) }
       : { id: step.id, kind: step.kind, axis: step.axis };
   }
   if (step.unknown) return step.unknown;
@@ -749,7 +750,7 @@ function writeAnnotation(annotation: DiagramAnnotation): Record<string, unknown>
     ...(halo ? { halo } : {}),
     ...(sizePt !== undefined ? { sizePt } : {}),
     ...(offsetPt !== undefined ? { offsetPt: [offsetPt[0], offsetPt[1]] } : {}),
-    ...(rotate !== undefined ? { rotate } : {}),
+    ...(rotate !== undefined ? { rotate: writeRotation(rotate) } : {}),
     ...(axis !== undefined ? { axis } : {}),
     ...(other !== undefined ? { other } : {}),
     ...(ticks !== undefined ? { ticks } : {}),
@@ -2493,17 +2494,45 @@ function readPreset<T extends string>(value: unknown, known: readonly T[], fallb
   return (known as readonly string[]).includes(value) ? (value as T) : NEWER;
 }
 
-/** How far and which way a rotation turns: a quarter clockwise when unsaid. Shared by the glyph and the turn (D22). */
+/** The fields a rotation is written with: a preset's `amount`, or an angle's `degrees`, and its `direction`. */
+const ROTATION_KEYS: ReadonlySet<string> = new Set(['amount', 'degrees', 'direction']);
+
+/**
+ * How far and which way a rotation turns: a quarter clockwise when unsaid.
+ * Shared by the glyph and the turn (D22). A preset, or an angle of the
+ * author's own — never both. A build before angles had no name for
+ * `degrees`, so it carries an angle's mark or turn whole and locked by the
+ * first rule here; past a whole turn, or finer than a tenth, is news again.
+ */
 function readRotation(value: unknown): DiagramRotation | typeof NEWER | null {
   if (value === undefined) return DEFAULT_ROTATION;
   if (!isRecord(value)) return null;
   // A field it has no name for is news before a missing one is damage, as for a whole annotation.
-  if (Object.keys(value).some((key) => key !== 'amount' && key !== 'direction')) return NEWER;
-  if (typeof value.amount !== 'string' || typeof value.direction !== 'string') return null;
+  if (Object.keys(value).some((key) => !ROTATION_KEYS.has(key))) return NEWER;
+  if (typeof value.direction !== 'string' || (value.amount === undefined) === (value.degrees === undefined)) return null;
+  if (value.degrees !== undefined) {
+    const degrees = finiteNumber(value.degrees);
+    if (degrees === null || degrees <= 0) return null;
+    if (degrees >= 360 || !isTenth(degrees) || !['cw', 'ccw'].includes(value.direction)) return NEWER;
+    return { degrees, direction: value.direction as DiagramRotation['direction'] };
+  }
+  if (typeof value.amount !== 'string') return null;
   if (!['eighth', 'quarter', 'half'].includes(value.amount) || !['cw', 'ccw'].includes(value.direction)) {
     return NEWER;
   }
-  return { amount: value.amount as DiagramRotation['amount'], direction: value.direction as DiagramRotation['direction'] };
+  return { amount: value.amount as DiagramRotationAmount, direction: value.direction as DiagramRotation['direction'] };
+}
+
+/** Whether an angle is to a tenth of a degree, as this build writes one. */
+function isTenth(degrees: number): boolean {
+  return Math.abs(degrees * 10 - Math.round(degrees * 10)) < 1e-6;
+}
+
+/** A rotation as it is written: a preset as every build has written one, `amount` first, or an angle. */
+function writeRotation(rotation: DiagramRotation): Record<string, unknown> {
+  return rotation.degrees === undefined
+    ? { amount: rotation.amount, direction: rotation.direction }
+    : { degrees: rotation.degrees, direction: rotation.direction };
 }
 
 /** The axis a turn-over turns about: the vertical one, side to side, when unsaid. */
