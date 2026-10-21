@@ -70,6 +70,16 @@ describe('the vertex folds’ ops', () => {
     const ops = [
       squash,
       { ...squash, target: [-1, 0.5] },
+      // About a drawn hinge, located as a fold's line is: a crease, a free line, an axiom with its root.
+      { ...squash, hinge: { line: { via: 'crease', at: [0.3, 0.3] } } },
+      { ...squash, target: [-1, 0.5], hinge: { line: { via: 'free', through: [[0, 0.6], [0.6, 0]] } } },
+      {
+        ...squash,
+        hinge: {
+          line: { via: 'axiom', axiom: 2, inputs: [{ kind: 'point', at: [0, 0] }, { kind: 'point', at: [0.6, 0.6] }] },
+          root: { n: [0.7071067811865476, 0.7071067811865476], d: 0.4242640687119285 },
+        },
+      },
       { kind: 'petal', crease: [0.3, 0.2], petal: [0.25, 0.1], direction: 'mountain' },
       ear,
       { ...ear, ridge: [0, -1], seed: { scope: 'flaps', at: [[0.2, 0.1]] } },
@@ -100,6 +110,9 @@ describe('the vertex folds’ ops', () => {
       // A target with no direction.
       { ...squash, target: [0, 0] },
       { ...squash, target: [Number.NaN, 1] },
+      // A drawn hinge that does not read, or an axiom's with no root.
+      { ...squash, hinge: { line: { via: 'sideways' } } },
+      { ...squash, hinge: { line: { via: 'axiom', axiom: 2, inputs: [{ kind: 'point', at: [0, 0] }, { kind: 'point', at: [1, 1] }] } } },
       { kind: 'petal', crease: [0.3, 0.2], direction: 'valley' },
       { ...ear, corners: [[0, 0], [1, 0]] },
       { ...ear, seed: { scope: 'depth', at: [0.2, 0.1], layers: 0 } },

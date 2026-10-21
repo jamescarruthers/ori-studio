@@ -294,7 +294,7 @@ export interface FoldVertexAnalysed {
 // Refusals the tools read the fields of (`FoldRefusal`'s vertex block)
 
 /** Why there is no flap to squash at a point (`NoFlap`). */
-export type FoldNoFlap = 'single_layer' | 'no_spine' | 'no_hinge' | 'upper_not_hinged';
+export type FoldNoFlap = 'single_layer' | 'no_spine' | 'no_hinge' | 'upper_not_hinged' | 'hinge_off_spine';
 
 /**
  * Which crease of a petal fold is not precreased (`PetalCrease`). H named by

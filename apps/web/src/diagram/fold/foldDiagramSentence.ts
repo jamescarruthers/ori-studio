@@ -54,6 +54,12 @@ function vertexSentence(t: TFunction, step: Extract<FoldSentenceStep, { op: 'ver
   const behind = step.direction === 'mountain';
   switch (step.fold) {
     case 'squash':
+      // About a drawn hinge: only the end squashes.
+      if (step.form !== undefined && 'squashHinge' in step.form) {
+        return behind
+          ? t('panels:diagram.fold.instruction.squashEndBehind', 'Squash fold the end behind.')
+          : t('panels:diagram.fold.instruction.squashEnd', 'Squash fold the end.');
+      }
       return behind
         ? t('panels:diagram.fold.instruction.squashBehind', 'Squash fold behind.')
         : t('panels:diagram.fold.instruction.squash', 'Squash fold.');

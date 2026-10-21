@@ -133,6 +133,7 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
       // Never "in half" either: what moves is the flap, tucked away.
       return { op: 'tuck', direction: op.direction, line: sentenceLine(op.line, null, context) };
     case 'squash':
+      return { op: 'vertex', fold: 'squash', direction: op.direction, ...(op.hinge ? { form: { squashHinge: 'line' as const } } : {}) };
     case 'rabbit-ear':
       return { op: 'vertex', fold: op.kind, direction: op.direction };
     // How a petal fold named its hinge, and a swivel its form.

@@ -115,6 +115,8 @@ export type FoldSinkSentenceKind = 'open' | 'closed' | 'unsink';
  */
 export type FoldVertexSentenceForm =
   | { hinge: 'crease' | 'points' }
+  /** A squash about a drawn hinge: only the flap's end beyond it squashes. */
+  | { squashHinge: 'line' }
   | { swivel: 'rays' }
   /**
    * A swivel by its valley and mountain on the layer that faces the viewer:

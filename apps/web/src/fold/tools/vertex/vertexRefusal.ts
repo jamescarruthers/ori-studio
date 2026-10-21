@@ -128,6 +128,11 @@ function noFlap(t: TFunction, cause: FoldNoFlap): string {
         'tools:fold.vertex.refusal.noFlap.upperNotHinged',
         'The flap’s top layer is held by its spine alone: pressed flat, its hinge side would lie loose.'
       );
+    case 'hinge_off_spine':
+      return t(
+        'tools:fold.vertex.refusal.noFlap.hingeOffSpine',
+        'The hinge line must cross the flap’s folded edge, with the end you click on one side of it.'
+      );
   }
 }
 

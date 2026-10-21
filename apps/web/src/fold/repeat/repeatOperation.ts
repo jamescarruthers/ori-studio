@@ -145,7 +145,12 @@ export function mirrorOperation(
       };
       break;
     case 'squash':
-      next = { ...op, flap: p(op.flap), ...(op.target ? { target: vector(op.target) } : {}) };
+      next = {
+        ...op,
+        flap: p(op.flap),
+        ...(op.target ? { target: vector(op.target) } : {}),
+        ...(op.hinge ? { hinge: located(op.hinge) } : {}),
+      };
       break;
     case 'petal':
       next =
