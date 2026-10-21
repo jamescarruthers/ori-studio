@@ -161,84 +161,88 @@ export function* prepareRepeatSearch(
       /** Why the predicted mirror failed: the reason a refusal gives. */
       let predictedReason: RepeatFailure | null = null;
       for (const [variant, mapped] of variants.entries()) {
-      let reason = new RepeatFailure('repeat_order');
-      let unresolved = false;
-      const tryCandidate = (op: FoldOp, choices?: FoldChoices) => {
-        const result = engine.step(current, op, choices);
-        if (result.status !== 'ok') {
-          reason = RepeatFailure.refused(result.refusal);
-          // Native replay refuses unresolved choices; it never chooses an order.
-          unresolved =
-            (result.refusal.code === 'choice_needed' && result.refusal.choice === 'completion') ||
-            (result.refusal.code === 'choice_broken' && result.refusal.broken === 'not_unique');
-          return;
-        }
-        owned.push(result.state);
-        try {
-          verifyMaterial(before, after, target, engine.scene(result.state), map, side);
-        } catch (error) {
-          if (error instanceof RepeatFailure) {
-            reason = error;
-            engine.release([result.state]);
-            owned.pop();
+        let reason = new RepeatFailure('repeat_order');
+        let unresolved = false;
+        const tryCandidate = (op: FoldOp, choices?: FoldChoices) => {
+          const result = engine.step(current, op, choices);
+          if (result.status !== 'ok') {
+            reason = RepeatFailure.refused(result.refusal);
+            // Native replay refuses unresolved choices; it never chooses an order.
+            unresolved =
+              (result.refusal.code === 'choice_needed' && result.refusal.choice === 'completion') ||
+              (result.refusal.code === 'choice_broken' && result.refusal.broken === 'not_unique');
             return;
           }
-          throw error;
+          owned.push(result.state);
+          try {
+            verifyMaterial(before, after, target, engine.scene(result.state), map, side);
+          } catch (error) {
+            if (error instanceof RepeatFailure) {
+              reason = error;
+              engine.release([result.state]);
+              owned.pop();
+              return;
+            }
+            throw error;
+          }
+          if (!candidates.some((c) => c.entry.expect === result.fingerprint))
+            candidates.push({
+              state: result.state,
+              variant,
+              entry: { op, ...(choices ? { choices } : {}), expect: result.fingerprint, sourceStep: item.id },
+            });
+          else {
+            engine.release([result.state]);
+            owned.pop();
+          }
+        };
+        // The landing/opening already chosen in the source is part of the
+        // operation. A successful native replay has a unique result under those
+        // choices. Do not enumerate alternate tuck positions or moving sets.
+        // The other ways of the mirror are folded in the predicted one's slice.
+        if (variant === 0) yield;
+        tryCandidate(mapped.op, mapped.choices);
+        if (!candidates.some((c) => c.variant === variant) && unresolved) {
+          // Inserted M/V is resolved by the bridge through this same public tuck
+          // operation. Query its remaining orders with the saved targets fixed;
+          // the general M/V authoring query intentionally searches all landings.
+          const queryOp: FoldOp =
+            (mapped.op.kind === 'valley' || mapped.op.kind === 'mountain') &&
+            mapped.op.landing?.kind === 'against'
+              ? {
+                  kind: 'tuck',
+                  direction: mapped.op.kind,
+                  line: mapped.op.line,
+                  seed: mapped.op.seed,
+                  moving: mapped.op.moving,
+                  target: mapped.op.landing.targets[0]!,
+                  additionalTargets: mapped.op.landing.targets.slice(1),
+                }
+              : mapped.op;
+          let first = engine.orderSelection(current, queryOp, mapped.choices, { index: 0, batch: 0 });
+          for (let batch = 1; first.status === 'ok' && !first.count.exact && batch <= 8; batch++) {
+            yield;
+            first = engine.orderSelection(current, queryOp, mapped.choices, { index: 0, batch });
+          }
+          // This way of the mirror has no order: it does not land.
+          if (first.status !== 'ok') reason = RepeatFailure.refused(first.refusal);
+          // Orders past the cap could hold a match: no way of the mirror can be ruled in or out.
+          else if (!first.count.exact || first.count.orders > 64) throw new RepeatFailure('repeat_order_limit');
+          else
+            for (let n = 0; n < first.count.orders; n++) {
+              yield;
+              const order =
+                n === 0 ? first : engine.orderSelection(current, queryOp, mapped.choices, { index: n, batch: 8 });
+              if (order.status !== 'ok') throw RepeatFailure.refused(order.refusal);
+              const choices: FoldChoices = {
+                ...mapped.choices,
+                ...(order.completion ? { completion: order.completion } : {}),
+              };
+              tryCandidate(mapped.op.kind === 'pleat' && order.pleat ? { ...mapped.op, resolved: order.pleat } : mapped.op, Object.keys(choices).length ? choices : undefined);
+            }
         }
-        if (!candidates.some((c) => c.entry.expect === result.fingerprint))
-          candidates.push({
-            state: result.state,
-            variant,
-            entry: { op, ...(choices ? { choices } : {}), expect: result.fingerprint, sourceStep: item.id },
-          });
-        else {
-          engine.release([result.state]);
-          owned.pop();
-        }
-      };
-      // The landing/opening already chosen in the source is part of the
-      // operation. A successful native replay has a unique result under those
-      // choices. Do not enumerate alternate tuck positions or moving sets.
-      yield;
-      tryCandidate(mapped.op, mapped.choices);
-      if (!candidates.some((c) => c.variant === variant) && unresolved) {
-        // Inserted M/V is resolved by the bridge through this same public tuck
-        // operation. Query its remaining orders with the saved targets fixed;
-        // the general M/V authoring query intentionally searches all landings.
-        const queryOp: FoldOp =
-          (mapped.op.kind === 'valley' || mapped.op.kind === 'mountain') &&
-          mapped.op.landing?.kind === 'against'
-            ? {
-                kind: 'tuck',
-                direction: mapped.op.kind,
-                line: mapped.op.line,
-                seed: mapped.op.seed,
-                moving: mapped.op.moving,
-                target: mapped.op.landing.targets[0]!,
-                additionalTargets: mapped.op.landing.targets.slice(1),
-              }
-            : mapped.op;
-        let first = engine.orderSelection(current, queryOp, mapped.choices, { index: 0, batch: 0 });
-        for (let batch = 1; first.status === 'ok' && !first.count.exact && batch <= 8; batch++) {
-          yield;
-          first = engine.orderSelection(current, queryOp, mapped.choices, { index: 0, batch });
-        }
-        if (first.status !== 'ok') throw RepeatFailure.refused(first.refusal);
-        if (!first.count.exact || first.count.orders > 64) throw new RepeatFailure('repeat_order_limit');
-        for (let n = 0; n < first.count.orders; n++) {
-          yield;
-          const order =
-            n === 0 ? first : engine.orderSelection(current, queryOp, mapped.choices, { index: n, batch: 8 });
-          if (order.status !== 'ok') throw RepeatFailure.refused(order.refusal);
-          const choices: FoldChoices = {
-            ...mapped.choices,
-            ...(order.completion ? { completion: order.completion } : {}),
-          };
-          tryCandidate(mapped.op.kind === 'pleat' && order.pleat ? { ...mapped.op, resolved: order.pleat } : mapped.op, Object.keys(choices).length ? choices : undefined);
-        }
-      }
-      engine.releaseOrderSearch?.(current);
-      if (variant === 0) predictedReason = reason;
+        engine.releaseOrderSearch?.(current);
+        if (variant === 0) predictedReason = reason;
       }
       if (!candidates.length) throw predictedReason ?? new RepeatFailure('repeat_order');
       // Two ways of turning the mirror both pass, landing differently: which
@@ -263,6 +267,8 @@ export function* prepareRepeatSearch(
       current = chosen.state;
       preparedStates.push(current);
     }
+    // Every step its own mirror — a precrease along the axis — leaves the model as it was: nothing to add.
+    if (entries.at(-1)?.expect === recipe.parentState) throw new RepeatFailure('repeat_nothing');
     return { status: 'ready', op: { ...recipe, steps: entries }, matched };
   } catch (error) {
     const failure = error instanceof FoldSearchStopped && error.reason === 'budget' ? new RepeatFailure('repeat_limit') : error;
