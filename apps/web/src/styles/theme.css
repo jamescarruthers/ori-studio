@@ -3835,10 +3835,12 @@ button.cp-folded-figure-toolbar__notice:hover {
  * One card per row, filling what the header leaves and scrolling on its own:
  * a pattern is a picture, and at a rail's width two of them side by side were
  * too small to tell apart. The phone's block asks for two of thumb size.
+ * Its basis is 0, not `auto`: a content basis with a scrollbar in the layout
+ * made each layout beside it re-measure every card (630 ms on 204 sheets).
  */
 .sheet-grid {
   display: grid;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   grid-template-columns: minmax(0, 1fr);
   /*
    * The rows are their cards' height, said twice, because the grid fills the

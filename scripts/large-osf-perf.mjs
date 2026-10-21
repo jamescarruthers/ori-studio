@@ -185,6 +185,8 @@ async function main() {
   const osf = await serveFile(options.file);
   const browser = await chromium.launch({
     headless: !options.headed,
+    // Real scrollbars: headless hides them, and then under-reports layout in scroll containers.
+    ignoreDefaultArgs: ['--hide-scrollbars'],
     // Hardware WebGL in headless Chromium on macOS; without it the canvas draws
     // through SwiftShader and the numbers stop resembling a user's.
     args:
