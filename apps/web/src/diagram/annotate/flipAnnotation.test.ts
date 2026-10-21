@@ -84,6 +84,9 @@ describe('flipping a mark over', () => {
       rotate: { amount: 'quarter', direction: 'cw' },
     };
     expect(flipAnnotation(rotate, 'vertical')).toEqual({ ...rotate, rotate: { amount: 'quarter', direction: 'ccw' } });
+    // An angle of its own turns the other way as far: its degrees kept, no preset put in.
+    const angled: KnownDiagramAnnotation = { ...rotate, rotate: { degrees: 135, direction: 'ccw' } };
+    expect(flipAnnotation(angled, 'horizontal')).toEqual({ ...angled, rotate: { degrees: 135, direction: 'cw' } });
   });
 
   it('keeps a right angle’s corner and an angle mark’s vertex, turning the way they open', () => {

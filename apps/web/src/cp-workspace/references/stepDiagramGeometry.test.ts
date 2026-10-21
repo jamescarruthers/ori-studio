@@ -78,7 +78,9 @@ import {
   rightAnglePathData,
   rightAngleReach,
   rightAngleShape,
+  rotateAmountLabel,
   rotateGlyph,
+  rotateLabelScale,
   strokedOutlinePoints,
   offPaperPathData,
   onSheetBoundary,
@@ -1118,6 +1120,27 @@ describe('the Diagram’s glyphs', () => {
         expect(Math.hypot(r.x, r.y)).toBeCloseTo(12, 6);
       }
     }
+  });
+
+  it('prints a preset as its fraction, and an angle of a diagram’s own as its degrees to a tenth', () => {
+    expect(rotateAmountLabel({ amount: 'eighth' })).toBe('1/8');
+    expect(rotateAmountLabel({ amount: 'quarter' })).toBe('1/4');
+    expect(rotateAmountLabel({ amount: 'half' })).toBe('1/2');
+    expect(rotateAmountLabel({ degrees: 135 })).toBe('135°');
+    expect(rotateAmountLabel({ degrees: 22.5 })).toBe('22.5°');
+    // An angle that is a preset's is still an angle, and no ".0" trails a whole one.
+    expect(rotateAmountLabel({ degrees: 90 })).toBe('90°');
+    expect(rotateAmountLabel({ degrees: 45.0 })).toBe('45°');
+    expect(rotateAmountLabel({ degrees: 0.1 + 0.2 })).toBe('0.3°');
+  });
+
+  it('sets an angle as wide as "135°" at the fraction’s size, and a wider one smaller to fit', () => {
+    for (const label of ['1/8', '45°', '90°', '135°', '359°']) expect(rotateLabelScale(label), label).toBe(1);
+    const wide = ['22.5°', '157.5°', '359.9°'].map(rotateLabelScale);
+    for (const scale of wide) expect(scale).toBeLessThan(1);
+    // The wider, the smaller: each set to the same width.
+    expect(wide[0]).toBeGreaterThan(wide[1]!);
+    expect(wide[1]).toBeCloseTo(wide[2]!, 9);
   });
 });
 

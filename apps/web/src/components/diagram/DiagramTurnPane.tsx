@@ -6,6 +6,7 @@ import { DEFAULT_ROTATION } from '../../diagram/annotate/annotationModel';
 import { isLockedTurn, type DiagramTurn, type DiagramTurnKind } from '../../diagram/document/diagramDocument';
 import { ActionList, type ActionListItem } from '../ui/ActionList';
 import { SegmentedRow } from '../ui/fieldRows';
+import { DiagramRotationControls } from './DiagramRotationControls';
 import styles from './DiagramTurnPane.module.css';
 
 /** The turn's verbs this pane lists, drawn as the step's same verbs are. */
@@ -65,7 +66,9 @@ export function DiagramTurnPane({
         </p>
       </div>
       {!isLockedTurn(turn) && <TurnControls turn={turn} readOnly={readOnly} onSet={onSet} />}
-      <ActionList groups={[verbs]} aria-label={t('panels:diagram.turns.actions', 'Turn actions')} />
+      <div className={styles.verbs}>
+        <ActionList groups={[verbs]} aria-label={t('panels:diagram.turns.actions', 'Turn actions')} />
+      </div>
     </div>
   );
 }
@@ -110,33 +113,13 @@ function TurnControls({
           onChange={(value) => onSet({ kind: 'turn-over', axis: value as 'vertical' | 'horizontal' })}
         />
       ) : (
-        <>
-          <SegmentedRow
-            label={t('panels:diagram.turns.amount', 'Amount')}
-            value={turn.rotate.amount}
-            disabled={readOnly}
-            options={[
-              { id: 'eighth', label: '1/8' },
-              { id: 'quarter', label: '1/4' },
-              { id: 'half', label: '1/2' },
-            ]}
-            onChange={(amount) =>
-              onSet({ kind: 'rotate', rotate: { ...turn.rotate, amount: amount as 'eighth' | 'quarter' | 'half' } })
-            }
-          />
-          <SegmentedRow
-            label={t('panels:diagram.annotations.direction', 'Direction')}
-            value={turn.rotate.direction}
-            disabled={readOnly}
-            options={[
-              { id: 'cw', label: labels.direction.cw },
-              { id: 'ccw', label: labels.direction.ccw },
-            ]}
-            onChange={(direction) =>
-              onSet({ kind: 'rotate', rotate: { ...turn.rotate, direction: direction as 'cw' | 'ccw' } })
-            }
-          />
-        </>
+        <DiagramRotationControls
+          rotation={turn.rotate}
+          amountLabel={t('panels:diagram.turns.amount', 'Amount')}
+          target="turn"
+          disabled={readOnly}
+          onChange={(rotate) => onSet({ kind: 'rotate', rotate })}
+        />
       )}
     </>
   );

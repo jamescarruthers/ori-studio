@@ -49,6 +49,7 @@ import { DiagramAngleMarkControls } from './DiagramAngleMarkControls';
 import { DiagramTicksRow } from './DiagramTicksRow';
 import { DiagramWhiteArrowControls } from './DiagramWhiteArrowControls';
 import { DiagramStarControls } from './DiagramStarControls';
+import { DiagramRotationControls } from './DiagramRotationControls';
 import { DiagramRotationRow } from './DiagramRotationRow';
 import { boxedMarkOf } from '../../diagram/annotate/transformGrips';
 import { DiagramZoomControls } from './DiagramZoomControls';
@@ -354,33 +355,15 @@ function SelectedAnnotation({
         />
       )}
       {annotation.kind === 'rotate' && annotation.rotate && (
-        <>
-          <SegmentedRow
-            label={t('panels:diagram.annotations.turn', 'Turn')}
-            value={annotation.rotate.amount}
-            disabled={!editable}
-            options={[
-              { id: 'eighth', label: '1/8' },
-              { id: 'quarter', label: '1/4' },
-              { id: 'half', label: '1/2' },
-            ]}
-            onChange={(amount) =>
-              annotations.setRotation(id, { ...annotation.rotate!, amount: amount as 'eighth' | 'quarter' | 'half' })
-            }
-          />
-          <SegmentedRow
-            label={t('panels:diagram.annotations.direction', 'Direction')}
-            value={annotation.rotate.direction}
-            disabled={!editable}
-            options={[
-              { id: 'cw', label: t('panels:diagram.annotations.clockwise', 'Clockwise') },
-              { id: 'ccw', label: t('panels:diagram.annotations.counterclockwise', 'Counterclockwise') },
-            ]}
-            onChange={(direction) =>
-              annotations.setRotation(id, { ...annotation.rotate!, direction: direction as 'cw' | 'ccw' })
-            }
-          />
-        </>
+        <DiagramRotationControls
+          // One field per mark: an uncommitted angle never carries over to the next one.
+          key={id}
+          rotation={annotation.rotate}
+          amountLabel={t('panels:diagram.annotations.turn', 'Turn')}
+          target="mark"
+          disabled={!editable}
+          onChange={(rotate) => annotations.setRotation(id, rotate)}
+        />
       )}
       {lineType !== null && (
         <FieldRow label={typeName} kind="segmented" disabled={!editable}>

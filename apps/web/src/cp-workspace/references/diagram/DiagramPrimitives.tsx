@@ -8,7 +8,6 @@ import type {
 } from '../stepDiagramGeometry';
 import {
   HIDDEN_STROKE_DASH,
-  ROTATE_FRACTION,
   TURN_OVER_HEAD_PATH,
   TURN_OVER_PATH,
   arcExtent,
@@ -39,7 +38,9 @@ import {
   rightAnglePathData,
   reversedStretches,
   ringPieces,
+  rotateAmountLabel,
   rotateGlyphDrawn,
+  rotateLabelScale,
   sheetCorners,
   starDrawn,
   eyeDrawn,
@@ -885,7 +886,10 @@ function diagramPrimitiveShape(
       const glyph = rotateGlyphDrawn(primitive.at, primitive.direction, project);
       const { centre } = glyph;
       const stroke = strokeAttributes('arrow', project.ink, 1, project.pens);
-      const size = DIAGRAM_ROTATE_INK.fraction * project.ink;
+      // A fraction at its own size, as every References step prints it; a wide angle a little smaller, to fit.
+      const label = rotateAmountLabel(primitive);
+      const fit = primitive.degrees === undefined ? 1 : rotateLabelScale(label);
+      const size = DIAGRAM_ROTATE_INK.fraction * project.ink * fit;
       return onAndOffPaper(context, index, (inks) => {
         const arrowInk = inked(inks, 'step-diagram__arc step-diagram__line--arrow', (ink) =>
           strokeInk(ink.lines.arrow, stroke.strokeOpacity)
@@ -910,7 +914,7 @@ function diagramPrimitiveShape(
                 fontWeight: 700,
               }))}
             >
-              {ROTATE_FRACTION[primitive.amount]}
+              {label}
             </text>
           </g>
         );

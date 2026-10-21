@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next';
+import { rotateAmountLabel } from '../../cp-workspace/references/stepDiagramGeometry';
 import { DEFAULT_ROTATION } from '../annotate/annotationModel';
 import type { DiagramRotation, DiagramTurnKind } from '../document/diagramDocument';
+import { isCustomRotation, withRotationAmount, withRotationDirection } from '../document/diagramRotation';
 import type { DiagramStepAction, DiagramStepCommand } from './diagramActions';
 
 /**
@@ -18,6 +20,7 @@ export type DiagramTurnActionId =
   | 'rotate-eighth'
   | 'rotate-quarter'
   | 'rotate-half'
+  | 'rotate-custom'
   | 'rotate-cw'
   | 'rotate-ccw';
 
@@ -54,6 +57,9 @@ export function turnLabels(t: TFunction) {
       quarter: t('panels:diagram.turns.quarter', '1/4 Turn'),
       half: t('panels:diagram.turns.half', '1/2 Turn'),
     },
+    /** The Step pane's fourth Amount, an angle of the author's own, and its field. */
+    custom: t('panels:diagram.turns.custom', 'Custom'),
+    angle: t('panels:diagram.turns.angle', 'Angle'),
     direction: {
       cw: t('panels:diagram.annotations.clockwise', 'Clockwise'),
       ccw: t('panels:diagram.annotations.counterclockwise', 'Counterclockwise'),
@@ -61,7 +67,7 @@ export function turnLabels(t: TFunction) {
   } as const;
 }
 
-/** What a turn says it is, in a few words: "Turn over", or "Rotate 1/4 turn clockwise". */
+/** What a turn says it is, in a few words: "Turn over", "Rotate 1/4 turn clockwise", or "Rotate 135° clockwise". */
 export function turnName(turn: DiagramTurnKind & { unknown?: unknown }, t: TFunction): string {
   if (turn.unknown !== undefined) return t('panels:diagram.turns.newer', 'Turn from a newer Ori Studio');
   if (turn.kind === 'turn-over') {
@@ -69,8 +75,14 @@ export function turnName(turn: DiagramTurnKind & { unknown?: unknown }, t: TFunc
       ? t('panels:diagram.turns.turnOverTopToBottom', 'Turn over, top to bottom')
       : t('panels:diagram.turns.turnOverSideToSide', 'Turn over, side to side');
   }
-  const { amount, direction } = turn.rotate;
-  const fraction = { eighth: '1/8', quarter: '1/4', half: '1/2' }[amount];
+  const { direction } = turn.rotate;
+  if (isCustomRotation(turn.rotate)) {
+    const angle = rotateAmountLabel(turn.rotate);
+    return direction === 'cw'
+      ? t('panels:diagram.turns.rotateAngleClockwise', 'Rotate {{angle}} clockwise', { angle })
+      : t('panels:diagram.turns.rotateAngleCounterclockwise', 'Rotate {{angle}} counterclockwise', { angle });
+  }
+  const fraction = rotateAmountLabel(turn.rotate);
   return direction === 'cw'
     ? t('panels:diagram.turns.rotateClockwise', 'Rotate {{fraction}} turn clockwise', { fraction })
     : t('panels:diagram.turns.rotateCounterclockwise', 'Rotate {{fraction}} turn counterclockwise', { fraction });
@@ -113,7 +125,7 @@ export function turnPlace(between: TurnBetween, t: TFunction): string | null {
 /**
  * A turn's card's words (D24): its title, where a step has its number, and
  * how it turns — "Turn over" and "Side to side", "Rotate" and "1/4 turn
- * clockwise". A newer build's says only that it is one.
+ * clockwise" or "135° clockwise". A newer build's says only that it is one.
  */
 export function turnCardWords(turn: DiagramTurnKind & { unknown?: unknown }, t: TFunction): { title: string; how: string } {
   if (turn.unknown !== undefined) {
@@ -128,10 +140,21 @@ export function turnCardWords(turn: DiagramTurnKind & { unknown?: unknown }, t: 
           : t('panels:diagram.turns.howSideToSide', 'Side to side'),
     };
   }
-  const { amount, direction } = turn.rotate;
-  const fraction = { eighth: '1/8', quarter: '1/4', half: '1/2' }[amount];
+  const { direction } = turn.rotate;
+  const title = t('panels:diagram.turns.cardRotate', 'Rotate');
+  if (isCustomRotation(turn.rotate)) {
+    const angle = rotateAmountLabel(turn.rotate);
+    return {
+      title,
+      how:
+        direction === 'cw'
+          ? t('panels:diagram.turns.howAngleClockwise', '{{angle}} clockwise', { angle })
+          : t('panels:diagram.turns.howAngleCounterclockwise', '{{angle}} counterclockwise', { angle }),
+    };
+  }
+  const fraction = rotateAmountLabel(turn.rotate);
   return {
-    title: t('panels:diagram.turns.cardRotate', 'Rotate'),
+    title,
     how:
       direction === 'cw'
         ? t('panels:diagram.turns.howClockwise', '{{fraction}} turn clockwise', { fraction })
@@ -171,14 +194,19 @@ export function buildDiagramTurnActions(
           ...(['eighth', 'quarter', 'half'] as const).map((amount) =>
             choose(`rotate-${amount}`, labels.amount[amount], rotation.amount === amount, {
               kind: 'rotate',
-              rotate: { ...rotation, amount },
+              rotate: withRotationAmount(rotation, amount),
             })
           ),
+          // A menu takes no number: an angle of the author's own is shown as
+          // one more of the set, checked, and set in the Step pane.
+          ...(isCustomRotation(rotation)
+            ? [choose('rotate-custom', rotateAmountLabel(rotation), true, { kind: 'rotate', rotate: rotation })]
+            : []),
           { kind: 'separator', id: 'after-amount' },
           ...(['cw', 'ccw'] as const).map((direction) =>
             choose(`rotate-${direction}`, labels.direction[direction], rotation.direction === direction, {
               kind: 'rotate',
-              rotate: { ...rotation, direction },
+              rotate: withRotationDirection(rotation, direction),
             })
           ),
         ];

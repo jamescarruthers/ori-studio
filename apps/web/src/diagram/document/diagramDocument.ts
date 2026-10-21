@@ -23,7 +23,7 @@ import type {
 } from '../../cp-workspace/folded/foldedLayerSpread';
 import type { DiagramWhiteArrowWidth } from '../../cp-workspace/references/diagram/diagramInk';
 import type { StepDiagramModel } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
-import type { WhiteArrowTail } from '../../cp-workspace/references/stepDiagramGeometry';
+import type { RotateFraction, WhiteArrowTail } from '../../cp-workspace/references/stepDiagramGeometry';
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { builtInPaperPreset, type BuiltInPaperPresetId } from '../../lib/paper/paperPresets';
@@ -942,11 +942,20 @@ export interface DiagramBehind {
   to?: number;
 }
 
-/** How far, and which way, a rotate glyph turns the model. */
-export interface DiagramRotation {
-  amount: 'eighth' | 'quarter' | 'half';
-  direction: 'cw' | 'ccw';
-}
+/** A rotation's preset: the fraction of a turn its glyph prints. */
+export type DiagramRotationAmount = RotateFraction;
+
+/**
+ * How far, and which way, a rotate glyph turns the model: one of the
+ * presets, written `{ amount, direction }` as every build has written one, or
+ * an angle of the author's own, `{ degrees, direction }` — more than none,
+ * less than a whole turn, to a tenth of a degree (`ROTATION_DEGREES`). Never
+ * both: the shape a build without angles has no name for, so it carries one
+ * whole and locked rather than dropping it.
+ */
+export type DiagramRotation =
+  | { amount: DiagramRotationAmount; degrees?: undefined; direction: 'cw' | 'ccw' }
+  | { degrees: number; amount?: undefined; direction: 'cw' | 'ccw' };
 
 /**
  * A node of a shaped arrow's path, in picture units like everything else an
@@ -2848,7 +2857,12 @@ export function setTurn(document: DiagramDocument, turnId: string, kind: Diagram
 /** Whether two turns turn the model the same way, field by field. */
 function sameTurn(a: DiagramTurnKind, b: DiagramTurnKind): boolean {
   if (a.kind === 'turn-over') return b.kind === 'turn-over' && a.axis === b.axis;
-  return b.kind === 'rotate' && a.rotate.amount === b.rotate.amount && a.rotate.direction === b.rotate.direction;
+  return (
+    b.kind === 'rotate' &&
+    a.rotate.amount === b.rotate.amount &&
+    a.rotate.degrees === b.rotate.degrees &&
+    a.rotate.direction === b.rotate.direction
+  );
 }
 
 /**
