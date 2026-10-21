@@ -1087,6 +1087,82 @@ fn angle_restricted_converging_candidates_and_draw_add_two_lines() {
     ));
 }
 
+/// A base whose end is its start: every indicator has no length and the fan's
+/// convergence point is NaN, which upstream ends both creases at. Refused.
+#[test]
+fn angle_restricted_converging_refuses_a_base_of_no_length() {
+    let base = segment(10.0, 0.0, 10.0, 0.0, LineColor::Purple8);
+    let mut model = CreasePatternModel::default();
+    for converge_point in [Point::new(f64::NAN, f64::NAN), Point::new(10.0, 5.0)] {
+        assert_eq!(
+            draw_crease_angle_restricted_converging(
+                &mut model,
+                &base,
+                converge_point,
+                LineColor::Red1,
+            ),
+            0
+        );
+    }
+    assert!(model.is_empty());
+}
+
+/// A starting pair picked as one point leaves every fan line without length,
+/// and projecting onto one is 0/0: upstream adds a crease from NaN. Refused.
+#[test]
+fn angle_restricted_3_refuses_a_fan_line_of_no_length() {
+    let vertex = Point::new(10.0, 0.0);
+    let candidates = draw_crease_angle_restricted_3_candidates(
+        vertex,
+        vertex,
+        4,
+        [40.0, 60.0, 80.0, 30.0, 50.0, 100.0],
+    );
+    let mut model = model_from_segments(&[segment(0.0, 0.0, 40.0, 0.0, LineColor::Black0)]);
+    let before = model.line_segments.clone();
+
+    assert!(!draw_crease_angle_restricted_3_to_point(
+        &mut model,
+        vertex,
+        vertex,
+        &candidates[0],
+        1.0,
+        LineColor::Blue2,
+    ));
+    assert_eq!(model.line_segments, before);
+}
+
+/// Both tools as the canvas sends three picks on one point. Each wrote creases
+/// with NaN endpoints; now neither adds anything.
+#[test]
+fn angle_restricted_tools_add_nothing_from_a_base_of_one_point() {
+    for operation in [
+        OperationId::DrawCreaseAngleRestricted,
+        OperationId::DrawCreaseAngleRestricted3,
+    ] {
+        let mut document = CreasePatternDocument {
+            crease_pattern: model_from_segments(&[segment(0.0, 0.0, 40.0, 0.0, LineColor::Black0)]),
+            ..Default::default()
+        };
+        let before = document.crease_pattern.line_segments.clone();
+        let vertex = Point::new(10.0, 0.0);
+        let command =
+            CreasePatternCommand::new(operation).with_payload(CreasePatternCommandPayload {
+                points: vec![vertex, vertex, vertex],
+                line_color: Some(LineColor::Red1),
+                selection_distance: Some(1.0),
+                ..Default::default()
+            });
+
+        execute_command(&mut document, command).expect("a refused construction is not an error");
+
+        assert_eq!(
+            document.crease_pattern.line_segments, before,
+            "{operation:?}"
+        );
+    }
+}
+
 fn segment(ax: f64, ay: f64, bx: f64, by: f64, color: LineColor) -> LineSegment {
     LineSegment::with_color(Point::new(ax, ay), Point::new(bx, by), color)
 }

@@ -286,6 +286,29 @@ are unchanged:
   `reflect_selection_command_across_one_point_leaves_the_pattern_unchanged`;
   `draw_symmetric_matches_oriedita_oracle` still gates an axis with a length.
 
+- **The angle-restricted tools refuse a base of one point.** Two more handlers
+  take a pair of points with no check that they differ, and write NaN creases
+  from the pair they get:
+  - `MouseHandlerDrawCreaseAngleRestricted` (`DRAW_CREASE_ANGLE_RESTRICTED_13`):
+    with the base's end picked on its start, every indicator has no length and
+    the fan's one convergence point is `findIntersection` of two of them, NaN.
+    `getClosestIntersection` takes it wherever the press lands, since each of
+    its comparisons with NaN is false, and both creases end there.
+    `draw_crease_angle_restricted_converging` refuses a base with no length.
+  - `MouseHandlerDrawCreaseAngleRestricted3_2` (`DRAW_CREASE_ANGLE_RESTRICTED_3_18`):
+    its first two presses each take the nearest point, so a second press on the
+    first leaves every fan line without length, and a third press near them
+    projects onto one (`findProjection`, 0/0) and adds a crease from NaN.
+    `draw_crease_angle_restricted_3_to_point` refuses a fan line with no length.
+
+  The oracle shows both on a one-point base (`foldline-angle-restricted-converging-*`,
+  `foldline-angle-restricted3-*`). Pinned by
+  `angle_restricted_converging_refuses_a_base_of_no_length`,
+  `angle_restricted_3_refuses_a_fan_line_of_no_length` and
+  `angle_restricted_tools_add_nothing_from_a_base_of_one_point`;
+  `angle_restricted_converging_matches_oriedita_oracle` and
+  `angle_restricted_3_matches_oriedita_oracle` still gate a base with a length.
+
 - **The flat-foldability check is evaluated with orientation-invariant
   arithmetic.** `checks::check4` and `checks::check3` default to
   `CamvAngleArithmetic::Refined`, which differs from upstream in two evaluations
