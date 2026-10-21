@@ -1,4 +1,4 @@
-import { useId, type ComponentPropsWithoutRef } from 'react';
+import { useId, useRef, useState, type ComponentPropsWithoutRef } from 'react';
 import { Select, SelectContent, SelectItem, SelectValue } from '../Select';
 import { FieldRow, FieldRowSelectTrigger } from './FieldRow';
 
@@ -52,6 +52,16 @@ export function SelectRow({
   contentProps?: Omit<ComponentPropsWithoutRef<typeof SelectContent>, 'children'>;
 }) {
   const noteId = useId();
+  // A list whose options carry a description line is held to the row's width as it opens — in a tool
+  // window, the window's — so a long reason wraps under its option rather than stretching the list.
+  const described = options.some((option) => option.description);
+  const trigger = useRef<HTMLButtonElement | null>(null);
+  const [rowWidth, setRowWidth] = useState<number | null>(null);
+  const measure = (open: boolean) => {
+    if (!open || !described) return;
+    const row = trigger.current?.closest('[data-field-row]');
+    if (row) setRowWidth(row.getBoundingClientRect().width);
+  };
   return (
     <FieldRow
       label={label}
@@ -65,11 +75,11 @@ export function SelectRow({
       note={note}
       onReset={onReset}
     >
-      <Select value={value ?? ''} onValueChange={onChange} disabled={disabled}>
-        <FieldRowSelectTrigger aria-label={label} aria-describedby={note === undefined ? undefined : noteId}>
+      <Select value={value ?? ''} onValueChange={onChange} disabled={disabled} onOpenChange={measure}>
+        <FieldRowSelectTrigger ref={trigger} aria-label={label} aria-describedby={note === undefined ? undefined : noteId}>
           <SelectValue placeholder={placeholder} />
         </FieldRowSelectTrigger>
-        <SelectContent {...contentProps}>
+        <SelectContent {...(described && rowWidth !== null ? { maxWidth: rowWidth } : {})} {...contentProps}>
           {options.map((option) => (
             <SelectItem key={option.id} value={option.id} disabled={option.disabled} description={option.description}>
               {option.label}
