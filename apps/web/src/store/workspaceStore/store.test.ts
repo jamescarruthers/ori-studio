@@ -124,6 +124,7 @@ const oristudioCpMocks = vi.hoisted(() => ({
   createBlankOristudioCpDocument: vi.fn(),
   duplicateOristudioCpFoldedFigure: vi.fn(),
   executeOristudioCpCommand: vi.fn(),
+  executeOristudioCpSelectionCommand: vi.fn(),
   exportOristudioCpDocumentAsCp: vi.fn(),
   exportOristudioCpDocumentAsFold: vi.fn(),
   exportOristudioCpLinesAsFold: vi.fn(),
@@ -233,6 +234,7 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
     createBlankOristudioCpDocument: oristudioCpMocks.createBlankOristudioCpDocument,
     duplicateOristudioCpFoldedFigure: oristudioCpMocks.duplicateOristudioCpFoldedFigure,
     executeOristudioCpCommand: oristudioCpMocks.executeOristudioCpCommand,
+    executeOristudioCpSelectionCommand: oristudioCpMocks.executeOristudioCpSelectionCommand,
     exportOristudioCpDocumentAsCp: oristudioCpMocks.exportOristudioCpDocumentAsCp,
     exportOristudioCpDocumentAsFold: oristudioCpMocks.exportOristudioCpDocumentAsFold,
     exportOristudioCpLinesAsFold: oristudioCpMocks.exportOristudioCpLinesAsFold,
@@ -260,6 +262,10 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
     runOristudioCpCheckCommand: oristudioCpMocks.runOristudioCpCheckCommand,
     setOristudioCpDocumentSource: oristudioCpMocks.setOristudioCpDocumentSource,
     setOristudioCpFoldedFigureModel: oristudioCpMocks.setOristudioCpFoldedFigureModel,
+    // Every call that changes the document is mocked here and answers at once,
+    // so no change is ever in flight and the store's snapshot is always the
+    // kernel's. `cpSelectionCommands.wasm.test.ts` covers the in-flight case.
+    isCurrentOristudioCpDocumentState: () => true,
   };
 });
 
@@ -1549,6 +1555,10 @@ function resetStores(snapshot = makeSnapshot()) {
   oristudioCpMocks.executeOristudioCpCommand.mockReset().mockRejectedValue({
     code: 'not_implemented',
     message: 'Oriedita operation DrawCreaseFree is not implemented yet',
+  });
+  oristudioCpMocks.executeOristudioCpSelectionCommand.mockReset().mockRejectedValue({
+    code: 'not_implemented',
+    message: 'no selection command is expected',
   });
   oristudioCpMocks.insertOristudioCpLineSegments
     .mockReset()
@@ -6710,47 +6720,16 @@ describe('workspace store slices', () => {
     });
     const currentDocument = useWorkspaceStore.getState().oristudioCpDocument;
     if (!currentDocument) throw new Error('expected editable CP document');
-    oristudioCpMocks.executeOristudioCpCommand.mockResolvedValueOnce({
-      ...currentDocument,
-      document: {
-        ...currentDocument.document,
-        crease_pattern: {
-          ...currentDocument.document.crease_pattern,
-          line_segments: [
-            {
-              a: { x: 0, y: 0 },
-              b: { x: 1, y: 0 },
-              active: 'Inactive0',
-              color: 'Red1',
-              selected: 2,
-              customized: 0,
-              customized_color: { red: 100, green: 200, blue: 200 },
-            },
-            {
-              a: { x: 0, y: 0 },
-              b: { x: 0, y: 1 },
-              active: 'Inactive0',
-              color: 'Blue2',
-              selected: 2,
-              customized: 0,
-              customized_color: { red: 100, green: 200, blue: 200 },
-            },
-            {
-              a: { x: 1, y: 0 },
-              b: { x: 1, y: 1 },
-              active: 'Inactive0',
-              color: 'Black0',
-              selected: 0,
-              customized: 0,
-              customized_color: { red: 100, green: 200, blue: 200 },
-            },
-          ],
-        },
+    const revision = useWorkspaceStore.getState().oristudioCpRevision;
+    // The kernel answers a selection with the selected lines, not a document.
+    oristudioCpMocks.executeOristudioCpSelectionCommand.mockResolvedValueOnce({
+      result: {
+        operation: 'SelectLineIntersecting',
+        status: 'OracleTested',
+        diagnostics: ['Changed 2 line(s)'],
       },
-      summary: {
-        ...currentDocument.summary,
-        line_segments: 3,
-      },
+      before: { ids: new Uint32Array(0), values: new Int32Array(0) },
+      after: { ids: Uint32Array.of(1, 2), values: Int32Array.of(2, 2) },
     });
 
     await expect(
@@ -6762,9 +6741,25 @@ describe('workspace store slices', () => {
       })
     ).resolves.toBe(true);
 
-    expect(useWorkspaceStore.getState().oristudioCpSelection).toEqual({
+    const state = useWorkspaceStore.getState();
+    expect(oristudioCpMocks.executeOristudioCpCommand).not.toHaveBeenCalledWith(
+      'SelectLineIntersecting',
+      expect.anything()
+    );
+    expect(state.oristudioCpSelection).toEqual({
       ...emptyOristudioCpSelection(),
       lines: [1, 2],
+    });
+    // The same snapshot (its flags are written in place, which
+    // `cpSelectionCommands.wasm.test.ts` checks against the real kernel).
+    expect(state.oristudioCpDocument?.document).toBe(currentDocument.document);
+    expect(state.oristudioCpDocument?.lastCommandResult?.operation).toBe('SelectLineIntersecting');
+    expect(state.oristudioCpRevision).toBe(revision);
+    expect(state.dirty).toBe(true);
+    expect(state.oristudioCpHistoryPast.at(-1)).toMatchObject({
+      label: 'SelectLineIntersecting',
+      document: currentDocument.document,
+      selectedLines: { ids: new Uint32Array(0), values: new Int32Array(0) },
     });
   });
 

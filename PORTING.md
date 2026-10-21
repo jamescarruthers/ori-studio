@@ -374,6 +374,29 @@ are unchanged:
   `FoldLineSet` can hold, so the one colour at issue is unreachable from it.
   `crates/oristudio-cp/tests/color_operations.rs` covers the widened half.
 
+- **Delete Extra Vertices also merges auxiliary lines.** Upstream's
+  `del_V_all` and `del_V_all_cc` never touch a cyan line: `PointLineMap` skips
+  `CYAN_3` (`PointLineMap.java:36`), so every cyan branch of `del_V`'s colour
+  matrix is dead on that path, and an aux line left in pieces stays in pieces.
+  `operations::arrangement::del_v_sweep` runs upstream's walk unchanged, then a
+  second pass over what it leaves that merges collinear cyan pairs
+  (`SweepPass::Auxiliary`), in both variants.
+
+  That pass counts *every* line at a vertex, where upstream's counts none of
+  the cyan ones. So an aux vertex goes only where two collinear aux lines meet
+  and nothing else does, which is the rule upstream's own single-point
+  `del_V(Point, …)` (Delete Vertex) already applies; a crease ending on an aux
+  line keeps it split there. Where a crease crosses an aux line, upstream's
+  pass merges the crease through the crossing first, and the aux line then
+  merges too. Aux and crease are never merged into each other.
+
+  Parity is untouched for every non-cyan line: the first pass is the ported
+  walk, and a document without cyan lines never reaches the second. The
+  `foldline-del-v-all*` oracle cases carry no cyan, so they still apply.
+  `crates/oristudio-cp/tests/operations.rs` covers the new pass. The automatic
+  cleanup after a solve or import still keeps aux lines out
+  (`apps/web/src/lib/cpGraphCleanup.ts`), because there they are references.
+
 ### Holes in the sheet
 
 `PointSet.calculateFaces` keeps every traced region whose signed area is

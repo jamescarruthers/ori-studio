@@ -33,6 +33,7 @@ use crate::folding3d::snapshot::Fold3dSnapshot;
 use crate::folding3d::wire::Fold3dRefusalWire;
 use crate::geometry::{Circle, LineColor, LineSegment, Point};
 use crate::geometry_transport::{self, CompactGeometry};
+use crate::line_selection::{SelectedLines, is_selection_operation};
 use crate::model::TextElement;
 use crate::share;
 use crate::sheets::{CompactSheetIndex, sheet_index};
@@ -63,6 +64,8 @@ pub const CP_ENGINE_COMMANDS: &[&str] = &[
     "free_document",
     "execute_command",
     "preview_command",
+    "execute_selection_command",
+    "set_selected_lines",
     "insert_line_segments",
     "deselect_all",
     "import_add",
@@ -438,6 +441,16 @@ pub struct DocumentSummary {
     pub is_empty: bool,
 }
 
+/// What a selection command did: its result, and the selected lines before and
+/// after it — everything a selection changes, so the caller needs no new copy
+/// of the document to show it or to undo it.
+#[derive(Debug, Clone, Serialize)]
+pub struct SelectionCommandResult {
+    pub result: crate::CommandResult,
+    pub before: SelectedLines,
+    pub after: SelectedLines,
+}
+
 /// A newly-allocated folded figure handle plus its initial snapshot.
 #[derive(Debug, Clone, Serialize)]
 pub struct FoldedFigureResult {
@@ -731,6 +744,49 @@ impl CpSession {
             document,
             CreasePatternCommand::new(operation).with_payload(payload),
         )?)
+    }
+
+    /// Run one of the commands that only change which lines are selected
+    /// ([`crate::line_selection::SELECTION_OPERATIONS`]) and answer with the
+    /// selected lines before and after it. Any other operation is refused,
+    /// unrun: its answer would leave out what it changed.
+    pub fn execute_selection_command(
+        &mut self,
+        handle: u32,
+        operation: OperationId,
+        payload: CreasePatternCommandPayload,
+    ) -> Result<SelectionCommandResult, EngineError> {
+        if !is_selection_operation(operation) {
+            return Err(EngineError::new(
+                "not_a_selection_command",
+                format!("{operation:?} changes more than the selection"),
+            ));
+        }
+        let document = self.document_mut(handle)?;
+        let before = SelectedLines::of(&document.crease_pattern);
+        let result = execute_command(
+            document,
+            CreasePatternCommand::new(operation).with_payload(payload),
+        )?;
+        let after = SelectedLines::of(&document.crease_pattern);
+        Ok(SelectionCommandResult {
+            result,
+            before,
+            after,
+        })
+    }
+
+    /// Make `lines` the document's selected lines exactly, and answer with the
+    /// ones they replaced. Undo and redo of a selection, and a deselect.
+    pub fn set_selected_lines(
+        &mut self,
+        handle: u32,
+        lines: &SelectedLines,
+    ) -> Result<SelectedLines, EngineError> {
+        let document = self.document_mut(handle)?;
+        lines
+            .apply(&mut document.crease_pattern)
+            .map_err(|error| EngineError::invalid_input(error.to_string()))
     }
 
     pub fn insert_line_segments(
@@ -1433,6 +1489,95 @@ mod tests {
         assert_eq!(summary.title.as_deref(), Some("square"));
         assert_eq!(summary.line_segments, 4);
         assert!(!summary.is_empty);
+    }
+
+    /// Four separate creases, one unit apart: a box picks out exactly the ones it covers.
+    const PARALLEL_CP: &str = "2 0 0 1 0\n2 0 1 1 1\n2 0 2 1 2\n2 0 3 1 3\n";
+
+    /// A box over the creases at heights `from..=to`.
+    fn box_over(from: f64, to: f64) -> CreasePatternCommandPayload {
+        CreasePatternCommandPayload {
+            points: vec![Point::new(-0.5, from - 0.5), Point::new(1.5, to + 0.5)],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_selection_command_answers_with_the_lines_before_and_after() {
+        let mut session = CpSession::new();
+        let handle = session.load_cp(PARALLEL_CP, "").expect("load cp");
+        let first = session
+            .execute_selection_command(handle, OperationId::CreaseSelect, box_over(0.0, 0.0))
+            .expect("box select");
+        assert_eq!(first.result.operation, OperationId::CreaseSelect);
+        assert_eq!(first.before, SelectedLines::default());
+        assert_eq!(first.after.ids, vec![1]);
+        assert_eq!(first.after.values, vec![2]);
+
+        // A second box, additive (the kernel's select adds unless told to replace).
+        let second = session
+            .execute_selection_command(handle, OperationId::CreaseSelect, box_over(1.0, 1.0))
+            .expect("box select");
+        assert_eq!(second.before, first.after);
+        assert_eq!(second.after.ids, vec![1, 2]);
+        assert_eq!(
+            SelectedLines::of(&session.document(handle).unwrap().crease_pattern),
+            second.after
+        );
+    }
+
+    #[test]
+    fn a_selection_command_refuses_an_edit_without_running_it() {
+        let mut session = CpSession::new();
+        let handle = session.load_cp(SQUARE_CP, "").expect("load cp");
+        let before = session.document_snapshot(handle).unwrap();
+        let error = session
+            .execute_selection_command(
+                handle,
+                OperationId::CreaseMakeValley,
+                CreasePatternCommandPayload {
+                    line_ids: vec![1],
+                    ..Default::default()
+                },
+            )
+            .expect_err("an edit is not a selection");
+        assert_eq!(error.code, "not_a_selection_command");
+        assert_eq!(session.document_snapshot(handle).unwrap(), before);
+    }
+
+    #[test]
+    fn setting_the_selected_lines_returns_the_ones_replaced() {
+        let mut session = CpSession::new();
+        let handle = session.load_cp(PARALLEL_CP, "").expect("load cp");
+        let selected = session
+            .execute_selection_command(handle, OperationId::CreaseSelect, box_over(0.0, 3.0))
+            .expect("box select")
+            .after;
+        assert_eq!(selected.ids, vec![1, 2, 3, 4]);
+
+        let replaced = session
+            .set_selected_lines(handle, &SelectedLines::default())
+            .expect("deselect");
+        assert_eq!(replaced, selected);
+        let restored = session
+            .set_selected_lines(handle, &replaced)
+            .expect("reselect");
+        assert_eq!(restored, SelectedLines::default());
+        assert_eq!(
+            SelectedLines::of(&session.document(handle).unwrap().crease_pattern),
+            selected
+        );
+
+        let error = session
+            .set_selected_lines(
+                handle,
+                &SelectedLines {
+                    ids: vec![5],
+                    values: vec![2],
+                },
+            )
+            .expect_err("there is no line 5");
+        assert_eq!(error.code, "invalid_input");
     }
 
     #[test]

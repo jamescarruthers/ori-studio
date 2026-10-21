@@ -10,6 +10,7 @@ import { MAX_CP_HISTORY, withCpHistoryEntry } from "./cpHistory";
 import { useWorkspaceStore } from "../workspaceStore";
 import type { OristudioCpHistoryEntry, WorkspaceState } from "./types";
 import {
+  countOristudioCpDocumentChange,
   getOristudioCpClient,
   refreshOristudioCpDocument,
   restoreOristudioCpDocumentInPlace,
@@ -266,9 +267,13 @@ export async function commitDiagramImport(
   try {
     let cp = before.oristudioCpDocument;
     if (cpGroups.length && cp) {
+      // The undo entry holds the store's snapshot from here, so a selection
+      // landing meanwhile must not write its flags into it (`cpSelectedLines.ts`).
+      countOristudioCpDocumentChange();
       const api = await getOristudioCpClient();
       if (!matches(target, get()))
         throw new Error(destinationChanged());
+      countOristudioCpDocumentChange();
       await api.appendDisjoint(
         cp.handle,
         cpGroups.map((g, i) => placedGeometry(g.geometry, placements[i]!)),
@@ -285,6 +290,7 @@ export async function commitDiagramImport(
           get().oristudioCpDocument?.loadSerial ===
           before.oristudioCpDocument!.loadSerial
         ) {
+          countOristudioCpDocumentChange();
           await api.restoreDocument(
             before.oristudioCpDocument!.handle,
             before.oristudioCpDocument!.document,

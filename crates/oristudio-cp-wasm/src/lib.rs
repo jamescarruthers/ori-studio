@@ -12,6 +12,7 @@ use oristudio_cp::folding::{
 };
 use oristudio_cp::geometry::LineSegment;
 use oristudio_cp::geometry_transport::CompactGeometry;
+use oristudio_cp::line_selection::SelectedLines;
 use oristudio_cp::session::{CpSession, EngineError};
 use oristudio_cp::{CreasePatternCommandPayload, CreasePatternDocument, OperationId};
 use serde::Serialize;
@@ -184,6 +185,50 @@ pub fn preview_cp_command(
     let payload: CreasePatternCommandPayload = from_js(payload)?;
     let result = with_session(|session| session.preview_command(handle, operation, payload))?;
     to_js_value(&result)
+}
+
+/// Run a selection command (`CpSession::execute_selection_command`) and answer
+/// `{ result, before, after }`: its command result, and the selected lines
+/// before and after it as `{ ids: Uint32Array, values: Int32Array }`.
+#[wasm_bindgen]
+pub fn execute_cp_selection_command(
+    handle: u32,
+    operation: JsValue,
+    payload: JsValue,
+) -> Result<JsValue, JsValue> {
+    let operation: OperationId = from_js(operation)?;
+    let payload: CreasePatternCommandPayload = from_js(payload)?;
+    let outcome =
+        with_session_mut(|session| session.execute_selection_command(handle, operation, payload))?;
+    let object = Object::new();
+    Reflect::set(
+        &object,
+        &JsValue::from_str("result"),
+        &to_js_value(&outcome.result)?,
+    )?;
+    Reflect::set(
+        &object,
+        &JsValue::from_str("before"),
+        &selected_lines_to_js(&outcome.before)?,
+    )?;
+    Reflect::set(
+        &object,
+        &JsValue::from_str("after"),
+        &selected_lines_to_js(&outcome.after)?,
+    )?;
+    Ok(object.into())
+}
+
+/// Make `ids` (1-based) the selected lines, each with its value from `values`,
+/// and every other line unselected. Answers with the selected lines replaced.
+#[wasm_bindgen]
+pub fn set_selected_lines(handle: u32, ids: &[u32], values: &[i32]) -> Result<JsValue, JsValue> {
+    let lines = SelectedLines {
+        ids: ids.to_vec(),
+        values: values.to_vec(),
+    };
+    let replaced = with_session_mut(|session| session.set_selected_lines(handle, &lines))?;
+    selected_lines_to_js(&replaced)
 }
 
 #[wasm_bindgen]
@@ -540,6 +585,13 @@ fn set_u8_array(target: &Object, key: &str, data: &[u8]) -> Result<(), JsValue> 
 fn set_u32_array(target: &Object, key: &str, data: &[u32]) -> Result<(), JsValue> {
     let array = Uint32Array::from(data);
     Reflect::set(target, &JsValue::from_str(key), array.as_ref()).map(|_| ())
+}
+
+fn selected_lines_to_js(lines: &SelectedLines) -> Result<JsValue, JsValue> {
+    let object = Object::new();
+    set_u32_array(&object, "ids", &lines.ids)?;
+    set_i32_array(&object, "values", &lines.values)?;
+    Ok(object.into())
 }
 
 fn compact_to_js(compact: &CompactGeometry) -> Result<JsValue, JsValue> {

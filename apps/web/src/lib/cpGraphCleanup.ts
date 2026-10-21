@@ -1,9 +1,12 @@
 import type { OristudioCpLineSegment } from '../engine/oristudioCpTypes';
 
 /**
- * Automatic solve/import cleanup must preserve reference junctions. Oriedita's
- * explicit Delete Extra Vertices operation deliberately ignores cyan edges;
- * leave that command intact and limit the automatic sweep to unaffected lines.
+ * Automatic solve/import cleanup must preserve reference junctions. The
+ * kernel's crease pass does not see cyan edges (Oriedita's rule), so two
+ * collinear creases meeting where an aux line ends would merge past it, and its
+ * aux pass would merge the references themselves. Keep cyan lines, and creases
+ * touching their endpoints, out of the automatic sweep; the explicit Delete
+ * Extra Vertices command is the user's to run over them.
  * IDs are one-based kernel line IDs, as in DeleteExtraVerticesAmong.
  */
 export function extraVertexCleanupLineIds(

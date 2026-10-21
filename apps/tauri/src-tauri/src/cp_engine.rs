@@ -26,9 +26,10 @@ use oristudio_cp::folding::{
 use oristudio_cp::folding3d::aux_lines::Folded3dAuxLines;
 use oristudio_cp::geometry::LineSegment;
 use oristudio_cp::geometry_transport::CompactGeometry;
+use oristudio_cp::line_selection::SelectedLines;
 use oristudio_cp::session::{
     CpSession, DocumentSummary, EngineError, Fold3dFoldResult, Fold3dStepResult,
-    FoldedFigureBatchResult, FoldedFigureResult, OperationInfo,
+    FoldedFigureBatchResult, FoldedFigureResult, OperationInfo, SelectionCommandResult,
 };
 use oristudio_cp::{CommandPreview, CommandResult, CreasePatternCommandPayload, OperationId};
 use tauri::State;
@@ -461,6 +462,33 @@ pub async fn cp_preview_command(
 ) -> Result<CommandPreview, EngineError> {
     run(state, session_id, move |session| {
         session.preview_command(handle, operation, payload)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn cp_execute_selection_command(
+    handle: u32,
+    operation: OperationId,
+    payload: CreasePatternCommandPayload,
+    state: State<'_, CpEngine>,
+    session_id: Option<u32>,
+) -> Result<SelectionCommandResult, EngineError> {
+    run(state, session_id, move |session| {
+        session.execute_selection_command(handle, operation, payload)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn cp_set_selected_lines(
+    handle: u32,
+    lines: SelectedLines,
+    state: State<'_, CpEngine>,
+    session_id: Option<u32>,
+) -> Result<SelectedLines, EngineError> {
+    run(state, session_id, move |session| {
+        session.set_selected_lines(handle, &lines)
     })
     .await
 }
@@ -908,6 +936,8 @@ const NATIVE_CP_COMMAND_NAMES: &[&str] = &[
     "cp_free_document",
     "cp_execute_command",
     "cp_preview_command",
+    "cp_execute_selection_command",
+    "cp_set_selected_lines",
     "cp_insert_line_segments",
     "cp_deselect_all",
     "cp_import_add",
@@ -1153,5 +1183,43 @@ mod tests {
             .expect("summary");
         assert_eq!(summary.line_segments, 4);
         assert_eq!(summary.title.as_deref(), Some("square"));
+    }
+
+    /// A selection answers with the selected lines, which the desktop client
+    /// reads as JSON: the field names are the contract with
+    /// `oristudioCpNativeClient.ts`.
+    #[test]
+    fn a_selection_serializes_as_the_selected_lines() {
+        let state = new_state();
+        let mut session = state.lock().unwrap();
+        let handle = session.load_cp(SQUARE_CP, "square").expect("load cp");
+        let outcome = session
+            .execute_selection_command(
+                handle,
+                oristudio_cp::OperationId::CreaseSelect,
+                oristudio_cp::CreasePatternCommandPayload {
+                    points: vec![
+                        oristudio_cp::geometry::Point::new(-1.0, -1.0),
+                        oristudio_cp::geometry::Point::new(2.0, 2.0),
+                    ],
+                    ..Default::default()
+                },
+            )
+            .expect("box select");
+        let json = serde_json::to_value(&outcome).expect("serialize");
+        assert_eq!(json["result"]["operation"], "CreaseSelect");
+        assert_eq!(
+            json["before"],
+            serde_json::json!({ "ids": [], "values": [] })
+        );
+        assert_eq!(
+            json["after"],
+            serde_json::json!({ "ids": [1, 2, 3, 4], "values": [2, 2, 2, 2] })
+        );
+        let lines: super::SelectedLines =
+            serde_json::from_value(serde_json::json!({ "ids": [2], "values": [2] }))
+                .expect("deserialize");
+        let replaced = session.set_selected_lines(handle, &lines).expect("set");
+        assert_eq!(replaced.ids, vec![1, 2, 3, 4]);
     }
 }

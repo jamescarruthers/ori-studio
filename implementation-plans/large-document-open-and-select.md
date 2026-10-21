@@ -418,6 +418,61 @@ medium on the effort, since five consumers move.
   replaced (ids), not the document; an edit entry stores the compact typed
   arrays (`restore_from_compact` already exists) instead of the decoded object
   graph — 26 MiB instead of 131 MiB here.
+
+  *3.1 and the selection half of 3.2 done, as built (#472):* the kernel runs
+  the eight region selects through `execute_selection_command`, which answers
+  with the selected lines before and after (`line_selection.rs`) and refuses
+  anything else, and `set_selected_lines` puts an exact selection back for
+  undo, redo and deselect — in the session, the wasm bridge and the Tauri
+  commands alike. The store keeps its snapshot and geometry and writes the
+  changed `selected` flags into them in place (`mirrorSelectedLines`): an
+  `.osf` save writes those flags, and an edit's undo entry puts its snapshot
+  back into the kernel, so they must stay the kernel's; nothing draws from them
+  and no fingerprint reads them. It writes in place only while the snapshot is
+  current: the runtime counts every edit, in-place restore, insert, replace and
+  merge as it is asked for and stamps the count on each state it reads
+  (`isCurrentOristudioCpDocumentState`). Otherwise the selection fetches the
+  document again, as `main` always did, because an edit or undo in flight has
+  already taken that snapshot for its undo or redo entry (found in review:
+  Escape during a grid change, then undo, left the store showing a selection
+  the kernel no longer had).
+  A selection's undo entry holds the selected
+  lines it replaced (`selectedLines`) with `document` a shared reference to the
+  live snapshot, never a copy. Dirty is unchanged: `.osf` and `.ori` both carry
+  the selection, and a save after the same actions is byte-identical to
+  `main`'s apart from `savedAt`. Measured on this file (same boxes, main
+  0be4cdff3 against the branch, two runs each):
+
+  | | main | selection returns ids |
+  | --- | ---: | ---: |
+  | First sheet → selected | 627 / 594 ms | 290 / 254 ms |
+  | Second sheet → selected | 746 / 792 ms | 226 / 202 ms |
+  | Longest freeze per selection | 394–618 ms | 100–124 ms |
+  | Heap per selection (its undo entry) | +92–94 MiB | +2–6 MiB |
+
+  Re-measured with the current-snapshot check (two runs each, alternating
+  with main and the branch before it): first sheet 299 / 294 ms, second
+  228 / 228 ms, heap +6 / +2 MiB, so a selection after an open still writes
+  in place; main 591 / 689 and 728 / 828 ms in the same runs.
+
+  Merged with main after #455 (the diagram batch import and its compound
+  undo across Edit and Diagram). The import appends its sheets, and rolls them
+  back, through the client directly, so it counts those as changes itself
+  (`countOristudioCpDocumentChange`): its compound entry holds the store's
+  snapshot from the moment it starts, and a selection landing meanwhile must
+  not write into it. Selection entries never carry a `compoundId`, so the
+  compound history's pruning passes them through; select, import, select
+  undoes and redoes one step at a time with the store's ids, the kernel's
+  flags and the snapshot's flags agreeing at each (kernel-backed test).
+  Re-measured on the merge (c32c16cc5) against main with #455 (0bc59d6b1),
+  two runs each, alternating: first sheet 258 / 267 ms (main 602 / 601),
+  second 201 / 202 ms (main 776 / 748), longest freeze 98–114 ms (main
+  394–619), heap +6 / +2 MiB per selection (main +95 / +92).
+
+  What is left of a selection is about 100 ms of the kernel's box select in
+  the worker and one ~107 ms main-thread task of passes over every line keyed
+  on the selection — the canvas's stroke scene for the highlight, the move-snap
+  document, the selected endpoints, the fold-angle layer — which is 3.3.
 - **3.3 Stop decoding 489k objects on every command.** The compact-transport
   work deliberately left consumers on the decoded snapshot because decoding
   was "~ms"; at this size it is ~150 ms and 131 MiB of garbage per command.
@@ -553,8 +608,9 @@ Phase 2
 - [x] 2.4 Inference hot spots, output bit-identical
 
 Phase 3
-- [ ] 3.1 Selection commands return ids; document identity preserved
-- [ ] 3.2 Selection-only undo entries; compact geometry for edit entries
+- [x] 3.1 Selection commands return ids; document identity preserved (#472)
+- [x] 3.2 Selection-only undo entries (#472)
+- [ ] 3.2 Compact geometry for edit entries
 - [ ] 3.3 Hot consumers on the `CpGeometry` accessor
 
 Phase 4

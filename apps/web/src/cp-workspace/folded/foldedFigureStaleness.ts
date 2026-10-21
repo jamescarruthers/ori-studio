@@ -295,8 +295,10 @@ export function foldedSourceFingerprint(lines: readonly OristudioCpLineSegment[]
  * # Why keying on document identity is safe
  *
  * It is the *same* key the `useMemo` already used, so this is no weaker: a
- * snapshot is decoded fresh per edit and never mutated in place, and were that
- * untrue the memo would already have been serving stale answers. A `WeakMap`
+ * snapshot is decoded fresh per edit, and the one thing ever written into it in
+ * place is the `selected` flags (`mirrorSelectedLines`), which no fingerprint
+ * reads. Were that untrue the memo would already have been serving stale
+ * answers. A `WeakMap`
  * means a superseded document's entry goes when the document does, and the
  * inner map is bounded by the number of distinct regions asked about.
  */

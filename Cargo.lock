@@ -3291,7 +3291,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "oracle-tests"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "oristudio-cp",
  "oristudio-fold",
@@ -3318,7 +3318,7 @@ dependencies = [
 
 [[package]]
 name = "ori-studio"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "oristudio-cp",
  "oristudio-cp-compiler",
@@ -3341,7 +3341,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-bp"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -3353,7 +3353,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-bp-wasm"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "js-sys",
  "oristudio-bp",
@@ -3365,7 +3365,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-cp"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "crc32fast",
  "encoding_rs",
@@ -3382,7 +3382,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-cp-compiler"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "js-sys",
  "levenberg-marquardt",
@@ -3399,7 +3399,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-cp-detect"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "image",
  "imageproc",
@@ -3416,7 +3416,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-cp-detect-inspector"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "anyhow",
  "image",
@@ -3429,7 +3429,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-cp-detect-wasm"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -3446,7 +3446,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-cp-eval"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -3455,7 +3455,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-cp-wasm"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "js-sys",
  "oristudio-cp",
@@ -3521,7 +3521,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-pdf"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "krilla",
  "krilla-svg",
@@ -3532,7 +3532,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-pdf-wasm"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -3542,7 +3542,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-precrease"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "js-sys",
  "oristudio-geometry",
@@ -3553,7 +3553,7 @@ dependencies = [
 
 [[package]]
 name = "oristudio-precrease-wasm"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -5992,7 +5992,7 @@ dependencies = [
 
 [[package]]
 name = "treemaker-cli"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -6008,7 +6008,7 @@ dependencies = [
 
 [[package]]
 name = "treemaker-core"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "proptest",
  "serde",
@@ -6019,7 +6019,7 @@ dependencies = [
 
 [[package]]
 name = "treemaker-flatfold"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -6029,7 +6029,7 @@ dependencies = [
 
 [[package]]
 name = "treemaker-fold"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "earcutr",
  "serde",
@@ -6039,7 +6039,7 @@ dependencies = [
 
 [[package]]
 name = "treemaker-wasm"
-version = "0.6.0"
+version = "0.6.2"
 dependencies = [
  "serde",
  "serde-wasm-bindgen",

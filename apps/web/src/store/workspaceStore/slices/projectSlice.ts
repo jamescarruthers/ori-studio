@@ -151,6 +151,11 @@ import { noteInlineSimulationIds } from '../../../cp-workspace/inlineSimulation/
 import { discardCpDocumentState } from '../cpDocumentState';
 import { withCpHistoryEntry } from '../cpHistory';
 import {
+  documentStateAfterSelection,
+  lineSelectionOf,
+  SELECTION_ONLY_CP_OPERATIONS,
+} from '../cpSelectedLines';
+import {
   discardProjectDocuments,
   hasProjectDocument,
   pickProjectDocuments,
@@ -235,6 +240,7 @@ import {
 import { FOLD_RUN_NONE } from '../../../lib/foldCancellation';
 import {
   executeOristudioCpCommand as executeRuntimeOristudioCpCommand,
+  executeOristudioCpSelectionCommand as executeRuntimeOristudioCpSelectionCommand,
   runOristudioCpCheckCommand,
   exportOristudioCpDocumentAsCp,
   exportOristudioCpDocumentAsFold,
@@ -400,15 +406,10 @@ const CLEAR_CP_SELECTION_AFTER_OPERATIONS = new Set<OristudioCpOperationId>([
   'VertexMove',
 ]);
 
+// The store's line selection is rebuilt from the kernel's flags after these.
+// The selection commands get theirs the same way, but from the selected lines the
+// kernel answers with (`applyOristudioCpSelectionCommand`), not from a document.
 const SYNC_CP_LINE_SELECTION_AFTER_OPERATIONS = new Set<OristudioCpOperationId>([
-  'CreaseSelect',
-  'CreaseUnselect',
-  'SelectPolygon',
-  'UnselectPolygon',
-  'SelectLineIntersecting',
-  'UnselectLineIntersecting',
-  'SelectLasso',
-  'UnselectLasso',
   // Not a selection tool, and here for the reason the sync exists: a split keeps
   // both halves' `selected` flag, but only the first half keeps the *id* the
   // store is holding — the second is appended at a new index the store has never
@@ -829,6 +830,61 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       });
       return false;
     }
+  };
+
+  /**
+   * Run a selection command (`SELECTION_ONLY_CP_OPERATIONS`).
+   *
+   * The kernel answers with the selected lines before and after it, not with a
+   * new document, so the store keeps its snapshot and geometry (mirrored, see
+   * `mirrorSelectedLines`) and everything keyed on them: the canvas's memos,
+   * the fingerprint and sheet caches, the fold artifacts. Nothing a CAMV check
+   * reads has changed either, so it is not run again.
+   *
+   * It still records an undo step, as Oriedita does (`MouseHandlerCreaseSelect`
+   * calls `d.record()`), but the step holds the selected lines it replaced
+   * rather than the document. And it still marks the project dirty: an `.osf`
+   * save writes the selection, and so does an `.ori` export.
+   */
+  const applyOristudioCpSelectionCommand = async (
+    operationId: OristudioCpOperationId,
+    payload: Parameters<typeof executeRuntimeOristudioCpSelectionCommand>[1]
+  ): Promise<void> => {
+    const started = get().oristudioCpDocument;
+    if (!started) throw new Error('No editable crease-pattern document is loaded');
+    const previousSelection = get().oristudioCpSelection;
+    const change = await executeRuntimeOristudioCpSelectionCommand(operationId, payload);
+    const documentState = await documentStateAfterSelection(
+      started,
+      get().oristudioCpDocument,
+      change.before,
+      change.after,
+      change.result
+    );
+    set({
+      oristudioCpDocument: documentState,
+      oristudioCpError: null,
+      oristudioCpActiveDiagnosticId: null,
+      oristudioCpSelection: lineSelectionOf(change.after),
+      oristudioCpHistoryPast: withCpHistoryEntry(get().oristudioCpHistoryPast, {
+        ...cpHistoryEntry(
+          documentState.document,
+          String(operationId),
+          previousSelection,
+          get().oristudioCpAnnotations,
+          get().oristudioCpFoldedFigures,
+          get().oristudioCpActiveFoldedFigureId,
+          get().oristudioCpInlineSimulations
+        ),
+        selectedLines: change.before,
+      }),
+      oristudioCpHistoryFuture: [],
+      error: null,
+      dirty: true,
+    });
+    // As in `executeOristudioCpCommand`: the selection came from the kernel, not
+    // from the setter, so the canvas's one-selection rule applies after the fact.
+    get().claimCanvasForCreaseSelection();
   };
 
   const loadText = async (
@@ -2450,6 +2506,10 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
           operation: operationId,
           group: cpCommandByOperation(operationId)?.group ?? 'other',
         });
+        if (SELECTION_ONLY_CP_OPERATIONS.has(operationId)) {
+          await applyOristudioCpSelectionCommand(operationId, validation.payload);
+          return true;
+        }
         const commandDocument = await executeRuntimeOristudioCpCommand(
           operationId,
           validation.payload
@@ -2707,11 +2767,12 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         camvRefreshTimer = null;
         // Snapshot the document we're checking; the result is discarded if any edit,
         // undo/redo, or load replaces it (reference change) before the check lands.
-        const pending = get().oristudioCpDocument;
+        // A selection keeps the snapshot, so it does not discard the check.
+        const pending = get().oristudioCpDocument?.document;
         if (!pending) return;
         void runOristudioCpCheckCommand('CheckCamv')
           .then((result) => {
-            if (get().oristudioCpDocument !== pending) return;
+            if (get().oristudioCpDocument?.document !== pending) return;
             set({
               oristudioCpCamvResult: result.operation === 'CheckCamv' ? result : null,
             });
