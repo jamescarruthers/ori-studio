@@ -127,6 +127,40 @@ describe('where a Fold step’s marks go in the Diagram', () => {
     expect(foldStepAction(action, { op, parent: squareScene() })).toEqual(action);
   });
 
+  /** Each op drawn by the creases it folds: the states either side say them; the engine's arrow and push stay. */
+  function drawnByItsCreases(op: FoldOp) {
+    const action = { ...engineAction([0, 0.5], [1, 0.5], [0.5, 0.15], [0.5, 0.85]), push: { at: { x: 0.5, y: 0.4 }, toward: { x: 0.5, y: 0.5 } } };
+    const placed = foldStepAction(action, { op, parent: squareScene(), child: diagonalHalfScene() });
+    expect(placed.spans).toEqual(stepFoldedCreases(squareScene(), diagonalHalfScene()));
+    expect(placed.grip).toEqual(action.grip);
+    expect(placed.push).toEqual(action.push);
+  }
+
+  it('draws every crease a squash folds, each in its letter, in either form, and keeps the engine’s arrows', () => {
+    drawnByItsCreases({ kind: 'squash', flap: [0.7, 0.3], direction: 'valley' });
+    drawnByItsCreases({ kind: 'squash', flap: [0.7, 0.3], target: [0, 1], direction: 'valley' });
+    // A drawn hinge.
+    drawnByItsCreases({ kind: 'squash', flap: [0.7, 0.3], direction: 'valley', hinge: { line: { via: 'free', through: [[0, 0.5], [1, 0.5]] } } });
+  });
+
+  it('draws every crease a swivel folds, each in its letter, in every form, and keeps the engine’s arrow', () => {
+    // By its rays.
+    drawnByItsCreases({
+      kind: 'swivel', vertex: [0.5, 0.5], toward: [[0, 0.5], [1, 0.5], [0.5, 1]], emergent: [0, -1], seed: all, stayer: [0.1, 0.9], direction: 'valley',
+    });
+    // By its edge, about a pivot.
+    drawnByItsCreases({ kind: 'swivel', via: 'edge', pivot: [0.5, 0.5], edge: [0.5, 0], target: { via: 'crease', at: [0.5, 0.5] }, seed: all, direction: 'valley' });
+    // On a folded edge, open and inside.
+    drawnByItsCreases({ kind: 'swivel', via: 'edge', fold: [0.5, 0.5], edge: [0.5, 0], target: { via: 'crease', at: [0.5, 0.5] }, direction: 'valley' });
+    drawnByItsCreases({ kind: 'swivel', via: 'edge', fold: [0.5, 0.5], edge: [0.5, 0], target: { via: 'crease', at: [0.5, 0.5] }, direction: 'valley', swivel: 'inside' });
+    // By its valley and mountain.
+    drawnByItsCreases({
+      kind: 'swivel', via: 'valley-mountain',
+      valley: { line: { via: 'free', through: [[0, 0.5], [1, 0.5]] } },
+      mountain: { line: { via: 'free', through: [[0.5, 0], [0.5, 1]] } },
+    });
+  });
+
   it('keeps the engine’s picture of a line it cannot place by: a free line, a newer build’s step', () => {
     const action = engineAction([0, 0.5], [1, 0.5], [0.5, 0.15], [0.5, 0.85]);
     const free: FoldOp = { kind: 'precrease', direction: 'valley', line: { via: 'free', through: [[0, 0.5], [1, 0.5]] }, seed: all };
