@@ -21,6 +21,8 @@
 
 /* A list held to a width (`maxWidth`): its options' description lines wrap there. */
 .content[data-capped] {
+  /* Set inline from `maxWidth`; no wider than the trigger until it is. */
+  --select-max-width: 0px;
   max-width: max(var(--radix-select-trigger-width), var(--select-max-width));
 }
 
