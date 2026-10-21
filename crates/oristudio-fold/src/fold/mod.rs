@@ -32,7 +32,7 @@ mod partial;
 mod partial_existing;
 pub mod placements;
 pub(crate) mod score;
-mod section;
+pub(crate) mod section;
 
 use oristudio_geometry::Line;
 use serde::Serialize;
