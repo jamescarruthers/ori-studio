@@ -31,6 +31,8 @@ import {
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, locate, buildFoldStep, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind, isSinkTool, isVertexTool, usesLineMode } from '../tools/foldToolCatalog';
+import { locatesWithLineModes } from '../tools/vertex/vertexInputs';
+import { storedLine } from '../tools/vertex/vertexStep';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import { rotateStepOp } from '../tools/rotate/rotateTool';
 import {
@@ -84,10 +86,12 @@ export interface FoldExtentPreview {
 export interface FoldToolPreview {
   pleatLines?: FoldCrimpLines | null;
   /**
-   * A swivel by its valley and mountain's line the picks locate: its valley
-   * until that is taken, then its mountain. Null while none is located.
+   * The line the picks locate for a construction of the line modes' own
+   * (`locatesTakenLine`): a swivel by its valley and mountain's valley until
+   * that is taken, then its mountain; a squash's drawn hinge until it is
+   * taken. Null while none is located.
    */
-  swivelLocated?: NonNullable<FoldToolState['swivelValley']> | null;
+  locatedLine?: NonNullable<FoldToolState['takenLine']> | null;
   orderResolution?: FoldOrderResolution | null;
   /** The axiom's roots for the picks, once the engine has named them; null for no axiom, or not yet. */
   candidates: readonly FoldAxiomCandidate[] | null;
@@ -151,8 +155,11 @@ const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis
 const lineSideKey = (build: FoldStepBuild) => (build.status === 'built' ? lineSideKeyOf(build.sceneLine, build.movingSign) : null);
 
 /** The axiom line a fold's picks locate, once every click of it is in. */
-function axiomLineOf({ tool, lineMode, picks, swivelInput }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks' | 'swivelInput'>): FoldAxiomLine | null {
-  return usesLineMode(tool, swivelInput) ? axiomLineOfPicks(lineMode, picks.slice(0, lineModeInput(lineMode).steps.length)) : null;
+function axiomLineOf(
+  { tool, lineMode, picks, swivelInput, squashHinge, takenLine }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks' | 'swivelInput' | 'squashHinge' | 'takenLine'>
+): FoldAxiomLine | null {
+  const construction = { swivelInput, squashHinge, lineTaken: takenLine !== undefined };
+  return usesLineMode(tool, construction) ? axiomLineOfPicks(lineMode, picks.slice(0, lineModeInput(lineMode).steps.length)) : null;
 }
 
 /** No step built: a vertex fold builds none of a fold along a line's. */
@@ -185,8 +192,11 @@ export function useFoldToolPreview(
   // --- The axiom's roots, once per set of picks on a state: a root stepped
   // through, a flap hovered or a side swapped asks nothing. The picks change
   // identity only with a pick or a restart.
-  const { tool, lineMode, picks, swivelInput } = tools;
-  const axiomLine = useMemo(() => axiomLineOf({ tool, lineMode, picks, swivelInput }), [tool, lineMode, picks, swivelInput]);
+  const { tool, lineMode, picks, swivelInput, squashHinge, takenLine } = tools;
+  const axiomLine = useMemo(
+    () => axiomLineOf({ tool, lineMode, picks, swivelInput, squashHinge, takenLine }),
+    [tool, lineMode, picks, swivelInput, squashHinge, takenLine]
+  );
   // A fold that takes the top flap asks the layers at the root it takes next
   // (`useFoldLineSection`): they are asked with the roots.
   const viewTransform = index?.scene.view_transform ?? null;
@@ -239,17 +249,19 @@ export function useFoldToolPreview(
             : null;
   // A vertex fold's, once the engine has described its flap, line or fan.
   const vertexing = isVertexTool(tools.tool);
-  // A swivel by its valley and mountain locates each line as a fold's line is.
-  const locatedSwivel = useMemo(() => index && tool === 'swivel' && swivelInput === 'valley-mountain'
+  // A swivel by its valley and mountain locates each line as a fold's line
+  // is; a squash its drawn hinge, until it is taken.
+  const locating = isVertexTool(tool) && locatesWithLineModes(tool, { swivelInput, squashHinge, lineTaken: takenLine !== undefined });
+  const located = useMemo(() => index && locating
     ? locate({ lineMode, picks, candidate, swapped: false, seed: FOLD_EVERY_LAYER }, index) : null,
-    [index, tool, swivelInput, lineMode, picks, candidate]);
-  const swivelLocated = useMemo(() => locatedSwivel && !('status' in locatedSwivel)
-    ? { line: locatedSwivel.line, ...(locatedSwivel.choices?.root ? { root: locatedSwivel.choices.root } : {}), sceneLine: locatedSwivel.sceneLine } : null,
-    [locatedSwivel]);
-  // Its mountain, once the valley is taken: the line located now, as the op stores it.
+    [index, locating, lineMode, picks, candidate]);
+  const locatedLine = useMemo(() => located && !('status' in located)
+    ? { line: located.line, ...(located.choices?.root ? { root: located.choices.root } : {}), sceneLine: located.sceneLine } : null,
+    [located]);
+  // A swivel's mountain, once the valley is taken: the line located now, as the op stores it.
   const swivelMountain = useMemo(
-    () => (tools.swivelValley && swivelLocated ? { line: swivelLocated.line, ...(swivelLocated.root ? { root: swivelLocated.root } : {}) } : undefined),
-    [tools.swivelValley, swivelLocated]
+    () => (tool === 'swivel' && takenLine ? storedLine(locatedLine ?? undefined) : undefined),
+    [tool, takenLine, locatedLine]
   );
   const vertexStep = useFoldVertexStep(session, index, tools, vertexing, swivelMountain);
   // A precrease of part of its line: its points along the line, and a pinch's
@@ -498,7 +510,7 @@ export function useFoldToolPreview(
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ?? secondRoots?.refused ??
     compoundRefused ??
-    (locatedSwivel && 'status' in locatedSwivel ? locatedSwivel : null) ??
+    (located && 'status' in located ? located : null) ??
     vertexStep.refused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
@@ -522,7 +534,7 @@ export function useFoldToolPreview(
   const landedPreview = heldLanded ?? (landed && landed.key === landedKey ? landed.landed : null);
   return {
     pleatLines: pleatDrawing,
-    swivelLocated,
+    locatedLine,
     orderResolution: resolvedOrders.resolution,
     candidates,
     rootLine,

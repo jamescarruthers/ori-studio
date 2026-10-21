@@ -188,14 +188,14 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     expect(meet?.pick).toMatchObject({ kind: 'point' });
     expect(meet?.pick).not.toHaveProperty('fold');
     await clickPane(seen, { x:0.1,y:0.8 }, 'crease-pattern');
-    await until(() => seen.current?.preview.swivelLocated, 'the valley line');
+    await until(() => seen.current?.preview.locatedLine, 'the valley line');
     expect(seen.current?.preview.step).toBeNull();
     const before = snapshot().sequence!.steps.length;
     // Enter takes it as the valley: no step yet, and the picks go on to the mountain.
     await act(async () => { expect(seen.current!.verbs.commit()).toBe(true); await settle(); });
     expect(snapshot().sequence!.steps).toHaveLength(before);
     expect(tools.store.getState().picks).toHaveLength(0);
-    expect(tools.store.getState().swivelValley?.root).toBeDefined();
+    expect(tools.store.getState().takenLine?.root).toBeDefined();
     // The mountain, a construction of its own with its own root.
     await clickPane(seen, { x:0.5,y:0.5 }, 'crease-pattern');
     await clickPane(seen, { x:0.05,y:0.1 }, 'crease-pattern');
@@ -207,7 +207,7 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     expect(asked).not.toHaveProperty('direction');
     const window = foldVertexWindowView(tools.store.getState(),seen.current!.preview)!;
     expect(window.lineBy).toBeUndefined();
-    expect(window.valleyTaken).toBe(true);
+    expect(window.lineTaken).toBe(true);
     // The crease behind is previewed, dotted where the front layer hides it.
     const analysis = seen.current!.preview.vertex?.base?.analysis;
     expect(analysis?.kind).toBe('swivel-valley-mountain');
@@ -236,7 +236,7 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
       // inside, the lower-left edge laid on the centre line (Axiom 3), through the tip.
       await act(async () => { seen.current!.verbs.selectLineMode(kind === 'open' ? 'axiom-4' : 'axiom-3'); await settle(); });
       for (const at of kind === 'open' ? [MEET, CORNER] : [EDGE, CENTRE_LINE]) await click(seen, at);
-      await until(() => seen.current?.preview.swivelLocated, 'the valley line');
+      await until(() => seen.current?.preview.locatedLine, 'the valley line');
       await act(async () => { expect(seen.current!.verbs.commit()).toBe(true); await settle(); });
       // The mountain through two points, the first where the valley meets the folded edge: that point exactly.
       await act(async () => { seen.current!.verbs.selectLineMode('axiom-1'); await settle(); });

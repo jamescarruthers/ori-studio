@@ -6,6 +6,9 @@
  * - **Squash**: the flap, a point anywhere on it (`free`: a landmark would sit
  *   on a crease, where no one layer is the flap's). Where its spine lands is
  *   drawn afterwards, by a click on the folded pane (`useFoldCanvasVerbs`).
+ *   About a drawn hinge ({@link FoldSquashHinge}), the line is located first
+ *   with the line modes and taken, as a swivel's valley is; the click then
+ *   names the flap's end on one side of it.
  * - **Petal fold**: its hinge, as {@link FoldVertexLines.petalHinge} names it
  *   — the precrease across the flap, or its two ends (`point` landmarks, or
  *   with Alt any point), which the fold creases itself — then the flap below
@@ -53,10 +56,29 @@ const LINE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: true 
  */
 export type FoldSwivelInput = 'edge' | 'valley-mountain';
 
+/**
+ * A squash's hinge, as the window's Hinge control switches it: the folded
+ * edge the flap's lower layer turns over, which the engine infers, or a line
+ * located with the line modes and taken first, only the flap's end beyond it
+ * squashing (`FoldSquashOp`'s `hinge`).
+ */
+export type FoldSquashHinge = 'folded' | 'line';
+
 export interface FoldVertexLines {
   swivelInput?: FoldSwivelInput;
   petalHinge: FoldLineBy;
   swivelTarget: FoldLineBy;
+  squashHinge?: FoldSquashHinge;
+  /** The line a construction takes first is taken (`FoldToolState.takenLine`). */
+  lineTaken?: boolean;
+}
+
+/** Whether a construction locates a line with the line modes now: a swivel by its valley and mountain, or a squash's drawn hinge before it is taken. */
+export function locatesWithLineModes(tool: FoldVertexToolId, lines: Partial<FoldVertexLines>): boolean {
+  return (
+    (tool === 'swivel' && lines.swivelInput === 'valley-mountain') ||
+    (tool === 'squash' && lines.squashHinge === 'line' && lines.lineTaken !== true)
+  );
 }
 
 export const FOLD_VERTEX_LINES_DEFAULT: FoldVertexLines = { petalHinge: 'crease', swivelTarget: 'crease' };
@@ -191,6 +213,14 @@ export function vertexToolSteps(
 ): string[] {
   switch (tool) {
     case 'squash':
+      // About a drawn hinge, the flap's end on one side of it: the canvas lights the end under the pointer.
+      if (lines.squashHinge === 'line') {
+        return [
+          host.coarse
+            ? t('tools:fold.vertex.steps.squashEndTouch', 'Tap the end of the flap to squash, on one side of the line.')
+            : t('tools:fold.vertex.steps.squashEnd', 'Click the end of the flap to squash, on one side of the line.'),
+        ];
+      }
       return [
         host.coarse
           ? t('tools:fold.vertex.steps.squashFlapTouch', 'Tap the flap to squash.')

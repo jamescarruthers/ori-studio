@@ -1053,6 +1053,7 @@
           "titleValleyMountain": "Las líneas no se juntan en un borde plegado"
         },
         "noFlap": {
+          "hingeOffSpine": "La línea de bisagra debe cruzar el borde plegado de la solapa, con el extremo en el que haces clic a un lado.",
           "noHinge": "La solapa no se pliega sobre ninguna bisagra en ningún extremo de su lomo, así que no hay contra qué aplastarla.",
           "noSpine": "Las dos capas de aquí no están unidas por un pliegue, así que la solapa no tiene lomo por el que abrirse.",
           "singleLayer": "Aquí solo hay una capa. Haz clic en una solapa de dos capas unidas por un borde plegado.",
@@ -1151,6 +1152,18 @@
       },
       "reset": "Volver a la bisagra",
       "ridge": "Cresta",
+      "squashHinge": {
+        "folded": "Borde plegado",
+        "foldedHelp": "El pliegue sobre el que gira la capa inferior de la solapa: se aplasta toda la solapa",
+        "intro": "Dibuja la bisagra a través del borde plegado de la solapa. Solo se aplasta el extremo más allá de ella.",
+        "label": "Bisagra",
+        "line": "Línea",
+        "lineHelp": "Una línea que dibujas: solo se aplasta el extremo de la solapa más allá de ella",
+        "lineMode": "Línea de bisagra",
+        "take": "Pulsa Enter para tomarla como bisagra.",
+        "takeTouch": "Toca Usar como bisagra.",
+        "use": "Usar como bisagra"
+      },
       "steps": {
         "earChoose": "Elige las capas o haz clic en otra región para el pliegue de bisagra.",
         "earChooseTouch": "Elige las capas o toca otra región para el pliegue de bisagra.",
@@ -1180,6 +1193,8 @@
         "petalWayTouch": "Elige hacia dónde se levanta, o toca otra solapa para levantar esa.",
         "pickAgainRead": "Pulsa Esc y vuelve a elegir: el aviso de abajo dice qué cambiar.",
         "pickAgainReadTouch": "Toca Cancelar y vuelve a elegir: el aviso de abajo dice qué cambiar.",
+        "squashEnd": "Haz clic en el extremo de la solapa que quieres aplastar, a un lado de la línea.",
+        "squashEndTouch": "Toca el extremo de la solapa que quieres aplastar, a un lado de la línea.",
         "squashFlap": "Haz clic en la solapa que quieres aplastar.",
         "squashFlapTouch": "Toca la solapa que quieres aplastar.",
         "squashSpine": "El lomo cae sobre la línea gruesa: haz clic en el papel para que caiga en otro sitio.",

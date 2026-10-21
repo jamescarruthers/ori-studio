@@ -98,10 +98,10 @@ export function swivelMeetingPick(
  */
 export function swivelMeetingMarks(
   index: FoldPickIndex | null,
-  tools: Pick<FoldToolState, 'tool' | 'swivelValley'>,
+  tools: Pick<FoldToolState, 'tool' | 'takenLine'>,
   inks: Pick<FoldOverlayInks, 'accent' | 'outline'> | null
 ): FoldOverlayMarks | null {
-  const valley = tools.tool === 'swivel' ? tools.swivelValley : undefined;
+  const valley = tools.tool === 'swivel' ? tools.takenLine : undefined;
   const meetings = index && valley && inks ? swivelMeetings(index, valley.sceneLine) : [];
   if (!inks || meetings.length === 0) return null;
   return {

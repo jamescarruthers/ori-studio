@@ -1030,6 +1030,7 @@
           "titleValleyMountain": "The lines do not meet on a folded edge"
         },
         "noFlap": {
+          "hingeOffSpine": "The hinge line must cross the flap’s folded edge, with the end you click on one side of it.",
           "noHinge": "The flap folds over no hinge at either end of its spine, so there is nothing to press it flat against.",
           "noSpine": "The two layers here are not joined by a fold, so the flap has no spine to open along.",
           "singleLayer": "Only one layer lies here. Click a flap of two layers joined along a folded edge.",
@@ -1128,6 +1129,18 @@
       },
       "reset": "Back to the hinge",
       "ridge": "Ridge",
+      "squashHinge": {
+        "folded": "Folded edge",
+        "foldedHelp": "The fold the flap’s lower layer turns over: the whole flap squashes",
+        "intro": "Draw the hinge across the flap’s folded edge. Only the end beyond it squashes.",
+        "label": "Hinge",
+        "line": "Line",
+        "lineHelp": "A line you draw: only the flap’s end beyond it squashes",
+        "lineMode": "Hinge line",
+        "take": "Press Enter to take it as the hinge.",
+        "takeTouch": "Tap Use as the hinge.",
+        "use": "Use as the hinge"
+      },
       "steps": {
         "earChoose": "Choose the layers, or click another region for the hinge crease.",
         "earChooseTouch": "Choose the layers, or tap another region for the hinge crease.",
@@ -1157,6 +1170,8 @@
         "petalWayTouch": "Choose which way it lifts, or tap another flap to lift that one.",
         "pickAgainRead": "Press Esc and pick again: the notice below says what to change.",
         "pickAgainReadTouch": "Tap Cancel and pick again: the notice below says what to change.",
+        "squashEnd": "Click the end of the flap to squash, on one side of the line.",
+        "squashEndTouch": "Tap the end of the flap to squash, on one side of the line.",
         "squashFlap": "Click the flap to squash.",
         "squashFlapTouch": "Tap the flap to squash.",
         "squashSpine": "The spine lands on the bold line: click the paper to land it elsewhere.",

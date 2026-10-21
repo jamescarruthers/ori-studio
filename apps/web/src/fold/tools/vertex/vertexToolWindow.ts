@@ -70,7 +70,7 @@ import {
 import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 import { choiceStepper, type FoldChoiceStepper, type FoldKindChoice } from '../reverse/reverseToolWindow';
 import { swivelRidgeName } from '../../stepSentenceVertex';
-import { vertexToolSteps, type FoldSwivelInput } from './vertexInputs';
+import { vertexToolSteps, type FoldSquashHinge, type FoldSwivelInput } from './vertexInputs';
 
 /** Which of a swivel's two creases rises as its ridge: square to the edge, or toward its far end. */
 export type FoldSwivelRidge = 'foot' | 'end';
@@ -88,9 +88,15 @@ export interface FoldVertexWindowView {
   tool: FoldVertexToolId;
   /** How a swivel is constructed: by its edge onto a line, or by its valley and mountain. */
   swivelInput?: FoldSwivelInput;
-  /** A swivel by its valley and mountain's valley is taken: its picks locate the mountain. */
-  valleyTaken?: boolean;
-  /** A swivel by its valley and mountain's picks have located a line: the valley can be taken. */
+  /** A squash's hinge: the folded edge, or a line drawn. */
+  squashHinge?: FoldSquashHinge;
+  /**
+   * The line taken first is: a swivel by its valley and mountain's valley,
+   * its picks then locating the mountain; a squash's drawn hinge, its pick
+   * then the flap's end.
+   */
+  lineTaken?: boolean;
+  /** The picks have located that line: it can be taken. */
   lineLocated?: boolean;
   direction: FoldDirection;
   /** The engine has described the flap, line or fan the clicks name: there is something to choose about. */
@@ -144,6 +150,8 @@ export interface FoldVertexWindowView {
 /** The vertex folds' own calls in the window; the canvas binds them. */
 export interface FoldVertexWindowVerbs {
   setSwivelInput?: (mode: FoldSwivelInput) => void;
+  /** A squash's hinge: the folded edge, or a line drawn. */
+  setSquashHinge?: (hinge: FoldSquashHinge) => void;
   setVertexDirection?: (direction: FoldDirection) => void;
   /** A swivel on a folded edge's kind: its strip on top, or tucked between the layers. */
   setSwivelKind?: (kind: FoldSwivelKind) => void;
@@ -156,6 +164,8 @@ export interface FoldVertexWindowVerbs {
 /** A vertex fold's own controls in the window. */
 export interface FoldVertexControls {
   input?: FoldKindChoice<FoldSwivelInput> | null;
+  /** A squash's hinge, the folded edge or a line drawn; null for the other folds. */
+  hinge?: FoldKindChoice<FoldSquashHinge> | null;
   /**
    * A swivel on a folded edge's kind, Open or Inside: only once previewed
    * and only when both land — a control with no choice in it is not shown —
@@ -342,6 +352,63 @@ function isValleyMountain(vertex: FoldVertexWindowView): boolean {
   return vertex.tool === 'swivel' && vertex.swivelInput === 'valley-mountain';
 }
 
+/** Whether the vertex tool in hand is a squash whose drawn hinge is still being located. */
+function isLocatingHinge(vertex: FoldVertexWindowView): boolean {
+  return vertex.tool === 'squash' && vertex.squashHinge === 'line' && vertex.lineTaken !== true;
+}
+
+/**
+ * A squash's drawn hinge, located with the line modes as a swivel's valley
+ * is: the line mode's clicks, then Enter takes it, and the flap's end is
+ * clicked after.
+ */
+function hingeLineInstructions(t: TFunction, view: FoldToolWindowView, host: FoldToolHost): FoldToolInstructions {
+  const take = host.coarse
+    ? t('tools:fold.vertex.squashHinge.takeTouch', 'Tap Use as the hinge.')
+    : t('tools:fold.vertex.squashHinge.take', 'Press Enter to take it as the hinge.');
+  const items = [...lineModeSteps(t, view.lineMode, host.coarse), take];
+  return {
+    heading: t('tools:fold.window.instructions', 'Instructions'),
+    intro: t('tools:fold.vertex.squashHinge.intro', 'Draw the hinge across the flap’s folded edge. Only the end beyond it squashes.'),
+    items,
+    current: Math.min(view.picks, items.length - 1),
+    notes: lineModeNotes(t, view.lineMode, host, view.freeLineSnap),
+  };
+}
+
+/** A squash's Hinge control: the folded edge it infers, or a line drawn. Both are always offered. */
+function squashHingeControl(
+  t: TFunction,
+  vertex: FoldVertexWindowView,
+  verbs: FoldToolWindowVerbs,
+  readOnly: boolean
+): FoldKindChoice<FoldSquashHinge> | null {
+  if (vertex.tool !== 'squash') return null;
+  return {
+    label: t('tools:fold.vertex.squashHinge.label', 'Hinge'),
+    value: vertex.squashHinge ?? 'folded',
+    options: [
+      {
+        value: 'folded',
+        short: t('tools:fold.vertex.squashHinge.folded', 'Folded edge'),
+        label: t('tools:fold.vertex.squashHinge.foldedHelp', 'The fold the flap’s lower layer turns over: the whole flap squashes'),
+        disabled: false,
+        reason: null,
+      },
+      {
+        value: 'line',
+        short: t('tools:fold.vertex.squashHinge.line', 'Line'),
+        label: t('tools:fold.vertex.squashHinge.lineHelp', 'A line you draw: only the flap’s end beyond it squashes'),
+        disabled: false,
+        reason: null,
+      },
+    ],
+    disabled: readOnly || !verbs.setSquashHinge,
+    note: null,
+    set: (hinge) => verbs.setSquashHinge?.(hinge),
+  };
+}
+
 /**
  * A swivel by its valley and mountain's steps: its valley, then its
  * mountain, each the line mode's own clicks named by the line they locate
@@ -355,7 +422,7 @@ function valleyMountainInstructions(
   host: FoldToolHost,
   commit: string
 ): FoldToolInstructions {
-  const valley = !vertex.valleyTaken;
+  const valley = !vertex.lineTaken;
   const clicks = lineModeSteps(t, view.lineMode, host.coarse).map((instruction) =>
     valley
       ? t('tools:fold.vertex.valleyMountain.valleyStep', 'Valley line: {{instruction}}', { instruction })
@@ -396,7 +463,13 @@ function locateInstructions(
 ): FoldToolInstructions {
   const { tool } = vertex;
   if (isValleyMountain(vertex)) return valleyMountainInstructions(t, view, vertex, host, commitStepPlain(t, 'swivel', host));
-  const lines = { petalHinge: vertex.lineBy ?? 'crease', swivelTarget: vertex.lineBy ?? 'crease', swivelInput: vertex.swivelInput };
+  if (isLocatingHinge(vertex)) return hingeLineInstructions(t, view, host);
+  const lines = {
+    petalHinge: vertex.lineBy ?? 'crease',
+    swivelTarget: vertex.lineBy ?? 'crease',
+    swivelInput: vertex.swivelInput,
+    ...(vertex.squashHinge ? { squashHinge: vertex.squashHinge } : {}),
+  };
   const items = [...vertexToolSteps(t, tool, lines, host, vertex.nothingSwings === true), finishStep(t, tool, host)];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
@@ -718,6 +791,7 @@ export function vertexControls(
       note: null,
       set: mode => verbs.setSwivelInput?.(mode),
     } : null,
+    hinge: squashHingeControl(t, vertex, verbs, readOnly),
     kind: swivelKindControl(t, vertex, verbs, readOnly, located),
     direction: offersDirection(vertex, clicked)
       ? {
@@ -794,7 +868,9 @@ export function vertexToolWindow(
   // A swivel by its valley and mountain locates its lines with the line
   // modes, the select named by the line it locates now.
   const valleyMountain = isValleyMountain(vertex);
-  const locatingValley = valleyMountain && !vertex.valleyTaken;
+  const locatingValley = valleyMountain && !vertex.lineTaken;
+  // So does a squash its drawn hinge, until it is taken.
+  const locatingHinge = isLocatingHinge(vertex);
   const lineMode = valleyMountain
     ? {
         ...lineModeSelect(t, view, verbs),
@@ -802,14 +878,16 @@ export function vertexToolWindow(
           ? t('tools:fold.vertex.valleyMountain.valleyLine', 'Valley line')
           : t('tools:fold.vertex.valleyMountain.mountainLine', 'Mountain line'),
       }
-    : null;
+    : locatingHinge
+      ? { ...lineModeSelect(t, view, verbs), label: t('tools:fold.vertex.squashHinge.lineMode', 'Hinge line') }
+      : null;
   const swivelForm = valleyMountain ? ('valley-mountain' as const) : vertex.onFold ? ('fold' as const) : ('edge' as const);
-  if (!preview || locatingValley) {
+  if (!preview || locatingValley || locatingHinge) {
     const controls = vertexControls(t, vertex, verbs, readOnly, host, false);
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, [controls.direction, controls.lineBy, controls.input, lineMode].filter(Boolean).length),
+      meta: settingsMeta(t, [controls.direction, controls.lineBy, controls.input, controls.hinge, lineMode].filter(Boolean).length),
       instructions: locateInstructions(t, view, vertex, host),
       lineMode,
       kind: null,
@@ -820,11 +898,13 @@ export function vertexToolWindow(
       }, verbs) : null,
       divide: null,
       vertex: controls,
-      // The valley is taken with Enter, or this button, once a line is located.
-      footer: locatingValley ? {
+      // The valley, or the hinge, is taken with Enter, or this button, once a line is located.
+      footer: locatingValley || locatingHinge ? {
         cancel: { label: t('tools:fold.window.cancel', 'Cancel'), shortcut: 'viewport.cancel', disabled: false, run: verbs.cancel },
         commit: {
-          label: t('tools:fold.vertex.valleyMountain.useValley', 'Use as the valley'),
+          label: locatingHinge
+            ? t('tools:fold.vertex.squashHinge.use', 'Use as the hinge')
+            : t('tools:fold.vertex.valleyMountain.useValley', 'Use as the valley'),
           shortcut: 'fold.commit',
           disabled: readOnly || !vertex.lineLocated || preview?.refused != null,
           run: verbs.commit,
@@ -838,6 +918,7 @@ export function vertexToolWindow(
     controls.direction,
     controls.lineBy,
     controls.input,
+    controls.hinge,
     controls.target,
     controls.emergent,
     controls.layers,

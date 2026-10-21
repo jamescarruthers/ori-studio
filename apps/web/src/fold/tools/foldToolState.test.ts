@@ -481,12 +481,12 @@ it('keeps a swivel’s valley taken while the mountain’s line mode changes, an
   const tools=createFoldTools();
   tools.selectTool('swivel');tools.setSwivelInput('valley-mountain');tools.selectLineMode('axiom-3');
   const valley={line:{via:'free' as const,through:[[0,0],[1,1]] as [[number,number],[number,number]]},sceneLine:{n:[1,-1] as [number,number],d:0}};
-  tools.takeSwivelValley(valley);
+  tools.takeLine(valley);
   expect(hasToolInput(tools.store.getState())).toBe(true);
   tools.selectLineMode('crease');
-  expect(tools.store.getState()).toMatchObject({tool:'swivel',swivelValley:valley,lineMode:'crease',picks:[],root:0});
+  expect(tools.store.getState()).toMatchObject({tool:'swivel',takenLine:valley,lineMode:'crease',picks:[],root:0});
   tools.clear();
-  expect(tools.store.getState().swivelValley).toBeUndefined();
+  expect(tools.store.getState().takenLine).toBeUndefined();
   expect(hasToolInput(tools.store.getState())).toBe(false);
 });
 
@@ -498,7 +498,7 @@ it('keeps the kind a swivel by its valley and mountain asks for across its locat
   const valley = { line: { via: 'free' as const, through: [[0, 0], [1, 1]] as [[number, number], [number, number]] }, sceneLine: { n: [1, -1] as [number, number], d: 0 } };
   // Another line mode, the valley taken, Escape: still the inside swivel asked.
   tools.selectLineMode('axiom-3');
-  tools.takeSwivelValley(valley);
+  tools.takeLine(valley);
   tools.clear();
   expect(tools.store.getState().compound.swivelKind).toBe('inside');
   // Another construction asks anew.

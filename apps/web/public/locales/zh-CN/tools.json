@@ -1007,6 +1007,7 @@
           "titleValleyMountain": "这些线没有交于折边"
         },
         "noFlap": {
+          "hingeOffSpine": "铰链线必须穿过翼片的折边，且你点击的末端位于其一侧。",
           "noHinge": "翼片的脊两端都没有翻过铰链，因此没有可以压向的地方。",
           "noSpine": "这里的两层没有由折叠相连，因此翼片没有可以沿之打开的脊。",
           "singleLayer": "这里只有一层。请单击一个由折边相连的两层翼片。",
@@ -1105,6 +1106,18 @@
       },
       "reset": "放回铰链",
       "ridge": "脊线",
+      "squashHinge": {
+        "folded": "折边",
+        "foldedHelp": "翼片下层翻折所沿的折痕：整个翼片被压折",
+        "intro": "横跨翼片的折边绘制铰链。只有其外侧的末端被压折。",
+        "label": "铰链",
+        "line": "线",
+        "lineHelp": "你绘制的线：只有其外侧的翼片末端被压折",
+        "lineMode": "铰链线",
+        "take": "按 Enter 键将其用作铰链。",
+        "takeTouch": "轻点“用作铰链”。",
+        "use": "用作铰链"
+      },
       "steps": {
         "earChoose": "选择纸层，或点击其他区域以放置铰链折痕。",
         "earChooseTouch": "选择纸层，或轻触其他区域以放置铰链折痕。",
@@ -1134,6 +1147,8 @@
         "petalWayTouch": "选择抬起的方向，或轻点另一个翼片改为抬起它。",
         "pickAgainRead": "按 Esc 后重新选择：下面的提示说明了要改什么。",
         "pickAgainReadTouch": "轻点“取消”后重新选择：下面的提示说明了要改什么。",
+        "squashEnd": "单击线一侧要压平的翼片末端。",
+        "squashEndTouch": "轻点线一侧要压平的翼片末端。",
         "squashFlap": "单击要压平的翼片。",
         "squashFlapTouch": "轻点要压平的翼片。",
         "squashSpine": "脊落在粗线上：单击纸可让它落在别处。",

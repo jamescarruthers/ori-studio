@@ -61,11 +61,11 @@ describe('a swivel’s meeting points', () => {
   it('are dotted while the mountain is located, the valley taken, and for no other tool', () => {
     const index = foldPickIndex(bookScene(), bookLandmarks(), []);
     const line = { line: { via: 'free' as const, through: [[0.5, 0.3], [0.6, 0.06]] as [[number, number], [number, number]] }, sceneLine: valley };
-    const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel', swivelInput: 'valley-mountain', swivelValley: line };
+    const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel', swivelInput: 'valley-mountain', takenLine: line };
     const marks = swivelMeetingMarks(index, swivel, inks);
     expect(marks?.dots).toHaveLength(1);
     expect(marks?.dots[0]?.at.x).toBe(0.5);
-    expect(swivelMeetingMarks(index, { ...swivel, swivelValley: undefined }, inks)).toBeNull();
+    expect(swivelMeetingMarks(index, { ...swivel, takenLine: undefined }, inks)).toBeNull();
     expect(swivelMeetingMarks(index, { ...swivel, tool: 'squash' }, inks)).toBeNull();
     expect(swivelMeetingMarks(index, swivel, null)).toBeNull();
   });

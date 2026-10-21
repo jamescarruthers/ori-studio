@@ -27,6 +27,7 @@ function verbs() {
     takeEmergent: vi.fn(),
     stepFanLayers: vi.fn(),
     resetSquashTarget: vi.fn(),
+    setSquashHinge: vi.fn(),
     setVertexLineBy: vi.fn(),
     precreaseLine: vi.fn(),
     precreaseKite: vi.fn(),
@@ -253,7 +254,15 @@ describe('a vertex fold’s window while it previews', () => {
   it('offers a squash’s spine target, and the hinge back once it is aimed off it', () => {
     const calls = verbs();
     const onHinge = foldToolWindow(t, view(vertex(), { preview: preview() }), calls, mouse);
-    expect(onHinge).toMatchObject({ phase: 'preview', meta: '2 settings' });
+    // The direction, the hinge — the folded edge, or a line drawn — and where the spine lands.
+    expect(onHinge).toMatchObject({ phase: 'preview', meta: '3 settings' });
+    expect(onHinge?.vertex?.hinge?.value).toBe('folded');
+    expect(onHinge?.vertex?.hinge?.options.map((option) => [option.short, option.disabled])).toEqual([
+      ['Folded edge', false],
+      ['Line', false],
+    ]);
+    onHinge?.vertex?.hinge?.set('line');
+    expect(calls.setSquashHinge).toHaveBeenCalledWith('line');
     expect(onHinge?.vertex?.target).toEqual({ label: 'Spine lands on', value: 'The hinge line', reset: null });
     // Where it lands, as the folded pane draws it, and how to move it: said once, in the step.
     expect(onHinge?.instructions.items[0]).toBe('The spine lands on the bold line: click the paper to land it elsewhere.');
@@ -649,8 +658,30 @@ describe('a vertex fold’s refusals', () => {
   });
 });
 
+describe('a squash about a drawn hinge', () => {
+  const locating = vertex({ tool: 'squash', squashHinge: 'line', lineTaken: false, lineLocated: true, described: false, known: false });
+
+  it('locates the hinge with the line modes, takes it with Enter, then asks for the end of the flap', () => {
+    const actions = verbs();
+    const window = foldToolWindow(t, view(locating, { picks: 1, lineMode: 'crease', preview: preview() }), actions, mouse)!;
+    expect(window.phase).toBe('locate');
+    expect(window.lineMode).toMatchObject({ value: 'crease', label: 'Hinge line' });
+    expect(window.instructions.intro).toBe('Draw the hinge across the flap’s folded edge. Only the end beyond it squashes.');
+    expect(window.instructions.items.at(-1)).toBe('Press Enter to take it as the hinge.');
+    expect(window.footer?.commit).toMatchObject({ label: 'Use as the hinge', disabled: false });
+    window.footer!.commit.run();
+    expect(actions.commit).toHaveBeenCalledOnce();
+    expect(foldToolWindow(t, view({ ...locating, lineLocated: false }, { lineMode: 'crease' }), actions, mouse)!.footer?.commit.disabled).toBe(true);
+    // Taken: no line mode, and the click names the end on one side of it.
+    const taken = foldToolWindow(t, view({ ...locating, lineTaken: true }, { lineMode: 'crease' }), actions, mouse)!;
+    expect(taken.lineMode).toBeNull();
+    expect(taken.instructions.items[0]).toBe('Click the end of the flap to squash, on one side of the line.');
+    expect(taken.vertex?.hinge?.value).toBe('line');
+  });
+});
+
 describe('a swivel by its valley and mountain', () => {
-  const valleyStep = vertex({ tool: 'swivel', swivelInput: 'valley-mountain', valleyTaken: false, lineLocated: true, described: false, known: false });
+  const valleyStep = vertex({ tool: 'swivel', swivelInput: 'valley-mountain', lineTaken: false, lineLocated: true, described: false, known: false });
 
   it('names each line by its letter, the line modes’ own clicks under it, and takes the valley with Enter', () => {
     const actions = verbs();
@@ -671,7 +702,7 @@ describe('a swivel by its valley and mountain', () => {
   });
 
   it('locates the mountain next, offers no direction, and folds with Enter', () => {
-    const taken = { ...valleyStep, valleyTaken: true };
+    const taken = { ...valleyStep, lineTaken: true };
     const mountain = foldToolWindow(t, view(taken, { lineMode: 'crease' }), verbs(), mouse)!;
     expect(mountain.lineMode).toMatchObject({ value: 'crease', label: 'Mountain line' });
     expect(mountain.instructions.intro).toContain('mountain line');

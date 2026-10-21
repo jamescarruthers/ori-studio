@@ -57,22 +57,35 @@ const SLIVER = 1e-12;
 export function petalRegionOnFolded(index: FoldPickIndex, analysis: FoldPetalAnalysis): Point[][] {
   const kite = petalKiteScene(index, analysis);
   if (polygonArea(kite) <= SLIVER) return [];
-  const lines = insideOf(kite);
-  const top = sceneFaces(index, analysis.top);
-  return index.subfaces
-    .filter((cell) => cell.stack.some((face) => top.has(face)))
-    .flatMap((cell) => clipToWedges(cell.polygon, [lines]))
-    .filter((piece) => polygonArea(piece) > SLIVER);
+  return facesRegionOnFolded(index, analysis.top, insideOf(kite));
 }
 
 /** The kite that lifts on the sheet: each face of the flap's top layer, cut to the kite where that face lies. */
 export function petalRegionOnSheet(index: FoldPickIndex, analysis: FoldPetalAnalysis): Point[][] {
   const kite = petalKiteScene(index, analysis);
   if (polygonArea(kite) <= SLIVER) return [];
-  const lines = insideOf(kite);
+  return facesRegionOnSheet(index, analysis.top, insideOf(kite));
+}
+
+/**
+ * Where faces an engine answer names by id lie on the folded pane: each cell
+ * of the folded form they are in, cut to the half-planes `lines` keep (scene
+ * frame, each line's positive side) — a petal's kite, a squash's side of its
+ * drawn hinge, or none.
+ */
+export function facesRegionOnFolded(index: FoldPickIndex, ids: readonly number[], lines: readonly FoldModelLine[]): Point[][] {
+  const faces = sceneFaces(index, ids);
+  return index.subfaces
+    .filter((cell) => cell.stack.some((face) => faces.has(face)))
+    .flatMap((cell) => clipToWedges(cell.polygon, [lines]))
+    .filter((piece) => polygonArea(piece) > SLIVER);
+}
+
+/** The same faces on the sheet: each one's outline, cut to the half-planes `lines` keep where that face lies. */
+export function facesRegionOnSheet(index: FoldPickIndex, ids: readonly number[], lines: readonly FoldModelLine[]): Point[][] {
   const { scene } = index;
   const pieces: Point[][] = [];
-  for (const f of sceneFaces(index, analysis.top)) {
+  for (const f of sceneFaces(index, ids)) {
     const face = scene.faces[f];
     const transform = scene.face_transforms[f];
     const outline = face?.points.map((vertex) => scene.sheet_points[vertex]);
