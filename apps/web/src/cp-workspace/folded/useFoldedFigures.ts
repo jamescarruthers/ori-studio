@@ -77,19 +77,13 @@ import {
   deleteFoldedFigure,
   duplicateFoldedFigure,
   exportFoldedFigure,
+  foldCreases,
   setFoldedFigureDisplayStyle,
   showAnotherFoldedSolution,
 } from './foldedFigureVerbs';
 import { useSettingsStore } from '../../store/settingsStore';
 import { effectiveObjectPaperStyle, setFoldedFigureAppearance } from '../paper/objectPaperStyle';
 import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
-
-/**
- * The face folding holds fixed. Oriedita lets this be chosen and the kernel still
- * takes it per fold, but the product does not offer the choice: the picker was the
- * only thing that ever set it, so every fold was already from face 1.
- */
-const FOLD_STARTING_FACE_ID = 1;
 
 /**
  * How long a wheel must go quiet before a figure's zoom is written to the
@@ -160,7 +154,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
   const setOristudioCpActiveFoldedFigure = useWorkspaceStore(
     (state) => state.setOristudioCpActiveFoldedFigure
   );
-  const foldOristudioCpDocument = useWorkspaceStore((state) => state.foldOristudioCpDocument);
   const setOristudioCpFoldedFigurePlacement = useWorkspaceStore(
     (state) => state.setOristudioCpFoldedFigurePlacement
   );
@@ -740,19 +733,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
 
   const handleFoldModel = useCallback(() => {
     if (!canFoldSelectedModel) return;
-    runFoldedFigureAction(t('panels:creasePattern.foldModelAction', 'Fold model'), () =>
-      foldOristudioCpDocument({
-        startingFaceId: FOLD_STARTING_FACE_ID,
-        lineIds: selectedFoldLineIds,
-      })
-    );
-  }, [
-    canFoldSelectedModel,
-    foldOristudioCpDocument,
-    selectedFoldLineIds,
-    runFoldedFigureAction,
-    t,
-  ]);
+    // A colour run still open lands as its own entry first, as for every verb
+    // run through `runFoldedFigureAction`.
+    endOpenMenuGesture();
+    void foldCreases(selectedFoldLineIds, t);
+  }, [canFoldSelectedModel, endOpenMenuGesture, selectedFoldLineIds, t]);
 
   const trackStyled = useCallback(
     (figure: OristudioCpFoldedFigureEntry, options: readonly FoldedFigureStyleOption[]) => {
