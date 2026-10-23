@@ -179,15 +179,13 @@ describe('where a Fold step’s marks go in the Diagram', () => {
     close(right!.to, 1, 0.5);
     // Its arrow and circles as before.
     expect(placed.grip).toEqual(foldStepAction(action, { op: precrease(3, inputs), parent: squareScene() }).grip);
-    // A segment of the line creased by another axiom: the rest too.
+    // A segment draws no rest, whatever locates its line: pinches alone do.
     const segment = foldStepAction(engineAction([0, 0.5], [0.5, 0.5], [0.25, 0.3], [0.25, 0.7]), {
       op: precrease(3, [edge([0, 0], [1, 0]), edge([0, 1], [1, 1])], { kind: 'segment', from: pt(0, 0.5), to: pt(0.5, 0.5) }),
       parent: squareScene(),
     });
-    expect(segment.uncreased).toHaveLength(1);
-    close(segment.uncreased![0]!.from, 0.5, 0.5);
-    close(segment.uncreased![0]!.to, 1, 0.5);
-    // Through two points, a segment says it all: no rest.
+    expect(segment.uncreased).toBeUndefined();
+    // Nor through two points.
     const twoPoints = foldStepAction(engineAction([0.2, 0.2], [0.8, 0.8], [0.4, 0.6], [0.6, 0.4]), {
       op: precrease(1, [pt(0.2, 0.2), pt(0.8, 0.8)], { kind: 'segment', from: pt(0.2, 0.2), to: pt(0.8, 0.8) }),
       parent: squareScene(),

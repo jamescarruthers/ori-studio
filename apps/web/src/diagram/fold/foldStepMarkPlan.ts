@@ -108,8 +108,8 @@ export function foldStepAction(action: FoldActionGeometry, context: FoldStepMark
   if ((op.kind === 'valley' || op.kind === 'mountain' || op.kind === 'precrease') && op.line.via === 'axiom') {
     placed = axiomPlaced(placed, op, frame, context);
   }
-  // A segment through the two points it names says it all (above), and has no rest drawn.
-  if (op.kind === 'precrease' && op.extent && !(op.extent.kind === 'segment' && op.line.via === 'axiom' && op.line.axiom === 1)) {
+  // A pinch alone: a segment is the crease it says, with no rest drawn.
+  if (op.kind === 'precrease' && op.extent?.kind === 'pinch') {
     const uncreased = uncreasedStretches(action, parent);
     if (uncreased.length > 0) placed = { ...placed, uncreased };
   }
