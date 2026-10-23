@@ -2356,3 +2356,71 @@ describe('a project holding fold sequences', () => {
     expect(() => parseNativeProjectFile(serializeNativeProjectFile(designOnly({ foldSequences })))).not.toThrow();
   });
 });
+
+describe('a crease pattern’s layer orders', () => {
+  /** A flat figure, a 3D one, and a bag holding two keys of other builds' features. */
+  function cpInput(
+    foldedFigures: OristudioCpFoldedFigureEntry[] = [foldedFigure(), folded3dFigure()],
+    extensions: Record<string, unknown> = { futureDocFeature: { a: 1 }, 'zeta.other': [1, 2] }
+  ) {
+    return {
+      title: 'Layer orders',
+      filename: 'layers.osf',
+      path: null,
+      document: cpDocument(),
+      source: null,
+      foldProjection: null,
+      foldArtifacts: null,
+      creaseColorMode: 'mvf' as const,
+      selection: emptyOristudioCpSelection(),
+      viewport: DEFAULT_ORISTUDIO_CP_VIEWPORT_OPTIONS,
+      foldedFigures,
+      activeFoldedFigureId: null,
+      lineage: importedCpLineage(),
+      extensions,
+      fileExtensions: { futureFileFeature: 'keep-me' },
+      appVersion: '0.1.1',
+      now,
+    };
+  }
+
+  /**
+   * Open a saved crease pattern and save it again, as the store does: the
+   * figures and the bag installed, then handed back to the writer.
+   */
+  function resaved(text: string): string {
+    const parsed = parseNativeProjectFile(text);
+    const document = parsed.workspace.creasePattern;
+    if (!document) throw new Error('expected CP document');
+    return serializeNativeProjectFile(
+      createNativeCreasePatternProjectFile({
+        ...cpInput(document.viewState.foldedFigures, document.extensions),
+        selection: document.viewState.selection,
+        viewport: document.viewState.viewport,
+        camera: document.viewState.camera,
+        activeFoldedFigureId: document.viewState.activeFoldedFigureId,
+        referencesReaderState: document.viewState.references,
+        fileExtensions: parsed.extensions,
+      })
+    );
+  }
+
+  // Both fixtures are this writer's output from before layer orders existed,
+  // written by the commit that added these tests, ahead of the feature: a
+  // project with no record keeps those bytes, saved fresh or reopened and
+  // saved again. The second differs from the first only in the order the
+  // reader names a figure's fields.
+  const SAVED_BEFORE_LAYER_ORDERS = './__fixtures__/layerOrderZeroBytes.osf';
+  const RESAVED_BEFORE_LAYER_ORDERS = './__fixtures__/layerOrderZeroBytesResaved.osf';
+
+  it('writes a project with no record exactly as before layer orders existed', async () => {
+    const text = serializeNativeProjectFile(createNativeCreasePatternProjectFile(cpInput()));
+    await expect(text).toMatchFileSnapshot(SAVED_BEFORE_LAYER_ORDERS);
+  });
+
+  it('opens and saves a project with no record, foreign keys in its bag, to the same bytes as before', async () => {
+    const text = resaved(serializeNativeProjectFile(createNativeCreasePatternProjectFile(cpInput())));
+    await expect(text).toMatchFileSnapshot(RESAVED_BEFORE_LAYER_ORDERS);
+    expect(resaved(text)).toBe(text);
+  });
+});

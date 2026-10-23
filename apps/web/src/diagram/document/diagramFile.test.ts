@@ -3808,3 +3808,17 @@ describe('turns between steps (D22)', () => {
     }
   });
 });
+
+describe('a linked step’s layer order', () => {
+  // The fixture is this writer's output from before layer orders existed,
+  // written by the commit that added this test, ahead of the feature: a
+  // diagram with no record keeps those bytes, written fresh or read back.
+  const WRITTEN_BEFORE_LAYER_ORDERS = './__fixtures__/layer-order-zero-bytes.diagram.json';
+
+  it('writes a diagram with no layer order exactly as before layer orders existed', async () => {
+    const written = JSON.stringify(throughJson(writeDiagram(linkedDiagram())), null, 2);
+    await expect(written).toMatchFileSnapshot(WRITTEN_BEFORE_LAYER_ORDERS);
+    const again = JSON.stringify(throughJson(writeDiagram(readDiagram(JSON.parse(written))!.document)), null, 2);
+    expect(again).toBe(written);
+  });
+});
