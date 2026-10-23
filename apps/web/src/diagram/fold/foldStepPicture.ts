@@ -308,7 +308,8 @@ function pushTail(from: PicturePoint, tip: PicturePoint): PicturePoint {
 /**
  * The step's marks on the flat picture `captured` is: its fold's line — the
  * stretches of it the moving paper is creased along that the viewer sees, a
- * stretch under a layer that stays not drawn; every crease of a rabbit ear,
+ * stretch under a layer that stays not drawn, and a pinch's rest of it
+ * dotted (`uncreased-line`); every crease of a rabbit ear,
  * a petal fold, a squash or a swivel the viewer sees — the points it names
  * circled (`foldStepMarkPlan.ts`), and its arrow from the paper it moves to
  * where it lands, dotted from an end under layers (15e), bowed over the
@@ -356,6 +357,8 @@ export function foldStepMarks(
     const spanValley = ((span.direction ?? action.direction) === 'valley') !== back;
     marks.push(mark(spanValley ? 'valley-line' : 'mountain-line', span.from, span.to));
   }
+  // A pinch's line where it is not creased, dotted.
+  for (const stretch of action.uncreased ?? []) marks.push(mark('uncreased-line', stretch.from, stretch.to));
   // The points it names — a crease's ends, the points a fold brings together — as the Diagram's point circles.
   for (const ring of action.rings ?? []) {
     const circle = mark('circle', ring.at, ring.at);

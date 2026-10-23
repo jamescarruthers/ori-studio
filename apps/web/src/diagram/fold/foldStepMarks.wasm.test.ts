@@ -221,6 +221,42 @@ describe.skipIf(!available)('a Fold step’s marks in the Diagram, from the real
     expect(inside.find((span) => along(span, V, CORNER))?.direction).toBe('mountain');
   });
 
+  it('draws a pinch as its crease and the rest of its line across the paper dotted, the two apart', async () => {
+    const calls = await engine();
+    const sheet = landed(calls.sheet(SQUARE_PAPER)).state;
+    // The square folded in half along its diagonal: the bottom-right triangle, two layers.
+    const half = stepOf(calls, sheet, { kind: 'valley', line: { via: 'free', through: [[0, 0], [1, 1]] }, moving: [0.1, 0.9], seed: all });
+    // Pinched where the other diagonal crosses the triangle's middle, both layers.
+    const op: FoldOp = {
+      kind: 'precrease', direction: 'valley', line: { via: 'free', through: [[1, 0], [0.5, 0.5]] }, moving: [0.9, 0.6], seed: all,
+      extent: { kind: 'pinch', at: pt(0.75, 0.25), length: 0.1 },
+    };
+    const pinch = stepOf(calls, half.state, op);
+    const placed = foldStepAction(pinch.action, { op, parent: pinch.parent, child: pinch.child });
+    // The pinch as the engine draws it: its line is the mark.
+    expect(placed.spans).toEqual(pinch.action.spans);
+    const [a, b] = pinch.action.line!;
+    expect(length(a, b)).toBeCloseTo(0.1, 6);
+    // The rest, either side of it, across the triangle: from its edge to the diagonal, √½ in all.
+    const rest = placed.uncreased!;
+    expect(rest).toHaveLength(2);
+    const u = { x: (b.x - a.x) / length(a, b), y: (b.y - a.y) / length(a, b) };
+    const t = (p: Point) => (p.x - a.x) * u.x + (p.y - a.y) * u.y;
+    for (const stretch of rest) {
+      // On the pinch's line, and clear of it.
+      for (const end of [stretch.from, stretch.to]) expect(Math.abs((end.x - a.x) * u.y - (end.y - a.y) * u.x)).toBeLessThan(1e-9);
+      const [lo, hi] = [t(stretch.from), t(stretch.to)].sort((x, y) => x - y) as [number, number];
+      expect(hi <= 1e-9 || lo >= length(a, b) - 1e-9).toBe(true);
+    }
+    const total = rest.reduce((sum, stretch) => sum + length(stretch.from, stretch.to), 0) + length(a, b);
+    expect(total).toBeCloseTo(Math.SQRT1_2, 6);
+    const marks = foldStepPicture(
+      { shown: pinch.parent, own: { scene: pinch.child, step: pinch.summary.step, sheet: pinch.summary.sheet }, moment: 'before', action: placed },
+      FOLD_PULL_RENDER
+    ).marks;
+    expect(marks.map((mark) => mark.kind).sort()).toEqual(['fold-unfold-arrow', 'uncreased-line', 'uncreased-line', 'valley-line']);
+  });
+
   it('draws no crease the viewer cannot see, in any step of the examples', async () => {
     const calls = await engine();
     let lines = 0;
