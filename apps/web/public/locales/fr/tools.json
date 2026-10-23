@@ -286,7 +286,8 @@
     "toolValleyArrow": "Flèche de pli vallée",
     "toolValleyLine": "Ligne vallée",
     "toolWhiteArrow": "Flèche blanche",
-    "toolXRay": "Rayons X"
+    "toolXRay": "Rayons X",
+    "uncreasedLine": "Ligne non marquée"
   },
   "divideMode": {
     "count": "Nombre",

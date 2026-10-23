@@ -1746,6 +1746,7 @@ const ANNOTATION_FIELDS: Readonly<Record<DiagramAnnotationKind, ReadonlySet<stri
     'valley-line': fields('behind'),
     'mountain-line': fields('behind'),
     'hidden-line': fields(),
+    'uncreased-line': fields(),
     'solid-line': fields('color', 'behind'),
     label: fields('text', 'color', 'bold', 'halo', 'sizePt', 'offsetPt'),
     circle: fields('behind', 'radius'),
@@ -2038,6 +2039,7 @@ function readAnnotationOfKind(
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
       return annotation;
     case 'circle': {
       const radius = entry.radius === undefined ? undefined : readCloseUpRadius(entry.radius, unitsPerFrame(reach));

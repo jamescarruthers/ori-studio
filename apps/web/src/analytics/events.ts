@@ -220,6 +220,8 @@ export type DiagramAnnotationTool =
   | 'valley_line'
   | 'mountain_line'
   | 'hidden_line'
+  // No tool draws it: a Fold step's mark, the rest of a pinch's line, which can be deleted.
+  | 'uncreased_line'
   | 'solid_line'
   | 'label'
   | 'circle'

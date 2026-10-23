@@ -278,7 +278,8 @@
     "toolValleyArrow": "Valley Fold Arrow",
     "toolValleyLine": "Valley Line",
     "toolWhiteArrow": "White Arrow",
-    "toolXRay": "X-Ray"
+    "toolXRay": "X-Ray",
+    "uncreasedLine": "Uncreased Line"
   },
   "divideMode": {
     "count": "Count",

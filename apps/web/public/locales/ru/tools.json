@@ -294,7 +294,8 @@
     "toolValleyArrow": "Стрелка долинного сгиба",
     "toolValleyLine": "Долинная линия",
     "toolWhiteArrow": "Белая стрелка",
-    "toolXRay": "Рентген"
+    "toolXRay": "Рентген",
+    "uncreasedLine": "Несогнутая линия"
   },
   "divideMode": {
     "count": "Количество",

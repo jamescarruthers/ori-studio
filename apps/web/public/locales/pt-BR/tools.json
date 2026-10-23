@@ -286,7 +286,8 @@
     "toolValleyArrow": "Seta de vale",
     "toolValleyLine": "Linha de vale",
     "toolWhiteArrow": "Seta branca",
-    "toolXRay": "Raio X"
+    "toolXRay": "Raio X",
+    "uncreasedLine": "Linha não vincada"
   },
   "divideMode": {
     "count": "Quantidade",
