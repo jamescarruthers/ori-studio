@@ -278,7 +278,8 @@
     "toolValleyArrow": "Talfaltpfeil",
     "toolValleyLine": "Talfaltlinie",
     "toolWhiteArrow": "Weißer Pfeil",
-    "toolXRay": "Röntgen"
+    "toolXRay": "Röntgen",
+    "uncreasedLine": "Ungefalzte Linie"
   },
   "divideMode": {
     "count": "Anzahl",

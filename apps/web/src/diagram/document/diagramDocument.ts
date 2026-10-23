@@ -815,6 +815,12 @@ export type DiagramAnnotationKind =
   | 'valley-line'
   | 'mountain-line'
   | 'hidden-line'
+  /**
+   * The rest of a partial precrease's fold, not creased — a pinch's line across
+   * the paper it would fold — dotted, as diagrams draw it: a Fold step's mark,
+   * never a tool's.
+   */
+  | 'uncreased-line'
   | 'solid-line'
   | 'label'
   | 'circle'

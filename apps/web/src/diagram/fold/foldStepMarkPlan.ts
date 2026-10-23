@@ -28,6 +28,10 @@
  *   squash's crease on each layer and its spine, a swivel's creases meeting
  *   at its vertex — each in its own line. Their arrows, and a squash's
  *   push, are the engine's.
+ * - **A pinch, or a precrease of a segment of its line,** draws its crease
+ *   as the engine does, and the rest of its line across the paper it folds
+ *   dotted ({@link uncreasedStretches}): the fold is made across the paper
+ *   and pressed only at the mark.
  *
  * Anything else keeps the engine's picture. Every point is in the scene
  * frame of the state the step folds from — the picture's, before it is
@@ -53,6 +57,13 @@ export interface FoldStepRing {
 export interface FoldStepAction extends FoldActionGeometry {
   /** In the scene frame, as the rest; none when it names no point. */
   rings?: readonly FoldStepRing[];
+  /**
+   * A partial precrease's fold where it is not creased: the stretches of its
+   * whole line across the paper it folds that the viewer sees, outside the
+   * crease ({@link uncreasedStretches}). In the scene frame; none for any
+   * other step.
+   */
+  uncreased?: readonly { from: Point; to: Point }[];
 }
 
 /** What a step's marks are placed by: its stored operation, and the states either side of it. */
@@ -97,7 +108,82 @@ export function foldStepAction(action: FoldActionGeometry, context: FoldStepMark
   if ((op.kind === 'valley' || op.kind === 'mountain' || op.kind === 'precrease') && op.line.via === 'axiom') {
     placed = axiomPlaced(placed, op, frame, context);
   }
+  // A segment through the two points it names says it all (above), and has no rest drawn.
+  if (op.kind === 'precrease' && op.extent && !(op.extent.kind === 'segment' && op.line.via === 'axiom' && op.line.axiom === 1)) {
+    const uncreased = uncreasedStretches(action, parent);
+    if (uncreased.length > 0) placed = { ...placed, uncreased };
+  }
   return placed;
+}
+
+/**
+ * A partial precrease's fold line where it is not creased, as diagrams draw
+ * a pinch — the fold made across the paper, pressed only at the mark: its
+ * whole line, read off the state it folds from, along each stack of layers
+ * whose top one the fold moves — the paper it folds, as the viewer sees it,
+ * as the engine's spans are — less the stretch it creases (the engine's
+ * line, the extent's).
+ */
+export function uncreasedStretches(action: FoldActionGeometry, parent: FoldScene): { from: Point; to: Point }[] {
+  if (!action.line) return [];
+  const [a, b] = action.line;
+  const length = distance(a, b);
+  const direction = unit({ x: b.x - a.x, y: b.y - a.y });
+  if (!direction) return [];
+  const moving = new Set(action.moving);
+  const seen: [number, number][] = [];
+  for (const { polygon, faces_top_to_bottom: stack } of parent.subfaces) {
+    const top = stack[0];
+    const id = top === undefined ? undefined : parent.lineage[top]?.id;
+    if (id === undefined || !moving.has(id)) continue;
+    const through = clippedAlong(polygon, a, direction);
+    if (through) seen.push(through);
+  }
+  seen.sort((x, y) => x[0] - y[0]);
+  const stretches: { from: Point; to: Point }[] = [];
+  const keep = (lo: number, hi: number) => {
+    if (hi - lo > 1e-6) stretches.push({ from: along(a, direction, lo), to: along(a, direction, hi) });
+  };
+  let run: [number, number] | null = null;
+  const flush = () => {
+    if (!run) return;
+    // Less the crease, from 0 to its length along the line.
+    keep(run[0], Math.min(run[1], 0));
+    keep(Math.max(run[0], length), run[1]);
+  };
+  for (const [lo, hi] of seen) {
+    if (run && lo <= run[1] + 1e-9) run[1] = Math.max(run[1], hi);
+    else {
+      flush();
+      run = [lo, hi];
+    }
+  }
+  flush();
+  return stretches;
+}
+
+/** Where the line through `origin` the way `direction` runs crosses a convex polygon, along it; null when it misses. */
+function clippedAlong(polygon: readonly Point[], origin: Point, direction: Point): [number, number] | null {
+  let [lo, hi] = [-Infinity, Infinity];
+  // Each edge's inside, as the polygon winds: the side its centroid is on.
+  const centroid = polygon.reduce((sum, p) => ({ x: sum.x + p.x / polygon.length, y: sum.y + p.y / polygon.length }), { x: 0, y: 0 });
+  for (const [index, p] of polygon.entries()) {
+    const q = polygon[(index + 1) % polygon.length]!;
+    const normal = { x: -(q.y - p.y), y: q.x - p.x };
+    const inward = Math.sign(dot(normal, { x: centroid.x - p.x, y: centroid.y - p.y }));
+    if (inward === 0) continue;
+    // inward · (origin + t·direction − p) ≥ 0
+    const start = inward * dot(normal, { x: origin.x - p.x, y: origin.y - p.y });
+    const rate = inward * dot(normal, direction);
+    if (Math.abs(rate) < 1e-12) {
+      if (start < -1e-12) return null;
+      continue;
+    }
+    const t = -start / rate;
+    if (rate > 0) lo = Math.max(lo, t);
+    else hi = Math.min(hi, t);
+  }
+  return hi - lo > 1e-9 ? [lo, hi] : null;
 }
 
 /**

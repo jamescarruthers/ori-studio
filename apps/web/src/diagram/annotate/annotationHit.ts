@@ -798,6 +798,7 @@ function bodyDistance(
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
       return distanceToSegment(point, annotation.from, annotation.to);
     case 'circle':

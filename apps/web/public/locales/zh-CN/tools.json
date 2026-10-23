@@ -270,7 +270,8 @@
     "toolValleyArrow": "谷折箭头",
     "toolValleyLine": "谷折线",
     "toolWhiteArrow": "空心箭头",
-    "toolXRay": "透视"
+    "toolXRay": "透视",
+    "uncreasedLine": "未压折的线"
   },
   "divideMode": {
     "count": "数量",

@@ -474,6 +474,7 @@ function compileAnnotation(annotation: KnownDiagramAnnotation): CompiledAnnotati
     case 'mountain-line':
       return { kind: 'line', role: 'diagram-mountain', from, to };
     case 'hidden-line':
+    case 'uncreased-line':
       return { kind: 'line', role: 'diagram-hidden', from, to };
     case 'solid-line':
       // References' reference-line pen, in its own colour or, with none, the style's arrow ink (`annotationInk`).

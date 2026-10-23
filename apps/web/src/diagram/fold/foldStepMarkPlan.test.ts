@@ -163,6 +163,56 @@ describe('where a Fold step’s marks go in the Diagram', () => {
     });
   });
 
+  it('draws a pinch as its crease and the rest of its line across the paper it folds, the two never overlapping', () => {
+    // O3, the bottom edge onto the top: the middle line y = 0.5, pinched in the middle only.
+    const action = engineAction([0.45, 0.5], [0.55, 0.5], [0.5, 0.3], [0.5, 0.7]);
+    const inputs = [edge([0, 0], [1, 0]), edge([0, 1], [1, 1])];
+    const op = precrease(3, inputs, { kind: 'pinch', at: pt(0.5, 0.5), length: 0.1 });
+    const placed = foldStepAction(action, { op, parent: squareScene() });
+    // The pinch, as the engine draws it.
+    expect(placed.spans).toEqual(action.spans);
+    expect(placed.uncreased).toHaveLength(2);
+    const [left, right] = placed.uncreased!;
+    close(left!.from, 0, 0.5);
+    close(left!.to, 0.45, 0.5);
+    close(right!.from, 0.55, 0.5);
+    close(right!.to, 1, 0.5);
+    // Its arrow and circles as before.
+    expect(placed.grip).toEqual(foldStepAction(action, { op: precrease(3, inputs), parent: squareScene() }).grip);
+    // A segment of the line creased by another axiom: the rest too.
+    const segment = foldStepAction(engineAction([0, 0.5], [0.5, 0.5], [0.25, 0.3], [0.25, 0.7]), {
+      op: precrease(3, [edge([0, 0], [1, 0]), edge([0, 1], [1, 1])], { kind: 'segment', from: pt(0, 0.5), to: pt(0.5, 0.5) }),
+      parent: squareScene(),
+    });
+    expect(segment.uncreased).toHaveLength(1);
+    close(segment.uncreased![0]!.from, 0.5, 0.5);
+    close(segment.uncreased![0]!.to, 1, 0.5);
+    // Through two points, a segment says it all: no rest.
+    const twoPoints = foldStepAction(engineAction([0.2, 0.2], [0.8, 0.8], [0.4, 0.6], [0.6, 0.4]), {
+      op: precrease(1, [pt(0.2, 0.2), pt(0.8, 0.8)], { kind: 'segment', from: pt(0.2, 0.2), to: pt(0.8, 0.8) }),
+      parent: squareScene(),
+    });
+    expect(twoPoints.uncreased).toBeUndefined();
+  });
+
+  it('draws a pinch’s rest only where the paper it folds is on top', () => {
+    // Folded in half: the top-left half over the bottom-right. A pinch on y = x/2's line from the corner, x = 0.5 across it.
+    const pinch = (moving: number[]) =>
+      foldStepAction({ ...engineAction([0.5, 0.2], [0.5, 0.3], [0.6, 0.25], [0.4, 0.25]), moving }, {
+        op: precrease(2, [pt(0, 0), pt(1, 0)], { kind: 'pinch', at: pt(0.5, 0.25), length: 0.1 }),
+        parent: diagonalHalfScene(),
+      }).uncreased;
+    // Both layers fold: across the triangle, x = 0.5 from the bottom edge to the diagonal, less the pinch.
+    const both = pinch([0, 1])!;
+    expect(both).toHaveLength(2);
+    close(both[0]!.from, 0.5, 0);
+    close(both[0]!.to, 0.5, 0.2);
+    close(both[1]!.from, 0.5, 0.3);
+    close(both[1]!.to, 0.5, 0.5);
+    // Only the layer underneath: the viewer sees none of it.
+    expect(pinch([0])).toBeUndefined();
+  });
+
   it('keeps the engine’s picture of a line it cannot place by: a free line, a newer build’s step', () => {
     const action = engineAction([0, 0.5], [1, 0.5], [0.5, 0.15], [0.5, 0.85]);
     const free: FoldOp = { kind: 'precrease', direction: 'valley', line: { via: 'free', through: [[0, 0.5], [1, 0.5]] }, seed: all };

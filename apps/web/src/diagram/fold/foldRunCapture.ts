@@ -56,6 +56,7 @@ function actionSeenIn(action: FoldStepAction, from: FoldIsometry, to: FoldIsomet
     ...(action.push ? { push: { at: at(action.push.at), toward: at(action.push.toward) } } : {}),
     ...(action.pleat ? { pleat: { ...action.pleat, from: at(action.pleat.from), to: at(action.pleat.to) } } : {}),
     ...(action.rings ? { rings: action.rings.map((ring) => ({ ...ring, at: at(ring.at) })) } : {}),
+    ...(action.uncreased ? { uncreased: action.uncreased.map((stretch) => ({ from: at(stretch.from), to: at(stretch.to) })) } : {}),
   };
 }
 

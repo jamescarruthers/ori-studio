@@ -125,6 +125,7 @@ const ANNOTATION_SHAPES: Readonly<Record<DiagramAnnotationKind, AnnotationShape>
   'valley-line': 'line',
   'mountain-line': 'line',
   'hidden-line': 'line',
+  'uncreased-line': 'line',
   'solid-line': 'line',
   label: 'point',
   circle: 'point',
@@ -256,6 +257,7 @@ export function behindEnds(kind: DiagramAnnotationKind): readonly ('from' | 'to'
     case 'turn-over':
     case 'rotate':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'label':
     case 'right-angle':
     case 'callout':
@@ -1065,6 +1067,7 @@ export function canBeShaped(kind: DiagramAnnotationKind): boolean {
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
     case 'label':
     case 'circle':
@@ -1123,6 +1126,7 @@ export function carriesText(kind: DiagramAnnotationKind): boolean {
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
     case 'circle':
     case 'star':
@@ -1161,6 +1165,7 @@ export function carriesColor(kind: DiagramAnnotationKind): boolean {
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'circle':
     case 'star':
     case 'eye':
@@ -1209,6 +1214,7 @@ export function carriesTextStyle(kind: DiagramAnnotationKind): boolean {
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
     case 'circle':
     case 'star':
@@ -1365,6 +1371,7 @@ export function annotationEnds(annotation: Pick<KnownDiagramAnnotation, 'kind' |
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
     case 'divisions':
       return ['to', 'from'];
@@ -2302,6 +2309,7 @@ export function flipsArc(kind: DiagramAnnotationKind): boolean {
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
     case 'label':
     case 'circle':
@@ -2499,6 +2507,7 @@ export function kindFromOtherSide(kind: DiagramAnnotationKind): DiagramAnnotatio
     case 'turn-over':
     case 'rotate':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
     case 'label':
     case 'circle':
@@ -2800,6 +2809,7 @@ export function flipsOver(kind: DiagramAnnotationKind): boolean {
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
     case 'solid-line':
     case 'right-angle':
     case 'callout':

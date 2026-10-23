@@ -379,6 +379,7 @@ function Selection({
     case 'valley-line':
     case 'mountain-line':
     case 'hidden-line':
+    case 'uncreased-line':
       path = [annotation.from, annotation.to];
       break;
     case 'solid-line':
