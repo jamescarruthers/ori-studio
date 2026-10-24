@@ -17,11 +17,19 @@
 //!   letters Oriedita's edge rule gives, the refusals that keep v1 honest
 //!   ([`SourceRefusal`]), the pairs only the solver sees as overlapping, and
 //!   [`LayerSource::oriedita_relations`] for an order going back.
+//! - [`LayerOrderRecord`], [`read_record`] and [`encode_record`]: the saved
+//!   form, byte for byte the TypeScript codec's
+//!   (`apps/web/src/lib/layerOrder/layerOrderRecord.ts`).
 //!
-//! The constraint session the dialog drives (open pairs, preview, commit,
-//! explain, the saved record) is built on this source by the plan's later
-//! rows (E5, E6).
+//! The constraint session the dialog drives is built on these by the plan's
+//! row E5. Nothing here is bound to wasm yet (E7).
 
+mod record;
 mod source;
 
+pub use record::{
+    Attention, AttentionReason, EncodeRefusal, FoldSign, LayerOrderRecord, RECORD_MAX_BYTES,
+    RECORD_VERSION, RecordDamage, RecordFace, RecordPair, RecordPart, RecordRead, encode_record,
+    js_number, read_record,
+};
 pub use source::{LayerSource, PaperFrame, SourceRefusal, ToleranceCause};
