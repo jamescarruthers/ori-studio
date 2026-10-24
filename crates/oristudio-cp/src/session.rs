@@ -532,7 +532,8 @@ pub enum FoldOrderRefusal {
     /// The order puts a face above itself.
     SameFace { face: usize },
     /// The order puts `upper_face` above `lower_face`, where the creases'
-    /// letters or an earlier relation of the order say the reverse.
+    /// letters (as the unseeded fold's table settles them) or an earlier
+    /// relation of the order say the reverse. The pair named is the order's.
     AgainstLetters {
         upper_face: usize,
         lower_face: usize,
