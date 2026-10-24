@@ -148,6 +148,7 @@ import {
 import type { CanvasAnnotation } from '../../../cp-workspace/annotations/annotation';
 import type { InlineSimulation } from '../../../cp-workspace/inlineSimulation/inlineSimulation';
 import { noteInlineSimulationIds } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
+import { linkFoldedFigureLayerOrders } from '../../../cp-workspace/folded/foldedFigureLayerOrders';
 import { discardCpDocumentState } from '../cpDocumentState';
 import { cpHistoryDocumentOf, withCpHistoryEntry } from '../cpHistory';
 import {
@@ -1230,6 +1231,12 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       documentState.loadSerial
     );
     const restoredSelection = nativeDocument.viewState.selection ?? emptyOristudioCpSelection();
+    // Each figure's saved layer order, attached when it is still that
+    // figure's; the bag keeps the rest, written back as it came.
+    const layerOrders = linkFoldedFigureLayerOrders(
+      nativeDocument.extensions,
+      nativeDocument.viewState.foldedFigures ?? []
+    );
     return {
     // Overridden field-by-field below; spread for the fold side table,
     // which hydration only refills for the incoming windows.
@@ -1249,7 +1256,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     // mesh to draw.
     oristudioCpInlineSimulations: nativeDocument.creasePattern.inlineSimulations,
     oristudioCpFocusedInlineSimulationId: null,
-    oristudioCpDocumentExtensions: nativeDocument.extensions,
+    oristudioCpDocumentExtensions: layerOrders.extensions,
     oristudioCpCamvResult: camvResult,
     oristudioCpOperationDescriptors: documentState.operationDescriptors,
     oristudioCpError: null,
@@ -1259,7 +1266,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     oristudioCpSelection: restoredSelection,
     oristudioCpActiveDiagnosticId: null,
     oristudioCpRevision: 0,
-    oristudioCpFoldedFigures: nativeDocument.viewState.foldedFigures ?? [],
+    oristudioCpFoldedFigures: layerOrders.figures,
     // One holder at the boundary, as `takeCanvasSelection` keeps it everywhere
     // else: a file that carries both a crease selection and an active figure
     // (hand-edited, or written before the rule) opens with the creases.

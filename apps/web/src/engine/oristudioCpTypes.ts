@@ -1,6 +1,7 @@
 import type { PaperScene } from '@treemaker/origami-simulator';
 import type { Point } from '../lib/geometry';
 import type { PaperStyleOverrides } from '../lib/paper/paperStyle';
+import type { FoldedFigureLayerOrder } from '../lib/layerOrder/foldedFigureLayerOrder';
 import type { CpGeometryTransport } from './oristudioCpGeometry';
 import type {
   OristudioCpOperationId,
@@ -662,7 +663,18 @@ export interface OristudioCpFoldedFigureSnapshot {
    * Absent on figures saved before this existed.
    */
   outcome?: OristudioCpFoldOutcome;
+  /**
+   * Whether the order shown was given to the fold (`fold_with_order`, the
+   * Layer order dialog's Apply) rather than found by Oriedita's search.
+   * Written only when given, so a searched figure's snapshot is the bytes it
+   * always was: absent means searched. A saved layer order attaches to its
+   * figure only when this says given (`foldedFigureLayerOrders.ts`).
+   */
+  shown_order?: OristudioCpShownOrder;
 }
+
+/** Mirror of the kernel's `ShownOrder` (layer order plan, approach 4). */
+export type OristudioCpShownOrder = 'searched' | 'given';
 
 /** Mirror of the kernel's `folding::FoldOutcome`. */
 export type OristudioCpFoldOutcome =
@@ -1285,6 +1297,16 @@ export interface OristudioCpFoldedFigureEntry {
    * `implementation-plans/unified-paper-style-and-export.md` §4.
    */
   appearance?: PaperStyleOverrides;
+  /**
+   * The layer order chosen in the Layer order dialog: its constraints and the
+   * order shown, never a case number. Absent when there is none, and then
+   * `current_fold_case` means what it always has.
+   *
+   * Held here, saved elsewhere: the figure writer strips it and the crease
+   * pattern's extensions bag carries it, which every build since v0.2.0
+   * writes back as it came (`cp-workspace/folded/foldedFigureLayerOrders.ts`).
+   */
+  layerOrder?: FoldedFigureLayerOrder | null;
 }
 
 /** Mirrors the kernel's `model::SnapCandidates`. */
