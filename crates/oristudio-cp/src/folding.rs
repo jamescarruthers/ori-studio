@@ -3561,9 +3561,10 @@ pub const SEEDED_FOLD_ITERATION_BUDGET: u64 = 100_000;
 /// seeds it takes exactly the shipped steps, and the unseeded entry is this
 /// call with `&[]`. With seeds:
 ///
-/// 1. they join the letters' hierarchy and are checked against them
-///    ([`seed_initial_hierarchy`]), because [`HierarchyTable::from_initial`]
-///    keeps the first of two contradictory relations silently;
+/// 1. they join the letters' hierarchy, each checked first against the table
+///    the unseeded fold reads ([`seed_initial_hierarchy`]), because
+///    [`HierarchyTable::from_initial`] keeps the first of two contradictory
+///    relations silently;
 /// 2. every deduction the shipped fold makes then runs over letters and seeds
 ///    together, in the shipped order: the equivalence conditions, Oriedita's
 ///    setup-time `removeMode` AEA round (the step a pipeline assembled from
@@ -5606,10 +5607,11 @@ pub enum HierarchySeedError {
     UnknownFace { face: usize, faces_total: usize },
     /// A seed puts a face above itself.
     SameFace { face: usize },
-    /// A seed orders a pair the other way from the creases' letters or from an
-    /// earlier seed. On the flat path the letters never disagree among
-    /// themselves, and they are checked first, so the refused relation is
-    /// always a seed.
+    /// A seed orders a pair the other way from the letters' table, the one the
+    /// unseeded fold reads, or from an earlier seed. The refused relation is
+    /// always the seed, never a letter: the letters can disagree among
+    /// themselves (two collinear creases of different letters between the same
+    /// two faces), and the table settles that before any seed is checked.
     Contradiction {
         upper_face: usize,
         lower_face: usize,
@@ -5617,40 +5619,45 @@ pub enum HierarchySeedError {
 }
 
 /// Add `seeds` to the letters' hierarchy `initial`, refusing any that name no
-/// face, relate a face to itself, or contradict a relation already there
-/// ([`validate_initial_hierarchy`] over the union).
+/// face, relate a face to itself, or contradict what is already known.
+///
+/// Each seed is checked against [`HierarchyTable::from_initial`] of the
+/// letters, the table the unseeded fold reads, with the seeds before it added
+/// in turn. So only a seed is ever named, and the order an unseeded fold found
+/// always passes as seeds. ([`validate_initial_hierarchy`] over letters and
+/// seeds together would name a letter when two letters disagree, which
+/// `from_initial` resolves silently by keeping the first.)
 fn seed_initial_hierarchy(
     initial: &mut InitialHierarchy,
     seeds: &[HierarchyRelation],
 ) -> Result<(), WorkerOverlapSearchError> {
     let faces_total = initial.faces_total;
+    let refuse = |error| Err(WorkerOverlapSearchError::Seed(error));
+    let mut table = HierarchyTable::from_initial(initial);
     for seed in seeds {
         for face in [seed.upper_face, seed.lower_face] {
             if face >= faces_total {
-                return Err(WorkerOverlapSearchError::Seed(
-                    HierarchySeedError::UnknownFace { face, faces_total },
-                ));
+                return refuse(HierarchySeedError::UnknownFace { face, faces_total });
             }
         }
         if seed.upper_face == seed.lower_face {
-            return Err(WorkerOverlapSearchError::Seed(
-                HierarchySeedError::SameFace {
-                    face: seed.upper_face,
-                },
-            ));
+            return refuse(HierarchySeedError::SameFace {
+                face: seed.upper_face,
+            });
+        }
+        match table.infer_above(seed.upper_face, seed.lower_face) {
+            Ok(_) => {}
+            Err(AdditionalEstimationError::Contradiction { .. }) => {
+                return refuse(HierarchySeedError::Contradiction {
+                    upper_face: seed.upper_face,
+                    lower_face: seed.lower_face,
+                });
+            }
+            Err(other) => return Err(WorkerOverlapSearchError::AdditionalEstimation(other)),
         }
     }
     initial.relations.extend_from_slice(seeds);
-    validate_initial_hierarchy(initial).map_err(|error| match error {
-        AdditionalEstimationError::Contradiction {
-            upper_face,
-            lower_face,
-        } => WorkerOverlapSearchError::Seed(HierarchySeedError::Contradiction {
-            upper_face,
-            lower_face,
-        }),
-        other => WorkerOverlapSearchError::AdditionalEstimation(other),
-    })
+    Ok(())
 }
 
 impl HierarchyTable {
