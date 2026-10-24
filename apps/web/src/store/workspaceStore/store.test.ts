@@ -88,6 +88,8 @@ import {
   foldedFigureUserBounds,
 } from '../../cp-workspace/adapters/cpFoldedToScene';
 import { isFoldedFigureStale } from '../../cp-workspace/folded/foldedFigureStaleness';
+import { FOLDED_FIGURE_LAYER_ORDERS_KEY } from '../../cp-workspace/folded/foldedFigureLayerOrders';
+import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import { foldedFigureOtherSideCamera } from '../../cp-workspace/folded/folded3dCamera';
 import {
   resetFoldedFigureHandles,
@@ -2502,6 +2504,72 @@ describe('workspace store slices', () => {
     // selected — the same rule `takeCanvasSelection` keeps everywhere else.
     expect(useWorkspaceStore.getState().oristudioCpActiveFoldedFigureId).toBeNull();
     expect(useWorkspaceStore.getState().foldArtifacts?.simulation_model).not.toBeNull();
+  });
+
+  it('attaches a saved layer order to its figure on open, and saves it back to the crease pattern’s bag', async () => {
+    resetStores(seedSnapshot());
+    loadSnapshotIntoStore(seedSnapshot());
+    const held = foldedFigureLayerOrder({
+      faces: [
+        { at: [0.25, 0.5], area: 0.5 },
+        { at: [0.75, 0.5], area: 0.5 },
+      ],
+      constraints: [[0, 1, 1]],
+      order: [],
+    });
+    if (!held.ok) throw new Error(held.reason);
+    const figure: OristudioCpFoldedFigureEntry = {
+      id: 'generated-1',
+      title: 'Folded model 1',
+      handle: 99,
+      sourceKind: 'generated-from-current-cp',
+      sourceCpRevision: 0,
+      startingFaceId: 1,
+      displayStyle: 'Paper5',
+      status: 'ready',
+      placement: IDENTITY_FOLDED_PLACEMENT,
+      snapshot: { ...foldedFigureSnapshot(), shown_order: 'given' },
+      renderSnapshot: foldedRenderSnapshot(),
+      sourceFingerprint: 'cs1:folded',
+      error: null,
+      layerOrder: held.layerOrder,
+    };
+    const nativeText = serializeNativeProjectFile(
+      createNativeCreasePatternProjectFile({
+        title: 'Native CP',
+        filename: 'layers.osf',
+        path: '/tmp/layers.osf',
+        document: blankCpDocumentState().document,
+        source: null,
+        foldProjection: JSON.parse(editableCpFoldText) as FoldDocument,
+        foldArtifacts: null,
+        creaseColorMode: 'mvf',
+        selection: emptyOristudioCpSelection(),
+        viewport: DEFAULT_ORISTUDIO_CP_VIEWPORT_OPTIONS,
+        foldedFigures: [figure],
+        activeFoldedFigureId: null,
+        lineage: importedCpLineage(),
+        extensions: { futureDocFeature: { a: 1 } },
+        appVersion: '0.1.1',
+      })
+    );
+    const savedBag = JSON.parse(nativeText).workspace.creasePattern.extensions;
+    expect(Object.keys(savedBag)).toEqual(['futureDocFeature', FOLDED_FIGURE_LAYER_ORDERS_KEY]);
+
+    await expect(
+      useWorkspaceStore
+        .getState()
+        .openProject(createFileService({ text: nativeText, name: 'layers.osf', path: '/tmp/layers.osf' }))
+    ).resolves.toBe(true);
+    expect(useWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.layerOrder).toEqual(held.layerOrder);
+
+    const fileService = createFileService();
+    await expect(useWorkspaceStore.getState().saveProjectAs(fileService)).resolves.toBe(true);
+    const written = JSON.parse(
+      (fileService.saveTextFile.mock.calls.at(-1)?.[0] as SaveTextFileOptions).contents
+    );
+    expect(written.workspace.creasePattern.extensions).toEqual(savedBag);
+    expect(written.workspace.creasePattern.viewState.foldedFigures[0]).not.toHaveProperty('layerOrder');
   });
 
   it('restores reference images from a native CP project', async () => {
