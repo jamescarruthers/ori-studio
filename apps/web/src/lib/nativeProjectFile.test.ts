@@ -27,7 +27,8 @@ import {
   linkFoldedFigureLayerOrders,
 } from '../cp-workspace/folded/foldedFigureLayerOrders';
 import { foldedFigureLayerOrder } from './layerOrder/foldedFigureLayerOrder';
-import type { LayerOrderRecord } from './layerOrder/layerOrderRecord';
+import { LAYER_ORDER_RECORD_MAX_BYTES, type LayerOrderRecord } from './layerOrder/layerOrderRecord';
+import { layerOrderRecordOfSize } from './layerOrder/layerOrderRecord.fixtures';
 
 const now = new Date('2026-05-26T12:00:00.000Z');
 
@@ -2502,6 +2503,18 @@ describe('a crease pattern’s layer orders', () => {
     const again = resaved(text);
     expect(bagOf(again)).toEqual(bagOf(text));
     expect(resaved(again)).toBe(again);
+  });
+
+  it('writes a record at the budget as one string, about its own size, and reads it back', () => {
+    const held = foldedFigureLayerOrder(layerOrderRecordOfSize(LAYER_ORDER_RECORD_MAX_BYTES));
+    if (!held.ok) throw new Error(held.reason);
+    const figure = { ...constrained(), layerOrder: held.layerOrder };
+    const plain = serializeNativeProjectFile(createNativeCreasePatternProjectFile(cpInput([foldedFigure()])));
+    const text = serializeNativeProjectFile(createNativeCreasePatternProjectFile(cpInput([figure])));
+    // The record's bytes and a backslash before each of its quotes: never a line per number.
+    expect(text.length - plain.length).toBeGreaterThan(LAYER_ORDER_RECORD_MAX_BYTES);
+    expect(text.length - plain.length).toBeLessThan(LAYER_ORDER_RECORD_MAX_BYTES * 1.2);
+    expect(opened(text).figures[0]!.layerOrder).toEqual(held.layerOrder);
   });
 
   // The four zero-bytes rules (layer-order plan, approach 6); the fourth is the Diagram's.

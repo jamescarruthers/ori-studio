@@ -6,6 +6,7 @@ import {
   readLayerOrderRecord,
   type LayerOrderRecord,
 } from './layerOrderRecord';
+import { layerOrderRecordOfSize } from './layerOrderRecord.fixtures';
 
 /** Two constraints over three faces, and the one free pair the order shown settled. */
 const RECORD: LayerOrderRecord = {
@@ -125,30 +126,8 @@ describe('a layer order record', () => {
 });
 
 describe('the record budget', () => {
-  /**
-   * A record whose JSON is `bytes` long: unit faces, and order pairs between
-   * the first two to make up the rest. Each face is 27 bytes and each pair
-   * 8, comma included.
-   */
-  function recordOfSize(bytes: number): LayerOrderRecord {
-    const empty = encoded({ faces: [], constraints: [], order: [] }).length;
-    const face = { at: [0.5, 0.25] as const, area: 1 };
-    const faceBytes = JSON.stringify(face).length + 1;
-    const faceCount = Math.floor((bytes - empty) / faceBytes) - 1;
-    const faces = Array.from({ length: faceCount }, () => face);
-    const withFaces = encoded({ faces, constraints: [], order: [] }).length;
-    // The first pair has no comma before it.
-    const pairCount = Math.floor((bytes - withFaces + 1) / 8);
-    const order = Array.from({ length: pairCount }, () => [0, 1, 1] as const);
-    const record = { faces, constraints: [], order };
-    // The few bytes left over, under a pair's, go on the first face's area: 11, 111, ….
-    const remainder = bytes - encoded(record).length;
-    const area = Number('1'.repeat(remainder + 1));
-    return { ...record, faces: [{ at: face.at, area }, ...faces.slice(1)] };
-  }
-
   it('writes a record of exactly the budget, and reads it back', () => {
-    const record = recordOfSize(LAYER_ORDER_RECORD_MAX_BYTES);
+    const record = layerOrderRecordOfSize(LAYER_ORDER_RECORD_MAX_BYTES);
     const json = encoded(record);
     expect(json.length).toBe(LAYER_ORDER_RECORD_MAX_BYTES);
     const read = readLayerOrderRecord(json);
@@ -156,7 +135,7 @@ describe('the record budget', () => {
   });
 
   it('refuses one byte more, saying how far over it is', () => {
-    const record = recordOfSize(LAYER_ORDER_RECORD_MAX_BYTES + 1);
+    const record = layerOrderRecordOfSize(LAYER_ORDER_RECORD_MAX_BYTES + 1);
     expect(encodeLayerOrderRecord(record)).toEqual({
       ok: false,
       reason: 'over-budget',
