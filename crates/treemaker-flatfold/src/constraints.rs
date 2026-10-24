@@ -159,6 +159,8 @@ pub(crate) struct SeedConflict {
     pub constraint_type: usize,
     pub faces: Vec<usize>,
     pub error_faces: Vec<usize>,
+    /// The roots the same walk leads back to ([`Traced::roots`]; ours).
+    pub roots: Vec<usize>,
     pub cause: ConflictCause,
 }
 
@@ -832,15 +834,20 @@ pub(crate) fn propagate_levels<M: NodeMeter>(
                     };
                     if let Some(cause) = cause {
                         let faces = *constraint_faces;
+                        let Traced {
+                            faces: error_faces,
+                            roots,
+                        } = error_faces(
+                            tables,
+                            pairs_of(constraint_type, &faces),
+                            assignments,
+                            parents,
+                        );
                         return Ok(Ok(Some(SeedConflict {
                             constraint_type,
                             faces: faces_vec(constraint_type, &faces),
-                            error_faces: error_faces(
-                                tables,
-                                pairs_of(constraint_type, &faces),
-                                assignments,
-                                parents,
-                            ),
+                            error_faces,
+                            roots,
                             cause,
                         })));
                     }
@@ -859,13 +866,13 @@ pub(crate) fn propagate_levels<M: NodeMeter>(
 /// found by walking parent pointers back from the pairs the conflicting
 /// constraint reads to the roots. Like upstream, it follows only variables
 /// already applied; ones implied in the level that conflicted are not
-/// expanded.
+/// expanded. With the conflict's roots beside it ([`traced`]; ours).
 pub(crate) fn error_faces(
     tables: &SearchTables<'_>,
     pairs: PairList,
     assignments: &[u8],
     parents: &[Option<Parent>],
-) -> Vec<usize> {
+) -> Traced {
     let lookup = tables.data.lookup();
     let variable_of = |[a, b]: [usize; 2]| lookup.get(a, b);
     let stack = pairs
@@ -874,23 +881,109 @@ pub(crate) fn error_faces(
         .copied()
         .filter_map(variable_of)
         .collect::<Vec<_>>();
-    traced_faces(tables, stack, assignments, parents)
+    traced(tables, stack, assignments, parents)
+}
+
+/// What a walk back through parent pointers reached ([`traced`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Traced {
+    /// The faces of every variable reached, ascending: upstream
+    /// `error_faces`, what [`traced_faces`] returns.
+    pub faces: Vec<usize>,
+    /// The traced roots (ours): the assigned variables reached whose parent
+    /// is [`Parent::Root`], the fixed orders and seeds the walk leads back
+    /// to, ascending.
+    pub roots: Vec<usize>,
 }
 
 /// The walk behind [`error_faces`], from any variables: the faces of every
 /// variable reached, ascending.
 pub(crate) fn traced_faces(
     tables: &SearchTables<'_>,
-    mut stack: Vec<usize>,
+    stack: Vec<usize>,
     assignments: &[u8],
     parents: &[Option<Parent>],
 ) -> Vec<usize> {
-    let lookup = tables.data.lookup();
+    traced(tables, stack, assignments, parents).faces
+}
+
+/// [`traced_faces`]' walk, with the roots it leads back to beside the faces
+/// (ours; one walk for both).
+///
+/// Every order the walk passes through was implied by a constraint from
+/// orders it also reaches, so the roots and the constraints imply all of
+/// them: whatever the walk explains, a conflict or a component with no
+/// order, needs no seed outside the roots. To keep that true where
+/// upstream's walk stops short, the roots also follow a pair implied in the
+/// level that conflicted (given a parent but no order yet), which upstream's
+/// `error_faces` leaves unexpanded: two constraints implied opposite orders
+/// for it, and both lead back to roots. The faces stay upstream's.
+pub(crate) fn traced(
+    tables: &SearchTables<'_>,
+    stack: Vec<usize>,
+    assignments: &[u8],
+    parents: &[Option<Parent>],
+) -> Traced {
     let mut scratch = tables.scratch();
     let mut seen = vec![false; assignments.len()];
+    walk_parents(
+        tables,
+        stack,
+        &mut seen,
+        assignments,
+        parents,
+        false,
+        &mut scratch,
+    );
+    let faces = seen
+        .iter()
+        .enumerate()
+        .filter(|(_, seen)| **seen)
+        .flat_map(|(variable, _)| tables.data.faces(variable))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    // On past the pairs implied in the level that conflicted: none are
+    // reached unless the walk explains a conflict.
+    let pending: Vec<usize> = (0..seen.len())
+        .filter(|&v| seen[v] && assignments[v] == 0 && parents[v].is_some())
+        .collect();
+    if !pending.is_empty() {
+        for &v in &pending {
+            seen[v] = false;
+        }
+        walk_parents(
+            tables,
+            pending,
+            &mut seen,
+            assignments,
+            parents,
+            true,
+            &mut scratch,
+        );
+    }
+    let roots = (0..seen.len())
+        .filter(|&v| seen[v] && assignments[v] != 0 && parents[v] == Some(Parent::Root))
+        .collect();
+    Traced { faces, roots }
+}
+
+/// Mark every variable reachable from `stack` through the constraints that
+/// implied them, expanding only applied ones unless `pending_too`.
+#[allow(clippy::too_many_arguments)]
+fn walk_parents(
+    tables: &SearchTables<'_>,
+    mut stack: Vec<usize>,
+    seen: &mut [bool],
+    assignments: &[u8],
+    parents: &[Option<Parent>],
+    pending_too: bool,
+    scratch: &mut Scratch,
+) {
+    let lookup = tables.data.lookup();
     while let Some(variable) = stack.pop() {
         seen[variable] = true;
-        if assignments[variable] == 0 {
+        if assignments[variable] == 0 && !pending_too {
             continue;
         }
         let Some(Parent::Implied {
@@ -911,7 +1004,7 @@ pub(crate) fn traced_faces(
             f1,
             f2,
             &mut counts,
-            &mut scratch,
+            scratch,
         )
         .get(index)
         .copied() else {
@@ -925,13 +1018,6 @@ pub(crate) fn traced_faces(
             }
         }
     }
-    seen.iter()
-        .enumerate()
-        .filter(|(_, seen)| **seen)
-        .flat_map(|(variable, _)| tables.data.faces(variable))
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect()
 }
 
 /// Upstream `get_components`. `transitivity_counts`, when given, counts
