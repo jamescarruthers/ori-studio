@@ -2024,7 +2024,9 @@ mod tests {
             }
         }
         assert!(previews > 100, "{previews}");
-        // The bug the option fixes is real.
+        // The bug the option fixes is real: where a quick search runs out of
+        // nodes (given none here, standing in for a component too big for
+        // 128), faraway cells went back to the open's first order.
         assert!(resets > 0);
     }
 

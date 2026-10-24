@@ -970,7 +970,6 @@ pub(crate) fn traced(
 
 /// Mark every variable reachable from `stack` through the constraints that
 /// implied them, expanding only applied ones unless `pending_too`.
-#[allow(clippy::too_many_arguments)]
 fn walk_parents(
     tables: &SearchTables<'_>,
     mut stack: Vec<usize>,
