@@ -154,6 +154,17 @@ export function isShortcutBarrierOpen(): boolean {
   return document.querySelector('[role="dialog"][aria-modal="true"][data-shortcut-barrier]') !== null;
 }
 
+/** The modal dialog on top — the last in the document, as they stack — or null with none open. */
+export function topmostModalDialog(): Element | null {
+  const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+  return dialogs[dialogs.length - 1] ?? null;
+}
+
+/** Is `root` the dialog on top? */
+export function isTopmostDialog(root: Element | null): boolean {
+  return root !== null && topmostModalDialog() === root;
+}
+
 export function handleShortcutKeyDown(
   event: KeyboardEvent,
   options: ShortcutDispatchOptions
