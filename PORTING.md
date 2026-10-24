@@ -662,21 +662,26 @@ Nothing changes until a caller seeds:
   wrap, recorded by the unseeded entry before the seeded core existed. The
   folding and render oracles are unchanged.
 - **Seeds go through every deduction the shipped fold makes.** They join the
-  letters' hierarchy and are checked against them first, because
-  `HierarchyTable::from_initial` keeps the first of two contradictory relations
-  silently. Then the equivalence conditions, the setup-time `removeMode` AEA
+  letters' hierarchy, each checked first against the table the unseeded fold
+  reads: `HierarchyTable::from_initial` of the letters, plus the seeds before
+  it. The check is needed because `from_initial` keeps the first of two
+  contradictory relations silently. It is made against that table, not the raw
+  letters, because the letters can disagree among themselves (two collinear
+  creases of different letters between the same two faces) and the table has
+  already settled that, so the order an unseeded fold found always passes as
+  seeds. Then the equivalence conditions, the setup-time `removeMode` AEA
   round, the subface priority and guide maps, and the search's realtime and
   final AEA all run over letters and seeds together. The research spike
   assembled its seeded path from the public stages and skipped the closure
   (product spec §13); this path cannot skip it, because it is the shipped body.
-- **Refusals are typed.** A seed that names no face, puts a face above itself,
-  or reverses a letter or an earlier seed is `WorkerOverlapSearchError::Seed`
-  (`HierarchySeedError`, engine code `fold_seed_refused`), never a
-  `FoldOutcome::Contradiction`, which is a statement about the creases. A seed
-  against a pair only the closure derives is the fold's ordinary contradiction:
-  the closure cannot tell which relations led to it. A seeded search is
-  bounded (`SEEDED_FOLD_ITERATION_BUDGET`, 100,000 outer iterations per
-  search, ending in `Exhausted`).
+- **Refusals are typed, and name a seed.** A seed that names no face, puts a
+  face above itself, or reverses that table or an earlier seed is
+  `WorkerOverlapSearchError::Seed` (`HierarchySeedError`, engine code
+  `fold_seed_refused`), never a `FoldOutcome::Contradiction`, which is a
+  statement about the creases. A seed against a pair only the closure derives
+  is the fold's ordinary contradiction: the closure cannot tell which relations
+  led to it. A seeded search is bounded (`SEEDED_FOLD_ITERATION_BUDGET`,
+  100,000 outer iterations per search, ending in `Exhausted`).
 - **The seeds are the session's**, so the restart, the wrap of "Another
   solution" and the render's fallback search (`HierarchySource::Search`) all
   start from them. A seeded figure never falls back to the order an unseeded
