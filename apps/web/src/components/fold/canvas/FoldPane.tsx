@@ -109,7 +109,6 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     () => (dx === 0 && dy === 0 ? foldUnitToUser : (point: Point) => foldUnitToUser({ x: point.x + dx, y: point.y + dy })),
     [dx, dy]
   );
-  const markers = useMemo(() => ({ [FOLD_PANE_ATTRIBUTE]: pane }), [pane]);
 
   return (
     <PaperPane<FoldHit>
@@ -129,7 +128,8 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       isTarget={takesPick}
       themeKey={inkKey}
       testId={`fold-${pane}-canvas`}
-      markers={markers}
+      // A press focuses the pane, and Enter there is the canvas's: it commits.
+      markers={{ [FOLD_PANE_ATTRIBUTE]: pane }}
       errorSurface={`fold:${pane}-webgl`}
     />
   );
