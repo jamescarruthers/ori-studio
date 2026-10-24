@@ -15,6 +15,8 @@ import { useLayoutStore } from '../store/layoutStore';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { createMenuActionHandler, handleMenuAction, isMenuActionId } from './menuActions';
 import { registerCanvasSessionEnder } from '../cp-workspace/canvasObjects/canvasSessions';
+import { registerModalHistory } from '../keyboard/dialogShortcuts';
+import { handleAppKeyDown } from '../lib/appKeyboard';
 
 const analyticsMocks = vi.hoisted(() => ({ track: vi.fn() }));
 vi.mock('../analytics', async (importOriginal) => ({
@@ -1155,5 +1157,127 @@ describe('the menus behind a modal dialog', () => {
 
     await expect(handleMenuAction('edit.undo')).resolves.toBe(true);
     expect(stepCount()).toBe(1);
+  });
+
+  /**
+   * A dialog that keeps a history of its own (`registerModalHistory`): the
+   * native Edit ▸ Undo and the keys inside it act on that history, not on the
+   * Diagram behind.
+   */
+  describe('with a history of its own', () => {
+    const unregisters: Array<() => void> = [];
+
+    function keepHistory(root: HTMLElement | null, steps: { past: number; future: number }) {
+      if (!root) throw new Error('no dialog open');
+      const history = {
+        undo: vi.fn(() => {
+          steps.past -= 1;
+          steps.future += 1;
+        }),
+        redo: vi.fn(() => {
+          steps.future -= 1;
+          steps.past += 1;
+        }),
+        canUndo: () => steps.past > 0,
+        canRedo: () => steps.future > 0,
+      };
+      unregisters.push(registerModalHistory(root, history));
+      return history;
+    }
+
+    afterEach(() => {
+      while (unregisters.length) unregisters.pop()?.();
+    });
+
+    it('undoes and redoes in the dialog, leaves the document alone, and counts each', async () => {
+      const past = state().diagramHistory.past.length;
+      openModal();
+      const history = keepHistory(dialog, { past: 1, future: 0 });
+
+      await expect(handleMenuAction('edit.undo')).resolves.toBe(true);
+      expect(history.undo).toHaveBeenCalledOnce();
+      expect(counted('edit.undo')).toBe(true);
+      await expect(handleMenuAction('edit.redo')).resolves.toBe(true);
+      expect(history.redo).toHaveBeenCalledOnce();
+      expect(counted('edit.redo')).toBe(true);
+
+      expect(stepCount()).toBe(2);
+      expect(state().diagramHistory.past).toHaveLength(past);
+      expect(state().diagramHistory.future).toHaveLength(0);
+    });
+
+    it('refuses a step its history does not have, and counts nothing', async () => {
+      openModal();
+      const history = keepHistory(dialog, { past: 0, future: 0 });
+
+      await expect(handleMenuAction('edit.undo')).resolves.toBe(false);
+      await expect(handleMenuAction('edit.redo')).resolves.toBe(false);
+
+      expect(history.undo).not.toHaveBeenCalled();
+      expect(history.redo).not.toHaveBeenCalled();
+      expect(stepCount()).toBe(2);
+      expect(counted('edit.undo')).toBe(false);
+      expect(counted('edit.redo')).toBe(false);
+    });
+
+    it('still holds the workspace switches back', async () => {
+      openModal();
+      keepHistory(dialog, { past: 1, future: 1 });
+
+      await expect(handleMenuAction('view.edit')).resolves.toBe(false);
+
+      expect(useLayoutStore.getState().activeWorkspace).toBe('diagram');
+      expect(routingMocks.navigateTo).not.toHaveBeenCalled();
+      expect(counted('view.edit')).toBe(false);
+    });
+
+    it('goes only to the dialog on top, and refuses again once unregistered', async () => {
+      openModal();
+      const history = keepHistory(dialog, { past: 2, future: 0 });
+      // Settings over it, say, which keeps no history.
+      const over = document.createElement('div');
+      over.setAttribute('role', 'dialog');
+      over.setAttribute('aria-modal', 'true');
+      over.setAttribute('data-shortcut-barrier', '');
+      document.body.append(over);
+
+      await expect(handleMenuAction('edit.undo')).resolves.toBe(false);
+      expect(history.undo).not.toHaveBeenCalled();
+      over.remove();
+      await expect(handleMenuAction('edit.undo')).resolves.toBe(true);
+      expect(history.undo).toHaveBeenCalledOnce();
+
+      unregisters.pop()?.();
+      await expect(handleMenuAction('edit.undo')).resolves.toBe(false);
+      expect(history.undo).toHaveBeenCalledOnce();
+      expect(stepCount()).toBe(2);
+    });
+
+    it('takes the same route from ⌘Z and ⇧⌘Z pressed inside the dialog', async () => {
+      openModal();
+      const history = keepHistory(dialog, { past: 1, future: 0 });
+      const surface = dialog?.appendChild(document.createElement('div'));
+      if (!surface) throw new Error('no dialog open');
+      const actions = {
+        getActiveEditingContext: () => state().activeEditingContext,
+        getSelection: () => ({ kind: 'tree' }) as const,
+        handleMenuAction,
+        selectNone: vi.fn(),
+      };
+      const press = (init: KeyboardEventInit) => {
+        const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+        Object.defineProperty(event, 'target', { value: surface });
+        return handleAppKeyDown(event, actions);
+      };
+
+      expect(press({ key: 'z', metaKey: true })).toBe(true);
+      await vi.waitFor(() => expect(history.undo).toHaveBeenCalledOnce());
+      expect(press({ key: 'Z', metaKey: true, shiftKey: true })).toBe(true);
+      await vi.waitFor(() => expect(history.redo).toHaveBeenCalledOnce());
+
+      expect(stepCount()).toBe(2);
+      expect(counted('edit.undo')).toBe(true);
+      expect(counted('edit.redo')).toBe(true);
+    });
   });
 });
