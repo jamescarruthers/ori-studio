@@ -1106,18 +1106,25 @@ fn kabuto_cut(t: f64, color: LineColor) -> FoldSource {
     }
 }
 
-/// [`kabuto_cut`] with whichever letter the solver can order.
+/// [`kabuto_cut`] with whichever letter Oriedita folds flat, as Edit would
+/// fold the edited creases, and the session orders.
 fn split_kabuto(t: f64) -> FoldSource {
     for color in [LineColor::Blue2, LineColor::Red1] {
         let fold = kabuto_cut(t, color);
+        let mut cp = CpSession::new();
+        let solved = matches!(
+            cp.folded_figure_fold_with_order(&fold, &[], FoldedFigureModel::default()),
+            Ok(oristudio_cp::session::FoldWithOrderResult::Folded { snapshot, .. })
+                if snapshot.outcome == FoldOutcome::Solved
+        );
         let Ok(source) = LayerSource::from_oriedita(&fold) else {
             continue;
         };
-        if ConstraintSession::open(source, &Limits::default()).is_ok() {
+        if solved && ConstraintSession::open(source, &Limits::default()).is_ok() {
             return fold;
         }
     }
-    panic!("no letter orders kabuto's split flap");
+    panic!("no letter folds kabuto's split flap flat");
 }
 
 fn session_on(fold: &FoldSource) -> ConstraintSession {

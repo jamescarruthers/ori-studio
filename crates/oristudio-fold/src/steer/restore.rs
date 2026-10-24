@@ -215,7 +215,9 @@ impl ConstraintSession {
         }
 
         // The saved order pairs that resolve: a preference, one value per
-        // variable, the open's first order where nothing resolves.
+        // variable, the open's first order where nothing resolves. Any pair
+        // of the order does, as `save` writes every free pair, a pair only the
+        // solver's view overlaps among them.
         let view = session.source().view();
         let mut resolved: Vec<Option<Seed>> = record
             .order
@@ -225,7 +227,7 @@ impl ConstraintSession {
                     faces[saved.f as usize].intact()?,
                     faces[saved.g as usize].intact()?,
                 );
-                let v = session.offered_pair(f, g)?;
+                let v = session.variable_of(f, g)?;
                 let f_above = saved.sign.above(view.front_up(g)?);
                 let lo_above = f_above == (f == session.variables()[v].lo());
                 Some((v, value_of(lo_above)))
