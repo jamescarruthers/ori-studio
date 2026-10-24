@@ -737,7 +737,13 @@ between two faces folds, a mountain if `Red1` and otherwise a valley), and
 through the same builder as a solved figure's. Given a session's own order it
 is the scene of the figure `fold_with_order` folds, front and back, on every
 order of kabuto and `solution_sample_1`, so the dialog shows what its Apply
-will.
+will. The constraint session (E5) adds one more accessor,
+`scene_subface_face_ids`: the faces under each subface the paper scene draws,
+numbered as the scene numbers them, so the dialog restacks a scene it holds
+for another order without asking for a new one. The scene and the accessor
+share one skip rule (`drawn_subfaces`: no face under it, or a ring of fewer
+than three points), moved out of the scene builder unchanged; the scene
+goldens of `tests/fold_with_order.rs` hold it to its bytes.
 
 ### Ori Studio native operations
 
