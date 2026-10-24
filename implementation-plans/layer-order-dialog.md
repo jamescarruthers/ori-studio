@@ -347,6 +347,19 @@ the fixtures. The thresholds are proposals for you to accept.
 | Record bytes through `LayerSource::from_oriedita` (Fold's import measured 3.1 KB / 40 KB / 228 KB at p50 / p95 / max; iguana-c0 830 KB) | every design under the 1 MB budget | Apply refuses above the budget, with a reason. A smaller encoding is built only if a real file crosses it |
 | Fold-only pairs | reported | – |
 
+**Result, 2026-10-24 (#503): passed on every measure.** It was run natively,
+in release, over 489 designs (484 cpoogle, iguana-c0 and the fixtures), all of
+which Oriedita folds flat.
+- Letter seeds matched on 480 of 480 admitted designs.
+- The source refused 9 (1.8%): 8 too deep, 1 with 4,722 faces. None were
+  non-convex, ambiguous or out of tolerance.
+- `fold_with_order` reproduced 1,467 of 1,467 witnesses, and the reopen
+  rebuild matched all 1,467.
+- Records ran 3.8 KB / 46 KB / 249 KB, and iguana-c0's was 863 KB.
+- There were no Fold-only pairs on any design.
+- Watch: on iguana-c0, 1 of 5 checks reached its 30 s deadline with no
+  verdict.
+
 **Phase gate 2 (E8).** In wasm, against spec §6.9's targets.
 
 | Measure | Pass | If it fails |
@@ -764,11 +777,11 @@ H3's new rehydrate, so it can only follow H3.
 - [ ] E6: explain and solutions
 - [ ] E7: wasm bridge
 - [ ] E8: census 2 (phase gate 2 reviewed)
-- [ ] U1: shared picking and tints
+- [x] U1: shared picking and tints (#497)
 - [ ] U2: ModalFrame
 - [ ] U3a: the native-menu guard (to main)
 - [ ] U3b: dialog keys
-- [ ] H1: record, host contract, file formats
+- [x] H1: record, host contract, file formats (#496)
 - [ ] U4: dialog shell
 - [ ] U5: engine client
 - [ ] U6: engine wiring
