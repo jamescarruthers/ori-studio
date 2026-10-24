@@ -399,9 +399,13 @@ fn unsearched(segments: &[LineSegment], seeds: Vec<HierarchyRelation>) -> Foldin
 }
 
 /// Seeded with the full relations of any order Oriedita found, on any fixture,
-/// the fold finds exactly that order as its first and only solution; "Another
-/// solution" and a restart stay on it; and a render that has to search
-/// (nothing solved yet) draws it, not the unseeded first order.
+/// the fold finds exactly that order as its first and only solution; a
+/// restart, which rebuilds the search, comes back to it; and a render that has
+/// to search (nothing solved yet) draws it, not the unseeded first order.
+///
+/// "Another solution" is pressed too, but with one solution it has nowhere to
+/// go and never wraps, so it cannot fail here: the wrap is held to the seeds
+/// by `a_partly_seeded_figure_walks_only_the_solutions_that_honour_the_seeds`.
 #[test]
 fn seeding_an_order_oriedita_found_reproduces_it() {
     let (mut orders_checked, mut fallbacks_with_teeth) = (0, 0);
@@ -435,6 +439,7 @@ fn seeding_an_order_oriedita_found_reproduces_it() {
                 "{name} case {case}: a whole order seeded leaves another solution"
             );
 
+            // One solution: the press neither searches nor wraps.
             let another = fold_another(&mut seeded).expect("another solution");
             assert_eq!(
                 shown(&another),
@@ -480,10 +485,184 @@ fn seeding_an_order_oriedita_found_reproduces_it() {
     assert!(fallbacks_with_teeth > 0);
 }
 
+fn relation_pair(relation: &HierarchyRelation) -> (usize, usize) {
+    (relation.upper_face, relation.lower_face)
+}
+
+fn honours(order: &InitialHierarchy, seed: &HierarchyRelation) -> bool {
+    order.relations.contains(seed)
+}
+
+/// Partly seeded, a figure keeps several solutions, and "Another solution"
+/// walks exactly those: every case it shows, through the wrap back to the
+/// first, honours the seed, and the cases are Oriedita's own solutions that do.
+///
+/// The seed is a pair Oriedita's solutions order both ways, taken the way its
+/// first solution does not, by at least two solutions. So the walk has
+/// somewhere to go and does wrap, and a wrap that forgot the seeds would land
+/// on an order that breaks them.
+#[test]
+fn a_partly_seeded_figure_walks_only_the_solutions_that_honour_the_seeds() {
+    let fixtures = flat_fixtures();
+    for name in ["solution_sample_1", "kabuto", "r069-s07"] {
+        let segments = &fixtures
+            .iter()
+            .find(|(fixture, _)| *fixture == name)
+            .expect("a fixture")
+            .1;
+        let orders = oriedita_orders(segments);
+        let seed = orders[0]
+            .relations
+            .iter()
+            .map(|relation| HierarchyRelation {
+                upper_face: relation.lower_face,
+                lower_face: relation.upper_face,
+            })
+            .find(|seed| orders.iter().filter(|order| honours(order, seed)).count() >= 2)
+            .unwrap_or_else(|| panic!("{name}: no pair two solutions order against the first"));
+        let mut expected: Vec<&InitialHierarchy> = orders
+            .iter()
+            .filter(|order| honours(order, &seed))
+            .collect();
+
+        let mut session = FoldingEstimateSession::with_seeds(segments, 1, vec![seed]);
+        let mut estimate = session
+            .folding_estimated(EstimationOrder::Order5)
+            .unwrap_or_else(|error| panic!("{name}: {error:?}"));
+        let first = shown(&estimate).cloned().expect("a first solution");
+        let mut walked = vec![first.clone()];
+        let mut presses = 0;
+        while estimate.find_another_overlap_valid {
+            estimate = fold_another(&mut session).expect("another solution");
+            presses += 1;
+            assert!(presses <= MAX_PRESSES, "{name}: the walk does not end");
+            walked.extend(shown(&estimate).cloned());
+        }
+        assert!(walked.len() >= 2, "{name}: one solution, so nothing wraps");
+        let wrapped = fold_another(&mut session).expect("the wrap");
+        assert_eq!(
+            wrapped.current_fold_case, 1,
+            "{name}: the press did not wrap"
+        );
+        assert_eq!(
+            shown(&wrapped),
+            Some(&first),
+            "{name}: the wrap left the seeded first solution"
+        );
+
+        for (index, order) in walked.iter().enumerate() {
+            assert!(
+                honours(order, &seed),
+                "{name} case {}: breaks the seed {:?}",
+                index + 1,
+                relation_pair(&seed)
+            );
+        }
+        let mut walked: Vec<&InitialHierarchy> = walked.iter().collect();
+        let key = |order: &&InitialHierarchy| {
+            order
+                .relations
+                .iter()
+                .map(relation_pair)
+                .collect::<Vec<_>>()
+        };
+        walked.sort_by_key(key);
+        expected.sort_by_key(key);
+        assert_eq!(
+            walked, expected,
+            "{name}: not Oriedita's own solutions that honour the seed"
+        );
+        println!(
+            "{name}: seeded {:?}, {} of {} solutions walked, wrapped to case 1",
+            relation_pair(&seed),
+            walked.len(),
+            orders.len()
+        );
+    }
+}
+
 // --- refusals ---------------------------------------------------------------
 
 fn kabuto() -> Vec<LineSegment> {
     fold_file("flat-folder/kabuto.fold")
+}
+
+/// A square whose middle crease is two collinear halves, `lower` from the
+/// bottom edge to the centre and `upper` on to the top: two letters for one
+/// pair of faces.
+fn split_crease_square(lower: LineColor, upper: LineColor) -> Vec<LineSegment> {
+    vec![
+        segment(0.0, 0.0, 0.5, 0.0, LineColor::Black0),
+        segment(0.5, 0.0, 1.0, 0.0, LineColor::Black0),
+        segment(1.0, 0.0, 1.0, 1.0, LineColor::Black0),
+        segment(1.0, 1.0, 0.5, 1.0, LineColor::Black0),
+        segment(0.5, 1.0, 0.0, 1.0, LineColor::Black0),
+        segment(0.0, 1.0, 0.0, 0.0, LineColor::Black0),
+        segment(0.5, 0.0, 0.5, 0.5, lower),
+        segment(0.5, 0.5, 0.5, 1.0, upper),
+    ]
+}
+
+/// When the creases' letters disagree, the fold reads the first of them
+/// (`HierarchyTable::from_initial`) and solves. Seeds are checked against
+/// that reading, not the raw letters, so the order on screen, and the letter
+/// it kept, always pass as seeds; the other letter, seeded, says the opposite
+/// of what the fold reads and is refused, named as the seed it is.
+#[test]
+fn seeds_are_checked_against_the_order_the_fold_reads_when_letters_disagree() {
+    // Mountain and valley halves either way round, and a mountain half beside
+    // an unassigned one, which folds as a valley.
+    for (lower, upper) in [
+        (LineColor::Red1, LineColor::Blue2),
+        (LineColor::Blue2, LineColor::Red1),
+        (LineColor::Red1, LineColor::Black0),
+    ] {
+        let label = format!("{lower:?}/{upper:?}");
+        let segments = split_crease_square(lower, upper);
+        let letters = letters(&segments);
+        let (kept, dropped) = letters
+            .relations
+            .iter()
+            .enumerate()
+            .find_map(|(index, kept)| {
+                letters.relations[index + 1..]
+                    .iter()
+                    .find(|other| relation_pair(other) == (kept.lower_face, kept.upper_face))
+                    .map(|dropped| (*kept, *dropped))
+            })
+            .unwrap_or_else(|| panic!("{label}: the letters agree"));
+
+        let mut unseeded = FoldingEstimateSession::new(&segments, 1);
+        let estimate = unseeded
+            .folding_estimated(EstimationOrder::Order5)
+            .expect("the unseeded fold");
+        assert_eq!(estimate.outcome, FoldOutcome::Solved, "{label}");
+        assert_eq!(estimate.discovered_fold_cases, 1, "{label}");
+        let order = shown(&estimate).cloned().expect("the order on screen");
+        assert!(
+            honours(&order, &kept),
+            "{label}: the fold read the first letter"
+        );
+
+        for seeds in [vec![kept], order.relations.clone()] {
+            let (_, result) = seeded_first_fold(&segments, seeds);
+            let estimate = result.unwrap_or_else(|error| panic!("{label}: {error:?}"));
+            assert_eq!(estimate.outcome, FoldOutcome::Solved, "{label}");
+            assert_eq!(shown(&estimate), Some(&order), "{label}");
+        }
+
+        let (_, result) = seeded_first_fold(&segments, vec![dropped]);
+        assert_eq!(
+            result.expect_err("the other letter, seeded, is refused"),
+            FoldingEstimateError::WorkerOverlap(WorkerOverlapSearchError::Seed(
+                HierarchySeedError::Contradiction {
+                    upper_face: dropped.upper_face,
+                    lower_face: dropped.lower_face,
+                }
+            )),
+            "{label}"
+        );
+    }
 }
 
 fn seeded_first_fold(

@@ -691,7 +691,10 @@ Nothing changes until a caller seeds:
 
 Seeded with the full relations of an order Oriedita found, the fold finds that
 order and no other: 38 of 38 orders over the eleven fixtures that solve, each in
-one outer iteration.
+one outer iteration. Seeded with one pair that Oriedita's solutions order both
+ways, "Another solution" walks exactly the solutions that honour it, and wraps
+back to the seeded first (`solution_sample_1` 8 of 16, `kabuto` 3 of 9,
+`r069-s07` 3 of 5).
 
 ### Ori Studio native operations
 
