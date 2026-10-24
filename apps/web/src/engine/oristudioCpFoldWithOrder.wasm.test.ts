@@ -8,6 +8,8 @@ import type {
   OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureResult,
   OristudioCpFoldedRenderSnapshot,
+  OristudioCpFoldSource,
+  OristudioCpFoldWithOrderResult,
 } from './oristudioCpTypes';
 import {
   createNativeCreasePatternProjectFile,
@@ -29,6 +31,11 @@ import { importedCpLineage } from '../lib/oristudioCpLineage';
  * gate (`crates/oristudio-cp/tests/fold_with_order.rs`), over the same file
  * fixtures. The recording, `tests/fixtures/oristudio-cp/flat-figure-osf.json`,
  * was written by the bridge built before the change.
+ *
+ * Given an order, the bridge names the same faces as the native kernel: its
+ * face-ring digests are the ones the native test recorded
+ * (`face-ring-digests.json`), so a source read on desktop folds in the browser
+ * and the other way round. And a refusal crosses as a result with no handle.
  *
  * Skipped when the bridge has not been built; CI builds it first. Regenerate
  * only after an intentional change to what an unseeded fold answers:
@@ -188,5 +195,99 @@ describe.skipIf(!wasmAvailable)('the CP bridge, with no order given', () => {
     }
     const expected = JSON.parse(readFileSync(OSF_GOLDEN, 'utf8')) as OsfBytes[];
     expect(actual).toEqual(expected);
+  });
+});
+
+interface FixtureDigest {
+  fixture: string;
+  faces: number;
+  digest: string;
+}
+
+/** The native kernel's digests, written by `fold_with_order.rs`'s `the_native_digests_are_the_recorded_ones`. */
+const NATIVE_DIGESTS = resolve(FIXTURES, 'oristudio-cp/face-ring-digests.json');
+
+describe.skipIf(!wasmAvailable)('the CP bridge, given a layer order', () => {
+  let wasm: CpWasm;
+
+  beforeAll(async () => {
+    wasm = await import('../generated/oristudio-cp-wasm/oristudio_cp_wasm');
+    wasm.initSync({ module: readFileSync(WASM) });
+  });
+
+  /** The fixture folded whole, unseeded, with the selection's source. */
+  function folded(relative: string) {
+    const document = open(wasm, relative);
+    const lineIds = everyLine(wasm, document);
+    const source = wasm.fold_source_of_selection(document, lineIds, 1) as OristudioCpFoldSource;
+    const figure = wasm.folded_figure_fold_selected(
+      document,
+      lineIds,
+      1,
+      'Order5',
+      null,
+      0
+    ) as OristudioCpFoldedFigureResult;
+    return { document, source, figure };
+  }
+
+  it('names every fixture’s faces with the native kernel’s digest', () => {
+    const native = JSON.parse(readFileSync(NATIVE_DIGESTS, 'utf8')) as FixtureDigest[];
+    expect(native.map((entry) => entry.fixture)).toEqual(FILE_FIXTURES.map(([fixture]) => fixture));
+    for (const [fixture, relative] of FILE_FIXTURES) {
+      const { source, figure } = folded(relative);
+      const expected = native.find((entry) => entry.fixture === fixture)?.digest;
+      expect(source.digest, fixture).toBe(expected);
+      expect(wasm.folded_figure_digest(figure.handle), fixture).toBe(expected);
+      expect((wasm.folded_figure_source(figure.handle, undefined) as OristudioCpFoldSource).digest).toBe(
+        expected
+      );
+    }
+  });
+
+  it('folds a source into a new handle, and refuses an order it cannot draw with no handle', () => {
+    const { source, figure } = folded('flat-folder/kabuto.fold');
+    const next = figure.handle + 1;
+    const nothingAt = (handle: number) => expect(() => wasm.folded_figure_snapshot(handle)).toThrow();
+
+    // No relations is an ordinary fold: Oriedita's order, and no `shown_order` key.
+    const plain = wasm.folded_figure_fold_with_order(
+      source,
+      new Uint32Array(0),
+      null,
+      0
+    ) as OristudioCpFoldWithOrderResult;
+    if (plain.status !== 'folded') throw new Error(`refused: ${JSON.stringify(plain.refusal)}`);
+    expect(plain.handle).toBe(next);
+    expect(plain.snapshot.outcome).toBe('Solved');
+    expect('shown_order' in plain.snapshot).toBe(false);
+    expect(plain.snapshot).toEqual(figure.snapshot);
+    wasm.free_folded_figure(plain.handle);
+
+    const refusalOf = (relations: Uint32Array, from: OristudioCpFoldSource = source) => {
+      const result = wasm.folded_figure_fold_with_order(
+        from,
+        relations,
+        null,
+        0
+      ) as OristudioCpFoldWithOrderResult;
+      nothingAt(next);
+      return result.status === 'refused' ? result.refusal : result;
+    };
+    expect(refusalOf(Uint32Array.of(2, 2))).toEqual({ code: 'same_face', face: 2 });
+    expect(refusalOf(Uint32Array.of(0, 999))).toEqual({
+      code: 'unknown_face',
+      face: 999,
+      faces_total: 18,
+    });
+    expect(refusalOf(Uint32Array.of(0, 1, 1, 0))).toMatchObject({ code: 'against_letters' });
+    expect(refusalOf(new Uint32Array(0), { ...source, digest: '0000000000000000' })).toEqual({
+      code: 'digest_mismatch',
+      expected: '0000000000000000',
+      actual: source.digest,
+    });
+    // Relations are pairs.
+    expect(() => wasm.folded_figure_fold_with_order(source, Uint32Array.of(0, 1, 2), null, 0)).toThrow();
+    nothingAt(next);
   });
 });
