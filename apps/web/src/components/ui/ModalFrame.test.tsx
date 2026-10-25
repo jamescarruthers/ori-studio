@@ -90,11 +90,35 @@ describe('a modal frame', () => {
     expect(close.parentElement?.textContent).toContain('Kabuto');
   });
 
-  it('puts a lead right after the title, before the detail', () => {
-    render({ lead: <button type="button">Folded</button>, detail: 'Kabuto' });
-    const lead = byRole(dialog(), 'button', 'Folded');
-    const bar = lead.closest('div')?.parentElement;
-    expect(bar?.textContent?.startsWith('Layer orderFoldedKabuto')).toBe(true);
+  it('puts a lead right after the title, before the detail and the tools', () => {
+    render({ lead: <button type="button">Folded</button>, detail: 'Kabuto', tools: <button type="button">X-ray</button> });
+    const close = byRole(dialog(), 'button', 'Close Layer order');
+    const bar = close.parentElement!;
+    expect(bar.textContent?.startsWith('Layer orderFoldedKabutoX-ray')).toBe(true);
+    // In rows on a phone: the title's line (title, lead, detail), then the tools; the close button in the bar.
+    expect(bar.dataset.rows).toBe('true');
+    expect(bar.children[0]!.textContent).toBe('Layer orderFoldedKabuto');
+    expect(bar.children[1]!.textContent).toBe('X-ray');
+    expect(bar.lastElementChild).toBe(close);
+  });
+
+  it('keeps a bar with no lead and no tools as it was: title, detail and close, side by side', () => {
+    render({ detail: 'Kabuto' });
+    const close = byRole(dialog(), 'button', 'Close Layer order');
+    const bar = close.parentElement!;
+    expect(bar.dataset.rows).toBeUndefined();
+    expect([...bar.children].map((child) => child.textContent)).toEqual(['Layer order', 'Kabuto', '']);
+  });
+
+  it('closes on a press on the backdrop unless told not to', () => {
+    const { onClose } = render({ closeOnBackdrop: false });
+    press(dialog(), 'mousedown');
+    expect(onClose).not.toHaveBeenCalled();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    press(byRole(dialog(), 'button', 'Close Layer order'), 'click');
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 
   it('gives Undo and Redo to its history while it is on top, and lets go as it closes', () => {
