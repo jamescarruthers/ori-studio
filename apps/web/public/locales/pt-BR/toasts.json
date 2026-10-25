@@ -143,6 +143,7 @@
     "solvingLong": "Ainda resolvendo — isso pode demorar um pouco"
   },
   "layerOrder": {
+    "reopenFailed": "Não foi possível dobrar {{name}} novamente para abri-lo aqui. A imagem não mudou.",
     "unavailable": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo."
   },
   "paperExport": {

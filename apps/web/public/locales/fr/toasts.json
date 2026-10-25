@@ -143,6 +143,7 @@
     "solvingLong": "Résolution toujours en cours — cela peut prendre du temps"
   },
   "layerOrder": {
+    "reopenFailed": "Impossible de replier {{name}} pour l’ouvrir ici. Son image est inchangée.",
     "unavailable": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion et réessayez."
   },
   "paperExport": {

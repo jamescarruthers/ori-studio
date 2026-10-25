@@ -130,6 +130,7 @@
     "solvingLong": "Wird noch gelöst – das kann eine Weile dauern"
   },
   "layerOrder": {
+    "reopenFailed": "{{name}} konnte nicht neu gefaltet werden, um es hier zu öffnen. Sein Bild bleibt unverändert.",
     "unavailable": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
   },
   "paperExport": {

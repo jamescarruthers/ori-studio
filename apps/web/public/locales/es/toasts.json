@@ -143,6 +143,7 @@
     "solvingLong": "Sigue resolviendo: esto puede tardar un rato"
   },
   "layerOrder": {
+    "reopenFailed": "No se pudo volver a plegar {{name}} para abrirlo aquí. Su imagen no cambia.",
     "unavailable": "Orden de capas no se cargó. Comprueba tu conexión y vuelve a intentarlo."
   },
   "paperExport": {

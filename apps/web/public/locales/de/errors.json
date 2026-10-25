@@ -20,6 +20,8 @@
   },
   "cp": {
     "foldProducedNothing": "Diese Faltlinien haben keine flache Faltform, die sich zeichnen ließe",
+    "layerOrderNotApplied": "Die Lagenreihenfolge konnte diese Reihenfolge nicht auf {{name}} anwenden. Sein Bild bleibt unverändert.",
+    "layerOrderTooLarge": "Diese Lagenreihenfolge ist zu groß, um sie mit dem Modell zu speichern; es bleibt unverändert.",
     "pinnedVertex": "Diese Falte beginnt an einem fixierten Knoten und kann daher nicht verlängert werden. Lösen Sie zuerst die Fixierung des Knotens, oder verlängern Sie eine andere Falte."
   },
   "cpDetectImport": {

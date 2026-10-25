@@ -130,6 +130,7 @@
     "solvingLong": "Still solving — this can take a while"
   },
   "layerOrder": {
+    "reopenFailed": "Couldn’t refold {{name}} to open it here. Its picture is unchanged.",
     "unavailable": "Layer order didn’t load. Check your connection and try again."
   },
   "paperExport": {
