@@ -6368,7 +6368,8 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12739,7 +12740,8 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19112,7 +19114,8 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25138,7 +25141,8 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31164,7 +31168,8 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37535,7 +37540,8 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -43906,7 +43912,8 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -49932,6 +49939,7 @@
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
     "tools:diagram.uncreasedLine": "ec84cf0f5a33",
-    "common:workspaceRail.foldBeta": "4ca3f6c57efe"
+    "common:workspaceRail.foldBeta": "4ca3f6c57efe",
+    "dialogs:paperExport.zipUnavailable": "ac5f8181da74"
   }
 }
