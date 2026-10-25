@@ -496,7 +496,7 @@ describe('the Layer order dialog’s session', () => {
     await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
   });
 
-  it('a dialog that crashes answers cancelled at once, and its fallback stays until it is dismissed', async () => {
+  it('a dialog that crashes answers cancelled at once, and its fallback stays, with Close, until it is closed', async () => {
     boom.whenReady = true;
     vi.spyOn(console, 'error').mockImplementation(() => {});
     mount();
@@ -515,8 +515,11 @@ describe('the Layer order dialog’s session', () => {
     expect(byRole(document, 'alert', /This dialog stopped working/)).toBeDefined();
     await flush();
     expect(queryByRole(document, 'alert', /This dialog stopped working/)).not.toBeNull();
+    // Its host has its answer, so there is nothing to try again: Close, not Try again.
+    const fallback = byRole(document, 'alert', /This dialog stopped working/);
+    expect(queryByRole(fallback, 'button', /Try again/)).toBeNull();
 
-    click(byRole(document, 'button', 'Dismiss'));
+    click(byRole(fallback, 'button', 'Close'));
     expect(queryByRole(document, 'alert', /This dialog stopped working/)).toBeNull();
 
     // The next open is not busy, and opens.
