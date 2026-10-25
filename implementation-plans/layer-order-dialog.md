@@ -698,7 +698,10 @@ notice has no board of its own; U10 builds it from the approved copy.
     one or more. In the object step, a pick on an unpicked face adds it and a
     pick on a picked one removes it, by pointer, tap or the keyboard face menu
     (whose object items become checkable and stay open). Objects read in
-    letter order ("H, K"), whatever order they were picked in.
+    letter order ("H, K"), whatever order they were picked in. The sentence
+    stays on one line: the object chips sit inline after the verb, and the
+    object slot wraps when it fills (your call, 2026-10-25, over a separate
+    line for the objects).
   - **Which faces can be objects** (my call): the faces open against the
     subject in the committed order, as now, whatever else is picked. Picking
     one never changes which others are offered, so the tints hold still.
