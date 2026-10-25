@@ -1055,6 +1055,86 @@ function diagramStepCases(theme) {
   };
 }
 
+/**
+ * Refresh All offline (#519 second review): five constrained steps and one
+ * without a record, all out of date, refreshed with the network gone. The
+ * host engine is asked once, the constrained steps after it counted; the
+ * unconstrained one refreshes; one toast counts them, and the app's error
+ * toast ("The worker stopped unexpectedly.") says nothing.
+ */
+function diagramStepOfflineCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openKabutoInEdit(page, url, theme);
+    await linkKabutoStep(page);
+    await captured(page);
+    const applied = await applyConstraintToStep(page);
+    await captured(page);
+    if (applied.outcome !== 'captured') throw new Error(`Apply: ${applied.outcome}`);
+    await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const { ensureCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+      const { sheetRegions } = await import('/src/cp-workspace/sheets/cpSheetRegions.ts');
+      const { linkDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+      store.getState().closeDiagramStep();
+      // Four copies, record and all: five constrained steps.
+      for (let i = 0; i < 4; i += 1) store.getState().duplicateDiagramStep(window.__layerOrderStep);
+      const [sheet] = sheetRegions(await ensureCpSheetIndex(store.getState().oristudioCpDocument.document));
+      const plain = store.getState().addDiagramStep();
+      if (!(await linkDiagramStep(plain, sheet, 'folded'))) throw new Error('the plain step did not link');
+      // An edit that keeps every face: every step goes out of date.
+      const lines = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+      const minY = Math.min(...lines.flatMap((line) => [line.a.y, line.b.y]));
+      const index = lines.findIndex(
+        (line) => line.color === 'Black0' && Math.abs(line.a.y - minY) < 1e-9 && Math.abs(line.b.y - minY) < 1e-9
+      );
+      const line = lines[index];
+      const mid = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
+      await store.getState().replaceOristudioCpLineSegments([index + 1], [{ ...line, b: mid }, { ...line, a: mid }], 'Split border');
+      // What the run needs, loaded while online: Refresh All, and the host engine's code (not its worker).
+      window.__refreshAll = (await import('/src/diagram/capture/captureQueue.ts')).refreshAllDiagramSteps;
+      await (await import('/src/layer-order/host/hostEngineGateway.ts')).loadLayerOrderHostEngine();
+      const Spawning = window.Worker;
+      window.__spawned = [];
+      window.Worker = class extends Spawning {
+        constructor(...args) {
+          super(...args);
+          window.__spawned.push(String(args[0]));
+        }
+      };
+    });
+    await settle(page);
+
+    await page.context().setOffline(true);
+    const result = await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const refreshed = await window.__refreshAll();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const { stepLayerOrderOf } = await import('/src/diagram/capture/captureLayerOrder.ts');
+      const steps = store.getState().diagram.steps.filter((step) => step.source?.kind === 'cp');
+      return {
+        refreshed,
+        layerOrderWorkers: window.__spawned.filter((spawned) => spawned.includes('layerOrderWorker')).length,
+        toasts: [...document.querySelectorAll('[data-sonner-toast]')].map((toast) => toast.textContent?.trim()),
+        error: store.getState().error,
+        flagged: steps.filter((step) => stepLayerOrderOf(step.source.layerOrder)?.record.attention).length,
+        constrained: steps.filter((step) => step.source.layerOrder !== undefined).length,
+      };
+    });
+    await record(`diagram-${tag}-offline-refresh-all`, { page: await pageShot(page) });
+    await page.context().setOffline(false);
+    console.log(`[${tag}] offline Refresh All: ${JSON.stringify(result)}`);
+    const said = 'Layer order couldn’t load, so 5 steps weren’t changed. Check your connection, then try again.';
+    if (result.refreshed !== 1) throw new Error('offline Refresh All did not refresh the unconstrained step alone');
+    if (result.layerOrderWorkers > 1) throw new Error(`offline Refresh All spawned ${result.layerOrderWorkers} workers`);
+    if (!result.toasts.some((toast) => toast?.includes(said))) throw new Error('offline Refresh All did not count its steps');
+    if (result.toasts.some((toast) => toast?.includes('stopped unexpectedly')) || result.error) {
+      throw new Error('offline Refresh All raised the app’s error toast');
+    }
+    if (result.flagged !== 0 || result.constrained !== 5) throw new Error('offline Refresh All wrote to a record');
+  };
+}
+
 // ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
@@ -1067,6 +1147,8 @@ const CASES = [
   { name: 'fold-import-frame', run: foldImportFrame },
   { name: 'diagram-step', run: diagramStepCases(null) },
   { name: 'diagram-step-horizon', run: diagramStepCases('Horizon') },
+  { name: 'diagram-step-offline', run: diagramStepOfflineCases(null) },
+  { name: 'diagram-step-offline-horizon', run: diagramStepOfflineCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------
