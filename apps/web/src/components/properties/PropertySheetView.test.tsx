@@ -78,10 +78,11 @@ afterEach(() => {
 describe('PropertySheetView', () => {
   it('shows the header and marks the surface', () => {
     render(sheetOf());
-    expect(container?.querySelector('.property-sheet')?.getAttribute('data-test-surface')).toBe('');
-    expect(container?.querySelector('.property-sheet__title')?.textContent).toBe('Thing');
-    expect(container?.querySelector('.property-sheet__subtitle')?.textContent).toBe('10 × 10');
-    expect(container?.querySelector('.property-sheet__icon svg')).not.toBeNull();
+    const sheet = container?.querySelector('[data-property-sheet]');
+    expect(sheet?.getAttribute('data-test-surface')).toBe('');
+    expect(sheet?.querySelector('header h2')?.textContent).toBe('Thing');
+    expect(sheet?.querySelector('[data-property-sheet-subtitle]')?.textContent).toBe('10 × 10');
+    expect(sheet?.querySelector('header svg')).not.toBeNull();
   });
 
   it('hides a not-applicable field and disables an unsupported one with its reason', () => {
@@ -109,6 +110,8 @@ describe('PropertySheetView', () => {
       )
     );
     expect(container?.querySelector('[aria-label="Gone"]')).toBeNull();
+    // The untitled section is the sheet's plain body, there while one row shows.
+    expect(container?.querySelector('[data-property-sheet-section] [data-field-row]')).not.toBeNull();
     const row = container?.querySelector('[data-field-row]');
     expect(row?.getAttribute('data-disabled')).toBe('true');
     expect(row?.getAttribute('title')).toBe('Refold first');
@@ -126,7 +129,7 @@ describe('PropertySheetView', () => {
         commit: vi.fn(),
       })
     );
-    expect(container?.querySelector('.property-sheet__section')).toBeNull();
+    expect(container?.querySelector('[data-property-sheet-section]')).toBeNull();
   });
 
   it('commits a toggle, a select and a segmented control once each, skipping a no-op', () => {
