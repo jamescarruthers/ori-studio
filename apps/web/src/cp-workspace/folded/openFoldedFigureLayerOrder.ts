@@ -21,14 +21,14 @@
  */
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
-import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
+import type { OristudioCpFoldedFigureEntry, OristudioCpFoldedFigureModel } from '../../engine/oristudioCpTypes';
 import {
   openLayerOrderDialog,
   prefetchLayerOrderDialog,
   type LayerOrderDialogOutcome,
 } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { EDIT_PAPER_FRAME, layerOrderRecordToSource } from '../../lib/layerOrder/paperFrame';
-import type { LayerOrderApplied, LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
+import type { LayerOrderApplied, LayerOrderLook, LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import { layerOrderSourceOf } from '../../lib/layerOrder/layerOrderSource';
 import { radiansToDegrees, wrapDegrees } from '../../lib/angleUnits';
 import {
@@ -97,20 +97,39 @@ export function foldedFigureLayerOrderRequest(
     surface: 'edit_figure',
     source: layerOrderSourceOf(opening.source, opening.model),
     record: record ? layerOrderRecordToSource(record, EDIT_PAPER_FRAME) : null,
-    look: {
+    look: editFigureLook(view, {
       style: effectiveObjectPaperStyle(figure, view.display),
-      policy: PAPER_STYLE_POLICIES['folded-flat'],
-      // Both turn the paper clockwise on screen by their angle, as a Diagram
-      // step's `rotationDeg` does: the figure on the canvas, the canvas on the screen.
-      turnDeg: wrapDegrees(radiansToDegrees(figure.placement.rotation + view.cameraRotation)),
-      // The kernel's back pass; Both and Transparent are views of the front.
-      side: (figure.snapshot?.model ?? opening.model).state === 'Back1' ? 'back' : 'front',
+      rotation: figure.placement.rotation,
+      model: figure.snapshot?.model ?? opening.model,
       xray: figure.displayStyle === 'Transparent3',
-      lineStyle: view.lineStyle,
-      lineWidth: view.lineWidth,
-    },
+    }),
     ...(opening.shown ? { shown: opening.shown } : {}),
     name: figure.title,
+  };
+}
+
+/**
+ * Edit's look for a flat figure on the canvas `view` (D18): drawn in `style`
+ * through the flat figure's policy, on the side its `model` shows, turned by
+ * its own `rotation` and the canvas's, see-through when `xray`, its creases in
+ * Edit's line style and width. A figure "Layer order…" opens on, or the one
+ * "Fold with layer order…" will make.
+ */
+export function editFigureLook(
+  view: EditFigureView,
+  figure: { style: PaperStyle; rotation: number; model: Pick<OristudioCpFoldedFigureModel, 'state'>; xray: boolean }
+): LayerOrderLook {
+  return {
+    style: figure.style,
+    policy: PAPER_STYLE_POLICIES['folded-flat'],
+    // Both turn the paper clockwise on screen by their angle, as a Diagram
+    // step's `rotationDeg` does: the figure on the canvas, the canvas on the screen.
+    turnDeg: wrapDegrees(radiansToDegrees(figure.rotation + view.cameraRotation)),
+    // The kernel's back pass; Both and Transparent are views of the front.
+    side: figure.model.state === 'Back1' ? 'back' : 'front',
+    xray: figure.xray,
+    lineStyle: view.lineStyle,
+    lineWidth: view.lineWidth,
   };
 }
 

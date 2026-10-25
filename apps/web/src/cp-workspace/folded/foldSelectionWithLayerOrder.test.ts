@@ -1,0 +1,474 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TFunction } from 'i18next';
+import type {
+  OristudioCpDocumentState,
+  OristudioCpFoldedFigureSnapshot,
+  OristudioCpFoldedPaperScene,
+  OristudioCpFoldedRenderSnapshot,
+  OristudioCpFoldSource,
+  OristudioCpLineSegment,
+} from '../../engine/oristudioCpTypes';
+import type { LayerOrderDialogOutcome } from '../../layer-order/dialog/layerOrderDialogGateway';
+import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
+import { FOLD_MAGNITUDE_FULL } from '../../lib/foldAngle';
+
+/**
+ * "Fold with layer order…" (row H5) over the store, with the kernel's figure
+ * arena stood in for — a fold takes the lowest free slot, a free gives it back,
+ * and reading a slot that is not live fails — and the Layer order dialog's one
+ * door answering as each test says. Every way the press can end leaves each
+ * fold held exactly as often as something refers to it: the dialog's own fold
+ * by nothing once the dialog has closed, the new figure's by the live list and
+ * history.
+ */
+const arena = vi.hoisted(() => ({
+  live: new Set<number>(),
+  freed: [] as number[],
+  take(): number {
+    let slot = 0;
+    while (this.live.has(slot)) slot += 1;
+    this.live.add(slot);
+    return slot;
+  },
+  read(handle: number): void {
+    if (!this.live.has(handle)) throw new Error(`no folded figure in slot ${handle}`);
+  },
+}));
+
+/** What the kernel answers next, and what it was asked. */
+const kernel = vi.hoisted(() => ({
+  /** The relations each fold was given, in order. */
+  folds: [] as number[][],
+  /** How the next folds end, first to last; past the list, they fold. */
+  next: [] as Array<'ok' | 'stop' | 'refuse' | 'unsolved' | 'other-faces' | 'fail'>,
+  /** Slots folded on other faces than the dialog analysed, which answer another digest. */
+  otherFaces: new Set<number>(),
+  /** Holds the next fold's answer until opened, to press again meanwhile. */
+  gate: null as Promise<void> | null,
+  checks: 0,
+}));
+
+/** The dialog's door: its answer is each test's to give. */
+const dialog = vi.hoisted(() => ({
+  requests: [] as LayerOrderRequest[],
+  answer: (_request: LayerOrderRequest): Promise<LayerOrderDialogOutcome> =>
+    Promise.resolve({ kind: 'cancelled' }),
+}));
+
+const analytics = vi.hoisted(() => ({ track: vi.fn() }));
+
+const DIGEST = '0123456789abcdef';
+
+vi.mock('../../store/workspaceStore/oristudioCpRuntime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../store/workspaceStore/oristudioCpRuntime')>();
+  return {
+    ...actual,
+    freeOristudioCpFoldedFigure: async (handle: number) => {
+      arena.freed.push(handle);
+      arena.live.delete(handle);
+    },
+    getOristudioCpSelectionFoldSource: async (): Promise<OristudioCpFoldSource> => source(),
+    // A plain fold, for the one test that compares with it.
+    foldOristudioCpDocument: async () => ({
+      handle: arena.take(),
+      snapshot: snapshot({ outcome: 'Solved', given: false }),
+    }),
+    foldOristudioCpWithOrder: async (_source: OristudioCpFoldSource, relations: Uint32Array) => {
+      kernel.folds.push([...relations]);
+      if (kernel.gate) await kernel.gate;
+      const how = kernel.next.shift();
+      if (how === 'stop') throw { code: 'fold_cancelled', message: 'stopped' };
+      if (how === 'fail') throw new Error('The crease pattern could not be folded');
+      if (how === 'refuse') return { status: 'refused', refusal: { code: 'not_found' } };
+      const handle = arena.take();
+      if (how === 'other-faces') kernel.otherFaces.add(handle);
+      return {
+        status: 'folded',
+        handle,
+        snapshot: snapshot({ outcome: how === 'unsolved' ? 'Contradiction' : 'Solved', given: relations.length > 0 }),
+      };
+    },
+    getOristudioCpFoldedFigureDigest: async (handle: number) => {
+      arena.read(handle);
+      return kernel.otherFaces.has(handle) ? 'fedcba9876543210' : DIGEST;
+    },
+    getOristudioCpFoldedFigurePaperScene: async (handle: number) => {
+      arena.read(handle);
+      return SCENE;
+    },
+    getOristudioCpFoldedFigureRenderSnapshot: async (handle: number) => {
+      arena.read(handle);
+      return renderSnapshot();
+    },
+    runOristudioCpCheckCommand: async () => {
+      kernel.checks += 1;
+      return { operation: 'CheckCamv', status: 'OracleTested', diagnostics: [], diagnostic_entries: [] };
+    },
+    isCurrentOristudioCpDocumentState: () => true,
+  };
+});
+
+vi.mock('../../layer-order/dialog/layerOrderDialogGateway', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../layer-order/dialog/layerOrderDialogGateway')>();
+  return {
+    ...actual,
+    prefetchLayerOrderDialog: () => {},
+    openLayerOrderDialog: (request: LayerOrderRequest) => {
+      dialog.requests.push(request);
+      return dialog.answer(request);
+    },
+  };
+});
+
+vi.mock('../../analytics', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../analytics')>();
+  return { ...actual, track: analytics.track };
+});
+
+import { useWorkspaceStore } from '../../store/workspaceStore/store';
+import { useSettingsStore } from '../../store/settingsStore';
+import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
+import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
+import { foldedFigureHandleRefCount, resetFoldedFigureHandles } from './foldedFigureHandles';
+import { foldSelectionWithLayerOrder } from './foldSelectionWithLayerOrder';
+
+const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
+
+const SCENE = { faces: [] } as unknown as OristudioCpFoldedPaperScene;
+
+function line(a: { x: number; y: number }, b: { x: number; y: number }, color: 'Red1' | 'Blue2'): OristudioCpLineSegment {
+  return { a, b, color, active: 'Inactive0', selected: 0, customized: 0, customized_color: { red: 0, green: 0, blue: 0 } };
+}
+
+const LINES = [line({ x: 0, y: 0 }, { x: 1, y: 1 }, 'Red1'), line({ x: 1, y: 0 }, { x: 0, y: 1 }, 'Blue2')];
+const SELECTION = [1, 2];
+
+function source(): OristudioCpFoldSource {
+  return { segments: LINES, starting_face_id: 1, aux_segments: [], digest: DIGEST };
+}
+
+function renderSnapshot(): OristudioCpFoldedRenderSnapshot {
+  return { schema_version: 1, fixture: null, pass: 'paper-front-full', primitives: [] };
+}
+
+function snapshot({
+  outcome,
+  given,
+}: {
+  outcome: 'Solved' | 'Contradiction';
+  given: boolean;
+}): OristudioCpFoldedFigureSnapshot {
+  return {
+    model: {
+      front_color: { red: 255, green: 255, blue: 50 },
+      back_color: { red: 233, green: 233, blue: 233 },
+      line_color: { red: 0, green: 0, blue: 0 },
+      scale: 1,
+      rotation: 0,
+      anti_alias: true,
+      display_shadows: false,
+      state: 'Front0',
+      folded_cases: 1,
+      transparent_transparency: 16,
+      transparency_color: false,
+    },
+    estimation_step: 'Step5',
+    display_style: outcome === 'Solved' ? 'Paper5' : 'Transparent3',
+    discovered_fold_cases: outcome === 'Solved' ? 2 : 0,
+    current_fold_case: outcome === 'Solved' ? 1 : 0,
+    find_another_overlap_valid: false,
+    outcome,
+    shown_order: given ? 'given' : 'searched',
+    text_result: '',
+    wireframe: {
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      lines: [{ begin: 0, end: 1, color: 'Red1' }],
+      faces: [[0, 1, 2]],
+      starting_face: 0,
+      face_positions: [1],
+      next_faces: [null],
+      associated_lines: [null],
+    },
+  } as OristudioCpFoldedFigureSnapshot;
+}
+
+function cpState(lines: OristudioCpLineSegment[] = LINES): OristudioCpDocumentState {
+  const document = createStarterOristudioCpDocument();
+  return {
+    handle: 4,
+    loadSerial: 1,
+    document: { ...document, crease_pattern: { ...document.crease_pattern, line_segments: lines } },
+    geometry: null,
+    summary: {
+      title: 'Untitled CP',
+      line_segments: lines.length,
+      circles: 0,
+      points: 0,
+      aux_line_segments: 0,
+      texts: 0,
+      can_save_as_cp: true,
+      is_empty: false,
+    },
+    source: { format: 'cp', filename: 'Untitled.cp', path: null },
+    operationDescriptors: [],
+    lastCommandResult: null,
+  };
+}
+
+const state = () => useWorkspaceStore.getState();
+const figures = () => state().oristudioCpFoldedFigures;
+
+/** Every slot referred to is live and counted once per reference; every live slot is referred to. */
+function expectEachFoldHeldOnce() {
+  const lists = [
+    figures(),
+    ...state().oristudioCpHistoryPast.map((entry) => entry.foldedFigures ?? []),
+    ...state().oristudioCpHistoryFuture.map((entry) => entry.foldedFigures ?? []),
+  ];
+  const references = new Map<number, number>();
+  for (const list of lists) {
+    for (const figure of list) {
+      if (figure.handle != null) references.set(figure.handle, (references.get(figure.handle) ?? 0) + 1);
+    }
+  }
+  for (const [handle, count] of references) {
+    expect(arena.live.has(handle), `slot ${handle} is referred to but free`).toBe(true);
+    expect(foldedFigureHandleRefCount(handle), `slot ${handle}'s count`).toBe(count);
+  }
+  for (const handle of arena.live) {
+    expect(references.has(handle), `slot ${handle} is taken but nothing refers to it`).toBe(true);
+  }
+}
+
+/** The fold events, as the dashboards read them. */
+function foldEvents(name: 'fold attempted' | 'fold completed') {
+  return analytics.track.mock.calls.filter(([event]) => event === name).map(([, properties]) => properties);
+}
+
+/** Apply, with the order on screen: the record and the relations the dialog saved. */
+function applies(relations = [0, 1]) {
+  dialog.answer = async (request) => ({
+    kind: 'applied',
+    applied: { record: twoConstraintRecord(), relations: new Uint32Array(relations), source: request.source },
+  });
+}
+
+beforeEach(async () => {
+  await resetFoldedFigureHandles();
+  arena.live.clear();
+  arena.freed.length = 0;
+  kernel.otherFaces.clear();
+  kernel.folds.length = 0;
+  kernel.next.length = 0;
+  kernel.gate = null;
+  kernel.checks = 0;
+  dialog.requests.length = 0;
+  dialog.answer = async () => ({ kind: 'cancelled' });
+  analytics.track.mockReset();
+  useSettingsStore.setState({ foldWarningEnabled: true });
+  useWorkspaceStore.setState({
+    activePanelId: 'crease-pattern',
+    oristudioCpDocument: cpState(),
+    oristudioCpFoldedFigures: [],
+    oristudioCpActiveFoldedFigureId: null,
+    oristudioCpHistoryPast: [],
+    oristudioCpHistoryFuture: [],
+    oristudioCpError: null,
+    dirty: false,
+  });
+});
+
+describe('Fold with layer order…', () => {
+  it('opens the dialog on the selection’s own fold, as the figure Apply makes would look', async () => {
+    await foldSelectionWithLayerOrder(SELECTION, t);
+
+    // Oriedita's own search on the selection's source: no order given.
+    expect(kernel.folds).toEqual([[]]);
+    expect(dialog.requests).toHaveLength(1);
+    expect(dialog.requests[0]).toMatchObject({
+      surface: 'edit_figure',
+      record: null,
+      source: { digest: DIGEST, startingFaceId: 1, segments: LINES },
+      shown: SCENE,
+      name: 'Selection',
+      // The display style, front up, upright on the canvas, not see-through.
+      look: {
+        style: useSettingsStore.getState().paperStyle.display,
+        side: 'front',
+        turnDeg: 0,
+        xray: false,
+      },
+    });
+  });
+
+  it.each(['cancelled', 'busy', 'unavailable'] as const)(
+    '%s: no figure, no undo entry, nothing marked dirty, and its fold let go',
+    async (kind) => {
+      dialog.answer = async () => ({ kind });
+
+      await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe(kind);
+      expect(figures()).toEqual([]);
+      expect(state().oristudioCpHistoryPast).toEqual([]);
+      expect(state().dirty).toBe(false);
+      expect(arena.freed).toHaveLength(1);
+      expect(foldedFigureHandleRefCount(arena.freed[0]!)).toBe(0);
+      expectEachFoldHeldOnce();
+      // No figure was asked for, so no fold is counted.
+      expect(foldEvents('fold attempted')).toEqual([]);
+    }
+  );
+
+  it('Apply makes one figure with the order and its record, as one undo entry', async () => {
+    applies();
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('applied');
+    // The dialog's fold, then the figure's: the dialog's source, with its relations.
+    expect(kernel.folds).toEqual([[], [0, 1]]);
+    expect(figures()).toHaveLength(1);
+    const [figure] = figures();
+    expect(figure).toMatchObject({
+      status: 'ready',
+      sourceLineIds: SELECTION,
+      layerOrder: { kind: 'record', record: twoConstraintRecord() },
+    });
+    expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Fold model']);
+    expect(state().dirty).toBe(true);
+    // The pre-fold check is asked once, at the press, and not again at Apply.
+    expect(kernel.checks).toBe(1);
+    // The dialog's fold is gone; the figure's is held by the figure alone.
+    expect(arena.freed).toEqual([0]);
+    expect(foldedFigureHandleRefCount(figure!.handle!)).toBe(1);
+    expectEachFoldHeldOnce();
+  });
+
+  it('undo takes the figure away, keeping its fold for the redo, which puts it back', async () => {
+    applies();
+    await foldSelectionWithLayerOrder(SELECTION, t);
+    const [figure] = figures();
+
+    await state().undo();
+    expect(figures()).toEqual([]);
+    expect(arena.live.has(figure!.handle!)).toBe(true);
+    expectEachFoldHeldOnce();
+
+    await state().redo();
+    expect(figures().map((entry) => [entry.id, entry.handle, entry.layerOrder?.kind])).toEqual([
+      [figure!.id, figure!.handle, 'record'],
+    ]);
+    expectEachFoldHeldOnce();
+  });
+
+  it('Apply on the order it opened on folds Oriedita’s order, with no record, as Fold does', async () => {
+    dialog.answer = async () => ({ kind: 'unchanged' });
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('unchanged');
+    expect(kernel.folds).toEqual([[], []]);
+    expect(figures()).toHaveLength(1);
+    expect(figures()[0]?.layerOrder).toBeUndefined();
+    expect(state().oristudioCpHistoryPast.map((entry) => entry.label)).toEqual(['Fold model']);
+    expectEachFoldHeldOnce();
+  });
+
+  it.each([
+    ['refused', 'refuse'],
+    ['drawn on other faces', 'other-faces'],
+    ['not reached whole', 'unsolved'],
+  ] as const)('an order the kernel %s makes nothing, and says so', async (_what, how) => {
+    applies();
+    // The dialog's fold folds; the figure's ends as `how`.
+    kernel.next = ['ok', how];
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('applied');
+    expect(figures()).toEqual([]);
+    expect(state().oristudioCpHistoryPast).toEqual([]);
+    expect(state().oristudioCpError).toBe('Layer order couldn’t fold these creases in this order.');
+    expect(arena.live.size).toBe(0);
+    expectEachFoldHeldOnce();
+  });
+
+  it('a Stop while the figure folds makes nothing and says nothing', async () => {
+    applies();
+    kernel.next = ['ok', 'stop'];
+
+    await foldSelectionWithLayerOrder(SELECTION, t);
+    expect(figures()).toEqual([]);
+    expect(state().oristudioCpHistoryPast).toEqual([]);
+    expect(state().oristudioCpError).toBeNull();
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('a Stop while the selection folds opens nothing and leaves nothing', async () => {
+    kernel.next = ['stop'];
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
+    expect(dialog.requests).toEqual([]);
+    expect(state().oristudioCpError).toBeNull();
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('a fold that fails opens nothing, says why and leaves nothing', async () => {
+    kernel.next = ['fail'];
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
+    expect(dialog.requests).toEqual([]);
+    expect(state().oristudioCpError).toBe('The crease pattern could not be folded');
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('creases Oriedita finds no layer order for open nothing (D3), and their fold is let go', async () => {
+    kernel.next = ['unsolved'];
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
+    expect(dialog.requests).toEqual([]);
+    expect(state().oristudioCpError).toBe('Layer order couldn’t be determined for these creases.');
+    expect(arena.freed).toEqual([0]);
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('creases that fold in 3D are refused before anything folds', async () => {
+    useWorkspaceStore.setState({
+      oristudioCpDocument: cpState(LINES.map((segment) => ({ ...segment, fold_magnitude: FOLD_MAGNITUDE_FULL / 2 }))),
+    });
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
+    expect(kernel.folds).toEqual([]);
+    expect(state().oristudioCpError).toBe('Layer order works on flat figures');
+  });
+
+  it('a second press while the first folds is refused, and folds nothing', async () => {
+    let open = () => {};
+    kernel.gate = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    const first = foldSelectionWithLayerOrder(SELECTION, t);
+    await vi.waitFor(() => expect(kernel.folds).toHaveLength(1));
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
+    kernel.gate = null;
+    open();
+    await expect(first).resolves.toBe('cancelled');
+    expect(kernel.folds).toHaveLength(1);
+    expect(arena.live.size).toBe(0);
+  });
+
+  it('tags the figure’s fold `via: layer_order`, once attempted and once completed', async () => {
+    applies();
+    await foldSelectionWithLayerOrder(SELECTION, t);
+
+    expect(foldEvents('fold attempted')).toEqual([
+      expect.objectContaining({ mode: 'flat', via: 'layer_order' }),
+    ]);
+    expect(foldEvents('fold completed')).toEqual([
+      expect.objectContaining({ mode: 'flat', verdict: 'folded', via: 'layer_order' }),
+    ]);
+  });
+
+  it('leaves a plain fold untagged', async () => {
+    await state().foldOristudioCpDocument({ lineIds: SELECTION });
+    expect(foldEvents('fold attempted')).toEqual([expect.not.objectContaining({ via: expect.anything() })]);
+  });
+});
