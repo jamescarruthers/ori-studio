@@ -10,10 +10,10 @@
  *
  * - **Start with**: the range's first step, among the ones it can start from;
  * - **Symmetry axis**: the verified symmetry axes of the range's starting
- *   state, by where they run on the paper — the canvas draws them too, to
- *   hover and click; or one located on either pane with the line modes
- *   (**Locate line**, and Snap to points for a free line), taken only when
- *   it is one of them;
+ *   state, by where they run as the folded pane shows them — the canvas
+ *   draws them too, to hover and click; or one located on either pane with
+ *   the line modes (**Locate line**, and Snap to points for a free line),
+ *   taken only when it is one of them;
  * - **Show as individual steps**, how the repeat is added;
  * - the preparation's progress, a layer order to choose when a source
  *   operation has several, and why a repeat stopped, in Repeat's own words
@@ -27,6 +27,7 @@
  */
 import type { TFunction } from 'i18next';
 import { foldReturnEntryLabel } from '../return/foldReturnWords';
+import type { FoldView } from '../engine/foldEngineWire';
 import type { FoldPathEntry } from '../sequence/foldSequencePath';
 import { foldToolLabel } from '../tools/foldToolCatalog';
 import {
@@ -70,6 +71,8 @@ export interface FoldRepeatWindowView {
   range: { entries: readonly FoldPathEntry[]; starts: readonly FoldPathEntry[]; first: string; count: number } | null;
   /** The range's verified axes, each a line on the sheet and the side it repeats on; null while they are being found. */
   axes: readonly RepeatSymmetry[] | null;
+  /** How the folded pane shows the step on screen, turned over and rotated: what the axes are named by; null while it has not landed. */
+  foldedView: FoldView | null;
   /** Per axis, whether its repeat lands, as far as it is prepared (`repeatPrepared`): a refused one is offered disabled, with why. */
   states?: readonly RepeatAxisView[];
   /** The one taken; -1 for none. */
@@ -304,7 +307,7 @@ export function repeatToolWindow(
       : repeat.side === 'same'
         ? t('panels:fold.repeat.commitSame', 'Repeat on the other side')
         : t('panels:fold.repeat.label', 'Repeat');
-  const axisNames = (repeat.axes ?? []).map((axis) => repeatAxisName(t, axis.sheet));
+  const axisNames = (repeat.axes ?? []).map((axis) => repeatAxisName(t, axis.sheet, repeat.foldedView));
   const refusedAll = axisNames.length > 0 && axisNames.every((_, index) => repeat.states?.[index]?.kind === 'refused');
   const choosing = phase.kind === 'choosing' && phase.index !== null ? phase : null;
   const status = statusNote(t, repeat);

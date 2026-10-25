@@ -458,8 +458,12 @@ describe('the Repeat tool', () => {
     const view: FoldToolWindowView = { tool: 'repeat', lineMode: 'crease', readOnly: null, picks: 0, preview: null, freeLineSnap: false, repeat: seen!.view };
     const model = foldToolWindow(i18n.t.bind(i18n), view, { repeat: seen!.verbs } as unknown as FoldToolWindowVerbs, { coarse: false, alt: 'Option' })!;
     expect(model.repeat?.axis.value).toBe(String(behind));
-    expect(model.repeat?.axis.options[behind]).toEqual({ id: String(behind), label: 'Diagonal, bottom left to top right' });
-    expect(model.repeat?.axis.options[same]).toMatchObject({ id: String(same), label: 'Diagonal, top left to bottom right', disabled: true });
+    // Each named as the folded pane shows it. The base was turned over on its way (step 4), so the sheet's
+    // diagonal from the bottom left corner to the top right, the axis behind, runs from top left to bottom right.
+    expect(seen!.view.foldedView).toMatchObject({ flipped: true });
+    expect(seen!.view.axes![behind]!.sheet.n[0] + seen!.view.axes![behind]!.sheet.n[1]).toBeCloseTo(0);
+    expect(model.repeat?.axis.options[behind]).toEqual({ id: String(behind), label: 'Diagonal, top left to bottom right' });
+    expect(model.repeat?.axis.options[same]).toMatchObject({ id: String(same), label: 'Diagonal, bottom left to top right', disabled: true });
     expect(model.repeat?.axis.options[same]!.description).toMatch(/^Stops at operation 1: /);
     expect(model.footer?.commit.label).toBe('Repeat behind');
     expect(model.refusal).toBeNull();
