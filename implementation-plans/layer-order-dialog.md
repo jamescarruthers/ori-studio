@@ -769,10 +769,10 @@ H3's new rehydrate, so it can only follow H3.
   - [ ] **Large figures:** the label cap
   - [ ] **Phone layout** and its tap equivalents
   - [ ] **Horizon theme** (the accent and danger colours are the same)
-- [ ] E1: kernel seeded core
-- [ ] E2: kernel entry points and exports
+- [x] E1: kernel seeded core (#494)
+- [x] E2: kernel entry points and exports (#500)
 - [ ] E3: Flat-Folder session additions
-- [ ] E4: source and census 1 (phase gate 1 reviewed)
+- [x] E4: source and census 1 (#503; phase gate 1 passed)
 - [ ] E5: constraint session core
 - [ ] E6: explain and solutions
 - [ ] E7: wasm bridge
@@ -780,12 +780,12 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U1: shared picking and tints (#497)
 - [ ] U2: ModalFrame
 - [ ] U3a: the native-menu guard (to main)
-- [ ] U3b: dialog keys
+- [x] U3b: dialog keys (#498)
 - [x] H1: record, host contract, file formats (#496)
 - [ ] U4: dialog shell
 - [ ] U5: engine client
 - [ ] U6: engine wiring
-- [ ] U7: PaperPane
+- [x] U7: PaperPane (#501)
 - [ ] U8: panes
 - [ ] U9: inspector model
 - [ ] U10: inspector
