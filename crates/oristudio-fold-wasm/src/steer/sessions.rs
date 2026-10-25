@@ -7,30 +7,48 @@
 //! view of exactly what the host folded (`LayerSource::from_oriedita`). It
 //! stays here, by handle, until it is closed or its worker is terminated; a
 //! worker that is respawned starts with none.
+//!
+//! **Add adopts its preview.** Beside each session the store keeps the last
+//! preview that fit, under the token that preview answered with
+//! ([`PreviewFits::token`]), until the next preview, commit or restore. A
+//! commit by that token and the list it checked
+//! ([`LayerSessions::commit_preview`]) adopts the previewed order with no
+//! search, so Add cannot run out of time right after a preview that fit; any
+//! other token commits the list by a search, as [`LayerSessions::commit`]
+//! does.
 
 use std::collections::HashMap;
 
 use oristudio_cp::folding::{FoldedFigureModel, FoldedPaperScene};
 use oristudio_cp::session::FoldSource;
 use oristudio_fold::steer::{
-    Commit, ConstraintSession, EncodeRefusal, LayerSource, Preview, RecordRead, Restored, ViewSide,
-    encode_record, read_record,
+    Commit, ConstraintSession, ConstraintStatus, EncodeRefusal, FaceStatus, LayerOrderRecord,
+    LayerSource, Preview, PreviewFit, RecordRead, RestoreOutcome, Restored, SavedPairStatus,
+    ViewSide, encode_record, read_record,
 };
 
 use super::wire::{
-    CommitDone, Committing, LayerCallError, LayerLimits, LayerOpened, LayerRefusal, LayerRestored,
-    Opening, PackedStacks, PreviewFits, Previewed, Restoring, SavedFaces, Saving, Sides,
-    candidate_of, constraints_of, flat_pairs, order_status, session_refusal, source_refusal,
-    thrown, triples_of,
+    CarriedRow, CommitDone, Committing, LayerCallError, LayerLimits, LayerOpened, LayerRefusal,
+    LayerRestored, OpenedOnWire, Opening, PackedStacks, PreviewFits, Previewed, Restoring,
+    SavedFaces, Saving, Sides, candidate_of, carried_rows, constraints_of, flat_pairs,
+    order_status, relations_of, session_refusal, source_refusal, thrown, triples_of,
 };
 use crate::ops_crimp_tuck::clock;
 
 /// Every constraint session the caller still holds. Handles start at 1 and
-/// are never reused while this store lives.
+/// are never reused while this store lives; so do preview tokens.
 #[derive(Debug, Default)]
 pub struct LayerSessions {
-    held: HashMap<u32, ConstraintSession>,
+    held: HashMap<u32, Held>,
     last: u32,
+    tokens: u32,
+}
+
+/// A session, and its last preview that fit.
+#[derive(Debug)]
+struct Held {
+    session: ConstraintSession,
+    preview: Option<(u32, PreviewFit)>,
 }
 
 impl LayerSessions {
@@ -38,8 +56,8 @@ impl LayerSessions {
         LayerSessions::default()
     }
 
-    /// Open a session on what a host folded: the letters' deduction and a
-    /// first order of every independent part, with no constraints.
+    /// Open a session on what a host folded: the letters' deduction and the
+    /// solver's first order of every independent part, with no constraints.
     pub fn open(
         &mut self,
         source: &FoldSource,
@@ -56,10 +74,33 @@ impl LayerSessions {
         }
     }
 
+    /// Open a session on what a host folded, showing the order the host
+    /// shows: `relations`, flat `[upper, lower, …]` in Oriedita's frame, held
+    /// whole when they fit, else the fitting order closest to them
+    /// ([`LayerOpened::opened_on`] says which).
+    pub fn open_showing(
+        &mut self,
+        source: &FoldSource,
+        relations: &[u32],
+        limits: &LayerLimits,
+    ) -> Result<Opening, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let relations = relations_of(relations)?;
+        let layer = match LayerSource::from_oriedita(source) {
+            Ok(layer) => layer,
+            Err(refusal) => return source_refusal(refusal).map(Opening::Refused),
+        };
+        match ConstraintSession::open_showing(layer, &relations, &limits) {
+            Ok(session) => Ok(Opening::Opened(self.hold(session))),
+            Err(refusal) => session_refusal(refusal).map(Opening::Refused),
+        }
+    }
+
     /// Open a session on what a host folded and restore a saved record onto
     /// it (decision D10): the record as the host stores it, one JSON string.
     /// The session is held whatever the outcome; a clash or a timeout
-    /// commits no constraint, and the rows say why.
+    /// commits no constraint, the rows say why, and every saved constraint
+    /// not applied is carried.
     pub fn restore(
         &mut self,
         source: &FoldSource,
@@ -67,12 +108,9 @@ impl LayerSessions {
         limits: &LayerLimits,
     ) -> Result<Restoring, LayerCallError> {
         let limits = limits.limits(clock::now_ms)?;
-        let record = match read_record(record) {
-            RecordRead::Read { record, .. } => record,
-            RecordRead::Newer => return Ok(Restoring::Refused(LayerRefusal::RecordNewer)),
-            RecordRead::Damaged(damage) => {
-                return Ok(Restoring::Refused(LayerRefusal::RecordDamaged { damage }));
-            }
+        let record = match readable(record) {
+            Ok(record) => record,
+            Err(refusal) => return Ok(Restoring::Refused(refusal)),
         };
         let layer = match LayerSource::from_oriedita(source) {
             Ok(layer) => layer,
@@ -88,15 +126,64 @@ impl LayerSessions {
             Ok(restored) => restored,
             Err(refusal) => return session_refusal(refusal).map(Restoring::Refused),
         };
-        let committed = triples_of(session.constraints());
-        Ok(Restoring::Restored(Box::new(LayerRestored {
-            opened: self.hold(session),
-            constraints: committed,
-            outcome: outcome.into(),
-            faces: SavedFaces::of(&faces),
-            constraint_status: constraints,
-            order_status: order_status(&order),
-        })))
+        let found = Found {
+            faces: &faces,
+            constraints,
+            order: &order,
+            outcome,
+        };
+        let handle = self.next_handle();
+        let restored = restored_of(opened_of(handle, &session), &session, found);
+        self.held.insert(
+            handle,
+            Held {
+                session,
+                preview: None,
+            },
+        );
+        Ok(Restoring::Restored(Box::new(restored)))
+    }
+
+    /// Restore `record` again on an open session (a retry after "couldn't
+    /// check in time", or the host engine's next try), without building the
+    /// source or opening again: the session is put back as it opened and
+    /// restored as a fresh one would be. Answers as [`Self::restore`] does,
+    /// under the same handle. A record that does not read leaves the session
+    /// as it was.
+    pub fn restore_record(
+        &mut self,
+        session: u32,
+        record: &str,
+        limits: &LayerLimits,
+    ) -> Result<Restoring, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let held = self.held_mut(session)?;
+        let record = match readable(record) {
+            Ok(record) => record,
+            Err(refusal) => return Ok(Restoring::Refused(refusal)),
+        };
+        let report = match held.session.restore_record(&record, &limits) {
+            Ok(report) => report,
+            Err(refusal) => return session_refusal(refusal).map(Restoring::Refused),
+        };
+        held.preview = None;
+        let found = Found {
+            faces: &report.faces,
+            constraints: report.constraints,
+            order: &report.order,
+            outcome: report.outcome,
+        };
+        let opened = opened_of(session, &held.session);
+        Ok(Restoring::Restored(Box::new(restored_of(
+            opened,
+            &held.session,
+            found,
+        ))))
+    }
+
+    /// Where the order on screen came from at open or the last restore.
+    pub fn opened_on(&self, session: u32) -> Result<OpenedOnWire, LayerCallError> {
+        Ok(self.session(session)?.opened_on().into())
     }
 
     /// The pairs deduction leaves open, flat (see [`LayerOpened::open_pairs`]).
@@ -111,38 +198,51 @@ impl LayerSessions {
 
     /// Whether the committed constraints and `candidate` (one triple) leave
     /// an order, and the fitting one closest to the order on screen. Never
-    /// changes the session. A timeout is no verdict: keep trying is the same
-    /// call with a larger `deadlineMs`.
+    /// changes what the session shows or commits; a fit is kept under its
+    /// token for [`Self::commit_preview`]. A timeout is no verdict: keep
+    /// trying is the same call with a larger `deadlineMs`.
     pub fn preview(
-        &self,
+        &mut self,
         session: u32,
         candidate: &[i32],
         limits: &LayerLimits,
     ) -> Result<Previewed, LayerCallError> {
         let limits = limits.limits(clock::now_ms)?;
         let candidate = candidate_of(candidate)?;
-        let preview = self
-            .session(session)?
-            .preview(candidate, &limits)
-            .map_err(thrown)?;
-        Ok(match preview {
-            Preview::Fits(fit) => Previewed::Fits(PreviewFits {
-                stacks: Sides {
-                    front: PackedStacks::from(&fit.stacks(ViewSide::Front)),
-                    back: PackedStacks::from(&fit.stacks(ViewSide::Back)),
-                },
-                changed: fit.changed,
-                stage: fit.stage,
-                nodes: fit.nodes,
-            }),
-            Preview::CantFit(cant) => Previewed::CantFit(cant.into()),
-            Preview::TimedOut(out) => Previewed::TimedOut(out),
-        })
+        let LayerSessions { held, tokens, .. } = self;
+        let held = held
+            .get_mut(&session)
+            .ok_or(LayerCallError::UnknownSession(session))?;
+        let preview = held.session.preview(candidate, &limits).map_err(thrown)?;
+        Ok(keep(held, tokens, preview))
+    }
+
+    /// Whether `constraints` (triples), whatever is committed, leave an
+    /// order with the creases: the dialog's own rows plus a new one, when
+    /// they are not what the session committed (after a restore whose
+    /// constraints clashed, nothing is). Never commits; a fit is kept under
+    /// its token, as [`Self::preview`]'s is. A no's `constraints` index this
+    /// list.
+    pub fn preview_list(
+        &mut self,
+        session: u32,
+        constraints: &[i32],
+        limits: &LayerLimits,
+    ) -> Result<Previewed, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let list = constraints_of(constraints)?;
+        let LayerSessions { held, tokens, .. } = self;
+        let held = held
+            .get_mut(&session)
+            .ok_or(LayerCallError::UnknownSession(session))?;
+        let preview = held.session.preview_list(&list, &limits).map_err(thrown)?;
+        Ok(keep(held, tokens, preview))
     }
 
     /// Make `constraints` (triples) the committed list: Add, remove, undo,
     /// redo and Clear all are each a new list. A list that cannot fit, or
-    /// runs out of time, changes nothing.
+    /// runs out of time, changes nothing. A carried row whose constraint the
+    /// list holds is applied, and leaves the carried rows.
     pub fn commit(
         &mut self,
         session: u32,
@@ -150,19 +250,58 @@ impl LayerSessions {
         limits: &LayerLimits,
     ) -> Result<Committing, LayerCallError> {
         let limits = limits.limits(clock::now_ms)?;
-        let constraints = constraints_of(constraints)?;
-        let held = self.session_mut(session)?;
-        Ok(match held.commit(constraints, &limits).map_err(thrown)? {
-            Commit::Committed(done) => Committing::Committed(CommitDone {
-                changed: done.changed,
-                stacks: stacks_of(held),
-                open_pairs: flat_pairs(&held.open_pairs()),
-                stage: done.stage,
-                nodes: done.nodes,
-            }),
-            Commit::CantFit(cant) => Committing::CantFit(cant.into()),
-            Commit::TimedOut(out) => Committing::TimedOut(out),
-        })
+        let list = constraints_of(constraints)?;
+        let held = self.held_mut(session)?;
+        held.preview = None;
+        let commit = held.session.commit(list, &limits).map_err(thrown)?;
+        Ok(committing(&held.session, commit, false))
+    }
+
+    /// Add by a preview: when `token` is the session's last preview that fit
+    /// and `constraints` (triples) is the list it checked, its order is
+    /// adopted with no search (`adopted`), so it cannot run out of time.
+    /// Otherwise (a stale or unknown token, or another list) the list is
+    /// committed by a search within `limits`, as [`Self::commit`] does.
+    pub fn commit_preview(
+        &mut self,
+        session: u32,
+        token: u32,
+        constraints: &[i32],
+        limits: &LayerLimits,
+    ) -> Result<Committing, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let list = constraints_of(constraints)?;
+        let held = self.held_mut(session)?;
+        let (commit, adopted) = match held.preview.take() {
+            Some((kept, fit)) if kept == token && fit.constraints() == list.as_slice() => {
+                (held.session.commit_preview(fit, &limits), true)
+            }
+            _ => (held.session.commit(list, &limits), false),
+        };
+        let commit = commit.map_err(thrown)?;
+        Ok(committing(&held.session, commit, adopted))
+    }
+
+    /// The saved constraints the last restore did not apply, and nothing has
+    /// committed or removed since, in record order.
+    pub fn carried(&self, session: u32) -> Result<Vec<CarriedRow>, LayerCallError> {
+        Ok(carried_rows(self.session(session)?.carried()))
+    }
+
+    /// Remove carried row `index` (into [`Self::carried`]), as a row's trash
+    /// button does, so a save no longer writes it; whether there was one.
+    pub fn remove_carried(&mut self, session: u32, index: usize) -> Result<bool, LayerCallError> {
+        Ok(self
+            .held_mut(session)?
+            .session
+            .remove_carried(index)
+            .is_some())
+    }
+
+    /// Remove every carried row, as Clear all does with the committed ones.
+    pub fn clear_carried(&mut self, session: u32) -> Result<(), LayerCallError> {
+        self.held_mut(session)?.session.clear_carried();
+        Ok(())
     }
 
     /// The order on screen's stacks from `side`.
@@ -194,8 +333,9 @@ impl LayerSessions {
             .collect())
     }
 
-    /// The saved record, encoded: refused only when it would be over the
-    /// record budget (1 MB).
+    /// The saved record, encoded: the committed constraints, then the
+    /// carried rows as their record saved them. Refused only when it would
+    /// be over the record budget (1 MB).
     pub fn save(&self, session: u32) -> Result<Saving, LayerCallError> {
         let record = self.session(session)?.save().map_err(thrown)?;
         match encode_record(&record) {
@@ -238,47 +378,141 @@ impl LayerSessions {
     fn session(&self, session: u32) -> Result<&ConstraintSession, LayerCallError> {
         self.held
             .get(&session)
+            .map(|held| &held.session)
             .ok_or(LayerCallError::UnknownSession(session))
     }
 
-    fn session_mut(&mut self, session: u32) -> Result<&mut ConstraintSession, LayerCallError> {
+    fn held_mut(&mut self, session: u32) -> Result<&mut Held, LayerCallError> {
         self.held
             .get_mut(&session)
             .ok_or(LayerCallError::UnknownSession(session))
     }
 
-    /// Hold `session` under a new handle, and what an open reports of it.
-    fn hold(&mut self, session: ConstraintSession) -> LayerOpened {
-        let view = session.source().view();
-        let front_up: Vec<u8> = view
-            .faces()
-            .iter()
-            .map(|face| u8::from(face.front_up))
-            .collect();
-        let open_pairs = flat_pairs(&session.open_pairs());
-        let spots = u32::try_from(session.spot_count()).unwrap_or(u32::MAX);
-        // As `Bridge`'s handles: wrapping skips 0 and every handle held.
+    /// A handle no session holds. As `Bridge`'s handles: wrapping skips 0
+    /// and every handle held.
+    fn next_handle(&mut self) -> u32 {
         loop {
             self.last = self.last.wrapping_add(1);
             if self.last != 0 && !self.held.contains_key(&self.last) {
-                break;
+                return self.last;
             }
         }
-        self.held.insert(self.last, session);
-        LayerOpened {
-            session: self.last,
-            faces: u32::try_from(front_up.len()).unwrap_or(u32::MAX),
-            front_up,
-            open_pairs,
-            spots,
+    }
+
+    /// Hold `session` under a new handle, and what an open reports of it.
+    fn hold(&mut self, session: ConstraintSession) -> LayerOpened {
+        let handle = self.next_handle();
+        let opened = opened_of(handle, &session);
+        self.held.insert(
+            handle,
+            Held {
+                session,
+                preview: None,
+            },
+        );
+        opened
+    }
+}
+
+/// What an open, or a restore, reports of the session under `handle`.
+fn opened_of(handle: u32, session: &ConstraintSession) -> LayerOpened {
+    let front_up: Vec<u8> = session
+        .source()
+        .view()
+        .faces()
+        .iter()
+        .map(|face| u8::from(face.front_up))
+        .collect();
+    LayerOpened {
+        session: handle,
+        faces: u32::try_from(front_up.len()).unwrap_or(u32::MAX),
+        front_up,
+        open_pairs: flat_pairs(&session.open_pairs()),
+        spots: u32::try_from(session.spot_count()).unwrap_or(u32::MAX),
+        opened_on: session.opened_on().into(),
+    }
+}
+
+/// How a restore found a record again.
+struct Found<'a> {
+    faces: &'a [FaceStatus],
+    constraints: Vec<ConstraintStatus>,
+    order: &'a [SavedPairStatus],
+    outcome: RestoreOutcome,
+}
+
+fn restored_of(
+    opened: LayerOpened,
+    session: &ConstraintSession,
+    found: Found<'_>,
+) -> LayerRestored {
+    LayerRestored {
+        opened,
+        constraints: triples_of(session.constraints()),
+        outcome: found.outcome.into(),
+        faces: SavedFaces::of(found.faces),
+        constraint_status: found.constraints,
+        order_status: order_status(found.order),
+        carried: carried_rows(session.carried()),
+    }
+}
+
+/// A stored record read, or why it is not one to restore.
+fn readable(record: &str) -> Result<LayerOrderRecord, LayerRefusal> {
+    match read_record(record) {
+        RecordRead::Read { record, .. } => Ok(record),
+        RecordRead::Newer => Err(LayerRefusal::RecordNewer),
+        RecordRead::Damaged(damage) => Err(LayerRefusal::RecordDamaged { damage }),
+    }
+}
+
+/// A preview's verdict as it crosses; a fit is kept under a new token, and
+/// anything else drops the one kept.
+fn keep(held: &mut Held, tokens: &mut u32, preview: Preview) -> Previewed {
+    match preview {
+        Preview::Fits(fit) => {
+            *tokens = tokens.wrapping_add(1).max(1);
+            let token = *tokens;
+            let fits = PreviewFits {
+                token,
+                stacks: Sides {
+                    front: PackedStacks::from(&fit.stacks(ViewSide::Front)),
+                    back: PackedStacks::from(&fit.stacks(ViewSide::Back)),
+                },
+                changed: fit.changed.clone(),
+                stage: fit.stage,
+                nodes: fit.nodes,
+            };
+            held.preview = Some((token, fit));
+            Previewed::Fits(fits)
+        }
+        Preview::CantFit(cant) => {
+            held.preview = None;
+            Previewed::CantFit(cant.into())
+        }
+        Preview::TimedOut(out) => {
+            held.preview = None;
+            Previewed::TimedOut(out)
         }
     }
 }
 
-fn stacks_of(session: &ConstraintSession) -> Sides<PackedStacks> {
-    Sides {
-        front: PackedStacks::from(&session.stacks(ViewSide::Front)),
-        back: PackedStacks::from(&session.stacks(ViewSide::Back)),
+/// A commit's verdict as it crosses.
+fn committing(session: &ConstraintSession, commit: Commit, adopted: bool) -> Committing {
+    match commit {
+        Commit::Committed(done) => Committing::Committed(CommitDone {
+            changed: done.changed,
+            stacks: Sides {
+                front: PackedStacks::from(&session.stacks(ViewSide::Front)),
+                back: PackedStacks::from(&session.stacks(ViewSide::Back)),
+            },
+            open_pairs: flat_pairs(&session.open_pairs()),
+            stage: done.stage,
+            nodes: done.nodes,
+            adopted,
+        }),
+        Commit::CantFit(cant) => Committing::CantFit(cant.into()),
+        Commit::TimedOut(out) => Committing::TimedOut(out),
     }
 }
 

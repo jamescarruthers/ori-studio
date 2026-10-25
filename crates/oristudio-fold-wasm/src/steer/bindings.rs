@@ -5,25 +5,45 @@
 //! ```ts
 //! class FoldEngine {
 //!   /** Open a constraint session on what a host folded: the CP bridge's
-//!    *  source, passed through unchanged. `limits` may be undefined. */
+//!    *  source, passed through unchanged, on the solver's first order.
+//!    *  `limits` may be undefined. */
 //!   layer_open(source: OristudioCpFoldSource, limits?: LayerLimits): LayerOpenOutcome;
-//!   /** The same, then a saved record (its JSON string) restored onto it. */
+//!   /** The same, on the order the host shows: its relations, [upper, lower, …]. */
+//!   layer_open_showing(source: OristudioCpFoldSource, relations: Uint32Array,
+//!     limits?: LayerLimits): LayerOpenOutcome;
+//!   /** The same as layer_open, then a saved record (its JSON) restored onto it. */
 //!   layer_restore(source: OristudioCpFoldSource, record: string, limits?: LayerLimits):
 //!     LayerRestoreOutcome;
+//!   /** A record restored again on an open session (a retry), same handle. */
+//!   layer_restore_record(session: number, record: string, limits?: LayerLimits):
+//!     LayerRestoreOutcome;
+//!   /** Where the order on screen came from at open or the last restore. */
+//!   layer_opened_on(session: number): LayerOpenedOn;
 //!   /** The pairs deduction leaves open, [lo, hi, …], ascending. */
 //!   layer_open_pairs(session: number): Uint32Array;
 //!   /** The committed constraints, [subject, object, sign, …]. */
 //!   layer_constraints(session: number): Int32Array;
 //!   /** The committed list plus one [subject, object, sign]: never commits. */
 //!   layer_preview(session: number, candidate: Int32Array, limits?: LayerLimits): LayerPreviewed;
+//!   /** Any list, whatever is committed: never commits. */
+//!   layer_preview_list(session: number, constraints: Int32Array, limits?: LayerLimits):
+//!     LayerPreviewed;
 //!   /** Make the whole list the committed one (Add, remove, undo, redo, Clear all). */
 //!   layer_commit(session: number, constraints: Int32Array, limits?: LayerLimits): LayerCommitted;
+//!   /** Add by a preview: its token and the list it checked; no search when current. */
+//!   layer_commit_preview(session: number, token: number, constraints: Int32Array,
+//!     limits?: LayerLimits): LayerCommitted;
+//!   /** The saved constraints a restore did not apply, in record order. */
+//!   layer_carried(session: number): LayerCarriedRow[];
+//!   layer_remove_carried(session: number, index: number): boolean;
+//!   layer_clear_carried(session: number): void;
 //!   layer_stacks(session: number, side: 'front' | 'back'): LayerStacks;
 //!   /** The kernel's paper scene of the order on screen; null with no subfaces. */
 //!   layer_scene(session: number, side: 'front' | 'back', model?: OristudioCpFoldedFigureModel):
 //!     OristudioCpFoldedPaperScene | null;
 //!   /** [upper, lower, …], for the CP bridge's `folded_figure_fold_with_order`. */
 //!   layer_oriedita_relations(session: number): Uint32Array;
+//!   /** The committed constraints, then the carried rows, as one record. */
 //!   layer_save(session: number): LayerSaveOutcome;
 //!   /** Let a session go; whether it was held. */
 //!   layer_close(session: number): boolean;
@@ -31,11 +51,16 @@
 //! }
 //! ```
 //!
-//! Every call that searches (open, restore, preview, commit) takes
-//! `{ maxNodes?, fastNodes?, deadlineMs? }`; the deadline is `deadlineMs`
-//! after the call starts, by the worker's clock, and **keep trying is the
-//! same call with a larger `deadlineMs`** ([`LayerLimits`]). A call that
-//! timed out changed nothing.
+//! Every call that searches (the opens, the restores, the previews, the
+//! commits) takes `{ maxNodes?, fastNodes?, deadlineMs? }`; the deadline is
+//! `deadlineMs` after the call starts, by the worker's clock, and **keep
+//! trying is the same call with a larger `deadlineMs`** ([`LayerLimits`]). A
+//! call that timed out changed nothing.
+//!
+//! The order a host shows, for `layer_open_showing`, is read off the paper
+//! scene it holds by `layerOrderSceneRelations.ts`, which mirrors
+//! `oristudio_fold::steer::scene_relations`: the scene is already in the
+//! host's hands, so it is not sent through the wasm to come back as pairs.
 //!
 //! Large data crosses as typed arrays, copied out of the wasm heap (so a
 //! later call that grows it leaves them valid); small results are plain
@@ -64,14 +89,30 @@ use crate::{FoldEngine, js_error, parse, to_js_value};
 impl FoldEngine {
     /// Open a constraint session on `source`, the CP bridge's
     /// `{ segments, starting_face_id, aux_segments, digest }` of what the
-    /// host folded. `limits` may be `undefined` or `null`.
+    /// host folded, on the solver's first order. `limits` may be `undefined`
+    /// or `null`.
     pub fn layer_open(&mut self, source: JsValue, limits: JsValue) -> Result<JsValue, JsValue> {
         let source: LayerFoldSource = parse("source", source)?;
         let limits = limits_of(limits)?;
-        match self.layers.open(&source, &limits).map_err(thrown)? {
-            Opening::Opened(opened) => opened_object(&opened, "ok").map(JsValue::from),
-            Opening::Refused(refusal) => refused(&refusal),
-        }
+        opening(self.layers.open(&source, &limits).map_err(thrown)?)
+    }
+
+    /// Open a constraint session on `source` showing the order the host
+    /// shows: `relations`, `[upper, lower, …]` in Oriedita's frame, as
+    /// `layer_oriedita_relations` answers them.
+    pub fn layer_open_showing(
+        &mut self,
+        source: JsValue,
+        relations: &[u32],
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let source: LayerFoldSource = parse("source", source)?;
+        let limits = limits_of(limits)?;
+        opening(
+            self.layers
+                .open_showing(&source, relations, &limits)
+                .map_err(thrown)?,
+        )
     }
 
     /// Open a session on `source` and restore `record`, a saved record's
@@ -84,14 +125,32 @@ impl FoldEngine {
     ) -> Result<JsValue, JsValue> {
         let source: LayerFoldSource = parse("source", source)?;
         let limits = limits_of(limits)?;
-        match self
-            .layers
-            .restore(&source, record, &limits)
-            .map_err(thrown)?
-        {
-            Restoring::Restored(restored) => restored_object(&restored),
-            Restoring::Refused(refusal) => refused(&refusal),
-        }
+        restoring(
+            self.layers
+                .restore(&source, record, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// Restore `record` again on the open `session`, as `layer_restore`
+    /// answers, under the same handle.
+    pub fn layer_restore_record(
+        &mut self,
+        session: u32,
+        record: &str,
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits = limits_of(limits)?;
+        restoring(
+            self.layers
+                .restore_record(session, record, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// Where the order on screen came from at open or the last restore.
+    pub fn layer_opened_on(&self, session: u32) -> Result<JsValue, JsValue> {
+        to_js_value(&self.layers.opened_on(session).map_err(thrown)?)
     }
 
     /// The pairs deduction leaves open, `[lo, hi, …]`.
@@ -105,32 +164,36 @@ impl FoldEngine {
     }
 
     /// Whether the committed constraints and `candidate`
-    /// (`[subject, object, sign]`) leave an order. Never commits.
+    /// (`[subject, object, sign]`) leave an order. Never commits; a fit
+    /// carries the token `layer_commit_preview` adopts it by.
     pub fn layer_preview(
-        &self,
+        &mut self,
         session: u32,
         candidate: &[i32],
         limits: JsValue,
     ) -> Result<JsValue, JsValue> {
         let limits = limits_of(limits)?;
-        let previewed = self
-            .layers
-            .preview(session, candidate, &limits)
-            .map_err(thrown)?;
-        Ok(match previewed {
-            Previewed::Fits(fit) => Fields::new()
-                .text("verdict", "fits")?
-                .set(
-                    "changed",
-                    spots_changed(&fit.changed.front, &fit.changed.back)?,
-                )?
-                .set("stacks", sides_object(&fit.stacks)?)?
-                .plain("stage", &fit.stage)?
-                .number("nodes", fit.nodes as f64)?
-                .into(),
-            Previewed::CantFit(cant) => cant_fit(&cant)?,
-            Previewed::TimedOut(out) => Fields::of(&out)?.text("verdict", "timed_out")?.into(),
-        })
+        previewed(
+            self.layers
+                .preview(session, candidate, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// Whether `constraints` (`[subject, object, sign, …]`), whatever is
+    /// committed, leave an order. Never commits.
+    pub fn layer_preview_list(
+        &mut self,
+        session: u32,
+        constraints: &[i32],
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits = limits_of(limits)?;
+        previewed(
+            self.layers
+                .preview_list(session, constraints, &limits)
+                .map_err(thrown)?,
+        )
     }
 
     /// Make `constraints` (`[subject, object, sign, …]`) the committed list.
@@ -141,25 +204,47 @@ impl FoldEngine {
         limits: JsValue,
     ) -> Result<JsValue, JsValue> {
         let limits = limits_of(limits)?;
-        let committed = self
-            .layers
-            .commit(session, constraints, &limits)
-            .map_err(thrown)?;
-        Ok(match committed {
-            Committing::Committed(done) => Fields::new()
-                .text("verdict", "committed")?
-                .set(
-                    "changed",
-                    spots_changed(&done.changed.front, &done.changed.back)?,
-                )?
-                .set("stacks", sides_object(&done.stacks)?)?
-                .set("open_pairs", Uint32Array::from(done.open_pairs.as_slice()))?
-                .plain("stage", &done.stage)?
-                .number("nodes", done.nodes as f64)?
-                .into(),
-            Committing::CantFit(cant) => cant_fit(&cant)?,
-            Committing::TimedOut(out) => Fields::of(&out)?.text("verdict", "timed_out")?.into(),
-        })
+        committed(
+            self.layers
+                .commit(session, constraints, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// Add by a preview: `token` from its fit and `constraints` the list it
+    /// checked. Adopted with no search while it is the session's last
+    /// preview; otherwise the list is committed by a search within `limits`.
+    pub fn layer_commit_preview(
+        &mut self,
+        session: u32,
+        token: u32,
+        constraints: &[i32],
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits = limits_of(limits)?;
+        committed(
+            self.layers
+                .commit_preview(session, token, constraints, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// The saved constraints the last restore did not apply, in record
+    /// order, each with its status.
+    pub fn layer_carried(&self, session: u32) -> Result<JsValue, JsValue> {
+        to_js_value(&self.layers.carried(session).map_err(thrown)?)
+    }
+
+    /// Remove carried row `index`; whether there was one.
+    pub fn layer_remove_carried(&mut self, session: u32, index: u32) -> Result<bool, JsValue> {
+        self.layers
+            .remove_carried(session, index as usize)
+            .map_err(thrown)
+    }
+
+    /// Remove every carried row.
+    pub fn layer_clear_carried(&mut self, session: u32) -> Result<(), JsValue> {
+        self.layers.clear_carried(session).map_err(thrown)
     }
 
     /// The order on screen's stacks from `side` (`"front"` or `"back"`).
@@ -255,7 +340,21 @@ impl From<Fields> for JsValue {
     }
 }
 
-/// `{ status, session, faces, front_up, open_pairs, spots }`.
+fn opening(opening: Opening) -> Result<JsValue, JsValue> {
+    match opening {
+        Opening::Opened(opened) => opened_object(&opened, "ok").map(JsValue::from),
+        Opening::Refused(refusal) => refused(&refusal),
+    }
+}
+
+fn restoring(restoring: Restoring) -> Result<JsValue, JsValue> {
+    match restoring {
+        Restoring::Restored(restored) => restored_object(&restored),
+        Restoring::Refused(refusal) => refused(&refusal),
+    }
+}
+
+/// `{ status, session, faces, front_up, open_pairs, spots, opened_on }`.
 fn opened_object(opened: &LayerOpened, status: &str) -> Result<Fields, JsValue> {
     Fields::new()
         .text("status", status)?
@@ -266,7 +365,8 @@ fn opened_object(opened: &LayerOpened, status: &str) -> Result<Fields, JsValue> 
             "open_pairs",
             Uint32Array::from(opened.open_pairs.as_slice()),
         )?
-        .number("spots", opened.spots)
+        .number("spots", opened.spots)?
+        .plain("opened_on", &opened.opened_on)
 }
 
 fn restored_object(restored: &LayerRestored) -> Result<JsValue, JsValue> {
@@ -286,7 +386,45 @@ fn restored_object(restored: &LayerRestored) -> Result<JsValue, JsValue> {
             "saved_order",
             Uint8Array::from(restored.order_status.as_slice()),
         )?
+        .plain("carried", &restored.carried)?
         .into())
+}
+
+fn previewed(previewed: Previewed) -> Result<JsValue, JsValue> {
+    Ok(match previewed {
+        Previewed::Fits(fit) => Fields::new()
+            .text("verdict", "fits")?
+            .number("token", fit.token)?
+            .set(
+                "changed",
+                spots_changed(&fit.changed.front, &fit.changed.back)?,
+            )?
+            .set("stacks", sides_object(&fit.stacks)?)?
+            .plain("stage", &fit.stage)?
+            .number("nodes", fit.nodes as f64)?
+            .into(),
+        Previewed::CantFit(cant) => cant_fit(&cant)?,
+        Previewed::TimedOut(out) => Fields::of(&out)?.text("verdict", "timed_out")?.into(),
+    })
+}
+
+fn committed(committed: Committing) -> Result<JsValue, JsValue> {
+    Ok(match committed {
+        Committing::Committed(done) => Fields::new()
+            .text("verdict", "committed")?
+            .set(
+                "changed",
+                spots_changed(&done.changed.front, &done.changed.back)?,
+            )?
+            .set("stacks", sides_object(&done.stacks)?)?
+            .set("open_pairs", Uint32Array::from(done.open_pairs.as_slice()))?
+            .plain("stage", &done.stage)?
+            .number("nodes", done.nodes as f64)?
+            .set("adopted", JsValue::from_bool(done.adopted))?
+            .into(),
+        Committing::CantFit(cant) => cant_fit(&cant)?,
+        Committing::TimedOut(out) => Fields::of(&out)?.text("verdict", "timed_out")?.into(),
+    })
 }
 
 fn refused(refusal: &LayerRefusal) -> Result<JsValue, JsValue> {

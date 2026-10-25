@@ -10,12 +10,13 @@
 //! `[a, b, a, b, …]`, constraints as `[subject, object, sign, …]`, stacks as
 //! offsets and faces, statuses as one byte each.
 
-use oristudio_cp::session::FoldSource;
+use oristudio_cp::folding::HierarchyRelation;
+use oristudio_cp::session::{FoldSource, relations_from_flat_pairs};
 use oristudio_fold::complete::{BudgetLimit, Deadline};
 use oristudio_fold::steer::{
-    ChangedSpots, Constraint, ConstraintFault, ConstraintStatus, FaceStatus, FoldSign, Limits,
-    RecordDamage, RestoreOutcome, SavedPairStatus, SessionRefusal, SourceRefusal, Stacks, TimedOut,
-    ViewSide,
+    CarriedConstraint, ChangedSpots, Constraint, ConstraintFault, ConstraintStatus, FaceStatus,
+    FoldSign, Limits, OpenedOn, RecordDamage, RecordFace, RestoreOutcome, SavedPairStatus,
+    SessionRefusal, SourceRefusal, Stacks, TimedOut, ViewSide,
 };
 use oristudio_fold::{CheckStage, FaceId};
 use oristudio_layer_order::FacePair;
@@ -159,6 +160,17 @@ fn face_number(face: FaceId) -> i32 {
     i32::try_from(face.0).unwrap_or(i32::MAX)
 }
 
+/// The order a host shows, as Oriedita's relations: `[upper, lower, …]`,
+/// each `upper` nearer a viewer of the starting face's front, the shape
+/// `layer_oriedita_relations` answers and the CP bridge's
+/// `folded_figure_fold_with_order` takes, read by the CP kernel's own
+/// reader. An odd length is the caller's mistake; a pair naming no
+/// overlapping faces is not, and the open counts it as ignored.
+pub fn relations_of(flat: &[u32]) -> Result<Vec<HierarchyRelation>, LayerCallError> {
+    relations_from_flat_pairs(flat)
+        .map_err(|error| LayerCallError::invalid(format!("relations: {}", error.message)))
+}
+
 /// `"front"` or `"back"`: the side the folded paper is seen from.
 pub fn side_of(word: &str) -> Result<ViewSide, LayerCallError> {
     match word {
@@ -221,6 +233,36 @@ pub struct LayerOpened {
     pub open_pairs: Vec<u32>,
     /// How many spots the stacks list (the paper scene's subfaces).
     pub spots: u32,
+    /// Where the order on screen came from.
+    pub opened_on: OpenedOnWire,
+}
+
+/// Where the order a session shows at open, or after its last restore, came
+/// from (`OpenedOn`, tagged by `kind`). Commits do not change it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum OpenedOnWire {
+    /// The solver's first order: what `layer_open` shows, and what is left
+    /// when holding an order and the search toward it both ran out
+    /// (`timed_out`, else null).
+    First { timed_out: Option<TimedOut> },
+    /// The order given, held whole: the host's relations, or the saved
+    /// pairs that still resolve. `ignored` relations named no overlapping
+    /// pair, or both orders of one.
+    Held { ignored: usize },
+    /// The order given does not all fit: the fitting order closest to it,
+    /// with `moved` of its relations the other way.
+    Closest { moved: usize, ignored: usize },
+}
+
+impl From<&OpenedOn> for OpenedOnWire {
+    fn from(opened_on: &OpenedOn) -> OpenedOnWire {
+        match *opened_on {
+            OpenedOn::First { timed_out } => OpenedOnWire::First { timed_out },
+            OpenedOn::Held { ignored } => OpenedOnWire::Held { ignored },
+            OpenedOn::Closest { moved, ignored } => OpenedOnWire::Closest { moved, ignored },
+        }
+    }
 }
 
 /// An open's answer.
@@ -326,6 +368,71 @@ pub struct LayerRestored {
     /// Per record order pair: [`PAIR_KEPT`], [`PAIR_MOVED`] or
     /// [`PAIR_UNRESOLVED`].
     pub order_status: Vec<u8>,
+    /// Every saved constraint the restore did not apply, in record order,
+    /// carried to the next save ([`CarriedRow`]).
+    pub carried: Vec<CarriedRow>,
+}
+
+/// A record face as a carried row names it: its point and area as saved.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct SavedFace {
+    pub at: [f64; 2],
+    pub area: f64,
+}
+
+impl From<RecordFace> for SavedFace {
+    fn from(face: RecordFace) -> SavedFace {
+        SavedFace {
+            at: face.at,
+            area: face.area,
+        }
+    }
+}
+
+/// A saved constraint a restore did not apply (`CarriedConstraint`): a row
+/// the dialog shows by its status, and that `layer_save` writes back as
+/// saved, after the committed constraints, until it is removed
+/// (`layer_remove_carried`, `layer_clear_carried`) or a commit applies it.
+/// Its status is flattened in: `{ status: 'intact' | 'ambiguous' |
+/// 'clashing' }` or `{ status: 'gone', cause }`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct CarriedRow {
+    /// Its index among the constraints of the record restored.
+    pub index: usize,
+    /// Its faces as the record saved them.
+    pub subject: SavedFace,
+    pub object: SavedFace,
+    /// FOLD's sign, as saved.
+    pub sign: i8,
+    #[serde(flatten)]
+    pub status: ConstraintStatus,
+    /// `[subject, object, sign]` on today's faces, when both are intact and
+    /// overlap: a commit whose list holds it applies the row. Null otherwise.
+    pub constraint: Option<[i32; 3]>,
+}
+
+impl From<&CarriedConstraint> for CarriedRow {
+    fn from(row: &CarriedConstraint) -> CarriedRow {
+        CarriedRow {
+            index: row.index,
+            subject: row.subject.into(),
+            object: row.object.into(),
+            sign: row.sign.value(),
+            status: row.status,
+            constraint: row.constraint.map(|c| {
+                [
+                    face_number(c.subject),
+                    face_number(c.object),
+                    i32::from(c.sign.value()),
+                ]
+            }),
+        }
+    }
+}
+
+/// A session's carried rows, as they cross.
+pub fn carried_rows(carried: &[CarriedConstraint]) -> Vec<CarriedRow> {
+    carried.iter().map(CarriedRow::from).collect()
 }
 
 pub(crate) fn order_status(order: &[SavedPairStatus]) -> Vec<u8> {
@@ -343,6 +450,10 @@ pub(crate) fn order_status(order: &[SavedPairStatus]) -> Vec<u8> {
 /// which the session does not adopt.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreviewFits {
+    /// What `layer_commit_preview` adopts it by: the session keeps its last
+    /// preview that fit under this token, until the next preview, commit or
+    /// restore. Never 0.
+    pub token: u32,
     /// The spots whose top face would change, per side, ascending.
     pub changed: ChangedSpots,
     /// The previewed order's stacks.
@@ -426,8 +537,15 @@ pub struct CommitDone {
     pub stacks: Sides<PackedStacks>,
     /// The open pairs now, flat, as [`LayerOpened::open_pairs`].
     pub open_pairs: Vec<u32>,
+    /// `stage` is how far the check had to search (`unchanged`: no search,
+    /// not no change; read `changed` for that). A commit that adopted its
+    /// preview reports the preview's.
     pub stage: CheckStage,
     pub nodes: u64,
+    /// Whether the commit adopted a stored preview with no search
+    /// (`layer_commit_preview` with the token of the session's last preview
+    /// and the list it checked); false for every other commit.
+    pub adopted: bool,
 }
 
 /// A commit's verdict. Only [`Committing::Committed`] changed the session.
@@ -738,6 +856,61 @@ mod tests {
             .map_err(|e| e.code()),
             Err("source_internal")
         );
+    }
+
+    #[test]
+    fn where_the_order_came_from_and_carried_rows_are_flat_objects() {
+        let first = OpenedOnWire::from(&OpenedOn::First {
+            timed_out: Some(TimedOut {
+                limit: BudgetLimit::Deadline,
+                nodes: 3,
+            }),
+        });
+        assert_eq!(
+            serde_json::to_value(first).unwrap_or_default(),
+            json!({ "kind": "first", "timed_out": { "limit": "deadline", "nodes": 3 } })
+        );
+        assert_eq!(
+            serde_json::to_value(OpenedOnWire::from(&OpenedOn::First { timed_out: None }))
+                .unwrap_or_default(),
+            json!({ "kind": "first", "timed_out": null })
+        );
+        assert_eq!(
+            serde_json::to_value(OpenedOnWire::from(&OpenedOn::Closest {
+                moved: 2,
+                ignored: 1
+            }))
+            .unwrap_or_default(),
+            json!({ "kind": "closest", "moved": 2, "ignored": 1 })
+        );
+        let face = RecordFace {
+            at: [0.25, 0.5],
+            area: 0.125,
+        };
+        let row = CarriedRow::from(&CarriedConstraint {
+            index: 4,
+            subject: face,
+            object: face,
+            sign: FoldSign::Back,
+            status: ConstraintStatus::Gone {
+                cause: oristudio_fold::steer::GoneCause::FaceGone,
+            },
+            constraint: None,
+        });
+        assert_eq!(
+            serde_json::to_value(row).unwrap_or_default(),
+            json!({
+                "index": 4,
+                "subject": { "at": [0.25, 0.5], "area": 0.125 },
+                "object": { "at": [0.25, 0.5], "area": 0.125 },
+                "sign": -1, "status": "gone", "cause": "face_gone", "constraint": null
+            })
+        );
+        assert_eq!(
+            relations_of(&[1, 2, 3]).map(|_| ()).map_err(|e| e.code()),
+            Err("invalid_input")
+        );
+        assert_eq!(relations_of(&[3, 1]).map(|r| r.len()), Ok(1));
     }
 
     #[test]

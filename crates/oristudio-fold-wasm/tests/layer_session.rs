@@ -18,12 +18,12 @@ use oristudio_fold::FaceId;
 use oristudio_fold::complete::BudgetLimit;
 use oristudio_fold::steer::{
     ConstraintStatus, LayerSource, RecordFace, RecordPair, RecordRead, TimedOut, Verb, ViewSide,
-    encode_record, read_record,
+    encode_record, read_record, scene_relations,
 };
 use oristudio_fold_wasm::steer::{
     CantFitKind, Committing, FACE_INTACT, LayerCallError, LayerLimits, LayerOpened, LayerRefusal,
-    LayerRestored, LayerSessions, Opening, PAIR_KEPT, PackedStacks, Previewed, RestoredOutcome,
-    Restoring, Saving, constraints_of,
+    LayerRestored, LayerSessions, OpenedOnWire, Opening, PAIR_KEPT, PAIR_UNRESOLVED, PackedStacks,
+    Previewed, RestoredOutcome, Restoring, Saving, constraints_of,
 };
 
 fn repo(relative: &str) -> std::path::PathBuf {
@@ -609,7 +609,7 @@ fn a_restore_whose_constraints_clash_commits_none_and_marks_the_clash() {
         })
         .expect("kabuto forces pairs");
     let mut listed = |face: u32| -> u32 {
-        let at = layer_source.paper_point(FaceId(face)).expect("a point");
+        let at = layer_source.interior_point(FaceId(face)).expect("a point");
         if let Some(i) = record.faces.iter().position(|f| f.at == at) {
             return i as u32;
         }
@@ -644,8 +644,427 @@ fn a_restore_whose_constraints_clash_commits_none_and_marks_the_clash() {
     assert_eq!(layers.constraints(back.opened.session), Ok(Vec::new()));
     // The saved order is still the one shown, where the creases allow it.
     assert!(back.order_status.iter().all(|&s| s == PAIR_KEPT));
+    assert_eq!(back.opened.opened_on, OpenedOnWire::Held { ignored: 0 });
     // The session is held, for the dialog to open on the rows.
     assert_eq!(layers.len(), 2);
+
+    // Both saved constraints are carried, as saved, each with its status
+    // and today's constraint.
+    let restored_session = back.opened.session;
+    let rows = &back.carried;
+    assert_eq!(rows.len(), 2);
+    assert_eq!(
+        (rows[0].index, rows[0].status, rows[0].constraint),
+        (0, ConstraintStatus::Intact, Some(fine))
+    );
+    let against_triple = sentence(lower, true, upper, true, &opened.front_up);
+    assert_eq!(
+        (rows[1].index, rows[1].status, rows[1].constraint),
+        (1, ConstraintStatus::Clashing, Some(against_triple))
+    );
+    assert_eq!(rows[1].sign, against_triple[2] as i8);
+    assert_eq!(layers.carried(restored_session), Ok(back.carried.clone()));
+    let saved_constraints = |layers: &LayerSessions| {
+        let RecordRead::Read { record, .. } = read_record(&saved_json(layers, restored_session))
+        else {
+            panic!("the record reads");
+        };
+        record.constraints.len()
+    };
+    // A save writes them back: nothing the user made is dropped.
+    assert_eq!(saved_constraints(&layers), 2);
+    // The clashing row's trash button.
+    assert_eq!(layers.remove_carried(restored_session, 1), Ok(true));
+    assert_eq!(layers.remove_carried(restored_session, 7), Ok(false));
+    assert_eq!(saved_constraints(&layers), 1);
+    // The builder previews the rows it shows, then commits them: the
+    // carried row is applied and leaves the carried rows.
+    let Ok(Previewed::Fits(fit)) = layers.preview_list(restored_session, &fine, &defaults()) else {
+        panic!("the intact row fits alone");
+    };
+    let Ok(Committing::Committed(done)) =
+        layers.commit_preview(restored_session, fit.token, &fine, &defaults())
+    else {
+        panic!("it fits");
+    };
+    assert!(done.adopted);
+    assert_eq!(layers.carried(restored_session), Ok(Vec::new()));
+    assert_eq!(layers.constraints(restored_session), Ok(fine.to_vec()));
+    assert_eq!(saved_constraints(&layers), 1);
+
+    // Restored again on the same session: carried again, then Clear all.
+    let Ok(Restoring::Restored(again)) =
+        layers.restore_record(restored_session, &json, &defaults())
+    else {
+        panic!("the record restores");
+    };
+    assert_eq!(again.opened.session, restored_session);
+    assert_eq!(again.carried.len(), 2);
+    assert_eq!(layers.clear_carried(restored_session), Ok(()));
+    assert_eq!(layers.carried(restored_session), Ok(Vec::new()));
+    assert_eq!(saved_constraints(&layers), 0);
+}
+
+/// The CP kernel's own paper scene of `source` folded with Oriedita's order:
+/// what Edit shows.
+fn edit_scene(source: &FoldSource) -> oristudio_cp::folding::FoldedPaperScene {
+    let mut cp = CpSession::new();
+    let FoldWithOrderResult::Folded { handle, .. } = cp
+        .folded_figure_fold_with_order(source, &[], FoldedFigureModel::default())
+        .expect("a fold")
+    else {
+        panic!("Oriedita folds it");
+    };
+    cp.folded_figure_paper_scene(handle, None)
+        .expect("a scene")
+        .expect("subfaces")
+}
+
+fn flat_relations(relations: &[oristudio_cp::folding::HierarchyRelation]) -> Vec<u32> {
+    relations
+        .iter()
+        .flat_map(|r| [r.upper_face as u32, r.lower_face as u32])
+        .collect()
+}
+
+#[test]
+fn a_session_opens_on_the_order_its_host_shows() {
+    let source = kabuto();
+    let scene = edit_scene(&source);
+    let shown = flat_relations(&scene_relations(&scene));
+    let mut layers = LayerSessions::new();
+    let first = open(&mut layers, &source);
+    assert_eq!(first.opened_on, OpenedOnWire::First { timed_out: None });
+    let Ok(Opening::Opened(showing)) = layers.open_showing(&source, &shown, &defaults()) else {
+        panic!("kabuto opens on Oriedita's order");
+    };
+    assert_eq!(showing.opened_on, OpenedOnWire::Held { ignored: 0 });
+    assert_eq!(
+        layers.opened_on(showing.session),
+        Ok(OpenedOnWire::Held { ignored: 0 })
+    );
+    assert_eq!(showing.open_pairs, first.open_pairs, "nothing committed");
+    // The dialog shows what Edit shows, spot for spot; the solver's first
+    // order differs on some.
+    let front = layers
+        .stacks(showing.session, ViewSide::Front)
+        .expect("front");
+    let solver = layers
+        .stacks(first.session, ViewSide::Front)
+        .expect("front");
+    let mut differ = 0;
+    for (i, subface) in scene.subfaces.iter().enumerate() {
+        let drawn: Vec<u32> = subface
+            .faces_top_to_bottom
+            .iter()
+            .map(|&f| f as u32)
+            .collect();
+        assert_eq!(spot(&front, i), drawn.as_slice(), "spot {i}");
+        differ += usize::from(spot(&solver, i) != drawn.as_slice());
+    }
+    println!(
+        "kabuto: the solver's first order differs from Edit's on {differ} of {} spots",
+        scene.subfaces.len()
+    );
+    assert!(differ > 0);
+    // The relations it hands back at Apply are the ones it was given.
+    let sorted = |flat: &[u32]| {
+        let mut pairs = pairs(flat);
+        pairs.sort_unstable();
+        pairs
+    };
+    assert_eq!(
+        sorted(
+            &layers
+                .oriedita_relations(showing.session)
+                .expect("relations")
+        ),
+        sorted(&shown)
+    );
+
+    // Relations that do not all fit: one forced pair the other way.
+    let open = pairs(&first.open_pairs);
+    let forced = pairs(&shown)
+        .into_iter()
+        .position(|(u, l)| !open.contains(&(u.min(l), u.max(l))))
+        .expect("kabuto forces pairs");
+    let mut wrong = shown.clone();
+    wrong.swap(2 * forced, 2 * forced + 1);
+    match layers.open_showing(&source, &wrong, &defaults()) {
+        Ok(Opening::Opened(opened)) => match opened.opened_on {
+            OpenedOnWire::Closest { moved, ignored } => {
+                assert!(moved >= 1, "{moved}");
+                assert_eq!(ignored, 0);
+            }
+            other => panic!("{other:?}"),
+        },
+        other => panic!("{other:?}"),
+    }
+    // A pair named both ways, and a face the figure lacks, are ignored and
+    // counted.
+    let mut odd = shown.clone();
+    odd.extend([shown[1], shown[0], 999, 0]);
+    match layers.open_showing(&source, &odd, &defaults()) {
+        Ok(Opening::Opened(opened)) => {
+            assert_eq!(opened.opened_on, OpenedOnWire::Held { ignored: 3 });
+        }
+        other => panic!("{other:?}"),
+    }
+    // Not pairs.
+    assert_eq!(
+        layers
+            .open_showing(&source, &shown[..3], &defaults())
+            .map(|_| ())
+            .map_err(|e| e.code()),
+        Err("invalid_input")
+    );
+    assert_eq!(layers.len(), 4);
+}
+
+#[test]
+fn add_adopts_its_preview_by_token_and_anything_else_searches() {
+    let source = kabuto();
+    let mut layers = LayerSessions::new();
+    let opened = open(&mut layers, &source);
+    let session = opened.session;
+    let candidate = needs_search(&mut layers, &opened);
+    let Ok(Previewed::Fits(fit)) = layers.preview(session, &candidate, &defaults()) else {
+        panic!("it fits");
+    };
+    assert_ne!(fit.token, 0);
+    // Adopted with no search, so even no nodes at all cannot stop it.
+    let Ok(Committing::Committed(done)) =
+        layers.commit_preview(session, fit.token, &candidate, &tiny())
+    else {
+        panic!("Add adopts the preview");
+    };
+    assert!(done.adopted);
+    assert_eq!(done.changed, fit.changed);
+    assert_eq!(done.stacks, fit.stacks);
+    assert_eq!(layers.constraints(session), Ok(candidate.to_vec()));
+    // The preview it adopted is gone: the same token now searches.
+    let Ok(Committing::Committed(again)) =
+        layers.commit_preview(session, fit.token, &candidate, &defaults())
+    else {
+        panic!("the same list fits");
+    };
+    assert!(!again.adopted);
+
+    // A stale token, an unknown one and another list each commit by a search.
+    let fresh = open_pair_candidates(&mut layers, &source);
+    let (session, list_a, list_b) = (fresh.0, fresh.1, fresh.2);
+    let Ok(Previewed::Fits(a)) = layers.preview(session, &list_a, &defaults()) else {
+        panic!("a fits");
+    };
+    let Ok(Previewed::Fits(b)) = layers.preview(session, &list_b, &defaults()) else {
+        panic!("b fits");
+    };
+    assert_ne!(a.token, b.token);
+    // Without a search's nodes, a stale token's commit runs out, and
+    // commits nothing.
+    assert!(matches!(
+        layers.commit_preview(session, a.token, &list_a, &tiny()),
+        Ok(Committing::TimedOut(_))
+    ));
+    assert_eq!(layers.constraints(session), Ok(Vec::new()));
+    for (token, list) in [(a.token, &list_a), (12_345, &list_b), (b.token, &list_a)] {
+        let Ok(Committing::Committed(done)) =
+            layers.commit_preview(session, token, list, &defaults())
+        else {
+            panic!("{token}: the list fits");
+        };
+        assert!(!done.adopted, "{token}");
+        assert_eq!(layers.constraints(session), Ok(list.to_vec()));
+        // Back to nothing committed for the next.
+        let Ok(Committing::Committed(_)) = layers.commit(session, &[], &defaults()) else {
+            panic!("an empty list fits");
+        };
+    }
+    // A preview that cannot fit drops the one kept.
+    let Ok(Previewed::Fits(kept)) = layers.preview(session, &list_a, &defaults()) else {
+        panic!("a fits");
+    };
+    let (x, y) = pairs(&opened.open_pairs)[0];
+    let both = [
+        sentence(x, true, y, true, &opened.front_up),
+        sentence(x, false, y, true, &opened.front_up),
+    ]
+    .concat();
+    assert!(matches!(
+        layers.preview_list(session, &both, &defaults()),
+        Ok(Previewed::CantFit(_))
+    ));
+    let Ok(Committing::Committed(done)) =
+        layers.commit_preview(session, kept.token, &list_a, &defaults())
+    else {
+        panic!("the list fits");
+    };
+    assert!(!done.adopted);
+}
+
+/// A constraint the session's order on screen breaks, on an open pair, whose
+/// preview needs a search: out of nodes, it times out.
+fn needs_search(layers: &mut LayerSessions, opened: &LayerOpened) -> [i32; 3] {
+    let candidates: Vec<[i32; 3]> = pairs(&opened.open_pairs)
+        .into_iter()
+        .map(|pair| against_shown(layers, opened.session, pair, &opened.front_up))
+        .collect();
+    candidates
+        .into_iter()
+        .find(|c| {
+            matches!(
+                layers.preview(opened.session, c, &tiny()),
+                Ok(Previewed::TimedOut(_))
+            )
+        })
+        .expect("a preview that needs a search")
+}
+
+/// A new session on `source`, and two lists of one constraint each on
+/// different open pairs, each the other order of the pair from the one
+/// shown, the first one that needs a search.
+fn open_pair_candidates(
+    layers: &mut LayerSessions,
+    source: &FoldSource,
+) -> (u32, Vec<i32>, Vec<i32>) {
+    let opened = open(layers, source);
+    let a = needs_search(layers, &opened);
+    let b = pairs(&opened.open_pairs)
+        .into_iter()
+        .map(|pair| against_shown(layers, opened.session, pair, &opened.front_up))
+        .find(|b| b[..2] != a[..2] && b[..2] != [a[1], a[0]])
+        .expect("another open pair");
+    (opened.session, a.to_vec(), b.to_vec())
+}
+
+#[test]
+fn a_whole_list_previews_without_committing() {
+    let source = kabuto();
+    let mut layers = LayerSessions::new();
+    let opened = open(&mut layers, &source);
+    let session = opened.session;
+    let before = observed(&layers, session);
+    let open = pairs(&opened.open_pairs);
+    let list = [
+        against_shown(&layers, session, open[0], &opened.front_up),
+        against_shown(&layers, session, open[open.len() - 1], &opened.front_up),
+    ]
+    .concat();
+    let Ok(Previewed::Fits(fit)) = layers.preview_list(session, &list, &defaults()) else {
+        panic!("two open pairs' other orders fit");
+    };
+    assert_eq!(observed(&layers, session), before);
+    let Ok(Committing::Committed(done)) =
+        layers.commit_preview(session, fit.token, &list, &defaults())
+    else {
+        panic!("it fits");
+    };
+    assert!(done.adopted);
+    assert_eq!(layers.constraints(session), Ok(list.clone()));
+    // A no indexes the list given.
+    let (a, b) = open[1];
+    let both = [
+        sentence(a, true, b, true, &opened.front_up),
+        sentence(a, false, b, true, &opened.front_up),
+    ]
+    .concat();
+    match layers.preview_list(session, &both, &defaults()) {
+        Ok(Previewed::CantFit(cant)) => {
+            assert_eq!(cant.proof, CantFitKind::Opposed);
+            assert_eq!(cant.constraints, vec![0, 1]);
+        }
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(layers.constraints(session), Ok(list));
+}
+
+#[test]
+fn a_restore_is_retried_on_the_open_session() {
+    let source = kabuto();
+    let mut layers = LayerSessions::new();
+    let saving = open(&mut layers, &source);
+    let candidate = needs_search(&mut layers, &saving);
+    let Ok(Committing::Committed(_)) = layers.commit(saving.session, &candidate, &defaults())
+    else {
+        panic!("it fits");
+    };
+    let json = saved_json(&layers, saving.session);
+    let session = open(&mut layers, &source).session;
+
+    // On a session already open, the record restores as on a fresh one.
+    let Ok(Restoring::Restored(back)) = layers.restore_record(session, &json, &defaults()) else {
+        panic!("it restores");
+    };
+    assert_eq!(back.opened.session, session);
+    assert_eq!(back.outcome, RestoredOutcome::Applied);
+    assert_eq!(back.constraints, candidate.to_vec());
+    assert!(back.carried.is_empty());
+    assert_eq!(back.opened.opened_on, OpenedOnWire::Held { ignored: 0 });
+    assert_eq!(
+        observed(&layers, session),
+        observed(&layers, saving.session)
+    );
+
+    // Saved with no order pairs, its constraint needs a search. Out of
+    // nodes: none is applied, and the row is carried.
+    let RecordRead::Read { mut record, .. } = read_record(&json) else {
+        panic!("the record reads");
+    };
+    record.order.clear();
+    let bare = encode_record(&record).expect("encode");
+    let Ok(Restoring::Restored(short)) = layers.restore_record(session, &bare, &tiny()) else {
+        panic!("a restore that runs out still answers");
+    };
+    assert!(matches!(short.outcome, RestoredOutcome::TimedOut { .. }));
+    assert!(matches!(
+        short.opened.opened_on,
+        OpenedOnWire::First { timed_out: Some(_) }
+    ));
+    assert!(short.constraints.is_empty());
+    assert_eq!(short.carried.len(), 1);
+    assert_eq!(short.carried[0].status, ConstraintStatus::Intact);
+    assert_eq!(short.carried[0].constraint, Some(candidate));
+    // Keep trying: the same call with time.
+    let Ok(Restoring::Restored(applied)) = layers.restore_record(session, &bare, &later()) else {
+        panic!("it restores");
+    };
+    assert_eq!(applied.outcome, RestoredOutcome::Applied);
+    assert_eq!(applied.constraints, candidate.to_vec());
+    assert!(applied.carried.is_empty());
+    // A timed-out restore of the full record resolves none of its pairs.
+    let Ok(Restoring::Restored(unresolved)) = layers.restore_record(session, &json, &passed())
+    else {
+        panic!("a restore that runs out still answers");
+    };
+    assert!(matches!(
+        unresolved.outcome,
+        RestoredOutcome::TimedOut {
+            limit: BudgetLimit::Deadline,
+            ..
+        }
+    ));
+    assert!(!unresolved.order_status.is_empty());
+    assert!(
+        unresolved
+            .order_status
+            .iter()
+            .all(|&s| s == PAIR_UNRESOLVED)
+    );
+
+    // A record that does not read leaves the session as it was.
+    let before = observed(&layers, session);
+    match layers.restore_record(session, "not json", &defaults()) {
+        Ok(Restoring::Refused(refusal)) => assert_eq!(refusal.code(), "record_damaged"),
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(observed(&layers, session), before);
+    assert_eq!(
+        layers
+            .restore_record(99, &json, &defaults())
+            .map(|_| ())
+            .map_err(|e| e.code()),
+        Err("unknown_layer_session")
+    );
 }
 
 #[test]
