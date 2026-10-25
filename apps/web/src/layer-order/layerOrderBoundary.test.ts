@@ -137,6 +137,7 @@ const BEHIND_THE_DOORS: readonly RegExp[] = [
   /^layer-order\/dialog\/(?!layerOrderDialogGateway$)/,
   /^layer-order\/engine\/layerOrderRuntime$/,
   /^layer-order\/host\/layerOrderHostEngine$/,
+  /^layer-order\/host\/layerOrderSolutionCursor$/,
 ];
 
 /** Every module `text` names, relative or a package: what the model's purity is checked on. */
@@ -252,6 +253,7 @@ describe('the Layer order dialog’s boundaries', () => {
     expect(behind('layer-order/dialog/useLayerOrderSession')).toBe(true);
     expect(behind('layer-order/engine/layerOrderRuntime')).toBe(true);
     expect(behind('layer-order/host/layerOrderHostEngine')).toBe(true);
+    expect(behind('layer-order/host/layerOrderSolutionCursor')).toBe(true);
   });
 
   it('a host, the app root’s mount among them, reaches the dialog and the host engine only through their gateways', () => {

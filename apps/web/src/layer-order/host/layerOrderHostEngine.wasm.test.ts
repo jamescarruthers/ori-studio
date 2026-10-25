@@ -20,6 +20,7 @@ import { inProcessLayerOrderWorkers } from '../engine/layerOrderEngine.fixtures'
 import { LAYER_ORDER_LIMITS, constraintSeen, type LayerConstraint } from '../engine/layerOrderEngine';
 import { createLayerOrderRuntime } from '../engine/layerOrderRuntime';
 import { createLayerOrderResolveBatch } from './layerOrderHostEngine';
+import { createLayerOrderSolutionCursor } from './layerOrderSolutionCursor';
 import type { LayerOrderResolution } from './layerOrderResolution';
 
 /**
@@ -41,8 +42,13 @@ import type { LayerOrderResolution } from './layerOrderResolution';
  * - **a node budget its open runs out of:** timed out, and with a later
  *   budget as a retry, applied on the same worker.
  *
- * All on one batch's one worker. Skipped when either bridge has not been
- * built; CI builds them first.
+ * All on one batch's one worker. Then a host's solutions cursor (row H6)
+ * steps a record of one constraint through every picture that fits it from
+ * the front, in its fixed order, each step's order folding flat through the
+ * CP bridge with a record of its own, and the last step's record restores
+ * whole to the place it was saved at.
+ *
+ * Skipped when either bridge has not been built; CI builds them first.
  */
 const ROOT = process.cwd();
 const FOLD_WASM = resolve(ROOT, 'src/generated/oristudio-fold-wasm/oristudio_fold_wasm_bg.wasm');
@@ -297,5 +303,82 @@ describe.skipIf(!available)('the host engine over the Fold bridge, on kabuto', (
       expect(workers.workers[0]!.terminated).toBe(true);
     },
     60_000
+  );
+
+  /** A record of one constraint, saved through the dialog's engine, that leaves at least three pictures from the front. */
+  async function savedLeavingSeveral(source: LayerOrderSource) {
+    const { workers } = overTheBridge();
+    const dialog = createLayerOrderRuntime({ role: 'dialog', spawn: workers.spawn });
+    try {
+      const opened = await dialog.engine.open(source, LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`refused: ${JSON.stringify(opened.refusal)}`);
+      for (let i = 0; i < opened.open_pairs.length; i += 2) {
+        const [lo, hi] = [opened.open_pairs[i]!, opened.open_pairs[i + 1]!];
+        const constraint = constraintSeen(lo, 'in_front_of', hi, 'front', opened.front_up[hi] === 1);
+        const committed = await dialog.engine.commit([constraint], LAYER_ORDER_LIMITS.commit);
+        if (committed.verdict !== 'committed') continue;
+        const counted = await dialog.engine.countSlice(LAYER_ORDER_LIMITS.restore);
+        if (!counted.count.done || counted.count.front.n < 3) continue;
+        const saved = await dialog.engine.save();
+        if (saved.status !== 'ok') throw new Error(`refused: ${JSON.stringify(saved.refusal)}`);
+        return { record: saved.record, pictures: counted.count.front.n };
+      }
+      throw new Error('no one constraint on kabuto leaves three pictures');
+    } finally {
+      dialog.dispose();
+    }
+  }
+
+  it(
+    'steps a saved record through the solutions that fit, in a fixed order, each one folding flat with its own record (H6)',
+    async () => {
+      const { source: kernelSource } = kabuto();
+      const source = layerOrderSourceOf(kernelSource, DEFAULT_FOLDED_MODEL);
+      const { record, pictures } = await savedLeavingSeveral(source);
+      const { workers, calls } = overTheBridge();
+      const cursor = createLayerOrderSolutionCursor(source, record, { spawn: workers.spawn });
+      const front = { picture: 'front' } as const;
+
+      // Back to the first, then on to the last: every picture once, numbered in turn, of a final total.
+      for (let step = await cursor.step('previous', front); step.outcome !== 'end'; step = await cursor.step('previous', front)) {
+        if (step.outcome !== 'moved') throw new Error(`stepping back: ${JSON.stringify(step)}`);
+      }
+      const indices: number[] = [];
+      const records: string[] = [];
+      for (let step = await cursor.step('next', front); step.outcome !== 'end'; step = await cursor.step('next', front)) {
+        if (step.outcome !== 'moved') throw new Error(`stepping on: ${JSON.stringify(step)}`);
+        expect(step.counted).toBe(true);
+        expect(step.position.total).toEqual({ n: pictures, exact: true });
+        indices.push(step.position.index);
+        // The CP bridge draws it, as the host's fold of it does, and the record names the same constraint.
+        expect(foldsFlat(source, step.applied.relations)).toBe(true);
+        expect(step.applied.record.constraints).toEqual(record.constraints);
+        const encoded = encodeLayerOrderRecord(step.applied.record);
+        if (!encoded.ok) throw new Error('a step’s record encodes');
+        records.push(encoded.json);
+      }
+      expect(indices).toEqual(Array.from({ length: pictures - 1 }, (_, i) => i + 2));
+      expect(new Set(records).size).toBe(records.length);
+      // One worker throughout, kept between presses; closing the cursor ends it.
+      expect(workers.workers).toHaveLength(1);
+      expect(calls.filter((call) => call === 'restore')).toHaveLength(1);
+      cursor.close();
+      expect(workers.workers[0]!.terminated).toBe(true);
+
+      // The last step's record, restored afresh (a reload, the next cursor), holds the order it saved.
+      const batch = createLayerOrderResolveBatch({ spawn: overTheBridge().workers.spawn });
+      const last = JSON.parse(records.at(-1)!) as typeof record;
+      const reopened = await batch.resolve(source, last);
+      expectOutcome(reopened, 'applied');
+      expect(reopened.found.opened_on).toEqual({ kind: 'held', ignored: 0 });
+      const again = createLayerOrderSolutionCursor(source, reopened.record, { spawn: overTheBridge().workers.spawn });
+      await expect(again.step('next', front)).resolves.toMatchObject({
+        outcome: 'end',
+        position: { index: pictures, total: { n: pictures, exact: true } },
+      });
+      again.close();
+      batch.close();
+    },
+    120_000
   );
 });

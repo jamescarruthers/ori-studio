@@ -2,7 +2,9 @@
  * The one door into the Layer order host engine
  * (`implementation-plans/layer-order-dialog.md`, row H2): what Edit's refold
  * and reopen, the Diagram's capture and Refresh, and Pose call when no dialog
- * is open. Hosts import this module, never `layerOrderHostEngine.ts`.
+ * is open, and what a constrained figure's Another solution steps with (H6,
+ * {@link openLayerOrderSolutionCursor}). Hosts import this module, never
+ * `layerOrderHostEngine.ts` or `layerOrderSolutionCursor.ts`.
  *
  * **Nothing loads with the page** (approach 5). This module is a few lines and
  * imports no engine: the host engine's code, the runtime and comlink come in
@@ -35,10 +37,24 @@ import type {
   LayerOrderResolveBatch,
   LayerOrderResolveBatchOptions,
   LayerOrderResolveOptions,
+  LayerOrderSolutionCursor,
+  LayerOrderSolutionCursorOptions,
+  LayerOrderSolutionPlace,
+  LayerOrderSolutionStep,
+  LayerOrderSolutionStepOptions,
+  LayerOrderSolutionsUnrestored,
 } from './layerOrderHostEngine';
 import { LAYER_ORDER_CANCELLED, lostLayerOrder, type LayerOrderResolution } from './layerOrderResolution';
 
 export type { LayerOrderResolveBatch, LayerOrderResolveBatchOptions, LayerOrderResolveOptions };
+export type {
+  LayerOrderSolutionCursor,
+  LayerOrderSolutionCursorOptions,
+  LayerOrderSolutionPlace,
+  LayerOrderSolutionStep,
+  LayerOrderSolutionStepOptions,
+  LayerOrderSolutionsUnrestored,
+};
 export type {
   LayerOrderFound,
   LayerOrderKept,
@@ -123,6 +139,60 @@ export async function resolveLayerOrder(
   } finally {
     batch.close();
   }
+}
+
+/**
+ * A cursor through the solutions that fit `record` on `source` (H6,
+ * `layerOrderSolutionCursor.ts`), for a host's Another solution and its ‹ ›
+ * on a constrained figure. Opening it loads nothing and spawns nothing: its
+ * first step loads the code, spawns its worker and restores the record, and
+ * the worker stays for the next press until the cursor is closed. A load that
+ * fails is a `lost` step (`load` when the browser failed to fetch it), and
+ * the next step loads again.
+ */
+export function openLayerOrderSolutionCursor(
+  source: LayerOrderSource,
+  record: LayerOrderRecord,
+  options: LayerOrderSolutionCursorOptions = {}
+): LayerOrderSolutionCursor {
+  let closed = false;
+  let cursor: LayerOrderSolutionCursor | null = null;
+  let opening: Promise<LayerOrderSolutionCursor | null> | null = null;
+
+  const open = (): Promise<LayerOrderSolutionCursor | null> => {
+    opening ??= hostEngine.load().then((engine) => {
+      if (closed) return null;
+      cursor = engine.createLayerOrderSolutionCursor(source, record, options);
+      return cursor;
+    });
+    return opening;
+  };
+
+  return {
+    async step(direction, by, more = {}): Promise<LayerOrderSolutionStep> {
+      const stopped = () => closed || !!more.signal?.aborted;
+      if (stopped()) return { outcome: 'cancelled' };
+      let opened: LayerOrderSolutionCursor | null;
+      try {
+        opened = await open();
+      } catch (error) {
+        // Forgotten, so the next step loads again; reported as a resolve's failed load is.
+        opening = null;
+        if (stopped()) return { outcome: 'cancelled' };
+        if (isLayerOrderLoadFailure(error)) return { outcome: 'lost', cause: 'load' };
+        reportError(error, { surface: 'layer-order:host', tags: { cause: 'unavailable' } });
+        return { outcome: 'lost', cause: 'unavailable' };
+      }
+      if (!opened) return { outcome: 'cancelled' };
+      return opened.step(direction, by, more);
+    },
+    place: async (by): Promise<LayerOrderSolutionPlace | null> => (cursor && !closed ? cursor.place(by) : null),
+    alive: () => !closed && (cursor?.alive() ?? true),
+    close() {
+      closed = true;
+      cursor?.close();
+    },
+  };
 }
 
 export function resetLayerOrderHostEngineForTest(): void {
