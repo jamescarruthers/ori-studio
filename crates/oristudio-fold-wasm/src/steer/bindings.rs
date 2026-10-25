@@ -54,9 +54,9 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 
 use super::wire::{
-    CantFitWire, Committing, LayerCallError, LayerFoldSource, LayerLimits, LayerOpened,
-    LayerRefusal, LayerRestored, Opening, PackedStacks, Previewed, Restoring, Saving, Sides,
-    side_of,
+    CantFitWire, Committing, LAYER_LIMITS_FIELDS, LayerCallError, LayerFoldSource, LayerLimits,
+    LayerOpened, LayerRefusal, LayerRestored, Opening, PackedStacks, Previewed, Restoring, Saving,
+    Sides, side_of,
 };
 use crate::{FoldEngine, js_error, parse, to_js_value};
 
@@ -67,7 +67,7 @@ impl FoldEngine {
     /// host folded. `limits` may be `undefined` or `null`.
     pub fn layer_open(&mut self, source: JsValue, limits: JsValue) -> Result<JsValue, JsValue> {
         let source: LayerFoldSource = parse("source", source)?;
-        let limits: LayerLimits = optional("limits", limits)?;
+        let limits = limits_of(limits)?;
         match self.layers.open(&source, &limits).map_err(thrown)? {
             Opening::Opened(opened) => opened_object(&opened, "ok").map(JsValue::from),
             Opening::Refused(refusal) => refused(&refusal),
@@ -83,7 +83,7 @@ impl FoldEngine {
         limits: JsValue,
     ) -> Result<JsValue, JsValue> {
         let source: LayerFoldSource = parse("source", source)?;
-        let limits: LayerLimits = optional("limits", limits)?;
+        let limits = limits_of(limits)?;
         match self
             .layers
             .restore(&source, record, &limits)
@@ -112,7 +112,7 @@ impl FoldEngine {
         candidate: &[i32],
         limits: JsValue,
     ) -> Result<JsValue, JsValue> {
-        let limits: LayerLimits = optional("limits", limits)?;
+        let limits = limits_of(limits)?;
         let previewed = self
             .layers
             .preview(session, candidate, &limits)
@@ -140,7 +140,7 @@ impl FoldEngine {
         constraints: &[i32],
         limits: JsValue,
     ) -> Result<JsValue, JsValue> {
-        let limits: LayerLimits = optional("limits", limits)?;
+        let limits = limits_of(limits)?;
         let committed = self
             .layers
             .commit(session, constraints, &limits)
@@ -328,6 +328,28 @@ fn spots_changed(front: &[u32], back: &[u32]) -> Result<Fields, JsValue> {
     Fields::new()
         .set("front", Uint32Array::from(front))?
         .set("back", Uint32Array::from(back))
+}
+
+/// A call's limits, `undefined` or `null` for the defaults. A field the
+/// limits have no name for is a mistake, not a default: `serde-wasm-bindgen`
+/// reads only the fields a struct names, so a misspelt `deadline` would
+/// otherwise leave a search with no deadline at all.
+fn limits_of(value: JsValue) -> Result<LayerLimits, JsValue> {
+    if value.is_undefined() || value.is_null() {
+        return Ok(LayerLimits::default());
+    }
+    let Some(object) = value.dyn_ref::<Object>() else {
+        return Err(thrown(LayerCallError::invalid("limits: not an object")));
+    };
+    for key in Object::keys(object).iter() {
+        let key = key.as_string().unwrap_or_default();
+        if !LAYER_LIMITS_FIELDS.contains(&key.as_str()) {
+            return Err(thrown(LayerCallError::invalid(format!(
+                "limits: unknown field {key:?}, expected one of {LAYER_LIMITS_FIELDS:?}"
+            ))));
+        }
+    }
+    parse("limits", value)
 }
 
 /// `value` parsed, or the default when it is `undefined` or `null`.

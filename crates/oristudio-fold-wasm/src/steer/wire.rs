@@ -54,6 +54,11 @@ pub struct LayerLimits {
     pub deadline_ms: Option<f64>,
 }
 
+/// [`LayerLimits`]' fields as the web app spells them. Any other field is the
+/// caller's mistake (`invalid_input`), checked at the boundary because
+/// `serde-wasm-bindgen` reads only the fields a struct names.
+pub const LAYER_LIMITS_FIELDS: [&str; 3] = ["maxNodes", "fastNodes", "deadlineMs"];
+
 impl LayerLimits {
     /// The engine's limits, the deadline `deadline_ms` after `now_ms()` now.
     pub fn limits(&self, now_ms: fn() -> f64) -> Result<Limits, LayerCallError> {
@@ -630,8 +635,17 @@ mod tests {
                 Err("invalid_input")
             );
         }
-        // A misspelt field is a mistake, not a default.
+        // A misspelt field is a mistake, not a default; the boundary checks
+        // the same list (`bindings::limits_of`).
         assert!(serde_json::from_value::<LayerLimits>(json!({ "deadline": 5 })).is_err());
+        let every = json!({ "maxNodes": 1, "fastNodes": 1, "deadlineMs": 1 });
+        let names: Vec<&str> = every
+            .as_object()
+            .map(|fields| fields.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+        assert_eq!(names.len(), LAYER_LIMITS_FIELDS.len());
+        assert!(names.iter().all(|n| LAYER_LIMITS_FIELDS.contains(n)));
+        assert!(serde_json::from_value::<LayerLimits>(every).is_ok());
     }
 
     #[test]
