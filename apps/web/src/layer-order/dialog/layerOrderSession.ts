@@ -124,6 +124,7 @@ export async function openLayerOrderSession(
   ]);
   const stacks = { front, back };
   const scene = frontScene ?? backScene;
+  const letters = scene ? faceLettersOf(scene) : null;
   return {
     kind: 'ready',
     open: {
@@ -131,8 +132,9 @@ export async function openLayerOrderSession(
       opened: outcome,
       stacks,
       scenes: { front: frontScene, back: backScene },
-      letters: scene ? faceLettersOf(scene) : null,
-      facts: openFacts(outcome, stacks, record),
+      letters,
+      // With no scene to letter, every face ranks alike and sorts by its index.
+      facts: openFacts(outcome, stacks, record, letters?.inLetterOrder ?? []),
     },
   };
 }

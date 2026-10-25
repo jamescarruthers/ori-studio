@@ -74,6 +74,9 @@ describe('opening the dialog’s session', () => {
     expect(open.facts.faces).toBe(4);
     expect(Array.from(open.facts.openPairs)).toEqual(Array.from(open.opened.open_pairs));
     expect(open.facts.restore).toBeNull();
+    // The letters it sorts objects by (D21), from the scene it read.
+    expect(open.facts.letterOrder).toEqual(open.letters?.inLetterOrder);
+    expect(open.facts.letterOrder).toEqual([0, 1, 2, 3]);
   });
 
   it('opens on the solver’s first order when the host shows none', async () => {
@@ -92,9 +95,11 @@ describe('opening the dialog’s session', () => {
     expect(fakes.workers[0]!.backend.calls[0]).toBe('restore');
     expect(open.facts.constraints).toEqual([[3, 0, 1]]);
     expect(open.facts.restore?.outcome).toEqual({ kind: 'applied' });
+    expect(open.facts.letterOrder).toEqual([0, 1, 2, 3]);
 
-    ready(await openLayerOrderSession(engine, request, FAKE_LIMITS, { sessionOpen: true }));
+    const again = ready(await openLayerOrderSession(engine, request, FAKE_LIMITS, { sessionOpen: true }));
     expect(fakes.workers[0]!.backend.calls).toContain('restoreRecord');
+    expect(again.facts.letterOrder).toEqual([0, 1, 2, 3]);
   });
 
   it('answers a refusal as a refusal, and reads nothing more', async () => {
