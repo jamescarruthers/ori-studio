@@ -488,6 +488,8 @@
   },
   "layerOrder": {
     "apply": "应用",
+    "applyBusy": "请等待检查完成",
+    "applyClash": "删除其中一条冲突的约束即可应用",
     "applying": "正在保存层叠顺序…",
     "applyNothing": "没有可应用的内容",
     "applyOpening": "暂无可应用的内容",
@@ -495,6 +497,7 @@
       "other": "无法保存此层叠顺序。没有任何改动。",
       "tooLarge": "此层叠顺序太大，无法随折叠图一起保存。"
     },
+    "applyUnsettled": "保存的约束尚未检查",
     "cancel": "取消",
     "creasePane": "折痕图",
     "details": "层叠顺序详情",

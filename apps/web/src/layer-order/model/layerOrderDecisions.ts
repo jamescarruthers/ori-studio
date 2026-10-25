@@ -146,6 +146,25 @@ export function openedBaseline(facts: LayerOpenFacts, recordNeedsAttention: bool
 }
 
 /**
+ * Why Apply waits on what a session opened on, before an inspector has
+ * changed anything (D10): a restore whose saved rows clash waits for one to
+ * be removed (`clash`), and one that ran out of time for its rows to be
+ * checked (`unsettled`). The reducer's `applyBlocker` says the same at its
+ * open (held equal by a test); the dialog shell asks this until U10's
+ * inspector, which asks the reducer, takes over. Null when it can apply.
+ */
+export function openedApplyBlocker(facts: LayerOpenFacts): 'clash' | 'unsettled' | null {
+  switch (facts.restore?.outcome.kind) {
+    case 'clash':
+      return 'clash';
+    case 'timed_out':
+      return 'unsettled';
+    default:
+      return null;
+  }
+}
+
+/**
  * An Apply that changed nothing writes nothing: the same constraints, the
  * same carried rows and the same order as the host shows. An Apply with no
  * constraints but a browsed solution changed the order, so it writes a

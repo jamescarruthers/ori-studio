@@ -510,6 +510,8 @@
   },
   "layerOrder": {
     "apply": "Aplicar",
+    "applyBusy": "Espera a que termine la comprobación",
+    "applyClash": "Quita una de las restricciones en conflicto para aplicar",
     "applying": "Guardando el orden de capas…",
     "applyNothing": "No hay nada que aplicar",
     "applyOpening": "Todavía no hay nada que aplicar",
@@ -517,6 +519,7 @@
       "other": "No se pudo guardar este orden de capas. No se cambió nada.",
       "tooLarge": "Este orden de capas es demasiado grande para guardarlo con la figura."
     },
+    "applyUnsettled": "Las restricciones guardadas aún no se han comprobado",
     "cancel": "Cancelar",
     "creasePane": "Patrón de pliegues",
     "details": "Detalles del orden de capas",

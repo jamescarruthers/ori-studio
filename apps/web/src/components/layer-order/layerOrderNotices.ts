@@ -139,6 +139,25 @@ function refusalText(t: TFunction, refusal: LayerRefusal, { letters, name }: Lay
   }
 }
 
+/** Why Apply waits, by U9's reasons (`applyBlocker`, D10). */
+export type LayerOrderApplyWait = 'opening' | 'refused' | 'busy' | 'clash' | 'unsettled';
+
+/** Apply's title while it waits, for each of U9's reasons; the clash's is the board's (Round4-States, "The clashing set"). */
+export function applyWaitText(t: TFunction, why: LayerOrderApplyWait): string {
+  switch (why) {
+    case 'opening':
+      return t('dialogs:layerOrder.applyOpening', 'Nothing to apply yet');
+    case 'refused':
+      return t('dialogs:layerOrder.applyNothing', 'Nothing to apply');
+    case 'busy':
+      return t('dialogs:layerOrder.applyBusy', 'Wait for the check to finish');
+    case 'clash':
+      return t('dialogs:layerOrder.applyClash', 'Remove one of the clashing constraints to apply');
+    case 'unsettled':
+      return t('dialogs:layerOrder.applyUnsettled', 'The saved constraints haven’t been checked yet');
+  }
+}
+
 /** Why Apply could not save: its record is over the budget, or the save refused for another reason. */
 export function applyRefusalText(t: TFunction, refusal: LayerRefusal): string {
   return refusal.code === 'record_over_budget'

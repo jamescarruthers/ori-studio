@@ -488,6 +488,8 @@
   },
   "layerOrder": {
     "apply": "적용",
+    "applyBusy": "검사가 끝날 때까지 기다리세요",
+    "applyClash": "적용하려면 충돌하는 제약 중 하나를 제거하세요",
     "applying": "겹침 순서를 저장하는 중…",
     "applyNothing": "적용할 내용이 없습니다",
     "applyOpening": "아직 적용할 내용이 없습니다",
@@ -495,6 +497,7 @@
       "other": "이 겹침 순서를 저장하지 못했습니다. 아무것도 바뀌지 않았습니다.",
       "tooLarge": "이 겹침 순서는 너무 커서 도형과 함께 저장할 수 없습니다."
     },
+    "applyUnsettled": "저장된 제약이 아직 확인되지 않았습니다",
     "cancel": "취소",
     "creasePane": "전개도",
     "details": "겹침 순서 세부 정보",

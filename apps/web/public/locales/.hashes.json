@@ -6404,6 +6404,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   },
   "es": {
@@ -12811,6 +12814,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   },
   "fr": {
@@ -19220,6 +19226,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   },
   "ja": {
@@ -25282,6 +25291,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   },
   "ko": {
@@ -31344,6 +31356,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   },
   "pt-BR": {
@@ -37751,6 +37766,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   },
   "ru": {
@@ -44158,6 +44176,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   },
   "zh-CN": {
@@ -50220,6 +50241,9 @@
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
     "dialogs:layerOrder.lostLoad": "36db30b09768",
     "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8",
+    "dialogs:layerOrder.applyBusy": "24f81c4f69aa",
+    "dialogs:layerOrder.applyClash": "ad2759dd5703",
+    "dialogs:layerOrder.applyUnsettled": "be4326255186",
     "errors:boundary.close": "7d9eb7acb13e"
   }
 }

@@ -17,11 +17,18 @@
  * What is on screen is the open's own order and rows until an inspector
  * (U10) changes them, and passes them to {@link LayerOrderSettle.apply}: the
  * state, never a verdict. So the shell's Apply, with no inspector yet,
- * answers `unchanged` on a session opened on the host's own order.
+ * answers `unchanged` on a session opened on the host's own order, and waits
+ * ({@link LayerOrderSettle.waits}) on a restore whose saved rows clashed or
+ * ran out of time (D10), which only an inspector can settle.
  */
 import { useCallback, useState } from 'react';
 import type { LayerRefusal } from '../engine/layerOrderEngine';
-import { applyChangedNothing, openedBaseline, type LayerOrderAtApply } from '../model/layerOrderDecisions';
+import {
+  applyChangedNothing,
+  openedApplyBlocker,
+  openedBaseline,
+  type LayerOrderAtApply,
+} from '../model/layerOrderDecisions';
 import { settleLayerOrderDialog, type LayerOrderDialogOpening } from './layerOrderDialogStore';
 import type { LayerOrderSession } from './useLayerOrderSession';
 
@@ -32,6 +39,13 @@ export interface LayerOrderSettle {
    * open's own when left out.
    */
   readonly apply: (now?: LayerOrderAtApply) => Promise<void>;
+  /**
+   * Why the shell's Apply waits on what the session opened on (D10, U9's
+   * reasons): a restore whose saved rows `clash`, or that left them
+   * `unsettled`; null when it can apply. An inspector (U10) passes what is
+   * on screen to {@link apply} and gates Apply with the reducer instead.
+   */
+  readonly waits: 'clash' | 'unsettled' | null;
   /** An Apply is saving: Apply waits, Cancel still closes. */
   readonly applying: boolean;
   /** Why the last Apply could not save, until the next. */
@@ -43,6 +57,7 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
   const [applyRefusal, setApplyRefusal] = useState<LayerRefusal | null>(null);
   const { id, request } = opening;
   const { status, apply: save } = session;
+  const waits = status.kind === 'ready' ? openedApplyBlocker(status.open.facts) : null;
 
   const cancel = useCallback(() => {
     settleLayerOrderDialog(id, { kind: 'cancelled' });
@@ -51,6 +66,8 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
   const apply = useCallback(
     async (now?: LayerOrderAtApply) => {
       if (applying || status.kind !== 'ready') return;
+      // Saved rows that clashed or were never checked: never written as they stand.
+      if (now === undefined && waits !== null) return;
       const { open } = status;
       const baseline = openedBaseline(open.facts, request.record?.attention !== undefined);
       const onScreen = now ?? { constraints: open.facts.constraints, carried: baseline.carried, stacks: open.stacks };
@@ -70,8 +87,8 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
       }
       settleLayerOrderDialog(id, { kind: 'applied', applied: answer.applied });
     },
-    [applying, id, request, save, status]
+    [applying, id, request, save, status, waits]
   );
 
-  return { cancel, apply, applying, applyRefusal };
+  return { cancel, apply, waits, applying, applyRefusal };
 }

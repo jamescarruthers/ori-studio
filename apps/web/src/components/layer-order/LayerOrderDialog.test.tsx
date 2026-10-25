@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   FAKE_LAYER_ORDER_FIGURE,
   FAKE_LAYER_ORDER_SOURCE,
+  FAKE_NO_NODES,
   FakeLayerOrderWorker,
   createFakeLayerOrderBackend,
   fakeLayerOrderScene,
@@ -27,6 +28,7 @@ import {
 } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { resetLayerOrderDialogStoreForTest } from '../../layer-order/dialog/layerOrderDialogStore';
 import { isShortcutBarrierOpen } from '../../keyboard/shortcutDispatcher';
+import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
@@ -93,6 +95,9 @@ const REQUEST: LayerOrderRequest = {
   name: 'Kabuto',
   byline: 'Traditional',
 };
+const savedFace = (k: number) => ({ at: FAKE_LAYER_ORDER_FIGURE.facePoints[k]!, area: 100 });
+/** A saved record of one row: face D over face A. */
+const RECORD: LayerOrderRecord = { faces: [savedFace(3), savedFace(0)], constraints: [[0, 1, 1]], order: [] };
 /** A host showing 1 over 0, which the creases forbid: the dialog opens on the closest order that folds (D19). */
 const CANT_FOLD_REQUEST: LayerOrderRequest = {
   ...REQUEST,
@@ -478,6 +483,45 @@ describe('the Layer order dialog’s session', () => {
     act(() => spawned[0]!.crash());
     await until(() => alert(/stopped unexpectedly/) !== null, 'the loss showed');
     expect(button('Apply').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('a restore whose saved rows clash keeps Apply waiting, with the board’s reason (D10)', async () => {
+    mount();
+    // Face D over A, and A over D: the two rows clash, so neither is applied.
+    const { outcome } = await opened({ ...REQUEST, record: { ...RECORD, constraints: [[0, 1, 1], [0, 1, -1]] } });
+    await until(isReady, 'the session opened');
+    expect(spawned[0]!.backend.calls[0]).toBe('restore');
+    expect(button('Apply').getAttribute('aria-disabled')).toBe('true');
+    expect(button('Apply').title).toBe('Remove one of the clashing constraints to apply');
+
+    // Pressing it writes nothing and leaves the dialog open: only Cancel closes it.
+    click(button('Apply'));
+    await flush();
+    expect(dialog()).not.toBeNull();
+    expect(spawned[0]!.backend.calls).not.toContain('save');
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+  });
+
+  it('a restore whose check ran out of time keeps Apply waiting: its rows were never checked (D10)', async () => {
+    makeBackend = () => {
+      const backend = createFakeLayerOrderBackend();
+      const restore = backend.restore;
+      backend.restore = (source, record) => restore(source, record, FAKE_NO_NODES);
+      return backend;
+    };
+    mount();
+    const { outcome } = await opened({ ...REQUEST, record: RECORD });
+    await until(isReady, 'the session opened');
+    expect(button('Apply').getAttribute('aria-disabled')).toBe('true');
+    expect(button('Apply').title).toBe('The saved constraints haven’t been checked yet');
+
+    click(button('Apply'));
+    await flush();
+    expect(dialog()).not.toBeNull();
+    expect(spawned[0]!.backend.calls).not.toContain('save');
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
   });
 
   it('a record over its budget keeps the dialog open, with the reason in the foot', async () => {
