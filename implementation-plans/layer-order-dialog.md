@@ -726,12 +726,17 @@ notice has no board of its own; U10 builds it from the approved copy.
     the whole row, as one undo step. Each object in a row of two or more has
     its own remove (×), shown on hover or focus, and always on a coarse
     pointer. Carried rows group the same way, within one status, so a row
-    never mixes statuses. A pressed or hovered row lights its subject and all
+    never mixes statuses; intact and clashing count as one there, since both
+    still apply and a clash is marked per object, as on committed rows. A
+    row keeps its place and identity when one of its objects is removed.
+    When a row's own objects are the whole clash, it says they can't all fit
+    together. A pressed or hovered row lights its subject and all
     its objects; a row click puts its subject in the builder, as now. A clash
     marks the clashing objects within their rows.
-  - **Analytics:** `layer constraint added` and `layer constraint blocked`
-    fire once per Add, with an `object_count_bucket` (`<=1`, `<=2`, `<=5`,
-    `>5`, the events' existing bucket style).
+  - **Analytics:** `layer constraint added` fires once per Add, and `layer
+    constraint blocked` once per sentence (a subject and its verb, until
+    either changes, an Add or a clear), each with an `object_count_bucket`
+    (`<=1`, `<=2`, `<=5`, `>5`, the events' existing bucket style).
   - **Where it lands:** U9b changes the merged inspector model; U10 builds the
     UI from the "A5 · Compound constraints" board.
 
