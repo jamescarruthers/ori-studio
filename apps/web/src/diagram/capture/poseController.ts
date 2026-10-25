@@ -78,16 +78,20 @@ import { lightingChanged } from '../pictures/lighting';
 import { poseLinkedStep, type FlatSolutions, type LinkedPoseRequest } from './linkedPose';
 import { captureKind, sayCaptureOutcome, trackStepLayerOrderAttention } from './stepCaptureActions';
 import {
+  APPLY_LAYER_ORDER_LABEL,
+  flatPoseOf,
   sayStepFoldsIn3d,
   stepLayerOrderGuard,
   stepLayerOrderRequest,
   stillOpenedOn,
+  type DiagramStepLayerOrderVia,
+  type FlatRender,
   type StepLayerOrderGuard,
   type StepLayerOrderOpening,
 } from './stepLayerOrderActions';
 
-/** What Pose opens the Layer order dialog with (H8): the request, the step's paper frame, and its guard. */
-type PoseLayerOrderOpening = Pick<StepLayerOrderOpening, 'request' | 'frame' | 'guard'>;
+/** The undo step a pose makes. */
+const POSE_LABEL = 'Adjust pose';
 
 /** How long the 3D view must rest before its camera is captured: one orbit, one undo step. */
 export const ORBIT_SETTLE_MS = 450;
@@ -319,16 +323,17 @@ export interface PoseController {
   commitSpread: () => Promise<void>;
   /**
    * Open the Layer order dialog on the step's flat fold, as Pose holds it
-   * (H8), and commit an Apply: the fold held — in the step's record's order,
-   * or the kernel's at its case — is what the dialog analyses, read with no
-   * fold of its own when one is held already; an Apply replaces it with a
-   * new one in the applied order (`fold_with_order`), and writes the record
-   * on the step's source in the pose it has, one undo step ("Adjust pose").
-   * `unchanged`, `cancelled`, `busy` and `unavailable` write nothing, and so
-   * does an Apply onto a step or pattern that changed while it was open.
-   * Whether it applied an order.
+   * (H8), and commit an Apply: Edit order… and the Step pane's Edit… on the
+   * flat fold the step shows; `review`, its flag's Review… (D14), on the flat
+   * fold it would show. The fold held is what the dialog analyses, read with
+   * no fold of its own (`sourceToEdit`). An Apply replaces it with a new one
+   * in the applied order (`fold_with_order`), and writes the record on the
+   * step's source in the flat pose it was opened on, one undo step ("Change
+   * layer order", as the Step pane's). `unchanged`, `cancelled`, `busy` and
+   * `unavailable` write nothing, and so does an Apply onto a step or pattern
+   * that changed while it was open. Whether it applied an order.
    */
-  editLayerOrder: () => Promise<boolean>;
+  editLayerOrder: (via?: DiagramStepLayerOrderVia) => Promise<boolean>;
   /**
    * An undo or redo: stop what is still folding for a source the step no
    * longer has, and let go of a held fold in a layer order the step's record
@@ -440,11 +445,12 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
   /**
    * Run a pose as one capture, and say how it went: `opened`, for an order
    * the Layer order dialog applied, is the step and pattern it was opened on,
-   * and an Apply onto anything else commits nothing.
+   * and an Apply onto anything else commits nothing; `label`, its undo step's
+   * ("Adjust pose" unless said).
    */
   const pose = async (
     request: LinkedPoseRequest,
-    options: { tracked?: boolean; opened?: StepLayerOrderGuard } = {}
+    options: { tracked?: boolean; opened?: StepLayerOrderGuard; label?: string } = {}
   ): Promise<DiagramCaptureOutcome | null> => {
     // Any other verb makes a picture the preview was not drawn over — a drag
     // that ended where it began commits nothing and would leave one up.
@@ -477,7 +483,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
       const source = linkedSource(linked, choice.creases, document, result.render, result.layerOrder);
       const committed = await useWorkspaceStore
         .getState()
-        .commitDiagramCapture(begun, { source, picture: result.picture }, 'Adjust pose');
+        .commitDiagramCapture(begun, { source, picture: result.picture }, options.label ?? POSE_LABEL);
       if (!committed) return { status: 'discarded' };
       if (committed.changed && options.tracked !== false && request.verb !== 'layer-order') {
         trackPose(request.verb, result.render);
@@ -515,38 +521,40 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
   };
 
   /**
-   * What the Layer order dialog opens on: the flat fold the session holds,
-   * held first if it holds none — in the step's record's order, or the
-   * kernel's at the step's case — read with no fold of its own (H8). A
-   * record whose order cannot be drawn now opens on a fold of the creases,
-   * freed at once, which the dialog restores it onto and says why (D10);
-   * opening writes nothing, so no flag either. A Stop opens nothing.
+   * What the Layer order dialog opens on (H8). With no record: the flat fold
+   * the session holds, held first if it holds none — the kernel's at the
+   * step's case — read with no fold of its own. With a record: the fold held
+   * in its order, when the session holds one now; otherwise the creases folded
+   * at the first case and freed, as the Step pane reads them (H7), for the
+   * dialog restores a record itself — restoring it here too would ask the host
+   * engine twice before the dialog opened, and fold a third time on a clash.
    */
   const sourceToEdit = async (
     begun: StepCaptureStart,
     document: OristudioCpDocumentSnapshot,
     lineIds: readonly number[],
-    render: Extract<DiagramCpRender, { mode: 'folded-flat' }>,
+    render: FlatRender,
     linked: DiagramCpSource
   ): Promise<StepFoldSource> => {
-    try {
-      await session.flat(document, lineIds, render.side, render.foldCase, undefined, heldLayerOrderOf(linked));
-    } catch (error) {
-      if (!(error instanceof LayerOrderNotShownError) || !error.why) throw error;
+    const layerOrder = heldLayerOrderOf(linked);
+    if (layerOrder && !session.holdsFlat(document, lineIds, layerOrder.order.json)) {
       return runStepFold(store, begun, 'diagram-capture', (runtime) =>
         stepFoldSource(runtime, lineIds, captureModel(document, render.side))
       );
     }
+    // Held already for a record (no restore, at most a turn of its model), or the kernel's fold of the case.
+    await session.flat(document, lineIds, render.side, render.foldCase, undefined, layerOrder);
     return session.heldFlatSource();
   };
 
-  const editLayerOrder = async (): Promise<boolean> => {
+  const editLayerOrder = async (via: DiagramStepLayerOrderVia = 'edit'): Promise<boolean> => {
     endPreview();
     const opening = await capturing(
-      async (begun, linked): Promise<PoseLayerOrderOpening | DiagramCaptureOutcome | 'spatial'> => {
-        // A flat fold's (D13): Edit order… is held on any other.
-        if (linked.render.mode !== 'folded-flat') return { status: 'discarded' };
-        const render = linked.render;
+      async (begun, linked): Promise<StepLayerOrderOpening | DiagramCaptureOutcome | 'spatial'> => {
+        // Edit… is a flat fold's (D13); Review… opens on the flat fold the step would show (D14).
+        if (via === 'edit' && linked.render.mode !== 'folded-flat') return { status: 'discarded' };
+        const render = flatPoseOf(stepId, linked);
+        if (!render) return { status: 'discarded' };
         const { document, choice } = await creasesFor(begun, linked);
         if (choice.status !== 'found') return choice;
         const lineIds = choice.creases.foldLineIds;
@@ -564,6 +572,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
             stepLayerOrderOf(linked.layerOrder)
           ),
           frame: folded.frame,
+          render,
           guard: stepLayerOrderGuard(begun),
         };
       }
@@ -577,15 +586,35 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
       sayCaptureOutcome(opening);
       return false;
     }
+    // An undo or a capture moved the step while it was read: the dialog would open on what it no longer is.
+    if (disposed || !stillOpenedOn(stepId, opening.guard)) return false;
     // The capture is over before the dialog opens: nothing is held busy while it is up.
     const outcome = await openLayerOrderDialog(opening.request);
     if (outcome.kind !== 'applied') return false;
-    // Counted by the dialog, not as a pose.
+    // One undo step, named as the Step pane's Apply names it; counted by the dialog, not as a pose.
     const applied = await pose(
-      { verb: 'layer-order', applied: outcome.applied, frame: opening.frame },
-      { tracked: false, opened: opening.guard }
+      { verb: 'layer-order', applied: outcome.applied, frame: opening.frame, render: opening.render },
+      { tracked: false, opened: opening.guard, label: APPLY_LAYER_ORDER_LABEL }
     );
     return applied?.status === 'captured';
+  };
+
+  /**
+   * Let go of a fold held in an order the step's record no longer has — an
+   * Apply undone, or redone — rather than keep it until the next verb folds
+   * again (H8). Never under this controller's own capture, which may be
+   * reading that fold as the undo lands (a turn's picture, Edit order…'s
+   * source): its kernel calls would meet a freed handle. Once it is over, the
+   * record the step has then decides.
+   */
+  const releaseStaleHold = () => {
+    if (disposed) return;
+    // After this capture, and any that began as it ended.
+    if (own) {
+      void own.then(releaseStaleHold, releaseStaleHold);
+      return;
+    }
+    if (session.releaseUnlessIn(currentLinkedSource(stepId)?.layerOrder ?? null)) heldFor = null;
   };
 
   const wantsRest = (pose: Pick<SimulatedRest, 'foldPercent' | 'view'>): boolean => {
@@ -791,9 +820,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
         if (disposed || stepRevision(stepId) === revision) return;
         waiting.clear();
         endPreview();
-        // A fold held in an order the step's record no longer has — an Apply undone, or redone — is
-        // let go now, not kept until the next verb folds again: no verb would ever draw from it (H8).
-        if (session.releaseUnlessIn(currentLinkedSource(stepId)?.layerOrder ?? null)) heldFor = null;
+        releaseStaleHold();
       });
     },
 
@@ -945,7 +972,7 @@ function keepLayerOrder(begun: StepCaptureStart, error: LayerOrderNotShownError)
   const { why } = error;
   if (!why) return { status: 'stopped' };
   if (why.kind === 'lost') return { status: 'layer-order-lost', offline: why.cause === 'load' };
-  const committed = useWorkspaceStore.getState().commitDiagramLayerOrder(begun, why.layerOrder.json, 'Adjust pose');
+  const committed = useWorkspaceStore.getState().commitDiagramLayerOrder(begun, why.layerOrder.json, POSE_LABEL);
   if (!committed) return { status: 'discarded' };
   if (committed.changed) trackStepLayerOrderAttention(why.attention);
   return { status: 'needs-attention', attention: why.attention, changed: committed.changed };

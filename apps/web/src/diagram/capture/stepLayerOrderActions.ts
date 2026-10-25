@@ -63,8 +63,8 @@ import { sayCaptureOutcome } from './stepCaptureActions';
 
 const store = { get: useWorkspaceStore.getState, set: useWorkspaceStore.setState };
 
-/** The undo step an Apply makes. */
-const APPLY_LABEL = 'Change layer order';
+/** The undo step an Apply makes, from the Step pane or from Pose (H8). */
+export const APPLY_LAYER_ORDER_LABEL = 'Change layer order';
 
 /**
  * The Diagram's look for a step (approach 3, D18): its paper as a folded
@@ -90,7 +90,7 @@ export function diagramStepLayerOrderLook(
 }
 
 /** A flat fold's pose, as a step keeps it. */
-type FlatRender = Extract<DiagramCpRender, { mode: 'folded-flat' }>;
+export type FlatRender = Extract<DiagramCpRender, { mode: 'folded-flat' }>;
 
 /** Where the dialog was asked from: the Step pane's Layer order row, or its flag's Review… (D14). */
 export type DiagramStepLayerOrderVia = 'edit' | 'review';
@@ -102,7 +102,7 @@ export type DiagramStepLayerOrderVia = 'edit' | 'review';
  * would draw it. None for one shown in 3D, whose creases fold in 3D, or a
  * saved Defox view.
  */
-function flatPoseOf(stepId: string, linked: DiagramCpSource): FlatRender | null {
+export function flatPoseOf(stepId: string, linked: DiagramCpSource): FlatRender | null {
   if (linked.render.mode === 'folded-flat') return linked.render;
   if (linked.render.mode === 'folded-3d' || linked.render.mode === 'defox') return null;
   const { diagram } = store.get();
@@ -231,7 +231,7 @@ async function applyToStep(stepId: string, opening: StepLayerOrderOpening, appli
     known: knownCreasesOf(step.source),
     render: opening.render,
     kind: 'diagram-capture',
-    label: APPLY_LABEL,
+    label: APPLY_LAYER_ORDER_LABEL,
     layerOrderApplied: { applied, frame: opening.frame },
   });
   sayCaptureOutcome(outcome);

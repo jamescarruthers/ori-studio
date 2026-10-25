@@ -67,7 +67,9 @@ import { uprightTurn } from './mirrorAxes';
  * model where the solver holds it, at a fold %, from a camera — or a crease
  * pattern's paper on the colour of one side (the Step pane's Front | Back),
  * or turned over on its back (the Step pane's Flip creases) — or a flat fold
- * drawn in the order the Layer order dialog applied (H8), in the pose it has.
+ * drawn in the order the Layer order dialog applied (H8), in the flat pose
+ * the dialog was opened on: the step's, or for one shown another way, the
+ * one it would show (Review…).
  */
 export type LinkedPoseRequest =
   | { verb: DiagramLinkedPoseVerb }
@@ -79,7 +81,7 @@ export type LinkedPoseRequest =
   | { verb: 'simulate'; foldPercent: number; view: DiagramSimulatedView; still: StillScene }
   | { verb: 'paper-side'; side: 'front' | 'back' }
   | { verb: 'flip-creases'; on: boolean }
-  | ({ verb: 'layer-order' } & AppliedLayerOrder);
+  | ({ verb: 'layer-order'; render: Extract<DiagramCpRender, { mode: 'folded-flat' }> } & AppliedLayerOrder);
 
 /** The verbs that set one field of a spread: each a no-op on a fold with none, or of the other kind. */
 function isSpreadFieldRequest(request: LinkedPoseRequest): request is LayerSpreadEdit {
@@ -280,9 +282,9 @@ export async function poseLinkedStep(
     return simulated(request.view, request.foldPercent, request.still);
   }
   if (request.verb === 'layer-order') {
-    // A flat fold's, in the pose it has: one shown another way since, or whose creases fold in 3D now, cannot take it.
-    if (render.mode !== 'folded-flat' || spatialRoute) return { status: 'order-refused' };
-    const { side, rotationDeg, foldCase, spread } = render;
+    // A flat fold's, in the pose it was opened on: creases that fold in 3D now cannot take it.
+    if (spatialRoute) return { status: 'order-refused' };
+    const { side, rotationDeg, foldCase, spread } = request.render;
     return flat({ side, rotationDeg, foldCase, ...(spread ? { spread } : {}) }, undefined, undefined, {
       applied: { applied: request.applied, frame: request.frame },
     });

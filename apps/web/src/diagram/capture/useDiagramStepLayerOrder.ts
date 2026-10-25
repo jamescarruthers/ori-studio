@@ -27,8 +27,8 @@ const NONE: DiagramStepLayerOrder = { row: null, flag: null };
  * the Step pane's row and the Picture section's flag
  * (`diagramStepLayerOrderActions.ts`), read from the step's saved source —
  * opening a diagram or selecting a step asks the engine nothing. Edit… and
- * Review… open the dialog (`stepLayerOrderActions.ts`); Edit… on the step
- * open in Pose, through Pose's controller, on the fold it holds (H8).
+ * Review… open the dialog (`stepLayerOrderActions.ts`); on the step open in
+ * Pose, through Pose's controller, on the fold it holds (H8).
  */
 export function useDiagramStepLayerOrder(step: DiagramStep | null): DiagramStepLayerOrder {
   const { t } = useTranslation();
@@ -43,9 +43,10 @@ export function useDiagramStepLayerOrder(step: DiagramStep | null): DiagramStepL
     if (!render || stepId === null) return NONE;
     const state: DiagramStepLayerOrderState = { render, record, readOnly, busy, seeThrough };
     const open = (via: DiagramStepLayerOrderVia) => {
-      // Edit… on the step open in Pose is Pose's own (H8): one session per step, whichever surface asks.
-      const pose = via === 'edit' ? openLinkedPoseOf(stepId) : null;
-      void (pose ? pose.editLayerOrder() : openDiagramStepLayerOrder(stepId, via));
+      // Edit… and Review… on the step open in Pose are Pose's own (H8): one session per step, whichever surface
+      // asks, so the fold it holds never outlives the order an Apply gives the step.
+      const pose = openLinkedPoseOf(stepId);
+      void (pose ? pose.editLayerOrder(via) : openDiagramStepLayerOrder(stepId, via));
     };
     const deps = { t, open };
     return { row: buildDiagramStepLayerOrderRow(state, deps), flag: buildDiagramStepLayerOrderFlag(state, deps) };

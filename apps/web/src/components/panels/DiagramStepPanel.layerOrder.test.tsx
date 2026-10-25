@@ -248,15 +248,21 @@ describe('a constrained step in the Step pane', () => {
   });
 
   // One session per step, whichever surface asks (H8): the pane's Edit… is the open Pose's own Edit order….
-  it('opens the dialog through Pose’s controller on the step open in Pose', async () => {
-    const [first] = await openConstrainedDiagram();
+  it('opens the dialog through Pose’s controller on the step open in Pose: Edit… and the flag’s Review…', async () => {
+    const [first, second] = await openConstrainedDiagram();
     act(() => state().selectDiagramStep(first));
     act(() => state().openDiagramStep(first));
-    const editLayerOrder = vi.fn(async () => false);
+    const editLayerOrder = vi.fn(async (_via?: 'edit' | 'review') => false);
     publishPose(first, FLAT, true, editLayerOrder);
     vi.mocked(bindings.runtime!.fold).mockClear();
     act(() => button('Edit Layer Order…')!.click());
-    expect(editLayerOrder).toHaveBeenCalledOnce();
+    expect(editLayerOrder).toHaveBeenLastCalledWith('edit');
+    act(() => state().selectDiagramStep(second));
+    act(() => state().openDiagramStep(second));
+    publishPose(second, FLAT, true, editLayerOrder);
+    act(() => textButton('Review…')!.click());
+    expect(editLayerOrder).toHaveBeenLastCalledWith('review');
+    expect(editLayerOrder).toHaveBeenCalledTimes(2);
     // Nothing of its own: no capture of the pane's, no worker.
     expect(state().diagramCaptures).toEqual({});
     expect(bindings.runtime!.fold).not.toHaveBeenCalled();

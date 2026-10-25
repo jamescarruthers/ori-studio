@@ -33,6 +33,7 @@ import {
 } from '../document/diagramDocument';
 import { creasePatternPaperShows, type CreasePatternPaperRequest } from './creasePatternSide';
 import { publishOpenLinkedPose } from './openLinkedPose';
+import type { DiagramStepLayerOrderVia } from './stepLayerOrderActions';
 import {
   createPoseController,
   linkedFoldKey,
@@ -77,10 +78,10 @@ export interface DiagramLinkedPose {
   layerOrderEdit: DiagramStepLayerOrderEntry | null;
   /**
    * Open the Layer order dialog on the fold Pose holds, and commit an Apply
-   * as one pose (`PoseController.editLayerOrder`): Edit order…'s, and the
-   * Step pane's Edit… while the step is open here. Whether it applied one.
+   * (`PoseController.editLayerOrder`): Edit order…'s, and the Step pane's
+   * Edit… and Review… while the step is open here. Whether it applied one.
    */
-  editLayerOrder: () => Promise<boolean>;
+  editLayerOrder: (via?: DiagramStepLayerOrderVia) => Promise<boolean>;
   /** The live 3D fold, for a step shown in 3D once it is folded; null otherwise. */
   spatial: DiagramPoseSpatialView | null;
   /** The 3D view moved: captured once it rests. */
@@ -240,7 +241,7 @@ export function useDiagramLinkedPose(
   // The toolbar's Edit order…, from the saved source as the Step pane's Edit… is (H7, H8).
   const record = layerOrderSummaryOf(source);
   const editLayerOrder = useCallback(
-    async () => (controller !== null && !readOnly ? controller.editLayerOrder() : false),
+    async (via?: DiagramStepLayerOrderVia) => (controller !== null && !readOnly ? controller.editLayerOrder(via) : false),
     [controller, readOnly]
   );
   const layerOrderEdit = useMemo(

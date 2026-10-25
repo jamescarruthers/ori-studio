@@ -195,6 +195,12 @@ export interface CaptureSession {
    */
   heldFlatSource: () => Promise<StepFoldSource>;
   /**
+   * Whether the session holds the flat fold of these lines from this document
+   * drawn in `layerOrder` — a record's text, or null for the kernel's own —
+   * as `flat` would find it: no fold and no restore needed.
+   */
+  holdsFlat: (document: OristudioCpDocumentSnapshot, lineIds: readonly number[], layerOrder: string | null) => boolean;
+  /**
    * Let go of the held flat fold unless it is drawn in `layerOrder` — a
    * record's text, or null for the kernel's own enumeration: after an undo or
    * redo, the fold of an order the step no longer has (H8). Whether it let go.
@@ -462,6 +468,10 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
         // Its paper as read for its picture, when it has been: the fold as it stands.
         hold.read ? hold.read.scene : undefined
       );
+    },
+
+    holdsFlat(document, lineIds, layerOrder) {
+      return held?.kind === 'flat' && live({ document, lineIds: lineIds.join(','), layerOrder: orderKey(layerOrder) });
     },
 
     releaseUnlessIn(layerOrder) {

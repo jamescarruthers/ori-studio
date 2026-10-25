@@ -16,6 +16,7 @@ import {
   fakeFoldSource,
   fakeLayerOrderResolutions,
   halfFoldKernelScene,
+  squareRenderSnapshot,
   movedLines,
   ORDERED_HANDLE,
   STEP_LAYER_ORDER,
@@ -34,7 +35,7 @@ import { diagramStepLayerOrderLook } from './stepLayerOrderActions';
 import { createPoseController, linkedFoldKey } from './poseController';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { stepsIn } from '../document/diagramSteps.fixtures';
-import type { DiagramLayerSpread } from '../document/diagramDocument';
+import type { DiagramCpRender, DiagramLayerSpread } from '../document/diagramDocument';
 
 const bindings = vi.hoisted(() => ({ runtime: null as CpCaptureRuntime | null }));
 vi.mock('../../store/workspaceStore/cpFoldRuntimeBindings', async (importOriginal) => ({
@@ -1134,6 +1135,16 @@ describe('the Layer order dialog from Pose (H8)', () => {
   };
   /** The handle the last picture was read from. */
   const pictured = () => vi.mocked(bindings.runtime!.paperScene).mock.calls.at(-1)?.[0];
+  /** The step's source shown as `shown`, as a file opened or another surface leaves it: nothing folded here. */
+  const shownAs = (stepId: string, shown: DiagramCpRender) =>
+    useWorkspaceStore.setState({
+      diagram: {
+        ...state().diagram!,
+        steps: stepsIn(state().diagram!).map((step) =>
+          step.id === stepId && step.source?.kind === 'cp' ? { ...step, source: { ...step.source, render: shown } } : step
+        ),
+      },
+    });
   /** The relations the last fold with a given order was folded with. */
   const orderedWith = () => vi.mocked(bindings.runtime!.foldWithOrder!).mock.calls.at(-1)?.[1];
 
@@ -1208,30 +1219,60 @@ describe('the Layer order dialog from Pose (H8)', () => {
     controller.dispose();
   });
 
-  it('opens a record that cannot be drawn now on a fold of the creases, freed, and flags nothing (D10)', async () => {
+  // The dialog restores a record itself: Pose restoring it first would ask the host engine twice before the
+  // dialog opened, and fold a third time on a clash (#523 review).
+  it.each([
+    ['holds a fold of the kernel’s order', true],
+    ['holds nothing', false],
+  ])(
+    'opens a constrained step that %s on the creases at the first case, freed: no restore before the dialog',
+    async (_case, folded) => {
+      const stepId = await linkedStep();
+      const controller = createPoseController(stepId, listener());
+      // Folded flat by Pose, or as a file opened leaves it: shown flat, nothing held.
+      if (folded) await controller.run({ verb: 'show-folded' });
+      else shownAs(stepId, { mode: 'folded-flat', side: 'back', rotationDeg: 0, foldCase: 2 });
+      useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, stepLayerOrderJson()) });
+      const entries = state().diagramHistory.past.length;
+      const before = layerOrderOf(stepId);
+      vi.mocked(bindings.runtime!.fold).mockClear();
+      vi.mocked(bindings.runtime!.free).mockClear();
+      vi.mocked(bindings.runtime!.foldToCase).mockClear();
+      expect(await controller.editLayerOrder()).toBe(false);
+      expect(hostEngine.resolveLayerOrder).not.toHaveBeenCalled();
+      expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
+      // One fold of the creases, at the first case, on the step's side, read and freed.
+      expect(bindings.runtime!.fold).toHaveBeenCalledOnce();
+      expect(bindings.runtime!.foldToCase).not.toHaveBeenCalled();
+      expect(bindings.runtime!.free).toHaveBeenCalledOnce();
+      const request = asked();
+      // The record as the dialog takes it, for it to restore; no scene of an order it isn't.
+      expect(request.record?.constraints).toEqual(STEP_LAYER_ORDER.constraints);
+      expect(request.record?.faces).toEqual(inSource.faces);
+      expect(request.shown).toBeUndefined();
+      // Opening wrote nothing, flag included.
+      expect(layerOrderOf(stepId)).toBe(before);
+      expect(state().diagramHistory.past).toHaveLength(entries);
+      expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
+      controller.dispose();
+    }
+  );
+
+  it('opens a constrained step whose fold it holds in the record’s order on that fold: no restore, no fold', async () => {
     const stepId = await linkedStep();
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, stepLayerOrderJson()) });
     const controller = createPoseController(stepId, listener());
     await controller.run({ verb: 'show-folded' });
-    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, stepLayerOrderJson()) });
-    hostEngine.resolveLayerOrder.mockImplementation(async () => fakeLayerOrderResolutions.kept('clash', inSource));
-    const entries = state().diagramHistory.past.length;
-    const before = layerOrderOf(stepId);
-    vi.mocked(bindings.runtime!.free).mockClear();
-    expect(await controller.editLayerOrder()).toBe(false);
-    const request = asked();
-    // The record as the dialog takes it, for it to restore and say why; no scene of an order it isn't.
-    expect(request.record?.constraints).toEqual(STEP_LAYER_ORDER.constraints);
-    expect(request.record?.faces).toEqual(inSource.faces);
-    expect(request.shown).toBeUndefined();
-    // The fold read for it is freed; opening wrote nothing, flag included.
-    expect(bindings.runtime!.free).toHaveBeenCalled();
-    expect(layerOrderOf(stepId)).toBe(before);
-    expect(state().diagramHistory.past).toHaveLength(entries);
-    expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
+    expect(hostEngine.resolveLayerOrder).toHaveBeenCalledOnce();
+    vi.mocked(bindings.runtime!.fold).mockClear();
+    await controller.editLayerOrder();
+    expect(hostEngine.resolveLayerOrder).toHaveBeenCalledOnce();
+    expect(bindings.runtime!.fold).not.toHaveBeenCalled();
+    expect(bindings.runtime!.source).toHaveBeenLastCalledWith(ORDERED_HANDLE);
     controller.dispose();
   });
 
-  it('replaces the held fold on Apply, in the pose it has, and writes the record as one pose (one undo step)', async () => {
+  it('replaces the held fold on Apply, in the pose it has, and writes the record as one undo step', async () => {
     const stepId = await linkedStep();
     const controller = createPoseController(stepId, listener());
     await controller.run({ verb: 'show-folded' });
@@ -1241,7 +1282,8 @@ describe('the Layer order dialog from Pose (H8)', () => {
     apply();
     const entries = state().diagramHistory.past.length;
     expect(await controller.editLayerOrder()).toBe(true);
-    expect(labelsSince(entries)).toEqual(['Adjust pose']);
+    // Named as the Step pane's Apply names it: one name for one Apply, wherever it was pressed.
+    expect(labelsSince(entries)).toEqual(['Change layer order']);
     // Folded as the dialog analysed it, on the side the step shows.
     expect(bindings.runtime!.foldWithOrder).toHaveBeenCalledOnce();
     expect(bindings.runtime!.foldWithOrder).toHaveBeenCalledWith(
@@ -1503,5 +1545,202 @@ describe('the Layer order dialog from Pose (H8)', () => {
     expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
     expect(hostEngine.resolveLayerOrder).not.toHaveBeenCalled();
     controller.dispose();
+  });
+
+  // Review… is the Step pane's flag's (D14): through Pose too while the step is open there, one session per step.
+  it('reviews a flagged step shown as its crease pattern: opens on its record, and Apply folds it flat', async () => {
+    const stepId = await linkedStep();
+    const flagged = stepLayerOrderJson({ ...STEP_LAYER_ORDER, attention: { reason: 'conflict', count: 1 } });
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, flagged) });
+    const controller = createPoseController(stepId, listener());
+    // Edit… is a flat fold's: nothing opens from a crease pattern.
+    expect(await controller.editLayerOrder('edit')).toBe(false);
+    expect(dialog.openLayerOrderDialog).not.toHaveBeenCalled();
+    apply();
+    const entries = state().diagramHistory.past.length;
+    expect(await controller.editLayerOrder('review')).toBe(true);
+    // On its record, for the dialog to restore and mark; nothing restored here.
+    expect(asked().record?.attention).toEqual({ reason: 'conflict', count: 1 });
+    expect(asked().shown).toBeUndefined();
+    expect(hostEngine.resolveLayerOrder).not.toHaveBeenCalled();
+    // Applied: folded flat in the pose it would show, the dialog's record, one undo step.
+    expect(render(stepId)).toMatchObject({ render: { mode: 'folded-flat' } });
+    expect(stepLayerOrderOf(layerOrderOf(stepId))?.record.constraints).toEqual([[1, 0, 1]]);
+    expect(labelsSince(entries)).toEqual(['Change layer order']);
+    expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(1);
+    controller.dispose();
+  });
+});
+
+/**
+ * A kernel that hands out a new handle per figure, and says what was used
+ * after it was freed (`strict`: answering as the kernel's arena answers a
+ * freed slot, "invalid folded figure handle"); a call of a name can be held
+ * until let through. From the #523 review's ledger.
+ */
+function trackingKernel({ strict = true }: { strict?: boolean } = {}) {
+  let next = 100;
+  const live = new Set<number>();
+  const freed = new Set<number>();
+  const usedAfterFree: string[] = [];
+  const gates = new Map<string, { reach: () => void; wait: Promise<void> }>();
+  const gated = async (name: string) => {
+    const gate = gates.get(name);
+    if (!gate) return;
+    gates.delete(name);
+    gate.reach();
+    await gate.wait;
+  };
+  const use = async (name: string, handle: number) => {
+    await gated(name);
+    if (freed.has(handle) || !live.has(handle)) {
+      usedAfterFree.push(`${name}(${handle})`);
+      if (strict) throw new Error('invalid folded figure handle');
+    }
+  };
+  const free = (handle: number) => {
+    freed.add(handle);
+    live.delete(handle);
+  };
+  setFoldedFigureHandleFree(free);
+  const folded = () => {
+    const handle = next++;
+    live.add(handle);
+    return handle;
+  };
+  const runtime = fakeCaptureRuntime({
+    fold: vi.fn(async () => ({ handle: folded(), discoveredCases: 1, displayStyle: 'Paper5' as const, outcome: 'Solved' as const })),
+    foldWithOrder: vi.fn(async () => ({
+      status: 'folded' as const,
+      handle: folded(),
+      discoveredCases: 1,
+      displayStyle: 'Paper5' as const,
+      outcome: 'Solved' as const,
+      currentCase: 1,
+      hasNext: false,
+    })),
+    source: vi.fn(async (handle: number) => {
+      await use('source', handle);
+      return fakeFoldSource();
+    }),
+    setModel: vi.fn(async (handle: number) => {
+      await use('setModel', handle);
+      return { discoveredCases: 1, displayStyle: 'Paper5' as const };
+    }),
+    renderSnapshot: vi.fn(async (handle: number) => {
+      await use('renderSnapshot', handle);
+      return squareRenderSnapshot();
+    }),
+    paperScene: vi.fn(async (handle: number) => {
+      await use('paperScene', handle);
+      return halfFoldKernelScene();
+    }),
+    free: vi.fn(async (handle: number) => free(handle)),
+  });
+  return {
+    runtime,
+    live,
+    usedAfterFree,
+    /** Hold the next call of `name` until `release`; `reached` once it is held. */
+    gate(name: string) {
+      let reach!: () => void;
+      let release!: () => void;
+      const reached = new Promise<void>((resolve) => (reach = resolve));
+      const wait = new Promise<void>((resolve) => (release = resolve));
+      gates.set(name, { reach, wait });
+      return { reached, release };
+    },
+  };
+}
+
+// An undo heard while a verb of this step reads the fold Pose holds — Apply, Turn Over, ⌘Z some milliseconds
+// later on kabuto (#523 review): the fold in the undone order is let go only once that read is over.
+describe('an undo that lands while Pose reads its held fold (#523 review)', () => {
+  const CHOSEN: LayerOrderRecord = { ...STEP_LAYER_ORDER_IN_SOURCE, constraints: [[1, 0, 1]], order: [[1, 0, 1]] };
+  const applied = (request: LayerOrderRequest): LayerOrderDialogOutcome => ({
+    kind: 'applied',
+    applied: { record: CHOSEN, relations: Uint32Array.of(0, 1), source: request.source },
+  });
+  const layerOrderOf = (stepId: string) => {
+    const source = render(stepId);
+    return source?.kind === 'cp' ? source.layerOrder : undefined;
+  };
+  const settled = async () => {
+    for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  };
+
+  it('lets a turn-over read the fold it began on, then lets that fold go', async () => {
+    const kernel = trackingKernel();
+    bindings.runtime = kernel.runtime;
+    const stepId = await linkedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    dialog.outcome = applied;
+    expect(await controller.editLayerOrder()).toBe(true);
+    const [ordered] = [...kernel.live];
+    const gate = kernel.gate('paperScene');
+    const turning = controller.run({ verb: 'turn-over' });
+    await gate.reached;
+    // ⌘Z: the canvas sessions hear it, then the Apply is undone, while the turn reads its picture.
+    controller.historyMoved();
+    expect(state().undoDiagram()).toBe(true);
+    await settled();
+    expect(kernel.live.has(ordered!)).toBe(true);
+    gate.release();
+    await turning;
+    await settled();
+    expect(kernel.usedAfterFree).toEqual([]);
+    expect(toasts.error).not.toHaveBeenCalled();
+    // The turn landed on the step it began on, not the undone one, and wrote nothing.
+    expect(layerOrderOf(stepId)).toBeUndefined();
+    // Then the fold in the undone order is let go.
+    expect(kernel.live.size).toBe(0);
+    controller.dispose();
+  });
+
+  it('lets Edit order… read its source from the fold it held, opens nothing on the step it no longer is, then lets that fold go', async () => {
+    const kernel = trackingKernel();
+    bindings.runtime = kernel.runtime;
+    const stepId = await linkedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    dialog.outcome = applied;
+    expect(await controller.editLayerOrder()).toBe(true);
+    const [ordered] = [...kernel.live];
+    dialog.openLayerOrderDialog.mockClear();
+    const gate = kernel.gate('source');
+    const opening = controller.editLayerOrder();
+    await gate.reached;
+    controller.historyMoved();
+    expect(state().undoDiagram()).toBe(true);
+    await settled();
+    expect(kernel.live.has(ordered!)).toBe(true);
+    gate.release();
+    expect(await opening).toBe(false);
+    await settled();
+    expect(kernel.usedAfterFree).toEqual([]);
+    expect(toasts.error).not.toHaveBeenCalled();
+    // Read for a step the undo has taken back: the dialog would open on what the step no longer is.
+    expect(dialog.openLayerOrderDialog).not.toHaveBeenCalled();
+    expect(kernel.live.size).toBe(0);
+    controller.dispose();
+  });
+
+  it('still lets a stale fold go at once when nothing of the step is being read', async () => {
+    const kernel = trackingKernel();
+    bindings.runtime = kernel.runtime;
+    const stepId = await linkedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    dialog.outcome = applied;
+    await controller.editLayerOrder();
+    expect(kernel.live.size).toBe(1);
+    controller.historyMoved();
+    expect(state().undoDiagram()).toBe(true);
+    await settled();
+    expect(kernel.live.size).toBe(0);
+    expect(layerOrderOf(stepId)).toBeUndefined();
+    controller.dispose();
+    expect(kernel.usedAfterFree).toEqual([]);
   });
 });
