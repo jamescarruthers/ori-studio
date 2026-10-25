@@ -12,6 +12,11 @@
  *    gzipped) is fetched only when a worker that needs it starts, so it is
  *    imported only inside `workers/`. A module anywhere else that imports the
  *    glue, even for a type, pulls it into a chunk the page loads.
+ * 3. **The inspector model is pure** (U9, AGENTS.md's panel rules). Under
+ *    `layer-order/model/` there is no React, no store, no package at all and
+ *    no engine runtime: the reducer describes its effects as data and the
+ *    hook (U10) runs them. It reads the engine's types and pure helpers only,
+ *    through `model/layerOrderEngineFacts.ts`.
  *
  * Tests and fixtures may reach anything: they never ship.
  */
@@ -65,6 +70,25 @@ const HOSTS: readonly RegExp[] = [
 
 const FOLD_WASM = /^generated\/oristudio-fold-wasm(\/|$)/;
 
+/** Every module `text` names, relative or a package: what the model's purity is checked on. */
+function specifiersIn(text: string): string[] {
+  return [...text.matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+|\bnew\s+URL\s*\(\s*)['"]([^'"]+)['"]/g)].map(
+    (match) => match[1]!
+  );
+}
+
+/**
+ * What the inspector model may import, resolved under `src/`: itself, the
+ * engine contract's types and pure helpers (never its runtime or worker),
+ * the record's types, and the analytics taxonomy's pure bucketing.
+ */
+const MODEL_MAY_IMPORT: readonly RegExp[] = [
+  /^layer-order\/model\/[\w.]+$/,
+  /^layer-order\/engine\/(layerOrderEngine|layerOrderWire|faceIndex)$/,
+  /^lib\/layerOrder\/layerOrderRecord$/,
+  /^analytics\/events$/,
+];
+
 describe('the Layer order dialog’s boundaries', () => {
   it('finds the sources to check', () => {
     expect(sourcesUnder(resolve(SRC, 'layer-order')).length).toBeGreaterThan(2);
@@ -89,6 +113,41 @@ describe('the Layer order dialog’s boundaries', () => {
           .map((target) => `${posix(relative(SRC, file))} → ${target}`)
       );
     expect(reaches).toEqual([]);
+  });
+
+  it('the inspector model imports no React, no store, no package and no engine runtime', () => {
+    const model = resolve(SRC, 'layer-order/model');
+    const files = sourcesUnder(model);
+    expect(files.length).toBeGreaterThan(5);
+    const reaches = files.flatMap((file) =>
+      specifiersIn(readFileSync(file, 'utf8'))
+        .map((specifier) =>
+          specifier.startsWith('.') ? posix(relative(SRC, resolve(dirname(file), specifier))) : `package:${specifier}`
+        )
+        .filter((target) => !MODEL_MAY_IMPORT.some((allowed) => allowed.test(target)))
+        .map((target) => `${posix(relative(SRC, file))} → ${target}`)
+    );
+    expect(reaches).toEqual([]);
+  });
+
+  it('the model’s check sees packages and the engine runtime', () => {
+    const file = resolve(SRC, 'layer-order/model/example.ts');
+    const named = specifiersIn(`
+      import { useReducer } from 'react';
+      import { create } from 'zustand';
+      import type { X } from '../engine/layerOrderRuntime';
+      import { y } from './layerOrderSentence';
+    `);
+    expect(named).toEqual(['react', 'zustand', '../engine/layerOrderRuntime', './layerOrderSentence']);
+    const resolved = named.map((specifier) =>
+      specifier.startsWith('.') ? posix(relative(SRC, resolve(dirname(file), specifier))) : `package:${specifier}`
+    );
+    expect(resolved.map((target) => MODEL_MAY_IMPORT.some((allowed) => allowed.test(target)))).toEqual([
+      false,
+      false,
+      false,
+      true,
+    ]);
   });
 
   it('sees every shape of import it must catch', () => {
