@@ -29,10 +29,13 @@ import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
 import {
   beginLayerOrderDialog,
   settleLayerOrderDialog,
+  useLayerOrderDialogStore,
+  type LayerOrderDialogOpening,
   type LayerOrderDialogOutcome,
 } from './layerOrderDialogStore';
 
-export type { LayerOrderDialogOutcome } from './layerOrderDialogStore';
+export type { LayerOrderDialogOpening, LayerOrderDialogOutcome } from './layerOrderDialogStore';
+export { registerLayerOrderDialogMount } from './layerOrderDialogStore';
 
 /** The dialog's chunk, as the mount renders it. */
 export type LayerOrderDialogModule = typeof LayerOrderDialogChunk;
@@ -72,6 +75,20 @@ export function prefetchLayerOrderDialog(): void {
 /** The dialog's code once it has loaded, for the mount's render; never asks for it. */
 export function useLoadedLayerOrderDialog(): LayerOrderDialogModule | null {
   return dialog.useLoaded();
+}
+
+/** The opening the app root's mount shows: null until a host opens the dialog, and again once it settles. */
+export function useLayerOrderDialogOpening(): LayerOrderDialogOpening | null {
+  return useLayerOrderDialogStore((state) => state.opening);
+}
+
+/**
+ * The dialog of opening `id` crashed: its host hears `cancelled` at once, so
+ * it never waits on a dialog that is gone and the next open is not `busy`.
+ * For the mount's error boundary. Whether it was still waiting.
+ */
+export function abandonLayerOrderDialog(id: number): boolean {
+  return settleLayerOrderDialog(id, { kind: 'cancelled' });
 }
 
 export function resetLayerOrderDialogGatewayForTest(): void {
