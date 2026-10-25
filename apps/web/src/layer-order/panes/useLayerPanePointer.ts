@@ -18,7 +18,10 @@
  *   tap.
  *
  * The hover is told only when the face under it changes, not the spot: on
- * the folded paper a face lies over many.
+ * the folded paper a face lies over many. While a tap's pick waits, the face
+ * under the finger stays pointed at: the hover the lift ends is told once the
+ * pick goes or a double tap drops it, so the mark under the finger never
+ * flickers off before its pick lands.
  *
  * No behaviour here depends on DOM focus: the events come from pointers on
  * the pane alone.
@@ -63,6 +66,20 @@ export function useLayerPanePointer(
   /** A tap's pick, waiting out the double-tap window. */
   const pending = useRef<{ timer: ReturnType<typeof setTimeout>; hit: LayerPaneHit | null } | null>(null);
   const hovered = useRef<LayerFace | null>(null);
+  /** A hover the surface told while a tap's pick waited: told once it no longer does. */
+  const heldHover = useRef<{ face: LayerFace | null; by: LayerPaneInput } | null>(null);
+
+  const tellHover = useEventCallback((face: LayerFace | null, by: LayerPaneInput) => {
+    if (hovered.current === face) return;
+    hovered.current = face;
+    events.onFaceHovered?.({ face, origin: pane, input: by });
+  });
+  /** The hover held while a pick waited, told now. */
+  const releaseHover = () => {
+    const held = heldHover.current;
+    heldHover.current = null;
+    if (held) tellHover(held.face, held.by);
+  };
 
   const cancelPending = () => {
     if (pending.current !== null) clearTimeout(pending.current.timer);
@@ -98,6 +115,7 @@ export function useLayerPanePointer(
       // Neither tap picks: the first's is still waiting, the second's is about to be reported.
       cancelPending();
       dropPick.current = true;
+      releaseHover();
       onDoubleTap();
     } else {
       lastTap.current = tap;
@@ -126,15 +144,20 @@ export function useLayerPanePointer(
     const timer = setTimeout(() => {
       pending.current = null;
       report(hit, 'tap');
+      releaseHover();
     }, DOUBLE_TAP_MS);
     pending.current = { timer, hit };
   });
 
   const onHover = useEventCallback((hit: LayerPaneHit | null) => {
     const face = hit?.face ?? null;
-    if (hovered.current === face) return;
-    hovered.current = face;
-    events.onFaceHovered?.({ face, origin: pane, input: input.current });
+    if (pending.current !== null) {
+      // A tap's pick waits: its face stays pointed at until the pick goes.
+      heldHover.current = { face, by: input.current };
+      return;
+    }
+    heldHover.current = null;
+    tellHover(face, input.current);
   });
 
   const capture = useMemo(
