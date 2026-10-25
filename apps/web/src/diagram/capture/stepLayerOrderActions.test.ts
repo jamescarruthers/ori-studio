@@ -86,19 +86,29 @@ beforeEach(() => {
 describe('opening the Layer order dialog on a step', () => {
   it('asks with the step’s fold, its paper as the Diagram paints it and its turn, the scene it shows, and its name', async () => {
     const stepId = await flatStep();
+    // Edit's view draws its creases in black and white, thicker.
+    useWorkspaceStore.setState({
+      oristudioCpViewport: { ...state().oristudioCpViewport, lineStyle: 'black-white', lineWidth: 2 },
+    });
     const entries = state().diagramHistory.past.length;
     expect(await openDiagramStepLayerOrder(stepId)).toBe(false);
     const request = asked();
     expect(request.source).toMatchObject({ segments: fakeFoldSource().segments, startingFaceId: 1, digest: 'fixture-digest' });
-    // Its side is the model's; the look its paper, the Diagram's policy and the step's turn, no X-ray.
+    // The look: its paper, the Diagram's policy, the step's turn and side (its model's too), no X-ray,
+    // and the crease pattern's lines as Edit's view draws them.
     expect(request.source.model.state).toBe('Back1');
     expect(request.look).toEqual({
       style: diagramScenePaintStyle(DEFAULT_DIAGRAM_STYLE, false),
       policy: DIAGRAM_STYLE_POLICY,
       turnDeg: 30,
+      side: 'back',
       xray: false,
+      lineStyle: 'black-white',
+      lineWidth: 2,
     });
-    expect(request.look).toEqual(diagramStepLayerOrderLook(DEFAULT_DIAGRAM_STYLE, FLAT));
+    expect(request.look).toEqual(diagramStepLayerOrderLook(DEFAULT_DIAGRAM_STYLE, FLAT, state().oristudioCpViewport));
+    // Edit's view with none set: its defaults.
+    expect(diagramStepLayerOrderLook(DEFAULT_DIAGRAM_STYLE, FLAT, {})).toMatchObject({ lineStyle: 'color', lineWidth: 1 });
     expect(request.record).toBeNull();
     expect(request.shown).toEqual(halfFoldKernelScene());
     expect(request.name).toBe('Step 1');

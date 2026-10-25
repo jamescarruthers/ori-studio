@@ -12,6 +12,7 @@ import type {
   OristudioCpFoldedPaperScene,
   OristudioCpLineSegment,
 } from '../../engine/oristudioCpTypes';
+import type { OristudioCpLineStyle } from '../creasePatternViewport';
 import type { PaperStyle } from '../paper/paperStyle';
 import type { SurfaceStylePolicy } from '../paper/paperStyleResolve';
 import type { LayerOrderRecord } from './layerOrderRecord';
@@ -56,8 +57,22 @@ export interface LayerOrderLook {
    * on-canvas rotation in those terms. One map turns the scene and the pane.
    */
   readonly turnDeg: number;
+  /**
+   * The side of the folded paper the host's picture shows: a Diagram step's
+   * `side`, or an Edit figure's front or back pass. The dialog opens on it,
+   * and its turn is {@link turnDeg} from this side, the other way round from
+   * the other.
+   */
+  readonly side: 'front' | 'back';
   /** Open with the hidden layers showing through, as an Edit figure in Transparent3 does. */
   readonly xray: boolean;
+  /**
+   * Edit's view's line style and width: the crease-pattern pane draws as
+   * Edit's canvas does in them, whatever the host (D18), as Fold's crease
+   * pattern pane does from the same view.
+   */
+  readonly lineStyle: OristudioCpLineStyle;
+  readonly lineWidth: number;
 }
 
 export interface LayerOrderRequest {

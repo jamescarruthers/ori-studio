@@ -510,8 +510,11 @@
     },
     "applyUnsettled": "The saved constraints haven’t been checked yet",
     "cancel": "Cancel",
+    "creaseCanvas": "The crease pattern. Pick a face on it; drag to pan, scroll to zoom.",
     "creasePane": "Crease pattern",
     "details": "Layer order details",
+    "foldedCanvasBack": "The folded figure from the back. Pick the face on top; drag to pan, scroll to zoom.",
+    "foldedCanvasFront": "The folded figure from the front. Pick the face on top; drag to pan, scroll to zoom.",
     "foldedLoading": "Loading the folded figure",
     "foldedPane": "Folded figure",
     "keepTrying": "Keep trying",
@@ -541,7 +544,27 @@
       "unreadable": "Layer order couldn’t read how this figure folds, so it can’t open on it. Nothing was changed."
     },
     "title": "Layer order",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "view": {
+      "back": "Back",
+      "front": "Front",
+      "side": "Side",
+      "undecided": "Undecided",
+      "undecidedTitle": "Tint where the face on top isn’t decided yet",
+      "xray": "X-ray",
+      "xrayTitle": "Show every layer of the folded figure faintly"
+    },
+    "zoom": {
+      "creaseBar": "Crease pattern view",
+      "creaseIn": "Zoom in the crease pattern",
+      "creaseOut": "Zoom out the crease pattern",
+      "creaseReset": "Reset the crease pattern zoom",
+      "fit": "Fit both views",
+      "foldedBar": "Folded figure view",
+      "foldedIn": "Zoom in the folded figure",
+      "foldedOut": "Zoom out the folded figure",
+      "foldedReset": "Reset the folded figure zoom"
+    }
   },
   "number": {
     "tooSmall": "Enter a number greater than {{minimum}}."

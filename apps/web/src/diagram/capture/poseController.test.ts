@@ -1160,11 +1160,14 @@ describe('the Layer order dialog from Pose (H8)', () => {
     expect(request.source).toMatchObject({ segments: fakeFoldSource().segments, digest: 'fixture-digest' });
     expect(request.record).toBeNull();
     expect(request.shown).toEqual(halfFoldKernelScene());
-    // The Diagram's look, as the Step pane's Edit… asks: the step's turn, no spread, no X-ray.
+    // The Diagram's look, as the Step pane's Edit… asks: the step's turn and side, the crease
+    // pattern's lines as Edit's view draws them, no spread, no X-ray.
     const flat = render(stepId);
     if (flat?.kind !== 'cp' || flat.render.mode !== 'folded-flat') throw new Error('folded flat');
-    expect(request.look).toEqual(diagramStepLayerOrderLook(DEFAULT_DIAGRAM_STYLE, flat.render));
-    expect(request.look.turnDeg).toBe(15);
+    expect(request.look).toEqual(
+      diagramStepLayerOrderLook(DEFAULT_DIAGRAM_STYLE, flat.render, state().oristudioCpViewport)
+    );
+    expect(request.look).toMatchObject({ turnDeg: 15, side: 'front' });
     expect(request.name).toBe('Step 1');
     expect(state().diagramHistory.past).toHaveLength(entries);
     expect(state().diagramCaptures).toEqual({});

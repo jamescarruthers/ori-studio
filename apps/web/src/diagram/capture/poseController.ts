@@ -555,7 +555,14 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
         if (route.kind === 'spatial') return 'spatial';
         const folded = await abandonOnEngineLoss(sourceToEdit(begun, document, lineIds, render, linked));
         return {
-          request: stepLayerOrderRequest(stepId, begun.style, render, folded, stepLayerOrderOf(linked.layerOrder)),
+          request: stepLayerOrderRequest(
+            stepId,
+            begun.style,
+            store.get().oristudioCpViewport,
+            render,
+            folded,
+            stepLayerOrderOf(linked.layerOrder)
+          ),
           frame: folded.frame,
           guard: stepLayerOrderGuard(begun),
         };
