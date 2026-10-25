@@ -120,6 +120,8 @@ describe.skipIf(!available)('the Layer order engine over the Fold bridge, throug
       return backend;
     });
     const runtime = createLayerOrderRuntime({ role, spawn: workers.spawn, count });
+    // The dialog counts when its owner says so (`setCounting`); this one, from the start.
+    if (count) runtime.setCounting(true);
     return { runtime, slices: () => slices };
   }
 
