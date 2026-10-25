@@ -570,7 +570,11 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
     async restore(_source, record, limits) {
       await answering('restore');
       session = null;
-      if (limits.maxNodes === 0) return { status: 'refused', refusal: { code: 'session_timed_out', limit: 'nodes', nodes: 0 } };
+      // The open's first order needs no search here, so only no time at all stops it. With no nodes, the
+      // restore opens and its check times out, as a real one that runs out with the session open does.
+      if (limits.deadlineMs === 0) {
+        return { status: 'refused', refusal: { code: 'session_timed_out', limit: 'deadline', nodes: 0 } };
+      }
       session = fresh([...figure.order], { kind: 'first', timed_out: null });
       return restoredOnto(session, record, limits);
     },
