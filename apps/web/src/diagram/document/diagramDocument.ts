@@ -445,6 +445,16 @@ export interface DiagramCpSource {
    * order back. Never holds the way the step is shown now; absent when empty.
    */
   remembered?: Partial<Record<DiagramShowAs, DiagramCpRender>>;
+  /**
+   * The layer order chosen for the step in the Layer order dialog, as the
+   * record's compact JSON (`lib/layerOrder/layerOrderRecord.ts`): its
+   * constraints and the order shown, never a case number. On the source, so
+   * it survives Show as and a switch to 3D; each constrained step carries its
+   * own. Absent when the step has none, so a step without one is written as
+   * before. A build without the field carries the step locked, as any source
+   * field it has no name for, and so does this one a newer build's record.
+   */
+  layerOrder?: string;
 }
 
 /**
