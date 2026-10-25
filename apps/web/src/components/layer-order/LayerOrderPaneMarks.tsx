@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CpOverlayView } from '../../cp-workspace/CreasePatternWebglCanvas';
+import type { CpSurfaceView } from '../../cp-workspace/surface/useCpSurface';
 import { observeResizeDeferred } from '../ui/observeResizeDeferred';
 import type { Point } from '../../lib/geometry';
 import { insetRing, ringInsetPx } from '../../layer-order/panes/faceRing';
@@ -17,6 +18,20 @@ function projector(view: CpOverlayView): (point: Point) => Point {
 
 const pointsOf = (ring: readonly Point[]) => ring.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
 
+/** Two views at one scale, turn and line boost: one only pans from the other. */
+function samePlacing(a: CpSurfaceView, b: CpSurfaceView): boolean {
+  return (
+    a.widthBoost === b.widthBoost &&
+    a.ex[0] === b.ex[0] &&
+    a.ex[1] === b.ex[1] &&
+    a.ey[0] === b.ey[0] &&
+    a.ey[1] === b.ey[1]
+  );
+}
+
+/** How long a pan must hold still before the letters are placed again, ms. */
+const PAN_SETTLE_MS = 120;
+
 /**
  * What a Layer order pane draws over its canvas, through its camera
  * (`implementation-plans/layer-order-dialog.md`, row U8; D20): the
@@ -24,17 +39,34 @@ const pointsOf = (ring: readonly Point[]) => ring.map(({ x, y }) => `${x.toFixed
  * faces' letters on top.
  *
  * In CSS px rather than on a channel of the canvas, because each of these
- * holds a size on screen at every zoom: a ring sits half its stroke plus a
- * pixel in from its face's edge (`faceRing.ts`), so it never covers a
- * crease's colour, and a letter's chip keeps its size and clears the others
+ * holds a size on screen at every zoom: a ring sits a pixel clear of the line
+ * drawn along its face's edge, as wide as that line is drawn at this zoom
+ * (`faceRing.ts`), so it never covers a crease's colour, and a letter's chip
+ * keeps its size, clears that line and the ring, and clears the other chips
  * (`layerPaneLabels.ts`). The tints are the canvas's (`PaperPane`'s fills).
+ *
+ * While the camera only pans, the letters move with it as placed, and are
+ * placed again once it has held still for {@link PAN_SETTLE_MS}: placing
+ * every letter every frame of a drag costs more than the frame has.
  *
  * Nothing here takes a pointer: the canvas under it does. Its box is
  * measured, a frame late, only so a letter set beside its face stays on
  * screen.
  */
-export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; view: CpOverlayView }) {
+export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; view: CpSurfaceView }) {
   const project = useMemo(() => projector(view), [view]);
+  const linePx = pane.lineWidthCss(view.widthBoost);
+  // The view the letters are placed in: this one, or while the camera pans, the one it panned from.
+  const [placed, setPlaced] = useState(view);
+  useEffect(() => {
+    if (placed === view) return;
+    const timer = setTimeout(() => setPlaced(view), samePlacing(placed, view) ? PAN_SETTLE_MS : 0);
+    return () => clearTimeout(timer);
+  }, [placed, view]);
+  const anchor = samePlacing(placed, view) ? placed : view;
+  const anchorProject = useMemo(() => projector(anchor), [anchor]);
+  const shiftX = view.origin[0] - anchor.origin[0];
+  const shiftY = view.origin[1] - anchor.origin[1];
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const [frame, setFrame] = useState<{ width: number; height: number } | null>(null);
   useEffect(() => {
@@ -53,18 +85,19 @@ export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; v
   const rings = useMemo(
     () =>
       pane.rings.flatMap(({ face, ring, ink, widthPx }) => {
-        const inner = insetRing(ring.map(project), ringInsetPx(widthPx));
+        const inner = insetRing(ring.map(project), ringInsetPx(widthPx, linePx));
         return inner ? [{ face, points: pointsOf(inner), ink, widthPx }] : [];
       }),
-    [pane.rings, project]
+    [pane.rings, project, linePx]
   );
   const flash = useMemo(
     () => (pane.flash ? { n: pane.flash.n, polygons: pane.flash.spots.map((spot) => pointsOf(spot.map(project))) } : null),
     [pane.flash, project]
   );
+  const anchorLinePx = pane.lineWidthCss(anchor.widthBoost);
   const labels: LayerPlacedLabel[] = useMemo(
-    () => placeLabels(pane.labels, pane.labelSpots, pane.letterOf, project, frame),
-    [pane.labels, pane.labelSpots, pane.letterOf, project, frame]
+    () => placeLabels(pane.labels, pane.labelSpots, pane.letterOf, anchorProject, { frame, linePx: anchorLinePx }),
+    [pane.labels, pane.labelSpots, pane.letterOf, anchorProject, frame, anchorLinePx]
   );
 
   return (
@@ -98,8 +131,8 @@ export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; v
           data-off={label.off || undefined}
           data-layer-order-letter={label.text}
           style={{
-            left: label.x - label.width / 2,
-            top: label.y - label.height / 2,
+            left: label.x + shiftX - label.width / 2,
+            top: label.y + shiftY - label.height / 2,
             width: label.width,
             height: label.height,
           }}

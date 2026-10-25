@@ -341,10 +341,29 @@ describe('placing the letters', () => {
     // With no frame, above it, off the top.
     const anywhere = placeLabels(label, spotsOf, () => 'A', (p) => p)[0]!;
     expect(anywhere.y - anywhere.height / 2).toBeLessThan(0);
-    const onScreen = placeLabels(label, spotsOf, () => 'A', (p) => p, { width: 400, height: 400 })[0]!;
+    const onScreen = placeLabels(label, spotsOf, () => 'A', (p) => p, { frame: { width: 400, height: 400 } })[0]!;
     expect(onScreen.off).toBe(true);
     expect(onScreen.y - onScreen.height / 2).toBeGreaterThan(8);
     expect(onScreen.x).toBe(104);
+  });
+
+  it('keeps a chip clear of the crease along its face as wide as the crease is drawn', () => {
+    const face = square(0, 0, 30);
+    const spotsOf = () => ({ visible: true, spots: [{ at: { x: 15, y: 15 }, region: face }], outline: face });
+    const label: LayerPaneLabel[] = [{ face: 0, tone: 'pick', keep: true }];
+    // A 30 px face holds a chip with the ring's room at line width 1, …
+    expect(placeLabels(label, spotsOf, () => 'C', (p) => p, { linePx: 1.5 })[0]!.off).toBe(false);
+    // … but not with a crease drawn 9 px wide along it: the letter goes beside, clear of that crease.
+    const wide = placeLabels(label, spotsOf, () => 'C', (p) => p, { linePx: 9 })[0]!;
+    expect(wide.off).toBe(true);
+    // How far the chip sits outside the face, on the side it sits beyond.
+    const clearance = Math.max(
+      wide.x - wide.width / 2 - 30,
+      0 - (wide.x + wide.width / 2),
+      wide.y - wide.height / 2 - 30,
+      0 - (wide.y + wide.height / 2)
+    );
+    expect(clearance).toBeGreaterThanOrEqual(4.5);
   });
 
   it('places in the pane’s pixels, through the projection', () => {

@@ -23,9 +23,10 @@
  *   figure, at {@link LAYER_ORDER_PANE_FIT_SHARE}, so both take one scale and
  *   their readouts agree; a turn over keeps the figure itself in view.
  * - **What follows the pointer** (the face pointed at, a row's faces) is
- *   painted apart, on the overlay channel (`pointerPanePaint`), and the
- *   letters take it on last (`withPointerLetters`): a hover changes those and
- *   nothing else. The marks' lists are held by value, so a caller that builds
+ *   painted apart, on the overlay channel (`pointerPanePaint`): under the
+ *   creases on the crease pattern, as every tint there is (D20), over the
+ *   paper on the folded figure. The letters take it on last
+ *   (`withPointerLetters`): a hover changes those and nothing else. The marks' lists are held by value, so a caller that builds
  *   them afresh for each hover rebuilds nothing.
  *
  * The inks are the theme's, read off the dialog's element, and read again
@@ -41,6 +42,8 @@ import { foldedFlatPaperScene } from '../../cp-workspace/folded/foldedFlatScene'
 import { StackHitIndex, type StackHit } from '../../cp-workspace/picking/stackHitIndex';
 import type { UserBounds } from '../../cp-workspace/renderer/camera';
 import { readCssVarColor } from '../../cp-workspace/renderer/cssColor';
+import { cpCreaseStrokeWidthPx } from '../../cp-workspace/cpSizingScales';
+import { ptToDevicePx } from '../../lib/paper/paperStyle';
 import type { FillGeometry, Rgba } from '../../cp-workspace/renderer/types';
 import type { PaperLook, PaperPaneOverlay } from '../../cp-workspace/surface/PaperPane';
 import type { LayerOrderSessionStatus } from '../dialog/useLayerOrderSession';
@@ -107,6 +110,12 @@ export interface LayerPaneChannels {
   readonly fills: FillGeometry | null;
   /** What follows the pointer, on the overlay channel: the face pointed at, a row's faces. */
   readonly overlay: () => PaperPaneOverlay;
+  /**
+   * How wide, CSS px, the pane draws the line along a face's edge at a frame's
+   * line boost: a crease, or the paper's widest pen. Rings and letters keep
+   * clear of half of it.
+   */
+  readonly lineWidthCss: (widthBoost: number) => number;
   /** The cells a press is tested against, in the pane's frame. */
   readonly stacks: StackHitIndex | null;
   readonly hitTest: (at: Point, radii: unknown, stack: StackHit | null) => LayerPaneHit | null;
@@ -244,9 +253,12 @@ export interface LayerPaneInputs {
   readonly themeKey: string;
 }
 
-/** The overlay channel's fills for what follows the pointer, as `PaperPane` asks for them. */
-function useOverlay(fills: FillGeometry | null): () => PaperPaneOverlay {
-  return useMemo(() => (fills ? () => ({ fills }) : () => NO_OVERLAY), [fills]);
+/**
+ * The overlay channel's fills for what follows the pointer, as `PaperPane`
+ * asks for them: `under` the creases, or over the paper.
+ */
+function useOverlay(fills: FillGeometry | null, slot: 'underFills' | 'fills'): () => PaperPaneOverlay {
+  return useMemo(() => (fills ? () => ({ [slot]: fills }) : () => NO_OVERLAY), [fills, slot]);
 }
 
 /** The crease-pattern pane: Edit's drawing of the source, its faces marked. */
@@ -295,13 +307,18 @@ export function useLayerPatternPane({
     () => (inks && faces ? paneTintFills(pointerPaint.tints, inks, ringOf, null) : null),
     [pointerPaint, inks, faces, ringOf]
   );
-  const overlay = useOverlay(pointerFills);
+  // Under the creases, as the base tints are: a tint never veils a crease (D20).
+  const overlay = useOverlay(pointerFills, 'underFills');
   const baseLetters = useMemo(() => (faces ? paneLetters(base, faces.patternCentroids) : null), [base, faces]);
   const letters = useMemo(
     () => (faces && baseLetters ? withPointerLetters(baseLetters, marks, faces.patternCentroids).labels : []),
     [baseLetters, marks, faces]
   );
   const labelSpots = useMemo(() => (faces ? patternLabelIndex(faces.pattern) : NO_SPOTS), [faces]);
+  const lineWidthCss = useMemo(
+    () => (widthBoost: number) => cpCreaseStrokeWidthPx(look.lineWidth, { ratio: 1, widthBoost }),
+    [look.lineWidth]
+  );
   const pickable = useMemo(() => new Set(base.pickable), [base.pickable]);
   const letterOf = useMemo(() => lettersOf(faceLetters), [faceLetters]);
   const paperLook = useMemo<PaperLook>(() => ({ style: look.style, policy: look.policy }), [look.style, look.policy]);
@@ -327,6 +344,7 @@ export function useLayerPatternPane({
     underFills,
     fills: null,
     overlay,
+    lineWidthCss,
     stacks: index?.hits ?? null,
     hitTest,
     pickable: pickable.size > 0 ? pickable : NO_FACES,
@@ -417,7 +435,13 @@ export function useLayerFoldedPane({
     () => (inks && outlines ? paneTintFills(pointerPaint.tints, inks, ringOf, index) : null),
     [pointerPaint, inks, outlines, ringOf, index]
   );
-  const overlay = useOverlay(pointerFills);
+  const overlay = useOverlay(pointerFills, 'fills');
+  // The paper's pens hold their width on screen (pt), whatever the zoom.
+  const lineWidthCss = useMemo(() => {
+    const { edges, mountainFolds, valleyFolds } = look.style;
+    const widest = ptToDevicePx(Math.max(edges.width, mountainFolds.width, valleyFolds.width), 1);
+    return () => widest;
+  }, [look.style]);
   const faces = useMemo(() => (figure.faces ? paneFacesOf(figure.faces) : null), [figure.faces]);
   const baseLetters = useMemo(() => (faces ? paneLetters(base, faces.patternCentroids) : null), [base, faces]);
   const letters = useMemo(
@@ -456,6 +480,7 @@ export function useLayerFoldedPane({
     underFills: null,
     fills,
     overlay,
+    lineWidthCss,
     stacks: index,
     hitTest,
     pickable: pickable.size > 0 ? pickable : NO_FACES,

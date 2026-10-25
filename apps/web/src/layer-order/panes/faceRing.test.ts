@@ -37,9 +37,11 @@ function signedArea(ring: readonly Point[]): number {
 }
 
 describe('a face’s ring, inside it', () => {
-  it('sits half its stroke plus a pixel in', () => {
+  it('sits a pixel clear of the line along the face: half that line, half its stroke, a pixel in', () => {
     expect(ringInsetPx(2)).toBe(2);
     expect(ringInsetPx(1.5)).toBe(1.75);
+    // A crease at line width 3, at the fit zoom: 1.5 × 3 = 4.5 px wide.
+    expect(ringInsetPx(2, 4.5)).toBe(4.25);
   });
 
   it('moves every side of a square in by the inset', () => {

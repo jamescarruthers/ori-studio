@@ -351,6 +351,14 @@ export function foldedLabelIndex(scene: OristudioCpFoldedPaperScene): (face: Lay
   };
 }
 
+/** How {@link placeLabels} fits letters to the pane: its box, and the line along each face. */
+export interface LayerLabelPlacing {
+  /** The pane's box, CSS px; null before it is measured. */
+  readonly frame?: { readonly width: number; readonly height: number } | null;
+  /** How wide the line along a face's edge is drawn, CSS px. */
+  readonly linePx?: number;
+}
+
 /** A letter placed on a pane, CSS px of the canvas box: its centre and its box. */
 export interface LayerPlacedLabel {
   readonly face: LayerFace;
@@ -470,16 +478,22 @@ const BESIDE_STEP_PX = 2;
 /**
  * Points just beside a face on screen, nearest first: from `from`, a point of
  * the face, out each way to where a chip of `size` first clears the face's
- * `outline` by {@link LABEL_OFF_GAP_PX}. So the letter sits against the face
+ * `outline` by {@link LABEL_OFF_GAP_PX} past the line along it (`lineHalfPx`,
+ * half its drawn width). So the letter sits against the face
  * it names, whatever the face's shape, never across another part of it.
  */
-function besideSpots(outline: readonly Point[], from: Point, size: { width: number; height: number }): Point[] {
+function besideSpots(
+  outline: readonly Point[],
+  from: Point,
+  size: { width: number; height: number },
+  lineHalfPx: number
+): Point[] {
   if (outline.length < 3) return [];
   const found: { at: Point; reach: number }[] = [];
   for (const [dx, dy] of BESIDE_WAYS) {
     for (let reach = BESIDE_STEP_PX; reach <= BESIDE_REACH_PX; reach += BESIDE_STEP_PX) {
       const at = { x: from.x + dx * reach, y: from.y + dy * reach };
-      if (!boxTouchesRing({ ...at, ...size }, outline, LABEL_OFF_GAP_PX)) {
+      if (!boxTouchesRing({ ...at, ...size }, outline, lineHalfPx + LABEL_OFF_GAP_PX)) {
         found.push({ at, reach });
         break;
       }
@@ -502,14 +516,18 @@ function besideSpots(outline: readonly Point[], from: Point, size: { width: numb
  *
  * `frame`, the pane's box, keeps a letter set beside its face on screen: a
  * face along the pane's edge takes its letter on the side away from it.
+ * `linePx` is how wide the line along a face's edge is drawn on screen (a
+ * crease at its line width and zoom): a chip keeps clear of half of it as
+ * well as of the ring ({@link LABEL_EDGE_ROOM_PX}).
  */
 export function placeLabels(
   labels: readonly LayerPaneLabel[],
   spotsOf: (face: LayerFace) => LayerLabelSpots | null,
   textOf: (face: LayerFace) => string,
   project: (point: Point) => Point,
-  frame: { readonly width: number; readonly height: number } | null = null
+  { frame = null, linePx = 0 }: LayerLabelPlacing = {}
 ): LayerPlacedLabel[] {
+  const room = linePx / 2 + LABEL_EDGE_ROOM_PX;
   const rank = ({ face, keep }: LayerPaneLabel) => (keep ? 0 : 2) + (spotsOf(face)?.visible === false ? 1 : 0);
   const ordered = labels
     .map((label, order) => ({ label, order, rank: rank(label) }))
@@ -531,7 +549,7 @@ export function placeLabels(
     const box = (at: Point): Box => ({ x: at.x, y: at.y, ...size });
     const inside = spots.spots
       .map(({ at, region }) => ({ at: project(at), region: region.map(project) }))
-      .filter(({ at, region }) => chipFits(at, size, region, LABEL_EDGE_ROOM_PX))
+      .filter(({ at, region }) => chipFits(at, size, region, room))
       .map(({ at }) => at);
     let at = inside.find((p) => clear(box(p))) ?? null;
     let off = false;
@@ -539,7 +557,7 @@ export function placeLabels(
       // Beside the face on screen, clear of the rest; else inside it over another letter; else beside it whatever it covers.
       const outline = spots.outline.map(project);
       const from = spots.spots[0] ? project(spots.spots[0].at) : ringCentroid(outline);
-      const around = from ? besideSpots(outline, from, size) : [];
+      const around = from ? besideSpots(outline, from, size, linePx / 2) : [];
       const onScreen = frame ? around.filter((p) => chipInFrame(p, size, frame)) : around;
       const besideClear = onScreen.find((p) => clear(box(p)));
       at = besideClear ?? inside[0] ?? onScreen[0] ?? around[0] ?? null;

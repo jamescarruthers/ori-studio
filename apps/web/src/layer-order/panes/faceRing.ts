@@ -1,8 +1,9 @@
 /**
  * A face's ring on the Layer order dialog's panes, drawn inside the face
  * (`implementation-plans/layer-order-dialog.md`, D20): a pick's outline sits
- * half its stroke plus a pixel in from the face's edge, so it never covers
- * the colour of a crease or an edge along that side.
+ * a pixel clear of the line drawn along the face's edge, half that line's
+ * width plus half its own stroke plus a pixel in, so it never covers the
+ * colour of a crease or an edge along that side, however wide it is drawn.
  *
  * {@link insetRing} moves every side of a ring inward by the same distance and
  * meets each pair of neighbours at a mitred corner, which is the inset of a
@@ -25,9 +26,14 @@ import { distanceToSegment } from '../../cp-workspace/picking/lineHitIndex';
 /** How small a turn, or a side, counts as none: a share of the ring's extent. */
 const STRAIGHT = 1e-9;
 
-/** How far in a ring's ring is drawn, in the pane's px: half its stroke, then a pixel. */
-export function ringInsetPx(strokePx: number): number {
-  return strokePx / 2 + 1;
+/**
+ * How far in from a face's edge its ring's middle is drawn, in the pane's px:
+ * half the width of the line drawn along the edge (`linePx`, a crease or the
+ * paper's edge, as wide as it is drawn on screen), half the ring's stroke,
+ * then a pixel.
+ */
+export function ringInsetPx(strokePx: number, linePx = 0): number {
+  return linePx / 2 + strokePx / 2 + 1;
 }
 
 /** Twice the signed area: positive when the ring turns from +x toward +y. */

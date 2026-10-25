@@ -278,6 +278,62 @@ describe('the Layer order panes', () => {
     expect(onFacePicked.mock.calls.map(([event]) => event.face)).toEqual([A, C]);
   });
 
+  it('a tap keeps its face pointed at until its pick goes', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const onFacePicked = vi.fn();
+    const onFaceHovered = vi.fn();
+    render({ marks: PICKED, onFacePicked, onFaceHovered });
+    const canvas = canvasOf('folded')!;
+    const at = letterAt('folded', 'C');
+    // The finger down: its face is pointed at.
+    act(() => {
+      canvas.dispatchEvent(pointer('pointerdown', at.x, at.y, 'touch'));
+    });
+    expect(onFaceHovered).toHaveBeenLastCalledWith({ face: C, origin: 'folded', input: 'tap' });
+    act(() => {
+      canvas.dispatchEvent(pointer('pointerup', at.x, at.y, 'touch'));
+    });
+    // The finger has lifted, and the pick waits out the double-tap window: C stays pointed at.
+    expect(onFaceHovered).toHaveBeenLastCalledWith({ face: C, origin: 'folded', input: 'tap' });
+    expect(onFacePicked).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(DOUBLE_TAP_MS));
+    expect(onFacePicked).toHaveBeenCalledWith({ face: C, origin: 'folded', input: 'tap' });
+    expect(onFaceHovered).toHaveBeenLastCalledWith({ face: null, origin: 'folded', input: 'tap' });
+    // The pick first, then the hover it ends.
+    expect(onFacePicked.mock.invocationCallOrder[0]!).toBeLessThan(onFaceHovered.mock.invocationCallOrder.at(-1)!);
+  });
+
+  it('draws the pointer’s tint under the creases on the crease pattern, over the paper on the folded figure', () => {
+    render({ marks: { ...PICKED, pointed: B, row: [A, C] } });
+    const pattern = channels.last.get(canvasOf('pattern')!)!;
+    expect((pattern.get('setSheetMarks') as { count: number }).count).toBeGreaterThan(0);
+    expect(pattern.get('setDiagnosticFills')).toBeNull();
+    const folded = channels.last.get(canvasOf('folded')!)!;
+    expect(folded.get('setSheetMarks')).toBeNull();
+    render({ marks: PICKED });
+    expect(pattern.get('setSheetMarks')).toBeNull();
+  });
+
+  it('moves the letters with a pan, and places them again once it settles', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    render({ marks: PICKED });
+    const canvas = canvasOf('pattern')!;
+    const before = letterAt('pattern', 'C');
+    act(() => {
+      canvas.dispatchEvent(pointer('pointerdown', 200, 200));
+      canvas.dispatchEvent(pointer('pointermove', 230, 210));
+      canvas.dispatchEvent(pointer('pointerup', 230, 210));
+    });
+    runFrames();
+    const panned = letterAt('pattern', 'C');
+    expect(panned.x - before.x).toBeCloseTo(30, 5);
+    expect(panned.y - before.y).toBeCloseTo(10, 5);
+    act(() => vi.advanceTimersByTime(200));
+    const settled = letterAt('pattern', 'C');
+    expect(settled.x).toBeCloseTo(panned.x, 5);
+    expect(settled.y).toBeCloseTo(panned.y, 5);
+  });
+
   it('tells the hover when the face under the pointer changes', () => {
     const onFaceHovered = vi.fn();
     render({ marks: PICKED, onFaceHovered });
