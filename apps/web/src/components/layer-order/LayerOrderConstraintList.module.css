@@ -1,0 +1,225 @@
+/*
+ * The constraints list (LayerOrderConstraintList.tsx; A3, A5's grouped rows,
+ * Round4-States' rows by status). Each row is the sentence that made it; its
+ * button covers the whole line, so a press anywhere on it puts its subject in
+ * the builder, and its objects' × sit above it.
+ */
+.list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding: 4px var(--space-2) 2px var(--space-3);
+}
+
+.title {
+  margin: 0 auto 0 0;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.empty {
+  flex: 1;
+  margin: 0;
+  padding: 4px var(--space-3);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+.rows {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 6px;
+  overflow: auto;
+  list-style: none;
+}
+
+.row {
+  --row-height: 28px;
+  --object-slot: 16px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 2px;
+  min-height: 32px;
+  padding: 2px var(--space-2) 2px 4px;
+}
+
+.row[data-hot] {
+  background: var(--bg-surface);
+}
+
+.line {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  min-height: var(--row-height);
+  padding-left: 4px;
+}
+
+/* The row's button, under the whole line: what a press, the focus and a reader land on. */
+.hit {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.hit:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+
+.dot {
+  flex: none;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.row[data-mark='clash'] .dot {
+  background: var(--status-danger);
+}
+
+.row[data-mark='not_applied'] .dot {
+  background: var(--status-warning);
+}
+
+.sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: var(--row-height);
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  pointer-events: none;
+}
+
+.verb {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Not applied: grey and dimmer, never dashed; the dot keeps its full ink. */
+.verb[data-dim] {
+  opacity: 0.55;
+}
+
+.objects {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.object {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* A segment after each object of a row of two or more: its comma at rest, its × when shown, in the same place. */
+.objectSlot {
+  position: relative;
+  flex: none;
+  width: var(--object-slot);
+  height: 20px;
+}
+
+.separator {
+  position: absolute;
+  bottom: 3px;
+  left: 2px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.objectRemove {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--text-tertiary);
+  border-left: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.object:hover .objectRemove,
+.objectRemove:focus-visible {
+  opacity: 1;
+}
+
+.object:hover .separator,
+.object:focus-within .separator {
+  opacity: 0;
+}
+
+.objectRemove:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+/* At touch size (Round5-Compound's phone): no hover, so every object's × shows, each a 44 px target; rows 44 px. */
+@media (pointer: coarse) {
+  .row {
+    --row-height: var(--touch-target);
+    --object-slot: 44px;
+
+    min-height: var(--touch-target);
+    padding: 0 var(--space-2) 0 4px;
+  }
+
+  .objects {
+    row-gap: 24px;
+    padding: 12px 0;
+  }
+
+  .objectRemove {
+    right: 16px;
+    opacity: 1;
+  }
+
+  .objectRemove::after {
+    position: absolute;
+    top: -12px;
+    right: -17px;
+    bottom: -12px;
+    left: 0;
+    content: '';
+  }
+
+  .separator {
+    opacity: 0;
+  }
+}
