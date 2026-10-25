@@ -1012,6 +1012,29 @@ describe('a step with a layer order, posed (H7)', () => {
     expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledOnce();
     // Nothing held for it.
     expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(0);
+    // Asked again, flagged as it was: no new undo step, nothing new to count.
+    await controller.run({ verb: 'show-folded' });
+    expect(state().diagramHistory.past.slice(entries)).toHaveLength(1);
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledOnce();
+    controller.dispose();
+  });
+
+  it.each([
+    ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
+    ['unavailable', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
+  ] as const)('writes nothing when the host engine is lost (%s): no undo step, not dirty, said', async (cause, said) => {
+    const stepId = await constrainedStep();
+    hostEngine.resolveLayerOrder.mockImplementation(async () => fakeLayerOrderResolutions.lost(inSource, cause));
+    const controller = createPoseController(stepId, listener());
+    const before = stepsIn(state().diagram!).find((step) => step.id === stepId)!;
+    useWorkspaceStore.setState({ dirty: false });
+    const entries = state().diagramHistory.past.length;
+    await controller.run({ verb: 'show-folded' });
+    expect(stepsIn(state().diagram!).find((step) => step.id === stepId)).toEqual(before);
+    expect(state().diagramHistory.past).toHaveLength(entries);
+    expect(state().dirty).toBe(false);
+    expect(toasts.error).toHaveBeenCalledWith(said);
+    expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
     controller.dispose();
   });
 

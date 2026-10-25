@@ -18,7 +18,7 @@ import {
   type SimulateFlat,
 } from '../../diagram/capture/captureFolded';
 import type { KnownCreases } from '../../diagram/capture/captureCreases';
-import type { CaptureLayerOrderResolve } from '../../diagram/capture/captureLayerOrder';
+import { layerOrderSummaryOf, type CaptureLayerOrderResolve } from '../../diagram/capture/captureLayerOrder';
 import { abandonOnEngineLoss } from '../../diagram/capture/engineLoss';
 import {
   DEFAULT_DIAGRAM_STYLE,
@@ -124,11 +124,12 @@ export type DiagramCaptureOutcome =
       /** Too detailed to keep as vector; kept as a bitmap. */
       tooDetailed: boolean;
       /**
-       * The step's layer order record's summary after it, when some of its
-       * constraints need a look (layer order D10, D13); absent or null when
-       * none do, or the step has none.
+       * The summary this capture stored on the step's layer order record,
+       * when it changed it to one that needs a look — some constraints left
+       * out, or creases that now fold in 3D (D10, D13); absent or null when
+       * the stored summary is as it was, or needs nothing.
        */
-      attention?: LayerOrderAttention | null;
+      flagged?: LayerOrderAttention | null;
     }
   /**
    * The step's layer order could not be drawn (D10): it keeps its picture,
@@ -136,6 +137,13 @@ export type DiagramCaptureOutcome =
    * was flagged so already.
    */
   | { status: 'needs-attention'; attention: LayerOrderAttention; changed: boolean }
+  /** The Layer order dialog's order, which the kernel cannot draw (D3): nothing was written. */
+  | { status: 'order-refused' }
+  /**
+   * The host engine was not there to restore the step's record: nothing was
+   * checked and nothing written. `offline` when the browser did not load it.
+   */
+  | { status: 'layer-order-lost'; offline: boolean }
   | { status: 'no-pattern' }
   | { status: 'missing' }
   | { status: 'unknown' }
@@ -339,6 +347,18 @@ export function commitStepLayerOrder(
   return { changed: next !== null };
 }
 
+/** The summary a step's layer order record stores now; null for none, or a record that needs nothing. */
+function storedAttentionOf(store: DiagramCaptureStore, stepId: string): LayerOrderAttention | null {
+  const { diagram } = store.get();
+  const source = diagram ? stepById(diagram, stepId)?.source : null;
+  return source?.kind === 'cp' ? (layerOrderSummaryOf(source.layerOrder)?.attention ?? null) : null;
+}
+
+/** Whether two summaries say the same: the same reason, for as many constraints. */
+export function sameAttention(a: LayerOrderAttention | null, b: LayerOrderAttention | null): boolean {
+  return a === b || (a !== null && b !== null && a.reason === b.reason && a.count === b.count);
+}
+
 /** The layer order a capture asks `captureStep` to draw: one the dialog applied, the step's record, or none. */
 function captureLayerOrderOf(
   request: DiagramCaptureRequest,
@@ -422,7 +442,11 @@ export async function runDiagramCapture(
       const flagged = commitStepLayerOrder(store, commit, start, result.layerOrder, request.label, request.joinEntry);
       return flagged ? { status: 'needs-attention', attention: result.attention, changed: flagged.changed } : { status: 'discarded' };
     }
+    // Nothing checked, nothing written: no undo step, nothing to save.
+    if (result.status === 'layer-order-lost') return { status: 'layer-order-lost', offline: result.cause === 'unavailable' };
     if (result.status !== 'captured') return result;
+    // What the step's record said before, to tell a summary this capture stored from one it kept.
+    const before = storedAttentionOf(store, stepId);
     const committed = await commitStepCapture(
       store,
       commit,
@@ -438,7 +462,7 @@ export async function runDiagramCapture(
       render: result.source.render,
       noLayerOrder: result.noLayerOrder,
       tooDetailed: committed.tooDetailed,
-      attention: result.attention,
+      flagged: result.attention && !sameAttention(before, result.attention) ? result.attention : null,
     };
   } catch (error) {
     return captureFailure(error);

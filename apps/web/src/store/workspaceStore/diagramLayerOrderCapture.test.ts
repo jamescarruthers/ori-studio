@@ -24,11 +24,16 @@ import {
 import type { CpCaptureRuntime } from '../../diagram/capture/captureFolded';
 import { stepLayerOrderOf } from '../../diagram/capture/captureLayerOrder';
 import { refreshAllDiagramSteps } from '../../diagram/capture/captureQueue';
-import { duplicateLinkedStepAs, refreshDiagramStep, showLinkedStepAs } from '../../diagram/capture/stepCaptureActions';
+import {
+  duplicateLinkedStepAs,
+  linkDiagramStep,
+  refreshDiagramStep,
+  showLinkedStepAs,
+} from '../../diagram/capture/stepCaptureActions';
 import { setLinkedLayerOrder, stepById, type DiagramCpSource } from '../../diagram/document/diagramDocument';
 import { stepsIn } from '../../diagram/document/diagramSteps.fixtures';
 import type { LayerOrderResolution, LayerOrderResolveBatch } from '../../layer-order/host/hostEngineGateway';
-import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+import { encodeLayerOrderRecord, type LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import { useLayoutStore } from '../layoutStore';
 import { useWorkspaceStore } from '../workspaceStore';
@@ -94,8 +99,8 @@ const edited = () =>
     )
   );
 
-/** A step linked to `region`, folded flat, carrying the fixture's record (as an Apply would leave it). */
-async function constrainedStep(region = left): Promise<string> {
+/** A step linked to `region`, folded flat, with no layer order chosen. */
+async function linkedStep(region = left): Promise<string> {
   const stepId = state().addDiagramStep()!;
   await state().captureDiagramStep(stepId, {
     scope: { kind: 'segment', region: regionReferenceFor(region!) },
@@ -103,9 +108,25 @@ async function constrainedStep(region = left): Promise<string> {
     kind: 'diagram-capture',
     label: 'Link pattern',
   });
+  return stepId;
+}
+
+/** A step linked to `region`, folded flat, carrying the fixture's record (as an Apply would leave it). */
+async function constrainedStep(region = left): Promise<string> {
+  const stepId = await linkedStep(region);
   useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, json) });
   return stepId;
 }
+
+/** A record as a step's source keeps it. */
+function encoded(record: LayerOrderRecord): string {
+  const written = encodeLayerOrderRecord(record);
+  if (!written.ok) throw new Error('the fixture record encodes');
+  return written.json;
+}
+
+/** Let a run reach what it waits on. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const step = (stepId: string) => stepById(state().diagram!, stepId)!;
 const source = (stepId: string) => step(stepId).source as DiagramCpSource;
@@ -148,7 +169,28 @@ describe('a step’s layer order, captured', () => {
     expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
   });
 
-  it.each(['clash', 'timed_out', 'lost'] as const)(
+  it.each([
+    ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
+    ['unavailable', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
+  ] as const)(
+    'with no host engine (%s) writes nothing: no undo step, not dirty, never saved as couldn’t be checked',
+    async (cause, said) => {
+      const stepId = await constrainedStep();
+      const before = step(stepId);
+      useWorkspaceStore.setState({ dirty: false });
+      hostEngine.answer = async () => fakeLayerOrderResolutions.lost(inSource, cause);
+      const entries = state().diagramHistory.past.length;
+      expect(await refreshDiagramStep(stepId)).toBe(false);
+      expect(step(stepId)).toEqual(before);
+      expect(stepLayerOrderOf(source(stepId).layerOrder)?.record.attention).toBeUndefined();
+      expect(state().diagramHistory.past).toHaveLength(entries);
+      expect(state().dirty).toBe(false);
+      expect(toasts.error).toHaveBeenCalledWith(said);
+      expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['clash', 'timed_out', 'refused'] as const)(
     'on %s keeps the step’s picture and flags its record, one undo step, and says so (D10)',
     async (outcome) => {
       const stepId = await constrainedStep();
@@ -183,17 +225,45 @@ describe('a step’s layer order, captured', () => {
     }
   );
 
-  it('fires `layer constraints need attention` with enums only, and toasts once per Refresh', async () => {
+  it('fires `layer constraints need attention` with enums only, once, as the stored summary changes', async () => {
     const stepId = await constrainedStep();
     hostEngine.answer = async () => fakeLayerOrderResolutions.kept('clash', inSource);
     await refreshDiagramStep(stepId);
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledOnce();
     expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledWith({
       surface: 'diagram_step',
       broken_count_bucket: '<=1',
     });
+    // A single Refresh says why it kept its picture.
     expect(toasts.message).toHaveBeenCalledWith('This step’s layer constraints need attention, so it keeps its picture.');
     // Not a capture: no picture was taken.
     expect(analytics.trackDiagramPictureCaptured).not.toHaveBeenCalled();
+    // Refreshed again, flagged as it was: nothing new to count.
+    await refreshDiagramStep(stepId);
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledOnce();
+  });
+
+  it('draws a step with some constraints left out with no toast, and counts it once (D10, D14)', async () => {
+    const stepId = await constrainedStep();
+    const attention = { reason: 'unresolved' as const, count: 1 };
+    hostEngine.answer = async (source) => fakeLayerOrderResolutions.applied(inSource, source, attention);
+    expect(await refreshDiagramStep(stepId)).toBe(true);
+    expect(stepLayerOrderOf(source(stepId).layerOrder)?.record.attention).toEqual(attention);
+    expect(toasts.message).not.toHaveBeenCalled();
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledOnce();
+    await refreshDiagramStep(stepId);
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledOnce();
+  });
+
+  it('a chosen order with no constraints (D16) says so in its own words, and counts nothing broken', async () => {
+    const stepId = await constrainedStep();
+    const chosen = { ...STEP_LAYER_ORDER, constraints: [] };
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, encoded(chosen)) });
+    hostEngine.answer = async () => fakeLayerOrderResolutions.kept('timed_out', { ...inSource, constraints: [] });
+    await refreshDiagramStep(stepId);
+    expect(stepLayerOrderOf(source(stepId).layerOrder)?.record.attention).toEqual({ reason: 'timeout', count: 0 });
+    expect(toasts.message).toHaveBeenCalledWith('This step’s chosen layer order needs attention, so it keeps its picture.');
+    expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
   });
 
   it('a Stop on the step ends its restore: nothing is committed', async () => {
@@ -235,6 +305,80 @@ describe('a step’s layer order, captured', () => {
     expect(batch!.close).toHaveBeenCalledOnce();
     expect(stepLayerOrderOf(source(first).layerOrder)).not.toBeNull();
     expect(stepLayerOrderOf(source(second).layerOrder)).not.toBeNull();
+  });
+
+  it('Refresh All says the steps that kept their pictures in one toast, and counts each once', async () => {
+    await constrainedStep(left);
+    await constrainedStep(right);
+    useDocument(edited());
+    hostEngine.answer = async () => fakeLayerOrderResolutions.kept('clash', inSource);
+    expect(await refreshAllDiagramSteps()).toBe(0);
+    expect(toasts.message).toHaveBeenCalledOnce();
+    expect(toasts.message).toHaveBeenCalledWith('2 steps’ layer constraints need attention, so they keep their pictures.');
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledTimes(2);
+    // Run again, both flagged as they were: the run says so again, and counts nothing new.
+    expect(await refreshAllDiagramSteps()).toBe(0);
+    expect(toasts.message).toHaveBeenCalledTimes(2);
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledTimes(2);
+  });
+
+  it('Refresh All says what it refreshed and what kept its picture together', async () => {
+    await constrainedStep(left);
+    await linkedStep(right);
+    useDocument(edited());
+    hostEngine.answer = async () => fakeLayerOrderResolutions.kept('clash', inSource);
+    expect(await refreshAllDiagramSteps()).toBe(1);
+    expect(toasts.success).toHaveBeenCalledOnce();
+    expect(toasts.success).toHaveBeenCalledWith('Refreshed 1 step', {
+      description: '1 step’s layer constraints need attention, so it keeps its picture.',
+    });
+    expect(toasts.message).not.toHaveBeenCalled();
+  });
+
+  it('Refresh All opens a host engine only for a constrained step, and only once it has done waiting for Edit', async () => {
+    await linkedStep(right);
+    useDocument(edited());
+    await refreshAllDiagramSteps();
+    expect(hostEngine.openLayerOrderResolveBatch).not.toHaveBeenCalled();
+
+    await constrainedStep(left);
+    useDocument(cpDocument());
+    useLayoutStore.setState({ activeWorkspace: 'edit' });
+    const run = refreshAllDiagramSteps();
+    await settle();
+    expect(hostEngine.openLayerOrderResolveBatch).not.toHaveBeenCalled();
+    useLayoutStore.setState({ activeWorkspace: 'diagram' });
+    await run;
+    expect(hostEngine.openLayerOrderResolveBatch).toHaveBeenCalledOnce();
+    expect(hostEngine.batches[0]!.close).toHaveBeenCalledOnce();
+  });
+
+  it('a relink to the step’s own sheet keeps its record and restores it', async () => {
+    const stepId = await constrainedStep(left);
+    expect(await linkDiagramStep(stepId, left!)).toBe(true);
+    expect(hostEngine.resolveLayerOrder).toHaveBeenCalledOnce();
+    expect(stepLayerOrderOf(source(stepId).layerOrder)?.record.constraints).toEqual(STEP_LAYER_ORDER.constraints);
+    expect(toasts.message).not.toHaveBeenCalled();
+  });
+
+  it('a relink to another sheet leaves its record behind and says so; Undo brings it back', async () => {
+    const stepId = await constrainedStep(left);
+    expect(await linkDiagramStep(stepId, right!)).toBe(true);
+    expect(hostEngine.resolveLayerOrder).not.toHaveBeenCalled();
+    expect(source(stepId).layerOrder).toBeUndefined();
+    expect(toasts.message).toHaveBeenCalledWith(
+      'The step’s layer constraint was for its old pattern, so it was removed. Undo brings it back.'
+    );
+    expect(state().undoDiagram()).toBe(true);
+    expect(source(stepId).layerOrder).toBe(json);
+  });
+
+  it('a first link starts with no record, and asks the host engine nothing', async () => {
+    const stepId = state().addDiagramStep()!;
+    expect(await linkDiagramStep(stepId, left!, 'folded')).toBe(true);
+    expect(source(stepId).layerOrder).toBeUndefined();
+    expect(hostEngine.resolveLayerOrder).not.toHaveBeenCalled();
+    expect(toasts.message).not.toHaveBeenCalled();
   });
 
   it('Show as Crease Pattern and back keeps the record, restored as it is drawn again', async () => {

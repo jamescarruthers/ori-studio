@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { onEngineLost } from '../../engines/engineHost';
 import i18n from '../../i18n';
-import { openLayerOrderResolveBatch } from '../../layer-order/host/hostEngineGateway';
+import { openLayerOrderResolveBatch, type LayerOrderResolveBatch } from '../../layer-order/host/hostEngineGateway';
 import { requestConfirmation } from '../../store/commandDialogStore';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -13,7 +13,7 @@ import { knownCreasesOf } from './captureCreases';
 import { diagramLinkStatus } from './diagramLinks';
 import { abandonOnEngineLoss } from './engineLoss';
 import { linkedSourceOf, refreshKind, type DiagramLinkContext } from './linkStatus';
-import { layerOrderOf, sayCaptureOutcome, trackCapture } from './stepCaptureActions';
+import { layerOrderOf, sayCaptureOutcome, sayLayerOrderLost, trackCapture } from './stepCaptureActions';
 import { linkContextNow } from './useLinkStatus';
 
 /** The label Refresh all's one undo entry carries. */
@@ -74,9 +74,13 @@ export async function refreshAllDiagramSteps(): Promise<number> {
   useWorkspaceStore.setState({ diagramRefreshAll: { total: stale.length, done: 0 } });
   let refreshed = 0;
   let joinEntry: object | undefined;
-  // One host engine worker for every step whose layer order is restored, spawned
-  // by the first of them, if any is; ended with the run (layer order H7).
-  const layerOrders = openLayerOrderResolveBatch();
+  // One host engine worker for every step whose layer order is restored (H7):
+  // opened by the first such step, once it has done waiting for Edit, and
+  // ended with the run.
+  let layerOrders: LayerOrderResolveBatch | null = null;
+  // Steps whose layer order kept their picture, or found no engine: said once, at the end.
+  const kept = { constraints: 0, chosen: 0 };
+  const lost = { steps: 0, offline: false };
   try {
     for (const [index, stepId] of stale.entries()) {
       await nextTurn();
@@ -102,6 +106,7 @@ export async function refreshAllDiagramSteps(): Promise<number> {
       const step = store.diagram ? stepById(store.diagram, stepId) : null;
       if (step?.source?.kind !== 'cp') continue;
       const { scope, render } = step.source;
+      if (step.source.layerOrder !== undefined) layerOrders ??= openLayerOrderResolveBatch();
       refreshing = stepId;
       const outcome = await store
         .captureDiagramStep(stepId, {
@@ -112,7 +117,7 @@ export async function refreshAllDiagramSteps(): Promise<number> {
           label: REFRESH_ALL_LABEL,
           joinEntry,
           ...layerOrderOf(step.source),
-          layerOrders,
+          ...(layerOrders ? { layerOrders } : {}),
         })
         .finally(() => {
           refreshing = null;
@@ -122,32 +127,67 @@ export async function refreshAllDiagramSteps(): Promise<number> {
         refreshed += 1;
         joinEntry ??= useWorkspaceStore.getState().diagramHistory.past.at(-1);
       }
-      // A step whose constraints need attention is flagged in the run's one entry too.
-      if (outcome.status === 'needs-attention' && outcome.changed) {
-        joinEntry ??= useWorkspaceStore.getState().diagramHistory.past.at(-1);
+      if (outcome.status === 'needs-attention') {
+        // Flagged in the run's one entry too, and said with the rest at the end.
+        if (outcome.changed) joinEntry ??= useWorkspaceStore.getState().diagramHistory.past.at(-1);
+        if (outcome.attention.count === 0) kept.chosen += 1;
+        else kept.constraints += 1;
+      } else if (outcome.status === 'layer-order-lost') {
+        lost.steps += 1;
+        if (outcome.offline) lost.offline = true;
+      } else if (outcome.status === 'stopped') {
+        break;
+      } else if (outcome.status !== 'captured' && outcome.status !== 'discarded') {
+        sayCaptureOutcome(outcome);
       }
-      if (outcome.status === 'stopped') break;
-      if (outcome.status !== 'captured' && outcome.status !== 'discarded') sayCaptureOutcome(outcome);
       useWorkspaceStore.setState({ diagramRefreshAll: { total: stale.length, done: index + 1 } });
     }
   } finally {
-    layerOrders.close();
+    layerOrders?.close();
     unlisten();
     cancelRun = null;
     if (useWorkspaceStore.getState().diagramLoadId === loadId) {
       useWorkspaceStore.setState({ diagramRefreshAll: null });
     }
   }
-  if (refreshed > 0) {
-    toast.success(
-      i18n.t('toasts:diagram.refreshedAll', {
-        count: refreshed,
-        defaultValue_one: 'Refreshed 1 step',
-        defaultValue_other: 'Refreshed {{count}} steps',
-      })
-    );
-  }
+  sayRefreshedAll(refreshed, kept);
+  if (lost.steps > 0) sayLayerOrderLost(lost.offline);
   return refreshed;
+}
+
+/**
+ * What Refresh all came to, in one toast: the steps it refreshed, and the
+ * steps whose layer order kept their picture (D10), which each say why in the
+ * Step pane — never a toast a step.
+ */
+function sayRefreshedAll(refreshed: number, kept: { constraints: number; chosen: number }): void {
+  const t = i18n.t;
+  const flagged = kept.constraints + kept.chosen;
+  const description =
+    flagged === 0
+      ? undefined
+      : kept.constraints === 0
+        ? t('toasts:diagram.refreshAllChosenOrderKept', {
+            count: kept.chosen,
+            defaultValue_one: '1 step’s chosen layer order needs attention, so it keeps its picture.',
+            defaultValue_other: '{{count}} steps’ chosen layer orders need attention, so they keep their pictures.',
+          })
+        : t('toasts:diagram.refreshAllLayerOrderKept', {
+            count: flagged,
+            defaultValue_one: '1 step’s layer constraints need attention, so it keeps its picture.',
+            defaultValue_other: '{{count}} steps’ layer constraints need attention, so they keep their pictures.',
+          });
+  if (refreshed > 0) {
+    const title = t('toasts:diagram.refreshedAll', {
+      count: refreshed,
+      defaultValue_one: 'Refreshed 1 step',
+      defaultValue_other: 'Refreshed {{count}} steps',
+    });
+    if (description) toast.success(title, { description });
+    else toast.success(title);
+  } else if (description) {
+    toast.message(description);
+  }
 }
 
 /**

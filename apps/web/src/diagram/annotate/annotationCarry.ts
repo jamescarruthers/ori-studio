@@ -19,9 +19,8 @@
 import { meanValueWeights } from '../../cp-workspace/folded/foldedLayerSpread';
 import { storedSceneStep } from '../capture/captureGeometry';
 import { boundariesMatchMoved, isRelativeFingerprint } from '../../cp-workspace/regions/regionIdentity';
-import { NEWER } from '../../lib/documentFile';
 import { turnClockwise } from '../../lib/geometry';
-import { readLayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+import { layerOrderKeyOf } from '../capture/captureLayerOrder';
 import type { PaperFaceItem, PaperScene, SceneBounds, ScenePoint } from '../../lib/paper/paperScene';
 import { isCardMark } from '../document/cardMarks';
 import {
@@ -203,13 +202,9 @@ function sameLayerOrder(
   return before !== null && before === after;
 }
 
-/** The order a source's record draws, as a key: its faces and their order; null for a source with none. */
+/** The order a source's record draws, as a key (`layerOrderKeyOf`); null for a source with none. */
 function recordedOrderOf(source: DiagramPosedSource): string | null {
-  if (source.kind !== 'cp' || source.layerOrder === undefined) return null;
-  const read = readLayerOrderRecord(source.layerOrder);
-  // One this build cannot read is no order it can tell from another: never the same.
-  if (read === NEWER || !read.ok) return `unread:${source.layerOrder}`;
-  return JSON.stringify([read.record.faces, read.record.order]);
+  return source.kind === 'cp' ? layerOrderKeyOf(source.layerOrder) : null;
 }
 
 /**

@@ -12,7 +12,7 @@ import {
 } from '../../analytics';
 import { fold3dRefusalMessage } from '../../cp-workspace/folded/foldedFigureNotice';
 import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
-import { regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
+import { boundariesMatch, regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
 import { needsAttentionFact } from '../../layer-order/model/layerOrderAnalytics';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
@@ -37,6 +37,7 @@ import {
 } from '../document/diagramDocument';
 import { firstLinkPose } from '../zoom/zoomCapture';
 import { knownCreasesOf } from './captureCreases';
+import { layerOrderSummaryOf } from './captureLayerOrder';
 import { stepSheetNow } from './stepSheetNow';
 import { openLinkedPoseOf } from './openLinkedPose';
 
@@ -79,7 +80,9 @@ export function pickerShowAs(document: DiagramDocument | null, step: DiagramStep
  * Simulated fold %, which starts again at 0%. A first link starts at no turn,
  * but an enlarged step's shown as its run is in its run source's turn
  * (`firstLinkPose`); shown another way, it starts whole (`landSeededFrame`).
- * Whether it was linked.
+ * A relink to the step's own sheet keeps its layer order and restores it; to
+ * another, leaves it behind and says so, Undo bringing it back. Whether it
+ * was linked.
  */
 export async function linkDiagramStep(stepId: string, sheet: RegionLike, way?: DiagramShowAs): Promise<boolean> {
   const store = useWorkspaceStore.getState();
@@ -97,20 +100,51 @@ export async function linkDiagramStep(stepId: string, sheet: RegionLike, way?: D
   // to settle (D19): shown Simulated, it links at 0%, from the camera it had.
   const render: DiagramCpRender =
     asked.mode === 'simulated' && asked.foldPercent > 0 ? { ...asked, foldPercent: 0 } : asked;
+  // A layer order names its sheet's faces (H7): kept, and restored, through a relink to the same sheet;
+  // a link to another leaves it behind. A first link starts without one.
+  const record = linked?.layerOrder;
+  const sameSheet = linked !== null && record !== undefined && sameSheetAs(linked, sheet);
   const outcome = await store.captureDiagramStep(stepId, {
     scope: { kind: 'segment', region: regionReferenceFor(sheet) },
     render,
     kind: 'diagram-capture',
     label: linked ? 'Relink pattern' : 'Link pattern',
+    ...(sameSheet ? layerOrderOf(linked) : {}),
   });
   report(outcome, render, linked ? 'relink' : 'link');
   if (outcome.status !== 'captured') return false;
+  if (record !== undefined && !sameSheet && outcome.changed) sayLayerOrderLeftBehind(record);
   lastLinkedAs = showAs;
   if (way !== undefined && (!linked || showAsOf(linked.render) !== showAs)) {
     trackDiagramStepShownAs(trackedShowAs(showAs), 'picker');
   }
   useWorkspaceStore.getState().closeDiagramPatternPicker();
   return true;
+}
+
+/** Whether `sheet` is the one a linked step's link names now: a relink to its own sheet. */
+function sameSheetAs(linked: DiagramCpSource, sheet: RegionLike): boolean {
+  const now = stepSheetNow(linked);
+  return now !== null && boundariesMatch(now.boundary, sheet.boundary);
+}
+
+/** A relink to another sheet left the step's layer order behind: said, with the way back. */
+function sayLayerOrderLeftBehind(record: string): void {
+  const t = i18n.t;
+  const constraints = layerOrderSummaryOf(record)?.constraints ?? 0;
+  toast.message(
+    constraints === 0
+      ? t(
+          'toasts:diagram.layerOrder.chosenOrderRemoved',
+          'The step’s chosen layer order was for its old pattern, so it was removed. Undo brings it back.'
+        )
+      : t('toasts:diagram.layerOrder.removed', {
+          count: constraints,
+          defaultValue_one: 'The step’s layer constraint was for its old pattern, so it was removed. Undo brings it back.',
+          defaultValue_other:
+            'The step’s {{count}} layer constraints were for its old pattern, so they were removed. Undo brings them back.',
+        })
+  );
 }
 
 /**
@@ -235,9 +269,9 @@ export async function refreshDiagramStep(stepId: string): Promise<boolean> {
 
 /**
  * A capture's layer order, from the step's source: the record it keeps, if
- * any, for the capture to carry and draw (layer order H7). A Link or Relink
- * asks with none — its creases are another region's, whose faces the record
- * does not name.
+ * any, for the capture to carry and draw (layer order H7). A relink asks
+ * with it only to the step's own sheet: another's faces are not the ones the
+ * record names.
  */
 export function layerOrderOf(source: DiagramCpSource): { layerOrder?: string } {
   return source.layerOrder === undefined ? {} : { layerOrder: source.layerOrder };
@@ -287,25 +321,41 @@ export function trackCapture(
   asked: DiagramCpRender,
   via: DiagramCaptureVia
 ): void {
-  const attention = captureAttention(outcome);
-  // Constraints that did not all hold, however the picture came out (spec §10).
-  if (attention) trackLayerConstraintsNeedAttention(needsAttentionFact('diagram_step', attention.count).properties);
+  const attention = newAttentionOf(outcome);
+  // Constraints that did not all hold (spec §10): once, as the stored summary changes to say so.
+  if (attention) trackStepLayerOrderAttention(attention);
   const tracked = trackedOutcome(outcome);
   if (!tracked) return;
   const render = outcome.status === 'captured' ? outcome.render : asked;
   trackDiagramPictureCaptured(captureKind(render), tracked, via);
 }
 
-/** What a capture left the step's layer order needing, if it needs a look: kept back, or drawn with some left out. */
-function captureAttention(outcome: DiagramCaptureOutcome): LayerOrderAttention | null {
-  if (outcome.status === 'needs-attention') return outcome.attention;
-  return outcome.status === 'captured' ? (outcome.attention ?? null) : null;
+/**
+ * The summary a capture newly stored on the step's record: kept back and
+ * flagged anew, or drawn with some left out, or waiting for 3D creases. A
+ * summary stored again as it was says nothing new.
+ */
+function newAttentionOf(outcome: DiagramCaptureOutcome): LayerOrderAttention | null {
+  if (outcome.status === 'needs-attention') return outcome.changed ? outcome.attention : null;
+  return outcome.status === 'captured' ? (outcome.flagged ?? null) : null;
+}
+
+/**
+ * `layer constraints need attention` for a Diagram step (spec §10), through
+ * the central layer, for a summary newly stored: never for a record whose
+ * order was chosen with no constraint (D16), where nothing is broken.
+ */
+export function trackStepLayerOrderAttention(attention: LayerOrderAttention): void {
+  if (attention.count === 0) return;
+  trackLayerConstraintsNeedAttention(needsAttentionFact('diagram_step', attention.count).properties);
 }
 
 /**
  * Tell the user what a capture came to, when there is something to tell: a
  * picture kept see-through or as a bitmap, or one that could not be taken and
- * why. A Stop, or a capture the user moved on from, says nothing.
+ * why. A Stop, or a capture the user moved on from, says nothing. A capture
+ * that drew the step with some of its constraints left out says nothing
+ * either: the Step pane's flag does (D10, D14).
  */
 export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
   const t = i18n.t;
@@ -313,23 +363,23 @@ export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
     case 'needs-attention':
       // The Step pane's Picture section says why, with Review… (D14).
       toast.message(
-        t(
-          'toasts:diagram.capture.layerOrderKept',
-          'This step’s layer constraints need attention, so it keeps its picture.'
-        )
+        outcome.attention.count === 0
+          ? t(
+              'toasts:diagram.capture.chosenOrderKept',
+              'This step’s chosen layer order needs attention, so it keeps its picture.'
+            )
+          : t('toasts:diagram.capture.layerOrderKept', 'This step’s layer constraints need attention, so it keeps its picture.')
       );
       return;
+    case 'order-refused':
+      // D3: the dialog's order is drawn as it was chosen, or not at all.
+      toast.error(t('toasts:diagram.layerOrder.refused', 'This layer order couldn’t be drawn, so nothing was changed.'));
+      return;
+    case 'layer-order-lost':
+      sayLayerOrderLost(outcome.offline);
+      return;
     case 'captured':
-      // Drawn with some left out; one waiting for its creases to fold flat says so in the Step pane alone.
-      if (outcome.attention && outcome.attention.reason !== 'route-3d') {
-        toast.message(
-          t('toasts:diagram.capture.layerOrderAttention', {
-            count: outcome.attention.count,
-            defaultValue_one: '1 of this step’s layer constraints needs attention.',
-            defaultValue_other: '{{count}} of this step’s layer constraints need attention.',
-          })
-        );
-      } else if (outcome.noLayerOrder) {
+      if (outcome.noLayerOrder) {
         toast.message(
           t(
             'toasts:diagram.capture.noLayerOrder',
@@ -397,6 +447,23 @@ export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
     case 'busy':
       return;
   }
+}
+
+/**
+ * The host engine was not there to restore a step's record, so nothing was
+ * checked and nothing written: offline (the host engine's `unavailable`, by
+ * `isLayerOrderLoadFailure`), or it stopped.
+ */
+export function sayLayerOrderLost(offline: boolean): void {
+  const t = i18n.t;
+  toast.error(
+    offline
+      ? t(
+          'toasts:diagram.layerOrder.lostLoad',
+          'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'
+        )
+      : t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.')
+  );
 }
 
 function trackedOutcome(outcome: DiagramCaptureOutcome): TrackedOutcome | null {
