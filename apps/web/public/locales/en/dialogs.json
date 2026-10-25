@@ -504,6 +504,8 @@
     "applying": "Saving the layer order…",
     "applyNothing": "Nothing to apply",
     "applyOpening": "Nothing to apply yet",
+    "applyRefolds": "The creases changed since this was folded: Apply also refolds it.",
+    "applyRefoldsNamed": "{{name}}’s creases changed since it was folded: Apply also refolds it.",
     "applyRefused": {
       "other": "Couldn’t save this layer order. Nothing was changed.",
       "tooLarge": "This layer order is too large to save with the figure."

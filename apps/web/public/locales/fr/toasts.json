@@ -169,6 +169,11 @@
     "solvingLong": "Résolution toujours en cours — cela peut prendre du temps"
   },
   "layerOrder": {
+    "folds3d": "Les plis de ce modèle se plient maintenant en 3D, et l’ordre des couches fonctionne sur les pliages à plat. Repliez-le pour le voir.",
+    "refoldKept": "Les contraintes de couches de {{name}} demandent votre attention, il garde donc son image.",
+    "refoldKeptChosenOrder": "L’ordre des couches choisi pour {{name}} demande votre attention, il garde donc son image.",
+    "refoldLost": "L’ordre des couches s’est arrêté de façon inattendue, {{name}} n’a donc pas été replié.",
+    "refoldLostLoad": "L’ordre des couches n’a pas pu se charger, {{name}} n’a donc pas été replié. Vérifiez votre connexion, puis réessayez.",
     "unavailable": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion et réessayez."
   },
   "paperExport": {

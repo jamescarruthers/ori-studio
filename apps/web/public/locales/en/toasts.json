@@ -151,6 +151,11 @@
     "solvingLong": "Still solving — this can take a while"
   },
   "layerOrder": {
+    "folds3d": "This figure’s creases fold in 3D now, and layer order works on flat folds. Refold it to see it.",
+    "refoldKept": "{{name}}’s layer constraints need attention, so it keeps its picture.",
+    "refoldKeptChosenOrder": "{{name}}’s chosen layer order needs attention, so it keeps its picture.",
+    "refoldLost": "Layer order stopped unexpectedly, so {{name}} wasn’t refolded.",
+    "refoldLostLoad": "Layer order couldn’t load, so {{name}} wasn’t refolded. Check your connection, then try again.",
     "unavailable": "Layer order didn’t load. Check your connection and try again."
   },
   "paperExport": {

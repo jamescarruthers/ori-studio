@@ -169,6 +169,11 @@
     "solvingLong": "Ainda resolvendo — isso pode demorar um pouco"
   },
   "layerOrder": {
+    "folds3d": "Os vincos deste modelo agora dobram em 3D, e a ordem das camadas funciona em dobras planas. Dobre-o novamente para vê-lo.",
+    "refoldKept": "As restrições de camadas de {{name}} precisam de atenção, então ele mantém sua imagem.",
+    "refoldKeptChosenOrder": "A ordem das camadas escolhida para {{name}} precisa de atenção, então ele mantém sua imagem.",
+    "refoldLost": "A ordem das camadas parou inesperadamente, então {{name}} não foi dobrado novamente.",
+    "refoldLostLoad": "Não foi possível carregar a ordem das camadas, então {{name}} não foi dobrado novamente. Verifique sua conexão e tente novamente.",
     "unavailable": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo."
   },
   "paperExport": {

@@ -169,6 +169,11 @@
     "solvingLong": "Sigue resolviendo: esto puede tardar un rato"
   },
   "layerOrder": {
+    "folds3d": "Los pliegues de este modelo ahora se pliegan en 3D, y el orden de capas funciona con pliegues planos. Vuelve a plegarlo para verlo.",
+    "refoldKept": "Las restricciones de capas de {{name}} necesitan atención, así que conserva su imagen.",
+    "refoldKeptChosenOrder": "El orden de capas elegido para {{name}} necesita atención, así que conserva su imagen.",
+    "refoldLost": "El orden de capas se detuvo inesperadamente, así que {{name}} no se volvió a plegar.",
+    "refoldLostLoad": "No se pudo cargar el orden de capas, así que {{name}} no se volvió a plegar. Comprueba tu conexión y vuelve a intentarlo.",
     "unavailable": "Orden de capas no se cargó. Comprueba tu conexión y vuelve a intentarlo."
   },
   "paperExport": {

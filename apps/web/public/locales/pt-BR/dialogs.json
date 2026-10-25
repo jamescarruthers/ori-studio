@@ -515,6 +515,8 @@
     "applying": "Salvando a ordem das camadas…",
     "applyNothing": "Nada para aplicar",
     "applyOpening": "Ainda não há nada para aplicar",
+    "applyRefolds": "Os vincos mudaram desde a dobra: Aplicar também dobra novamente.",
+    "applyRefoldsNamed": "Os vincos de {{name}} mudaram desde que ele foi dobrado: Aplicar também o dobra novamente.",
     "applyRefused": {
       "other": "Não foi possível salvar esta ordem das camadas. Nada foi alterado.",
       "tooLarge": "Esta ordem das camadas é grande demais para ser salva com a figura."

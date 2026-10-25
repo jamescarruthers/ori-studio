@@ -151,6 +151,11 @@
     "solvingLong": "Wird noch gelöst – das kann eine Weile dauern"
   },
   "layerOrder": {
+    "folds3d": "Die Faltlinien dieses Modells falten sich jetzt in 3D, und die Lagenreihenfolge gilt für flache Faltungen. Falte es neu, um es zu sehen.",
+    "refoldKept": "Die Lagenvorgaben von {{name}} brauchen Aufmerksamkeit, daher behält es sein Bild.",
+    "refoldKeptChosenOrder": "Die gewählte Lagenreihenfolge von {{name}} braucht Aufmerksamkeit, daher behält es sein Bild.",
+    "refoldLost": "Die Lagenreihenfolge wurde unerwartet beendet, daher wurde {{name}} nicht neu gefaltet.",
+    "refoldLostLoad": "Die Lagenreihenfolge konnte nicht geladen werden, daher wurde {{name}} nicht neu gefaltet. Prüfe deine Verbindung und versuche es dann erneut.",
     "unavailable": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
   },
   "paperExport": {

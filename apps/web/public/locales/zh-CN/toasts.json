@@ -133,6 +133,11 @@
     "solvingLong": "仍在求解 — 这可能需要一段时间"
   },
   "layerOrder": {
+    "folds3d": "此模型的折痕现在以 3D 折叠，而层叠顺序适用于平折。请重新折叠后查看。",
+    "refoldKept": "{{name}} 的层叠约束需要处理，因此保留其图片。",
+    "refoldKeptChosenOrder": "{{name}} 所选的层叠顺序需要处理，因此保留其图片。",
+    "refoldLost": "层叠顺序意外停止，因此 {{name}} 未重新折叠。",
+    "refoldLostLoad": "无法加载层叠顺序，因此 {{name}} 未重新折叠。请检查网络连接，然后重试。",
     "unavailable": "层叠顺序未能加载。请检查网络连接后重试。"
   },
   "paperExport": {
