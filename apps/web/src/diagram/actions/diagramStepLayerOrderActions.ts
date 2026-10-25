@@ -144,8 +144,8 @@ export function buildDiagramStepLayerOrderRow(
  * The Pose toolbar's Edit order… (H8, the approved Pose toolbar board): the
  * Layer order row's Edit… under the toolbar's own word, held for the same
  * reasons — on a 3D step with its reason as its hint (D13), as Spread Layers
- * is held there. Its name is the row's, so the one verb is named alike
- * wherever it is. Null for a step shown any other way.
+ * is held there. `name` is its tooltip; the toolbar names the button by its
+ * word, so what is read is what is shown. Null for a step shown any other way.
  */
 export function buildDiagramPoseLayerOrderEntry(
   state: DiagramStepLayerOrderState,
@@ -158,7 +158,8 @@ export function buildDiagramPoseLayerOrderEntry(
     deps,
     'edit',
     t('panels:diagram.layerOrder.editOrder', 'Edit order…'),
-    t('panels:diagram.layerOrder.editName', 'Edit Layer Order…')
+    // Its tooltip, as the approved board words it; its accessible name is the word it shows.
+    t('panels:diagram.layerOrder.editOrderName', 'Edit layer order…')
   );
 }
 

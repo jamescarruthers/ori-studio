@@ -136,7 +136,8 @@ export function DiagramLinkedPoseControls({
 /**
  * Edit order…: refused rather than disabled, so it keeps the focus a press
  * gave it — which the dialog hands back to it as it closes — and says why on
- * hover; the Step pane's Edit… under the toolbar's word.
+ * hover; the Step pane's Edit… under the toolbar's word. Its name is the word
+ * it shows (WCAG 2.5.3, label in name); its tooltip names it in full.
  */
 function LayerOrderEdit({ entry }: { entry: DiagramStepLayerOrderEntry }) {
   const held = entry.disabled || entry.waiting;
@@ -144,7 +145,6 @@ function LayerOrderEdit({ entry }: { entry: DiagramStepLayerOrderEntry }) {
     <Button
       size="sm"
       variant="ghost"
-      aria-label={entry.name}
       title={held && entry.hint ? entry.hint : entry.name}
       aria-disabled={held || undefined}
       onClick={entry.run}

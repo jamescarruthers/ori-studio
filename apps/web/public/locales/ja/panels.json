@@ -1195,6 +1195,7 @@
       "edit": "編集…",
       "editName": "重なり順を編集…",
       "editOrder": "順序を編集…",
+      "editOrderName": "重なり順を編集…",
       "needAttention_other": "パターンが変わったため、重なりの制約 {{count}} 件の確認が必要です。",
       "needsFlat": "重なり順は平らな折りに使えます",
       "needsFlatNote": "重なり順は平らな折りに使えます。このステップは 3D で折られます。",

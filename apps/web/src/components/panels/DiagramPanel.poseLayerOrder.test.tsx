@@ -166,11 +166,14 @@ function press(key: string, target: EventTarget) {
 describe('Pose’s Edit order…', () => {
   it('steps with ‹ › and no readout, then opens the dialog on the fold Pose holds; Cancel writes nothing', async () => {
     const [first] = await twoFlatSteps();
-    const names = [...toolbar().querySelectorAll('button')].map((button) => button.getAttribute('aria-label'));
+    // Each button's accessible name: its label, or the words it shows.
+    const names = [...toolbar().querySelectorAll('button')].map(
+      (button) => button.getAttribute('aria-label') ?? button.textContent
+    );
     expect(names.slice(names.indexOf('Previous Layer Order'))).toEqual([
       'Previous Layer Order',
       'Next Layer Order',
-      'Edit Layer Order…',
+      'Edit order…',
       'Spread Layers',
       'Reset Pose',
     ]);
@@ -184,8 +187,8 @@ describe('Pose’s Edit order…', () => {
     const entries = state().diagramHistory.past.length;
     expect(spawned).toHaveLength(0);
 
-    const edit = toolbarButton('Edit Layer Order…');
-    expect(edit.textContent).toBe('Edit order…');
+    const edit = toolbarButton('Edit order…');
+    expect(edit.title).toBe('Edit layer order…');
     click(edit);
     await until(() => dialog() !== null, 'the dialog opened');
     // On the fold Pose holds: read, never folded again for the dialog; opened on the order the step shows.
@@ -211,7 +214,7 @@ describe('Pose’s Edit order…', () => {
     expect(press('[', document.body)).toBe(true);
     expect(state().diagramSelectedStepId).toBe(first);
 
-    click(toolbarButton('Edit Layer Order…'));
+    click(toolbarButton('Edit order…'));
     await until(() => dialog() !== null, 'the dialog opened');
     expect(isShortcutBarrierOpen()).toBe(true);
     const detail = state().diagramDetail;

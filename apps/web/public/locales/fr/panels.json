@@ -1269,6 +1269,7 @@
       "edit": "Modifier…",
       "editName": "Modifier l’ordre des couches…",
       "editOrder": "Modifier l’ordre…",
+      "editOrderName": "Modifier l’ordre des couches…",
       "needAttention_one": "{{count}} contrainte de couches demande votre attention depuis que le patron a changé.",
       "needAttention_many": "{{count}} contraintes de couches demandent votre attention depuis que le patron a changé.",
       "needAttention_other": "{{count}} contraintes de couches demandent votre attention depuis que le patron a changé.",

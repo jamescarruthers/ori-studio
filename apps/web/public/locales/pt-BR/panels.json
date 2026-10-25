@@ -1269,6 +1269,7 @@
       "edit": "Editar…",
       "editName": "Editar ordem das camadas…",
       "editOrder": "Editar ordem…",
+      "editOrderName": "Editar ordem das camadas…",
       "needAttention_one": "{{count}} restrição de camadas precisa de atenção desde que o padrão mudou.",
       "needAttention_many": "{{count}} restrições de camadas precisam de atenção desde que o padrão mudou.",
       "needAttention_other": "{{count}} restrições de camadas precisam de atenção desde que o padrão mudou.",

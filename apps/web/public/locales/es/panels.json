@@ -1269,6 +1269,7 @@
       "edit": "Editar…",
       "editName": "Editar orden de capas…",
       "editOrder": "Editar orden…",
+      "editOrderName": "Editar orden de capas…",
       "needAttention_one": "{{count}} restricción de capas necesita atención desde que cambió el patrón.",
       "needAttention_many": "{{count}} restricciones de capas necesitan atención desde que cambió el patrón.",
       "needAttention_other": "{{count}} restricciones de capas necesitan atención desde que cambió el patrón.",

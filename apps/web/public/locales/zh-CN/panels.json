@@ -1195,6 +1195,7 @@
       "edit": "编辑…",
       "editName": "编辑层叠顺序…",
       "editOrder": "编辑顺序…",
+      "editOrderName": "编辑层叠顺序…",
       "needAttention_other": "图案已更改，{{count}} 条层叠约束需要处理。",
       "needsFlat": "层叠顺序适用于平折",
       "needsFlatNote": "层叠顺序适用于平折。此步骤以 3D 折叠。",

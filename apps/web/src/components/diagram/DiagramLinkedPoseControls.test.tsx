@@ -148,8 +148,11 @@ describe('DiagramLinkedPoseControls', () => {
         )
       );
     }
-    const named = (name: string) => host!.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
-    const order = () => [...host!.querySelectorAll('button')].map((button) => button.getAttribute('aria-label'));
+    /** A button's accessible name: its label, or else the words it shows. */
+    const nameOf = (button: HTMLButtonElement) => button.getAttribute('aria-label') ?? button.textContent;
+    const named = (name: string) =>
+      [...host!.querySelectorAll<HTMLButtonElement>('button')].find((button) => nameOf(button) === name)!;
+    const order = () => [...host!.querySelectorAll<HTMLButtonElement>('button')].map(nameOf);
 
     it('steps with ‹ › and no readout, then Edit order…, ghost, before Spread Layers and Reset', () => {
       const open = vi.fn();
@@ -157,16 +160,17 @@ describe('DiagramLinkedPoseControls', () => {
       expect(order().slice(-5)).toEqual([
         'Previous Layer Order',
         'Next Layer Order',
-        'Edit Layer Order…',
+        'Edit order…',
         'Spread Layers',
         'Reset Pose',
       ]);
       // No place among the orders between ‹ and ›: the Step pane keeps the count.
       expect(host!.textContent).not.toMatch(/\d of \d/);
       expect(named('Previous Layer Order').nextElementSibling).toBe(named('Next Layer Order'));
-      const edit = named('Edit Layer Order…');
-      expect(edit.textContent).toBe('Edit order…');
-      expect(edit.title).toBe('Edit Layer Order…');
+      const edit = named('Edit order…');
+      // Its name is the word it shows (label in name); the tooltip names it in full.
+      expect(edit.hasAttribute('aria-label')).toBe(false);
+      expect(edit.title).toBe('Edit layer order…');
       expect(edit.className).toContain('ui-button--ghost');
       act(() => edit.click());
       expect(open).toHaveBeenCalledWith('edit');
@@ -195,14 +199,14 @@ describe('DiagramLinkedPoseControls', () => {
       for (const name of ['Previous Layer Order', 'Next Layer Order']) {
         expect(named(name).getAttribute('aria-disabled')).toBe('true');
       }
-      act(() => named('Edit Layer Order…').click());
+      act(() => named('Edit order…').click());
       expect(open).toHaveBeenCalledOnce();
     });
 
     it('holds Edit order… on a 3D step with its reason, where the pager would end', () => {
       const open = vi.fn();
       show({ render: { mode: 'folded-3d', side: 'front', camera: { yaw: 0, pitch: 0, zoom: 1 } } }, open);
-      const edit = named('Edit Layer Order…');
+      const edit = named('Edit order…');
       expect(edit.getAttribute('aria-disabled')).toBe('true');
       expect(edit.title).toBe('Layer order works on flat folds');
       expect(edit.nextElementSibling).toBe(named('Spread Layers'));
@@ -213,7 +217,7 @@ describe('DiagramLinkedPoseControls', () => {
     it('waits while a capture runs, keeping the focus a press gave it', () => {
       const open = vi.fn();
       show({ busy: true }, open);
-      const edit = named('Edit Layer Order…');
+      const edit = named('Edit order…');
       edit.focus();
       expect(edit.getAttribute('aria-disabled')).toBe('true');
       expect(edit.title).toBe('Its picture is being captured');
