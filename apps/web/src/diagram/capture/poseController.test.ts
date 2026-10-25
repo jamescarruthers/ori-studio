@@ -10,8 +10,22 @@ import {
 import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
-import { cpDocument, fakeCaptureRuntime, movedLines, TWO_SQUARES, twoSquaresIndex } from './capture.fixtures';
+import {
+  cpDocument,
+  fakeCaptureRuntime,
+  fakeLayerOrderResolutions,
+  movedLines,
+  ORDERED_HANDLE,
+  STEP_LAYER_ORDER,
+  STEP_LAYER_ORDER_IN_SOURCE,
+  stepLayerOrderJson,
+  TWO_SQUARES,
+  twoSquaresIndex,
+} from './capture.fixtures';
 import type { CpCaptureRuntime } from './captureFolded';
+import { stepLayerOrderOf } from './captureLayerOrder';
+import { setLinkedLayerOrder } from '../document/diagramDocument';
+import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import { createPoseController, linkedFoldKey } from './poseController';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { stepsIn } from '../document/diagramSteps.fixtures';
@@ -39,7 +53,21 @@ vi.mock('../../engines/engineHost', async (importOriginal) => ({
 }));
 const toasts = vi.hoisted(() => ({ error: vi.fn(), message: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toasts }));
-const analytics = vi.hoisted(() => ({ trackDiagramPicturePosed: vi.fn() }));
+// A 3D figure's picture, with no window to build it in.
+vi.mock('../../cp-workspace/folded/folded3dStoredScene', async (importOriginal) => {
+  const { sheetWithCrease: drawn } = await import('../../lib/paper/paperScene.fixtures');
+  return {
+    ...(await importOriginal<typeof import('../../cp-workspace/folded/folded3dStoredScene')>()),
+    folded3dFigureScene: () => drawn(),
+  };
+});
+// The host engine, for a step with a layer order: the record's order applies, unless a test says otherwise.
+const hostEngine = vi.hoisted(() => ({ resolveLayerOrder: vi.fn() }));
+vi.mock('../../layer-order/host/hostEngineGateway', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../layer-order/host/hostEngineGateway')>()),
+  resolveLayerOrder: hostEngine.resolveLayerOrder,
+}));
+const analytics = vi.hoisted(() => ({ trackDiagramPicturePosed: vi.fn(), trackLayerConstraintsNeedAttention: vi.fn() }));
 vi.mock('../../analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../analytics')>()),
   ...analytics,
@@ -919,6 +947,107 @@ describe('spreading a flat fold’s layers (Phase 13)', () => {
     await controller.run({ verb: 'spread-layers' });
     controller.previewSpread({ slider: 'amount', kind: 'depth', value: 0.14 });
     expect(heard.preview).toHaveBeenLastCalledWith(null, null);
+    controller.dispose();
+  });
+});
+
+describe('a step with a layer order, posed (H7)', () => {
+  const json = stepLayerOrderJson();
+  const inSource = STEP_LAYER_ORDER_IN_SOURCE;
+
+  /** The linked step, its record put on as an Apply leaves it. */
+  async function constrainedStep(): Promise<string> {
+    const stepId = await linkedStep();
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, json) });
+    return stepId;
+  }
+  const layerOrderOf = (stepId: string) => {
+    const source = render(stepId);
+    return source?.kind === 'cp' ? source.layerOrder : undefined;
+  };
+
+  beforeEach(() => {
+    hostEngine.resolveLayerOrder.mockImplementation(async (source: LayerOrderSource) =>
+      fakeLayerOrderResolutions.applied(inSource, source)
+    );
+  });
+
+  it('holds its flat fold in the record’s order: restored once, and every verb drawn from it', async () => {
+    const stepId = await constrainedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    await controller.run({ verb: 'rotate-right' });
+    await controller.run({ verb: 'turn-over' });
+    expect(hostEngine.resolveLayerOrder).toHaveBeenCalledOnce();
+    expect(bindings.runtime!.foldWithOrder).toHaveBeenCalledOnce();
+    // The turn-over is a model change on the held figure, which keeps its order.
+    expect(bindings.runtime!.setModel).toHaveBeenCalledWith(ORDERED_HANDLE, expect.objectContaining({ state: 'Back1' }));
+    expect(bindings.runtime!.foldToCase).not.toHaveBeenCalled();
+    expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(1);
+    expect(render(stepId)).toMatchObject({ render: { mode: 'folded-flat', side: 'back' } });
+    expect(stepLayerOrderOf(layerOrderOf(stepId))?.record.constraints).toEqual(STEP_LAYER_ORDER.constraints);
+    // Its record goes back to the crease pattern with it, and Reset Pose keeps it.
+    await controller.run({ verb: 'reset' });
+    expect(layerOrderOf(stepId)).toBeDefined();
+    await controller.run({ verb: 'show-crease-pattern' });
+    expect(render(stepId)).toMatchObject({ render: { mode: 'crease-pattern' } });
+    expect(layerOrderOf(stepId)).toBeDefined();
+    controller.dispose();
+    expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(0);
+  });
+
+  it('keeps the picture and flags the record when the order cannot be drawn, as one undo step (D10)', async () => {
+    const stepId = await constrainedStep();
+    hostEngine.resolveLayerOrder.mockImplementation(async () => fakeLayerOrderResolutions.kept('clash', inSource));
+    const controller = createPoseController(stepId, listener());
+    const before = stepsIn(state().diagram!).find((step) => step.id === stepId)!;
+    const entries = state().diagramHistory.past.length;
+    await controller.run({ verb: 'show-folded' });
+    const after = stepsIn(state().diagram!).find((step) => step.id === stepId)!;
+    expect(after.picture).toEqual(before.picture);
+    expect(render(stepId)).toMatchObject({ render: { mode: 'crease-pattern' } });
+    expect(stepLayerOrderOf(layerOrderOf(stepId))?.record.attention).toEqual({ reason: 'conflict', count: 1 });
+    expect(state().diagramHistory.past.slice(entries).map((entry) => entry.label)).toEqual(['Adjust pose']);
+    expect(toasts.message).toHaveBeenCalledWith('This step’s layer constraints need attention, so it keeps its picture.');
+    expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledOnce();
+    // Nothing held for it.
+    expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(0);
+    controller.dispose();
+  });
+
+  it('flags the record waiting when a pose finds its creases fold in 3D (D13)', async () => {
+    const stepId = await constrainedStep();
+    bindings.runtime = fakeCaptureRuntime({
+      fold3d: vi.fn(async () => ({
+        status: 'placed' as const,
+        handle: 11,
+        snapshot: {} as never,
+        render: { cell_points: [0, 0, 0, 1, 0, 0, 0, 1, 0], span: 1 } as never,
+      })),
+    });
+    useWorkspaceStore.setState({
+      oristudioCpDocument: {
+        handle: 1,
+        document: cpDocument(undefined, (cp, id) => (id === 8 ? { ...cp, fold_magnitude: 90 } : cp)),
+        geometry: null,
+      } as unknown as OristudioCpDocumentState,
+    });
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    expect(render(stepId)).toMatchObject({ render: { mode: 'folded-3d' } });
+    expect(stepLayerOrderOf(layerOrderOf(stepId))?.record.attention).toEqual({ reason: 'route-3d', count: 1 });
+    expect(hostEngine.resolveLayerOrder).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
+  it('folds again in the new order once the step’s record changes, and never in the kernel’s first', async () => {
+    const stepId = await constrainedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    const other = stepLayerOrderJson({ ...STEP_LAYER_ORDER, constraints: [[1, 0, 1]] });
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, other) });
+    await controller.run({ verb: 'rotate-right' });
+    expect(hostEngine.resolveLayerOrder).toHaveBeenCalledTimes(2);
     controller.dispose();
   });
 });
