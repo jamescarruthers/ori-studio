@@ -641,6 +641,104 @@ immediately after dispatching, so upstream drops the selection whatever the fold
 does and a user who stops one has to reselect. We restore it, so pressing G again
 is enough.
 
+### The seeded flat fold (Ori Studio native, additive)
+
+`FoldingEstimateSession::with_seeds` is the seeded core of the Layer order
+dialog (`implementation-plans/layer-order-dialog.md`, E1): a flat figure whose
+layer-order search starts from given face-pair relations as well as the
+creases' letters, so a host can show an order chosen elsewhere through
+Oriedita's own search and drawer. It is not a port and not a divergence, since
+upstream has nothing to compare it with. Its `CustomConstraint`s are per-subface
+top and bottom sets, a different shape, and they are not ported (see "Folding
+search coverage").
+
+Nothing changes until a caller seeds:
+
+- **No seeds, the shipped fold.** `overlap_enumerator_from_segments` is
+  `overlap_enumerator_from_segments_seeded(.., &[])`, and with no seeds that
+  takes exactly the shipped steps, with upstream's unbounded search.
+  `crates/oristudio-cp/tests/folding_seeded.rs` holds fourteen flat fixtures to
+  a golden of their case sequences through every "Another solution" and the
+  wrap, recorded by the unseeded entry before the seeded core existed. The
+  folding and render oracles are unchanged.
+- **Seeds go through every deduction the shipped fold makes.** They join the
+  letters' hierarchy, each checked first against the table the unseeded fold
+  reads: `HierarchyTable::from_initial` of the letters, plus the seeds before
+  it. The check is needed because `from_initial` keeps the first of two
+  contradictory relations silently. It is made against that table, not the raw
+  letters, because the letters can disagree among themselves (two collinear
+  creases of different letters between the same two faces) and the table has
+  already settled that, so the order an unseeded fold found always passes as
+  seeds. Then the equivalence conditions, the setup-time `removeMode` AEA
+  round, the subface priority and guide maps, and the search's realtime and
+  final AEA all run over letters and seeds together. The research spike
+  assembled its seeded path from the public stages and skipped the closure
+  (product spec §13); this path cannot skip it, because it is the shipped body.
+- **Refusals are typed, and name a seed.** A seed that names no face, puts a
+  face above itself, or reverses that table or an earlier seed is
+  `WorkerOverlapSearchError::Seed` (`HierarchySeedError`, engine code
+  `fold_seed_refused`), never a `FoldOutcome::Contradiction`, which is a
+  statement about the creases. A seed against a pair only the closure derives
+  is the fold's ordinary contradiction: the closure cannot tell which relations
+  led to it. A seeded search is bounded (`SEEDED_FOLD_ITERATION_BUDGET`,
+  100,000 outer iterations per search, ending in `Exhausted`).
+- **The seeds are the session's**, so the restart, the wrap of "Another
+  solution" and the render's fallback search (`HierarchySource::Search`) all
+  start from them. A seeded figure never falls back to the order an unseeded
+  search would find.
+- **The frame is Oriedita's:** `upper_face` is nearer a viewer of the starting
+  face's front.
+
+Seeded with the full relations of an order Oriedita found, the fold finds that
+order and no other: 38 of 38 orders over the eleven fixtures that solve, each in
+one outer iteration. Seeded with one pair that Oriedita's solutions order both
+ways, "Another solution" walks exactly the solutions that honour it, and wraps
+back to the seeded first (`solution_sample_1` 8 of 16, `kabuto` 3 of 9,
+`r069-s07` 3 of 5).
+
+#### The hosts' entries (E2)
+
+The Layer order dialog's hosts reach the seeded core through four `CpSession`
+entries, each a CP-wasm binding and a Tauri command
+(`implementation-plans/layer-order-dialog.md`, E2). They are read-only or fold
+into a new handle; none changes a figure in place.
+
+- **`folded_figure_source(handle, document)` and
+  `fold_source_of_selection(document, lines, face)`** answer a `FoldSource`:
+  the creases exactly as the fold takes them, the starting face, the aux lines
+  and a face-ring digest. A host hands it on whole, never reselected from the
+  document, because reselected lines can renumber the faces an order names.
+- **`folded_figure_fold_with_order(source, relations, model)`** folds the
+  source's segments, after checking its digest, through
+  `FoldingEstimateSession::with_seeds` into a **new** handle. An order Oriedita
+  cannot draw is a typed `FoldOrderRefusal` result (`digest_mismatch`,
+  `unknown_face`, `same_face`, `against_letters`, `in_closure`, `not_found`,
+  `budget`) that leaves no handle; a Stop is `fold_cancelled`, as for any fold.
+  There is no in-place "show this order": a new handle keeps undo honest.
+- **`folded_figure_digest(handle)`** is the figure's digest alone.
+- **The digest** (`FaceRingDigest`) is FNV-1a over each segment's colour and
+  coordinates as given, the starting face as given and every face ring's vertex
+  indices. No folded or derived float enters it, so two builds whose libm round
+  a reflection differently still agree while their faces agree. The native
+  kernel and the CP bridge are held to one recording of it
+  (`tests/fixtures/oristudio-cp/face-ring-digests.json`).
+- **The snapshot's `shown_order`** is `"given"` on a seeded figure and is not
+  written otherwise (`skip_serializing_if`), so every unseeded snapshot and
+  every saved file keeps its bytes. `tests/fold_with_order.rs` holds the
+  unseeded snapshot, renders and paper scenes of eleven file fixtures, and
+  `oristudioCpFoldWithOrder.wasm.test.ts` an `.osf` of each, to recordings made
+  before the entries existed.
+
+Two Rust-only exports serve the dialog's own engine, the Fold wasm, which links
+this crate: the `FoldedRenderInputs` accessors (`flat_points`, `wireframe`,
+`subface_face_ids` and `line_face_border`, Oriedita's edge rule: every line
+between two faces folds, a mountain if `Red1` and otherwise a valley), and
+`folded_paper_scene_with_order`, the paper scene stacked by a given order
+through the same builder as a solved figure's. Given a session's own order it
+is the scene of the figure `fold_with_order` folds, front and back, on every
+order of kabuto and `solution_sample_1`, so the dialog shows what its Apply
+will.
+
 ### Ori Studio native operations
 
 Not every CP operation is a port. Some exist only here — fold-angle editing has

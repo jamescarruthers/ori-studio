@@ -347,6 +347,19 @@ the fixtures. The thresholds are proposals for you to accept.
 | Record bytes through `LayerSource::from_oriedita` (Fold's import measured 3.1 KB / 40 KB / 228 KB at p50 / p95 / max; iguana-c0 830 KB) | every design under the 1 MB budget | Apply refuses above the budget, with a reason. A smaller encoding is built only if a real file crosses it |
 | Fold-only pairs | reported | – |
 
+**Result, 2026-10-24 (#503): passed on every measure.** It was run natively,
+in release, over 489 designs (484 cpoogle, iguana-c0 and the fixtures), all of
+which Oriedita folds flat.
+- Letter seeds matched on 480 of 480 admitted designs.
+- The source refused 9 (1.8%): 8 too deep, 1 with 4,722 faces. None were
+  non-convex, ambiguous or out of tolerance.
+- `fold_with_order` reproduced 1,467 of 1,467 witnesses, and the reopen
+  rebuild matched all 1,467.
+- Records ran 3.8 KB / 46 KB / 249 KB, and iguana-c0's was 863 KB.
+- There were no Fold-only pairs on any design.
+- Watch: on iguana-c0, 1 of 5 checks reached its 30 s deadline with no
+  verdict.
+
 **Phase gate 2 (E8).** In wasm, against spec §6.9's targets.
 
 | Measure | Pass | If it fails |
@@ -590,6 +603,27 @@ them. Say if any should change. The rest can wait until the PR named.
   figure's on-canvas rotation. The crease-pattern pane always uses Edit's
   line colours.
 
+*Added 2026-10-25, from E5's census:*
+
+- **D19. When the order Edit shows can't fold** (before U10). On 15 of 480
+  cpoogle designs (about 3%), Oriedita's own order puts a face inside a fold
+  whose crease runs through it. Upstream does the same, and Flat-Folder
+  independently rejects that order on the same faces.
+  - **The cause:** one of the face's corners sits on the crease, about 1e-11
+    off it. Upstream's inside test (`isInside_sweet`) allows only 1e-12
+    there, so Oriedita never creates the three-face condition. The port copies
+    this, as porting discipline requires.
+  - **What happens now:** the dialog can't hold that order. It opens on the
+    closest valid order, which Flat-Folder rates valid on all 15. That order
+    differs from Edit's picture on 163 spots in total, 0 to 68 per design.
+  - *Recommended:* open on the closest valid order and say why in one line,
+    with the face and crease lit on both panes: "Edit's order can't fold here:
+    face H sits inside the fold at a crease through it. Showing the nearest
+    order that folds." Apply then writes the valid order, as any Apply does.
+    This becomes a mock.
+  - *Also proposed:* report the bug upstream to Oriedita, with the
+    triceratops polygon as a self-contained repro.
+
 **Settled by the spec or the design** (no answer needed):
 - Escape closes an open menu first, then cancels (Round3).
 - Front/Back is a lens: constraints are paper-relative, and Apply never turns
@@ -675,7 +709,12 @@ H3's new rehydrate, so it can only follow H3.
 - **CI time.** The web job is near its 30-minute limit on the Fold branches,
   and the layer-order tests add to it.
 - **"Closest fitting order" is a warm-start heuristic,** not a proven minimum.
-  E3's option keeps untouched components exactly as they were.
+  E3's option keeps untouched components exactly as they were. Measured by
+  E5's review, one constraint moved 3,721 pairs on one cpoogle design and
+  changed the top face of 194 of its 386 spots. A search for the smallest
+  change may be worth building later.
+- **Oriedita sometimes shows an order that can't fold** (D19, about 3% of
+  cpoogle). The dialog opens on a different picture on those designs.
 
 ## Affected Areas
 
@@ -756,23 +795,23 @@ H3's new rehydrate, so it can only follow H3.
   - [ ] **Large figures:** the label cap
   - [ ] **Phone layout** and its tap equivalents
   - [ ] **Horizon theme** (the accent and danger colours are the same)
-- [ ] E1: kernel seeded core
-- [ ] E2: kernel entry points and exports
+- [x] E1: kernel seeded core (#494)
+- [x] E2: kernel entry points and exports (#500)
 - [ ] E3: Flat-Folder session additions
-- [ ] E4: source and census 1 (phase gate 1 reviewed)
+- [x] E4: source and census 1 (#503; phase gate 1 passed)
 - [ ] E5: constraint session core
 - [ ] E6: explain and solutions
 - [ ] E7: wasm bridge
 - [ ] E8: census 2 (phase gate 2 reviewed)
-- [ ] U1: shared picking and tints
+- [x] U1: shared picking and tints (#497)
 - [ ] U2: ModalFrame
 - [ ] U3a: the native-menu guard (to main)
-- [ ] U3b: dialog keys
-- [ ] H1: record, host contract, file formats
+- [x] U3b: dialog keys (#498)
+- [x] H1: record, host contract, file formats (#496)
 - [ ] U4: dialog shell
 - [ ] U5: engine client
 - [ ] U6: engine wiring
-- [ ] U7: PaperPane
+- [x] U7: PaperPane (#501)
 - [ ] U8: panes
 - [ ] U9: inspector model
 - [ ] U10: inspector
