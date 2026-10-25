@@ -2217,6 +2217,284 @@ function editFigureStateCases(theme) {
 }
 
 // ---------------------------------------------------------------------------
+// Edit's refold with constraints, a stale figure, 3D and attention (H4)
+
+/** The selected figure's record as it reads: its constraints and the summary it stores. */
+function recordState(page, index = 0) {
+  return page.evaluate(async (index) => {
+    const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[index];
+    if (!figure) return null;
+    const record = figure.layerOrder?.kind === 'record' ? figure.layerOrder.record : null;
+    return {
+      id: figure.id,
+      handle: figure.handle,
+      kind: figure.folded3d ? '3d' : 'flat',
+      picture: JSON.stringify(figure.renderSnapshot),
+      constraints: record?.constraints.length ?? null,
+      attention: record?.attention ?? null,
+      error: window.__treemakerWorkspaceStore.getState().oristudioCpError,
+      stale: (await import('/src/cp-workspace/folded/foldedFigureStaleness.ts')).isFoldedFigureStale(
+        window.__treemakerWorkspaceStore.getState().oristudioCpDocument.document,
+        figure
+      ),
+    };
+  }, index);
+}
+
+/**
+ * A new valley crease across the paper corner that no crease reaches, half as
+ * far in as the nearest crease on its two edges: it splits that corner's face
+ * in two and adds no interior vertex, so the creases still fold flat. One
+ * undo entry, as the Line tool's is.
+ */
+async function splitCornerFace(page) {
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const lines = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+    const xs = lines.flatMap((line) => [line.a.x, line.b.x]);
+    const ys = lines.flatMap((line) => [line.a.y, line.b.y]);
+    const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const near = (p, q) => Math.hypot(p.x - q.x, p.y - q.y) < 1e-9;
+    const creases = lines.filter((line) => line.color !== 'Black0');
+    for (const corner of [
+      { x: maxX, y: minY },
+      { x: minX, y: minY },
+      { x: maxX, y: maxY },
+      { x: minX, y: maxY },
+    ]) {
+      if (creases.some((line) => near(line.a, corner) || near(line.b, corner))) continue;
+      // The nearest crease end on the corner's two edges.
+      const onEdges = creases
+        .flatMap((line) => [line.a, line.b])
+        .filter((p) => Math.abs(p.x - corner.x) < 1e-9 || Math.abs(p.y - corner.y) < 1e-9)
+        .map((p) => Math.hypot(p.x - corner.x, p.y - corner.y))
+        .filter((d) => d > 1e-9);
+      if (onEdges.length === 0) continue;
+      const d = Math.min(...onEdges) / 2;
+      const sx = corner.x === maxX ? -1 : 1;
+      const sy = corner.y === maxY ? -1 : 1;
+      const a = { x: corner.x + sx * d, y: corner.y };
+      const b = { x: corner.x, y: corner.y + sy * d };
+      const figureId = store.getState().oristudioCpActiveFoldedFigureId;
+      // Drawn as the Draw crease tool draws one, so the border lines it ends on are split there.
+      if (!(await store.getState().executeOristudioCpCommand('DrawCreaseFree', { points: [a, b] }))) {
+        throw new Error('the crease did not land');
+      }
+      const after = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+      const drawn = after.find((line) => (near(line.a, a) && near(line.b, b)) || (near(line.a, b) && near(line.b, a)));
+      if (!drawn) throw new Error('the drawn crease is not in the document');
+      // The new crease took the selection: the figure takes it back, as a click on it would.
+      store.getState().setOristudioCpActiveFoldedFigure(figureId);
+      return { corner, d, a, b, color: drawn.color, lines: [lines.length, after.length] };
+    }
+    throw new Error('no corner that no crease reaches');
+  });
+}
+
+/** Press a figure toolbar button by name and wait until no fold runs and the figure is at rest. */
+async function pressFigureVerb(page, name) {
+  await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name }).click();
+  await page.waitForFunction(
+    () => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      return Object.keys(state.oristudioCpFoldRuns).length === 0 && state.oristudioCpFoldedFigures.every((f) => f.status !== 'loading');
+    },
+    null,
+    { timeout: 120000 }
+  );
+  await settle(page);
+}
+
+/** The project saved, then opened again on a fresh page; what the page loaded of the Layer order engine meanwhile. */
+async function reopenSaved(page, url, theme, name) {
+  const osf = await savedProject(page);
+  const watch = watchLayerOrderLoads(page);
+  await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+  await openTextInEdit(page, osf, name, theme);
+  await page.evaluate(() => {
+    const store = window.__treemakerWorkspaceStore;
+    store.getState().setOristudioCpActiveFoldedFigure(store.getState().oristudioCpFoldedFigures[0].id);
+  });
+  return watch;
+}
+
+/**
+ * Edit's refold with constraints (H4), in one theme, on kabuto with an order
+ * chosen through the engine (H3's synthetic approach; the real dialog's Apply
+ * waits for U10): a new crease splits a face, and Refold restores the record
+ * on the creases as they are now and draws the order that fits; then a record
+ * whose constraints clash keeps the picture, flagged, with Review… (D10,
+ * D14); Layer order… on the stale figure says Apply also refolds (D12); the
+ * flag survives a reload with no worker. Then a book fold whose crease gains
+ * a fold angle: Refold shows it in 3D, its record kept and waiting (D13),
+ * through a reload and the idle 3D rehydrate, with no worker.
+ */
+function editRefoldCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    const t0 = Date.now();
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    const id = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    const chosen = await chosenOrder(page, id);
+    if (!(await applyChosenOrder(page, id))) throw new Error('Apply wrote nothing');
+    const before = await recordState(page);
+    console.log(`[${tag}] kabuto constrained: ${chosen.constraints} constraint, handle ${before.handle}`);
+
+    // A new crease splits a face: the figure goes stale, and Refold (no longer held) folds it in its order.
+    const split = await splitCornerFace(page);
+    const stale = await recordState(page);
+    if (!stale.stale) throw new Error('the new crease did not make the figure stale');
+    console.log(
+      `[${tag}] drew a ${split.color} crease across the corner face at ${JSON.stringify(split.corner)}, ${split.d.toFixed(4)} in ` +
+        `(lines ${split.lines.join(' → ')}): figure stale`
+    );
+    const refoldButton = page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Refold' });
+    if (await refoldButton.isDisabled()) throw new Error('Refold is still held on a constrained figure');
+    const watch = watchLayerOrderLoads(page);
+    const started = Date.now();
+    await pressFigureVerb(page, 'Refold');
+    const refolded = await recordState(page);
+    const workers = watch.workers();
+    watch.stop();
+    console.log(
+      `[${tag}] Refold in ${Date.now() - started} ms: handle ${refolded.handle}, ${refolded.kind}, stale ${refolded.stale}, ` +
+        `attention ${JSON.stringify(refolded.attention)}, ${workers.length} host engine worker(s), error ${JSON.stringify(refolded.error)}`
+    );
+    if (workers.length !== 1) throw new Error(`Refold spawned ${workers.length} Layer order workers, not the host engine's one`);
+    const applied = refolded.handle !== before.handle && !refolded.stale;
+    const flaggedFirst = refolded.handle === before.handle && refolded.attention !== null;
+    if (!applied && !flaggedFirst) throw new Error(`Refold neither drew the order nor flagged the record: ${JSON.stringify(refolded)}`);
+    await record(`edit-refold-${tag}-${applied ? 'applied' : 'flagged'}`, await figureShots(page));
+
+    // Its record made to clash (its first constraint and its opposite), the creases changed again:
+    // Refold keeps the picture and flags it (D10), with Review… (D14).
+    await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const { foldedFigureLayerOrder } = await import('/src/lib/layerOrder/foldedFigureLayerOrder.ts');
+      const figure = store.getState().oristudioCpFoldedFigures[0];
+      const { record } = figure.layerOrder;
+      const [f, g, sign] = record.constraints[0];
+      const clashing = foldedFigureLayerOrder({ ...record, constraints: [...record.constraints, [f, g, -sign]] });
+      store.setState({
+        oristudioCpFoldedFigures: store
+          .getState()
+          .oristudioCpFoldedFigures.map((entry) => (entry.id === figure.id ? { ...entry, layerOrder: clashing.layerOrder } : entry)),
+      });
+    });
+    await splitCornerFace(page);
+    const pictureBefore = (await recordState(page)).picture;
+    const handleBefore = (await recordState(page)).handle;
+    await pressFigureVerb(page, 'Refold');
+    const kept = await recordState(page);
+    console.log(`[${tag}] clash: handle ${kept.handle}, attention ${JSON.stringify(kept.attention)}, stale ${kept.stale}`);
+    if (kept.attention?.reason !== 'conflict' || kept.picture !== pictureBefore || kept.handle !== handleBefore || !kept.stale) {
+      throw new Error(`the clash did not keep the picture and flag the record: ${JSON.stringify(kept)}`);
+    }
+    const sheet = page.locator('[data-property-sheet]');
+    await sheet.getByRole('button', { name: 'Review…' }).waitFor({ state: 'visible', timeout: 10000 });
+    const subtitle = await sheet.locator('[data-property-sheet-subtitle]').innerText();
+    console.log(`[${tag}] Properties: "${subtitle}", Review… shown; the toolbar leads with the flag`);
+    // Another solution's tooltip: ‹ › wait until the constraints are reviewed.
+    await record(`edit-refold-${tag}-attention`, await figureShots(page, { hover: true, hoverName: 'Another solution' }));
+
+    // Review… on the stale flagged figure: the dialog opens on its creases as they are now, and says Apply also refolds.
+    // (Once the Refold's toast has gone, so it covers nothing in the picture.)
+    await page.waitForTimeout(5000);
+    await sheet.getByRole('button', { name: 'Review…' }).click();
+    const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    await dialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 60000 });
+    const note = await dialog.getByRole('status').filter({ hasText: 'Apply also refolds' }).innerText();
+    const asked = await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      return { review: request.review === true, applyRefolds: request.applyRefolds === true, record: request.record !== null };
+    });
+    console.log(`[${tag}] Review… opened the dialog: ${JSON.stringify(asked)}; its foot says "${note}"`);
+    if (!asked.review || !asked.applyRefolds || !asked.record) throw new Error(`the request is not a stale review: ${JSON.stringify(asked)}`);
+    await record(`edit-refold-${tag}-stale-dialog`, await dialogShot(page));
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached' });
+
+    // Saved and opened again: still flagged, from saved data, with no worker or Fold wasm loaded.
+    const reopened = await reopenSaved(page, url, theme, 'kabuto-flagged.osf');
+    await zoomOutToFigure(page);
+    const reopenedShots = await figureShots(page);
+    await page.waitForTimeout(1500);
+    if (reopened.loaded().length > 0) throw new Error(`opening and selecting loaded ${reopened.loaded().join(', ')}`);
+    reopened.stop();
+    const back = await recordState(page);
+    if (back.attention?.reason !== 'conflict' || back.picture !== kept.picture) throw new Error(`the flag did not survive a reload: ${JSON.stringify(back)}`);
+    console.log(`[${tag}] reloaded: still flagged ${JSON.stringify(back.attention)}, no worker, no Fold wasm, no dialog code`);
+    await record(`edit-refold-${tag}-reopened-attention`, reopenedShots);
+
+    // A book fold whose crease gains a fold angle: Refold shows it in 3D, its record kept and waiting (D13).
+    const book = [
+      '1 -200 -200 0 -200',
+      '1 0 -200 200 -200',
+      '1 200 -200 200 200',
+      '1 200 200 0 200',
+      '1 0 200 -200 200',
+      '1 -200 200 -200 -200',
+      '3 0 -200 0 200',
+    ].join('\n');
+    await openTextInEdit(page, book, 'book.cp', theme);
+    const bookId = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    await page.evaluate(async (bookId) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { foldedFigureLayerOrder } = await import('/src/lib/layerOrder/foldedFigureLayerOrder.ts');
+      const { FOLD_MAGNITUDE_UNITS_PER_DEGREE } = await import('/src/lib/foldAngle.ts');
+      // Synthetic: one constraint between the two halves, which the fold forces anyway.
+      const held = foldedFigureLayerOrder({
+        faces: [
+          { at: [-100, 0], area: 40000 },
+          { at: [100, 0], area: 40000 },
+        ],
+        constraints: [[0, 1, 1]],
+        order: [],
+      });
+      store.setState({
+        oristudioCpFoldedFigures: store
+          .getState()
+          .oristudioCpFoldedFigures.map((entry) => (entry.id === bookId ? { ...entry, layerOrder: held.layerOrder } : entry)),
+      });
+      const lines = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+      const index = lines.findIndex((line) => line.color === 'Blue2');
+      await store
+        .getState()
+        .replaceOristudioCpLineSegments([index + 1], [{ ...lines[index], fold_magnitude: 90 * FOLD_MAGNITUDE_UNITS_PER_DEGREE }], 'Set fold angle');
+      // The edited crease took the selection: the figure takes it back.
+      store.getState().setOristudioCpActiveFoldedFigure(bookId);
+    }, bookId);
+    await pressFigureVerb(page, 'Refold');
+    const spatial = await recordState(page);
+    console.log(`[${tag}] book refolded: ${spatial.kind}, record ${spatial.constraints} constraint, ${JSON.stringify(spatial.attention)}`);
+    if (spatial.kind !== '3d' || spatial.constraints !== 1 || spatial.attention?.reason !== 'route-3d') {
+      throw new Error(`the 3D refold did not keep the record waiting: ${JSON.stringify(spatial)}`);
+    }
+    await record(`edit-refold-${tag}-3d`, await figureShots(page, { hover: true }));
+    const reopened3d = await reopenSaved(page, url, theme, 'book-3d.osf');
+    await zoomOutToFigure(page);
+    // The idle 3D rehydrate runs in the background: it makes the figure live and asks nothing of the record.
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.handle != null, null, {
+      timeout: 60000,
+    });
+    const shots3d = await figureShots(page);
+    await page.waitForTimeout(1500);
+    if (reopened3d.loaded().length > 0) throw new Error(`the reopened 3D figure loaded ${reopened3d.loaded().join(', ')}`);
+    reopened3d.stop();
+    const back3d = await recordState(page);
+    if (back3d.kind !== '3d' || back3d.attention?.reason !== 'route-3d') throw new Error(`the 3D record did not survive a reload: ${JSON.stringify(back3d)}`);
+    console.log(`[${tag}] book reloaded and rehydrated in 3D: record kept ${JSON.stringify(back3d.attention)}, no worker, no Fold wasm`);
+    await record(`edit-refold-${tag}-reopened-3d`, shots3d);
+    console.log(`[${tag}] done in ${Math.round((Date.now() - t0) / 1000)} s`);
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
 const CASES = [
@@ -2242,6 +2520,8 @@ const CASES = [
   { name: 'edit-figure-review', run: editFigureReviewCases },
   { name: 'edit-figure-states', run: editFigureStateCases(null) },
   { name: 'edit-figure-states-horizon', run: editFigureStateCases('Horizon') },
+  { name: 'edit-refold', run: editRefoldCases(null) },
+  { name: 'edit-refold-horizon', run: editRefoldCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------
