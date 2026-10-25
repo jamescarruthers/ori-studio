@@ -62,6 +62,18 @@ precrease through the tools, clicks and all.
   state; `apps/web/src/fold/canvas/reverseSeedSegmentFlow.wasm.test.tsx`
   draws the free line and the Axiom 1 line through the tools. Built by a
   script over the engine on 2026-10-21.
+- `swivel-at-flap-edge.osf`: a square folded in half, its bottom left corner
+  folded up past the folded edge, so the flap's raw edge crosses the folded
+  edge at (1/2, 3/8) and hides it below there; then a swivel by its valley
+  and mountain, open, both Axiom 1 lines drawn from that crossing, the point
+  the folded pane offers there. Refused, as "The lines do not meet on a
+  folded edge": the engine measures the folded edge's visible part a probe
+  inside its layers, so it started about 1e-4 above the crossing, and the
+  swivel took only points within the tolerance of it. It now takes a point
+  within half the minimum feature of a visible part's end, as the landmarks
+  do for the crossing. `foldRegressions.wasm.test.ts` checks the pick, the
+  meeting and the swivel's creases, their letters as seen and the flat
+  vertex they make. Built by a script over the engine on 2026-10-25.
 - `independent-sides-orders.osf` (KNOWN GAP, open): a square with two flaps
   folded in at the bottom left (the corner onto (5/8, 1/4), then that flap's
   point (1/4, 0) onto (9/16, 1/8)) and the same mirrored at the top right.
