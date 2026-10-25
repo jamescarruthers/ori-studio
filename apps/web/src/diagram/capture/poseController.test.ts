@@ -1180,11 +1180,25 @@ describe('the Layer order dialog from Pose (H8)', () => {
     );
     expect(request.look).toMatchObject({ turnDeg: 15, side: 'front' });
     expect(request.name).toBe('Step 1');
+    // Pose asked, for the dialog's events (H3's `surface`).
+    expect(request.surface).toBe('pose');
     expect(state().diagramHistory.past).toHaveLength(entries);
     expect(state().diagramCaptures).toEqual({});
     expect(foldedFigureHandleRefCount(7)).toBe(1);
     controller.dispose();
     expect(foldedFigureHandleRefCount(7)).toBe(0);
+  });
+
+  // The Step pane's Edit… and Review… on the step open in Pose go through Pose, and are still the Step pane's.
+  it('says which surface asked: Pose’s own Edit order…, or the Step pane beside it', async () => {
+    const stepId = await linkedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    await controller.editLayerOrder();
+    expect(asked().surface).toBe('pose');
+    await controller.editLayerOrder('edit', 'diagram_step');
+    expect(asked().surface).toBe('diagram_step');
+    controller.dispose();
   });
 
   it.each([

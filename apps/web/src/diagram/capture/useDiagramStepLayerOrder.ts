@@ -46,7 +46,8 @@ export function useDiagramStepLayerOrder(step: DiagramStep | null): DiagramStepL
       // Edit… and Review… on the step open in Pose are Pose's own (H8): one session per step, whichever surface
       // asks, so the fold it holds never outlives the order an Apply gives the step.
       const pose = openLinkedPoseOf(stepId);
-      void (pose ? pose.editLayerOrder(via) : openDiagramStepLayerOrder(stepId, via));
+      // Asked from the Step pane all the same, as the dialog's events count it.
+      void (pose ? pose.editLayerOrder(via, 'diagram_step') : openDiagramStepLayerOrder(stepId, via));
     };
     const deps = { t, open };
     return { row: buildDiagramStepLayerOrderRow(state, deps), flag: buildDiagramStepLayerOrderFlag(state, deps) };

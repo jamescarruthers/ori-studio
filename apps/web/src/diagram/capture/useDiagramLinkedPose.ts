@@ -39,6 +39,7 @@ import {
   linkedFoldKey,
   withSlide,
   type DiagramPoseSpatialView,
+  type PoseLayerOrderSurface,
   type SimulatedRest,
   type SpreadPreview,
   type SpreadSlider,
@@ -79,9 +80,10 @@ export interface DiagramLinkedPose {
   /**
    * Open the Layer order dialog on the fold Pose holds, and commit an Apply
    * (`PoseController.editLayerOrder`): Edit order…'s, and the Step pane's
-   * Edit… and Review… while the step is open here. Whether it applied one.
+   * Edit… and Review… while the step is open here, each saying which it is
+   * (`surface`). Whether it applied one.
    */
-  editLayerOrder: (via?: DiagramStepLayerOrderVia) => Promise<boolean>;
+  editLayerOrder: (via?: DiagramStepLayerOrderVia, surface?: PoseLayerOrderSurface) => Promise<boolean>;
   /** The live 3D fold, for a step shown in 3D once it is folded; null otherwise. */
   spatial: DiagramPoseSpatialView | null;
   /** The 3D view moved: captured once it rests. */
@@ -241,7 +243,8 @@ export function useDiagramLinkedPose(
   // The toolbar's Edit order…, from the saved source as the Step pane's Edit… is (H7, H8).
   const record = layerOrderSummaryOf(source);
   const editLayerOrder = useCallback(
-    async (via?: DiagramStepLayerOrderVia) => (controller !== null && !readOnly ? controller.editLayerOrder(via) : false),
+    async (via?: DiagramStepLayerOrderVia, surface?: PoseLayerOrderSurface) =>
+      controller !== null && !readOnly ? controller.editLayerOrder(via, surface) : false,
     [controller, readOnly]
   );
   const layerOrderEdit = useMemo(

@@ -252,16 +252,17 @@ describe('a constrained step in the Step pane', () => {
     const [first, second] = await openConstrainedDiagram();
     act(() => state().selectDiagramStep(first));
     act(() => state().openDiagramStep(first));
-    const editLayerOrder = vi.fn(async (_via?: 'edit' | 'review') => false);
+    const editLayerOrder = vi.fn(async (_via?: 'edit' | 'review', _surface?: 'pose' | 'diagram_step') => false);
     publishPose(first, FLAT, true, editLayerOrder);
     vi.mocked(bindings.runtime!.fold).mockClear();
     act(() => button('Edit Layer Order…')!.click());
-    expect(editLayerOrder).toHaveBeenLastCalledWith('edit');
+    // Through Pose, but asked from the Step pane all the same.
+    expect(editLayerOrder).toHaveBeenLastCalledWith('edit', 'diagram_step');
     act(() => state().selectDiagramStep(second));
     act(() => state().openDiagramStep(second));
     publishPose(second, FLAT, true, editLayerOrder);
     act(() => textButton('Review…')!.click());
-    expect(editLayerOrder).toHaveBeenLastCalledWith('review');
+    expect(editLayerOrder).toHaveBeenLastCalledWith('review', 'diagram_step');
     expect(editLayerOrder).toHaveBeenCalledTimes(2);
     // Nothing of its own: no capture of the pane's, no worker.
     expect(state().diagramCaptures).toEqual({});
