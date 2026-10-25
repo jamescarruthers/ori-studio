@@ -194,6 +194,92 @@ and a single-flip check at most 55 ms on the corpus; on iguana-c0 the open
 took 1.0 s, checks a median of 0.6 s, and one of five ran out at its 30 s
 deadline.
 
+### The constraint session
+
+`crates/oracle-tests/tests/layer_order_session.rs` (row E5) runs the dialog's
+`ConstraintSession` over the same designs, read from the same
+`LAYER_ORDER_CENSUS_DIR` (`LAYER_ORDER_SESSION_OUT` moves its report from
+`artifacts/layer-order-session/`). Per design it opens the session on the
+order Edit shows (`open_showing` with the figure's paper-scene relations),
+which must be held and stack every spot as Edit's scene does whenever the
+solver's problem accepts that order; builds up to three constraints on open
+pairs, each the other way from the order on screen; and holds each preview to
+changing nothing, a preview with no nodes to answering alike or timing out,
+and Add (`commit_preview`, given no nodes) to landing on the previewed order;
+then removal to keeping the order on screen, and a save, encode, read and
+restore on a fresh source, and again on that session (`restore_record`), to
+giving back the same constraints, order and open pairs with nothing carried:
+
+```sh
+cargo test -p oracle-tests --test layer_order_session
+LAYER_ORDER_CENSUS_DIR=/path/to/real_benchmark/cpoogle \
+  cargo test -p oracle-tests --release --test layer_order_session -- --nocapture
+```
+
+Last run on October 24, 2026, natively on an Apple Silicon Mac, one design at
+a time (296 s): 480 of 489 designs admitted (the nine census 1 refuses), and
+all 480 pass every gate, 376 of them with constraints (the other 104 have no
+open pair).
+
+- **The order Edit shows.** Opened on the solver's first order, 175 designs
+  show another top face than Edit on some spot (2,785 spots in all). Opened on
+  Edit's own order, 465 hold it and match Edit's scene on every spot. On the
+  other 15, Edit's order breaks Flat-Folder's taco-tortilla rule as the
+  solver's view states it (63 constraints; the first such crease runs 1–6% of
+  the sheet into the face Oriedita stacks between its two sides, far past the
+  1e-6 tolerance), so the session shows the closest order that fits and says
+  so (`OpenedOn::Closest`): 163 spots off Edit's top face there, against 320
+  on the first order.
+- 1,033 previews: 999 fit, 34 could not (an offered object can have no
+  fitting order); with no nodes, 559 timed out and the other 474 needed no
+  search and answered alike.
+- Corpus p50 / p95 / max: open 7.6 / 390 / 1,747 ms, `open_showing` (open
+  included) 10 / 484 / 1,999 ms, preview 0.2 / 8.3 / 41 ms, Add by
+  `commit_preview` 0.0 / 0.0 / 2.9 ms, restore 8.6 / 427 / 1,779 ms, record
+  3.8 / 46 / 249 KB. iguana-c0: `open_showing` 1.5 s, previews 0.48 s,
+  restore 2.0 s, record 863 KB.
+
+### Solutions and explanations
+
+`crates/oracle-tests/tests/layer_order_solutions.rs` (row E6) runs the
+dialog's solution count, stepper and `explain` over the same designs, read
+from the same `LAYER_ORDER_CENSUS_DIR` (`LAYER_ORDER_SOLUTIONS_OUT` moves its
+report from `artifacts/layer-order-solutions/`). Per design it counts the
+solutions with no constraints in one call within `LAYER_ORDER_COUNT_MS`
+(10 s by default) and, when that took under 2 s, again in slices of 1,000
+nodes, which must end equal and never be above the end on the way; steps
+forward and back by picture and with X-ray; commits three constraints as the
+session census does and counts again; and explains up to three candidates
+that can't fit, each set checked on a second session (it can't fit, and
+fits without any one member):
+
+```sh
+cargo test -p oracle-tests --test layer_order_solutions
+LAYER_ORDER_CENSUS_DIR=/path/to/real_benchmark/cpoogle \
+  cargo test -p oracle-tests --release --test layer_order_solutions -- --nocapture
+```
+
+Last run on October 24, 2026, natively on an Apple Silicon Mac shared with
+other work, four designs at a time: 479 of 488 designs admitted (the nine
+census 1 refuses), all 479 pass every gate.
+
+- **"N solutions".** Of the 475 corpus designs, the pictures are exact from
+  both sides on 473 within 10 s; the other two read "at least" (2,016 and
+  135 from the front). The layer-order count is exact on 465: 8 more stopped
+  at the deadline and 2 at a cap (one past 2⁶⁴), each "at least". With three
+  constraints, 469 are exact. iguana-c0's one open component of 65,851 pairs
+  gives one picture and no more in 10 s ("at least 1"); with three
+  constraints its count is exact (1 picture, 5,120 orders) in 10 s.
+- Count with no constraints p50 / p95 / max: 0.6 / 285 / 10,024 ms (14 over
+  1 s); with constraints 0.2 / 52 / 10,025 ms. Pictures from the front, of
+  the exact counts: 1 / 16 / 320. Components 2 / 11 / 58; 4 look groups of
+  more than one component in the corpus.
+- 464 designs counted again in slices: every one equal.
+- Steps 0.0 / 2.4 / 2,531 ms (the slowest spend half their 5 s on the count
+  that did not finish).
+- 1,422 candidates explained, all minimal and checked; 6 smaller than the
+  check's set; 0.0 / 0.2 / 49 ms (iguana-c0 0.40 s).
+
 ## FOLD Frame-Shape Corpus Testing
 
 `file_frames` makes a FOLD document a tree of frames, and the importer has to
