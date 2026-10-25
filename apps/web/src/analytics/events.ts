@@ -1494,6 +1494,13 @@ export const ANALYTICS_EVENTS = {
   foldAttempted: 'fold attempted',
   foldCompleted: 'fold completed',
   foldSolutionCycled: 'fold solution cycled',
+  /**
+   * A host's saved layer constraints did not all hold after an edit (layer
+   * order plan, spec §10): a Diagram step's Refresh found some of them gone,
+   * split or clashing, ran out of time checking them, or its creases now
+   * fold in 3D. Whether constraints survive the edits made after them.
+   */
+  layerConstraintsNeedAttention: 'layer constraints need attention',
   foldedFigureStyled: 'folded figure styled',
   /**
    * A field of the app-wide paper style was edited. `source` is where:
