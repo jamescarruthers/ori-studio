@@ -1324,6 +1324,16 @@ E3):
   - A component with no order is reported before any order is yielded,
     instead of backtracking into the components before it: they are
     independent, so it has no order whatever they hold.
+  - **`Enumeration::varying(vary, hold)`** (E6) starts the cursor over
+    walking only some of its components, every other one held at a given
+    order, and `component_order(k)` reads one component's values of the
+    order just yielded. The Layer order dialog's solution count lists each
+    component's orders this way instead of walking the product of all of
+    them. Every constraint joining two components is dead whatever either
+    holds, so a varying component's search is the one it has in the whole
+    walk: the randomized test checks that each component alone, and two
+    together, list exactly completing from scratch's orders for them, whole
+    and resumed in slices.
 - **`CheckOptions::prefer_fits`.** The caller vouches that the preferred
   order is a complete order that fits, such as an earlier check's fit or an
   enumerated order. Every component on which it agrees with what the seeds

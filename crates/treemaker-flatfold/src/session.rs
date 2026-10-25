@@ -69,7 +69,10 @@
 //!   each component with upstream's search, and walks their product, the
 //!   first component slowest, so its orders are
 //!   [`complete_layer_order`](crate::complete_layer_order)'s, every one
-//!   listed, in that order.
+//!   listed, in that order. [`Enumeration::varying`] narrows the walk to
+//!   some components, the others held at a given order, so one component's
+//!   orders can be listed alone ([`Enumeration::component_order`]), as the
+//!   dialog's solution count lists them.
 //! - [`CheckOptions::prefer_fits`]: when the caller vouches that the
 //!   preferred order is a complete order that fits (an earlier check's fit),
 //!   every component on which it agrees with what the seeds force keeps it
@@ -283,9 +286,12 @@ pub struct Enumeration {
     /// What the deduction leaves, split as completing from scratch splits
     /// it, smallest first.
     components: Vec<Vec<usize>>,
-    /// Per component, its search so far.
+    /// The components the walk varies, ascending: every one, unless
+    /// [`Self::varying`] narrowed it.
+    walk: Vec<usize>,
+    /// Per component of the walk, its search so far.
     searches: Vec<Search>,
-    /// The component whose search runs next.
+    /// The place in the walk whose search runs next.
     at: usize,
     /// Complete orders yielded so far.
     yielded: u64,
@@ -334,8 +340,8 @@ impl Enumeration {
                 session.base.assignments.len()
             )));
         }
-        if self.components.is_empty() {
-            // Everything is forced: one order.
+        if self.walk.is_empty() {
+            // Everything is forced, or held: one order.
             if self.yielded == 0 {
                 self.yielded = 1;
                 self.current = true;
@@ -347,8 +353,9 @@ impl Enumeration {
         let tables = session.tables();
         let mut meter = BudgetMeter::new(budget);
         let step = loop {
-            let k = self.at;
-            let searched = self.searches[k].run(
+            let at = self.at;
+            let k = self.walk[at];
+            let searched = self.searches[at].run(
                 &tables,
                 &self.components[k],
                 &mut self.assignments,
@@ -370,14 +377,14 @@ impl Enumeration {
                     self.end = Some(end.clone());
                     break end;
                 }
-                Ok(0) if k == 0 => {
+                Ok(0) if at == 0 => {
                     self.end = Some(Step::Exhausted);
                     break Step::Exhausted;
                 }
                 // Every order of this component has been walked with the
                 // ones before it as they are: the one before moves on.
                 Ok(0) => self.at -= 1,
-                Ok(_) if k + 1 == self.components.len() => {
+                Ok(_) if at + 1 == self.walk.len() => {
                     if let Some(v) = self.assignments.iter().position(|&a| a == 0) {
                         return Err(invalid(format!("an enumeration left variable {v} open")));
                     }
@@ -400,6 +407,68 @@ impl Enumeration {
     /// unless it yielded one.
     pub fn order(&self) -> Option<Vec<PairOrder>> {
         self.current.then(|| orders_of(&self.assignments))
+    }
+
+    /// The last yielded order's values on component `k` (an index into
+    /// [`Self::components`]), one per variable in the component's search
+    /// order: what reading [`Self::order`] there gives, without the whole
+    /// order (ours). `None` unless the last call yielded one, or past the
+    /// last component.
+    pub fn component_order(&self, k: usize) -> Option<Vec<PairOrder>> {
+        let component = self.components.get(k).filter(|_| self.current)?;
+        Some(orders_of(
+            &component
+                .iter()
+                .map(|&v| self.assignments[v])
+                .collect::<Vec<_>>(),
+        ))
+    }
+
+    /// The same cursor, started over, walking only the components `vary`
+    /// (indices into [`Self::components`]) while every other component
+    /// holds its values in `hold`, one order per variable (ours): what the
+    /// Layer order dialog's count needs to list one component's orders
+    /// without the product of all of them.
+    ///
+    /// The components are independent (the module docs, step 3): every
+    /// constraint that joins two of them is dead whatever either holds, so
+    /// a varying component's search finds the same orders, in the same
+    /// order and with the same nodes, as it does in the whole walk, which
+    /// is the product of the varying components, the first slowest. The
+    /// orders are complete orders that fit when `hold` is one, such as an
+    /// earlier check's fit; the cursor does not check it. With no component
+    /// to vary it yields one order, the deduction and `hold`.
+    pub fn varying(mut self, vary: &[usize], hold: &[PairOrder]) -> CompletionResult<Enumeration> {
+        if hold.len() != self.assignments.len() {
+            return Err(invalid(format!(
+                "a held order of {} pairs for {} variables",
+                hold.len(),
+                self.assignments.len()
+            )));
+        }
+        let mut walk = vary.to_vec();
+        walk.sort_unstable();
+        walk.dedup();
+        if let Some(&k) = walk.last().filter(|&&k| k >= self.components.len()) {
+            return Err(invalid(format!(
+                "component {k} varied, but there are {}",
+                self.components.len()
+            )));
+        }
+        for (k, component) in self.components.iter().enumerate() {
+            let varies = walk.binary_search(&k).is_ok();
+            for &v in component {
+                self.assignments[v] = if varies { 0 } else { hold[v].value() };
+            }
+        }
+        self.searches = vec![Search::default(); walk.len()];
+        self.walk = walk;
+        self.at = 0;
+        self.yielded = 0;
+        self.current = false;
+        self.end = None;
+        self.nodes = 0;
+        Ok(self)
     }
 
     /// What the deduction leaves, in independent components, smallest
@@ -650,6 +719,7 @@ impl CompletionSession {
         Ok(Enumeration {
             assignments: deduced.assignments.clone(),
             searches: vec![Search::default(); components.len()],
+            walk: (0..components.len()).collect(),
             components,
             at: 0,
             yielded: 0,
@@ -1646,8 +1716,114 @@ mod tests {
             deadline: None,
         };
         let sliced = enumerate_all(session, deduced, slices, stops);
+        if let Some(Completion::Solved(solution)) = scratch {
+            check_varying(session, deduced, solution, &orders, slices, stops);
+        }
         assert_eq!(sliced, (orders, end.clone(), nodes));
         end
+    }
+
+    /// Every order of `cursor` narrowed to `vary` while the rest hold
+    /// `hold`, each call within `budget`, as each varying component's own
+    /// order (`component_order`), ascending by component.
+    fn walk_varying(
+        session: &CompletionSession,
+        deduced: &Deduced,
+        vary: &[usize],
+        hold: &[PairOrder],
+        budget: SearchBudget,
+        stops: &mut usize,
+    ) -> Vec<Vec<Vec<PairOrder>>> {
+        let mut cursor = session
+            .enumerate(deduced)
+            .and_then(|cursor| cursor.varying(vary, hold))
+            .unwrap_or_else(|e| panic!("{e}"));
+        let mut ascending = vary.to_vec();
+        ascending.sort_unstable();
+        let mut walked = Vec::new();
+        loop {
+            match cursor.next(session, budget) {
+                Ok(EnumerationStep::Order) => {
+                    let order = cursor.order().unwrap_or_else(|| panic!("no order"));
+                    // Every component that does not vary holds.
+                    for (k, component) in cursor.components().iter().enumerate() {
+                        if !vary.contains(&k) {
+                            for &v in component {
+                                assert_eq!(order[v], hold[v]);
+                            }
+                        }
+                    }
+                    walked.push(
+                        ascending
+                            .iter()
+                            .map(|&k| {
+                                let own = cursor
+                                    .component_order(k)
+                                    .unwrap_or_else(|| panic!("no order of {k}"));
+                                let read: Vec<PairOrder> =
+                                    cursor.components()[k].iter().map(|&v| order[v]).collect();
+                                assert_eq!(own, read);
+                                own
+                            })
+                            .collect(),
+                    );
+                }
+                Ok(EnumerationStep::Stopped(_)) => *stops += 1,
+                Ok(EnumerationStep::Exhausted) => return walked,
+                other => panic!("{other:?}"),
+            }
+        }
+    }
+
+    /// Narrowed to one component, or two, the walk lists exactly what
+    /// completing from scratch lists for them, the first slowest, whole or
+    /// resumed in slices, while the others hold one of `orders` (the last,
+    /// so mostly not the first order). It draws no random numbers, so the
+    /// questions the caller asks are what they were before it.
+    fn check_varying(
+        session: &CompletionSession,
+        deduced: &Deduced,
+        solution: &crate::CompletionSolution,
+        orders: &[Vec<PairOrder>],
+        slices: SearchBudget,
+        stops: &mut usize,
+    ) {
+        let Some(hold) = orders.last() else {
+            return;
+        };
+        let count = solution.components.len();
+        for k in 0..count {
+            let expected: Vec<Vec<Vec<PairOrder>>> = solution.components[k]
+                .solutions
+                .iter()
+                .map(|s| vec![s.clone()])
+                .collect();
+            for budget in [SearchBudget::default(), slices] {
+                assert_eq!(
+                    walk_varying(session, deduced, &[k], hold, budget, stops),
+                    expected
+                );
+            }
+        }
+        if count >= 2 {
+            let (a, b) = (count / 2 - 1, count - 1);
+            let mut expected = Vec::new();
+            for x in &solution.components[a].solutions {
+                for y in &solution.components[b].solutions {
+                    expected.push(vec![x.clone(), y.clone()]);
+                }
+            }
+            // Given in either order, the walk is ascending.
+            assert_eq!(
+                walk_varying(session, deduced, &[b, a], hold, slices, stops),
+                expected
+            );
+        }
+        // Nothing to vary: one order, the deduction and what is held.
+        assert_eq!(
+            walk_varying(session, deduced, &[], hold, slices, stops),
+            vec![Vec::<Vec<PairOrder>>::new()]
+        );
     }
 
     #[test]
