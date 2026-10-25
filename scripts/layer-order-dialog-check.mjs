@@ -482,6 +482,390 @@ function dialogShellCases(theme) {
 const PHONE = { width: 390, height: 844 };
 
 // ---------------------------------------------------------------------------
+// The Diagram step (H7)
+
+/** What the Diagram's capture, the host engine and the dialog load: none of it may load at rest. */
+const LAYER_ORDER_LOADS = /components\/layer-order\/LayerOrderDialog\.tsx|layerOrderWorker|oristudio_fold_wasm/;
+
+/** Everything the page and its workers ask for from now, and the workers it starts, until `stop()`. */
+function watchLoads(page) {
+  const seen = [];
+  const onRequest = (request) => seen.push(request.url());
+  const onWorker = (worker) => seen.push(worker.url());
+  page.context().on('request', onRequest);
+  page.on('worker', onWorker);
+  return {
+    layerOrder: () => seen.filter((loaded) => LAYER_ORDER_LOADS.test(loaded)),
+    count: () => seen.length,
+    stop() {
+      page.context().off('request', onRequest);
+      page.off('worker', onWorker);
+    },
+  };
+}
+
+/**
+ * Kabuto in Edit, a Diagram with one step linked to its sheet, folded flat,
+ * the step open in Pose; the step's id on `window.__layerOrderStep`.
+ */
+async function linkKabutoStep(page) {
+  await page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const { useLayoutStore } = await import('/src/store/layoutStore.ts');
+    const { ensureCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+    const { sheetRegions } = await import('/src/cp-workspace/sheets/cpSheetRegions.ts');
+    const { linkDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+    useLayoutStore.getState().activateWorkspace('diagram');
+    const index = await ensureCpSheetIndex(store.getState().oristudioCpDocument.document);
+    const [sheet] = sheetRegions(index);
+    const stepId = store.getState().addDiagramStep();
+    if (!(await linkDiagramStep(stepId, sheet, 'folded'))) throw new Error('kabuto did not link');
+    store.getState().openDiagramStep(stepId);
+    window.__layerOrderStep = stepId;
+  });
+}
+
+/**
+ * A constraint that moves kabuto's step off the order it shows, worked out on
+ * the host engine as the dialog would (open on the order shown, the first open
+ * pair either way, the side that changes a spot), and applied as the dialog's
+ * Apply is: through the Diagram's capture, as one undo step. What it was.
+ */
+async function applyConstraintToStep(page) {
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const stepId = window.__layerOrderStep;
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const { chooseStepCreases, knownCreasesOf } = await import('/src/diagram/capture/captureCreases.ts');
+    const { resolveFoldRoute } = await import('/src/cp-workspace/folded/foldRoute.ts');
+    const { peekCpSheetIndex } = await import('/src/cp-workspace/sheets/cpSheetIndex.ts');
+    const { captureModel } = await import('/src/diagram/capture/captureFolded.ts');
+    const { stepFoldSource } = await import('/src/diagram/capture/captureLayerOrder.ts');
+    const { createCpCaptureRuntime } = await import('/src/store/workspaceStore/cpFoldRuntimeBindings.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+    const state = store.getState();
+    const source = stepById(state.diagram, stepId).source;
+    const document = state.oristudioCpDocument.document;
+    const choice = chooseStepCreases(document, source.scope, peekCpSheetIndex(document), knownCreasesOf(source));
+    const route = resolveFoldRoute(document, choice.creases.foldLineIds);
+    const folded = await stepFoldSource(createCpCaptureRuntime(0, null), route.lineIds, captureModel(document, source.render.side));
+    const runtime = createLayerOrderRuntime({ role: 'host' });
+    try {
+      const { engine } = runtime;
+      const opened = await engine.openShowing(folded.source, layerOrderSceneRelations(folded.scene), LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`open: ${JSON.stringify(opened)}`);
+      const pairs = opened.open_pairs;
+      let chosen = null;
+      for (let k = 0; k + 1 < pairs.length && !chosen; k += 2) {
+        for (const sign of [1, -1]) {
+          const candidate = [pairs[k], pairs[k + 1], sign];
+          const previewed = await engine.preview(candidate, LAYER_ORDER_LIMITS.preview);
+          if (previewed.verdict === 'fits' && previewed.changed.front.length + previewed.changed.back.length > 0) {
+            chosen = { candidate, token: previewed.token, spots: previewed.changed.front.length };
+            break;
+          }
+        }
+      }
+      if (!chosen) throw new Error('no constraint moves kabuto off its order');
+      await engine.commitPreview(chosen.token, [chosen.candidate], LAYER_ORDER_LIMITS.commit);
+      const saved = await engine.save();
+      if (saved.status !== 'ok') throw new Error(`save: ${JSON.stringify(saved)}`);
+      const relations = await engine.relations();
+      const applied = { record: saved.record, relations, source: folded.source };
+      const outcome = await store.getState().captureDiagramStep(stepId, {
+        scope: source.scope,
+        known: knownCreasesOf(source),
+        render: source.render,
+        kind: 'diagram-capture',
+        label: 'Change layer order',
+        layerOrderApplied: { applied, frame: folded.frame },
+      });
+      return {
+        outcome: outcome.status,
+        candidate: chosen.candidate,
+        spots: chosen.spots,
+        openPairs: pairs.length / 2,
+        undo: store.getState().diagramHistory.past.at(-1)?.label,
+      };
+    } finally {
+      runtime.dispose();
+    }
+  });
+}
+
+/** The step detail's picture, the pose toolbar over it painted out. */
+async function stageShot(page) {
+  const stage = page.locator('[role="region"] [data-picture]').first();
+  await page.mouse.move(1, 1);
+  await settle(page);
+  return stage.screenshot({ animations: 'disabled', mask: [page.getByRole('toolbar', { name: 'Pose' })], maskColor: '#ff00ff' });
+}
+
+async function pageShot(page) {
+  await page.mouse.move(1, 1);
+  await settle(page);
+  await page.waitForTimeout(250);
+  return page.screenshot({ animations: 'disabled' });
+}
+
+/** Wait for the step to stop capturing. */
+async function captured(page) {
+  await page.waitForFunction(
+    () => Object.keys(window.__treemakerWorkspaceStore.getState().diagramCaptures).length === 0,
+    null,
+    { timeout: 120000 }
+  );
+  await settle(page);
+}
+
+/** Wait for the step to be shown `mode`, and done capturing. */
+async function shownAs(page, mode) {
+  await page.waitForFunction(
+    (wanted) => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      const step = state.diagram?.steps.find((entry) => entry.id === window.__layerOrderStep);
+      return step?.source?.render.mode === wanted && Object.keys(state.diagramCaptures).length === 0;
+    },
+    mode,
+    { timeout: 120000 }
+  );
+  await settle(page);
+}
+
+/** The step's source as the store holds it, with its record read. */
+async function stepSource(page) {
+  return page.evaluate(async () => {
+    const { stepById } = await import('/src/diagram/document/diagramDocument.ts');
+    const { stepLayerOrderOf } = await import('/src/diagram/capture/captureLayerOrder.ts');
+    const source = stepById(window.__treemakerWorkspaceStore.getState().diagram, window.__layerOrderStep).source;
+    const read = stepLayerOrderOf(source.layerOrder);
+    return {
+      mode: source.render.mode,
+      constraints: read ? read.record.constraints.length : null,
+      attention: read?.record.attention ?? null,
+      picture: window.__treemakerWorkspaceStore.getState().diagram.steps.find((step) => step.id === window.__layerOrderStep)
+        ?.picture?.key,
+    };
+  });
+}
+
+/**
+ * A Diagram step with a layer order (H7), in one theme: the constrained order
+ * drawn against the kernel's; nothing of the engine loaded by opening the
+ * saved diagram and selecting the step; Show as and back; Refresh after an
+ * edit that keeps the faces; a clash flagged with Review…; a step whose
+ * creases now fold in 3D; and Edit… opening the dialog's shell.
+ */
+function diagramStepCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openKabutoInEdit(page, url, theme);
+    await linkKabutoStep(page);
+    await captured(page);
+    const unconstrained = await stageShot(page);
+    await record(`diagram-${tag}-unconstrained`, { stage: unconstrained });
+
+    const applied = await applyConstraintToStep(page);
+    await captured(page);
+    console.log(`[${tag}] applied ${JSON.stringify(applied)}`);
+    if (applied.outcome !== 'captured') throw new Error(`Apply: ${applied.outcome}`);
+    const constrained = await stageShot(page);
+    await record(`diagram-${tag}-constrained`, { stage: constrained });
+    const differs = await pixelDiff(page, unconstrained, constrained);
+    console.log(`[${tag}] constrained vs unconstrained: ${differs.differing} of ${differs.pixels} pixels differ`);
+    if (!differs.sameSize || differs.differing === 0) throw new Error('the constrained order drew the same picture');
+
+    // Saved, and opened again in a fresh page: nothing of the engine loads with it, nor as the step is shown.
+    const saved = await page.evaluate(async () => {
+      let text = null;
+      const files = {
+        saveTextFile: async (options) => {
+          text = options.contents;
+          return { name: 'kabuto-diagram.osf', path: null };
+        },
+      };
+      if (!(await window.__treemakerWorkspaceStore.getState().saveProjectAs(files))) throw new Error('save failed');
+      return { text, stepId: window.__layerOrderStep };
+    });
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    const loads = watchLoads(page);
+    await page.evaluate(
+      async ({ osf, stepId, theme }) => {
+        const store = window.__treemakerWorkspaceStore;
+        const files = { openTextFile: async () => ({ text: osf, name: 'kabuto-diagram.osf', path: null }) };
+        if (!(await store.getState().openProject(files, { confirmDiscard: false }))) throw new Error('the diagram did not open');
+        if (theme) {
+          const { useThemeStore } = await import('/src/store/themeStore.ts');
+          useThemeStore.getState().setThemeByName(theme);
+        }
+        const { useLayoutStore } = await import('/src/store/layoutStore.ts');
+        useLayoutStore.getState().activateWorkspace('diagram');
+        store.getState().selectDiagramStep(stepId);
+        store.getState().openDiagramStep(stepId);
+        window.__layerOrderStep = stepId;
+      },
+      { osf: saved.text, stepId: saved.stepId, theme }
+    );
+    const row = page.locator('[data-field-row]', { hasText: 'Layer order' });
+    await row.waitFor({ state: 'visible', timeout: 60000 });
+    await page.waitForTimeout(1500);
+    const reopened = await pageShot(page);
+    loads.stop();
+    if (loads.layerOrder().length > 0) throw new Error(`loaded at rest: ${loads.layerOrder().join(', ')}`);
+    console.log(`[${tag}] reopened and shown: ${loads.count()} requests, none of the dialog, its worker or the Fold wasm`);
+    await record(`diagram-${tag}-pane-constrained`, { page: reopened });
+    const reopenedStage = await stageShot(page);
+    const same = await pixelDiff(page, constrained, reopenedStage);
+    console.log(`[${tag}] reopened picture vs the constrained one: ${same.differing} pixels differ`);
+
+    // Show as Crease Pattern, then Folded again, from the Step pane (through the open step's Pose):
+    // the record survives and is drawn again. The detail is opened again first: one opened on the
+    // Diagram's first mount, as this page's was, holds a controller React's dev double mount has
+    // already let go of (found in passing; dev only), and its verbs would do nothing.
+    await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().closeDiagramStep();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      store.getState().openDiagramStep(window.__layerOrderStep);
+    });
+    await row.waitFor({ state: 'visible', timeout: 60000 });
+    const showAs = page.getByRole('group', { name: 'Show as' });
+    await showAs.getByRole('button', { name: 'Crease Pattern' }).click();
+    await shownAs(page, 'crease-pattern');
+    const asPattern = await stepSource(page);
+    await record(`diagram-${tag}-show-as-pattern`, { stage: await stageShot(page) });
+    await page.getByRole('group', { name: 'Show as' }).getByRole('button', { name: 'Folded' }).click();
+    await shownAs(page, 'folded-flat');
+    const back = await stepSource(page);
+    console.log(`[${tag}] Show as: crease pattern ${JSON.stringify(asPattern)}, folded ${JSON.stringify(back)}`);
+    if (asPattern.constraints !== 1 || asPattern.mode !== 'crease-pattern' || back.constraints !== 1) {
+      throw new Error('Show as lost the record');
+    }
+    const shownBack = await stageShot(page);
+    await record(`diagram-${tag}-show-as-back`, { stage: shownBack });
+    const roundTrip = await pixelDiff(page, constrained, shownBack);
+    console.log(`[${tag}] Show as round trip vs the constrained picture: ${roundTrip.differing} pixels differ`);
+
+    // An edit that keeps every face: a border line split in two. The link goes out of date; Refresh restores the record.
+    const edit = await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const lines = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+      const ys = lines.flatMap((line) => [line.a.y, line.b.y]);
+      const minY = Math.min(...ys);
+      const index = lines.findIndex(
+        (line) => line.color === 'Black0' && Math.abs(line.a.y - minY) < 1e-9 && Math.abs(line.b.y - minY) < 1e-9
+      );
+      if (index < 0) throw new Error('no border line on the bottom');
+      const line = lines[index];
+      const mid = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
+      await store.getState().replaceOristudioCpLineSegments([index + 1], [{ ...line, b: mid }, { ...line, a: mid }], 'Split border');
+      return { lineId: index + 1 };
+    });
+    console.log(`[${tag}] edited: split border line ${edit.lineId}`);
+    const revision = await page.evaluate(
+      () => window.__treemakerWorkspaceStore.getState().diagram.steps.find((step) => step.id === window.__layerOrderStep).revision
+    );
+    await page.getByRole('button', { name: 'Refresh Picture' }).click();
+    await page.waitForFunction(
+      (was) => {
+        const state = window.__treemakerWorkspaceStore.getState();
+        const step = state.diagram.steps.find((entry) => entry.id === window.__layerOrderStep);
+        return step.revision > was && Object.keys(state.diagramCaptures).length === 0;
+      },
+      revision,
+      { timeout: 120000 }
+    );
+    await settle(page);
+    const refreshed = await stepSource(page);
+    console.log(`[${tag}] refreshed after the edit: ${JSON.stringify(refreshed)}`);
+    if (refreshed.constraints !== 1 || refreshed.attention) throw new Error('Refresh did not restore the record');
+    const afterEdit = await stageShot(page);
+    await record(`diagram-${tag}-refreshed`, { stage: afterEdit });
+    const kept = await pixelDiff(page, constrained, afterEdit);
+    console.log(`[${tag}] refreshed picture vs the constrained one: ${kept.differing} pixels differ`);
+
+    // A forced clash: the record's constraint and its opposite. Refresh keeps the picture and flags the step.
+    await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const { stepById, setLinkedLayerOrder } = await import('/src/diagram/document/diagramDocument.ts');
+      const { stepLayerOrderOf } = await import('/src/diagram/capture/captureLayerOrder.ts');
+      const { encodeLayerOrderRecord } = await import('/src/lib/layerOrder/layerOrderRecord.ts');
+      const stepId = window.__layerOrderStep;
+      const source = stepById(store.getState().diagram, stepId).source;
+      const { record } = stepLayerOrderOf(source.layerOrder);
+      const [f, g, sign] = record.constraints[0];
+      const clashing = encodeLayerOrderRecord({ ...record, constraints: [...record.constraints, [f, g, -sign]] });
+      store.setState({ diagram: setLinkedLayerOrder(store.getState().diagram, stepId, clashing.json) });
+    });
+    const pictureBefore = (await stepSource(page)).picture;
+    await page.evaluate(async () => {
+      const { refreshDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+      await refreshDiagramStep(window.__layerOrderStep);
+    });
+    await captured(page);
+    const clashed = await stepSource(page);
+    console.log(`[${tag}] clash: ${JSON.stringify(clashed)}`);
+    if (clashed.attention?.reason !== 'conflict' || clashed.picture !== pictureBefore) {
+      throw new Error('the clash did not keep the picture and flag the step');
+    }
+    await page.getByRole('button', { name: 'Review…' }).waitFor({ state: 'visible', timeout: 10000 });
+    await record(`diagram-${tag}-pane-attention`, { page: await pageShot(page) });
+
+    // Edit… opens the dialog's shell on the step; Cancel writes nothing.
+    const entries = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().diagramHistory.past.length);
+    await page.getByRole('button', { name: 'Edit Layer Order…' }).click();
+    const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    await page.waitForTimeout(3000);
+    await record(`diagram-${tag}-dialog`, { dialog: await steadyShot(page, dialog, { masked: false, timeoutMs: 60000 }) });
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 10000 });
+    const after = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().diagramHistory.past.length);
+    if (after !== entries) throw new Error('Cancel wrote something');
+    console.log(`[${tag}] Edit… opened the dialog; Cancel wrote nothing`);
+
+    // The creases now fold in 3D: Refresh draws the 3D picture, keeps the record and flags it waiting.
+    const route = await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const lines = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+      const index = lines.findIndex((line) => line.color === 'Red1' || line.color === 'Blue2');
+      await store.getState().replaceOristudioCpLineSegments([index + 1], [{ ...lines[index], fold_magnitude: 90 }], 'Partial fold');
+      const { refreshDiagramStep } = await import('/src/diagram/capture/stepCaptureActions.ts');
+      return refreshDiagramStep(window.__layerOrderStep);
+    });
+    await captured(page);
+    let in3d = await stepSource(page);
+    console.log(`[${tag}] after a partial fold: refreshed ${route}, ${JSON.stringify(in3d)}`);
+    if (in3d.mode !== 'folded-3d') {
+      // Kabuto's 3D fold refused that crease: the row's 3D state is shown on the step's render alone.
+      await page.evaluate(async () => {
+        const store = window.__treemakerWorkspaceStore;
+        const diagram = store.getState().diagram;
+        const camera = { yaw: 0, pitch: 0, zoom: 1 };
+        store.setState({
+          diagram: {
+            ...diagram,
+            steps: diagram.steps.map((step) =>
+              step.id === window.__layerOrderStep ? { ...step, source: { ...step.source, render: { mode: 'folded-3d', side: 'front', camera } } } : step
+            ),
+          },
+        });
+      });
+      in3d = await stepSource(page);
+      console.log(`[${tag}] 3D refused for kabuto; the 3D row shown on the render: ${JSON.stringify(in3d)}`);
+    }
+    await page.getByRole('button', { name: 'Edit Layer Order…' }).waitFor({ state: 'visible' });
+    if ((await page.getByRole('button', { name: 'Edit Layer Order…' }).getAttribute('aria-disabled')) !== 'true') {
+      throw new Error('Edit… is not held on a 3D step');
+    }
+    await record(`diagram-${tag}-pane-3d`, { page: await pageShot(page) });
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
 const CASES = [
@@ -489,6 +873,8 @@ const CASES = [
   { name: 'fold-stack', run: foldStackCases },
   { name: 'dialog-shell', run: dialogShellCases(null) },
   { name: 'dialog-shell-horizon', run: dialogShellCases('Horizon') },
+  { name: 'diagram-step', run: diagramStepCases(null) },
+  { name: 'diagram-step-horizon', run: diagramStepCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------
