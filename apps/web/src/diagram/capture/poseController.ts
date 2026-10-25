@@ -36,7 +36,7 @@ import {
 import { withSheetPaper } from './captureFolded';
 import {
   LayerOrderNotShownError,
-  layerOrderKeyOf,
+  layerOrderDigestOf,
   layerOrderSummaryOf,
   routed3dLayerOrder,
   stepLayerOrderOf,
@@ -237,13 +237,16 @@ export interface PoseControllerListener {
  * fingerprint — and the layer order it is drawn in (H7), the record's or
  * none, so what was learnt of a fold in a record's order (its one solution)
  * is not shown for the kernel's enumeration once an undo takes the record
- * back, nor the other way round.
+ * back, nor the other way round. The record goes in as a digest of its text
+ * (`layerOrderDigestOf`), so the key stays short however large the record,
+ * and is built as often as a spread's sliders move.
  */
 export function linkedFoldKey(
   stepId: string,
   source: Pick<DiagramCpSource, 'scope' | 'fingerprint' | 'layerOrder'>
 ): string {
-  return JSON.stringify([stepId, source.scope, source.fingerprint, layerOrderKeyOf(source.layerOrder)]);
+  const layerOrder = source.layerOrder === undefined ? null : layerOrderDigestOf(source.layerOrder);
+  return JSON.stringify([stepId, source.scope, source.fingerprint, layerOrder]);
 }
 
 /**
@@ -794,8 +797,8 @@ function heldLayerOrderOf(linked: DiagramCpSource): HeldLayerOrder | null {
 
 /** What a pose left the step's record needing, when that is new: it came to need a look, or for another reason. */
 function newAttention(before: DiagramCpSource, after: DiagramCpSource): LayerOrderAttention | null {
-  const was = layerOrderSummaryOf(before.layerOrder)?.attention ?? null;
-  const is = layerOrderSummaryOf(after.layerOrder)?.attention ?? null;
+  const was = layerOrderSummaryOf(before)?.attention ?? null;
+  const is = layerOrderSummaryOf(after)?.attention ?? null;
   return is && !sameAttention(was, is) ? is : null;
 }
 
@@ -807,7 +810,7 @@ function newAttention(before: DiagramCpSource, after: DiagramCpSource): LayerOrd
 function keepLayerOrder(begun: StepCaptureStart, error: LayerOrderNotShownError): DiagramCaptureOutcome {
   const { why } = error;
   if (!why) return { status: 'stopped' };
-  if (why.kind === 'lost') return { status: 'layer-order-lost', offline: why.cause === 'unavailable' };
+  if (why.kind === 'lost') return { status: 'layer-order-lost', offline: why.cause === 'load' };
   const committed = useWorkspaceStore.getState().commitDiagramLayerOrder(begun, why.layerOrder.json, 'Adjust pose');
   if (!committed) return { status: 'discarded' };
   if (committed.changed) trackStepLayerOrderAttention(why.attention);

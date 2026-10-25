@@ -15,12 +15,16 @@ import {
   diagramLayerOrderFrame,
   foldAppliedOrder,
   foldWithLayerOrder,
+  layerOrderDigestOf,
+  layerOrderKeyOf,
+  layerOrderSummaryOf,
   routed3dLayerOrder,
   stepFoldSource,
   stepLayerOrderOf,
   type CaptureLayerOrderResolve,
 } from './captureLayerOrder';
 import { flatPaperFaces } from './capturePaperFaces';
+import { linkedFoldKey } from './poseController';
 
 const model = DEFAULT_FOLDED_MODEL;
 const layerOrder = stepLayerOrderOf(stepLayerOrderJson())!;
@@ -53,6 +57,46 @@ describe('a step’s layer order record', () => {
     // The sheet's first corner, as the step's faces keep it and as its record would.
     expect(frame.fromSource(scene.sheet_points[0]!)).toEqual([faces.points[0]![0], faces.points[0]![1]]);
     expect(frame.toSource([0, 0])).toEqual({ x: 50, y: 50 });
+  });
+});
+
+describe('a record read at rest and keyed', () => {
+  const json = stepLayerOrderJson();
+  const flagged = stepLayerOrderJson({ ...STEP_LAYER_ORDER, attention: { reason: 'conflict', count: 1 } });
+
+  it('reads a source’s summary once, and again for another source', () => {
+    const source = { layerOrder: json };
+    const summary = layerOrderSummaryOf(source);
+    expect(summary).toEqual({ constraints: 1, attention: null });
+    expect(layerOrderSummaryOf(source)).toBe(summary);
+    expect(layerOrderSummaryOf({ layerOrder: flagged })).toEqual({ constraints: 1, attention: { reason: 'conflict', count: 1 } });
+    expect(layerOrderSummaryOf({})).toBeNull();
+    expect(layerOrderSummaryOf(null)).toBeNull();
+    expect(layerOrderSummaryOf({ layerOrder: '{"v":1,' })).toBeNull();
+  });
+
+  it('keys the order a record draws, not what it says of it', () => {
+    expect(layerOrderKeyOf({ layerOrder: json })).toBe(layerOrderKeyOf({ layerOrder: flagged }));
+    const other = stepLayerOrderJson({ ...STEP_LAYER_ORDER, order: [[0, 1, -1]] });
+    expect(layerOrderKeyOf({ layerOrder: other })).not.toBe(layerOrderKeyOf({ layerOrder: json }));
+    expect(layerOrderKeyOf({})).toBeNull();
+    // One that does not read is its text: only the same text is the same order.
+    expect(layerOrderKeyOf({ layerOrder: '{"v":1,' })).toBe(layerOrderKeyOf({ layerOrder: '{"v":1,' }));
+    expect(layerOrderKeyOf({ layerOrder: '{"v":1,' })).not.toBe(layerOrderKeyOf({ layerOrder: '{"v":1, ' }));
+  });
+
+  it('digests a record’s text into a short key, the same for the same text, another for any change', () => {
+    const faces = Array.from({ length: 4000 }, (_, k) => ({ at: [k, k + 0.5] as const, area: 1 + k }));
+    const large = stepLayerOrderJson({ faces, constraints: [[0, 1, 1]], order: [] });
+    expect(large.length).toBeGreaterThan(100_000);
+    const digest = layerOrderDigestOf(large);
+    expect(digest.length).toBeLessThan(24);
+    expect(layerOrderDigestOf(`${large}`)).toBe(digest);
+    expect(layerOrderDigestOf(json)).not.toBe(layerOrderDigestOf(flagged));
+    // A step's fold key stays as short, however large its record.
+    const key = linkedFoldKey('step-1', { scope: { kind: 'all' } as never, fingerprint: 'rc1:0', layerOrder: large });
+    expect(key.length).toBeLessThan(100);
+    expect(linkedFoldKey('step-1', { scope: { kind: 'all' } as never, fingerprint: 'rc1:0' })).not.toBe(key);
   });
 });
 
@@ -150,7 +194,7 @@ describe('foldWithLayerOrder', () => {
     }
   );
 
-  it.each(['crashed', 'unavailable'] as const)(
+  it.each(['load', 'crashed', 'unavailable'] as const)(
     'with no host engine (%s) keeps nothing: no flag to store, nothing folded, the cause to say',
     async (cause) => {
       const runtime = fakeCaptureRuntime();

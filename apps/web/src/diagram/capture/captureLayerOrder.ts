@@ -31,6 +31,7 @@ import type {
 import type { LayerOrderLossCause, LayerOrderResolution } from '../../layer-order/host/hostEngineGateway';
 import { withLayerOrderAttention } from '../../layer-order/host/layerOrderResolution';
 import { NEWER } from '../../lib/documentFile';
+import { keyDigest } from '../../lib/keyDigest';
 import { openFold, type CpFoldRuntime, type FoldedFigureState } from '../../lib/creaseExportFold';
 import {
   encodeLayerOrderRecord,
@@ -66,40 +67,97 @@ export function stepLayerOrderOf(layerOrder: string | undefined): StepLayerOrder
   return read !== NEWER && read.ok ? { record: read.record, json: read.json } : null;
 }
 
+/** What a record says at rest: how many constraints, and its summary. */
+export interface LayerOrderSummary {
+  readonly constraints: number;
+  readonly attention: LayerOrderAttention | null;
+}
+
+/** A source with a record or none: a step's `DiagramCpSource`, or any object that keeps one as it does. */
+type LayerOrderHolder = { readonly layerOrder?: string };
+
+/** What a source's record says, read once: its summary, and the order it draws as a key once asked. */
+interface LayerOrderReading {
+  /** The text it was read from: the source's own, so keeping it costs nothing. */
+  readonly text: string;
+  readonly summary: LayerOrderSummary | null;
+  orderKey?: string;
+}
+
+/**
+ * Readings by source object. A source is never changed in place, so its
+ * reading holds while it does, and goes with it: nothing here outlives the
+ * diagram's steps and their undo history.
+ */
+const readings = new WeakMap<LayerOrderHolder, LayerOrderReading>();
+
+function readingOf(source: LayerOrderHolder, text: string): LayerOrderReading {
+  const known = readings.get(source);
+  if (known && known.text === text) return known;
+  const read = stepLayerOrderOf(text);
+  const reading: LayerOrderReading = {
+    text,
+    summary: read ? { constraints: read.record.constraints.length, attention: read.record.attention ?? null } : null,
+  };
+  readings.set(source, reading);
+  return reading;
+}
+
 /**
  * What a source's record says at rest, read from saved data alone, for a
  * surface drawn often (a card, the Step pane): its constraints and its
- * summary; null for none, or one that does not read. Read once per record.
+ * summary; null for none, or one that does not read. Read once per source.
  */
-export function layerOrderSummaryOf(
-  layerOrder: string | undefined
-): { constraints: number; attention: LayerOrderAttention | null } | null {
-  if (layerOrder === undefined) return null;
-  let summary = summaries.get(layerOrder);
-  if (summary === undefined) {
-    const read = stepLayerOrderOf(layerOrder);
-    summary = read ? { constraints: read.record.constraints.length, attention: read.record.attention ?? null } : null;
-    if (summaries.size >= SUMMARIES_KEPT) summaries.delete(summaries.keys().next().value!);
-    summaries.set(layerOrder, summary);
-  }
-  return summary;
+export function layerOrderSummaryOf(source: LayerOrderHolder | null | undefined): LayerOrderSummary | null {
+  const text = source?.layerOrder;
+  return source && text !== undefined ? readingOf(source, text).summary : null;
 }
-
-/** The last records read by {@link layerOrderSummaryOf}: a diagram's constrained steps, a few times over. */
-const summaries = new Map<string, { constraints: number; attention: LayerOrderAttention | null } | null>();
-const SUMMARIES_KEPT = 256;
 
 /**
- * The order a source's record draws, as a key: its faces and their order,
- * which are all a picture is drawn from; null for a source with none. What
- * its constraints say, or a summary, draws nothing. One this build cannot
- * read keys by its text, so only the same text is the same order.
+ * The order a source's record draws, as a key: a digest of its faces and
+ * their order, which are all a picture is drawn from; null for a source with
+ * none. What its constraints say, or a summary, draws nothing. One this build
+ * cannot read keys by its text, so only the same text is the same order.
  */
-export function layerOrderKeyOf(layerOrder: string | undefined): string | null {
-  if (layerOrder === undefined) return null;
-  const read = stepLayerOrderOf(layerOrder);
-  return read ? JSON.stringify([read.record.faces, read.record.order]) : `unread:${layerOrder}`;
+export function layerOrderKeyOf(source: LayerOrderHolder): string | null {
+  const text = source.layerOrder;
+  if (text === undefined) return null;
+  const reading = readingOf(source, text);
+  if (reading.orderKey === undefined) {
+    const read = stepLayerOrderOf(text);
+    reading.orderKey = read
+      ? keyDigest([JSON.stringify([read.record.faces, read.record.order])], 'loo1:')
+      : `unread:${layerOrderDigestOf(text)}`;
+  }
+  return reading.orderKey;
 }
+
+/**
+ * A short digest of a record's text (`keyDigest`, 64 bits): how a key names a
+ * record, a few dozen characters however large it is. Every change to the
+ * text is another digest. Kept for the texts asked about last, up to
+ * {@link DIGESTED_CHARS} of them, so the step open in Pose, keyed as its
+ * spread's sliders move, hashes its record once.
+ */
+export function layerOrderDigestOf(layerOrder: string): string {
+  const known = digests.get(layerOrder);
+  if (known !== undefined) return known;
+  const digest = keyDigest([layerOrder], 'lo1:');
+  digests.set(layerOrder, digest);
+  digestedChars += layerOrder.length;
+  // The oldest go first; the text just digested always stays.
+  for (const [text] of digests) {
+    if (digestedChars <= DIGESTED_CHARS || digests.size === 1) break;
+    digests.delete(text);
+    digestedChars -= text.length;
+  }
+  return digest;
+}
+
+const digests = new Map<string, string>();
+let digestedChars = 0;
+/** About 4 MB of record text: a few of the largest records, or hundreds of usual ones. */
+const DIGESTED_CHARS = 2 * 1024 * 1024;
 
 /** `layerOrder` with its summary set (or cleared, for null), as its source keeps it. */
 export function flaggedLayerOrder(layerOrder: StepLayerOrder, attention: LayerOrderAttention | null): StepLayerOrder {
@@ -203,8 +261,8 @@ export type LayerOrderShown =
   /**
    * The host engine was not there to answer — offline, or it crashed. Nothing
    * was checked, so nothing is kept: the step stays as it was, its record
-   * unflagged. `cause` is the host engine's, `unavailable` when the browser
-   * did not load it (`isLayerOrderLoadFailure`).
+   * unflagged. `cause` is the host engine's, `load` when the browser did not
+   * load it (`isLayerOrderLoadFailure`).
    */
   | { readonly kind: 'lost'; readonly cause: LayerOrderLossCause }
   /** A Stop: nothing to keep. */

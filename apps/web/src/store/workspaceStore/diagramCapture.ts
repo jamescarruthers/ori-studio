@@ -351,7 +351,7 @@ export function commitStepLayerOrder(
 function storedAttentionOf(store: DiagramCaptureStore, stepId: string): LayerOrderAttention | null {
   const { diagram } = store.get();
   const source = diagram ? stepById(diagram, stepId)?.source : null;
-  return source?.kind === 'cp' ? (layerOrderSummaryOf(source.layerOrder)?.attention ?? null) : null;
+  return source?.kind === 'cp' ? (layerOrderSummaryOf(source)?.attention ?? null) : null;
 }
 
 /** Whether two summaries say the same: the same reason, for as many constraints. */
@@ -443,7 +443,7 @@ export async function runDiagramCapture(
       return flagged ? { status: 'needs-attention', attention: result.attention, changed: flagged.changed } : { status: 'discarded' };
     }
     // Nothing checked, nothing written: no undo step, nothing to save.
-    if (result.status === 'layer-order-lost') return { status: 'layer-order-lost', offline: result.cause === 'unavailable' };
+    if (result.status === 'layer-order-lost') return { status: 'layer-order-lost', offline: result.cause === 'load' };
     if (result.status !== 'captured') return result;
     // What the step's record said before, to tell a summary this capture stored from one it kept.
     const before = storedAttentionOf(store, stepId);

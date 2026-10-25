@@ -1020,8 +1020,10 @@ describe('a step with a layer order, posed (H7)', () => {
   });
 
   it.each([
+    ['load', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
     ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
-    ['unavailable', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
+    // The engine's own "did not start" may be a defect: no connection to check.
+    ['unavailable', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
   ] as const)('writes nothing when the host engine is lost (%s): no undo step, not dirty, said', async (cause, said) => {
     const stepId = await constrainedStep();
     hostEngine.resolveLayerOrder.mockImplementation(async () => fakeLayerOrderResolutions.lost(inSource, cause));

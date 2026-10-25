@@ -34,7 +34,7 @@ export function useDiagramStepLayerOrder(step: DiagramStep | null): DiagramStepL
   const stepId = source ? step!.id : null;
   const readOnly = useWorkspaceStore((state) => state.diagramReadOnly);
   const busy = useWorkspaceStore((state) => stepId !== null && Object.hasOwn(state.diagramCaptures, stepId));
-  const record = layerOrderSummaryOf(source?.layerOrder);
+  const record = layerOrderSummaryOf(source);
   const render = source?.render ?? null;
   const seeThrough = render?.mode === 'folded-flat' && step?.picture?.kind === 'fixed';
   return useMemo((): DiagramStepLayerOrder => {

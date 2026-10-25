@@ -650,7 +650,7 @@ describe('captureStep, a step’s layer order (H7)', () => {
     expect(result.captured.picture.key).not.toBe(unconstrained.captured.picture.key);
   });
 
-  it.each(['crashed', 'unavailable'] as const)(
+  it.each(['load', 'crashed', 'unavailable'] as const)(
     'with no host engine (%s) writes nothing: no picture read, no record flagged, the cause said',
     async (cause) => {
       const { runtime, calls } = recordingRuntime();

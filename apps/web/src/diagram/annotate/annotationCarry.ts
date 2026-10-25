@@ -204,7 +204,7 @@ function sameLayerOrder(
 
 /** The order a source's record draws, as a key (`layerOrderKeyOf`); null for a source with none. */
 function recordedOrderOf(source: DiagramPosedSource): string | null {
-  return source.kind === 'cp' ? layerOrderKeyOf(source.layerOrder) : null;
+  return source.kind === 'cp' ? layerOrderKeyOf(source) : null;
 }
 
 /**

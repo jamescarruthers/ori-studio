@@ -170,8 +170,10 @@ describe('a step’s layer order, captured', () => {
   });
 
   it.each([
+    ['load', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
     ['crashed', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
-    ['unavailable', 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'],
+    // The engine's own "did not start" may be a defect: no connection to check.
+    ['unavailable', 'Layer order stopped unexpectedly, so this step wasn’t changed.'],
   ] as const)(
     'with no host engine (%s) writes nothing: no undo step, not dirty, never saved as couldn’t be checked',
     async (cause, said) => {
@@ -322,6 +324,43 @@ describe('a step’s layer order, captured', () => {
     expect(analytics.trackLayerConstraintsNeedAttention).toHaveBeenCalledTimes(2);
   });
 
+  it('Refresh All offline asks the host engine once: the constrained steps after it are counted, the rest refreshed', async () => {
+    for (let i = 0; i < 5; i += 1) await constrainedStep(left);
+    await linkedStep(right);
+    useDocument(edited());
+    hostEngine.answer = async () => fakeLayerOrderResolutions.lost(inSource, 'load');
+    vi.mocked(bindings.runtime!.source!).mockClear();
+    const entries = state().diagramHistory.past.length;
+    expect(await refreshAllDiagramSteps()).toBe(1);
+    expect(hostEngine.batches).toHaveLength(1);
+    expect(hostEngine.batches[0]!.resolve).toHaveBeenCalledOnce();
+    // Folded for the step that asked, not for those counted after it.
+    expect(bindings.runtime!.source).toHaveBeenCalledOnce();
+    expect(toasts.error).toHaveBeenCalledOnce();
+    expect(toasts.error).toHaveBeenCalledWith(
+      'Layer order couldn’t load, so 5 steps weren’t changed. Check your connection, then try again.'
+    );
+    expect(toasts.success).toHaveBeenCalledWith('Refreshed 1 step');
+    // The unconstrained step's picture, one entry; no record flagged.
+    expect(state().diagramHistory.past).toHaveLength(entries + 1);
+    const flagged = stepsIn(state().diagram!).filter(
+      (entry) => entry.source?.kind === 'cp' && stepLayerOrderOf(entry.source.layerOrder)?.record.attention
+    );
+    expect(flagged).toHaveLength(0);
+  });
+
+  it('Refresh All goes on after a crash, which may be one record’s, and counts what it left', async () => {
+    for (let i = 0; i < 3; i += 1) await constrainedStep(left);
+    useDocument(edited());
+    let asked = 0;
+    hostEngine.answer = async (source) =>
+      asked++ === 0 ? fakeLayerOrderResolutions.lost(inSource, 'crashed') : fakeLayerOrderResolutions.applied(inSource, source);
+    expect(await refreshAllDiagramSteps()).toBe(2);
+    expect(hostEngine.batches[0]!.resolve).toHaveBeenCalledTimes(3);
+    expect(toasts.error).toHaveBeenCalledOnce();
+    expect(toasts.error).toHaveBeenCalledWith('Layer order stopped unexpectedly, so 1 step wasn’t changed.');
+  });
+
   it('Refresh All says what it refreshed and what kept its picture together', async () => {
     await constrainedStep(left);
     await linkedStep(right);
@@ -401,6 +440,25 @@ describe('a step’s layer order, captured', () => {
     expect(shownAs).not.toBeNull();
     expect(source(shownAs!).layerOrder).toBe(json);
     expect(source(shownAs!).render.mode).toBe('crease-pattern');
+  });
+
+  it('Duplicate as Folded onto a record that clashes makes no copy, says so of the copy, and counts nothing', async () => {
+    const stepId = await constrainedStep();
+    expect(await showLinkedStepAs(stepId, 'crease-pattern', 'pane')).toBe(true);
+    vi.clearAllMocks();
+    hostEngine.answer = async () => fakeLayerOrderResolutions.kept('clash', inSource);
+    const steps = stepsIn(state().diagram!).length;
+    const entries = state().diagramHistory.past.length;
+    expect(await duplicateLinkedStepAs(stepId, 'folded')).toBeNull();
+    expect(stepsIn(state().diagram!)).toHaveLength(steps);
+    expect(state().diagramHistory.past).toHaveLength(entries);
+    expect(toasts.message).toHaveBeenCalledOnce();
+    expect(toasts.message).toHaveBeenCalledWith(
+      'The copy couldn’t be shown folded, because this step’s layer constraints need attention.'
+    );
+    expect(analytics.trackLayerConstraintsNeedAttention).not.toHaveBeenCalled();
+    // The original as it was: its record unflagged.
+    expect(stepLayerOrderOf(source(stepId).layerOrder)?.record.attention).toBeUndefined();
   });
 
   it('never captures a step whose record is a newer build’s: it is locked, and carried as it came', async () => {

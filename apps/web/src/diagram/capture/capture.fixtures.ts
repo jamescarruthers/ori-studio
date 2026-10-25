@@ -304,8 +304,11 @@ export const fakeLayerOrderResolutions = {
         return { outcome, refusal: { code: 'source_no_faces' }, record: kept, attention };
     }
   },
-  /** No host engine to ask: it crashed, or (`unavailable`) could not load. H2 flags the record; a capture keeps none of it. */
-  lost(record: LayerOrderRecord, cause: 'crashed' | 'unavailable' = 'crashed'): LayerOrderResolution {
+  /**
+   * No host engine to ask: the browser did not load it (`load`), it crashed,
+   * or it did not start (`unavailable`). H2 flags the record; a capture keeps none of it.
+   */
+  lost(record: LayerOrderRecord, cause: 'load' | 'crashed' | 'unavailable' = 'crashed'): LayerOrderResolution {
     const attention: LayerOrderAttention = { reason: 'timeout', count: record.constraints.length };
     return { outcome: 'lost', cause, record: { ...record, attention }, attention };
   },

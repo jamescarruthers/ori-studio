@@ -113,7 +113,7 @@ export async function linkDiagramStep(stepId: string, sheet: RegionLike, way?: D
   });
   report(outcome, render, linked ? 'relink' : 'link');
   if (outcome.status !== 'captured') return false;
-  if (record !== undefined && !sameSheet && outcome.changed) sayLayerOrderLeftBehind(record);
+  if (linked && record !== undefined && !sameSheet && outcome.changed) sayLayerOrderLeftBehind(linked);
   lastLinkedAs = showAs;
   if (way !== undefined && (!linked || showAsOf(linked.render) !== showAs)) {
     trackDiagramStepShownAs(trackedShowAs(showAs), 'picker');
@@ -128,10 +128,26 @@ function sameSheetAs(linked: DiagramCpSource, sheet: RegionLike): boolean {
   return now !== null && boundariesMatch(now.boundary, sheet.boundary);
 }
 
-/** A relink to another sheet left the step's layer order behind: said, with the way back. */
-function sayLayerOrderLeftBehind(record: string): void {
+/** Duplicate as Folded found the step's layer order needing a look (D10): no copy was made. */
+function sayCopyNotFolded(attention: LayerOrderAttention): void {
   const t = i18n.t;
-  const constraints = layerOrderSummaryOf(record)?.constraints ?? 0;
+  toast.message(
+    attention.count === 0
+      ? t(
+          'toasts:diagram.layerOrder.copyNotFoldedChosenOrder',
+          'The copy couldn’t be shown folded, because this step’s chosen layer order needs attention.'
+        )
+      : t(
+          'toasts:diagram.layerOrder.copyNotFolded',
+          'The copy couldn’t be shown folded, because this step’s layer constraints need attention.'
+        )
+  );
+}
+
+/** A relink to another sheet left the step's layer order behind: said, with the way back. */
+function sayLayerOrderLeftBehind(was: DiagramCpSource): void {
+  const t = i18n.t;
+  const constraints = layerOrderSummaryOf(was)?.constraints ?? 0;
   toast.message(
     constraints === 0
       ? t(
@@ -213,7 +229,10 @@ export async function duplicateLinkedStepAs(stepId: string, way: DiagramShowAs):
     // The copy's: its source is the original's, record and all.
     ...layerOrderOf(source),
   });
-  report(outcome, render, 'duplicate_as');
+  // A copy whose layer order kept it from being drawn is undone below: nothing was kept, so
+  // nothing is counted, and the toast is about the copy, not a picture it keeps.
+  if (outcome.status === 'needs-attention') sayCopyNotFolded(outcome.attention);
+  else report(outcome, render, 'duplicate_as');
   if (outcome.status !== 'captured') {
     const now = useWorkspaceStore.getState();
     if (duplicated !== undefined && now.diagramHistory.past.at(-1) === duplicated) now.undoDiagram();
@@ -451,8 +470,9 @@ export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
 
 /**
  * The host engine was not there to restore a step's record, so nothing was
- * checked and nothing written: offline (the host engine's `unavailable`, by
- * `isLayerOrderLoadFailure`), or it stopped.
+ * checked and nothing written: the browser did not load it (the host engine's
+ * `load`, by `isLayerOrderLoadFailure`), which a connection may settle; or it
+ * stopped or did not start, said neutrally, since that may be a defect.
  */
 export function sayLayerOrderLost(offline: boolean): void {
   const t = i18n.t;

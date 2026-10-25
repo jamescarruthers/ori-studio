@@ -159,7 +159,7 @@ export const DiagramStepCard = memo(function DiagramStepCard({
   const restyled = capturedStyleChange(step, style);
   // Its layer order's constraints need a Review… (layer order D10, D14), which a Refresh would not
   // settle: from saved data. One waiting for its creases to fold flat (D13) has nothing to review.
-  const attention = !locked && linked?.kind === 'cp' && link !== 'missing' ? layerOrderSummaryOf(linked.layerOrder)?.attention : null;
+  const attention = !locked && linked?.kind === 'cp' && link !== 'missing' ? layerOrderSummaryOf(linked)?.attention : null;
   const flagged = attention != null && attention.reason !== 'route-3d';
   const chip = capture
     ? t('panels:diagram.card.capturing', 'Capturing…')
