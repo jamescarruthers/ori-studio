@@ -88,9 +88,10 @@ describe('canvasObjectPropertyRegistry', () => {
 
     act(() => root?.render(<SheetHost target={target!} registry={registry} />));
 
-    expect(host?.querySelector('.property-sheet__title')?.textContent).toBe('Stub image');
+    const sheet = host?.querySelector('[data-property-sheet]');
+    expect(sheet?.querySelector('header h2')?.textContent).toBe('Stub image');
     // The host marks the sheet as the canvas selection's own surface.
-    expect(host?.querySelector('.property-sheet')?.hasAttribute('data-cp-companion')).toBe(true);
+    expect(sheet?.hasAttribute('data-cp-companion')).toBe(true);
   });
 
   it('reports one property change per commit, as enums', () => {
