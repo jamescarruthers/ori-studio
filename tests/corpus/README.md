@@ -239,6 +239,47 @@ open pair).
   3.8 / 46 / 249 KB. iguana-c0: `open_showing` 1.5 s, previews 0.48 s,
   restore 2.0 s, record 863 KB.
 
+### Solutions and explanations
+
+`crates/oracle-tests/tests/layer_order_solutions.rs` (row E6) runs the
+dialog's solution count, stepper and `explain` over the same designs, read
+from the same `LAYER_ORDER_CENSUS_DIR` (`LAYER_ORDER_SOLUTIONS_OUT` moves its
+report from `artifacts/layer-order-solutions/`). Per design it counts the
+solutions with no constraints in one call within `LAYER_ORDER_COUNT_MS`
+(10 s by default) and, when that took under 2 s, again in slices of 1,000
+nodes, which must end equal and never be above the end on the way; steps
+forward and back by picture and with X-ray; commits three constraints as the
+session census does and counts again; and explains up to three candidates
+that can't fit, each set checked on a second session (it can't fit, and
+fits without any one member):
+
+```sh
+cargo test -p oracle-tests --test layer_order_solutions
+LAYER_ORDER_CENSUS_DIR=/path/to/real_benchmark/cpoogle \
+  cargo test -p oracle-tests --release --test layer_order_solutions -- --nocapture
+```
+
+Last run on October 24, 2026, natively on an Apple Silicon Mac shared with
+other work, four designs at a time: 479 of 488 designs admitted (the nine
+census 1 refuses), all 479 pass every gate.
+
+- **"N solutions".** Of the 475 corpus designs, the pictures are exact from
+  both sides on 473 within 10 s; the other two read "at least" (2,016 and
+  135 from the front). The layer-order count is exact on 465: 8 more stopped
+  at the deadline and 2 at a cap (one past 2⁶⁴), each "at least". With three
+  constraints, 469 are exact. iguana-c0's one open component of 65,851 pairs
+  gives one picture and no more in 10 s ("at least 1"); with three
+  constraints its count is exact (1 picture, 5,120 orders) in 10 s.
+- Count with no constraints p50 / p95 / max: 0.6 / 285 / 10,024 ms (14 over
+  1 s); with constraints 0.2 / 52 / 10,025 ms. Pictures from the front, of
+  the exact counts: 1 / 16 / 320. Components 2 / 11 / 58; 4 look groups of
+  more than one component in the corpus.
+- 464 designs counted again in slices: every one equal.
+- Steps 0.0 / 2.4 / 2,531 ms (the slowest spend half their 5 s on the count
+  that did not finish).
+- 1,422 candidates explained, all minimal and checked; 6 smaller than the
+  check's set; 0.0 / 0.2 / 49 ms (iguana-c0 0.40 s).
+
 ## FOLD Frame-Shape Corpus Testing
 
 `file_frames` makes a FOLD document a tree of frames, and the importer has to
