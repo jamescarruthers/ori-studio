@@ -48,7 +48,12 @@ import { dropFolded3dAuxLines, resetFolded3dAuxLines } from './folded3dAuxLines'
 import { dropFolded3dRenderModel, resetFolded3dRenderModels } from './folded3dRenderModels';
 import { clearAllFolded3dOrbits } from './folded3dRuntime';
 import { dropFoldedFlatScene, resetFoldedFlatScenes } from './foldedFlatScenes';
-import { dropSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFrontiers';
+import {
+  dropSolutionFrontier,
+  resetSolutionFrontiers,
+  seedSolutionFrontier,
+  startSolutionFrontier,
+} from './foldedSolutionFrontiers';
 
 /** Live reference count per handle. Entries reaching 0 are freed and dropped. */
 const counts = new Map<number, number>();
@@ -78,6 +83,18 @@ let freeHandle: FreeFoldedFigureHandle = () => {};
 /** Install the free implementation. Called once, from the store slice. */
 export function setFoldedFigureHandleFree(free: FreeFoldedFigureHandle): void {
   freeHandle = free;
+}
+
+/**
+ * A handle the kernel just made, taken by the live list: one reference, and
+ * how far its layer-order search has reached — only what the fold reports,
+ * or, for a duplicate (`copyFrom`, its original's handle), as far as the
+ * session it is a copy of (`foldedSolutionFrontiers.ts`).
+ */
+export function adoptFoldedFigureHandle(handle: number, { copyFrom }: { copyFrom?: number | null } = {}): void {
+  if (copyFrom === undefined) startSolutionFrontier(handle);
+  else seedSolutionFrontier(handle, copyFrom);
+  retainFoldedFigureHandle(handle);
 }
 
 /** Take a reference to `handle`. No-op for a figure that has none yet. */

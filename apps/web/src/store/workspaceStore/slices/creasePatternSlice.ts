@@ -148,11 +148,11 @@ import {
   type CanvasAnnotation,
 } from '../../../cp-workspace/annotations/annotation';
 import {
+  adoptFoldedFigureHandle,
   foldedFigureHandleEpoch,
   releaseFoldedFigureHandle,
   releaseFoldedFigureHandles,
   resetFoldedFigureHandles,
-  retainFoldedFigureHandle,
   retainFoldedFigureHandles,
   setFoldedFigureHandleFree,
 } from '../../../cp-workspace/folded/foldedFigureHandles';
@@ -187,11 +187,7 @@ import {
   layerOrderRecordToSource,
 } from '../../../lib/layerOrder/paperFrame';
 import { kernelFoldSourceOf, layerOrderSourceOf } from '../../../lib/layerOrder/layerOrderSource';
-import {
-  noteSolutionFrontier,
-  seedSolutionFrontier,
-  startSolutionFrontier,
-} from '../../../cp-workspace/folded/foldedSolutionFrontiers';
+import { noteSolutionFrontier } from '../../../cp-workspace/folded/foldedSolutionFrontiers';
 import { resolveFoldRoute } from '../../../cp-workspace/folded/foldRoute';
 import {
   fold3dRefusalMessage,
@@ -567,7 +563,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     figureId: string,
     epoch: number,
     handle: number,
-    render: Parameters<typeof setFolded3dRenderModel>[1]
+    render: Parameters<typeof setFolded3dRenderModel>[1],
+    { copyFrom }: { copyFrom?: number | null } = {}
   ): Promise<boolean> {
     const stillThere =
       foldedFigureHandleEpoch() === epoch &&
@@ -576,9 +573,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       await freeOristudioCpFoldedFigure(handle).catch(() => {});
       return false;
     }
-    // A fresh session: its search has reached only what this fold reports.
-    startSolutionFrontier(handle);
-    retainFoldedFigureHandle(handle);
+    // A fresh session has reached only what this fold reports; a duplicate's, as far as its original.
+    adoptFoldedFigureHandle(handle, copyFrom === undefined ? {} : { copyFrom });
     setFolded3dRenderModel(handle, render);
     return true;
   }
@@ -2223,8 +2219,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           const camera = defaultFolded3dCamera(result.render, result.snapshot.model.state);
           const displayStyle: OristudioCpFoldedFigureDisplayStyle = 'Paper5';
           const scene = project3dScene(result.render, result.snapshot, displayStyle, camera);
-          startSolutionFrontier(result.handle);
-          retainFoldedFigureHandle(result.handle);
+          adoptFoldedFigureHandle(result.handle);
           // The geometry lives beside the handle, not on the entry: it is up to
           // ~235 KB of packed arrays and the `.osf` writer pretty-prints. It is
           // what every *re*-projection needs, and it is released with the handle.
@@ -2415,8 +2410,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // the entry so deleting/re-folding the figure clears the highlight for
         // free, and keep the fold out of the error toast path.
         const contradiction = result.snapshot.contradiction ?? null;
-        startSolutionFrontier(result.handle);
-        retainFoldedFigureHandle(result.handle);
+        adoptFoldedFigureHandle(result.handle);
         // Park the figure against the creases it was actually folded from, not
         // against the nominal paper square — a pattern can sit anywhere in the
         // sheet, and anchoring to the paper leaves the figure adrift from it.
@@ -2591,12 +2585,11 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           const step = await withFoldInFlight('another-3d', (runId) =>
             fold3dRuntimeOristudioCpFigureAnother(handle, runId)
           );
+          // Noted before anything reads it: the event, then the entry's readout.
+          const known = noteFoldedSolutions(figure, handle, step.snapshot);
           track(ANALYTICS_EVENTS.foldSolutionCycled, {
             direction: cycleDirection,
-            solution_count_bucket: bucketCount(
-              noteFoldedSolutions(figure, handle, step.snapshot),
-              COUNT_BUCKETS
-            ),
+            solution_count_bucket: bucketCount(known, COUNT_BUCKETS),
           });
           setFolded3dRenderModel(handle, step.render);
           const camera =
@@ -2631,12 +2624,11 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         const snapshot = await withFoldInFlight('another', (runId) =>
           foldRuntimeOristudioCpFigureAnother(handle, runId)
         );
+        // Noted before anything reads it: the event, then the entry's readout.
+        const known = noteFoldedSolutions(figure, handle, snapshot);
         track(ANALYTICS_EVENTS.foldSolutionCycled, {
           direction: cycleDirection,
-          solution_count_bucket: bucketCount(
-            noteFoldedSolutions(figure, handle, snapshot),
-            COUNT_BUCKETS
-          ),
+          solution_count_bucket: bucketCount(known, COUNT_BUCKETS),
         });
         const renderSnapshot = await renderSnapshotForFoldedFigure(
           figure.handle,
@@ -3192,8 +3184,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           );
         }
         // A refold is a new search on a new handle: it starts from what it found.
-        startSolutionFrontier(result.handle);
-        retainFoldedFigureHandle(result.handle);
+        adoptFoldedFigureHandle(result.handle);
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
             candidate.id === figure.id
@@ -3373,8 +3364,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // flight. Adopting now would overwrite a newer handle and leak it.
         if (!latest || latest.handle != null) return await abandon(handle);
 
-        startSolutionFrontier(handle);
-        retainFoldedFigureHandle(handle);
+        adoptFoldedFigureHandle(handle);
         setFolded3dRenderModel(handle, render);
         set({
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
@@ -3485,12 +3475,13 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             { appearance: source.appearance, frameRadius: folded3dFrameRadius(result.render) }
           );
           if (
-            !(await adoptFolded3dHandle(figureId, duplicateEpoch, result.handle, result.render))
+            // The kernel cloned the whole session: the copy has searched as far.
+            !(await adoptFolded3dHandle(figureId, duplicateEpoch, result.handle, result.render, {
+              copyFrom: source.handle,
+            }))
           ) {
             return false;
           }
-          // The kernel cloned the whole session: the copy has searched as far.
-          seedSolutionFrontier(result.handle, source.handle);
           takeCanvasSelection('folded-figure', {
             oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
               figure.id === figureId
@@ -3524,8 +3515,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           true
         );
         // A copy of the original's session, so it has searched as far.
-        seedSolutionFrontier(result.handle, source.handle);
-        retainFoldedFigureHandle(result.handle);
+        adoptFoldedFigureHandle(result.handle, { copyFrom: source.handle });
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
             figure.id === figureId
@@ -3676,8 +3666,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // A figure with a chosen order keeps the fold that draws it, as a
         // rehydrate does: the same picture, now live. Nothing about the
         // document changed, so no entry, no `dirty`, no selection.
-        startSolutionFrontier(folded.handle);
-        retainFoldedFigureHandle(folded.handle);
+        adoptFoldedFigureHandle(folded.handle);
         set({
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
             candidate.id === id
@@ -3773,8 +3762,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           await giveBack();
           return false;
         }
-        startSolutionFrontier(result.handle);
-        retainFoldedFigureHandle(result.handle);
+        adoptFoldedFigureHandle(result.handle);
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
             candidate.id === figure.id
