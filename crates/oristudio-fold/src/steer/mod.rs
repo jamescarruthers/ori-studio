@@ -22,6 +22,9 @@
 //!   of the whole list, the stacks and the paper scene of the order on
 //!   screen, the saved record, and a restore onto creases that may have
 //!   changed ([`ConstraintSession::restore`], decision D10).
+//! - [`ConstraintSession::explain`] (E6): the smallest set of constraints
+//!   that clash, every member necessary, for the dialog's "Can't fit" and
+//!   its danger tints ([`Clash`]).
 //! - [`Solutions`] (E6): how many distinct pictures fit from each side and
 //!   how many layer orders, counted in resumable slices with the product
 //!   rule ("at least N" past a cap), and a stepper through them in a fixed
@@ -33,6 +36,7 @@
 //!
 //! Nothing here is bound to wasm yet (E7).
 
+mod explain;
 mod record;
 mod restore;
 mod session;
@@ -40,6 +44,7 @@ mod solutions;
 mod source;
 mod stacks;
 
+pub use explain::{Clash, Explanation};
 pub use record::{
     Attention, AttentionReason, EncodeRefusal, FoldSign, LayerOrderRecord, RECORD_MAX_BYTES,
     RECORD_VERSION, RecordDamage, RecordFace, RecordPair, RecordPart, RecordRead, encode_record,
