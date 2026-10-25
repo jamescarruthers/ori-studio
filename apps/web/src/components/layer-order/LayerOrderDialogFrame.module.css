@@ -121,6 +121,23 @@
   color: var(--status-danger);
 }
 
+/* D19's line about the order opened on: the quiet tone, one line, cut short with its whole text as its title. */
+.footNote[data-tone='info'] {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.footIcon[data-tone='info'] {
+  color: var(--text-tertiary);
+}
+
+.footText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* After the title (Round3): a rule, the figure's name, then its credit, quieter; the credit gives way first. */
 .figure {
   display: flex;

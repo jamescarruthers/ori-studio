@@ -136,6 +136,17 @@ export function recordNeedsAttentionOf(record: LayerOrderRecord | null): boolean
 }
 
 /**
+ * Whether even an untouched Apply writes, for both deciders of D16, as
+ * {@link openedBaseline} takes it: the host flagged its record after an edit
+ * ({@link recordNeedsAttentionOf}), or its picture was folded from creases
+ * that changed since (the request's `applyRefolds`, D12), so the Apply is
+ * its refold — the order opened on can match nothing the host shows.
+ */
+export function untouchedApplyWrites(record: LayerOrderRecord | null, applyRefolds: boolean | undefined): boolean {
+  return recordNeedsAttentionOf(record) || applyRefolds === true;
+}
+
+/**
  * What a session opened on: the reducer keeps it at its open (`opened`), and
  * an Apply decided outside the reducer asks it too, the dialog shell's before
  * an inspector (U4's `useLayerOrderSettle`). The order is the host's when it

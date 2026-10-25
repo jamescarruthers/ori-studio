@@ -158,6 +158,19 @@ export function applyWaitText(t: TFunction, why: LayerOrderApplyWait): string {
   }
 }
 
+/**
+ * What Apply also does, at the foot beside it, for a host whose picture was
+ * folded from creases that have changed since (D12, the approved "Stale
+ * figure: Apply also refolds" frame): named, when the host names its fold.
+ */
+export function applyRefoldsText(t: TFunction, name: string | undefined): string {
+  return name
+    ? t('dialogs:layerOrder.applyRefoldsNamed', '{{name}}’s creases changed since it was folded: Apply also refolds it.', {
+        name,
+      })
+    : t('dialogs:layerOrder.applyRefolds', 'The creases changed since this was folded: Apply also refolds it.');
+}
+
 /** Why Apply could not save: its record is over the budget, or the save refused for another reason. */
 export function applyRefusalText(t: TFunction, refusal: LayerRefusal): string {
   return refusal.code === 'record_over_budget'

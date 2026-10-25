@@ -9,7 +9,7 @@ import type { LayerPanesView } from '../../layer-order/panes/layerPaneMarks';
 import { layerOrderOpeningView } from '../../layer-order/panes/useLayerOrderPanes';
 import { useModalFullScreen } from '../ui/ModalFrame';
 import { LayerOrderDialogFrame, type LayerOrderPhonePane } from './LayerOrderDialogFrame';
-import { applyWaitText } from './layerOrderNotices';
+import { applyRefoldsText, applyWaitText } from './layerOrderNotices';
 import { LayerOrderPanes } from './LayerOrderPanes';
 import { LayerOrderViewTools } from './LayerOrderViewTools';
 
@@ -70,6 +70,8 @@ export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening
       applyWaits={settle.waits && applyWaitText(t, settle.waits)}
       applying={settle.applying}
       applyRefusal={settle.applyRefusal}
+      // D12: opened on creases that changed since the host's fold, its Apply refolds too.
+      note={request.applyRefolds ? { text: applyRefoldsText(t, request.name) } : null}
     />
   );
 }

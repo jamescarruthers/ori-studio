@@ -284,6 +284,21 @@ describe('the Layer order dialog’s session', () => {
     expect(monitoring.reportError).not.toHaveBeenCalled();
   });
 
+  it('on creases changed since the host’s fold, says Apply also refolds, and Apply saves even the host’s own order (D12)', async () => {
+    mount();
+    const { outcome } = await opened({ ...REQUEST, applyRefolds: true });
+    await until(isReady, 'the session opened');
+    // The foot, beside Apply, in the quiet tone.
+    expect(byRole(openDialog(), 'status', /Apply also refolds/).textContent).toBe(
+      'Kabuto’s creases changed since it was folded: Apply also refolds it.'
+    );
+    // The order the host shows, untouched: still written, since the Apply is the host's refold.
+    click(button('Apply'));
+    const answer = await outcome;
+    expect(answer.kind).toBe('applied');
+    expect(spawned[0]!.backend.calls).toContain('save');
+  });
+
   it('Apply on an order that isn’t the host’s (D19) saves, and hands the host its fold', async () => {
     mount();
     const { outcome } = await opened(CANT_FOLD_REQUEST);

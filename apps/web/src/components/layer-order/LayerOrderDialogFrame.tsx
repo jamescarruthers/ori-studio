@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, Info } from 'lucide-react';
 import type { ModalHistory } from '../../keyboard/dialogShortcuts';
 import type { FaceLetters } from '../../layer-order/engine/faceIndex';
 import type { LayerRefusal } from '../../layer-order/engine/layerOrderEngine';
@@ -85,6 +85,12 @@ export interface LayerOrderDialogFrameProps {
   readonly applyWaits?: string | null;
   readonly applying: boolean;
   readonly applyRefusal: LayerRefusal | null;
+  /**
+   * A line beside Cancel and Apply about the order the dialog opened on (D19:
+   * "Edit’s order can’t fold here…"), in the quiet tone; pointing at it calls
+   * `onHover`. Apply's refusal takes its place while there is one.
+   */
+  readonly note?: { readonly text: string; readonly onHover?: (on: boolean) => void } | null;
 }
 
 /**
@@ -121,6 +127,7 @@ export function LayerOrderDialogFrame({
   applyWaits = null,
   applying,
   applyRefusal,
+  note = null,
 }: LayerOrderDialogFrameProps) {
   const { t } = useTranslation();
   const notice = sessionNotice(t, status, { letters, name });
@@ -179,6 +186,18 @@ export function LayerOrderDialogFrame({
           <p className={styles.footNote} role="alert">
             <CircleAlert size={14} className={styles.footIcon} aria-hidden="true" />
             {applyRefusalText(t, applyRefusal)}
+          </p>
+        ) : note && status.kind === 'ready' ? (
+          <p
+            className={styles.footNote}
+            data-tone="info"
+            role="status"
+            title={note.text}
+            onPointerEnter={() => note.onHover?.(true)}
+            onPointerLeave={() => note.onHover?.(false)}
+          >
+            <Info size={14} className={styles.footIcon} data-tone="info" aria-hidden="true" />
+            <span className={styles.footText}>{note.text}</span>
           </p>
         ) : undefined
       }
