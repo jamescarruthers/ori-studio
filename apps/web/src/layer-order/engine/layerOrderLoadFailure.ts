@@ -25,7 +25,8 @@
  * Small and engine-free: the dialog's gateway imports it with the page.
  */
 import { isChunkLoadError } from '../../lib/importOrReload';
-import { LAYER_ORDER_CALL_FAILURES, isLayerOrderEngineTrapped } from './layerOrderEngine';
+// The leaf, not the contract: the gateway imports this with the page.
+import { LAYER_ORDER_CALL_FAILURES, isLayerOrderEngineTrapped } from './layerOrderCallFailures';
 
 /**
  * How browsers word a fetch that did not happen, and a response that was not

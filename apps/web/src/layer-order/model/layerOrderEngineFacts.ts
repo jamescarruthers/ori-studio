@@ -75,15 +75,14 @@ export { constraintSeen, constraintVerb, keepTrying };
 /**
  * The limits each call the model asks for runs with. The open, preview,
  * commit and restore are the contract's (`LAYER_ORDER_LIMITS`); explain and a
- * step search like a preview; a count slice is short, so the worker answers
- * between the user's own calls (E7: there is no count worker). Phase gate 2
- * (E8) measures these in wasm and replaces them.
+ * step search like a preview. A count slice is not here: it is phase gate 2's
+ * `LAYER_ORDER_COUNT_SLICE` (`layer-order/layerOrderBudgets.ts`), its one
+ * source.
  */
 export const LAYER_ORDER_MODEL_LIMITS = {
   ...LAYER_ORDER_LIMITS,
   explain: LAYER_ORDER_LIMITS.preview,
   step: LAYER_ORDER_LIMITS.preview,
-  slice: { maxNodes: 20_000, fastNodes: 128, deadlineMs: 50 },
 } as const satisfies Record<string, LayerOrderLimits>;
 
 // ---------------------------------------------------------------------------
@@ -131,9 +130,16 @@ export interface LayerOpenFacts {
   readonly constraints: readonly LayerConstraint[];
   /** Set for a restore: how it went, and the rows it did not apply. */
   readonly restore: LayerRestoreFacts | null;
+  /**
+   * The faces in letter order, A first: what a sentence's and a row's objects
+   * are sorted by (D21). The hook reads it from the paper scene it draws,
+   * `faceLettersOf(scene).inLetterOrder` (`engine/faceIndex.ts`), at every
+   * open and restore.
+   */
+  readonly letterOrder: readonly LayerFace[];
 }
 
-/** A proof that no order fits: `constraints` index the list checked (committed first, a candidate last). */
+/** A proof that no order fits: `constraints` index the list checked (the committed list, then the sentence's candidates). */
 export interface LayerCantFitFacts {
   readonly verdict: 'cant_fit';
   readonly constraints: readonly number[];
@@ -205,11 +211,16 @@ export type LayerOpenAnswer =
       readonly constraints: LayerRestored['constraints'] | readonly LayerConstraint[];
     });
 
-/** The facts of an open (`layer_open`, `layer_open_showing`) or a restore, with the stacks the hook read after it. */
+/**
+ * The facts of an open (`layer_open`, `layer_open_showing`) or a restore,
+ * with the stacks and the letters (`faceLettersOf(scene).inLetterOrder`) the
+ * hook read after it.
+ */
 export function openFacts(
   opened: LayerOpenAnswer,
   stacks: LayerSidesStacks,
-  record: LayerOrderRecord | null
+  record: LayerOrderRecord | null,
+  letterOrder: readonly LayerFace[]
 ): LayerOpenFacts {
   const restored = 'carried' in opened ? opened : null;
   return {
@@ -220,6 +231,7 @@ export function openFacts(
     stacks,
     constraints: restored ? restoredConstraints(restored.constraints) : [],
     restore: restored ? restoreFacts(restored, record) : null,
+    letterOrder,
   };
 }
 

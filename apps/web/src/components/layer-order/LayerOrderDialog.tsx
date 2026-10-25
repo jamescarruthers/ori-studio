@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LayerOrderDialogOpening } from '../../layer-order/dialog/layerOrderDialogStore';
 import { requestFaceLetters } from '../../layer-order/dialog/layerOrderSession';
 import { useLayerOrderPanesCheck } from '../../layer-order/dialog/useLayerOrderPanesCheck';
@@ -8,6 +9,7 @@ import type { LayerPanesView } from '../../layer-order/panes/layerPaneMarks';
 import { layerOrderOpeningView } from '../../layer-order/panes/useLayerOrderPanes';
 import { useModalFullScreen } from '../ui/ModalFrame';
 import { LayerOrderDialogFrame, type LayerOrderPhonePane } from './LayerOrderDialogFrame';
+import { applyWaitText } from './layerOrderNotices';
 import { LayerOrderPanes } from './LayerOrderPanes';
 import { LayerOrderViewTools } from './LayerOrderViewTools';
 
@@ -28,6 +30,7 @@ import { LayerOrderViewTools } from './LayerOrderViewTools';
  * with a worker of its own, terminated as it closes.
  */
 export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening }) {
+  const { t } = useTranslation();
   const { request } = opening;
   const session = useLayerOrderSession(request);
   const settle = useLayerOrderSettle(opening, session);
@@ -64,6 +67,7 @@ export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening
       onRetry={() => session.reopen()}
       onCancel={settle.cancel}
       onApply={() => void settle.apply()}
+      applyWaits={settle.waits && applyWaitText(t, settle.waits)}
       applying={settle.applying}
       applyRefusal={settle.applyRefusal}
     />

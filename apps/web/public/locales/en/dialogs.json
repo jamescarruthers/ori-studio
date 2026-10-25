@@ -499,6 +499,8 @@
   },
   "layerOrder": {
     "apply": "Apply",
+    "applyBusy": "Wait for the check to finish",
+    "applyClash": "Remove one of the clashing constraints to apply",
     "applying": "Saving the layer order…",
     "applyNothing": "Nothing to apply",
     "applyOpening": "Nothing to apply yet",
@@ -506,6 +508,7 @@
       "other": "Couldn’t save this layer order. Nothing was changed.",
       "tooLarge": "This layer order is too large to save with the figure."
     },
+    "applyUnsettled": "The saved constraints haven’t been checked yet",
     "cancel": "Cancel",
     "creaseCanvas": "The crease pattern. Pick a face on it; drag to pan, scroll to zoom.",
     "creasePane": "Crease pattern",

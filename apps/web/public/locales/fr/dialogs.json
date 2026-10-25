@@ -510,6 +510,8 @@
   },
   "layerOrder": {
     "apply": "Appliquer",
+    "applyBusy": "Attendez la fin de la vérification",
+    "applyClash": "Retirez l’une des contraintes en conflit pour appliquer",
     "applying": "Enregistrement de l’ordre des couches…",
     "applyNothing": "Rien à appliquer",
     "applyOpening": "Rien à appliquer pour l’instant",
@@ -517,6 +519,7 @@
       "other": "Impossible d’enregistrer cet ordre des couches. Rien n’a été modifié.",
       "tooLarge": "Cet ordre des couches est trop volumineux pour être enregistré avec la figure."
     },
+    "applyUnsettled": "Les contraintes enregistrées n’ont pas encore été vérifiées",
     "cancel": "Annuler",
     "creaseCanvas": "Le patron de plis. Choisissez-y une face ; faites glisser pour déplacer, faites défiler pour zoomer.",
     "creasePane": "Patron de plis",

@@ -510,6 +510,8 @@
   },
   "layerOrder": {
     "apply": "Aplicar",
+    "applyBusy": "Aguarde a verificação terminar",
+    "applyClash": "Remova uma das restrições em conflito para aplicar",
     "applying": "Salvando a ordem das camadas…",
     "applyNothing": "Nada para aplicar",
     "applyOpening": "Ainda não há nada para aplicar",
@@ -517,6 +519,7 @@
       "other": "Não foi possível salvar esta ordem das camadas. Nada foi alterado.",
       "tooLarge": "Esta ordem das camadas é grande demais para ser salva com a figura."
     },
+    "applyUnsettled": "As restrições salvas ainda não foram verificadas",
     "cancel": "Cancelar",
     "creaseCanvas": "O padrão de vincos. Escolha uma face nele; arraste para mover, role para aplicar zoom.",
     "creasePane": "Padrão de vincos",

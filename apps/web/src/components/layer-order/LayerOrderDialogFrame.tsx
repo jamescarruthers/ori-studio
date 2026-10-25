@@ -12,7 +12,7 @@ import { Button } from '../ui/Button';
 import { ModalFrame } from '../ui/ModalFrame';
 import { Notice } from '../ui/Notice';
 import { SegmentedControl } from '../ui/SegmentedControl';
-import { applyRefusalText, sessionNotice } from './layerOrderNotices';
+import { applyRefusalText, applyWaitText, sessionNotice } from './layerOrderNotices';
 import styles from './LayerOrderDialogFrame.module.css';
 
 /** The one pane a phone-width dialog shows at a time (D6). */
@@ -77,7 +77,11 @@ export interface LayerOrderDialogFrameProps {
   readonly onRetry: () => void;
   readonly onCancel: () => void;
   readonly onApply: () => void;
-  /** Why Apply waits, beyond the session's own state (U10: a clash, a check running). */
+  /**
+   * Why Apply waits once the session is open, as a title (`applyWaitText`):
+   * the shell's, from what it opened on (`openedApplyBlocker`), until U10's
+   * inspector passes the reducer's (`applyBlocker`). Null when it can apply.
+   */
   readonly applyWaits?: string | null;
   readonly applying: boolean;
   readonly applyRefusal: LayerRefusal | null;
@@ -123,8 +127,8 @@ export function LayerOrderDialogFrame({
   const applyBlocked = applyBlockedReason();
 
   function applyBlockedReason(): string | null {
-    if (status.kind === 'opening') return t('dialogs:layerOrder.applyOpening', 'Nothing to apply yet');
-    if (status.kind !== 'ready') return t('dialogs:layerOrder.applyNothing', 'Nothing to apply');
+    if (status.kind === 'opening') return applyWaitText(t, 'opening');
+    if (status.kind !== 'ready') return applyWaitText(t, 'refused');
     if (applying) return t('dialogs:layerOrder.applying', 'Saving the layer order…');
     return applyWaits;
   }
