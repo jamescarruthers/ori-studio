@@ -952,7 +952,7 @@ H3's new rehydrate, so it can only follow H3.
 - [ ] U3a: the native-menu guard (to main)
 - [x] U3b: dialog keys (#498)
 - [x] H1: record, host contract, file formats (#496)
-- [ ] U4: dialog shell
+- [x] U4: dialog shell (#516)
 - [x] U5: engine client (#506)
 - [x] U6: engine wiring (#511)
 - [x] U7: PaperPane (#501)
