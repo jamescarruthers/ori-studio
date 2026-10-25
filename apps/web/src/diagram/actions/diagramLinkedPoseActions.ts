@@ -95,6 +95,12 @@ export interface DiagramLinkedPoseState {
   mirrorAxes?: readonly number[] | null;
   /** A live view of the step shows — 3D, or the simulator — which Set Upright turns. */
   liveView?: boolean;
+  /**
+   * The step keeps a layer order chosen in the Layer order dialog (H7), from
+   * its saved source: its order is the record's, so ‹ › wait for a stepper
+   * that keeps to its constraints (D9's stop-gap, until H9).
+   */
+  constrained?: boolean;
 }
 
 /**
@@ -240,6 +246,9 @@ export function buildDiagramLinkedPoseActions(
     toggle: true,
   });
 
+  // A layer order chosen in the dialog is the record's, not a place in the kernel's enumeration (D9).
+  const constrained = t('panels:diagram.pose.layerOrderConstrained', 'Step through solutions in Layer order…');
+
   switch (render.mode) {
     case 'defox': return modes;
     case 'crease-pattern':
@@ -258,17 +267,20 @@ export function buildDiagramLinkedPoseActions(
         // before, on to the next — the search's next when none is found past
         // this one — the last wrapping round to the first, as Edit's does.
         action('previous-solution', t('panels:diagram.pose.previousSolution', 'Previous Layer Order'), {
-          disabled: render.foldCase <= 1,
-          hint: t('panels:diagram.pose.firstSolution', 'This is its first layer order'),
+          disabled: state.constrained === true || render.foldCase <= 1,
+          hint: state.constrained ? constrained : t('panels:diagram.pose.firstSolution', 'This is its first layer order'),
         }),
         action('next-solution', t('panels:diagram.pose.nextLayerOrder', 'Next Layer Order'), {
           disabled:
-            state.solutions !== null &&
-            (state.solutions.none === true ||
-              (!state.solutions.hasNext && state.solutions.discovered <= 1 && render.foldCase === 1)),
-          hint: state.solutions?.none
-            ? t('panels:diagram.pose.noSolution', 'This fold has no layer order')
-            : t('panels:diagram.pose.onlySolution', 'This fold has one layer order'),
+            state.constrained === true ||
+            (state.solutions !== null &&
+              (state.solutions.none === true ||
+                (!state.solutions.hasNext && state.solutions.discovered <= 1 && render.foldCase === 1))),
+          hint: state.constrained
+            ? constrained
+            : state.solutions?.none
+              ? t('panels:diagram.pose.noSolution', 'This fold has no layer order')
+              : t('panels:diagram.pose.onlySolution', 'This fold has one layer order'),
         }),
         spreadLayers,
         reset,

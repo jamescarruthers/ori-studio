@@ -34,6 +34,7 @@ export function FieldRow({
   htmlFor,
   noteId,
   note,
+  noteKind = 'reason',
   overridable = false,
   kind,
   disabled = false,
@@ -67,6 +68,12 @@ export function FieldRow({
    * the row is overridden.
    */
   note?: string;
+  /**
+   * What the note is: a `reason` to be read (the default), in the label's
+   * ink, never dimmed, wrapped rather than cut; or a `fact` about the value
+   * ("3 constraints"), quiet on one line, dimmed with the row.
+   */
+  noteKind?: 'reason' | 'fact';
   /**
    * A toggle that can be overridden, whether or not it is now. Its row keeps
    * the note's line under the label while the note is empty, so the row is
@@ -195,7 +202,7 @@ export function FieldRow({
       {noteLine && (
         <span
           className={styles.note}
-          data-field-note={overridden ? 'overridden' : note !== undefined ? 'reason' : ''}
+          data-field-note={overridden ? 'overridden' : note !== undefined ? noteKind : ''}
           id={noteId}
         >
           {overridden ? t('common:fieldRow.overridden', 'Overridden') : note}

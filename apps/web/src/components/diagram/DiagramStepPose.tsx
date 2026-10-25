@@ -2,6 +2,10 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DiagramPoseAction } from '../../diagram/actions/diagramPoseActions';
 import type { DiagramLinkedPoseAction } from '../../diagram/actions/diagramLinkedPoseActions';
+import type {
+  DiagramStepLayerOrderEntry,
+  DiagramStepLayerOrderRow,
+} from '../../diagram/actions/diagramStepLayerOrderActions';
 import { useOpenLinkedPose } from '../../diagram/capture/openLinkedPose';
 import { useDiagramFoldStepPose } from '../../diagram/fold/useDiagramFoldStepPose';
 import { isLockedStep, type DiagramStep } from '../../diagram/document/diagramDocument';
@@ -11,6 +15,7 @@ import { useReferencesStepWays } from '../../diagram/references/useReferencesSte
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { DiagramWayRow } from './DiagramWayChooser';
+import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { FieldRow, NumberRow, SegmentedRow } from '../ui/fieldRows';
 import styles from './DiagramStepPose.module.css';
@@ -52,11 +57,14 @@ interface SideChoice {
 export function DiagramStepPose({
   step,
   actions,
+  layerOrder = null,
   main = false,
 }: {
   step: DiagramStep;
   /** An upload's or a References step's pose verbs (`useDiagramPoseActions`). */
   actions: readonly DiagramPoseAction[];
+  /** A folded linked step's way into the Layer order dialog, and its note (`useDiagramStepLayerOrder`). */
+  layerOrder?: DiagramStepLayerOrderRow | null;
   main?: boolean;
 }) {
   const { t } = useTranslation();
@@ -156,13 +164,26 @@ export function DiagramStepPose({
         <RotationRow turn={turn} disabled={turnHeld || waiting} onCommit={linkedPose.rotateTo} />
       )}
       {side !== null && sideRow({ side, turnOver })}
-      {render.mode === 'folded-flat' && !main && (
-        // Any layer order found, back or on (D23), as Pose's own pager has them.
-        <FieldRow label={t('panels:diagram.pose.layerOrder', 'Layer order')} kind="text">
-          <span className={styles.pager}>
-            {layerVerb(linked.find((action) => action.id === 'previous-solution'), ChevronLeft)}
-            <span className={styles.pagerLabel}>{linkedPose.layerOrder?.count ?? render.foldCase}</span>
-            {layerVerb(linked.find((action) => action.id === 'next-solution'), ChevronRight)}
+      {(render.mode === 'folded-flat' || render.mode === 'folded-3d') && !main && layerOrder && (
+        // Any layer order found, back or on (D23), as Pose's own pager has them; then the
+        // Layer order dialog, always there so the pager never moves (H7, D13).
+        <FieldRow
+          label={t('panels:diagram.pose.layerOrder', 'Layer order')}
+          kind="text"
+          disabled={layerOrder.edit.disabled}
+          note={layerOrder.note?.text}
+          noteKind={layerOrder.note?.reason ? 'reason' : 'fact'}
+        >
+          <span className={styles.layerOrder}>
+            {render.mode === 'folded-flat' && (
+              <span className={styles.pager}>
+                {layerVerb(linked.find((action) => action.id === 'previous-solution'), ChevronLeft)}
+                {/* A record's order has no place among the kernel's to read out (D11). */}
+                {linkedPose.layerOrder && <span className={styles.pagerLabel}>{linkedPose.layerOrder.count}</span>}
+                {layerVerb(linked.find((action) => action.id === 'next-solution'), ChevronRight)}
+              </span>
+            )}
+            <LayerOrderEntry entry={layerOrder.edit} />
           </span>
         </FieldRow>
       )}
@@ -203,6 +224,27 @@ function RotationRow({
       normalize={(degrees) => ((Math.round(degrees * 10) / 10) % 360 + 360) % 360}
       onCommit={onCommit}
     />
+  );
+}
+
+/**
+ * A way into the Layer order dialog, as a word button (no icon says "layer
+ * order"): refused rather than disabled, so it keeps the focus a press gave
+ * it, and says why on hover.
+ */
+function LayerOrderEntry({ entry }: { entry: DiagramStepLayerOrderEntry }) {
+  const held = entry.disabled || entry.waiting;
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      aria-label={entry.name}
+      title={held && entry.hint ? entry.hint : entry.name}
+      aria-disabled={held || undefined}
+      onClick={entry.run}
+    >
+      {entry.label}
+    </Button>
   );
 }
 
