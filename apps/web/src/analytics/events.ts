@@ -1984,6 +1984,16 @@ export const ANALYTICS_EVENTS = {
    */
   canvasObjectPropertyChanged: 'canvas object property changed',
   /**
+   * One of a selected canvas object's verbs was pressed in the Properties
+   * pane's header (Export…, Duplicate, Delete on a folded figure).
+   *
+   * The same verbs are on the object's floating toolbar and its menu; this is
+   * what says whether people reach for them in the pane too, which is the
+   * question putting them there raises. Once per press. `object_kind` is the
+   * kind table's key and `action` the verb's id: enums by construction.
+   */
+  canvasObjectActionUsed: 'canvas object action used',
+  /**
    * The phone layout's tool sheet was opened.
    *
    * Phone-only, because that layout is the only one without a tool rail — so

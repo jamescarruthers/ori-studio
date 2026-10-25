@@ -11,10 +11,17 @@
  * Nothing here knows about the crease pattern, so a later Design-side
  * inspector can reuse the field and protocol types unchanged.
  *
- * Seven field kinds and no action kind: the sheet holds *properties* — things
- * with a value — and verbs (delete, duplicate, refold, stacking, Solve) keep
- * the toolbars, chips and menus that already own them. A property that cannot
- * be expressed as one of the seven is a sign it is not a property.
+ * Fields hold *properties* — things with a value — in eight kinds, and a
+ * property that cannot be expressed as one of them is a sign it is not a
+ * property. Verbs on the object as a whole (Export…, Duplicate, Delete) may
+ * also sit in the sheet's header, as `actions`, so a pane can read like the
+ * Diagram's Step pane, whose header carries its step's verbs (Zach,
+ * 2026-10-25: "id like it to look the same way that the diagram sidebar
+ * looks"). They are the object's catalog verbs, the same ones its toolbar and
+ * menu run, never new ones; and the one field kind that is pressed rather
+ * than set, the stepper, steps a value — which layer order shows — rather
+ * than standing in for a verb. Every one of these parts is optional: a kind
+ * that uses none renders as it always has.
  */
 
 /** The answer `foldedFigureAppearance.ts` gives, generalised: hide 'not-applicable', disable 'unsupported' with a reason. */
@@ -50,7 +57,7 @@ interface FieldBase {
 }
 
 /**
- * Three commit protocols. Which one a field uses is data, so the renderer never
+ * Four commit protocols. Which one a field uses is data, so the renderer never
  * guesses how a control commits.
  */
 export interface DiscreteCommit<T> {
@@ -89,16 +96,26 @@ export interface PropertyOption {
   label: string;
 }
 
-export type ToggleField = FieldBase & {
-  kind: 'toggle';
-  /**
-   * The value the row shows once `reset` has cleared it — what it follows
-   * while nothing is pinned. A toggle offers no reset button (`FieldRow`), so
-   * while `reset` is offered, switching to this value runs `reset` rather than
-   * pinning a value that merely agrees with it.
-   */
-  inherited?: boolean;
-} & DiscreteCommit<boolean>;
+/**
+ * A short line under a row's label, read with it (`FieldRow.note`): why a
+ * row cannot be used now, or what holds it. Only the kinds whose row has a
+ * note line take one.
+ */
+interface NotedField {
+  note?: string;
+}
+
+export type ToggleField = FieldBase &
+  NotedField & {
+    kind: 'toggle';
+    /**
+     * The value the row shows once `reset` has cleared it — what it follows
+     * while nothing is pinned. A toggle offers no reset button (`FieldRow`), so
+     * while `reset` is offered, switching to this value runs `reset` rather than
+     * pinning a value that merely agrees with it.
+     */
+    inherited?: boolean;
+  } & DiscreteCommit<boolean>;
 /** `value: null` is the mixed state — nothing chosen, the placeholder shown. */
 export type SelectField = FieldBase & {
   kind: 'select';
@@ -108,6 +125,12 @@ export type SelectField = FieldBase & {
 export type SegmentedField = FieldBase & {
   kind: 'segmented';
   options: readonly PropertyOption[];
+  /**
+   * `stacked` puts the label over the control and the control across the
+   * row, as the Step pane's Show as is: for choices too wide to sit beside
+   * their label in a narrow pane. Beside it otherwise.
+   */
+  layout?: 'beside' | 'stacked';
 } & DiscreteCommit<string | null>;
 export type NumberField = FieldBase & {
   kind: 'number';
@@ -140,6 +163,34 @@ export type ColorField = FieldBase & {
   resetWhileUnsupported?: boolean;
 } & ContinuousCommit<string>;
 
+/** One of a stepper's two verbs: back to the one before, or on to the next. */
+export interface StepperVerb {
+  /** Translated; the button's accessible name. */
+  label: string;
+  /** Refused: kept in the tab order, so it keeps a press's focus, and a press does nothing. */
+  disabled: boolean;
+  /** Translated; shown in place of the label while refused. */
+  hint?: string;
+  /** One recorded change, under the verb's own undo label. */
+  run(): void;
+}
+
+export interface SteppedCommit {
+  /** A stepper: each press of ‹ or › is one commit, under that verb's own undo label. */
+  protocol: 'stepped';
+  /** Where it stands, read out between the two ("2 of 5+"). */
+  value: string;
+  previous: StepperVerb;
+  next: StepperVerb;
+}
+
+/**
+ * A value stepped through one at a time, ‹ where it stands › — a folded
+ * figure's layer orders, as the Diagram's pager steps a flat fold's. On an
+ * 'unsupported' field both verbs are refused, with `reason` as their hint.
+ */
+export type StepperField = FieldBase & NotedField & { kind: 'stepper' } & SteppedCommit;
+
 export type PropertyField =
   | ToggleField
   | SelectField
@@ -147,7 +198,8 @@ export type PropertyField =
   | NumberField
   | TextField
   | SliderField
-  | ColorField;
+  | ColorField
+  | StepperField;
 
 export type PropertyFieldKind = PropertyField['kind'];
 
@@ -158,7 +210,30 @@ export interface PropertySection {
   description?: string;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  /**
+   * Rows a little apart rather than ruled edge to edge, as the Diagram Step
+   * pane's Pose section has them.
+   */
+  spaced?: boolean;
   fields: readonly PropertyField[];
+}
+
+/**
+ * A verb on the object itself, in the sheet's header — Export…, Duplicate,
+ * Delete — taken from the object's own catalog, as its toolbar and menu take
+ * them.
+ */
+export interface PropertySheetAction {
+  /** Stable per kind ('export', 'duplicate', …). Doubles as the analytics `action` enum. */
+  id: string;
+  /** Translated; the button's accessible name. */
+  label: string;
+  /** An icon name, resolved by the renderer. */
+  icon: string;
+  disabled: boolean;
+  /** Translated; the title while disabled. */
+  hint?: string;
+  run(): void;
 }
 
 export interface PropertySheet {
@@ -170,6 +245,8 @@ export interface PropertySheet {
   subtitle?: string;
   /** An icon name, resolved by the renderer. */
   icon?: string;
+  /** The object's verbs, at the header's end. */
+  actions?: readonly PropertySheetAction[];
   sections: readonly PropertySection[];
 }
 
