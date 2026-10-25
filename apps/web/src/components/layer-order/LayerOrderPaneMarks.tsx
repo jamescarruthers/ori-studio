@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CpOverlayView } from '../../cp-workspace/CreasePatternWebglCanvas';
+import { observeResizeDeferred } from '../ui/observeResizeDeferred';
 import type { Point } from '../../lib/geometry';
 import { insetRing, ringInsetPx } from '../../layer-order/panes/faceRing';
 import { placeLabels, type LayerPlacedLabel } from '../../layer-order/panes/layerPaneLabels';
@@ -28,10 +29,27 @@ const pointsOf = (ring: readonly Point[]) => ring.map(({ x, y }) => `${x.toFixed
  * crease's colour, and a letter's chip keeps its size and clears the others
  * (`layerPaneLabels.ts`). The tints are the canvas's (`PaperPane`'s fills).
  *
- * Nothing here takes a pointer: the canvas under it does.
+ * Nothing here takes a pointer: the canvas under it does. Its box is
+ * measured, a frame late, only so a letter set beside its face stays on
+ * screen.
  */
 export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; view: CpOverlayView }) {
   const project = useMemo(() => projector(view), [view]);
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const [frame, setFrame] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!element) return;
+    const measure = () =>
+      setFrame((was) =>
+        was && was.width === element.clientWidth && was.height === element.clientHeight
+          ? was
+          : { width: element.clientWidth, height: element.clientHeight }
+      );
+    measure();
+    // jsdom has none; the box is then measured once.
+    if (typeof ResizeObserver === 'undefined') return;
+    return observeResizeDeferred(element, measure);
+  }, [element]);
   const rings = useMemo(
     () =>
       pane.rings.flatMap(({ face, ring, ink, widthPx }) => {
@@ -45,12 +63,12 @@ export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; v
     [pane.flash, project]
   );
   const labels: LayerPlacedLabel[] = useMemo(
-    () => placeLabels(pane.labels, pane.labelSpots, pane.letterOf, project),
-    [pane.labels, pane.labelSpots, pane.letterOf, project]
+    () => placeLabels(pane.labels, pane.labelSpots, pane.letterOf, project, frame),
+    [pane.labels, pane.labelSpots, pane.letterOf, project, frame]
   );
 
   return (
-    <div className={styles.marks} aria-hidden="true" data-layer-order-marks={pane.id}>
+    <div ref={setElement} className={styles.marks} aria-hidden="true" data-layer-order-marks={pane.id}>
       <svg className={styles.layer}>
         {flash && (
           // Keyed by the flash, so each one fades from the start.

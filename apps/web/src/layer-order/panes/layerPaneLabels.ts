@@ -428,6 +428,16 @@ function segmentCrossesBox(a: Point, b: Point, minX: number, minY: number, maxX:
   return true;
 }
 
+/** Whether a chip of `size` centred at `at` lies inside `frame`, the pane's box, CSS px. */
+function chipInFrame(at: Point, size: { width: number; height: number }, frame: { width: number; height: number }): boolean {
+  return (
+    at.x - size.width / 2 >= 0 &&
+    at.y - size.height / 2 >= 0 &&
+    at.x + size.width / 2 <= frame.width &&
+    at.y + size.height / 2 <= frame.height
+  );
+}
+
 /** Points beside an on-screen outline's box where a chip of `size` sits clear of it: above, below, right, left. */
 function besideSpots(outline: readonly Point[], size: { width: number; height: number }): Point[] {
   if (outline.length === 0) return [];
@@ -460,12 +470,16 @@ function besideSpots(outline: readonly Point[], size: { width: number; height: n
  * another face's paper: so a hidden face never takes the one spot of the
  * face on top there. The earliest come out on top, so they go last in the
  * answer, which is the order to draw them in.
+ *
+ * `frame`, the pane's box, keeps a letter set beside its face on screen: a
+ * face along the pane's edge takes its letter on the side away from it.
  */
 export function placeLabels(
   labels: readonly LayerPaneLabel[],
   spotsOf: (face: LayerFace) => LayerLabelSpots | null,
   textOf: (face: LayerFace) => string,
-  project: (point: Point) => Point
+  project: (point: Point) => Point,
+  frame: { readonly width: number; readonly height: number } | null = null
 ): LayerPlacedLabel[] {
   const rank = ({ face, keep }: LayerPaneLabel) => (keep ? 0 : 2) + (spotsOf(face)?.visible === false ? 1 : 0);
   const ordered = labels
@@ -493,10 +507,11 @@ export function placeLabels(
     let at = inside.find((p) => clear(box(p))) ?? null;
     let off = false;
     if (!at && keep) {
-      // Beside the face, clear of the rest; else inside it over another letter; else beside it whatever it covers.
-      const beside = besideSpots(spots.outline.map(project), size);
-      const besideClear = beside.find((p) => clear(box(p)));
-      at = besideClear ?? inside[0] ?? beside[0] ?? null;
+      // Beside the face on screen, clear of the rest; else inside it over another letter; else beside it whatever it covers.
+      const around = besideSpots(spots.outline.map(project), size);
+      const onScreen = frame ? around.filter((p) => chipInFrame(p, size, frame)) : around;
+      const besideClear = onScreen.find((p) => clear(box(p)));
+      at = besideClear ?? inside[0] ?? onScreen[0] ?? around[0] ?? null;
       off = at !== null && (besideClear !== undefined || inside.length === 0);
     }
     if (!at) continue;

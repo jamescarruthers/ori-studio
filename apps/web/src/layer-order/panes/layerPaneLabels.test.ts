@@ -314,6 +314,19 @@ describe('placing the letters', () => {
     expect(chip.x).toBe(104);
   });
 
+  it('keeps a letter set beside its face on screen: a face along the pane’s top takes its letter below', () => {
+    const thin = square(100, 0, 8);
+    const spotsOf = () => ({ visible: true, spots: [{ at: { x: 104, y: 4 }, region: thin }], outline: thin });
+    const label: LayerPaneLabel[] = [{ face: 0, tone: 'pick', keep: true }];
+    // With no frame, above it, off the top.
+    const anywhere = placeLabels(label, spotsOf, () => 'A', (p) => p)[0]!;
+    expect(anywhere.y - anywhere.height / 2).toBeLessThan(0);
+    const onScreen = placeLabels(label, spotsOf, () => 'A', (p) => p, { width: 400, height: 400 })[0]!;
+    expect(onScreen.off).toBe(true);
+    expect(onScreen.y - onScreen.height / 2).toBeGreaterThan(8);
+    expect(onScreen.x).toBe(104);
+  });
+
   it('places in the pane’s pixels, through the projection', () => {
     const placed = placeLabels(
       [{ face: 0, tone: 'pick', keep: true }],
