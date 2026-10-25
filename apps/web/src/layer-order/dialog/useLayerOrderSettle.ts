@@ -33,13 +33,21 @@ import {
 import { settleLayerOrderDialog, type LayerOrderDialogOpening } from './layerOrderDialogStore';
 import type { LayerOrderSession } from './useLayerOrderSession';
 
+/**
+ * How an Apply went: the dialog is answered (`settled`: applied, or nothing to
+ * write), the save refused it and the dialog stays open with the reason
+ * (`refused`), or it did nothing (`skipped`: already applying, no session, or
+ * saved rows that wait).
+ */
+export type LayerOrderApplyOutcome = 'settled' | 'refused' | 'skipped';
+
 export interface LayerOrderSettle {
   readonly cancel: () => void;
   /**
    * Apply, with what is on screen now (an inspector's rows and order); the
-   * open's own when left out.
+   * open's own when left out. Resolves how it went.
    */
-  readonly apply: (now?: LayerOrderAtApply) => Promise<void>;
+  readonly apply: (now?: LayerOrderAtApply) => Promise<LayerOrderApplyOutcome>;
   /**
    * Why the shell's Apply waits on what the session opened on (D10, U9's
    * reasons): a restore whose saved rows `clash`, or that left them
@@ -65,28 +73,29 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
   }, [id]);
 
   const apply = useCallback(
-    async (now?: LayerOrderAtApply) => {
-      if (applying || status.kind !== 'ready') return;
+    async (now?: LayerOrderAtApply): Promise<LayerOrderApplyOutcome> => {
+      if (applying || status.kind !== 'ready') return 'skipped';
       // Saved rows that clashed or were never checked: never written as they stand.
-      if (now === undefined && waits !== null) return;
+      if (now === undefined && waits !== null) return 'skipped';
       const { open } = status;
       const baseline = openedBaseline(open.facts, recordNeedsAttentionOf(request.record));
       const onScreen = now ?? { constraints: open.facts.constraints, carried: baseline.carried, stacks: open.stacks };
       if (applyChangedNothing(baseline, onScreen)) {
         settleLayerOrderDialog(id, { kind: 'unchanged' });
-        return;
+        return 'settled';
       }
       setApplying(true);
       setApplyRefusal(null);
       const answer = await save();
       setApplying(false);
       // No session, or it went away while saving: the session's status says which.
-      if (!answer) return;
+      if (!answer) return 'skipped';
       if (answer.kind === 'refused') {
         setApplyRefusal(answer.refusal);
-        return;
+        return 'refused';
       }
       settleLayerOrderDialog(id, { kind: 'applied', applied: answer.applied });
+      return 'settled';
     },
     [applying, id, request, save, status, waits]
   );
