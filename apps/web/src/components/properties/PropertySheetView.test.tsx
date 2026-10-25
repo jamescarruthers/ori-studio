@@ -655,4 +655,50 @@ describe('PropertySheetView', () => {
     // It opens what it opens; it changes nothing on the figure.
     expect(onCommit).not.toHaveBeenCalled();
   });
+
+  it('draws a warning subtitle, and a section’s notice after its rows with the fix it offers', () => {
+    const review = vi.fn();
+    const field: PropertyField = {
+      id: 'layerOrder',
+      kind: 'stepper',
+      label: 'Layer order',
+      support: 'supported',
+      protocol: 'stepped',
+      readout: '',
+    };
+    const onCommit = render({
+      ...sheetOf(),
+      subtitle: '2 layer constraints need attention',
+      subtitleTone: 'warning',
+      sections: [
+        {
+          id: 'pose',
+          title: 'Pose',
+          spaced: true,
+          fields: [field],
+          notice: {
+            tone: 'warning',
+            text: '2 layer constraints need attention since the creases changed.',
+            actions: [{ id: 'review', label: 'Review…', disabled: false, run: review }],
+          },
+        },
+      ],
+    });
+    const subtitle = container?.querySelector('[data-property-sheet-subtitle]');
+    expect(subtitle?.getAttribute('data-tone')).toBe('warning');
+    const notice = container?.querySelector('[role="status"][data-tone="warning"]');
+    expect(notice?.textContent).toContain('2 layer constraints need attention since the creases changed.');
+    // After the section's rows.
+    const row = container?.querySelector('[data-field-row]');
+    expect(row && notice && row.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const button = [...(notice?.querySelectorAll('button') ?? [])].find((each) => each.textContent === 'Review…');
+    act(() => button?.click());
+    expect(review).toHaveBeenCalledTimes(1);
+    expect(onCommit).not.toHaveBeenCalled();
+
+    // Left out, neither draws.
+    render(sheetOf(field));
+    expect(container?.querySelector('[data-property-sheet-subtitle]')?.hasAttribute('data-tone')).toBe(false);
+    expect(container?.querySelector('[role="status"][data-tone]')).toBeNull();
+  });
 });
