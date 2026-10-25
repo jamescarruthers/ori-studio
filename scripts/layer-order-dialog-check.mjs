@@ -757,6 +757,116 @@ async function viewTool(dialog, name) {
 }
 
 /**
+ * How many of a crease pattern's crease pixels `marked` changes (D20: no tint,
+ * ring or letter ever veils a crease). A crease pixel is one far from the
+ * pane's ground in `plain` (no marks) that `tinted` (every face with choices
+ * faintly tinted, under the creases) leaves exactly as it was: a pixel the
+ * crease covers whole, not one its edge shares with the paper beside it.
+ * Answers how many there are, how many changed, and where a few of those are.
+ */
+async function creasePixelsChanged(page, plain, tinted, marked) {
+  return page.evaluate(
+    async ({ plain, tinted, marked }) => {
+      const load = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+        return { width: image.width, rgba: context.getImageData(0, 0, image.width, image.height).data };
+      };
+      const [a, b, c] = await Promise.all([load(plain), load(tinted), load(marked)]);
+      const counts = new Map();
+      for (let k = 0; k < a.rgba.length; k += 4) {
+        const key = (a.rgba[k] << 16) | (a.rgba[k + 1] << 8) | a.rgba[k + 2];
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+      const ground = [...counts].sort((x, y) => y[1] - x[1])[0][0];
+      const g = [(ground >> 16) & 255, (ground >> 8) & 255, ground & 255];
+      const delta = (x, y, k) => Math.max(...[0, 1, 2].map((ch) => Math.abs(x.rgba[k + ch] - y.rgba[k + ch])));
+      let creases = 0;
+      let changed = 0;
+      const at = [];
+      for (let k = 0; k < a.rgba.length; k += 4) {
+        const far = Math.max(...[0, 1, 2].map((ch) => Math.abs(a.rgba[k + ch] - g[ch]))) > 60;
+        if (!far || delta(a, b, k) > 2) continue;
+        creases += 1;
+        if (delta(b, c, k) > 2) {
+          changed += 1;
+          if (at.length < 6) at.push([(k / 4) % a.width, Math.floor(k / 4 / a.width)]);
+        }
+      }
+      return { creases, changed, at };
+    },
+    { plain: plain.toString('base64'), tinted: tinted.toString('base64'), marked: marked.toString('base64') }
+  );
+}
+
+/**
+ * D20 on kabuto's crease pattern, at line width 1 and 3: a face pointed at, a
+ * row hovered, and a subject with two objects picked (their tints, rings and
+ * letters) change no crease pixel. Fails on any.
+ */
+function creaseCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openFigureInEdit(page, url, { theme, file: 'flat-folder/kabuto.fold' });
+    const failures = [];
+    for (const lineWidth of [1, 3]) {
+      const dialog = await openPanesDialog(page, 'Kabuto', { lineStyle: 'color', lineWidth });
+      const pane = dialog.locator('[data-layer-order-pane="pattern"]');
+      const shot = async () => {
+        await page.mouse.move(1, 1);
+        return steadyShot(page, pane, { masked: false });
+      };
+      const show = (kind) =>
+        page.evaluate(async (kind) => {
+          const { NO_FACE_MARKS } = await import('/src/layer-order/panes/layerPaneMarks.ts');
+          const handle = window.__layerOrderPanes;
+          const { opened, letters } = handle.open;
+          const withChoices = [...new Set(opened.open_pairs)].sort((a, b) => letters.compare(a, b));
+          const choosing = { ...NO_FACE_MARKS, picking: 'subject', pickable: withChoices };
+          const marks = {
+            plain: NO_FACE_MARKS,
+            tinted: choosing,
+            pointed: { ...choosing, pointed: withChoices[0] },
+            row: { ...choosing, row: withChoices.slice(0, 3) },
+            compound: {
+              ...NO_FACE_MARKS,
+              picking: 'object',
+              pickable: withChoices.slice(1),
+              subject: withChoices[0],
+              objects: withChoices.slice(1, 3),
+            },
+          }[kind];
+          handle.show({ marks });
+        }, kind);
+      await show('plain');
+      const plain = await shot();
+      await show('tinted');
+      const tinted = await shot();
+      const results = {};
+      for (const kind of ['pointed', 'row', 'compound']) {
+        await show(kind);
+        const marked = await shot();
+        results[kind] = await creasePixelsChanged(page, plain, tinted, marked);
+        await record(`creases-${tag}-kabuto-width-${lineWidth}-${kind}`, { pattern: marked });
+      }
+      console.log(`[${tag}] kabuto creases at line width ${lineWidth}: ${JSON.stringify(results)}`);
+      for (const [kind, { changed, at }] of Object.entries(results)) {
+        if (changed > 0) failures.push(`${kind} at line width ${lineWidth} changed ${changed} crease pixels, at ${JSON.stringify(at)}`);
+      }
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
+    }
+    if (failures.length > 0) throw new Error(failures.join('; '));
+  };
+}
+
+/**
  * Each figure's panes, in one theme: front and back with the faces that have
  * choices tinted, X-ray, Undecided; on kabuto, a subject with two objects
  * picked, and a clash; on iguana-c0, the label cap.
@@ -1068,6 +1178,8 @@ const CASES = [
   { name: 'panes-horizon', run: paneCases('Horizon') },
   { name: 'panes-phone', run: panePhoneCases },
   { name: 'panes-refusal', run: paneRefusalCases },
+  { name: 'panes-creases', run: creaseCases(null) },
+  { name: 'panes-creases-horizon', run: creaseCases('Horizon') },
   { name: 'host-looks', run: hostLookCases },
 ];
 
