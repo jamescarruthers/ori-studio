@@ -2319,7 +2319,7 @@ function editSelectionCases(theme) {
     await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
     let dialog = await readyDialog(page);
     const asked = await openedRequest(page);
-    if (asked?.surface !== 'edit_figure' || asked.record !== null || !asked.shown || asked.side !== 'front' || asked.xray) {
+    if (asked?.surface !== 'edit_pattern' || asked.record !== null || !asked.shown || asked.side !== 'front' || asked.xray) {
       throw new Error(`the request: ${JSON.stringify(asked)}`);
     }
     const whileOpen = await editCanvasState(page);

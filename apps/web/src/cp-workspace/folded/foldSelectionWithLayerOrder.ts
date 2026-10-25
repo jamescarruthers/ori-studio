@@ -41,7 +41,8 @@ export type SelectionLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-op
 
 /**
  * What the dialog opens on for the selection's fold (`opening`), on the canvas
- * `view`: the source it folded, with no record yet; the look of the figure
+ * `view`: asked from a selection (`edit_pattern`, spec §10), not a figure;
+ * the source it folded, with no record yet; the look of the figure
  * Apply makes (D18) — the app's display style, which a new figure follows,
  * front up, turned as a new figure is placed (`rotation`, upright on screen),
  * not see-through; the order Fold would show (D19); and the dialog's name for
@@ -54,7 +55,7 @@ export function selectionLayerOrderRequest(
   t: TFunction
 ): LayerOrderRequest {
   return {
-    surface: 'edit_figure',
+    surface: 'edit_pattern',
     source: layerOrderSourceOf(opening.source, opening.model),
     record: null,
     look: editFigureLook(view, { style: view.display, rotation, model: opening.model, xray: false }),

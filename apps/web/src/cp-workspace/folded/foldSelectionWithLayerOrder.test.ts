@@ -290,7 +290,8 @@ describe('Fold with layer order…', () => {
     expect(kernel.folds).toEqual([[]]);
     expect(dialog.requests).toHaveLength(1);
     expect(dialog.requests[0]).toMatchObject({
-      surface: 'edit_figure',
+      // A selection, not a figure: the dialog's events tell the two entry points apart (spec §10).
+      surface: 'edit_pattern',
       record: null,
       source: { digest: DIGEST, startingFaceId: 1, segments: LINES },
       shown: SCENE,
