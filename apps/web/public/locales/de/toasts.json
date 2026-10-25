@@ -24,6 +24,9 @@
     "addedAsStep": "Als Schritt {{number}} hinzugefügt",
     "capture": {
       "failed": "Das Bild konnte nicht erfasst werden",
+      "layerOrderAttention_one": "1 Lagenvorgabe dieses Schritts braucht Aufmerksamkeit.",
+      "layerOrderAttention_other": "{{count}} Lagenvorgaben dieses Schritts brauchen Aufmerksamkeit.",
+      "layerOrderKept": "Die Lagenvorgaben dieses Schritts brauchen Aufmerksamkeit, daher behält er sein Bild.",
       "missing": "Dieses Muster ist nicht mehr im Faltmuster.",
       "needsPose": "Ein im Simulator teilweise gefalteter Schritt wird in „Pose“ aufgenommen: öffne ihn mit „Pose anpassen“.",
       "noLayerOrder": "Seine Lagen ließen sich nicht ordnen, daher zeigt der Schritt das gefaltete Papier durchsichtig.",
@@ -50,6 +53,9 @@
     "import": {
       "otherWorkspaceFirst": "Machen Sie zuerst die späteren Änderungen im anderen Arbeitsbereich rückgängig oder wiederholen Sie sie: Der Import hat Bearbeiten und Diagramm geändert.",
       "restoreFailed": "Die importierten Schritte konnten nicht wiederhergestellt werden."
+    },
+    "layerOrder": {
+      "folds3d": "Die Falten dieses Schritts falten sich jetzt in 3D, und die Lagenreihenfolge gilt für flache Faltungen. Aktualisiere den Schritt, um ihn zu sehen."
     },
     "placementsReflowed_one": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",
     "placementsReflowed_other": "{{count}} verschobene Schritte sind in ihre Zellen zurückgekehrt",

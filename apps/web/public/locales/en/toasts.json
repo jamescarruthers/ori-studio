@@ -24,6 +24,9 @@
     "addedAsStep": "Added as step {{number}}",
     "capture": {
       "failed": "The picture couldn’t be captured",
+      "layerOrderAttention_one": "1 of this step’s layer constraints needs attention.",
+      "layerOrderAttention_other": "{{count}} of this step’s layer constraints need attention.",
+      "layerOrderKept": "This step’s layer constraints need attention, so it keeps its picture.",
       "missing": "That pattern isn’t in the crease pattern any more.",
       "needsPose": "A step folded part way in the simulator is captured in Pose: open it with Adjust Pose.",
       "noLayerOrder": "Its layers couldn’t be put in order, so the step shows the folded paper see-through.",
@@ -50,6 +53,9 @@
     "import": {
       "otherWorkspaceFirst": "Undo or redo the later edits in the other workspace first: the import changed both Edit and Diagram.",
       "restoreFailed": "Couldn’t restore the imported steps."
+    },
+    "layerOrder": {
+      "folds3d": "This step’s creases fold in 3D now, and layer order works on flat folds. Refresh the step to see it."
     },
     "placementsReflowed_one": "Moved steps returned to automatic placement: {{count}}",
     "placementsReflowed_other": "Moved steps returned to automatic placement: {{count}}",

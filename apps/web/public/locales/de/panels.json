@@ -1218,6 +1218,24 @@
       "unsupported": "Wählen Sie Faltmuster, ein Defox-Projekt oder Bilder."
     },
     "label": "Diagramm",
+    "layerOrder": {
+      "constraints_one": "{{count}} Vorgabe",
+      "constraints_other": "{{count}} Vorgaben",
+      "edit": "Bearbeiten…",
+      "editName": "Lagenreihenfolge bearbeiten…",
+      "needAttention_one": "{{count}} Lagenvorgabe braucht Aufmerksamkeit, seit sich das Muster geändert hat.",
+      "needAttention_other": "{{count}} Lagenvorgaben brauchen Aufmerksamkeit, seit sich das Muster geändert hat.",
+      "needsFlat": "Die Lagenreihenfolge gilt für flache Faltungen",
+      "needsFlatNote": "Die Lagenreihenfolge gilt für flache Faltungen. Dieser Schritt faltet sich in 3D.",
+      "noOrder": "Für diesen Schritt ließ sich keine Lagenreihenfolge bestimmen",
+      "review": "Prüfen…",
+      "reviewName": "Lagenvorgaben prüfen…",
+      "stepName": "Schritt {{number}}",
+      "timedOut_one": "{{count}} Lagenvorgabe ließ sich nicht rechtzeitig prüfen.",
+      "timedOut_other": "{{count}} Lagenvorgaben ließen sich nicht rechtzeitig prüfen.",
+      "waiting3d_one": "Dieser Schritt faltet sich jetzt in 3D. Seine Lagenvorgabe bleibt erhalten, bis er sich wieder flach faltet.",
+      "waiting3d_other": "Dieser Schritt faltet sich jetzt in 3D. Seine {{count}} Lagenvorgaben bleiben erhalten, bis er sich wieder flach faltet."
+    },
     "layers": {
       "deleteMark": "{{name}} löschen",
       "deleteStep": "Schritt {{number}} löschen",
@@ -1485,6 +1503,7 @@
       "foldStep": "Einen Schritt falten",
       "front": "Vorderseite",
       "layerOrder": "Lagenfolge",
+      "layerOrderConstrained": "Lösungen in Lagenreihenfolge… durchgehen",
       "layerOrderLabel": "Lagenfolge {{place}}",
       "layerOrderNone": "Keine",
       "layerOrderOf": "{{number}} von {{total}}",

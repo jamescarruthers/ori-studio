@@ -25,6 +25,10 @@
     "addedAsStep": "Ajouté comme étape {{number}}",
     "capture": {
       "failed": "L’image n’a pas pu être capturée",
+      "layerOrderAttention_one": "{{count}} des contraintes de couches de cette étape demande votre attention.",
+      "layerOrderAttention_many": "{{count}} des contraintes de couches de cette étape demandent votre attention.",
+      "layerOrderAttention_other": "{{count}} des contraintes de couches de cette étape demandent votre attention.",
+      "layerOrderKept": "Les contraintes de couches de cette étape demandent votre attention, elle garde donc son image.",
       "missing": "Ce patron ne fait plus partie du patron de plis.",
       "needsPose": "Une étape pliée en partie dans le simulateur se capture dans Pose : ouvrez-la avec Ajuster la pose.",
       "noLayerOrder": "Ses couches n’ont pas pu être ordonnées\u00a0: l’étape montre le papier plié en transparence.",
@@ -53,6 +57,9 @@
     "import": {
       "otherWorkspaceFirst": "Annulez ou rétablissez d’abord les modifications suivantes dans l’autre espace de travail\u00a0: l’importation a modifié Édition et Diagramme.",
       "restoreFailed": "Impossible de restaurer les étapes importées."
+    },
+    "layerOrder": {
+      "folds3d": "Les plis de cette étape se plient maintenant en 3D, et l’ordre des couches fonctionne sur les pliages à plat. Actualisez l’étape pour la voir."
     },
     "placementsReflowed_one": "{{count}} étapes déplacées ont retrouvé leur cellule",
     "placementsReflowed_many": "{{count}} étapes déplacées ont retrouvé leur cellule",

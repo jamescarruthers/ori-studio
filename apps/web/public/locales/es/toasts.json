@@ -25,6 +25,10 @@
     "addedAsStep": "Añadido como paso {{number}}",
     "capture": {
       "failed": "No se pudo capturar la imagen",
+      "layerOrderAttention_one": "1 de las restricciones de capas de este paso necesita atención.",
+      "layerOrderAttention_many": "{{count}} de las restricciones de capas de este paso necesitan atención.",
+      "layerOrderAttention_other": "{{count}} de las restricciones de capas de este paso necesitan atención.",
+      "layerOrderKept": "Las restricciones de capas de este paso necesitan atención, así que conserva su imagen.",
       "missing": "Ese patrón ya no está en el patrón de pliegues.",
       "needsPose": "Un paso plegado a medias en el simulador se captura en Pose: ábrelo con Ajustar pose.",
       "noLayerOrder": "No se pudieron ordenar sus capas, así que el paso muestra el papel plegado en transparencia.",
@@ -53,6 +57,9 @@
     "import": {
       "otherWorkspaceFirst": "Primero deshaz o rehaz las ediciones posteriores en el otro espacio de trabajo: la importación cambió Edición y Diagrama.",
       "restoreFailed": "No se pudieron restaurar los pasos importados."
+    },
+    "layerOrder": {
+      "folds3d": "Los pliegues de este paso ahora se pliegan en 3D, y el orden de capas funciona con pliegues planos. Actualiza el paso para verlo."
     },
     "placementsReflowed_one": "{{count}} pasos movidos volvieron a sus celdas",
     "placementsReflowed_many": "{{count}} pasos movidos volvieron a sus celdas",

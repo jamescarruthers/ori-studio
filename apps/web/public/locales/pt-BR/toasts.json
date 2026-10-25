@@ -25,6 +25,10 @@
     "addedAsStep": "Adicionado como passo {{number}}",
     "capture": {
       "failed": "Não foi possível capturar a imagem",
+      "layerOrderAttention_one": "{{count}} das restrições de camadas deste passo precisa de atenção.",
+      "layerOrderAttention_many": "{{count}} das restrições de camadas deste passo precisam de atenção.",
+      "layerOrderAttention_other": "{{count}} das restrições de camadas deste passo precisam de atenção.",
+      "layerOrderKept": "As restrições de camadas deste passo precisam de atenção, então ele mantém sua imagem.",
       "missing": "Esse padrão não está mais no padrão de vincos.",
       "needsPose": "Um passo dobrado em parte no simulador é capturado em Pose: abra-o com Ajustar pose.",
       "noLayerOrder": "Não foi possível ordenar as camadas, então o passo mostra o papel dobrado em transparência.",
@@ -53,6 +57,9 @@
     "import": {
       "otherWorkspaceFirst": "Primeiro desfaça ou refaça as edições posteriores no outro workspace: a importação mudou a Edição e o Diagrama.",
       "restoreFailed": "Não foi possível restaurar os passos importados."
+    },
+    "layerOrder": {
+      "folds3d": "Os vincos deste passo agora dobram em 3D, e a ordem das camadas funciona em dobras planas. Atualize o passo para vê-lo."
     },
     "placementsReflowed_one": "{{count}} passos movidos voltaram às suas células",
     "placementsReflowed_many": "{{count}} passos movidos voltaram às suas células",
