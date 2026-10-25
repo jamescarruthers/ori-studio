@@ -24,22 +24,31 @@
 //!   and the paper scene of the order on screen, the saved record, and a
 //!   restore onto creases that may have changed
 //!   ([`ConstraintSession::restore`], decision D10), carrying every saved
-//!   constraint it could not apply. The smallest clashing set and the
-//!   solution count (E6) build on it: [`CantFit::constraints`] is where a
-//!   smallest set is looked for.
+//!   constraint it could not apply.
+//! - [`ConstraintSession::explain`] (E6): the smallest set of constraints
+//!   that clash, every member necessary, for the dialog's "Can't fit" and
+//!   its danger tints ([`Clash`]).
+//! - [`Solutions`] (E6): how many distinct pictures fit from each side and
+//!   how many layer orders, counted in resumable slices with the product
+//!   rule ("at least N" past a cap), and a stepper through them in a fixed
+//!   order ("3 of 12"), or through every layer order with X-ray on
+//!   ([`ConstraintSession::step`], [`StepBy`]).
 //! - [`LayerOrderRecord`], [`read_record`] and [`encode_record`]: the saved
 //!   form, byte for byte the TypeScript codec's
 //!   (`apps/web/src/lib/layerOrder/layerOrderRecord.ts`).
 //!
 //! Nothing here is bound to wasm yet (E7).
 
+mod explain;
 mod record;
 mod restore;
 mod session;
 mod showing;
+mod solutions;
 mod source;
 mod stacks;
 
+pub use explain::{Clash, Explanation};
 pub use record::{
     Attention, AttentionReason, EncodeRefusal, FoldSign, LayerOrderRecord, RECORD_MAX_BYTES,
     RECORD_VERSION, RecordDamage, RecordFace, RecordPair, RecordPart, RecordRead, encode_record,
@@ -54,5 +63,9 @@ pub use session::{
     Limits, Preview, PreviewFit, SessionRefusal, TimedOut, Verb,
 };
 pub use showing::{OpenedOn, scene_relations};
+pub use solutions::{
+    CountShape, Moved, NO_TOP, Position, SolutionCaps, SolutionCount, Solutions, StepBy,
+    StepDirection, Stepped, Tally,
+};
 pub use source::{LayerSource, PaperFrame, SourceRefusal, ToleranceCause};
 pub use stacks::{ChangedSpots, Stacks, ViewSide};

@@ -243,6 +243,12 @@ pub enum SessionRefusal {
     #[serde(rename = "session_bad_record")]
     #[error("the record's {} would not read back", part.word())]
     BadRecord { part: RecordPart },
+    /// A solution count asked about a session it was not started on, or
+    /// after the committed constraints changed: start a new one
+    /// ([`ConstraintSession::solutions`]).
+    #[serde(rename = "session_stale_solutions")]
+    #[error("the solutions were counted for another session or other constraints")]
+    StaleSolutions,
     /// A defect, never the user's input.
     #[serde(rename = "session_internal")]
     #[error("the constraint session failed: {message}")]
@@ -257,11 +263,12 @@ impl SessionRefusal {
             SessionRefusal::TimedOut { .. } => "session_timed_out",
             SessionRefusal::BadConstraint { .. } => "session_bad_constraint",
             SessionRefusal::BadRecord { .. } => "session_bad_record",
+            SessionRefusal::StaleSolutions => "session_stale_solutions",
             SessionRefusal::Internal { .. } => "session_internal",
         }
     }
 
-    fn internal(message: impl Into<String>) -> SessionRefusal {
+    pub(crate) fn internal(message: impl Into<String>) -> SessionRefusal {
         SessionRefusal::Internal {
             message: message.into(),
         }
@@ -332,7 +339,7 @@ impl Arrangement {
     }
 }
 
-fn upper_lower(pair: FacePair, value: PairOrder) -> (FaceId, FaceId) {
+pub(crate) fn upper_lower(pair: FacePair, value: PairOrder) -> (FaceId, FaceId) {
     match value {
         PairOrder::FirstAbove => (pair.lo(), pair.hi()),
         PairOrder::SecondAbove => (pair.hi(), pair.lo()),
@@ -876,6 +883,16 @@ impl ConstraintSession {
         &self.variables
     }
 
+    /// The variables, shared: one allocation per open session, which is
+    /// how a solution count knows the session it counted.
+    pub(crate) fn shared_variables(&self) -> &Arc<[FacePair]> {
+        &self.variables
+    }
+
+    pub(crate) fn spots(&self) -> &Spots {
+        &self.spots
+    }
+
     pub(crate) fn is_offered(&self, v: usize) -> bool {
         self.offered[v]
     }
@@ -898,6 +915,26 @@ impl ConstraintSession {
     /// The search opened over the letters.
     pub(crate) fn letter_search(&self) -> &flatfold::CompletionSession {
         self.solver.search()
+    }
+
+    /// Show `values`, a complete order that fits the committed constraints,
+    /// keeping them and what they force: a stepper's move. The spots whose
+    /// top face changes, per side.
+    pub(crate) fn show_values(&mut self, values: Vec<PairOrder>) -> ChangedSpots {
+        let stacks = self.spots.stacks(&self.variables, &values);
+        let changed = ChangedSpots::between(&self.shown.stacks, &stacks);
+        self.shown = Arrangement {
+            variables: self.variables.clone(),
+            values,
+            stacks,
+        };
+        self.generation += 1;
+        changed
+    }
+
+    /// This session, among every session of the process.
+    pub(crate) fn id(&self) -> u64 {
+        self.id
     }
 
     /// Make `constraints` committed with the order `fit` found for them. A
@@ -1193,7 +1230,7 @@ fn open_refusal(refusal: CompletionRefusal) -> SessionRefusal {
 }
 
 /// The search refused its input: the session asked it something malformed.
-fn internal_search(error: CompletionError) -> SessionRefusal {
+pub(crate) fn internal_search(error: CompletionError) -> SessionRefusal {
     SessionRefusal::internal(complete::search_refusal(error).to_string())
 }
 

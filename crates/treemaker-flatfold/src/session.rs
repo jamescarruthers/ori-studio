@@ -69,7 +69,12 @@
 //!   each component with upstream's search, and walks their product, the
 //!   first component slowest, so its orders are
 //!   [`complete_layer_order`](crate::complete_layer_order)'s, every one
-//!   listed, in that order.
+//!   listed, in that order. [`Enumeration::varying`] narrows the walk to
+//!   some components, the others held at a given order, so one component's
+//!   orders can be listed alone ([`Enumeration::component_order`]), as the
+//!   dialog's solution count lists them; [`Enumeration::projected`] lists
+//!   one order per distinct assignment of some of a component's variables,
+//!   as it counts distinct pictures.
 //! - [`CheckOptions::prefer_fits`]: when the caller vouches that the
 //!   preferred order is a complete order that fits (an earlier check's fit),
 //!   every component on which it agrees with what the seeds force keeps it
@@ -283,9 +288,12 @@ pub struct Enumeration {
     /// What the deduction leaves, split as completing from scratch splits
     /// it, smallest first.
     components: Vec<Vec<usize>>,
-    /// Per component, its search so far.
+    /// The components the walk varies, ascending: every one, unless
+    /// [`Self::varying`] narrowed it.
+    walk: Vec<usize>,
+    /// Per component of the walk, its search so far.
     searches: Vec<Search>,
-    /// The component whose search runs next.
+    /// The place in the walk whose search runs next.
     at: usize,
     /// Complete orders yielded so far.
     yielded: u64,
@@ -295,6 +303,40 @@ pub struct Enumeration {
     end: Option<EnumerationStep>,
     nodes: u64,
     scratch: Scratch,
+    /// Set by [`Self::projected`].
+    projection: Option<Projection>,
+}
+
+/// A walk of one component's distinct assignments of some of its variables
+/// ([`Enumeration::projected`]).
+#[derive(Debug, Clone)]
+struct Projection {
+    /// The component, its index among the components.
+    component: usize,
+    /// The variables projected onto, in the component's own order: what
+    /// the walk's search (the walk's one [`Search`]) guesses.
+    first: Vec<usize>,
+    /// Per variable, the value each guess tries first: the held order's.
+    prefer: Vec<u8>,
+    /// Where the search reached an assignment of `first`: completing it.
+    leaf: Option<Leaf>,
+}
+
+/// One assignment of the projected variables, being completed: what they
+/// and their propagation leave of the component, split as Flat-Folder
+/// splits what is left (upstream `get_components`), each part searched for
+/// one order.
+#[derive(Debug, Clone)]
+struct Leaf {
+    /// The component's variables open at the leaf: unassigned again to
+    /// leave it.
+    open: Vec<usize>,
+    parts: Vec<Vec<usize>>,
+    /// The part being searched, and its search.
+    at: usize,
+    search: Search,
+    /// Every part has an order, and the whole order was yielded.
+    yielded: bool,
 }
 
 /// What one [`Enumeration::next`] call reached.
@@ -334,8 +376,8 @@ impl Enumeration {
                 session.base.assignments.len()
             )));
         }
-        if self.components.is_empty() {
-            // Everything is forced: one order.
+        if self.walk.is_empty() {
+            // Everything is forced, or held: one order.
             if self.yielded == 0 {
                 self.yielded = 1;
                 self.current = true;
@@ -346,9 +388,15 @@ impl Enumeration {
         }
         let tables = session.tables();
         let mut meter = BudgetMeter::new(budget);
+        if self.projection.is_some() {
+            let step = self.next_projected(session, &tables, &mut meter);
+            self.nodes += meter.nodes;
+            return step;
+        }
         let step = loop {
-            let k = self.at;
-            let searched = self.searches[k].run(
+            let at = self.at;
+            let k = self.walk[at];
+            let searched = self.searches[at].run(
                 &tables,
                 &self.components[k],
                 &mut self.assignments,
@@ -370,14 +418,14 @@ impl Enumeration {
                     self.end = Some(end.clone());
                     break end;
                 }
-                Ok(0) if k == 0 => {
+                Ok(0) if at == 0 => {
                     self.end = Some(Step::Exhausted);
                     break Step::Exhausted;
                 }
                 // Every order of this component has been walked with the
                 // ones before it as they are: the one before moves on.
                 Ok(0) => self.at -= 1,
-                Ok(_) if k + 1 == self.components.len() => {
+                Ok(_) if at + 1 == self.walk.len() => {
                     if let Some(v) = self.assignments.iter().position(|&a| a == 0) {
                         return Err(invalid(format!("an enumeration left variable {v} open")));
                     }
@@ -396,10 +444,245 @@ impl Enumeration {
         Ok(step)
     }
 
+    /// [`Self::next`] for a [`Self::projected`] walk: the search over the
+    /// projected variables, and at each assignment of them, one order of
+    /// each part of what is left, or none, which skips the assignment.
+    fn next_projected(
+        &mut self,
+        session: &CompletionSession,
+        tables: &SearchTables<'_>,
+        meter: &mut BudgetMeter,
+    ) -> CompletionResult<EnumerationStep> {
+        use EnumerationStep as Step;
+        let Enumeration {
+            assignments,
+            components,
+            searches,
+            yielded,
+            current,
+            end,
+            scratch,
+            projection,
+            ..
+        } = self;
+        let Some(projection) = projection.as_mut() else {
+            return Err(invalid("a projected step with no projection".to_string()));
+        };
+        let prefer = &projection.prefer;
+        loop {
+            if let Some(leaf) = projection.leaf.as_mut() {
+                if !leaf.yielded {
+                    // Complete the assignment, part by part.
+                    while leaf.at < leaf.parts.len() {
+                        match leaf.search.run(
+                            tables,
+                            &leaf.parts[leaf.at],
+                            assignments,
+                            1,
+                            meter,
+                            |v| prefer[v],
+                            scratch,
+                            |_| {},
+                        )? {
+                            Err(limit) => return Ok(Step::Stopped(limit)),
+                            // This part has no order: nor has the
+                            // assignment.
+                            Ok(0) => break,
+                            Ok(_) => {
+                                leaf.at += 1;
+                                leaf.search = Search::default();
+                            }
+                        }
+                    }
+                    if leaf.at == leaf.parts.len() {
+                        if let Some(&v) = leaf.open.iter().find(|&&v| assignments[v] == 0) {
+                            return Err(invalid(format!("an enumeration left variable {v} open")));
+                        }
+                        leaf.yielded = true;
+                        *yielded += 1;
+                        *current = true;
+                        return Ok(Step::Order);
+                    }
+                }
+                // Leave the assignment: what completed it goes, and the
+                // search over the projected variables moves on.
+                for &v in &leaf.open {
+                    assignments[v] = 0;
+                }
+                projection.leaf = None;
+            }
+            match searches[0].run(
+                tables,
+                &projection.first,
+                assignments,
+                1,
+                meter,
+                |v| prefer[v],
+                scratch,
+                |_| {},
+            )? {
+                Err(limit) => return Ok(Step::Stopped(limit)),
+                Ok(0) => {
+                    let k = projection.component;
+                    let step = if *yielded == 0 {
+                        Step::Unsatisfied(UnsatisfiedComponent {
+                            component: k,
+                            faces: group_faces(&session.input.data, &components[k]),
+                        })
+                    } else {
+                        Step::Exhausted
+                    };
+                    *end = Some(step.clone());
+                    return Ok(step);
+                }
+                Ok(_) => {
+                    // Every projected variable is assigned. The components
+                    // are independent and every other one is held, so what
+                    // is still open is this component's.
+                    let open: Vec<usize> = components[projection.component]
+                        .iter()
+                        .copied()
+                        .filter(|&v| assignments[v] == 0)
+                        .collect();
+                    let parts = if open.is_empty() {
+                        Vec::new()
+                    } else {
+                        constraints::variable_groups(tables, assignments, None)
+                            .into_iter()
+                            .skip(1)
+                            .collect()
+                    };
+                    projection.leaf = Some(Leaf {
+                        open,
+                        parts,
+                        at: 0,
+                        search: Search::default(),
+                        yielded: false,
+                    });
+                }
+            }
+        }
+    }
+
     /// The complete order the last call yielded, one per variable; `None`
     /// unless it yielded one.
     pub fn order(&self) -> Option<Vec<PairOrder>> {
         self.current.then(|| orders_of(&self.assignments))
+    }
+
+    /// The last yielded order's values on component `k` (an index into
+    /// [`Self::components`]), one per variable in the component's search
+    /// order: what reading [`Self::order`] there gives, without the whole
+    /// order (ours). `None` unless the last call yielded one, or past the
+    /// last component.
+    pub fn component_order(&self, k: usize) -> Option<Vec<PairOrder>> {
+        let component = self.components.get(k).filter(|_| self.current)?;
+        Some(orders_of(
+            &component
+                .iter()
+                .map(|&v| self.assignments[v])
+                .collect::<Vec<_>>(),
+        ))
+    }
+
+    /// The same cursor, started over, walking only the components `vary`
+    /// (indices into [`Self::components`]) while every other component
+    /// holds its values in `hold`, one order per variable (ours): what the
+    /// Layer order dialog's count needs to list one component's orders
+    /// without the product of all of them.
+    ///
+    /// The components are independent (the module docs, step 3): every
+    /// constraint that joins two of them is dead whatever either holds, so
+    /// a varying component's search finds the same orders, in the same
+    /// order and with the same nodes, as it does in the whole walk, which
+    /// is the product of the varying components, the first slowest. The
+    /// orders are complete orders that fit when `hold` is one, such as an
+    /// earlier check's fit; the cursor does not check it. With no component
+    /// to vary it yields one order, the deduction and `hold`.
+    pub fn varying(mut self, vary: &[usize], hold: &[PairOrder]) -> CompletionResult<Enumeration> {
+        if hold.len() != self.assignments.len() {
+            return Err(invalid(format!(
+                "a held order of {} pairs for {} variables",
+                hold.len(),
+                self.assignments.len()
+            )));
+        }
+        let mut walk = vary.to_vec();
+        walk.sort_unstable();
+        walk.dedup();
+        if let Some(&k) = walk.last().filter(|&&k| k >= self.components.len()) {
+            return Err(invalid(format!(
+                "component {k} varied, but there are {}",
+                self.components.len()
+            )));
+        }
+        for (k, component) in self.components.iter().enumerate() {
+            let varies = walk.binary_search(&k).is_ok();
+            for &v in component {
+                self.assignments[v] = if varies { 0 } else { hold[v].value() };
+            }
+        }
+        self.searches = vec![Search::default(); walk.len()];
+        self.walk = walk;
+        self.at = 0;
+        self.yielded = 0;
+        self.current = false;
+        self.end = None;
+        self.nodes = 0;
+        self.projection = None;
+        Ok(self)
+    }
+
+    /// The same cursor, started over, walking component `k` alone (the
+    /// others hold `hold`, as for [`Self::varying`]) and yielding one order
+    /// for each distinct assignment of the variables `first`, all of them
+    /// the component's, that some order of the component extends (ours):
+    /// the Layer order dialog counts distinct pictures this way, `first`
+    /// being the pairs a picture reads, without listing every order that
+    /// differs only in hidden layers.
+    ///
+    /// A search over `first` alone (upstream's `guess_vars` over them, in
+    /// the component's own order, with propagation as always) reaches each
+    /// assignment of them once. There, what is left of the component is
+    /// split as Flat-Folder splits (upstream `get_components`) and each
+    /// part searched for one order, so an assignment with none is refuted
+    /// in the one part that has none, never across the product of parts it
+    /// does not touch. Each guess tries `hold`'s value first: when `hold`
+    /// fits, the first order yielded is `hold`'s own, with no backtracking,
+    /// and each later one is completed near it.
+    pub fn projected(
+        self,
+        k: usize,
+        first: &[usize],
+        hold: &[PairOrder],
+    ) -> CompletionResult<Enumeration> {
+        let mut cursor = self.varying(&[k], hold)?;
+        let n = cursor.assignments.len();
+        let mut own = vec![false; n];
+        for &v in &cursor.components[k] {
+            own[v] = true;
+        }
+        let mut marked = vec![false; n];
+        for &v in first {
+            if !own.get(v).copied().unwrap_or(false) {
+                return Err(invalid(format!(
+                    "variable {v} is projected onto, but is not in component {k}"
+                )));
+            }
+            marked[v] = true;
+        }
+        let first = cursor.components[k]
+            .iter()
+            .copied()
+            .filter(|&v| marked[v])
+            .collect();
+        cursor.projection = Some(Projection {
+            component: k,
+            first,
+            prefer: hold.iter().map(|o| o.value()).collect(),
+            leaf: None,
+        });
+        Ok(cursor)
     }
 
     /// What the deduction leaves, in independent components, smallest
@@ -650,6 +933,7 @@ impl CompletionSession {
         Ok(Enumeration {
             assignments: deduced.assignments.clone(),
             searches: vec![Search::default(); components.len()],
+            walk: (0..components.len()).collect(),
             components,
             at: 0,
             yielded: 0,
@@ -657,6 +941,7 @@ impl CompletionSession {
             end: None,
             nodes: 0,
             scratch: tables.scratch(),
+            projection: None,
         })
     }
 
@@ -1646,8 +1931,171 @@ mod tests {
             deadline: None,
         };
         let sliced = enumerate_all(session, deduced, slices, stops);
+        if let Some(Completion::Solved(solution)) = scratch {
+            check_varying(session, deduced, solution, &orders, slices, stops);
+        }
         assert_eq!(sliced, (orders, end.clone(), nodes));
         end
+    }
+
+    /// Every order of `cursor` narrowed to `vary` while the rest hold
+    /// `hold`, each call within `budget`, as each varying component's own
+    /// order (`component_order`), ascending by component.
+    fn walk_varying(
+        session: &CompletionSession,
+        deduced: &Deduced,
+        vary: &[usize],
+        hold: &[PairOrder],
+        budget: SearchBudget,
+        stops: &mut usize,
+    ) -> Vec<Vec<Vec<PairOrder>>> {
+        let mut cursor = session
+            .enumerate(deduced)
+            .and_then(|cursor| cursor.varying(vary, hold))
+            .unwrap_or_else(|e| panic!("{e}"));
+        let mut ascending = vary.to_vec();
+        ascending.sort_unstable();
+        let mut walked = Vec::new();
+        loop {
+            match cursor.next(session, budget) {
+                Ok(EnumerationStep::Order) => {
+                    let order = cursor.order().unwrap_or_else(|| panic!("no order"));
+                    // Every component that does not vary holds.
+                    for (k, component) in cursor.components().iter().enumerate() {
+                        if !vary.contains(&k) {
+                            for &v in component {
+                                assert_eq!(order[v], hold[v]);
+                            }
+                        }
+                    }
+                    walked.push(
+                        ascending
+                            .iter()
+                            .map(|&k| {
+                                let own = cursor
+                                    .component_order(k)
+                                    .unwrap_or_else(|| panic!("no order of {k}"));
+                                let read: Vec<PairOrder> =
+                                    cursor.components()[k].iter().map(|&v| order[v]).collect();
+                                assert_eq!(own, read);
+                                own
+                            })
+                            .collect(),
+                    );
+                }
+                Ok(EnumerationStep::Stopped(_)) => *stops += 1,
+                Ok(EnumerationStep::Exhausted) => return walked,
+                other => panic!("{other:?}"),
+            }
+        }
+    }
+
+    /// Narrowed to one component, or two, the walk lists exactly what
+    /// completing from scratch lists for them, the first slowest, whole or
+    /// resumed in slices, while the others hold one of `orders` (the last,
+    /// so mostly not the first order). It draws no random numbers, so the
+    /// questions the caller asks are what they were before it.
+    fn check_varying(
+        session: &CompletionSession,
+        deduced: &Deduced,
+        solution: &crate::CompletionSolution,
+        orders: &[Vec<PairOrder>],
+        slices: SearchBudget,
+        stops: &mut usize,
+    ) {
+        let Some(hold) = orders.last() else {
+            return;
+        };
+        let count = solution.components.len();
+        for k in 0..count {
+            let expected: Vec<Vec<Vec<PairOrder>>> = solution.components[k]
+                .solutions
+                .iter()
+                .map(|s| vec![s.clone()])
+                .collect();
+            for budget in [SearchBudget::default(), slices] {
+                assert_eq!(
+                    walk_varying(session, deduced, &[k], hold, budget, stops),
+                    expected
+                );
+            }
+        }
+        if count >= 2 {
+            let (a, b) = (count / 2 - 1, count - 1);
+            let mut expected = Vec::new();
+            for x in &solution.components[a].solutions {
+                for y in &solution.components[b].solutions {
+                    expected.push(vec![x.clone(), y.clone()]);
+                }
+            }
+            // Given in either order, the walk is ascending.
+            assert_eq!(
+                walk_varying(session, deduced, &[b, a], hold, slices, stops),
+                expected
+            );
+        }
+        // Nothing to vary: one order, the deduction and what is held.
+        assert_eq!(
+            walk_varying(session, deduced, &[], hold, slices, stops),
+            vec![Vec::<Vec<PairOrder>>::new()]
+        );
+        // Projected onto some of a component's variables: one order per
+        // distinct assignment of them, each one of the component's.
+        for (k, component) in solution.components.iter().enumerate() {
+            let variables = &component.variables;
+            for pick in [0, 1, 2] {
+                let first: Vec<usize> = variables
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| match pick {
+                        0 => i % 2 == 0,
+                        1 => *i >= variables.len() / 2,
+                        _ => *i == 0,
+                    })
+                    .map(|(_, &v)| v)
+                    .collect();
+                let places: Vec<usize> = first
+                    .iter()
+                    .map(|v| variables.iter().position(|w| w == v).unwrap_or(0))
+                    .collect();
+                let project = |order: &[PairOrder]| -> Vec<PairOrder> {
+                    places.iter().map(|&p| order[p]).collect()
+                };
+                let expected: BTreeSet<Vec<bool>> = component
+                    .solutions
+                    .iter()
+                    .map(|s| bits(&project(s)))
+                    .collect();
+                for budget in [SearchBudget::default(), slices] {
+                    let mut cursor = session
+                        .enumerate(deduced)
+                        .and_then(|cursor| cursor.projected(k, &first, hold))
+                        .unwrap_or_else(|e| panic!("{e}"));
+                    let mut seen = BTreeSet::new();
+                    loop {
+                        match cursor.next(session, budget) {
+                            Ok(EnumerationStep::Order) => {
+                                let own = cursor
+                                    .component_order(k)
+                                    .unwrap_or_else(|| panic!("no order of {k}"));
+                                assert!(component.solutions.contains(&own));
+                                if seen.is_empty() {
+                                    // The held order's own, first.
+                                    let held: Vec<PairOrder> =
+                                        variables.iter().map(|&v| hold[v]).collect();
+                                    assert_eq!(own, held);
+                                }
+                                assert!(seen.insert(bits(&project(&own))), "a projection twice");
+                            }
+                            Ok(EnumerationStep::Stopped(_)) => *stops += 1,
+                            Ok(EnumerationStep::Exhausted) => break,
+                            other => panic!("{other:?}"),
+                        }
+                    }
+                    assert_eq!(seen, expected);
+                }
+            }
+        }
     }
 
     #[test]
