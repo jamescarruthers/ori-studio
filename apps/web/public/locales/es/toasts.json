@@ -24,10 +24,8 @@
   "diagram": {
     "addedAsStep": "Añadido como paso {{number}}",
     "capture": {
+      "chosenOrderKept": "El orden de capas elegido para este paso necesita atención, así que conserva su imagen.",
       "failed": "No se pudo capturar la imagen",
-      "layerOrderAttention_one": "1 de las restricciones de capas de este paso necesita atención.",
-      "layerOrderAttention_many": "{{count}} de las restricciones de capas de este paso necesitan atención.",
-      "layerOrderAttention_other": "{{count}} de las restricciones de capas de este paso necesitan atención.",
       "layerOrderKept": "Las restricciones de capas de este paso necesitan atención, así que conserva su imagen.",
       "missing": "Ese patrón ya no está en el patrón de pliegues.",
       "needsPose": "Un paso plegado a medias en el simulador se captura en Pose: ábrelo con Ajustar pose.",
@@ -59,7 +57,14 @@
       "restoreFailed": "No se pudieron restaurar los pasos importados."
     },
     "layerOrder": {
-      "folds3d": "Los pliegues de este paso ahora se pliegan en 3D, y el orden de capas funciona con pliegues planos. Actualiza el paso para verlo."
+      "chosenOrderRemoved": "El orden de capas elegido para el paso era de su patrón anterior, así que se quitó. Deshacer lo recupera.",
+      "folds3d": "Los pliegues de este paso ahora se pliegan en 3D, y el orden de capas funciona con pliegues planos. Actualiza el paso para verlo.",
+      "lost": "El orden de capas se detuvo inesperadamente, así que este paso no cambió.",
+      "lostLoad": "No se pudo cargar el orden de capas, así que este paso no cambió. Comprueba tu conexión y vuelve a intentarlo.",
+      "refused": "No se pudo dibujar este orden de capas, así que no se cambió nada.",
+      "removed_one": "La restricción de capas del paso era de su patrón anterior, así que se quitó. Deshacer la recupera.",
+      "removed_many": "Las {{count}} restricciones de capas del paso eran de su patrón anterior, así que se quitaron. Deshacer las recupera.",
+      "removed_other": "Las {{count}} restricciones de capas del paso eran de su patrón anterior, así que se quitaron. Deshacer las recupera."
     },
     "placementsReflowed_one": "{{count}} pasos movidos volvieron a sus celdas",
     "placementsReflowed_many": "{{count}} pasos movidos volvieron a sus celdas",
@@ -88,6 +93,12 @@
       "tooLarge": "Este paso es demasiado detallado para guardarlo en el diagrama.",
       "undoReplaced": "Deshacer"
     },
+    "refreshAllChosenOrderKept_one": "El orden de capas elegido de 1 paso necesita atención, así que conserva su imagen.",
+    "refreshAllChosenOrderKept_many": "Los órdenes de capas elegidos de {{count}} pasos necesitan atención, así que conservan sus imágenes.",
+    "refreshAllChosenOrderKept_other": "Los órdenes de capas elegidos de {{count}} pasos necesitan atención, así que conservan sus imágenes.",
+    "refreshAllLayerOrderKept_one": "Las restricciones de capas de 1 paso necesitan atención, así que conserva su imagen.",
+    "refreshAllLayerOrderKept_many": "Las restricciones de capas de {{count}} pasos necesitan atención, así que conservan sus imágenes.",
+    "refreshAllLayerOrderKept_other": "Las restricciones de capas de {{count}} pasos necesitan atención, así que conservan sus imágenes.",
     "refreshedAll_one": "Se actualizó 1 paso",
     "refreshedAll_many": "Se actualizaron {{count}} pasos",
     "refreshedAll_other": "Se actualizaron {{count}} pasos",

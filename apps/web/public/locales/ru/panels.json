@@ -1094,6 +1094,7 @@
       "locked": "Создан в более новой версии Ori Studio",
       "lockedTurn": "Создан в более новой версии Ori Studio",
       "missing": "Паттерн пропал",
+      "needsAttention": "Требует внимания",
       "noInstruction": "Нет описания",
       "noPicture": "Изображения пока нет",
       "notCaptured": "Ещё не создано",
@@ -1293,6 +1294,10 @@
     },
     "label": "Схема",
     "layerOrder": {
+      "chosenOrder": "Выбранный порядок",
+      "chosenOrderNeedsAttention": "Выбранный порядок слоёв этого шага требует внимания после изменения паттерна.",
+      "chosenOrderTimedOut": "Не удалось вовремя проверить выбранный порядок слоёв этого шага.",
+      "chosenOrderWaiting3d": "Этот шаг теперь складывается в 3D. Его выбранный порядок слоёв сохранён, пока он снова не сложится плоско.",
       "constraints_one": "{{count}} ограничение",
       "constraints_few": "{{count}} ограничения",
       "constraints_many": "{{count}} ограничений",

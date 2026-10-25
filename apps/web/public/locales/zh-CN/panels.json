@@ -992,6 +992,7 @@
       "locked": "由更新版本的 Ori Studio 创建",
       "lockedTurn": "由更新版本的 Ori Studio 创建",
       "missing": "图样缺失",
+      "needsAttention": "需要处理",
       "noInstruction": "无说明",
       "noPicture": "尚无图片",
       "notCaptured": "尚未捕获",
@@ -1182,6 +1183,10 @@
     },
     "label": "图解",
     "layerOrder": {
+      "chosenOrder": "已选顺序",
+      "chosenOrderNeedsAttention": "图案已更改，此步骤所选的层叠顺序需要处理。",
+      "chosenOrderTimedOut": "未能及时检查此步骤所选的层叠顺序。",
+      "chosenOrderWaiting3d": "此步骤现在以 3D 折叠。其所选的层叠顺序会保留，待它再次平折时使用。",
       "constraints_other": "{{count}} 条约束",
       "edit": "编辑…",
       "editName": "编辑层叠顺序…",

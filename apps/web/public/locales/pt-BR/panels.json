@@ -1060,6 +1060,7 @@
       "locked": "Criado com uma versão mais recente do Ori Studio",
       "lockedTurn": "Criado com uma versão mais recente do Ori Studio",
       "missing": "Padrão ausente",
+      "needsAttention": "Precisa de atenção",
       "noInstruction": "Sem instrução",
       "noPicture": "Ainda sem imagem",
       "notCaptured": "Ainda não capturado",
@@ -1256,6 +1257,10 @@
     },
     "label": "Diagrama",
     "layerOrder": {
+      "chosenOrder": "Ordem escolhida",
+      "chosenOrderNeedsAttention": "A ordem das camadas escolhida para este passo precisa de atenção desde que o padrão mudou.",
+      "chosenOrderTimedOut": "Não foi possível verificar a tempo a ordem das camadas escolhida para este passo.",
+      "chosenOrderWaiting3d": "Este passo agora dobra em 3D. Sua ordem das camadas escolhida fica guardada para quando ele voltar a dobrar plano.",
       "constraints_one": "{{count}} restrição",
       "constraints_many": "{{count}} restrições",
       "constraints_other": "{{count}} restrições",

@@ -22,8 +22,8 @@
   "diagram": {
     "addedAsStep": "{{number}}단계로 추가했습니다",
     "capture": {
+      "chosenOrderKept": "이 단계에서 선택한 겹침 순서를 확인해야 해서 그림을 그대로 둡니다.",
       "failed": "그림을 캡처하지 못했습니다",
-      "layerOrderAttention_other": "이 단계의 겹침 제약 중 {{count}}개를 확인해야 합니다.",
       "layerOrderKept": "이 단계의 겹침 제약을 확인해야 해서 그림을 그대로 둡니다.",
       "missing": "그 패턴은 더 이상 전개도에 없습니다.",
       "needsPose": "시뮬레이터에서 일부만 접은 단계는 포즈에서 캡처합니다. 포즈 조정으로 여세요.",
@@ -51,7 +51,12 @@
       "restoreFailed": "가져온 단계를 복원하지 못했습니다."
     },
     "layerOrder": {
-      "folds3d": "이 단계의 접는 선은 이제 3D로 접히고, 겹침 순서는 평평한 접기에서 쓸 수 있습니다. 단계를 새로 고쳐 확인하세요."
+      "chosenOrderRemoved": "이 단계에서 선택한 겹침 순서는 이전 패턴의 것이어서 제거했습니다. 실행 취소하면 되돌아옵니다.",
+      "folds3d": "이 단계의 접는 선은 이제 3D로 접히고, 겹침 순서는 평평한 접기에서 쓸 수 있습니다. 단계를 새로 고쳐 확인하세요.",
+      "lost": "겹침 순서가 예기치 않게 멈춰 이 단계를 바꾸지 않았습니다.",
+      "lostLoad": "겹침 순서를 불러오지 못해 이 단계를 바꾸지 않았습니다. 연결을 확인한 뒤 다시 시도하세요.",
+      "refused": "이 겹침 순서를 그릴 수 없어 아무것도 바꾸지 않았습니다.",
+      "removed_other": "이 단계의 겹침 제약 {{count}}개는 이전 패턴의 것이어서 제거했습니다. 실행 취소하면 되돌아옵니다."
     },
     "placementsReflowed_other": "이동한 {{count}}단계가 원래 칸으로 돌아갔습니다",
     "references": {
@@ -68,6 +73,8 @@
       "tooLarge": "이 단계는 너무 세밀해서 도해에 보관할 수 없습니다.",
       "undoReplaced": "실행 취소"
     },
+    "refreshAllChosenOrderKept_other": "{{count}}개 단계에서 선택한 겹침 순서를 확인해야 해서 그림을 그대로 둡니다.",
+    "refreshAllLayerOrderKept_other": "{{count}}개 단계의 겹침 제약을 확인해야 해서 그림을 그대로 둡니다.",
     "refreshedAll_other": "{{count}}개 단계를 새로 고쳤습니다",
     "uploadFailed_other": "그림 {{count}}개를 추가하지 못했습니다",
     "uploadFailureLine": "{{name}}: {{reason}}",

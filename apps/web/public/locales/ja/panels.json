@@ -992,6 +992,7 @@
       "locked": "新しい Ori Studio で作成",
       "lockedTurn": "新しい Ori Studio で作成",
       "missing": "パターンなし",
+      "needsAttention": "確認が必要",
       "noInstruction": "説明文なし",
       "noPicture": "図はまだありません",
       "notCaptured": "まだキャプチャされていません",
@@ -1182,6 +1183,10 @@
     },
     "label": "折り図",
     "layerOrder": {
+      "chosenOrder": "選んだ順序",
+      "chosenOrderNeedsAttention": "パターンが変わったため、このステップで選んだ重なり順の確認が必要です。",
+      "chosenOrderTimedOut": "このステップで選んだ重なり順を時間内に確認できませんでした。",
+      "chosenOrderWaiting3d": "このステップは現在 3D で折られます。選んだ重なり順は、再び平らに折られるときのために保たれています。",
       "constraints_other": "制約 {{count}} 件",
       "edit": "編集…",
       "editName": "重なり順を編集…",

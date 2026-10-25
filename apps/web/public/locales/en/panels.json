@@ -1026,6 +1026,7 @@
       "locked": "Made with a newer Ori Studio",
       "lockedTurn": "Made with a newer Ori Studio",
       "missing": "Pattern missing",
+      "needsAttention": "Needs attention",
       "noInstruction": "No instruction",
       "noPicture": "No picture yet",
       "notCaptured": "Not captured yet",
@@ -1219,6 +1220,10 @@
     },
     "label": "Diagram",
     "layerOrder": {
+      "chosenOrder": "Chosen order",
+      "chosenOrderNeedsAttention": "This step’s chosen layer order needs attention since the pattern changed.",
+      "chosenOrderTimedOut": "This step’s chosen layer order couldn’t be checked in time.",
+      "chosenOrderWaiting3d": "This step folds in 3D now. Its chosen layer order is kept for when it folds flat again.",
       "constraints_one": "{{count}} constraint",
       "constraints_other": "{{count}} constraints",
       "edit": "Edit…",

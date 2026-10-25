@@ -1060,6 +1060,7 @@
       "locked": "Créée avec une version plus récente d’Ori Studio",
       "lockedTurn": "Créée avec une version plus récente d’Ori Studio",
       "missing": "Patron introuvable",
+      "needsAttention": "À vérifier",
       "noInstruction": "Aucune instruction",
       "noPicture": "Pas encore d’image",
       "notCaptured": "Pas encore capturé",
@@ -1256,6 +1257,10 @@
     },
     "label": "Diagramme",
     "layerOrder": {
+      "chosenOrder": "Ordre choisi",
+      "chosenOrderNeedsAttention": "L’ordre des couches choisi pour cette étape demande votre attention depuis que le patron a changé.",
+      "chosenOrderTimedOut": "L’ordre des couches choisi pour cette étape n’a pas pu être vérifié à temps.",
+      "chosenOrderWaiting3d": "Cette étape se plie maintenant en 3D. Son ordre des couches choisi est conservé pour quand elle se pliera de nouveau à plat.",
       "constraints_one": "{{count}} contrainte",
       "constraints_many": "{{count}} contraintes",
       "constraints_other": "{{count}} contraintes",

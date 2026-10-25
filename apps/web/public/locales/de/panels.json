@@ -1026,6 +1026,7 @@
       "locked": "Mit einem neueren Ori Studio erstellt",
       "lockedTurn": "Mit einem neueren Ori Studio erstellt",
       "missing": "Muster fehlt",
+      "needsAttention": "Braucht Aufmerksamkeit",
       "noInstruction": "Keine Anleitung",
       "noPicture": "Noch kein Bild",
       "notCaptured": "Noch nicht erfasst",
@@ -1219,6 +1220,10 @@
     },
     "label": "Diagramm",
     "layerOrder": {
+      "chosenOrder": "Gewählte Reihenfolge",
+      "chosenOrderNeedsAttention": "Die gewählte Lagenreihenfolge dieses Schritts braucht Aufmerksamkeit, seit sich das Muster geändert hat.",
+      "chosenOrderTimedOut": "Die gewählte Lagenreihenfolge dieses Schritts ließ sich nicht rechtzeitig prüfen.",
+      "chosenOrderWaiting3d": "Dieser Schritt faltet sich jetzt in 3D. Seine gewählte Lagenreihenfolge bleibt erhalten, bis er sich wieder flach faltet.",
       "constraints_one": "{{count}} Vorgabe",
       "constraints_other": "{{count}} Vorgaben",
       "edit": "Bearbeiten…",

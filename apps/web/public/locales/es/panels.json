@@ -1060,6 +1060,7 @@
       "locked": "Creado con una versión más reciente de Ori Studio",
       "lockedTurn": "Creado con una versión más reciente de Ori Studio",
       "missing": "Falta el patrón",
+      "needsAttention": "Necesita atención",
       "noInstruction": "Sin instrucción",
       "noPicture": "Aún sin imagen",
       "notCaptured": "Aún sin capturar",
@@ -1256,6 +1257,10 @@
     },
     "label": "Diagrama",
     "layerOrder": {
+      "chosenOrder": "Orden elegido",
+      "chosenOrderNeedsAttention": "El orden de capas elegido para este paso necesita atención desde que cambió el patrón.",
+      "chosenOrderTimedOut": "No se pudo comprobar a tiempo el orden de capas elegido para este paso.",
+      "chosenOrderWaiting3d": "Este paso ahora se pliega en 3D. Su orden de capas elegido se conserva para cuando vuelva a plegarse plano.",
       "constraints_one": "{{count}} restricción",
       "constraints_many": "{{count}} restricciones",
       "constraints_other": "{{count}} restricciones",

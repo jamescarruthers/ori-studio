@@ -24,10 +24,8 @@
   "diagram": {
     "addedAsStep": "Adicionado como passo {{number}}",
     "capture": {
+      "chosenOrderKept": "A ordem das camadas escolhida para este passo precisa de atenção, então ele mantém sua imagem.",
       "failed": "Não foi possível capturar a imagem",
-      "layerOrderAttention_one": "{{count}} das restrições de camadas deste passo precisa de atenção.",
-      "layerOrderAttention_many": "{{count}} das restrições de camadas deste passo precisam de atenção.",
-      "layerOrderAttention_other": "{{count}} das restrições de camadas deste passo precisam de atenção.",
       "layerOrderKept": "As restrições de camadas deste passo precisam de atenção, então ele mantém sua imagem.",
       "missing": "Esse padrão não está mais no padrão de vincos.",
       "needsPose": "Um passo dobrado em parte no simulador é capturado em Pose: abra-o com Ajustar pose.",
@@ -59,7 +57,14 @@
       "restoreFailed": "Não foi possível restaurar os passos importados."
     },
     "layerOrder": {
-      "folds3d": "Os vincos deste passo agora dobram em 3D, e a ordem das camadas funciona em dobras planas. Atualize o passo para vê-lo."
+      "chosenOrderRemoved": "A ordem das camadas escolhida para o passo era do padrão antigo, então foi removida. Desfazer a traz de volta.",
+      "folds3d": "Os vincos deste passo agora dobram em 3D, e a ordem das camadas funciona em dobras planas. Atualize o passo para vê-lo.",
+      "lost": "A ordem das camadas parou inesperadamente, então este passo não foi alterado.",
+      "lostLoad": "Não foi possível carregar a ordem das camadas, então este passo não foi alterado. Verifique sua conexão e tente novamente.",
+      "refused": "Não foi possível desenhar esta ordem das camadas, então nada foi alterado.",
+      "removed_one": "A restrição de camadas do passo era do padrão antigo, então foi removida. Desfazer a traz de volta.",
+      "removed_many": "As {{count}} restrições de camadas do passo eram do padrão antigo, então foram removidas. Desfazer as traz de volta.",
+      "removed_other": "As {{count}} restrições de camadas do passo eram do padrão antigo, então foram removidas. Desfazer as traz de volta."
     },
     "placementsReflowed_one": "{{count}} passos movidos voltaram às suas células",
     "placementsReflowed_many": "{{count}} passos movidos voltaram às suas células",
@@ -88,6 +93,12 @@
       "tooLarge": "Este passo é detalhado demais para ser mantido no diagrama.",
       "undoReplaced": "Desfazer"
     },
+    "refreshAllChosenOrderKept_one": "A ordem das camadas escolhida de {{count}} passo precisa de atenção, então ele mantém sua imagem.",
+    "refreshAllChosenOrderKept_many": "As ordens das camadas escolhidas de {{count}} passos precisam de atenção, então eles mantêm suas imagens.",
+    "refreshAllChosenOrderKept_other": "As ordens das camadas escolhidas de {{count}} passos precisam de atenção, então eles mantêm suas imagens.",
+    "refreshAllLayerOrderKept_one": "As restrições de camadas de {{count}} passo precisam de atenção, então ele mantém sua imagem.",
+    "refreshAllLayerOrderKept_many": "As restrições de camadas de {{count}} passos precisam de atenção, então eles mantêm suas imagens.",
+    "refreshAllLayerOrderKept_other": "As restrições de camadas de {{count}} passos precisam de atenção, então eles mantêm suas imagens.",
     "refreshedAll_one": "1 passo atualizado",
     "refreshedAll_many": "{{count}} passos atualizados",
     "refreshedAll_other": "{{count}} passos atualizados",

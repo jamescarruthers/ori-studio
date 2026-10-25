@@ -23,9 +23,8 @@
   "diagram": {
     "addedAsStep": "Added as step {{number}}",
     "capture": {
+      "chosenOrderKept": "This step’s chosen layer order needs attention, so it keeps its picture.",
       "failed": "The picture couldn’t be captured",
-      "layerOrderAttention_one": "1 of this step’s layer constraints needs attention.",
-      "layerOrderAttention_other": "{{count}} of this step’s layer constraints need attention.",
       "layerOrderKept": "This step’s layer constraints need attention, so it keeps its picture.",
       "missing": "That pattern isn’t in the crease pattern any more.",
       "needsPose": "A step folded part way in the simulator is captured in Pose: open it with Adjust Pose.",
@@ -55,7 +54,13 @@
       "restoreFailed": "Couldn’t restore the imported steps."
     },
     "layerOrder": {
-      "folds3d": "This step’s creases fold in 3D now, and layer order works on flat folds. Refresh the step to see it."
+      "chosenOrderRemoved": "The step’s chosen layer order was for its old pattern, so it was removed. Undo brings it back.",
+      "folds3d": "This step’s creases fold in 3D now, and layer order works on flat folds. Refresh the step to see it.",
+      "lost": "Layer order stopped unexpectedly, so this step wasn’t changed.",
+      "lostLoad": "Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.",
+      "refused": "This layer order couldn’t be drawn, so nothing was changed.",
+      "removed_one": "The step’s layer constraint was for its old pattern, so it was removed. Undo brings it back.",
+      "removed_other": "The step’s {{count}} layer constraints were for its old pattern, so they were removed. Undo brings them back."
     },
     "placementsReflowed_one": "Moved steps returned to automatic placement: {{count}}",
     "placementsReflowed_other": "Moved steps returned to automatic placement: {{count}}",
@@ -78,6 +83,10 @@
       "tooLarge": "This step is too detailed to keep in the diagram.",
       "undoReplaced": "Undo"
     },
+    "refreshAllChosenOrderKept_one": "1 step’s chosen layer order needs attention, so it keeps its picture.",
+    "refreshAllChosenOrderKept_other": "{{count}} steps’ chosen layer orders need attention, so they keep their pictures.",
+    "refreshAllLayerOrderKept_one": "1 step’s layer constraints need attention, so it keeps its picture.",
+    "refreshAllLayerOrderKept_other": "{{count}} steps’ layer constraints need attention, so they keep their pictures.",
     "refreshedAll_one": "Refreshed 1 step",
     "refreshedAll_other": "Refreshed {{count}} steps",
     "uploadFailed_one": "A picture couldn’t be added",
