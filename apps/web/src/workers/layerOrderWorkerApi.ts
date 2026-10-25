@@ -1,0 +1,161 @@
+/**
+ * What `layerOrderWorker.ts` exposes: the Layer order engine's contract
+ * (`layer-order/engine/layerOrderEngine.ts`) over a backend that holds the
+ * session, kept apart from the worker so tests run it over a fake backend,
+ * through comlink, with no wasm.
+ *
+ * The backend is the only part that knows the bridge. U6's is the Fold
+ * bridge's `layer_*` bindings (E7) and lives in this directory, the only one
+ * that may import the Fold wasm glue; until then the worker's backend is
+ * {@link unavailableLayerOrderBackend}.
+ *
+ * What this adds to any backend, in the shape of `foldSequenceWorker.ts`:
+ *
+ * - **A lazy start.** The backend is loaded on the first call. A start that
+ *   failed (a `.wasm` that did not arrive, a compile that ran out of memory)
+ *   is forgotten, so the next call starts it again.
+ * - **Envelopes.** Every rejection is a `{ code, message }` envelope.
+ * - **A trap ends the engine.** A failure that is not an envelope left the
+ *   call halfway (`fold/engine/foldEngineTrap.ts` says why, for this same
+ *   bridge), so this call and every one after it answer
+ *   `layer_order_engine_trapped`, without touching the backend again; the
+ *   runtime replaces the worker on the first such answer.
+ * - **Calls a backend lacks** (E6's, until they land) reject as
+ *   `layer_order_unsupported_operation`, naming the call.
+ */
+import type { WasmErrorEnvelope } from '../engine/types';
+import { foldEngineTrapOf } from '../fold/engine/foldEngineTrap';
+import {
+  LAYER_ORDER_CALL_FAILURES,
+  isLayerOrderEngineTrapped,
+  type LayerOrderEngine,
+  type LayerOrderEngineTrapped,
+  type LayerOrderSessionCalls,
+  type LayerOrderSolutionCalls,
+  type LayerOrderUnsupported,
+} from '../layer-order/engine/layerOrderEngine';
+
+/** A call as a backend may answer it: at once, as the bridge's calls do, or later. */
+type Answering<Calls> = {
+  [K in keyof Calls]: Calls[K] extends (...args: infer A) => Promise<infer R> ? (...args: A) => R | Promise<R> : never;
+};
+
+/**
+ * What hosts the session: every session call, and as many of E6's calls as
+ * it has. Its rejections are envelopes; a refusal is a value it returns.
+ */
+export type LayerOrderBackend = Answering<LayerOrderSessionCalls> & Partial<Answering<LayerOrderSolutionCalls>>;
+
+/** Loads the backend, once per worker. */
+export type LayerOrderBackendLoader = () => LayerOrderBackend | Promise<LayerOrderBackend>;
+
+/** The worker's backend until U6 wires the bridge: it never starts, so every call rejects as unavailable. */
+export const unavailableLayerOrderBackend: LayerOrderBackendLoader = () =>
+  Promise.reject({
+    code: LAYER_ORDER_CALL_FAILURES.unavailable,
+    message: 'The layer order engine is not built into this worker yet.',
+  } satisfies WasmErrorEnvelope);
+
+function isEnvelope(error: unknown): error is WasmErrorEnvelope {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    typeof (error as { code?: unknown }).code === 'string' &&
+    'message' in error
+  );
+}
+
+function startFailure(error: unknown): WasmErrorEnvelope {
+  if (isEnvelope(error)) return error;
+  return {
+    code: LAYER_ORDER_CALL_FAILURES.unavailable,
+    message: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function trappedOf(error: unknown): LayerOrderEngineTrapped | null {
+  if (isLayerOrderEngineTrapped(error)) return error;
+  const trap = foldEngineTrapOf(error);
+  if (!trap) return null;
+  return {
+    code: LAYER_ORDER_CALL_FAILURES.trapped,
+    trap: trap.trap,
+    message: trap.message,
+    ...(trap.stack ? { stack: trap.stack } : {}),
+  };
+}
+
+/** The contract over `load`'s backend (see the module docs). */
+export function createLayerOrderWorkerApi(load: LayerOrderBackendLoader): LayerOrderEngine {
+  let ready: Promise<LayerOrderBackend> | null = null;
+  let trapped: LayerOrderEngineTrapped | null = null;
+
+  const ensureReady = (): Promise<LayerOrderBackend> => {
+    if (ready) return ready;
+    const starting = Promise.resolve().then(load);
+    ready = starting;
+    starting.catch(() => {
+      if (ready === starting) ready = null;
+    });
+    return starting;
+  };
+
+  const call = async <T>(answer: (backend: LayerOrderBackend) => T | Promise<T>): Promise<T> => {
+    if (trapped) throw trapped;
+    let backend: LayerOrderBackend;
+    try {
+      backend = await ensureReady();
+    } catch (error) {
+      // A start that failed: nothing ran, and the next call starts again.
+      throw startFailure(error);
+    }
+    if (trapped) throw trapped;
+    try {
+      return await answer(backend);
+    } catch (error) {
+      const trap = trappedOf(error);
+      if (!trap) throw error;
+      trapped = trap;
+      console.error('[ori-studio] the layer order engine failed mid-call; this worker answers nothing more', error);
+      throw trap;
+    }
+  };
+
+  return {
+    open: (source, limits) => call((backend) => backend.open(source, limits)),
+    restore: (source, record, limits) => call((backend) => backend.restore(source, record, limits)),
+    openPairs: () => call((backend) => backend.openPairs()),
+    constraints: () => call((backend) => backend.constraints()),
+    preview: (candidate, limits) => call((backend) => backend.preview(candidate, limits)),
+    commit: (constraints, limits) => call((backend) => backend.commit(constraints, limits)),
+    stacks: (side) => call((backend) => backend.stacks(side)),
+    scene: (side) => call((backend) => backend.scene(side)),
+    save: () => call((backend) => backend.save()),
+    relations: () => call((backend) => backend.relations()),
+    close: () => call((backend) => backend.close()),
+    explain: (candidate, limits) =>
+      call((backend) => {
+        if (!backend.explain) throw unsupported('explain');
+        return backend.explain(candidate, limits);
+      }),
+    countSolutions: (limits) =>
+      call((backend) => {
+        if (!backend.countSolutions) throw unsupported('countSolutions');
+        return backend.countSolutions(limits);
+      }),
+    stepSolution: (step, limits) =>
+      call((backend) => {
+        if (!backend.stepSolution) throw unsupported('stepSolution');
+        return backend.stepSolution(step, limits);
+      }),
+  };
+}
+
+/** The rejection for one of E6's calls on a backend that has none. */
+function unsupported(operation: keyof LayerOrderSolutionCalls): LayerOrderUnsupported {
+  return {
+    code: LAYER_ORDER_CALL_FAILURES.unsupported,
+    operation,
+    message: `The layer order engine has no ${operation} yet.`,
+  };
+}
