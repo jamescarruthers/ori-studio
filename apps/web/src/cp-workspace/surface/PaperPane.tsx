@@ -6,7 +6,6 @@ import { ptToDevicePx, type PaperStyle } from '../../lib/paper/paperStyle';
 import type { SurfaceStylePolicy } from '../../lib/paper/paperStyleResolve';
 import type { WheelGesturePreference } from '../../lib/wheelGesture';
 import { CpRendererUnavailable } from '../CpRendererUnavailable';
-import type { CpOverlayView } from '../CreasePatternWebglCanvas';
 import { paperSceneToFoldedGeometry, type FoldedFaceInk } from '../adapters/cpFoldedToScene';
 import { cpCanvasCursor } from '../cpCanvasCursor';
 import type { StackHit, StackHitIndex } from '../picking/stackHitIndex';
@@ -20,6 +19,7 @@ import {
   type CpSurfaceFrameScales,
   type CpSurfaceHitRadii,
   type CpSurfaceInset,
+  type CpSurfaceView,
 } from './useCpSurface';
 import styles from './PaperPane.module.css';
 
@@ -65,6 +65,8 @@ export interface PaperLook {
 
 /** What follows the pointer, over the pane's own channels. */
 export interface PaperPaneOverlay {
+  /** Over `underFills`, under the creases: a tint that must never veil one. */
+  underFills?: FillGeometry | null;
   /** Over `fills`. */
   fills?: FillGeometry | null;
   /** Over `strokes`. */
@@ -144,7 +146,7 @@ export interface PaperPaneProps<Hit> {
   /** Called when a press on the pane begins: the pane the keyboard's zoom now means. */
   onActivate?: () => void;
   /** Layers drawn over the canvas through its camera. */
-  layers?: (view: CpOverlayView) => ReactNode;
+  layers?: (view: CpSurfaceView) => ReactNode;
   /** The canvas's accessible name. */
   ariaLabel: string;
   /** The canvas's test id. */
@@ -214,7 +216,7 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
     markers,
     errorSurface,
   } = props;
-  const [view, setView] = useState<CpOverlayView | null>(null);
+  const [view, setView] = useState<CpSurfaceView | null>(null);
 
   const { canvasRef, rendererRef, rendererGeneration, rendererStatus, hovered, dragging, render, controls } =
     useCpSurface<Hit>({
@@ -271,6 +273,9 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
 
   // What follows the pointer, over the pane's own fills and strokes.
   const feedback = useMemo(() => overlay?.(hovered) ?? NO_OVERLAY, [overlay, hovered]);
+  useEffect(() => {
+    rendererRef.current?.setSheetMarks(feedback.underFills ?? null);
+  }, [feedback, rendererGeneration, rendererRef]);
   useEffect(() => {
     rendererRef.current?.setDiagnosticFills(joinFills(fills, feedback.fills ?? null));
   }, [fills, feedback, rendererGeneration, rendererRef]);

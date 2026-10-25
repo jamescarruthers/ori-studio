@@ -167,6 +167,7 @@ export function createReglRenderer(
   // frame): sparse, on top of the crease pattern.
   const diagnosticFills = createFillProgram(regl);
   const sheetFill = createFillProgram(regl);
+  const sheetMarks = createFillProgram(regl);
   const diagnosticMarkers = createMarkerProgram(regl);
   // Big-little-big sector wedges: screen-scaled fills at a vertex.
   const diagnosticWedges = createWedgeProgram(regl);
@@ -179,6 +180,7 @@ export function createReglRenderer(
   let hasOverlayPoints = false;
   let hasDiagnosticFills = false;
   let hasSheetFill = false;
+  let hasSheetMarks = false;
   let hasDiagnosticMarkers = false;
   let hasDiagnosticWedges = false;
   let hasOverlayFrame = false;
@@ -342,6 +344,12 @@ export function createReglRenderer(
       if (next) sheetFill.setData(next);
     },
 
+    setSheetMarks(next) {
+      if (disposed) return;
+      hasSheetMarks = next !== null && next.count > 0;
+      if (next) sheetMarks.setData(next);
+    },
+
     setDiagnosticFills(next) {
       if (disposed) return;
       hasDiagnosticFills = next !== null && next.count > 0;
@@ -382,6 +390,10 @@ export function createReglRenderer(
       // paper has a face of its own.
       if (hasSheetFill) {
         sheetFill.draw({ view: frame.view, viewport });
+      }
+      // Marks on the sheet: under everything drawn on it, so no crease is veiled.
+      if (hasSheetMarks) {
+        sheetMarks.draw({ view: frame.view, viewport });
       }
       // Grid sits behind everything as the coordinate backdrop.
       if (hasGrid) {
@@ -515,6 +527,7 @@ export function createReglRenderer(
       overlayPoints.dispose();
       diagnosticFills.dispose();
       sheetFill.dispose();
+      sheetMarks.dispose();
       diagnosticMarkers.dispose();
       diagnosticWedges.dispose();
       overlayFrame.dispose();

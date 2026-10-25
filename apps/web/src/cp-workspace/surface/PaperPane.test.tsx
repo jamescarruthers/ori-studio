@@ -231,8 +231,9 @@ describe('a paper pane', () => {
       stroke: new Float32Array(4),
       count: 1,
     };
+    const hoverUnder = fill(3, 0.16);
     const overlay = vi.fn((hovered: CellHit | null) =>
-      hovered ? { fills: hoverFills, strokes: hoverStrokes, points: hoverPoints } : {}
+      hovered ? { underFills: hoverUnder, fills: hoverFills, strokes: hoverStrokes, points: hoverPoints } : {}
     );
     const canvas = mount({ creases, underFills, fills, strokes, overlay, stacks: new StackHitIndex(CELLS) });
     expect(channels.last.get('setStrokes')).toBe(creases);
@@ -240,11 +241,15 @@ describe('a paper pane', () => {
     expect(channels.last.get('setDiagnosticFills')).toBe(fills);
     expect(channels.last.get('setPreview')).toBe(strokes);
     expect(channels.last.get('setOverlayPoints')).toBeNull();
-    // Over a cell: the pointer's fills over the pane's, its strokes over the pane's, its points.
+    expect(channels.last.get('setSheetMarks')).toBeNull();
+    // Over a cell: the pointer's fills under the creases and over the pane's, its strokes over the pane's, its points.
     const right = onCanvas({ x: 0.75, y: 0.5 });
     hover(canvas, right.x, right.y);
     expect(overlay).toHaveBeenLastCalledWith({ cell: 1, face: 1 });
     expect(channels.last.get('setDiagnosticFills')).toEqual(joinFills(fills, hoverFills));
+    // Its own channel, under the creases, the pane's under-fills left as they were.
+    expect(channels.last.get('setSheetMarks')).toBe(hoverUnder);
+    expect(channels.last.get('setSheetFill')).toBe(underFills);
     expect((channels.last.get('setPreview') as StrokeGeometry).count).toBe(3);
     expect(channels.last.get('setOverlayPoints')).toBe(hoverPoints);
   });

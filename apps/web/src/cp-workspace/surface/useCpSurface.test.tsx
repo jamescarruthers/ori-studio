@@ -12,7 +12,7 @@ import {
   CP_POINT_HIT_MIN_CSS,
   CP_POINT_HIT_MIN_CSS_COARSE,
 } from '../snapRadius';
-import type { CpSurface, CpSurfaceHitRadii, UseCpSurfaceOptions } from './useCpSurface';
+import type { CpSurface, CpSurfaceHitRadii, CpSurfaceView, UseCpSurfaceOptions } from './useCpSurface';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -339,6 +339,16 @@ describe('useCpSurface opening fit', () => {
     act(() => surface().controls.zoomIn());
     act(() => surface().controls.fit());
     expect(onZoomPercentChange).toHaveBeenLastCalledWith(fitted);
+  });
+
+  it('reports the line boost with its view: none at the fit, more once zoomed past it', () => {
+    layOut({ width: 400, height: 400 });
+    const onViewChange = vi.fn<(view: CpSurfaceView) => void>();
+    mount({ onViewChange });
+    expect(onViewChange.mock.lastCall![0].widthBoost).toBe(1);
+    act(() => surface().controls.zoomIn());
+    act(() => surface().controls.zoomIn());
+    expect(onViewChange.mock.lastCall![0].widthBoost).toBeGreaterThan(1);
   });
 
   it('takes no fit while the canvas has no box, and fits once it has one', () => {
