@@ -400,7 +400,10 @@ export type LayerOrderAction =
   | { readonly type: 'ground_clicked' }
   // The builder.
   | { readonly type: 'slot_activated'; readonly slot: LayerSlot }
+  /** A slot's ×: the object slot's clears every object. */
   | { readonly type: 'slot_cleared'; readonly slot: LayerSlot }
+  /** An object chip's ×: that one object goes, whichever slot is active; the subject stays (D21). */
+  | { readonly type: 'object_removed'; readonly face: LayerFace }
   | { readonly type: 'slot_hovered'; readonly slot: LayerSlot | null }
   | { readonly type: 'sentence_cleared' }
   | { readonly type: 'verb_pointed'; readonly verb: LayerVerb | null }

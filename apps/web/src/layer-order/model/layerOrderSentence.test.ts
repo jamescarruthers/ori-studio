@@ -17,6 +17,7 @@ import {
   openIndexOf,
   openPartners,
   pickFace,
+  removeObject,
   revealSubject,
   setVerb,
   slotNow,
@@ -218,6 +219,23 @@ describe('compound constraints (D21)', () => {
     const once = groundClick(pickWide(EMPTY_SENTENCE, 2, 0, 3, 5));
     expect(once).toMatchObject({ subject: 2, objects: [], active: 'object' });
     expect(groundClick(once)).toMatchObject({ subject: null, objects: [] });
+  });
+
+  it('an object chip’s × removes that object whichever slot is active, and never the subject', () => {
+    const s = pickWide(EMPTY_SENTENCE, 2, 0, 3);
+    expect(removeObject(s, 3)).toMatchObject({ subject: 2, objects: [0], objectOrigin: 'pattern', active: 'object' });
+    const replacing = activateSlot(s, wide, 'subject');
+    expect(removeObject(replacing, 0)).toMatchObject({ subject: 2, objects: [3], active: 'subject' });
+    // The last object: none left, and the object slot stays active.
+    expect(removeObject(pickWide(EMPTY_SENTENCE, 2, 0), 0)).toMatchObject({
+      subject: 2,
+      objects: [],
+      objectOrigin: null,
+      active: 'object',
+    });
+    // A face that is not an object changes nothing.
+    expect(removeObject(s, 5)).toBe(s);
+    expect(removeObject(s, 2)).toBe(s);
   });
 
   it('the object slot’s × clears every object', () => {

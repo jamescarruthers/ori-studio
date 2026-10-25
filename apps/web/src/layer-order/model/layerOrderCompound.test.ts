@@ -97,6 +97,51 @@ describe('the builder with several objects', () => {
     expect(paneMarks(dispatch(s.state, { type: 'slot_hovered', slot: 'object' }).state).lit).toEqual([0, 3]);
   });
 
+  it('an object chip’s × in the object step is the same as picking that object again', () => {
+    const s = fits(sentenceOf(opened().state, 2, 0, 3)).state;
+    const removed = dispatch(s, { type: 'object_removed', face: 3 });
+    expect(removed).toEqual(dispatch(s, { type: 'face_picked', face: 3, origin: 'pattern' }));
+    expect(removed.state.sentence).toMatchObject({ subject: 2, objects: [0], active: 'object' });
+  });
+
+  it('an object chip’s × checks what is left, and the hint follows', () => {
+    // 2 in front of 3 alone was never checked: removing 0 asks for it.
+    const s = fits(sentenceOf(opened().state, 2, 0, 3)).state;
+    const removed = dispatch(s, { type: 'object_removed', face: 0 });
+    expect(effectsOf(removed.effects, 'preview').map((effect) => effect.constraints)).toEqual([[[2, 3, -1]]]);
+    expect(hintLine(removed.state)?.text).toEqual({ key: 'checking', sentence: view(2, 'in_front_of', 3) });
+    expect(addState(removed.state)).toMatchObject({ enabled: false, why: 'checking', label: 'add_constraint' });
+  });
+
+  it('an object chip’s × with the subject slot active removes the object, not the subject', () => {
+    const s = play(sentenceOf(opened().state, 2, 0, 3).state, { type: 'slot_activated', slot: 'subject' }).state;
+    expect(dispatch(s, { type: 'object_removed', face: 3 }).state.sentence).toMatchObject({
+      subject: 2,
+      objects: [0],
+      active: 'subject',
+    });
+    // A pick there would have made 3 the subject instead.
+    expect(dispatch(s, { type: 'face_picked', face: 3, origin: 'pattern' }).state.sentence).toMatchObject({ subject: 3 });
+  });
+
+  it('the last object’s × leaves the object slot active, with nothing to check', () => {
+    const s = fits(sentenceOf(opened().state, 2, 0)).state;
+    const removed = dispatch(s, { type: 'object_removed', face: 0 });
+    expect(removed.state.sentence).toMatchObject({ subject: 2, objects: [], active: 'object' });
+    expect(paneMarks(removed.state).active).toBe('object');
+    expect(effectsOf(removed.effects, 'preview')).toEqual([]);
+    expect(hintLine(removed.state)?.text).toEqual({ key: 'pick_object', objects: 2, tinted: false });
+    expect(addState(removed.state)).toMatchObject({ enabled: false, why: 'pick_object' });
+  });
+
+  it('an object chip’s × does nothing for a face that is not an object, or while the builder is inert', () => {
+    const s = sentenceOf(opened().state, 2, 0).state;
+    expect(dispatch(s, { type: 'object_removed', face: 3 })).toEqual({ state: s, effects: [] });
+    const committing = play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }).state;
+    const inert = { ...committing, settle: { kind: 'timed_out' as const, limits: LAYER_ORDER_MODEL_LIMITS.restore } };
+    expect(dispatch(inert, { type: 'object_removed', face: 0 }).state).toBe(inert);
+  });
+
   it('a click on empty paper clears every object, then the subject', () => {
     const s = sentenceOf(opened().state, 2, 0, 3);
     const once = play(s.state, { type: 'ground_clicked' });

@@ -61,6 +61,7 @@ import {
   keepOpenObjects,
   openIndexOf,
   pickFace,
+  removeObject,
   revealSubject,
   setVerb,
   type LayerSentence,
@@ -305,6 +306,9 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'slot_cleared':
       if (!builderLive(state)) return state;
       return withSentence(state, clearSlot(state.sentence, action.slot));
+    case 'object_removed':
+      if (!builderLive(state)) return state;
+      return withSentence(state, removeObject(state.sentence, action.face));
     case 'slot_hovered':
       return state.hover.slot === action.slot ? state : { ...state, hover: { ...state.hover, slot: action.slot } };
     case 'sentence_cleared':

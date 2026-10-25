@@ -7,7 +7,8 @@
  *
  * **Compound constraints (D21).** The subject is one face; the objects are
  * one or more. In the object step a pick toggles: an unpicked face is added,
- * a picked one removed, by pointer, tap or the keyboard face menu alike. The
+ * a picked one removed, by pointer, tap or the keyboard face menu alike; each
+ * object's chip has a × that removes it whichever slot is active. The
  * objects read in letter order ("H, K") whatever order they were picked in,
  * and the rules that carried one object carry each: a new subject keeps each
  * object still open with it, and a click on empty paper clears every object,
@@ -203,6 +204,21 @@ export function toggleObject(
     ? sentence.objects.filter((object) => object !== face)
     : inLetterOrder([...sentence.objects, face], ranks);
   return { ...withObjects(sentence, objects, sentence.objectOrigin ?? origin), active: 'object' };
+}
+
+/**
+ * An object chip's ×: that object leaves the sentence, whichever slot is
+ * active, and the subject and the active slot stay as they are (so with the
+ * object slot active, removing the last object leaves it active). A face that
+ * is not an object changes nothing.
+ */
+export function removeObject(sentence: LayerSentence, face: LayerFace): LayerSentence {
+  if (!sentence.objects.includes(face)) return sentence;
+  return withObjects(
+    sentence,
+    sentence.objects.filter((object) => object !== face),
+    sentence.objectOrigin
+  );
 }
 
 /**
