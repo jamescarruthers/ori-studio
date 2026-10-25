@@ -21,6 +21,7 @@ import {
 } from './layerOrderEngine.fixtures';
 import type { LayerOrderLimits, LayerSolutionCount } from './layerOrderEngine';
 import { createLayerOrderRuntime, isLayerOrderEngineLost, type LayerOrderRuntime } from './layerOrderRuntime';
+import { registerWorkerFailureSink } from '../../lib/workerDiagnostics';
 
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 
@@ -512,6 +513,32 @@ describe('engine loss', () => {
     await expect(runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS)).resolves.toMatchObject({ status: 'ok' });
     expect(fake.workers).toHaveLength(2);
   });
+
+  it.each(['dialog', 'host'] as const)(
+    'the %s’s worker the browser never loaded is its owner’s to say: the app’s error toast hears nothing of it, but of a crash',
+    async (role) => {
+      const sink = vi.fn();
+      registerWorkerFailureSink(sink);
+      try {
+        const fake = fakeLayerOrderWorkers();
+        const runtime = createLayerOrderRuntime({ role, spawn: fake.spawn });
+        const opening = runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS).catch((e: unknown) => e);
+        fake.workers[0]!.backend.hold('open');
+        fake.workers[0]!.failToLoad();
+        await expect(opening).resolves.toMatchObject({ reason: 'unloaded', loadFailed: true });
+        expect(sink).not.toHaveBeenCalled();
+
+        const again = runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS).catch((e: unknown) => e);
+        fake.workers[1]!.backend.hold('open');
+        fake.workers[1]!.crash();
+        await expect(again).resolves.toMatchObject({ reason: 'crashed' });
+        expect(sink).toHaveBeenCalledOnce();
+        expect(sink.mock.calls[0]![0]).toMatchObject({ worker: 'layer-order', loadFailed: false });
+      } finally {
+        registerWorkerFailureSink(null);
+      }
+    }
+  );
 
   it('a worker that dies rejects every call on it as crashed, and is reported once', async () => {
     const { fake, runtime, worker } = opened();

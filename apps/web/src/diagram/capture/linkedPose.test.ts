@@ -16,15 +16,22 @@ import {
   type DiagramSimulatedView,
   type DiagramSpreadStarts,
 } from '../document/diagramDocument';
+import type { LayerOrderResolution } from '../../layer-order/host/hostEngineGateway';
+import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import {
   cpDocument,
   fakeCaptureRuntime,
+  fakeLayerOrderResolutions,
   halfFoldOnSheetKernelScene,
   LEFT_FOLD_LINE_IDS,
+  ORDERED_HANDLE,
+  STEP_LAYER_ORDER_IN_SOURCE,
+  stepLayerOrderJson,
   twoSquaresIndex,
 } from './capture.fixtures';
 import { chooseStepCreases } from './captureCreases';
 import type { CpCaptureRuntime } from './captureFolded';
+import { stepLayerOrderOf } from './captureLayerOrder';
 import { CaptureSessionClosedError, createCaptureSession, type CaptureSessionDeps } from './captureSession';
 import { poseLinkedStep, type LinkedPoseRequest } from './linkedPose';
 
@@ -858,5 +865,34 @@ describe('a session let go while it folds', () => {
     land();
     await expect(folding).rejects.toBeInstanceOf(CaptureSessionClosedError);
     expect(held.get(placed.handle)).toBe(0);
+  });
+
+  it('frees a fold in a record’s order whose restore answers after it was disposed (H7)', async () => {
+    const { session, held, runtime } = sessionWith();
+    let answer: (resolution: LayerOrderResolution) => void = () => {};
+    const resolve = vi.fn((_source: LayerOrderSource) => new Promise<LayerOrderResolution>((done) => (answer = done)));
+    const order = stepLayerOrderOf(stepLayerOrderJson())!;
+    const folding = session.flat(cpDocument(), creasesOf().foldLineIds, 'front', 1, 0, { order, resolve });
+    await vi.waitFor(() => expect(resolve).toHaveBeenCalled());
+    // The detail closes while the host engine restores; then the order comes back and is folded.
+    session.dispose();
+    answer(fakeLayerOrderResolutions.applied(STEP_LAYER_ORDER_IN_SOURCE, resolve.mock.calls[0]![0]));
+    await expect(folding).rejects.toBeInstanceOf(CaptureSessionClosedError);
+    expect(runtime.foldWithOrder).toHaveBeenCalledOnce();
+    // The new figure is let go as it lands: held for nothing.
+    expect(held.get(ORDERED_HANDLE)).toBe(0);
+  });
+
+  it('says a restore that came back kept, after it was disposed, is over: nothing to keep', async () => {
+    const { session, runtime } = sessionWith();
+    let answer: (resolution: LayerOrderResolution) => void = () => {};
+    const resolve = vi.fn((_source: LayerOrderSource) => new Promise<LayerOrderResolution>((done) => (answer = done)));
+    const order = stepLayerOrderOf(stepLayerOrderJson())!;
+    const folding = session.flat(cpDocument(), creasesOf().foldLineIds, 'front', 1, 0, { order, resolve });
+    await vi.waitFor(() => expect(resolve).toHaveBeenCalled());
+    session.dispose();
+    answer(fakeLayerOrderResolutions.kept('clash', STEP_LAYER_ORDER_IN_SOURCE));
+    await expect(folding).rejects.toBeInstanceOf(CaptureSessionClosedError);
+    expect(runtime.foldWithOrder).not.toHaveBeenCalled();
   });
 });

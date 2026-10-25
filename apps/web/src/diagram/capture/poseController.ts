@@ -3,6 +3,7 @@ import {
   trackDiagramPicturePosed,
   type DiagramPoseAction as TrackedPoseAction,
 } from '../../analytics';
+import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { ensureCpSheetIndex, peekCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
 import type { LayerSpreadOptions, SpreadKind } from '../../cp-workspace/folded/foldedLayerSpread';
@@ -23,7 +24,9 @@ import {
   beginStepCapture,
   captureFailure,
   endStepCapture,
+  layerOrderResolver,
   runStepFold,
+  sameAttention,
   stepCaptureRuntime,
   storeSheetPaper,
   storeSimulateFlat,
@@ -31,6 +34,13 @@ import {
   type StepCaptureStart,
 } from '../../store/workspaceStore/diagramCapture';
 import { withSheetPaper } from './captureFolded';
+import {
+  LayerOrderNotShownError,
+  layerOrderDigestOf,
+  layerOrderSummaryOf,
+  routed3dLayerOrder,
+  stepLayerOrderOf,
+} from './captureLayerOrder';
 import {
   creasePatternSide,
   creasesFlipped,
@@ -50,13 +60,19 @@ import {
   knownCreasesOf,
   type StepCreases,
 } from './captureCreases';
-import { CaptureSessionClosedError, createCaptureSession, type CaptureSession } from './captureSession';
+import {
+  CaptureSessionClosedError,
+  createCaptureSession,
+  type CaptureSession,
+  type FlatFoldState,
+  type HeldLayerOrder,
+} from './captureSession';
 import { creasesThumbnail } from './captureThumbnail';
 import { abandonOnEngineLoss } from './engineLoss';
 import { linkStatus } from './linkStatus';
 import { lightingChanged } from '../pictures/lighting';
 import { poseLinkedStep, type FlatSolutions, type LinkedPoseRequest } from './linkedPose';
-import { captureKind, sayCaptureOutcome } from './stepCaptureActions';
+import { captureKind, sayCaptureOutcome, trackStepLayerOrderAttention } from './stepCaptureActions';
 
 /** How long the 3D view must rest before its camera is captured: one orbit, one undo step. */
 export const ORBIT_SETTLE_MS = 450;
@@ -216,9 +232,21 @@ export interface PoseControllerListener {
   preview: (preview: SpreadPreview | null, key: string | null) => void;
 }
 
-/** Which creases a step's fold is of: its scope and their fingerprint. */
-export function linkedFoldKey(stepId: string, source: Pick<DiagramCpSource, 'scope' | 'fingerprint'>): string {
-  return JSON.stringify([stepId, source.scope, source.fingerprint]);
+/**
+ * Which fold a step's facts are of: its creases — their scope and
+ * fingerprint — and the layer order it is drawn in (H7), the record's or
+ * none, so what was learnt of a fold in a record's order (its one solution)
+ * is not shown for the kernel's enumeration once an undo takes the record
+ * back, nor the other way round. The record goes in as a digest of its text
+ * (`layerOrderDigestOf`), so the key stays short however large the record,
+ * and is built as often as a spread's sliders move.
+ */
+export function linkedFoldKey(
+  stepId: string,
+  source: Pick<DiagramCpSource, 'scope' | 'fingerprint' | 'layerOrder'>
+): string {
+  const layerOrder = source.layerOrder === undefined ? null : layerOrderDigestOf(source.layerOrder);
+  return JSON.stringify([stepId, source.scope, source.fingerprint, layerOrder]);
 }
 
 /**
@@ -342,6 +370,8 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
       } catch (error) {
         // The detail closed, or a newer verb took over, while this folded.
         if (error instanceof CaptureSessionClosedError) return { status: 'discarded' };
+        // The step's layer order could not be drawn: it keeps its picture, its record flagged (D10).
+        if (error instanceof LayerOrderNotShownError) return keepLayerOrder(begun, error);
         return captureFailure(error);
       } finally {
         start = null;
@@ -390,17 +420,21 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
             style: begun.style,
             simulateFlat: storeSimulateFlat({ get: useWorkspaceStore.getState, set: useWorkspaceStore.setState }),
             spreadStart: spreadStartsOf(stepId),
+            layerOrder: heldLayerOrderOf(linked),
           },
           request
         )
       );
       if (result.status === 'refused' || result.status === 'unavailable') return result;
-      const source = linkedSource(linked, choice.creases, document, result.render);
+      const source = linkedSource(linked, choice.creases, document, result.render, result.layerOrder);
       const committed = await useWorkspaceStore
         .getState()
         .commitDiagramCapture(begun, { source, picture: result.picture }, 'Adjust pose');
       if (!committed) return { status: 'discarded' };
       if (committed.changed && options?.tracked !== false) trackPose(request.verb, result.render);
+      // Said once, as the step comes to need a look or its reason changes; a turn of a flagged step says nothing new.
+      const attention = newAttention(linked, source);
+      if (attention) trackStepLayerOrderAttention(attention);
       const key = linkedFoldKey(stepId, source);
       // What a preview may draw from: the flat fold just posed, of these creases.
       heldFor = result.render.mode === 'folded-flat' ? { key, document } : null;
@@ -413,6 +447,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
         render: result.render,
         noLayerOrder: result.noLayerOrder,
         tooDetailed: committed.tooDetailed,
+        flagged: attention,
       };
     });
     // A drag begun while this verb captured was drawn over the spread before
@@ -447,7 +482,8 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
     if (linked?.render.mode !== 'folded-flat' || !document) return null;
     if (heldFor?.key !== linkedFoldKey(stepId, linked) || heldFor.document !== document) return undefined;
     const { side, foldCase, rotationDeg } = linked.render;
-    const drawn = session.heldFlatPicture({ document, side, foldCase }, rotationDeg, spread);
+    const layerOrder = linked.layerOrder ?? null;
+    const drawn = session.heldFlatPicture({ document, side, foldCase, layerOrder }, rotationDeg, spread);
     if (!drawn) return undefined;
     return drawn.kind === 'picture' && drawn.picture.kind === 'scene' ? drawn.picture : null;
   };
@@ -485,7 +521,14 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
       const { document, choice } = await creasesFor(begun, linked);
       if (choice.status !== 'found') return null;
       const { side, foldCase, rotationDeg } = linked.render;
-      await abandonOnEngineLoss(session.flat(document, choice.creases.foldLineIds, side, foldCase));
+      const layerOrder = heldLayerOrderOf(linked);
+      try {
+        await abandonOnEngineLoss(session.flat(document, choice.creases.foldLineIds, side, foldCase, undefined, layerOrder));
+      } catch (error) {
+        // Not drawn in its order: no preview, and nothing kept for a drag; the verb it ends in keeps it.
+        if (error instanceof LayerOrderNotShownError) return null;
+        throw error;
+      }
       await abandonOnEngineLoss(session.flatPicture(rotationDeg));
       heldFor = { key: linkedFoldKey(stepId, linked), document };
       return null;
@@ -596,6 +639,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
               fingerprint: creasesMatch(choice.creases, knownCreasesOf(linked))
                 ? linked.fingerprint
                 : creasesFingerprint(choice.creases, linked.render),
+              layerOrder: linked.layerOrder,
             })
           );
         }
@@ -710,19 +754,67 @@ function linkedSource(
   previous: DiagramCpSource,
   creases: StepCreases,
   document: OristudioCpDocumentSnapshot,
-  render: DiagramCpSource['render']
+  render: DiagramCpSource['render'],
+  shown?: FlatFoldState['layerOrder']
 ): DiagramCpSource {
   const sameLines = (previous.render.mode === 'crease-pattern') === (render.mode === 'crease-pattern');
   const keep = !isRelativeFingerprint(previous.fingerprint) && sameLines && creasesMatch(creases, knownCreasesOf(previous));
+  const layerOrder = layerOrderAfterPose(previous, render, shown);
   const stored = storedCpSource({
     kind: 'cp',
     scope: followedScope(previous.scope, creases),
     fingerprint: keep ? previous.fingerprint : creasesFingerprint(creases, render),
     thumbnail: creasesThumbnail(document, creases),
     render,
+    ...(layerOrder !== undefined ? { layerOrder } : {}),
   });
   if (!stored) throw new Error('The pose made a link the file cannot read');
   return stored;
+}
+
+/**
+ * The step's layer order record after a pose (H7): the record of the order
+ * a flat pose drew; for a pose in 3D, kept, waiting for its creases to fold
+ * flat again (D13); for any other way of showing it, as it was. A pose never
+ * drops it — Reset Pose included.
+ */
+function layerOrderAfterPose(
+  previous: DiagramCpSource,
+  render: DiagramCpSource['render'],
+  shown: FlatFoldState['layerOrder'] | undefined
+): string | undefined {
+  if (shown) return shown.order.json;
+  const kept = stepLayerOrderOf(previous.layerOrder);
+  if (!kept) return previous.layerOrder;
+  return render.mode === 'folded-3d' ? routed3dLayerOrder(kept).json : kept.json;
+}
+
+/** The step's layer order, for its held flat fold to be drawn in: its record and the host engine; null for none. */
+function heldLayerOrderOf(linked: DiagramCpSource): HeldLayerOrder | null {
+  const order = stepLayerOrderOf(linked.layerOrder);
+  return order ? { order, resolve: layerOrderResolver() } : null;
+}
+
+/** What a pose left the step's record needing, when that is new: it came to need a look, or for another reason. */
+function newAttention(before: DiagramCpSource, after: DiagramCpSource): LayerOrderAttention | null {
+  const was = layerOrderSummaryOf(before)?.attention ?? null;
+  const is = layerOrderSummaryOf(after)?.attention ?? null;
+  return is && !sameAttention(was, is) ? is : null;
+}
+
+/**
+ * A pose whose fold was not drawn in the step's layer order: kept back
+ * (D10), the step keeps its picture and its record is flagged, one undo step;
+ * the host engine not there, or a Stop, keeps nothing at all.
+ */
+function keepLayerOrder(begun: StepCaptureStart, error: LayerOrderNotShownError): DiagramCaptureOutcome {
+  const { why } = error;
+  if (!why) return { status: 'stopped' };
+  if (why.kind === 'lost') return { status: 'layer-order-lost', offline: why.cause === 'load' };
+  const committed = useWorkspaceStore.getState().commitDiagramLayerOrder(begun, why.layerOrder.json, 'Adjust pose');
+  if (!committed) return { status: 'discarded' };
+  if (committed.changed) trackStepLayerOrderAttention(why.attention);
+  return { status: 'needs-attention', attention: why.attention, changed: committed.changed };
 }
 
 export function sameCamera(a: FoldedFigureCamera, b: FoldedFigureCamera): boolean {

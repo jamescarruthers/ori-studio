@@ -156,7 +156,10 @@ export function dialogClosedFact(
 }
 
 /** The hosts' event after a refold or an edit (H4, H7): `broken` saved constraints not applied. */
-export function needsAttentionFact(surface: LayerOrderSurface, broken: number): LayerOrderFact {
+export function needsAttentionFact(
+  surface: LayerOrderSurface,
+  broken: number
+): Extract<LayerOrderFact, { event: 'layer constraints need attention' }> {
   return {
     event: 'layer constraints need attention',
     properties: { surface, broken_count_bucket: bucketCount(broken, LAYER_ORDER_BROKEN_COUNT_BUCKETS) },

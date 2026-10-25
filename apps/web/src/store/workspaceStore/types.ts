@@ -2446,6 +2446,12 @@ export interface DiagramSliceActions {
     label: string
   ) => Promise<{ changed: boolean; tooDetailed: boolean } | null>;
   /**
+   * Commit a linked step's layer order record, flagged, its picture kept, as
+   * one undo step under the same guard (layer order D10): what a Pose verb
+   * that could not draw the record's order leaves. Null when it was dropped.
+   */
+  commitDiagramLayerOrder: (start: StepCaptureStart, layerOrder: string, label: string) => { changed: boolean } | null;
+  /**
    * Choose a step's pattern: select it and show the pattern picker for it.
    * False for a step that is not there, or cannot be changed.
    */

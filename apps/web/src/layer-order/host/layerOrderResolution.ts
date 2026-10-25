@@ -54,9 +54,15 @@ export interface LayerOrderKept {
 
 /** Why the engine was not there to answer. */
 export type LayerOrderLossCause =
+  /**
+   * The browser failed to load the engine's code, its worker or its wasm
+   * (offline, a stale deploy; `engine/layerOrderLoadFailure.ts`): reported to
+   * no one, and what a host says "check your connection" for.
+   */
+  | 'load'
   /** The worker died or its engine trapped (reported by the runtime, `layer-order:engine`). */
   | 'crashed'
-  /** The engine's code or its wasm would not load. */
+  /** The engine did not start for a defect, its code or its wasm there: reported once. */
   | 'unavailable'
   /** The engine failed a call for a defect, not the user's fold. */
   | 'failed';
