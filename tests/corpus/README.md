@@ -280,6 +280,63 @@ census 1 refuses), all 479 pass every gate.
 - 1,422 candidates explained, all minimal and checked; 6 smaller than the
   check's set; 0.0 / 0.2 / 49 ms (iguana-c0 0.40 s).
 
+### Census 2, in wasm
+
+`scripts/layer-order-census.mjs` (row E8, phase gate 2) makes the dialog's
+calls through the built Fold bridge in Node, as its worker will, on the same
+designs: per design, the CP bridge folds the sheet as Edit does, and a fresh
+Fold-wasm instance (the dialog's worker) opens on Edit's order
+(`layer_open_showing`), counts the solutions in the dialog's slices
+(`{ maxNodes: 1000, deadlineMs: 30 }`, up to 30 s of slicing), previews eight
+single flips of open pairs, steps by picture and with X-ray, builds three
+constraints as the session census does (each added by its preview's token),
+explains up to three candidates that can't fit, counts again and saves. A
+second fresh instance (the host engine) restores the record, and a third
+(Fold's own worker) imports the file through Import CP. Each instance runs in
+a worker thread of its own, so its wasm memory is its own peak. It is local
+only, never in CI; it needs Node 22 and both bridges built:
+
+```sh
+npm --workspace @treemaker/web run build:oristudio-fold-wasm
+npm --workspace @treemaker/web run build:oristudio-cp-wasm
+node scripts/layer-order-census.mjs --corpus /path/to/real_benchmark/cpoogle
+```
+
+Without `--corpus` (or `LAYER_ORDER_CENSUS_DIR`) it runs the fixtures and
+iguana-c0 only. `--only a,b` keeps matching cases and `--jobs n` runs n at
+once (timings are cleanest at 1); the caps (`--orders-per-component`,
+`--combinations-per-group`, `--stored-bits`), the slice (`--slice-nodes`,
+`--slice-ms`), `--count-ms` and `--previews` can be changed to try other
+budgets, and `--no-fold-import` skips the third instance. It writes
+`designs.csv`, `rows.json` and `summary.md` to
+`artifacts/layer-order-census/wasm/` (`--out` moves them).
+
+Last run on October 24, 2026, on an Apple Silicon Mac shared with other work,
+one design at a time (985 s): 480 of 489 designs admitted (the nine census 1
+refuses), all 480 through every call, every restore applied and back on the
+dialog's order, every Add adopted. Corpus p50 / p95 / max (475 designs):
+
+| | wasm | native, for comparison |
+| --- | --- | --- |
+| open on Edit's order (source built), ms | 24 / 818 / 2,317 | 17 / 657 / 2,751 (census 1) |
+| preview, ms (3,966) | 0.31 / 10 / 57 | 0.2 / 8.3 / 41 |
+| Add by token, ms | 0.04 / 0.10 / 0.81 | 0.0 / 0.0 / 2.9 |
+| explain, ms (1,422) | 0.04 / 0.25 / 66 | 0.0 / 0.2 / 49 |
+| restore, ms | 24 / 825 / 2,283 | 8.6 / 427 / 1,779 |
+| the count, whole, ms | 0.9 / 409 / 30,027 (5 unfinished) | 0.6 / 285 / 10,024, in one call |
+| the count's longest call, ms | 0.6 / 31 / 59 | – |
+| wasm memory, dialog / host engine / Fold's Import CP, MiB | 3.6 / 46 / 118; 3.5 / 43 / 116; 4.2 / 56 / 155 | – |
+| the three at once, MiB | 11 / 147 / 388 | – |
+
+iguana-c0: open 2.3 s, previews 0.66 s at the median with one of eleven past
+its 30 s deadline, Add 0.2 ms, explain up to 0.57 s, restore 2.8 s; the count
+reads "at least 1" after 30 s, its slices up to 454 ms; memory 91 MiB
+(dialog), 92 (host engine) and 168 (Fold's Import CP). Of the corpus's 34,397
+pickable subjects, one offers 8 open objects at the median, 46 at p95 and 306
+at most. These set `apps/web/src/layer-order/layerOrderBudgets.ts` (the label
+cap, the size past which the count is not started, the slice) and the count's
+stored-orders cap.
+
 ## FOLD Frame-Shape Corpus Testing
 
 `file_frames` makes a FOLD document a tree of frames, and the importer has to
