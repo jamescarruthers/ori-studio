@@ -698,7 +698,13 @@ notice has no board of its own; U10 builds it from the approved copy.
     one or more. In the object step, a pick on an unpicked face adds it and a
     pick on a picked one removes it, by pointer, tap or the keyboard face menu
     (whose object items become checkable and stay open). Objects read in
-    letter order ("H, K"), whatever order they were picked in.
+    letter order ("H, K"), whatever order they were picked in. The sentence
+    stays on one line: the object chips sit inline after the verb, and the
+    object slot wraps when it fills (your call, 2026-10-25, over a separate
+    line for the objects). So that two objects fit on a line in the approved
+    grid, an object chip in the builder is just its letter: a click on it
+    removes that object ("Remove H"), and the slot's one × clears them all
+    (my call; the list's rows keep a × per object).
   - **Which faces can be objects** (my call): the faces open against the
     subject in the committed order, as now, whatever else is picked. Picking
     one never changes which others are offered, so the tints hold still.
@@ -718,17 +724,25 @@ notice has no board of its own; U10 builds it from the approved copy.
   - **Saved as before.** The record holds one constraint per object, so H1's
     codec, the engine and the hosts don't change.
   - **The list** (my calls) shows one row per subject and verb: committed
-    constraints with the same subject and sign read "D in front of H, K", at
-    the place of the earliest, and a later Add for that subject and verb joins
-    its row. The verb still reads from the side shown. The row's trash removes
+    constraints with the same subject and the same verb, as read from the
+    side shown, read "D in front of H, K", at the place of the earliest, and a
+    later Add for that subject and verb joins its row. (Not by the stored
+    sign: one verb gives objects facing different ways different signs, so
+    sign would split your own example.) The row's trash removes
     the whole row, as one undo step. Each object in a row of two or more has
     its own remove (×), shown on hover or focus, and always on a coarse
     pointer. Carried rows group the same way, within one status, so a row
-    never mixes statuses. A pressed or hovered row lights its subject and all
+    never mixes statuses; intact and clashing count as one there, since both
+    still apply and a clash is marked per object, as on committed rows. A
+    row keeps its place and identity when one of its objects is removed.
+    When a row's own objects are the whole clash, it says they can't all fit
+    together. A pressed or hovered row lights its subject and all
     its objects; a row click puts its subject in the builder, as now. A clash
     marks the clashing objects within their rows.
-  - **Analytics:** `layer constraint added` and `layer constraint blocked`
-    fire once per Add, with an `objects` bucket (1, 2, 3–5, 6+).
+  - **Analytics:** `layer constraint added` fires once per Add, and `layer
+    constraint blocked` once per sentence (a subject and its verb, until
+    either changes, an Add or a clear), each with an `object_count_bucket`
+    (`<=1`, `<=2`, `<=5`, `>5`, the events' existing bucket style).
   - **Where it lands:** U9b changes the merged inspector model; U10 builds the
     UI from the "A5 · Compound constraints" board.
 
