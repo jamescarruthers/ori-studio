@@ -41,6 +41,15 @@ import { LayerOrderDialogMount } from './LayerOrderDialogMount';
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
 
+// The panes draw on WebGL, which jsdom has none of: stubbed whole, as the panes' own test stubs it.
+vi.mock('../../cp-workspace/renderer/reglRenderer', () => ({
+  createReglRenderer: () => new Proxy({}, { get: () => () => undefined }),
+}));
+vi.mock('../../cp-workspace/renderer/webglSupport', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/renderer/webglSupport')>()),
+  cpWebglSupport: () => ({ supported: true }),
+}));
+
 /** D7's threshold as the session asks it, or the real one when `starts` is null. */
 const budget = vi.hoisted(() => ({ starts: null as boolean | null }));
 vi.mock('../../layer-order/layerOrderBudgets', async (importOriginal) => {
@@ -51,14 +60,14 @@ vi.mock('../../layer-order/layerOrderBudgets', async (importOriginal) => {
   };
 });
 
-/** A pane that throws once the session is ready, when asked: a dialog that crashes. */
+/** The panes, throwing once the session is ready, when asked: a dialog that crashes. */
 const boom = vi.hoisted(() => ({ whenReady: false }));
-vi.mock('./LayerOrderPanesPlaceholder', async (importOriginal) => {
-  const original = await importOriginal<typeof import('./LayerOrderPanesPlaceholder')>();
+vi.mock('./LayerOrderPanes', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./LayerOrderPanes')>();
   return {
-    LayerOrderPanesPlaceholder: (props: Parameters<typeof original.LayerOrderPanesPlaceholder>[0]) => {
+    LayerOrderPanes: (props: Parameters<typeof original.LayerOrderPanes>[0]) => {
       if (boom.whenReady && props.status.kind === 'ready') throw new Error('a pane crashed');
-      return original.LayerOrderPanesPlaceholder(props);
+      return original.LayerOrderPanes(props);
     },
   };
 });
@@ -90,7 +99,15 @@ const SHOWN = fakeLayerOrderScene(FAKE_LAYER_ORDER_FIGURE, [2, 3, 0, 1], 'front'
 const REQUEST: LayerOrderRequest = {
   source: FAKE_LAYER_ORDER_SOURCE,
   record: null,
-  look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+  look: {
+    style: DEFAULT_PAPER_STYLE,
+    policy: PAPER_STYLE_POLICIES['folded-flat'],
+    turnDeg: 0,
+    side: 'front',
+    xray: false,
+    lineStyle: 'color',
+    lineWidth: 1,
+  },
   shown: SHOWN,
   name: 'Kabuto',
   byline: 'Traditional',
@@ -241,9 +258,13 @@ describe('the Layer order dialog’s session', () => {
     expect(button('Apply').title).toBe('Nothing to apply yet');
     // A shortcut barrier: the workspace's keys and its menus' Undo stay behind it.
     expect(isShortcutBarrierOpen()).toBe(true);
-    // The title row: "Layer order │ Kabuto Traditional" on a wide screen, and no pane switch.
-    expect(button('Close Layer order').parentElement?.textContent).toBe('Layer orderKabutoTraditional');
+    // The title row: "Layer order │ Kabuto Traditional" on a wide screen, the view tools, and no pane switch.
+    expect(button('Close Layer order').parentElement?.textContent).toBe(
+      'Layer orderKabutoTraditionalSideFrontBackX-rayUndecided'
+    );
     expect(queryByRole(openDialog(), 'group', 'Pane')).toBeNull();
+    // The view tools wait for the session.
+    expect(button('X-ray').hasAttribute('disabled')).toBe(true);
 
     held.release();
     await until(isReady, 'the session opened');
@@ -595,15 +616,15 @@ describe('the Layer order dialog as the whole screen (D6)', () => {
     await opened();
     await until(isReady, 'the session opened');
     const panes = byRole(openDialog(), 'group', 'Pane');
+    // Both panes stay mounted, so a switch keeps each one's camera; the other is hidden.
+    const shown = (name: string) => byRole(openDialog(), 'region', name).closest('[hidden]') === null;
     expect(byRole(panes, 'button', 'Folded').getAttribute('aria-pressed')).toBe('true');
-    expect(byRole(openDialog(), 'region', 'Folded figure')).toBeDefined();
-    expect(queryByRole(openDialog(), 'region', 'Crease pattern')).toBeNull();
+    expect([shown('Folded figure'), shown('Crease pattern')]).toEqual([true, false]);
     // The name gives way to the switch.
     expect(openDialog().textContent).not.toContain('Kabuto');
 
     click(byRole(panes, 'button', 'Crease pattern'));
     await flush();
-    expect(byRole(openDialog(), 'region', 'Crease pattern')).toBeDefined();
-    expect(queryByRole(openDialog(), 'region', 'Folded figure')).toBeNull();
+    expect([shown('Folded figure'), shown('Crease pattern')]).toEqual([false, true]);
   });
 });

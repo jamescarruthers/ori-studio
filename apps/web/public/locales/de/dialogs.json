@@ -510,8 +510,11 @@
     },
     "applyUnsettled": "Die gespeicherten Vorgaben wurden noch nicht geprüft",
     "cancel": "Abbrechen",
+    "creaseCanvas": "Das Faltmuster. Wähle darauf eine Fläche aus; ziehen zum Verschieben, scrollen zum Zoomen.",
     "creasePane": "Faltmuster",
     "details": "Details zur Lagenreihenfolge",
+    "foldedCanvasBack": "Die gefaltete Figur von hinten. Wähle die oberste Fläche aus; ziehen zum Verschieben, scrollen zum Zoomen.",
+    "foldedCanvasFront": "Die gefaltete Figur von vorne. Wähle die oberste Fläche aus; ziehen zum Verschieben, scrollen zum Zoomen.",
     "foldedLoading": "Gefaltete Figur wird geladen",
     "foldedPane": "Gefaltete Figur",
     "keepTrying": "Weiter versuchen",
@@ -541,7 +544,27 @@
       "unreadable": "Lagenreihenfolge konnte nicht lesen, wie diese Figur gefaltet wird, und kann sie daher nicht öffnen. Es wurde nichts geändert."
     },
     "title": "Lagenreihenfolge",
-    "tryAgain": "Erneut versuchen"
+    "tryAgain": "Erneut versuchen",
+    "view": {
+      "back": "Rückseite",
+      "front": "Vorderseite",
+      "side": "Seite",
+      "undecided": "Unentschieden",
+      "undecidedTitle": "Färbt die Stellen, deren oberste Fläche noch nicht feststeht",
+      "xray": "Röntgen",
+      "xrayTitle": "Alle Lagen der gefalteten Figur durchscheinend zeigen"
+    },
+    "zoom": {
+      "creaseBar": "Ansicht des Faltmusters",
+      "creaseIn": "Faltmuster vergrößern",
+      "creaseOut": "Faltmuster verkleinern",
+      "creaseReset": "Zoom des Faltmusters zurücksetzen",
+      "fit": "Beide Ansichten einpassen",
+      "foldedBar": "Ansicht der gefalteten Figur",
+      "foldedIn": "Gefaltete Figur vergrößern",
+      "foldedOut": "Gefaltete Figur verkleinern",
+      "foldedReset": "Zoom der gefalteten Figur zurücksetzen"
+    }
   },
   "number": {
     "tooSmall": "Geben Sie eine Zahl größer als {{minimum}} ein."
