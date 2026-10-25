@@ -409,6 +409,7 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
         settle(held, held.state);
       }
       const hold = flatHold();
+      // A record's order is one, not a place in the kernel's enumeration: nothing a step left is known of it.
       if (!hold.order) hold.reached = solutionFrontierKnowing(hold.reached, knownCases);
       if (hold.side !== side) {
         settle(hold, { ...hold.state, ...(await deps.runtime().setModel(hold.handle, captureModel(document, side))) });

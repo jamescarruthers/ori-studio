@@ -14,8 +14,8 @@ import { useReferencesStepWays } from '../../diagram/references/useReferencesSte
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { DiagramWayRow } from './DiagramWayChooser';
-import { Button } from '../ui/Button';
 import type { ControlVerb } from '../../lib/controlVerb';
+import { Button } from '../ui/Button';
 import { Pager } from '../ui/Pager';
 import { FieldRow, NumberRow, SegmentedRow } from '../ui/fieldRows';
 import styles from './DiagramStepPose.module.css';
@@ -164,15 +164,15 @@ export function DiagramStepPose({
         <RotationRow turn={turn} disabled={turnHeld || waiting} onCommit={linkedPose.rotateTo} />
       )}
       {side !== null && sideRow({ side, turnOver })}
-      {(render.mode === 'folded-flat' || render.mode === 'folded-3d') && !main && layerOrder && (
+      {(render.mode === 'folded-flat' || (render.mode === 'folded-3d' && layerOrder)) && !main && (
         // Any layer order found, back or on (D23), as Pose's own pager has them; then the
         // Layer order dialog, always there so the pager never moves (H7, D13).
         <FieldRow
           label={t('panels:diagram.pose.layerOrder', 'Layer order')}
           kind="text"
-          disabled={layerOrder.edit.disabled}
-          note={layerOrder.note?.text}
-          noteKind={layerOrder.note?.kind}
+          disabled={layerOrder?.edit.disabled}
+          note={layerOrder?.note?.text}
+          noteKind={layerOrder?.note?.kind}
         >
           <span className={styles.layerOrder}>
             {render.mode === 'folded-flat' && (
@@ -181,8 +181,8 @@ export function DiagramStepPose({
                 previous={layerVerb(linked.find((action) => action.id === 'previous-solution'))}
                 next={layerVerb(linked.find((action) => action.id === 'next-solution'))}
               >
-                {linkedPose.layerOrder ? (
-                  linkedPose.layerOrder.count
+                {source.layerOrder === undefined ? (
+                  (linkedPose.layerOrder?.count ?? render.foldCase)
                 ) : (
                   // A record's order has no place among the kernel's to read out (D11): its place is
                   // kept, unread, so the chevrons stay where a count puts them (until H9's stepper).
@@ -192,7 +192,7 @@ export function DiagramStepPose({
                 )}
               </Pager>
             )}
-            <LayerOrderEntry entry={layerOrder.edit} />
+            {layerOrder && <LayerOrderEntry entry={layerOrder.edit} />}
           </span>
         </FieldRow>
       )}
