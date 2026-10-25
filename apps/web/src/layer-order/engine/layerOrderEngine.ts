@@ -298,10 +298,14 @@ export interface LayerOrderLimits {
 const NODES = { maxNodes: 200_000, fastNodes: 128 } as const;
 
 /**
- * The limits the dialog asks with. The deadlines are first guesses, from the
- * plan (a preview's about 3 s, approach 5) and #503's census (the iguana's
- * slowest check passed 30 s); phase gate 2 (E8) measures them in wasm and
- * replaces these.
+ * The limits the dialog asks with: a preview's about 3 s (approach 5), the
+ * rest generous. Census 2 (E8, `scripts/layer-order-census.mjs`) measured
+ * them in wasm over cpoogle and kept them: opens took at most 2.3 s (p95
+ * 0.82 s), previews 57 ms (p95 10 ms), a commit that searched 3.7 ms and a
+ * restore 2.3 s. On iguana-c0 the open took 2.3 s, previews 0.66 s at the
+ * median, a restore 2.8 s, and one preview of eleven ran past 30 s, so it
+ * reads "couldn't check in time" at 3 s. The count's slice is
+ * `LAYER_ORDER_COUNT_SLICE` (`layerOrderBudgets.ts`).
  */
 export const LAYER_ORDER_LIMITS = {
   open: { ...NODES, deadlineMs: 30_000 },
