@@ -366,12 +366,16 @@ async function openDialogOnKabuto(page, { forge = false } = {}) {
     const { PAPER_STYLE_POLICIES } = await import('/src/lib/paper/paperStyleResolve.ts');
     const { openLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogGateway.ts');
     const { source, scene } = window.__layerOrderCheck;
+    const editLines = () => {
+      const { lineStyle, lineWidth } = window.__treemakerWorkspaceStore.getState().oristudioCpViewport;
+      return { lineStyle, lineWidth };
+    };
     const kernel = forge ? { ...source, digest: `${source.digest}-forged` } : source;
     window.__layerOrderOutcome = null;
     openLayerOrderDialog({
       source: layerOrderSourceOf(kernel, DEFAULT_FOLDED_MODEL),
       record: null,
-      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, side: 'front', xray: false, ...editLines() },
       shown: scene,
       name: 'Kabuto',
       byline: 'Traditional',
@@ -580,6 +584,584 @@ async function foldImportFrame(page, url, record, { dir }) {
     await dialog.waitFor({ state: 'detached' });
   }
   await page.setViewportSize(VIEWPORT);
+}
+
+// ---------------------------------------------------------------------------
+// The panes (U8)
+
+/** The figures the panes are photographed on: `r271-s03`'s faces are convex, two of its spots are not. */
+const PANE_FIGURES = [
+  { name: 'kabuto', file: 'flat-folder/kabuto.fold', title: 'Kabuto' },
+  { name: 'solution-sample-1', file: 'oriedita/solution_sample_1.cp', title: 'Solution sample 1' },
+  { name: 'iguana-c0', file: 'precrease/iguana-c0.fold', title: 'Iguana' },
+  { name: 'r271-s03', file: 'flat-folder/r271-s03.fold', title: 'r271-s03' },
+];
+
+/**
+ * Edit on `file` (under `tests/fixtures/`), in `theme`, folded whole as Edit
+ * folds it, the fold's source and scene kept on `window.__layerOrderCheck`
+ * (`openKabutoInEdit`, for any figure). `style`, when given, is the paper
+ * style Edit's display takes, as Settings ▸ Paper sets it.
+ */
+async function openFigureInEdit(page, url, { theme, file, style = null }) {
+  await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, {
+    timeout: 120000,
+  });
+  const text = await readFile(path.join(repoRoot, 'tests/fixtures', file), 'utf8');
+  await page.evaluate(
+    async ({ text, name, theme, style }) => {
+      const store = window.__treemakerWorkspaceStore;
+      const files = { openTextFile: async () => ({ text, name, path: null }) };
+      if (!(await store.getState().openProject(files, { confirmDiscard: false }))) throw new Error(`${name} did not open`);
+      if (theme) {
+        const { useThemeStore } = await import('/src/store/themeStore.ts');
+        useThemeStore.getState().setThemeByName(theme);
+      }
+      const runtime = await import('/src/store/workspaceStore/oristudioCpRuntime.ts');
+      const figure = await runtime.foldOristudioCpDocument(1, 'Order5');
+      const source = await runtime.getOristudioCpFoldedFigureSource(figure.handle);
+      const scene = await runtime.getOristudioCpFoldedFigurePaperScene(figure.handle);
+      if (!scene) throw new Error(`${name} folded with no subfaces`);
+      window.__layerOrderCheck = { source, scene, style };
+    },
+    { text, name: path.basename(file), theme, style }
+  );
+}
+
+/**
+ * Open the dialog on the figure `openFigureInEdit` folded, as a host would,
+ * in `look` (the paper style given there, the Edit flat figure's policy, no
+ * turn, the front, and Edit's line style and width by default), and wait for
+ * the panes' session.
+ */
+async function openPanesDialog(page, title, look = {}) {
+  await page.evaluate(
+    async ({ title, look }) => {
+      const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+      const { DEFAULT_FOLDED_MODEL } = await import('/src/lib/orieditaNativeMetadata.ts');
+      const { DEFAULT_PAPER_STYLE } = await import('/src/lib/paper/paperStyle.ts');
+      const { PAPER_STYLE_POLICIES } = await import('/src/lib/paper/paperStyleResolve.ts');
+      const { openLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogGateway.ts');
+      const { source, scene, style } = window.__layerOrderCheck;
+      // Edit's line style and width, as Edit hands them; the dialog never reads the store itself.
+      const { lineStyle, lineWidth } = window.__treemakerWorkspaceStore.getState().oristudioCpViewport;
+      window.__layerOrderOutcome = null;
+      openLayerOrderDialog({
+        source: layerOrderSourceOf(source, DEFAULT_FOLDED_MODEL),
+        record: null,
+        look: {
+          style: style ?? DEFAULT_PAPER_STYLE,
+          policy: PAPER_STYLE_POLICIES[look.policy ?? 'folded-flat'],
+          turnDeg: look.turnDeg ?? 0,
+          side: look.side ?? 'front',
+          xray: look.xray ?? false,
+          lineStyle: look.lineStyle ?? lineStyle,
+          lineWidth: look.lineWidth ?? lineWidth,
+        },
+        shown: scene,
+        name: title,
+      }).then((outcome) => {
+        window.__layerOrderOutcome = outcome;
+      });
+    },
+    { title, look }
+  );
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  try {
+    await dialog.waitFor({ state: 'visible', timeout: 30000 });
+  } catch (error) {
+    const outcome = await page.evaluate(() => window.__layerOrderOutcome);
+    throw new Error(`the dialog never showed on ${title} (it answered ${JSON.stringify(outcome)})`, { cause: error });
+  }
+  await dialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 120000 });
+  await page.waitForFunction(() => window.__layerOrderPanes?.open != null, null, { timeout: 30000 });
+  return dialog;
+}
+
+/**
+ * Show marks on the panes through the development build's handle
+ * (`useLayerOrderPanesCheck`), built in the page from the session's open by
+ * `kind`, the way the inspector's model (U10) would mark them:
+ *
+ * - `subjects`: choosing a subject, every face with choices faint;
+ * - `compound`: a subject and two of its objects picked (D21), its other open faces on offer;
+ * - `cap`: the subject with the most open faces, none picked, so the label cap shows (D7);
+ * - `clash`: `compound`, the second object in a clash with a third face;
+ * - `undecided`: the spots the inspector's model calls undecided (`openSpotsOf`), from each
+ *   side, and how many there are from each; `side` is only which to count first.
+ *
+ * Answers what it marked, by letter.
+ */
+async function showPaneMarks(page, kind, side = 'front') {
+  return page.evaluate(
+    async ({ kind, side }) => {
+      const { NO_FACE_MARKS } = await import('/src/layer-order/panes/layerPaneMarks.ts');
+      const handle = window.__layerOrderPanes;
+      const { opened, letters, facts } = handle.open;
+      const partners = new Map();
+      const pairs = opened.open_pairs;
+      for (let i = 0; i + 1 < pairs.length; i += 2) {
+        const [a, b] = [pairs[i], pairs[i + 1]];
+        partners.set(a, [...(partners.get(a) ?? []), b]);
+        partners.set(b, [...(partners.get(b) ?? []), a]);
+      }
+      const byLetter = (faces) => faces.map((face) => letters.letterOf(face)).join(',');
+      const withChoices = [...partners.keys()].sort((a, b) => letters.compare(a, b));
+      if (kind === 'subjects') {
+        handle.show({ marks: { ...NO_FACE_MARKS, picking: 'subject', pickable: withChoices } });
+        return { pickable: withChoices.length };
+      }
+      if (kind === 'undecided') {
+        const { initLayerOrderDialog, layerOrderReducer } = await import('/src/layer-order/model/layerOrderReducer.ts');
+        const { openSpotsOf } = await import('/src/layer-order/model/layerOrderSelectors.ts');
+        let { state } = initLayerOrderDialog({ surface: 'edit_figure', hasRecord: false, recordNeedsAttention: false, review: false, xray: false, at: 0 });
+        state = layerOrderReducer(state, { type: 'opened', request: 1, facts }).state;
+        const undecided = { front: openSpotsOf(state, 'front'), back: openSpotsOf(state, 'back') };
+        handle.show({ marks: { ...NO_FACE_MARKS, picking: 'subject', undecided } });
+        return { side, undecided: undecided[side].length, front: undecided.front.length, back: undecided.back.length };
+      }
+      // The subject: the face with the most open faces for `cap`, else the first with three or more.
+      const ranked = [...withChoices].sort((a, b) => (partners.get(b).length - partners.get(a).length) || letters.compare(a, b));
+      const subject = kind === 'cap' ? ranked[0] : (withChoices.find((face) => partners.get(face).length >= 3) ?? ranked[0]);
+      const open = [...partners.get(subject)].sort((a, b) => letters.compare(a, b));
+      if (kind === 'cap') {
+        handle.show({ marks: { ...NO_FACE_MARKS, picking: 'object', pickable: open, subject } });
+        return { subject: byLetter([subject]), open: open.length };
+      }
+      const objects = open.slice(0, 2);
+      const marks = { ...NO_FACE_MARKS, picking: 'object', pickable: open, subject, objects };
+      if (kind === 'clash') {
+        const third = withChoices.find((face) => face !== subject && !objects.includes(face));
+        handle.show({ marks: { ...marks, clash: [objects[1], third] } });
+        return { subject: byLetter([subject]), objects: byLetter(objects), clash: byLetter([objects[1], third]) };
+      }
+      handle.show({ marks });
+      return { subject: byLetter([subject]), objects: byLetter(objects), open: open.length };
+    },
+    { kind, side }
+  );
+}
+
+/** The dialog, the pointer off it, once its canvases settle. */
+async function panesShot(page) {
+  await page.mouse.move(1, 1);
+  return dialogShot(page);
+}
+
+/** Press one of the title row's view tools: a Side option, X-ray or Undecided. */
+async function viewTool(dialog, name) {
+  const side = dialog.getByRole('group', { name: 'Side' });
+  if (name === 'Front' || name === 'Back') await side.getByRole('button', { name }).click();
+  else await dialog.getByRole('button', { name, exact: true }).click();
+}
+
+/**
+ * How many of a crease pattern's crease pixels `marked` changes (D20: no tint,
+ * ring or letter ever veils a crease). A crease pixel is one far from the
+ * pane's ground in `plain` (no marks) that `tinted` (every face with choices
+ * faintly tinted, under the creases) leaves exactly as it was: a pixel the
+ * crease covers whole, not one its edge shares with the paper beside it.
+ * Answers how many there are, how many changed, and where a few of those are.
+ */
+async function creasePixelsChanged(page, plain, tinted, marked) {
+  return page.evaluate(
+    async ({ plain, tinted, marked }) => {
+      const load = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0);
+        return { width: image.width, rgba: context.getImageData(0, 0, image.width, image.height).data };
+      };
+      const [a, b, c] = await Promise.all([load(plain), load(tinted), load(marked)]);
+      const counts = new Map();
+      for (let k = 0; k < a.rgba.length; k += 4) {
+        const key = (a.rgba[k] << 16) | (a.rgba[k + 1] << 8) | a.rgba[k + 2];
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+      const ground = [...counts].sort((x, y) => y[1] - x[1])[0][0];
+      const g = [(ground >> 16) & 255, (ground >> 8) & 255, ground & 255];
+      const delta = (x, y, k) => Math.max(...[0, 1, 2].map((ch) => Math.abs(x.rgba[k + ch] - y.rgba[k + ch])));
+      let creases = 0;
+      let changed = 0;
+      const at = [];
+      for (let k = 0; k < a.rgba.length; k += 4) {
+        const far = Math.max(...[0, 1, 2].map((ch) => Math.abs(a.rgba[k + ch] - g[ch]))) > 60;
+        if (!far || delta(a, b, k) > 2) continue;
+        creases += 1;
+        if (delta(b, c, k) > 2) {
+          changed += 1;
+          if (at.length < 6) at.push([(k / 4) % a.width, Math.floor(k / 4 / a.width)]);
+        }
+      }
+      return { creases, changed, at };
+    },
+    { plain: plain.toString('base64'), tinted: tinted.toString('base64'), marked: marked.toString('base64') }
+  );
+}
+
+/**
+ * D20 on kabuto's crease pattern, at line width 1 and 3: a face pointed at, a
+ * row hovered, and a subject with two objects picked (their tints, rings and
+ * letters) change no crease pixel. Fails on any.
+ */
+function creaseCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openFigureInEdit(page, url, { theme, file: 'flat-folder/kabuto.fold' });
+    const failures = [];
+    for (const lineWidth of [1, 3]) {
+      const dialog = await openPanesDialog(page, 'Kabuto', { lineStyle: 'color', lineWidth });
+      const pane = dialog.locator('[data-layer-order-pane="pattern"]');
+      const shot = async () => {
+        await page.mouse.move(1, 1);
+        return steadyShot(page, pane, { masked: false });
+      };
+      const show = (kind) =>
+        page.evaluate(async (kind) => {
+          const { NO_FACE_MARKS } = await import('/src/layer-order/panes/layerPaneMarks.ts');
+          const handle = window.__layerOrderPanes;
+          const { opened, letters } = handle.open;
+          const withChoices = [...new Set(opened.open_pairs)].sort((a, b) => letters.compare(a, b));
+          const choosing = { ...NO_FACE_MARKS, picking: 'subject', pickable: withChoices };
+          const marks = {
+            plain: NO_FACE_MARKS,
+            tinted: choosing,
+            pointed: { ...choosing, pointed: withChoices[0] },
+            row: { ...choosing, row: withChoices.slice(0, 3) },
+            compound: {
+              ...NO_FACE_MARKS,
+              picking: 'object',
+              pickable: withChoices.slice(1),
+              subject: withChoices[0],
+              objects: withChoices.slice(1, 3),
+            },
+          }[kind];
+          handle.show({ marks });
+        }, kind);
+      await show('plain');
+      const plain = await shot();
+      await show('tinted');
+      const tinted = await shot();
+      const results = {};
+      for (const kind of ['pointed', 'row', 'compound']) {
+        await show(kind);
+        const marked = await shot();
+        results[kind] = await creasePixelsChanged(page, plain, tinted, marked);
+        await record(`creases-${tag}-kabuto-width-${lineWidth}-${kind}`, { pattern: marked });
+      }
+      console.log(`[${tag}] kabuto creases at line width ${lineWidth}: ${JSON.stringify(results)}`);
+      for (const [kind, { changed, at }] of Object.entries(results)) {
+        if (changed > 0) failures.push(`${kind} at line width ${lineWidth} changed ${changed} crease pixels, at ${JSON.stringify(at)}`);
+      }
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
+    }
+    if (failures.length > 0) throw new Error(failures.join('; '));
+  };
+}
+
+/**
+ * Each figure's panes, in one theme: front and back with the faces that have
+ * choices tinted, X-ray, Undecided; on kabuto, a subject with two objects
+ * picked, and a clash; on iguana-c0, the label cap.
+ */
+function paneCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    for (const figure of PANE_FIGURES) {
+      await openFigureInEdit(page, url, { theme, file: figure.file });
+      const dialog = await openPanesDialog(page, figure.title);
+      const shot = (state) => `panes-${tag}-${figure.name}-${state}`;
+      // At Fit both panes take one scale (Round3's fitAll): their readouts agree.
+      const readouts = await Promise.all(
+        ['crease pattern', 'folded figure'].map((pane) => dialog.getByRole('button', { name: `Reset the ${pane} zoom` }).innerText())
+      );
+      console.log(`[${tag}] ${figure.name} at Fit: ${readouts.join(' and ')}`);
+      if (Math.abs(Number.parseFloat(readouts[0]) - Number.parseFloat(readouts[1])) > 1) {
+        throw new Error(`${figure.name}: the panes' readouts disagree at Fit (${readouts.join(', ')})`);
+      }
+      console.log(`[${tag}] ${figure.name}: ${JSON.stringify(await showPaneMarks(page, 'subjects'))}`);
+      await record(shot('front'), await panesShot(page));
+      await viewTool(dialog, 'Back');
+      await record(shot('back'), await panesShot(page));
+      await viewTool(dialog, 'Front');
+      await viewTool(dialog, 'X-ray');
+      await record(shot('xray'), await panesShot(page));
+      await viewTool(dialog, 'X-ray');
+      await viewTool(dialog, 'Undecided');
+      // From the side with more of them: the solution sample has one picture from the front.
+      const counted = await showPaneMarks(page, 'undecided');
+      const side = counted.back > counted.front ? 'back' : 'front';
+      if (side === 'back') {
+        await viewTool(dialog, 'Back');
+        await showPaneMarks(page, 'undecided', 'back');
+      }
+      console.log(`[${tag}] ${figure.name} undecided: ${JSON.stringify({ ...counted, side })}`);
+      await record(shot('undecided'), await panesShot(page));
+      await viewTool(dialog, 'Undecided');
+      if (side === 'back') await viewTool(dialog, 'Front');
+      if (figure.name === 'kabuto') {
+        console.log(`[${tag}] kabuto compound: ${JSON.stringify(await showPaneMarks(page, 'compound'))}`);
+        await record(shot('compound'), await panesShot(page));
+        console.log(`[${tag}] kabuto clash: ${JSON.stringify(await showPaneMarks(page, 'clash'))}`);
+        await record(shot('clash'), await panesShot(page));
+      }
+      if (figure.name === 'iguana-c0') {
+        console.log(`[${tag}] iguana-c0 cap: ${JSON.stringify(await showPaneMarks(page, 'cap'))}`);
+        await record(shot('cap'), await panesShot(page));
+        // Zoomed in on both panes, where the cap's letters have room.
+        for (let step = 0; step < 6; step += 1) {
+          await dialog.getByRole('button', { name: 'Zoom in the crease pattern' }).click();
+          await dialog.getByRole('button', { name: 'Zoom in the folded figure' }).click();
+        }
+        console.log(`[${tag}] iguana-c0 letters zoomed in: ${await dialog.locator('[data-layer-order-letter]').count()}`);
+        await record(shot('cap-zoomed'), await panesShot(page));
+      }
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
+    }
+  };
+}
+
+/**
+ * A refusal that names a face (D4): a frame with a window cut in it, whose
+ * one face bends round the window. The crease pattern marks the face it
+ * names, in danger, its letter dotted.
+ */
+async function paneRefusalCases(page, url, record) {
+  await openFigureInEdit(page, url, { theme: null, file: 'oriedita/holed_frame_collinear.ori' });
+  await page.evaluate(async () => {
+    const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+    const { DEFAULT_FOLDED_MODEL } = await import('/src/lib/orieditaNativeMetadata.ts');
+    const { DEFAULT_PAPER_STYLE } = await import('/src/lib/paper/paperStyle.ts');
+    const { PAPER_STYLE_POLICIES } = await import('/src/lib/paper/paperStyleResolve.ts');
+    const { openLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogGateway.ts');
+    const { source, scene } = window.__layerOrderCheck;
+    const editLines = () => {
+      const { lineStyle, lineWidth } = window.__treemakerWorkspaceStore.getState().oristudioCpViewport;
+      return { lineStyle, lineWidth };
+    };
+    window.__layerOrderOutcome = null;
+    openLayerOrderDialog({
+      source: layerOrderSourceOf(source, DEFAULT_FOLDED_MODEL),
+      record: null,
+      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, side: 'front', xray: false, ...editLines() },
+      shown: scene,
+      name: 'Frame',
+    }).then((outcome) => {
+      window.__layerOrderOutcome = outcome;
+    });
+  });
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  await dialog.getByRole('alert').waitFor({ state: 'visible', timeout: 60000 });
+  console.log(`[refusal] ${await dialog.getByRole('alert').innerText()}`);
+  await record('panes-refused-non-convex', await panesShot(page));
+}
+
+/** Counts the WebGL contexts the dialog's canvases make, from before the page loads. */
+const LAYER_ORDER_CONTEXT_PROBE = () => {
+  const made = [];
+  const original = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (kind, ...rest) {
+    const context = original.call(this, kind, ...rest);
+    const id = this.getAttribute('data-testid') ?? '';
+    if (context && /webgl/.test(String(kind)) && id.startsWith('layer-order-') && !this.__layerOrderProbed) {
+      this.__layerOrderProbed = true;
+      made.push(id);
+    }
+    return context;
+  };
+  window.__layerOrderContexts = () => made.slice();
+  // What reaches the window as an error, a ResizeObserver loop's included: the app toasts each one.
+  const errors = [];
+  window.addEventListener('error', (event) => errors.push(event.message));
+  window.__layerOrderErrors = () => errors.slice();
+};
+
+/**
+ * The phone (390 × 844): one pane at a time, nothing over it; kabuto with a
+ * subject and two objects picked, then with its open faces on offer. A
+ * switch keeps both panes: the dialog makes its two WebGL contexts once, and
+ * a pane zoomed in is as it was after a switch away and back.
+ */
+async function panePhoneCases(page, url, record) {
+  await page.addInitScript(LAYER_ORDER_CONTEXT_PROBE);
+  await page.setViewportSize(PHONE);
+  await openFigureInEdit(page, url, { theme: null, file: 'flat-folder/kabuto.fold' });
+  const dialog = await openPanesDialog(page, 'Kabuto');
+  const switchTo = (name) => dialog.getByRole('group', { name: 'Pane' }).getByRole('button', { name }).click();
+  console.log(`[phone] kabuto compound: ${JSON.stringify(await showPaneMarks(page, 'compound'))}`);
+  await record('panes-phone-folded', await panesShot(page));
+  await switchTo('Crease pattern');
+  await record('panes-phone-crease-pattern', await panesShot(page));
+  if ((await dialog.getByRole('toolbar').count()) !== 0) throw new Error('a toolbar floats over the phone’s pane');
+  console.log(`[phone] kabuto cap: ${JSON.stringify(await showPaneMarks(page, 'cap'))}`);
+  await record('panes-phone-crease-pattern-offer', await panesShot(page));
+  await switchTo('Folded');
+  await record('panes-phone-folded-offer', await panesShot(page));
+
+  // Zoomed in on the folded pane, then away to the crease pattern and back.
+  const folded = dialog.locator('[data-testid="layer-order-folded-canvas"]');
+  const box = await folded.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const fitted = await steadyShot(page, folded, { masked: false });
+  await page.mouse.wheel(0, -400);
+  const zoomed = await steadyShot(page, folded, { masked: false });
+  if ((await pixelDiff(page, fitted, zoomed)).differing === 0) throw new Error('the wheel never zoomed the folded pane');
+  await switchTo('Crease pattern');
+  await switchTo('Folded');
+  const back = await steadyShot(page, folded, { masked: false });
+  const kept = await pixelDiff(page, zoomed, back);
+  const contexts = await page.evaluate(() => window.__layerOrderContexts());
+  console.log(`[phone] after switches: ${kept.differing} pixels moved; contexts made ${JSON.stringify(contexts)}`);
+  if (kept.differing !== 0) throw new Error('a switch of pane reset the folded pane’s camera');
+  if (contexts.length !== 2) throw new Error(`the dialog made ${contexts.length} WebGL contexts, not 2`);
+  const errors = await page.evaluate(() => window.__layerOrderErrors());
+  if (errors.length > 0) throw new Error(`the window heard errors: ${JSON.stringify(errors)}`);
+  await page.setViewportSize(VIEWPORT);
+}
+
+/** Two PNGs side by side on one, the left's height, on white. */
+async function sideBySide(page, left, right) {
+  const data = await page.evaluate(
+    async ({ left, right }) => {
+      const load = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        return image;
+      };
+      const [a, b] = await Promise.all([load(left), load(right)]);
+      const height = Math.max(a.height, b.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = a.width + 8 + b.width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(a, 0, (height - a.height) / 2);
+      context.drawImage(b, a.width + 8, (height - b.height) / 2);
+      return canvas.toDataURL('image/png').split(',')[1];
+    },
+    { left: left.toString('base64'), right: right.toString('base64') }
+  );
+  return Buffer.from(data, 'base64');
+}
+
+/** A paper style none of the hosts' defaults is: red front, pale back, a heavy navy edge. */
+const HOST_STYLE_FIELDS = {
+  'paper.front': '#e76f51',
+  'paper.back': '#f1faee',
+  edges: { width: 2.4, color: '#1d3557', dash: null, cap: 'butt' },
+};
+
+/** The dialog's folded pane, steady. */
+async function foldedPaneShot(page, dialog) {
+  await page.mouse.move(1, 1);
+  return steadyShot(page, dialog.locator('[data-layer-order-pane="folded"]'), { masked: false });
+}
+
+/**
+ * One side-by-side per host look (D18): the host's own picture of kabuto,
+ * then the dialog's folded pane opened with the look that host hands it, in
+ * a paper style none of them has by default.
+ *
+ * - **An Edit figure on the canvas:** the display style set to the style
+ *   above, the pattern folded whole; the dialog in the figure's effective
+ *   style (`effectiveObjectPaperStyle`), the flat figure's policy, no turn.
+ * - **A Diagram step card** and **Pose:** the pattern linked to a step,
+ *   Folded, in the Diagram's own style (its preset), turned 30° and over in
+ *   Pose, its spread off; the card once Pose is done. The dialog in the
+ *   Diagram's paint style (`diagramScenePaintStyle`) and policy, the step's
+ *   turn, opening on its side, with no spread (D18).
+ *
+ * The hosts' pens scale with their pictures (the card's are a fraction of
+ * Pose's); the dialog's hold their width on screen.
+ */
+async function hostLookCases(page, url, record) {
+  await openFigureInEdit(page, url, { theme: null, file: 'flat-folder/kabuto.fold' });
+  const edit = await page.evaluate(async (fields) => {
+    const { useSettingsStore } = await import('/src/store/settingsStore.ts');
+    useSettingsStore.getState().setPaperStyleFields('display', fields);
+    const store = window.__treemakerWorkspaceStore;
+    // Every line, as a selection of the whole pattern folds it.
+    const lineIds = Array.from({ length: store.getState().oristudioCpDocument.summary.line_segments }, (_, index) => index + 1);
+    await store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds });
+    const figure = store.getState().oristudioCpFoldedFigures.at(-1);
+    if (!figure?.handle) throw new Error('Edit folded no figure');
+    const runtime = await import('/src/store/workspaceStore/oristudioCpRuntime.ts');
+    const { effectiveObjectPaperStyle } = await import('/src/cp-workspace/paper/objectPaperStyle.ts');
+    const source = await runtime.getOristudioCpFoldedFigureSource(figure.handle);
+    const scene = await runtime.getOristudioCpFoldedFigurePaperScene(figure.handle);
+    window.__layerOrderCheck = { source, scene, style: effectiveObjectPaperStyle(figure) };
+    return { rotation: figure.placement.rotation ?? 0, displayStyle: figure.displayStyle };
+  }, HOST_STYLE_FIELDS);
+  console.log(`[host] Edit figure: ${JSON.stringify(edit)}`);
+  await page.waitForTimeout(1500);
+  // Edit's viewport, fitted to the pattern and the figure beside it.
+  await page.getByRole('toolbar').getByRole('button', { name: 'Fit', exact: true }).first().click();
+  await page.mouse.move(1, 1);
+  const editShot = await steadyShot(page, page.locator('.cp-panel__viewport').first(), { masked: false });
+  let dialog = await openPanesDialog(page, 'Kabuto', { turnDeg: edit.rotation, xray: edit.displayStyle === 'Transparent3' });
+  await record('host-edit-figure', { 'side-by-side': await sideBySide(page, editShot, await foldedPaneShot(page, dialog)) });
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
+
+  // The Diagram: a step linked to the pattern, Folded, posed in Pose.
+  await page.evaluate(async () => {
+    const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+    await handleMenuAction('view.diagram');
+  });
+  await page.getByRole('button', { name: 'Link a pattern…' }).first().click();
+  await page.getByRole('group', { name: 'Show as' }).getByRole('button', { name: 'Folded' }).click();
+  await page.getByRole('listbox', { name: 'Patterns' }).getByRole('option', { name: 'Pattern 1' }).click();
+  await page.getByRole('button', { name: 'Adjust Pose' }).waitFor({ state: 'visible', timeout: 60000 });
+  await page.getByRole('button', { name: 'Adjust Pose' }).click();
+  const pose = page.getByRole('toolbar', { name: 'Pose' });
+  await pose.waitFor({ state: 'visible', timeout: 60000 });
+  await pose.getByRole('button', { name: 'Spread Layers' }).click();
+  await pose.getByRole('button', { name: 'Turn Over' }).click();
+  const rotation = page.getByRole('spinbutton', { name: 'Rotation' });
+  await rotation.fill('30');
+  await rotation.press('Enter');
+  await page.waitForTimeout(1500);
+  const posed = await page.evaluate(() => {
+    const state = window.__treemakerWorkspaceStore.getState();
+    return state.diagram.steps.find((step) => step.source?.kind === 'cp')?.source.render ?? null;
+  });
+  console.log(`[host] Diagram step: ${JSON.stringify(posed)}`);
+  // Pose's stage: the page left of the Step pane, under the header.
+  await page.mouse.move(1, 1);
+  await page.waitForTimeout(1000);
+  const poseShot = await page.screenshot({ clip: { x: 50, y: 72, width: 1070, height: 760 }, animations: 'disabled' });
+  const look = await page.evaluate(async (render) => {
+    const state = window.__treemakerWorkspaceStore.getState();
+    const { diagramScenePaintStyle } = await import('/src/diagram/pictures/diagramPaperStyle.ts');
+    const runtime = await import('/src/store/workspaceStore/oristudioCpRuntime.ts');
+    const figure = await runtime.foldOristudioCpDocument(1, 'Order5');
+    const back = render.side === 'back';
+    if (back) await runtime.setOristudioCpFoldedFigureModel(figure.handle, { ...figure.snapshot.model, state: 'Back1' });
+    const source = await runtime.getOristudioCpFoldedFigureSource(figure.handle);
+    const scene = await runtime.getOristudioCpFoldedFigurePaperScene(figure.handle);
+    window.__layerOrderCheck = { source, scene, style: diagramScenePaintStyle(state.diagram.style, false) };
+    return { turnDeg: render.rotationDeg, side: render.side };
+  }, posed);
+  dialog = await openPanesDialog(page, 'Step 1', { policy: 'diagram-workspace', turnDeg: look.turnDeg, side: look.side });
+  const diagramPane = await foldedPaneShot(page, dialog);
+  await record('host-pose', { 'side-by-side': await sideBySide(page, poseShot, diagramPane) });
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
+  await page.getByRole('button', { name: 'Done' }).click();
+  const card = page.getByRole('listbox', { name: 'Steps' }).getByRole('option').first();
+  await card.waitFor({ state: 'visible', timeout: 30000 });
+  await page.waitForTimeout(1500);
+  await record('host-diagram-step', { 'side-by-side': await sideBySide(page, await steadyShot(page, card, { masked: false }), diagramPane) });
 }
 
 // ---------------------------------------------------------------------------
@@ -1071,6 +1653,13 @@ const CASES = [
   { name: 'dialog-shell-horizon', run: dialogShellCases('Horizon') },
   { name: 'dialog-phone-locales', run: dialogPhoneLocales },
   { name: 'fold-import-frame', run: foldImportFrame },
+  { name: 'panes', run: paneCases(null) },
+  { name: 'panes-horizon', run: paneCases('Horizon') },
+  { name: 'panes-phone', run: panePhoneCases },
+  { name: 'panes-refusal', run: paneRefusalCases },
+  { name: 'panes-creases', run: creaseCases(null) },
+  { name: 'panes-creases-horizon', run: creaseCases('Horizon') },
+  { name: 'host-looks', run: hostLookCases },
   { name: 'edit-figure', run: editFigureCases(null) },
   { name: 'edit-figure-horizon', run: editFigureCases('Horizon') },
   { name: 'edit-figure-review', run: editFigureReviewCases },

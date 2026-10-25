@@ -41,8 +41,18 @@ describe('the Layer order dialog’s contract', () => {
         digest: 'ring-digest',
       },
       record: RECORD,
-      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 90, xray: false },
+      look: {
+        style: DEFAULT_PAPER_STYLE,
+        policy: PAPER_STYLE_POLICIES['folded-flat'],
+        turnDeg: 90,
+        side: 'back',
+        xray: false,
+        lineStyle: 'black-white',
+        lineWidth: 2,
+      },
     };
+    // The side and the turn go together: a step turned over and a quarter turn from its back.
+    expect([request.look.side, request.look.turnDeg]).toEqual(['back', 90]);
     const applied: LayerOrderApplied = {
       record: request.record!,
       relations: Uint32Array.from([0, 1]),
