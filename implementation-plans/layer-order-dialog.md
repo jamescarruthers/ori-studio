@@ -956,7 +956,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U5: engine client (#506)
 - [x] U6: engine wiring (#511)
 - [x] U7: PaperPane (#501)
-- [ ] U8: panes
+- [x] U8: panes (#518)
 - [x] U9: inspector model (#510)
 - [x] U9b: compound constraints in the model (#515)
 - [ ] U10: inspector
