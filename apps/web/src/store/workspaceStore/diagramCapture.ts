@@ -207,19 +207,21 @@ export function endStepCapture(store: DiagramCaptureStore, stepId: string): void
 /**
  * Run kernel work for a step's capture as a fold run: visible in the global
  * "Folding…" toast, stoppable there and from the step's card, and abandoned if
- * the engine is lost, since a call on a dead worker never settles (D4).
+ * the engine is lost, since a call on a dead worker never settles (D4). The
+ * run's stop signal reaches `work` too, for what it runs outside the kernel
+ * (a Layer order resolve).
  */
 export function runStepFold<T>(
   store: DiagramCaptureStore,
   start: StepCaptureStart,
   kind: DiagramCaptureRequest['kind'],
-  work: (runtime: CpCaptureRuntime) => Promise<T>
+  work: (runtime: CpCaptureRuntime, stop: AbortSignal) => Promise<T>
 ): Promise<T> {
   const { stepId } = start.guard;
   return abandonOnEngineLoss(
-    withFoldInFlight(store, kind, (runId) => {
+    withFoldInFlight(store, kind, (runId, stop) => {
       if (Object.hasOwn(store.get().diagramCaptures, stepId)) setRun(store, stepId, { runId });
-      return work(createCpCaptureRuntime(runId, start.auxHandle));
+      return work(createCpCaptureRuntime(runId, start.auxHandle), stop);
     })
   );
 }
