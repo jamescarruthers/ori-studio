@@ -150,6 +150,7 @@ import {
 } from '../../../cp-workspace/annotations/annotation';
 import {
   adoptFoldedFigureHandle,
+  adoptTransientFoldedFigureHandle,
   foldedFigureHandleEpoch,
   releaseFoldedFigureHandle,
   releaseFoldedFigureHandles,
@@ -184,6 +185,8 @@ import { holdFoldedFigureAtRest } from '../../../cp-workspace/folded/foldedFigur
 import {
   foldedFigureLayerOrderBlock,
   foldedFigureLayerOrderRecord,
+  refoldHeldByLayerOrder,
+  refoldHeldByLayerOrderReason,
 } from '../../../cp-workspace/folded/foldedFigureLayerOrderState';
 import { resolveLayerOrder } from '../../../layer-order/host/hostEngineGateway';
 import { foldedFigureLayerOrder } from '../../../lib/layerOrder/foldedFigureLayerOrder';
@@ -1158,30 +1161,31 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
   /**
    * A fold of `source` made for the Layer order dialog alone, at case
    * `target` of Oriedita's search: the figure keeps its own. The count holds
-   * it, and whoever opens the dialog on it lets go through the count. Null
-   * when the search does not reach that case again.
+   * it, and whoever opens the dialog on it lets go through `release`
+   * (`adoptTransientFoldedFigureHandle`). Null when the search does not reach
+   * that case again.
    */
   async function ownLayerOrderFold(
     source: OristudioCpFoldSource,
     model: OristudioCpFoldedFigureModel,
     target: number,
     runId: number
-  ): Promise<number | null> {
+  ): Promise<{ handle: number; release: () => void } | null> {
     // No order given: Oriedita's own search, as a plain fold of these creases runs it.
     const result = await foldOristudioCpWithOrder(source, new Uint32Array(), model, runId);
     if (result.status !== 'folded') return null;
-    adoptFoldedFigureHandle(result.handle);
+    const release = adoptTransientFoldedFigureHandle(result.handle);
     try {
       let snapshot = result.snapshot;
       if (foldedSnapshotCase(snapshot) !== target) {
         snapshot = (await foldRuntimeOristudioCpFigureToCase(result.handle, target, 'Order5', runId)).snapshot;
       }
-      if (foldedSnapshotCase(snapshot) === target) return result.handle;
+      if (foldedSnapshotCase(snapshot) === target) return { handle: result.handle, release };
     } catch (error) {
-      releaseFoldedFigureHandle(result.handle);
+      release();
       throw error;
     }
-    releaseFoldedFigureHandle(result.handle);
+    release();
     return null;
   }
 
@@ -3116,6 +3120,12 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         });
         return false;
       }
+      // The toolbar's hold, for a call that reaches here without it.
+      if (refoldHeldByLayerOrder(figure)) {
+        const message = refoldHeldByLayerOrderReason(i18n.t);
+        set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+        return false;
+      }
 
       const lineIds = reselectFoldableLineIds(oristudioCpDocument.document, figure.sourceBounds);
       // The unfiltered half of the same reselect. A refold has no live selection
@@ -3700,14 +3710,15 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       /**
        * The dialog's opening on a fold made for it alone, `own` (the count
        * holds it): its picture is what the dialog opens on, and the opening's
-       * release lets it go.
+       * release lets it go — not across a document replaced while the dialog
+       * was open, whose next fold may have its slot.
        */
-      async function readyOn(own: number, source: OristudioCpFoldSource) {
+      async function readyOn(own: { handle: number; release: () => void }, source: OristudioCpFoldSource) {
         try {
-          const shown = await getOristudioCpFoldedFigurePaperScene(own);
-          return ready(source, shown, async () => releaseFoldedFigureHandle(own));
+          const shown = await getOristudioCpFoldedFigurePaperScene(own.handle);
+          return ready(source, shown, async () => own.release());
         } catch {
-          releaseFoldedFigureHandle(own);
+          own.release();
           return ready(source, null);
         }
       }
@@ -3746,7 +3757,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           const kernelSource = await getOristudioCpSelectionFoldSource(route.lineIds, figure.startingFaceId ?? 1);
           source = kernelSource;
           const folded = await withFoldInFlight('layer-order', async (runId, stop) => {
-            if (!record) return { kind: 'own', handle: await ownLayerOrderFold(kernelSource, model, target, runId) } as const;
+            if (!record) return { kind: 'own', own: await ownLayerOrderFold(kernelSource, model, target, runId) } as const;
             const resolution = await resolveLayerOrder(
               layerOrderSourceOf(kernelSource, model),
               layerOrderRecordToSource(record, EDIT_PAPER_FRAME),
@@ -3769,12 +3780,12 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             const result = await foldOristudioCpWithOrder(kernelSource, resolution.applied.relations, model, runId);
             if (result.status !== 'folded') return { kind: 'source' } as const;
             // The count holds it from here; every way out lets go through it.
-            adoptFoldedFigureHandle(result.handle);
+            const release = adoptTransientFoldedFigureHandle(result.handle);
             if (result.snapshot.outcome !== 'Solved') {
-              releaseFoldedFigureHandle(result.handle);
+              release();
               return { kind: 'source' } as const;
             }
-            return { kind: 'adopt', handle: result.handle, snapshot: result.snapshot } as const;
+            return { kind: 'adopt', handle: result.handle, snapshot: result.snapshot, release } as const;
           });
 
           switch (folded.kind) {
@@ -3786,7 +3797,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
               return { status: 'unavailable', reason: 'unavailable' };
             case 'own':
               putBack();
-              return folded.handle === null ? ready(kernelSource, null) : await readyOn(folded.handle, kernelSource);
+              return folded.own === null ? ready(kernelSource, null) : await readyOn(folded.own, kernelSource);
             case 'source':
               putBack();
               track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger: 'press', outcome: 'refused', mode: 'flat' });
@@ -3797,15 +3808,17 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
               try {
                 shown = await getOristudioCpFoldedFigurePaperScene(folded.handle);
               } catch {
-                releaseFoldedFigureHandle(folded.handle);
+                folded.release();
                 putBack();
                 track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger: 'press', outcome: 'refused', mode: 'flat' });
                 return ready(kernelSource, null);
               }
-              const latest = get().oristudioCpFoldedFigures.find((candidate) => candidate.id === id);
-              // Torn down, deleted or given a fold by another path while this folded.
-              if (foldedFigureHandleEpoch() !== epoch || !latest || latest.handle != null) {
-                releaseFoldedFigureHandle(folded.handle);
+              // Torn down, deleted, undone or given a fold by another path while this folded.
+              if (
+                foldedFigureHandleEpoch() !== epoch ||
+                !figuresAwaitFold(get().oristudioCpFoldedFigures, id, null)
+              ) {
+                folded.release();
                 return { status: 'unavailable', reason: 'cancelled' };
               }
               // The same picture, now live, as a rehydrate makes it: nothing about
@@ -3867,7 +3880,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         });
 
       const previousHandle = figure.handle;
-      const epoch = foldedFigureHandleEpoch();
+      // It lands only on the figure as this marks it, still holding `previousHandle`:
+      // not after an undo, a Delete or a new document took it (`foldLanding.ts`).
+      const landing = foldLanding(figure.id, previousHandle);
       set({
         oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
           candidate.id === figure.id ? { ...candidate, status: 'loading' } : candidate
@@ -3894,7 +3909,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           await giveBack();
           return restorePreviousFigure(figure, notApplied());
         }
-        const renderSnapshot = await renderSnapshotForFoldedFigure(
+        const renderSnapshot = await landing.picture(
           result.handle,
           figure.displayStyle,
           foldedFigureIndex(figure.id),
@@ -3903,14 +3918,6 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         if (!isDrawableFoldResult(result.snapshot, renderSnapshot)) {
           await giveBack();
           return restorePreviousFigure(figure, notApplied());
-        }
-        // Deleted, or its document replaced, while this folded.
-        if (
-          foldedFigureHandleEpoch() !== epoch ||
-          !get().oristudioCpFoldedFigures.some((candidate) => candidate.id === figure.id)
-        ) {
-          await giveBack();
-          return false;
         }
         adoptFoldedFigureHandle(result.handle);
         takeCanvasSelection('folded-figure', {
@@ -3939,6 +3946,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         return true;
       } catch (error) {
         await giveBack();
+        // Its figure moved on while it folded: the new fold is gone, and there is nothing to put back.
+        if (error instanceof FoldMovedOn) return false;
         if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
         return restorePreviousFigure(figure, engineError(error).message);
       }

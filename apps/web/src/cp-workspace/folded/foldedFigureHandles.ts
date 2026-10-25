@@ -97,6 +97,26 @@ export function adoptFoldedFigureHandle(handle: number, { copyFrom }: { copyFrom
   retainFoldedFigureHandle(handle);
 }
 
+/**
+ * A handle the kernel just made for a press that keeps it a while with no
+ * figure holding it: the Layer order dialog's own fold, or a reopened figure's
+ * fold until it is the figure's. Adopted into the count. The returned release
+ * lets go of it once, and only in the generation of handles it was adopted in:
+ * a document replaced meanwhile freed it with every other, and the kernel may
+ * have given its slot to the new document's next fold by then. A press that
+ * hands the fold to a figure instead never calls it.
+ */
+export function adoptTransientFoldedFigureHandle(handle: number): () => void {
+  adoptFoldedFigureHandle(handle);
+  const epoch = handleEpoch;
+  let held = true;
+  return () => {
+    if (!held) return;
+    held = false;
+    if (handleEpoch === epoch) releaseFoldedFigureHandle(handle);
+  };
+}
+
 /** Take a reference to `handle`. No-op for a figure that has none yet. */
 export function retainFoldedFigureHandle(handle: number | null | undefined): void {
   // Handle 0 is a valid wasm slot index; only null/undefined means "not ready".

@@ -8,6 +8,7 @@
  *
  * React-free and store-free.
  */
+import type { TFunction } from 'i18next';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import { isFolded3dFigure } from './foldedFigureCapabilities';
@@ -62,4 +63,19 @@ export function foldedFigureLayerOrderHold(figure: OristudioCpFoldedFigureEntry)
 /** The record a figure carries, when this build reads it. */
 export function foldedFigureLayerOrderRecord(figure: OristudioCpFoldedFigureEntry): LayerOrderRecord | null {
   return figure.layerOrder?.kind === 'record' ? figure.layerOrder.record : null;
+}
+
+/**
+ * Whether Refold is held on `figure` until a refold can keep a chosen layer
+ * order (H4). A refold folds Oriedita's search again: it would draw the
+ * searched order on a figure that still carries its record, and a reload would
+ * then detach the record. The toolbar, the menu and the store all ask this.
+ */
+export function refoldHeldByLayerOrder(figure: OristudioCpFoldedFigureEntry): boolean {
+  return figure.layerOrder != null;
+}
+
+/** Why, in the words the toolbar shows and a refused call reports. */
+export function refoldHeldByLayerOrderReason(t: TFunction): string {
+  return t('panels:foldedFigureActions.refoldLayerOrder', 'Refold can’t keep its layer order yet');
 }

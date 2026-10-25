@@ -96,9 +96,11 @@ import {
 } from '../../cp-workspace/folded/foldedFigureState';
 import {
   deleteFoldedFigure,
+  setFoldedFigurePlacementAsEntry,
   showAnotherFoldedSolution,
   showPreviousFoldedSolution,
 } from '../../cp-workspace/folded/foldedFigureVerbs';
+import { endOpenCanvasSessions } from '../../cp-workspace/canvasObjects/canvasSessions';
 import { solutionFrontierOf } from '../../cp-workspace/folded/foldedSolutionFrontiers';
 import {
   FOLDED_FIGURE_LAYER_ORDERS_KEY,
@@ -11478,6 +11480,39 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
       expect(figureNow()).toBe(figure);
       expect(state().oristudioCpHistoryPast).toEqual([]);
     });
+
+    it.each(['a Delete', 'an undo'] as const)(
+      'lands on nothing after %s took the figure while it folded: its fold goes, the old one stays with history',
+      async (meanwhile) => {
+        const figure = seedFigure();
+        if (meanwhile === 'an undo') await setFoldedFigurePlacementAsEntry(figure.id, { rotation: 1 }, 'Rotate folded form');
+        clearKernelCalls();
+        let answer: (() => void) | null = null;
+        oristudioCpMocks.foldOristudioCpWithOrder.mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              answer = () => resolve({ status: 'folded', handle: 9, snapshot: solvedSnapshot({ shown_order: 'given' }) });
+            })
+        );
+
+        const applying = applyAsEntry(figure.id, applied());
+        await vi.waitFor(() => expect(answer).not.toBeNull());
+        if (meanwhile === 'a Delete') {
+          await deleteFoldedFigure(figure.id, t);
+        } else {
+          endOpenCanvasSessions('history');
+          await state().undo();
+        }
+        answer!();
+
+        await expect(applying).resolves.toBe(false);
+        expect(oristudioCpMocks.freeOristudioCpFoldedFigure.mock.calls).toEqual([[9]]);
+        expect(foldedFigureHandleRefCount(9)).toBe(0);
+        // With the Delete's entry; or with the figure the undo put back, and the redo.
+        expect(foldedFigureHandleRefCount(3)).toBe(meanwhile === 'a Delete' ? 1 : 2);
+        expect(state().oristudioCpFoldedFigures.some((each) => each.layerOrder)).toBe(false);
+      }
+    );
   });
 
   describe('Layer order… (the verb)', () => {
@@ -11564,6 +11599,31 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
       expect(figureNow()).toBe(figure);
       expect(foldedFigureHandleRefCount(3)).toBe(1);
       expect(state().oristudioCpHistoryPast).toEqual([]);
+    });
+
+    it('lets its own fold go when the dialog closes, but not across a document replaced while it was open', async () => {
+      const figure = seedFigure({ snapshot: solvedSnapshot({ discovered_fold_cases: 2, current_fold_case: 1 }) });
+      oristudioCpMocks.getOristudioCpFoldedFigureSnapshot.mockResolvedValueOnce(
+        solvedSnapshot({ discovered_fold_cases: 2, current_fold_case: 2 })
+      );
+      oristudioCpMocks.foldOristudioCpWithOrder.mockResolvedValueOnce({
+        status: 'folded',
+        handle: 15,
+        snapshot: solvedSnapshot({ discovered_fold_cases: 1, current_fold_case: 1 }),
+      });
+      dialogGatewayMocks.openLayerOrderDialog.mockImplementationOnce(async () => {
+        // Another document opens while the dialog is: every fold goes, and its
+        // first fold is given the slot the dialog's fold had.
+        await resetFoldedFigureHandles();
+        retainFoldedFigureHandle(15);
+        return { kind: 'cancelled' };
+      });
+
+      await expect(openFoldedFigureLayerOrder(figure.id, t)).resolves.toBe('cancelled');
+
+      // Freed once, by the replace; the new document's fold in that slot stays.
+      expect(oristudioCpMocks.freeOristudioCpFoldedFigure.mock.calls.filter(([handle]) => handle === 15)).toHaveLength(1);
+      expect(foldedFigureHandleRefCount(15)).toBe(1);
     });
 
     it('opens a constrained figure whose kernel shows another order on the source alone, to restore its record', async () => {
@@ -11781,6 +11841,19 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
       expect(figureNow()).toBe(figure);
       expect(state().oristudioCpHistoryPast).toEqual([]);
     });
+  });
+
+  it('refuses to refold a figure with a layer order, called directly, with the toolbar’s reason', async () => {
+    for (const layerOrder of [held(), { kind: 'newer', saved: { figureKey: 'fk9:x', record: '{"v":2}' } }] as const) {
+      const figure = seedFigure({ layerOrder });
+      clearKernelCalls();
+
+      await expect(state().refoldOristudioCpFoldedFigure(figure.id)).resolves.toBe(false);
+
+      expect(kernelCalls(), layerOrder.kind).toEqual([]);
+      expect(figureNow(), layerOrder.kind).toBe(figure);
+      expect(state().oristudioCpError, layerOrder.kind).toBe('Refold can’t keep its layer order yet');
+    }
   });
 
   it('with no record, refolds, steps and duplicates with exactly the kernel calls it always made (parity guard)', async () => {

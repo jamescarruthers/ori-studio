@@ -21,6 +21,8 @@ import { foldedFigureNotice, type FoldedFigureNotice } from './foldedFigureNotic
 import {
   foldedFigureLayerOrderBlock,
   foldedFigureLayerOrderHold,
+  refoldHeldByLayerOrder,
+  refoldHeldByLayerOrderReason,
   type FoldedFigureLayerOrderBlock,
 } from './foldedFigureLayerOrderState';
 import { edgeInkEdits } from '../paper/paperStyleFields';
@@ -648,19 +650,15 @@ export function buildFoldedFigureActions(
   // Refold is present only when it applies: a figure that matches its source
   // creases has nothing to refold, and a disabled button would just be noise.
   if (canRefold) {
-    // Until a refold keeps a chosen layer order (H4), it would draw Oriedita's
-    // search on a figure that still carries the record, which a reload then
-    // detaches: held, and why.
-    const keepsNoLayerOrder = figure.layerOrder != null;
+    // Held, and why, until a refold keeps a chosen layer order (H4).
+    const held = refoldHeldByLayerOrder(figure);
     actions.push({
       kind: 'command',
       id: 'refold',
       label: t('panels:foldedFigureActions.refold', 'Refold'),
       icon: 'refold',
-      disabled: keepsNoLayerOrder,
-      ...(keepsNoLayerOrder
-        ? { hint: t('panels:foldedFigureActions.refoldLayerOrder', 'Refold can’t keep its layer order yet') }
-        : {}),
+      disabled: held,
+      ...(held ? { hint: refoldHeldByLayerOrderReason(t) } : {}),
       run: () => deps.refold?.(figure),
     });
   }
