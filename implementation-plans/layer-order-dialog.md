@@ -594,6 +594,12 @@ notice has no board of its own; U10 builds it from the approved copy.
      phase gate 2.
    - *A stepper with no total:* when the count is skipped, ‹ › still steps
      ("Solution 3"). *Recommended* over removing the stepper.
+   - *Added in U8, 2026-10-25 (my call while you were away; say if not):*
+     on iguana-c0 the 50 capped letters piled into one unreadable block at
+     fit. So a plain face keeps its letter only where its chip fits on screen
+     and has a clear spot; the rest stay tinted, and appear as you zoom in.
+     Picked, clashing and pointed-at faces always keep theirs. The hint's
+     count still counts every tinted face.
 - **D8. Add after a preview runs out of time.** *Recommended:* disabled, with
    "Couldn't check in time" and Keep trying in the hint line.
 
