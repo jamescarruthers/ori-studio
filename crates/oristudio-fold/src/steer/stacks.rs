@@ -148,8 +148,35 @@ impl Spots {
         }
     }
 
+    /// Spots from their faces' lists, for a problem with `face_count` faces
+    /// that no kernel folded (the solution count's own tests).
+    #[cfg(test)]
+    pub(crate) fn from_lists(lists: &[Vec<u32>], face_count: usize) -> Spots {
+        let mut offsets = vec![0u32];
+        let mut faces = Vec::new();
+        for spot in lists {
+            faces.extend_from_slice(spot);
+            offsets.push(faces.len() as u32);
+        }
+        Spots {
+            offsets,
+            faces,
+            face_count,
+        }
+    }
+
     pub(crate) fn len(&self) -> usize {
         self.offsets.len() - 1
+    }
+
+    /// Spot `i`'s faces, as the kernel lists them.
+    pub(crate) fn spot(&self, i: usize) -> &[u32] {
+        &self.faces[self.offsets[i] as usize..self.offsets[i + 1] as usize]
+    }
+
+    /// How many faces the view has.
+    pub(crate) fn face_count(&self) -> usize {
+        self.face_count
     }
 
     /// Every face named is a face of the view.

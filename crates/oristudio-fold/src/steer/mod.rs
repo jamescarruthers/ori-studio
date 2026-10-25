@@ -21,9 +21,12 @@
 //!   constraints (E5): the open pairs, a preview that never commits, a commit
 //!   of the whole list, the stacks and the paper scene of the order on
 //!   screen, the saved record, and a restore onto creases that may have
-//!   changed ([`ConstraintSession::restore`], decision D10). The smallest
-//!   clashing set and the solution count (E6) build on it:
-//!   [`CantFit::constraints`] is where a smallest set is looked for.
+//!   changed ([`ConstraintSession::restore`], decision D10).
+//! - [`Solutions`] (E6): how many distinct pictures fit from each side and
+//!   how many layer orders, counted in resumable slices with the product
+//!   rule ("at least N" past a cap), and a stepper through them in a fixed
+//!   order ("3 of 12"), or through every layer order with X-ray on
+//!   ([`ConstraintSession::step`], [`StepBy`]).
 //! - [`LayerOrderRecord`], [`read_record`] and [`encode_record`]: the saved
 //!   form, byte for byte the TypeScript codec's
 //!   (`apps/web/src/lib/layerOrder/layerOrderRecord.ts`).
@@ -33,6 +36,7 @@
 mod record;
 mod restore;
 mod session;
+mod solutions;
 mod source;
 mod stacks;
 
@@ -48,6 +52,10 @@ pub use restore::{
 pub use session::{
     CantFit, CantFitProof, Commit, Committed, Constraint, ConstraintFault, ConstraintSession,
     Limits, Preview, PreviewFit, SessionRefusal, TimedOut, Verb,
+};
+pub use solutions::{
+    Moved, NO_TOP, Position, SolutionCaps, SolutionCount, Solutions, StepBy, StepDirection,
+    Stepped, Tally,
 };
 pub use source::{LayerSource, PaperFrame, SourceRefusal, ToleranceCause};
 pub use stacks::{ChangedSpots, Stacks, ViewSide};
