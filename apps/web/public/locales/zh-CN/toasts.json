@@ -116,6 +116,9 @@
     "solving": "正在求解…",
     "solvingLong": "仍在求解 — 这可能需要一段时间"
   },
+  "layerOrder": {
+    "unavailable": "层叠顺序未能加载。请检查网络连接后重试。"
+  },
   "paperExport": {
     "saved": "已导出 {{name}}"
   },

@@ -2,7 +2,7 @@ import { mixHexColors } from '../lib/rgbColor';
 import { applyThemeVariables } from './applyThemeVariables';
 import { paperBackFor } from './paperBack';
 import { FOLD_UNASSIGNED, referencesCreaseAlpha } from './referencesInk';
-import { textOnFill } from './textOnFill';
+import { textOnFill, textReadableOn } from './textOnFill';
 import type { ThemeTokens, TreeMakerTheme } from './types';
 import { tokenToCssVar } from './types';
 
@@ -138,6 +138,9 @@ function applyTreeMakerDerivedTokens(theme: TreeMakerTheme, setVar: (name: strin
   // one on danger. See `textOnFill.ts`.
   setVar('--text-on-accent', textOnFill(colors['accent.primary'], colors['bg.primary']));
   setVar('--text-on-danger', textOnFill(colors['status.danger'], colors['bg.primary']));
+  // Words that must be read on the elevated surface (a dialog's foot): the
+  // theme's primary text, unless it reads under AA there. See `textOnFill.ts`.
+  setVar('--text-on-elevated', textReadableOn(colors['text.primary'], colors['bg.tertiary']));
 
   setVar('--domain-overlay-bg', colorMix(colors['bg.primary'], isLight ? 88 : 82));
   setVar('--domain-danger-border', colorMix(colors['status.danger'], 64));

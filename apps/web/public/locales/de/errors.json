@@ -2,6 +2,7 @@
   "boundary": {
     "appDescription": "Deine Arbeit ist noch im Speicher, aber die Oberfläche konnte sich nicht selbst erholen. Kopiere die Details unten, bevor du neu lädst – sie zeigen einem Entwickler genau, was schiefgelaufen ist.",
     "appTitle": "In Ori Studio ist ein Problem aufgetreten",
+    "close": "Schließen",
     "copied": "Kopiert",
     "copy": "Details kopieren",
     "copyFailed": "Kopieren fehlgeschlagen",

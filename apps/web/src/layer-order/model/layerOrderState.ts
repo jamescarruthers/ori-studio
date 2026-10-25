@@ -468,7 +468,7 @@ export interface LayerOrderDialogInit {
   readonly surface: LayerOrderSurface;
   /** Whether the host hands a saved record: the session restores it, else opens on the host's order. */
   readonly hasRecord: boolean;
-  /** Whether the record came with `attention` set. */
+  /** Whether the record came with `attention` set: `recordNeedsAttentionOf(request.record)`, as the dialog shell asks it. */
   readonly recordNeedsAttention: boolean;
   /** Opened from the host's "Review…" action (D14). */
   readonly review: boolean;

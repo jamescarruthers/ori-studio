@@ -2,6 +2,7 @@
   "boundary": {
     "appDescription": "您的工作仍在内存中，但界面无法自行恢复。请在重新加载前复制下方的详细信息——它们能准确告诉开发者出了什么问题。",
     "appTitle": "Ori Studio 遇到了问题",
+    "close": "关闭",
     "copied": "已复制",
     "copy": "复制详细信息",
     "copyFailed": "无法复制",

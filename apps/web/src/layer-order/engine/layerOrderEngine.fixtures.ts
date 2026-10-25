@@ -832,6 +832,11 @@ export class InProcessLayerOrderWorker extends FakePort {
   crash(message = 'The worker stopped unexpectedly.'): void {
     this.dispatchEvent(new ErrorEvent('error', { message }));
   }
+
+  /** Never run, as a worker whose script did not load (offline): a plain `error` event, not an `ErrorEvent`. */
+  failToLoad(): void {
+    this.dispatchEvent(new Event('error'));
+  }
 }
 
 /** A worker over the fake backend, with the test's handle on it. */

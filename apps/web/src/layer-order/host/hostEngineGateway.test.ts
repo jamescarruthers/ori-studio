@@ -88,6 +88,18 @@ describe('the host engine’s gateway', () => {
     expect(spawned).toHaveLength(0);
   });
 
+  it('a load that fails while the browser is offline answers lost, reported to no one', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    vi.doMock('./layerOrderHostEngine', () => {
+      throw new TypeError('Failed to fetch dynamically imported module');
+    });
+    const gateway = await import('./hostEngineGateway');
+    const resolved = await gateway.resolveLayerOrder(FAKE_LAYER_ORDER_SOURCE, RECORD, FAKE_LIMITS);
+    expect(resolved).toMatchObject({ outcome: 'lost', cause: 'unavailable' });
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+    expect(spawned).toHaveLength(0);
+  });
+
   it('a load that fails answers lost, reported once, and the next resolve loads again', async () => {
     vi.doMock('./layerOrderHostEngine', () => {
       throw new Error('Offline.');

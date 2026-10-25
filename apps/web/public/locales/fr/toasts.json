@@ -142,6 +142,9 @@
     "solving": "Résolution…",
     "solvingLong": "Résolution toujours en cours — cela peut prendre du temps"
   },
+  "layerOrder": {
+    "unavailable": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion et réessayez."
+  },
   "paperExport": {
     "saved": "{{name}} exporté"
   },

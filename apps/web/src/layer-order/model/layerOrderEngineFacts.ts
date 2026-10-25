@@ -200,12 +200,24 @@ function savedFaceState(status: number | undefined): LayerSavedFaceState {
 }
 
 /**
+ * An open or a restore as either side of the worker answers it: the bridge's
+ * (a session handle, constraints packed in threes) or the engine contract's
+ * (`LayerOrderOpened`, `LayerOrderRestored`: no handle, constraints as
+ * tuples), which is what the dialog's hook holds.
+ */
+export type LayerOpenAnswer =
+  | Omit<LayerOpened, 'session'>
+  | (Omit<LayerRestored, 'session' | 'constraints'> & {
+      readonly constraints: LayerRestored['constraints'] | readonly LayerConstraint[];
+    });
+
+/**
  * The facts of an open (`layer_open`, `layer_open_showing`) or a restore,
  * with the stacks and the letters (`faceLettersOf(scene).inLetterOrder`) the
  * hook read after it.
  */
 export function openFacts(
-  opened: LayerOpened | LayerRestored,
+  opened: LayerOpenAnswer,
   stacks: LayerSidesStacks,
   record: LayerOrderRecord | null,
   letterOrder: readonly LayerFace[]
@@ -217,13 +229,22 @@ export function openFacts(
     openPairs: opened.open_pairs,
     openedOn: opened.opened_on,
     stacks,
-    constraints: restored ? unpackConstraints(restored.constraints) : [],
+    constraints: restored ? restoredConstraints(restored.constraints) : [],
     restore: restored ? restoreFacts(restored, record) : null,
     letterOrder,
   };
 }
 
-function restoreFacts(restored: LayerRestored, record: LayerOrderRecord | null): LayerRestoreFacts {
+/** A restore's committed constraints, packed (the bridge's) or as tuples (the contract's). */
+function restoredConstraints(constraints: LayerRestored['constraints'] | readonly LayerConstraint[]): LayerConstraint[] {
+  // Not `instanceof`: an array that crossed a worker may be of another realm's Int32Array.
+  return ArrayBuffer.isView(constraints) ? unpackConstraints(constraints) : [...constraints];
+}
+
+function restoreFacts(
+  restored: Pick<LayerRestored, 'saved_faces' | 'outcome' | 'carried'>,
+  record: LayerOrderRecord | null
+): LayerRestoreFacts {
   const faceNow = (savedFace: number | undefined): { face: LayerFace | null; state: LayerSavedFaceState } => {
     if (savedFace === undefined) return { face: null, state: 'gone' };
     const state = savedFaceState(restored.saved_faces.status[savedFace]);
