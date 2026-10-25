@@ -1,0 +1,196 @@
+/**
+ * The contract's own helpers (E5's sign rule, the bridge's triples, the
+ * limits), and the fake backend the dialog's tests stand on, held to the
+ * contract's rules.
+ */
+import { describe, expect, it } from 'vitest';
+import { faceLettersOf } from './faceIndex';
+import {
+  FAKE_LAYER_ORDER_SOURCE,
+  FAKE_LIMITS,
+  FAKE_NO_NODES,
+  createFakeLayerOrderBackend,
+} from './layerOrderEngine.fixtures';
+import {
+  KEEP_TRYING_FACTOR,
+  LAYER_ORDER_LIMITS,
+  constraintSeen,
+  constraintVerb,
+  keepTrying,
+  packConstraints,
+  spotCount,
+  unpackConstraints,
+  type LayerSide,
+  type LayerVerb,
+} from './layerOrderEngine';
+
+describe('constraints read from a side', () => {
+  it('follow FOLD’s sign rule, as E5’s Constraint::seen does', () => {
+    // From the front, "in front of" puts the subject above; the side above a face is its front exactly when it shows its front.
+    expect(constraintSeen(2, 'in_front_of', 3, 'front', true)).toEqual([2, 3, 1]);
+    expect(constraintSeen(2, 'in_front_of', 3, 'front', false)).toEqual([2, 3, -1]);
+    expect(constraintSeen(2, 'behind', 3, 'front', true)).toEqual([2, 3, -1]);
+    // Turned over, "in front of" puts the subject below.
+    expect(constraintSeen(2, 'in_front_of', 3, 'back', true)).toEqual([2, 3, -1]);
+    expect(constraintSeen(2, 'behind', 3, 'back', false)).toEqual([2, 3, -1]);
+  });
+
+  it('are paper-relative: the same constraint reads the other way from the other side', () => {
+    const sides: LayerSide[] = ['front', 'back'];
+    const verbs: LayerVerb[] = ['in_front_of', 'behind'];
+    for (const side of sides) {
+      for (const verb of verbs) {
+        for (const frontUp of [true, false]) {
+          const constraint = constraintSeen(0, verb, 1, side, frontUp);
+          expect(constraintVerb(constraint, side, frontUp)).toBe(verb);
+          const other = side === 'front' ? 'back' : 'front';
+          expect(constraintVerb(constraint, other, frontUp)).toBe(verb === 'in_front_of' ? 'behind' : 'in_front_of');
+        }
+      }
+    }
+  });
+
+  it('pack into the bridge’s triples and back', () => {
+    const packed = packConstraints([
+      [3, 0, 1],
+      [2, 5, -1],
+    ]);
+    expect(packed).toEqual(Int32Array.of(3, 0, 1, 2, 5, -1));
+    expect(unpackConstraints(packed)).toEqual([
+      [3, 0, 1],
+      [2, 5, -1],
+    ]);
+    expect(unpackConstraints(new Int32Array())).toEqual([]);
+  });
+});
+
+describe('limits', () => {
+  it('give a preview about 3 s, and every call E5’s node defaults', () => {
+    expect(LAYER_ORDER_LIMITS.preview.deadlineMs).toBe(3_000);
+    for (const limits of Object.values(LAYER_ORDER_LIMITS)) {
+      expect(limits).toMatchObject({ maxNodes: 200_000, fastNodes: 128 });
+    }
+  });
+
+  it('keep trying with a later deadline and more nodes, since the same nodes would stop in the same place', () => {
+    expect(keepTrying(LAYER_ORDER_LIMITS.preview)).toEqual({
+      maxNodes: 200_000 * KEEP_TRYING_FACTOR,
+      fastNodes: 128,
+      deadlineMs: 3_000 * KEEP_TRYING_FACTOR,
+    });
+    expect(keepTrying({ maxNodes: 10, fastNodes: 128, deadlineMs: 500 }, 2)).toEqual({
+      maxNodes: 20,
+      fastNodes: 128,
+      deadlineMs: 1_000,
+    });
+  });
+
+  it('count spots from the stacks’ offsets', () => {
+    expect(spotCount({ offsets: Uint32Array.of(0, 2, 5), faces: new Uint32Array(5) })).toBe(2);
+    expect(spotCount({ offsets: new Uint32Array(), faces: new Uint32Array() })).toBe(0);
+  });
+});
+
+describe('the fake backend keeps the contract’s rules', () => {
+  async function openedBackend() {
+    const backend = createFakeLayerOrderBackend();
+    const open = await backend.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+    if (open.status !== 'ok') throw new Error('expected an open session');
+    return { backend, open };
+  }
+
+  it('a preview never commits', async () => {
+    const { backend, open } = await openedBackend();
+    const before = await backend.stacks('front');
+    await expect(backend.preview([3, 0, 1], FAKE_LIMITS)).resolves.toMatchObject({ verdict: 'fits' });
+    expect(await backend.stacks('front')).toEqual(before);
+    expect(await backend.openPairs()).toEqual(open.open_pairs);
+    expect(await backend.constraints()).toEqual([]);
+  });
+
+  it('Add commits what was previewed, and the open pairs shrink', async () => {
+    const { backend } = await openedBackend();
+    // 3 in front of 0, 0 showing its front: 3 moves to the top.
+    const preview = await backend.preview([3, 0, 1], FAKE_LIMITS);
+    const commit = await backend.commit([[3, 0, 1]], FAKE_LIMITS);
+    if (preview.verdict !== 'fits' || commit.verdict !== 'committed') throw new Error('expected a fit');
+    expect(commit.stacks).toEqual(preview.stacks);
+    expect([...commit.stacks.front.faces]).toEqual([3, 0, 1, 2]);
+    expect([...commit.changed.front]).toEqual([0]);
+    // 3 above 0 above 1 is settled; 2 against each of them is not.
+    expect([...commit.open_pairs]).toEqual([0, 2, 1, 2, 2, 3]);
+    expect(await backend.constraints()).toEqual([[3, 0, 1]]);
+  });
+
+  it('removing a constraint keeps the order on screen', async () => {
+    const { backend } = await openedBackend();
+    await backend.commit([[3, 0, 1]], FAKE_LIMITS);
+    const removed = await backend.commit([], FAKE_LIMITS);
+    if (removed.verdict !== 'committed') throw new Error('expected a commit');
+    expect([...removed.stacks.front.faces]).toEqual([3, 0, 1, 2]);
+    expect([...removed.changed.front]).toEqual([]);
+  });
+
+  it('a constraint against the creases can’t fit, and one against another is opposed', async () => {
+    const { backend } = await openedBackend();
+    // 1 in front of 0: the creases force 0 above 1.
+    await expect(backend.preview([1, 0, 1], FAKE_LIMITS)).resolves.toMatchObject({
+      verdict: 'cant_fit',
+      proof: { kind: 'forced' },
+      constraints: Uint32Array.of(0),
+    });
+    // [2, 3, 1] puts 3 above 2, as 3 is face down; [3, 2, -1] puts 2 above 3, as 2 is face up.
+    await backend.commit([[2, 3, 1]], FAKE_LIMITS);
+    await expect(backend.preview([3, 2, -1], FAKE_LIMITS)).resolves.toMatchObject({
+      verdict: 'cant_fit',
+      proof: { kind: 'opposed' },
+      constraints: Uint32Array.of(0, 1),
+    });
+  });
+
+  it('with no nodes, an answer that needs a search times out; one deduction settles does not', async () => {
+    const { backend } = await openedBackend();
+    await expect(backend.preview([3, 0, 1], FAKE_NO_NODES)).resolves.toEqual({
+      verdict: 'timed_out',
+      limit: 'nodes',
+      nodes: 0,
+    });
+    await expect(backend.preview([0, 2, 1], FAKE_NO_NODES)).resolves.toMatchObject({ verdict: 'fits' });
+    await expect(backend.preview([1, 0, 1], FAKE_NO_NODES)).resolves.toMatchObject({ verdict: 'cant_fit' });
+  });
+
+  it('a constraint that is no question throws, as the bridge does', async () => {
+    const { backend } = await openedBackend();
+    await expect(backend.preview([2, 2, 1], FAKE_LIMITS)).rejects.toMatchObject({ code: 'session_bad_constraint' });
+    await expect(backend.commit([[0, 9, 1]], FAKE_LIMITS)).rejects.toMatchObject({ code: 'session_bad_constraint' });
+  });
+
+  it('draws a scene of the order on screen that letters its faces in reading order', async () => {
+    const { backend } = await openedBackend();
+    await backend.commit([[3, 0, 1]], FAKE_LIMITS);
+    const front = await backend.scene('front');
+    const back = await backend.scene('back');
+    expect(front?.subfaces[0]?.faces_top_to_bottom).toEqual([3, 0, 1, 2]);
+    expect(back?.subfaces[0]?.faces_top_to_bottom).toEqual([2, 1, 0, 3]);
+    const letters = faceLettersOf(front!);
+    expect([0, 1, 2, 3].map((face) => letters.letterOf(face))).toEqual(['A', 'B', 'C', 'D']);
+    expect(faceLettersOf(back!).inLetterOrder).toEqual(letters.inLetterOrder);
+  });
+
+  it('saves a record that restores to the same constraints and order', async () => {
+    const { backend } = await openedBackend();
+    await backend.commit([[3, 0, 1]], FAKE_LIMITS);
+    const saved = await backend.save();
+    if (saved.status !== 'ok') throw new Error('expected a record');
+    expect(saved.json.startsWith('{"v":1,')).toBe(true);
+
+    const reopened = createFakeLayerOrderBackend();
+    const restored = await reopened.restore(FAKE_LAYER_ORDER_SOURCE, saved.record, FAKE_LIMITS);
+    if (restored.status !== 'ok') throw new Error('expected a restore');
+    expect(restored.outcome).toEqual({ kind: 'applied' });
+    expect(restored.saved_constraints).toEqual([{ status: 'intact' }]);
+    expect(restored.constraints).toEqual([[3, 0, 1]]);
+    expect(await reopened.stacks('front')).toEqual(await backend.stacks('front'));
+    expect(await reopened.relations()).toEqual(await backend.relations());
+  });
+});
