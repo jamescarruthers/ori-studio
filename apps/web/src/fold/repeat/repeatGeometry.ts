@@ -157,6 +157,10 @@ const UNIT: readonly Point[] = [
   { x: 0, y: 1 },
 ];
 const IDENTITY: FoldIsometry = [1, 0, 0, 0, 1, 0];
+/** Whether two isometries are one, as their images of the unit triangle say. */
+export const sameIsometry = (a: FoldIsometry, b: FoldIsometry): boolean => sameImages(a, b, UNIT);
+/** Whether a model map turns the paper over: a reflection in the plane, not a turn or a slide. */
+export const turnsOver = (m: FoldIsometry): boolean => m[0] * m[4] - m[1] * m[3] < 0;
 
 /**
  * The side a model map repeats on, or null when it is no mirror of a sheet
@@ -170,8 +174,8 @@ const IDENTITY: FoldIsometry = [1, 0, 0, 0, 1, 0];
  * repeat, and the layer check refuses it.)
  */
 function mirrorSide(m: FoldIsometry): RepeatSide | null {
-  if (!sameImages(compose(m, m), IDENTITY, UNIT)) return null;
-  return m[0] * m[4] - m[1] * m[3] < 0 ? 'same' : 'behind';
+  if (!sameIsometry(compose(m, m), IDENTITY)) return null;
+  return turnsOver(m) ? 'same' : 'behind';
 }
 export function orderPairs(scene: FoldScene): Map<string, number> {
   const pairs = new Map<string, number>();
@@ -253,7 +257,7 @@ export function repeatSymmetries(scene: FoldScene, outline: readonly SheetPoint[
         )
       )
         continue;
-      if (found.some((s) => sameImages(reflection(s.sheet), m, UNIT))) continue;
+      if (found.some((s) => sameIsometry(reflection(s.sheet), m))) continue;
       const valid = verifiedSymmetry(scene, axis);
       if (valid) found.push(valid);
     }

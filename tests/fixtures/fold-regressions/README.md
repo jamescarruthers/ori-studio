@@ -42,6 +42,18 @@ precrease through the tools, clicks and all.
   model map is the identity with every layer pair reversed, and Repeat took
   only a 2D reflection that kept the layer order. It now carries a side and
   repeats behind (`apps/web/src/fold/repeat/repeatBehind.wasm.test.ts`).
+- `repeat-big-side-pleat.osf`: a pleat parallel to the diagonal from the
+  bottom left corner to the top right, mountain along y = x + 1/4 and valley
+  along y = x + 0.15, then its Repeat across that diagonal. A pleat moves the
+  side of its mountain that holds its valley: here the big side, across the
+  axis. Repeat measured each mirrored step against the paper the source left
+  in place, and the mirror of the paper this pleat moved is paper it moved
+  too, so the mirrored pleat, the same one folded by hand, was refused
+  (`repeat_material`). Fixed by measuring such a step again against paper
+  the source moved all alike (`heldGauge` in
+  `apps/web/src/fold/repeat/repeatVerification.ts`; more cases in
+  `repeatHeldGauge.wasm.test.ts` beside it). Built by a script over the
+  engine on 2026-10-25.
 - `unfold-to-after-import.osf`: a diagonal precrease and a fold in half,
   then an Import CP of the half fold alone, which drops the diagonal; a fold
   in half the other way; and Unfold to step back to the import. The unfold

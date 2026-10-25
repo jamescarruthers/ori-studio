@@ -15,6 +15,9 @@ import { findReverseSeedFix, narrowerReverseFlaps } from '../tools/reverse/rever
 import { reverseDrawnSegment, reverseSegmentSeed } from '../tools/reverse/reverseSegmentSeed';
 import { buildReverseStep } from '../tools/reverse/reverseStep';
 import { lineSectionProbe } from '../tools/topFlapSeed';
+import { prepareRepeat } from '../repeat/repeatPreparation';
+import { reflection, verifiedSymmetry } from '../repeat/repeatGeometry';
+import { verifyMaterial } from '../repeat/repeatVerification';
 import { createFoldReplayer, type FoldReplayProgress } from './foldReplay';
 import { isLockedStep, type FoldChoices, type FoldOp, type FoldSequenceDocument, type FoldStep, type SheetPoint } from './foldSequenceDocument';
 import { readFoldSequences } from './foldSequenceFile';
@@ -39,6 +42,7 @@ const available = existsSync(WASM) && existsSync(FIXTURES);
 const NAMES = [
   'edge-crossing.osf',
   'ghost-precrease.osf',
+  'repeat-big-side-pleat.osf',
   'reverse-seed-segment.osf',
   'squash-covered.osf',
   'squash-drawn-hinge.osf',
@@ -364,6 +368,35 @@ describe.skipIf(!available)('the fold-regression fixtures', () => {
       const shown = index.toScene(toPoint(crossing!.at));
       expect(resolveFoldPick(index, 'folded', shown, RADII, POINT_RULE)).toMatchObject({ kind: 'point', provenance: 'crossing' });
     }
+  });
+
+  it('repeat-big-side-pleat: the pleat, its big side moving across the diagonal, repeats across it as saved', async () => {
+    const { calls, steps: all, parentOf, stateOf } = await replayed('repeat-big-side-pleat.osf');
+    const [pleat, repeat] = all;
+    if (pleat?.op.kind !== 'pleat' || repeat?.op.kind !== 'repeat') throw new Error('a pleat, then its repeat');
+    const saved = repeat.op;
+    const [before, after] = [parentOf(pleat), stateOf(pleat)];
+    // The pleat moved paper on both sides of the diagonal, its big side, and
+    // left the corner beyond its mountain where it lay.
+    for (const sheet of [
+      [0.9, 0.1],
+      [0.4, 0.5],
+    ] as SheetPoint[]) {
+      expect(Math.hypot(...minus(imageOf(calls, after, sheet), imageOf(calls, before, sheet))), `${sheet.join(', ')} moves`).toBeGreaterThan(0.05);
+    }
+    expectNear(imageOf(calls, after, [0.05, 0.95]), imageOf(calls, before, [0.05, 0.95]), 'the corner stays');
+    // Its mirror moves the big side too, so measured against that corner its
+    // paper lands nowhere a rigid fold can: Repeat refused it
+    // (`repeat_material`). Measured against the paper the pleat moved, the
+    // saved repeat is the pleat mirrored, and prepares again as saved.
+    const prepared = prepareRepeat(calls, { parent: after, axis: saved.axis, steps: [{ id: pleat.id, op: pleat.op, before, after }], source: saved.source });
+    if (prepared.status !== 'ready') throw new Error(JSON.stringify(prepared));
+    expect(prepared.matched).toEqual([0]);
+    expect(prepared.op.steps.map((step) => step.expect)).toEqual(saved.steps.map((step) => step.expect));
+    const mirrored = calls.step(after, saved.steps[0]!.op, saved.steps[0]!.choices);
+    if (mirrored.status !== 'ok') throw new Error(JSON.stringify(mirrored.refusal));
+    expect(verifyMaterial(calls.scene(before), calls.scene(after), calls.scene(after), calls.scene(mirrored.state), reflection(saved.axis))).toBe('held');
+    expect(verifiedSymmetry(calls.scene(stateOf(repeat)), saved.axis)?.side).toBe('same');
   });
 
   it('unfold-to-after-import: unfolding to an Import CP brings back no crease from before it, and opens only the fold made since', async () => {
