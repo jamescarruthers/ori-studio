@@ -12,6 +12,7 @@ import {
 import { annotationGesture } from '../../cp-workspace/annotations/annotationGesture';
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
+import { TooltipProvider } from '../ui/Tooltip';
 import { CpPropertiesPanel } from './CpPropertiesPanel';
 
 /**
@@ -45,7 +46,13 @@ function mount(patch: Partial<ReturnType<typeof useWorkspaceStore.getState>>) {
     oristudioCpInlineSimulations: [WINDOW],
     ...patch,
   });
-  act(() => root?.render(<CpPropertiesPanel />));
+  act(() =>
+    root?.render(
+      <TooltipProvider>
+        <CpPropertiesPanel />
+      </TooltipProvider>
+    )
+  );
 }
 
 const text = (selector: string) => host?.querySelector(selector)?.textContent ?? null;
@@ -157,10 +164,13 @@ describe('CpPropertiesPanel', () => {
     expect(text(TITLE)).toBe(FIGURE.title);
     expect(text(SUBTITLE)).toBe('Folding…');
     // Re-pinned for Phase 5: the flat figure's policy applies the aux crease
-    // toggle, its pen and erode, and the sheet offers a row for each.
+    // toggle, its pen and erode, and the sheet offers a row for each. Re-pinned
+    // for H3a: laid out as the Step pane, Render as over its control (so no
+    // row label), then Pose, Appearance and Placement.
     expect(labels()).toEqual([
-      'Render as',
+      'Rotation',
       'Side',
+      'Layer order',
       'Front color',
       'Back color',
       'Line color',
@@ -170,15 +180,22 @@ describe('CpPropertiesPanel', () => {
       'Aux crease width (pt)',
       'Erode (% of sheet)',
       'Scale',
-      'Rotation',
     ]);
+    const renderAs = [...(host?.querySelectorAll('[role="group"]') ?? [])].find(
+      (group) =>
+        document.getElementById(group.getAttribute('aria-labelledby') ?? '')?.textContent === 'Render as'
+    );
+    expect(renderAs).toBeDefined();
     // Not ready: the appearance is offered, disabled, with the reason; the
     // placement — where it sits — stays editable.
-    expect(host?.querySelector('[data-field-row]')?.getAttribute('title')).toBe(
-      'Refold to change how this figure looks'
-    );
+    const sideRow = [...(host?.querySelectorAll('[data-field-label]') ?? [])]
+      .find((label) => label.textContent === 'Side')
+      ?.closest('[data-field-row]');
+    expect(sideRow?.getAttribute('title')).toBe('Refold to change how this figure looks');
     const scale = host?.querySelector<HTMLInputElement>('input[aria-label="Scale"]');
     expect(scale?.disabled).toBe(false);
+    const rotation = host?.querySelector<HTMLInputElement>('input[aria-label="Rotation"]');
+    expect(rotation?.disabled).toBe(false);
   });
 
   it('shows the shared simulator settings for a window and writes them app-wide', () => {

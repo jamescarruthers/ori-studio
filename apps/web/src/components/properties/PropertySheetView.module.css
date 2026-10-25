@@ -50,12 +50,45 @@
   white-space: nowrap;
 }
 
-/* An untitled section is the sheet's plain body: rows with no header. */
-.section {
-  flex: 0 0 auto;
-  border-bottom: 1px solid var(--border-subtle);
+/* With the object's verbs at its end (`sheet.actions`), the header is the
+   Diagram Step pane's header line (DiagramStepHeader.module.css): its padding,
+   and the verbs pushed to the end of the line. Beside them the subtitle has
+   little room, so it wraps rather than lose its end. */
+.header[data-actions] {
+  padding: var(--space-2) var(--space-3);
 }
 
-.section:last-child {
-  border-bottom: 0;
+.header[data-actions] .subtitle {
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+/* An untitled section is the sheet's plain body: rows with no header. Its
+   rows rule themselves off, so it draws no rule of its own — one would double
+   the last row's wherever another section follows. */
+.section {
+  flex: 0 0 auto;
+}
+
+/* A stepper with a button after its pager ("Edit…"), as the board draws the
+   Layer order row: the two 8px apart at the row's end. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A section's rows a little apart, as the Step pane's Pose section has them
+   (DiagramStepPose.module.css). */
+.spaced {
+  display: grid;
+  gap: var(--space-1);
 }

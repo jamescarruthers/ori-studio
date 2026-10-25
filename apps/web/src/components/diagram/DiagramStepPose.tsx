@@ -9,14 +9,14 @@ import type {
 import { useOpenLinkedPose } from '../../diagram/capture/openLinkedPose';
 import { useDiagramFoldStepPose } from '../../diagram/fold/useDiagramFoldStepPose';
 import { isLockedStep, type DiagramStep } from '../../diagram/document/diagramDocument';
-import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { useReferencesStepWays } from '../../diagram/references/useReferencesStepWays';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { DiagramWayRow } from './DiagramWayChooser';
 import { Button } from '../ui/Button';
-import { IconButton } from '../ui/IconButton';
+import type { ControlVerb } from '../../lib/controlVerb';
+import { Pager } from '../ui/Pager';
 import { FieldRow, NumberRow, SegmentedRow } from '../ui/fieldRows';
 import styles from './DiagramStepPose.module.css';
 
@@ -176,19 +176,21 @@ export function DiagramStepPose({
         >
           <span className={styles.layerOrder}>
             {render.mode === 'folded-flat' && (
-              <span className={styles.pager}>
-                {layerVerb(linked.find((action) => action.id === 'previous-solution'), ChevronLeft)}
+              <Pager
+                label={t('panels:diagram.pose.layerOrder', 'Layer order')}
+                previous={layerVerb(linked.find((action) => action.id === 'previous-solution'))}
+                next={layerVerb(linked.find((action) => action.id === 'next-solution'))}
+              >
                 {linkedPose.layerOrder ? (
-                  <span className={styles.pagerLabel}>{linkedPose.layerOrder.count}</span>
+                  linkedPose.layerOrder.count
                 ) : (
                   // A record's order has no place among the kernel's to read out (D11): its place is
                   // kept, unread, so the chevrons stay where a count puts them (until H9's stepper).
-                  <span className={styles.pagerLabel} data-reserved="" aria-hidden="true">
+                  <span className={styles.reserved} data-reserved="" aria-hidden="true">
                     {t('panels:diagram.pose.layerOrderOf', '{{number}} of {{total}}', { number: 1, total: 1 })}
                   </span>
                 )}
-                {layerVerb(linked.find((action) => action.id === 'next-solution'), ChevronRight)}
-              </span>
+              </Pager>
             )}
             <LayerOrderEntry entry={layerOrder.edit} />
           </span>
@@ -256,21 +258,16 @@ function LayerOrderEntry({ entry }: { entry: DiagramStepLayerOrderEntry }) {
 }
 
 /**
- * One of a flat fold's layer order verbs, as a small button: refused rather
- * than disabled, while a capture runs or at either end, so it keeps the focus
- * a press gave it.
+ * One of a flat fold's layer order verbs, for the pager: refused rather than
+ * disabled while a capture runs or at either end, so it keeps the focus a
+ * press gave it.
  */
-function layerVerb(action: DiagramLinkedPoseAction | undefined, Icon: LucideIcon): ReactNode {
-  if (!action) return null;
-  return (
-    <IconButton
-      size="sm"
-      aria-label={action.label}
-      title={(action.disabled || action.waiting) && action.hint ? action.hint : action.label}
-      aria-disabled={action.disabled || action.waiting || undefined}
-      onClick={action.run}
-    >
-      <Icon size={14} />
-    </IconButton>
-  );
+function layerVerb(action: DiagramLinkedPoseAction | undefined): ControlVerb | undefined {
+  if (!action) return undefined;
+  return {
+    label: action.label,
+    disabled: action.disabled || action.waiting,
+    hint: action.hint,
+    run: action.run,
+  };
 }
