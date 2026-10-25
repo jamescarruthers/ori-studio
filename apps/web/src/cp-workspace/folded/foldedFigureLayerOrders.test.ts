@@ -149,6 +149,30 @@ describe('attaching saved layer orders at install', () => {
     expect(saved(linked.extensions, linked.figures)).toEqual(bag);
   });
 
+  it('attaches a 3D figure’s record by its key alone, which names 3D: no flat snapshot says it was given (D13)', () => {
+    const waiting = held({ ...RECORD, attention: { reason: 'route-3d', count: 1 } });
+    const spatial = (fingerprint = 'cs1:fold'): OristudioCpFoldedFigureEntry => ({
+      ...figure('generated-1', { fingerprint }),
+      sourceKind: 'generated-3d',
+      snapshot: null,
+      folded3d: { current_fold_case: 1, discovered_fold_cases: 1 } as OristudioCpFoldedFigureEntry['folded3d'],
+    });
+    const bag = bagFor([withRecord(spatial(), waiting)]);
+    const linked = linkFoldedFigureLayerOrders(bag, [spatial()]);
+    expect(linked.figures[0]!.layerOrder).toEqual(waiting);
+    expect(saved(linked.extensions, linked.figures)).toEqual(bag);
+
+    // Folded in 3D again from other creases, or a flat figure on the id: another key.
+    for (const [other, reason] of [
+      [spatial('cs1:edited'), 'figure-changed'],
+      [figure('generated-1'), 'figure-changed'],
+    ] as const) {
+      const detached = linkFoldedFigureLayerOrders(bag, [other]);
+      expect(detached.figures[0]!.layerOrder, reason).toBeUndefined();
+      expect(detachedFoldedFigureLayerOrders(detached.extensions).map((entry) => entry.reason)).toEqual([reason]);
+    }
+  });
+
   it('leaves a bag without the key, or with one it cannot read, as it came', () => {
     const figures = [figure('generated-1')];
     for (const bag of [{ futureDocFeature: { a: 1 } }, { [KEY]: [1, 2] }]) {

@@ -23,7 +23,11 @@
  * Figure ids are reused (`generated-N`), and an older build carries the bag
  * and the figure's snapshot unchanged, replacing the snapshot only when it
  * folds again. So a figure refolded by an older build, or a new figure on a
- * reused id, has no `shown_order` and never inherits a record.
+ * reused id, has no `shown_order` and never inherits a record. A 3D figure
+ * keeps its record while its creases fold in 3D (D13) and has no flat
+ * snapshot at all, so it attaches by its key alone, which names 3D: a 3D
+ * figure folded again from other creases, or by an older build from these
+ * after an edit, has another key.
  *
  * **Detached, never dropped.** A record that does not attach is detached: it
  * moves to the list with why, and is written back there, never to attach
@@ -53,9 +57,9 @@ const SAVED_KEYS: ReadonlySet<string> = new Set(['figureKey', 'record']);
 /**
  * Why a record is detached:
  * - `figure-missing`: no figure has its id;
- * - `order-not-given`: the figure's snapshot does not say its order was given —
- *   an older build folded it again, a new figure took the id, or it is a 3D
- *   figure, which has no flat snapshot;
+ * - `order-not-given`: a flat figure whose snapshot does not say its order was
+ *   given — an older build folded it again, or a new figure took the id (a 3D
+ *   figure, which has no flat snapshot, is known by its key alone);
  * - `figure-changed`: it says given, but its source or its case is not the one
  *   the record was saved with.
  */
@@ -183,7 +187,10 @@ function detachReason(
   figureKey: string
 ): FoldedFigureLayerOrderDetachReason | null {
   if (!figure) return 'figure-missing';
-  if (figure.snapshot?.shown_order !== 'given') return 'order-not-given';
+  // A 3D figure keeps its record for when its creases fold flat again (D13),
+  // and has no flat snapshot to say an order was given: its key, which names
+  // 3D, says it is the fold the record was kept on.
+  if (figure.folded3d == null && figure.snapshot?.shown_order !== 'given') return 'order-not-given';
   if (foldedFigureLayerOrderKey(figure) !== figureKey) return 'figure-changed';
   return null;
 }
