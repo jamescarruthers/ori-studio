@@ -223,13 +223,28 @@ pub enum StepDirection {
 }
 
 /// Where an order lies in the stepper's fixed order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+///
+/// Serialized for JavaScript as [`Tally`] is: an index past
+/// [`ChoiceCount::MAX_SENT`] is sent as that bound. With X-ray on, the index
+/// of a layer order can be past it (census 2 met three designs whose orders
+/// pass 2⁵³), and `serde-wasm-bindgen` refuses a larger `u64`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
     /// From 1. Final only when `total` is exact; before that it counts
     /// among the solutions found so far, and can move as more are found.
     pub index: u64,
     /// The pictures from the side, or with X-ray the layer orders.
     pub total: Tally,
+}
+
+impl Serialize for Position {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut out = serializer.serialize_struct("Position", 2)?;
+        out.serialize_field("index", &self.index.min(ChoiceCount::MAX_SENT))?;
+        out.serialize_field("total", &self.total)?;
+        out.end()
+    }
 }
 
 /// A step that moved the order on screen.
@@ -2343,5 +2358,28 @@ mod tests {
             }
             println!("{name}: {}", rows.join("; "));
         }
+    }
+
+    /// An index past what JavaScript holds exactly is sent as that bound, as
+    /// a tally is; under it, as it is.
+    #[test]
+    fn a_position_past_two_to_the_fifty_three_is_sent_as_the_bound() {
+        let sent = |index: u64, n: u64| {
+            serde_json::to_value(Position {
+                index,
+                total: Tally { n, exact: true },
+            })
+            .expect("serialize")
+        };
+        let max = ChoiceCount::MAX_SENT;
+        assert_eq!(
+            sent(u64::MAX, u64::MAX),
+            serde_json::json!({ "index": max, "total": { "n": max, "exact": false } })
+        );
+        assert_eq!(sent(max + 1, max + 2)["index"], max);
+        assert_eq!(
+            sent(3, 12),
+            serde_json::json!({ "index": 3, "total": { "n": 12, "exact": true } })
+        );
     }
 }
