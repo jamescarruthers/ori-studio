@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DiagramPoseAction } from '../../diagram/actions/diagramPoseActions';
 import type { DiagramLinkedPoseAction } from '../../diagram/actions/diagramLinkedPoseActions';
@@ -66,6 +66,7 @@ export function DiagramStepPose({
   const ways = useReferencesStepWays(step);
   // A Fold step's angle and spread (plan D17).
   const foldPose = useDiagramFoldStepPose(isLockedStep(step) ? null : step);
+  const layerOrderLabelId = useId();
   if (isLockedStep(step)) return null;
   const section = (body: ReactNode) =>
     main ? (
@@ -158,9 +159,10 @@ export function DiagramStepPose({
       {side !== null && sideRow({ side, turnOver })}
       {render.mode === 'folded-flat' && !main && (
         // Any layer order found, back or on (D23), as Pose's own pager has them.
-        <FieldRow label={t('panels:diagram.pose.layerOrder', 'Layer order')} kind="text">
+        // The pager is named by the row's label, so "Layer order" is said once.
+        <FieldRow label={t('panels:diagram.pose.layerOrder', 'Layer order')} labelId={layerOrderLabelId} kind="text">
           <Pager
-            label={t('panels:diagram.pose.layerOrder', 'Layer order')}
+            labelledBy={layerOrderLabelId}
             previous={layerVerb(linked.find((action) => action.id === 'previous-solution'))}
             next={layerVerb(linked.find((action) => action.id === 'next-solution'))}
           >

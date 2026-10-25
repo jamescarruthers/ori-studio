@@ -30,6 +30,7 @@ export type FieldRowValueKind =
 
 export function FieldRow({
   label,
+  labelId,
   help,
   htmlFor,
   noteId,
@@ -48,6 +49,12 @@ export function FieldRow({
   children,
 }: {
   label: string;
+  /**
+   * The id the label carries, so a control that is not a native input — a
+   * pager's group — can be named by it (`aria-labelledby`) rather than repeat
+   * it.
+   */
+  labelId?: string;
   /**
    * What the setting does, for one whose name cannot carry it: an info mark
    * after the label that explains on hover or focus.
@@ -162,12 +169,12 @@ export function FieldRow({
   return (
     <div className={rootClass} {...rootData} title={title}>
       {htmlFor ? (
-        <label className={styles.label} data-field-label="" htmlFor={htmlFor}>
+        <label className={styles.label} data-field-label="" htmlFor={htmlFor} id={labelId}>
           {label}
           {helpMark}
         </label>
       ) : (
-        <span className={styles.label} data-field-label="">
+        <span className={styles.label} data-field-label="" id={labelId}>
           {label}
           {helpMark}
         </span>

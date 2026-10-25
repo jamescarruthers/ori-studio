@@ -200,8 +200,10 @@ describe('A, a flat figure', () => {
 
     const layerOrder = rowOf('Layer order')!;
     expect(layerOrder.textContent).toContain('2 of 3+');
-    // The pager is a group named by its row, and its readout is announced.
-    const pager = layerOrder.querySelector('[role="group"][aria-label="Layer order"]');
+    // The pager is a group named by its row's label, said once, and its readout is announced.
+    const pager = group('Layer order');
+    expect(pager?.hasAttribute('aria-label')).toBe(false);
+    expect(layerOrder.contains(pager)).toBe(true);
     expect(pager?.querySelector('[aria-live="polite"]')?.textContent).toBe('2 of 3+');
     expect(button(layerOrder, 'Previous solution')?.getAttribute('aria-disabled')).toBeNull();
     expect(button(layerOrder, 'Another solution')?.getAttribute('aria-disabled')).toBeNull();
