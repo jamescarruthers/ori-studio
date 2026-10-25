@@ -359,4 +359,107 @@ describe.skipIf(!available)('the Fold bridge’s layer calls, in Node', () => {
     expect(constraintsSaved()).toBe(2);
     engine.free();
   });
+
+  /** A fixture folded whole, as Edit's selection hands it over. */
+  function sourceOf(relative: string): OristudioCpFoldSource {
+    const text = readFileSync(resolve(ROOT, '../../tests/fixtures', relative), 'utf8');
+    const document = relative.endsWith('.cp') ? cp.load_cp(text, '') : cp.load_fold(text, '');
+    const summary = cp.document_summary(document) as OristudioCpDocumentSummary;
+    const lines = Array.from({ length: summary.line_segments }, (_, index) => index + 1);
+    const source = cp.fold_source_of_selection(document, lines, 1) as OristudioCpFoldSource;
+    cp.free_document(document);
+    return source;
+  }
+
+  /** The count advanced in small slices to its end, as the dialog's worker does between calls. */
+  function countInSlices(bridge: LayerOrderBridge, session: number, cursor: number) {
+    for (let slices = 1; slices < 100_000; slices += 1) {
+      const count = bridge.layer_solutions_advance(session, cursor, { maxNodes: 1, deadlineMs: 50 });
+      if (count.done) return { count, slices };
+    }
+    throw new Error('the count never ends');
+  }
+
+  it('counts the solutions in slices, walks the stepper through each once, and explains a clash', () => {
+    const engine = new fold.FoldEngine();
+    const bridge: LayerOrderBridge = engine;
+    const fixtures = [
+      { relative: 'flat-folder/kabuto.fold', front: 9, back: 1, orders: 9 },
+      { relative: 'oriedita/solution_sample_1.cp', front: 1, back: 16, orders: 16 },
+    ];
+    for (const { relative, front, back, orders } of fixtures) {
+      const opened = bridge.layer_open(sourceOf(relative), { deadlineMs: 10_000 });
+      if (opened.status !== 'ok') throw new Error(`${relative} opens`);
+      const cursor = bridge.layer_solutions_start(opened.session);
+      const { count } = countInSlices(bridge, opened.session, cursor);
+      expect(count, relative).toEqual({
+        front: { n: front, exact: true },
+        back: { n: back, exact: true },
+        orders: { n: orders, exact: true },
+        done: true,
+      });
+      // The stepper, by the pictures from the side with more of them, from
+      // the first to the last: each once, 1 to N.
+      const by = { picture: front >= back ? 'front' : 'back' } as const;
+      const total = Math.max(front, back);
+      while (bridge.layer_step(opened.session, cursor, by, 'previous').verdict === 'moved');
+      const tops = () => {
+        const stacks = bridge.layer_stacks(opened.session, by.picture);
+        return Array.from(stacks.offsets.subarray(0, -1), (start, i) =>
+          start < stacks.offsets[i + 1]! ? stacks.faces[start] : -1
+        ).join(',');
+      };
+      const seen = [{ index: bridge.layer_solutions_position(opened.session, cursor, by).index, tops: tops() }];
+      for (;;) {
+        const stepped = bridge.layer_step(opened.session, cursor, by, 'next', { deadlineMs: 3_000 });
+        if (stepped.verdict === 'end') break;
+        if (stepped.verdict !== 'moved') throw new Error(`no step: ${JSON.stringify(stepped)}`);
+        expect(stepped.changed.front).toBeInstanceOf(Uint32Array);
+        expect(stepped.position.total).toEqual({ n: total, exact: true });
+        seen.push({ index: stepped.position.index, tops: tops() });
+      }
+      expect(seen.map((s) => s.index), relative).toEqual(Array.from({ length: total }, (_, i) => i + 1));
+      expect(new Set(seen.map((s) => s.tops)).size, relative).toBe(total);
+      // With X-ray: every layer order, each once.
+      const xray = bridge.layer_solutions_position(opened.session, cursor, 'layer_order');
+      expect(xray.total).toEqual({ n: orders, exact: true });
+      expect(bridge.layer_solutions_close(opened.session, cursor)).toBe(true);
+      expect(thrownCode(() => bridge.layer_solutions_advance(opened.session, cursor))).toBe('unknown_layer_cursor');
+    }
+
+    // Kabuto: a commit makes a cursor stale; a step keeps it good.
+    const opened = bridge.layer_open(sourceOf('flat-folder/kabuto.fold'));
+    if (opened.status !== 'ok') throw new Error('kabuto opens');
+    const { session, front_up: frontUp } = opened;
+    const cursor = bridge.layer_solutions_start(session, { storedBits: 1 << 20 });
+    countInSlices(bridge, session, cursor);
+    expect(bridge.layer_step(session, cursor, 'layer_order', 'next').verdict).toBe('moved');
+    expect(bridge.layer_solutions_advance(session, cursor).done).toBe(true);
+    const [a, b] = pairsOf(opened.open_pairs)[0]!;
+    const first = inFrontOf(a, b, frontUp);
+    expect(bridge.layer_commit(session, first, { deadlineMs: 3_000 }).verdict).toBe('committed');
+    expect(thrownCode(() => bridge.layer_solutions_advance(session, cursor))).toBe('session_stale_solutions');
+    expect(thrownCode(() => bridge.layer_step(session, cursor, { picture: 'front' }, 'next'))).toBe(
+      'session_stale_solutions'
+    );
+    const fewer = bridge.layer_solutions_start(session);
+    expect(countInSlices(bridge, session, fewer).count.front.n).toBeLessThan(9);
+    expect(thrownCode(() => bridge.layer_solutions_start(session, { orders: 1 } as never))).toBe('invalid_input');
+    expect(thrownCode(() => bridge.layer_solutions_position(session, fewer, 'up' as never))).toBe('invalid_input');
+
+    // Explain: the committed constraint's pair the other way clashes with
+    // it, both needed; a candidate that fits has nothing to explain.
+    const reversed = Int32Array.of(first[0]!, first[1]!, -first[2]!);
+    const explained = bridge.layer_explain(session, reversed, { deadlineMs: 3_000 });
+    if (explained.verdict !== 'clash') throw new Error(`no clash: ${JSON.stringify(explained)}`);
+    expect(Array.from(explained.constraints)).toEqual([0, 1]);
+    expect(explained.minimal).toBe(true);
+    expect(Array.from(explained.faces)).toEqual([Math.min(a, b), Math.max(a, b)]);
+    expect(explained.proof).toEqual({ kind: 'opposed' });
+    expect(bridge.layer_explain(session, first)).toEqual({ verdict: 'fits' });
+    const listed = bridge.layer_explain_list(session, Int32Array.from([...reversed, ...first]));
+    expect(listed).toMatchObject({ verdict: 'clash', minimal: true });
+    expect(bridge.layer_constraints(session)).toEqual(first);
+    engine.free();
+  });
 });

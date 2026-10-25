@@ -256,8 +256,92 @@ export type LayerCallErrorCode =
   | 'invalid_input'
   | 'unknown_layer_session'
   | 'session_bad_constraint'
+  /** A solutions cursor closed, or never started on this session. */
+  | 'unknown_layer_cursor'
+  /**
+   * A solutions cursor counted other committed constraints than the
+   * session's now (a commit or a restore since; a step keeps it): close it
+   * and start another. A commit back to its constraints makes it good again.
+   */
+  | 'session_stale_solutions'
   | 'session_internal'
   | 'source_internal';
+
+// ---------------------------------------------------------------------------
+// E6: why a sentence can't fit, and the solutions.
+
+/**
+ * The smallest set of constraints that clash: every member is necessary
+ * (dropping any one leaves an order) unless `minimal` is false, when the
+ * limits ran out first and the set, which still can't fit, may hold more.
+ */
+export type LayerExplained =
+  | { verdict: 'fits' }
+  | {
+      verdict: 'clash';
+      /** Indices into the list explained (for `layer_explain`: the committed constraints, then the candidate, last), ascending. */
+      constraints: Uint32Array;
+      minimal: boolean;
+      /** The faces those constraints name, subjects and objects: the danger tints. */
+      faces: Uint32Array;
+      /** How the last check proved the set can't fit. */
+      proof: LayerCantFitProof;
+      /** Every face that proof traces back to, the creases' included. */
+      traced: Uint32Array;
+    }
+  /** The first check, of the whole list, ran out: no proof yet. */
+  | LayerTimedOut;
+
+/** How far a count goes before it reads "at least"; every cap is a count, never a time. */
+export interface LayerSolutionCaps {
+  /** Orders listed per component, by each of its searches; default 100,000. */
+  ordersPerComponent?: number;
+  /** Combinations a look group walks; default 1,000,000. */
+  combinationsPerGroup?: number;
+  /** Bits of whole orders kept for the stepper; default 2²⁷ (16 MiB). */
+  storedBits?: number;
+}
+
+/** A count: exact, or a lower bound ("at least `n`"); past 2⁵³ − 1 it is sent as that bound, inexact. */
+export interface LayerTally {
+  n: number;
+  exact: boolean;
+}
+
+/**
+ * What a solutions cursor has counted so far. `front` and `back` are the
+ * distinct pictures from each side ("N solutions"), `orders` the layer
+ * orders that fit (the tooltip's); `done` once nothing is left to count.
+ */
+export interface LayerSolutionCount {
+  front: LayerTally;
+  back: LayerTally;
+  orders: LayerTally;
+  done: boolean;
+}
+
+/** What the stepper steps through: distinct pictures from a side (X-ray off), or every layer order (X-ray on). */
+export type LayerStepBy = { picture: LayerSide } | 'layer_order';
+
+/** Where the order on screen lies in the stepper's fixed order ("3 of 12"): `index` from 1, final once `total.exact`. */
+export interface LayerPosition {
+  index: number;
+  total: LayerTally;
+}
+
+export type LayerStepped =
+  | {
+      verdict: 'moved';
+      /** The spots whose top face changed, per side: what a pane flashes. */
+      changed: LayerChangedSpots;
+      position: LayerPosition;
+      /** The order on screen's stacks now. */
+      stacks: { front: LayerStacks; back: LayerStacks };
+    }
+  /** No solution lies that way among those counted: final once the count is done. */
+  | { verdict: 'end' }
+  /** The check within the next solution ran out with nothing counted to fall back on: nothing changed. */
+  | LayerTimedOut;
 
 /** The `layer_*` methods of the Fold bridge's `FoldEngine`, as the wasm glue exposes them. */
 export interface LayerOrderBridge {
@@ -307,4 +391,32 @@ export interface LayerOrderBridge {
   layer_save(session: number): LayerSaveOutcome;
   layer_close(session: number): boolean;
   layer_live(): number;
+
+  // E6. A solutions cursor lives beside its session: there is no count
+  // worker, and the dialog's one worker advances it in short slices between
+  // its other calls (a small `maxNodes` and a short `deadlineMs`).
+
+  /** Why the committed constraints and one more can't fit. Never commits. */
+  layer_explain(session: number, candidate: Int32Array, limits?: LayerLimits): LayerExplained;
+  /** The same for any list. */
+  layer_explain_list(session: number, constraints: LayerConstraintTriples, limits?: LayerLimits): LayerExplained;
+  /** A cursor for the committed constraints; nothing is counted until advanced. */
+  layer_solutions_start(session: number, caps?: LayerSolutionCaps): number;
+  /** One slice of the count, resumed where the last stopped; any slicing ends equal to a one-shot count. */
+  layer_solutions_advance(session: number, cursor: number, limits?: LayerLimits): LayerSolutionCount;
+  layer_solutions_position(session: number, cursor: number, by: LayerStepBy): LayerPosition;
+  /**
+   * Show the next or previous solution: only the order on screen changes,
+   * the cursor stays good, and a preview kept from before is dropped (Add
+   * then commits from the stepped order). Unless the count is done it first
+   * counts on within half its limits.
+   */
+  layer_step(
+    session: number,
+    cursor: number,
+    by: LayerStepBy,
+    direction: 'next' | 'previous',
+    limits?: LayerLimits
+  ): LayerStepped;
+  layer_solutions_close(session: number, cursor: number): boolean;
 }
