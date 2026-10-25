@@ -9,6 +9,7 @@
  */
 import type {
   OristudioCpFoldedFigureModel,
+  OristudioCpFoldedPaperScene,
   OristudioCpLineSegment,
 } from '../../engine/oristudioCpTypes';
 import type { PaperStyle } from '../paper/paperStyle';
@@ -64,6 +65,17 @@ export interface LayerOrderRequest {
   /** What is saved, if anything, with its points in the crease pattern's coordinates (`paperFrame.ts`). */
   readonly record: LayerOrderRecord | null;
   readonly look: LayerOrderLook;
+  /**
+   * The paper scene the host shows for this fold now, from either side: its
+   * kernel's scene, over the same faces as `source` (the digest holds them
+   * to it). With no record, the dialog opens on the order it draws, or the
+   * fitting order closest to it (`layer_open_showing`, D19), and it letters
+   * the faces from it before the engine answers, so a refusal can name one.
+   * Left out, the dialog opens on the solver's first order.
+   */
+  readonly shown?: OristudioCpFoldedPaperScene | null;
+  /** What the host calls the fold, after the dialog's title: a figure's name, "Selection", a step's. */
+  readonly name?: string;
 }
 
 /**
