@@ -2,6 +2,7 @@ import type { PaperScene } from '@treemaker/origami-simulator';
 import type { Point } from '../lib/geometry';
 import type { PaperStyleOverrides } from '../lib/paper/paperStyle';
 import type { FoldedFigureLayerOrder } from '../lib/layerOrder/foldedFigureLayerOrder';
+import type { SolutionFrontier } from '../lib/layerOrderPlace';
 import type { CpGeometryTransport } from './oristudioCpGeometry';
 import type {
   OristudioCpOperationId,
@@ -1348,6 +1349,15 @@ export interface OristudioCpFoldedFigureEntry {
    * writes back as it came (`cp-workspace/folded/foldedFigureLayerOrders.ts`).
    */
   layerOrder?: FoldedFigureLayerOrder | null;
+  /**
+   * How far the search for this figure's layer orders has reached on its
+   * kernel handle, and whether it ran out there (`lib/layerOrderPlace.ts`): a
+   * step back restarts Oriedita's enumeration, which forgets every order past
+   * the one it lands on, and this does not. Read only while `handle` is the
+   * one it was reached on (`foldedFigureFrontier`), so a refold or a reopen
+   * starts it again. In memory only: the figure writer leaves it out.
+   */
+  solutionFrontier?: SolutionFrontier & { handle: number };
 }
 
 /** Mirrors the kernel's `model::SnapCandidates`. */

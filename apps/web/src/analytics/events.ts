@@ -848,8 +848,12 @@ export type FoldVerdict =
   | 'transversal-crossing'
   | 'no-layer-order';
 
-/** Which way a press of the one solution verb moved. */
-export type FoldCycleDirection = 'next' | 'wrap';
+/**
+ * Which way a press of a solution verb moved: on (`next`), on past the last
+ * back to the first (`wrap`), or back one (`previous`, the Properties pane's
+ * ‹ on a flat figure).
+ */
+export type FoldCycleDirection = 'next' | 'wrap' | 'previous';
 
 /**
  * Which appearance setting a folded figure's Style menu changed.

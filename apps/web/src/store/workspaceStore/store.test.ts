@@ -87,7 +87,13 @@ import {
   cpUserAnchorForLineIds,
   foldedFigureUserBounds,
 } from '../../cp-workspace/adapters/cpFoldedToScene';
+import type { TFunction } from 'i18next';
 import { isFoldedFigureStale } from '../../cp-workspace/folded/foldedFigureStaleness';
+import {
+  foldedFigureCurrentCase,
+  foldedFigureFrontier,
+} from '../../cp-workspace/folded/foldedFigureState';
+import { showPreviousFoldedSolution } from '../../cp-workspace/folded/foldedFigureVerbs';
 import { FOLDED_FIGURE_LAYER_ORDERS_KEY } from '../../cp-workspace/folded/foldedFigureLayerOrders';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import { foldedFigureOtherSideCamera } from '../../cp-workspace/folded/folded3dCamera';
@@ -5189,6 +5195,76 @@ describe('workspace store slices', () => {
       expect(foldEvents('fold solution cycled')).toEqual([
         { direction: 'next', solution_count_bucket: '<=5' },
       ]);
+    });
+
+    describe('‹, back one layer order (the Properties pane’s)', () => {
+      const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
+
+      /** A flat figure showing the third of three solutions found. */
+      async function onThirdOfThree() {
+        resetStores(seedSnapshot());
+        seedFlatSquare();
+        await expect(useWorkspaceStore.getState().foldOristudioCpDocument()).resolves.toBe(true);
+        const figure = useWorkspaceStore.getState().oristudioCpFoldedFigures[0]!;
+        const third = {
+          ...figure,
+          snapshot: {
+            ...figure.snapshot!,
+            discovered_fold_cases: 3,
+            current_fold_case: 3,
+            find_another_overlap_valid: false,
+          },
+        };
+        useWorkspaceStore.setState({ oristudioCpFoldedFigures: [third] });
+        return third;
+      }
+
+      it('goes back one fold case as one entry, keeps what it found past it, and says so', async () => {
+        const figure = await onThirdOfThree();
+        // The kernel restarts the enumeration and replays it to the second,
+        // forgetting the third it found on the way out.
+        oristudioCpMocks.foldOristudioCpFigureToCase.mockResolvedValueOnce({
+          snapshot: {
+            ...figure.snapshot,
+            discovered_fold_cases: 2,
+            current_fold_case: 2,
+            find_another_overlap_valid: true,
+          },
+          discovered_case_numbers: [1, 2],
+        });
+        const before = useWorkspaceStore.getState().oristudioCpHistoryPast.length;
+
+        await expect(showPreviousFoldedSolution(figure.id, t)).resolves.toBe(true);
+
+        expect(oristudioCpMocks.foldOristudioCpFigureToCase).toHaveBeenCalledWith(
+          figure.handle,
+          2,
+          'Order5',
+          expect.any(Number)
+        );
+        const landed = useWorkspaceStore.getState().oristudioCpFoldedFigures[0]!;
+        expect(foldedFigureCurrentCase(landed)).toBe(2);
+        expect(foldedFigureFrontier(landed)).toEqual({ cases: 3, complete: true });
+        const past = useWorkspaceStore.getState().oristudioCpHistoryPast;
+        expect(past).toHaveLength(before + 1);
+        expect(past.at(-1)?.label).toBe('Show previous solution');
+        expect(foldEvents('fold solution cycled')).toEqual([
+          { direction: 'previous', solution_count_bucket: '<=5' },
+        ]);
+      });
+
+      it('goes no further back than the first, and records nothing', async () => {
+        const third = await onThirdOfThree();
+        const first = { ...third, snapshot: { ...third.snapshot, current_fold_case: 1 } };
+        useWorkspaceStore.setState({ oristudioCpFoldedFigures: [first] });
+        const before = useWorkspaceStore.getState().oristudioCpHistoryPast.length;
+
+        await expect(showPreviousFoldedSolution(first.id, t)).resolves.toBe(false);
+
+        expect(oristudioCpMocks.foldOristudioCpFigureToCase).not.toHaveBeenCalled();
+        expect(useWorkspaceStore.getState().oristudioCpHistoryPast).toHaveLength(before);
+        expect(foldEvents('fold solution cycled')).toEqual([]);
+      });
     });
 
     it('sends no count, angle or geometry as a property value', async () => {

@@ -1,10 +1,16 @@
 import type {
   OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureModel,
+  OristudioCpFoldedFigureSnapshot,
   OristudioCpFoldedFigureState,
   OristudioCpRgbColor,
 } from '../../engine/oristudioCpTypes';
 import type { FoldedFigureSide } from '../../lib/foldedFigureSides';
+import {
+  advanceSolutionFrontier,
+  UNSEARCHED_FRONTIER,
+  type SolutionFrontier,
+} from '../../lib/layerOrderPlace';
 
 /** Where a figure sits in its stream of layer-ordering solutions. */
 export interface FoldedFigureCycling {
@@ -61,6 +67,47 @@ export function foldedFigureCurrentCase(
   figure: OristudioCpFoldedFigureEntry | null | undefined
 ): number {
   return foldedFigureCycling(figure).current;
+}
+
+/**
+ * How far the search for the figure's layer orders has reached
+ * (`lib/layerOrderPlace.ts`): the frontier the entry keeps for its kernel
+ * handle, with what the kernel reports now laid over it. A frontier kept for
+ * another handle — the figure refolded since — counts for nothing.
+ */
+export function foldedFigureFrontier(
+  figure: OristudioCpFoldedFigureEntry | null | undefined
+): SolutionFrontier {
+  const kept = figure?.solutionFrontier;
+  const frontier =
+    kept && kept.handle === figure?.handle
+      ? { cases: kept.cases, complete: kept.complete }
+      : UNSEARCHED_FRONTIER;
+  const source = figure?.folded3d ?? figure?.snapshot;
+  if (!source) return frontier;
+  return advanceSolutionFrontier(frontier, {
+    discovered: source.discovered_fold_cases,
+    hasNext: source.find_another_overlap_valid,
+  });
+}
+
+/**
+ * The frontier to keep on `figure` once the kernel, on the same handle, has
+ * moved it to another solution and reports `next`: it only grows, so a step
+ * back, which restarts the enumeration, keeps every order found past it.
+ */
+export function foldedFigureFrontierAfter(
+  figure: OristudioCpFoldedFigureEntry,
+  next: Pick<OristudioCpFoldedFigureSnapshot, 'discovered_fold_cases' | 'find_another_overlap_valid'>
+): OristudioCpFoldedFigureEntry['solutionFrontier'] {
+  if (figure.handle === null) return undefined;
+  return {
+    handle: figure.handle,
+    ...advanceSolutionFrontier(foldedFigureFrontier(figure), {
+      discovered: next.discovered_fold_cases,
+      hasNext: next.find_another_overlap_valid,
+    }),
+  };
 }
 
 /**

@@ -165,6 +165,7 @@ import type {
 } from '../../../engine/oristudioCpTypes';
 import {
   foldedFigureCycling,
+  foldedFigureFrontierAfter,
   foldedModelsEqual,
 } from '../../../cp-workspace/folded/foldedFigureState';
 import { resolveFoldRoute } from '../../../cp-workspace/folded/foldRoute';
@@ -2566,6 +2567,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
                     scene: scene ?? candidate.scene,
                     camera,
                     error: null,
+                    solutionFrontier: foldedFigureFrontierAfter(figure, step.snapshot),
                   }
                 : candidate
             ),
@@ -2592,7 +2594,14 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
             candidate.id === figure.id
-              ? { ...candidate, status: 'ready', snapshot, renderSnapshot, error: null }
+              ? {
+                  ...candidate,
+                  status: 'ready',
+                  snapshot,
+                  renderSnapshot,
+                  error: null,
+                  solutionFrontier: foldedFigureFrontierAfter(figure, snapshot),
+                }
               : candidate
           ),
           oristudioCpActiveFoldedFigureId: figure.id,
@@ -2676,6 +2685,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
                   snapshot: result.snapshot,
                   renderSnapshot,
                   error: null,
+                  // A seek back restarts the enumeration; what it found past
+                  // the case it lands on is kept here (`layerOrderPlace.ts`).
+                  solutionFrontier: foldedFigureFrontierAfter(figure, result.snapshot),
                 }
               : candidate
           ),
