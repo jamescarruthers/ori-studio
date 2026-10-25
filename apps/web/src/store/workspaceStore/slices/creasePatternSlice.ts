@@ -206,6 +206,11 @@ import {
 } from '../../../cp-workspace/folded/folded3dCamera';
 import { setFolded3dRenderModel } from '../../../cp-workspace/folded/folded3dRenderModels';
 import {
+  figuresAwaitFold,
+  FoldMovedOn,
+  isAwaitingFold,
+} from '../../../cp-workspace/folded/foldLanding';
+import {
   folded3dStoredSceneStyleChanged,
   project3dScene,
   reproject3dScene,
@@ -1091,6 +1096,38 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
   }
 
   /**
+   * Where a press's fold lands: the figure `figureId` it marked `loading`,
+   * holding `holding` (null for a placeholder it added), in this generation of
+   * handles. Each check throws {@link FoldMovedOn} once an undo, a redo, a
+   * Delete or a new document has taken that figure from the press; its catch
+   * frees the fold ({@link foldLandedOnNothing}). See `foldLanding.ts`.
+   */
+  function foldLanding(figureId: string, holding: number | null) {
+    const epoch = foldedFigureHandleEpoch();
+    const check = (handle: number) => {
+      const holds =
+        foldedFigureHandleEpoch() === epoch &&
+        figuresAwaitFold(get().oristudioCpFoldedFigures, figureId, holding);
+      if (!holds) throw new FoldMovedOn(handle);
+    };
+    return {
+      check,
+      /** The new fold's picture, the last thing a flat landing waits for, then the check. */
+      async picture(...args: Parameters<typeof renderSnapshotForFoldedFigure>) {
+        const picture = await renderSnapshotForFoldedFigure(...args);
+        check(args[0]);
+        return picture;
+      },
+    };
+  }
+
+  /** A fold whose figure moved on while it ran: nothing adopted it, so it is freed. */
+  async function foldLandedOnNothing(moved: FoldMovedOn): Promise<false> {
+    await freeOristudioCpFoldedFigure(moved.handle).catch(() => {});
+    return false;
+  }
+
+  /**
    * Put a figure back exactly as it was and report why, for a refold that could
    * not produce a replacement. The figure itself was never invalid — the crease
    * pattern is — so destroying it would lose work over someone else's problem.
@@ -1104,11 +1141,15 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     return false;
   }
 
-  /** The same restore, for a fold the user stopped. See {@link discardFoldedFigureDraftQuietly}. */
+  /**
+   * The same restore, for a fold the user stopped. See {@link discardFoldedFigureDraftQuietly}.
+   * Only onto the figure the press left `loading`: one an undo or a redo put
+   * in its place meanwhile is history's, and stays (`foldLanding.ts`).
+   */
   function restorePreviousFigureQuietly(previous: OristudioCpFoldedFigureEntry): false {
     set({
       oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
-        candidate.id === previous.id ? previous : candidate
+        isAwaitingFold(candidate, previous.id, previous.handle) ? previous : candidate
       ),
     });
     return false;
@@ -2396,6 +2437,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         oristudioCpFoldedFigures: [...get().oristudioCpFoldedFigures, loadingEntry],
         oristudioCpError: null,
       });
+      // The fold lands only on the draft, which an undo can take away meanwhile.
+      const landing = foldLanding(figureId, null);
 
       try {
         // A reopened Oriedita file keeps its folded appearance, but not its
@@ -2418,7 +2461,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         const displayStyle = result.snapshot.display_style;
         // Rendered unselected: a fresh fold is not the canvas selection, so it
         // must not carry the kernel's selection marker either.
-        const renderSnapshot = await renderSnapshotForFoldedFigure(
+        const renderSnapshot = await landing.picture(
           result.handle,
           displayStyle,
           figureIndex,
@@ -2516,6 +2559,11 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         );
         return true;
       } catch (error) {
+        // Undone, or deleted, while it folded: nothing to land on, and nothing to put back.
+        if (error instanceof FoldMovedOn) {
+          completed('halted');
+          return await foldLandedOnNothing(error);
+        }
         if (isFoldCancellation(error)) {
           // The draft goes, quietly. Left as an `error` entry it would be debris
           // on the canvas *and* an error toast, for something the user asked for.
@@ -3092,6 +3140,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       // Which teardown generation this refold belongs to, captured before the
       // await. See `adoptFolded3dHandle`.
       const refoldEpoch = foldedFigureHandleEpoch();
+      // It lands only on the figure as this marks it: still holding `previousHandle`.
+      const landing = foldLanding(figure.id, previousHandle);
       set({
         oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
           candidate.id === figure.id ? { ...candidate, status: 'loading' } : candidate
@@ -3133,6 +3183,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
               fold3dRefusalMessage(i18n.t, result.refusal)
             );
           }
+          landing.check(result.handle);
           const camera = defaultFolded3dCamera(result.render, result.snapshot.model.state);
           const scene = project3dScene(
             result.render,
@@ -3186,6 +3237,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           releaseFoldedFigureHandle(previousHandle);
           return true;
         } catch (error) {
+          if (error instanceof FoldMovedOn) return await foldLandedOnNothing(error);
           if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
           return restorePreviousFigure(figure, engineError(error).message);
         }
@@ -3201,7 +3253,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             runId
           )
         );
-        const renderSnapshot = await renderSnapshotForFoldedFigure(
+        const renderSnapshot = await landing.picture(
           result.handle,
           figure.displayStyle,
           foldedFigureIndex(figure.id),
@@ -3264,6 +3316,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // valid — it is the *crease pattern* that cannot be folded — and the old
         // kernel handle is untouched, since it is released only after a success.
         // Stopping one is the same no-op with nothing to say about it.
+        if (error instanceof FoldMovedOn) return await foldLandedOnNothing(error);
         if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
         return restorePreviousFigure(figure, engineError(error).message);
       }
@@ -3485,6 +3538,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       // Captured before the await: the placeholder below is deletable while it
       // loads, exactly as a refolding figure is. See `adoptFolded3dHandle`.
       const duplicateEpoch = foldedFigureHandleEpoch();
+      // The copy lands only on that placeholder, which an undo can take away.
+      const landing = foldLanding(figureId, null);
       takeCanvasSelection('folded-figure', {
         oristudioCpFoldedFigures: [...get().oristudioCpFoldedFigures, loadingEntry],
         oristudioCpActiveFoldedFigureId: figureId,
@@ -3504,6 +3559,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             // through as if a handle had come back.
             throw new Error(fold3dRefusalMessage(i18n.t, result.refusal));
           }
+          landing.check(result.handle);
           const camera =
             source.camera ?? defaultFolded3dCamera(result.render, result.snapshot.model.state);
           const scene = project3dScene(
@@ -3547,7 +3603,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           return true;
         }
         const result = await duplicateRuntimeOristudioCpFoldedFigure(source.handle);
-        const renderSnapshot = await renderSnapshotForFoldedFigure(
+        const renderSnapshot = await landing.picture(
           result.handle,
           source.displayStyle,
           figureIndex,
@@ -3576,6 +3632,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         refreshFoldedFigureSelectionMarkers(previousActiveId);
         return true;
       } catch (error) {
+        if (error instanceof FoldMovedOn) return await foldLandedOnNothing(error);
         const normalized = engineError(error);
         set({
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
