@@ -522,11 +522,18 @@ disagrees, the artboard wins):
 - The footer note ("Apply keeps the order on screen…", Round3:1536) is
   dropped, per spec §6.7's "no routine status notes".
 
-**Analytics** (spec §10, unchanged):
+**Analytics** (spec §10, plus D21's bucket):
 - U10 fires `layer order dialog opened` (`solutions_bucket: 'pending'` until
   the count arrives), `layer constraint added`, `layer constraint blocked` and
   `layer order dialog closed`. `subject_origin` and `object_origin` gain `menu`
   (the keyboard face menu) and `list` (a row click).
+- `layer constraint added` and `layer constraint blocked` carry
+  `object_count_bucket` (D21): how many objects the sentence named, `<=1`,
+  `<=2`, `<=5` or `>5` (one, two, a few, many). Each fires once per Add or
+  per blocked sentence, however many constraints it makes, and
+  `object_origin` is where the sentence's first object was picked. Built in
+  U9b (`model/layerOrderAnalytics.ts`); `docs/analytics.md` gets the dialog's
+  rows when U10 fires them.
 - H4 and H7 fire `layer constraints need attention`.
 - H5 tags `fold attempted`/`completed` with `via: 'layer_order'`. H6 tags
   `fold solution cycled` with `constrained`.
