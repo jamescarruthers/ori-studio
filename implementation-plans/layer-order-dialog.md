@@ -799,6 +799,19 @@ notice has no board of its own; U10 builds it from the approved copy.
 - undo after "Another solution" probably redraws the undone solution after a
   restyle (hosts §1.4 R4).
 
+Found while building H3 and H7, on main too (own PRs to main, after the
+host lane settles; the owner merges):
+- undo during a fold then redo brings back a folded figure stuck `loading`
+  (entries capture the live list mid-fold); entries should record figures at
+  rest everywhere they capture `oristudioCpFoldedFigures`;
+- an edit made while a Refold runs can be lost, or its verb can close the
+  Refold's gesture under its own label;
+- a background 3D rehydrate can adopt onto a figure a Refold is folding;
+- Another solution and step-to-case land on whatever figure has their id
+  after an undo (#495 lists this as out of scope).
+- Already sent: #521 (Pose controller under StrictMode), #522 (undo keeps the
+  folded figure's kernel slot; a late fold lands only where it started).
+
 A third, the on-demand flat rehydrate re-enabling "Another solution" and
 Duplicate on reopened unconstrained figures (hosts Q8), is a side effect of
 H3's new rehydrate, so it can only follow H3.
@@ -956,7 +969,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U5: engine client (#506)
 - [x] U6: engine wiring (#511)
 - [x] U7: PaperPane (#501)
-- [ ] U8: panes
+- [x] U8: panes (#518)
 - [x] U9: inspector model (#510)
 - [x] U9b: compound constraints in the model (#515)
 - [ ] U10: inspector
@@ -967,6 +980,6 @@ H3's new rehydrate, so it can only follow H3.
 - [ ] H4: Edit refold with constraints
 - [ ] H5: Fold with layer order…
 - [ ] H6: Edit "Another solution" within constraints
-- [ ] H7: Diagram step
+- [x] H7: Diagram step (#519)
 - [ ] H8: Pose
 - [ ] H9: the Diagram's ‹ › within constraints

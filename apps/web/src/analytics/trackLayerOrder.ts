@@ -14,10 +14,26 @@ const EVENT_OF = {
  * One of the Layer order dialog's events, as its pure model built it
  * (`layer-order/model/layerOrderAnalytics.ts`): the dialog's hook sends the
  * four the dialog reports (opened, a constraint added or blocked, closed) at
- * the moment the model says they happened, and a host sends `layer
- * constraints need attention` after a refold (H4, H7). The properties are the
- * fact's own, enums and buckets only; nothing is added here.
+ * the moment the model says they happened. The properties are the fact's own,
+ * enums and buckets only; nothing is added here.
  */
 export function trackLayerOrderFact(fact: LayerOrderFact): void {
   track(EVENT_OF[fact.event], { ...fact.properties });
+}
+
+/** Where a host's layer order lives: an Edit figure, an Edit selection, a Diagram step, Pose. */
+type LayerOrderSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose';
+
+/**
+ * A host's saved layer constraints need attention after an edit (spec §10):
+ * where, and how many did not hold, bucketed by the Layer order model's own
+ * ladder (`needsAttentionFact`, `layer-order/model/layerOrderAnalytics.ts`),
+ * so the dialog's and the hosts' buckets agree. Never a face, a point or the
+ * count itself.
+ */
+export function trackLayerConstraintsNeedAttention(properties: {
+  surface: LayerOrderSurface;
+  broken_count_bucket: string;
+}): void {
+  track(ANALYTICS_EVENTS.layerConstraintsNeedAttention, properties);
 }

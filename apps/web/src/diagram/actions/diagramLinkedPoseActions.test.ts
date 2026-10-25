@@ -172,6 +172,27 @@ describe('the linked pose verbs', () => {
     expect(ids.indexOf('previous-solution') + 1).toBe(ids.indexOf('next-solution'));
   });
 
+  // D9's stop-gap until H9: a record's order is no place in the kernel's enumeration.
+  it('holds ‹ › on a step whose order is a layer order record’s, pointing to the dialog', () => {
+    const pose = vi.fn();
+    const actions = build(
+      {
+        render: { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 3 },
+        solutions: { discovered: 5, hasNext: true },
+        constrained: true,
+      },
+      pose
+    );
+    for (const id of ['previous-solution', 'next-solution'] as const) {
+      const action = actions.find((candidate) => candidate.id === id)!;
+      expect(action).toMatchObject({ disabled: true, hint: 'Step through solutions in Layer order…' });
+      action.run();
+    }
+    expect(pose).not.toHaveBeenCalled();
+    // The rest of its pose is as any flat fold's.
+    expect(actions.find((action) => action.id === 'turn-over')?.disabled).toBe(false);
+  });
+
   it('says where a flat fold stands among the layer orders found', () => {
     const t = ((_key: string, fallback: string, values?: Record<string, unknown>) =>
       fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''))) as never;

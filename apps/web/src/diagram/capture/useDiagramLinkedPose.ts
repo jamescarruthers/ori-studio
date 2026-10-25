@@ -55,7 +55,11 @@ export interface DiagramLinkedSpread extends DiagramSpreadControls {
 
 export interface DiagramLinkedPose {
   actions: DiagramLinkedPoseAction[];
-  /** A flat fold's place among its layer orders ("2 of 5+"), for the pager between its verbs; null otherwise. */
+  /**
+   * A flat fold's place among its layer orders ("2 of 5+"), for the pager
+   * between its verbs; null otherwise, and for a step whose order is a
+   * record's (H7), which has no place among them.
+   */
   layerOrder: { count: string; label: string } | null;
   /** The live 3D fold, for a step shown in 3D once it is folded; null otherwise. */
   spatial: DiagramPoseSpatialView | null;
@@ -185,10 +189,14 @@ export function useDiagramLinkedPose(
   const mirrorAxes = measured !== null && measured.key === foldKey ? measured.value : null;
   // A flat fold drawn as its see-through development has no layers to spread.
   const seeThrough = render?.mode === 'folded-flat' && step?.picture?.kind === 'fixed';
+  // From the saved source, never the engine: its order is the record's (H7, D9).
+  const constrained = source?.layerOrder !== undefined;
   const poseState = useMemo(
     (): DiagramLinkedPoseState | null =>
-      render ? { render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView: liveView !== null } : null,
-    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView]
+      render
+        ? { render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView: liveView !== null, constrained }
+        : null,
+    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained]
   );
   const actions = useMemo(
     () =>
@@ -244,7 +252,8 @@ export function useDiagramLinkedPose(
     // A mark on the top layer stays on it, as it will when the spread is committed.
     return withCarriedAnnotations(step, shown, assets ?? {});
   }, [step, source, shownPreview, assets]);
-  const layerOrder = render ? layerOrderLabel(render, solutions, t) : null;
+  // A record's order has no place in the kernel's enumeration to read out; the dialog counts what fits (D11).
+  const layerOrder = render && !constrained ? layerOrderLabel(render, solutions, t) : null;
 
   const rotateTo = useCallback(
     (degrees: number) => {

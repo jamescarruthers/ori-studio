@@ -95,7 +95,7 @@ describe('the host engine’s gateway', () => {
     });
     const gateway = await import('./hostEngineGateway');
     const resolved = await gateway.resolveLayerOrder(FAKE_LAYER_ORDER_SOURCE, RECORD, FAKE_LIMITS);
-    expect(resolved).toMatchObject({ outcome: 'lost', cause: 'unavailable' });
+    expect(resolved).toMatchObject({ outcome: 'lost', cause: 'load' });
     expect(monitoring.reportError).not.toHaveBeenCalled();
     expect(spawned).toHaveLength(0);
   });

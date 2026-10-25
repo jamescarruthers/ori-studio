@@ -50,7 +50,7 @@ import { trackDiagramImportedMarkEdited } from '../../../analytics';
 import { annotationEventKind } from '../../../diagram/annotate/annotationEventKind';
 import { cardMarkEdits } from '../../../diagram/document/cardMarks';
 import { requestConfirmation } from '../../commandDialogStore';
-import { commitStepCapture, runDiagramCapture, stopDiagramCapture } from '../diagramCapture';
+import { commitStepCapture, commitStepLayerOrder, runDiagramCapture, stopDiagramCapture } from '../diagramCapture';
 import { runDiagramFoldCapture } from '../diagramFoldCapture';
 import { discardDiagramState, noteAdoptedPacking, selectedDiagramAnnotation, trimDiagramHistory } from '../diagramState';
 import { pathNodesOf } from '../../../diagram/annotate/annotationPath';
@@ -712,6 +712,9 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
 
     commitDiagramCapture: (start, captured, label) =>
       commitStepCapture({ get, set }, commit, start, captured, label),
+
+    commitDiagramLayerOrder: (start, layerOrder, label) =>
+      commitStepLayerOrder({ get, set }, commit, start, layerOrder, label),
 
     undoDiagram: () => travel('undo'),
     redoDiagram: () => travel('redo'),

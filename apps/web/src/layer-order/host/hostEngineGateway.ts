@@ -91,7 +91,8 @@ export function openLayerOrderResolveBatch(options: LayerOrderResolveBatchOption
         // reported to no one (`engine/layerOrderLoadFailure.ts`); anything else once per resolve.
         opening = null;
         if (stopped()) return LAYER_ORDER_CANCELLED;
-        if (!isLayerOrderLoadFailure(error)) reportError(error, { surface: 'layer-order:host', tags: { cause: 'unavailable' } });
+        if (isLayerOrderLoadFailure(error)) return lostLayerOrder('load', record);
+        reportError(error, { surface: 'layer-order:host', tags: { cause: 'unavailable' } });
         return lostLayerOrder('unavailable', record);
       }
       if (!opened) return LAYER_ORDER_CANCELLED;

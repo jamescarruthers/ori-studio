@@ -1498,6 +1498,13 @@ export const ANALYTICS_EVENTS = {
   foldAttempted: 'fold attempted',
   foldCompleted: 'fold completed',
   foldSolutionCycled: 'fold solution cycled',
+  /**
+   * A host's saved layer constraints did not all hold after an edit (layer
+   * order plan, spec §10): a Diagram step's Refresh found some of them gone,
+   * split or clashing, ran out of time checking them, or its creases now
+   * fold in 3D. Whether constraints survive the edits made after them.
+   */
+  layerConstraintsNeedAttention: 'layer constraints need attention',
   foldedFigureStyled: 'folded figure styled',
   /**
    * A field of the app-wide paper style was edited. `source` is where:
@@ -2103,13 +2110,13 @@ export const ANALYTICS_EVENTS = {
    * "Analytics"; spec §10). Built as facts by its pure model
    * (`layer-order/model/layerOrderAnalytics.ts`) and sent by
    * `trackLayerOrderFact` (`trackLayerOrder.ts`): enums and buckets only,
-   * never a face, a letter or an exact count.
+   * never a face, a letter or an exact count. The hosts' `layer constraints
+   * need attention` is beside the fold events.
    */
   layerOrderDialogOpened: 'layer order dialog opened',
   layerConstraintAdded: 'layer constraint added',
   layerConstraintBlocked: 'layer constraint blocked',
   layerOrderDialogClosed: 'layer order dialog closed',
-  layerConstraintsNeedAttention: 'layer constraints need attention',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

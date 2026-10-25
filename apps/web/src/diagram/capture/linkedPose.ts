@@ -50,7 +50,7 @@ import {
   type SimulateFlat,
   type StillScene,
 } from './captureFolded';
-import type { CaptureSession, SpatialHold } from './captureSession';
+import type { CaptureSession, FlatFoldState, HeldLayerOrder, SpatialHold } from './captureSession';
 import { uprightTurn } from './mirrorAxes';
 
 /**
@@ -90,6 +90,11 @@ export type LinkedPoseResult =
       mirrorAxes?: readonly number[];
       /** For a 3D fold: what the live view draws. */
       spatial?: SpatialHold;
+      /**
+       * For a flat fold drawn in the step's layer order (H7): the record of
+       * the order it shows, its summary, and whether this pose restored it.
+       */
+      layerOrder?: FlatFoldState['layerOrder'];
     }
   | { status: 'refused'; refusal: OristudioCpFold3dRefusal }
   /** Shown as Simulated, and the region has no model the simulator can fold. */
@@ -118,6 +123,11 @@ export interface LinkedPoseInput {
    * steps spread alike (`spreadStartsFor`); the defaults when absent.
    */
   spreadStart?: DiagramSpreadStarts;
+  /**
+   * The step's layer order (H7): every flat pose is drawn in it. Absent or
+   * null, the kernel's own enumeration, as always.
+   */
+  layerOrder?: HeldLayerOrder | null;
 }
 
 /** A flat fold's pose: which side, turned how far, which layer order, its layers spread or not. */
@@ -133,7 +143,16 @@ const VIEW_TOP: FoldedFigureCamera = { yaw: 0, pitch: 0, zoom: 1 };
 
 export async function poseLinkedStep(
   session: CaptureSession,
-  { document, creases, render, remembered, style, simulateFlat, spreadStart = DEFAULT_SPREAD_STARTS }: LinkedPoseInput,
+  {
+    document,
+    creases,
+    render,
+    remembered,
+    style,
+    simulateFlat,
+    spreadStart = DEFAULT_SPREAD_STARTS,
+    layerOrder = null,
+  }: LinkedPoseInput,
   request: LinkedPoseRequest
 ): Promise<LinkedPoseResult> {
   const spatialRoute = resolveFoldRoute(document, creases.foldLineIds).kind === 'spatial';
@@ -160,7 +179,9 @@ export async function poseLinkedStep(
     { upright = false }: { upright?: boolean } = {}
   ): Promise<LinkedPoseResult> => {
     // Another layer order is a search of the held fold; one already found, a jump to it.
-    let state = await session.flat(document, creases.foldLineIds, side, foldCase, knownCases);
+    let state = await session.flat(document, creases.foldLineIds, side, foldCase, knownCases, layerOrder);
+    // Restored by this pose or not, whatever the turn-over reports after it.
+    const shownOrder = state.layerOrder;
     if (move === 'turn-over') state = await session.turnOver();
     if (move === 'next-solution') state = await session.nextSolution();
     const mirrorAxes = await session.flatMirrorAxes();
@@ -179,6 +200,7 @@ export async function poseLinkedStep(
       noLayerOrder: state.noLayerOrder,
       solutions: { discovered: state.discovered, hasNext: state.hasNext, none: state.noLayerOrder },
       mirrorAxes,
+      ...(shownOrder ? { layerOrder: shownOrder } : {}),
     };
   };
 

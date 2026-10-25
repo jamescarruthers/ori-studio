@@ -20,6 +20,7 @@ import type {
 } from '../../engine/oristudioCpTypes';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { hasFoldedLayerOrder, openFold, readFoldedPicture, type FoldedFigureState, type FoldedPicture } from '../../lib/creaseExportFold';
+import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import {
   advanceSolutionFrontier,
   frontierSolutions,
@@ -28,6 +29,12 @@ import {
   type SolutionFrontier,
 } from '../../lib/layerOrderPlace';
 import type { DiagramStyle } from '../document/diagramDocument';
+import {
+  foldWithLayerOrder,
+  LayerOrderNotShownError,
+  type CaptureLayerOrderResolve,
+  type StepLayerOrder,
+} from './captureLayerOrder';
 import { foldedMirrorAxes } from './mirrorAxes';
 import type { SanitizeEnv } from '../upload/svgSanitize';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
@@ -42,9 +49,10 @@ import {
 export interface CaptureSessionDeps {
   /**
    * Run a layer-ordering search as a visible, stoppable fold run: the kernel
-   * calls, bound to that run.
+   * calls, bound to that run, and the run's Stop, which a layer order's
+   * restore listens to (H7).
    */
-  search: <T>(work: (runtime: CpCaptureRuntime) => Promise<T>) => Promise<T>;
+  search: <T>(work: (runtime: CpCaptureRuntime, stop?: AbortSignal) => Promise<T>) => Promise<T>;
   /** The kernel calls that search nothing — a model change, a read. */
   runtime: () => CpCaptureRuntime;
   retain: (handle: number) => void;
@@ -60,11 +68,30 @@ interface FoldKey {
   lineIds: string;
 }
 
+/**
+ * A layer order a flat fold is drawn in (H7): the step's record, and the host
+ * engine that restores it onto the creases.
+ */
+export interface HeldLayerOrder {
+  order: StepLayerOrder;
+  resolve: CaptureLayerOrderResolve;
+}
+
+/** The layer order a held flat fold shows: the record it was asked in, and the record of what it shows. */
+interface HeldOrder {
+  /** The step's record as asked: the hold is this fold for it, or for {@link HeldOrder.shown}'s. */
+  asked: string;
+  shown: StepLayerOrder;
+  attention: LayerOrderAttention | null;
+}
+
 interface FlatHold extends FoldKey {
   kind: 'flat';
   handle: number;
   epoch: number;
   side: 'front' | 'back';
+  /** The record's order it is drawn in; null for the kernel's own enumeration. */
+  order: HeldOrder | null;
   state: Omit<FoldedFigureState, 'handle'>;
   /**
    * The most layer orders this fold's search has reached, and whether it ran
@@ -98,6 +125,13 @@ export interface FlatFoldState {
   /** Whether the search may find more than `discovered`. */
   hasNext: boolean;
   noLayerOrder: boolean;
+  /**
+   * The layer order it is drawn in (H7): the record of the order it shows
+   * and its summary, and whether this call restored it (`fresh`), so a verb
+   * that only turns a held fold says nothing new of it. Null for the
+   * kernel's own enumeration.
+   */
+  layerOrder: { order: StepLayerOrder; attention: LayerOrderAttention | null; fresh: boolean } | null;
 }
 
 export interface CaptureSession {
@@ -106,13 +140,19 @@ export interface CaptureSession {
    * folding it only when the session holds none of it. `knownCases` is how
    * many layer orders are known to exist already — the one a step leaves —
    * which a fold opened fresh cannot know.
+   *
+   * With `layerOrder` (H7), the fold is drawn in the record's order, held
+   * for that record (or the one it showed), and never stepped to a case. A
+   * record whose order cannot be drawn holds nothing and throws
+   * `LayerOrderNotShownError`, for the caller to keep the step's picture.
    */
   flat: (
     document: OristudioCpDocumentSnapshot,
     lineIds: readonly number[],
     side: 'front' | 'back',
     foldCase: number,
-    knownCases?: number
+    knownCases?: number,
+    layerOrder?: HeldLayerOrder | null
   ) => Promise<FlatFoldState>;
   /** Turn the held flat fold over: a model change, no fold. */
   turnOver: () => Promise<FlatFoldState>;
@@ -137,7 +177,13 @@ export interface CaptureSession {
    * creases the fold is of, and it has no faces on the paper.
    */
   heldFlatPicture: (
-    held: { document: OristudioCpDocumentSnapshot; side: 'front' | 'back'; foldCase: number },
+    held: {
+      document: OristudioCpDocumentSnapshot;
+      side: 'front' | 'back';
+      foldCase: number;
+      /** The step's layer order record, which the held fold must be drawn in; absent or null for none. */
+      layerOrder?: string | null;
+    },
     rotationDeg: number,
     spread?: LayerSpreadOptions
   ) => CapturedPicture | null;
@@ -234,44 +280,88 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
     });
   };
 
-  const flatState = (hold: FlatHold): FlatFoldState => ({
+  const flatState = (hold: FlatHold, fresh = false): FlatFoldState => ({
     side: hold.side,
     foldCase: Math.max(1, hold.state.currentCase ?? hold.state.discoveredCases),
     ...frontierSolutions(hold.reached),
     noLayerOrder: !hasFoldedLayerOrder(hold.state),
+    layerOrder: hold.order ? { order: hold.order.shown, attention: hold.order.attention, fresh } : null,
   });
 
+  /** Whether `hold` is drawn in the order a step asks for: none, or its record's (or the record of what it showed). */
+  const sameOrder = (hold: FlatHold, asked: string | null): boolean =>
+    hold.order === null ? asked === null : asked === hold.order.asked || asked === hold.order.shown.json;
+
+  /** A flat fold of these lines, in the kernel's first order or in a record's, held. */
+  const foldFlat = async (
+    key: FoldKey,
+    lineIds: readonly number[],
+    side: 'front' | 'back',
+    layerOrder: HeldLayerOrder | null
+  ): Promise<FlatHold> => {
+    release();
+    const ticket = ++generation;
+    const model = captureModel(key.document, side);
+    if (!layerOrder) {
+      const folded = await deps.search((runtime) => openFold(runtime, [...lineIds], model));
+      return {
+        kind: 'flat',
+        ...key,
+        handle: folded.handle,
+        epoch: adopt(ticket, folded.handle),
+        side,
+        order: null,
+        state: folded,
+        reached: UNSEARCHED_FRONTIER,
+        read: null,
+      };
+    }
+    const shown = await deps.search((runtime, stop) =>
+      foldWithLayerOrder(runtime, lineIds, model, layerOrder.order, layerOrder.resolve, stop)
+    );
+    if (shown.kind !== 'shown') {
+      // No figure was made for it: nothing to hold, or to free.
+      if (ticket !== generation) throw new CaptureSessionClosedError();
+      throw new LayerOrderNotShownError(shown.kind === 'kept' || shown.kind === 'lost' ? shown : null);
+    }
+    const { state } = shown;
+    // Held through the registry, or let go through it when the session moved on while it was restored.
+    const epoch = adopt(ticket, state.handle);
+    return {
+      kind: 'flat',
+      ...key,
+      handle: state.handle,
+      epoch,
+      side,
+      order: { asked: layerOrder.order.json, shown: shown.layerOrder, attention: shown.attention },
+      state,
+      // Its order is the record's, not a step of an enumeration.
+      reached: { cases: 1, complete: true },
+      read: null,
+    };
+  };
+
   return {
-    async flat(document, lineIds, side, foldCase, knownCases = 0) {
+    async flat(document, lineIds, side, foldCase, knownCases = 0, layerOrder = null) {
       const key: FoldKey = { document, lineIds: lineIds.join(',') };
-      if (!live(key) || held?.kind !== 'flat') {
-        release();
-        const ticket = ++generation;
-        const folded = await deps.search((runtime) =>
-          openFold(runtime, [...lineIds], captureModel(document, side))
-        );
-        held = {
-          kind: 'flat',
-          ...key,
-          handle: folded.handle,
-          epoch: adopt(ticket, folded.handle),
-          side,
-          state: folded,
-          reached: UNSEARCHED_FRONTIER,
-          read: null,
-        };
-        settle(held, folded);
+      const asked = layerOrder?.order.json ?? null;
+      const fresh = !live(key) || held?.kind !== 'flat' || !sameOrder(held, asked);
+      if (fresh) {
+        held = await foldFlat(key, lineIds, side, layerOrder);
+        settle(held, held.state);
       }
       const hold = flatHold();
-      hold.reached = solutionFrontierKnowing(hold.reached, knownCases);
+      // A record's order is one, not a place in the kernel's enumeration: nothing a step left is known of it.
+      if (!hold.order) hold.reached = solutionFrontierKnowing(hold.reached, knownCases);
       if (hold.side !== side) {
         settle(hold, { ...hold.state, ...(await deps.runtime().setModel(hold.handle, captureModel(document, side))) });
         hold.side = side;
       }
-      if (flatState(hold).foldCase !== foldCase && foldCase >= 1) {
+      // A record's order is never stepped: its pager waits for the dialog's (D9).
+      if (!hold.order && flatState(hold).foldCase !== foldCase && foldCase >= 1) {
         settle(hold, await deps.search((runtime) => runtime.foldToCase(hold.handle, foldCase)));
       }
-      return flatState(hold);
+      return flatState(hold, fresh);
     },
 
     async turnOver() {
@@ -300,9 +390,10 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
       return foldedMirrorAxes(hold.read);
     },
 
-    heldFlatPicture({ document, side, foldCase }, rotationDeg, spread) {
+    heldFlatPicture({ document, side, foldCase, layerOrder = null }, rotationDeg, spread) {
       if (held?.kind !== 'flat' || held.epoch !== deps.epoch() || held.document !== document) return null;
       if (!held.read || held.side !== side || flatState(held).foldCase !== foldCase) return null;
+      if (!sameOrder(held, layerOrder)) return null;
       // A preview, never stored: no faces on the paper, which only a stored capture is anchored by.
       return flatPicture(held.read, rotationDeg, deps.env, spread, { faces: false });
     },

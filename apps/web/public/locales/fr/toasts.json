@@ -24,7 +24,9 @@
   "diagram": {
     "addedAsStep": "Ajouté comme étape {{number}}",
     "capture": {
+      "chosenOrderKept": "L’ordre des couches choisi pour cette étape demande votre attention, elle garde donc son image.",
       "failed": "L’image n’a pas pu être capturée",
+      "layerOrderKept": "Les contraintes de couches de cette étape demandent votre attention, elle garde donc son image.",
       "missing": "Ce patron ne fait plus partie du patron de plis.",
       "needsPose": "Une étape pliée en partie dans le simulateur se capture dans Pose : ouvrez-la avec Ajuster la pose.",
       "noLayerOrder": "Ses couches n’ont pas pu être ordonnées\u00a0: l’étape montre le papier plié en transparence.",
@@ -54,6 +56,18 @@
       "otherWorkspaceFirst": "Annulez ou rétablissez d’abord les modifications suivantes dans l’autre espace de travail\u00a0: l’importation a modifié Édition et Diagramme.",
       "restoreFailed": "Impossible de restaurer les étapes importées."
     },
+    "layerOrder": {
+      "chosenOrderRemoved": "L’ordre des couches choisi pour l’étape concernait son ancien patron, il a donc été retiré. Annuler le rétablit.",
+      "copyNotFolded": "La copie n’a pas pu être affichée pliée, car les contraintes de couches de cette étape demandent votre attention.",
+      "copyNotFoldedChosenOrder": "La copie n’a pas pu être affichée pliée, car l’ordre des couches choisi pour cette étape demande votre attention.",
+      "folds3d": "Les plis de cette étape se plient maintenant en 3D, et l’ordre des couches fonctionne sur les pliages à plat. Actualisez l’étape pour la voir.",
+      "lost": "L’ordre des couches s’est arrêté de façon inattendue, cette étape n’a donc pas été modifiée.",
+      "lostLoad": "L’ordre des couches n’a pas pu se charger, cette étape n’a donc pas été modifiée. Vérifiez votre connexion, puis réessayez.",
+      "refused": "Cet ordre des couches n’a pas pu être dessiné, rien n’a donc été modifié.",
+      "removed_one": "La contrainte de couches de l’étape concernait son ancien patron, elle a donc été retirée. Annuler la rétablit.",
+      "removed_many": "Les {{count}} contraintes de couches de l’étape concernaient son ancien patron, elles ont donc été retirées. Annuler les rétablit.",
+      "removed_other": "Les {{count}} contraintes de couches de l’étape concernaient son ancien patron, elles ont donc été retirées. Annuler les rétablit."
+    },
     "placementsReflowed_one": "{{count}} étapes déplacées ont retrouvé leur cellule",
     "placementsReflowed_many": "{{count}} étapes déplacées ont retrouvé leur cellule",
     "placementsReflowed_other": "{{count}} étapes déplacées ont retrouvé leur cellule",
@@ -81,6 +95,18 @@
       "tooLarge": "Cette étape est trop détaillée pour être conservée dans le diagramme.",
       "undoReplaced": "Annuler"
     },
+    "refreshAllChosenOrderKept_one": "L’ordre des couches choisi pour {{count}} étape demande votre attention, elle garde donc son image.",
+    "refreshAllChosenOrderKept_many": "Les ordres des couches choisis pour {{count}} étapes demandent votre attention, elles gardent donc leurs images.",
+    "refreshAllChosenOrderKept_other": "Les ordres des couches choisis pour {{count}} étapes demandent votre attention, elles gardent donc leurs images.",
+    "refreshAllLayerOrderKept_one": "Les contraintes de couches de {{count}} étape demandent votre attention, elle garde donc son image.",
+    "refreshAllLayerOrderKept_many": "Les contraintes de couches de {{count}} étapes demandent votre attention, elles gardent donc leurs images.",
+    "refreshAllLayerOrderKept_other": "Les contraintes de couches de {{count}} étapes demandent votre attention, elles gardent donc leurs images.",
+    "refreshAllLayerOrderLost_one": "L’ordre des couches s’est arrêté de façon inattendue, {{count}} étape n’a donc pas été modifiée.",
+    "refreshAllLayerOrderLost_many": "L’ordre des couches s’est arrêté de façon inattendue, {{count}} étapes n’ont donc pas été modifiées.",
+    "refreshAllLayerOrderLost_other": "L’ordre des couches s’est arrêté de façon inattendue, {{count}} étapes n’ont donc pas été modifiées.",
+    "refreshAllLayerOrderLostLoad_one": "L’ordre des couches n’a pas pu se charger, {{count}} étape n’a donc pas été modifiée. Vérifiez votre connexion, puis réessayez.",
+    "refreshAllLayerOrderLostLoad_many": "L’ordre des couches n’a pas pu se charger, {{count}} étapes n’ont donc pas été modifiées. Vérifiez votre connexion, puis réessayez.",
+    "refreshAllLayerOrderLostLoad_other": "L’ordre des couches n’a pas pu se charger, {{count}} étapes n’ont donc pas été modifiées. Vérifiez votre connexion, puis réessayez.",
     "refreshedAll_one": "{{count}} étape actualisée",
     "refreshedAll_many": "{{count}} étapes actualisées",
     "refreshedAll_other": "{{count}} étapes actualisées",

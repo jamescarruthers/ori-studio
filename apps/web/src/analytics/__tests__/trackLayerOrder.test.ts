@@ -12,6 +12,8 @@ import {
  * The Layer order dialog's five events (spec §10, plan "Analytics"): each
  * fact its model builds goes out under its own name, with its properties as
  * built — enums and buckets only, and the host's `surface` only when it says.
+ * A host's saved constraints needing attention are counted the same way:
+ * where, and how many, by the dialog's own ladder.
  */
 
 const runtime = vi.hoisted(() => ({ track: vi.fn() }));
@@ -21,7 +23,7 @@ vi.mock('../runtime', async (importOriginal) => {
   return { ...actual, track: runtime.track };
 });
 
-const { trackLayerOrderFact } = await import('../trackLayerOrder');
+const { trackLayerConstraintsNeedAttention, trackLayerOrderFact } = await import('../trackLayerOrder');
 
 beforeEach(() => {
   runtime.track.mockClear();
@@ -73,11 +75,26 @@ describe('trackLayerOrderFact', () => {
     });
   });
 
-  it('sends the hosts’ constraints needing attention (H4, H7)', () => {
+  it('sends the hosts’ constraints needing attention as a fact too', () => {
     trackLayerOrderFact(needsAttentionFact('diagram_step', 2));
     expect(runtime.track).toHaveBeenCalledWith('layer constraints need attention', {
       surface: 'diagram_step',
       broken_count_bucket: '<=2',
+    });
+  });
+});
+
+describe('trackLayerConstraintsNeedAttention', () => {
+  it('sends where and how many, bucketed, and nothing else', () => {
+    trackLayerConstraintsNeedAttention(needsAttentionFact('diagram_step', 3).properties);
+    expect(runtime.track).toHaveBeenCalledWith('layer constraints need attention', {
+      surface: 'diagram_step',
+      broken_count_bucket: '<=5',
+    });
+    trackLayerConstraintsNeedAttention(needsAttentionFact('diagram_step', 40).properties);
+    expect(runtime.track).toHaveBeenLastCalledWith('layer constraints need attention', {
+      surface: 'diagram_step',
+      broken_count_bucket: '>10',
     });
   });
 });
