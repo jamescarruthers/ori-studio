@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TFunction } from 'i18next';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import { DEFAULT_PAPER_STYLE, applyCreaseStyle } from '../../lib/paper/paperStyle';
@@ -7,6 +7,9 @@ import type { PropertyField, PropertySheet, StepperField } from '../../lib/prope
 import { FIGURE } from '../canvasObjects/canvasObjectKinds.fixtures';
 import { DEFAULT_FOLDED_3D_CAMERA, type FoldedFigureCamera } from './folded3dCamera';
 import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './foldedFigureProperties';
+import { noteSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFrontiers';
+
+afterEach(() => resetSolutionFrontiers());
 
 // Identity `t`, with its interpolations: the readout's number and total.
 const t = ((_key: string, fallback: string | object, options?: Record<string, unknown>) =>
@@ -176,7 +179,7 @@ describe('buildFoldedFigureProperties', () => {
     });
   });
 
-  it('keeps what the search found past a step back, for the handle it found it on', () => {
+  it('reads what its handle’s search has reached past a step back, not only its own snapshot', () => {
     // Back on the first after a restart, which forgot the five found before.
     const restarted = {
       ...FLAT,
@@ -187,13 +190,10 @@ describe('buildFoldedFigureProperties', () => {
         find_another_overlap_valid: true,
       },
     };
-    expect(stepper(sheetFor({ ...restarted, solutionFrontier: { handle: 3, cases: 5, complete: true } })).value).toBe(
-      '1 of 5'
-    );
-    // Refolded since, on another handle: what was found then says nothing now.
-    expect(stepper(sheetFor({ ...restarted, solutionFrontier: { handle: 9, cases: 5, complete: true } })).value).toBe(
-      '1 of 1+'
-    );
+    noteSolutionFrontier(3, { discovered: 5, hasNext: false });
+    expect(stepper(sheetFor(restarted)).value).toBe('1 of 5');
+    // Another handle, refolded since: what handle 3 found says nothing about it.
+    expect(stepper(sheetFor({ ...restarted, handle: 9 })).value).toBe('1 of 1+');
   });
 
   it('says why a figure whose fold found no layer order has none to step through', () => {

@@ -936,9 +936,8 @@ function createNativeCreasePatternDocument(
 
 function nativeFoldedFigures(entries: OristudioCpFoldedFigureEntry[]): OristudioCpFoldedFigureEntry[] {
   // A layer order is saved in the extensions bag, never on the figure, set or
-  // not: a figure is written as it was before layer orders existed. How far
-  // its search reached belongs to a kernel handle the file does not keep.
-  return entries.map(({ layerOrder: _savedInTheBag, solutionFrontier: _ofTheHandle, ...entry }) => ({
+  // not: a figure is written as it was before layer orders existed.
+  return entries.map(({ layerOrder: _savedInTheBag, ...entry }) => ({
     ...entry,
     handle: null,
     status: entry.status === 'loading' ? 'stale' : entry.status,

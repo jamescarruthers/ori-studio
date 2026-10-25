@@ -165,9 +165,14 @@ import type {
 } from '../../../engine/oristudioCpTypes';
 import {
   foldedFigureCycling,
-  foldedFigureFrontierAfter,
   foldedModelsEqual,
+  reportedSolutions,
 } from '../../../cp-workspace/folded/foldedFigureState';
+import {
+  noteSolutionFrontier,
+  seedSolutionFrontier,
+  startSolutionFrontier,
+} from '../../../cp-workspace/folded/foldedSolutionFrontiers';
 import { resolveFoldRoute } from '../../../cp-workspace/folded/foldRoute';
 import {
   fold3dRefusalMessage,
@@ -330,6 +335,23 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     lastWrittenKernelModel.delete(handle);
     return freeOristudioCpFoldedFigure(handle);
   });
+
+  /**
+   * Note how far `handle`'s layer-order search has reached once the kernel
+   * answered a step of `figure` with `snapshot` (`foldedSolutionFrontiers.ts`):
+   * what the figure showed before the step, then what the kernel says now.
+   * Answers how many solutions are known, which `fold solution cycled`
+   * reports — not the kernel's own count, which a step back restarts.
+   */
+  function noteFoldedSolutions(
+    figure: OristudioCpFoldedFigureEntry,
+    handle: number,
+    snapshot: Pick<OristudioCpFoldedFigureSnapshot, 'discovered_fold_cases' | 'find_another_overlap_valid'>
+  ): number {
+    const before = figure.folded3d ?? figure.snapshot;
+    if (before) noteSolutionFrontier(handle, reportedSolutions(before));
+    return noteSolutionFrontier(handle, reportedSolutions(snapshot)).cases;
+  }
 
   let foldArtifactPromise: Promise<FoldArtifacts | null> | null = null;
   let foldArtifactPromiseRevision: number | null = null;
@@ -529,6 +551,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       await freeOristudioCpFoldedFigure(handle).catch(() => {});
       return false;
     }
+    // A fresh session: its search has reached only what this fold reports.
+    startSolutionFrontier(handle);
     retainFoldedFigureHandle(handle);
     setFolded3dRenderModel(handle, render);
     return true;
@@ -2174,6 +2198,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           const camera = defaultFolded3dCamera(result.render, result.snapshot.model.state);
           const displayStyle: OristudioCpFoldedFigureDisplayStyle = 'Paper5';
           const scene = project3dScene(result.render, result.snapshot, displayStyle, camera);
+          startSolutionFrontier(result.handle);
           retainFoldedFigureHandle(result.handle);
           // The geometry lives beside the handle, not on the entry: it is up to
           // ~235 KB of packed arrays and the `.osf` writer pretty-prints. It is
@@ -2365,6 +2390,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // the entry so deleting/re-folding the figure clears the highlight for
         // free, and keep the fold out of the error toast path.
         const contradiction = result.snapshot.contradiction ?? null;
+        startSolutionFrontier(result.handle);
         retainFoldedFigureHandle(result.handle);
         // Park the figure against the creases it was actually folded from, not
         // against the nominal paper square — a pattern can sit anywhere in the
@@ -2543,7 +2569,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           track(ANALYTICS_EVENTS.foldSolutionCycled, {
             direction: cycleDirection,
             solution_count_bucket: bucketCount(
-              step.snapshot.discovered_fold_cases,
+              noteFoldedSolutions(figure, handle, step.snapshot),
               COUNT_BUCKETS
             ),
           });
@@ -2567,7 +2593,6 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
                     scene: scene ?? candidate.scene,
                     camera,
                     error: null,
-                    solutionFrontier: foldedFigureFrontierAfter(figure, step.snapshot),
                   }
                 : candidate
             ),
@@ -2583,7 +2608,10 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         );
         track(ANALYTICS_EVENTS.foldSolutionCycled, {
           direction: cycleDirection,
-          solution_count_bucket: bucketCount(snapshot.discovered_fold_cases, COUNT_BUCKETS),
+          solution_count_bucket: bucketCount(
+            noteFoldedSolutions(figure, handle, snapshot),
+            COUNT_BUCKETS
+          ),
         });
         const renderSnapshot = await renderSnapshotForFoldedFigure(
           figure.handle,
@@ -2600,7 +2628,6 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
                   snapshot,
                   renderSnapshot,
                   error: null,
-                  solutionFrontier: foldedFigureFrontierAfter(figure, snapshot),
                 }
               : candidate
           ),
@@ -2670,6 +2697,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         const result = await withFoldInFlight('to-case', (runId) =>
           foldRuntimeOristudioCpFigureToCase(handle, objective, 'Order5', runId)
         );
+        // A seek back restarts the enumeration and forgets what it found past
+        // the case it lands on; the handle's frontier does not.
+        noteFoldedSolutions(figure, handle, result.snapshot);
         const renderSnapshot = await renderSnapshotForFoldedFigure(
           figure.handle,
           figure.displayStyle,
@@ -2685,9 +2715,6 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
                   snapshot: result.snapshot,
                   renderSnapshot,
                   error: null,
-                  // A seek back restarts the enumeration; what it found past
-                  // the case it lands on is kept here (`layerOrderPlace.ts`).
-                  solutionFrontier: foldedFigureFrontierAfter(figure, result.snapshot),
                 }
               : candidate
           ),
@@ -3139,6 +3166,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             'This crease pattern can no longer be folded flat, so the folded model is unchanged'
           );
         }
+        // A refold is a new search on a new handle: it starts from what it found.
+        startSolutionFrontier(result.handle);
         retainFoldedFigureHandle(result.handle);
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
@@ -3319,6 +3348,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // flight. Adopting now would overwrite a newer handle and leak it.
         if (!latest || latest.handle != null) return await abandon(handle);
 
+        startSolutionFrontier(handle);
         retainFoldedFigureHandle(handle);
         setFolded3dRenderModel(handle, render);
         set({
@@ -3430,6 +3460,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           ) {
             return false;
           }
+          // The kernel cloned the whole session: the copy has searched as far.
+          seedSolutionFrontier(result.handle, source.handle);
           takeCanvasSelection('folded-figure', {
             oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
               figure.id === figureId
@@ -3462,6 +3494,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           figureIndex,
           true
         );
+        // A copy of the original's session, so it has searched as far.
+        seedSolutionFrontier(result.handle, source.handle);
         retainFoldedFigureHandle(result.handle);
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
