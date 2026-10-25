@@ -487,6 +487,7 @@
       "replay": "恢复为平面",
       "setUpright": "设置向上方向"
     },
+    "layerOrderSelectionName": "所选内容",
     "linesCount_other": "{{count}} 条线",
     "measure": "测量",
     "measurePickFirstPoint": "选择第一个点",
@@ -531,6 +532,7 @@
       "exportPng": "PNG 图像",
       "exportSvg": "SVG 图像",
       "fold": "折叠",
+      "foldWithLayerOrder": "按层叠顺序折叠…",
       "label": "折痕图操作",
       "references": "折叠参考",
       "saveImage": "保存为图像",

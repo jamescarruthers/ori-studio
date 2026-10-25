@@ -514,6 +514,7 @@
       "replay": "Reset to flat",
       "setUpright": "Set upright"
     },
+    "layerOrderSelectionName": "Selection",
     "linesCount_one": "{{count}} lines",
     "linesCount_other": "{{count}} lines",
     "measure": "Measure",
@@ -560,6 +561,7 @@
       "exportPng": "PNG image",
       "exportSvg": "SVG image",
       "fold": "Fold",
+      "foldWithLayerOrder": "Fold with layer order…",
       "label": "Crease pattern actions",
       "references": "Folding references",
       "saveImage": "Save to image",

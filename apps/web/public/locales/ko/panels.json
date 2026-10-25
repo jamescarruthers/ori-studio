@@ -487,6 +487,7 @@
       "replay": "평평하게 되돌리기",
       "setUpright": "위쪽 방향 설정"
     },
+    "layerOrderSelectionName": "선택 영역",
     "linesCount_other": "선 {{count}}개",
     "measure": "측정",
     "measurePickFirstPoint": "첫 번째 점 선택",
@@ -531,6 +532,7 @@
       "exportPng": "PNG 이미지",
       "exportSvg": "SVG 이미지",
       "fold": "접기",
+      "foldWithLayerOrder": "겹침 순서로 접기…",
       "label": "접힘 패턴 작업",
       "references": "접기 참조",
       "saveImage": "이미지로 저장",

@@ -541,6 +541,7 @@
       "replay": "Voltar ao plano",
       "setUpright": "Definir vertical"
     },
+    "layerOrderSelectionName": "Seleção",
     "linesCount_one": "{{count}} linha",
     "linesCount_many": "{{count}} linhas",
     "linesCount_other": "{{count}} linhas",
@@ -589,6 +590,7 @@
       "exportPng": "Imagem PNG",
       "exportSvg": "Imagem SVG",
       "fold": "Dobrar",
+      "foldWithLayerOrder": "Dobrar com ordem das camadas…",
       "label": "Ações do padrão de vincos",
       "references": "Referências de dobra",
       "saveImage": "Salvar como imagem",
