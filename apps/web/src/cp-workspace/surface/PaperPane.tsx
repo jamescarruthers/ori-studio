@@ -255,42 +255,37 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
     () => (scene ? paperSceneToFoldedGeometry(scene, style, { policy, faceAlpha, faces }) : EMPTY_FOLDED),
     [scene, style, policy, faceAlpha, faces]
   );
+  // Each channel is handed over in an effect of its own, so a change uploads
+  // only what changed; the frame is drawn once, after them all (below).
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setFolded(geometry);
-    render();
-  }, [geometry, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setFolded(geometry);
+  }, [geometry, rendererGeneration, rendererRef]);
 
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setStrokes(creases ?? EMPTY_STROKES);
-    render();
-  }, [creases, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setStrokes(creases ?? EMPTY_STROKES);
+  }, [creases, rendererGeneration, rendererRef]);
 
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setSheetFill(underFills);
-    render();
-  }, [underFills, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setSheetFill(underFills);
+  }, [underFills, rendererGeneration, rendererRef]);
 
   // What follows the pointer, over the pane's own fills and strokes.
   const feedback = useMemo(() => overlay?.(hovered) ?? NO_OVERLAY, [overlay, hovered]);
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setDiagnosticFills(joinFills(fills, feedback.fills ?? null));
-    render();
-  }, [fills, feedback, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setDiagnosticFills(joinFills(fills, feedback.fills ?? null));
+  }, [fills, feedback, rendererGeneration, rendererRef]);
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
     renderer.setOverlayPoints(feedback.points ?? null);
     renderer.setPreview(concatStrokes(strokes, feedback.strokes ?? null));
+  }, [feedback, strokes, themeKey, rendererGeneration, rendererRef]);
+
+  // One frame for whatever changed in this commit: a hover that moves the
+  // overlay's fills and its points draws once, not once a channel.
+  useEffect(() => {
     render();
-  }, [feedback, strokes, themeKey, rendererGeneration, rendererRef, render]);
+  }, [geometry, creases, underFills, fills, feedback, strokes, themeKey, rendererGeneration, render]);
 
   useEffect(() => {
     onHover?.(hovered);

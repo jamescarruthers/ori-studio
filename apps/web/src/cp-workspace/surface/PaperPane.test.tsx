@@ -18,7 +18,7 @@ import type { CpSurfaceControls, CpSurfaceHitRadii } from './useCpSurface';
  * the pane is about which channel carries what, in which frame, not about
  * pixels (the browser check, `scripts/layer-order-dialog-check.mjs`, has those).
  */
-const channels = vi.hoisted(() => ({ last: new Map<string, unknown>() }));
+const channels = vi.hoisted(() => ({ last: new Map<string, unknown>(), calls: new Map<string, number>() }));
 vi.mock('../renderer/reglRenderer', () => ({
   createReglRenderer: () =>
     new Proxy(
@@ -26,6 +26,7 @@ vi.mock('../renderer/reglRenderer', () => ({
       {
         get: (_target, key: string) => (value: unknown) => {
           channels.last.set(key, value);
+          channels.calls.set(key, (channels.calls.get(key) ?? 0) + 1);
         },
       }
     ),
@@ -163,6 +164,7 @@ afterEach(() => {
   host?.remove();
   host = null;
   channels.last.clear();
+  channels.calls.clear();
   frames.length = 0;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -245,6 +247,20 @@ describe('a paper pane', () => {
     expect(channels.last.get('setDiagnosticFills')).toEqual(joinFills(fills, hoverFills));
     expect((channels.last.get('setPreview') as StrokeGeometry).count).toBe(3);
     expect(channels.last.get('setOverlayPoints')).toBe(hoverPoints);
+  });
+
+  it('draws one frame for a hover that moves the pointer’s fills, strokes and points, and hands over nothing else', () => {
+    const fills = fill(6, 0.42);
+    const hoverFills = fill(3, 0.26);
+    const overlay = (hovered: CellHit | null) => (hovered ? { fills: hoverFills, strokes: stroke(2) } : {});
+    const canvas = mount({ creases: stroke(3), underFills: fill(3, 0.16), fills, overlay, stacks: new StackHitIndex(CELLS) });
+    channels.calls.clear();
+    const right = onCanvas({ x: 0.75, y: 0.5 });
+    hover(canvas, right.x, right.y);
+    expect(channels.last.get('setDiagnosticFills')).toEqual(joinFills(fills, hoverFills));
+    expect(channels.calls.get('render')).toBe(1);
+    // The paper, the creases and the fills under them are not handed over again.
+    for (const channel of ['setFolded', 'setStrokes', 'setSheetFill']) expect(channels.calls.get(channel), channel).toBeUndefined();
   });
 
   it('asks its hit test at the point under the pointer in its own frame, with the stack there and radii in its units', () => {
