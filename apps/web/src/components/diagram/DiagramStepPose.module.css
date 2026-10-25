@@ -23,3 +23,8 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* A constrained step's count, which the host never runs (D11): its width kept, nothing shown. */
+.pagerLabel[data-reserved] {
+  visibility: hidden;
+}

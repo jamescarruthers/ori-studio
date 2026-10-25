@@ -69,11 +69,12 @@ export function FieldRow({
    */
   note?: string;
   /**
-   * What the note is: a `reason` to be read (the default), in the label's
-   * ink, never dimmed, wrapped rather than cut; or a `fact` about the value
-   * ("3 constraints"), quiet on one line, dimmed with the row.
+   * What the note says. A `reason` (the default) is there to be read: the
+   * label's ink, wrapped rather than cut. A `status` is a quiet fact about the
+   * value — "3 constraints" — on the one tertiary line "Overridden" uses, cut
+   * short rather than wrapped.
    */
-  noteKind?: 'reason' | 'fact';
+  noteKind?: 'reason' | 'status';
   /**
    * A toggle that can be overridden, whether or not it is now. Its row keeps
    * the note's line under the label while the note is empty, so the row is

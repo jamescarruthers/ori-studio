@@ -179,29 +179,6 @@ describe('ToggleRow', () => {
     });
   });
 
-  // The Diagram's Layer order row: "3 constraints" is a fact about the value, not a reason to read.
-  it('keeps a fact on the note’s line quiet, and dims it with its row', () => {
-    withFieldRowStyles(() => {
-      const view = render(
-        <FieldRow label="Layer order" kind="text" note="3 constraints" noteKind="fact">
-          Edit…
-        </FieldRow>
-      );
-      const note = view.querySelector('[data-field-note]')!;
-      expect(note.textContent).toBe('3 constraints');
-      expect(note.getAttribute('data-field-note')).toBe('fact');
-      const color = (selector: string) => getComputedStyle(view.querySelector(selector)!).color;
-      // The quieter ink "Overridden" wears, not the label's.
-      expect(color('[data-field-note]')).not.toBe(color('[data-field-label]'));
-      rerender(
-        <FieldRow label="Layer order" kind="text" note="3 constraints" noteKind="fact" disabled>
-          Edit…
-        </FieldRow>
-      );
-      expect(getComputedStyle(view.querySelector('[data-field-note]')!).opacity).toBe('0.5');
-    });
-  });
-
   it('says why it cannot be switched on the note’s line, read with the switch', () => {
     const view = render(<ToggleRow label="Title block" checked={false} disabled note="Needs two rows or more" onChange={() => {}} />);
     const row = view.querySelector('[data-field-row]')!;

@@ -208,7 +208,7 @@ describe('a constrained step in the Step pane', () => {
     publishPose(first, FLAT, true);
     const row = layerOrderRow()!;
     expect(row.querySelector('[data-field-note]')?.textContent).toBe('1 constraint');
-    expect(row.querySelector('[data-field-note]')?.getAttribute('data-field-note')).toBe('fact');
+    expect(row.querySelector('[data-field-note]')?.getAttribute('data-field-note')).toBe('status');
     const edit = button('Edit Layer Order…')!;
     expect(edit.textContent).toBe('Edit…');
     expect(edit.hasAttribute('aria-disabled')).toBe(false);
@@ -216,8 +216,12 @@ describe('a constrained step in the Step pane', () => {
     for (const name of ['Previous Layer Order', 'Next Layer Order']) {
       expect(button(name)?.getAttribute('aria-disabled')).toBe('true');
     }
-    // A record's order has no place among the kernel's: no count between them.
-    expect(row.textContent).not.toMatch(/\d of \d/);
+    // A record's order has no place among the kernel's: no count read out between them, but its
+    // width kept, so the chevrons stand where a count puts them (until H9's stepper).
+    const readable = row.cloneNode(true) as HTMLElement;
+    for (const hidden of readable.querySelectorAll('[aria-hidden="true"]')) hidden.remove();
+    expect(readable.textContent).not.toMatch(/\d of \d/);
+    expect(row.querySelector('[data-reserved]')?.getAttribute('aria-hidden')).toBe('true');
     const controls = [...row.querySelectorAll('button')].map((control) => control.getAttribute('aria-label'));
     expect(controls).toEqual(['Previous Layer Order', 'Next Layer Order', 'Edit Layer Order…']);
     // No flag on a record that needs nothing.
@@ -263,6 +267,33 @@ describe('a constrained step in the Step pane', () => {
     expect(edit.getAttribute('aria-disabled')).toBe('true');
     expect(edit.title).toBe('Layer order works on flat folds');
     expect(button('Previous Layer Order')).toBeNull();
+  });
+
+  it('offers the flag’s Review… on a flagged step shown as its crease pattern, with no row to reach', async () => {
+    const [, second] = await openConstrainedDiagram();
+    const render: DiagramCpRender = { mode: 'crease-pattern', rotationDeg: 0 };
+    const diagram = state().diagram!;
+    act(() =>
+      useWorkspaceStore.setState({
+        diagram: {
+          ...diagram,
+          steps: diagram.steps.map((entry) =>
+            entry.id === second && 'source' in entry && entry.source?.kind === 'cp'
+              ? { ...entry, source: { ...entry.source, render } }
+              : entry
+          ),
+        },
+      })
+    );
+    act(() => state().selectDiagramStep(second));
+    act(() => state().openDiagramStep(second));
+    publishPose(second, render, true);
+    expect(layerOrderRow()).toBeUndefined();
+    const notice = [...host!.querySelectorAll('[role="status"]')].find((element) => element.textContent?.includes('need'))!;
+    const review = notice.querySelector('button')!;
+    expect(review.textContent).toBe('Review…');
+    expect(review.getAttribute('aria-disabled')).toBeNull();
+    expect(spawned).toHaveLength(0);
   });
 
   it('has no row while the step is not open in Pose, and none for a step with no source of its own', async () => {

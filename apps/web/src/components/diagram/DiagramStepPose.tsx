@@ -172,14 +172,21 @@ export function DiagramStepPose({
           kind="text"
           disabled={layerOrder.edit.disabled}
           note={layerOrder.note?.text}
-          noteKind={layerOrder.note?.reason ? 'reason' : 'fact'}
+          noteKind={layerOrder.note?.kind}
         >
           <span className={styles.layerOrder}>
             {render.mode === 'folded-flat' && (
               <span className={styles.pager}>
                 {layerVerb(linked.find((action) => action.id === 'previous-solution'), ChevronLeft)}
-                {/* A record's order has no place among the kernel's to read out (D11). */}
-                {linkedPose.layerOrder && <span className={styles.pagerLabel}>{linkedPose.layerOrder.count}</span>}
+                {linkedPose.layerOrder ? (
+                  <span className={styles.pagerLabel}>{linkedPose.layerOrder.count}</span>
+                ) : (
+                  // A record's order has no place among the kernel's to read out (D11): its place is
+                  // kept, unread, so the chevrons stay where a count puts them (until H9's stepper).
+                  <span className={styles.pagerLabel} data-reserved="" aria-hidden="true">
+                    {t('panels:diagram.pose.layerOrderOf', '{{number}} of {{total}}', { number: 1, total: 1 })}
+                  </span>
+                )}
                 {layerVerb(linked.find((action) => action.id === 'next-solution'), ChevronRight)}
               </span>
             )}
