@@ -11,8 +11,7 @@
  * sentence, the list or the engine's answers: the inspector's hook (U10)
  * reads its model and fills these in.
  *
- * **How each role is drawn** ({@link patternPanePaint},
- * {@link foldedPanePaint}): a tint, at one rung of the tint ladder Fold's
+ * **How each role is drawn:** a tint, at one rung of the tint ladder Fold's
  * panes share (`fillTint.ts`, `TINT`), and at most one ring per face, inside
  * it (`faceRing.ts`). Picks, the face pointed at and a row's faces are
  * `--face-pick`, violet in every theme; a clash is the theme's danger. What
@@ -37,6 +36,15 @@
  * as the clash and not as a pick, so an object the clash names turns danger
  * while the subject and the other objects stay violet (D21).
  *
+ * **What follows the pointer is drawn apart.** The face pointed at and a
+ * pressed or hovered row's faces change at pointer rate, so they are their
+ * own paint ({@link pointerPanePaint}), on the panes' overlay channel: a
+ * change of either redraws those few faces and leaves every other tint,
+ * ring and letter as it was ({@link basePatternPaint},
+ * {@link baseFoldedPaint}). On the crease pattern a face the pointer lights
+ * is faint already; its overlay tint is the share that takes it to the
+ * board's rung, so it reads exactly as one tint at that rung would.
+ *
  * Pure: no React, no store, no engine.
  */
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
@@ -46,6 +54,7 @@ import { cellsFill, joinFills, ringsFill, TINT } from '../../cp-workspace/render
 import type { FillGeometry, Rgba } from '../../cp-workspace/renderer/types';
 import type { LayerFace } from '../engine/faceIndex';
 import type { LayerChangedSpots, LayerSide, LayerStacks } from '../engine/layerOrderEngine';
+import type { LayerPaneId } from './layerPaneInput';
 
 // ---------------------------------------------------------------------------
 // The props
@@ -68,6 +77,12 @@ export interface LayerPanesView {
 export interface LayerPanesStacks {
   readonly front: LayerStacks;
   readonly back: LayerStacks;
+}
+
+/** Spots of the folded paper, by the scene's subface number, per side. */
+export interface LayerSidesSpots {
+  readonly front: readonly number[];
+  readonly back: readonly number[];
 }
 
 /** The slot a face pick fills now: what the pickable faces are offered as. */
@@ -104,9 +119,11 @@ export interface LayerFaceMarks {
   readonly changed: LayerChangedSpots | null;
   /** The spots the last commit or step changed: one 1.6 s fade (Round3:172-176). */
   readonly flash: LayerPaneFlash | null;
-  /** The spots whose face on top isn't decided yet, seen from the side shown. */
-  readonly undecided: readonly number[];
+  /** The spots whose face on top isn't decided yet, per side (the model's `openSpotsOf`). */
+  readonly undecided: LayerSidesSpots;
 }
+
+const NO_SPOTS: LayerSidesSpots = { front: [], back: [] };
 
 /** Nothing marked: the panes draw the paper alone. */
 export const NO_FACE_MARKS: LayerFaceMarks = {
@@ -120,8 +137,18 @@ export const NO_FACE_MARKS: LayerFaceMarks = {
   clashStrong: false,
   changed: null,
   flash: null,
-  undecided: [],
+  undecided: NO_SPOTS,
 };
+
+/** What follows the pointer: the face pointed at and a pressed or hovered row's faces. */
+export type LayerPointerMarks = Pick<LayerFaceMarks, 'pointed' | 'row'>;
+
+const NO_POINTER: LayerPointerMarks = { pointed: null, row: [] };
+
+/** `marks` with nothing following the pointer: what the base paint and the base letters read. */
+export function baseMarks(marks: LayerFaceMarks): LayerFaceMarks {
+  return marks.pointed === null && marks.row.length === 0 ? marks : { ...marks, ...NO_POINTER };
+}
 
 // ---------------------------------------------------------------------------
 // What the panes draw for them
@@ -162,11 +189,15 @@ function notInClash(faces: readonly LayerFace[], clash: ReadonlySet<LayerFace>):
   return faces.filter((face) => !clash.has(face));
 }
 
-/**
- * One ring per face, the strongest role's: a clash's, the subject's, then
- * an object's, a row's or the pointer's, which look alike.
- */
-function ringsOf(marks: LayerFaceMarks): LayerPaneRing[] {
+/** The faces whose ring the base paint draws: a clash's, the subject's, the objects'. */
+function baseRingFaces(marks: LayerFaceMarks): Set<LayerFace> {
+  const faces = new Set<LayerFace>([...marks.clash, ...marks.objects]);
+  if (marks.subject !== null) faces.add(marks.subject);
+  return faces;
+}
+
+/** One ring per face, the strongest role's: a clash's, the subject's, then an object's. */
+function baseRings(marks: LayerFaceMarks): LayerPaneRing[] {
   const rings = new Map<LayerFace, LayerPaneRing>();
   const put = (face: LayerFace, ink: LayerPaneInk, widthPx: number) => {
     if (!rings.has(face)) rings.set(face, { face, ink, widthPx });
@@ -174,8 +205,6 @@ function ringsOf(marks: LayerFaceMarks): LayerPaneRing[] {
   for (const face of marks.clash) put(face, 'danger', FACE_RING_PX);
   if (marks.subject !== null) put(marks.subject, 'pick', SUBJECT_RING_PX);
   for (const face of marks.objects) put(face, 'pick', FACE_RING_PX);
-  for (const face of marks.row) put(face, 'pick', FACE_RING_PX);
-  if (marks.pointed !== null) put(marks.pointed, 'pick', FACE_RING_PX);
   return [...rings.values()];
 }
 
@@ -184,42 +213,39 @@ function push(tints: LayerPaneTint[], tint: LayerPaneTint): void {
   if ('faces' in tint ? tint.faces.length > 0 : tint.spots.length > 0) tints.push(tint);
 }
 
-/**
- * The crease-pattern pane's marks: whole faces, under the creases, so a tint
- * never veils a crease's colour. Faces never overlap here.
- */
-export function patternPanePaint(marks: LayerFaceMarks): LayerPanePaint {
-  const clash = new Set(marks.clash);
-  const subject = marks.subject !== null && !clash.has(marks.subject) ? marks.subject : null;
-  const objects = notInClash(marks.objects, clash);
-  const row = notInClash(marks.row, clash);
-  const strong = new Set<LayerFace>([...marks.clash, ...objects, ...row]);
-  if (marks.subject !== null) strong.add(marks.subject);
-  if (marks.pointed !== null) strong.add(marks.pointed);
-  const pointed =
-    marks.pointed !== null && marks.pointed !== marks.subject && !marks.objects.includes(marks.pointed) && !clash.has(marks.pointed)
-      ? marks.pointed
-      : null;
-  const tints: LayerPaneTint[] = [];
-  push(tints, { faces: marks.pickable.filter((face) => !strong.has(face)), ink: 'pick', alpha: TINT.faint });
-  push(tints, { faces: subject === null ? [] : [subject], ink: 'pick', alpha: TINT.emphasis });
-  push(tints, { faces: objects, ink: 'pick', alpha: TINT.hover });
-  push(tints, { faces: row, ink: 'pick', alpha: TINT.picked });
-  push(tints, { faces: marks.clash, ink: 'danger', alpha: clashAlpha(marks) });
-  push(tints, { faces: pointed === null ? [] : [pointed], ink: 'pick', alpha: TINT.hover });
-  return { tints, rings: ringsOf(marks) };
+/** The faces the crease pattern tints faintly: the pickable ones no stronger base role holds. */
+function faintPatternFaces(marks: LayerFaceMarks): LayerFace[] {
+  const strong = baseRingFaces(marks);
+  return marks.pickable.filter((face) => !strong.has(face));
 }
 
 /**
- * The folded pane's marks, over the paper, for `scene`: the side shown, its
- * spots stacked in the order on screen (`restackedScene`).
+ * The crease-pattern pane's marks but what follows the pointer: whole faces,
+ * under the creases, so a tint never veils a crease's colour. Faces never
+ * overlap here.
+ */
+export function basePatternPaint(marks: LayerFaceMarks): LayerPanePaint {
+  const clash = new Set(marks.clash);
+  const subject = marks.subject !== null && !clash.has(marks.subject) ? marks.subject : null;
+  const tints: LayerPaneTint[] = [];
+  push(tints, { faces: faintPatternFaces(marks), ink: 'pick', alpha: TINT.faint });
+  push(tints, { faces: subject === null ? [] : [subject], ink: 'pick', alpha: TINT.emphasis });
+  push(tints, { faces: notInClash(marks.objects, clash), ink: 'pick', alpha: TINT.hover });
+  push(tints, { faces: marks.clash, ink: 'danger', alpha: clashAlpha(marks) });
+  return { tints, rings: baseRings(marks) };
+}
+
+/**
+ * The folded pane's marks but what follows the pointer, over the paper, for
+ * `scene`: the side shown, its spots stacked in the order on screen
+ * (`restackedScene`).
  *
  * At most one tint of the faint and changed kind falls on a spot, so none
  * stacks on another: a spot the preview changes; else, choosing objects, a
  * spot with one on top; else a spot of the subject's, a rung stronger, the
  * subject's whole face when no spot of it is taken.
  */
-export function foldedPanePaint(
+export function baseFoldedPaint(
   marks: LayerFaceMarks,
   scene: OristudioCpFoldedPaperScene,
   view: LayerPanesView
@@ -241,12 +267,8 @@ export function foldedPanePaint(
       else subjectSpots.push(spot);
     }
   });
-  const pointed =
-    marks.pointed !== null && marks.pointed !== marks.subject && !marks.objects.includes(marks.pointed) && !clash.has(marks.pointed)
-      ? marks.pointed
-      : null;
   const tints: LayerPaneTint[] = [];
-  if (view.undecided) push(tints, { spots: marks.undecided, ink: 'pick', alpha: TINT.faint });
+  if (view.undecided) push(tints, { spots: marks.undecided[side], ink: 'pick', alpha: TINT.faint });
   push(tints, { spots: offeredSpots, ink: 'pick', alpha: TINT.faint });
   push(tints, { spots: [...changed], ink: 'pick', alpha: TINT.picked });
   if (subject !== null) {
@@ -255,10 +277,54 @@ export function foldedPanePaint(
       subjectAll ? { faces: [subject], ink: 'pick', alpha: TINT.hover } : { spots: subjectSpots, ink: 'pick', alpha: TINT.hover }
     );
   }
-  push(tints, { faces: notInClash(marks.row, clash), ink: 'pick', alpha: TINT.hover });
   push(tints, { faces: marks.clash, ink: 'danger', alpha: clashAlpha(marks) });
-  push(tints, { faces: pointed === null ? [] : [pointed], ink: 'pick', alpha: TINT.hover });
-  return { tints, rings: ringsOf(marks) };
+  return { tints, rings: baseRings(marks) };
+}
+
+/**
+ * The alpha that takes paper already tinted at `under` in the same ink to
+ * `target`, drawn over it: two tints compose as `1 − (1 − a)(1 − b)`.
+ */
+export function overAlpha(target: number, under: number): number {
+  return under >= target ? 0 : 1 - (1 - target) / (1 - under);
+}
+
+/**
+ * What follows the pointer on `pane`, for the overlay channel: a pressed or
+ * hovered row's faces (the picked rung on the crease pattern, the hover rung
+ * on the folded paper) and the face pointed at (the hover rung), each ringed
+ * unless a base role already rings it. The subject and the objects keep their
+ * own tints, and a clash's face is drawn as the clash. On the crease pattern
+ * a faint face takes the share that brings it to its rung (see the module
+ * docs); on the folded paper the board composes the tints, and so do these.
+ */
+export function pointerPanePaint(marks: LayerFaceMarks, pane: LayerPaneId): LayerPanePaint {
+  if (marks.pointed === null && marks.row.length === 0) return { tints: [], rings: [] };
+  const clash = new Set(marks.clash);
+  const ringed = baseRingFaces(marks);
+  const faint = pane === 'pattern' ? new Set(faintPatternFaces(marks)) : new Set<LayerFace>();
+  const rowFaces = notInClash(marks.row, clash);
+  const rowRung = pane === 'pattern' ? TINT.picked : TINT.hover;
+  const pointed =
+    marks.pointed !== null && marks.pointed !== marks.subject && !marks.objects.includes(marks.pointed) && !clash.has(marks.pointed)
+      ? marks.pointed
+      : null;
+  const tints: LayerPaneTint[] = [];
+  // Faint faces and the rest take different alphas to land on the same rung.
+  const tintAt = (faces: readonly LayerFace[], rung: number) => {
+    push(tints, { faces: faces.filter((face) => !faint.has(face)), ink: 'pick', alpha: rung });
+    push(tints, { faces: faces.filter((face) => faint.has(face)), ink: 'pick', alpha: overAlpha(rung, TINT.faint) });
+  };
+  tintAt(rowFaces, rowRung);
+  if (pointed !== null) tintAt([pointed], TINT.hover);
+  const rings: LayerPaneRing[] = [];
+  const seen = new Set(ringed);
+  for (const face of [...rowFaces, ...(pointed !== null ? [pointed] : [])]) {
+    if (seen.has(face)) continue;
+    seen.add(face);
+    rings.push({ face, ink: 'pick', widthPx: FACE_RING_PX });
+  }
+  return { tints, rings };
 }
 
 /** The colours a pane's marks are drawn in, resolved from the theme. */

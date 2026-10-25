@@ -3,6 +3,7 @@ import { cpCreaseStrokeWidthPx } from '../../cp-workspace/cpSizingScales';
 import { PaperPane } from '../../cp-workspace/surface/PaperPane';
 import type { CpSurfaceControls, CpSurfaceFrameScales } from '../../cp-workspace/surface/useCpSurface';
 import type { WheelGesturePreference } from '../../lib/wheelGesture';
+import { LAYER_ORDER_PANE_FIT_SHARE } from '../../layer-order/panes/layerPaneFigure';
 import { sameLayerPaneHit, type LayerPaneHit, type LayerPanesEvents } from '../../layer-order/panes/layerPaneInput';
 import type { LayerPaneChannels } from '../../layer-order/panes/useLayerOrderPanes';
 import { useLayerPanePointer } from '../../layer-order/panes/useLayerPanePointer';
@@ -69,6 +70,7 @@ export function LayerOrderPane({
         creases={channels.creases?.creases ?? null}
         underFills={channels.underFills}
         fills={channels.fills}
+        overlay={channels.overlay}
         strokeWidthPx={strokeWidthPx(channels)}
         stacks={channels.stacks}
         hitTest={channels.hitTest}
@@ -77,8 +79,10 @@ export function LayerOrderPane({
         onPick={pointer.onPick}
         onHover={pointer.onHover}
         contentBounds={channels.contentBounds}
+        fitShare={LAYER_ORDER_PANE_FIT_SHARE}
         framingKey={framingKey}
         keepInViewKey={channels.keepInViewKey}
+        keepInViewBounds={channels.keepInViewBounds}
         wheelGesture={wheelGesture}
         snapRadius={snapRadius}
         themeKey={themeKey}

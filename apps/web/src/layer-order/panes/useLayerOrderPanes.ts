@@ -6,16 +6,27 @@
  * what these hooks answer.
  *
  * - **The crease pattern** draws at once, from the request's source, as
- *   Edit draws a crease pattern whatever the host (D18): Edit's line style
- *   and width, Edit's frame. Its faces, for tints, rings, letters and hits,
- *   come from the session's scene once it is open, or from the scene the
- *   host shows until then, so a refusal can name a face.
+ *   Edit draws a crease pattern whatever the host (D18): in the line style
+ *   and width of Edit's view, which the host hands over in its look, in
+ *   Edit's frame. Its faces, for tints, rings, letters and hits, come from
+ *   the session's scene once it is open, or from the scene the host shows
+ *   until then, so a refusal can name a face.
  * - **The folded figure** draws once the session is open: the side shown's
  *   scene, restacked for the order on screen (a preview's included),
  *   painted by the shared pipeline (`foldedFlatPaperScene`, then
  *   `paperSceneToFoldedGeometry` inside `PaperPane`) in the host's paper
- *   style and policy, turned as the host turns it, with no spread (D18).
- *   X-ray draws every layer, the buried ones too, see-through.
+ *   style and policy, turned as the host turns it from the side its picture
+ *   shows, with no spread (D18). X-ray draws every layer, the buried ones
+ *   too, see-through.
+ * - **Fit** (Round3's `fitAll`): each pane frames a square of the sheet's
+ *   size, the crease pattern's about the paper, the folded figure's about the
+ *   figure, at {@link LAYER_ORDER_PANE_FIT_SHARE}, so both take one scale and
+ *   their readouts agree; a turn over keeps the figure itself in view.
+ * - **What follows the pointer** (the face pointed at, a row's faces) is
+ *   painted apart, on the overlay channel (`pointerPanePaint`), and the
+ *   letters take it on last (`withPointerLetters`): a hover changes those and
+ *   nothing else. The marks' lists are held by value, so a caller that builds
+ *   them afresh for each hover rebuilds nothing.
  *
  * The inks are the theme's, read off the dialog's element, and read again
  * when the theme changes.
@@ -23,7 +34,6 @@
 import { useMemo } from 'react';
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
 import type { Point } from '../../lib/geometry';
-import { DEFAULT_ORISTUDIO_CP_LINE_STYLE, DEFAULT_ORISTUDIO_CP_LINE_WIDTH } from '../../lib/creasePatternViewport';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { cpPatternStrokes, type CpPatternStrokes } from '../../cp-workspace/adapters/cpPatternStrokes';
@@ -32,18 +42,19 @@ import { StackHitIndex, type StackHit } from '../../cp-workspace/picking/stackHi
 import type { UserBounds } from '../../cp-workspace/renderer/camera';
 import { readCssVarColor } from '../../cp-workspace/renderer/cssColor';
 import type { FillGeometry, Rgba } from '../../cp-workspace/renderer/types';
-import type { PaperLook } from '../../cp-workspace/surface/PaperPane';
+import type { PaperLook, PaperPaneOverlay } from '../../cp-workspace/surface/PaperPane';
 import type { LayerOrderSessionStatus } from '../dialog/useLayerOrderSession';
 import type { FaceLetters, LayerFace } from '../engine/faceIndex';
 import type { LayerSide } from '../engine/layerOrderEngine';
 import {
   foldedOutlinesOf,
+  foldedPaneFrame,
   foldedPaneToUser,
   foldedPivot,
   PANE_USER_PER_UNIT,
   paneFacesOf,
   paneTurnDeg,
-  patternPaneBounds,
+  patternPaneFrame,
   patternPaneLines,
   patternPaneToUser,
   restackedScene,
@@ -52,15 +63,24 @@ import {
   xrayFaceAlpha,
 } from './layerPaneFigure';
 import type { LayerPaneHit, LayerPaneId } from './layerPaneInput';
-import { foldedLabelSpots, paneLetters, type LayerLabelSpots, type LayerPaneLabel } from './layerPaneLabels';
 import {
-  foldedPanePaint,
+  foldedLabelIndex,
+  paneLetters,
+  patternLabelIndex,
+  withPointerLetters,
+  type LayerLabelSpots,
+  type LayerPaneLabel,
+} from './layerPaneLabels';
+import {
+  baseFoldedPaint,
+  basePatternPaint,
   NO_FACE_MARKS,
   paneTintFills,
-  patternPanePaint,
+  pointerPanePaint,
   type LayerFaceMarks,
   type LayerPaneInks,
   type LayerPaneInk,
+  type LayerPanePaint,
   type LayerPanesStacks,
   type LayerPanesView,
 } from './layerPaneMarks';
@@ -85,14 +105,19 @@ export interface LayerPaneChannels {
   readonly underFills: FillGeometry | null;
   /** Tints over the paper: the folded figure's. */
   readonly fills: FillGeometry | null;
+  /** What follows the pointer, on the overlay channel: the face pointed at, a row's faces. */
+  readonly overlay: () => PaperPaneOverlay;
   /** The cells a press is tested against, in the pane's frame. */
   readonly stacks: StackHitIndex | null;
   readonly hitTest: (at: Point, radii: unknown, stack: StackHit | null) => LayerPaneHit | null;
   /** The faces a pick can take now: the pointer's cursor says so over them. */
   readonly pickable: ReadonlySet<LayerFace>;
+  /** What a fit frames: a square of the sheet's size (see the module docs). */
   readonly contentBounds: UserBounds | null;
   /** What the content is: the side shown, on the folded pane, so turning it over keeps the view while it shows. */
   readonly keepInViewKey: string | null;
+  /** What must still show across a new {@link keepInViewKey}: the folded figure itself. */
+  readonly keepInViewBounds: UserBounds | null;
   readonly rings: readonly LayerPaneRingMark[];
   /** The spots fading, in the pane's frame, and which flash they are. */
   readonly flash: { readonly n: number; readonly spots: readonly (readonly Point[])[] } | null;
@@ -102,6 +127,8 @@ export interface LayerPaneChannels {
 }
 
 const NO_FACES: ReadonlySet<LayerFace> = new Set();
+const NO_OVERLAY: PaperPaneOverlay = {};
+const NO_SPOTS = () => null;
 
 /** What `--face-pick` is when nothing has set it: the dark type's (`applyTheme`'s `FACE_PICK_COLORS`). */
 const PICK_FALLBACK: Rgba = [0xa7 / 255, 0x8b / 255, 0xfa / 255, 1];
@@ -120,14 +147,9 @@ export function useLayerPaneInks(element: Element | null, themeKey: string): Lay
   }, [element, themeKey]);
 }
 
-/** The side the dialog opens on: the one the host's picture shows. */
-export function layerOrderOpeningSide(request: LayerOrderRequest): LayerSide {
-  return request.shown?.flipped ? 'back' : 'front';
-}
-
 /** The view the dialog opens with: the host's side, X-ray as the host says (D18), Undecided off. */
 export function layerOrderOpeningView(request: LayerOrderRequest): LayerPanesView {
-  return { side: layerOrderOpeningSide(request), xray: request.look.xray, undecided: false };
+  return { side: request.look.side, xray: request.look.xray, undecided: false };
 }
 
 /** What the session has to draw from, or the request's own until it is open. */
@@ -150,13 +172,59 @@ function lettersOf(letters: FaceLetters | null): (face: LayerFace) => string {
 }
 
 function ringMarks(
-  rings: readonly { face: LayerFace; ink: LayerPaneInk; widthPx: number }[],
+  paints: readonly LayerPanePaint[],
   ringOf: (face: LayerFace) => readonly Point[] | undefined
 ): LayerPaneRingMark[] {
-  return rings.flatMap(({ face, ink, widthPx }) => {
-    const ring = ringOf(face);
-    return ring && ring.length >= 3 ? [{ face, ring, ink, widthPx }] : [];
-  });
+  return paints.flatMap((paint) =>
+    paint.rings.flatMap(({ face, ink, widthPx }) => {
+      const ring = ringOf(face);
+      return ring && ring.length >= 3 ? [{ face, ring, ink, widthPx }] : [];
+    })
+  );
+}
+
+/** A list held while its values are the same, whatever its identity: a caller may build it afresh each render. */
+function useListByValue<T>(list: readonly T[]): readonly T[] {
+  const key = list.join(',');
+  // The key is the list's value: a new array with the same values is the same list.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => list, [key]);
+}
+
+/**
+ * The marks split for drawing: `base`, everything but what follows the
+ * pointer, held by value; and `marks`, the same with the pointer's faces,
+ * which only those change.
+ */
+export function useSplitMarks(marks: LayerFaceMarks): { base: LayerFaceMarks; marks: LayerFaceMarks } {
+  const pickable = useListByValue(marks.pickable);
+  const objects = useListByValue(marks.objects);
+  const clash = useListByValue(marks.clash);
+  const row = useListByValue(marks.row);
+  const undecidedFront = useListByValue(marks.undecided.front);
+  const undecidedBack = useListByValue(marks.undecided.back);
+  const { picking, subject, clashStrong, changed, flash, pointed } = marks;
+  const base = useMemo<LayerFaceMarks>(
+    () => ({
+      picking,
+      pickable,
+      subject,
+      objects,
+      pointed: null,
+      row: [],
+      clash,
+      clashStrong,
+      changed,
+      flash,
+      undecided: { front: undecidedFront, back: undecidedBack },
+    }),
+    [picking, pickable, subject, objects, clash, clashStrong, changed, flash, undecidedFront, undecidedBack]
+  );
+  const full = useMemo<LayerFaceMarks>(
+    () => (pointed === null && row.length === 0 ? base : { ...base, pointed, row }),
+    [base, pointed, row]
+  );
+  return { base, marks: full };
 }
 
 export interface LayerPaneInputs {
@@ -165,6 +233,8 @@ export interface LayerPaneInputs {
   /** The face index of the opening (`LayerOrderPanesProps.letters`). */
   readonly letters: FaceLetters | null;
   readonly view: LayerPanesView;
+  /** Everything but what follows the pointer (`useSplitMarks`). */
+  readonly base: LayerFaceMarks;
   readonly marks: LayerFaceMarks;
   /** The order on screen, per side: a preview's while one shows; null for the session's own. */
   readonly stacks: LayerPanesStacks | null;
@@ -174,32 +244,32 @@ export interface LayerPaneInputs {
   readonly themeKey: string;
 }
 
+/** The overlay channel's fills for what follows the pointer, as `PaperPane` asks for them. */
+function useOverlay(fills: FillGeometry | null): () => PaperPaneOverlay {
+  return useMemo(() => (fills ? () => ({ fills }) : () => NO_OVERLAY), [fills]);
+}
+
 /** The crease-pattern pane: Edit's drawing of the source, its faces marked. */
 export function useLayerPatternPane({
   status,
   request,
   letters: faceLetters,
-  marks,
+  base: baseIn,
+  marks: marksIn,
   inks,
   element,
   themeKey,
 }: LayerPaneInputs): LayerPaneChannels {
   const { source, look } = request;
-  const figure = figureOf(status, request);
-  const facesScene = figure.faces;
+  const facesScene = figureOf(status, request).faces;
   const lines = useMemo(() => patternPaneLines(source), [source]);
-  const contentBounds = useMemo(() => patternPaneBounds(source), [source]);
+  const contentBounds = useMemo(() => patternPaneFrame(source), [source]);
   const creases = useMemo(
     () =>
-      element
-        ? cpPatternStrokes(lines, element, {
-            lineStyle: DEFAULT_ORISTUDIO_CP_LINE_STYLE,
-            lineWidth: DEFAULT_ORISTUDIO_CP_LINE_WIDTH,
-          })
-        : null,
+      element ? cpPatternStrokes(lines, element, { lineStyle: look.lineStyle, lineWidth: look.lineWidth }) : null,
     // The theme is read off the element: its key is what says it changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lines, element, themeKey]
+    [lines, element, themeKey, look.lineStyle, look.lineWidth]
   );
   const faces = useMemo(() => (facesScene ? paneFacesOf(facesScene) : null), [facesScene]);
   const index = useMemo(() => {
@@ -210,26 +280,29 @@ export function useLayerPatternPane({
       hits: new StackHitIndex(cells.map(({ ring, face }) => ({ polygon: ring, faces_top_to_bottom: [face] }))),
     };
   }, [faces]);
-  const refused = status.kind === 'refused' ? status.refusal : null;
-  const shown = useMemo(() => (refused ? refusalMarks(status) : null) ?? marks, [refused, status, marks]);
-  const paint = useMemo(() => patternPanePaint(shown), [shown]);
+  // A refusal that names a face marks it, and nothing else.
+  const refused = useMemo(() => refusalMarks(status), [status]);
+  const base = refused ?? baseIn;
+  const marks = refused ?? marksIn;
+  const basePaint = useMemo(() => basePatternPaint(base), [base]);
+  const pointerPaint = useMemo(() => pointerPanePaint(marks, 'pattern'), [marks]);
   const ringOf = useMemo(() => (face: LayerFace) => faces?.pattern[face], [faces]);
   const underFills = useMemo(
-    () => (inks && faces ? paneTintFills(paint.tints, inks, ringOf, null) : null),
-    [paint, inks, faces, ringOf]
+    () => (inks && faces ? paneTintFills(basePaint.tints, inks, ringOf, null) : null),
+    [basePaint, inks, faces, ringOf]
   );
+  const pointerFills = useMemo(
+    () => (inks && faces ? paneTintFills(pointerPaint.tints, inks, ringOf, null) : null),
+    [pointerPaint, inks, faces, ringOf]
+  );
+  const overlay = useOverlay(pointerFills);
+  const baseLetters = useMemo(() => (faces ? paneLetters(base, faces.patternCentroids) : null), [base, faces]);
   const letters = useMemo(
-    () => (faces ? paneLetters(shown, faces.patternCentroids).labels : []),
-    [shown, faces]
+    () => (faces && baseLetters ? withPointerLetters(baseLetters, marks, faces.patternCentroids).labels : []),
+    [baseLetters, marks, faces]
   );
-  const labelSpots = useMemo(
-    () => (face: LayerFace): LayerLabelSpots | null => {
-      const at = faces?.patternLabels[face];
-      return at ? { visible: true, at: [at] } : null;
-    },
-    [faces]
-  );
-  const pickable = useMemo(() => new Set(shown.pickable), [shown.pickable]);
+  const labelSpots = useMemo(() => (faces ? patternLabelIndex(faces.pattern) : NO_SPOTS), [faces]);
+  const pickable = useMemo(() => new Set(base.pickable), [base.pickable]);
   const letterOf = useMemo(() => lettersOf(faceLetters), [faceLetters]);
   const paperLook = useMemo<PaperLook>(() => ({ style: look.style, policy: look.policy }), [look.style, look.policy]);
   const hitTest = useMemo(
@@ -240,7 +313,11 @@ export function useLayerPatternPane({
       },
     [index]
   );
-  const rings = useMemo(() => ringMarks(paint.rings, ringOf), [paint, ringOf]);
+  const baseRings = useMemo(() => ringMarks([basePaint], ringOf), [basePaint, ringOf]);
+  const rings = useMemo(
+    () => (pointerPaint.rings.length === 0 ? baseRings : [...baseRings, ...ringMarks([pointerPaint], ringOf)]),
+    [baseRings, pointerPaint, ringOf]
+  );
   return {
     id: 'pattern',
     scene: null,
@@ -249,11 +326,13 @@ export function useLayerPatternPane({
     creases,
     underFills,
     fills: null,
+    overlay,
     stacks: index?.hits ?? null,
     hitTest,
     pickable: pickable.size > 0 ? pickable : NO_FACES,
     contentBounds,
     keepInViewKey: null,
+    keepInViewBounds: null,
     rings,
     flash: null,
     labels: letters,
@@ -279,6 +358,7 @@ export function useLayerFoldedPane({
   request,
   letters: faceLetters,
   view,
+  base,
   marks,
   stacks,
   inks,
@@ -292,9 +372,9 @@ export function useLayerFoldedPane({
   const shown = pair?.shown ?? null;
   // The turn, about the paper's middle, from the side shown.
   const modelToSvg = useMemo(() => {
-    const turn = paneTurnDeg(look.turnDeg, layerOrderOpeningSide(request), side);
+    const turn = paneTurnDeg(look.turnDeg, look.side, side);
     return foldedPaneToUser(turn, kernel ? foldedPivot(kernel) : { x: 0, y: 0 });
-  }, [look.turnDeg, request, side, kernel]);
+  }, [look.turnDeg, look.side, side, kernel]);
   const scene = useMemo(
     () =>
       shown
@@ -321,27 +401,37 @@ export function useLayerFoldedPane({
   // The cells never move with the order: one index per scene.
   const index = useMemo(() => (kernel ? new StackHitIndex(kernel.subfaces) : null), [kernel]);
   const outlines = useMemo(() => (kernel ? foldedOutlinesOf(kernel) : null), [kernel]);
-  const contentBounds = useMemo(() => (outlines ? ringsBounds(outlines, modelToSvg) : null), [outlines, modelToSvg]);
-  const paint = useMemo(() => (shown ? foldedPanePaint(marks, shown, view) : null), [marks, shown, view]);
+  const figureBounds = useMemo(() => (outlines ? ringsBounds(outlines, modelToSvg) : null), [outlines, modelToSvg]);
+  const contentBounds = useMemo(
+    () => (figureBounds && kernel ? foldedPaneFrame(figureBounds, kernel.sheet) : null),
+    [figureBounds, kernel]
+  );
+  const basePaint = useMemo(() => (shown ? baseFoldedPaint(base, shown, view) : null), [base, shown, view]);
+  const pointerPaint = useMemo(() => pointerPanePaint(marks, 'folded'), [marks]);
   const ringOf = useMemo(() => (face: LayerFace) => outlines?.[face], [outlines]);
   const fills = useMemo(
-    () => (paint && inks ? paneTintFills(paint.tints, inks, ringOf, index) : null),
-    [paint, inks, ringOf, index]
+    () => (basePaint && inks ? paneTintFills(basePaint.tints, inks, ringOf, index) : null),
+    [basePaint, inks, ringOf, index]
   );
+  const pointerFills = useMemo(
+    () => (inks && outlines ? paneTintFills(pointerPaint.tints, inks, ringOf, index) : null),
+    [pointerPaint, inks, outlines, ringOf, index]
+  );
+  const overlay = useOverlay(pointerFills);
   const faces = useMemo(() => (figure.faces ? paneFacesOf(figure.faces) : null), [figure.faces]);
-  const letters = useMemo(() => (faces ? paneLetters(marks, faces.patternCentroids).labels : []), [marks, faces]);
-  const spots = useMemo(
-    () => (shown ? foldedLabelSpots(shown, letters.map((label) => label.face)) : null),
-    [shown, letters]
+  const baseLetters = useMemo(() => (faces ? paneLetters(base, faces.patternCentroids) : null), [base, faces]);
+  const letters = useMemo(
+    () => (faces && baseLetters ? withPointerLetters(baseLetters, marks, faces.patternCentroids).labels : []),
+    [baseLetters, marks, faces]
   );
-  const labelSpots = useMemo(() => (face: LayerFace) => spots?.get(face) ?? null, [spots]);
-  const flashSpots = marks.flash?.changed[side];
+  const labelSpots = useMemo(() => (shown ? foldedLabelIndex(shown) : NO_SPOTS), [shown]);
+  const flashSpots = base.flash?.changed[side];
   const flash = useMemo(() => {
-    if (!marks.flash || !kernel || !flashSpots || flashSpots.length === 0) return null;
+    if (!base.flash || !kernel || !flashSpots || flashSpots.length === 0) return null;
     const polygons = Array.from(flashSpots, (spot) => kernel.subfaces[spot]?.polygon ?? []).filter((ring) => ring.length >= 3);
-    return { n: marks.flash.n, spots: polygons };
-  }, [marks.flash, kernel, flashSpots]);
-  const pickable = useMemo(() => new Set(marks.pickable), [marks.pickable]);
+    return { n: base.flash.n, spots: polygons };
+  }, [base.flash, kernel, flashSpots]);
+  const pickable = useMemo(() => new Set(base.pickable), [base.pickable]);
   const letterOf = useMemo(() => lettersOf(faceLetters), [faceLetters]);
   const hitTest = useMemo(
     () =>
@@ -351,7 +441,11 @@ export function useLayerFoldedPane({
       },
     [shown]
   );
-  const rings = useMemo(() => (paint ? ringMarks(paint.rings, ringOf) : []), [paint, ringOf]);
+  const baseRings = useMemo(() => (basePaint ? ringMarks([basePaint], ringOf) : []), [basePaint, ringOf]);
+  const rings = useMemo(
+    () => (pointerPaint.rings.length === 0 ? baseRings : [...baseRings, ...ringMarks([pointerPaint], ringOf)]),
+    [baseRings, pointerPaint, ringOf]
+  );
   if (!shown) return null;
   return {
     id: 'folded',
@@ -361,11 +455,13 @@ export function useLayerFoldedPane({
     creases: null,
     underFills: null,
     fills,
+    overlay,
     stacks: index,
     hitTest,
     pickable: pickable.size > 0 ? pickable : NO_FACES,
     contentBounds,
     keepInViewKey: side,
+    keepInViewBounds: figureBounds,
     rings,
     flash,
     labels: letters,
