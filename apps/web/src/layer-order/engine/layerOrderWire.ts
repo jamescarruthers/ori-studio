@@ -298,7 +298,7 @@ export interface LayerSolutionCaps {
   ordersPerComponent?: number;
   /** Combinations a look group walks; default 1,000,000. */
   combinationsPerGroup?: number;
-  /** Bits of whole orders kept for the stepper; default 2²⁷ (16 MiB). */
+  /** Bits of whole orders kept for the stepper; default 2²⁵ (4 MiB). */
   storedBits?: number;
 }
 
