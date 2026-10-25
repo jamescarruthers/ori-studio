@@ -2,6 +2,7 @@
   "boundary": {
     "appDescription": "Tu trabajo sigue en memoria, pero la interfaz no ha podido recuperarse por sí sola. Copia los detalles antes de recargar: le indican al desarrollador exactamente qué ha fallado.",
     "appTitle": "Ori Studio ha tenido un problema",
+    "close": "Cerrar",
     "copied": "Copiado",
     "copy": "Copiar detalles",
     "copyFailed": "No se pudo copiar",

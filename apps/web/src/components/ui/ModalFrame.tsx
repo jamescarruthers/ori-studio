@@ -52,11 +52,15 @@ export type ModalFrameLayout = 'stack' | 'fill';
 export interface ModalFrameProps {
   /** Names the dialog and its close button, and heads the bar. */
   title: string;
-  /** Right after the title, before any detail: a control that belongs with it (a phone's pane switch). */
+  /**
+   * Right after the title, before any detail: a control that belongs with it
+   * (a phone's pane switch). On a phone the title, the lead and the close
+   * button keep one line: the title truncates first, then the lead shrinks.
+   */
   lead?: ReactNode;
   /** After the title, quieter: what the dialog is about (a figure's name). */
   detail?: ReactNode;
-  /** The bar's controls, at its end before the close button; on a phone, a row of their own under it. */
+  /** The bar's controls, at its end before the close button; on a phone, a row of their own under the title's. */
   tools?: ReactNode;
   size?: ModalFrameSize;
   layout?: ModalFrameLayout;
@@ -64,8 +68,15 @@ export interface ModalFrameProps {
   footer?: ReactNode;
   /** The foot's verbs, at its end. */
   actions?: ReactNode;
-  /** Escape, the close button and a press on the backdrop. */
+  /** Escape, the close button and, unless {@link closeOnBackdrop} is false, a press on the backdrop. */
   onClose: () => void;
+  /**
+   * Whether a press on the backdrop closes the dialog (the default). A dialog
+   * that holds work a stray press must not throw away (the Layer order
+   * dialog's constraints) closes only by its own verbs, Escape and the close
+   * button.
+   */
+  closeOnBackdrop?: boolean;
   /** Focus goes back here when the dialog closes, if it is still in the document. */
   returnFocus: HTMLElement | null;
   /**
@@ -90,7 +101,7 @@ export interface ModalFrameProps {
  * A shortcut barrier with `useModalDialog`'s focus and Escape: no key aimed
  * inside it reaches the workspace behind, focus stays inside it and goes back
  * to `returnFocus` on close, and Escape, the close button and a press on the
- * backdrop call `onClose`.
+ * backdrop (unless `closeOnBackdrop` is false) call `onClose`.
  */
 export function ModalFrame({
   title,
@@ -102,6 +113,7 @@ export function ModalFrame({
   footer,
   actions,
   onClose,
+  closeOnBackdrop = true,
   returnFocus,
   history,
   onDragOver,
@@ -118,6 +130,16 @@ export function ModalFrame({
     return registerModalHistory(root, history);
   }, [history, rootRef]);
 
+  const heading = (
+    <>
+      <span className={styles.title}>{title}</span>
+      {lead !== undefined && <div className={styles.lead}>{lead}</div>}
+      {detail !== undefined && <span className={styles.detail}>{detail}</span>}
+    </>
+  );
+  // A bar with a lead or tools lays out in rows on a phone: the title's line, then the tools.
+  const rows = lead !== undefined || tools !== undefined;
+
   return (
     <div
       ref={rootRef}
@@ -126,7 +148,7 @@ export function ModalFrame({
       aria-label={title}
       data-shortcut-barrier=""
       className={styles.backdrop}
-      onMouseDown={onClose}
+      onMouseDown={closeOnBackdrop ? onClose : undefined}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -140,10 +162,8 @@ export function ModalFrame({
         onMouseDown={(event) => event.stopPropagation()}
         onBlur={keepFocus}
       >
-        <div className={styles.bar}>
-          <span className={styles.title}>{title}</span>
-          {lead !== undefined && <div className={styles.lead}>{lead}</div>}
-          {detail !== undefined && <span className={styles.detail}>{detail}</span>}
+        <div className={styles.bar} data-rows={rows || undefined}>
+          {rows ? <div className={styles.head}>{heading}</div> : heading}
           {tools !== undefined && <div className={styles.tools}>{tools}</div>}
           <IconButton size="sm" aria-label={t('dialogs:common.closeNamed', 'Close {{name}}', { name: title })} onClick={onClose}>
             <X size={15} />

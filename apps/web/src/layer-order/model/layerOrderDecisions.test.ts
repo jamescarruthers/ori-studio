@@ -6,12 +6,8 @@
  * and its test here, and no other test.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  LAYER_ORDER_COUNT_FACE_LIMIT,
-  LAYER_ORDER_LABEL_CAP,
-  applyChangedNothing,
-  stepByFor,
-} from './layerOrderDecisions';
+import { LAYER_ORDER_COUNT_MAX_OPEN_PAIRS, LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
+import { applyChangedNothing, stepByFor } from './layerOrderDecisions';
 import { LAYER_ORDER_MODEL_LIMITS, keepTrying } from './layerOrderEngineFacts';
 import {
   SPOTS,
@@ -31,7 +27,7 @@ import {
   sidesOf,
   stacksOf,
 } from './layerOrderModel.fixtures';
-import { addState, applyState, hintLine, openNotice, rowsView, statusView } from './layerOrderSelectors';
+import { addState, applyState, hintLine, openNotice, rowGroupsView, statusView } from './layerOrderSelectors';
 
 describe('decisions', () => {
   it('D5: X-ray steps through every layer order, and the status counts what it steps through', () => {
@@ -58,22 +54,42 @@ describe('decisions', () => {
   });
 
   it('D7: past the label cap the hint counts tinted faces; above the face limit the count is skipped and the stepper has no total', () => {
-    // Face 0 overlaps 13 faces, every pair open.
-    const faces = LAYER_ORDER_LABEL_CAP + 2;
-    const others = Array.from({ length: faces - 1 }, (_, i) => i + 1);
-    const wide = openFactsOf({
-      faces,
-      frontUp: new Uint8Array(faces).fill(1),
-      openPairs: Uint32Array.from(others.flatMap((face) => [0, face])),
-      stacks: { front: stacksOf([[0, ...others]]), back: stacksOf([[...others].reverse().concat(0)]) },
+    // Face 0 overlaps `objects` faces, every pair open. The cap is the budgets' one (50, census 2).
+    const subjectWith = (objects: number) => {
+      const others = Array.from({ length: objects }, (_, i) => i + 1);
+      const wide = openFactsOf({
+        faces: objects + 1,
+        frontUp: new Uint8Array(objects + 1).fill(1),
+        openPairs: Uint32Array.from(others.flatMap((face) => [0, face])),
+        stacks: { front: stacksOf([[0, ...others]]), back: stacksOf([[...others].reverse().concat(0)]) },
+      });
+      return dispatch(opened(wide).state, { type: 'face_picked', face: 0, origin: 'pattern' }).state;
+    };
+    expect(LAYER_ORDER_LABEL_CAP).toBe(50);
+    const past = LAYER_ORDER_LABEL_CAP + 1;
+    expect(hintLine(subjectWith(past))?.text).toEqual({ key: 'pick_object', objects: past, tinted: true });
+    expect(hintLine(subjectWith(LAYER_ORDER_LABEL_CAP))?.text).toEqual({
+      key: 'pick_object',
+      objects: LAYER_ORDER_LABEL_CAP,
+      tinted: false,
     });
-    const subject = dispatch(opened(wide).state, { type: 'face_picked', face: 0, origin: 'pattern' });
-    expect(hintLine(subject.state)?.text).toEqual({ key: 'pick_object', objects: faces - 1, tinted: true });
     const narrow = dispatch(opened().state, { type: 'face_picked', face: 2, origin: 'pattern' });
     expect(hintLine(narrow.state)?.text).toEqual({ key: 'pick_object', objects: 2, tinted: false });
+  });
 
-    const huge = openFactsOf({ faces: LAYER_ORDER_COUNT_FACE_LIMIT + 1, frontUp: new Uint8Array(LAYER_ORDER_COUNT_FACE_LIMIT + 1) });
-    const skipped = opened(huge);
+  it('D7: the count starts only at 20,000 open pairs or fewer, at the open and after each commit; skipped, the stepper has no total', () => {
+    // Face 0 is open with faces 1…n: n open pairs. The threshold is the budgets' one (census 2).
+    const withOpenPairs = (n: number) => Uint32Array.from(Array.from({ length: n }, (_, i) => [0, i + 1]).flat());
+    const openOn = (n: number) =>
+      opened(openFactsOf({ faces: n + 1, frontUp: new Uint8Array(n + 1), openPairs: withOpenPairs(n) }));
+    const limit = LAYER_ORDER_COUNT_MAX_OPEN_PAIRS;
+    expect(limit).toBe(20_000);
+
+    // At the open: at the threshold it counts, one pair past it it doesn't.
+    const at = openOn(limit);
+    expect(lastOf(at.effects, 'solutions_restart').count).toBe(true);
+    expect(lastOf(at.effects, 'track').fact).toMatchObject({ properties: { solutions_bucket: 'pending' } });
+    const skipped = openOn(limit + 1);
     expect(lastOf(skipped.effects, 'solutions_restart').count).toBe(false);
     expect(lastOf(skipped.effects, 'track').fact).toMatchObject({ properties: { solutions_bucket: 'skipped' } });
     const placed = dispatch(skipped.state, {
@@ -88,6 +104,28 @@ describe('decisions', () => {
       text: { key: 'solution_n', index: 3 },
       stepper: { index: 3, total: null, previous: true, next: true },
     });
+
+    // After a commit: an Add that leaves the threshold's worth starts the count; a removal that reopens one more stops it.
+    const sentence = play(
+      skipped.state,
+      { type: 'face_picked', face: 0, origin: 'pattern' },
+      { type: 'face_picked', face: 1, origin: 'pattern' }
+    );
+    const previewed = play(sentence.state, {
+      type: 'previewed',
+      request: lastOf(sentence.effects, 'preview').request,
+      facts: { verdict: 'fits', token: 1, changed: changedSpots([1]), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+    });
+    // 0 in front of 1 decides the pair 0–1: `limit` pairs are left open.
+    const added = commits(play(previewed.state, { type: 'add' }), withOpenPairs(limit + 1).subarray(2));
+    expect(added.state.solutions.runs).toBe(true);
+    expect(lastOf(added.effects, 'solutions_restart').count).toBe(true);
+    const removed = commits(
+      play(added.state, { type: 'rows_removed', ids: [added.state.rows.committed[0]!.id] }),
+      withOpenPairs(limit + 1)
+    );
+    expect(removed.state.solutions.runs).toBe(false);
+    expect(lastOf(removed.effects, 'solutions_restart').count).toBe(false);
   });
 
   it('D8: Add after a preview runs out of time is disabled, with Keep trying in the hint line', () => {
@@ -121,7 +159,7 @@ describe('decisions', () => {
     expect(dispatch(state, { type: 'apply', at: 2_000 }).effects).toEqual([]);
 
     const first = state.rows.carried[0]!.id;
-    const removed = play(state, { type: 'row_removed', id: first });
+    const removed = play(state, { type: 'rows_removed', ids: [first] });
     // Never one by one: every row left that can apply, in one commit.
     expect(effectsOf(removed.effects, 'commit').map((effect) => effect.constraints)).toEqual([[[0, 2, 1], [4, 5, -1]]]);
     expect(applyState(removed.state)).toEqual({ enabled: false, why: 'unsettled' });
@@ -143,11 +181,11 @@ describe('decisions', () => {
     });
     const review = opened(flagged, { hasRecord: true, review: true }).state;
     expect(review.reviewRows).toEqual([review.rows.carried[0]!.id]);
-    expect(rowsView(review).map((row) => row.flagged)).toEqual([false, true]);
+    expect(rowGroupsView(review).map((row) => row.flagged)).toEqual([false, true]);
 
     const plain = opened(flagged, { hasRecord: true, review: false }).state;
     expect(plain.reviewRows).toBeNull();
-    expect(rowsView(plain).some((row) => row.flagged)).toBe(false);
+    expect(rowGroupsView(plain).some((row) => row.flagged)).toBe(false);
   });
 
   it('D16: an Apply that changed nothing writes nothing; a browsed solution with no constraints writes a record', () => {

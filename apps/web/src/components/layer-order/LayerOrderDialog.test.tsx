@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   FAKE_LAYER_ORDER_FIGURE,
   FAKE_LAYER_ORDER_SOURCE,
+  FAKE_NO_NODES,
   FakeLayerOrderWorker,
   createFakeLayerOrderBackend,
   fakeLayerOrderScene,
@@ -27,6 +28,7 @@ import {
 } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { resetLayerOrderDialogStoreForTest } from '../../layer-order/dialog/layerOrderDialogStore';
 import { isShortcutBarrierOpen } from '../../keyboard/shortcutDispatcher';
+import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
@@ -38,6 +40,28 @@ import { LayerOrderDialogMount } from './LayerOrderDialogMount';
 
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
+
+/** D7's threshold as the session asks it, or the real one when `starts` is null. */
+const budget = vi.hoisted(() => ({ starts: null as boolean | null }));
+vi.mock('../../layer-order/layerOrderBudgets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../layer-order/layerOrderBudgets')>();
+  return {
+    ...actual,
+    layerOrderCountStarts: (openPairs: number) => budget.starts ?? actual.layerOrderCountStarts(openPairs),
+  };
+});
+
+/** A pane that throws once the session is ready, when asked: a dialog that crashes. */
+const boom = vi.hoisted(() => ({ whenReady: false }));
+vi.mock('./LayerOrderPanesPlaceholder', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./LayerOrderPanesPlaceholder')>();
+  return {
+    LayerOrderPanesPlaceholder: (props: Parameters<typeof original.LayerOrderPanesPlaceholder>[0]) => {
+      if (boom.whenReady && props.status.kind === 'ready') throw new Error('a pane crashed');
+      return original.LayerOrderPanesPlaceholder(props);
+    },
+  };
+});
 
 /** How often the dialog's chunk was loaded: its module evaluated. */
 const chunk = vi.hoisted(() => ({ loads: 0 }));
@@ -69,6 +93,15 @@ const REQUEST: LayerOrderRequest = {
   look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
   shown: SHOWN,
   name: 'Kabuto',
+  byline: 'Traditional',
+};
+const savedFace = (k: number) => ({ at: FAKE_LAYER_ORDER_FIGURE.facePoints[k]!, area: 100 });
+/** A saved record of one row: face D over face A. */
+const RECORD: LayerOrderRecord = { faces: [savedFace(3), savedFace(0)], constraints: [[0, 1, 1]], order: [] };
+/** A host showing 1 over 0, which the creases forbid: the dialog opens on the closest order that folds (D19). */
+const CANT_FOLD_REQUEST: LayerOrderRequest = {
+  ...REQUEST,
+  shown: fakeLayerOrderScene(FAKE_LAYER_ORDER_FIGURE, [1, 0, 2, 3], 'front'),
 };
 
 let host: HTMLDivElement;
@@ -77,6 +110,8 @@ let root: Root;
 beforeEach(() => {
   spawned.length = 0;
   makeBackend = () => createFakeLayerOrderBackend();
+  budget.starts = null;
+  boom.whenReady = false;
   monitoring.reportError.mockClear();
   vi.stubGlobal('Worker', SpyWorker);
   host = document.createElement('div');
@@ -139,13 +174,13 @@ function holdingOpen(): { release: () => void } {
   return { release: () => held.release() };
 }
 
-/** A backend whose opens refuse with `refusal`, the first `times` times; the limits each open ran with. */
+/** Backends whose opens refuse with `refusal`, the first `times` times across workers; the limits each open ran with. */
 function refusing(refusal: LayerRefusal, times = Infinity): LayerOrderLimits[] {
   const seen: LayerOrderLimits[] = [];
+  let left = times;
   makeBackend = () => {
     const backend = createFakeLayerOrderBackend();
     const open = backend.openShowing;
-    let left = times;
     backend.openShowing = async (source, relations, limits) => {
       seen.push(limits);
       if (left-- > 0) return { status: 'refused', refusal };
@@ -192,7 +227,7 @@ describe('the Layer order dialog’s door', () => {
 });
 
 describe('the Layer order dialog’s session', () => {
-  it('opens working, with Cancel; then ready; and Apply hands the host its fold', async () => {
+  it('opens working, with Cancel; then ready; and Apply on the host’s own order changes nothing (D16)', async () => {
     const held = holdingOpen();
     mount();
     const { outcome } = await opened();
@@ -206,27 +241,60 @@ describe('the Layer order dialog’s session', () => {
     expect(button('Apply').title).toBe('Nothing to apply yet');
     // A shortcut barrier: the workspace's keys and its menus' Undo stay behind it.
     expect(isShortcutBarrierOpen()).toBe(true);
-    // The host's name follows the title on a wide screen; there is no pane switch.
-    expect(openDialog().textContent).toContain('Kabuto');
+    // The title row: "Layer order │ Kabuto Traditional" on a wide screen, and no pane switch.
+    expect(button('Close Layer order').parentElement?.textContent).toBe('Layer orderKabutoTraditional');
     expect(queryByRole(openDialog(), 'group', 'Pane')).toBeNull();
 
     held.release();
     await until(isReady, 'the session opened');
     expect(byRole(openDialog(), 'region', 'Folded figure')).toBeDefined();
     expect(button('Apply').getAttribute('aria-disabled')).toBeNull();
-    expect(spawned[0]!.backend.calls).toEqual(['openShowing', 'stacks', 'stacks', 'scene', 'scene']);
+    // The open, then what the panes draw; the count only after.
+    expect(spawned[0]!.backend.calls.slice(0, 5)).toEqual(['openShowing', 'stacks', 'stacks', 'scene', 'scene']);
 
+    // The order the host shows, held whole, with nothing added: the host writes nothing, and nothing is saved.
     click(button('Apply'));
-    const answer = await outcome;
-    if (answer.kind !== 'applied') throw new Error(`expected applied: ${answer.kind}`);
-    expect(answer.applied.source).toBe(REQUEST.source);
-    expect(Array.from(answer.applied.relations)).toEqual([0, 1, 2, 0, 2, 1, 2, 3, 3, 0, 3, 1]);
-    expect(answer.applied.record.constraints).toEqual([]);
+    await expect(outcome).resolves.toEqual({ kind: 'unchanged' });
+    expect(spawned[0]!.backend.calls).not.toContain('save');
     await flush();
     expect(dialog()).toBeNull();
     expect(isShortcutBarrierOpen()).toBe(false);
     expect(spawned[0]!.terminated).toBe(true);
     expect(monitoring.reportError).not.toHaveBeenCalled();
+  });
+
+  it('Apply on an order that isn’t the host’s (D19) saves, and hands the host its fold', async () => {
+    mount();
+    const { outcome } = await opened(CANT_FOLD_REQUEST);
+    await until(isReady, 'the session opened');
+    click(button('Apply'));
+    const answer = await outcome;
+    if (answer.kind !== 'applied') throw new Error(`expected applied: ${answer.kind}`);
+    expect(answer.applied.source).toBe(CANT_FOLD_REQUEST.source);
+    // The closest order that folds, 0 over 1 over 2 over 3, as the host's kernel takes it.
+    expect(Array.from(answer.applied.relations)).toEqual([0, 1, 0, 2, 0, 3, 1, 2, 1, 3, 2, 3]);
+    expect(answer.applied.record.constraints).toEqual([]);
+    expect(spawned[0]!.backend.calls.slice(-2)).toEqual(['save', 'relations']);
+    await flush();
+    expect(spawned[0]!.terminated).toBe(true);
+  });
+
+  it('a press on the backdrop leaves it open: only Cancel, Escape and the close button close it', async () => {
+    mount();
+    const { outcome } = await opened();
+    await until(isReady, 'the session opened');
+    let settled = false;
+    void outcome.then(() => {
+      settled = true;
+    });
+    act(() => {
+      openDialog().dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    await flush();
+    expect(settled).toBe(false);
+    expect(dialog()).not.toBeNull();
+    click(button('Close Layer order'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
   });
 
   it('Cancel while it opens terminates the worker at once and answers cancelled', async () => {
@@ -258,6 +326,10 @@ describe('the Layer order dialog’s session', () => {
     mount();
     const { outcome } = await opened();
     await until(() => alert(/couldn’t match its faces/) !== null, 'the refusal showed');
+    // The board's form, naming what the host calls the fold, never the host.
+    expect(alert(/couldn’t match its faces/)?.textContent).toBe(
+      'Layer order couldn’t match its faces to the ones this figure was folded with, so it can’t open on Kabuto. Nothing was changed.'
+    );
     expect(queryByRole(openDialog(), 'region', 'Folded figure')).toBeNull();
     expect(byRole(openDialog(), 'region', 'Crease pattern')).toBeDefined();
     expect(queryByRole(openDialog(), 'complementary', 'Layer order details')).toBeNull();
@@ -280,11 +352,14 @@ describe('the Layer order dialog’s session', () => {
     );
   });
 
-  it('an open that ran out offers Keep trying, which opens again with later limits', async () => {
+  it('an open that ran out says so quietly and offers Keep trying, which opens again with later limits', async () => {
     const seen = refusing({ code: 'session_timed_out', limit: 'deadline', nodes: 10 }, 1);
     mount();
     await opened();
     await until(() => queryByRole(openDialog(), 'button', 'Keep trying') !== null, 'Keep trying showed');
+    // The quiet tone: a timeout is not a refusal.
+    expect(byRole(openDialog(), 'status', /in time/).textContent).toContain('Couldn’t work out this figure’s layer orders in time.');
+    expect(alert(/in time/)).toBeNull();
     click(button('Keep trying'));
     await until(isReady, 'the second open');
     expect(seen).toHaveLength(2);
@@ -292,6 +367,22 @@ describe('the Layer order dialog’s session', () => {
     expect(seen[1]!.maxNodes).toBeGreaterThan(seen[0]!.maxNodes);
     // On the same worker: a timeout is an answer, not a loss.
     expect(spawned).toHaveLength(1);
+
+    // A crash after that: Try again opens with the limits the session last opened with, not the defaults.
+    act(() => spawned[0]!.crash());
+    await until(() => alert(/stopped unexpectedly/) !== null, 'the loss showed');
+    click(button('Try again'));
+    await until(isReady, 'the reopen');
+    expect(seen).toHaveLength(3);
+    expect(seen[2]).toEqual(seen[1]);
+  });
+
+  it('a record saved by a newer Ori Studio says so in the board’s words', async () => {
+    refusing({ code: 'record_newer' });
+    mount();
+    await opened();
+    await until(() => alert(/newer Ori Studio/) !== null, 'the refusal showed');
+    expect(alert(/newer Ori Studio/)?.textContent).toBe('Made with a newer Ori Studio: its layer constraints can’t be changed here.');
   });
 
   it('a lost engine says so, reported once by the runtime; Try again opens on a fresh worker', async () => {
@@ -315,6 +406,76 @@ describe('the Layer order dialog’s session', () => {
     expect(monitoring.reportError).toHaveBeenCalledTimes(1);
   });
 
+  it('a worker the browser couldn’t load says so, reported to no one; Try again opens on a fresh worker', async () => {
+    holdingOpen();
+    mount();
+    await opened();
+    await flush();
+    act(() => spawned[0]!.failToLoad());
+    await until(() => alert(/couldn’t load/) !== null, 'the load failure showed');
+    expect(alert(/couldn’t load/)?.textContent).toContain('Check your connection, then try again.');
+    // Never the crash's sentence for a load.
+    expect(alert(/stopped unexpectedly/)).toBeNull();
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+
+    makeBackend = () => createFakeLayerOrderBackend();
+    click(button('Try again'));
+    await until(isReady, 'the session reopened');
+    expect(spawned).toHaveLength(2);
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+  });
+
+  it('a Fold wasm that didn’t arrive says so, reported to no one; one that failed otherwise is reported once', async () => {
+    let message = 'Failed to fetch';
+    makeBackend = () => {
+      const backend = createFakeLayerOrderBackend();
+      backend.openShowing = async () => {
+        throw { code: 'layer_order_engine_unavailable', message };
+      };
+      return backend;
+    };
+    mount();
+    const { outcome } = await opened();
+    await until(() => alert(/couldn’t load/) !== null, 'the load failure showed');
+    expect(alert(/stopped unexpectedly/)).toBeNull();
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+
+    // Offline, whatever the wording: still a load.
+    vi.stubGlobal('navigator', { ...navigator, onLine: false });
+    message = 'WebAssembly.Memory(): could not allocate memory';
+    click(button('Try again'));
+    await until(() => !working(), 'the second open answered');
+    expect(alert(/couldn’t load/)).not.toBeNull();
+    expect(alert(/stopped unexpectedly/)).toBeNull();
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+    vi.stubGlobal('navigator', { ...navigator, onLine: true });
+    click(button('Try again'));
+    await until(() => alert(/stopped unexpectedly/) !== null, 'the failure showed');
+    expect(monitoring.reportError).toHaveBeenCalledTimes(1);
+    expect(monitoring.reportError.mock.calls[0]![1]).toEqual({ surface: 'layer-order:dialog', tags: { call: 'open' } });
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+  });
+
+  it('counts the solutions once open, and only when few enough pairs are open', async () => {
+    const slices = (index: number) => spawned[index]!.backend.calls.filter((call) => call === 'countSlice').length;
+    mount();
+    let { outcome } = await opened();
+    await until(isReady, 'the session opened');
+    await until(() => slices(0) > 0, 'the count ran');
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+
+    // Past D7's threshold the count never starts.
+    budget.starts = false;
+    ({ outcome } = await opened());
+    await until(isReady, 'the session opened');
+    await flush(20);
+    expect(slices(1)).toBe(0);
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+  });
+
   it('a worker that dies after the open loses the session too', async () => {
     mount();
     await opened();
@@ -324,6 +485,45 @@ describe('the Layer order dialog’s session', () => {
     expect(button('Apply').getAttribute('aria-disabled')).toBe('true');
   });
 
+  it('a restore whose saved rows clash keeps Apply waiting, with the board’s reason (D10)', async () => {
+    mount();
+    // Face D over A, and A over D: the two rows clash, so neither is applied.
+    const { outcome } = await opened({ ...REQUEST, record: { ...RECORD, constraints: [[0, 1, 1], [0, 1, -1]] } });
+    await until(isReady, 'the session opened');
+    expect(spawned[0]!.backend.calls[0]).toBe('restore');
+    expect(button('Apply').getAttribute('aria-disabled')).toBe('true');
+    expect(button('Apply').title).toBe('Remove one of the clashing constraints to apply');
+
+    // Pressing it writes nothing and leaves the dialog open: only Cancel closes it.
+    click(button('Apply'));
+    await flush();
+    expect(dialog()).not.toBeNull();
+    expect(spawned[0]!.backend.calls).not.toContain('save');
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+  });
+
+  it('a restore whose check ran out of time keeps Apply waiting: its rows were never checked (D10)', async () => {
+    makeBackend = () => {
+      const backend = createFakeLayerOrderBackend();
+      const restore = backend.restore;
+      backend.restore = (source, record) => restore(source, record, FAKE_NO_NODES);
+      return backend;
+    };
+    mount();
+    const { outcome } = await opened({ ...REQUEST, record: RECORD });
+    await until(isReady, 'the session opened');
+    expect(button('Apply').getAttribute('aria-disabled')).toBe('true');
+    expect(button('Apply').title).toBe('The saved constraints haven’t been checked yet');
+
+    click(button('Apply'));
+    await flush();
+    expect(dialog()).not.toBeNull();
+    expect(spawned[0]!.backend.calls).not.toContain('save');
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+  });
+
   it('a record over its budget keeps the dialog open, with the reason in the foot', async () => {
     makeBackend = () => {
       const backend = createFakeLayerOrderBackend();
@@ -331,12 +531,48 @@ describe('the Layer order dialog’s session', () => {
       return backend;
     };
     mount();
-    const { outcome } = await opened();
+    const { outcome } = await opened(CANT_FOLD_REQUEST);
     await until(isReady, 'the session opened');
     click(button('Apply'));
-    await until(() => openDialog().textContent?.includes('too large to save') ?? false, 'the reason showed');
+    await until(() => alert(/too large to save/) !== null, 'the reason showed');
+    expect(alert(/too large to save/)?.textContent).toBe('This layer order is too large to save with the figure.');
     click(button('Cancel'));
     await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+  });
+
+  it('a dialog that crashes answers cancelled at once, and its fallback stays, with Close, until it is closed', async () => {
+    boom.whenReady = true;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mount();
+    let outcome!: Promise<LayerOrderDialogOutcome>;
+    act(() => {
+      outcome = openLayerOrderDialog(REQUEST);
+    });
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+    await flush();
+    // Reported by the boundary, the worker gone, and the fallback still on screen.
+    expect(monitoring.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'a pane crashed' }),
+      expect.objectContaining({ surface: 'overlay:layer-order' })
+    );
+    expect(spawned.every((worker) => worker.terminated)).toBe(true);
+    expect(byRole(document, 'alert', /This dialog stopped working/)).toBeDefined();
+    await flush();
+    expect(queryByRole(document, 'alert', /This dialog stopped working/)).not.toBeNull();
+    // Its host has its answer, so there is nothing to try again: Close, not Try again.
+    const fallback = byRole(document, 'alert', /This dialog stopped working/);
+    expect(queryByRole(fallback, 'button', /Try again/)).toBeNull();
+
+    click(byRole(fallback, 'button', 'Close'));
+    expect(queryByRole(document, 'alert', /This dialog stopped working/)).toBeNull();
+
+    // The next open is not busy, and opens.
+    boom.whenReady = false;
+    const { outcome: next } = await opened();
+    await until(isReady, 'the next open');
+    click(button('Cancel'));
+    await expect(next).resolves.toEqual({ kind: 'cancelled' });
+    vi.mocked(console.error).mockRestore();
   });
 });
 

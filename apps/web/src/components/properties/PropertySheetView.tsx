@@ -19,6 +19,7 @@ import {
   TextRow,
   ToggleRow,
 } from '../ui/fieldRows';
+import styles from './PropertySheetView.module.css';
 
 /**
  * Attributes a host puts on the sheet's own DOM and on every menu the sheet
@@ -67,16 +68,20 @@ export function PropertySheetView({
 }) {
   const Icon = sheet.icon ? SHEET_ICONS[sheet.icon] : undefined;
   return (
-    <div className="property-sheet" {...surfaceProps}>
-      <header className="property-sheet__header">
+    <div className={styles.sheet} data-property-sheet="" {...surfaceProps}>
+      <header className={styles.header}>
         {Icon && (
-          <span className="property-sheet__icon">
+          <span className={styles.icon}>
             <Icon size={14} aria-hidden />
           </span>
         )}
-        <div className="property-sheet__titles">
-          <h2 className="property-sheet__title">{sheet.title}</h2>
-          {sheet.subtitle && <span className="property-sheet__subtitle">{sheet.subtitle}</span>}
+        <div className={styles.titles}>
+          <h2 className={styles.title}>{sheet.title}</h2>
+          {sheet.subtitle && (
+            <span className={styles.subtitle} data-property-sheet-subtitle="">
+              {sheet.subtitle}
+            </span>
+          )}
         </div>
       </header>
       {sheet.sections.map((section) => (
@@ -109,7 +114,7 @@ function SectionView({
   // fold behind, the shape a one-section sheet wants.
   if (section.title === undefined) {
     return (
-      <div className="property-sheet__section">
+      <div className={styles.section} data-property-sheet-section="">
         {section.description && <p className="collapsible-section__hint">{section.description}</p>}
         {rows}
       </div>

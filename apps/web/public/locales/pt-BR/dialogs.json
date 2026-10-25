@@ -510,6 +510,8 @@
   },
   "layerOrder": {
     "apply": "Aplicar",
+    "applyBusy": "Aguarde a verificação terminar",
+    "applyClash": "Remova uma das restrições em conflito para aplicar",
     "applying": "Salvando a ordem das camadas…",
     "applyNothing": "Nada para aplicar",
     "applyOpening": "Ainda não há nada para aplicar",
@@ -517,6 +519,7 @@
       "other": "Não foi possível salvar esta ordem das camadas. Nada foi alterado.",
       "tooLarge": "Esta ordem das camadas é grande demais para ser salva com a figura."
     },
+    "applyUnsettled": "As restrições salvas ainda não foram verificadas",
     "cancel": "Cancelar",
     "creasePane": "Padrão de vincos",
     "details": "Detalhes da ordem das camadas",
@@ -524,6 +527,7 @@
     "foldedPane": "Figura dobrada",
     "keepTrying": "Continuar tentando",
     "lost": "Ordem das camadas parou inesperadamente. Nada foi alterado.",
+    "lostLoad": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo.",
     "opening": "Calculando as ordens das camadas…",
     "pane": {
       "creasePattern": "Padrão de vincos",
@@ -533,11 +537,12 @@
     "refused": {
       "ambiguousOverlap": "Algumas faces desta figura se sobrepõem de forma próxima demais para saber qual cobre qual, então Ordem das camadas não pode abri-la. Nada foi alterado.",
       "digestMismatch": "Ordem das camadas não conseguiu associar suas faces às usadas para dobrar esta figura, então não pode abri-la. Nada foi alterado.",
+      "digestMismatchNamed": "Ordem das camadas não conseguiu associar suas faces às usadas para dobrar esta figura, então não pode abrir {{name}}. Nada foi alterado.",
       "noFaces": "Esta figura não tem faces para ordenar.",
       "nonConvex": "Uma face desta figura não é convexa. Ordem das camadas ainda não funciona com faces não convexas.",
       "nonConvexFace": "A face {{face}} não é convexa. Ordem das camadas ainda não funciona com faces não convexas.",
       "noOrder": "Não foi possível determinar a ordem das camadas desta figura.",
-      "recordNewer": "As restrições desta figura foram salvas por uma versão mais recente do Ori Studio. Atualize o Ori Studio para alterá-las.",
+      "recordNewer": "Feito com uma versão mais recente do Ori Studio: suas restrições de camadas não podem ser alteradas aqui.",
       "recordTooLarge": "As restrições salvas desta figura são grandes demais para abrir. Nada foi alterado.",
       "recordUnreadable": "Não foi possível ler as restrições salvas desta figura, então Ordem das camadas não pode abri-las. Nada foi alterado.",
       "timedOut": "Não foi possível calcular a tempo as ordens das camadas desta figura.",

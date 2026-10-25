@@ -215,6 +215,7 @@ describe('the count, between calls', () => {
   function counting(slice: LayerOrderLimits = FAKE_ONE_ORDER_SLICE) {
     const fake = fakeLayerOrderWorkers();
     const runtime = createLayerOrderRuntime({ role: 'dialog', spawn: fake.spawn, count: slice });
+    runtime.setCounting(true);
     const heard: (LayerSolutionCount | null)[] = [];
     runtime.onCount((count) => heard.push(count));
     const worker = (index = 0): FakeLayerOrderWorker => fake.workers[index]!;
@@ -390,6 +391,7 @@ describe('the count, between calls', () => {
       },
     }));
     const runtime = createLayerOrderRuntime({ role: 'dialog', spawn: fake.spawn, count: FAKE_LIMITS });
+    runtime.setCounting(true);
     await runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
     await vi.waitFor(() => expect(monitoring.reportError).toHaveBeenCalledTimes(1), { interval: 2 });
     await settle();
@@ -420,7 +422,97 @@ describe('the count, between calls', () => {
   });
 });
 
+describe('turning the count on and off', () => {
+  const slicesOf = (worker: FakeLayerOrderWorker) =>
+    worker.backend.calls.filter((call) => call === 'countSlice').length;
+
+  it('never counts until its owner turns it on, slice limits given or not', async () => {
+    for (const count of [undefined, FAKE_ONE_ORDER_SLICE]) {
+      const fake = fakeLayerOrderWorkers();
+      const runtime = createLayerOrderRuntime({ role: 'dialog', spawn: fake.spawn, ...(count ? { count } : {}) });
+      await runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+      await runtime.engine.stacks('front');
+      await settle();
+      expect(runtime.counting()).toBe(false);
+      expect(fake.workers[0]!.backend.calls).toEqual(['open', 'stacks']);
+      expect(runtime.count()).toBeNull();
+      runtime.dispose();
+    }
+  });
+
+  it('counts between calls once on, stops and reads null when off, and goes on from the cursor when on again', async () => {
+    const fake = fakeLayerOrderWorkers();
+    const runtime = createLayerOrderRuntime({ role: 'dialog', spawn: fake.spawn, count: FAKE_ONE_ORDER_SLICE });
+    const heard: (LayerSolutionCount | null)[] = [];
+    runtime.onCount((count) => heard.push(count));
+    await runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+    await settle();
+    expect(slicesOf(fake.workers[0]!)).toBe(0);
+
+    // On after the open, with nothing else asked: the count starts by itself.
+    runtime.setCounting(true);
+    expect(runtime.counting()).toBe(true);
+    await vi.waitFor(() => expect(slicesOf(fake.workers[0]!)).toBeGreaterThanOrEqual(3), { interval: 2 });
+
+    runtime.setCounting(false);
+    expect(runtime.count()).toBeNull();
+    expect(heard.at(-1)).toBeNull();
+    // At most the slice already in the worker answers, and it is not published.
+    await settle();
+    const stopped = slicesOf(fake.workers[0]!);
+    await runtime.engine.stacks('front');
+    await settle();
+    expect(slicesOf(fake.workers[0]!)).toBe(stopped);
+    expect(runtime.count()).toBeNull();
+
+    // On again: the same cursor goes on to the end, from where it was, not from the start.
+    runtime.setCounting(true);
+    await vi.waitFor(() => expect(runtime.count()?.done).toBe(true), { timeout: 2_000, interval: 2 });
+    // The toy figure has 24 orders, read one a slice: one cursor for the whole count.
+    expect(slicesOf(fake.workers[0]!)).toBeLessThanOrEqual(25);
+    expect(runtime.count()?.orders.n).toBe(12);
+    runtime.dispose();
+  });
+
+  it('stays as it was across an open and a loss', async () => {
+    const fake = fakeLayerOrderWorkers();
+    const runtime = createLayerOrderRuntime({ role: 'dialog', spawn: fake.spawn, count: FAKE_LIMITS });
+    runtime.setCounting(true);
+    await runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+    await vi.waitFor(() => expect(runtime.count()?.done).toBe(true), { interval: 2 });
+    runtime.cancel();
+    expect(runtime.counting()).toBe(true);
+    expect(runtime.count()).toBeNull();
+    await runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+    await vi.waitFor(() => expect(runtime.count()?.done).toBe(true), { interval: 2 });
+    expect(slicesOf(fake.workers[1]!)).toBeGreaterThan(0);
+    runtime.dispose();
+  });
+});
+
 describe('engine loss', () => {
+  it('a worker that never loads rejects every call on it as unloaded, and is reported to no one', async () => {
+    const { fake, runtime, worker } = opened();
+    const heard: unknown[][] = [];
+    runtime.onLost((...args) => heard.push(args));
+    const opening = runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS).catch((e: unknown) => e);
+    worker().backend.hold('open');
+    worker().failToLoad();
+
+    await expect(opening).resolves.toEqual({
+      code: 'layer_order_engine_lost',
+      reason: 'unloaded',
+      message: 'The layer order engine did not load.',
+      loadFailed: true,
+    });
+    expect(worker().terminated).toBe(true);
+    expect(heard).toEqual([['unloaded', undefined]]);
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+    // Try again: a fresh worker.
+    await expect(runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS)).resolves.toMatchObject({ status: 'ok' });
+    expect(fake.workers).toHaveLength(2);
+  });
+
   it('a worker that dies rejects every call on it as crashed, and is reported once', async () => {
     const { fake, runtime, worker } = opened();
     const heard: unknown[][] = [];
@@ -484,6 +576,7 @@ describe('engine loss', () => {
   it('a slice that traps drops the worker as any call does, and the count with it', async () => {
     const fake = fakeLayerOrderWorkers();
     const runtime = createLayerOrderRuntime({ role: 'dialog', spawn: fake.spawn, count: FAKE_LIMITS });
+    runtime.setCounting(true);
     const opening = runtime.engine.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
     fake.workers[0]!.backend.trapNext('countSlice');
     await opening;

@@ -26,13 +26,13 @@ describe('the analytics facts', () => {
       event: 'layer order dialog opened',
       properties: { surface: 'diagram_step', face_count_bucket: '<=500', solutions_bucket: 'pending' },
     });
-    expect(constraintAddedFact('behind', 'folded', 'list')).toEqual({
+    expect(constraintAddedFact('behind', 'folded', 'list', 1)).toEqual({
       event: 'layer constraint added',
-      properties: { verb: 'behind', subject_origin: 'folded', object_origin: 'list' },
+      properties: { verb: 'behind', subject_origin: 'folded', object_origin: 'list', object_count_bucket: '<=1' },
     });
-    expect(constraintBlockedFact(3)).toEqual({
+    expect(constraintBlockedFact(3, 2)).toEqual({
       event: 'layer constraint blocked',
-      properties: { constraint_count_bucket: '<=5' },
+      properties: { constraint_count_bucket: '<=5', object_count_bucket: '<=2' },
     });
     expect(dialogClosedFact('cancelled', 0, '<=10', 42_000)).toEqual({
       event: 'layer order dialog closed',
@@ -47,6 +47,19 @@ describe('the analytics facts', () => {
       event: 'layer constraints need attention',
       properties: { surface: 'edit_figure', broken_count_bucket: '<=2' },
     });
+  });
+
+  it.each([
+    [1, '<=1'],
+    [2, '<=2'],
+    [3, '<=5'],
+    [5, '<=5'],
+    [6, '>5'],
+    [40, '>5'],
+  ])('object_count_bucket buckets %i objects as %s: one, two, a few, many (D21)', (objects, bucket) => {
+    const property = { properties: { object_count_bucket: bucket } };
+    expect(constraintAddedFact('in_front_of', 'pattern', 'pattern', objects)).toMatchObject(property);
+    expect(constraintBlockedFact(0, objects)).toMatchObject(property);
   });
 
   it('a clock that ran backwards buckets as no time, never a negative number', () => {

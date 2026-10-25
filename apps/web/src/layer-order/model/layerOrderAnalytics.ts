@@ -33,6 +33,9 @@ export const LAYER_ORDER_ELAPSED_MS_BUCKETS = [5_000, 15_000, 30_000, 60_000, 18
 /** How many saved constraints an edit left needing attention. */
 export const LAYER_ORDER_BROKEN_COUNT_BUCKETS = [1, 2, 5, 10] as const;
 
+/** A sentence's objects (D21): one, two, a few (3–5), many (6+). */
+export const LAYER_ORDER_OBJECT_COUNT_BUCKETS = [1, 2, 5] as const;
+
 /**
  * The solutions, as `solutions_bucket` sends them: `pending` until the count
  * arrives, `skipped` when it never runs (D7), a bucket when exact, and
@@ -63,12 +66,15 @@ export type LayerOrderFact =
       readonly properties: {
         readonly verb: LayerVerb;
         readonly subject_origin: LayerPickOrigin;
+        /** Where the sentence's first object was picked. */
         readonly object_origin: LayerPickOrigin;
+        /** How many objects the sentence named: once per Add, however many constraints it made (D21). */
+        readonly object_count_bucket: string;
       };
     }
   | {
       readonly event: 'layer constraint blocked';
-      readonly properties: { readonly constraint_count_bucket: string };
+      readonly properties: { readonly constraint_count_bucket: string; readonly object_count_bucket: string };
     }
   | {
       readonly event: 'layer order dialog closed';
@@ -99,22 +105,36 @@ export function dialogOpenedFact(
   };
 }
 
+/** One Add: the sentence's verb, where its faces were picked, and how many objects it named. */
 export function constraintAddedFact(
   verb: LayerVerb,
   subjectOrigin: LayerPickOrigin,
-  objectOrigin: LayerPickOrigin
+  objectOrigin: LayerPickOrigin,
+  objects: number
 ): LayerOrderFact {
   return {
     event: 'layer constraint added',
-    properties: { verb, subject_origin: subjectOrigin, object_origin: objectOrigin },
+    properties: {
+      verb,
+      subject_origin: subjectOrigin,
+      object_origin: objectOrigin,
+      object_count_bucket: bucketCount(objects, LAYER_ORDER_OBJECT_COUNT_BUCKETS),
+    },
   };
 }
 
-/** A complete sentence that can't fit, so Add is disabled; `constraints` is the list it was checked against. */
-export function constraintBlockedFact(constraints: number): LayerOrderFact {
+/**
+ * A complete sentence that can't fit, so Add is disabled, once per sentence:
+ * `constraints` is the list it was checked against, `objects` how many
+ * objects the sentence named.
+ */
+export function constraintBlockedFact(constraints: number, objects: number): LayerOrderFact {
   return {
     event: 'layer constraint blocked',
-    properties: { constraint_count_bucket: bucketCount(constraints, LAYER_ORDER_CONSTRAINT_COUNT_BUCKETS) },
+    properties: {
+      constraint_count_bucket: bucketCount(constraints, LAYER_ORDER_CONSTRAINT_COUNT_BUCKETS),
+      object_count_bucket: bucketCount(objects, LAYER_ORDER_OBJECT_COUNT_BUCKETS),
+    },
   };
 }
 

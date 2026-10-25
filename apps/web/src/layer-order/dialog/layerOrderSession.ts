@@ -99,7 +99,7 @@ export function requestFaceLetters(request: LayerOrderRequest): FaceLetters | nu
  * dialog draws. Resolves `ready` or `refused`; rejects when a call fails.
  */
 export async function openLayerOrderSession(
-  engine: LayerOrderEngine,
+  engine: Pick<LayerOrderEngine, 'open' | 'openShowing' | 'restore' | 'restoreRecord' | 'stacks' | 'scene'>,
   request: LayerOrderRequest,
   limits: LayerOrderLimits,
   { sessionOpen = false }: LayerOrderOpenOptions = {}
@@ -124,6 +124,7 @@ export async function openLayerOrderSession(
   ]);
   const stacks = { front, back };
   const scene = frontScene ?? backScene;
+  const letters = scene ? faceLettersOf(scene) : null;
   return {
     kind: 'ready',
     open: {
@@ -131,8 +132,9 @@ export async function openLayerOrderSession(
       opened: outcome,
       stacks,
       scenes: { front: frontScene, back: backScene },
-      letters: scene ? faceLettersOf(scene) : null,
-      facts: openFacts(outcome, stacks, record),
+      letters,
+      // With no scene to letter, every face ranks alike and sorts by its index.
+      facts: openFacts(outcome, stacks, record, letters?.inLetterOrder ?? []),
     },
   };
 }
@@ -150,7 +152,7 @@ export type LayerOrderApplyAnswer =
  * (U9's `keepCarried`). Rejects when a call fails.
  */
 export async function applyLayerOrderSession(
-  engine: LayerOrderEngine,
+  engine: Pick<LayerOrderEngine, 'save' | 'relations'>,
   request: LayerOrderRequest
 ): Promise<LayerOrderApplyAnswer> {
   const saved = await engine.save();

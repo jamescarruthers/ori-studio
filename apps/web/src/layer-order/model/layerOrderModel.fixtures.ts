@@ -28,6 +28,7 @@ import type {
   LayerStacks,
 } from './layerOrderEngineFacts';
 import { initLayerOrderDialog, layerOrderReducer } from './layerOrderReducer';
+import { rowKeyOf, type LayerRowKey } from './layerOrderRowGroups';
 import type {
   LayerOrderAction,
   LayerOrderDialogInit,
@@ -65,15 +66,18 @@ export function changedSpots(front: number[] = [], back: number[] = []): LayerCh
 
 export const NO_SPOTS = changedSpots();
 
+/** The open's facts; the letters default to face order, A for face 0, over however many faces it has. */
 export function openFactsOf(overrides: Partial<LayerOpenFacts> = {}): LayerOpenFacts {
+  const faces = overrides.faces ?? 7;
   return {
-    faces: 7,
+    faces,
     frontUp: FRONT_UP,
     openPairs: OPEN_PAIRS,
     openedOn: { kind: 'held', ignored: 0 },
     stacks: sidesOf(SPOTS),
     constraints: [],
     restore: null,
+    letterOrder: Array.from({ length: faces }, (_, face) => face),
     ...overrides,
   };
 }
@@ -190,6 +194,13 @@ export function commits(
     request: commit.request,
     facts: { verdict: 'committed', changed, stacks: sidesOf(spots), openPairs },
   });
+}
+
+/** The key of the list row that shows stored constraint `id`: what `row_hovered` and `row_clicked` take. */
+export function rowKey(state: LayerOrderDialogState, id: number): LayerRowKey {
+  const row = [...state.rows.committed, ...state.rows.carried].find((r) => r.id === id);
+  if (!row) throw new Error(`no row ${id}`);
+  return rowKeyOf(row, state.figure);
 }
 
 /** Open, pick 2 in front of 0, preview it fitting, Add it, and land the commit: one committed row, `[2, 0, 1]`. */

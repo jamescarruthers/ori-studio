@@ -23,14 +23,19 @@ import { toast } from 'sonner';
 import i18n from '../../i18n';
 import { lazyModule } from '../../lib/lazyModule';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
+import { reportError } from '../../monitoring';
 import type * as LayerOrderDialogChunk from '../../components/layer-order/LayerOrderDialog';
+import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
 import {
   beginLayerOrderDialog,
   settleLayerOrderDialog,
+  useLayerOrderDialogStore,
+  type LayerOrderDialogOpening,
   type LayerOrderDialogOutcome,
 } from './layerOrderDialogStore';
 
-export type { LayerOrderDialogOutcome } from './layerOrderDialogStore';
+export type { LayerOrderDialogOpening, LayerOrderDialogOutcome } from './layerOrderDialogStore';
+export { registerLayerOrderDialogMount } from './layerOrderDialogStore';
 
 /** The dialog's chunk, as the mount renders it. */
 export type LayerOrderDialogModule = typeof LayerOrderDialogChunk;
@@ -51,12 +56,13 @@ export function openLayerOrderDialog(request: LayerOrderRequest): Promise<LayerO
   const begun = beginLayerOrderDialog(request);
   if (!('opening' in begun)) return Promise.resolve(begun);
   const { id } = begun.opening;
-  dialog.load().catch(() => {
-    // A stale deploy reloads the page (`importOrReload`); what is left is a load that can't
-    // reach the server. Said once, here, so no host has to.
-    if (settleLayerOrderDialog(id, { kind: 'unavailable' })) {
-      toast.error(i18n.t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
-    }
+  dialog.load().catch((error: unknown) => {
+    // A stale deploy reloads the page (`importOrReload`); what is left is mostly a load that
+    // can't reach the server, which is the browser's, not a defect (`layerOrderLoadFailure.ts`):
+    // said once, here, so no host has to, and reported only when it is something else.
+    if (!settleLayerOrderDialog(id, { kind: 'unavailable' })) return;
+    if (!isLayerOrderLoadFailure(error)) reportError(error, { surface: 'layer-order:dialog', tags: { call: 'load' } });
+    toast.error(i18n.t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
   });
   return begun.outcome;
 }
@@ -69,6 +75,20 @@ export function prefetchLayerOrderDialog(): void {
 /** The dialog's code once it has loaded, for the mount's render; never asks for it. */
 export function useLoadedLayerOrderDialog(): LayerOrderDialogModule | null {
   return dialog.useLoaded();
+}
+
+/** The opening the app root's mount shows: null until a host opens the dialog, and again once it settles. */
+export function useLayerOrderDialogOpening(): LayerOrderDialogOpening | null {
+  return useLayerOrderDialogStore((state) => state.opening);
+}
+
+/**
+ * The dialog of opening `id` crashed: its host hears `cancelled` at once, so
+ * it never waits on a dialog that is gone and the next open is not `busy`.
+ * For the mount's error boundary. Whether it was still waiting.
+ */
+export function abandonLayerOrderDialog(id: number): boolean {
+  return settleLayerOrderDialog(id, { kind: 'cancelled' });
 }
 
 export function resetLayerOrderDialogGatewayForTest(): void {

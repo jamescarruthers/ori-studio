@@ -499,6 +499,8 @@
   },
   "layerOrder": {
     "apply": "Apply",
+    "applyBusy": "Wait for the check to finish",
+    "applyClash": "Remove one of the clashing constraints to apply",
     "applying": "Saving the layer order…",
     "applyNothing": "Nothing to apply",
     "applyOpening": "Nothing to apply yet",
@@ -506,6 +508,7 @@
       "other": "Couldn’t save this layer order. Nothing was changed.",
       "tooLarge": "This layer order is too large to save with the figure."
     },
+    "applyUnsettled": "The saved constraints haven’t been checked yet",
     "cancel": "Cancel",
     "creasePane": "Crease pattern",
     "details": "Layer order details",
@@ -513,6 +516,7 @@
     "foldedPane": "Folded figure",
     "keepTrying": "Keep trying",
     "lost": "Layer order stopped unexpectedly. Nothing was changed.",
+    "lostLoad": "Layer order couldn’t load. Check your connection, then try again.",
     "opening": "Working out the layer orders…",
     "pane": {
       "creasePattern": "Crease pattern",
@@ -522,11 +526,12 @@
     "refused": {
       "ambiguousOverlap": "Some of this figure’s faces overlap too closely to tell which covers which, so Layer order can’t open on it. Nothing was changed.",
       "digestMismatch": "Layer order couldn’t match its faces to the ones this figure was folded with, so it can’t open on it. Nothing was changed.",
+      "digestMismatchNamed": "Layer order couldn’t match its faces to the ones this figure was folded with, so it can’t open on {{name}}. Nothing was changed.",
       "noFaces": "This figure has no faces to put in order.",
       "nonConvex": "A face of this figure isn’t convex. Layer order can’t work with non-convex faces yet.",
       "nonConvexFace": "Face {{face}} isn’t convex. Layer order can’t work with non-convex faces yet.",
       "noOrder": "Layer order couldn’t be determined for this figure.",
-      "recordNewer": "This figure’s constraints were saved by a newer version of Ori Studio. Update Ori Studio to change them.",
+      "recordNewer": "Made with a newer Ori Studio: its layer constraints can’t be changed here.",
       "recordTooLarge": "This figure’s saved constraints are too large to open. Nothing was changed.",
       "recordUnreadable": "This figure’s saved constraints couldn’t be read, so Layer order can’t open on them. Nothing was changed.",
       "timedOut": "Couldn’t work out this figure’s layer orders in time.",

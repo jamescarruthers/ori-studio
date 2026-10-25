@@ -48,7 +48,7 @@ describe('the hint line, choosing a subject', () => {
 });
 
 describe('the hint line, choosing an object', () => {
-  it('“Pick one of the N labelled faces”, then “Pick another labelled face to replace D”', () => {
+  it('“Pick one of the N labelled faces”', () => {
     const subject = dispatch(opened().state, { type: 'face_picked', face: 2, origin: 'pattern' });
     expect(hintLine(subject.state)).toEqual(hint({ key: 'pick_object', objects: 2, tinted: false }));
   });
@@ -67,20 +67,20 @@ describe('the hint line, choosing an object', () => {
         stacks: full.state.shown!,
       },
     });
-    expect(hintLine(fitted.state)).toEqual(hint({ key: 'replace_object', object: 5, objects: 1 }));
+    expect(hintLine(fitted.state)).toEqual(hint({ key: 'only_object', object: 5 }));
   });
 });
 
 describe('the panes’ tints and labels', () => {
   it('choosing a subject, every face with choices is pickable and faint; nothing is labelled', () => {
     const marks = paneMarks(opened().state);
-    expect(marks).toMatchObject({ active: 'subject', subject: null, pickable: [0, 2, 3, 4, 5], labelled: [], lit: null });
+    expect(marks).toMatchObject({ active: 'subject', subject: null, pickable: [0, 2, 3, 4, 5], labelled: [], lit: [] });
   });
 
   it('a face lights only when the active slot can take it', () => {
     const { state } = opened();
-    expect(paneMarks(dispatch(state, { type: 'face_hovered', face: 1 }).state).lit).toBeNull();
-    expect(paneMarks(dispatch(state, { type: 'face_hovered', face: 2 }).state).lit).toBe(2);
+    expect(paneMarks(dispatch(state, { type: 'face_hovered', face: 1 }).state).lit).toEqual([]);
+    expect(paneMarks(dispatch(state, { type: 'face_hovered', face: 2 }).state).lit).toEqual([2]);
   });
 
   it('with a subject, its open faces are the pickable objects, labelled with it on both panes', () => {
@@ -93,13 +93,13 @@ describe('the panes’ tints and labels', () => {
       labelled: [2, 0, 3],
     });
     // A face outside them is inert: it doesn't light.
-    expect(paneMarks(dispatch(subject.state, { type: 'face_hovered', face: 4 }).state).lit).toBeNull();
+    expect(paneMarks(dispatch(subject.state, { type: 'face_hovered', face: 4 }).state).lit).toEqual([]);
   });
 
   it('a hovered slot lights its face', () => {
     const full = picked(opened().state, 2, 0);
-    expect(paneMarks(dispatch(full.state, { type: 'slot_hovered', slot: 'subject' }).state).lit).toBe(2);
-    expect(paneMarks(dispatch(full.state, { type: 'slot_hovered', slot: 'object' }).state).lit).toBe(0);
+    expect(paneMarks(dispatch(full.state, { type: 'slot_hovered', slot: 'subject' }).state).lit).toEqual([2]);
+    expect(paneMarks(dispatch(full.state, { type: 'slot_hovered', slot: 'object' }).state).lit).toEqual([0]);
   });
 
   it('nothing is pickable while the dialog is still opening', () => {

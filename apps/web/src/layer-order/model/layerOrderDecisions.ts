@@ -8,10 +8,13 @@
  *
  * Pure: no React, no store, no engine calls.
  */
+import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+import { LAYER_ORDER_LABEL_CAP, layerOrderCountStarts } from '../layerOrderBudgets';
 import {
   keepTrying,
   type LayerConstraint,
   type LayerOpenedOn,
+  type LayerOpenFacts,
   type LayerOrderLimits,
   type LayerSide,
   type LayerSidesStacks,
@@ -36,31 +39,26 @@ export function stepByFor(side: LayerSide, xray: boolean): LayerStepBy {
 // D7: large figures.
 
 /**
- * The label cap: past this many valid objects only the hovered face and the
- * nearest few keep letters (the panes choose which, U8), and the hint counts
- * tinted faces instead of labelled ones. Provisional until phase gate 2 (E8)
- * names N.
+ * Whether a subject's objects are past the label cap
+ * (`LAYER_ORDER_LABEL_CAP`, 50, set by phase gate 2 in `layerOrderBudgets.ts`,
+ * the cap's one source): past it only the hovered face and the nearest few
+ * keep letters (the panes choose which, U8), and the hint counts tinted faces
+ * instead of labelled ones ("tinted").
  */
-export const LAYER_ORDER_LABEL_CAP = 12;
-
-/** Whether a subject's objects are past the label cap, so the hint says "tinted". */
 export function objectsPastLabelCap(objects: number): boolean {
   return objects > LAYER_ORDER_LABEL_CAP;
 }
 
 /**
- * Above this many faces the solution count is skipped. Provisional until
- * phase gate 2 (E8) names the threshold; 4,096 is the source's own face cap,
- * so until then the count always runs.
+ * Whether the background count runs on a session that leaves `openPairs`
+ * pairs open: decided at the open and again after each commit, by phase gate
+ * 2's threshold (`layerOrderCountStarts`, 20,000 open pairs, in
+ * `layerOrderBudgets.ts`, its one source). When it is skipped the stepper
+ * still steps, with no total: the status names the solution shown
+ * ("Solution 3").
  */
-export const LAYER_ORDER_COUNT_FACE_LIMIT = 4_096;
-
-/**
- * Whether the background count runs. When it is skipped the stepper still
- * steps, with no total: the status names the solution shown ("Solution 3").
- */
-export function solutionCountRuns(faces: number): boolean {
-  return faces <= LAYER_ORDER_COUNT_FACE_LIMIT;
+export function solutionCountRuns(openPairs: number): boolean {
+  return layerOrderCountStarts(openPairs);
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +122,54 @@ export interface LayerOrderAtApply {
   readonly constraints: readonly LayerConstraint[];
   readonly carried: readonly number[];
   readonly stacks: LayerSidesStacks;
+}
+
+/**
+ * Whether the host handed a record it flagged after an edit (its
+ * `attention`, set by H4 and H7): then even an untouched Apply writes, so the
+ * host can clear the flag. The one test of it, for both deciders of D16: the
+ * dialog shell asks it of its request, and the reducer's init carries its
+ * answer (`LayerOrderDialogInit.recordNeedsAttention`).
+ */
+export function recordNeedsAttentionOf(record: LayerOrderRecord | null): boolean {
+  return record?.attention !== undefined;
+}
+
+/**
+ * What a session opened on: the reducer keeps it at its open (`opened`), and
+ * an Apply decided outside the reducer asks it too, the dialog shell's before
+ * an inspector (U4's `useLayerOrderSettle`). The order is the host's when it
+ * was held whole (or the closest fit moved nothing), the host flagged nothing
+ * ({@link recordNeedsAttentionOf}), and a restore applied every saved row.
+ */
+export function openedBaseline(facts: LayerOpenFacts, recordNeedsAttention: boolean): LayerOrderBaseline {
+  const carried = (facts.restore?.carried ?? []).map((row) => row.index);
+  const restoredWhole = facts.restore === null || (facts.restore.outcome.kind === 'applied' && carried.length === 0);
+  return {
+    constraints: facts.constraints,
+    carried,
+    stacks: facts.stacks,
+    matchesHost: openedOnHostOrder(facts.openedOn) && !recordNeedsAttention && restoredWhole,
+  };
+}
+
+/**
+ * Why Apply waits on what a session opened on, before an inspector has
+ * changed anything (D10): a restore whose saved rows clash waits for one to
+ * be removed (`clash`), and one that ran out of time for its rows to be
+ * checked (`unsettled`). The reducer's `applyBlocker` says the same at its
+ * open (held equal by a test); the dialog shell asks this until U10's
+ * inspector, which asks the reducer, takes over. Null when it can apply.
+ */
+export function openedApplyBlocker(facts: LayerOpenFacts): 'clash' | 'unsettled' | null {
+  switch (facts.restore?.outcome.kind) {
+    case 'clash':
+      return 'clash';
+    case 'timed_out':
+      return 'unsettled';
+    default:
+      return null;
+  }
 }
 
 /**

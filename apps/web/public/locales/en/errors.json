@@ -2,6 +2,7 @@
   "boundary": {
     "appDescription": "Your work is still in memory but the interface could not recover on its own. Copy the details below before reloading — they tell a developer exactly what went wrong.",
     "appTitle": "Ori Studio ran into a problem",
+    "close": "Close",
     "copied": "Copied",
     "copy": "Copy details",
     "copyFailed": "Couldn't copy",

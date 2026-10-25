@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LayerOrderDialogOpening } from '../../layer-order/dialog/layerOrderDialogStore';
 import { requestFaceLetters } from '../../layer-order/dialog/layerOrderSession';
 import { useLayerOrderSession } from '../../layer-order/dialog/useLayerOrderSession';
@@ -6,6 +7,7 @@ import { useLayerOrderSettle } from '../../layer-order/dialog/useLayerOrderSettl
 import { useModalFullScreen } from '../ui/ModalFrame';
 import { LayerOrderDialogFrame, type LayerOrderPhonePane } from './LayerOrderDialogFrame';
 import { LayerOrderPanesPlaceholder } from './LayerOrderPanesPlaceholder';
+import { applyWaitText } from './layerOrderNotices';
 
 /**
  * The Layer order dialog: the entry of its lazy chunk, which only its gateway
@@ -20,6 +22,7 @@ import { LayerOrderPanesPlaceholder } from './LayerOrderPanesPlaceholder';
  * with a worker of its own, terminated as it closes.
  */
 export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening }) {
+  const { t } = useTranslation();
   const { request } = opening;
   const session = useLayerOrderSession(request);
   const settle = useLayerOrderSettle(opening, session);
@@ -33,15 +36,17 @@ export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening
   return (
     <LayerOrderDialogFrame
       name={request.name}
+      byline={request.byline}
       status={status}
       letters={letters}
       returnFocus={opening.returnFocus}
       phonePane={phonePane}
       onPhonePaneChange={setPane}
-      panes={<LayerOrderPanesPlaceholder status={status} phonePane={phonePane} request={request} />}
+      panes={<LayerOrderPanesPlaceholder status={status} phonePane={phonePane} request={request} letters={letters} />}
       onRetry={() => session.reopen()}
       onCancel={settle.cancel}
       onApply={() => void settle.apply()}
+      applyWaits={settle.waits && applyWaitText(t, settle.waits)}
       applying={settle.applying}
       applyRefusal={settle.applyRefusal}
     />
