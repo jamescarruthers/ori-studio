@@ -28,7 +28,7 @@ export type WorkerName =
   | 'precrease'
   /** The Fold engine's bridge; see store/workspaceStore/foldSequenceRuntime.ts. */
   | 'fold-sequence'
-  /** A Layer order engine: the dialog's session, its count, or a host's; see layer-order/engine/layerOrderRuntime.ts. */
+  /** A Layer order engine: the dialog's session and its count, or a host's; see layer-order/engine/layerOrderRuntime.ts. */
   | 'layer-order'
   /** One diagram PDF, spawned per export and terminated after it; see diagram/export/browserPdfWriter.ts. */
   | 'diagram-pdf'

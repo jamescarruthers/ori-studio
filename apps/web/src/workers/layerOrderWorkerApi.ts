@@ -1,13 +1,12 @@
 /**
  * What `layerOrderWorker.ts` exposes: the Layer order engine's contract
  * (`layer-order/engine/layerOrderEngine.ts`) over a backend that holds the
- * session, kept apart from the worker so tests run it over a fake backend,
- * through comlink, with no wasm.
+ * session, kept apart from the worker so tests run it over a fake backend, or
+ * over the real one in Node, through comlink.
  *
- * The backend is the only part that knows the bridge. U6's is the Fold
- * bridge's `layer_*` bindings (E7) and lives in this directory, the only one
- * that may import the Fold wasm glue; until then the worker's backend is
- * {@link unavailableLayerOrderBackend}.
+ * The backend is the only part that knows the bridge: the worker's is
+ * `layerOrderBridgeBackend.ts`, over the Fold bridge's `layer_*` bindings
+ * (E7). This directory is the only one that may import the Fold wasm glue.
  *
  * What this adds to any backend, in the shape of `foldSequenceWorker.ts`:
  *
@@ -20,8 +19,6 @@
  *   bridge), so this call and every one after it answer
  *   `layer_order_engine_trapped`, without touching the backend again; the
  *   runtime replaces the worker on the first such answer.
- * - **Calls a backend lacks** (E6's, until they land) reject as
- *   `layer_order_unsupported_operation`, naming the call.
  */
 import type { WasmErrorEnvelope } from '../engine/types';
 import { foldEngineTrapOf } from '../fold/engine/foldEngineTrap';
@@ -30,9 +27,6 @@ import {
   isLayerOrderEngineTrapped,
   type LayerOrderEngine,
   type LayerOrderEngineTrapped,
-  type LayerOrderSessionCalls,
-  type LayerOrderSolutionCalls,
-  type LayerOrderUnsupported,
 } from '../layer-order/engine/layerOrderEngine';
 
 /** A call as a backend may answer it: at once, as the bridge's calls do, or later. */
@@ -40,21 +34,11 @@ type Answering<Calls> = {
   [K in keyof Calls]: Calls[K] extends (...args: infer A) => Promise<infer R> ? (...args: A) => R | Promise<R> : never;
 };
 
-/**
- * What hosts the session: every session call, and as many of E6's calls as
- * it has. Its rejections are envelopes; a refusal is a value it returns.
- */
-export type LayerOrderBackend = Answering<LayerOrderSessionCalls> & Partial<Answering<LayerOrderSolutionCalls>>;
+/** What hosts the session: every call of the contract. Its rejections are envelopes; a refusal is a value it returns. */
+export type LayerOrderBackend = Answering<LayerOrderEngine>;
 
 /** Loads the backend, once per worker. */
 export type LayerOrderBackendLoader = () => LayerOrderBackend | Promise<LayerOrderBackend>;
-
-/** The worker's backend until U6 wires the bridge: it never starts, so every call rejects as unavailable. */
-export const unavailableLayerOrderBackend: LayerOrderBackendLoader = () =>
-  Promise.reject({
-    code: LAYER_ORDER_CALL_FAILURES.unavailable,
-    message: 'The layer order engine is not built into this worker yet.',
-  } satisfies WasmErrorEnvelope);
 
 function isEnvelope(error: unknown): error is WasmErrorEnvelope {
   return (
@@ -123,39 +107,28 @@ export function createLayerOrderWorkerApi(load: LayerOrderBackendLoader): LayerO
 
   return {
     open: (source, limits) => call((backend) => backend.open(source, limits)),
+    openShowing: (source, relations, limits) => call((backend) => backend.openShowing(source, relations, limits)),
     restore: (source, record, limits) => call((backend) => backend.restore(source, record, limits)),
+    restoreRecord: (record, limits) => call((backend) => backend.restoreRecord(record, limits)),
+    openedOn: () => call((backend) => backend.openedOn()),
     openPairs: () => call((backend) => backend.openPairs()),
     constraints: () => call((backend) => backend.constraints()),
     preview: (candidate, limits) => call((backend) => backend.preview(candidate, limits)),
+    previewList: (constraints, limits) => call((backend) => backend.previewList(constraints, limits)),
     commit: (constraints, limits) => call((backend) => backend.commit(constraints, limits)),
+    commitPreview: (token, constraints, limits) => call((backend) => backend.commitPreview(token, constraints, limits)),
+    carried: () => call((backend) => backend.carried()),
+    removeCarried: (index) => call((backend) => backend.removeCarried(index)),
+    clearCarried: () => call((backend) => backend.clearCarried()),
     stacks: (side) => call((backend) => backend.stacks(side)),
     scene: (side) => call((backend) => backend.scene(side)),
     save: () => call((backend) => backend.save()),
     relations: () => call((backend) => backend.relations()),
     close: () => call((backend) => backend.close()),
-    explain: (candidate, limits) =>
-      call((backend) => {
-        if (!backend.explain) throw unsupported('explain');
-        return backend.explain(candidate, limits);
-      }),
-    countSolutions: (limits) =>
-      call((backend) => {
-        if (!backend.countSolutions) throw unsupported('countSolutions');
-        return backend.countSolutions(limits);
-      }),
-    stepSolution: (step, limits) =>
-      call((backend) => {
-        if (!backend.stepSolution) throw unsupported('stepSolution');
-        return backend.stepSolution(step, limits);
-      }),
-  };
-}
-
-/** The rejection for one of E6's calls on a backend that has none. */
-function unsupported(operation: keyof LayerOrderSolutionCalls): LayerOrderUnsupported {
-  return {
-    code: LAYER_ORDER_CALL_FAILURES.unsupported,
-    operation,
-    message: `The layer order engine has no ${operation} yet.`,
+    explain: (candidate, limits) => call((backend) => backend.explain(candidate, limits)),
+    explainList: (constraints, limits) => call((backend) => backend.explainList(constraints, limits)),
+    countSlice: (limits) => call((backend) => backend.countSlice(limits)),
+    position: (by) => call((backend) => backend.position(by)),
+    step: (by, direction, limits) => call((backend) => backend.step(by, direction, limits)),
   };
 }
