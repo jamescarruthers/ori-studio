@@ -603,6 +603,27 @@ them. Say if any should change. The rest can wait until the PR named.
   figure's on-canvas rotation. The crease-pattern pane always uses Edit's
   line colours.
 
+*Added 2026-10-25, from E5's census:*
+
+- **D19. When the order Edit shows can't fold** (before U10). On 15 of 480
+  cpoogle designs (about 3%), Oriedita's own order puts a face inside a fold
+  whose crease runs through it. Upstream does the same, and Flat-Folder
+  independently rejects that order on the same faces.
+  - **The cause:** one of the face's corners sits on the crease, about 1e-11
+    off it. Upstream's inside test (`isInside_sweet`) allows only 1e-12
+    there, so Oriedita never creates the three-face condition. The port copies
+    this, as porting discipline requires.
+  - **What happens now:** the dialog can't hold that order. It opens on the
+    closest valid order, which Flat-Folder rates valid on all 15. That order
+    differs from Edit's picture on 163 spots in total, 0 to 68 per design.
+  - *Recommended:* open on the closest valid order and say why in one line,
+    with the face and crease lit on both panes: "Edit's order can't fold here:
+    face H sits inside the fold at a crease through it. Showing the nearest
+    order that folds." Apply then writes the valid order, as any Apply does.
+    This becomes a mock.
+  - *Also proposed:* report the bug upstream to Oriedita, with the
+    triceratops polygon as a self-contained repro.
+
 **Settled by the spec or the design** (no answer needed):
 - Escape closes an open menu first, then cancels (Round3).
 - Front/Back is a lens: constraints are paper-relative, and Apply never turns
@@ -688,7 +709,12 @@ H3's new rehydrate, so it can only follow H3.
 - **CI time.** The web job is near its 30-minute limit on the Fold branches,
   and the layer-order tests add to it.
 - **"Closest fitting order" is a warm-start heuristic,** not a proven minimum.
-  E3's option keeps untouched components exactly as they were.
+  E3's option keeps untouched components exactly as they were. Measured by
+  E5's review, one constraint moved 3,721 pairs on one cpoogle design and
+  changed the top face of 194 of its 386 spots. A search for the smallest
+  change may be worth building later.
+- **Oriedita sometimes shows an order that can't fold** (D19, about 3% of
+  cpoogle). The dialog opens on a different picture on those designs.
 
 ## Affected Areas
 
@@ -769,10 +795,10 @@ H3's new rehydrate, so it can only follow H3.
   - [ ] **Large figures:** the label cap
   - [ ] **Phone layout** and its tap equivalents
   - [ ] **Horizon theme** (the accent and danger colours are the same)
-- [ ] E1: kernel seeded core
-- [ ] E2: kernel entry points and exports
+- [x] E1: kernel seeded core (#494)
+- [x] E2: kernel entry points and exports (#500)
 - [ ] E3: Flat-Folder session additions
-- [ ] E4: source and census 1 (phase gate 1 reviewed)
+- [x] E4: source and census 1 (#503; phase gate 1 passed)
 - [ ] E5: constraint session core
 - [ ] E6: explain and solutions
 - [ ] E7: wasm bridge
@@ -780,12 +806,12 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U1: shared picking and tints (#497)
 - [ ] U2: ModalFrame
 - [ ] U3a: the native-menu guard (to main)
-- [ ] U3b: dialog keys
+- [x] U3b: dialog keys (#498)
 - [x] H1: record, host contract, file formats (#496)
 - [ ] U4: dialog shell
 - [ ] U5: engine client
 - [ ] U6: engine wiring
-- [ ] U7: PaperPane
+- [x] U7: PaperPane (#501)
 - [ ] U8: panes
 - [ ] U9: inspector model
 - [ ] U10: inspector
