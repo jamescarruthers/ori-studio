@@ -518,8 +518,11 @@
       "tooLarge": "Cet ordre des couches est trop volumineux pour être enregistré avec la figure."
     },
     "cancel": "Annuler",
+    "creaseCanvas": "Le patron de plis. Choisissez-y une face ; faites glisser pour déplacer, faites défiler pour zoomer.",
     "creasePane": "Patron de plis",
     "details": "Détails de l’ordre des couches",
+    "foldedCanvasBack": "La figure pliée vue de dos. Choisissez la face du dessus ; faites glisser pour déplacer, faites défiler pour zoomer.",
+    "foldedCanvasFront": "La figure pliée vue de face. Choisissez la face du dessus ; faites glisser pour déplacer, faites défiler pour zoomer.",
     "foldedLoading": "Chargement de la figure pliée",
     "foldedPane": "Figure pliée",
     "keepTrying": "Continuer à essayer",
@@ -547,7 +550,27 @@
       "unreadable": "Ordre des couches n’a pas pu lire comment cette figure se plie : il ne peut pas l’ouvrir. Rien n’a été modifié."
     },
     "title": "Ordre des couches",
-    "tryAgain": "Réessayer"
+    "tryAgain": "Réessayer",
+    "view": {
+      "back": "Verso",
+      "front": "Recto",
+      "side": "Face",
+      "undecided": "Indécis",
+      "undecidedTitle": "Teinter là où la face du dessus n’est pas encore décidée",
+      "xray": "Rayons X",
+      "xrayTitle": "Montrer faiblement toutes les couches de la figure pliée"
+    },
+    "zoom": {
+      "creaseBar": "Vue du patron de plis",
+      "creaseIn": "Zoom avant sur le patron de plis",
+      "creaseOut": "Zoom arrière sur le patron de plis",
+      "creaseReset": "Réinitialiser le zoom du patron de plis",
+      "fit": "Ajuster les deux vues",
+      "foldedBar": "Vue de la figure pliée",
+      "foldedIn": "Zoom avant sur la figure pliée",
+      "foldedOut": "Zoom arrière sur la figure pliée",
+      "foldedReset": "Réinitialiser le zoom de la figure pliée"
+    }
   },
   "number": {
     "tooSmall": "Saisissez un nombre supérieur à {{minimum}}."

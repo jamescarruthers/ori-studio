@@ -518,8 +518,11 @@
       "tooLarge": "Esta ordem das camadas é grande demais para ser salva com a figura."
     },
     "cancel": "Cancelar",
+    "creaseCanvas": "O padrão de vincos. Escolha uma face nele; arraste para mover, role para aplicar zoom.",
     "creasePane": "Padrão de vincos",
     "details": "Detalhes da ordem das camadas",
+    "foldedCanvasBack": "A figura dobrada vista de trás. Escolha a face de cima; arraste para mover, role para aplicar zoom.",
+    "foldedCanvasFront": "A figura dobrada vista de frente. Escolha a face de cima; arraste para mover, role para aplicar zoom.",
     "foldedLoading": "Carregando a figura dobrada",
     "foldedPane": "Figura dobrada",
     "keepTrying": "Continuar tentando",
@@ -547,7 +550,27 @@
       "unreadable": "Ordem das camadas não conseguiu ler como esta figura se dobra, então não pode abri-la. Nada foi alterado."
     },
     "title": "Ordem das camadas",
-    "tryAgain": "Tentar de novo"
+    "tryAgain": "Tentar de novo",
+    "view": {
+      "back": "Verso",
+      "front": "Frente",
+      "side": "Lado",
+      "undecided": "Indefinido",
+      "undecidedTitle": "Colorir os lugares onde a face de cima ainda não está definida",
+      "xray": "Raio X",
+      "xrayTitle": "Mostrar todas as camadas da figura dobrada de forma esmaecida"
+    },
+    "zoom": {
+      "creaseBar": "Visualização do padrão de vincos",
+      "creaseIn": "Ampliar o padrão de vincos",
+      "creaseOut": "Reduzir o padrão de vincos",
+      "creaseReset": "Redefinir o zoom do padrão de vincos",
+      "fit": "Ajustar as duas visualizações",
+      "foldedBar": "Visualização da figura dobrada",
+      "foldedIn": "Ampliar a figura dobrada",
+      "foldedOut": "Reduzir a figura dobrada",
+      "foldedReset": "Redefinir o zoom da figura dobrada"
+    }
   },
   "number": {
     "tooSmall": "Insira um número maior que {{minimum}}."

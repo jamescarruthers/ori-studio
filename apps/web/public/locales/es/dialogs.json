@@ -518,8 +518,11 @@
       "tooLarge": "Este orden de capas es demasiado grande para guardarlo con la figura."
     },
     "cancel": "Cancelar",
+    "creaseCanvas": "El patrón de pliegues. Elige una cara en él; arrastra para mover y desplázate para hacer zoom.",
     "creasePane": "Patrón de pliegues",
     "details": "Detalles del orden de capas",
+    "foldedCanvasBack": "La figura plegada vista desde atrás. Elige la cara de arriba; arrastra para mover y desplázate para hacer zoom.",
+    "foldedCanvasFront": "La figura plegada vista desde delante. Elige la cara de arriba; arrastra para mover y desplázate para hacer zoom.",
     "foldedLoading": "Cargando la figura plegada",
     "foldedPane": "Figura plegada",
     "keepTrying": "Seguir intentando",
@@ -547,7 +550,27 @@
       "unreadable": "Orden de capas no pudo leer cómo se pliega esta figura, así que no puede abrirla. No se cambió nada."
     },
     "title": "Orden de capas",
-    "tryAgain": "Reintentar"
+    "tryAgain": "Reintentar",
+    "view": {
+      "back": "Reverso",
+      "front": "Anverso",
+      "side": "Cara",
+      "undecided": "Sin decidir",
+      "undecidedTitle": "Colorea los lugares donde aún no se ha decidido qué cara queda arriba",
+      "xray": "Rayos X",
+      "xrayTitle": "Mostrar tenuemente todas las capas de la figura plegada"
+    },
+    "zoom": {
+      "creaseBar": "Vista del patrón de pliegues",
+      "creaseIn": "Acercar el patrón de pliegues",
+      "creaseOut": "Alejar el patrón de pliegues",
+      "creaseReset": "Restablecer el zoom del patrón de pliegues",
+      "fit": "Ajustar ambas vistas",
+      "foldedBar": "Vista de la figura plegada",
+      "foldedIn": "Acercar la figura plegada",
+      "foldedOut": "Alejar la figura plegada",
+      "foldedReset": "Restablecer el zoom de la figura plegada"
+    }
   },
   "number": {
     "tooSmall": "Introduce un número mayor que {{minimum}}."

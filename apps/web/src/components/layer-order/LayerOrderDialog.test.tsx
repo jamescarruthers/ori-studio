@@ -39,6 +39,15 @@ import { LayerOrderDialogMount } from './LayerOrderDialogMount';
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
 
+// The panes draw on WebGL, which jsdom has none of: stubbed whole, as the panes' own test stubs it.
+vi.mock('../../cp-workspace/renderer/reglRenderer', () => ({
+  createReglRenderer: () => new Proxy({}, { get: () => () => undefined }),
+}));
+vi.mock('../../cp-workspace/renderer/webglSupport', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../cp-workspace/renderer/webglSupport')>()),
+  cpWebglSupport: () => ({ supported: true }),
+}));
+
 /** How often the dialog's chunk was loaded: its module evaluated. */
 const chunk = vi.hoisted(() => ({ loads: 0 }));
 vi.mock('./LayerOrderDialog', async (importOriginal) => {
