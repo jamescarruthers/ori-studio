@@ -1,0 +1,673 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TFunction } from 'i18next';
+import type {
+  OristudioCpDocumentState,
+  OristudioCpFoldedFigureEntry,
+  OristudioCpFoldedFigureSnapshot,
+  OristudioCpFoldedRenderSnapshot,
+  OristudioCpFoldSource,
+  OristudioCpLineSegment,
+} from '../../engine/oristudioCpTypes';
+import { IDENTITY_FOLDED_PLACEMENT } from '../../engine/oristudioCpTypes';
+import type { LayerOrderSolutionStep } from '../../layer-order/host/hostEngineGateway';
+import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
+
+/**
+ * Another solution within a constrained Edit figure's constraints
+ * (`implementation-plans/layer-order-dialog.md`, row H6, D9), through the
+ * store and the verbs, with the CP kernel and the host engine's solutions
+ * cursor stood in for: the cursor is made on the first press and never
+ * before, stepped by later ones, and let go whenever the figure stops
+ * holding what it last landed — an undo or a redo, an Apply, an edit to its
+ * creases, a Delete, a document closing. Each step that moved is one undo
+ * entry, a new fold of the step's order with the step's record; every other
+ * answer writes nothing, and says why when it is news. An unconstrained
+ * figure makes exactly the kernel calls it always made.
+ */
+
+/** The kernel, as the store reaches it: every call logged by its export's name, in order. */
+const kernel = vi.hoisted(() => ({
+  calls: [] as string[],
+  freed: [] as number[],
+  nextHandle: 9,
+  digest: '00000000c0ffee01',
+  /** What `foldOristudioCpWithOrder` answers: a fold on the next handle unless a test says otherwise. */
+  foldWithOrder: null as null | ((...args: unknown[]) => Promise<unknown>),
+}));
+
+vi.mock('./oristudioCpRuntime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./oristudioCpRuntime')>();
+  const logged =
+    <A extends unknown[], R>(name: string, run: (...args: A) => R) =>
+    (...args: A): R => {
+      kernel.calls.push(name);
+      return run(...args);
+    };
+  return {
+    ...actual,
+    freeOristudioCpFoldedFigure: logged('freeOristudioCpFoldedFigure', async (handle: number) => {
+      kernel.freed.push(handle);
+    }),
+    getOristudioCpFoldedFigureSource: logged('getOristudioCpFoldedFigureSource', async () => kernelSource()),
+    getOristudioCpSelectionFoldSource: logged('getOristudioCpSelectionFoldSource', async () => kernelSource()),
+    foldOristudioCpWithOrder: logged('foldOristudioCpWithOrder', async (...args: unknown[]) => {
+      if (kernel.foldWithOrder) return kernel.foldWithOrder(...args);
+      const handle = kernel.nextHandle++;
+      return { status: 'folded', handle, snapshot: snapshot({ shown_order: 'given' }) };
+    }),
+    getOristudioCpFoldedFigureDigest: logged('getOristudioCpFoldedFigureDigest', async () => kernel.digest),
+    getOristudioCpFoldedFigureRenderSnapshot: logged(
+      'getOristudioCpFoldedFigureRenderSnapshot',
+      async (handle: number) => picture(handle)
+    ),
+    foldOristudioCpFigureAnother: logged('foldOristudioCpFigureAnother', async () =>
+      snapshot({ discovered_fold_cases: 2, current_fold_case: 2 })
+    ),
+    foldOristudioCpFigureToCase: logged('foldOristudioCpFigureToCase', async () => ({
+      snapshot: snapshot({ discovered_fold_cases: 2, current_fold_case: 1 }),
+      discovered_case_numbers: [1, 2],
+    })),
+    setOristudioCpFoldedFigureModel: logged(
+      'setOristudioCpFoldedFigureModel',
+      async (_handle: number, model: OristudioCpFoldedFigureSnapshot['model']) => ({ ...snapshot(), model })
+    ),
+    isCurrentOristudioCpDocumentState: () => true,
+  };
+});
+
+/** The host engine's door: each cursor the press opens is the test's to script. */
+const gateway = vi.hoisted(() => ({ open: vi.fn() }));
+vi.mock('../../layer-order/host/hostEngineGateway', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../layer-order/host/hostEngineGateway')>()),
+  openLayerOrderSolutionCursor: (...args: unknown[]) => gateway.open(...args),
+}));
+
+const analytics = vi.hoisted(() => ({ track: vi.fn() }));
+vi.mock('../../analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../analytics')>()),
+  track: analytics.track,
+}));
+
+/** A browser that can stop a fold: the run's Stop reaches its signal. */
+const cancellation = vi.hoisted(() => ({
+  next: 0,
+  beginFoldRun: () => ++cancellation.next,
+  cancelFoldRun: () => {},
+  foldCancellationAvailable: () => true,
+}));
+vi.mock('../../lib/foldCancellation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/foldCancellation')>()),
+  beginFoldRun: () => cancellation.beginFoldRun(),
+  cancelFoldRun: () => cancellation.cancelFoldRun(),
+  foldCancellationAvailable: () => cancellation.foldCancellationAvailable(),
+}));
+
+const toasts = vi.hoisted(() => {
+  const toast = Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn(), message: vi.fn(), dismiss: vi.fn() });
+  return { toast };
+});
+vi.mock('sonner', () => ({ toast: toasts.toast }));
+
+import { useWorkspaceStore } from './store';
+import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
+import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
+import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
+import { layerOrderSourceOf } from '../../lib/layerOrder/layerOrderSource';
+import {
+  foldedFigureHandleRefCount,
+  resetFoldedFigureHandles,
+  retainFoldedFigureHandle,
+} from '../../cp-workspace/folded/foldedFigureHandles';
+import { foldedFigureGesture } from '../../cp-workspace/folded/foldedFigureGesture';
+import { foldedSourceBounds } from '../../cp-workspace/folded/foldedFigureStaleness';
+import {
+  deleteFoldedFigure,
+  showAnotherFoldedSolution,
+  showPreviousFoldedSolution,
+} from '../../cp-workspace/folded/foldedFigureVerbs';
+import {
+  dropFoldedSolutionCursor,
+  foldedSolutionCursorFigure,
+  foldedSolutionPlace,
+} from '../../cp-workspace/folded/foldedSolutionCursor';
+import {
+  scriptedSolutionCursor,
+  solutionPosition,
+  type ScriptedSolutionCursor,
+  type ScriptedSolutionStep,
+} from '../../cp-workspace/folded/foldedSolutionCursor.fixtures';
+import { applyFoldedFigureLayerOrder } from '../../cp-workspace/folded/openFoldedFigureLayerOrder';
+import { endOpenCanvasSessions } from '../../cp-workspace/canvasObjects/canvasSessions';
+import { resetFoldedFiguresAtRestForTests } from '../../cp-workspace/folded/foldedFiguresAtRest';
+
+const t = ((_key: string, fallback: string, options?: Record<string, unknown>) =>
+  fallback.replace(/\{\{(\w+)\}\}/gu, (_match, name: string) => String(options?.[name] ?? ''))) as unknown as TFunction;
+
+function line(a: { x: number; y: number }, b: { x: number; y: number }, color: 'Red1' | 'Blue2'): OristudioCpLineSegment {
+  return { a, b, color, active: 'Inactive0', selected: 0, customized: 0, customized_color: { red: 0, green: 0, blue: 0 } };
+}
+
+/** The X the figure is folded from, mountain and valley. */
+const LINES = [line({ x: 0, y: 0 }, { x: 1, y: 1 }, 'Red1'), line({ x: 1, y: 0 }, { x: 0, y: 1 }, 'Blue2')];
+
+function kernelSource(): OristudioCpFoldSource {
+  return { segments: LINES, starting_face_id: 1, aux_segments: [], digest: kernel.digest };
+}
+
+function picture(handle: number): OristudioCpFoldedRenderSnapshot {
+  return { schema_version: 1, fixture: null, pass: `fold ${handle}`, primitives: [] } as OristudioCpFoldedRenderSnapshot;
+}
+
+function snapshot(overrides: Partial<OristudioCpFoldedFigureSnapshot> = {}): OristudioCpFoldedFigureSnapshot {
+  return {
+    model: {
+      front_color: { red: 255, green: 255, blue: 50 },
+      back_color: { red: 233, green: 233, blue: 233 },
+      line_color: { red: 0, green: 0, blue: 0 },
+      scale: 1,
+      rotation: 0,
+      anti_alias: true,
+      display_shadows: false,
+      state: 'Front0',
+      folded_cases: 1,
+      transparent_transparency: 16,
+      transparency_color: false,
+    },
+    estimation_step: 'Step5',
+    display_style: 'Paper5',
+    discovered_fold_cases: 1,
+    find_another_overlap_valid: false,
+    outcome: 'Solved',
+    text_result: '',
+    wireframe: {
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      lines: [{ begin: 0, end: 1, color: 'Red1' }],
+      faces: [[0, 1, 2]],
+      starting_face: 0,
+      face_positions: [1],
+      next_faces: [null],
+      associated_lines: [null],
+    },
+    ...overrides,
+  } as OristudioCpFoldedFigureSnapshot;
+}
+
+function cpState(lines: OristudioCpLineSegment[] = LINES): OristudioCpDocumentState {
+  const document = createStarterOristudioCpDocument();
+  return {
+    handle: 4,
+    loadSerial: 1,
+    document: { ...document, crease_pattern: { ...document.crease_pattern, line_segments: lines } },
+    geometry: null,
+    summary: {
+      title: 'Untitled CP',
+      line_segments: lines.length,
+      circles: 0,
+      points: 0,
+      aux_line_segments: 0,
+      texts: 0,
+      can_save_as_cp: true,
+      is_empty: false,
+    },
+    source: { format: 'cp', filename: 'Untitled.cp', path: null },
+    operationDescriptors: [],
+    lastCommandResult: null,
+  };
+}
+
+/** A record as the figure holds it. */
+function held(record: LayerOrderRecord) {
+  const made = foldedFigureLayerOrder(record);
+  if (!made.ok) throw new Error('the fixture record encodes');
+  return made.layerOrder;
+}
+
+/** The record the figure starts on, and one per solution a step lands on: the same constraints, each its own order. */
+const RECORD = twoConstraintRecord();
+const solutionRecord = (n: number) => twoConstraintRecord({ order: [[0, 2, n % 2 === 0 ? 1 : -1]], faces: [...RECORD.faces.slice(0, 2), { at: [0.5, 0.75 + n / 1000], area: 0.25 }] });
+
+const MODEL = snapshot().model;
+const SOURCE = () => layerOrderSourceOf(kernelSource(), MODEL);
+
+/** A step that moved to `index` of `n`, onto solution `index`'s record. */
+function movedTo(index: number, n: number, exact = true): LayerOrderSolutionStep {
+  return {
+    outcome: 'moved',
+    applied: { record: solutionRecord(index), relations: Uint32Array.of(0, 1, index, 2), source: SOURCE() },
+    position: solutionPosition(index, n, exact),
+    counted: true,
+  };
+}
+
+const state = () => useWorkspaceStore.getState();
+const figureNow = () => state().oristudioCpFoldedFigures[0]!;
+const history = () => state().oristudioCpHistoryPast.map((entry) => entry.label);
+
+/** A constrained flat figure on handle 3 (unless `overrides` says otherwise), the store holding only it. */
+function seed(overrides: Partial<OristudioCpFoldedFigureEntry> = {}): OristudioCpFoldedFigureEntry {
+  const figure: OristudioCpFoldedFigureEntry = {
+    id: 'generated-1',
+    title: 'Folded model 1',
+    handle: 3,
+    sourceKind: 'generated-from-current-cp',
+    sourceCpRevision: 0,
+    startingFaceId: 1,
+    displayStyle: 'Paper5',
+    status: 'ready',
+    placement: IDENTITY_FOLDED_PLACEMENT,
+    snapshot: snapshot({ shown_order: 'given' }),
+    renderSnapshot: picture(3),
+    sourceBounds: foldedSourceBounds(LINES),
+    sourceFingerprint: null,
+    sourceLineIds: [1, 2],
+    error: null,
+    layerOrder: held(RECORD),
+    ...overrides,
+  };
+  if (figure.handle !== null) retainFoldedFigureHandle(figure.handle);
+  useWorkspaceStore.setState({
+    oristudioCpFoldedFigures: [figure],
+    oristudioCpActiveFoldedFigureId: figure.id,
+    oristudioCpHistoryPast: [],
+    oristudioCpHistoryFuture: [],
+    dirty: false,
+  });
+  return figure;
+}
+
+/** The next cursor a press opens answers `steps` in turn. */
+function script(...steps: ScriptedSolutionStep[]): ScriptedSolutionCursor {
+  const cursor = scriptedSolutionCursor(steps);
+  gateway.open.mockReturnValueOnce(cursor);
+  return cursor;
+}
+
+const cycled = () => analytics.track.mock.calls.filter(([name]) => name === 'fold solution cycled').map(([, properties]) => properties);
+
+beforeEach(async () => {
+  dropFoldedSolutionCursor();
+  foldedFigureGesture.abortAll();
+  await resetFoldedFigureHandles();
+  resetFoldedFiguresAtRestForTests();
+  kernel.calls.length = 0;
+  kernel.freed.length = 0;
+  kernel.nextHandle = 9;
+  kernel.foldWithOrder = null;
+  gateway.open.mockReset();
+  analytics.track.mockClear();
+  toasts.toast.mockClear();
+  toasts.toast.error.mockClear();
+  useWorkspaceStore.setState({
+    activePanelId: 'crease-pattern',
+    oristudioCpDocument: cpState(),
+    oristudioCpFoldedFigures: [],
+    oristudioCpActiveFoldedFigureId: null,
+    oristudioCpHistoryPast: [],
+    oristudioCpHistoryFuture: [],
+    oristudioCpError: null,
+    error: null,
+  });
+});
+
+describe('the cursor’s life', () => {
+  it('is made on the first press, never on selection, and the step lands as one entry with its own record', async () => {
+    const figure = seed();
+    state().setOristudioCpActiveFoldedFigure(figure.id);
+    expect(gateway.open).not.toHaveBeenCalled();
+    expect(foldedSolutionPlace(figure)).toBeNull();
+    // (Selecting redraws its selection marker, as it always has.)
+    kernel.calls.length = 0;
+
+    const cursor = script(movedTo(2, 3, false));
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(true);
+
+    // Made on the press, over the figure's own fold and its record (Edit's frame is the crease pattern's).
+    expect(gateway.open).toHaveBeenCalledTimes(1);
+    expect(gateway.open).toHaveBeenCalledWith(SOURCE(), RECORD);
+    expect(cursor.asked).toEqual([{ direction: 'next', by: { picture: 'front' } }]);
+    // Folded as an Apply is: the step's order on the very segments, its faces checked, drawn, adopted.
+    expect(kernel.calls).toEqual([
+      'getOristudioCpFoldedFigureSource',
+      'foldOristudioCpWithOrder',
+      'getOristudioCpFoldedFigureDigest',
+      'getOristudioCpFoldedFigureRenderSnapshot',
+    ]);
+    expect(figureNow()).toMatchObject({
+      handle: 9,
+      status: 'ready',
+      renderSnapshot: picture(9),
+      snapshot: { shown_order: 'given' },
+      layerOrder: held(solutionRecord(2)),
+    });
+    expect(history()).toEqual(['Show another solution']);
+    expect(state().dirty).toBe(true);
+    // The fold before stays with history: an undo shows the order it draws.
+    expect(foldedFigureHandleRefCount(3)).toBe(1);
+    expect(foldedFigureHandleRefCount(9)).toBe(1);
+    expect(kernel.freed).toEqual([]);
+    // Where it stands now, for the readout.
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(2, 3, false), counted: true });
+    expect(cycled()).toEqual([{ direction: 'next', solution_count_bucket: expect.any(String), constrained: true }]);
+  });
+
+  it('steps on and back with the same cursor, one entry a press', async () => {
+    const figure = seed();
+    const cursor = script(movedTo(2, 3), movedTo(3, 3), movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    await showAnotherFoldedSolution(figure.id, t);
+    await showPreviousFoldedSolution(figure.id, t);
+
+    expect(gateway.open).toHaveBeenCalledTimes(1);
+    expect(cursor.asked.map(({ direction }) => direction)).toEqual(['next', 'next', 'previous']);
+    // The source was read once, for the cursor; each step folds on what the cursor answered.
+    expect(kernel.calls.filter((call) => call === 'getOristudioCpFoldedFigureSource')).toHaveLength(1);
+    expect(figureNow()).toMatchObject({ handle: 11, layerOrder: held(solutionRecord(2)) });
+    expect(history()).toEqual(['Show another solution', 'Show another solution', 'Show previous solution']);
+    expect(cycled().map((event) => (event as { direction: string }).direction)).toEqual(['next', 'next', 'previous']);
+    expect(cursor.closed).toBe(false);
+  });
+
+  it('is let go on an undo of a step, which shows the order before; the next press makes a fresh one', async () => {
+    const figure = seed();
+    const first = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+
+    await state().undo();
+    expect(figureNow()).toMatchObject({ handle: 3, layerOrder: held(RECORD), renderSnapshot: picture(3) });
+    expect(first.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+
+    // Redo puts the stepped fold back, with no cursor: none is made until a press.
+    await state().redo();
+    expect(figureNow()).toMatchObject({ handle: 9, layerOrder: held(solutionRecord(2)) });
+    expect(foldedSolutionCursorFigure()).toBeNull();
+    expect(gateway.open).toHaveBeenCalledTimes(1);
+
+    const second = script(movedTo(3, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    // From the record the figure holds now: the redone step's.
+    expect(gateway.open).toHaveBeenLastCalledWith(SOURCE(), solutionRecord(2));
+    expect(second.asked).toHaveLength(1);
+    expect(figureNow().layerOrder).toEqual(held(solutionRecord(3)));
+  });
+
+  it('is let go when an Apply gives the figure another record', async () => {
+    const figure = seed();
+    const cursor = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    const applied = twoConstraintRecord({ constraints: [[0, 1, 1]] });
+    await applyFoldedFigureLayerOrder(figure.id, { record: applied, relations: Uint32Array.of(1, 0), source: SOURCE() }, t);
+    expect(figureNow().layerOrder).toEqual(held(applied));
+    expect(cursor.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
+  it('is let go when the creases it was folded from change, and kept through an edit elsewhere', async () => {
+    const figure = seed();
+    const cursor = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+
+    // A crease far outside the figure's creases: its creases are as they were.
+    useWorkspaceStore.setState({ oristudioCpDocument: cpState([...LINES, line({ x: 5, y: 5 }, { x: 6, y: 5 }, 'Red1')]) });
+    expect(cursor.closed).toBe(false);
+    expect(foldedSolutionPlace(figureNow())).not.toBeNull();
+
+    // One of its own creases moved.
+    useWorkspaceStore.setState({
+      oristudioCpDocument: cpState([LINES[0]!, line({ x: 1, y: 0 }, { x: 0, y: 0.9 }, 'Blue2')]),
+    });
+    expect(cursor.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
+  it('is let go when the figure is deleted, and when the document closes', async () => {
+    const figure = seed();
+    const deleted = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    await deleteFoldedFigure(figure.id, t);
+    expect(deleted.closed).toBe(true);
+
+    await state().undo();
+    const closed = script(movedTo(3, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    expect(foldedSolutionCursorFigure()).toBe(figure.id);
+    await state().clearOristudioCpFoldedFigures();
+    expect(closed.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
+  it('asks where it stands again when the figure turns over, and reads nothing until it answers', async () => {
+    const figure = seed();
+    const cursor = scriptedSolutionCursor([movedTo(2, 3)], [{ position: solutionPosition(1, 2), counted: true }]);
+    gateway.open.mockReturnValueOnce(cursor);
+    await showAnotherFoldedSolution(figure.id, t);
+    expect(foldedSolutionPlace(figureNow())).toMatchObject({ position: solutionPosition(2, 3) });
+
+    await state().updateOristudioCpFoldedFigureModel(figure.id, { state: 'Back1' });
+    expect(cursor.placesAsked).toEqual([{ picture: 'back' }]);
+    await vi.waitFor(() => expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 2), counted: true }));
+    // A turn over is no step: the cursor stays, and nothing was written.
+    expect(cursor.closed).toBe(false);
+    expect(figureNow().layerOrder).toEqual(held(solutionRecord(2)));
+  });
+
+  it('goes to the figure last stepped: one cursor, one worker, at a time', async () => {
+    const one = seed();
+    const two = { ...one, id: 'generated-2', handle: 5 };
+    retainFoldedFigureHandle(5);
+    useWorkspaceStore.setState({ oristudioCpFoldedFigures: [one, two] });
+    const first = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(one.id, t);
+    const second = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(two.id, t);
+    expect(first.closed).toBe(true);
+    expect(second.closed).toBe(false);
+    expect(foldedSolutionCursorFigure()).toBe(two.id);
+  });
+});
+
+describe('a press that moves nothing', () => {
+  it('at the end writes nothing and says nothing, and the ends wait from then on', async () => {
+    const figure = seed();
+    script({ outcome: 'end', position: solutionPosition(1, 3), counted: true });
+    await expect(showPreviousFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(figureNow()).toBe(figure);
+    expect(history()).toEqual([]);
+    expect(state().dirty).toBe(false);
+    expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
+    expect(toasts.toast).not.toHaveBeenCalled();
+    expect(toasts.toast.error).not.toHaveBeenCalled();
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 3), counted: true });
+    expect(cycled()).toEqual([]);
+  });
+
+  it('says the count may find another when the end is not final', async () => {
+    const figure = seed();
+    script({ outcome: 'end', position: solutionPosition(4, 4, false), counted: true });
+    await showAnotherFoldedSolution(figure.id, t);
+    expect(figureNow()).toBe(figure);
+    expect(toasts.toast).toHaveBeenCalledWith('No other solution found yet. Try again to keep looking.');
+  });
+
+  it.each([
+    [
+      'offline: the engine didn’t load',
+      { outcome: 'lost', cause: 'load' },
+      'Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.',
+      true,
+    ],
+    ['a lost engine', { outcome: 'lost', cause: 'crashed' }, 'Layer order stopped unexpectedly, so the figure wasn’t changed.', true],
+    ['out of time', { outcome: 'timed_out' }, 'Another solution couldn’t be found in time, so the figure wasn’t changed.', false],
+    [
+      'a record that needs attention',
+      { outcome: 'unrestored', why: 'clash' },
+      'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.',
+      true,
+    ],
+  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent) => {
+    const figure = seed();
+    const cursor = script(answer as LayerOrderSolutionStep);
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(figureNow()).toBe(figure);
+    expect(history()).toEqual([]);
+    expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
+    expect(toasts.toast.error).toHaveBeenCalledWith(said);
+    // An engine gone or a record it can't restore takes the cursor with it; a timeout keeps it for another try.
+    expect(cursor.closed).toBe(spent);
+    expect(foldedSolutionCursorFigure()).toBe(spent ? null : figure.id);
+  });
+
+  it('a Stop ends the step through the fold run, quietly, and the cursor with it', async () => {
+    const figure = seed();
+    let signalled = false;
+    const cursor = script(
+      ({ signal }) =>
+        new Promise<LayerOrderSolutionStep>((resolve) => {
+          signal?.addEventListener('abort', () => {
+            signalled = true;
+            resolve({ outcome: 'cancelled' });
+          });
+        })
+    );
+    const press = showAnotherFoldedSolution(figure.id, t);
+    // The step is running in the cursor, inside the fold run the indicator shows.
+    await vi.waitFor(() => expect(cursor.asked).toHaveLength(1));
+    expect(Object.keys(state().oristudioCpFoldRuns)).toHaveLength(1);
+    expect(figureNow().status).toBe('loading');
+
+    expect(state().stopOristudioCpFolds()).toBe(true);
+    await expect(press).resolves.toBe(false);
+    expect(signalled).toBe(true);
+    expect(figureNow()).toBe(figure);
+    expect(history()).toEqual([]);
+    expect(toasts.toast.error).not.toHaveBeenCalled();
+    expect(cursor.closed).toBe(true);
+    expect(state().oristudioCpFoldRuns).toEqual({});
+  });
+
+  it('a fold the kernel refuses, or whose faces aren’t the cursor’s, is freed: nothing lands, and the cursor goes', async () => {
+    const figure = seed();
+    const cursor = script(movedTo(2, 3), movedTo(2, 3));
+    kernel.foldWithOrder = async () => ({ status: 'refused', refusal: { code: 'order_not_drawn' } });
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(figureNow()).toMatchObject({ handle: 3, status: 'ready', layerOrder: held(RECORD) });
+    expect(state().oristudioCpError).toBe('Layer order couldn’t apply this order to Folded model 1. Its picture is unchanged.');
+    expect(history()).toEqual([]);
+    // Its session shows an order the figure never took.
+    expect(cursor.closed).toBe(true);
+
+    kernel.foldWithOrder = null;
+    kernel.digest = '00000000c0ffee01';
+    const again = script(movedTo(2, 3));
+    const digest = vi.fn();
+    kernel.foldWithOrder = async () => {
+      digest();
+      kernel.digest = 'ffffffffffffffff';
+      return { status: 'folded', handle: 20, snapshot: snapshot({ shown_order: 'given' }) };
+    };
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(kernel.freed).toContain(20);
+    expect(figureNow().handle).toBe(3);
+    expect(again.closed).toBe(true);
+    kernel.digest = '00000000c0ffee01';
+  });
+
+  it('an undo while the step folds lands it on nothing: its fold is freed, the cursor goes', async () => {
+    const figure = seed();
+    await foldedFigureGesture.run('verb', 'Rotate folded form', () =>
+      state().setOristudioCpFoldedFigurePlacement(figure.id, { rotation: 1 })
+    );
+    let answer: (() => void) | null = null;
+    kernel.foldWithOrder = () =>
+      new Promise((resolve) => {
+        answer = () => resolve({ status: 'folded', handle: 9, snapshot: snapshot({ shown_order: 'given' }) });
+      });
+    const cursor = script(movedTo(2, 3));
+    const press = showAnotherFoldedSolution(figure.id, t);
+    await vi.waitFor(() => expect(answer).not.toBeNull());
+    endOpenCanvasSessions('history');
+    await state().undo();
+    answer!();
+    await expect(press).resolves.toBe(false);
+    expect(kernel.freed).toEqual([9]);
+    expect(figureNow()).toMatchObject({ handle: 3, layerOrder: held(RECORD) });
+    expect(cursor.closed).toBe(true);
+  });
+});
+
+describe('what it steps by, and from', () => {
+  it('steps every layer order with X-ray on (D5), and the pictures of the side the figure shows otherwise', async () => {
+    seed({ displayStyle: 'Transparent3' });
+    const xray = script(movedTo(2, 3));
+    await showAnotherFoldedSolution('generated-1', t);
+    expect(xray.asked[0]!.by).toBe('layer_order');
+
+    dropFoldedSolutionCursor();
+    seed({ snapshot: snapshot({ shown_order: 'given', model: { ...MODEL, state: 'Back1' } }) });
+    const back = script(movedTo(2, 3));
+    await showAnotherFoldedSolution('generated-1', t);
+    expect(back.asked[0]!.by).toEqual({ picture: 'back' });
+  });
+
+  it('folds a figure reopened from a file from its creases as they stand, and it is live from then on', async () => {
+    const figure = seed({ handle: null });
+    script(movedTo(2, 3));
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(true);
+    expect(kernel.calls[0]).toBe('getOristudioCpSelectionFoldSource');
+    expect(gateway.open).toHaveBeenCalledWith(SOURCE(), RECORD);
+    expect(figureNow()).toMatchObject({ handle: 9, status: 'ready', layerOrder: held(solutionRecord(2)) });
+    expect(history()).toEqual(['Show another solution']);
+    await state().undo();
+    expect(figureNow()).toMatchObject({ handle: null, layerOrder: held(RECORD) });
+  });
+
+  it('refuses a figure it can’t step now, asking nothing of the engine', async () => {
+    for (const overrides of [
+      { status: 'loading' as const },
+      { layerOrder: { kind: 'newer' as const, saved: {} } },
+      { handle: null, sourceBounds: null },
+    ]) {
+      dropFoldedSolutionCursor();
+      const figure = seed(overrides);
+      await expect(state().stepOristudioCpFigureLayerOrder(figure.id, 'next')).resolves.toEqual({ status: 'blocked' });
+    }
+    expect(gateway.open).not.toHaveBeenCalled();
+    expect(kernel.calls).toEqual([]);
+  });
+
+  it('keeps Oriedita’s search away from a chosen order, called directly', async () => {
+    const figure = seed();
+    await expect(state().foldAnotherOristudioCpFigure(figure.id)).resolves.toBe(false);
+    await expect(state().foldOristudioCpFigureToCase(figure.id, 1)).resolves.toBe(false);
+    expect(kernel.calls).toEqual([]);
+    expect(figureNow()).toBe(figure);
+  });
+});
+
+describe('an unconstrained figure (the parity guard)', () => {
+  it('steps on and back with exactly the kernel calls it always made, and no cursor', async () => {
+    const plain = seed({
+      layerOrder: undefined,
+      snapshot: snapshot({ discovered_fold_cases: 1, current_fold_case: 1, find_another_overlap_valid: true }),
+    });
+    await expect(showAnotherFoldedSolution(plain.id, t)).resolves.toBe(true);
+    expect(kernel.calls).toEqual(['foldOristudioCpFigureAnother', 'getOristudioCpFoldedFigureRenderSnapshot']);
+    kernel.calls.length = 0;
+    await expect(showPreviousFoldedSolution(plain.id, t)).resolves.toBe(true);
+    expect(kernel.calls).toEqual(['foldOristudioCpFigureToCase', 'getOristudioCpFoldedFigureRenderSnapshot']);
+    expect(gateway.open).not.toHaveBeenCalled();
+    expect(foldedSolutionCursorFigure()).toBeNull();
+    expect(figureNow().handle).toBe(3);
+    expect(history()).toEqual(['Show another solution', 'Show previous solution']);
+    // Its events as they always were: no `constrained`.
+    expect(cycled()).toEqual([
+      { direction: 'next', solution_count_bucket: expect.any(String) },
+      { direction: 'previous', solution_count_bucket: expect.any(String) },
+    ]);
+  });
+});

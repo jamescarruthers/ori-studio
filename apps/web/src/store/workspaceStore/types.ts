@@ -117,6 +117,10 @@ import type {
   OristudioCpSelectedLines,
 } from '../../engine/oristudioCpTypes';
 import type { LayerOrderApplied } from '../../lib/layerOrder/layerOrderRequest';
+import type {
+  LayerOrderLossCause,
+  LayerOrderSolutionsUnrestored,
+} from '../../layer-order/host/hostEngineGateway';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 import type { OristudioCpActionId } from '../../lib/oristudioCpActions';
 import type { CpLineClipboardPayload, CpSelectionTransform } from '../../lib/creasePatternClipboard';
@@ -866,6 +870,32 @@ export type OristudioCpFigureLayerOrderOpening =
    */
   | { status: 'unavailable'; reason: 'blocked' | 'failed' | 'unavailable' | 'cancelled' };
 
+/**
+ * How a press of Another solution or ‹ on a constrained Edit figure ended
+ * (row H6): only `moved` changed the figure, as one undo entry.
+ *
+ * - `end`: no solution lies that way among those counted, `final` once the
+ *   count is; the figure shows it is at its end;
+ * - `timed_out`: the check within the next solution ran out of time;
+ * - `unrestored`: the record restores to no order to step from (D10): its
+ *   constraints clash, it ran out of time, or the engine refused it;
+ * - `lost`: the Layer order engine went away or never came (`load` for the
+ *   browser failing to fetch it, offline);
+ * - `not-drawn`: the kernel could not draw the order, and said so through
+ *   `oristudioCpError`;
+ * - `stopped`: a Stop, or the figure moved on (an undo, a Delete) while it ran;
+ * - `blocked`: the figure can't step now (`foldedFigureLayerOrderBlock`).
+ */
+export type OristudioCpFigureSolutionStep =
+  | { status: 'moved' }
+  | { status: 'end'; final: boolean }
+  | { status: 'timed_out' }
+  | { status: 'unrestored'; why: LayerOrderSolutionsUnrestored }
+  | { status: 'lost'; cause: LayerOrderLossCause }
+  | { status: 'not-drawn' }
+  | { status: 'stopped' }
+  | { status: 'blocked' };
+
 export interface CreasePatternSliceState {
   creaseColorMode: CreaseColorMode;
   oristudioCpSelection: OristudioCpSelection;
@@ -1219,6 +1249,19 @@ export interface CreasePatternSliceActions {
    * until the entry has taken it.
    */
   applyOristudioCpFigureLayerOrder: (id: string, applied: LayerOrderApplied) => Promise<boolean>;
+  /**
+   * Another solution, or back one, on a constrained flat figure (row H6, D9):
+   * step through the solutions that fit its record on the host engine's
+   * cursor (`foldedSolutionCursor.ts`, made on the first press), then fold
+   * the step's order into a **new** handle, as an Apply does, with the
+   * step's record. The old handle stays with history. Every outcome but
+   * `moved` leaves the figure as it was. Callers bracket it as one undo
+   * entry (`foldedFigureVerbs.ts`).
+   */
+  stepOristudioCpFigureLayerOrder: (
+    id: string,
+    direction: 'next' | 'previous'
+  ) => Promise<OristudioCpFigureSolutionStep>;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
   setOristudioCpActiveFoldedFigure: (id: string | null) => void;
   /**
