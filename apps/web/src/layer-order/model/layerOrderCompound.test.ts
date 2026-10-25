@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { constraintAddedFact, constraintBlockedFact } from './layerOrderAnalytics';
-import { LAYER_ORDER_LABEL_CAP } from './layerOrderDecisions';
+import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
 import { LAYER_ORDER_MODEL_LIMITS, keepTrying, type LayerOpenFacts } from './layerOrderEngineFacts';
 import {
   OPEN_PAIRS,

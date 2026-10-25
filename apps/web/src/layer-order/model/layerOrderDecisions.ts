@@ -8,6 +8,7 @@
  *
  * Pure: no React, no store, no engine calls.
  */
+import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
 import {
   keepTrying,
   type LayerConstraint,
@@ -36,14 +37,12 @@ export function stepByFor(side: LayerSide, xray: boolean): LayerStepBy {
 // D7: large figures.
 
 /**
- * The label cap: past this many valid objects only the hovered face and the
- * nearest few keep letters (the panes choose which, U8), and the hint counts
- * tinted faces instead of labelled ones. Provisional until phase gate 2 (E8)
- * names N.
+ * Whether a subject's objects are past the label cap
+ * (`LAYER_ORDER_LABEL_CAP`, 50, set by phase gate 2 in `layerOrderBudgets.ts`,
+ * the cap's one source): past it only the hovered face and the nearest few
+ * keep letters (the panes choose which, U8), and the hint counts tinted faces
+ * instead of labelled ones ("tinted").
  */
-export const LAYER_ORDER_LABEL_CAP = 12;
-
-/** Whether a subject's objects are past the label cap, so the hint says "tinted". */
 export function objectsPastLabelCap(objects: number): boolean {
   return objects > LAYER_ORDER_LABEL_CAP;
 }

@@ -79,11 +79,14 @@ function specifiersIn(text: string): string[] {
 
 /**
  * What the inspector model may import, resolved under `src/`: itself, the
- * engine contract's types and pure helpers (never its runtime or worker),
- * the record's types, and the analytics taxonomy's pure bucketing.
+ * dialog's budgets, the engine contract's types and pure helpers (never its
+ * runtime or worker), the record's types, and the analytics taxonomy's pure
+ * bucketing.
  */
 const MODEL_MAY_IMPORT: readonly RegExp[] = [
   /^layer-order\/model\/[\w.]+$/,
+  // The dialog's measured budgets (D7's label cap): constants only, the cap's one source.
+  /^layer-order\/layerOrderBudgets$/,
   /^layer-order\/engine\/(layerOrderEngine|layerOrderWire|faceIndex)$/,
   /^lib\/layerOrder\/layerOrderRecord$/,
   /^analytics\/events$/,

@@ -6,12 +6,8 @@
  * and its test here, and no other test.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  LAYER_ORDER_COUNT_FACE_LIMIT,
-  LAYER_ORDER_LABEL_CAP,
-  applyChangedNothing,
-  stepByFor,
-} from './layerOrderDecisions';
+import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
+import { LAYER_ORDER_COUNT_FACE_LIMIT, applyChangedNothing, stepByFor } from './layerOrderDecisions';
 import { LAYER_ORDER_MODEL_LIMITS, keepTrying } from './layerOrderEngineFacts';
 import {
   SPOTS,
@@ -58,17 +54,25 @@ describe('decisions', () => {
   });
 
   it('D7: past the label cap the hint counts tinted faces; above the face limit the count is skipped and the stepper has no total', () => {
-    // Face 0 overlaps 13 faces, every pair open.
-    const faces = LAYER_ORDER_LABEL_CAP + 2;
-    const others = Array.from({ length: faces - 1 }, (_, i) => i + 1);
-    const wide = openFactsOf({
-      faces,
-      frontUp: new Uint8Array(faces).fill(1),
-      openPairs: Uint32Array.from(others.flatMap((face) => [0, face])),
-      stacks: { front: stacksOf([[0, ...others]]), back: stacksOf([[...others].reverse().concat(0)]) },
+    // Face 0 overlaps `objects` faces, every pair open. The cap is the budgets' one (50, census 2).
+    const subjectWith = (objects: number) => {
+      const others = Array.from({ length: objects }, (_, i) => i + 1);
+      const wide = openFactsOf({
+        faces: objects + 1,
+        frontUp: new Uint8Array(objects + 1).fill(1),
+        openPairs: Uint32Array.from(others.flatMap((face) => [0, face])),
+        stacks: { front: stacksOf([[0, ...others]]), back: stacksOf([[...others].reverse().concat(0)]) },
+      });
+      return dispatch(opened(wide).state, { type: 'face_picked', face: 0, origin: 'pattern' }).state;
+    };
+    expect(LAYER_ORDER_LABEL_CAP).toBe(50);
+    const past = LAYER_ORDER_LABEL_CAP + 1;
+    expect(hintLine(subjectWith(past))?.text).toEqual({ key: 'pick_object', objects: past, tinted: true });
+    expect(hintLine(subjectWith(LAYER_ORDER_LABEL_CAP))?.text).toEqual({
+      key: 'pick_object',
+      objects: LAYER_ORDER_LABEL_CAP,
+      tinted: false,
     });
-    const subject = dispatch(opened(wide).state, { type: 'face_picked', face: 0, origin: 'pattern' });
-    expect(hintLine(subject.state)?.text).toEqual({ key: 'pick_object', objects: faces - 1, tinted: true });
     const narrow = dispatch(opened().state, { type: 'face_picked', face: 2, origin: 'pattern' });
     expect(hintLine(narrow.state)?.text).toEqual({ key: 'pick_object', objects: 2, tinted: false });
 
