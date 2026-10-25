@@ -129,6 +129,9 @@
     "solving": "Solving…",
     "solvingLong": "Still solving — this can take a while"
   },
+  "layerOrder": {
+    "unavailable": "Layer order didn’t load. Check your connection and try again."
+  },
   "paperExport": {
     "saved": "Exported {{name}}"
   },

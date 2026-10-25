@@ -129,6 +129,9 @@
     "solving": "Wird gelöst…",
     "solvingLong": "Wird noch gelöst – das kann eine Weile dauern"
   },
+  "layerOrder": {
+    "unavailable": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
+  },
   "paperExport": {
     "saved": "{{name}} exportiert"
   },

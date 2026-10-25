@@ -508,6 +508,47 @@
     },
     "closeLabel": "Fechar {{title}}"
   },
+  "layerOrder": {
+    "apply": "Aplicar",
+    "applying": "Salvando a ordem das camadas…",
+    "applyNothing": "Nada para aplicar",
+    "applyOpening": "Ainda não há nada para aplicar",
+    "applyRefused": {
+      "other": "Não foi possível salvar esta ordem das camadas. Nada foi alterado.",
+      "tooLarge": "Esta ordem das camadas é grande demais para ser salva com a figura."
+    },
+    "cancel": "Cancelar",
+    "creasePane": "Padrão de vincos",
+    "details": "Detalhes da ordem das camadas",
+    "foldedLoading": "Carregando a figura dobrada",
+    "foldedPane": "Figura dobrada",
+    "keepTrying": "Continuar tentando",
+    "lost": "Ordem das camadas parou inesperadamente. Nada foi alterado.",
+    "opening": "Calculando as ordens das camadas…",
+    "pane": {
+      "creasePattern": "Padrão de vincos",
+      "folded": "Dobrada",
+      "label": "Painel"
+    },
+    "refused": {
+      "ambiguousOverlap": "Algumas faces desta figura se sobrepõem de forma próxima demais para saber qual cobre qual, então Ordem das camadas não pode abri-la. Nada foi alterado.",
+      "digestMismatch": "Ordem das camadas não conseguiu associar suas faces às usadas para dobrar esta figura, então não pode abri-la. Nada foi alterado.",
+      "noFaces": "Esta figura não tem faces para ordenar.",
+      "nonConvex": "Uma face desta figura não é convexa. Ordem das camadas ainda não funciona com faces não convexas.",
+      "nonConvexFace": "A face {{face}} não é convexa. Ordem das camadas ainda não funciona com faces não convexas.",
+      "noOrder": "Não foi possível determinar a ordem das camadas desta figura.",
+      "recordNewer": "As restrições desta figura foram salvas por uma versão mais recente do Ori Studio. Atualize o Ori Studio para alterá-las.",
+      "recordTooLarge": "As restrições salvas desta figura são grandes demais para abrir. Nada foi alterado.",
+      "recordUnreadable": "Não foi possível ler as restrições salvas desta figura, então Ordem das camadas não pode abri-las. Nada foi alterado.",
+      "timedOut": "Não foi possível calcular a tempo as ordens das camadas desta figura.",
+      "tolerance": "Algumas faces ou vincos desta figura são pequenos demais ou estão próximos demais para Ordem das camadas. Nada foi alterado.",
+      "tooDeep": "Esta figura empilha camadas demais em um só lugar para Ordem das camadas por enquanto. Nada foi alterado.",
+      "tooManyFaces": "Esta figura tem {{faces}} faces, mais do que as {{limit}} com que Ordem das camadas funciona. Nada foi alterado.",
+      "unreadable": "Ordem das camadas não conseguiu ler como esta figura se dobra, então não pode abri-la. Nada foi alterado."
+    },
+    "title": "Ordem das camadas",
+    "tryAgain": "Tentar de novo"
+  },
   "number": {
     "tooSmall": "Insira um número maior que {{minimum}}."
   },

@@ -497,6 +497,47 @@
     },
     "closeLabel": "{{title}} schließen"
   },
+  "layerOrder": {
+    "apply": "Anwenden",
+    "applying": "Lagenreihenfolge wird gespeichert…",
+    "applyNothing": "Nichts anzuwenden",
+    "applyOpening": "Noch nichts anzuwenden",
+    "applyRefused": {
+      "other": "Diese Lagenreihenfolge konnte nicht gespeichert werden. Es wurde nichts geändert.",
+      "tooLarge": "Diese Lagenreihenfolge ist zu groß, um mit der Figur gespeichert zu werden."
+    },
+    "cancel": "Abbrechen",
+    "creasePane": "Faltmuster",
+    "details": "Details zur Lagenreihenfolge",
+    "foldedLoading": "Gefaltete Figur wird geladen",
+    "foldedPane": "Gefaltete Figur",
+    "keepTrying": "Weiter versuchen",
+    "lost": "Lagenreihenfolge wurde unerwartet beendet. Es wurde nichts geändert.",
+    "opening": "Lagenreihenfolgen werden ermittelt…",
+    "pane": {
+      "creasePattern": "Faltmuster",
+      "folded": "Gefaltet",
+      "label": "Ansicht"
+    },
+    "refused": {
+      "ambiguousOverlap": "Einige Flächen dieser Figur überlappen zu knapp, um zu erkennen, welche welche bedeckt, daher kann Lagenreihenfolge sie nicht öffnen. Es wurde nichts geändert.",
+      "digestMismatch": "Lagenreihenfolge konnte ihre Flächen nicht denen zuordnen, mit denen diese Figur gefaltet wurde, und kann sie daher nicht öffnen. Es wurde nichts geändert.",
+      "noFaces": "Diese Figur hat keine Flächen, die sich ordnen ließen.",
+      "nonConvex": "Eine Fläche dieser Figur ist nicht konvex. Lagenreihenfolge kann noch nicht mit nicht konvexen Flächen arbeiten.",
+      "nonConvexFace": "Fläche {{face}} ist nicht konvex. Lagenreihenfolge kann noch nicht mit nicht konvexen Flächen arbeiten.",
+      "noOrder": "Die Lagenreihenfolge dieser Figur konnte nicht bestimmt werden.",
+      "recordNewer": "Die Vorgaben dieser Figur wurden mit einer neueren Version von Ori Studio gespeichert. Aktualisiere Ori Studio, um sie zu ändern.",
+      "recordTooLarge": "Die gespeicherten Vorgaben dieser Figur sind zu groß zum Öffnen. Es wurde nichts geändert.",
+      "recordUnreadable": "Die gespeicherten Vorgaben dieser Figur konnten nicht gelesen werden, daher kann Lagenreihenfolge sie nicht öffnen. Es wurde nichts geändert.",
+      "timedOut": "Die Lagenreihenfolgen dieser Figur konnten nicht rechtzeitig ermittelt werden.",
+      "tolerance": "Einige Flächen oder Falten dieser Figur sind zu klein oder liegen zu dicht beieinander für Lagenreihenfolge. Es wurde nichts geändert.",
+      "tooDeep": "Diese Figur stapelt an einer Stelle zu viele Lagen für Lagenreihenfolge. Es wurde nichts geändert.",
+      "tooManyFaces": "Diese Figur hat {{faces}} Flächen, mehr als die {{limit}}, mit denen Lagenreihenfolge arbeiten kann. Es wurde nichts geändert.",
+      "unreadable": "Lagenreihenfolge konnte nicht lesen, wie diese Figur gefaltet wird, und kann sie daher nicht öffnen. Es wurde nichts geändert."
+    },
+    "title": "Lagenreihenfolge",
+    "tryAgain": "Erneut versuchen"
+  },
   "number": {
     "tooSmall": "Geben Sie eine Zahl größer als {{minimum}} ein."
   },

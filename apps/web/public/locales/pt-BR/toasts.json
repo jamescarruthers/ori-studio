@@ -142,6 +142,9 @@
     "solving": "Resolvendo…",
     "solvingLong": "Ainda resolvendo — isso pode demorar um pouco"
   },
+  "layerOrder": {
+    "unavailable": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo."
+  },
   "paperExport": {
     "saved": "{{name}} exportado"
   },

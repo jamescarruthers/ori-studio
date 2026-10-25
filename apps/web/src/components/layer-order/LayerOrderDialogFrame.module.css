@@ -1,0 +1,110 @@
+/*
+ * The Layer order dialog's body (LayerOrderDialogFrame.tsx), inside the modal
+ * frame's: the panes region, then the inspector. Wide (A3, Round3): the two
+ * panes side by side, the inspector a 304px column. As the whole screen (D6,
+ * Round4-Phone): the one pane over the inspector, which keeps about 45% of
+ * the height and scrolls. Refused or lost (Round4-States): the crease
+ * pattern's place, then the notice where the folded figure and the inspector
+ * would be.
+ */
+.body {
+  --inspector-width: 304px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--inspector-width);
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.panes {
+  display: grid;
+  grid-column: 1 / 3;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.inspector,
+.noticeArea {
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  grid-column: 3;
+  grid-row: 1;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+}
+
+.noticeArea {
+  display: grid;
+  grid-column: 2 / 4;
+  grid-row: 1;
+  place-items: center;
+  padding: var(--space-5) 28px;
+  background: var(--bg-primary);
+}
+
+.body[data-session='refused'] .panes,
+.body[data-session='lost'] .panes {
+  grid-column: 1 / 2;
+}
+
+.notice {
+  max-width: 380px;
+}
+
+.noticeText {
+  margin: 0;
+}
+
+/* The opening state: one sentence, centred in the inspector's place. */
+.working {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: center;
+  justify-items: center;
+  margin: 0;
+  padding: var(--space-5);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.body[data-layout='narrow'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 45vh);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 45dvh);
+}
+
+/* After the refused rule, which it overrides at the same weight. */
+.body[data-layout='narrow'] .panes {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.body[data-layout='narrow'] .inspector,
+.body[data-layout='narrow'] .noticeArea {
+  grid-column: 1;
+  grid-row: 2;
+  border-top: 1px solid var(--border-subtle);
+  border-left: 0;
+}
+
+.body[data-layout='narrow'] .noticeArea {
+  padding: var(--space-4);
+}
+
+/* Why Apply could not save, at the start of the foot. */
+.footNote {
+  min-width: 0;
+  margin: 0;
+  color: var(--status-danger);
+  font-size: 0.76rem;
+  font-weight: 600;
+}

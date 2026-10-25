@@ -116,6 +116,9 @@
     "solving": "解いています…",
     "solvingLong": "まだ解いています — しばらく時間がかかる場合があります"
   },
+  "layerOrder": {
+    "unavailable": "重なり順を読み込めませんでした。接続を確認して、もう一度お試しください。"
+  },
   "paperExport": {
     "saved": "{{name}} を書き出しました"
   },
