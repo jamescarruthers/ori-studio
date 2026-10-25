@@ -27,7 +27,15 @@ import {
 const REQUEST: LayerOrderRequest = {
   source: FAKE_LAYER_ORDER_SOURCE,
   record: null,
-  look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+  look: {
+    style: DEFAULT_PAPER_STYLE,
+    policy: PAPER_STYLE_POLICIES['folded-flat'],
+    turnDeg: 0,
+    side: 'front',
+    xray: false,
+    lineStyle: 'color',
+    lineWidth: 1,
+  },
 };
 /** The toy figure as a host shows it: 2 over 3 over 0 over 1. */
 const SHOWN = fakeLayerOrderScene(FAKE_LAYER_ORDER_FIGURE, [2, 3, 0, 1], 'front');
