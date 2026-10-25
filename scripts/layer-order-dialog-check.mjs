@@ -735,6 +735,49 @@ async function shownAs(page, mode) {
   await settle(page);
 }
 
+/**
+ * Open the step's detail again. One opened on the Diagram's first mount holds
+ * a controller React's dev double mount has already let go of (found in
+ * passing; dev only, not this PR's), and its verbs would do nothing.
+ */
+async function reopenDetail(page) {
+  await page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    store.getState().closeDiagramStep();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    store.getState().openDiagramStep(window.__layerOrderStep);
+  });
+  await page.waitForFunction(
+    async () => {
+      const { openLinkedPoseOf } = await import('/src/diagram/capture/openLinkedPose.ts');
+      return openLinkedPoseOf(window.__layerOrderStep) !== null;
+    },
+    null,
+    { timeout: 30000 }
+  );
+  await settle(page);
+}
+
+/** The open step's pager, as its Pose publishes it: the count, and whether › is held. */
+async function pagerNow(page) {
+  return page.evaluate(async () => {
+    const { openLinkedPoseOf } = await import('/src/diagram/capture/openLinkedPose.ts');
+    const pose = openLinkedPoseOf(window.__layerOrderStep);
+    const next = pose?.actions.find((action) => action.id === 'next-solution');
+    return { count: pose?.layerOrder?.count ?? null, nextHeld: next?.disabled ?? null };
+  });
+}
+
+/** Run one of the open step's Pose verbs, and wait for its capture. */
+async function poseVerb(page, id) {
+  await page.evaluate(async (verb) => {
+    const { openLinkedPoseOf } = await import('/src/diagram/capture/openLinkedPose.ts');
+    openLinkedPoseOf(window.__layerOrderStep)?.actions.find((action) => action.id === verb)?.run();
+  }, id);
+  await page.waitForTimeout(200);
+  await captured(page);
+}
+
 /** The step's source as the store holds it, with its record read. */
 async function stepSource(page) {
   return page.evaluate(async () => {
@@ -767,6 +810,32 @@ function diagramStepCases(theme) {
     await captured(page);
     const unconstrained = await stageShot(page);
     await record(`diagram-${tag}-unconstrained`, { stage: unconstrained });
+
+    // Pose's facts are the record's order's too (#519 review, fix 4): turned in a chosen order, and
+    // both undone, the pager counts the kernel's orders again, never the held fold's one of one.
+    await reopenDetail(page);
+    const pagerBefore = await pagerNow(page);
+    const trial = await applyConstraintToStep(page);
+    await captured(page);
+    if (trial.outcome !== 'captured') throw new Error(`Apply: ${trial.outcome}`);
+    await poseVerb(page, 'rotate-right');
+    const pagerHeld = await pagerNow(page);
+    await page.evaluate(() => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      state.undoDiagram();
+      state.undoDiagram();
+    });
+    await captured(page);
+    await page.waitForTimeout(500);
+    const pagerUndone = await pagerNow(page);
+    const recordUndone = (await stepSource(page)).constraints;
+    console.log(
+      `[${tag}] pager: before ${JSON.stringify(pagerBefore)}, turned in the chosen order ${JSON.stringify(pagerHeld)}, both undone ${JSON.stringify(pagerUndone)} (record ${recordUndone})`
+    );
+    if (recordUndone !== null || pagerUndone.nextHeld !== pagerBefore.nextHeld || pagerUndone.count === null) {
+      throw new Error('undo left the pager on the chosen order’s facts');
+    }
+    await record(`diagram-${tag}-pager-undone`, { page: await pageShot(page) });
 
     const applied = await applyConstraintToStep(page);
     await captured(page);
@@ -823,15 +892,8 @@ function diagramStepCases(theme) {
     console.log(`[${tag}] reopened picture vs the constrained one: ${same.differing} pixels differ`);
 
     // Show as Crease Pattern, then Folded again, from the Step pane (through the open step's Pose):
-    // the record survives and is drawn again. The detail is opened again first: one opened on the
-    // Diagram's first mount, as this page's was, holds a controller React's dev double mount has
-    // already let go of (found in passing; dev only), and its verbs would do nothing.
-    await page.evaluate(async () => {
-      const store = window.__treemakerWorkspaceStore;
-      store.getState().closeDiagramStep();
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      store.getState().openDiagramStep(window.__layerOrderStep);
-    });
+    // the record survives and is drawn again. The detail is opened again first (`reopenDetail`).
+    await reopenDetail(page);
     await row.waitFor({ state: 'visible', timeout: 60000 });
     const showAs = page.getByRole('group', { name: 'Show as' });
     await showAs.getByRole('button', { name: 'Crease Pattern' }).click();
@@ -927,6 +989,33 @@ function diagramStepCases(theme) {
     const after = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().diagramHistory.past.length);
     if (after !== entries) throw new Error('Cancel wrote something');
     console.log(`[${tag}] Edit… opened the dialog; Cancel wrote nothing`);
+
+    // The flagged card reads Needs attention, not Out of date (#519 review, fix 9).
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().closeDiagramStep());
+    const chip = page.locator('[data-tone]', { hasText: 'Needs attention' }).first();
+    await chip.waitFor({ state: 'visible', timeout: 10000 });
+    await record(`diagram-${tag}-card-attention`, { page: await pageShot(page) });
+    console.log(`[${tag}] the flagged card reads ${JSON.stringify(await chip.textContent())}`);
+    await reopenDetail(page);
+
+    // Shown as its crease pattern, the flagged step's Review… still opens the dialog, on the flat fold
+    // the step would show (#519 review, fix 2); Cancel writes nothing.
+    await page.getByRole('group', { name: 'Show as' }).getByRole('button', { name: 'Crease Pattern' }).click();
+    await shownAs(page, 'crease-pattern');
+    const review = page.getByRole('button', { name: 'Review…' });
+    await review.waitFor({ state: 'visible', timeout: 10000 });
+    if ((await review.getAttribute('aria-disabled')) === 'true') throw new Error('Review… is held on a crease pattern');
+    await record(`diagram-${tag}-pane-attention-pattern`, { page: await pageShot(page) });
+    const reviewEntries = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().diagramHistory.past.length);
+    await review.click();
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    await page.waitForTimeout(3000);
+    await record(`diagram-${tag}-review-from-pattern`, { dialog: await steadyShot(page, dialog, { masked: false, timeoutMs: 60000 }) });
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 10000 });
+    const reviewed = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().diagramHistory.past.length);
+    if (reviewed !== reviewEntries) throw new Error('Cancel from Review… wrote something');
+    console.log(`[${tag}] Review… opened the dialog from the crease pattern; Cancel wrote nothing`);
 
     // The creases now fold in 3D: Refresh draws the 3D picture, keeps the record and flags it waiting.
     const route = await page.evaluate(async () => {
