@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CpSurfaceControls } from '../../cp-workspace/surface/useCpSurface';
+import { useEventCallback } from '../../hooks/useEventCallback';
 import { LAYER_PANE_FLASH_MS, type LayerPaneId } from '../../layer-order/panes/layerPaneInput';
 import { NO_FACE_MARKS } from '../../layer-order/panes/layerPaneMarks';
 import {
@@ -8,6 +9,7 @@ import {
   useLayerFoldedPane,
   useLayerPaneInks,
   useLayerPatternPane,
+  useSplitMarks,
 } from '../../layer-order/panes/useLayerOrderPanes';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -32,18 +34,20 @@ import styles from './LayerOrderPanes.module.css';
  * - **What a press does** is the inspector's: a pick, a hover or a press on
  *   no paper goes out as an event, with its pane and whether a pointer or a
  *   finger made it. A double tap fits.
- * - **Zoom.** Each pane has its own zoom bar; its Fit frames both. On a
- *   phone (`phonePane`), one pane at a time, switched from the title row,
- *   and nothing floats over it: pinch zooms, a double tap fits (D6).
+ * - **Zoom.** Each pane has its own zoom bar; its Fit frames both, at one
+ *   scale (Round3's `fitAll`). On a phone (`phonePane`), one pane at a time,
+ *   switched from the title row, and nothing floats over it: pinch zooms, a
+ *   double tap fits (D6). Both panes stay mounted, the other one hidden, so a
+ *   switch keeps each pane's camera and makes no new canvas.
  * - **The flash** of the spots the last change moved is one 1.6 s fade;
  *   `onFlashEnded` hears when it is over, whichever pane is showing.
  */
 export function LayerOrderPanes(props: LayerOrderPanesProps) {
   const { t } = useTranslation();
-  const { status, phonePane, request, letters, onFlashEnded } = props;
+  const { status, phonePane, request, letters } = props;
   const openingView = useMemo(() => layerOrderOpeningView(request), [request]);
   const view = props.view ?? openingView;
-  const marks = props.marks ?? NO_FACE_MARKS;
+  const { base, marks } = useSplitMarks(props.marks ?? NO_FACE_MARKS);
   const stacks = props.stacks ?? null;
   const events = props;
 
@@ -52,7 +56,7 @@ export function LayerOrderPanes(props: LayerOrderPanesProps) {
   const wheelGesture = useSettingsStore((state) => state.cpWheelGesture);
   const snapRadius = useSettingsStore((state) => state.cpSnapRadius);
   const inks = useLayerPaneInks(root, themeKey);
-  const inputs = { status, request, letters, view, marks, stacks, inks, element: root, themeKey };
+  const inputs = { status, request, letters, view, base, marks, stacks, inks, element: root, themeKey };
   const pattern = useLayerPatternPane(inputs);
   const folded = useLayerFoldedPane(inputs);
 
@@ -76,13 +80,15 @@ export function LayerOrderPanes(props: LayerOrderPanesProps) {
   const onPatternZoom = useMemo(() => zoomOf('pattern'), [zoomOf]);
   const onFoldedZoom = useMemo(() => zoomOf('folded'), [zoomOf]);
 
-  // The flash ends on the clock, not on its animation: the pane drawing it may not be on screen.
-  const flashN = marks.flash?.n ?? null;
+  // The flash ends on the clock, not on its animation: the pane drawing it may
+  // not be on screen. A new callback each render must not start it again.
+  const flashN = base.flash?.n ?? null;
+  const flashEnded = useEventCallback((n: number) => props.onFlashEnded?.(n));
   useEffect(() => {
-    if (flashN === null || !onFlashEnded) return;
-    const timer = setTimeout(() => onFlashEnded(flashN), LAYER_PANE_FLASH_MS);
+    if (flashN === null) return;
+    const timer = setTimeout(() => flashEnded(flashN), LAYER_PANE_FLASH_MS);
     return () => clearTimeout(timer);
-  }, [flashN, onFlashEnded]);
+  }, [flashN, flashEnded]);
 
   const foldedPlace = status.kind === 'opening' || status.kind === 'ready';
   // Refused or lost, the crease pattern is the one pane, whatever the switch says.
@@ -94,7 +100,7 @@ export function LayerOrderPanes(props: LayerOrderPanesProps) {
 
   return (
     <div ref={setRoot} className={styles.panes} data-layer-order-panes="">
-      {one !== 'folded' && (
+      <div className={styles.slot} hidden={one === 'folded'}>
         <LayerOrderPane
           ref={patternCamera}
           channels={pattern}
@@ -118,46 +124,48 @@ export function LayerOrderPanes(props: LayerOrderPanesProps) {
             />
           )}
         </LayerOrderPane>
+      </div>
+      {foldedPlace && (
+        <div className={styles.slot} hidden={one === 'crease'}>
+          {folded ? (
+            <LayerOrderPane
+              ref={foldedCamera}
+              channels={folded}
+              label={t('dialogs:layerOrder.foldedPane', 'Folded figure')}
+              canvasLabel={
+                view.side === 'back'
+                  ? t('dialogs:layerOrder.foldedCanvasBack', 'The folded figure from the back. Pick the face on top; drag to pan, scroll to zoom.')
+                  : t('dialogs:layerOrder.foldedCanvasFront', 'The folded figure from the front. Pick the face on top; drag to pan, scroll to zoom.')
+              }
+              onZoomPercentChange={onFoldedZoom}
+              {...shared}
+            >
+              {wide && (
+                <LayerOrderPaneToolbar
+                  label={t('dialogs:layerOrder.zoom.foldedBar', 'Folded figure view')}
+                  zoomOutLabel={t('dialogs:layerOrder.zoom.foldedOut', 'Zoom out the folded figure')}
+                  zoomInLabel={t('dialogs:layerOrder.zoom.foldedIn', 'Zoom in the folded figure')}
+                  resetLabel={t('dialogs:layerOrder.zoom.foldedReset', 'Reset the folded figure zoom')}
+                  fitLabel={fitLabel}
+                  zoomPercent={zoom.folded}
+                  onZoomOut={() => cameras.current.folded?.zoomOut()}
+                  onZoomIn={() => cameras.current.folded?.zoomIn()}
+                  onReset={() => cameras.current.folded?.setZoomPercent(100)}
+                  onFit={fitBoth}
+                />
+              )}
+            </LayerOrderPane>
+          ) : (
+            <section className={styles.waiting} aria-label={t('dialogs:layerOrder.foldedPane', 'Folded figure')}>
+              {status.kind === 'opening' && (
+                <span className={styles.loading} role="status" aria-label={t('dialogs:layerOrder.foldedLoading', 'Loading the folded figure')}>
+                  <PictureLoading />
+                </span>
+              )}
+            </section>
+          )}
+        </div>
       )}
-      {foldedPlace &&
-        one !== 'crease' &&
-        (folded ? (
-          <LayerOrderPane
-            ref={foldedCamera}
-            channels={folded}
-            label={t('dialogs:layerOrder.foldedPane', 'Folded figure')}
-            canvasLabel={
-              view.side === 'back'
-                ? t('dialogs:layerOrder.foldedCanvasBack', 'The folded figure from the back. Pick the face on top; drag to pan, scroll to zoom.')
-                : t('dialogs:layerOrder.foldedCanvasFront', 'The folded figure from the front. Pick the face on top; drag to pan, scroll to zoom.')
-            }
-            onZoomPercentChange={onFoldedZoom}
-            {...shared}
-          >
-            {wide && (
-              <LayerOrderPaneToolbar
-                label={t('dialogs:layerOrder.zoom.foldedBar', 'Folded figure view')}
-                zoomOutLabel={t('dialogs:layerOrder.zoom.foldedOut', 'Zoom out the folded figure')}
-                zoomInLabel={t('dialogs:layerOrder.zoom.foldedIn', 'Zoom in the folded figure')}
-                resetLabel={t('dialogs:layerOrder.zoom.foldedReset', 'Reset the folded figure zoom')}
-                fitLabel={fitLabel}
-                zoomPercent={zoom.folded}
-                onZoomOut={() => cameras.current.folded?.zoomOut()}
-                onZoomIn={() => cameras.current.folded?.zoomIn()}
-                onReset={() => cameras.current.folded?.setZoomPercent(100)}
-                onFit={fitBoth}
-              />
-            )}
-          </LayerOrderPane>
-        ) : (
-          <section className={styles.waiting} aria-label={t('dialogs:layerOrder.foldedPane', 'Folded figure')}>
-            {status.kind === 'opening' && (
-              <span className={styles.loading} role="status" aria-label={t('dialogs:layerOrder.foldedLoading', 'Loading the folded figure')}>
-                <PictureLoading />
-              </span>
-            )}
-          </section>
-        ))}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import type { OristudioCpLineSegment } from '../../engine/oristudioCpTypes';
 import { faceLettersOf } from '../../layer-order/engine/faceIndex';
 import type { LayerOrderSessionOpen } from '../../layer-order/dialog/layerOrderSession';
 import type { LayerOrderSessionStatus } from '../../layer-order/dialog/useLayerOrderSession';
+import { DOUBLE_TAP_MS } from '../../layer-order/panes/layerPaneInput';
 import { NO_FACE_MARKS, type LayerFaceMarks } from '../../layer-order/panes/layerPaneMarks';
 import { zScene } from '../../layer-order/panes/layerPanes.fixtures';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
@@ -70,7 +71,15 @@ const REQUEST: LayerOrderRequest = {
     digest: 'z',
   },
   record: null,
-  look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+  look: {
+    style: DEFAULT_PAPER_STYLE,
+    policy: PAPER_STYLE_POLICIES['folded-flat'],
+    turnDeg: 0,
+    side: 'front',
+    xray: false,
+    lineStyle: 'color',
+    lineWidth: 1,
+  },
   shown: FRONT,
 };
 
@@ -242,15 +251,31 @@ describe('the Layer order panes', () => {
   });
 
   it('a pick sends its face, its pane and its input; no paper sends empty paper', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const onFacePicked = vi.fn();
     const onEmptyPaper = vi.fn();
     render({ marks: PICKED, onFacePicked, onEmptyPaper });
     press(canvasOf('folded')!, letterAt('folded', 'C'));
     expect(onFacePicked).toHaveBeenLastCalledWith({ face: C, origin: 'folded', input: 'pointer' });
+    // A tap's pick waits out the double-tap window.
     press(canvasOf('pattern')!, letterAt('pattern', 'A'), 'touch');
+    expect(onFacePicked).toHaveBeenCalledTimes(1);
+    act(() => vi.advanceTimersByTime(DOUBLE_TAP_MS));
     expect(onFacePicked).toHaveBeenLastCalledWith({ face: A, origin: 'pattern', input: 'tap' });
     press(canvasOf('pattern')!, { x: 2, y: 2 });
     expect(onEmptyPaper).toHaveBeenLastCalledWith({ origin: 'pattern', input: 'pointer' });
+  });
+
+  it('two taps far apart are two picks, the first sent as the second comes', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const onFacePicked = vi.fn();
+    render({ marks: PICKED, onFacePicked });
+    const canvas = canvasOf('folded')!;
+    press(canvas, letterAt('folded', 'A'), 'touch');
+    press(canvas, letterAt('folded', 'C'), 'touch');
+    expect(onFacePicked.mock.calls.map(([event]) => event.face)).toEqual([A]);
+    act(() => vi.advanceTimersByTime(DOUBLE_TAP_MS));
+    expect(onFacePicked.mock.calls.map(([event]) => event.face)).toEqual([A, C]);
   });
 
   it('tells the hover when the face under the pointer changes', () => {
@@ -264,7 +289,8 @@ describe('the Layer order panes', () => {
     expect(onFaceHovered).toHaveBeenLastCalledWith({ face: C, origin: 'folded', input: 'pointer' });
   });
 
-  it('a double tap fits, and the second tap picks nothing', () => {
+  it('a double tap fits, and picks nothing', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const onFacePicked = vi.fn();
     render({ marks: PICKED, onFacePicked });
     const readout = () => byRole(host, 'button', 'Reset the folded figure zoom').textContent;
@@ -276,20 +302,27 @@ describe('the Layer order panes', () => {
     const at = letterAt('folded', 'C');
     press(canvas, at, 'touch');
     press(canvas, at, 'touch');
+    act(() => vi.advanceTimersByTime(DOUBLE_TAP_MS * 2));
     runFrames();
-    expect(onFacePicked).toHaveBeenCalledTimes(1);
+    expect(onFacePicked).not.toHaveBeenCalled();
     expect(readout()).toBe(fitted);
   });
 
-  it('on a phone: one pane, and nothing floats over it', () => {
+  it('on a phone: one pane, nothing floats over it, and a switch keeps both canvases and their cameras', () => {
+    const shown = (pane: 'pattern' | 'folded') => canvasOf(pane)!.closest('[hidden]') === null;
     render({ phonePane: 'crease' });
-    expect(canvasOf('pattern')).not.toBeNull();
-    expect(canvasOf('folded')).toBeNull();
+    const pattern = canvasOf('pattern')!;
+    const folded = canvasOf('folded')!;
+    expect([shown('pattern'), shown('folded')]).toEqual([true, false]);
     expect(queryByRole(host, 'toolbar', 'Crease pattern view')).toBeNull();
     render({ phonePane: 'folded' });
-    expect(canvasOf('pattern')).toBeNull();
-    expect(canvasOf('folded')).not.toBeNull();
+    expect([shown('pattern'), shown('folded')]).toEqual([false, true]);
     expect(allByRole(host, 'toolbar')).toEqual([]);
+    render({ phonePane: 'crease' });
+    render({ phonePane: 'folded' });
+    // The same two canvases throughout: no pane remounted, so no new context and no camera reset.
+    expect([canvasOf('pattern'), canvasOf('folded')]).toEqual([pattern, folded]);
+    expect(channels.last.size).toBe(2);
   });
 
   it('refused or lost: the crease pattern alone; a face the refusal names marked in danger', () => {
@@ -297,7 +330,7 @@ describe('the Layer order panes', () => {
     expect(canvasOf('folded')).toBeNull();
     expect(lettersOn('pattern')).toEqual([{ letter: 'B', tone: 'danger', under: false }]);
     render({ status: { kind: 'lost', cause: 'failed', limits: LIMITS }, phonePane: 'folded' });
-    expect(canvasOf('pattern')).not.toBeNull();
+    expect(canvasOf('pattern')?.closest('[hidden]')).toBeNull();
     expect(canvasOf('folded')).toBeNull();
   });
 
@@ -311,6 +344,19 @@ describe('the Layer order panes', () => {
     expect(onFlashEnded).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(1));
     expect(onFlashEnded).toHaveBeenCalledWith(4);
+  });
+
+  it('a new flash callback each render neither restarts the fade nor misses its end', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const flash = { changed: { front: new Uint32Array([1]), back: new Uint32Array([1]) }, n: 5 };
+    const first = vi.fn();
+    const second = vi.fn();
+    render({ marks: { ...NO_FACE_MARKS, flash }, onFlashEnded: first });
+    act(() => vi.advanceTimersByTime(800));
+    render({ marks: { ...NO_FACE_MARKS, flash }, onFlashEnded: second });
+    act(() => vi.advanceTimersByTime(800));
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith(5);
   });
 
   it('X-ray draws every layer see-through, the buried ones too', () => {

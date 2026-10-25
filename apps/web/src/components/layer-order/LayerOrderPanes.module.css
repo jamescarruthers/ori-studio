@@ -1,7 +1,8 @@
 /*
  * The Layer order dialog's panes region (LayerOrderPanes.tsx): the crease
  * pattern and the folded figure side by side, the rule between them the 1px
- * gap over the region's own ground; one pane at a time on a phone.
+ * gap over the region's own ground; one pane at a time on a phone, the other
+ * kept, hidden.
  */
 .panes {
   display: grid;
@@ -11,6 +12,17 @@
   min-width: 0;
   min-height: 0;
   background: var(--border-subtle);
+}
+
+/* Each pane's place: the pane fills it. */
+.slot {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+
+.slot[hidden] {
+  display: none;
 }
 
 /* The folded figure's place while the session opens: the picture loading. */

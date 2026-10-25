@@ -7,10 +7,15 @@
  *
  * How a press came is read off the pane's own pointer events in the capture
  * phase, before the canvas under it handles them, so a pick knows its input
- * by the time the surface reports it. A tap's end that lands soon after and
- * near the last one's is a double tap (`isDoubleTap`): it fits, and the pick
- * its release would make is dropped; the first tap has already picked. A
- * press that moved is a pan, and is no tap.
+ * by the time the surface reports it.
+ *
+ * - **A pointer's pick** goes out at once.
+ * - **A tap's pick** goes out once the double-tap window has passed with no
+ *   second tap ({@link DOUBLE_TAP_MS}). A second tap soon after and near the
+ *   first is a double tap (`isDoubleTap`): it fits both panes, and neither
+ *   tap picks. A press that travels further than a click may
+ *   (`CP_SURFACE_CLICK_SLOP_CSS`, the surface's own test) is a pan, and is no
+ *   tap.
  *
  * The hover is told only when the face under it changes, not the spot: on
  * the folded paper a face lies over many.
@@ -18,11 +23,12 @@
  * No behaviour here depends on DOM focus: the events come from pointers on
  * the pane alone.
  */
-import { useMemo, useRef, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, type PointerEvent } from 'react';
+import { isClick } from '../../cp-workspace/surface/cpSurfaceInput';
 import { useEventCallback } from '../../hooks/useEventCallback';
 import type { LayerFace } from '../engine/faceIndex';
 import {
-  DOUBLE_TAP_SLOP_PX,
+  DOUBLE_TAP_MS,
   isDoubleTap,
   paneInputOf,
   type LayerPaneHit,
@@ -54,7 +60,21 @@ export function useLayerPanePointer(
   const press = useRef<{ x: number; y: number } | null>(null);
   const lastTap = useRef<LayerPaneTap | null>(null);
   const dropPick = useRef(false);
+  /** A tap's pick, waiting out the double-tap window. */
+  const pending = useRef<{ timer: ReturnType<typeof setTimeout>; hit: LayerPaneHit | null } | null>(null);
   const hovered = useRef<LayerFace | null>(null);
+
+  const cancelPending = () => {
+    if (pending.current !== null) clearTimeout(pending.current.timer);
+    pending.current = null;
+  };
+  // A pane going away drops the tap still waiting.
+  useEffect(() => {
+    const held = pending;
+    return () => {
+      if (held.current !== null) clearTimeout(held.current.timer);
+    };
+  }, []);
 
   const onPointerDownCapture = useEventCallback((event: PointerEvent) => {
     input.current = paneInputOf(event.pointerType);
@@ -68,13 +88,15 @@ export function useLayerPanePointer(
     if (event.pointerType !== 'touch') return;
     const from = press.current;
     press.current = null;
-    if (!from || Math.hypot(event.clientX - from.x, event.clientY - from.y) > DOUBLE_TAP_SLOP_PX) {
+    if (!from || !isClick(from, { x: event.clientX, y: event.clientY })) {
       lastTap.current = null;
       return;
     }
     const tap = { at: event.timeStamp, x: event.clientX, y: event.clientY };
     if (isDoubleTap(lastTap.current, tap)) {
       lastTap.current = null;
+      // Neither tap picks: the first's is still waiting, the second's is about to be reported.
+      cancelPending();
       dropPick.current = true;
       onDoubleTap();
     } else {
@@ -82,13 +104,30 @@ export function useLayerPanePointer(
     }
   });
 
+  const report = useEventCallback((hit: LayerPaneHit | null, by: LayerPaneInput) => {
+    if (hit) events.onFacePicked?.({ face: hit.face, origin: pane, input: by });
+    else events.onEmptyPaper?.({ origin: pane, input: by });
+  });
+
   const onPick = useEventCallback((hit: LayerPaneHit | null) => {
     if (dropPick.current) {
       dropPick.current = false;
       return;
     }
-    if (hit) events.onFacePicked?.({ face: hit.face, origin: pane, input: input.current });
-    else events.onEmptyPaper?.({ origin: pane, input: input.current });
+    const by = input.current;
+    if (by !== 'tap') {
+      report(hit, by);
+      return;
+    }
+    // A tap that made no double tap with the one before it: that one's pick goes now.
+    const waiting = pending.current;
+    cancelPending();
+    if (waiting) report(waiting.hit, 'tap');
+    const timer = setTimeout(() => {
+      pending.current = null;
+      report(hit, 'tap');
+    }, DOUBLE_TAP_MS);
+    pending.current = { timer, hit };
   });
 
   const onHover = useEventCallback((hit: LayerPaneHit | null) => {

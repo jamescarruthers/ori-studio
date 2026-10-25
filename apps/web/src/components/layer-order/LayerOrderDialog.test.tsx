@@ -99,7 +99,15 @@ const SHOWN = fakeLayerOrderScene(FAKE_LAYER_ORDER_FIGURE, [2, 3, 0, 1], 'front'
 const REQUEST: LayerOrderRequest = {
   source: FAKE_LAYER_ORDER_SOURCE,
   record: null,
-  look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+  look: {
+    style: DEFAULT_PAPER_STYLE,
+    policy: PAPER_STYLE_POLICIES['folded-flat'],
+    turnDeg: 0,
+    side: 'front',
+    xray: false,
+    lineStyle: 'color',
+    lineWidth: 1,
+  },
   shown: SHOWN,
   name: 'Kabuto',
   byline: 'Traditional',
@@ -608,15 +616,15 @@ describe('the Layer order dialog as the whole screen (D6)', () => {
     await opened();
     await until(isReady, 'the session opened');
     const panes = byRole(openDialog(), 'group', 'Pane');
+    // Both panes stay mounted, so a switch keeps each one's camera; the other is hidden.
+    const shown = (name: string) => byRole(openDialog(), 'region', name).closest('[hidden]') === null;
     expect(byRole(panes, 'button', 'Folded').getAttribute('aria-pressed')).toBe('true');
-    expect(byRole(openDialog(), 'region', 'Folded figure')).toBeDefined();
-    expect(queryByRole(openDialog(), 'region', 'Crease pattern')).toBeNull();
+    expect([shown('Folded figure'), shown('Crease pattern')]).toEqual([true, false]);
     // The name gives way to the switch.
     expect(openDialog().textContent).not.toContain('Kabuto');
 
     click(byRole(panes, 'button', 'Crease pattern'));
     await flush();
-    expect(byRole(openDialog(), 'region', 'Crease pattern')).toBeDefined();
-    expect(queryByRole(openDialog(), 'region', 'Folded figure')).toBeNull();
+    expect([shown('Folded figure'), shown('Crease pattern')]).toEqual([false, true]);
   });
 });
