@@ -35,6 +35,7 @@ import {
 } from '../../store/workspaceStore/diagramCapture';
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import { openLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
+import type { LayerOrderRequestSurface } from '../../lib/layerOrder/layerOrderRequest';
 import { captureModel, withSheetPaper } from './captureFolded';
 import {
   LayerOrderNotShownError,
@@ -92,6 +93,9 @@ import {
 
 /** The undo step a pose makes. */
 const POSE_LABEL = 'Adjust pose';
+
+/** Who asked Pose for the Layer order dialog: its own Edit order…, or the Step pane beside it. */
+export type PoseLayerOrderSurface = Extract<LayerOrderRequestSurface, 'pose' | 'diagram_step'>;
 
 /** How long the 3D view must rest before its camera is captured: one orbit, one undo step. */
 export const ORBIT_SETTLE_MS = 450;
@@ -331,9 +335,11 @@ export interface PoseController {
    * step's source in the flat pose it was opened on, one undo step ("Change
    * layer order", as the Step pane's). `unchanged`, `cancelled`, `busy` and
    * `unavailable` write nothing, and so does an Apply onto a step or pattern
-   * that changed while it was open. Whether it applied an order.
+   * that changed while it was open. `surface` is who asked, for the dialog's
+   * events: `pose`, Pose's own Edit order…; `diagram_step`, the Step pane's
+   * Edit… or Review… on the step open here. Whether it applied an order.
    */
-  editLayerOrder: (via?: DiagramStepLayerOrderVia) => Promise<boolean>;
+  editLayerOrder: (via?: DiagramStepLayerOrderVia, surface?: PoseLayerOrderSurface) => Promise<boolean>;
   /**
    * An undo or redo: stop what is still folding for a source the step no
    * longer has, and let go of a held fold in a layer order the step's record
@@ -547,7 +553,10 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
     return session.heldFlatSource();
   };
 
-  const editLayerOrder = async (via: DiagramStepLayerOrderVia = 'edit'): Promise<boolean> => {
+  const editLayerOrder = async (
+    via: DiagramStepLayerOrderVia = 'edit',
+    surface: PoseLayerOrderSurface = 'pose'
+  ): Promise<boolean> => {
     endPreview();
     const opening = await capturing(
       async (begun, linked): Promise<StepLayerOrderOpening | DiagramCaptureOutcome | 'spatial'> => {
@@ -565,6 +574,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
         return {
           request: stepLayerOrderRequest(
             stepId,
+            surface,
             begun.style,
             store.get().oristudioCpViewport,
             render,

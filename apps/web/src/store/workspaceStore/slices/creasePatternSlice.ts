@@ -117,8 +117,14 @@ import {
   foldOristudioCpDocument as foldRuntimeOristudioCpDocument,
   foldOristudioCpFigureAnother as foldRuntimeOristudioCpFigureAnother,
   foldOristudioCpFigureToCase as foldRuntimeOristudioCpFigureToCase,
+  foldOristudioCpWithOrder,
   freeOristudioCpFoldedFigure,
+  getOristudioCpFoldedFigureDigest,
+  getOristudioCpFoldedFigurePaperScene,
   getOristudioCpFoldedFigureRenderSnapshot as getRuntimeOristudioCpFoldedFigureRenderSnapshot,
+  getOristudioCpFoldedFigureSnapshot,
+  getOristudioCpFoldedFigureSource,
+  getOristudioCpSelectionFoldSource,
   isFoldCancellation,
   loadOristudioCpDocumentFromText,
   releaseOristudioCpDocument,
@@ -133,6 +139,7 @@ import {
 } from '../foldRuns';
 import type {
   CreasePatternSlice,
+  OristudioCpFigureLayerOrderOpening,
   OristudioCpFoldRunKind,
   WorkspaceSliceCreator,
   WorkspaceState,
@@ -142,11 +149,12 @@ import {
   type CanvasAnnotation,
 } from '../../../cp-workspace/annotations/annotation';
 import {
+  adoptFoldedFigureHandle,
+  adoptTransientFoldedFigureHandle,
   foldedFigureHandleEpoch,
   releaseFoldedFigureHandle,
   releaseFoldedFigureHandles,
   resetFoldedFigureHandles,
-  retainFoldedFigureHandle,
   retainFoldedFigureHandles,
   setFoldedFigureHandleFree,
 } from '../../../cp-workspace/folded/foldedFigureHandles';
@@ -162,17 +170,33 @@ import type {
   OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureModel,
   OristudioCpFoldedFigureSnapshot,
+  OristudioCpFoldedPaperScene,
+  OristudioCpFoldSource,
 } from '../../../engine/oristudioCpTypes';
 import {
+  foldedFigureCurrentCase,
   foldedFigureCycling,
   foldedModelsEqual,
+  foldedSnapshotCase,
   reportedSolutions,
+  sameFoldedOrder,
 } from '../../../cp-workspace/folded/foldedFigureState';
+import { holdFoldedFigureAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
 import {
-  noteSolutionFrontier,
-  seedSolutionFrontier,
-  startSolutionFrontier,
-} from '../../../cp-workspace/folded/foldedSolutionFrontiers';
+  foldedFigureLayerOrderBlock,
+  foldedFigureLayerOrderRecord,
+  refoldHeldByLayerOrder,
+  refoldHeldByLayerOrderReason,
+} from '../../../cp-workspace/folded/foldedFigureLayerOrderState';
+import { resolveLayerOrder } from '../../../layer-order/host/hostEngineGateway';
+import { foldedFigureLayerOrder } from '../../../lib/layerOrder/foldedFigureLayerOrder';
+import {
+  EDIT_PAPER_FRAME,
+  layerOrderRecordFromSource,
+  layerOrderRecordToSource,
+} from '../../../lib/layerOrder/paperFrame';
+import { kernelFoldSourceOf, layerOrderSourceOf } from '../../../lib/layerOrder/layerOrderSource';
+import { noteSolutionFrontier } from '../../../cp-workspace/folded/foldedSolutionFrontiers';
 import { resolveFoldRoute } from '../../../cp-workspace/folded/foldRoute';
 import {
   fold3dRefusalMessage,
@@ -184,6 +208,11 @@ import {
   folded3dFrameRadius,
 } from '../../../cp-workspace/folded/folded3dCamera';
 import { setFolded3dRenderModel } from '../../../cp-workspace/folded/folded3dRenderModels';
+import {
+  figuresAwaitFold,
+  FoldMovedOn,
+  isAwaitingFold,
+} from '../../../cp-workspace/folded/foldLanding';
 import {
   folded3dStoredSceneStyleChanged,
   project3dScene,
@@ -409,6 +438,12 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
    */
   const pendingFolded3dRehydrations = new Set<string>();
   /**
+   * Flat figures whose Layer order dialog is being opened; see
+   * `prepareOristudioCpFigureLayerOrder`. A second press while one reads or
+   * folds is refused rather than folding the figure twice.
+   */
+  const pendingLayerOrderOpens = new Set<string>();
+  /**
    * What we last wrote into each kernel handle, so a reconcile that would change
    * nothing costs a comparison instead of a round-trip. Cleared when the handle
    * is freed: the kernel may hand the same slot to a later figure, and a stale
@@ -542,7 +577,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     figureId: string,
     epoch: number,
     handle: number,
-    render: Parameters<typeof setFolded3dRenderModel>[1]
+    render: Parameters<typeof setFolded3dRenderModel>[1],
+    { copyFrom }: { copyFrom?: number | null } = {}
   ): Promise<boolean> {
     const stillThere =
       foldedFigureHandleEpoch() === epoch &&
@@ -551,9 +587,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       await freeOristudioCpFoldedFigure(handle).catch(() => {});
       return false;
     }
-    // A fresh session: its search has reached only what this fold reports.
-    startSolutionFrontier(handle);
-    retainFoldedFigureHandle(handle);
+    // A fresh session has reached only what this fold reports; a duplicate's, as far as its original.
+    adoptFoldedFigureHandle(handle, copyFrom === undefined ? {} : { copyFrom });
     setFolded3dRenderModel(handle, render);
     return true;
   }
@@ -1064,6 +1099,38 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
   }
 
   /**
+   * Where a press's fold lands: the figure `figureId` it marked `loading`,
+   * holding `holding` (null for a placeholder it added), in this generation of
+   * handles. Each check throws {@link FoldMovedOn} once an undo, a redo, a
+   * Delete or a new document has taken that figure from the press; its catch
+   * frees the fold ({@link foldLandedOnNothing}). See `foldLanding.ts`.
+   */
+  function foldLanding(figureId: string, holding: number | null) {
+    const epoch = foldedFigureHandleEpoch();
+    const check = (handle: number) => {
+      const holds =
+        foldedFigureHandleEpoch() === epoch &&
+        figuresAwaitFold(get().oristudioCpFoldedFigures, figureId, holding);
+      if (!holds) throw new FoldMovedOn(handle);
+    };
+    return {
+      check,
+      /** The new fold's picture, the last thing a flat landing waits for, then the check. */
+      async picture(...args: Parameters<typeof renderSnapshotForFoldedFigure>) {
+        const picture = await renderSnapshotForFoldedFigure(...args);
+        check(args[0]);
+        return picture;
+      },
+    };
+  }
+
+  /** A fold whose figure moved on while it ran: nothing adopted it, so it is freed. */
+  async function foldLandedOnNothing(moved: FoldMovedOn): Promise<false> {
+    await freeOristudioCpFoldedFigure(moved.handle).catch(() => {});
+    return false;
+  }
+
+  /**
    * Put a figure back exactly as it was and report why, for a refold that could
    * not produce a replacement. The figure itself was never invalid — the crease
    * pattern is — so destroying it would lose work over someone else's problem.
@@ -1077,20 +1144,55 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
     return false;
   }
 
-  /** The same restore, for a fold the user stopped. See {@link discardFoldedFigureDraftQuietly}. */
+  /**
+   * The same restore, for a fold the user stopped. See {@link discardFoldedFigureDraftQuietly}.
+   * Only onto the figure the press left `loading`: one an undo or a redo put
+   * in its place meanwhile is history's, and stays (`foldLanding.ts`).
+   */
   function restorePreviousFigureQuietly(previous: OristudioCpFoldedFigureEntry): false {
     set({
       oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
-        candidate.id === previous.id ? previous : candidate
+        isAwaitingFold(candidate, previous.id, previous.handle) ? previous : candidate
       ),
     });
     return false;
   }
 
+  /**
+   * A fold of `source` made for the Layer order dialog alone, at case
+   * `target` of Oriedita's search: the figure keeps its own. The count holds
+   * it, and whoever opens the dialog on it lets go through `release`
+   * (`adoptTransientFoldedFigureHandle`). Null when the search does not reach
+   * that case again.
+   */
+  async function ownLayerOrderFold(
+    source: OristudioCpFoldSource,
+    model: OristudioCpFoldedFigureModel,
+    target: number,
+    runId: number
+  ): Promise<{ handle: number; release: () => void } | null> {
+    // No order given: Oriedita's own search, as a plain fold of these creases runs it.
+    const result = await foldOristudioCpWithOrder(source, new Uint32Array(), model, runId);
+    if (result.status !== 'folded') return null;
+    const release = adoptTransientFoldedFigureHandle(result.handle);
+    try {
+      let snapshot = result.snapshot;
+      if (foldedSnapshotCase(snapshot) !== target) {
+        snapshot = (await foldRuntimeOristudioCpFigureToCase(result.handle, target, 'Order5', runId)).snapshot;
+      }
+      if (foldedSnapshotCase(snapshot) === target) return { handle: result.handle, release };
+    } catch (error) {
+      release();
+      throw error;
+    }
+    release();
+    return null;
+  }
+
   /** {@link withFoldInFlightIn} over this store: see `foldRuns.ts`. */
   function withFoldInFlight<T>(
     kind: OristudioCpFoldRunKind,
-    run: (runId: number) => Promise<T>
+    run: (runId: number, stop: AbortSignal) => Promise<T>
   ): Promise<T> {
     return withFoldInFlightIn({ get, set }, kind, run);
   }
@@ -2198,8 +2300,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           const camera = defaultFolded3dCamera(result.render, result.snapshot.model.state);
           const displayStyle: OristudioCpFoldedFigureDisplayStyle = 'Paper5';
           const scene = project3dScene(result.render, result.snapshot, displayStyle, camera);
-          startSolutionFrontier(result.handle);
-          retainFoldedFigureHandle(result.handle);
+          adoptFoldedFigureHandle(result.handle);
           // The geometry lives beside the handle, not on the entry: it is up to
           // ~235 KB of packed arrays and the `.osf` writer pretty-prints. It is
           // what every *re*-projection needs, and it is released with the handle.
@@ -2340,6 +2441,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         oristudioCpFoldedFigures: [...get().oristudioCpFoldedFigures, loadingEntry],
         oristudioCpError: null,
       });
+      // The fold lands only on the draft, which an undo can take away meanwhile.
+      const landing = foldLanding(figureId, null);
 
       try {
         // A reopened Oriedita file keeps its folded appearance, but not its
@@ -2362,7 +2465,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         const displayStyle = result.snapshot.display_style;
         // Rendered unselected: a fresh fold is not the canvas selection, so it
         // must not carry the kernel's selection marker either.
-        const renderSnapshot = await renderSnapshotForFoldedFigure(
+        const renderSnapshot = await landing.picture(
           result.handle,
           displayStyle,
           figureIndex,
@@ -2390,8 +2493,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // the entry so deleting/re-folding the figure clears the highlight for
         // free, and keep the fold out of the error toast path.
         const contradiction = result.snapshot.contradiction ?? null;
-        startSolutionFrontier(result.handle);
-        retainFoldedFigureHandle(result.handle);
+        adoptFoldedFigureHandle(result.handle);
         // Park the figure against the creases it was actually folded from, not
         // against the nominal paper square — a pattern can sit anywhere in the
         // sheet, and anchoring to the paper leaves the figure adrift from it.
@@ -2461,6 +2563,11 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         );
         return true;
       } catch (error) {
+        // Undone, or deleted, while it folded: nothing to land on, and nothing to put back.
+        if (error instanceof FoldMovedOn) {
+          completed('halted');
+          return await foldLandedOnNothing(error);
+        }
         if (isFoldCancellation(error)) {
           // The draft goes, quietly. Left as an `error` entry it would be debris
           // on the canvas *and* an error toast, for something the user asked for.
@@ -2566,12 +2673,11 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           const step = await withFoldInFlight('another-3d', (runId) =>
             fold3dRuntimeOristudioCpFigureAnother(handle, runId)
           );
+          // Noted before anything reads it: the event, then the entry's readout.
+          const known = noteFoldedSolutions(figure, handle, step.snapshot);
           track(ANALYTICS_EVENTS.foldSolutionCycled, {
             direction: cycleDirection,
-            solution_count_bucket: bucketCount(
-              noteFoldedSolutions(figure, handle, step.snapshot),
-              COUNT_BUCKETS
-            ),
+            solution_count_bucket: bucketCount(known, COUNT_BUCKETS),
           });
           setFolded3dRenderModel(handle, step.render);
           const camera =
@@ -2606,12 +2712,11 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         const snapshot = await withFoldInFlight('another', (runId) =>
           foldRuntimeOristudioCpFigureAnother(handle, runId)
         );
+        // Noted before anything reads it: the event, then the entry's readout.
+        const known = noteFoldedSolutions(figure, handle, snapshot);
         track(ANALYTICS_EVENTS.foldSolutionCycled, {
           direction: cycleDirection,
-          solution_count_bucket: bucketCount(
-            noteFoldedSolutions(figure, handle, snapshot),
-            COUNT_BUCKETS
-          ),
+          solution_count_bucket: bucketCount(known, COUNT_BUCKETS),
         });
         const renderSnapshot = await renderSnapshotForFoldedFigure(
           figure.handle,
@@ -3015,6 +3120,12 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         });
         return false;
       }
+      // The toolbar's hold, for a call that reaches here without it.
+      if (refoldHeldByLayerOrder(figure)) {
+        const message = refoldHeldByLayerOrderReason(i18n.t);
+        set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+        return false;
+      }
 
       const lineIds = reselectFoldableLineIds(oristudioCpDocument.document, figure.sourceBounds);
       // The unfiltered half of the same reselect. A refold has no live selection
@@ -3039,6 +3150,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       // Which teardown generation this refold belongs to, captured before the
       // await. See `adoptFolded3dHandle`.
       const refoldEpoch = foldedFigureHandleEpoch();
+      // It lands only on the figure as this marks it: still holding `previousHandle`.
+      const landing = foldLanding(figure.id, previousHandle);
       set({
         oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
           candidate.id === figure.id ? { ...candidate, status: 'loading' } : candidate
@@ -3080,6 +3193,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
               fold3dRefusalMessage(i18n.t, result.refusal)
             );
           }
+          landing.check(result.handle);
           const camera = defaultFolded3dCamera(result.render, result.snapshot.model.state);
           const scene = project3dScene(
             result.render,
@@ -3133,6 +3247,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           releaseFoldedFigureHandle(previousHandle);
           return true;
         } catch (error) {
+          if (error instanceof FoldMovedOn) return await foldLandedOnNothing(error);
           if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
           return restorePreviousFigure(figure, engineError(error).message);
         }
@@ -3148,7 +3263,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             runId
           )
         );
-        const renderSnapshot = await renderSnapshotForFoldedFigure(
+        const renderSnapshot = await landing.picture(
           result.handle,
           figure.displayStyle,
           foldedFigureIndex(figure.id),
@@ -3167,8 +3282,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           );
         }
         // A refold is a new search on a new handle: it starts from what it found.
-        startSolutionFrontier(result.handle);
-        retainFoldedFigureHandle(result.handle);
+        adoptFoldedFigureHandle(result.handle);
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
             candidate.id === figure.id
@@ -3212,6 +3326,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // valid — it is the *crease pattern* that cannot be folded — and the old
         // kernel handle is untouched, since it is released only after a success.
         // Stopping one is the same no-op with nothing to say about it.
+        if (error instanceof FoldMovedOn) return await foldLandedOnNothing(error);
         if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
         return restorePreviousFigure(figure, engineError(error).message);
       }
@@ -3283,6 +3398,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           ),
         });
       };
+      // An undo entry taken while the press waits reads the figure as it was before it.
+      const atRest = options?.pending ? holdFoldedFigureAtRest(figure) : () => {};
       if (options?.pending) setStatus('loading');
 
       // Fired only from here on, i.e. only once a fold has actually been asked
@@ -3295,7 +3412,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       const abandon = async (handle: number | null): Promise<false> => {
         if (handle !== null) await freeOristudioCpFoldedFigure(handle).catch(() => {});
         if (options?.pending && foldedFigureHandleEpoch() === epoch) setStatus('ready');
-        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'refused' });
+        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'refused', mode: 'spatial' });
         return false;
       };
 
@@ -3348,8 +3465,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         // flight. Adopting now would overwrite a newer handle and leak it.
         if (!latest || latest.handle != null) return await abandon(handle);
 
-        startSolutionFrontier(handle);
-        retainFoldedFigureHandle(handle);
+        adoptFoldedFigureHandle(handle);
         setFolded3dRenderModel(handle, render);
         set({
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
@@ -3372,7 +3488,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           // Nothing about the document changed; a figure that could not be
           // turned now can be.
         });
-        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'adopted' });
+        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'adopted', mode: 'spatial' });
         return true;
       } catch {
         // Silent by design. A background rehydrate that fails leaves a figure
@@ -3380,6 +3496,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         return await abandon(handle);
       } finally {
         pendingFolded3dRehydrations.delete(id);
+        atRest();
       }
     },
 
@@ -3421,12 +3538,18 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         sourceFingerprint: source.sourceFingerprint ?? null,
         sourceLineIds: [...(source.sourceLineIds ?? [])],
         sourceScopedLineIds: [...(source.sourceScopedLineIds ?? source.sourceLineIds ?? [])],
+        // A copy shows its original's chosen layer order — the kernel clones
+        // the session with its given order — so it keeps the record that
+        // order was saved as, and saves it under its own id.
+        ...(source.layerOrder ? { layerOrder: source.layerOrder } : {}),
         error: null,
       };
 
       // Captured before the await: the placeholder below is deletable while it
       // loads, exactly as a refolding figure is. See `adoptFolded3dHandle`.
       const duplicateEpoch = foldedFigureHandleEpoch();
+      // The copy lands only on that placeholder, which an undo can take away.
+      const landing = foldLanding(figureId, null);
       takeCanvasSelection('folded-figure', {
         oristudioCpFoldedFigures: [...get().oristudioCpFoldedFigures, loadingEntry],
         oristudioCpActiveFoldedFigureId: figureId,
@@ -3446,6 +3569,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             // through as if a handle had come back.
             throw new Error(fold3dRefusalMessage(i18n.t, result.refusal));
           }
+          landing.check(result.handle);
           const camera =
             source.camera ?? defaultFolded3dCamera(result.render, result.snapshot.model.state);
           const scene = project3dScene(
@@ -3456,12 +3580,13 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             { appearance: source.appearance, frameRadius: folded3dFrameRadius(result.render) }
           );
           if (
-            !(await adoptFolded3dHandle(figureId, duplicateEpoch, result.handle, result.render))
+            // The kernel cloned the whole session: the copy has searched as far.
+            !(await adoptFolded3dHandle(figureId, duplicateEpoch, result.handle, result.render, {
+              copyFrom: source.handle,
+            }))
           ) {
             return false;
           }
-          // The kernel cloned the whole session: the copy has searched as far.
-          seedSolutionFrontier(result.handle, source.handle);
           takeCanvasSelection('folded-figure', {
             oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
               figure.id === figureId
@@ -3488,15 +3613,14 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           return true;
         }
         const result = await duplicateRuntimeOristudioCpFoldedFigure(source.handle);
-        const renderSnapshot = await renderSnapshotForFoldedFigure(
+        const renderSnapshot = await landing.picture(
           result.handle,
           source.displayStyle,
           figureIndex,
           true
         );
         // A copy of the original's session, so it has searched as far.
-        seedSolutionFrontier(result.handle, source.handle);
-        retainFoldedFigureHandle(result.handle);
+        adoptFoldedFigureHandle(result.handle, { copyFrom: source.handle });
         takeCanvasSelection('folded-figure', {
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
             figure.id === figureId
@@ -3518,6 +3642,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         refreshFoldedFigureSelectionMarkers(previousActiveId);
         return true;
       } catch (error) {
+        if (error instanceof FoldMovedOn) return await foldLandedOnNothing(error);
         const normalized = engineError(error);
         set({
           oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((figure) =>
@@ -3529,6 +3654,302 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           error: normalized,
         });
         return false;
+      }
+    },
+
+    prepareOristudioCpFigureLayerOrder: async (id) => {
+      const oristudioCpDocument = get().oristudioCpDocument;
+      const figure = get().oristudioCpFoldedFigures.find((candidate) => candidate.id === id);
+      const blocked = { status: 'unavailable', reason: 'blocked' } as const;
+      if (!oristudioCpDocument || !figure?.snapshot) return blocked;
+      const stale = isFoldedFigureStale(oristudioCpDocument.document, figure);
+      if (foldedFigureLayerOrderBlock(figure, { stale }) !== null) return blocked;
+      if (pendingLayerOrderOpens.has(id)) return blocked;
+      const model = figure.snapshot.model;
+      const record = foldedFigureLayerOrderRecord(figure);
+      const target = foldedFigureCurrentCase(figure);
+      const nothingToRelease = async () => {};
+      const ready = (
+        source: OristudioCpFoldSource,
+        shown: OristudioCpFoldedPaperScene | null,
+        release: () => Promise<void> = nothingToRelease
+      ) => ({ status: 'ready', source, shown, model, release }) as const;
+
+      pendingLayerOrderOpens.add(id);
+      try {
+        if (figure.handle !== null) {
+          const handle = figure.handle;
+          try {
+            // An undo after Another solution puts back the entry, not the
+            // kernel's case: the handle may show a later order than the
+            // figure. The dialog opens on what the figure shows.
+            const kernel = await getOristudioCpFoldedFigureSnapshot(handle);
+            const source = await getOristudioCpFoldedFigureSource(handle);
+            if (sameFoldedOrder(kernel, figure.snapshot)) {
+              return ready(source, await getOristudioCpFoldedFigurePaperScene(handle));
+            }
+            // A chosen order the handle no longer shows: the dialog restores
+            // the record itself.
+            if (record) return ready(source, null);
+            const own = await withFoldInFlight('layer-order', (runId) =>
+              ownLayerOrderFold(source, model, target, runId)
+            );
+            return own ? await readyOn(own, source) : ready(source, null);
+          } catch (error) {
+            if (isFoldCancellation(error)) return { status: 'unavailable', reason: 'cancelled' };
+            const normalized = engineError(error);
+            set({ oristudioCpError: normalized.message, error: normalized });
+            return { status: 'unavailable', reason: 'failed' };
+          }
+        }
+        return await reopenForLayerOrder();
+      } finally {
+        pendingLayerOrderOpens.delete(id);
+      }
+
+      /**
+       * The dialog's opening on a fold made for it alone, `own` (the count
+       * holds it): its picture is what the dialog opens on, and the opening's
+       * release lets it go — not across a document replaced while the dialog
+       * was open, whose next fold may have its slot.
+       */
+      async function readyOn(own: { handle: number; release: () => void }, source: OristudioCpFoldSource) {
+        try {
+          const shown = await getOristudioCpFoldedFigurePaperScene(own.handle);
+          return ready(source, shown, async () => own.release());
+        } catch {
+          own.release();
+          return ready(source, null);
+        }
+      }
+
+      /**
+       * A figure reopened from a file has no live fold. Its source is its
+       * creases as they stand (not stale: blocked above), read without
+       * folding (`fold_source_of_selection`), so the dialog can open whatever
+       * the refold below does. With a record, the record is restored on
+       * them through the host engine (H2) and folded with the order it
+       * rebuilds, and the figure keeps that fold if it draws the order it
+       * was saved with. With none, the figure is folded to the case it
+       * shows on a fold of the dialog's own. When that fails, the dialog
+       * opens on the source alone: it restores the record itself and shows
+       * why, in its own frames.
+       */
+      async function reopenForLayerOrder(): Promise<OristudioCpFigureLayerOrderOpening> {
+        if (!oristudioCpDocument || !figure || figure.sourceBounds == null) return blocked;
+        const lineIds = reselectFoldableLineIds(oristudioCpDocument.document, figure.sourceBounds);
+        const route = resolveFoldRoute(oristudioCpDocument.document, lineIds);
+        if (route.kind !== 'flat') return blocked;
+        const epoch = foldedFigureHandleEpoch();
+        // The press waits, and the figure's verbs with it; an undo entry taken
+        // meanwhile reads the figure as it was before the press.
+        const atRest = holdFoldedFigureAtRest(figure);
+        set({
+          oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
+            candidate.id === id ? { ...candidate, status: 'loading' } : candidate
+          ),
+        });
+        const putBack = () => {
+          if (foldedFigureHandleEpoch() === epoch) restorePreviousFigureQuietly(figure);
+        };
+        let source: OristudioCpFoldSource | null = null;
+        try {
+          const kernelSource = await getOristudioCpSelectionFoldSource(route.lineIds, figure.startingFaceId ?? 1);
+          source = kernelSource;
+          const folded = await withFoldInFlight('layer-order', async (runId, stop) => {
+            if (!record) return { kind: 'own', own: await ownLayerOrderFold(kernelSource, model, target, runId) } as const;
+            const resolution = await resolveLayerOrder(
+              layerOrderSourceOf(kernelSource, model),
+              layerOrderRecordToSource(record, EDIT_PAPER_FRAME),
+              undefined,
+              { signal: stop }
+            );
+            if (resolution.outcome === 'cancelled') return { kind: 'cancelled' } as const;
+            // An engine that never loaded: the dialog's would not either.
+            if (resolution.outcome === 'lost' && resolution.cause === 'unavailable') {
+              return { kind: 'unavailable' } as const;
+            }
+            // Only the order it was saved with, whole: anything else would change its picture.
+            if (
+              resolution.outcome !== 'applied' ||
+              resolution.found.opened_on.kind !== 'held' ||
+              resolution.found.opened_on.ignored !== 0
+            ) {
+              return { kind: 'source' } as const;
+            }
+            const result = await foldOristudioCpWithOrder(kernelSource, resolution.applied.relations, model, runId);
+            if (result.status !== 'folded') return { kind: 'source' } as const;
+            // The count holds it from here; every way out lets go through it.
+            const release = adoptTransientFoldedFigureHandle(result.handle);
+            if (result.snapshot.outcome !== 'Solved') {
+              release();
+              return { kind: 'source' } as const;
+            }
+            return { kind: 'adopt', handle: result.handle, snapshot: result.snapshot, release } as const;
+          });
+
+          switch (folded.kind) {
+            case 'cancelled':
+              putBack();
+              return { status: 'unavailable', reason: 'cancelled' };
+            case 'unavailable':
+              putBack();
+              return { status: 'unavailable', reason: 'unavailable' };
+            case 'own':
+              putBack();
+              return folded.own === null ? ready(kernelSource, null) : await readyOn(folded.own, kernelSource);
+            case 'source':
+              putBack();
+              track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger: 'press', outcome: 'refused', mode: 'flat' });
+              return ready(kernelSource, null);
+            case 'adopt': {
+              // Read before it is the figure's, so a failure leaves nothing adopted.
+              let shown: OristudioCpFoldedPaperScene | null;
+              try {
+                shown = await getOristudioCpFoldedFigurePaperScene(folded.handle);
+              } catch {
+                folded.release();
+                putBack();
+                track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger: 'press', outcome: 'refused', mode: 'flat' });
+                return ready(kernelSource, null);
+              }
+              // Torn down, deleted, undone or given a fold by another path while this folded.
+              if (
+                foldedFigureHandleEpoch() !== epoch ||
+                !figuresAwaitFold(get().oristudioCpFoldedFigures, id, null)
+              ) {
+                folded.release();
+                return { status: 'unavailable', reason: 'cancelled' };
+              }
+              // The same picture, now live, as a rehydrate makes it: nothing about
+              // the document changed, so no entry, no `dirty`, no selection.
+              set({
+                oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
+                  candidate.id === id
+                    ? { ...figure, handle: folded.handle, status: 'ready', snapshot: folded.snapshot, error: null }
+                    : candidate
+                ),
+              });
+              track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger: 'press', outcome: 'adopted', mode: 'flat' });
+              return ready(kernelSource, shown);
+            }
+          }
+        } catch (error) {
+          putBack();
+          if (isFoldCancellation(error)) return { status: 'unavailable', reason: 'cancelled' };
+          if (source) return ready(source, null);
+          const normalized = engineError(error);
+          set({ oristudioCpError: normalized.message, error: normalized });
+          return { status: 'unavailable', reason: 'failed' };
+        } finally {
+          atRest();
+        }
+      }
+    },
+
+    applyOristudioCpFigureLayerOrder: async (id, applied) => {
+      const figure = get().oristudioCpFoldedFigures.find((candidate) => candidate.id === id);
+      if (!figure?.snapshot || (figure.folded3d ?? null) !== null || figure.status !== 'ready') {
+        const message = 'No folded model is ready';
+        set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+        return false;
+      }
+      const held = foldedFigureLayerOrder(layerOrderRecordFromSource(applied.record, EDIT_PAPER_FRAME));
+      if (!held.ok) {
+        const message = i18n.t(
+          'errors:cp.layerOrderTooLarge',
+          'This layer order is too large to save with the figure, so it is unchanged.'
+        );
+        set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+        return false;
+      }
+      // An Apply that changed nothing writes nothing (D16): the order the
+      // figure shows was given, and this is the record it was given with.
+      if (
+        figure.handle !== null &&
+        figure.snapshot.shown_order === 'given' &&
+        figure.layerOrder?.kind === 'record' &&
+        held.layerOrder.kind === 'record' &&
+        figure.layerOrder.json === held.layerOrder.json
+      ) {
+        return false;
+      }
+      const notApplied = () =>
+        i18n.t('errors:cp.layerOrderNotApplied', 'Layer order couldn’t apply this order to {{name}}. Its picture is unchanged.', {
+          name: figure.title,
+        });
+
+      const previousHandle = figure.handle;
+      // It lands only on the figure as this marks it, still holding `previousHandle`:
+      // not after an undo, a Delete or a new document took it (`foldLanding.ts`).
+      const landing = foldLanding(figure.id, previousHandle);
+      set({
+        oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
+          candidate.id === figure.id ? { ...candidate, status: 'loading' } : candidate
+        ),
+        oristudioCpError: null,
+      });
+
+      let handle: number | null = null;
+      const giveBack = async () => {
+        if (handle !== null) await freeOristudioCpFoldedFigure(handle).catch(() => {});
+        handle = null;
+      };
+      try {
+        // Exactly the segments the dialog analysed, never lines reselected from
+        // the document, whose order can renumber faces (approach 4).
+        const result = await withFoldInFlight('layer-order', (runId) =>
+          foldOristudioCpWithOrder(kernelFoldSourceOf(applied.source), applied.relations, figure.snapshot?.model, runId)
+        );
+        if (result.status === 'refused') return restorePreviousFigure(figure, notApplied());
+        handle = result.handle;
+        // The digest again, on the new fold: its faces are the ones the order names.
+        const digest = await getOristudioCpFoldedFigureDigest(result.handle);
+        if (digest !== applied.source.digest || result.snapshot.outcome !== 'Solved') {
+          await giveBack();
+          return restorePreviousFigure(figure, notApplied());
+        }
+        const renderSnapshot = await landing.picture(
+          result.handle,
+          figure.displayStyle,
+          foldedFigureIndex(figure.id),
+          true
+        );
+        if (!isDrawableFoldResult(result.snapshot, renderSnapshot)) {
+          await giveBack();
+          return restorePreviousFigure(figure, notApplied());
+        }
+        adoptFoldedFigureHandle(result.handle);
+        takeCanvasSelection('folded-figure', {
+          oristudioCpFoldedFigures: get().oristudioCpFoldedFigures.map((candidate) =>
+            candidate.id === figure.id
+              ? {
+                  ...candidate,
+                  handle: result.handle,
+                  status: 'ready',
+                  snapshot: result.snapshot,
+                  renderSnapshot,
+                  contradiction: result.snapshot.contradiction ?? null,
+                  error: null,
+                  layerOrder: held.layerOrder,
+                }
+              : candidate
+          ),
+          oristudioCpActiveFoldedFigureId: figure.id,
+          oristudioCpError: null,
+          dirty: true,
+          projectMessage: 'Set layer order',
+        });
+        // Released only once the new fold is in place: history may still hold
+        // the old one, and an undo shows the order it draws.
+        releaseFoldedFigureHandle(previousHandle);
+        return true;
+      } catch (error) {
+        await giveBack();
+        // Its figure moved on while it folded: the new fold is gone, and there is nothing to put back.
+        if (error instanceof FoldMovedOn) return false;
+        if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
+        return restorePreviousFigure(figure, engineError(error).message);
       }
     },
 

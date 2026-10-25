@@ -33,7 +33,12 @@ import {
   DEFAULT_ORISTUDIO_CP_LINE_WIDTH,
   type OristudioCpViewportOptions,
 } from '../../lib/creasePatternViewport';
-import type { LayerOrderApplied, LayerOrderLook, LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
+import type {
+  LayerOrderApplied,
+  LayerOrderLook,
+  LayerOrderRequest,
+  LayerOrderRequestSurface,
+} from '../../lib/layerOrder/layerOrderRequest';
 import { layerOrderRecordToSource, type PaperFrame } from '../../lib/layerOrder/paperFrame';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import {
@@ -145,14 +150,16 @@ export function stillOpenedOn(stepId: string, guard: StepLayerOrderGuard): boole
 
 /**
  * The request for a step's flat fold in `render`, as `folded` was read from
- * it: its source, its record in the crease pattern's coordinates (through
- * the step's paper frame), the Diagram's look with `view`'s crease lines (the
- * crease pattern's viewport), and its name. With no record,
- * the scene it shows, so the dialog opens on the order the step draws; with
- * one, the dialog restores it.
+ * it: which host asked (`surface`: the Step pane's `diagram_step`, or
+ * `pose`), its source, its record in the crease pattern's coordinates
+ * (through the step's paper frame), the Diagram's look with `view`'s crease
+ * lines (the crease pattern's viewport), and its name. With no record, the
+ * scene it shows, so the dialog opens on the order the step draws; with one,
+ * the dialog restores it.
  */
 export function stepLayerOrderRequest(
   stepId: string,
+  surface: Extract<LayerOrderRequestSurface, 'diagram_step' | 'pose'>,
   style: DiagramStyle,
   view: Pick<OristudioCpViewportOptions, 'lineStyle' | 'lineWidth'>,
   render: FlatRender,
@@ -162,6 +169,7 @@ export function stepLayerOrderRequest(
   const diagram = store.get().diagram;
   const number = diagram ? stepNumber(diagram, stepId) : null;
   return {
+    surface,
     source: folded.source,
     record: saved ? layerOrderRecordToSource(saved.record, folded.frame) : null,
     look: diagramStepLayerOrderLook(style, render, view),
@@ -202,7 +210,15 @@ async function openingFor(
       stepFoldSource(runtime, route.lineIds, captureModel(document, render.side), saved ? 1 : render.foldCase)
     );
     return {
-      request: stepLayerOrderRequest(stepId, start.style, store.get().oristudioCpViewport, render, folded, saved),
+      request: stepLayerOrderRequest(
+        stepId,
+        'diagram_step',
+        start.style,
+        store.get().oristudioCpViewport,
+        render,
+        folded,
+        saved
+      ),
       frame: folded.frame,
       render,
       guard: stepLayerOrderGuard(start),

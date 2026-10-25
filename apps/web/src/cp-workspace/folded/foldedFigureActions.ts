@@ -18,6 +18,13 @@ import {
   type FoldedColorKey,
 } from './foldedFigureControlOptions';
 import { foldedFigureNotice, type FoldedFigureNotice } from './foldedFigureNotice';
+import {
+  foldedFigureLayerOrderBlock,
+  foldedFigureLayerOrderHold,
+  refoldHeldByLayerOrder,
+  refoldHeldByLayerOrderReason,
+  type FoldedFigureLayerOrderBlock,
+} from './foldedFigureLayerOrderState';
 import { edgeInkEdits } from '../paper/paperStyleFields';
 
 /**
@@ -45,6 +52,7 @@ export type FoldedFigureActionIcon =
   | 'previous'
   | 'first-solution'
   | 'refold'
+  | 'layer-order'
   | 'export'
   | 'duplicate'
   | 'delete'
@@ -64,6 +72,7 @@ export interface FoldedFigureCommand extends ControlVerb {
     | 'set-upright'
     | 'another'
     | 'previous'
+    | 'layer-order'
     | 'refold'
     | 'export'
     | 'duplicate'
@@ -285,6 +294,11 @@ export interface FoldedFigureActionDeps {
   isStale?: (figure: OristudioCpFoldedFigureEntry) => boolean;
   /** Open the export dialog on the figure on its own. Omitted drops the verb. */
   exportFigure?: (figure: OristudioCpFoldedFigureEntry) => void;
+  /**
+   * Open the Layer order dialog on the figure (`openFoldedFigureLayerOrder.ts`).
+   * Omitted drops the verb, as for a surface that only reads.
+   */
+  openLayerOrder?: (figure: OristudioCpFoldedFigureEntry) => void;
   /**
    * Act on a 3D figure's verdict: reveal the CAMV issues, select the creases a
    * crossing names, or simulate a figure whose layers could not be ordered.
@@ -628,16 +642,23 @@ export function buildFoldedFigureActions(
     { kind: 'separator', id: 'after-appearance' },
     anotherSolutionCommand(figure, deps)
   );
+  // Right after Another solution, the other way to choose which layer order
+  // shows: the toolbar and the menu both get it from here.
+  const layerOrder = layerOrderCommand(figure, deps);
+  if (layerOrder) actions.push(layerOrder);
 
   // Refold is present only when it applies: a figure that matches its source
   // creases has nothing to refold, and a disabled button would just be noise.
   if (canRefold) {
+    // Held, and why, until a refold keeps a chosen layer order (H4).
+    const held = refoldHeldByLayerOrder(figure);
     actions.push({
       kind: 'command',
       id: 'refold',
       label: t('panels:foldedFigureActions.refold', 'Refold'),
       icon: 'refold',
-      disabled: false,
+      disabled: held,
+      ...(held ? { hint: refoldHeldByLayerOrderReason(t) } : {}),
       run: () => deps.refold?.(figure),
     });
   }
@@ -673,20 +694,97 @@ export function anotherSolutionCommand(
 ): FoldedFigureCommand {
   const { t } = deps;
   const { hasNext, wrapsToFirst } = foldedFigureCycling(figure);
+  const held = heldByLayerOrderHint(figure, t);
   // Disabled only with nowhere to go: a single-solution fold, where wrapping
   // would land exactly where it started.
   const single = !hasNext && !wrapsToFirst;
   return {
     kind: 'command',
     id: 'another',
-    label: wrapsToFirst
-      ? t('panels:foldedFigureActions.firstSolution', 'Back to first solution')
-      : t('panels:foldedFigureActions.anotherSolution', 'Another solution'),
-    icon: wrapsToFirst ? 'first-solution' : 'another',
-    disabled: !isFoldedFigureReady(figure) || single,
-    ...(single ? { hint: t('panels:foldedFigureActions.onlySolution', 'This figure has one solution') } : {}),
+    label:
+      wrapsToFirst && !held
+        ? t('panels:foldedFigureActions.firstSolution', 'Back to first solution')
+        : t('panels:foldedFigureActions.anotherSolution', 'Another solution'),
+    icon: wrapsToFirst && !held ? 'first-solution' : 'another',
+    disabled: !isFoldedFigureReady(figure) || single || held !== null,
+    ...(held
+      ? { hint: held }
+      : single
+        ? { hint: t('panels:foldedFigureActions.onlySolution', 'This figure has one solution') }
+        : {}),
     run: () => deps.foldAnother(figure),
   };
+}
+
+/**
+ * Why a figure's solution verbs wait while a chosen layer order holds it, or
+ * null when none does (D9). Oriedita's search steps through every order the
+ * creases allow, not the ones that fit the figure's constraints, so until
+ * they step within them (H6) they are held, pointing to where the solutions
+ * that fit are. A newer build's order is that build's to step.
+ */
+function heldByLayerOrderHint(figure: OristudioCpFoldedFigureEntry, t: TFunction): string | null {
+  switch (foldedFigureLayerOrderHold(figure)) {
+    case 'record':
+      return t('panels:foldedFigureActions.layerOrderSolutions', 'Step through solutions in Layer order…');
+    case 'newer':
+      return t('panels:foldedFigureActions.layerOrderNewer', 'Made with a newer Ori Studio: its layer constraints can’t be changed here.');
+    case null:
+      return null;
+  }
+}
+
+/** What the Layer order verb calls, and what it reads to say whether it can. */
+export type FoldedFigureLayerOrderDeps = Pick<FoldedFigureActionDeps, 't' | 'openLayerOrder' | 'isStale'>;
+
+/**
+ * "Layer order…": open the dialog on the figure (row H3). Null when the
+ * surface offers no way to open it. Disabled, with why, from saved data only
+ * (`foldedFigureLayerOrderBlock`): a 3D figure (D13), one whose fold found no
+ * layer order (D3), a newer build's record, no source to fold, or creases
+ * changed since the fold; and with no reason while the figure is folding, as
+ * every verb waits. A figure reopened from a file has no live fold and stays
+ * enabled: the press folds it again first.
+ *
+ * Drawn as its word: no glyph says "layer order" (Layers already means
+ * Render as, Precreases and Spread), so the toolbar shows the label and the
+ * menu a row with no icon.
+ */
+export function layerOrderCommand(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: FoldedFigureLayerOrderDeps
+): FoldedFigureCommand | null {
+  const { t, openLayerOrder } = deps;
+  if (!openLayerOrder) return null;
+  const block = foldedFigureLayerOrderBlock(figure, { stale: deps.isStale?.(figure) === true });
+  const hint = block ? layerOrderBlockHint(block, t) : null;
+  return {
+    kind: 'command',
+    id: 'layer-order',
+    label: t('panels:foldedFigureActions.layerOrder', 'Layer order…'),
+    icon: 'layer-order',
+    disabled: block !== null,
+    ...(hint ? { hint } : {}),
+    run: () => openLayerOrder(figure),
+  };
+}
+
+/** Why "Layer order…" waits, as its hint; null while the figure is folding, which says nothing. */
+export function layerOrderBlockHint(block: FoldedFigureLayerOrderBlock, t: TFunction): string | null {
+  switch (block) {
+    case '3d':
+      return t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
+    case 'waiting':
+      return null;
+    case 'undetermined':
+      return t('panels:cpProperties.folded.layerOrderUndetermined', 'Layer order couldn’t be determined for this figure.');
+    case 'newer':
+      return t('panels:foldedFigureActions.layerOrderNewer', 'Made with a newer Ori Studio: its layer constraints can’t be changed here.');
+    case 'no-source':
+      return t('panels:foldedFigureActions.layerOrderNoSource', 'This folded model has no source creases to work from');
+    case 'stale':
+      return t('panels:foldedFigureActions.layerOrderCreasesChanged', 'Its creases changed since it was folded');
+  }
 }
 
 /**
@@ -704,17 +802,20 @@ export function previousSolutionCommand(
   const { t } = deps;
   const canGoBack = foldedFigureCapabilities(figure).foldToCase;
   const first = foldedFigureCycling(figure).current <= 1;
+  const held = heldByLayerOrderHint(figure, t);
   const hint = !canGoBack
     ? t('panels:foldedFigureActions.previousSolution3d', 'Stepping back works on flat figures')
-    : first
-      ? t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution')
-      : undefined;
+    : held
+      ? held
+      : first
+        ? t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution')
+        : undefined;
   return {
     kind: 'command',
     id: 'previous',
     label: t('panels:foldedFigureActions.previousSolution', 'Previous solution'),
     icon: 'previous',
-    disabled: !isFoldedFigureReady(figure) || !canGoBack || first,
+    disabled: !isFoldedFigureReady(figure) || !canGoBack || first || held !== null,
     ...(hint ? { hint } : {}),
     run: () => deps.foldPrevious(figure),
   };

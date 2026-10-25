@@ -20,6 +20,8 @@
   },
   "cp": {
     "foldProducedNothing": "Estos pliegues no tienen ninguna forma plegada en plano que dibujar",
+    "layerOrderNotApplied": "Orden de capas no pudo aplicar este orden a {{name}}. Su imagen no cambia.",
+    "layerOrderTooLarge": "Este orden de capas es demasiado grande para guardarlo con el modelo, así que no cambia.",
     "pinnedVertex": "Ese pliegue empieza en un vértice fijado, así que no se puede alargar. Suelta primero el vértice o extiende otro pliegue."
   },
   "cpDetectImport": {

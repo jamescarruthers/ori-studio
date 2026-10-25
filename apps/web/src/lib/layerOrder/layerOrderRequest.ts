@@ -75,7 +75,15 @@ export interface LayerOrderLook {
   readonly lineWidth: number;
 }
 
+/**
+ * Which host asked: an Edit figure, a Diagram step, Pose. An analytics enum,
+ * sent as the dialog's events' `surface`, and never shown.
+ */
+export type LayerOrderRequestSurface = 'edit_figure' | 'diagram_step' | 'pose';
+
 export interface LayerOrderRequest {
+  /** Which host asked, for the dialog's analytics (`LayerOrderRequestSurface`). */
+  readonly surface?: LayerOrderRequestSurface;
   readonly source: LayerOrderSource;
   /** What is saved, if anything, with its points in the crease pattern's coordinates (`paperFrame.ts`). */
   readonly record: LayerOrderRecord | null;

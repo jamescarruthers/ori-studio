@@ -35,6 +35,7 @@ import {
   showPreviousFoldedSolution,
   updateFoldedFigureModelAsEntry,
 } from './foldedFigureVerbs';
+import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
 
 /**
  * The folded figure's sheet, bound to the store through the verbs module, the
@@ -132,6 +133,7 @@ export function useFoldedFigureProperties(target: TargetOf<'folded-figure'>): Pr
       exportFigure: (target: OristudioCpFoldedFigureEntry) => exportFoldedFigure(target.id, t),
       duplicate: (target: OristudioCpFoldedFigureEntry) => void duplicateFoldedFigure(target.id, t),
       remove: (target: OristudioCpFoldedFigureEntry) => void deleteFoldedFigure(target.id, t),
+      openLayerOrder: (target: OristudioCpFoldedFigureEntry) => void openFoldedFigureLayerOrder(target.id, t),
     }),
     [t]
   );
