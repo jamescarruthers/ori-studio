@@ -38,7 +38,7 @@ afterEach(() => {
 const RECORD = twoConstraintRecord();
 const held = (() => {
   const made = foldedFigureLayerOrder(RECORD);
-  if (!made.ok) throw new Error('the fixture record encodes');
+  if (!made.ok || made.layerOrder.kind !== 'record') throw new Error('the fixture record encodes');
   return made.layerOrder;
 })();
 
