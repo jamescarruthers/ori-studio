@@ -583,6 +583,347 @@ async function foldImportFrame(page, url, record, { dir }) {
 }
 
 // ---------------------------------------------------------------------------
+// Edit's figure: display and Apply (H3)
+
+/** Open `file` (repo-relative) in Edit as File ▸ Open does, in `theme` (a preset's name, or null). */
+async function openFileInEdit(page, url, file, theme) {
+  await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, {
+    timeout: 120000,
+  });
+  const text = await readFile(path.join(repoRoot, file), 'utf8');
+  await openTextInEdit(page, text, path.basename(file), theme);
+}
+
+/** Open `text` as a file named `name` in the Edit already loaded, in `theme`. */
+async function openTextInEdit(page, text, name, theme) {
+  await page.evaluate(
+    async ({ text, name, theme }) => {
+      const store = window.__treemakerWorkspaceStore;
+      const files = { openTextFile: async () => ({ text, name, path: null }) };
+      if (!(await store.getState().openProject(files, { confirmDiscard: false }))) throw new Error(`${name} did not open`);
+      if (theme) {
+        const { useThemeStore } = await import('/src/store/themeStore.ts');
+        useThemeStore.getState().setThemeByName(theme);
+      }
+    },
+    { text, name, theme }
+  );
+}
+
+/** Every crease folded as one figure, as Fold (G) folds them, one undo entry; the figure selected. Its id. */
+async function foldWholeAndSelect(page) {
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const count = store.getState().oristudioCpDocument.summary.line_segments;
+    const lineIds = Array.from({ length: count }, (_, i) => i + 1);
+    const { foldedFigureGesture } = await import('/src/cp-workspace/folded/foldedFigureGesture.ts');
+    await foldedFigureGesture.run('verb', 'Fold model', () =>
+      store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds })
+    );
+    const figure = store.getState().oristudioCpFoldedFigures.at(-1);
+    if (!figure || figure.status !== 'ready') throw new Error('the fold made no figure');
+    store.getState().setOristudioCpActiveFoldedFigure(figure.id);
+    return figure.id;
+  });
+}
+
+const FIGURE_TOOLBAR = { role: 'toolbar', name: 'Folded figure actions' };
+
+/** Zoom the crease pattern out until the folded figure beside it is in view. */
+async function zoomOutToFigure(page, times = 2) {
+  for (let i = 0; i < times; i += 1) await page.getByRole('button', { name: 'Zoom Out', exact: true }).first().click();
+  await page.mouse.move(1, 1);
+}
+
+/**
+ * The selected figure as the canvas shows it, with its floating toolbar and
+ * its Properties sheet; and, when `hover`, the toolbar again with the pointer
+ * on Layer order…, so its tooltip (why it is held) is in the picture.
+ */
+async function figureShots(page, { hover = false } = {}) {
+  const toolbar = page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name });
+  const sheet = page.locator('[data-property-sheet]');
+  await toolbar.waitFor({ state: 'visible', timeout: 30000 });
+  await sheet.waitFor({ state: 'visible', timeout: 30000 });
+  await page.mouse.move(1, 1);
+  const shots = {
+    canvas: await steadyShot(page, page.locator('canvas.cp-webgl-layer').locator('..'), { masked: false }),
+    toolbar: await steadyShot(page, toolbar, { masked: false }),
+    properties: await steadyShot(page, sheet, { masked: false }),
+  };
+  if (hover) {
+    await toolbar.getByRole('button', { name: 'Layer order…' }).hover();
+    await page.getByRole('tooltip').first().waitFor({ state: 'visible', timeout: 10000 });
+    const box = await toolbar.boundingBox();
+    await settle(page);
+    shots.tooltip = await page.screenshot({
+      clip: { x: Math.max(0, box.x - 120), y: Math.max(0, box.y - 70), width: box.width + 240, height: box.height + 140 },
+      animations: 'disabled',
+    });
+    await page.mouse.move(1, 1);
+  }
+  return shots;
+}
+
+/** The selected figure, as the store holds it. */
+function figureState(page, index = 0) {
+  return page.evaluate((index) => {
+    const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[index];
+    if (!figure) return null;
+    return {
+      id: figure.id,
+      handle: figure.handle,
+      status: figure.status,
+      shownOrder: figure.snapshot?.shown_order ?? 'searched',
+      picture: JSON.stringify(figure.renderSnapshot),
+      layerOrder: figure.layerOrder ? { kind: figure.layerOrder.kind, json: figure.layerOrder.json ?? null } : null,
+    };
+  }, index);
+}
+
+/**
+ * An order the dialog's engine would hand over at Apply, chosen with no
+ * dialog (U10 isn't built): the figure's fold opened on the Fold wasm, one
+ * open pair constrained whichever way moves the order off Oriedita's first,
+ * saved. In the page, through the engine's own worker.
+ */
+async function chosenOrder(page, figureId) {
+  return page.evaluate(async (figureId) => {
+    const store = window.__treemakerWorkspaceStore;
+    const figure = store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === figureId);
+    const runtime = await import('/src/store/workspaceStore/oristudioCpRuntime.ts');
+    const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS, constraintSeen } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const source = layerOrderSourceOf(await runtime.getOristudioCpFoldedFigureSource(figure.handle), figure.snapshot.model);
+    const engine = createLayerOrderRuntime({ role: 'dialog' });
+    try {
+      const opened = await engine.engine.open(source, LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`refused: ${JSON.stringify(opened.refusal)}`);
+      const first = Array.from(await engine.engine.relations()).join();
+      for (let i = 0; i < opened.open_pairs.length; i += 2) {
+        const [lo, hi] = [opened.open_pairs[i], opened.open_pairs[i + 1]];
+        for (const verb of ['in_front_of', 'behind']) {
+          const constraint = constraintSeen(lo, verb, hi, 'front', opened.front_up[hi] === 1);
+          const committed = await engine.engine.commit([constraint], LAYER_ORDER_LIMITS.commit);
+          if (committed.verdict !== 'committed') continue;
+          const relations = await engine.engine.relations();
+          if (Array.from(relations).join() === first) continue;
+          const saved = await engine.engine.save();
+          if (saved.status !== 'ok') throw new Error(`save refused: ${JSON.stringify(saved.refusal)}`);
+          window.__layerOrderApplied = { record: saved.record, relations, source };
+          return { constraints: saved.record.constraints.length, relations: relations.length };
+        }
+      }
+      throw new Error('no constraint moves the order');
+    } finally {
+      engine.dispose();
+    }
+  }, figureId);
+}
+
+/** Commit what `chosenOrder` left, as the dialog's Apply is committed: one undo entry. */
+async function applyChosenOrder(page, figureId) {
+  return page.evaluate(async (figureId) => {
+    const { applyFoldedFigureLayerOrder } = await import('/src/cp-workspace/folded/openFoldedFigureLayerOrder.ts');
+    const i18n = (await import('/src/i18n/index.ts')).default;
+    return applyFoldedFigureLayerOrder(figureId, window.__layerOrderApplied, i18n.t);
+  }, figureId);
+}
+
+/** The project as Save writes it. */
+async function savedProject(page) {
+  return page.evaluate(async () => {
+    let contents = null;
+    const files = {
+      surface: 'web',
+      supportsNativeDialogs: false,
+      saveTextFile: async (options) => {
+        contents = options.contents;
+        return { name: options.suggestedName, path: null };
+      },
+    };
+    if (!(await window.__treemakerWorkspaceStore.getState().saveProjectAs(files))) throw new Error('save failed');
+    return contents;
+  });
+}
+
+/** Re-render figure `id` through its kernel, as a restyle does, and back: what its live fold draws. */
+async function restyled(page, id) {
+  return page.evaluate(async (id) => {
+    const store = window.__treemakerWorkspaceStore;
+    await store.getState().setOristudioCpFoldedFigureDisplayStyle(id, 'Transparent3');
+    await store.getState().setOristudioCpFoldedFigureDisplayStyle(id, 'Paper5');
+    return JSON.stringify(store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id).renderSnapshot);
+  }, id);
+}
+
+/** Watch what the page loads of the Layer order dialog and its engine: its chunk, its worker, the Fold wasm. */
+function watchLayerOrderLoads(page) {
+  const seen = [];
+  const spawned = [];
+  const onRequest = (request) => seen.push(request.url());
+  const onWorker = (worker) => {
+    seen.push(worker.url());
+    spawned.push(worker.url());
+  };
+  page.context().on('request', onRequest);
+  page.on('worker', onWorker);
+  return {
+    loaded: () => seen.filter((url) => /layerOrderWorker|oristudio_fold_wasm|components\/layer-order\/LayerOrderDialog\.tsx/.test(url)),
+    /** Workers started on the Layer order worker's script. */
+    workers: () => spawned.filter((url) => /layerOrderWorker/.test(url)),
+    stop: () => {
+      page.context().off('request', onRequest);
+      page.off('worker', onWorker);
+    },
+  };
+}
+
+/**
+ * Edit's display and Apply on kabuto, in one theme: the figure and its entry
+ * before and after an Apply (the order chosen through the engine, committed
+ * as the dialog's Apply is); undo, a restyle, redo; Duplicate; the file saved
+ * and opened again, with no worker until Layer order… is pressed; the press,
+ * which folds the reopened figure with its record and opens the dialog;
+ * Duplicate after it; and the file once more. The real dialog's Apply waits
+ * for U10.
+ */
+function editFigureCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record, { dir }) => {
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    const id = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    const before = await figureState(page);
+    const plain = await figureShots(page);
+    await record(`edit-${tag}-enabled`, plain);
+
+    const chosen = await chosenOrder(page, id);
+    if (!(await applyChosenOrder(page, id))) throw new Error('Apply wrote nothing');
+    const after = await figureState(page);
+    if (after.handle === before.handle || after.shownOrder !== 'given' || after.layerOrder?.kind !== 'record') {
+      throw new Error(`Apply did not land: ${JSON.stringify(after)}`);
+    }
+    if (after.picture === before.picture) throw new Error('the constrained order draws the same picture');
+    const constrained = await figureShots(page);
+    const moved = await pixelDiff(page, plain.canvas, constrained.canvas);
+    if (!moved.differing) throw new Error('the canvas shows no change after Apply');
+    console.log(`[${tag}] Apply of ${chosen.constraints} constraint: new fold, order given; ${moved.differing} canvas pixels changed`);
+    await record(`edit-${tag}-constrained`, constrained);
+
+    // Undo shows the order before, and a restyle redraws it from the old fold, not the new.
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    if ((await figureState(page)).handle !== before.handle) throw new Error('undo did not put the old fold back');
+    if ((await restyled(page, id)) !== before.picture) throw new Error('a restyle after undo drew another order');
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().redo());
+    if ((await figureState(page)).handle !== after.handle) throw new Error('redo did not put the new fold back');
+    if ((await restyled(page, id)) !== after.picture) throw new Error('a restyle after redo drew another order');
+    console.log(`[${tag}] undo, restyle, redo, restyle: each fold draws its own order`);
+
+    // Duplicate keeps the order.
+    await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Duplicate' }).click();
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[1]?.status === 'ready');
+    const copy = await figureState(page, 1);
+    if (copy.layerOrder?.json !== after.layerOrder.json || copy.picture !== after.picture) {
+      throw new Error(`the copy lost the order: ${JSON.stringify(copy)}`);
+    }
+    console.log(`[${tag}] Duplicate carries the record and draws the same order`);
+
+    // Saved and opened again: drawn from the file, with no worker, the Fold wasm or the dialog's code.
+    const osf = await savedProject(page);
+    if (!tag.includes('horizon')) await writeFile(path.join(dir, 'kabuto-constrained.osf'), osf);
+    const watch = watchLayerOrderLoads(page);
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    await openTextInEdit(page, osf, 'kabuto-constrained.osf', theme);
+    await page.evaluate(() => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().setOristudioCpActiveFoldedFigure(store.getState().oristudioCpFoldedFigures[0].id);
+    });
+    await zoomOutToFigure(page);
+    const reopenedShots = await figureShots(page);
+    await page.waitForTimeout(1500);
+    if (watch.loaded().length > 0) throw new Error(`opening and selecting loaded ${watch.loaded().join(', ')}`);
+    const reopened = await figureState(page);
+    if (reopened.handle !== null || reopened.layerOrder?.json !== after.layerOrder.json || reopened.picture !== after.picture) {
+      throw new Error(`the file did not keep the order: ${JSON.stringify(reopened)}`);
+    }
+    if ((await figureState(page, 1))?.layerOrder?.json !== after.layerOrder.json) throw new Error('the copy lost its record in the file');
+    console.log(`[${tag}] reopened: both figures carry the record and draw the constrained order; no worker, no Fold wasm, no dialog code loaded`);
+    await record(`edit-${tag}-reopened`, reopenedShots);
+
+    // The press: the host engine folds the figure with its record, and the dialog opens on it.
+    await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Layer order…' }).click();
+    const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    await dialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 60000 });
+    const workers = watch.workers();
+    watch.stop();
+    if (workers.length < 2) throw new Error(`the press spawned ${workers.length} Layer order workers, not the host engine's and the dialog's`);
+    await record(`edit-${tag}-dialog`, await dialogShot(page));
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached' });
+    const live = await figureState(page);
+    if (live.handle === null || live.layerOrder?.json !== after.layerOrder.json || live.picture !== after.picture) {
+      throw new Error(`the press did not fold it again with its record: ${JSON.stringify(live)}`);
+    }
+    console.log(`[${tag}] the press spawned ${workers.length} Layer order workers (host engine, dialog); the figure is live on its record`);
+
+    // Live now, so it duplicates, with its record; and the file keeps all three.
+    await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Duplicate' }).click();
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[2]?.status === 'ready');
+    if ((await figureState(page, 2)).layerOrder?.json !== after.layerOrder.json) throw new Error('the reopened copy lost the order');
+    const again = await savedProject(page);
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    await openTextInEdit(page, again, 'kabuto-constrained.osf', theme);
+    for (const index of [0, 1, 2]) {
+      const figure = await figureState(page, index);
+      if (figure.layerOrder?.json !== after.layerOrder.json || figure.picture !== after.picture) {
+        throw new Error(`figure ${index} lost the order on reload`);
+      }
+    }
+    console.log(`[${tag}] duplicate after reopen, then reload: all three keep the record`);
+  };
+}
+
+/**
+ * The entry and the Properties row in the states a figure can hold it in, in
+ * one theme: held on a 3D figure (box_90), on a fold that found no layer
+ * order (failing_global_flat_fold.ori), and on a newer build's record (on
+ * kabuto); each with Layer order…'s tooltip.
+ */
+function editFigureStateCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openFileInEdit(page, url, 'tests/fixtures/fold-angle-3d/box_90.fold', theme);
+    await foldWholeAndSelect(page);
+    await record(`edit-${tag}-3d`, await figureShots(page, { hover: true }));
+
+    await openFileInEdit(page, url, 'tests/fixtures/oriedita/failing_global_flat_fold.ori', theme);
+    await foldWholeAndSelect(page);
+    await record(`edit-${tag}-no-layer-order`, await figureShots(page, { hover: true }));
+
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    const id = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    await page.evaluate((id) => {
+      const store = window.__treemakerWorkspaceStore;
+      store.setState({
+        oristudioCpFoldedFigures: store.getState().oristudioCpFoldedFigures.map((figure) =>
+          figure.id === id
+            ? { ...figure, layerOrder: { kind: 'newer', saved: { figureKey: 'fk9:later', record: '{"v":2}' } } }
+            : figure
+        ),
+      });
+    }, id);
+    await record(`edit-${tag}-newer`, await figureShots(page, { hover: true }));
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
 const CASES = [
@@ -592,6 +933,10 @@ const CASES = [
   { name: 'dialog-shell-horizon', run: dialogShellCases('Horizon') },
   { name: 'dialog-phone-locales', run: dialogPhoneLocales },
   { name: 'fold-import-frame', run: foldImportFrame },
+  { name: 'edit-figure', run: editFigureCases(null) },
+  { name: 'edit-figure-horizon', run: editFigureCases('Horizon') },
+  { name: 'edit-figure-states', run: editFigureStateCases(null) },
+  { name: 'edit-figure-states-horizon', run: editFigureStateCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------
