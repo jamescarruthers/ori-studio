@@ -1334,6 +1334,21 @@ E3):
     walk: the randomized test checks that each component alone, and two
     together, list exactly completing from scratch's orders for them, whole
     and resumed in slices.
+  - **`Enumeration::projected(k, first, hold)`** (E6) walks one component
+    for each distinct assignment of some of its variables (the pairs a
+    picture reads) and completes each once, so the count of distinct
+    pictures never lists the orders that differ only in hidden layers.
+    Upstream's search runs over those variables alone (with propagation as
+    always), reaching each assignment of them once; there, what is left of
+    the component is split with upstream's `get_components` and each part
+    searched for one order, so an assignment with none is refuted within
+    the part that has none. Each guess tries the held order's value first,
+    so the first order yielded is the held one. The search loop itself is
+    unchanged, and no upstream path calls this. The randomized test checks,
+    for three choices of the variables per component, that the assignments
+    yielded are exactly the distinct ones of completing from scratch's
+    orders, each once, each order one of the component's, the first the
+    held one, whole and resumed in slices.
 - **`CheckOptions::prefer_fits`.** The caller vouches that the preferred
   order is a complete order that fits, such as an earlier check's fit or an
   enumerated order. Every component on which it agrees with what the seeds
