@@ -800,11 +800,11 @@ H3's new rehydrate, so it can only follow H3.
   - [ ] **Horizon theme** (the accent and danger colours are the same)
 - [x] E1: kernel seeded core (#494)
 - [x] E2: kernel entry points and exports (#500)
-- [ ] E3: Flat-Folder session additions
+- [x] E3: Flat-Folder session additions (#502)
 - [x] E4: source and census 1 (#503; phase gate 1 passed)
-- [ ] E5: constraint session core
-- [ ] E6: explain and solutions
-- [ ] E7: wasm bridge
+- [x] E5: constraint session core (#504)
+- [x] E6: explain and solutions (#509, landed through #505)
+- [x] E7: wasm bridge (#505; kept in the Fold bridge, +195 KiB gzipped)
 - [ ] E8: census 2 (phase gate 2 reviewed)
 - [x] U1: shared picking and tints (#497)
 - [ ] U2: ModalFrame
@@ -812,7 +812,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U3b: dialog keys (#498)
 - [x] H1: record, host contract, file formats (#496)
 - [ ] U4: dialog shell
-- [ ] U5: engine client
+- [x] U5: engine client (#506)
 - [ ] U6: engine wiring
 - [x] U7: PaperPane (#501)
 - [ ] U8: panes
