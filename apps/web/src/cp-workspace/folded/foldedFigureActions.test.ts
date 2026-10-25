@@ -22,7 +22,9 @@ import {
   type FoldedFigureStyleItem,
   type FoldedFigureToggleOption,
 } from './foldedFigureActions';
+import { foldedFigureNotice } from './foldedFigureNotice';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
+import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
 
 // The builder only ever calls t(key, defaultValue); return the default so the
@@ -532,23 +534,97 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
     expect(command(figure, withLayerOrder(), 'layer-order')).toMatchObject({ disabled: true, hint });
   });
 
-  it('is held when its creases changed since the fold, until H4 opens it on the current ones (D12)', () => {
-    expect(command(solved(), withLayerOrder({ isStale: () => true }), 'layer-order')).toMatchObject({
+  it('opens on a figure whose creases changed since the fold, constrained or not: on them as they are now (D12)', () => {
+    const deps = withLayerOrder({ refold: vi.fn(), isStale: () => true });
+    for (const figure of [solved(), solved({ layerOrder: held() })]) {
+      const entry = command(figure, deps, 'layer-order');
+      expect(entry.disabled).toBe(false);
+      expect(entry.hint).toBeUndefined();
+    }
+  });
+
+  it('refolds a figure that carries this build’s layer order, and holds Refold only on a newer build’s (H4)', () => {
+    const deps = withLayerOrder({ refold: vi.fn(), isStale: () => true });
+    for (const figure of [solved(), solved({ layerOrder: held() }), { ...make3dFigure(), layerOrder: held() }]) {
+      const refold = command(figure, deps, 'refold');
+      expect(refold.disabled).toBe(false);
+      expect(refold.hint).toBeUndefined();
+      refold.run();
+      expect(deps.refold).toHaveBeenLastCalledWith(figure);
+    }
+    const newer = solved({ layerOrder: { kind: 'newer', saved: {} } });
+    expect(command(newer, deps, 'refold')).toMatchObject({
       disabled: true,
-      hint: 'Its creases changed since it was folded',
+      hint: 'Made with a newer Ori Studio: its layer constraints can’t be changed here.',
     });
   });
 
-  it('holds Refold on a figure that carries a layer order, until a refold keeps it (H4)', () => {
-    const deps = withLayerOrder({ refold: vi.fn(), isStale: () => true });
-    expect(command(solved(), deps, 'refold')).toMatchObject({ disabled: false });
-    expect(command(solved(), deps, 'refold').hint).toBeUndefined();
-    for (const layerOrder of [held(), { kind: 'newer', saved: {} } as const]) {
-      const refold = command(solved({ layerOrder }), deps, 'refold');
-      expect(refold).toMatchObject({ disabled: true, hint: 'Refold can’t keep its layer order yet' });
-      // Both held on a stale constrained figure: H4 replaces the two together.
-      expect(command(solved({ layerOrder }), deps, 'layer-order').disabled).toBe(true);
-    }
+  describe('constraints that need attention since an edit (D10, D14)', () => {
+    // Identity `t` with English plurals and interpolation.
+    const tp = ((_key: string, fallback: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const values = typeof fallback === 'string' ? options : fallback;
+      const text =
+        typeof fallback === 'string'
+          ? fallback
+          : String((values?.count === 1 ? values.defaultValue_one : values?.defaultValue_other) ?? '');
+      return text.replace(/\{\{(\w+)\}\}/gu, (_match, name: string) => String(values?.[name] ?? ''));
+    }) as unknown as TFunction;
+    const flagged = (attention: LayerOrderAttention, constraints = twoConstraintRecord().constraints) => {
+      const made = foldedFigureLayerOrder(twoConstraintRecord({ constraints, attention }));
+      if (!made.ok) throw new Error('the fixture record encodes');
+      return solved({ layerOrder: made.layerOrder });
+    };
+
+    it('leads the toolbar and the menu with how many, its sentence, and Review…, which opens the dialog', () => {
+      const runNoticeAction = vi.fn();
+      const figure = flagged({ reason: 'conflict', count: 2 });
+      const actions = buildFoldedFigureActions(figure, withLayerOrder({ t: tp, runNoticeAction }));
+      const [note, separator] = actions;
+      expect(note).toMatchObject({
+        kind: 'note',
+        id: 'notice',
+        icon: 'notice-warn',
+        notice: {
+          id: 'layer-order-attention',
+          tone: 'warn',
+          label: '2 need attention',
+          detail: '2 layer constraints need attention since the creases changed.',
+          action: { id: 'review-layer-order', label: 'Review…', lineIds: [] },
+        },
+      });
+      expect(separator).toEqual({ kind: 'separator', id: 'after-notice' });
+      if (note?.kind !== 'note') throw new Error('no notice');
+      // The chip's label fits it (16 characters, as the board caps it).
+      expect(note.notice.label.length).toBeLessThanOrEqual(16);
+      note.run?.();
+      expect(runNoticeAction).toHaveBeenCalledWith(figure, note.notice);
+    });
+
+    it('says a check that ran out of time, and an order chosen with no constraint, in their own words', () => {
+      const timedOut = foldedFigureNotice(tp, flagged({ reason: 'timeout', count: 1 }));
+      expect(timedOut).toMatchObject({ label: '1 needs attention', detail: '1 layer constraint couldn’t be checked in time.' });
+      const chosen = foldedFigureNotice(tp, flagged({ reason: 'timeout', count: 0 }, []));
+      expect(chosen).toMatchObject({
+        label: 'Needs attention',
+        detail: 'This figure’s chosen layer order couldn’t be checked in time.',
+      });
+    });
+
+    it('says nothing on a figure whose record needs nothing, nor on a 3D one whose record waits (D13)', () => {
+      expect(foldedFigureNotice(tp, solved({ layerOrder: held() }))).toBeNull();
+      const waiting = foldedFigureLayerOrder(twoConstraintRecord({ attention: { reason: 'route-3d', count: 2 } }));
+      if (!waiting.ok) throw new Error('the fixture record encodes');
+      expect(foldedFigureNotice(tp, { ...make3dFigure(), layerOrder: waiting.layerOrder })).toBeNull();
+    });
+
+    it('holds Another solution and ‹ until they are reviewed', () => {
+      const figure = flagged({ reason: 'unresolved', count: 1 });
+      const hint = 'Review the layer constraints that need attention first';
+      expect(command(figure, withLayerOrder(), 'another')).toMatchObject({ disabled: true, hint });
+      expect(previousSolutionCommand(figure, { t, foldPrevious: vi.fn() })).toMatchObject({ disabled: true, hint });
+      // Layer order… itself stays open: it is where they are reviewed.
+      expect(command(figure, withLayerOrder({ isStale: () => true }), 'layer-order').disabled).toBe(false);
+    });
   });
 
   it('waits with no reason while the figure folds or after it failed, as every verb waits', () => {

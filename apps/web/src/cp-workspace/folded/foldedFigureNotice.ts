@@ -26,13 +26,15 @@ import type {
   OristudioCpFoldedFigureEntry,
 } from '../../engine/oristudioCpTypes';
 import type { Point } from '../../lib/geometry';
+import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { cpDiagnosticEntryMessage } from '../diagnostics/foldabilityMessages';
 import { cpDiagnosticClass } from '../diagnostics/severity';
 import { cpDiagnosticEntryAt } from '../diagnostics/visibleEntries';
 import { documentLineIdsForKernelLines, kernelLineOrder } from './foldRoute';
+import { foldedFigureLayerOrderAttention, foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
 
 /** What a notice asks the user to do about it. */
-export type FoldedFigureNoticeActionId = 'show-issues' | 'select-creases' | 'simulate-instead';
+export type FoldedFigureNoticeActionId = 'show-issues' | 'select-creases' | 'simulate-instead' | 'review-layer-order';
 
 export interface FoldedFigureNoticeAction {
   id: FoldedFigureNoticeActionId;
@@ -51,7 +53,7 @@ export interface FoldedFigureNoticeAction {
 }
 
 export interface FoldedFigureNotice {
-  id: 'local-crossing' | 'transversal-crossing' | 'no-layer-order';
+  id: 'local-crossing' | 'transversal-crossing' | 'no-layer-order' | 'layer-order-attention';
   tone: 'warn' | 'error';
   /** Short, for the toolbar chip and the dropdown subtitle. */
   label: string;
@@ -143,16 +145,19 @@ export function orderReasonDetail(t: TFunction, reason: OristudioCpFold3dOrderRe
 /**
  * The notice for `figure`, or `null` when there is nothing to say.
  *
- * `null` on every flat figure and on a 3D figure whose verdict is `folded` —
- * silence is the right report for success, and a chip that always shows is a
- * chip nobody reads.
+ * `null` on a flat figure whose layer constraints need nothing and on a 3D
+ * figure whose verdict is `folded` — silence is the right report for success,
+ * and a chip that always shows is a chip nobody reads. A flat figure whose
+ * constraints need a look since an edit says so, with Review…
+ * ({@link foldedFigureLayerOrderAttentionNotice}).
  */
 export function foldedFigureNotice(
   t: TFunction,
   figure: OristudioCpFoldedFigureEntry | null | undefined
 ): FoldedFigureNotice | null {
   const snapshot = figure?.folded3d ?? null;
-  if (!figure || !snapshot) return null;
+  if (!figure) return null;
+  if (!snapshot) return foldedFigureLayerOrderAttentionNotice(t, figure);
   const verdict = snapshot.verdict;
   switch (verdict.verdict) {
     case 'folded':
@@ -212,9 +217,102 @@ export function foldedFigureNotice(
 }
 
 /**
+ * A flat figure's layer constraints that need a look since an edit (D10,
+ * D14), as the toolbar's chip and the context menu's first row say it: the
+ * count, short; the sentence the Properties pane's notice says in full; and
+ * Review…, which opens the Layer order dialog on them. Read from the record's
+ * stored summary, never the engine. Null when nothing needs a look.
+ */
+export function foldedFigureLayerOrderAttentionNotice(
+  t: TFunction,
+  figure: OristudioCpFoldedFigureEntry
+): FoldedFigureNotice | null {
+  const attention = foldedFigureLayerOrderAttention(figure);
+  if (!attention) return null;
+  const chosen = (foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0;
+  return {
+    id: 'layer-order-attention',
+    tone: 'warn',
+    // Literal keys so the i18n extractor can see them (see apps/web/CLAUDE.md).
+    label: chosen
+      ? t('panels:foldedFigureActions.chosenOrderAttentionLabel', 'Needs attention')
+      : t('panels:foldedFigureActions.layerOrderAttentionLabel', {
+          count: attention.count,
+          defaultValue_one: '{{count}} needs attention',
+          defaultValue_other: '{{count}} need attention',
+        }),
+    detail: foldedFigureLayerOrderAttentionSentence(t, figure, attention),
+    action: {
+      id: 'review-layer-order',
+      label: t('panels:foldedFigureActions.reviewLayerOrder', 'Review…'),
+      lineIds: [],
+    },
+  };
+}
+
+/**
+ * Why a flat figure's layer constraints need a look, as one sentence: they
+ * couldn't be checked in time, or they need attention since its creases
+ * changed — clashing, split or gone, which the dialog tells apart row by row
+ * when it opens. A record with no constraint says so of its chosen order (D16).
+ */
+export function foldedFigureLayerOrderAttentionSentence(
+  t: TFunction,
+  figure: OristudioCpFoldedFigureEntry,
+  attention: LayerOrderAttention
+): string {
+  const chosen = (foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0;
+  const { count } = attention;
+  if (attention.reason === 'timeout') {
+    return chosen
+      ? t('panels:cpProperties.folded.chosenOrderTimedOut', 'This figure’s chosen layer order couldn’t be checked in time.')
+      : t('panels:cpProperties.folded.layerConstraintsTimedOut', {
+          count,
+          defaultValue_one: '{{count}} layer constraint couldn’t be checked in time.',
+          defaultValue_other: '{{count}} layer constraints couldn’t be checked in time.',
+        });
+  }
+  return chosen
+    ? t(
+        'panels:cpProperties.folded.chosenOrderNeedsAttention',
+        'This figure’s chosen layer order needs attention since the creases changed.'
+      )
+    : t('panels:cpProperties.folded.layerConstraintsNeedAttention', {
+        count,
+        defaultValue_one: '{{count}} layer constraint needs attention since the creases changed.',
+        defaultValue_other: '{{count}} layer constraints need attention since the creases changed.',
+      });
+}
+
+/** The Properties pane's subtitle for a figure whose constraints need a look: the count, in full. */
+function layerOrderAttentionSubtitle(t: TFunction, figure: OristudioCpFoldedFigureEntry): string | undefined {
+  const attention = foldedFigureLayerOrderAttention(figure);
+  if (!attention) return undefined;
+  if ((foldedFigureLayerOrderRecord(figure)?.constraints.length ?? 0) === 0) {
+    return t('panels:cpProperties.folded.chosenOrderAttention', 'Chosen layer order needs attention');
+  }
+  return t('panels:cpProperties.folded.layerConstraintsAttention', {
+    count: attention.count,
+    defaultValue_one: '1 layer constraint needs attention',
+    defaultValue_other: '{{count}} layer constraints need attention',
+  });
+}
+
+/**
+ * The tone the Properties pane draws its subtitle in: a warning while the
+ * figure's layer constraints need a look (the Properties board's state C),
+ * the quiet default otherwise.
+ */
+export function foldedFigureSubtitleTone(figure: OristudioCpFoldedFigureEntry): 'warning' | undefined {
+  return figure.status === 'ready' && foldedFigureLayerOrderAttention(figure) ? 'warning' : undefined;
+}
+
+/**
  * What the Properties pane says under a figure's title: a state, or nothing.
  *
- * Stale first (it is the one the user can act on), then a verdict if there is
+ * Layer constraints that need a look first, since the figure was kept as it
+ * was for them (D10), and in the warning tone ({@link foldedFigureSubtitleTone});
+ * then stale (it is the one the user can act on), then a verdict if there is
  * one. Which solution the figure shows is the Layer order row's to say (D11:
  * the header's subtitle keeps states only), so a figure that folded cleanly
  * has no subtitle, as the board draws it. The non-`ready` arms used to render
@@ -226,6 +324,7 @@ export function foldedFigureSubtitle(
   figure: OristudioCpFoldedFigureEntry,
   stale: boolean
 ): string | undefined {
+  if (foldedFigureSubtitleTone(figure)) return layerOrderAttentionSubtitle(t, figure);
   if (stale) return t('panels:creasePattern.stale', 'Stale');
   // Literal keys so the i18n extractor can see them (see apps/web/CLAUDE.md).
   switch (figure.status) {

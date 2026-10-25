@@ -134,6 +134,8 @@ export function useFoldedFigureProperties(target: TargetOf<'folded-figure'>): Pr
       duplicate: (target: OristudioCpFoldedFigureEntry) => void duplicateFoldedFigure(target.id, t),
       remove: (target: OristudioCpFoldedFigureEntry) => void deleteFoldedFigure(target.id, t),
       openLayerOrder: (target: OristudioCpFoldedFigureEntry) => void openFoldedFigureLayerOrder(target.id, t),
+      reviewLayerOrder: (target: OristudioCpFoldedFigureEntry) =>
+        void openFoldedFigureLayerOrder(target.id, t, { via: 'review' }),
     }),
     [t]
   );

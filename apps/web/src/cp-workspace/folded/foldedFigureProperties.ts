@@ -20,6 +20,7 @@ import type {
   FieldNote,
   LiveValue,
   PropertyField,
+  PropertyNotice,
   PropertySection,
   PropertySheet,
   PropertySupport,
@@ -45,7 +46,11 @@ import {
 } from './foldedFigureAppearance';
 import { foldedFigureCapabilities, isFolded3dFigure } from './foldedFigureCapabilities';
 import { foldedColorLabel, foldedStateLabel } from './foldedFigureControlOptions';
-import { foldedFigureSubtitle } from './foldedFigureNotice';
+import {
+  foldedFigureLayerOrderAttentionNotice,
+  foldedFigureSubtitle,
+  foldedFigureSubtitleTone,
+} from './foldedFigureNotice';
 import {
   foldedFigureCurrentCase,
   foldedFigureFrontier,
@@ -94,6 +99,8 @@ export interface FoldedFigurePropertyDeps {
   remove(figure: OristudioCpFoldedFigureEntry): void;
   /** The Layer order row's Edit…: the toolbar's Layer order… (`openFoldedFigureLayerOrder.ts`). */
   openLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
+  /** The Pose section's flag's Review…: the dialog on the rows that need attention (D14). */
+  reviewLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
 }
 
 /**
@@ -337,6 +344,8 @@ export function buildFoldedFigureProperties(
       // A flat figure's turn is its pose; a 3D figure's pose is its camera,
       // and its turn on the page stays with where it sits (Placement).
       fields: spatial ? [side, layerOrderField(figure, deps)] : [rotation, side, layerOrderField(figure, deps)],
+      // Under the Layer order row, while its constraints need a look.
+      notice: layerOrderAttentionNotice(figure, deps),
     },
   ];
 
@@ -427,6 +436,7 @@ export function buildFoldedFigureProperties(
     targetId: figure.id,
     title: figure.title,
     subtitle: foldedFigureSubtitle(t, figure, deps.stale),
+    subtitleTone: foldedFigureSubtitleTone(figure),
     icon: 'folded-figure',
     // The toolbar's last group, from the same catalog and as it is: what is
     // done to the figure as a whole, at the header's end as the Step pane has
@@ -475,11 +485,7 @@ function layerOrderField(
   const previous = previousSolutionCommand(figure, deps);
   const next = anotherSolutionCommand(figure, deps);
   // The toolbar's Layer order…, as the row's Edit… after the pager.
-  const layerOrder = layerOrderCommand(figure, {
-    t,
-    openLayerOrder: deps.openLayerOrder,
-    isStale: () => deps.stale,
-  });
+  const layerOrder = layerOrderCommand(figure, { t, openLayerOrder: deps.openLayerOrder });
   const action = layerOrder
     ? { ...layerOrder, label: t('panels:cpProperties.folded.layerOrderEdit', 'Edit…') }
     : undefined;
@@ -566,10 +572,11 @@ function layerOrderField(
 
 /**
  * What the Layer order row says under its label about a chosen order (D11):
- * how many constraints hold it ("3 constraints"), or how many need attention
- * since an edit — quietly, as a status — or, for a newer build's, why it
- * can't be changed here. Read from the record alone, never the engine. None
- * for a figure Oriedita's search orders.
+ * how many constraints hold it ("3 constraints"), quietly, as a status,
+ * flagged or not — the Pose section's notice says which need attention
+ * (`layerOrderAttentionNotice`, the Properties board's state C) — or, for a
+ * newer build's, why it can't be changed here. Read from the record alone,
+ * never the engine. None for a figure Oriedita's search orders.
  */
 function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): FieldNote | null {
   switch (foldedFigureLayerOrderHold(figure)) {
@@ -586,15 +593,9 @@ function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): Fie
     case 'record': {
       const record = foldedFigureLayerOrderRecord(figure);
       if (!record) return null;
-      if (record.attention) {
-        return {
-          kind: 'status',
-          text: t('panels:cpProperties.folded.layerConstraintsAttention', {
-            count: record.attention.count,
-            defaultValue_one: '1 layer constraint needs attention',
-            defaultValue_other: '{{count}} layer constraints need attention',
-          }),
-        };
+      // An order chosen with no constraint (D16), as the Diagram's row says it.
+      if (record.constraints.length === 0) {
+        return { kind: 'status', text: t('panels:cpProperties.folded.chosenOrder', 'Chosen order') };
       }
       return {
         kind: 'status',
@@ -606,4 +607,34 @@ function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): Fie
       };
     }
   }
+}
+
+/**
+ * The Pose section's notice while a flat figure's layer constraints need a
+ * look since an edit (D10, D14; the Properties board's state C): the
+ * sentence, and Review…, which opens the Layer order dialog on them — held
+ * as the row's Edit… is. While the figure folds, Review… waits with the rest
+ * of the row. None when nothing needs a look.
+ */
+function layerOrderAttentionNotice(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: FoldedFigurePropertyDeps
+): PropertyNotice | undefined {
+  const { t } = deps;
+  const notice = foldedFigureLayerOrderAttentionNotice(t, figure);
+  const edit = layerOrderCommand(figure, { t, openLayerOrder: deps.reviewLayerOrder });
+  if (!notice || !edit) return undefined;
+  return {
+    tone: 'warning',
+    text: notice.detail,
+    actions: [
+      {
+        id: 'review-layer-order',
+        label: t('panels:foldedFigureActions.reviewLayerOrder', 'Review…'),
+        disabled: edit.disabled,
+        ...(edit.hint ? { hint: edit.hint } : {}),
+        run: edit.run,
+      },
+    ],
+  };
 }

@@ -237,6 +237,8 @@ describe('opening the Layer order dialog on a step', () => {
     expect(asked().source.model.state).toBe('Front0');
     expect(asked().look.turnDeg).toBe(0);
     expect(asked().record).toEqual({ ...inSource, attention: { reason: 'conflict', count: 1 } });
+    // From the flag: the dialog opens on the rows that need attention (D14).
+    expect(asked().review).toBe(true);
     expect(source(stepId).render).toMatchObject({ mode: 'folded-flat', side: 'front', rotationDeg: 0 });
     expect(stepLayerOrderOf(source(stepId).layerOrder)?.record).toEqual(STEP_LAYER_ORDER);
   });

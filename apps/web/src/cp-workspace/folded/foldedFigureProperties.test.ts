@@ -91,6 +91,7 @@ function deps(
     duplicate: vi.fn(),
     remove: vi.fn(),
     openLayerOrder: vi.fn(),
+    reviewLayerOrder: vi.fn(),
     ...overrides,
   };
 }
@@ -269,15 +270,81 @@ describe('buildFoldedFigureProperties', () => {
       expect(sheetFor(constrained).subtitle).toBe(sheetFor(SOLVED).subtitle);
     });
 
-    it('says how many need attention after an edit, quietly', () => {
+    it('flags constraints that need attention after an edit: the header in warning, a notice with Review…, ‹ › waiting (D10, D14)', () => {
+      const d = deps({ stale: true });
       const flagged = {
         ...SOLVED,
-        layerOrder: held(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } })),
+        layerOrder: held(
+          twoConstraintRecord({
+            constraints: [
+              [0, 1, 1],
+              [2, 1, -1],
+              [0, 2, 1],
+            ],
+            attention: { reason: 'conflict', count: 2 },
+          })
+        ),
       };
-      expect(stepper(sheetFor(flagged)).note).toEqual({
-        kind: 'status',
-        text: '2 layer constraints need attention',
+      const sheet = sheetFor(flagged, d);
+      // The Properties board's state C: the state in the header, before Stale.
+      expect(sheet).toMatchObject({ subtitle: '2 layer constraints need attention', subtitleTone: 'warning' });
+      const layerOrder = stepper(sheet);
+      // The row keeps the total; the notice says which need a look.
+      expect(layerOrder.note).toEqual({ kind: 'status', text: '3 constraints' });
+      for (const verb of [layerOrder.previous, layerOrder.next]) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Review the layer constraints that need attention first' });
+      }
+      expect(layerOrder.action).toMatchObject({ label: 'Edit…', disabled: false });
+      const pose = sheet.sections.find((section) => section.id === 'pose');
+      expect(pose?.notice).toMatchObject({
+        tone: 'warning',
+        text: '2 layer constraints need attention since the creases changed.',
+        actions: [{ id: 'review-layer-order', label: 'Review…', disabled: false }],
       });
+      // Review…: the dialog, on the rows that need attention (D14); not the row's Edit….
+      pose?.notice?.actions?.[0]?.run();
+      expect(d.reviewLayerOrder).toHaveBeenCalledWith(flagged);
+      expect(d.openLayerOrder).not.toHaveBeenCalled();
+
+      // A check that ran out of time says so; one that needs nothing says nothing.
+      const timedOut = { ...SOLVED, layerOrder: held(twoConstraintRecord({ attention: { reason: 'timeout', count: 2 } })) };
+      expect(sheetFor(timedOut).sections.find((section) => section.id === 'pose')?.notice?.text).toBe(
+        '2 layer constraints couldn’t be checked in time.'
+      );
+      const settled = sheetFor({ ...SOLVED, layerOrder: held() }, deps({ stale: true }));
+      expect(settled.sections.find((section) => section.id === 'pose')?.notice).toBeUndefined();
+      expect(settled).toMatchObject({ subtitle: 'Stale' });
+      expect(settled.subtitleTone).toBeUndefined();
+    });
+
+    it('reads an order chosen with no constraint as one, flagged or not (D16)', () => {
+      const chosen = { ...SOLVED, layerOrder: held(twoConstraintRecord({ constraints: [] })) };
+      expect(stepper(sheetFor(chosen)).note).toEqual({ kind: 'status', text: 'Chosen order' });
+      const flagged = { ...SOLVED, layerOrder: held(twoConstraintRecord({ constraints: [], attention: { reason: 'timeout', count: 0 } })) };
+      const sheet = sheetFor(flagged);
+      expect(sheet.subtitle).toBe('Chosen layer order needs attention');
+      expect(sheet.sections.find((section) => section.id === 'pose')?.notice?.text).toBe(
+        'This figure’s chosen layer order couldn’t be checked in time.'
+      );
+    });
+
+    it('keeps a 3D figure’s flag on its row alone: no warning header, no notice (D13)', () => {
+      const waiting = { ...SPATIAL, layerOrder: held(twoConstraintRecord({ attention: { reason: 'route-3d', count: 2 } })) };
+      const sheet = sheetFor(waiting);
+      expect(sheet.subtitle).toBeUndefined();
+      expect(sheet.subtitleTone).toBeUndefined();
+      expect(sheet.sections.find((section) => section.id === 'pose')?.notice).toBeUndefined();
+      expect(stepper(sheet).note?.text).toBe(
+        'Layer order works on flat figures. Its 2 constraints are kept for when it folds flat again.'
+      );
+    });
+
+    it('opens on a figure whose creases changed since the fold, as it is now (D12)', () => {
+      const d = deps({ stale: true });
+      const layerOrder = stepper(sheetFor({ ...SOLVED, layerOrder: held() }, d));
+      expect(layerOrder.action).toMatchObject({ label: 'Edit…', disabled: false });
+      // ‹ › stay as a constrained figure has them, held for the dialog.
+      expect(layerOrder.next).toMatchObject({ disabled: true, hint: 'Step through solutions in Layer order…' });
     });
 
     it('holds Edit… on a 3D figure with why, stepping on as before when no record waits on it', () => {

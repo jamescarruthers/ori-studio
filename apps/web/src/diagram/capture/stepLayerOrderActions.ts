@@ -222,7 +222,8 @@ export async function openDiagramStepLayerOrder(stepId: string, via: DiagramStep
     sayCaptureOutcome(opening);
     return false;
   }
-  const outcome = await openLayerOrderDialog(opening.request);
+  // From the flag's Review…: the dialog opens on the rows that need attention (D14).
+  const outcome = await openLayerOrderDialog(via === 'review' ? { ...opening.request, review: true } : opening.request);
   if (outcome.kind !== 'applied') return false;
   return applyToStep(stepId, opening, outcome.applied);
 }

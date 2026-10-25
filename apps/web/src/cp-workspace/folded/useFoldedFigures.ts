@@ -83,6 +83,7 @@ import {
 import { useSettingsStore } from '../../store/settingsStore';
 import { effectiveObjectPaperStyle, setFoldedFigureAppearance } from '../paper/objectPaperStyle';
 import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
+import { sayFoldedFigureLayerOrderRefold } from './foldedFigureLayerOrderToasts';
 
 /**
  * The face folding holds fixed. Oriedita lets this be chosen and the kernel still
@@ -960,7 +961,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
       refold: (figure) =>
         runFoldedFigureAction(
           t('panels:creasePattern.refoldFoldedModelAction', 'Refold folded model'),
-          () => refoldOristudioCpFoldedFigure(figure.id)
+          () =>
+            refoldOristudioCpFoldedFigure(figure.id, {
+              // A chosen layer order refolds with it (H4): say what it came to.
+              onLayerOrder: (outcome) => sayFoldedFigureLayerOrderRefold(outcome, figure.title, t),
+            })
         ),
       // Derived, not stamped: an edit outside a figure's source region leaves it
       // alone, which is the whole point of porting Oriedita's box + content
@@ -1011,6 +1016,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
             void simulateOristudioCpCreaseRegion(lineIds);
             return;
           }
+          // Layer constraints that need a look since an edit: the dialog, on them (D14).
+          case 'review-layer-order':
+            endOpenMenuGesture();
+            void openFoldedFigureLayerOrder(figure.id, t, { via: 'review' });
+            return;
           case undefined:
             return;
         }

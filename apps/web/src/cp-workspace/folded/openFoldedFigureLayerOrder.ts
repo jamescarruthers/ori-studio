@@ -40,13 +40,20 @@ import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import type { OristudioCpFigureLayerOrderOpening, WorkspaceState } from '../../store/workspaceStore/types';
+import type {
+  OristudioCpFigureLayerOrderOpening,
+  OristudioCpFigureLayerOrderRefold,
+  WorkspaceState,
+} from '../../store/workspaceStore/types';
 import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
 
 /** How a press ended: the dialog's answer, or that it never opened. */
 export type FoldedFigureLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-opened';
+
+/** Where it was pressed: Layer order… (the toolbar, the menu, the row's Edit…), or the flag's Review… (D14). */
+export type FoldedFigureLayerOrderVia = 'edit' | 'review';
 
 /** What the Edit canvas adds to a figure's look: the app's display style, how far the canvas is turned, its creases' pen. */
 export interface EditFigureView {
@@ -85,7 +92,9 @@ export function editFigureView(state: WorkspaceState): EditFigureView {
  * - **what it shows** (`shown`), so the dialog opens on the order on the
  *   canvas (D19); left out when no fold could show it, and the dialog
  *   restores the record itself;
- * - **the figure's name**, and the surface for the dialog's analytics.
+ * - **the figure's name**, and the surface for the dialog's analytics;
+ * - **that its Apply also refolds it** (`applyRefolds`), when its creases
+ *   changed since the fold and the source is them as they are now (D12).
  */
 export function foldedFigureLayerOrderRequest(
   figure: OristudioCpFoldedFigureEntry,
@@ -111,6 +120,8 @@ export function foldedFigureLayerOrderRequest(
     },
     ...(opening.shown ? { shown: opening.shown } : {}),
     name: figure.title,
+    // Opened on creases that changed since the fold: its Apply refolds it too (D12).
+    ...(opening.refold ? { applyRefolds: true } : {}),
   };
 }
 
@@ -118,7 +129,11 @@ export function foldedFigureLayerOrderRequest(
  * Open the Layer order dialog on figure `id`, and commit its Apply. Answers
  * how the press ended; every way but `applied` leaves the figure as it was.
  */
-export async function openFoldedFigureLayerOrder(id: string, t: TFunction): Promise<FoldedFigureLayerOrderPress> {
+export async function openFoldedFigureLayerOrder(
+  id: string,
+  t: TFunction,
+  { via = 'edit' }: { via?: FoldedFigureLayerOrderVia } = {}
+): Promise<FoldedFigureLayerOrderPress> {
   const store = useWorkspaceStore;
   const figure = store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
   if (!figure) return 'not-opened';
@@ -131,13 +146,24 @@ export async function openFoldedFigureLayerOrder(id: string, t: TFunction): Prom
     if (opening.reason === 'unavailable') {
       toast.error(t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
     }
+    // Its creases changed, and fold in 3D now: there is no flat order to open on (D13).
+    if (opening.reason === 'spatial') {
+      toast.message(
+        t(
+          'toasts:layerOrder.folds3d',
+          'This figure’s creases fold in 3D now, and layer order works on flat folds. Refold it to see it.'
+        )
+      );
+    }
     return 'not-opened';
   }
   try {
     const state = store.getState();
     const shown = state.oristudioCpFoldedFigures.find((entry) => entry.id === id) ?? figure;
-    const outcome = await openLayerOrderDialog(foldedFigureLayerOrderRequest(shown, opening, editFigureView(state)));
-    if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, t);
+    const request = foldedFigureLayerOrderRequest(shown, opening, editFigureView(state));
+    // From the flag's Review…: the dialog opens on the rows that need attention (D14).
+    const outcome = await openLayerOrderDialog(via === 'review' ? { ...request, review: true } : request);
+    if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, t, opening.refold);
     return outcome.kind;
   } finally {
     await opening.release();
@@ -148,17 +174,22 @@ export async function openFoldedFigureLayerOrder(id: string, t: TFunction): Prom
  * Commit an Apply on figure `id` as one undo entry, "Set layer order": a new
  * fold with the chosen order, the fold before kept by the entry, so an undo
  * shows the order it draws. The bracket holds that fold until the entry has
- * taken it (`foldedFigureGesture.ts`).
+ * taken it (`foldedFigureGesture.ts`). With `refold`, the dialog was opened
+ * on creases that changed since the fold (D12), and the one entry is the
+ * figure's refold too: "Refold with layer order".
  */
 export async function applyFoldedFigureLayerOrder(
   id: string,
   applied: LayerOrderApplied,
-  t: TFunction
+  t: TFunction,
+  refold?: OristudioCpFigureLayerOrderRefold
 ): Promise<boolean> {
   const done = await foldedFigureGesture.run(
     'verb',
-    t('panels:creasePattern.setLayerOrderAction', 'Set layer order'),
-    () => useWorkspaceStore.getState().applyOristudioCpFigureLayerOrder(id, applied)
+    refold
+      ? t('panels:creasePattern.refoldWithLayerOrderAction', 'Refold with layer order')
+      : t('panels:creasePattern.setLayerOrderAction', 'Set layer order'),
+    () => useWorkspaceStore.getState().applyOristudioCpFigureLayerOrder(id, applied, refold ? { refold } : undefined)
   );
   return done === true;
 }
