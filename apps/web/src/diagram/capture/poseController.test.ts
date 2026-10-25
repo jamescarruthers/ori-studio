@@ -1424,6 +1424,24 @@ describe('the Layer order dialog from Pose (H8)', () => {
     expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(0);
   });
 
+  it('holds only the new fold for an Apply after the engine was lost while the dialog was open', async () => {
+    const stepId = await linkedStep();
+    const controller = createPoseController(stepId, listener());
+    await controller.run({ verb: 'show-folded' });
+    dialog.outcome = async (request) => {
+      // The CP engine restarts under the dialog: its handles are gone, the registry reset with them.
+      controller.engineLost();
+      await resetFoldedFigureHandles();
+      return { kind: 'applied', applied: { record: CHOSEN, relations: CHOSEN_RELATIONS, source: request.source } };
+    };
+    expect(await controller.editLayerOrder()).toBe(true);
+    // The old fold forgotten with the engine that held it; the applied one held in the new one.
+    expect(foldedFigureHandleRefCount(7)).toBe(0);
+    expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(1);
+    controller.dispose();
+    expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(0);
+  });
+
   it('opens nothing on a step whose creases fold in 3D now, and says so', async () => {
     const stepId = await linkedStep();
     const controller = createPoseController(stepId, listener());
