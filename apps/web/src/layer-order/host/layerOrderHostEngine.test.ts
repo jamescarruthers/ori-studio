@@ -299,6 +299,30 @@ describe('engine loss', () => {
     batch.close();
   });
 
+  it('a worker the browser never loaded answers lost as unavailable, reported to no one', async () => {
+    const { batch, worker } = batchOverFakes((backend) => backend.hold('restore'));
+    const running = batch.resolve(FAKE_LAYER_ORDER_SOURCE, D_ABOVE_A, FAKE_LIMITS);
+    await vi.waitFor(() => expect(worker()?.backend.calls).toEqual(['restore']), { interval: 2 });
+    worker().failToLoad();
+    const resolved = await running;
+    expectOutcome(resolved, 'lost');
+    expect(resolved.cause).toBe('unavailable');
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+    batch.close();
+  });
+
+  it('an engine whose wasm did not arrive answers lost as unavailable, reported to no one', async () => {
+    const workers = inProcessLayerOrderWorkers(() => {
+      throw new TypeError('Failed to fetch');
+    });
+    const batch = createLayerOrderResolveBatch({ spawn: workers.spawn });
+    const resolved = await batch.resolve(FAKE_LAYER_ORDER_SOURCE, D_ABOVE_A, FAKE_LIMITS);
+    expectOutcome(resolved, 'lost');
+    expect(resolved.cause).toBe('unavailable');
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+    batch.close();
+  });
+
   it('an engine that never starts answers lost as unavailable, reported once here', async () => {
     const workers = inProcessLayerOrderWorkers(() => {
       throw new Error('The wasm did not arrive.');
