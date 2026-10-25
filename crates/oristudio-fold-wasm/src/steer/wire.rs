@@ -319,8 +319,21 @@ pub enum OpenedOnWire {
     /// pair, or both orders of one.
     Held { ignored: usize },
     /// The order given does not all fit: the fitting order closest to it,
-    /// with `moved` of its relations the other way.
-    Closest { moved: usize, ignored: usize },
+    /// with `moved` of its relations the other way. `inside` (else null) is a
+    /// face the order given put inside a fold at a crease through it.
+    Closest {
+        moved: usize,
+        ignored: usize,
+        inside: Option<FoldInsideWire>,
+    },
+}
+
+/// A face an order put inside a fold it can't be in (`FoldInside`): `face`
+/// between `crease`'s two faces, the crease running through it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct FoldInsideWire {
+    pub face: u32,
+    pub crease: [u32; 2],
 }
 
 impl From<&OpenedOn> for OpenedOnWire {
@@ -328,7 +341,18 @@ impl From<&OpenedOn> for OpenedOnWire {
         match *opened_on {
             OpenedOn::First { timed_out } => OpenedOnWire::First { timed_out },
             OpenedOn::Held { ignored } => OpenedOnWire::Held { ignored },
-            OpenedOn::Closest { moved, ignored } => OpenedOnWire::Closest { moved, ignored },
+            OpenedOn::Closest {
+                moved,
+                ignored,
+                inside,
+            } => OpenedOnWire::Closest {
+                moved,
+                ignored,
+                inside: inside.map(|inside| FoldInsideWire {
+                    face: inside.face.0,
+                    crease: [inside.crease[0].0, inside.crease[1].0],
+                }),
+            },
         }
     }
 }
@@ -1041,10 +1065,28 @@ mod tests {
         assert_eq!(
             serde_json::to_value(OpenedOnWire::from(&OpenedOn::Closest {
                 moved: 2,
-                ignored: 1
+                ignored: 1,
+                inside: None,
             }))
             .unwrap_or_default(),
-            json!({ "kind": "closest", "moved": 2, "ignored": 1 })
+            json!({ "kind": "closest", "moved": 2, "ignored": 1, "inside": null })
+        );
+        assert_eq!(
+            serde_json::to_value(OpenedOnWire::from(&OpenedOn::Closest {
+                moved: 1,
+                ignored: 0,
+                inside: Some(oristudio_fold::steer::FoldInside {
+                    face: oristudio_fold::FaceId(7),
+                    crease: [oristudio_fold::FaceId(2), oristudio_fold::FaceId(5)],
+                }),
+            }))
+            .unwrap_or_default(),
+            json!({
+                "kind": "closest",
+                "moved": 1,
+                "ignored": 0,
+                "inside": { "face": 7, "crease": [2, 5] },
+            })
         );
         let face = RecordFace {
             at: [0.25, 0.5],

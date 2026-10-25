@@ -793,7 +793,7 @@ fn a_session_opens_on_the_order_its_host_shows() {
     wrong.swap(2 * forced, 2 * forced + 1);
     match layers.open_showing(&source, &wrong, &defaults()) {
         Ok(Opening::Opened(opened)) => match opened.opened_on {
-            OpenedOnWire::Closest { moved, ignored } => {
+            OpenedOnWire::Closest { moved, ignored, .. } => {
                 assert!(moved >= 1, "{moved}");
                 assert_eq!(ignored, 0);
             }

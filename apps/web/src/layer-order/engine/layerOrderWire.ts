@@ -77,8 +77,20 @@ export type LayerOpenedOn =
   | { kind: 'first'; timed_out: { limit: LayerBudgetLimit; nodes: number } | null }
   /** The order given, held whole: the host's relations, or a record's saved pairs that still resolve. */
   | { kind: 'held'; ignored: number }
-  /** The order given did not all fit: the fitting order closest to it, `moved` of its relations the other way. */
-  | { kind: 'closest'; moved: number; ignored: number };
+  /**
+   * The order given did not all fit: the fitting order closest to it, `moved`
+   * of its relations the other way. `inside` is a face the order given (the
+   * host's, or a record's saved pairs) puts inside a fold whose crease runs
+   * through it, and the two faces that fold meets at (D19, `FoldInside`);
+   * null when no one face is to blame. The dialog names it only for an open
+   * on the host's order.
+   */
+  | {
+      kind: 'closest';
+      moved: number;
+      ignored: number;
+      inside?: { face: number; crease: [number, number] } | null;
+    };
 
 /** A session the engine now holds. */
 export interface LayerOpened {

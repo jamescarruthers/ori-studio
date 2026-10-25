@@ -483,7 +483,11 @@ impl ConstraintSession {
                             self.set_opened_on(if moved == 0 {
                                 OpenedOn::Held { ignored: 0 }
                             } else {
-                                OpenedOn::Closest { moved, ignored: 0 }
+                                OpenedOn::Closest {
+                                    moved,
+                                    ignored: 0,
+                                    inside: self.fold_inside(saved),
+                                }
                             });
                             Restoring::Applied
                         }
@@ -519,7 +523,12 @@ impl ConstraintSession {
             Solved::Fit(fit) => {
                 self.adopt(intact.to_vec(), fit);
                 let moved = moved(saved, self.shown_values());
-                self.set_opened_on(OpenedOn::Closest { moved, ignored: 0 });
+                let inside = self.fold_inside(saved);
+                self.set_opened_on(OpenedOn::Closest {
+                    moved,
+                    ignored: 0,
+                    inside,
+                });
                 Ok(Restoring::Applied)
             }
             Solved::CantFit(cant) => self.restore_clash(cant, saved, prefer, limits),
@@ -554,6 +563,7 @@ impl ConstraintSession {
                         OpenedOn::Closest {
                             moved: moved(saved, &values),
                             ignored: 0,
+                            inside: self.fold_inside(saved),
                         }
                     };
                     let letters = self.letter_forced();
