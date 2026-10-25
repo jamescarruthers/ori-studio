@@ -287,7 +287,7 @@ export const fakeLayerOrderResolutions = {
       attention,
     };
   },
-  kept(outcome: 'clash' | 'timed_out' | 'refused' | 'lost', record: LayerOrderRecord): LayerOrderResolution {
+  kept(outcome: 'clash' | 'timed_out' | 'refused', record: LayerOrderRecord): LayerOrderResolution {
     const attention: LayerOrderAttention =
       outcome === 'clash'
         ? { reason: 'conflict', count: 1 }
@@ -302,9 +302,12 @@ export const fakeLayerOrderResolutions = {
         return { outcome, limit: 'deadline', nodes: 10, found: null, record: kept, attention };
       case 'refused':
         return { outcome, refusal: { code: 'source_no_faces' }, record: kept, attention };
-      case 'lost':
-        return { outcome, cause: 'crashed', record: kept, attention };
     }
+  },
+  /** No host engine to ask: it crashed, or (`unavailable`) could not load. H2 flags the record; a capture keeps none of it. */
+  lost(record: LayerOrderRecord, cause: 'crashed' | 'unavailable' = 'crashed'): LayerOrderResolution {
+    const attention: LayerOrderAttention = { reason: 'timeout', count: record.constraints.length };
+    return { outcome: 'lost', cause, record: { ...record, attention }, attention };
   },
 };
 

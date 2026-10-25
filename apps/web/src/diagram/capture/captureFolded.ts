@@ -42,6 +42,7 @@ import {
   type FoldedPicture,
 } from '../../lib/creaseExportFold';
 import type { Point } from '../../lib/geometry';
+import type { LayerOrderLossCause } from '../../layer-order/host/hostEngineGateway';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderApplied } from '../../lib/layerOrder/layerOrderRequest';
 import type { PaperFrame } from '../../lib/layerOrder/paperFrame';
@@ -444,6 +445,16 @@ export type CaptureStepResult =
    * source keeps `layerOrder`, flagged with `attention`.
    */
   | { status: 'needs-attention'; layerOrder: string; attention: LayerOrderAttention }
+  /**
+   * An order the Layer order dialog applied that the kernel cannot draw
+   * (D3): nothing changes, and no record is written.
+   */
+  | { status: 'order-refused' }
+  /**
+   * The host engine was not there to restore the step's record — offline
+   * (`unavailable`), or it crashed: nothing was checked, and nothing changes.
+   */
+  | { status: 'layer-order-lost'; cause: LayerOrderLossCause }
   /** Stopped while the step's layer order was being restored. */
   | { status: 'stopped' }
   | { status: 'missing' }
@@ -613,6 +624,9 @@ async function captureInLayerOrder(
     shown = await foldWithLayerOrder(runtime, lineIds, model, kept, layerOrder.resolve, layerOrder.stop);
   }
   if (shown.kind === 'cancelled') return { status: 'stopped' };
+  if (shown.kind === 'lost') return { status: 'layer-order-lost', cause: shown.cause };
+  // The dialog's order, refused by the kernel: nothing to keep, flagged or not (D3).
+  if (shown.kind === 'kept' && layerOrder.kind === 'applied') return { status: 'order-refused' };
   if (shown.kind === 'kept') return { status: 'needs-attention', layerOrder: shown.layerOrder.json, attention: shown.attention };
   const { state } = shown;
   try {

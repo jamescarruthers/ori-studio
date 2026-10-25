@@ -650,7 +650,37 @@ describe('captureStep, a step’s layer order (H7)', () => {
     expect(result.captured.picture.key).not.toBe(unconstrained.captured.picture.key);
   });
 
-  it.each(['clash', 'timed_out', 'refused', 'lost'] as const)(
+  it.each(['crashed', 'unavailable'] as const)(
+    'with no host engine (%s) writes nothing: no picture read, no record flagged, the cause said',
+    async (cause) => {
+      const { runtime, calls } = recordingRuntime();
+      const result = await captureStep(
+        runtime,
+        request(FLAT, withRecord(resolver(() => fakeLayerOrderResolutions.lost(inSource, cause))))
+      );
+      expect(result).toEqual({ status: 'layer-order-lost', cause });
+      expect(calls).toEqual(['fold', 'source(7)', 'paperScene(7)', 'free(7)']);
+    }
+  );
+
+  it('refuses an order the dialog applied that the kernel cannot draw: nothing to keep, nothing flagged (D3)', async () => {
+    const { runtime, calls } = recordingRuntime({
+      foldWithOrder: vi.fn(async () => ({ status: 'refused' as const, refusal: { code: 'not_found' as const } })),
+    });
+    const source = layerOrderSourceOf(fakeFoldSource(), captureModel(cpDocument(), 'front'));
+    const frame = diagramLayerOrderFrame({ sheet_points: [{ x: 0, y: 0 }, { x: 100, y: 100 }] });
+    const result = await captureStep(
+      runtime,
+      request(FLAT, {
+        layerOrder: { kind: 'applied', applied: { record: inSource, relations: new Uint32Array([1, 0]), source }, frame },
+      })
+    );
+    expect(result).toEqual({ status: 'order-refused' });
+    // No figure came back: nothing drawn, nothing to free.
+    expect(calls).toEqual(['foldWithOrder']);
+  });
+
+  it.each(['clash', 'timed_out', 'refused'] as const)(
     'keeps the step’s picture on %s: no picture read, the record flagged (D10)',
     async (outcome) => {
       const { runtime, calls } = recordingRuntime();

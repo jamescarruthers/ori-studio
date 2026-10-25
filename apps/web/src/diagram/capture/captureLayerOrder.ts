@@ -28,7 +28,7 @@ import type {
   OristudioCpFoldedPaperScene,
   OristudioCpFoldSource,
 } from '../../engine/oristudioCpTypes';
-import type { LayerOrderResolution } from '../../layer-order/host/hostEngineGateway';
+import type { LayerOrderLossCause, LayerOrderResolution } from '../../layer-order/host/hostEngineGateway';
 import { withLayerOrderAttention } from '../../layer-order/host/layerOrderResolution';
 import { NEWER } from '../../lib/documentFile';
 import { openFold, type CpFoldRuntime, type FoldedFigureState } from '../../lib/creaseExportFold';
@@ -64,6 +64,41 @@ export function stepLayerOrderOf(layerOrder: string | undefined): StepLayerOrder
   if (layerOrder === undefined) return null;
   const read = readLayerOrderRecord(layerOrder);
   return read !== NEWER && read.ok ? { record: read.record, json: read.json } : null;
+}
+
+/**
+ * What a source's record says at rest, read from saved data alone, for a
+ * surface drawn often (a card, the Step pane): its constraints and its
+ * summary; null for none, or one that does not read. Read once per record.
+ */
+export function layerOrderSummaryOf(
+  layerOrder: string | undefined
+): { constraints: number; attention: LayerOrderAttention | null } | null {
+  if (layerOrder === undefined) return null;
+  let summary = summaries.get(layerOrder);
+  if (summary === undefined) {
+    const read = stepLayerOrderOf(layerOrder);
+    summary = read ? { constraints: read.record.constraints.length, attention: read.record.attention ?? null } : null;
+    if (summaries.size >= SUMMARIES_KEPT) summaries.delete(summaries.keys().next().value!);
+    summaries.set(layerOrder, summary);
+  }
+  return summary;
+}
+
+/** The last records read by {@link layerOrderSummaryOf}: a diagram's constrained steps, a few times over. */
+const summaries = new Map<string, { constraints: number; attention: LayerOrderAttention | null } | null>();
+const SUMMARIES_KEPT = 256;
+
+/**
+ * The order a source's record draws, as a key: its faces and their order,
+ * which are all a picture is drawn from; null for a source with none. What
+ * its constraints say, or a summary, draws nothing. One this build cannot
+ * read keys by its text, so only the same text is the same order.
+ */
+export function layerOrderKeyOf(layerOrder: string | undefined): string | null {
+  if (layerOrder === undefined) return null;
+  const read = stepLayerOrderOf(layerOrder);
+  return read ? JSON.stringify([read.record.faces, read.record.order]) : `unread:${layerOrder}`;
 }
 
 /** `layerOrder` with its summary set (or cleared, for null), as its source keeps it. */
@@ -111,22 +146,26 @@ export interface StepFoldSource {
   readonly source: LayerOrderSource;
   /** The step's paper frame, for its record's points. */
   readonly frame: PaperFrame;
-  /** The kernel's paper scene of the fold, in the kernel's first order; null for one it drew none of. */
+  /** The kernel's paper scene of the fold, in the order asked for; null for one it drew none of. */
   readonly scene: OristudioCpFoldedPaperScene | null;
 }
 
 /**
- * Fold a step's creases as a capture does, read what the fold was made from
- * and the paper it lies on, and free it.
+ * Fold a step's creases as a capture does — stepped to `foldCase`, the
+ * kernel's layer order the step shows, when that is past the first — read
+ * what the fold was made from and the paper it lies on, and free it. A fold's
+ * source is the same at every case; its scene is the case's.
  */
 export async function stepFoldSource(
   runtime: CpFoldRuntime,
   lineIds: readonly number[],
-  model: OristudioCpFoldedFigureModel
+  model: OristudioCpFoldedFigureModel,
+  foldCase = 1
 ): Promise<StepFoldSource> {
   if (!runtime.source) throw new Error('This crease kernel cannot say what a fold was made from');
   const folded = await openFold(runtime, [...lineIds], model);
   try {
+    if (foldCase > 1) await runtime.foldToCase(folded.handle, foldCase);
     const kernel = await runtime.source(folded.handle);
     const scene = await runtime.paperScene(folded.handle);
     return {
@@ -140,7 +179,7 @@ export async function stepFoldSource(
 }
 
 /** Why a record's order was not drawn: the host engine's answer, or the kernel refusing to draw it. */
-export type LayerOrderKeptOutcome = 'clash' | 'timed_out' | 'refused' | 'lost';
+export type LayerOrderKeptOutcome = 'clash' | 'timed_out' | 'refused';
 
 /** A fold in a record's order, or why the step keeps its picture. */
 export type LayerOrderShown =
@@ -161,6 +200,13 @@ export type LayerOrderShown =
       readonly attention: LayerOrderAttention;
       readonly outcome: LayerOrderKeptOutcome;
     }
+  /**
+   * The host engine was not there to answer — offline, or it crashed. Nothing
+   * was checked, so nothing is kept: the step stays as it was, its record
+   * unflagged. `cause` is the host engine's, `unavailable` when the browser
+   * did not load it (`isLayerOrderLoadFailure`).
+   */
+  | { readonly kind: 'lost'; readonly cause: LayerOrderLossCause }
   /** A Stop: nothing to keep. */
   | { readonly kind: 'cancelled' };
 
@@ -187,6 +233,8 @@ export async function foldWithLayerOrder(
   const { source, frame } = await stepFoldSource(runtime, lineIds, model);
   const resolution = await resolve(source, layerOrderRecordToSource(layerOrder.record, frame), stop);
   if (resolution.outcome === 'cancelled') return { kind: 'cancelled' };
+  // Never saved as "couldn't be checked in time": nothing was checked.
+  if (resolution.outcome === 'lost') return { kind: 'lost', cause: resolution.cause };
   if (resolution.outcome !== 'applied') {
     // The record asked about, as the step keeps it: its points never go through the frame and back.
     const attention = resolution.attention ?? { reason: 'unresolved', count: layerOrder.record.constraints.length };
@@ -194,25 +242,28 @@ export async function foldWithLayerOrder(
   }
   const shown = await foldAppliedOrder(runtime, resolution.applied, model, frame);
   if (shown.kind === 'shown') return { ...shown, attention: resolution.attention };
-  return shown.kind === 'kept' ? { ...shown, layerOrder: flaggedLayerOrder(layerOrder, shown.attention) } : shown;
+  // The record asked about, flagged, as for any order not drawn.
+  return { ...shown, layerOrder: flaggedLayerOrder(layerOrder, shown.attention) };
 }
 
 /**
  * Fold an order the dialog applied, or the host engine restored, into a new
  * figure: `applied.relations` on `applied.source`, exactly what was analysed.
- * Its record is saved in the step's frame, with the summary it came with. A
- * kernel that cannot draw the order refuses (a typed refusal, no figure), and
- * the step keeps its picture, its record flagged with every constraint.
+ * Its record is saved in the step's frame, with the summary it came with —
+ * encoded first, so a record that cannot be saved never leaves a figure
+ * behind. A kernel that cannot draw the order refuses (a typed refusal, no
+ * figure): `kept`, the record flagged with every constraint, which a restore
+ * keeps and the dialog's Apply does not (`captureInLayerOrder`).
  */
 export async function foldAppliedOrder(
   runtime: CpFoldRuntime,
   applied: LayerOrderApplied,
   model: OristudioCpFoldedFigureModel,
   frame: PaperFrame
-): Promise<LayerOrderShown> {
+): Promise<Exclude<LayerOrderShown, { kind: 'lost' | 'cancelled' }>> {
   if (!runtime.foldWithOrder) throw new Error('This crease kernel cannot fold a given layer order');
-  const folded = await runtime.foldWithOrder(kernelFoldSourceOf(applied.source), applied.relations, model);
   const layerOrder = keptLayerOrder(layerOrderRecordFromSource(applied.record, frame));
+  const folded = await runtime.foldWithOrder(kernelFoldSourceOf(applied.source), applied.relations, model);
   if (folded.status === 'refused') {
     const attention: LayerOrderAttention = { reason: 'unresolved', count: applied.record.constraints.length };
     return { kind: 'kept', layerOrder: flaggedLayerOrder(layerOrder, attention), attention, outcome: 'refused' };
@@ -222,14 +273,15 @@ export async function foldAppliedOrder(
 }
 
 /**
- * A fold that was asked for in a record's order and could not be drawn in
- * it: the step keeps its picture, and `shown`'s flagged record (D10). Thrown
- * through a Pose verb, whose session holds the fold, for its controller to
- * keep; `null` for a Stop.
+ * A fold that was asked for in a record's order and was not drawn in it,
+ * thrown through a Pose verb, whose session holds the fold, for its
+ * controller: `kept`, the step keeps its picture and the flagged record
+ * (D10); `lost`, the host engine was not there and nothing is kept; null for
+ * a Stop.
  */
 export class LayerOrderNotShownError extends Error {
-  constructor(readonly kept: Extract<LayerOrderShown, { kind: 'kept' }> | null) {
-    super(kept ? 'The step’s layer order could not be drawn' : 'The step’s layer order was stopped');
+  constructor(readonly why: Extract<LayerOrderShown, { kind: 'kept' | 'lost' }> | null) {
+    super(why ? 'The step’s layer order could not be drawn' : 'The step’s layer order was stopped');
     this.name = 'LayerOrderNotShownError';
   }
 }

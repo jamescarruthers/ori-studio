@@ -74,6 +74,17 @@ describe('stepFoldSource', () => {
     expect(folded.frame.toSource([0, 0])).toEqual({ x: 50, y: 50 });
   });
 
+  it('steps to the case the step shows before it reads the paper, and never at the first', async () => {
+    const runtime = fakeCaptureRuntime();
+    await stepFoldSource(runtime, [1], model, 2);
+    expect(runtime.foldToCase).toHaveBeenCalledWith(7, 2);
+    const order = (spy: unknown) => (spy as { mock: { invocationCallOrder: number[] } }).mock.invocationCallOrder[0]!;
+    expect(order(runtime.foldToCase)).toBeLessThan(order(runtime.paperScene));
+    const first = fakeCaptureRuntime();
+    await stepFoldSource(first, [1], model, 1);
+    expect(first.foldToCase).not.toHaveBeenCalled();
+  });
+
   it('frees the fold when reading its source fails', async () => {
     const runtime = fakeCaptureRuntime({ source: vi.fn(async () => Promise.reject(new Error('gone'))) });
     await expect(stepFoldSource(runtime, [1], model)).rejects.toThrow('gone');
@@ -119,7 +130,7 @@ describe('foldWithLayerOrder', () => {
     if (shown.kind === 'shown') expect(shown.layerOrder.record.attention).toEqual(attention);
   });
 
-  it.each(['clash', 'timed_out', 'refused', 'lost'] as const)(
+  it.each(['clash', 'timed_out', 'refused'] as const)(
     'on %s keeps the step’s record as it was, its points untouched, flagged; folds nothing more (D10)',
     async (outcome) => {
       const runtime = fakeCaptureRuntime();
@@ -135,6 +146,22 @@ describe('foldWithLayerOrder', () => {
       expect(shown.outcome).toBe(outcome);
       expect(shown.layerOrder.record.faces).toEqual(STEP_LAYER_ORDER.faces);
       expect(shown.layerOrder.record.attention).toEqual(shown.attention);
+      expect(runtime.foldWithOrder).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['crashed', 'unavailable'] as const)(
+    'with no host engine (%s) keeps nothing: no flag to store, nothing folded, the cause to say',
+    async (cause) => {
+      const runtime = fakeCaptureRuntime();
+      const shown = await foldWithLayerOrder(
+        runtime,
+        [1],
+        model,
+        layerOrder,
+        resolving(() => Promise.resolve(fakeLayerOrderResolutions.lost(inSource, cause)))
+      );
+      expect(shown).toEqual({ kind: 'lost', cause });
       expect(runtime.foldWithOrder).not.toHaveBeenCalled();
     }
   );
@@ -172,5 +199,16 @@ describe('foldAppliedOrder', () => {
     expect(runtime.foldWithOrder).toHaveBeenCalledWith({ segments: [], starting_face_id: 1, aux_segments: [], digest: 'd' }, new Uint32Array([0, 1]), model);
     expect(shown).toMatchObject({ kind: 'shown', attention: null });
     if (shown.kind === 'shown') expect(shown.layerOrder.record).toEqual(STEP_LAYER_ORDER);
+  });
+
+  it('encodes the record before it folds: one it cannot save leaves no figure behind', async () => {
+    const runtime = fakeCaptureRuntime();
+    const source: LayerOrderSource = { segments: [], startingFaceId: 1, auxSegments: [], model, digest: 'd' };
+    const frame = diagramLayerOrderFrame({ sheet_points: [{ x: 0, y: 0 }, { x: 100, y: 100 }] });
+    const unsaveable = { ...inSource, faces: [{ at: [Number.NaN, 0] as const, area: 1 }, ...inSource.faces.slice(1)] };
+    await expect(
+      foldAppliedOrder(runtime, { record: unsaveable, relations: new Uint32Array([0, 1]), source }, model, frame)
+    ).rejects.toThrow('cannot be saved');
+    expect(runtime.foldWithOrder).not.toHaveBeenCalled();
   });
 });

@@ -316,15 +316,19 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
     const shown = await deps.search((runtime, stop) =>
       foldWithLayerOrder(runtime, lineIds, model, layerOrder.order, layerOrder.resolve, stop)
     );
-    // No figure was made for it: nothing to hold, or to free.
-    if (ticket !== generation) throw new CaptureSessionClosedError();
-    if (shown.kind !== 'shown') throw new LayerOrderNotShownError(shown.kind === 'kept' ? shown : null);
+    if (shown.kind !== 'shown') {
+      // No figure was made for it: nothing to hold, or to free.
+      if (ticket !== generation) throw new CaptureSessionClosedError();
+      throw new LayerOrderNotShownError(shown.kind === 'kept' || shown.kind === 'lost' ? shown : null);
+    }
     const { state } = shown;
+    // Held through the registry, or let go through it when the session moved on while it was restored.
+    const epoch = adopt(ticket, state.handle);
     return {
       kind: 'flat',
       ...key,
       handle: state.handle,
-      epoch: adopt(ticket, state.handle),
+      epoch,
       side,
       order: { asked: layerOrder.order.json, shown: shown.layerOrder, attention: shown.attention },
       state,
