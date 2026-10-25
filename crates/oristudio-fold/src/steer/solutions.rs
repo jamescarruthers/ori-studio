@@ -138,11 +138,25 @@ pub struct SolutionCaps {
     pub stored_bits: u64,
 }
 
+/// The defaults, set by census 2 in wasm (`scripts/layer-order-census.mjs`,
+/// phase gate 2 of `implementation-plans/layer-order-dialog.md`) on the 22
+/// cpoogle designs whose counts were the slowest or grew the dialog's wasm
+/// memory the most:
+///
+/// - **Stored bits, 4 MiB** (down from 16): the count then grew the dialog's
+///   memory by at most 12 MiB instead of 60, and its peak by up to 48 MiB
+///   less (102 to 54 MiB on the largest), with every tally the same.
+/// - **Orders per component, 100,000** (kept): at 10,000 the slow counts
+///   ended up to 9× sooner, but one design's pictures fell from an exact
+///   7,776 and 4 to "at least" 7,776 and 1, and three exact layer-order
+///   counts became "at least".
+/// - **Combinations per group, 1,000,000** (kept): look groups of more than
+///   one component are rare (4 in the corpus), and none came near it.
 impl SolutionCaps {
     pub const DEFAULT_ORDERS_PER_COMPONENT: u64 = 100_000;
     pub const DEFAULT_COMBINATIONS_PER_GROUP: u64 = 1_000_000;
-    /// 16 MiB.
-    pub const DEFAULT_STORED_BITS: u64 = 1 << 27;
+    /// 4 MiB.
+    pub const DEFAULT_STORED_BITS: u64 = 1 << 25;
 }
 
 impl Default for SolutionCaps {
@@ -223,13 +237,28 @@ pub enum StepDirection {
 }
 
 /// Where an order lies in the stepper's fixed order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+///
+/// Serialized for JavaScript as [`Tally`] is: an index past
+/// [`ChoiceCount::MAX_SENT`] is sent as that bound. With X-ray on, the index
+/// of a layer order can be past it (census 2 met three designs whose orders
+/// pass 2⁵³), and `serde-wasm-bindgen` refuses a larger `u64`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
     /// From 1. Final only when `total` is exact; before that it counts
     /// among the solutions found so far, and can move as more are found.
     pub index: u64,
     /// The pictures from the side, or with X-ray the layer orders.
     pub total: Tally,
+}
+
+impl Serialize for Position {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut out = serializer.serialize_struct("Position", 2)?;
+        out.serialize_field("index", &self.index.min(ChoiceCount::MAX_SENT))?;
+        out.serialize_field("total", &self.total)?;
+        out.end()
+    }
 }
 
 /// A step that moved the order on screen.
@@ -2343,5 +2372,28 @@ mod tests {
             }
             println!("{name}: {}", rows.join("; "));
         }
+    }
+
+    /// An index past what JavaScript holds exactly is sent as that bound, as
+    /// a tally is; under it, as it is.
+    #[test]
+    fn a_position_past_two_to_the_fifty_three_is_sent_as_the_bound() {
+        let sent = |index: u64, n: u64| {
+            serde_json::to_value(Position {
+                index,
+                total: Tally { n, exact: true },
+            })
+            .expect("serialize")
+        };
+        let max = ChoiceCount::MAX_SENT;
+        assert_eq!(
+            sent(u64::MAX, u64::MAX),
+            serde_json::json!({ "index": max, "total": { "n": max, "exact": false } })
+        );
+        assert_eq!(sent(max + 1, max + 2)["index"], max);
+        assert_eq!(
+            sent(3, 12),
+            serde_json::json!({ "index": 3, "total": { "n": 12, "exact": true } })
+        );
     }
 }

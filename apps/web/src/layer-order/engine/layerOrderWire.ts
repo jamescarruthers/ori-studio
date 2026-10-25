@@ -298,7 +298,7 @@ export interface LayerSolutionCaps {
   ordersPerComponent?: number;
   /** Combinations a look group walks; default 1,000,000. */
   combinationsPerGroup?: number;
-  /** Bits of whole orders kept for the stepper; default 2²⁷ (16 MiB). */
+  /** Bits of whole orders kept for the stepper; default 2²⁵ (4 MiB). */
   storedBits?: number;
 }
 
@@ -323,7 +323,11 @@ export interface LayerSolutionCount {
 /** What the stepper steps through: distinct pictures from a side (X-ray off), or every layer order (X-ray on). */
 export type LayerStepBy = { picture: LayerSide } | 'layer_order';
 
-/** Where the order on screen lies in the stepper's fixed order ("3 of 12"): `index` from 1, final once `total.exact`. */
+/**
+ * Where the order on screen lies in the stepper's fixed order ("3 of 12"):
+ * `index` from 1, final once `total.exact`. Past 2⁵³ − 1 (layer orders with
+ * X-ray on can be) it is sent as that bound, as a tally is.
+ */
 export interface LayerPosition {
   index: number;
   total: LayerTally;

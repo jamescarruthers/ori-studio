@@ -175,7 +175,7 @@ pub fn relations_of(flat: &[u32]) -> Result<Vec<HierarchyRelation>, LayerCallErr
 /// How far a solution count goes before it reads "at least" (E6's
 /// `SolutionCaps`). Every field may be left out, for E6's defaults
 /// (100,000 orders per component, 1,000,000 combinations per look group,
-/// 16 MiB of stored orders); every cap is a count, never a time.
+/// 4 MiB of stored orders); every cap is a count, never a time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LayerSolutionCaps {

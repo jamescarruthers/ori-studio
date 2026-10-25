@@ -11,9 +11,9 @@ import {
   FAKE_NO_NODES,
   createFakeLayerOrderBackend,
 } from './layerOrderEngine.fixtures';
+import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
 import {
   KEEP_TRYING_FACTOR,
-  LAYER_ORDER_COUNT_SLICE,
   LAYER_ORDER_LIMITS,
   constraintSeen,
   constraintVerb,
