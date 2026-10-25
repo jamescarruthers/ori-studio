@@ -307,25 +307,77 @@ describe('a clash on a compound sentence', () => {
     expect(effectsOf(dispatch(cant.state, { type: 'face_hovered', face: 0 }).effects, 'track')).toEqual([]);
   });
 
-  it('is reported once per sentence as it grows; a new verb, subject or a Clear starts a new one', () => {
-    const blockedFacts = (played: Played) => effectsOf(played.effects, 'track').map((effect) => effect.fact);
-    // 2 in front of 0 can't fit: reported, with one object.
-    const one = previewed(sentenceOf(opened().state, 2, 0), { verdict: 'cant_fit', constraints: [0] });
-    expect(blockedFacts(one)).toEqual([constraintBlockedFact(0, 1)]);
-    // Adding 3 to the same sentence can't fit either: not reported again.
-    const two = play(one.state, { type: 'face_picked', face: 3, origin: 'pattern' });
-    expect(blockedFacts(previewed(two, { verdict: 'cant_fit', constraints: [0] }))).toEqual([]);
-    const twoBlocked = previewed(two, { verdict: 'cant_fit', constraints: [0] }).state;
-    // Another verb is another sentence.
-    const behind = play(twoBlocked, { type: 'verb_set', verb: 'behind' });
-    expect(blockedFacts(previewed(behind, { verdict: 'cant_fit', constraints: [0] }))).toEqual([constraintBlockedFact(0, 2)]);
-    // Back to the first verb, the cached block counts again: the sentence changed in between.
-    const behindBlocked = previewed(behind, { verdict: 'cant_fit', constraints: [0] }).state;
-    expect(blockedFacts(play(behindBlocked, { type: 'verb_set', verb: 'in_front_of' }))).toEqual([constraintBlockedFact(0, 2)]);
-    // A Clear, then the same sentence again, is a new sentence.
-    const cleared = play(twoBlocked, { type: 'sentence_cleared' });
-    expect(blockedFacts(cleared)).toEqual([]);
-    expect(blockedFacts(sentenceOf(cleared.state, 2, 0))).toEqual([constraintBlockedFact(0, 1)]);
+  describe('once per sentence against the order on screen', () => {
+    const tracked = (played: Played) => effectsOf(played.effects, 'track').map((effect) => effect.fact);
+    const CANT = { verdict: 'cant_fit', constraints: [0] } as const;
+    const FIT = { verdict: 'fits', token: 4, changed: changedSpots([1]), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) } as const;
+    /** 2 in front of 0, blocked: reported once, with one object. */
+    function blocked(): Played {
+      const one = previewed(sentenceOf(opened().state, 2, 0), CANT);
+      expect(tracked(one)).toEqual([constraintBlockedFact(0, 1)]);
+      return one;
+    }
+
+    it('a sentence that grows is the same sentence', () => {
+      const two = play(blocked().state, { type: 'face_picked', face: 3, origin: 'pattern' });
+      expect(tracked(previewed(two, CANT))).toEqual([]);
+    });
+
+    it('a verb away and back reports the first block only, and the other verb’s block once', () => {
+      const behind = play(blocked().state, { type: 'verb_set', verb: 'behind' });
+      const behindBlocked = previewed(behind, CANT);
+      expect(tracked(behindBlocked)).toEqual([constraintBlockedFact(0, 1)]);
+      const front = play(behindBlocked.state, { type: 'verb_set', verb: 'in_front_of' });
+      expect(effectsOf(front.effects, 'preview')).toEqual([]);
+      expect(tracked(front)).toEqual([]);
+      // A verb that fits away and back changes nothing either.
+      const fitAway = previewed(play(blocked().state, { type: 'verb_set', verb: 'behind' }), FIT);
+      expect(tracked(play(fitAway.state, { type: 'verb_set', verb: 'in_front_of' }))).toEqual([]);
+    });
+
+    it('a subject away and back reports nothing more', () => {
+      const swap = play(
+        blocked().state,
+        { type: 'slot_activated', slot: 'subject' },
+        { type: 'face_picked', face: 4, origin: 'pattern' }
+      );
+      expect(swap.state.sentence).toMatchObject({ subject: 4, objects: [] });
+      const back = play(
+        swap.state,
+        { type: 'slot_activated', slot: 'subject' },
+        { type: 'face_picked', face: 2, origin: 'pattern' },
+        { type: 'face_picked', face: 0, origin: 'pattern' }
+      );
+      expect(effectsOf(back.effects, 'preview')).toEqual([]);
+      expect(tracked(back)).toEqual([]);
+    });
+
+    it('turning over reports only a constraint that really is another one', () => {
+      // From the back the same words are the opposite constraint, 2 behind 0 as read from the front: reported.
+      const back = play(blocked().state, { type: 'side_set', side: 'back' });
+      expect(lastOf(back.effects, 'preview').constraints).toEqual([[2, 0, -1]]);
+      const backBlocked = previewed(back, CANT);
+      expect(tracked(backBlocked)).toEqual([constraintBlockedFact(0, 1)]);
+      // The verb that reads as the same constraint from the back is the same sentence: nothing more.
+      const same = play(backBlocked.state, { type: 'verb_set', verb: 'behind' });
+      expect(chosenPreview(same.state)?.kind).toBe('cant_fit');
+      expect(tracked(same)).toEqual([]);
+    });
+
+    it('after an undo, a new block of the same sentence is reported', () => {
+      const one = commits(play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
+      const first = previewed(sentenceOf(one.state, 2, 3), { verdict: 'cant_fit', constraints: [0, 1] });
+      expect(tracked(first)).toEqual([constraintBlockedFact(1, 1)]);
+      const undone = commits(play(first.state, { type: 'undo' }), OPEN_PAIRS);
+      expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [3] });
+      expect(tracked(previewed(undone, CANT))).toEqual([constraintBlockedFact(0, 1)]);
+    });
+
+    it('after a Clear, the same sentence built again is reported again', () => {
+      const cleared = play(blocked().state, { type: 'sentence_cleared' });
+      expect(tracked(cleared)).toEqual([]);
+      expect(tracked(sentenceOf(cleared.state, 2, 0))).toEqual([constraintBlockedFact(0, 1)]);
+    });
   });
 });
 
@@ -419,16 +471,53 @@ describe('Add by a token the session no longer holds', () => {
     expect(commit.limits.maxNodes).toBe(retried.maxNodes);
   });
 
-  it('a step since the preview drops it from the session too', () => {
+  it('a step that ends or runs out keeps the session’s preview; one that moves drops it, and checks again', () => {
     const fitted = previewed(sentenceOf(opened().state, 2, 0), fitsFacts(5));
     const stepping = play(fitted.state, { type: 'step', direction: 'next' });
-    const ended = play(stepping.state, {
+    const request = lastOf(stepping.effects, 'step').request;
+    for (const verdict of ['end', 'timed_out'] as const) {
+      const still = play(stepping.state, { type: 'stepped', request, facts: { verdict } });
+      expect(still.state.lastPreview).toBe(fitted.state.lastPreview);
+      expect(lastOf(play(still.state, { type: 'add' }).effects, 'commit')).toMatchObject({
+        token: 5,
+        limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      });
+    }
+    const moved = play(stepping.state, {
       type: 'stepped',
-      request: lastOf(stepping.effects, 'step').request,
-      facts: { verdict: 'end' },
+      request,
+      facts: {
+        verdict: 'moved',
+        changed: changedSpots([1]),
+        position: { index: 2, total: { n: 3, exact: true } },
+        stacks: sidesOf(SPOTS),
+      },
     });
-    expect(chosenPreview(ended.state)).toMatchObject({ kind: 'fits', token: 5 });
-    expect(lastOf(play(ended.state, { type: 'add' }).effects, 'commit')).toMatchObject({ token: null });
+    // The old preview is gone with the order it was for; the sentence is checked again against the new one.
+    const again = lastOf(moved.effects, 'preview');
+    expect(moved.state.lastPreview).toBe(again.request);
+    expect(lastOf(play(previewed(moved, fitsFacts(6)).state, { type: 'add' }).effects, 'commit')).toMatchObject({ token: 6 });
+  });
+});
+
+describe('the hint before an explain runs', () => {
+  it('says plainly that it can’t fit, in the danger tone, until the explain starts', () => {
+    // A preview answers can't-fit while a removal is in flight: its explain waits for the commit.
+    const one = commits(play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
+    const p = sentenceOf(one.state, 4, 5);
+    const removing = play(p.state, { type: 'rows_removed', ids: [one.state.rows.committed[0]!.id] });
+    const landed = play(removing.state, {
+      type: 'previewed',
+      request: lastOf(p.effects, 'preview').request,
+      facts: { verdict: 'cant_fit', constraints: [0, 1] },
+    });
+    expect(effectsOf(landed.effects, 'explain')).toEqual([]);
+    expect(hintLine(landed.state)).toEqual({
+      tone: 'danger',
+      action: null,
+      text: { key: 'cant_fit', sentence: view(4, 'in_front_of', 5), clashes: [view(2, 'in_front_of', 0)], minimal: false },
+    });
+    expect(paneMarks(landed.state)).toMatchObject({ danger: [2, 0, 4, 5], clashObjects: [5] });
   });
 });
 

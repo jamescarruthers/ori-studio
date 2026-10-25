@@ -6,6 +6,7 @@
  * in `layerOrderDecisions.test.ts`, and not again here.
  */
 import { describe, expect, it } from 'vitest';
+import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
 import { constraintAddedFact, constraintBlockedFact, dialogClosedFact, dialogOpenedFact } from './layerOrderAnalytics';
 import { LAYER_ORDER_MODEL_LIMITS, keepTrying } from './layerOrderEngineFacts';
 import {
@@ -789,7 +790,8 @@ describe('solutions: the count and the stepper', () => {
       position: position(2, 4, false),
     });
     expect(counting.effects).toEqual([
-      { type: 'solutions_slice', generation: 1, by: { picture: 'front' }, limits: LAYER_ORDER_MODEL_LIMITS.slice },
+      // Phase gate 2's slice, from the budgets: 1,000 nodes, 30 ms.
+      { type: 'solutions_slice', generation: 1, by: { picture: 'front' }, limits: LAYER_ORDER_COUNT_SLICE },
     ]);
     expect(statusView(counting.state)).toEqual({
       dot: 'open',

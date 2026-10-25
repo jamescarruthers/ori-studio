@@ -69,10 +69,14 @@ function carriedKey(row: LayerCarriedRow, figure: LayerFigure | null): LayerRowK
   return `carried:${carriedClass(row)}:${subject}:${verbAsRead([subject, object, sign], figure)}`;
 }
 
+/** The key of the committed row `constraint` would show in: its subject and its verb as read. */
+export function constraintRowKey(constraint: LayerConstraint, figure: LayerFigure | null): LayerRowKey {
+  return `committed:${constraint[0]}:${verbAsRead(constraint, figure)}`;
+}
+
 /** The key of the row a stored constraint shows in. */
 export function rowKeyOf(row: LayerRow, figure: LayerFigure | null): LayerRowKey {
-  if (row.kind === 'carried') return carriedKey(row, figure);
-  return `committed:${row.constraint[0]}:${verbAsRead(row.constraint, figure)}`;
+  return row.kind === 'carried' ? carriedKey(row, figure) : constraintRowKey(row.constraint, figure);
 }
 
 /** The list's rows, in its order: the committed ones, then the carried ones, each at its earliest constraint's place. */

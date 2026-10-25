@@ -18,6 +18,7 @@
  *
  * Pure: no React, no store, no engine calls.
  */
+import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
 import {
   constraintAddedFact,
   constraintBlockedFact,
@@ -49,7 +50,14 @@ import {
   type LayerVerb,
 } from './layerOrderEngineFacts';
 import { afterRedo, afterUndo, emptyHistory, recorded, redoTarget, undoTarget } from './layerOrderHistory';
-import { rowGroupByKey, rowGroupsOf, rowParts, withoutRows, type LayerRowKey } from './layerOrderRowGroups';
+import {
+  constraintRowKey,
+  rowGroupByKey,
+  rowGroupsOf,
+  rowParts,
+  withoutRows,
+  type LayerRowKey,
+} from './layerOrderRowGroups';
 import {
   EMPTY_SENTENCE,
   activateSlot,
@@ -87,6 +95,16 @@ import type {
 
 const NO_ROWS: LayerRows = { committed: [], carried: [] };
 
+/**
+ * What goes when the order on screen changes (a commit lands, a step moves,
+ * an open): the previews of it, the session's own (`lastPreview`), and the
+ * sentences reported blocked against it.
+ */
+const NO_PREVIEWS = { previews: {}, lastPreview: null, blocked: [] } satisfies Pick<
+  LayerOrderDialogState,
+  'previews' | 'lastPreview' | 'blocked'
+>;
+
 function openLimits(how: LayerOrderDialogState['how']): LayerOrderLimits {
   return how === 'restore' ? LAYER_ORDER_MODEL_LIMITS.restore : LAYER_ORDER_MODEL_LIMITS.open;
 }
@@ -117,9 +135,7 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     reviewRows: null,
     sentence: EMPTY_SENTENCE,
     pointedVerb: null,
-    previews: {},
-    lastPreview: null,
-    blocked: null,
+    ...NO_PREVIEWS,
     solutions: { runs: true, generation: 0, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     hover: { face: null, slot: null, row: null, reason: false },
     view: { side: 'front', xray: init.xray, openSpots: false },
@@ -272,7 +288,7 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
           type: 'solutions_slice',
           generation: solutions.generation,
           by: currentStepBy(state),
-          limits: LAYER_ORDER_MODEL_LIMITS.slice,
+          limits: LAYER_ORDER_COUNT_SLICE,
         });
       }
       return {
@@ -317,7 +333,8 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
       return state.hover.slot === action.slot ? state : { ...state, hover: { ...state.hover, slot: action.slot } };
     case 'sentence_cleared':
       if (!builderLive(state)) return state;
-      return withSentence(state, clearSentence(state.sentence));
+      // Clear starts afresh: a sentence built again is reported again if it is blocked.
+      return { ...withSentence(state, clearSentence(state.sentence)), blocked: [] };
     case 'verb_pointed':
       return state.pointedVerb === action.verb ? state : { ...state, pointedVerb: action.verb };
     case 'verb_set':
@@ -474,9 +491,7 @@ function opened(
     reviewRows: reviewRowsFor(state.review, carried.map((row) => row.id)),
     sentence: EMPTY_SENTENCE,
     pointedVerb: null,
-    previews: {},
-    lastPreview: null,
-    blocked: null,
+    ...NO_PREVIEWS,
     solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     hover: { face: null, slot: null, row: null, reason: false },
     flash: null,
@@ -536,20 +551,21 @@ function askExplain(state: LayerOrderDialogState, effects: LayerOrderEffect[]): 
 }
 
 /**
- * `layer constraint blocked`, once per sentence: a subject with its verb.
- * It resets when either changes, and so after Add and on Clear, which empty
- * the subject; its bucket is the objects at the first block.
+ * `layer constraint blocked`, once per sentence against the order on screen:
+ * a sentence is its subject and its verb as read from the front, keyed as its
+ * row would be, so turning over is no new sentence unless the constraint
+ * really changes. Leaving a sentence and coming back reports nothing more;
+ * once the previews go (a commit, a step that moves, an open), or after Add
+ * or Clear, it can be reported again. The bucket is the objects at its first
+ * block.
  */
 function reportBlocked(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOrderDialogState {
-  const { subject, verb } = state.sentence;
-  let { blocked } = state;
-  if (blocked && (blocked.subject !== subject || blocked.verb !== verb)) blocked = null;
-  if (!blocked && subject !== null && chosenPreview(state)?.kind === 'cant_fit') {
-    const fact = constraintBlockedFact(state.rows.committed.length, state.sentence.objects.length);
-    effects.push({ type: 'track', fact });
-    blocked = { subject, verb };
-  }
-  return blocked === state.blocked ? state : { ...state, blocked };
+  const chosen = chosenPreview(state);
+  if (chosen?.kind !== 'cant_fit') return state;
+  const key = constraintRowKey(chosen.candidates[0]!, state.figure);
+  if (state.blocked.includes(key)) return state;
+  effects.push({ type: 'track', fact: constraintBlockedFact(state.rows.committed.length, state.sentence.objects.length) });
+  return { ...state, blocked: [...state.blocked, key] };
 }
 
 /**
@@ -702,7 +718,7 @@ function add(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOr
   const added = entry.candidates.map((constraint): LayerCommittedRow => ({ kind: 'committed', id: nextRowId++, constraint }));
   const rows = { ...state.rows, committed: [...state.rows.committed, ...added] };
   return ask(
-    { ...state, nextRowId },
+    { ...state, nextRowId, blocked: [] },
     {
       via: 'add',
       constraints: committedConstraints(rows),
@@ -760,7 +776,7 @@ function committed(
       settle: commit.via === 'settle' ? { kind: 'settled' } : state.settle,
       sentence,
       pointedVerb: commit.via === 'add' ? null : state.pointedVerb,
-      previews: {},
+      ...NO_PREVIEWS,
       solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     },
     commit.rows,
@@ -975,12 +991,7 @@ function step(
     direction,
     limits: LAYER_ORDER_MODEL_LIMITS.step,
   });
-  // A step that moves drops the preview the session holds. Taking every step so costs at most one search on Add.
-  return {
-    ...next,
-    lastPreview: null,
-    solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by } },
-  };
+  return { ...next, solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by } } };
 }
 
 function stepped(
@@ -991,17 +1002,18 @@ function stepped(
   const pending = state.solutions.step;
   if (pending.kind !== 'pending' || pending.request !== action.request) return state;
   const { facts } = action;
+  // A step that ends or runs out moves nothing, and the session keeps its preview.
   if (facts.verdict === 'end') {
     return { ...state, solutions: { ...state.solutions, step: { kind: 'end', direction: pending.direction } } };
   }
   if (facts.verdict === 'timed_out') {
     return { ...state, solutions: { ...state.solutions, step: { kind: 'timed_out', direction: pending.direction } } };
   }
-  // The order on screen changed, and no constraint did: previews go, the flash shows what moved.
+  // The order on screen changed, and no constraint did: previews go (the session's too), the flash shows what moved.
   const next: LayerOrderDialogState = {
     ...state,
     shown: facts.stacks,
-    previews: {},
+    ...NO_PREVIEWS,
     solutions: {
       ...state.solutions,
       position: facts.position,

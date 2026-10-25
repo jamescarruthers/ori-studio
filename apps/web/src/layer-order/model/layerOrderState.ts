@@ -291,12 +291,17 @@ export interface LayerOrderDialogState {
   readonly previews: Readonly<Record<string, LayerPreviewEntry>>;
   /**
    * The request of the preview the session holds: the last one asked, until
-   * a commit, a step or an open drops it. Only its token adopts with no
-   * search.
+   * a commit, a step that moves or an open drops it. Only its token adopts
+   * with no search.
    */
   readonly lastPreview: number | null;
-  /** The sentence `layer constraint blocked` went out for, by subject and verb: once per sentence. */
-  readonly blocked: { readonly subject: LayerFace; readonly verb: LayerVerb } | null;
+  /**
+   * The sentences `layer constraint blocked` went out for against the order
+   * on screen, each keyed as its row would be (subject and verb as read from
+   * the front): once per sentence. Emptied with the previews, and by Add and
+   * Clear.
+   */
+  readonly blocked: readonly LayerRowKey[];
 
   readonly solutions: LayerSolutionsState;
   readonly hover: LayerHover;

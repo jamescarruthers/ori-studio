@@ -75,15 +75,14 @@ export { constraintSeen, constraintVerb, keepTrying };
 /**
  * The limits each call the model asks for runs with. The open, preview,
  * commit and restore are the contract's (`LAYER_ORDER_LIMITS`); explain and a
- * step search like a preview; a count slice is short, so the worker answers
- * between the user's own calls (E7: there is no count worker). Phase gate 2
- * (E8) measures these in wasm and replaces them.
+ * step search like a preview. A count slice is not here: it is phase gate 2's
+ * `LAYER_ORDER_COUNT_SLICE` (`layer-order/layerOrderBudgets.ts`), its one
+ * source.
  */
 export const LAYER_ORDER_MODEL_LIMITS = {
   ...LAYER_ORDER_LIMITS,
   explain: LAYER_ORDER_LIMITS.preview,
   step: LAYER_ORDER_LIMITS.preview,
-  slice: { maxNodes: 20_000, fastNodes: 128, deadlineMs: 50 },
 } as const satisfies Record<string, LayerOrderLimits>;
 
 // ---------------------------------------------------------------------------

@@ -162,17 +162,30 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
   // Indices past the committed list name the sentence's candidates, in order.
   const named = (indices: readonly number[]) =>
     candidates.filter((_, i) => indices.includes(committed.length + i));
-  if (entry.explain.kind !== 'done') {
+  const inCheck = named(entry.constraints);
+  const checked = inCheck.length > 0 ? inCheck : candidates;
+  if (entry.explain.kind === 'pending') {
     // The sentence's faces in the check's own set go danger at once; the smallest set follows
     // (Round 4 "A clash being explained").
-    const inCheck = named(entry.constraints);
-    const objects = (inCheck.length > 0 ? inCheck : candidates).map((candidate) => candidate[1]);
+    const objects = checked.map((candidate) => candidate[1]);
     return {
       sentence: candidatesSentence(state, candidates),
       objects,
       rows: [],
       faces: [candidates[0]![0], ...objects],
       explaining: true,
+      minimal: false,
+    };
+  }
+  if (entry.explain.kind === 'none') {
+    // No explain runs yet (it waits for a commit in flight): the check's own set is the reason, not claimed minimal.
+    const rows = entry.constraints.filter((index) => index < committed.length).map((index) => committed[index]!);
+    return {
+      sentence: candidatesSentence(state, checked),
+      objects: checked.map((candidate) => candidate[1]),
+      rows,
+      faces: Array.from(new Set([...rows.flatMap(rowFaces), ...checked.flatMap((candidate) => [candidate[0], candidate[1]])])),
+      explaining: false,
       minimal: false,
     };
   }
