@@ -31,11 +31,16 @@ import { EDIT_PAPER_FRAME, layerOrderRecordToSource } from '../../lib/layerOrder
 import type { LayerOrderApplied, LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import { layerOrderSourceOf } from '../../lib/layerOrder/layerOrderSource';
 import { radiansToDegrees, wrapDegrees } from '../../lib/angleUnits';
+import {
+  DEFAULT_ORISTUDIO_CP_LINE_STYLE,
+  DEFAULT_ORISTUDIO_CP_LINE_WIDTH,
+  type OristudioCpLineStyle,
+} from '../../lib/creasePatternViewport';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import type { OristudioCpFigureLayerOrderOpening } from '../../store/workspaceStore/types';
+import type { OristudioCpFigureLayerOrderOpening, WorkspaceState } from '../../store/workspaceStore/types';
 import { effectiveObjectPaperStyle } from '../paper/objectPaperStyle';
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
@@ -43,12 +48,25 @@ import { foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
 /** How a press ended: the dialog's answer, or that it never opened. */
 export type FoldedFigureLayerOrderPress = LayerOrderDialogOutcome['kind'] | 'not-opened';
 
-/** What the Edit canvas adds to a figure's look: the app's display style, and how far the canvas is turned. */
+/** What the Edit canvas adds to a figure's look: the app's display style, how far the canvas is turned, its creases' pen. */
 export interface EditFigureView {
   /** The app's display style: what a figure shows for a field it does not pin. */
   display: PaperStyle;
   /** The Edit camera's view rotation, in radians, clockwise on screen (`renderer/camera.ts`). */
   cameraRotation: number;
+  /** The line style and width Edit's view draws creases in (`oristudioCpViewport`). */
+  lineStyle: OristudioCpLineStyle;
+  lineWidth: number;
+}
+
+/** Edit's view of the canvas, as `state` holds it. */
+export function editFigureView(state: WorkspaceState): EditFigureView {
+  return {
+    display: useSettingsStore.getState().paperStyle.display,
+    cameraRotation: state.oristudioCpCamera?.rotation ?? 0,
+    lineStyle: state.oristudioCpViewport.lineStyle ?? DEFAULT_ORISTUDIO_CP_LINE_STYLE,
+    lineWidth: state.oristudioCpViewport.lineWidth ?? DEFAULT_ORISTUDIO_CP_LINE_WIDTH,
+  };
 }
 
 /**
@@ -60,9 +78,10 @@ export interface EditFigureView {
  *   frame is the crease pattern's own);
  * - **Edit's look** (approach 3, D18): the figure's effective paper style
  *   (`effectiveObjectPaperStyle`), read through the flat figure's policy;
- *   turned as the canvas shows it — the figure's own rotation and the
- *   canvas's — and with X-ray on when the figure is drawn see-through
- *   (Transparent3);
+ *   on the side the figure shows, turned as the canvas shows it — the
+ *   figure's own rotation and the canvas's — with X-ray on when the figure
+ *   is drawn see-through (Transparent3), and the creases in Edit's line
+ *   style and width;
  * - **what it shows** (`shown`), so the dialog opens on the order on the
  *   canvas (D19); left out when no fold could show it, and the dialog
  *   restores the record itself;
@@ -84,7 +103,11 @@ export function foldedFigureLayerOrderRequest(
       // Both turn the paper clockwise on screen by their angle, as a Diagram
       // step's `rotationDeg` does: the figure on the canvas, the canvas on the screen.
       turnDeg: wrapDegrees(radiansToDegrees(figure.placement.rotation + view.cameraRotation)),
+      // The kernel's back pass; Both and Transparent are views of the front.
+      side: (figure.snapshot?.model ?? opening.model).state === 'Back1' ? 'back' : 'front',
       xray: figure.displayStyle === 'Transparent3',
+      lineStyle: view.lineStyle,
+      lineWidth: view.lineWidth,
     },
     ...(opening.shown ? { shown: opening.shown } : {}),
     name: figure.title,
@@ -113,12 +136,7 @@ export async function openFoldedFigureLayerOrder(id: string, t: TFunction): Prom
   try {
     const state = store.getState();
     const shown = state.oristudioCpFoldedFigures.find((entry) => entry.id === id) ?? figure;
-    const outcome = await openLayerOrderDialog(
-      foldedFigureLayerOrderRequest(shown, opening, {
-        display: useSettingsStore.getState().paperStyle.display,
-        cameraRotation: state.oristudioCpCamera?.rotation ?? 0,
-      })
-    );
+    const outcome = await openLayerOrderDialog(foldedFigureLayerOrderRequest(shown, opening, editFigureView(state)));
     if (outcome.kind === 'applied') await applyFoldedFigureLayerOrder(id, outcome.applied, t);
     return outcome.kind;
   } finally {

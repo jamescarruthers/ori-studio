@@ -11524,8 +11524,11 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
           placement: { ...IDENTITY_FOLDED_PLACEMENT, rotation: Math.PI / 2 },
           appearance: { 'paper.front': '#ff0000' },
         });
-        // The canvas turned an eighth more: the figure shows turned by both.
-        useWorkspaceStore.setState({ oristudioCpCamera: { centerX: 0, centerY: 0, zoom: 1, rotation: Math.PI / 4 } });
+        // The canvas turned an eighth more: the figure shows turned by both. Its creases in Edit's pen.
+        useWorkspaceStore.setState({
+          oristudioCpCamera: { centerX: 0, centerY: 0, zoom: 1, rotation: Math.PI / 4 },
+          oristudioCpViewport: { ...state().oristudioCpViewport, lineStyle: 'black-two-dot', lineWidth: 2 },
+        });
         oristudioCpMocks.getOristudioCpFoldedFigurePaperScene.mockResolvedValueOnce(scene);
         dialogGatewayMocks.openLayerOrderDialog.mockResolvedValueOnce({ kind });
 
@@ -11541,7 +11544,10 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
             style: expect.objectContaining({ paper: expect.objectContaining({ front: '#ff0000' }) }),
             policy: expect.objectContaining({ surface: 'folded-flat' }),
             turnDeg: 135,
+            side: 'front',
             xray: true,
+            lineStyle: 'black-two-dot',
+            lineWidth: 2,
           },
           shown: scene,
           name: 'Folded model 1',
@@ -11551,6 +11557,15 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
         expect(figureNow().layerOrder, kind).toBeUndefined();
         expect(state().oristudioCpHistoryPast, kind).toEqual([]);
       }
+    });
+
+    it('opens on the back when the figure shows its back', async () => {
+      const figure = seedFigure({ snapshot: solvedSnapshot({ model: { ...MODEL, state: 'Back1' } }) });
+
+      await openFoldedFigureLayerOrder(figure.id, t);
+
+      const request = dialogGatewayMocks.openLayerOrderDialog.mock.calls[0]![0] as LayerOrderRequest;
+      expect(request.look).toMatchObject({ side: 'back', lineStyle: 'color', lineWidth: 1 });
     });
 
     it('commits an Apply as one “Set layer order” entry', async () => {

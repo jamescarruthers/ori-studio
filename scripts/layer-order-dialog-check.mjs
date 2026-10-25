@@ -1486,12 +1486,32 @@ function editFigureCases(theme) {
       const state = window.__treemakerWorkspaceStore.getState();
       const figure = state.oristudioCpFoldedFigures[0];
       const turned = ((((figure.placement.rotation + state.oristudioCpCamera.rotation) * 180) / Math.PI) % 360 + 540) % 360 - 180;
-      return { surface: request.surface, turnDeg: request.look.turnDeg, turned, shown: request.shown != null, record: request.record != null };
+      const { look } = request;
+      return {
+        surface: request.surface,
+        turnDeg: look.turnDeg,
+        turned,
+        shown: request.shown != null,
+        record: request.record != null,
+        side: look.side,
+        pen: [look.lineStyle, look.lineWidth],
+        editPen: [state.oristudioCpViewport.lineStyle ?? 'color', state.oristudioCpViewport.lineWidth ?? 1],
+      };
     });
-    if (asked.surface !== 'edit_figure' || !asked.shown || !asked.record || Math.abs(asked.turnDeg - asked.turned) > 0.01 || asked.turnDeg === 0) {
+    if (
+      asked.surface !== 'edit_figure' ||
+      !asked.shown ||
+      !asked.record ||
+      Math.abs(asked.turnDeg - asked.turned) > 0.01 ||
+      asked.turnDeg === 0 ||
+      asked.side !== 'front' ||
+      asked.pen.join() !== asked.editPen.join()
+    ) {
       throw new Error(`the request is not what the canvas shows: ${JSON.stringify(asked)}`);
     }
-    console.log(`[${tag}] on a canvas turned ${asked.turnDeg}°, the request turns the paper ${asked.turnDeg}°, surface ${asked.surface}`);
+    console.log(
+      `[${tag}] on a canvas turned ${asked.turnDeg}°, the request turns the paper ${asked.turnDeg}°, on the ${asked.side}, creases ${asked.pen.join(' ')} as Edit draws them, surface ${asked.surface}`
+    );
     await record(`edit-${tag}-dialog`, await dialogShot(page));
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await dialog.waitFor({ state: 'detached' });
