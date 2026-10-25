@@ -62,6 +62,11 @@ export function foldedFigureActionIconNode(
       return <ChevronFirst size={size} />;
     case 'refold':
       return <RefreshCw size={size} />;
+    // No glyph: none says "layer order" (Layers is already Render as, and the
+    // Diagram's Precreases and Spread), and one concept keeps one icon. The
+    // toolbar draws its word instead, and the menu leaves its icon column empty.
+    case 'layer-order':
+      return null;
     case 'export':
       return <FileDown size={size} />;
     case 'duplicate':
