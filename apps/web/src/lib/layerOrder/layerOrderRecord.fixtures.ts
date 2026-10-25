@@ -3,6 +3,27 @@
  */
 import { LAYER_ORDER_RECORD_VERSION, type LayerOrderRecord } from './layerOrderRecord';
 
+/**
+ * A small, synthetic record: three faces of a unit sheet, two constraints and
+ * one free pair of the order shown. Its points name no real figure's faces;
+ * it is for hosts that only carry, count and save a record.
+ */
+export function twoConstraintRecord(overrides: Partial<LayerOrderRecord> = {}): LayerOrderRecord {
+  return {
+    faces: [
+      { at: [0.25, 0.25], area: 0.125 },
+      { at: [0.75, 0.25], area: 0.125 },
+      { at: [0.5, 0.75], area: 0.25 },
+    ],
+    constraints: [
+      [0, 1, 1],
+      [2, 1, -1],
+    ],
+    order: [[0, 2, 1]],
+    ...overrides,
+  };
+}
+
 /** The record's JSON as the encoder writes it, without the budget the encoder holds it to. */
 function jsonLength(record: LayerOrderRecord): number {
   return JSON.stringify({ v: LAYER_ORDER_RECORD_VERSION, ...record }).length;

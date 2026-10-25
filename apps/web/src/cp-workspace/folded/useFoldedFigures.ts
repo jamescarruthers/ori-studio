@@ -82,6 +82,7 @@ import {
 } from './foldedFigureVerbs';
 import { useSettingsStore } from '../../store/settingsStore';
 import { effectiveObjectPaperStyle, setFoldedFigureAppearance } from '../paper/objectPaperStyle';
+import { openFoldedFigureLayerOrder } from './openFoldedFigureLayerOrder';
 
 /**
  * The face folding holds fixed. Oriedita lets this be chosen and the kernel still
@@ -969,6 +970,12 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
       // Not wrapped in runFoldedFigureAction: saving a file changes nothing
       // about the document, so it is not an undo step.
       exportFigure: (figure) => exportFoldedFigure(figure.id, t),
+      // Opening the dialog writes nothing; its Apply is the one entry, which
+      // the verb brackets itself, after the dialog has answered.
+      openLayerOrder: (figure) => {
+        endOpenMenuGesture();
+        void openFoldedFigureLayerOrder(figure.id, t);
+      },
       // What a 3D verdict offers to do about itself. None of the three is an
       // undo step: two only change what is shown, and the third opens a
       // simulation window, which records its own.

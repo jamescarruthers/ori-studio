@@ -406,8 +406,10 @@ function StepperFieldView({
     };
   };
   const step = (verb: ControlVerb | undefined) => (verb ? refusable(verb, onCommit) : undefined);
+  // Named by the row's label, so "Layer order" is said once.
+  const labelId = useId();
   const pager = (
-    <Pager label={field.label} previous={step(field.previous)} next={step(field.next)}>
+    <Pager labelledBy={labelId} previous={step(field.previous)} next={step(field.next)}>
       {field.readout}
     </Pager>
   );
@@ -415,6 +417,7 @@ function StepperFieldView({
   return (
     <FieldRow
       label={field.label}
+      labelId={labelId}
       kind="text"
       disabled={disabled}
       title={title}

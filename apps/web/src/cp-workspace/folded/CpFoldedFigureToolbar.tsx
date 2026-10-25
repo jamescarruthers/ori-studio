@@ -4,7 +4,9 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MenuContent } from '../../components/ui/Menu';
 import { FloatingToolbar } from '../../components/ui/FloatingToolbar';
 import { resolveCpViewportCanvas } from '../cpViewportCanvas';
+import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/Tooltip';
 import { MenuIconButton } from '../../components/ui/MenuIconButton';
 import { ContextMenuItems } from '../../components/ui/ContextMenu';
 import type { ContextMenuItem } from '../../components/ui/contextMenuTypes';
@@ -21,17 +23,52 @@ import { choiceMenuItems, styleMenuItems } from './foldedFigureMenuItems';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import { ToolbarSeparator } from '../../components/ui/Toolbar';
 
+/**
+ * One verb as a button: its icon, named by its label, or — for a verb no
+ * glyph says (Layer order…) — its word. While it cannot act, its tooltip says
+ * why, when the catalog says (`ControlVerb.hint`).
+ */
 function CommandButton({ action }: { action: FoldedFigureCommand }) {
+  const icon = foldedFigureActionIconNode(action.icon);
+  const why = action.disabled ? action.hint : undefined;
+  if (icon === null) return <WordButton action={action} why={why} />;
   return (
     <IconButton
       size="sm"
       variant="toolbar"
-      title={action.label}
+      aria-label={action.label}
+      title={why ?? action.label}
       disabled={action.disabled}
       onClick={action.run}
     >
-      {foldedFigureActionIconNode(action.icon)}
+      {icon}
     </IconButton>
+  );
+}
+
+/**
+ * A verb drawn as its word, in the bar's own control: `Button` small and
+ * secondary, as the toolbar variant of `IconButton` is. Refused rather than
+ * disabled while it cannot act, so its tooltip still says why on a hover or a
+ * focus, and a press does nothing.
+ */
+function WordButton({ action, why }: { action: FoldedFigureCommand; why: string | undefined }) {
+  const button = (
+    <Button
+      size="sm"
+      variant="secondary"
+      aria-disabled={action.disabled || undefined}
+      onClick={action.disabled ? undefined : action.run}
+    >
+      {action.label}
+    </Button>
+  );
+  if (!why) return button;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent>{why}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -113,7 +150,7 @@ function ToolbarMenu({
 
 /**
  * Floating actions for the selected folded figure: flip, style, another
- * solution, refold (when stale), export, duplicate, and delete. Hovers above the
+ * solution, layer order, refold (when stale), export, duplicate, and delete. Hovers above the
  * figure via {@link FloatingToolbar}, mirroring {@link CpImageInspector}.
  *
  * Items come from {@link buildFoldedFigureActions}, which the right-click menu

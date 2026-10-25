@@ -584,8 +584,10 @@ describe('PropertySheetView', () => {
     );
     const row = container?.querySelector('[data-field-row]');
     expect(row?.querySelector('[data-field-label]')?.textContent).toBe('Layer order');
-    // A group named by the row, whose readout is announced as it changes.
-    const pager = row?.querySelector('[role="group"][aria-label="Layer order"]');
+    // A group named by the row's label (said once), whose readout is announced as it changes.
+    const pager = row?.querySelector('[role="group"][aria-labelledby]');
+    expect(document.getElementById(pager?.getAttribute('aria-labelledby') ?? '')?.textContent).toBe('Layer order');
+    expect(pager?.hasAttribute('aria-label')).toBe(false);
     const readout = pager?.querySelector('[aria-live="polite"]');
     expect(readout?.textContent).toBe('1 of 5+');
     expect(readout?.getAttribute('aria-atomic')).toBe('true');
