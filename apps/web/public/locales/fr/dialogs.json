@@ -524,6 +524,7 @@
     "foldedPane": "Figure pliée",
     "keepTrying": "Continuer à essayer",
     "lost": "Ordre des couches s’est arrêté de façon inattendue. Rien n’a été modifié.",
+    "lostLoad": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion, puis réessayez.",
     "opening": "Calcul des ordres des couches…",
     "pane": {
       "creasePattern": "Patron de plis",

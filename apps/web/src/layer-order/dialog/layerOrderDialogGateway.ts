@@ -23,7 +23,9 @@ import { toast } from 'sonner';
 import i18n from '../../i18n';
 import { lazyModule } from '../../lib/lazyModule';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
+import { reportError } from '../../monitoring';
 import type * as LayerOrderDialogChunk from '../../components/layer-order/LayerOrderDialog';
+import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
 import {
   beginLayerOrderDialog,
   settleLayerOrderDialog,
@@ -51,12 +53,13 @@ export function openLayerOrderDialog(request: LayerOrderRequest): Promise<LayerO
   const begun = beginLayerOrderDialog(request);
   if (!('opening' in begun)) return Promise.resolve(begun);
   const { id } = begun.opening;
-  dialog.load().catch(() => {
-    // A stale deploy reloads the page (`importOrReload`); what is left is a load that can't
-    // reach the server. Said once, here, so no host has to.
-    if (settleLayerOrderDialog(id, { kind: 'unavailable' })) {
-      toast.error(i18n.t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
-    }
+  dialog.load().catch((error: unknown) => {
+    // A stale deploy reloads the page (`importOrReload`); what is left is mostly a load that
+    // can't reach the server, which is the browser's, not a defect (`layerOrderLoadFailure.ts`):
+    // said once, here, so no host has to, and reported only when it is something else.
+    if (!settleLayerOrderDialog(id, { kind: 'unavailable' })) return;
+    if (!isLayerOrderLoadFailure(error)) reportError(error, { surface: 'layer-order:dialog', tags: { call: 'load' } });
+    toast.error(i18n.t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
   });
   return begun.outcome;
 }

@@ -513,6 +513,7 @@
     "foldedPane": "Gefaltete Figur",
     "keepTrying": "Weiter versuchen",
     "lost": "Lagenreihenfolge wurde unerwartet beendet. Es wurde nichts geändert.",
+    "lostLoad": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es dann erneut.",
     "opening": "Lagenreihenfolgen werden ermittelt…",
     "pane": {
       "creasePattern": "Faltmuster",

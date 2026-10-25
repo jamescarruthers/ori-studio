@@ -524,6 +524,7 @@
     "foldedPane": "Figura dobrada",
     "keepTrying": "Continuar tentando",
     "lost": "Ordem das camadas parou inesperadamente. Nada foi alterado.",
+    "lostLoad": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo.",
     "opening": "Calculando as ordens das camadas…",
     "pane": {
       "creasePattern": "Padrão de vincos",

@@ -513,6 +513,7 @@
     "foldedPane": "Folded figure",
     "keepTrying": "Keep trying",
     "lost": "Layer order stopped unexpectedly. Nothing was changed.",
+    "lostLoad": "Layer order couldn’t load. Check your connection, then try again.",
     "opening": "Working out the layer orders…",
     "pane": {
       "creasePattern": "Crease pattern",

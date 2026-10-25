@@ -502,6 +502,7 @@
     "foldedPane": "折叠图",
     "keepTrying": "继续尝试",
     "lost": "层叠顺序意外停止。没有任何改动。",
+    "lostLoad": "层叠顺序未能加载。请检查网络连接，然后重试。",
     "opening": "正在计算层叠顺序…",
     "pane": {
       "creasePattern": "折痕图",

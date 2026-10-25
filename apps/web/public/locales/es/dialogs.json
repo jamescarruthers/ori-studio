@@ -524,6 +524,7 @@
     "foldedPane": "Figura plegada",
     "keepTrying": "Seguir intentando",
     "lost": "Orden de capas se detuvo de forma inesperada. No se cambió nada.",
+    "lostLoad": "Orden de capas no se pudo cargar. Comprueba tu conexión y vuelve a intentarlo.",
     "opening": "Calculando los órdenes de capas…",
     "pane": {
       "creasePattern": "Patrón de pliegues",

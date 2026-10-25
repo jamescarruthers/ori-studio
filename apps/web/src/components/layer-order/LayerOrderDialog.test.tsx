@@ -39,6 +39,16 @@ import { LayerOrderDialogMount } from './LayerOrderDialogMount';
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
 
+/** D7's threshold as the session asks it, or the real one when `starts` is null. */
+const budget = vi.hoisted(() => ({ starts: null as boolean | null }));
+vi.mock('../../layer-order/layerOrderBudgets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../layer-order/layerOrderBudgets')>();
+  return {
+    ...actual,
+    layerOrderCountStarts: (openPairs: number) => budget.starts ?? actual.layerOrderCountStarts(openPairs),
+  };
+});
+
 /** How often the dialog's chunk was loaded: its module evaluated. */
 const chunk = vi.hoisted(() => ({ loads: 0 }));
 vi.mock('./LayerOrderDialog', async (importOriginal) => {
@@ -77,6 +87,7 @@ let root: Root;
 beforeEach(() => {
   spawned.length = 0;
   makeBackend = () => createFakeLayerOrderBackend();
+  budget.starts = null;
   monitoring.reportError.mockClear();
   vi.stubGlobal('Worker', SpyWorker);
   host = document.createElement('div');
@@ -214,7 +225,8 @@ describe('the Layer order dialog’s session', () => {
     await until(isReady, 'the session opened');
     expect(byRole(openDialog(), 'region', 'Folded figure')).toBeDefined();
     expect(button('Apply').getAttribute('aria-disabled')).toBeNull();
-    expect(spawned[0]!.backend.calls).toEqual(['openShowing', 'stacks', 'stacks', 'scene', 'scene']);
+    // The open, then what the panes draw; the count only after.
+    expect(spawned[0]!.backend.calls.slice(0, 5)).toEqual(['openShowing', 'stacks', 'stacks', 'scene', 'scene']);
 
     click(button('Apply'));
     const answer = await outcome;
@@ -313,6 +325,65 @@ describe('the Layer order dialog’s session', () => {
     await until(isReady, 'the session reopened');
     expect(spawned).toHaveLength(2);
     expect(monitoring.reportError).toHaveBeenCalledTimes(1);
+  });
+
+  it('a worker the browser couldn’t load says so, reported to no one; Try again opens on a fresh worker', async () => {
+    holdingOpen();
+    mount();
+    await opened();
+    await flush();
+    act(() => spawned[0]!.failToLoad());
+    await until(() => alert(/couldn’t load/) !== null, 'the load failure showed');
+    expect(alert(/couldn’t load/)?.textContent).toContain('Check your connection, then try again.');
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+
+    makeBackend = () => createFakeLayerOrderBackend();
+    click(button('Try again'));
+    await until(isReady, 'the session reopened');
+    expect(spawned).toHaveLength(2);
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+  });
+
+  it('a Fold wasm that didn’t arrive says so, reported to no one; one that failed otherwise is reported once', async () => {
+    let message = 'Failed to fetch';
+    makeBackend = () => {
+      const backend = createFakeLayerOrderBackend();
+      backend.openShowing = async () => {
+        throw { code: 'layer_order_engine_unavailable', message };
+      };
+      return backend;
+    };
+    mount();
+    const { outcome } = await opened();
+    await until(() => alert(/couldn’t load/) !== null, 'the load failure showed');
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+
+    message = 'WebAssembly.Memory(): could not allocate memory';
+    click(button('Try again'));
+    await until(() => alert(/stopped unexpectedly/) !== null, 'the failure showed');
+    expect(monitoring.reportError).toHaveBeenCalledTimes(1);
+    expect(monitoring.reportError.mock.calls[0]![1]).toEqual({ surface: 'layer-order:dialog', tags: { call: 'open' } });
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+  });
+
+  it('counts the solutions once open, and only when few enough pairs are open', async () => {
+    const slices = (index: number) => spawned[index]!.backend.calls.filter((call) => call === 'countSlice').length;
+    mount();
+    let { outcome } = await opened();
+    await until(isReady, 'the session opened');
+    await until(() => slices(0) > 0, 'the count ran');
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
+
+    // Past D7's threshold the count never starts.
+    budget.starts = false;
+    ({ outcome } = await opened());
+    await until(isReady, 'the session opened');
+    await flush(20);
+    expect(slices(1)).toBe(0);
+    click(button('Cancel'));
+    await expect(outcome).resolves.toEqual({ kind: 'cancelled' });
   });
 
   it('a worker that dies after the open loses the session too', async () => {

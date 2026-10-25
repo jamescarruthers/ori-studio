@@ -6401,7 +6401,8 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12805,7 +12806,8 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19211,7 +19213,8 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25270,7 +25273,8 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31329,7 +31333,8 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37733,7 +37738,8 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44137,7 +44143,8 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50196,6 +50203,7 @@
     "dialogs:layerOrder.refused.unreadable": "144b49ebba5d",
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
-    "toasts:layerOrder.unavailable": "151f6eaf0a55"
+    "toasts:layerOrder.unavailable": "151f6eaf0a55",
+    "dialogs:layerOrder.lostLoad": "36db30b09768"
   }
 }
