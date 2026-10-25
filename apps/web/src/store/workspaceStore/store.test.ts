@@ -12233,9 +12233,14 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
       });
 
       it('commits an Apply as its refold: one “Refold with layer order” entry, and the figure up to date', async () => {
-        for (const record of [twoConstraintRecord({ constraints: [[0, 1, 1]] }), twoConstraintRecord()]) {
-          // The second is the record it holds: still written, since the Apply is its refold (D12 over D16).
-          const figure = stale();
+        for (const [record, handle] of [
+          [twoConstraintRecord({ constraints: [[0, 1, 1]] }), 3],
+          // The record it holds: still written, since the Apply is its refold (D12 over D16).
+          [twoConstraintRecord(), 3],
+          // Reopened from a file, with no live fold: the Apply gives it one.
+          [twoConstraintRecord(), null],
+        ] as const) {
+          const figure = stale({ handle });
           dialogGatewayMocks.openLayerOrderDialog.mockResolvedValueOnce({ kind: 'applied', applied: applied(record) });
           oristudioCpMocks.getOristudioCpFoldedFigureRenderSnapshot.mockResolvedValueOnce(CONSTRAINED_PICTURE);
 
