@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { runModalHistory } from '../../keyboard/dialogShortcuts';
 import { byRole, queryByRole } from '../../test/roleQueries';
-import { ModalFrame, type ModalFrameProps } from './ModalFrame';
+import { MODAL_FULL_SCREEN_QUERY, ModalFrame, type ModalFrameProps } from './ModalFrame';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -85,6 +88,29 @@ describe('a modal frame', () => {
     const xray = byRole(dialog(), 'button', 'X-ray');
     expect(xray.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(close.parentElement?.textContent).toContain('Kabuto');
+  });
+
+  it('puts a lead right after the title, before the detail', () => {
+    render({ lead: <button type="button">Folded</button>, detail: 'Kabuto' });
+    const lead = byRole(dialog(), 'button', 'Folded');
+    const bar = lead.closest('div')?.parentElement;
+    expect(bar?.textContent?.startsWith('Layer orderFoldedKabuto')).toBe(true);
+  });
+
+  it('gives Undo and Redo to its history while it is on top, and lets go as it closes', () => {
+    const history = { undo: vi.fn(), redo: vi.fn(), canUndo: () => true, canRedo: () => false };
+    render({ history });
+    expect(runModalHistory('undo')).toBe(true);
+    expect(history.undo).toHaveBeenCalledOnce();
+    expect(runModalHistory('redo')).toBe(false);
+    act(() => root.render(null));
+    expect(runModalHistory('undo')).toBe(false);
+    expect(history.undo).toHaveBeenCalledOnce();
+  });
+
+  it('is the whole screen at the width its stylesheet says', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/components/ui/ModalFrame.module.css'), 'utf8');
+    expect(css).toContain(`@media ${MODAL_FULL_SCREEN_QUERY} {`);
   });
 
   it('has a foot only with a note or verbs, the verbs after the note', () => {

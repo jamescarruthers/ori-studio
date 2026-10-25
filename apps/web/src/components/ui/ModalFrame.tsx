@@ -1,6 +1,7 @@
-import type { DragEventHandler, ReactNode } from 'react';
+import { useEffect, useSyncExternalStore, type DragEventHandler, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { registerModalHistory, type ModalHistory } from '../../keyboard/dialogShortcuts';
 import { IconButton } from './IconButton';
 import { useModalDialog } from './useModalDialog';
 import styles from './ModalFrame.module.css';
@@ -14,6 +15,34 @@ import styles from './ModalFrame.module.css';
 export type ModalFrameSize = 'form' | 'workspace';
 
 /**
+ * When the frame is the whole screen: below 720px wide, the References
+ * browser's rule. `ModalFrame.module.css` asks the same in its media query,
+ * which a test holds to this string.
+ */
+export const MODAL_FULL_SCREEN_QUERY = '(max-width: 720px)';
+
+function fullScreenQuery(): MediaQueryList | null {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia(MODAL_FULL_SCREEN_QUERY)
+    : null;
+}
+
+function subscribeFullScreen(onChange: () => void): () => void {
+  const query = fullScreenQuery();
+  query?.addEventListener('change', onChange);
+  return () => query?.removeEventListener('change', onChange);
+}
+
+/**
+ * Whether a modal frame is the whole screen now, following the window: for
+ * a dialog that lays out differently there (one pane at a time, D6). False
+ * where media queries can't be asked, so a headless render lays out wide.
+ */
+export function useModalFullScreen(): boolean {
+  return useSyncExternalStore(subscribeFullScreen, () => fullScreenQuery()?.matches ?? false, () => false);
+}
+
+/**
  * How the body holds its content:
  * - `stack`: padded, one item under another, scrolling when it runs long;
  * - `fill`: the content takes the whole body and lays itself out, edge to edge.
@@ -23,9 +52,11 @@ export type ModalFrameLayout = 'stack' | 'fill';
 export interface ModalFrameProps {
   /** Names the dialog and its close button, and heads the bar. */
   title: string;
+  /** Right after the title, before any detail: a control that belongs with it (a phone's pane switch). */
+  lead?: ReactNode;
   /** After the title, quieter: what the dialog is about (a figure's name). */
   detail?: ReactNode;
-  /** The bar's controls, at its end before the close button. */
+  /** The bar's controls, at its end before the close button; on a phone, a row of their own under it. */
   tools?: ReactNode;
   size?: ModalFrameSize;
   layout?: ModalFrameLayout;
@@ -37,6 +68,12 @@ export interface ModalFrameProps {
   onClose: () => void;
   /** Focus goes back here when the dialog closes, if it is still in the document. */
   returnFocus: HTMLElement | null;
+  /**
+   * The dialog's own undo history: Undo and Redo, from the keys and the menu
+   * bar, act on it while the dialog is on top (`registerModalHistory`).
+   * Without one they are refused while it is open.
+   */
+  history?: ModalHistory;
   /** A drag over any of the dialog, backdrop included: a dialog that takes a dropped file. */
   onDragOver?: DragEventHandler<HTMLDivElement>;
   onDragLeave?: DragEventHandler<HTMLDivElement>;
@@ -57,6 +94,7 @@ export interface ModalFrameProps {
  */
 export function ModalFrame({
   title,
+  lead,
   detail,
   tools,
   size = 'form',
@@ -65,6 +103,7 @@ export function ModalFrame({
   actions,
   onClose,
   returnFocus,
+  history,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -72,6 +111,12 @@ export function ModalFrame({
 }: ModalFrameProps) {
   const { t } = useTranslation();
   const { rootRef, documentRef, keepFocus } = useModalDialog(onClose, returnFocus);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!history || !root) return;
+    return registerModalHistory(root, history);
+  }, [history, rootRef]);
 
   return (
     <div
@@ -97,6 +142,7 @@ export function ModalFrame({
       >
         <div className={styles.bar}>
           <span className={styles.title}>{title}</span>
+          {lead !== undefined && <div className={styles.lead}>{lead}</div>}
           {detail !== undefined && <span className={styles.detail}>{detail}</span>}
           {tools !== undefined && <div className={styles.tools}>{tools}</div>}
           <IconButton size="sm" aria-label={t('dialogs:common.closeNamed', 'Close {{name}}', { name: title })} onClick={onClose}>
