@@ -35,7 +35,7 @@ import type {
   LayerVerb,
 } from './layerOrderEngineFacts';
 import type { LayerHistory } from './layerOrderHistory';
-import type { LayerOpenIndex, LayerPickOrigin, LayerSentence, LayerSlot } from './layerOrderSentence';
+import type { LayerLetterRanks, LayerOpenIndex, LayerPickOrigin, LayerSentence, LayerSlot } from './layerOrderSentence';
 
 // ---------------------------------------------------------------------------
 // Rows
@@ -72,6 +72,8 @@ export interface LayerFigure {
   readonly frontUp: Uint8Array;
   /** Per face, 1 when it shares a spot with another face: "everything it overlaps is settled" or "it overlaps no other face". */
   readonly overlapping: Uint8Array;
+  /** Per face, its place in letter order: a sentence's and a row's objects read in it (D21). */
+  readonly letterRank: LayerLetterRanks;
 }
 
 /** How the session opens: on the host's order, or by restoring its saved record. */
@@ -90,7 +92,11 @@ export type LayerPhase =
 // ---------------------------------------------------------------------------
 // The preview of a complete sentence
 
-/** The smallest clashing set, once explained: indices into the list checked, committed first, the candidate last. */
+/**
+ * The smallest clashing set, once explained: indices into the list checked,
+ * the committed constraints first, then the sentence's candidates in their
+ * order (so an index past the committed ones names one of the objects).
+ */
 export interface LayerClash {
   readonly constraints: readonly number[];
   readonly faces: readonly LayerFace[];
@@ -99,14 +105,23 @@ export interface LayerClash {
 
 export type LayerExplainState = { readonly kind: 'pending'; readonly request: number } | ({ readonly kind: 'done' } & LayerClash);
 
-/** One sentence's preview against the order on screen. Each is kept until the order on screen changes. */
+/**
+ * One sentence's preview against the order on screen: the committed list plus
+ * its `candidates`, one constraint per object in letter order, less any the
+ * list holds already (D21). Each is kept until the order on screen changes.
+ */
 export type LayerPreviewEntry =
   /** The check is running: Add waits. */
-  | { readonly kind: 'pending'; readonly request: number; readonly candidate: LayerConstraint; readonly limits: LayerOrderLimits }
+  | {
+      readonly kind: 'pending';
+      readonly request: number;
+      readonly candidates: readonly LayerConstraint[];
+      readonly limits: LayerOrderLimits;
+    }
   /** The fitting order closest to the one on screen, and the spots that would change. */
   | {
       readonly kind: 'fits';
-      readonly candidate: LayerConstraint;
+      readonly candidates: readonly LayerConstraint[];
       readonly token: number;
       readonly changed: LayerChangedSpots;
       readonly stacks: LayerSidesStacks;
@@ -114,14 +129,14 @@ export type LayerPreviewEntry =
   /** No order fits: the check's set, refined by explain into the smallest clashing set. */
   | {
       readonly kind: 'cant_fit';
-      readonly candidate: LayerConstraint;
+      readonly candidates: readonly LayerConstraint[];
       readonly constraints: readonly number[];
       readonly explain: LayerExplainState;
       /** Whether `layer constraint blocked` went out for it. */
       readonly reported: boolean;
     }
   /** "Couldn't check in time" (D8): Keep trying runs it again, later. */
-  | { readonly kind: 'timed_out'; readonly candidate: LayerConstraint; readonly limits: LayerOrderLimits };
+  | { readonly kind: 'timed_out'; readonly candidates: readonly LayerConstraint[]; readonly limits: LayerOrderLimits };
 
 // ---------------------------------------------------------------------------
 // Commits
@@ -258,7 +273,7 @@ export interface LayerOrderDialogState {
   readonly sentence: LayerSentence;
   /** The verb under the pointer or focus in the open verb menu: previewed in place of the sentence's (Round3:457, 893). */
   readonly pointedVerb: LayerVerb | null;
-  /** Each sentence's preview against the order on screen, by {@link constraintKey}; emptied when the order changes. */
+  /** Each sentence's preview against the order on screen, by its candidates' key (`candidatesKey`); emptied when the order changes. */
   readonly previews: Readonly<Record<string, LayerPreviewEntry>>;
 
   readonly solutions: LayerSolutionsState;
@@ -296,24 +311,25 @@ export type LayerOrderEffect =
    * or `open_refused`.
    */
   | { readonly type: 'open'; readonly request: number; readonly how: LayerOpenHow; readonly limits: LayerOrderLimits }
-  /** Check the committed list plus `candidate` (`layer_preview`): answer `previewed`. */
+  /**
+   * Check `constraints` (`layer_preview_list`): the committed list, then the
+   * sentence's candidates, one per object (D21). Answer `previewed`; a fit's
+   * token adopts exactly this list (`commit` with the token).
+   */
   | {
       readonly type: 'preview';
       readonly request: number;
-      readonly candidate: LayerConstraint;
+      readonly constraints: readonly LayerConstraint[];
       readonly limits: LayerOrderLimits;
     }
   /**
-   * Find the smallest clashing set: of the committed list plus `candidate`
-   * (`layer_explain`), or of `constraints` (`layer_explain_list`). Answer
-   * `explained`.
+   * Find the smallest clashing set of `constraints` (`layer_explain_list`): a
+   * preview's list, or a restore's rows after a removal. Answer `explained`.
    */
   | {
       readonly type: 'explain';
       readonly request: number;
-      readonly target:
-        | { readonly kind: 'candidate'; readonly candidate: LayerConstraint }
-        | { readonly kind: 'list'; readonly constraints: readonly LayerConstraint[] };
+      readonly constraints: readonly LayerConstraint[];
       readonly limits: LayerOrderLimits;
     }
   /** Make `constraints` the committed list (`layer_commit`, or `layer_commit_preview` with a token): answer `committed`. */
@@ -396,7 +412,10 @@ export type LayerOrderAction =
   // The constraints list.
   | { readonly type: 'row_hovered'; readonly id: number | null }
   | { readonly type: 'row_clicked'; readonly id: number }
+  /** One constraint's removal: a row's trash, or one object's × in a grouped row (D21). One undo step. */
   | { readonly type: 'row_removed'; readonly id: number }
+  /** A grouped row's trash: every constraint in it, by id, as one undo step (D21). */
+  | { readonly type: 'rows_removed'; readonly ids: readonly number[] }
   | { readonly type: 'undo' }
   | { readonly type: 'redo' }
   | { readonly type: 'clear_all' }

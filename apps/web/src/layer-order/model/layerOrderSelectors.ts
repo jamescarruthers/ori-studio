@@ -10,6 +10,10 @@
  * states board's (`Round4-States.dc.html`, the current proposal for the
  * waiting, timed-out, attention and refusal states).
  *
+ * A sentence names one subject and one or more objects (D21), and so does a
+ * row of the list: constraints are stored one per object and drawn one row
+ * per subject and verb (`layerOrderRowGroups.ts`, {@link rowGroupsView}).
+ *
  * Pure: no React, no store, no engine calls.
  */
 import { objectsPastLabelCap, hostOrderNotice, ADD_AFTER_PREVIEW_TIMEOUT, type LayerOpenNotice } from './layerOrderDecisions';
@@ -32,9 +36,10 @@ import {
   chosenPreview,
   currentStepBy,
   displayedPreview,
-  sentenceCandidate,
+  sentenceCandidates,
   stepByKey,
 } from './layerOrderReducer';
+import { rowGroupOf, rowGroupsOf, rowParts, type LayerRowGroup } from './layerOrderRowGroups';
 import { facesWithChoices, hasChoices, openPartners, slotNow, subjectStuck, type LayerSlot } from './layerOrderSentence';
 import type {
   LayerCarriedRow,
@@ -47,34 +52,56 @@ import type {
 // ---------------------------------------------------------------------------
 // Sentences
 
-/** A constraint as a row or a reason reads it, from the side shown. A face that no longer exists is null, and has no letter. */
+/**
+ * A sentence as the builder, a row or a reason reads it, from the side shown:
+ * one subject and one or more objects, "D in front of H, K" (D21). A single
+ * constraint has one object. A face that no longer exists is null, and has
+ * no letter.
+ */
 export interface LayerSentenceView {
   readonly subject: LayerFace | null;
   /** Null when the object no longer exists, so its side can't be read. */
   readonly verb: LayerVerb | null;
-  readonly object: LayerFace | null;
+  /** In letter order. */
+  readonly objects: readonly (LayerFace | null)[];
 }
 
 function frontUpOf(state: LayerOrderDialogState, face: LayerFace): boolean {
   return state.figure?.frontUp[face] === 1;
 }
 
+/** One constraint, read from the side shown. */
 export function constraintSentence(state: LayerOrderDialogState, constraint: LayerConstraint): LayerSentenceView {
   const [subject, object] = constraint;
-  return { subject, verb: constraintVerb(constraint, state.view.side, frontUpOf(state, object)), object };
+  return { subject, verb: constraintVerb(constraint, state.view.side, frontUpOf(state, object)), objects: [object] };
 }
 
-/** A row, read the way it was built, subject first (spec §6.5). */
+/** A sentence's constraints, one subject and one verb with an object each, read from the side shown. */
+export function candidatesSentence(state: LayerOrderDialogState, candidates: readonly LayerConstraint[]): LayerSentenceView {
+  return { ...constraintSentence(state, candidates[0]!), objects: candidates.map((candidate) => candidate[1]) };
+}
+
+/** A stored row, read the way it was built, subject first (spec §6.5). */
 export function rowSentence(state: LayerOrderDialogState, row: LayerRow): LayerSentenceView {
   if (row.kind === 'committed') return constraintSentence(state, row.constraint);
   const { subject, object, sign } = row.facts;
   const verb = object === null ? null : constraintVerb([subject ?? 0, object, sign], state.view.side, frontUpOf(state, object));
-  return { subject, verb, object };
+  return { subject, verb, objects: [object] };
+}
+
+/** A list row: its subject and verb, and every object it holds. */
+function groupSentence(state: LayerOrderDialogState, group: LayerRowGroup): LayerSentenceView {
+  const first = rowSentence(state, group.members[0]!);
+  return { ...first, objects: group.members.map((row) => rowParts(row).object) };
 }
 
 function rowFaces(row: LayerRow): LayerFace[] {
-  if (row.kind === 'committed') return [row.constraint[0], row.constraint[1]];
-  return [row.facts.subject, row.facts.object].filter((face): face is LayerFace => face !== null);
+  const { subject, object } = rowParts(row);
+  return [subject, object].filter((face): face is LayerFace => face !== null);
+}
+
+function groupFaces(group: LayerRowGroup): LayerFace[] {
+  return Array.from(new Set(group.members.flatMap(rowFaces)));
 }
 
 function findRow(state: LayerOrderDialogState, id: number | null): LayerRow | null {
@@ -82,12 +109,21 @@ function findRow(state: LayerOrderDialogState, id: number | null): LayerRow | nu
   return state.rows.committed.find((row) => row.id === id) ?? state.rows.carried.find((row) => row.id === id) ?? null;
 }
 
+function rowGroups(state: LayerOrderDialogState): LayerRowGroup[] {
+  return rowGroupsOf(state.rows, state.figure);
+}
+
 // ---------------------------------------------------------------------------
 // The clash on screen
 
 interface LayerClashView {
-  /** The candidate's sentence, when the clash is a preview's. */
+  /**
+   * The sentence, when the clash is a preview's: whole while it is being
+   * explained, then only its objects in the clash (D21).
+   */
   readonly sentence: LayerSentenceView | null;
+  /** The sentence's objects in the clash: marked on their chips. */
+  readonly objects: readonly LayerFace[];
   /** The rows in the clash, by id. */
   readonly rows: readonly number[];
   readonly clashes: readonly LayerSentenceView[];
@@ -102,6 +138,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
     const rows = state.settle.rows.map((id) => findRow(state, id)).filter((row): row is LayerRow => row !== null);
     return {
       sentence: null,
+      objects: [],
       rows: rows.map((row) => row.id),
       clashes: rows.map((row) => rowSentence(state, row)),
       faces: Array.from(new Set(rows.flatMap(rowFaces))),
@@ -111,22 +148,31 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
   }
   const entry = displayedPreview(state);
   if (entry?.kind !== 'cant_fit') return null;
-  const sentence = constraintSentence(state, entry.candidate);
+  const { candidates } = entry;
+  const committed = state.rows.committed;
+  // Indices past the committed list name the sentence's candidates, in order.
+  const named = (indices: readonly number[]) =>
+    candidates.filter((_, i) => indices.includes(committed.length + i));
   if (entry.explain.kind === 'pending') {
-    // The sentence's own faces go danger at once; the clashing set follows (Round 4 "A clash being explained").
+    // The sentence's faces in the check's own set go danger at once; the smallest set follows
+    // (Round 4 "A clash being explained").
+    const inCheck = named(entry.constraints);
+    const objects = (inCheck.length > 0 ? inCheck : candidates).map((candidate) => candidate[1]);
     return {
-      sentence,
+      sentence: candidatesSentence(state, candidates),
+      objects,
       rows: [],
       clashes: [],
-      faces: [entry.candidate[0], entry.candidate[1]],
+      faces: [candidates[0]![0], ...objects],
       explaining: true,
       minimal: false,
     };
   }
-  const committed = state.rows.committed;
+  const inClash = named(entry.explain.constraints);
   const rows = entry.explain.constraints.filter((index) => index < committed.length).map((index) => committed[index]!);
   return {
-    sentence,
+    sentence: candidatesSentence(state, inClash.length > 0 ? inClash : candidates),
+    objects: inClash.map((candidate) => candidate[1]),
     rows: rows.map((row) => row.id),
     clashes: rows.map((row) => rowSentence(state, row)),
     faces: entry.explain.faces,
@@ -173,13 +219,19 @@ export type LayerHintText =
   | { readonly key: 'subject_stuck'; readonly subject: LayerFace; readonly why: LayerSettledWhy }
   /** "Pick one of the N labelled faces", or "tinted" past the label cap (D7). */
   | { readonly key: 'pick_object'; readonly objects: number; readonly tinted: boolean }
-  /** "Pick another labelled face to replace D", or "D is the only face to choose" when `objects` is 1. */
-  | { readonly key: 'replace_object'; readonly object: LayerFace; readonly objects: number }
-  /** "Checking C behind D…". */
+  /** Once an object is picked: "Pick more faces to add them, or a picked face to remove it." (D21). */
+  | { readonly key: 'more_objects' }
+  /** The subject's one open face is picked: "D is the only face to choose". */
+  | { readonly key: 'only_object'; readonly object: LayerFace }
+  /** "Checking C behind D, E…". */
   | { readonly key: 'checking'; readonly sentence: LayerSentenceView }
   /** "Can't fit. Finding what it clashes with…". */
   | { readonly key: 'cant_fit_explaining'; readonly sentence: LayerSentenceView }
-  /** "Can't fit: with the creases, C in front of F clashes with C behind E", or with no clashes, "the creases don't allow …". */
+  /**
+   * "Can't fit: with the creases, C in front of F clashes with C behind E", or
+   * with no clashes, "the creases don't allow …". `sentence` names only the
+   * objects in the clash.
+   */
   | {
       readonly key: 'cant_fit';
       readonly sentence: LayerSentenceView;
@@ -209,6 +261,23 @@ const quietHint = (text: LayerHintText): LayerHint => ({ tone: 'quiet', action: 
 
 function settledWhy(state: LayerOrderDialogState, face: LayerFace): LayerSettledWhy {
   return state.figure?.overlapping[face] === 1 ? 'settled' : 'no_overlap';
+}
+
+/**
+ * A list row's reason: what its constraints clash with, when the clash shown
+ * names any of them; else, for carried rows, why they are not applied, which
+ * is one reason for the whole row since a row holds one status (D21).
+ */
+function groupReason(state: LayerOrderDialogState, group: LayerRowGroup, clash: LayerClashView | null): LayerRowReason | null {
+  const ids = new Set(group.members.map((row) => row.id));
+  if (clash && clash.rows.some((id) => ids.has(id))) {
+    const others = clash.clashes.filter((_, i) => !ids.has(clash.rows[i]!));
+    return { key: 'clashes', clashes: clash.sentence ? [clash.sentence, ...others] : others };
+  }
+  const first = group.members[0]!;
+  if (first.kind === 'committed') return null;
+  const reason = carriedReason(state, first);
+  return reason && 'sentence' in reason && group.members.length > 1 ? { ...reason, sentence: groupSentence(state, group) } : reason;
 }
 
 /** A carried row's reason, when it is not applied. */
@@ -241,8 +310,8 @@ export function carriedReason(state: LayerOrderDialogState, row: LayerCarriedRow
 /** The one line under the sentence: its height is always reserved, and it holds text only when something blocks or guides. */
 export function hintLine(state: LayerOrderDialogState): LayerHint | null {
   if (state.phase.kind !== 'open' || !state.figure) return null;
-  const hovered = findRow(state, state.hover.row);
-  const hoveredReason = hovered?.kind === 'carried' ? carriedReason(state, hovered) : null;
+  const hovered = rowGroupOf(rowGroups(state), state.hover.row);
+  const hoveredReason = hovered?.kind === 'carried' ? groupReason(state, hovered, clashOnScreen(state)) : null;
 
   // A restored record still settling (D10): the builder is inert, and the line speaks for the rows.
   if (state.settle.kind !== 'settled' || (state.commit.kind !== 'idle' && state.commit.via === 'settle')) {
@@ -268,13 +337,17 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
 
   const preview = displayedPreview(state);
   if (preview) {
-    const sentence = constraintSentence(state, preview.candidate);
+    const sentence = candidatesSentence(state, preview.candidates);
     if (preview.kind === 'pending') return { tone: 'busy', action: null, text: { key: 'checking', sentence } };
     if (preview.kind === 'timed_out') return { tone: 'quiet', action: 'keep_trying', text: { key: 'timed_out', sentence } };
     if (preview.kind === 'cant_fit') {
       const clash = clashOnScreen(state)!;
       if (clash.explaining) return { tone: 'busy_danger', action: null, text: { key: 'cant_fit_explaining', sentence } };
-      return { tone: 'danger', action: null, text: { key: 'cant_fit', sentence, clashes: clash.clashes, minimal: clash.minimal } };
+      return {
+        tone: 'danger',
+        action: null,
+        text: { key: 'cant_fit', sentence: clash.sentence ?? sentence, clashes: clash.clashes, minimal: clash.minimal },
+      };
     }
   }
 
@@ -300,18 +373,25 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
         : { key: 'replace_subject', subject: sentence.subject, choosers }
     );
   }
-  const objects = openPartners(state.open, sentence.subject).length;
-  if (sentence.object === null) return quietHint({ key: 'pick_object', objects, tinted: objectsPastLabelCap(objects) });
-  return quietHint({ key: 'replace_object', object: sentence.object, objects });
+  const offered = openPartners(state.open, sentence.subject).length;
+  if (sentence.objects.length === 0) {
+    return quietHint({ key: 'pick_object', objects: offered, tinted: objectsPastLabelCap(offered) });
+  }
+  if (offered === 1) return quietHint({ key: 'only_object', object: sentence.objects[0]! });
+  return quietHint({ key: 'more_objects' });
 }
 
 // ---------------------------------------------------------------------------
 // Add, Clear, the history, Apply
 
+/** Add's own text: "Add constraint" with one object, "Add constraints" with more (D21). */
+export type LayerAddLabel = 'add_constraint' | 'add_constraints';
+
 export type LayerAddState =
-  | { readonly enabled: true; readonly sentence: LayerSentenceView }
+  | { readonly enabled: true; readonly label: LayerAddLabel; readonly sentence: LayerSentenceView }
   | {
       readonly enabled: false;
+      readonly label: LayerAddLabel;
       readonly why:
         | 'inert'
         | 'busy'
@@ -326,23 +406,24 @@ export type LayerAddState =
       readonly sentence: LayerSentenceView | null;
     };
 
-/** Add constraint: enabled only for a sentence its preview fit (Round3 `addOk`; D8). */
+/** Add: enabled only for a sentence its preview fit, every object at once (Round3 `addOk`; D8, D21). */
 export function addState(state: LayerOrderDialogState): LayerAddState {
+  const label: LayerAddLabel = state.sentence.objects.length > 1 ? 'add_constraints' : 'add_constraint';
   const off = (why: Extract<LayerAddState, { enabled: false }>['why'], sentence: LayerSentenceView | null = null) =>
-    ({ enabled: false, why, subject: state.sentence.subject, sentence }) as const;
+    ({ enabled: false, label, why, subject: state.sentence.subject, sentence }) as const;
   if (!builderLive(state)) return off('inert');
   const { sentence, open } = state;
   if (sentence.subject === null) return off('pick_subject');
   if (!hasChoices(open, sentence.subject)) return off('subject_stuck');
-  const candidate = sentenceCandidate(state);
-  if (!candidate) return off('pick_object');
-  const view = constraintSentence(state, candidate);
+  const candidates = sentenceCandidates(state);
+  if (!candidates) return off('pick_object');
+  const view = candidatesSentence(state, candidates);
   if (state.commit.kind === 'pending' || state.solutions.step.kind === 'pending') return off('busy', view);
   const entry = chosenPreview(state);
   if (!entry || entry.kind === 'pending') return off('checking', view);
   if (entry.kind === 'cant_fit') return off('cant_fit', view);
   if (entry.kind === 'timed_out' && !ADD_AFTER_PREVIEW_TIMEOUT) return off('timed_out', view);
-  return { enabled: true, sentence: view };
+  return { enabled: true, label, sentence: view };
 }
 
 export interface LayerListControls {
@@ -364,7 +445,8 @@ export function listControls(state: LayerOrderDialogState): LayerListControls {
     undo: settled && canUndo(state.history),
     redo: settled && canRedo(state.history),
     clearAll: settled && rows > 0,
-    clearSentence: builderLive(state) && (state.sentence.subject !== null || state.sentence.object !== null),
+    clearSentence: builderLive(state) && (state.sentence.subject !== null || state.sentence.objects.length > 0),
+    /** Each row's trash and each object's × (D21). */
     remove: open && quietNow && state.settle.kind !== 'restoring',
   };
 }
@@ -386,27 +468,42 @@ export interface LayerPaneMarks {
   /** The slot a face click fills now. */
   readonly active: LayerSlot;
   readonly subject: LayerFace | null;
-  readonly object: LayerFace | null;
+  /** The sentence's objects, in letter order: tinted and ringed as picks (D20, D21). */
+  readonly picked: readonly LayerFace[];
   /**
    * The faces a click can take in the active slot, faintly tinted: every face
-   * with choices for the subject, the subject's open faces for the object.
-   * Every other face is inert. Empty while the builder is inert.
+   * with choices for the subject, the subject's open faces for the objects,
+   * picked or not (a pick on a picked one removes it), whatever else is
+   * picked. Every other face is inert. Empty while the builder is inert.
    */
   readonly pickable: readonly LayerFace[];
   /** The subject's open faces: the valid objects, labelled on both panes. */
   readonly objects: readonly LayerFace[];
-  /** Every face that carries a letter: the subject, the object, the valid objects, the clash's faces, the hovered row's. */
+  /** Every face that carries a letter: the subject, the picked objects, the valid objects, the clash's faces, the hovered row's. */
   readonly labelled: readonly LayerFace[];
-  /** The face that lights on both panes: a hovered slot's, else the hovered face when the active slot can take it. */
-  readonly lit: LayerFace | null;
-  /** The hovered row's faces that still exist. */
+  /**
+   * The faces whose letters stay past the label cap (D7): the subject, the
+   * picked objects, the clash's faces and the hovered row's. Past the cap the
+   * panes letter these, the hovered face and the nearest of the rest (U8).
+   */
+  readonly alwaysLabelled: readonly LayerFace[];
+  /** Whether the subject's valid objects are more than the label cap (D7). */
+  readonly pastLabelCap: boolean;
+  /**
+   * The faces that light on both panes: a hovered slot's (every picked object,
+   * for the object slot), else the hovered face when the active slot can take it.
+   */
+  readonly lit: readonly LayerFace[];
+  /** The hovered row's faces that still exist: its subject and all its objects (D21). */
   readonly rowFaces: readonly LayerFace[];
   /** The clash's faces: danger tints and labels on both panes. */
   readonly danger: readonly LayerFace[];
   /** Pointing at the reason strengthens the danger tints (Round3:473, 883). */
   readonly dangerStrong: boolean;
-  /** The rows the clash marks, by id. */
+  /** The stored constraints the clash marks, by id. */
   readonly clashRows: readonly number[];
+  /** The picked objects in the clash: their chips are marked (D21). */
+  readonly clashObjects: readonly LayerFace[];
   /** The spots a fitting preview would change, per side. */
   readonly changed: LayerChangedSpots | null;
   /** The spots of the last commit or step, fading once. */
@@ -414,6 +511,10 @@ export interface LayerPaneMarks {
 }
 
 const NO_FACES: readonly LayerFace[] = [];
+
+function distinctFaces(faces: readonly (LayerFace | null)[]): LayerFace[] {
+  return Array.from(new Set(faces.filter((face): face is LayerFace => face !== null)));
+}
 
 export function paneMarks(state: LayerOrderDialogState): LayerPaneMarks {
   const { sentence, open, hover } = state;
@@ -423,30 +524,27 @@ export function paneMarks(state: LayerOrderDialogState): LayerPaneMarks {
   const pickable = !live ? NO_FACES : active === 'subject' ? facesWithChoices(open) : objects;
   const clash = clashOnScreen(state);
   const danger = clash?.faces ?? NO_FACES;
-  const hoveredRow = findRow(state, hover.row);
-  const rowFacesNow = hoveredRow ? rowFaces(hoveredRow) : NO_FACES;
-  const slotFace = hover.slot === 'subject' ? sentence.subject : hover.slot === 'object' ? sentence.object : null;
-  const paneFace = hover.face !== null && pickable.includes(hover.face) ? hover.face : null;
-  const labelled = Array.from(
-    new Set(
-      [sentence.subject, sentence.object, ...objects, ...danger, ...rowFacesNow].filter(
-        (face): face is LayerFace => face !== null
-      )
-    )
-  );
+  const hoveredRow = rowGroupOf(rowGroups(state), hover.row);
+  const rowFacesNow = hoveredRow ? groupFaces(hoveredRow) : NO_FACES;
+  const slotFaces =
+    hover.slot === 'subject' ? distinctFaces([sentence.subject]) : hover.slot === 'object' ? sentence.objects : NO_FACES;
+  const paneFace = hover.face !== null && pickable.includes(hover.face) ? [hover.face] : NO_FACES;
   const preview = displayedPreview(state);
   return {
     active,
     subject: sentence.subject,
-    object: sentence.object,
+    picked: sentence.objects,
     pickable,
     objects,
-    labelled,
-    lit: slotFace ?? paneFace,
+    labelled: distinctFaces([sentence.subject, ...sentence.objects, ...objects, ...danger, ...rowFacesNow]),
+    alwaysLabelled: distinctFaces([sentence.subject, ...sentence.objects, ...danger, ...rowFacesNow]),
+    pastLabelCap: objectsPastLabelCap(objects.length),
+    lit: slotFaces.length > 0 ? slotFaces : paneFace,
     rowFaces: rowFacesNow,
     danger,
     dangerStrong: hover.reason && danger.length > 0,
     clashRows: clash?.rows ?? [],
+    clashObjects: clash?.objects ?? NO_FACES,
     changed: preview?.kind === 'fits' ? preview.changed : null,
     flash: state.flash,
   };
@@ -573,31 +671,67 @@ export interface LayerRowView {
   readonly flagged: boolean;
 }
 
-export function rowsView(state: LayerOrderDialogState): LayerRowView[] {
-  const clash = clashOnScreen(state);
-  const clashing = new Set(clash?.rows ?? []);
-  const flagged = new Set(state.reviewRows ?? []);
-  const view = (row: LayerRow): LayerRowView => {
-    let reason: LayerRowReason | null = null;
-    if (row.kind === 'carried') reason = carriedReason(state, row);
-    else if (clash && clashing.has(row.id)) reason = clashReason(clash, row.id);
-    const notApplied = row.kind === 'carried' && reason !== null && reason.key !== 'waiting' && reason.key !== 'clashes';
-    return {
-      id: row.id,
-      kind: row.kind,
-      sentence: rowSentence(state, row),
-      mark: clashing.has(row.id) ? 'clash' : notApplied ? 'not_applied' : 'none',
-      reason,
-      hot: state.hover.row === row.id,
-      flagged: flagged.has(row.id),
-    };
-  };
-  return [...state.rows.committed.map(view), ...state.rows.carried.map(view)];
+/** One object of a list row: the stored constraint behind it. */
+export interface LayerRowMemberView {
+  /** Its id: what its own × removes (`row_removed`), shown in a row of two or more (D21). */
+  readonly id: number;
+  /** Null when the face no longer exists. */
+  readonly object: LayerFace | null;
+  /** Whether the clash shown names it: a clash marks the clashing objects within their rows (D21). */
+  readonly clash: boolean;
 }
 
-function clashReason(clash: LayerClashView, id: number): LayerRowReason {
-  const others = clash.clashes.filter((_, i) => clash.rows[i] !== id);
-  return { key: 'clashes', clashes: clash.sentence ? [clash.sentence, ...others] : others };
+/**
+ * One row of the constraints list: one subject, one verb, one or more
+ * objects, "D in front of H, K" (D21). Its trash removes every member
+ * (`rows_removed`); `row_hovered` and `row_clicked` take `id`, or any
+ * member's.
+ */
+export interface LayerRowGroupView extends LayerRowView {
+  /** One per object, in the sentence's order. */
+  readonly members: readonly LayerRowMemberView[];
+}
+
+interface LayerRowMarks {
+  readonly clash: LayerClashView | null;
+  readonly clashing: ReadonlySet<number>;
+  readonly flagged: ReadonlySet<number>;
+}
+
+function rowMarks(state: LayerOrderDialogState): LayerRowMarks {
+  const clash = clashOnScreen(state);
+  return { clash, clashing: new Set(clash?.rows ?? []), flagged: new Set(state.reviewRows ?? []) };
+}
+
+function groupView(state: LayerOrderDialogState, group: LayerRowGroup, marks: LayerRowMarks): LayerRowGroupView {
+  const reason = groupReason(state, group, marks.clash);
+  const notApplied = group.kind === 'carried' && reason !== null && reason.key !== 'waiting' && reason.key !== 'clashes';
+  const members = group.members.map((row) => ({ id: row.id, object: rowParts(row).object, clash: marks.clashing.has(row.id) }));
+  return {
+    id: group.id,
+    kind: group.kind,
+    sentence: groupSentence(state, group),
+    mark: members.some((member) => member.clash) ? 'clash' : notApplied ? 'not_applied' : 'none',
+    reason,
+    hot: members.some((member) => member.id === state.hover.row),
+    flagged: members.some((member) => marks.flagged.has(member.id)),
+    members,
+  };
+}
+
+/** The constraints list as it is drawn: one row per subject and verb, at its earliest constraint's place (D21). */
+export function rowGroupsView(state: LayerOrderDialogState): LayerRowGroupView[] {
+  const marks = rowMarks(state);
+  return rowGroups(state).map((group) => groupView(state, group, marks));
+}
+
+/** One entry per stored constraint, ungrouped: the list's rows as the record holds them. */
+export function rowsView(state: LayerOrderDialogState): LayerRowView[] {
+  const marks = rowMarks(state);
+  return [...state.rows.committed, ...state.rows.carried].map((row) => {
+    const { members: _members, ...view } = groupView(state, { id: row.id, kind: row.kind, members: [row] }, marks);
+    return view;
+  });
 }
 
 /** How many saved rows are not applied: what a host's flag counts. */

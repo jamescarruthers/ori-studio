@@ -1,9 +1,18 @@
 /**
- * The constraint builder's sentence, `[subject] [in front of ▾] [object]`
+ * The constraint builder's sentence, `[subject] [in front of ▾] [objects]`
  * (spec §6.4), and the open pairs it is built from. Each rule mirrors the
  * approved artboard's function of the same name
  * (`artifacts/layer-order-design/project/Round3.dc.html`, cited as Round3):
  * where the plan's research and the artboard disagree, the artboard wins.
+ *
+ * **Compound constraints (D21).** The subject is one face; the objects are
+ * one or more. In the object step a pick toggles: an unpicked face is added,
+ * a picked one removed, by pointer, tap or the keyboard face menu alike. The
+ * objects read in letter order ("H, K") whatever order they were picked in,
+ * and the rules that carried one object carry each: a new subject keeps each
+ * object still open with it, and a click on empty paper clears every object,
+ * then the subject. Which faces are offered as objects never depends on what
+ * else is picked.
  *
  * Which faces are open comes from deduction (the engine's open pairs), not a
  * search, so an offered object can still fail its preview: that is the
@@ -27,21 +36,32 @@ export type LayerSlot = 'subject' | 'object';
  */
 export type LayerPickOrigin = 'pattern' | 'folded' | 'menu' | 'list';
 
+/**
+ * Each face's place in letter order, by face (`engine/faceIndex.ts`'s
+ * reading order, A first): what the objects are sorted by. Without one, a
+ * face's place is its own number.
+ */
+export type LayerLetterRanks = ArrayLike<number>;
+
 export interface LayerSentence {
   readonly subject: LayerFace | null;
   readonly verb: LayerVerb;
-  readonly object: LayerFace | null;
+  /** The objects, in letter order (D21); empty until the first is picked. */
+  readonly objects: readonly LayerFace[];
   /** The slot the next face click fills, unless the subject has nothing left to choose ({@link slotNow}). */
   readonly active: LayerSlot;
   readonly subjectOrigin: LayerPickOrigin | null;
+  /** Where the sentence's first object was picked, for `object_origin`; null with no objects. */
   readonly objectOrigin: LayerPickOrigin | null;
 }
 
-/** The sentence after Add: subject, verb (back to the first) and object cleared, the subject slot active (Round3 `emptySentence`). */
+const NO_OBJECTS: readonly LayerFace[] = [];
+
+/** The sentence after Add: subject, verb (back to the first) and objects cleared, the subject slot active (Round3 `emptySentence`). */
 export const EMPTY_SENTENCE: LayerSentence = {
   subject: null,
   verb: LAYER_VERBS[0]!,
-  object: null,
+  objects: NO_OBJECTS,
   active: 'subject',
   subjectOrigin: null,
   objectOrigin: null,
@@ -112,27 +132,50 @@ export function subjectStuck(sentence: LayerSentence, open: LayerOpenIndex): boo
   return sentence.subject !== null && !hasChoices(open, sentence.subject);
 }
 
+/** A face's place in letter order; its own number without ranks. */
+function rankOf(ranks: LayerLetterRanks | undefined, face: LayerFace): number {
+  return ranks?.[face] ?? face;
+}
+
+/** `faces` in letter order (D21: "H, K" whatever order they were picked in). */
+export function inLetterOrder(faces: readonly LayerFace[], ranks?: LayerLetterRanks): LayerFace[] {
+  return [...faces].sort((a, b) => rankOf(ranks, a) - rankOf(ranks, b) || a - b);
+}
+
+/** The objects with `objects`, and the origin kept while any remain. */
+function withObjects(sentence: LayerSentence, objects: readonly LayerFace[], origin: LayerPickOrigin | null): LayerSentence {
+  return {
+    ...sentence,
+    objects: objects.length === 0 ? NO_OBJECTS : objects,
+    objectOrigin: objects.length === 0 ? null : origin,
+  };
+}
+
 /**
  * A face click fills the active slot, and only with a face that slot can
  * take: a subject needs an open face, an object must be one of the subject's.
- * Every other face is inert; the click does nothing. Round3 `pickFace`.
+ * In the object step a pick toggles (D21): an unpicked object is added, a
+ * picked one removed. Every other face is inert; the click does nothing.
+ * Round3 `pickFace`.
  */
 export function pickFace(
   sentence: LayerSentence,
   open: LayerOpenIndex,
   face: LayerFace,
-  origin: LayerPickOrigin
+  origin: LayerPickOrigin,
+  ranks?: LayerLetterRanks
 ): LayerSentence {
   if (slotNow(sentence, open) === 'subject') {
     return hasChoices(open, face) ? setSubject(sentence, open, face, origin) : sentence;
   }
-  return isOpenWith(open, sentence.subject, face) ? setObject(sentence, face, origin) : sentence;
+  return isOpenWith(open, sentence.subject, face) ? toggleObject(sentence, face, origin, ranks) : sentence;
 }
 
 /**
- * The subject, with the object kept if it is still open with the new subject
- * and quietly cleared otherwise; the object slot is active next. Round3
- * `setSubject`.
+ * The subject, keeping each object still open with the new subject and
+ * quietly dropping the rest; so a pick of one of the objects as the subject
+ * removes it from the objects, since no face is open with itself. The object
+ * slot is active next. Round3 `setSubject`, per object (D21).
  */
 export function setSubject(
   sentence: LayerSentence,
@@ -140,26 +183,32 @@ export function setSubject(
   face: LayerFace,
   origin: LayerPickOrigin
 ): LayerSentence {
-  const keep = isOpenWith(open, face, sentence.object);
-  return {
-    ...sentence,
-    subject: face,
-    subjectOrigin: origin,
-    object: keep ? sentence.object : null,
-    objectOrigin: keep ? sentence.objectOrigin : null,
-    active: 'object',
-  };
-}
-
-/** Round3 `setObject`. */
-export function setObject(sentence: LayerSentence, face: LayerFace, origin: LayerPickOrigin): LayerSentence {
-  return { ...sentence, object: face, objectOrigin: origin, active: 'object' };
+  const kept = sentence.objects.filter((object) => isOpenWith(open, face, object));
+  const objects = kept.length === sentence.objects.length ? sentence.objects : kept;
+  return { ...withObjects(sentence, objects, sentence.objectOrigin), subject: face, subjectOrigin: origin, active: 'object' };
 }
 
 /**
- * Clicking a filled slot makes it the active one, so the next pick replaces
- * its face; the object slot can't be made active with no subject or a stuck
- * one. Round3 `activate`.
+ * An object pick (D21): an unpicked face joins the objects, in letter order;
+ * a picked one leaves them. Round3 `setObject`, which replaced the object.
+ */
+export function toggleObject(
+  sentence: LayerSentence,
+  face: LayerFace,
+  origin: LayerPickOrigin,
+  ranks?: LayerLetterRanks
+): LayerSentence {
+  const picked = sentence.objects.includes(face);
+  const objects = picked
+    ? sentence.objects.filter((object) => object !== face)
+    : inLetterOrder([...sentence.objects, face], ranks);
+  return { ...withObjects(sentence, objects, sentence.objectOrigin ?? origin), active: 'object' };
+}
+
+/**
+ * Clicking a filled slot makes it the active one: the next pick replaces the
+ * subject, or toggles an object; the object slot can't be made active with no
+ * subject or a stuck one. Round3 `activate`.
  */
 export function activateSlot(sentence: LayerSentence, open: LayerOpenIndex, slot: LayerSlot): LayerSentence {
   if (slot === 'object' && (sentence.subject === null || !hasChoices(open, sentence.subject))) return sentence;
@@ -167,26 +216,27 @@ export function activateSlot(sentence: LayerSentence, open: LayerOpenIndex, slot
 }
 
 /**
- * A slot's ×. Clearing the subject keeps the object, which the next subject
- * keeps if it is open with it (Round3 `clearSlot`, then `setSubject`).
+ * A slot's ×: the object slot's clears every object. Clearing the subject
+ * keeps the objects, which the next subject keeps where they are open with it
+ * (Round3 `clearSlot`, then `setSubject`).
  */
 export function clearSlot(sentence: LayerSentence, slot: LayerSlot): LayerSentence {
-  if (slot === 'object') return { ...sentence, object: null, objectOrigin: null, active: 'object' };
+  if (slot === 'object') return { ...withObjects(sentence, NO_OBJECTS, null), active: 'object' };
   return { ...sentence, subject: null, subjectOrigin: null, active: 'subject' };
 }
 
-/** Clear: both faces go; the verb stays (Round3 `clearSentence`, unlike Add's {@link EMPTY_SENTENCE}). */
+/** Clear: every face goes; the verb stays (Round3 `clearSentence`, unlike Add's {@link EMPTY_SENTENCE}). */
 export function clearSentence(sentence: LayerSentence): LayerSentence {
-  if (sentence.subject === null && sentence.object === null) return sentence;
-  return { ...sentence, subject: null, subjectOrigin: null, object: null, objectOrigin: null, active: 'subject' };
+  if (sentence.subject === null && sentence.objects.length === 0) return sentence;
+  return { ...withObjects(sentence, NO_OBJECTS, null), subject: null, subjectOrigin: null, active: 'subject' };
 }
 
 /**
- * A click on empty paper clears the object when that is the slot being
+ * A click on empty paper clears every object when that is the slot being
  * filled, otherwise the subject, otherwise the sentence. Round3 `groundClick`.
  */
 export function groundClick(sentence: LayerSentence): LayerSentence {
-  if (sentence.subject !== null && sentence.active === 'object' && sentence.object !== null) {
+  if (sentence.subject !== null && sentence.active === 'object' && sentence.objects.length > 0) {
     return clearSlot(sentence, 'object');
   }
   if (sentence.subject !== null) return clearSlot(sentence, 'subject');
@@ -205,45 +255,49 @@ export function setVerb(sentence: LayerSentence, verb: LayerVerb): LayerSentence
  * hint says so. Round3 `reveal`.
  */
 export function revealSubject(sentence: LayerSentence, face: LayerFace): LayerSentence {
-  return { ...sentence, subject: face, subjectOrigin: 'list', object: null, objectOrigin: null, active: 'object' };
+  return { ...withObjects(sentence, NO_OBJECTS, null), subject: face, subjectOrigin: 'list', active: 'object' };
 }
 
 /**
- * After a commit, the builder keeps its sentence unless the object is no
- * longer open with the subject, which then clears. Round3 `commit`.
+ * After a commit, the builder keeps its sentence, less any object no longer
+ * open with the subject. Round3 `commit`, per object.
  */
-export function keepOpenObject(sentence: LayerSentence, open: LayerOpenIndex): LayerSentence {
-  if (sentence.object === null || sentence.subject === null || isOpenWith(open, sentence.subject, sentence.object)) {
-    return sentence;
-  }
-  return { ...sentence, object: null, objectOrigin: null };
+export function keepOpenObjects(sentence: LayerSentence, open: LayerOpenIndex): LayerSentence {
+  if (sentence.subject === null) return sentence;
+  const kept = sentence.objects.filter((object) => isOpenWith(open, sentence.subject, object));
+  return kept.length === sentence.objects.length ? sentence : withObjects(sentence, kept, sentence.objectOrigin);
 }
 
-/** Whether the sentence names a subject and one of its open faces. */
+/** Whether the sentence names a subject and one or more of its open faces. */
 export function isComplete(sentence: LayerSentence, open: LayerOpenIndex): boolean {
-  return isOpenWith(open, sentence.subject, sentence.object);
+  return sentence.objects.length > 0 && sentence.objects.every((object) => isOpenWith(open, sentence.subject, object));
 }
 
 /**
- * The sentence as a constraint, read from `side` with `verb` (the menu's
- * pointed verb, or the sentence's own); null unless the sentence is complete.
- * Stored paper-relative, so the list reads back what was built from either
- * side (Round3 `sentenceCons`).
+ * The sentence as constraints, one per object in letter order, read from
+ * `side` with `verb` (the menu's pointed verb, or the sentence's own); null
+ * unless the sentence is complete. Stored paper-relative, so the list reads
+ * back what was built from either side (Round3 `sentenceCons`). One verb from
+ * one side can be either sign, by how each object faces.
  */
-export function candidateOf(
+export function candidatesOf(
   sentence: LayerSentence,
   open: LayerOpenIndex,
   verb: LayerVerb,
   side: LayerSide,
   frontUp: Uint8Array
-): LayerConstraint | null {
+): LayerConstraint[] | null {
   if (!isComplete(sentence, open)) return null;
   const subject = sentence.subject!;
-  const object = sentence.object!;
-  return constraintSeen(subject, verb, object, side, frontUp[object] === 1);
+  return sentence.objects.map((object) => constraintSeen(subject, verb, object, side, frontUp[object] === 1));
 }
 
-/** A constraint's key, for the preview cache: its two faces and sign. */
+/** A constraint's key: its two faces and sign. */
 export function constraintKey(constraint: LayerConstraint): string {
   return `${constraint[0]},${constraint[1]},${constraint[2]}`;
+}
+
+/** A sentence's constraints' key, for the preview cache: one sentence, one preview. */
+export function candidatesKey(candidates: readonly LayerConstraint[]): string {
+  return candidates.map(constraintKey).join(';');
 }

@@ -131,6 +131,12 @@ export interface LayerOpenFacts {
   readonly constraints: readonly LayerConstraint[];
   /** Set for a restore: how it went, and the rows it did not apply. */
   readonly restore: LayerRestoreFacts | null;
+  /**
+   * The faces in letter order, A first (`FaceLetters.inLetterOrder`, from the
+   * paper scene the hook reads to draw): what objects are sorted by (D21).
+   * Without it, faces sort by number.
+   */
+  readonly letterOrder?: readonly LayerFace[];
 }
 
 /** A proof that no order fits: `constraints` index the list checked (committed first, a candidate last). */
@@ -193,11 +199,16 @@ function savedFaceState(status: number | undefined): LayerSavedFaceState {
   return status === SAVED_FACE_AMBIGUOUS ? 'ambiguous' : 'intact';
 }
 
-/** The facts of an open (`layer_open`, `layer_open_showing`) or a restore, with the stacks the hook read after it. */
+/**
+ * The facts of an open (`layer_open`, `layer_open_showing`) or a restore,
+ * with the stacks the hook read after it and, when it has them, the faces in
+ * letter order.
+ */
 export function openFacts(
   opened: LayerOpened | LayerRestored,
   stacks: LayerSidesStacks,
-  record: LayerOrderRecord | null
+  record: LayerOrderRecord | null,
+  letterOrder?: readonly LayerFace[]
 ): LayerOpenFacts {
   const restored = 'carried' in opened ? opened : null;
   return {
@@ -208,6 +219,7 @@ export function openFacts(
     stacks,
     constraints: restored ? unpackConstraints(restored.constraints) : [],
     restore: restored ? restoreFacts(restored, record) : null,
+    ...(letterOrder ? { letterOrder } : {}),
   };
 }
 

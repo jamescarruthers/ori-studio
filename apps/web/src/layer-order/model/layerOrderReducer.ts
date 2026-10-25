@@ -11,6 +11,11 @@
  * the spots that changed (Round3 `commit`); the engine does the solving, so
  * here a change is a `commit` effect, and it lands when its answer does.
  *
+ * A sentence may name several objects (D21). It is previewed and explained
+ * as one list, the committed constraints plus one per object, and Add
+ * commits that list as one undo step; a one-object sentence is the same
+ * check it always was.
+ *
  * Pure: no React, no store, no engine calls.
  */
 import {
@@ -41,21 +46,24 @@ import {
   type LayerPreviewFacts,
   type LayerStacks,
   type LayerStepBy,
+  type LayerVerb,
 } from './layerOrderEngineFacts';
 import { afterRedo, afterUndo, emptyHistory, recorded, redoTarget, undoTarget } from './layerOrderHistory';
 import {
   EMPTY_SENTENCE,
   activateSlot,
-  candidateOf,
+  candidatesKey,
+  candidatesOf,
   clearSentence,
   clearSlot,
   constraintKey,
   groundClick,
-  keepOpenObject,
+  keepOpenObjects,
   openIndexOf,
   pickFace,
   revealSubject,
   setVerb,
+  type LayerSentence,
 } from './layerOrderSentence';
 import type {
   LayerCarriedRow,
@@ -148,22 +156,41 @@ export function committedConstraints(rows: LayerRows): LayerConstraint[] {
   return rows.committed.map((row) => row.constraint);
 }
 
-/** The sentence as a constraint with `verb`, read from the side shown; null unless complete. */
-export function sentenceCandidate(state: LayerOrderDialogState, verb = state.sentence.verb): LayerConstraint | null {
+/**
+ * What the sentence adds with `verb`, read from the side shown: one
+ * constraint per object in letter order, less any the list already holds
+ * (D21). Null unless the sentence is complete, or when it adds nothing.
+ */
+export function sentenceCandidates(
+  state: LayerOrderDialogState,
+  verb = state.sentence.verb
+): readonly LayerConstraint[] | null {
   if (!state.figure) return null;
-  return candidateOf(state.sentence, state.open, verb, state.view.side, state.figure.frontUp);
+  const all = candidatesOf(state.sentence, state.open, verb, state.view.side, state.figure.frontUp);
+  if (!all) return null;
+  const held = new Set(state.rows.committed.map((row) => constraintKey(row.constraint)));
+  const fresh = all.filter((candidate) => !held.has(constraintKey(candidate)));
+  return fresh.length > 0 ? fresh : null;
+}
+
+/** The list a sentence's preview checks: the committed constraints, then its candidates. */
+export function previewListOf(rows: LayerRows, candidates: readonly LayerConstraint[]): LayerConstraint[] {
+  return [...committedConstraints(rows), ...candidates];
+}
+
+function previewOf(state: LayerOrderDialogState, verb: LayerVerb): LayerPreviewEntry | null {
+  const candidates = sentenceCandidates(state, verb);
+  return candidates ? (state.previews[candidatesKey(candidates)] ?? null) : null;
 }
 
 /** The sentence's preview as the folded pane shows it: with the menu's pointed verb when there is one. */
 export function displayedPreview(state: LayerOrderDialogState): LayerPreviewEntry | null {
-  const candidate = sentenceCandidate(state, state.pointedVerb ?? state.sentence.verb);
-  return candidate ? (state.previews[constraintKey(candidate)] ?? null) : null;
+  return previewOf(state, state.pointedVerb ?? state.sentence.verb);
 }
 
 /** The preview Add stands on: the sentence's own verb. */
 export function chosenPreview(state: LayerOrderDialogState): LayerPreviewEntry | null {
-  const candidate = sentenceCandidate(state);
-  return candidate ? (state.previews[constraintKey(candidate)] ?? null) : null;
+  return previewOf(state, state.sentence.verb);
 }
 
 /** Rows a restore can still apply: intact on today's faces, not yet committed (D10). */
@@ -182,6 +209,17 @@ function constraintFaces(constraints: readonly LayerConstraint[]): LayerFace[] {
 
 function hasChangedSpots(changed: LayerChangedSpots): boolean {
   return changed.front.length > 0 || changed.back.length > 0;
+}
+
+/** Each face's place in letter order, from the faces in that order; by face number for any face it leaves out. */
+function letterRanksOf(faces: number, letterOrder: readonly LayerFace[] | undefined): Uint32Array {
+  const ranks = Uint32Array.from({ length: faces }, (_, face) => face);
+  if (!letterOrder) return ranks;
+  ranks.fill(faces);
+  letterOrder.forEach((face, rank) => {
+    if (face >= 0 && face < faces) ranks[face] = rank;
+  });
+  return ranks;
 }
 
 function overlappingFaces(faces: number, stacks: LayerStacks): Uint8Array {
@@ -254,7 +292,10 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
       return state.hover.face === action.face ? state : { ...state, hover: { ...state.hover, face: action.face } };
     case 'face_picked':
       if (!builderLive(state)) return state;
-      return withSentence(state, pickFace(state.sentence, state.open, action.face, action.origin));
+      return withSentence(
+        state,
+        pickFace(state.sentence, state.open, action.face, action.origin, state.figure?.letterRank)
+      );
     case 'ground_clicked':
       if (!builderLive(state)) return state;
       return withSentence(state, groundClick(state.sentence));
@@ -286,7 +327,9 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
     case 'row_clicked':
       return rowClicked(state, action.id);
     case 'row_removed':
-      return rowRemoved(state, action.id, effects);
+      return rowsRemoved(state, [action.id], effects);
+    case 'rows_removed':
+      return rowsRemoved(state, action.ids, effects);
     case 'undo':
       return travel(state, 'undo', effects);
     case 'redo':
@@ -332,7 +375,7 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
   }
 }
 
-function withSentence(state: LayerOrderDialogState, sentence: LayerOrderDialogState['sentence']): LayerOrderDialogState {
+function withSentence(state: LayerOrderDialogState, sentence: LayerSentence): LayerOrderDialogState {
   if (sentence === state.sentence) return state;
   // A pick closes the verb menu and lets go of the reason (Round3 `setSubject`, `setObject`).
   return { ...state, sentence, pointedVerb: null, hover: { ...state.hover, reason: false } };
@@ -412,6 +455,7 @@ function opened(
       faces: facts.faces,
       frontUp: facts.frontUp,
       overlapping: overlappingFaces(facts.faces, facts.stacks.front),
+      letterRank: letterRanksOf(facts.faces, facts.letterOrder),
     },
     openedOn: facts.openedOn,
     open: openIndexOf(facts.openPairs),
@@ -448,6 +492,21 @@ function opened(
 // ---------------------------------------------------------------------------
 // Previews
 
+/** Ask for a sentence's preview: one check of the committed list plus its candidates (D21). */
+function askPreview(
+  state: LayerOrderDialogState,
+  candidates: readonly LayerConstraint[],
+  limits: LayerOrderLimits,
+  effects: LayerOrderEffect[]
+): LayerOrderDialogState {
+  const [id, asked] = request(state);
+  effects.push({ type: 'preview', request: id, constraints: previewListOf(asked.rows, candidates), limits });
+  return {
+    ...asked,
+    previews: { ...asked.previews, [candidatesKey(candidates)]: { kind: 'pending', request: id, candidates, limits } },
+  };
+}
+
 /**
  * After every action: a complete sentence the order on screen has no preview
  * for gets one (the one the folded pane shows, with the menu's pointed verb),
@@ -456,23 +515,18 @@ function opened(
 function reconcile(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOrderStep {
   let next = state;
   if (builderLive(next) && quiet(next)) {
-    const candidate = sentenceCandidate(next, next.pointedVerb ?? next.sentence.verb);
-    if (candidate && !next.previews[constraintKey(candidate)]) {
-      const [id, asked] = request(next);
-      const limits = LAYER_ORDER_MODEL_LIMITS.preview;
-      effects.push({ type: 'preview', request: id, candidate, limits });
-      next = {
-        ...asked,
-        previews: { ...asked.previews, [constraintKey(candidate)]: { kind: 'pending', request: id, candidate, limits } },
-      };
+    const candidates = sentenceCandidates(next, next.pointedVerb ?? next.sentence.verb);
+    if (candidates && !next.previews[candidatesKey(candidates)]) {
+      next = askPreview(next, candidates, LAYER_ORDER_MODEL_LIMITS.preview, effects);
     }
   }
   const chosen = chosenPreview(next);
   if (chosen?.kind === 'cant_fit' && !chosen.reported) {
-    effects.push({ type: 'track', fact: constraintBlockedFact(next.rows.committed.length) });
+    const fact = constraintBlockedFact(next.rows.committed.length, next.sentence.objects.length);
+    effects.push({ type: 'track', fact });
     next = {
       ...next,
-      previews: { ...next.previews, [constraintKey(chosen.candidate)]: { ...chosen, reported: true } },
+      previews: { ...next.previews, [candidatesKey(chosen.candidates)]: { ...chosen, reported: true } },
     };
   }
   return { state: next, effects };
@@ -491,26 +545,26 @@ function previewed(
   const key = previewKeyFor(state, (entry) => entry.kind === 'pending' && entry.request === id);
   if (key === null) return state;
   const entry = state.previews[key] as Extract<LayerPreviewEntry, { kind: 'pending' }>;
-  const { candidate } = entry;
+  const { candidates } = entry;
   let result: LayerPreviewEntry;
   let next = state;
   switch (facts.verdict) {
     case 'fits':
-      result = { kind: 'fits', candidate, token: facts.token, changed: facts.changed, stacks: facts.stacks };
+      result = { kind: 'fits', candidates, token: facts.token, changed: facts.changed, stacks: facts.stacks };
       break;
     case 'timed_out':
-      result = { kind: 'timed_out', candidate, limits: entry.limits };
+      result = { kind: 'timed_out', candidates, limits: entry.limits };
       break;
     case 'cant_fit': {
-      const candidateIndex = state.rows.committed.length;
-      const alone = facts.constraints.every((index) => index === candidateIndex);
-      if (alone) {
-        // The creases alone refuse it: nothing to explain.
+      const alone = aloneIndex(facts.constraints, state.rows.committed.length, candidates.length);
+      if (alone !== null) {
+        // The creases alone refuse one of its constraints: nothing to explain.
+        const candidate = candidates[alone - state.rows.committed.length]!;
         result = {
           kind: 'cant_fit',
-          candidate,
+          candidates,
           constraints: facts.constraints,
-          explain: { kind: 'done', constraints: [candidateIndex], faces: [candidate[0], candidate[1]], minimal: true },
+          explain: { kind: 'done', constraints: [alone], faces: [candidate[0], candidate[1]], minimal: true },
           reported: false,
         };
       } else {
@@ -519,12 +573,12 @@ function previewed(
         effects.push({
           type: 'explain',
           request: explainId,
-          target: { kind: 'candidate', candidate },
+          constraints: previewListOf(state.rows, candidates),
           limits: LAYER_ORDER_MODEL_LIMITS.explain,
         });
         result = {
           kind: 'cant_fit',
-          candidate,
+          candidates,
           constraints: facts.constraints,
           explain: { kind: 'pending', request: explainId },
           reported: false,
@@ -536,6 +590,19 @@ function previewed(
   return { ...next, previews: { ...next.previews, [key]: result } };
 }
 
+/**
+ * The one candidate a can't-fit's proof names when it names no other
+ * constraint, so the creases alone refuse it and it is its own smallest set;
+ * null when explain has more to find. A proof naming nothing means the only
+ * candidate, as it always did with one object.
+ */
+function aloneIndex(proof: readonly number[], committed: number, candidates: number): number | null {
+  if (proof.length === 0) return candidates === 1 ? committed : null;
+  const index = proof[0]!;
+  const one = proof.every((named) => named === index);
+  return one && index >= committed && index < committed + candidates ? index : null;
+}
+
 function explained(state: LayerOrderDialogState, id: number, facts: LayerExplainFacts): LayerOrderDialogState {
   const key = previewKeyFor(
     state,
@@ -543,8 +610,7 @@ function explained(state: LayerOrderDialogState, id: number, facts: LayerExplain
   );
   if (key !== null) {
     const entry = state.previews[key] as Extract<LayerPreviewEntry, { kind: 'cant_fit' }>;
-    const list = [...committedConstraints(state.rows), entry.candidate];
-    const clash = clashOf(facts, entry.constraints, list);
+    const clash = clashOf(facts, entry.constraints, previewListOf(state.rows, entry.candidates));
     return { ...state, previews: { ...state.previews, [key]: { ...entry, explain: { kind: 'done', ...clash } } } };
   }
   const { settle } = state;
@@ -592,20 +658,25 @@ function landNow(state: LayerOrderDialogState, rows: LayerRows, history: LayerOr
   return { ...state, rows, history, hover: stillThere ? state.hover : { ...state.hover, row: null } };
 }
 
-/** Round3 `add`: commit the sentence the preview fit, by its token; it lands (and the sentence clears) when the commit does. */
+/**
+ * Round3 `add`: commit the sentence the preview fit, by its token, as one
+ * undo step: one constraint per object, less any already committed (D21). It
+ * lands (and the sentence clears) when the commit does.
+ */
 function add(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOrderDialogState {
   if (!builderLive(state) || !quiet(state)) return state;
   const entry = chosenPreview(state);
   const searchAfterTimeout = entry?.kind === 'timed_out' && ADD_AFTER_PREVIEW_TIMEOUT;
-  if (entry?.kind !== 'fits' && !searchAfterTimeout) return state;
-  const row: LayerCommittedRow = { kind: 'committed', id: state.nextRowId, constraint: entry!.candidate };
-  const rows = { ...state.rows, committed: [...state.rows.committed, row] };
+  if (!entry || (entry.kind !== 'fits' && !searchAfterTimeout)) return state;
+  let nextRowId = state.nextRowId;
+  const added = entry.candidates.map((constraint): LayerCommittedRow => ({ kind: 'committed', id: nextRowId++, constraint }));
+  const rows = { ...state.rows, committed: [...state.rows.committed, ...added] };
   return ask(
-    { ...state, nextRowId: state.nextRowId + 1 },
+    { ...state, nextRowId },
     {
       via: 'add',
       constraints: committedConstraints(rows),
-      token: entry?.kind === 'fits' ? entry.token : null,
+      token: entry.kind === 'fits' ? entry.token : null,
       limits: LAYER_ORDER_MODEL_LIMITS.commit,
       rows,
       history: recorded(state.history, state.rows),
@@ -635,12 +706,7 @@ function committed(
     // The rows still clash after a removal: mark the check's set, and find the smallest (D10).
     const [id, next] = request({ ...state, commit: { kind: 'idle' } });
     const rows = facts.constraints.map((index) => commit.listRows[index]).filter((rowId) => rowId !== undefined);
-    effects.push({
-      type: 'explain',
-      request: id,
-      target: { kind: 'list', constraints: commit.constraints },
-      limits: LAYER_ORDER_MODEL_LIMITS.explain,
-    });
+    effects.push({ type: 'explain', request: id, constraints: commit.constraints, limits: LAYER_ORDER_MODEL_LIMITS.explain });
     return { ...next, settle: { kind: 'clash', rows, explain: { request: id, listRows: commit.listRows } } };
   }
 
@@ -650,7 +716,7 @@ function committed(
     // Round3 `add`: the whole sentence clears; the flash is what remains of it.
     sentence = EMPTY_SENTENCE;
   } else {
-    sentence = keepOpenObject(sentence, open);
+    sentence = keepOpenObjects(sentence, open);
   }
   const generation = state.solutions.generation + 1;
   let next: LayerOrderDialogState = landNow(
@@ -671,15 +737,20 @@ function committed(
   next = flashed(next, facts.changed, effects);
   effects.push({ type: 'solutions_restart', generation, by: currentStepBy(next), count: next.solutions.runs });
   if (commit.via === 'add' && commit.sentence) {
-    const { verb, subjectOrigin, objectOrigin } = commit.sentence;
-    const fact = constraintAddedFact(verb, subjectOrigin ?? 'pattern', objectOrigin ?? 'pattern');
+    const { verb, subjectOrigin, objectOrigin, objects } = commit.sentence;
+    const fact = constraintAddedFact(verb, subjectOrigin ?? 'pattern', objectOrigin ?? 'pattern', objects.length);
     effects.push({ type: 'track', fact });
   }
   return next;
 }
 
-function sameSentence(a: LayerOrderDialogState['sentence'], b: LayerOrderDialogState['sentence']): boolean {
-  return a.subject === b.subject && a.object === b.object && a.verb === b.verb;
+function sameSentence(a: LayerSentence, b: LayerSentence): boolean {
+  return (
+    a.subject === b.subject &&
+    a.verb === b.verb &&
+    a.objects.length === b.objects.length &&
+    a.objects.every((object, i) => object === b.objects[i])
+  );
 }
 
 function flashed(state: LayerOrderDialogState, changed: LayerChangedSpots, effects: LayerOrderEffect[]): LayerOrderDialogState {
@@ -689,13 +760,21 @@ function flashed(state: LayerOrderDialogState, changed: LayerChangedSpots, effec
   return { ...state, flashes: n, flash: { changed, n } };
 }
 
-/** Round3 `removeCons`, and a carried row's trash (D10). */
-function rowRemoved(state: LayerOrderDialogState, id: number, effects: LayerOrderEffect[]): LayerOrderDialogState {
+/**
+ * Round3 `removeCons`, and a carried row's trash (D10): the constraints `ids`
+ * name, one for a row or an object's ×, every one in a grouped row for its
+ * trash (D21). Each removal is one undo step, however many it takes.
+ */
+function rowsRemoved(state: LayerOrderDialogState, ids: readonly number[], effects: LayerOrderEffect[]): LayerOrderDialogState {
   if (state.phase.kind !== 'open' || !quiet(state) || state.settle.kind === 'restoring') return state;
   const { rows } = state;
-  if (rows.committed.some((row) => row.id === id)) {
+  const gone = new Set(ids);
+  const target: LayerRows = {
+    committed: rows.committed.filter((row) => !gone.has(row.id)),
+    carried: rows.carried.filter((row) => !gone.has(row.id)),
+  };
+  if (target.committed.length < rows.committed.length) {
     if (state.settle.kind !== 'settled') return state;
-    const target = { ...rows, committed: rows.committed.filter((row) => row.id !== id) };
     return ask(
       state,
       {
@@ -711,26 +790,29 @@ function rowRemoved(state: LayerOrderDialogState, id: number, effects: LayerOrde
       effects
     );
   }
-  if (!rows.carried.some((row) => row.id === id)) return state;
-  const target = { ...rows, carried: rows.carried.filter((row) => row.id !== id) };
+  if (target.carried.length === rows.carried.length) return state;
   if (state.settle.kind === 'settled') {
-    // A carried row the order never depended on: no commit, but an entry, so undo puts it back.
+    // Carried rows the order never depended on: no commit, but an entry, so undo puts them back.
     return landNow(state, target, recorded(state.history, rows));
   }
-  return settleAfterRemoval(landNow(state, target, state.history), id, effects);
+  return settleAfterRemoval(landNow(state, target, state.history), gone, effects);
 }
 
 /**
- * A row removed while the saved rows are unsettled: the rows left that can
+ * Rows removed while the saved rows are unsettled: the rows left that can
  * apply are committed together, or not at all (D10). With none left, they
  * are settled as they stand.
  */
-function settleAfterRemoval(state: LayerOrderDialogState, removed: number, effects: LayerOrderEffect[]): LayerOrderDialogState {
+function settleAfterRemoval(
+  state: LayerOrderDialogState,
+  removed: ReadonlySet<number>,
+  effects: LayerOrderEffect[]
+): LayerOrderDialogState {
   // A clashing set none of whose rows went still clashes: there is nothing to re-check.
-  if (state.settle.kind === 'clash' && !state.settle.rows.includes(removed)) return state;
+  if (state.settle.kind === 'clash' && !state.settle.rows.some((rowId) => removed.has(rowId))) return state;
   const settle =
     state.settle.kind === 'clash'
-      ? { ...state.settle, rows: state.settle.rows.filter((rowId) => rowId !== removed), explain: null }
+      ? { ...state.settle, rows: state.settle.rows.filter((rowId) => !removed.has(rowId)), explain: null }
       : state.settle;
   const listed = state.rows.carried.filter(applicable);
   if (listed.length === 0) return { ...state, settle: { kind: 'settled' } };
@@ -839,16 +921,7 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
   }
   const entry = displayedPreview(state);
   if (entry?.kind === 'timed_out' && quiet(state)) {
-    const [id, next] = request(state);
-    const limits = keepTryingLimits(entry.limits);
-    effects.push({ type: 'preview', request: id, candidate: entry.candidate, limits });
-    return {
-      ...next,
-      previews: {
-        ...next.previews,
-        [constraintKey(entry.candidate)]: { kind: 'pending', request: id, candidate: entry.candidate, limits },
-      },
-    };
+    return askPreview(state, entry.candidates, keepTryingLimits(entry.limits), effects);
   }
   return state;
 }

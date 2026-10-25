@@ -48,7 +48,7 @@ import type { LayerOrderDialogState } from './layerOrderState';
 const sentence = (subject: number | null, verb: 'in_front_of' | 'behind' | null, object: number | null) => ({
   subject,
   verb,
-  object,
+  objects: [object],
 });
 
 function previewAnswer(played: Played, facts: Parameters<typeof layerOrderReducer>[1] & { type: 'previewed' }) {
@@ -146,7 +146,7 @@ describe('the preview of a complete sentence', () => {
   it('runs at once; Add waits while it is checking', () => {
     const p = picked(opened().state, 2, 0);
     const preview = lastOf(p.effects, 'preview');
-    expect(preview).toMatchObject({ candidate: [2, 0, 1], limits: LAYER_ORDER_MODEL_LIMITS.preview });
+    expect(preview).toMatchObject({ constraints: [[2, 0, 1]], limits: LAYER_ORDER_MODEL_LIMITS.preview });
     expect(chosenPreview(p.state)?.kind).toBe('pending');
     expect(addState(p.state)).toMatchObject({ enabled: false, why: 'checking' });
     expect(hintLine(p.state)).toEqual({
@@ -160,9 +160,9 @@ describe('the preview of a complete sentence', () => {
     const f = fits(picked(opened().state, 2, 0));
     expect(displayedStacks(f.state)).toEqual(sidesOf(SPOTS_TWO_OVER_ZERO));
     expect(paneMarks(f.state).changed).toEqual(changedSpots([1], [1]));
-    expect(addState(f.state)).toEqual({ enabled: true, sentence: sentence(2, 'in_front_of', 0) });
-    // No routine status text: the hint says what a click does now (Round3:1395).
-    expect(hintLine(f.state)).toEqual({ tone: 'quiet', action: null, text: { key: 'replace_object', object: 0, objects: 2 } });
+    expect(addState(f.state)).toEqual({ enabled: true, label: 'add_constraint', sentence: sentence(2, 'in_front_of', 0) });
+    // No routine status text: the hint says what a click does now (Round3:1395), and a pick adds or removes (D21).
+    expect(hintLine(f.state)).toEqual({ tone: 'quiet', action: null, text: { key: 'more_objects' } });
   });
 
   it('a sentence the creases alone refuse needs no explaining: the reason names only it', () => {
@@ -180,7 +180,7 @@ describe('the preview of a complete sentence', () => {
     });
     expect(paneMarks(cant.state).danger).toEqual([2, 3]);
     expect(addState(cant.state)).toMatchObject({ enabled: false, why: 'cant_fit' });
-    expect(lastOf(cant.effects, 'track').fact).toEqual(constraintBlockedFact(0));
+    expect(lastOf(cant.effects, 'track').fact).toEqual(constraintBlockedFact(0, 1));
   });
 
   it('a clash is explained: the sentence’s faces go danger at once, the smallest set and its rows when it arrives', () => {
@@ -193,7 +193,7 @@ describe('the preview of a complete sentence', () => {
       facts: { verdict: 'cant_fit', constraints: [0, 1] },
     });
     const explain = lastOf(cant.effects, 'explain');
-    expect(explain).toMatchObject({ target: { kind: 'candidate', candidate: [2, 3, -1] }, limits: LAYER_ORDER_MODEL_LIMITS.explain });
+    expect(explain).toMatchObject({ constraints: [[2, 0, 1], [2, 3, -1]], limits: LAYER_ORDER_MODEL_LIMITS.explain });
     // Round 4 "A clash being explained".
     expect(hintLine(cant.state)).toEqual({
       tone: 'busy_danger',
@@ -201,7 +201,7 @@ describe('the preview of a complete sentence', () => {
       text: { key: 'cant_fit_explaining', sentence: sentence(2, 'in_front_of', 3) },
     });
     expect(paneMarks(cant.state)).toMatchObject({ danger: [2, 3], clashRows: [] });
-    expect(lastOf(cant.effects, 'track').fact).toEqual(constraintBlockedFact(1));
+    expect(lastOf(cant.effects, 'track').fact).toEqual(constraintBlockedFact(1, 1));
 
     const done = play(cant.state, {
       type: 'explained',
@@ -256,7 +256,7 @@ describe('the preview of a complete sentence', () => {
     });
     const again = dispatch(out.state, { type: 'keep_trying' });
     expect(lastOf(again.effects, 'preview')).toMatchObject({
-      candidate: [2, 0, 1],
+      constraints: [[2, 0, 1]],
       limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.preview),
     });
     expect(chosenPreview(again.state)?.kind).toBe('pending');
@@ -266,7 +266,7 @@ describe('the preview of a complete sentence', () => {
     const p = picked(opened().state, 2, 0);
     const chosenRequest = lastPreviewRequest(p);
     const pointed = play(p.state, { type: 'verb_pointed', verb: 'behind' });
-    expect(lastOf(pointed.effects, 'preview').candidate).toEqual([2, 0, -1]);
+    expect(lastOf(pointed.effects, 'preview').constraints).toEqual([[2, 0, -1]]);
     const pointedCant = play(pointed.state, {
       type: 'previewed',
       request: lastPreviewRequest(pointed),
@@ -289,30 +289,38 @@ describe('the preview of a complete sentence', () => {
     // Picking the verb that can't fit blocks Add, and reports it once.
     const behind = play(closed.state, { type: 'verb_set', verb: 'behind' });
     expect(addState(behind.state)).toMatchObject({ enabled: false, why: 'cant_fit' });
-    expect(lastOf(behind.effects, 'track').fact).toEqual(constraintBlockedFact(0));
+    expect(lastOf(behind.effects, 'track').fact).toEqual(constraintBlockedFact(0, 1));
   });
 
   it('drops an answer to a preview it no longer waits on', () => {
     const p = picked(opened().state, 2, 0);
-    const replaced = play(p.state, { type: 'face_picked', face: 3, origin: 'pattern' });
-    expect(lastOf(replaced.effects, 'preview').candidate).toEqual([2, 3, -1]);
-    const stale = play(replaced.state, {
+    // D21: a second object joins the sentence, which is checked again as a whole.
+    const widened = play(p.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    expect(lastOf(widened.effects, 'preview').constraints).toEqual([
+      [2, 0, 1],
+      [2, 3, -1],
+    ]);
+    const stale = play(widened.state, {
       type: 'previewed',
       request: 999,
       facts: { verdict: 'timed_out' },
     });
-    expect(stale.state).toBe(replaced.state);
+    expect(stale.state).toBe(widened.state);
   });
 
   it('runs nothing while a commit is in flight, and catches up when it lands', () => {
     const added = play(fits(picked(opened().state, 2, 0)).state, { type: 'add' });
     const moved = play(added.state, { type: 'face_picked', face: 3, origin: 'pattern' });
-    expect(moved.state.sentence).toMatchObject({ subject: 2, object: 3 });
+    // D21: the pick adds 3 to the sentence Add is committing.
+    expect(moved.state.sentence).toMatchObject({ subject: 2, objects: [0, 3] });
     expect(effectsOf(moved.effects, 'preview')).toEqual([]);
     const landed = commits({ state: moved.state, effects: added.effects }, Uint32Array.of(2, 3, 4, 5));
-    // A sentence changed since Add is kept, not cleared, and previewed now.
-    expect(landed.state.sentence).toMatchObject({ subject: 2, object: 3 });
-    expect(lastOf(landed.effects, 'preview').candidate).toEqual([2, 3, -1]);
+    // A sentence changed since Add is kept, not cleared, less the object Add settled, and previewed now.
+    expect(landed.state.sentence).toMatchObject({ subject: 2, objects: [3] });
+    expect(lastOf(landed.effects, 'preview').constraints).toEqual([
+      [2, 0, 1],
+      [2, 3, -1],
+    ]);
   });
 });
 
@@ -344,7 +352,7 @@ describe('Add (Round3 add, commit)', () => {
       by: { picture: 'front' },
       count: true,
     });
-    expect(lastOf(landed.effects, 'track').fact).toEqual(constraintAddedFact('in_front_of', 'pattern', 'folded'));
+    expect(lastOf(landed.effects, 'track').fact).toEqual(constraintAddedFact('in_front_of', 'pattern', 'folded', 1));
     expect(listControls(landed.state)).toMatchObject({ undo: true, redo: false, clearAll: true });
   });
 
@@ -428,7 +436,7 @@ describe('the constraints list and its history', () => {
     const { removed } = removedAndLanded();
     const built = fits(picked(removed.state, 2, 0));
     const undone = commits(play(built.state, { type: 'undo' }), Uint32Array.of(2, 3, 4, 5));
-    expect(undone.state.sentence).toMatchObject({ subject: 2, object: null });
+    expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [] });
   });
 
   it('a row click puts its subject in the builder; with nothing left to choose the hint says so, quietly', () => {
@@ -465,7 +473,7 @@ describe('the builder through the reducer', () => {
   it('a click on empty paper clears the object, then the subject', () => {
     const p = picked(opened().state, 2, 0);
     const once = play(p.state, { type: 'ground_clicked' });
-    expect(once.state.sentence).toMatchObject({ subject: 2, object: null });
+    expect(once.state.sentence).toMatchObject({ subject: 2, objects: [] });
     expect(play(once.state, { type: 'ground_clicked' }).state.sentence).toMatchObject({ subject: null });
   });
 
@@ -474,7 +482,10 @@ describe('the builder through the reducer', () => {
     const p = picked(one.state, 2, 3);
     const back = play(p.state, { type: 'side_set', side: 'back' });
     expect(back.state.flash).toBeNull();
-    expect(lastOf(back.effects, 'preview').candidate).toEqual([2, 3, 1]);
+    expect(lastOf(back.effects, 'preview').constraints).toEqual([
+      [2, 0, 1],
+      [2, 3, 1],
+    ]);
     expect(lastOf(back.effects, 'solutions_position')).toEqual({
       type: 'solutions_position',
       generation: 2,
@@ -688,7 +699,7 @@ describe('restored records: rows by status', () => {
       expect(still.state.settle).toMatchObject({ kind: 'clash', rows: [second, waiting] });
       expect(still.state.rows.committed).toEqual([]);
       const explain = lastOf(still.effects, 'explain');
-      expect(explain.target).toEqual({ kind: 'list', constraints: commit.constraints });
+      expect(explain.constraints).toEqual(commit.constraints);
       expect(hintLine(still.state)?.text).toMatchObject({ key: 'attention_clash', explaining: true });
 
       const done = play(still.state, {
@@ -859,7 +870,7 @@ describe('solutions: the count and the stepper', () => {
     expect(moved.state.flash?.changed).toEqual(changedSpots([0]));
     expect(statusView(moved.state)?.stepper).toMatchObject({ index: 3, busy: false });
     // The sentence is checked again against the stepped order.
-    expect(lastOf(moved.effects, 'preview').candidate).toEqual([2, 0, 1]);
+    expect(lastOf(moved.effects, 'preview').constraints).toEqual([[2, 0, 1]]);
   });
 
   it('a step that finds no solution that way stops there', () => {
