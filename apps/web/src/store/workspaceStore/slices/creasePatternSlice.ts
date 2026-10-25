@@ -196,6 +196,7 @@ import {
   settleFoldedSolutionCursor,
 } from '../../../cp-workspace/folded/foldedSolutionCursor';
 import { resolveLayerOrder } from '../../../layer-order/host/hostEngineGateway';
+import { solutionPressOf } from '../../../layer-order/host/solutionCursorTable';
 import {
   foldedFigureLayerOrder,
   type FoldedFigureLayerOrder,
@@ -4082,22 +4083,8 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         if (answer.outcome !== 'moved' || !folded) {
           // Nothing moved: the figure is as it was, and the press says why.
           restorePreviousFigureQuietly(figure);
-          switch (answer.outcome) {
-            case 'end':
-              // Nothing lies before the first, counted or not.
-              return {
-                status: 'end',
-                final: answer.position.total.exact || (direction === 'previous' && answer.position.index <= 1),
-              };
-            case 'timed_out':
-              return { status: 'timed_out' };
-            case 'unrestored':
-              return { status: 'unrestored', why: answer.why };
-            case 'lost':
-              return { status: 'lost', cause: answer.cause };
-            default:
-              return { status: 'stopped' };
-          }
+          // As every host's press says it (`solutionCursorTable.ts`): nothing lies before the first, counted or not.
+          return answer.outcome === 'moved' ? { status: 'stopped' } : solutionPressOf(answer, direction);
         }
         const notApplied = i18n.t(
           'errors:cp.layerOrderNotApplied',

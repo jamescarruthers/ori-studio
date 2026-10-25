@@ -72,6 +72,24 @@ export function frontierSolutions(frontier: SolutionFrontier): Omit<LayerOrderSo
 }
 
 /**
+ * Where a constrained figure's or step's order stands among the solutions
+ * that fit its record (layer order H6, H9), as its solutions cursor last
+ * answered: "2 of 3+" while the count may find more, "2 of 3" once it is
+ * final, and "Solution 3" on one too large to count (D7). The host never
+ * counts at rest (D11), so a pager reads this only once a press has asked.
+ */
+export function solutionPlaceCount(
+  place: { position: { index: number; total: { n: number; exact: boolean } }; counted: boolean },
+  t: TFunction
+): string {
+  const { index, total } = place.position;
+  if (!place.counted) {
+    return t('panels:cpProperties.folded.layerOrderSolution', 'Solution {{number}}', { number: index });
+  }
+  return layerOrderCount(index, { discovered: total.n, hasNext: !total.exact }, t);
+}
+
+/**
  * Where order `number` stands, between ‹ and ›: "2 of 5" when the search has
  * found them all, "2 of 5+" while it may find more, the number alone before it
  * has looked (`solutions` null), "None" for a fold whose layers could not be
