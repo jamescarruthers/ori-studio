@@ -87,7 +87,17 @@ import {
   cpUserAnchorForLineIds,
   foldedFigureUserBounds,
 } from '../../cp-workspace/adapters/cpFoldedToScene';
+import type { TFunction } from 'i18next';
 import { isFoldedFigureStale } from '../../cp-workspace/folded/foldedFigureStaleness';
+import {
+  foldedFigureCurrentCase,
+  foldedFigureFrontier,
+} from '../../cp-workspace/folded/foldedFigureState';
+import {
+  showAnotherFoldedSolution,
+  showPreviousFoldedSolution,
+} from '../../cp-workspace/folded/foldedFigureVerbs';
+import { solutionFrontierOf } from '../../cp-workspace/folded/foldedSolutionFrontiers';
 import { FOLDED_FIGURE_LAYER_ORDERS_KEY } from '../../cp-workspace/folded/foldedFigureLayerOrders';
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import { foldedFigureOtherSideCamera } from '../../cp-workspace/folded/folded3dCamera';
@@ -95,6 +105,7 @@ import {
   resetFoldedFigureHandles,
   retainFoldedFigureHandle,
 } from '../../cp-workspace/folded/foldedFigureHandles';
+import { cancelOristudioCamvRefresh } from './slices/projectSlice';
 import {
   dropFolded3dRenderModel,
   folded3dRenderModel,
@@ -1348,6 +1359,10 @@ function resetStores(snapshot = makeSnapshot()) {
   analyticsMocks.track.mockReset();
   // Handle ownership is module-level; isolate it between tests.
   resetFoldedFigureHandles();
+  // So is the debounced CAMV refresh. One an edit in an earlier test left
+  // pending would run against this test's document when its 120ms come round,
+  // and replace the CAMV result the test seeded with the mock's empty one.
+  cancelOristudioCamvRefresh();
   useWorkspaceStore.setState(initialWorkspaceState, true);
   useLayoutStore.setState(initialLayoutState, true);
   const api = createMockEngineApi(snapshot);
@@ -5189,6 +5204,166 @@ describe('workspace store slices', () => {
       expect(foldEvents('fold solution cycled')).toEqual([
         { direction: 'next', solution_count_bucket: '<=5' },
       ]);
+    });
+
+    describe('‹, back one layer order (the Properties pane’s)', () => {
+      const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
+
+      /** A flat figure showing the third of three solutions found. */
+      async function onThirdOfThree() {
+        resetStores(seedSnapshot());
+        seedFlatSquare();
+        await expect(useWorkspaceStore.getState().foldOristudioCpDocument()).resolves.toBe(true);
+        const figure = useWorkspaceStore.getState().oristudioCpFoldedFigures[0]!;
+        const third = {
+          ...figure,
+          snapshot: {
+            ...figure.snapshot!,
+            discovered_fold_cases: 3,
+            current_fold_case: 3,
+            find_another_overlap_valid: false,
+          },
+        };
+        useWorkspaceStore.setState({ oristudioCpFoldedFigures: [third] });
+        return third;
+      }
+
+      it('goes back one fold case as one entry, keeps what it found past it, and says so', async () => {
+        const figure = await onThirdOfThree();
+        // The kernel restarts the enumeration and replays it to the second,
+        // forgetting the third it found on the way out.
+        oristudioCpMocks.foldOristudioCpFigureToCase.mockResolvedValueOnce({
+          snapshot: {
+            ...figure.snapshot,
+            discovered_fold_cases: 2,
+            current_fold_case: 2,
+            find_another_overlap_valid: true,
+          },
+          discovered_case_numbers: [1, 2],
+        });
+        const before = useWorkspaceStore.getState().oristudioCpHistoryPast.length;
+
+        await expect(showPreviousFoldedSolution(figure.id, t)).resolves.toBe(true);
+
+        expect(oristudioCpMocks.foldOristudioCpFigureToCase).toHaveBeenCalledWith(
+          figure.handle,
+          2,
+          'Order5',
+          expect.any(Number)
+        );
+        const landed = useWorkspaceStore.getState().oristudioCpFoldedFigures[0]!;
+        expect(foldedFigureCurrentCase(landed)).toBe(2);
+        expect(foldedFigureFrontier(landed)).toEqual({ cases: 3, complete: true });
+        const past = useWorkspaceStore.getState().oristudioCpHistoryPast;
+        expect(past).toHaveLength(before + 1);
+        expect(past.at(-1)?.label).toBe('Show previous solution');
+        expect(foldEvents('fold solution cycled')).toEqual([
+          { direction: 'previous', solution_count_bucket: '<=5' },
+        ]);
+      });
+
+      it('goes no further back than the first, and records nothing', async () => {
+        const third = await onThirdOfThree();
+        const first = { ...third, snapshot: { ...third.snapshot, current_fold_case: 1 } };
+        useWorkspaceStore.setState({ oristudioCpFoldedFigures: [first] });
+        const before = useWorkspaceStore.getState().oristudioCpHistoryPast.length;
+
+        await expect(showPreviousFoldedSolution(first.id, t)).resolves.toBe(false);
+
+        expect(oristudioCpMocks.foldOristudioCpFigureToCase).not.toHaveBeenCalled();
+        expect(useWorkspaceStore.getState().oristudioCpHistoryPast).toHaveLength(before);
+        expect(foldEvents('fold solution cycled')).toEqual([]);
+      });
+    });
+
+    describe('how far a figure’s layer-order search has reached, kept by handle outside undo', () => {
+      const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
+      const at = (discovered: number, current: number, more: boolean) => ({
+        ...foldedFigureSnapshot(),
+        discovered_fold_cases: discovered,
+        current_fold_case: current,
+        find_another_overlap_valid: more,
+      });
+      const figure = () => useWorkspaceStore.getState().oristudioCpFoldedFigures[0]!;
+
+      /** Folded on handle 7, then › twice, to the third and last of three solutions. */
+      async function steppedToThird() {
+        resetStores(seedSnapshot());
+        seedFlatSquare();
+        oristudioCpMocks.foldOristudioCpDocument.mockResolvedValueOnce({ handle: 7, snapshot: at(1, 1, true) });
+        await expect(useWorkspaceStore.getState().foldOristudioCpDocument()).resolves.toBe(true);
+        oristudioCpMocks.foldOristudioCpFigureAnother
+          .mockResolvedValueOnce(at(2, 2, true))
+          .mockResolvedValueOnce(at(3, 3, false));
+        await showAnotherFoldedSolution(figure().id, t);
+        await showAnotherFoldedSolution(figure().id, t);
+        expect(foldedFigureFrontier(figure())).toEqual({ cases: 3, complete: true });
+      }
+
+      it('counts the stored total in fold solution cycled, both ways', async () => {
+        await steppedToThird();
+        oristudioCpMocks.foldOristudioCpFigureToCase.mockResolvedValueOnce({
+          snapshot: at(2, 2, true),
+          discovered_case_numbers: [1, 2],
+        });
+        await showPreviousFoldedSolution(figure().id, t);
+        // Back on the second, the kernel has found two again; the search had found three.
+        expect(foldEvents('fold solution cycled')).toEqual([
+          { direction: 'next', solution_count_bucket: '<=5' },
+          { direction: 'next', solution_count_bucket: '<=5' },
+          { direction: 'previous', solution_count_bucket: '<=5' },
+        ]);
+        expect(solutionFrontierOf(7)).toEqual({ cases: 3, complete: true });
+      });
+
+      it('never shrinks on undo, after ‹ or after ›', async () => {
+        await steppedToThird();
+        oristudioCpMocks.foldOristudioCpFigureToCase.mockResolvedValueOnce({
+          snapshot: at(2, 2, true),
+          discovered_case_numbers: [1, 2],
+        });
+        await showPreviousFoldedSolution(figure().id, t);
+        expect(foldedFigureFrontier(figure())).toEqual({ cases: 3, complete: true });
+
+        // Undo the ‹, then each › back to the fold: the entries put back reported
+        // fewer, and the handle's search has still reached three.
+        for (let undo = 0; undo < 3; undo += 1) {
+          await useWorkspaceStore.getState().undo();
+          expect(foldedFigureFrontier(figure()), `undo ${undo + 1}`).toEqual({ cases: 3, complete: true });
+        }
+        expect(useWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.handle).toBe(7);
+      });
+
+      it('starts a refold’s new handle fresh', async () => {
+        await steppedToThird();
+        oristudioCpMocks.foldOristudioCpDocument.mockResolvedValueOnce({ handle: 11, snapshot: at(1, 1, true) });
+        await expect(useWorkspaceStore.getState().refoldOristudioCpFoldedFigure(figure().id)).resolves.toBe(true);
+        expect(figure().handle).toBe(11);
+        expect(foldedFigureFrontier(figure())).toEqual({ cases: 1, complete: false });
+      });
+
+      it('shows nothing of another fold on a handle the kernel reuses', async () => {
+        await steppedToThird();
+        // The slot freed and given to a new fold, as the kernel may.
+        useWorkspaceStore.setState({ oristudioCpFoldedFigures: [] });
+        seedFlatSquare();
+        oristudioCpMocks.foldOristudioCpDocument.mockResolvedValueOnce({ handle: 7, snapshot: at(1, 1, true) });
+        await expect(useWorkspaceStore.getState().foldOristudioCpDocument()).resolves.toBe(true);
+        expect(figure().handle).toBe(7);
+        expect(foldedFigureFrontier(figure())).toEqual({ cases: 1, complete: false });
+      });
+
+      it('carries what the original had found to a duplicate', async () => {
+        await steppedToThird();
+        oristudioCpMocks.duplicateOristudioCpFoldedFigure.mockResolvedValueOnce({
+          handle: 8,
+          snapshot: at(3, 3, false),
+        });
+        await expect(
+          useWorkspaceStore.getState().duplicateOristudioCpFoldedFigure(figure().id)
+        ).resolves.toBe(true);
+        expect(solutionFrontierOf(8)).toEqual({ cases: 3, complete: true });
+      });
     });
 
     it('sends no count, angle or geometry as a property value', async () => {

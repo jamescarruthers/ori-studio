@@ -73,8 +73,13 @@ import type { CanvasLayerBinding } from '../canvasObjects/canvasLayerBindings';
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { foldedFigureMenuItemsWith } from './foldedFigureMenuItems';
 import { queueFoldedModelWrite } from './foldedModelWriteQueue';
-import { deleteFoldedFigure, setFoldedFigureDisplayStyle } from './foldedFigureVerbs';
-import { openFoldedFigureExport } from './openFoldedFigureExport';
+import {
+  deleteFoldedFigure,
+  duplicateFoldedFigure,
+  exportFoldedFigure,
+  setFoldedFigureDisplayStyle,
+  showAnotherFoldedSolution,
+} from './foldedFigureVerbs';
 import { useSettingsStore } from '../../store/settingsStore';
 import { effectiveObjectPaperStyle, setFoldedFigureAppearance } from '../paper/objectPaperStyle';
 
@@ -155,9 +160,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
     (state) => state.setOristudioCpActiveFoldedFigure
   );
   const foldOristudioCpDocument = useWorkspaceStore((state) => state.foldOristudioCpDocument);
-  const foldAnotherOristudioCpFigure = useWorkspaceStore(
-    (state) => state.foldAnotherOristudioCpFigure
-  );
   const setOristudioCpFoldedFigurePlacement = useWorkspaceStore(
     (state) => state.setOristudioCpFoldedFigurePlacement
   );
@@ -166,9 +168,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
   );
   const updateOristudioCpFoldedFigureModel = useWorkspaceStore(
     (state) => state.updateOristudioCpFoldedFigureModel
-  );
-  const duplicateOristudioCpFoldedFigure = useWorkspaceStore(
-    (state) => state.duplicateOristudioCpFoldedFigure
   );
   const refoldOristudioCpFoldedFigure = useWorkspaceStore(
     (state) => state.refoldOristudioCpFoldedFigure
@@ -870,12 +869,9 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
 
   const handleDuplicateFoldedFigure = useCallback(() => {
     if (!activeFoldedFigure) return;
-    const id = activeFoldedFigure.id;
-    runFoldedFigureAction(
-      t('panels:creasePattern.duplicateFoldedModelAction', 'Duplicate folded model'),
-      () => duplicateOristudioCpFoldedFigure(id)
-    );
-  }, [activeFoldedFigure, duplicateOristudioCpFoldedFigure, runFoldedFigureAction, t]);
+    endOpenMenuGesture();
+    void duplicateFoldedFigure(activeFoldedFigure.id, t);
+  }, [activeFoldedFigure, endOpenMenuGesture, t]);
 
   /** Delete a folded figure by id, defaulting to the one the menu is acting on. */
   const handleDeleteFoldedFigure = useCallback(
@@ -948,16 +944,17 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
       paperStyle: foldedPaperStyle,
       inheritedPaperStyle: displayPaperStyle,
       setAppearance: setFoldedAppearance,
-      foldAnother: (figure) =>
-        runFoldedFigureAction(
-          t('panels:creasePattern.anotherSolutionAction', 'Show another solution'),
-          () => foldAnotherOristudioCpFigure(figure.id)
-        ),
-      duplicate: (figure) =>
-        runFoldedFigureAction(
-          t('panels:creasePattern.duplicateFoldedModelAction', 'Duplicate folded model'),
-          () => duplicateOristudioCpFoldedFigure(figure.id)
-        ),
+      // The Properties pane runs these same verbs (`foldedFigureVerbs.ts`); a
+      // colour run the menu still has open is committed first, under its own
+      // label, as `runFoldedFigureAction` does for every verb here.
+      foldAnother: (figure) => {
+        endOpenMenuGesture();
+        void showAnotherFoldedSolution(figure.id, t);
+      },
+      duplicate: (figure) => {
+        endOpenMenuGesture();
+        void duplicateFoldedFigure(figure.id, t);
+      },
       remove: (figure) => void deleteFoldedFigure(figure.id, t),
       refold: (figure) =>
         runFoldedFigureAction(
@@ -971,9 +968,7 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
       isStale: (figure) => staleFoldedFigureIds.has(figure.id),
       // Not wrapped in runFoldedFigureAction: saving a file changes nothing
       // about the document, so it is not an undo step.
-      exportFigure: (figure) => {
-        void openFoldedFigureExport(figure.id, t);
-      },
+      exportFigure: (figure) => exportFoldedFigure(figure.id, t),
       // What a 3D verdict offers to do about itself. None of the three is an
       // undo step: two only change what is shown, and the third opens a
       // simulation window, which records its own.
@@ -1023,8 +1018,7 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
       setFoldedAppearance,
       trackStyled,
       setOristudioCpFolded3dCamera,
-      foldAnotherOristudioCpFigure,
-      duplicateOristudioCpFoldedFigure,
+      endOpenMenuGesture,
       refoldOristudioCpFoldedFigure,
       runFoldedFigureAction,
       setOristudioCpViewportOption,

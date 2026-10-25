@@ -5,13 +5,13 @@ import type { DiagramLinkedPoseAction } from '../../diagram/actions/diagramLinke
 import { useOpenLinkedPose } from '../../diagram/capture/openLinkedPose';
 import { useDiagramFoldStepPose } from '../../diagram/fold/useDiagramFoldStepPose';
 import { isLockedStep, type DiagramStep } from '../../diagram/document/diagramDocument';
-import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { useReferencesStepWays } from '../../diagram/references/useReferencesStepWays';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { DiagramWayRow } from './DiagramWayChooser';
-import { IconButton } from '../ui/IconButton';
+import type { ControlVerb } from '../../lib/controlVerb';
+import { Pager } from '../ui/Pager';
 import { FieldRow, NumberRow, SegmentedRow } from '../ui/fieldRows';
 import styles from './DiagramStepPose.module.css';
 
@@ -159,11 +159,13 @@ export function DiagramStepPose({
       {render.mode === 'folded-flat' && !main && (
         // Any layer order found, back or on (D23), as Pose's own pager has them.
         <FieldRow label={t('panels:diagram.pose.layerOrder', 'Layer order')} kind="text">
-          <span className={styles.pager}>
-            {layerVerb(linked.find((action) => action.id === 'previous-solution'), ChevronLeft)}
-            <span className={styles.pagerLabel}>{linkedPose.layerOrder?.count ?? render.foldCase}</span>
-            {layerVerb(linked.find((action) => action.id === 'next-solution'), ChevronRight)}
-          </span>
+          <Pager
+            label={t('panels:diagram.pose.layerOrder', 'Layer order')}
+            previous={layerVerb(linked.find((action) => action.id === 'previous-solution'))}
+            next={layerVerb(linked.find((action) => action.id === 'next-solution'))}
+          >
+            {linkedPose.layerOrder?.count ?? render.foldCase}
+          </Pager>
         </FieldRow>
       )}
       {render.mode === 'folded-flat' && !main && (
@@ -207,21 +209,16 @@ function RotationRow({
 }
 
 /**
- * One of a flat fold's layer order verbs, as a small button: refused rather
- * than disabled, while a capture runs or at either end, so it keeps the focus
- * a press gave it.
+ * One of a flat fold's layer order verbs, for the pager: refused rather than
+ * disabled while a capture runs or at either end, so it keeps the focus a
+ * press gave it.
  */
-function layerVerb(action: DiagramLinkedPoseAction | undefined, Icon: LucideIcon): ReactNode {
-  if (!action) return null;
-  return (
-    <IconButton
-      size="sm"
-      aria-label={action.label}
-      title={(action.disabled || action.waiting) && action.hint ? action.hint : action.label}
-      aria-disabled={action.disabled || action.waiting || undefined}
-      onClick={action.run}
-    >
-      <Icon size={14} />
-    </IconButton>
-  );
+function layerVerb(action: DiagramLinkedPoseAction | undefined): ControlVerb | undefined {
+  if (!action) return undefined;
+  return {
+    label: action.label,
+    disabled: action.disabled || action.waiting,
+    hint: action.hint,
+    run: action.run,
+  };
 }

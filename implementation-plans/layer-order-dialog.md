@@ -962,7 +962,7 @@ H3's new rehydrate, so it can only follow H3.
 - [ ] U10: inspector
 - [x] H2: host engine (#512)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
-- [ ] H3a: Edit's Properties pane
+- [x] H3a: Edit's Properties pane (#517)
 - [ ] H3: Edit display and Apply
 - [ ] H4: Edit refold with constraints
 - [ ] H5: Fold with layer order…
