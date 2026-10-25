@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { onEngineLost } from '../../engines/engineHost';
 import i18n from '../../i18n';
+import { openLayerOrderResolveBatch } from '../../layer-order/host/hostEngineGateway';
 import { requestConfirmation } from '../../store/commandDialogStore';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -12,7 +13,7 @@ import { knownCreasesOf } from './captureCreases';
 import { diagramLinkStatus } from './diagramLinks';
 import { abandonOnEngineLoss } from './engineLoss';
 import { linkedSourceOf, refreshKind, type DiagramLinkContext } from './linkStatus';
-import { sayCaptureOutcome, trackCapture } from './stepCaptureActions';
+import { layerOrderOf, sayCaptureOutcome, trackCapture } from './stepCaptureActions';
 import { linkContextNow } from './useLinkStatus';
 
 /** The label Refresh all's one undo entry carries. */
@@ -73,6 +74,9 @@ export async function refreshAllDiagramSteps(): Promise<number> {
   useWorkspaceStore.setState({ diagramRefreshAll: { total: stale.length, done: 0 } });
   let refreshed = 0;
   let joinEntry: object | undefined;
+  // One host engine worker for every step whose layer order is restored, spawned
+  // by the first of them, if any is; ended with the run (layer order H7).
+  const layerOrders = openLayerOrderResolveBatch();
   try {
     for (const [index, stepId] of stale.entries()) {
       await nextTurn();
@@ -107,6 +111,8 @@ export async function refreshAllDiagramSteps(): Promise<number> {
           kind: 'diagram-refresh',
           label: REFRESH_ALL_LABEL,
           joinEntry,
+          ...layerOrderOf(step.source),
+          layerOrders,
         })
         .finally(() => {
           refreshing = null;
@@ -116,11 +122,16 @@ export async function refreshAllDiagramSteps(): Promise<number> {
         refreshed += 1;
         joinEntry ??= useWorkspaceStore.getState().diagramHistory.past.at(-1);
       }
+      // A step whose constraints need attention is flagged in the run's one entry too.
+      if (outcome.status === 'needs-attention' && outcome.changed) {
+        joinEntry ??= useWorkspaceStore.getState().diagramHistory.past.at(-1);
+      }
       if (outcome.status === 'stopped') break;
       if (outcome.status !== 'captured' && outcome.status !== 'discarded') sayCaptureOutcome(outcome);
       useWorkspaceStore.setState({ diagramRefreshAll: { total: stale.length, done: index + 1 } });
     }
   } finally {
+    layerOrders.close();
     unlisten();
     cancelRun = null;
     if (useWorkspaceStore.getState().diagramLoadId === loadId) {

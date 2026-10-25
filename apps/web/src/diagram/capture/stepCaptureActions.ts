@@ -3,6 +3,7 @@ import {
   trackDiagramPictureCaptured,
   trackDiagramSourceOpened,
   trackDiagramStepShownAs,
+  trackLayerConstraintsNeedAttention,
   type DiagramCaptureKind,
   type DiagramCaptureOutcome as TrackedOutcome,
   type DiagramCaptureVia,
@@ -13,6 +14,8 @@ import { fold3dRefusalMessage } from '../../cp-workspace/folded/foldedFigureNoti
 import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
 import { regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
+import { needsAttentionFact } from '../../layer-order/model/layerOrderAnalytics';
+import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
 import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -26,6 +29,7 @@ import {
   spreadStartsFor,
   type DiagramLayerSpread,
   type DiagramCpRender,
+  type DiagramCpSource,
   type DiagramDocument,
   type DiagramShowAs,
   type DiagramStep,
@@ -139,6 +143,7 @@ export async function showLinkedStepAs(
     render,
     kind: 'diagram-capture',
     label: showAsLabel(way),
+    ...layerOrderOf(step.source),
   });
   report(outcome, render, 'show_as');
   if (outcome.status !== 'captured') return false;
@@ -171,6 +176,8 @@ export async function duplicateLinkedStepAs(stepId: string, way: DiagramShowAs):
     kind: 'diagram-capture',
     label: 'Duplicate step',
     joinEntry: duplicated,
+    // The copy's: its source is the original's, record and all.
+    ...layerOrderOf(source),
   });
   report(outcome, render, 'duplicate_as');
   if (outcome.status !== 'captured') {
@@ -220,9 +227,20 @@ export async function refreshDiagramStep(stepId: string): Promise<boolean> {
     render,
     kind: 'diagram-refresh',
     label: 'Refresh picture',
+    ...layerOrderOf(step.source),
   });
   report(outcome, render, 'refresh');
   return outcome.status === 'captured';
+}
+
+/**
+ * A capture's layer order, from the step's source: the record it keeps, if
+ * any, for the capture to carry and draw (layer order H7). A Link or Relink
+ * asks with none — its creases are another region's, whose faces the record
+ * does not name.
+ */
+export function layerOrderOf(source: DiagramCpSource): { layerOrder?: string } {
+  return source.layerOrder === undefined ? {} : { layerOrder: source.layerOrder };
 }
 
 /**
@@ -269,10 +287,19 @@ export function trackCapture(
   asked: DiagramCpRender,
   via: DiagramCaptureVia
 ): void {
+  const attention = captureAttention(outcome);
+  // Constraints that did not all hold, however the picture came out (spec §10).
+  if (attention) trackLayerConstraintsNeedAttention(needsAttentionFact('diagram_step', attention.count).properties);
   const tracked = trackedOutcome(outcome);
   if (!tracked) return;
   const render = outcome.status === 'captured' ? outcome.render : asked;
   trackDiagramPictureCaptured(captureKind(render), tracked, via);
+}
+
+/** What a capture left the step's layer order needing, if it needs a look: kept back, or drawn with some left out. */
+function captureAttention(outcome: DiagramCaptureOutcome): LayerOrderAttention | null {
+  if (outcome.status === 'needs-attention') return outcome.attention;
+  return outcome.status === 'captured' ? (outcome.attention ?? null) : null;
 }
 
 /**
@@ -283,8 +310,26 @@ export function trackCapture(
 export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
   const t = i18n.t;
   switch (outcome.status) {
+    case 'needs-attention':
+      // The Step pane's Picture section says why, with Review… (D14).
+      toast.message(
+        t(
+          'toasts:diagram.capture.layerOrderKept',
+          'This step’s layer constraints need attention, so it keeps its picture.'
+        )
+      );
+      return;
     case 'captured':
-      if (outcome.noLayerOrder) {
+      // Drawn with some left out; one waiting for its creases to fold flat says so in the Step pane alone.
+      if (outcome.attention && outcome.attention.reason !== 'route-3d') {
+        toast.message(
+          t('toasts:diagram.capture.layerOrderAttention', {
+            count: outcome.attention.count,
+            defaultValue_one: '1 of this step’s layer constraints needs attention.',
+            defaultValue_other: '{{count}} of this step’s layer constraints need attention.',
+          })
+        );
+      } else if (outcome.noLayerOrder) {
         toast.message(
           t(
             'toasts:diagram.capture.noLayerOrder',

@@ -11,18 +11,21 @@
  */
 import {
   captureStep,
+  type CaptureLayerOrder,
   type CapturedPicture,
   type CpCaptureRuntime,
   type SheetPaper,
   type SimulateFlat,
 } from '../../diagram/capture/captureFolded';
 import type { KnownCreases } from '../../diagram/capture/captureCreases';
+import type { CaptureLayerOrderResolve } from '../../diagram/capture/captureLayerOrder';
 import { abandonOnEngineLoss } from '../../diagram/capture/engineLoss';
 import {
   DEFAULT_DIAGRAM_STYLE,
   DEFAULT_LAYER_SPREAD,
   isLockedStep,
   setFoldStepPicture,
+  setLinkedLayerOrder,
   setLinkedPicture,
   spreadStartsFor,
   type DiagramCpRender,
@@ -50,7 +53,14 @@ import type {
   OristudioCpFold3dRefusal,
 } from '../../engine/oristudioCpTypes';
 import type { FoldDocument } from '../../engine/types';
+import {
+  resolveLayerOrder,
+  type LayerOrderResolveBatch,
+} from '../../layer-order/host/hostEngineGateway';
 import { FOLD_RUN_NONE } from '../../lib/foldCancellation';
+import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
+import type { LayerOrderApplied } from '../../lib/layerOrder/layerOrderRequest';
+import type { PaperFrame } from '../../lib/layerOrder/paperFrame';
 import { paperPngSize, paperSvgToPng } from '../../lib/paper/paperPng';
 import type { PaperPage } from '../../lib/paper/paperPage';
 import { pagePtPerPx, paperSceneToSvg } from '../../lib/paper/paperSvg';
@@ -83,6 +93,23 @@ export interface DiagramCaptureRequest {
    * an entry of its own rather than being merged into.
    */
   joinEntry?: object;
+  /**
+   * The step's layer order record (`DiagramCpSource.layerOrder`), carried on
+   * the source the capture makes and drawn when it folds flat (layer order
+   * H7). Absent for a link, which starts without one.
+   */
+  layerOrder?: string;
+  /**
+   * The host engine's batch a Refresh all restores every step's record on,
+   * so the run spawns one worker; absent, a capture spawns its own.
+   */
+  layerOrders?: LayerOrderResolveBatch;
+  /**
+   * An order the Layer order dialog applied to the step, folded as it is,
+   * with the paper frame its record was made in; it takes `layerOrder`'s
+   * place (`stepLayerOrderActions.ts`).
+   */
+  layerOrderApplied?: { applied: LayerOrderApplied; frame: PaperFrame };
 }
 
 export type DiagramCaptureOutcome =
@@ -96,7 +123,19 @@ export type DiagramCaptureOutcome =
       noLayerOrder: boolean;
       /** Too detailed to keep as vector; kept as a bitmap. */
       tooDetailed: boolean;
+      /**
+       * The step's layer order record's summary after it, when some of its
+       * constraints need a look (layer order D10, D13); absent or null when
+       * none do, or the step has none.
+       */
+      attention?: LayerOrderAttention | null;
     }
+  /**
+   * The step's layer order could not be drawn (D10): it keeps its picture,
+   * and its record is flagged with `attention`; `changed` is false when it
+   * was flagged so already.
+   */
+  | { status: 'needs-attention'; attention: LayerOrderAttention; changed: boolean }
   | { status: 'no-pattern' }
   | { status: 'missing' }
   | { status: 'unknown' }
@@ -277,6 +316,59 @@ export async function commitStepCapture(
   return { changed: next !== null, tooDetailed: kept.asset !== undefined, ...(next && replaced > 0 ? { replaced } : {}) };
 }
 
+/**
+ * Commit a step's layer order record, flagged, as one undo step, its picture
+ * kept (layer order D10): what a capture that could not draw the record's
+ * order leaves. Under the capture's guard, as {@link commitStepCapture} is;
+ * null when it was dropped.
+ */
+export function commitStepLayerOrder(
+  store: DiagramCaptureStore,
+  commit: DiagramCommit,
+  start: CaptureRunStart,
+  layerOrder: string,
+  label: string,
+  joinEntry?: object
+): { changed: boolean } | null {
+  const now = store.get();
+  const { stepId, loadId, revision } = start.guard;
+  const current = now.diagram ? stepById(now.diagram, stepId) : null;
+  if (now.diagramLoadId !== loadId || !current || current.revision !== revision) return null;
+  const join = joinEntry !== undefined && now.diagramHistory.past.at(-1) === joinEntry;
+  const next = commit(label, (diagram) => setLinkedLayerOrder(diagram, stepId, layerOrder), join);
+  return { changed: next !== null };
+}
+
+/** The layer order a capture asks `captureStep` to draw: one the dialog applied, the step's record, or none. */
+function captureLayerOrderOf(
+  request: DiagramCaptureRequest,
+  stop: AbortSignal | undefined
+): { layerOrder?: CaptureLayerOrder } {
+  if (request.layerOrderApplied) return { layerOrder: { kind: 'applied', ...request.layerOrderApplied } };
+  if (request.layerOrder === undefined) return {};
+  return {
+    layerOrder: {
+      kind: 'record',
+      json: request.layerOrder,
+      resolve: layerOrderResolver(request.layerOrders),
+      ...(stop ? { stop } : {}),
+    },
+  };
+}
+
+/**
+ * The host engine as a capture asks it (`captureLayerOrder.ts`): a resolve on
+ * Refresh all's batch, which keeps one worker across its steps, or on a
+ * worker of its own, spawned for it and ended when it answers. Neither loads
+ * a line of the engine until a step's record is resolved.
+ */
+export function layerOrderResolver(batch?: LayerOrderResolveBatch): CaptureLayerOrderResolve {
+  return (source, record, stop) =>
+    batch
+      ? batch.resolve(source, record, undefined, stop ? { signal: stop } : {})
+      : resolveLayerOrder(source, record, undefined, stop ? { signal: stop } : {});
+}
+
 /** What a capture commits: the step's new source and picture, and for a Fold step the marks its fold brings. */
 export interface StepCaptured {
   source: DiagramPosedSource;
@@ -308,7 +400,7 @@ export async function runDiagramCapture(
     const document = start.cp.document;
     const sheets = await abandonOnEngineLoss(ensureCpSheetIndex(document));
     const { diagram } = store.get();
-    const capture = (runtime: CpCaptureRuntime) =>
+    const capture = (runtime: CpCaptureRuntime, stop?: AbortSignal) =>
       captureStep(runtime, {
         document,
         sheets,
@@ -319,12 +411,17 @@ export async function runDiagramCapture(
         simulateFlat: storeSimulateFlat(store),
         sheetPaper: storeSheetPaper(store),
         spreadStart: diagram ? spreadStartsFor(diagram, stepId).any : DEFAULT_LAYER_SPREAD,
+        ...captureLayerOrderOf(request, stop),
       });
     const result =
       request.render.mode === 'crease-pattern' || request.render.mode === 'simulated'
         ? // The kernel folds nothing: there is no run to show or stop.
           await capture(stepCaptureRuntime(start))
         : await runStepFold(store, start, request.kind, capture);
+    if (result.status === 'needs-attention') {
+      const flagged = commitStepLayerOrder(store, commit, start, result.layerOrder, request.label, request.joinEntry);
+      return flagged ? { status: 'needs-attention', attention: result.attention, changed: flagged.changed } : { status: 'discarded' };
+    }
     if (result.status !== 'captured') return result;
     const committed = await commitStepCapture(
       store,
@@ -341,6 +438,7 @@ export async function runDiagramCapture(
       render: result.source.render,
       noLayerOrder: result.noLayerOrder,
       tooDetailed: committed.tooDetailed,
+      attention: result.attention,
     };
   } catch (error) {
     return captureFailure(error);
