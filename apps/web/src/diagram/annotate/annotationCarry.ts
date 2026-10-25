@@ -19,7 +19,9 @@
 import { meanValueWeights } from '../../cp-workspace/folded/foldedLayerSpread';
 import { storedSceneStep } from '../capture/captureGeometry';
 import { boundariesMatchMoved, isRelativeFingerprint } from '../../cp-workspace/regions/regionIdentity';
+import { NEWER } from '../../lib/documentFile';
 import { turnClockwise } from '../../lib/geometry';
+import { readLayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { PaperFaceItem, PaperScene, SceneBounds, ScenePoint } from '../../lib/paper/paperScene';
 import { isCardMark } from '../document/cardMarks';
 import {
@@ -183,6 +185,34 @@ function samePosedLink(from: DiagramPosedSource, to: DiagramPosedSource): boolea
 }
 
 /**
+ * Whether two flat poses show one layer order, so a change between them is
+ * a turn, not a new picture (layer order H7): the kernel's same case, with
+ * no record on either; or, where a record is (`DiagramCpSource.layerOrder`),
+ * the same faces in the same order — what its constraints say, or whether
+ * they need a look, draws nothing. A record put on or taken off is another
+ * order, whatever case either says.
+ */
+function sameLayerOrder(
+  was: Extract<DiagramCpRender, { mode: 'folded-flat' }>,
+  is: Extract<DiagramCpRender, { mode: 'folded-flat' }>,
+  from: DiagramPosedSource,
+  to: DiagramPosedSource
+): boolean {
+  const [before, after] = [recordedOrderOf(from), recordedOrderOf(to)];
+  if (before === null && after === null) return was.foldCase === is.foldCase;
+  return before !== null && before === after;
+}
+
+/** The order a source's record draws, as a key: its faces and their order; null for a source with none. */
+function recordedOrderOf(source: DiagramPosedSource): string | null {
+  if (source.kind !== 'cp' || source.layerOrder === undefined) return null;
+  const read = readLayerOrderRecord(source.layerOrder);
+  // One this build cannot read is no order it can tell from another: never the same.
+  if (read === NEWER || !read.ok) return `unread:${source.layerOrder}`;
+  return JSON.stringify([read.record.faces, read.record.order]);
+}
+
+/**
  * Whether `after`'s picture is `before`'s in another colour and nothing else:
  * a crease pattern's paper put on the other side's colour (the Step pane's
  * Front | Back), of the same region and creases at the same turn, turned over
@@ -256,7 +286,11 @@ function pictureMove(
     if (was.mode !== is.mode) return null;
     if (was.mode !== 'crease-pattern' && was.mode !== 'folded-flat') return null;
     if (is.mode !== 'crease-pattern' && is.mode !== 'folded-flat') return null;
-    if (was.mode === 'folded-flat' && is.mode === 'folded-flat' && (was.side !== is.side || was.foldCase !== is.foldCase)) {
+    if (
+      was.mode === 'folded-flat' &&
+      is.mode === 'folded-flat' &&
+      (was.side !== is.side || !sameLayerOrder(was, is, from, to))
+    ) {
       return null;
     }
     // The axis a turn-over turns about follows the poses' own quarter turns, so
