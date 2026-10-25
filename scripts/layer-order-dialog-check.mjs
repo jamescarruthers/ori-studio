@@ -359,7 +359,7 @@ async function openKabutoInEdit(page, url, theme) {
  * digest forged when `forge`); the answer lands on `window.__layerOrderOutcome`.
  */
 async function openDialogOnKabuto(page, { forge = false } = {}) {
-  await page.evaluate(async (forge) => {
+  await page.evaluate(async ({ forge }) => {
     const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
     const { DEFAULT_FOLDED_MODEL } = await import('/src/lib/orieditaNativeMetadata.ts');
     const { DEFAULT_PAPER_STYLE } = await import('/src/lib/paper/paperStyle.ts');
@@ -374,11 +374,18 @@ async function openDialogOnKabuto(page, { forge = false } = {}) {
       look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
       shown: scene,
       name: 'Kabuto',
+      byline: 'Traditional',
     }).then((outcome) => {
       window.__layerOrderOutcome = outcome;
     });
-  }, forge);
-  await page.getByRole(DIALOG.role, { name: DIALOG.name }).waitFor({ state: 'visible', timeout: 30000 });
+  }, { forge });
+  // By its frame, not its name, which a locale translates.
+  await anyDialog(page).waitFor({ state: 'visible', timeout: 30000 });
+}
+
+/** The modal on top, whatever its name says in the locale. */
+function anyDialog(page) {
+  return page.locator('[role="dialog"][aria-modal="true"][data-shortcut-barrier]').last();
 }
 
 /** How the last dialog ended, once it has: its kind, and for Apply what it handed over. */
@@ -446,10 +453,11 @@ function dialogShellCases(theme) {
     await page.context().unroute(FOLD_WASM_ROUTE);
     await ready.waitFor({ state: 'visible' });
     await record(`dialog-${tag}-ready`, await dialogShot(page));
+    // Kabuto's own order, held whole, nothing added: Apply changes nothing (D16), and the host writes nothing.
     await dialog.getByRole('button', { name: 'Apply' }).click();
     const applied = await dialogOutcome(page);
-    if (applied.kind !== 'applied' || applied.relations === 0) throw new Error(`Apply: ${JSON.stringify(applied)}`);
-    console.log(`[${tag}] Apply handed over ${applied.relations / 2} relations and ${applied.constraints} constraints`);
+    if (applied.kind !== 'unchanged') throw new Error(`Apply: ${JSON.stringify(applied)}`);
+    console.log(`[${tag}] Apply on the host's own order answered unchanged`);
 
     await openDialogOnKabuto(page, { forge: true });
     await dialog.getByRole('alert').waitFor({ state: 'visible', timeout: 60000 });
@@ -481,6 +489,99 @@ function dialogShellCases(theme) {
 
 const PHONE = { width: 390, height: 844 };
 
+/**
+ * The dialog's title line on a phone, in the locales whose words run longest
+ * and English: the title, the pane switch and the close button on one line
+ * that never wraps, nothing past the screen's edge. Fails on a broken line.
+ */
+async function dialogPhoneLocales(page, url, record) {
+  await openKabutoInEdit(page, url, null);
+  for (const width of [360, 375]) {
+    await page.setViewportSize({ width, height: 812 });
+    for (const lng of ['en', 'pt-BR', 'ru']) {
+      await page.evaluate(async (lng) => {
+        const i18n = (await import('/src/i18n/index.ts')).default;
+        await i18n.changeLanguage(lng);
+        await i18n.loadNamespaces(['dialogs']);
+      }, lng);
+      await openDialogOnKabuto(page);
+      const dialog = anyDialog(page);
+      await dialog.getByRole('complementary').waitFor({ state: 'visible', timeout: 60000 });
+      const line = await page.evaluate(() => {
+        const root = [...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].at(-1);
+        const bar = root.querySelector('[role="document"] > div');
+        const close = bar.lastElementChild;
+        const head = bar.children[0];
+        const title = head.children[0];
+        const lead = head.children[1];
+        const box = (el) => el.getBoundingClientRect();
+        const middle = (el) => Math.round(box(el).top + box(el).height / 2);
+        return {
+          title: title.textContent,
+          clipped: title.scrollWidth > title.clientWidth,
+          oneLine: middle(title) === middle(close) && middle(lead) === middle(close),
+          inside: Math.round(box(close).right) <= window.innerWidth && Math.round(box(lead).right) <= Math.round(box(close).left),
+          scrolls: document.documentElement.scrollWidth > window.innerWidth,
+        };
+      });
+      const ok = line.oneLine && line.inside && !line.scrolls;
+      console.log(`[phone ${width} ${lng}] ${ok ? 'one line' : 'BROKEN'}: "${line.title}"${line.clipped ? ' (truncated)' : ''}`);
+      if (!ok) throw new Error(`the title line broke at ${width}px in ${lng}: ${JSON.stringify(line)}`);
+      await page.mouse.move(1, 1);
+      await record(`dialog-phone-${width}-${lng}`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+      await page.keyboard.press('Escape');
+      await dialogOutcome(page);
+    }
+  }
+  await page.evaluate(async () => (await import('/src/i18n/index.ts')).default.changeLanguage('en'));
+  await page.setViewportSize(VIEWPORT);
+}
+
+/**
+ * Fold's Import CP, ModalFrame's other user, wide and on a phone: a
+ * screenshot each (for `compare`) and its DOM with every element's computed
+ * style, written beside them as JSON, with CSS-module hashes left out. Run on
+ * the base and on the change, then diff the two.
+ */
+async function foldImportFrame(page, url, record, { dir }) {
+  await openFold(page, url);
+  for (const size of [VIEWPORT, { width: 375, height: 812 }]) {
+    await page.setViewportSize(size);
+    await page.evaluate(async () => {
+      const { useFoldImportUiStore } = await import('/src/fold/io/foldImportUiStore.ts');
+      useFoldImportUiStore.getState().open();
+    });
+    const dialog = page.getByRole('dialog', { name: 'Import crease pattern' });
+    await dialog.waitFor({ state: 'visible', timeout: 30000 });
+    await page.mouse.move(1, 1);
+    await settle(page);
+    const dump = await page.evaluate(() => {
+      const root = document.querySelector('[role="dialog"][aria-label="Import crease pattern"]');
+      const PROPS = [
+        'display', 'position', 'box-sizing', 'width', 'height', 'min-width', 'max-width', 'margin', 'padding',
+        'border', 'border-radius', 'background-color', 'color', 'font-size', 'font-weight', 'line-height',
+        'flex', 'flex-wrap', 'order', 'align-items', 'justify-content', 'gap', 'grid-template-columns',
+        'grid-row', 'grid-column', 'overflow', 'white-space', 'text-overflow',
+      ];
+      const walk = (el, depth) => {
+        const cs = getComputedStyle(el);
+        const attrs = [...el.attributes]
+          .filter((a) => a.name !== 'class' && a.name !== 'style')
+          .map((a) => `${a.name}=${a.value}`)
+          .join(' ');
+        const style = Object.fromEntries(PROPS.map((p) => [p, cs.getPropertyValue(p)]));
+        return [{ depth, tag: el.tagName.toLowerCase(), attrs, text: el.children.length ? '' : (el.textContent ?? '').trim(), style }, ...[...el.children].flatMap((child) => walk(child, depth + 1))];
+      };
+      return walk(root, 0);
+    });
+    await writeFile(path.join(dir, `fold-import-frame-${size.width}.json`), `${JSON.stringify(dump, null, 1)}\n`);
+    await record(`fold-import-${size.width}`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached' });
+  }
+  await page.setViewportSize(VIEWPORT);
+}
+
 // ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
@@ -489,6 +590,8 @@ const CASES = [
   { name: 'fold-stack', run: foldStackCases },
   { name: 'dialog-shell', run: dialogShellCases(null) },
   { name: 'dialog-shell-horizon', run: dialogShellCases('Horizon') },
+  { name: 'dialog-phone-locales', run: dialogPhoneLocales },
+  { name: 'fold-import-frame', run: foldImportFrame },
 ];
 
 // ---------------------------------------------------------------------------
@@ -503,14 +606,19 @@ async function capture({ label, url, only }) {
       if (only && !only.includes(name)) continue;
       const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
       page.on('pageerror', (error) => console.warn(`[${name}] page error: ${error.message}`));
-      await run(page, url, async (shot, panes) => {
-        for (const [pane, png] of Object.entries(panes)) {
-          if (!(await darkBox(page, png))) throw new Error(`${shot}: the ${pane} pane drew nothing`);
-          const file = path.join(dir, `${shot}-${pane}.png`);
-          await writeFile(file, png);
-          console.log(`wrote ${path.relative(repoRoot, file)}`);
-        }
-      });
+      await run(
+        page,
+        url,
+        async (shot, panes) => {
+          for (const [pane, png] of Object.entries(panes)) {
+            if (!(await darkBox(page, png))) throw new Error(`${shot}: the ${pane} pane drew nothing`);
+            const file = path.join(dir, `${shot}-${pane}.png`);
+            await writeFile(file, png);
+            console.log(`wrote ${path.relative(repoRoot, file)}`);
+          }
+        },
+        { dir }
+      );
       await page.close();
     }
   } finally {
