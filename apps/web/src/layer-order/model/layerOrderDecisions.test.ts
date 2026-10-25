@@ -27,7 +27,7 @@ import {
   sidesOf,
   stacksOf,
 } from './layerOrderModel.fixtures';
-import { addState, applyState, hintLine, openNotice, rowsView, statusView } from './layerOrderSelectors';
+import { addState, applyState, hintLine, openNotice, rowGroupsView, statusView } from './layerOrderSelectors';
 
 describe('decisions', () => {
   it('D5: X-ray steps through every layer order, and the status counts what it steps through', () => {
@@ -77,7 +77,7 @@ describe('decisions', () => {
     expect(hintLine(narrow.state)?.text).toEqual({ key: 'pick_object', objects: 2, tinted: false });
   });
 
-  it('D7: the count starts only with at most 20,000 open pairs, decided at the open and after each commit; skipped, the stepper has no total', () => {
+  it('D7: the count starts only at 20,000 open pairs or fewer, at the open and after each commit; skipped, the stepper has no total', () => {
     // Face 0 is open with faces 1…n: n open pairs. The threshold is the budgets' one (census 2).
     const withOpenPairs = (n: number) => Uint32Array.from(Array.from({ length: n }, (_, i) => [0, i + 1]).flat());
     const openOn = (n: number) =>
@@ -121,7 +121,7 @@ describe('decisions', () => {
     expect(added.state.solutions.runs).toBe(true);
     expect(lastOf(added.effects, 'solutions_restart').count).toBe(true);
     const removed = commits(
-      play(added.state, { type: 'row_removed', id: added.state.rows.committed[0]!.id }),
+      play(added.state, { type: 'rows_removed', ids: [added.state.rows.committed[0]!.id] }),
       withOpenPairs(limit + 1)
     );
     expect(removed.state.solutions.runs).toBe(false);
@@ -159,7 +159,7 @@ describe('decisions', () => {
     expect(dispatch(state, { type: 'apply', at: 2_000 }).effects).toEqual([]);
 
     const first = state.rows.carried[0]!.id;
-    const removed = play(state, { type: 'row_removed', id: first });
+    const removed = play(state, { type: 'rows_removed', ids: [first] });
     // Never one by one: every row left that can apply, in one commit.
     expect(effectsOf(removed.effects, 'commit').map((effect) => effect.constraints)).toEqual([[[0, 2, 1], [4, 5, -1]]]);
     expect(applyState(removed.state)).toEqual({ enabled: false, why: 'unsettled' });
@@ -181,11 +181,11 @@ describe('decisions', () => {
     });
     const review = opened(flagged, { hasRecord: true, review: true }).state;
     expect(review.reviewRows).toEqual([review.rows.carried[0]!.id]);
-    expect(rowsView(review).map((row) => row.flagged)).toEqual([false, true]);
+    expect(rowGroupsView(review).map((row) => row.flagged)).toEqual([false, true]);
 
     const plain = opened(flagged, { hasRecord: true, review: false }).state;
     expect(plain.reviewRows).toBeNull();
-    expect(rowsView(plain).some((row) => row.flagged)).toBe(false);
+    expect(rowGroupsView(plain).some((row) => row.flagged)).toBe(false);
   });
 
   it('D16: an Apply that changed nothing writes nothing; a browsed solution with no constraints writes a record', () => {

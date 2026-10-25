@@ -44,29 +44,41 @@ export type LayerPickOrigin = 'pattern' | 'folded' | 'menu' | 'list';
  */
 export type LayerLetterRanks = ArrayLike<number>;
 
+/** One object, and where it was picked. */
+export interface LayerObjectPick {
+  readonly face: LayerFace;
+  readonly origin: LayerPickOrigin;
+}
+
 export interface LayerSentence {
   readonly subject: LayerFace | null;
   readonly verb: LayerVerb;
   /** The objects, in letter order (D21); empty until the first is picked. */
   readonly objects: readonly LayerFace[];
+  /** The same objects in the order they were picked, each with its origin ({@link objectOriginOf}). */
+  readonly objectPicks: readonly LayerObjectPick[];
   /** The slot the next face click fills, unless the subject has nothing left to choose ({@link slotNow}). */
   readonly active: LayerSlot;
   readonly subjectOrigin: LayerPickOrigin | null;
-  /** Where the sentence's first object was picked, for `object_origin`; null with no objects. */
-  readonly objectOrigin: LayerPickOrigin | null;
 }
 
 const NO_OBJECTS: readonly LayerFace[] = [];
+const NO_PICKS: readonly LayerObjectPick[] = [];
 
 /** The sentence after Add: subject, verb (back to the first) and objects cleared, the subject slot active (Round3 `emptySentence`). */
 export const EMPTY_SENTENCE: LayerSentence = {
   subject: null,
   verb: LAYER_VERBS[0]!,
   objects: NO_OBJECTS,
+  objectPicks: NO_PICKS,
   active: 'subject',
   subjectOrigin: null,
-  objectOrigin: null,
 };
+
+/** `object_origin`: where the first of the objects still in the sentence was picked; null with none. */
+export function objectOriginOf(sentence: LayerSentence): LayerPickOrigin | null {
+  return sentence.objectPicks[0]?.origin ?? null;
+}
 
 // ---------------------------------------------------------------------------
 // Open pairs
@@ -148,13 +160,11 @@ export function inLetterOrder(faces: readonly LayerFace[], ranks?: LayerLetterRa
   return [...faces].sort((a, b) => rankOf(ranks, a) - rankOf(ranks, b) || a - b);
 }
 
-/** The objects with `objects`, and the origin kept while any remain. */
-function withObjects(sentence: LayerSentence, objects: readonly LayerFace[], origin: LayerPickOrigin | null): LayerSentence {
-  return {
-    ...sentence,
-    objects: objects.length === 0 ? NO_OBJECTS : objects,
-    objectOrigin: objects.length === 0 ? null : origin,
-  };
+/** The sentence with `objects`: each kept object keeps its pick, and `added`, a new one, joins them last. */
+function withObjects(sentence: LayerSentence, objects: readonly LayerFace[], added?: LayerObjectPick): LayerSentence {
+  if (objects.length === 0) return { ...sentence, objects: NO_OBJECTS, objectPicks: NO_PICKS };
+  const kept = sentence.objectPicks.filter((pick) => objects.includes(pick.face));
+  return { ...sentence, objects, objectPicks: added ? [...kept, added] : kept };
 }
 
 /**
@@ -191,12 +201,13 @@ export function setSubject(
 ): LayerSentence {
   const kept = sentence.objects.filter((object) => isOpenWith(open, face, object));
   const objects = kept.length === sentence.objects.length ? sentence.objects : kept;
-  return { ...withObjects(sentence, objects, sentence.objectOrigin), subject: face, subjectOrigin: origin, active: 'object' };
+  return { ...withObjects(sentence, objects), subject: face, subjectOrigin: origin, active: 'object' };
 }
 
 /**
- * An object pick (D21): an unpicked face joins the objects, in letter order;
- * a picked one leaves them. Round3 `setObject`, which replaced the object.
+ * An object pick (D21): an unpicked face joins the objects, in letter order,
+ * with where it was picked; a picked one leaves them, with its pick. Round3
+ * `setObject`, which replaced the object.
  */
 export function toggleObject(
   sentence: LayerSentence,
@@ -204,11 +215,8 @@ export function toggleObject(
   origin: LayerPickOrigin,
   ranks?: LayerLetterRanks
 ): LayerSentence {
-  const picked = sentence.objects.includes(face);
-  const objects = picked
-    ? sentence.objects.filter((object) => object !== face)
-    : inLetterOrder([...sentence.objects, face], ranks);
-  return { ...withObjects(sentence, objects, sentence.objectOrigin ?? origin), active: 'object' };
+  if (sentence.objects.includes(face)) return { ...removeObject(sentence, face), active: 'object' };
+  return { ...withObjects(sentence, inLetterOrder([...sentence.objects, face], ranks), { face, origin }), active: 'object' };
 }
 
 /**
@@ -219,11 +227,7 @@ export function toggleObject(
  */
 export function removeObject(sentence: LayerSentence, face: LayerFace): LayerSentence {
   if (!sentence.objects.includes(face)) return sentence;
-  return withObjects(
-    sentence,
-    sentence.objects.filter((object) => object !== face),
-    sentence.objectOrigin
-  );
+  return withObjects(sentence, sentence.objects.filter((object) => object !== face));
 }
 
 /**
@@ -242,14 +246,14 @@ export function activateSlot(sentence: LayerSentence, open: LayerOpenIndex, slot
  * (Round3 `clearSlot`, then `setSubject`).
  */
 export function clearSlot(sentence: LayerSentence, slot: LayerSlot): LayerSentence {
-  if (slot === 'object') return { ...withObjects(sentence, NO_OBJECTS, null), active: 'object' };
+  if (slot === 'object') return { ...withObjects(sentence, NO_OBJECTS), active: 'object' };
   return { ...sentence, subject: null, subjectOrigin: null, active: 'subject' };
 }
 
 /** Clear: every face goes; the verb stays (Round3 `clearSentence`, unlike Add's {@link EMPTY_SENTENCE}). */
 export function clearSentence(sentence: LayerSentence): LayerSentence {
   if (sentence.subject === null && sentence.objects.length === 0) return sentence;
-  return { ...withObjects(sentence, NO_OBJECTS, null), subject: null, subjectOrigin: null, active: 'subject' };
+  return { ...withObjects(sentence, NO_OBJECTS), subject: null, subjectOrigin: null, active: 'subject' };
 }
 
 /**
@@ -276,7 +280,7 @@ export function setVerb(sentence: LayerSentence, verb: LayerVerb): LayerSentence
  * hint says so. Round3 `reveal`.
  */
 export function revealSubject(sentence: LayerSentence, face: LayerFace): LayerSentence {
-  return { ...withObjects(sentence, NO_OBJECTS, null), subject: face, subjectOrigin: 'list', active: 'object' };
+  return { ...withObjects(sentence, NO_OBJECTS), subject: face, subjectOrigin: 'list', active: 'object' };
 }
 
 /**
@@ -286,7 +290,7 @@ export function revealSubject(sentence: LayerSentence, face: LayerFace): LayerSe
 export function keepOpenObjects(sentence: LayerSentence, open: LayerOpenIndex): LayerSentence {
   if (sentence.subject === null) return sentence;
   const kept = sentence.objects.filter((object) => isOpenWith(open, sentence.subject, object));
-  return kept.length === sentence.objects.length ? sentence : withObjects(sentence, kept, sentence.objectOrigin);
+  return kept.length === sentence.objects.length ? sentence : withObjects(sentence, kept);
 }
 
 /** Whether the sentence names a subject and one or more of its open faces. */

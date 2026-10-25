@@ -35,6 +35,7 @@ import type {
   LayerVerb,
 } from './layerOrderEngineFacts';
 import type { LayerHistory } from './layerOrderHistory';
+import type { LayerRowKey } from './layerOrderRowGroups';
 import type { LayerLetterRanks, LayerOpenIndex, LayerPickOrigin, LayerSentence, LayerSlot } from './layerOrderSentence';
 
 // ---------------------------------------------------------------------------
@@ -103,7 +104,15 @@ export interface LayerClash {
   readonly minimal: boolean;
 }
 
-export type LayerExplainState = { readonly kind: 'pending'; readonly request: number } | ({ readonly kind: 'done' } & LayerClash);
+/**
+ * A can't-fit's explain: not asked yet (it is asked when the entry comes on
+ * display, so a set the sentence has moved past costs nothing), running, or
+ * done.
+ */
+export type LayerExplainState =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'pending'; readonly request: number }
+  | ({ readonly kind: 'done' } & LayerClash);
 
 /**
  * One sentence's preview against the order on screen: the committed list plus
@@ -118,11 +127,18 @@ export type LayerPreviewEntry =
       readonly candidates: readonly LayerConstraint[];
       readonly limits: LayerOrderLimits;
     }
-  /** The fitting order closest to the one on screen, and the spots that would change. */
+  /**
+   * The fitting order closest to the one on screen, and the spots that would
+   * change. Its `token` adopts it with no search only while it is the
+   * session's last preview ({@link LayerOrderDialogState.lastPreview}).
+   */
   | {
       readonly kind: 'fits';
+      readonly request: number;
       readonly candidates: readonly LayerConstraint[];
       readonly token: number;
+      /** What it fit under: a later Add that has to search gets at least this. */
+      readonly limits: LayerOrderLimits;
       readonly changed: LayerChangedSpots;
       readonly stacks: LayerSidesStacks;
     }
@@ -132,8 +148,6 @@ export type LayerPreviewEntry =
       readonly candidates: readonly LayerConstraint[];
       readonly constraints: readonly number[];
       readonly explain: LayerExplainState;
-      /** Whether `layer constraint blocked` went out for it. */
-      readonly reported: boolean;
     }
   /** "Couldn't check in time" (D8): Keep trying runs it again, later. */
   | { readonly kind: 'timed_out'; readonly candidates: readonly LayerConstraint[]; readonly limits: LayerOrderLimits };
@@ -149,7 +163,7 @@ export interface LayerCommitAsk {
   readonly via: LayerCommitVia;
   /** The list sent: the committed rows' constraints once it lands. */
   readonly constraints: readonly LayerConstraint[];
-  /** For Add: the preview's token, adopted with no search while it is the session's last preview. */
+  /** For Add: the preview's token, when it is the session's last preview, so it is adopted with no search; else null, a search. */
   readonly token: number | null;
   readonly limits: LayerOrderLimits;
   /** The rows once it lands. */
@@ -220,8 +234,8 @@ export interface LayerHover {
   readonly face: LayerFace | null;
   /** A builder slot under the pointer: its face wins over the panes. */
   readonly slot: LayerSlot | null;
-  /** A constraint row under the pointer, pressed or focused (D6), by id. */
-  readonly row: number | null;
+  /** A row of the list under the pointer, pressed or focused (D6), by its key: it stays on the row as its constraints go. */
+  readonly row: LayerRowKey | null;
   /** Pointing at the can't-fit reason strengthens the clash's tints. */
   readonly reason: boolean;
 }
@@ -275,6 +289,14 @@ export interface LayerOrderDialogState {
   readonly pointedVerb: LayerVerb | null;
   /** Each sentence's preview against the order on screen, by its candidates' key (`candidatesKey`); emptied when the order changes. */
   readonly previews: Readonly<Record<string, LayerPreviewEntry>>;
+  /**
+   * The request of the preview the session holds: the last one asked, until
+   * a commit, a step or an open drops it. Only its token adopts with no
+   * search.
+   */
+  readonly lastPreview: number | null;
+  /** The sentence `layer constraint blocked` went out for, by subject and verb: once per sentence. */
+  readonly blocked: { readonly subject: LayerFace; readonly verb: LayerVerb } | null;
 
   readonly solutions: LayerSolutionsState;
   readonly hover: LayerHover;
@@ -307,8 +329,9 @@ export type LayerOrderEffect =
   /**
    * Open the session: on the host's order (`layer_open_showing`), or by
    * restoring the record (`layer_restore`, or `layer_restore_record` on a
-   * session already open). Then read both sides' stacks, and answer `opened`
-   * or `open_refused`.
+   * session already open). Then read both sides' stacks and a paper scene's
+   * letters (`faceLettersOf(scene).inLetterOrder`, `engine/faceIndex.ts`), and
+   * answer `opened` (`openFacts(…, letterOrder)`) or `open_refused`.
    */
   | { readonly type: 'open'; readonly request: number; readonly how: LayerOpenHow; readonly limits: LayerOrderLimits }
   /**
@@ -412,12 +435,13 @@ export type LayerOrderAction =
   | { readonly type: 'add' }
   /** The hint line's Keep trying, or a refusal's: whatever ran out runs again, later. */
   | { readonly type: 'keep_trying' }
-  // The constraints list.
-  | { readonly type: 'row_hovered'; readonly id: number | null }
-  | { readonly type: 'row_clicked'; readonly id: number }
-  /** One constraint's removal: a row's trash, or one object's × in a grouped row (D21). One undo step. */
-  | { readonly type: 'row_removed'; readonly id: number }
-  /** A grouped row's trash: every constraint in it, by id, as one undo step (D21). */
+  // The constraints list: rows by key, the constraints in them by id.
+  | { readonly type: 'row_hovered'; readonly key: LayerRowKey | null }
+  | { readonly type: 'row_clicked'; readonly key: LayerRowKey }
+  /**
+   * The one way to remove constraints, as one undo step (D21): a row's trash
+   * sends every member's id, an object's × in a row of two or more its own.
+   */
   | { readonly type: 'rows_removed'; readonly ids: readonly number[] }
   | { readonly type: 'undo' }
   | { readonly type: 'redo' }

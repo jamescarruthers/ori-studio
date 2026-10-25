@@ -14,6 +14,7 @@ import {
   groundClick,
   isComplete,
   keepOpenObjects,
+  objectOriginOf,
   openIndexOf,
   openPartners,
   pickFace,
@@ -71,7 +72,8 @@ describe('picking a face (Round3 pickFace, slotNow)', () => {
 
   it('records where each face was picked, for the analytics', () => {
     const s = pickFace(pickFace(EMPTY_SENTENCE, open, 2, 'folded'), open, 3, 'menu');
-    expect(s).toMatchObject({ subjectOrigin: 'folded', objectOrigin: 'menu' });
+    expect(s).toMatchObject({ subjectOrigin: 'folded', objectPicks: [{ face: 3, origin: 'menu' }] });
+    expect(objectOriginOf(s)).toBe('menu');
   });
 });
 
@@ -84,7 +86,7 @@ describe('changing the subject (Round3 setSubject)', () => {
 
   it('clears the object quietly when it is not', () => {
     const s = activateSlot(pick(EMPTY_SENTENCE, 2, 3), open, 'subject');
-    expect(pick(s, 4)).toMatchObject({ subject: 4, objects: [], objectOrigin: null, active: 'object' });
+    expect(pick(s, 4)).toMatchObject({ subject: 4, objects: [], objectPicks: [], active: 'object' });
   });
 });
 
@@ -179,7 +181,7 @@ describe('compound constraints (D21)', () => {
     expect(two).toMatchObject({ subject: 2, objects: [3, 0], active: 'object' });
     expect(pickWide(two, 0)).toMatchObject({ subject: 2, objects: [3], active: 'object' });
     // Removing the last leaves the object step, with no objects and no origin.
-    expect(pickWide(two, 0, 3)).toMatchObject({ subject: 2, objects: [], objectOrigin: null, active: 'object' });
+    expect(pickWide(two, 0, 3)).toMatchObject({ subject: 2, objects: [], objectPicks: [], active: 'object' });
   });
 
   it('objects read in letter order, whatever order they were picked in', () => {
@@ -195,15 +197,29 @@ describe('compound constraints (D21)', () => {
     expect(pickWide(s, 2)).toBe(s);
   });
 
-  it('the object origin is where the first object was picked', () => {
+  it('keeps each object’s origin, in pick order: the object origin is the first remaining one’s', () => {
     const s = pickFace(pickFace(pickFace(EMPTY_SENTENCE, wide, 2, 'pattern'), wide, 0, 'menu'), wide, 3, 'folded');
-    expect(s.objectOrigin).toBe('menu');
+    expect(s.objectPicks).toEqual([
+      { face: 0, origin: 'menu' },
+      { face: 3, origin: 'folded' },
+    ]);
+    expect(objectOriginOf(s)).toBe('menu');
+    // The first object goes: the origin is the next one's, not the removed one's.
+    const without = pickFace(s, wide, 0, 'menu');
+    expect(without).toMatchObject({ objects: [3], objectPicks: [{ face: 3, origin: 'folded' }] });
+    expect(objectOriginOf(without)).toBe('folded');
+    expect(objectOriginOf(removeObject(without, 3))).toBeNull();
   });
 
   it('a new subject keeps each object still open with it and drops the rest quietly', () => {
     // 2 with 0 and 5; 5 is open with 2 and 4, 0 only with 2. With 4 as the subject, 5 stays.
     const s = activateSlot(pickWide(EMPTY_SENTENCE, 2, 0, 5), wide, 'subject');
-    expect(pickWide(s, 4)).toMatchObject({ subject: 4, objects: [5], objectOrigin: 'pattern', active: 'object' });
+    expect(pickWide(s, 4)).toMatchObject({
+      subject: 4,
+      objects: [5],
+      objectPicks: [{ face: 5, origin: 'pattern' }],
+      active: 'object',
+    });
   });
 
   it('a pick of one of the objects as the subject removes it from the objects', () => {
@@ -223,14 +239,14 @@ describe('compound constraints (D21)', () => {
 
   it('an object chip’s × removes that object whichever slot is active, and never the subject', () => {
     const s = pickWide(EMPTY_SENTENCE, 2, 0, 3);
-    expect(removeObject(s, 3)).toMatchObject({ subject: 2, objects: [0], objectOrigin: 'pattern', active: 'object' });
+    expect(removeObject(s, 3)).toMatchObject({ subject: 2, objects: [0], objectPicks: [{ face: 0 }], active: 'object' });
     const replacing = activateSlot(s, wide, 'subject');
     expect(removeObject(replacing, 0)).toMatchObject({ subject: 2, objects: [3], active: 'subject' });
     // The last object: none left, and the object slot stays active.
     expect(removeObject(pickWide(EMPTY_SENTENCE, 2, 0), 0)).toMatchObject({
       subject: 2,
       objects: [],
-      objectOrigin: null,
+      objectPicks: [],
       active: 'object',
     });
     // A face that is not an object changes nothing.
@@ -239,13 +255,17 @@ describe('compound constraints (D21)', () => {
   });
 
   it('the object slot’s × clears every object', () => {
-    expect(clearSlot(pickWide(EMPTY_SENTENCE, 2, 0, 3), 'object')).toMatchObject({ subject: 2, objects: [], objectOrigin: null });
+    expect(clearSlot(pickWide(EMPTY_SENTENCE, 2, 0, 3), 'object')).toMatchObject({ subject: 2, objects: [], objectPicks: [] });
   });
 
   it('after a commit, each object no longer open with the subject goes, and the rest stay', () => {
     const s = pickWide(EMPTY_SENTENCE, 2, 0, 3, 5);
     const later = openIndexOf(Uint32Array.of(2, 3, 2, 5));
-    expect(keepOpenObjects(s, later)).toMatchObject({ subject: 2, objects: [5, 3], objectOrigin: 'pattern' });
+    expect(keepOpenObjects(s, later)).toMatchObject({
+      subject: 2,
+      objects: [5, 3],
+      objectPicks: [{ face: 3 }, { face: 5 }],
+    });
     expect(keepOpenObjects(s, wide)).toBe(s);
   });
 

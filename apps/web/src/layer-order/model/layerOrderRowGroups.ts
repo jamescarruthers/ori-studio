@@ -4,28 +4,34 @@
  * them, and shown one row per subject and verb, "D in front of H, K".
  *
  * - A row sits at the place of its earliest constraint, and a later Add for
- *   the same subject and verb joins it.
- * - The verb is paper-relative here (whether the subject lies nearer the
- *   front), so a row is the same row from either side; read from the side
- *   shown, its verb flips for every object at once. It is not the sign: one
- *   verb from one side is either sign, by how each object faces, and
- *   grouping by sign would split "D in front of H, K" whenever H and K face
- *   different ways.
- * - Committed and carried rows never share a row, and carried rows group
- *   only within one status, so a row never mixes statuses. A carried row
- *   whose subject or object no longer exists, whose two faces are one face
- *   now, or whose reason names its own object (an ambiguous object) stays a
- *   row of its own: its reason would not hold for the others.
+ *   the same subject and verb joins it. Removing one of its constraints keeps
+ *   the row where it was ({@link withoutRows}).
+ * - A row is keyed by its subject and its verb as read ({@link LayerRowKey}),
+ *   so its key survives the removal of any of its constraints and a turn of
+ *   the figure: the verb is read from the front here, which groups exactly as
+ *   the side shown does, since turning over flips every row's verb at once.
+ *   It is not the sign: one verb from one side is either sign, by how each
+ *   object faces, and grouping by sign would split "D in front of H, K"
+ *   whenever H and K face different ways.
+ * - Committed and carried rows never share a row. Carried rows group by what
+ *   the restore found: the ones that can still apply (intact or clashing)
+ *   together, since a clash is marked on each constraint as it is for
+ *   committed rows; the others only within one status, so a row never
+ *   mixes reasons. A carried row whose subject or object no longer exists,
+ *   whose two faces are one face now, or whose reason names its own object
+ *   (an ambiguous object) stays a row of its own.
  *
  * Pure: no React, no store, no engine calls.
  */
 import { constraintVerb, type LayerConstraint, type LayerFace } from './layerOrderEngineFacts';
 import type { LayerCarriedRow, LayerFigure, LayerRow, LayerRows } from './layerOrderState';
 
+/** A row of the list's key: its kind, subject and verb as read, or a stored row's own id for one that stays alone. */
+export type LayerRowKey = string;
+
 /** One row of the list: one stored constraint, or several with one subject and verb. */
 export interface LayerRowGroup {
-  /** The earliest member's id: the row's key. */
-  readonly id: number;
+  readonly key: LayerRowKey;
   readonly kind: LayerRow['kind'];
   /** The stored constraints it shows, in their objects' letter order. */
   readonly members: readonly LayerRow[];
@@ -41,37 +47,48 @@ export function rowParts(row: LayerRow): { subject: LayerFace | null; object: La
   return { subject, object, sign };
 }
 
-function nearerTheFront(constraint: LayerConstraint, figure: LayerFigure | null): boolean {
-  return constraintVerb(constraint, 'front', figure?.frontUp[constraint[1]] === 1) === 'in_front_of';
+function verbAsRead(constraint: LayerConstraint, figure: LayerFigure | null): string {
+  return constraintVerb(constraint, 'front', figure?.frontUp[constraint[1]] === 1);
 }
 
-function carriedKey(row: LayerCarriedRow, figure: LayerFigure | null): string | null {
+/** What the restore found, as rows group by it: the rows that can still apply share one class. */
+function carriedClass(row: LayerCarriedRow): string {
+  const { status } = row.facts;
+  if (status.status === 'intact' || status.status === 'clashing') return 'applies';
+  return status.status === 'gone' ? `gone_${status.cause}` : status.status;
+}
+
+function carriedKey(row: LayerCarriedRow, figure: LayerFigure | null): LayerRowKey {
   const { status, subject, object, sign, subjectState } = row.facts;
-  if (subject === null || object === null || subject === object) return null;
-  if (status.status === 'ambiguous' && subjectState !== 'ambiguous') return null;
-  const cause = status.status === 'gone' ? status.cause : '';
-  return `carried:${status.status}:${cause}:${subject}:${nearerTheFront([subject, object, sign], figure)}`;
+  const alone =
+    subject === null ||
+    object === null ||
+    subject === object ||
+    (status.status === 'ambiguous' && subjectState !== 'ambiguous');
+  if (alone) return `carried:row:${row.id}`;
+  return `carried:${carriedClass(row)}:${subject}:${verbAsRead([subject, object, sign], figure)}`;
 }
 
-function groupKey(row: LayerRow, figure: LayerFigure | null): string | null {
+/** The key of the row a stored constraint shows in. */
+export function rowKeyOf(row: LayerRow, figure: LayerFigure | null): LayerRowKey {
   if (row.kind === 'carried') return carriedKey(row, figure);
-  return `committed:${row.constraint[0]}:${nearerTheFront(row.constraint, figure)}`;
+  return `committed:${row.constraint[0]}:${verbAsRead(row.constraint, figure)}`;
 }
 
 /** The list's rows, in its order: the committed ones, then the carried ones, each at its earliest constraint's place. */
 export function rowGroupsOf(rows: LayerRows, figure: LayerFigure | null): LayerRowGroup[] {
-  const groups: { id: number; kind: LayerRow['kind']; members: LayerRow[] }[] = [];
-  const byKey = new Map<string, (typeof groups)[number]>();
+  const groups: { key: LayerRowKey; kind: LayerRow['kind']; members: LayerRow[] }[] = [];
+  const byKey = new Map<LayerRowKey, (typeof groups)[number]>();
   for (const row of [...rows.committed, ...rows.carried]) {
-    const key = groupKey(row, figure);
-    const found = key === null ? undefined : byKey.get(key);
+    const key = rowKeyOf(row, figure);
+    const found = byKey.get(key);
     if (found) {
       found.members.push(row);
       continue;
     }
-    const group = { id: row.id, kind: row.kind, members: [row] };
+    const group = { key, kind: row.kind, members: [row] };
     groups.push(group);
-    if (key !== null) byKey.set(key, group);
+    byKey.set(key, group);
   }
   const rank = (row: LayerRow) => {
     const { object } = rowParts(row);
@@ -84,8 +101,36 @@ export function rowGroupsOf(rows: LayerRows, figure: LayerFigure | null): LayerR
   );
 }
 
-/** The row holding stored constraint `id`, or null. */
-export function rowGroupOf(groups: readonly LayerRowGroup[], id: number | null): LayerRowGroup | null {
-  if (id === null) return null;
-  return groups.find((group) => group.members.some((row) => row.id === id)) ?? null;
+/** The row with `key`, or null. */
+export function rowGroupByKey(groups: readonly LayerRowGroup[], key: LayerRowKey | null): LayerRowGroup | null {
+  if (key === null) return null;
+  return groups.find((group) => group.key === key) ?? null;
+}
+
+/**
+ * `list` without the rows `gone` names, every row keeping its place: when a
+ * row's earliest constraint goes and others stay, its next one takes that
+ * constraint's place. The engine treats the list as a set, so only the
+ * list's order moves.
+ */
+function keepingPlaces<T extends LayerRow>(list: readonly T[], gone: ReadonlySet<number>, figure: LayerFigure | null): T[] {
+  const keys = list.map((row) => rowKeyOf(row, figure));
+  const out: (T | null)[] = list.map((row) => (gone.has(row.id) ? null : row));
+  const placed = new Set<LayerRowKey>();
+  list.forEach((row, i) => {
+    const key = keys[i]!;
+    if (placed.has(key)) return;
+    placed.add(key);
+    if (!gone.has(row.id)) return;
+    const next = keys.findIndex((other, j) => j > i && other === key && out[j] !== null);
+    if (next < 0) return;
+    out[i] = out[next]!;
+    out[next] = null;
+  });
+  return out.filter((row): row is T => row !== null);
+}
+
+/** The rows without the stored constraints `gone` names, each row keeping its place. */
+export function withoutRows(rows: LayerRows, gone: ReadonlySet<number>, figure: LayerFigure | null): LayerRows {
+  return { committed: keepingPlaces(rows.committed, gone, figure), carried: keepingPlaces(rows.carried, gone, figure) };
 }

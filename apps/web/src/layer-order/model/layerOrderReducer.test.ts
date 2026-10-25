@@ -26,6 +26,7 @@ import {
   picked,
   play,
   position,
+  rowKey,
   sidesOf,
   withOneConstraint,
   type Played,
@@ -39,7 +40,7 @@ import {
   listControls,
   openingView,
   paneMarks,
-  rowsView,
+  rowGroupsView,
   statusView,
 } from './layerOrderSelectors';
 import { EMPTY_SENTENCE } from './layerOrderSentence';
@@ -219,7 +220,7 @@ describe('the preview of a complete sentence', () => {
         minimal: true,
       },
     });
-    expect(rowsView(done.state)[0]).toMatchObject({
+    expect(rowGroupsView(done.state)[0]).toMatchObject({
       mark: 'clash',
       reason: { key: 'clashes', clashes: [sentence(2, 'in_front_of', 3)] },
     });
@@ -376,14 +377,14 @@ describe('the constraints list and its history', () => {
   function removedAndLanded(): { one: Played; removed: Played; rowId: number } {
     const one = withOneConstraint();
     const rowId = one.state.rows.committed[0]!.id;
-    const asked = play(one.state, { type: 'row_removed', id: rowId });
+    const asked = play(one.state, { type: 'rows_removed', ids: [rowId] });
     return { one, removed: commits(asked, OPEN_PAIRS, SPOTS), rowId };
   }
 
   it('remove re-solves for the order closest to the one on screen (Round3 removeCons)', () => {
     const one = withOneConstraint();
     const rowId = one.state.rows.committed[0]!.id;
-    const asked = play(one.state, { type: 'row_removed', id: rowId });
+    const asked = play(one.state, { type: 'rows_removed', ids: [rowId] });
     expect(lastOf(asked.effects, 'commit')).toMatchObject({ constraints: [], token: null });
     const landed = commits(asked, OPEN_PAIRS, SPOTS, changedSpots([1]));
     expect(landed.state.rows.committed).toEqual([]);
@@ -442,7 +443,7 @@ describe('the constraints list and its history', () => {
   it('a row click puts its subject in the builder; with nothing left to choose the hint says so, quietly', () => {
     const one = withOneConstraint(Uint32Array.of(4, 5));
     const rowId = one.state.rows.committed[0]!.id;
-    const clicked = play(one.state, { type: 'row_clicked', id: rowId });
+    const clicked = play(one.state, { type: 'row_clicked', key: rowKey(one.state, rowId) });
     expect(clicked.state.sentence).toMatchObject({ subject: 2, subjectOrigin: 'list' });
     expect(paneMarks(clicked.state).active).toBe('subject');
     expect(hintLine(clicked.state)).toEqual({
@@ -455,15 +456,15 @@ describe('the constraints list and its history', () => {
   it('hovering a row lights its two faces', () => {
     const one = withOneConstraint();
     const rowId = one.state.rows.committed[0]!.id;
-    const hovered = play(one.state, { type: 'row_hovered', id: rowId });
+    const hovered = play(one.state, { type: 'row_hovered', key: rowKey(one.state, rowId) });
     expect(paneMarks(hovered.state)).toMatchObject({ rowFaces: [2, 0], labelled: [2, 0] });
-    expect(rowsView(hovered.state)[0]).toMatchObject({ hot: true, mark: 'none', sentence: sentence(2, 'in_front_of', 0) });
+    expect(rowGroupsView(hovered.state)[0]).toMatchObject({ hot: true, mark: 'none', sentence: sentence(2, 'in_front_of', 0) });
   });
 
   it('rows read from the side shown: turning over reads “behind”', () => {
     const one = withOneConstraint();
     const back = play(one.state, { type: 'side_set', side: 'back' });
-    expect(rowsView(back.state)[0]!.sentence).toEqual(sentence(2, 'behind', 0));
+    expect(rowGroupsView(back.state)[0]!.sentence).toEqual(sentence(2, 'behind', 0));
   });
 });
 
@@ -526,7 +527,7 @@ describe('restored records: rows by status', () => {
 
   it('applies the intact rows and shows the others dimmed, each with its reason; a face that is gone has no letter', () => {
     const { state } = opened(AFTER_EDIT, { hasRecord: true });
-    const rows = rowsView(state);
+    const rows = rowGroupsView(state);
     expect(rows.map((row) => [row.kind, row.mark])).toEqual([
       ['committed', 'none'],
       ['carried', 'not_applied'],
@@ -563,19 +564,20 @@ describe('restored records: rows by status', () => {
       }),
       { hasRecord: true }
     );
-    expect(rowsView(state).map((row) => [row.mark, row.reason])).toEqual([
+    expect(rowGroupsView(state).map((row) => [row.mark, row.reason])).toEqual([
       ['not_applied', { key: 'same_face', sentence: sentence(2, 'in_front_of', 2) }],
       ['not_applied', { key: 'no_overlap', sentence: sentence(4, 'in_front_of', 0) }],
       ['not_applied', { key: 'face_gone', gone: 'both', sentence: sentence(null, null, null) }],
     ]);
     // Neither face of the last exists, so nothing lights for it.
-    expect(paneMarks(play(state, { type: 'row_hovered', id: state.rows.carried[2]!.id }).state).rowFaces).toEqual([]);
+    const last = rowKey(state, state.rows.carried[2]!.id);
+    expect(paneMarks(play(state, { type: 'row_hovered', key: last }).state).rowFaces).toEqual([]);
   });
 
   it('pointing at a row not applied lights only its faces that exist and puts its reason in the hint line', () => {
     const { state } = opened(AFTER_EDIT, { hasRecord: true });
     const gone = state.rows.carried[1]!.id;
-    const hovered = play(state, { type: 'row_hovered', id: gone });
+    const hovered = play(state, { type: 'row_hovered', key: rowKey(state, gone) });
     expect(paneMarks(hovered.state).rowFaces).toEqual([3]);
     expect(hintLine(hovered.state)).toEqual({
       tone: 'quiet',
@@ -590,7 +592,7 @@ describe('restored records: rows by status', () => {
   it('removing a carried row needs no commit, is an entry undo puts back, and Apply writes back only the rows kept', () => {
     const { state } = opened(AFTER_EDIT, { hasRecord: true });
     const ambiguous = state.rows.carried[0]!.id;
-    const removed = play(state, { type: 'row_removed', id: ambiguous });
+    const removed = play(state, { type: 'rows_removed', ids: [ambiguous] });
     expect(effectsOf(removed.effects, 'commit')).toEqual([]);
     expect(removed.state.rows.carried.map((row) => row.facts.index)).toEqual([3]);
     const undone = play(removed.state, { type: 'undo' });
@@ -632,7 +634,7 @@ describe('restored records: rows by status', () => {
     it('marks the clashing rows, keeps the builder inert and says what clashes', () => {
       const state = clashing();
       const [first, second, waiting, ambiguous] = state.rows.carried.map((row) => row.id);
-      expect(rowsView(state).map((row) => [row.id, row.mark, row.reason?.key])).toEqual([
+      expect(rowGroupsView(state).map((row) => [row.members[0]!.id, row.mark, row.reason?.key])).toEqual([
         [first, 'clash', 'clashes'],
         [second, 'clash', 'clashes'],
         [waiting, 'none', 'waiting'],
@@ -660,7 +662,7 @@ describe('restored records: rows by status', () => {
     it('removing a clashing row re-checks the rows left that can apply, and they land together', () => {
       const state = clashing();
       const [first, second, waiting, ambiguous] = state.rows.carried.map((row) => row.id);
-      const removed = play(state, { type: 'row_removed', id: first! });
+      const removed = play(state, { type: 'rows_removed', ids: [first!] });
       expect(lastOf(removed.effects, 'commit')).toMatchObject({ constraints: [[0, 2, 1], [4, 5, -1]], token: null });
       expect(hintLine(removed.state)).toEqual({ tone: 'busy', action: null, text: { key: 'attention_checking' } });
 
@@ -679,7 +681,7 @@ describe('restored records: rows by status', () => {
     it('removing a row outside the clashing set re-checks nothing: the set still clashes', () => {
       const state = clashing();
       const [first, second, , ambiguous] = state.rows.carried.map((row) => row.id);
-      const removed = play(state, { type: 'row_removed', id: ambiguous! });
+      const removed = play(state, { type: 'rows_removed', ids: [ambiguous!] });
       expect(effectsOf(removed.effects, 'commit')).toEqual([]);
       expect(removed.state.rows.carried.map((row) => row.id)).not.toContain(ambiguous);
       expect(removed.state.settle).toEqual({ kind: 'clash', rows: [first, second], explain: null });
@@ -688,7 +690,7 @@ describe('restored records: rows by status', () => {
     it('rows that still clash after a removal are explained again, down to the smallest set', () => {
       const state = clashing();
       const [first, second, waiting] = state.rows.carried.map((row) => row.id);
-      const removed = play(state, { type: 'row_removed', id: first! });
+      const removed = play(state, { type: 'rows_removed', ids: [first!] });
       const commit = lastOf(removed.effects, 'commit');
       expect(commit.constraints).toEqual([[0, 2, 1], [4, 5, -1]]);
       const still = play(removed.state, {
@@ -708,7 +710,10 @@ describe('restored records: rows by status', () => {
         facts: { verdict: 'clash', constraints: [0], faces: [0, 2], minimal: true },
       });
       expect(done.state.settle).toEqual({ kind: 'clash', rows: [second], explain: null });
-      expect(rowsView(done.state).find((row) => row.id === waiting)).toMatchObject({ mark: 'none', reason: { key: 'waiting' } });
+      expect(rowGroupsView(done.state).find((row) => row.members[0]!.id === waiting)).toMatchObject({
+        mark: 'none',
+        reason: { key: 'waiting' },
+      });
     });
   });
 
@@ -726,7 +731,7 @@ describe('restored records: rows by status', () => {
     it('offers Keep trying, which restores again with a later deadline, keeping the figure on screen', () => {
       const { state } = opened(OUT, { hasRecord: true });
       expect(hintLine(state)).toEqual({ tone: 'quiet', action: 'keep_trying', text: { key: 'attention_timed_out' } });
-      expect(rowsView(state).map((row) => row.reason?.key)).toEqual(['waiting', 'waiting']);
+      expect(rowGroupsView(state).map((row) => row.reason?.key)).toEqual(['waiting', 'waiting']);
 
       const again = dispatch(state, { type: 'keep_trying' });
       const open = lastOf(again.effects, 'open');
@@ -750,7 +755,7 @@ describe('restored records: rows by status', () => {
 
     it('after a removal, Keep trying retries the re-check, never the restore that would bring the row back', () => {
       const { state } = opened(OUT, { hasRecord: true });
-      const removed = play(state, { type: 'row_removed', id: state.rows.carried[0]!.id });
+      const removed = play(state, { type: 'rows_removed', ids: [state.rows.carried[0]!.id] });
       const commit = lastOf(removed.effects, 'commit');
       expect(commit.constraints).toEqual([[4, 5, -1]]);
       const out = play(removed.state, { type: 'committed', request: commit.request, facts: { verdict: 'timed_out' } });

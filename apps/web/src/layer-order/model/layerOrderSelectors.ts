@@ -39,14 +39,16 @@ import {
   sentenceCandidates,
   stepByKey,
 } from './layerOrderReducer';
-import { rowGroupOf, rowGroupsOf, rowParts, type LayerRowGroup } from './layerOrderRowGroups';
+import { rowGroupByKey, rowGroupsOf, rowParts, type LayerRowGroup, type LayerRowKey } from './layerOrderRowGroups';
 import { facesWithChoices, hasChoices, openPartners, slotNow, subjectStuck, type LayerSlot } from './layerOrderSentence';
 import type {
   LayerCarriedRow,
+  LayerCommittedRow,
   LayerCommitVia,
   LayerOrderDialogState,
   LayerPreviewEntry,
   LayerRow,
+  LayerRows,
 } from './layerOrderState';
 
 // ---------------------------------------------------------------------------
@@ -113,6 +115,15 @@ function rowGroups(state: LayerOrderDialogState): LayerRowGroup[] {
   return rowGroupsOf(state.rows, state.figure);
 }
 
+/** Stored constraints as sentences, grouped one per subject and verb as the list groups them (D21). */
+function sentencesOf(state: LayerOrderDialogState, rows: readonly LayerRow[]): LayerSentenceView[] {
+  const subset: LayerRows = {
+    committed: rows.filter((row): row is LayerCommittedRow => row.kind === 'committed'),
+    carried: rows.filter((row): row is LayerCarriedRow => row.kind === 'carried'),
+  };
+  return rowGroupsOf(subset, state.figure).map((group) => groupSentence(state, group));
+}
+
 // ---------------------------------------------------------------------------
 // The clash on screen
 
@@ -124,9 +135,8 @@ interface LayerClashView {
   readonly sentence: LayerSentenceView | null;
   /** The sentence's objects in the clash: marked on their chips. */
   readonly objects: readonly LayerFace[];
-  /** The rows in the clash, by id. */
-  readonly rows: readonly number[];
-  readonly clashes: readonly LayerSentenceView[];
+  /** The stored constraints in the clash, in the list's order. */
+  readonly rows: readonly LayerRow[];
   readonly faces: readonly LayerFace[];
   readonly explaining: boolean;
   readonly minimal: boolean;
@@ -139,8 +149,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
     return {
       sentence: null,
       objects: [],
-      rows: rows.map((row) => row.id),
-      clashes: rows.map((row) => rowSentence(state, row)),
+      rows,
       faces: Array.from(new Set(rows.flatMap(rowFaces))),
       explaining: state.settle.explain !== null,
       minimal: state.settle.explain === null,
@@ -153,7 +162,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
   // Indices past the committed list name the sentence's candidates, in order.
   const named = (indices: readonly number[]) =>
     candidates.filter((_, i) => indices.includes(committed.length + i));
-  if (entry.explain.kind === 'pending') {
+  if (entry.explain.kind !== 'done') {
     // The sentence's faces in the check's own set go danger at once; the smallest set follows
     // (Round 4 "A clash being explained").
     const inCheck = named(entry.constraints);
@@ -162,7 +171,6 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
       sentence: candidatesSentence(state, candidates),
       objects,
       rows: [],
-      clashes: [],
       faces: [candidates[0]![0], ...objects],
       explaining: true,
       minimal: false,
@@ -173,8 +181,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
   return {
     sentence: candidatesSentence(state, inClash.length > 0 ? inClash : candidates),
     objects: inClash.map((candidate) => candidate[1]),
-    rows: rows.map((row) => row.id),
-    clashes: rows.map((row) => rowSentence(state, row)),
+    rows,
     faces: entry.explain.faces,
     explaining: false,
     minimal: entry.explain.minimal,
@@ -199,8 +206,10 @@ export type LayerRowReason =
   | { readonly key: 'same_face'; readonly sentence: LayerSentenceView }
   /** Its faces no longer overlap. */
   | { readonly key: 'no_overlap'; readonly sentence: LayerSentenceView }
-  /** It is in the clash shown. */
+  /** It is in the clash shown: what it clashes with, grouped as the list groups rows. */
   | { readonly key: 'clashes'; readonly clashes: readonly LayerSentenceView[] }
+  /** The clash is the row's own constraints and nothing else: "D in front of H, K can't all fit together". */
+  | { readonly key: 'clash_within'; readonly sentence: LayerSentenceView }
   /** Intact, waiting for the rows that clash to settle. */
   | { readonly key: 'waiting' };
 
@@ -265,14 +274,21 @@ function settledWhy(state: LayerOrderDialogState, face: LayerFace): LayerSettled
 
 /**
  * A list row's reason: what its constraints clash with, when the clash shown
- * names any of them; else, for carried rows, why they are not applied, which
- * is one reason for the whole row since a row holds one status (D21).
+ * names any of them (or, when the clash is two or more of its own constraints
+ * and nothing else, that those can't all fit together); else, for carried
+ * rows, why they are not applied, which is one reason for the whole row since
+ * a row holds one status (D21).
  */
 function groupReason(state: LayerOrderDialogState, group: LayerRowGroup, clash: LayerClashView | null): LayerRowReason | null {
   const ids = new Set(group.members.map((row) => row.id));
-  if (clash && clash.rows.some((id) => ids.has(id))) {
-    const others = clash.clashes.filter((_, i) => !ids.has(clash.rows[i]!));
-    return { key: 'clashes', clashes: clash.sentence ? [clash.sentence, ...others] : others };
+  const clashing = new Set(clash?.rows.map((row) => row.id) ?? []);
+  const own = group.members.filter((row) => clashing.has(row.id));
+  if (clash && own.length > 0) {
+    const others = sentencesOf(state, clash.rows.filter((row) => !ids.has(row.id)));
+    const clashes = clash.sentence ? [clash.sentence, ...others] : others;
+    if (clashes.length > 0 || own.length < 2) return { key: 'clashes', clashes };
+    const objects = own.map((row) => rowParts(row).object);
+    return { key: 'clash_within', sentence: { ...groupSentence(state, group), objects } };
   }
   const first = group.members[0]!;
   if (first.kind === 'committed') return null;
@@ -280,12 +296,8 @@ function groupReason(state: LayerOrderDialogState, group: LayerRowGroup, clash: 
   return reason && 'sentence' in reason && group.members.length > 1 ? { ...reason, sentence: groupSentence(state, group) } : reason;
 }
 
-/** A carried row's reason, when it is not applied. */
-export function carriedReason(state: LayerOrderDialogState, row: LayerCarriedRow): LayerRowReason | null {
-  const clash = clashOnScreen(state);
-  if (clash?.rows.includes(row.id)) {
-    return { key: 'clashes', clashes: clash.clashes.filter((_, i) => clash.rows[i] !== row.id) };
-  }
+/** A carried row's reason when it is not applied and not in the clash shown. */
+function carriedReason(state: LayerOrderDialogState, row: LayerCarriedRow): LayerRowReason | null {
   const { status, subjectState, objectState, subject, object } = row.facts;
   const sentence = rowSentence(state, row);
   switch (status.status) {
@@ -310,23 +322,24 @@ export function carriedReason(state: LayerOrderDialogState, row: LayerCarriedRow
 /** The one line under the sentence: its height is always reserved, and it holds text only when something blocks or guides. */
 export function hintLine(state: LayerOrderDialogState): LayerHint | null {
   if (state.phase.kind !== 'open' || !state.figure) return null;
-  const hovered = rowGroupOf(rowGroups(state), state.hover.row);
-  const hoveredReason = hovered?.kind === 'carried' ? groupReason(state, hovered, clashOnScreen(state)) : null;
+  const clash = clashOnScreen(state);
+  const hovered = rowGroupByKey(rowGroups(state), state.hover.row);
+  const hoveredReason = hovered?.kind === 'carried' ? groupReason(state, hovered, clash) : null;
 
   // A restored record still settling (D10): the builder is inert, and the line speaks for the rows.
   if (state.settle.kind !== 'settled' || (state.commit.kind !== 'idle' && state.commit.via === 'settle')) {
-    if (hoveredReason && hoveredReason.key !== 'clashes') return quietHint({ key: 'row_not_applied', reason: hoveredReason });
+    const inClash = hoveredReason?.key === 'clashes' || hoveredReason?.key === 'clash_within';
+    if (hoveredReason && !inClash) return quietHint({ key: 'row_not_applied', reason: hoveredReason });
     if (state.commit.kind === 'pending' || state.settle.kind === 'restoring') {
       return { tone: 'busy', action: null, text: { key: 'attention_checking' } };
     }
     if (state.commit.kind === 'timed_out' || state.settle.kind === 'timed_out') {
       return { tone: 'quiet', action: 'keep_trying', text: { key: 'attention_timed_out' } };
     }
-    const clash = clashOnScreen(state);
     return {
       tone: 'danger',
       action: null,
-      text: { key: 'attention_clash', clashes: clash?.clashes ?? [], explaining: clash?.explaining ?? false },
+      text: { key: 'attention_clash', clashes: sentencesOf(state, clash?.rows ?? []), explaining: clash?.explaining ?? false },
     };
   }
 
@@ -340,13 +353,13 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
     const sentence = candidatesSentence(state, preview.candidates);
     if (preview.kind === 'pending') return { tone: 'busy', action: null, text: { key: 'checking', sentence } };
     if (preview.kind === 'timed_out') return { tone: 'quiet', action: 'keep_trying', text: { key: 'timed_out', sentence } };
-    if (preview.kind === 'cant_fit') {
-      const clash = clashOnScreen(state)!;
+    if (preview.kind === 'cant_fit' && clash) {
       if (clash.explaining) return { tone: 'busy_danger', action: null, text: { key: 'cant_fit_explaining', sentence } };
+      const clashes = sentencesOf(state, clash.rows);
       return {
         tone: 'danger',
         action: null,
-        text: { key: 'cant_fit', sentence: clash.sentence ?? sentence, clashes: clash.clashes, minimal: clash.minimal },
+        text: { key: 'cant_fit', sentence: clash.sentence ?? sentence, clashes, minimal: clash.minimal },
       };
     }
   }
@@ -384,7 +397,7 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
 // ---------------------------------------------------------------------------
 // Add, Clear, the history, Apply
 
-/** Add's own text: "Add constraint" with one object, "Add constraints" with more (D21). */
+/** Add's own text: "Add constraint" or "Add constraints", by the constraints it adds once any already committed are skipped (D21). */
 export type LayerAddLabel = 'add_constraint' | 'add_constraints';
 
 export type LayerAddState =
@@ -408,14 +421,14 @@ export type LayerAddState =
 
 /** Add: enabled only for a sentence its preview fit, every object at once (Round3 `addOk`; D8, D21). */
 export function addState(state: LayerOrderDialogState): LayerAddState {
-  const label: LayerAddLabel = state.sentence.objects.length > 1 ? 'add_constraints' : 'add_constraint';
+  const candidates = sentenceCandidates(state);
+  const label: LayerAddLabel = (candidates?.length ?? 0) > 1 ? 'add_constraints' : 'add_constraint';
   const off = (why: Extract<LayerAddState, { enabled: false }>['why'], sentence: LayerSentenceView | null = null) =>
     ({ enabled: false, label, why, subject: state.sentence.subject, sentence }) as const;
   if (!builderLive(state)) return off('inert');
   const { sentence, open } = state;
   if (sentence.subject === null) return off('pick_subject');
   if (!hasChoices(open, sentence.subject)) return off('subject_stuck');
-  const candidates = sentenceCandidates(state);
   if (!candidates) return off('pick_object');
   const view = candidatesSentence(state, candidates);
   if (state.commit.kind === 'pending' || state.solutions.step.kind === 'pending') return off('busy', view);
@@ -524,7 +537,7 @@ export function paneMarks(state: LayerOrderDialogState): LayerPaneMarks {
   const pickable = !live ? NO_FACES : active === 'subject' ? facesWithChoices(open) : objects;
   const clash = clashOnScreen(state);
   const danger = clash?.faces ?? NO_FACES;
-  const hoveredRow = rowGroupOf(rowGroups(state), hover.row);
+  const hoveredRow = rowGroupByKey(rowGroups(state), hover.row);
   const rowFacesNow = hoveredRow ? groupFaces(hoveredRow) : NO_FACES;
   const slotFaces =
     hover.slot === 'subject' ? distinctFaces([sentence.subject]) : hover.slot === 'object' ? sentence.objects : NO_FACES;
@@ -543,7 +556,7 @@ export function paneMarks(state: LayerOrderDialogState): LayerPaneMarks {
     rowFaces: rowFacesNow,
     danger,
     dangerStrong: hover.reason && danger.length > 0,
-    clashRows: clash?.rows ?? [],
+    clashRows: clash?.rows.map((row) => row.id) ?? [],
     clashObjects: clash?.objects ?? NO_FACES,
     changed: preview?.kind === 'fits' ? preview.changed : null,
     flash: state.flash,
@@ -657,23 +670,9 @@ export function statusView(state: LayerOrderDialogState): LayerStatusView | null
 // ---------------------------------------------------------------------------
 // The constraint rows (spec §6.5; D10, D14)
 
-export interface LayerRowView {
-  readonly id: number;
-  /** A committed row is applied; a carried one is a saved row a restore did not apply. */
-  readonly kind: LayerRow['kind'];
-  readonly sentence: LayerSentenceView;
-  /** The dot: the clash shown marks its rows (danger); a saved row not applied is dimmed (warning). */
-  readonly mark: 'none' | 'not_applied' | 'clash';
-  /** For a row not applied or in a clash: its reason, for its tooltip and the hint line. */
-  readonly reason: LayerRowReason | null;
-  readonly hot: boolean;
-  /** "Review…" opened on it (D14). */
-  readonly flagged: boolean;
-}
-
 /** One object of a list row: the stored constraint behind it. */
 export interface LayerRowMemberView {
-  /** Its id: what its own × removes (`row_removed`), shown in a row of two or more (D21). */
+  /** Its id: an object's × in a row of two or more sends `rows_removed` with it alone (D21). */
   readonly id: number;
   /** Null when the face no longer exists. */
   readonly object: LayerFace | null;
@@ -683,55 +682,56 @@ export interface LayerRowMemberView {
 
 /**
  * One row of the constraints list: one subject, one verb, one or more
- * objects, "D in front of H, K" (D21). Its trash removes every member
- * (`rows_removed`); `row_hovered` and `row_clicked` take `id`, or any
- * member's.
+ * objects, "D in front of H, K" (D21).
+ * - `row_hovered` and `row_clicked` take its `key`, which stays the same as
+ *   its constraints go and as the figure turns over.
+ * - Its trash always sends `rows_removed` with every member's id, a row of
+ *   one included; an object's × sends that member's id alone.
  */
-export interface LayerRowGroupView extends LayerRowView {
+export interface LayerRowGroupView {
+  readonly key: LayerRowKey;
+  /** A committed row is applied; a carried one is a saved row a restore did not apply. */
+  readonly kind: LayerRow['kind'];
+  readonly sentence: LayerSentenceView;
+  /** The dot: the clash shown marks its rows (danger); a saved row not applied is dimmed (warning). */
+  readonly mark: 'none' | 'not_applied' | 'clash';
+  /** For a row not applied or in a clash: its reason, for its tooltip and the hint line. */
+  readonly reason: LayerRowReason | null;
+  readonly hot: boolean;
+  /** "Review…" opened on one of its constraints (D14). */
+  readonly flagged: boolean;
   /** One per object, in the sentence's order. */
   readonly members: readonly LayerRowMemberView[];
 }
 
-interface LayerRowMarks {
-  readonly clash: LayerClashView | null;
-  readonly clashing: ReadonlySet<number>;
-  readonly flagged: ReadonlySet<number>;
-}
-
-function rowMarks(state: LayerOrderDialogState): LayerRowMarks {
-  const clash = clashOnScreen(state);
-  return { clash, clashing: new Set(clash?.rows ?? []), flagged: new Set(state.reviewRows ?? []) };
-}
-
-function groupView(state: LayerOrderDialogState, group: LayerRowGroup, marks: LayerRowMarks): LayerRowGroupView {
-  const reason = groupReason(state, group, marks.clash);
-  const notApplied = group.kind === 'carried' && reason !== null && reason.key !== 'waiting' && reason.key !== 'clashes';
-  const members = group.members.map((row) => ({ id: row.id, object: rowParts(row).object, clash: marks.clashing.has(row.id) }));
+function groupView(
+  state: LayerOrderDialogState,
+  group: LayerRowGroup,
+  clash: LayerClashView | null,
+  flagged: ReadonlySet<number>
+): LayerRowGroupView {
+  const reason = groupReason(state, group, clash);
+  const inClash = reason?.key === 'clashes' || reason?.key === 'clash_within';
+  const notApplied = group.kind === 'carried' && reason !== null && reason.key !== 'waiting' && !inClash;
+  const clashing = new Set(clash?.rows.map((row) => row.id) ?? []);
+  const members = group.members.map((row) => ({ id: row.id, object: rowParts(row).object, clash: clashing.has(row.id) }));
   return {
-    id: group.id,
+    key: group.key,
     kind: group.kind,
     sentence: groupSentence(state, group),
     mark: members.some((member) => member.clash) ? 'clash' : notApplied ? 'not_applied' : 'none',
     reason,
-    hot: members.some((member) => member.id === state.hover.row),
-    flagged: members.some((member) => marks.flagged.has(member.id)),
+    hot: state.hover.row === group.key,
+    flagged: members.some((member) => flagged.has(member.id)),
     members,
   };
 }
 
 /** The constraints list as it is drawn: one row per subject and verb, at its earliest constraint's place (D21). */
 export function rowGroupsView(state: LayerOrderDialogState): LayerRowGroupView[] {
-  const marks = rowMarks(state);
-  return rowGroups(state).map((group) => groupView(state, group, marks));
-}
-
-/** One entry per stored constraint, ungrouped: the list's rows as the record holds them. */
-export function rowsView(state: LayerOrderDialogState): LayerRowView[] {
-  const marks = rowMarks(state);
-  return [...state.rows.committed, ...state.rows.carried].map((row) => {
-    const { members: _members, ...view } = groupView(state, { id: row.id, kind: row.kind, members: [row] }, marks);
-    return view;
-  });
+  const clash = clashOnScreen(state);
+  const flagged = new Set(state.reviewRows ?? []);
+  return rowGroups(state).map((group) => groupView(state, group, clash, flagged));
 }
 
 /** How many saved rows are not applied: what a host's flag counts. */

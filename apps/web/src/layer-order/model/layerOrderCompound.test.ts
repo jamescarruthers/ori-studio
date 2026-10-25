@@ -23,11 +23,13 @@ import {
   openFactsOf,
   opened,
   play,
+  rowKey,
+  sidesOf,
   stacksOf,
   type Played,
 } from './layerOrderModel.fixtures';
 import { chosenPreview } from './layerOrderReducer';
-import { addState, hintLine, listControls, paneMarks, rowGroupsView, rowsView } from './layerOrderSelectors';
+import { addState, hintLine, listControls, paneMarks, rowGroupsView } from './layerOrderSelectors';
 import type { LayerOrderDialogState } from './layerOrderState';
 
 const view = (subject: number | null, verb: 'in_front_of' | 'behind' | null, ...objects: (number | null)[]) => ({
@@ -67,18 +69,24 @@ describe('the builder with several objects', () => {
     expect(hintLine(subject.state)?.text).toEqual({ key: 'pick_object', objects: 2, tinted: false });
 
     const one = dispatch(subject.state, { type: 'face_picked', face: 0, origin: 'menu' });
-    expect(one.state.sentence).toMatchObject({ subject: 2, objects: [0], objectOrigin: 'menu' });
+    expect(one.state.sentence).toMatchObject({ subject: 2, objects: [0], objectPicks: [{ face: 0, origin: 'menu' }] });
     // Picking one never changes which others are offered, so the tints hold still.
     expect(paneMarks(one.state)).toMatchObject({ pickable: [0, 3], objects: [0, 3], picked: [0] });
 
     const two = play(one.state, { type: 'face_picked', face: 3, origin: 'pattern' });
-    expect(two.state.sentence).toMatchObject({ objects: [0, 3], objectOrigin: 'menu' });
+    expect(two.state.sentence).toMatchObject({
+      objects: [0, 3],
+      objectPicks: [
+        { face: 0, origin: 'menu' },
+        { face: 3, origin: 'pattern' },
+      ],
+    });
     expect(paneMarks(two.state)).toMatchObject({ pickable: [0, 3], picked: [0, 3], labelled: [2, 0, 3] });
     expect(hintLine(fits(two).state)?.text).toEqual({ key: 'more_objects' });
 
-    // The keyboard face menu's checked item is the same toggle.
+    // The keyboard face menu's checked item is the same toggle; the origin left is the remaining object's.
     const back = dispatch(two.state, { type: 'face_picked', face: 0, origin: 'menu' });
-    expect(back.state.sentence).toMatchObject({ objects: [3], objectOrigin: 'menu' });
+    expect(back.state.sentence).toMatchObject({ objects: [3], objectPicks: [{ face: 3, origin: 'pattern' }] });
   });
 
   it('objects read in letter order, from the letters the hook hands the open', () => {
@@ -298,6 +306,130 @@ describe('a clash on a compound sentence', () => {
     expect(effectsOf(cant.effects, 'track').map((effect) => effect.fact)).toEqual([constraintBlockedFact(0, 2)]);
     expect(effectsOf(dispatch(cant.state, { type: 'face_hovered', face: 0 }).effects, 'track')).toEqual([]);
   });
+
+  it('is reported once per sentence as it grows; a new verb, subject or a Clear starts a new one', () => {
+    const blockedFacts = (played: Played) => effectsOf(played.effects, 'track').map((effect) => effect.fact);
+    // 2 in front of 0 can't fit: reported, with one object.
+    const one = previewed(sentenceOf(opened().state, 2, 0), { verdict: 'cant_fit', constraints: [0] });
+    expect(blockedFacts(one)).toEqual([constraintBlockedFact(0, 1)]);
+    // Adding 3 to the same sentence can't fit either: not reported again.
+    const two = play(one.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    expect(blockedFacts(previewed(two, { verdict: 'cant_fit', constraints: [0] }))).toEqual([]);
+    const twoBlocked = previewed(two, { verdict: 'cant_fit', constraints: [0] }).state;
+    // Another verb is another sentence.
+    const behind = play(twoBlocked, { type: 'verb_set', verb: 'behind' });
+    expect(blockedFacts(previewed(behind, { verdict: 'cant_fit', constraints: [0] }))).toEqual([constraintBlockedFact(0, 2)]);
+    // Back to the first verb, the cached block counts again: the sentence changed in between.
+    const behindBlocked = previewed(behind, { verdict: 'cant_fit', constraints: [0] }).state;
+    expect(blockedFacts(play(behindBlocked, { type: 'verb_set', verb: 'in_front_of' }))).toEqual([constraintBlockedFact(0, 2)]);
+    // A Clear, then the same sentence again, is a new sentence.
+    const cleared = play(twoBlocked, { type: 'sentence_cleared' });
+    expect(blockedFacts(cleared)).toEqual([]);
+    expect(blockedFacts(sentenceOf(cleared.state, 2, 0))).toEqual([constraintBlockedFact(0, 1)]);
+  });
+});
+
+describe('explains, only for the set on display', () => {
+  // 4 in front of 5 is committed, so a can't-fit names it and needs explaining; 2 is open with 0, 3 and 5.
+  const WIDE: LayerOpenFacts = openFactsOf({ constraints: [[4, 5, -1]], openPairs: Uint32Array.of(0, 2, 2, 3, 2, 5) });
+
+  it('building “2 in front of 0, 3, 5” through can’t-fit prefixes asks one explain, not three', () => {
+    const built = sentenceOf(opened(WIDE).state, 2, 0, 3, 5);
+    const [first, second, third] = effectsOf(built.effects, 'preview');
+    expect(third!.constraints).toHaveLength(4);
+    // Every answer lands after the sentence has moved on: only the last set is on display.
+    const answered = play(
+      built.state,
+      { type: 'previewed', request: first!.request, facts: { verdict: 'cant_fit', constraints: [0, 1] } },
+      { type: 'previewed', request: second!.request, facts: { verdict: 'cant_fit', constraints: [0, 1] } },
+      { type: 'previewed', request: third!.request, facts: { verdict: 'cant_fit', constraints: [0, 1] } }
+    );
+    const explains = effectsOf(answered.effects, 'explain');
+    expect(explains.map((effect) => effect.constraints)).toEqual([
+      [
+        [4, 5, -1],
+        [2, 0, 1],
+        [2, 3, -1],
+        [2, 5, -1],
+      ],
+    ]);
+    // Coming back to a set it moved past asks for that set's explain then.
+    const back = play(answered.state, { type: 'face_picked', face: 5, origin: 'pattern' });
+    expect(effectsOf(back.effects, 'explain').map((effect) => effect.constraints)).toEqual([
+      [
+        [4, 5, -1],
+        [2, 0, 1],
+        [2, 3, -1],
+      ],
+    ]);
+    expect(hintLine(back.state)?.text.key).toBe('cant_fit_explaining');
+  });
+
+  it('a can’t-fit that lands for a set the sentence has moved past asks nothing', () => {
+    const p = sentenceOf(opened(WIDE).state, 2, 0);
+    const moved = play(p.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    const late = play(moved.state, {
+      type: 'previewed',
+      request: lastOf(p.effects, 'preview').request,
+      facts: { verdict: 'cant_fit', constraints: [0, 1] },
+    });
+    expect(effectsOf(late.effects, 'explain')).toEqual([]);
+  });
+});
+
+describe('Add by a token the session no longer holds', () => {
+  const fitsFacts = (token: number) =>
+    ({ verdict: 'fits', token, changed: changedSpots([1], [1]), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) }) as const;
+
+  it('after a later preview, Add searches instead, with the commit’s limits', () => {
+    const fitOne = previewed(sentenceOf(opened().state, 2, 0), fitsFacts(5));
+    // A second object asks a second preview, which replaces the first in the session; it can't fit.
+    const widened = play(fitOne.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    const cant = previewed(widened, { verdict: 'cant_fit', constraints: [1] });
+    const back = play(cant.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    expect(chosenPreview(back.state)).toMatchObject({ kind: 'fits', token: 5 });
+    expect(lastOf(play(back.state, { type: 'add' }).effects, 'commit')).toMatchObject({
+      constraints: [[2, 0, 1]],
+      token: null,
+      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+    });
+  });
+
+  it('a set that fit only after Keep trying gets at least those limits when Add has to search', () => {
+    const out = previewed(sentenceOf(opened().state, 2, 0), { verdict: 'timed_out' });
+    const again = play(out.state, { type: 'keep_trying' });
+    const retried = keepTrying(LAYER_ORDER_MODEL_LIMITS.preview);
+    expect(lastOf(again.effects, 'preview').limits).toEqual(retried);
+    const fitted = previewed(again, fitsFacts(5));
+    // While it is the session's last preview, its token adopts it.
+    expect(lastOf(play(fitted.state, { type: 'add' }).effects, 'commit')).toMatchObject({
+      token: 5,
+      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+    });
+    // After another preview, Add searches with the wider of the two limits.
+    const widened = play(fitted.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    const back = play(widened.state, { type: 'face_picked', face: 3, origin: 'pattern' });
+    const commit = lastOf(play(back.state, { type: 'add' }).effects, 'commit');
+    expect(commit).toMatchObject({ token: null });
+    expect(commit.limits).toEqual({
+      maxNodes: Math.max(retried.maxNodes, LAYER_ORDER_MODEL_LIMITS.commit.maxNodes),
+      fastNodes: Math.max(retried.fastNodes, LAYER_ORDER_MODEL_LIMITS.commit.fastNodes),
+      deadlineMs: Math.max(retried.deadlineMs, LAYER_ORDER_MODEL_LIMITS.commit.deadlineMs),
+    });
+    expect(commit.limits.maxNodes).toBe(retried.maxNodes);
+  });
+
+  it('a step since the preview drops it from the session too', () => {
+    const fitted = previewed(sentenceOf(opened().state, 2, 0), fitsFacts(5));
+    const stepping = play(fitted.state, { type: 'step', direction: 'next' });
+    const ended = play(stepping.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'end' },
+    });
+    expect(chosenPreview(ended.state)).toMatchObject({ kind: 'fits', token: 5 });
+    expect(lastOf(play(ended.state, { type: 'add' }).effects, 'commit')).toMatchObject({ token: null });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -325,6 +457,18 @@ describe('Add with several objects', () => {
     ]);
   });
 
+  it('reports where the first object still in the sentence was picked, not one removed since', () => {
+    const s = play(
+      opened().state,
+      { type: 'face_picked', face: 2, origin: 'pattern' },
+      { type: 'face_picked', face: 0, origin: 'menu' },
+      { type: 'face_picked', face: 3, origin: 'folded' },
+      { type: 'face_picked', face: 0, origin: 'menu' }
+    );
+    const landed = commits(play(fits(s).state, { type: 'add' }), Uint32Array.of(4, 5));
+    expect(lastOf(landed.effects, 'track').fact).toEqual(constraintAddedFact('in_front_of', 'pattern', 'folded', 1));
+  });
+
   it('undo takes the whole Add back in one step, and redo puts it back', () => {
     const added = twoObjectsAdded();
     const undo = play(added.state, { type: 'undo' });
@@ -350,6 +494,8 @@ describe('Add with several objects', () => {
       [2, 0, 1],
       [2, 3, -1],
     ]);
+    // Add's label counts what it would add: one constraint, so singular, though two objects are picked.
+    expect(addState(fits(s, 4).state)).toMatchObject({ enabled: true, label: 'add_constraint' });
     const added = play(fits(s, 4).state, { type: 'add' });
     expect(lastOf(added.effects, 'commit')).toMatchObject({ constraints: [[2, 0, 1], [2, 3, -1]], token: 4 });
     const landed = commits(added, Uint32Array.of(4, 5));
@@ -372,7 +518,7 @@ describe('the list: one row per subject and verb', () => {
     const [first, second] = added.state.rows.committed.map((row) => row.id);
     expect(rowGroupsView(added.state)).toEqual([
       {
-        id: first,
+        key: rowKey(added.state, first!),
         kind: 'committed',
         sentence: view(2, 'in_front_of', 0, 3),
         mark: 'none',
@@ -386,20 +532,56 @@ describe('the list: one row per subject and verb', () => {
       },
     ]);
     // Stored one constraint each.
-    expect(rowsView(added.state)).toHaveLength(2);
+    expect(added.state.rows.committed).toHaveLength(2);
     const back = play(added.state, { type: 'side_set', side: 'back' });
     expect(rowGroupsView(back.state)[0]!.sentence).toEqual(view(2, 'behind', 0, 3));
   });
 
-  it('a later Add for the same subject and verb joins its row, at the earliest one’s place', () => {
+  /** 2 in front of 0, then 4 in front of 5, then 2 in front of 3: two rows, the first holding the first and last. */
+  function threeAdds(): Played {
     const first = commits(play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
     const second = commits(play(fits(sentenceOf(first.state, 4, 5)).state, { type: 'add' }), Uint32Array.of(2, 3));
-    const third = commits(play(fits(sentenceOf(second.state, 2, 3)).state, { type: 'add' }), new Uint32Array());
+    return commits(play(fits(sentenceOf(second.state, 2, 3)).state, { type: 'add' }), new Uint32Array());
+  }
+
+  it('a later Add for the same subject and verb joins its row, at the earliest one’s place', () => {
+    const third = threeAdds();
     const [twoZero, fourFive, twoThree] = third.state.rows.committed.map((row) => row.id);
-    expect(rowGroupsView(third.state).map((row) => [row.id, row.sentence, row.members.map((m) => m.id)])).toEqual([
-      [twoZero, view(2, 'in_front_of', 0, 3), [twoZero, twoThree]],
-      [fourFive, view(4, 'in_front_of', 5), [fourFive]],
+    expect(rowGroupsView(third.state).map((row) => [row.sentence, row.members.map((m) => m.id)])).toEqual([
+      [view(2, 'in_front_of', 0, 3), [twoZero, twoThree]],
+      [view(4, 'in_front_of', 5), [fourFive]],
     ]);
+  });
+
+  it('a row keeps its key, its place and its hover when its earliest object goes, and across a turn', () => {
+    const third = threeAdds();
+    const [twoZero, fourFive, twoThree] = third.state.rows.committed.map((row) => row.id);
+    const [twoRow, fourRow] = rowGroupsView(third.state);
+    const hovered = play(third.state, { type: 'row_hovered', key: twoRow!.key });
+    const asked = play(hovered.state, { type: 'rows_removed', ids: [twoZero!] });
+    // The row's next object takes the removed one's place in the list; the engine treats it as a set.
+    expect(lastOf(asked.effects, 'commit').constraints).toEqual([
+      [2, 3, -1],
+      [4, 5, -1],
+    ]);
+    const removed = commits(asked, Uint32Array.of(2, 0));
+    expect(removed.state.rows.committed.map((row) => row.id)).toEqual([twoThree, fourFive]);
+    const after = rowGroupsView(removed.state);
+    expect(after.map((row) => [row.key, row.sentence])).toEqual([
+      [twoRow!.key, view(2, 'in_front_of', 3)],
+      [fourRow!.key, view(4, 'in_front_of', 5)],
+    ]);
+    expect(removed.state.hover.row).toBe(twoRow!.key);
+    expect(after.map((row) => row.hot)).toEqual([true, false]);
+    // Turned over, every row keeps its key, its members and its place, and reads the other verb.
+    const back = rowGroupsView(play(third.state, { type: 'side_set', side: 'back' }).state);
+    expect(back.map((row) => [row.key, row.members.map((m) => m.id), row.sentence])).toEqual([
+      [twoRow!.key, [twoZero, twoThree], view(2, 'behind', 0, 3)],
+      [fourRow!.key, [fourFive], view(4, 'behind', 5)],
+    ]);
+    // Undo puts the list back as it was.
+    const undone = commits(play(removed.state, { type: 'undo' }), new Uint32Array());
+    expect(undone.state.rows.committed.map((row) => row.id)).toEqual([twoZero, fourFive, twoThree]);
   });
 
   it('a different verb for the same subject is a row of its own', () => {
@@ -422,11 +604,12 @@ describe('the list: one row per subject and verb', () => {
 
   it('each object’s × removes only it, as one undo step', () => {
     const added = twoObjectsAdded();
-    const [zero, three] = rowGroupsView(added.state)[0]!.members;
-    const asked = play(added.state, { type: 'row_removed', id: three!.id });
+    const [row] = rowGroupsView(added.state);
+    const [zero, three] = row!.members;
+    const asked = play(added.state, { type: 'rows_removed', ids: [three!.id] });
     expect(lastOf(asked.effects, 'commit').constraints).toEqual([[2, 0, 1]]);
     const removed = commits(asked, Uint32Array.of(2, 3, 4, 5));
-    expect(rowGroupsView(removed.state).map((row) => [row.id, row.sentence])).toEqual([[zero!.id, view(2, 'in_front_of', 0)]]);
+    expect(rowGroupsView(removed.state).map((r) => [r.key, r.sentence])).toEqual([[row!.key, view(2, 'in_front_of', 0)]]);
 
     const undone = commits(play(removed.state, { type: 'undo' }), Uint32Array.of(4, 5));
     expect(rowGroupsView(undone.state)[0]!.members.map((member) => member.id)).toEqual([zero!.id, three!.id]);
@@ -435,12 +618,10 @@ describe('the list: one row per subject and verb', () => {
   it('hovering a row lights its subject and all its objects; a click puts its subject in the builder', () => {
     const added = twoObjectsAdded(Uint32Array.of(2, 5, 4, 5));
     const row = rowGroupsView(added.state)[0]!;
-    const hovered = play(added.state, { type: 'row_hovered', id: row.id });
+    const hovered = play(added.state, { type: 'row_hovered', key: row.key });
     expect(paneMarks(hovered.state)).toMatchObject({ rowFaces: [2, 0, 3], labelled: [2, 0, 3] });
     expect(rowGroupsView(hovered.state)[0]!.hot).toBe(true);
-    // Through any of its members.
-    expect(paneMarks(play(added.state, { type: 'row_hovered', id: row.members[1]!.id }).state).rowFaces).toEqual([2, 0, 3]);
-    const clicked = play(added.state, { type: 'row_clicked', id: row.id });
+    const clicked = play(added.state, { type: 'row_clicked', key: row.key });
     expect(clicked.state.sentence).toMatchObject({ subject: 2, subjectOrigin: 'list', objects: [] });
   });
 
@@ -463,6 +644,26 @@ describe('the list: one row per subject and verb', () => {
       ],
     });
     expect(paneMarks(done.state).clashRows).toEqual([three]);
+  });
+
+  it('the can’t-fit hint groups what clashes as the list does', () => {
+    const start = opened(openFactsOf({ constraints: [[2, 0, 1], [2, 3, -1]], openPairs: Uint32Array.of(4, 5) })).state;
+    const cant = previewed(sentenceOf(start, 4, 5), { verdict: 'cant_fit', constraints: [0, 1, 2] });
+    const done = play(cant.state, {
+      type: 'explained',
+      request: lastOf(cant.effects, 'explain').request,
+      facts: { verdict: 'clash', constraints: [0, 1, 2], faces: [0, 2, 3, 4, 5], minimal: true },
+    });
+    expect(hintLine(done.state)?.text).toEqual({
+      key: 'cant_fit',
+      sentence: view(4, 'in_front_of', 5),
+      clashes: [view(2, 'in_front_of', 0, 3)],
+      minimal: true,
+    });
+    expect(rowGroupsView(done.state)[0]).toMatchObject({
+      mark: 'clash',
+      reason: { key: 'clashes', clashes: [view(4, 'in_front_of', 5)] },
+    });
   });
 
   describe('carried rows', () => {
@@ -488,7 +689,7 @@ describe('the list: one row per subject and verb', () => {
     it('group within one status, never with the committed rows, and give the row its one reason', () => {
       const { state } = opened(RESTORED, { hasRecord: true });
       const ids = [...state.rows.committed, ...state.rows.carried].map((row) => row.id);
-      expect(rowGroupsView(state).map((row) => [row.id, row.kind, row.sentence, row.mark, row.reason])).toEqual([
+      expect(rowGroupsView(state).map((row) => [row.members[0]!.id, row.kind, row.sentence, row.mark, row.reason])).toEqual([
         [ids[0], 'committed', view(2, 'in_front_of', 0), 'none', null],
         [ids[1], 'carried', view(2, 'in_front_of', 3, 5), 'not_applied', { key: 'ambiguous', face: 2 }],
         [ids[3], 'carried', view(2, 'in_front_of', 4), 'not_applied', { key: 'no_overlap', sentence: view(2, 'in_front_of', 4) }],
@@ -499,11 +700,11 @@ describe('the list: one row per subject and verb', () => {
     it('pointing at a grouped carried row gives the row’s reason, and its × removes one, as one undo step', () => {
       const { state } = opened(RESTORED, { hasRecord: true });
       const row = rowGroupsView(state)[1]!;
-      const hovered = play(state, { type: 'row_hovered', id: row.members[1]!.id });
+      const hovered = play(state, { type: 'row_hovered', key: row.key });
       expect(hintLine(hovered.state)?.text).toEqual({ key: 'row_not_applied', reason: { key: 'ambiguous', face: 2 } });
       expect(paneMarks(hovered.state).rowFaces).toEqual([2, 3, 5]);
 
-      const removedOne = play(state, { type: 'row_removed', id: row.members[0]!.id });
+      const removedOne = play(state, { type: 'rows_removed', ids: [row.members[0]!.id] });
       expect(effectsOf(removedOne.effects, 'commit')).toEqual([]);
       expect(rowGroupsView(removedOne.state)[1]!.sentence).toEqual(view(2, 'in_front_of', 5));
       const removedRow = play(state, { type: 'rows_removed', ids: row.members.map((member) => member.id) });
@@ -534,6 +735,79 @@ describe('the list: one row per subject and verb', () => {
       const removed = play(state, { type: 'rows_removed', ids: row!.members.map((member) => member.id) });
       expect(effectsOf(removed.effects, 'commit').map((effect) => effect.constraints)).toEqual([[[4, 5, -1]]]);
       expect(commits(removed).state.settle).toEqual({ kind: 'settled' });
+    });
+
+    it('a row whose own constraints are the whole clash says they can’t all fit together, naming them', () => {
+      // 2 in front of 0 and of 3 clash with each other and nothing else; 4 in front of 5 waits.
+      const clashing = openFactsOf({
+        restore: {
+          outcome: { kind: 'clash', constraints: [0, 1] },
+          carried: [
+            carried({ index: 0, status: { status: 'clashing' }, subject: 2, object: 0, constraint: [2, 0, 1] }),
+            carried({ index: 1, status: { status: 'clashing' }, subject: 2, object: 3, sign: -1, constraint: [2, 3, -1] }),
+            carried({ index: 2, subject: 4, object: 5, sign: -1, constraint: [4, 5, -1] }),
+          ],
+        },
+      });
+      const { state } = opened(clashing, { hasRecord: true });
+      const [row] = rowGroupsView(state);
+      expect(row).toMatchObject({ mark: 'clash', reason: { key: 'clash_within', sentence: view(2, 'in_front_of', 0, 3) } });
+      // The attention line groups the clash as the list does.
+      expect(hintLine(state)?.text).toEqual({
+        key: 'attention_clash',
+        clashes: [view(2, 'in_front_of', 0, 3)],
+        explaining: false,
+      });
+      // Pointing at the row leaves the line on the clash, as a clashing row always has.
+      expect(hintLine(play(state, { type: 'row_hovered', key: row!.key }).state)?.text.key).toBe('attention_clash');
+      // With a third member outside the clash, the reason names only the two that clash.
+      const wider = openFactsOf({
+        restore: {
+          outcome: { kind: 'clash', constraints: [0, 1] },
+          carried: [
+            carried({ index: 0, status: { status: 'clashing' }, subject: 2, object: 0, constraint: [2, 0, 1] }),
+            carried({ index: 1, status: { status: 'clashing' }, subject: 2, object: 3, sign: -1, constraint: [2, 3, -1] }),
+            carried({ index: 2, subject: 2, object: 5, sign: -1, constraint: [2, 5, -1] }),
+          ],
+        },
+      });
+      const [three] = rowGroupsView(opened(wider, { hasRecord: true }).state);
+      expect(three).toMatchObject({
+        sentence: view(2, 'in_front_of', 0, 3, 5),
+        members: [{ clash: true }, { clash: true }, { clash: false }],
+        reason: { key: 'clash_within', sentence: view(2, 'in_front_of', 0, 3) },
+      });
+    });
+
+    it('rows that can still apply group together, intact or clashing, and mark their clash per constraint', () => {
+      // 2 in front of 0 clashed at the restore, 2 in front of 3 was intact: one row.
+      const facts = openFactsOf({
+        restore: {
+          outcome: { kind: 'clash', constraints: [0, 2] },
+          carried: [
+            carried({ index: 0, status: { status: 'clashing' }, subject: 2, object: 0, constraint: [2, 0, 1] }),
+            carried({ index: 1, subject: 2, object: 3, sign: -1, constraint: [2, 3, -1] }),
+            carried({ index: 2, status: { status: 'clashing' }, subject: 4, object: 5, sign: -1, constraint: [4, 5, -1] }),
+          ],
+        },
+      });
+      const { state } = opened(facts, { hasRecord: true });
+      expect(rowGroupsView(state).map((row) => [row.sentence, row.members.map((m) => m.clash)])).toEqual([
+        [view(2, 'in_front_of', 0, 3), [true, false]],
+        [view(4, 'in_front_of', 5), [true]],
+      ]);
+      // After 4 in front of 5 goes, the re-check finds the two left clash: one row, both marked.
+      const fourFive = state.rows.carried[2]!.id;
+      const removed = play(state, { type: 'rows_removed', ids: [fourFive] });
+      const commit = lastOf(removed.effects, 'commit');
+      const still = play(removed.state, {
+        type: 'committed',
+        request: commit.request,
+        facts: { verdict: 'cant_fit', constraints: [0, 1] },
+      });
+      expect(rowGroupsView(still.state).map((row) => [row.sentence, row.mark, row.members.map((m) => m.clash)])).toEqual([
+        [view(2, 'in_front_of', 0, 3), 'clash', [true, true]],
+      ]);
     });
   });
 });

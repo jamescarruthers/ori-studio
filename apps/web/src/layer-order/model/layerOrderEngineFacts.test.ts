@@ -30,8 +30,9 @@ const OPENED: LayerOpened = {
 };
 
 describe('the engine’s answers as the model reads them', () => {
-  it('an open: the figure, its open pairs, where its order came from, and no constraints', () => {
-    expect(openFacts(OPENED, STACKS, null)).toEqual({
+  it('an open: the figure, its open pairs, where its order came from, no constraints, and the letters the hook read', () => {
+    const letterOrder = [3, 0, 1, 2, 6, 5, 4];
+    expect(openFacts(OPENED, STACKS, null, letterOrder)).toEqual({
       faces: 7,
       frontUp: OPENED.front_up,
       openPairs: OPENED.open_pairs,
@@ -39,6 +40,7 @@ describe('the engine’s answers as the model reads them', () => {
       stacks: STACKS,
       constraints: [],
       restore: null,
+      letterOrder,
     });
   });
 
@@ -86,7 +88,7 @@ describe('the engine’s answers as the model reads them', () => {
         },
       ],
     };
-    const facts = openFacts(restored, STACKS, record);
+    const facts = openFacts(restored, STACKS, record, [0, 1, 2, 3, 4, 5, 6]);
     expect(facts.constraints).toEqual([[4, 5, -1]]);
     expect(facts.restore).toEqual({
       outcome: { kind: 'applied' },
