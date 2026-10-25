@@ -66,6 +66,12 @@ export interface LayerPanesEvents {
   readonly onEmptyPaper?: (pick: LayerPaneGroundPick) => void;
   /** The flash `n` has faded (1.6 s after it began). */
   readonly onFlashEnded?: (n: number) => void;
+  /**
+   * The faces on offer `pane` leaves unlettered at its zoom, since no chip of
+   * theirs fits (D7's addition), ascending: told when they change, so the hint
+   * can say to zoom in.
+   */
+  readonly onUnlettered?: (pane: LayerPaneId, faces: readonly LayerFace[]) => void;
 }
 
 /** A pointer type as the events name it: a finger taps; a mouse and a pen point. */

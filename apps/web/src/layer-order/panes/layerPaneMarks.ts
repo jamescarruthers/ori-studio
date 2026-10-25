@@ -29,6 +29,7 @@
  * | In a clash | danger, moving rung (picked when its reason is pointed at), 1.5 px ring | the same |
  * | A spot a preview changes | – | picked rung |
  * | Undecided spots | – | faint, while the view's Undecided is on |
+ * | A crease a notice names | a 2 px line each side of it, clear of its colour | the same, along the folded edge |
  *
  * While a subject is being chosen, the faint tint of every face with a choice
  * is on the crease pattern only (spec §6.4): on the folded paper it would
@@ -121,6 +122,11 @@ export interface LayerFaceMarks {
   readonly flash: LayerPaneFlash | null;
   /** The spots whose face on top isn't decided yet, per side (the model's `openSpotsOf`). */
   readonly undecided: LayerSidesSpots;
+  /**
+   * A crease the dialog's notice names, as the two faces it joins (D19): lit
+   * along its line on both panes, beside the face the notice names.
+   */
+  readonly crease: readonly [LayerFace, LayerFace] | null;
 }
 
 const NO_SPOTS: LayerSidesSpots = { front: [], back: [] };
@@ -138,6 +144,7 @@ export const NO_FACE_MARKS: LayerFaceMarks = {
   changed: null,
   flash: null,
   undecided: NO_SPOTS,
+  crease: null,
 };
 
 /** What follows the pointer: the face pointed at and a pressed or hovered row's faces. */
