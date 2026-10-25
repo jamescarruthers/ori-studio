@@ -2,7 +2,8 @@
  * The Layer order dialog on a Diagram step
  * (`implementation-plans/layer-order-dialog.md`, row H7): the Step pane's
  * Edit… and the Picture section's Review… (D14) open it on the step's flat
- * fold, and an Apply commits the order it hands back, as one undo step.
+ * fold — Review… on the one a step shown another way would show — and an
+ * Apply commits the order it hands back, as one undo step.
  *
  * - **Opening is a user action**, so it may fold (approach 5): the step's
  *   creases are folded as a capture folds them, as a visible, stoppable run,
@@ -12,8 +13,9 @@
  * - **The request** is the step's: its source, its record in the crease
  *   pattern's coordinates (through the step's paper frame), and the
  *   Diagram's look — the diagram's style as its steps are painted, the step's
- *   turn and side, no spread (D18). With no record, the scene it shows, so
- *   the dialog opens on the order the step draws.
+ *   turn and side, no spread (D18). With no record, the scene it shows, at
+ *   the kernel's layer order the step shows, so the dialog opens on the order
+ *   the step draws.
  * - **Only `applied` writes** (D16): the order is folded as the dialog
  *   analysed it (`fold_with_order`) and committed with its record, as a
  *   capture is, one undo step. `unchanged`, `cancelled`, `busy` and
@@ -37,6 +39,8 @@ import {
 } from '../../store/workspaceStore/diagramCapture';
 import {
   isLockedStep,
+  renderToShowAs,
+  spreadStartsFor,
   stepById,
   stepNumber,
   type DiagramCpRender,
@@ -61,7 +65,7 @@ const APPLY_LABEL = 'Change layer order';
  * X-ray. Its side is the request's model's; its spread is the dialog's to
  * leave out.
  */
-export function diagramStepLayerOrderLook(style: DiagramStyle, render: Extract<DiagramCpRender, { mode: 'folded-flat' }>): LayerOrderLook {
+export function diagramStepLayerOrderLook(style: DiagramStyle, render: FlatRender): LayerOrderLook {
   return {
     style: diagramScenePaintStyle(style, false),
     policy: DIAGRAM_STYLE_POLICY,
@@ -70,10 +74,35 @@ export function diagramStepLayerOrderLook(style: DiagramStyle, render: Extract<D
   };
 }
 
+/** A flat fold's pose, as a step keeps it. */
+type FlatRender = Extract<DiagramCpRender, { mode: 'folded-flat' }>;
+
+/** Where the dialog was asked from: the Step pane's Layer order row, or its flag's Review… (D14). */
+export type DiagramStepLayerOrderVia = 'edit' | 'review';
+
+/**
+ * The flat fold the dialog opens on for a step: the one it shows; for one
+ * shown as its crease pattern or simulated — a flagged step's Review… — the
+ * pose its folded way last had (D19), or a new flat pose, as Show as Folded
+ * would draw it. None for one shown in 3D, whose creases fold in 3D, or a
+ * saved Defox view.
+ */
+function flatPoseOf(stepId: string, linked: DiagramCpSource): FlatRender | null {
+  if (linked.render.mode === 'folded-flat') return linked.render;
+  if (linked.render.mode === 'folded-3d' || linked.render.mode === 'defox') return null;
+  const { diagram } = store.get();
+  const target = renderToShowAs(linked, 'folded', diagram ? spreadStartsFor(diagram, stepId).any : undefined);
+  return target.mode === 'folded-flat'
+    ? target
+    : { mode: 'folded-flat', side: target.mode === 'folded-3d' ? target.side : 'front', rotationDeg: 0, foldCase: 1 };
+}
+
 /** A request made for a step: what the dialog opens on, and what its Apply is checked against. */
 interface StepLayerOrderOpening {
   request: LayerOrderRequest;
   frame: PaperFrame;
+  /** The flat pose the dialog was opened on, which an Apply captures the step in. */
+  render: FlatRender;
   /** The step and pattern it was made from: an Apply onto anything else commits nothing. */
   guard: { loadId: number; revision: number; content: string };
 }
@@ -81,7 +110,8 @@ interface StepLayerOrderOpening {
 /** Fold the step's creases for the dialog, as a stoppable run, and build its request; or why it cannot open. */
 async function openingFor(
   stepId: string,
-  linked: DiagramCpSource & { render: Extract<DiagramCpRender, { mode: 'folded-flat' }> }
+  linked: DiagramCpSource,
+  render: FlatRender
 ): Promise<StepLayerOrderOpening | DiagramCaptureOutcome | 'spatial'> {
   const start = beginStepCapture(store, stepId);
   if ('status' in start) return start;
@@ -93,11 +123,11 @@ async function openingFor(
     const route = resolveFoldRoute(document, choice.creases.foldLineIds);
     if (route.kind === 'none') return { status: 'missing' };
     if (route.kind === 'spatial') return 'spatial';
-    const { render } = linked;
-    const folded = await runStepFold(store, start, 'diagram-capture', (runtime) =>
-      stepFoldSource(runtime, route.lineIds, captureModel(document, render.side))
-    );
     const saved = stepLayerOrderOf(linked.layerOrder);
+    // With no record the dialog opens on the order the step draws: the kernel's, at the step's case.
+    const folded = await runStepFold(store, start, 'diagram-capture', (runtime) =>
+      stepFoldSource(runtime, route.lineIds, captureModel(document, render.side), saved ? 1 : render.foldCase)
+    );
     const diagram = store.get().diagram;
     const number = diagram ? stepNumber(diagram, stepId) : null;
     return {
@@ -112,6 +142,7 @@ async function openingFor(
           : {}),
       },
       frame: folded.frame,
+      render,
       guard: { loadId: start.guard.loadId, revision: start.guard.revision, content: lineContentFingerprint(document) },
     };
   } catch (error) {
@@ -123,20 +154,22 @@ async function openingFor(
 
 /**
  * Commit an order the dialog applied: folded as it was analysed, into the
- * step's picture, with its record, as one undo step — onto the step and
- * pattern it was opened on, or not at all.
+ * step's picture in the flat pose the dialog was opened on — a step shown
+ * another way comes back folded, which is what was being shown — with its
+ * record, as one undo step; onto the step and pattern it was opened on, or
+ * not at all. An order the kernel cannot draw writes nothing (D3).
  */
 async function applyToStep(stepId: string, opening: StepLayerOrderOpening, applied: LayerOrderApplied): Promise<boolean> {
   const now = store.get();
   const step = now.diagram ? stepById(now.diagram, stepId) : null;
   const document = now.oristudioCpDocument?.document;
   const { loadId, revision, content } = opening.guard;
-  if (step?.source?.kind !== 'cp' || step.source.render.mode !== 'folded-flat' || !document) return false;
+  if (step?.source?.kind !== 'cp' || !document) return false;
   if (now.diagramLoadId !== loadId || step.revision !== revision || lineContentFingerprint(document) !== content) return false;
   const outcome = await now.captureDiagramStep(stepId, {
     scope: step.source.scope,
     known: knownCreasesOf(step.source),
-    render: step.source.render,
+    render: opening.render,
     kind: 'diagram-capture',
     label: APPLY_LABEL,
     layerOrderApplied: { applied, frame: opening.frame },
@@ -146,17 +179,21 @@ async function applyToStep(stepId: string, opening: StepLayerOrderOpening, appli
 }
 
 /**
- * Open the Layer order dialog on a linked step shown folded flat — from the
- * Step pane's Edit…, or its flag's Review… (D14) — and commit an Apply.
- * Whether it applied an order.
+ * Open the Layer order dialog on a linked step and commit an Apply: from the
+ * Step pane's Edit…, on the flat fold the step shows; or from its flag's
+ * Review… (D14), whatever it is shown as while its creases fold flat, on the
+ * flat fold it would show. Whether it applied an order.
  */
-export async function openDiagramStepLayerOrder(stepId: string): Promise<boolean> {
+export async function openDiagramStepLayerOrder(stepId: string, via: DiagramStepLayerOrderVia = 'edit'): Promise<boolean> {
   const state = store.get();
   const step = state.diagram ? stepById(state.diagram, stepId) : null;
   if (!step || isLockedStep(step) || state.diagramReadOnly || step.source?.kind !== 'cp') return false;
   const linked = step.source;
-  if (linked.render.mode !== 'folded-flat') return false;
-  const opening = await openingFor(stepId, { ...linked, render: linked.render });
+  // Edit… is the Layer order row's, which only a flat fold has.
+  if (via === 'edit' && linked.render.mode !== 'folded-flat') return false;
+  const render = flatPoseOf(stepId, linked);
+  if (!render) return false;
+  const opening = await openingFor(stepId, linked, render);
   if (opening === 'spatial') {
     toast.message(
       i18n.t(

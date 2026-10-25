@@ -108,6 +108,18 @@ describe('opening the Layer order dialog on a step', () => {
     expect(state().diagramCaptures).toEqual({});
   });
 
+  it('opens on the kernel’s order the step shows: its fold stepped to that case before its scene is read', async () => {
+    const stepId = await flatStep({ ...FLAT, foldCase: 2 });
+    vi.mocked(bindings.runtime!.foldToCase).mockClear();
+    vi.mocked(bindings.runtime!.paperScene).mockClear();
+    await openDiagramStepLayerOrder(stepId);
+    expect(bindings.runtime!.foldToCase).toHaveBeenCalledWith(7, 2);
+    expect(bindings.runtime!.paperScene).toHaveBeenCalledOnce();
+    const order = (spy: unknown) => (spy as { mock: { invocationCallOrder: number[] } }).mock.invocationCallOrder[0]!;
+    expect(order(bindings.runtime!.foldToCase)).toBeLessThan(order(bindings.runtime!.paperScene));
+    expect(asked().shown).toBeDefined();
+  });
+
   it('hands over the step’s record in the crease pattern’s coordinates, and lets it, not a scene, open the dialog', async () => {
     const stepId = await flatStep();
     useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, json) });
@@ -173,6 +185,48 @@ describe('opening the Layer order dialog on a step', () => {
     expect(await openDiagramStepLayerOrder(stepId)).toBe(false);
     expect(state().diagramHistory.past).toHaveLength(entries);
     expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
+  });
+
+  it('commits nothing when the kernel cannot draw the order the dialog applied, and says so (D3)', async () => {
+    const stepId = await flatStep();
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, json) });
+    bindings.runtime = fakeCaptureRuntime({
+      foldWithOrder: vi.fn(async () => ({ status: 'refused' as const, refusal: { code: 'not_found' as const } })),
+    });
+    dialog.outcome = (request) => ({
+      kind: 'applied',
+      applied: { record: { ...inSource, constraints: [] }, relations: new Uint32Array([1, 0]), source: request.source },
+    });
+    const diagram = state().diagram;
+    const entries = state().diagramHistory.past.length;
+    useWorkspaceStore.setState({ dirty: false });
+    expect(await openDiagramStepLayerOrder(stepId)).toBe(false);
+    // No flag, no new record: the step as it was.
+    expect(state().diagram).toBe(diagram);
+    expect(source(stepId).layerOrder).toBe(json);
+    expect(state().diagramHistory.past).toHaveLength(entries);
+    expect(state().dirty).toBe(false);
+    expect(toasts.error).toHaveBeenCalledWith('This layer order couldn’t be drawn, so nothing was changed.');
+  });
+
+  it('Review… opens a flagged step shown as its crease pattern on the flat fold it would show, and Apply folds it', async () => {
+    const stepId = await flatStep({ mode: 'crease-pattern', rotationDeg: 0 });
+    const flagged = stepLayerOrderJson({ ...STEP_LAYER_ORDER, attention: { reason: 'conflict', count: 1 } });
+    useWorkspaceStore.setState({ diagram: setLinkedLayerOrder(state().diagram!, stepId, flagged) });
+    // Edit… is the Layer order row's, which a crease pattern has none of.
+    expect(await openDiagramStepLayerOrder(stepId, 'edit')).toBe(false);
+    expect(dialog.openLayerOrderDialog).not.toHaveBeenCalled();
+    dialog.outcome = (request) => ({
+      kind: 'applied',
+      applied: { record: inSource, relations: new Uint32Array([1, 0]), source: request.source },
+    });
+    expect(await openDiagramStepLayerOrder(stepId, 'review')).toBe(true);
+    // A new flat pose, from the front, at no turn: as Show as Folded draws it.
+    expect(asked().source.model.state).toBe('Front0');
+    expect(asked().look.turnDeg).toBe(0);
+    expect(asked().record).toEqual({ ...inSource, attention: { reason: 'conflict', count: 1 } });
+    expect(source(stepId).render).toMatchObject({ mode: 'folded-flat', side: 'front', rotationDeg: 0 });
+    expect(stepLayerOrderOf(source(stepId).layerOrder)?.record).toEqual(STEP_LAYER_ORDER);
   });
 
   it('opens nothing for a step not shown folded flat, on a read-only diagram, or locked by a newer build', async () => {

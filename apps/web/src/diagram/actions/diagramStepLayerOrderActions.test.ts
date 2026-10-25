@@ -40,7 +40,7 @@ describe('the Step pane’s Layer order row (H7)', () => {
     const deps = { t, open: vi.fn() };
     expect(buildDiagramStepLayerOrderRow(state({ record: { constraints: 3, attention: null } }), deps)!.note).toEqual({
       text: '3 constraints',
-      reason: false,
+      kind: 'status',
     });
     expect(buildDiagramStepLayerOrderRow(state({ record: { constraints: 1, attention: null } }), deps)!.note?.text).toBe(
       '1 constraint'
@@ -50,11 +50,19 @@ describe('the Step pane’s Layer order row (H7)', () => {
     ).toBe('3 constraints');
   });
 
+  it('says an order chosen with no constraint is a chosen order (D16)', () => {
+    const deps = { t, open: vi.fn() };
+    expect(buildDiagramStepLayerOrderRow(state({ record: { constraints: 0, attention: null } }), deps)!.note).toEqual({
+      text: 'Chosen order',
+      kind: 'status',
+    });
+  });
+
   it('holds Edit… on a 3D step, its reason on the note line to be read (D13)', () => {
     const open = vi.fn();
     const row = buildDiagramStepLayerOrderRow(state({ render: IN_3D }), { t, open })!;
     expect(row.edit).toMatchObject({ disabled: true, hint: 'Layer order works on flat folds' });
-    expect(row.note).toEqual({ text: 'Layer order works on flat folds. This step folds in 3D.', reason: true });
+    expect(row.note).toEqual({ text: 'Layer order works on flat folds. This step folds in 3D.', kind: 'reason' });
     row.edit.run();
     expect(open).not.toHaveBeenCalled();
   });
@@ -120,12 +128,44 @@ describe('the Picture section’s flag (D10, D14)', () => {
     expect(flag.review).toBeNull();
   });
 
-  it('reviews only from a flat fold: shown as its crease pattern, the flag stands alone', () => {
+  it.each([
+    [{ mode: 'crease-pattern', rotationDeg: 0 } as const],
+    [{ mode: 'simulated', foldPercent: 40, view: { yaw: 0, pitch: 0, zoom: 1 } } as const],
+  ])('offers Review… whatever the step is shown as while it folds flat: %o', (render) => {
+    const open = vi.fn();
+    const flag = buildDiagramStepLayerOrderFlag(state({ render, record: flagged({ reason: 'conflict', count: 1 }) }), {
+      t,
+      open,
+    })!;
+    expect(flag.sentence).toBe('1 layer constraint needs attention since the pattern changed.');
+    expect(flag.review).toMatchObject({ disabled: false });
+    flag.review!.run();
+    expect(open).toHaveBeenCalledWith('review');
+  });
+
+  it('says a 3D step keeps its chosen order waiting, whatever its summary says (D13, D16)', () => {
     const flag = buildDiagramStepLayerOrderFlag(
-      state({ render: { mode: 'crease-pattern', rotationDeg: 0 }, record: flagged({ reason: 'conflict', count: 1 }) }),
+      state({ render: IN_3D, record: { constraints: 0, attention: { reason: 'conflict', count: 0 } } }),
       { t, open: vi.fn() }
     )!;
-    expect(flag.sentence).toContain('need');
+    expect(flag.sentence).toBe('This step folds in 3D now. Its chosen layer order is kept for when it folds flat again.');
+    expect(flag.review).toBeNull();
+  });
+
+  it.each([
+    [{ reason: 'timeout', count: 0 } as const, 'This step’s chosen layer order couldn’t be checked in time.'],
+    [{ reason: 'conflict', count: 0 } as const, 'This step’s chosen layer order needs attention since the pattern changed.'],
+  ])('says an order chosen with no constraint needs a look in its own words: %o (D16)', (attention, sentence) => {
+    const flag = buildDiagramStepLayerOrderFlag(state({ record: { constraints: 0, attention } }), { t, open: vi.fn() })!;
+    expect(flag.sentence).toBe(sentence);
+    expect(flag.review).not.toBeNull();
+  });
+
+  it('has nothing to review on a saved Defox view', () => {
+    const flag = buildDiagramStepLayerOrderFlag(
+      state({ render: { mode: 'defox', snapshot: '{}' }, record: flagged({ reason: 'conflict', count: 1 }) }),
+      { t, open: vi.fn() }
+    )!;
     expect(flag.review).toBeNull();
   });
 

@@ -40,11 +40,12 @@ export interface DiagramStepLayerOrderEntry {
 export interface DiagramStepLayerOrderRow {
   edit: DiagramStepLayerOrderEntry;
   /**
-   * The row's note line: the constraints the step keeps (D11), or why Edit…
-   * can do nothing on a step folded in 3D (D13), which is to be read; null
-   * when there is nothing to say.
+   * The row's note line, as `FieldRow` draws a note: a quiet `status`, the
+   * constraints the step keeps (D11); or a `reason` to be read, why Edit…
+   * can do nothing on a step folded in 3D (D13); null when there is nothing
+   * to say.
    */
-  note: { text: string; reason: boolean } | null;
+  note: { text: string; kind: 'reason' | 'status' } | null;
 }
 
 /** The Picture section's flag: why the step's constraints need a look, and Review…, when it can open. */
@@ -118,30 +119,35 @@ export function buildDiagramStepLayerOrderRow(
       edit,
       note: {
         text: t('panels:diagram.layerOrder.needsFlatNote', 'Layer order works on flat folds. This step folds in 3D.'),
-        reason: true,
+        kind: 'reason',
       },
     };
   }
   // The total, flagged or not: the flag says which need a look (States board).
-  const note = record
-    ? {
-        text: t('panels:diagram.layerOrder.constraints', {
-          count: record.constraints,
-          defaultValue_one: '{{count}} constraint',
-          defaultValue_other: '{{count}} constraints',
-        }),
-        reason: false,
-      }
-    : null;
+  // A record with no constraint is an order chosen as it was (D16).
+  const note: DiagramStepLayerOrderRow['note'] = !record
+    ? null
+    : record.constraints === 0
+      ? { text: t('panels:diagram.layerOrder.chosenOrder', 'Chosen order'), kind: 'status' }
+      : {
+          text: t('panels:diagram.layerOrder.constraints', {
+            count: record.constraints,
+            defaultValue_one: '{{count}} constraint',
+            defaultValue_other: '{{count}} constraints',
+          }),
+          kind: 'status',
+        };
   return { edit, note };
 }
 
 /**
  * The Picture section's flag for a step whose constraints need a look, from
  * the record's summary (D10, D11): a warning notice with Review…, which opens
- * the dialog on them (D14) while the step is shown folded flat. A step whose
- * creases fold in 3D says its constraints wait, with nothing to review (D13).
- * Null for a step whose record needs nothing, or that has none.
+ * the dialog on them (D14) whatever the step is shown as while its creases
+ * fold flat — on the flat fold it would show. A step whose creases fold in 3D
+ * says its constraints wait, with nothing to review (D13). A record with no
+ * constraint says so of its chosen order (D16). Null for a step whose record
+ * needs nothing, or that has none.
  */
 export function buildDiagramStepLayerOrderFlag(
   state: DiagramStepLayerOrderState,
@@ -149,40 +155,54 @@ export function buildDiagramStepLayerOrderFlag(
 ): DiagramStepLayerOrderFlag | null {
   const { t } = deps;
   const attention = state.record?.attention;
-  if (!attention) return null;
+  if (!state.record || !attention) return null;
+  const chosen = state.record.constraints === 0;
   const { count } = attention;
-  if (attention.reason === 'route-3d') {
+  if (attention.reason === 'route-3d' || state.render.mode === 'folded-3d') {
     return {
-      sentence: t('panels:diagram.layerOrder.waiting3d', {
-        count,
-        defaultValue_one: 'This step folds in 3D now. Its layer constraint is kept for when it folds flat again.',
-        defaultValue_other:
-          'This step folds in 3D now. Its {{count}} layer constraints are kept for when it folds flat again.',
-      }),
+      sentence: chosen
+        ? t(
+            'panels:diagram.layerOrder.chosenOrderWaiting3d',
+            'This step folds in 3D now. Its chosen layer order is kept for when it folds flat again.'
+          )
+        : t('panels:diagram.layerOrder.waiting3d', {
+            count,
+            defaultValue_one: 'This step folds in 3D now. Its layer constraint is kept for when it folds flat again.',
+            defaultValue_other:
+              'This step folds in 3D now. Its {{count}} layer constraints are kept for when it folds flat again.',
+          }),
       review: null,
     };
   }
   const sentence =
     attention.reason === 'timeout'
-      ? t('panels:diagram.layerOrder.timedOut', {
-          count,
-          defaultValue_one: '{{count}} layer constraint couldn’t be checked in time.',
-          defaultValue_other: '{{count}} layer constraints couldn’t be checked in time.',
-        })
-      : t('panels:diagram.layerOrder.needAttention', {
-          count,
-          defaultValue_one: '{{count}} layer constraint needs attention since the pattern changed.',
-          defaultValue_other: '{{count}} layer constraints need attention since the pattern changed.',
-        });
+      ? chosen
+        ? t('panels:diagram.layerOrder.chosenOrderTimedOut', 'This step’s chosen layer order couldn’t be checked in time.')
+        : t('panels:diagram.layerOrder.timedOut', {
+            count,
+            defaultValue_one: '{{count}} layer constraint couldn’t be checked in time.',
+            defaultValue_other: '{{count}} layer constraints couldn’t be checked in time.',
+          })
+      : chosen
+        ? t(
+            'panels:diagram.layerOrder.chosenOrderNeedsAttention',
+            'This step’s chosen layer order needs attention since the pattern changed.'
+          )
+        : t('panels:diagram.layerOrder.needAttention', {
+            count,
+            defaultValue_one: '{{count}} layer constraint needs attention since the pattern changed.',
+            defaultValue_other: '{{count}} layer constraints need attention since the pattern changed.',
+          });
+  // A saved Defox view is none of the ways a fold is shown: Show as replaces it first.
   const review =
-    state.render.mode === 'folded-flat'
-      ? entry(
+    state.render.mode === 'defox'
+      ? null
+      : entry(
           state,
           deps,
           'review',
           t('panels:diagram.layerOrder.review', 'Review…'),
           t('panels:diagram.layerOrder.reviewName', 'Review Layer Constraints…')
-        )
-      : null;
+        );
   return { sentence, review };
 }

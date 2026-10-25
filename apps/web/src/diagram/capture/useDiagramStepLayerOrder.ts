@@ -9,8 +9,8 @@ import {
   type DiagramStepLayerOrderState,
 } from '../actions/diagramStepLayerOrderActions';
 import { isLockedStep, type DiagramStep } from '../document/diagramDocument';
-import { stepLayerOrderOf } from './captureLayerOrder';
-import { openDiagramStepLayerOrder } from './stepLayerOrderActions';
+import { layerOrderSummaryOf } from './captureLayerOrder';
+import { openDiagramStepLayerOrder, type DiagramStepLayerOrderVia } from './stepLayerOrderActions';
 
 export interface DiagramStepLayerOrder {
   /** The Step pane's Layer order row's Edit… and note; null for a step with no such row. */
@@ -34,17 +34,13 @@ export function useDiagramStepLayerOrder(step: DiagramStep | null): DiagramStepL
   const stepId = source ? step!.id : null;
   const readOnly = useWorkspaceStore((state) => state.diagramReadOnly);
   const busy = useWorkspaceStore((state) => stepId !== null && Object.hasOwn(state.diagramCaptures, stepId));
-  const layerOrder = source?.layerOrder;
-  const record = useMemo(() => {
-    const read = stepLayerOrderOf(layerOrder);
-    return read ? { constraints: read.record.constraints.length, attention: read.record.attention ?? null } : null;
-  }, [layerOrder]);
+  const record = layerOrderSummaryOf(source?.layerOrder);
   const render = source?.render ?? null;
   const seeThrough = render?.mode === 'folded-flat' && step?.picture?.kind === 'fixed';
   return useMemo((): DiagramStepLayerOrder => {
     if (!render || stepId === null) return NONE;
     const state: DiagramStepLayerOrderState = { render, record, readOnly, busy, seeThrough };
-    const deps = { t, open: () => void openDiagramStepLayerOrder(stepId) };
+    const deps = { t, open: (via: DiagramStepLayerOrderVia) => void openDiagramStepLayerOrder(stepId, via) };
     return { row: buildDiagramStepLayerOrderRow(state, deps), flag: buildDiagramStepLayerOrderFlag(state, deps) };
   }, [render, record, readOnly, busy, seeThrough, stepId, t]);
 }
