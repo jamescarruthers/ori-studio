@@ -422,6 +422,46 @@ impl LayerSource {
         convex::centroid(ring).map(|p| self.frame.to_paper(p))
     }
 
+    /// The point a saved record names `face` by, in crease-pattern
+    /// coordinates: its centroid ([`Self::paper_point`]) when
+    /// [`Self::face_at_paper`] finds the face there, and otherwise, for a face
+    /// so thin its centroid lies within the tolerance of an edge, the most
+    /// interior of a few points that lie further in: the incenters of the
+    /// triangles each corner makes with its neighbours and with the centroid.
+    /// The choice depends on the face's ring alone, so the same face gives the
+    /// same point, which a restore compares with the one saved. A face
+    /// narrower than twice the tolerance has no point the face is found at,
+    /// and gives its most interior one anyway (a restore then reports it
+    /// gone, never silently).
+    pub fn interior_point(&self, face: FaceId) -> Option<[f64; 2]> {
+        let centroid = self.paper_point(face)?;
+        if self.face_at_paper(centroid) == Some(face) {
+            return Some(centroid);
+        }
+        let ring = self.paper.get(face.0 as usize)?;
+        let planes = convex::edge_planes(ring);
+        let clearance = |p: [f64; 2]| {
+            planes
+                .iter()
+                .map(|plane| plane.signed_distance(p))
+                .fold(f64::INFINITY, f64::min)
+        };
+        let middle = self.frame.to_sheet(centroid);
+        let n = ring.len();
+        let mut best = (clearance(middle), middle);
+        for i in 0..n {
+            let (before, at, after) = (ring[(i + n - 1) % n], ring[i], ring[(i + 1) % n]);
+            for triangle in [[before, at, after], [middle, at, after]] {
+                if let Some(p) = incenter(triangle)
+                    && clearance(p) > best.0
+                {
+                    best = (clearance(p), p);
+                }
+            }
+        }
+        Some(self.frame.to_paper(best.1))
+    }
+
     /// `face`'s area on the unfolded paper, in crease-pattern units squared:
     /// what tells a split or merged face from the one a record saved.
     pub fn paper_area(&self, face: FaceId) -> Option<f64> {
@@ -447,6 +487,19 @@ impl LayerSource {
 /// Face `k`'s id. A view takes at most [`MAX_FACES`], so the index fits.
 fn face_id(k: usize) -> FaceId {
     FaceId(k as u32)
+}
+
+/// The center of a triangle's inscribed circle; `None` for a degenerate one.
+fn incenter([a, b, c]: [[f64; 2]; 3]) -> Option<[f64; 2]> {
+    let length = |p: [f64; 2], q: [f64; 2]| (p[0] - q[0]).hypot(p[1] - q[1]);
+    let (la, lb, lc) = (length(b, c), length(c, a), length(a, b));
+    let perimeter = la + lb + lc;
+    (perimeter > 0.0 && perimeter.is_finite()).then(|| {
+        [
+            (la * a[0] + lb * b[0] + lc * c[0]) / perimeter,
+            (la * a[1] + lb * b[1] + lc * c[1]) / perimeter,
+        ]
+    })
 }
 
 /// The kernel's wireframe read in the solver's frame.
