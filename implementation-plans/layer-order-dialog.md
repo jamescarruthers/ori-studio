@@ -923,8 +923,9 @@ H3's new rehydrate, so it can only follow H3.
         picks take `--face-pick`, D20)
   - [x] **Properties:** Edit's Properties pane for a selected figure, laid
         out as the Diagram's Step pane
-  - [ ] **Compound constraints** (D21): the builder with several objects, a
+  - [x] **Compound constraints** (D21): the builder with several objects, a
         clash on one of them, grouped rows with per-object removal, phone
+        (A5, canvas v19, approved 2026-10-25)
 - [x] E1: kernel seeded core (#494)
 - [x] E2: kernel entry points and exports (#500)
 - [x] E3: Flat-Folder session additions (#502)
