@@ -40,13 +40,6 @@ export type LayerOrderBackend = Answering<LayerOrderEngine>;
 /** Loads the backend, once per worker. */
 export type LayerOrderBackendLoader = () => LayerOrderBackend | Promise<LayerOrderBackend>;
 
-/** The worker's backend until U6 wires the bridge: it never starts, so every call rejects as unavailable. */
-export const unavailableLayerOrderBackend: LayerOrderBackendLoader = () =>
-  Promise.reject({
-    code: LAYER_ORDER_CALL_FAILURES.unavailable,
-    message: 'The layer order engine is not built into this worker yet.',
-  } satisfies WasmErrorEnvelope);
-
 function isEnvelope(error: unknown): error is WasmErrorEnvelope {
   return (
     !!error &&
