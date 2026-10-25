@@ -2217,6 +2217,242 @@ function editFigureStateCases(theme) {
 }
 
 // ---------------------------------------------------------------------------
+// Edit's selection: Fold with layer order… (H5)
+
+const SELECTION_TOOLBAR = { role: 'toolbar', name: 'Crease pattern actions' };
+const FOLD_WITH_LAYER_ORDER = 'Fold with layer order…';
+
+/** Every line of the open pattern selected, as Select All does: one whole sheet, so the selection toolbar shows. */
+async function selectWholeSheet(page) {
+  await page.evaluate(async () => {
+    const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+    await handleMenuAction('edit.selectAll');
+  });
+  await page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name }).waitFor({ state: 'visible', timeout: 30000 });
+}
+
+/** The selection toolbar, and again with the pointer on Fold with layer order…, its tooltip in the picture. */
+async function selectionToolbarShots(page) {
+  const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+  await page.mouse.move(1, 1);
+  const shots = { toolbar: await steadyShot(page, toolbar, { masked: false }) };
+  const target = await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).boundingBox();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+  await page.getByRole('tooltip').first().waitFor({ state: 'visible', timeout: 10000 });
+  const box = await toolbar.boundingBox();
+  await settle(page);
+  shots.tooltip = await page.screenshot({
+    clip: { x: Math.max(0, box.x - 60), y: Math.max(0, box.y - 70), width: box.width + 120, height: box.height + 110 },
+    animations: 'disabled',
+  });
+  await page.mouse.move(1, 1);
+  return shots;
+}
+
+/** What the canvas holds and remembers: its figures, its undo entries' labels, whether a fold runs. */
+function editCanvasState(page) {
+  return page.evaluate(() => {
+    const state = window.__treemakerWorkspaceStore.getState();
+    return {
+      figures: state.oristudioCpFoldedFigures.map((figure) => ({
+        id: figure.id,
+        status: figure.status,
+        handle: figure.handle,
+        shownOrder: figure.snapshot?.shown_order ?? 'searched',
+        layerOrder: figure.layerOrder?.kind ?? null,
+        picture: JSON.stringify(figure.renderSnapshot),
+      })),
+      history: state.oristudioCpHistoryPast.map((entry) => entry.label),
+      folding: Object.keys(state.oristudioCpFoldRuns).length,
+      dirty: state.dirty,
+    };
+  });
+}
+
+/** The request the open dialog was asked with, as far as the host decides it. */
+function openedRequest(page) {
+  return page.evaluate(async () => {
+    const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const request = useLayerOrderDialogStore.getState().opening?.request;
+    if (!request) return null;
+    return {
+      surface: request.surface,
+      name: request.name,
+      record: request.record,
+      digest: request.source.digest,
+      segments: request.source.segments.length,
+      shown: Boolean(request.shown),
+      side: request.look.side,
+      turnDeg: request.look.turnDeg,
+      xray: request.look.xray,
+    };
+  });
+}
+
+/** The dialog, open and ready on what it was asked. */
+async function readyDialog(page) {
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  await dialog.waitFor({ state: 'visible', timeout: 60000 });
+  await dialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 60000 });
+  return dialog;
+}
+
+/**
+ * Fold with layer order… on kabuto's whole sheet, in one theme: the selection
+ * toolbar with the new button and its tooltip; the press, which folds the
+ * sheet for the dialog and opens it on that fold; Cancel, which leaves no
+ * figure and no entry; Apply on the order it opened on, one figure and one
+ * entry, undone; the order the dialog's engine would choose, committed as its
+ * Apply is (the real dialog's Apply waits for U10); Settings ▸ Shortcuts
+ * listing it Unassigned after Fold estimate, a key bound there and pressed;
+ * and the button held, with why, on creases that fold in 3D.
+ */
+function editSelectionCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    await selectWholeSheet(page);
+    await record(`selection-${tag}-toolbar`, await selectionToolbarShots(page));
+
+    // The press: the sheet folded for the dialog alone, which opens on it.
+    const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    let dialog = await readyDialog(page);
+    const asked = await openedRequest(page);
+    if (asked?.surface !== 'edit_figure' || asked.record !== null || !asked.shown || asked.side !== 'front' || asked.xray) {
+      throw new Error(`the request: ${JSON.stringify(asked)}`);
+    }
+    const whileOpen = await editCanvasState(page);
+    if (whileOpen.figures.length !== 0 || whileOpen.history.length !== 0) {
+      throw new Error(`the press put something on the canvas: ${JSON.stringify(whileOpen)}`);
+    }
+    console.log(`[${tag}] the press opened the dialog on the sheet's fold (${asked.segments} creases, turned ${asked.turnDeg}°, "${asked.name}"); nothing on the canvas`);
+    await record(`selection-${tag}-dialog`, await dialogShot(page));
+
+    // Cancel: no figure, no entry.
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    const cancelled = await editCanvasState(page);
+    if (cancelled.figures.length !== 0 || cancelled.history.length !== 0 || cancelled.folding !== 0 || cancelled.dirty) {
+      throw new Error(`Cancel left something: ${JSON.stringify(cancelled)}`);
+    }
+    console.log(`[${tag}] Cancel: no figure, no undo entry, not dirty`);
+
+    // Apply on the order it opened on: a figure as Fold makes it, one entry.
+    await selectWholeSheet(page);
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    dialog = await readyDialog(page);
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await page.waitForFunction(
+      () => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.status === 'ready',
+      null,
+      { timeout: 60000 }
+    );
+    const unchanged = await editCanvasState(page);
+    if (unchanged.figures.length !== 1 || unchanged.history.join() !== 'Fold model' || unchanged.figures[0].layerOrder !== null) {
+      throw new Error(`Apply unchanged: ${JSON.stringify(unchanged)}`);
+    }
+    console.log(`[${tag}] Apply on the order it opened on: one figure, no record, one entry "${unchanged.history[0]}"`);
+    await zoomOutToFigure(page);
+    await record(`selection-${tag}-applied-unchanged`, {
+      canvas: await steadyShot(page, page.locator('canvas.cp-webgl-layer').locator('..'), { masked: false }),
+    });
+
+    // The order the dialog's engine would choose, committed as its Apply is, from the same sheet.
+    const plain = unchanged.figures[0];
+    await chosenOrder(page, plain.id);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    if ((await editCanvasState(page)).figures.length !== 0) throw new Error('undo left the figure');
+    await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const { foldedFigureGesture } = await import('/src/cp-workspace/folded/foldedFigureGesture.ts');
+      const count = store.getState().oristudioCpDocument.summary.line_segments;
+      const lineIds = Array.from({ length: count }, (_, i) => i + 1);
+      const { record: saved, relations, source } = window.__layerOrderApplied;
+      await foldedFigureGesture.run('verb', 'Fold model', () =>
+        store.getState().foldOristudioCpDocument({ startingFaceId: 1, lineIds, withOrder: { source, relations, record: saved } })
+      );
+    });
+    const applied = await editCanvasState(page);
+    const [figure] = applied.figures;
+    if (applied.figures.length !== 1 || figure.shownOrder !== 'given' || figure.layerOrder !== 'record' || applied.history.join() !== 'Fold model') {
+      throw new Error(`the chosen order did not land: ${JSON.stringify(applied)}`);
+    }
+    if (figure.picture === plain.picture) throw new Error('the chosen order draws Oriedita’s picture');
+    console.log(`[${tag}] the chosen order folded through fold_with_order: one figure, order given, record kept, one entry`);
+    await record(`selection-${tag}-applied-chosen`, {
+      canvas: await steadyShot(page, page.locator('canvas.cp-webgl-layer').locator('..'), { masked: false }),
+    });
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    if ((await editCanvasState(page)).figures.length !== 0) throw new Error('undo left the chosen figure');
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().redo());
+    const redone = await editCanvasState(page);
+    if (redone.figures[0]?.handle !== figure.handle || redone.figures[0]?.layerOrder !== 'record') {
+      throw new Error(`redo: ${JSON.stringify(redone)}`);
+    }
+    console.log(`[${tag}] undo and redo: the figure goes and comes back on its fold, with its record`);
+
+    // Settings ▸ Shortcuts: Unassigned, right after Fold estimate; then a key bound there.
+    await page.evaluate(async () => {
+      const { useSettingsStore } = await import('/src/store/settingsStore.ts');
+      useSettingsStore.getState().openSettings('shortcuts');
+    });
+    const row = (label) => page.locator('.settings-shortcuts__row').filter({ has: page.getByText(label, { exact: true }) });
+    const ours = row(FOLD_WITH_LAYER_ORDER);
+    await ours.waitFor({ state: 'visible', timeout: 30000 });
+    const estimate = row('Fold estimate');
+    const order = await page.evaluate(() =>
+      [...document.querySelectorAll('.settings-shortcuts__copy span')].map((span) => span.textContent)
+    );
+    if (order[order.indexOf('Fold estimate') + 1] !== FOLD_WITH_LAYER_ORDER) throw new Error('not right after Fold estimate');
+    if ((await ours.getByRole('button', { name: 'Unassigned' }).count()) !== 1) throw new Error('not Unassigned');
+    await estimate.scrollIntoViewIfNeeded();
+    await page.mouse.move(1, 1);
+    const rows = async () => {
+      const top = await estimate.boundingBox();
+      const bottom = await ours.boundingBox();
+      return page.screenshot({
+        clip: { x: top.x - 8, y: top.y - 8, width: top.width + 16, height: bottom.y + bottom.height - top.y + 16 },
+        animations: 'disabled',
+      });
+    };
+    await record(`selection-${tag}-shortcuts-unassigned`, { rows: await rows() });
+    await ours.getByRole('button', { name: 'Unassigned' }).click();
+    await page.keyboard.press('Alt+Shift+KeyK');
+    const bound = await page.evaluate(async () => {
+      const { useShortcutStore } = await import('/src/store/shortcutStore.ts');
+      return useShortcutStore.getState().overrides['cp.action.fold-with-layer-order'] ?? null;
+    });
+    if (!bound?.length) throw new Error('capture bound nothing');
+    await page.mouse.move(1, 1);
+    await record(`selection-${tag}-shortcuts-bound`, { rows: await rows() });
+    await page.evaluate(async () => {
+      const { useSettingsStore } = await import('/src/store/settingsStore.ts');
+      useSettingsStore.getState().closeSettings();
+    });
+    await ours.waitFor({ state: 'detached', timeout: 30000 });
+    console.log(`[${tag}] Settings: Unassigned after Fold estimate; bound to ${JSON.stringify(bound)}`);
+
+    // The key, on the canvas, with the sheet selected: the dialog opens on it.
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await selectWholeSheet(page);
+    await page.keyboard.press('Alt+Shift+KeyK');
+    dialog = await readyDialog(page);
+    if ((await openedRequest(page))?.digest !== asked.digest) throw new Error('the key opened the dialog on another fold');
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    if ((await editCanvasState(page)).figures.length !== 0) throw new Error('Escape left a figure');
+    console.log(`[${tag}] the bound key opened the dialog on the sheet's fold; Escape left nothing`);
+
+    // Creases that fold in 3D: held, with why.
+    await openFileInEdit(page, url, 'tests/fixtures/fold-angle-3d/box_90.fold', theme);
+    await selectWholeSheet(page);
+    if (!(await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).isDisabled())) throw new Error('not held on 3D creases');
+    await record(`selection-${tag}-3d`, await selectionToolbarShots(page));
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
 const CASES = [
@@ -2242,6 +2478,8 @@ const CASES = [
   { name: 'edit-figure-review', run: editFigureReviewCases },
   { name: 'edit-figure-states', run: editFigureStateCases(null) },
   { name: 'edit-figure-states-horizon', run: editFigureStateCases('Horizon') },
+  { name: 'edit-selection', run: editSelectionCases(null) },
+  { name: 'edit-selection-horizon', run: editSelectionCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------
