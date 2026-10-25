@@ -65,7 +65,20 @@ export interface LayerChangedSpots {
 }
 
 export type LayerBudgetLimit = 'nodes' | 'deadline';
+/**
+ * How far a check had to search. `unchanged` means no search was needed, not
+ * that the order is unchanged: read `changed` for what a pane flashes.
+ */
 export type LayerCheckStage = 'unchanged' | 'seeds_first' | 'open_order' | 'exhaustive';
+
+/** Where the order a session shows came from, at open or at its last restore. Commits do not change it. */
+export type LayerOpenedOn =
+  /** The solver's first order (`layer_open`), or what is left when holding an order and the search toward it both ran out. */
+  | { kind: 'first'; timed_out: { limit: LayerBudgetLimit; nodes: number } | null }
+  /** The order given, held whole: the host's relations, or a record's saved pairs that still resolve. */
+  | { kind: 'held'; ignored: number }
+  /** The order given did not all fit: the fitting order closest to it, `moved` of its relations the other way. */
+  | { kind: 'closest'; moved: number; ignored: number };
 
 /** A session the engine now holds. */
 export interface LayerOpened {
@@ -80,6 +93,8 @@ export interface LayerOpened {
   open_pairs: Uint32Array;
   /** How many spots the stacks list. */
   spots: number;
+  /** Where the order on screen came from. */
+  opened_on: LayerOpenedOn;
 }
 
 export type LayerToleranceCause =
@@ -141,6 +156,23 @@ export type LayerRestoreOutcomeKind =
   /** None is committed. Keep trying: the same restore with a larger `deadlineMs`. */
   | { kind: 'timed_out'; limit: LayerBudgetLimit; nodes: number };
 
+/**
+ * A saved constraint a restore did not apply: a row the dialog shows by its
+ * status, which `layer_save` writes back as saved, after the committed
+ * constraints, until it is removed or a commit whose list holds its
+ * `constraint` applies it.
+ */
+export type LayerCarriedRow = LayerSavedConstraintStatus & {
+  /** Its index among the record's constraints. */
+  index: number;
+  /** Its faces as the record saved them, in the crease pattern's coordinates. */
+  subject: { at: [number, number]; area: number };
+  object: { at: [number, number]; area: number };
+  sign: 1 | -1;
+  /** `[subject, object, sign]` on today's faces when both are intact and overlap; null otherwise. */
+  constraint: [number, number, 1 | -1] | null;
+};
+
 /** A record restored onto a source: the session it opened, and each part of the record found again. */
 export interface LayerRestored extends LayerOpened {
   /** The constraints committed: the intact ones when applied, none otherwise. */
@@ -150,8 +182,10 @@ export interface LayerRestored extends LayerOpened {
   saved_faces: { status: Uint8Array; face: Int32Array; area: Float64Array };
   /** Per record constraint. */
   saved_constraints: LayerSavedConstraintStatus[];
-  /** Per record order pair, its `SAVED_PAIR_*`. */
+  /** Per record order pair, its `SAVED_PAIR_*` (all unresolved when the restore timed out). */
   saved_order: Uint8Array;
+  /** Every saved constraint not applied, in record order. */
+  carried: LayerCarriedRow[];
 }
 
 export type LayerRestoreOutcome = LayerRestored | LayerRefused;
@@ -185,6 +219,12 @@ export interface LayerTimedOut {
 export type LayerPreviewed =
   | {
       verdict: 'fits';
+      /**
+       * What `layer_commit_preview` adopts this preview by: the session keeps
+       * its last preview that fit until the next preview, commit or restore.
+       * Never 0.
+       */
+      token: number;
       changed: LayerChangedSpots;
       stacks: { front: LayerStacks; back: LayerStacks };
       stage: LayerCheckStage;
@@ -199,8 +239,11 @@ export type LayerCommitted =
       changed: LayerChangedSpots;
       stacks: { front: LayerStacks; back: LayerStacks };
       open_pairs: Uint32Array;
+      /** A commit that adopted its preview reports the preview's. */
       stage: LayerCheckStage;
       nodes: number;
+      /** Whether it adopted a stored preview with no search (`layer_commit_preview`); false for every other commit. */
+      adopted: boolean;
     }
   | LayerCantFit
   | LayerTimedOut;
@@ -218,19 +261,49 @@ export type LayerCallErrorCode =
 
 /** The `layer_*` methods of the Fold bridge's `FoldEngine`, as the wasm glue exposes them. */
 export interface LayerOrderBridge {
+  /** On the solver's first order. */
   layer_open(source: OristudioCpFoldSource, limits?: LayerLimits): LayerOpenOutcome;
+  /**
+   * On the order the host shows: `relations`, `[upper, lower, …]` in
+   * Oriedita's frame, as `layerOrderSceneRelations` reads them off the
+   * host's paper scene. A pair naming no overlapping faces, or both orders
+   * of one, is ignored and counted (`opened_on.ignored`).
+   */
+  layer_open_showing(source: OristudioCpFoldSource, relations: Uint32Array, limits?: LayerLimits): LayerOpenOutcome;
   layer_restore(source: OristudioCpFoldSource, record: string, limits?: LayerLimits): LayerRestoreOutcome;
+  /** A record restored again on an open session (a retry, the host engine's next try), under the same handle. */
+  layer_restore_record(session: number, record: string, limits?: LayerLimits): LayerRestoreOutcome;
+  layer_opened_on(session: number): LayerOpenedOn;
   layer_open_pairs(session: number): Uint32Array;
   layer_constraints(session: number): LayerConstraintTriples;
-  /** Never commits. */
+  /** The committed list plus one. Never commits. */
   layer_preview(session: number, candidate: Int32Array, limits?: LayerLimits): LayerPreviewed;
+  /** Any list, whatever is committed (the dialog's rows after a clash, plus one). Never commits; `cant_fit.constraints` index it. */
+  layer_preview_list(session: number, constraints: LayerConstraintTriples, limits?: LayerLimits): LayerPreviewed;
   /** Add, remove, undo, redo and Clear all are each a whole new list. */
   layer_commit(session: number, constraints: LayerConstraintTriples, limits?: LayerLimits): LayerCommitted;
+  /**
+   * Add by a preview: its `token` and the list it checked. Adopted with no
+   * search (so it cannot time out) while it is the session's last preview;
+   * otherwise the list is committed by a search within `limits`.
+   */
+  layer_commit_preview(
+    session: number,
+    token: number,
+    constraints: LayerConstraintTriples,
+    limits?: LayerLimits
+  ): LayerCommitted;
+  /** The saved constraints the last restore did not apply, in record order. */
+  layer_carried(session: number): LayerCarriedRow[];
+  /** A carried row's trash button; whether there was one at `index`. */
+  layer_remove_carried(session: number, index: number): boolean;
+  layer_clear_carried(session: number): void;
   layer_stacks(session: number, side: LayerSide): LayerStacks;
   /** The CP kernel's paper scene of the order on screen; null with no subfaces. */
   layer_scene(session: number, side: LayerSide, model?: OristudioCpFoldedFigureModel): OristudioCpFoldedPaperScene | null;
   /** `[upper, lower, …]`, for the CP bridge's `folded_figure_fold_with_order`. */
   layer_oriedita_relations(session: number): Uint32Array;
+  /** The committed constraints, then the carried rows as saved, as one record. */
   layer_save(session: number): LayerSaveOutcome;
   layer_close(session: number): boolean;
   layer_live(): number;

@@ -3,9 +3,12 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type {
   OristudioCpDocumentSummary,
+  OristudioCpFoldedFigureResult,
+  OristudioCpFoldedPaperScene,
   OristudioCpFoldSource,
   OristudioCpFoldWithOrderResult,
 } from '../engine/oristudioCpTypes';
+import { layerOrderSceneRelations } from '../layer-order/engine/layerOrderSceneRelations';
 import type {
   LayerCommitted,
   LayerOpened,
@@ -251,6 +254,109 @@ describe.skipIf(!available)('the Fold bridge’s layer calls, in Node', () => {
     expect(thrownCode(() => bridge.layer_open_pairs(session))).toBe('unknown_layer_session');
     expect(thrownCode(() => bridge.layer_save(session))).toBe('unknown_layer_session');
     expect(bridge.layer_live()).toBe(0);
+    engine.free();
+  });
+
+  it('opens on the order Edit shows, adds by its preview, and carries what a restore cannot apply', () => {
+    // Kabuto as Edit folds and shows it, and the scene Edit holds of it.
+    const document = cp.load_fold(readFileSync(KABUTO, 'utf8'), '');
+    const summary = cp.document_summary(document) as OristudioCpDocumentSummary;
+    const lines = Array.from({ length: summary.line_segments }, (_, index) => index + 1);
+    const source = cp.fold_source_of_selection(document, lines, 1) as OristudioCpFoldSource;
+    const figure = cp.folded_figure_fold_selected(document, lines, 1, 'Order5', null, 0) as OristudioCpFoldedFigureResult;
+    const scene = cp.folded_figure_paper_scene(figure.handle) as OristudioCpFoldedPaperScene | null;
+    if (!scene) throw new Error('kabuto has subfaces');
+    expect(scene.flipped).toBe(false);
+    cp.free_folded_figure(figure.handle);
+    cp.free_document(document);
+
+    const engine = new fold.FoldEngine();
+    const bridge: LayerOrderBridge = engine;
+    const first = bridge.layer_open(source);
+    if (first.status !== 'ok') throw new Error('kabuto opens');
+    expect(first.opened_on).toEqual({ kind: 'first', timed_out: null });
+
+    // Open on Edit's order: the dialog shows what Edit shows, spot for spot.
+    const showing = bridge.layer_open_showing(source, layerOrderSceneRelations(scene), { deadlineMs: 10_000 });
+    if (showing.status !== 'ok') throw new Error(`refused: ${JSON.stringify(showing.refusal)}`);
+    expect(showing.opened_on).toEqual({ kind: 'held', ignored: 0 });
+    expect(bridge.layer_opened_on(showing.session)).toEqual({ kind: 'held', ignored: 0 });
+    const front = bridge.layer_stacks(showing.session, 'front');
+    scene.subfaces.forEach((subface, i) => expect(spot(front, i)).toEqual(subface.faces_top_to_bottom));
+    expect(thrownCode(() => bridge.layer_open_showing(source, Uint32Array.of(1, 2, 3)))).toBe('invalid_input');
+
+    // Add by the preview: adopted with no search.
+    const { session, front_up: frontUp } = showing;
+    const relations = bridge.layer_oriedita_relations(session);
+    const open = pairsOf(showing.open_pairs);
+    const candidate = againstShown(relations, open[0], frontUp);
+    const preview: LayerPreviewed = bridge.layer_preview(session, candidate, { deadlineMs: 3_000 });
+    if (preview.verdict !== 'fits') throw new Error(`no fit: ${JSON.stringify(preview)}`);
+    expect(preview.token).toBeGreaterThan(0);
+    const added: LayerCommitted = bridge.layer_commit_preview(session, preview.token, candidate, {
+      maxNodes: 0,
+      fastNodes: 0,
+    });
+    if (added.verdict !== 'committed') throw new Error(`not committed: ${JSON.stringify(added)}`);
+    expect(added.adopted).toBe(true);
+    expect(added.stacks).toEqual(preview.stacks);
+
+    // A whole list previewed, then added by its token; a stale token searches.
+    const second = againstShown(bridge.layer_oriedita_relations(session), pairsOf(added.open_pairs)[0], frontUp);
+    const list = Int32Array.from([...candidate, ...second]);
+    const listed = bridge.layer_preview_list(session, list, { deadlineMs: 3_000 });
+    if (listed.verdict !== 'fits') throw new Error(`no fit: ${JSON.stringify(listed)}`);
+    expect(bridge.layer_constraints(session)).toEqual(candidate);
+    const stale = bridge.layer_commit_preview(session, listed.token + 1, list, { deadlineMs: 3_000 });
+    expect(stale).toMatchObject({ verdict: 'committed', adopted: false });
+    expect(bridge.layer_constraints(session)).toEqual(list);
+
+    // Restore on the same session, a record whose first constraint is also
+    // saved the other way: they clash, nothing is applied, and every saved
+    // constraint is carried.
+    const saved = bridge.layer_save(session);
+    if (saved.status !== 'ok') throw new Error('it saves');
+    const read = readLayerOrderRecord(saved.json);
+    if (typeof read === 'symbol' || !read.ok) throw new Error('the record reads');
+    const [f, g, sign] = read.record.constraints[0]!;
+    const clashing = encodeLayerOrderRecord({
+      ...read.record,
+      constraints: [...read.record.constraints, [f, g, sign === 1 ? -1 : 1]],
+    });
+    if (!clashing.ok) throw new Error('it encodes');
+    const restored = bridge.layer_restore_record(session, clashing.json, { deadlineMs: 10_000 });
+    if (restored.status !== 'ok') throw new Error(`refused: ${JSON.stringify(restored.refusal)}`);
+    expect(restored.session).toBe(session);
+    expect(restored.outcome).toEqual({ kind: 'clash', constraints: [0, 2] });
+    expect(restored.constraints).toEqual(new Int32Array(0));
+    expect(restored.saved_constraints).toEqual([{ status: 'clashing' }, { status: 'intact' }, { status: 'clashing' }]);
+    expect(restored.carried.map((row) => [row.index, row.status, row.constraint])).toEqual([
+      [0, 'clashing', Array.from(candidate)],
+      [1, 'intact', Array.from(second)],
+      [2, 'clashing', [candidate[0], candidate[1], -candidate[2]!]],
+    ]);
+    expect(bridge.layer_carried(session)).toEqual(restored.carried);
+    expect(bridge.layer_opened_on(session)).toEqual(restored.opened_on);
+
+    // A save writes every carried row back; the trash button and Clear all.
+    const constraintsSaved = () => {
+      const again = bridge.layer_save(session);
+      if (again.status !== 'ok') throw new Error('it saves');
+      const record = readLayerOrderRecord(again.json);
+      if (typeof record === 'symbol' || !record.ok) throw new Error('the record reads');
+      return record.record.constraints.length;
+    };
+    expect(constraintsSaved()).toBe(3);
+    expect(bridge.layer_remove_carried(session, 2)).toBe(true);
+    expect(bridge.layer_remove_carried(session, 9)).toBe(false);
+    expect(constraintsSaved()).toBe(2);
+    // Committing the rows applies them, and they leave the carried rows.
+    const rows = bridge.layer_preview_list(session, list, { deadlineMs: 3_000 });
+    if (rows.verdict !== 'fits') throw new Error('the two rows fit');
+    expect(bridge.layer_commit_preview(session, rows.token, list)).toMatchObject({ verdict: 'committed', adopted: true });
+    expect(bridge.layer_carried(session)).toEqual([]);
+    bridge.layer_clear_carried(session);
+    expect(constraintsSaved()).toBe(2);
     engine.free();
   });
 });
