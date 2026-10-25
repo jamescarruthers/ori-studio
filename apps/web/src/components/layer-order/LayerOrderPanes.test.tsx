@@ -74,8 +74,11 @@ const REQUEST: LayerOrderRequest = {
   shown: FRONT,
 };
 
+const LIMITS = { maxNodes: 1, fastNodes: 1, deadlineMs: 1 };
+
 const READY: LayerOrderSessionStatus = {
   kind: 'ready',
+  limits: LIMITS,
   open: {
     how: 'showing',
     opened: {} as LayerOrderSessionOpen['opened'],
@@ -89,7 +92,7 @@ const READY: LayerOrderSessionStatus = {
   },
 };
 
-const OPENING: LayerOrderSessionStatus = { kind: 'opening', limits: { maxNodes: 1, fastNodes: 1, deadlineMs: 1 } };
+const OPENING: LayerOrderSessionStatus = { kind: 'opening', limits: LIMITS };
 
 let host: HTMLDivElement;
 let root: Root;
@@ -132,7 +135,7 @@ afterEach(() => {
 
 function render(props: Partial<LayerOrderPanesProps> = {}) {
   act(() =>
-    root.render(<LayerOrderPanes status={READY} phonePane={null} request={REQUEST} {...props} />)
+    root.render(<LayerOrderPanes status={READY} phonePane={null} request={REQUEST} letters={LETTERS} {...props} />)
   );
 }
 
@@ -290,10 +293,10 @@ describe('the Layer order panes', () => {
   });
 
   it('refused or lost: the crease pattern alone; a face the refusal names marked in danger', () => {
-    render({ status: { kind: 'refused', refusal: { code: 'source_non_convex_face', face: B }, limits: OPENING.limits } });
+    render({ status: { kind: 'refused', refusal: { code: 'source_non_convex_face', face: B }, limits: LIMITS } });
     expect(canvasOf('folded')).toBeNull();
     expect(lettersOn('pattern')).toEqual([{ letter: 'B', tone: 'danger', under: false }]);
-    render({ status: { kind: 'lost', limits: OPENING.limits }, phonePane: 'folded' });
+    render({ status: { kind: 'lost', cause: 'failed', limits: LIMITS }, phonePane: 'folded' });
     expect(canvasOf('pattern')).not.toBeNull();
     expect(canvasOf('folded')).toBeNull();
   });

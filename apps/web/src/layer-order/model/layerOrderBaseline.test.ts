@@ -1,0 +1,62 @@
+/**
+ * D16 outside the reducer: `openedBaseline` is what the reducer keeps at its
+ * open, so the dialog shell (U4) decides an Apply that changed nothing as the
+ * inspector (U10) will.
+ */
+import { describe, expect, it } from 'vitest';
+import { applyChangedNothing, openedBaseline } from './layerOrderDecisions';
+import type { LayerOpenFacts } from './layerOrderEngineFacts';
+import { carried, opened, openFactsOf, sidesOf, SPOTS, SPOTS_TWO_OVER_ZERO } from './layerOrderModel.fixtures';
+
+const RESTORED_WHOLE = { outcome: { kind: 'applied' as const }, carried: [] };
+const RESTORED_WITH_A_ROW = { outcome: { kind: 'applied' as const }, carried: [carried({ index: 1 })] };
+
+const CASES: readonly { name: string; facts: LayerOpenFacts; attention: boolean; matchesHost: boolean }[] = [
+  { name: 'the host’s order, held whole', facts: openFactsOf(), attention: false, matchesHost: true },
+  {
+    name: 'the closest fitting order, moved',
+    facts: openFactsOf({ openedOn: { kind: 'closest', moved: 2, ignored: 0 } }),
+    attention: false,
+    matchesHost: false,
+  },
+  {
+    name: 'the closest fitting order, moved nothing',
+    facts: openFactsOf({ openedOn: { kind: 'closest', moved: 0, ignored: 0 } }),
+    attention: false,
+    matchesHost: true,
+  },
+  {
+    name: 'a record restored whole',
+    facts: openFactsOf({ constraints: [[0, 2, 1]], restore: RESTORED_WHOLE }),
+    attention: false,
+    matchesHost: true,
+  },
+  {
+    name: 'a record with a row not applied',
+    facts: openFactsOf({ restore: RESTORED_WITH_A_ROW }),
+    attention: false,
+    matchesHost: false,
+  },
+  { name: 'a record the host flagged', facts: openFactsOf({ restore: RESTORED_WHOLE }), attention: true, matchesHost: false },
+];
+
+describe('what a session opened on (D16)', () => {
+  it.each(CASES)('$name: as the reducer keeps it at its open', ({ facts, attention, matchesHost }) => {
+    const { state } = opened(facts, { hasRecord: facts.restore !== null, recordNeedsAttention: attention });
+    const baseline = openedBaseline(facts, attention);
+    expect(baseline).toEqual(state.baseline);
+    expect(baseline.matchesHost).toBe(matchesHost);
+  });
+
+  it('an Apply on what it opened on changes nothing only when that was the host’s own', () => {
+    for (const { facts, attention, matchesHost } of CASES) {
+      const baseline = openedBaseline(facts, attention);
+      const atOpen = { constraints: facts.constraints, carried: baseline.carried, stacks: facts.stacks };
+      expect(applyChangedNothing(baseline, atOpen)).toBe(matchesHost);
+    }
+    // Another order on screen is a change, whatever it opened on.
+    const baseline = openedBaseline(openFactsOf(), false);
+    expect(applyChangedNothing(baseline, { constraints: [], carried: [], stacks: sidesOf(SPOTS_TWO_OVER_ZERO) })).toBe(false);
+    expect(applyChangedNothing(baseline, { constraints: [], carried: [], stacks: sidesOf(SPOTS) })).toBe(true);
+  });
+});

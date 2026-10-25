@@ -23,9 +23,11 @@
  *   terminates its worker, and the resolve answers `cancelled`. The next
  *   resolve in the batch spawns a fresh worker.
  * - **Loss is an answer.** A worker that dies or an engine that traps is
- *   reported once by the runtime (`layer-order:engine`); an engine that never
- *   started, or a call failing for a defect, is reported once here
- *   (`layer-order:host`). Each answers `lost`; nothing rejects.
+ *   reported once by the runtime (`layer-order:engine`); an engine that did
+ *   not start for a defect, or a call failing for one, is reported once here
+ *   (`layer-order:host`). The browser failing to load the worker or the Fold
+ *   wasm (offline) is reported to no one, by the dialog's rule
+ *   (`engine/layerOrderLoadFailure.ts`). Each answers `lost`; nothing rejects.
  *
  * Store-free and host-free (`layerOrderBoundary.test.ts`).
  */
@@ -39,6 +41,7 @@ import {
   type LayerOrderRestoreOutcome,
   type LayerOrderRestored,
 } from '../engine/layerOrderEngine';
+import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
 import { createLayerOrderRuntime, isLayerOrderEngineLost, type LayerOrderRuntime } from '../engine/layerOrderRuntime';
 import {
   LAYER_ORDER_CANCELLED,
@@ -101,12 +104,19 @@ function timedOut(restored: LayerOrderRestoreOutcome): 'record' | 'open' | null 
   return restored.outcome.kind === 'timed_out' ? 'record' : null;
 }
 
-/** Why a rejection that is not a Stop left the resolve with no answer, and whether this module reports it. */
-function lossOf(error: unknown): { cause: LayerOrderLossCause; reported: boolean } {
-  // A crash: the runtime has reported it.
-  if (isLayerOrderEngineLost(error)) return { cause: 'crashed', reported: true };
+/**
+ * Why a rejection that is not a Stop left the resolve with no answer, and
+ * whether this module reports it: the dialog's rule (`layerOrderLoadFailure.ts`).
+ * The browser failing to load the worker or the Fold wasm (offline) is
+ * `unavailable` and reported to no one; a crash the runtime has reported; an
+ * engine that did not start for another reason, or any other failure, is
+ * reported here.
+ */
+function lossOf(error: unknown): { cause: LayerOrderLossCause; report: boolean } {
+  if (isLayerOrderLoadFailure(error)) return { cause: 'unavailable', report: false };
+  if (isLayerOrderEngineLost(error)) return { cause: 'crashed', report: false };
   const code = (error as { code?: unknown } | null)?.code;
-  return { cause: code === LAYER_ORDER_CALL_FAILURES.unavailable ? 'unavailable' : 'failed', reported: false };
+  return { cause: code === LAYER_ORDER_CALL_FAILURES.unavailable ? 'unavailable' : 'failed', report: true };
 }
 
 /** One resolve on `runtime`'s worker; `halted` says whether it was stopped since its last call. */
@@ -205,8 +215,8 @@ export function createLayerOrderResolveBatch(options: LayerOrderResolveBatchOpti
       return stopped || closed ? LAYER_ORDER_CANCELLED : answer;
     } catch (error) {
       if (stopped || closed || error === STOPPED) return LAYER_ORDER_CANCELLED;
-      const { cause, reported } = lossOf(error);
-      if (!reported) reportError(error, { surface: 'layer-order:host', tags: { cause } });
+      const { cause, report } = lossOf(error);
+      if (report) reportError(error, { surface: 'layer-order:host', tags: { cause } });
       return lostLayerOrder(cause, record);
     } finally {
       signal?.removeEventListener('abort', stop);

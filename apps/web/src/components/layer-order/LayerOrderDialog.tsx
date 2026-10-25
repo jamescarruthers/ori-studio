@@ -43,6 +43,7 @@ export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening
   return (
     <LayerOrderDialogFrame
       name={request.name}
+      byline={request.byline}
       status={status}
       letters={letters}
       returnFocus={opening.returnFocus}
@@ -54,6 +55,7 @@ export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening
           status={status}
           phonePane={phonePane}
           request={request}
+          letters={letters}
           view={view}
           marks={check?.marks}
           stacks={check?.stacks}

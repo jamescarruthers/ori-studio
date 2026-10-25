@@ -527,6 +527,7 @@
     "foldedPane": "Figura plegada",
     "keepTrying": "Seguir intentando",
     "lost": "Orden de capas se detuvo de forma inesperada. No se cambió nada.",
+    "lostLoad": "Orden de capas no se pudo cargar. Comprueba tu conexión y vuelve a intentarlo.",
     "opening": "Calculando los órdenes de capas…",
     "pane": {
       "creasePattern": "Patrón de pliegues",
@@ -536,11 +537,12 @@
     "refused": {
       "ambiguousOverlap": "Algunas caras de esta figura se solapan demasiado como para saber cuál cubre a cuál, así que Orden de capas no puede abrirla. No se cambió nada.",
       "digestMismatch": "Orden de capas no pudo hacer coincidir sus caras con las que se usaron al plegar esta figura, así que no puede abrirla. No se cambió nada.",
+      "digestMismatchNamed": "Orden de capas no pudo hacer coincidir sus caras con las que se usaron al plegar esta figura, así que no puede abrir {{name}}. No se cambió nada.",
       "noFaces": "Esta figura no tiene caras que ordenar.",
       "nonConvex": "Una cara de esta figura no es convexa. Orden de capas todavía no admite caras no convexas.",
       "nonConvexFace": "La cara {{face}} no es convexa. Orden de capas todavía no admite caras no convexas.",
       "noOrder": "No se pudo determinar el orden de capas de esta figura.",
-      "recordNewer": "Las restricciones de esta figura se guardaron con una versión más reciente de Ori Studio. Actualiza Ori Studio para cambiarlas.",
+      "recordNewer": "Hecho con una versión más reciente de Ori Studio: sus restricciones de capas no se pueden cambiar aquí.",
       "recordTooLarge": "Las restricciones guardadas de esta figura son demasiado grandes para abrirlas. No se cambió nada.",
       "recordUnreadable": "No se pudieron leer las restricciones guardadas de esta figura, así que Orden de capas no puede abrirlas. No se cambió nada.",
       "timedOut": "No se pudieron calcular a tiempo los órdenes de capas de esta figura.",

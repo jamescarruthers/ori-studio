@@ -527,6 +527,7 @@
     "foldedPane": "Figure pliée",
     "keepTrying": "Continuer à essayer",
     "lost": "Ordre des couches s’est arrêté de façon inattendue. Rien n’a été modifié.",
+    "lostLoad": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion, puis réessayez.",
     "opening": "Calcul des ordres des couches…",
     "pane": {
       "creasePattern": "Patron de plis",
@@ -536,11 +537,12 @@
     "refused": {
       "ambiguousOverlap": "Certaines faces de cette figure se chevauchent de trop près pour savoir laquelle recouvre l’autre : Ordre des couches ne peut pas l’ouvrir. Rien n’a été modifié.",
       "digestMismatch": "Ordre des couches n’a pas pu faire correspondre ses faces à celles avec lesquelles cette figure a été pliée : il ne peut pas l’ouvrir. Rien n’a été modifié.",
+      "digestMismatchNamed": "Ordre des couches n’a pas pu faire correspondre ses faces à celles avec lesquelles cette figure a été pliée : il ne peut pas ouvrir {{name}}. Rien n’a été modifié.",
       "noFaces": "Cette figure n’a aucune face à ordonner.",
       "nonConvex": "Une face de cette figure n’est pas convexe. Ordre des couches ne gère pas encore les faces non convexes.",
       "nonConvexFace": "La face {{face}} n’est pas convexe. Ordre des couches ne gère pas encore les faces non convexes.",
       "noOrder": "L’ordre des couches n’a pas pu être déterminé pour cette figure.",
-      "recordNewer": "Les contraintes de cette figure ont été enregistrées par une version plus récente d’Ori Studio. Mettez à jour Ori Studio pour les modifier.",
+      "recordNewer": "Créé avec une version plus récente d’Ori Studio : ses contraintes de couches ne peuvent pas être modifiées ici.",
       "recordTooLarge": "Les contraintes enregistrées de cette figure sont trop volumineuses pour être ouvertes. Rien n’a été modifié.",
       "recordUnreadable": "Les contraintes enregistrées de cette figure sont illisibles : Ordre des couches ne peut pas les ouvrir. Rien n’a été modifié.",
       "timedOut": "Impossible de calculer à temps les ordres des couches de cette figure.",

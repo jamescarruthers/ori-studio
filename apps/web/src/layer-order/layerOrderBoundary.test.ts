@@ -20,12 +20,13 @@
  * 4. **Hosts come in through the doors** (U4). The dialog's component and
  *    everything it brings (`components/layer-order/`, but for the app root's
  *    mount) are one lazy chunk, which only its gateway
- *    (`layer-order/dialog/layerOrderDialogGateway.ts`) imports; the mount
- *    renders it once the gateway has loaded it, and imports none of it. A
- *    host reaches the dialog through that gateway and the host engine through
- *    its own (`host/hostEngineGateway.ts`), never the engine runtime or the
- *    host engine itself, so neither the runtime, comlink nor a worker's URL
- *    joins a chunk the page loads.
+ *    (`layer-order/dialog/layerOrderDialogGateway.ts`) imports, and only by
+ *    `import()` or `import type`; the mount renders it once the gateway has
+ *    loaded it, and imports none of it. A host, and the mount like one,
+ *    reaches the dialog through that gateway and the host engine through its
+ *    own (`host/hostEngineGateway.ts`), never the dialog's other modules, the
+ *    engine runtime or the host engine itself, so neither the runtime,
+ *    comlink nor a worker's URL joins a chunk the page loads.
  *
  * The dialog's components (`components/layer-order/`) are held to the first
  * rule too: they draw what a request hands them and read no host's state.
@@ -65,6 +66,22 @@ function targetsIn(text: string, file: string): string[] {
 function importsOf(file: string): string[] {
   return targetsIn(readFileSync(file, 'utf8'), file);
 }
+
+/**
+ * The relative modules `text` loads with it, resolved under `src/`: static
+ * imports and re-exports that bring a value (side-effect ones included), not
+ * `import type` or `export type`, and not a dynamic `import()`, which loads a
+ * chunk of its own when it runs.
+ */
+function staticValueTargetsIn(text: string, file: string): string[] {
+  const specifiers = [
+    ...text.matchAll(/(?:^|[;\n])\s*(?:import|export)\s+(?!type\b)(?:[^'";]*?\s+from\s+)?['"](\.{1,2}\/[^'"]+)['"]/g),
+  ].map((match) => match[1]!);
+  return specifiers.map((specifier) => posix(relative(SRC, resolve(dirname(file), specifier))));
+}
+
+/** A shipped module's path under `src/`, without its extension: what imports resolve to. */
+const moduleOf = (file: string) => posix(relative(SRC, file)).replace(/\.tsx?$/, '');
 
 /** The hosts' own state and documents: what the dialog never reaches into. */
 const HOSTS: readonly RegExp[] = [
@@ -137,7 +154,7 @@ describe('the Layer order dialog’s boundaries', () => {
 
   it('nothing but the gateway imports the dialog’s chunk, and the mount imports none of it', () => {
     const reaches = sourcesUnder(SRC).flatMap((file) => {
-      const from = posix(relative(SRC, file)).replace(/\.tsx?$/, '');
+      const from = moduleOf(file);
       // The chunk's own modules import one another; the mount is outside it.
       if (from !== DIALOG_MOUNT && from.startsWith('components/layer-order/')) return [];
       return importsOf(file)
@@ -147,6 +164,41 @@ describe('the Layer order dialog’s boundaries', () => {
     expect(reaches).toEqual([]);
     // The gateway does import it, so the check above has something to let through.
     expect(importsOf(resolve(SRC, `${DIALOG_GATEWAY}.ts`))).toContain(DIALOG_COMPONENT);
+  });
+
+  it('the gateway reaches the dialog’s component only through import() or import type, so it loads with no page', () => {
+    const gateway = resolve(SRC, `${DIALOG_GATEWAY}.ts`);
+    expect(staticValueTargetsIn(readFileSync(gateway, 'utf8'), gateway)).not.toContain(DIALOG_COMPONENT);
+  });
+
+  it('tells a static value import from import type and import()', () => {
+    const file = resolve(SRC, 'layer-order/dialog/example.ts');
+    expect(
+      staticValueTargetsIn(
+        `
+        import type * as Chunk from '../../components/layer-order/LayerOrderDialog';
+        import type { LayerOrderDialogOpening } from './layerOrderDialogStore';
+        export type { X } from './x';
+        const chunk = () => import('../../components/layer-order/LayerOrderDialog');
+        import { toast } from 'sonner';
+        import { lazyModule } from '../../lib/lazyModule';
+        import {
+          beginLayerOrderDialog,
+          type LayerOrderDialogOutcome,
+        } from './layerOrderDialogStore';
+        import '../../components/layer-order/LayerOrderDialogFrame';
+        export { registerLayerOrderDialogMount } from './layerOrderDialogStore';
+        import Dialog from '../../components/layer-order/LayerOrderDialog';
+        `,
+        file
+      )
+    ).toEqual([
+      'lib/lazyModule',
+      'layer-order/dialog/layerOrderDialogStore',
+      'components/layer-order/LayerOrderDialogFrame',
+      'layer-order/dialog/layerOrderDialogStore',
+      DIALOG_COMPONENT,
+    ]);
   });
 
   it('tells the chunk from the mount, and the doors from what is behind them', () => {
@@ -161,14 +213,17 @@ describe('the Layer order dialog’s boundaries', () => {
     expect(behind('layer-order/host/layerOrderHostEngine')).toBe(true);
   });
 
-  it('a host reaches the dialog and the host engine only through their gateways', () => {
-    const reaches = sourcesUnder(SRC)
-      .filter((file) => !/^(layer-order|components\/layer-order|workers)\//.test(posix(relative(SRC, file))))
-      .flatMap((file) =>
-        importsOf(file)
-          .filter((target) => BEHIND_THE_DOORS.some((inside) => inside.test(target)))
-          .map((target) => `${posix(relative(SRC, file))} → ${target}`)
-      );
+  it('a host, the app root’s mount among them, reaches the dialog and the host engine only through their gateways', () => {
+    /** Inside the doors: the dialog's own modules, its chunk and the workers; the mount stands outside, as a host does. */
+    const inside = (module: string) =>
+      /^(layer-order|workers)\//.test(module) || (DIALOG_CHUNK.test(module) && module !== DIALOG_MOUNT);
+    const hosts = sourcesUnder(SRC).filter((file) => !inside(moduleOf(file)));
+    expect(hosts.map(moduleOf)).toContain(DIALOG_MOUNT);
+    const reaches = hosts.flatMap((file) =>
+      importsOf(file)
+        .filter((target) => BEHIND_THE_DOORS.some((door) => door.test(target)))
+        .map((target) => `${moduleOf(file)} → ${target}`)
+    );
     expect(reaches).toEqual([]);
   });
 

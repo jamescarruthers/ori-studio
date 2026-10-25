@@ -40,7 +40,7 @@ import styles from './LayerOrderPanes.module.css';
  */
 export function LayerOrderPanes(props: LayerOrderPanesProps) {
   const { t } = useTranslation();
-  const { status, phonePane, request, onFlashEnded } = props;
+  const { status, phonePane, request, letters, onFlashEnded } = props;
   const openingView = useMemo(() => layerOrderOpeningView(request), [request]);
   const view = props.view ?? openingView;
   const marks = props.marks ?? NO_FACE_MARKS;
@@ -52,7 +52,7 @@ export function LayerOrderPanes(props: LayerOrderPanesProps) {
   const wheelGesture = useSettingsStore((state) => state.cpWheelGesture);
   const snapRadius = useSettingsStore((state) => state.cpSnapRadius);
   const inks = useLayerPaneInks(root, themeKey);
-  const inputs = { status, request, view, marks, stacks, inks, element: root, themeKey };
+  const inputs = { status, request, letters, view, marks, stacks, inks, element: root, themeKey };
   const pattern = useLayerPatternPane(inputs);
   const folded = useLayerFoldedPane(inputs);
 

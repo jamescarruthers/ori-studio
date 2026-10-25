@@ -1,37 +1,48 @@
-import { useEffect } from 'react';
-import { useLoadedLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
+import { useEffect, useState } from 'react';
 import {
+  abandonLayerOrderDialog,
   registerLayerOrderDialogMount,
-  settleLayerOrderDialog,
-  useLayerOrderDialogStore,
-} from '../../layer-order/dialog/layerOrderDialogStore';
+  useLayerOrderDialogOpening,
+  useLoadedLayerOrderDialog,
+} from '../../layer-order/dialog/layerOrderDialogGateway';
 import { ErrorBoundary } from '../errors/ErrorBoundary';
 
 /**
  * The Layer order dialog's place at the app root (`App.tsx`). Nothing until a
  * host opens the dialog through its gateway, which asks for the dialog's code
  * then; the dialog once that code is here. Rendering this loads no code,
- * spawns no worker and costs a store read.
+ * spawns no worker and costs a store read. Like a host, it reaches the dialog
+ * only through the gateway (`layerOrderBoundary.test.ts`).
  *
  * Its being mounted is what lets a host's open go ahead: with none mounted, an
  * open answers `unavailable` at once rather than waiting on a dialog nobody
- * shows, and an open dialog goes when its mount does. A dialog that crashes
- * is reported and answers `cancelled`, so its host is never left waiting and
- * the next open is not refused as `busy`.
+ * shows, and an open dialog goes when its mount does.
+ *
+ * **A dialog that crashes** is reported (the boundary) and answers its host
+ * `cancelled` at once, so the host never waits and the next open is not
+ * `busy`; its worker goes with it. Its fallback ("This dialog stopped
+ * working") stays on screen until it is dismissed or another opening takes
+ * its place.
  */
 export function LayerOrderDialogMount() {
-  const opening = useLayerOrderDialogStore((state) => state.opening);
+  const opening = useLayerOrderDialogOpening();
   const chunk = useLoadedLayerOrderDialog();
+  // The opening whose dialog crashed, kept so its fallback outlives its answer.
+  const [crashed, setCrashed] = useState<number | null>(null);
   useEffect(() => registerLayerOrderDialogMount(), []);
-  if (!opening || !chunk) return null;
+  const shown = opening?.id ?? crashed;
+  if (shown === null || !chunk) return null;
   return (
     <ErrorBoundary
-      key={opening.id}
+      key={shown}
       surface="overlay:layer-order"
       variant="overlay"
-      onError={() => settleLayerOrderDialog(opening.id, { kind: 'cancelled' })}
+      onError={() => {
+        abandonLayerOrderDialog(shown);
+        setCrashed(shown);
+      }}
     >
-      <chunk.LayerOrderDialog opening={opening} />
+      {opening?.id === shown ? <chunk.LayerOrderDialog opening={opening} /> : null}
     </ErrorBoundary>
   );
 }

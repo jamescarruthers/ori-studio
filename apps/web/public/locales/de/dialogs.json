@@ -516,6 +516,7 @@
     "foldedPane": "Gefaltete Figur",
     "keepTrying": "Weiter versuchen",
     "lost": "Lagenreihenfolge wurde unerwartet beendet. Es wurde nichts geändert.",
+    "lostLoad": "Lagenreihenfolge konnte nicht geladen werden. Prüfe deine Verbindung und versuche es dann erneut.",
     "opening": "Lagenreihenfolgen werden ermittelt…",
     "pane": {
       "creasePattern": "Faltmuster",
@@ -525,11 +526,12 @@
     "refused": {
       "ambiguousOverlap": "Einige Flächen dieser Figur überlappen zu knapp, um zu erkennen, welche welche bedeckt, daher kann Lagenreihenfolge sie nicht öffnen. Es wurde nichts geändert.",
       "digestMismatch": "Lagenreihenfolge konnte ihre Flächen nicht denen zuordnen, mit denen diese Figur gefaltet wurde, und kann sie daher nicht öffnen. Es wurde nichts geändert.",
+      "digestMismatchNamed": "Lagenreihenfolge konnte ihre Flächen nicht denen zuordnen, mit denen diese Figur gefaltet wurde, und kann {{name}} daher nicht öffnen. Es wurde nichts geändert.",
       "noFaces": "Diese Figur hat keine Flächen, die sich ordnen ließen.",
       "nonConvex": "Eine Fläche dieser Figur ist nicht konvex. Lagenreihenfolge kann noch nicht mit nicht konvexen Flächen arbeiten.",
       "nonConvexFace": "Fläche {{face}} ist nicht konvex. Lagenreihenfolge kann noch nicht mit nicht konvexen Flächen arbeiten.",
       "noOrder": "Die Lagenreihenfolge dieser Figur konnte nicht bestimmt werden.",
-      "recordNewer": "Die Vorgaben dieser Figur wurden mit einer neueren Version von Ori Studio gespeichert. Aktualisiere Ori Studio, um sie zu ändern.",
+      "recordNewer": "Mit einem neueren Ori Studio erstellt: Seine Lagenvorgaben können hier nicht geändert werden.",
       "recordTooLarge": "Die gespeicherten Vorgaben dieser Figur sind zu groß zum Öffnen. Es wurde nichts geändert.",
       "recordUnreadable": "Die gespeicherten Vorgaben dieser Figur konnten nicht gelesen werden, daher kann Lagenreihenfolge sie nicht öffnen. Es wurde nichts geändert.",
       "timedOut": "Die Lagenreihenfolgen dieser Figur konnten nicht rechtzeitig ermittelt werden.",

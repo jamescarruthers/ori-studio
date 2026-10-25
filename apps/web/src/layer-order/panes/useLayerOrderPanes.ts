@@ -34,7 +34,6 @@ import { readCssVarColor } from '../../cp-workspace/renderer/cssColor';
 import type { FillGeometry, Rgba } from '../../cp-workspace/renderer/types';
 import type { PaperLook } from '../../cp-workspace/surface/PaperPane';
 import type { LayerOrderSessionStatus } from '../dialog/useLayerOrderSession';
-import { requestFaceLetters } from '../dialog/layerOrderSession';
 import type { FaceLetters, LayerFace } from '../engine/faceIndex';
 import type { LayerSide } from '../engine/layerOrderEngine';
 import {
@@ -134,10 +133,10 @@ export function layerOrderOpeningView(request: LayerOrderRequest): LayerPanesVie
 /** What the session has to draw from, or the request's own until it is open. */
 function figureOf(status: LayerOrderSessionStatus, request: LayerOrderRequest) {
   if (status.kind === 'ready') {
-    const { scenes, letters } = status.open;
-    return { faces: scenes.front ?? scenes.back, letters, scenes };
+    const { scenes } = status.open;
+    return { faces: scenes.front ?? scenes.back, scenes };
   }
-  return { faces: request.shown ?? null, letters: requestFaceLetters(request), scenes: null };
+  return { faces: request.shown ?? null, scenes: null };
 }
 
 /** A refusal that names a face marks it on the crease pattern, as its notice names it (D4). */
@@ -163,6 +162,8 @@ function ringMarks(
 export interface LayerPaneInputs {
   readonly status: LayerOrderSessionStatus;
   readonly request: LayerOrderRequest;
+  /** The face index of the opening (`LayerOrderPanesProps.letters`). */
+  readonly letters: FaceLetters | null;
   readonly view: LayerPanesView;
   readonly marks: LayerFaceMarks;
   /** The order on screen, per side: a preview's while one shows; null for the session's own. */
@@ -177,6 +178,7 @@ export interface LayerPaneInputs {
 export function useLayerPatternPane({
   status,
   request,
+  letters: faceLetters,
   marks,
   inks,
   element,
@@ -228,7 +230,7 @@ export function useLayerPatternPane({
     [faces]
   );
   const pickable = useMemo(() => new Set(shown.pickable), [shown.pickable]);
-  const letterOf = useMemo(() => lettersOf(figure.letters), [figure.letters]);
+  const letterOf = useMemo(() => lettersOf(faceLetters), [faceLetters]);
   const paperLook = useMemo<PaperLook>(() => ({ style: look.style, policy: look.policy }), [look.style, look.policy]);
   const hitTest = useMemo(
     () =>
@@ -275,6 +277,7 @@ function sideScene(
 export function useLayerFoldedPane({
   status,
   request,
+  letters: faceLetters,
   view,
   marks,
   stacks,
@@ -339,7 +342,7 @@ export function useLayerFoldedPane({
     return { n: marks.flash.n, spots: polygons };
   }, [marks.flash, kernel, flashSpots]);
   const pickable = useMemo(() => new Set(marks.pickable), [marks.pickable]);
-  const letterOf = useMemo(() => lettersOf(figure.letters), [figure.letters]);
+  const letterOf = useMemo(() => lettersOf(faceLetters), [faceLetters]);
   const hitTest = useMemo(
     () =>
       (_at: Point, _radii: unknown, stack: StackHit | null): LayerPaneHit | null => {
