@@ -501,8 +501,13 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   the matrices against the frame's coordinates; a turn-over and a rotation;
   the whole-file cap refusing one element short; Edit saving the file with
   the step frames kept.
-- `tests/steer_source.rs`, `tests/steer_session.rs` and
-  `tests/steer_record.rs`: the Layer order dialog's engine (`steer`, below).
+- `tests/steer_source.rs`, `tests/steer_session.rs`, `tests/steer_host.rs`
+  and `tests/steer_record.rs`: the Layer order dialog's engine (`steer`,
+  below). `steer_host.rs` holds the open on Edit's own order spot for spot,
+  Add adopting its preview even out of time, the rows a restore carries,
+  previewing a list nothing committed, a second restore on an open session,
+  a point now in another face of the same area, and a thin face saved by a
+  point it is found at.
   The source's edge rule, frame and refusals; the constraint session against
   Fold's own import of the same square sheets (the same forced and open pairs
   and the same orders), Oriedita's own first order accepted whole, a preview
@@ -522,12 +527,16 @@ and E5):
   Edit folded (face *k* is Oriedita face *k*), by Oriedita's edge rule, with
   typed refusals.
 - `ConstraintSession`: the committed constraints, the order on screen and
-  what deduction forces. `open`, `open_pairs`, `preview` (never commits),
-  `commit` (the whole list), `stacks` and `scene` per side,
-  `oriedita_relations` for a host's `fold_with_order`, `save`, and `restore`
-  onto creases that may have changed (decision D10: intact constraints
-  applied together or not at all, the saved order kept where it still fits).
-  Every limit that runs out is a `TimedOut`, never a "can't fit".
+  what deduction forces. `open`, and `open_showing` on the order the host
+  shows (its paper scene's relations, `scene_relations`), `open_pairs`,
+  `preview` and `preview_list` (never commit), `commit` (the whole list) and
+  `commit_preview` (Add adopting its preview, no search), `stacks` and
+  `scene` per side, `oriedita_relations` for a host's `fold_with_order`,
+  `save`, and `restore` / `restore_record` onto creases that may have changed
+  (decision D10: intact constraints applied together or not at all, the
+  saved order kept where it still fits, every constraint not applied carried
+  to the next save). Every limit that runs out is a `TimedOut`, never a
+  "can't fit".
 - `read_record` / `encode_record`: the saved record, byte for byte the web
   codec's.
 
