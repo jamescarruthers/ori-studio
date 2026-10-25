@@ -17,13 +17,14 @@ use oristudio_cp::session::{
 use oristudio_fold::FaceId;
 use oristudio_fold::complete::BudgetLimit;
 use oristudio_fold::steer::{
-    ConstraintStatus, LayerSource, RecordFace, RecordPair, RecordRead, TimedOut, Verb, ViewSide,
-    encode_record, read_record, scene_relations,
+    ConstraintStatus, LayerSource, RecordFace, RecordPair, RecordRead, SolutionCount, StepBy,
+    StepDirection, Tally, TimedOut, Verb, ViewSide, encode_record, read_record, scene_relations,
 };
 use oristudio_fold_wasm::steer::{
-    CantFitKind, Committing, FACE_INTACT, LayerCallError, LayerLimits, LayerOpened, LayerRefusal,
-    LayerRestored, LayerSessions, OpenedOnWire, Opening, PAIR_KEPT, PAIR_UNRESOLVED, PackedStacks,
-    Previewed, RestoredOutcome, Restoring, Saving, constraints_of,
+    CantFitKind, Committing, Explained, FACE_INTACT, LayerCallError, LayerLimits, LayerOpened,
+    LayerRefusal, LayerRestored, LayerSessions, LayerSolutionCaps, OpenedOnWire, Opening,
+    PAIR_KEPT, PAIR_UNRESOLVED, PackedStacks, Previewed, RestoredOutcome, Restoring, Saving,
+    Stepping, constraints_of,
 };
 
 fn repo(relative: &str) -> std::path::PathBuf {
@@ -1191,5 +1192,382 @@ fn a_caller_s_mistakes_are_thrown_by_code() {
     assert_eq!(
         oristudio_fold_wasm::steer::side_of("up").map_err(|e| e.code()),
         Err("invalid_input")
+    );
+}
+
+// ---------------------------------------------------------------------------
+// E6: explain, the count and the stepper.
+
+const SOLUTION_SAMPLE: &str = "tests/fixtures/oriedita/solution_sample_1.cp";
+
+fn exact(n: u64) -> Tally {
+    Tally { n, exact: true }
+}
+
+/// A slice of the count: the dialog's worker between its other calls.
+fn slice() -> LayerLimits {
+    LayerLimits {
+        max_nodes: Some(1),
+        fast_nodes: None,
+        deadline_ms: Some(50.0),
+    }
+}
+
+/// The count advanced in one-node slices to its end, and how many slices.
+fn count_in_slices(
+    layers: &mut LayerSessions,
+    session: u32,
+    cursor: u32,
+) -> (SolutionCount, usize) {
+    let mut slices = 0;
+    loop {
+        let count = layers
+            .solutions_advance(session, cursor, &slice())
+            .expect("a slice");
+        slices += 1;
+        if count.done {
+            return (count, slices);
+        }
+        assert!(slices < 100_000, "the count never ends");
+    }
+}
+
+#[test]
+fn the_count_in_slices_is_kabuto_s_9_and_1_and_solution_sample_1_s_1_and_16() {
+    for (relative, front, back, orders) in [
+        ("tests/fixtures/flat-folder/kabuto.fold", 9, 1, 9),
+        (SOLUTION_SAMPLE, 1, 16, 16),
+    ] {
+        let source = source_of(relative);
+        let mut layers = LayerSessions::new();
+        let session = open(&mut layers, &source).session;
+        let sliced = layers
+            .solutions_start(session, &LayerSolutionCaps::default())
+            .expect("a cursor");
+        let (count, slices) = count_in_slices(&mut layers, session, sliced);
+        assert_eq!(
+            count,
+            SolutionCount {
+                front: exact(front),
+                back: exact(back),
+                orders: exact(orders),
+                done: true,
+            },
+            "{relative}"
+        );
+        // A one-shot count on another cursor ends the same.
+        let whole = layers
+            .solutions_start(session, &LayerSolutionCaps::default())
+            .expect("a cursor");
+        assert_ne!(whole, sliced);
+        assert_eq!(
+            layers.solutions_advance(session, whole, &defaults()),
+            Ok(count)
+        );
+        // Done, it only reads.
+        assert_eq!(
+            layers.solutions_advance(session, sliced, &slice()),
+            Ok(count)
+        );
+        println!("{relative}: {front} / {back} pictures, {orders} orders, in {slices} slices");
+    }
+}
+
+/// The top face of every spot.
+fn tops(stacks: &PackedStacks) -> Vec<Option<u32>> {
+    (0..stacks.offsets.len() - 1)
+        .map(|i| spot(stacks, i).first().copied())
+        .collect()
+}
+
+/// Walk the stepper from its first solution to its last: what each shows
+/// (the tops from `side`, or with X-ray the whole order) and its index.
+fn walk(
+    layers: &mut LayerSessions,
+    session: u32,
+    cursor: u32,
+    by: StepBy,
+    side: ViewSide,
+) -> Vec<(u64, Vec<u32>)> {
+    let shows = |layers: &LayerSessions| -> Vec<u32> {
+        match by {
+            StepBy::LayerOrder => layers.oriedita_relations(session).expect("relations"),
+            StepBy::Picture(_) => tops(&layers.stacks(session, side).expect("stacks"))
+                .into_iter()
+                .map(|top| top.unwrap_or(u32::MAX))
+                .collect(),
+        }
+    };
+    // Back to the first.
+    loop {
+        match layers.step(session, cursor, by, StepDirection::Previous, &defaults()) {
+            Ok(Stepping::Moved(_)) => {}
+            Ok(Stepping::End) => break,
+            other => panic!("{other:?}"),
+        }
+    }
+    let position = layers
+        .solutions_position(session, cursor, by)
+        .expect("a position");
+    let mut seen = vec![(position.index, shows(layers))];
+    loop {
+        match layers.step(session, cursor, by, StepDirection::Next, &defaults()) {
+            Ok(Stepping::Moved(moved)) => {
+                assert_eq!(
+                    moved.stacks.front,
+                    layers.stacks(session, ViewSide::Front).expect("front")
+                );
+                assert_eq!(
+                    Ok(moved.position),
+                    layers.solutions_position(session, cursor, by)
+                );
+                seen.push((moved.position.index, shows(layers)));
+            }
+            Ok(Stepping::End) => return seen,
+            other => panic!("{other:?}"),
+        }
+    }
+}
+
+#[test]
+fn walking_the_stepper_visits_every_solution_once_in_order() {
+    for (relative, by, side, total) in [
+        (
+            "tests/fixtures/flat-folder/kabuto.fold",
+            StepBy::Picture(ViewSide::Front),
+            ViewSide::Front,
+            9,
+        ),
+        (
+            "tests/fixtures/flat-folder/kabuto.fold",
+            StepBy::LayerOrder,
+            ViewSide::Front,
+            9,
+        ),
+        (
+            SOLUTION_SAMPLE,
+            StepBy::Picture(ViewSide::Back),
+            ViewSide::Back,
+            16,
+        ),
+        (
+            SOLUTION_SAMPLE,
+            StepBy::Picture(ViewSide::Front),
+            ViewSide::Front,
+            1,
+        ),
+    ] {
+        let source = source_of(relative);
+        let mut layers = LayerSessions::new();
+        let session = open(&mut layers, &source).session;
+        let cursor = layers
+            .solutions_start(session, &LayerSolutionCaps::default())
+            .expect("a cursor");
+        let (count, _) = count_in_slices(&mut layers, session, cursor);
+        assert!(count.done);
+        let seen = walk(&mut layers, session, cursor, by, side);
+        let indices: Vec<u64> = seen.iter().map(|(index, _)| *index).collect();
+        assert_eq!(
+            indices,
+            (1..=total).collect::<Vec<u64>>(),
+            "{relative} {by:?}"
+        );
+        let mut shown: Vec<&Vec<u32>> = seen.iter().map(|(_, shows)| shows).collect();
+        shown.sort_unstable();
+        shown.dedup();
+        assert_eq!(shown.len() as u64, total, "{relative} {by:?}: each once");
+        // Every solution walked fits: the kernel folds it.
+        folds_with(
+            &source,
+            &layers.oriedita_relations(session).expect("relations"),
+        );
+        // The last is the last: next ends, the position says so.
+        assert_eq!(
+            layers
+                .solutions_position(session, cursor, by)
+                .map(|p| p.index),
+            Ok(total)
+        );
+    }
+}
+
+#[test]
+fn a_commit_makes_a_cursor_stale_and_a_step_keeps_it_good() {
+    let source = kabuto();
+    let mut layers = LayerSessions::new();
+    let opened = open(&mut layers, &source);
+    let session = opened.session;
+    let cursor = layers
+        .solutions_start(session, &LayerSolutionCaps::default())
+        .expect("a cursor");
+    let (count, _) = count_in_slices(&mut layers, session, cursor);
+    let by = StepBy::Picture(ViewSide::Front);
+    // A step moves the order on screen and keeps the cursor good, and drops
+    // a preview kept from before it: Add then commits from the stepped
+    // order.
+    let pair = pairs(&opened.open_pairs)[0];
+    let candidate = against_shown(&layers, session, pair, &opened.front_up);
+    let Ok(Previewed::Fits(kept)) = layers.preview(session, &candidate, &defaults()) else {
+        panic!("it fits");
+    };
+    let direction = match layers.step(session, cursor, by, StepDirection::Next, &defaults()) {
+        Ok(Stepping::Moved(_)) => StepDirection::Next,
+        Ok(Stepping::End) => StepDirection::Previous,
+        other => panic!("{other:?}"),
+    };
+    if direction == StepDirection::Previous {
+        assert!(matches!(
+            layers.step(session, cursor, by, direction, &defaults()),
+            Ok(Stepping::Moved(_))
+        ));
+    }
+    assert_eq!(
+        layers.solutions_advance(session, cursor, &slice()),
+        Ok(count)
+    );
+    assert!(layers.solutions_position(session, cursor, by).is_ok());
+    let stale = |e: LayerCallError| assert_eq!(e.code(), "session_stale_solutions");
+    let Ok(Committing::Committed(done)) =
+        layers.commit_preview(session, kept.token, &candidate, &defaults())
+    else {
+        panic!("it fits from the stepped order too");
+    };
+    assert!(!done.adopted, "the step put the preview out of date");
+    // The commit makes the cursor stale: every call on it is refused.
+    stale(
+        layers
+            .solutions_advance(session, cursor, &slice())
+            .expect_err("stale"),
+    );
+    stale(
+        layers
+            .solutions_position(session, cursor, by)
+            .expect_err("stale"),
+    );
+    stale(
+        layers
+            .step(session, cursor, by, StepDirection::Next, &defaults())
+            .expect_err("stale"),
+    );
+    // A new cursor counts what the constraint leaves.
+    let fresh = layers
+        .solutions_start(session, &LayerSolutionCaps::default())
+        .expect("a cursor");
+    let (fewer, _) = count_in_slices(&mut layers, session, fresh);
+    assert!(fewer.front.n < count.front.n, "{fewer:?} against {count:?}");
+    // Back to the constraints the old one counted: it is good again (E6's
+    // own test of a cursor).
+    let Ok(Committing::Committed(_)) = layers.commit(session, &[], &defaults()) else {
+        panic!("an empty list fits");
+    };
+    assert_eq!(
+        layers.solutions_advance(session, cursor, &slice()),
+        Ok(count)
+    );
+    stale(
+        layers
+            .solutions_advance(session, fresh, &slice())
+            .expect_err("stale"),
+    );
+    // Closed cursors, and cursors of a closed session, are gone.
+    assert_eq!(layers.solutions_close(session, fresh), Ok(true));
+    assert_eq!(layers.solutions_close(session, fresh), Ok(false));
+    assert_eq!(
+        layers
+            .solutions_advance(session, fresh, &slice())
+            .map(|_| ())
+            .map_err(|e| e.code()),
+        Err("unknown_layer_cursor")
+    );
+    assert!(layers.close(session));
+    assert_eq!(
+        layers
+            .solutions_position(session, cursor, by)
+            .map(|_| ())
+            .map_err(|e| e.code()),
+        Err("unknown_layer_session")
+    );
+}
+
+#[test]
+fn explain_names_a_smallest_clashing_set() {
+    let source = kabuto();
+    let mut layers = LayerSessions::new();
+    let opened = open(&mut layers, &source);
+    let session = opened.session;
+    let open = pairs(&opened.open_pairs);
+    let (a, b) = open[0];
+    let first = sentence(a, true, b, true, &opened.front_up);
+    let Ok(Committing::Committed(_)) = layers.commit(session, &first, &defaults()) else {
+        panic!("an open pair takes either order");
+    };
+    // A candidate that fits has nothing to explain.
+    let other = against_shown(&layers, session, open[open.len() - 1], &opened.front_up);
+    assert_eq!(
+        layers.explain(session, &other, &defaults()),
+        Ok(Explained::Fits)
+    );
+    // The committed constraint's pair the other way: both clash, and each is
+    // needed.
+    let reversed = sentence(a, false, b, true, &opened.front_up);
+    match layers.explain(session, &reversed, &defaults()) {
+        Ok(Explained::Clash(clash)) => {
+            assert_eq!(clash.constraints, vec![0, 1]);
+            assert!(clash.minimal);
+            assert_eq!(clash.faces, vec![a.min(b), a.max(b)]);
+            assert_eq!(clash.proof, CantFitKind::Opposed);
+        }
+        other => panic!("{other:?}"),
+    }
+    // Against a pair the creases force: the candidate alone.
+    let layer_source = LayerSource::from_oriedita(&source).expect("source");
+    let forced = layer_source
+        .problem()
+        .variables()
+        .iter()
+        .map(|p| (p.lo().0, p.hi().0))
+        .find(|p| !open.contains(p))
+        .expect("kabuto forces pairs");
+    let against = against_shown(&layers, session, forced, &opened.front_up);
+    match layers.explain(session, &against, &defaults()) {
+        Ok(Explained::Clash(clash)) => {
+            assert_eq!(clash.constraints, vec![1]);
+            assert!(clash.minimal);
+            assert_eq!(clash.proof, CantFitKind::Forced);
+            assert!(!clash.traced.is_empty());
+        }
+        other => panic!("{other:?}"),
+    }
+    // Any list, uncommitted: the third clashes with the first, the second is
+    // spared, and dropping either of the two leaves an order.
+    let list = [first, other, reversed].concat();
+    match layers.explain_list(session, &list, &defaults()) {
+        Ok(Explained::Clash(clash)) => {
+            assert_eq!(clash.constraints, vec![0, 2]);
+            assert!(clash.minimal);
+            for kept in [[first, other], [other, reversed]] {
+                assert!(matches!(
+                    layers.preview_list(session, &kept.concat(), &defaults()),
+                    Ok(Previewed::Fits(_))
+                ));
+            }
+        }
+        other => panic!("{other:?}"),
+    }
+    // Out of time it still answers, and never a set that fits.
+    match layers.explain_list(session, &list, &passed()) {
+        Ok(Explained::Clash(clash)) => {
+            assert!(!clash.minimal || clash.constraints == vec![0, 2]);
+        }
+        Ok(Explained::TimedOut(_)) => {}
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(layers.constraints(session), Ok(first.to_vec()));
+    assert_eq!(
+        layers
+            .explain(session, &[a as i32, a as i32, 1], &defaults())
+            .map(|_| ())
+            .map_err(|e| e.code()),
+        Err("session_bad_constraint")
     );
 }

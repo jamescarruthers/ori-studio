@@ -45,11 +45,36 @@
 //!   layer_oriedita_relations(session: number): Uint32Array;
 //!   /** The committed constraints, then the carried rows, as one record. */
 //!   layer_save(session: number): LayerSaveOutcome;
-//!   /** Let a session go; whether it was held. */
+//!   /** Let a session go, with its cursors; whether it was held. */
 //!   layer_close(session: number): boolean;
 //!   layer_live(): number;
+//!
+//!   // E6: why a sentence can't fit, and the solutions.
+//!   /** The smallest clashing set of the committed list plus one. Never commits. */
+//!   layer_explain(session: number, candidate: Int32Array, limits?: LayerLimits): LayerExplained;
+//!   /** The same for any list. */
+//!   layer_explain_list(session: number, constraints: Int32Array, limits?: LayerLimits):
+//!     LayerExplained;
+//!   /** A solutions cursor beside the session, counted only when advanced. */
+//!   layer_solutions_start(session: number, caps?: LayerSolutionCaps): number;
+//!   /** One slice of the count, resumed where the last stopped. */
+//!   layer_solutions_advance(session: number, cursor: number, limits?: LayerLimits):
+//!     LayerSolutionCount;
+//!   /** Where the order on screen lies in the stepper's order ("3 of 12"). */
+//!   layer_solutions_position(session: number, cursor: number, by: LayerStepBy): LayerPosition;
+//!   /** The next or previous solution; only the order on screen changes. */
+//!   layer_step(session: number, cursor: number, by: LayerStepBy,
+//!     direction: 'next' | 'previous', limits?: LayerLimits): LayerStepped;
+//!   layer_solutions_close(session: number, cursor: number): boolean;
 //! }
 //! ```
+//!
+//! A cursor counts the committed constraints it started on. After a commit
+//! or a restore to other constraints every call on it throws
+//! `session_stale_solutions` (a commit back to the same list makes it good
+//! again); a step keeps it. There is no count worker: the dialog's one
+//! worker advances the cursor in short slices (a small `maxNodes` and a
+//! short `deadlineMs`) between its other calls.
 //!
 //! Every call that searches (the opens, the restores, the previews, the
 //! commits) takes `{ maxNodes?, fastNodes?, deadlineMs? }`; the deadline is
@@ -67,9 +92,6 @@
 //! objects. Refusals are values (`{ status: 'refused', refusal: { code, … } }`);
 //! only a caller's mistake or a defect throws, as `{ code, message }`
 //! ([`LayerCallError`]).
-//!
-//! E6 (the smallest clashing set, the solution count, X-ray stepping) adds
-//! its calls beside these, over the same store.
 
 use js_sys::{Float64Array, Int32Array, Object, Reflect, Uint8Array, Uint32Array};
 use oristudio_cp::folding::FoldedFigureModel;
@@ -79,9 +101,10 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 
 use super::wire::{
-    CantFitWire, Committing, LAYER_LIMITS_FIELDS, LayerCallError, LayerFoldSource, LayerLimits,
-    LayerOpened, LayerRefusal, LayerRestored, Opening, PackedStacks, Previewed, Restoring, Saving,
-    Sides, side_of,
+    CantFitKind, CantFitWire, Committing, Explained, LAYER_LIMITS_FIELDS,
+    LAYER_SOLUTION_CAPS_FIELDS, LayerCallError, LayerFoldSource, LayerLimits, LayerOpened,
+    LayerRefusal, LayerRestored, LayerSolutionCaps, LayerStepBy, Opening, PackedStacks, Previewed,
+    Restoring, Saving, Sides, Stepping, direction_of, side_of,
 };
 use crate::{FoldEngine, js_error, parse, to_js_value};
 
@@ -295,6 +318,148 @@ impl FoldEngine {
     pub fn layer_live(&self) -> u32 {
         u32::try_from(self.layers.len()).unwrap_or(u32::MAX)
     }
+
+    // --- E6: explain, and the solutions -----------------------------------
+
+    /// Why the committed constraints and `candidate` (`[subject, object,
+    /// sign]`) can't fit: the smallest clashing set. Never commits.
+    pub fn layer_explain(
+        &self,
+        session: u32,
+        candidate: &[i32],
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits = limits_of(limits)?;
+        explained(
+            self.layers
+                .explain(session, candidate, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// [`Self::layer_explain`] for any list (`[subject, object, sign, …]`).
+    pub fn layer_explain_list(
+        &self,
+        session: u32,
+        constraints: &[i32],
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits = limits_of(limits)?;
+        explained(
+            self.layers
+                .explain_list(session, constraints, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// A solutions cursor for the committed constraints; `caps` may be
+    /// `undefined` or `null`.
+    pub fn layer_solutions_start(&mut self, session: u32, caps: JsValue) -> Result<u32, JsValue> {
+        let caps: LayerSolutionCaps = if caps.is_undefined() || caps.is_null() {
+            LayerSolutionCaps::default()
+        } else {
+            known_fields("caps", &caps, &LAYER_SOLUTION_CAPS_FIELDS)?;
+            parse("caps", caps)?
+        };
+        self.layers.solutions_start(session, &caps).map_err(thrown)
+    }
+
+    /// One slice of the count: `{ front, back, orders, done }`, each tally
+    /// `{ n, exact }`.
+    pub fn layer_solutions_advance(
+        &mut self,
+        session: u32,
+        cursor: u32,
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let limits = limits_of(limits)?;
+        to_js_value(
+            &self
+                .layers
+                .solutions_advance(session, cursor, &limits)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// Where the order on screen lies: `{ index, total: { n, exact } }`.
+    pub fn layer_solutions_position(
+        &self,
+        session: u32,
+        cursor: u32,
+        by: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let by = step_by_of(by)?;
+        to_js_value(
+            &self
+                .layers
+                .solutions_position(session, cursor, by)
+                .map_err(thrown)?,
+        )
+    }
+
+    /// The next or the previous solution (`direction`: `"next"` or
+    /// `"previous"`).
+    pub fn layer_step(
+        &mut self,
+        session: u32,
+        cursor: u32,
+        by: JsValue,
+        direction: &str,
+        limits: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let by = step_by_of(by)?;
+        let direction = direction_of(direction).map_err(thrown)?;
+        let limits = limits_of(limits)?;
+        let stepped = self
+            .layers
+            .step(session, cursor, by, direction, &limits)
+            .map_err(thrown)?;
+        Ok(match stepped {
+            Stepping::Moved(moved) => Fields::new()
+                .text("verdict", "moved")?
+                .set(
+                    "changed",
+                    spots_changed(&moved.changed.front, &moved.changed.back)?,
+                )?
+                .plain("position", &moved.position)?
+                .set("stacks", sides_object(&moved.stacks)?)?
+                .into(),
+            Stepping::End => Fields::new().text("verdict", "end")?.into(),
+            Stepping::TimedOut(out) => Fields::of(&out)?.text("verdict", "timed_out")?.into(),
+        })
+    }
+
+    /// Let a cursor go; whether it was held.
+    pub fn layer_solutions_close(&mut self, session: u32, cursor: u32) -> Result<bool, JsValue> {
+        self.layers.solutions_close(session, cursor).map_err(thrown)
+    }
+}
+
+fn explained(explained: Explained) -> Result<JsValue, JsValue> {
+    Ok(match explained {
+        Explained::Fits => Fields::new().text("verdict", "fits")?.into(),
+        Explained::Clash(clash) => Fields::new()
+            .text("verdict", "clash")?
+            .set(
+                "constraints",
+                Uint32Array::from(clash.constraints.as_slice()),
+            )?
+            .set("minimal", JsValue::from_bool(clash.minimal))?
+            .set("faces", Uint32Array::from(clash.faces.as_slice()))?
+            .set("proof", proof_object(&clash.proof, &clash.proof_faces)?)?
+            .set("traced", Uint32Array::from(clash.traced.as_slice()))?
+            .into(),
+        Explained::TimedOut(out) => Fields::of(&out)?.text("verdict", "timed_out")?.into(),
+    })
+}
+
+/// `{ picture: 'front' | 'back' }` or `'layer_order'`.
+fn step_by_of(by: JsValue) -> Result<oristudio_fold::steer::StepBy, JsValue> {
+    if by.is_object() {
+        known_fields("by", &by, &["picture"])?;
+    }
+    let by: LayerStepBy = parse("by", by)?;
+    by.step_by().map_err(thrown)
 }
 
 /// A plain JS object, built field by field: serde for the small parts, typed
@@ -434,14 +599,21 @@ fn refused(refusal: &LayerRefusal) -> Result<JsValue, JsValue> {
         .into())
 }
 
-fn cant_fit(cant: &CantFitWire) -> Result<JsValue, JsValue> {
-    let mut proof = Fields::of(&cant.proof)?;
-    if !cant.proof_faces.is_empty() {
-        proof = proof.set("faces", Uint32Array::from(cant.proof_faces.as_slice()))?;
+/// `{ kind, family? }`, with `faces` for a search's proof that some faces
+/// have no order.
+fn proof_object(proof: &CantFitKind, proof_faces: &[u32]) -> Result<Fields, JsValue> {
+    let fields = Fields::of(proof)?;
+    if proof_faces.is_empty() {
+        Ok(fields)
+    } else {
+        fields.set("faces", Uint32Array::from(proof_faces))
     }
+}
+
+fn cant_fit(cant: &CantFitWire) -> Result<JsValue, JsValue> {
     Ok(Fields::new()
         .text("verdict", "cant_fit")?
-        .set("proof", proof)?
+        .set("proof", proof_object(&cant.proof, &cant.proof_faces)?)?
         .set("faces", Uint32Array::from(cant.faces.as_slice()))?
         .set(
             "constraints",
@@ -476,18 +648,28 @@ fn limits_of(value: JsValue) -> Result<LayerLimits, JsValue> {
     if value.is_undefined() || value.is_null() {
         return Ok(LayerLimits::default());
     }
+    known_fields("limits", &value, &LAYER_LIMITS_FIELDS)?;
+    parse("limits", value)
+}
+
+/// `value` is an object whose fields are all among `allowed`: anything
+/// else is the caller's mistake (`invalid_input`), which `serde-wasm-bindgen`
+/// would read as nothing.
+fn known_fields(name: &str, value: &JsValue, allowed: &[&str]) -> Result<(), JsValue> {
     let Some(object) = value.dyn_ref::<Object>() else {
-        return Err(thrown(LayerCallError::invalid("limits: not an object")));
+        return Err(thrown(LayerCallError::invalid(format!(
+            "{name}: not an object"
+        ))));
     };
     for key in Object::keys(object).iter() {
         let key = key.as_string().unwrap_or_default();
-        if !LAYER_LIMITS_FIELDS.contains(&key.as_str()) {
+        if !allowed.contains(&key.as_str()) {
             return Err(thrown(LayerCallError::invalid(format!(
-                "limits: unknown field {key:?}, expected one of {LAYER_LIMITS_FIELDS:?}"
+                "{name}: unknown field {key:?}, expected one of {allowed:?}"
             ))));
         }
     }
-    parse("limits", value)
+    Ok(())
 }
 
 /// `value` parsed, or the default when it is `undefined` or `null`.

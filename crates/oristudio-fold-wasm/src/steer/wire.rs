@@ -14,9 +14,10 @@ use oristudio_cp::folding::HierarchyRelation;
 use oristudio_cp::session::{FoldSource, relations_from_flat_pairs};
 use oristudio_fold::complete::{BudgetLimit, Deadline};
 use oristudio_fold::steer::{
-    CarriedConstraint, ChangedSpots, Constraint, ConstraintFault, ConstraintStatus, FaceStatus,
-    FoldSign, Limits, OpenedOn, RecordDamage, RecordFace, RestoreOutcome, SavedPairStatus,
-    SessionRefusal, SourceRefusal, Stacks, TimedOut, ViewSide,
+    CarriedConstraint, ChangedSpots, Clash, Constraint, ConstraintFault, ConstraintStatus,
+    Explanation, FaceStatus, FoldSign, Limits, OpenedOn, Position, RecordDamage, RecordFace,
+    RestoreOutcome, SavedPairStatus, SessionRefusal, SolutionCaps, SourceRefusal, Stacks, StepBy,
+    StepDirection, TimedOut, ViewSide,
 };
 use oristudio_fold::{CheckStage, FaceId};
 use oristudio_layer_order::FacePair;
@@ -169,6 +170,73 @@ fn face_number(face: FaceId) -> i32 {
 pub fn relations_of(flat: &[u32]) -> Result<Vec<HierarchyRelation>, LayerCallError> {
     relations_from_flat_pairs(flat)
         .map_err(|error| LayerCallError::invalid(format!("relations: {}", error.message)))
+}
+
+/// How far a solution count goes before it reads "at least" (E6's
+/// `SolutionCaps`). Every field may be left out, for E6's defaults
+/// (100,000 orders per component, 1,000,000 combinations per look group,
+/// 16 MiB of stored orders); every cap is a count, never a time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LayerSolutionCaps {
+    #[serde(default)]
+    pub orders_per_component: Option<u64>,
+    #[serde(default)]
+    pub combinations_per_group: Option<u64>,
+    #[serde(default)]
+    pub stored_bits: Option<u64>,
+}
+
+/// [`LayerSolutionCaps`]' fields as the web app spells them.
+pub const LAYER_SOLUTION_CAPS_FIELDS: [&str; 3] =
+    ["ordersPerComponent", "combinationsPerGroup", "storedBits"];
+
+impl LayerSolutionCaps {
+    pub fn caps(&self) -> SolutionCaps {
+        let defaults = SolutionCaps::default();
+        SolutionCaps {
+            orders_per_component: self
+                .orders_per_component
+                .unwrap_or(defaults.orders_per_component),
+            combinations_per_group: self
+                .combinations_per_group
+                .unwrap_or(defaults.combinations_per_group),
+            stored_bits: self.stored_bits.unwrap_or(defaults.stored_bits),
+        }
+    }
+}
+
+/// What the stepper steps through, as the web app spells it:
+/// `{ picture: 'front' | 'back' }` (distinct pictures from a side, X-ray
+/// off) or `'layer_order'` (every layer order, X-ray on, decision D5).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(untagged)]
+pub enum LayerStepBy {
+    Word(String),
+    Picture { picture: String },
+}
+
+impl LayerStepBy {
+    pub fn step_by(&self) -> Result<StepBy, LayerCallError> {
+        match self {
+            LayerStepBy::Word(word) if word == "layer_order" => Ok(StepBy::LayerOrder),
+            LayerStepBy::Picture { picture } => side_of(picture).map(StepBy::Picture),
+            LayerStepBy::Word(other) => Err(LayerCallError::invalid(format!(
+                "by: {other:?} is not 'layer_order' or {{ picture: side }}"
+            ))),
+        }
+    }
+}
+
+/// `"next"` or `"previous"`.
+pub fn direction_of(word: &str) -> Result<StepDirection, LayerCallError> {
+    match word {
+        "next" => Ok(StepDirection::Next),
+        "previous" => Ok(StepDirection::Previous),
+        other => Err(LayerCallError::invalid(format!(
+            "direction: {other:?} is not \"next\" or \"previous\""
+        ))),
+    }
 }
 
 /// `"front"` or `"back"`: the side the folded paper is seen from.
@@ -556,6 +624,89 @@ pub enum Committing {
     TimedOut(TimedOut),
 }
 
+/// The smallest set of constraints that clash (E6's `Clash`): every member
+/// necessary, dropping any one leaves an order, unless `minimal` is false
+/// (the limits ran out first; the set still can't fit). Indices into the
+/// list explained (for `layer_explain`, the committed constraints and then
+/// the candidate, last), ascending.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClashWire {
+    pub constraints: Vec<u32>,
+    pub minimal: bool,
+    /// The faces the clashing constraints name: the danger tints.
+    pub faces: Vec<u32>,
+    /// How the last check proved the set can't fit.
+    pub proof: CantFitKind,
+    /// The faces a search proved have no order, for [`CantFitKind::NoOrder`].
+    pub proof_faces: Vec<u32>,
+    /// Every face that proof traces back to, the creases' included.
+    pub traced: Vec<u32>,
+}
+
+/// What an explain found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Explained {
+    /// The list fits: nothing to explain.
+    Fits,
+    Clash(ClashWire),
+    /// The first check, of the whole list, ran out: no proof yet.
+    TimedOut(TimedOut),
+}
+
+impl From<Explanation> for Explained {
+    fn from(explanation: Explanation) -> Explained {
+        match explanation {
+            Explanation::Fits => Explained::Fits,
+            Explanation::TimedOut(out) => Explained::TimedOut(out),
+            Explanation::Clash(Clash {
+                constraints,
+                minimal,
+                faces,
+                proof,
+                traced,
+            }) => {
+                let proof = CantFitWire::from(oristudio_fold::steer::CantFit {
+                    proof,
+                    faces: traced,
+                    constraints,
+                });
+                Explained::Clash(ClashWire {
+                    constraints: proof.constraints,
+                    minimal,
+                    faces: faces.iter().map(|f| f.0).collect(),
+                    proof: proof.proof,
+                    proof_faces: proof.proof_faces,
+                    traced: proof.faces,
+                })
+            }
+        }
+    }
+}
+
+/// A step that moved the order on screen to another solution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SteppedTo {
+    /// The spots whose top face changed, per side: what a pane flashes.
+    pub changed: ChangedSpots,
+    /// Where the order on screen now lies ("3 of 12"; final once the
+    /// total is exact).
+    pub position: Position,
+    /// The order on screen's stacks now.
+    pub stacks: Sides<PackedStacks>,
+}
+
+/// What a step did (E6's `Stepped`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Stepping {
+    Moved(SteppedTo),
+    /// No solution lies that way among those counted: final once the count
+    /// is done.
+    End,
+    /// The check within the next solution ran out, with no counted order
+    /// to fall back on: nothing changed. Keep trying with a later deadline.
+    TimedOut(TimedOut),
+}
+
 /// A save's answer.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Saving {
@@ -659,6 +810,15 @@ pub enum LayerCallError {
         index: usize,
         fault: ConstraintFault,
     },
+    /// `unknown_layer_cursor`: a solutions cursor closed, never started on
+    /// this session, or whose session was closed.
+    #[error("no solutions cursor {cursor} on layer session {session}")]
+    UnknownCursor { session: u32, cursor: u32 },
+    /// `session_stale_solutions`: the cursor counted other committed
+    /// constraints than the session's now (a commit or a restore since; a
+    /// step keeps it). Close it and start another.
+    #[error("the solutions were counted for other constraints than the session's")]
+    StaleSolutions,
     /// `session_internal`, `source_internal`: a defect.
     #[error("{message}")]
     Defect { code: &'static str, message: String },
@@ -670,6 +830,8 @@ impl LayerCallError {
             LayerCallError::InvalidInput(_) => "invalid_input",
             LayerCallError::UnknownSession(_) => "unknown_layer_session",
             LayerCallError::BadConstraint { .. } => "session_bad_constraint",
+            LayerCallError::UnknownCursor { .. } => "unknown_layer_cursor",
+            LayerCallError::StaleSolutions => "session_stale_solutions",
             LayerCallError::Defect { code, .. } => code,
         }
     }
@@ -691,6 +853,7 @@ pub(crate) fn session_refusal(refusal: SessionRefusal) -> Result<LayerRefusal, L
         SessionRefusal::BadConstraint { index, fault } => {
             Err(LayerCallError::BadConstraint { index, fault })
         }
+        SessionRefusal::StaleSolutions => Err(LayerCallError::StaleSolutions),
         SessionRefusal::Internal { message } => Err(LayerCallError::Defect {
             code: "session_internal",
             message,
@@ -911,6 +1074,62 @@ mod tests {
             Err("invalid_input")
         );
         assert_eq!(relations_of(&[3, 1]).map(|r| r.len()), Ok(1));
+    }
+
+    #[test]
+    fn the_stepper_s_words_read_as_e6_s() {
+        let by = |value: Value| {
+            serde_json::from_value::<LayerStepBy>(value)
+                .map_err(|_| "parse")
+                .and_then(|by| by.step_by().map_err(|e| e.code()))
+        };
+        assert_eq!(by(json!("layer_order")), Ok(StepBy::LayerOrder));
+        assert_eq!(
+            by(json!({ "picture": "back" })),
+            Ok(StepBy::Picture(ViewSide::Back))
+        );
+        assert_eq!(by(json!("picture")), Err("invalid_input"));
+        assert_eq!(by(json!({ "picture": "up" })), Err("invalid_input"));
+        assert_eq!(direction_of("previous"), Ok(StepDirection::Previous));
+        assert_eq!(
+            direction_of("back").map_err(|e| e.code()),
+            Err("invalid_input")
+        );
+        let caps: LayerSolutionCaps =
+            serde_json::from_value(json!({ "storedBits": 64 })).unwrap_or_default();
+        let defaults = SolutionCaps::default();
+        assert_eq!(
+            caps.caps(),
+            SolutionCaps {
+                stored_bits: 64,
+                ..defaults
+            }
+        );
+        assert!(serde_json::from_value::<LayerSolutionCaps>(json!({ "orders": 1 })).is_err());
+        assert_eq!(
+            session_refusal(SessionRefusal::StaleSolutions).map_err(|e| e.code()),
+            Err("session_stale_solutions")
+        );
+        let clash = Explained::from(Explanation::Clash(Clash {
+            constraints: vec![0, 2],
+            minimal: true,
+            faces: vec![FaceId(1), FaceId(4)],
+            proof: oristudio_fold::steer::CantFitProof::NoOrder {
+                faces: vec![FaceId(4), FaceId(1)],
+            },
+            traced: vec![FaceId(1), FaceId(3), FaceId(4)],
+        }));
+        assert_eq!(
+            clash,
+            Explained::Clash(ClashWire {
+                constraints: vec![0, 2],
+                minimal: true,
+                faces: vec![1, 4],
+                proof: CantFitKind::NoOrder,
+                proof_faces: vec![4, 1],
+                traced: vec![1, 3, 4],
+            })
+        );
     }
 
     #[test]

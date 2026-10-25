@@ -22,8 +22,12 @@
 //! when it ran out of time (`layer_restore_record`), reads
 //! `layer_oriedita_relations` and is terminated.
 //!
-//! **E6 adds** the smallest clashing set (`explain`), the solution count and
-//! X-ray stepping as calls of their own beside these, over the same store.
+//! **E6** is bound beside these, over the same store: the smallest clashing
+//! set (`layer_explain`, `layer_explain_list`) and a solutions cursor
+//! (`layer_solutions_*`, `layer_step`) that lives beside its session. There
+//! is no count worker: the dialog's one worker advances the count in short
+//! slices between its other calls, so the count, the index and the stepper
+//! read one cursor.
 
 pub mod bindings;
 pub mod sessions;
@@ -31,9 +35,10 @@ pub mod wire;
 
 pub use sessions::LayerSessions;
 pub use wire::{
-    CantFitKind, CantFitWire, CarriedRow, CommitDone, Committing, FACE_AMBIGUOUS, FACE_GONE,
-    FACE_INTACT, LayerCallError, LayerFoldSource, LayerLimits, LayerOpened, LayerRefusal,
-    LayerRestored, OpenedOnWire, Opening, PAIR_KEPT, PAIR_MOVED, PAIR_UNRESOLVED, PackedStacks,
-    PreviewFits, Previewed, RestoredOutcome, Restoring, SavedFace, SavedFaces, Saving, Sides,
-    candidate_of, constraints_of, flat_pairs, relations_of, side_of, triples_of,
+    CantFitKind, CantFitWire, CarriedRow, ClashWire, CommitDone, Committing, Explained,
+    FACE_AMBIGUOUS, FACE_GONE, FACE_INTACT, LayerCallError, LayerFoldSource, LayerLimits,
+    LayerOpened, LayerRefusal, LayerRestored, LayerSolutionCaps, LayerStepBy, OpenedOnWire,
+    Opening, PAIR_KEPT, PAIR_MOVED, PAIR_UNRESOLVED, PackedStacks, PreviewFits, Previewed,
+    RestoredOutcome, Restoring, SavedFace, SavedFaces, Saving, Sides, SteppedTo, Stepping,
+    candidate_of, constraints_of, direction_of, flat_pairs, relations_of, side_of, triples_of,
 };

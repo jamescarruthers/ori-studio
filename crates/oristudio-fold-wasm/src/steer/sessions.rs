@@ -16,6 +16,12 @@
 //! search, so Add cannot run out of time right after a preview that fit; any
 //! other token commits the list by a search, as [`LayerSessions::commit`]
 //! does.
+//!
+//! **The count lives beside the session.** There is no count worker: the
+//! dialog's one worker advances a solutions cursor
+//! ([`LayerSessions::solutions_start`]) in short slices between its other
+//! calls, and the same cursor serves the count, the index and the stepper.
+//! A step drops the kept preview, as it moves the order on screen.
 
 use std::collections::HashMap;
 
@@ -23,32 +29,52 @@ use oristudio_cp::folding::{FoldedFigureModel, FoldedPaperScene};
 use oristudio_cp::session::FoldSource;
 use oristudio_fold::steer::{
     Commit, ConstraintSession, ConstraintStatus, EncodeRefusal, FaceStatus, LayerOrderRecord,
-    LayerSource, Preview, PreviewFit, RecordRead, RestoreOutcome, Restored, SavedPairStatus,
-    ViewSide, encode_record, read_record,
+    LayerSource, Position, Preview, PreviewFit, RecordRead, RestoreOutcome, Restored,
+    SavedPairStatus, SolutionCount, Solutions, StepBy, StepDirection, Stepped, ViewSide,
+    encode_record, read_record,
 };
 
 use super::wire::{
-    CarriedRow, CommitDone, Committing, LayerCallError, LayerLimits, LayerOpened, LayerRefusal,
-    LayerRestored, OpenedOnWire, Opening, PackedStacks, PreviewFits, Previewed, Restoring,
-    SavedFaces, Saving, Sides, candidate_of, carried_rows, constraints_of, flat_pairs,
-    order_status, relations_of, session_refusal, source_refusal, thrown, triples_of,
+    CarriedRow, CommitDone, Committing, Explained, LayerCallError, LayerLimits, LayerOpened,
+    LayerRefusal, LayerRestored, LayerSolutionCaps, OpenedOnWire, Opening, PackedStacks,
+    PreviewFits, Previewed, Restoring, SavedFaces, Saving, Sides, SteppedTo, Stepping,
+    candidate_of, carried_rows, constraints_of, flat_pairs, order_status, relations_of,
+    session_refusal, source_refusal, thrown, triples_of,
 };
 use crate::ops_crimp_tuck::clock;
 
 /// Every constraint session the caller still holds. Handles start at 1 and
-/// are never reused while this store lives; so do preview tokens.
+/// are never reused while this store lives; nor are preview tokens or
+/// solutions cursors.
 #[derive(Debug, Default)]
 pub struct LayerSessions {
     held: HashMap<u32, Held>,
     last: u32,
     tokens: u32,
+    cursors: u32,
 }
 
-/// A session, and its last preview that fit.
+/// A session, its last preview that fit, and its solutions cursors.
 #[derive(Debug)]
 struct Held {
     session: ConstraintSession,
     preview: Option<(u32, PreviewFit)>,
+    /// E6's counts, by cursor. A cursor is good for the committed
+    /// constraints it started on: after a commit or a restore to other
+    /// constraints every call on it is refused (`session_stale_solutions`),
+    /// and a commit back to those constraints makes it good again, as E6
+    /// decides. A step keeps it. Closed with the session.
+    cursors: HashMap<u32, Solutions>,
+}
+
+impl Held {
+    fn new(session: ConstraintSession) -> Held {
+        Held {
+            session,
+            preview: None,
+            cursors: HashMap::new(),
+        }
+    }
 }
 
 impl LayerSessions {
@@ -134,13 +160,7 @@ impl LayerSessions {
         };
         let handle = self.next_handle();
         let restored = restored_of(opened_of(handle, &session), &session, found);
-        self.held.insert(
-            handle,
-            Held {
-                session,
-                preview: None,
-            },
-        );
+        self.held.insert(handle, Held::new(session));
         Ok(Restoring::Restored(Box::new(restored)))
     }
 
@@ -304,6 +324,152 @@ impl LayerSessions {
         Ok(())
     }
 
+    /// Why the committed constraints and `candidate` (one triple) can't
+    /// fit: the smallest set of them that clash (E6). `maxNodes` bounds each
+    /// check the deletion filter makes and the deadline the whole call; out
+    /// of time it answers the set it has, not minimal. Never changes the
+    /// session.
+    pub fn explain(
+        &self,
+        session: u32,
+        candidate: &[i32],
+        limits: &LayerLimits,
+    ) -> Result<Explained, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let candidate = candidate_of(candidate)?;
+        let explanation = self
+            .session(session)?
+            .explain(candidate, &limits)
+            .map_err(thrown)?;
+        Ok(explanation.into())
+    }
+
+    /// [`Self::explain`] for any list (triples): a restored record's rows
+    /// that clash. Indices are into the list.
+    pub fn explain_list(
+        &self,
+        session: u32,
+        constraints: &[i32],
+        limits: &LayerLimits,
+    ) -> Result<Explained, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let list = constraints_of(constraints)?;
+        let explanation = self
+            .session(session)?
+            .explain_list(&list, &limits)
+            .map_err(thrown)?;
+        Ok(explanation.into())
+    }
+
+    /// Start counting the solutions the committed constraints leave, and
+    /// the stepper's order through them (E6): a cursor beside the session,
+    /// counted only when advanced. The dialog's one worker advances it in
+    /// short slices between its other calls.
+    pub fn solutions_start(
+        &mut self,
+        session: u32,
+        caps: &LayerSolutionCaps,
+    ) -> Result<u32, LayerCallError> {
+        let LayerSessions { held, cursors, .. } = self;
+        let held = held
+            .get_mut(&session)
+            .ok_or(LayerCallError::UnknownSession(session))?;
+        let solutions = held.session.solutions_with(caps.caps()).map_err(thrown)?;
+        let cursor = loop {
+            *cursors = cursors.wrapping_add(1);
+            if *cursors != 0 && !held.cursors.contains_key(cursors) {
+                break *cursors;
+            }
+        };
+        held.cursors.insert(cursor, solutions);
+        Ok(cursor)
+    }
+
+    /// Count on within `limits` (a slice: a small `maxNodes`, one per node
+    /// of a component's search and one per combination walked, and a short
+    /// `deadlineMs`), resuming where the last slice stopped, and say what is
+    /// counted so far. Any slicing ends equal to a one-shot count. Refused
+    /// on a stale cursor.
+    pub fn solutions_advance(
+        &mut self,
+        session: u32,
+        cursor: u32,
+        limits: &LayerLimits,
+    ) -> Result<SolutionCount, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let held = self.held_mut(session)?;
+        let solutions = held
+            .cursors
+            .get_mut(&cursor)
+            .ok_or(LayerCallError::UnknownCursor { session, cursor })?;
+        solutions.advance(&held.session, &limits).map_err(thrown)
+    }
+
+    /// Where the order on screen lies in the stepper's fixed order ("3 of
+    /// 12"): from 1, final once `total` is exact. Refused on a stale cursor.
+    pub fn solutions_position(
+        &self,
+        session: u32,
+        cursor: u32,
+        by: StepBy,
+    ) -> Result<Position, LayerCallError> {
+        let held = self
+            .held
+            .get(&session)
+            .ok_or(LayerCallError::UnknownSession(session))?;
+        let solutions = held
+            .cursors
+            .get(&cursor)
+            .ok_or(LayerCallError::UnknownCursor { session, cursor })?;
+        held.session.position(solutions, by).map_err(thrown)
+    }
+
+    /// Show the next or the previous solution (E6): with a picture from a
+    /// side, the closest layer order within the next picture; with
+    /// `layer_order` (X-ray), the next layer order. Only the order on
+    /// screen changes: the cursor stays good, and a preview kept from
+    /// before is dropped (Add then commits from the stepped order). Unless
+    /// the count is done, the step counts on within half its limits first.
+    pub fn step(
+        &mut self,
+        session: u32,
+        cursor: u32,
+        by: StepBy,
+        direction: StepDirection,
+        limits: &LayerLimits,
+    ) -> Result<Stepping, LayerCallError> {
+        let limits = limits.limits(clock::now_ms)?;
+        let held = self.held_mut(session)?;
+        let solutions = held
+            .cursors
+            .get_mut(&cursor)
+            .ok_or(LayerCallError::UnknownCursor { session, cursor })?;
+        let stepped = held
+            .session
+            .step(solutions, by, direction, &limits)
+            .map_err(thrown)?;
+        Ok(match stepped {
+            Stepped::Moved(moved) => {
+                held.preview = None;
+                Stepping::Moved(SteppedTo {
+                    changed: moved.changed,
+                    position: moved.position,
+                    stacks: Sides {
+                        front: PackedStacks::from(&held.session.stacks(ViewSide::Front)),
+                        back: PackedStacks::from(&held.session.stacks(ViewSide::Back)),
+                    },
+                })
+            }
+            Stepped::End => Stepping::End,
+            Stepped::TimedOut(out) => Stepping::TimedOut(out),
+        })
+    }
+
+    /// Let a cursor go; whether it was held.
+    pub fn solutions_close(&mut self, session: u32, cursor: u32) -> Result<bool, LayerCallError> {
+        Ok(self.held_mut(session)?.cursors.remove(&cursor).is_some())
+    }
+
     /// The order on screen's stacks from `side`.
     pub fn stacks(&self, session: u32, side: ViewSide) -> Result<PackedStacks, LayerCallError> {
         Ok(PackedStacks::from(&self.session(session)?.stacks(side)))
@@ -403,13 +569,7 @@ impl LayerSessions {
     fn hold(&mut self, session: ConstraintSession) -> LayerOpened {
         let handle = self.next_handle();
         let opened = opened_of(handle, &session);
-        self.held.insert(
-            handle,
-            Held {
-                session,
-                preview: None,
-            },
-        );
+        self.held.insert(handle, Held::new(session));
         opened
     }
 }
