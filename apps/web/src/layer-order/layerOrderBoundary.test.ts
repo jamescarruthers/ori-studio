@@ -33,7 +33,7 @@
  *
  * Tests and fixtures may reach anything: they never ship.
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -82,6 +82,29 @@ function staticValueTargetsIn(text: string, file: string): string[] {
 
 /** A shipped module's path under `src/`, without its extension: what imports resolve to. */
 const moduleOf = (file: string) => posix(relative(SRC, file)).replace(/\.tsx?$/, '');
+
+/** The file a module path under `src/` names, or null for one that is not a source (a JSON, a package). */
+function fileOf(module: string): string | null {
+  for (const candidate of [`${module}.ts`, `${module}.tsx`, `${module}/index.ts`, `${module}/index.tsx`]) {
+    const file = resolve(SRC, candidate);
+    if (existsSync(file)) return file;
+  }
+  return null;
+}
+
+/** Every module `entry` loads with it: its static value imports, and theirs, under `src/`. */
+function staticClosureOf(entry: string): Set<string> {
+  const seen = new Set<string>();
+  const waiting = [entry];
+  while (waiting.length > 0) {
+    const module = waiting.pop()!;
+    if (seen.has(module)) continue;
+    seen.add(module);
+    const file = fileOf(module);
+    if (file) waiting.push(...staticValueTargetsIn(readFileSync(file, 'utf8'), file));
+  }
+  return seen;
+}
 
 /** The hosts' own state and documents: what the dialog never reaches into. */
 const HOSTS: readonly RegExp[] = [
@@ -169,6 +192,21 @@ describe('the Layer order dialog’s boundaries', () => {
   it('the gateway reaches the dialog’s component only through import() or import type, so it loads with no page', () => {
     const gateway = resolve(SRC, `${DIALOG_GATEWAY}.ts`);
     expect(staticValueTargetsIn(readFileSync(gateway, 'utf8'), gateway)).not.toContain(DIALOG_COMPONENT);
+  });
+
+  it('what the gateway loads with the page holds nothing of the dialog or the engine but its leaves', () => {
+    const loaded = staticClosureOf(DIALOG_GATEWAY);
+    // Its own store, and the load-failure rule over the call-failure codes: nothing else of the dialog,
+    // the engine, the wire contract or the workers.
+    const ours = /^(layer-order|components\/layer-order|lib\/layerOrder|workers)\//;
+    expect([...loaded].filter((module) => ours.test(module)).sort()).toEqual([
+      'layer-order/dialog/layerOrderDialogGateway',
+      'layer-order/dialog/layerOrderDialogStore',
+      'layer-order/engine/layerOrderCallFailures',
+      'layer-order/engine/layerOrderLoadFailure',
+    ]);
+    // It follows imports far enough to have seen the rest of what loads (the store's focus helper, say).
+    expect(loaded).toContain('components/ui/useModalDialog');
   });
 
   it('tells a static value import from import type and import()', () => {

@@ -47,7 +47,6 @@
  * Types and a few pure helpers. React-free, store-free and engine-free.
  */
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
-import type { WasmErrorEnvelope } from '../../engine/types';
 import type { LayerOrderRecord, LayerOrderSign } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import type { LayerFace } from './faceIndex';
@@ -362,35 +361,13 @@ export interface LayerOrderSolutionCalls {
 export interface LayerOrderEngine extends LayerOrderSessionCalls, LayerOrderSolutionCalls {}
 
 // ---------------------------------------------------------------------------
-// When a call fails
+// When a call fails: the codes and the trap envelope, in a leaf of their own
+// (`layerOrderCallFailures.ts`) so the dialog's gateway can read them without
+// loading this contract.
 
-/**
- * The worker's own reasons a call rejects, beside the bridge's
- * {@link LayerCallErrorCode}s and the runtime's loss. Each is a
- * `{ code, message }` envelope; none is the user's doing.
- */
-export const LAYER_ORDER_CALL_FAILURES = {
-  /** A call that needs a session, before one is open or after close. */
-  sessionNotOpen: 'layer_order_session_not_open',
-  /** The worker has no engine to ask: the Fold wasm would not load or start. */
-  unavailable: 'layer_order_engine_unavailable',
-  /** The engine failed halfway through a call and answers nothing more; the runtime replaces its worker. */
-  trapped: 'layer_order_engine_trapped',
-} as const;
-
-/** How a call killed the engine, as `fold/engine/foldEngineTrap.ts` classifies the Fold bridge's failures. */
-export type LayerOrderTrapKind = 'wasm_trap' | 'engine_poisoned' | 'unexpected_error';
-
-/** What the worker throws for a trap, and for every call after it. */
-export interface LayerOrderEngineTrapped extends WasmErrorEnvelope {
-  readonly code: typeof LAYER_ORDER_CALL_FAILURES.trapped;
-  readonly trap: LayerOrderTrapKind;
-  /** The failure's own stack, from the worker: frames of our code and the module, nothing of the user's. */
-  readonly stack?: string;
-}
-
-export function isLayerOrderEngineTrapped(error: unknown): error is LayerOrderEngineTrapped {
-  return (
-    !!error && typeof error === 'object' && (error as { code?: unknown }).code === LAYER_ORDER_CALL_FAILURES.trapped
-  );
-}
+export {
+  LAYER_ORDER_CALL_FAILURES,
+  isLayerOrderEngineTrapped,
+  type LayerOrderEngineTrapped,
+  type LayerOrderTrapKind,
+} from './layerOrderCallFailures';
