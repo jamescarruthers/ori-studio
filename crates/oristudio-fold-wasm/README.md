@@ -201,8 +201,19 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   `deadlineMs`. Refusals are values (`source_*`, `session_no_order`,
   `session_timed_out`, `record_*`); a bad constraint
   (`session_bad_constraint`), a closed session (`unknown_layer_session`)
-  and malformed input throw. `apps/web/src/layer-order/engine/layerOrderWire.ts`
-  holds the shapes.
+  and malformed input throw. E6's calls sit beside them: `layer_explain`
+  and `layer_explain_list` (the smallest clashing set: `fits`, `clash {
+  constraints, minimal, faces, proof, traced }` or `timed_out`), and a
+  solutions cursor beside the session — `layer_solutions_start`,
+  `layer_solutions_advance` (one slice of the count, `{ front, back,
+  orders, done }`, each `{ n, exact }`), `layer_solutions_position` ("3 of
+  12"), `layer_step` (by `{ picture: side }` or `'layer_order'`, next or
+  previous: `moved`, `end` or `timed_out`) and `layer_solutions_close`.
+  There is no count worker: the dialog's one worker advances the cursor in
+  short slices between its other calls. A cursor counts the constraints it
+  started on: after a commit or a restore to others every call on it throws
+  `session_stale_solutions`, and a step keeps it.
+  `apps/web/src/layer-order/engine/layerOrderWire.ts` holds the shapes.
 
 ## The `kernel` feature
 
@@ -233,6 +244,8 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | With the Layer order dialog's first `layer_*` calls (E7, 2026-10-24) | 3,696,203 B (3,610 KiB) | 1,442,948 B (1,409 KiB) |
 | At `43ce19c06`, E5 with its host-facing additions, before the calls (2026-10-24) | 3,342,847 B (3,264 KiB) | 1,303,015 B (1,272 KiB) |
 | With every `layer_*` call, the additions bound (E7, 2026-10-24) | 3,747,930 B (3,660 KiB) | 1,450,720 B (1,417 KiB) |
+| At E5 `c2abda418` with E6 `f495229b7` merged (explain and the solutions), before the calls (2026-10-24) | 3,339,896 B (3,262 KiB) | 1,305,371 B (1,275 KiB) |
+| With every `layer_*` call, E6's bound (E7, 2026-10-24) | 3,861,859 B (3,771 KiB) | 1,505,540 B (1,470 KiB) |
 
 The vertex folds add **245,476 B raw (+240 KiB), 93,958 B gzipped
 (+92 KiB)**: the staged motions, the fan scoring and the general pieces
@@ -266,19 +279,24 @@ they add **214,970 B raw (+210 KiB), 70,672 B gzipped (+69 KiB)** over the
 row before. That leaves the bridge **324,095 B (316 KiB) gzipped over the
 two budgets' 800 KiB sum**.
 
-**The Layer order dialog's calls** (the last four rows, each pair built in
-one worktree the same day) add, with every call bound, **405,083 B raw
-(+396 KiB), 147,705 B gzipped (+144 KiB)** over E5's head (the last two
-rows), well past the ~50 KiB the dialog's plan allowed for reusing this
-bridge (`implementation-plans/layer-order-dialog.md`, "The dialog reuses
-the Fold bridge"). The first calls had added 137,306 B gzipped over
-`6652deeb3`; E5's additions grew the engine they link, and their own calls
-(open on the host's order, Add by a preview, a whole-list preview, a
-restore again, carried rows) add 30,888 B raw and 8,655 B gzipped over the
-first calls rebuilt on `43ce19c06`. E5's head links none of the dialog's
-engine; its two builds differ by a few kilobytes because the code it added
-to `oristudio-fold` moves how the crate is split for codegen, not because
-any of it is linked. What the calls link in, besides the session itself:
+**The Layer order dialog's calls** (the last six rows, each pair built in
+one worktree the same day) add, with every call bound, E6's included,
+**521,963 B raw (+510 KiB), 200,169 B gzipped (+195 KiB)** over the
+engine they link (the last two rows), past the ~50 KiB the dialog's plan
+allowed for reusing this bridge (`implementation-plans/layer-order-dialog.md`,
+"The dialog reuses the Fold bridge"). **Decided (2026-10-24): the calls
+stay in this bridge, no split**; this table is kept current instead. Row by
+row: the first calls added 137,306 B gzipped over `6652deeb3`; E5's
+additions grew the engine they link, and their own calls (open on the
+host's order, Add by a preview, a whole-list preview, a restore again,
+carried rows) added 8,655 B gzipped over the first calls rebuilt on
+`43ce19c06`; E6's engine and its calls (explain, the solutions cursor and
+the stepper) add 113,929 B raw and 54,820 B gzipped over the row before
+them. The heads before the calls link none of the dialog's engine; their
+builds differ by a few kilobytes because the code each added to
+`oristudio-fold` moves how the crate is split for codegen, not because any
+of it is linked. What the calls link in, besides the session itself
+(measured before E6):
 
 - **The paper scene, about 51 KiB gzipped** (150,291 B raw, 52,161 B
   gzipped, measured by building with `layer_scene` stubbed out): the CP
@@ -296,15 +314,13 @@ in all, the names section aside): the CP kernel's `folding` 107 KB, its `geometr
 `fold_graph` and `operations` 27 KB, `oristudio_fold::steer` 60 KB, this
 bridge's `steer` 35 KB, std's generic code (`core`, `alloc`, hashbrown)
 108 KB, `serde_json` and `serde_wasm_bindgen` 37 KB, data 13 KB. A
-dialog-only bridge would carry these bytes too, plus what it shares with
-this one (the solver, `oristudio-layer-order`, serde). It would keep them
-off a Fold user's first load, and make a first load of the dialog smaller
-than this whole bridge, at the cost of a second wasm build in CI, another
-`.wasm` to keep out of the warm set, and the shared code downloaded twice
-by anyone who uses both. **Open, for the owner:** keep the calls here, or
-split them (the plan's call). The service worker's warm set does
-not change either way today: this `.wasm` is still in `UNWARMED_PATTERNS`
-by name, and no new asset was added.
+dialog-only bridge would have carried these bytes too, plus what it shares
+with this one (the solver, `oristudio-layer-order`, serde), at the cost of
+a second wasm build in CI, another `.wasm` to keep out of the warm set, and
+the shared code downloaded twice by anyone who uses both; that is why the
+calls stay here. The service worker's warm set does not change: this
+`.wasm` is still in `UNWARMED_PATTERNS` by name, and no new asset was
+added.
 
 The fourth row was the bridge that shipped when the budget was set. Rebuilt at `44005c2d9`, with the
 Fold workspace's UI merged, it is the same 1,879,638 B raw, and 752,480 B
@@ -541,7 +557,12 @@ kind from that one preparation under one shared budget.
   read, close then use, a caller's mistakes by code, an open on Edit's own
   scene showing Edit's stacks spot for spot (held, closest, ignored), Add by
   a preview's token even with no nodes against a stale token's search, a
-  whole-list preview, and a restore retried on the open session.
+  whole-list preview, a restore retried on the open session, and E6's
+  calls: kabuto's 9 / 1 pictures and 9 orders and `solution_sample_1`'s
+  1 / 16 and 16 counted in one-node slices as in one shot, the stepper
+  walked from first to last (by pictures from each side and with X-ray)
+  visiting each solution once with indices 1 to N, a cursor stale after a
+  commit and good after a step, and explain's smallest clashing sets.
 - `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs`,
   `tests/io_node.rs`, `tests/crimp_tuck_node.rs` and
   `tests/partial_node.rs`, the same calls across
@@ -558,6 +579,8 @@ kind from that one preparation under one shared budget.
   the CP bridge, saves (the TypeScript codec reading the record byte for
   byte) and restores on a second engine; then opens on the scene Edit
   holds, adds by a preview's token, and restores a clashing record on the
-  same session with its carried rows.
+  same session with its carried rows; then counts kabuto and
+  `solution_sample_1` in slices, walks the stepper through each picture
+  once, refuses a stale cursor and explains a clash.
 
 Original work under `MIT OR Apache-2.0`.
