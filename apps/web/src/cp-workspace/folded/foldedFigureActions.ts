@@ -25,6 +25,7 @@ import {
   refoldHeldByLayerOrderReason,
   type FoldedFigureLayerOrderBlock,
 } from './foldedFigureLayerOrderState';
+import { foldedSolutionPlace } from './foldedSolutionCursor';
 import { edgeInkEdits } from '../paper/paperStyleFields';
 
 /**
@@ -680,58 +681,124 @@ export interface FoldedFigureSolutionDeps {
   foldAnother: (figure: OristudioCpFoldedFigureEntry) => void;
   /** Back one layer order, by fold case. */
   foldPrevious: (figure: OristudioCpFoldedFigureEntry) => void;
+  /** Whether the figure's source creases have changed since it was folded: a constrained figure waits then (H4). */
+  isStale?: (figure: OristudioCpFoldedFigureEntry) => boolean;
 }
 
 /**
  * On to the next layer order: Another solution, the one solution verb the
  * toolbar and menu offer. At the end of the enumeration the kernel wraps to
  * the first rather than dead-ending, so the label says which the press will
- * do.
+ * do. On a constrained figure it steps through the solutions that fit
+ * instead ({@link constrainedSolutionCommand}).
  */
 export function anotherSolutionCommand(
   figure: OristudioCpFoldedFigureEntry,
-  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldAnother'>
+  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldAnother' | 'isStale'>
 ): FoldedFigureCommand {
   const { t } = deps;
+  const hold = foldedFigureLayerOrderHold(figure);
+  if (hold === 'record') return constrainedSolutionCommand(figure, anotherSolutionVerb(figure, deps), 'next', deps);
+  if (hold === 'newer') return heldByNewerBuild(anotherSolutionVerb(figure, deps), t);
   const { hasNext, wrapsToFirst } = foldedFigureCycling(figure);
-  const held = heldByLayerOrderHint(figure, t);
   // Disabled only with nowhere to go: a single-solution fold, where wrapping
   // would land exactly where it started.
   const single = !hasNext && !wrapsToFirst;
   return {
     kind: 'command',
     id: 'another',
-    label:
-      wrapsToFirst && !held
-        ? t('panels:foldedFigureActions.firstSolution', 'Back to first solution')
-        : t('panels:foldedFigureActions.anotherSolution', 'Another solution'),
-    icon: wrapsToFirst && !held ? 'first-solution' : 'another',
-    disabled: !isFoldedFigureReady(figure) || single || held !== null,
-    ...(held
-      ? { hint: held }
-      : single
-        ? { hint: t('panels:foldedFigureActions.onlySolution', 'This figure has one solution') }
-        : {}),
+    label: wrapsToFirst
+      ? t('panels:foldedFigureActions.firstSolution', 'Back to first solution')
+      : t('panels:foldedFigureActions.anotherSolution', 'Another solution'),
+    icon: wrapsToFirst ? 'first-solution' : 'another',
+    disabled: !isFoldedFigureReady(figure) || single,
+    ...(single ? { hint: t('panels:foldedFigureActions.onlySolution', 'This figure has one solution') } : {}),
     run: () => deps.foldAnother(figure),
   };
 }
 
+/** Another solution as a constrained figure offers it, before saying whether it can. */
+function anotherSolutionVerb(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldAnother'>
+): FoldedFigureCommand {
+  return {
+    kind: 'command',
+    id: 'another',
+    label: deps.t('panels:foldedFigureActions.anotherSolution', 'Another solution'),
+    icon: 'another',
+    disabled: false,
+    run: () => deps.foldAnother(figure),
+  };
+}
+
+/** Previous solution as a constrained figure offers it, before saying whether it can. */
+function previousSolutionVerb(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldPrevious'>
+): FoldedFigureCommand {
+  return {
+    kind: 'command',
+    id: 'previous',
+    label: deps.t('panels:foldedFigureActions.previousSolution', 'Previous solution'),
+    icon: 'previous',
+    disabled: false,
+    run: () => deps.foldPrevious(figure),
+  };
+}
+
+/** A newer build's order is that build's to step: held, saying so. */
+function heldByNewerBuild(verb: FoldedFigureCommand, t: TFunction): FoldedFigureCommand {
+  return {
+    ...verb,
+    disabled: true,
+    hint: t('panels:foldedFigureActions.layerOrderNewer', 'Made with a newer Ori Studio: its layer constraints can’t be changed here.'),
+  };
+}
+
 /**
- * Why a figure's solution verbs wait while a chosen layer order holds it, or
- * null when none does (D9). Oriedita's search steps through every order the
- * creases allow, not the ones that fit the figure's constraints, so until
- * they step within them (H6) they are held, pointing to where the solutions
- * that fit are. A newer build's order is that build's to step.
+ * Another solution and ‹ on a constrained figure (H6, D9): they step through
+ * the solutions that fit its record, in the stepper's fixed order, on the
+ * host engine's cursor (`foldedSolutionCursor.ts`), never through Oriedita's
+ * search, which knows nothing of the constraints.
+ *
+ * Whether they can comes from saved data alone, as "Layer order…"'s does
+ * (`foldedFigureLayerOrderBlock`): the press makes the cursor, folding a
+ * figure reopened from a file as it steps. Where the order shown lies is
+ * known only once a press has answered ({@link foldedSolutionPlace}); then
+ * each waits at its end of the solutions, which a stepper through a fixed
+ * order has, rather than wrapping round: ‹ on the first, › on the last once
+ * the count is final.
  */
-function heldByLayerOrderHint(figure: OristudioCpFoldedFigureEntry, t: TFunction): string | null {
-  switch (foldedFigureLayerOrderHold(figure)) {
-    case 'record':
-      return t('panels:foldedFigureActions.layerOrderSolutions', 'Step through solutions in Layer order…');
-    case 'newer':
-      return t('panels:foldedFigureActions.layerOrderNewer', 'Made with a newer Ori Studio: its layer constraints can’t be changed here.');
-    case null:
-      return null;
+function constrainedSolutionCommand(
+  figure: OristudioCpFoldedFigureEntry,
+  verb: FoldedFigureCommand,
+  direction: 'next' | 'previous',
+  deps: Pick<FoldedFigureSolutionDeps, 't' | 'isStale'>
+): FoldedFigureCommand {
+  const { t } = deps;
+  const block = foldedFigureLayerOrderBlock(figure, { stale: deps.isStale?.(figure) === true });
+  if (block !== null) {
+    const hint = layerOrderBlockHint(block, t);
+    return { ...verb, disabled: true, ...(hint ? { hint } : {}) };
   }
+  const place = foldedSolutionPlace(figure);
+  if (!place) return verb;
+  const { index, total } = place.position;
+  if (direction === 'previous') {
+    return index <= 1
+      ? { ...verb, disabled: true, hint: t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution') }
+      : verb;
+  }
+  if (!total.exact || index < total.n) return verb;
+  return {
+    ...verb,
+    disabled: true,
+    hint:
+      total.n <= 1
+        ? t('panels:foldedFigureActions.onlySolution', 'This figure has one solution')
+        : t('panels:foldedFigureActions.lastSolutionShown', 'This is its last solution'),
+  };
 }
 
 /** What the Layer order verb calls, and what it reads to say whether it can. */
@@ -793,29 +860,30 @@ export function layerOrderBlockHint(block: FoldedFigureLayerOrderBlock, t: TFunc
  * the Diagram's ‹ goes back. Not Oriedita's — upstream only goes forward — and
  * not the toolbar's: the Properties pane's Layer order row offers it beside
  * Another solution. A 3D figure has no numbered solutions to go back to
- * (`foldedFigureCapabilities.foldToCase`).
+ * (`foldedFigureCapabilities.foldToCase`). On a constrained figure it steps
+ * back through the solutions that fit ({@link constrainedSolutionCommand}).
  */
 export function previousSolutionCommand(
   figure: OristudioCpFoldedFigureEntry,
-  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldPrevious'>
+  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldPrevious' | 'isStale'>
 ): FoldedFigureCommand {
   const { t } = deps;
+  const hold = foldedFigureLayerOrderHold(figure);
+  if (hold === 'record') return constrainedSolutionCommand(figure, previousSolutionVerb(figure, deps), 'previous', deps);
+  if (hold === 'newer') return heldByNewerBuild(previousSolutionVerb(figure, deps), t);
   const canGoBack = foldedFigureCapabilities(figure).foldToCase;
   const first = foldedFigureCycling(figure).current <= 1;
-  const held = heldByLayerOrderHint(figure, t);
   const hint = !canGoBack
     ? t('panels:foldedFigureActions.previousSolution3d', 'Stepping back works on flat figures')
-    : held
-      ? held
-      : first
-        ? t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution')
-        : undefined;
+    : first
+      ? t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution')
+      : undefined;
   return {
     kind: 'command',
     id: 'previous',
     label: t('panels:foldedFigureActions.previousSolution', 'Previous solution'),
     icon: 'previous',
-    disabled: !isFoldedFigureReady(figure) || !canGoBack || first || held !== null,
+    disabled: !isFoldedFigureReady(figure) || !canGoBack || first,
     ...(hint ? { hint } : {}),
     run: () => deps.foldPrevious(figure),
   };

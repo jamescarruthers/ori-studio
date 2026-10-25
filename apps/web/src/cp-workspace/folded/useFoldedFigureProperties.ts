@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ANALYTICS_EVENTS, track } from '../../analytics';
 import type {
@@ -24,6 +24,7 @@ import { DEFAULT_FOLDED_3D_CAMERA, type FoldedFigureCamera } from './folded3dCam
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './foldedFigureProperties';
 import { isFoldedFigureStale } from './foldedFigureStaleness';
+import { foldedSolutionCursorVersion, subscribeFoldedSolutionCursor } from './foldedSolutionCursor';
 import {
   deleteFoldedFigure,
   duplicateFoldedFigure,
@@ -137,6 +138,10 @@ export function useFoldedFigureProperties(target: TargetOf<'folded-figure'>): Pr
     }),
     [t]
   );
+  // A constrained figure's readout and ends are where its solutions cursor
+  // stands, which moves without the figure changing (an answer after a turn
+  // over, the cursor let go): read again whenever it does.
+  const cursorVersion = useSyncExternalStore(subscribeFoldedSolutionCursor, foldedSolutionCursorVersion);
   const storedCamera = figure.camera ?? DEFAULT_FOLDED_3D_CAMERA;
   const liveCamera = useMemo<LiveValue<FoldedFigureCamera>>(
     () => ({
@@ -184,5 +189,10 @@ export function useFoldedFigureProperties(target: TargetOf<'folded-figure'>): Pr
       setPlacement,
     ]
   );
-  return useMemo(() => buildFoldedFigureProperties(target, deps), [target, deps]);
+  return useMemo(
+    () => buildFoldedFigureProperties(target, deps),
+    // The cursor's version is read by the builder through `foldedSolutionPlace`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [target, deps, cursorVersion]
+  );
 }

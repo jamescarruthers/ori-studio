@@ -38,6 +38,7 @@ import {
   previousSolutionCommand,
 } from './foldedFigureActions';
 import { foldedFigureLayerOrderHold, foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
+import { foldedSolutionPlace } from './foldedSolutionCursor';
 import {
   foldedAppearanceSupport,
   foldedAppearanceVisible,
@@ -443,6 +444,11 @@ export function buildFoldedFigureProperties(
  * step back never shrinks what it says was found. A figure whose fold found
  * no layer order has nothing to step through: the row says why, under its
  * label. Before the figure is ready, the row waits as the appearance does.
+ *
+ * On a constrained figure the verbs step through the solutions that fit its
+ * record (H6) and the readout is where the cursor they step with stands
+ * ({@link constrainedSolutionReadout}); before the first press there is no
+ * cursor, and the row says only what the record says, on its note (D11).
  */
 function layerOrderField(
   figure: OristudioCpFoldedFigureEntry,
@@ -452,19 +458,19 @@ function layerOrderField(
   // Unknown while the first fold runs or after it failed: nothing to read out.
   const found = foldedFigureHasLayerOrder(figure);
   const none = found === false;
-  // A chosen order's place among the solutions that fit is the dialog's to
-  // count (D11): the host never runs the count, so the row reads none out.
   const held = foldedFigureLayerOrderHold(figure);
   const readout =
-    found === null || held !== null
+    found === null || held === 'newer'
       ? ''
-      : layerOrderCount(
-          foldedFigureCurrentCase(figure),
-          none
-            ? { discovered: 0, hasNext: false, none: true }
-            : frontierSolutions(foldedFigureFrontier(figure)),
-          t
-        );
+      : held === 'record'
+        ? constrainedSolutionReadout(figure, t)
+        : layerOrderCount(
+            foldedFigureCurrentCase(figure),
+            none
+              ? { discovered: 0, hasNext: false, none: true }
+              : frontierSolutions(foldedFigureFrontier(figure)),
+            t
+          );
   const row = {
     id: 'layerOrder',
     kind: 'stepper',
@@ -472,8 +478,9 @@ function layerOrderField(
     protocol: 'stepped',
     readout,
   } as const;
-  const previous = previousSolutionCommand(figure, deps);
-  const next = anotherSolutionCommand(figure, deps);
+  const solutionDeps = { ...deps, isStale: () => deps.stale };
+  const previous = previousSolutionCommand(figure, solutionDeps);
+  const next = anotherSolutionCommand(figure, solutionDeps);
   // The toolbar's Layer order…, as the row's Edit… after the pager.
   const layerOrder = layerOrderCommand(figure, {
     t,
@@ -522,9 +529,13 @@ function layerOrderField(
     };
   }
   // Failed or reopened from a file: as every kernel-backed row waits. A
-  // reopened flat figure can still open Layer order…, which folds it first.
+  // reopened flat figure can still open Layer order…, which folds it first,
+  // and a constrained one still steps, folding it as it goes (H6).
   if (!isFoldedFigureReady(figure)) {
     const refold = t('panels:cpProperties.folded.refoldToChange', 'Refold to change how this figure looks');
+    if (held === 'record' && action && !action.disabled) {
+      return { ...row, support: 'supported', previous, next, action, ...(note ? { note } : {}) };
+    }
     if (action && !action.disabled) {
       const wait = <V extends ControlVerb>(verb: V): V => ({ ...verb, disabled: true, hint: refold });
       return {
@@ -562,6 +573,24 @@ function layerOrderField(
     };
   }
   return { ...row, support: 'supported', previous, next, ...(action ? { action } : {}), ...(note ? { note } : {}) };
+}
+
+/**
+ * Where a constrained figure stands among the solutions that fit its record,
+ * as its cursor last answered (`foldedSolutionCursor.ts`), in the frontier's
+ * words: "2 of 3+" while the count may find more, "2 of 3" once it is final,
+ * and "Solution 3" on a figure too large to count (D7). Nothing before a
+ * press has made the cursor, or once it is gone: the host never counts at
+ * rest (D11).
+ */
+function constrainedSolutionReadout(figure: OristudioCpFoldedFigureEntry, t: TFunction): string {
+  const place = foldedSolutionPlace(figure);
+  if (!place) return '';
+  const { index, total } = place.position;
+  if (!place.counted) {
+    return t('panels:cpProperties.folded.layerOrderSolution', 'Solution {{number}}', { number: index });
+  }
+  return layerOrderCount(index, { discovered: total.n, hasNext: !total.exact }, t);
 }
 
 /**

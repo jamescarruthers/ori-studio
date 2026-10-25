@@ -6488,10 +6488,16 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12982,10 +12988,16 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19478,10 +19490,16 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25616,10 +25634,16 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31754,10 +31778,16 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -38248,10 +38278,16 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44742,10 +44778,16 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50880,9 +50922,15 @@
     "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
-    "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
     "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:cpProperties.folded.layerOrderSolution": "81dd7b6464c3",
+    "panels:foldedFigureActions.lastSolutionShown": "65afa8d984ab",
+    "toasts:layerOrder.stepLost": "cdcbe13e1f4d",
+    "toasts:layerOrder.stepLostLoad": "88eb497a5545",
+    "toasts:layerOrder.stepNotFoundYet": "6eb45c99e256",
+    "toasts:layerOrder.stepTimedOut": "f2cfb6e10790",
+    "toasts:layerOrder.stepUnrestored": "0e6d8fb7a411"
   }
 }
