@@ -50,7 +50,13 @@ import {
   type SimulateFlat,
   type StillScene,
 } from './captureFolded';
-import type { CaptureSession, FlatFoldState, HeldLayerOrder, SpatialHold } from './captureSession';
+import type {
+  AppliedLayerOrder,
+  CaptureSession,
+  FlatFoldState,
+  HeldLayerOrder,
+  SpatialHold,
+} from './captureSession';
 import { uprightTurn } from './mirrorAxes';
 
 /**
@@ -60,7 +66,8 @@ import { uprightTurn } from './mirrorAxes';
  * still, skew or axis (Phase 13), Pose's simulator come to rest (D19): its
  * model where the solver holds it, at a fold %, from a camera — or a crease
  * pattern's paper on the colour of one side (the Step pane's Front | Back),
- * or turned over on its back (the Step pane's Flip creases).
+ * or turned over on its back (the Step pane's Flip creases) — or a flat fold
+ * drawn in the order the Layer order dialog applied (H8), in the pose it has.
  */
 export type LinkedPoseRequest =
   | { verb: DiagramLinkedPoseVerb }
@@ -71,7 +78,8 @@ export type LinkedPoseRequest =
   | LayerSpreadEdit
   | { verb: 'simulate'; foldPercent: number; view: DiagramSimulatedView; still: StillScene }
   | { verb: 'paper-side'; side: 'front' | 'back' }
-  | { verb: 'flip-creases'; on: boolean };
+  | { verb: 'flip-creases'; on: boolean }
+  | ({ verb: 'layer-order' } & AppliedLayerOrder);
 
 /** The verbs that set one field of a spread: each a no-op on a fold with none, or of the other kind. */
 function isSpreadFieldRequest(request: LinkedPoseRequest): request is LayerSpreadEdit {
@@ -98,7 +106,14 @@ export type LinkedPoseResult =
     }
   | { status: 'refused'; refusal: OristudioCpFold3dRefusal }
   /** Shown as Simulated, and the region has no model the simulator can fold. */
-  | { status: 'unavailable' };
+  | { status: 'unavailable' }
+  /**
+   * The order the Layer order dialog applied, which the kernel cannot draw
+   * (D3): nothing was folded, and the fold held stays as it was. Also a
+   * `layer-order` request on a step no longer folded flat, which the
+   * dialog's order cannot be drawn on.
+   */
+  | { status: 'order-refused' };
 
 /** A flat fold's layer orders as the search knows them: how many found, and whether there may be more. */
 export interface FlatSolutions {
@@ -171,15 +186,22 @@ export async function poseLinkedStep(
    * fold draws again with no call to the kernel. `upright` turns it to stand
    * on a mirror axis (`uprightTurn`) measured on the fold just held, and every
    * pose reports the axes, so the toolbar can say whether Upright can act.
+   * `applied`, the order the Layer order dialog applied, folded into a new
+   * held fold (H8): the pose stays, its layer order is the dialog's.
    */
   const flat = async (
     { side, rotationDeg, foldCase, spread }: FlatPose,
     move?: 'turn-over' | 'next-solution',
     knownCases?: number,
-    { upright = false }: { upright?: boolean } = {}
+    { upright = false, applied }: { upright?: boolean; applied?: AppliedLayerOrder } = {}
   ): Promise<LinkedPoseResult> => {
     // Another layer order is a search of the held fold; one already found, a jump to it.
-    let state = await session.flat(document, creases.foldLineIds, side, foldCase, knownCases, layerOrder);
+    const posed = applied
+      ? await session.flatWithOrder(document, creases.foldLineIds, side, applied)
+      : await session.flat(document, creases.foldLineIds, side, foldCase, knownCases, layerOrder);
+    // The dialog's order, which the kernel cannot draw: nothing changes (D3).
+    if (!posed) return { status: 'order-refused' };
+    let state = posed;
     // Restored by this pose or not, whatever the turn-over reports after it.
     const shownOrder = state.layerOrder;
     if (move === 'turn-over') state = await session.turnOver();
@@ -256,6 +278,14 @@ export async function poseLinkedStep(
     // Nothing folded to keep: the simulator has its own model.
     session.dispose();
     return simulated(request.view, request.foldPercent, request.still);
+  }
+  if (request.verb === 'layer-order') {
+    // A flat fold's, in the pose it has: one shown another way since, or whose creases fold in 3D now, cannot take it.
+    if (render.mode !== 'folded-flat' || spatialRoute) return { status: 'order-refused' };
+    const { side, rotationDeg, foldCase, spread } = render;
+    return flat({ side, rotationDeg, foldCase, ...(spread ? { spread } : {}) }, undefined, undefined, {
+      applied: { applied: request.applied, frame: request.frame },
+    });
   }
   const { verb } = request;
   if (verb === 'show-simulated') {

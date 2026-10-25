@@ -36,6 +36,7 @@ import {
   endStepCapture,
   runStepFold,
   type DiagramCaptureOutcome,
+  type StepCaptureStart,
 } from '../../store/workspaceStore/diagramCapture';
 import {
   isLockedStep,
@@ -50,7 +51,7 @@ import {
 import { DIAGRAM_STYLE_POLICY, diagramScenePaintStyle } from '../pictures/diagramPaperStyle';
 import { chooseStepCreases, knownCreasesOf } from './captureCreases';
 import { captureModel } from './captureFolded';
-import { stepFoldSource, stepLayerOrderOf } from './captureLayerOrder';
+import { stepFoldSource, stepLayerOrderOf, type StepFoldSource, type StepLayerOrder } from './captureLayerOrder';
 import { abandonOnEngineLoss } from './engineLoss';
 import { sayCaptureOutcome } from './stepCaptureActions';
 
@@ -97,14 +98,70 @@ function flatPoseOf(stepId: string, linked: DiagramCpSource): FlatRender | null 
     : { mode: 'folded-flat', side: target.mode === 'folded-3d' ? target.side : 'front', rotationDeg: 0, foldCase: 1 };
 }
 
+/** The step and pattern a request was made from: an Apply onto anything else commits nothing. */
+export interface StepLayerOrderGuard {
+  loadId: number;
+  revision: number;
+  /** The pattern's lines, fingerprinted. */
+  content: string;
+}
+
 /** A request made for a step: what the dialog opens on, and what its Apply is checked against. */
-interface StepLayerOrderOpening {
+export interface StepLayerOrderOpening {
   request: LayerOrderRequest;
   frame: PaperFrame;
   /** The flat pose the dialog was opened on, which an Apply captures the step in. */
   render: FlatRender;
-  /** The step and pattern it was made from: an Apply onto anything else commits nothing. */
-  guard: { loadId: number; revision: number; content: string };
+  guard: StepLayerOrderGuard;
+}
+
+/** The guard for a request made in this capture: the step and pattern as they are as it runs. */
+export function stepLayerOrderGuard(start: StepCaptureStart): StepLayerOrderGuard {
+  return { loadId: start.guard.loadId, revision: start.guard.revision, content: lineContentFingerprint(start.cp.document) };
+}
+
+/** Whether the step is still linked, and it and the pattern are as they were when `guard` was taken. */
+export function stillOpenedOn(stepId: string, guard: StepLayerOrderGuard): boolean {
+  const now = store.get();
+  const step = now.diagram ? stepById(now.diagram, stepId) : null;
+  const document = now.oristudioCpDocument?.document;
+  if (step?.source?.kind !== 'cp' || !document) return false;
+  return now.diagramLoadId === guard.loadId && step.revision === guard.revision && lineContentFingerprint(document) === guard.content;
+}
+
+/**
+ * The request for a step's flat fold in `render`, as `folded` was read from
+ * it: its source, its record in the crease pattern's coordinates (through
+ * the step's paper frame), the Diagram's look, and its name. With no record,
+ * the scene it shows, so the dialog opens on the order the step draws; with
+ * one, the dialog restores it.
+ */
+export function stepLayerOrderRequest(
+  stepId: string,
+  style: DiagramStyle,
+  render: FlatRender,
+  folded: StepFoldSource,
+  saved: StepLayerOrder | null
+): LayerOrderRequest {
+  const diagram = store.get().diagram;
+  const number = diagram ? stepNumber(diagram, stepId) : null;
+  return {
+    source: folded.source,
+    record: saved ? layerOrderRecordToSource(saved.record, folded.frame) : null,
+    look: diagramStepLayerOrderLook(style, render),
+    ...(saved || !folded.scene ? {} : { shown: folded.scene }),
+    ...(number !== null ? { name: i18n.t('panels:diagram.layerOrder.stepName', 'Step {{number}}', { number }) } : {}),
+  };
+}
+
+/** A step whose creases fold in 3D now, asked for its layer order: said, and nothing opens. */
+export function sayStepFoldsIn3d(): void {
+  toast.message(
+    i18n.t(
+      'toasts:diagram.layerOrder.folds3d',
+      'This step’s creases fold in 3D now, and layer order works on flat folds. Refresh the step to see it.'
+    )
+  );
 }
 
 /** Fold the step's creases for the dialog, as a stoppable run, and build its request; or why it cannot open. */
@@ -128,22 +185,11 @@ async function openingFor(
     const folded = await runStepFold(store, start, 'diagram-capture', (runtime) =>
       stepFoldSource(runtime, route.lineIds, captureModel(document, render.side), saved ? 1 : render.foldCase)
     );
-    const diagram = store.get().diagram;
-    const number = diagram ? stepNumber(diagram, stepId) : null;
     return {
-      request: {
-        source: folded.source,
-        record: saved ? layerOrderRecordToSource(saved.record, folded.frame) : null,
-        look: diagramStepLayerOrderLook(start.style, render),
-        // With a record the dialog restores it; with none, it opens on the order the step draws.
-        ...(saved || !folded.scene ? {} : { shown: folded.scene }),
-        ...(number !== null
-          ? { name: i18n.t('panels:diagram.layerOrder.stepName', 'Step {{number}}', { number }) }
-          : {}),
-      },
+      request: stepLayerOrderRequest(stepId, start.style, render, folded, saved),
       frame: folded.frame,
       render,
-      guard: { loadId: start.guard.loadId, revision: start.guard.revision, content: lineContentFingerprint(document) },
+      guard: stepLayerOrderGuard(start),
     };
   } catch (error) {
     return captureFailure(error);
@@ -160,12 +206,10 @@ async function openingFor(
  * not at all. An order the kernel cannot draw writes nothing (D3).
  */
 async function applyToStep(stepId: string, opening: StepLayerOrderOpening, applied: LayerOrderApplied): Promise<boolean> {
+  if (!stillOpenedOn(stepId, opening.guard)) return false;
   const now = store.get();
   const step = now.diagram ? stepById(now.diagram, stepId) : null;
-  const document = now.oristudioCpDocument?.document;
-  const { loadId, revision, content } = opening.guard;
-  if (step?.source?.kind !== 'cp' || !document) return false;
-  if (now.diagramLoadId !== loadId || step.revision !== revision || lineContentFingerprint(document) !== content) return false;
+  if (step?.source?.kind !== 'cp') return false;
   const outcome = await now.captureDiagramStep(stepId, {
     scope: step.source.scope,
     known: knownCreasesOf(step.source),
@@ -195,12 +239,7 @@ export async function openDiagramStepLayerOrder(stepId: string, via: DiagramStep
   if (!render) return false;
   const opening = await openingFor(stepId, linked, render);
   if (opening === 'spatial') {
-    toast.message(
-      i18n.t(
-        'toasts:diagram.layerOrder.folds3d',
-        'This step’s creases fold in 3D now, and layer order works on flat folds. Refresh the step to see it.'
-      )
-    );
+    sayStepFoldsIn3d();
     return false;
   }
   if (!('request' in opening)) {
