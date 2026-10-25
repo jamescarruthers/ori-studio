@@ -51,7 +51,8 @@ LayerOrderModal (lazy chunk): hook + pure model, PaperPane ×2
   │ comlink
   ▼
 Dialog worker (Fold wasm): ConstraintSession over LayerSource::from_oriedita(source)
-Count worker (same wasm): background solution count, lives as long as the dialog
+  + the solution count, in short slices between calls (one cursor serves the count,
+    the "3 of 12" index and the stepper)
 
 Host engine (no dialog needed): resolveLayerOrder(source, record, limits)
   a short-lived Fold-wasm worker → per-constraint statuses + the full relations
@@ -173,8 +174,9 @@ Display: the host's CP kernel (CP wasm on the web, native through Tauri on deskt
      unconstrained files keep their bytes. (engine §3.2's `#[serde(default)]`
      would write "searched" on every figure.)
 5. **Two engine paths over one wasm.**
-   - **The dialog's** two workers: its session, and the count. It never
-     touches Fold's singleton, and closing terminates both (blocks §5).
+   - **The dialog's** one worker: its session, which also advances the
+     solution count in short slices between calls. It never touches Fold's
+     singleton, and closing terminates it (blocks §5).
    - **The hosts'**, `resolveLayerOrder(source, record, limits)`: a
      short-lived Fold-wasm worker spawned per job and terminated after, as in
      `cpExactSolveSession`. A Refresh All shares one across its steps. It
@@ -319,7 +321,7 @@ is built.
 | H1 | **Record, host contract, file formats.** `lib/layerOrder/layerOrderRecord.ts` (codec, `NEWER`, a 1 MB budget); `PaperFrame`s; `LayerOrderRequest` (`source: { segments, startingFaceId, auxSegments, model, digest }`, `record`, `look: { style, policy, turnDeg, xray }`) and `LayerOrderApplied`; Edit's `extensions` bag with the attach rule (approach 6) and orphan rules; `DiagramCpSource.layerOrder` (key set, lock). Written on #475's reworked `projectSlice`, `nativeProjectFile` and `diagramDocument`; merges after phase gate 1 | M | – | – | Round trips in `nativeProjectFile` and `diagramFile`; the four zero-bytes rules, including a load and save of a bag with foreign keys; an older-reader simulation keeps the bag; a record whose figure id was reused doesn't attach; a `v:2` record locks its step; a size fixture |
 | U4 | **Dialog shell.** `layerOrderDialogStore`, a lazy gateway, the `App.tsx` mount, the empty dialog with Cancel and Apply, the opening state with Cancel; i18n scaffolding; a boundary test | S–M | U2, U3b, H1 | Opening | Store and mount tests; the boundary test: `layer-order/` imports no host, nothing outside the gateway imports the dialog, and no production module outside `workers/` imports the Fold wasm glue; `i18n:check` |
 | U5 | **Engine client.** The `layerOrderEngine.ts` contract, `faceIndex.ts`, the worker shell and runtime (spawn, generation, dispose); `lib/latestWinsChannel.ts`, with Fold's preview channel moving onto it in a no-change commit | M | U4 | – | Fake-worker tests (dispose, stale counts dropped, Cancel terminates); Fold's preview tests unchanged |
-| U6 | **Engine wiring.** The dialog and count workers on the bridge, one worker file; that file joins `UNWARMED_PATTERNS`, so the service worker never downloads it ahead of time; the `sw.js` warm-set diff, chunk bytes and wasm bytes recorded in the PR | S–M | U5, E6, E7 | – | `layerOrderEngine.wasm.test.ts` on kabuto and `solution_sample_1`; a `.wasm.test.ts` that loads the CP and Fold bridges on the same segments asserts equal digests; a forged mismatch refuses the open; `scripts/webkit-pwa-check.mjs`, already in CI, asserts that neither the Fold wasm nor the layer-order worker is cached after the idle warm |
+| U6 | **Engine wiring.** The dialog's worker on the bridge, with the solution count advanced in short slices between calls; one worker file; that file joins `UNWARMED_PATTERNS`, so the service worker never downloads it ahead of time; the `sw.js` warm-set diff, chunk bytes and wasm bytes recorded in the PR | S–M | U5, E6, E7 | – | `layerOrderEngine.wasm.test.ts` on kabuto and `solution_sample_1`; a `.wasm.test.ts` that loads the CP and Fold bridges on the same segments asserts equal digests; a forged mismatch refuses the open; `scripts/webkit-pwa-check.mjs`, already in CI, asserts that neither the Fold wasm nor the layer-order worker is cached after the idle warm |
 | U7 | **PaperPane.** Extracted from FoldPane at #475's head (no step playback since 4cd968128), which becomes a specialisation, with no visual change. The pure stroke step of `useFoldCreasePatternStrokes` moves into `cp-workspace/`, with line style and width as arguments; Fold's hook stays as a wrapper | S–M | U1 | – | Fold canvas tests unchanged; Fold before/after screenshots |
 | U8 | **Panes.** `LayerOrderPanes` on the shared pipeline (approach 3): Front/Back, X-ray, Open spots, tints (hover and clash on the overlay layer; the persistent subject and object tints may use per-face ink), the changed-spot flash, letters and label placement, per-pane zoom and Fit both, the host's `look`, the turn through one map; tap equivalents (D6). Built against fixture scenes, so it doesn't wait on the bridge | L | U7, U4 | Phone, Horizon | Unit tests (tints, labels, letters, X-ray alpha); Playwright screenshots of front, back, X-ray and open spots on kabuto, `solution_sample_1`, iguana-c0 and a non-convex-cell fixture, in the default and Horizon themes; one side-by-side per host look (an Edit figure on the canvas, a Diagram step card, Pose) with a non-default paper style, expecting the Diagram's and Pose's pens to scale differently |
 | U9 | **Inspector model.** The pure reducer and history (behaviour list below); restored records with per-status rows and Apply waiting on a clash; the waiting and timed-out states | M | U4 | – | Reducer tests per behaviour, per status and per waiting state |
@@ -366,7 +368,7 @@ which Oriedita folds flat.
 | --- | --- | --- |
 | Open p95 | ≤ 1 s | The opening state carries it; above a size threshold the count is skipped |
 | Preview p95 | ≤ 200 ms | Previews past it show the running state; past the deadline, "couldn't check in time" |
-| Memory per worker, with Fold's, the dialog's, the count and the host engine live | reported | The count is skipped above the threshold |
+| Memory per worker, with Fold's, the dialog's and the host engine live | reported | The count's caps are lowered |
 
 If either target misses on most designs, we stop and talk: clause learning is
 the known fix, and it isn't built.
@@ -635,9 +637,11 @@ them. Say if any should change. The rest can wait until the PR named.
   figure at the median (approach 6), against 46 KB for the full order.
 - **A 1 MB budget per record.** Above it, Apply refuses with a reason. No
   cpoogle design comes near it (228 KB at most); the iguana is 830 KB.
-- **The count worker lives as long as the dialog,** enumerating in short
-  slices with a generation check between them. Respawning per change would
-  reopen every time: 1.5 s on the iguana.
+- **The count runs in the dialog's own worker,** in short slices between
+  calls (decided 2026-10-25, from E6). The stepper and its index need the
+  count's cursor in the worker that holds the session; a second worker would
+  count twice and hold a second copy of the wasm. A slice delays a waiting
+  preview by at most its own length.
 - **The dialog reuses the Fold bridge** (about 1,047 KiB gzipped, already
   over its budget, which hasn't been raised). A dialog-only bridge would mean
   another wasm build in CI, and a new `.wasm` the service worker downloads
@@ -680,11 +684,10 @@ H3's new rehydrate, so it can only follow H3.
     new wasm deadline, and a running call can only be stopped by terminating
     its worker.
 - **Memory.**
-  - An iguana import peaked at 170 MB on the old solver. Up to four wasm
-    instances may be live: Fold's, the dialog's, the count and the host
-    engine.
-  - Mitigations: the count is skipped above a threshold, the host engine is
-    short-lived, and the dialog's workers are terminated on close.
+  - An iguana import peaked at 170 MB on the old solver. Up to three wasm
+    instances may be live: Fold's, the dialog's and the host engine.
+  - Mitigations: the count's caps, the host engine is short-lived, and the
+    dialog's worker is terminated on close.
 - **Two kernels must number faces identically:** the host's CP kernel (wasm
   or native) and the Fold wasm. The digest is checked at open and at Apply,
   and refold and reopen find faces by paper point, never by reused ids.
@@ -797,11 +800,11 @@ H3's new rehydrate, so it can only follow H3.
   - [ ] **Horizon theme** (the accent and danger colours are the same)
 - [x] E1: kernel seeded core (#494)
 - [x] E2: kernel entry points and exports (#500)
-- [ ] E3: Flat-Folder session additions
+- [x] E3: Flat-Folder session additions (#502)
 - [x] E4: source and census 1 (#503; phase gate 1 passed)
-- [ ] E5: constraint session core
-- [ ] E6: explain and solutions
-- [ ] E7: wasm bridge
+- [x] E5: constraint session core (#504)
+- [x] E6: explain and solutions (#509, landed through #505)
+- [x] E7: wasm bridge (#505; kept in the Fold bridge, +195 KiB gzipped)
 - [ ] E8: census 2 (phase gate 2 reviewed)
 - [x] U1: shared picking and tints (#497)
 - [ ] U2: ModalFrame
@@ -809,7 +812,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U3b: dialog keys (#498)
 - [x] H1: record, host contract, file formats (#496)
 - [ ] U4: dialog shell
-- [ ] U5: engine client
+- [x] U5: engine client (#506)
 - [ ] U6: engine wiring
 - [x] U7: PaperPane (#501)
 - [ ] U8: panes
