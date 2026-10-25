@@ -314,6 +314,26 @@ describe('placing the letters', () => {
     expect(chip.x).toBe(104);
   });
 
+  it('sets a letter beside a long slanted face against the face, not off its bounding box', () => {
+    // A sliver along the diagonal from (0, 0) to (200, 200), 6 px across.
+    const sliver = [
+      { x: 0, y: 0 },
+      { x: 4, y: -2 },
+      { x: 204, y: 198 },
+      { x: 200, y: 200 },
+    ];
+    const placed = placeLabels(
+      [{ face: 0, tone: 'pick', keep: true }],
+      () => ({ visible: true, spots: [{ at: { x: 102, y: 99 }, region: sliver }], outline: sliver }),
+      () => 'C',
+      (p) => p
+    )[0]!;
+    expect(placed.off).toBe(true);
+    // Against the sliver, near the spot it names: off the bounding box's top it would be 80 px from the diagonal.
+    expect(Math.abs(placed.x - placed.y) / Math.SQRT2).toBeLessThan(25);
+    expect(Math.hypot(placed.x - 102, placed.y - 99)).toBeLessThan(30);
+  });
+
   it('keeps a letter set beside its face on screen: a face along the pane’s top takes its letter below', () => {
     const thin = square(100, 0, 8);
     const spotsOf = () => ({ visible: true, spots: [{ at: { x: 104, y: 4 }, region: thin }], outline: thin });

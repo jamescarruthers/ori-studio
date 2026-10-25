@@ -438,25 +438,54 @@ function chipInFrame(at: Point, size: { width: number; height: number }, frame: 
   );
 }
 
-/** Points beside an on-screen outline's box where a chip of `size` sits clear of it: above, below, right, left. */
-function besideSpots(outline: readonly Point[], size: { width: number; height: number }): Point[] {
-  if (outline.length === 0) return [];
-  const xs = outline.map(({ x }) => x);
-  const ys = outline.map(({ y }) => y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const midX = (minX + maxX) / 2;
-  const midY = (minY + maxY) / 2;
-  const gapX = size.width / 2 + LABEL_OFF_GAP_PX;
-  const gapY = size.height / 2 + LABEL_OFF_GAP_PX;
-  return [
-    { x: midX, y: minY - gapY },
-    { x: midX, y: maxY + gapY },
-    { x: maxX + gapX, y: midY },
-    { x: minX - gapX, y: midY },
-  ];
+/** Whether a box, grown by `gap` each way, touches `ring`: lies over its inside or across its edge. */
+function boxTouchesRing(box: Box, ring: readonly Point[], gap: number): boolean {
+  const minX = box.x - box.width / 2 - gap;
+  const maxX = box.x + box.width / 2 + gap;
+  const minY = box.y - box.height / 2 - gap;
+  const maxY = box.y + box.height / 2 + gap;
+  if (insideEvenOdd(ring, { x: box.x, y: box.y })) return true;
+  return ring.some((a, i) => {
+    const b = ring[(i + 1) % ring.length]!;
+    if (a.x >= minX && a.x <= maxX && a.y >= minY && a.y <= maxY) return true;
+    return segmentCrossesBox(a, b, minX, minY, maxX, maxY);
+  });
+}
+
+/** The ways out of a face a letter beside it tries: up, down, right, left, then the corners. */
+const BESIDE_WAYS: readonly (readonly [number, number])[] = [
+  [0, -1],
+  [0, 1],
+  [1, 0],
+  [-1, 0],
+  [Math.SQRT1_2, -Math.SQRT1_2],
+  [-Math.SQRT1_2, -Math.SQRT1_2],
+  [Math.SQRT1_2, Math.SQRT1_2],
+  [-Math.SQRT1_2, Math.SQRT1_2],
+];
+/** How far out, CSS px, and in what steps, a letter beside its face looks for room. */
+const BESIDE_REACH_PX = 160;
+const BESIDE_STEP_PX = 2;
+
+/**
+ * Points just beside a face on screen, nearest first: from `from`, a point of
+ * the face, out each way to where a chip of `size` first clears the face's
+ * `outline` by {@link LABEL_OFF_GAP_PX}. So the letter sits against the face
+ * it names, whatever the face's shape, never across another part of it.
+ */
+function besideSpots(outline: readonly Point[], from: Point, size: { width: number; height: number }): Point[] {
+  if (outline.length < 3) return [];
+  const found: { at: Point; reach: number }[] = [];
+  for (const [dx, dy] of BESIDE_WAYS) {
+    for (let reach = BESIDE_STEP_PX; reach <= BESIDE_REACH_PX; reach += BESIDE_STEP_PX) {
+      const at = { x: from.x + dx * reach, y: from.y + dy * reach };
+      if (!boxTouchesRing({ ...at, ...size }, outline, LABEL_OFF_GAP_PX)) {
+        found.push({ at, reach });
+        break;
+      }
+    }
+  }
+  return found.sort((a, b) => a.reach - b.reach).map(({ at }) => at);
 }
 
 /**
@@ -508,7 +537,9 @@ export function placeLabels(
     let off = false;
     if (!at && keep) {
       // Beside the face on screen, clear of the rest; else inside it over another letter; else beside it whatever it covers.
-      const around = besideSpots(spots.outline.map(project), size);
+      const outline = spots.outline.map(project);
+      const from = spots.spots[0] ? project(spots.spots[0].at) : ringCentroid(outline);
+      const around = from ? besideSpots(outline, from, size) : [];
       const onScreen = frame ? around.filter((p) => chipInFrame(p, size, frame)) : around;
       const besideClear = onScreen.find((p) => clear(box(p)));
       at = besideClear ?? inside[0] ?? onScreen[0] ?? around[0] ?? null;
