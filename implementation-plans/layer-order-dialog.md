@@ -701,7 +701,10 @@ notice has no board of its own; U10 builds it from the approved copy.
     letter order ("H, K"), whatever order they were picked in. The sentence
     stays on one line: the object chips sit inline after the verb, and the
     object slot wraps when it fills (your call, 2026-10-25, over a separate
-    line for the objects).
+    line for the objects). So that two objects fit on a line in the approved
+    grid, an object chip in the builder is just its letter: a click on it
+    removes that object ("Remove H"), and the slot's one × clears them all
+    (my call; the list's rows keep a × per object).
   - **Which faces can be objects** (my call): the faces open against the
     subject in the committed order, as now, whatever else is picked. Picking
     one never changes which others are offered, so the tints hold still.
