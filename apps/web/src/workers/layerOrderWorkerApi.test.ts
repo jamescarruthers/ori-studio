@@ -9,7 +9,7 @@ import {
   FAKE_LIMITS,
   createFakeLayerOrderBackend,
 } from '../layer-order/engine/layerOrderEngine.fixtures';
-import { createLayerOrderWorkerApi, unavailableLayerOrderBackend, type LayerOrderBackend } from './layerOrderWorkerApi';
+import { createLayerOrderWorkerApi, type LayerOrderBackend } from './layerOrderWorkerApi';
 
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -30,15 +30,6 @@ describe('createLayerOrderWorkerApi', () => {
     await expect(api.preview([2, 3, 1], FAKE_LIMITS)).resolves.toMatchObject({ verdict: 'fits' });
     expect(load).toHaveBeenCalledTimes(1);
     expect(backend.calls).toEqual(['open', 'preview']);
-  });
-
-  it('until U6 wires the bridge, every call rejects as unavailable', async () => {
-    const api = createLayerOrderWorkerApi(unavailableLayerOrderBackend);
-    await expect(api.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS)).rejects.toEqual({
-      code: 'layer_order_engine_unavailable',
-      message: 'The layer order engine is not built into this worker yet.',
-    });
-    await expect(api.relations()).rejects.toMatchObject({ code: 'layer_order_engine_unavailable' });
   });
 
   it('forgets a start that failed, so the next call starts again', async () => {
@@ -82,24 +73,26 @@ describe('createLayerOrderWorkerApi', () => {
     expect(backend.calls).toEqual(['open', 'commit']);
   });
 
-  it('E6’s calls on a backend without them reject naming the call; a backend with one answers it', async () => {
-    const { countSolutions: _count, ...withoutCount } = createFakeLayerOrderBackend();
-    const bare = createLayerOrderWorkerApi(() => withoutCount);
-    await expect(bare.explain(null, FAKE_LIMITS)).rejects.toEqual({
-      code: 'layer_order_unsupported_operation',
-      operation: 'explain',
-      message: 'The layer order engine has no explain yet.',
+  it('answers E6’s calls through the backend: explain, the count, the position and a step', async () => {
+    const api = createLayerOrderWorkerApi(() => createFakeLayerOrderBackend());
+    await api.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
+    await expect(api.explain([1, 0, 1], FAKE_LIMITS)).resolves.toMatchObject({
+      verdict: 'clash',
+      proof: { kind: 'forced' },
     });
-    await expect(bare.countSolutions(FAKE_LIMITS)).rejects.toMatchObject({ operation: 'countSolutions' });
-    await expect(bare.stepSolution({ by: 'order', to: 1 }, FAKE_LIMITS)).rejects.toMatchObject({
-      operation: 'stepSolution',
+    await expect(api.countSlice(FAKE_LIMITS)).resolves.toEqual({
+      epoch: 1,
+      count: {
+        front: { n: 3, exact: true },
+        back: { n: 3, exact: true },
+        orders: { n: 12, exact: true },
+        done: true,
+      },
     });
-
-    const counting = createLayerOrderWorkerApi(() => createFakeLayerOrderBackend());
-    await counting.open(FAKE_LAYER_ORDER_SOURCE, FAKE_LIMITS);
-    await expect(counting.countSolutions(FAKE_LIMITS)).resolves.toMatchObject({
-      status: 'counted',
-      count: { orders: { n: 12, exact: true } },
+    await expect(api.position({ picture: 'front' })).resolves.toEqual({ index: 1, total: { n: 3, exact: true } });
+    await expect(api.step({ picture: 'front' }, 'next', FAKE_LIMITS)).resolves.toMatchObject({
+      verdict: 'moved',
+      position: { index: 2 },
     });
   });
 });

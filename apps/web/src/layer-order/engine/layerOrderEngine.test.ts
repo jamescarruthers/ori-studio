@@ -11,6 +11,7 @@ import {
   FAKE_NO_NODES,
   createFakeLayerOrderBackend,
 } from './layerOrderEngine.fixtures';
+import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
 import {
   KEEP_TRYING_FACTOR,
   LAYER_ORDER_LIMITS,
@@ -83,6 +84,11 @@ describe('limits', () => {
       fastNodes: 128,
       deadlineMs: 1_000,
     });
+  });
+
+  it('give a count slice a small budget and a short deadline: the longest a call waits behind the count', () => {
+    expect(LAYER_ORDER_COUNT_SLICE).toEqual({ maxNodes: 1_000, fastNodes: 128, deadlineMs: 30 });
+    expect(LAYER_ORDER_COUNT_SLICE.deadlineMs).toBeLessThan(LAYER_ORDER_LIMITS.preview.deadlineMs / 10);
   });
 
   it('count spots from the stacks’ offsets', () => {
@@ -192,5 +198,87 @@ describe('the fake backend keeps the contract’s rules', () => {
     expect(restored.constraints).toEqual([[3, 0, 1]]);
     expect(await reopened.stacks('front')).toEqual(await backend.stacks('front'));
     expect(await reopened.relations()).toEqual(await backend.relations());
+  });
+
+  it('Add adopts its preview by token; a stale token, or a step since, commits by a search', async () => {
+    const { backend } = await openedBackend();
+    const preview = await backend.preview([3, 0, 1], FAKE_LIMITS);
+    if (preview.verdict !== 'fits') throw new Error('expected a fit');
+    await expect(backend.commitPreview(preview.token, [[3, 0, 1]], FAKE_NO_NODES)).resolves.toMatchObject({
+      verdict: 'committed',
+      adopted: true,
+      stacks: preview.stacks,
+    });
+
+    const next = await backend.preview([2, 3, 1], FAKE_LIMITS);
+    if (next.verdict !== 'fits') throw new Error('expected a fit');
+    await expect(backend.step({ picture: 'back' }, 'previous', FAKE_LIMITS)).resolves.toMatchObject({ verdict: 'moved' });
+    await expect(
+      backend.commitPreview(next.token, [
+        [3, 0, 1],
+        [2, 3, 1],
+      ], FAKE_LIMITS)
+    ).resolves.toMatchObject({ verdict: 'committed', adopted: false });
+  });
+
+  it('opens on the order shown, held whole when the creases allow it', async () => {
+    const backend = createFakeLayerOrderBackend();
+    // [3, 0, 1, 2] top first: every pair above to below.
+    const shown = Uint32Array.of(3, 0, 3, 1, 3, 2, 0, 1, 0, 2, 1, 2);
+    await expect(backend.openShowing(FAKE_LAYER_ORDER_SOURCE, shown, FAKE_LIMITS)).resolves.toMatchObject({
+      status: 'ok',
+      opened_on: { kind: 'held', ignored: 0 },
+    });
+    expect([...(await backend.stacks('front')).faces]).toEqual([3, 0, 1, 2]);
+    // 1 above 0 is against the creases: the closest order that folds stands in.
+    const against = Uint32Array.of(1, 0, 1, 2, 1, 3, 0, 2, 0, 3, 2, 3);
+    await expect(backend.openShowing(FAKE_LAYER_ORDER_SOURCE, against, FAKE_LIMITS)).resolves.toMatchObject({
+      opened_on: { kind: 'closest' },
+    });
+  });
+
+  it('a restore whose constraints clash applies none, carries every one, and a save writes them back', async () => {
+    const { backend } = await openedBackend();
+    await backend.commit([[3, 0, 1]], FAKE_LIMITS);
+    const saved = await backend.save();
+    if (saved.status !== 'ok') throw new Error('expected a record');
+    const [f, g, sign] = saved.record.constraints[0]!;
+    const clashing = { ...saved.record, constraints: [...saved.record.constraints, [f, g, sign === 1 ? -1 : 1] as const] };
+
+    const restored = await backend.restoreRecord(clashing, FAKE_LIMITS);
+    if (restored.status !== 'ok') throw new Error('expected a restore');
+    expect(restored.outcome).toEqual({ kind: 'clash', constraints: [0, 1] });
+    expect(restored.constraints).toEqual([]);
+    expect(restored.carried.map((row) => [row.index, row.status, row.constraint])).toEqual([
+      [0, 'clashing', [3, 0, 1]],
+      [1, 'clashing', [3, 0, -1]],
+    ]);
+    const resaved = await backend.save();
+    if (resaved.status !== 'ok') throw new Error('expected a record');
+    expect(resaved.record.constraints).toHaveLength(2);
+    await expect(backend.removeCarried(1)).resolves.toBe(true);
+    await expect(backend.carried()).resolves.toHaveLength(1);
+    await backend.clearCarried();
+    await expect(backend.carried()).resolves.toEqual([]);
+  });
+
+  it('explains a clash by its smallest set, and says when a list fits', async () => {
+    const { backend } = await openedBackend();
+    await backend.commit(
+      [
+        [2, 3, 1],
+        [0, 2, 1],
+      ],
+      FAKE_LIMITS
+    );
+    // [3, 2, -1] puts 2 above 3, against the first; the second has no part in it.
+    await expect(backend.explain([3, 2, -1], FAKE_LIMITS)).resolves.toMatchObject({
+      verdict: 'clash',
+      constraints: Uint32Array.of(0, 2),
+      minimal: true,
+      faces: Uint32Array.of(2, 3),
+      proof: { kind: 'opposed' },
+    });
+    await expect(backend.explain(null, FAKE_LIMITS)).resolves.toEqual({ verdict: 'fits' });
   });
 });

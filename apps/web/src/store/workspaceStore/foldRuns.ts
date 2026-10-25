@@ -27,6 +27,15 @@ function foldRunsWithout(runs: FoldRuns, runId: number): FoldRuns {
 }
 
 /**
+ * Each live run's stop signal, by id: what a run's work outside the CP kernel
+ * listens to, since the cancel slot reaches only the kernel. The Layer order
+ * host engine is that work (`layer-order/host/`): its worker has no cancel
+ * channel, so a Stop terminates it. Kept here rather than in the store,
+ * because nothing draws a signal.
+ */
+const stopSignals = new Map<number, AbortController>();
+
+/**
  * Live stoppable runs, **oldest first** — which is executing order.
  *
  * One CP worker on web and one engine mutex on desktop, so folds run strictly
@@ -50,10 +59,17 @@ export function stoppableFoldRuns(runs: FoldRuns): OristudioCpFoldRun[] {
  * Instead the stop intent is recorded on every run (`stopping`) and the slot is
  * re-aimed here, as each run leaves and the next becomes the one executing.
  * Re-writing an id already in the slot is harmless.
+ *
+ * Every Stop passes through here, so this is also where each run marked
+ * stopping has its stop signal aborted ({@link withFoldInFlight}). A signal
+ * names one run, so all of them are told at once; aborting one twice is
+ * harmless.
  */
 export function aimFoldStopAtOldestPending(runs: FoldRuns): void {
-  const pending = stoppableFoldRuns(runs).find((run) => run.stopping);
+  const stoppable = stoppableFoldRuns(runs);
+  const pending = stoppable.find((run) => run.stopping);
   if (pending) cancelFoldRun(pending.runId);
+  for (const run of stoppable) if (run.stopping) stopSignals.get(run.runId)?.abort();
 }
 
 /**
@@ -83,13 +99,19 @@ export function stopFoldRun(store: FoldRunStore, runId: number): boolean {
  * clears it on **every** exit — including a cancel, which a cooperative stop
  * makes an ordinary rejection rather than a promise that never settles (the
  * stuck-flag failure recorded in `bp-optimizer-cancellation.md`).
+ *
+ * `run` also gets the run's stop signal, aborted when a Stop reaches this run:
+ * the way to stop work in the run that the kernel's cancel slot cannot reach,
+ * such as a Layer order resolve (`layer-order/host/hostEngineGateway.ts`).
  */
 export async function withFoldInFlight<T>(
   store: FoldRunStore,
   kind: OristudioCpFoldRunKind,
-  run: (runId: number) => Promise<T>
+  run: (runId: number, stop: AbortSignal) => Promise<T>
 ): Promise<T> {
   const runId = beginFoldRun();
+  const stop = new AbortController();
+  stopSignals.set(runId, stop);
   store.set({
     oristudioCpFoldRuns: {
       ...store.get().oristudioCpFoldRuns,
@@ -106,8 +128,9 @@ export async function withFoldInFlight<T>(
     },
   });
   try {
-    return await run(runId);
+    return await run(runId, stop.signal);
   } finally {
+    stopSignals.delete(runId);
     const remaining = foldRunsWithout(store.get().oristudioCpFoldRuns, runId);
     store.set({ oristudioCpFoldRuns: remaining });
     aimFoldStopAtOldestPending(remaining);
