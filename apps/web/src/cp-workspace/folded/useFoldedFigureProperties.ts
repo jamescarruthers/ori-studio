@@ -4,6 +4,7 @@ import { ANALYTICS_EVENTS, track } from '../../analytics';
 import type {
   FoldedFigurePlacement,
   OristudioCpFoldedFigureDisplayStyle,
+  OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureModel,
 } from '../../engine/oristudioCpTypes';
 import type { PaperStyleField, PaperStyleValue } from '../../lib/paper/paperStyle';
@@ -24,9 +25,14 @@ import { foldedFigureGesture } from './foldedFigureGesture';
 import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './foldedFigureProperties';
 import { isFoldedFigureStale } from './foldedFigureStaleness';
 import {
+  deleteFoldedFigure,
+  duplicateFoldedFigure,
+  exportFoldedFigure,
   setFolded3dCamera,
   setFoldedFigureDisplayStyle,
   setFoldedFigurePlacementAsEntry,
+  showAnotherFoldedSolution,
+  showPreviousFoldedSolution,
   updateFoldedFigureModelAsEntry,
 } from './foldedFigureVerbs';
 
@@ -117,6 +123,18 @@ export function useFoldedFigureProperties(target: TargetOf<'folded-figure'>): Pr
     },
     [id]
   );
+  // The figure's verbs, as the floating toolbar runs them: each one entry
+  // under the toolbar's own label, through the same React-free functions.
+  const verbs = useMemo(
+    () => ({
+      foldAnother: (target: OristudioCpFoldedFigureEntry) => void showAnotherFoldedSolution(target.id, t),
+      foldPrevious: (target: OristudioCpFoldedFigureEntry) => void showPreviousFoldedSolution(target.id, t),
+      exportFigure: (target: OristudioCpFoldedFigureEntry) => exportFoldedFigure(target.id, t),
+      duplicate: (target: OristudioCpFoldedFigureEntry) => void duplicateFoldedFigure(target.id, t),
+      remove: (target: OristudioCpFoldedFigureEntry) => void deleteFoldedFigure(target.id, t),
+    }),
+    [t]
+  );
   const storedCamera = figure.camera ?? DEFAULT_FOLDED_3D_CAMERA;
   const liveCamera = useMemo<LiveValue<FoldedFigureCamera>>(
     () => ({
@@ -143,8 +161,10 @@ export function useFoldedFigureProperties(target: TargetOf<'folded-figure'>): Pr
       setCamera,
       liveCamera,
       setPlacement,
+      ...verbs,
     }),
     [
+      verbs,
       t,
       stale,
       gesture.held,

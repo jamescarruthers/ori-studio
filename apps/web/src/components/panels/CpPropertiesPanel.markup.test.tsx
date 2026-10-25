@@ -11,15 +11,21 @@ import {
 import type { OristudioCpDocumentState } from '../../engine/oristudioCpTypes';
 import { createStarterOristudioCpDocument } from '../../lib/oristudioCpStarterDocument';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { TooltipProvider } from '../ui/Tooltip';
 import { CpPropertiesPanel } from './CpPropertiesPanel';
 
 /**
- * The markup each canvas-object kind's sheet renders, pinned. The shared
+ * The structure each canvas-object kind's sheet renders, pinned. The shared
  * renderer grows optional parts for one kind at a time (the folded figure's
  * header verbs, a stacked choice, a stepper, a note line); a kind that uses
  * none of them must render exactly what it did, and this is where a change
- * that leaks into the others shows. Ids React generates are counted per test
- * run, so they are named by order of appearance instead.
+ * that leaks into the others shows.
+ *
+ * Structure only: each element's tag, its `data-*`, `role` and `aria-*`
+ * attributes, and its text. Not class names, which belong to other
+ * components' modules; not inline styles; not the ids React and Radix
+ * generate, which an `aria-*` reference is renamed by order of appearance;
+ * and not an icon's drawing, which is the icon set's.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -33,6 +39,18 @@ const DOCUMENT = {
   summary: null,
   source: { format: 'cp', filename: 'Untitled.cp', path: null },
 } as unknown as OristudioCpDocumentState;
+
+/** The `aria-*` attributes whose values are ids of other elements. */
+const ID_REFERENCES = new Set([
+  'aria-activedescendant',
+  'aria-controls',
+  'aria-describedby',
+  'aria-details',
+  'aria-errormessage',
+  'aria-flowto',
+  'aria-labelledby',
+  'aria-owns',
+]);
 
 let root: Root | null = null;
 let host: HTMLDivElement | null = null;
@@ -52,14 +70,37 @@ afterEach(() => {
   useWorkspaceStore.setState(initialState, true);
 });
 
-/** The sheet's markup with React's generated ids named by order of appearance. */
-function sheetMarkup(): string {
-  const html = host?.querySelector('[data-property-sheet]')?.outerHTML ?? '';
+/** The sheet as an indented outline of its structure. */
+function sheetStructure(): string {
+  const sheet = host?.querySelector('[data-property-sheet]');
+  if (!sheet) return '';
   const ids = new Map<string, string>();
-  return html.replace(/_r_[0-9a-z]+_|[:«]r[0-9a-z]+[:»]/gu, (id) => {
-    if (!ids.has(id)) ids.set(id, `id-${ids.size + 1}`);
+  const idOf = (id: string) => {
+    if (!ids.has(id)) ids.set(id, `#${ids.size + 1}`);
     return ids.get(id)!;
-  });
+  };
+  const lines: string[] = [];
+  const walk = (node: Node, depth: number) => {
+    const indent = '  '.repeat(depth);
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) lines.push(`${indent}"${text}"`);
+      return;
+    }
+    if (!(node instanceof Element)) return;
+    const attributes = [...node.attributes]
+      .filter(({ name }) => name.startsWith('data-') || name.startsWith('aria-') || name === 'role')
+      .map(({ name, value }) =>
+        ID_REFERENCES.has(name) ? `${name}="${value.split(/\s+/u).map(idOf).join(' ')}"` : `${name}="${value}"`
+      )
+      .sort();
+    lines.push(`${indent}<${node.tagName.toLowerCase()}${attributes.map((a) => ` ${a}`).join('')}>`);
+    // An icon is the icon set's drawing, not the sheet's structure.
+    if (node.tagName.toLowerCase() === 'svg') return;
+    for (const child of node.childNodes) walk(child, depth + 1);
+  };
+  walk(sheet, 0);
+  return lines.join('\n');
 }
 
 describe('CpPropertiesPanel markup', () => {
@@ -76,7 +117,13 @@ describe('CpPropertiesPanel markup', () => {
       oristudioCpInlineSimulations: [WINDOW],
       ...selection,
     });
-    act(() => root?.render(<CpPropertiesPanel />));
-    expect(sheetMarkup()).toMatchSnapshot();
+    act(() =>
+      root?.render(
+        <TooltipProvider>
+          <CpPropertiesPanel />
+        </TooltipProvider>
+      )
+    );
+    expect(sheetStructure()).toMatchSnapshot();
   });
 });
