@@ -40,6 +40,15 @@ export interface WorkerFailure {
   /** `error` is a dead worker; `messageerror` is a message it could not deserialize. */
   kind: 'error' | 'messageerror';
   message: string;
+  /**
+   * The worker never ran: its `error` is a plain event, not an `ErrorEvent`.
+   * The HTML spec fires one at a worker whose script, or a module it imports,
+   * could not be fetched or parsed (offline, a deploy that removed it), and an
+   * `ErrorEvent` for an exception thrown while it runs. Always said by
+   * {@link attachWorkerDiagnostics}; a failure an owner makes up itself (a
+   * build that failed inside a live worker) leaves it out.
+   */
+  loadFailed?: boolean;
 }
 
 /** Stable error code for a worker failure, e.g. `worker_oristudio_cp`. */
@@ -79,7 +88,12 @@ export function attachWorkerDiagnostics(
   observe?: (failure: WorkerFailure) => void
 ): () => void {
   const report = (kind: WorkerFailure['kind']) => (event: Event) => {
-    const failure: WorkerFailure = { worker: name, kind, message: describeWorkerEvent(event) };
+    const failure: WorkerFailure = {
+      worker: name,
+      kind,
+      message: describeWorkerEvent(event),
+      loadFailed: kind === 'error' && !(event instanceof ErrorEvent),
+    };
     console.error(`[ori-studio] worker "${name}" ${kind}`, event);
     try {
       observe?.(failure);

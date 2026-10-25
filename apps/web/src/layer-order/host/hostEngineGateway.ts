@@ -15,8 +15,9 @@
  * the runtime once between them.
  *
  * **Every call answers** a {@link LayerOrderResolution}, never a rejection: a
- * load that fails (offline, a stale deploy) is a `lost` engine, reported once,
- * and forgotten, so the next ask loads again.
+ * load that fails is a `lost` engine, forgotten, so the next ask loads again.
+ * The browser failing to fetch it (offline, a stale deploy) is reported to no
+ * one (`engine/layerOrderLoadFailure.ts`); any other failure once.
  *
  * **Stop.** A host runs a resolve inside the fold run it already shows
  * (`withFoldInFlight`'s or `runStepFold`'s work gets the run's stop signal)
@@ -24,6 +25,7 @@
  * worker too, and the resolve answers `cancelled`.
  */
 import type { LayerOrderLimits } from '../engine/layerOrderEngine';
+import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import { lazyModule } from '../../lib/lazyModule';
@@ -85,10 +87,11 @@ export function openLayerOrderResolveBatch(options: LayerOrderResolveBatchOption
       try {
         opened = await open();
       } catch (error) {
-        // Forgotten, so the next resolve loads again; one report per resolve that found no engine.
+        // Forgotten, so the next resolve loads again. A load the browser failed (offline) is
+        // reported to no one (`engine/layerOrderLoadFailure.ts`); anything else once per resolve.
         opening = null;
         if (stopped()) return LAYER_ORDER_CANCELLED;
-        reportError(error, { surface: 'layer-order:host', tags: { cause: 'unavailable' } });
+        if (!isLayerOrderLoadFailure(error)) reportError(error, { surface: 'layer-order:host', tags: { cause: 'unavailable' } });
         return lostLayerOrder('unavailable', record);
       }
       if (!opened) return LAYER_ORDER_CANCELLED;

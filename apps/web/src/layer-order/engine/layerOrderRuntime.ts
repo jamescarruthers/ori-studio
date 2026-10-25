@@ -28,12 +28,18 @@
  *   event) or an engine that trapped (`layer_order_engine_trapped`) drops the
  *   worker: every call on it rejects as {@link LayerOrderEngineLost} with
  *   `reason: 'crashed'`, and the crash is reported to Sentry once, under
- *   `layer-order:engine`.
+ *   `layer-order:engine`. A worker that never ran (its script or an import
+ *   did not load: offline, say) is dropped the same way as `unloaded`, and
+ *   reported to no one: that is the browser failing to load it, not the
+ *   engine failing (`layerOrderLoadFailure.ts`).
  * - **Previews are latest-wins** ({@link LayerOrderRuntime.channel},
  *   `lib/latestWinsChannel.ts`): a preview already in the worker can't be
  *   dropped, only superseded when it returns.
- * - **The count runs between calls** (the dialog's, {@link
- *   LayerOrderRuntimeOptions.count}). The session's one solutions cursor
+ * - **The count runs between calls** once its owner turns it on
+ *   ({@link LayerOrderRuntime.setCounting}; never by default). The dialog
+ *   follows its model's decision, which may change with every commit
+ *   (`layerOrderCountStarts`, D7), and nothing is counted while it is off.
+ *   The session's one solutions cursor
  *   lives in the same worker, so the count, the stepper and its "3 of 12"
  *   read one cursor and the wasm is loaded once. After each answer the
  *   runtime asks for one slice ({@link LayerOrderEngine.countSlice}), and
@@ -55,6 +61,8 @@ import type { WasmErrorEnvelope } from '../../engine/types';
 import { createLatestWinsChannel, type LatestWinsChannel } from '../../lib/latestWinsChannel';
 import { attachWorkerDiagnostics } from '../../lib/workerDiagnostics';
 import { reportError } from '../../monitoring';
+import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
+import { isLayerOrderLoadFailure } from './layerOrderLoadFailure';
 import {
   LAYER_ORDER_CALL_FAILURES,
   isLayerOrderEngineTrapped,
@@ -78,10 +86,11 @@ export type LayerOrderEngineRole = 'dialog' | 'host';
 export type LayerOrderClient = LayerOrderEngine;
 
 /**
- * Why a worker went away: it crashed (a trap or its `error` event), its owner
- * cancelled the work in it, or its owner closed the runtime.
+ * Why a worker went away: it crashed (a trap or its `error` event), it never
+ * ran (`unloaded`: its script or an import did not load), its owner cancelled
+ * the work in it, or its owner closed the runtime.
  */
-export type LayerOrderLossReason = 'crashed' | 'cancelled' | 'closed';
+export type LayerOrderLossReason = 'crashed' | 'unloaded' | 'cancelled' | 'closed';
 
 export const LAYER_ORDER_ENGINE_LOST = 'layer_order_engine_lost';
 
@@ -89,6 +98,8 @@ export const LAYER_ORDER_ENGINE_LOST = 'layer_order_engine_lost';
 export interface LayerOrderEngineLost extends WasmErrorEnvelope {
   readonly code: typeof LAYER_ORDER_ENGINE_LOST;
   readonly reason: LayerOrderLossReason;
+  /** Set for `unloaded`: the browser failed to load the worker (`isLayerOrderLoadFailure`). */
+  readonly loadFailed?: true;
 }
 
 export function isLayerOrderEngineLost(error: unknown): error is LayerOrderEngineLost {
@@ -98,10 +109,11 @@ export function isLayerOrderEngineLost(error: unknown): error is LayerOrderEngin
 function lost(reason: LayerOrderLossReason): LayerOrderEngineLost {
   const message = {
     crashed: 'The layer order engine stopped while it was running.',
+    unloaded: 'The layer order engine did not load.',
     cancelled: 'The layer order engine was stopped while it was running.',
     closed: 'The layer order engine was closed while it was running.',
   }[reason];
-  return { code: LAYER_ORDER_ENGINE_LOST, reason, message };
+  return { code: LAYER_ORDER_ENGINE_LOST, reason, message, ...(reason === 'unloaded' ? { loadFailed: true } : {}) };
 }
 
 /** Why a worker crashed: how its engine trapped, or the worker dying (`error`). */
@@ -172,10 +184,21 @@ export interface LayerOrderRuntime {
   /** Called when a worker goes away, after the calls on it are rejected. */
   onLost(listener: LayerOrderLossListener): () => void;
   /**
+   * Count the session's solutions between calls, or stop. Off when the
+   * runtime is made, and only its owner turns it on: the dialog, once an open
+   * or a commit leaves few enough open pairs (`layerOrderCountStarts`). On,
+   * the count resumes from where the worker's cursor is, a slice at a time;
+   * off, no slice is asked again, one already in the worker is not published,
+   * and the count reads null. An open, a restore, a commit and a close keep
+   * it on or off as it was.
+   */
+  setCounting(on: boolean): void;
+  /** Whether {@link setCounting} has the count on. */
+  counting(): boolean;
+  /**
    * The solution count of the session open, as far as it has gone (`done`
-   * once it is final); null with no session, before its first slice, and
-   * from a restart until the next. Always null without
-   * {@link LayerOrderRuntimeOptions.count}.
+   * once it is final); null with no session, before its first slice, from a
+   * restart until the next, and while counting is off.
    */
   count(): LayerSolutionCount | null;
   /** Called when {@link count} changes. */
@@ -187,9 +210,9 @@ export interface LayerOrderRuntimeOptions {
   /** Starts a worker. The default spawns `workers/layerOrderWorker.ts`; tests pass a fake. */
   readonly spawn?: () => Worker;
   /**
-   * Count the session's solutions between calls, a slice of these limits at
-   * a time (`LAYER_ORDER_COUNT_SLICE`): the dialog's. Left out, nothing is
-   * counted unless asked, as for the hosts' engine.
+   * What one slice of the count may spend, while counting is on
+   * ({@link LayerOrderRuntime.setCounting}): `LAYER_ORDER_COUNT_SLICE` when
+   * left out. Giving it does not turn the count on.
    */
   readonly count?: LayerOrderLimits;
 }
@@ -216,7 +239,9 @@ const NOTHING_TO_COUNT: ReadonlySet<string> = new Set([LAYER_ORDER_CALL_FAILURES
 
 export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): LayerOrderRuntime {
   const spawn = options.spawn ?? spawnLayerOrderWorker;
-  const slice = options.count;
+  const sliceLimits = options.count ?? LAYER_ORDER_COUNT_SLICE;
+  /** A slice's limits while the count is on; null while it is off, which is how every runtime starts. */
+  let slice: LayerOrderLimits | null = null;
   let live: Live | null = null;
   let generation = 0;
   let closed = false;
@@ -259,7 +284,10 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
       client: wrap<LayerOrderEngine>(worker),
       // Guarded on identity, so a late event from a worker already replaced cannot drop its replacement.
       detach: attachWorkerDiagnostics(worker, 'layer-order', (failure) => {
-        if (live === started) drop('crashed', { cause: 'worker_error', message: failure.message });
+        if (live !== started) return;
+        // A worker that never ran is the browser failing to load it: dropped, never reported.
+        if (isLayerOrderLoadFailure(failure)) drop('unloaded');
+        else drop('crashed', { cause: 'worker_error', message: failure.message });
       }),
       waiting: new Set(),
     };
@@ -341,20 +369,21 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
   const pump = () => {
     pumpTimer = null;
     const target = live;
-    if (!slice || !target || !sliceDue()) return;
+    const limits = slice;
+    if (!limits || !target || !sliceDue()) return;
     owed = false;
     slicing = true;
-    send(target, (client) => client.countSlice(slice))
+    send(target, (client) => client.countSlice(limits))
       .then(
         (answered) => {
-          // A worker replaced since is another count: its epochs start again.
-          if (live !== target) return;
+          // A worker replaced since is another count: its epochs start again. Counting off since: not news.
+          if (live !== target || !slice) return;
           publish(answered);
           more = !answered.count.done;
         },
         (error: unknown) => {
           // A loss has already published its null; no session is nothing to count.
-          if (live !== target || isLayerOrderEngineLost(error)) return;
+          if (live !== target || !slice || isLayerOrderEngineLost(error)) return;
           more = false;
           publish(null);
           const code = (error as { code?: unknown } | null)?.code;
@@ -459,6 +488,24 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
       drop('closed');
     },
     running: () => live !== null,
+    setCounting: (on) => {
+      if (on === (slice !== null)) return;
+      if (on) {
+        slice = sliceLimits;
+        broken = false;
+        // Start, or go on from where the worker's cursor is: a slice is due now.
+        owed = true;
+        schedule();
+        return;
+      }
+      slice = null;
+      owed = false;
+      more = false;
+      if (pumpTimer !== null) clearTimeout(pumpTimer);
+      pumpTimer = null;
+      publish(null);
+    },
+    counting: () => slice !== null,
     onLost: (listener) => {
       listeners.add(listener);
       return () => {
