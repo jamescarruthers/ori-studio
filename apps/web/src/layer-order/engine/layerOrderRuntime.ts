@@ -347,13 +347,15 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
     send(target, (client) => client.countSlice(slice))
       .then(
         (answered) => {
+          // A worker replaced since is another count: its epochs start again.
+          if (live !== target) return;
           publish(answered);
           more = !answered.count.done;
         },
         (error: unknown) => {
-          more = false;
           // A loss has already published its null; no session is nothing to count.
-          if (isLayerOrderEngineLost(error)) return;
+          if (live !== target || isLayerOrderEngineLost(error)) return;
+          more = false;
           publish(null);
           const code = (error as { code?: unknown } | null)?.code;
           if (typeof code === 'string' && NOTHING_TO_COUNT.has(code)) return;
