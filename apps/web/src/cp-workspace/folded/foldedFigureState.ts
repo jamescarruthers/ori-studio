@@ -70,6 +70,19 @@ export function foldedFigureCurrentCase(
 }
 
 /**
+ * Whether the figure's fold found a layer order — one to step through, drawn
+ * as layers — or none, so the kernel shows it see-through (as Crane and Heart
+ * fold); null while there is no fold to ask, the first one running or failed.
+ */
+export function foldedFigureHasLayerOrder(
+  figure: OristudioCpFoldedFigureEntry | null | undefined
+): boolean | null {
+  const source = figure?.folded3d ?? figure?.snapshot;
+  if (!source) return null;
+  return source.discovered_fold_cases > 0;
+}
+
+/**
  * How far the search for the figure's layer orders has reached
  * (`lib/layerOrderPlace.ts`): the frontier the entry keeps for its kernel
  * handle, with what the kernel reports now laid over it. A frontier kept for

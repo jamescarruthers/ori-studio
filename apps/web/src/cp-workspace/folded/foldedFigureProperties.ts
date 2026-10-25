@@ -2,10 +2,12 @@ import type { TFunction } from 'i18next';
 import type {
   FoldedFigurePlacement,
   OristudioCpFoldedFigureDisplayStyle,
+  OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureModel,
   OristudioCpFoldedFigureState,
 } from '../../engine/oristudioCpTypes';
 import { FOLDED_FIGURE_SIDES } from '../../lib/foldedFigureSides';
+import { frontierSolutions, layerOrderCount } from '../../lib/layerOrderPlace';
 import type {
   PaperStyle,
   PaperStyleField,
@@ -19,12 +21,21 @@ import type {
   PropertySection,
   PropertySheet,
   PropertySupport,
+  StepperField,
+  StepperVerb,
 } from '../../lib/propertyDescriptors';
 import { clampSimulatorZoom, SIMULATOR_MAX_ZOOM, SIMULATOR_MIN_ZOOM } from '../../lib/simulatorOrbit';
 import { degreesToRadians, radiansToDegrees, wrapDegrees } from '../../lib/angleUnits';
 import type { TargetOf } from '../canvasObjects/canvasObjectKinds';
 import { DEFAULT_FOLDED_3D_CAMERA, type FoldedFigureCamera } from './folded3dCamera';
-import { foldedDisplayStyleChoiceLabel, isFoldedFigureReady } from './foldedFigureActions';
+import {
+  anotherSolutionCommand,
+  foldedDisplayStyleChoiceLabel,
+  foldedFigureHeaderCommands,
+  isFoldedFigureReady,
+  previousSolutionCommand,
+  type FoldedFigureCommand,
+} from './foldedFigureActions';
 import {
   foldedAppearanceSupport,
   foldedAppearanceVisible,
@@ -33,7 +44,12 @@ import {
 import { foldedFigureCapabilities, isFolded3dFigure } from './foldedFigureCapabilities';
 import { foldedColorLabel, foldedStateLabel } from './foldedFigureControlOptions';
 import { foldedFigureSubtitle } from './foldedFigureNotice';
-import { foldedFigureModel } from './foldedFigureState';
+import {
+  foldedFigureCurrentCase,
+  foldedFigureFrontier,
+  foldedFigureHasLayerOrder,
+  foldedFigureModel,
+} from './foldedFigureState';
 import type { PaperStyleOverrideEdit } from '../paper/objectPaperStyle';
 import { auxAndErodeFields, edgeInkEdits, foldPenFields } from '../paper/paperStyleFields';
 
@@ -66,13 +82,33 @@ export interface FoldedFigurePropertyDeps {
   liveCamera: LiveValue<FoldedFigureCamera>;
   /** A typed placement edit as one entry, under the canvas gesture's own label. */
   setPlacement(patch: Partial<FoldedFigurePlacement>, label: string): void;
+  /** On to the next layer order, as the toolbar's Another solution (`foldedFigureVerbs.ts`). */
+  foldAnother(figure: OristudioCpFoldedFigureEntry): void;
+  /** Back one layer order, by fold case. */
+  foldPrevious(figure: OristudioCpFoldedFigureEntry): void;
+  /** The header's verbs, as the toolbar binds them. */
+  exportFigure(figure: OristudioCpFoldedFigureEntry): void;
+  duplicate(figure: OristudioCpFoldedFigureEntry): void;
+  remove(figure: OristudioCpFoldedFigureEntry): void;
 }
 
 /**
- * The properties of a folded figure: appearance (what the kernel or the
- * canvas draws), camera (a 3D figure's eye), placement (where it sits on
- * the paper). The title is the figure's own and the subtitle its stale / case
- * note — context, not a field.
+ * The properties of a folded figure, laid out as the Diagram's Step pane
+ * (the approved Properties board, A4): the figure's verbs in the header
+ * (Export…, Duplicate, Delete — the toolbar's last group, from the catalog),
+ * Render as over a control across the pane, then Pose (a flat figure's
+ * Rotation, its Side, and its Layer order: ‹ where it stands ›), Camera on a
+ * 3D figure, Appearance (what the kernel or the canvas draws) and Placement
+ * (where it sits on the paper; a 3D figure's Rotation stays here, since its
+ * pose is its camera). The title is the figure's own and the subtitle a state
+ * — stale, folding, failed, a 3D verdict — context, not a field; which layer
+ * order it shows is the Layer order row's.
+ *
+ * The Layer order row's › is the toolbar's Another solution and its ‹ the
+ * catalog's Previous solution (`previousSolutionCommand`); between them,
+ * where it stands as the Diagram reads it (`layerOrderCount`), from the
+ * search's frontier the figure keeps. A figure whose fold found no layer
+ * order has none to step through, and says so under the row's label.
  *
  * The colours and, on a 3D figure, the light are the figure's *paper style*:
  * the surface policy's fields (`PAPER_STYLE_POLICIES`) with their effective
@@ -92,8 +128,8 @@ export interface FoldedFigurePropertyDeps {
  * Never wired: `model.scale` / `model.rotation` (Oriedita's own display
  * transform; the placement is ours and the canvas handles drive it),
  * `transparent_transparency`, the title, the starting face. Not here because
- * they are verbs: flip / other side, reset view as a whole, set upright,
- * another solution, refold, export, duplicate, delete.
+ * they are verbs the toolbar keeps: flip / other side, reset view as a whole,
+ * set upright, refold.
  */
 export function buildFoldedFigureProperties(
   target: TargetOf<'folded-figure'>,
@@ -167,43 +203,48 @@ export function buildFoldedFigureProperties(
     ...resetOf(field),
   });
 
+  const styleChoices = foldedFigureCapabilities(figure).styleChoices;
+  const renderAs: PropertyField = {
+    id: 'displayStyle',
+    kind: 'segmented',
+    // Over a control across the pane, as the Step pane's Show as: the three
+    // choices are too wide to sit beside their label in a narrow pane.
+    layout: 'stacked',
+    label: t('panels:foldedFigureActions.renderAs', 'Render as'),
+    ...appearance('displayStyle'),
+    undoLabel: t('panels:creasePattern.changeFoldedDisplayStyle', 'Change folded display style'),
+    // The kind's own choices, as the Style menu offers them; a legacy style
+    // a file carries shows nothing chosen, and picking any is the way out.
+    options: styleChoices.map((choice) => ({
+      id: choice,
+      label: foldedDisplayStyleChoiceLabel(t, choice),
+    })),
+    protocol: 'discrete',
+    value: figure.displayStyle,
+    commit: (next) => {
+      if (next !== null) deps.setDisplayStyle(next as OristudioCpFoldedFigureDisplayStyle);
+    },
+  };
+  const side: PropertyField = {
+    id: 'side',
+    kind: 'segmented',
+    label: t('panels:foldedFigureActions.side', 'Side'),
+    ...appearance('side'),
+    undoLabel: changeModel,
+    options: FOLDED_FIGURE_SIDES.map((value) => ({ id: value, label: foldedStateLabel(t, value) })),
+    protocol: 'discrete',
+    // The kernel's full state, not just the two offered sides: a figure
+    // loaded from Oriedita in an overlay state marks neither side current.
+    value:
+      model && (FOLDED_FIGURE_SIDES as readonly string[]).includes(model.state)
+        ? model.state
+        : null,
+    commit: (next) => {
+      if (next !== null) deps.commitModel({ state: next as OristudioCpFoldedFigureState });
+    },
+  };
+
   const appearanceFields: PropertyField[] = [
-    {
-      id: 'displayStyle',
-      kind: 'select',
-      label: t('panels:foldedFigureActions.renderAs', 'Render as'),
-      ...appearance('displayStyle'),
-      undoLabel: t('panels:creasePattern.changeFoldedDisplayStyle', 'Change folded display style'),
-      // The kind's own choices, as the Style menu offers them; a legacy style
-      // a file carries shows nothing chosen, and picking any is the way out.
-      options: foldedFigureCapabilities(figure).styleChoices.map((style) => ({
-        id: style,
-        label: foldedDisplayStyleChoiceLabel(t, style),
-      })),
-      protocol: 'discrete',
-      value: figure.displayStyle,
-      commit: (next) => {
-        if (next !== null) deps.setDisplayStyle(next as OristudioCpFoldedFigureDisplayStyle);
-      },
-    },
-    {
-      id: 'side',
-      kind: 'segmented',
-      label: t('panels:foldedFigureActions.side', 'Side'),
-      ...appearance('side'),
-      undoLabel: changeModel,
-      options: FOLDED_FIGURE_SIDES.map((side) => ({ id: side, label: foldedStateLabel(t, side) })),
-      protocol: 'discrete',
-      // The kernel's full state, not just the two offered sides: a figure
-      // loaded from Oriedita in an overlay state marks neither side current.
-      value:
-        model && (FOLDED_FIGURE_SIDES as readonly string[]).includes(model.state)
-          ? model.state
-          : null,
-      commit: (next) => {
-        if (next !== null) deps.commitModel({ state: next as OristudioCpFoldedFigureState });
-      },
-    },
     styleColor('frontColor', 'front_color', 'paper.front', style.paper.front, (hex) =>
       deps.writeOverride('paper.front', hex)
     ),
@@ -263,11 +304,35 @@ export function buildFoldedFigureProperties(
     ...auxAndErodeFields({ ...deps, support: styleSupport }),
   ];
 
+  const rotation: PropertyField = {
+    id: 'rotation',
+    kind: 'number',
+    label: t('panels:cpProperties.folded.rotation', 'Rotation'),
+    support: 'supported',
+    undoLabel: t('panels:creasePattern.rotateFoldedForm', 'Rotate folded form'),
+    step: 1,
+    suffix: '°',
+    normalize: wrapDegrees,
+    protocol: 'draft',
+    value: radiansToDegrees(figure.placement.rotation),
+    commit: (degrees) =>
+      deps.setPlacement(
+        { rotation: degreesToRadians(degrees) },
+        t('panels:creasePattern.rotateFoldedForm', 'Rotate folded form')
+      ),
+  };
+
   const sections: PropertySection[] = [
+    // Untitled, so the sheet's plain body: Render as heads the pane, over
+    // everything it changes, as Show as heads the Step pane.
+    { id: 'render', fields: [renderAs] },
     {
-      id: 'appearance',
-      title: t('panels:cpProperties.folded.appearance', 'Appearance'),
-      fields: appearanceFields,
+      id: 'pose',
+      title: t('panels:cpProperties.folded.pose', 'Pose'),
+      spaced: true,
+      // A flat figure's turn is its pose; a 3D figure's pose is its camera,
+      // and its turn on the page stays with where it sits (Placement).
+      fields: spatial ? [side, layerOrderField(figure, deps)] : [rotation, side, layerOrderField(figure, deps)],
     },
   ];
 
@@ -321,46 +386,37 @@ export function buildFoldedFigureProperties(
     });
   }
 
-  sections.push({
-    id: 'placement',
-    title: t('panels:cpProperties.folded.placement', 'Placement'),
-    fields: [
-      {
-        id: 'scale',
-        kind: 'number',
-        label: t('panels:cpProperties.folded.scale', 'Scale'),
-        support: 'supported',
-        undoLabel: t('panels:creasePattern.resizeFoldedForm', 'Resize folded form'),
-        min: 0.05,
-        step: 0.05,
-        normalize: (scale) => Math.max(0.05, scale),
-        protocol: 'draft',
-        value: figure.placement.scale,
-        commit: (scale) =>
-          deps.setPlacement(
-            { scale: Math.max(0.05, scale) },
-            t('panels:creasePattern.resizeFoldedForm', 'Resize folded form')
-          ),
-      },
-      {
-        id: 'rotation',
-        kind: 'number',
-        label: t('panels:cpProperties.folded.rotation', 'Rotation'),
-        support: 'supported',
-        undoLabel: t('panels:creasePattern.rotateFoldedForm', 'Rotate folded form'),
-        step: 1,
-        suffix: '°',
-        normalize: wrapDegrees,
-        protocol: 'draft',
-        value: radiansToDegrees(figure.placement.rotation),
-        commit: (degrees) =>
-          deps.setPlacement(
-            { rotation: degreesToRadians(degrees) },
-            t('panels:creasePattern.rotateFoldedForm', 'Rotate folded form')
-          ),
-      },
-    ],
-  });
+  sections.push(
+    {
+      id: 'appearance',
+      title: t('panels:cpProperties.folded.appearance', 'Appearance'),
+      fields: appearanceFields,
+    },
+    {
+      id: 'placement',
+      title: t('panels:cpProperties.folded.placement', 'Placement'),
+      fields: [
+        {
+          id: 'scale',
+          kind: 'number',
+          label: t('panels:cpProperties.folded.scale', 'Scale'),
+          support: 'supported',
+          undoLabel: t('panels:creasePattern.resizeFoldedForm', 'Resize folded form'),
+          min: 0.05,
+          step: 0.05,
+          normalize: (scale) => Math.max(0.05, scale),
+          protocol: 'draft',
+          value: figure.placement.scale,
+          commit: (scale) =>
+            deps.setPlacement(
+              { scale: Math.max(0.05, scale) },
+              t('panels:creasePattern.resizeFoldedForm', 'Resize folded form')
+            ),
+        },
+        ...(spatial ? [rotation] : []),
+      ],
+    }
+  );
 
   return {
     kind: 'folded-figure',
@@ -368,6 +424,73 @@ export function buildFoldedFigureProperties(
     title: figure.title,
     subtitle: foldedFigureSubtitle(t, figure, deps.stale),
     icon: 'folded-figure',
+    // The toolbar's last group, from the same catalog: what is done to the
+    // figure as a whole, at the header's end as the Step pane has its step's.
+    actions: foldedFigureHeaderCommands(figure, deps).map((command) => ({
+      id: command.id,
+      label: command.label,
+      icon: command.icon,
+      disabled: command.disabled,
+      ...(command.hint ? { hint: command.hint } : {}),
+      run: command.run,
+    })),
     sections,
+  };
+}
+
+/**
+ * The Layer order row: ‹ where it stands ›. The verbs are the catalog's —
+ * Another solution, as the toolbar has it, and Previous solution — and the
+ * readout the Diagram's, from the search's frontier the figure keeps, so a
+ * step back never shrinks what it says was found. A figure whose fold found
+ * no layer order has nothing to step through: the row says why, under its
+ * label. Before the figure is ready, the row waits as the appearance does.
+ */
+function layerOrderField(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: FoldedFigurePropertyDeps
+): StepperField {
+  const { t } = deps;
+  const previous = previousSolutionCommand(figure, deps);
+  const next = anotherSolutionCommand(figure, deps);
+  // Unknown while the first fold runs or after it failed: nothing to read out.
+  const found = foldedFigureHasLayerOrder(figure);
+  const none = found === false;
+  const verb = (command: FoldedFigureCommand): StepperVerb => ({
+    label: command.label,
+    disabled: command.disabled,
+    ...(command.hint ? { hint: command.hint } : {}),
+    run: command.run,
+  });
+  const undetermined = t(
+    'panels:cpProperties.folded.layerOrderUndetermined',
+    'Layer order couldn’t be determined for this figure.'
+  );
+  const support: Pick<StepperField, 'support' | 'reason' | 'note'> = !isFoldedFigureReady(figure)
+    ? {
+        support: 'unsupported',
+        reason: t('panels:cpProperties.folded.refoldToChange', 'Refold to change how this figure looks'),
+      }
+    : none
+      ? { support: 'unsupported', reason: undetermined, note: undetermined }
+      : { support: 'supported' };
+  return {
+    id: 'layerOrder',
+    kind: 'stepper',
+    label: t('panels:cpProperties.folded.layerOrder', 'Layer order'),
+    ...support,
+    protocol: 'stepped',
+    value:
+      found === null
+        ? ''
+        : layerOrderCount(
+            foldedFigureCurrentCase(figure),
+            none
+              ? { discovered: 0, hasNext: false, none: true }
+              : frontierSolutions(foldedFigureFrontier(figure)),
+            t
+          ),
+    previous: verb(previous),
+    next: verb(next),
   };
 }

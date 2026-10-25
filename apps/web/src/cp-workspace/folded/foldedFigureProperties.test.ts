@@ -3,15 +3,15 @@ import type { TFunction } from 'i18next';
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 import { DEFAULT_PAPER_STYLE, applyCreaseStyle } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
-import type { PropertyField, PropertySheet } from '../../lib/propertyDescriptors';
+import type { PropertyField, PropertySheet, StepperField } from '../../lib/propertyDescriptors';
 import { FIGURE } from '../canvasObjects/canvasObjectKinds.fixtures';
 import { DEFAULT_FOLDED_3D_CAMERA, type FoldedFigureCamera } from './folded3dCamera';
 import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './foldedFigureProperties';
 
-// Identity `t`, with the one interpolation the subtitle uses.
-const t = ((_key: string, fallback: string | { count?: number }, options?: { count?: number }) =>
+// Identity `t`, with its interpolations: the readout's number and total.
+const t = ((_key: string, fallback: string | object, options?: Record<string, unknown>) =>
   typeof fallback === 'string'
-    ? fallback.replace('{{count}}', String(options?.count ?? ''))
+    ? fallback.replace(/\{\{(\w+)\}\}/gu, (_match, name: string) => String(options?.[name] ?? ''))
     : '') as unknown as TFunction;
 
 const MODEL = {
@@ -73,8 +73,19 @@ function deps(
     setCamera: vi.fn(),
     liveCamera: { read: () => camera, subscribe: () => () => {} },
     setPlacement: vi.fn(),
+    foldAnother: vi.fn(),
+    foldPrevious: vi.fn(),
+    exportFigure: vi.fn(),
+    duplicate: vi.fn(),
+    remove: vi.fn(),
     ...overrides,
   };
+}
+
+function stepper(sheet: PropertySheet): StepperField {
+  const found = field(sheet, 'layerOrder');
+  if (found.kind !== 'stepper') throw new Error('stepper');
+  return found;
 }
 
 function sheetFor(figure: OristudioCpFoldedFigureEntry, d = deps()): PropertySheet {
@@ -91,23 +102,31 @@ const visibleIds = (sheet: PropertySheet) =>
   sheet.sections.flatMap((s) => s.fields.filter((f) => f.support !== 'not-applicable').map((f) => f.id));
 
 describe('buildFoldedFigureProperties', () => {
-  it('titles the sheet with the figure and its case note, or Stale', () => {
-    expect(sheetFor(FLAT)).toMatchObject({
+  it('titles the sheet with the figure, and a state under it only when it has one', () => {
+    const sheet = sheetFor(FLAT);
+    expect(sheet).toMatchObject({
       kind: 'folded-figure',
       targetId: FLAT.id,
       title: 'Folded model 1',
-      subtitle: 'Case 2',
       icon: 'folded-figure',
     });
+    // Which solution it shows is the Layer order row's to say (D11).
+    expect(sheet.subtitle).toBeUndefined();
     expect(sheetFor(FLAT, deps({ stale: true })).subtitle).toBe('Stale');
   });
 
-  it('offers a flat figure appearance and placement, and no camera', () => {
+  it('lays a flat figure out as the Step pane: Render as, Pose, Appearance, Placement', () => {
     const sheet = sheetFor(FLAT);
-    expect(sheet.sections.map((s) => s.id)).toEqual(['appearance', 'placement']);
+    expect(sheet.sections.map((s) => s.id)).toEqual(['render', 'pose', 'appearance', 'placement']);
+    // Render as heads the pane untitled, over a control across it.
+    expect(sheet.sections[0]?.title).toBeUndefined();
+    expect(field(sheet, 'displayStyle')).toMatchObject({ kind: 'segmented', layout: 'stacked' });
+    expect(sheet.sections[1]).toMatchObject({ title: 'Pose', spaced: true });
     expect(visibleIds(sheet)).toEqual([
       'displayStyle',
+      'rotation',
       'side',
+      'layerOrder',
       'frontColor',
       'backColor',
       'lineColor',
@@ -117,11 +136,86 @@ describe('buildFoldedFigureProperties', () => {
       'auxWidth',
       'erode',
       'scale',
-      'rotation',
     ]);
     for (const f of sheet.sections.flatMap((s) => s.fields)) {
       expect(f.support, f.id).toBe('supported');
     }
+  });
+
+  it('puts the toolbar’s Export…, Duplicate and Delete in the header, calling what the toolbar calls', () => {
+    const d = deps();
+    const sheet = sheetFor(FLAT, d);
+    expect(sheet.actions?.map(({ id, label, icon, disabled }) => ({ id, label, icon, disabled }))).toEqual([
+      { id: 'export', label: 'Export…', icon: 'export', disabled: true },
+      { id: 'duplicate', label: 'Duplicate', icon: 'duplicate', disabled: false },
+      { id: 'delete', label: 'Delete', icon: 'delete', disabled: false },
+    ]);
+    for (const action of sheet.actions ?? []) action.run();
+    expect(d.exportFigure).toHaveBeenCalledWith(FLAT);
+    expect(d.duplicate).toHaveBeenCalledWith(FLAT);
+    expect(d.remove).toHaveBeenCalledWith(FLAT);
+  });
+
+  it('steps a flat figure through its layer orders with ‹ and ›, read out as the Diagram reads them', () => {
+    const d = deps();
+    const layerOrder = stepper(sheetFor(FLAT, d));
+    expect(layerOrder).toMatchObject({ label: 'Layer order', support: 'supported', value: '2 of 3+' });
+    expect(layerOrder.note).toBeUndefined();
+    expect(layerOrder.previous).toMatchObject({ label: 'Previous solution', disabled: false });
+    expect(layerOrder.next).toMatchObject({ label: 'Another solution', disabled: false });
+    layerOrder.previous.run();
+    expect(d.foldPrevious).toHaveBeenCalledWith(FLAT);
+    layerOrder.next.run();
+    expect(d.foldAnother).toHaveBeenCalledWith(FLAT);
+
+    // The first can go no further back, and says so.
+    const first = { ...FLAT, snapshot: { ...FLAT.snapshot!, current_fold_case: 1 } };
+    expect(stepper(sheetFor(first)).previous).toMatchObject({
+      disabled: true,
+      hint: 'This is its first solution',
+    });
+  });
+
+  it('keeps what the search found past a step back, for the handle it found it on', () => {
+    // Back on the first after a restart, which forgot the five found before.
+    const restarted = {
+      ...FLAT,
+      snapshot: {
+        ...FLAT.snapshot!,
+        discovered_fold_cases: 1,
+        current_fold_case: 1,
+        find_another_overlap_valid: true,
+      },
+    };
+    expect(stepper(sheetFor({ ...restarted, solutionFrontier: { handle: 3, cases: 5, complete: true } })).value).toBe(
+      '1 of 5'
+    );
+    // Refolded since, on another handle: what was found then says nothing now.
+    expect(stepper(sheetFor({ ...restarted, solutionFrontier: { handle: 9, cases: 5, complete: true } })).value).toBe(
+      '1 of 1+'
+    );
+  });
+
+  it('says why a figure whose fold found no layer order has none to step through', () => {
+    const none = {
+      ...FLAT,
+      displayStyle: 'Transparent3',
+      snapshot: {
+        ...FLAT.snapshot!,
+        discovered_fold_cases: 0,
+        current_fold_case: 0,
+        find_another_overlap_valid: false,
+      },
+    } as OristudioCpFoldedFigureEntry;
+    const sheet = sheetFor(none);
+    expect(stepper(sheet)).toMatchObject({
+      support: 'unsupported',
+      reason: 'Layer order couldn’t be determined for this figure.',
+      note: 'Layer order couldn’t be determined for this figure.',
+      value: 'None',
+    });
+    // Drawn see-through, and Render as says so.
+    expect(field(sheet, 'displayStyle').value).toBe('Transparent3');
   });
 
   it('pins every style field its surface policy applies, on both kinds', () => {
@@ -151,7 +245,10 @@ describe('buildFoldedFigureProperties', () => {
 
   it('disables side with its reason on a 3D figure, offers its light, and adds the camera', () => {
     const sheet = sheetFor(SPATIAL);
-    expect(sheet.sections.map((s) => s.id)).toEqual(['appearance', 'camera', 'placement']);
+    expect(sheet.sections.map((s) => s.id)).toEqual(['render', 'pose', 'camera', 'appearance', 'placement']);
+    // Its pose is its camera: its turn on the page stays with where it sits.
+    expect(sheet.sections.find((s) => s.id === 'pose')?.fields.map((f) => f.id)).toEqual(['side', 'layerOrder']);
+    expect(sheet.sections.find((s) => s.id === 'placement')?.fields.map((f) => f.id)).toEqual(['scale', 'rotation']);
     // Shown disabled, with the Style menu's own hint: a control that vanished
     // between figure kinds would read as a bug.
     expect(field(sheet, 'side')).toMatchObject({
@@ -175,16 +272,42 @@ describe('buildFoldedFigureProperties', () => {
     expect(visibleIds(sheetFor(FLAT))).not.toContain('lighting');
   });
 
+  it('steps an unconstrained 3D figure on as its toolbar does, and holds ‹, which has nowhere to go in 3D', () => {
+    const d = deps();
+    const several = {
+      ...SPATIAL,
+      folded3d: { ...SPATIAL.folded3d!, find_another_overlap_valid: true, discovered_fold_cases: 2, current_fold_case: 2 },
+    } as OristudioCpFoldedFigureEntry;
+    const layerOrder = stepper(sheetFor(several, d));
+    expect(layerOrder).toMatchObject({ support: 'supported', value: '2 of 2+' });
+    expect(layerOrder.previous).toMatchObject({
+      disabled: true,
+      hint: 'Stepping back works on flat figures',
+    });
+    expect(layerOrder.next.disabled).toBe(false);
+    layerOrder.next.run();
+    expect(d.foldAnother).toHaveBeenCalledWith(several);
+    // One solution: the toolbar's Another solution is held too, and says why here.
+    expect(stepper(sheetFor(SPATIAL)).next).toMatchObject({
+      disabled: true,
+      hint: 'This figure has one solution',
+    });
+  });
+
   it('disables every appearance field with the Refold reason on a figure that is not ready', () => {
     const sheet = sheetFor(FIGURE);
-    const appearance = sheet.sections.find((s) => s.id === 'appearance');
-    for (const f of appearance?.fields ?? []) {
-      if (f.support === 'not-applicable') continue;
+    const held = sheet.sections.filter((s) => ['render', 'pose', 'appearance'].includes(s.id));
+    for (const f of held.flatMap((s) => s.fields)) {
+      // A flat figure's turn is where it sits on the page, and stays editable.
+      if (f.support === 'not-applicable' || f.id === 'rotation') continue;
       expect(f.support, f.id).toBe('unsupported');
       expect(f.reason, f.id).toBe('Refold to change how this figure looks');
     }
     // Placement is where the figure sits, and moving a reopened figure is fine.
     expect(field(sheet, 'scale').support).toBe('supported');
+    expect(field(sheet, 'rotation').support).toBe('supported');
+    // Still folding: nothing to read out yet.
+    expect(stepper(sheet).value).toBe('');
     expect(sheet.subtitle).toBe('Folding…');
   });
 
@@ -192,7 +315,7 @@ describe('buildFoldedFigureProperties', () => {
     const d = deps();
     const sheet = sheetFor(FLAT, d);
     const style = field(sheet, 'displayStyle');
-    if (style.kind !== 'select') throw new Error('select');
+    if (style.kind !== 'segmented') throw new Error('segmented');
     // The kind's choices in the Style menu's order and words.
     expect(style.options.map((o) => o.label)).toEqual(['Paper', 'Wireframe', 'X-ray']);
     style.commit('Wire2');
@@ -209,7 +332,42 @@ describe('buildFoldedFigureProperties', () => {
     if (shadows.kind !== 'toggle') throw new Error('toggle');
     shadows.commit(true);
     expect(d.commitModel).toHaveBeenCalledWith({ display_shadows: true });
+  });
 
+  it('moves no control off what it called: each moved row dispatches as it did, under the same label', () => {
+    // What each did before the pane took the Step pane's layout, from the
+    // catalog as it stood (Render as a select in Appearance, Side in
+    // Appearance, Rotation in Placement): the same field id, the same undo
+    // label, the same call with the same arguments.
+    const BEFORE: Record<string, { undoLabel: string; drive: (f: PropertyField) => void; call: [string, unknown[]] }> = {
+      displayStyle: {
+        undoLabel: 'Change folded display style',
+        drive: (f) => f.kind === 'segmented' && f.commit('Transparent3'),
+        call: ['setDisplayStyle', ['Transparent3']],
+      },
+      side: {
+        undoLabel: 'Change folded model',
+        drive: (f) => f.kind === 'segmented' && f.commit('Back1'),
+        call: ['commitModel', [{ state: 'Back1' }]],
+      },
+      rotation: {
+        undoLabel: 'Rotate folded form',
+        drive: (f) => f.kind === 'number' && f.commit(180),
+        call: ['setPlacement', [{ rotation: Math.PI }, 'Rotate folded form']],
+      },
+    };
+    for (const figure of [FLAT, SPATIAL]) {
+      for (const [id, expected] of Object.entries(BEFORE)) {
+        const d = deps();
+        const found = field(sheetFor(figure, d), id);
+        expect(found.undoLabel, id).toBe(expected.undoLabel);
+        expected.drive(found);
+        const [name, args] = expected.call;
+        // Side is held on a 3D figure (its reason above); the call is the flat figure's.
+        if (id === 'side' && figure === SPATIAL) continue;
+        expect(d[name as keyof FoldedFigurePropertyDeps], `${figure.id} ${id}`).toHaveBeenCalledWith(...args);
+      }
+    }
   });
 
   it('marks neither side current for a figure in an overlay state', () => {

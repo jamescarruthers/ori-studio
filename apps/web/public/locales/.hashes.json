@@ -2321,8 +2321,6 @@
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_one": "0483ec7f8c0f",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_one": "9f949dde1cbf",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -6367,7 +6365,15 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8691,8 +8697,6 @@
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_one": "0483ec7f8c0f",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_one": "9f949dde1cbf",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -12737,7 +12741,15 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15061,8 +15073,6 @@
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_one": "0483ec7f8c0f",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_one": "9f949dde1cbf",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -19109,7 +19119,15 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -21403,7 +21421,6 @@
     "panels:creasePattern.bringTextToFront": "313606ad8065",
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -25134,7 +25151,15 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -27428,7 +27453,6 @@
     "panels:creasePattern.bringTextToFront": "313606ad8065",
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -31159,7 +31183,15 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -33483,8 +33515,6 @@
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_one": "0483ec7f8c0f",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_one": "9f949dde1cbf",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -37529,7 +37559,15 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -39853,8 +39891,6 @@
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_one": "0483ec7f8c0f",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_one": "9f949dde1cbf",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -43899,7 +43935,15 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -46193,7 +46237,6 @@
     "panels:creasePattern.bringTextToFront": "313606ad8065",
     "panels:creasePattern.buildingCreasePattern": "458de595c419",
     "panels:creasePattern.canvasDiagnostics_other": "0483ec7f8c0f",
-    "panels:creasePattern.case_other": "9f949dde1cbf",
     "panels:creasePattern.changeFoldedColor": "07b13b860c68",
     "panels:creasePattern.changeFoldedDisplayStyle": "eb424b07e2ec",
     "panels:creasePattern.changeFoldedModel": "a73dc0c3482b",
@@ -49924,6 +49967,14 @@
     "tools:fold.tool.repeatAxisHelp": "18c1d5d3ec17",
     "panels:references.warning.nonFiniteSegments": "d6300696e654",
     "tools:fold.fix.reverseCrossedFlaps": "084d27d6b49b",
-    "tools:diagram.uncreasedLine": "ec84cf0f5a33"
+    "tools:diagram.uncreasedLine": "ec84cf0f5a33",
+    "panels:cpProperties.folded.layerOrder": "101de550cf0d",
+    "panels:cpProperties.folded.layerOrderUndetermined": "b417f699c7b7",
+    "panels:cpProperties.folded.pose": "f27f13d02192",
+    "panels:creasePattern.previousSolutionAction": "40e0d32ce267",
+    "panels:foldedFigureActions.firstSolutionShown": "80ae645f31a6",
+    "panels:foldedFigureActions.onlySolution": "5045370def53",
+    "panels:foldedFigureActions.previousSolution": "3c561546c021",
+    "panels:foldedFigureActions.previousSolution3d": "cf13297fb33a"
   }
 }
