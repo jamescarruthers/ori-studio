@@ -184,12 +184,17 @@ fn with_shown(session: &ConstraintSession, pair: FacePair) -> Constraint {
 
 /// A constraint on `pair` the order on screen breaks.
 fn against_shown(session: &ConstraintSession, pair: FacePair) -> Constraint {
+    // The sentence the other way round: a sign is read against its object's
+    // side, so swapping subject and object alone would not reverse it.
     let c = with_shown(session, pair);
-    Constraint {
-        subject: c.object,
-        object: c.subject,
-        ..c
-    }
+    Constraint::seen(
+        c.object,
+        Verb::InFrontOf,
+        c.subject,
+        ViewSide::Front,
+        session.source().view(),
+    )
+    .expect("faces of the view")
 }
 
 // Gate 3: the stepper's order stays put across Add and remove.

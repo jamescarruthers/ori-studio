@@ -512,11 +512,17 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   merge, a moved crease and a clash on kabuto, and a node budget or deadline
   that runs out reported as a timeout; the record codec against the golden
   it shares with the web's (`tests/fixtures/layer-order/record-v1.json`).
+- `tests/steer_solutions.rs` and the unit tests in `src/steer/solutions.rs`:
+  the solution count and the stepper against brute force (every order,
+  grouped by picture) over 300 random problems of several components and
+  the three fixtures, with and without constraints, whole and in slices;
+  the stepper's order across Add and remove; `explain`'s sets minimal
+  against every layer order of the fixture.
 
 ## The Layer order dialog's engine (`steer`, feature `kernel`)
 
 Ori Studio original work (`implementation-plans/layer-order-dialog.md`, E4
-and E5):
+to E6):
 
 - `LayerSource::from_oriedita`: the solver's folded view of exactly the faces
   Edit folded (face *k* is Oriedita face *k*), by Oriedita's edge rule, with
@@ -528,12 +534,19 @@ and E5):
   onto creases that may have changed (decision D10: intact constraints
   applied together or not at all, the saved order kept where it still fits).
   Every limit that runs out is a `TimedOut`, never a "can't fit".
+- `ConstraintSession::explain` (E6): the smallest set of constraints that
+  clash, every member necessary (a deletion filter over the set a check
+  names), with the faces they name.
+- `Solutions` (E6): the distinct pictures from each side and the layer
+  orders, counted in resumable slices by the product rule over independent
+  components ("at least N" past a cap), and `ConstraintSession::step`
+  through them in a fixed order, or through every layer order with X-ray.
 - `read_record` / `encode_record`: the saved record, byte for byte the web
   codec's.
 
-`crates/oracle-tests/tests/layer_order_witness.rs` (census 1) and
-`layer_order_session.rs` run the same calls over the fixtures in CI and over
-a corpus locally.
+`crates/oracle-tests/tests/layer_order_witness.rs` (census 1),
+`layer_order_session.rs` and `layer_order_solutions.rs` run the same calls
+over the fixtures in CI and over a corpus locally.
 
 ## Performance
 

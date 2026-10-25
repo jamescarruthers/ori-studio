@@ -59,8 +59,8 @@ pub use session::{
     Limits, Preview, PreviewFit, SessionRefusal, TimedOut, Verb,
 };
 pub use solutions::{
-    Moved, NO_TOP, Position, SolutionCaps, SolutionCount, Solutions, StepBy, StepDirection,
-    Stepped, Tally,
+    CountShape, Moved, NO_TOP, Position, SolutionCaps, SolutionCount, Solutions, StepBy,
+    StepDirection, Stepped, Tally,
 };
 pub use source::{LayerSource, PaperFrame, SourceRefusal, ToleranceCause};
 pub use stacks::{ChangedSpots, Stacks, ViewSide};

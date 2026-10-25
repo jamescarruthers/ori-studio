@@ -27,6 +27,14 @@
 //! projection; the product of its members' projections is walked; and each
 //! combination's tops are one key, counted once.
 //!
+//! A component's projections come from a search that assigns the pairs a
+//! picture reads first and completes each assignment of them once
+//! (`Enumeration::projected`), never listing the orders that differ only in
+//! hidden layers: on a deep stack those can be nearly all of them (the
+//! iguana's one open component has more orders than a count lists in
+//! minutes, and 13 open spots). The layer orders are counted after every
+//! picture, by listing each component's orders (`Enumeration::varying`).
+//!
 //! When every spot's faces share one of the solver's cells (transitivity
 //! holds on the spot, as on every design census 1 measured), the pairs among
 //! a spot's candidates are all open and tied by transitivity, so they lie
@@ -43,9 +51,11 @@
 //! so a background worker counts in short slices between the session's
 //! other calls, and the result after any slicing equals a one-shot count:
 //! the enumeration is deterministic and resumes exactly, and every cap is a
-//! count, never a time. Components are counted smallest first, and a group
-//! as soon as its members are, so an early "at least N" already multiplies
-//! what is known. A count that stops at a cap
+//! count, never a time. Every component's pictures are counted before any
+//! layer order, smallest component first, and a group as soon as its
+//! members are (a group of one component as its projections are found), so
+//! the pictures are exact as soon as they can be and an early "at least N"
+//! already multiplies what is known. A count that stops at a cap
 //! ([`SolutionCaps`]) reads "at least": every key found is a picture some
 //! fitting order makes, so a lower bound never exceeds the true count.
 //!
@@ -116,13 +126,15 @@ fn side_index(side: ViewSide) -> usize {
 /// so a count is the same however it is sliced.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SolutionCaps {
-    /// Orders listed per component.
+    /// Orders listed per component, by each of its two searches: one order
+    /// per distinct assignment of what its pictures read, then every layer
+    /// order.
     pub orders_per_component: u64,
     /// Combinations of its members' projections a look group walks.
     pub combinations_per_group: u64,
-    /// Bits of whole component orders kept, across components, for X-ray
-    /// stepping and for the order a step falls back on. A component past it
-    /// is still counted; X-ray then steps through the orders kept.
+    /// Bits of whole component orders kept, across components, for the
+    /// order a step falls back on and for X-ray stepping. A component past
+    /// it is still counted; X-ray then steps through the orders kept.
     pub stored_bits: u64,
 }
 
@@ -176,6 +188,21 @@ pub struct SolutionCount {
     /// Nothing is left to count: every tally is final, exact or "at least"
     /// at a cap.
     pub done: bool,
+}
+
+/// How a count splits its problem ([`Solutions::shape`]); per side, front
+/// then back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct CountShape {
+    /// Independent components of the open pairs.
+    pub components: usize,
+    /// The most pairs in one component.
+    pub largest_component: usize,
+    /// Spots whose top the forced pairs leave to choose.
+    pub open_spots: [usize; 2],
+    pub groups: [usize; 2],
+    /// Look groups of more than one component (see the module docs).
+    pub joined_groups: [usize; 2],
 }
 
 /// What the stepper steps through.
@@ -289,9 +316,66 @@ struct Group {
     /// Once walked: the keys in lexicographic order.
     sorted: Vec<u32>,
     combinations: u64,
+    /// A group of one component is keyed as its projections are found, and
+    /// stops at its cap there.
+    capped: bool,
     walked: bool,
     /// Walked to the end over members counted to the end.
     complete: bool,
+}
+
+impl Group {
+    /// The key combination `at` gives, counted once.
+    fn insert(&mut self, key: Vec<u32>, at: &[u32]) {
+        if !self.index.contains_key(&key) {
+            self.index.insert(key.clone(), self.reps.len() as u32);
+            self.keys.extend_from_slice(&key);
+            self.reps.push(at.to_vec());
+        }
+        self.combinations += 1;
+    }
+
+    /// Every combination walked, or a cap reached: sort the keys.
+    fn close(&mut self, capped: bool, members_complete: bool) {
+        self.walked = true;
+        self.complete = !capped && members_complete;
+        let width = self.spots.len();
+        let keys = &self.keys;
+        let mut sorted: Vec<u32> = (0..self.reps.len() as u32).collect();
+        sorted.sort_by(|&a, &b| {
+            keys[a as usize * width..(a as usize + 1) * width]
+                .cmp(&keys[b as usize * width..(b as usize + 1) * width])
+        });
+        self.sorted = sorted;
+    }
+}
+
+/// The key (each of its spots' top) of `group`'s combination `at`, one
+/// projection per member.
+fn key_at(
+    spots: &[OpenSpot],
+    group: &Group,
+    components: &[Component],
+    s: usize,
+    at: &[u32],
+    wins: &mut Vec<u32>,
+) -> Vec<u32> {
+    group
+        .spots
+        .iter()
+        .map(|&i| {
+            top_of(
+                &spots[i as usize],
+                s,
+                |pair| {
+                    let m = pair.member as usize;
+                    let member = &components[group.members[m] as usize].projections[s];
+                    !get_bit(member.get(at[m] as usize), pair.bit as usize)
+                },
+                wins,
+            )
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Default)]
@@ -331,11 +415,23 @@ struct Component {
     /// Per variable in the search's order, its place.
     place: Vec<u32>,
     words: usize,
+    /// The variables a picture reads from either side, in the search's
+    /// order: what the pictures' search assigns first.
+    read: Vec<usize>,
+    /// Orders the pictures' search found: one per distinct assignment of
+    /// `read`.
+    pictures: u64,
+    pictures_finished: bool,
+    pictures_complete: bool,
+    /// The orders of the pictures' search that gave a projection first,
+    /// `words` each: what a step falls back on.
+    reps: Vec<u64>,
+    /// Orders listed by the full enumeration.
     orders: u64,
-    finished: bool,
-    complete: bool,
+    orders_finished: bool,
+    orders_complete: bool,
     /// Whole orders kept, `words` each (a bit per place, set where the
-    /// larger face lies above), in the order found.
+    /// larger face lies above), in the order found: X-ray's.
     kept: Vec<u64>,
     kept_count: u32,
     /// Once finished: the kept orders in lexicographic order.
@@ -346,6 +442,21 @@ struct Component {
 impl Component {
     fn kept(&self, i: usize) -> &[u64] {
         &self.kept[i * self.words..(i + 1) * self.words]
+    }
+
+    fn rep(&self, i: usize) -> &[u64] {
+        &self.reps[i * self.words..(i + 1) * self.words]
+    }
+
+    /// An order of it as bits, from its values in the search's order.
+    fn bits_of(&self, values: &[PairOrder]) -> Vec<u64> {
+        let mut bits = vec![0u64; self.words];
+        for (i, value) in values.iter().enumerate() {
+            if *value == PairOrder::SecondAbove {
+                set_bit(&mut bits, self.place[i] as usize);
+            }
+        }
+        bits
     }
 }
 
@@ -410,6 +521,21 @@ impl ForcedTable {
     }
 }
 
+/// Half of `limits`' nodes, and a deadline halfway to its own.
+fn halved(limits: &Limits) -> Limits {
+    Limits {
+        max_nodes: limits.max_nodes.map(|n| n.div_ceil(2)),
+        deadline: limits.deadline.map(|d| {
+            let now = (d.now_ms)();
+            complete::Deadline {
+                at_ms: now + (d.at_ms - now).max(0.0) / 2.0,
+                ..d
+            }
+        }),
+        ..*limits
+    }
+}
+
 /// A union–find over components.
 fn find(parent: &mut [u32], mut x: u32) -> u32 {
     while parent[x as usize] != x {
@@ -452,12 +578,24 @@ pub struct Solutions {
     hold: Vec<PairOrder>,
     components: Vec<Component>,
     sides: [Side; 2],
-    /// Per component, the groups `(side, group)` whose last member it is.
+    /// Per component, the groups `(side, group)` of several components
+    /// whose last member it is.
     ending: Vec<Vec<(u8, u32)>>,
+    /// Per side, per component, the group it is alone in, if any.
+    alone: [Vec<u32>; 2],
     /// The closure's split, a fresh cursor cloned from it per component.
     base: Enumeration,
     cursor: Option<Enumeration>,
-    next_component: usize,
+    /// The components in the order counted: those a picture reads first,
+    /// smallest first, then those only the layer orders count.
+    schedule: Vec<u32>,
+    /// How many of `schedule` a picture reads.
+    read_count: usize,
+    /// The places in `schedule` whose pictures, and whose orders, are
+    /// counted next: every picture first, so they are exact as soon as they
+    /// can be, then every order.
+    next_pictures: usize,
+    next_orders: usize,
     /// Groups whose members are all counted, to walk next.
     queue: VecDeque<(u8, u32)>,
     /// The combination the front group's walk is at.
@@ -524,9 +662,14 @@ impl Solutions {
                 words: words_for(sorted.len()),
                 variables: sorted,
                 place,
+                read: Vec::new(),
+                pictures: 0,
+                pictures_finished: false,
+                pictures_complete: false,
+                reps: Vec::new(),
                 orders: 0,
-                finished: false,
-                complete: false,
+                orders_finished: false,
+                orders_complete: false,
                 kept: Vec::new(),
                 kept_count: 0,
                 sorted: Vec::new(),
@@ -536,6 +679,10 @@ impl Solutions {
         let table = ForcedTable::of(spots.face_count(), &variables, &forced);
         let mut sides = [Side::default(), Side::default()];
         let mut ending = vec![Vec::new(); components.len()];
+        let mut alone = [
+            vec![u32::MAX; components.len()],
+            vec![u32::MAX; components.len()],
+        ];
         for (s, side) in sides.iter_mut().enumerate() {
             for i in 0..spots.len() {
                 let faces = spots.spot(i);
@@ -660,11 +807,35 @@ impl Solutions {
                 }
             }
             for (g, group) in side.groups.iter().enumerate() {
-                if let Some(&last) = group.members.last() {
-                    ending[last as usize].push((s as u8, g as u32));
+                match group.members.as_slice() {
+                    [one] => alone[s][*one as usize] = g as u32,
+                    [.., last] => ending[*last as usize].push((s as u8, g as u32)),
+                    [] => {}
                 }
             }
         }
+        // What the pictures' search assigns first: the pairs either side's
+        // spots read, in the component's own order.
+        for (component, list) in components.iter_mut().zip(base.components()) {
+            let mut reads = vec![false; component.variables.len()];
+            for projections in &component.projections {
+                for &p in &projections.relevant {
+                    reads[p as usize] = true;
+                }
+            }
+            component.read = list
+                .iter()
+                .zip(&component.place)
+                .filter(|(_, p)| reads[**p as usize])
+                .map(|(&v, _)| v)
+                .collect();
+        }
+        // The components a picture reads first, each in order, so a group's
+        // last member to be counted is its last.
+        let (mut schedule, rest): (Vec<u32>, Vec<u32>) =
+            (0..components.len() as u32).partition(|&k| !components[k as usize].read.is_empty());
+        let read_count = schedule.len();
+        schedule.extend(rest);
         Ok(Solutions {
             variables,
             constraints,
@@ -673,9 +844,13 @@ impl Solutions {
             components,
             sides,
             ending,
+            alone,
             base,
             cursor: None,
-            next_component: 0,
+            schedule,
+            read_count,
+            next_pictures: 0,
+            next_orders: 0,
             queue: VecDeque::new(),
             digits: None,
             kept_bits: 0,
@@ -714,11 +889,12 @@ impl Solutions {
                 self.queue.pop_front();
                 continue;
             }
-            if self.next_component == self.components.len() {
+            let pictures = self.next_pictures < self.read_count;
+            if !pictures && self.next_orders == self.components.len() {
                 self.done = true;
                 break;
             }
-            if !self.count_component(search, &mut left, limits)? {
+            if !self.count_component(search, pictures, &mut left, limits)? {
                 break;
             }
         }
@@ -741,7 +917,7 @@ impl Solutions {
             orders: product(
                 self.components
                     .iter()
-                    .map(|c| (c.orders.max(1), c.finished && c.complete)),
+                    .map(|c| (c.orders.max(1), c.orders_finished && c.orders_complete)),
             ),
             done: self.done,
         }
@@ -750,6 +926,25 @@ impl Solutions {
     /// Nothing is left to count.
     pub fn is_done(&self) -> bool {
         self.done
+    }
+
+    /// How the count splits the problem: what a census reports.
+    pub fn shape(&self) -> CountShape {
+        let per_side = |f: &dyn Fn(&Side) -> usize| [f(&self.sides[FRONT]), f(&self.sides[BACK])];
+        CountShape {
+            components: self.components.len(),
+            largest_component: self
+                .components
+                .iter()
+                .map(|c| c.variables.len())
+                .max()
+                .unwrap_or(0),
+            open_spots: per_side(&|side| side.spots.len()),
+            groups: per_side(&|side| side.groups.len()),
+            joined_groups: per_side(&|side| {
+                side.groups.iter().filter(|g| g.members.len() > 1).count()
+            }),
+        }
     }
 
     /// Search nodes and combinations spent so far.
@@ -793,17 +988,35 @@ impl Solutions {
         }
     }
 
-    /// Count the next component on, to its end or a cap (`true`), or until
-    /// the limits stop it (`false`).
+    /// Count the next component's pictures (`pictures`) or orders on, to
+    /// the end or a cap (`true`), or until the limits stop it (`false`).
+    ///
+    /// Its pictures come from a search that assigns the pairs a picture
+    /// reads first and completes each assignment of them once
+    /// (`Enumeration::projected`): the orders that differ only in hidden
+    /// layers, which can be most of a deep stack's, are never listed. Its
+    /// layer orders, after every component's pictures, come from the whole
+    /// enumeration of its orders (`Enumeration::varying`).
     fn count_component(
         &mut self,
         search: &flatfold::CompletionSession,
+        pictures: bool,
         left: &mut Option<u64>,
         limits: &Limits,
     ) -> Result<bool, SessionRefusal> {
-        let k = self.next_component;
+        let place = if pictures {
+            self.next_pictures
+        } else {
+            self.next_orders
+        };
+        let k = self.schedule[place] as usize;
         let mut cursor = match self.cursor.take() {
             Some(cursor) => cursor,
+            None if pictures => self
+                .base
+                .clone()
+                .projected(k, &self.components[k].read, &self.hold)
+                .map_err(internal_search)?,
             None => self
                 .base
                 .clone()
@@ -821,17 +1034,27 @@ impl Solutions {
             }
             match step {
                 EnumerationStep::Order => {
-                    if self.components[k].orders >= self.caps.orders_per_component {
-                        self.finish_component(k, false);
+                    let component = &self.components[k];
+                    let listed = if pictures {
+                        component.pictures
+                    } else {
+                        component.orders
+                    };
+                    if listed >= self.caps.orders_per_component {
+                        self.finish_component(k, pictures, false);
                         return Ok(true);
                     }
                     let values = cursor
                         .component_order(k)
                         .ok_or_else(|| SessionRefusal::internal("an order step with no order"))?;
-                    self.record(k, &values);
+                    if pictures {
+                        self.record_picture(k, &values);
+                    } else {
+                        self.record_order(k, &values);
+                    }
                 }
                 EnumerationStep::Exhausted => {
-                    self.finish_component(k, true);
+                    self.finish_component(k, pictures, true);
                     return Ok(true);
                 }
                 EnumerationStep::Stopped(_) => {
@@ -847,28 +1070,42 @@ impl Solutions {
         }
     }
 
-    /// One order of component `k`, its values in the search's order.
-    fn record(&mut self, k: usize, values: &[PairOrder]) {
+    /// Keep `bits` within the budget, in `store` (a component's
+    /// representatives or its X-ray orders); its index there, if kept.
+    fn keep(&mut self, k: usize, bits: &[u64], reps: bool) -> Option<u32> {
         let component = &mut self.components[k];
-        component.orders += 1;
-        let mut bits = vec![0u64; component.words];
-        for (i, value) in values.iter().enumerate() {
-            if *value == PairOrder::SecondAbove {
-                set_bit(&mut bits, component.place[i] as usize);
-            }
-        }
         let cost = 64 * component.words as u64;
-        let kept = if self.kept_bits + cost <= self.caps.stored_bits {
-            self.kept_bits += cost;
-            component.kept.extend_from_slice(&bits);
+        if self.kept_bits + cost > self.caps.stored_bits {
+            return None;
+        }
+        self.kept_bits += cost;
+        if reps {
+            component.reps.extend_from_slice(bits);
+            Some((component.reps.len() / component.words.max(1)) as u32 - 1)
+        } else {
+            component.kept.extend_from_slice(bits);
             component.kept_count += 1;
             Some(component.kept_count - 1)
-        } else {
-            None
-        };
-        for projections in &mut component.projections {
+        }
+    }
+
+    /// One order of component `k` from the whole enumeration, its values in
+    /// the search's order: counted, and kept for X-ray.
+    fn record_order(&mut self, k: usize, values: &[PairOrder]) {
+        self.components[k].orders += 1;
+        let bits = self.components[k].bits_of(values);
+        self.keep(k, &bits, false);
+    }
+
+    /// One order of component `k` from the pictures' search, its values in
+    /// the search's order: a distinct assignment of what a picture reads.
+    fn record_picture(&mut self, k: usize, values: &[PairOrder]) {
+        self.components[k].pictures += 1;
+        let bits = self.components[k].bits_of(values);
+        let keys: [Option<Vec<u64>>; 2] = [FRONT, BACK].map(|s| {
+            let projections = &self.components[k].projections[s];
             if projections.relevant.is_empty() {
-                continue;
+                return None;
             }
             let mut key = vec![0u64; projections.words];
             for (r, &p) in projections.relevant.iter().enumerate() {
@@ -876,24 +1113,78 @@ impl Solutions {
                     set_bit(&mut key, r);
                 }
             }
-            if !projections.index.contains_key(&key) {
-                let i = projections.representative.len() as u32;
-                projections.list.extend_from_slice(&key);
-                projections.index.insert(key, i);
-                projections.representative.push(kept);
+            (!projections.index.contains_key(&key)).then_some(key)
+        });
+        let rep = if keys.iter().any(Option::is_some) {
+            self.keep(k, &bits, true)
+        } else {
+            None
+        };
+        let mut found = [None, None];
+        for (s, key) in keys.into_iter().enumerate() {
+            let Some(key) = key else {
+                continue;
+            };
+            let projections = &mut self.components[k].projections[s];
+            let i = projections.representative.len() as u32;
+            projections.list.extend_from_slice(&key);
+            projections.index.insert(key, i);
+            projections.representative.push(rep);
+            found[s] = Some(i);
+        }
+        // A group of this component alone is keyed as its projections are
+        // found, as walking them after would key them, in the same order:
+        // its count grows while the component is counted.
+        for (s, found) in found.into_iter().enumerate() {
+            let (Some(i), Some(&g)) = (found, self.alone[s].get(k)) else {
+                continue;
+            };
+            let Some(group) = self.sides[s].groups.get_mut(g as usize) else {
+                continue;
+            };
+            if group.combinations >= self.caps.combinations_per_group {
+                group.capped = true;
+                continue;
             }
+            let mut wins = Vec::new();
+            let key = key_at(
+                &self.sides[s].spots,
+                group,
+                &self.components,
+                s,
+                &[i],
+                &mut wins,
+            );
+            group.insert(key, &[i]);
+            self.nodes += 1;
         }
     }
 
-    fn finish_component(&mut self, k: usize, complete: bool) {
+    fn finish_component(&mut self, k: usize, pictures: bool, complete: bool) {
         self.cursor = None;
         let component = &mut self.components[k];
-        component.finished = true;
-        component.complete = complete;
-        let mut sorted: Vec<u32> = (0..component.kept_count).collect();
-        sorted.sort_by(|&a, &b| component.kept(a as usize).cmp(component.kept(b as usize)));
-        component.sorted = sorted;
-        self.next_component += 1;
+        if !pictures {
+            component.orders_finished = true;
+            component.orders_complete = complete;
+            let mut sorted: Vec<u32> = (0..component.kept_count).collect();
+            sorted.sort_by(|&a, &b| component.kept(a as usize).cmp(component.kept(b as usize)));
+            component.sorted = sorted;
+            self.next_orders += 1;
+            return;
+        }
+        component.pictures_finished = true;
+        component.pictures_complete = complete;
+        for s in [FRONT, BACK] {
+            let none = self.components[k].projections[s].len() == 0;
+            if let Some(group) = self.alone[s]
+                .get(k)
+                .and_then(|&g| self.sides[s].groups.get_mut(g as usize))
+            {
+                let capped = group.capped || none;
+                group.close(capped, complete);
+            }
+        }
+        self.next_pictures += 1;
         self.queue.extend(self.ending[k].iter().copied());
     }
 
@@ -937,28 +1228,8 @@ impl Solutions {
                         return false;
                     }
                 }
-                let key: Vec<u32> = group
-                    .spots
-                    .iter()
-                    .map(|&i| {
-                        top_of(
-                            &side.spots[i as usize],
-                            s,
-                            |pair| {
-                                let m = pair.member as usize;
-                                let member = &components[group.members[m] as usize].projections[s];
-                                !get_bit(member.get(at[m] as usize), pair.bit as usize)
-                            },
-                            &mut wins,
-                        )
-                    })
-                    .collect();
-                if !group.index.contains_key(&key) {
-                    group.index.insert(key.clone(), group.reps.len() as u32);
-                    group.keys.extend_from_slice(&key);
-                    group.reps.push(at.clone());
-                }
-                group.combinations += 1;
+                let key = key_at(&side.spots, group, components, s, &at, &mut wins);
+                group.insert(key, &at);
                 *nodes += 1;
                 if let Some(left) = left.as_mut() {
                     *left = left.saturating_sub(1);
@@ -980,20 +1251,11 @@ impl Solutions {
                     break false;
                 }
             };
-        group.walked = true;
-        group.complete = !capped
-            && group
-                .members
-                .iter()
-                .all(|&m| components[m as usize].complete);
-        let width = group.spots.len();
-        let keys = &group.keys;
-        let mut sorted: Vec<u32> = (0..group.reps.len() as u32).collect();
-        sorted.sort_by(|&a, &b| {
-            keys[a as usize * width..(a as usize + 1) * width]
-                .cmp(&keys[b as usize * width..(b as usize + 1) * width])
-        });
-        group.sorted = sorted;
+        let members_complete = group
+            .members
+            .iter()
+            .all(|&m| components[m as usize].pictures_complete);
+        group.close(capped, members_complete);
         true
     }
 
@@ -1059,7 +1321,7 @@ impl Solutions {
                                 per: component.words,
                             },
                             &component.sorted,
-                            component.finished,
+                            component.orders_finished,
                             target,
                             component.variables.clone(),
                         )
@@ -1140,9 +1402,9 @@ impl Solutions {
                             let component = &self.components[m as usize];
                             match component.projections[s].representative[p as usize] {
                                 Some(r) => {
-                                    let kept = component.kept(r as usize);
+                                    let rep = component.rep(r as usize);
                                     for (place, &v) in component.variables.iter().enumerate() {
-                                        order[v as usize] = order_of_bit(get_bit(kept, place));
+                                        order[v as usize] = order_of_bit(get_bit(rep, place));
                                     }
                                 }
                                 None => kept_all = false,
@@ -1210,10 +1472,11 @@ impl ConstraintSession {
     /// [`StepBy::LayerOrder`] (X-ray) the next layer order. It adds no
     /// constraint, and only the order on screen changes.
     ///
-    /// Unless the count is done, it first counts on within `limits`, so on a
-    /// figure the count finishes the step follows the final order; the
-    /// dialog keeps that work off the step by advancing the count between
-    /// calls. Past the limits it steps through what is counted.
+    /// Unless the count is done, it first counts on within half of `limits`
+    /// (the other half is the check's), so on a figure the count finishes
+    /// the step follows the final order; the dialog keeps that work off the
+    /// step by advancing the count between calls. Past that it steps
+    /// through what is counted, and what it counted is kept.
     pub fn step(
         &mut self,
         solutions: &mut Solutions,
@@ -1223,7 +1486,7 @@ impl ConstraintSession {
     ) -> Result<Stepped, SessionRefusal> {
         solutions.ensure_for(self)?;
         if !solutions.is_done() {
-            solutions.advance_on(self.letter_search(), limits)?;
+            solutions.advance_on(self.letter_search(), &halved(limits))?;
         }
         let Some(target) = solutions.target(by, self.shown_values(), direction) else {
             return Ok(Stepped::End);
