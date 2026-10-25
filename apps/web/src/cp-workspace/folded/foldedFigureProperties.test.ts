@@ -362,6 +362,7 @@ describe('buildFoldedFigureProperties', () => {
     it('keeps a 3D figure’s constraints for when it folds flat again, with no pager (D13)', () => {
       const kept = stepper(sheetFor({ ...SPATIAL, layerOrder: held() }));
       expect(kept).toMatchObject({
+        readout: '',
         support: 'unsupported',
         reason: 'Layer order works on flat figures',
         note: {

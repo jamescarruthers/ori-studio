@@ -513,6 +513,8 @@ function layerOrderField(
     const flat = t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
     return {
       ...row,
+      // No pager, so nothing to read out between it (the Properties board's state D).
+      readout: '',
       support: 'unsupported',
       reason: flat,
       note: {
