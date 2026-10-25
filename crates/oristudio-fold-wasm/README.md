@@ -177,13 +177,23 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   `implementation-plans/layer-order-dialog.md`, E7), held by handle beside
   the states and only ever opened by the dialog's own workers:
   `layer_open(source, limits)` over the CP bridge's `FoldSource` of what a
-  host folded, passed through unchanged, and `layer_restore(source, record,
-  limits)` with a saved record's JSON; then `layer_open_pairs`,
-  `layer_preview` (never commits), `layer_commit` (the whole list),
-  `layer_constraints`, `layer_stacks`, `layer_scene` (the CP kernel's paper
-  scene of the order on screen), `layer_oriedita_relations` (for the CP
-  bridge's `folded_figure_fold_with_order` at Apply), `layer_save`,
-  `layer_close` and `layer_live`. Pairs, constraints
+  host folded, passed through unchanged, on the solver's first order;
+  `layer_open_showing(source, relations, limits)` on the order the host
+  shows (its relations, as `layerOrderSceneRelations.ts` reads them off the
+  host's paper scene); and `layer_restore(source, record, limits)` with a
+  saved record's JSON, or `layer_restore_record(session, record, limits)`
+  again on an open session. Every opened result says where its order came
+  from (`opened_on`: first, held or closest; `layer_opened_on`). Then
+  `layer_open_pairs`; `layer_preview` and `layer_preview_list` (never
+  commit; a fit carries a token); `layer_commit` (the whole list) and
+  `layer_commit_preview` (Add: a preview's token and list, adopted with no
+  search while it is the session's last preview, else a search);
+  `layer_carried`, `layer_remove_carried` and `layer_clear_carried` (what a
+  restore did not apply, which a save writes back); `layer_constraints`,
+  `layer_stacks`, `layer_scene` (the CP kernel's paper scene of the order
+  on screen), `layer_oriedita_relations` (for the CP bridge's
+  `folded_figure_fold_with_order` at Apply), `layer_save`, `layer_close`
+  and `layer_live`. Pairs, constraints
   (`[subject, object, sign, …]`, FOLD's sign), stacks and statuses cross as
   typed arrays. Every call that searches takes `{ maxNodes, fastNodes,
   deadlineMs }`: the deadline is relative to the call's start and read by
@@ -220,7 +230,9 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | With the vertex folds' pictures and the tuck listing's deadline (2026-10-11) | 2,711,257 B (2,648 KiB) | 1,072,623 B (1,047 KiB) |
 | Shipped at `94082c8d3`, the merge of the petal fold and swivel UI (2026-10-12) | 2,926,227 B (2,858 KiB) | 1,143,295 B (1,116 KiB) |
 | At `6652deeb3`, the head of the Layer order dialog's constraint session (E5), before its calls (2026-10-24) | 3,340,616 B (3,262 KiB) | 1,305,642 B (1,275 KiB) |
-| With the Layer order dialog's `layer_*` calls (E7, 2026-10-24) | 3,696,203 B (3,610 KiB) | 1,442,948 B (1,409 KiB) |
+| With the Layer order dialog's first `layer_*` calls (E7, 2026-10-24) | 3,696,203 B (3,610 KiB) | 1,442,948 B (1,409 KiB) |
+| At `43ce19c06`, E5 with its host-facing additions, before the calls (2026-10-24) | 3,342,847 B (3,264 KiB) | 1,303,015 B (1,272 KiB) |
+| With every `layer_*` call, the additions bound (E7, 2026-10-24) | 3,747,930 B (3,660 KiB) | 1,450,720 B (1,417 KiB) |
 
 The vertex folds add **245,476 B raw (+240 KiB), 93,958 B gzipped
 (+92 KiB)**: the staged motions, the fan scoring and the general pieces
@@ -254,27 +266,33 @@ they add **214,970 B raw (+210 KiB), 70,672 B gzipped (+69 KiB)** over the
 row before. That leaves the bridge **324,095 B (316 KiB) gzipped over the
 two budgets' 800 KiB sum**.
 
-**The Layer order dialog's calls** (the last two rows, built in one worktree
-the same day) add **355,587 B raw (+347 KiB), 137,306 B gzipped
-(+134 KiB)**, well past the ~50 KiB the dialog's plan allowed for reusing
-this bridge (`implementation-plans/layer-order-dialog.md`, "The dialog
-reuses the Fold bridge"). The row before them is E5's head, which already
-carries the merges since 2026-10-12 but links none of the dialog's engine.
-What the calls link in, besides the session itself:
+**The Layer order dialog's calls** (the last four rows, each pair built in
+one worktree the same day) add, with every call bound, **405,083 B raw
+(+396 KiB), 147,705 B gzipped (+144 KiB)** over E5's head (the last two
+rows), well past the ~50 KiB the dialog's plan allowed for reusing this
+bridge (`implementation-plans/layer-order-dialog.md`, "The dialog reuses
+the Fold bridge"). The first calls had added 137,306 B gzipped over
+`6652deeb3`; E5's additions grew the engine they link, and their own calls
+(open on the host's order, Add by a preview, a whole-list preview, a
+restore again, carried rows) add 30,888 B raw and 8,655 B gzipped over the
+first calls rebuilt on `43ce19c06`. E5's head links none of the dialog's
+engine; its two builds differ by a few kilobytes because the code it added
+to `oristudio-fold` moves how the crate is split for codegen, not because
+any of it is linked. What the calls link in, besides the session itself:
 
-- **The paper scene, about 56 KiB gzipped** (146,381 B raw, 57,336 B
+- **The paper scene, about 51 KiB gzipped** (150,291 B raw, 52,161 B
   gzipped, measured by building with `layer_scene` stubbed out): the CP
   kernel's scene builder (`folded_paper_scene_with_order`) and the scene's
   serializer.
-- **Everything else, about 79 KiB gzipped:** the CP kernel's fold of the
+- **Everything else, about 93 KiB gzipped:** the CP kernel's fold of the
   creases into Oriedita's wireframe and subfaces
   (`FoldedRenderInputs::from_segments`, which `LayerSource::from_oriedita`
   builds the solver's view from), the constraint session, the record codec
   and the restore, and the bridge's own code.
 
-By `twiggy`, comparing the two builds' cargo outputs before `wasm-bindgen`
-and `wasm-opt` (names kept, hashes folded; 408,538 B raw in all, the names
-section aside): the CP kernel's `folding` 107 KB, its `geometry`,
+By `twiggy`, comparing the first calls' cargo outputs before `wasm-bindgen`
+and `wasm-opt` with `6652deeb3`'s (names kept, hashes folded; 408,538 B raw
+in all, the names section aside): the CP kernel's `folding` 107 KB, its `geometry`,
 `fold_graph` and `operations` 27 KB, `oristudio_fold::steer` 60 KB, this
 bridge's `steer` 35 KB, std's generic code (`core`, `alloc`, hashbrown)
 108 KB, `serde_json` and `serde_wasm_bindgen` 37 KB, data 13 KB. A
@@ -519,8 +537,11 @@ kind from that one preparation under one shared budget.
   kernel's scene from both sides, relations the kernel folds, a preview
   that never commits and the commit that lands on it, a no, timeouts by
   nodes and by deadline answered when tried again, refused opens, save and
-  restore, a clashing restore, records that do not read, close then use,
-  and a caller's mistakes by code.
+  restore, a clashing restore and its carried rows, records that do not
+  read, close then use, a caller's mistakes by code, an open on Edit's own
+  scene showing Edit's stacks spot for spot (held, closest, ignored), Add by
+  a preview's token even with no nodes against a stale token's search, a
+  whole-list preview, and a restore retried on the open session.
 - `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs`,
   `tests/io_node.rs`, `tests/crimp_tuck_node.rs` and
   `tests/partial_node.rs`, the same calls across
@@ -535,6 +556,8 @@ kind from that one preparation under one shared budget.
   `apps/web/src/workers/layerOrderBridge.wasm.test.ts` opens kabuto's
   source from the CP bridge, previews, commits, folds the relations back in
   the CP bridge, saves (the TypeScript codec reading the record byte for
-  byte) and restores on a second engine.
+  byte) and restores on a second engine; then opens on the scene Edit
+  holds, adds by a preview's token, and restores a clashing record on the
+  same session with its carried rows.
 
 Original work under `MIT OR Apache-2.0`.
