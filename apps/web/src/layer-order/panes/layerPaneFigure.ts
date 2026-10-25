@@ -140,8 +140,6 @@ export interface LayerPaneFaces {
   readonly pattern: readonly (readonly Point[])[];
   /** Per face, the centroid of its crease-pattern ring: what the label cap measures by. */
   readonly patternCentroids: readonly (Point | null)[];
-  /** Per face, where its letter sits on the crease pattern: inside it ({@link ringInterior}). */
-  readonly patternLabels: readonly (Point | null)[];
 }
 
 const patternCache = new WeakMap<OristudioCpFoldedPaperScene, LayerPaneFaces>();
@@ -156,7 +154,7 @@ export function paneFacesOf(scene: OristudioCpFoldedPaperScene): LayerPaneFaces 
       return point ? [{ x: point.x, y: point.y }] : [];
     })
   );
-  const faces = { pattern, patternCentroids: pattern.map(ringCentroid), patternLabels: pattern.map(ringInterior) };
+  const faces = { pattern, patternCentroids: pattern.map(ringCentroid) };
   patternCache.set(scene, faces);
   return faces;
 }
@@ -247,12 +245,52 @@ export function patternPaneLines(source: LayerOrderSource): CpLineSegmentInput[]
 /** Edit's line colour of the paper's edge (Oriedita's `BLACK_0`). */
 const EDGE_COLOR = 'Black0';
 
-/** Where the crease pattern is, in user space: what its pane fits. */
+/** Where the crease pattern is, in user space. */
 export function patternPaneBounds(source: LayerOrderSource): UserBounds | null {
   return ringsBounds(
     [...source.segments, ...source.auxSegments].map(({ a, b }) => [a, b]),
     patternPaneToUser
   );
+}
+
+/**
+ * How much of a pane the sheet fills at Fit, across the pane's shorter side:
+ * Round3's `fitAll`, a 1000-unit sheet in an 1100-unit view.
+ */
+export const LAYER_ORDER_PANE_FIT_SHARE = 1000 / 1100;
+
+/** A square of `side` user units about `centre`: the sheet, as a pane frames it. */
+export function sheetBox(centre: Point, side: number): UserBounds {
+  const half = side / 2;
+  return { minX: centre.x - half, minY: centre.y - half, maxX: centre.x + half, maxY: centre.y + half };
+}
+
+/** The middle of a box. */
+export function boundsCentre(bounds: UserBounds): Point {
+  return { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+}
+
+/**
+ * What the crease-pattern pane fits: the sheet, a square as long as the
+ * paper's longest side about its middle. Both panes frame a square of the
+ * sheet's size, so at Fit they take one scale, and a percentage means the
+ * same on both (Round3's `fitAll`).
+ */
+export function patternPaneFrame(source: LayerOrderSource): UserBounds | null {
+  const paper = patternPaneBounds(source);
+  if (!paper) return null;
+  return sheetBox(boundsCentre(paper), Math.max(paper.maxX - paper.minX, paper.maxY - paper.minY));
+}
+
+/**
+ * What the folded pane fits: the folded figure grown to the sheet's size
+ * about its own middle, as Fold's folded pane frames with the sheet
+ * (`useFoldCanvasPaint`), `figure` being the figure's own bounds in user
+ * space and `sheet` the scene's longest unfolded extent in its units.
+ */
+export function foldedPaneFrame(figure: UserBounds, sheet: number): UserBounds {
+  const side = Math.max(sheet * PANE_USER_PER_UNIT, figure.maxX - figure.minX, figure.maxY - figure.minY);
+  return sheetBox(boundsCentre(figure), side);
 }
 
 /**
