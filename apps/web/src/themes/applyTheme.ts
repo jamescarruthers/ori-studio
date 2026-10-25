@@ -75,6 +75,19 @@ export const REFERENCE_COLORS = {
   light: { input: '#c91d87', new: '#4d7c0f' },
 } as const;
 
+/**
+ * The Layer order dialog's face picks (`--face-pick`): a picked, pointed-at
+ * or pressed row's face, tinted and ringed on its panes (D20 of
+ * `implementation-plans/layer-order-dialog.md`). Fixed per dark or light type,
+ * as the References colours are, and never a theme's: the accent was danger
+ * pink in Horizon and valley blue in One Dark. A violet held clear of the
+ * valley blue and every preset's danger, and legible on every canvas, which
+ * `facePickColor.test.ts` holds it to. The one hue it shares is the crease
+ * palette's purple, which only an auxiliary line has, and a fill inside a
+ * face does not read as a line.
+ */
+export const FACE_PICK_COLORS = { dark: '#a78bfa', light: '#6d28d9' } as const;
+
 function colorMix(color: string, amount: number): string {
   return `color-mix(in srgb, ${color} ${amount}%, transparent)`;
 }
@@ -125,6 +138,7 @@ function applyTreeMakerDerivedTokens(theme: TreeMakerTheme, setVar: (name: strin
   setVar('--cp-selection', colors['selection.cp'] ?? colors['accent.primary']);
   setVar('--cp-reference-input', REFERENCE_COLORS[theme.type].input);
   setVar('--cp-reference-new', REFERENCE_COLORS[theme.type].new);
+  setVar('--face-pick', FACE_PICK_COLORS[theme.type]);
   setVar(
     '--fold-monochrome-valley',
     mixHexColors(colors['text.primary'], colors['bg.canvas'], MONOCHROME_VALLEY_INK_RATIO)
