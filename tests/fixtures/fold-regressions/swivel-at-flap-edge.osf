@@ -1,0 +1,249 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 11,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.6.2",
+    "savedAt": "2026-10-21T00:00:00.000Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.6.2",
+    "savedAt": "2026-10-21T00:00:00.000Z"
+  },
+  "workspace": {
+    "id": "workspace",
+    "title": "Swivel where a flap’s edge crosses the folded edge",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 2,
+        "id": "fold-regression-swivel-at-flap-edge",
+        "title": "Swivel where a flap’s edge crosses the folded edge",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "front"
+        },
+        "style": {
+          "preset": "diagram",
+          "style": {
+            "version": 1,
+            "paper": {
+              "front": "#ffffff",
+              "back": "#b3b3b3"
+            },
+            "edges": {
+              "width": 0.5,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "butt"
+            },
+            "mountainFolds": {
+              "width": 0.25,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "butt"
+            },
+            "valleyFolds": {
+              "width": 0.25,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "butt"
+            },
+            "mountainDiagramCreases": {
+              "width": 0.75,
+              "color": "#231f20",
+              "dash": [
+                8,
+                2,
+                1,
+                2
+              ],
+              "cap": "butt"
+            },
+            "valleyDiagramCreases": {
+              "width": 0.75,
+              "color": "#231f20",
+              "dash": [
+                4,
+                2
+              ],
+              "cap": "butt"
+            },
+            "foldsAsEdges": false,
+            "auxCreases": {
+              "visible": true,
+              "pen": {
+                "width": 0.25,
+                "color": "#231f20",
+                "dash": null,
+                "cap": "butt"
+              }
+            },
+            "arrows": {
+              "width": 0.75,
+              "color": "#231f20",
+              "dash": null,
+              "cap": "round"
+            },
+            "erode": 0.005,
+            "light": {
+              "enabled": true,
+              "azimuth": 322.19347,
+              "elevation": 42.80915
+            }
+          }
+        },
+        "steps": [
+          {
+            "id": "fstep-swivel-at-flap-edge-1",
+            "parent": null,
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0
+                  ],
+                  [
+                    0.5,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.8,
+                0.5
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
+              }
+            },
+            "expect": "fs1:d29c86c105f1ff42",
+            "note": "Valley fold in half, the right half over the left: a folded edge along x = 1/2."
+          },
+          {
+            "id": "fstep-swivel-at-flap-edge-2",
+            "parent": "fstep-swivel-at-flap-edge-1",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.75
+                  ],
+                  [
+                    0.375,
+                    0
+                  ]
+                ]
+              },
+              "moving": [
+                0.05,
+                0.05
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "landing": {
+                "kind": "outer"
+              }
+            },
+            "expect": "fs1:3a066886149f4145",
+            "note": "Valley fold the bottom left corner up, both layers, from (0, 3/4) to (3/8, 0): the corner lands at (3/5, 3/10), past the folded edge, and the flap’s edge crosses the folded edge at (1/2, 3/8), hiding it below there."
+          },
+          {
+            "id": "fstep-swivel-at-flap-edge-3",
+            "parent": "fstep-swivel-at-flap-edge-2",
+            "op": {
+              "kind": "swivel",
+              "via": "valley-mountain",
+              "valley": {
+                "line": {
+                  "via": "axiom",
+                  "axiom": 1,
+                  "inputs": [
+                    {
+                      "kind": "point",
+                      "at": [
+                        0,
+                        0.125
+                      ]
+                    },
+                    {
+                      "kind": "point",
+                      "at": [
+                        0.815,
+                        0.9
+                      ]
+                    }
+                  ]
+                },
+                "root": {
+                  "n": [
+                    0.8574929257125443,
+                    0.5144957554275265
+                  ],
+                  "d": 0.6216823711415945
+                }
+              },
+              "mountain": {
+                "line": {
+                  "via": "axiom",
+                  "axiom": 1,
+                  "inputs": [
+                    {
+                      "kind": "point",
+                      "at": [
+                        0,
+                        0.125
+                      ]
+                    },
+                    {
+                      "kind": "point",
+                      "at": [
+                        0.605,
+                        0.9
+                      ]
+                    }
+                  ]
+                },
+                "root": {
+                  "n": [
+                    0.9805806756909202,
+                    0.19611613513818402
+                  ],
+                  "d": 0.5638338885222791
+                }
+              }
+            },
+            "expect": "fs1:f2ad8485af99b0ca",
+            "note": "Swivel by its valley and mountain, open, the two meeting where the flap’s edge crosses the folded edge: Axiom 1 from the crossing toward (1/8, 1), the valley, and toward (3/8, 1), the mountain. Refused before as “The lines do not meet on a folded edge”."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-regression-swivel-at-flap-edge",
+        "cursor": "fstep-swivel-at-flap-edge-3"
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}
