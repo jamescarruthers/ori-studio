@@ -52,6 +52,8 @@
     },
     "layerOrder": {
       "chosenOrderRemoved": "此步骤所选的层叠顺序属于其旧图样，因此已移除。撤销可将其恢复。",
+      "copyNotFolded": "此步骤的层叠约束需要处理，因此无法将副本显示为折叠状态。",
+      "copyNotFoldedChosenOrder": "此步骤所选的层叠顺序需要处理，因此无法将副本显示为折叠状态。",
       "folds3d": "此步骤的折痕现在以 3D 折叠，而层叠顺序适用于平折。请刷新该步骤查看。",
       "lost": "层叠顺序意外停止，因此此步骤未更改。",
       "lostLoad": "无法加载层叠顺序，因此此步骤未更改。请检查网络连接，然后重试。",
@@ -75,6 +77,8 @@
     },
     "refreshAllChosenOrderKept_other": "{{count}} 个步骤所选的层叠顺序需要处理，因此保留其图片。",
     "refreshAllLayerOrderKept_other": "{{count}} 个步骤的层叠约束需要处理，因此保留其图片。",
+    "refreshAllLayerOrderLost_other": "层叠顺序意外停止，因此 {{count}} 个步骤未更改。",
+    "refreshAllLayerOrderLostLoad_other": "无法加载层叠顺序，因此 {{count}} 个步骤未更改。请检查网络连接，然后重试。",
     "refreshedAll_other": "已刷新 {{count}} 个步骤",
     "uploadFailed_other": "{{count}} 张图片未能添加",
     "uploadFailureLine": "{{name}}：{{reason}}",
