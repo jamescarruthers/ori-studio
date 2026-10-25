@@ -3320,7 +3320,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       const abandon = async (handle: number | null): Promise<false> => {
         if (handle !== null) await freeOristudioCpFoldedFigure(handle).catch(() => {});
         if (options?.pending && foldedFigureHandleEpoch() === epoch) setStatus('ready');
-        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'refused' });
+        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'refused', mode: 'spatial' });
         return false;
       };
 
@@ -3397,7 +3397,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           // Nothing about the document changed; a figure that could not be
           // turned now can be.
         });
-        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'adopted' });
+        track(ANALYTICS_EVENTS.foldedFigureRehydrated, { trigger, outcome: 'adopted', mode: 'spatial' });
         return true;
       } catch {
         // Silent by design. A background rehydrate that fails leaves a figure
