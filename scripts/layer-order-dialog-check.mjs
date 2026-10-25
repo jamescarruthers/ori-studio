@@ -2044,7 +2044,8 @@ function inspectorCases(theme) {
       if (pane) await pickObjectsOnPane(page, dialog, pane, [first]);
       else await pickObjectsFromMenu(page, dialog, [first]);
       const previewed = await previewKeptTrying(page, dialog);
-      console.log(`[${tag}] ${figure.name}: ${subject} in front of ${first}, picked on the ${pane} pane: “${previewed}”`);
+      const where = pane ? `on the ${pane} pane` : 'from the object menu (no letter clickable yet)';
+      console.log(`[${tag}] ${figure.name}: ${subject} in front of ${first}, picked ${where}: “${previewed}”`);
       await record(shot('preview'), await dialogShot(page));
       const folded = dialog.locator('[data-layer-order-pane="folded"]');
       const inFront = await steadyShot(page, folded, { masked: false });
