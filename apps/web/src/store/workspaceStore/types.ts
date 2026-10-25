@@ -116,7 +116,8 @@ import type {
   OristudioCpOperationDescriptor,
   OristudioCpSelectedLines,
 } from '../../engine/oristudioCpTypes';
-import type { LayerOrderApplied } from '../../lib/layerOrder/layerOrderRequest';
+import type { LayerOrderApplied, LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
+import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 import type { OristudioCpActionId } from '../../lib/oristudioCpActions';
 import type { CpLineClipboardPayload, CpSelectionTransform } from '../../lib/creasePatternClipboard';
@@ -866,6 +867,55 @@ export type OristudioCpFigureLayerOrderOpening =
    */
   | { status: 'unavailable'; reason: 'blocked' | 'failed' | 'unavailable' | 'cancelled' };
 
+/**
+ * What "Fold with layer order…" opens the Layer order dialog on, for an Edit
+ * selection (row H5): the creases folded on a fold of the dialog's own, which
+ * no figure holds, or why there is none.
+ */
+export type OristudioCpSelectionLayerOrderOpening =
+  | {
+      status: 'ready';
+      /** What the fold folded (`fold_source_of_selection`): what the dialog analyses and Apply folds again. */
+      source: OristudioCpFoldSource;
+      /** The order Fold would show on these creases, which the dialog opens on (D19); null when no picture was read. */
+      shown: OristudioCpFoldedPaperScene | null;
+      /** The model the fold was made with, as the new figure folds with it. */
+      model: OristudioCpFoldedFigureModel;
+      /** The creases the press scoped the fold to, which the new figure records as its source. */
+      lineIds: number[];
+      /** Let go of the dialog's fold, once the dialog has closed. Once only. */
+      release: () => Promise<void>;
+    }
+  /**
+   * - `blocked`: nothing foldable is selected, or no crease pattern is open;
+   * - `spatial`: these creases fold in 3D, and a layer order is a flat fold's;
+   * - `busy`: another press is still folding;
+   * - `declined`: the pre-fold check found errors and the user chose not to fold;
+   * - `undetermined`: Fold finds no layer order on these creases (D3);
+   * - `failed`: the kernel failed, and said so through `oristudioCpError`;
+   * - `cancelled`: stopped while it folded.
+   *
+   * Every one but `busy` and `cancelled` has said why, or needs to say nothing.
+   */
+  | {
+      status: 'unavailable';
+      reason: 'blocked' | 'spatial' | 'busy' | 'declined' | 'undetermined' | 'failed' | 'cancelled';
+    };
+
+/**
+ * A new figure's fold with the order the Layer order dialog chose (row H5):
+ * the source the dialog analysed, folded again as it is with `relations`
+ * given, and the record it saves. No relations fold it with Oriedita's own
+ * search, the order the dialog opened on, and save no record.
+ */
+export interface OristudioCpFoldWithChosenOrder {
+  source: LayerOrderSource;
+  /** Flat `[upper, lower]` pairs of the source's faces; empty for Oriedita's own order. */
+  relations: Uint32Array;
+  /** The record to save on the new figure, its points in the crease pattern's coordinates; null for none. */
+  record: LayerOrderRecord | null;
+}
+
 export interface CreasePatternSliceState {
   creaseColorMode: CreaseColorMode;
   oristudioCpSelection: OristudioCpSelection;
@@ -1104,7 +1154,22 @@ export interface CreasePatternSliceActions {
     order?: OristudioCpEstimationOrder;
     model?: OristudioCpFoldedFigureModel;
     lineIds?: number[];
+    /**
+     * Fold the new figure with the order the Layer order dialog chose (row
+     * H5), from the source it analysed rather than these lines, keeping its
+     * record. The press asked the pre-fold check already, so it is not asked
+     * again; `fold attempted` and `fold completed` say `via: 'layer_order'`.
+     */
+    withOrder?: OristudioCpFoldWithChosenOrder;
   }) => Promise<boolean>;
+  /**
+   * The fold "Fold with layer order…" opens the dialog on (row H5): the
+   * selection's creases, after the pre-fold check Fold asks, folded on a fold
+   * of the dialog's own that no figure holds, which the opening's `release`
+   * lets go. No figure, no undo entry, no `dirty`: Apply makes the figure,
+   * through {@link foldOristudioCpDocument} with `withOrder`.
+   */
+  prepareOristudioCpLayerOrderFold: (lineIds: readonly number[]) => Promise<OristudioCpSelectionLayerOrderOpening>;
   /**
    * Stop every fold the user can address, and say whether there was one.
    *

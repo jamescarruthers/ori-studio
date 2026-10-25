@@ -140,6 +140,8 @@ import {
 import type {
   CreasePatternSlice,
   OristudioCpFigureLayerOrderOpening,
+  OristudioCpFoldWithChosenOrder,
+  OristudioCpSelectionLayerOrderOpening,
   OristudioCpFoldRunKind,
   WorkspaceSliceCreator,
   WorkspaceState,
@@ -190,6 +192,7 @@ import {
 } from '../../../cp-workspace/folded/foldedFigureLayerOrderState';
 import { resolveLayerOrder } from '../../../layer-order/host/hostEngineGateway';
 import { foldedFigureLayerOrder } from '../../../lib/layerOrder/foldedFigureLayerOrder';
+import { hasFoldedLayerOrder } from '../../../lib/creaseExportFold';
 import {
   EDIT_PAPER_FRAME,
   layerOrderRecordFromSource,
@@ -443,6 +446,12 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
    * folds is refused rather than folding the figure twice.
    */
   const pendingLayerOrderOpens = new Set<string>();
+  /**
+   * A "Fold with layer order…" press still folding the selection; see
+   * `prepareOristudioCpLayerOrderFold`. A second press meanwhile is refused
+   * rather than folding the creases twice.
+   */
+  let selectionLayerOrderPending = false;
   /**
    * What we last wrote into each kernel handle, so a reconcile that would change
    * nothing costs a comparison instead of a round-trip. Cleared when the handle
@@ -1186,6 +1195,123 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       throw error;
     }
     release();
+    return null;
+  }
+
+  /**
+   * Oriedita `FoldAction`'s check before a fold: run the local
+   * flat-foldability check (CAMV / Check4) and, if it finds violations, warn
+   * the user and let them fold anyway. Whether to fold. This gate is purely
+   * LOCAL (per-vertex Maekawa/Kawasaki/big-little-big); global layer-ordering
+   * contradictions surface later, from the fold itself. Skipped when the user
+   * has disabled the warning. Asked by a plain fold and by Fold with layer
+   * order…, at the press.
+   */
+  async function confirmFoldDespiteCheck(spatial: boolean): Promise<boolean> {
+    const settings = useSettingsStore.getState();
+    if (!settings.foldWarningEnabled) return true;
+    let violationCount = 0;
+    try {
+      const camv = await runOristudioCpCheckCommand('CheckCamv');
+      // The scoped check filter applies here too. This is the one gate that
+      // calls the kernel directly, so it sees findings the canvas, the HUD
+      // and the marker layer have all agreed to hide — and warning about a
+      // class the user has declared does not apply to a region is how a
+      // suppressor becomes a nag instead of a tool.
+      //
+      // Only the per-class rules, deliberately: `camvIssuesVisible` is a
+      // *view* switch, and turning markers off must not silently disarm the
+      // pre-fold warning. The switch for that is `foldWarningEnabled`, which
+      // already guards this whole check.
+      const rules = cpCheckSuppressionRules(
+        get().oristudioCpViewport.suppressedCheckClasses,
+        get().oristudioCpAnnotations
+      );
+      // Errors only. `CheckCamv` also emits `SpatialInteriorBorder` at
+      // `warning` severity — "border with paper on both sides: the vertices
+      // on it are not checked" — which is an observation about the check's
+      // own coverage and not a violation of anything. Counting it here would
+      // raise Oriedita's "continue to fold?" modal over a document with
+      // nothing wrong with it, and report `had_violations` for it.
+      violationCount = countCpDiagnosticErrors(
+        partitionCpDiagnosticsBySuppression(camv.diagnostic_entries ?? [], rules).visible
+      );
+      track(ANALYTICS_EVENTS.foldabilityChecked, {
+        source: 'pre-fold',
+        had_violations: violationCount > 0,
+        violation_count_bucket: bucketCount(violationCount, COUNT_BUCKETS),
+      });
+    } catch {
+      // A failed check must not block folding — leave the count at zero and fold.
+    }
+    if (violationCount === 0) return true;
+    track(ANALYTICS_EVENTS.foldWarningShown, { source: 'pre-fold' });
+    const { confirmed, optionChecked } = await requestConfirmationWithOption({
+      title: i18n.t('dialogs:foldWarning.title', 'Warning'),
+      // Same check, same scope, same toggle — only the sentence is split.
+      // "Errors in flat foldability" is a false description of a spatial
+      // document, where what `CheckCamv` reports is closure and
+      // self-intersection at folded vertices, not Maekawa and Kawasaki.
+      message: spatial
+        ? i18n.t(
+            'dialogs:foldWarning.spatialMessage',
+            'Detected errors in how these creases fold. Continue to fold?'
+          )
+        : i18n.t('dialogs:foldWarning.message', 'Detected errors in flat foldability. Continue to fold?'),
+      optionLabel: i18n.t('dialogs:foldWarning.dontShowAgain', "Don't show this again"),
+      confirmLabel: i18n.t('dialogs:common.yes', 'Yes'),
+      cancelLabel: i18n.t('dialogs:common.no', 'No'),
+    });
+    track(ANALYTICS_EVENTS.foldWarningAccepted, {
+      source: 'pre-fold',
+      accepted: confirmed,
+      suppressed_future_warnings: optionChecked,
+    });
+    // Oriedita persists the "don't show again" choice whether the user
+    // clicks Yes or No.
+    if (optionChecked) settings.setFoldWarningEnabled(false);
+    return confirmed;
+  }
+
+  /**
+   * The model a new flat figure folds with. A reopened Oriedita file keeps its
+   * folded appearance, but not its saved side -- a new figure always faces
+   * front (NEW_FOLDED_FIGURE_SIDE). Undefined for the kernel's own.
+   */
+  function newFoldedFigureModel(document: OristudioCpDocumentSnapshot): OristudioCpFoldedFigureModel | undefined {
+    const savedModel = foldedFigureModelFromOrieditaMetadata(document.metadata);
+    return savedModel ? { ...savedModel, state: NEW_FOLDED_FIGURE_SIDE } : undefined;
+  }
+
+  /**
+   * The fold of a new figure with the order the Layer order dialog chose
+   * (row H5): the source it analysed folded again as it is, with its
+   * relations (`fold_with_order`); none folds it with Oriedita's own search.
+   * Null, with nothing left in the kernel, when the order can't be drawn on
+   * those faces whole: refused, other faces than the dialog analysed (the
+   * digest), or a given order not reached.
+   */
+  async function foldWithChosenOrder(
+    order: OristudioCpFoldWithChosenOrder,
+    runId: number
+  ): Promise<{ handle: number; snapshot: OristudioCpFoldedFigureSnapshot } | null> {
+    const result = await foldOristudioCpWithOrder(
+      kernelFoldSourceOf(order.source),
+      order.relations,
+      order.source.model,
+      runId
+    );
+    if (result.status !== 'folded') return null;
+    let digest: string;
+    try {
+      digest = await getOristudioCpFoldedFigureDigest(result.handle);
+    } catch (error) {
+      await freeOristudioCpFoldedFigure(result.handle).catch(() => {});
+      throw error;
+    }
+    const drawsTheOrder = order.relations.length === 0 || result.snapshot.outcome === 'Solved';
+    if (digest === order.source.digest && drawsTheOrder) return result;
+    await freeOristudioCpFoldedFigure(result.handle).catch(() => {});
     return null;
   }
 
@@ -2097,18 +2223,42 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       }
       const selectedLineIds = route.lineIds;
       const nonClassicCount = route.kind === 'spatial' ? route.nonClassicCount : 0;
+      const withOrder = options.withOrder;
+      // A layer order is a flat fold's: these creases fold in 3D now, and the
+      // order chosen for them would be drawn on nothing.
+      if (withOrder && route.kind !== 'flat') {
+        const message = i18n.t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
+        set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+        return false;
+      }
+      // The record, as the figure saves it, before anything is folded: one too
+      // large to save is refused with nothing to undo.
+      const held = withOrder?.record
+        ? foldedFigureLayerOrder(layerOrderRecordFromSource(withOrder.record, EDIT_PAPER_FRAME))
+        : null;
+      if (held && !held.ok) {
+        const message = i18n.t(
+          'errors:cp.layerOrderTooLargeToFold',
+          'This layer order is too large to save with a folded model, so nothing was folded.'
+        );
+        set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+        return false;
+      }
 
       // `G` reaches neither analytics chokepoint: `handleCpShortcutAction`
       // short-circuits to the fold before `handleCpToolAction` (so no
       // `cp tool used`), and the toolbar button calls the same store action
       // directly (so no `command invoked`). These are hand-placed for that
       // reason, and every terminal branch below pairs one `fold completed` with
-      // this one `fold attempted`.
+      // this one `fold attempted`. A fold with a layer order the dialog chose
+      // says so (`via`), on both.
       const mode: FoldMode = route.kind === 'spatial' ? 'spatial' : 'flat';
+      const via = withOrder ? ({ via: 'layer_order' } as const) : {};
       track(ANALYTICS_EVENTS.foldAttempted, {
         mode,
         crease_count_bucket: bucketCount(selectedLineIds.length, COUNT_BUCKETS),
         non_classic_count_bucket: bucketCount(nonClassicCount, COUNT_BUCKETS),
+        ...via,
       });
       // Measured from the press, not from the kernel call: the CAMV pre-check and
       // its dialog are part of what the user waits through, and a `halted` verdict
@@ -2134,86 +2284,15 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           solution_count_bucket: bucketCount(solutionCount ?? 0, COUNT_BUCKETS),
           elapsed_ms_bucket: bucketCount(Date.now() - attemptedAt, FOLD_DURATION_MS_BUCKETS),
           ...extra,
+          ...via,
         });
       };
 
-      // Oriedita `FoldAction`: before folding, run the local flat-foldability
-      // check (CAMV / Check4) and, if it finds violations, warn the user and let
-      // them fold anyway. This gate is purely LOCAL (per-vertex Maekawa/Kawasaki/
-      // big-little-big); global layer-ordering contradictions surface later, from
-      // the fold itself. Skipped when the user has disabled the warning.
-      const settings = useSettingsStore.getState();
-      if (settings.foldWarningEnabled) {
-        let violationCount = 0;
-        try {
-          const camv = await runOristudioCpCheckCommand('CheckCamv');
-          // The scoped check filter applies here too. This is the one gate that
-          // calls the kernel directly, so it sees findings the canvas, the HUD
-          // and the marker layer have all agreed to hide — and warning about a
-          // class the user has declared does not apply to a region is how a
-          // suppressor becomes a nag instead of a tool.
-          //
-          // Only the per-class rules, deliberately: `camvIssuesVisible` is a
-          // *view* switch, and turning markers off must not silently disarm the
-          // pre-fold warning. The switch for that is `foldWarningEnabled`, which
-          // already guards this whole block.
-          const rules = cpCheckSuppressionRules(
-            get().oristudioCpViewport.suppressedCheckClasses,
-            get().oristudioCpAnnotations
-          );
-          // Errors only. `CheckCamv` also emits `SpatialInteriorBorder` at
-          // `warning` severity — "border with paper on both sides: the vertices
-          // on it are not checked" — which is an observation about the check's
-          // own coverage and not a violation of anything. Counting it here would
-          // raise Oriedita's "continue to fold?" modal over a document with
-          // nothing wrong with it, and report `had_violations` for it.
-          violationCount = countCpDiagnosticErrors(
-            partitionCpDiagnosticsBySuppression(camv.diagnostic_entries ?? [], rules).visible
-          );
-          track(ANALYTICS_EVENTS.foldabilityChecked, {
-            source: 'pre-fold',
-            had_violations: violationCount > 0,
-            violation_count_bucket: bucketCount(violationCount, COUNT_BUCKETS),
-          });
-        } catch {
-          // A failed check must not block folding — leave the count at zero and fold.
-        }
-        const hasFlatFoldabilityViolations = violationCount > 0;
-        if (hasFlatFoldabilityViolations) {
-          track(ANALYTICS_EVENTS.foldWarningShown, { source: 'pre-fold' });
-          const { confirmed, optionChecked } = await requestConfirmationWithOption({
-            title: i18n.t('dialogs:foldWarning.title', 'Warning'),
-            // Same check, same scope, same toggle — only the sentence is split.
-            // "Errors in flat foldability" is a false description of a spatial
-            // document, where what `CheckCamv` reports is closure and
-            // self-intersection at folded vertices, not Maekawa and Kawasaki.
-            message:
-              route.kind === 'spatial'
-                ? i18n.t(
-                    'dialogs:foldWarning.spatialMessage',
-                    'Detected errors in how these creases fold. Continue to fold?'
-                  )
-                : i18n.t(
-                    'dialogs:foldWarning.message',
-                    'Detected errors in flat foldability. Continue to fold?'
-                  ),
-            optionLabel: i18n.t('dialogs:foldWarning.dontShowAgain', "Don't show this again"),
-            confirmLabel: i18n.t('dialogs:common.yes', 'Yes'),
-            cancelLabel: i18n.t('dialogs:common.no', 'No'),
-          });
-          track(ANALYTICS_EVENTS.foldWarningAccepted, {
-            source: 'pre-fold',
-            accepted: confirmed,
-            suppressed_future_warnings: optionChecked,
-          });
-          // Oriedita persists the "don't show again" choice whether the user
-          // clicks Yes or No.
-          if (optionChecked) settings.setFoldWarningEnabled(false);
-          if (!confirmed) {
-            completed('cancelled');
-            return false;
-          }
-        }
+      // A fold with a chosen order was asked the pre-fold check at its press,
+      // before the Layer order dialog opened on the same creases.
+      if (!withOrder && !(await confirmFoldDespiteCheck(route.kind === 'spatial'))) {
+        completed('cancelled');
+        return false;
       }
 
       const previousActiveId = get().oristudioCpActiveFoldedFigureId;
@@ -2445,23 +2524,25 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
       const landing = foldLanding(figureId, null);
 
       try {
-        // A reopened Oriedita file keeps its folded appearance, but not its
-        // saved side -- a new figure always faces front (NEW_FOLDED_FIGURE_SIDE).
-        const savedModel = foldedFigureModelFromOrieditaMetadata(
-          oristudioCpDocument.document.metadata
-        );
-        const model =
-          options.model ??
-          (savedModel ? { ...savedModel, state: NEW_FOLDED_FIGURE_SIDE } : undefined);
-        const result = await withFoldInFlight('fold', (runId) =>
-          foldRuntimeOristudioCpDocument(
-            options.startingFaceId ?? 1,
-            options.order ?? 'Order5',
-            model,
-            selectedLineIds,
-            runId
-          )
-        );
+        const model = options.model ?? newFoldedFigureModel(oristudioCpDocument.document);
+        const result = withOrder
+          ? await withFoldInFlight('layer-order', (runId) => foldWithChosenOrder(withOrder, runId))
+          : await withFoldInFlight('fold', (runId) =>
+              foldRuntimeOristudioCpDocument(
+                options.startingFaceId ?? 1,
+                options.order ?? 'Order5',
+                model,
+                selectedLineIds,
+                runId
+              )
+            );
+        if (!result) {
+          completed('error');
+          return discardFoldedFigureDraft(
+            figureId,
+            i18n.t('errors:cp.layerOrderNotFolded', 'Layer order couldn’t fold these creases in this order.')
+          );
+        }
         const displayStyle = result.snapshot.display_style;
         // Rendered unselected: a fresh fold is not the canvas selection, so it
         // must not carry the kernel's selection marker either.
@@ -2527,6 +2608,9 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
             selectedLineIds,
             scopedLineIds
           ),
+          // The order the dialog chose, saved as its record; an Apply that
+          // changed nothing folds Oriedita's own order, and saves none.
+          ...(held?.ok ? { layerOrder: held.layerOrder } : {}),
         };
         // A fresh flat fold is not selected. Selecting it would put delete-key
         // focus on the new figure the moment it appears, and the folded-figure
@@ -3950,6 +4034,81 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         if (error instanceof FoldMovedOn) return false;
         if (isFoldCancellation(error)) return restorePreviousFigureQuietly(figure);
         return restorePreviousFigure(figure, engineError(error).message);
+      }
+    },
+
+    prepareOristudioCpLayerOrderFold: async (scopedLineIds) => {
+      const oristudioCpDocument = get().oristudioCpDocument;
+      const refuse = (
+        reason: Extract<OristudioCpSelectionLayerOrderOpening, { status: 'unavailable' }>['reason'],
+        message?: string
+      ): OristudioCpSelectionLayerOrderOpening => {
+        if (message) set({ oristudioCpError: message, error: { code: 'invalid_operation', message } });
+        return { status: 'unavailable', reason };
+      };
+      if (!oristudioCpDocument) return refuse('blocked', 'No editable crease-pattern document is loaded');
+      // The same routing a fold makes, on the same scoped ids.
+      const route = resolveFoldRoute(oristudioCpDocument.document, scopedLineIds);
+      if (route.kind === 'none') return refuse('blocked', 'Select one or more foldable crease-pattern lines first');
+      // A layer order is a flat fold's (D2); the selection toolbar says so before a press.
+      if (route.kind === 'spatial') {
+        return refuse('spatial', i18n.t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures'));
+      }
+      if (selectionLayerOrderPending) return refuse('busy');
+      selectionLayerOrderPending = true;
+      try {
+        // Asked here, once, as Fold asks it: Apply's fold does not ask again.
+        if (!(await confirmFoldDespiteCheck(false))) return refuse('declined');
+        const model = newFoldedFigureModel(oristudioCpDocument.document);
+        const { source, folded } = await withFoldInFlight('layer-order', async (runId) => {
+          // From face 1, as every fold is (`foldCreases`).
+          const source = await getOristudioCpSelectionFoldSource(route.lineIds, 1);
+          // No order given: Oriedita's own search, as Fold runs it on these creases.
+          return { source, folded: await foldOristudioCpWithOrder(source, new Uint32Array(), model, runId) };
+        });
+        if (folded.status !== 'folded') {
+          return refuse('failed', i18n.t('errors:cp.foldProducedNothing', 'These creases have no flat folded form to draw'));
+        }
+        // The count holds it from here, and every way out lets go through it:
+        // no figure ever holds this fold.
+        const release = adoptTransientFoldedFigureHandle(folded.handle);
+        const { snapshot } = folded;
+        // As "Layer order…" is held on a figure Oriedita's search did not order
+        // (D3): Apply could not draw the order chosen on these faces.
+        if (
+          !hasFoldedLayerOrder({
+            discoveredCases: snapshot.discovered_fold_cases,
+            displayStyle: snapshot.display_style,
+            outcome: snapshot.outcome,
+          })
+        ) {
+          release();
+          return refuse(
+            'undetermined',
+            i18n.t('errors:cp.layerOrderUndeterminedSelection', 'Layer order couldn’t be determined for these creases.')
+          );
+        }
+        let shown: OristudioCpFoldedPaperScene | null = null;
+        try {
+          shown = await getOristudioCpFoldedFigurePaperScene(folded.handle);
+        } catch {
+          // The dialog opens on its solver's first order instead.
+        }
+        return {
+          status: 'ready',
+          source,
+          shown,
+          model: snapshot.model,
+          lineIds: [...scopedLineIds],
+          release: async () => release(),
+        };
+      } catch (error) {
+        if (isFoldCancellation(error)) return refuse('cancelled');
+        const normalized = engineError(error);
+        set({ oristudioCpError: normalized.message, error: normalized });
+        return { status: 'unavailable', reason: 'failed' };
+      } finally {
+        selectionLayerOrderPending = false;
       }
     },
 
