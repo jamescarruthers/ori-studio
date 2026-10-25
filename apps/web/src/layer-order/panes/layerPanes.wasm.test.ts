@@ -47,7 +47,7 @@ import {
   XRAY_COVER,
   xrayFaceAlpha,
 } from './layerPaneFigure';
-import { foldedLabelSpots, paneLetters } from './layerPaneLabels';
+import { foldedLabelIndex, paneLetters, patternLabelIndex } from './layerPaneLabels';
 import { NO_FACE_MARKS, SUBJECT_RING_PX } from './layerPaneMarks';
 
 const CP_WASM = resolve(process.cwd(), 'src/generated/oristudio-cp-wasm/oristudio_cp_wasm_bg.wasm');
@@ -133,19 +133,38 @@ describe.skipIf(!existsSync(CP_WASM))('the Layer order panes over Oriedita’s f
     for (const { name, front, back } of figures) {
       for (const scene of [front, back]) {
         const all = scene.faces.map((_, face) => face);
-        const spots = foldedLabelSpots(scene, all);
+        const spotsOf = foldedLabelIndex(scene);
         const onTop = new Set(topFaces(scene));
         for (const face of all) {
-          const at = spots.get(face)!;
-          expect(at.at.length, `${name} face ${face}`).toBeGreaterThan(0);
-          expect(at.visible, `${name} face ${face}`).toBe(onTop.has(face));
-          if (at.visible) {
+          const spots = spotsOf(face)!;
+          expect(spots.spots.length, `${name} face ${face}`).toBeGreaterThan(0);
+          expect(spots.visible, `${name} face ${face}`).toBe(onTop.has(face));
+          if (spots.visible) {
             const outline = scene.faces[face]!.outline;
             // A convex face holds its spots' centres.
-            expect(insideEvenOdd(outline, at.at[0]!, scene.sheet * 1e-9), `${name} face ${face}`).toBe(true);
+            expect(insideEvenOdd(outline, spots.spots[0]!.at, scene.sheet * 1e-9), `${name} face ${face}`).toBe(true);
+          }
+          // Each spot inside the region a chip there must stay in.
+          for (const { at, region } of spots.spots) {
+            expect(insideEvenOdd(region, at, scene.sheet * 1e-9), `${name} face ${face}`).toBe(true);
           }
         }
       }
+    }
+  });
+
+  it('offers every face on the crease pattern several spots inside it', () => {
+    for (const { name, front } of figures) {
+      const { pattern } = paneFacesOf(front);
+      const spotsOf = patternLabelIndex(pattern);
+      let several = 0;
+      pattern.forEach((ring, face) => {
+        const spots = spotsOf(face)!;
+        expect(spots.spots.length, `${name} face ${face}`).toBeGreaterThan(0);
+        for (const { at } of spots.spots) expect(insideEvenOdd(ring, at, front.sheet * 1e-9), `${name} face ${face}`).toBe(true);
+        if (spots.spots.length > 1) several += 1;
+      });
+      expect(several, name).toBe(pattern.length);
     }
   });
 

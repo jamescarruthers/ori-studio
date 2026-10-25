@@ -4,19 +4,44 @@ import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
 import { restackedScene } from './layerPaneFigure';
 import {
   cappedFaces,
-  foldedLabelSpots,
+  chipFits,
+  foldedLabelIndex,
   labelSize,
+  LABEL_EDGE_ROOM_PX,
   paneLetters,
+  patternLabelIndex,
   placeLabels,
+  ringSpots,
+  withPointerLetters,
+  type LayerLabelSpots,
   type LayerPaneLabel,
 } from './layerPaneLabels';
-import { NO_FACE_MARKS, type LayerFaceMarks } from './layerPaneMarks';
+import { baseMarks, NO_FACE_MARKS, type LayerFaceMarks } from './layerPaneMarks';
 import { zScene } from './layerPanes.fixtures';
 
 const marks = (over: Partial<LayerFaceMarks>): LayerFaceMarks => ({ ...NO_FACE_MARKS, ...over });
 
 /** Faces along a line on the crease pattern: face k at x = k. */
 const LINE: Point[] = Array.from({ length: 200 }, (_, k) => ({ x: k, y: 0 }));
+
+const square = (x: number, y: number, side: number): Point[] => [
+  { x, y },
+  { x: x + side, y },
+  { x: x + side, y: y + side },
+  { x, y: y + side },
+];
+
+const insideRect = ({ x, y }: Point, ring: readonly Point[]) => {
+  const xs = ring.map((p) => p.x);
+  const ys = ring.map((p) => p.y);
+  return x > Math.min(...xs) && x < Math.max(...xs) && y > Math.min(...ys) && y < Math.max(...ys);
+};
+
+/** A face given whole as its own one spot, the identity its projection. */
+const roomy = (x: number, y: number, side = 60): LayerLabelSpots => {
+  const ring = square(x - side / 2, y - side / 2, side);
+  return { visible: true, spots: [{ at: { x, y }, region: ring }], outline: ring };
+};
 
 describe('which faces carry letters', () => {
   it('the cap is phase gate 2’s', () => {
@@ -68,15 +93,102 @@ describe('which faces carry letters', () => {
     expect(letters.pastCap).toHaveLength(120 - 52);
     expect(letters.pastCap.every((face) => !lettered.has(face))).toBe(true);
   });
+
+  it('marks which letters must show: picks, the clash, the face pointed at', () => {
+    const pickable = Array.from({ length: 60 }, (_, k) => k + 1);
+    const { labels } = paneLetters(marks({ picking: 'object', pickable, subject: 0, objects: [3], clash: [9], pointed: 30 }), LINE);
+    const keep = labels.filter((label) => label.keep).map(({ face }) => face).sort((a, b) => a - b);
+    expect(keep).toEqual([0, 3, 9, 30]);
+  });
+
+  const byFace = (letters: { labels: readonly LayerPaneLabel[] }) => [...letters.labels].sort((a, b) => a.face - b.face);
+  const PAST_CAP = Array.from({ length: 120 }, (_, k) => k + 1);
+
+  it('takes the pointer on last, the same letters as reading the marks whole', () => {
+    const cases: Partial<LayerFaceMarks>[] = [
+      { picking: 'object', pickable: [4, 5, 6], subject: 0, objects: [4], pointed: 5, row: [7, 8] },
+      { picking: 'object', pickable: PAST_CAP, subject: 0, pointed: 100 },
+      { picking: 'subject', pickable: [1, 2], pointed: 2, row: [1, 9], clash: [9] },
+    ];
+    for (const over of cases) {
+      const full = marks(over);
+      const taken = withPointerLetters(paneLetters(baseMarks(full), LINE), full, LINE);
+      expect(byFace(taken)).toEqual(byFace(paneLetters(full, LINE)));
+    }
+  });
+
+  it('past the cap, pointing at a lettered face moves no letter: only one the cap left out gathers them', () => {
+    const resting = marks({ picking: 'object', pickable: PAST_CAP, subject: 0 });
+    const base = paneLetters(resting, LINE);
+    const lettered = (letters: { labels: readonly LayerPaneLabel[] }) => letters.labels.map(({ face }) => face).sort((a, b) => a - b);
+    const onLettered = withPointerLetters(base, { ...resting, pointed: 3 }, LINE);
+    expect(lettered(onLettered)).toEqual(lettered(base));
+    expect(onLettered.labels.find(({ face }) => face === 3)?.keep).toBe(true);
+    const onLeftOut = withPointerLetters(base, { ...resting, pointed: 100 }, LINE);
+    expect(lettered(onLeftOut)).toContain(100);
+    expect(lettered(onLeftOut)).not.toContain(1);
+  });
 });
 
-describe('where a letter sits', () => {
-  it('on the folded paper: its spots on top, largest first; a hidden face’s at its middle, then its spots', () => {
-    const spots = foldedLabelSpots(zScene(), [0, 1, 2]);
+describe('where a letter may sit', () => {
+  it('on the crease pattern: inside the face, its centroid first, then spread along it whichever way it lies', () => {
+    const long = square(0, 0, 10).map(({ x, y }) => ({ x: x * 10, y }));
+    const tall = long.map(({ x, y }) => ({ x: y, y: x }));
+    for (const [ring, along] of [
+      [long, 'x'],
+      [tall, 'y'],
+    ] as const) {
+      const spots = ringSpots(ring, 4);
+      expect(spots).toHaveLength(4);
+      expect(spots[0]).toEqual(along === 'x' ? { x: 50, y: 5 } : { x: 5, y: 50 });
+      expect(spots.every((p) => insideRect(p, ring))).toBe(true);
+      const reach = spots.map((p) => p[along]);
+      expect(Math.max(...reach) - Math.min(...reach)).toBeGreaterThan(50);
+    }
+    // A face whose centroid is outside it: only points inside.
+    const l = [
+      { x: 0, y: 0 },
+      { x: 40, y: 0 },
+      { x: 40, y: 10 },
+      { x: 10, y: 10 },
+      { x: 10, y: 40 },
+      { x: 0, y: 40 },
+    ];
+    const spots = ringSpots(l, 6);
+    expect(spots.length).toBeGreaterThan(1);
+    expect(spots.every(({ x, y }) => (x < 10 && y < 40) || (y < 10 && x < 40))).toBe(true);
+  });
+
+  it('on the crease pattern, the face’s ring is each spot’s region, worked out once', () => {
+    const index = patternLabelIndex([square(0, 0, 30), []]);
+    const spots = index(0)!;
+    expect(spots.visible).toBe(true);
+    expect(spots.spots.length).toBeGreaterThan(1);
+    expect(spots.spots.every(({ region }) => region === spots.outline)).toBe(true);
+    expect(index(0)).toBe(spots);
+    expect(index(1)).toBeNull();
+    expect(index(5)).toBeNull();
+  });
+
+  it('on the folded paper: points in its spots on top; a hidden face’s in its outline, then in its spots', () => {
+    const scene = zScene();
+    const index = foldedLabelIndex(scene);
+    const [left, right] = scene.subfaces.map(({ polygon }) => polygon);
     // Face 0 is on top of spot 0 only; face 2 of spot 1; face 1 of none.
-    expect(spots.get(0)).toEqual({ visible: true, at: [{ x: 5, y: 5 }] });
-    expect(spots.get(2)).toEqual({ visible: true, at: [{ x: 15, y: 5 }] });
-    expect(spots.get(1)).toEqual({ visible: false, at: [{ x: 15, y: 5 }, { x: 15, y: 5 }] });
+    const zero = index(0)!;
+    expect(zero.visible).toBe(true);
+    expect(zero.spots[0]!.at).toEqual({ x: 5, y: 5 });
+    expect(zero.spots.length).toBeGreaterThan(1);
+    expect(zero.spots.every(({ at, region }) => region === left && insideRect(at, left!))).toBe(true);
+    const two = index(2)!;
+    expect(two.spots[0]!.at).toEqual({ x: 15, y: 5 });
+    expect(two.spots.every(({ region }) => region === right)).toBe(true);
+    const one = index(1)!;
+    expect(one.visible).toBe(false);
+    expect(one.outline).toBe(scene.faces[1]!.outline);
+    expect(one.spots[0]).toEqual({ at: { x: 15, y: 5 }, region: one.outline });
+    expect(one.spots.at(-1)!.region).toBe(right);
+    expect(index(1)).toBe(one);
   });
 
   it('follows the order on screen', () => {
@@ -84,8 +196,8 @@ describe('where a letter sits', () => {
       offsets: new Uint32Array([0, 1, 4]),
       faces: new Uint32Array([0, 1, 2, 0]),
     });
-    expect(foldedLabelSpots(turned, [1]).get(1)?.visible).toBe(true);
-    expect(foldedLabelSpots(turned, [2]).get(2)?.visible).toBe(false);
+    expect(foldedLabelIndex(turned)(1)?.visible).toBe(true);
+    expect(foldedLabelIndex(turned)(2)?.visible).toBe(false);
   });
 
   it('sizes a chip by its letters, smaller when hidden, wider with a clash’s dot', () => {
@@ -96,33 +208,64 @@ describe('where a letter sits', () => {
     expect(labelSize('C', false, true).width).toBe(plain.width + 8);
   });
 
-  it('places each clear of the ones before it; one that must show at its first spot when none is clear; the first on top', () => {
+  it('fits a chip inside its region with room for the ring, and not across a notch', () => {
+    const size = labelSize('C', false, false);
+    expect(chipFits({ x: 30, y: 30 }, size, square(0, 0, 60), LABEL_EDGE_ROOM_PX)).toBe(true);
+    // A face narrower than the chip, or as wide with no room for its ring.
+    expect(chipFits({ x: 5, y: 5 }, size, square(0, 0, 10), LABEL_EDGE_ROOM_PX)).toBe(false);
+    expect(chipFits({ x: 9, y: 9 }, size, square(0, 0, 18), LABEL_EDGE_ROOM_PX)).toBe(false);
+    // An L whose reflex corner bites into the chip's box though every corner of the box is inside.
+    const l = [
+      { x: 0, y: 0 },
+      { x: 60, y: 0 },
+      { x: 60, y: 30 },
+      { x: 31, y: 30 },
+      { x: 31, y: 32 },
+      { x: 60, y: 32 },
+      { x: 60, y: 60 },
+      { x: 0, y: 60 },
+    ];
+    expect(chipFits({ x: 40, y: 31 }, { width: 10, height: 30 }, l, 0)).toBe(false);
+  });
+});
+
+describe('placing the letters', () => {
+  const at = (placed: ReturnType<typeof placeLabels>) =>
+    placed.map(({ face, x, y, under, off }) => [face, Math.round(x), Math.round(y), under, off]);
+
+  it('places each at the first spot it fits clear of the ones before; the first on top', () => {
     const labels: LayerPaneLabel[] = [
       { face: 0, tone: 'pick', keep: true },
       { face: 1, tone: 'plain', keep: false },
-      { face: 2, tone: 'plain', keep: true },
     ];
-    const spots = new Map([
-      [0, { visible: true, at: [{ x: 0, y: 0 }] }],
-      [1, { visible: true, at: [{ x: 1, y: 0 }, { x: 100, y: 0 }] }],
-      [2, { visible: false, at: [{ x: 0, y: 1 }] }],
+    const spots = new Map<number, LayerLabelSpots>([
+      [0, roomy(30, 30)],
+      [
+        1,
+        {
+          visible: true,
+          spots: [
+            { at: { x: 32, y: 30 }, region: square(0, 0, 60) },
+            { at: { x: 130, y: 30 }, region: square(100, 0, 60) },
+          ],
+          outline: square(0, 0, 160),
+        },
+      ],
     ]);
-    const placed = placeLabels(labels, (face) => spots.get(face) ?? null, (face) => 'ABC'[face]!, (p) => p);
-    expect(placed.map(({ face, x, y, under }) => [face, x, y, under])).toEqual([
-      [2, 0, 1, true],
-      [1, 100, 0, false],
-      [0, 0, 0, false],
+    const placed = placeLabels(labels, (face) => spots.get(face) ?? null, (face) => 'AB'[face]!, (p) => p);
+    expect(at(placed)).toEqual([
+      [1, 130, 30, false, false],
+      [0, 30, 30, false, false],
     ]);
   });
 
-  it('leaves out a letter that need not show and has no clear spot: only legible letters', () => {
+  it('leaves out a plain letter with no clear spot it fits in: only legible letters', () => {
     const labels: LayerPaneLabel[] = Array.from({ length: 50 }, (_, face) => ({ face, tone: 'plain', keep: face === 7 }));
-    // Fifty faces a pixel apart, as iguana-c0's are at fit.
-    const placed = placeLabels(labels, (face) => ({ visible: true, at: [{ x: face, y: 0 }] }), () => 'HN', (p) => p);
+    // Fifty faces a pixel apart, as iguana-c0's are at fit, each roomy enough on its own.
+    const placed = placeLabels(labels, (face) => roomy(face, 0), () => 'HN', (p) => p);
     const faces = placed.map(({ face }) => face).sort((a, b) => a - b);
     expect(faces).toContain(7);
     expect(faces.length).toBeLessThan(10);
-    // No two left overlapping but the one that must show.
     for (const a of placed) {
       for (const b of placed) {
         if (a === b || a.face === 7 || b.face === 7) continue;
@@ -131,11 +274,54 @@ describe('where a letter sits', () => {
     }
   });
 
-  it('marks which letters must show: picks, the clash, the face pointed at', () => {
-    const pickable = Array.from({ length: 60 }, (_, k) => k + 1);
-    const { labels } = paneLetters(marks({ picking: 'object', pickable, subject: 0, objects: [3], clash: [9], pointed: 30 }), LINE);
-    const keep = labels.filter((label) => label.keep).map(({ face }) => face).sort((a, b) => a - b);
-    expect(keep).toEqual([0, 3, 9, 30]);
+  it('letters the faces that show before the hidden ones, so a buried face never takes the spot of the face on top', () => {
+    const one = roomy(30, 30);
+    const labels: LayerPaneLabel[] = [
+      { face: 1, tone: 'pick', keep: true },
+      { face: 2, tone: 'pick', keep: true },
+    ];
+    const spotsOf = (face: number): LayerLabelSpots => (face === 1 ? { ...one, visible: false } : one);
+    const placed = placeLabels(labels, spotsOf, (face) => 'AB'[face - 1]!, (p) => p);
+    const two = placed.find(({ face }) => face === 2)!;
+    expect([two.x, two.y, two.off]).toEqual([30, 30, false]);
+    expect(placed.find(({ face }) => face === 1)?.off).toBe(true);
+  });
+
+  it('never letters a plain face narrower than its chip', () => {
+    const thin = square(0, 0, 8);
+    const placed = placeLabels(
+      [{ face: 0, tone: 'plain', keep: false }],
+      () => ({ visible: true, spots: [{ at: { x: 4, y: 4 }, region: thin }], outline: thin }),
+      () => 'A',
+      (p) => p
+    );
+    expect(placed).toEqual([]);
+  });
+
+  it('sets a letter that must show beside its face when the face has no room, so it never hides the face’s tint or ring', () => {
+    const thin = square(100, 100, 8);
+    const placed = placeLabels(
+      [{ face: 0, tone: 'pick', keep: true }],
+      () => ({ visible: true, spots: [{ at: { x: 104, y: 104 }, region: thin }], outline: thin }),
+      () => 'A',
+      (p) => p
+    );
+    expect(placed).toHaveLength(1);
+    const chip = placed[0]!;
+    expect(chip.off).toBe(true);
+    // Above the face, clear of it.
+    expect(chip.y + chip.height / 2).toBeLessThan(100);
+    expect(chip.x).toBe(104);
+  });
+
+  it('places in the pane’s pixels, through the projection', () => {
+    const placed = placeLabels(
+      [{ face: 0, tone: 'pick', keep: true }],
+      () => roomy(3, 3, 6),
+      () => 'A',
+      ({ x, y }) => ({ x: x * 10, y: y * 10 })
+    );
+    expect(at(placed)).toEqual([[0, 30, 30, false, false]]);
   });
 
   it('leaves out a face with no letter or nowhere to sit', () => {
@@ -144,8 +330,8 @@ describe('where a letter sits', () => {
         { face: 0, tone: 'plain', keep: true },
         { face: 1, tone: 'plain', keep: true },
       ],
-      (face) => (face === 0 ? { visible: true, at: [] } : { visible: true, at: [{ x: 0, y: 0 }] }),
-      () => '',
+      (face) => (face === 0 ? { visible: true, spots: [], outline: [] } : roomy(0, 0)),
+      (face) => (face === 1 ? '' : 'A'),
       (p) => p
     );
     expect(placed).toEqual([]);

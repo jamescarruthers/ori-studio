@@ -77,6 +77,7 @@ export function LayerOrderPaneMarks({ pane, view }: { pane: LayerPaneChannels; v
           className={styles.label}
           data-tone={label.tone}
           data-under={label.under || undefined}
+          data-off={label.off || undefined}
           data-layer-order-letter={label.text}
           style={{
             left: label.x - label.width / 2,
