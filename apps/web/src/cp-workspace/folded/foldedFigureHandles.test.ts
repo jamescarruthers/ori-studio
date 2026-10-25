@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  adoptTransientFoldedFigureHandle,
   foldedFigureHandleRefCount,
   releaseFoldedFigureHandle,
   releaseFoldedFigureHandles,
@@ -109,6 +110,28 @@ describe('folded figure handle ownership', () => {
     void resetFoldedFigureHandles();
     expect(foldedFigureHandleRefCount(9)).toBe(0);
     expect(free).toHaveBeenCalledExactlyOnceWith(9);
+  });
+});
+
+describe('a fold a press keeps a while', () => {
+  it('is held by the count until its release, which lets go once', () => {
+    const release = adoptTransientFoldedFigureHandle(7);
+    expect(foldedFigureHandleRefCount(7)).toBe(1);
+
+    release();
+    release();
+    expect(free).toHaveBeenCalledExactlyOnceWith(7);
+  });
+
+  it('is not let go across a replaced document, whose next fold may have its slot', async () => {
+    const release = adoptTransientFoldedFigureHandle(7);
+    await resetFoldedFigureHandles();
+    retainFoldedFigureHandle(7);
+    free.mockClear();
+
+    release();
+    expect(free).not.toHaveBeenCalled();
+    expect(foldedFigureHandleRefCount(7)).toBe(1);
   });
 });
 

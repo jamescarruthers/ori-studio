@@ -146,6 +146,7 @@ async function openingFor(
     const number = diagram ? stepNumber(diagram, stepId) : null;
     return {
       request: {
+        surface: 'diagram_step',
         source: folded.source,
         record: saved ? layerOrderRecordToSource(saved.record, folded.frame) : null,
         look: diagramStepLayerOrderLook(start.style, render, store.get().oristudioCpViewport),

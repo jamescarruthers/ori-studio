@@ -1,6 +1,7 @@
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FieldRow } from './fieldRows';
 import { Pager } from './Pager';
 import { TooltipProvider } from './Tooltip';
 
@@ -66,5 +67,17 @@ describe('Pager', () => {
     expect(previous).toHaveBeenCalledTimes(1);
     // No next: its place is empty.
     expect(host?.querySelectorAll('button')).toHaveLength(1);
+  });
+
+  it('is named by its row’s label, so the name is said once', () => {
+    render(
+      <FieldRow label="Layer order" labelId="layer-order-label" kind="text">
+        <Pager labelledBy="layer-order-label">2 of 5+</Pager>
+      </FieldRow>
+    );
+    const pager = host?.querySelector('[role="group"]');
+    expect(pager?.getAttribute('aria-labelledby')).toBe('layer-order-label');
+    expect(pager?.hasAttribute('aria-label')).toBe(false);
+    expect(host?.querySelector('#layer-order-label')?.textContent).toBe('Layer order');
   });
 });

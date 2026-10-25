@@ -20,6 +20,8 @@
   },
   "cp": {
     "foldProducedNothing": "These creases have no flat folded form to draw",
+    "layerOrderNotApplied": "Layer order couldn’t apply this order to {{name}}. Its picture is unchanged.",
+    "layerOrderTooLarge": "This layer order is too large to save with the figure, so it is unchanged.",
     "pinnedVertex": "That crease starts at a pinned vertex, so it cannot be lengthened. Unpin the vertex first, or extend a different crease."
   },
   "cpDetectImport": {

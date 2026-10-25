@@ -16,6 +16,8 @@ import type {
 } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES, policyApplies } from '../../lib/paper/paperStyleResolve';
 import type {
+  ControlVerb,
+  FieldNote,
   LiveValue,
   PropertyField,
   PropertySection,
@@ -32,8 +34,10 @@ import {
   foldedDisplayStyleChoiceLabel,
   foldedFigureHeaderCommands,
   isFoldedFigureReady,
+  layerOrderCommand,
   previousSolutionCommand,
 } from './foldedFigureActions';
+import { foldedFigureLayerOrderHold, foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
 import {
   foldedAppearanceSupport,
   foldedAppearanceVisible,
@@ -88,6 +92,8 @@ export interface FoldedFigurePropertyDeps {
   exportFigure(figure: OristudioCpFoldedFigureEntry): void;
   duplicate(figure: OristudioCpFoldedFigureEntry): void;
   remove(figure: OristudioCpFoldedFigureEntry): void;
+  /** The Layer order row's Edit…: the toolbar's Layer order… (`openFoldedFigureLayerOrder.ts`). */
+  openLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
 }
 
 /**
@@ -446,8 +452,11 @@ function layerOrderField(
   // Unknown while the first fold runs or after it failed: nothing to read out.
   const found = foldedFigureHasLayerOrder(figure);
   const none = found === false;
+  // A chosen order's place among the solutions that fit is the dialog's to
+  // count (D11): the host never runs the count, so the row reads none out.
+  const held = foldedFigureLayerOrderHold(figure);
   const readout =
-    found === null
+    found === null || held !== null
       ? ''
       : layerOrderCount(
           foldedFigureCurrentCase(figure),
@@ -465,27 +474,76 @@ function layerOrderField(
   } as const;
   const previous = previousSolutionCommand(figure, deps);
   const next = anotherSolutionCommand(figure, deps);
+  // The toolbar's Layer order…, as the row's Edit… after the pager.
+  const layerOrder = layerOrderCommand(figure, {
+    t,
+    openLayerOrder: deps.openLayerOrder,
+    isStale: () => deps.stale,
+  });
+  const action = layerOrder
+    ? { ...layerOrder, label: t('panels:cpProperties.folded.layerOrderEdit', 'Edit…') }
+    : undefined;
+  const note = layerOrderNote(figure, t);
 
   // A step, a refold or a duplicate is folding: the row stays as it is, as
   // the Diagram's does while a capture runs, and both verbs wait for it —
   // refused, so the one pressed keeps the focus through the step it started.
   if (figure.status === 'loading') {
     const waiting = t('panels:cpProperties.folded.layerOrderWaiting', 'Its layer order is being found');
+    const wait = <V extends ControlVerb>(verb: V): V => ({ ...verb, disabled: true, hint: waiting });
     return {
       ...row,
       support: 'supported',
-      previous: { ...previous, disabled: true, hint: waiting },
-      next: { ...next, disabled: true, hint: waiting },
+      previous: wait(previous),
+      next: wait(next),
+      ...(action ? { action: wait(action) } : {}),
+      ...(note ? { note } : {}),
     };
   }
-  // Stale, failed or reopened from a file: as every kernel-backed row waits.
-  if (!isFoldedFigureReady(figure)) {
+  // A 3D figure keeps a chosen order for when its creases fold flat again
+  // (D13): no pager, Edit… held, and why under the label.
+  const record = foldedFigureLayerOrderRecord(figure);
+  if (isFolded3dFigure(figure) && record) {
+    const flat = t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
     return {
       ...row,
       support: 'unsupported',
-      reason: t('panels:cpProperties.folded.refoldToChange', 'Refold to change how this figure looks'),
+      reason: flat,
+      note: {
+        kind: 'reason',
+        text: t('panels:cpProperties.folded.layerOrderKept3d', {
+          count: record.constraints.length,
+          defaultValue_one: 'Layer order works on flat figures. Its constraint is kept for when it folds flat again.',
+          defaultValue_other:
+            'Layer order works on flat figures. Its {{count}} constraints are kept for when it folds flat again.',
+        }),
+      },
+      ...(action ? { action } : {}),
+    };
+  }
+  // Failed or reopened from a file: as every kernel-backed row waits. A
+  // reopened flat figure can still open Layer order…, which folds it first.
+  if (!isFoldedFigureReady(figure)) {
+    const refold = t('panels:cpProperties.folded.refoldToChange', 'Refold to change how this figure looks');
+    if (action && !action.disabled) {
+      const wait = <V extends ControlVerb>(verb: V): V => ({ ...verb, disabled: true, hint: refold });
+      return {
+        ...row,
+        support: 'supported',
+        previous: wait(previous),
+        next: wait(next),
+        action,
+        ...(note ? { note } : {}),
+      };
+    }
+    return {
+      ...row,
+      support: 'unsupported',
+      reason: refold,
       previous,
       next,
+      ...(action ? { action } : {}),
+      ...(note ? { note } : {}),
     };
   }
   if (none) {
@@ -500,7 +558,52 @@ function layerOrderField(
       note: { kind: 'reason', text: undetermined },
       previous,
       next,
+      ...(action ? { action } : {}),
     };
   }
-  return { ...row, support: 'supported', previous, next };
+  return { ...row, support: 'supported', previous, next, ...(action ? { action } : {}), ...(note ? { note } : {}) };
+}
+
+/**
+ * What the Layer order row says under its label about a chosen order (D11):
+ * how many constraints hold it ("3 constraints"), or how many need attention
+ * since an edit — quietly, as a status — or, for a newer build's, why it
+ * can't be changed here. Read from the record alone, never the engine. None
+ * for a figure Oriedita's search orders.
+ */
+function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): FieldNote | null {
+  switch (foldedFigureLayerOrderHold(figure)) {
+    case null:
+      return null;
+    case 'newer':
+      return {
+        kind: 'reason',
+        text: t(
+          'panels:foldedFigureActions.layerOrderNewer',
+          'Made with a newer Ori Studio: its layer constraints can’t be changed here.'
+        ),
+      };
+    case 'record': {
+      const record = foldedFigureLayerOrderRecord(figure);
+      if (!record) return null;
+      if (record.attention) {
+        return {
+          kind: 'status',
+          text: t('panels:cpProperties.folded.layerConstraintsAttention', {
+            count: record.attention.count,
+            defaultValue_one: '1 layer constraint needs attention',
+            defaultValue_other: '{{count}} layer constraints need attention',
+          }),
+        };
+      }
+      return {
+        kind: 'status',
+        text: t('panels:cpProperties.folded.layerConstraints', {
+          count: record.constraints.length,
+          defaultValue_one: '1 constraint',
+          defaultValue_other: '{{count}} constraints',
+        }),
+      };
+    }
+  }
 }

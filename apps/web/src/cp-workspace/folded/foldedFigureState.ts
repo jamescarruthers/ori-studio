@@ -62,6 +62,28 @@ export function foldedFigureCycling(
   };
 }
 
+/** Which layer-ordering solution a kernel snapshot shows, 1-based (see {@link foldedFigureCycling}). */
+export function foldedSnapshotCase(
+  snapshot: Pick<OristudioCpFoldedFigureSnapshot, 'current_fold_case' | 'discovered_fold_cases'>
+): number {
+  return snapshot.current_fold_case ?? snapshot.discovered_fold_cases;
+}
+
+/**
+ * Whether two snapshots of one fold show the same layer order: the same case
+ * of Oriedita's search, or both an order given. What an entry says and what
+ * its kernel handle shows can part after an undo, which puts back the entry
+ * and not the kernel's case.
+ */
+export function sameFoldedOrder(
+  a: Pick<OristudioCpFoldedFigureSnapshot, 'current_fold_case' | 'discovered_fold_cases' | 'shown_order'>,
+  b: Pick<OristudioCpFoldedFigureSnapshot, 'current_fold_case' | 'discovered_fold_cases' | 'shown_order'>
+): boolean {
+  return (
+    foldedSnapshotCase(a) === foldedSnapshotCase(b) && (a.shown_order ?? 'searched') === (b.shown_order ?? 'searched')
+  );
+}
+
 /**
  * Which layer-ordering solution a figure is showing, 1-based.
  */

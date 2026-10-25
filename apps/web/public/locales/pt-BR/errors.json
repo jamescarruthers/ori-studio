@@ -20,6 +20,8 @@
   },
   "cp": {
     "foldProducedNothing": "Estes vincos não têm nenhuma forma dobrada em plano para desenhar",
+    "layerOrderNotApplied": "Ordem das camadas não conseguiu aplicar esta ordem a {{name}}. A imagem não mudou.",
+    "layerOrderTooLarge": "Esta ordem das camadas é grande demais para salvar com o modelo, então ele não mudou.",
     "pinnedVertex": "Esse vinco começa em um vértice fixado, então não pode ser estendido. Solte o vértice primeiro ou estenda outro vinco."
   },
   "cpDetectImport": {

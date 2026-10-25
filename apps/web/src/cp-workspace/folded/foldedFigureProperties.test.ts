@@ -8,14 +8,21 @@ import { FIGURE } from '../canvasObjects/canvasObjectKinds.fixtures';
 import { DEFAULT_FOLDED_3D_CAMERA, type FoldedFigureCamera } from './folded3dCamera';
 import { buildFoldedFigureProperties, type FoldedFigurePropertyDeps } from './foldedFigureProperties';
 import { noteSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFrontiers';
+import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
+import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
 
 afterEach(() => resetSolutionFrontiers());
 
-// Identity `t`, with its interpolations: the readout's number and total.
-const t = ((_key: string, fallback: string | object, options?: Record<string, unknown>) =>
-  typeof fallback === 'string'
-    ? fallback.replace(/\{\{(\w+)\}\}/gu, (_match, name: string) => String(options?.[name] ?? ''))
-    : '') as unknown as TFunction;
+// Identity `t`, with its interpolations (the readout's number and total) and
+// its English plurals, given as `defaultValue_one` / `defaultValue_other`.
+const t = ((_key: string, fallback: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+  const values = typeof fallback === 'string' ? options : fallback;
+  const text =
+    typeof fallback === 'string'
+      ? fallback
+      : String((values?.count === 1 ? values.defaultValue_one : values?.defaultValue_other) ?? '');
+  return text.replace(/\{\{(\w+)\}\}/gu, (_match, name: string) => String(values?.[name] ?? ''));
+}) as unknown as TFunction;
 
 const MODEL = {
   state: 'Front0',
@@ -31,6 +38,7 @@ const FLAT: OristudioCpFoldedFigureEntry = {
   title: 'Folded model 1',
   status: 'ready',
   handle: 3,
+  sourceBounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
   snapshot: {
     model: MODEL,
     display_style: 'Paper5',
@@ -82,6 +90,7 @@ function deps(
     exportFigure: vi.fn(),
     duplicate: vi.fn(),
     remove: vi.fn(),
+    openLayerOrder: vi.fn(),
     ...overrides,
   };
 }
@@ -172,8 +181,10 @@ describe('buildFoldedFigureProperties', () => {
     const layerOrder = stepper(sheetFor(FLAT, d));
     expect(layerOrder).toMatchObject({ label: 'Layer order', support: 'supported', readout: '2 of 3+' });
     expect(layerOrder.note).toBeUndefined();
-    // No Edit… yet: H3 adds it.
-    expect(layerOrder.action).toBeUndefined();
+    // Edit… after the pager: the toolbar's Layer order…, opening the dialog on the figure.
+    expect(layerOrder.action).toMatchObject({ label: 'Edit…', disabled: false });
+    layerOrder.action?.run();
+    expect(d.openLayerOrder).toHaveBeenCalledWith(FLAT);
     expect(layerOrder.previous).toMatchObject({ label: 'Previous solution', disabled: false });
     expect(layerOrder.next).toMatchObject({ label: 'Another solution', disabled: false });
     layerOrder.previous?.run();
@@ -226,6 +237,117 @@ describe('buildFoldedFigureProperties', () => {
     });
     // Drawn see-through, and Render as says so.
     expect(valueOf(sheet, 'displayStyle')).toBe('Transparent3');
+  });
+
+  describe('the Layer order row’s Edit… and its note (H3)', () => {
+    const held = (record = twoConstraintRecord()) => {
+      const made = foldedFigureLayerOrder(record);
+      if (!made.ok) throw new Error('the fixture record encodes');
+      return made.layerOrder;
+    };
+    const SOLVED = { ...FLAT, snapshot: { ...FLAT.snapshot!, outcome: 'Solved' } } as OristudioCpFoldedFigureEntry;
+
+    it('says how many constraints hold a constrained figure, and holds ‹ › until they step within them (D9, D11)', () => {
+      const d = deps();
+      const constrained = { ...SOLVED, layerOrder: held() };
+      const layerOrder = stepper(sheetFor(constrained, d));
+      expect(layerOrder).toMatchObject({
+        support: 'supported',
+        // The count of the solutions that fit is the dialog's (D11).
+        readout: '',
+        note: { kind: 'status', text: '2 constraints' },
+        action: { label: 'Edit…', disabled: false },
+      });
+      for (const verb of [layerOrder.previous, layerOrder.next]) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Step through solutions in Layer order…' });
+      }
+      layerOrder.action?.run();
+      expect(d.openLayerOrder).toHaveBeenCalledWith(constrained);
+      // One reads as one; the header keeps states only.
+      const one = { ...SOLVED, layerOrder: held(twoConstraintRecord({ constraints: [[0, 1, 1]] })) };
+      expect(stepper(sheetFor(one)).note).toEqual({ kind: 'status', text: '1 constraint' });
+      expect(sheetFor(constrained).subtitle).toBe(sheetFor(SOLVED).subtitle);
+    });
+
+    it('says how many need attention after an edit, quietly', () => {
+      const flagged = {
+        ...SOLVED,
+        layerOrder: held(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } })),
+      };
+      expect(stepper(sheetFor(flagged)).note).toEqual({
+        kind: 'status',
+        text: '2 layer constraints need attention',
+      });
+    });
+
+    it('holds Edit… on a 3D figure with why, stepping on as before when no record waits on it', () => {
+      const several = {
+        ...SPATIAL,
+        folded3d: { ...SPATIAL.folded3d!, find_another_overlap_valid: true, discovered_fold_cases: 2, current_fold_case: 2 },
+      } as OristudioCpFoldedFigureEntry;
+      const layerOrder = stepper(sheetFor(several));
+      expect(layerOrder).toMatchObject({ support: 'supported', readout: '2 of 2+' });
+      expect(layerOrder.next?.disabled).toBe(false);
+      expect(layerOrder.action).toMatchObject({ disabled: true, hint: 'Layer order works on flat figures' });
+      expect(layerOrder.note).toBeUndefined();
+    });
+
+    it('keeps a 3D figure’s constraints for when it folds flat again, with no pager (D13)', () => {
+      const kept = stepper(sheetFor({ ...SPATIAL, layerOrder: held() }));
+      expect(kept).toMatchObject({
+        support: 'unsupported',
+        reason: 'Layer order works on flat figures',
+        note: {
+          kind: 'reason',
+          text: 'Layer order works on flat figures. Its 2 constraints are kept for when it folds flat again.',
+        },
+        action: { label: 'Edit…', disabled: true },
+      });
+      expect(kept.previous).toBeUndefined();
+      expect(kept.next).toBeUndefined();
+    });
+
+    it('holds Edit… with the row’s reason on a figure whose fold found no layer order (D3)', () => {
+      const none = {
+        ...FLAT,
+        displayStyle: 'Transparent3',
+        snapshot: { ...FLAT.snapshot!, discovered_fold_cases: 0, current_fold_case: 0, find_another_overlap_valid: false },
+      } as OristudioCpFoldedFigureEntry;
+      expect(stepper(sheetFor(none))).toMatchObject({
+        support: 'unsupported',
+        reason: 'Layer order couldn’t be determined for this figure.',
+        action: { label: 'Edit…', disabled: true, hint: 'Layer order couldn’t be determined for this figure.' },
+      });
+    });
+
+    it('says a newer build’s order can’t be changed here, and holds everything', () => {
+      const newer = { ...SOLVED, layerOrder: { kind: 'newer', saved: {} } } as OristudioCpFoldedFigureEntry;
+      const layerOrder = stepper(sheetFor(newer));
+      const why = 'Made with a newer Ori Studio: its layer constraints can’t be changed here.';
+      expect(layerOrder).toMatchObject({
+        note: { kind: 'reason', text: why },
+        action: { disabled: true, hint: why },
+        next: { disabled: true, hint: why },
+        previous: { disabled: true, hint: why },
+      });
+    });
+
+    it('keeps Edit… live on a figure reopened from a file, the pager waiting as before', () => {
+      const d = deps();
+      const reopened = { ...SOLVED, handle: null } as OristudioCpFoldedFigureEntry;
+      const layerOrder = stepper(sheetFor(reopened, d));
+      expect(layerOrder).toMatchObject({ support: 'supported', readout: '2 of 3+', action: { disabled: false } });
+      for (const verb of [layerOrder.previous, layerOrder.next]) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Refold to change how this figure looks' });
+      }
+      layerOrder.action?.run();
+      expect(d.openLayerOrder).toHaveBeenCalledWith(reopened);
+    });
+
+    it('waits with the pager while the figure folds', () => {
+      const layerOrder = stepper(sheetFor({ ...SOLVED, status: 'loading' } as OristudioCpFoldedFigureEntry));
+      expect(layerOrder.action).toMatchObject({ disabled: true, hint: 'Its layer order is being found' });
+    });
   });
 
   it('pins every style field its surface policy applies, on both kinds', () => {
