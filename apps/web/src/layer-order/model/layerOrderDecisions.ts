@@ -8,6 +8,7 @@
  *
  * Pure: no React, no store, no engine calls.
  */
+import { LAYER_ORDER_LABEL_CAP, layerOrderCountStarts } from '../layerOrderBudgets';
 import {
   keepTrying,
   type LayerConstraint,
@@ -36,31 +37,26 @@ export function stepByFor(side: LayerSide, xray: boolean): LayerStepBy {
 // D7: large figures.
 
 /**
- * The label cap: past this many valid objects only the hovered face and the
- * nearest few keep letters (the panes choose which, U8), and the hint counts
- * tinted faces instead of labelled ones. Provisional until phase gate 2 (E8)
- * names N.
+ * Whether a subject's objects are past the label cap
+ * (`LAYER_ORDER_LABEL_CAP`, 50, set by phase gate 2 in `layerOrderBudgets.ts`,
+ * the cap's one source): past it only the hovered face and the nearest few
+ * keep letters (the panes choose which, U8), and the hint counts tinted faces
+ * instead of labelled ones ("tinted").
  */
-export const LAYER_ORDER_LABEL_CAP = 12;
-
-/** Whether a subject's objects are past the label cap, so the hint says "tinted". */
 export function objectsPastLabelCap(objects: number): boolean {
   return objects > LAYER_ORDER_LABEL_CAP;
 }
 
 /**
- * Above this many faces the solution count is skipped. Provisional until
- * phase gate 2 (E8) names the threshold; 4,096 is the source's own face cap,
- * so until then the count always runs.
+ * Whether the background count runs on a session that leaves `openPairs`
+ * pairs open: decided at the open and again after each commit, by phase gate
+ * 2's threshold (`layerOrderCountStarts`, 20,000 open pairs, in
+ * `layerOrderBudgets.ts`, its one source). When it is skipped the stepper
+ * still steps, with no total: the status names the solution shown
+ * ("Solution 3").
  */
-export const LAYER_ORDER_COUNT_FACE_LIMIT = 4_096;
-
-/**
- * Whether the background count runs. When it is skipped the stepper still
- * steps, with no total: the status names the solution shown ("Solution 3").
- */
-export function solutionCountRuns(faces: number): boolean {
-  return faces <= LAYER_ORDER_COUNT_FACE_LIMIT;
+export function solutionCountRuns(openPairs: number): boolean {
+  return layerOrderCountStarts(openPairs);
 }
 
 // ---------------------------------------------------------------------------
