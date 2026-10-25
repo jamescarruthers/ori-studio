@@ -325,7 +325,8 @@ is built.
 | U7 | **PaperPane.** Extracted from FoldPane at #475's head (no step playback since 4cd968128), which becomes a specialisation, with no visual change. The pure stroke step of `useFoldCreasePatternStrokes` moves into `cp-workspace/`, with line style and width as arguments; Fold's hook stays as a wrapper | S–M | U1 | – | Fold canvas tests unchanged; Fold before/after screenshots |
 | U8 | **Panes.** `LayerOrderPanes` on the shared pipeline (approach 3): Front/Back, X-ray, Undecided, tints (hover and clash on the overlay layer; the persistent subject and object tints may use per-face ink) with face picks in `--face-pick` and their rings inside the face (D20), the changed-spot flash, letters and label placement, per-pane zoom and Fit both, the host's `look`, the turn through one map; tap equivalents (D6). Built against fixture scenes, so it doesn't wait on the bridge | L | U7, U4 | Phone, Horizon | Unit tests (tints, labels, letters, X-ray alpha); Playwright screenshots of front, back, X-ray and Undecided on kabuto, `solution_sample_1`, iguana-c0 and a non-convex-cell fixture, in the default and Horizon themes; one side-by-side per host look (an Edit figure on the canvas, a Diagram step card, Pose) with a non-default paper style, expecting the Diagram's and Pose's pens to scale differently |
 | U9 | **Inspector model.** The pure reducer and history (behaviour list below); restored records with per-status rows and Apply waiting on a clash; the waiting and timed-out states | M | U4 | – | Reducer tests per behaviour, per status and per waiting state |
-| U10 | **Inspector.** `useLayerOrderDialog`; status and stepper; the sentence builder (face slots, verb menu, the reserved hint line with Keep trying); the constraints list (trash, statuses, faces that no longer exist); the five spec analytics events; 8 locales | L | U6, U8, U9, U3b | Opening, counting, couldn't check, attention | Component tests by role and name; a tracker test per event; i18n; Playwright on kabuto, `solution_sample_1` and iguana-c0: pick, preview, can't fit, Add, undo, remove, back side, a forced timeout (tiny node budget on kabuto), coarse pointer in Chromium and WebKit; the fidelity list below |
+| U9b | **Compound constraints in the model** (D21). The sentence's object becomes a set: toggling picks, letter order, the carry-over rules per object; the preview and explain of the whole set through `previewList` and `explainList`; Add commits one constraint per object as one history entry; a selector that groups rows by subject and sign (and status, for carried rows) with per-object removal; the hint line and Add's label; the `objects` bucket on the two events | M | U9 | Compound constraints | Reducer and selector tests per rule above, including a clash on one of two objects, a duplicate skipped, undo of a compound Add, a grouped row's whole and per-object removal, and carried rows of mixed statuses kept apart |
+| U10 | **Inspector.** `useLayerOrderDialog`; status and stepper; the sentence builder (face slots, verb menu, the reserved hint line with Keep trying); the constraints list (trash, statuses, faces that no longer exist); compound objects and grouped rows (D21); the five spec analytics events; 8 locales | L | U6, U8, U9b, U3b | Opening, counting, couldn't check, attention | Component tests by role and name; a tracker test per event; i18n; Playwright on kabuto, `solution_sample_1` and iguana-c0: pick, preview, can't fit, Add, undo, remove, back side, a forced timeout (tiny node budget on kabuto), coarse pointer in Chromium and WebKit; the fidelity list below |
 | **Phase 1: Edit** |
 | H2 | **Host engine.** `resolveLayerOrder(source, record, limits)` on a short-lived Fold-wasm worker (the U6 worker file), loaded through the dialog's lazy gateway; node budget plus deadline; Stop through `withFoldInFlight` and `runStepFold`; engine-loss rule; one worker across a Refresh All | M | E7, H1, U5 | – | Fake-worker tests for Stop and engine loss; a wasm test on kabuto that resolves after a synthetic split |
 | H3a | **Edit: the Properties pane** (split from H3, 2026-10-25, so it needn't wait for the dialog). A selected folded figure's pane laid out as the Diagram's Step pane, per the approved Properties board: the figure's verbs in the header (Export…, Duplicate, Delete), Render as above a full-width control, a Pose section (Rotation, Side, and a Layer order row whose ‹ › step through the solutions found, as the Diagram's do, ‹ being new in Edit), Appearance, Camera on 3D, Placement. No "Edit…" yet: H3 adds it and the D11 note | M | – | Properties | Component tests by role and name; the parity of every control it moves (each still calls what it called); the ‹ action's store test; computed-style proof for any block it moves; before/after screenshots of the five board states that exist without a record |
@@ -686,6 +687,51 @@ notice has no board of its own; U10 builds it from the approved copy.
 - **"Open spots" is "Undecided":** the toggle tints where the face on top
   isn't decided yet.
 
+*Added 2026-10-25, after the Round 4 approval:*
+
+- **D21. Compound constraints.** In your words: "I should be able to make
+  compound constraints, so you should be able to put D in front of H and K …
+  The subject should always be singular, just the objects can be multiple.
+  Internally they can be stored as individual constraints but in the
+  constraints list it should be together." The rules, with my calls marked:
+  - **The builder.** The subject slot holds one face; the object slot holds
+    one or more. In the object step, a pick on an unpicked face adds it and a
+    pick on a picked one removes it, by pointer, tap or the keyboard face menu
+    (whose object items become checkable and stay open). Objects read in
+    letter order ("H, K"), whatever order they were picked in.
+  - **Which faces can be objects** (my call): the faces open against the
+    subject in the committed order, as now, whatever else is picked. Picking
+    one never changes which others are offered, so the tints hold still.
+  - **The preview** checks the whole set: the committed list plus one
+    constraint per object (`previewList`, `explainList`; no engine change). On
+    a can't-fit, the smallest clashing set marks the objects in it, on their
+    chips and both panes.
+  - **Add** reads "Add constraint" with one object and "Add constraints" with
+    more. It commits one constraint per object, skipping any already
+    committed, as one undo step.
+  - **The other rules carry over per object** (my calls): a new subject keeps
+    each object still open against it and drops the rest quietly; a pick of
+    one of the objects as the new subject removes it from the objects; a click
+    on empty paper clears every object, then the subject.
+  - **The hint line,** once an object is picked: "Pick more faces to add them,
+    or a picked face to remove it."
+  - **Saved as before.** The record holds one constraint per object, so H1's
+    codec, the engine and the hosts don't change.
+  - **The list** (my calls) shows one row per subject and verb: committed
+    constraints with the same subject and sign read "D in front of H, K", at
+    the place of the earliest, and a later Add for that subject and verb joins
+    its row. The verb still reads from the side shown. The row's trash removes
+    the whole row, as one undo step. Each object in a row of two or more has
+    its own remove (×), shown on hover or focus, and always on a coarse
+    pointer. Carried rows group the same way, within one status, so a row
+    never mixes statuses. A pressed or hovered row lights its subject and all
+    its objects; a row click puts its subject in the builder, as now. A clash
+    marks the clashing objects within their rows.
+  - **Analytics:** `layer constraint added` and `layer constraint blocked`
+    fire once per Add, with an `objects` bucket (1, 2, 3–5, 6+).
+  - **Where it lands:** U9b changes the merged inspector model; U10 builds the
+    UI from the "A5 · Compound constraints" board.
+
 **Settled by the spec or the design** (no answer needed):
 - Escape closes an open menu first, then cancels (Round3).
 - Front/Back is a lens: constraints are paper-relative, and Apply never turns
@@ -843,6 +889,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] D6–D8 and D18 (approved 2026-10-25)
 - [x] D9–D16 (approved 2026-10-25)
 - [x] D19 and D20 (approved 2026-10-25)
+- [x] D21: compound constraints (your ask, 2026-10-25; the list's rules are my calls)
 - [x] Mocks, each approved before the PRs that name it (canvas v17, approved 2026-10-25):
   - [x] **Entry points:** Edit's figure toolbar and context menu, Fold with
         layer order…, the Step pane row (and its disabled 3D state), Pose's
@@ -862,6 +909,8 @@ H3's new rehydrate, so it can only follow H3.
         picks take `--face-pick`, D20)
   - [x] **Properties:** Edit's Properties pane for a selected figure, laid
         out as the Diagram's Step pane
+  - [ ] **Compound constraints** (D21): the builder with several objects, a
+        clash on one of them, grouped rows with per-object removal, phone
 - [x] E1: kernel seeded core (#494)
 - [x] E2: kernel entry points and exports (#500)
 - [x] E3: Flat-Folder session additions (#502)
@@ -881,6 +930,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U7: PaperPane (#501)
 - [ ] U8: panes
 - [x] U9: inspector model (#510)
+- [ ] U9b: compound constraints in the model
 - [ ] U10: inspector
 - [x] H2: host engine (#512)
 - [ ] H3a: Edit's Properties pane
