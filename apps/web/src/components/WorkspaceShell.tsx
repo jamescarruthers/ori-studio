@@ -96,7 +96,7 @@ function workspaceTooltip(t: TFunction, id: WorkspaceId): string {
     case 'diagram':
       return t('common:workspaceRail.diagram', 'Diagram workspace');
     case 'fold':
-      return t('common:workspaceRail.fold', 'Fold workspace');
+      return t('common:workspaceRail.foldBeta', 'Fold workspace (Beta)');
   }
 }
 
