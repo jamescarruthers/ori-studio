@@ -648,12 +648,19 @@ export function buildFoldedFigureActions(
   // Refold is present only when it applies: a figure that matches its source
   // creases has nothing to refold, and a disabled button would just be noise.
   if (canRefold) {
+    // Until a refold keeps a chosen layer order (H4), it would draw Oriedita's
+    // search on a figure that still carries the record, which a reload then
+    // detaches: held, and why.
+    const keepsNoLayerOrder = figure.layerOrder != null;
     actions.push({
       kind: 'command',
       id: 'refold',
       label: t('panels:foldedFigureActions.refold', 'Refold'),
       icon: 'refold',
-      disabled: false,
+      disabled: keepsNoLayerOrder,
+      ...(keepsNoLayerOrder
+        ? { hint: t('panels:foldedFigureActions.refoldLayerOrder', 'Refold can’t keep its layer order yet') }
+        : {}),
       run: () => deps.refold?.(figure),
     });
   }
@@ -778,7 +785,7 @@ export function layerOrderBlockHint(block: FoldedFigureLayerOrderBlock, t: TFunc
     case 'no-source':
       return t('panels:foldedFigureActions.layerOrderNoSource', 'This folded model has no source creases to work from');
     case 'stale':
-      return t('panels:foldedFigureActions.layerOrderStale', 'Refold this figure to choose its layer order');
+      return t('panels:foldedFigureActions.layerOrderCreasesChanged', 'Its creases changed since it was folded');
   }
 }
 

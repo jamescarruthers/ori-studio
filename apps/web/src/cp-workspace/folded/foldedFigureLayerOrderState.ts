@@ -23,9 +23,9 @@ import { foldedFigureHasLayerOrder } from './foldedFigureState';
  * - `newer`: its record is a newer build's, carried as it came (H1's lock);
  * - `no-source`: it has no live fold and no recorded source creases to fold
  *   again, as a figure saved before they were recorded;
- * - `stale`: its creases changed since it was folded. Until refold with
- *   constraints (H4, D12) opens it on the current creases, it waits for a
- *   refold.
+ * - `stale`: its creases changed since it was folded. Held until H4 opens
+ *   it on the current creases, with a notice that Apply also refolds (D12);
+ *   a constrained figure's Refold is held meanwhile too, so H4 replaces both.
  */
 export type FoldedFigureLayerOrderBlock = '3d' | 'waiting' | 'undetermined' | 'newer' | 'no-source' | 'stale';
 

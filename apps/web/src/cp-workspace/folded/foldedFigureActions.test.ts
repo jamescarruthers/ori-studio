@@ -532,11 +532,23 @@ describe('Layer order…, the dialog’s entry on a figure (H3)', () => {
     expect(command(figure, withLayerOrder(), 'layer-order')).toMatchObject({ disabled: true, hint });
   });
 
-  it('waits until its creases are refolded when they changed since the fold (until H4)', () => {
+  it('is held when its creases changed since the fold, until H4 opens it on the current ones (D12)', () => {
     expect(command(solved(), withLayerOrder({ isStale: () => true }), 'layer-order')).toMatchObject({
       disabled: true,
-      hint: 'Refold this figure to choose its layer order',
+      hint: 'Its creases changed since it was folded',
     });
+  });
+
+  it('holds Refold on a figure that carries a layer order, until a refold keeps it (H4)', () => {
+    const deps = withLayerOrder({ refold: vi.fn(), isStale: () => true });
+    expect(command(solved(), deps, 'refold')).toMatchObject({ disabled: false });
+    expect(command(solved(), deps, 'refold').hint).toBeUndefined();
+    for (const layerOrder of [held(), { kind: 'newer', saved: {} } as const]) {
+      const refold = command(solved({ layerOrder }), deps, 'refold');
+      expect(refold).toMatchObject({ disabled: true, hint: 'Refold can’t keep its layer order yet' });
+      // Both held on a stale constrained figure: H4 replaces the two together.
+      expect(command(solved({ layerOrder }), deps, 'layer-order').disabled).toBe(true);
+    }
   });
 
   it('waits with no reason while the figure folds or after it failed, as every verb waits', () => {
