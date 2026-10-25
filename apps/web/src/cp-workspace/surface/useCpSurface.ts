@@ -97,6 +97,13 @@ export interface UseCpSurfaceOptions<Hit> {
   modelToSvg: (point: Point) => Point;
   /** What the camera fits, in user space; null before there is anything to frame. */
   contentBounds: UserBounds | null;
+  /**
+   * How much of the canvas `contentBounds` fills at a fit, across its
+   * shorter side: {@link DEFAULT_FIT_SHARE} unless a surface frames its
+   * content its own way (the Layer order dialog's panes, Round3's `fitAll`).
+   * The line boost past the fit zoom is measured from it too.
+   */
+  fitShare?: number;
   /** The camera refits when this changes (a new document), never on an edit. */
   framingKey: string;
   /**
@@ -201,6 +208,9 @@ export interface CpSurface<Hit> {
  * content would arrive mostly off screen, so it is fitted instead.
  */
 export const KEEP_IN_VIEW_SHARE = 0.5;
+
+/** The share of the canvas a fit fills by default: `fitUserCamera`'s padding. */
+export const DEFAULT_FIT_SHARE = 0.7;
 
 const CANVAS_BG_VAR = '--bg-primary';
 const FALLBACK_CLEAR: Rgba = [0.157, 0.172, 0.204, 1];
@@ -338,12 +348,12 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
         return cameraRef.current;
       }
       if (cameraRef.current && !fitRequestedRef.current) return cameraRef.current;
-      const { contentBounds: bounds, inset } = liveRef.current;
+      const { contentBounds: bounds, inset, fitShare = DEFAULT_FIT_SHARE } = liveRef.current;
       if (!bounds || !boxed) return cameraRef.current;
       fitRequestedRef.current = false;
       const fitted = inset
-        ? fitUserCameraWithin(bounds, viewport, deviceInset(inset, viewport))
-        : fitUserCamera(bounds, viewport);
+        ? fitUserCameraWithin(bounds, viewport, deviceInset(inset, viewport), fitShare)
+        : fitUserCamera(bounds, viewport, fitShare);
       cameraRef.current = fitted;
       lastFitRef.current = { ...fitted };
       return cameraRef.current;
@@ -373,7 +383,7 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
       const view = modelViewFromCamera(cam, viewport, live.modelToSvg);
       const userView = userCameraToView(cam, viewport);
       const bounds = live.contentBounds;
-      const fitZoom = bounds ? fitUserCamera(bounds, viewport).zoom : cam.zoom;
+      const fitZoom = bounds ? fitUserCamera(bounds, viewport, live.fitShare ?? DEFAULT_FIT_SHARE).zoom : cam.zoom;
       const { widthBoost, markerScalePx, pointScalePx } = cpSizingScales({
         camZoom: cam.zoom,
         fitZoom,

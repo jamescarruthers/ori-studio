@@ -330,6 +330,17 @@ describe('useCpSurface opening fit', () => {
     expect(onZoomPercentChange).toHaveBeenLastCalledWith(FIT_400);
   });
 
+  it('fills the share of the canvas a surface asks for, and fits back to it', () => {
+    layOut({ width: 400, height: 400 });
+    const onZoomPercentChange = vi.fn<(percent: number) => void>();
+    mount({ onZoomPercentChange, fitShare: 0.9 });
+    const fitted = Math.round((400 / 200) * 0.9 * 100);
+    expect(onZoomPercentChange).toHaveBeenLastCalledWith(fitted);
+    act(() => surface().controls.zoomIn());
+    act(() => surface().controls.fit());
+    expect(onZoomPercentChange).toHaveBeenLastCalledWith(fitted);
+  });
+
   it('takes no fit while the canvas has no box, and fits once it has one', () => {
     // A dock not laid out yet, or a page in a hidden tab: the canvas is in
     // the document with nothing to draw in, and its content already known.

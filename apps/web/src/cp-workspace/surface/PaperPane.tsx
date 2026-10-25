@@ -125,6 +125,8 @@ export interface PaperPaneProps<Hit> {
   radiusScale?: number;
   /** What the camera fits, in user space. */
   contentBounds: UserBounds | null;
+  /** How much of the pane `contentBounds` fills at a fit (`useCpSurface`); its default unless given. */
+  fitShare?: number;
   /** The camera refits when this changes (`useCpSurface`). */
   framingKey: string;
   /** What the content is: when it changes, the camera keeps its view while the content still shows (`useCpSurface`). */
@@ -196,6 +198,7 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
     onHover,
     radiusScale = 1,
     contentBounds,
+    fitShare,
     framingKey,
     keepInViewKey = null,
     keepInViewBounds = null,
@@ -217,6 +220,7 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
     useCpSurface<Hit>({
       modelToSvg,
       contentBounds,
+      fitShare,
       framingKey,
       keepInViewKey,
       keepInViewBounds,
