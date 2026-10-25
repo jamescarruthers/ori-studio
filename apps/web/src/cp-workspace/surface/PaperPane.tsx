@@ -6,7 +6,6 @@ import { ptToDevicePx, type PaperStyle } from '../../lib/paper/paperStyle';
 import type { SurfaceStylePolicy } from '../../lib/paper/paperStyleResolve';
 import type { WheelGesturePreference } from '../../lib/wheelGesture';
 import { CpRendererUnavailable } from '../CpRendererUnavailable';
-import type { CpOverlayView } from '../CreasePatternWebglCanvas';
 import { paperSceneToFoldedGeometry, type FoldedFaceInk } from '../adapters/cpFoldedToScene';
 import { cpCanvasCursor } from '../cpCanvasCursor';
 import type { StackHit, StackHitIndex } from '../picking/stackHitIndex';
@@ -20,6 +19,7 @@ import {
   type CpSurfaceFrameScales,
   type CpSurfaceHitRadii,
   type CpSurfaceInset,
+  type CpSurfaceView,
 } from './useCpSurface';
 import styles from './PaperPane.module.css';
 
@@ -65,6 +65,8 @@ export interface PaperLook {
 
 /** What follows the pointer, over the pane's own channels. */
 export interface PaperPaneOverlay {
+  /** Over `underFills`, under the creases: a tint that must never veil one. */
+  underFills?: FillGeometry | null;
   /** Over `fills`. */
   fills?: FillGeometry | null;
   /** Over `strokes`. */
@@ -125,6 +127,8 @@ export interface PaperPaneProps<Hit> {
   radiusScale?: number;
   /** What the camera fits, in user space. */
   contentBounds: UserBounds | null;
+  /** How much of the pane `contentBounds` fills at a fit (`useCpSurface`); its default unless given. */
+  fitShare?: number;
   /** The camera refits when this changes (`useCpSurface`). */
   framingKey: string;
   /** What the content is: when it changes, the camera keeps its view while the content still shows (`useCpSurface`). */
@@ -142,7 +146,7 @@ export interface PaperPaneProps<Hit> {
   /** Called when a press on the pane begins: the pane the keyboard's zoom now means. */
   onActivate?: () => void;
   /** Layers drawn over the canvas through its camera. */
-  layers?: (view: CpOverlayView) => ReactNode;
+  layers?: (view: CpSurfaceView) => ReactNode;
   /** The canvas's accessible name. */
   ariaLabel: string;
   /** The canvas's test id. */
@@ -196,6 +200,7 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
     onHover,
     radiusScale = 1,
     contentBounds,
+    fitShare,
     framingKey,
     keepInViewKey = null,
     keepInViewBounds = null,
@@ -211,12 +216,13 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
     markers,
     errorSurface,
   } = props;
-  const [view, setView] = useState<CpOverlayView | null>(null);
+  const [view, setView] = useState<CpSurfaceView | null>(null);
 
   const { canvasRef, rendererRef, rendererGeneration, rendererStatus, hovered, dragging, render, controls } =
     useCpSurface<Hit>({
       modelToSvg,
       contentBounds,
+      fitShare,
       framingKey,
       keepInViewKey,
       keepInViewBounds,
@@ -251,42 +257,40 @@ export function PaperPane<Hit>(props: PaperPaneProps<Hit>) {
     () => (scene ? paperSceneToFoldedGeometry(scene, style, { policy, faceAlpha, faces }) : EMPTY_FOLDED),
     [scene, style, policy, faceAlpha, faces]
   );
+  // Each channel is handed over in an effect of its own, so a change uploads
+  // only what changed; the frame is drawn once, after them all (below).
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setFolded(geometry);
-    render();
-  }, [geometry, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setFolded(geometry);
+  }, [geometry, rendererGeneration, rendererRef]);
 
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setStrokes(creases ?? EMPTY_STROKES);
-    render();
-  }, [creases, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setStrokes(creases ?? EMPTY_STROKES);
+  }, [creases, rendererGeneration, rendererRef]);
 
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setSheetFill(underFills);
-    render();
-  }, [underFills, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setSheetFill(underFills);
+  }, [underFills, rendererGeneration, rendererRef]);
 
   // What follows the pointer, over the pane's own fills and strokes.
   const feedback = useMemo(() => overlay?.(hovered) ?? NO_OVERLAY, [overlay, hovered]);
   useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setDiagnosticFills(joinFills(fills, feedback.fills ?? null));
-    render();
-  }, [fills, feedback, rendererGeneration, rendererRef, render]);
+    rendererRef.current?.setSheetMarks(feedback.underFills ?? null);
+  }, [feedback, rendererGeneration, rendererRef]);
+  useEffect(() => {
+    rendererRef.current?.setDiagnosticFills(joinFills(fills, feedback.fills ?? null));
+  }, [fills, feedback, rendererGeneration, rendererRef]);
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
     renderer.setOverlayPoints(feedback.points ?? null);
     renderer.setPreview(concatStrokes(strokes, feedback.strokes ?? null));
+  }, [feedback, strokes, themeKey, rendererGeneration, rendererRef]);
+
+  // One frame for whatever changed in this commit: a hover that moves the
+  // overlay's fills and its points draws once, not once a channel.
+  useEffect(() => {
     render();
-  }, [feedback, strokes, themeKey, rendererGeneration, rendererRef, render]);
+  }, [geometry, creases, underFills, fills, feedback, strokes, themeKey, rendererGeneration, render]);
 
   useEffect(() => {
     onHover?.(hovered);

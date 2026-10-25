@@ -13,7 +13,8 @@
  * - **The request** is the step's: its source, its record in the crease
  *   pattern's coordinates (through the step's paper frame), and the
  *   Diagram's look — the diagram's style as its steps are painted, the step's
- *   turn and side, no spread (D18). With no record, the scene it shows, at
+ *   turn and side, no spread, and Edit's view's line style and width for the
+ *   crease pattern (D18). With no record, the scene it shows, at
  *   the kernel's layer order the step shows, so the dialog opens on the order
  *   the step draws.
  * - **Only `applied` writes** (D16): the order is folded as the dialog
@@ -27,6 +28,11 @@ import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import i18n from '../../i18n';
 import { openLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { lineContentFingerprint } from '../../lib/creaseFingerprint';
+import {
+  DEFAULT_ORISTUDIO_CP_LINE_STYLE,
+  DEFAULT_ORISTUDIO_CP_LINE_WIDTH,
+  type OristudioCpViewportOptions,
+} from '../../lib/creasePatternViewport';
 import type { LayerOrderApplied, LayerOrderLook, LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import { layerOrderRecordToSource, type PaperFrame } from '../../lib/layerOrder/paperFrame';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -61,16 +67,24 @@ const APPLY_LABEL = 'Change layer order';
 
 /**
  * The Diagram's look for a step (approach 3, D18): its paper as a folded
- * step is painted, read through the Diagram's policy, the step's turn, no
- * X-ray. Its side is the request's model's; its spread is the dialog's to
+ * step is painted, read through the Diagram's policy, the step's turn and
+ * side (the request's model's too), no X-ray; and the crease pattern's lines
+ * as Edit's view draws them, whatever the host. Its spread is the dialog's to
  * leave out.
  */
-export function diagramStepLayerOrderLook(style: DiagramStyle, render: FlatRender): LayerOrderLook {
+export function diagramStepLayerOrderLook(
+  style: DiagramStyle,
+  render: FlatRender,
+  view: Pick<OristudioCpViewportOptions, 'lineStyle' | 'lineWidth'>
+): LayerOrderLook {
   return {
     style: diagramScenePaintStyle(style, false),
     policy: DIAGRAM_STYLE_POLICY,
     turnDeg: render.rotationDeg,
+    side: render.side,
     xray: false,
+    lineStyle: view.lineStyle ?? DEFAULT_ORISTUDIO_CP_LINE_STYLE,
+    lineWidth: view.lineWidth ?? DEFAULT_ORISTUDIO_CP_LINE_WIDTH,
   };
 }
 
@@ -134,7 +148,7 @@ async function openingFor(
       request: {
         source: folded.source,
         record: saved ? layerOrderRecordToSource(saved.record, folded.frame) : null,
-        look: diagramStepLayerOrderLook(start.style, render),
+        look: diagramStepLayerOrderLook(start.style, render, store.get().oristudioCpViewport),
         // With a record the dialog restores it; with none, it opens on the order the step draws.
         ...(saved || !folded.scene ? {} : { shown: folded.scene }),
         ...(number !== null

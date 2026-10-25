@@ -5,6 +5,8 @@ import type { ModalHistory } from '../../keyboard/dialogShortcuts';
 import type { FaceLetters } from '../../layer-order/engine/faceIndex';
 import type { LayerRefusal } from '../../layer-order/engine/layerOrderEngine';
 import type { LayerOrderSessionStatus } from '../../layer-order/dialog/useLayerOrderSession';
+import type { LayerPanesEvents } from '../../layer-order/panes/layerPaneInput';
+import type { LayerFaceMarks, LayerPanesStacks, LayerPanesView } from '../../layer-order/panes/layerPaneMarks';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import { Button } from '../ui/Button';
 import { ModalFrame } from '../ui/ModalFrame';
@@ -17,16 +19,19 @@ import styles from './LayerOrderDialogFrame.module.css';
 export type LayerOrderPhonePane = 'folded' | 'crease';
 
 /**
- * What the panes region is told: the contract U8's `LayerOrderPanes` takes,
- * which `LayerOrderPanesPlaceholder` holds the place of until then.
+ * What the panes region is told: the contract `LayerOrderPanes` takes (U8).
  *
  * - `opening`: the crease pattern draws at once, from the request's source;
  *   the folded figure's place waits (PictureLoading).
  * - `ready`: both draw, from `status.open`.
  * - `refused`, `lost`: the crease pattern only. The frame gives the region
  *   the crease pattern's column and puts the notice where the rest would be.
+ *
+ * The rest is the inspector's to fill in (U10, from its model): the view,
+ * the marks by role, the order a preview shows, and what to do with a pick.
+ * Left out, the panes open on the host's side and X-ray, and mark nothing.
  */
-export interface LayerOrderPanesProps {
+export interface LayerOrderPanesProps extends LayerPanesEvents {
   readonly status: LayerOrderSessionStatus;
   /**
    * The one pane to show when the dialog is the whole screen (D6), switched
@@ -40,6 +45,12 @@ export interface LayerOrderPanesProps {
    * the host's scene's before (`requestFaceLetters`); null with neither.
    */
   readonly letters: FaceLetters | null;
+  /** Which side shows, X-ray, Undecided: the title row's tools (`LayerOrderViewTools`). */
+  readonly view?: LayerPanesView;
+  /** The faces marked, by role, and the spots lit. */
+  readonly marks?: LayerFaceMarks;
+  /** The order the folded figure draws, per side: a preview's while one shows; absent for the session's own. */
+  readonly stacks?: LayerPanesStacks | null;
 }
 
 export interface LayerOrderDialogFrameProps {

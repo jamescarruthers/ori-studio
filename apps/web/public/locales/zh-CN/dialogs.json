@@ -499,8 +499,11 @@
     },
     "applyUnsettled": "保存的约束尚未检查",
     "cancel": "取消",
+    "creaseCanvas": "折痕图。在其上选择一个面；拖动以平移，滚动以缩放。",
     "creasePane": "折痕图",
     "details": "层叠顺序详情",
+    "foldedCanvasBack": "从背面看的折叠图。选择最上层的面；拖动以平移，滚动以缩放。",
+    "foldedCanvasFront": "从正面看的折叠图。选择最上层的面；拖动以平移，滚动以缩放。",
     "foldedLoading": "正在加载折叠图",
     "foldedPane": "折叠图",
     "keepTrying": "继续尝试",
@@ -530,7 +533,27 @@
       "unreadable": "层叠顺序无法读取此图的折叠方式，因此无法打开。没有任何改动。"
     },
     "title": "层叠顺序",
-    "tryAgain": "重试"
+    "tryAgain": "重试",
+    "view": {
+      "back": "背面",
+      "front": "正面",
+      "side": "侧面",
+      "undecided": "未定",
+      "undecidedTitle": "为最上层的面尚未确定的位置着色",
+      "xray": "透视",
+      "xrayTitle": "淡淡地显示折叠图的所有层"
+    },
+    "zoom": {
+      "creaseBar": "折痕图视图",
+      "creaseIn": "放大折痕图",
+      "creaseOut": "缩小折痕图",
+      "creaseReset": "重置折痕图缩放",
+      "fit": "适应两个视图",
+      "foldedBar": "折叠图视图",
+      "foldedIn": "放大折叠图",
+      "foldedOut": "缩小折叠图",
+      "foldedReset": "重置折叠图缩放"
+    }
   },
   "number": {
     "tooSmall": "请输入大于 {{minimum}} 的数字。"
