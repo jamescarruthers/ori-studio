@@ -6428,10 +6428,10 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12862,10 +12862,10 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19298,10 +19298,10 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25385,10 +25385,10 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31472,10 +31472,10 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37906,10 +37906,10 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44340,10 +44340,10 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50427,9 +50427,9 @@
     "panels:foldedFigureActions.layerOrderNewer": "0046728db0fd",
     "panels:foldedFigureActions.layerOrderNoSource": "8eb568e2a8d0",
     "panels:foldedFigureActions.layerOrderSolutions": "86bf6cf0181b",
-    "panels:foldedFigureActions.layerOrderStale": "e9babe8d57aa",
-    "toasts:layerOrder.reopenFailed": "7efc03fe83fb",
     "errors:cp.layerOrderNotApplied": "12264cdb4248",
-    "errors:cp.layerOrderTooLarge": "09c9e519ed9f"
+    "errors:cp.layerOrderTooLarge": "09c9e519ed9f",
+    "panels:foldedFigureActions.layerOrderCreasesChanged": "244a84ae2f4d",
+    "panels:foldedFigureActions.refoldLayerOrder": "f179a2cced9f"
   }
 }
