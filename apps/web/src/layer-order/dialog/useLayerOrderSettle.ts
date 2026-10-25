@@ -27,6 +27,7 @@ import {
   applyChangedNothing,
   openedApplyBlocker,
   openedBaseline,
+  recordNeedsAttentionOf,
   type LayerOrderAtApply,
 } from '../model/layerOrderDecisions';
 import { settleLayerOrderDialog, type LayerOrderDialogOpening } from './layerOrderDialogStore';
@@ -69,7 +70,7 @@ export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: L
       // Saved rows that clashed or were never checked: never written as they stand.
       if (now === undefined && waits !== null) return;
       const { open } = status;
-      const baseline = openedBaseline(open.facts, request.record?.attention !== undefined);
+      const baseline = openedBaseline(open.facts, recordNeedsAttentionOf(request.record));
       const onScreen = now ?? { constraints: open.facts.constraints, carried: baseline.carried, stacks: open.stacks };
       if (applyChangedNothing(baseline, onScreen)) {
         settleLayerOrderDialog(id, { kind: 'unchanged' });

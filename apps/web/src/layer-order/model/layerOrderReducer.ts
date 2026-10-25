@@ -31,7 +31,7 @@ import {
   ADD_AFTER_PREVIEW_TIMEOUT,
   applyChangedNothing,
   keepTryingLimits,
-  openedOnHostOrder,
+  openedBaseline,
   reviewRowsFor,
   solutionCountRuns,
   stepByFor,
@@ -466,10 +466,6 @@ function opened(
   const open = openIndexOf(facts.openPairs);
   const runs = solutionCountRuns(openPairCount(open));
   const generation = state.solutions.generation + 1;
-  const matchesHost =
-    openedOnHostOrder(facts.openedOn) &&
-    !state.recordNeedsAttention &&
-    (facts.restore === null || (outcome?.kind === 'applied' && carried.length === 0));
 
   const next: LayerOrderDialogState = {
     ...state,
@@ -495,12 +491,7 @@ function opened(
     solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     hover: { face: null, slot: null, row: null, reason: false },
     flash: null,
-    baseline: {
-      constraints: facts.constraints,
-      carried: carried.map((row) => row.facts.index),
-      stacks: facts.stacks,
-      matchesHost,
-    },
+    baseline: openedBaseline(facts, state.recordNeedsAttention),
     reportedOpen: true,
   };
   effects.push({ type: 'solutions_restart', generation, by: currentStepBy(next), count: runs });

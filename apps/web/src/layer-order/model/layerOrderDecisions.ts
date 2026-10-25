@@ -8,6 +8,7 @@
  *
  * Pure: no React, no store, no engine calls.
  */
+import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import { LAYER_ORDER_LABEL_CAP, layerOrderCountStarts } from '../layerOrderBudgets';
 import {
   keepTrying,
@@ -124,11 +125,22 @@ export interface LayerOrderAtApply {
 }
 
 /**
- * What a session opened on, as the reducer keeps it at its open (`opened`):
- * for an Apply decided outside the reducer, the dialog shell's before an
- * inspector (U4's `useLayerOrderSettle`). The order is the host's when it was
- * held whole (or the closest fit moved nothing), the host flagged nothing,
- * and a restore applied every saved row.
+ * Whether the host handed a record it flagged after an edit (its
+ * `attention`, set by H4 and H7): then even an untouched Apply writes, so the
+ * host can clear the flag. The one test of it, for both deciders of D16: the
+ * dialog shell asks it of its request, and the reducer's init carries its
+ * answer (`LayerOrderDialogInit.recordNeedsAttention`).
+ */
+export function recordNeedsAttentionOf(record: LayerOrderRecord | null): boolean {
+  return record?.attention !== undefined;
+}
+
+/**
+ * What a session opened on: the reducer keeps it at its open (`opened`), and
+ * an Apply decided outside the reducer asks it too, the dialog shell's before
+ * an inspector (U4's `useLayerOrderSettle`). The order is the host's when it
+ * was held whole (or the closest fit moved nothing), the host flagged nothing
+ * ({@link recordNeedsAttentionOf}), and a restore applied every saved row.
  */
 export function openedBaseline(facts: LayerOpenFacts, recordNeedsAttention: boolean): LayerOrderBaseline {
   const carried = (facts.restore?.carried ?? []).map((row) => row.index);
