@@ -8,6 +8,7 @@ import {
   releaseFoldedFigureHandle,
   retainFoldedFigureHandle,
 } from './foldedFigureHandles';
+import { foldedFiguresAtRest } from './foldedFiguresAtRest';
 import { pendingFoldedModelWrites, supersedeFoldedModelWrites } from './foldedModelWriteQueue';
 import { foldedFigureListsEqual } from './foldedFigureState';
 
@@ -47,7 +48,9 @@ export const foldedFigureGesture = createGestureBracket<FoldedFigureSnapshot>({
   snapshot: () => {
     const state = useWorkspaceStore.getState();
     return {
-      figures: state.oristudioCpFoldedFigures,
+      // A figure a press marked `loading` outside any bracket, as it was
+      // before the press: an undo must never put back a figure that waits.
+      figures: foldedFiguresAtRest(state.oristudioCpFoldedFigures),
       activeId: state.oristudioCpActiveFoldedFigureId,
       epoch: foldedFigureHandleEpoch(),
     };

@@ -841,25 +841,30 @@ export type OristudioCpFigureLayerOrderOpening =
       status: 'ready';
       /** What the fold folded (`folded_figure_source`): what the dialog analyses and Apply folds again. */
       source: OristudioCpFoldSource;
-      /** The fold's paper scene: the order the figure shows, which the dialog opens on (D19). */
+      /**
+       * The fold's paper scene: the order the figure shows, which the dialog
+       * opens on (D19). Null when no fold could show it — a reopened figure
+       * whose record did not fold again whole: the dialog then restores the
+       * record itself, and says why in its own frames.
+       */
       shown: OristudioCpFoldedPaperScene | null;
       /** The model the figure folds with. */
       model: OristudioCpFoldedFigureModel;
       /**
-       * Let go of a fold made only to open the dialog on (a figure reopened from
-       * a file with no layer order of its own); nothing for the figure's own.
-       * Once the dialog has closed.
+       * Let go of a fold made only to open the dialog on (a figure with no
+       * layer order of its own, reopened from a file or showing another case
+       * than its kernel after an undo); nothing for the figure's own. Once the
+       * dialog has closed.
        */
       release: () => Promise<void>;
     }
   /**
    * - `blocked`: "Layer order…" cannot open on it now (`foldedFigureLayerOrderBlock`);
-   * - `reopen-failed`: a figure reopened from a file did not fold again to the
-   *   order it shows, and keeps its picture;
    * - `failed`: the kernel failed, and said so through `oristudioCpError`;
-   * - `cancelled`: stopped while it folded.
+   * - `unavailable`: the Layer order engine could not be loaded at all;
+   * - `cancelled`: stopped while it folded, or the figure went meanwhile.
    */
-  | { status: 'unavailable'; reason: 'blocked' | 'reopen-failed' | 'failed' | 'cancelled' };
+  | { status: 'unavailable'; reason: 'blocked' | 'failed' | 'unavailable' | 'cancelled' };
 
 export interface CreasePatternSliceState {
   creaseColorMode: CreaseColorMode;
@@ -1189,13 +1194,16 @@ export interface CreasePatternSliceActions {
   ) => Promise<boolean>;
   /**
    * The fold "Layer order…" opens the dialog on (row H3), on a press and
-   * never before: a figure's own live fold; or, for a flat figure reopened
-   * from a file, its creases folded again to the order it shows. A figure
-   * with a saved layer order is folded with it — the record restored through
-   * the host engine, then `fold_with_order` — and keeps that fold, as a
-   * rehydrate does: no undo entry, no `dirty`. One with none is folded to the
-   * case it shows on a fold of its own, which the opening's `release` frees,
-   * so the figure itself stays as it was. Never in the idle rehydrate queue.
+   * never before: a figure's own live fold, when its kernel shows the order
+   * the figure does; or, for a flat figure reopened from a file, its creases
+   * folded again to the order it shows. A figure with a saved layer order is
+   * folded with it — the record restored through the host engine, then
+   * `fold_with_order` — and keeps that fold, as a rehydrate does: no undo
+   * entry, no `dirty`. One with none (or whose handle shows another case
+   * after an undo) is folded to the case it shows on a fold of its own, which
+   * the opening's `release` lets go, so the figure stays as it was. When the
+   * fold fails, the opening has the source alone. Never in the idle
+   * rehydrate queue.
    */
   prepareOristudioCpFigureLayerOrder: (id: string) => Promise<OristudioCpFigureLayerOrderOpening>;
   /**
@@ -1206,9 +1214,9 @@ export interface CreasePatternSliceActions {
    * crease pattern's extensions bag. The old handle stays with history, so an
    * undo shows the order before. A refusal, a failure or a Stop leaves the
    * figure as it was; a record the figure already holds writes nothing (D16).
-   * Callers bracket it as one undo entry, holding the fold it replaces across
-   * the bracket so the entry takes it before it could be freed
-   * (`applyFoldedFigureLayerOrder`, `openFoldedFigureLayerOrder.ts`).
+   * Callers bracket it as one undo entry (`applyFoldedFigureLayerOrder`,
+   * `openFoldedFigureLayerOrder.ts`); the bracket holds the fold it replaces
+   * until the entry has taken it.
    */
   applyOristudioCpFigureLayerOrder: (id: string, applied: LayerOrderApplied) => Promise<boolean>;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
