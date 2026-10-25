@@ -1134,6 +1134,8 @@ describe('the Layer order dialog from Pose (H8)', () => {
   };
   /** The handle the last picture was read from. */
   const pictured = () => vi.mocked(bindings.runtime!.paperScene).mock.calls.at(-1)?.[0];
+  /** The relations the last fold with a given order was folded with. */
+  const orderedWith = () => vi.mocked(bindings.runtime!.foldWithOrder!).mock.calls.at(-1)?.[1];
 
   beforeEach(() => {
     hostEngine.resolveLayerOrder.mockImplementation(async (source: LayerOrderSource) =>
@@ -1309,7 +1311,7 @@ describe('the Layer order dialog from Pose (H8)', () => {
     await controller.run({ verb: 'turn-over' });
     // Restored from the record by the host engine, then folded in its order.
     expect(hostEngine.resolveLayerOrder).toHaveBeenCalledOnce();
-    expect(vi.mocked(bindings.runtime!.foldWithOrder).mock.calls.at(-1)?.[1]).toEqual(Uint32Array.of(1, 0));
+    expect(orderedWith()).toEqual(Uint32Array.of(1, 0));
     expect(pictured()).toBe(ORDERED_HANDLE);
     controller.dispose();
   });
@@ -1327,7 +1329,7 @@ describe('the Layer order dialog from Pose (H8)', () => {
     expect(asked().record?.constraints).toEqual(STEP_LAYER_ORDER.constraints);
     expect(asked().shown).toBeUndefined();
     expect(stepLayerOrderOf(layerOrderOf(stepId))?.record.constraints).toEqual([[1, 0, 1]]);
-    expect(vi.mocked(bindings.runtime!.foldWithOrder).mock.calls.at(-1)?.[1]).toEqual(CHOSEN_RELATIONS);
+    expect(orderedWith()).toEqual(CHOSEN_RELATIONS);
     expect(foldedFigureHandleRefCount(ORDERED_HANDLE)).toBe(1);
 
     await historyStep(controller, () => state().undoDiagram());
@@ -1336,7 +1338,7 @@ describe('the Layer order dialog from Pose (H8)', () => {
     await controller.run({ verb: 'turn-over' });
     // The record before Apply, restored again: the host engine's relations, not the dialog's.
     expect(hostEngine.resolveLayerOrder).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(bindings.runtime!.foldWithOrder).mock.calls.at(-1)?.[1]).toEqual(Uint32Array.of(1, 0));
+    expect(orderedWith()).toEqual(Uint32Array.of(1, 0));
     expect(stepLayerOrderOf(layerOrderOf(stepId))?.record.constraints).toEqual(STEP_LAYER_ORDER.constraints);
     expect(render(stepId)).toMatchObject({ render: { side: 'back' } });
     controller.dispose();

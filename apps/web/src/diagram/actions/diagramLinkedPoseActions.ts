@@ -120,22 +120,21 @@ function spreadBlocker(state: DiagramLinkedPoseState, t: TFunction): string | un
 }
 
 /**
- * Where a flat fold stands among its layer orders, for the pager between ‹
- * and ›: "2 of 5" when the search has found them all, "2 of 5+" while it may
- * find more, the number alone before it has looked, "None" for a fold whose
- * layers could not be ordered — as `count`, under a row's own "Layer order",
- * and as `label`, standing alone in a toolbar. Null for any other render.
+ * Where a flat fold stands among its layer orders, for the Step pane's pager
+ * between ‹ and ›, under its row's own "Layer order": "2 of 5" when the
+ * search has found them all, "2 of 5+" while it may find more, the number
+ * alone before it has looked, "None" for a fold whose layers could not be
+ * ordered. The Pose toolbar's ‹ › have no readout (Round 4, H8). Null for any
+ * other render.
  */
 export function layerOrderLabel(
   render: DiagramCpRender,
   solutions: DiagramLinkedPoseState['solutions'],
   t: TFunction
-): { count: string; label: string } | null {
+): { count: string } | null {
   if (render.mode !== 'folded-flat') return null;
   // The readout Edit's Properties pane shows too (`layerOrderPlace.ts`).
-  const count = layerOrderCount(render.foldCase, solutions, t);
-  if (solutions?.none) return { count, label: t('panels:diagram.pose.noLayerOrder', 'No layer order') };
-  return { count, label: t('panels:diagram.pose.layerOrderLabel', 'Layer order {{place}}', { place: count }) };
+  return { count: layerOrderCount(render.foldCase, solutions, t) };
 }
 
 /** The verb that shows a linked step each way (D19): the one map every surface reads. */
@@ -155,7 +154,18 @@ export function buildDiagramLinkedPoseActions(
     pose: (verb: DiagramLinkedPoseVerb) => void;
     /** Set Upright, in the live view: what pointed up on screen is the model's up. */
     setUpright?: () => void;
-  }
+  },
+  {
+    stopsAtLast = false,
+  }: {
+    /**
+     * For a pager with no readout — the Pose toolbar's (Round 4, H8): Next
+     * Layer Order holds at the last order once the search has run out,
+     * rather than wrapping round to the first, which nothing there would
+     * show. The Step pane's, which reads "5 of 5", wraps.
+     */
+    stopsAtLast?: boolean;
+  } = {}
 ): DiagramLinkedPoseAction[] {
   const { t } = deps;
   const { render } = state;
@@ -238,6 +248,19 @@ export function buildDiagramLinkedPoseActions(
 
   // A layer order chosen in the dialog is the record's, not a place in the kernel's enumeration (D9).
   const constrained = t('panels:diagram.pose.layerOrderConstrained', 'Step through solutions in Layer order…');
+  const { solutions } = state;
+  const foldCase = render.mode === 'folded-flat' ? render.foldCase : 1;
+  // Nowhere to go: no layer order, or one only; with `stopsAtLast`, the last of several once the search ran out.
+  const single = solutions !== null && !solutions.hasNext && solutions.discovered <= 1;
+  const last = stopsAtLast && solutions !== null && !solutions.hasNext && foldCase >= solutions.discovered;
+  const nextHeld = state.constrained === true || solutions?.none === true || (single && foldCase === 1) || last;
+  const nextHint = state.constrained
+    ? constrained
+    : solutions?.none
+      ? t('panels:diagram.pose.noSolution', 'This fold has no layer order')
+      : single
+        ? t('panels:diagram.pose.onlySolution', 'This fold has one layer order')
+        : t('panels:diagram.pose.lastSolution', 'This is its last layer order');
 
   switch (render.mode) {
     case 'defox': return modes;
@@ -255,22 +278,15 @@ export function buildDiagramLinkedPoseActions(
         }),
         // Any layer order found, in either direction (D23): back to the one
         // before, on to the next — the search's next when none is found past
-        // this one — the last wrapping round to the first, as Edit's does.
+        // this one — the last wrapping round to the first, as Edit's does,
+        // unless the pager has no readout to show it (`stopsAtLast`).
         action('previous-solution', t('panels:diagram.pose.previousSolution', 'Previous Layer Order'), {
           disabled: state.constrained === true || render.foldCase <= 1,
           hint: state.constrained ? constrained : t('panels:diagram.pose.firstSolution', 'This is its first layer order'),
         }),
         action('next-solution', t('panels:diagram.pose.nextLayerOrder', 'Next Layer Order'), {
-          disabled:
-            state.constrained === true ||
-            (state.solutions !== null &&
-              (state.solutions.none === true ||
-                (!state.solutions.hasNext && state.solutions.discovered <= 1 && render.foldCase === 1))),
-          hint: state.constrained
-            ? constrained
-            : state.solutions?.none
-              ? t('panels:diagram.pose.noSolution', 'This fold has no layer order')
-              : t('panels:diagram.pose.onlySolution', 'This fold has one layer order'),
+          disabled: nextHeld,
+          hint: nextHint,
         }),
         spreadLayers,
         reset,

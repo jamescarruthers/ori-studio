@@ -103,7 +103,12 @@ async function openConstrainedDiagram(): Promise<[string, string]> {
 }
 
 /** The open step's Pose, as its controller would publish it, so the pane shows its Pose section. */
-function publishPose(stepId: string, render: DiagramCpRender, constrained: boolean) {
+function publishPose(
+  stepId: string,
+  render: DiagramCpRender,
+  constrained: boolean,
+  editLayerOrder: () => Promise<boolean> = async () => false
+) {
   const t = ((_key: string, fallback: string) => fallback) as never;
   const actions = buildDiagramLinkedPoseActions(
     { render, readOnly: false, busy: false, solutions: null, constrained },
@@ -111,7 +116,10 @@ function publishPose(stepId: string, render: DiagramCpRender, constrained: boole
   );
   const pose: DiagramLinkedPose = {
     actions,
-    layerOrder: constrained ? null : { count: '1', label: 'Layer order 1' },
+    toolbar: actions,
+    layerOrder: constrained ? null : { count: '1' },
+    layerOrderEdit: null,
+    editLayerOrder,
     spatial: null,
     onCamera: () => {},
     registerLiveView: () => () => {},
@@ -236,6 +244,22 @@ describe('a constrained step in the Step pane', () => {
     expect(notice.textContent).toContain('1 layer constraint needs attention since the pattern changed.');
     expect(notice.querySelector('button')?.textContent).toBe('Review…');
     expect(layerOrderRow()!.querySelector('[data-field-note]')?.textContent).toBe('1 constraint');
+    expect(spawned).toHaveLength(0);
+  });
+
+  // One session per step, whichever surface asks (H8): the pane's Edit… is the open Pose's own Edit order….
+  it('opens the dialog through Pose’s controller on the step open in Pose', async () => {
+    const [first] = await openConstrainedDiagram();
+    act(() => state().selectDiagramStep(first));
+    act(() => state().openDiagramStep(first));
+    const editLayerOrder = vi.fn(async () => false);
+    publishPose(first, FLAT, true, editLayerOrder);
+    vi.mocked(bindings.runtime!.fold).mockClear();
+    act(() => button('Edit Layer Order…')!.click());
+    expect(editLayerOrder).toHaveBeenCalledOnce();
+    // Nothing of its own: no capture of the pane's, no worker.
+    expect(state().diagramCaptures).toEqual({});
+    expect(bindings.runtime!.fold).not.toHaveBeenCalled();
     expect(spawned).toHaveLength(0);
   });
 

@@ -10,6 +10,7 @@ import {
 } from '../actions/diagramStepLayerOrderActions';
 import { isLockedStep, type DiagramStep } from '../document/diagramDocument';
 import { layerOrderSummaryOf } from './captureLayerOrder';
+import { openLinkedPoseOf } from './openLinkedPose';
 import { openDiagramStepLayerOrder, type DiagramStepLayerOrderVia } from './stepLayerOrderActions';
 
 export interface DiagramStepLayerOrder {
@@ -26,7 +27,8 @@ const NONE: DiagramStepLayerOrder = { row: null, flag: null };
  * the Step pane's row and the Picture section's flag
  * (`diagramStepLayerOrderActions.ts`), read from the step's saved source —
  * opening a diagram or selecting a step asks the engine nothing. Edit… and
- * Review… open the dialog (`stepLayerOrderActions.ts`).
+ * Review… open the dialog (`stepLayerOrderActions.ts`); Edit… on the step
+ * open in Pose, through Pose's controller, on the fold it holds (H8).
  */
 export function useDiagramStepLayerOrder(step: DiagramStep | null): DiagramStepLayerOrder {
   const { t } = useTranslation();
@@ -40,7 +42,12 @@ export function useDiagramStepLayerOrder(step: DiagramStep | null): DiagramStepL
   return useMemo((): DiagramStepLayerOrder => {
     if (!render || stepId === null) return NONE;
     const state: DiagramStepLayerOrderState = { render, record, readOnly, busy, seeThrough };
-    const deps = { t, open: (via: DiagramStepLayerOrderVia) => void openDiagramStepLayerOrder(stepId, via) };
+    const open = (via: DiagramStepLayerOrderVia) => {
+      // Edit… on the step open in Pose is Pose's own (H8): one session per step, whichever surface asks.
+      const pose = via === 'edit' ? openLinkedPoseOf(stepId) : null;
+      void (pose ? pose.editLayerOrder() : openDiagramStepLayerOrder(stepId, via));
+    };
+    const deps = { t, open };
     return { row: buildDiagramStepLayerOrderRow(state, deps), flag: buildDiagramStepLayerOrderFlag(state, deps) };
   }, [render, record, readOnly, busy, seeThrough, stepId, t]);
 }
