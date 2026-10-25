@@ -16,6 +16,7 @@ import {
   setActiveShortcutViewportSurface,
 } from '../../keyboard/shortcutRuntime';
 import {
+  FOLD_WITH_LAYER_ORDER_SHORTCUT_ID,
   shortcutLabelForAction,
   type ViewportShortcutId,
 } from '../../keyboard/shortcuts';
@@ -150,6 +151,7 @@ import { useSelectedCanvasObject } from '../../cp-workspace/canvasObjects/useSel
 import { usePropertiesPaneActivation } from '../../cp-workspace/properties/usePropertiesPaneActivation';
 import { CpSelectionToolbar } from '../../cp-workspace/CpSelectionToolbar';
 import { useFoldedFigures } from '../../cp-workspace/folded/useFoldedFigures';
+import { foldSelectionWithLayerOrder } from '../../cp-workspace/folded/foldSelectionWithLayerOrder';
 import {
   mergeCanvasLayerBindings,
   type CanvasObjectGestureKind,
@@ -1405,6 +1407,11 @@ export function CreasePatternPanel() {
 
   const handleCpShortcutAction = useCallback(
     (actionId: OristudioCpActionId) => {
+      // Edit's own verb, in the tools' space but no tool: on the creases selected, as G folds them.
+      if (actionId === FOLD_WITH_LAYER_ORDER_SHORTCUT_ID) {
+        if (selectedEditableFoldLineIds.length > 0) void foldSelectionWithLayerOrder(selectedEditableFoldLineIds, t);
+        return;
+      }
       const action = cpActionById(actionId);
       if (!action) return;
       // The `foldAction` chord — `G` here (`keyboard/shortcuts.ts`); `F` is
@@ -1422,7 +1429,7 @@ export function CreasePatternPanel() {
       }
       handleCpToolAction(action, true);
     },
-    [handleCpToolAction, folded]
+    [handleCpToolAction, folded, selectedEditableFoldLineIds, t]
   );
 
   useEffect(
