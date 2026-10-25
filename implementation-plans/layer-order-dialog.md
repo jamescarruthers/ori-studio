@@ -816,6 +816,27 @@ A third, the on-demand flat rehydrate re-enabling "Another solution" and
 Duplicate on reopened unconstrained figures (hosts Q8), is a side effect of
 H3's new rehydrate, so it can only follow H3.
 
+Settled while building H4, for the PRs that meet it:
+- **The request gained two fields:** `applyRefolds` (D12: the foot's note,
+  and an untouched Apply still writes, `untouchedApplyWrites`) and `review`
+  (D14: opened from a flag's Review…; Edit's and the Diagram's both set it).
+  U10's `useLayerOrderDialog` should init the reducer with
+  `recordNeedsAttention: untouchedApplyWrites(request.record, request.applyRefolds)`
+  and `review: request.review === true`, where it now has
+  `recordNeedsAttentionOf(request.record)` and `false`.
+- **The foot's note** is U10's `note` prop on `LayerOrderDialogFrame`, added
+  in H4 line for line as U10 has it (the frame and its styles merge clean);
+  the one line that conflicts, in `LayerOrderDialog`, resolves to D19's
+  notice, else D12's note.
+- **A 3D figure's record attaches by its key** (D13). Its one blind spot: an
+  older build that deletes a 3D constrained figure and folds the same
+  creases in 3D again on the reused id inherits the record, flagged as
+  waiting; flat figures have the snapshot check for that, 3D ones have no
+  flat snapshot.
+- **Not built:** a figure whose record a reload detached (`detached` in the
+  bag) shows nothing yet; the States board's "Detached by an older build"
+  frame needs the bag's detached list read back onto its figure.
+
 ### Risks
 
 - **Display fidelity on real files.**
