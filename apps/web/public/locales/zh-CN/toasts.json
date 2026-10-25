@@ -22,7 +22,9 @@
   "diagram": {
     "addedAsStep": "已添加为第 {{number}} 步",
     "capture": {
+      "chosenOrderKept": "此步骤所选的层叠顺序需要处理，因此保留其图片。",
       "failed": "无法捕获图片",
+      "layerOrderKept": "此步骤的层叠约束需要处理，因此保留其图片。",
       "missing": "该图样已不在折痕图中。",
       "needsPose": "在模拟器中折到一半的步骤需在姿态中捕获：用“调整姿态”打开它。",
       "noLayerOrder": "无法确定其层序，因此此步骤以透视方式显示折叠后的纸。",
@@ -48,6 +50,16 @@
       "otherWorkspaceFirst": "请先在另一个工作区中撤销或重做之后的编辑：此次导入同时更改了编辑和图解。",
       "restoreFailed": "无法恢复导入的步骤。"
     },
+    "layerOrder": {
+      "chosenOrderRemoved": "此步骤所选的层叠顺序属于其旧图样，因此已移除。撤销可将其恢复。",
+      "copyNotFolded": "此步骤的层叠约束需要处理，因此无法将副本显示为折叠状态。",
+      "copyNotFoldedChosenOrder": "此步骤所选的层叠顺序需要处理，因此无法将副本显示为折叠状态。",
+      "folds3d": "此步骤的折痕现在以 3D 折叠，而层叠顺序适用于平折。请刷新该步骤查看。",
+      "lost": "层叠顺序意外停止，因此此步骤未更改。",
+      "lostLoad": "无法加载层叠顺序，因此此步骤未更改。请检查网络连接，然后重试。",
+      "refused": "无法绘制此层叠顺序，因此未做任何更改。",
+      "removed_other": "此步骤的 {{count}} 条层叠约束属于其旧图样，因此已移除。撤销可将其恢复。"
+    },
     "placementsReflowed_other": "{{count}} 个已移动步骤回到了原来的单元格",
     "references": {
       "addedSteps": "已添加为第 {{first}}–{{last}} 步",
@@ -63,6 +75,10 @@
       "tooLarge": "此步骤过于复杂，无法保存在图解中。",
       "undoReplaced": "撤销"
     },
+    "refreshAllChosenOrderKept_other": "{{count}} 个步骤所选的层叠顺序需要处理，因此保留其图片。",
+    "refreshAllLayerOrderKept_other": "{{count}} 个步骤的层叠约束需要处理，因此保留其图片。",
+    "refreshAllLayerOrderLost_other": "层叠顺序意外停止，因此 {{count}} 个步骤未更改。",
+    "refreshAllLayerOrderLostLoad_other": "无法加载层叠顺序，因此 {{count}} 个步骤未更改。请检查网络连接，然后重试。",
     "refreshedAll_other": "已刷新 {{count}} 个步骤",
     "uploadFailed_other": "{{count}} 张图片未能添加",
     "uploadFailureLine": "{{name}}：{{reason}}",

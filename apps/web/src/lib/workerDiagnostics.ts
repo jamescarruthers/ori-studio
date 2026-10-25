@@ -81,11 +81,16 @@ function describeWorkerEvent(event: Event): string {
  * run: the sink tells the user, the observer lets the owner drop its dead client
  * so the next call spawns a replacement. Two consumers, one set of listeners —
  * the alternative was a second pair of `error` handlers on every worker.
+ *
+ * An owner that tells the user itself answers `'handled'`, and the sink is
+ * not told: the Layer order engine's worker the browser failed to load
+ * (offline) is the dialog's lost state or a host's toast, never "The worker
+ * stopped unexpectedly." as well.
  */
 export function attachWorkerDiagnostics(
   worker: Worker,
   name: WorkerName,
-  observe?: (failure: WorkerFailure) => void
+  observe?: (failure: WorkerFailure) => void | 'handled'
 ): () => void {
   const report = (kind: WorkerFailure['kind']) => (event: Event) => {
     const failure: WorkerFailure = {
@@ -95,12 +100,14 @@ export function attachWorkerDiagnostics(
       loadFailed: kind === 'error' && !(event instanceof ErrorEvent),
     };
     console.error(`[ori-studio] worker "${name}" ${kind}`, event);
+    let handled = false;
     try {
-      observe?.(failure);
+      handled = observe?.(failure) === 'handled';
     } catch {
       // An owner that throws while dropping its client must not stop the user
       // from being told the worker died.
     }
+    if (handled) return;
     try {
       sink?.(failure);
     } catch {

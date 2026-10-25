@@ -1974,6 +1974,20 @@ export function setLinkedPicture(
   );
 }
 
+/**
+ * A linked step's layer order record set, its picture as it is: what a
+ * capture keeps when the record's order could not be drawn (layer order D10)
+ * — the record, flagged — so the step says so at rest. Nothing else of the
+ * source changes, so its link still says whether the picture is behind its
+ * pattern. The same record again is no edit.
+ */
+export function setLinkedLayerOrder(document: DiagramDocument, stepId: string, layerOrder: string): DiagramDocument {
+  return updateStep(document, stepId, (step) => {
+    if (step.source?.kind !== 'cp' || step.source.layerOrder === layerOrder) return step;
+    return { ...step, source: { ...step.source, layerOrder }, revision: step.revision + 1 };
+  });
+}
+
 /** A Fold step's capture: its source and picture, and the marks its fold brings (plan D17). */
 export interface CapturedFoldStep extends CapturedLink {
   source: DiagramFoldStepSource;
