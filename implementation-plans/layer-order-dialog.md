@@ -952,7 +952,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U7: PaperPane (#501)
 - [ ] U8: panes
 - [x] U9: inspector model (#510)
-- [ ] U9b: compound constraints in the model
+- [x] U9b: compound constraints in the model (#515)
 - [ ] U10: inspector
 - [x] H2: host engine (#512)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
