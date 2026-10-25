@@ -718,9 +718,11 @@ notice has no board of its own; U10 builds it from the approved copy.
   - **Saved as before.** The record holds one constraint per object, so H1's
     codec, the engine and the hosts don't change.
   - **The list** (my calls) shows one row per subject and verb: committed
-    constraints with the same subject and sign read "D in front of H, K", at
-    the place of the earliest, and a later Add for that subject and verb joins
-    its row. The verb still reads from the side shown. The row's trash removes
+    constraints with the same subject and the same verb, as read from the
+    side shown, read "D in front of H, K", at the place of the earliest, and a
+    later Add for that subject and verb joins its row. (Not by the stored
+    sign: one verb gives objects facing different ways different signs, so
+    sign would split your own example.) The row's trash removes
     the whole row, as one undo step. Each object in a row of two or more has
     its own remove (×), shown on hover or focus, and always on a coarse
     pointer. Carried rows group the same way, within one status, so a row
@@ -728,7 +730,8 @@ notice has no board of its own; U10 builds it from the approved copy.
     its objects; a row click puts its subject in the builder, as now. A clash
     marks the clashing objects within their rows.
   - **Analytics:** `layer constraint added` and `layer constraint blocked`
-    fire once per Add, with an `objects` bucket (1, 2, 3–5, 6+).
+    fire once per Add, with an `object_count_bucket` (`<=1`, `<=2`, `<=5`,
+    `>5`, the events' existing bucket style).
   - **Where it lands:** U9b changes the merged inspector model; U10 builds the
     UI from the "A5 · Compound constraints" board.
 
