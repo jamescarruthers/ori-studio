@@ -112,6 +112,8 @@ describe('opening the Layer order dialog on a step', () => {
     expect(request.record).toBeNull();
     expect(request.shown).toEqual(halfFoldKernelScene());
     expect(request.name).toBe('Step 1');
+    // The surface the dialog's analytics count it under.
+    expect(request.surface).toBe('diagram_step');
     // Folded for the request and freed; nothing written for a Cancel.
     expect(bindings.runtime!.free).toHaveBeenCalledWith(7);
     expect(state().diagramHistory.past).toHaveLength(entries);
