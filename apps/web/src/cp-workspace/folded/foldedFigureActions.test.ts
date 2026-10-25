@@ -9,8 +9,10 @@ import type {
 import {
   buildFoldedFigureActions,
   foldedFigureFlipState,
+  foldedFigureHeaderCommands,
   foldedFigureStyleGroup,
   isFoldedFigureReady,
+  previousSolutionCommand,
   type FoldedFigureAction,
   type FoldedFigureActionDeps,
   type FoldedFigureChoice,
@@ -451,6 +453,85 @@ describe('the solution verb is the same verb on either kind of figure', () => {
     });
     // Nowhere to go: wrapping a one-solution fold lands where it started.
     expect(at(4).disabled).toBe(true);
+  });
+});
+
+describe('previousSolutionCommand, the Properties pane’s ‹', () => {
+  const deps = () => ({ t, foldPrevious: vi.fn() });
+  const at = (current: number) =>
+    makeFigure({
+      snapshot: {
+        model: { state: 'Front0' },
+        find_another_overlap_valid: true,
+        discovered_fold_cases: 3,
+        current_fold_case: current,
+      },
+    } as unknown as Partial<OristudioCpFoldedFigureEntry>);
+
+  it('goes back from any but the first solution of a flat figure', () => {
+    const d = deps();
+    const figure = at(2);
+    const previous = previousSolutionCommand(figure, d);
+    expect(previous).toMatchObject({ id: 'previous', label: 'Previous solution', disabled: false });
+    expect(previous.hint).toBeUndefined();
+    previous.run();
+    expect(d.foldPrevious).toHaveBeenCalledWith(figure);
+  });
+
+  it('stops at the first, saying so', () => {
+    expect(previousSolutionCommand(at(1), deps())).toMatchObject({
+      disabled: true,
+      hint: 'This is its first solution',
+    });
+  });
+
+  it('is held on a 3D figure, which has no numbered solutions to go back to', () => {
+    const spatial = makeFigure({
+      snapshot: null,
+      folded3d: {
+        model: { state: 'Front0' },
+        verdict: { verdict: 'folded' },
+        find_another_overlap_valid: true,
+        discovered_fold_cases: 3,
+        current_fold_case: 3,
+      },
+    } as unknown as Partial<OristudioCpFoldedFigureEntry>);
+    expect(previousSolutionCommand(spatial, deps())).toMatchObject({
+      disabled: true,
+      hint: 'Stepping back works on flat figures',
+    });
+  });
+
+  it('waits for the figure to be ready, as every kernel-backed verb does', () => {
+    expect(previousSolutionCommand(makeFigure({ status: 'loading' }), deps()).disabled).toBe(true);
+  });
+});
+
+describe('the header verbs', () => {
+  it('are Export…, Duplicate and Delete, the toolbar’s last group, routed to the same deps', () => {
+    const exportFigure = vi.fn();
+    const d = makeDeps({ exportFigure });
+    const figure = makeFigure();
+    const header = foldedFigureHeaderCommands(figure, d);
+    expect(header.map((item) => item.label)).toEqual(['Export…', 'Duplicate', 'Delete']);
+    const toolbar = buildFoldedFigureActions(figure, d).filter(
+      (item): item is FoldedFigureCommand =>
+        item.kind === 'command' && ['export', 'duplicate', 'delete'].includes(item.id)
+    );
+    expect(toolbar.map(({ id, label, icon, disabled }) => ({ id, label, icon, disabled }))).toEqual(
+      header.map(({ id, label, icon, disabled }) => ({ id, label, icon, disabled }))
+    );
+    for (const item of header) item.run();
+    expect(exportFigure).toHaveBeenCalledWith(figure);
+    expect(d.duplicate).toHaveBeenCalledWith(figure);
+    expect(d.remove).toHaveBeenCalledWith(figure);
+  });
+
+  it('leave Export… out where the surface cannot export', () => {
+    expect(foldedFigureHeaderCommands(makeFigure(), makeDeps()).map((item) => item.id)).toEqual([
+      'duplicate',
+      'delete',
+    ]);
   });
 });
 

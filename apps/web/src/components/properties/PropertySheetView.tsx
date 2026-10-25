@@ -1,21 +1,41 @@
-import { useRef, useSyncExternalStore } from 'react';
-import { Image, Origami, Play, SquareDashed, Type, type LucideIcon } from 'lucide-react';
+import { useId, useRef, useSyncExternalStore } from 'react';
+import {
+  Copy,
+  FileDown,
+  Image,
+  Origami,
+  Play,
+  SquareDashed,
+  Trash2,
+  Type,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   visiblePropertyFields,
   type ColorField,
+  type ControlVerb,
   type NumberField,
   type PropertyField,
   type PropertySection,
   type PropertySheet,
+  type PropertySheetAction,
+  type SegmentedField,
   type SliderField,
+  type StepperField,
 } from '../../lib/propertyDescriptors';
+import { Button } from '../ui/Button';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
+import { IconButton } from '../ui/IconButton';
+import { Pager } from '../ui/Pager';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import {
   ColorRow,
+  FieldRow,
   NumberRow,
   SegmentedRow,
   SelectRow,
   SliderRow,
+  StackedRow,
   TextRow,
   ToggleRow,
 } from '../ui/fieldRows';
@@ -42,9 +62,20 @@ const SHEET_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
+ * The names a catalog may put in an action's `icon`: the glyphs the object's
+ * toolbar draws for the same verbs (`foldedFigureActionIcons`), and the
+ * Diagram's Step pane for its step's.
+ */
+const ACTION_ICONS: Record<string, LucideIcon> = {
+  export: FileDown,
+  duplicate: Copy,
+  delete: Trash2,
+};
+
+/**
  * One {@link PropertySheet}, rendered.
  *
- * The renderer knows the seven field kinds and the three commit protocols and
+ * The renderer knows the eight field kinds and the four commit protocols and
  * nothing else — not which object the sheet describes, nor where its values
  * live. Every decision that could differ per kind is data on the field:
  * `support` hides (`not-applicable`) or disables with `reason` (`unsupported`),
@@ -54,22 +85,30 @@ const SHEET_ICONS: Record<string, LucideIcon> = {
  * `vi.fn` deps, and what keeps a new object kind from needing a new form.
  *
  * `onCommit(fieldId)` fires once per recorded change — inside the discrete
- * commit, the draft commit, the continuous `end` and the reset — never per
- * input event, so a host can count property edits without seeing values.
+ * commit, the draft commit, the continuous `end`, the reset and a stepper's
+ * press — never per input event, so a host can count property edits without
+ * seeing values. `onAction(actionId)` fires once per press of a header verb.
+ *
+ * The parts only some kinds use — header `actions`, a `stacked` segmented
+ * field, a stepper, a `note`, a `spaced` section — draw nothing for a kind
+ * that leaves them out, which renders as it always has.
  */
 export function PropertySheetView({
   sheet,
   surfaceProps,
   onCommit,
+  onAction,
 }: {
   sheet: PropertySheet;
   surfaceProps?: PropertySurfaceProps;
   onCommit?: (fieldId: string) => void;
+  onAction?: (actionId: string) => void;
 }) {
   const Icon = sheet.icon ? SHEET_ICONS[sheet.icon] : undefined;
+  const actions = sheet.actions ?? [];
   return (
     <div className={styles.sheet} data-property-sheet="" {...surfaceProps}>
-      <header className={styles.header}>
+      <header className={styles.header} data-actions={actions.length > 0 || undefined}>
         {Icon && (
           <span className={styles.icon}>
             <Icon size={14} aria-hidden />
@@ -83,6 +122,13 @@ export function PropertySheetView({
             </span>
           )}
         </div>
+        {actions.length > 0 && (
+          <div className={styles.actions}>
+            {actions.map((action) => (
+              <ActionButton key={action.id} action={action} onAction={onAction} />
+            ))}
+          </div>
+        )}
       </header>
       {sheet.sections.map((section) => (
         <SectionView
@@ -107,9 +153,10 @@ function SectionView({
 }) {
   const fields = visiblePropertyFields(section);
   if (fields.length === 0) return null;
-  const rows = fields.map((field) => (
+  const fieldRows = fields.map((field) => (
     <FieldView key={field.id} field={field} surfaceProps={surfaceProps} onCommit={onCommit} />
   ));
+  const rows = section.spaced ? <div className={styles.spaced}>{fieldRows}</div> : fieldRows;
   // An untitled section is the sheet's plain body: rows with no header to
   // fold behind, the shape a one-section sheet wants.
   if (section.title === undefined) {
@@ -186,6 +233,16 @@ function FieldView({
         />
       );
     case 'segmented':
+      if (field.layout === 'stacked') {
+        return (
+          <StackedSegmentedFieldView
+            field={field}
+            disabled={disabled}
+            title={title}
+            onCommit={committed}
+          />
+        );
+      }
       return (
         <SegmentedRow
           label={field.label}
@@ -246,7 +303,142 @@ function FieldView({
           onReset={reset}
         />
       );
+    case 'stepper':
+      return (
+        <StepperFieldView field={field} disabled={disabled} title={title} onCommit={committed} />
+      );
   }
+}
+
+/**
+ * One of the object's verbs, in the header as the Step pane has its step's:
+ * a small icon button named by its label, disabled with its hint.
+ */
+function ActionButton({
+  action,
+  onAction,
+}: {
+  action: PropertySheetAction;
+  onAction?: (actionId: string) => void;
+}) {
+  const Icon = ACTION_ICONS[action.icon];
+  return (
+    <IconButton
+      size="sm"
+      aria-label={action.label}
+      title={action.disabled && action.hint ? action.hint : action.label}
+      disabled={action.disabled}
+      onClick={() => {
+        action.run();
+        onAction?.(action.id);
+      }}
+    >
+      {Icon && <Icon size={15} />}
+    </IconButton>
+  );
+}
+
+/**
+ * A segmented field laid out `stacked`: the label over the control, the
+ * control across the row (the Step pane's Show as). The visible label names
+ * the group, so it is announced once.
+ */
+function StackedSegmentedFieldView({
+  field,
+  disabled,
+  title,
+  onCommit,
+}: {
+  field: SegmentedField;
+  disabled: boolean;
+  title?: string;
+  onCommit: () => void;
+}) {
+  const labelId = useId();
+  return (
+    <StackedRow label={field.label} labelId={labelId} disabled={disabled} title={title}>
+      <SegmentedControl
+        size="sm"
+        fill
+        aria-labelledby={labelId}
+        value={field.value}
+        disabled={disabled}
+        options={field.options.map((option) => ({ value: option.id, label: option.label }))}
+        onChange={(next) => {
+          if (next === field.value) return;
+          field.commit(next);
+          onCommit();
+        }}
+      />
+    </StackedRow>
+  );
+}
+
+/**
+ * ‹ where it stands ›, in a row with its label and its note, and the row's
+ * button after it when it has one. A refused verb — the descriptor's, or every
+ * one on an unsupported field, with its reason — keeps its place and its focus
+ * and does nothing. A step that runs is one commit; the button opens what it
+ * opens and commits nothing.
+ */
+function StepperFieldView({
+  field,
+  disabled,
+  title,
+  onCommit,
+}: {
+  field: StepperField;
+  disabled: boolean;
+  title?: string;
+  onCommit: () => void;
+}) {
+  const refusable = (verb: ControlVerb, after?: () => void): ControlVerb => {
+    const refused = disabled || verb.disabled;
+    return {
+      label: verb.label,
+      disabled: refused,
+      hint: disabled ? (field.reason ?? verb.hint) : verb.hint,
+      run: () => {
+        if (refused) return;
+        verb.run();
+        after?.();
+      },
+    };
+  };
+  const step = (verb: ControlVerb | undefined) => (verb ? refusable(verb, onCommit) : undefined);
+  const pager = (
+    <Pager label={field.label} previous={step(field.previous)} next={step(field.next)}>
+      {field.readout}
+    </Pager>
+  );
+  const action = field.action ? refusable(field.action) : undefined;
+  return (
+    <FieldRow
+      label={field.label}
+      kind="text"
+      disabled={disabled}
+      title={title}
+      note={field.note?.text}
+      noteKind={field.note?.kind}
+    >
+      {action ? (
+        <span className={styles.stepper}>
+          {pager}
+          <Button
+            size="sm"
+            variant="secondary"
+            title={action.disabled ? action.hint : undefined}
+            aria-disabled={action.disabled || undefined}
+            onClick={action.run}
+          >
+            {action.label}
+          </Button>
+        </span>
+      ) : (
+        pager
+      )}
+    </FieldRow>
+  );
 }
 
 /**

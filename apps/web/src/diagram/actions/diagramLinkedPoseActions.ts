@@ -5,6 +5,7 @@ import {
   type LayerSpreadChoice,
   type LayerSpreadControls,
 } from '../../cp-workspace/folded/layerSpreadControls';
+import { layerOrderCount, type LayerOrderSolutions } from '../../lib/layerOrderPlace';
 import { defaultCaptureCamera } from '../capture/captureFolded';
 import {
   DEFAULT_SIMULATED_VIEW,
@@ -81,7 +82,7 @@ export interface DiagramLinkedPoseState {
    * The held flat fold's layer orders: how many found, whether there may be
    * more, and whether it has none at all; null when not known yet.
    */
-  solutions: { discovered: number; hasNext: boolean; none?: boolean } | null;
+  solutions: LayerOrderSolutions | null;
   /**
    * The step's flat fold is its see-through development, which the kernel
    * draws when it finds no layer order: no layers to spread.
@@ -131,20 +132,9 @@ export function layerOrderLabel(
   t: TFunction
 ): { count: string; label: string } | null {
   if (render.mode !== 'folded-flat') return null;
-  if (solutions?.none) {
-    return {
-      count: t('panels:diagram.pose.layerOrderNone', 'None'),
-      label: t('panels:diagram.pose.noLayerOrder', 'No layer order'),
-    };
-  }
-  const number = render.foldCase;
-  const total = solutions ? Math.max(solutions.discovered, number) : null;
-  const count =
-    total === null
-      ? String(number)
-      : solutions!.hasNext
-        ? t('panels:diagram.pose.layerOrderOfMore', '{{number}} of {{total}}+', { number, total })
-        : t('panels:diagram.pose.layerOrderOf', '{{number}} of {{total}}', { number, total });
+  // The readout Edit's Properties pane shows too (`layerOrderPlace.ts`).
+  const count = layerOrderCount(render.foldCase, solutions, t);
+  if (solutions?.none) return { count, label: t('panels:diagram.pose.noLayerOrder', 'No layer order') };
   return { count, label: t('panels:diagram.pose.layerOrderLabel', 'Layer order {{place}}', { place: count }) };
 }
 

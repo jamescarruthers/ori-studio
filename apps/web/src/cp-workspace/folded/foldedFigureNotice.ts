@@ -30,7 +30,6 @@ import { cpDiagnosticEntryMessage } from '../diagnostics/foldabilityMessages';
 import { cpDiagnosticClass } from '../diagnostics/severity';
 import { cpDiagnosticEntryAt } from '../diagnostics/visibleEntries';
 import { documentLineIdsForKernelLines, kernelLineOrder } from './foldRoute';
-import { foldedFigureCurrentCase } from './foldedFigureState';
 
 /** What a notice asks the user to do about it. */
 export type FoldedFigureNoticeActionId = 'show-issues' | 'select-creases' | 'simulate-instead';
@@ -213,18 +212,20 @@ export function foldedFigureNotice(
 }
 
 /**
- * What the Properties pane says under a figure's title.
+ * What the Properties pane says under a figure's title: a state, or nothing.
  *
  * Stale first (it is the one the user can act on), then a verdict if there is
- * one, then the solution the figure is showing. The non-`ready` arms used to
- * render `figure.status` — a raw identifier, untranslated, reading `loading` or
+ * one. Which solution the figure shows is the Layer order row's to say (D11:
+ * the header's subtitle keeps states only), so a figure that folded cleanly
+ * has no subtitle, as the board draws it. The non-`ready` arms used to render
+ * `figure.status` — a raw identifier, untranslated, reading `loading` or
  * `error` in eight locales.
  */
 export function foldedFigureSubtitle(
   t: TFunction,
   figure: OristudioCpFoldedFigureEntry,
   stale: boolean
-): string {
+): string | undefined {
   if (stale) return t('panels:creasePattern.stale', 'Stale');
   // Literal keys so the i18n extractor can see them (see apps/web/CLAUDE.md).
   switch (figure.status) {
@@ -234,13 +235,8 @@ export function foldedFigureSubtitle(
       return t('panels:creasePattern.foldedModelStatus.error', 'Failed');
     case 'stale':
       return t('panels:creasePattern.stale', 'Stale');
-    case 'ready': {
-      const notice = foldedFigureNotice(t, figure);
-      if (notice) return notice.label;
-      return t('panels:creasePattern.case', 'Case {{count}}', {
-        count: foldedFigureCurrentCase(figure),
-      });
-    }
+    case 'ready':
+      return foldedFigureNotice(t, figure)?.label;
   }
 }
 

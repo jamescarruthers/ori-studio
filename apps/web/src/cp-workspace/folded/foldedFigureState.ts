@@ -1,10 +1,18 @@
 import type {
   OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureModel,
+  OristudioCpFoldedFigureSnapshot,
   OristudioCpFoldedFigureState,
   OristudioCpRgbColor,
 } from '../../engine/oristudioCpTypes';
+import { hasFoldedLayerOrder } from '../../lib/creaseExportFold';
 import type { FoldedFigureSide } from '../../lib/foldedFigureSides';
+import {
+  advanceSolutionFrontier,
+  type ReportedSolutions,
+  type SolutionFrontier,
+} from '../../lib/layerOrderPlace';
+import { solutionFrontierOf } from './foldedSolutionFrontiers';
 
 /** Where a figure sits in its stream of layer-ordering solutions. */
 export interface FoldedFigureCycling {
@@ -61,6 +69,55 @@ export function foldedFigureCurrentCase(
   figure: OristudioCpFoldedFigureEntry | null | undefined
 ): number {
   return foldedFigureCycling(figure).current;
+}
+
+/**
+ * Whether the figure's fold found a layer order — one to step through, drawn
+ * as layers — or none, so it shows see-through (as Crane and Heart fold);
+ * null while there is no fold to ask, the first one running or failed.
+ *
+ * A flat figure asks the predicate every flat fold is read by
+ * (`hasFoldedLayerOrder`: the stage the estimate reached, its count and its
+ * outcome). A 3D figure's own verdict says it.
+ */
+export function foldedFigureHasLayerOrder(
+  figure: OristudioCpFoldedFigureEntry | null | undefined
+): boolean | null {
+  const spatial = figure?.folded3d;
+  if (spatial) {
+    return spatial.verdict.verdict !== 'no_layer_order' && spatial.discovered_fold_cases > 0;
+  }
+  const snapshot = figure?.snapshot;
+  if (!snapshot) return null;
+  return hasFoldedLayerOrder({
+    discoveredCases: snapshot.discovered_fold_cases,
+    displayStyle: snapshot.display_style,
+    outcome: snapshot.outcome,
+  });
+}
+
+/**
+ * How far the search for the figure's layer orders has reached
+ * (`lib/layerOrderPlace.ts`): what its kernel handle's search has reached
+ * (`foldedSolutionFrontiers.ts`, outside undo), with what the entry's own
+ * snapshot reports laid over it. An entry an undo put back never shows less
+ * than the handle has found; a figure with no handle — reopened from a file —
+ * shows what its snapshot says.
+ */
+export function foldedFigureFrontier(
+  figure: OristudioCpFoldedFigureEntry | null | undefined
+): SolutionFrontier {
+  const frontier = solutionFrontierOf(figure?.handle);
+  const source = figure?.folded3d ?? figure?.snapshot;
+  if (!source) return frontier;
+  return advanceSolutionFrontier(frontier, reportedSolutions(source));
+}
+
+/** What a kernel snapshot reports of its search: how many found, and whether another may be. */
+export function reportedSolutions(
+  snapshot: Pick<OristudioCpFoldedFigureSnapshot, 'discovered_fold_cases' | 'find_another_overlap_valid'>
+): ReportedSolutions {
+  return { discovered: snapshot.discovered_fold_cases, hasNext: snapshot.find_another_overlap_valid };
 }
 
 /**

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   Axis3d,
   ChevronFirst,
+  ChevronLeft,
   ChevronRight,
   Copy,
   FileDown,
@@ -54,6 +55,8 @@ export function foldedFigureActionIconNode(
       return <RotateCcwSquare size={size} />;
     case 'another':
       return <ChevronRight size={size} />;
+    case 'previous':
+      return <ChevronLeft size={size} />;
     // Rewind-to-start, so the wrap at the end of a lap reads as what it is.
     case 'first-solution':
       return <ChevronFirst size={size} />;
