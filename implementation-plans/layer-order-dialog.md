@@ -373,6 +373,30 @@ which Oriedita folds flat.
 If either target misses on most designs, we stop and talk: clause learning is
 the known fix, and it isn't built.
 
+**Result, 2026-10-24 (E8): both targets met; memory reported.** It was run
+through the built bridge in Node 22 (`scripts/layer-order-census.mjs`), over
+the 480 designs the source admits, one at a time.
+- Open p95 818 ms on the 475 corpus designs (max 2.3 s; 14 over 1 s).
+  iguana-c0 takes 2.3 s, which the opening state carries.
+- Preview p95 10 ms (max 57 ms; none over 200 ms). iguana-c0's previews take
+  0.66 s at the median and one of eleven passed 30 s: the running state, then
+  "couldn't check in time".
+- Memory, per instance at its peak (p50 / p95 / max): the dialog 3.6 / 46 /
+  118 MiB, the host engine 3.5 / 43 / 116, Fold's worker on the same file's
+  Import CP 4.2 / 56 / 155; all three at once 11 / 147 / 388 MiB. The
+  count's stored orders are cut from 16 to 4 MiB, with every tally the same,
+  which takes up to 48 MiB off the dialog's peak.
+- The count's longest call is 59 ms on the corpus, so a preview waits at most
+  that behind it. On iguana-c0 its calls reach 454 ms, and in 30 s it shows
+  only "at least 1", so above 20,000 open pairs the count isn't started.
+- D7's label cap is 50: it letters every open object of 96% of subjects.
+
+The census also found that a position past 2⁵³ (X-ray stepping on three
+designs) threw instead of answering. It is now sent capped, as counts are.
+For U6: a step while the count is unfinished first counts for half its
+deadline, so on the 5 designs whose count doesn't end, 19 of their 20 steps
+took 1.4 to 2.5 s of a 5 s deadline. The stepper's deadline should be short.
+
 **Where the gates run.**
 - **CI:** small fixtures only (kabuto, `solution_sample_1`,
   `colorconstrainttest`), in the workspace test step, not added to the
