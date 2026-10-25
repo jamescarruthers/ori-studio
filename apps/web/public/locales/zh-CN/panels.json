@@ -225,6 +225,7 @@
       "changeView": "更改折叠模型视角",
       "layerOrder": "层序",
       "layerOrderUndetermined": "无法确定此模型的层序。",
+      "layerOrderWaiting": "正在查找其层序",
       "pitch": "俯仰",
       "placement": "位置",
       "pose": "姿态",

@@ -235,6 +235,7 @@
       "changeView": "Alterar a vista do modelo dobrado",
       "layerOrder": "Ordem de camadas",
       "layerOrderUndetermined": "Não foi possível determinar a ordem de camadas deste modelo.",
+      "layerOrderWaiting": "Sua ordem de camadas está sendo procurada",
       "pitch": "Inclinação",
       "placement": "Posição",
       "pose": "Pose",

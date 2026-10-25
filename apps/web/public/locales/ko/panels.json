@@ -225,6 +225,7 @@
       "changeView": "접힌 모델 보기 변경",
       "layerOrder": "층 순서",
       "layerOrderUndetermined": "이 모델의 층 순서를 정할 수 없습니다.",
+      "layerOrderWaiting": "층 순서를 찾는 중입니다",
       "pitch": "기울기",
       "placement": "배치",
       "pose": "포즈",

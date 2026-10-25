@@ -129,7 +129,13 @@ function mount(figure: OristudioCpFoldedFigureEntry) {
 }
 
 const sheet = () => host!.querySelector<HTMLElement>('[data-property-sheet]')!;
-const group = (name: string) => sheet().querySelector<HTMLElement>(`[role="group"][aria-label="${name}"]`);
+/** A group by its accessible name: its own label, or the visible one that names it. */
+const group = (name: string) =>
+  [...sheet().querySelectorAll<HTMLElement>('[role="group"]')].find(
+    (candidate) =>
+      candidate.getAttribute('aria-label') === name ||
+      document.getElementById(candidate.getAttribute('aria-labelledby') ?? '')?.textContent === name
+  ) ?? null;
 const button = (scope: Element | null, name: string) =>
   [...(scope?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
     (candidate) => (candidate.getAttribute('aria-label') ?? candidate.textContent) === name
@@ -194,6 +200,9 @@ describe('A, a flat figure', () => {
 
     const layerOrder = rowOf('Layer order')!;
     expect(layerOrder.textContent).toContain('2 of 3+');
+    // The pager is a group named by its row, and its readout is announced.
+    const pager = layerOrder.querySelector('[role="group"][aria-label="Layer order"]');
+    expect(pager?.querySelector('[aria-live="polite"]')?.textContent).toBe('2 of 3+');
     expect(button(layerOrder, 'Previous solution')?.getAttribute('aria-disabled')).toBeNull();
     expect(button(layerOrder, 'Another solution')?.getAttribute('aria-disabled')).toBeNull();
   });
@@ -231,6 +240,23 @@ describe('A, a flat figure', () => {
 
     await press(button(header, 'Delete'));
     expect(store.deleteOristudioCpFoldedFigure).toHaveBeenCalledWith(FLAT.id);
+  });
+
+  it('waits while a step folds, keeping its place and the pressed button', async () => {
+    mount({ ...FLAT, status: 'loading' } as OristudioCpFoldedFigureEntry);
+    const store = stubbedActions();
+    const layerOrder = rowOf('Layer order')!;
+    // Not held as a figure that cannot be used: the step it started is running.
+    expect(layerOrder.hasAttribute('data-disabled')).toBe(false);
+    expect(layerOrder.textContent).toContain('2 of 3+');
+    for (const name of ['Previous solution', 'Another solution']) {
+      const verb = button(layerOrder, name);
+      expect(verb?.getAttribute('aria-disabled'), name).toBe('true');
+      expect(verb?.disabled, name).toBe(false);
+      await press(verb);
+    }
+    expect(store.foldAnotherOristudioCpFigure).not.toHaveBeenCalled();
+    expect(store.foldOristudioCpFigureToCase).not.toHaveBeenCalled();
   });
 
   it('goes no further back than the first solution', async () => {

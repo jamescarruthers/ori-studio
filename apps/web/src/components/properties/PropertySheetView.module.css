@@ -78,6 +78,14 @@
   flex: 0 0 auto;
 }
 
+/* A stepper with a button after its pager ("Edit…"), as the board draws the
+   Layer order row: the two 8px apart at the row's end. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* A section's rows a little apart, as the Step pane's Pose section has them
    (DiagramStepPose.module.css). */
 .spaced {

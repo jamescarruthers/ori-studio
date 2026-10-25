@@ -21,8 +21,13 @@
  * menu run, never new ones; and the one field kind that is pressed rather
  * than set, the stepper, steps a value — which layer order shows — rather
  * than standing in for a verb. Every one of these parts is optional: a kind
- * that uses none renders as it always has.
+ * that uses none renders as it always has. Every verb, wherever it sits, is a
+ * {@link ControlVerb}.
  */
+
+import type { ControlVerb } from './controlVerb';
+
+export type { ControlVerb };
 
 /** The answer `foldedFigureAppearance.ts` gives, generalised: hide 'not-applicable', disable 'unsupported' with a reason. */
 export type PropertySupport = 'supported' | 'unsupported' | 'not-applicable';
@@ -96,26 +101,16 @@ export interface PropertyOption {
   label: string;
 }
 
-/**
- * A short line under a row's label, read with it (`FieldRow.note`): why a
- * row cannot be used now, or what holds it. Only the kinds whose row has a
- * note line take one.
- */
-interface NotedField {
-  note?: string;
-}
-
-export type ToggleField = FieldBase &
-  NotedField & {
-    kind: 'toggle';
-    /**
-     * The value the row shows once `reset` has cleared it — what it follows
-     * while nothing is pinned. A toggle offers no reset button (`FieldRow`), so
-     * while `reset` is offered, switching to this value runs `reset` rather than
-     * pinning a value that merely agrees with it.
-     */
-    inherited?: boolean;
-  } & DiscreteCommit<boolean>;
+export type ToggleField = FieldBase & {
+  kind: 'toggle';
+  /**
+   * The value the row shows once `reset` has cleared it — what it follows
+   * while nothing is pinned. A toggle offers no reset button (`FieldRow`), so
+   * while `reset` is offered, switching to this value runs `reset` rather than
+   * pinning a value that merely agrees with it.
+   */
+  inherited?: boolean;
+} & DiscreteCommit<boolean>;
 /** `value: null` is the mixed state — nothing chosen, the placeholder shown. */
 export type SelectField = FieldBase & {
   kind: 'select';
@@ -163,33 +158,44 @@ export type ColorField = FieldBase & {
   resetWhileUnsupported?: boolean;
 } & ContinuousCommit<string>;
 
-/** One of a stepper's two verbs: back to the one before, or on to the next. */
-export interface StepperVerb {
-  /** Translated; the button's accessible name. */
-  label: string;
-  /** Refused: kept in the tab order, so it keeps a press's focus, and a press does nothing. */
-  disabled: boolean;
-  /** Translated; shown in place of the label while refused. */
-  hint?: string;
-  /** One recorded change, under the verb's own undo label. */
-  run(): void;
+/**
+ * A short line under a row's label, read with it (`FieldRow.note`).
+ *
+ * - `reason`: why the row cannot be used now ("Layer order couldn’t be
+ *   determined for this figure."). It keeps the label's ink and wraps, since
+ *   it is there to be read.
+ * - `status`: a quiet fact about the value ("3 constraints"): one line, in
+ *   tertiary ink, cut short rather than wrapped.
+ */
+export interface FieldNote {
+  kind: 'reason' | 'status';
+  /** Translated. */
+  text: string;
 }
 
 export interface SteppedCommit {
-  /** A stepper: each press of ‹ or › is one commit, under that verb's own undo label. */
+  /**
+   * A stepper: each press of ‹ or › is one commit, under that verb's own undo
+   * label. A refused verb (`disabled`) keeps its place and the focus a press
+   * gave it, and a press does nothing.
+   */
   protocol: 'stepped';
-  /** Where it stands, read out between the two ("2 of 5+"). */
-  value: string;
-  previous: StepperVerb;
-  next: StepperVerb;
+  /** Where it stands, read out between the two ("2 of 5+"), and announced as it changes. */
+  readout: string;
+  /** Back to the one before; its place stays empty when absent. */
+  previous?: ControlVerb;
+  /** On to the next; its place stays empty when absent. */
+  next?: ControlVerb;
+  /** A button after the pager, for what the row opens ("Edit…", the Layer order dialog). */
+  action?: ControlVerb;
 }
 
 /**
  * A value stepped through one at a time, ‹ where it stands › — a folded
  * figure's layer orders, as the Diagram's pager steps a flat fold's. On an
- * 'unsupported' field both verbs are refused, with `reason` as their hint.
+ * 'unsupported' field every verb is refused, with `reason` as its hint.
  */
-export type StepperField = FieldBase & NotedField & { kind: 'stepper' } & SteppedCommit;
+export type StepperField = FieldBase & { kind: 'stepper'; note?: FieldNote } & SteppedCommit;
 
 export type PropertyField =
   | ToggleField
@@ -221,19 +227,13 @@ export interface PropertySection {
 /**
  * A verb on the object itself, in the sheet's header — Export…, Duplicate,
  * Delete — taken from the object's own catalog, as its toolbar and menu take
- * them.
+ * them (a catalog's command can be handed over as it is).
  */
-export interface PropertySheetAction {
+export interface PropertySheetAction extends ControlVerb {
   /** Stable per kind ('export', 'duplicate', …). Doubles as the analytics `action` enum. */
   id: string;
-  /** Translated; the button's accessible name. */
-  label: string;
   /** An icon name, resolved by the renderer. */
   icon: string;
-  disabled: boolean;
-  /** Translated; the title while disabled. */
-  hint?: string;
-  run(): void;
 }
 
 export interface PropertySheet {

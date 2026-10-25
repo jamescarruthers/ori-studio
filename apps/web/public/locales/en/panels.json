@@ -230,6 +230,7 @@
       "changeView": "Change folded model view",
       "layerOrder": "Layer order",
       "layerOrderUndetermined": "Layer order couldn’t be determined for this figure.",
+      "layerOrderWaiting": "Its layer order is being found",
       "pitch": "Tilt",
       "placement": "Placement",
       "pose": "Pose",

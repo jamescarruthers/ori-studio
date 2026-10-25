@@ -553,7 +553,12 @@ describe('PropertySheetView', () => {
     );
     // Not a label-beside row: the label stands over the control.
     expect(container?.querySelector('[data-field-row]')).toBeNull();
-    const group = container?.querySelector('[role="group"][aria-label="Render as"]');
+    // Named by the label over it, once: no aria-label repeating it.
+    const group = [...(container?.querySelectorAll('[role="group"]') ?? [])].find(
+      (candidate) =>
+        document.getElementById(candidate.getAttribute('aria-labelledby') ?? '')?.textContent === 'Render as'
+    );
+    expect(group?.hasAttribute('aria-label')).toBe(false);
     const options = [...(group?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
     act(() => options.find((option) => option.textContent === 'Paper')?.click());
     expect(commit).not.toHaveBeenCalled();
@@ -572,14 +577,18 @@ describe('PropertySheetView', () => {
         label: 'Layer order',
         support: 'supported',
         protocol: 'stepped',
-        value: '1 of 5+',
+        readout: '1 of 5+',
         previous: { label: 'Previous solution', disabled: true, hint: 'This is its first solution', run: previous },
         next: { label: 'Another solution', disabled: false, run: next },
       })
     );
     const row = container?.querySelector('[data-field-row]');
     expect(row?.querySelector('[data-field-label]')?.textContent).toBe('Layer order');
-    expect(row?.textContent).toContain('1 of 5+');
+    // A group named by the row, whose readout is announced as it changes.
+    const pager = row?.querySelector('[role="group"][aria-label="Layer order"]');
+    const readout = pager?.querySelector('[aria-live="polite"]');
+    expect(readout?.textContent).toBe('1 of 5+');
+    expect(readout?.getAttribute('aria-atomic')).toBe('true');
     const back = row?.querySelector<HTMLButtonElement>('button[aria-label="Previous solution"]');
     expect(back?.getAttribute('aria-disabled')).toBe('true');
     act(() => back?.click());
@@ -598,20 +607,50 @@ describe('PropertySheetView', () => {
         label: 'Layer order',
         support: 'unsupported',
         reason: 'Couldn’t be determined',
-        note: 'Couldn’t be determined.',
+        note: { kind: 'reason', text: 'Couldn’t be determined.' },
         protocol: 'stepped',
-        value: 'None',
+        readout: 'None',
         previous: { label: 'Previous solution', disabled: false, run: vi.fn() },
         next: { label: 'Another solution', disabled: false, run: next },
+        action: { label: 'Edit…', disabled: false, run: vi.fn() },
       })
     );
     const row = container?.querySelector('[data-field-row]');
     expect(row?.getAttribute('data-disabled')).toBe('true');
     expect(row?.querySelector('[data-field-note="reason"]')?.textContent).toBe('Couldn’t be determined.');
     const verbs = [...(row?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
-    expect(verbs.map((verb) => verb.getAttribute('aria-disabled'))).toEqual(['true', 'true']);
+    expect(verbs.map((verb) => verb.getAttribute('aria-disabled'))).toEqual(['true', 'true', 'true']);
     act(() => verbs[1]?.click());
     expect(next).not.toHaveBeenCalled();
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('puts a quiet status under the label, the row’s button after the pager, and leaves out a verb it lacks', () => {
+    const edit = vi.fn();
+    const onCommit = render(
+      sheetOf({
+        id: 'layerOrder',
+        kind: 'stepper',
+        label: 'Layer order',
+        support: 'supported',
+        note: { kind: 'status', text: '3 constraints' },
+        protocol: 'stepped',
+        readout: '1 of 3',
+        next: { label: 'Another solution', disabled: false, run: vi.fn() },
+        action: { label: 'Edit…', disabled: false, run: edit },
+      })
+    );
+    const row = container?.querySelector('[data-field-row]');
+    expect(row?.querySelector('[data-field-note="status"]')?.textContent).toBe('3 constraints');
+    const buttons = [...(row?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
+    // No ‹: its place is empty. The button comes last.
+    expect(buttons.map((button) => button.getAttribute('aria-label') ?? button.textContent)).toEqual([
+      'Another solution',
+      'Edit…',
+    ]);
+    act(() => buttons[1]?.click());
+    expect(edit).toHaveBeenCalledTimes(1);
+    // It opens what it opens; it changes nothing on the figure.
     expect(onCommit).not.toHaveBeenCalled();
   });
 });

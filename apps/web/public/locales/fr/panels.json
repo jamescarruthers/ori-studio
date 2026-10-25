@@ -235,6 +235,7 @@
       "changeView": "Modifier la vue du modèle plié",
       "layerOrder": "Ordre des couches",
       "layerOrderUndetermined": "L’ordre des couches de ce modèle n’a pas pu être déterminé.",
+      "layerOrderWaiting": "Son ordre des couches est en cours de recherche",
       "pitch": "Inclinaison",
       "placement": "Position",
       "pose": "Pose",

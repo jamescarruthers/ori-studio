@@ -225,6 +225,7 @@
       "changeView": "折り上がりモデルの視点を変更",
       "layerOrder": "重なり順",
       "layerOrderUndetermined": "この図の重なり順を決められませんでした。",
+      "layerOrderWaiting": "重なり順を探しています",
       "pitch": "傾き",
       "placement": "配置",
       "pose": "ポーズ",

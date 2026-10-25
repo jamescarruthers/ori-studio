@@ -33,6 +33,7 @@ describe('Pager', () => {
     const next = vi.fn();
     render(
       <Pager
+        label="Layer order"
         previous={{ label: 'Previous', disabled: false, run: vi.fn() }}
         next={{ label: 'Next', disabled: false, run: next }}
       >
@@ -40,6 +41,11 @@ describe('Pager', () => {
       </Pager>
     );
     expect(host?.textContent).toBe('2 of 5+');
+    // A group named by what it steps, whose readout is announced whole as it changes.
+    const pager = host?.querySelector('[role="group"][aria-label="Layer order"]');
+    const readout = pager?.querySelector('[aria-live="polite"]');
+    expect(readout?.textContent).toBe('2 of 5+');
+    expect(readout?.getAttribute('aria-atomic')).toBe('true');
     expect(button('Previous')?.getAttribute('aria-disabled')).toBeNull();
     act(() => button('Next')?.click());
     expect(next).toHaveBeenCalledTimes(1);
@@ -48,7 +54,7 @@ describe('Pager', () => {
   it('refuses a verb without taking it out of the tab order, and says why', () => {
     const previous = vi.fn();
     render(
-      <Pager previous={{ label: 'Previous', disabled: true, hint: 'This is its first', run: previous }}>
+      <Pager label="Layer order" previous={{ label: 'Previous', disabled: true, hint: 'This is its first', run: previous }}>
         1 of 5
       </Pager>
     );

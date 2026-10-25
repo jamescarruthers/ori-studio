@@ -10,7 +10,8 @@ import { useReferencesStepWays } from '../../diagram/references/useReferencesSte
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { DiagramWayRow } from './DiagramWayChooser';
-import { Pager, type PagerVerb } from '../ui/Pager';
+import type { ControlVerb } from '../../lib/controlVerb';
+import { Pager } from '../ui/Pager';
 import { FieldRow, NumberRow, SegmentedRow } from '../ui/fieldRows';
 import styles from './DiagramStepPose.module.css';
 
@@ -159,6 +160,7 @@ export function DiagramStepPose({
         // Any layer order found, back or on (D23), as Pose's own pager has them.
         <FieldRow label={t('panels:diagram.pose.layerOrder', 'Layer order')} kind="text">
           <Pager
+            label={t('panels:diagram.pose.layerOrder', 'Layer order')}
             previous={layerVerb(linked.find((action) => action.id === 'previous-solution'))}
             next={layerVerb(linked.find((action) => action.id === 'next-solution'))}
           >
@@ -211,7 +213,7 @@ function RotationRow({
  * disabled while a capture runs or at either end, so it keeps the focus a
  * press gave it.
  */
-function layerVerb(action: DiagramLinkedPoseAction | undefined): PagerVerb | undefined {
+function layerVerb(action: DiagramLinkedPoseAction | undefined): ControlVerb | undefined {
   if (!action) return undefined;
   return {
     label: action.label,

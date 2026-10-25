@@ -5,6 +5,7 @@ import type {
   OristudioCpFoldedFigureState,
   OristudioCpRgbColor,
 } from '../../engine/oristudioCpTypes';
+import { hasFoldedLayerOrder } from '../../lib/creaseExportFold';
 import type { FoldedFigureSide } from '../../lib/foldedFigureSides';
 import {
   advanceSolutionFrontier,
@@ -72,15 +73,27 @@ export function foldedFigureCurrentCase(
 
 /**
  * Whether the figure's fold found a layer order — one to step through, drawn
- * as layers — or none, so the kernel shows it see-through (as Crane and Heart
- * fold); null while there is no fold to ask, the first one running or failed.
+ * as layers — or none, so it shows see-through (as Crane and Heart fold);
+ * null while there is no fold to ask, the first one running or failed.
+ *
+ * A flat figure asks the predicate every flat fold is read by
+ * (`hasFoldedLayerOrder`: the stage the estimate reached, its count and its
+ * outcome). A 3D figure's own verdict says it.
  */
 export function foldedFigureHasLayerOrder(
   figure: OristudioCpFoldedFigureEntry | null | undefined
 ): boolean | null {
-  const source = figure?.folded3d ?? figure?.snapshot;
-  if (!source) return null;
-  return source.discovered_fold_cases > 0;
+  const spatial = figure?.folded3d;
+  if (spatial) {
+    return spatial.verdict.verdict !== 'no_layer_order' && spatial.discovered_fold_cases > 0;
+  }
+  const snapshot = figure?.snapshot;
+  if (!snapshot) return null;
+  return hasFoldedLayerOrder({
+    discoveredCases: snapshot.discovered_fold_cases,
+    displayStyle: snapshot.display_style,
+    outcome: snapshot.outcome,
+  });
 }
 
 /**

@@ -235,6 +235,7 @@
       "changeView": "Cambiar la vista del modelo plegado",
       "layerOrder": "Orden de capas",
       "layerOrderUndetermined": "No se pudo determinar el orden de capas de este modelo.",
+      "layerOrderWaiting": "Se está buscando su orden de capas",
       "pitch": "Inclinación",
       "placement": "Posición",
       "pose": "Pose",

@@ -22,7 +22,6 @@ import type {
   PropertySheet,
   PropertySupport,
   StepperField,
-  StepperVerb,
 } from '../../lib/propertyDescriptors';
 import { clampSimulatorZoom, SIMULATOR_MAX_ZOOM, SIMULATOR_MIN_ZOOM } from '../../lib/simulatorOrbit';
 import { degreesToRadians, radiansToDegrees, wrapDegrees } from '../../lib/angleUnits';
@@ -34,7 +33,6 @@ import {
   foldedFigureHeaderCommands,
   isFoldedFigureReady,
   previousSolutionCommand,
-  type FoldedFigureCommand,
 } from './foldedFigureActions';
 import {
   foldedAppearanceSupport,
@@ -424,16 +422,10 @@ export function buildFoldedFigureProperties(
     title: figure.title,
     subtitle: foldedFigureSubtitle(t, figure, deps.stale),
     icon: 'folded-figure',
-    // The toolbar's last group, from the same catalog: what is done to the
-    // figure as a whole, at the header's end as the Step pane has its step's.
-    actions: foldedFigureHeaderCommands(figure, deps).map((command) => ({
-      id: command.id,
-      label: command.label,
-      icon: command.icon,
-      disabled: command.disabled,
-      ...(command.hint ? { hint: command.hint } : {}),
-      run: command.run,
-    })),
+    // The toolbar's last group, from the same catalog and as it is: what is
+    // done to the figure as a whole, at the header's end as the Step pane has
+    // its step's.
+    actions: foldedFigureHeaderCommands(figure, deps),
     sections,
   };
 }
@@ -451,46 +443,64 @@ function layerOrderField(
   deps: FoldedFigurePropertyDeps
 ): StepperField {
   const { t } = deps;
-  const previous = previousSolutionCommand(figure, deps);
-  const next = anotherSolutionCommand(figure, deps);
   // Unknown while the first fold runs or after it failed: nothing to read out.
   const found = foldedFigureHasLayerOrder(figure);
   const none = found === false;
-  const verb = (command: FoldedFigureCommand): StepperVerb => ({
-    label: command.label,
-    disabled: command.disabled,
-    ...(command.hint ? { hint: command.hint } : {}),
-    run: command.run,
-  });
-  const undetermined = t(
-    'panels:cpProperties.folded.layerOrderUndetermined',
-    'Layer order couldn’t be determined for this figure.'
-  );
-  const support: Pick<StepperField, 'support' | 'reason' | 'note'> = !isFoldedFigureReady(figure)
-    ? {
-        support: 'unsupported',
-        reason: t('panels:cpProperties.folded.refoldToChange', 'Refold to change how this figure looks'),
-      }
-    : none
-      ? { support: 'unsupported', reason: undetermined, note: undetermined }
-      : { support: 'supported' };
-  return {
+  const readout =
+    found === null
+      ? ''
+      : layerOrderCount(
+          foldedFigureCurrentCase(figure),
+          none
+            ? { discovered: 0, hasNext: false, none: true }
+            : frontierSolutions(foldedFigureFrontier(figure)),
+          t
+        );
+  const row = {
     id: 'layerOrder',
     kind: 'stepper',
     label: t('panels:cpProperties.folded.layerOrder', 'Layer order'),
-    ...support,
     protocol: 'stepped',
-    value:
-      found === null
-        ? ''
-        : layerOrderCount(
-            foldedFigureCurrentCase(figure),
-            none
-              ? { discovered: 0, hasNext: false, none: true }
-              : frontierSolutions(foldedFigureFrontier(figure)),
-            t
-          ),
-    previous: verb(previous),
-    next: verb(next),
-  };
+    readout,
+  } as const;
+  const previous = previousSolutionCommand(figure, deps);
+  const next = anotherSolutionCommand(figure, deps);
+
+  // A step, a refold or a duplicate is folding: the row stays as it is, as
+  // the Diagram's does while a capture runs, and both verbs wait for it —
+  // refused, so the one pressed keeps the focus through the step it started.
+  if (figure.status === 'loading') {
+    const waiting = t('panels:cpProperties.folded.layerOrderWaiting', 'Its layer order is being found');
+    return {
+      ...row,
+      support: 'supported',
+      previous: { ...previous, disabled: true, hint: waiting },
+      next: { ...next, disabled: true, hint: waiting },
+    };
+  }
+  // Stale, failed or reopened from a file: as every kernel-backed row waits.
+  if (!isFoldedFigureReady(figure)) {
+    return {
+      ...row,
+      support: 'unsupported',
+      reason: t('panels:cpProperties.folded.refoldToChange', 'Refold to change how this figure looks'),
+      previous,
+      next,
+    };
+  }
+  if (none) {
+    const undetermined = t(
+      'panels:cpProperties.folded.layerOrderUndetermined',
+      'Layer order couldn’t be determined for this figure.'
+    );
+    return {
+      ...row,
+      support: 'unsupported',
+      reason: undetermined,
+      note: { kind: 'reason', text: undetermined },
+      previous,
+      next,
+    };
+  }
+  return { ...row, support: 'supported', previous, next };
 }

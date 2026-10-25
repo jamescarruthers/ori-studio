@@ -181,7 +181,11 @@ describe('CpPropertiesPanel', () => {
       'Erode (% of sheet)',
       'Scale',
     ]);
-    expect(host?.querySelector('[role="group"][aria-label="Render as"]')).not.toBeNull();
+    const renderAs = [...(host?.querySelectorAll('[role="group"]') ?? [])].find(
+      (group) =>
+        document.getElementById(group.getAttribute('aria-labelledby') ?? '')?.textContent === 'Render as'
+    );
+    expect(renderAs).toBeDefined();
     // Not ready: the appearance is offered, disabled, with the reason; the
     // placement — where it sits — stays editable.
     const sideRow = [...(host?.querySelectorAll('[data-field-label]') ?? [])]

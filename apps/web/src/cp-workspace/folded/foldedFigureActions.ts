@@ -4,6 +4,7 @@ import type {
   OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureModel,
 } from '../../engine/oristudioCpTypes';
+import type { ControlVerb } from '../../lib/controlVerb';
 import { FOLDED_FIGURE_SIDES } from '../../lib/foldedFigureSides';
 import type { Hex, PaperStyle, PaperStyleField, PaperStyleValue } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES, policyApplies } from '../../lib/paper/paperStyleResolve';
@@ -50,7 +51,12 @@ export type FoldedFigureActionIcon =
   | 'notice-warn'
   | 'notice-error';
 
-export interface FoldedFigureCommand {
+/**
+ * One verb. A {@link ControlVerb} — its label, whether it can act now and why
+ * not, what it does — so any surface that draws verbs takes it as it is: the
+ * toolbar, the menu, the Properties pane's header and its Layer order row.
+ */
+export interface FoldedFigureCommand extends ControlVerb {
   kind: 'command';
   id:
     | 'flip'
@@ -62,13 +68,8 @@ export interface FoldedFigureCommand {
     | 'export'
     | 'duplicate'
     | 'delete';
-  label: string;
   icon: FoldedFigureActionIcon;
-  disabled: boolean;
-  /** Why it is disabled, where a surface has room to say so. */
-  hint?: string;
   danger?: boolean;
-  run: () => void;
 }
 
 export interface FoldedFigureChoiceOption {

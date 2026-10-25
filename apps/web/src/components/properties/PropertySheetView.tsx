@@ -1,4 +1,4 @@
-import { useRef, useSyncExternalStore } from 'react';
+import { useId, useRef, useSyncExternalStore } from 'react';
 import {
   Copy,
   FileDown,
@@ -13,6 +13,7 @@ import {
 import {
   visiblePropertyFields,
   type ColorField,
+  type ControlVerb,
   type NumberField,
   type PropertyField,
   type PropertySection,
@@ -21,11 +22,11 @@ import {
   type SegmentedField,
   type SliderField,
   type StepperField,
-  type StepperVerb,
 } from '../../lib/propertyDescriptors';
+import { Button } from '../ui/Button';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { IconButton } from '../ui/IconButton';
-import { Pager, type PagerVerb } from '../ui/Pager';
+import { Pager } from '../ui/Pager';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import {
   ColorRow,
@@ -204,7 +205,6 @@ function FieldView({
           label={field.label}
           checked={field.value}
           inherited={field.inherited}
-          note={field.note}
           disabled={disabled}
           title={title}
           onChange={(next) => {
@@ -340,7 +340,8 @@ function ActionButton({
 
 /**
  * A segmented field laid out `stacked`: the label over the control, the
- * control across the row (the Step pane's Show as).
+ * control across the row (the Step pane's Show as). The visible label names
+ * the group, so it is announced once.
  */
 function StackedSegmentedFieldView({
   field,
@@ -353,12 +354,13 @@ function StackedSegmentedFieldView({
   title?: string;
   onCommit: () => void;
 }) {
+  const labelId = useId();
   return (
-    <StackedRow label={field.label} disabled={disabled} title={title}>
+    <StackedRow label={field.label} labelId={labelId} disabled={disabled} title={title}>
       <SegmentedControl
         size="sm"
         fill
-        aria-label={field.label}
+        aria-labelledby={labelId}
         value={field.value}
         disabled={disabled}
         options={field.options.map((option) => ({ value: option.id, label: option.label }))}
@@ -373,9 +375,11 @@ function StackedSegmentedFieldView({
 }
 
 /**
- * ‹ where it stands ›, in a row with its label and its note. A refused verb —
- * the descriptor's, or both on an unsupported field, with its reason — keeps
- * its place and its focus and does nothing; a verb that runs is one commit.
+ * ‹ where it stands ›, in a row with its label and its note, and the row's
+ * button after it when it has one. A refused verb — the descriptor's, or every
+ * one on an unsupported field, with its reason — keeps its place and its focus
+ * and does nothing. A step that runs is one commit; the button opens what it
+ * opens and commits nothing.
  */
 function StepperFieldView({
   field,
@@ -388,24 +392,51 @@ function StepperFieldView({
   title?: string;
   onCommit: () => void;
 }) {
-  const verb = (step: StepperVerb): PagerVerb => {
-    const refused = disabled || step.disabled;
+  const refusable = (verb: ControlVerb, after?: () => void): ControlVerb => {
+    const refused = disabled || verb.disabled;
     return {
-      label: step.label,
+      label: verb.label,
       disabled: refused,
-      hint: disabled ? (field.reason ?? step.hint) : step.hint,
+      hint: disabled ? (field.reason ?? verb.hint) : verb.hint,
       run: () => {
         if (refused) return;
-        step.run();
-        onCommit();
+        verb.run();
+        after?.();
       },
     };
   };
+  const step = (verb: ControlVerb | undefined) => (verb ? refusable(verb, onCommit) : undefined);
+  const pager = (
+    <Pager label={field.label} previous={step(field.previous)} next={step(field.next)}>
+      {field.readout}
+    </Pager>
+  );
+  const action = field.action ? refusable(field.action) : undefined;
   return (
-    <FieldRow label={field.label} kind="text" disabled={disabled} title={title} note={field.note}>
-      <Pager previous={verb(field.previous)} next={verb(field.next)}>
-        {field.value}
-      </Pager>
+    <FieldRow
+      label={field.label}
+      kind="text"
+      disabled={disabled}
+      title={title}
+      note={field.note?.text}
+      noteKind={field.note?.kind}
+    >
+      {action ? (
+        <span className={styles.stepper}>
+          {pager}
+          <Button
+            size="sm"
+            variant="secondary"
+            title={action.disabled ? action.hint : undefined}
+            aria-disabled={action.disabled || undefined}
+            onClick={action.run}
+          >
+            {action.label}
+          </Button>
+        </span>
+      ) : (
+        pager
+      )}
     </FieldRow>
   );
 }

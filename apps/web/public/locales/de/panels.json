@@ -230,6 +230,7 @@
       "changeView": "Ansicht des gefalteten Modells ändern",
       "layerOrder": "Lagenfolge",
       "layerOrderUndetermined": "Die Lagenfolge dieses Modells konnte nicht bestimmt werden.",
+      "layerOrderWaiting": "Seine Lagenfolge wird gerade gesucht",
       "pitch": "Neigung",
       "placement": "Position",
       "pose": "Pose",

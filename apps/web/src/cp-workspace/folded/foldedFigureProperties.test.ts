@@ -33,6 +33,7 @@ const FLAT: OristudioCpFoldedFigureEntry = {
   handle: 3,
   snapshot: {
     model: MODEL,
+    display_style: 'Paper5',
     find_another_overlap_valid: true,
     discovered_fold_cases: 3,
     current_fold_case: 2,
@@ -101,6 +102,13 @@ function field(sheet: PropertySheet, id: string): PropertyField {
   return found;
 }
 
+/** A field's value; every kind but the stepper, which has a readout, has one. */
+function valueOf(sheet: PropertySheet, id: string): unknown {
+  const found = field(sheet, id);
+  if (found.kind === 'stepper') throw new Error(`${id} is a stepper`);
+  return found.value;
+}
+
 const visibleIds = (sheet: PropertySheet) =>
   sheet.sections.flatMap((s) => s.fields.filter((f) => f.support !== 'not-applicable').map((f) => f.id));
 
@@ -162,13 +170,15 @@ describe('buildFoldedFigureProperties', () => {
   it('steps a flat figure through its layer orders with ‹ and ›, read out as the Diagram reads them', () => {
     const d = deps();
     const layerOrder = stepper(sheetFor(FLAT, d));
-    expect(layerOrder).toMatchObject({ label: 'Layer order', support: 'supported', value: '2 of 3+' });
+    expect(layerOrder).toMatchObject({ label: 'Layer order', support: 'supported', readout: '2 of 3+' });
     expect(layerOrder.note).toBeUndefined();
+    // No Edit… yet: H3 adds it.
+    expect(layerOrder.action).toBeUndefined();
     expect(layerOrder.previous).toMatchObject({ label: 'Previous solution', disabled: false });
     expect(layerOrder.next).toMatchObject({ label: 'Another solution', disabled: false });
-    layerOrder.previous.run();
+    layerOrder.previous?.run();
     expect(d.foldPrevious).toHaveBeenCalledWith(FLAT);
-    layerOrder.next.run();
+    layerOrder.next?.run();
     expect(d.foldAnother).toHaveBeenCalledWith(FLAT);
 
     // The first can go no further back, and says so.
@@ -191,9 +201,9 @@ describe('buildFoldedFigureProperties', () => {
       },
     };
     noteSolutionFrontier(3, { discovered: 5, hasNext: false });
-    expect(stepper(sheetFor(restarted)).value).toBe('1 of 5');
+    expect(stepper(sheetFor(restarted)).readout).toBe('1 of 5');
     // Another handle, refolded since: what handle 3 found says nothing about it.
-    expect(stepper(sheetFor({ ...restarted, handle: 9 })).value).toBe('1 of 1+');
+    expect(stepper(sheetFor({ ...restarted, handle: 9 })).readout).toBe('1 of 1+');
   });
 
   it('says why a figure whose fold found no layer order has none to step through', () => {
@@ -211,11 +221,11 @@ describe('buildFoldedFigureProperties', () => {
     expect(stepper(sheet)).toMatchObject({
       support: 'unsupported',
       reason: 'Layer order couldn’t be determined for this figure.',
-      note: 'Layer order couldn’t be determined for this figure.',
-      value: 'None',
+      note: { kind: 'reason', text: 'Layer order couldn’t be determined for this figure.' },
+      readout: 'None',
     });
     // Drawn see-through, and Render as says so.
-    expect(field(sheet, 'displayStyle').value).toBe('Transparent3');
+    expect(valueOf(sheet, 'displayStyle')).toBe('Transparent3');
   });
 
   it('pins every style field its surface policy applies, on both kinds', () => {
@@ -279,13 +289,13 @@ describe('buildFoldedFigureProperties', () => {
       folded3d: { ...SPATIAL.folded3d!, find_another_overlap_valid: true, discovered_fold_cases: 2, current_fold_case: 2 },
     } as OristudioCpFoldedFigureEntry;
     const layerOrder = stepper(sheetFor(several, d));
-    expect(layerOrder).toMatchObject({ support: 'supported', value: '2 of 2+' });
+    expect(layerOrder).toMatchObject({ support: 'supported', readout: '2 of 2+' });
     expect(layerOrder.previous).toMatchObject({
       disabled: true,
       hint: 'Stepping back works on flat figures',
     });
-    expect(layerOrder.next.disabled).toBe(false);
-    layerOrder.next.run();
+    expect(layerOrder.next?.disabled).toBe(false);
+    layerOrder.next?.run();
     expect(d.foldAnother).toHaveBeenCalledWith(several);
     // One solution: the toolbar's Another solution is held too, and says why here.
     expect(stepper(sheetFor(SPATIAL)).next).toMatchObject({
@@ -295,7 +305,8 @@ describe('buildFoldedFigureProperties', () => {
   });
 
   it('disables every appearance field with the Refold reason on a figure that is not ready', () => {
-    const sheet = sheetFor(FIGURE);
+    const stale = { ...FLAT, status: 'stale', handle: null } as OristudioCpFoldedFigureEntry;
+    const sheet = sheetFor(stale);
     const held = sheet.sections.filter((s) => ['render', 'pose', 'appearance'].includes(s.id));
     for (const f of held.flatMap((s) => s.fields)) {
       // A flat figure's turn is where it sits on the page, and stays editable.
@@ -306,9 +317,22 @@ describe('buildFoldedFigureProperties', () => {
     // Placement is where the figure sits, and moving a reopened figure is fine.
     expect(field(sheet, 'scale').support).toBe('supported');
     expect(field(sheet, 'rotation').support).toBe('supported');
-    // Still folding: nothing to read out yet.
-    expect(stepper(sheet).value).toBe('');
-    expect(sheet.subtitle).toBe('Folding…');
+    // Reopened from a file: it reads what it was saved showing.
+    expect(stepper(sheet).readout).toBe('2 of 3+');
+    expect(sheet.subtitle).toBe('Stale');
+  });
+
+  it('waits while a step folds, as the Diagram’s pager waits for a capture', () => {
+    // Mid-step: the figure keeps its picture and its place among its orders.
+    const stepping = { ...FLAT, status: 'loading' } as OristudioCpFoldedFigureEntry;
+    const layerOrder = stepper(sheetFor(stepping));
+    expect(layerOrder).toMatchObject({ support: 'supported', readout: '2 of 3+' });
+    expect(layerOrder.reason).toBeUndefined();
+    for (const verb of [layerOrder.previous, layerOrder.next]) {
+      expect(verb).toMatchObject({ disabled: true, hint: 'Its layer order is being found' });
+    }
+    // The first fold, with nothing folded yet: nothing to read out.
+    expect(stepper(sheetFor(FIGURE)).readout).toBe('');
   });
 
   it('routes the discrete appearance fields through one-entry setters', () => {
@@ -406,7 +430,7 @@ describe('buildFoldedFigureProperties', () => {
       },
     });
     const sheet = sheetFor(FLAT, d);
-    expect(['frontColor', 'backColor', 'lineColor'].map((id) => field(sheet, id).value)).toEqual([
+    expect(['frontColor', 'backColor', 'lineColor'].map((id) => valueOf(sheet, id))).toEqual([
       '#112233',
       '#445566',
       '#778899',
@@ -479,7 +503,7 @@ describe('buildFoldedFigureProperties', () => {
       if (found.kind !== 'toggle') throw new Error('toggle');
       return found.inherited;
     };
-    expect(field(sheet, 'lighting').value).toBe(false);
+    expect(valueOf(sheet, 'lighting')).toBe(false);
     expect(inheritedOf('lighting')).toBe(true);
     expect(inheritedOf('auxVisible')).toBe(false);
   });
