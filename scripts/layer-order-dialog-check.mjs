@@ -366,12 +366,16 @@ async function openDialogOnKabuto(page, { forge = false } = {}) {
     const { PAPER_STYLE_POLICIES } = await import('/src/lib/paper/paperStyleResolve.ts');
     const { openLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogGateway.ts');
     const { source, scene } = window.__layerOrderCheck;
+    const editLines = () => {
+      const { lineStyle, lineWidth } = window.__treemakerWorkspaceStore.getState().oristudioCpViewport;
+      return { lineStyle, lineWidth };
+    };
     const kernel = forge ? { ...source, digest: `${source.digest}-forged` } : source;
     window.__layerOrderOutcome = null;
     openLayerOrderDialog({
       source: layerOrderSourceOf(kernel, DEFAULT_FOLDED_MODEL),
       record: null,
-      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, side: 'front', xray: false, ...editLines() },
       shown: scene,
       name: 'Kabuto',
       byline: 'Traditional',
@@ -627,8 +631,9 @@ async function openFigureInEdit(page, url, { theme, file, style = null }) {
 
 /**
  * Open the dialog on the figure `openFigureInEdit` folded, as a host would,
- * in `look` (the paper style given there, the Edit flat figure's policy and
- * no turn by default), and wait for the panes' session.
+ * in `look` (the paper style given there, the Edit flat figure's policy, no
+ * turn, the front, and Edit's line style and width by default), and wait for
+ * the panes' session.
  */
 async function openPanesDialog(page, title, look = {}) {
   await page.evaluate(
@@ -639,6 +644,8 @@ async function openPanesDialog(page, title, look = {}) {
       const { PAPER_STYLE_POLICIES } = await import('/src/lib/paper/paperStyleResolve.ts');
       const { openLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogGateway.ts');
       const { source, scene, style } = window.__layerOrderCheck;
+      // Edit's line style and width, as Edit hands them; the dialog never reads the store itself.
+      const { lineStyle, lineWidth } = window.__treemakerWorkspaceStore.getState().oristudioCpViewport;
       window.__layerOrderOutcome = null;
       openLayerOrderDialog({
         source: layerOrderSourceOf(source, DEFAULT_FOLDED_MODEL),
@@ -647,7 +654,10 @@ async function openPanesDialog(page, title, look = {}) {
           style: style ?? DEFAULT_PAPER_STYLE,
           policy: PAPER_STYLE_POLICIES[look.policy ?? 'folded-flat'],
           turnDeg: look.turnDeg ?? 0,
+          side: look.side ?? 'front',
           xray: look.xray ?? false,
+          lineStyle: look.lineStyle ?? lineStyle,
+          lineWidth: look.lineWidth ?? lineWidth,
         },
         shown: scene,
         name: title,
@@ -678,8 +688,8 @@ async function openPanesDialog(page, title, look = {}) {
  * - `compound`: a subject and two of its objects picked (D21), its other open faces on offer;
  * - `cap`: the subject with the most open faces, none picked, so the label cap shows (D7);
  * - `clash`: `compound`, the second object in a clash with a third face;
- * - `undecided`: the spots the inspector's model calls undecided (`openSpotsOf`), from `side`,
- *   and how many there are from each side.
+ * - `undecided`: the spots the inspector's model calls undecided (`openSpotsOf`), from each
+ *   side, and how many there are from each; `side` is only which to count first.
  *
  * Answers what it marked, by letter.
  */
@@ -707,9 +717,9 @@ async function showPaneMarks(page, kind, side = 'front') {
         const { openSpotsOf } = await import('/src/layer-order/model/layerOrderSelectors.ts');
         let { state } = initLayerOrderDialog({ surface: 'edit_figure', hasRecord: false, recordNeedsAttention: false, review: false, xray: false, at: 0 });
         state = layerOrderReducer(state, { type: 'opened', request: 1, facts }).state;
-        const undecided = openSpotsOf(state, side);
+        const undecided = { front: openSpotsOf(state, 'front'), back: openSpotsOf(state, 'back') };
         handle.show({ marks: { ...NO_FACE_MARKS, picking: 'subject', undecided } });
-        return { side, undecided: undecided.length, front: openSpotsOf(state, 'front').length, back: openSpotsOf(state, 'back').length };
+        return { side, undecided: undecided[side].length, front: undecided.front.length, back: undecided.back.length };
       }
       // The subject: the face with the most open faces for `cap`, else the first with three or more.
       const ranked = [...withChoices].sort((a, b) => (partners.get(b).length - partners.get(a).length) || letters.compare(a, b));
@@ -758,6 +768,14 @@ function paneCases(theme) {
       await openFigureInEdit(page, url, { theme, file: figure.file });
       const dialog = await openPanesDialog(page, figure.title);
       const shot = (state) => `panes-${tag}-${figure.name}-${state}`;
+      // At Fit both panes take one scale (Round3's fitAll): their readouts agree.
+      const readouts = await Promise.all(
+        ['crease pattern', 'folded figure'].map((pane) => dialog.getByRole('button', { name: `Reset the ${pane} zoom` }).innerText())
+      );
+      console.log(`[${tag}] ${figure.name} at Fit: ${readouts.join(' and ')}`);
+      if (Math.abs(Number.parseFloat(readouts[0]) - Number.parseFloat(readouts[1])) > 1) {
+        throw new Error(`${figure.name}: the panes' readouts disagree at Fit (${readouts.join(', ')})`);
+      }
       console.log(`[${tag}] ${figure.name}: ${JSON.stringify(await showPaneMarks(page, 'subjects'))}`);
       await record(shot('front'), await panesShot(page));
       await viewTool(dialog, 'Back');
@@ -815,11 +833,15 @@ async function paneRefusalCases(page, url, record) {
     const { PAPER_STYLE_POLICIES } = await import('/src/lib/paper/paperStyleResolve.ts');
     const { openLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogGateway.ts');
     const { source, scene } = window.__layerOrderCheck;
+    const editLines = () => {
+      const { lineStyle, lineWidth } = window.__treemakerWorkspaceStore.getState().oristudioCpViewport;
+      return { lineStyle, lineWidth };
+    };
     window.__layerOrderOutcome = null;
     openLayerOrderDialog({
       source: layerOrderSourceOf(source, DEFAULT_FOLDED_MODEL),
       record: null,
-      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, side: 'front', xray: false, ...editLines() },
       shown: scene,
       name: 'Frame',
     }).then((outcome) => {
@@ -832,16 +854,66 @@ async function paneRefusalCases(page, url, record) {
   await record('panes-refused-non-convex', await panesShot(page));
 }
 
-/** The phone (390 × 844): one pane at a time, nothing over it, a subject and two objects picked. */
+/** Counts the WebGL contexts the dialog's canvases make, from before the page loads. */
+const LAYER_ORDER_CONTEXT_PROBE = () => {
+  const made = [];
+  const original = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (kind, ...rest) {
+    const context = original.call(this, kind, ...rest);
+    const id = this.getAttribute('data-testid') ?? '';
+    if (context && /webgl/.test(String(kind)) && id.startsWith('layer-order-') && !this.__layerOrderProbed) {
+      this.__layerOrderProbed = true;
+      made.push(id);
+    }
+    return context;
+  };
+  window.__layerOrderContexts = () => made.slice();
+  // What reaches the window as an error, a ResizeObserver loop's included: the app toasts each one.
+  const errors = [];
+  window.addEventListener('error', (event) => errors.push(event.message));
+  window.__layerOrderErrors = () => errors.slice();
+};
+
+/**
+ * The phone (390 × 844): one pane at a time, nothing over it; kabuto with a
+ * subject and two objects picked, then with its open faces on offer. A
+ * switch keeps both panes: the dialog makes its two WebGL contexts once, and
+ * a pane zoomed in is as it was after a switch away and back.
+ */
 async function panePhoneCases(page, url, record) {
+  await page.addInitScript(LAYER_ORDER_CONTEXT_PROBE);
   await page.setViewportSize(PHONE);
   await openFigureInEdit(page, url, { theme: null, file: 'flat-folder/kabuto.fold' });
   const dialog = await openPanesDialog(page, 'Kabuto');
+  const switchTo = (name) => dialog.getByRole('group', { name: 'Pane' }).getByRole('button', { name }).click();
   console.log(`[phone] kabuto compound: ${JSON.stringify(await showPaneMarks(page, 'compound'))}`);
   await record('panes-phone-folded', await panesShot(page));
-  await dialog.getByRole('group', { name: 'Pane' }).getByRole('button', { name: 'Crease pattern' }).click();
+  await switchTo('Crease pattern');
   await record('panes-phone-crease-pattern', await panesShot(page));
   if ((await dialog.getByRole('toolbar').count()) !== 0) throw new Error('a toolbar floats over the phone’s pane');
+  console.log(`[phone] kabuto cap: ${JSON.stringify(await showPaneMarks(page, 'cap'))}`);
+  await record('panes-phone-crease-pattern-offer', await panesShot(page));
+  await switchTo('Folded');
+  await record('panes-phone-folded-offer', await panesShot(page));
+
+  // Zoomed in on the folded pane, then away to the crease pattern and back.
+  const folded = dialog.locator('[data-testid="layer-order-folded-canvas"]');
+  const box = await folded.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const fitted = await steadyShot(page, folded, { masked: false });
+  await page.mouse.wheel(0, -400);
+  const zoomed = await steadyShot(page, folded, { masked: false });
+  if ((await pixelDiff(page, fitted, zoomed)).differing === 0) throw new Error('the wheel never zoomed the folded pane');
+  await switchTo('Crease pattern');
+  await switchTo('Folded');
+  const back = await steadyShot(page, folded, { masked: false });
+  const kept = await pixelDiff(page, zoomed, back);
+  const contexts = await page.evaluate(() => window.__layerOrderContexts());
+  console.log(`[phone] after switches: ${kept.differing} pixels moved; contexts made ${JSON.stringify(contexts)}`);
+  if (kept.differing !== 0) throw new Error('a switch of pane reset the folded pane’s camera');
+  if (contexts.length !== 2) throw new Error(`the dialog made ${contexts.length} WebGL contexts, not 2`);
+  const errors = await page.evaluate(() => window.__layerOrderErrors());
+  if (errors.length > 0) throw new Error(`the window heard errors: ${JSON.stringify(errors)}`);
   await page.setViewportSize(VIEWPORT);
 }
 
@@ -970,7 +1042,7 @@ async function hostLookCases(page, url, record) {
     window.__layerOrderCheck = { source, scene, style: diagramScenePaintStyle(state.diagram.style, false) };
     return { turnDeg: render.rotationDeg, side: render.side };
   }, posed);
-  dialog = await openPanesDialog(page, 'Step 1', { policy: 'diagram-workspace', turnDeg: look.turnDeg });
+  dialog = await openPanesDialog(page, 'Step 1', { policy: 'diagram-workspace', turnDeg: look.turnDeg, side: look.side });
   const diagramPane = await foldedPaneShot(page, dialog);
   await record('host-pose', { 'side-by-side': await sideBySide(page, poseShot, diagramPane) });
   await dialog.getByRole('button', { name: 'Cancel' }).click();
