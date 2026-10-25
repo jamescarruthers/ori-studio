@@ -366,6 +366,17 @@ const CAMV_REFRESH_DEBOUNCE_MS = 120;
 let camvRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
+ * Drop a refresh still waiting out its debounce. The timer is module-level, so
+ * it outlives the document it was scheduled for: closing that document drops
+ * it here, and a test's store reset must too, or a refresh one test scheduled
+ * runs a check against the next test's document when its 120ms come round.
+ */
+export function cancelOristudioCamvRefresh(): void {
+  if (camvRefreshTimer !== null) clearTimeout(camvRefreshTimer);
+  camvRefreshTimer = null;
+}
+
+/**
  * Synchronous, eager CAMV refresh (runs CheckCamv + re-snapshots). Still used by the
  * document-load paths, which want the overlay populated as part of opening a document.
  * Interactive edits use the deferred `scheduleOristudioCamvRefresh` instead.
@@ -2767,6 +2778,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     },
 
     clearOristudioCpDocument: async () => {
+      // Its pending check has no document left to check.
+      cancelOristudioCamvRefresh();
       await releaseEditableCreasePattern();
       set({
         // Nothing to override: closing the document keeps none of its state.

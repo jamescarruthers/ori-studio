@@ -123,6 +123,7 @@ import {
   resetFoldedFigureHandles,
   retainFoldedFigureHandle,
 } from '../../cp-workspace/folded/foldedFigureHandles';
+import { cancelOristudioCamvRefresh } from './slices/projectSlice';
 import {
   dropFolded3dRenderModel,
   folded3dRenderModel,
@@ -1431,6 +1432,10 @@ function resetStores(snapshot = makeSnapshot()) {
   analyticsMocks.track.mockReset();
   // Handle ownership is module-level; isolate it between tests.
   resetFoldedFigureHandles();
+  // So is the debounced CAMV refresh. One an edit in an earlier test left
+  // pending would run against this test's document when its 120ms come round,
+  // and replace the CAMV result the test seeded with the mock's empty one.
+  cancelOristudioCamvRefresh();
   useWorkspaceStore.setState(initialWorkspaceState, true);
   useLayoutStore.setState(initialLayoutState, true);
   const api = createMockEngineApi(snapshot);
