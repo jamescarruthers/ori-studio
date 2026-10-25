@@ -115,6 +115,21 @@ describe('the engine’s answers as the model reads them', () => {
     });
   });
 
+  it('the engine contract’s shapes too: no handle, and a restore’s constraints as tuples', () => {
+    const { session: _session, ...opened } = OPENED;
+    expect(openFacts(opened, STACKS, null)).toEqual(openFacts(OPENED, STACKS, null));
+    const restored = {
+      ...opened,
+      constraints: [[4, 5, -1]] as const,
+      outcome: { kind: 'applied' } as const,
+      saved_faces: { status: new Uint8Array(), face: new Int32Array(), area: new Float64Array() },
+      saved_constraints: [],
+      saved_order: new Uint8Array(),
+      carried: [],
+    };
+    expect(openFacts(restored, STACKS, null).constraints).toEqual([[4, 5, -1]]);
+  });
+
   it('a check’s verdicts, with the clash’s indices and faces as plain arrays', () => {
     const changed = changedSpots([1]);
     expect(
