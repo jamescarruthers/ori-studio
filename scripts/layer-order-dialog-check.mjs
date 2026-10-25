@@ -641,7 +641,7 @@ async function zoomOutToFigure(page, times = 2) {
  * its Properties sheet; and, when `hover`, the toolbar again with the pointer
  * on Layer order…, so its tooltip (why it is held) is in the picture.
  */
-async function figureShots(page, { hover = false } = {}) {
+async function figureShots(page, { hover = false, hoverName = 'Layer order…' } = {}) {
   const toolbar = page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name });
   const sheet = page.locator('[data-property-sheet]');
   await toolbar.waitFor({ state: 'visible', timeout: 30000 });
@@ -653,7 +653,9 @@ async function figureShots(page, { hover = false } = {}) {
     properties: await steadyShot(page, sheet, { masked: false }),
   };
   if (hover) {
-    await toolbar.getByRole('button', { name: 'Layer order…' }).hover();
+    // The pointer over it, whatever takes the event: a disabled icon button's tooltip trigger wraps it.
+    const target = await toolbar.getByRole('button', { name: hoverName }).boundingBox();
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
     await page.getByRole('tooltip').first().waitFor({ state: 'visible', timeout: 10000 });
     const box = await toolbar.boundingBox();
     await settle(page);
@@ -813,6 +815,34 @@ function editFigureCases(theme) {
     console.log(`[${tag}] Apply of ${chosen.constraints} constraint: new fold, order given; ${moved.differing} canvas pixels changed`);
     await record(`edit-${tag}-constrained`, constrained);
 
+    // Its creases moved: Refold and Layer order… are both held, until H4 refolds with the constraints.
+    const fingerprint = await page.evaluate((id) => {
+      const store = window.__treemakerWorkspaceStore;
+      const figure = store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
+      store.setState({
+        oristudioCpFoldedFigures: store.getState().oristudioCpFoldedFigures.map((entry) =>
+          entry.id === id ? { ...entry, sourceFingerprint: 'cs1:moved' } : entry
+        ),
+      });
+      return figure.sourceFingerprint;
+    }, id);
+    const toolbar = page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name });
+    await toolbar.getByRole('button', { name: 'Refold' }).waitFor({ state: 'visible' });
+    if ((await toolbar.getByRole('button', { name: 'Refold' }).isDisabled()) !== true) throw new Error('Refold is not held');
+    await record(`edit-${tag}-stale-constrained`, await figureShots(page, { hover: true, hoverName: 'Refold' }));
+    await page.evaluate(
+      ({ id, fingerprint }) => {
+        const store = window.__treemakerWorkspaceStore;
+        store.setState({
+          oristudioCpFoldedFigures: store.getState().oristudioCpFoldedFigures.map((entry) =>
+            entry.id === id ? { ...entry, sourceFingerprint: fingerprint } : entry
+          ),
+        });
+      },
+      { id, fingerprint }
+    );
+    console.log(`[${tag}] stale and constrained: Refold and Layer order… both held`);
+
     // Undo shows the order before, and a restyle redraws it from the old fold, not the new.
     await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
     if ((await figureState(page)).handle !== before.handle) throw new Error('undo did not put the old fold back');
@@ -854,6 +884,12 @@ function editFigureCases(theme) {
     console.log(`[${tag}] reopened: both figures carry the record and draw the constrained order; no worker, no Fold wasm, no dialog code loaded`);
     await record(`edit-${tag}-reopened`, reopenedShots);
 
+    // The canvas turned a step: the dialog's paper turns as the canvas shows the figure.
+    await page.getByRole('button', { name: 'Rotate view right' }).first().click();
+    await page.waitForFunction(() => (window.__treemakerWorkspaceStore.getState().oristudioCpCamera?.rotation ?? 0) !== 0, null, {
+      timeout: 10000,
+    });
+
     // The press: the host engine folds the figure with its record, and the dialog opens on it.
     await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Layer order…' }).click();
     const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
@@ -862,6 +898,18 @@ function editFigureCases(theme) {
     const workers = watch.workers();
     watch.stop();
     if (workers.length < 2) throw new Error(`the press spawned ${workers.length} Layer order workers, not the host engine's and the dialog's`);
+    const asked = await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      const state = window.__treemakerWorkspaceStore.getState();
+      const figure = state.oristudioCpFoldedFigures[0];
+      const turned = ((((figure.placement.rotation + state.oristudioCpCamera.rotation) * 180) / Math.PI) % 360 + 540) % 360 - 180;
+      return { surface: request.surface, turnDeg: request.look.turnDeg, turned, shown: request.shown != null, record: request.record != null };
+    });
+    if (asked.surface !== 'edit_figure' || !asked.shown || !asked.record || Math.abs(asked.turnDeg - asked.turned) > 0.01 || asked.turnDeg === 0) {
+      throw new Error(`the request is not what the canvas shows: ${JSON.stringify(asked)}`);
+    }
+    console.log(`[${tag}] on a canvas turned ${asked.turnDeg}°, the request turns the paper ${asked.turnDeg}°, surface ${asked.surface}`);
     await record(`edit-${tag}-dialog`, await dialogShot(page));
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await dialog.waitFor({ state: 'detached' });
@@ -887,6 +935,96 @@ function editFigureCases(theme) {
     }
     console.log(`[${tag}] duplicate after reopen, then reload: all three keep the record`);
   };
+}
+
+/**
+ * What #520's review found, on the real kernel (no pictures): after Another
+ * solution and Undo, Layer order… opens on the order the figure shows, not
+ * the one its handle was left on; a figure deleted and undone still draws
+ * through its own fold; and a fold made after the delete never takes the
+ * deleted figure's slot while its undo can put it back.
+ */
+async function editFigureReviewCases(page, url) {
+  await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', null);
+  const id = await foldWholeAndSelect(page);
+  await zoomOutToFigure(page);
+
+  // Another solution, then Undo, then Layer order… at once, as the reviewer's
+  // script pressed it: the entry back on the first order, its handle still on
+  // the second. The dialog opens on the entry's.
+  const steps = await page.evaluate(async (id) => {
+    const store = window.__treemakerWorkspaceStore;
+    const runtime = await import('/src/store/workspaceStore/oristudioCpRuntime.ts');
+    const { showAnotherFoldedSolution } = await import('/src/cp-workspace/folded/foldedFigureVerbs.ts');
+    const i18n = (await import('/src/i18n/index.ts')).default;
+    const figure = () => store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
+    const first = JSON.stringify(await runtime.getOristudioCpFoldedFigurePaperScene(figure().handle));
+    await showAnotherFoldedSolution(id, i18n.t);
+    const second = JSON.stringify(await runtime.getOristudioCpFoldedFigurePaperScene(figure().handle));
+    await store.getState().undo();
+    const entryCase = figure().snapshot.current_fold_case;
+    const opening = await store.getState().prepareOristudioCpFigureLayerOrder(id);
+    const kernelCase = (await runtime.getOristudioCpFoldedFigureSnapshot(figure().handle)).current_fold_case;
+    const shown = JSON.stringify(opening.shown);
+    await opening.release();
+    window.__layerOrderScenes = { first, second };
+    return { differ: first !== second, entryCase, kernelCase, opensOn: shown === first ? 'first' : shown === second ? 'second' : 'other' };
+  }, id);
+  if (!steps.differ || steps.entryCase !== 1 || steps.kernelCase !== 2 || steps.opensOn !== 'first') {
+    throw new Error(`after Another solution and Undo, Layer order… opened on another order: ${JSON.stringify(steps)}`);
+  }
+  // Pressed once the undo's model write has landed, it opens on whatever the figure shows then.
+  await page.waitForTimeout(500);
+  await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Layer order…' }).click();
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  await dialog.waitFor({ state: 'visible', timeout: 60000 });
+  const pressed = await page.evaluate(async () => {
+    const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const shown = JSON.stringify(useLayerOrderDialogStore.getState().opening.request.shown);
+    const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0];
+    const { first, second } = window.__layerOrderScenes;
+    return { entryCase: figure.snapshot.current_fold_case, opensOn: shown === first ? 'first' : shown === second ? 'second' : 'other' };
+  });
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await dialog.waitFor({ state: 'detached' });
+  if (pressed.opensOn !== (pressed.entryCase === 1 ? 'first' : 'second')) {
+    throw new Error(`the press opened on an order the figure does not show: ${JSON.stringify(pressed)}`);
+  }
+  console.log(
+    `[review] after Another solution and Undo (entry on ${steps.entryCase}, handle on ${steps.kernelCase}), Layer order… opens on the entry's order; pressed later, on the one the figure shows (${pressed.entryCase})`
+  );
+
+  // Delete, then Undo: the figure draws through its own fold again. On a fresh
+  // fold: the one above is the undo drift's own case (its handle on another order).
+  const fresh = await foldWholeAndSelect(page);
+  const original = await figureState(page, 1);
+  if (original.id !== fresh) throw new Error('the fresh fold is not the second figure');
+  await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Delete' }).click();
+  await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+  const back = await page.evaluate(async (id) => {
+    const store = window.__treemakerWorkspaceStore;
+    await store.getState().setOristudioCpFoldedFigureDisplayStyle(id, 'Transparent3');
+    await store.getState().setOristudioCpFoldedFigureDisplayStyle(id, 'Paper5');
+    const figure = store.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
+    return { status: figure.status, error: store.getState().oristudioCpError, handle: figure.handle };
+  }, fresh);
+  if (back.status !== 'ready' || back.error || back.handle !== original.handle) {
+    throw new Error(`Delete then Undo put back a figure that does not draw: ${JSON.stringify(back)}`);
+  }
+
+  // Delete, fold again, Undo twice: the first figure's slot was never the second's.
+  await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Delete' }).click();
+  await foldWholeAndSelect(page);
+  const second = await figureState(page, 1);
+  if (second.id === fresh || second.handle === original.handle) throw new Error('the next fold took the deleted figure’s slot');
+  await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+  await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+  const redrawn = await restyled(page, fresh);
+  const restored = await figureState(page, 1);
+  if (restored.handle !== original.handle || redrawn !== original.picture) {
+    throw new Error(`the undone figure draws another fold: ${JSON.stringify({ restored, second: second.handle })}`);
+  }
+  console.log('[review] Delete then Undo draws through its own fold; the next fold never took its slot');
 }
 
 /**
@@ -935,6 +1073,7 @@ const CASES = [
   { name: 'fold-import-frame', run: foldImportFrame },
   { name: 'edit-figure', run: editFigureCases(null) },
   { name: 'edit-figure-horizon', run: editFigureCases('Horizon') },
+  { name: 'edit-figure-review', run: editFigureReviewCases },
   { name: 'edit-figure-states', run: editFigureStateCases(null) },
   { name: 'edit-figure-states-horizon', run: editFigureStateCases('Horizon') },
 ];
