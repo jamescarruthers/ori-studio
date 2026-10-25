@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CircleAlert } from 'lucide-react';
 import type { ModalHistory } from '../../keyboard/dialogShortcuts';
 import type { FaceLetters } from '../../layer-order/engine/faceIndex';
 import type { LayerRefusal } from '../../layer-order/engine/layerOrderEngine';
@@ -34,11 +35,18 @@ export interface LayerOrderPanesProps {
    */
   readonly phonePane: LayerOrderPhonePane | null;
   readonly request: LayerOrderRequest;
+  /**
+   * The face index, built once per opening: the session's once it is open,
+   * the host's scene's before (`requestFaceLetters`); null with neither.
+   */
+  readonly letters: FaceLetters | null;
 }
 
 export interface LayerOrderDialogFrameProps {
   /** What the host calls the fold, after the title on a wide screen. */
   readonly name?: string;
+  /** Quieter, after the name: the design's credit. */
+  readonly byline?: string;
   readonly status: LayerOrderSessionStatus;
   /** The faces' letters, for a refusal that names a face. */
   readonly letters: FaceLetters | null;
@@ -68,19 +76,21 @@ export interface LayerOrderDialogFrameProps {
  * The Layer order dialog's frame (`implementation-plans/layer-order-dialog.md`,
  * row U4; approved as A3 in `Round3`, its states in `Round4-States`, the phone
  * in `Round4-Phone`): the app's modal frame at the workspace size, with the
- * title row, a body of two regions (the panes, then the inspector) and a foot
- * with Cancel and Apply.
+ * title row ("Layer order │ Kabuto Traditional"), a body of two regions (the
+ * panes, then the inspector) and a foot with Cancel and Apply.
  *
  * Wide, the body is the two panes side by side and the inspector beside them;
  * as the whole screen (D6), one pane at a time, switched from the title row,
- * with the inspector under it. While the session opens the inspector says so;
- * refused or lost, a notice stands where the folded figure and the inspector
- * would be. Escape, the close button and the backdrop are Cancel; the frame is
- * a shortcut barrier, so the workspace's keys and its menus' Undo, Redo and
- * view switches stay behind it.
+ * with the inspector under it, and the name gives way to the switch. While
+ * the session opens the inspector says so; refused or lost, a notice stands
+ * where the folded figure and the inspector would be. Cancel, Escape and the
+ * close button close it; a press on the backdrop does not, so a stray press
+ * never throws away the constraints. The frame is a shortcut barrier, so the
+ * workspace's keys and its menus' Undo, Redo and view switches stay behind it.
  */
 export function LayerOrderDialogFrame({
   name,
+  byline,
   status,
   letters,
   returnFocus,
@@ -98,7 +108,7 @@ export function LayerOrderDialogFrame({
   applyRefusal,
 }: LayerOrderDialogFrameProps) {
   const { t } = useTranslation();
-  const notice = sessionNotice(t, status, letters);
+  const notice = sessionNotice(t, status, { letters, name });
   const applyBlocked = applyBlockedReason();
 
   function applyBlockedReason(): string | null {
@@ -135,12 +145,28 @@ export function LayerOrderDialogFrame({
           />
         ) : undefined
       }
-      detail={name && phonePane === null ? name : undefined}
+      detail={
+        name && phonePane === null ? (
+          <span className={styles.figure}>
+            <span className={styles.separator} aria-hidden="true" />
+            <span className={styles.name}>{name}</span>
+            {byline && <span className={styles.byline}>{byline}</span>}
+          </span>
+        ) : undefined
+      }
       tools={tools}
       onClose={onCancel}
+      closeOnBackdrop={false}
       returnFocus={returnFocus}
       history={history}
-      footer={applyRefusal ? <p className={styles.footNote}>{applyRefusalText(t, applyRefusal)}</p> : undefined}
+      footer={
+        applyRefusal ? (
+          <p className={styles.footNote} role="alert">
+            <CircleAlert size={14} className={styles.footIcon} aria-hidden="true" />
+            {applyRefusalText(t, applyRefusal)}
+          </p>
+        ) : undefined
+      }
       actions={
         <>
           <Button size="sm" variant="ghost" onClick={onCancel}>
@@ -166,7 +192,7 @@ export function LayerOrderDialogFrame({
           <div className={styles.noticeArea}>
             <div className={styles.notice}>
               <Notice
-                tone="danger"
+                tone={notice.tone}
                 actions={retryLabel ? [{ id: notice.retry ?? 'retry', label: retryLabel, run: onRetry }] : []}
               >
                 <p className={styles.noticeText}>{notice.text}</p>

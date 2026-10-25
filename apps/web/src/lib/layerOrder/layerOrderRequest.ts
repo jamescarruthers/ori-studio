@@ -76,6 +76,8 @@ export interface LayerOrderRequest {
   readonly shown?: OristudioCpFoldedPaperScene | null;
   /** What the host calls the fold, after the dialog's title: a figure's name, "Selection", a step's. */
   readonly name?: string;
+  /** Quieter, after the name: the design's credit when there is one ("Traditional", "by Birb"). */
+  readonly byline?: string;
 }
 
 /**

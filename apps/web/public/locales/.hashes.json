@@ -6391,7 +6391,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -6402,7 +6402,8 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -12796,7 +12797,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -12807,7 +12808,8 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19203,7 +19205,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -19214,7 +19216,8 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -25263,7 +25266,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -25274,7 +25277,8 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -31323,7 +31327,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -31334,7 +31338,8 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -37728,7 +37733,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -37739,7 +37744,8 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -44133,7 +44139,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -44144,7 +44150,8 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -50193,7 +50200,7 @@
     "dialogs:layerOrder.refused.nonConvex": "891511595e26",
     "dialogs:layerOrder.refused.nonConvexFace": "2ad7c0cb05a6",
     "dialogs:layerOrder.refused.noOrder": "b417f699c7b7",
-    "dialogs:layerOrder.refused.recordNewer": "a6bffd72fae1",
+    "dialogs:layerOrder.refused.recordNewer": "0046728db0fd",
     "dialogs:layerOrder.refused.recordTooLarge": "141951d68158",
     "dialogs:layerOrder.refused.recordUnreadable": "f0c5cfbad64a",
     "dialogs:layerOrder.refused.timedOut": "9b434171896f",
@@ -50204,6 +50211,7 @@
     "dialogs:layerOrder.title": "101de550cf0d",
     "dialogs:layerOrder.tryAgain": "d8b8392e2c54",
     "toasts:layerOrder.unavailable": "151f6eaf0a55",
-    "dialogs:layerOrder.lostLoad": "36db30b09768"
+    "dialogs:layerOrder.lostLoad": "36db30b09768",
+    "dialogs:layerOrder.refused.digestMismatchNamed": "c691180d65f8"
   }
 }

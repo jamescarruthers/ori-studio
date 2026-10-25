@@ -512,11 +512,12 @@
     "refused": {
       "ambiguousOverlap": "此图的部分面重叠得太近，无法分辨哪一面在上，因此层叠顺序无法打开它。没有任何改动。",
       "digestMismatch": "层叠顺序无法将它的面与折叠此图时的面对应起来，因此无法打开。没有任何改动。",
+      "digestMismatchNamed": "层叠顺序无法将它的面与折叠此图时的面对应起来，因此无法在 {{name}} 上打开。没有任何改动。",
       "noFaces": "此图没有可排序的面。",
       "nonConvex": "此图有一个面不是凸的。层叠顺序暂不支持非凸面。",
       "nonConvexFace": "面 {{face}} 不是凸的。层叠顺序暂不支持非凸面。",
       "noOrder": "无法确定此图的层叠顺序。",
-      "recordNewer": "此图的约束由更新版本的 Ori Studio 保存。请更新 Ori Studio 后再修改。",
+      "recordNewer": "由更新版本的 Ori Studio 制作：无法在此修改其层叠约束。",
       "recordTooLarge": "此图保存的约束太大，无法打开。没有任何改动。",
       "recordUnreadable": "无法读取此图保存的约束，因此层叠顺序无法打开它们。没有任何改动。",
       "timedOut": "未能及时算出此图的层叠顺序。",

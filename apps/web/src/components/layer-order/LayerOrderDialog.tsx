@@ -33,12 +33,13 @@ export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening
   return (
     <LayerOrderDialogFrame
       name={request.name}
+      byline={request.byline}
       status={status}
       letters={letters}
       returnFocus={opening.returnFocus}
       phonePane={phonePane}
       onPhonePaneChange={setPane}
-      panes={<LayerOrderPanesPlaceholder status={status} phonePane={phonePane} request={request} />}
+      panes={<LayerOrderPanesPlaceholder status={status} phonePane={phonePane} request={request} letters={letters} />}
       onRetry={() => session.reopen()}
       onCancel={settle.cancel}
       onApply={() => void settle.apply()}
