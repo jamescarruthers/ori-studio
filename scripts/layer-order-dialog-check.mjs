@@ -1156,11 +1156,18 @@ async function poseToolbarState(page) {
   return {
     previous: await held('Previous Layer Order'),
     next: await held('Next Layer Order'),
-    edit: await held('Edit Layer Order…'),
-    names: await bar.locator('button').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))),
+    edit: await held(EDIT_ORDER),
+    // Each button's accessible name: its label, or the words it shows.
+    names: await bar
+      .locator('button')
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label') ?? button.textContent)),
+    editTitle: await bar.getByRole('button', { name: EDIT_ORDER }).getAttribute('title'),
     text: (await bar.textContent()) ?? '',
   };
 }
+
+/** Pose's Edit order…, named by the word it shows. */
+const EDIT_ORDER = 'Edit order…';
 
 /** The toolbar, with the tooltip of the control named `hover` up when given. */
 async function toolbarShot(page, hover = null) {
@@ -1275,6 +1282,67 @@ async function applyThroughOpenDialog(page) {
   });
 }
 
+/**
+ * The #523 review's race, swept: for each delay, an Apply through Pose, then
+ * Turn Over and, `delay` ms later, Undo as ⌘Z runs it (the menu action: the
+ * canvas sessions hear it, then the history moves). Per round: the toasts
+ * that say a capture failed, and whether a record was left once every Apply
+ * was undone again.
+ */
+const RACE_DELAYS_MS = (process.env.POSE_RACE_DELAYS ?? '0,2,4,6,8,10,12,14,16,18,20,25,30,40,60')
+  .split(',')
+  .map(Number);
+
+async function undoRaceSweep(page, delays) {
+  await page.evaluate(() => {
+    if (window.__toastsSeen) return;
+    window.__toastsSeen = [];
+    new MutationObserver(() => {
+      for (const node of document.querySelectorAll('[data-sonner-toast]')) {
+        if (node.__seen) continue;
+        node.__seen = true;
+        window.__toastsSeen.push(node.textContent ?? '');
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  const undo = () =>
+    page.evaluate(async () => {
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      await handleMenuAction('edit.undo');
+    });
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  const rounds = [];
+  for (const delay of delays) {
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    await applyThroughOpenDialog(page);
+    await dialog.waitFor({ state: 'detached', timeout: 10000 });
+    await captured(page);
+    const seen = await page.evaluate(() => window.__toastsSeen.length);
+    await page.evaluate(async (wait) => {
+      const { openLinkedPoseOf } = await import('/src/diagram/capture/openLinkedPose.ts');
+      const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+      openLinkedPoseOf(window.__layerOrderStep)
+        .actions.find((action) => action.id === 'turn-over')
+        .run();
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      await handleMenuAction('edit.undo');
+    }, delay);
+    await page.waitForTimeout(300);
+    await captured(page);
+    const errors = (await page.evaluate((from) => window.__toastsSeen.slice(from), seen)).filter((text) =>
+      /couldn.t be captured|invalid folded figure handle|stopped unexpectedly/i.test(text)
+    );
+    // The turn may have landed before the undo, which then took it back instead: undo to no record.
+    for (let more = 0; more < 4 && (await poseNow(page)).layerOrder; more += 1) {
+      await undo();
+      await captured(page);
+    }
+    rounds.push({ delay, errors, record: (await poseNow(page)).layerOrder !== null });
+  }
+  return rounds;
+}
+
 /** The step selected, its source's render and record, and how many undo steps there are. */
 async function poseNow(page) {
   return page.evaluate(async () => {
@@ -1321,10 +1389,12 @@ function poseToolbarCases(theme) {
     const at = first.names.indexOf('Previous Layer Order');
     if (
       JSON.stringify(first.names.slice(at, at + 5)) !==
-      JSON.stringify(['Previous Layer Order', 'Next Layer Order', 'Edit Layer Order…', 'Spread Layers', 'Reset Pose'])
+      JSON.stringify(['Previous Layer Order', 'Next Layer Order', EDIT_ORDER, 'Spread Layers', 'Reset Pose'])
     ) {
       throw new Error('the toolbar is not ‹ › Edit order… Spread Reset');
     }
+    // Named by its word (label in name), titled in full.
+    if (first.editTitle !== 'Edit layer order…') throw new Error(`Edit order…'s tooltip: ${first.editTitle}`);
     if (/\d\s*of\s*\d|Layer order \d/.test(first.text)) throw new Error(`the toolbar reads out a place: ${first.text}`);
     if (!first.previous || first.next || first.edit) throw new Error('at the first order: ‹ held, › and Edit order… free');
     await record(`pose-${tag}-toolbar-first`, { toolbar: await toolbarShot(page, 'Previous Layer Order') });
@@ -1340,7 +1410,7 @@ function poseToolbarCases(theme) {
 
     // Edit order… on the fold Pose holds, at the step's own order.
     const before = await poseNow(page);
-    await poseToolbar(page).getByRole('button', { name: 'Edit Layer Order…' }).click();
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
     await dialog.waitFor({ state: 'visible', timeout: 60000 });
     const asked = await dialogRequestAgainstKernel(page);
     console.log(`[${tag}] Edit order… asked: ${JSON.stringify(asked)}`);
@@ -1386,7 +1456,7 @@ function poseToolbarCases(theme) {
     await record(`pose-${tag}-before-apply-turned`, { stage: beforeTurned });
     await toolbarVerb(page, 'Turn Over');
     const ready = await poseNow(page);
-    await poseToolbar(page).getByRole('button', { name: 'Edit Layer Order…' }).click();
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
     await dialog.waitFor({ state: 'visible', timeout: 60000 });
     const answered = await applyThroughOpenDialog(page);
     await dialog.waitFor({ state: 'detached', timeout: 10000 });
@@ -1402,8 +1472,9 @@ function poseToolbarCases(theme) {
       `[${tag}] Apply through Pose: ${JSON.stringify(answered)}, one undo step "${label}" (${afterApply.entries - ready.entries}), ` +
         `record ${afterApply.layerOrder ? 'written' : 'none'}, ${appliedDiffers.differing} of ${appliedDiffers.pixels} pixels changed`
     );
-    if (afterApply.entries - ready.entries !== 1 || label !== 'Adjust pose' || !afterApply.layerOrder || appliedDiffers.differing === 0) {
-      throw new Error('Apply through Pose did not write its order as one pose');
+    // One undo step, named as the Step pane's Apply names it.
+    if (afterApply.entries - ready.entries !== 1 || label !== 'Change layer order' || !afterApply.layerOrder || appliedDiffers.differing === 0) {
+      throw new Error('Apply through Pose did not write its order as one undo step');
     }
     await record(`pose-${tag}-applied`, { stage: appliedShot });
     await page.evaluate(async () => {
@@ -1421,6 +1492,12 @@ function poseToolbarCases(theme) {
     await record(`pose-${tag}-undone-turned`, { stage: undoneTurned });
     await toolbarVerb(page, 'Turn Over');
 
+    // The #523 review's race: Apply, Turn Over, then ⌘Z some milliseconds later, while the turn may still
+    // be reading the fold the undo takes the order of. Nothing may say the picture couldn't be captured.
+    const raced = await undoRaceSweep(page, RACE_DELAYS_MS);
+    console.log(`[${tag}] Apply, Turn Over, undo after ${raced.map((round) => `${round.delay}ms`).join(', ')}: ${JSON.stringify(raced.flatMap((round) => round.errors))}`);
+    if (raced.some((round) => round.errors.length > 0 || round.record)) throw new Error('an undo under a turn failed it');
+
     // Constrained: D9's hold on ‹ ›, and Edit order… opening on the record.
     const applied = await applyConstraintToStep(page);
     await captured(page);
@@ -1430,7 +1507,7 @@ function poseToolbarCases(theme) {
     if (!constrained.previous || !constrained.next || constrained.edit) throw new Error('constrained: ‹ › held, Edit order… free');
     await record(`pose-${tag}-toolbar-constrained`, { toolbar: await toolbarShot(page, 'Next Layer Order') });
     const constrainedBefore = await poseNow(page);
-    await poseToolbar(page).getByRole('button', { name: 'Edit Layer Order…' }).click();
+    await poseToolbar(page).getByRole('button', { name: EDIT_ORDER }).click();
     await dialog.waitFor({ state: 'visible', timeout: 60000 });
     const askedConstrained = await dialogRequestAgainstKernel(page);
     console.log(`[${tag}] Edit order… on the constrained step asked: ${JSON.stringify(askedConstrained)}`);
