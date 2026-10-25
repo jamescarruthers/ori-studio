@@ -96,6 +96,11 @@ export function openIndexOf(pairs: Uint32Array): LayerOpenIndex {
   return { pairs, partners };
 }
 
+/** How many pairs are open: what D7's count threshold reads. */
+export function openPairCount(open: LayerOpenIndex): number {
+  return Math.floor(open.pairs.length / 2);
+}
+
 /** A face's open faces: the only valid objects for it as a subject (spec §5). */
 export function openPartners(open: LayerOpenIndex, face: LayerFace | null): readonly LayerFace[] {
   return face === null ? NO_FACES : (open.partners.get(face) ?? NO_FACES);

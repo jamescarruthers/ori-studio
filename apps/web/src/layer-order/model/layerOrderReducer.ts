@@ -60,6 +60,7 @@ import {
   groundClick,
   keepOpenObjects,
   openIndexOf,
+  openPairCount,
   pickFace,
   removeObject,
   revealSubject,
@@ -444,7 +445,8 @@ function opened(
     settle = { kind: 'timed_out', limits };
   }
 
-  const runs = solutionCountRuns(facts.faces);
+  const open = openIndexOf(facts.openPairs);
+  const runs = solutionCountRuns(openPairCount(open));
   const generation = state.solutions.generation + 1;
   const matchesHost =
     openedOnHostOrder(facts.openedOn) &&
@@ -462,7 +464,7 @@ function opened(
       letterRank: letterRanksOf(facts.faces, facts.letterOrder),
     },
     openedOn: facts.openedOn,
-    open: openIndexOf(facts.openPairs),
+    open,
     shown: facts.stacks,
     rows: { committed, carried },
     history: emptyHistory(),
@@ -723,6 +725,8 @@ function committed(
     sentence = keepOpenObjects(sentence, open);
   }
   const generation = state.solutions.generation + 1;
+  // D7: whether the count starts again is decided on the open pairs this commit leaves.
+  const runs = solutionCountRuns(openPairCount(open));
   let next: LayerOrderDialogState = landNow(
     {
       ...state,
@@ -733,13 +737,13 @@ function committed(
       sentence,
       pointedVerb: commit.via === 'add' ? null : state.pointedVerb,
       previews: {},
-      solutions: { ...state.solutions, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
+      solutions: { runs, generation, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     },
     commit.rows,
     commit.history
   );
   next = flashed(next, facts.changed, effects);
-  effects.push({ type: 'solutions_restart', generation, by: currentStepBy(next), count: next.solutions.runs });
+  effects.push({ type: 'solutions_restart', generation, by: currentStepBy(next), count: runs });
   if (commit.via === 'add' && commit.sentence) {
     const { verb, subjectOrigin, objectOrigin, objects } = commit.sentence;
     const fact = constraintAddedFact(verb, subjectOrigin ?? 'pattern', objectOrigin ?? 'pattern', objects.length);

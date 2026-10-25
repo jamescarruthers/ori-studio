@@ -8,7 +8,7 @@
  *
  * Pure: no React, no store, no engine calls.
  */
-import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
+import { LAYER_ORDER_LABEL_CAP, layerOrderCountStarts } from '../layerOrderBudgets';
 import {
   keepTrying,
   type LayerConstraint,
@@ -48,18 +48,15 @@ export function objectsPastLabelCap(objects: number): boolean {
 }
 
 /**
- * Above this many faces the solution count is skipped. Provisional until
- * phase gate 2 (E8) names the threshold; 4,096 is the source's own face cap,
- * so until then the count always runs.
+ * Whether the background count runs on a session that leaves `openPairs`
+ * pairs open: decided at the open and again after each commit, by phase gate
+ * 2's threshold (`layerOrderCountStarts`, 20,000 open pairs, in
+ * `layerOrderBudgets.ts`, its one source). When it is skipped the stepper
+ * still steps, with no total: the status names the solution shown
+ * ("Solution 3").
  */
-export const LAYER_ORDER_COUNT_FACE_LIMIT = 4_096;
-
-/**
- * Whether the background count runs. When it is skipped the stepper still
- * steps, with no total: the status names the solution shown ("Solution 3").
- */
-export function solutionCountRuns(faces: number): boolean {
-  return faces <= LAYER_ORDER_COUNT_FACE_LIMIT;
+export function solutionCountRuns(openPairs: number): boolean {
+  return layerOrderCountStarts(openPairs);
 }
 
 // ---------------------------------------------------------------------------

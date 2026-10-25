@@ -201,7 +201,7 @@ export type LayerStepState =
   | { readonly kind: 'timed_out'; readonly direction: LayerStepDirection };
 
 export interface LayerSolutionsState {
-  /** Whether the background count runs (D7); the stepper steps either way. */
+  /** Whether the background count runs (D7), by the open pairs at the open and after each commit; the stepper steps either way. */
   readonly runs: boolean;
   /** Bumped by every open and commit: a count or a position for another generation is dropped. */
   readonly generation: number;
