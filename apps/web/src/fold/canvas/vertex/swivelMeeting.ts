@@ -26,8 +26,15 @@ export interface FoldSwivelMeeting {
 
 /** How far inside a folded edge's ends a meeting lies: the engine meets the lines strictly inside a bend. */
 const END_MARGIN = 1e-3;
-/** How far off a shown stretch of its edge, in the pane's frame, a meeting still lies on it. */
-const ON_PORTION = 1e-7;
+/**
+ * How far past a shown stretch of its edge, in the pane's frame, a meeting
+ * still lies on it: the engine's slack, half its minimum feature
+ * (`SEEN_SLACK`). The engine measures a stretch a little inside the edge's
+ * layers, so where the edge of a layer on top crosses the folded edge the
+ * stretch stops just short of the crossing — and the crossing, the corner
+ * the two make, is in view.
+ */
+const ON_PORTION = 5e-4;
 /** CSS px: the meeting's dot, as a vertex fold's vertex is drawn (`vertexOverlay`). */
 const MEETING_RADIUS = 4;
 

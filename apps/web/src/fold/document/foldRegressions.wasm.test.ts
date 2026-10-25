@@ -2,7 +2,15 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseNativeProjectFile } from '../../lib/nativeProjectFile';
-import { foldPickIndex, resolveFoldPick, sheetPointsTogether, sheetToScene, type FoldPickIndex } from '../canvas/foldPicking';
+import {
+  foldPickIndex,
+  foldStackAt,
+  resolveFoldPick,
+  sheetPointsTogether,
+  sheetToScene,
+  topSheetPointAt,
+  type FoldPickIndex,
+} from '../canvas/foldPicking';
 import { toPoint } from '../canvas/foldCanvasGeometry';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
@@ -46,6 +54,7 @@ const NAMES = [
   'reverse-seed-segment.osf',
   'squash-covered.osf',
   'squash-drawn-hinge.osf',
+  'swivel-at-flap-edge.osf',
   'tuck-target-layer.osf',
   'unfold-to-after-import.osf',
 ];
@@ -421,5 +430,79 @@ describe.skipIf(!available)('the fold-regression fixtures', () => {
     const opened = creases(returned).filter((crease) => summary.summary!.diff.unfolded.includes(crease.id));
     expect(opened.length).toBe(creases(stateOf(after)).filter(onX(0.5)).length);
     expect(opened.every(onX(0.5))).toBe(true);
+  });
+
+  it('swivel-at-flap-edge: the valley and the mountain meet where the flap’s edge crosses the folded edge, and the swivel lands flat', async () => {
+    const { calls, steps: all, parentOf, stateOf } = await replayed('swivel-at-flap-edge.osf');
+    const swivel = all.at(-1)!;
+    const op = swivel.op;
+    if (op.kind !== 'swivel' || !('valley' in op)) throw new Error('the last step is a swivel by its valley and mountain');
+    const [parent, landed] = [parentOf(swivel), stateOf(swivel)];
+    const index = pickIndex(calls, parent);
+    // The crossing, (1/2, 3/8): a point the folded pane offers, which both lines are drawn from.
+    const crossing = index.toScene({ x: 0.5, y: 0.375 });
+    const pick = resolveFoldPick(index, 'folded', crossing, RADII, POINT_RULE);
+    if (pick?.kind !== 'point') throw new Error('the crossing is no point');
+    expect(pick.provenance).toBe('crossing');
+    for (const line of [op.valley.line, op.mountain.line]) {
+      expect(line).toMatchObject({ via: 'axiom', axiom: 1, inputs: [{ kind: 'point', at: pick.sheet }, { kind: 'point' }] });
+    }
+    // The folded edge's shown part starts just above it: the engine measures it a probe inside the edge's layers.
+    const spine = calls
+      .landmarks(parent, [])
+      .segments.find((segment) => segment.kind === 'bend' && segment.at.every(([x]) => Math.abs(x - 0.5) < 1e-12));
+    if (!spine) throw new Error('no folded edge along x = 1/2');
+    const fraction = (y: number) => (y - spine.at[0][1]) / (spine.at[1][1] - spine.at[0][1]);
+    const length = Math.abs(spine.at[1][1] - spine.at[0][1]);
+    const gaps = spine.visible.flatMap((part) => part.map((end) => Math.abs(end - fraction(0.375)) * length));
+    const gap = Math.min(...gaps);
+    expect(gap).toBeGreaterThan(1e-6);
+    expect(gap).toBeLessThan(5e-4);
+    // The engine meets the lines there; it used to refuse them (`swivel_line_meeting`).
+    const asked = calls.compoundAnalysis(parent, op);
+    if (asked.status !== 'ok' || asked.family !== 'vertex' || asked.analysis.kind !== 'swivel-valley-mountain') {
+      throw new Error(`refused: ${JSON.stringify(asked)}`);
+    }
+    expectNear(asked.analysis.vertex, [0.5, 0.375], 'where the creases meet');
+    // Landed, the layer in front creased as named, each letter as the viewer saw that layer before it folded.
+    const before = calls.scene(parent);
+    const after = calls.scene(landed).creases.filter((crease) => crease.kind === 'fold');
+    const flip = (letter: string) => (letter === 'valley' ? 'mountain' : 'valley');
+    const seenLetter = (model: [number, number]) => {
+      const at = index.toScene({ x: model[0], y: model[1] });
+      const face = foldStackAt(index, at)[0];
+      const sheet = topSheetPointAt(index, at);
+      if (face === undefined || !sheet) throw new Error(`nothing at ${model.join(', ')}`);
+      const crease = after.find((c) => {
+        const cross = (c.to.x - c.from.x) * (sheet[1] - c.from.y) - (c.to.y - c.from.y) * (sheet[0] - c.from.x);
+        const along = (sheet[0] - c.from.x) * (c.to.x - c.from.x) + (sheet[1] - c.from.y) * (c.to.y - c.from.y);
+        return Math.abs(cross) < 1e-9 && along > 0 && along < (c.to.x - c.from.x) ** 2 + (c.to.y - c.from.y) ** 2;
+      });
+      if (!crease?.letter) throw new Error(`no folded crease at ${sheet.join(', ')}`);
+      return before.faces[face]!.front_up ? crease.letter : flip(crease.letter);
+    };
+    // Half way from the crossing to (3/8, 1), the mountain; to (1/8, 1), the valley.
+    expect(seenLetter([0.4375, 0.6875])).toBe('mountain');
+    expect(seenLetter([0.3125, 0.6875])).toBe('valley');
+    // Flat at the new vertex: on the sheet, the folded creases round the crossing
+    // keep Kawasaki's alternating sums at half a turn and Maekawa's |M − V| = 2.
+    const vertex = calls.scene(landed).creases.flatMap((c) => [c.from, c.to]).find((p) => Math.hypot(p.x - 0.5, p.y - 0.375) < 1e-9);
+    if (!vertex) throw new Error('the crossing is no vertex of the crease pattern');
+    const rays = after
+      .flatMap((c) => {
+        const [near, far] = Math.hypot(c.from.x - vertex.x, c.from.y - vertex.y) < 1e-9 ? [c.from, c.to] : [c.to, c.from];
+        return Math.hypot(near.x - vertex.x, near.y - vertex.y) < 1e-9 ? [{ angle: Math.atan2(far.y - near.y, far.x - near.x), letter: c.letter }] : [];
+      })
+      .sort((a, b) => a.angle - b.angle);
+    expect(rays.length).toBe(4);
+    const sectors = rays.map((ray, k) => {
+      const next = rays[(k + 1) % rays.length]!;
+      return (next.angle - ray.angle + 2 * Math.PI) % (2 * Math.PI) || 2 * Math.PI;
+    });
+    expect(sectors[0]! + sectors[2]!).toBeCloseTo(Math.PI, 9);
+    expect(sectors[1]! + sectors[3]!).toBeCloseTo(Math.PI, 9);
+    const mountains = rays.filter((ray) => ray.letter === 'mountain').length;
+    expect(Math.abs(mountains - (rays.length - mountains))).toBe(2);
+    expect(calls.summary(landed).residual).toBeLessThan(1e-9);
   });
 });
