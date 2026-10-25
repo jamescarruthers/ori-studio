@@ -20,6 +20,13 @@ import type {
 } from '../../engine/oristudioCpTypes';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { hasFoldedLayerOrder, openFold, readFoldedPicture, type FoldedFigureState, type FoldedPicture } from '../../lib/creaseExportFold';
+import {
+  advanceSolutionFrontier,
+  frontierSolutions,
+  solutionFrontierKnowing,
+  UNSEARCHED_FRONTIER,
+  type SolutionFrontier,
+} from '../../lib/layerOrderPlace';
 import type { DiagramStyle } from '../document/diagramDocument';
 import { foldedMirrorAxes } from './mirrorAxes';
 import type { SanitizeEnv } from '../upload/svgSanitize';
@@ -62,9 +69,10 @@ interface FlatHold extends FoldKey {
   /**
    * The most layer orders this fold's search has reached, and whether it ran
    * out there. A jump back to an earlier one restarts the search (the kernel
-   * replays it forward), which forgets every one past it: these do not.
+   * replays it forward), which forgets every one past it: these do not
+   * (`layerOrderPlace.ts`, which Edit's figures keep too).
    */
-  reached: { cases: number; complete: boolean };
+  reached: SolutionFrontier;
   /**
    * What the kernel drew of it as it stands — its paper scene, unturned — so
    * a turn or a spread of the same side and layer order is drawn again with
@@ -216,25 +224,20 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
     return held;
   };
 
-  /**
-   * The fold's new state, and how far its search has reached. The frontier
-   * only grows, or closes: the kernel learns it ran out only from a search
-   * that failed, and a replay to the last order says "maybe more" again.
-   */
+  /** The fold's new state, and how far its search has reached (`advanceSolutionFrontier`). */
   const settle = (hold: FlatHold, state: Omit<FoldedFigureState, 'handle'>) => {
     hold.state = state;
     hold.read = null;
-    const cases = state.discoveredCases;
-    const more = state.hasNext ?? false;
-    if (cases > hold.reached.cases) hold.reached = { cases, complete: !more };
-    else if (cases === hold.reached.cases && !more) hold.reached = { cases, complete: true };
+    hold.reached = advanceSolutionFrontier(hold.reached, {
+      discovered: state.discoveredCases,
+      hasNext: state.hasNext ?? false,
+    });
   };
 
   const flatState = (hold: FlatHold): FlatFoldState => ({
     side: hold.side,
     foldCase: Math.max(1, hold.state.currentCase ?? hold.state.discoveredCases),
-    discovered: Math.max(1, hold.reached.cases),
-    hasNext: !hold.reached.complete,
+    ...frontierSolutions(hold.reached),
     noLayerOrder: !hasFoldedLayerOrder(hold.state),
   });
 
@@ -254,13 +257,13 @@ export function createCaptureSession(deps: CaptureSessionDeps): CaptureSession {
           epoch: adopt(ticket, folded.handle),
           side,
           state: folded,
-          reached: { cases: 0, complete: false },
+          reached: UNSEARCHED_FRONTIER,
           read: null,
         };
         settle(held, folded);
       }
       const hold = flatHold();
-      if (knownCases > hold.reached.cases) hold.reached = { cases: knownCases, complete: false };
+      hold.reached = solutionFrontierKnowing(hold.reached, knownCases);
       if (hold.side !== side) {
         settle(hold, { ...hold.state, ...(await deps.runtime().setModel(hold.handle, captureModel(document, side))) });
         hold.side = side;

@@ -48,6 +48,7 @@ import { dropFolded3dAuxLines, resetFolded3dAuxLines } from './folded3dAuxLines'
 import { dropFolded3dRenderModel, resetFolded3dRenderModels } from './folded3dRenderModels';
 import { clearAllFolded3dOrbits } from './folded3dRuntime';
 import { dropFoldedFlatScene, resetFoldedFlatScenes } from './foldedFlatScenes';
+import { dropSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFrontiers';
 
 /** Live reference count per handle. Entries reaching 0 are freed and dropped. */
 const counts = new Map<number, number>();
@@ -114,6 +115,9 @@ export function releaseFoldedFigureHandle(handle: number | null | undefined): vo
   dropFolded3dRenderModel(handle);
   dropFolded3dAuxLines(handle);
   dropFoldedFlatScene(handle);
+  // How far its layer-order search reached belongs to this session alone; the
+  // next fold the kernel gives the slot to has found nothing yet.
+  dropSolutionFrontier(handle);
   void freeHandle(handle);
 }
 
@@ -163,6 +167,7 @@ export function resetFoldedFigureHandles(): Promise<void> {
   resetFolded3dRenderModels();
   resetFolded3dAuxLines();
   resetFoldedFlatScenes();
+  resetSolutionFrontiers();
   // The other 3D side table, torn down at the same point and for the same
   // reason: a live orbit frame outliving its document would draw a figure at a
   // camera no entry in the store has.

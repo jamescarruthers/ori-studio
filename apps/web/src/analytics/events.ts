@@ -848,8 +848,12 @@ export type FoldVerdict =
   | 'transversal-crossing'
   | 'no-layer-order';
 
-/** Which way a press of the one solution verb moved. */
-export type FoldCycleDirection = 'next' | 'wrap';
+/**
+ * Which way a press of a solution verb moved: on (`next`), on past the last
+ * back to the first (`wrap`), or back one (`previous`, the Properties pane's
+ * ‹ on a flat figure).
+ */
+export type FoldCycleDirection = 'next' | 'wrap' | 'previous';
 
 /**
  * Which appearance setting a folded figure's Style menu changed.
@@ -1983,6 +1987,16 @@ export const ANALYTICS_EVENTS = {
    * field's id: enums by construction, never a value.
    */
   canvasObjectPropertyChanged: 'canvas object property changed',
+  /**
+   * One of a selected canvas object's verbs was pressed in the Properties
+   * pane's header (Export…, Duplicate, Delete on a folded figure).
+   *
+   * The same verbs are on the object's floating toolbar and its menu; this is
+   * what says whether people reach for them in the pane too, which is the
+   * question putting them there raises. Once per press. `object_kind` is the
+   * kind table's key and `action` the verb's id: enums by construction.
+   */
+  canvasObjectActionUsed: 'canvas object action used',
   /**
    * The phone layout's tool sheet was opened.
    *

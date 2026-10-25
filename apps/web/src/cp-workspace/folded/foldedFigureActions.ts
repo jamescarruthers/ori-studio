@@ -4,6 +4,7 @@ import type {
   OristudioCpFoldedFigureEntry,
   OristudioCpFoldedFigureModel,
 } from '../../engine/oristudioCpTypes';
+import type { ControlVerb } from '../../lib/controlVerb';
 import { FOLDED_FIGURE_SIDES } from '../../lib/foldedFigureSides';
 import type { Hex, PaperStyle, PaperStyleField, PaperStyleValue } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES, policyApplies } from '../../lib/paper/paperStyleResolve';
@@ -41,6 +42,7 @@ export type FoldedFigureActionIcon =
   | 'display-style'
   | 'side'
   | 'another'
+  | 'previous'
   | 'first-solution'
   | 'refold'
   | 'export'
@@ -49,22 +51,25 @@ export type FoldedFigureActionIcon =
   | 'notice-warn'
   | 'notice-error';
 
-export interface FoldedFigureCommand {
+/**
+ * One verb. A {@link ControlVerb} — its label, whether it can act now and why
+ * not, what it does — so any surface that draws verbs takes it as it is: the
+ * toolbar, the menu, the Properties pane's header and its Layer order row.
+ */
+export interface FoldedFigureCommand extends ControlVerb {
   kind: 'command';
   id:
     | 'flip'
     | 'reset-view'
     | 'set-upright'
     | 'another'
+    | 'previous'
     | 'refold'
     | 'export'
     | 'duplicate'
     | 'delete';
-  label: string;
   icon: FoldedFigureActionIcon;
-  disabled: boolean;
   danger?: boolean;
-  run: () => void;
 }
 
 export interface FoldedFigureChoiceOption {
@@ -550,7 +555,6 @@ export function buildFoldedFigureActions(
   const { t } = deps;
   const ready = isFoldedFigureReady(figure);
   const canRefold = deps.refold !== undefined && deps.isStale?.(figure) === true;
-  const { hasNext: hasNextSolution, wrapsToFirst } = foldedFigureCycling(figure);
   const capabilities = foldedFigureCapabilities(figure);
   const notice = foldedFigureNotice(t, figure);
 
@@ -622,20 +626,7 @@ export function buildFoldedFigureActions(
   actions.push(
     foldedFigureStyleGroup(figure, deps),
     { kind: 'separator', id: 'after-appearance' },
-    {
-      kind: 'command',
-      id: 'another',
-      // At the end of the enumeration the kernel wraps to the first solution
-      // rather than dead-ending, so say which of the two the press will do.
-      label: wrapsToFirst
-        ? t('panels:foldedFigureActions.firstSolution', 'Back to first solution')
-        : t('panels:foldedFigureActions.anotherSolution', 'Another solution'),
-      icon: wrapsToFirst ? 'first-solution' : 'another',
-      // Disabled only with nowhere to go: a single-solution fold, where wrapping
-      // would land exactly where it started.
-      disabled: !ready || (!hasNextSolution && !wrapsToFirst),
-      run: () => deps.foldAnother(figure),
-    }
+    anotherSolutionCommand(figure, deps)
   );
 
   // Refold is present only when it applies: a figure that matches its source
@@ -651,27 +642,117 @@ export function buildFoldedFigureActions(
     });
   }
 
-  if (deps.exportFigure) {
-    const exportFigure = deps.exportFigure;
-    actions.push(
-      { kind: 'separator', id: 'before-export' },
-      {
-        kind: 'command',
-        id: 'export',
-        // One verb: the dialog it opens chooses the format, with the page in view.
-        label: t('panels:foldedFigureActions.export', 'Export…'),
-        icon: 'export',
-        // Exported from the figure's own picture — a 3D figure's scene, a flat
-        // figure's render snapshot — so anything on screen can be saved,
-        // including a figure whose creases have since moved.
-        disabled: figure.renderSnapshot === null && (figure.scene ?? null) === null,
-        run: () => exportFigure(figure),
-      }
-    );
-  }
-
+  const header = foldedFigureHeaderCommands(figure, deps);
+  const exportCommand = header.find((command) => command.id === 'export');
+  if (exportCommand) actions.push({ kind: 'separator', id: 'before-export' }, exportCommand);
   actions.push(
     { kind: 'separator', id: 'before-manage' },
+    ...header.filter((command) => command.id !== 'export')
+  );
+
+  return actions;
+}
+
+/** What the figure's solution verbs call, and nothing else. */
+export interface FoldedFigureSolutionDeps {
+  t: TFunction;
+  foldAnother: (figure: OristudioCpFoldedFigureEntry) => void;
+  /** Back one layer order, by fold case. */
+  foldPrevious: (figure: OristudioCpFoldedFigureEntry) => void;
+}
+
+/**
+ * On to the next layer order: Another solution, the one solution verb the
+ * toolbar and menu offer. At the end of the enumeration the kernel wraps to
+ * the first rather than dead-ending, so the label says which the press will
+ * do.
+ */
+export function anotherSolutionCommand(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldAnother'>
+): FoldedFigureCommand {
+  const { t } = deps;
+  const { hasNext, wrapsToFirst } = foldedFigureCycling(figure);
+  // Disabled only with nowhere to go: a single-solution fold, where wrapping
+  // would land exactly where it started.
+  const single = !hasNext && !wrapsToFirst;
+  return {
+    kind: 'command',
+    id: 'another',
+    label: wrapsToFirst
+      ? t('panels:foldedFigureActions.firstSolution', 'Back to first solution')
+      : t('panels:foldedFigureActions.anotherSolution', 'Another solution'),
+    icon: wrapsToFirst ? 'first-solution' : 'another',
+    disabled: !isFoldedFigureReady(figure) || single,
+    ...(single ? { hint: t('panels:foldedFigureActions.onlySolution', 'This figure has one solution') } : {}),
+    run: () => deps.foldAnother(figure),
+  };
+}
+
+/**
+ * Back to the layer order before, by fold case: the kernel restarts the
+ * enumeration and replays it to that one (`folding_estimate_to_case`), the way
+ * the Diagram's ‹ goes back. Not Oriedita's — upstream only goes forward — and
+ * not the toolbar's: the Properties pane's Layer order row offers it beside
+ * Another solution. A 3D figure has no numbered solutions to go back to
+ * (`foldedFigureCapabilities.foldToCase`).
+ */
+export function previousSolutionCommand(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: Pick<FoldedFigureSolutionDeps, 't' | 'foldPrevious'>
+): FoldedFigureCommand {
+  const { t } = deps;
+  const canGoBack = foldedFigureCapabilities(figure).foldToCase;
+  const first = foldedFigureCycling(figure).current <= 1;
+  const hint = !canGoBack
+    ? t('panels:foldedFigureActions.previousSolution3d', 'Stepping back works on flat figures')
+    : first
+      ? t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution')
+      : undefined;
+  return {
+    kind: 'command',
+    id: 'previous',
+    label: t('panels:foldedFigureActions.previousSolution', 'Previous solution'),
+    icon: 'previous',
+    disabled: !isFoldedFigureReady(figure) || !canGoBack || first,
+    ...(hint ? { hint } : {}),
+    run: () => deps.foldPrevious(figure),
+  };
+}
+
+/** What the figure's header verbs call. */
+export type FoldedFigureManageDeps = Pick<
+  FoldedFigureActionDeps,
+  't' | 'duplicate' | 'remove' | 'exportFigure'
+>;
+
+/**
+ * The verbs on the figure as a whole — Export… (when the surface can export),
+ * Duplicate, Delete — in that order: the toolbar's and menu's last group, and
+ * the Properties pane's header.
+ */
+export function foldedFigureHeaderCommands(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: FoldedFigureManageDeps
+): FoldedFigureCommand[] {
+  const { t } = deps;
+  const commands: FoldedFigureCommand[] = [];
+  if (deps.exportFigure) {
+    const exportFigure = deps.exportFigure;
+    commands.push({
+      kind: 'command',
+      id: 'export',
+      // One verb: the dialog it opens chooses the format, with the page in view.
+      label: t('panels:foldedFigureActions.export', 'Export…'),
+      icon: 'export',
+      // Exported from the figure's own picture — a 3D figure's scene, a flat
+      // figure's render snapshot — so anything on screen can be saved,
+      // including a figure whose creases have since moved.
+      disabled: figure.renderSnapshot === null && (figure.scene ?? null) === null,
+      run: () => exportFigure(figure),
+    });
+  }
+  commands.push(
     {
       kind: 'command',
       id: 'duplicate',
@@ -690,8 +771,7 @@ export function buildFoldedFigureActions(
       run: () => deps.remove(figure),
     }
   );
-
-  return actions;
+  return commands;
 }
 
 /** The flip target for `figure`, exposed so callers can build the model patch. */
