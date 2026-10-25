@@ -107,13 +107,13 @@ function timedOut(restored: LayerOrderRestoreOutcome): 'record' | 'open' | null 
 /**
  * Why a rejection that is not a Stop left the resolve with no answer, and
  * whether this module reports it: the dialog's rule (`layerOrderLoadFailure.ts`).
- * The browser failing to load the worker or the Fold wasm (offline) is
- * `unavailable` and reported to no one; a crash the runtime has reported; an
- * engine that did not start for another reason, or any other failure, is
+ * The browser failing to load the worker or the Fold wasm (offline) is `load`
+ * and reported to no one; a crash the runtime has reported; an engine that did
+ * not start for another reason (`unavailable`), or any other failure, is
  * reported here.
  */
 function lossOf(error: unknown): { cause: LayerOrderLossCause; report: boolean } {
-  if (isLayerOrderLoadFailure(error)) return { cause: 'unavailable', report: false };
+  if (isLayerOrderLoadFailure(error)) return { cause: 'load', report: false };
   if (isLayerOrderEngineLost(error)) return { cause: 'crashed', report: false };
   const code = (error as { code?: unknown } | null)?.code;
   return { cause: code === LAYER_ORDER_CALL_FAILURES.unavailable ? 'unavailable' : 'failed', report: true };
