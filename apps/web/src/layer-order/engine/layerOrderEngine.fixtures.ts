@@ -1,8 +1,9 @@
 /**
  * A Layer order engine with no wasm, for tests: a backend that answers the
  * contract over a toy figure, and a worker that runs the real worker shell
- * (`workers/layerOrderWorkerApi.ts`) through comlink, so a runtime test
- * exercises everything but the bridge.
+ * (`workers/layerOrderWorkerApi.ts`) through comlink over any backend, this
+ * one or the real one over the bridge, so a runtime test exercises
+ * everything but the `Worker` itself.
  *
  * **The toy figure** stacks every face on one spot. Its creases force some
  * pairs; the rest are open. An order is the one stack, and the fitting order
@@ -12,28 +13,43 @@
  * ways is `opposed`, a pair against the creases is `forced`, a cycle is a
  * `conflict`; with no nodes, an answer that needs a search (one that would
  * move the order) times out, while one that deduction settles does not; a
- * constraint that is no question throws, as the bridge does. It has a paper
- * scene (each face a square on the crease pattern, all folded onto one), and
- * counts its solutions by brute force, standing in for E6's count.
+ * constraint that is no question throws, as the bridge does. A fit keeps its
+ * preview for Add by token, as E5 does. It has a paper scene (each face a
+ * square on the crease pattern, all folded onto one).
  *
- * **Control.** Every call is logged ({@link FakeLayerOrderBackend.calls});
+ * **Its solutions** are counted by brute force over every order of the one
+ * stack, in lexicographic order, a slice at a time: each slice reads
+ * `maxNodes` orders (at least one), so a test sets how many slices a count
+ * takes. The cursor, its epoch and its staleness follow E6's and the bridge
+ * backend's rules: started by the first slice, step or position, started
+ * again by a commit that committed, a restore or an open; kept by a step.
+ *
+ * **Control.** Calls are answered one at a time, in the order they arrive,
+ * as a worker's synchronous bridge calls are. Every call is logged
+ * ({@link FakeLayerOrderBackend.calls}) when its turn comes;
  * {@link FakeLayerOrderBackend.hold} keeps the next answer of a call back
- * until the test releases it; {@link FakeLayerOrderBackend.trapNext} makes
- * the next one fail as a trapped wasm call does. {@link FakeLayerOrderWorker}
+ * until the test releases it, and every call behind it waits too;
+ * {@link FakeLayerOrderBackend.trapNext} makes
+ * the next one fail as a trapped wasm call does. {@link InProcessLayerOrderWorker}
  * delivers messages a task later, as a worker does, and can die
- * ({@link FakeLayerOrderWorker.crash}).
+ * ({@link InProcessLayerOrderWorker.crash}).
  */
 import { expose, type Endpoint } from 'comlink';
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
 import type { Point } from '../../lib/geometry';
 import {
   encodeLayerOrderRecord,
+  type LayerOrderFace,
   type LayerOrderPair,
   type LayerOrderRecord,
 } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import { DEFAULT_FOLDED_MODEL } from '../../lib/orieditaNativeMetadata';
-import { createLayerOrderWorkerApi, type LayerOrderBackend } from '../../workers/layerOrderWorkerApi';
+import {
+  createLayerOrderWorkerApi,
+  type LayerOrderBackend,
+  type LayerOrderBackendLoader,
+} from '../../workers/layerOrderWorkerApi';
 import type { LayerFace } from './faceIndex';
 import {
   LAYER_ORDER_CALL_FAILURES,
@@ -41,14 +57,22 @@ import {
   SAVED_FACE_INTACT,
   SAVED_PAIR_KEPT,
   type LayerCantFit,
+  type LayerCarriedRow,
   type LayerChangedSpots,
+  type LayerCommitted,
   type LayerConstraint,
+  type LayerExplained,
+  type LayerOpenedOn,
   type LayerOrderEngine,
   type LayerOrderLimits,
   type LayerOrderOpened,
+  type LayerPosition,
+  type LayerPreviewed,
   type LayerSavedConstraintStatus,
   type LayerSide,
+  type LayerSolutionCount,
   type LayerStacks,
+  type LayerStepBy,
   type LayerTimedOut,
 } from './layerOrderEngine';
 
@@ -69,7 +93,7 @@ export interface FakeLayerOrderFigure {
 /**
  * Four faces in a 2 × 2 grid on the crease pattern, two face up and two face
  * down: the creases force 0 above 1, and leave 0–2, 0–3, 1–2, 1–3 and 2–3
- * open.
+ * open. Of its 24 orders, 12 fit.
  */
 export const FAKE_LAYER_ORDER_FIGURE: FakeLayerOrderFigure = {
   facePoints: [
@@ -96,6 +120,8 @@ export const FAKE_LAYER_ORDER_SOURCE: LayerOrderSource = {
 export const FAKE_LIMITS: LayerOrderLimits = { maxNodes: 1_000, fastNodes: 128, deadlineMs: 1_000 };
 /** No nodes at all: a search times out. */
 export const FAKE_NO_NODES: LayerOrderLimits = { maxNodes: 0, fastNodes: 0, deadlineMs: 1_000 };
+/** A count slice that reads one order of the toy figure's 24: a count of 24 slices. */
+export const FAKE_ONE_ORDER_SLICE: LayerOrderLimits = { maxNodes: 1, fastNodes: 0, deadlineMs: 1_000 };
 
 type Upper = readonly [upper: LayerFace, lower: LayerFace];
 
@@ -132,6 +158,10 @@ function closestOrder(shown: readonly LayerFace[], edges: readonly Upper[]): Lay
   return shown.every(place) ? order : null;
 }
 
+function fitsEdges(order: readonly LayerFace[], edges: readonly Upper[]): boolean {
+  return edges.every(([upper, lower]) => order.indexOf(upper) < order.indexOf(lower));
+}
+
 function stacksOf(order: readonly LayerFace[]): { front: LayerStacks; back: LayerStacks } {
   const offsets = Uint32Array.of(0, order.length);
   return {
@@ -154,6 +184,11 @@ function permutations(faces: readonly LayerFace[]): LayerFace[][] {
     permutations([...faces.slice(0, i), ...faces.slice(i + 1)]).map((rest) => [face, ...rest])
   );
 }
+
+const sameConstraint = (a: readonly number[], b: readonly number[]) => a.every((value, i) => value === b[i]);
+
+const sameList = (a: readonly LayerConstraint[], b: readonly LayerConstraint[]) =>
+  a.length === b.length && a.every((constraint, i) => sameConstraint(constraint, b[i]!));
 
 /**
  * The toy figure's paper scene from `side`, for an order: each face a 10 × 10
@@ -193,7 +228,7 @@ export function fakeLayerOrderScene(
 
 /** The backend, with the test's handles on it. */
 export interface FakeLayerOrderBackend extends LayerOrderBackend {
-  /** Every call answered or held, by name, in the order they reached the backend. */
+  /** Every call answered or held, by name, in the order their turns came. */
   readonly calls: (keyof LayerOrderEngine)[];
   /** Keep the next answer of `call` back until `release` (a stand-in for a call that runs long). */
   hold(call: keyof LayerOrderEngine): { release(): void };
@@ -201,17 +236,33 @@ export interface FakeLayerOrderBackend extends LayerOrderBackend {
   trapNext(call: keyof LayerOrderEngine): void;
 }
 
+/** A count in progress: the orders read so far, and the fitting ones among them. */
+interface Cursor {
+  readonly epoch: number;
+  readonly constraints: readonly LayerConstraint[];
+  read: number;
+  readonly fits: LayerFace[][];
+}
+
 interface Session {
   constraints: LayerConstraint[];
   order: LayerFace[];
+  openedOn: LayerOpenedOn;
+  /** The last preview that fit, until the next preview, commit, restore or step. */
+  preview: { token: number; list: LayerConstraint[]; order: LayerFace[] } | null;
+  carried: LayerCarriedRow[];
+  cursor: Cursor | null;
 }
 
 export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_LAYER_ORDER_FIGURE): FakeLayerOrderBackend {
   const faceCount = figure.order.length;
+  const everyOrder = permutations([...figure.order].sort((a, b) => a - b));
   const calls: (keyof LayerOrderEngine)[] = [];
   const holds = new Map<keyof LayerOrderEngine, Promise<void>[]>();
   const traps = new Set<keyof LayerOrderEngine>();
   let session: Session | null = null;
+  let tokens = 0;
+  let epochs = 0;
 
   /** Log the call, wait out a hold on it, and fail it if it is to trap. */
   const answering = async (call: keyof LayerOrderEngine): Promise<void> => {
@@ -234,7 +285,7 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
   ];
 
   /** The pairs neither the creases nor the constraints decide, by reachability. */
-  const openPairsOf = ({ constraints }: Session): Uint32Array => {
+  const openPairsOf = (constraints: readonly LayerConstraint[]): Uint32Array => {
     const edges = edgesOf(constraints);
     const reaches = (from: LayerFace, to: LayerFace): boolean => {
       const seen = new Set([from]);
@@ -257,12 +308,22 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
     return Uint32Array.from(pairs);
   };
 
-  const opened = (now: Session): LayerOrderOpened => ({
+  const openedOf = (now: Session): LayerOrderOpened => ({
     status: 'ok',
     faces: faceCount,
     front_up: Uint8Array.from(figure.frontUp, (up) => (up ? 1 : 0)),
-    open_pairs: openPairsOf(now),
+    open_pairs: openPairsOf(now.constraints),
     spots: 1,
+    opened_on: now.openedOn,
+  });
+
+  const fresh = (order: LayerFace[], openedOn: LayerOpenedOn): Session => ({
+    constraints: [],
+    order,
+    openedOn,
+    preview: null,
+    carried: [],
+    cursor: null,
   });
 
   /** A constraint that is no question throws, as the bridge's `session_bad_constraint` does. */
@@ -303,70 +364,230 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
     return { order };
   };
 
-  const timedOutOpen = { status: 'refused', refusal: { code: 'session_timed_out', limit: 'nodes', nodes: 0 } } as const;
+  const previewed = (now: Session, list: readonly LayerConstraint[], limits: LayerOrderLimits): LayerPreviewed => {
+    question(list);
+    now.preview = null;
+    const checked = check(now, list, limits);
+    if (!('order' in checked)) return checked;
+    tokens += 1;
+    now.preview = { token: tokens, list: [...list], order: checked.order };
+    return {
+      verdict: 'fits',
+      token: tokens,
+      changed: changedBetween(now.order, checked.order),
+      stacks: stacksOf(checked.order),
+      stage: 'seeds_first',
+      nodes: 1,
+    };
+  };
 
-  return {
-    calls,
-    hold(call) {
-      let release!: () => void;
-      const held = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      holds.set(call, [...(holds.get(call) ?? []), held]);
-      return { release };
-    },
-    trapNext(call) {
-      traps.add(call);
-    },
+  /** Commit `list` on `order`: the session's constraints change, and so does what the count counts. */
+  const committedOn = (now: Session, list: readonly LayerConstraint[], order: LayerFace[], adopted: boolean): LayerCommitted => {
+    const changed = changedBetween(now.order, order);
+    now.constraints = [...list];
+    now.order = order;
+    now.preview = null;
+    now.cursor = null;
+    // A carried row the list now holds is applied, and leaves the carried rows.
+    now.carried = now.carried.filter(({ constraint }) => !constraint || !list.some((c) => sameConstraint(c, constraint)));
+    return {
+      verdict: 'committed',
+      changed,
+      stacks: stacksOf(now.order),
+      open_pairs: openPairsOf(now.constraints),
+      stage: 'seeds_first',
+      nodes: adopted ? 0 : 1,
+      adopted,
+    };
+  };
 
+  const committed = (now: Session, list: readonly LayerConstraint[], limits: LayerOrderLimits): LayerCommitted => {
+    question(list);
+    const checked = check(now, list, limits);
+    if (!('order' in checked)) return checked;
+    return committedOn(now, list, checked.order, false);
+  };
+
+  /** Where a record's saved face is now, by its point. */
+  const foundFace = ({ at }: LayerOrderFace) => figure.facePoints.findIndex(([x, y]) => x === at[0] && y === at[1]);
+
+  /** A record restored onto `now`: E5's rules, over faces found by point. */
+  const restoredOnto = (now: Session, record: LayerOrderRecord, limits: LayerOrderLimits) => {
+    const found = record.faces.map(foundFace);
+    const intact: { index: number; constraint: LayerConstraint }[] = [];
+    const saved_constraints = record.constraints.map(([f, g, sign], index): LayerSavedConstraintStatus => {
+      const subject = found[f] ?? -1;
+      const object = found[g] ?? -1;
+      if (subject < 0 || object < 0) return { status: 'gone', cause: 'face_gone' };
+      if (subject === object) return { status: 'gone', cause: 'same_face' };
+      intact.push({ index, constraint: [subject, object, sign] });
+      return { status: 'intact' };
+    });
+    now.preview = null;
+    now.cursor = null;
+    const checked = check(now, intact.map((row) => row.constraint), limits);
+    const outcome =
+      'order' in checked
+        ? ({ kind: 'applied' } as const)
+        : checked.verdict === 'timed_out'
+          ? ({ kind: 'timed_out', limit: checked.limit, nodes: checked.nodes } as const)
+          : ({ kind: 'clash', constraints: Array.from(checked.constraints, (i) => intact[i]!.index) } as const);
+    if (outcome.kind === 'clash') for (const index of outcome.constraints) saved_constraints[index] = { status: 'clashing' };
+    const applied = 'order' in checked ? new Set(intact.map((row) => row.index)) : new Set<number>();
+    now.carried = record.constraints.flatMap(([f, g, sign], index): LayerCarriedRow[] => {
+      if (applied.has(index)) return [];
+      const face = (k: number) => ({ at: [record.faces[k]!.at[0], record.faces[k]!.at[1]] as [number, number], area: record.faces[k]!.area });
+      const constraint = intact.find((row) => row.index === index)?.constraint ?? null;
+      return [
+        {
+          ...saved_constraints[index]!,
+          index,
+          subject: face(f),
+          object: face(g),
+          sign,
+          constraint: constraint ? [constraint[0], constraint[1], constraint[2]] : null,
+        },
+      ];
+    });
+    if ('order' in checked) {
+      now.constraints = intact.map((row) => row.constraint);
+      now.order = checked.order;
+    } else {
+      now.constraints = [];
+    }
+    return {
+      ...openedOf(now),
+      constraints: [...now.constraints],
+      outcome,
+      saved_faces: {
+        status: Uint8Array.from(found, (face) => (face < 0 ? SAVED_FACE_GONE : SAVED_FACE_INTACT)),
+        face: Int32Array.from(found),
+        area: new Float64Array(found.length).fill(Number.NaN),
+      },
+      saved_constraints,
+      saved_order: new Uint8Array(record.order.length).fill(SAVED_PAIR_KEPT),
+      carried: now.carried.map((row) => ({ ...row })),
+    };
+  };
+
+  /** The smallest clashing subset of `list`, by deletion: E6's filter, by brute force. */
+  const explained = (now: Session, list: readonly LayerConstraint[], limits: LayerOrderLimits): LayerExplained => {
+    question(list);
+    const first = check(now, list, limits);
+    if ('order' in first) return { verdict: 'fits' };
+    if (first.verdict === 'timed_out') return first;
+    let kept = Array.from(list.keys());
+    for (const index of [...kept]) {
+      const without = kept.filter((i) => i !== index);
+      const checked = check(now, without.map((i) => list[i]!), FAKE_LIMITS);
+      if (!('order' in checked) && checked.verdict === 'cant_fit') kept = without;
+    }
+    const last = check(now, kept.map((i) => list[i]!), FAKE_LIMITS) as LayerCantFit;
+    const faces = new Set(kept.flatMap((i) => [list[i]![0], list[i]![1]]));
+    return {
+      verdict: 'clash',
+      constraints: Uint32Array.from(kept),
+      minimal: true,
+      faces: Uint32Array.from([...faces].sort((a, b) => a - b)),
+      proof: last.proof,
+      traced: last.faces,
+    };
+  };
+
+  /** The session's cursor, started if there is none. */
+  const cursorOf = (now: Session): Cursor => {
+    if (!now.cursor) {
+      epochs += 1;
+      now.cursor = { epoch: epochs, constraints: [...now.constraints], read: 0, fits: [] };
+    }
+    return now.cursor;
+  };
+
+  /** Read on `orders` more orders, at least one, unless every order is read. */
+  const advance = (cursor: Cursor, orders: number) => {
+    const edges = edgesOf(cursor.constraints);
+    const until = Math.min(everyOrder.length, cursor.read + Math.max(1, orders));
+    for (; cursor.read < until; cursor.read += 1) {
+      const order = everyOrder[cursor.read]!;
+      if (fitsEdges(order, edges)) cursor.fits.push(order);
+    }
+  };
+
+  const keyOf = (order: readonly LayerFace[], by: LayerStepBy): string =>
+    by === 'layer_order' ? order.join(',') : String(by.picture === 'front' ? order[0] : order.at(-1));
+
+  /** The distinct keys counted so far, in the stepper's order, with a fitting order for each. */
+  const keysOf = (cursor: Cursor, by: LayerStepBy): { key: string; order: LayerFace[] }[] => {
+    const seen = new Map<string, LayerFace[]>();
+    for (const order of cursor.fits) if (!seen.has(keyOf(order, by))) seen.set(keyOf(order, by), order);
+    return [...seen].map(([key, order]) => ({ key, order })).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  };
+
+  const countOf = (cursor: Cursor): LayerSolutionCount => {
+    const done = cursor.read === everyOrder.length;
+    return {
+      front: { n: keysOf(cursor, { picture: 'front' }).length, exact: done },
+      back: { n: keysOf(cursor, { picture: 'back' }).length, exact: done },
+      orders: { n: cursor.fits.length, exact: done },
+      done,
+    };
+  };
+
+  const positionOf = (now: Session, cursor: Cursor, by: LayerStepBy): LayerPosition => {
+    const keys = keysOf(cursor, by);
+    const count = countOf(cursor);
+    const total = by === 'layer_order' ? count.orders : count[by.picture];
+    const at = keys.findIndex(({ key }) => key === keyOf(now.order, by));
+    return at < 0 ? { index: Number.MAX_SAFE_INTEGER, total: { ...total, exact: false } } : { index: at + 1, total };
+  };
+
+  const methods: LayerOrderBackend = {
     async open(_source, limits) {
       await answering('open');
-      if (limits.maxNodes === 0) return timedOutOpen;
-      session = { constraints: [], order: [...figure.order] };
-      return opened(session);
+      session = null;
+      if (limits.maxNodes === 0) return { status: 'refused', refusal: { code: 'session_timed_out', limit: 'nodes', nodes: 0 } };
+      session = fresh([...figure.order], { kind: 'first', timed_out: null });
+      return openedOf(session);
+    },
+
+    async openShowing(_source, relations, limits) {
+      await answering('openShowing');
+      session = null;
+      if (limits.maxNodes === 0) return { status: 'refused', refusal: { code: 'session_timed_out', limit: 'nodes', nodes: 0 } };
+      // The one stack the relations describe: each face below every face related above it.
+      const above = (face: LayerFace) => {
+        let n = 0;
+        for (let i = 1; i < relations.length; i += 2) if (relations[i] === face) n += 1;
+        return n;
+      };
+      const shown = [...figure.order].sort((a, b) => above(a) - above(b) || a - b);
+      const order = closestOrder(shown, figure.forced) ?? [...figure.order];
+      const moved = order.some((face, i) => face !== shown[i]);
+      session = fresh(order, moved ? { kind: 'closest', moved: 1, ignored: 0 } : { kind: 'held', ignored: 0 });
+      return openedOf(session);
     },
 
     async restore(_source, record, limits) {
       await answering('restore');
-      if (limits.maxNodes === 0) return timedOutOpen;
-      const now: Session = { constraints: [], order: [...figure.order] };
-      session = now;
-      const found = record.faces.map(({ at }) => figure.facePoints.findIndex(([x, y]) => x === at[0] && y === at[1]));
-      const intact: LayerConstraint[] = [];
-      const saved_constraints = record.constraints.map(([f, g, sign]): LayerSavedConstraintStatus => {
-        const subject = found[f] ?? -1;
-        const object = found[g] ?? -1;
-        if (subject < 0 || object < 0) return { status: 'gone', cause: 'face_gone' };
-        if (subject === object) return { status: 'gone', cause: 'same_face' };
-        intact.push([subject, object, sign]);
-        return { status: 'intact' };
-      });
-      const restored = {
-        ...opened(now),
-        saved_faces: {
-          status: Uint8Array.from(found, (face) => (face < 0 ? SAVED_FACE_GONE : SAVED_FACE_INTACT)),
-          face: Int32Array.from(found),
-          area: new Float64Array(found.length).fill(Number.NaN),
-        },
-        saved_constraints,
-        saved_order: new Uint8Array(record.order.length).fill(SAVED_PAIR_KEPT),
-      };
-      const checked = check(now, intact, limits);
-      if (!('order' in checked)) {
-        const outcome =
-          checked.verdict === 'timed_out'
-            ? { kind: 'timed_out' as const, limit: checked.limit, nodes: checked.nodes }
-            : { kind: 'clash' as const, constraints: [...checked.constraints] };
-        return { ...restored, constraints: [], outcome };
-      }
-      now.constraints = intact;
-      now.order = checked.order;
-      return { ...restored, open_pairs: openPairsOf(now), constraints: [...intact], outcome: { kind: 'applied' } };
+      session = null;
+      if (limits.maxNodes === 0) return { status: 'refused', refusal: { code: 'session_timed_out', limit: 'nodes', nodes: 0 } };
+      session = fresh([...figure.order], { kind: 'first', timed_out: null });
+      return restoredOnto(session, record, limits);
+    },
+
+    async restoreRecord(record, limits) {
+      await answering('restoreRecord');
+      return restoredOnto(current(), record, limits);
+    },
+
+    async openedOn() {
+      await answering('openedOn');
+      return current().openedOn;
     },
 
     async openPairs() {
       await answering('openPairs');
-      return openPairsOf(current());
+      return openPairsOf(current().constraints);
     },
 
     async constraints() {
@@ -377,36 +598,45 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
     async preview(candidate, limits) {
       await answering('preview');
       const now = current();
-      const list = [...now.constraints, candidate];
-      question(list);
-      const checked = check(now, list, limits);
-      if (!('order' in checked)) return checked;
-      return {
-        verdict: 'fits',
-        changed: changedBetween(now.order, checked.order),
-        stacks: stacksOf(checked.order),
-        stage: 'seeds_first',
-        nodes: 1,
-      };
+      return previewed(now, [...now.constraints, candidate], limits);
+    },
+
+    async previewList(constraints, limits) {
+      await answering('previewList');
+      return previewed(current(), constraints, limits);
     },
 
     async commit(constraints, limits) {
       await answering('commit');
+      return committed(current(), constraints, limits);
+    },
+
+    async commitPreview(token, constraints, limits) {
+      await answering('commitPreview');
       const now = current();
-      question(constraints);
-      const checked = check(now, constraints, limits);
-      if (!('order' in checked)) return checked;
-      const changed = changedBetween(now.order, checked.order);
-      now.constraints = [...constraints];
-      now.order = checked.order;
-      return {
-        verdict: 'committed',
-        changed,
-        stacks: stacksOf(now.order),
-        open_pairs: openPairsOf(now),
-        stage: 'seeds_first',
-        nodes: 1,
-      };
+      const kept = now.preview;
+      if (kept && kept.token === token && sameList(kept.list, constraints)) {
+        return committedOn(now, constraints, kept.order, true);
+      }
+      return committed(now, constraints, limits);
+    },
+
+    async carried() {
+      await answering('carried');
+      return current().carried.map((row) => ({ ...row }));
+    },
+
+    async removeCarried(index) {
+      await answering('removeCarried');
+      const now = current();
+      const before = now.carried.length;
+      now.carried = now.carried.filter((row) => row.index !== index);
+      return now.carried.length < before;
+    },
+
+    async clearCarried() {
+      await answering('clearCarried');
+      current().carried = [];
     },
 
     async stacks(side) {
@@ -422,7 +652,9 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
     async save() {
       await answering('save');
       const now = current();
+      // The committed constraints' faces and the order's, then each carried row's two, as saved.
       const named = [...new Set([...now.constraints.flatMap(([s, o]) => [s, o]), ...now.order])].sort((a, b) => a - b);
+      const faces: LayerOrderFace[] = named.map((face) => ({ at: figure.facePoints[face]!, area: 100 }));
       const indexOf = (face: LayerFace) => named.indexOf(face);
       const pair = (upper: LayerFace, lower: LayerFace): LayerOrderPair => [
         indexOf(upper),
@@ -435,9 +667,13 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
           if (!figure.forced.some(([u, l]) => u === upper && l === lower)) free.push(pair(upper, lower));
         }
       });
+      const carried: LayerOrderPair[] = now.carried.map((row) => {
+        faces.push(row.subject, row.object);
+        return [faces.length - 2, faces.length - 1, row.sign];
+      });
       const record: LayerOrderRecord = {
-        faces: named.map((face) => ({ at: figure.facePoints[face]!, area: 100 })),
-        constraints: now.constraints.map(([s, o, sign]) => [indexOf(s), indexOf(o), sign]),
+        faces,
+        constraints: [...now.constraints.map(([s, o, sign]): LayerOrderPair => [indexOf(s), indexOf(o), sign]), ...carried],
         order: free,
       };
       const encoded = encodeLayerOrderRecord(record);
@@ -452,7 +688,7 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
       order.forEach((upper, i) => {
         for (const lower of order.slice(i + 1)) pairs.push([upper, lower]);
       });
-      pairs.sort((x, y) => Math.min(...x) - Math.min(...y) || Math.max(...x) - Math.max(...y));
+      pairs.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
       return Uint32Array.from(pairs.flat());
     },
 
@@ -461,31 +697,85 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
       session = null;
     },
 
-    // One of E6's calls, by brute force, so a count's flow can be tested
-    // before E6 lands: every order of the one stack that fits, in one slice.
-    async countSolutions() {
-      await answering('countSolutions');
+    async explain(candidate, limits) {
+      await answering('explain');
       const now = current();
-      const edges = edgesOf(now.constraints);
-      const fits = permutations(figure.order).filter((order) =>
-        edges.every(([upper, lower]) => order.indexOf(upper) < order.indexOf(lower))
-      );
-      const tops = [...new Set(fits.map((order) => order[0]!))].sort((a, b) => a - b);
-      const bottoms = [...new Set(fits.map((order) => order.at(-1)!))].sort((a, b) => a - b);
-      const index = fits.findIndex((order) => order.every((face, i) => face === now.order[i]));
-      return {
-        status: 'counted',
-        count: {
-          pictures: { front: { n: tops.length, exact: true }, back: { n: bottoms.length, exact: true } },
-          orders: { n: fits.length, exact: true },
-          current: {
-            pictures: { front: tops.indexOf(now.order[0]!), back: bottoms.indexOf(now.order.at(-1)!) },
-            order: index < 0 ? null : index,
-          },
-        },
-      };
+      return explained(now, candidate ? [...now.constraints, candidate] : now.constraints, limits);
+    },
+
+    async explainList(constraints, limits) {
+      await answering('explainList');
+      return explained(current(), constraints, limits);
+    },
+
+    async countSlice(limits) {
+      await answering('countSlice');
+      const now = current();
+      const cursor = cursorOf(now);
+      advance(cursor, limits.maxNodes);
+      return { epoch: cursor.epoch, count: countOf(cursor) };
+    },
+
+    async position(by) {
+      await answering('position');
+      const now = current();
+      return positionOf(now, cursorOf(now), by);
+    },
+
+    async step(by, direction, limits) {
+      await answering('step');
+      const now = current();
+      const cursor = cursorOf(now);
+      // Unless the count is done, count on within half the step's limits first, as E6 does.
+      advance(cursor, Math.floor(limits.maxNodes / 2));
+      const keys = keysOf(cursor, by);
+      const at = keys.findIndex(({ key }) => key === keyOf(now.order, by));
+      const to = at < 0 ? (direction === 'next' ? 0 : -1) : at + (direction === 'next' ? 1 : -1);
+      const target = keys[to];
+      if (!target) return { verdict: 'end' };
+      const changed = changedBetween(now.order, target.order);
+      now.order = [...target.order];
+      now.preview = null;
+      return { verdict: 'moved', changed, position: positionOf(now, cursor, by), stacks: stacksOf(now.order) };
     },
   };
+
+  return {
+    calls,
+    hold(call) {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      holds.set(call, [...(holds.get(call) ?? []), held]);
+      return { release };
+    },
+    trapNext(call) {
+      traps.add(call);
+    },
+    ...oneAtATime(methods),
+  };
+}
+
+/**
+ * The calls answered one at a time, in the order they arrive, as a real
+ * worker answers them: each bridge call is synchronous, so a call that runs
+ * long (here, one held) keeps every call behind it waiting.
+ */
+function oneAtATime(methods: LayerOrderBackend): LayerOrderBackend {
+  let queue: Promise<unknown> = Promise.resolve();
+  const queued = {} as Record<string, (...args: unknown[]) => Promise<unknown>>;
+  for (const [name, method] of Object.entries(methods) as [string, (...args: unknown[]) => unknown][]) {
+    queued[name] = (...args) => {
+      const turn = queue.then(() => method(...args));
+      queue = turn.then(
+        () => {},
+        () => {}
+      );
+      return turn;
+    };
+  }
+  return queued as unknown as LayerOrderBackend;
 }
 
 // ---------------------------------------------------------------------------
@@ -513,19 +803,19 @@ class FakePort extends EventTarget {
 }
 
 /**
- * A worker running the real worker shell over `backend`, through comlink:
- * what the runtime spawns in a test. `terminate()` cuts both ends, so a call
- * in flight is orphaned exactly as a real one is.
+ * A worker running the real worker shell over `load`'s backend, through
+ * comlink, in this thread: what the runtime spawns in a test. `terminate()`
+ * cuts both ends, so a call in flight is orphaned exactly as a real one is.
  */
-export class FakeLayerOrderWorker extends FakePort {
+export class InProcessLayerOrderWorker extends FakePort {
   terminated = false;
   private readonly inside = new FakePort();
 
-  constructor(readonly backend: FakeLayerOrderBackend) {
+  constructor(load: LayerOrderBackendLoader) {
     super();
     this.other = this.inside;
     this.inside.other = this;
-    expose(createLayerOrderWorkerApi(() => backend), this.inside as unknown as Endpoint);
+    expose(createLayerOrderWorkerApi(load), this.inside as unknown as Endpoint);
   }
 
   terminate(): void {
@@ -540,6 +830,13 @@ export class FakeLayerOrderWorker extends FakePort {
   }
 }
 
+/** A worker over the fake backend, with the test's handle on it. */
+export class FakeLayerOrderWorker extends InProcessLayerOrderWorker {
+  constructor(readonly backend: FakeLayerOrderBackend) {
+    super(() => backend);
+  }
+}
+
 /** A spawner for `createLayerOrderRuntime`, keeping every worker it made and the backend of each. */
 export function fakeLayerOrderWorkers(makeBackend: () => FakeLayerOrderBackend = () => createFakeLayerOrderBackend()) {
   const workers: FakeLayerOrderWorker[] = [];
@@ -547,6 +844,19 @@ export function fakeLayerOrderWorkers(makeBackend: () => FakeLayerOrderBackend =
     workers,
     spawn: (): Worker => {
       const worker = new FakeLayerOrderWorker(makeBackend());
+      workers.push(worker);
+      return worker as unknown as Worker;
+    },
+  };
+}
+
+/** A spawner over any backend: a fresh one per worker, as each real worker loads its own. */
+export function inProcessLayerOrderWorkers(makeBackend: LayerOrderBackendLoader) {
+  const workers: InProcessLayerOrderWorker[] = [];
+  return {
+    workers,
+    spawn: (): Worker => {
+      const worker = new InProcessLayerOrderWorker(makeBackend);
       workers.push(worker);
       return worker as unknown as Worker;
     },

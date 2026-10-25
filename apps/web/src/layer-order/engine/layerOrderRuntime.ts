@@ -1,10 +1,11 @@
 /**
  * One Layer order engine worker's lifetime: spawned on demand, stamped with a
- * generation, terminated to stop it (`implementation-plans/layer-order-dialog.md`,
+ * generation, terminated to stop it, and for the dialog, the solution count
+ * run between its calls (`implementation-plans/layer-order-dialog.md`,
  * approach 5).
  *
- * Each role gets a runtime of its own (the dialog's session, its count, a
- * host's engine), and each runtime at most one worker
+ * Each role gets a runtime of its own (the dialog's session, a host's
+ * engine), and each runtime at most one worker
  * (`workers/layerOrderWorker.ts`). Nothing is shared with the Fold
  * workspace's worker, so stopping one costs Fold nothing.
  *
@@ -20,9 +21,9 @@
  *   after a cancel spawns a fresh worker, with no session open.
  * - **A generation.** It moves when a worker goes away, and when its owner
  *   says the questions already asked no longer matter
- *   ({@link LayerOrderRuntime.invalidate}: the count after a commit). An
- *   answer asked through {@link LayerOrderRuntime.askCurrent} that comes back
- *   under a later generation is dropped as `stale`.
+ *   ({@link LayerOrderRuntime.invalidate}). An answer asked through
+ *   {@link LayerOrderRuntime.askCurrent} that comes back under a later
+ *   generation is dropped as `stale`.
  * - **Engine loss is a typed failure.** A worker that dies (its `error`
  *   event) or an engine that trapped (`layer_order_engine_trapped`) drops the
  *   worker: every call on it rejects as {@link LayerOrderEngineLost} with
@@ -31,19 +32,41 @@
  * - **Previews are latest-wins** ({@link LayerOrderRuntime.channel},
  *   `lib/latestWinsChannel.ts`): a preview already in the worker can't be
  *   dropped, only superseded when it returns.
+ * - **The count runs between calls** (the dialog's, {@link
+ *   LayerOrderRuntimeOptions.count}). The session's one solutions cursor
+ *   lives in the same worker, so the count, the stepper and its "3 of 12"
+ *   read one cursor and the wasm is loaded once. After each answer the
+ *   runtime asks for one slice ({@link LayerOrderEngine.countSlice}), and
+ *   while the worker has nothing else to do it asks for the next, until the
+ *   count is done. **At most one slice is ever outstanding,** and the worker
+ *   answers in the order it is asked, so a call waits behind one slice at
+ *   most, never behind the count; and since every answer earns a slice, a
+ *   stream of previews never starves the count. The slice is asked a task
+ *   after the answer, so a caller that asks again at once goes first. Each
+ *   slice is published ({@link LayerOrderRuntime.count}); an open, a
+ *   restore, a commit that committed and a close publish null at once, and
+ *   the worker starts counting again (a new `epoch`). A step keeps the
+ *   count.
  *
  * Store-free: its owner (the dialog's hook, the host engine) holds it.
  */
-import { wrap, type Remote } from 'comlink';
+import { wrap } from 'comlink';
 import type { WasmErrorEnvelope } from '../../engine/types';
 import { createLatestWinsChannel, type LatestWinsChannel } from '../../lib/latestWinsChannel';
 import { attachWorkerDiagnostics } from '../../lib/workerDiagnostics';
 import { reportError } from '../../monitoring';
-import type { LayerOrderWorkerApi } from '../../workers/layerOrderWorker';
-import { isLayerOrderEngineTrapped, type LayerOrderEngine, type LayerOrderTrapKind } from './layerOrderEngine';
+import {
+  LAYER_ORDER_CALL_FAILURES,
+  isLayerOrderEngineTrapped,
+  type LayerOrderCountSlice,
+  type LayerOrderEngine,
+  type LayerOrderLimits,
+  type LayerOrderTrapKind,
+  type LayerSolutionCount,
+} from './layerOrderEngine';
 
 /** What a worker is for; it tags a crash report. */
-export type LayerOrderEngineRole = 'dialog' | 'count' | 'host';
+export type LayerOrderEngineRole = 'dialog' | 'host';
 
 /**
  * The worker, as the runtime asks it: comlink's proxy, typed as the contract
@@ -87,6 +110,9 @@ export type LayerOrderCrashCause = LayerOrderTrapKind | 'worker_error';
 /** Hears a worker go away: why, and for a crash, what crashed it. */
 export type LayerOrderLossListener = (reason: LayerOrderLossReason, cause?: LayerOrderCrashCause) => void;
 
+/** Hears the count move: each slice's count so far, or null when there is nothing counted. */
+export type LayerOrderCountListener = (count: LayerSolutionCount | null) => void;
+
 interface CrashReport {
   readonly cause: LayerOrderCrashCause;
   readonly message: string;
@@ -114,9 +140,16 @@ export class LayerOrderEngineCrash extends Error {
 export type LayerOrderCurrent<T> = { status: 'answered'; value: T } | { status: 'stale' };
 
 export interface LayerOrderRuntime {
-  /** The engine, every call guarded: it spawns the worker on the first call. */
+  /**
+   * The engine, every call guarded: it spawns the worker on the first call.
+   * Its opens, restores, commits and close also restart the published count.
+   */
   readonly engine: LayerOrderEngine;
-  /** Ask the worker, spawning it if none is running. Rejects as {@link LayerOrderEngineLost} if the worker goes away first. */
+  /**
+   * Ask the worker, spawning it if none is running. Rejects as {@link LayerOrderEngineLost}
+   * if the worker goes away first. A call asked here earns a count slice like any
+   * other, but the count is published again only by the slice's own `epoch`.
+   */
   ask<T>(run: (client: LayerOrderClient) => Promise<T>): Promise<T>;
   /** {@link ask}, with the answer dropped as `stale` if the generation moved while it ran. */
   askCurrent<T>(run: (client: LayerOrderClient) => Promise<T>): Promise<LayerOrderCurrent<T>>;
@@ -138,17 +171,27 @@ export interface LayerOrderRuntime {
   running(): boolean;
   /** Called when a worker goes away, after the calls on it are rejected. */
   onLost(listener: LayerOrderLossListener): () => void;
+  /**
+   * The solution count of the session open, as far as it has gone (`done`
+   * once it is final); null with no session, before its first slice, and
+   * from a restart until the next. Always null without
+   * {@link LayerOrderRuntimeOptions.count}.
+   */
+  count(): LayerSolutionCount | null;
+  /** Called when {@link count} changes. */
+  onCount(listener: LayerOrderCountListener): () => void;
 }
 
 export interface LayerOrderRuntimeOptions {
   readonly role: LayerOrderEngineRole;
   /** Starts a worker. The default spawns `workers/layerOrderWorker.ts`; tests pass a fake. */
   readonly spawn?: () => Worker;
-}
-
-/** The proxy as {@link LayerOrderClient}: assignable as it is, since a union of promises is a promise of the union. */
-function clientOf(remote: Remote<LayerOrderWorkerApi>): LayerOrderClient {
-  return remote;
+  /**
+   * Count the session's solutions between calls, a slice of these limits at
+   * a time (`LAYER_ORDER_COUNT_SLICE`): the dialog's. Left out, nothing is
+   * counted unless asked, as for the hosts' engine.
+   */
+  readonly count?: LayerOrderLimits;
 }
 
 function spawnLayerOrderWorker(): Worker {
@@ -163,18 +206,57 @@ interface Live {
   readonly waiting: Set<(failure: LayerOrderEngineLost) => void>;
 }
 
+function sameCount(a: LayerSolutionCount, b: LayerSolutionCount): boolean {
+  const same = (x: LayerSolutionCount['front'], y: LayerSolutionCount['front']) => x.n === y.n && x.exact === y.exact;
+  return a.done === b.done && same(a.front, b.front) && same(a.back, b.back) && same(a.orders, b.orders);
+}
+
+/** A slice that found no session to count: nothing to report. */
+const NOTHING_TO_COUNT: ReadonlySet<string> = new Set([LAYER_ORDER_CALL_FAILURES.sessionNotOpen, 'unknown_layer_session']);
+
 export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): LayerOrderRuntime {
   const spawn = options.spawn ?? spawnLayerOrderWorker;
+  const slice = options.count;
   let live: Live | null = null;
   let generation = 0;
   let closed = false;
   const listeners = new Set<LayerOrderLossListener>();
 
+  // The count: what is published, and the pump's state.
+  const countListeners = new Set<LayerOrderCountListener>();
+  let counted: LayerOrderCountSlice | null = null;
+  /** The newest cursor a slice of this worker has come from: an older one's slice is never published over it. */
+  let epochSeen = 0;
+  /** Calls asked and not yet settled, slices aside. */
+  let asking = 0;
+  /** Whether a slice is in the worker. Never more than one. */
+  let slicing = false;
+  /** Whether an answer came since the last slice was asked: it earns one. */
+  let owed = false;
+  /** Whether the last slice left more to count. */
+  let more = false;
+  /** Whether a slice failed for a defect: no slice is asked again until the count restarts. */
+  let broken = false;
+  let pumpTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const publish = (next: LayerOrderCountSlice | null) => {
+    if (next) {
+      if (next.epoch < epochSeen) return;
+      epochSeen = next.epoch;
+      // A done count read again is no news.
+      if (counted && counted.epoch === next.epoch && sameCount(counted.count, next.count)) return;
+    } else if (!counted) {
+      return;
+    }
+    counted = next;
+    for (const listener of [...countListeners]) listener(next ? next.count : null);
+  };
+
   const start = (): Live => {
     const worker = spawn();
     const started: Live = {
       worker,
-      client: clientOf(wrap<LayerOrderWorkerApi>(worker)),
+      client: wrap<LayerOrderEngine>(worker),
       // Guarded on identity, so a late event from a worker already replaced cannot drop its replacement.
       detach: attachWorkerDiagnostics(worker, 'layer-order', (failure) => {
         if (live === started) drop('crashed', { cause: 'worker_error', message: failure.message });
@@ -188,7 +270,8 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
   /**
    * The one place a worker goes away. Every call in flight is rejected first,
    * and only then is the worker terminated and the generation moved, so a
-   * listener that asks again gets a fresh worker in a fresh generation.
+   * listener that asks again gets a fresh worker in a fresh generation. The
+   * session, and with it the count, goes with the worker.
    */
   const drop = (reason: LayerOrderLossReason, crash?: CrashReport): boolean => {
     const gone = live;
@@ -200,6 +283,12 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
     gone.detach();
     gone.worker.terminate();
     generation += 1;
+    owed = false;
+    more = false;
+    broken = false;
+    publish(null);
+    // A fresh worker numbers its cursors from the start again.
+    epochSeen = 0;
     if (crash) {
       reportError(new LayerOrderEngineCrash(crash), {
         surface: 'layer-order:engine',
@@ -220,9 +309,8 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
     return Promise.race([pending, gone]).finally(release);
   };
 
-  const ask = <T>(run: (client: LayerOrderClient) => Promise<T>): Promise<T> => {
-    if (closed) return Promise.reject(lost('closed'));
-    const target = live ?? start();
+  /** Ask `target`; a trapped engine drops its worker, and the call rejects as its loss. */
+  const send = <T>(target: Live, run: (client: LayerOrderClient) => Promise<T>): Promise<T> => {
     let pending: Promise<T>;
     try {
       pending = run(target.client);
@@ -240,27 +328,116 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
     );
   };
 
+  /** Whether a slice is due: one is owed, or the count has more and nothing else is waiting. */
+  const sliceDue = () =>
+    !!slice && !closed && !broken && !slicing && live !== null && (owed || (more && asking === 0));
+
+  /** Ask for the next slice a task from now, so a caller that asks again at once goes first. */
+  const schedule = () => {
+    if (pumpTimer !== null || !sliceDue()) return;
+    pumpTimer = setTimeout(pump, 0);
+  };
+
+  const pump = () => {
+    pumpTimer = null;
+    const target = live;
+    if (!slice || !target || !sliceDue()) return;
+    owed = false;
+    slicing = true;
+    send(target, (client) => client.countSlice(slice))
+      .then(
+        (answered) => {
+          publish(answered);
+          more = !answered.count.done;
+        },
+        (error: unknown) => {
+          more = false;
+          // A loss has already published its null; no session is nothing to count.
+          if (isLayerOrderEngineLost(error)) return;
+          publish(null);
+          const code = (error as { code?: unknown } | null)?.code;
+          if (typeof code === 'string' && NOTHING_TO_COUNT.has(code)) return;
+          // A defect: reported once, and the count waits for its next restart rather than failing on every answer.
+          broken = true;
+          reportError(error, { surface: 'layer-order:count', tags: { role: options.role } });
+        }
+      )
+      .finally(() => {
+        slicing = false;
+        schedule();
+      });
+  };
+
+  const ask = <T>(run: (client: LayerOrderClient) => Promise<T>): Promise<T> => {
+    if (closed) return Promise.reject(lost('closed'));
+    const target = live ?? start();
+    asking += 1;
+    const answered = send(target, run);
+    answered
+      .then(
+        () => {
+          owed = true;
+        },
+        () => {}
+      )
+      .finally(() => {
+        asking -= 1;
+        schedule();
+      });
+    return answered;
+  };
+
   const askCurrent = async <T>(run: (client: LayerOrderClient) => Promise<T>): Promise<LayerOrderCurrent<T>> => {
     const asked = generation;
     const value = await ask(run);
     return generation === asked ? { status: 'answered', value } : { status: 'stale' };
   };
 
+  /** Ask, and publish null once `restarts` says the answer changed what the count counts. */
+  const restarting = <T>(run: (client: LayerOrderClient) => Promise<T>, restarts: (answer: T) => boolean) =>
+    ask(run).then((answer) => {
+      if (restarts(answer)) {
+        broken = false;
+        publish(null);
+      }
+      return answer;
+    });
+
+  const always = () => true;
+  const restored = (answer: { status: string }) => answer.status === 'ok';
+  const committed = (answer: { verdict: string }) => answer.verdict === 'committed';
+
   const engine: LayerOrderEngine = {
-    open: (source, limits) => ask((client) => client.open(source, limits)),
-    restore: (source, record, limits) => ask((client) => client.restore(source, record, limits)),
+    open: (source, limits) => restarting((client) => client.open(source, limits), always),
+    openShowing: (source, relations, limits) =>
+      restarting((client) => client.openShowing(source, relations, limits), always),
+    restore: (source, record, limits) => restarting((client) => client.restore(source, record, limits), always),
+    restoreRecord: (record, limits) => restarting((client) => client.restoreRecord(record, limits), restored),
+    openedOn: () => ask((client) => client.openedOn()),
     openPairs: () => ask((client) => client.openPairs()),
     constraints: () => ask((client) => client.constraints()),
     preview: (candidate, limits) => ask((client) => client.preview(candidate, limits)),
-    commit: (constraints, limits) => ask((client) => client.commit(constraints, limits)),
+    previewList: (constraints, limits) => ask((client) => client.previewList(constraints, limits)),
+    commit: (constraints, limits) => restarting((client) => client.commit(constraints, limits), committed),
+    commitPreview: (token, constraints, limits) =>
+      restarting((client) => client.commitPreview(token, constraints, limits), committed),
+    carried: () => ask((client) => client.carried()),
+    removeCarried: (index) => ask((client) => client.removeCarried(index)),
+    clearCarried: () => ask((client) => client.clearCarried()),
     stacks: (side) => ask((client) => client.stacks(side)),
     scene: (side) => ask((client) => client.scene(side)),
     save: () => ask((client) => client.save()),
     relations: () => ask((client) => client.relations()),
-    close: () => ask((client) => client.close()),
+    close: () => restarting((client) => client.close(), always),
     explain: (candidate, limits) => ask((client) => client.explain(candidate, limits)),
-    countSolutions: (limits) => ask((client) => client.countSolutions(limits)),
-    stepSolution: (step, limits) => ask((client) => client.stepSolution(step, limits)),
+    explainList: (constraints, limits) => ask((client) => client.explainList(constraints, limits)),
+    countSlice: (limits) =>
+      ask((client) => client.countSlice(limits)).then((answered) => {
+        publish(answered);
+        return answered;
+      }),
+    position: (by) => ask((client) => client.position(by)),
+    step: (by, direction, limits) => ask((client) => client.step(by, direction, limits)),
   };
 
   return {
@@ -275,6 +452,8 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
     cancel: () => drop('cancelled'),
     dispose: () => {
       closed = true;
+      if (pumpTimer !== null) clearTimeout(pumpTimer);
+      pumpTimer = null;
       drop('closed');
     },
     running: () => live !== null,
@@ -282,6 +461,13 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
+      };
+    },
+    count: () => counted?.count ?? null,
+    onCount: (listener) => {
+      countListeners.add(listener);
+      return () => {
+        countListeners.delete(listener);
       };
     },
   };

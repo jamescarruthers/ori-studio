@@ -1,19 +1,27 @@
 /**
  * The Layer order dialog's engine, as TypeScript sees it: one constraint
- * session over a flat fold (`implementation-plans/layer-order-dialog.md`,
- * approach 1 and 5).
+ * session over a flat fold, and the solution count beside it
+ * (`implementation-plans/layer-order-dialog.md`, approach 1 and 5).
  *
- * It is E5's `oristudio_fold::steer::ConstraintSession` call for call, in the
- * shapes E7's bridge answers in (`crates/oristudio-fold-wasm/src/steer`, its
- * TypeScript in `layerOrderWire.ts`), so the worker's adapter over the
- * bridge (U6) is close to a pass-through. What the contract adds to the
- * bridge:
+ * It is the Fold bridge's `layer_*` calls (E7, `layerOrderWire.ts`) call for
+ * call, and the answers are the bridge's own shapes, re-exported from the
+ * wire, so the worker's backend over the bridge
+ * (`workers/layerOrderBridgeBackend.ts`) is close to a pass-through. What the
+ * contract adds to the bridge:
  *
  * - **One session per worker, and no handle.** The worker that hosts it
- *   (`workers/layerOrderWorker.ts`) holds at most one; {@link
- *   LayerOrderEngine.open} or {@link LayerOrderEngine.restore} replaces it.
- *   One worker file serves three roles: the dialog's session, its solution
- *   count, and the hosts' engine (H2), each in a worker of its own.
+ *   (`workers/layerOrderWorker.ts`) holds at most one; an open or a restore
+ *   replaces it. One worker file serves both roles, each in a worker of its
+ *   own: the dialog's session and the hosts' engine (H2).
+ * - **One solutions cursor per session, and no handle either.** The worker
+ *   starts it on the first count slice, step or position, and starts it
+ *   again whenever the committed constraints change (an open, a restore, a
+ *   commit); a step keeps it. The count, the stepper's "3 of 12" and its
+ *   steps all read that one cursor. {@link LayerOrderSolutionCalls.countSlice}
+ *   advances it by one short slice; the dialog's runtime asks for one after
+ *   each answer (`layerOrderRuntime.ts`), so the count runs between the
+ *   dialog's other calls in the same worker, and a call waits behind one
+ *   slice at most.
  * - **Limits are always given, deadline included** ({@link
  *   LayerOrderLimits}). The wasm has no cancel channel: a call runs until it
  *   answers, so the deadline bounds it and terminating the worker is the
@@ -22,9 +30,6 @@
  * - **Constraints as tuples** ({@link LayerConstraint}), and the record as
  *   the host's own `LayerOrderRecord` (`lib/layerOrder/`), where the bridge
  *   takes packed triples and JSON.
- * - **E6's calls** (explain, the solution count in slices, the stepper),
- *   typed so the dialog can be written against them. Until E6 lands, the
- *   worker rejects them as `layer_order_unsupported_operation`.
  *
  * As on the bridge: outputs are snake_case, large data typed arrays, small
  * results plain objects. **A refusal is an answer; a rejection is the call
@@ -46,174 +51,61 @@ import type { WasmErrorEnvelope } from '../../engine/types';
 import type { LayerOrderRecord, LayerOrderSign } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
 import type { LayerFace } from './faceIndex';
+import type {
+  LayerCarriedRow,
+  LayerCommitted,
+  LayerExplained,
+  LayerOpened,
+  LayerOpenedOn,
+  LayerPosition,
+  LayerPreviewed,
+  LayerRefused,
+  LayerRestored,
+  LayerSide,
+  LayerSolutionCount,
+  LayerStacks,
+  LayerStepBy,
+  LayerStepped,
+} from './layerOrderWire';
 
 // ---------------------------------------------------------------------------
-// The bridge's shapes, mirrored field for field from E7's `layerOrderWire.ts`
-// (not yet on this branch): once both are, these become its re-exports.
+// The bridge's shapes, as the bridge answers them
 
-export type LayerSide = 'front' | 'back';
-
-/**
- * The faces stacked on every spot (a subface the paper scene draws, in its
- * order), top first from one side, packed: spot `i`'s faces are
- * `faces[offsets[i]..offsets[i + 1]]`. A pane that holds one scene restacks
- * it for another order without asking for a new scene.
- */
-export interface LayerStacks {
-  offsets: Uint32Array;
-  faces: Uint32Array;
-}
-
-/** The spots whose top face changes, per side, ascending: what a preview marks and a commit flashes. */
-export interface LayerChangedSpots {
-  front: Uint32Array;
-  back: Uint32Array;
-}
-
-/** Which limit stopped a search. */
-export type LayerBudgetLimit = 'nodes' | 'deadline';
-
-/** Which part of a check settled it. */
-export type LayerCheckStage = 'unchanged' | 'seeds_first' | 'open_order' | 'exhaustive';
-
-/** Which test of the solver's view the folded geometry fails (E4's `ToleranceCause`). */
-export type LayerToleranceCause =
-  | { kind: 'collapsed_face'; face: number }
-  | { kind: 'thin_face'; face: number }
-  | { kind: 'short_crease'; line: number }
-  | { kind: 'crease_off_face'; line: number; face: number }
-  | { kind: 'crease_sides'; line: number }
-  | { kind: 'overlap_disagrees'; faces: [number, number] };
-
-/**
- * Why there is no session, or no record: an answer to show, by code (E4's
- * `SourceRefusal`, E5's `SessionRefusal` and the record codec's). Lines are
- * the source's segments, by index.
- */
-export type LayerRefusal =
-  | { code: 'source_no_faces' }
-  | { code: 'source_kernel'; kernel_code: string }
-  /** The creases trace other faces than the digest the host sent: an order would name the wrong faces. */
-  | { code: 'source_digest_mismatch'; expected: string; actual: string }
-  | { code: 'source_same_parity'; line: number; faces: [number, number] }
-  /** A face with a reflex corner: refused in v1 (D4), naming the face. */
-  | { code: 'source_non_convex_face'; face: number }
-  | { code: 'source_too_many_faces'; face_count: number; limit: number }
-  | { code: 'source_stacked_too_deep'; deepest: number; triples: number; limit: number }
-  | { code: 'source_ambiguous_overlap'; ambiguities: { pair: { lo: number; hi: number }; cause: unknown }[] }
-  | { code: 'source_tolerance'; cause: LayerToleranceCause }
-  /** The creases alone admit no order: Edit could not have folded them flat. */
-  | { code: 'session_no_order'; faces: number[] }
-  /** The open ran out of nodes or time before it had a first order: keep trying. */
-  | { code: 'session_timed_out'; limit: LayerBudgetLimit; nodes: number }
-  | { code: 'session_bad_record'; part: 'record' | 'faces' | 'constraints' | 'order' | 'attention' }
-  /** A later build's record: carried, never read. */
-  | { code: 'record_newer' }
-  /** `damage` is the TypeScript codec's word (`not-json`, `version`, `faces`, …). */
-  | { code: 'record_damaged'; damage: string }
-  /** Past the record budget (`LAYER_ORDER_RECORD_MAX_BYTES`): Apply refuses, with the reason. */
-  | { code: 'record_over_budget'; bytes: number; budget: number };
-
-export interface LayerRefused {
-  status: 'refused';
-  refusal: LayerRefusal;
-}
-
-/** Per saved face, one of these (`LayerOrderRestored.saved_faces.status`). */
-export const SAVED_FACE_INTACT = 0;
-/** Its point lies in a face whose area is not the saved one: split or merged. Never guessed. */
-export const SAVED_FACE_AMBIGUOUS = 1;
-/** Its point lies on a crease or off the paper. */
-export const SAVED_FACE_GONE = 2;
-
-/** Per saved order pair, one of these (`LayerOrderRestored.saved_order`). */
-export const SAVED_PAIR_KEPT = 0;
-export const SAVED_PAIR_MOVED = 1;
-export const SAVED_PAIR_UNRESOLVED = 2;
-
-/** A saved constraint, found again on the creases as they are now. */
-export type LayerSavedConstraintStatus =
-  | { status: 'intact' }
-  | { status: 'ambiguous' }
-  /** Intact, but the intact constraints clash and the proof names this one. */
-  | { status: 'clashing' }
-  | { status: 'gone'; cause: 'face_gone' | 'same_face' | 'no_overlap' };
-
-/** What a restore applied. */
-export type LayerRestoreOutcomeKind =
-  /** Every intact constraint is committed; the order shown is the fitting one closest to the saved one. */
-  | { kind: 'applied' }
-  /** The record's indices of the clashing constraints; none is committed. */
-  | { kind: 'clash'; constraints: number[] }
-  /** None is committed, and the order shown is the open's first. Keep trying. */
-  | { kind: 'timed_out'; limit: LayerBudgetLimit; nodes: number };
-
-/** How a check proved that no order fits. */
-export type LayerCantFitProof =
-  /** Two constraints of the list order one pair both ways. */
-  | { kind: 'opposed' }
-  /** A constraint asks the opposite of what the creases alone force. */
-  | { kind: 'forced' }
-  /** The constraints, propagated with the creases, break a constraint of the fold. */
-  | { kind: 'conflict'; family: 'taco_taco' | 'taco_tortilla' | 'tortilla_tortilla' | 'transitivity' }
-  /** A search proved that these faces have no order. */
-  | { kind: 'no_order'; faces: Uint32Array };
-
-/**
- * A proof that no order fits, never a timeout. `constraints` are indices into
- * the list checked (for a preview: the committed list, then the candidate,
- * last), a set that already has no order with the creases; the smallest such
- * set lies within it ({@link LayerOrderEngine.explain}).
- */
-export interface LayerCantFit {
-  verdict: 'cant_fit';
-  proof: LayerCantFitProof;
-  /** Every face the proof traces back to, the creases' included. */
-  faces: Uint32Array;
-  constraints: Uint32Array;
-}
-
-/** No verdict: "couldn't check in time". Nothing changed. */
-export interface LayerTimedOut {
-  verdict: 'timed_out';
-  limit: LayerBudgetLimit;
-  nodes: number;
-}
-
-/** What a preview found. It never changes the session. */
-export type LayerPreviewed =
-  | {
-      /** Fits: the fitting order closest to the one on screen. */
-      verdict: 'fits';
-      changed: LayerChangedSpots;
-      stacks: { front: LayerStacks; back: LayerStacks };
-      stage: LayerCheckStage;
-      nodes: number;
-    }
-  | LayerCantFit
-  | LayerTimedOut;
-
-/** What a commit did. Only `committed` changed the session; the others leave it as it was. */
-export type LayerCommitted =
-  | {
-      verdict: 'committed';
-      changed: LayerChangedSpots;
-      stacks: { front: LayerStacks; back: LayerStacks };
-      /** The pairs still open under the new list. */
-      open_pairs: Uint32Array;
-      stage: LayerCheckStage;
-      nodes: number;
-    }
-  | LayerCantFit
-  | LayerTimedOut;
-
-/** The codes a bridge call throws with: a caller's mistake or a defect, never an answer. */
-export type LayerCallErrorCode =
-  | 'invalid_input'
-  | 'unknown_layer_session'
-  | 'session_bad_constraint'
-  | 'session_internal'
-  | 'source_internal';
+export type {
+  LayerBudgetLimit,
+  LayerCallErrorCode,
+  LayerCantFit,
+  LayerCantFitProof,
+  LayerCarriedRow,
+  LayerChangedSpots,
+  LayerCheckStage,
+  LayerCommitted,
+  LayerExplained,
+  LayerOpenedOn,
+  LayerPosition,
+  LayerPreviewed,
+  LayerRefusal,
+  LayerRefused,
+  LayerRestoreOutcomeKind,
+  LayerSavedConstraintStatus,
+  LayerSide,
+  LayerSolutionCaps,
+  LayerSolutionCount,
+  LayerStacks,
+  LayerStepBy,
+  LayerStepped,
+  LayerTally,
+  LayerTimedOut,
+  LayerToleranceCause,
+} from './layerOrderWire';
+export {
+  SAVED_FACE_AMBIGUOUS,
+  SAVED_FACE_GONE,
+  SAVED_FACE_INTACT,
+  SAVED_PAIR_KEPT,
+  SAVED_PAIR_MOVED,
+  SAVED_PAIR_UNRESOLVED,
+} from './layerOrderWire';
 
 // ---------------------------------------------------------------------------
 // Constraints
@@ -278,8 +170,9 @@ export function spotCount(stacks: LayerStacks): number {
 // Limits
 
 /**
- * What one call may spend, for the open, a preview, a commit and a restore
- * alike: E5's `Limits`, every field given.
+ * What one call may spend: E5's `Limits`, every field given. A count slice
+ * spends them on counting: one node per search node and per combination
+ * walked.
  */
 export interface LayerOrderLimits {
   /** Search nodes for the open's first order and a check's exhaustive search. */
@@ -301,14 +194,23 @@ const NODES = { maxNodes: 200_000, fastNodes: 128 } as const;
  * The limits the dialog asks with. The deadlines are first guesses, from the
  * plan (a preview's about 3 s, approach 5) and #503's census (the iguana's
  * slowest check passed 30 s); phase gate 2 (E8) measures them in wasm and
- * replaces these.
+ * replaces these. A step checks one solution, as a preview does; an explain
+ * runs a few checks.
  */
 export const LAYER_ORDER_LIMITS = {
   open: { ...NODES, deadlineMs: 30_000 },
   preview: { ...NODES, deadlineMs: 3_000 },
   commit: { ...NODES, deadlineMs: 10_000 },
   restore: { ...NODES, deadlineMs: 30_000 },
+  step: { ...NODES, deadlineMs: 3_000 },
+  explain: { ...NODES, deadlineMs: 10_000 },
 } as const satisfies Record<string, LayerOrderLimits>;
+
+/**
+ * One slice of the solution count, between the dialog's other calls: the
+ * longest a call can wait behind the count. E7's suggestion; E8 measures it.
+ */
+export const LAYER_ORDER_COUNT_SLICE: LayerOrderLimits = { maxNodes: 1_000, fastNodes: 128, deadlineMs: 30 };
 
 /** How much further {@link keepTrying} lets a call go each time. */
 export const KEEP_TRYING_FACTOR = 4;
@@ -328,127 +230,91 @@ export function keepTrying(limits: LayerOrderLimits, factor: number = KEEP_TRYIN
 }
 
 // ---------------------------------------------------------------------------
-// The session's results
+// The session's results: the bridge's, with no handle and constraints as tuples
 
 /** A session, opened: the bridge's `LayerOpened`, with no handle. */
-export interface LayerOrderOpened {
-  status: 'ok';
-  /** How many faces: dialog faces are `0 … faces - 1`. */
-  faces: number;
-  /** Per face, 1 when it shows its front from the front side: what turns a sentence into a constraint and back. */
-  front_up: Uint8Array;
-  /**
-   * The pairs deduction leaves open, `[lo, hi, …]` ascending; never a pair
-   * only the solver's view overlaps. A subject can be picked when it is in
-   * one; its objects are its partners in them.
-   */
-  open_pairs: Uint32Array;
-  /** How many spots the stacks list. */
-  spots: number;
-}
+export type LayerOrderOpened = Omit<LayerOpened, 'session'>;
 
 export type LayerOrderOpenOutcome = LayerOrderOpened | LayerRefused;
 
-/** A record restored onto the creases as they are now (D10): the session it opened, and each part of the record found again. */
-export interface LayerOrderRestored extends LayerOrderOpened {
+/**
+ * A record restored onto the creases as they are now (D10): the session it
+ * opened, each part of the record found again, and the saved constraints it
+ * did not apply ({@link LayerCarriedRow}), which a save writes back.
+ */
+export type LayerOrderRestored = Omit<LayerRestored, 'session' | 'constraints'> & {
   /** The constraints committed: the intact ones when applied, none otherwise. */
   constraints: LayerConstraint[];
-  outcome: LayerRestoreOutcomeKind;
-  /** Per record face: its `SAVED_FACE_*`, the face it is in now (-1 when gone) and that face's area (NaN unless ambiguous). */
-  saved_faces: { status: Uint8Array; face: Int32Array; area: Float64Array };
-  /** Per record constraint. */
-  saved_constraints: LayerSavedConstraintStatus[];
-  /** Per record order pair, its `SAVED_PAIR_*`. */
-  saved_order: Uint8Array;
-}
+};
 
 export type LayerOrderRestoreOutcome = LayerOrderRestored | LayerRefused;
 
 /** The record to save, and its compact JSON, byte for byte `encodeLayerOrderRecord`'s. */
 export type LayerOrderSaveOutcome = { status: 'ok'; record: LayerOrderRecord; json: string } | LayerRefused;
 
-// ---------------------------------------------------------------------------
-// E6's seams: typed now, answered once E6 lands
-
-/** The smallest set of constraints that clashes with the creases, or word that the list fits. */
-export type LayerOrderExplained =
-  | {
-      verdict: 'explained';
-      /** Indices into the list explained (the committed constraints, then the candidate last), ascending. */
-      constraints: Uint32Array;
-      /** Whether no smaller set clashes; false when the limits ran out first. */
-      minimal: boolean;
-      faces: Uint32Array;
-    }
-  | { verdict: 'fits' }
-  | LayerTimedOut;
-
-/** A count, and whether it is exact ("at least N" when it is not). */
-export interface LayerCount {
-  /** Saturates at `Number.MAX_SAFE_INTEGER`, with `exact` false. */
-  n: number;
-  exact: boolean;
-}
-
 /**
- * The solutions that fit the committed constraints: distinct pictures per
- * side (what "N solutions" counts) and layer orders (the tooltip's), each in
- * a stable order, with where the order on screen falls in it.
+ * One slice of the solution count: what the worker's cursor has counted so
+ * far. `epoch` names the cursor: it moves each time the worker starts
+ * counting again, so a slice of an older count is told from the current one.
  */
-export interface LayerSolutionCount {
-  pictures: { front: LayerCount; back: LayerCount };
-  orders: LayerCount;
-  /** The order on screen's place in each stable order, from 0; null until the count reaches it. */
-  current: { pictures: { front: number | null; back: number | null }; order: number | null };
+export interface LayerOrderCountSlice {
+  epoch: number;
+  count: LayerSolutionCount;
 }
-
-/**
- * One slice of the count, which resumes where the last stopped. A commit, a
- * restore or a step on the same session starts it again.
- */
-export type LayerSolutionCountSlice =
-  | { status: 'counting'; so_far: LayerSolutionCount }
-  | { status: 'counted'; count: LayerSolutionCount };
-
-/** Where the stepper goes: by picture from a side, or by layer order (X-ray steps through every order, D5). */
-export type LayerSolutionStep =
-  | { readonly by: 'picture'; readonly side: LayerSide; readonly to: number }
-  | { readonly by: 'order'; readonly to: number };
-
-/** The step taken: that solution is now the order on screen. */
-export type LayerSolutionStepped =
-  | {
-      verdict: 'stepped';
-      index: number;
-      stacks: { front: LayerStacks; back: LayerStacks };
-      changed: LayerChangedSpots;
-    }
-  | LayerTimedOut;
 
 // ---------------------------------------------------------------------------
 // The engine
 
-/** The calls E5 answers, through E7's bridge. */
+/** The session's calls (E5, through E7's bridge). */
 export interface LayerOrderSessionCalls {
-  /** Open a session over `source`: the letters' deduction and a first order. Replaces any session open. */
+  /** Open a session over `source` on the solver's first order. Replaces any session open. */
   open(source: LayerOrderSource, limits: LayerOrderLimits): Promise<LayerOrderOpenOutcome>;
+  /**
+   * Open a session over `source` on the order the host shows: `relations`,
+   * `[upper, lower, …]` as `layerOrderSceneRelations` reads them off the
+   * host's paper scene. `opened_on` says whether it was held whole or the
+   * closest fitting order stands in for it (D19). Replaces any session open.
+   */
+  openShowing(source: LayerOrderSource, relations: Uint32Array, limits: LayerOrderLimits): Promise<LayerOrderOpenOutcome>;
   /**
    * Open a session over `source` and restore `record` onto it, its points in
    * the crease pattern's coordinates (`paperFrame.ts`). Replaces any session open.
    */
   restore(source: LayerOrderSource, record: LayerOrderRecord, limits: LayerOrderLimits): Promise<LayerOrderRestoreOutcome>;
+  /** Restore `record` again on the session open (a retry, Keep trying). */
+  restoreRecord(record: LayerOrderRecord, limits: LayerOrderLimits): Promise<LayerOrderRestoreOutcome>;
+  /** Where the order on screen came from, at the open or the last restore. */
+  openedOn(): Promise<LayerOpenedOn>;
   /** The pairs still open, as {@link LayerOrderOpened.open_pairs}. */
   openPairs(): Promise<Uint32Array>;
   /** The committed constraints, as built. */
   constraints(): Promise<LayerConstraint[]>;
-  /** Whether the committed constraints and `candidate` leave an order. Never changes the session. */
-  preview(candidate: LayerConstraint, limits: LayerOrderLimits): Promise<LayerPreviewed>;
   /**
-   * Make `constraints` the committed list (Add, remove, undo, redo and Clear
-   * all each send the whole list). A list the order on screen still fits, as
-   * any list that only lost constraints does, keeps it exactly.
+   * Whether the committed constraints and `candidate` leave an order. Never
+   * changes the session; a fit carries the `token` Add adopts it by.
+   */
+  preview(candidate: LayerConstraint, limits: LayerOrderLimits): Promise<LayerPreviewed>;
+  /** The same for any list (the dialog's rows after a clash, plus one); `cant_fit.constraints` index it. */
+  previewList(constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerPreviewed>;
+  /**
+   * Make `constraints` the committed list (remove, undo, redo and Clear all
+   * each send the whole list). A list the order on screen still fits, as any
+   * list that only lost constraints does, keeps it exactly.
    */
   commit(constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerCommitted>;
+  /**
+   * Add: commit `constraints`, the list a preview checked, by that preview's
+   * `token`. Adopted with no search (`adopted`, so it cannot time out) while
+   * it is the session's last preview; otherwise committed by a search within
+   * `limits`.
+   */
+  commitPreview(token: number, constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerCommitted>;
+  /** The saved constraints the last restore did not apply, in record order. */
+  carried(): Promise<LayerCarriedRow[]>;
+  /** A carried row's trash button: whether there was one at `index` (its index in the record). */
+  removeCarried(index: number): Promise<boolean>;
+  /** Drop every carried row (Clear all). */
+  clearCarried(): Promise<void>;
   /** The order on screen's stacks from `side`. */
   stacks(side: LayerSide): Promise<LayerStacks>;
   /**
@@ -457,7 +323,7 @@ export interface LayerOrderSessionCalls {
    * fold will; null when the figure has no subfaces.
    */
   scene(side: LayerSide): Promise<OristudioCpFoldedPaperScene | null>;
-  /** The record to save: the faces it names, the constraints as built, the order's free pairs. */
+  /** The record to save: the committed constraints, then the carried rows as saved, and the order's free pairs. */
   save(): Promise<LayerOrderSaveOutcome>;
   /**
    * The order on screen as Oriedita's relations, flat `[upper, lower, …]` over
@@ -465,21 +331,36 @@ export interface LayerOrderSessionCalls {
    * (`LayerOrderApplied.relations`).
    */
   relations(): Promise<Uint32Array>;
-  /** Let the session go. The worker stays, for the next open. */
+  /** Let the session go, with its cursor. The worker stays, for the next open. */
   close(): Promise<void>;
 }
 
-/** E6's calls. */
+/** Why a sentence can't fit, and the solutions (E6). */
 export interface LayerOrderSolutionCalls {
-  /** The smallest clashing set among the committed constraints and `candidate` (or the committed alone, for null). */
-  explain(candidate: LayerConstraint | null, limits: LayerOrderLimits): Promise<LayerOrderExplained>;
-  /** One slice of the solution count, within `limits`. */
-  countSolutions(limits: LayerOrderLimits): Promise<LayerSolutionCountSlice>;
-  /** Show another solution that fits the committed constraints. */
-  stepSolution(step: LayerSolutionStep, limits: LayerOrderLimits): Promise<LayerSolutionStepped>;
+  /**
+   * The smallest set among the committed constraints and `candidate` (or the
+   * committed alone, for null) that clashes with the creases. Never commits.
+   */
+  explain(candidate: LayerConstraint | null, limits: LayerOrderLimits): Promise<LayerExplained>;
+  /** The same for any list. */
+  explainList(constraints: readonly LayerConstraint[], limits: LayerOrderLimits): Promise<LayerExplained>;
+  /**
+   * Advance the session's solutions cursor by one slice within `limits`
+   * ({@link LAYER_ORDER_COUNT_SLICE}), starting it if there is none. Any
+   * slicing ends equal to a one-shot count; a done count only reads.
+   */
+  countSlice(limits: LayerOrderLimits): Promise<LayerOrderCountSlice>;
+  /** Where the order on screen lies in the stepper's fixed order ("3 of 12"): by picture from a side, or by layer order. */
+  position(by: LayerStepBy): Promise<LayerPosition>;
+  /**
+   * Show the next or previous solution. Only the order on screen changes and
+   * the cursor stays good, so the count goes on; a preview kept from before
+   * is dropped (Add then commits from the stepped order).
+   */
+  step(by: LayerStepBy, direction: 'next' | 'previous', limits: LayerOrderLimits): Promise<LayerStepped>;
 }
 
-/** What the dialog's worker exposes, and what the runtime hands its owner, guarded. */
+/** What the worker exposes, and what the runtime hands its owner, guarded. */
 export interface LayerOrderEngine extends LayerOrderSessionCalls, LayerOrderSolutionCalls {}
 
 // ---------------------------------------------------------------------------
@@ -493,9 +374,7 @@ export interface LayerOrderEngine extends LayerOrderSessionCalls, LayerOrderSolu
 export const LAYER_ORDER_CALL_FAILURES = {
   /** A call that needs a session, before one is open or after close. */
   sessionNotOpen: 'layer_order_session_not_open',
-  /** A call the engine does not have yet (E6's, until it lands). */
-  unsupported: 'layer_order_unsupported_operation',
-  /** The worker has no engine to ask: its backend is not wired (until U6), or would not start. */
+  /** The worker has no engine to ask: the Fold wasm would not load or start. */
   unavailable: 'layer_order_engine_unavailable',
   /** The engine failed halfway through a call and answers nothing more; the runtime replaces its worker. */
   trapped: 'layer_order_engine_trapped',
@@ -516,10 +395,4 @@ export function isLayerOrderEngineTrapped(error: unknown): error is LayerOrderEn
   return (
     !!error && typeof error === 'object' && (error as { code?: unknown }).code === LAYER_ORDER_CALL_FAILURES.trapped
   );
-}
-
-/** A call the engine does not have, by name. */
-export interface LayerOrderUnsupported extends WasmErrorEnvelope {
-  readonly code: typeof LAYER_ORDER_CALL_FAILURES.unsupported;
-  readonly operation: keyof LayerOrderEngine;
 }
