@@ -997,7 +997,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] H2: host engine (#512)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
-- [ ] H3: Edit display and Apply
+- [x] H3: Edit display and Apply (#520)
 - [ ] H4: Edit refold with constraints
 - [ ] H5: Fold with layer order…
 - [ ] H6: Edit "Another solution" within constraints
