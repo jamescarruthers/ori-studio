@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { constraintAddedFact, constraintBlockedFact } from './layerOrderAnalytics';
 import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
-import { LAYER_ORDER_MODEL_LIMITS, keepTrying, type LayerOpenFacts } from './layerOrderEngineFacts';
+import { LAYER_ORDER_LIMITS, keepTrying, type LayerOpenFacts } from './layerOrderEngineFacts';
 import {
   OPEN_PAIRS,
   SPOTS,
@@ -146,7 +146,7 @@ describe('the builder with several objects', () => {
     const s = sentenceOf(opened().state, 2, 0).state;
     expect(dispatch(s, { type: 'object_removed', face: 3 })).toEqual({ state: s, effects: [] });
     const committing = play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }).state;
-    const inert = { ...committing, settle: { kind: 'timed_out' as const, limits: LAYER_ORDER_MODEL_LIMITS.restore } };
+    const inert = { ...committing, settle: { kind: 'timed_out' as const, limits: LAYER_ORDER_LIMITS.restore } };
     expect(dispatch(inert, { type: 'object_removed', face: 0 }).state).toBe(inert);
   });
 
@@ -193,7 +193,7 @@ describe('one preview per sentence, over the whole set', () => {
         [2, 3, -1],
       ],
     ]);
-    expect(previews[1]!.limits).toEqual(LAYER_ORDER_MODEL_LIMITS.preview);
+    expect(previews[1]!.limits).toEqual(LAYER_ORDER_LIMITS.preview);
     expect(chosenPreview(s.state)).toMatchObject({ kind: 'pending', candidates: [[2, 0, 1], [2, 3, -1]] });
     expect(addState(s.state)).toMatchObject({ enabled: false, why: 'checking', label: 'add_constraints' });
     expect(hintLine(s.state)?.text).toEqual({ key: 'checking', sentence: view(2, 'in_front_of', 0, 3) });
@@ -229,7 +229,7 @@ describe('one preview per sentence, over the whole set', () => {
         [2, 0, 1],
         [2, 3, -1],
       ],
-      limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.preview),
+      limits: keepTrying(LAYER_ORDER_LIMITS.preview),
     });
   });
 });
@@ -255,7 +255,7 @@ describe('a clash on a compound sentence', () => {
         [2, 0, 1],
         [2, 3, -1],
       ],
-      limits: LAYER_ORDER_MODEL_LIMITS.explain,
+      limits: LAYER_ORDER_LIMITS.explain,
     });
     // While it is explained, the check's own set already names 3.
     expect(paneMarks(cant.state)).toMatchObject({ danger: [2, 3], clashObjects: [3], clashRows: [] });
@@ -443,20 +443,20 @@ describe('Add by a token the session no longer holds', () => {
     expect(lastOf(play(back.state, { type: 'add' }).effects, 'commit')).toMatchObject({
       constraints: [[2, 0, 1]],
       token: null,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
     });
   });
 
   it('a set that fit only after Keep trying gets at least those limits when Add has to search', () => {
     const out = previewed(sentenceOf(opened().state, 2, 0), { verdict: 'timed_out' });
     const again = play(out.state, { type: 'keep_trying' });
-    const retried = keepTrying(LAYER_ORDER_MODEL_LIMITS.preview);
+    const retried = keepTrying(LAYER_ORDER_LIMITS.preview);
     expect(lastOf(again.effects, 'preview').limits).toEqual(retried);
     const fitted = previewed(again, fitsFacts(5));
     // While it is the session's last preview, its token adopts it.
     expect(lastOf(play(fitted.state, { type: 'add' }).effects, 'commit')).toMatchObject({
       token: 5,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
     });
     // After another preview, Add searches with the wider of the two limits.
     const widened = play(fitted.state, { type: 'face_picked', face: 3, origin: 'pattern' });
@@ -464,9 +464,9 @@ describe('Add by a token the session no longer holds', () => {
     const commit = lastOf(play(back.state, { type: 'add' }).effects, 'commit');
     expect(commit).toMatchObject({ token: null });
     expect(commit.limits).toEqual({
-      maxNodes: Math.max(retried.maxNodes, LAYER_ORDER_MODEL_LIMITS.commit.maxNodes),
-      fastNodes: Math.max(retried.fastNodes, LAYER_ORDER_MODEL_LIMITS.commit.fastNodes),
-      deadlineMs: Math.max(retried.deadlineMs, LAYER_ORDER_MODEL_LIMITS.commit.deadlineMs),
+      maxNodes: Math.max(retried.maxNodes, LAYER_ORDER_LIMITS.commit.maxNodes),
+      fastNodes: Math.max(retried.fastNodes, LAYER_ORDER_LIMITS.commit.fastNodes),
+      deadlineMs: Math.max(retried.deadlineMs, LAYER_ORDER_LIMITS.commit.deadlineMs),
     });
     expect(commit.limits.maxNodes).toBe(retried.maxNodes);
   });
@@ -480,7 +480,7 @@ describe('Add by a token the session no longer holds', () => {
       expect(still.state.lastPreview).toBe(fitted.state.lastPreview);
       expect(lastOf(play(still.state, { type: 'add' }).effects, 'commit')).toMatchObject({
         token: 5,
-        limits: LAYER_ORDER_MODEL_LIMITS.commit,
+        limits: LAYER_ORDER_LIMITS.commit,
       });
     }
     const moved = play(stepping.state, {
@@ -907,7 +907,7 @@ describe('a one-object sentence behaves as it always did', () => {
   it('previews, adds and lists one constraint, with the same effects as before', () => {
     const p = sentenceOf(opened().state, 2, 0);
     expect(effectsOf(p.effects, 'preview')).toEqual([
-      { type: 'preview', request: 2, constraints: [[2, 0, 1]], limits: LAYER_ORDER_MODEL_LIMITS.preview },
+      { type: 'preview', request: 2, constraints: [[2, 0, 1]], limits: LAYER_ORDER_LIMITS.preview },
     ]);
     const added = play(fits(p, 7, SPOTS_TWO_OVER_ZERO, changedSpots([1], [1])).state, { type: 'add' });
     expect(lastOf(added.effects, 'commit')).toMatchObject({ constraints: [[2, 0, 1]], token: 7 });

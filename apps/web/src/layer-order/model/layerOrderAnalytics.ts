@@ -56,7 +56,8 @@ export type LayerOrderFact =
   | {
       readonly event: 'layer order dialog opened';
       readonly properties: {
-        readonly surface: LayerOrderSurface;
+        /** Left out when the host didn't say which it is (`LayerOrderRequest.surface` is optional). */
+        readonly surface?: LayerOrderSurface;
         readonly face_count_bucket: string;
         readonly solutions_bucket: LayerOrderSolutionsBucket;
       };
@@ -91,14 +92,14 @@ export type LayerOrderFact =
     };
 
 export function dialogOpenedFact(
-  surface: LayerOrderSurface,
+  surface: LayerOrderSurface | null,
   faces: number,
   solutions: LayerOrderSolutionsBucket
 ): LayerOrderFact {
   return {
     event: 'layer order dialog opened',
     properties: {
-      surface,
+      ...(surface === null ? {} : { surface }),
       face_count_bucket: bucketCount(faces, LAYER_ORDER_FACE_COUNT_BUCKETS),
       solutions_bucket: solutions,
     },

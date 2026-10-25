@@ -37,7 +37,7 @@ import {
   stepByFor,
 } from './layerOrderDecisions';
 import {
-  LAYER_ORDER_MODEL_LIMITS,
+  LAYER_ORDER_LIMITS,
   type LayerChangedSpots,
   type LayerConstraint,
   type LayerExplainFacts,
@@ -106,7 +106,7 @@ const NO_PREVIEWS = { previews: {}, lastPreview: null, blocked: [] } satisfies P
 >;
 
 function openLimits(how: LayerOrderDialogState['how']): LayerOrderLimits {
-  return how === 'restore' ? LAYER_ORDER_MODEL_LIMITS.restore : LAYER_ORDER_MODEL_LIMITS.open;
+  return how === 'restore' ? LAYER_ORDER_LIMITS.restore : LAYER_ORDER_LIMITS.open;
 }
 
 /** The dialog as it opens: working, with one effect, the open. */
@@ -138,7 +138,7 @@ export function initLayerOrderDialog(init: LayerOrderDialogInit): LayerOrderStep
     ...NO_PREVIEWS,
     solutions: { runs: true, generation: 0, count: null, position: null, positionBy: null, step: { kind: 'idle' } },
     hover: { face: null, slot: null, row: null, reason: false },
-    view: { side: 'front', xray: init.xray, openSpots: false },
+    view: { side: init.side ?? 'front', xray: init.xray, openSpots: false },
     flash: null,
     baseline: null,
   };
@@ -270,7 +270,7 @@ function reduce(state: LayerOrderDialogState, action: LayerOrderAction, effects:
         (state.phase.kind === 'opening' && state.phase.request === action.request) ||
         (state.settle.kind === 'restoring' && state.settle.request === action.request);
       if (!waiting) return state;
-      const limits = state.phase.kind === 'opening' ? state.phase.limits : LAYER_ORDER_MODEL_LIMITS.restore;
+      const limits = state.phase.kind === 'opening' ? state.phase.limits : LAYER_ORDER_LIMITS.restore;
       return { ...state, phase: { kind: 'refused', refusal: action.refusal, limits } };
     }
     case 'previewed':
@@ -439,7 +439,7 @@ function opened(
       ? state.phase.limits
       : state.settle.kind === 'restoring'
         ? state.settle.limits
-        : LAYER_ORDER_MODEL_LIMITS.restore;
+        : LAYER_ORDER_LIMITS.restore;
 
   let nextRowId = state.nextRowId;
   const committed: LayerCommittedRow[] = facts.constraints.map((constraint) => ({
@@ -533,7 +533,7 @@ function askExplain(state: LayerOrderDialogState, effects: LayerOrderEffect[]): 
     type: 'explain',
     request: id,
     constraints: previewListOf(asked.rows, entry.candidates),
-    limits: LAYER_ORDER_MODEL_LIMITS.explain,
+    limits: LAYER_ORDER_LIMITS.explain,
   });
   return {
     ...asked,
@@ -570,7 +570,7 @@ function reconcile(state: LayerOrderDialogState, effects: LayerOrderEffect[]): L
   if (builderLive(next) && quiet(next)) {
     const candidates = sentenceCandidates(next, next.pointedVerb ?? next.sentence.verb);
     if (candidates && !next.previews[candidatesKey(candidates)]) {
-      next = askPreview(next, candidates, LAYER_ORDER_MODEL_LIMITS.preview, effects);
+      next = askPreview(next, candidates, LAYER_ORDER_LIMITS.preview, effects);
     }
     next = askExplain(next, effects);
   }
@@ -704,7 +704,7 @@ function add(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOr
   const searchAfterTimeout = entry?.kind === 'timed_out' && ADD_AFTER_PREVIEW_TIMEOUT;
   if (!entry || (entry.kind !== 'fits' && !searchAfterTimeout)) return state;
   const held = entry.kind === 'fits' && entry.request === state.lastPreview;
-  const limits = held ? LAYER_ORDER_MODEL_LIMITS.commit : widestLimits(LAYER_ORDER_MODEL_LIMITS.commit, entry.limits);
+  const limits = held ? LAYER_ORDER_LIMITS.commit : widestLimits(LAYER_ORDER_LIMITS.commit, entry.limits);
   let nextRowId = state.nextRowId;
   const added = entry.candidates.map((constraint): LayerCommittedRow => ({ kind: 'committed', id: nextRowId++, constraint }));
   const rows = { ...state.rows, committed: [...state.rows.committed, ...added] };
@@ -743,7 +743,7 @@ function committed(
     // The rows still clash after a removal: mark the check's set, and find the smallest (D10).
     const [id, next] = request({ ...state, commit: { kind: 'idle' } });
     const rows = facts.constraints.map((index) => commit.listRows[index]).filter((rowId) => rowId !== undefined);
-    effects.push({ type: 'explain', request: id, constraints: commit.constraints, limits: LAYER_ORDER_MODEL_LIMITS.explain });
+    effects.push({ type: 'explain', request: id, constraints: commit.constraints, limits: LAYER_ORDER_LIMITS.explain });
     return { ...next, settle: { kind: 'clash', rows, explain: { request: id, listRows: commit.listRows } } };
   }
 
@@ -819,7 +819,7 @@ function rowsRemoved(state: LayerOrderDialogState, ids: readonly number[], effec
         via: 'remove',
         constraints: committedConstraints(target),
         token: null,
-        limits: LAYER_ORDER_MODEL_LIMITS.commit,
+        limits: LAYER_ORDER_LIMITS.commit,
         rows: target,
         history: recorded(state.history, rows),
         sentence: null,
@@ -870,7 +870,7 @@ function settleAfterRemoval(
       via: 'settle',
       constraints: committedConstraints(rows),
       token: null,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
       rows,
       history: state.history,
       sentence: null,
@@ -893,7 +893,7 @@ function travel(state: LayerOrderDialogState, way: 'undo' | 'redo', effects: Lay
       via: way,
       constraints: committedConstraints(target),
       token: null,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
       rows: target,
       history,
       sentence: null,
@@ -915,7 +915,7 @@ function clearAll(state: LayerOrderDialogState, effects: LayerOrderEffect[]): La
       via: 'clear_all',
       constraints: [],
       token: null,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
       rows: NO_ROWS,
       history,
       sentence: null,
@@ -980,7 +980,7 @@ function step(
     generation: state.solutions.generation,
     by,
     direction,
-    limits: LAYER_ORDER_MODEL_LIMITS.step,
+    limits: LAYER_ORDER_LIMITS.step,
   });
   return { ...next, solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by } } };
 }

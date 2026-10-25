@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { LAYER_ORDER_COUNT_SLICE } from '../layerOrderBudgets';
 import { constraintAddedFact, constraintBlockedFact, dialogClosedFact, dialogOpenedFact } from './layerOrderAnalytics';
-import { LAYER_ORDER_MODEL_LIMITS, keepTrying } from './layerOrderEngineFacts';
+import { LAYER_ORDER_LIMITS, keepTrying } from './layerOrderEngineFacts';
 import {
   INIT,
   OPEN_PAIRS,
@@ -66,14 +66,14 @@ function lastPreviewRequest(played: Played): number {
 describe('opening', () => {
   it('starts working, with one open: on the host’s order, or by restoring its record', () => {
     const showing = initLayerOrderDialog(INIT);
-    expect(showing.state.phase).toEqual({ kind: 'opening', request: 1, limits: LAYER_ORDER_MODEL_LIMITS.open });
-    expect(showing.effects).toEqual([{ type: 'open', request: 1, how: 'showing', limits: LAYER_ORDER_MODEL_LIMITS.open }]);
+    expect(showing.state.phase).toEqual({ kind: 'opening', request: 1, limits: LAYER_ORDER_LIMITS.open });
+    expect(showing.effects).toEqual([{ type: 'open', request: 1, how: 'showing', limits: LAYER_ORDER_LIMITS.open }]);
     expect(openingView(showing.state)).toEqual({ kind: 'working' });
     expect(applyState(showing.state)).toEqual({ enabled: false, why: 'opening' });
 
     const restoring = initLayerOrderDialog({ ...INIT, hasRecord: true });
     expect(restoring.effects).toEqual([
-      { type: 'open', request: 1, how: 'restore', limits: LAYER_ORDER_MODEL_LIMITS.restore },
+      { type: 'open', request: 1, how: 'restore', limits: LAYER_ORDER_LIMITS.restore },
     ]);
   });
 
@@ -129,7 +129,7 @@ describe('opening', () => {
     });
     const again = dispatch(refused.state, { type: 'keep_trying' });
     expect(again.effects).toEqual([
-      { type: 'open', request: 2, how: 'showing', limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.open) },
+      { type: 'open', request: 2, how: 'showing', limits: keepTrying(LAYER_ORDER_LIMITS.open) },
     ]);
     expect(again.state.phase).toMatchObject({ kind: 'opening', request: 2 });
   });
@@ -148,7 +148,7 @@ describe('the preview of a complete sentence', () => {
   it('runs at once; Add waits while it is checking', () => {
     const p = picked(opened().state, 2, 0);
     const preview = lastOf(p.effects, 'preview');
-    expect(preview).toMatchObject({ constraints: [[2, 0, 1]], limits: LAYER_ORDER_MODEL_LIMITS.preview });
+    expect(preview).toMatchObject({ constraints: [[2, 0, 1]], limits: LAYER_ORDER_LIMITS.preview });
     expect(chosenPreview(p.state)?.kind).toBe('pending');
     expect(addState(p.state)).toMatchObject({ enabled: false, why: 'checking' });
     expect(hintLine(p.state)).toEqual({
@@ -195,7 +195,7 @@ describe('the preview of a complete sentence', () => {
       facts: { verdict: 'cant_fit', constraints: [0, 1] },
     });
     const explain = lastOf(cant.effects, 'explain');
-    expect(explain).toMatchObject({ constraints: [[2, 0, 1], [2, 3, -1]], limits: LAYER_ORDER_MODEL_LIMITS.explain });
+    expect(explain).toMatchObject({ constraints: [[2, 0, 1], [2, 3, -1]], limits: LAYER_ORDER_LIMITS.explain });
     // Round 4 "A clash being explained".
     expect(hintLine(cant.state)).toEqual({
       tone: 'busy_danger',
@@ -259,7 +259,7 @@ describe('the preview of a complete sentence', () => {
     const again = dispatch(out.state, { type: 'keep_trying' });
     expect(lastOf(again.effects, 'preview')).toMatchObject({
       constraints: [[2, 0, 1]],
-      limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.preview),
+      limits: keepTrying(LAYER_ORDER_LIMITS.preview),
     });
     expect(chosenPreview(again.state)?.kind).toBe('pending');
   });
@@ -335,7 +335,7 @@ describe('Add (Round3 add, commit)', () => {
     expect(lastOf(added.effects, 'commit')).toMatchObject({
       constraints: [[2, 0, 1]],
       token: 7,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
     });
     // It lands when the commit does; until then nothing else changes the list.
     expect(added.state.sentence.subject).toBe(2);
@@ -421,7 +421,7 @@ describe('the constraints list and its history', () => {
     expect(lastOf(again.effects, 'commit')).toMatchObject({
       constraints: [[2, 0, 1]],
       token: null,
-      limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.commit),
+      limits: keepTrying(LAYER_ORDER_LIMITS.commit),
     });
   });
 
@@ -736,7 +736,7 @@ describe('restored records: rows by status', () => {
 
       const again = dispatch(state, { type: 'keep_trying' });
       const open = lastOf(again.effects, 'open');
-      expect(open).toMatchObject({ how: 'restore', limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.restore) });
+      expect(open).toMatchObject({ how: 'restore', limits: keepTrying(LAYER_ORDER_LIMITS.restore) });
       expect(again.state.phase).toEqual({ kind: 'open' });
       expect(hintLine(again.state)?.text.key).toBe('attention_checking');
 
@@ -765,7 +765,7 @@ describe('restored records: rows by status', () => {
       expect(effectsOf(again.effects, 'open')).toEqual([]);
       expect(lastOf(again.effects, 'commit')).toMatchObject({
         constraints: [[4, 5, -1]],
-        limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.commit),
+        limits: keepTrying(LAYER_ORDER_LIMITS.commit),
       });
       expect(commits({ state: again.state, effects: again.effects }).state.settle).toEqual({ kind: 'settled' });
     });
@@ -863,7 +863,7 @@ describe('solutions: the count and the stepper', () => {
     const built = fits(picked(counted, 2, 0));
     const stepping = play(built.state, { type: 'step', direction: 'next' });
     const step = lastOf(stepping.effects, 'step');
-    expect(step).toMatchObject({ generation: 1, by: { picture: 'front' }, direction: 'next', limits: LAYER_ORDER_MODEL_LIMITS.step });
+    expect(step).toMatchObject({ generation: 1, by: { picture: 'front' }, direction: 'next', limits: LAYER_ORDER_LIMITS.step });
     expect(statusView(stepping.state)?.stepper?.busy).toBe(true);
     expect(addState(stepping.state)).toMatchObject({ enabled: false, why: 'busy' });
 

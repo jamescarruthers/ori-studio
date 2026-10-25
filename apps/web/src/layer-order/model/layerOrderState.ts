@@ -257,7 +257,8 @@ export interface LayerFlash {
 // The state
 
 export interface LayerOrderDialogState {
-  readonly surface: LayerOrderSurface;
+  /** Which host asked, when it says: the analytics' `surface`. */
+  readonly surface: LayerOrderSurface | null;
   readonly how: LayerOpenHow;
   /** Opened from the host's "Review…" (D14). */
   readonly review: boolean;
@@ -465,7 +466,8 @@ export type LayerOrderAction =
 
 /** What the host's opening request decides, and the hook's clock. */
 export interface LayerOrderDialogInit {
-  readonly surface: LayerOrderSurface;
+  /** Which host asked (`LayerOrderRequest.surface`), or null when it doesn't say: sent as the opened event's `surface`. */
+  readonly surface: LayerOrderSurface | null;
   /** Whether the host hands a saved record: the session restores it, else opens on the host's order. */
   readonly hasRecord: boolean;
   /** Whether the record came with `attention` set: `recordNeedsAttentionOf(request.record)`, as the dialog shell asks it. */
@@ -474,5 +476,7 @@ export interface LayerOrderDialogInit {
   readonly review: boolean;
   /** The host's `look.xray`: X-ray on for an Edit figure in Transparent3. */
   readonly xray: boolean;
+  /** The side the host's picture shows (`look.side`): the folded pane opens on it. The front when left out. */
+  readonly side?: LayerSide;
   readonly at: number;
 }
