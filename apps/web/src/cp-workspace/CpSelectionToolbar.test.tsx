@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '../store/workspaceStore/store';
 import type { OristudioCpFoldedFigureEntry } from '../engine/oristudioCpTypes';
 import { cpOverlayViewStore } from './cpOverlayViewStore';
 import { emptyOristudioCpSelection } from '../lib/creasePatternViewport';
+import { FOLD_MAGNITUDE_FULL } from '../lib/foldAngle';
 import { TooltipProvider } from '../components/ui/Tooltip';
 import { CpSelectionToolbar } from './CpSelectionToolbar';
 import { resolveInlineSimulationRegion } from './inlineSimulation/resolveSimulationRegion';
@@ -111,11 +112,13 @@ describe('CpSelectionToolbar', () => {
     await act(async () => renderToolbar(root, container));
     const toolbar = document.querySelector('[role="toolbar"]');
     expect(toolbar).not.toBeNull();
-    // Fold, Export, Save to image, Simulate inline, Simulate, Create shareable link. A
-    // diagram step is made in the Diagram (D21), so there is no Add to diagram here.
-    expect(toolbar?.querySelectorAll('button').length).toBe(6);
+    // Fold, Fold with layer order…, Export, Save to image, Simulate inline, Simulate,
+    // Create shareable link. A diagram step is made in the Diagram (D21), so there is
+    // no Add to diagram here.
+    expect(toolbar?.querySelectorAll('button').length).toBe(7);
     expect(document.querySelector('button[aria-label="Add to diagram"]')).toBeNull();
     expect(document.querySelector('button[aria-label="Fold"]')).not.toBeNull();
+    expect(document.querySelector('button[aria-label="Fold with layer order…"]')).not.toBeNull();
     expect(document.querySelector('button[aria-label="Simulate inline"]')).not.toBeNull();
     expect(document.querySelector('button[aria-label="Simulate"]')).not.toBeNull();
     expect(document.querySelector('button[aria-label="Export…"]')).not.toBeNull();
@@ -149,7 +152,7 @@ describe('CpSelectionToolbar', () => {
     seedStore(LEFT_SHEET);
     await act(async () => renderToolbar(root, container));
     const toolbar = document.querySelector('[role="toolbar"]');
-    expect(toolbar?.querySelectorAll('button').length).toBe(5);
+    expect(toolbar?.querySelectorAll('button').length).toBe(6);
     expect(document.querySelector('button[aria-label="Create shareable link"]')).toBeNull();
     expect(document.querySelector('button[aria-label="Fold"]')).not.toBeNull();
   });
@@ -339,6 +342,62 @@ describe('CpSelectionToolbar', () => {
 
       await act(async () => useWorkspaceStore.getState().undo());
       expect(useWorkspaceStore.getState().oristudioCpFoldedFigures).toEqual([]);
+    });
+  });
+
+  // Row H5: beside Fold, on this toolbar only, an icon button that folds the
+  // sheet with a layer order chosen in the Layer order dialog.
+  describe('Fold with layer order…', () => {
+    const realPrepare = useWorkspaceStore.getState().prepareOristudioCpLayerOrderFold;
+    afterEach(() => {
+      useWorkspaceStore.setState({ prepareOristudioCpLayerOrderFold: realPrepare });
+    });
+
+    const button = () => document.querySelector<HTMLButtonElement>('button[aria-label="Fold with layer order…"]');
+
+    it('sits right after Fold, named by its tooltip', async () => {
+      seedStore(LEFT_SHEET);
+      await act(async () => renderToolbar(root, container));
+      const labels = [...document.querySelectorAll('[role="toolbar"] button')].map((b) => b.getAttribute('aria-label'));
+      expect(labels.slice(0, 2)).toEqual(['Fold', 'Fold with layer order…']);
+      expect(button()?.disabled).toBe(false);
+      // Fold's glyph, cut for the layers badge by a mask of its own.
+      expect(button()?.querySelector('svg mask')).not.toBeNull();
+    });
+
+    it('folds the sheet’s creases for the dialog, and dismisses like every action', async () => {
+      const prepare = vi.fn(async () => ({ status: 'unavailable', reason: 'cancelled' }) as const);
+      useWorkspaceStore.setState({ prepareOristudioCpLayerOrderFold: prepare });
+      seedStore(LEFT_SHEET);
+      await act(async () => renderToolbar(root, container));
+      await act(async () => button()!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+      // The sheet's creases, captured before the toolbar cleared the selection.
+      expect(prepare).toHaveBeenCalledWith(LEFT_SHEET);
+      expect(useWorkspaceStore.getState().oristudioCpSelection.lines).toEqual([]);
+      expect(document.querySelector('[role="toolbar"]')).toBeNull();
+    });
+
+    it('waits, saying why, on a sheet whose creases fold in 3D', async () => {
+      const prepare = vi.fn();
+      useWorkspaceStore.setState({ prepareOristudioCpLayerOrderFold: prepare });
+      const document3d = twoSheetDocument();
+      // The left sheet's diagonal folded half way: its creases fold in 3D.
+      document3d.crease_pattern.line_segments[4] = {
+        ...document3d.crease_pattern.line_segments[4]!,
+        fold_magnitude: FOLD_MAGNITUDE_FULL / 2,
+      };
+      useWorkspaceStore.setState({
+        oristudioCpDocument: { document: document3d },
+        oristudioCpSelection: { ...emptyOristudioCpSelection(), lines: LEFT_SHEET },
+      } as unknown as Partial<ReturnType<typeof useWorkspaceStore.getState>>);
+      await act(async () => renderToolbar(root, container));
+
+      expect(button()?.disabled).toBe(true);
+      expect(button()?.closest('[data-disabled="true"]')).not.toBeNull();
+      // Fold itself folds in 3D, as ever.
+      expect(document.querySelector<HTMLButtonElement>('button[aria-label="Fold"]')?.disabled).toBe(false);
+      expect(prepare).not.toHaveBeenCalled();
     });
   });
 
