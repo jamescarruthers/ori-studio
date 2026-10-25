@@ -12,6 +12,7 @@ import {
   keepTrying,
   type LayerConstraint,
   type LayerOpenedOn,
+  type LayerOpenFacts,
   type LayerOrderLimits,
   type LayerSide,
   type LayerSidesStacks,
@@ -124,6 +125,24 @@ export interface LayerOrderAtApply {
   readonly constraints: readonly LayerConstraint[];
   readonly carried: readonly number[];
   readonly stacks: LayerSidesStacks;
+}
+
+/**
+ * What a session opened on, as the reducer keeps it at its open (`opened`):
+ * for an Apply decided outside the reducer, the dialog shell's before an
+ * inspector (U4's `useLayerOrderSettle`). The order is the host's when it was
+ * held whole (or the closest fit moved nothing), the host flagged nothing,
+ * and a restore applied every saved row.
+ */
+export function openedBaseline(facts: LayerOpenFacts, recordNeedsAttention: boolean): LayerOrderBaseline {
+  const carried = (facts.restore?.carried ?? []).map((row) => row.index);
+  const restoredWhole = facts.restore === null || (facts.restore.outcome.kind === 'applied' && carried.length === 0);
+  return {
+    constraints: facts.constraints,
+    carried,
+    stacks: facts.stacks,
+    matchesHost: openedOnHostOrder(facts.openedOn) && !recordNeedsAttention && restoredWhole,
+  };
 }
 
 /**

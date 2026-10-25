@@ -6,9 +6,15 @@
  * it takes {@link LayerOrderSession.runtime} for the inspector's calls and
  * reads the status the open left.
  *
- * - **The worker is the dialog's.** Created as the dialog mounts, so no
- *   worker exists until a host has opened the dialog, and terminated as it
- *   unmounts. A runtime spawns its worker on its first call, which is the open.
+ * - **The worker is the dialog's, for as long as it is up.** Created as the
+ *   dialog mounts, so no worker exists until a host has opened the dialog,
+ *   and terminated as it unmounts: Cancel, Escape, the close button and Apply
+ *   all settle the opening, the dialog goes, and its worker with it, in the
+ *   same commit. Nothing this hook returns can end the worker or the session
+ *   short of that ({@link LayerOrderSessionRuntime} has no `cancel` or
+ *   `dispose`, its engine no `close`), so no status ever stands over a worker
+ *   that is gone. A long call is bounded by its deadline and Keep trying,
+ *   never by killing the worker.
  * - **Statuses** ({@link LayerOrderSessionStatus}): `opening` (the Opening
  *   frame), `ready` (the open's result), `refused` (by code: what the panes
  *   and the notice say, `session_timed_out` offering Keep trying), `lost`
@@ -21,18 +27,20 @@
  *   (offline, a dropped connection) is shown as `lost` with Try again and
  *   reported to no one (`layerOrderLoadFailure.ts`). A crash is reported by
  *   the runtime, once, under `layer-order:engine`; any other failure of the
- *   open or Apply here, once per dialog, under `layer-order:dialog`. A stop
- *   the dialog asked for is neither.
- * - **Stop** ({@link LayerOrderSession.stop}) terminates the worker at once
- *   (the wasm has no cancel channel), for the Opening frame's Cancel and any
- *   close; the dialog closes after it.
+ *   open or Apply here, once per dialog, under `layer-order:dialog`.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { reportError } from '../../monitoring';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
-import { keepTrying, type LayerOrderLimits, type LayerRefusal } from '../engine/layerOrderEngine';
+import { keepTrying, type LayerOrderEngine, type LayerOrderLimits, type LayerRefusal } from '../engine/layerOrderEngine';
 import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
-import { createLayerOrderRuntime, isLayerOrderEngineLost, type LayerOrderRuntime } from '../engine/layerOrderRuntime';
+import {
+  createLayerOrderRuntime,
+  isLayerOrderEngineLost,
+  type LayerOrderCurrent,
+  type LayerOrderRuntime,
+} from '../engine/layerOrderRuntime';
+import type { LatestWinsChannel } from '../../lib/latestWinsChannel';
 import { layerOrderCountStarts } from '../layerOrderBudgets';
 import {
   applyLayerOrderSession,
@@ -48,11 +56,31 @@ export type LayerOrderSessionLoss = 'load' | 'failed';
 export type LayerOrderSessionStatus =
   /** Working out the layer orders; the Opening frame, with Cancel. `limits` is what the open runs with. */
   | { readonly kind: 'opening'; readonly limits: LayerOrderLimits }
-  | { readonly kind: 'ready'; readonly open: LayerOrderSessionOpen }
+  /** The open's result. `limits` is what the open ran with. */
+  | { readonly kind: 'ready'; readonly open: LayerOrderSessionOpen; readonly limits: LayerOrderLimits }
   /** No session: the refusal says why, by code. `limits` is what the refused open ran with. */
   | { readonly kind: 'refused'; readonly refusal: LayerRefusal; readonly limits: LayerOrderLimits }
   /** The engine went away, failed or never loaded, and its session with it. `limits` is what the last open ran with. */
   | { readonly kind: 'lost'; readonly cause: LayerOrderSessionLoss; readonly limits: LayerOrderLimits };
+
+/** The session's engine as the inspector asks it: every call but `close`, which is the dialog's own. */
+export type LayerOrderSessionEngine = Omit<LayerOrderEngine, 'close'>;
+
+/**
+ * The dialog's runtime as the inspector reaches it: its calls, previews,
+ * generation and count, but not `cancel` or `dispose`, which would end the
+ * worker under a status that still says it is there.
+ */
+export interface LayerOrderSessionRuntime
+  extends Pick<
+    LayerOrderRuntime,
+    'generation' | 'invalidate' | 'running' | 'onLost' | 'setCounting' | 'counting' | 'count' | 'onCount'
+  > {
+  readonly engine: LayerOrderSessionEngine;
+  ask<T>(run: (client: LayerOrderSessionEngine) => Promise<T>): Promise<T>;
+  askCurrent<T>(run: (client: LayerOrderSessionEngine) => Promise<T>): Promise<LayerOrderCurrent<T>>;
+  channel(): LatestWinsChannel<LayerOrderSessionEngine>;
+}
 
 export interface LayerOrderSessionOptions {
   /** Starts the engine's worker. The default spawns `workers/layerOrderWorker.ts`; tests pass a fake. */
@@ -69,15 +97,14 @@ export interface LayerOrderSession {
    * count on and off (`setCounting`). Null only until the dialog's first
    * effect has run.
    */
-  readonly runtime: LayerOrderRuntime | null;
+  readonly runtime: LayerOrderSessionRuntime | null;
   /**
-   * Open again: Try again after a loss (the same limits), Keep trying after
-   * an open that ran out (`keepTrying`'s), or `limits` when given. Ignored
-   * while an open is running.
+   * Open again: Try again after a loss and Keep trying after an open that ran
+   * out, each with the limits the session last opened with (later ones,
+   * `keepTrying`'s, after a timeout), or `limits` when given. Ignored while
+   * an open is running.
    */
   reopen(limits?: LayerOrderLimits): void;
-  /** Stop: terminate the worker now, rejecting every call in flight. The dialog closes after it. */
-  stop(): void;
   /**
    * Apply's plumbing (`applyLayerOrderSession`): the record and relations for
    * the host, or the reason it can't be saved. Null when there is no session
@@ -86,15 +113,29 @@ export interface LayerOrderSession {
   apply(): Promise<LayerOrderApplyAnswer | null>;
 }
 
-/** The limits a status's open ran with, for the next. */
-function limitsOf(status: LayerOrderSessionStatus, request: LayerOrderRequest): LayerOrderLimits {
-  return status.kind === 'ready' ? layerOrderOpenLimits(request) : status.limits;
+/** The limits to open again with after `status`: later ones after an open that ran out, the same otherwise. */
+function againLimits(status: LayerOrderSessionStatus): LayerOrderLimits {
+  return status.kind === 'refused' && status.refusal.code === 'session_timed_out' ? keepTrying(status.limits) : status.limits;
 }
 
-/** The limits to open again with after `status`: later ones after an open that ran out, the same otherwise. */
-function againLimits(status: LayerOrderSessionStatus, request: LayerOrderRequest): LayerOrderLimits {
-  const limits = limitsOf(status, request);
-  return status.kind === 'refused' && status.refusal.code === 'session_timed_out' ? keepTrying(limits) : limits;
+/** What of `runtime` the inspector may reach: no `cancel`, no `dispose`, no `close` (see {@link LayerOrderSessionRuntime}). */
+function sessionRuntimeOf(runtime: LayerOrderRuntime): LayerOrderSessionRuntime {
+  const { close: _close, ...engine } = runtime.engine;
+  return {
+    engine,
+    // The worker's client is the whole engine; what asks through here is typed without `close`.
+    ask: (run) => runtime.ask(run),
+    askCurrent: (run) => runtime.askCurrent(run),
+    channel: () => runtime.channel(),
+    generation: () => runtime.generation(),
+    invalidate: () => runtime.invalidate(),
+    running: () => runtime.running(),
+    onLost: (listener) => runtime.onLost(listener),
+    setCounting: (on) => runtime.setCounting(on),
+    counting: () => runtime.counting(),
+    count: () => runtime.count(),
+    onCount: (listener) => runtime.onCount(listener),
+  };
 }
 
 export function useLayerOrderSession(request: LayerOrderRequest, options: LayerOrderSessionOptions = {}): LayerOrderSession {
@@ -102,7 +143,7 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
     kind: 'opening',
     limits: layerOrderOpenLimits(request),
   }));
-  const [runtime, setRuntime] = useState<LayerOrderRuntime | null>(null);
+  const [runtime, setRuntime] = useState<LayerOrderSessionRuntime | null>(null);
   // The runtime the dialog holds now, and which open of it counts: an answer for another is dropped.
   const live = useRef<{ runtime: LayerOrderRuntime; attempt: number } | null>(null);
   const reported = useRef(false);
@@ -111,14 +152,14 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
   const firstOptions = useRef({ spawn, count });
 
   const lose = useCallback(
-    (cause: LayerOrderSessionLoss) => setStatus((now) => ({ kind: 'lost', cause, limits: limitsOf(now, request) })),
-    [request]
+    (cause: LayerOrderSessionLoss) => setStatus((now) => ({ kind: 'lost', cause, limits: now.limits })),
+    []
   );
 
   /**
-   * A failure that is not a stop the dialog asked for: the session is lost.
-   * A load failure is shown and not reported; a crash the runtime reported;
-   * anything else is reported here, once.
+   * A failure that is not the dialog closing: the session is lost. A load
+   * failure is shown and not reported; a crash the runtime reported; anything
+   * else is reported here, once.
    */
   const fail = useCallback(
     (target: LayerOrderRuntime, error: unknown, call: 'open' | 'apply') => {
@@ -155,7 +196,7 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
             return;
           }
           target.setCounting(layerOrderCountStarts(answer.open.opened.open_pairs.length / 2));
-          setStatus({ kind: 'ready', open: answer.open });
+          setStatus({ kind: 'ready', open: answer.open, limits });
         },
         (error: unknown) => {
           if (current()) fail(target, error, 'open');
@@ -168,7 +209,7 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
   useEffect(() => {
     const target = createLayerOrderRuntime({ role: 'dialog', ...firstOptions.current });
     live.current = { runtime: target, attempt: 0 };
-    setRuntime(target);
+    setRuntime(sessionRuntimeOf(target));
     // A loss after the open (an inspector call's) loses the session too.
     const offLost = target.onLost((reason) => {
       if (live.current?.runtime !== target) return;
@@ -176,6 +217,7 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
       else if (reason === 'unloaded') lose('load');
     });
     open(target, layerOrderOpenLimits(request));
+    // The dialog closing: the one way this worker ends.
     return () => {
       offLost();
       if (live.current?.runtime === target) live.current = null;
@@ -187,18 +229,10 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
     (limits?: LayerOrderLimits) => {
       const held = live.current;
       if (!held || status.kind === 'opening') return;
-      open(held.runtime, limits ?? againLimits(status, request));
+      open(held.runtime, limits ?? againLimits(status));
     },
-    [open, request, status]
+    [open, status]
   );
-
-  const stop = useCallback(() => {
-    const held = live.current;
-    if (!held) return;
-    // Whatever the worker was answering no longer counts.
-    live.current = { runtime: held.runtime, attempt: held.attempt + 1 };
-    held.runtime.cancel();
-  }, []);
 
   const apply = useCallback(async (): Promise<LayerOrderApplyAnswer | null> => {
     const held = live.current;
@@ -212,5 +246,5 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
     }
   }, [fail, request, status]);
 
-  return { status, runtime, reopen, stop, apply };
+  return { status, runtime, reopen, apply };
 }
