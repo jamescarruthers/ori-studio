@@ -64,9 +64,10 @@ async function settle(page) {
  * one of two ways from run to run (±1 on about a hundred corner pixels once a
  * fold is made). CSS transitions are finished first, for the same reason.
  */
-async function steadyShot(page, locator, { timeoutMs = 15000 } = {}) {
+async function steadyShot(page, locator, { timeoutMs = 15000, masked = true } = {}) {
   const deadline = Date.now() + timeoutMs;
-  const floating = [page.locator('section[data-pin]'), page.locator('[data-viewport-toolbar]')];
+  // A modal covers the workspace's floating bars, which a mask would paint over it.
+  const floating = masked ? [page.locator('section[data-pin]'), page.locator('[data-viewport-toolbar]')] : [];
   const shoot = () => locator.screenshot({ animations: 'disabled', mask: floating, maskColor: '#ff00ff' });
   await settle(page);
   let last = await shoot();
@@ -301,11 +302,193 @@ async function foldStackCases(page, url, record) {
 }
 
 // ---------------------------------------------------------------------------
+// The dialog's shell (U4)
+
+const DIALOG = { role: 'dialog', name: 'Layer order' };
+const FOLD_WASM_ROUTE = '**/oristudio_fold_wasm_bg.wasm*';
+
+/**
+ * Edit on kabuto, in `theme` (a preset's name, or null for the app's
+ * default): `tests/fixtures/flat-folder/kabuto.fold` opened as File ▸ Open
+ * does, then folded whole as Edit folds a selection. The fold's source and
+ * paper scene are kept on `window.__layerOrderCheck`, from which each case
+ * builds the request a host would.
+ */
+async function openKabutoInEdit(page, url, theme) {
+  // Nothing of the dialog loads with the page, a file or a fold: no chunk, no worker, no Fold wasm.
+  const early = [];
+  const onRequest = (request) => early.push(request.url());
+  const onWorker = (worker) => early.push(worker.url());
+  // The context's requests, which include a worker's own (its wasm fetch); the page's do not.
+  page.context().on('request', onRequest);
+  page.on('worker', onWorker);
+  await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, {
+    timeout: 120000,
+  });
+  const text = await readFile(path.join(repoRoot, 'tests/fixtures/flat-folder/kabuto.fold'), 'utf8');
+  await page.evaluate(
+    async ({ fold, theme }) => {
+      const store = window.__treemakerWorkspaceStore;
+      const files = { openTextFile: async () => ({ text: fold, name: 'kabuto.fold', path: null }) };
+      if (!(await store.getState().openProject(files, { confirmDiscard: false }))) throw new Error('kabuto did not open');
+      if (theme) {
+        const { useThemeStore } = await import('/src/store/themeStore.ts');
+        useThemeStore.getState().setThemeByName(theme);
+      }
+      const runtime = await import('/src/store/workspaceStore/oristudioCpRuntime.ts');
+      const figure = await runtime.foldOristudioCpDocument(1, 'Order5');
+      const source = await runtime.getOristudioCpFoldedFigureSource(figure.handle);
+      const scene = await runtime.getOristudioCpFoldedFigurePaperScene(figure.handle);
+      if (!scene) throw new Error('kabuto folded with no subfaces');
+      window.__layerOrderCheck = { source, scene };
+    },
+    { fold: text, theme }
+  );
+  page.context().off('request', onRequest);
+  page.off('worker', onWorker);
+  const loaded = early.filter((loadedUrl) =>
+    /components\/layer-order\/LayerOrderDialog\.tsx|layerOrderWorker|oristudio_fold_wasm/.test(loadedUrl)
+  );
+  if (loaded.length > 0) throw new Error(`loaded before any open: ${loaded.join(', ')}`);
+  console.log(`[${theme ?? 'default'}] before the open: ${early.length} requests, none of the dialog, its worker or the Fold wasm`);
+}
+
+/**
+ * Open the dialog through its gateway, as a host does, on kabuto's fold (its
+ * digest forged when `forge`); the answer lands on `window.__layerOrderOutcome`.
+ */
+async function openDialogOnKabuto(page, { forge = false } = {}) {
+  await page.evaluate(async (forge) => {
+    const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+    const { DEFAULT_FOLDED_MODEL } = await import('/src/lib/orieditaNativeMetadata.ts');
+    const { DEFAULT_PAPER_STYLE } = await import('/src/lib/paper/paperStyle.ts');
+    const { PAPER_STYLE_POLICIES } = await import('/src/lib/paper/paperStyleResolve.ts');
+    const { openLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogGateway.ts');
+    const { source, scene } = window.__layerOrderCheck;
+    const kernel = forge ? { ...source, digest: `${source.digest}-forged` } : source;
+    window.__layerOrderOutcome = null;
+    openLayerOrderDialog({
+      source: layerOrderSourceOf(kernel, DEFAULT_FOLDED_MODEL),
+      record: null,
+      look: { style: DEFAULT_PAPER_STYLE, policy: PAPER_STYLE_POLICIES['folded-flat'], turnDeg: 0, xray: false },
+      shown: scene,
+      name: 'Kabuto',
+    }).then((outcome) => {
+      window.__layerOrderOutcome = outcome;
+    });
+  }, forge);
+  await page.getByRole(DIALOG.role, { name: DIALOG.name }).waitFor({ state: 'visible', timeout: 30000 });
+}
+
+/** How the last dialog ended, once it has: its kind, and for Apply what it handed over. */
+async function dialogOutcome(page) {
+  await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
+  return page.evaluate(() => {
+    const outcome = window.__layerOrderOutcome;
+    if (outcome.kind !== 'applied') return { kind: outcome.kind };
+    const { applied } = outcome;
+    return { kind: 'applied', relations: applied.relations.length, constraints: applied.record.constraints.length };
+  });
+}
+
+async function dialogShot(page) {
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  await page.mouse.move(1, 1);
+  return { dialog: await steadyShot(page, dialog, { masked: false }) };
+}
+
+/**
+ * The shell's states, wide and as the whole screen, in one theme: opening (the
+ * Fold wasm held back so the state stays), ready, refused (a forged digest),
+ * lost (the Fold wasm refused) and, on a phone, ready on each pane.
+ */
+function dialogShellCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openKabutoInEdit(page, url, theme);
+    const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    const working = dialog.getByText('Working out the layer orders…');
+    const ready = dialog.getByRole('complementary', { name: 'Layer order details' });
+
+    // Opening: the worker can't start its engine until the wasm arrives.
+    let release;
+    const held = new Promise((resolve) => {
+      release = resolve;
+    });
+    // The worker's fetch reaches the route; a held request is not yet a `request` event.
+    const wasmAsked = [];
+    await page.context().route(FOLD_WASM_ROUTE, async (route) => {
+      wasmAsked.push(route.request().url());
+      await held;
+      await route.continue();
+    });
+    // What the open loads, which nothing before it did (`openKabutoInEdit`).
+    const opening = [];
+    const onRequest = (request) => opening.push(request.url());
+    const onWorker = (worker) => opening.push(worker.url());
+    page.context().on('request', onRequest);
+    page.on('worker', onWorker);
+    await openDialogOnKabuto(page);
+    await working.waitFor({ state: 'visible' });
+    page.context().off('request', onRequest);
+    page.off('worker', onWorker);
+    for (const expected of [/components\/layer-order\/LayerOrderDialog\.tsx/, /layerOrderWorker/]) {
+      if (!opening.some((loadedUrl) => expected.test(loadedUrl))) throw new Error(`the open never loaded ${expected}`);
+    }
+    // The worker loads its own code first, then asks for the wasm, which the route holds.
+    for (let waited = 0; wasmAsked.length === 0 && waited < 60000; waited += 100) await page.waitForTimeout(100);
+    if (wasmAsked.length === 0) throw new Error('the open never fetched the Fold wasm');
+    console.log(`[${tag}] the open loaded the dialog's code, spawned its worker and fetched the Fold wasm`);
+    await record(`dialog-${tag}-opening`, await dialogShot(page));
+    release();
+    await working.waitFor({ state: 'detached', timeout: 60000 });
+    await page.context().unroute(FOLD_WASM_ROUTE);
+    await ready.waitFor({ state: 'visible' });
+    await record(`dialog-${tag}-ready`, await dialogShot(page));
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    const applied = await dialogOutcome(page);
+    if (applied.kind !== 'applied' || applied.relations === 0) throw new Error(`Apply: ${JSON.stringify(applied)}`);
+    console.log(`[${tag}] Apply handed over ${applied.relations / 2} relations and ${applied.constraints} constraints`);
+
+    await openDialogOnKabuto(page, { forge: true });
+    await dialog.getByRole('alert').waitFor({ state: 'visible', timeout: 60000 });
+    await record(`dialog-${tag}-refused`, await dialogShot(page));
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    if ((await dialogOutcome(page)).kind !== 'cancelled') throw new Error('Cancel did not answer cancelled');
+
+    // Lost: a fresh worker whose wasm never arrives.
+    await page.context().route(FOLD_WASM_ROUTE, (route) => route.abort());
+    await openDialogOnKabuto(page);
+    await dialog.getByRole('button', { name: 'Try again' }).waitFor({ state: 'visible', timeout: 60000 });
+    await record(`dialog-${tag}-lost`, await dialogShot(page));
+    await page.context().unroute(FOLD_WASM_ROUTE);
+    await page.keyboard.press('Escape');
+    if ((await dialogOutcome(page)).kind !== 'cancelled') throw new Error('Escape did not answer cancelled');
+
+    // The phone: the whole screen, one pane at a time.
+    await page.setViewportSize(PHONE);
+    await openDialogOnKabuto(page);
+    await ready.waitFor({ state: 'visible', timeout: 60000 });
+    await record(`dialog-${tag}-phone-folded`, await dialogShot(page));
+    await dialog.getByRole('group', { name: 'Pane' }).getByRole('button', { name: 'Crease pattern' }).click();
+    await record(`dialog-${tag}-phone-crease-pattern`, await dialogShot(page));
+    await dialog.getByRole('button', { name: 'Close Layer order' }).click();
+    if ((await dialogOutcome(page)).kind !== 'cancelled') throw new Error('Close did not answer cancelled');
+    await page.setViewportSize(VIEWPORT);
+  };
+}
+
+const PHONE = { width: 390, height: 844 };
+
+// ---------------------------------------------------------------------------
 // The cases, in order. Later PRs add the dialog's.
 
 const CASES = [
   { name: 'fold', run: foldCases },
   { name: 'fold-stack', run: foldStackCases },
+  { name: 'dialog-shell', run: dialogShellCases(null) },
+  { name: 'dialog-shell-horizon', run: dialogShellCases('Horizon') },
 ];
 
 // ---------------------------------------------------------------------------
