@@ -328,12 +328,13 @@ is built.
 | U10 | **Inspector.** `useLayerOrderDialog`; status and stepper; the sentence builder (face slots, verb menu, the reserved hint line with Keep trying); the constraints list (trash, statuses, faces that no longer exist); the five spec analytics events; 8 locales | L | U6, U8, U9, U3b | Opening, counting, couldn't check, attention | Component tests by role and name; a tracker test per event; i18n; Playwright on kabuto, `solution_sample_1` and iguana-c0: pick, preview, can't fit, Add, undo, remove, back side, a forced timeout (tiny node budget on kabuto), coarse pointer in Chromium and WebKit; the fidelity list below |
 | **Phase 1: Edit** |
 | H2 | **Host engine.** `resolveLayerOrder(source, record, limits)` on a short-lived Fold-wasm worker (the U6 worker file), loaded through the dialog's lazy gateway; node budget plus deadline; Stop through `withFoldInFlight` and `runStepFold`; engine-loss rule; one worker across a Refresh All | M | E7, H1, U5 | – | Fake-worker tests for Stop and engine loss; a wasm test on kabuto that resolves after a synthetic split |
-| H3 | **Edit: display and Apply.** The `'layer-order'` catalog entry with a disabled-reason `hint` (3D; "Layer order couldn't be determined for this figure"; no source; a newer record), read from saved data; `applyOristudioCpFigureLayerOrder` (`fold_with_order` on the analysed segments, digest re-checked, one undo entry; an Apply that changed nothing writes nothing); reopen through H2, on demand only, never in the idle rehydrate queue; Edit's `look` (`effectiveObjectPaperStyle`, X-ray for Transparent3, the figure's on-canvas rotation); Duplicate carries the record; the Properties pane laid out as the Diagram's Step pane once its board is approved (the figure's verbs in the header, Render as above its control, a Pose section with Side, Rotation and a Layer order row: ‹ › through the solutions found, "Edit…", the D11 note); "Another solution" per D9 | M–L | E2, H1, H2, U10 | Entry points | Store tests, including undo then restyle; parity guard: with no record, exactly today's kernel calls in order; catalog tests; a `Worker`-constructor spy: opening an .osf with a constrained figure and selecting it spawns no worker; Playwright: Apply, undo, redo, reload, duplicate; desktop Apply in a Tauri dev run; `check:desktop` |
+| H3a | **Edit: the Properties pane** (split from H3, 2026-10-25, so it needn't wait for the dialog). A selected folded figure's pane laid out as the Diagram's Step pane, per the approved Properties board: the figure's verbs in the header (Export…, Duplicate, Delete), Render as above a full-width control, a Pose section (Rotation, Side, and a Layer order row whose ‹ › step through the solutions found, as the Diagram's do, ‹ being new in Edit), Appearance, Camera on 3D, Placement. No "Edit…" yet: H3 adds it and the D11 note | M | – | Properties | Component tests by role and name; the parity of every control it moves (each still calls what it called); the ‹ action's store test; computed-style proof for any block it moves; before/after screenshots of the five board states that exist without a record |
+| H3 | **Edit: display and Apply.** The `'layer-order'` catalog entry with a disabled-reason `hint` (3D; "Layer order couldn't be determined for this figure"; no source; a newer record), read from saved data; `applyOristudioCpFigureLayerOrder` (`fold_with_order` on the analysed segments, digest re-checked, one undo entry; an Apply that changed nothing writes nothing); reopen through H2, on demand only, never in the idle rehydrate queue; Edit's `look` (`effectiveObjectPaperStyle`, X-ray for Transparent3, the figure's on-canvas rotation); Duplicate carries the record; on H3a's Layer order row, "Edit…" and the D11 note, with ‹ › disabled on a constrained figure until H6; "Another solution" per D9 | M–L | E2, H1, H2, U4, H3a; U10 for its browser gates | Entry points | Store tests, including undo then restyle; parity guard: with no record, exactly today's kernel calls in order; catalog tests; a `Worker`-constructor spy: opening an .osf with a constrained figure and selecting it spawns no worker; Playwright: Apply, undo, redo, reload, duplicate; desktop Apply in a Tauri dev run; `check:desktop` |
 | H4 | **Edit: refold with constraints.** Resolve through H2, then a seeded fold; D10; `attention`; a "Review…" action opens the dialog on the flagged rows (D14); a stale figure (D12); a switch to 3D keeps the record (D13), and the idle 3D rehydrate ignores records; `layer constraints need attention` | M | H3 | Attention | Store tests per status; parity guard; Playwright: add two constraints, split a face with a crease, refold, reopen, remove a row, Apply |
 | H5 | **Edit: Fold with layer order….** An icon button beside Fold in the selection toolbar only, never the viewport bar (Fold's glyph with a layers badge); a shortcut-registry entry with no default chord (`null`, as `cp.makeUnassigned` is), in the Fold category beside Fold (G), listed in Settings ▸ Shortcuts as "Unassigned" until someone binds it, with a translated label in `i18n/shortcutLabels.ts`; the selection toolbar's Fold through a gesture (taking over the standalone undo fix); `prepareOristudioCpLayerOrderFold` (a private handle, freed on Cancel); the selection's `look` (the display style, no pins); one undo entry; `fold attempted`/`completed` with `via: 'layer_order'` | M | H3 | Entry points | Catalog and store tests (Cancel leaves no entry, Apply adds one); Playwright |
 | H6 | **Edit: "Another solution" within constraints** (D9). An in-memory cursor on the host engine, created on the first press, never on selection; the enabled state comes from saved data; `fold solution cycled` with `constrained`. Completes Phase 1 as the spec defines it | M | E6, H3 | – | Store and action tests; Playwright |
 | **Phase 2: Diagram and Pose** |
-| H7 | **Diagram step.** Capture with a record through H2 and `fold_with_order` (Refresh, Refresh All, Show as, Duplicate, paperFaces); the Diagram's `look` (`diagramScenePaintStyle`, the step's rotation and side, no spread); the Step-pane entry, shown disabled with its reason on a 3D step; the pager stop-gap until H9; the readout and link status show the record's state from saved data, never the engine (not #475's `useFoldLinkContext` pattern); the annotation-carry rule; the `needs-attention` outcome and event | L | E2, H1, H2, U10 | Entry points, attention | `captureFolded` and action tests with the parity guard; a `Worker`-constructor spy: opening a Diagram with constrained steps spawns no worker; Playwright on a linked diagram (Apply, undo, Refresh after an edit, Show as round trip), and the dialog drawn in the Diagram's style |
+| H7 | **Diagram step.** Capture with a record through H2 and `fold_with_order` (Refresh, Refresh All, Show as, Duplicate, paperFaces); the Diagram's `look` (`diagramScenePaintStyle`, the step's rotation and side, no spread); the Step-pane entry, shown disabled with its reason on a 3D step; the pager stop-gap until H9; the readout and link status show the record's state from saved data, never the engine (not #475's `useFoldLinkContext` pattern); the annotation-carry rule; the `needs-attention` outcome and event | L | E2, H1, H2, U4; U10 for its browser gates | Entry points, attention | `captureFolded` and action tests with the parity guard; a `Worker`-constructor spy: opening a Diagram with constrained steps spawns no worker; Playwright on a linked diagram (Apply, undo, Refresh after an edit, Show as round trip), and the dialog drawn in the Diagram's style |
 | H8 | **Pose.** Pose's `look` (as H7); the source comes from Pose's held fold; Apply replaces the held fold with a `fold_with_order` handle; `FoldKey` and `linkedFoldKey` include the record's digest, and `historyMoved` releases a held fold whose record no longer matches; the `layer-order` pose request (one "Adjust pose"); the toolbar's ‹ › with no readout, each disabled at its end, and "Edit order…"; Pose's keys stand down; Reset Pose keeps the constraints | M | H7 | Entry points | `linkedPose` and `poseController` tests, including Apply → undo → turn over draws the pre-Apply order; Playwright |
 | H9 | **The Diagram's ‹ › within constraints** (D9) | S–M | H6, H7 | – | Action tests; Playwright |
 
@@ -411,6 +412,13 @@ took 1.4 to 2.5 s of a 5 s deadline. The stepper's deadline should be short.
 H7 → H8, H9. E3, U1, U2, U3a, U3b and H1 start on day one. U4, U5, U7, U8 and U9 then
 proceed against fixture scenes and fake workers while the engine lane runs.
 The dialog meets the engine at U6 and the hosts at H3.
+
+**From 2026-10-25** (the engine lane is done): U4 and H3a first. Once U4's PR
+is up, U8, H3 and H7 stack on it. The hosts call the dialog only through U4's
+gateway, which takes H1's `LayerOrderRequest` and resolves to its
+`LayerOrderApplied` or nothing on Cancel, so their code and unit gates need no
+working dialog; their browser gates run once U10 has merged. U10 stacks on U8;
+H4, H5 and H6 on H3; H8 on H7; H9 on H6 and H7.
 
 **Landing and launch** (D17).
 - **There are no flags, so merged means launched.** A merge to main deploys
@@ -533,9 +541,12 @@ disagrees, the artboard wins):
 
 ### Decisions
 
-**Yours to answer.** D17 is decided. D1–D5 are taken as recommended: on
+**All decided.** D17 is decided. D1–D5 are taken as recommended: on
 2026-10-23 you said "Okay great, please implement" to this plan, which assumes
-them. Say if any should change. The rest can wait until the PR named.
+them. D6–D20 are approved as recommended, with the revised Round 4 boards and
+the Properties board, in your words on 2026-10-25: "Approve the revised Round 4
+boards, the Properties board, and decisions D6–D20 as recommended." D19's
+notice has no board of its own; U10 builds it from the approved copy.
 
 *Before E1:*
 
@@ -829,26 +840,27 @@ H3's new rehydrate, so it can only follow H3.
 
 - [x] D17: the `claude/layer-order` feature branch (2026-10-20)
 - [x] D1–D5: taken as recommended with "please implement" (2026-10-23)
-- [ ] D6–D8 and D18 (before U8–U10)
-- [ ] D9–D16 (before H3)
-- [ ] Mocks, each approved before the PRs that name it:
-  - [ ] **Entry points:** Edit's figure toolbar and context menu, Fold with
+- [x] D6–D8 and D18 (approved 2026-10-25)
+- [x] D9–D16 (approved 2026-10-25)
+- [x] D19 and D20 (approved 2026-10-25)
+- [x] Mocks, each approved before the PRs that name it (canvas v17, approved 2026-10-25):
+  - [x] **Entry points:** Edit's figure toolbar and context menu, Fold with
         layer order…, the Step pane row (and its disabled 3D state), Pose's
         toolbar
-  - [ ] **Opening:** working, with Cancel
-  - [ ] **Counting:** "at least N", a stepper with no total, a preview
+  - [x] **Opening:** working, with Cancel
+  - [x] **Counting:** "at least N", a stepper with no total, a preview
         running, a clash being explained
-  - [ ] **Couldn't check in time,** with Keep trying
-  - [ ] **Attention:** rows by status, including faces that no longer exist;
+  - [x] **Couldn't check in time,** with Keep trying
+  - [x] **Attention:** rows by status, including faces that no longer exist;
         the clashing set with Apply waiting; the host's flag and "Review…"
-  - [ ] **Refusals:** "Layer order couldn't be determined for this figure",
+  - [x] **Refusals:** "Layer order couldn't be determined for this figure",
         a non-convex face, a digest mismatch, a failed reopen, the stale-figure notice,
         the detached, 3D and newer-record locks
-  - [ ] **Large figures:** the label cap
-  - [ ] **Phone layout** and its tap equivalents
-  - [ ] **Horizon theme** (the accent and danger colours are the same; face
+  - [x] **Large figures:** the label cap
+  - [x] **Phone layout** and its tap equivalents
+  - [x] **Horizon theme** (the accent and danger colours are the same; face
         picks take `--face-pick`, D20)
-  - [ ] **Properties:** Edit's Properties pane for a selected figure, laid
+  - [x] **Properties:** Edit's Properties pane for a selected figure, laid
         out as the Diagram's Step pane
 - [x] E1: kernel seeded core (#494)
 - [x] E2: kernel entry points and exports (#500)
@@ -857,7 +869,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] E5: constraint session core (#504)
 - [x] E6: explain and solutions (#509, landed through #505)
 - [x] E7: wasm bridge (#505; kept in the Fold bridge, +195 KiB gzipped)
-- [ ] E8: census 2 (phase gate 2 reviewed)
+- [x] E8: census 2 (#513; phase gate 2 passed)
 - [x] U1: shared picking and tints (#497)
 - [x] U2: ModalFrame (#493)
 - [ ] U3a: the native-menu guard (to main)
@@ -871,6 +883,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] U9: inspector model (#510)
 - [ ] U10: inspector
 - [x] H2: host engine (#512)
+- [ ] H3a: Edit's Properties pane
 - [ ] H3: Edit display and Apply
 - [ ] H4: Edit refold with constraints
 - [ ] H5: Fold with layer order…
