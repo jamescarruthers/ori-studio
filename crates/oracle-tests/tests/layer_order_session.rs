@@ -3,23 +3,31 @@
 //! the gates its unit tests hold on the fixtures, at the scale of the corpus.
 //!
 //! Each design is folded as Edit folds a whole sheet, and each one Oriedita
-//! folds flat and `LayerSource::from_oriedita` admits is opened as the dialog
-//! opens it. Then, three times, a constraint is built on an open pair, the
-//! other way from the order on screen (so it changes the order), and:
+//! folds flat and `LayerSource::from_oriedita` admits is opened on the
+//! solver's first order (counting the spots whose top face differs from
+//! Edit's) and then as the dialog opens it, on the order Edit shows
+//! (`open_showing` with the figure's paper-scene relations), which must hold
+//! that order and stack every spot as Edit's scene does. Then, three times, a
+//! constraint is built on an open pair, the other way from the order on
+//! screen (so it changes the order), and:
 //!
 //! 1. **previewed**, and the session must be as it was: constraints, order
 //!    on screen, open pairs, stacks from both sides and the saved record;
 //! 2. previewed again with no nodes at all, which must give the same answer
 //!    when the first needed no search, and a timeout when it did, never a
 //!    "can't fit" it did not prove;
-//! 3. **committed** when it fits, landing on exactly the previewed order; when
-//!    it cannot fit, the order on screen's own way of the pair is committed.
+//! 3. **committed** when it fits, by adopting the preview (`commit_preview`,
+//!    given no nodes at all, so it must not search) and landing on exactly the
+//!    previewed order; when it cannot fit, the order on screen's own way of
+//!    the pair is committed.
 //!
 //! Then the first constraint is **removed**, which must keep the order on
 //! screen, and put back; and the session is **saved**, encoded, read back
 //! and **restored** on a fresh source of the same creases, which must give
 //! back the same constraints, the same order on screen and the same open
-//! pairs, every face and constraint intact and every saved pair kept.
+//! pairs, every face and constraint intact, every saved pair kept and nothing
+//! carried; a second restore on that session (`restore_record`) gives the
+//! same again.
 //!
 //! # Where it runs
 //!
@@ -56,8 +64,8 @@ use oristudio_cp::session::CpSession;
 use oristudio_fold::complete::Deadline;
 use oristudio_fold::steer::{
     CantFitProof, Commit, Constraint, ConstraintSession, ConstraintStatus, FaceStatus, LayerSource,
-    Limits, Preview, RECORD_MAX_BYTES, RecordRead, RestoreOutcome, SavedPairStatus, Stacks, Verb,
-    ViewSide, encode_record, read_record,
+    Limits, OpenedOn, Preview, RECORD_MAX_BYTES, RecordRead, RestoreOutcome, SavedPairStatus,
+    Stacks, Verb, ViewSide, encode_record, read_record, scene_relations,
 };
 use oristudio_layer_order::{FacePair, LayerOrder};
 
@@ -132,6 +140,23 @@ struct Row {
     record_bytes: usize,
     save_ms: f64,
     restore_ms: f64,
+    /// Spots whose top face differs from Edit's when the session opens on the
+    /// solver's first order.
+    first_tops_differ: usize,
+    /// Where `open_showing` put the order on screen: `held`, `closest`,
+    /// `first`.
+    showing: &'static str,
+    /// Spots whose stack differs from Edit's after `open_showing`.
+    showing_differ: usize,
+    /// Spots whose top face differs from Edit's after `open_showing`.
+    showing_tops_differ: usize,
+    /// When Edit's order is not held: how it breaks the solver's problem,
+    /// violations by kind.
+    edit_violations: BTreeMap<String, usize>,
+    /// How deep the first such taco-tortilla's crease runs into its
+    /// tortilla, in the sheet's units.
+    crossing_depth: Option<f64>,
+    showing_ms: f64,
     /// Every gate this design failed, by name.
     failures: Vec<String>,
 }
@@ -147,12 +172,13 @@ impl Row {
 
     const CSV_HEADER: &'static str = "name,group,status,faces,pairs,spots,open_at_start,open_ms,\
 previews,preview_ms_median,preview_ms_max,commit_ms_max,verdicts,tiny_timed_out,tiny_alike,\
-constraints,record_bytes,save_ms,restore_ms,failures";
+constraints,record_bytes,save_ms,restore_ms,first_tops_differ,showing,showing_differ,showing_ms,\
+failures";
 
     fn csv(&self) -> String {
         let clean = |s: &str| s.replace([',', '\n'], ";");
         format!(
-            "{},{},{},{},{},{},{},{:.1},{},{:.2},{:.2},{:.2},{},{},{},{},{},{:.1},{:.1},{}",
+            "{},{},{},{},{},{},{},{:.1},{},{:.2},{:.2},{:.2},{},{},{},{},{},{:.1},{:.1},{},{},{},{:.1},{}",
             clean(&self.name),
             self.group,
             clean(&self.status),
@@ -176,6 +202,10 @@ constraints,record_bytes,save_ms,restore_ms,failures";
             self.record_bytes,
             self.save_ms,
             self.restore_ms,
+            self.first_tops_differ,
+            self.showing,
+            self.showing_differ,
+            self.showing_ms,
             clean(&self.failures.join(" ")),
         )
     }
@@ -185,13 +215,17 @@ constraints,record_bytes,save_ms,restore_ms,failures";
             return format!("{}: {}", self.name, self.status);
         }
         format!(
-            "{}: {} faces, {} pairs, {} spots, {} open; open {:.0} ms, preview median {:.1} ms \
+            "{}: {} faces, {} pairs, {} spots, {} open; first order {} tops off Edit's, \
+             open_showing {} ({} stacks off); open {:.0} ms, preview median {:.1} ms \
              max {:.1} ms; {} constraints, record {} B, restore {:.0} ms; {}",
             self.name,
             self.faces,
             self.pairs,
             self.spots,
             self.open_at_start,
+            self.first_tops_differ,
+            self.showing,
+            self.showing_differ,
             self.open_ms,
             percentile(&self.preview_ms, 0.5).unwrap_or(0.0),
             max(&self.preview_ms),
@@ -345,11 +379,24 @@ fn census(name: &str, group: &'static str, path: &Path) -> Row {
     };
     row.faces = source.view().faces().len();
     row.pairs = source.problem().variables().len();
+    // What Edit shows: its figure's paper scene, front.
+    let edit = match cp.folded_figure_paper_scene(folded.handle, None) {
+        Ok(Some(scene)) => scene,
+        other => {
+            row.status = format!("no scene {}", other.is_ok());
+            return row;
+        }
+    };
+    let edit_stacks: Vec<Vec<u32>> = edit
+        .subfaces
+        .iter()
+        .map(|s| s.faces_top_to_bottom.iter().map(|&f| f as u32).collect())
+        .collect();
 
     let t = Instant::now();
     let session = ConstraintSession::open(source, &limits_for(120_000.0));
     row.open_ms = elapsed_ms(t);
-    let mut session = match session {
+    let first = match session {
         Ok(session) => session,
         Err(refusal) => {
             row.status = refusal.code().to_string();
@@ -357,8 +404,114 @@ fn census(name: &str, group: &'static str, path: &Path) -> Row {
         }
     };
     row.status = "ok".to_string();
-    row.spots = session.spot_count();
-    row.open_at_start = session.open_pairs().len();
+    row.spots = first.spot_count();
+    row.open_at_start = first.open_pairs().len();
+    let stacks = first.stacks(ViewSide::Front);
+    row.first_tops_differ = edit_stacks
+        .iter()
+        .enumerate()
+        .filter(|(i, stack)| stacks.spot(*i).first() != stack.first())
+        .count();
+
+    // 0. The dialog opens on the order Edit shows, spot for spot.
+    let t = Instant::now();
+    let showing = ConstraintSession::open_showing(
+        first.into_source(),
+        &scene_relations(&edit),
+        &limits_for(120_000.0),
+    );
+    row.showing_ms = elapsed_ms(t);
+    let mut session = match showing {
+        Ok(session) => session,
+        Err(refusal) => {
+            row.failures
+                .push(format!("open_showing {}", refusal.code()));
+            return row;
+        }
+    };
+    row.showing = match session.opened_on() {
+        OpenedOn::Held { .. } => "held",
+        OpenedOn::Closest { .. } => "closest",
+        OpenedOn::First { .. } => "first",
+    };
+    if row.showing != "held" {
+        // Why the solver's problem does not take Edit's order: its
+        // violations of it, by kind.
+        let mut edit_order = LayerOrder::new();
+        for r in scene_relations(&edit) {
+            let _ = edit_order.set_above(
+                oristudio_fold::FaceId(r.upper_face as u32),
+                oristudio_fold::FaceId(r.lower_face as u32),
+            );
+        }
+        let source = session.source();
+        if let Ok(report) = oristudio_layer_order::check::check_problem(
+            source.problem(),
+            source.view(),
+            &edit_order,
+            oristudio_layer_order::check::Scope::All,
+        ) {
+            for violation in &report.violations {
+                let kind = serde_json::to_value(violation)
+                    .ok()
+                    .and_then(|v| v["kind"].as_str().map(str::to_string))
+                    .unwrap_or_default();
+                *row.edit_violations.entry(kind).or_default() += 1;
+            }
+            // How deep the first taco-tortilla's crease runs into its
+            // tortilla, in the sheet's units (the tolerance is 1e-6).
+            row.crossing_depth = report.violations.iter().find_map(|v| {
+                let oristudio_layer_order::check::Violation::TacoTortilla { faces: [a, b, h] } = *v
+                else {
+                    return None;
+                };
+                let edge = source
+                    .view()
+                    .edges()
+                    .iter()
+                    .find(|e| e.faces == [a, b] || e.faces == [b, a])?;
+                let ring = oristudio_geometry::convex::normalize(&source.view().face(h)?.polygon);
+                let planes = oristudio_geometry::convex::edge_planes(&ring);
+                let [p, q] = edge.segment;
+                (0..=20)
+                    .map(|i| {
+                        let t = f64::from(i) / 20.0;
+                        let x = [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])];
+                        planes
+                            .iter()
+                            .map(|plane| plane.signed_distance(x))
+                            .fold(f64::INFINITY, f64::min)
+                    })
+                    .reduce(f64::max)
+            });
+        }
+        // Holding fails only for an order the problem rejects: then the
+        // closest fitting order is the session's to show (reported, not a
+        // failure); an order it accepts must be held.
+        if row.edit_violations.is_empty() || row.showing != "closest" {
+            row.failures.push(format!(
+                "open_showing {:?} edit_order_violates {:?}",
+                session.opened_on(),
+                row.edit_violations
+            ));
+        }
+    }
+    let stacks = session.stacks(ViewSide::Front);
+    row.showing_differ = edit_stacks
+        .iter()
+        .enumerate()
+        .filter(|(i, stack)| stacks.spot(*i) != stack.as_slice())
+        .count()
+        + edit_stacks.len().abs_diff(stacks.len());
+    row.showing_tops_differ = edit_stacks
+        .iter()
+        .enumerate()
+        .filter(|(i, stack)| stacks.spot(*i).first() != stack.first())
+        .count();
+    // Held, the dialog shows Edit's picture spot for spot.
+    if row.showing == "held" && row.showing_differ > 0 {
+        row.failures.push("open_showing_stacks".to_string());
+    }
 
     let tiny = Limits {
         max_nodes: Some(0),
@@ -418,18 +571,21 @@ fn census(name: &str, group: &'static str, path: &Path) -> Row {
             )),
         }
 
-        // 3. Commit what fits; Add lands on the previewed order.
-        let chosen = match &preview {
-            Preview::Fits(_) => candidate,
+        // 3. Commit what fits by adopting its preview (Add): no search, so
+        // even with no nodes it lands on the previewed order; else the order
+        // on screen's own way of the pair.
+        let t = Instant::now();
+        let committed = match &preview {
+            Preview::Fits(fit) => session.commit_preview(fit.clone(), &tiny),
             _ => match with_shown(&session, pair) {
-                Some(keep) => keep,
+                Some(keep) => {
+                    let mut list = session.constraints().to_vec();
+                    list.push(keep);
+                    session.commit(list, &limits_for(30_000.0))
+                }
                 None => break,
             },
         };
-        let mut list = session.constraints().to_vec();
-        list.push(chosen);
-        let t = Instant::now();
-        let committed = session.commit(list, &limits_for(30_000.0));
         row.commit_ms.push(elapsed_ms(t));
         match (committed, &preview) {
             (Ok(Commit::Committed(_)), Preview::Fits(fit)) => {
@@ -533,6 +689,18 @@ fn census(name: &str, group: &'static str, path: &Path) -> Row {
     if restored.session.open_pairs() != session.open_pairs() {
         row.failures.push("restore_open".to_string());
     }
+    if !restored.session.carried().is_empty() {
+        row.failures.push("restore_carried".to_string());
+    }
+    // A retry on the open session restores the same.
+    let mut again = restored.session;
+    match again.restore_record(&record, &limits_for(120_000.0)) {
+        Ok(report)
+            if report.outcome == RestoreOutcome::Applied
+                && again.shown_order() == session.shown_order()
+                && again.constraints() == session.constraints() => {}
+        other => row.failures.push(format!("restore_record {other:?}")),
+    }
     row
 }
 
@@ -573,7 +741,10 @@ fn the_session_passes_every_gate_on_the_fixtures() {
         .collect();
     for row in rows_of(&designs, 1) {
         assert!(row.passes(), "{row:#?}");
-        assert_eq!(row.constraints, STEPS, "{}", row.name);
+        // Every fixture has open pairs to build on (kabuto's run out after
+        // two, from Edit's order).
+        assert!(row.constraints >= 2, "{}: {}", row.name, row.constraints);
+        assert_eq!(row.showing, "held", "{}", row.name);
     }
 }
 
@@ -702,11 +873,57 @@ fn summary(rows: &[Row], jobs: usize) -> String {
         admitted.iter().map(|r| r.tiny_timed_out).sum::<usize>(),
         admitted.iter().map(|r| r.tiny_alike).sum::<usize>(),
     );
+    let showing = admitted.iter().fold(BTreeMap::new(), |mut m, r| {
+        *m.entry(r.showing).or_insert(0usize) += 1;
+        m
+    });
+    let _ = writeln!(
+        s,
+        "Opened on the solver's first order, {} of {} designs show another top face than Edit \
+         on some spot ({} spots in all); opened on Edit's own order (`open_showing`): {:?}, \
+         {} designs with any stack off Edit's\n",
+        admitted.iter().filter(|r| r.first_tops_differ > 0).count(),
+        admitted.len(),
+        admitted.iter().map(|r| r.first_tops_differ).sum::<usize>(),
+        showing,
+        admitted.iter().filter(|r| r.showing_differ > 0).count(),
+    );
+    let not_held: Vec<&&Row> = admitted.iter().filter(|r| r.showing != "held").collect();
+    if !not_held.is_empty() {
+        let kinds = not_held.iter().fold(BTreeMap::new(), |mut m, r| {
+            for (k, n) in &r.edit_violations {
+                *m.entry(k.clone()).or_insert(0usize) += n;
+            }
+            m
+        });
+        let depths: Vec<f64> = not_held.iter().filter_map(|r| r.crossing_depth).collect();
+        let _ = writeln!(
+            s,
+            "Where Edit's order is not held ({} designs), the solver's problem finds it breaks \
+             {:?}, the first such crease running {:.4} to {:.4} of the sheet into its tortilla \
+             (the tolerance is 1e-6); the closest order shows another top face than Edit on {} \
+             spots, the first order on {}\n",
+            not_held.len(),
+            kinds,
+            depths.iter().copied().fold(f64::INFINITY, f64::min),
+            max(&depths),
+            not_held
+                .iter()
+                .map(|r| r.showing_tops_differ)
+                .sum::<usize>(),
+            not_held.iter().map(|r| r.first_tops_differ).sum::<usize>(),
+        );
+    }
     let _ = writeln!(s, "| Corpus (p50 / p95 / max) | |\n| --- | --- |");
     let _ = writeln!(
         s,
         "| open, ms | {} |",
         stat(corpus.iter().map(|r| r.open_ms).collect())
+    );
+    let _ = writeln!(
+        s,
+        "| open_showing, ms (source built, open included) | {} |",
+        stat(corpus.iter().map(|r| r.showing_ms).collect())
     );
     let _ = writeln!(
         s,
