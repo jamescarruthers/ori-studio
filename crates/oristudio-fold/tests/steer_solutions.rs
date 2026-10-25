@@ -260,6 +260,51 @@ fn the_stepper_keeps_its_order_across_add_and_remove() {
     println!("{tally:?}");
 }
 
+/// A step moves the order on screen, so a preview from before it is out of
+/// date: Add commits its list from where the step left the order, exactly
+/// as a commit of the list does, never the preview's stale order.
+#[test]
+fn a_step_puts_an_earlier_preview_out_of_date() {
+    let mut moved = 0;
+    for &(_, relative) in FIXTURES {
+        let mut stale = open(relative);
+        let mut fresh = open(relative);
+        let pairs = stale.open_pairs();
+        for pair in pairs {
+            let candidate = against_shown(&stale, pair);
+            let Ok(Preview::Fits(fit)) = stale.preview(candidate, &unlimited()) else {
+                continue;
+            };
+            let previewed = fit.order();
+            let mut counts = [
+                stale.solutions().expect("count"),
+                fresh.solutions().expect("count"),
+            ];
+            let mut stepped = Vec::new();
+            for (session, solutions) in [&mut stale, &mut fresh].into_iter().zip(&mut counts) {
+                stepped.push(
+                    session
+                        .step(solutions, BY[0], StepDirection::Next, &unlimited())
+                        .expect("step"),
+                );
+            }
+            if !matches!(stepped[0], Stepped::Moved(_)) {
+                continue;
+            }
+            let adopted = stale.commit_preview(fit, &unlimited()).expect("add");
+            let committed = fresh.commit(vec![candidate], &unlimited()).expect("commit");
+            assert_eq!(adopted, committed);
+            assert_eq!(stale.shown_order(), fresh.shown_order());
+            assert_fits(&stale, "after a stale preview");
+            if stale.shown_order() != previewed {
+                moved += 1;
+            }
+            break;
+        }
+    }
+    assert!(moved > 0, "no step moved a preview's order");
+}
+
 #[test]
 fn a_count_is_refused_once_the_constraints_change() {
     let mut session = open(FIXTURES[0].1);

@@ -199,12 +199,16 @@ deadline.
 `crates/oracle-tests/tests/layer_order_session.rs` (row E5) runs the dialog's
 `ConstraintSession` over the same designs, read from the same
 `LAYER_ORDER_CENSUS_DIR` (`LAYER_ORDER_SESSION_OUT` moves its report from
-`artifacts/layer-order-session/`). Per design it builds up to three
-constraints on open pairs, each the other way from the order on screen, and
-holds each preview to changing nothing, a preview with no nodes to answering
-alike or timing out, and Add to landing on the previewed order; then removal
-to keeping the order on screen, and a save, encode, read and restore on a
-fresh source to giving back the same constraints, order and open pairs:
+`artifacts/layer-order-session/`). Per design it opens the session on the
+order Edit shows (`open_showing` with the figure's paper-scene relations),
+which must be held and stack every spot as Edit's scene does whenever the
+solver's problem accepts that order; builds up to three constraints on open
+pairs, each the other way from the order on screen; and holds each preview to
+changing nothing, a preview with no nodes to answering alike or timing out,
+and Add (`commit_preview`, given no nodes) to landing on the previewed order;
+then removal to keeping the order on screen, and a save, encode, read and
+restore on a fresh source, and again on that session (`restore_record`), to
+giving back the same constraints, order and open pairs with nothing carried:
 
 ```sh
 cargo test -p oracle-tests --test layer_order_session
@@ -212,15 +216,28 @@ LAYER_ORDER_CENSUS_DIR=/path/to/real_benchmark/cpoogle \
   cargo test -p oracle-tests --release --test layer_order_session -- --nocapture
 ```
 
-Last run on October 23, 2026, natively on an Apple Silicon Mac, one design at
-a time (235 s): 480 of 489 designs admitted (the nine census 1 refuses), and
+Last run on October 24, 2026, natively on an Apple Silicon Mac, one design at
+a time (296 s): 480 of 489 designs admitted (the nine census 1 refuses), and
 all 480 pass every gate, 376 of them with constraints (the other 104 have no
-open pair). 1,031 previews: 997 fit, 34 could not (an offered object can
-have no fitting order); with no nodes, 541 timed out and the other 490 needed
-no search and answered alike. Corpus p50 / p95 / max: open 7.4 / 373 /
-1,406 ms, preview 0.2 / 7.6 / 39.1 ms, commit 0.2 / 7.4 / 40.5 ms, restore
-8.4 / 395 / 1,427 ms, record 3.8 / 46 / 249 KB. iguana-c0: open 0.97 s,
-previews 0.46 s, restore 1.9 s, record 863 KB.
+open pair).
+
+- **The order Edit shows.** Opened on the solver's first order, 175 designs
+  show another top face than Edit on some spot (2,785 spots in all). Opened on
+  Edit's own order, 465 hold it and match Edit's scene on every spot. On the
+  other 15, Edit's order breaks Flat-Folder's taco-tortilla rule as the
+  solver's view states it (63 constraints; the first such crease runs 1–6% of
+  the sheet into the face Oriedita stacks between its two sides, far past the
+  1e-6 tolerance), so the session shows the closest order that fits and says
+  so (`OpenedOn::Closest`): 163 spots off Edit's top face there, against 320
+  on the first order.
+- 1,033 previews: 999 fit, 34 could not (an offered object can have no
+  fitting order); with no nodes, 559 timed out and the other 474 needed no
+  search and answered alike.
+- Corpus p50 / p95 / max: open 7.6 / 390 / 1,747 ms, `open_showing` (open
+  included) 10 / 484 / 1,999 ms, preview 0.2 / 8.3 / 41 ms, Add by
+  `commit_preview` 0.0 / 0.0 / 2.9 ms, restore 8.6 / 427 / 1,779 ms, record
+  3.8 / 46 / 249 KB. iguana-c0: `open_showing` 1.5 s, previews 0.48 s,
+  restore 2.0 s, record 863 KB.
 
 ## FOLD Frame-Shape Corpus Testing
 

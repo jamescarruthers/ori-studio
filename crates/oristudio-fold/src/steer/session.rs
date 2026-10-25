@@ -12,15 +12,23 @@
 //!   *open* ([`ConstraintSession::open_pairs`]), and only an open pair is
 //!   offered to the user.
 //!
-//! Every question is one of four, and only [`ConstraintSession::commit`]
-//! changes the session:
+//! Every question is one of these, and only a commit or a restore changes
+//! the session:
 //!
 //! | Call | Searches | Changes the session |
 //! | --- | --- | --- |
-//! | [`open`](ConstraintSession::open) | one deduction pass, and one order per independent part | – |
+//! | [`open`](ConstraintSession::open) | one deduction pass, and one order per independent part | – (it opens one, on the solver's first order) |
+//! | [`open_showing`](ConstraintSession::open_showing) | the same, then the order the host shows, held | – (it opens one, on the host's order) |
 //! | [`preview`](ConstraintSession::preview) | the committed constraints plus one candidate | never |
+//! | [`preview_list`](ConstraintSession::preview_list) | any list, such as the dialog's own rows plus one | never |
 //! | [`commit`](ConstraintSession::commit) | the whole new list | only when it fits |
+//! | [`commit_preview`](ConstraintSession::commit_preview) | nothing, when the preview is still current | yes, to the previewed order |
 //! | [`restore`](ConstraintSession::restore) | a saved record on (possibly edited) creases | – (it opens one) |
+//! | [`restore_record`](ConstraintSession::restore_record) | the same, on a session already open | yes |
+//!
+//! Every call takes [`Limits`], and an interactive caller always gives them a
+//! deadline: `Limits::default()` has none, and a check on a deep stack can
+//! run for seconds.
 //!
 //! # The order on screen moves as little as it can
 //!
@@ -36,7 +44,9 @@
 //!
 //! A preview and the commit of the same list, with the same `fast_nodes`,
 //! find the same order: the search is deterministic and a deadline only ever
-//! stops it. So Add commits exactly the order its preview showed.
+//! stops it. Add need not search again at all: [`ConstraintSession::commit_preview`]
+//! adopts the preview's order while the session is as it was when the
+//! preview ran, so it cannot run out of time right after a preview that fit.
 //!
 //! # Verdicts and time
 //!
@@ -58,7 +68,9 @@
 //!
 //! Ori Studio original work, not a port.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 
 use oristudio_cp::folding::{
     FoldedFigureModel, FoldedFigureState, FoldedPaperScene, HierarchyRelation,
@@ -73,6 +85,8 @@ use treemaker_flatfold::{
 };
 
 use super::record::{FoldSign, LayerOrderRecord, RecordFace, RecordPair, RecordPart};
+use super::restore::CarriedConstraint;
+use super::showing::OpenedOn;
 use super::source::LayerSource;
 use super::stacks::{ChangedSpots, Spots, Stacks, ViewSide};
 use crate::complete::{
@@ -83,6 +97,13 @@ use crate::pattern::FaceId;
 
 /// What one call may spend: a node budget and a deadline, for the open, a
 /// preview, a commit and a restore alike.
+///
+/// **Always give an interactive call a deadline.** The default has none, so
+/// a check is bounded by its nodes alone, and a node on a deep stack can cost
+/// tens of milliseconds (the iguana's preview takes about half a second). The
+/// dialog's preview deadline is about 3 s (the plan's approach 5); a timeout
+/// is a [`TimedOut`], and "keep trying" is the same call with a later
+/// deadline.
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
     /// Search nodes for the open's first order, and for a check's exhaustive
@@ -96,6 +117,8 @@ pub struct Limits {
     pub deadline: Option<Deadline>,
 }
 
+/// 200,000 nodes, 128 quick nodes and **no deadline**: for tests and batch
+/// runs. An interactive caller sets [`Limits::deadline`].
 impl Default for Limits {
     fn default() -> Limits {
         let check = CheckLimits::default();
@@ -324,14 +347,27 @@ pub(crate) fn upper_lower(pair: FacePair, value: PairOrder) -> (FaceId, FaceId) 
 }
 
 /// A preview that fits: the fitting order closest to the one on screen.
+///
+/// It also carries what a commit of its list needs, so Add can adopt it with
+/// [`ConstraintSession::commit_preview`] rather than search again.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PreviewFit {
     arrangement: Arrangement,
-    /// The spots whose top face would change, per side.
+    /// The spots whose top face would change, per side. What a pane
+    /// flashes: never infer a change, or its absence, from [`Self::stage`].
     pub changed: ChangedSpots,
-    /// The last step of the check that had to search.
+    /// How far the check had to search: [`CheckStage::Unchanged`] means no
+    /// search was needed, not that the order is unchanged (what the new
+    /// constraints force by deduction alone can still move it).
     pub stage: CheckStage,
     pub nodes: u64,
+    /// The list it checked.
+    list: Vec<Constraint>,
+    /// What the creases and the list force.
+    forced: Vec<Option<PairOrder>>,
+    /// The session it ran on, and that session's generation then.
+    session: u64,
+    generation: u64,
 }
 
 impl PreviewFit {
@@ -343,6 +379,19 @@ impl PreviewFit {
     /// Its stacks per spot, from `side`.
     pub fn stacks(&self, side: ViewSide) -> Stacks {
         self.arrangement.stacks.seen_from(side)
+    }
+
+    /// The constraint list it checked: the committed constraints and the
+    /// candidate, for [`ConstraintSession::preview`]; the list given, for
+    /// [`ConstraintSession::preview_list`].
+    pub fn constraints(&self) -> &[Constraint] {
+        &self.list
+    }
+
+    /// The order the preview shows as Oriedita relations, as
+    /// [`ConstraintSession::oriedita_relations`] gives the order on screen.
+    pub fn oriedita_relations(&self, session: &ConstraintSession) -> Vec<HierarchyRelation> {
+        session.relations_of(&self.arrangement.values)
     }
 }
 
@@ -357,8 +406,12 @@ pub enum Preview {
 /// A commit that fit, and moved the session to it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Committed {
-    /// The spots whose top face changed, per side.
+    /// The spots whose top face changed, per side: what a pane flashes.
     pub changed: ChangedSpots,
+    /// How far the check had to search: [`CheckStage::Unchanged`] means no
+    /// search, not no change; read [`Self::changed`] for that. A commit that
+    /// adopted its preview ([`ConstraintSession::commit_preview`]) reports
+    /// the preview's.
     pub stage: CheckStage,
     pub nodes: u64,
 }
@@ -429,11 +482,29 @@ pub struct ConstraintSession {
     shown: Arrangement,
     /// Per variable, what the letters and the committed constraints force.
     forced: Vec<Option<PairOrder>>,
+    /// Saved constraints a restore did not apply, carried to the next save
+    /// unless removed or committed.
+    carried: Vec<CarriedConstraint>,
+    /// Where the order shown at open or restore came from.
+    opened_on: OpenedOn,
+    /// This session, among every session of the process, so a preview is
+    /// adopted only by the session it ran on.
+    id: u64,
+    /// Bumped whenever the constraints, the order on screen or what they
+    /// force change: a preview of an older generation is out of date.
+    generation: u64,
 }
+
+/// Each session's own number, for [`PreviewFit`]'s guard.
+static SESSIONS: AtomicU64 = AtomicU64::new(0);
 
 impl ConstraintSession {
     /// Open a session over `source`: the letters' deduction, a first order of
     /// every independent part (the order shown first), no constraints.
+    ///
+    /// The first order is the solver's, not necessarily the one the host is
+    /// showing: a host opening the dialog on a figure uses
+    /// [`Self::open_showing`].
     pub fn open(source: LayerSource, limits: &Limits) -> Result<ConstraintSession, SessionRefusal> {
         let solver = source.session(&limits.completion()).map_err(open_refusal)?;
         let variables: Arc<[FacePair]> = solver.variables().into();
@@ -466,7 +537,25 @@ impl ConstraintSession {
             spots,
             constraints: Vec::new(),
             forced,
+            carried: Vec::new(),
+            opened_on: OpenedOn::First { timed_out: None },
+            id: SESSIONS.fetch_add(1, AtomicOrdering::Relaxed),
+            generation: 0,
         })
+    }
+
+    /// Where the order shown at open or at the last restore came from: the
+    /// solver's first order, the host's or the saved one held whole, or the
+    /// closest fitting order the search found to it. Commits do not change
+    /// it.
+    pub fn opened_on(&self) -> &OpenedOn {
+        &self.opened_on
+    }
+
+    /// Hand the source back, for a caller done with the session that wants
+    /// to open another on the same creases without building it again.
+    pub fn into_source(self) -> LayerSource {
+        self.source
     }
 
     /// What the session orders.
@@ -568,9 +657,14 @@ impl ConstraintSession {
     /// Oriedita's upper is the solver's above;
     /// [`LayerSource::oriedita_relations`]).
     pub fn oriedita_relations(&self) -> Vec<HierarchyRelation> {
+        self.relations_of(&self.shown.values)
+    }
+
+    /// A complete order, one value per variable, as Oriedita's relations.
+    pub(crate) fn relations_of(&self, values: &[PairOrder]) -> Vec<HierarchyRelation> {
         self.variables
             .iter()
-            .zip(&self.shown.values)
+            .zip(values)
             .zip(&self.offered)
             .filter(|(_, offered)| **offered)
             .map(|((pair, value), _)| {
@@ -593,12 +687,30 @@ impl ConstraintSession {
     ) -> Result<Preview, SessionRefusal> {
         let mut list = self.constraints.clone();
         list.push(candidate);
-        Ok(match self.solve(&list, &[], Steer::Shown, limits)? {
+        self.preview_list(&list, limits)
+    }
+
+    /// Whether `list`, whatever is committed, leaves an order with the
+    /// creases, and the fitting order closest to the one on screen with the
+    /// spots it would change. Never changes the session. The dialog previews
+    /// its own rows plus a new one this way when they are not what the
+    /// session has committed, as after a restore whose constraints clashed
+    /// (nothing is committed then). [`CantFit::constraints`] indexes `list`.
+    pub fn preview_list(
+        &self,
+        list: &[Constraint],
+        limits: &Limits,
+    ) -> Result<Preview, SessionRefusal> {
+        Ok(match self.solve(list, &[], Steer::Shown, limits)? {
             Solved::Fit(fit) => Preview::Fits(PreviewFit {
                 changed: ChangedSpots::between(&self.shown.stacks, &fit.arrangement.stacks),
                 arrangement: fit.arrangement,
                 stage: fit.stage,
                 nodes: fit.nodes,
+                list: list.to_vec(),
+                forced: fit.forced,
+                session: self.id,
+                generation: self.generation,
             }),
             Solved::CantFit(cant) => Preview::CantFit(cant),
             Solved::TimedOut(out) => Preview::TimedOut(out),
@@ -610,6 +722,9 @@ impl ConstraintSession {
     /// the one on screen. A list the order on screen still fits, as any list
     /// that only lost constraints does, keeps it exactly. When the list
     /// cannot fit, or the check runs out of time, nothing changes.
+    ///
+    /// A carried row ([`Self::carried`]) whose constraint the list holds is
+    /// applied by it, and leaves the carried rows.
     pub fn commit(
         &mut self,
         constraints: Vec<Constraint>,
@@ -630,11 +745,45 @@ impl ConstraintSession {
         })
     }
 
+    /// Commit the list `fit` previewed, adopting its order with no search,
+    /// when nothing has changed the session since the preview ran (Add after
+    /// a preview that fit, which so cannot time out). A preview from another
+    /// session, or one the session has moved on from, is committed as
+    /// [`Self::commit`] commits its list, within `limits`.
+    pub fn commit_preview(
+        &mut self,
+        fit: PreviewFit,
+        limits: &Limits,
+    ) -> Result<Commit, SessionRefusal> {
+        if fit.session != self.id || fit.generation != self.generation {
+            return self.commit(fit.list, limits);
+        }
+        let committed = Committed {
+            changed: fit.changed,
+            stage: fit.stage,
+            nodes: fit.nodes,
+        };
+        self.adopt(
+            fit.list,
+            Fit {
+                arrangement: fit.arrangement,
+                forced: fit.forced,
+                stage: fit.stage,
+                nodes: fit.nodes,
+            },
+        );
+        Ok(Commit::Committed(committed))
+    }
+
     /// The saved form of the session (approach 6): the faces the constraints
-    /// and the order name, ascending, by an interior paper point and their
-    /// paper area; the constraints as built; and the order on screen's pairs
-    /// the creases leave free (the letters do not force them), each with
-    /// its smaller face first. A host encodes it with
+    /// and the order name, ascending, by an interior paper point
+    /// ([`LayerSource::interior_point`], the face's centroid unless the face
+    /// is too thin to find it there) and their paper area; the constraints as
+    /// built, then the carried rows a restore did not apply
+    /// ([`Self::carried`]), each with the faces the record it came from
+    /// saved, so nothing the user made is dropped; and the order on screen's
+    /// pairs the creases leave free (the letters do not force them), each
+    /// with its smaller face first. A host encodes it with
     /// [`super::encode_record`].
     pub fn save(&self) -> Result<LayerOrderRecord, SessionRefusal> {
         let letters = self.solver.search().forced();
@@ -655,11 +804,11 @@ impl ConstraintSession {
                 .map(|i| i as u32)
                 .map_err(|_| SessionRefusal::internal("a face the record names is unlisted"))
         };
-        let faces = named
+        let mut faces = named
             .iter()
             .map(|&face| {
                 Ok(RecordFace {
-                    at: self.source.paper_point(face).ok_or_else(|| {
+                    at: self.source.interior_point(face).ok_or_else(|| {
                         SessionRefusal::internal(format!("face {face} has no paper point"))
                     })?,
                     area: self.source.paper_area(face).ok_or_else(|| {
@@ -668,7 +817,7 @@ impl ConstraintSession {
                 })
             })
             .collect::<Result<Vec<_>, SessionRefusal>>()?;
-        let constraints = self
+        let mut constraints = self
             .constraints
             .iter()
             .map(|c| {
@@ -679,6 +828,26 @@ impl ConstraintSession {
                 })
             })
             .collect::<Result<Vec<_>, SessionRefusal>>()?;
+        // The carried rows, after the faces this session names, by the faces
+        // their record saved.
+        let mut listed = |face: RecordFace| -> u32 {
+            match faces.iter().position(|f| *f == face) {
+                Some(i) => i as u32,
+                None => {
+                    faces.push(face);
+                    (faces.len() - 1) as u32
+                }
+            }
+        };
+        for row in &self.carried {
+            let f = listed(row.subject);
+            let g = listed(row.object);
+            constraints.push(RecordPair {
+                f,
+                g,
+                sign: row.sign,
+            });
+        }
         let view = self.source.view();
         let order = free
             .iter()
@@ -759,14 +928,38 @@ impl ConstraintSession {
             values,
             stacks,
         };
+        self.generation += 1;
         changed
     }
 
-    /// Make `constraints` committed with the order `fit` found for them.
+    /// This session, among every session of the process.
+    pub(crate) fn id(&self) -> u64 {
+        self.id
+    }
+
+    /// Make `constraints` committed with the order `fit` found for them. A
+    /// carried row they hold is applied, and leaves the carried rows.
     pub(crate) fn adopt(&mut self, constraints: Vec<Constraint>, fit: Fit) {
+        self.carried
+            .retain(|row| row.constraint.is_none_or(|c| !constraints.contains(&c)));
         self.constraints = constraints;
         self.shown = fit.arrangement;
         self.forced = fit.forced;
+        self.generation += 1;
+    }
+
+    /// The carried rows, for the restore that sets them.
+    pub(crate) fn carried_mut(&mut self) -> &mut Vec<CarriedConstraint> {
+        &mut self.carried
+    }
+
+    pub(crate) fn carried_rows(&self) -> &[CarriedConstraint] {
+        &self.carried
+    }
+
+    /// Where the order shown came from, for the open or restore that sets it.
+    pub(crate) fn set_opened_on(&mut self, opened_on: OpenedOn) {
+        self.opened_on = opened_on;
     }
 
     /// Commit no constraints and show `values`, a complete order that fits
@@ -784,6 +977,7 @@ impl ConstraintSession {
         };
         self.forced = forced;
         self.constraints = Vec::new();
+        self.generation += 1;
     }
 
     /// One seed per constraint, in list order, or why the list is no
@@ -833,7 +1027,9 @@ impl ConstraintSession {
 
     /// Check the constraints `list` (with `extra` seeds after them, which are
     /// asked for but never reported as constraints) and find the fitting
-    /// order closest to `steer`'s.
+    /// order closest to `steer`'s. An extra seed the other way from a
+    /// constraint on its pair is a [`CantFitProof::Opposed`] naming that
+    /// constraint; one the other way from another extra names none.
     pub(crate) fn solve(
         &self,
         list: &[Constraint],
@@ -846,6 +1042,33 @@ impl ConstraintSession {
             Err(cant) => return Ok(Solved::CantFit(cant)),
         };
         let asked = seeds.len();
+        // An extra seed against a constraint, or against another extra, on
+        // one pair has no order: the search would refuse both orders of one
+        // variable as malformed input.
+        let mut wanted: BTreeMap<usize, (PairOrder, Option<usize>)> = seeds
+            .iter()
+            .enumerate()
+            .map(|(i, &(v, value))| (v, (value, Some(i))))
+            .collect();
+        for &(v, value) in extra {
+            match wanted.get(&v) {
+                Some(&(other, by)) if other != value => {
+                    let faces = self
+                        .variables
+                        .get(v)
+                        .map_or_else(Vec::new, |pair| pair.faces().to_vec());
+                    return Ok(Solved::CantFit(CantFit {
+                        proof: CantFitProof::Opposed,
+                        faces,
+                        constraints: by.into_iter().collect(),
+                    }));
+                }
+                Some(_) => {}
+                None => {
+                    wanted.insert(v, (value, None));
+                }
+            }
+        }
         seeds.extend_from_slice(extra);
         // The order on screen already fits: keep it, and only deduce.
         if matches!(steer, Steer::Shown)
@@ -1009,4 +1232,67 @@ fn open_refusal(refusal: CompletionRefusal) -> SessionRefusal {
 /// The search refused its input: the session asked it something malformed.
 pub(crate) fn internal_search(error: CompletionError) -> SessionRefusal {
     SessionRefusal::internal(complete::search_refusal(error).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use oristudio_cp::session::CpSession;
+
+    fn kabuto() -> ConstraintSession {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/flat-folder/kabuto.fold");
+        let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{e}"));
+        let mut cp = CpSession::new();
+        let document = cp.load_fold(&text, "").unwrap_or_else(|e| panic!("{e:?}"));
+        let lines: Vec<usize> = (1..=cp
+            .document_summary(document)
+            .map(|s| s.line_segments)
+            .unwrap_or(0))
+            .collect();
+        let fold = cp
+            .fold_source_of_selection(document, &lines, 1)
+            .unwrap_or_else(|e| panic!("{e:?}"));
+        let source = LayerSource::from_oriedita(&fold).unwrap_or_else(|e| panic!("{e}"));
+        ConstraintSession::open(source, &Limits::default()).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    /// An extra seed the other way from a constraint, or from another extra,
+    /// on one pair is a can't-fit naming the constraint, not a malformed
+    /// question for the search.
+    #[test]
+    fn an_extra_seed_against_a_constraint_cannot_fit() {
+        let session = kabuto();
+        let pair = session.open_pairs()[0];
+        let v = session.variable_of(pair.lo(), pair.hi()).unwrap_or(0);
+        let view = session.source().view();
+        let lo_above =
+            Constraint::seen(pair.lo(), Verb::InFrontOf, pair.hi(), ViewSide::Front, view)
+                .unwrap_or_else(|| panic!("faces"));
+        let against = (v, PairOrder::SecondAbove);
+        for (list, extra, named) in [
+            (vec![lo_above], vec![against], vec![0]),
+            (
+                Vec::new(),
+                vec![(v, PairOrder::FirstAbove), against],
+                Vec::new(),
+            ),
+        ] {
+            match session.solve(&list, &extra, Steer::Shown, &Limits::default()) {
+                Ok(Solved::CantFit(cant)) => {
+                    assert_eq!(cant.proof, CantFitProof::Opposed);
+                    assert_eq!(cant.constraints, named);
+                }
+                other => panic!("{other:?}"),
+            }
+        }
+        // The same way is no clash.
+        let agreeing = session.solve(
+            &[lo_above],
+            &[(v, PairOrder::FirstAbove)],
+            Steer::Shown,
+            &Limits::default(),
+        );
+        assert!(matches!(agreeing, Ok(Solved::Fit(_))));
+    }
 }

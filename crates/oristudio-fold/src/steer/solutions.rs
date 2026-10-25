@@ -570,9 +570,12 @@ fn product(factors: impl Iterator<Item = (u64, bool)>) -> Tally {
 /// keeps it.
 #[derive(Debug, Clone)]
 pub struct Solutions {
-    /// The session counted, by its variables' one allocation.
-    variables: Arc<[FacePair]>,
+    /// The session counted (its number among the process's sessions) and
+    /// its committed constraints then.
+    session: u64,
     constraints: Vec<Constraint>,
+    /// The session's variables.
+    variables: Arc<[FacePair]>,
     caps: SolutionCaps,
     /// A fitting order the components that do not vary hold.
     hold: Vec<PairOrder>,
@@ -837,6 +840,8 @@ impl Solutions {
         let read_count = schedule.len();
         schedule.extend(rest);
         Ok(Solutions {
+            // Set by the session that starts it.
+            session: u64::MAX,
             variables,
             constraints,
             caps,
@@ -979,9 +984,7 @@ impl Solutions {
     }
 
     pub(crate) fn ensure_for(&self, session: &ConstraintSession) -> Result<(), SessionRefusal> {
-        if Arc::ptr_eq(&self.variables, session.shared_variables())
-            && self.constraints == session.constraints()
-        {
+        if self.session == session.id() && self.constraints == session.constraints() {
             Ok(())
         } else {
             Err(SessionRefusal::StaleSolutions)
@@ -1448,7 +1451,7 @@ impl ConstraintSession {
         let seeds = self
             .seeds_of(self.constraints())?
             .map_err(|_| SessionRefusal::internal("the committed constraints oppose"))?;
-        let solutions = Solutions::start(
+        let mut solutions = Solutions::start(
             self.letter_search(),
             self.shared_variables().clone(),
             self.spots(),
@@ -1457,6 +1460,7 @@ impl ConstraintSession {
             self.constraints().to_vec(),
             caps,
         )?;
+        solutions.session = self.id();
         Ok(solutions)
     }
 
