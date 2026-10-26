@@ -1125,9 +1125,9 @@ Settled while building H10 (Fold's Import CP):
       (`claude/lo-inspector-undo-all`)
 - [x] H2: host engine (#512)
 - [x] Your test feedback: Fit at ~70% and only the folded crease pattern (#540)
-- [ ] Your test feedback: no per-object × and exact undo of every action (#539)
+- [x] Your test feedback: no per-object × and exact undo of every action (#539)
 - [x] H10: Fold's Import CP chooses its order in the dialog (#541)
-- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s): your call 2026-10-26, "is there a way to cancel and a loading state? If so then raise to 60s" — open and restore deadlines to 60 s, the cap just above it, a "Large figures can take up to a minute" line after 5 s
+- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s): your call 2026-10-26, "is there a way to cancel and a loading state? If so then raise to 60s" — open and restore deadlines to 60 s, the cap just above it, a "Large figures can take up to a minute" line after 5 s (#545)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
@@ -1136,4 +1136,12 @@ Settled while building H10 (Fold's Import CP):
 - [x] H6: Edit "Another solution" within constraints (#528)
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)
-- [ ] H9: the Diagram's ‹ › within constraints
+- [x] H9: the Diagram's ‹ › within constraints (#532)
+- [ ] E9 in the hosts and the dialog: ‹ usable and "Solution k" until the
+      count is exact, Keep trying after a step times out, and steps that
+      don't also count in the dialog or above 20,000 open pairs (#548)
+- [ ] CI: cache the Tauri apt packages, after the mirror timed out the native
+      job five times on 2026-10-26 (#546; the same change for main)
+- [ ] Merge main into `claude/layer-order` (the Fold workspace launch #475,
+      0.7.0 and 0.7.1)
+- [ ] The umbrella draft PR into main, for a preview and a desktop build
