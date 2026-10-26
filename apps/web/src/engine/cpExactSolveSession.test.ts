@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The transport contract Stop rests on: a session that ends **settles what is in
  * flight**.

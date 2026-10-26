@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /** The desktop dialogs, answered "cancelled": what a test reads is what they were asked. */

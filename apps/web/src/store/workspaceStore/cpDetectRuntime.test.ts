@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The detect worker's lifetime, and the hang it used to guarantee.
  *

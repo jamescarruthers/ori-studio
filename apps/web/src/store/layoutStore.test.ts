@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { DockviewApi, SerializedDockview } from 'dockview';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WORKSPACE_IDS, workspaceForPanelId } from '../workspaces/workspaces';
