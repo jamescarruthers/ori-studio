@@ -545,8 +545,9 @@ disagrees, the artboard wins):
   strengthens the tints (Round3:473, 883).
 - The faint subject tint is on the crease pattern only (spec §6.4).
 - Each pane has its own zoom toolbar, and Fit frames both (Round3:385-389,
-  421-425). Each pane fits its own content (the crease pattern it came from;
-  the folded figure itself), filling about 70% of the pane: in your words
+  421-425). Each pane fits its own content (the crease pattern it came from,
+  the host's `region`, never the rest of a document of many; the folded
+  figure itself), filling about 70% of the pane: in your words
   (2026-10-26), "it should not fill totally edge to edge, but like 70% or
   something larger than what it currently does".
 - The flash is one 1.6 s fade (Round3:172-176).
@@ -1116,8 +1117,10 @@ Settled while building H10 (Fold's Import CP):
 - [x] U9b: compound constraints in the model (#515)
 - [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
+- [x] Your test feedback: Fit at ~70% and only the folded crease pattern (#540)
+- [ ] Your test feedback: no per-object × and exact undo of every action (#539)
 - [x] H10: Fold's Import CP chooses its order in the dialog (#541)
-- [ ] Deeper stacks: measure the too-deep designs through the dialog's engine and raise the dialog's own cap as far as they stay usable (your ask, 2026-10-26)
+- [x] Deeper stacks: measured; the dialog's own cap is 20 million triples (#542; 4 of the 8 now open). Going further for your hand model (51.4 M, opens in ~35 s) waits on your answer
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)

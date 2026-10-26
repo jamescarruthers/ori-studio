@@ -10,7 +10,8 @@
  *   for what the dialog analyses — the source the kernel folded, and the
  *   paper scene it draws — and the figure is freed. Nothing is folded on
  *   render or selection; what the pane shows at rest is the record's.
- * - **The request** is the step's: its source, its record in the crease
+ * - **The request** is the step's: its source, its sheet (the pattern the
+ *   crease-pattern pane shows alone), its record in the crease
  *   pattern's coordinates (through the step's paper frame), and the
  *   Diagram's look — the diagram's style as its steps are painted, the step's
  *   turn and side, no spread, and Edit's view's line style and width for the
@@ -25,6 +26,7 @@
 import { toast } from 'sonner';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
+import { layerOrderRegionOf } from '../../cp-workspace/regions/layerOrderRegion';
 import i18n from '../../i18n';
 import { openLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
 import { lineContentFingerprint } from '../../lib/creaseFingerprint';
@@ -36,6 +38,7 @@ import {
 import type {
   LayerOrderApplied,
   LayerOrderLook,
+  LayerOrderRegion,
   LayerOrderRequest,
   LayerOrderRequestSurface,
 } from '../../lib/layerOrder/layerOrderRequest';
@@ -155,7 +158,9 @@ export function stillOpenedOn(stepId: string, guard: StepLayerOrderGuard): boole
  * (through the step's paper frame), the Diagram's look with `view`'s crease
  * lines (the crease pattern's viewport), and its name. With no record, the
  * scene it shows, so the dialog opens on the order the step draws; with one,
- * the dialog restores it.
+ * the dialog restores it. `region` is the step's sheet, out of every pattern
+ * the document holds (`layerOrderRegionOf`): the crease-pattern pane shows it
+ * alone, as the step's crease-pattern picture does.
  */
 export function stepLayerOrderRequest(
   stepId: string,
@@ -164,13 +169,15 @@ export function stepLayerOrderRequest(
   view: Pick<OristudioCpViewportOptions, 'lineStyle' | 'lineWidth'>,
   render: FlatRender,
   folded: StepFoldSource,
-  saved: StepLayerOrder | null
+  saved: StepLayerOrder | null,
+  region: LayerOrderRegion
 ): LayerOrderRequest {
   const diagram = store.get().diagram;
   const number = diagram ? stepNumber(diagram, stepId) : null;
   return {
     surface,
     source: folded.source,
+    region,
     record: saved ? layerOrderRecordToSource(saved.record, folded.frame) : null,
     look: diagramStepLayerOrderLook(style, render, view),
     ...(saved || !folded.scene ? {} : { shown: folded.scene }),
@@ -217,7 +224,8 @@ async function openingFor(
         store.get().oristudioCpViewport,
         render,
         folded,
-        saved
+        saved,
+        layerOrderRegionOf(document, choice.creases)
       ),
       frame: folded.frame,
       render,

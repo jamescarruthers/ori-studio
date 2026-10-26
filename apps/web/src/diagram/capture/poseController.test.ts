@@ -34,6 +34,7 @@ import type { LayerOrderRequest, LayerOrderSource } from '../../lib/layerOrder/l
 import { diagramStepLayerOrderLook } from './stepLayerOrderActions';
 import { createPoseController, linkedFoldKey } from './poseController';
 import { ensureCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
+import { ringsBounds } from '../../layer-order/panes/layerPaneFigure';
 import { stepsIn } from '../document/diagramSteps.fixtures';
 import type { DiagramCpRender, DiagramLayerSpread } from '../document/diagramDocument';
 
@@ -1182,6 +1183,9 @@ describe('the Layer order dialog from Pose (H8)', () => {
     expect(request.name).toBe('Step 1');
     // Pose asked, for the dialog's events (H3's `surface`).
     expect(request.surface).toBe('pose');
+    // The step's sheet alone: the left square's paper and its aux line (10), nothing of the right square.
+    expect(ringsBounds(request.region!.paper)).toEqual({ minX: 0, minY: 0, maxX: 100, maxY: 100 });
+    expect(request.region!.auxSegments).toEqual([document.crease_pattern.line_segments[9]]);
     expect(state().diagramHistory.past).toHaveLength(entries);
     expect(state().diagramCaptures).toEqual({});
     expect(foldedFigureHandleRefCount(7)).toBe(1);
