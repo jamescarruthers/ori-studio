@@ -466,6 +466,18 @@ describe('Fold with layer order…', () => {
     expect(arena.live.size).toBe(0);
   });
 
+  // What the kernel answers for such creases with no order given (`in_closure` on
+  // `failing_global_flat_fold.ori`, which a plain Fold draws see-through): the same D3
+  // refusal, not "These creases have no flat folded form to draw".
+  it('a fold the kernel refuses for want of an order says D3’s words too, and holds nothing', async () => {
+    kernel.next = ['refuse'];
+
+    await expect(foldSelectionWithLayerOrder(SELECTION, t)).resolves.toBe('not-opened');
+    expect(dialog.requests).toEqual([]);
+    expect(state().oristudioCpError).toBe('Layer order couldn’t be determined for these creases.');
+    expect(arena.live.size).toBe(0);
+  });
+
   it('creases that fold in 3D are refused before anything folds', async () => {
     useWorkspaceStore.setState({
       oristudioCpDocument: cpState(LINES.map((segment) => ({ ...segment, fold_magnitude: FOLD_MAGNITUDE_FULL / 2 }))),

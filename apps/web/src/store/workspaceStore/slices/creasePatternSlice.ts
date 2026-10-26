@@ -4444,12 +4444,19 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
         };
         const movedWhileFolding = moved();
         if (movedWhileFolding) return movedWhileFolding;
-        if (folded.status !== 'folded') {
-          return refuse('failed', i18n.t('errors:cp.foldProducedNothing', 'These creases have no flat folded form to draw'));
-        }
-        const { snapshot } = folded;
         // As "Layer order…" is held on a figure Oriedita's search did not order
-        // (D3): Apply could not draw the order chosen on these faces.
+        // (D3): Apply could not draw the order chosen on these faces. With no
+        // order given, the kernel refuses where that search finds none
+        // (`in_closure`, `not_found`, out of `budget`): the same creases a
+        // plain Fold draws see-through, so the same D3 refusal, never "no flat
+        // folded form", which Fold says only of creases it cannot draw at all.
+        const undetermined = () =>
+          refuse(
+            'undetermined',
+            i18n.t('errors:cp.layerOrderUndeterminedSelection', 'Layer order couldn’t be determined for these creases.')
+          );
+        if (folded.status !== 'folded') return undetermined();
+        const { snapshot } = folded;
         if (
           !hasFoldedLayerOrder({
             discoveredCases: snapshot.discovered_fold_cases,
@@ -4458,10 +4465,7 @@ export const createCreasePatternSlice: WorkspaceSliceCreator<CreasePatternSlice>
           })
         ) {
           release();
-          return refuse(
-            'undetermined',
-            i18n.t('errors:cp.layerOrderUndeterminedSelection', 'Layer order couldn’t be determined for these creases.')
-          );
+          return undetermined();
         }
         let shown: OristudioCpFoldedPaperScene | null = null;
         try {
