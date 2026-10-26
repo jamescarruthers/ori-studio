@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { constraintAddedFact, constraintBlockedFact } from './layerOrderAnalytics';
 import { LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
-import { LAYER_ORDER_MODEL_LIMITS, keepTrying, type LayerOpenFacts } from './layerOrderEngineFacts';
+import { LAYER_ORDER_LIMITS, keepTrying, type LayerOpenFacts } from './layerOrderEngineFacts';
 import {
   OPEN_PAIRS,
   SPOTS,
@@ -23,6 +23,7 @@ import {
   openFactsOf,
   opened,
   play,
+  position,
   rowKey,
   sidesOf,
   stacksOf,
@@ -146,7 +147,7 @@ describe('the builder with several objects', () => {
     const s = sentenceOf(opened().state, 2, 0).state;
     expect(dispatch(s, { type: 'object_removed', face: 3 })).toEqual({ state: s, effects: [] });
     const committing = play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }).state;
-    const inert = { ...committing, settle: { kind: 'timed_out' as const, limits: LAYER_ORDER_MODEL_LIMITS.restore } };
+    const inert = { ...committing, settle: { kind: 'timed_out' as const, limits: LAYER_ORDER_LIMITS.restore } };
     expect(dispatch(inert, { type: 'object_removed', face: 0 }).state).toBe(inert);
   });
 
@@ -193,7 +194,7 @@ describe('one preview per sentence, over the whole set', () => {
         [2, 3, -1],
       ],
     ]);
-    expect(previews[1]!.limits).toEqual(LAYER_ORDER_MODEL_LIMITS.preview);
+    expect(previews[1]!.limits).toEqual(LAYER_ORDER_LIMITS.preview);
     expect(chosenPreview(s.state)).toMatchObject({ kind: 'pending', candidates: [[2, 0, 1], [2, 3, -1]] });
     expect(addState(s.state)).toMatchObject({ enabled: false, why: 'checking', label: 'add_constraints' });
     expect(hintLine(s.state)?.text).toEqual({ key: 'checking', sentence: view(2, 'in_front_of', 0, 3) });
@@ -229,7 +230,7 @@ describe('one preview per sentence, over the whole set', () => {
         [2, 0, 1],
         [2, 3, -1],
       ],
-      limits: keepTrying(LAYER_ORDER_MODEL_LIMITS.preview),
+      limits: keepTrying(LAYER_ORDER_LIMITS.preview),
     });
   });
 });
@@ -255,7 +256,7 @@ describe('a clash on a compound sentence', () => {
         [2, 0, 1],
         [2, 3, -1],
       ],
-      limits: LAYER_ORDER_MODEL_LIMITS.explain,
+      limits: LAYER_ORDER_LIMITS.explain,
     });
     // While it is explained, the check's own set already names 3.
     expect(paneMarks(cant.state)).toMatchObject({ danger: [2, 3], clashObjects: [3], clashRows: [] });
@@ -307,7 +308,7 @@ describe('a clash on a compound sentence', () => {
     expect(effectsOf(dispatch(cant.state, { type: 'face_hovered', face: 0 }).effects, 'track')).toEqual([]);
   });
 
-  describe('once per sentence against the order on screen', () => {
+  describe('once per sentence (D21): until its subject or its verb as read from the front changes, an Add or a Clear', () => {
     const tracked = (played: Played) => effectsOf(played.effects, 'track').map((effect) => effect.fact);
     const CANT = { verdict: 'cant_fit', constraints: [0] } as const;
     const FIT = { verdict: 'fits', token: 4, changed: changedSpots([1]), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) } as const;
@@ -323,25 +324,27 @@ describe('a clash on a compound sentence', () => {
       expect(tracked(previewed(two, CANT))).toEqual([]);
     });
 
-    it('a verb away and back reports the first block only, and the other verb’s block once', () => {
+    it('a verb away and back is a new sentence each time it changes', () => {
       const behind = play(blocked().state, { type: 'verb_set', verb: 'behind' });
       const behindBlocked = previewed(behind, CANT);
       expect(tracked(behindBlocked)).toEqual([constraintBlockedFact(0, 1)]);
+      // Back to the first verb: its can't-fit is known, so no preview, and it is reported again.
       const front = play(behindBlocked.state, { type: 'verb_set', verb: 'in_front_of' });
       expect(effectsOf(front.effects, 'preview')).toEqual([]);
-      expect(tracked(front)).toEqual([]);
-      // A verb that fits away and back changes nothing either.
+      expect(tracked(front)).toEqual([constraintBlockedFact(0, 1)]);
+      // A verb that fits away and back changed the verb too.
       const fitAway = previewed(play(blocked().state, { type: 'verb_set', verb: 'behind' }), FIT);
-      expect(tracked(play(fitAway.state, { type: 'verb_set', verb: 'in_front_of' }))).toEqual([]);
+      expect(tracked(play(fitAway.state, { type: 'verb_set', verb: 'in_front_of' }))).toEqual([constraintBlockedFact(0, 1)]);
     });
 
-    it('a subject away and back reports nothing more', () => {
+    it('a subject away and back is a new sentence', () => {
       const swap = play(
         blocked().state,
         { type: 'slot_activated', slot: 'subject' },
         { type: 'face_picked', face: 4, origin: 'pattern' }
       );
       expect(swap.state.sentence).toMatchObject({ subject: 4, objects: [] });
+      expect(tracked(swap)).toEqual([]);
       const back = play(
         swap.state,
         { type: 'slot_activated', slot: 'subject' },
@@ -349,28 +352,87 @@ describe('a clash on a compound sentence', () => {
         { type: 'face_picked', face: 0, origin: 'pattern' }
       );
       expect(effectsOf(back.effects, 'preview')).toEqual([]);
-      expect(tracked(back)).toEqual([]);
+      expect(tracked(back)).toEqual([constraintBlockedFact(0, 1)]);
     });
 
-    it('turning over reports only a constraint that really is another one', () => {
-      // From the back the same words are the opposite constraint, 2 behind 0 as read from the front: reported.
+    it('turning over keys the sentence by its verb as read from the front', () => {
+      // From the back the same words are the opposite constraint, 2 behind 0 as read from the front: a new sentence.
       const back = play(blocked().state, { type: 'side_set', side: 'back' });
       expect(lastOf(back.effects, 'preview').constraints).toEqual([[2, 0, -1]]);
       const backBlocked = previewed(back, CANT);
       expect(tracked(backBlocked)).toEqual([constraintBlockedFact(0, 1)]);
-      // The verb that reads as the same constraint from the back is the same sentence: nothing more.
-      const same = play(backBlocked.state, { type: 'verb_set', verb: 'behind' });
-      expect(chosenPreview(same.state)?.kind).toBe('cant_fit');
-      expect(tracked(same)).toEqual([]);
+      // “2 behind 0” from the back is “2 in front of 0” from the front: the same sentence.
+      const sameFromBack = play(
+        opened().state,
+        { type: 'side_set', side: 'back' },
+        { type: 'face_picked', face: 2, origin: 'pattern' },
+        { type: 'verb_set', verb: 'behind' },
+        { type: 'face_picked', face: 0, origin: 'folded' }
+      );
+      expect(lastOf(sameFromBack.effects, 'preview').constraints).toEqual([[2, 0, 1]]);
+      const blockedFromBack = previewed(sameFromBack, CANT);
+      expect(tracked(blockedFromBack)).toEqual([constraintBlockedFact(0, 1)]);
+      expect(blockedFromBack.state.blocked).toBe(blocked().state.blocked);
     });
 
-    it('after an undo, a new block of the same sentence is reported', () => {
+    it('a step keeps the can’t-fit and its explain, and asks and reports nothing more', () => {
+      const stepping = play(blocked().state, { type: 'step', direction: 'next' });
+      const moved = play(stepping.state, {
+        type: 'stepped',
+        request: lastOf(stepping.effects, 'step').request,
+        facts: { verdict: 'moved', changed: changedSpots([0]), position: position(2, 9), stacks: sidesOf(SPOTS_TWO_OVER_ZERO) },
+      });
+      expect(chosenPreview(moved.state)).toEqual(chosenPreview(blocked().state));
+      expect(effectsOf(moved.effects, 'preview')).toEqual([]);
+      expect(effectsOf(moved.effects, 'explain')).toEqual([]);
+      expect(tracked(moved)).toEqual([]);
+    });
+
+    it('a fit does not survive a step: the order it would show has moved on', () => {
+      const fit = fits(sentenceOf(opened().state, 2, 0));
+      const stepping = play(fit.state, { type: 'step', direction: 'next' });
+      const moved = play(stepping.state, {
+        type: 'stepped',
+        request: lastOf(stepping.effects, 'step').request,
+        facts: { verdict: 'moved', changed: changedSpots([0]), position: position(2, 9), stacks: sidesOf(SPOTS) },
+      });
+      expect(effectsOf(moved.effects, 'preview')).toHaveLength(1);
+    });
+
+    it('an undo and a redo leave the same sentence counted', () => {
       const one = commits(play(fits(sentenceOf(opened().state, 2, 0)).state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
       const first = previewed(sentenceOf(one.state, 2, 3), { verdict: 'cant_fit', constraints: [0, 1] });
       expect(tracked(first)).toEqual([constraintBlockedFact(1, 1)]);
       const undone = commits(play(first.state, { type: 'undo' }), OPEN_PAIRS);
       expect(undone.state.sentence).toMatchObject({ subject: 2, objects: [3] });
-      expect(tracked(previewed(undone, CANT))).toEqual([constraintBlockedFact(0, 1)]);
+      const undoneBlocked = previewed(undone, CANT);
+      expect(chosenPreview(undoneBlocked.state)?.kind).toBe('cant_fit');
+      expect(tracked(undoneBlocked)).toEqual([]);
+      const redone = commits(play(undoneBlocked.state, { type: 'redo' }), Uint32Array.of(2, 3, 4, 5));
+      expect(redone.state.rows.committed).toHaveLength(1);
+      const redoneBlocked = previewed(redone, { verdict: 'cant_fit', constraints: [0, 1] });
+      expect(chosenPreview(redoneBlocked.state)?.kind).toBe('cant_fit');
+      expect(tracked(redoneBlocked)).toEqual([]);
+    });
+
+    it('an Add starts the count afresh, for the same subject and verb too', () => {
+      // 2 in front of 0 and 3 is blocked; without 3 it fits, still the same sentence, and is added.
+      const built = sentenceOf(opened().state, 2, 0, 3);
+      const [first] = effectsOf(built.effects, 'preview');
+      const both = previewed(built, CANT);
+      expect(tracked(both)).toEqual([constraintBlockedFact(0, 2)]);
+      const alone = play(
+        both.state,
+        { type: 'object_removed', face: 3 },
+        { type: 'previewed', request: first!.request, facts: FIT }
+      );
+      expect(chosenPreview(alone.state)?.kind).toBe('fits');
+      expect(tracked(alone)).toEqual([]);
+      expect(alone.state.blocked).toBe(both.state.blocked);
+      const added = commits(play(alone.state, { type: 'add' }), Uint32Array.of(2, 3, 4, 5));
+      expect(added.state.blocked).toBeNull();
+      // 2 in front of 3 now: the same subject and verb, blocked again, counted again.
+      expect(tracked(previewed(sentenceOf(added.state, 2, 3), CANT))).toEqual([constraintBlockedFact(1, 1)]);
     });
 
     it('after a Clear, the same sentence built again is reported again', () => {
@@ -384,6 +446,19 @@ describe('a clash on a compound sentence', () => {
 describe('explains, only for the set on display', () => {
   // 4 in front of 5 is committed, so a can't-fit names it and needs explaining; 2 is open with 0, 3 and 5.
   const WIDE: LayerOpenFacts = openFactsOf({ constraints: [[4, 5, -1]], openPairs: Uint32Array.of(0, 2, 2, 3, 2, 5) });
+
+  it('an explain gets the preview’s 3 s; one that runs out keeps the check’s set, and Keep trying asks again, later', () => {
+    const cant = previewed(sentenceOf(opened(WIDE).state, 2, 0), { verdict: 'cant_fit', constraints: [0, 1] });
+    const asked = lastOf(cant.effects, 'explain');
+    expect(asked.limits).toEqual(LAYER_ORDER_LIMITS.preview);
+    const ranOut = play(cant.state, { type: 'explained', request: asked.request, facts: { verdict: 'timed_out' } });
+    expect(hintLine(ranOut.state)).toMatchObject({ tone: 'danger', action: 'keep_trying', text: { key: 'cant_fit', minimal: false } });
+    // The check's own set stands in on the panes, not claimed smallest.
+    expect(paneMarks(ranOut.state).danger).toEqual(expect.arrayContaining([2, 0, 4, 5]));
+    const again = play(ranOut.state, { type: 'keep_trying' });
+    expect(lastOf(again.effects, 'explain').limits).toEqual(keepTrying(LAYER_ORDER_LIMITS.explain));
+    expect(hintLine(again.state)?.text.key).toBe('cant_fit_explaining');
+  });
 
   it('building “2 in front of 0, 3, 5” through can’t-fit prefixes asks one explain, not three', () => {
     const built = sentenceOf(opened(WIDE).state, 2, 0, 3, 5);
@@ -443,20 +518,20 @@ describe('Add by a token the session no longer holds', () => {
     expect(lastOf(play(back.state, { type: 'add' }).effects, 'commit')).toMatchObject({
       constraints: [[2, 0, 1]],
       token: null,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
     });
   });
 
   it('a set that fit only after Keep trying gets at least those limits when Add has to search', () => {
     const out = previewed(sentenceOf(opened().state, 2, 0), { verdict: 'timed_out' });
     const again = play(out.state, { type: 'keep_trying' });
-    const retried = keepTrying(LAYER_ORDER_MODEL_LIMITS.preview);
+    const retried = keepTrying(LAYER_ORDER_LIMITS.preview);
     expect(lastOf(again.effects, 'preview').limits).toEqual(retried);
     const fitted = previewed(again, fitsFacts(5));
     // While it is the session's last preview, its token adopts it.
     expect(lastOf(play(fitted.state, { type: 'add' }).effects, 'commit')).toMatchObject({
       token: 5,
-      limits: LAYER_ORDER_MODEL_LIMITS.commit,
+      limits: LAYER_ORDER_LIMITS.commit,
     });
     // After another preview, Add searches with the wider of the two limits.
     const widened = play(fitted.state, { type: 'face_picked', face: 3, origin: 'pattern' });
@@ -464,9 +539,9 @@ describe('Add by a token the session no longer holds', () => {
     const commit = lastOf(play(back.state, { type: 'add' }).effects, 'commit');
     expect(commit).toMatchObject({ token: null });
     expect(commit.limits).toEqual({
-      maxNodes: Math.max(retried.maxNodes, LAYER_ORDER_MODEL_LIMITS.commit.maxNodes),
-      fastNodes: Math.max(retried.fastNodes, LAYER_ORDER_MODEL_LIMITS.commit.fastNodes),
-      deadlineMs: Math.max(retried.deadlineMs, LAYER_ORDER_MODEL_LIMITS.commit.deadlineMs),
+      maxNodes: Math.max(retried.maxNodes, LAYER_ORDER_LIMITS.commit.maxNodes),
+      fastNodes: Math.max(retried.fastNodes, LAYER_ORDER_LIMITS.commit.fastNodes),
+      deadlineMs: Math.max(retried.deadlineMs, LAYER_ORDER_LIMITS.commit.deadlineMs),
     });
     expect(commit.limits.maxNodes).toBe(retried.maxNodes);
   });
@@ -480,7 +555,7 @@ describe('Add by a token the session no longer holds', () => {
       expect(still.state.lastPreview).toBe(fitted.state.lastPreview);
       expect(lastOf(play(still.state, { type: 'add' }).effects, 'commit')).toMatchObject({
         token: 5,
-        limits: LAYER_ORDER_MODEL_LIMITS.commit,
+        limits: LAYER_ORDER_LIMITS.commit,
       });
     }
     const moved = play(stepping.state, {
@@ -907,7 +982,7 @@ describe('a one-object sentence behaves as it always did', () => {
   it('previews, adds and lists one constraint, with the same effects as before', () => {
     const p = sentenceOf(opened().state, 2, 0);
     expect(effectsOf(p.effects, 'preview')).toEqual([
-      { type: 'preview', request: 2, constraints: [[2, 0, 1]], limits: LAYER_ORDER_MODEL_LIMITS.preview },
+      { type: 'preview', request: 2, constraints: [[2, 0, 1]], limits: LAYER_ORDER_LIMITS.preview },
     ]);
     const added = play(fits(p, 7, SPOTS_TWO_OVER_ZERO, changedSpots([1], [1])).state, { type: 'add' });
     expect(lastOf(added.effects, 'commit')).toMatchObject({ constraints: [[2, 0, 1]], token: 7 });

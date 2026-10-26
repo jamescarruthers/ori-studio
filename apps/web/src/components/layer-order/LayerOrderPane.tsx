@@ -1,8 +1,10 @@
 import { useCallback, type ReactNode, type Ref } from 'react';
 import { cpCreaseStrokeWidthPx } from '../../cp-workspace/cpSizingScales';
+import { useEventCallback } from '../../hooks/useEventCallback';
 import { PaperPane } from '../../cp-workspace/surface/PaperPane';
 import type { CpSurfaceControls, CpSurfaceFrameScales } from '../../cp-workspace/surface/useCpSurface';
 import type { WheelGesturePreference } from '../../lib/wheelGesture';
+import type { LayerFace } from '../../layer-order/engine/faceIndex';
 import { LAYER_ORDER_PANE_FIT_SHARE } from '../../layer-order/panes/layerPaneFigure';
 import { sameLayerPaneHit, type LayerPaneHit, type LayerPanesEvents } from '../../layer-order/panes/layerPaneInput';
 import type { LayerPaneChannels } from '../../layer-order/panes/useLayerOrderPanes';
@@ -58,8 +60,9 @@ export function LayerOrderPane({
   children,
 }: LayerOrderPaneProps) {
   const pointer = useLayerPanePointer(channels.id, events, onFit);
-  const { pickable } = channels;
+  const { pickable, id } = channels;
   const isTarget = useCallback((hit: LayerPaneHit) => pickable.has(hit.face), [pickable]);
+  const told = useEventCallback((faces: readonly LayerFace[]) => events.onUnlettered?.(id, faces));
   return (
     <section className={styles.pane} aria-label={label} data-layer-order-pane={channels.id} {...pointer.capture}>
       <PaperPane<LayerPaneHit>
@@ -87,7 +90,7 @@ export function LayerOrderPane({
         snapRadius={snapRadius}
         themeKey={themeKey}
         onZoomPercentChange={onZoomPercentChange}
-        layers={(view) => <LayerOrderPaneMarks pane={channels} view={view} />}
+        layers={(view) => <LayerOrderPaneMarks pane={channels} view={view} onUnlettered={told} />}
         ariaLabel={canvasLabel}
         testId={`layer-order-${channels.id}-canvas`}
         errorSurface={`layer-order:${channels.id}-webgl`}

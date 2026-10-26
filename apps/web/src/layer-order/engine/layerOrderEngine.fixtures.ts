@@ -653,9 +653,10 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
       return fakeLayerOrderScene(figure, current().order, side);
     },
 
-    async save() {
+    async save(keepCarried) {
       await answering('save');
       const now = current();
+      const keep = keepCarried ? new Set(keepCarried) : null;
       // The committed constraints' faces and the order's, then each carried row's two, as saved.
       const named = [...new Set([...now.constraints.flatMap(([s, o]) => [s, o]), ...now.order])].sort((a, b) => a - b);
       const faces: LayerOrderFace[] = named.map((face) => ({ at: figure.facePoints[face]!, area: 100 }));
@@ -671,7 +672,9 @@ export function createFakeLayerOrderBackend(figure: FakeLayerOrderFigure = FAKE_
           if (!figure.forced.some(([u, l]) => u === upper && l === lower)) free.push(pair(upper, lower));
         }
       });
-      const carried: LayerOrderPair[] = now.carried.map((row) => {
+      // As the engine's: the carried rows `keepCarried` names by record index, else every one; the session keeps them all.
+      const written = keep ? now.carried.filter((row) => keep.has(row.index)) : now.carried;
+      const carried: LayerOrderPair[] = written.map((row) => {
         faces.push(row.subject, row.object);
         return [faces.length - 2, faces.length - 1, row.sign];
       });

@@ -48,6 +48,12 @@
   stroke: var(--status-danger);
 }
 
+/* A crease a notice names (D19): a line each side of it, clear of its colour. */
+.crease {
+  stroke: var(--face-pick, #a78bfa);
+  stroke-linecap: round;
+}
+
 /*
  * A face's letter: an opaque chip in theme tokens, so it reads the same over
  * any paper. Sized by the pane (layerPaneLabels.ts's labelSize), which places

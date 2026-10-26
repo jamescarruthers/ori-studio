@@ -164,6 +164,41 @@ export function foldedOutlinesOf(scene: OristudioCpFoldedPaperScene): readonly (
   return scene.faces.map((face) => face.outline);
 }
 
+/** A straight piece of a line, in a pane's frame. */
+export type LayerPaneSegment = readonly [Point, Point];
+
+/**
+ * The crease two faces meet at, as the sides they share: on the crease
+ * pattern (`'pattern'`, the sheet's points) or on the folded paper
+ * (`'folded'`, the scene's outlines, for its side). The two faces of a crease
+ * name its ends alike (`OristudioCpFoldedPaperFace.points`), so a side is
+ * shared when both faces' rings step between the same two points. Empty when
+ * the faces share none, or the scene names no points.
+ */
+export function creaseSegments(
+  scene: OristudioCpFoldedPaperScene,
+  crease: readonly [LayerFace, LayerFace],
+  frame: 'pattern' | 'folded'
+): LayerPaneSegment[] {
+  const [a, b] = crease;
+  const first = scene.faces[a];
+  const second = scene.faces[b];
+  if (!first || !second || first.points.length < 2 || second.points.length < 2) return [];
+  const sideKey = (p: number, q: number) => (p < q ? `${p},${q}` : `${q},${p}`);
+  const theirs = new Set<string>();
+  second.points.forEach((p, i) => theirs.add(sideKey(p, second.points[(i + 1) % second.points.length]!)));
+  const segments: LayerPaneSegment[] = [];
+  first.points.forEach((p, i) => {
+    const j = (i + 1) % first.points.length;
+    const q = first.points[j]!;
+    if (p === q || !theirs.has(sideKey(p, q))) return;
+    const from = frame === 'pattern' ? scene.sheet_points[p] : first.outline[i];
+    const to = frame === 'pattern' ? scene.sheet_points[q] : first.outline[j];
+    if (from && to) segments.push([{ x: from.x, y: from.y }, { x: to.x, y: to.y }]);
+  });
+  return segments;
+}
+
 // ---------------------------------------------------------------------------
 // The order on screen
 

@@ -338,18 +338,24 @@ describe.skipIf(!available)('the Fold bridge’s layer calls, in Node', () => {
     expect(bridge.layer_carried(session)).toEqual(restored.carried);
     expect(bridge.layer_opened_on(session)).toEqual(restored.opened_on);
 
-    // A save writes every carried row back; the trash button and Clear all.
-    const constraintsSaved = () => {
-      const again = bridge.layer_save(session);
+    // A save writes every carried row back, or those `keep` names by record index; the session keeps them all.
+    const constraintsSaved = (keep?: number[]) => {
+      const again = bridge.layer_save(session, keep ? Uint32Array.from(keep) : undefined);
       if (again.status !== 'ok') throw new Error('it saves');
       const record = readLayerOrderRecord(again.json);
       if (typeof record === 'symbol' || !record.ok) throw new Error('the record reads');
       return record.record.constraints.length;
     };
     expect(constraintsSaved()).toBe(3);
+    expect(constraintsSaved([2])).toBe(1);
+    expect(constraintsSaved([])).toBe(0);
+    expect(bridge.layer_carried(session)).toHaveLength(3);
+    // A removal names its row by record index, never its place: index 2 is found after index 0 goes.
+    expect(bridge.layer_remove_carried(session, 0)).toBe(true);
     expect(bridge.layer_remove_carried(session, 2)).toBe(true);
     expect(bridge.layer_remove_carried(session, 9)).toBe(false);
-    expect(constraintsSaved()).toBe(2);
+    expect(bridge.layer_carried(session).map((row) => row.index)).toEqual([1]);
+    expect(constraintsSaved()).toBe(1);
     // Committing the rows applies them, and they leave the carried rows.
     const rows = bridge.layer_preview_list(session, list, { deadlineMs: 3_000 });
     if (rows.verdict !== 'fits') throw new Error('the two rows fit');

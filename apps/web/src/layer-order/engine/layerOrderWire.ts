@@ -77,8 +77,20 @@ export type LayerOpenedOn =
   | { kind: 'first'; timed_out: { limit: LayerBudgetLimit; nodes: number } | null }
   /** The order given, held whole: the host's relations, or a record's saved pairs that still resolve. */
   | { kind: 'held'; ignored: number }
-  /** The order given did not all fit: the fitting order closest to it, `moved` of its relations the other way. */
-  | { kind: 'closest'; moved: number; ignored: number };
+  /**
+   * The order given did not all fit: the fitting order closest to it, `moved`
+   * of its relations the other way. `inside` is a face the order given (the
+   * host's, or a record's saved pairs) puts inside a fold whose crease runs
+   * through it, and the two faces that fold meets at (D19, `FoldInside`);
+   * null when no one face is to blame. The dialog names it only for an open
+   * on the host's order.
+   */
+  | {
+      kind: 'closest';
+      moved: number;
+      ignored: number;
+      inside?: { face: number; crease: [number, number] } | null;
+    };
 
 /** A session the engine now holds. */
 export interface LayerOpened {
@@ -383,7 +395,7 @@ export interface LayerOrderBridge {
   ): LayerCommitted;
   /** The saved constraints the last restore did not apply, in record order. */
   layer_carried(session: number): LayerCarriedRow[];
-  /** A carried row's trash button; whether there was one at `index`. */
+  /** Remove the carried row of record index `index` (`LayerCarriedRow.index`, not its place); whether there was one. */
   layer_remove_carried(session: number, index: number): boolean;
   layer_clear_carried(session: number): void;
   layer_stacks(session: number, side: LayerSide): LayerStacks;
@@ -391,8 +403,11 @@ export interface LayerOrderBridge {
   layer_scene(session: number, side: LayerSide, model?: OristudioCpFoldedFigureModel): OristudioCpFoldedPaperScene | null;
   /** `[upper, lower, …]`, for the CP bridge's `folded_figure_fold_with_order`. */
   layer_oriedita_relations(session: number): Uint32Array;
-  /** The committed constraints, then the carried rows as saved, as one record. */
-  layer_save(session: number): LayerSaveOutcome;
+  /**
+   * The committed constraints, then the carried rows as saved, as one record: every carried row, or
+   * only those whose record index `keep` names. The session keeps its carried rows either way.
+   */
+  layer_save(session: number, keep?: Uint32Array): LayerSaveOutcome;
   layer_close(session: number): boolean;
   layer_live(): number;
 
