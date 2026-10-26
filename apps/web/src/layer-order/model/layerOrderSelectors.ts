@@ -140,6 +140,8 @@ interface LayerClashView {
   readonly faces: readonly LayerFace[];
   readonly explaining: boolean;
   readonly minimal: boolean;
+  /** Its explain ran out: the check's own set stands in, and Keep trying asks again. */
+  readonly explainTimedOut: boolean;
 }
 
 /** A can't-fit preview's clash, or a restored record's (D10); null when nothing clashes. */
@@ -153,6 +155,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
       faces: Array.from(new Set(rows.flatMap(rowFaces))),
       explaining: state.settle.explain !== null,
       minimal: state.settle.explain === null,
+      explainTimedOut: false,
     };
   }
   const entry = displayedPreview(state);
@@ -175,6 +178,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
       faces: [candidates[0]![0], ...objects],
       explaining: true,
       minimal: false,
+      explainTimedOut: false,
     };
   }
   if (entry.explain.kind === 'none') {
@@ -187,6 +191,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
       faces: Array.from(new Set([...rows.flatMap(rowFaces), ...checked.flatMap((candidate) => [candidate[0], candidate[1]])])),
       explaining: false,
       minimal: false,
+      explainTimedOut: false,
     };
   }
   const inClash = named(entry.explain.constraints);
@@ -198,6 +203,7 @@ function clashOnScreen(state: LayerOrderDialogState): LayerClashView | null {
     faces: entry.explain.faces,
     explaining: false,
     minimal: entry.explain.minimal,
+    explainTimedOut: entry.explain.kind === 'timed_out',
   };
 }
 
@@ -371,7 +377,8 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
       const clashes = sentencesOf(state, clash.rows);
       return {
         tone: 'danger',
-        action: null,
+        // An explain that ran out names the check's own set, not the smallest: Keep trying looks further.
+        action: clash.explainTimedOut ? 'keep_trying' : null,
         text: { key: 'cant_fit', sentence: clash.sentence ?? sentence, clashes, minimal: clash.minimal },
       };
     }

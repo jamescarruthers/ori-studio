@@ -76,10 +76,15 @@ export interface LayerOrderLook {
 }
 
 /**
- * Which host asked: an Edit figure, a Diagram step, Pose. An analytics enum,
- * sent as the dialog's events' `surface`, and never shown.
+ * Which host asked (spec §10). An analytics enum, sent as the dialog's
+ * events' `surface`, and never shown:
+ *
+ * - `edit_figure`: Layer order… on an Edit folded figure;
+ * - `edit_pattern`: Fold with layer order… on an Edit selection, before any figure exists;
+ * - `diagram_step`: a Diagram step's Layer order row;
+ * - `pose`: the Pose toolbar.
  */
-export type LayerOrderRequestSurface = 'edit_figure' | 'diagram_step' | 'pose';
+export type LayerOrderRequestSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose';
 
 export interface LayerOrderRequest {
   /** Which host asked, for the dialog's analytics (`LayerOrderRequestSurface`). */

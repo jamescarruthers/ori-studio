@@ -461,7 +461,7 @@ export function createLayerOrderRuntime(options: LayerOrderRuntimeOptions): Laye
     clearCarried: () => ask((client) => client.clearCarried()),
     stacks: (side) => ask((client) => client.stacks(side)),
     scene: (side) => ask((client) => client.scene(side)),
-    save: () => ask((client) => client.save()),
+    save: (keepCarried) => ask((client) => client.save(keepCarried)),
     relations: () => ask((client) => client.relations()),
     close: () => restarting((client) => client.close(), always),
     explain: (candidate, limits) => ask((client) => client.explain(candidate, limits)),

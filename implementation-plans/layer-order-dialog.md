@@ -524,6 +524,10 @@ disagrees, the artboard wins):
   dropped, per spec §6.7's "no routine status notes".
 
 **Analytics** (spec §10, plus D21's bucket):
+- `layer order dialog closed`'s `outcome` is `applied`, `cancelled`,
+  `unchanged` (an Apply that changed nothing), `refused` (with the refusal
+  code as an enum), `crashed` or `unavailable` (the engine couldn't load),
+  so refusals and crashes can be measured (U10's review, 2026-10-25).
 - U10 fires `layer order dialog opened` (`solutions_bucket: 'pending'` until
   the count arrives), `layer constraint added`, `layer constraint blocked` and
   `layer order dialog closed`. `subject_origin` and `object_origin` gain `menu`
@@ -822,15 +826,14 @@ Settled while building H4, for the PRs that meet it:
   and an untouched Apply on a record still writes, `untouchedApplyWrites`;
   with no record the dialog opens on the order a plain Refold draws, and
   Edit runs that Refold for an untouched Apply) and `review` (D14: opened
-  from a flag's Review…; Edit's and the Diagram's both set it). Both
-  deciders read them through one helper,
-  `layer-order/dialog/layerOrderDialogInit.ts` (`layerOrderRequestInit`):
-  U10's `useLayerOrderDialog` should spread it into the reducer's init
-  (adding its own `surface`, `side` and clock), where it now has
-  `recordNeedsAttentionOf(request.record)` and `review: false`.
-- **The foot's note** is U10's `note` prop on `LayerOrderDialogFrame`, added
-  in H4 line for line as U10 has it (the frame and its styles merge clean);
-  the one line that conflicts, in `LayerOrderDialog`, resolves to D19's
+  from a flag's Review…; Edit's and the Diagram's both set it). The
+  reducer reads them through one helper,
+  `layer-order/dialog/layerOrderDialogInit.ts` (`layerOrderRequestInit`),
+  which `useLayerOrderDialog` spreads into its init (with its own
+  `surface`, `side` and clock), merged after U10: its D16 verdict
+  (`no_change`) then honours `applyRefolds`, so an untouched Apply on a
+  stale figure whose record restores whole answers applied and refolds it.
+- **The foot's note** is U10's `note` prop on `LayerOrderDialogFrame`: D19's
   notice, else D12's note.
 - **A 3D figure's record attaches by its key** (D13). Its one blind spot: an
   older build that deletes a 3D constrained figure and folds the same
@@ -1033,13 +1036,13 @@ Settled while building H4, for the PRs that meet it:
 - [x] U8: panes (#518)
 - [x] U9: inspector model (#510)
 - [x] U9b: compound constraints in the model (#515)
-- [ ] U10: inspector
+- [x] U10: inspector (#525)
 - [x] H2: host engine (#512)
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
 - [ ] H4: Edit refold with constraints
-- [ ] H5: Fold with layer order…
+- [x] H5: Fold with layer order… (#526)
 - [ ] H6: Edit "Another solution" within constraints
 - [x] H7: Diagram step (#519)
 - [x] H8: Pose (#523)

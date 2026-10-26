@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LayerSide } from '../../layer-order/engine/layerOrderEngine';
 import type { LayerPanesView } from '../../layer-order/panes/layerPaneMarks';
@@ -17,9 +18,10 @@ export interface LayerOrderViewToolsProps {
  * of the folded figure shows, X-ray, and Undecided, which tints the spots
  * whose face on top isn't decided yet. A lens on the panes: none of them
  * changes what is saved (spec §5). The frame places them (`ModalFrame`'s
- * tools, on a row of their own on a phone).
+ * tools, on a row of their own on a phone). Memoised: a pane hover changes
+ * none of its props.
  */
-export function LayerOrderViewTools({ view, onChange, disabled }: LayerOrderViewToolsProps) {
+export const LayerOrderViewTools = memo(function LayerOrderViewTools({ view, onChange, disabled }: LayerOrderViewToolsProps) {
   const { t } = useTranslation();
   const sideLabel = t('dialogs:layerOrder.view.side', 'Side');
   return (
@@ -64,4 +66,4 @@ export function LayerOrderViewTools({ view, onChange, disabled }: LayerOrderView
       </Button>
     </div>
   );
-}
+});

@@ -1,10 +1,10 @@
 /**
- * What a host's request decides about the dialog, read in one place for both
- * of its deciders: the inspector's reducer (its init, `LayerOrderDialogInit`)
- * and the dialog shell's Apply (`useLayerOrderSettle`). Read anywhere else, the
- * two could drift: an untouched Apply on a stale figure's record (D12) or a
- * flagged one (D10) must write in both, and an opening from Review… (D14) must
- * open on the flagged rows.
+ * What a host's request decides about the dialog, read in one place: the
+ * inspector's reducer init (`LayerOrderDialogInit`, spread in by
+ * `useLayerOrderDialog`), whose model alone decides what Apply writes (D16).
+ * Read anywhere else, a decider could drift from it: an untouched Apply on a
+ * stale figure's record (D12) or a flagged one (D10) must write, and an
+ * opening from Review… (D14) must open on the flagged rows.
  *
  * Pure: a request in, plain values out.
  */

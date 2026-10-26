@@ -268,7 +268,7 @@ fn an_order_that_no_longer_fits_opens_on_the_closest() {
     });
     let session = ConstraintSession::open_showing(source(&figure.fold), &shown, &Limits::default())
         .expect("open");
-    let OpenedOn::Closest { moved, ignored } = session.opened_on() else {
+    let OpenedOn::Closest { moved, ignored, .. } = session.opened_on() else {
         panic!("{:?}", session.opened_on());
     };
     assert!(*moved >= 1, "{moved}");
@@ -278,6 +278,101 @@ fn an_order_that_no_longer_fits_opens_on_the_closest() {
     // Out of time before anything is held: the solver's first order, said so.
     let late = ConstraintSession::open_showing(source(&figure.fold), &figure.shown, &passed());
     assert!(late.is_err(), "the open itself is out of time");
+}
+
+/// An order that puts a face between the two faces of a folded crease that
+/// runs through it (the three-face condition Edit can miss, plan D19) opens
+/// on the closest order, and says which face sat inside which fold.
+#[test]
+fn an_order_with_a_face_inside_a_fold_names_the_face() {
+    let figure = figure(FIXTURES[0].1);
+    let plain = ConstraintSession::open(source(&figure.fold), &Limits::default()).expect("open");
+    let shown: std::collections::BTreeSet<(usize, usize)> = figure
+        .shown
+        .iter()
+        .map(|r| (r.upper_face, r.lower_face))
+        .collect();
+    let has = |a: FaceId, b: FaceId| {
+        let (a, b) = (a.0 as usize, b.0 as usize);
+        shown.contains(&(a, b)) || shown.contains(&(b, a))
+    };
+    // A condition of kabuto's creases whose two pairs Edit's order states.
+    let (a, b, face) = plain
+        .source()
+        .problem()
+        .constraints()
+        .iter()
+        .find_map(|condition| match *condition {
+            oristudio_layer_order::Constraint::TacoTortilla([a, b, c]) => {
+                (has(c, a) && has(c, b)).then_some((a, b, c))
+            }
+            _ => None,
+        })
+        .expect("kabuto has a fold with a face across it");
+    // Put the face between them: above a, below b.
+    let (a, b, face) = (a.0 as usize, b.0 as usize, face.0 as usize);
+    let wrong: Vec<HierarchyRelation> = figure
+        .shown
+        .iter()
+        .map(|r| {
+            let pair = (
+                r.upper_face.min(r.lower_face),
+                r.upper_face.max(r.lower_face),
+            );
+            if pair == (a.min(face), a.max(face)) {
+                HierarchyRelation {
+                    upper_face: face,
+                    lower_face: a,
+                }
+            } else if pair == (b.min(face), b.max(face)) {
+                HierarchyRelation {
+                    upper_face: b,
+                    lower_face: face,
+                }
+            } else {
+                *r
+            }
+        })
+        .collect();
+    let above = |upper: usize, lower: usize| {
+        wrong
+            .iter()
+            .any(|r| r.upper_face == upper && r.lower_face == lower)
+    };
+    let session = ConstraintSession::open_showing(source(&figure.fold), &wrong, &Limits::default())
+        .expect("open");
+    let OpenedOn::Closest {
+        moved,
+        inside: Some(inside),
+        ..
+    } = session.opened_on()
+    else {
+        panic!("{:?}", session.opened_on());
+    };
+    assert!(*moved >= 1, "{moved}");
+    // The face named is one of the creases' conditions the order given breaks.
+    let [x, y] = inside.crease;
+    let (x, y, f) = (x.0 as usize, y.0 as usize, inside.face.0 as usize);
+    assert!(
+        session.source().problem().constraints().contains(
+            &oristudio_layer_order::Constraint::TacoTortilla([
+                inside.crease[0],
+                inside.crease[1],
+                inside.face
+            ])
+        ),
+        "{inside:?}"
+    );
+    assert_ne!(above(f, x), above(f, y), "{inside:?}");
+    // Edit's own order breaks none: it opens held.
+    let edit =
+        ConstraintSession::open_showing(source(&figure.fold), &figure.shown, &Limits::default())
+            .expect("open");
+    assert!(
+        matches!(edit.opened_on(), OpenedOn::Held { .. }),
+        "{:?}",
+        edit.opened_on()
+    );
 }
 
 // 2. Add adopts its preview.
@@ -459,6 +554,35 @@ fn rows_a_restore_cannot_apply_are_carried_and_saved() {
     assert_eq!(session.carried().len(), 1, "the gone row is still carried");
     let saved = session.save().expect("save");
     assert_eq!(saved.constraints.len(), 2);
+    // A dialog keeps or drops a carried row at the save, by its record
+    // index, and the session keeps it either way, for an undo after a save
+    // the host refuses.
+    assert_eq!(session.carried()[0].index, 2);
+    assert_eq!(
+        session.save_keeping(&[]).expect("save").constraints.len(),
+        1
+    );
+    assert_eq!(
+        session.save_keeping(&[2]).expect("save").constraints.len(),
+        2
+    );
+    assert_eq!(
+        session
+            .save_keeping(&[0, 1])
+            .expect("save")
+            .constraints
+            .len(),
+        1
+    );
+    assert_eq!(session.carried().len(), 1);
+    // A removal names its row by record index too, never by its place: the
+    // row of record index 2 is the only one now.
+    assert!(
+        session.remove_carried(0).is_none(),
+        "record index 0 was applied"
+    );
+    assert_eq!(session.remove_carried(2).map(|row| row.index), Some(2));
+    assert_eq!(session.save().expect("save").constraints.len(), 1);
     session.clear_carried();
     assert_eq!(session.save().expect("save").constraints.len(), 1);
 }

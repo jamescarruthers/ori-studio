@@ -107,10 +107,12 @@ export interface LayerOrderSession {
   reopen(limits?: LayerOrderLimits): void;
   /**
    * Apply's plumbing (`applyLayerOrderSession`): the record and relations for
-   * the host, or the reason it can't be saved. Null when there is no session
-   * to apply, or the engine went away while it ran (the status then says so).
+   * the host, writing back the carried rows `keepCarried` names (every one
+   * when left out), or the reason it can't be saved. Null when there is no
+   * session to apply, or the engine went away while it ran (the status then
+   * says so).
    */
-  apply(): Promise<LayerOrderApplyAnswer | null>;
+  apply(keepCarried?: readonly number[]): Promise<LayerOrderApplyAnswer | null>;
 }
 
 /** The limits to open again with after `status`: later ones after an open that ran out, the same otherwise. */
@@ -234,17 +236,20 @@ export function useLayerOrderSession(request: LayerOrderRequest, options: LayerO
     [open, status]
   );
 
-  const apply = useCallback(async (): Promise<LayerOrderApplyAnswer | null> => {
-    const held = live.current;
-    if (!held || status.kind !== 'ready') return null;
-    try {
-      const answer = await applyLayerOrderSession(held.runtime.engine, request);
-      return live.current?.runtime === held.runtime ? answer : null;
-    } catch (error) {
-      fail(held.runtime, error, 'apply');
-      return null;
-    }
-  }, [fail, request, status]);
+  const apply = useCallback(
+    async (keepCarried?: readonly number[]): Promise<LayerOrderApplyAnswer | null> => {
+      const held = live.current;
+      if (!held || status.kind !== 'ready') return null;
+      try {
+        const answer = await applyLayerOrderSession(held.runtime.engine, request, keepCarried);
+        return live.current?.runtime === held.runtime ? answer : null;
+      } catch (error) {
+        fail(held.runtime, error, 'apply');
+        return null;
+      }
+    },
+    [fail, request, status]
+  );
 
   return { status, runtime, reopen, apply };
 }

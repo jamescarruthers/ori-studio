@@ -35,6 +35,7 @@
 //!     limits?: LayerLimits): LayerCommitted;
 //!   /** The saved constraints a restore did not apply, in record order. */
 //!   layer_carried(session: number): LayerCarriedRow[];
+//!   /** Remove the carried row of record index `index` (`LayerCarriedRow.index`). */
 //!   layer_remove_carried(session: number, index: number): boolean;
 //!   layer_clear_carried(session: number): void;
 //!   layer_stacks(session: number, side: 'front' | 'back'): LayerStacks;
@@ -43,8 +44,12 @@
 //!     OristudioCpFoldedPaperScene | null;
 //!   /** [upper, lower, …], for the CP bridge's `folded_figure_fold_with_order`. */
 //!   layer_oriedita_relations(session: number): Uint32Array;
-//!   /** The committed constraints, then the carried rows, as one record. */
-//!   layer_save(session: number): LayerSaveOutcome;
+//!   /**
+//!    * The committed constraints, then the carried rows, as one record: every
+//!    * carried row, or only those whose record index `keep` names. The session
+//!    * keeps its carried rows either way.
+//!    */
+//!   layer_save(session: number, keep?: Uint32Array): LayerSaveOutcome;
 //!   /** Let a session go, with its cursors; whether it was held. */
 //!   layer_close(session: number): boolean;
 //!   layer_live(): number;
@@ -258,7 +263,7 @@ impl FoldEngine {
         to_js_value(&self.layers.carried(session).map_err(thrown)?)
     }
 
-    /// Remove carried row `index`; whether there was one.
+    /// Remove the carried row of record index `index`; whether there was one.
     pub fn layer_remove_carried(&mut self, session: u32, index: u32) -> Result<bool, JsValue> {
         self.layers
             .remove_carried(session, index as usize)
@@ -299,8 +304,12 @@ impl FoldEngine {
     }
 
     /// The saved record: `{ status: 'ok', json }`, or refused over budget.
-    pub fn layer_save(&self, session: u32) -> Result<JsValue, JsValue> {
-        match self.layers.save(session).map_err(thrown)? {
+    /// `keep`, when given, names the carried rows to write back by record
+    /// index; the session keeps every one either way.
+    pub fn layer_save(&self, session: u32, keep: Option<Vec<u32>>) -> Result<JsValue, JsValue> {
+        let keep: Option<Vec<usize>> =
+            keep.map(|keep| keep.into_iter().map(|index| index as usize).collect());
+        match self.layers.save(session, keep.as_deref()).map_err(thrown)? {
             Saving::Saved { json } => Ok(Fields::new()
                 .text("status", "ok")?
                 .text("json", &json)?

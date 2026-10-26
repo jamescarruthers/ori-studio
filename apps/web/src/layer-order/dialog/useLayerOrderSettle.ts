@@ -1,52 +1,40 @@
 /**
  * The Layer order dialog's two ways out, bound to its session and its host's
- * waiting promise (`implementation-plans/layer-order-dialog.md`, row U4):
- * Cancel (and the close button and Escape) and Apply.
+ * waiting promise (`implementation-plans/layer-order-dialog.md`, rows U4 and
+ * U10): Cancel (and the close button and Escape) and Apply.
  *
  * - **Cancel** answers `cancelled`. The dialog goes as the opening settles,
  *   and its worker with it (`useLayerOrderSession`), mid-call or not: the
  *   Opening frame's Cancel included.
- * - **Apply** decides D16 itself: what is on screen against what the session
- *   opened on (U9's `openedBaseline` and `applyChangedNothing`). Nothing
- *   changed answers `unchanged` with no save, and the host writes nothing.
- *   Otherwise it saves through the engine and answers `applied`, with the
- *   record and relations for the host to fold (`applyLayerOrderSession`). A
+ * - **Apply** carries out what the inspector's model decided (its `apply`
+ *   effect, `LayerOrderApplyResult`), and decides nothing itself: D16 is the
+ *   model's alone, against the baseline it keeps across every open and
+ *   restore, Keep trying's included. Nothing changed answers `unchanged` with
+ *   no save, and the host writes nothing. Otherwise it saves through the
+ *   engine, writing back the carried rows the model still lists, and answers
+ *   `applied` with the record and relations for the host to fold
+ *   (`applyLayerOrderSession`). The save changes nothing in the session, so a
  *   save the engine refuses (a record over its budget) keeps the dialog open
- *   with the reason.
- *
- * What is on screen is the open's own order and rows until an inspector
- * (U10) changes them, and passes them to {@link LayerOrderSettle.apply}: the
- * state, never a verdict. So the shell's Apply, with no inspector yet,
- * answers `unchanged` on a session opened on the host's own order, and waits
- * ({@link LayerOrderSettle.waits}) on a restore whose saved rows clashed or
- * ran out of time (D10), which only an inspector can settle.
+ *   with the reason, as it was.
  */
 import { useCallback, useState } from 'react';
 import type { LayerRefusal } from '../engine/layerOrderEngine';
-import {
-  applyChangedNothing,
-  openedApplyBlocker,
-  openedBaseline,
-  type LayerOrderAtApply,
-} from '../model/layerOrderDecisions';
-import { layerOrderRequestInit } from './layerOrderDialogInit';
+import type { LayerOrderApplyResult } from '../model/layerOrderState';
 import { settleLayerOrderDialog, type LayerOrderDialogOpening } from './layerOrderDialogStore';
 import type { LayerOrderSession } from './useLayerOrderSession';
 
+/**
+ * How an Apply went: the dialog is answered with a record (`applied`) or with
+ * nothing to write (`unchanged`), the save refused it and the dialog stays
+ * open with the reason (`refused`), or it did nothing (`skipped`: already
+ * applying, no session, or the engine went away).
+ */
+export type LayerOrderApplyOutcome = 'applied' | 'unchanged' | 'refused' | 'skipped';
+
 export interface LayerOrderSettle {
   readonly cancel: () => void;
-  /**
-   * Apply, with what is on screen now (an inspector's rows and order); the
-   * open's own when left out.
-   */
-  readonly apply: (now?: LayerOrderAtApply) => Promise<void>;
-  /**
-   * Why the shell's Apply waits on what the session opened on (D10, U9's
-   * reasons): a restore whose saved rows `clash`, or that left them
-   * `unsettled`; null when it can apply. An inspector (U10) passes what is
-   * on screen to {@link apply} and gates Apply with the reducer instead.
-   */
-  readonly waits: 'clash' | 'unsettled' | null;
+  /** Apply what the model decided Apply writes. Resolves how it went. */
+  readonly apply: (result: LayerOrderApplyResult) => Promise<LayerOrderApplyOutcome>;
   /** An Apply is saving: Apply waits, Cancel still closes. */
   readonly applying: boolean;
   /** Why the last Apply could not save, until the next. */
@@ -56,41 +44,35 @@ export interface LayerOrderSettle {
 export function useLayerOrderSettle(opening: LayerOrderDialogOpening, session: LayerOrderSession): LayerOrderSettle {
   const [applying, setApplying] = useState(false);
   const [applyRefusal, setApplyRefusal] = useState<LayerRefusal | null>(null);
-  const { id, request } = opening;
+  const { id } = opening;
   const { status, apply: save } = session;
-  const waits = status.kind === 'ready' ? openedApplyBlocker(status.open.facts) : null;
 
   const cancel = useCallback(() => {
     settleLayerOrderDialog(id, { kind: 'cancelled' });
   }, [id]);
 
   const apply = useCallback(
-    async (now?: LayerOrderAtApply) => {
-      if (applying || status.kind !== 'ready') return;
-      // Saved rows that clashed or were never checked: never written as they stand.
-      if (now === undefined && waits !== null) return;
-      const { open } = status;
-      // The reducer's own reading of the request (`layerOrderRequestInit`), so the two can't drift.
-      const baseline = openedBaseline(open.facts, layerOrderRequestInit(request).recordNeedsAttention);
-      const onScreen = now ?? { constraints: open.facts.constraints, carried: baseline.carried, stacks: open.stacks };
-      if (applyChangedNothing(baseline, onScreen)) {
+    async (result: LayerOrderApplyResult): Promise<LayerOrderApplyOutcome> => {
+      if (applying || status.kind !== 'ready') return 'skipped';
+      if (result.kind === 'no_change') {
         settleLayerOrderDialog(id, { kind: 'unchanged' });
-        return;
+        return 'unchanged';
       }
       setApplying(true);
       setApplyRefusal(null);
-      const answer = await save();
+      const answer = await save(result.keepCarried);
       setApplying(false);
       // No session, or it went away while saving: the session's status says which.
-      if (!answer) return;
+      if (!answer) return 'skipped';
       if (answer.kind === 'refused') {
         setApplyRefusal(answer.refusal);
-        return;
+        return 'refused';
       }
       settleLayerOrderDialog(id, { kind: 'applied', applied: answer.applied });
+      return 'applied';
     },
-    [applying, id, request, save, status, waits]
+    [applying, id, save, status]
   );
 
-  return { cancel, apply, waits, applying, applyRefusal };
+  return { cancel, apply, applying, applyRefusal };
 }

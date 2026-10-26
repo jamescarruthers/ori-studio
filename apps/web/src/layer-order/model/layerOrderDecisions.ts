@@ -13,6 +13,7 @@ import { LAYER_ORDER_LABEL_CAP, layerOrderCountStarts } from '../layerOrderBudge
 import {
   keepTrying,
   type LayerConstraint,
+  type LayerFace,
   type LayerOpenedOn,
   type LayerOpenFacts,
   type LayerOrderLimits,
@@ -136,7 +137,7 @@ export function recordNeedsAttentionOf(record: LayerOrderRecord | null): boolean
 }
 
 /**
- * Whether even an untouched Apply writes, for both deciders of D16, as
+ * Whether even an untouched Apply writes, as the reducer's
  * {@link openedBaseline} takes it (read from a request through
  * `layer-order/dialog/layerOrderDialogInit.ts`): the host flagged its record
  * after an edit ({@link recordNeedsAttentionOf}); or its picture was folded
@@ -221,19 +222,38 @@ function sameStacks(a: LayerStacks, b: LayerStacks): boolean {
 
 /** A line the dialog shows from the moment it opens, about the order it opened on. */
 export type LayerOpenNotice =
-  /** The host's order can't fold; the dialog shows the nearest one that does. Apply writes it. */
-  | { readonly key: 'host_order_cant_fold'; readonly moved: number }
+  /**
+   * The host's order can't fold; the dialog shows the nearest one that does.
+   * Apply writes it. `face` is the face that sits inside a fold whose crease
+   * runs through it, and `crease` the two faces that fold meets at, when the
+   * engine found one (D19); null otherwise.
+   */
+  | {
+      readonly key: 'host_order_cant_fold';
+      readonly moved: number;
+      readonly face: LayerFace | null;
+      readonly crease: readonly [LayerFace, LayerFace] | null;
+    }
   /** Holding the host's order and the search toward it both ran out: the solver's first order is shown. */
   | { readonly key: 'host_order_timed_out' };
 
 /**
  * Opened on the host's order (not a record): when it can't fold, open on the
- * closest valid order and say why in one line. The face and crease it names
- * in the recommendation are not on the wire yet, so the line names neither.
+ * closest valid order and say why in one line, naming the face that sits
+ * inside a fold whose crease runs through it, and that fold's two faces, when
+ * the engine found one in the host's order (`opened_on.inside`).
  */
 export function hostOrderNotice(openedOn: LayerOpenedOn, openedOnHostOrder: boolean): LayerOpenNotice | null {
   if (!openedOnHostOrder) return null;
-  if (openedOn.kind === 'closest' && openedOn.moved > 0) return { key: 'host_order_cant_fold', moved: openedOn.moved };
+  if (openedOn.kind === 'closest' && openedOn.moved > 0) {
+    const inside = openedOn.inside ?? null;
+    return {
+      key: 'host_order_cant_fold',
+      moved: openedOn.moved,
+      face: inside?.face ?? null,
+      crease: inside ? [inside.crease[0], inside.crease[1]] : null,
+    };
+  }
   if (openedOn.kind === 'first' && openedOn.timed_out) return { key: 'host_order_timed_out' };
   return null;
 }
