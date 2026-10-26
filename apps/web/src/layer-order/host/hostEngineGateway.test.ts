@@ -125,3 +125,44 @@ describe('the host engine’s gateway', () => {
     expect(spawned).toHaveLength(1);
   });
 });
+
+describe('a solutions cursor through the gateway (H6)', () => {
+  it('spawns nothing when opened; its first step spawns the worker, which it keeps until closed', async () => {
+    const gateway = await import('./hostEngineGateway');
+    const cursor = gateway.openLayerOrderSolutionCursor(FAKE_LAYER_ORDER_SOURCE, RECORD);
+    await expect(cursor.place({ picture: 'front' })).resolves.toBeNull();
+    expect(cursor.alive()).toBe(true);
+    expect(spawned).toHaveLength(0);
+
+    await expect(cursor.step('previous', { picture: 'front' })).resolves.toMatchObject({ outcome: 'moved' });
+    await expect(cursor.step('next', { picture: 'front' })).resolves.toMatchObject({ outcome: 'moved' });
+    expect(spawned).toHaveLength(1);
+    expect(new URL(spawned[0]!.url).pathname).toMatch(/\/src\/workers\/layerOrderWorker\.ts$/);
+    expect(spawned[0]!.worker.backend.calls).toEqual(['restore', 'step', 'relations', 'save', 'step', 'relations', 'save']);
+    expect(spawned[0]!.worker.terminated).toBe(false);
+
+    cursor.close();
+    expect(spawned[0]!.worker.terminated).toBe(true);
+    expect(cursor.alive()).toBe(false);
+    await expect(cursor.step('next', { picture: 'front' })).resolves.toEqual({ outcome: 'cancelled' });
+  });
+
+  it('a load that fails while the browser is offline is a lost step, reported to no one; the next loads again', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    vi.doMock('./layerOrderHostEngine', () => {
+      throw new TypeError('Failed to fetch dynamically imported module');
+    });
+    const gateway = await import('./hostEngineGateway');
+    const cursor = gateway.openLayerOrderSolutionCursor(FAKE_LAYER_ORDER_SOURCE, RECORD);
+    await expect(cursor.step('next', { picture: 'front' })).resolves.toEqual({ outcome: 'lost', cause: 'load' });
+    expect(monitoring.reportError).not.toHaveBeenCalled();
+    expect(spawned).toHaveLength(0);
+
+    vi.doUnmock('./layerOrderHostEngine');
+    vi.unstubAllGlobals();
+    vi.stubGlobal('Worker', SpyWorker);
+    await expect(cursor.step('previous', { picture: 'front' })).resolves.toMatchObject({ outcome: 'moved' });
+    expect(spawned).toHaveLength(1);
+    cursor.close();
+  });
+});

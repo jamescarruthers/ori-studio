@@ -36,6 +36,36 @@ describe('the fold-run registry', () => {
     expect(store.runs()).toEqual({});
   });
 
+  it('can be stoppable whatever the kernel’s transport says, and say otherwise once its work moves to the kernel', async () => {
+    cancel.foldCancellationAvailable.mockReturnValue(false);
+    try {
+      const store = memoryStore();
+      // A plain fold follows the transport: here none.
+      await withFoldInFlight(store, 'fold', async (runId) => {
+        expect(store.runs()[runId]?.cancellable).toBe(false);
+      });
+      // A Layer order step's run starts stoppable (terminating its engine's worker), then says what the kernel allows.
+      let stoppedRun: number | null = null;
+      await withFoldInFlight(
+        store,
+        'another',
+        async (runId, stop, controls) => {
+          expect(store.runs()[runId]?.cancellable).toBe(true);
+          expect(stopFoldRun(store, runId)).toBe(true);
+          expect(stop.aborted).toBe(true);
+          stoppedRun = runId;
+          controls.stoppable(false);
+          expect(store.runs()[runId]?.cancellable).toBe(false);
+        },
+        { stoppable: true }
+      );
+      expect(stoppedRun).not.toBeNull();
+      expect(store.runs()).toEqual({});
+    } finally {
+      cancel.foldCancellationAvailable.mockReturnValue(true);
+    }
+  });
+
   it('lets go of a run that fails or is stopped', async () => {
     const store = memoryStore();
     await expect(

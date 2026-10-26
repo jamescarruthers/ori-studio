@@ -649,7 +649,7 @@
       "recordUnreadable": "Die gespeicherten Vorgaben dieser Figur konnten nicht gelesen werden, daher kann Lagenreihenfolge sie nicht öffnen. Es wurde nichts geändert.",
       "timedOut": "Die Lagenreihenfolgen dieser Figur konnten nicht rechtzeitig ermittelt werden.",
       "tolerance": "Einige Flächen oder Falten dieser Figur sind zu klein oder liegen zu dicht beieinander für Lagenreihenfolge. Es wurde nichts geändert.",
-      "tooDeep": "Diese Figur stapelt an einer Stelle zu viele Lagen für Lagenreihenfolge. Es wurde nichts geändert.",
+      "tooDeep": "Diese Figur stapelt an einer Stelle {{depth}} Lagen, mehr als Lagenreihenfolge bisher verarbeiten kann. Es wurde nichts geändert.",
       "tooManyFaces": "Diese Figur hat {{faces}} Flächen, mehr als die {{limit}}, mit denen Lagenreihenfolge arbeiten kann. Es wurde nichts geändert.",
       "unreadable": "Lagenreihenfolge konnte nicht lesen, wie diese Figur gefaltet wird, und kann sie daher nicht öffnen. Es wurde nichts geändert."
     },

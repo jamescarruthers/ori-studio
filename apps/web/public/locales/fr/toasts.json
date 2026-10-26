@@ -178,7 +178,14 @@
     "refoldKeptChosenOrder": "L’ordre des couches choisi pour {{name}} demande votre attention, il garde donc son image.",
     "refoldLost": "L’ordre des couches s’est arrêté de façon inattendue, {{name}} n’a donc pas été replié.",
     "refoldLostLoad": "L’ordre des couches n’a pas pu se charger, {{name}} n’a donc pas été replié. Vérifiez votre connexion, puis réessayez.",
-    "unavailable": "Ordre des couches n’a pas pu se charger. Vérifiez votre connexion et réessayez."
+    "stepCheckTimedOut": "Les contraintes de couches de ce modèle n’ont pas pu être vérifiées à temps, il n’a donc pas été modifié.",
+    "stepLost": "L’ordre des couches s’est arrêté de façon inattendue, le modèle n’a donc pas été modifié.",
+    "stepLostLoadOffline": "L’ordre des couches n’a pas pu se charger hors ligne, le modèle n’a donc pas été modifié. Reconnectez-vous, puis rechargez Ori Studio pour réessayer.",
+    "stepLostLoadReload": "L’ordre des couches n’a pas pu se charger, le modèle n’a donc pas été modifié. Rechargez Ori Studio pour réessayer.",
+    "stepNotFoundInTime": "Aucune autre solution n’a pu être trouvée à temps, le modèle n’a donc pas été modifié.",
+    "stepUnrestored": "Les contraintes de couches de ce modèle demandent votre attention, il ne peut donc pas parcourir ses solutions. Ouvrez « Ordre des couches… » pour les vérifier.",
+    "unavailableOffline": "Ordre des couches n’a pas pu se charger hors ligne. Reconnectez-vous, puis rechargez Ori Studio pour réessayer.",
+    "unavailableReload": "Ordre des couches n’a pas pu se charger. Rechargez Ori Studio pour réessayer."
   },
   "paperExport": {
     "saved": "{{name}} exporté"
