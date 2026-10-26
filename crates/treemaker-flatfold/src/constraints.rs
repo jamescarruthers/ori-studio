@@ -1726,6 +1726,53 @@ pub(crate) struct Search {
 }
 
 impl Search {
+    /// A search standing on a solution of `group`, as if it had just found
+    /// it (ours, for the session's stepper, `Enumeration::after`): each
+    /// variable of `group` still open when the loop would reach it is
+    /// guessed with `value`'s order and propagated, in the group's order, as
+    /// the loop guesses. Run with the same `first`, it goes on past that
+    /// solution exactly as a search that reached it by itself would: a guess
+    /// made with `first`'s value still has the other to try, and one made
+    /// with the other has none.
+    ///
+    /// `Ok(None)` when the values are no solution here (a guess breaks a
+    /// constraint, or propagates a value they do not have); the group's
+    /// variables are then open again.
+    pub(crate) fn placed_at(
+        tables: &SearchTables<'_>,
+        group: &[usize],
+        assignments: &mut [u8],
+        value: impl Fn(usize) -> u8,
+        scratch: &mut Scratch,
+    ) -> Result<Option<Search>> {
+        let mut guesses: Vec<Vec<usize>> = Vec::new();
+        let mut placed = true;
+        for &variable in group {
+            if assignments[variable] != 0 {
+                continue;
+            }
+            let assigned =
+                propagate_assignment(tables, variable, value(variable), assignments, scratch)?;
+            if assigned.is_empty() {
+                placed = false;
+                break;
+            }
+            guesses.push(assigned);
+        }
+        placed &= group.iter().all(|&v| assignments[v] == value(v));
+        if !placed {
+            for variable in guesses.iter().flatten() {
+                assignments[*variable] = 0;
+            }
+            return Ok(None);
+        }
+        Ok(Some(Search {
+            guesses,
+            index: group.len(),
+            backtracking: true,
+        }))
+    }
+
     /// Search on until `limit` more solutions, calling `found` on each, or
     /// until every guess is undone. Returns how many it found in this run.
     #[allow(clippy::too_many_arguments)]
