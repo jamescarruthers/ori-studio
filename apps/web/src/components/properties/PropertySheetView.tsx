@@ -16,6 +16,7 @@ import {
   type ControlVerb,
   type NumberField,
   type PropertyField,
+  type PropertyNotice,
   type PropertySection,
   type PropertySheet,
   type PropertySheetAction,
@@ -26,6 +27,7 @@ import {
 import { Button } from '../ui/Button';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { IconButton } from '../ui/IconButton';
+import { Notice } from '../ui/Notice';
 import { Pager } from '../ui/Pager';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import {
@@ -89,9 +91,10 @@ const ACTION_ICONS: Record<string, LucideIcon> = {
  * press — never per input event, so a host can count property edits without
  * seeing values. `onAction(actionId)` fires once per press of a header verb.
  *
- * The parts only some kinds use — header `actions`, a `stacked` segmented
- * field, a stepper, a `note`, a `spaced` section — draw nothing for a kind
- * that leaves them out, which renders as it always has.
+ * The parts only some kinds use — header `actions`, a warning subtitle, a
+ * `stacked` segmented field, a stepper, a `note`, a `spaced` section, a
+ * section's `notice` — draw nothing for a kind that leaves them out, which
+ * renders as it always has.
  */
 export function PropertySheetView({
   sheet,
@@ -117,7 +120,7 @@ export function PropertySheetView({
         <div className={styles.titles}>
           <h2 className={styles.title}>{sheet.title}</h2>
           {sheet.subtitle && (
-            <span className={styles.subtitle} data-property-sheet-subtitle="">
+            <span className={styles.subtitle} data-property-sheet-subtitle="" data-tone={sheet.subtitleTone}>
               {sheet.subtitle}
             </span>
           )}
@@ -156,7 +159,18 @@ function SectionView({
   const fieldRows = fields.map((field) => (
     <FieldView key={field.id} field={field} surfaceProps={surfaceProps} onCommit={onCommit} />
   ));
-  const rows = section.spaced ? <div className={styles.spaced}>{fieldRows}</div> : fieldRows;
+  const notice = section.notice ? <SectionNoticeView notice={section.notice} /> : null;
+  const rows = section.spaced ? (
+    <div className={styles.spaced}>
+      {fieldRows}
+      {notice}
+    </div>
+  ) : (
+    <>
+      {fieldRows}
+      {notice}
+    </>
+  );
   // An untitled section is the sheet's plain body: rows with no header to
   // fold behind, the shape a one-section sheet wants.
   if (section.title === undefined) {
@@ -308,6 +322,29 @@ function FieldView({
         <StepperFieldView field={field} disabled={disabled} title={title} onCommit={committed} />
       );
   }
+}
+
+/**
+ * A section's notice, after its rows and inset as the Diagram's Picture
+ * section insets its own: the sentence, and the fixes it offers as buttons
+ * under it.
+ */
+function SectionNoticeView({ notice }: { notice: PropertyNotice }) {
+  return (
+    <div className={styles.notice}>
+      <Notice
+        tone={notice.tone}
+        actions={(notice.actions ?? []).map((action) => ({
+          id: action.id,
+          label: action.label,
+          disabled: action.disabled,
+          run: action.run,
+        }))}
+      >
+        {notice.text}
+      </Notice>
+    </div>
+  );
 }
 
 /**

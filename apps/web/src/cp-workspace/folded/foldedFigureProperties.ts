@@ -20,6 +20,7 @@ import type {
   FieldNote,
   LiveValue,
   PropertyField,
+  PropertyNotice,
   PropertySection,
   PropertySheet,
   PropertySupport,
@@ -37,7 +38,12 @@ import {
   layerOrderCommand,
   previousSolutionCommand,
 } from './foldedFigureActions';
-import { foldedFigureLayerOrderHold, foldedFigureLayerOrderRecord } from './foldedFigureLayerOrderState';
+import {
+  foldedFigureAwaitsFlatRefold,
+  foldedFigureDetachedLayerOrder,
+  foldedFigureLayerOrderHold,
+  foldedFigureLayerOrderRecord,
+} from './foldedFigureLayerOrderState';
 import { foldedSolutionPlace } from './foldedSolutionCursor';
 import {
   foldedAppearanceSupport,
@@ -46,7 +52,11 @@ import {
 } from './foldedFigureAppearance';
 import { foldedFigureCapabilities, isFolded3dFigure } from './foldedFigureCapabilities';
 import { foldedColorLabel, foldedStateLabel } from './foldedFigureControlOptions';
-import { foldedFigureSubtitle } from './foldedFigureNotice';
+import {
+  foldedFigureLayerOrderAttentionNotice,
+  foldedFigureSubtitle,
+  foldedFigureSubtitleTone,
+} from './foldedFigureNotice';
 import {
   foldedFigureCurrentCase,
   foldedFigureFrontier,
@@ -95,6 +105,10 @@ export interface FoldedFigurePropertyDeps {
   remove(figure: OristudioCpFoldedFigureEntry): void;
   /** The Layer order row's Edit…: the toolbar's Layer order… (`openFoldedFigureLayerOrder.ts`). */
   openLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
+  /** The Pose section's flag's Review…: the dialog on the rows that need attention (D14). */
+  reviewLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
+  /** Beside Review… on constraints a reload found detached: let them go, as one entry. */
+  dismissDetachedLayerOrder(figure: OristudioCpFoldedFigureEntry): void;
 }
 
 /**
@@ -338,6 +352,8 @@ export function buildFoldedFigureProperties(
       // A flat figure's turn is its pose; a 3D figure's pose is its camera,
       // and its turn on the page stays with where it sits (Placement).
       fields: spatial ? [side, layerOrderField(figure, deps)] : [rotation, side, layerOrderField(figure, deps)],
+      // Under the Layer order row, while its constraints need a look.
+      notice: layerOrderAttentionNotice(figure, deps),
     },
   ];
 
@@ -428,6 +444,7 @@ export function buildFoldedFigureProperties(
     targetId: figure.id,
     title: figure.title,
     subtitle: foldedFigureSubtitle(t, figure, deps.stale),
+    subtitleTone: foldedFigureSubtitleTone(figure),
     icon: 'folded-figure',
     // The toolbar's last group, from the same catalog and as it is: what is
     // done to the figure as a whole, at the header's end as the Step pane has
@@ -482,11 +499,7 @@ function layerOrderField(
   const previous = previousSolutionCommand(figure, solutionDeps);
   const next = anotherSolutionCommand(figure, solutionDeps);
   // The toolbar's Layer order…, as the row's Edit… after the pager.
-  const layerOrder = layerOrderCommand(figure, {
-    t,
-    openLayerOrder: deps.openLayerOrder,
-    isStale: () => deps.stale,
-  });
+  const layerOrder = layerOrderCommand(figure, { t, openLayerOrder: deps.openLayerOrder });
   const action = layerOrder
     ? { ...layerOrder, label: t('panels:cpProperties.folded.layerOrderEdit', 'Edit…') }
     : undefined;
@@ -507,15 +520,25 @@ function layerOrderField(
       ...(note ? { note } : {}),
     };
   }
+  // A 3D figure whose creases fold flat again, its record flagged by a refold
+  // on them: a stale figure on flat creases. Edit… opens on them; no pager,
+  // since its 3D solutions are not the ones its record orders; the flag below.
+  const record = foldedFigureLayerOrderRecord(figure);
+  if (foldedFigureAwaitsFlatRefold(figure)) {
+    return { ...row, readout: '', support: 'supported', ...(action ? { action } : {}), ...(note ? { note } : {}) };
+  }
   // A 3D figure keeps a chosen order for when its creases fold flat again
   // (D13): no pager, Edit… held, and why under the label.
-  const record = foldedFigureLayerOrderRecord(figure);
   if (isFolded3dFigure(figure) && record) {
     const flat = t('panels:foldedFigureActions.layerOrder3d', 'Layer order works on flat figures');
     return {
       ...row,
+      // No pager, so nothing to read out between it (the Properties board's state D).
+      readout: '',
       support: 'unsupported',
       reason: flat,
+      // The row says the rest under its label: the button's own reason stays short.
+      ...(action ? { action: { ...action, hint: flat } } : {}),
       note: {
         kind: 'reason',
         text: t('panels:cpProperties.folded.layerOrderKept3d', {
@@ -525,7 +548,6 @@ function layerOrderField(
             'Layer order works on flat figures. Its {{count}} constraints are kept for when it folds flat again.',
         }),
       },
-      ...(action ? { action } : {}),
     };
   }
   // Failed or reopened from a file: as every kernel-backed row waits. A
@@ -595,10 +617,11 @@ function constrainedSolutionReadout(figure: OristudioCpFoldedFigureEntry, t: TFu
 
 /**
  * What the Layer order row says under its label about a chosen order (D11):
- * how many constraints hold it ("3 constraints"), or how many need attention
- * since an edit — quietly, as a status — or, for a newer build's, why it
- * can't be changed here. Read from the record alone, never the engine. None
- * for a figure Oriedita's search orders.
+ * how many constraints hold it ("3 constraints"), quietly, as a status,
+ * flagged or not — the Pose section's notice says which need attention
+ * (`layerOrderAttentionNotice`, the Properties board's state C) — or, for a
+ * newer build's, why it can't be changed here. Read from the record alone,
+ * never the engine. None for a figure Oriedita's search orders.
  */
 function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): FieldNote | null {
   switch (foldedFigureLayerOrderHold(figure)) {
@@ -615,15 +638,9 @@ function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): Fie
     case 'record': {
       const record = foldedFigureLayerOrderRecord(figure);
       if (!record) return null;
-      if (record.attention) {
-        return {
-          kind: 'status',
-          text: t('panels:cpProperties.folded.layerConstraintsAttention', {
-            count: record.attention.count,
-            defaultValue_one: '1 layer constraint needs attention',
-            defaultValue_other: '{{count}} layer constraints need attention',
-          }),
-        };
+      // An order chosen with no constraint (D16), as the Diagram's row says it.
+      if (record.constraints.length === 0) {
+        return { kind: 'status', text: t('panels:cpProperties.folded.chosenOrder', 'Chosen order') };
       }
       return {
         kind: 'status',
@@ -635,4 +652,47 @@ function layerOrderNote(figure: OristudioCpFoldedFigureEntry, t: TFunction): Fie
       };
     }
   }
+}
+
+/**
+ * The Pose section's notice while a flat figure's layer constraints need a
+ * look since an edit (D10, D14; the Properties board's state C): the
+ * sentence, and Review…, which opens the Layer order dialog on them — held
+ * as the row's Edit… is. While the figure folds, Review… waits with the rest
+ * of the row. Constraints a reload found detached can be let go beside it
+ * (Dismiss, one entry), as they are not the figure's own until an Apply.
+ * None when nothing needs a look.
+ */
+function layerOrderAttentionNotice(
+  figure: OristudioCpFoldedFigureEntry,
+  deps: FoldedFigurePropertyDeps
+): PropertyNotice | undefined {
+  const { t } = deps;
+  const notice = foldedFigureLayerOrderAttentionNotice(t, figure);
+  const edit = layerOrderCommand(figure, { t, openLayerOrder: deps.reviewLayerOrder });
+  if (!notice || !edit) return undefined;
+  return {
+    tone: 'warning',
+    text: notice.detail,
+    actions: [
+      {
+        id: 'review-layer-order',
+        label: t('panels:foldedFigureActions.reviewLayerOrder', 'Review…'),
+        disabled: edit.disabled,
+        ...(edit.hint ? { hint: edit.hint } : {}),
+        run: edit.run,
+      },
+      ...(foldedFigureDetachedLayerOrder(figure)
+        ? [
+            {
+              id: 'dismiss-layer-order',
+              label: t('panels:foldedFigureActions.dismissDetachedLayerOrder', 'Dismiss'),
+              // It writes the figure alone, so it waits only while the figure folds.
+              disabled: figure.status !== 'ready',
+              run: () => deps.dismissDetachedLayerOrder(figure),
+            },
+          ]
+        : []),
+    ],
+  };
 }

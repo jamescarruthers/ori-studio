@@ -1505,6 +1505,12 @@ export const ANALYTICS_EVENTS = {
    * fold in 3D. Whether constraints survive the edits made after them.
    */
   layerConstraintsNeedAttention: 'layer constraints need attention',
+  /**
+   * A record a reload detached, because an older build folded its Edit
+   * figure again, let go with Dismiss rather than taken up by Review…'s
+   * Apply. Whether people keep the constraints an older build dropped.
+   */
+  layerConstraintsDismissed: 'layer constraints dismissed',
   foldedFigureStyled: 'folded figure styled',
   /**
    * A field of the app-wide paper style was edited. `source` is where:

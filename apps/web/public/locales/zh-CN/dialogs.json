@@ -493,6 +493,8 @@
     "applying": "正在保存层叠顺序…",
     "applyNothing": "没有可应用的内容",
     "applyOpening": "暂无可应用的内容",
+    "applyRefolds": "折叠后折痕已更改：应用时也会重新折叠。",
+    "applyRefoldsNamed": "{{name}} 折叠后折痕已更改：应用时也会重新折叠。",
     "applyRefused": {
       "other": "无法保存此层叠顺序。没有任何改动。",
       "tooLarge": "此层叠顺序太大，无法随折叠图一起保存。"

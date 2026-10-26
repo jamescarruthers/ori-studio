@@ -13,6 +13,7 @@ import type { FoldedFigureCamera } from './folded3dCamera';
 import { foldedFigureCapabilities } from './foldedFigureCapabilities';
 import { foldedFigureGesture } from './foldedFigureGesture';
 import { foldedFigureLayerOrderHold } from './foldedFigureLayerOrderState';
+import { sayFoldedFigureLayerOrderRefold } from './foldedFigureLayerOrderToasts';
 import { foldedFigureCurrentCase, foldedFigureFrontier } from './foldedFigureState';
 import { openFoldedFigureExport } from './openFoldedFigureExport';
 
@@ -127,6 +128,34 @@ export function duplicateFoldedFigure(id: string, t: TFunction): Promise<boolean
   );
 }
 
+/** Let go of the layer constraints a reload found detached (Dismiss, beside Review…), as one entry. */
+export function dismissFoldedFigureDetachedLayerOrder(id: string, t: TFunction): Promise<boolean | undefined> {
+  return foldedFigureGesture.run(
+    'verb',
+    t('panels:foldedFigureActions.dismissDetachedLayerOrderAction', 'Dismiss layer constraints'),
+    () => useWorkspaceStore.getState().dismissOristudioCpFigureDetachedLayerOrder(id)
+  );
+}
+
+/**
+ * Refold a figure from its creases as they are now, as one entry: in its
+ * chosen layer order when it has one (H4), saying what that came to
+ * (`foldedFigureLayerOrderToasts.ts`).
+ */
+export function refoldFoldedFigure(id: string, t: TFunction): Promise<boolean | undefined> {
+  return foldedFigureGesture.run(
+    'verb',
+    t('panels:creasePattern.refoldFoldedModelAction', 'Refold folded model'),
+    () =>
+      useWorkspaceStore.getState().refoldOristudioCpFoldedFigure(id, {
+        onLayerOrder: (outcome) => {
+          const figure = useWorkspaceStore.getState().oristudioCpFoldedFigures.find((entry) => entry.id === id);
+          sayFoldedFigureLayerOrderRefold(outcome, figure?.title ?? '', t);
+        },
+      })
+  );
+}
+
 /**
  * On to the next layer order, or past the last back to the first, as one
  * entry. On a constrained figure, on to the next solution that fits its
@@ -187,16 +216,16 @@ function stepToastId(tries: number): string {
  *
  * - the engine didn't load, with Reload, the only retry there is (offline:
  *   reconnect first), or it stopped;
- * - the record couldn't be checked in time (D10), or no next solution was
- *   found within the step's deadline (an end the count hasn't reached yet,
- *   or a step that ran out): each with Keep trying, which asks again with a
- *   longer deadline (`keepTrying`);
+ * - the record couldn't be checked in time (D10), or the search for the next
+ *   solution ran out (E9's `timed_out`): each with Keep trying, which asks
+ *   again with a longer deadline (`keepTrying`), and the step goes on from
+ *   what it proved;
  * - its constraints need attention; or the next solution is too large to save.
  *
- * An end that is final, a Stop, a figure that moved on, or one that can't
- * step now says nothing: the pager shows where it stands, and the rest the
- * user did or already sees. A fold the kernel couldn't draw said so through
- * the store.
+ * An end (proved since E9: asking again gains nothing), a Stop, a figure that
+ * moved on, or one that can't step now says nothing: the pager waits at the
+ * end and shows where it stands, and the rest the user did or already sees.
+ * A fold the kernel couldn't draw said so through the store.
  */
 export function sayFoldedSolutionStep(
   step: OristudioCpFigureSolutionStep,
@@ -242,15 +271,6 @@ export function sayFoldedSolutionStep(
         { id: toastId, action: keepTryingAction }
       );
       return;
-    case 'end':
-      // Not final: the search for the next ran out before the count got there.
-      if (!step.final) {
-        toast.error(
-          t('toasts:layerOrder.stepNotFoundInTime', 'Couldn’t find another solution in time, so the figure wasn’t changed.'),
-          { id: toastId, action: keepTryingAction }
-        );
-      }
-      return;
     case 'unrestored':
       toast.error(
         t(
@@ -267,6 +287,7 @@ export function sayFoldedSolutionStep(
       );
       return;
     case 'moved':
+    case 'end':
     case 'not-drawn':
     case 'stopped':
     case 'blocked':

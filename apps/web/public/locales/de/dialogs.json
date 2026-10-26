@@ -504,6 +504,8 @@
     "applying": "Lagenreihenfolge wird gespeichert…",
     "applyNothing": "Nichts anzuwenden",
     "applyOpening": "Noch nichts anzuwenden",
+    "applyRefolds": "Die Faltlinien haben sich seit dem Falten geändert: „Anwenden“ faltet auch neu.",
+    "applyRefoldsNamed": "Die Faltlinien von {{name}} haben sich seit dem Falten geändert: „Anwenden“ faltet es auch neu.",
     "applyRefused": {
       "other": "Diese Lagenreihenfolge konnte nicht gespeichert werden. Es wurde nichts geändert.",
       "tooLarge": "Diese Lagenreihenfolge ist zu groß, um mit der Figur gespeichert zu werden."

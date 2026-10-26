@@ -400,6 +400,24 @@ For U6: a step while the count is unfinished first counts for half its
 deadline, so on the 5 designs whose count doesn't end, 19 of their 20 steps
 took 1.4 to 2.5 s of a 5 s deadline. The stepper's deadline should be short.
 
+**E9, 2026-10-25: the stepper without the count.** A step before the count
+has what it steps through now searches for the solution the count would
+list next, in the count's order, within nine tenths of its limits, and the
+count gets the tenth held back, unless the answer came from what earlier
+steps proved or the cursor was started with `countInSteps: false` (row E9).
+A step that runs out answers `timed_out`; `end` is always a proof. On
+iguana-c0, with no count and the dialog's 3 s, in wasm: X-ray › moves in
+0.3 s a step (0.9 s the first; with `countInSteps: false`, 2–3 ms, 0.6 s
+the first), ‹ back over what it found takes 1 ms, and the positions read
+"2 of 2+", "3 of 3+". By picture it does not move: the picture on screen is
+the first from the front and the last from the back (each proved in under
+1 s), and the next one hinges on whether a picture with the first top of
+one and the second of the other exists, which a check leaves undecided
+after 600 s (the converse is refuted in 13 s); those steps now say
+`timed_out`, at 3, 12 and 48 s. Keeping the count's order there needs that
+answer; the options (keep the order, step out of order on figures the count
+skips, or clause learning) are in the PR, and the choice is open.
+
 **Where the gates run.**
 - **CI:** small fixtures only (kabuto, `solution_sample_1`,
   `colorconstrainttest`), in the workspace test step, not added to the
@@ -821,6 +839,64 @@ A third, the on-demand flat rehydrate re-enabling "Another solution" and
 Duplicate on reopened unconstrained figures (hosts Q8), is a side effect of
 H3's new rehydrate, so it can only follow H3.
 
+Settled while building H4, for the PRs that meet it:
+- **The request gained two fields:** `applyRefolds` (D12: the foot's note,
+  and an untouched Apply on a record still writes, `untouchedApplyWrites`;
+  with no record the dialog opens on the order a plain Refold draws, and
+  Edit runs that Refold for an untouched Apply) and `review` (D14: opened
+  from a flag's Review…; Edit's and the Diagram's both set it). The
+  reducer reads them through one helper,
+  `layer-order/dialog/layerOrderDialogInit.ts` (`layerOrderRequestInit`),
+  which `useLayerOrderDialog` spreads into its init (with its own
+  `surface`, `side` and clock), merged after U10: its D16 verdict
+  (`no_change`) then honours `applyRefolds`, so an untouched Apply on a
+  stale figure whose record restores whole answers applied and refolds it.
+- **The foot's note** is U10's `note` prop on `LayerOrderDialogFrame`: D19's
+  notice, else D12's note.
+- **A 3D figure's record attaches by its key** (D13). Its one blind spot: an
+  older build that deletes a 3D constrained figure and folds the same
+  creases in 3D again on the reused id inherits the record, flagged as
+  waiting; flat figures have the snapshot check for that, 3D ones have no
+  flat snapshot.
+- **Detached by an older build** (the Refusals board's frame), built in H4.
+  A released build detaches a record only by editing the creases and
+  refolding, which changes the source fingerprint, so the figure is
+  recognised by what every build's Refold keeps instead:
+  - **The refold key.** Saved entries carry a `refoldKey`, a hash of the id,
+    the title, the placement, the starting face and the region (rounded).
+    An `order-not-given` record whose figure is still there, flat, with
+    that key is shown for review ("Not applied", Review…, Dismiss), never
+    used to fold. The dialog restores it on the figure as folded now, so a
+    row whose faces are gone reads as not applied.
+  - **Through this build.** The figure holds it through a Refold, a move or
+    a rename, and the save keys its entry to the figure as it is then.
+  - **Settled.** An Apply takes it up and Dismiss lets it go, each one undo
+    entry; the save then drops its entry from `detached[]`, and an undo
+    keeps it.
+  - **Deleted.** The save marks an `order-not-given` entry whose figure is
+    gone `figure-missing`, so a figure folded on the reused id is never
+    shown it. `figure-missing` entries stay in the bag, unshown.
+  - **No id reused in a session.** Figure ids come from a session high-water
+    mark (`foldedFigureIds.ts`) that opening a file raises past every figure
+    id it holds and every id its bag names, so a fold after a Delete, with
+    no save between, never takes the deleted figure's id.
+  - **The session's bag follows each save** (`foldedFigureLayerOrdersAfterSave`):
+    an entry a save dropped stays dropped, and a figure that shows a record,
+    after an undo, writes its entry again.
+  - **`sourceKey`,** the key development builds saved before `refoldKey`, is
+    known and ignored: those entries never lock a figure, and are not shown.
+  - **Blind spots, display only.** A figure the older build moved or
+    renamed shows nothing. One it deleted and folded again from the same
+    region, unmoved, on the reused id with the same title, is shown the
+    record. Entries saved before the key existed (dev builds only) are
+    never shown.
+  - **Dismiss** is on the Properties pane's notice only: the toolbar's chip
+    is one button, and a second would need a rule in the shared
+    `.cp-folded-figure-toolbar` block.
+- **A 3D figure whose creases fold flat again,** and whose record a
+  refold on them could not draw, is a stale figure on flat creases:
+  flagged, opened on them, refolded flat by its Apply.
+
 ### Risks
 
 - **Display fidelity on real files.**
@@ -965,7 +1041,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] E6: explain and solutions (#509, landed through #505)
 - [x] E7: wasm bridge (#505; kept in the Fold bridge, +195 KiB gzipped)
 - [x] E8: census 2 (#513; phase gate 2 passed)
-- [ ] E9: stepping without a finished count
+- [x] E9: stepping without a finished count (#536)
 - [x] U1: shared picking and tints (#497)
 - [x] U2: ModalFrame (#493)
 - [ ] U3a: the native-menu guard (to main)
@@ -983,7 +1059,7 @@ H3's new rehydrate, so it can only follow H3.
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
-- [ ] H4: Edit refold with constraints
+- [x] H4: Edit refold with constraints (#529)
 - [x] H5: Fold with layer order… (#526)
 - [ ] H6: Edit "Another solution" within constraints
 - [x] H7: Diagram step (#519)

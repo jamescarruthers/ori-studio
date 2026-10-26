@@ -154,6 +154,11 @@
     "solvingLong": "Wird noch gelöst – das kann eine Weile dauern"
   },
   "layerOrder": {
+    "folds3d": "Die Faltlinien dieses Modells falten sich jetzt in 3D, und die Lagenreihenfolge gilt für flache Faltungen. Falte es neu, um es zu sehen.",
+    "refoldKept": "Die Lagenvorgaben von {{name}} brauchen Aufmerksamkeit, daher behält es sein Bild.",
+    "refoldKeptChosenOrder": "Die gewählte Lagenreihenfolge von {{name}} braucht Aufmerksamkeit, daher behält es sein Bild.",
+    "refoldLost": "Die Lagenreihenfolge wurde unerwartet beendet, daher wurde {{name}} nicht neu gefaltet.",
+    "refoldLostLoad": "Die Lagenreihenfolge konnte nicht geladen werden, daher wurde {{name}} nicht neu gefaltet. Prüfe deine Verbindung und versuche es dann erneut.",
     "stepCheckTimedOut": "Die Lagenvorgaben dieses Modells konnten nicht rechtzeitig geprüft werden, daher wurde es nicht geändert.",
     "stepLost": "Die Lagenreihenfolge wurde unerwartet beendet, daher wurde das Modell nicht geändert.",
     "stepLostLoadOffline": "Die Lagenreihenfolge konnte offline nicht geladen werden, daher wurde das Modell nicht geändert. Stelle die Verbindung wieder her und lade Ori Studio dann neu, um es erneut zu versuchen.",

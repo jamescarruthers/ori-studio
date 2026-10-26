@@ -188,17 +188,19 @@ describe('the store’s subscription', () => {
     turn.end([FIGURE_HELD], null, FIGURE_HELD.id);
     const withSide = (state: 'Front0' | 'Back1') =>
       ({ ...FIGURE_HELD, snapshot: { model: { state }, shown_order: 'given' } }) as unknown as OristudioCpFoldedFigureEntry;
-    expect(foldedSolutionPlace(FIGURE_HELD)).toEqual({ position: solutionPosition(2, 3), counted: true });
+    // The › that found nothing proved that way ends (E9).
+    const front = { position: solutionPosition(2, 3), counted: true, ended: 'next' };
+    expect(foldedSolutionPlace(FIGURE_HELD)).toEqual(front);
 
     // Turned over: asked for the back. Then back again before the back's answer came.
     settleFoldedSolutionCursor([withSide('Back1')], null);
     expect(answers).toHaveLength(1);
     settleFoldedSolutionCursor([withSide('Front0')], null);
-    expect(foldedSolutionPlace(withSide('Front0'))).toEqual({ position: solutionPosition(2, 3), counted: true });
+    expect(foldedSolutionPlace(withSide('Front0'))).toEqual(front);
     // The back's answer arrives late, for a side no longer shown: the front's readout stays.
     answers[0]!({ position: solutionPosition(1, 1), counted: true });
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(foldedSolutionPlace(withSide('Front0'))).toEqual({ position: solutionPosition(2, 3), counted: true });
+    expect(foldedSolutionPlace(withSide('Front0'))).toEqual(front);
   });
 
   it('tells its subscribers whenever what it reads may have changed', async () => {

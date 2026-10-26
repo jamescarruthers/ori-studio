@@ -76,10 +76,12 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
 });
 
 /** The host engine's door: each cursor the press opens is the test's to script. */
-const gateway = vi.hoisted(() => ({ open: vi.fn() }));
+const gateway = vi.hoisted(() => ({ open: vi.fn(), resolve: vi.fn() }));
 vi.mock('../../layer-order/host/hostEngineGateway', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../layer-order/host/hostEngineGateway')>()),
   openLayerOrderSolutionCursor: (...args: unknown[]) => gateway.open(...args),
+  // A Refold of a constrained figure resolves its record on the creases as they are (H4).
+  resolveLayerOrder: (...args: unknown[]) => gateway.resolve(...args),
 }));
 
 const analytics = vi.hoisted(() => ({ track: vi.fn() }));
@@ -127,6 +129,7 @@ import { foldedFigureGesture } from '../../cp-workspace/folded/foldedFigureGestu
 import { foldedSourceBounds } from '../../cp-workspace/folded/foldedFigureStaleness';
 import {
   deleteFoldedFigure,
+  refoldFoldedFigure,
   showAnotherFoldedSolution,
   showPreviousFoldedSolution,
 } from '../../cp-workspace/folded/foldedFigureVerbs';
@@ -144,7 +147,7 @@ import {
 import { applyFoldedFigureLayerOrder } from '../../cp-workspace/folded/openFoldedFigureLayerOrder';
 import { markFoldPress } from '../../cp-workspace/folded/foldPress';
 import { endOpenCanvasSessions } from '../../cp-workspace/canvasObjects/canvasSessions';
-import { resetFoldedFiguresAtRestForTests } from '../../cp-workspace/folded/foldedFiguresAtRest';
+import { foldedFiguresAtRest, resetFoldedFiguresAtRestForTests } from '../../cp-workspace/folded/foldedFiguresAtRest';
 
 const t = ((_key: string, fallback: string, options?: Record<string, unknown>) =>
   fallback.replace(/\{\{(\w+)\}\}/gu, (_match, name: string) => String(options?.[name] ?? ''))) as unknown as TFunction;
@@ -304,6 +307,7 @@ beforeEach(async () => {
   kernel.nextHandle = 9;
   kernel.foldWithOrder = null;
   gateway.open.mockReset();
+  gateway.resolve.mockReset();
   analytics.track.mockClear();
   toasts.toast.mockClear();
   toasts.toast.error.mockClear();
@@ -433,6 +437,44 @@ describe('the cursor’s life', () => {
       oristudioCpDocument: cpState([LINES[0]!, line({ x: 1, y: 0 }, { x: 0, y: 0.9 }, 'Blue2')]),
     });
     expect(cursor.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
+  it('is let go when Refold refolds the figure in its order (H4), and when a refold keeps it flagged', async () => {
+    const figure = seed();
+    const first = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    gateway.resolve.mockResolvedValueOnce({
+      outcome: 'applied',
+      applied: { record: solutionRecord(2), relations: Uint32Array.of(0, 1, 2, 2), source: SOURCE() },
+      record: solutionRecord(2),
+      attention: null,
+      found: {},
+    });
+    await refoldFoldedFigure(figure.id, t);
+    // A new fold, in its order: the cursor's session shows the fold before.
+    expect(figureNow()).toMatchObject({ handle: 10, layerOrder: held(solutionRecord(2)) });
+    expect(first.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+    // The refold let go of its hold at rest: a figure waiting on its old fold reads as it is, not as the refold found it.
+    const waiting = { ...figureNow(), handle: 9, status: 'loading' as const };
+    expect(foldedFiguresAtRest([waiting])).toEqual([waiting]);
+
+    const second = script(movedTo(3, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    expect(second.closed).toBe(false);
+    gateway.resolve.mockResolvedValueOnce({
+      outcome: 'clash',
+      clashing: [0],
+      record: solutionRecord(3),
+      attention: { reason: 'conflict', count: 1 },
+      found: {},
+    });
+    await refoldFoldedFigure(figure.id, t);
+    // Kept, its picture as it was and its record flagged (D10): its ‹ › wait for a review.
+    expect(figureNow().layerOrder).not.toEqual(held(solutionRecord(3)));
+    expect(second.closed).toBe(true);
     expect(foldedSolutionCursorFigure()).toBeNull();
   });
 
@@ -621,8 +663,24 @@ describe('a press that moves nothing', () => {
     expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
     expect(toasts.toast).not.toHaveBeenCalled();
     expect(toasts.toast.error).not.toHaveBeenCalled();
-    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 3), counted: true });
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 3), counted: true, ended: 'previous' });
     expect(cycled()).toEqual([]);
+  });
+
+  it('at an end the count hasn’t reached says nothing either: E9 proved it, and › waits there', async () => {
+    const figure = seed();
+    const cursor = script({ outcome: 'end', position: solutionPosition(4, 4, false), counted: true });
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(figureNow()).toBe(figure);
+    expect(history()).toEqual([]);
+    expect(toasts.toast.error).not.toHaveBeenCalled();
+    // Kept: ‹ still steps back on the same worker.
+    expect(cursor.closed).toBe(false);
+    expect(foldedSolutionPlace(figureNow())).toEqual({
+      position: solutionPosition(4, 4, false),
+      counted: true,
+      ended: 'next',
+    });
   });
 
   it.each([
@@ -650,13 +708,6 @@ describe('a press that moves nothing', () => {
     [
       'a step out of time',
       { outcome: 'timed_out', stage: 'step' },
-      'Couldn’t find another solution in time, so the figure wasn’t changed.',
-      false,
-      'Keep trying',
-    ],
-    [
-      'an end the count hasn’t reached',
-      { outcome: 'end', position: solutionPosition(4, 4, false), counted: true },
       'Couldn’t find another solution in time, so the figure wasn’t changed.',
       false,
       'Keep trying',
@@ -710,11 +761,8 @@ describe('a press that moves nothing', () => {
 
   it('keeps trying, longer each time, on the same cursor, when asked', async () => {
     const figure = seed();
-    const cursor = script(
-      { outcome: 'timed_out', stage: 'restore' },
-      { outcome: 'end', position: solutionPosition(1, 3, false), counted: true },
-      movedTo(2, 3)
-    );
+    // The restore runs out, then E9's search for the next solution, then it lands.
+    const cursor = script({ outcome: 'timed_out', stage: 'restore' }, { outcome: 'timed_out', stage: 'step' }, movedTo(2, 3));
     await showAnotherFoldedSolution(figure.id, t);
     const keepTrying = () => {
       const calls = toasts.toast.error.mock.calls;

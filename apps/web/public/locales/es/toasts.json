@@ -172,6 +172,11 @@
     "solvingLong": "Sigue resolviendo: esto puede tardar un rato"
   },
   "layerOrder": {
+    "folds3d": "Los pliegues de este modelo ahora se pliegan en 3D, y el orden de capas funciona con pliegues planos. Vuelve a plegarlo para verlo.",
+    "refoldKept": "Las restricciones de capas de {{name}} necesitan atención, así que conserva su imagen.",
+    "refoldKeptChosenOrder": "El orden de capas elegido para {{name}} necesita atención, así que conserva su imagen.",
+    "refoldLost": "El orden de capas se detuvo inesperadamente, así que {{name}} no se volvió a plegar.",
+    "refoldLostLoad": "No se pudo cargar el orden de capas, así que {{name}} no se volvió a plegar. Comprueba tu conexión y vuelve a intentarlo.",
     "stepCheckTimedOut": "No se pudieron comprobar a tiempo las restricciones de capas de este modelo, así que no cambió.",
     "stepLost": "El orden de capas se detuvo inesperadamente, así que el modelo no cambió.",
     "stepLostLoadOffline": "No se pudo cargar el orden de capas sin conexión, así que el modelo no cambió. Vuelve a conectarte y recarga Ori Studio para intentarlo de nuevo.",

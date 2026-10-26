@@ -104,6 +104,18 @@ export interface LayerOrderRequest {
   readonly shown?: OristudioCpFoldedPaperScene | null;
   /** What the host calls the fold, after the dialog's title: a figure's name, "Selection", a step's. */
   readonly name?: string;
+  /**
+   * The host's picture was folded from creases that have changed since, and
+   * the source is the creases as they are now: its Apply also refolds it, as
+   * the dialog's foot says beside Apply (D12). Left out otherwise.
+   */
+  readonly applyRefolds?: boolean;
+  /**
+   * Opened from the host's Review… on its flag (D14): the dialog opens on
+   * the saved rows that need attention. Never set by the dialog itself; left
+   * out for every other way in.
+   */
+  readonly review?: boolean;
   /** Quieter, after the name: the design's credit when there is one ("Traditional", "by Birb"). */
   readonly byline?: string;
 }

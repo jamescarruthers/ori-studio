@@ -209,6 +209,21 @@ export type PropertyField =
 
 export type PropertyFieldKind = PropertyField['kind'];
 
+/**
+ * A sentence a section needs read, after its rows (`components/ui/Notice`):
+ * what is wrong with what the rows show, and the fix it offers — a folded
+ * figure's layer constraints that need attention, with Review…, as the
+ * Diagram's Picture section has a step's. It says nothing a row's note
+ * already does.
+ */
+export interface PropertyNotice {
+  tone: 'info' | 'warning';
+  /** Translated. */
+  text: string;
+  /** Buttons under the sentence; `id` is stable among them. */
+  actions?: readonly (ControlVerb & { id: string })[];
+}
+
 export interface PropertySection {
   id: string;
   title?: string;
@@ -222,6 +237,8 @@ export interface PropertySection {
    */
   spaced?: boolean;
   fields: readonly PropertyField[];
+  /** After the rows, while there is something to say. */
+  notice?: PropertyNotice;
 }
 
 /**
@@ -243,6 +260,8 @@ export interface PropertySheet {
   title: string;
   /** Read-only context (an image's natural size, a figure's stale note) — the one place the sheet shows something it does not edit. */
   subtitle?: string;
+  /** The subtitle drawn as a warning: a state that needs a look (a figure's layer constraints since an edit). */
+  subtitleTone?: 'warning';
   /** An icon name, resolved by the renderer. */
   icon?: string;
   /** The object's verbs, at the header's end. */

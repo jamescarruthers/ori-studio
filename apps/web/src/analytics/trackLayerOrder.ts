@@ -8,6 +8,7 @@ const EVENT_OF = {
   'layer constraint blocked': ANALYTICS_EVENTS.layerConstraintBlocked,
   'layer order dialog closed': ANALYTICS_EVENTS.layerOrderDialogClosed,
   'layer constraints need attention': ANALYTICS_EVENTS.layerConstraintsNeedAttention,
+  'layer constraints dismissed': ANALYTICS_EVENTS.layerConstraintsDismissed,
 } as const satisfies Record<LayerOrderFact['event'], string>;
 
 /**
@@ -36,4 +37,16 @@ export function trackLayerConstraintsNeedAttention(properties: {
   broken_count_bucket: string;
 }): void {
   track(ANALYTICS_EVENTS.layerConstraintsNeedAttention, properties);
+}
+
+/**
+ * A record a reload detached from its host, because an older build folded
+ * it again, let go with Dismiss rather than reviewed: where, and how many
+ * constraints it held, bucketed by the dialog's ladder (`dismissedFact`).
+ */
+export function trackLayerConstraintsDismissed(properties: {
+  surface: LayerOrderSurface;
+  constraint_count_bucket: string;
+}): void {
+  track(ANALYTICS_EVENTS.layerConstraintsDismissed, properties);
 }

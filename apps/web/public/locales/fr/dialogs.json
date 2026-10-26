@@ -515,6 +515,8 @@
     "applying": "Enregistrement de l’ordre des couches…",
     "applyNothing": "Rien à appliquer",
     "applyOpening": "Rien à appliquer pour l’instant",
+    "applyRefolds": "Les plis ont changé depuis le pliage : Appliquer le replie aussi.",
+    "applyRefoldsNamed": "Les plis de {{name}} ont changé depuis son pliage : Appliquer le replie aussi.",
     "applyRefused": {
       "other": "Impossible d’enregistrer cet ordre des couches. Rien n’a été modifié.",
       "tooLarge": "Cet ordre des couches est trop volumineux pour être enregistré avec la figure."

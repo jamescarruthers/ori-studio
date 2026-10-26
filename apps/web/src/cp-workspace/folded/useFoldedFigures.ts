@@ -78,6 +78,7 @@ import {
   duplicateFoldedFigure,
   exportFoldedFigure,
   foldCreases,
+  refoldFoldedFigure,
   setFoldedFigureDisplayStyle,
   showAnotherFoldedSolution,
 } from './foldedFigureVerbs';
@@ -163,9 +164,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
   );
   const updateOristudioCpFoldedFigureModel = useWorkspaceStore(
     (state) => state.updateOristudioCpFoldedFigureModel
-  );
-  const refoldOristudioCpFoldedFigure = useWorkspaceStore(
-    (state) => state.refoldOristudioCpFoldedFigure
   );
   const setOristudioCpViewportOption = useWorkspaceStore(
     (state) => state.setOristudioCpViewportOption
@@ -962,11 +960,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
         void duplicateFoldedFigure(figure.id, t);
       },
       remove: (figure) => void deleteFoldedFigure(figure.id, t),
-      refold: (figure) =>
-        runFoldedFigureAction(
-          t('panels:creasePattern.refoldFoldedModelAction', 'Refold folded model'),
-          () => refoldOristudioCpFoldedFigure(figure.id)
-        ),
+      // A chosen layer order refolds with it (H4), saying what it came to.
+      refold: (figure) => {
+        endOpenMenuGesture();
+        void refoldFoldedFigure(figure.id, t);
+      },
       // Derived, not stamped: an edit outside a figure's source region leaves it
       // alone, which is the whole point of porting Oriedita's box + content
       // check. Memoized on the document so a pan or a selection does not re-run
@@ -1016,6 +1014,11 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
             void simulateOristudioCpCreaseRegion(lineIds);
             return;
           }
+          // Layer constraints that need a look since an edit: the dialog, on them (D14).
+          case 'review-layer-order':
+            endOpenMenuGesture();
+            void openFoldedFigureLayerOrder(figure.id, t, { via: 'review' });
+            return;
           case undefined:
             return;
         }
@@ -1031,7 +1034,6 @@ export function useFoldedFigures({ cpDocument, selectedFoldLineIds }: UseFoldedF
       trackStyled,
       setOristudioCpFolded3dCamera,
       endOpenMenuGesture,
-      refoldOristudioCpFoldedFigure,
       runFoldedFigureAction,
       setOristudioCpViewportOption,
       requestOristudioCpAction,

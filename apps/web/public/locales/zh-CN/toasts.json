@@ -136,6 +136,11 @@
     "solvingLong": "仍在求解 — 这可能需要一段时间"
   },
   "layerOrder": {
+    "folds3d": "此模型的折痕现在以 3D 折叠，而层叠顺序适用于平折。请重新折叠后查看。",
+    "refoldKept": "{{name}} 的层叠约束需要处理，因此保留其图片。",
+    "refoldKeptChosenOrder": "{{name}} 所选的层叠顺序需要处理，因此保留其图片。",
+    "refoldLost": "层叠顺序意外停止，因此 {{name}} 未重新折叠。",
+    "refoldLostLoad": "无法加载层叠顺序，因此 {{name}} 未重新折叠。请检查网络连接，然后重试。",
     "stepCheckTimedOut": "未能及时检查此模型的层叠约束，因此模型未更改。",
     "stepLost": "层叠顺序意外停止，因此模型未更改。",
     "stepLostLoadOffline": "离线时无法加载层叠顺序，因此模型未更改。请恢复网络连接，然后重新加载 Ori Studio 再试。",

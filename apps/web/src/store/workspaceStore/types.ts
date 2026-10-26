@@ -124,6 +124,7 @@ import type {
   LayerOrderLossCause,
   LayerOrderSolutionsUnrestored,
 } from '../../layer-order/host/hostEngineGateway';
+import type { FoldedFigureLayerOrderRefold } from '../../cp-workspace/folded/foldedFigureLayerOrderState';
 import type { OristudioCpOperationId } from '../../lib/oristudioCpCommands';
 import type { OristudioCpActionId } from '../../lib/oristudioCpActions';
 import type { CpLineClipboardPayload, CpSelectionTransform } from '../../lib/creasePatternClipboard';
@@ -864,25 +865,41 @@ export type OristudioCpFigureLayerOrderOpening =
        * dialog has closed.
        */
       release: () => Promise<void>;
+      /**
+       * Set for a figure whose creases changed since it was folded (D12):
+       * `source` is its creases as they are now, so the dialog says that
+       * Apply also refolds it, and the Apply hands this back
+       * (`applyOristudioCpFigureLayerOrder`'s `refold`).
+       */
+      refold?: OristudioCpFigureLayerOrderRefold;
     }
   /**
    * - `blocked`: "Layer order…" cannot open on it now (`foldedFigureLayerOrderBlock`);
    * - `failed`: the kernel failed, and said so through `oristudioCpError`;
    * - `unavailable`: the Layer order engine could not be loaded at all;
-   * - `cancelled`: stopped while it folded, or the figure went meanwhile.
+   * - `cancelled`: stopped while it folded, or the figure went meanwhile;
+   * - `spatial`: its creases changed since it was folded, and fold in 3D now (D13).
    */
-  | { status: 'unavailable'; reason: 'blocked' | 'failed' | 'unavailable' | 'cancelled' };
+  | { status: 'unavailable'; reason: 'blocked' | 'failed' | 'unavailable' | 'cancelled' | 'spatial' };
+
+/**
+ * A stale figure's creases as the dialog opened on them (D12): which reselect
+ * of its region they were, by fingerprint, so an Apply that refolds it
+ * re-baselines it only onto creases that are still those.
+ */
+export interface OristudioCpFigureLayerOrderRefold {
+  sourceFingerprint: string | null;
+}
 
 /**
  * How a press of Another solution or ‹ on a constrained Edit figure ended
  * (row H6): only `moved` changed the figure, as one undo entry.
  *
- * - `end`: no solution lies that way among those counted, `final` once the
- *   count is; the figure shows it is at its end. Not final, the search for
- *   the next ran out within its deadline;
+ * - `end`: no solution lies that way, proved (E9), so asking again gains
+ *   nothing; the figure shows it is at its end, and that verb waits there;
  * - `timed_out`: the restore of the record (D10's "couldn't check in time"),
  *   or the search for the next solution, ran out of time; another press
- *   with more `tries` keeps trying, longer;
+ *   with more `tries` keeps trying, longer, from what the step proved;
  * - `unrestored`: the record restores to no order to step from (D10): its
  *   constraints clash, or the engine refused it;
  * - `too-large`: the next solution's record is past what a figure can save;
@@ -896,7 +913,7 @@ export type OristudioCpFigureLayerOrderOpening =
  */
 export type OristudioCpFigureSolutionStep =
   | { status: 'moved' }
-  | { status: 'end'; final: boolean }
+  | { status: 'end' }
   | { status: 'timed_out'; stage: 'restore' | 'step' }
   | { status: 'unrestored'; why: LayerOrderSolutionsUnrestored }
   | { status: 'too-large' }
@@ -1298,8 +1315,21 @@ export interface CreasePatternSliceActions {
    * placement, style and model, fresh geometry. See
    * `lib/foldedFigureStaleness.ts` for how that region is recorded and how a
    * figure is judged out of date.
+   *
+   * A flat figure with a chosen layer order (row H4) is refolded in it: the
+   * record restored onto the creases as they are now through the host
+   * engine, then folded with the relations it rebuilds (`fold_with_order`).
+   * When they clash, the check runs out of time or the engine or the kernel
+   * refuses, the figure keeps its picture and its record is flagged (D10);
+   * when the engine is not there, nothing is written. A figure whose creases
+   * now fold in 3D keeps its record, flagged as waiting (D13). What it came
+   * to is handed to `onLayerOrder`, for the verb to say. With no record,
+   * every kernel call is the one it always was.
    */
-  refoldOristudioCpFoldedFigure: (id: string) => Promise<boolean>;
+  refoldOristudioCpFoldedFigure: (
+    id: string,
+    options?: { onLayerOrder?: (outcome: FoldedFigureLayerOrderRefold) => void }
+  ) => Promise<boolean>;
   /**
    * Give a 3D figure reopened from a file its geometry back, so it can be turned
    * again — without changing what it draws.
@@ -1352,8 +1382,18 @@ export interface CreasePatternSliceActions {
    * until the entry has taken it. When the crease pattern changed or was
    * replaced since `press` (`foldPress.ts`), it writes nothing and says so:
    * figure `id` may then be another document's.
+   *
+   * With `refold` (the opening's, D12), the dialog was opened on the
+   * figure's creases as they are now: the Apply is its refold too, and the
+   * figure is re-baselined on them — while they are still the ones it opened
+   * on — so it reads as up to date.
    */
-  applyOristudioCpFigureLayerOrder: (id: string, applied: LayerOrderApplied, press: FoldPress) => Promise<boolean>;
+  applyOristudioCpFigureLayerOrder: (
+    id: string,
+    applied: LayerOrderApplied,
+    press: FoldPress,
+    options?: { refold?: OristudioCpFigureLayerOrderRefold }
+  ) => Promise<boolean>;
   /**
    * Another solution, or back one, on a constrained flat figure (row H6, D9):
    * step through the solutions that fit its record on the host engine's
@@ -1369,6 +1409,14 @@ export interface CreasePatternSliceActions {
     direction: 'next' | 'previous',
     options?: { tries?: number }
   ) => Promise<OristudioCpFigureSolutionStep>;
+  /**
+   * Let a record a reload detached go (Dismiss, beside its Review…): the
+   * figure stops showing it, and the save drops its entry from the bag's
+   * `detached` list. False, writing nothing, when the figure shows none.
+   * Callers bracket it as one undo entry, so an undo brings it back
+   * (`dismissFoldedFigureDetachedLayerOrder`).
+   */
+  dismissOristudioCpFigureDetachedLayerOrder: (id: string) => boolean;
   deleteOristudioCpFoldedFigure: (id: string) => Promise<void>;
   setOristudioCpActiveFoldedFigure: (id: string | null) => void;
   /**

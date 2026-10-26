@@ -50,6 +50,11 @@
   white-space: nowrap;
 }
 
+/* A state that needs a look, as the Properties board's "Needs attention" draws it. */
+.subtitle[data-tone='warning'] {
+  color: var(--status-warning);
+}
+
 /* With the object's verbs at its end (`sheet.actions`), the header is the
    Diagram Step pane's header line (DiagramStepHeader.module.css): its padding,
    and the verbs pushed to the end of the line. Beside them the subtitle has
@@ -91,4 +96,10 @@
 .spaced {
   display: grid;
   gap: var(--space-1);
+}
+
+/* A section's notice after its rows, inset to the rows' edges as the
+   Properties board's Pose notice is. */
+.notice {
+  padding: var(--space-1) var(--space-3) var(--space-2);
 }

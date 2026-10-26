@@ -154,6 +154,11 @@
     "solvingLong": "Still solving — this can take a while"
   },
   "layerOrder": {
+    "folds3d": "This figure’s creases fold in 3D now, and layer order works on flat folds. Refold it to see it.",
+    "refoldKept": "{{name}}’s layer constraints need attention, so it keeps its picture.",
+    "refoldKeptChosenOrder": "{{name}}’s chosen layer order needs attention, so it keeps its picture.",
+    "refoldLost": "Layer order stopped unexpectedly, so {{name}} wasn’t refolded.",
+    "refoldLostLoad": "Layer order couldn’t load, so {{name}} wasn’t refolded. Check your connection, then try again.",
     "stepCheckTimedOut": "Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.",
     "stepLost": "Layer order stopped unexpectedly, so the figure wasn’t changed.",
     "stepLostLoadOffline": "Layer order couldn’t load while offline, so the figure wasn’t changed. Reconnect, then reload Ori Studio to try again.",

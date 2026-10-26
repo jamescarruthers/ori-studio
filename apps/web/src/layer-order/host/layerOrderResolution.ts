@@ -147,6 +147,22 @@ export function withLayerOrderAttention(record: LayerOrderRecord, attention: Lay
   return attention ? { ...rest, attention } : rest;
 }
 
+/** Whether two stored summaries say the same: what a host's `layer constraints need attention` waits on changing. */
+export function sameLayerOrderAttention(a: LayerOrderAttention | null, b: LayerOrderAttention | null): boolean {
+  return a === b || (a !== null && b !== null && a.reason === b.reason && a.count === b.count);
+}
+
+/**
+ * A record once its host's creases fold in 3D (D13): kept, with every
+ * constraint waiting until they fold flat again; the very record when it says
+ * so already.
+ */
+export function routed3dLayerOrderRecord(record: LayerOrderRecord): LayerOrderRecord {
+  const count = record.constraints.length;
+  if (record.attention?.reason === 'route-3d' && record.attention.count === count) return record;
+  return withLayerOrderAttention(record, { reason: 'route-3d', count });
+}
+
 /** What the host keeps of `record` after `asked`: the record, flagged with its summary. */
 export function keptLayerOrder(asked: LayerOrderAttentionAsked, record: LayerOrderRecord): LayerOrderKept {
   const attention = layerOrderAttentionOf(asked, record);

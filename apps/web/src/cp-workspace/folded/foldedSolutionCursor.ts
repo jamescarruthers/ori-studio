@@ -53,6 +53,15 @@ import { currentSourceFingerprint } from './foldedFigureStaleness';
 export type { LayerOrderSolutionPlace };
 
 /**
+ * Where the order a figure shows lies, and the way a step from it last found
+ * nothing: an end E9 proved, so that verb waits there even before the count
+ * is final. Any step that moves, or a turn over, reads a new place without it.
+ */
+export interface FoldedSolutionPlace extends LayerOrderSolutionPlace {
+  readonly ended?: 'next' | 'previous';
+}
+
+/**
  * How long a cursor is kept with no press. A press while it is kept costs one
  * step; once it is gone, the next press restores the record first, which
  * takes up to 2–3 s on the largest figures measured (iguana-c0's restore,
@@ -92,7 +101,7 @@ interface KeptFor {
 /** A place, by the key of what it was read by. */
 interface KeyedPlace {
   readonly by: string;
-  readonly value: LayerOrderSolutionPlace;
+  readonly value: FoldedSolutionPlace;
 }
 
 interface Held extends KeptFor {
@@ -234,7 +243,7 @@ export function dropFoldedSolutionCursor(): void {
  * after an undo, once the figure turned over until it is asked again. Reads
  * the table only, so any render may ask.
  */
-export function foldedSolutionPlace(figure: OristudioCpFoldedFigureEntry): LayerOrderSolutionPlace | null {
+export function foldedSolutionPlace(figure: OristudioCpFoldedFigureEntry): FoldedSolutionPlace | null {
   const known = held ? (inStep(held, figure) ? held.place : null) : rest && holdsAsKept(rest, figure) ? rest.place : null;
   return known && known.by === stepByKey(foldedFigureStepBy(figure)) ? known.value : null;
 }
@@ -422,8 +431,12 @@ export function beginFoldedSolutionStep(
           landing = { by: stepByKey(by), value: { position: answer.position, counted: answer.counted } };
           break;
         case 'end':
-          // Nothing moved: where it stands is known now, for the readout and the ends.
-          cursor.place = { by: stepByKey(by), value: { position: answer.position, counted: answer.counted } };
+          // Nothing moved: where it stands is known now, for the readout, and that way is proved
+          // to end (E9), so its verb waits there.
+          cursor.place = {
+            by: stepByKey(by),
+            value: { position: answer.position, counted: answer.counted, ended: direction },
+          };
           break;
         case 'timed_out':
           // Kept, for Keep trying on the same session.

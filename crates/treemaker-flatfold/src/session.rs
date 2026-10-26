@@ -74,7 +74,12 @@
 //!   orders can be listed alone ([`Enumeration::component_order`]), as the
 //!   dialog's solution count lists them; [`Enumeration::projected`] lists
 //!   one order per distinct assignment of some of a component's variables,
-//!   as it counts distinct pictures.
+//!   as it counts distinct pictures. [`Enumeration::lexical`] walks the
+//!   same search over a component's variables in ascending order, so it
+//!   lists its orders lexicographically (or in the reverse order), and
+//!   [`Enumeration::after`] places such a walk on any one of its orders, by
+//!   propagation alone, so that it goes on from there: the dialog's X-ray
+//!   stepper finds the next layer order without listing the ones before it.
 //! - [`CheckOptions::prefer_fits`]: when the caller vouches that the
 //!   preferred order is a complete order that fits (an earlier check's fit),
 //!   every component on which it agrees with what the seeds force keeps it
@@ -305,6 +310,9 @@ pub struct Enumeration {
     scratch: Scratch,
     /// Set by [`Self::projected`].
     projection: Option<Projection>,
+    /// The value each guess of the walk tries first: upstream's 1, unless
+    /// [`Self::lexical`] set it.
+    first: u8,
 }
 
 /// A walk of one component's distinct assignments of some of its variables
@@ -354,6 +362,17 @@ pub enum EnumerationStep {
     Stopped(BudgetLimit),
 }
 
+/// What [`Enumeration::after`] did (ours).
+#[derive(Debug, Clone)]
+pub enum Placed {
+    /// The cursor stands on the order: its next call yields the one after.
+    On(Box<Enumeration>),
+    /// The order is not one the walk lists.
+    NotListed,
+    /// The budget ran out first, after `nodes` guesses; nothing is placed.
+    Stopped { limit: BudgetLimit, nodes: u64 },
+}
+
 impl Enumeration {
     /// Search on to the next complete order within `budget`, which bounds
     /// this call alone.
@@ -393,6 +412,7 @@ impl Enumeration {
             self.nodes += meter.nodes;
             return step;
         }
+        let first = self.first;
         let step = loop {
             let at = self.at;
             let k = self.walk[at];
@@ -402,7 +422,7 @@ impl Enumeration {
                 &mut self.assignments,
                 1,
                 &mut meter,
-                |_| 1,
+                |_| first,
                 &mut self.scratch,
                 |_| {},
             )?;
@@ -685,6 +705,110 @@ impl Enumeration {
         Ok(cursor)
     }
 
+    /// [`Self::varying`], with each varying component searched in ascending
+    /// order of its variables, every guess trying 1 first, or 2 first when
+    /// `descending` (ours). The walk then lists each component's orders in
+    /// lexicographic order of its variables, the first face above before
+    /// the second ("1" before "2"), or in the reverse order: the order the
+    /// Layer order dialog's X-ray stepper steps through. It is upstream's
+    /// search over another variable order, so it lists the same orders, as
+    /// a set, as the walk in the component's own order; only the order they
+    /// come in, and the nodes it takes, differ. From then on
+    /// [`Self::components`] and [`Self::component_order`] list a varying
+    /// component's variables ascending.
+    pub fn lexical(
+        self,
+        vary: &[usize],
+        hold: &[PairOrder],
+        descending: bool,
+    ) -> CompletionResult<Enumeration> {
+        let mut cursor = self.varying(vary, hold)?;
+        let Enumeration {
+            components, walk, ..
+        } = &mut cursor;
+        for &k in walk.iter() {
+            components[k].sort_unstable();
+        }
+        cursor.first = if descending { 2 } else { 1 };
+        Ok(cursor)
+    }
+
+    /// The same cursor, standing on `order`, one of the orders it lists
+    /// (ours): the next call yields what its walk lists after `order`, as
+    /// if it had just yielded `order` itself, so a stepper can go on from
+    /// any order without listing the ones before it.
+    /// [`Placed::NotListed`] when `order` is not one it lists: it breaks a
+    /// constraint, or differs from what the deduction forces or the cursor
+    /// holds. Not for a projected walk.
+    ///
+    /// Each varying component's search is placed on `order` by guessing,
+    /// in its own order, every variable still open when the search reaches
+    /// it with `order`'s value, and propagating: no search. Each guess is a
+    /// node of `budget`, which is asked before it as the search asks it, so
+    /// placing it stops within the budget too ([`Placed::Stopped`]); the
+    /// nodes it took count in [`Self::nodes`].
+    pub fn after(
+        mut self,
+        session: &CompletionSession,
+        order: &[PairOrder],
+        budget: SearchBudget,
+    ) -> CompletionResult<Placed> {
+        let n = self.assignments.len();
+        if order.len() != n || session.base.assignments.len() != n {
+            return Err(invalid(format!(
+                "an order of {} pairs for an enumeration of {n} variables",
+                order.len()
+            )));
+        }
+        if self.projection.is_some() {
+            return Err(invalid(
+                "a projected walk is not placed on an order".to_string(),
+            ));
+        }
+        let mut walked = vec![false; n];
+        for &k in &self.walk {
+            for &v in &self.components[k] {
+                walked[v] = true;
+            }
+        }
+        for (v, &varies) in walked.iter().enumerate() {
+            if varies {
+                self.assignments[v] = 0;
+            } else if self.assignments[v] != order[v].value() {
+                return Ok(Placed::NotListed);
+            }
+        }
+        let tables = session.tables();
+        let mut meter = BudgetMeter::new(budget);
+        let mut searches = Vec::with_capacity(self.walk.len());
+        for &k in &self.walk {
+            match Search::placed_at(
+                &tables,
+                &self.components[k],
+                &mut self.assignments,
+                |v| order[v].value(),
+                &mut meter,
+                &mut self.scratch,
+            )? {
+                Ok(Some(search)) => searches.push(search),
+                Ok(None) => return Ok(Placed::NotListed),
+                Err(limit) => {
+                    return Ok(Placed::Stopped {
+                        limit,
+                        nodes: meter.nodes,
+                    });
+                }
+            }
+        }
+        self.nodes += meter.nodes;
+        self.searches = searches;
+        self.at = self.walk.len().saturating_sub(1);
+        self.yielded = 1;
+        self.current = false;
+        self.end = None;
+        Ok(Placed::On(Box::new(self)))
+    }
+
     /// What the deduction leaves, in independent components, smallest
     /// first, each in its search order: as completing from scratch with the
     /// same seeds splits it.
@@ -942,6 +1066,7 @@ impl CompletionSession {
             nodes: 0,
             scratch: tables.scratch(),
             projection: None,
+            first: 1,
         })
     }
 
@@ -2039,6 +2164,7 @@ mod tests {
             walk_varying(session, deduced, &[], hold, slices, stops),
             vec![Vec::<Vec<PairOrder>>::new()]
         );
+        check_lexical(session, deduced, solution, hold, slices, stops);
         // Projected onto some of a component's variables: one order per
         // distinct assignment of them, each one of the component's.
         for (k, component) in solution.components.iter().enumerate() {
@@ -2093,6 +2219,169 @@ mod tests {
                         }
                     }
                     assert_eq!(seen, expected);
+                }
+            }
+        }
+    }
+
+    /// A lexical walk's orders of component `k`, each call within `budget`,
+    /// as their values in ascending order of its variables.
+    fn walk_lexical(
+        session: &CompletionSession,
+        mut cursor: Enumeration,
+        k: usize,
+        budget: SearchBudget,
+        stops: &mut usize,
+    ) -> Vec<Vec<u8>> {
+        let mut listed = Vec::new();
+        loop {
+            match cursor.next(session, budget) {
+                Ok(EnumerationStep::Order) => {
+                    let order = cursor.order().unwrap_or_else(|| panic!("no order"));
+                    let own = cursor
+                        .component_order(k)
+                        .unwrap_or_else(|| panic!("no order of {k}"));
+                    let variables = &cursor.components()[k];
+                    assert!(variables.windows(2).all(|w| w[0] < w[1]));
+                    let read: Vec<PairOrder> = variables.iter().map(|&v| order[v]).collect();
+                    assert_eq!(own, read);
+                    listed.push(own.iter().map(|o| o.value()).collect());
+                }
+                Ok(EnumerationStep::Stopped(_)) => *stops += 1,
+                Ok(EnumerationStep::Exhausted) => return listed,
+                other => panic!("{other:?}"),
+            }
+        }
+    }
+
+    /// Narrowed to each component, a lexical walk lists the component's
+    /// orders sorted by their values in ascending order of its variables, 1
+    /// before 2, or in the reverse order; placed on any one of them, it
+    /// lists exactly the ones after it, whole or resumed in slices; and on
+    /// an order it does not list, it is placed nowhere. It draws no random
+    /// numbers.
+    fn check_lexical(
+        session: &CompletionSession,
+        deduced: &Deduced,
+        solution: &crate::CompletionSolution,
+        hold: &[PairOrder],
+        slices: SearchBudget,
+        stops: &mut usize,
+    ) {
+        let forced = deduced.forced();
+        for (k, component) in solution.components.iter().enumerate() {
+            let mut ascending = component.variables.clone();
+            ascending.sort_unstable();
+            let key = |order: &[PairOrder]| -> Vec<u8> {
+                ascending.iter().map(|&v| order[v].value()).collect()
+            };
+            let whole: Vec<Vec<PairOrder>> = component
+                .solutions
+                .iter()
+                .map(|own| {
+                    let mut order = hold.to_vec();
+                    for (&v, &value) in component.variables.iter().zip(own) {
+                        order[v] = value;
+                    }
+                    order
+                })
+                .collect();
+            let mut sorted: Vec<Vec<u8>> = whole.iter().map(|o| key(o)).collect();
+            sorted.sort_unstable();
+            let lexical = |descending: bool| {
+                session
+                    .enumerate(deduced)
+                    .and_then(|cursor| cursor.lexical(&[k], hold, descending))
+                    .unwrap_or_else(|e| panic!("{e}"))
+            };
+            for descending in [false, true] {
+                let mut expected = sorted.clone();
+                if descending {
+                    expected.reverse();
+                }
+                for budget in [SearchBudget::default(), slices] {
+                    assert_eq!(
+                        walk_lexical(session, lexical(descending), k, budget, stops),
+                        expected
+                    );
+                }
+                let place = |order: &[PairOrder], budget: SearchBudget| {
+                    lexical(descending)
+                        .after(session, order, budget)
+                        .unwrap_or_else(|e| panic!("{e}"))
+                };
+                for order in &whole {
+                    let at = expected
+                        .iter()
+                        .position(|e| *e == key(order))
+                        .unwrap_or_else(|| panic!("an order of the component"));
+                    let Placed::On(placed) = place(order, SearchBudget::default()) else {
+                        panic!("placed on one of its orders");
+                    };
+                    let guesses = placed.nodes();
+                    assert_eq!(
+                        walk_lexical(session, *placed, k, slices, stops),
+                        expected[at + 1..]
+                    );
+                    // Each guess is a node of the budget: one fewer stops it,
+                    // having placed nothing, and a past deadline before any.
+                    if guesses > 0 {
+                        let short = SearchBudget {
+                            max_nodes: Some(guesses - 1),
+                            deadline: None,
+                        };
+                        assert!(matches!(
+                            place(order, short),
+                            Placed::Stopped {
+                                limit: BudgetLimit::Nodes,
+                                nodes,
+                            } if nodes == guesses - 1
+                        ));
+                        fn late() -> f64 {
+                            1.0
+                        }
+                        let past = SearchBudget {
+                            max_nodes: None,
+                            deadline: Some(crate::Deadline {
+                                now_ms: late,
+                                at_ms: 0.0,
+                            }),
+                        };
+                        assert!(matches!(
+                            place(order, past),
+                            Placed::Stopped {
+                                limit: BudgetLimit::Deadline,
+                                nodes: 0,
+                            }
+                        ));
+                    }
+                }
+                // Not one of its orders: a variable of the component the
+                // other way where that is no order of it, or a forced one.
+                let first = &whole[0];
+                for &v in &ascending {
+                    let mut other = first.clone();
+                    other[v] = if other[v] == PairOrder::FirstAbove {
+                        PairOrder::SecondAbove
+                    } else {
+                        PairOrder::FirstAbove
+                    };
+                    if !sorted.contains(&key(&other)) {
+                        let placed = place(&other, SearchBudget::default());
+                        assert!(matches!(placed, Placed::NotListed), "{v}");
+                    }
+                }
+                if let Some(v) = forced.iter().position(Option::is_some) {
+                    let mut other = first.clone();
+                    other[v] = if other[v] == PairOrder::FirstAbove {
+                        PairOrder::SecondAbove
+                    } else {
+                        PairOrder::FirstAbove
+                    };
+                    assert!(matches!(
+                        place(&other, SearchBudget::default()),
+                        Placed::NotListed
+                    ));
                 }
             }
         }

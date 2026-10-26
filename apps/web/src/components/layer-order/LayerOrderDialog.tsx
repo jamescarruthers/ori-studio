@@ -10,7 +10,7 @@ import { useModalFullScreen } from '../ui/ModalFrame';
 import { LayerOrderDialogFrame, type LayerOrderPhonePane } from './LayerOrderDialogFrame';
 import { layerOrderCopy } from './layerOrderInspectorCopy';
 import { LayerOrderInspector } from './LayerOrderInspector';
-import { applyWaitText } from './layerOrderNotices';
+import { applyRefoldsText, applyWaitText } from './layerOrderNotices';
 import { LayerOrderPanes } from './LayerOrderPanes';
 import { LayerOrderViewTools } from './LayerOrderViewTools';
 
@@ -86,7 +86,15 @@ export function LayerOrderDialog({ opening }: { opening: LayerOrderDialogOpening
       applyWaits={apply.enabled ? null : applyWaitText(t, apply.why)}
       applying={settle.applying}
       applyRefusal={settle.applyRefusal}
-      note={notice ? { text: copy.openNotice(notice), onHover: dialog.setNoticeLit } : null}
+      // D19's notice of how the record opened, else D12's: opened on creases that
+      // changed since the host's fold, its Apply refolds too.
+      note={
+        notice
+          ? { text: copy.openNotice(notice), onHover: dialog.setNoticeLit }
+          : request.applyRefolds
+            ? { text: applyRefoldsText(t, request.name) }
+            : null
+      }
     />
   );
 }

@@ -29,7 +29,7 @@ import type {
   OristudioCpFoldSource,
 } from '../../engine/oristudioCpTypes';
 import type { LayerOrderLossCause, LayerOrderResolution } from '../../layer-order/host/hostEngineGateway';
-import { withLayerOrderAttention } from '../../layer-order/host/layerOrderResolution';
+import { routed3dLayerOrderRecord, withLayerOrderAttention } from '../../layer-order/host/layerOrderResolution';
 import { NEWER } from '../../lib/documentFile';
 import { keyDigest } from '../../lib/keyDigest';
 import { openFold, type CpFoldRuntime, type FoldedFigureState } from '../../lib/creaseExportFold';
@@ -169,10 +169,8 @@ export function flaggedLayerOrder(layerOrder: StepLayerOrder, attention: LayerOr
  * constraint waiting until they fold flat again; already so, as it was.
  */
 export function routed3dLayerOrder(layerOrder: StepLayerOrder): StepLayerOrder {
-  const { attention } = layerOrder.record;
-  const count = layerOrder.record.constraints.length;
-  if (attention?.reason === 'route-3d' && attention.count === count) return layerOrder;
-  return flaggedLayerOrder(layerOrder, { reason: 'route-3d', count });
+  const routed = routed3dLayerOrderRecord(layerOrder.record);
+  return routed === layerOrder.record ? layerOrder : keptLayerOrder(routed);
 }
 
 /**
