@@ -245,6 +245,7 @@ describe('the preview of a complete sentence', () => {
       facts: { verdict: 'timed_out' },
     });
     expect(hintLine(done.state)?.text).toMatchObject({ key: 'cant_fit', minimal: false, clashes: [sentence(2, 'in_front_of', 0)] });
+    expect(hintLine(done.state)?.action).toBe('keep_trying');
     expect(paneMarks(done.state).danger).toEqual([2, 0, 3]);
   });
 

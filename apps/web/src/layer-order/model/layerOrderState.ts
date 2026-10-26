@@ -107,12 +107,15 @@ export interface LayerClash {
 /**
  * A can't-fit's explain: not asked yet (it is asked when the entry comes on
  * display, so a set the sentence has moved past costs nothing), running, or
- * done.
+ * done; or out of time, within the preview's short deadline so it never holds
+ * the worker from the next preview or Apply. Then the check's own set stands
+ * in, not claimed smallest, and Keep trying asks again with later `limits`.
  */
 export type LayerExplainState =
   | { readonly kind: 'none' }
-  | { readonly kind: 'pending'; readonly request: number }
-  | ({ readonly kind: 'done' } & LayerClash);
+  | { readonly kind: 'pending'; readonly request: number; readonly limits: LayerOrderLimits }
+  | ({ readonly kind: 'done' } & LayerClash)
+  | ({ readonly kind: 'timed_out'; readonly limits: LayerOrderLimits } & LayerClash);
 
 /**
  * One sentence's preview against the order on screen: the committed list plus

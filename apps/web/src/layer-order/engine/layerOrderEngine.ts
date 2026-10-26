@@ -197,8 +197,10 @@ const NODES = { maxNodes: 200_000, fastNodes: 128 } as const;
  * restore 2.3 s. On iguana-c0 the open took 2.3 s, previews 0.66 s at the
  * median, a restore 2.8 s, and one preview of eleven ran past 30 s, so it
  * reads "couldn't check in time" at 3 s. A step checks one solution, as a
- * preview does; an explain runs a few checks. The count's slice is
- * `LAYER_ORDER_COUNT_SLICE` (`layerOrderBudgets.ts`).
+ * preview does. An explain runs a few checks, but gets the preview's 3 s too:
+ * a wasm call can't be stopped, so a longer one would hold the worker from the
+ * user's next preview or Apply; one that runs out offers Keep trying. The
+ * count's slice is `LAYER_ORDER_COUNT_SLICE` (`layerOrderBudgets.ts`).
  */
 export const LAYER_ORDER_LIMITS = {
   open: { ...NODES, deadlineMs: 30_000 },
@@ -206,7 +208,7 @@ export const LAYER_ORDER_LIMITS = {
   commit: { ...NODES, deadlineMs: 10_000 },
   restore: { ...NODES, deadlineMs: 30_000 },
   step: { ...NODES, deadlineMs: 3_000 },
-  explain: { ...NODES, deadlineMs: 10_000 },
+  explain: { ...NODES, deadlineMs: 3_000 },
 } as const satisfies Record<string, LayerOrderLimits>;
 
 /** How much further {@link keepTrying} lets a call go each time. */

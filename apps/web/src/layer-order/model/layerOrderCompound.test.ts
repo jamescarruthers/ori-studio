@@ -447,6 +447,19 @@ describe('explains, only for the set on display', () => {
   // 4 in front of 5 is committed, so a can't-fit names it and needs explaining; 2 is open with 0, 3 and 5.
   const WIDE: LayerOpenFacts = openFactsOf({ constraints: [[4, 5, -1]], openPairs: Uint32Array.of(0, 2, 2, 3, 2, 5) });
 
+  it('an explain gets the preview’s 3 s; one that runs out keeps the check’s set, and Keep trying asks again, later', () => {
+    const cant = previewed(sentenceOf(opened(WIDE).state, 2, 0), { verdict: 'cant_fit', constraints: [0, 1] });
+    const asked = lastOf(cant.effects, 'explain');
+    expect(asked.limits).toEqual(LAYER_ORDER_LIMITS.preview);
+    const ranOut = play(cant.state, { type: 'explained', request: asked.request, facts: { verdict: 'timed_out' } });
+    expect(hintLine(ranOut.state)).toMatchObject({ tone: 'danger', action: 'keep_trying', text: { key: 'cant_fit', minimal: false } });
+    // The check's own set stands in on the panes, not claimed smallest.
+    expect(paneMarks(ranOut.state).danger).toEqual(expect.arrayContaining([2, 0, 4, 5]));
+    const again = play(ranOut.state, { type: 'keep_trying' });
+    expect(lastOf(again.effects, 'explain').limits).toEqual(keepTrying(LAYER_ORDER_LIMITS.explain));
+    expect(hintLine(again.state)?.text.key).toBe('cant_fit_explaining');
+  });
+
   it('building “2 in front of 0, 3, 5” through can’t-fit prefixes asks one explain, not three', () => {
     const built = sentenceOf(opened(WIDE).state, 2, 0, 3, 5);
     const [first, second, third] = effectsOf(built.effects, 'preview');

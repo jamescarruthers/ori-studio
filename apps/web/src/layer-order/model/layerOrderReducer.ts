@@ -548,21 +548,32 @@ function askPreview(
   };
 }
 
-/** Ask for the displayed can't-fit's explain: only the entry on display is explained, when it comes on display. */
-function askExplain(state: LayerOrderDialogState, effects: LayerOrderEffect[]): LayerOrderDialogState {
+/**
+ * Ask for the displayed can't-fit's explain: only the entry on display is
+ * explained, when it comes on display, within the preview's short deadline
+ * (`LAYER_ORDER_LIMITS.explain`); Keep trying asks again, later, after one
+ * that ran out (`again`).
+ */
+function askExplain(
+  state: LayerOrderDialogState,
+  effects: LayerOrderEffect[],
+  again: LayerOrderLimits | null = null
+): LayerOrderDialogState {
   const candidates = sentenceCandidates(state, state.pointedVerb ?? state.sentence.verb);
   const entry = candidates ? state.previews[candidatesKey(candidates)] : undefined;
-  if (!candidates || entry?.kind !== 'cant_fit' || entry.explain.kind !== 'none') return state;
+  if (!candidates || entry?.kind !== 'cant_fit') return state;
+  if (entry.explain.kind !== (again ? 'timed_out' : 'none')) return state;
+  const limits = again ?? LAYER_ORDER_LIMITS.explain;
   const [id, asked] = request(state);
   effects.push({
     type: 'explain',
     request: id,
     constraints: previewListOf(asked.rows, entry.candidates),
-    limits: LAYER_ORDER_LIMITS.explain,
+    limits,
   });
   return {
     ...asked,
-    previews: { ...asked.previews, [candidatesKey(candidates)]: { ...entry, explain: { kind: 'pending', request: id } } },
+    previews: { ...asked.previews, [candidatesKey(candidates)]: { ...entry, explain: { kind: 'pending', request: id, limits } } },
   };
 }
 
@@ -667,7 +678,11 @@ function explained(state: LayerOrderDialogState, id: number, facts: LayerExplain
   if (key !== null) {
     const entry = state.previews[key] as Extract<LayerPreviewEntry, { kind: 'cant_fit' }>;
     const clash = clashOf(facts, entry.constraints, previewListOf(state.rows, entry.candidates));
-    return { ...state, previews: { ...state.previews, [key]: { ...entry, explain: { kind: 'done', ...clash } } } };
+    const explain: LayerExplainState =
+      facts.verdict === 'timed_out' && entry.explain.kind === 'pending'
+        ? { kind: 'timed_out', limits: entry.explain.limits, ...clash }
+        : { kind: 'done', ...clash };
+    return { ...state, previews: { ...state.previews, [key]: { ...entry, explain } } };
   }
   const { settle } = state;
   if (settle.kind === 'clash' && settle.explain?.request === id) {
@@ -994,6 +1009,10 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
   const entry = displayedPreview(state);
   if (entry?.kind === 'timed_out' && quiet(state)) {
     return askPreview(state, entry.candidates, keepTryingLimits(entry.limits), effects);
+  }
+  // An explain that ran out: the same set, asked again with later limits.
+  if (entry?.kind === 'cant_fit' && entry.explain.kind === 'timed_out' && quiet(state)) {
+    return askExplain(state, effects, keepTryingLimits(entry.explain.limits));
   }
   return state;
 }
