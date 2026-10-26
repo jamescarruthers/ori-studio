@@ -11,11 +11,7 @@ import { noteSolutionFrontier, resetSolutionFrontiers } from './foldedSolutionFr
 import { foldedFigureLayerOrder } from '../../lib/layerOrder/foldedFigureLayerOrder';
 import { twoConstraintRecord } from '../../lib/layerOrder/layerOrderRecord.fixtures';
 import { dropFoldedSolutionCursor } from './foldedSolutionCursor';
-import {
-  scriptedSolutionCursor,
-  seatFoldedSolutionCursor,
-  solutionPosition,
-} from './foldedSolutionCursor.fixtures';
+import { landedAt, scriptedSolutionCursor, seatFoldedSolutionCursor } from './foldedSolutionCursor.fixtures';
 
 /** The host engine's door: a constrained figure's cursor is the test's to script (H6). */
 const gateway = vi.hoisted(() => ({ open: vi.fn() }));
@@ -104,6 +100,8 @@ function deps(
     duplicate: vi.fn(),
     remove: vi.fn(),
     openLayerOrder: vi.fn(),
+    reviewLayerOrder: vi.fn(),
+    dismissDetachedLayerOrder: vi.fn(),
     ...overrides,
   };
 }
@@ -285,15 +283,130 @@ describe('buildFoldedFigureProperties', () => {
       expect(sheetFor(constrained).subtitle).toBe(sheetFor(SOLVED).subtitle);
     });
 
-    it('says how many need attention after an edit, quietly', () => {
+    it('flags constraints that need attention after an edit: the header in warning, a notice with Review…, ‹ › waiting (D10, D14)', () => {
+      const d = deps({ stale: true });
       const flagged = {
         ...SOLVED,
+        layerOrder: held(
+          twoConstraintRecord({
+            constraints: [
+              [0, 1, 1],
+              [2, 1, -1],
+              [0, 2, 1],
+            ],
+            attention: { reason: 'conflict', count: 2 },
+          })
+        ),
+      };
+      const sheet = sheetFor(flagged, d);
+      // The Properties board's state C: the state in the header, before Stale.
+      expect(sheet).toMatchObject({ subtitle: '2 layer constraints need attention', subtitleTone: 'warning' });
+      const layerOrder = stepper(sheet);
+      // The row keeps the total; the notice says which need a look.
+      expect(layerOrder.note).toEqual({ kind: 'status', text: '3 constraints' });
+      for (const verb of [layerOrder.previous, layerOrder.next]) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Review the layer constraints that need attention first' });
+      }
+      expect(layerOrder.action).toMatchObject({ label: 'Edit…', disabled: false });
+      const pose = sheet.sections.find((section) => section.id === 'pose');
+      expect(pose?.notice).toMatchObject({
+        tone: 'warning',
+        text: '2 layer constraints need attention since the creases changed.',
+        actions: [{ id: 'review-layer-order', label: 'Review…', disabled: false }],
+      });
+      // Review…: the dialog, on the rows that need attention (D14); not the row's Edit….
+      pose?.notice?.actions?.[0]?.run();
+      expect(d.reviewLayerOrder).toHaveBeenCalledWith(flagged);
+      expect(d.openLayerOrder).not.toHaveBeenCalled();
+
+      // A check that ran out of time says so; one that needs nothing says nothing.
+      const timedOut = { ...SOLVED, layerOrder: held(twoConstraintRecord({ attention: { reason: 'timeout', count: 2 } })) };
+      expect(sheetFor(timedOut).sections.find((section) => section.id === 'pose')?.notice?.text).toBe(
+        '2 layer constraints couldn’t be checked in time.'
+      );
+      const settled = sheetFor({ ...SOLVED, layerOrder: held() }, deps({ stale: true }));
+      expect(settled.sections.find((section) => section.id === 'pose')?.notice).toBeUndefined();
+      expect(settled).toMatchObject({ subtitle: 'Stale' });
+      expect(settled.subtitleTone).toBeUndefined();
+    });
+
+    it('reads an order chosen with no constraint as one, flagged or not (D16)', () => {
+      const chosen = { ...SOLVED, layerOrder: held(twoConstraintRecord({ constraints: [] })) };
+      expect(stepper(sheetFor(chosen)).note).toEqual({ kind: 'status', text: 'Chosen order' });
+      const flagged = { ...SOLVED, layerOrder: held(twoConstraintRecord({ constraints: [], attention: { reason: 'timeout', count: 0 } })) };
+      const sheet = sheetFor(flagged);
+      expect(sheet.subtitle).toBe('Chosen layer order needs attention');
+      expect(sheet.sections.find((section) => section.id === 'pose')?.notice?.text).toBe(
+        'This figure’s chosen layer order couldn’t be checked in time.'
+      );
+    });
+
+    it('flags a record a reload detached as not applied, with Review… and Dismiss, and leaves the row as an unconstrained one', () => {
+      const d = deps();
+      const detached = { ...SOLVED, detachedLayerOrder: { record: twoConstraintRecord(), json: '{}' } };
+      const sheet = sheetFor(detached, d);
+      expect(sheet).toMatchObject({ subtitle: '2 layer constraints aren’t applied', subtitleTone: 'warning' });
+      const pose = sheet.sections.find((section) => section.id === 'pose');
+      expect(pose?.notice).toMatchObject({
+        tone: 'warning',
+        text: 'An older Ori Studio refolded this figure, so its 2 layer constraints aren’t applied.',
+        actions: [
+          { id: 'review-layer-order', label: 'Review…', disabled: false },
+          { id: 'dismiss-layer-order', label: 'Dismiss', disabled: false },
+        ],
+      });
+      pose?.notice?.actions?.[0]?.run();
+      expect(d.reviewLayerOrder).toHaveBeenCalledWith(detached);
+      pose?.notice?.actions?.[1]?.run();
+      expect(d.dismissDetachedLayerOrder).toHaveBeenCalledWith(detached);
+      // Settled — taken up or dismissed — it is gone; and a figure's own flag has no Dismiss.
+      for (const settled of ['reattached', 'dismissed'] as const) {
+        const after = sheetFor({ ...detached, detachedLayerOrder: { ...detached.detachedLayerOrder, settled } }, deps());
+        expect(after.sections.find((section) => section.id === 'pose')?.notice).toBeUndefined();
+      }
+      const own = sheetFor({ ...SOLVED, layerOrder: held(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } })) }, deps());
+      expect(own.sections.find((section) => section.id === 'pose')?.notice?.actions?.map((action) => action.id)).toEqual([
+        'review-layer-order',
+      ]);
+      // Not its own: the row steps Oriedita's search, and says nothing of constraints.
+      const layerOrder = stepper(sheet);
+      expect(layerOrder).toMatchObject({ readout: '2 of 3+', next: { disabled: false } });
+      expect(layerOrder.note).toBeUndefined();
+    });
+
+    it('opens a 3D figure whose creases fold flat again, its record flagged, as a stale flat one', () => {
+      const d = deps({ stale: true });
+      const flagged = {
+        ...SPATIAL,
+        sourceBounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
         layerOrder: held(twoConstraintRecord({ attention: { reason: 'conflict', count: 2 } })),
       };
-      expect(stepper(sheetFor(flagged)).note).toEqual({
-        kind: 'status',
-        text: '2 layer constraints need attention',
-      });
+      const sheet = sheetFor(flagged, d);
+      expect(sheet).toMatchObject({ subtitle: '2 layer constraints need attention', subtitleTone: 'warning' });
+      const layerOrder = stepper(sheet);
+      expect(layerOrder).toMatchObject({ support: 'supported', readout: '', action: { label: 'Edit…', disabled: false } });
+      expect(layerOrder.previous).toBeUndefined();
+      expect(layerOrder.note).toEqual({ kind: 'status', text: '2 constraints' });
+      expect(sheet.sections.find((section) => section.id === 'pose')?.notice?.actions?.[0]).toMatchObject({ disabled: false });
+    });
+
+    it('keeps a 3D figure’s flag on its row alone: no warning header, no notice (D13)', () => {
+      const waiting = { ...SPATIAL, layerOrder: held(twoConstraintRecord({ attention: { reason: 'route-3d', count: 2 } })) };
+      const sheet = sheetFor(waiting);
+      expect(sheet.subtitle).toBeUndefined();
+      expect(sheet.subtitleTone).toBeUndefined();
+      expect(sheet.sections.find((section) => section.id === 'pose')?.notice).toBeUndefined();
+      expect(stepper(sheet).note?.text).toBe(
+        'Layer order works on flat figures. Its 2 constraints are kept for when it folds flat again.'
+      );
+    });
+
+    it('opens on a figure whose creases changed since the fold, as it is now (D12)', () => {
+      const d = deps({ stale: true });
+      const layerOrder = stepper(sheetFor({ ...SOLVED, layerOrder: held() }, d));
+      expect(layerOrder.action).toMatchObject({ label: 'Edit…', disabled: false });
+      // ‹ › wait: the solutions of its fold are not its creases' now (H6); Refold or Edit… first.
+      expect(layerOrder.next).toMatchObject({ disabled: true, hint: 'Its creases changed since it was folded' });
     });
 
     it('holds Edit… on a 3D figure with why, stepping on as before when no record waits on it', () => {
@@ -311,13 +424,15 @@ describe('buildFoldedFigureProperties', () => {
     it('keeps a 3D figure’s constraints for when it folds flat again, with no pager (D13)', () => {
       const kept = stepper(sheetFor({ ...SPATIAL, layerOrder: held() }));
       expect(kept).toMatchObject({
+        readout: '',
         support: 'unsupported',
         reason: 'Layer order works on flat figures',
         note: {
           kind: 'reason',
           text: 'Layer order works on flat figures. Its 2 constraints are kept for when it folds flat again.',
         },
-        action: { label: 'Edit…', disabled: true },
+        // Short on the button: the row says the rest (the toolbar's tooltip says it all).
+        action: { label: 'Edit…', disabled: true, hint: 'Layer order works on flat figures' },
       });
       expect(kept.previous).toBeUndefined();
       expect(kept.next).toBeUndefined();
@@ -382,10 +497,9 @@ describe('buildFoldedFigureProperties', () => {
       layerOrder: held(),
     } as OristudioCpFoldedFigureEntry;
 
+    /** A press landed the figure on `index` of `n`. */
     async function at(figure: OristudioCpFoldedFigureEntry, index: number, n: number, { exact = true, counted = true } = {}) {
-      gateway.open.mockReturnValueOnce(
-        scriptedSolutionCursor([{ outcome: 'end', position: solutionPosition(index, n, exact), counted }])
-      );
+      gateway.open.mockReturnValueOnce(scriptedSolutionCursor([landedAt(twoConstraintRecord(), index, n, { exact, counted })]));
       await seatFoldedSolutionCursor(figure, twoConstraintRecord());
     }
 

@@ -62,7 +62,7 @@ pub use session::{
     CantFit, CantFitProof, Commit, Committed, Constraint, ConstraintFault, ConstraintSession,
     Limits, Preview, PreviewFit, SessionRefusal, TimedOut, Verb,
 };
-pub use showing::{OpenedOn, scene_relations};
+pub use showing::{FoldInside, OpenedOn, scene_relations};
 pub use solutions::{
     CountShape, Moved, NO_TOP, Position, SolutionCaps, SolutionCount, Solutions, StepBy,
     StepDirection, Stepped, Tally,

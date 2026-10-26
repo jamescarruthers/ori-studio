@@ -35,6 +35,7 @@ import {
 import { creasePatternPaperShows, type CreasePatternPaperRequest } from './creasePatternSide';
 import { publishOpenLinkedPose } from './openLinkedPose';
 import { stepSolutionCursorVersion, stepSolutionPlace, subscribeStepSolutionCursor } from './stepSolutionCursor';
+import { useDiagramLinkStatuses } from './useLinkStatus';
 import type { DiagramStepLayerOrderVia } from './stepLayerOrderActions';
 import {
   createPoseController,
@@ -130,6 +131,8 @@ export interface DiagramLinkedPose {
    */
   preview: DiagramStep | null;
 }
+
+const NO_STEPS: readonly DiagramStep[] = [];
 
 /**
  * Pose for a step linked to the crease pattern, while its detail is open
@@ -227,8 +230,13 @@ export function useDiagramLinkedPose(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [constrained, source, stepId, cursorVersion]
   );
-  // Its record's saved summary: a clash holds ‹ › until Review… (D10), from saved data.
-  const attention = layerOrderSummaryOf(source)?.attention ?? null;
+  // What its record says at rest: one that needs a look holds ‹ › until Review… (D10, D14), from saved data.
+  const record = layerOrderSummaryOf(source);
+  // Its pattern changed since it was captured: ‹ › wait for a Refresh. Asked only of a constrained step,
+  // as the Step pane asks it of every linked one (`useDiagramStepLink`).
+  const linkedSteps = useMemo(() => (constrained && step ? [step] : NO_STEPS), [constrained, step]);
+  const statuses = useDiagramLinkStatuses(linkedSteps);
+  const stale = stepId !== null && statuses.get(stepId) === 'stale';
   const poseState = useMemo(
     (): DiagramLinkedPoseState | null =>
       render
@@ -242,10 +250,11 @@ export function useDiagramLinkedPose(
             liveView: liveView !== null,
             constrained,
             place,
-            attention,
+            record,
+            stale,
           }
         : null,
-    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained, place, attention]
+    [render, readOnly, busy, solutions, seeThrough, mirrorAxes, liveView, constrained, place, record, stale]
   );
   const [actions, toolbar] = useMemo(() => {
     if (!poseState || !controller) return [[], []];
@@ -267,7 +276,6 @@ export function useDiagramLinkedPose(
   }, [poseState, t, controller, liveView]);
 
   // The toolbar's Edit order…, from the saved source as the Step pane's Edit… is (H7, H8).
-  const record = layerOrderSummaryOf(source);
   const editLayerOrder = useCallback(
     async (via?: DiagramStepLayerOrderVia, surface?: PoseLayerOrderSurface) =>
       controller !== null && !readOnly ? controller.editLayerOrder(via, surface) : false,

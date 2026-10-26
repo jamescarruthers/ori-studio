@@ -25,7 +25,11 @@
  *   the step go.
  * - **While it is in hand:** selecting another step, leaving the Diagram for
  *   another workspace, opening the Layer order dialog, or a minute with no
- *   press closes it too (the shared table's rules).
+ *   press closes it too (the shared table's rules). A minute with no press
+ *   lets go of the worker only: where the step's order lies is kept for the
+ *   readout, on the same terms as the cursor was.
+ * - **Where it ends:** a way a step proved to end (E9) is kept with the
+ *   place, and that way's verb waits there, whatever the count says.
  * - **What it steps by:** the distinct pictures of the side the step shows.
  *   The Diagram has no X-ray (D5's other way).
  * - **The step's paper frame** is kept with the cursor, from the fold it was
@@ -38,10 +42,10 @@
  */
 import type { OristudioCpDocumentSnapshot } from '../../engine/oristudioCpTypes';
 import type { LayerStepBy } from '../../layer-order/engine/layerOrderEngine';
-import type { LayerOrderSolutionPlace } from '../../layer-order/host/hostEngineGateway';
 import {
   createSolutionCursorTable,
   type SolutionCursorOpening,
+  type SolutionPlace,
   type SolutionTurn,
 } from '../../layer-order/host/solutionCursorTable';
 import { creaseLinesFingerprint } from '../../lib/creaseFingerprint';
@@ -145,12 +149,13 @@ function worldOf(state: StepSolutionState): StepSolutionWorld {
 
 /**
  * Where the order step `stepId` shows lies among the solutions that fit its
- * record, by the side it shows now: known only while a cursor is in step with
- * it and has answered for that side. Null before the first press, after an
- * undo, once it turned over until asked again. Reads the table only, so any
- * render may ask.
+ * record, by the side it shows now, with a way a step proved to end: known
+ * once a cursor in step with it has answered for that side, and still after
+ * the cursor rested, while the step holds what it did. Null before the first
+ * press, after an undo, once it turned over until asked again. Reads the
+ * table only, so any render may ask.
  */
-export function stepSolutionPlace(stepId: string, source: DiagramCpSource): LayerOrderSolutionPlace | null {
+export function stepSolutionPlace(stepId: string, source: DiagramCpSource): SolutionPlace | null {
   return table.place({ stepId, source });
 }
 
@@ -173,7 +178,11 @@ export interface StepSolutionTurn {
   frame(): PaperFrame | null;
   /** The step's order is the step's now, saved as `json`: called as the commit lands. */
   landed(json: string): void;
-  /** The press is over, and the store is as it left it. */
+  /**
+   * The press is over, and the store is as it left it: a step that moved and
+   * never landed takes the cursor with it, and anything that changed
+   * meanwhile — another step selected included — is settled now.
+   */
   end(state: StepSolutionState): void;
 }
 
@@ -189,7 +198,7 @@ export function beginStepSolutionStep(stepId: string, source: DiagramCpSource, w
     step: (ask) => turn.step(ask),
     frame: () => turn.mark()?.frame ?? null,
     landed: (json) => turn.landed((mark) => ({ ...mark, json })),
-    end: (state) => turn.end(lookup(state.diagram), worldOf(state)),
+    end: (state) => turn.end(lookup(state.diagram), worldOf(state), state.diagramSelectedStepId),
   };
 }
 

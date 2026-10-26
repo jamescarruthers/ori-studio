@@ -19,7 +19,7 @@ mod tables;
 
 pub use session::{
     CheckFit, CheckNoOrder, CheckOptions, CheckOutcome, CheckStage, CompletionSession, Deduced,
-    Deduction, Enumeration, EnumerationStep, SessionStart,
+    Deduction, Enumeration, EnumerationStep, Placed, SessionStart,
 };
 
 pub use completion::{

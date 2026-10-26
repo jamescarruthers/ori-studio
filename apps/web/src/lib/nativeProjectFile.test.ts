@@ -24,6 +24,7 @@ import {
   FOLDED_FIGURE_LAYER_ORDERS_KEY,
   detachedFoldedFigureLayerOrders,
   foldedFigureLayerOrderKey,
+  foldedFigureRefoldKey,
   linkFoldedFigureLayerOrders,
 } from '../cp-workspace/folded/foldedFigureLayerOrders';
 import { foldedFigureLayerOrder } from './layerOrder/foldedFigureLayerOrder';
@@ -2490,7 +2491,11 @@ describe('a crease pattern’s layer orders', () => {
       'zeta.other': [1, 2],
       [FOLDED_FIGURE_LAYER_ORDERS_KEY]: {
         figures: {
-          'generated-1': { figureKey: foldedFigureLayerOrderKey(figure), record: RECORD_JSON },
+          'generated-1': {
+            figureKey: foldedFigureLayerOrderKey(figure),
+            refoldKey: foldedFigureRefoldKey(figure),
+            record: RECORD_JSON,
+          },
         },
       },
     });
@@ -2559,15 +2564,22 @@ describe('a crease pattern’s layer orders', () => {
       expect(opened(older).figures[0]!.layerOrder).toEqual(constrained().layerOrder);
     });
 
-    it('is detached, never dropped, once that build folds the figure again', () => {
-      // An older build's refold replaces the snapshot with one of its own: no `shown_order`.
+    it('is detached, never dropped, once that build edits the creases and folds the figure again', () => {
+      // An older build refolds after an edit: the creases' fingerprint is another, and the
+      // snapshot its own, with no `shown_order`; the id, title, placement and region stay.
       const refolded = resaved(text(), { older: true }, (figures) =>
-        figures.map((entry) => (entry.snapshot ? { ...entry, snapshot: foldedFigure().snapshot } : entry))
+        figures.map((entry) =>
+          entry.snapshot ? { ...entry, snapshot: foldedFigure().snapshot, sourceFingerprint: 'cs1:edited' } : entry
+        )
       );
       const here = opened(refolded);
       expect(here.figures[0]!.layerOrder).toBeUndefined();
       const detached = detachedFoldedFigureLayerOrders(here.extensions);
-      expect(detached).toEqual([{ figureId: 'generated-1', reason: 'order-not-given', record: RECORD_JSON }]);
+      const refoldKey = foldedFigureRefoldKey(constrained());
+      expect(detached).toEqual([{ figureId: 'generated-1', reason: 'order-not-given', refoldKey, record: RECORD_JSON }]);
+      // Shown on its figure for review, recognised by what its refold kept, never as its own.
+      expect(here.figures[0]!.detachedLayerOrder).toEqual({ record: RECORD, json: RECORD_JSON });
+      expect(figuresOf(resaved(refolded))[0]).not.toHaveProperty('detachedLayerOrder');
       // And saved here, it is still there.
       expect(detachedFoldedFigureLayerOrders(opened(resaved(refolded)).extensions)).toEqual(detached);
     });
@@ -2579,6 +2591,9 @@ describe('a crease pattern’s layer orders', () => {
       const here = opened(reused);
       expect(foldedFigureLayerOrderKey(here.figures[0]!)).toBe(foldedFigureLayerOrderKey(constrained()));
       expect(here.figures[0]!.layerOrder).toBeUndefined();
+      // Nor is it shown on this one, titled apart, so another refold key. (One with the old
+      // title, placement and region is, display only: the older build's blind spot.)
+      expect(here.figures[0]!.detachedLayerOrder).toBeUndefined();
       expect(detachedFoldedFigureLayerOrders(here.extensions)).toMatchObject([
         { figureId: 'generated-1', reason: 'order-not-given' },
       ]);

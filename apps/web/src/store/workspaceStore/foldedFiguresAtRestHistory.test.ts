@@ -109,6 +109,7 @@ import { foldedSourceBounds } from '../../cp-workspace/folded/foldedFigureStalen
 import { endOpenCanvasSessions } from '../../cp-workspace/canvasObjects/canvasSessions';
 import {
   foldedFiguresAtRest,
+  foldedSelectionAtRest,
   holdFoldedFigureAtRest,
   holdFoldedPlaceholderAtRest,
   resetFoldedFiguresAtRestForTests,
@@ -120,6 +121,7 @@ import {
   showPreviousFoldedSolution,
 } from '../../cp-workspace/folded/foldedFigureVerbs';
 import { applyFoldedFigureLayerOrder } from '../../cp-workspace/folded/openFoldedFigureLayerOrder';
+import { markFoldPress } from '../../cp-workspace/folded/foldPress';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 const DIGEST = '00000000c0ffee01';
@@ -305,10 +307,15 @@ describe('the registry', () => {
     expect(foldedFiguresAtRest(list)).toBe(list);
 
     const draft = { id: 'b', handle: null, status: 'loading' } as OristudioCpFoldedFigureEntry;
-    const letGo = holdFoldedPlaceholderAtRest('b');
+    const letGo = holdFoldedPlaceholderAtRest('b', 'a');
     expect(foldedFiguresAtRest([figure, draft])).toEqual([figure]);
+    // Selected, it reads as what was selected before the press; landed, as itself.
+    expect(foldedSelectionAtRest('b', [figure, draft])).toBe('a');
+    expect(foldedSelectionAtRest('b', [figure, { ...draft, status: 'ready' }])).toBe('b');
+    expect(foldedSelectionAtRest('a', [figure, draft])).toBe('a');
     letGo();
     expect(foldedFiguresAtRest([figure, draft])).toEqual([figure, draft]);
+    expect(foldedSelectionAtRest('b', [figure, draft])).toBe('b');
   });
 
   it('never trades a figure for one on another fold, so history’s handle counts hold', () => {
@@ -366,6 +373,31 @@ describe('an undo while a press folds, then a redo', () => {
     expectEachFoldHeldOnce();
   });
 
+  it('records the selection as it was before a Duplicate whose placeholder it leaves out', async () => {
+    const figure = await foldedAsEntry();
+    state().setOristudioCpActiveFoldedFigure(figure.id);
+    await foldedFigureGesture.run('verb', 'Rotate folded form', () =>
+      state().setOristudioCpFoldedFigurePlacement(figure.id, { rotation: 1 })
+    );
+
+    // The copy's placeholder takes the selection while it folds; the undo's entry is taken meanwhile.
+    await undoWhile(() =>
+      foldedFigureGesture.run('verb', 'Duplicate folded model', () => state().duplicateOristudioCpFoldedFigure(figure.id))
+    );
+    const pushed = state().oristudioCpHistoryFuture[0]!;
+    expect(pushed.foldedFigures?.map((entry) => entry.id)).toEqual([figure.id]);
+    expect(pushed.activeFoldedFigureId).toBe(figure.id);
+
+    await state().redo();
+    expect(state().oristudioCpActiveFoldedFigureId).toBe(figure.id);
+    // No entry names a selected figure it doesn't hold.
+    for (const entry of [...state().oristudioCpHistoryPast, ...state().oristudioCpHistoryFuture]) {
+      const selected = entry.activeFoldedFigureId ?? null;
+      if (selected === null) continue;
+      expect(entry.foldedFigures?.some((each) => each.id === selected), entry.label).toBe(true);
+    }
+  });
+
   it('brings back a constrained figure as it was before an Apply, or a step within its constraints', async () => {
     const figure = await foldedAsEntry({ snapshot: snapshot(true), layerOrder: held() });
     await foldedFigureGesture.run('verb', 'Rotate folded form', () =>
@@ -379,7 +411,12 @@ describe('an undo while a press folds, then a redo', () => {
 
     const applied = twoConstraintRecord({ constraints: [[0, 1, 1]] });
     await undoWhile(() =>
-      applyFoldedFigureLayerOrder(figure.id, { record: applied, relations: Uint32Array.of(1, 0), source }, t)
+      applyFoldedFigureLayerOrder(
+        figure.id,
+        { record: applied, relations: Uint32Array.of(1, 0), source },
+        markFoldPress(state()),
+        t
+      )
     );
     await state().redo();
     expect(figures()[0]).toMatchObject({ handle: turned.handle, status: 'ready', layerOrder: held() });

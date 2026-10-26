@@ -204,8 +204,10 @@ describe('Refresh all, offline (layer order H7)', () => {
     expect(await refreshAllDiagramSteps()).toBe(1);
     expect(spawned).toHaveLength(1);
     expect(toasts.error).toHaveBeenCalledOnce();
+    // Only a reload retries a load that failed: Reload, the toast's one action.
     expect(toasts.error).toHaveBeenCalledWith(
-      'Layer order couldn’t load, so 5 steps weren’t changed. Check your connection, then try again.'
+      'Layer order couldn’t load, so 5 steps weren’t changed. Reload Ori Studio to try again.',
+      { action: expect.objectContaining({ label: 'Reload' }) }
     );
     // The host engine's toast says it: not the app's "The worker stopped unexpectedly." as well.
     expect(sink).not.toHaveBeenCalled();

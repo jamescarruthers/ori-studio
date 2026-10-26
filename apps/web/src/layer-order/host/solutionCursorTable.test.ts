@@ -5,9 +5,9 @@ import { useLayerOrderDialogStore } from '../dialog/layerOrderDialogStore';
 import {
   createSolutionCursorTable,
   SOLUTION_CURSOR_IDLE_MS,
-  solutionEndFinal,
   solutionPlaceEnds,
   solutionPressOf,
+  solutionsHeldForReview,
   type SolutionCursorOpening,
 } from './solutionCursorTable';
 import { scriptedSolutionCursor, solutionPosition } from './solutionCursorTable.fixtures';
@@ -135,7 +135,7 @@ describe('the hosts’ solutions-cursor table', () => {
     }
   });
 
-  it('lets it go after a minute with no press, and keeps it through presses', async () => {
+  it('lets its worker go after a minute with no press, keeping the readout, and keeps it through presses', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
       const [table] = tables;
@@ -155,9 +155,53 @@ describe('the hosts’ solutions-cursor table', () => {
       vi.advanceTimersByTime(1000);
       expect(cursor.closed).toBe(true);
       expect(table.heldId()).toBeNull();
+      // Where its order lay stays for the readout, with the end it proved, while the thing holds what it did.
+      expect(table.place(thing)).toEqual({ position: END.position, counted: true, ended: 'next' });
+      table.settle(() => thing, 0, 'step');
+      expect(table.place(thing)).not.toBeNull();
+      // And goes on the cursor's terms: here, the thing holding another order.
+      table.settle(() => ({ id: 'step', holds: 'b' }), 0);
+      expect(table.place(thing)).toBeNull();
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('seeds the next press’s cursor with where a rested one left the thing', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const [table] = tables;
+      const thing = { id: 'step', holds: 'a' };
+      await seat(table, thing);
+      vi.advanceTimersByTime(SOLUTION_CURSOR_IDLE_MS);
+      expect(table.heldId()).toBeNull();
+      // A press that has not answered yet still reads where the thing was.
+      let answer: (step: typeof END) => void = () => {};
+      gateway.open.mockReturnValueOnce(scriptedSolutionCursor([() => new Promise((resolve) => (answer = resolve as never))]));
+      const turn = table.begin(thing, 0);
+      const stepped = turn.step(ask);
+      await vi.waitFor(() => expect(table.heldId()).toBe('step'));
+      expect(table.place(thing)).toEqual({ position: END.position, counted: true, ended: 'next' });
+      answer(END);
+      await stepped;
+      turn.end(() => thing, 0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('marks the way a step proved to end, so that way’s verb waits there whatever the count says (E9)', async () => {
+    const [table] = tables;
+    const thing = { id: 'step', holds: 'a' };
+    gateway.open.mockReturnValueOnce(
+      scriptedSolutionCursor([{ outcome: 'end', position: solutionPosition(2, 5, false), counted: true }])
+    );
+    const turn = table.begin(thing, 0);
+    await turn.step({ ...ask, direction: 'previous' });
+    turn.end(() => thing, 0);
+    const place = table.place(thing)!;
+    expect(place.ended).toBe('previous');
+    expect(solutionPlaceEnds(place)).toEqual({ first: true, last: false, only: false });
   });
 
   it('keeps the readout of the side shown when its thing turns over and straight back', async () => {
@@ -185,7 +229,7 @@ describe('the hosts’ solutions-cursor table', () => {
       sided.settle(() => front, 0);
       answers[0]!({ position: solutionPosition(1, 1), counted: true });
       await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(sided.place(front)).toEqual({ position: END.position, counted: true });
+      expect(sided.place(front)).toEqual({ position: END.position, counted: true, ended: 'next' });
     } finally {
       sided.drop();
     }
@@ -257,21 +301,29 @@ describe('what every host’s pager and press read', () => {
     expect(at(1, 1, true)).toEqual({ first: true, last: true, only: true });
   });
 
-  it('calls an end final before the first, or once the count is', () => {
-    expect(solutionEndFinal('previous', solutionPosition(1, 3, false))).toBe(true);
-    expect(solutionEndFinal('next', solutionPosition(3, 3, false))).toBe(false);
-    expect(solutionEndFinal('next', solutionPosition(3, 3, true))).toBe(true);
+  it('waits at a way a step proved to end, whatever the count says (E9)', () => {
+    const at = (index: number, n: number, ended: 'next' | 'previous') =>
+      solutionPlaceEnds({ position: solutionPosition(index, n, false), counted: true, ended });
+    expect(at(3, 3, 'next')).toEqual({ first: false, last: true, only: false });
+    expect(at(2, 3, 'previous')).toEqual({ first: true, last: false, only: false });
+    // Proved past the one there is: the only solution.
+    expect(at(1, 1, 'next')).toEqual({ first: true, last: true, only: true });
   });
 
-  it('says what a press that moved nothing came to', () => {
-    expect(solutionPressOf({ outcome: 'end', position: solutionPosition(3, 3, false), counted: true }, 'next')).toEqual({
-      status: 'end',
-      final: false,
-    });
-    expect(solutionPressOf({ outcome: 'timed_out', stage: 'restore' }, 'next')).toEqual({ status: 'timed_out', stage: 'restore' });
-    expect(solutionPressOf({ outcome: 'unrestored', why: 'clash' }, 'next')).toEqual({ status: 'unrestored', why: 'clash' });
-    expect(solutionPressOf({ outcome: 'too_large' }, 'next')).toEqual({ status: 'too-large' });
-    expect(solutionPressOf({ outcome: 'lost', cause: 'load' }, 'previous')).toEqual({ status: 'lost', cause: 'load' });
-    expect(solutionPressOf({ outcome: 'cancelled' }, 'next')).toEqual({ status: 'stopped' });
+  it('holds ‹ › while a record needs any review since an edit (D14)', () => {
+    expect(solutionsHeldForReview(null)).toBe(false);
+    expect(solutionsHeldForReview(undefined)).toBe(false);
+    expect(solutionsHeldForReview({ reason: 'conflict', count: 2 })).toBe(true);
+    expect(solutionsHeldForReview({ reason: 'timeout', count: 0 })).toBe(true);
+  });
+
+  it('says what a press that moved nothing came to: an end is proved, however far the count got', () => {
+    expect(solutionPressOf({ outcome: 'end', position: solutionPosition(3, 3, false), counted: true })).toEqual({ status: 'end' });
+    expect(solutionPressOf({ outcome: 'timed_out', stage: 'restore' })).toEqual({ status: 'timed_out', stage: 'restore' });
+    expect(solutionPressOf({ outcome: 'timed_out', stage: 'step' })).toEqual({ status: 'timed_out', stage: 'step' });
+    expect(solutionPressOf({ outcome: 'unrestored', why: 'clash' })).toEqual({ status: 'unrestored', why: 'clash' });
+    expect(solutionPressOf({ outcome: 'too_large' })).toEqual({ status: 'too-large' });
+    expect(solutionPressOf({ outcome: 'lost', cause: 'load' })).toEqual({ status: 'lost', cause: 'load' });
+    expect(solutionPressOf({ outcome: 'cancelled' })).toEqual({ status: 'stopped' });
   });
 });

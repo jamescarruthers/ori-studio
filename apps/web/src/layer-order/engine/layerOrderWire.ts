@@ -77,8 +77,20 @@ export type LayerOpenedOn =
   | { kind: 'first'; timed_out: { limit: LayerBudgetLimit; nodes: number } | null }
   /** The order given, held whole: the host's relations, or a record's saved pairs that still resolve. */
   | { kind: 'held'; ignored: number }
-  /** The order given did not all fit: the fitting order closest to it, `moved` of its relations the other way. */
-  | { kind: 'closest'; moved: number; ignored: number };
+  /**
+   * The order given did not all fit: the fitting order closest to it, `moved`
+   * of its relations the other way. `inside` is a face the order given (the
+   * host's, or a record's saved pairs) puts inside a fold whose crease runs
+   * through it, and the two faces that fold meets at (D19, `FoldInside`);
+   * null when no one face is to blame. The dialog names it only for an open
+   * on the host's order.
+   */
+  | {
+      kind: 'closest';
+      moved: number;
+      ignored: number;
+      inside?: { face: number; crease: [number, number] } | null;
+    };
 
 /** A session the engine now holds. */
 export interface LayerOpened {
@@ -298,8 +310,16 @@ export interface LayerSolutionCaps {
   ordersPerComponent?: number;
   /** Combinations a look group walks; default 1,000,000. */
   combinationsPerGroup?: number;
-  /** Bits of whole orders kept for the stepper; default 2²⁵ (4 MiB). */
+  /** Bits of whole orders kept for the stepper; default 2²⁵ (4 MiB). The stepper's own finds are held within as many again. */
   storedBits?: number;
+  /**
+   * Whether a step counts on, a tenth of its limits held back for it;
+   * default true, for a host that never advances the count. False for one
+   * that advances it itself (the dialog's slices) or chose not to count
+   * (above `LAYER_ORDER_COUNT_MAX_OPEN_PAIRS`): a step then spends all its
+   * limits on the step.
+   */
+  countInSteps?: boolean;
 }
 
 /** A count: exact, or a lower bound ("at least `n`"); past 2⁵³ − 1 it is sent as that bound, inexact. */
@@ -325,8 +345,10 @@ export type LayerStepBy = { picture: LayerSide } | 'layer_order';
 
 /**
  * Where the order on screen lies in the stepper's fixed order ("3 of 12"):
- * `index` from 1, final once `total.exact`. Past 2⁵³ − 1 (layer orders with
- * X-ray on can be) it is sent as that bound, as a tally is.
+ * `index` from 1, final once `total.exact`. Before the count has every
+ * solution the stepper steps through, `index` counts the solutions found so
+ * far ("Solution 3") and `total` is at least those. Past 2⁵³ − 1 (layer
+ * orders with X-ray on can be) it is sent as that bound, as a tally is.
  */
 export interface LayerPosition {
   index: number;
@@ -342,9 +364,16 @@ export type LayerStepped =
       /** The order on screen's stacks now. */
       stacks: { front: LayerStacks; back: LayerStacks };
     }
-  /** No solution lies that way among those counted: final once the count is done. */
+  /**
+   * No solution lies that way: proved, so nothing is to be gained by asking
+   * again (with a count capped at its limits, none among those it counted).
+   */
   | { verdict: 'end' }
-  /** The check within the next solution ran out with nothing counted to fall back on: nothing changed. */
+  /**
+   * Out of its limits, nothing changed: the search for the next solution,
+   * or the check within it, ran out first. Asked again with longer limits
+   * (Keep trying), the step goes on from what it proved.
+   */
   | LayerTimedOut;
 
 /** The `layer_*` methods of the Fold bridge's `FoldEngine`, as the wasm glue exposes them. */
@@ -383,7 +412,7 @@ export interface LayerOrderBridge {
   ): LayerCommitted;
   /** The saved constraints the last restore did not apply, in record order. */
   layer_carried(session: number): LayerCarriedRow[];
-  /** A carried row's trash button; whether there was one at `index`. */
+  /** Remove the carried row of record index `index` (`LayerCarriedRow.index`, not its place); whether there was one. */
   layer_remove_carried(session: number, index: number): boolean;
   layer_clear_carried(session: number): void;
   layer_stacks(session: number, side: LayerSide): LayerStacks;
@@ -391,8 +420,11 @@ export interface LayerOrderBridge {
   layer_scene(session: number, side: LayerSide, model?: OristudioCpFoldedFigureModel): OristudioCpFoldedPaperScene | null;
   /** `[upper, lower, …]`, for the CP bridge's `folded_figure_fold_with_order`. */
   layer_oriedita_relations(session: number): Uint32Array;
-  /** The committed constraints, then the carried rows as saved, as one record. */
-  layer_save(session: number): LayerSaveOutcome;
+  /**
+   * The committed constraints, then the carried rows as saved, as one record: every carried row, or
+   * only those whose record index `keep` names. The session keeps its carried rows either way.
+   */
+  layer_save(session: number, keep?: Uint32Array): LayerSaveOutcome;
   layer_close(session: number): boolean;
   layer_live(): number;
 
@@ -412,8 +444,13 @@ export interface LayerOrderBridge {
   /**
    * Show the next or previous solution: only the order on screen changes,
    * the cursor stays good, and a preview kept from before is dropped (Add
-   * then commits from the stepped order). Unless the count is done it first
-   * counts on within half its limits.
+   * then commits from the stepped order). Before the count has every
+   * solution it steps through, it searches for the one the count would list
+   * next (E9) within nine tenths of its limits, every check's nodes taken
+   * from one budget, and the count gets the last tenth after it, unless the
+   * answer came from what earlier steps proved or the cursor was started
+   * with `countInSteps: false`. Once the count has them, it first counts on
+   * within half its limits, as before.
    */
   layer_step(
     session: number,

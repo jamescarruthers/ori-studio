@@ -24,7 +24,7 @@ import {
   retainFoldedFigureHandles,
   releaseFoldedFigureHandles,
 } from "../../cp-workspace/folded/foldedFigureHandles";
-import { foldedFiguresAtRest } from "../../cp-workspace/folded/foldedFiguresAtRest";
+import { foldedFiguresAtRest, foldedSelectionAtRest } from "../../cp-workspace/folded/foldedFiguresAtRest";
 import { staleFoldArtifactResourceState } from "./foldArtifactResource";
 import {
   snapshotEntry,
@@ -111,7 +111,7 @@ function cpEntryOf(
     annotations: s.oristudioCpAnnotations,
     // Never a figure mid-press (`foldedFiguresAtRest.ts`).
     foldedFigures: foldedFiguresAtRest(s.oristudioCpFoldedFigures),
-    activeFoldedFigureId: s.oristudioCpActiveFoldedFigureId,
+    activeFoldedFigureId: foldedSelectionAtRest(s.oristudioCpActiveFoldedFigureId, s.oristudioCpFoldedFigures),
     inlineSimulations: s.oristudioCpInlineSimulations,
     label,
     timestamp: new Date().toISOString(),

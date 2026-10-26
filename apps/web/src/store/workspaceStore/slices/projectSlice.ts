@@ -148,7 +148,12 @@ import {
 import type { CanvasAnnotation } from '../../../cp-workspace/annotations/annotation';
 import type { InlineSimulation } from '../../../cp-workspace/inlineSimulation/inlineSimulation';
 import { noteInlineSimulationIds } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
-import { linkFoldedFigureLayerOrders } from '../../../cp-workspace/folded/foldedFigureLayerOrders';
+import {
+  figureIdsInFoldedFigureLayerOrders,
+  foldedFigureLayerOrdersAfterSave,
+  linkFoldedFigureLayerOrders,
+} from '../../../cp-workspace/folded/foldedFigureLayerOrders';
+import { noteFoldedFigureIds } from '../../../cp-workspace/folded/foldedFigureIds';
 import { discardCpDocumentState } from '../cpDocumentState';
 import { cpHistoryDocumentOf, withCpHistoryEntry } from '../cpHistory';
 import {
@@ -272,7 +277,7 @@ import type {
   WorkspaceState,
 } from '../types';
 import { retainFoldedFigureHandles } from '../../../cp-workspace/folded/foldedFigureHandles';
-import { foldedFiguresAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
+import { foldedFiguresAtRest, foldedSelectionAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
 import { folded3dExportHandles } from '../../../cp-workspace/folded/foldedFigureInterchange';
 import type { FoldDocument } from '../../../engine/types';
 import type {
@@ -333,7 +338,7 @@ function cpHistoryEntry(
     // including their recorded source region, which is what decides whether they
     // read as out of date (see lib/foldedFigureStaleness.ts).
     foldedFigures: rested,
-    activeFoldedFigureId,
+    activeFoldedFigureId: foldedSelectionAtRest(activeFoldedFigureId, foldedFigures),
     // Same reason as the figures above: undo restores the simulation windows the
     // crease edit was made alongside, with the provenance that decides whether
     // they read as out of date.
@@ -1246,6 +1251,13 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       documentState.loadSerial
     );
     const restoredSelection = nativeDocument.viewState.selection ?? emptyOristudioCpSelection();
+    // Folded figure ids, for the same reason: the file's, and every one its
+    // layer order bag names, so no figure folded this session takes the id a
+    // record, or a record a reload detached, was saved on.
+    noteFoldedFigureIds([
+      ...(nativeDocument.viewState.foldedFigures ?? []).map((figure) => figure.id),
+      ...figureIdsInFoldedFigureLayerOrders(nativeDocument.extensions),
+    ]);
     // Each figure's saved layer order, attached when it is still that
     // figure's; the bag keeps the rest, written back as it came.
     const layerOrders = linkFoldedFigureLayerOrders(
@@ -1803,6 +1815,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       currentFilePath: result.path,
       dirty: projectDocumentsChangedSince(written, get()),
       projectMessage: savedMessageFor(result.name, embeddedBytes),
+      ...layerOrdersAfterSave(creasePatternCompanion),
       ...(document
         ? {
             ...patchBoxPleatDesign(
@@ -1857,6 +1870,19 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       return { referencesReaderState: null, referencesPlanCache: null };
     }
   };
+
+  /**
+   * The layer order bag the session holds once `input` is saved: what the
+   * save wrote (`foldedFigureLayerOrdersAfterSave`), so an entry it dropped
+   * stays dropped. Nothing when the bag was replaced meanwhile, by another
+   * document opened while the save dialog was up.
+   */
+  const layerOrdersAfterSave = (
+    input: { extensions?: Record<string, unknown>; foldedFigures: OristudioCpFoldedFigureEntry[] } | null
+  ): Partial<WorkspaceState> =>
+    input?.extensions && input.extensions === get().oristudioCpDocumentExtensions
+      ? { oristudioCpDocumentExtensions: foldedFigureLayerOrdersAfterSave(input.extensions, input.foldedFigures) }
+      : {};
 
   const currentEditableCreasePatternProjectInput = async (
     filename: string,
@@ -2120,6 +2146,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       currentFilePath: result.path,
       dirty: projectDocumentsChangedSince(written, get()),
       projectMessage: savedMessageFor(result.name, embeddedBytes),
+      ...layerOrdersAfterSave(input),
       oristudioCpDocument: {
         ...documentState,
         source,

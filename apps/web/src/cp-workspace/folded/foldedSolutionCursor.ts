@@ -22,7 +22,9 @@
  * - **While it is in hand:** selecting anything else, leaving Edit for
  *   another workspace, opening the Layer order dialog, or a minute with no
  *   press ({@link FOLDED_SOLUTION_CURSOR_IDLE_MS}) closes it too, and the next
- *   press restores the record again.
+ *   press restores the record again. A minute with no press lets go of the
+ *   worker only: where the figure's order lies is kept for the readout, on
+ *   the same terms as the cursor was.
  * - **What it steps by** ({@link foldedFigureStepBy}): every layer order in
  *   X-ray, else the pictures of the side it shows (D5).
  *
@@ -44,6 +46,7 @@ import {
   createSolutionCursorTable,
   SOLUTION_CURSOR_IDLE_MS,
   type SolutionCursorOpening,
+  type SolutionPlace,
 } from '../../layer-order/host/solutionCursorTable';
 import type { LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
@@ -52,6 +55,13 @@ import { foldedFigureHandleEpoch } from './foldedFigureHandles';
 import { currentSourceFingerprint } from './foldedFigureStaleness';
 
 export type { LayerOrderSolutionPlace };
+
+/**
+ * Where the order a figure shows lies, and the way a step from it last found
+ * nothing: an end E9 proved, so that verb waits there even before the count
+ * is final (every host's, `solutionCursorTable.ts`).
+ */
+export type FoldedSolutionPlace = SolutionPlace;
 
 /** How long a cursor is kept with no press: every host's minute (`solutionCursorTable.ts`). */
 export const FOLDED_SOLUTION_CURSOR_IDLE_MS = SOLUTION_CURSOR_IDLE_MS;
@@ -66,7 +76,7 @@ export function foldedFigureStepBy(figure: OristudioCpFoldedFigureEntry): LayerS
   return { picture: figure.snapshot?.model.state === 'Back1' ? 'back' : 'front' };
 }
 
-/** What Edit keeps of a figure for its cursor. */
+/** What Edit keeps of a figure for its cursor, and of its place once the cursor rests. */
 interface FigureMark {
   /** The generation of handles the figure's fold belongs to (`foldedFigureHandleEpoch`). */
   readonly epoch: number;
@@ -117,19 +127,20 @@ const table = createSolutionCursorTable<
 const lookup = (figures: readonly OristudioCpFoldedFigureEntry[]) => (id: string) =>
   figures.find((candidate) => candidate.id === id);
 
-/** Close the cursor, with its worker. Idempotent. */
+/** Close the cursor, with its worker, and forget where its figure's order lay. Idempotent. */
 export function dropFoldedSolutionCursor(): void {
   table.drop();
 }
 
 /**
  * Where the order `figure` shows lies among the solutions that fit its
- * record, by what its stepper steps through now: known only while a cursor
- * is in step with it and has answered for that. Null otherwise — before the
- * first press, after an undo, once the figure turned over until it is asked
- * again. Reads the table only, so any render may ask.
+ * record, by what its stepper steps through now: known once a cursor in step
+ * with it has answered for that, and still after the cursor rested, while
+ * the figure holds what it did. Null otherwise — before the first press,
+ * after an undo, once the figure turned over until it is asked again. Reads
+ * the table only, so any render may ask.
  */
-export function foldedSolutionPlace(figure: OristudioCpFoldedFigureEntry): LayerOrderSolutionPlace | null {
+export function foldedSolutionPlace(figure: OristudioCpFoldedFigureEntry): FoldedSolutionPlace | null {
   return table.place(figure);
 }
 
@@ -205,11 +216,16 @@ export interface FoldedSolutionTurn {
   /** The step's fold and record are the figure's now: called just before the store shows them. */
   landed(handle: number, json: string): void;
   /**
-   * The press is over, and `figures` and `document` are as it left them: a
-   * step that moved and never landed takes the cursor with it, and anything
-   * that changed meanwhile is settled now ({@link settleFoldedSolutionCursor}).
+   * The press is over, and `figures`, `document` and the selected figure are
+   * as it left them: a step that moved and never landed takes the cursor with
+   * it, and anything that changed meanwhile — a deselect included — is
+   * settled now ({@link settleFoldedSolutionCursor}).
    */
-  end(figures: readonly OristudioCpFoldedFigureEntry[], document: OristudioCpDocumentSnapshot | null): void;
+  end(
+    figures: readonly OristudioCpFoldedFigureEntry[],
+    document: OristudioCpDocumentSnapshot | null,
+    selected: string | null
+  ): void;
 }
 
 /**
@@ -231,7 +247,7 @@ export function beginFoldedSolutionStep(
         ...(tries !== undefined ? { tries } : {}),
       }),
     landed: (handle, json) => turn.landed((mark) => ({ ...mark, handle, json })),
-    end: (figures, now) => turn.end(lookup(figures), now),
+    end: (figures, now, selected) => turn.end(lookup(figures), now, selected),
   };
 }
 

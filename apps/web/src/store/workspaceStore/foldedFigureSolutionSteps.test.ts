@@ -76,10 +76,12 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
 });
 
 /** The host engine's door: each cursor the press opens is the test's to script. */
-const gateway = vi.hoisted(() => ({ open: vi.fn() }));
+const gateway = vi.hoisted(() => ({ open: vi.fn(), resolve: vi.fn() }));
 vi.mock('../../layer-order/host/hostEngineGateway', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../layer-order/host/hostEngineGateway')>()),
   openLayerOrderSolutionCursor: (...args: unknown[]) => gateway.open(...args),
+  // A Refold of a constrained figure resolves its record on the creases as they are (H4).
+  resolveLayerOrder: (...args: unknown[]) => gateway.resolve(...args),
 }));
 
 const analytics = vi.hoisted(() => ({ track: vi.fn() }));
@@ -127,6 +129,7 @@ import { foldedFigureGesture } from '../../cp-workspace/folded/foldedFigureGestu
 import { foldedSourceBounds } from '../../cp-workspace/folded/foldedFigureStaleness';
 import {
   deleteFoldedFigure,
+  refoldFoldedFigure,
   showAnotherFoldedSolution,
   showPreviousFoldedSolution,
 } from '../../cp-workspace/folded/foldedFigureVerbs';
@@ -142,8 +145,9 @@ import {
   type ScriptedSolutionStep,
 } from '../../cp-workspace/folded/foldedSolutionCursor.fixtures';
 import { applyFoldedFigureLayerOrder } from '../../cp-workspace/folded/openFoldedFigureLayerOrder';
+import { markFoldPress } from '../../cp-workspace/folded/foldPress';
 import { endOpenCanvasSessions } from '../../cp-workspace/canvasObjects/canvasSessions';
-import { resetFoldedFiguresAtRestForTests } from '../../cp-workspace/folded/foldedFiguresAtRest';
+import { foldedFiguresAtRest, resetFoldedFiguresAtRestForTests } from '../../cp-workspace/folded/foldedFiguresAtRest';
 
 const t = ((_key: string, fallback: string, options?: Record<string, unknown>) =>
   fallback.replace(/\{\{(\w+)\}\}/gu, (_match, name: string) => String(options?.[name] ?? ''))) as unknown as TFunction;
@@ -303,6 +307,7 @@ beforeEach(async () => {
   kernel.nextHandle = 9;
   kernel.foldWithOrder = null;
   gateway.open.mockReset();
+  gateway.resolve.mockReset();
   analytics.track.mockClear();
   toasts.toast.mockClear();
   toasts.toast.error.mockClear();
@@ -406,7 +411,12 @@ describe('the cursor’s life', () => {
     const cursor = script(movedTo(2, 3));
     await showAnotherFoldedSolution(figure.id, t);
     const applied = twoConstraintRecord({ constraints: [[0, 1, 1]] });
-    await applyFoldedFigureLayerOrder(figure.id, { record: applied, relations: Uint32Array.of(1, 0), source: SOURCE() }, t);
+    await applyFoldedFigureLayerOrder(
+      figure.id,
+      { record: applied, relations: Uint32Array.of(1, 0), source: SOURCE() },
+      markFoldPress(state()),
+      t
+    );
     expect(figureNow().layerOrder).toEqual(held(applied));
     expect(cursor.closed).toBe(true);
     expect(foldedSolutionCursorFigure()).toBeNull();
@@ -427,6 +437,44 @@ describe('the cursor’s life', () => {
       oristudioCpDocument: cpState([LINES[0]!, line({ x: 1, y: 0 }, { x: 0, y: 0.9 }, 'Blue2')]),
     });
     expect(cursor.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
+  it('is let go when Refold refolds the figure in its order (H4), and when a refold keeps it flagged', async () => {
+    const figure = seed();
+    const first = script(movedTo(2, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    gateway.resolve.mockResolvedValueOnce({
+      outcome: 'applied',
+      applied: { record: solutionRecord(2), relations: Uint32Array.of(0, 1, 2, 2), source: SOURCE() },
+      record: solutionRecord(2),
+      attention: null,
+      found: {},
+    });
+    await refoldFoldedFigure(figure.id, t);
+    // A new fold, in its order: the cursor's session shows the fold before.
+    expect(figureNow()).toMatchObject({ handle: 10, layerOrder: held(solutionRecord(2)) });
+    expect(first.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+    // The refold let go of its hold at rest: a figure waiting on its old fold reads as it is, not as the refold found it.
+    const waiting = { ...figureNow(), handle: 9, status: 'loading' as const };
+    expect(foldedFiguresAtRest([waiting])).toEqual([waiting]);
+
+    const second = script(movedTo(3, 3));
+    await showAnotherFoldedSolution(figure.id, t);
+    expect(second.closed).toBe(false);
+    gateway.resolve.mockResolvedValueOnce({
+      outcome: 'clash',
+      clashing: [0],
+      record: solutionRecord(3),
+      attention: { reason: 'conflict', count: 1 },
+      found: {},
+    });
+    await refoldFoldedFigure(figure.id, t);
+    // Kept, its picture as it was and its record flagged (D10): its ‹ › wait for a review.
+    expect(figureNow().layerOrder).not.toEqual(held(solutionRecord(3)));
+    expect(second.closed).toBe(true);
     expect(foldedSolutionCursorFigure()).toBeNull();
   });
 
@@ -484,6 +532,21 @@ describe('the cursor’s life', () => {
     }
   });
 
+  it('is let go as a press that moved nothing ends, when the selection moved off its figure meanwhile', async () => {
+    const figure = seed();
+    let answer: ((step: LayerOrderSolutionStep) => void) | null = null;
+    const cursor = script(() => new Promise((resolve) => (answer = resolve)));
+    const press = showAnotherFoldedSolution(figure.id, t);
+    await vi.waitFor(() => expect(answer).not.toBeNull());
+    state().setOristudioCpActiveFoldedFigure(null);
+    // Kept while the press runs: the press settles it when it ends.
+    expect(cursor.closed).toBe(false);
+    answer!({ outcome: 'end', position: solutionPosition(1, 3), counted: true });
+    await press;
+    expect(cursor.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+  });
+
   it('is let go after a minute with no press, and kept through presses', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
@@ -500,6 +563,78 @@ describe('the cursor’s life', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  /** One step, then the minute: the worker has gone, and where the figure's order lies is kept. */
+  async function steppedThenRested(): Promise<ScriptedSolutionCursor> {
+    const figure = seed();
+    const cursor = script(movedTo(2, 3));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await showAnotherFoldedSolution(figure.id, t);
+      vi.advanceTimersByTime(FOLDED_SOLUTION_CURSOR_IDLE_MS);
+    } finally {
+      vi.useRealTimers();
+    }
+    return cursor;
+  }
+
+  it('keeps where the figure’s order lies once the minute lets go of the worker, and the next press reads it until it answers', async () => {
+    const first = await steppedThenRested();
+    expect(first.closed).toBe(true);
+    expect(foldedSolutionCursorFigure()).toBeNull();
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(2, 3), counted: true });
+    // Turned over, nothing can ask where it stands on that side; turned back, it reads as it did.
+    await state().updateOristudioCpFoldedFigureModel(figureNow().id, { state: 'Back1' });
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+    await state().updateOristudioCpFoldedFigureModel(figureNow().id, { state: 'Front0' });
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(2, 3), counted: true });
+
+    let answer: ((step: LayerOrderSolutionStep) => void) | null = null;
+    const second = script(() => new Promise((resolve) => (answer = resolve)));
+    const press = showAnotherFoldedSolution(figureNow().id, t);
+    await vi.waitFor(() => expect(answer).not.toBeNull());
+    // A fresh cursor, restored from the record the figure holds, and the readout as it was meanwhile.
+    expect(gateway.open).toHaveBeenLastCalledWith(SOURCE(), solutionRecord(2));
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(2, 3), counted: true });
+    answer!(movedTo(3, 3));
+    await press;
+    expect(second.closed).toBe(false);
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(3, 3), counted: true });
+  });
+
+  it.each([
+    ['the selection moves off the figure', () => state().setOristudioCpActiveFoldedFigure(null)],
+    ['the workspace switches', () => useLayoutStore.setState({ activeWorkspace: 'diagram' })],
+    ['the Layer order dialog opens', () => useLayerOrderDialogStore.setState({ opening: { id: 99 } as never })],
+    [
+      'one of its creases moves',
+      () =>
+        useWorkspaceStore.setState({
+          oristudioCpDocument: cpState([LINES[0]!, line({ x: 1, y: 0 }, { x: 0, y: 0.9 }, 'Blue2')]),
+        }),
+    ],
+  ] as const)('forgets where the rested figure’s order lay when %s', async (_what, meanwhile) => {
+    const workspace = useLayoutStore.getState().activeWorkspace;
+    await steppedThenRested();
+    try {
+      meanwhile();
+    } finally {
+      useLayoutStore.setState({ activeWorkspace: workspace });
+      useLayerOrderDialogStore.setState({ opening: null });
+      useWorkspaceStore.setState({ oristudioCpDocument: cpState() });
+      state().setOristudioCpActiveFoldedFigure(figureNow().id);
+    }
+    // Put back as it was, the figure holds what it did; the place is not.
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
+  });
+
+  it('forgets where the rested figure’s order lay on an undo, and a redo brings back no readout', async () => {
+    await steppedThenRested();
+    await state().undo();
+    await state().redo();
+    expect(figureNow()).toMatchObject({ handle: 9, layerOrder: held(solutionRecord(2)) });
+    expect(foldedSolutionPlace(figureNow())).toBeNull();
   });
 
   it('goes to the figure last stepped: one cursor, one worker, at a time', async () => {
@@ -528,61 +663,70 @@ describe('a press that moves nothing', () => {
     expect(kernel.calls).toEqual(['getOristudioCpFoldedFigureSource']);
     expect(toasts.toast).not.toHaveBeenCalled();
     expect(toasts.toast.error).not.toHaveBeenCalled();
-    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 3), counted: true });
+    expect(foldedSolutionPlace(figureNow())).toEqual({ position: solutionPosition(1, 3), counted: true, ended: 'previous' });
     expect(cycled()).toEqual([]);
+  });
+
+  it('at an end the count hasn’t reached says nothing either: E9 proved it, and › waits there', async () => {
+    const figure = seed();
+    const cursor = script({ outcome: 'end', position: solutionPosition(4, 4, false), counted: true });
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(figureNow()).toBe(figure);
+    expect(history()).toEqual([]);
+    expect(toasts.toast.error).not.toHaveBeenCalled();
+    // Kept: ‹ still steps back on the same worker.
+    expect(cursor.closed).toBe(false);
+    expect(foldedSolutionPlace(figureNow())).toEqual({
+      position: solutionPosition(4, 4, false),
+      counted: true,
+      ended: 'next',
+    });
   });
 
   it.each([
     [
-      'offline: the engine didn’t load',
+      'an engine that didn’t load',
       { outcome: 'lost', cause: 'load' },
-      'Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.',
+      'Layer order couldn’t load, so the figure wasn’t changed. Reload Ori Studio to try again.',
       true,
-      false,
+      'Reload',
     ],
     [
       'a lost engine',
       { outcome: 'lost', cause: 'crashed' },
       'Layer order stopped unexpectedly, so the figure wasn’t changed.',
       true,
-      false,
+      undefined,
     ],
     [
       'a restore out of time (D10)',
       { outcome: 'timed_out', stage: 'restore' },
       'Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.',
       false,
-      true,
+      'Keep trying',
     ],
     [
       'a step out of time',
       { outcome: 'timed_out', stage: 'step' },
       'Couldn’t find another solution in time, so the figure wasn’t changed.',
       false,
-      true,
-    ],
-    [
-      'an end the count hasn’t reached',
-      { outcome: 'end', position: solutionPosition(4, 4, false), counted: true },
-      'Couldn’t find another solution in time, so the figure wasn’t changed.',
-      false,
-      true,
+      'Keep trying',
     ],
     [
       'a record that needs attention',
       { outcome: 'unrestored', why: 'clash' },
       'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.',
       true,
-      false,
+      undefined,
     ],
     [
       'a solution too large to save',
       { outcome: 'too_large' },
       'This layer order is too large to save with the figure, so it is unchanged.',
       true,
-      false,
+      undefined,
     ],
-  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent, retries) => {
+  ] as const)('on %s writes nothing and says so', async (_what, answer, said, spent, offered) => {
     const figure = seed();
     const cursor = script(answer as LayerOrderSolutionStep);
     await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
@@ -592,21 +736,33 @@ describe('a press that moves nothing', () => {
     expect(toasts.toast.error).toHaveBeenCalledTimes(1);
     const [text, options] = toasts.toast.error.mock.calls[0] as [string, { action?: { label: string } }];
     expect(text).toBe(said);
-    // Out of time offers to keep trying, longer; nothing else does.
-    expect(options.action?.label).toBe(retries ? 'Keep trying' : undefined);
+    // Out of time offers to keep trying, longer; a load that failed, the reload that alone retries it.
+    expect(options.action?.label).toBe(offered);
     // An engine gone, a record it can't restore or an order it can't save takes the cursor with it;
     // running out of time keeps it for Keep trying.
     expect(cursor.closed).toBe(spent);
     expect(foldedSolutionCursorFigure()).toBe(spent ? null : figure.id);
   });
 
+  it('on an engine that didn’t load offline says to reconnect before the Reload', async () => {
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    onTestFinished(() => onLine.mockRestore());
+    const figure = seed();
+    script({ outcome: 'lost', cause: 'load' });
+    await expect(showAnotherFoldedSolution(figure.id, t)).resolves.toBe(false);
+    expect(figureNow()).toBe(figure);
+    expect(toasts.toast.error).toHaveBeenCalledTimes(1);
+    const [text, options] = toasts.toast.error.mock.calls[0] as [string, { action?: { label: string } }];
+    expect(text).toBe(
+      'Layer order couldn’t load while offline, so the figure wasn’t changed. Reconnect, then reload Ori Studio to try again.'
+    );
+    expect(options.action?.label).toBe('Reload');
+  });
+
   it('keeps trying, longer each time, on the same cursor, when asked', async () => {
     const figure = seed();
-    const cursor = script(
-      { outcome: 'timed_out', stage: 'restore' },
-      { outcome: 'end', position: solutionPosition(1, 3, false), counted: true },
-      movedTo(2, 3)
-    );
+    // The restore runs out, then E9's search for the next solution, then it lands.
+    const cursor = script({ outcome: 'timed_out', stage: 'restore' }, { outcome: 'timed_out', stage: 'step' }, movedTo(2, 3));
     await showAnotherFoldedSolution(figure.id, t);
     const keepTrying = () => {
       const calls = toasts.toast.error.mock.calls;
@@ -615,6 +771,10 @@ describe('a press that moves nothing', () => {
     keepTrying();
     await vi.waitFor(() => expect(cursor.triesAsked).toHaveLength(2));
     await vi.waitFor(() => expect(toasts.toast.error).toHaveBeenCalledTimes(2));
+    // Each try says so under a toast of its own: one shown again under the id Keep trying just
+    // dismissed would be lost in its exit.
+    const ids = toasts.toast.error.mock.calls.map(([, options]) => (options as { id: string }).id);
+    expect(new Set(ids).size).toBe(2);
     keepTrying();
     await vi.waitFor(() => expect(figureNow().handle).toBe(9));
     expect(cursor.triesAsked).toEqual([0, 1, 2]);

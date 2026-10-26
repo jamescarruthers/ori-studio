@@ -786,6 +786,18 @@ impl ConstraintSession {
     /// with its smaller face first. A host encodes it with
     /// [`super::encode_record`].
     pub fn save(&self) -> Result<LayerOrderRecord, SessionRefusal> {
+        self.save_carrying(None)
+    }
+
+    /// [`Self::save`], writing back only the carried rows whose record index
+    /// ([`CarriedConstraint::index`]) `keep` names: the rows a dialog still
+    /// lists. The session is left as it was, so a save the host refuses
+    /// leaves every carried row there for an undo to show again.
+    pub fn save_keeping(&self, keep: &[usize]) -> Result<LayerOrderRecord, SessionRefusal> {
+        self.save_carrying(Some(keep))
+    }
+
+    fn save_carrying(&self, keep: Option<&[usize]>) -> Result<LayerOrderRecord, SessionRefusal> {
         let letters = self.solver.search().forced();
         let free: Vec<usize> = (0..self.variables.len())
             .filter(|&v| letters[v].is_none())
@@ -839,7 +851,11 @@ impl ConstraintSession {
                 }
             }
         };
-        for row in &self.carried {
+        let kept = self
+            .carried
+            .iter()
+            .filter(|row| keep.is_none_or(|keep| keep.contains(&row.index)));
+        for row in kept {
             let f = listed(row.subject);
             let g = listed(row.object);
             constraints.push(RecordPair {
@@ -1037,9 +1053,22 @@ impl ConstraintSession {
         steer: Steer<'_>,
         limits: &Limits,
     ) -> Result<Solved, SessionRefusal> {
+        Ok(self.solve_counted(list, extra, steer, limits)?.0)
+    }
+
+    /// [`Self::solve`], and the search nodes it spent (none for an answer
+    /// propagation alone gave), so a caller asking many can take each one's
+    /// out of one budget.
+    pub(crate) fn solve_counted(
+        &self,
+        list: &[Constraint],
+        extra: &[Seed],
+        steer: Steer<'_>,
+        limits: &Limits,
+    ) -> Result<(Solved, u64), SessionRefusal> {
         let mut seeds = match self.seeds_of(list)? {
             Ok(seeds) => seeds,
-            Err(cant) => return Ok(Solved::CantFit(cant)),
+            Err(cant) => return Ok((Solved::CantFit(cant), 0)),
         };
         let asked = seeds.len();
         // An extra seed against a constraint, or against another extra, on
@@ -1057,11 +1086,12 @@ impl ConstraintSession {
                         .variables
                         .get(v)
                         .map_or_else(Vec::new, |pair| pair.faces().to_vec());
-                    return Ok(Solved::CantFit(CantFit {
+                    let opposed = CantFit {
                         proof: CantFitProof::Opposed,
                         faces,
                         constraints: by.into_iter().collect(),
-                    }));
+                    };
+                    return Ok((Solved::CantFit(opposed), 0));
                 }
                 Some(_) => {}
                 None => {
@@ -1081,7 +1111,7 @@ impl ConstraintSession {
                 .search()
                 .deduce(&seeds, limits.flatfold_deadline())
                 .map_err(internal_search)?;
-            return Ok(match deduced {
+            let solved = match deduced {
                 Deduction::Deduced(deduced) => Solved::Fit(Fit {
                     arrangement: self.shown.clone(),
                     forced: deduced.forced(),
@@ -1108,7 +1138,8 @@ impl ConstraintSession {
                     limit: complete::budget_limit(limit),
                     nodes: 0,
                 }),
-            });
+            };
+            return Ok((solved, 0));
         }
         let (prefer, prefer_fits) = match steer {
             Steer::Shown => (self.shown.values.as_slice(), true),
@@ -1125,7 +1156,13 @@ impl ConstraintSession {
             .search()
             .check(&seeds, &options)
             .map_err(internal_search)?;
-        Ok(match outcome {
+        let nodes = match &outcome {
+            CheckOutcome::Fits(fit) => fit.nodes,
+            CheckOutcome::NoOrder(none) => none.nodes,
+            CheckOutcome::Undecided { nodes, .. } => *nodes,
+            CheckOutcome::Forced { .. } | CheckOutcome::Conflict(_) => 0,
+        };
+        let solved = match outcome {
             CheckOutcome::Fits(fit) => {
                 let stacks = if fit.order == self.shown.values {
                     self.shown.stacks.clone()
@@ -1166,7 +1203,8 @@ impl ConstraintSession {
                 limit: complete::budget_limit(limit),
                 nodes,
             }),
-        })
+        };
+        Ok((solved, nodes))
     }
 
     /// A seed against what the letters force: the constraints on that pair.

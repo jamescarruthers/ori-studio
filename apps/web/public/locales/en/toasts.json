@@ -59,7 +59,8 @@
       "copyNotFoldedChosenOrder": "The copy couldn’t be shown folded, because this step’s chosen layer order needs attention.",
       "folds3d": "This step’s creases fold in 3D now, and layer order works on flat folds. Refresh the step to see it.",
       "lost": "Layer order stopped unexpectedly, so this step wasn’t changed.",
-      "lostLoad": "Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.",
+      "lostLoadOffline": "Layer order couldn’t load while offline, so this step wasn’t changed. Reconnect, then reload Ori Studio to try again.",
+      "lostLoadReload": "Layer order couldn’t load, so this step wasn’t changed. Reload Ori Studio to try again.",
       "refused": "This layer order couldn’t be drawn, so nothing was changed.",
       "removed_one": "The step’s layer constraint was for its old pattern, so it was removed. Undo brings it back.",
       "removed_other": "The step’s {{count}} layer constraints were for its old pattern, so they were removed. Undo brings them back.",
@@ -96,8 +97,10 @@
     "refreshAllLayerOrderKept_other": "{{count}} steps’ layer constraints need attention, so they keep their pictures.",
     "refreshAllLayerOrderLost_one": "Layer order stopped unexpectedly, so 1 step wasn’t changed.",
     "refreshAllLayerOrderLost_other": "Layer order stopped unexpectedly, so {{count}} steps weren’t changed.",
-    "refreshAllLayerOrderLostLoad_one": "Layer order couldn’t load, so 1 step wasn’t changed. Check your connection, then try again.",
-    "refreshAllLayerOrderLostLoad_other": "Layer order couldn’t load, so {{count}} steps weren’t changed. Check your connection, then try again.",
+    "refreshAllLayerOrderLostLoadOffline_one": "Layer order couldn’t load while offline, so 1 step wasn’t changed. Reconnect, then reload Ori Studio to try again.",
+    "refreshAllLayerOrderLostLoadOffline_other": "Layer order couldn’t load while offline, so {{count}} steps weren’t changed. Reconnect, then reload Ori Studio to try again.",
+    "refreshAllLayerOrderLostLoadReload_one": "Layer order couldn’t load, so 1 step wasn’t changed. Reload Ori Studio to try again.",
+    "refreshAllLayerOrderLostLoadReload_other": "Layer order couldn’t load, so {{count}} steps weren’t changed. Reload Ori Studio to try again.",
     "refreshedAll_one": "Refreshed 1 step",
     "refreshedAll_other": "Refreshed {{count}} steps",
     "uploadFailed_one": "A picture couldn’t be added",
@@ -130,6 +133,9 @@
     "ignoredFile": "Used {{name}}; ignored 1 other dropped file.",
     "ignoredFiles": "Used {{name}}; ignored {{others}} other dropped files."
   },
+  "fileOpen": {
+    "closeDialog": "Close the dialog to open another file"
+  },
   "foldedFigureExport": {
     "empty": "This folded model has nothing to export yet",
     "failed": "Could not export this folded model"
@@ -156,12 +162,20 @@
     "solvingLong": "Still solving — this can take a while"
   },
   "layerOrder": {
+    "folds3d": "This figure’s creases fold in 3D now, and layer order works on flat folds. Refold it to see it.",
+    "refoldKept": "{{name}}’s layer constraints need attention, so it keeps its picture.",
+    "refoldKeptChosenOrder": "{{name}}’s chosen layer order needs attention, so it keeps its picture.",
+    "refoldLost": "Layer order stopped unexpectedly, so {{name}} wasn’t refolded.",
+    "refoldLostLoadOffline": "Layer order couldn’t load while offline, so {{name}} wasn’t refolded. Reconnect, then reload Ori Studio to try again.",
+    "refoldLostLoadReload": "Layer order couldn’t load, so {{name}} wasn’t refolded. Reload Ori Studio to try again.",
     "stepCheckTimedOut": "Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.",
     "stepLost": "Layer order stopped unexpectedly, so the figure wasn’t changed.",
-    "stepLostLoad": "Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.",
+    "stepLostLoadOffline": "Layer order couldn’t load while offline, so the figure wasn’t changed. Reconnect, then reload Ori Studio to try again.",
+    "stepLostLoadReload": "Layer order couldn’t load, so the figure wasn’t changed. Reload Ori Studio to try again.",
     "stepNotFoundInTime": "Couldn’t find another solution in time, so the figure wasn’t changed.",
     "stepUnrestored": "This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.",
-    "unavailable": "Layer order didn’t load. Check your connection and try again."
+    "unavailableOffline": "Layer order didn’t load while offline. Reconnect, then reload Ori Studio to try again.",
+    "unavailableReload": "Layer order didn’t load. Reload Ori Studio to try again."
   },
   "paperExport": {
     "saved": "Exported {{name}}"

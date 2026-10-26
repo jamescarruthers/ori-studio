@@ -37,7 +37,7 @@ import { resolveFoldRoute } from '../../cp-workspace/folded/foldRoute';
 import { openLayerOrderDialog } from '../../layer-order/dialog/layerOrderDialogGateway';
 import {
   solutionPressOf,
-  solutionsHeldByConflict,
+  solutionsHeldForReview,
   type LayerOrderSolutionPress,
 } from '../../layer-order/host/solutionCursorTable';
 import { foldCancellationAvailable } from '../../lib/foldCancellation';
@@ -603,8 +603,13 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
           return posed(begun, linked, document, choice.creases, { verb }, {});
         }
         if (route.kind === 'none') return { status: 'missing' };
-        // Saved as clashing (D10): no solution fits them all until they are reviewed; the pager waits, saying so.
-        if (solutionsHeldByConflict(saved.record.attention)) return { press: { status: 'blocked' } };
+        // As Edit's figures wait (`foldedFigureActions.ts`), and the pager says why: its record needs a look
+        // since an edit (D14), or its pattern changed since it was captured, so the solutions of the fold it
+        // shows are not its creases' until a Refresh.
+        if (solutionsHeldForReview(saved.record.attention)) return { press: { status: 'blocked' } };
+        // `linkStatus`'s rule for `stale`: a step that kept no fingerprint has nothing to say it changed from.
+        const known = knownCreasesOf(linked);
+        if (known.fingerprint !== null && !creasesMatch(choice.creases, known)) return { press: { status: 'blocked' } };
         const render = linked.render;
         const turn = beginStepSolutionStep(stepId, linked, { loadId: begun.guard.loadId, document, lineIds });
         try {
@@ -640,7 +645,9 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
           if (answer.outcome !== 'moved' || !frame) {
             // Undone, redone, relinked or deleted while it ran: nothing to say about a step that has moved on.
             if (currentLinkedSource(stepId) !== linked) return { press: { status: 'stopped' } };
-            return { press: answer.outcome === 'moved' ? { status: 'stopped' } : solutionPressOf(answer, direction) };
+            // As every host's press says it (`solutionCursorTable.ts`): an end is proved (E9), and Keep
+            // trying after a timeout goes on from what it proved.
+            return { press: answer.outcome === 'moved' ? { status: 'stopped' } : solutionPressOf(answer) };
           }
           const landed = await posed(
             begun,
@@ -664,7 +671,7 @@ export function createPoseController(stepId: string, listener: PoseControllerLis
     showPreview(false);
     if (!outcome) return;
     // Keep trying asks again with the same direction, on the same worker, with longer limits.
-    if ('press' in outcome) sayStepSolutionPress(outcome.press, () => void stepSolution(verb, tries + 1));
+    if ('press' in outcome) sayStepSolutionPress(outcome.press, () => void stepSolution(verb, tries + 1), tries);
     // As `pose` says it: a see-through fold says so only as it is first folded.
     else if (!(outcome.status === 'captured' && outcome.noLayerOrder)) sayCaptureOutcome(outcome);
   };

@@ -1,7 +1,7 @@
 import type { PaperScene } from '@treemaker/origami-simulator';
 import type { Point } from '../lib/geometry';
 import type { PaperStyleOverrides } from '../lib/paper/paperStyle';
-import type { FoldedFigureLayerOrder } from '../lib/layerOrder/foldedFigureLayerOrder';
+import type { DetachedFigureLayerOrder, FoldedFigureLayerOrder } from '../lib/layerOrder/foldedFigureLayerOrder';
 import type { CpGeometryTransport } from './oristudioCpGeometry';
 import type {
   OristudioCpOperationId,
@@ -1348,6 +1348,12 @@ export interface OristudioCpFoldedFigureEntry {
    * writes back as it came (`cp-workspace/folded/foldedFigureLayerOrders.ts`).
    */
   layerOrder?: FoldedFigureLayerOrder | null;
+  /**
+   * A record a reload detached from this figure (an older build folded it
+   * again), for review only: never used to fold. Held here at install,
+   * written back to the bag's `detached` list from there, never on the figure.
+   */
+  detachedLayerOrder?: DetachedFigureLayerOrder | null;
 }
 
 /** Mirrors the kernel's `model::SnapCandidates`. */

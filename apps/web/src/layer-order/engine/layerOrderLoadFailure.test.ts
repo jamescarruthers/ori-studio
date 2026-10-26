@@ -3,13 +3,45 @@
  * to load it (shown, never reported) rather than the engine failing.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { TFunction } from 'i18next';
+
+const toasts = vi.hoisted(() => ({ error: vi.fn() }));
+vi.mock('sonner', () => ({ toast: toasts }));
+
 import { LAYER_ORDER_CALL_FAILURES } from './layerOrderEngine';
-import { isLayerOrderLoadFailure } from './layerOrderLoadFailure';
+import { isLayerOrderLoadFailure, layerOrderReloadAction, sayLayerOrderUnavailable } from './layerOrderLoadFailure';
+
+const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 
 const unavailable = (message: string) => ({ code: LAYER_ORDER_CALL_FAILURES.unavailable, message });
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  toasts.error.mockClear();
+});
+
+describe('what a load failure offers', () => {
+  it('is Reload, which reloads the page only when the user presses it', () => {
+    const host = { location: { reload: vi.fn() } };
+    const action = layerOrderReloadAction(t, host);
+    expect(action.label).toBe('Reload');
+    expect(host.location.reload).not.toHaveBeenCalled();
+    action.onClick();
+    expect(host.location.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('says an open didn’t load, worded for whether the browser is offline, with Reload', () => {
+    sayLayerOrderUnavailable(t);
+    vi.stubGlobal('navigator', { onLine: false });
+    sayLayerOrderUnavailable(t);
+    expect(toasts.error.mock.calls).toEqual([
+      ['Layer order didn’t load. Reload Ori Studio to try again.', { action: { label: 'Reload', onClick: expect.any(Function) } }],
+      [
+        'Layer order didn’t load while offline. Reconnect, then reload Ori Studio to try again.',
+        { action: { label: 'Reload', onClick: expect.any(Function) } },
+      ],
+    ]);
+  });
 });
 
 describe('a load failure', () => {

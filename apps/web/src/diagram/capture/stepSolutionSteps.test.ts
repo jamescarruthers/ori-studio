@@ -4,20 +4,24 @@ import { regionReferenceFor } from '../../cp-workspace/regions/regionReference';
 import { resetFoldedFigureHandles, setFoldedFigureHandleFree } from '../../cp-workspace/folded/foldedFigureHandles';
 import { sheetRegions } from '../../cp-workspace/sheets/cpSheetRegions';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { ensureCpSheetIndex, peekCpSheetIndex } from '../../cp-workspace/sheets/cpSheetIndex';
 import {
   cpDocument,
   fakeCaptureRuntime,
   fakeFoldSource,
   fakeLayerOrderResolutions,
+  movedLines,
   ORDERED_HANDLE,
   STEP_LAYER_ORDER,
   STEP_LAYER_ORDER_IN_SOURCE,
   stepLayerOrderJson,
+  TWO_SQUARES,
   twoSquaresIndex,
 } from './capture.fixtures';
 import type { CpCaptureRuntime } from './captureFolded';
 import { captureModel } from './captureFolded';
-import { stepLayerOrderOf } from './captureLayerOrder';
+import { layerOrderSummaryOf, stepLayerOrderOf } from './captureLayerOrder';
+import { linkStatus } from './linkStatus';
 import { buildDiagramLinkedPoseActions } from '../actions/diagramLinkedPoseActions';
 import { setLinkedLayerOrder, stepById, type DiagramCpRender, type DiagramCpSource } from '../document/diagramDocument';
 import { readDiagram, writeDiagram } from '../document/diagramFile';
@@ -165,9 +169,13 @@ const labelsSince = (entries: number) => state().diagramHistory.past.slice(entri
 const t = ((_key: string, fallback: string, values?: Record<string, unknown>) =>
   fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''))) as never;
 
-/** The pager's ‹ and › as the Step pane draws them for the step now: from the table, never the engine. */
+/**
+ * The pager's ‹ and › as the Step pane draws them for the step now: from the table, saved data and the
+ * link's status (`useDiagramLinkedPose`), never the engine.
+ */
 function pager(stepId: string) {
   const source = sourceOf(stepId);
+  const pattern = state().oristudioCpDocument?.document ?? null;
   const actions = buildDiagramLinkedPoseActions(
     {
       render: source.render,
@@ -176,7 +184,8 @@ function pager(stepId: string) {
       solutions: { discovered: 1, hasNext: false },
       constrained: source.layerOrder !== undefined,
       place: stepSolutionPlace(stepId, source),
-      attention: stepLayerOrderOf(source.layerOrder)?.record.attention ?? null,
+      record: layerOrderSummaryOf(source),
+      stale: linkStatus(source, pattern, peekCpSheetIndex(pattern)) === 'stale',
     },
     { t, pose: vi.fn() }
   );
@@ -277,39 +286,68 @@ describe('the cursor’s life', () => {
     expect(analytics.trackDiagramPicturePosed).toHaveBeenLastCalledWith('previous_solution', 'flat', { constrained: true });
   });
 
-  it('says it couldn’t find another in time at an end the count has not settled, with Keep trying, and writes nothing', async () => {
+  it('waits at an end a press proved, whatever the count says, and says nothing (E9)', async () => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
-    const cursor = script(end(1, 1, false), moved(ORDER_2, 2, 2));
+    script(moved(ORDER_2, 2, 3, false), end(2, 3, false));
+    const entries = state().diagramHistory.past.length;
+    await pose.run({ verb: 'next-solution' });
+    await pose.run({ verb: 'next-solution' });
+    // The press that found the end wrote nothing and said nothing: asking again gains nothing.
+    expect(labelsSince(entries)).toEqual(['Show another solution']);
+    expect(toasts.error).not.toHaveBeenCalled();
+    expect(toasts.message).not.toHaveBeenCalled();
+    // The count has not settled, and still › waits there; ‹ goes back.
+    expect(pager(stepId).place).toEqual({ position: solutionPosition(2, 3, false), counted: true, ended: 'next' });
+    expect(pager(stepId).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
+    expect(pager(stepId).previous.disabled).toBe(false);
+  });
+
+  it('offers Keep trying when the next isn’t found in time, a toast a try, going on from what it proved', async () => {
+    const stepId = await constrainedStep();
+    const pose = poseOf(stepId);
+    const timedOut = { outcome: 'timed_out', stage: 'step' } as const;
+    const cursor = script(timedOut, timedOut, moved(ORDER_2, 2, 2));
     const entries = state().diagramHistory.past.length;
     await pose.run({ verb: 'next-solution' });
     expect(state().diagramHistory.past).toHaveLength(entries);
-    const [said, options] = toasts.error.mock.calls[0]! as [string, { action: { label: string; onClick: () => void } }];
+    type Said = [string, { id: string; action: { label: string; onClick: () => void } }];
+    const [said, first] = toasts.error.mock.calls[0]! as Said;
     expect(said).toBe('Couldn’t find another solution in time, so this step wasn’t changed.');
-    // Not final: › goes on looking.
+    expect(first.action.label).toBe('Keep trying');
     expect(pager(stepId).next.disabled).toBe(false);
-    // Keep trying: the same direction again, on the same worker, with longer limits.
-    expect(options.action.label).toBe('Keep trying');
-    options.action.onClick();
+    // Keep trying: the same direction again, on the same worker, with longer limits; its toast a fresh one,
+    // since clicking Keep trying dismisses the one it came from.
+    first.action.onClick();
+    await vi.waitFor(() => expect(toasts.error).toHaveBeenCalledTimes(2));
+    const [, second] = toasts.error.mock.calls[1]! as Said;
+    expect([first.id, second.id]).toEqual(['diagram-layer-order-step-0', 'diagram-layer-order-step-1']);
+    second.action.onClick();
     await vi.waitFor(() => expect(sourceOf(stepId).layerOrder).toBe(kept(ORDER_2)));
-    expect(cursor.triesAsked).toEqual([0, 1]);
-    expect(cursor.asked.map((asked) => asked.direction)).toEqual(['next', 'next']);
+    expect(cursor.triesAsked).toEqual([0, 1, 2]);
+    expect(cursor.asked.map((asked) => asked.direction)).toEqual(['next', 'next', 'next']);
     expect(hostEngine.open).toHaveBeenCalledOnce();
+    expect(labelsSince(entries)).toEqual(['Show another solution']);
   });
 
-  it('holds ‹ › on a step saved as clashing, pointing at Review…, and a press asks nothing of the engine', async () => {
-    const clashing = stepLayerOrderJson({ ...STEP_LAYER_ORDER, attention: { reason: 'conflict', count: 1 } });
-    const stepId = await constrainedStep(clashing);
-    for (const verb of [pager(stepId).previous, pager(stepId).next]) {
-      expect(verb).toMatchObject({ disabled: true, hint: 'Its layer constraints clash. Review… them first' });
+  it('holds ‹ › while its record needs a look since an edit, pointing at Review…, and a press asks nothing of the engine', async () => {
+    // Clashing (D10), or any other summary a capture wrote (D14): nothing to step through until reviewed.
+    for (const attention of [{ reason: 'conflict', count: 1 }, { reason: 'timeout', count: 2 }] as const) {
+      useWorkspaceStore.setState({ diagram: null });
+      const stepId = await constrainedStep(stepLayerOrderJson({ ...STEP_LAYER_ORDER, attention }));
+      for (const verb of [pager(stepId).previous, pager(stepId).next]) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Review the layer constraints that need attention first' });
+      }
+      // A surface that keeps it focusable, pressed anyway: nothing made, nothing written, nothing said.
+      const entries = state().diagramHistory.past.length;
+      await poseOf(stepId).run({ verb: 'next-solution' });
+      expect(hostEngine.open).not.toHaveBeenCalled();
+      expect(state().diagramHistory.past).toHaveLength(entries);
+      expect(toasts.error).not.toHaveBeenCalled();
+      expect(toasts.message).not.toHaveBeenCalled();
+      controller?.dispose();
+      controller = null;
     }
-    // A surface that keeps it focusable, pressed anyway: nothing made, nothing written, nothing said.
-    const entries = state().diagramHistory.past.length;
-    await poseOf(stepId).run({ verb: 'next-solution' });
-    expect(hostEngine.open).not.toHaveBeenCalled();
-    expect(state().diagramHistory.past).toHaveLength(entries);
-    expect(toasts.error).not.toHaveBeenCalled();
-    expect(toasts.message).not.toHaveBeenCalled();
   });
 
   it('is let go on an undo of a step, which shows the order before; redo brings the step back, and the next press makes a fresh one', async () => {
@@ -418,28 +456,68 @@ describe('the cursor’s life', () => {
     expect(stepSolutionCursorStep()).toBeNull();
   });
 
-  it('is kept through a custom colour on its creases, and let go as a press finds them changed', async () => {
+  it('waits while its pattern changed since it was captured, keeping the cursor, as a stale figure waits in Edit', async () => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
-    const cursor = script(end(1, 3, false), end(1, 3, false));
+    const cursor = script(moved(ORDER_2, 2, 3, false), moved(ORDER_3, 3, 3, false));
     await pose.run({ verb: 'next-solution' });
     const shown = (edited: typeof document) =>
       useWorkspaceStore.setState({
         oristudioCpDocument: { handle: 1, document: edited, geometry: null } as unknown as OristudioCpDocumentState,
       });
-    // One of the step's creases drawn in a colour of its own: its geometry and kind are as they were.
-    shown(cpDocument(undefined, (cp, id) => (id === 8 ? { ...cp, customized: 1, customized_color: { red: 1, green: 2, blue: 3 } } : cp)));
-    expect(cursor.closed).toBe(false);
+    // One of the step's creases drawn in a colour of its own, or turned from a mountain to a valley: the
+    // Step pane's "Pattern changed" (`linkStatus`), as Edit's staleness reads a custom colour too. Both
+    // verbs wait, saying why; pressed anyway, nothing is asked and nothing said, and the cursor is kept.
+    for (const patch of [
+      (cp: (typeof document)['crease_pattern']['line_segments'][number], id: number) =>
+        id === 8 ? { ...cp, customized: 1, customized_color: { red: 1, green: 2, blue: 3 } } : cp,
+      (cp: (typeof document)['crease_pattern']['line_segments'][number], id: number) => (id === 8 ? { ...cp, color: 'Blue2' as const } : cp),
+    ]) {
+      shown(cpDocument(undefined, patch));
+      for (const verb of [pager(stepId).previous, pager(stepId).next]) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Its pattern changed since it was captured' });
+      }
+      await pose.run({ verb: 'next-solution' });
+      expect(cursor.asked).toHaveLength(1);
+      expect(cursor.closed).toBe(false);
+    }
+    expect(toasts.error).not.toHaveBeenCalled();
+    expect(toasts.message).not.toHaveBeenCalled();
+    // Put back as it was captured: the same cursor steps on.
+    shown(document);
+    expect(pager(stepId).next.disabled).toBe(false);
     await pose.run({ verb: 'next-solution' });
+    expect(sourceOf(stepId).layerOrder).toBe(kept(ORDER_3));
     expect(hostEngine.open).toHaveBeenCalledOnce();
-    expect(cursor.asked).toHaveLength(2);
-    // That crease turned from a mountain to a valley: the next press finds it, and makes a fresh cursor on it.
-    shown(cpDocument(undefined, (cp, id) => (id === 8 ? { ...cp, color: 'Blue2' } : cp)));
-    const fresh = script(end(1, 3, false));
+  });
+
+  it('makes a fresh cursor once its creases moved with their sheet: its link current, its lines elsewhere', async () => {
+    const stepId = await constrainedStep();
+    const pose = poseOf(stepId);
+    const cursor = script(end(1, 3, false));
     await pose.run({ verb: 'next-solution' });
-    expect(cursor.closed).toBe(true);
-    expect(hostEngine.open).toHaveBeenCalledTimes(2);
-    expect(fresh.asked).toHaveLength(1);
+    const elsewhere = twoSquaresIndex({ dx: 300 });
+    vi.mocked(peekCpSheetIndex).mockImplementation(() => elsewhere);
+    vi.mocked(ensureCpSheetIndex).mockImplementation(async () => elsewhere);
+    try {
+      useWorkspaceStore.setState({
+        oristudioCpDocument: {
+          handle: 1,
+          document: cpDocument(movedLines(TWO_SQUARES, 300, 0)),
+          geometry: null,
+        } as unknown as OristudioCpDocumentState,
+      });
+      // Found where it went, by what it is: not changed, so ‹ › are offered.
+      expect(pager(stepId).previous.hint).not.toBe('Its pattern changed since it was captured');
+      const fresh = script(end(1, 3, false));
+      await pose.run({ verb: 'previous-solution' });
+      expect(cursor.closed).toBe(true);
+      expect(hostEngine.open).toHaveBeenCalledTimes(2);
+      expect(fresh.asked).toHaveLength(1);
+    } finally {
+      vi.mocked(peekCpSheetIndex).mockImplementation(() => sheets);
+      vi.mocked(ensureCpSheetIndex).mockImplementation(async () => sheets);
+    }
   });
 
   it('is let go, with its worker, when another step is selected, the workspace switches or the dialog opens', async () => {
@@ -468,10 +546,10 @@ describe('the cursor’s life', () => {
     }
   });
 
-  it('is let go after a minute with no press, and kept through presses', async () => {
+  it('lets its worker go after a minute with no press, keeping the readout, and is kept through presses', async () => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
-    const cursor = script(end(1, 3, false), end(1, 3, false));
+    const cursor = script(moved(ORDER_2, 2, 3, false), moved(ORDER_3, 3, 3, false));
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
       await pose.run({ verb: 'next-solution' });
@@ -482,6 +560,9 @@ describe('the cursor’s life', () => {
       vi.advanceTimersByTime(1000);
       expect(cursor.closed).toBe(true);
       expect(stepSolutionCursorStep()).toBeNull();
+      // Where it stands is still read out, while the step holds what it did.
+      expect(pager(stepId).place).toEqual({ position: solutionPosition(3, 3, false), counted: true });
+      expect(hostEngine.open).toHaveBeenCalledOnce();
     } finally {
       vi.useRealTimers();
     }
@@ -573,39 +654,52 @@ describe('what it steps from', () => {
 describe('a press that moves nothing writes nothing', () => {
   // By cause (H6's review): each its own words; running out of time offers Keep trying and keeps the cursor.
   it.each([
-    ['lost offline', { outcome: 'lost', cause: 'load' }, 'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.', false, true],
-    ['lost', { outcome: 'lost', cause: 'crashed' }, 'Layer order stopped unexpectedly, so this step wasn’t changed.', false, true],
+    // Only a reload retries a load that failed: Reload, the toast's one action.
+    [
+      'lost loading',
+      { outcome: 'lost', cause: 'load' },
+      'Layer order couldn’t load, so this step wasn’t changed. Reload Ori Studio to try again.',
+      'Reload',
+      true,
+    ],
+    ['lost', { outcome: 'lost', cause: 'crashed' }, 'Layer order stopped unexpectedly, so this step wasn’t changed.', undefined, true],
     [
       'its record not checked in time',
       { outcome: 'timed_out', stage: 'restore' },
       'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.',
-      true,
+      'Keep trying',
       false,
     ],
     [
       'the next not found in time',
       { outcome: 'timed_out', stage: 'step' },
       'Couldn’t find another solution in time, so this step wasn’t changed.',
-      true,
+      'Keep trying',
       false,
     ],
-    ['too large', { outcome: 'too_large' }, 'The next layer order is too large to save with this step, so it wasn’t changed.', false, true],
+    [
+      'too large',
+      { outcome: 'too_large' },
+      'The next layer order is too large to save with this step, so it wasn’t changed.',
+      undefined,
+      true,
+    ],
     [
       'refused',
       { outcome: 'unrestored', why: 'refused' },
       'Layer order can’t step through this step’s solutions, so it wasn’t changed.',
-      false,
+      undefined,
       true,
     ],
     [
-      // A step whose creases changed since its last capture carries no flag yet: said so it reads without one.
+      // Said so it reads without a flag: a stale step waits for a Refresh, and a flagged one for Review….
       'clashing',
       { outcome: 'unrestored', why: 'clash' },
       'This step’s layer constraints clash with its pattern as it is now, so it can’t step through its solutions. Edit its layer order to review them.',
-      false,
+      undefined,
       true,
     ],
-  ] as const)('%s: no undo step, not dirty, the picture kept, said', async (_name, answer, said, keepTrying, spent) => {
+  ] as const)('%s: no undo step, not dirty, the picture kept, said', async (_name, answer, said, action, spent) => {
     const stepId = await constrainedStep();
     const pose = poseOf(stepId);
     const cursor = script(answer as LayerOrderSolutionStep);
@@ -621,13 +715,29 @@ describe('a press that moves nothing writes nothing', () => {
     expect(toasts.error).toHaveBeenCalledOnce();
     const [text, options] = toasts.error.mock.calls[0]! as [string, { id?: string; action?: { label: string } }];
     expect(text).toBe(said);
-    // One toast at a time for a step's presses: a Keep trying replaces the one it came from.
-    expect(options.id).toBe('diagram-layer-order-step');
-    expect(options.action?.label).toBe(keepTrying ? 'Keep trying' : undefined);
+    // One toast at a time for a step's presses at the same try; a Keep trying's is a fresh one.
+    expect(options.id).toBe('diagram-layer-order-step-0');
+    expect(options.action?.label).toBe(action);
     expect(bindings.runtime!.foldWithOrder).not.toHaveBeenCalled();
     expect(analytics.trackDiagramPicturePosed).not.toHaveBeenCalled();
     // A lost, refused or unrestored session is gone; one that ran out of time is kept for Keep trying.
     expect(cursor.closed).toBe(spent);
+  });
+
+  it('says to reconnect first when the engine didn’t load while offline, with Reload', async () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    try {
+      const stepId = await constrainedStep();
+      script({ outcome: 'lost', cause: 'load' });
+      await poseOf(stepId).run({ verb: 'next-solution' });
+      const [text, options] = toasts.error.mock.calls[0]! as [string, { action: { label: string } }];
+      expect(text).toBe(
+        'Layer order couldn’t load while offline, so this step wasn’t changed. Reconnect, then reload Ori Studio to try again.'
+      );
+      expect(options.action.label).toBe('Reload');
+    } finally {
+      online.mockRestore();
+    }
   });
 
   it('says nothing for a press whose step moved on while it ran (an undo)', async () => {

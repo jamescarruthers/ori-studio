@@ -14,6 +14,7 @@ import { fold3dRefusalMessage } from '../../cp-workspace/folded/foldedFigureNoti
 import { requestCpRegionFocus } from '../../cp-workspace/regions/regionFocusRequest';
 import { boundariesMatch, regionReferenceFor, type RegionLike } from '../../cp-workspace/regions/regionReference';
 import i18n from '../../i18n';
+import { layerOrderOffline, layerOrderReloadAction } from '../../layer-order/engine/layerOrderLoadFailure';
 import { needsAttentionFact } from '../../layer-order/model/layerOrderAnalytics';
 import type { LayerOrderSolutionPress } from '../../layer-order/host/solutionCursorTable';
 import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
@@ -471,76 +472,92 @@ export function sayCaptureOutcome(outcome: DiagramCaptureOutcome): void {
 
 /**
  * The host engine was not there to restore a step's record, so nothing was
- * checked and nothing written: the browser did not load it (the host engine's
- * `load`, by `isLayerOrderLoadFailure`), which a connection may settle; or it
- * stopped or did not start, said neutrally, since that may be a defect.
+ * checked and nothing written. `loadFailed`: the browser did not load it (the
+ * host engine's `load`, by `isLayerOrderLoadFailure`), which only a reload
+ * retries — offered as Reload (`layerOrderReloadAction`), and offline, to
+ * reconnect first; otherwise it stopped or did not start, said neutrally,
+ * since that may be a defect.
  */
-export function sayLayerOrderLost(offline: boolean, id?: string): void {
+export function sayLayerOrderLost(loadFailed: boolean, id?: string): void {
   const t = i18n.t;
-  const said = offline
-    ? t(
-        'toasts:diagram.layerOrder.lostLoad',
-        'Layer order couldn’t load, so this step wasn’t changed. Check your connection, then try again.'
-      )
-    : t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.');
-  // A step's ‹ › share one toast (`sayStepSolutionPress`); a capture's stands alone.
-  if (id === undefined) toast.error(said);
-  else toast.error(said, { id });
+  // A step's ‹ › share a toast a try (`sayStepSolutionPress`); a capture's stands alone.
+  const shared = id === undefined ? {} : { id };
+  if (!loadFailed) {
+    const said = t('toasts:diagram.layerOrder.lost', 'Layer order stopped unexpectedly, so this step wasn’t changed.');
+    if (id === undefined) toast.error(said);
+    else toast.error(said, shared);
+    return;
+  }
+  toast.error(
+    layerOrderOffline()
+      ? t(
+          'toasts:diagram.layerOrder.lostLoadOffline',
+          'Layer order couldn’t load while offline, so this step wasn’t changed. Reconnect, then reload Ori Studio to try again.'
+        )
+      : t(
+          'toasts:diagram.layerOrder.lostLoadReload',
+          'Layer order couldn’t load, so this step wasn’t changed. Reload Ori Studio to try again.'
+        ),
+    { ...shared, action: layerOrderReloadAction(t) }
+  );
 }
 
-/** The toast id a step's ‹ › messages share, so a Keep trying replaces the one it came from. */
-const STEP_SOLUTION_TOAST_ID = 'diagram-layer-order-step';
+/**
+ * The toast id of a step's ‹ › message, by how many times the user has kept
+ * trying, as Edit's are (`foldedFigureVerbs.ts`): presses at the same try
+ * replace one another, and each Keep trying gets a fresh one, since clicking
+ * it dismisses its toast and a toast shown again under that id while it
+ * leaves is lost in its exit.
+ */
+function stepSolutionToastId(tries: number): string {
+  return `diagram-layer-order-step-${tries}`;
+}
 
 /**
  * What a constrained step's ‹ or › that moved nothing says, if anything
  * (layer order H9), by its cause, as Edit's figures say it
  * (`sayFoldedSolutionStep`) in the Diagram's words:
  *
- * - the engine didn't load (offline: check the connection) or stopped;
- * - the record couldn't be checked in time (D10), or no next solution was
- *   found within the step's deadline (an end the count hasn't reached yet,
- *   or a step that ran out): each with Keep trying (`keepTrying`), which
- *   asks again on the same worker with longer limits;
+ * - the engine didn't load, with Reload, the only retry there is (offline:
+ *   reconnect first), or it stopped;
+ * - the record couldn't be checked in time (D10), or the search for the next
+ *   solution ran out (E9's `timed_out`): each with Keep trying
+ *   (`keepTrying`), which asks again on the same worker with longer limits,
+ *   and the step goes on from what it proved;
  * - the next solution is too large to save with the step, or the engine
  *   refused the step's creases;
  * - its constraints clash with its pattern as it is now. Said so it reads
  *   without a flag: a step whose creases changed since it was last captured
- *   carries none until a Refresh, and a step flagged as clashing never gets
- *   here (its ‹ › wait for Review…).
+ *   carries none until a Refresh, and a step flagged as needing attention
+ *   never gets here (its ‹ › wait for Review…).
  *
- * An end that is final, a Stop, a step that moved on, or one that can't step
- * now says nothing: the pager shows where it stands, and the rest the user
- * did or already sees. An order that can't be drawn said so through the
- * capture.
+ * An end (proved since E9: asking again gains nothing), a Stop, a step that
+ * moved on, or one that can't step now says nothing: the pager waits at the
+ * end and shows where it stands, and the rest the user did or already sees.
+ * An order that can't be drawn said so through the capture. `tries` is how
+ * many times the user has kept trying, for the toast's id.
  */
-export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying: () => void): void {
+export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying: () => void, tries = 0): void {
   const t = i18n.t;
-  const id = STEP_SOLUTION_TOAST_ID;
-  const notFoundInTime = () =>
-    toast.error(
-      t('toasts:diagram.layerOrder.stepNotFoundInTime', 'Couldn’t find another solution in time, so this step wasn’t changed.'),
-      { id, action: { label: t('dialogs:layerOrder.keepTrying', 'Keep trying'), onClick: keepTrying } }
-    );
+  const id = stepSolutionToastId(tries);
+  const keepTryingAction = { label: t('dialogs:layerOrder.keepTrying', 'Keep trying'), onClick: keepTrying };
   switch (press.status) {
     case 'lost':
       sayLayerOrderLost(press.cause === 'load', id);
       return;
     case 'timed_out':
-      if (press.stage === 'step') {
-        notFoundInTime();
-        return;
-      }
       toast.error(
-        t(
-          'toasts:diagram.layerOrder.stepCheckTimedOut',
-          'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.'
-        ),
-        { id, action: { label: t('dialogs:layerOrder.keepTrying', 'Keep trying'), onClick: keepTrying } }
+        press.stage === 'step'
+          ? t(
+              'toasts:diagram.layerOrder.stepNotFoundInTime',
+              'Couldn’t find another solution in time, so this step wasn’t changed.'
+            )
+          : t(
+              'toasts:diagram.layerOrder.stepCheckTimedOut',
+              'Couldn’t check this step’s layer constraints in time, so it wasn’t changed.'
+            ),
+        { id, action: keepTryingAction }
       );
-      return;
-    case 'end':
-      // Not final: the search for the next ran out before the count got there.
-      if (!press.final) notFoundInTime();
       return;
     case 'too-large':
       toast.error(
@@ -566,6 +583,7 @@ export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying:
       );
       return;
     case 'moved':
+    case 'end':
     case 'not-drawn':
     case 'stopped':
     case 'blocked':

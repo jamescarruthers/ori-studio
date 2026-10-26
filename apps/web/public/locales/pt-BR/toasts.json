@@ -62,7 +62,8 @@
       "copyNotFoldedChosenOrder": "Não foi possível mostrar a cópia dobrada, porque a ordem das camadas escolhida para este passo precisa de atenção.",
       "folds3d": "Os vincos deste passo agora dobram em 3D, e a ordem das camadas funciona em dobras planas. Atualize o passo para vê-lo.",
       "lost": "A ordem das camadas parou inesperadamente, então este passo não foi alterado.",
-      "lostLoad": "Não foi possível carregar a ordem das camadas, então este passo não foi alterado. Verifique sua conexão e tente novamente.",
+      "lostLoadOffline": "Não foi possível carregar a ordem das camadas offline, então este passo não foi alterado. Reconecte-se e recarregue o Ori Studio para tentar novamente.",
+      "lostLoadReload": "Não foi possível carregar a ordem das camadas, então este passo não foi alterado. Recarregue o Ori Studio para tentar novamente.",
       "refused": "Não foi possível desenhar esta ordem das camadas, então nada foi alterado.",
       "removed_one": "A restrição de camadas do passo era do padrão antigo, então foi removida. Desfazer a traz de volta.",
       "removed_many": "As {{count}} restrições de camadas do passo eram do padrão antigo, então foram removidas. Desfazer as traz de volta.",
@@ -109,9 +110,12 @@
     "refreshAllLayerOrderLost_one": "A ordem das camadas parou inesperadamente, então {{count}} passo não foi alterado.",
     "refreshAllLayerOrderLost_many": "A ordem das camadas parou inesperadamente, então {{count}} passos não foram alterados.",
     "refreshAllLayerOrderLost_other": "A ordem das camadas parou inesperadamente, então {{count}} passos não foram alterados.",
-    "refreshAllLayerOrderLostLoad_one": "Não foi possível carregar a ordem das camadas, então {{count}} passo não foi alterado. Verifique sua conexão e tente novamente.",
-    "refreshAllLayerOrderLostLoad_many": "Não foi possível carregar a ordem das camadas, então {{count}} passos não foram alterados. Verifique sua conexão e tente novamente.",
-    "refreshAllLayerOrderLostLoad_other": "Não foi possível carregar a ordem das camadas, então {{count}} passos não foram alterados. Verifique sua conexão e tente novamente.",
+    "refreshAllLayerOrderLostLoadOffline_one": "Não foi possível carregar a ordem das camadas offline, então {{count}} passo não foi alterado. Reconecte-se e recarregue o Ori Studio para tentar novamente.",
+    "refreshAllLayerOrderLostLoadOffline_many": "Não foi possível carregar a ordem das camadas offline, então {{count}} passos não foram alterados. Reconecte-se e recarregue o Ori Studio para tentar novamente.",
+    "refreshAllLayerOrderLostLoadOffline_other": "Não foi possível carregar a ordem das camadas offline, então {{count}} passos não foram alterados. Reconecte-se e recarregue o Ori Studio para tentar novamente.",
+    "refreshAllLayerOrderLostLoadReload_one": "Não foi possível carregar a ordem das camadas, então {{count}} passo não foi alterado. Recarregue o Ori Studio para tentar novamente.",
+    "refreshAllLayerOrderLostLoadReload_many": "Não foi possível carregar a ordem das camadas, então {{count}} passos não foram alterados. Recarregue o Ori Studio para tentar novamente.",
+    "refreshAllLayerOrderLostLoadReload_other": "Não foi possível carregar a ordem das camadas, então {{count}} passos não foram alterados. Recarregue o Ori Studio para tentar novamente.",
     "refreshedAll_one": "1 passo atualizado",
     "refreshedAll_many": "{{count}} passos atualizados",
     "refreshedAll_other": "{{count}} passos atualizados",
@@ -148,6 +152,9 @@
     "ignoredFile": "{{name}} usado; 1 outro arquivo solto foi ignorado.",
     "ignoredFiles": "{{name}} usado; {{others}} outros arquivos soltos foram ignorados."
   },
+  "fileOpen": {
+    "closeDialog": "Feche a janela para abrir outro arquivo"
+  },
   "foldedFigureExport": {
     "empty": "Este modelo dobrado ainda não tem nada para exportar",
     "failed": "Não foi possível exportar este modelo dobrado"
@@ -174,12 +181,20 @@
     "solvingLong": "Ainda resolvendo — isso pode demorar um pouco"
   },
   "layerOrder": {
+    "folds3d": "Os vincos deste modelo agora dobram em 3D, e a ordem das camadas funciona em dobras planas. Dobre-o novamente para vê-lo.",
+    "refoldKept": "As restrições de camadas de {{name}} precisam de atenção, então ele mantém sua imagem.",
+    "refoldKeptChosenOrder": "A ordem das camadas escolhida para {{name}} precisa de atenção, então ele mantém sua imagem.",
+    "refoldLost": "A ordem das camadas parou inesperadamente, então {{name}} não foi dobrado novamente.",
+    "refoldLostLoadOffline": "Não foi possível carregar a ordem das camadas offline, então {{name}} não foi dobrado novamente. Reconecte-se e recarregue o Ori Studio para tentar novamente.",
+    "refoldLostLoadReload": "Não foi possível carregar a ordem das camadas, então {{name}} não foi dobrado novamente. Recarregue o Ori Studio para tentar novamente.",
     "stepCheckTimedOut": "Não foi possível verificar a tempo as restrições de camadas deste modelo, então ele não foi alterado.",
     "stepLost": "A ordem das camadas parou inesperadamente, então o modelo não foi alterado.",
-    "stepLostLoad": "Não foi possível carregar a ordem das camadas, então o modelo não foi alterado. Verifique sua conexão e tente novamente.",
+    "stepLostLoadOffline": "Não foi possível carregar a ordem das camadas offline, então o modelo não foi alterado. Reconecte-se e recarregue o Ori Studio para tentar novamente.",
+    "stepLostLoadReload": "Não foi possível carregar a ordem das camadas, então o modelo não foi alterado. Recarregue o Ori Studio para tentar novamente.",
     "stepNotFoundInTime": "Não foi possível encontrar outra solução a tempo, então o modelo não foi alterado.",
     "stepUnrestored": "As restrições de camadas deste modelo precisam de atenção, então ele não pode percorrer as soluções. Abra “Ordem das camadas…” para revisá-las.",
-    "unavailable": "Ordem das camadas não carregou. Verifique sua conexão e tente de novo."
+    "unavailableOffline": "Ordem das camadas não carregou offline. Reconecte-se e recarregue o Ori Studio para tentar de novo.",
+    "unavailableReload": "Ordem das camadas não carregou. Recarregue o Ori Studio para tentar de novo."
   },
   "paperExport": {
     "saved": "{{name}} exportado"

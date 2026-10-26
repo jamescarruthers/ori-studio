@@ -122,7 +122,7 @@ export function createLayerOrderWorkerApi(load: LayerOrderBackendLoader): LayerO
     clearCarried: () => call((backend) => backend.clearCarried()),
     stacks: (side) => call((backend) => backend.stacks(side)),
     scene: (side) => call((backend) => backend.scene(side)),
-    save: () => call((backend) => backend.save()),
+    save: (keepCarried) => call((backend) => backend.save(keepCarried)),
     relations: () => call((backend) => backend.relations()),
     close: () => call((backend) => backend.close()),
     explain: (candidate, limits) => call((backend) => backend.explain(candidate, limits)),

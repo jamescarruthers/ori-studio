@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { LAYER_ORDER_COUNT_MAX_OPEN_PAIRS, LAYER_ORDER_LABEL_CAP } from '../layerOrderBudgets';
 import { applyChangedNothing, stepByFor } from './layerOrderDecisions';
-import { LAYER_ORDER_MODEL_LIMITS, keepTrying } from './layerOrderEngineFacts';
+import { LAYER_ORDER_LIMITS, keepTrying } from './layerOrderEngineFacts';
 import {
   SPOTS,
   SPOTS_TWO_OVER_ZERO,
@@ -139,7 +139,7 @@ describe('decisions', () => {
     expect(effectsOf(dispatch(out.state, { type: 'add' }).effects, 'commit')).toEqual([]);
     expect(hintLine(out.state)).toMatchObject({ tone: 'quiet', action: 'keep_trying', text: { key: 'timed_out' } });
     expect(lastOf(dispatch(out.state, { type: 'keep_trying' }).effects, 'preview').limits).toEqual(
-      keepTrying(LAYER_ORDER_MODEL_LIMITS.preview)
+      keepTrying(LAYER_ORDER_LIMITS.preview)
     );
   });
 
@@ -230,8 +230,13 @@ describe('decisions', () => {
 
   it('D19: when Edit’s order can’t fold, the dialog opens on the closest one that does, says so, and Apply writes it', () => {
     const closest = opened(openFactsOf({ openedOn: { kind: 'closest', moved: 4, ignored: 0 } })).state;
-    expect(openNotice(closest)).toEqual({ key: 'host_order_cant_fold', moved: 4 });
+    expect(openNotice(closest)).toEqual({ key: 'host_order_cant_fold', moved: 4, face: null, crease: null });
     expect(lastOf(dispatch(closest, { type: 'apply', at: 2_000 }).effects, 'apply').result.kind).toBe('changed');
+    // The face the host's order puts inside a fold, and the fold's two faces, when the engine names them.
+    const inside = opened(
+      openFactsOf({ openedOn: { kind: 'closest', moved: 4, ignored: 0, inside: { face: 3, crease: [0, 2] } } })
+    ).state;
+    expect(openNotice(inside)).toEqual({ key: 'host_order_cant_fold', moved: 4, face: 3, crease: [0, 2] });
 
     expect(openNotice(opened().state)).toBeNull();
     const ranOut = opened(openFactsOf({ openedOn: { kind: 'first', timed_out: { limit: 'deadline', nodes: 5 } } })).state;

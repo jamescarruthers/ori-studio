@@ -173,9 +173,10 @@ pub fn relations_of(flat: &[u32]) -> Result<Vec<HierarchyRelation>, LayerCallErr
 }
 
 /// How far a solution count goes before it reads "at least" (E6's
-/// `SolutionCaps`). Every field may be left out, for E6's defaults
-/// (100,000 orders per component, 1,000,000 combinations per look group,
-/// 4 MiB of stored orders); every cap is a count, never a time.
+/// `SolutionCaps`), and whether a step counts on (E9). Every field may be
+/// left out, for the defaults (100,000 orders per component, 1,000,000
+/// combinations per look group, 4 MiB of stored orders, steps that count);
+/// every cap is a count, never a time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LayerSolutionCaps {
@@ -185,11 +186,17 @@ pub struct LayerSolutionCaps {
     pub combinations_per_group: Option<u64>,
     #[serde(default)]
     pub stored_bits: Option<u64>,
+    #[serde(default)]
+    pub count_in_steps: Option<bool>,
 }
 
 /// [`LayerSolutionCaps`]' fields as the web app spells them.
-pub const LAYER_SOLUTION_CAPS_FIELDS: [&str; 3] =
-    ["ordersPerComponent", "combinationsPerGroup", "storedBits"];
+pub const LAYER_SOLUTION_CAPS_FIELDS: [&str; 4] = [
+    "ordersPerComponent",
+    "combinationsPerGroup",
+    "storedBits",
+    "countInSteps",
+];
 
 impl LayerSolutionCaps {
     pub fn caps(&self) -> SolutionCaps {
@@ -202,6 +209,7 @@ impl LayerSolutionCaps {
                 .combinations_per_group
                 .unwrap_or(defaults.combinations_per_group),
             stored_bits: self.stored_bits.unwrap_or(defaults.stored_bits),
+            count_in_steps: self.count_in_steps.unwrap_or(defaults.count_in_steps),
         }
     }
 }
@@ -319,8 +327,21 @@ pub enum OpenedOnWire {
     /// pair, or both orders of one.
     Held { ignored: usize },
     /// The order given does not all fit: the fitting order closest to it,
-    /// with `moved` of its relations the other way.
-    Closest { moved: usize, ignored: usize },
+    /// with `moved` of its relations the other way. `inside` (else null) is a
+    /// face the order given put inside a fold at a crease through it.
+    Closest {
+        moved: usize,
+        ignored: usize,
+        inside: Option<FoldInsideWire>,
+    },
+}
+
+/// A face an order put inside a fold it can't be in (`FoldInside`): `face`
+/// between `crease`'s two faces, the crease running through it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct FoldInsideWire {
+    pub face: u32,
+    pub crease: [u32; 2],
 }
 
 impl From<&OpenedOn> for OpenedOnWire {
@@ -328,7 +349,18 @@ impl From<&OpenedOn> for OpenedOnWire {
         match *opened_on {
             OpenedOn::First { timed_out } => OpenedOnWire::First { timed_out },
             OpenedOn::Held { ignored } => OpenedOnWire::Held { ignored },
-            OpenedOn::Closest { moved, ignored } => OpenedOnWire::Closest { moved, ignored },
+            OpenedOn::Closest {
+                moved,
+                ignored,
+                inside,
+            } => OpenedOnWire::Closest {
+                moved,
+                ignored,
+                inside: inside.map(|inside| FoldInsideWire {
+                    face: inside.face.0,
+                    crease: [inside.crease[0].0, inside.crease[1].0],
+                }),
+            },
         }
     }
 }
@@ -459,8 +491,9 @@ impl From<RecordFace> for SavedFace {
 
 /// A saved constraint a restore did not apply (`CarriedConstraint`): a row
 /// the dialog shows by its status, and that `layer_save` writes back as
-/// saved, after the committed constraints, until it is removed
-/// (`layer_remove_carried`, `layer_clear_carried`) or a commit applies it.
+/// saved, after the committed constraints, unless the save's `keep` leaves
+/// its `index` out, until it is removed (`layer_remove_carried` by `index`,
+/// `layer_clear_carried`) or a commit applies it.
 /// Its status is flattened in: `{ status: 'intact' | 'ambiguous' |
 /// 'clashing' }` or `{ status: 'gone', cause }`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -1041,10 +1074,28 @@ mod tests {
         assert_eq!(
             serde_json::to_value(OpenedOnWire::from(&OpenedOn::Closest {
                 moved: 2,
-                ignored: 1
+                ignored: 1,
+                inside: None,
             }))
             .unwrap_or_default(),
-            json!({ "kind": "closest", "moved": 2, "ignored": 1 })
+            json!({ "kind": "closest", "moved": 2, "ignored": 1, "inside": null })
+        );
+        assert_eq!(
+            serde_json::to_value(OpenedOnWire::from(&OpenedOn::Closest {
+                moved: 1,
+                ignored: 0,
+                inside: Some(oristudio_fold::steer::FoldInside {
+                    face: oristudio_fold::FaceId(7),
+                    crease: [oristudio_fold::FaceId(2), oristudio_fold::FaceId(5)],
+                }),
+            }))
+            .unwrap_or_default(),
+            json!({
+                "kind": "closest",
+                "moved": 1,
+                "ignored": 0,
+                "inside": { "face": 7, "crease": [2, 5] },
+            })
         );
         let face = RecordFace {
             at: [0.25, 0.5],
@@ -1102,6 +1153,15 @@ mod tests {
             caps.caps(),
             SolutionCaps {
                 stored_bits: 64,
+                ..defaults
+            }
+        );
+        let quiet: LayerSolutionCaps =
+            serde_json::from_value(json!({ "countInSteps": false })).unwrap_or_default();
+        assert_eq!(
+            quiet.caps(),
+            SolutionCaps {
+                count_in_steps: false,
                 ..defaults
             }
         );

@@ -19,13 +19,12 @@
  * `applied` writes. A host that gets anything else leaves its document as it
  * was.
  */
-import { toast } from 'sonner';
 import i18n from '../../i18n';
 import { lazyModule } from '../../lib/lazyModule';
 import type { LayerOrderRequest } from '../../lib/layerOrder/layerOrderRequest';
 import { reportError } from '../../monitoring';
 import type * as LayerOrderDialogChunk from '../../components/layer-order/LayerOrderDialog';
-import { isLayerOrderLoadFailure } from '../engine/layerOrderLoadFailure';
+import { isLayerOrderLoadFailure, sayLayerOrderUnavailable } from '../engine/layerOrderLoadFailure';
 import {
   beginLayerOrderDialog,
   settleLayerOrderDialog,
@@ -40,8 +39,8 @@ export { registerLayerOrderDialogMount } from './layerOrderDialogStore';
 /** The dialog's chunk, as the mount renders it. */
 export type LayerOrderDialogModule = typeof LayerOrderDialogChunk;
 
-// A plain `import()`: an open offline must not reload the page under the user's
-// work; its failure is the `unavailable` outcome and the connection toast below.
+// A plain `import()`: an open must not reload the page under the user's work;
+// its failure is the `unavailable` outcome and the Reload toast below.
 const dialog = lazyModule<LayerOrderDialogModule>(() => import('../../components/layer-order/LayerOrderDialog'), {
   reload: false,
 });
@@ -61,12 +60,12 @@ export function openLayerOrderDialog(request: LayerOrderRequest): Promise<LayerO
   if (!('opening' in begun)) return Promise.resolve(begun);
   const { id } = begun.opening;
   dialog.load().catch((error: unknown) => {
-    // Never a reload (deploys keep the last builds' chunks): a load that can't reach the server
-    // is the browser's, not a defect (`layerOrderLoadFailure.ts`): said once, here, so no host
-    // has to, and reported only when it is something else.
+    // A load that can't reach the server is the browser's, not a defect
+    // (`layerOrderLoadFailure.ts`): said once, here, so no host has to, with
+    // the user's Reload, never one of ours; reported only when it is something else.
     if (!settleLayerOrderDialog(id, { kind: 'unavailable' })) return;
     if (!isLayerOrderLoadFailure(error)) reportError(error, { surface: 'layer-order:dialog', tags: { call: 'load' } });
-    toast.error(i18n.t('toasts:layerOrder.unavailable', 'Layer order didn’t load. Check your connection and try again.'));
+    sayLayerOrderUnavailable(i18n.t);
   });
   return begun.outcome;
 }

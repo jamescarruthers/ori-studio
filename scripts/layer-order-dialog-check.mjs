@@ -1130,7 +1130,9 @@ function diagramStepOfflineCases(theme) {
     await record(`diagram-${tag}-offline-refresh-all`, { page: await pageShot(page) });
     await page.context().setOffline(false);
     console.log(`[${tag}] offline Refresh All: ${JSON.stringify(result)}`);
-    const said = 'Layer order couldn’t load, so 5 steps weren’t changed. Check your connection, then try again.';
+    // Offline, with Reload: only a reload retries a load that failed.
+    const said =
+      'Layer order couldn’t load while offline, so 5 steps weren’t changed. Reconnect, then reload Ori Studio to try again.';
     if (result.refreshed !== 1) throw new Error('offline Refresh All did not refresh the unconstrained step alone');
     if (result.layerOrderWorkers > 1) throw new Error(`offline Refresh All spawned ${result.layerOrderWorkers} workers`);
     if (!result.toasts.some((toast) => toast?.includes(said))) throw new Error('offline Refresh All did not count its steps');
@@ -1276,6 +1278,11 @@ async function applyThroughOpenDialog(page) {
       const relations = await engine.relations();
       const applied = { record: saved.record, relations, source: request.source };
       if (!settleLayerOrderDialog(opening.id, { kind: 'applied', applied })) throw new Error('the dialog had already answered');
+      // Let the app answer Apply (the dialog closing, Pose capturing the order) before this returns.
+      // Chromium holds an evaluate's promise weakly: a GC in those microtasks, after it settles but
+      // before Playwright hears, drops the answer ("Promise was collected"), which Playwright reports
+      // as "Execution context was destroyed, most likely because of a navigation". Nothing navigates.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       return { candidate: chosen.candidate, relations: relations.length / 2 };
     } finally {
       runtime.dispose();
@@ -1883,7 +1890,7 @@ async function openFigureInEdit(page, url, { theme, file, style = null }) {
  * turn, the front, and Edit's line style and width by default), and wait for
  * the panes' session.
  */
-async function openPanesDialog(page, title, look = {}) {
+async function openPanesDialog(page, title, look = {}, { refused = false } = {}) {
   await page.evaluate(
     async ({ title, look }) => {
       const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
@@ -1895,8 +1902,11 @@ async function openPanesDialog(page, title, look = {}) {
       // Edit's line style and width, as Edit hands them; the dialog never reads the store itself.
       const { lineStyle, lineWidth } = window.__treemakerWorkspaceStore.getState().oristudioCpViewport;
       window.__layerOrderOutcome = null;
+      // A forged digest: the open refuses, and the crease pattern draws with nothing marked.
+      const kernel = look.forge ? { ...source, digest: `${source.digest}-forged` } : source;
       openLayerOrderDialog({
-        source: layerOrderSourceOf(source, DEFAULT_FOLDED_MODEL),
+        surface: 'edit_figure',
+        source: layerOrderSourceOf(kernel, DEFAULT_FOLDED_MODEL),
         record: null,
         look: {
           style: style ?? DEFAULT_PAPER_STYLE,
@@ -1907,7 +1917,8 @@ async function openPanesDialog(page, title, look = {}) {
           lineStyle: look.lineStyle ?? lineStyle,
           lineWidth: look.lineWidth ?? lineWidth,
         },
-        shown: scene,
+        // A host order forged to break a fold (`foldInsideScene`), else Edit's own.
+        shown: look.inside ? window.__layerOrderCheck.inside : scene,
         name: title,
       }).then((outcome) => {
         window.__layerOrderOutcome = outcome;
@@ -1922,73 +1933,218 @@ async function openPanesDialog(page, title, look = {}) {
     const outcome = await page.evaluate(() => window.__layerOrderOutcome);
     throw new Error(`the dialog never showed on ${title} (it answered ${JSON.stringify(outcome)})`, { cause: error });
   }
-  await dialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 120000 });
-  await page.waitForFunction(() => window.__layerOrderPanes?.open != null, null, { timeout: 30000 });
+  if (refused) await dialog.getByRole('alert').waitFor({ state: 'visible', timeout: 120000 });
+  else await dialog.getByRole('heading', { name: 'Add a constraint' }).waitFor({ state: 'visible', timeout: 120000 });
   return dialog;
 }
 
+// ---------------------------------------------------------------------------
+// Driving the inspector (U10): real picks, on the panes and from its menus
+
 /**
- * Show marks on the panes through the development build's handle
- * (`useLayerOrderPanesCheck`), built in the page from the session's open by
- * `kind`, the way the inspector's model (U10) would mark them:
+ * What a figure offers, worked out in the page by an engine session of the
+ * check's own, beside the dialog's, on the same request: each face's letter
+ * (the dialog letters from the same scene), the faces with choices and each
+ * one's open faces, by letter. Kept on `window.__layerOrderCheck.figure`, with
+ * the open's facts (the model's), for the cases that search the engine.
+ */
+async function inspectorFacts(page) {
+  return page.evaluate(async () => {
+    const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+    const { DEFAULT_FOLDED_MODEL } = await import('/src/lib/orieditaNativeMetadata.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const { openLayerOrderSession } = await import('/src/layer-order/dialog/layerOrderSession.ts');
+    const check = window.__layerOrderCheck;
+    const request = { source: layerOrderSourceOf(check.source, DEFAULT_FOLDED_MODEL), record: null, shown: check.scene };
+    const runtime = createLayerOrderRuntime({ role: 'host' });
+    const answer = await openLayerOrderSession(runtime.engine, request, LAYER_ORDER_LIMITS.open);
+    if (answer.kind !== 'ready') throw new Error(`the check's own open refused: ${JSON.stringify(answer.refusal)}`);
+    const { open } = answer;
+    const letter = (face) => open.letters.letterOf(face);
+    const partners = new Map();
+    const pairs = open.opened.open_pairs;
+    for (let i = 0; i + 1 < pairs.length; i += 2) {
+      partners.set(pairs[i], [...(partners.get(pairs[i]) ?? []), pairs[i + 1]]);
+      partners.set(pairs[i + 1], [...(partners.get(pairs[i + 1]) ?? []), pairs[i]]);
+    }
+    const subjects = [...partners.keys()].sort(open.letters.compare);
+    check.figure = { runtime, open, request, letter, partners };
+    return {
+      subjects: subjects.map(letter),
+      partners: Object.fromEntries(subjects.map((face) => [letter(face), [...partners.get(face)].sort(open.letters.compare).map(letter)])),
+      frontUp: Array.from(open.opened.front_up),
+      faceOf: Object.fromEntries(Array.from({ length: open.opened.faces }, (_, face) => [letter(face), face])),
+    };
+  });
+}
+
+/** The check's own engine session lets go of its worker. */
+async function dropInspectorFacts(page) {
+  await page.evaluate(() => window.__layerOrderCheck?.figure?.runtime.dispose());
+}
+
+/** The builder's subject slot, by its name ("Subject: …"), and the object field ("Objects: …"). */
+const subjectSlot = (dialog) => dialog.getByRole('button', { name: /^Subject:/ });
+const objectField = (dialog) => dialog.getByRole('button', { name: /^Objects:/ });
+const addButton = (dialog) => dialog.getByRole('button', { name: /^Add constraints?$/ });
+
+/** The builder's hint line: the text under the sentence. */
+async function hintText(dialog) {
+  const sentence = dialog.getByRole('group', { name: 'Add a constraint' });
+  // Its two live regions (polite, then the alert for a danger reason), only one of them holding text.
+  return (
+    await sentence.evaluate((el) =>
+      el
+        .getAttribute('aria-describedby')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join('')
+    )
+  ).trim();
+}
+
+/** Wait for the sentence's check to end: the hint no longer says it is checking. */
+async function previewSettled(page, dialog, timeout = 180000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const hint = await hintText(dialog);
+    if (!/Checking|Finding what it clashes/.test(hint)) return hint;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`the check never ended: ${await hintText(dialog)}`);
+}
+
+/**
+ * Wait for the sentence's check, and when it ran out of time (D8), Keep
+ * trying, twice at most: a deep figure's preview can take longer than its
+ * first deadline. Answers the hint it settled on.
+ */
+async function previewKeptTrying(page, dialog) {
+  const started = Date.now();
+  let hint = await previewSettled(page, dialog);
+  if (Date.now() - started > 5000) console.log(`  the check took ${((Date.now() - started) / 1000).toFixed(1)} s: “${hint}”`);
+  for (let tries = 0; tries < 2 && /in time/.test(hint); tries += 1) {
+    console.log(`  ran out (“${hint}”): Keep trying`);
+    await dialog.getByRole('button', { name: 'Keep trying' }).click();
+    hint = await previewSettled(page, dialog, 120000);
+  }
+  return hint;
+}
+
+/** Pick `letter` as the subject from the subject slot's face menu, as the keyboard does. */
+async function pickSubjectFromMenu(page, dialog, letter) {
+  await subjectSlot(dialog).focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('menu', { name: 'Subjects' });
+  await menu.waitFor({ state: 'visible', timeout: 10000 });
+  await menu.getByRole('menuitemradio', { name: `Face ${letter}`, exact: true }).click();
+  await menu.waitFor({ state: 'detached', timeout: 10000 });
+}
+
+/** Toggle `letters` in the object field's face menu, which stays open (A5); Escape closes it. */
+async function pickObjectsFromMenu(page, dialog, letters) {
+  await objectField(dialog).focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('menu', { name: /^Objects for / });
+  await menu.waitFor({ state: 'visible', timeout: 10000 });
+  for (const letter of letters) await menu.getByRole('menuitemcheckbox', { name: `Face ${letter}`, exact: true }).click();
+  await page.keyboard.press('Escape');
+  await menu.waitFor({ state: 'detached', timeout: 10000 });
+}
+
+/**
+ * Where `letter`'s chip sits on `pane` (`pattern` or `folded`), page px: a
+ * point inside its face, unless the chip had to sit beside it; null when the
+ * pane letters it nowhere it can be clicked.
+ */
+async function letterPoint(dialog, pane, letter) {
+  // Not a chip beside its face, nor a hidden face's, which sits over the paper of the face on top.
+  const chip = dialog.locator(`[data-layer-order-marks="${pane}"] [data-layer-order-letter="${letter}"]:not([data-off]):not([data-under])`);
+  if ((await chip.count()) === 0) return null;
+  const box = await chip.first().boundingBox();
+  const frame = await dialog.locator(`[data-layer-order-marks="${pane}"]`).boundingBox();
+  if (!box || !frame) return null;
+  const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  // On the pane, clear of the zoom bar along its foot.
+  const inside = at.x > frame.x + 4 && at.x < frame.x + frame.width - 4 && at.y > frame.y + 4 && at.y < frame.y + frame.height - 64;
+  return inside ? at : null;
+}
+
+/** The middle of the face `face`'s ring on `pane`, page px, while it is ringed (the subject, an object). */
+async function ringPoint(dialog, pane, face) {
+  const ring = dialog.locator(`[data-layer-order-marks="${pane}"] [data-layer-order-ring="${face}"]`).first();
+  const points = await ring.evaluate((polygon) => {
+    const box = polygon.ownerSVGElement.getBoundingClientRect();
+    return polygon.getAttribute('points').trim().split(/\s+/).map((pair) => {
+      const [x, y] = pair.split(',').map(Number);
+      return { x: box.left + x, y: box.top + y };
+    });
+  });
+  return { x: points.reduce((s, p) => s + p.x, 0) / points.length, y: points.reduce((s, p) => s + p.y, 0) / points.length };
+}
+
+/** Pick the objects `letters` on `pane`, each by a click on its chip there: a real pick, through the pane's hit test. */
+async function pickObjectsOnPane(page, dialog, pane, letters) {
+  for (const letter of letters) {
+    const at = await letterPoint(dialog, pane, letter);
+    if (!at) throw new Error(`${letter} has no letter to click on the ${pane} pane`);
+    await page.mouse.click(at.x, at.y);
+    // The pick shows as its chip in the object field.
+    await dialog.getByRole('button', { name: `Remove ${letter}`, exact: true }).waitFor({ state: 'visible', timeout: 5000 });
+  }
+}
+
+/**
+ * Pick `letter` as the subject on `pane` by a click inside its face: its
+ * ring's middle, found by picking it from the menu first, then clearing it.
+ */
+async function pickSubjectOnPane(page, dialog, pane, letter, face) {
+  await pickSubjectFromMenu(page, dialog, letter);
+  const at = await ringPoint(dialog, pane, face);
+  await dialog.getByRole('button', { name: `Clear ${letter} from the subject` }).click();
+  await page.mouse.click(at.x, at.y);
+  await page.waitForTimeout(80);
+  const name = await subjectSlot(dialog).getAttribute('aria-label');
+  if (!name?.includes(`face ${letter}.`)) throw new Error(`a click on ${letter}'s face on the ${pane} pane picked ${name}`);
+}
+
+/**
+ * Show what the inspector marks on the panes, by real picks, by `kind`:
  *
- * - `subjects`: choosing a subject, every face with choices faint;
+ * - `subjects`: choosing a subject (the open's own state), every face with choices faint;
  * - `compound`: a subject and two of its objects picked (D21), its other open faces on offer;
  * - `cap`: the subject with the most open faces, none picked, so the label cap shows (D7);
- * - `clash`: `compound`, the second object in a clash with a third face;
- * - `undecided`: the spots the inspector's model calls undecided (`openSpotsOf`), from each
- *   side, and how many there are from each; `side` is only which to count first.
+ * - `undecided`: the spots the model calls undecided (`openSpotsOf`), counted from each side.
  *
  * Answers what it marked, by letter.
  */
-async function showPaneMarks(page, kind, side = 'front') {
-  return page.evaluate(
-    async ({ kind, side }) => {
-      const { NO_FACE_MARKS } = await import('/src/layer-order/panes/layerPaneMarks.ts');
-      const handle = window.__layerOrderPanes;
-      const { opened, letters, facts } = handle.open;
-      const partners = new Map();
-      const pairs = opened.open_pairs;
-      for (let i = 0; i + 1 < pairs.length; i += 2) {
-        const [a, b] = [pairs[i], pairs[i + 1]];
-        partners.set(a, [...(partners.get(a) ?? []), b]);
-        partners.set(b, [...(partners.get(b) ?? []), a]);
-      }
-      const byLetter = (faces) => faces.map((face) => letters.letterOf(face)).join(',');
-      const withChoices = [...partners.keys()].sort((a, b) => letters.compare(a, b));
-      if (kind === 'subjects') {
-        handle.show({ marks: { ...NO_FACE_MARKS, picking: 'subject', pickable: withChoices } });
-        return { pickable: withChoices.length };
-      }
-      if (kind === 'undecided') {
-        const { initLayerOrderDialog, layerOrderReducer } = await import('/src/layer-order/model/layerOrderReducer.ts');
-        const { openSpotsOf } = await import('/src/layer-order/model/layerOrderSelectors.ts');
-        let { state } = initLayerOrderDialog({ surface: 'edit_figure', hasRecord: false, recordNeedsAttention: false, review: false, xray: false, at: 0 });
-        state = layerOrderReducer(state, { type: 'opened', request: 1, facts }).state;
-        const undecided = { front: openSpotsOf(state, 'front'), back: openSpotsOf(state, 'back') };
-        handle.show({ marks: { ...NO_FACE_MARKS, picking: 'subject', undecided } });
-        return { side, undecided: undecided[side].length, front: undecided.front.length, back: undecided.back.length };
-      }
-      // The subject: the face with the most open faces for `cap`, else the first with three or more.
-      const ranked = [...withChoices].sort((a, b) => (partners.get(b).length - partners.get(a).length) || letters.compare(a, b));
-      const subject = kind === 'cap' ? ranked[0] : (withChoices.find((face) => partners.get(face).length >= 3) ?? ranked[0]);
-      const open = [...partners.get(subject)].sort((a, b) => letters.compare(a, b));
-      if (kind === 'cap') {
-        handle.show({ marks: { ...NO_FACE_MARKS, picking: 'object', pickable: open, subject } });
-        return { subject: byLetter([subject]), open: open.length };
-      }
-      const objects = open.slice(0, 2);
-      const marks = { ...NO_FACE_MARKS, picking: 'object', pickable: open, subject, objects };
-      if (kind === 'clash') {
-        const third = withChoices.find((face) => face !== subject && !objects.includes(face));
-        handle.show({ marks: { ...marks, clash: [objects[1], third] } });
-        return { subject: byLetter([subject]), objects: byLetter(objects), clash: byLetter([objects[1], third]) };
-      }
-      handle.show({ marks });
-      return { subject: byLetter([subject]), objects: byLetter(objects), open: open.length };
-    },
-    { kind, side }
-  );
+async function showPaneMarks(page, dialog, facts, kind, side = 'front') {
+  if (kind === 'subjects') return { pickable: facts.subjects.length };
+  if (kind === 'undecided') {
+    return page.evaluate(async (side) => {
+      const { initLayerOrderDialog, layerOrderReducer } = await import('/src/layer-order/model/layerOrderReducer.ts');
+      const { openSpotsOf } = await import('/src/layer-order/model/layerOrderSelectors.ts');
+      let { state } = initLayerOrderDialog({ surface: 'edit_figure', hasRecord: false, recordNeedsAttention: false, review: false, xray: false, at: 0 });
+      state = layerOrderReducer(state, { type: 'opened', request: 1, facts: window.__layerOrderCheck.figure.open.facts }).state;
+      const front = openSpotsOf(state, 'front').length;
+      const back = openSpotsOf(state, 'back').length;
+      return { side, undecided: side === 'back' ? back : front, front, back };
+    }, side);
+  }
+  const ranked = [...facts.subjects].sort((a, b) => facts.partners[b].length - facts.partners[a].length);
+  const subject = kind === 'cap' ? ranked[0] : (facts.subjects.find((s) => facts.partners[s].length >= 3) ?? ranked[0]);
+  await pickSubjectFromMenu(page, dialog, subject);
+  if (kind === 'cap') return { subject, open: facts.partners[subject].length };
+  const objects = facts.partners[subject].slice(0, 2);
+  await pickObjectsFromMenu(page, dialog, objects);
+  return { subject, objects: objects.join(','), open: facts.partners[subject].length };
+}
+
+/** Clear the sentence, as the builder's Clear does. */
+async function clearSentence(dialog) {
+  const clear = dialog.getByRole('button', { name: 'Clear', exact: true });
+  if ((await clear.getAttribute('aria-disabled')) !== 'true') await clear.click();
 }
 
 /** The dialog, the pointer off it, once its canvases settle. */
@@ -2064,45 +2220,49 @@ function creaseCases(theme) {
     await openFigureInEdit(page, url, { theme, file: 'flat-folder/kabuto.fold' });
     const failures = [];
     for (const lineWidth of [1, 3]) {
-      const dialog = await openPanesDialog(page, 'Kabuto', { lineStyle: 'color', lineWidth });
-      const pane = dialog.locator('[data-layer-order-pane="pattern"]');
-      const shot = async () => {
-        await page.mouse.move(1, 1);
-        return steadyShot(page, pane, { masked: false });
+      const look = { lineStyle: 'color', lineWidth };
+      const paneOf = (dialog) => dialog.locator('[data-layer-order-pane="pattern"]');
+      const shot = async (dialog, { pointer = false } = {}) => {
+        if (!pointer) await page.mouse.move(1, 1);
+        return steadyShot(page, paneOf(dialog), { masked: false });
       };
-      const show = (kind) =>
-        page.evaluate(async (kind) => {
-          const { NO_FACE_MARKS } = await import('/src/layer-order/panes/layerPaneMarks.ts');
-          const handle = window.__layerOrderPanes;
-          const { opened, letters } = handle.open;
-          const withChoices = [...new Set(opened.open_pairs)].sort((a, b) => letters.compare(a, b));
-          const choosing = { ...NO_FACE_MARKS, picking: 'subject', pickable: withChoices };
-          const marks = {
-            plain: NO_FACE_MARKS,
-            tinted: choosing,
-            pointed: { ...choosing, pointed: withChoices[0] },
-            row: { ...choosing, row: withChoices.slice(0, 3) },
-            compound: {
-              ...NO_FACE_MARKS,
-              picking: 'object',
-              pickable: withChoices.slice(1),
-              subject: withChoices[0],
-              objects: withChoices.slice(1, 3),
-            },
-          }[kind];
-          handle.show({ marks });
-        }, kind);
-      await show('plain');
-      const plain = await shot();
-      await show('tinted');
-      const tinted = await shot();
+      // Plain: a refusal (a forged digest) draws the crease pattern with nothing marked, at the same frame.
+      let dialog = await openPanesDialog(page, 'Kabuto', { ...look, forge: true }, { refused: true });
+      const plain = await shot(dialog);
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
+      // Tinted: the open, choosing a subject: every face with choices faint.
+      dialog = await openPanesDialog(page, 'Kabuto', look);
+      const facts = await inspectorFacts(page);
+      const tinted = await shot(dialog);
+      const subject = facts.subjects.find((s) => facts.partners[s].length >= 3) ?? facts.subjects[0];
       const results = {};
-      for (const kind of ['pointed', 'row', 'compound']) {
-        await show(kind);
-        const marked = await shot();
+      const measure = async (kind, marked) => {
         results[kind] = await creasePixelsChanged(page, plain, tinted, marked);
         await record(`creases-${tag}-kabuto-width-${lineWidth}-${kind}`, { pattern: marked });
-      }
+      };
+      // A face pointed at: the pointer over the subject's face, which a pick could take.
+      await pickSubjectFromMenu(page, dialog, subject);
+      const at = await ringPoint(dialog, 'pattern', facts.faceOf[subject]);
+      await dialog.getByRole('button', { name: `Clear ${subject} from the subject` }).click();
+      await page.mouse.move(at.x, at.y);
+      await measure('pointed', await shot(dialog, { pointer: true }));
+      // A row hovered: a constraint added, then the pointer on its row.
+      await pickSubjectFromMenu(page, dialog, subject);
+      await pickObjectsFromMenu(page, dialog, [facts.partners[subject][0]]);
+      await previewSettled(page, dialog);
+      if ((await addButton(dialog).getAttribute('aria-disabled')) === 'true') throw new Error(`${subject}'s first object can't be added`);
+      await addButton(dialog).click();
+      const row = dialog.getByRole('listitem').first();
+      await row.waitFor({ state: 'visible' });
+      await row.hover();
+      await measure('row', await shot(dialog, { pointer: true }));
+      // A subject with two objects picked.
+      await pickSubjectFromMenu(page, dialog, subject);
+      await pickObjectsFromMenu(page, dialog, facts.partners[subject].slice(1, 3));
+      await previewSettled(page, dialog);
+      await measure('compound', await shot(dialog));
+      await dropInspectorFacts(page);
       console.log(`[${tag}] kabuto creases at line width ${lineWidth}: ${JSON.stringify(results)}`);
       for (const [kind, { changed, at }] of Object.entries(results)) {
         if (changed > 0) failures.push(`${kind} at line width ${lineWidth} changed ${changed} crease pixels, at ${JSON.stringify(at)}`);
@@ -2125,6 +2285,7 @@ function paneCases(theme) {
     for (const figure of PANE_FIGURES) {
       await openFigureInEdit(page, url, { theme, file: figure.file });
       const dialog = await openPanesDialog(page, figure.title);
+      const facts = await inspectorFacts(page);
       const shot = (state) => `panes-${tag}-${figure.name}-${state}`;
       // At Fit both panes take one scale (Round3's fitAll): their readouts agree.
       const readouts = await Promise.all(
@@ -2134,7 +2295,7 @@ function paneCases(theme) {
       if (Math.abs(Number.parseFloat(readouts[0]) - Number.parseFloat(readouts[1])) > 1) {
         throw new Error(`${figure.name}: the panes' readouts disagree at Fit (${readouts.join(', ')})`);
       }
-      console.log(`[${tag}] ${figure.name}: ${JSON.stringify(await showPaneMarks(page, 'subjects'))}`);
+      console.log(`[${tag}] ${figure.name}: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'subjects'))}`);
       await record(shot('front'), await panesShot(page));
       await viewTool(dialog, 'Back');
       await record(shot('back'), await panesShot(page));
@@ -2144,24 +2305,21 @@ function paneCases(theme) {
       await viewTool(dialog, 'X-ray');
       await viewTool(dialog, 'Undecided');
       // From the side with more of them: the solution sample has one picture from the front.
-      const counted = await showPaneMarks(page, 'undecided');
+      const counted = await showPaneMarks(page, dialog, facts, 'undecided');
       const side = counted.back > counted.front ? 'back' : 'front';
-      if (side === 'back') {
-        await viewTool(dialog, 'Back');
-        await showPaneMarks(page, 'undecided', 'back');
-      }
+      if (side === 'back') await viewTool(dialog, 'Back');
       console.log(`[${tag}] ${figure.name} undecided: ${JSON.stringify({ ...counted, side })}`);
       await record(shot('undecided'), await panesShot(page));
       await viewTool(dialog, 'Undecided');
       if (side === 'back') await viewTool(dialog, 'Front');
       if (figure.name === 'kabuto') {
-        console.log(`[${tag}] kabuto compound: ${JSON.stringify(await showPaneMarks(page, 'compound'))}`);
+        console.log(`[${tag}] kabuto compound: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'compound'))}`);
+        await previewSettled(page, dialog);
         await record(shot('compound'), await panesShot(page));
-        console.log(`[${tag}] kabuto clash: ${JSON.stringify(await showPaneMarks(page, 'clash'))}`);
-        await record(shot('clash'), await panesShot(page));
+        await clearSentence(dialog);
       }
       if (figure.name === 'iguana-c0') {
-        console.log(`[${tag}] iguana-c0 cap: ${JSON.stringify(await showPaneMarks(page, 'cap'))}`);
+        console.log(`[${tag}] iguana-c0 cap: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'cap'))}`);
         await record(shot('cap'), await panesShot(page));
         // Zoomed in on both panes, where the cap's letters have room.
         for (let step = 0; step < 6; step += 1) {
@@ -2171,6 +2329,7 @@ function paneCases(theme) {
         console.log(`[${tag}] iguana-c0 letters zoomed in: ${await dialog.locator('[data-layer-order-letter]').count()}`);
         await record(shot('cap-zoomed'), await panesShot(page));
       }
+      await dropInspectorFacts(page);
       await dialog.getByRole('button', { name: 'Cancel' }).click();
       await page.waitForFunction(() => window.__layerOrderOutcome !== null, null, { timeout: 30000 });
     }
@@ -2243,13 +2402,17 @@ async function panePhoneCases(page, url, record) {
   await page.setViewportSize(PHONE);
   await openFigureInEdit(page, url, { theme: null, file: 'flat-folder/kabuto.fold' });
   const dialog = await openPanesDialog(page, 'Kabuto');
+  const facts = await inspectorFacts(page);
   const switchTo = (name) => dialog.getByRole('group', { name: 'Pane' }).getByRole('button', { name }).click();
-  console.log(`[phone] kabuto compound: ${JSON.stringify(await showPaneMarks(page, 'compound'))}`);
+  console.log(`[phone] kabuto compound: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'compound'))}`);
+  await previewSettled(page, dialog);
   await record('panes-phone-folded', await panesShot(page));
   await switchTo('Crease pattern');
   await record('panes-phone-crease-pattern', await panesShot(page));
   if ((await dialog.getByRole('toolbar').count()) !== 0) throw new Error('a toolbar floats over the phone’s pane');
-  console.log(`[phone] kabuto cap: ${JSON.stringify(await showPaneMarks(page, 'cap'))}`);
+  await clearSentence(dialog);
+  console.log(`[phone] kabuto cap: ${JSON.stringify(await showPaneMarks(page, dialog, facts, 'cap'))}`);
+  await dropInspectorFacts(page);
   await record('panes-phone-crease-pattern-offer', await panesShot(page));
   await switchTo('Folded');
   await record('panes-phone-folded-offer', await panesShot(page));
@@ -2413,6 +2576,714 @@ async function hostLookCases(page, url, record) {
 }
 
 // ---------------------------------------------------------------------------
+// The inspector (U10)
+
+const INSPECTOR_FIGURES = PANE_FIGURES.filter((figure) => figure.name !== 'r271-s03');
+
+/** The constraints list's rows, as their buttons name them: each row's whole sentence. */
+async function rowSentences(dialog) {
+  const list = dialog.getByRole('region', { name: /^Constraints/ });
+  if ((await list.getByRole('listitem').count()) === 0) return [];
+  return list.getByRole('listitem').evaluateAll((rows) => rows.map((row) => row.querySelector('button')?.getAttribute('aria-label') ?? ''));
+}
+
+async function untilRows(page, dialog, expected, what) {
+  const deadline = Date.now() + 30000;
+  let rows = [];
+  while (Date.now() < deadline) {
+    rows = await rowSentences(dialog);
+    if (JSON.stringify(rows) === JSON.stringify(expected)) return rows;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`${what}: the list reads ${JSON.stringify(rows)}, not ${JSON.stringify(expected)}`);
+}
+
+/** The status row's text, once the count has a number (or says there is none to give). */
+async function statusText(page, dialog) {
+  // The status as drawn; its live region speaks only a settled count.
+  const status = dialog.getByRole('region', { name: 'Solutions' }).locator('[data-status-shown]');
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    const text = (await status.textContent())?.trim() ?? '';
+    if (text && !/Counting/.test(text)) return text;
+    await page.waitForTimeout(100);
+  }
+  return (await status.textContent())?.trim() ?? '';
+}
+
+/**
+ * A sentence the engine can't fit, searched for with the check's own session
+ * (`inspectorFacts`): one constraint the creases refuse, or a second one
+ * against a first that fits; at most `budgetMs` of searching. Answers them by
+ * letter and verb, the first (`first`) to add before the clash, or null.
+ */
+async function findClash(page, budgetMs) {
+  return page.evaluate(async (budgetMs) => {
+    const { constraintSeen, LAYER_ORDER_LIMITS } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const { runtime, open, partners, letter } = window.__layerOrderCheck.figure;
+    const frontUp = open.opened.front_up;
+    const verbs = ['in_front_of', 'behind'];
+    const sentences = [];
+    for (const [subject, objects] of partners) {
+      for (const object of objects) for (const verb of verbs) sentences.push({ subject, object, verb });
+    }
+    const seen = (s) => constraintSeen(s.subject, s.verb, s.object, 'front', frontUp[s.object] === 1);
+    const named = (s) => ({ subject: letter(s.subject), object: letter(s.object), verb: s.verb });
+    const until = Date.now() + budgetMs;
+    for (const s of sentences) {
+      if (Date.now() > until) return null;
+      const answer = await runtime.engine.previewList([seen(s)], LAYER_ORDER_LIMITS.preview);
+      if (answer.verdict === 'cant_fit') return { first: null, clash: named(s) };
+    }
+    // A second sentence the builder still offers once the first is committed: its pair left open.
+    try {
+      for (const a of sentences) {
+        if (Date.now() > until) return null;
+        const committed = await runtime.engine.commit([seen(a)], LAYER_ORDER_LIMITS.commit);
+        if (committed.verdict !== 'committed') continue;
+        const pairs = committed.open_pairs;
+        for (let i = 0; i + 1 < pairs.length; i += 2) {
+          for (const [subject, object] of [[pairs[i], pairs[i + 1]], [pairs[i + 1], pairs[i]]]) {
+            for (const verb of verbs) {
+              if (Date.now() > until) return null;
+              const b = { subject, object, verb };
+              const both = await runtime.engine.previewList([seen(a), seen(b)], LAYER_ORDER_LIMITS.preview);
+              if (both.verdict === 'cant_fit') return { first: named(a), clash: named(b) };
+            }
+          }
+        }
+      }
+      return null;
+    } finally {
+      await runtime.engine.commit([], LAYER_ORDER_LIMITS.commit);
+    }
+  }, budgetMs);
+}
+
+/** Set the verb from its menu, as a pointer does. */
+async function setVerb(page, dialog, verb) {
+  const label = verb === 'behind' ? 'behind' : 'in front of';
+  await dialog.getByRole('button', { name: /^Verb:/ }).click();
+  const menu = page.getByRole('menu', { name: 'Verb' });
+  await menu.getByRole('menuitemradio', { name: label, exact: true }).click();
+  await menu.waitFor({ state: 'detached', timeout: 10000 });
+  // Focus goes back to the verb's button as the menu closes, a moment later.
+  await page.waitForTimeout(200);
+}
+
+/** Build a sentence from the menus, as the keyboard does. */
+async function buildSentence(page, dialog, { subject, verb, objects }) {
+  await pickSubjectFromMenu(page, dialog, subject);
+  if (verb) await setVerb(page, dialog, verb);
+  await pickObjectsFromMenu(page, dialog, objects);
+  return previewKeptTrying(page, dialog);
+}
+
+/** Add what the builder holds; fails when Add waits. */
+async function addSentence(page, dialog) {
+  if ((await addButton(dialog).getAttribute('aria-disabled')) === 'true') {
+    throw new Error(`Add waits: ${await addButton(dialog).getAttribute('title')} (hint: ${await hintText(dialog)})`);
+  }
+  await addButton(dialog).click();
+  // The commit lands when the sentence clears.
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    if ((await subjectSlot(dialog).getAttribute('aria-label')) === 'Subject: pick a face') return;
+    await page.waitForTimeout(100);
+  }
+  throw new Error('Add never landed');
+}
+
+/**
+ * The inspector on each figure, in one theme, through real picks: a subject
+ * picked on the crease pattern, objects on the folded figure, the verb menu's
+ * preview, compound Add, a per-object ×, a grouped row's trash, undo and redo
+ * (the buttons and ⌘Z / ⇧⌘Z through the modal history), the back side, X-ray
+ * stepping, Clear all, a can't-fit and its reason pointed at, and Apply, which
+ * hands the host `applied`. Each step's state is photographed; the fidelity
+ * list's checks are logged and fail the case.
+ */
+function inspectorCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    for (const figure of INSPECTOR_FIGURES) {
+      const failures = [];
+      const check = (ok, what) => {
+        console.log(`[${tag}] ${figure.name}: ${ok ? 'ok' : 'FAIL'} ${what}`);
+        if (!ok) failures.push(what);
+      };
+      await openFigureInEdit(page, url, { theme, file: figure.file });
+      const dialog = await openPanesDialog(page, figure.title);
+      const facts = await inspectorFacts(page);
+      const shot = (state) => `inspector-${tag}-${figure.name}-${state}`;
+      const status = await statusText(page, dialog);
+      console.log(`[${tag}] ${figure.name} opened: ${status}; ${facts.subjects.length} faces with choices`);
+      await record(shot('ready'), await dialogShot(page));
+      check((await dialog.getByText(/Apply keeps the order on screen/).count()) === 0, 'no routine foot note (spec §6.7)');
+
+      // A subject picked on the crease pattern, by a click inside its face.
+      // The subject with the fewest open faces, two at least: a compound sentence, quick to check.
+      const ranked = [...facts.subjects].sort((a, b) => facts.partners[a].length - facts.partners[b].length);
+      const subject = ranked.find((s) => facts.partners[s].length >= 2) ?? ranked[0];
+      await pickSubjectOnPane(page, dialog, 'pattern', subject, facts.faceOf[subject]);
+      const objectsHint = await hintText(dialog);
+      console.log(`[${tag}] ${figure.name}: subject ${subject}, ${facts.partners[subject].length} open faces: ${facts.partners[subject].join(',')}`);
+      check(/Pick (one of the \d+|the) (labelled|tinted) face/.test(objectsHint), `the hint asks for an object: “${objectsHint}”`);
+      // Objects where their letters can be clicked: on the folded figure first, else on the crease pattern.
+      const clickable = [];
+      const findClickable = async () => {
+        for (const letter of facts.partners[subject]) {
+          const on = (await letterPoint(dialog, 'folded', letter)) ? 'folded' : (await letterPoint(dialog, 'pattern', letter)) ? 'pattern' : null;
+          if (on) clickable.push({ letter, on });
+        }
+      };
+      await findClickable();
+      if (clickable.length === 0) {
+        // Too small to letter at Fit (D7's addition): zoomed in, as the hint says, the letters find room.
+        check(/Zoom in to see their letters/.test(objectsHint), 'the hint says to zoom in for the letters');
+        // Toward the subject, where the nearest faces on offer keep their letters.
+        const toward = await ringPoint(dialog, 'pattern', facts.faceOf[subject]);
+        for (let step = 0; step < 8 && clickable.length === 0; step += 1) {
+          await page.mouse.move(toward.x, toward.y);
+          await page.mouse.wheel(0, -300);
+          await page.waitForTimeout(400);
+          await findClickable();
+        }
+        await record(shot('zoomed-letters'), await dialogShot(page));
+      }
+      const [first, second] = [...clickable.map((c) => c.letter), ...facts.partners[subject].filter((l) => !clickable.some((c) => c.letter === l))];
+      const pane = clickable[0]?.on ?? null;
+      if (pane) await pickObjectsOnPane(page, dialog, pane, [first]);
+      else await pickObjectsFromMenu(page, dialog, [first]);
+      const previewed = await previewKeptTrying(page, dialog);
+      const where = pane ? `on the ${pane} pane` : 'from the object menu (no letter clickable yet)';
+      console.log(`[${tag}] ${figure.name}: ${subject} in front of ${first}, picked ${where}: “${previewed}”`);
+      await record(shot('preview'), await dialogShot(page));
+      const folded = dialog.locator('[data-layer-order-pane="folded"]');
+      const inFront = await steadyShot(page, folded, { masked: false });
+
+      // The verb menu previews the verb under the pointer (Round3:457).
+      await dialog.getByRole('button', { name: /^Verb:/ }).click();
+      const verbMenu = page.getByRole('menu', { name: 'Verb' });
+      await verbMenu.getByRole('menuitemradio', { name: 'behind', exact: true }).hover();
+      await previewSettled(page, dialog);
+      await record(shot('verb-pointed'), { dialog: await steadyShot(page, dialog, { masked: false }) });
+      const behind = await steadyShot(page, folded, { masked: false });
+      const verbDiff = await pixelDiff(page, inFront, behind);
+      // With one picture from this side, every order that fits looks the same: nothing can move.
+      const onePicture = /^1 solution$/.test(status);
+      check(
+        verbDiff.differing > 0 || onePicture || /Can’t fit|in time/.test(await hintText(dialog)),
+        `pointing at “behind” previews it (${verbDiff.differing} pixels moved${onePicture ? '; one picture from the front' : ''})`
+      );
+      await page.keyboard.press('Escape');
+      await verbMenu.waitFor({ state: 'detached' });
+
+      // Compound: a second object (D21), and Add's label says so.
+      if (second) {
+        const secondPane = (await letterPoint(dialog, 'folded', second)) ? 'folded' : 'pattern';
+        if (await letterPoint(dialog, secondPane, second)) await pickObjectsOnPane(page, dialog, secondPane, [second]);
+        else await pickObjectsFromMenu(page, dialog, [second]);
+        const compoundHint = await previewKeptTrying(page, dialog);
+        check((await addButton(dialog).innerText()) === 'Add constraints', 'two objects: “Add constraints”');
+        check(compoundHint.includes('Pick more faces to add them'), `the hint says more can be added: “${compoundHint}”`);
+        await record(shot('compound'), await dialogShot(page));
+      }
+      const objects = [first, second].filter(Boolean).sort();
+      if ((await addButton(dialog).getAttribute('aria-disabled')) === 'true') {
+        // This pair can't go in front together; take the first alone.
+        console.log(`[${tag}] ${figure.name}: ${subject} in front of ${objects.join(', ')} waits: ${await hintText(dialog)}`);
+        await clearSentence(dialog);
+        await buildSentence(page, dialog, { subject, objects: [first] });
+        objects.splice(0, objects.length, first);
+      }
+      await addSentence(page, dialog);
+      const flash = await dialog.locator('[data-layer-order-flash]').count();
+      const sentence = `${subject} in front of ${objects.join(', ')}`;
+      await untilRows(page, dialog, [sentence], 'compound Add');
+      check(true, `Add committed “${sentence}” as one row; the flash ${flash > 0 ? 'shows' : 'had nothing to show'}`);
+      if (flash > 0) {
+        await page.waitForTimeout(1900);
+        check((await dialog.locator('[data-layer-order-flash]').count()) === 0, 'the flash is one 1.6 s fade (Round3:172-176)');
+      }
+      await record(shot('added'), await dialogShot(page));
+
+      if (objects.length === 2) {
+        // A per-object ×: hover the first object, and its × removes it alone.
+        const row = dialog.getByRole('listitem').first();
+        await row.hover();
+        await record(shot('row-hovered'), await dialogShot(page));
+        await dialog.getByRole('button', { name: `Remove ${subject} in front of ${objects[0]}`, exact: true }).click({ force: true });
+        await untilRows(page, dialog, [`${subject} in front of ${objects[1]}`], 'the per-object ×');
+        // Undo, from its button; redo, from ⇧⌘Z; undo again, from ⌘Z: the modal history.
+        await dialog.getByRole('button', { name: 'Undo', exact: true }).click();
+        await untilRows(page, dialog, [sentence], 'Undo');
+        await page.keyboard.press('Meta+Shift+z');
+        await untilRows(page, dialog, [`${subject} in front of ${objects[1]}`], '⇧⌘Z');
+        await page.keyboard.press('Meta+z');
+        await untilRows(page, dialog, [sentence], '⌘Z');
+        check(true, 'Undo, ⇧⌘Z and ⌘Z step the dialog’s own history');
+        // The grouped row's trash: the whole row, as one step.
+        await dialog.getByRole('button', { name: `Remove ${sentence}`, exact: true }).click();
+        await untilRows(page, dialog, [], 'the row’s trash');
+        // Off the trash first, so its tooltip covers nothing; Redo has nothing to redo, and says so.
+        await page.mouse.move(1, 1);
+        await dialog.getByRole('button', { name: 'Redo', exact: true }).click({ timeout: 3000 }).catch(() => {});
+        await dialog.getByRole('button', { name: 'Undo', exact: true }).click();
+        await untilRows(page, dialog, [sentence], 'Undo of the trash');
+      }
+
+      // The back side: the list reads from it, the figure turns over.
+      await viewTool(dialog, 'Back');
+      await page.waitForTimeout(300);
+      const fromBack = await rowSentences(dialog);
+      console.log(`[${tag}] ${figure.name} from the back: ${JSON.stringify(fromBack)}`);
+      await record(shot('back'), await dialogShot(page));
+      await viewTool(dialog, 'Front');
+
+      // X-ray steps through every layer order (D5).
+      await viewTool(dialog, 'X-ray');
+      const xrayStatus = await statusText(page, dialog);
+      const pager = dialog.getByRole('group', { name: 'Solution shown' });
+      const before = (await pager.textContent())?.trim() ?? '';
+      const next = pager.getByRole('button', { name: 'Next solution' });
+      const previous = pager.getByRole('button', { name: 'Previous solution' });
+      const way = (await next.getAttribute('aria-disabled')) !== 'true' ? next : previous;
+      if ((await way.getAttribute('aria-disabled')) !== 'true') {
+        await way.click();
+        const deadline = Date.now() + 30000;
+        while (Date.now() < deadline && ((await pager.textContent())?.trim() ?? '') === before) await page.waitForTimeout(100);
+      }
+      const after = (await pager.textContent())?.trim() ?? '';
+      console.log(`[${tag}] ${figure.name} X-ray: “${xrayStatus}”, stepper “${before}” → “${after}”`);
+      check(/layer order/.test(xrayStatus), 'X-ray counts layer orders (D5)');
+      await record(shot('xray-step'), await dialogShot(page));
+      await viewTool(dialog, 'X-ray');
+
+      // A can't-fit, and its reason pointed at (Round3:473, 883).
+      const clash = figure.name === 'iguana-c0' ? null : await findClash(page, 20000);
+      if (clash) {
+        await dialog.getByRole('button', { name: 'Clear all' }).click();
+        await untilRows(page, dialog, [], 'Clear all');
+        if (clash.first) {
+          await buildSentence(page, dialog, { subject: clash.first.subject, verb: clash.first.verb, objects: [clash.first.object] });
+          await addSentence(page, dialog);
+        }
+        const reason = await buildSentence(page, dialog, { subject: clash.clash.subject, verb: clash.clash.verb, objects: [clash.clash.object] });
+        check(/^Can’t fit/.test(reason), `can't fit: “${reason}”`);
+        check((await addButton(dialog).getAttribute('aria-disabled')) === 'true', 'Add waits on a can’t-fit');
+        const danger = await dialog.locator('[data-layer-order-letter][data-tone="danger"]').evaluateAll((chips) => chips.map((chip) => chip.closest('[data-layer-order-marks]')?.getAttribute('data-layer-order-marks')));
+        check(danger.includes('pattern') && danger.includes('folded'), `the clash's letters are danger on both panes (${JSON.stringify(danger)})`);
+        if (clash.first) {
+          const marked = await dialog.locator('li[data-mark="clash"]').count();
+          check(marked > 0, 'the clashing row is marked');
+        }
+        await page.mouse.move(1, 1);
+        const calm = await steadyShot(page, dialog.locator('[data-layer-order-pane="pattern"]'), { masked: false });
+        await record(shot('cant-fit'), await dialogShot(page));
+        await dialog.getByRole('alert').filter({ hasText: 'Can’t fit' }).hover();
+        const strong = await steadyShot(page, dialog.locator('[data-layer-order-pane="pattern"]'), { masked: false });
+        check((await pixelDiff(page, calm, strong)).differing > 0, 'pointing at the reason strengthens the tints');
+        await record(shot('cant-fit-reason'), { dialog: await steadyShot(page, dialog, { masked: false }) });
+        await clearSentence(dialog);
+      } else {
+        console.log(`[${tag}] ${figure.name}: no can't-fit searched or found in budget`);
+      }
+
+      // Clear all, undo it, and Apply: the host gets the fold.
+      if ((await rowSentences(dialog)).length > 0) {
+        const kept = await rowSentences(dialog);
+        await dialog.getByRole('button', { name: 'Clear all' }).click();
+        await untilRows(page, dialog, [], 'Clear all');
+        await record(shot('cleared'), await dialogShot(page));
+        await dialog.getByRole('button', { name: 'Undo', exact: true }).click();
+        await untilRows(page, dialog, kept, 'Undo of Clear all');
+      }
+      await dropInspectorFacts(page);
+      await dialog.getByRole('button', { name: 'Apply' }).click();
+      const outcome = await dialogOutcome(page);
+      check(outcome.kind === 'applied', `Apply hands the host ${JSON.stringify(outcome)}`);
+      if (failures.length > 0) throw new Error(`${figure.name}: ${failures.join('; ')}`);
+    }
+  };
+}
+
+/**
+ * A tiny node budget for every preview the dialog asks while
+ * `window.__layerOrderTinyBudget` is set: comlink's calls to its worker,
+ * rewritten on the way out, before the page loads. The app is untouched.
+ */
+const TINY_BUDGET_PROBE = () => {
+  const post = Worker.prototype.postMessage;
+  Worker.prototype.postMessage = function (message, ...rest) {
+    if (window.__layerOrderTinyBudget && message && message.type === 'APPLY' && message.path?.[0] === 'previewList') {
+      const limits = message.argumentList?.[1];
+      if (limits?.type === 'RAW') limits.value = { ...limits.value, maxNodes: 1, fastNodes: 0, deadlineMs: 0 };
+      window.__layerOrderTinyBudgetHits = (window.__layerOrderTinyBudgetHits ?? 0) + 1;
+    }
+    return post.call(this, message, ...rest);
+  };
+};
+
+/**
+ * Couldn't check in time (D8) on kabuto, forced by a tiny node budget: the
+ * quiet hint with Keep trying in its line, Add waiting; then, with the budget
+ * back, Keep trying checks it again and it answers.
+ */
+async function inspectorTimeoutCase(page, url, record) {
+  await page.addInitScript(TINY_BUDGET_PROBE);
+  await openFigureInEdit(page, url, { theme: null, file: 'flat-folder/kabuto.fold' });
+  const dialog = await openPanesDialog(page, 'Kabuto');
+  const facts = await inspectorFacts(page);
+  await page.evaluate(() => {
+    window.__layerOrderTinyBudget = true;
+  });
+  let timedOut = null;
+  for (const subject of facts.subjects) {
+    for (const object of facts.partners[subject]) {
+      for (const verb of ['in_front_of', 'behind']) {
+        await clearSentence(dialog);
+        await pickSubjectFromMenu(page, dialog, subject);
+        await setVerb(page, dialog, verb);
+        await pickObjectsFromMenu(page, dialog, [object]);
+        const hint = await previewSettled(page, dialog);
+        if (/in time/.test(hint)) {
+          timedOut = { subject, verb, object, hint };
+          break;
+        }
+      }
+      if (timedOut) break;
+    }
+    if (timedOut) break;
+  }
+  if (!timedOut) {
+    const hits = await page.evaluate(() => window.__layerOrderTinyBudgetHits ?? 0);
+    throw new Error(`no sentence ran out of a tiny budget on kabuto (${hits} previews shrunk)`);
+  }
+  console.log(`[timeout] ${timedOut.subject} ${timedOut.verb} ${timedOut.object}: “${timedOut.hint}”`);
+  const hint = await hintText(dialog);
+  if (!/^Couldn’t check .* in time\./.test(hint)) throw new Error(`the hint: ${hint}`);
+  if ((await addButton(dialog).getAttribute('aria-disabled')) !== 'true') throw new Error('Add is offered after a timeout (D8)');
+  await record('inspector-timed-out', await dialogShot(page));
+  await page.evaluate(() => {
+    window.__layerOrderTinyBudget = false;
+  });
+  await dialog.getByRole('button', { name: 'Keep trying' }).click();
+  const after = await previewSettled(page, dialog);
+  console.log(`[timeout] Keep trying, with the budget back: “${after}”`);
+  if (/in time/.test(after)) throw new Error(`Keep trying ran out again: ${after}`);
+  await record('inspector-kept-trying', await dialogShot(page));
+  await dropInspectorFacts(page);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await dialogOutcome(page);
+}
+
+/**
+ * What a pane hover costs the dialog on iguana-c0 (850 faces): 40 pointer
+ * moves across the crease pattern while a subject is chosen, most landing on
+ * another face, with each component's calls counted by V8's precise coverage
+ * (dev build, so the functions keep their names). `facesNamed` is the
+ * builder's per-face menu label: called for every face a menu lists, open or
+ * not, while the menus build their items closed. Prints the counts; fails on
+ * nothing.
+ */
+async function inspectorHoverCost(page, url) {
+  await openFigureInEdit(page, url, { theme: null, file: 'precrease/iguana-c0.fold' });
+  const dialog = await openPanesDialog(page, 'Iguana');
+  const pane = await dialog.locator('[data-layer-order-pane="pattern"]').boundingBox();
+  const client = await page.context().newCDPSession(page);
+  await client.send('Profiler.enable');
+  const points = [];
+  for (let row = 0; row < 4; row += 1) {
+    for (let col = 0; col < 10; col += 1) {
+      points.push({ x: pane.x + pane.width * (0.2 + 0.06 * col), y: pane.y + pane.height * (0.25 + 0.12 * row) });
+    }
+  }
+  await page.mouse.move(points[0].x, points[0].y);
+  await page.waitForTimeout(800);
+  await client.send('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+  for (const point of points) {
+    await page.mouse.move(point.x, point.y);
+    await page.waitForTimeout(80);
+  }
+  await page.waitForTimeout(400);
+  const { result } = await client.send('Profiler.takePreciseCoverage');
+  await client.send('Profiler.stopPreciseCoverage');
+  const names = [
+    'LayerOrderDialog',
+    'LayerOrderDialogFrame',
+    'LayerOrderInspector',
+    'LayerOrderBuilder',
+    'LayerOrderConstraintList',
+    'LayerOrderStatus',
+    'LayerOrderViewTools',
+    'LayerOrderPanes',
+    'facesNamed',
+  ];
+  const counts = Object.fromEntries(names.map((name) => [name, 0]));
+  for (const script of result) {
+    for (const fn of script.functions) {
+      if (fn.functionName in counts && fn.ranges[0]) counts[fn.functionName] += fn.ranges[0].count;
+    }
+  }
+  console.log(`[hover cost] iguana-c0, ${points.length} pointer moves on the crease pattern: ${JSON.stringify(counts)}`);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await dialogOutcome(page);
+}
+
+/**
+ * A host order that puts a face inside a fold at a crease through it (D19),
+ * forged from Edit's scene in the page: one face moved to just under another
+ * on every spot the two share, tried pair by pair until the engine says the
+ * order breaks such a fold. Kept on `window.__layerOrderCheck.inside` for
+ * `openPanesDialog(…, { inside: true })`; answers what the engine named.
+ */
+async function foldInsideScene(page) {
+  return page.evaluate(async () => {
+    const { layerOrderSourceOf } = await import('/src/lib/layerOrder/layerOrderSource.ts');
+    const { DEFAULT_FOLDED_MODEL } = await import('/src/lib/orieditaNativeMetadata.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const { layerOrderSceneRelations } = await import('/src/layer-order/engine/layerOrderSceneRelations.ts');
+    const check = window.__layerOrderCheck;
+    const { scene } = check;
+    const source = layerOrderSourceOf(check.source, DEFAULT_FOLDED_MODEL);
+    const runtime = createLayerOrderRuntime({ role: 'host' });
+    const tried = new Set();
+    try {
+      for (const subface of scene.subfaces) {
+        const stack = subface.faces_top_to_bottom;
+        for (let i = 0; i < stack.length; i += 1) {
+          for (let j = i + 1; j < stack.length; j += 1) {
+            const [face, under] = [stack[i], stack[j]];
+            const key = `${face},${under}`;
+            if (tried.has(key)) continue;
+            tried.add(key);
+            const forged = {
+              ...scene,
+              subfaces: scene.subfaces.map((spot) => {
+                const faces = spot.faces_top_to_bottom;
+                if (!faces.includes(face) || !faces.includes(under)) return spot;
+                const rest = faces.filter((f) => f !== face);
+                const at = rest.indexOf(under) + 1;
+                return { ...spot, faces_top_to_bottom: [...rest.slice(0, at), face, ...rest.slice(at)] };
+              }),
+            };
+            const outcome = await runtime.engine.openShowing(source, layerOrderSceneRelations(forged), LAYER_ORDER_LIMITS.open);
+            const on = outcome.status === 'refused' ? null : outcome.opened?.opened_on ?? outcome.opened_on;
+            if (on?.kind === 'closest' && on.inside) {
+              check.inside = forged;
+              return { tries: tried.size, moved: on.moved, inside: on.inside };
+            }
+          }
+        }
+      }
+      return { tries: tried.size, inside: null };
+    } finally {
+      runtime.dispose();
+    }
+  });
+}
+
+/**
+ * D19: a host order that can't fold because a face sits inside a fold. The
+ * dialog opens on the nearest order that folds, says so in its foot naming the
+ * face, and lights the face and the fold's crease on both panes until a face
+ * is picked; pointing at the note lights them again.
+ */
+async function inspectorNoticeCase(page, url, record) {
+  await openFigureInEdit(page, url, { theme: null, file: 'flat-folder/kabuto.fold' });
+  const found = await foldInsideScene(page);
+  console.log(`[notice] forged in ${found.tries} tries: ${JSON.stringify(found.inside)} (moved ${found.moved})`);
+  if (!found.inside) throw new Error('no forged order broke a fold on kabuto');
+  const dialog = await openPanesDialog(page, 'Kabuto', { inside: true });
+  const letters = await page.evaluate(async (face) => {
+    const { faceLettersOf } = await import('/src/layer-order/engine/faceIndex.ts');
+    return faceLettersOf(window.__layerOrderCheck.scene).letterOf(face);
+  }, found.inside.face);
+  const note = dialog.getByText(/can’t fold here: face \S+ sits inside the fold at a crease through it\. Showing the nearest order that folds\./);
+  await note.waitFor({ state: 'visible', timeout: 30000 });
+  const text = await note.textContent();
+  console.log(`[notice] the foot: “${text}”`);
+  if (!text.startsWith('Edit’s order can’t fold here: face ')) throw new Error(`the foot names the host: ${text}`);
+  if (!text.includes(`face ${letters} `)) throw new Error(`the foot names face ${letters}: ${text}`);
+  const lit = (pane) =>
+    dialog.locator(`[data-layer-order-marks="${pane}"]`).evaluate(
+      (marks, face) => ({
+        crease: Number(marks.querySelector('[data-layer-order-crease]')?.getAttribute('data-layer-order-crease') ?? 0),
+        ring: marks.querySelector(`[data-layer-order-ring="${face}"]`) !== null,
+      }),
+      found.inside.face
+    );
+  for (const pane of ['pattern', 'folded']) {
+    const marks = await lit(pane);
+    console.log(`[notice] ${pane}: crease segments ${marks.crease}, face ringed ${marks.ring}`);
+    if (marks.crease < 1 || !marks.ring) throw new Error(`the ${pane} pane does not light the face and its crease`);
+  }
+  await record('inspector-notice-lit', await dialogShot(page));
+  // A face picked takes the panes: the notice's marks step aside, and come back while the note is pointed at.
+  const facts = await inspectorFacts(page);
+  await pickSubjectFromMenu(page, dialog, facts.subjects.find((s) => s !== letters) ?? facts.subjects[0]);
+  const aside = await lit('pattern');
+  if (aside.crease !== 0) throw new Error('the crease stays lit with a subject picked');
+  await note.hover();
+  const back = await lit('pattern');
+  if (back.crease < 1) throw new Error('pointing at the note does not light the crease again');
+  await record('inspector-notice-hovered', { dialog: await steadyShot(page, dialog, { masked: false }) });
+  // On a phone the note wraps, whole, over Cancel and Apply: no title to hover there (U10's review).
+  await page.setViewportSize(PHONE);
+  await page.waitForTimeout(600);
+  const phone = await note.evaluate((text) => {
+    const line = text.closest('p');
+    const actions = line.parentElement.lastElementChild.getBoundingClientRect();
+    return {
+      whole: text.scrollHeight <= text.clientHeight + 1 && text.scrollWidth <= text.clientWidth + 1,
+      height: Math.round(text.clientHeight),
+      above: line.getBoundingClientRect().bottom <= actions.top + 1,
+    };
+  });
+  console.log(`[notice] on a phone: ${JSON.stringify(phone)}`);
+  await record('inspector-notice-phone', await dialogShot(page));
+  if (!phone.whole || !phone.above) throw new Error(`the note is cut on a phone: ${JSON.stringify(phone)}`);
+  await page.setViewportSize(VIEWPORT);
+  await dropInspectorFacts(page);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await dialogOutcome(page);
+}
+
+/**
+ * The coarse-pointer lane (D6, A5's phone), in `browserName` (Chromium or
+ * WebKit) at 390 × 844 with touch: the subject tapped on the folded figure,
+ * two objects tapped, Add by tap; every object's × shows in the list with no
+ * hover; a tap on a row puts its subject in the builder.
+ */
+function inspectorCoarseCases(browserName) {
+  return async (_page, url, record) => {
+    const playwright = await import('playwright');
+    const browser = await playwright[browserName].launch();
+    try {
+      const context = await browser.newContext({ viewport: PHONE, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+      await context.addInitScript(TINY_BUDGET_PROBE);
+      if (browserName === 'webkit') {
+        // WebKit refuses a module worker's imports from the dev server under its COEP unless each says
+        // it may be embedded; a production build serves no such imports. The dev server's, here.
+        const origin = new URL(url).origin;
+        await context.route((asked) => asked.protocol === 'http:' && asked.origin === origin, async (route) => {
+          const response = await route.fetch();
+          await route.fulfill({ response, headers: { ...response.headers(), 'cross-origin-resource-policy': 'same-origin' } });
+        });
+      }
+      const page = await context.newPage();
+      page.on('pageerror', (error) => console.warn(`[coarse ${browserName}] page error: ${error.message}`));
+      await openFigureInEdit(page, url, { theme: null, file: 'flat-folder/kabuto.fold' });
+      const coarse = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches);
+      console.log(`[coarse ${browserName}] (pointer: coarse) matches: ${coarse}`);
+      if (!coarse) throw new Error(`${browserName}: the page is not under a coarse pointer`);
+      const dialog = await openPanesDialog(page, 'Kabuto');
+      const facts = await inspectorFacts(page);
+      const subject = facts.subjects.find((s) => facts.partners[s].length >= 2) ?? facts.subjects[0];
+      // The subject, tapped on the crease pattern (one pane at a time, D6): inside its face, where the
+      // menu's pick rang it; faces never overlap there.
+      const switchTo = (name) => dialog.getByRole('group', { name: 'Pane' }).getByRole('button', { name }).tap();
+      await switchTo('Crease pattern');
+      await pickSubjectFromMenu(page, dialog, subject);
+      const at = await ringPoint(dialog, 'pattern', facts.faceOf[subject]);
+      await dialog.getByRole('button', { name: `Clear ${subject} from the subject` }).tap();
+      await page.touchscreen.tap(at.x, at.y);
+      await page.waitForTimeout(500);
+      await record(`inspector-coarse-${browserName}-subject`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+      await switchTo('Folded');
+      const picked = await subjectSlot(dialog).getAttribute('aria-label');
+      console.log(`[coarse ${browserName}] tapped ${subject}'s face: ${picked}`);
+      if (!picked?.includes(`face ${subject}.`)) throw new Error(`a tap on ${subject} picked ${picked}`);
+      // Two objects, tapped where their letters are: on the folded figure, else on the crease pattern.
+      console.log(`[coarse ${browserName}] choosing objects: “${await hintText(dialog)}”`);
+      const tapped = [];
+      for (const pane of ['folded', 'pattern']) {
+        if (pane === 'pattern') await switchTo('Crease pattern');
+        for (const letter of facts.partners[subject]) {
+          if (tapped.length === 2 || tapped.includes(letter)) continue;
+          const point = await letterPoint(dialog, pane, letter);
+          if (!point) continue;
+          await page.touchscreen.tap(point.x, point.y);
+          await page.waitForTimeout(500);
+          tapped.push(`${letter} (${pane})`.split(' ')[0]);
+        }
+        if (tapped.length === 2) break;
+      }
+      await switchTo('Folded');
+      if (tapped.length < 2) await pickObjectsFromMenu(page, dialog, facts.partners[subject].filter((l) => !tapped.includes(l)).slice(0, 2 - tapped.length));
+      const hint = await previewKeptTrying(page, dialog);
+      console.log(`[coarse ${browserName}] tapped objects ${tapped.join(', ')}: “${hint}”`);
+      await record(`inspector-coarse-${browserName}-sentence`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+
+      // Keep trying under a finger (U10's review): the other verb's check, out of a tiny budget, and its
+      // button whole inside the hint line, a 44 px target that nothing clips.
+      await page.evaluate(() => {
+        window.__layerOrderTinyBudget = true;
+      });
+      await setVerb(page, dialog, 'behind');
+      const ranOut = await previewSettled(page, dialog);
+      await page.evaluate(() => {
+        window.__layerOrderTinyBudget = false;
+      });
+      const keep = dialog.getByRole('button', { name: 'Keep trying' });
+      if (/in time/.test(ranOut) && (await keep.count()) > 0) {
+        const fit = await keep.evaluate((button) => {
+          const line = button.parentElement.getBoundingClientRect();
+          const box = button.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + box.width / 2, box.top + 2);
+          return { height: box.height, inside: box.top >= line.top - 0.5 && box.bottom <= line.bottom + 0.5, hitTop: button.contains(hit) };
+        });
+        console.log(`[coarse ${browserName}] Keep trying in “${ranOut}”: ${JSON.stringify(fit)}`);
+        await record(`inspector-coarse-${browserName}-keep-trying`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+        if (fit.height < 44 || !fit.inside || !fit.hitTop) throw new Error(`${browserName}: Keep trying is clipped: ${JSON.stringify(fit)}`);
+        await keep.tap();
+        await previewKeptTrying(page, dialog);
+      } else {
+        const line = await keep.count();
+        console.log(`[coarse ${browserName}] the other verb answered in a tiny budget (“${ranOut}”, ${line} Keep trying): no timeout to draw`);
+      }
+      await setVerb(page, dialog, 'in_front_of');
+      await previewKeptTrying(page, dialog);
+      await addButton(dialog).tap();
+      const row = dialog.getByRole('listitem').first();
+      await row.waitFor({ state: 'visible', timeout: 30000 });
+      const removes = await dialog.locator('li button[aria-label^="Remove "]').evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const box = button.getBoundingClientRect();
+          // An object's × is drawn 16 px short of its slot, and the gap toward the next object is its target too.
+          const gutter = document.elementFromPoint(box.right + 8, box.top + box.height / 2);
+          return { name: button.getAttribute('aria-label'), opacity: getComputedStyle(button).opacity, height: box.height, gutterHit: button.contains(gutter) };
+        })
+      );
+      console.log(`[coarse ${browserName}] the row's removes: ${JSON.stringify(removes)}`);
+      const objectRemoves = removes.filter((remove) => !remove.name.includes(','));
+      if (objectRemoves.length < 2 || objectRemoves.some((remove) => remove.opacity !== '1')) {
+        throw new Error(`${browserName}: each object's × should show with no hover: ${JSON.stringify(removes)}`);
+      }
+      if (objectRemoves.some((remove) => remove.height < 44 || !remove.gutterHit)) {
+        throw new Error(`${browserName}: each object's × should be a 44 px target: ${JSON.stringify(removes)}`);
+      }
+      await record(`inspector-coarse-${browserName}-row`, { dialog: await steadyShot(page, dialog, { masked: false }) });
+      // A tap on the row, on its subject, puts that subject in the builder; its objects keep their ×.
+      await row.getByRole('button').first().tap({ position: { x: 14, y: 22 } });
+      await page.waitForTimeout(300);
+      const revealed = await subjectSlot(dialog).getAttribute('aria-label');
+      console.log(`[coarse ${browserName}] a tap on the row: ${revealed}`);
+      if (!revealed?.includes(`face ${subject}.`)) throw new Error(`${browserName}: a tap on the row put ${revealed} in the builder`);
+      await dropInspectorFacts(page);
+      await dialog.getByRole('button', { name: 'Apply' }).tap();
+      const outcome = await dialogOutcome(page);
+      console.log(`[coarse ${browserName}] Apply: ${JSON.stringify(outcome)}`);
+      if (outcome.kind !== 'applied') throw new Error(`${browserName}: Apply answered ${outcome.kind}`);
+    } finally {
+      await browser.close();
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Edit's figure: display and Apply (H3)
 
 /** Open `file` (repo-relative) in Edit as File ▸ Open does, in `theme` (a preset's name, or null). */
@@ -2559,8 +3430,10 @@ async function chosenOrder(page, figureId) {
 async function applyChosenOrder(page, figureId) {
   return page.evaluate(async (figureId) => {
     const { applyFoldedFigureLayerOrder } = await import('/src/cp-workspace/folded/openFoldedFigureLayerOrder.ts');
+    const { markFoldPress } = await import('/src/cp-workspace/folded/foldPress.ts');
     const i18n = (await import('/src/i18n/index.ts')).default;
-    return applyFoldedFigureLayerOrder(figureId, window.__layerOrderApplied, i18n.t);
+    const press = markFoldPress(window.__treemakerWorkspaceStore.getState());
+    return applyFoldedFigureLayerOrder(figureId, window.__layerOrderApplied, press, i18n.t);
   }, figureId);
 }
 
@@ -2912,6 +3785,873 @@ function editFigureStateCases(theme) {
 }
 
 // ---------------------------------------------------------------------------
+// Edit's refold with constraints, a stale figure, 3D and attention (H4)
+
+/** The selected figure's record as it reads: its constraints and the summary it stores. */
+function recordState(page, index = 0) {
+  return page.evaluate(async (index) => {
+    const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[index];
+    if (!figure) return null;
+    const record = figure.layerOrder?.kind === 'record' ? figure.layerOrder.record : null;
+    return {
+      id: figure.id,
+      handle: figure.handle,
+      kind: figure.folded3d ? '3d' : 'flat',
+      picture: JSON.stringify(figure.renderSnapshot),
+      constraints: record?.constraints.length ?? null,
+      attention: record?.attention ?? null,
+      error: window.__treemakerWorkspaceStore.getState().oristudioCpError,
+      stale: (await import('/src/cp-workspace/folded/foldedFigureStaleness.ts')).isFoldedFigureStale(
+        window.__treemakerWorkspaceStore.getState().oristudioCpDocument.document,
+        figure
+      ),
+    };
+  }, index);
+}
+
+/**
+ * A new valley crease across the paper corner that no crease reaches, half as
+ * far in as the nearest crease on its two edges: it splits that corner's face
+ * in two and adds no interior vertex, so the creases still fold flat. One
+ * undo entry, as the Line tool's is.
+ */
+async function splitCornerFace(page) {
+  return page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    const lines = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+    const xs = lines.flatMap((line) => [line.a.x, line.b.x]);
+    const ys = lines.flatMap((line) => [line.a.y, line.b.y]);
+    const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const near = (p, q) => Math.hypot(p.x - q.x, p.y - q.y) < 1e-9;
+    const creases = lines.filter((line) => line.color !== 'Black0');
+    for (const corner of [
+      { x: maxX, y: minY },
+      { x: minX, y: minY },
+      { x: maxX, y: maxY },
+      { x: minX, y: maxY },
+    ]) {
+      if (creases.some((line) => near(line.a, corner) || near(line.b, corner))) continue;
+      // The nearest crease end on the corner's two edges.
+      const onEdges = creases
+        .flatMap((line) => [line.a, line.b])
+        .filter((p) => Math.abs(p.x - corner.x) < 1e-9 || Math.abs(p.y - corner.y) < 1e-9)
+        .map((p) => Math.hypot(p.x - corner.x, p.y - corner.y))
+        .filter((d) => d > 1e-9);
+      if (onEdges.length === 0) continue;
+      const d = Math.min(...onEdges) / 2;
+      const sx = corner.x === maxX ? -1 : 1;
+      const sy = corner.y === maxY ? -1 : 1;
+      const a = { x: corner.x + sx * d, y: corner.y };
+      const b = { x: corner.x, y: corner.y + sy * d };
+      const figureId = store.getState().oristudioCpActiveFoldedFigureId;
+      // Drawn as the Draw crease tool draws one, so the border lines it ends on are split there.
+      if (!(await store.getState().executeOristudioCpCommand('DrawCreaseFree', { points: [a, b] }))) {
+        throw new Error('the crease did not land');
+      }
+      const after = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+      const drawn = after.find((line) => (near(line.a, a) && near(line.b, b)) || (near(line.a, b) && near(line.b, a)));
+      if (!drawn) throw new Error('the drawn crease is not in the document');
+      // The new crease took the selection: the figure takes it back, as a click on it would.
+      store.getState().setOristudioCpActiveFoldedFigure(figureId);
+      return { corner, d, a, b, color: drawn.color, lines: [lines.length, after.length] };
+    }
+    throw new Error('no corner that no crease reaches');
+  });
+}
+
+/** Press a figure toolbar button by name and wait until no fold runs and the figure is at rest. */
+async function pressFigureVerb(page, name) {
+  await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name }).click();
+  await page.waitForFunction(
+    () => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      return Object.keys(state.oristudioCpFoldRuns).length === 0 && state.oristudioCpFoldedFigures.every((f) => f.status !== 'loading');
+    },
+    null,
+    { timeout: 120000 }
+  );
+  await settle(page);
+}
+
+/** The project saved, then opened again on a fresh page; what the page loaded of the Layer order engine meanwhile. */
+async function reopenSaved(page, url, theme, name) {
+  const osf = await savedProject(page);
+  const watch = watchLayerOrderLoads(page);
+  await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+  await openTextInEdit(page, osf, name, theme);
+  await page.evaluate(() => {
+    const store = window.__treemakerWorkspaceStore;
+    store.getState().setOristudioCpActiveFoldedFigure(store.getState().oristudioCpFoldedFigures[0].id);
+  });
+  return watch;
+}
+
+/**
+ * Edit's refold with constraints (H4), in one theme, on kabuto with an order
+ * chosen through the engine (H3's synthetic approach; the real dialog's Apply
+ * waits for U10): a new crease splits a face, and Refold restores the record
+ * on the creases as they are now and draws the order that fits; then a record
+ * whose constraints clash keeps the picture, flagged, with Review… (D10,
+ * D14); Layer order… on the stale figure says Apply also refolds (D12); the
+ * flag survives a reload with no worker. Then a released build's refold
+ * after an edit, simulated: the reopened record shows "Not applied", with
+ * Review…, whose Apply takes it up, and Dismiss, one entry an undo takes
+ * back. Then a book fold whose crease gains
+ * a fold angle: Refold shows it in 3D, its record kept and waiting (D13),
+ * through a reload and the idle 3D rehydrate, with no worker.
+ */
+function editRefoldCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    const t0 = Date.now();
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    const id = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    const chosen = await chosenOrder(page, id);
+    if (!(await applyChosenOrder(page, id))) throw new Error('Apply wrote nothing');
+    const before = await recordState(page);
+    console.log(`[${tag}] kabuto constrained: ${chosen.constraints} constraint, handle ${before.handle}`);
+
+    // A new crease splits a face: the figure goes stale, and Refold (no longer held) folds it in its order.
+    const split = await splitCornerFace(page);
+    const stale = await recordState(page);
+    if (!stale.stale) throw new Error('the new crease did not make the figure stale');
+    console.log(
+      `[${tag}] drew a ${split.color} crease across the corner face at ${JSON.stringify(split.corner)}, ${split.d.toFixed(4)} in ` +
+        `(lines ${split.lines.join(' → ')}): figure stale`
+    );
+    const refoldButton = page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Refold' });
+    if (await refoldButton.isDisabled()) throw new Error('Refold is still held on a constrained figure');
+    const watch = watchLayerOrderLoads(page);
+    const started = Date.now();
+    await pressFigureVerb(page, 'Refold');
+    const refolded = await recordState(page);
+    const workers = watch.workers();
+    watch.stop();
+    console.log(
+      `[${tag}] Refold in ${Date.now() - started} ms: handle ${refolded.handle}, ${refolded.kind}, stale ${refolded.stale}, ` +
+        `attention ${JSON.stringify(refolded.attention)}, ${workers.length} host engine worker(s), error ${JSON.stringify(refolded.error)}`
+    );
+    if (workers.length !== 1) throw new Error(`Refold spawned ${workers.length} Layer order workers, not the host engine's one`);
+    const applied = refolded.handle !== before.handle && !refolded.stale;
+    const flaggedFirst = refolded.handle === before.handle && refolded.attention !== null;
+    if (!applied && !flaggedFirst) throw new Error(`Refold neither drew the order nor flagged the record: ${JSON.stringify(refolded)}`);
+    await record(`edit-refold-${tag}-${applied ? 'applied' : 'flagged'}`, await figureShots(page));
+
+    // Stale again, its record whole: Layer order… opens the real dialog on the creases as they are now,
+    // and an untouched Apply is the refold in its order (D12), one "Refold with layer order" entry.
+    if (applied) {
+      await splitCornerFace(page);
+      const staleAgain = await recordState(page);
+      if (!staleAgain.stale) throw new Error('the second crease did not make the figure stale');
+      await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Layer order…' }).click();
+      const staleDialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+      await staleDialog.getByRole('status').filter({ hasText: 'Apply also refolds' }).waitFor({ state: 'visible', timeout: 60000 });
+      await page.waitForTimeout(500);
+      await record(`edit-refold-${tag}-stale-apply-dialog`, await dialogShot(page));
+      // Untouched: Apply waits on the dialog's own check, then goes.
+      await staleDialog.getByRole('button', { name: 'Apply' }).click({ timeout: 60000 });
+      await staleDialog.waitFor({ state: 'detached', timeout: 60000 });
+      await page.waitForFunction(
+        () => {
+          const state = window.__treemakerWorkspaceStore.getState();
+          return Object.keys(state.oristudioCpFoldRuns).length === 0 && state.oristudioCpFoldedFigures.every((f) => f.status !== 'loading');
+        },
+        null,
+        { timeout: 120000 }
+      );
+      const appliedStale = await recordState(page);
+      const staleLabel = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().oristudioCpHistoryPast.at(-1)?.label);
+      console.log(
+        `[${tag}] stale, its record whole, untouched Apply through the dialog: "${staleLabel}", handle ${staleAgain.handle} → ${appliedStale.handle}, ` +
+          `stale ${appliedStale.stale}, record ${JSON.stringify(appliedStale.constraints)}`
+      );
+      if (staleLabel !== 'Refold with layer order' || appliedStale.stale || appliedStale.handle === staleAgain.handle || appliedStale.constraints === null) {
+        throw new Error(`an untouched Apply on the stale constrained figure did not refold it: ${JSON.stringify({ staleLabel, appliedStale })}`);
+      }
+      await record(`edit-refold-${tag}-stale-applied`, await figureShots(page));
+    }
+
+    // Its record made to clash (its first constraint and its opposite), the creases changed again:
+    // Refold keeps the picture and flags it (D10), with Review… (D14).
+    await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const { foldedFigureLayerOrder } = await import('/src/lib/layerOrder/foldedFigureLayerOrder.ts');
+      const figure = store.getState().oristudioCpFoldedFigures[0];
+      const { record } = figure.layerOrder;
+      const [f, g, sign] = record.constraints[0];
+      const clashing = foldedFigureLayerOrder({ ...record, constraints: [...record.constraints, [f, g, -sign]] });
+      store.setState({
+        oristudioCpFoldedFigures: store
+          .getState()
+          .oristudioCpFoldedFigures.map((entry) => (entry.id === figure.id ? { ...entry, layerOrder: clashing.layerOrder } : entry)),
+      });
+    });
+    await splitCornerFace(page);
+    const pictureBefore = (await recordState(page)).picture;
+    const handleBefore = (await recordState(page)).handle;
+    await pressFigureVerb(page, 'Refold');
+    const kept = await recordState(page);
+    console.log(`[${tag}] clash: handle ${kept.handle}, attention ${JSON.stringify(kept.attention)}, stale ${kept.stale}`);
+    if (kept.attention?.reason !== 'conflict' || kept.picture !== pictureBefore || kept.handle !== handleBefore || !kept.stale) {
+      throw new Error(`the clash did not keep the picture and flag the record: ${JSON.stringify(kept)}`);
+    }
+    const sheet = page.locator('[data-property-sheet]');
+    await sheet.getByRole('button', { name: 'Review…' }).waitFor({ state: 'visible', timeout: 10000 });
+    const subtitle = await sheet.locator('[data-property-sheet-subtitle]').innerText();
+    console.log(`[${tag}] Properties: "${subtitle}", Review… shown; the toolbar leads with the flag`);
+    // Another solution's tooltip: ‹ › wait until the constraints are reviewed.
+    await record(`edit-refold-${tag}-attention`, await figureShots(page, { hover: true, hoverName: 'Another solution' }));
+
+    // Review… on the stale flagged figure: the dialog opens on its creases as they are now, and says Apply also refolds.
+    // (Once the Refold's toast has gone, so it covers nothing in the picture.)
+    await page.waitForTimeout(5000);
+    await sheet.getByRole('button', { name: 'Review…' }).click();
+    const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await dialog.waitFor({ state: 'visible', timeout: 60000 });
+    await dialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 60000 });
+    const note = await dialog.getByRole('status').filter({ hasText: 'Apply also refolds' }).innerText();
+    const asked = await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      return { review: request.review === true, applyRefolds: request.applyRefolds === true, record: request.record !== null };
+    });
+    console.log(`[${tag}] Review… opened the dialog: ${JSON.stringify(asked)}; its foot says "${note}"`);
+    if (!asked.review || !asked.applyRefolds || !asked.record) throw new Error(`the request is not a stale review: ${JSON.stringify(asked)}`);
+    await record(`edit-refold-${tag}-stale-dialog`, await dialogShot(page));
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached' });
+
+    // Saved and opened again: still flagged, from saved data, with no worker or Fold wasm loaded.
+    const reopened = await reopenSaved(page, url, theme, 'kabuto-flagged.osf');
+    await zoomOutToFigure(page);
+    const reopenedShots = await figureShots(page);
+    await page.waitForTimeout(1500);
+    if (reopened.loaded().length > 0) throw new Error(`opening and selecting loaded ${reopened.loaded().join(', ')}`);
+    reopened.stop();
+    const back = await recordState(page);
+    if (back.attention?.reason !== 'conflict' || back.picture !== kept.picture) throw new Error(`the flag did not survive a reload: ${JSON.stringify(back)}`);
+    console.log(`[${tag}] reloaded: still flagged ${JSON.stringify(back.attention)}, no worker, no Fold wasm, no dialog code`);
+    await record(`edit-refold-${tag}-reopened-attention`, reopenedShots);
+
+    // A stale figure with no record: Layer order… opens on the order a plain Refold draws, so an
+    // untouched Apply is that Refold — the same picture, and no record.
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    await splitCornerFace(page);
+    await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Layer order…' }).click();
+    const plainDialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await plainDialog.getByRole('status').filter({ hasText: 'Apply also refolds' }).waitFor({ state: 'visible', timeout: 60000 });
+    const plainAsked = await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      return { record: request.record !== null, shown: request.shown != null, applyRefolds: request.applyRefolds === true };
+    });
+    if (plainAsked.record || !plainAsked.shown || !plainAsked.applyRefolds) throw new Error(`the stale opening is not the plain one: ${JSON.stringify(plainAsked)}`);
+    await plainDialog.getByRole('button', { name: 'Apply' }).click();
+    await plainDialog.waitFor({ state: 'detached', timeout: 60000 });
+    await page.waitForFunction(
+      () => {
+        const state = window.__treemakerWorkspaceStore.getState();
+        return Object.keys(state.oristudioCpFoldRuns).length === 0 && state.oristudioCpFoldedFigures.every((f) => f.status !== 'loading');
+      },
+      null,
+      { timeout: 120000 }
+    );
+    const untouched = await recordState(page);
+    const untouchedLabel = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().oristudioCpHistoryPast.at(-1)?.label);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await pressFigureVerb(page, 'Refold');
+    const plainRefold = await recordState(page);
+    console.log(
+      `[${tag}] stale, no record, untouched Apply: "${untouchedLabel}", record ${JSON.stringify(untouched.constraints)}, stale ${untouched.stale}; ` +
+        `same picture as a plain Refold: ${untouched.picture === plainRefold.picture}`
+    );
+    if (untouched.constraints !== null || untouched.stale || untouchedLabel !== 'Refold folded model' || untouched.picture !== plainRefold.picture) {
+      throw new Error(`an untouched Apply is not the plain Refold: ${JSON.stringify({ untouched, untouchedLabel })}`);
+    }
+
+    // A released build edits a crease inside a constrained figure and refolds it, as it can: its Refold
+    // knows no record, re-baselines the figure on the new creases and writes its own snapshot (no
+    // `shown_order`), and it carries the bag as it came. Reopened here, the record detaches, flagged
+    // "Not applied" with Review… and Dismiss, from saved data alone; Review… and an Apply take it up
+    // again, and Dismiss lets it go, as one entry an undo takes back.
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    const detachedId = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    await chosenOrder(page, detachedId);
+    if (!(await applyChosenOrder(page, detachedId))) throw new Error('Apply wrote nothing');
+    const ours = JSON.parse(await savedProject(page));
+    await page.evaluate((detachedId) => {
+      const store = window.__treemakerWorkspaceStore;
+      store.setState({
+        oristudioCpFoldedFigures: store
+          .getState()
+          .oristudioCpFoldedFigures.map((entry) => (entry.id === detachedId ? { ...entry, layerOrder: undefined } : entry)),
+      });
+    }, detachedId);
+    await splitCornerFace(page);
+    await pressFigureVerb(page, 'Refold');
+    const olderBuilds = JSON.parse(await savedProject(page));
+    const olderFigure = olderBuilds.workspace.creasePattern.viewState.foldedFigures[0];
+    delete olderFigure.snapshot.shown_order;
+    olderBuilds.workspace.creasePattern.extensions = ours.workspace.creasePattern.extensions;
+    const oursFigure = ours.workspace.creasePattern.viewState.foldedFigures[0];
+    const linesIn = (file) => file.workspace.creasePattern.creasePattern.document.crease_pattern.line_segments.length;
+    console.log(
+      `[${tag}] an older build's refold after an edit: lines ${linesIn(ours)} → ${linesIn(olderBuilds)}, ` +
+        `fingerprint changed ${oursFigure.sourceFingerprint !== olderFigure.sourceFingerprint}, the bag carried as it came`
+    );
+    if (oursFigure.sourceFingerprint === olderFigure.sourceFingerprint) throw new Error('the older build’s refold kept the fingerprint');
+    const watchDetached = watchLayerOrderLoads(page);
+    await page.goto(new URL('/edit', url).href, { waitUntil: 'load', timeout: 120000 });
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore?.getState().engineReady === true, null, { timeout: 120000 });
+    await openTextInEdit(page, JSON.stringify(olderBuilds), 'kabuto-older.osf', theme);
+    await page.evaluate(() => {
+      const store = window.__treemakerWorkspaceStore;
+      store.getState().setOristudioCpActiveFoldedFigure(store.getState().oristudioCpFoldedFigures[0].id);
+    });
+    await zoomOutToFigure(page);
+    const detachedShots = await figureShots(page);
+    await page.waitForTimeout(1500);
+    if (watchDetached.loaded().length > 0) throw new Error(`the detached figure loaded ${watchDetached.loaded().join(', ')}`);
+    watchDetached.stop();
+    const detachedState = await page.evaluate(async () => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      const figure = state.oristudioCpFoldedFigures[0];
+      const { isFoldedFigureStale } = await import('/src/cp-workspace/folded/foldedFigureStaleness.ts');
+      return {
+        own: figure.layerOrder?.kind ?? null,
+        detached: figure.detachedLayerOrder?.record.constraints.length ?? null,
+        stale: isFoldedFigureStale(state.oristudioCpDocument.document, figure),
+      };
+    });
+    const detachedSheet = page.locator('[data-property-sheet]');
+    const detachedSubtitle = await detachedSheet.locator('[data-property-sheet-subtitle]').innerText();
+    const chip = await page.getByRole(FIGURE_TOOLBAR.role, { name: FIGURE_TOOLBAR.name }).getByRole('button', { name: 'Not applied' }).innerText();
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'visible', timeout: 10000 });
+    console.log(
+      `[${tag}] detached by an older build: ${JSON.stringify(detachedState)}; Properties "${detachedSubtitle}" with Review… and Dismiss; chip "${chip}"; nothing loaded`
+    );
+    if (detachedState.own !== null || detachedState.detached === null || detachedState.stale) {
+      throw new Error(`the record is not shown detached on an up-to-date figure: ${JSON.stringify(detachedState)}`);
+    }
+    await record(`edit-refold-${tag}-detached`, detachedShots);
+
+    await detachedSheet.getByRole('button', { name: 'Review…' }).click();
+    const detachedDialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+    await detachedDialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 60000 });
+    const detachedAsked = await page.evaluate(async () => {
+      const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+      const { request } = useLayerOrderDialogStore.getState().opening;
+      return { review: request.review === true, attention: request.record?.attention ?? null };
+    });
+    if (!detachedAsked.review || detachedAsked.attention?.reason !== 'detached') {
+      throw new Error(`Review… did not open on the detached record: ${JSON.stringify(detachedAsked)}`);
+    }
+    await page.waitForTimeout(500);
+    await record(`edit-refold-${tag}-detached-dialog`, await dialogShot(page));
+    // Untouched, the Apply still writes: it takes the record up.
+    await detachedDialog.getByRole('button', { name: 'Apply' }).click();
+    await detachedDialog.waitFor({ state: 'detached', timeout: 60000 });
+    await page.waitForFunction(
+      () => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.layerOrder?.kind === 'record',
+      null,
+      { timeout: 60000 }
+    );
+    const takenUp = JSON.parse(await savedProject(page)).workspace.creasePattern.extensions['oristudio.foldedFigureLayerOrders'];
+    console.log(`[${tag}] Review… and an untouched Apply took it up: the bag holds ${Object.keys(takenUp.figures ?? {}).length} record, ${takenUp.detached?.length ?? 0} detached`);
+    if (!takenUp.figures || takenUp.detached) throw new Error(`the save kept the detached entry: ${JSON.stringify(takenUp)}`);
+    await record(`edit-refold-${tag}-detached-taken`, await figureShots(page));
+
+    // The Apply undone, the flag is back; Dismiss lets it go as one entry, and an undo takes that back.
+    const flagShown = () =>
+      page.evaluate(() => {
+        const figure = window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0];
+        return figure.layerOrder == null && figure.detachedLayerOrder != null && figure.detachedLayerOrder.settled == null;
+      });
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'visible', timeout: 10000 });
+    if (!(await flagShown())) throw new Error('the undone Apply did not bring the flag back');
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).click();
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'detached', timeout: 10000 });
+    const dismissedLabel = await page.evaluate(() => window.__treemakerWorkspaceStore.getState().oristudioCpHistoryPast.at(-1)?.label);
+    const dismissedBag = JSON.parse(await savedProject(page)).workspace.creasePattern.extensions['oristudio.foldedFigureLayerOrders'] ?? null;
+    const dismissedShots = await figureShots(page);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await detachedSheet.getByRole('button', { name: 'Dismiss' }).waitFor({ state: 'visible', timeout: 10000 });
+    const backAfterUndo = await flagShown();
+    console.log(
+      `[${tag}] Dismiss: "${dismissedLabel}", the bag after it ${JSON.stringify(dismissedBag)}; undone, the flag is back ${backAfterUndo}`
+    );
+    if (dismissedLabel !== 'Dismiss layer constraints' || dismissedBag !== null || !backAfterUndo) {
+      throw new Error(`Dismiss did not let the record go as one entry: ${JSON.stringify({ dismissedLabel, dismissedBag, backAfterUndo })}`);
+    }
+    await record(`edit-refold-${tag}-detached-dismissed`, dismissedShots);
+
+    // Deleted while it shows the flag, and the same creases folded again in this session with no save
+    // between: the new figure never takes the deleted one's id, so neither it nor a reload shows the record.
+    const reusedBefore = await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const figure = store.getState().oristudioCpFoldedFigures[0];
+      const { deleteFoldedFigure } = await import('/src/cp-workspace/folded/foldedFigureVerbs.ts');
+      const i18n = (await import('/src/i18n/index.ts')).default;
+      await deleteFoldedFigure(figure.id, i18n.t);
+      return { id: figure.id, title: figure.title, left: store.getState().oristudioCpFoldedFigures.length };
+    });
+    const refoldedId = await foldWholeAndSelect(page);
+    const flagAfterFold = await page.evaluate(() =>
+      window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures.some((figure) => figure.detachedLayerOrder != null)
+    );
+    const reusedWatch = await reopenSaved(page, url, theme, 'kabuto-reused.osf');
+    const reusedReopened = await page.evaluate(() => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      return {
+        ids: state.oristudioCpFoldedFigures.map((figure) => figure.id),
+        shown: state.oristudioCpFoldedFigures.filter((figure) => figure.detachedLayerOrder != null).length,
+        detached: (state.oristudioCpDocumentExtensions['oristudio.foldedFigureLayerOrders']?.detached ?? []).map((entry) => entry.reason),
+      };
+    });
+    reusedWatch.stop();
+    console.log(
+      `[${tag}] deleted ${reusedBefore.id} ("${reusedBefore.title}") and folded again in the session: ${refoldedId}, flag ${flagAfterFold}; ` +
+        `saved and reopened: ${JSON.stringify(reusedReopened)}`
+    );
+    // Its entry: gone with it (earlier saves here dropped it, settled, before the undos brought the flag back), or missing.
+    if (refoldedId === reusedBefore.id || flagAfterFold || reusedReopened.shown !== 0 || reusedReopened.detached.includes('order-not-given')) {
+      throw new Error(`a fold after the Delete was shown the record: ${JSON.stringify({ refoldedId, flagAfterFold, reusedReopened })}`);
+    }
+
+    // A book fold whose crease gains a fold angle: Refold shows it in 3D, its record kept and waiting (D13).
+    const book = [
+      '1 -200 -200 0 -200',
+      '1 0 -200 200 -200',
+      '1 200 -200 200 200',
+      '1 200 200 0 200',
+      '1 0 200 -200 200',
+      '1 -200 200 -200 -200',
+      '3 0 -200 0 200',
+    ].join('\n');
+    await openTextInEdit(page, book, 'book.cp', theme);
+    const bookId = await foldWholeAndSelect(page);
+    await zoomOutToFigure(page);
+    await page.evaluate(async (bookId) => {
+      const store = window.__treemakerWorkspaceStore;
+      const { foldedFigureLayerOrder } = await import('/src/lib/layerOrder/foldedFigureLayerOrder.ts');
+      const { FOLD_MAGNITUDE_UNITS_PER_DEGREE } = await import('/src/lib/foldAngle.ts');
+      // Synthetic: one constraint between the two halves, which the fold forces anyway.
+      const held = foldedFigureLayerOrder({
+        faces: [
+          { at: [-100, 0], area: 40000 },
+          { at: [100, 0], area: 40000 },
+        ],
+        constraints: [[0, 1, 1]],
+        order: [],
+      });
+      store.setState({
+        oristudioCpFoldedFigures: store
+          .getState()
+          .oristudioCpFoldedFigures.map((entry) => (entry.id === bookId ? { ...entry, layerOrder: held.layerOrder } : entry)),
+      });
+      const lines = store.getState().oristudioCpDocument.document.crease_pattern.line_segments;
+      const index = lines.findIndex((line) => line.color === 'Blue2');
+      await store
+        .getState()
+        .replaceOristudioCpLineSegments([index + 1], [{ ...lines[index], fold_magnitude: 90 * FOLD_MAGNITUDE_UNITS_PER_DEGREE }], 'Set fold angle');
+      // The edited crease took the selection: the figure takes it back.
+      store.getState().setOristudioCpActiveFoldedFigure(bookId);
+    }, bookId);
+    await pressFigureVerb(page, 'Refold');
+    const spatial = await recordState(page);
+    console.log(`[${tag}] book refolded: ${spatial.kind}, record ${spatial.constraints} constraint, ${JSON.stringify(spatial.attention)}`);
+    if (spatial.kind !== '3d' || spatial.constraints !== 1 || spatial.attention?.reason !== 'route-3d') {
+      throw new Error(`the 3D refold did not keep the record waiting: ${JSON.stringify(spatial)}`);
+    }
+    await record(`edit-refold-${tag}-3d`, await figureShots(page, { hover: true }));
+    const reopened3d = await reopenSaved(page, url, theme, 'book-3d.osf');
+    await zoomOutToFigure(page);
+    // The idle 3D rehydrate runs in the background: it makes the figure live and asks nothing of the record.
+    await page.waitForFunction(() => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.handle != null, null, {
+      timeout: 60000,
+    });
+    const shots3d = await figureShots(page);
+    await page.waitForTimeout(1500);
+    if (reopened3d.loaded().length > 0) throw new Error(`the reopened 3D figure loaded ${reopened3d.loaded().join(', ')}`);
+    reopened3d.stop();
+    const back3d = await recordState(page);
+    if (back3d.kind !== '3d' || back3d.attention?.reason !== 'route-3d') throw new Error(`the 3D record did not survive a reload: ${JSON.stringify(back3d)}`);
+    console.log(`[${tag}] book reloaded and rehydrated in 3D: record kept ${JSON.stringify(back3d.attention)}, no worker, no Fold wasm`);
+    await record(`edit-refold-${tag}-reopened-3d`, shots3d);
+    console.log(`[${tag}] done in ${Math.round((Date.now() - t0) / 1000)} s`);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Edit's selection: Fold with layer order… (H5)
+
+const SELECTION_TOOLBAR = { role: 'toolbar', name: 'Crease pattern actions' };
+const FOLD_WITH_LAYER_ORDER = 'Fold with layer order…';
+
+/** Every line of the open pattern selected, as Select All does: one whole sheet, so the selection toolbar shows. */
+async function selectWholeSheet(page) {
+  await page.evaluate(async () => {
+    const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+    await handleMenuAction('edit.selectAll');
+  });
+  await page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name }).waitFor({ state: 'visible', timeout: 30000 });
+}
+
+/** The selection toolbar, and again with the pointer on Fold with layer order…, its tooltip in the picture. */
+async function selectionToolbarShots(page) {
+  const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+  await page.mouse.move(1, 1);
+  const shots = { toolbar: await steadyShot(page, toolbar, { masked: false }) };
+  const target = await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).boundingBox();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+  await page.getByRole('tooltip').first().waitFor({ state: 'visible', timeout: 10000 });
+  const box = await toolbar.boundingBox();
+  await settle(page);
+  shots.tooltip = await page.screenshot({
+    clip: { x: Math.max(0, box.x - 60), y: Math.max(0, box.y - 70), width: box.width + 120, height: box.height + 110 },
+    animations: 'disabled',
+  });
+  await page.mouse.move(1, 1);
+  return shots;
+}
+
+/** What the canvas holds and remembers: its figures, its undo entries' labels, whether a fold runs. */
+function editCanvasState(page) {
+  return page.evaluate(() => {
+    const state = window.__treemakerWorkspaceStore.getState();
+    return {
+      figures: state.oristudioCpFoldedFigures.map((figure) => ({
+        id: figure.id,
+        status: figure.status,
+        handle: figure.handle,
+        shownOrder: figure.snapshot?.shown_order ?? 'searched',
+        layerOrder: figure.layerOrder?.kind ?? null,
+        picture: JSON.stringify(figure.renderSnapshot),
+      })),
+      history: state.oristudioCpHistoryPast.map((entry) => entry.label),
+      folding: Object.keys(state.oristudioCpFoldRuns).length,
+      dirty: state.dirty,
+    };
+  });
+}
+
+/** The request the open dialog was asked with, as far as the host decides it. */
+function openedRequest(page) {
+  return page.evaluate(async () => {
+    const { useLayerOrderDialogStore } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const request = useLayerOrderDialogStore.getState().opening?.request;
+    if (!request) return null;
+    return {
+      surface: request.surface,
+      name: request.name,
+      record: request.record,
+      digest: request.source.digest,
+      segments: request.source.segments.length,
+      shown: Boolean(request.shown),
+      side: request.look.side,
+      turnDeg: request.look.turnDeg,
+      xray: request.look.xray,
+    };
+  });
+}
+
+/**
+ * Apply, with the order the dialog's engine would choose on the open dialog's
+ * own source (U10 isn't built): one open pair constrained whichever way moves
+ * the order off Oriedita's first, saved, and handed back as Apply hands it.
+ */
+async function applyEngineChosenOrder(page) {
+  return page.evaluate(async () => {
+    const { useLayerOrderDialogStore, settleLayerOrderDialog } = await import('/src/layer-order/dialog/layerOrderDialogStore.ts');
+    const { createLayerOrderRuntime } = await import('/src/layer-order/engine/layerOrderRuntime.ts');
+    const { LAYER_ORDER_LIMITS, constraintSeen } = await import('/src/layer-order/engine/layerOrderEngine.ts');
+    const opening = useLayerOrderDialogStore.getState().opening;
+    const { source } = opening.request;
+    const engine = createLayerOrderRuntime({ role: 'dialog' });
+    try {
+      const opened = await engine.engine.open(source, LAYER_ORDER_LIMITS.open);
+      if (opened.status !== 'ok') throw new Error(`refused: ${JSON.stringify(opened.refusal)}`);
+      const first = Array.from(await engine.engine.relations()).join();
+      for (let i = 0; i < opened.open_pairs.length; i += 2) {
+        const [lo, hi] = [opened.open_pairs[i], opened.open_pairs[i + 1]];
+        for (const verb of ['in_front_of', 'behind']) {
+          const committed = await engine.engine.commit([constraintSeen(lo, verb, hi, 'front', opened.front_up[hi] === 1)], LAYER_ORDER_LIMITS.commit);
+          if (committed.verdict !== 'committed') continue;
+          const relations = await engine.engine.relations();
+          if (Array.from(relations).join() === first) continue;
+          const saved = await engine.engine.save();
+          if (saved.status !== 'ok') throw new Error(`save refused: ${JSON.stringify(saved.refusal)}`);
+          settleLayerOrderDialog(opening.id, { kind: 'applied', applied: { record: saved.record, relations, source } });
+          return saved.record.constraints.length;
+        }
+      }
+      throw new Error('no constraint moves the order');
+    } finally {
+      engine.dispose();
+    }
+  });
+}
+
+const PATTERN_CHANGED = 'The crease pattern changed meanwhile, so Layer order changed nothing.';
+
+/** The toast a press whose crease pattern changed or went says (`foldPress.ts`). */
+function patternChangedToast(page) {
+  return page.locator('[data-sonner-toast]').filter({ hasText: PATTERN_CHANGED });
+}
+
+/** Forget the last error, so the next one is known to be new. */
+async function clearCpError(page) {
+  await page.evaluate(() => window.__treemakerWorkspaceStore.setState({ oristudioCpError: null, error: null }));
+}
+
+/** The press said its crease pattern changed: in the store, and on a toast. */
+async function saidPatternChanged(page) {
+  await page.waitForFunction(
+    (text) => window.__treemakerWorkspaceStore.getState().oristudioCpError === text,
+    PATTERN_CHANGED,
+    { timeout: 30000 }
+  );
+  await patternChangedToast(page).first().waitFor({ state: 'visible', timeout: 30000 });
+}
+
+/** One crease deleted, as Delete does on a selected crease. */
+async function deleteOneCrease(page) {
+  await page.evaluate(async () => {
+    const store = window.__treemakerWorkspaceStore;
+    store.getState().setOristudioCpSelection({ ...store.getState().oristudioCpSelection, lines: [5] });
+    const { handleMenuAction } = await import('/src/commands/menuActions.ts');
+    await handleMenuAction('edit.delete');
+  });
+}
+
+/** The dialog, open and ready on what it was asked. */
+async function readyDialog(page) {
+  const dialog = page.getByRole(DIALOG.role, { name: DIALOG.name });
+  await dialog.waitFor({ state: 'visible', timeout: 60000 });
+  await dialog.getByRole('complementary', { name: 'Layer order details' }).waitFor({ state: 'visible', timeout: 60000 });
+  return dialog;
+}
+
+/**
+ * Fold with layer order… on kabuto's whole sheet, in one theme: the selection
+ * toolbar with the new button and its tooltip; the press, which folds the
+ * sheet for the dialog and opens it on that fold; Cancel, which leaves no
+ * figure and no entry; Apply on the order it opened on, one figure and one
+ * entry, undone; the order the dialog's engine would choose, committed as its
+ * Apply is (the real dialog's Apply waits for U10); Settings ▸ Shortcuts
+ * listing it Unassigned after Fold estimate, a key bound there and pressed;
+ * and the button held, with why, on creases that fold in 3D.
+ */
+function editSelectionCases(theme) {
+  const tag = theme ? theme.toLowerCase().replace(/\s+/g, '-') : 'default';
+  return async (page, url, record) => {
+    await openFileInEdit(page, url, 'tests/fixtures/flat-folder/kabuto.fold', theme);
+    await selectWholeSheet(page);
+    await record(`selection-${tag}-toolbar`, await selectionToolbarShots(page));
+
+    // The press: the sheet folded for the dialog alone, which opens on it.
+    const toolbar = page.getByRole(SELECTION_TOOLBAR.role, { name: SELECTION_TOOLBAR.name });
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    let dialog = await readyDialog(page);
+    const asked = await openedRequest(page);
+    if (asked?.surface !== 'edit_pattern' || asked.record !== null || !asked.shown || asked.side !== 'front' || asked.xray) {
+      throw new Error(`the request: ${JSON.stringify(asked)}`);
+    }
+    const whileOpen = await editCanvasState(page);
+    if (whileOpen.figures.length !== 0 || whileOpen.history.length !== 0) {
+      throw new Error(`the press put something on the canvas: ${JSON.stringify(whileOpen)}`);
+    }
+    console.log(`[${tag}] the press opened the dialog on the sheet's fold (${asked.segments} creases, turned ${asked.turnDeg}°, "${asked.name}"); nothing on the canvas`);
+    await record(`selection-${tag}-dialog`, await dialogShot(page));
+
+    // Cancel: no figure, no entry.
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    const cancelled = await editCanvasState(page);
+    if (cancelled.figures.length !== 0 || cancelled.history.length !== 0 || cancelled.folding !== 0 || cancelled.dirty) {
+      throw new Error(`Cancel left something: ${JSON.stringify(cancelled)}`);
+    }
+    console.log(`[${tag}] Cancel: no figure, no undo entry, not dirty`);
+
+    // Apply on the order it opened on: a figure as Fold makes it, one entry.
+    await selectWholeSheet(page);
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    dialog = await readyDialog(page);
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await page.waitForFunction(
+      () => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.status === 'ready',
+      null,
+      { timeout: 60000 }
+    );
+    const unchanged = await editCanvasState(page);
+    if (unchanged.figures.length !== 1 || unchanged.history.join() !== 'Fold model' || unchanged.figures[0].layerOrder !== null) {
+      throw new Error(`Apply unchanged: ${JSON.stringify(unchanged)}`);
+    }
+    console.log(`[${tag}] Apply on the order it opened on: one figure, no record, one entry "${unchanged.history[0]}"`);
+    await zoomOutToFigure(page);
+    await record(`selection-${tag}-applied-unchanged`, {
+      canvas: await steadyShot(page, page.locator('canvas.cp-webgl-layer').locator('..'), { masked: false }),
+    });
+
+    // The order the dialog's engine would choose on the open dialog's source, handed back as its Apply hands it.
+    const plain = unchanged.figures[0];
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    if ((await editCanvasState(page)).figures.length !== 0) throw new Error('undo left the figure');
+    await selectWholeSheet(page);
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    await readyDialog(page);
+    await applyEngineChosenOrder(page);
+    await page.waitForFunction(
+      () => window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures[0]?.status === 'ready',
+      null,
+      { timeout: 60000 }
+    );
+    const applied = await editCanvasState(page);
+    const [figure] = applied.figures;
+    if (applied.figures.length !== 1 || figure.shownOrder !== 'given' || figure.layerOrder !== 'record' || applied.history.join() !== 'Fold model') {
+      throw new Error(`the chosen order did not land: ${JSON.stringify(applied)}`);
+    }
+    if (figure.picture === plain.picture) throw new Error('the chosen order draws Oriedita’s picture');
+    console.log(`[${tag}] the chosen order folded through fold_with_order: one figure, order given, record kept, one entry`);
+    await record(`selection-${tag}-applied-chosen`, {
+      canvas: await steadyShot(page, page.locator('canvas.cp-webgl-layer').locator('..'), { masked: false }),
+    });
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    if ((await editCanvasState(page)).figures.length !== 0) throw new Error('undo left the chosen figure');
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().redo());
+    const redone = await editCanvasState(page);
+    if (redone.figures[0]?.handle !== figure.handle || redone.figures[0]?.layerOrder !== 'record') {
+      throw new Error(`redo: ${JSON.stringify(redone)}`);
+    }
+    console.log(`[${tag}] undo and redo: the figure goes and comes back on its fold, with its record`);
+
+    // Settings ▸ Shortcuts: Unassigned, right after Fold estimate; then a key bound there.
+    await page.evaluate(async () => {
+      const { useSettingsStore } = await import('/src/store/settingsStore.ts');
+      useSettingsStore.getState().openSettings('shortcuts');
+    });
+    const row = (label) => page.locator('.settings-shortcuts__row').filter({ has: page.getByText(label, { exact: true }) });
+    const ours = row(FOLD_WITH_LAYER_ORDER);
+    await ours.waitFor({ state: 'visible', timeout: 30000 });
+    const estimate = row('Fold estimate');
+    const order = await page.evaluate(() =>
+      [...document.querySelectorAll('.settings-shortcuts__copy span')].map((span) => span.textContent)
+    );
+    if (order[order.indexOf('Fold estimate') + 1] !== FOLD_WITH_LAYER_ORDER) throw new Error('not right after Fold estimate');
+    if ((await ours.getByRole('button', { name: 'Unassigned' }).count()) !== 1) throw new Error('not Unassigned');
+    await estimate.scrollIntoViewIfNeeded();
+    await page.mouse.move(1, 1);
+    const rows = async () => {
+      const top = await estimate.boundingBox();
+      const bottom = await ours.boundingBox();
+      return page.screenshot({
+        clip: { x: top.x - 8, y: top.y - 8, width: top.width + 16, height: bottom.y + bottom.height - top.y + 16 },
+        animations: 'disabled',
+      });
+    };
+    await record(`selection-${tag}-shortcuts-unassigned`, { rows: await rows() });
+    await ours.getByRole('button', { name: 'Unassigned' }).click();
+    await page.keyboard.press('Alt+Shift+KeyK');
+    const bound = await page.evaluate(async () => {
+      const { useShortcutStore } = await import('/src/store/shortcutStore.ts');
+      return useShortcutStore.getState().overrides['cp.action.fold-with-layer-order'] ?? null;
+    });
+    if (!bound?.length) throw new Error('capture bound nothing');
+    await page.mouse.move(1, 1);
+    await record(`selection-${tag}-shortcuts-bound`, { rows: await rows() });
+    await page.evaluate(async () => {
+      const { useSettingsStore } = await import('/src/store/settingsStore.ts');
+      useSettingsStore.getState().closeSettings();
+    });
+    await ours.waitFor({ state: 'detached', timeout: 30000 });
+    console.log(`[${tag}] Settings: Unassigned after Fold estimate; bound to ${JSON.stringify(bound)}`);
+
+    // The key, on the canvas, with the sheet selected: the dialog opens on it.
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+    await selectWholeSheet(page);
+    await page.keyboard.press('Alt+Shift+KeyK');
+    dialog = await readyDialog(page);
+    if ((await openedRequest(page))?.digest !== asked.digest) throw new Error('the key opened the dialog on another fold');
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached', timeout: 30000 });
+    if ((await editCanvasState(page)).figures.length !== 0) throw new Error('Escape left a figure');
+    console.log(`[${tag}] the bound key opened the dialog on the sheet's fold; Escape left nothing`);
+
+    // A crease edited between the press and its fold: the press is held at its pre-fold
+    // warning (a crease deleted first, so the sheet has errors), a second crease is deleted
+    // meanwhile, and Yes lets it fold. It stops before its dialog opens: no dialog, no
+    // figure, and the reason said.
+    const figuresMade = async () => (await editCanvasState(page)).figures.length;
+    await page.evaluate(async () => {
+      const { useSettingsStore } = await import('/src/store/settingsStore.ts');
+      useSettingsStore.setState({ foldWarningEnabled: true });
+    });
+    await deleteOneCrease(page);
+    await clearCpError(page);
+    await selectWholeSheet(page);
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    const warning = page.getByText('Detected errors in flat foldability. Continue to fold?');
+    await warning.waitFor({ state: 'visible', timeout: 30000 });
+    await deleteOneCrease(page);
+    await page.getByRole('button', { name: 'Yes', exact: true }).click();
+    await saidPatternChanged(page);
+    if (await page.getByRole(DIALOG.role, { name: DIALOG.name }).isVisible()) throw new Error('the dialog opened on creases that changed');
+    if ((await figuresMade()) !== 0) throw new Error('an edit behind the press still made a figure');
+    console.log(`[${tag}] a crease edited between the press and its fold: no dialog, no figure, "${PATTERN_CHANGED}"`);
+    await record(`selection-${tag}-edited-behind-press`, { toast: await steadyShot(page, patternChangedToast(page).first(), { masked: false }) });
+    // Kabuto again: both deletions undone.
+    await page.evaluate(async () => {
+      await window.__treemakerWorkspaceStore.getState().undo();
+      await window.__treemakerWorkspaceStore.getState().undo();
+    });
+
+    // A crease edited while the dialog is open (as a native menu could): Apply writes nothing.
+    await clearCpError(page);
+    await selectWholeSheet(page);
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    dialog = await readyDialog(page);
+    await deleteOneCrease(page);
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await saidPatternChanged(page);
+    if ((await figuresMade()) !== 0) throw new Error('Apply after an edit made a figure');
+    console.log(`[${tag}] a crease deleted while the dialog was open: Apply made no figure, and said why`);
+    await page.evaluate(() => window.__treemakerWorkspaceStore.getState().undo());
+
+    // Another document opened while the dialog is open: Apply lands nothing in it.
+    await clearCpError(page);
+    await selectWholeSheet(page);
+    await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).click();
+    dialog = await readyDialog(page);
+    const other = await readFile(path.join(repoRoot, 'tests/fixtures/oriedita/solution_sample_1.cp'), 'utf8');
+    await openTextInEdit(page, other, 'solution_sample_1.cp', theme);
+    if (!(await dialog.isVisible())) throw new Error('the dialog closed with the document');
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await saidPatternChanged(page);
+    const replaced = await editCanvasState(page);
+    if (replaced.figures.length !== 0 || replaced.history.length !== 0) {
+      throw new Error(`Apply landed in the new document: ${JSON.stringify(replaced)}`);
+    }
+    console.log(`[${tag}] another document opened while the dialog was open: Apply landed nothing in it, and said why`);
+    await page.mouse.move(1, 1);
+    await record(`selection-${tag}-document-replaced`, {
+      canvas: await steadyShot(page, page.locator('canvas.cp-webgl-layer').locator('..'), { masked: false }),
+    });
+
+    // Creases that fold in 3D: held, with why.
+    await openFileInEdit(page, url, 'tests/fixtures/fold-angle-3d/box_90.fold', theme);
+    await selectWholeSheet(page);
+    if (!(await toolbar.getByRole('button', { name: FOLD_WITH_LAYER_ORDER }).isDisabled())) throw new Error('not held on 3D creases');
+    await record(`selection-${tag}-3d`, await selectionToolbarShots(page));
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Edit's figure: Another solution within constraints (H6)
 
 /**
@@ -3165,11 +4905,22 @@ const CASES = [
   { name: 'panes-creases', run: creaseCases(null) },
   { name: 'panes-creases-horizon', run: creaseCases('Horizon') },
   { name: 'host-looks', run: hostLookCases },
+  { name: 'inspector', run: inspectorCases(null) },
+  { name: 'inspector-horizon', run: inspectorCases('Horizon') },
+  { name: 'inspector-timeout', run: inspectorTimeoutCase },
+  { name: 'inspector-notice', run: inspectorNoticeCase },
+  { name: 'inspector-hover-cost', run: inspectorHoverCost },
+  { name: 'inspector-coarse-chromium', run: inspectorCoarseCases('chromium') },
+  { name: 'inspector-coarse-webkit', run: inspectorCoarseCases('webkit') },
   { name: 'edit-figure', run: editFigureCases(null) },
   { name: 'edit-figure-horizon', run: editFigureCases('Horizon') },
   { name: 'edit-figure-review', run: editFigureReviewCases },
   { name: 'edit-figure-states', run: editFigureStateCases(null) },
   { name: 'edit-figure-states-horizon', run: editFigureStateCases('Horizon') },
+  { name: 'edit-refold', run: editRefoldCases(null) },
+  { name: 'edit-refold-horizon', run: editRefoldCases('Horizon') },
+  { name: 'edit-selection', run: editSelectionCases(null) },
+  { name: 'edit-selection-horizon', run: editSelectionCases('Horizon') },
   { name: 'edit-figure-solutions', run: editFigureSolutionCases(null) },
   { name: 'edit-figure-solutions-horizon', run: editFigureSolutionCases('Horizon') },
   { name: 'pose-toolbar', run: poseToolbarCases(null) },

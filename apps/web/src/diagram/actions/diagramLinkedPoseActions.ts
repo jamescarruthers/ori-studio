@@ -6,10 +6,10 @@ import {
   type LayerSpreadControls,
 } from '../../cp-workspace/folded/layerSpreadControls';
 import type { LayerOrderSolutionPlace } from '../../layer-order/host/hostEngineGateway';
-import { solutionPlaceEnds, solutionsHeldByConflict } from '../../layer-order/host/solutionCursorTable';
-import type { LayerOrderAttention } from '../../lib/layerOrder/layerOrderRecord';
+import { solutionPlaceEnds, solutionsHeldForReview, type SolutionPlace } from '../../layer-order/host/solutionCursorTable';
 import { layerOrderCount, solutionPlaceCount, type LayerOrderSolutions } from '../../lib/layerOrderPlace';
 import { defaultCaptureCamera } from '../capture/captureFolded';
+import type { LayerOrderSummary } from '../capture/captureLayerOrder';
 import {
   DEFAULT_SIMULATED_VIEW,
   showAsOf,
@@ -107,15 +107,23 @@ export interface DiagramLinkedPoseState {
   constrained?: boolean;
   /**
    * Where a constrained step's order stands among the solutions that fit,
-   * once a press has asked (`stepSolutionCursor.ts`); null or absent before,
-   * when both are offered, from saved data alone.
+   * and a way a step proved to end (E9), once a press has asked
+   * (`stepSolutionCursor.ts`); null or absent before, when both are offered,
+   * from saved data alone.
    */
-  place?: LayerOrderSolutionPlace | null;
+  place?: SolutionPlace | null;
   /**
-   * A constrained step's record's saved summary (D10): one saying its
-   * constraints clash holds ‹ › until they are reviewed. From saved data.
+   * What a constrained step's record says at rest, from saved data: how many
+   * constraints it holds, and its summary (D10, D14) — any summary holds ‹ ›
+   * until it is reviewed (`solutionsHeldForReview`).
    */
-  attention?: LayerOrderAttention | null;
+  record?: LayerOrderSummary | null;
+  /**
+   * A constrained step's pattern changed since it was captured (its link is
+   * `stale`): the solutions of the fold it shows are not its creases', so its
+   * ‹ › wait for a Refresh, as a stale figure's wait for a Refold in Edit.
+   */
+  stale?: boolean;
 }
 
 /**
@@ -131,6 +139,29 @@ function spreadBlocker(state: DiagramLinkedPoseState, t: TFunction): string | un
     return t('panels:diagram.pose.spreadNeedsOrder', 'This fold has no layer order, so it has no layers to spread');
   }
   return undefined;
+}
+
+/**
+ * Why a constrained step's ‹ › both wait, or null when they can step, by
+ * Edit's rules for a constrained figure (`foldedFigureActions.ts`), from
+ * saved data alone:
+ *
+ * - its record needs a look since an edit (D14), as when its constraints
+ *   clash: nothing to step through until it is reviewed;
+ * - its pattern changed since it was captured: the solutions of the fold it
+ *   shows are not its creases', until a Refresh captures them again.
+ */
+function constrainedSolutionsHeld(state: DiagramLinkedPoseState, t: TFunction): string | null {
+  if (solutionsHeldForReview(state.record?.attention)) {
+    // An order chosen with no constraint has none to review: the order itself (D16).
+    return (state.record?.constraints ?? 0) === 0
+      ? t('panels:foldedFigureActions.layerOrderReviewChosenFirst', 'Review the chosen layer order first')
+      : t('panels:foldedFigureActions.layerOrderReviewFirst', 'Review the layer constraints that need attention first');
+  }
+  if (state.stale) {
+    return t('panels:diagram.pose.layerOrderPatternChanged', 'Its pattern changed since it was captured');
+  }
+  return null;
 }
 
 /**
@@ -289,26 +320,21 @@ export function buildDiagramLinkedPoseActions(
       : t('panels:diagram.pose.lastSolution', 'This is its last layer order');
   // A layer order chosen in the dialog is the record's (H9, D9): ‹ › step through the solutions that fit it,
   // in a fixed order with ends, which every pager waits at — the Step pane's too — once a press has found
-  // them; before one has, both are offered, from saved data alone. Saved as clashing, they wait for Review…
-  // (D10). Said in the cursor's words, which Edit's ‹ › use too: its place is among the solutions that fit,
+  // them, a way a step proved to end (E9) among them; before one has, both are offered, from saved data
+  // alone. Said in the cursor's words, which Edit's ‹ › use too: its place is among the solutions that fit,
   // counted by the pictures of a side, never the fold's layer orders.
-  const conflict = state.constrained === true && solutionsHeldByConflict(state.attention);
+  const held = state.constrained ? constrainedSolutionsHeld(state, t) : null;
   const ends = state.constrained && state.place ? solutionPlaceEnds(state.place) : null;
-  const conflictHint = t('panels:foldedFigureActions.layerOrderConflict', 'Its layer constraints clash. Review… them first');
   const previousHeld = state.constrained
-    ? conflict || ends?.first === true
+    ? held !== null || ends?.first === true
     : render.mode === 'folded-flat' && render.foldCase <= 1;
   const previousHint = !state.constrained
     ? t('panels:diagram.pose.firstSolution', 'This is its first layer order')
-    : conflict
-      ? conflictHint
-      : t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution');
-  const solutionNextHeld = state.constrained ? conflict || ends?.last === true : nextHeld;
+    : (held ?? t('panels:foldedFigureActions.firstSolutionShown', 'This is its first solution'));
+  const solutionNextHeld = state.constrained ? held !== null || ends?.last === true : nextHeld;
   const solutionNextHint = !state.constrained
     ? nextHint
-    : conflict
-      ? conflictHint
-      : t('panels:foldedFigureActions.lastSolutionShown', 'This is its last solution');
+    : (held ?? t('panels:foldedFigureActions.lastSolutionShown', 'This is its last solution'));
 
   switch (render.mode) {
     case 'defox': return modes;

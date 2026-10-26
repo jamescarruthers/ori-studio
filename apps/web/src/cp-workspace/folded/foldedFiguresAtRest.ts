@@ -29,8 +29,14 @@
  */
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 
-/** What a figure was before a press: an entry, or nothing, for a placeholder the press added. */
-type AtRest = { readonly entry: OristudioCpFoldedFigureEntry } | { readonly entry: null };
+/**
+ * What a figure was before a press: an entry, or nothing, for a placeholder
+ * the press added — with the figure selected before the press, which the
+ * press may have handed to the placeholder.
+ */
+type AtRest =
+  | { readonly entry: OristudioCpFoldedFigureEntry }
+  | { readonly entry: null; readonly selectedBefore: string | null };
 
 const atRest = new Map<string, AtRest>();
 
@@ -51,11 +57,30 @@ export function holdFoldedFigureAtRest(entry: OristudioCpFoldedFigureEntry): () 
 
 /**
  * A `loading` placeholder a press adds as figure `id` (a fold, a Duplicate):
- * at rest it isn't there, so history never stores it. Returns the press's
- * end, which lets go; idempotent.
+ * at rest it isn't there, so history never stores it, nor stores it as the
+ * selected figure: `selectedBefore` is the figure selected before the press
+ * ({@link foldedSelectionAtRest}). Returns the press's end, which lets go;
+ * idempotent.
  */
-export function holdFoldedPlaceholderAtRest(id: string): () => void {
-  return hold(id, { entry: null });
+export function holdFoldedPlaceholderAtRest(id: string, selectedBefore: string | null): () => void {
+  return hold(id, { entry: null, selectedBefore });
+}
+
+/**
+ * The selected figure as history stores it beside {@link foldedFiguresAtRest}
+ * of the same `figures`: a placeholder a press selected, still `loading`,
+ * reads as the figure selected before the press, since the placeholder is
+ * left out of the figures.
+ */
+export function foldedSelectionAtRest(
+  selected: string | null,
+  figures: readonly OristudioCpFoldedFigureEntry[]
+): string | null {
+  if (selected === null) return null;
+  const before = atRest.get(selected);
+  if (!before || before.entry !== null) return selected;
+  const waiting = figures.some((figure) => figure.id === selected && figure.status === 'loading');
+  return waiting ? before.selectedBefore : selected;
 }
 
 /**

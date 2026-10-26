@@ -201,7 +201,17 @@ describe('the linked pose verbs', () => {
       index: number,
       n: number,
       exact: boolean,
-      { stopsAtLast = false, attention = null }: { stopsAtLast?: boolean; attention?: DiagramLinkedPoseState['attention'] } = {}
+      {
+        stopsAtLast = false,
+        record = null,
+        stale = false,
+        ended,
+      }: {
+        stopsAtLast?: boolean;
+        record?: DiagramLinkedPoseState['record'];
+        stale?: boolean;
+        ended?: 'next' | 'previous';
+      } = {}
     ) => {
       const actions = buildDiagramLinkedPoseActions(
         {
@@ -210,8 +220,9 @@ describe('the linked pose verbs', () => {
           busy: false,
           solutions: { discovered: 1, hasNext: false },
           constrained: true,
-          place: { position: { index, total: { n, exact } }, counted: true },
-          attention,
+          place: { position: { index, total: { n, exact } }, counted: true, ...(ended ? { ended } : {}) },
+          record,
+          stale,
         },
         { t, pose: vi.fn() },
         { stopsAtLast }
@@ -231,12 +242,30 @@ describe('the linked pose verbs', () => {
     }
     // One picture from this side is not one layer order: no "This fold has one layer order".
     expect(constrained(1, 1, true).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
-    // Saved as clashing (D10): both wait for Review…, wherever a press last stood.
-    for (const verb of Object.values(constrained(2, 3, false, { attention: { reason: 'conflict', count: 1 } }))) {
-      expect(verb).toMatchObject({ disabled: true, hint: 'Its layer constraints clash. Review… them first' });
+    // A way a step proved to end (E9) waits there, whatever the count says.
+    expect(constrained(3, 3, false, { ended: 'next' }).next).toMatchObject({ disabled: true, hint: 'This is its last solution' });
+    expect(constrained(2, 3, false, { ended: 'previous' }).previous).toMatchObject({
+      disabled: true,
+      hint: 'This is its first solution',
+    });
+    // Its record needs a look since an edit (D14), clashing or any other summary: both wait for Review…,
+    // wherever a press last stood, in Edit's words.
+    for (const reason of ['conflict', 'timeout', 'unresolved'] as const) {
+      for (const verb of Object.values(constrained(2, 3, false, { record: { constraints: 2, attention: { reason, count: 1 } } }))) {
+        expect(verb).toMatchObject({ disabled: true, hint: 'Review the layer constraints that need attention first' });
+      }
     }
-    // Any other summary leaves them be: a press restores it and says what it found.
-    expect(constrained(2, 3, false, { attention: { reason: 'timeout', count: 1 } }).next.disabled).toBe(false);
+    // An order chosen with no constraint has none to review: the order itself (D16).
+    expect(constrained(2, 3, false, { record: { constraints: 0, attention: { reason: 'timeout', count: 0 } } }).next).toMatchObject({
+      disabled: true,
+      hint: 'Review the chosen layer order first',
+    });
+    // Its pattern changed since it was captured: both wait for a Refresh.
+    for (const verb of Object.values(constrained(2, 3, false, { stale: true }))) {
+      expect(verb).toMatchObject({ disabled: true, hint: 'Its pattern changed since it was captured' });
+    }
+    // A record that needs nothing, on creases as captured, steps.
+    expect(constrained(2, 3, false, { record: { constraints: 2, attention: null } }).next.disabled).toBe(false);
   });
 
   it('reads out where a constrained step stands once a press asked, and nothing at rest (H9, D11)', () => {

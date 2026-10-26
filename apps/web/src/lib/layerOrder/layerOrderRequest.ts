@@ -76,10 +76,15 @@ export interface LayerOrderLook {
 }
 
 /**
- * Which host asked: an Edit figure, a Diagram step, Pose. An analytics enum,
- * sent as the dialog's events' `surface`, and never shown.
+ * Which host asked (spec §10). An analytics enum, sent as the dialog's
+ * events' `surface`, and never shown:
+ *
+ * - `edit_figure`: Layer order… on an Edit folded figure;
+ * - `edit_pattern`: Fold with layer order… on an Edit selection, before any figure exists;
+ * - `diagram_step`: a Diagram step's Layer order row;
+ * - `pose`: the Pose toolbar.
  */
-export type LayerOrderRequestSurface = 'edit_figure' | 'diagram_step' | 'pose';
+export type LayerOrderRequestSurface = 'edit_figure' | 'edit_pattern' | 'diagram_step' | 'pose';
 
 export interface LayerOrderRequest {
   /** Which host asked, for the dialog's analytics (`LayerOrderRequestSurface`). */
@@ -99,6 +104,18 @@ export interface LayerOrderRequest {
   readonly shown?: OristudioCpFoldedPaperScene | null;
   /** What the host calls the fold, after the dialog's title: a figure's name, "Selection", a step's. */
   readonly name?: string;
+  /**
+   * The host's picture was folded from creases that have changed since, and
+   * the source is the creases as they are now: its Apply also refolds it, as
+   * the dialog's foot says beside Apply (D12). Left out otherwise.
+   */
+  readonly applyRefolds?: boolean;
+  /**
+   * Opened from the host's Review… on its flag (D14): the dialog opens on
+   * the saved rows that need attention. Never set by the dialog itself; left
+   * out for every other way in.
+   */
+  readonly review?: boolean;
   /** Quieter, after the name: the design's credit when there is one ("Traditional", "by Birb"). */
   readonly byline?: string;
 }

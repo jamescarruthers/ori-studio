@@ -1349,6 +1349,28 @@ E3):
     yielded are exactly the distinct ones of completing from scratch's
     orders, each once, each order one of the component's, the first the
     held one, whole and resumed in slices.
+  - **`Enumeration::lexical(vary, hold, descending)`** (E9) is `varying`
+    with each varying component's variables searched in ascending order and
+    every guess trying 1 first (2 first when descending): upstream's loop
+    over another variable order, so it lists the component's orders, as a
+    set, unchanged, in lexicographic order (or its reverse), which is the
+    order the dialog's X-ray stepper steps in.
+    **`Enumeration::after(order, budget)`** places such a walk on one of its
+    orders without searching (`constraints::Search::placed_at`: each
+    variable still open when the loop reaches it is guessed with `order`'s
+    value and propagated, as the loop guesses), so the next call yields the
+    order after it (`Placed::On`); an order the walk does not list places it
+    nowhere (`Placed::NotListed`). Each guess asks the budget's meter first,
+    as the loop does, so placing stops within a node budget or a deadline
+    (`Placed::Stopped`, nothing placed). The walk's only other change is that
+    `next` reads its first value from the cursor, 1 unless `lexical` set it,
+    so every upstream path and every earlier cursor search exactly as
+    before. The randomized test checks, per component and both ways, that
+    the walk lists completing from scratch's orders sorted, whole and in
+    slices; that placed on each of them it lists exactly the ones after it;
+    that one node fewer than placing took, or a deadline already past,
+    stops it; and that an order it does not list, or one against a forced
+    pair, places nothing.
 - **`CheckOptions::prefer_fits`.** The caller vouches that the preferred
   order is a complete order that fits, such as an earlier check's fit or an
   enumerated order. Every component on which it agrees with what the seeds
