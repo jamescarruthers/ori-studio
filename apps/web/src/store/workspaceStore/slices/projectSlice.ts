@@ -272,6 +272,7 @@ import type {
   WorkspaceState,
 } from '../types';
 import { retainFoldedFigureHandles } from '../../../cp-workspace/folded/foldedFigureHandles';
+import { foldedFiguresAtRest } from '../../../cp-workspace/folded/foldedFiguresAtRest';
 import { folded3dExportHandles } from '../../../cp-workspace/folded/foldedFigureInterchange';
 import type { FoldDocument } from '../../../engine/types';
 import type {
@@ -318,9 +319,12 @@ function cpHistoryEntry(
   activeFoldedFigureId: string | null,
   inlineSimulations: InlineSimulation[]
 ): OristudioCpHistoryEntry {
+  // As they were before any press still running: never a figure that waits on a
+  // fold an undo will have taken from it (`foldedFiguresAtRest.ts`).
+  const rested = foldedFiguresAtRest(foldedFigures);
   // The entry keeps these figures' wasm handles alive for as long as undo can
   // reach it — see cp-workspace/foldedFigureHandles.
-  retainFoldedFigureHandles(foldedFigures);
+  retainFoldedFigureHandles(rested);
   return {
     ...(document ? { document } : {}),
     selection,
@@ -328,7 +332,7 @@ function cpHistoryEntry(
     // Captured so undo restores the figures a crease edit was made alongside —
     // including their recorded source region, which is what decides whether they
     // read as out of date (see lib/foldedFigureStaleness.ts).
-    foldedFigures,
+    foldedFigures: rested,
     activeFoldedFigureId,
     // Same reason as the figures above: undo restores the simulation windows the
     // crease edit was made alongside, with the provenance that decides whether

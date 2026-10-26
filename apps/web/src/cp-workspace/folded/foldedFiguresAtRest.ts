@@ -1,48 +1,88 @@
 /**
- * Folded figures shown as `loading` while a press works on them outside any
- * undo bracket, and the entry each was before the press.
+ * Folded figures shown as `loading` while a press works on them, and what
+ * each was before the press.
  *
- * A press that folds a figure again to read it — Layer order… on a figure
- * reopened from a file (`prepareOristudioCpFigureLayerOrder`), or a 3D
- * figure's rehydrate on a press — marks it `loading` so its verbs wait, and
- * records nothing: nothing about the document changes. But a gesture begun
- * meanwhile (a Delete, a drag) snapshots the live list for its undo entry, and
- * an entry holding `loading` puts back, on undo, a figure that waits forever.
- * So the folded layer's bracket reads each figure here as it was before the
- * press (`foldedFigureGesture.ts`), and an undo restores it as it was.
+ * Every press that folds marks its figure `loading` so its verbs wait: a
+ * fold or a Duplicate by adding a placeholder, a Refold, an Apply, Another
+ * solution (Oriedita's, or a step within a chosen order's constraints), a
+ * step to a case, Layer order… on a figure reopened from a file, a 3D
+ * figure's rehydrate on a press. Meanwhile the user can still undo, redo or
+ * start another gesture, and each of those writes the live list into an
+ * undo or redo entry. An entry that holds a `loading` figure puts back, on
+ * undo or redo, a figure that waits forever: the press it waited on has
+ * landed on nothing by then (`foldLanding.ts`).
+ *
+ * So history never stores a figure mid-press. Every place that writes the
+ * live list into an entry — the folded layer's bracket
+ * (`foldedFigureGesture.ts`), an overlay entry, a crease edit's entry, the
+ * undo and redo swaps, the Diagram import's compound entries — reads it
+ * through {@link foldedFiguresAtRest}: each figure a press is working on as it
+ * was before the press, and a placeholder a press added not at all.
+ *
+ * A figure read at rest holds the same kernel handle as the one on screen (a
+ * press keeps the figure's handle until its new fold lands, and a placeholder
+ * has none), so history's handle counts are unchanged by the substitution
+ * (`foldedFigureHandles.ts`).
  *
  * Module state, like the handle registry: a press marks a figure, and its end
  * lets go, however it ended.
  */
 import type { OristudioCpFoldedFigureEntry } from '../../engine/oristudioCpTypes';
 
-const atRest = new Map<string, OristudioCpFoldedFigureEntry>();
+/** What a figure was before a press: an entry, or nothing, for a placeholder the press added. */
+type AtRest = { readonly entry: OristudioCpFoldedFigureEntry } | { readonly entry: null };
+
+const atRest = new Map<string, AtRest>();
+
+function hold(id: string, held: AtRest): () => void {
+  atRest.set(id, held);
+  return () => {
+    if (atRest.get(id) === held) atRest.delete(id);
+  };
+}
 
 /**
  * `entry` as it was before a press marks it `loading`. Returns the press's
  * end, which lets go; idempotent.
  */
 export function holdFoldedFigureAtRest(entry: OristudioCpFoldedFigureEntry): () => void {
-  atRest.set(entry.id, entry);
-  return () => {
-    if (atRest.get(entry.id) === entry) atRest.delete(entry.id);
-  };
+  return hold(entry.id, { entry });
+}
+
+/**
+ * A `loading` placeholder a press adds as figure `id` (a fold, a Duplicate):
+ * at rest it isn't there, so history never stores it. Returns the press's
+ * end, which lets go; idempotent.
+ */
+export function holdFoldedPlaceholderAtRest(id: string): () => void {
+  return hold(id, { entry: null });
 }
 
 /**
  * `figures` with each one a press is working on, still `loading`, read as it
- * was before the press; the very list when there is none.
+ * was before the press, and each placeholder a press added left out; the
+ * very list when there is none.
  */
+export function foldedFiguresAtRest(figures: OristudioCpFoldedFigureEntry[]): OristudioCpFoldedFigureEntry[];
+export function foldedFiguresAtRest(
+  figures: readonly OristudioCpFoldedFigureEntry[]
+): readonly OristudioCpFoldedFigureEntry[];
 export function foldedFiguresAtRest(
   figures: readonly OristudioCpFoldedFigureEntry[]
 ): readonly OristudioCpFoldedFigureEntry[] {
   if (atRest.size === 0) return figures;
   let changed = false;
-  const rested = figures.map((figure) => {
+  const rested = figures.flatMap((figure) => {
     const before = figure.status === 'loading' ? atRest.get(figure.id) : undefined;
-    if (!before) return figure;
+    if (!before) return [figure];
+    if (before.entry === null) {
+      changed = true;
+      return [];
+    }
+    // Only the figure the press found, on the fold it holds: anything else is not that press's.
+    if (before.entry.handle !== figure.handle) return [figure];
     changed = true;
-    return before;
+    return [before.entry];
   });
   return changed ? rested : figures;
 }
