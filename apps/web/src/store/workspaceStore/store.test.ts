@@ -12766,9 +12766,12 @@ describe('a chosen layer order on an Edit folded figure (H3)', () => {
           'Kabuto’s chosen layer order needs attention, so it keeps its picture.',
         ]);
         expect(error.mock.calls.map(([text]) => text)).toEqual([
-          'Layer order couldn’t load, so Kabuto wasn’t refolded. Check your connection, then try again.',
+          'Layer order couldn’t load, so Kabuto wasn’t refolded. Reload Ori Studio to try again.',
           'Layer order stopped unexpectedly, so Kabuto wasn’t refolded.',
         ]);
+        // A load that failed offers Reload, the only retry there is; a crash offers nothing.
+        expect(error.mock.calls[0]![1]).toMatchObject({ action: { label: 'Reload' } });
+        expect(error.mock.calls[1]![1]).toBeUndefined();
       } finally {
         message.mockRestore();
         error.mockRestore();
