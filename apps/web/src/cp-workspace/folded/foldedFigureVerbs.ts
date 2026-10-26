@@ -217,9 +217,9 @@ function stepToastId(tries: number): string {
  * - the engine didn't load, with Reload, the only retry there is (offline:
  *   reconnect first), or it stopped;
  * - the record couldn't be checked in time (D10), or the search for the next
- *   solution ran out (E9's `timed_out`): each with Keep trying, which asks
- *   again with a longer deadline (`keepTrying`), and the step goes on from
- *   what it proved;
+ *   solution ran out (E9's `timed_out`): each a calm message, not an error,
+ *   with Keep trying, which asks again that way with a longer deadline
+ *   (`keepTrying`), and the step goes on from what it proved;
  * - its constraints need attention; or the next solution is too large to save.
  *
  * An end (proved since E9: asking again gains nothing), a Stop, a figure that
@@ -261,7 +261,9 @@ export function sayFoldedSolutionStep(
       });
       return;
     case 'timed_out':
-      toast.error(
+      // Running out of time is an answer, not a fault: said calmly, as the press's other expected
+      // stops are (`layerOrderPressToasts.ts`).
+      toast.message(
         step.stage === 'restore'
           ? t(
               'toasts:layerOrder.stepCheckTimedOut',

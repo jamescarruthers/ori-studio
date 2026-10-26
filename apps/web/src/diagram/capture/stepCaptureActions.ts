@@ -521,9 +521,9 @@ function stepSolutionToastId(tries: number): string {
  * - the engine didn't load, with Reload, the only retry there is (offline:
  *   reconnect first), or it stopped;
  * - the record couldn't be checked in time (D10), or the search for the next
- *   solution ran out (E9's `timed_out`): each with Keep trying
- *   (`keepTrying`), which asks again on the same worker with longer limits,
- *   and the step goes on from what it proved;
+ *   solution ran out (E9's `timed_out`): each a calm message, not an error,
+ *   with Keep trying (`keepTrying`), which asks again that way on the same
+ *   worker with longer limits, and the step goes on from what it proved;
  * - the next solution is too large to save with the step, or the engine
  *   refused the step's creases;
  * - its constraints clash with its pattern as it is now. Said so it reads
@@ -546,7 +546,8 @@ export function sayStepSolutionPress(press: LayerOrderSolutionPress, keepTrying:
       sayLayerOrderLost(press.cause === 'load', id);
       return;
     case 'timed_out':
-      toast.error(
+      // Running out of time is an answer, not a fault: said calmly, as Edit's figures say it.
+      toast.message(
         press.stage === 'step'
           ? t(
               'toasts:diagram.layerOrder.stepNotFoundInTime',

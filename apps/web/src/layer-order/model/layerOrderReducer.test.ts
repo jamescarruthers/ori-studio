@@ -781,7 +781,7 @@ describe('solutions: the count and the stepper', () => {
     expect(statusView(state)).toEqual({ dot: 'open', text: { key: 'none' }, tooltip: null, stepper: null });
   });
 
-  it('a count still running reads “at least N”, steps “n of N+”, and asks for the next slice', () => {
+  it('a count still running reads “at least N”, steps with the total unfinished, and asks for the next slice', () => {
     const { state } = opened();
     const counting = dispatch(state, {
       type: 'solutions_counted',
@@ -897,6 +897,89 @@ describe('solutions: the count and the stepper', () => {
       facts: { verdict: 'end' },
     });
     expect(statusView(ended.state)?.stepper).toMatchObject({ previous: true, next: false });
+  });
+
+  it('keeps ‹ at 1 until the total is exact: a solution the count lists before the first found may yet be (E9)', () => {
+    const { state } = opened();
+    const at = (index: number, exact: boolean) =>
+      statusView(
+        dispatch(state, {
+          type: 'solutions_counted',
+          generation: 1,
+          by: { picture: 'front' },
+          count: count(4, 4, 4, exact),
+          position: position(index, 4, exact),
+        }).state
+      )?.stepper;
+    expect(at(1, false)).toMatchObject({ index: 1, previous: true, next: true });
+    expect(at(1, true)).toMatchObject({ index: 1, previous: false, next: true });
+    expect(at(4, true)).toMatchObject({ index: 4, previous: true, next: false });
+  });
+
+  it('a ‹ that proves nothing lies before waits there, the total unfinished', () => {
+    const { state } = opened();
+    const counting = dispatch(state, {
+      type: 'solutions_counted',
+      generation: 1,
+      by: { picture: 'front' },
+      count: count(4, 4, 4, false),
+      position: position(1, 4, false),
+    }).state;
+    const stepping = play(counting, { type: 'step', direction: 'previous' });
+    const ended = play(stepping.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'end' },
+    });
+    expect(statusView(ended.state)?.stepper).toMatchObject({ index: 1, previous: false, next: true });
+  });
+
+  it('a step that runs out says so calmly, and Keep trying steps that way again, later each time (E9)', () => {
+    const { state } = opened();
+    const counting = dispatch(state, {
+      type: 'solutions_counted',
+      generation: 1,
+      by: { picture: 'front' },
+      count: count(4, 4, 4, false),
+      position: position(2, 4, false),
+    }).state;
+    const stepping = play(counting, { type: 'step', direction: 'previous' });
+    const first = lastOf(stepping.effects, 'step');
+    const ranOut = play(stepping.state, { type: 'stepped', request: first.request, facts: { verdict: 'timed_out' } });
+    expect(hintLine(ranOut.state)).toEqual({
+      tone: 'quiet',
+      action: 'keep_trying',
+      text: { key: 'step_timed_out', direction: 'previous' },
+    });
+    // Nothing moved, and the stepper is free.
+    expect(statusView(ranOut.state)?.stepper).toMatchObject({ index: 2, previous: true, next: true, busy: false });
+
+    const again = play(ranOut.state, { type: 'keep_trying' });
+    const second = lastOf(again.effects, 'step');
+    expect(second).toMatchObject({ direction: 'previous', by: { picture: 'front' }, limits: keepTrying(LAYER_ORDER_LIMITS.step) });
+    const ranOutAgain = play(again.state, { type: 'stepped', request: second.request, facts: { verdict: 'timed_out' } });
+    const third = lastOf(play(ranOutAgain.state, { type: 'keep_trying' }).effects, 'step');
+    expect(third.limits).toEqual(keepTrying(keepTrying(LAYER_ORDER_LIMITS.step)));
+  });
+
+  it('a step that ran out gives the hint line back to a sentence under way', () => {
+    const { state } = opened();
+    const counting = dispatch(state, {
+      type: 'solutions_counted',
+      generation: 1,
+      by: { picture: 'front' },
+      count: count(4, 4, 4, false),
+      position: position(2, 4, false),
+    }).state;
+    const stepping = play(counting, { type: 'step', direction: 'next' });
+    const ranOut = play(stepping.state, {
+      type: 'stepped',
+      request: lastOf(stepping.effects, 'step').request,
+      facts: { verdict: 'timed_out' },
+    });
+    expect(hintLine(ranOut.state)?.text).toEqual({ key: 'step_timed_out', direction: 'next' });
+    const building = play(ranOut.state, { type: 'face_picked', face: 2, origin: 'pattern' });
+    expect(hintLine(building.state)?.text.key).not.toBe('step_timed_out');
   });
 });
 

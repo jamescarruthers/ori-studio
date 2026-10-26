@@ -44,7 +44,7 @@
  *
  * Store-free and host-free: the host hands it its things and its world.
  */
-import type { LayerStepBy } from '../engine/layerOrderEngine';
+import { layerPositionEnds, type LayerStepBy } from '../engine/layerOrderEngine';
 import { onLayerOrderDialogOpen } from '../dialog/layerOrderDialogGateway';
 import type { LayerOrderAttention, LayerOrderRecord } from '../../lib/layerOrder/layerOrderRecord';
 import type { LayerOrderSource } from '../../lib/layerOrder/layerOrderRequest';
@@ -447,16 +447,15 @@ export function createSolutionCursorTable<Target, World, Mark, Opened extends So
 }
 
 /**
- * A place's ends, for a pager's ‹ and ›: `first` on the first solution, or
- * once a ‹ proved nothing lies before it; `last` on the last once the count
- * is final, or once a › proved nothing lies after it (E9); `only` when that
- * last is the one solution there is. A stepper through a fixed order waits at
- * either end rather than wrapping round.
+ * A place's ends, for a pager's ‹ and ›, as the dialog's stepper has them
+ * (`layerPositionEnds`): `first` and `last` once the count is final, or the
+ * way a step proved nothing lies (E9); `only` when the one solution there is.
+ * Before the count is final ‹ stays even at 1, since the index counts the
+ * solutions found so far, not their rank. A stepper through a fixed order
+ * waits at either end rather than wrapping round.
  */
 export function solutionPlaceEnds(place: SolutionPlace): { first: boolean; last: boolean; only: boolean } {
-  const { index, total } = place.position;
-  const last = place.ended === 'next' || (total.exact && index >= total.n);
-  return { first: index <= 1 || place.ended === 'previous', last, only: last && total.n <= 1 };
+  return layerPositionEnds(place.position, place.ended);
 }
 
 /**

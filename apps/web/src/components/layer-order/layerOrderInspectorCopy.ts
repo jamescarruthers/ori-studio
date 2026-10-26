@@ -313,6 +313,10 @@ export function layerOrderCopy(
         return t('dialogs:layerOrder.hint.timedOut', 'Couldn’t check {{sentence}} in time.', { sentence: clause(text.sentence) });
       case 'commit_timed_out':
         return committedRunOut(text.via);
+      case 'step_timed_out':
+        return text.direction === 'next'
+          ? t('dialogs:layerOrder.hint.stepTimedOutNext', 'Couldn’t find the next solution in time.')
+          : t('dialogs:layerOrder.hint.stepTimedOutPrevious', 'Couldn’t find the previous solution in time.');
       case 'row_not_applied':
         return reason(text.reason);
       case 'attention_clash':
@@ -369,11 +373,12 @@ export function layerOrderCopy(
         })
       : undefined;
 
+  // "Solution 3" until the total is exact: the index counts the solutions found so far, not their rank (E9).
   const stepperCount = ({ index, total }: LayerStepperView) => {
     if (total === null) return '';
     return total.exact
       ? t('dialogs:layerOrder.status.position', '{{index}} of {{total}}', { index, total: total.n })
-      : t('dialogs:layerOrder.status.positionAtLeast', '{{index}} of {{total}}+', { index, total: total.n });
+      : t('dialogs:layerOrder.status.solutionN', 'Solution {{index}}', { index });
   };
 
   const addLabel = (add: LayerAddState) =>

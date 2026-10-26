@@ -1014,6 +1014,9 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
   if (entry?.kind === 'cant_fit' && entry.explain.kind === 'timed_out' && quiet(state)) {
     return askExplain(state, effects, keepTryingLimits(entry.explain.limits));
   }
+  // A step that ran out (E9): the same way again, later, going on from what it proved.
+  const ranOut = state.solutions.step;
+  if (ranOut.kind === 'timed_out') return step(state, ranOut.direction, effects, keepTryingLimits(ranOut.limits));
   return state;
 }
 
@@ -1023,20 +1026,14 @@ function keepTryingAgain(state: LayerOrderDialogState, effects: LayerOrderEffect
 function step(
   state: LayerOrderDialogState,
   direction: 'next' | 'previous',
-  effects: LayerOrderEffect[]
+  effects: LayerOrderEffect[],
+  limits: LayerOrderLimits = LAYER_ORDER_LIMITS.step
 ): LayerOrderDialogState {
   if (state.phase.kind !== 'open' || state.settle.kind !== 'settled' || !quiet(state)) return state;
   const [id, next] = request(state);
   const by = currentStepBy(state);
-  effects.push({
-    type: 'step',
-    request: id,
-    generation: state.solutions.generation,
-    by,
-    direction,
-    limits: LAYER_ORDER_LIMITS.step,
-  });
-  return { ...next, solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by } } };
+  effects.push({ type: 'step', request: id, generation: state.solutions.generation, by, direction, limits });
+  return { ...next, solutions: { ...next.solutions, step: { kind: 'pending', request: id, direction, by, limits } } };
 }
 
 function stepped(
@@ -1052,7 +1049,8 @@ function stepped(
     return { ...state, solutions: { ...state.solutions, step: { kind: 'end', direction: pending.direction } } };
   }
   if (facts.verdict === 'timed_out') {
-    return { ...state, solutions: { ...state.solutions, step: { kind: 'timed_out', direction: pending.direction } } };
+    const step = { kind: 'timed_out', direction: pending.direction, limits: pending.limits } as const;
+    return { ...state, solutions: { ...state.solutions, step } };
   }
   // The order on screen changed, and no constraint did: the fits go (the session's preview too), a
   // can't-fit and its explain stay, and the flash shows what moved.

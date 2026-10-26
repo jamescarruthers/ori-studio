@@ -6608,7 +6608,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_one": "db53303c1a3e",
@@ -6673,7 +6672,9 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -13284,7 +13285,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_one": "db53303c1a3e",
@@ -13349,7 +13349,9 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -19962,7 +19964,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_one": "db53303c1a3e",
@@ -20027,7 +20028,9 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -26272,7 +26275,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_other": "dd4219acbed9",
@@ -26329,7 +26331,9 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadOffline_other": "aae070c50e24",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -32574,7 +32578,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_other": "dd4219acbed9",
@@ -32631,7 +32634,9 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadOffline_other": "aae070c50e24",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -39242,7 +39247,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_one": "db53303c1a3e",
@@ -39307,7 +39311,9 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -45918,7 +45924,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_one": "db53303c1a3e",
@@ -45983,7 +45988,9 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_one": "809bea20647c",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -52228,7 +52235,6 @@
     "dialogs:layerOrder.status.onlyBack": "431b16a4cda0",
     "dialogs:layerOrder.status.onlyFront": "a7859511b692",
     "dialogs:layerOrder.status.position": "8faa0c3bbb3a",
-    "dialogs:layerOrder.status.positionAtLeast": "550e7cb75d8c",
     "dialogs:layerOrder.status.previous": "3c561546c021",
     "dialogs:layerOrder.status.solutionN": "ac02e78943ba",
     "dialogs:layerOrder.status.solutions_other": "dd4219acbed9",
@@ -52285,6 +52291,8 @@
     "toasts:diagram.refreshAllLayerOrderLostLoadOffline_other": "aae070c50e24",
     "toasts:diagram.refreshAllLayerOrderLostLoadReload_other": "a171f3ae8ee5",
     "toasts:layerOrder.refoldLostLoadOffline": "c0bee3e7ed9d",
-    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5"
+    "toasts:layerOrder.refoldLostLoadReload": "d942de960fe5",
+    "dialogs:layerOrder.hint.stepTimedOutNext": "5dc660014d80",
+    "dialogs:layerOrder.hint.stepTimedOutPrevious": "971ee70bcf1d"
   }
 }

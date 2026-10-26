@@ -215,10 +215,20 @@ export type LayerStepDirection = 'next' | 'previous';
 
 export type LayerStepState =
   | { readonly kind: 'idle' }
-  | { readonly kind: 'pending'; readonly request: number; readonly direction: LayerStepDirection; readonly by: LayerStepBy }
-  /** No solution lies that way among those counted. */
+  | {
+      readonly kind: 'pending';
+      readonly request: number;
+      readonly direction: LayerStepDirection;
+      readonly by: LayerStepBy;
+      readonly limits: LayerOrderLimits;
+    }
+  /** No solution lies that way: proved (E9), whatever the count says. */
   | { readonly kind: 'end'; readonly direction: LayerStepDirection }
-  | { readonly kind: 'timed_out'; readonly direction: LayerStepDirection };
+  /**
+   * The search for the next solution that way ran out (E9): nothing moved.
+   * Keep trying steps that way again, with later limits than `limits`.
+   */
+  | { readonly kind: 'timed_out'; readonly direction: LayerStepDirection; readonly limits: LayerOrderLimits };
 
 export interface LayerSolutionsState {
   /** Whether the background count runs (D7), by the open pairs at the open and after each commit; the stepper steps either way. */

@@ -293,12 +293,19 @@ describe('the hosts’ solutions-cursor table', () => {
 });
 
 describe('what every host’s pager and press read', () => {
-  it('waits at the ends of a fixed order: ‹ on the first, › on the last once the count is final', () => {
+  it('waits at the ends of a fixed order once the count is final: ‹ on the first, › on the last', () => {
     const at = (index: number, n: number, exact: boolean) => solutionPlaceEnds({ position: solutionPosition(index, n, exact), counted: true });
-    expect(at(1, 3, false)).toEqual({ first: true, last: false, only: false });
-    expect(at(3, 3, false)).toEqual({ first: false, last: false, only: false });
+    expect(at(1, 3, true)).toEqual({ first: true, last: false, only: false });
+    expect(at(2, 3, true)).toEqual({ first: false, last: false, only: false });
     expect(at(3, 3, true)).toEqual({ first: false, last: true, only: false });
     expect(at(1, 1, true)).toEqual({ first: true, last: true, only: true });
+  });
+
+  it('keeps ‹ at 1 until the count is final: the index counts the solutions found, not their rank (E9)', () => {
+    const at = (index: number, n: number) => solutionPlaceEnds({ position: solutionPosition(index, n, false), counted: true });
+    expect(at(1, 3)).toEqual({ first: false, last: false, only: false });
+    expect(at(1, 1)).toEqual({ first: false, last: false, only: false });
+    expect(at(3, 3)).toEqual({ first: false, last: false, only: false });
   });
 
   it('waits at a way a step proved to end, whatever the count says (E9)', () => {
@@ -306,8 +313,15 @@ describe('what every host’s pager and press read', () => {
       solutionPlaceEnds({ position: solutionPosition(index, n, false), counted: true, ended });
     expect(at(3, 3, 'next')).toEqual({ first: false, last: true, only: false });
     expect(at(2, 3, 'previous')).toEqual({ first: true, last: false, only: false });
-    // Proved past the one there is: the only solution.
-    expect(at(1, 1, 'next')).toEqual({ first: true, last: true, only: true });
+    expect(at(1, 3, 'previous')).toEqual({ first: true, last: false, only: false });
+    // Proved past the first found, with the count unfinished: one listed before it may yet be found.
+    expect(at(1, 1, 'next')).toEqual({ first: false, last: true, only: false });
+    // Once final, the one there is.
+    expect(solutionPlaceEnds({ position: solutionPosition(1, 1, true), counted: true, ended: 'next' })).toEqual({
+      first: true,
+      last: true,
+      only: true,
+    });
   });
 
   it('holds ‹ › while a record needs any review since an edit (D14)', () => {

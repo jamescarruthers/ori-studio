@@ -18,6 +18,7 @@ import {
   constraintSeen,
   constraintVerb,
   keepTrying,
+  layerPositionEnds,
   packConstraints,
   spotCount,
   unpackConstraints,
@@ -94,6 +95,30 @@ describe('limits', () => {
   it('count spots from the stacks’ offsets', () => {
     expect(spotCount({ offsets: Uint32Array.of(0, 2, 5), faces: new Uint32Array(5) })).toBe(2);
     expect(spotCount({ offsets: new Uint32Array(), faces: new Uint32Array() })).toBe(0);
+  });
+});
+
+describe('the stepper’s ends, every pager’s', () => {
+  const at = (index: number, n: number, exact: boolean) => ({ index, total: { n, exact } });
+
+  it('are the first and the last once the total is exact', () => {
+    expect(layerPositionEnds(at(1, 3, true))).toEqual({ first: true, last: false, only: false });
+    expect(layerPositionEnds(at(2, 3, true))).toEqual({ first: false, last: false, only: false });
+    expect(layerPositionEnds(at(3, 3, true))).toEqual({ first: false, last: true, only: false });
+    expect(layerPositionEnds(at(1, 1, true))).toEqual({ first: true, last: true, only: true });
+  });
+
+  it('leave ‹ at 1 until then: the index counts the solutions found so far, not their rank (E9)', () => {
+    expect(layerPositionEnds(at(1, 3, false))).toEqual({ first: false, last: false, only: false });
+    expect(layerPositionEnds(at(1, 1, false), null)).toEqual({ first: false, last: false, only: false });
+    expect(layerPositionEnds(at(4, 4, false))).toEqual({ first: false, last: false, only: false });
+  });
+
+  it('wait the way a step proved to end, whatever the count says', () => {
+    expect(layerPositionEnds(at(1, 3, false), 'previous')).toEqual({ first: true, last: false, only: false });
+    expect(layerPositionEnds(at(3, 3, false), 'next')).toEqual({ first: false, last: true, only: false });
+    // The last, proved, but not the only one: a solution listed before the first found may yet be.
+    expect(layerPositionEnds(at(1, 1, false), 'next')).toEqual({ first: false, last: true, only: false });
   });
 });
 

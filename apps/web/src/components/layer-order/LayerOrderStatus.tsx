@@ -32,9 +32,10 @@ function spokenStatus(text: LayerStatusText, countDone: boolean): LayerStatusTex
  * The inspector's first row (A3, `Round4-States`' counting states): how many
  * solutions fit, with the dot that turns to success once one order is
  * decided, and ‹ n of N › through them in a stable order. "At least N" and
- * "n of N+" while the count runs; with the count skipped (D7) the status
- * names the solution shown and the stepper has no total. With X-ray on it
- * counts and steps through every layer order (D5).
+ * ‹ Solution n › while the count runs, since until then n counts the
+ * solutions found, not their rank (E9); with the count skipped (D7) the
+ * status names the solution shown and the stepper has no total. With X-ray
+ * on it counts and steps through every layer order (D5).
  *
  * The stepper is the shared `Pager` (Properties' ‹ › and Diagram's), not the
  * board's bordered buttons: one stepper control across the app, its ends and

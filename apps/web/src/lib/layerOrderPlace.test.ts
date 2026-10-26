@@ -5,6 +5,7 @@ import {
   frontierSolutions,
   layerOrderCount,
   solutionFrontierKnowing,
+  solutionPlaceCount,
   UNSEARCHED_FRONTIER,
 } from './layerOrderPlace';
 
@@ -46,5 +47,27 @@ describe('layerOrderCount', () => {
     // The order shown is never past the total.
     expect(layerOrderCount(6, { discovered: 5, hasNext: false }, t)).toBe('6 of 6');
     expect(layerOrderCount(0, { discovered: 0, hasNext: false, none: true }, t)).toBe('None');
+  });
+});
+
+describe('solutionPlaceCount', () => {
+  const place = (index: number, n: number, exact: boolean, counted = true) => ({
+    position: { index, total: { n, exact } },
+    counted,
+  });
+
+  it('reads “k of N” once the count is final', () => {
+    expect(solutionPlaceCount(place(2, 3, true), t)).toBe('2 of 3');
+    expect(solutionPlaceCount(place(1, 1, true), t)).toBe('1 of 1');
+  });
+
+  it('reads “Solution k” until then: the index counts the solutions found so far, not their rank (E9)', () => {
+    expect(solutionPlaceCount(place(26, 123, false), t)).toBe('Solution 26');
+    expect(solutionPlaceCount(place(1, 1, false), t)).toBe('Solution 1');
+  });
+
+  it('reads “Solution k” on a figure too large to count (D7)', () => {
+    expect(solutionPlaceCount(place(3, 3, false, false), t)).toBe('Solution 3');
+    expect(solutionPlaceCount(place(3, 3, true, false), t)).toBe('Solution 3');
   });
 });

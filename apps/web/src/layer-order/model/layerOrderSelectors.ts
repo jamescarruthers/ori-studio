@@ -19,6 +19,7 @@
 import { objectsPastLabelCap, hostOrderNotice, ADD_AFTER_PREVIEW_TIMEOUT, type LayerOpenNotice } from './layerOrderDecisions';
 import {
   constraintVerb,
+  layerPositionEnds,
   type LayerChangedSpots,
   type LayerConstraint,
   type LayerFace,
@@ -49,6 +50,7 @@ import type {
   LayerPreviewEntry,
   LayerRow,
   LayerRows,
+  LayerStepDirection,
 } from './layerOrderState';
 
 // ---------------------------------------------------------------------------
@@ -270,6 +272,8 @@ export type LayerHintText =
   | { readonly key: 'timed_out'; readonly sentence: LayerSentenceView }
   /** A change to the list ran out of time with Keep trying; nothing changed. */
   | { readonly key: 'commit_timed_out'; readonly via: LayerCommitVia }
+  /** "Couldn't find the next solution in time." with Keep trying, which steps that way again (E9); nothing moved. */
+  | { readonly key: 'step_timed_out'; readonly direction: LayerStepDirection }
   /** Pointing at a row that is not applied: its reason. */
   | { readonly key: 'row_not_applied'; readonly reason: LayerRowReason }
   /** "Can't fit: with the new creases, E in front of C clashes with C in front of F. Remove one to apply." */
@@ -386,6 +390,11 @@ export function hintLine(state: LayerOrderDialogState): LayerHint | null {
 
   // Round3:1389-1395.
   const { sentence } = state;
+  // A step that ran out (E9), said while no sentence is under way, whose guidance comes first.
+  const { step } = state.solutions;
+  if (step.kind === 'timed_out' && sentence.subject === null && state.hover.face === null) {
+    return { tone: 'quiet', action: 'keep_trying', text: { key: 'step_timed_out', direction: step.direction } };
+  }
   const active = slotNow(sentence, state.open);
   if (active === 'subject') {
     const face = state.hover.face;
@@ -631,8 +640,12 @@ export type LayerStatusText =
 export interface LayerStepperView {
   /** From 1. */
   readonly index: number;
-  /** Null when there is no total to give (D7); "n of N+" when inexact. */
+  /**
+   * Null when there is no total to give (D7). Until it is exact the readout is
+   * "Solution n", not "n of N+": `index` counts the solutions found so far, not their rank (E9).
+   */
   readonly total: LayerTally | null;
+  /** ‹: enabled at 1 until the total is exact, since a solution the count lists earlier may yet be found. */
   readonly previous: boolean;
   readonly next: boolean;
   readonly busy: boolean;
@@ -670,18 +683,18 @@ export function statusView(state: LayerOrderDialogState): LayerStatusView | null
 
   const settledNow = state.settle.kind === 'settled' && state.commit.kind !== 'pending';
   const { step } = solutions;
-  const stepper: LayerStepperView | null = position
-    ? {
-        index: position.index,
-        total: solutions.runs && count ? position.total : null,
-        previous: settledNow && position.index > 1 && !(step.kind === 'end' && step.direction === 'previous'),
-        next:
-          settledNow &&
-          !(position.total.exact && position.index >= position.total.n) &&
-          !(step.kind === 'end' && step.direction === 'next'),
-        busy: step.kind === 'pending',
-      }
-    : null;
+  // The hosts' pagers wait at the same ends (`layerPositionEnds`): ‹ stays at 1 until the total is exact (E9).
+  const ends = position ? layerPositionEnds(position, step.kind === 'end' ? step.direction : null) : null;
+  const stepper: LayerStepperView | null =
+    position && ends
+      ? {
+          index: position.index,
+          total: solutions.runs && count ? position.total : null,
+          previous: settledNow && !ends.first,
+          next: settledNow && !ends.last,
+          busy: step.kind === 'pending',
+        }
+      : null;
 
   const decided = solutions.runs && count !== null && count.orders.exact && count.orders.n === 1;
   return { dot: decided ? 'decided' : 'open', text, tooltip, stepper };

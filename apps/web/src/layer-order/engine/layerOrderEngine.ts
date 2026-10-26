@@ -166,6 +166,32 @@ export function spotCount(stacks: LayerStacks): number {
 }
 
 // ---------------------------------------------------------------------------
+// The stepper's ends
+
+/** The way a step last proved nothing lies (its `end`), or none. */
+export type LayerEnded = 'next' | 'previous' | null | undefined;
+
+/**
+ * Whether `position` is at either end of the stepper's fixed order, for every
+ * ‹ and › that steps through it, the dialog's and the hosts' alike: the first
+ * and the last once the total is exact, or the way a step proved nothing lies
+ * (`ended`, E9) whatever the count says.
+ *
+ * Before the total is exact, `index` counts the solutions found so far, not
+ * their rank: a step back may still find one the count lists before the
+ * first found, so ‹ stays even at 1. `only` is the one solution there is.
+ */
+export function layerPositionEnds(
+  position: LayerPosition,
+  ended?: LayerEnded
+): { first: boolean; last: boolean; only: boolean } {
+  const { index, total } = position;
+  const first = ended === 'previous' || (total.exact && index <= 1);
+  const last = ended === 'next' || (total.exact && index >= total.n);
+  return { first, last, only: first && last && total.n <= 1 };
+}
+
+// ---------------------------------------------------------------------------
 // Limits
 
 /**
