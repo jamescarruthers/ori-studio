@@ -2984,6 +2984,39 @@ function editRefoldCases(theme) {
     }
     await record(`edit-refold-${tag}-detached-dismissed`, dismissedShots);
 
+    // Deleted while it shows the flag, and the same creases folded again in this session with no save
+    // between: the new figure never takes the deleted one's id, so neither it nor a reload shows the record.
+    const reusedBefore = await page.evaluate(async () => {
+      const store = window.__treemakerWorkspaceStore;
+      const figure = store.getState().oristudioCpFoldedFigures[0];
+      const { deleteFoldedFigure } = await import('/src/cp-workspace/folded/foldedFigureVerbs.ts');
+      const i18n = (await import('/src/i18n/index.ts')).default;
+      await deleteFoldedFigure(figure.id, i18n.t);
+      return { id: figure.id, title: figure.title, left: store.getState().oristudioCpFoldedFigures.length };
+    });
+    const refoldedId = await foldWholeAndSelect(page);
+    const flagAfterFold = await page.evaluate(() =>
+      window.__treemakerWorkspaceStore.getState().oristudioCpFoldedFigures.some((figure) => figure.detachedLayerOrder != null)
+    );
+    const reusedWatch = await reopenSaved(page, url, theme, 'kabuto-reused.osf');
+    const reusedReopened = await page.evaluate(() => {
+      const state = window.__treemakerWorkspaceStore.getState();
+      return {
+        ids: state.oristudioCpFoldedFigures.map((figure) => figure.id),
+        shown: state.oristudioCpFoldedFigures.filter((figure) => figure.detachedLayerOrder != null).length,
+        detached: (state.oristudioCpDocumentExtensions['oristudio.foldedFigureLayerOrders']?.detached ?? []).map((entry) => entry.reason),
+      };
+    });
+    reusedWatch.stop();
+    console.log(
+      `[${tag}] deleted ${reusedBefore.id} ("${reusedBefore.title}") and folded again in the session: ${refoldedId}, flag ${flagAfterFold}; ` +
+        `saved and reopened: ${JSON.stringify(reusedReopened)}`
+    );
+    // Its entry: gone with it (earlier saves here dropped it, settled, before the undos brought the flag back), or missing.
+    if (refoldedId === reusedBefore.id || flagAfterFold || reusedReopened.shown !== 0 || reusedReopened.detached.includes('order-not-given')) {
+      throw new Error(`a fold after the Delete was shown the record: ${JSON.stringify({ refoldedId, flagAfterFold, reusedReopened })}`);
+    }
+
     // A book fold whose crease gains a fold angle: Refold shows it in 3D, its record kept and waiting (D13).
     const book = [
       '1 -200 -200 0 -200',
