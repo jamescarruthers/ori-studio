@@ -1041,7 +1041,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] E6: explain and solutions (#509, landed through #505)
 - [x] E7: wasm bridge (#505; kept in the Fold bridge, +195 KiB gzipped)
 - [x] E8: census 2 (#513; phase gate 2 passed)
-- [ ] E9: stepping without a finished count
+- [x] E9: stepping without a finished count (#536)
 - [x] U1: shared picking and tints (#497)
 - [x] U2: ModalFrame (#493)
 - [ ] U3a: the native-menu guard (to main)
@@ -1059,7 +1059,7 @@ Settled while building H4, for the PRs that meet it:
 - [x] H3a pre-work: `.property-sheet` into a module (#514, no visual change)
 - [x] H3a: Edit's Properties pane (#517)
 - [x] H3: Edit display and Apply (#520)
-- [ ] H4: Edit refold with constraints
+- [x] H4: Edit refold with constraints (#529)
 - [x] H5: Fold with layer order… (#526)
 - [ ] H6: Edit "Another solution" within constraints
 - [x] H7: Diagram step (#519)
