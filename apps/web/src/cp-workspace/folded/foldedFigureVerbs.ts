@@ -139,13 +139,20 @@ export function stepConstrainedFoldedSolution(
       : t('panels:creasePattern.previousSolutionAction', 'Show previous solution');
   return foldedFigureGesture.run('verb', label, async () => {
     const step = await useWorkspaceStore.getState().stepOristudioCpFigureLayerOrder(id, direction, { tries });
-    sayFoldedSolutionStep(step, t, () => void stepConstrainedFoldedSolution(id, direction, t, { tries: tries + 1 }));
+    sayFoldedSolutionStep(step, t, () => void stepConstrainedFoldedSolution(id, direction, t, { tries: tries + 1 }), tries);
     return step.status === 'moved';
   });
 }
 
-/** The toast id the step's messages share, so a Keep trying replaces the one it came from. */
-const STEP_TOAST_ID = 'layer-order-step';
+/**
+ * The toast id of a step's message, by how many times the user has kept
+ * trying: presses at the same try replace one another, and each Keep trying
+ * gets a fresh one. Clicking Keep trying dismisses its toast, and a toast
+ * shown again under that id while it leaves is lost in its exit.
+ */
+function stepToastId(tries: number): string {
+  return `layer-order-step-${tries}`;
+}
 
 /**
  * What a constrained step that moved nothing says, if anything:
@@ -165,12 +172,14 @@ const STEP_TOAST_ID = 'layer-order-step';
 export function sayFoldedSolutionStep(
   step: OristudioCpFigureSolutionStep,
   t: TFunction,
-  keepTrying: () => void
+  keepTrying: () => void,
+  tries = 0
 ): void {
   const keepTryingAction = {
     label: t('dialogs:layerOrder.keepTrying', 'Keep trying'),
     onClick: keepTrying,
   };
+  const toastId = stepToastId(tries);
   switch (step.status) {
     case 'lost':
       toast.error(
@@ -180,7 +189,7 @@ export function sayFoldedSolutionStep(
               'Layer order couldn’t load, so the figure wasn’t changed. Check your connection, then try again.'
             )
           : t('toasts:layerOrder.stepLost', 'Layer order stopped unexpectedly, so the figure wasn’t changed.'),
-        { id: STEP_TOAST_ID }
+        { id: toastId }
       );
       return;
     case 'timed_out':
@@ -191,7 +200,7 @@ export function sayFoldedSolutionStep(
               'Couldn’t check this figure’s layer constraints in time, so it wasn’t changed.'
             )
           : t('toasts:layerOrder.stepNotFoundInTime', 'Couldn’t find another solution in time, so the figure wasn’t changed.'),
-        { id: STEP_TOAST_ID, action: keepTryingAction }
+        { id: toastId, action: keepTryingAction }
       );
       return;
     case 'end':
@@ -199,7 +208,7 @@ export function sayFoldedSolutionStep(
       if (!step.final) {
         toast.error(
           t('toasts:layerOrder.stepNotFoundInTime', 'Couldn’t find another solution in time, so the figure wasn’t changed.'),
-          { id: STEP_TOAST_ID, action: keepTryingAction }
+          { id: toastId, action: keepTryingAction }
         );
       }
       return;
@@ -209,13 +218,13 @@ export function sayFoldedSolutionStep(
           'toasts:layerOrder.stepUnrestored',
           'This figure’s layer constraints need attention, so it can’t step through solutions. Open Layer order… to review them.'
         ),
-        { id: STEP_TOAST_ID }
+        { id: toastId }
       );
       return;
     case 'too-large':
       toast.error(
         t('errors:cp.layerOrderTooLarge', 'This layer order is too large to save with the figure, so it is unchanged.'),
-        { id: STEP_TOAST_ID }
+        { id: toastId }
       );
       return;
     case 'moved':

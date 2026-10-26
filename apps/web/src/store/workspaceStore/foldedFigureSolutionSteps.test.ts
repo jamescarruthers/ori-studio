@@ -630,6 +630,10 @@ describe('a press that moves nothing', () => {
     keepTrying();
     await vi.waitFor(() => expect(cursor.triesAsked).toHaveLength(2));
     await vi.waitFor(() => expect(toasts.toast.error).toHaveBeenCalledTimes(2));
+    // Each try says so under a toast of its own: one shown again under the id Keep trying just
+    // dismissed would be lost in its exit.
+    const ids = toasts.toast.error.mock.calls.map(([, options]) => (options as { id: string }).id);
+    expect(new Set(ids).size).toBe(2);
     keepTrying();
     await vi.waitFor(() => expect(figureNow().handle).toBe(9));
     expect(cursor.triesAsked).toEqual([0, 1, 2]);
