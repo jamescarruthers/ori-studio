@@ -531,8 +531,12 @@ disagrees, the artboard wins):
   step, however many objects), a row's removal, Clear all, a solution step
   (your words, 2026-10-26: "cmd + z should undo adding a single constraint or
   setting the subject (so basically any action)").
-- Undo, redo, remove and Clear all re-solve for the fitting order closest to
-  the one on screen, and flash the spots that changed (Round3:1150-1190).
+- Remove and Clear all re-solve for the fitting order closest to the one on
+  screen, and flash the spots that changed (Round3:1150-1190). Undo and redo
+  restore the exact order the action started from or landed on (my call,
+  2026-10-26, from #539's review: relative re-solving made a step's undo stick
+  or land on another picture, and undoing everything didn't come back to the
+  opening order), and flash the spots that changed.
 
 **Fidelity list** (U8, U10 acceptance):
 - The verb menu previews the verb under the pointer or focus (Round3:457, 893).
@@ -747,7 +751,7 @@ notice has no board of its own; U10 builds it from the approved copy.
     line for the objects). So that two objects fit on a line in the approved
     grid, an object chip in the builder is just its letter: a click on it
     removes that object ("Remove H"), and the slot's one × clears them all
-    (my call; the list's rows keep a × per object).
+    (my call; the list's rows have no per-object ×, your call 2026-10-26).
   - **Which faces can be objects** (my call): the faces open against the
     subject in the committed order, as now, whatever else is picked. Picking
     one never changes which others are offered, so the tints hold still.
@@ -778,7 +782,8 @@ notice has no board of its own; U10 builds it from the approved copy.
     constraint if they want." Carried rows group the same way, within one status, so a row
     never mixes statuses; intact and clashing count as one there, since both
     still apply and a clash is marked per object, as on committed rows. A
-    row keeps its place and identity when one of its objects is removed.
+    row keeps its place and identity when an undo removes one of its
+    objects.
     When a row's own objects are the whole clash, it says they can't all fit
     together. A pressed or hovered row lights its subject and all
     its objects; a row click puts its subject in the builder, as now. A clash
