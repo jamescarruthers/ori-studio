@@ -394,6 +394,11 @@ describe('the constraints list', () => {
     act(() => button('Remove C in front of A, D').focus());
     click(button('Remove C in front of A, D'));
     expect(document.activeElement).toBe(button('Undo'));
+    // A pointer's press keeps nothing: no focus moves, so no tooltip opens.
+    const trash = button('Remove C in front of A, D');
+    act(() => trash.focus());
+    act(() => trash.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 })));
+    expect(document.activeElement).toBe(trash);
   });
 
   it('names Undo’s key in its tooltip, as the registry resolves it', async () => {

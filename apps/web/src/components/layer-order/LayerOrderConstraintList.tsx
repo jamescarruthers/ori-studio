@@ -1,4 +1,4 @@
-import { memo, useId, useMemo, useRef, type PointerEvent } from 'react';
+import { memo, useId, useMemo, useRef, type MouseEvent, type PointerEvent } from 'react';
 import { Redo2, Trash2, Undo2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { shortcutLabelForAction } from '../../keyboard/shortcuts';
@@ -23,9 +23,12 @@ function touched(event: PointerEvent): boolean {
   return event.pointerType === 'touch';
 }
 
-/** Before a control that holds the focus goes, hand the focus to `to`, which stays. */
-function handFocus(from: Element, to: Element | null | undefined) {
-  if (to instanceof HTMLElement && from.contains(document.activeElement)) to.focus();
+/**
+ * Before a control pressed from the keyboard goes, hand the focus to `to`,
+ * which stays. A pointer's press (a click with a count) has no focus to keep.
+ */
+function handFocus(event: MouseEvent<HTMLElement>, to: Element | null | undefined) {
+  if (event.detail === 0 && to instanceof HTMLElement && event.currentTarget.contains(document.activeElement)) to.focus();
 }
 
 /** Undo's and Redo's keys as the registry resolves them now, so a rebinding shows. */
@@ -232,7 +235,7 @@ function ConstraintRow({
                           event.stopPropagation();
                           if (!removable) return;
                           // The row stays, one object shorter: its button takes the focus.
-                          handFocus(event.currentTarget, hitRef.current);
+                          handFocus(event, hitRef.current);
                           remove([member.id]);
                         }}
                       >
@@ -299,7 +302,7 @@ function ConstraintRow({
           // The row goes: the next row's button takes the focus, else Undo.
           const row = event.currentTarget.closest('li');
           const next = row?.nextElementSibling?.querySelector('[data-row-button]');
-          handFocus(event.currentTarget, next ?? undo.current);
+          handFocus(event, next ?? undo.current);
           remove(members.map((member) => member.id));
         }}
       >

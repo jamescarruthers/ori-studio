@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronDown, CircleAlert, LoaderCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -57,12 +57,13 @@ function useMenuOpen(enabled: boolean): readonly [boolean, (next: boolean) => vo
 }
 
 /**
- * Before a control that holds the focus goes (a chip removed, a slot
+ * Before a control pressed from the keyboard goes (a chip removed, a slot
  * cleared), hand the focus to a neighbour that stays, so it never drops to
- * the page outside the dialog.
+ * the page outside the dialog. A pointer's press (a click with a count) has no
+ * focus to keep, and moving it would only open the neighbour's tooltip.
  */
-function handFocus(from: Element, to: Element | null | undefined) {
-  if (to instanceof HTMLElement && from.contains(document.activeElement)) to.focus();
+function handFocus(event: MouseEvent<HTMLElement>, to: Element | null | undefined) {
+  if (event.detail === 0 && to instanceof HTMLElement && event.currentTarget.contains(document.activeElement)) to.focus();
 }
 
 /**
@@ -207,7 +208,7 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
           aria-disabled={!live || undefined}
           onClick={(event) => {
             if (!live) return;
-            handFocus(event.currentTarget, subjectRef.current);
+            handFocus(event, subjectRef.current);
             dispatch({ type: 'slot_cleared', slot: 'subject' });
           }}
         >
@@ -331,7 +332,7 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
                 title={remove}
                 onClick={(event) => {
                   // The next chip takes the focus, else the field.
-                  handFocus(event.currentTarget, event.currentTarget.nextElementSibling ?? fieldRef.current);
+                  handFocus(event, event.currentTarget.nextElementSibling ?? fieldRef.current);
                   dispatch({ type: 'object_removed', face });
                 }}
               />
@@ -349,7 +350,7 @@ export function LayerOrderBuilder({ state, dispatch, copy, letters, hint: hintCo
           aria-disabled={!live || undefined}
           onClick={(event) => {
             if (!live) return;
-            handFocus(event.currentTarget, fieldRef.current);
+            handFocus(event, fieldRef.current);
             dispatch({ type: 'slot_cleared', slot: 'object' });
           }}
         >
