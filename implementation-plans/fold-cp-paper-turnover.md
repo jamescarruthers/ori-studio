@@ -5,8 +5,8 @@
 Draw the Fold workspace's crease-pattern sheet in its paper style's front/back
 colors and let the user turn it over left to right to inspect the back, with
 mountain and valley creases reversed. Use the paper’s pens throughout, start
-new Fold sequences in Default, and use Diagram’s looped turnover symbol for
-the model-turn actions in Fold and Diagram.
+new Fold sequences in Default, and retain the original paper-and-arrow icons
+for the model-turn actions in Fold and Diagram.
 
 ## Approach
 
@@ -39,7 +39,7 @@ Compose the existing viewport toolbar control on desktop and its overflow menu o
 - [x] Apply the paper pens to every CP crease, including step instructions.
 - [x] Replace turnover arrows with front/back paper-face icons and descriptive labels.
 - [x] Validate the follow-up and update the draft PR.
-- [x] Share Diagram’s looped turnover symbol across Fold and Diagram actions.
+- [x] Restore the original turnover action icons in Fold and Diagram after visual review.
 - [x] Verify Default’s crease categories and report why its pens differ.
 - [x] Start new Fold sequences in Default, preserving saved style choices.
 - [x] Validate the turnover-symbol and starting-style updates for the existing draft PR.
@@ -89,10 +89,11 @@ was run for the initial implementation; the follow-up uses focused coverage
 because it changes only Fold presentation. The same native/build exclusions
 apply.
 
-The model-turn actions in Fold and Diagram now share `TurnOverIcon`, drawn
-from the same shaft and arrowhead geometry as the diagram’s turnover mark.
-This covers Fold’s rail and menus, Diagram’s card shortcuts, action menus,
-and pose controls. The CP viewing-side control retains its white/grey faces.
+The model-turn actions in Fold and Diagram use their original paper-and-arrow
+icon (`RotateCcwSquare`), restored after the user reviewed the looped-arrow
+replacement. This covers Fold’s rail and menus, Diagram’s card shortcuts,
+action menus, and pose controls. Diagram’s annotation symbol stays unchanged;
+the CP viewing-side control retains its white/grey faces.
 
 New Fold sequences snapshot the built-in Default preset. Saved style choices,
 including Diagram, are preserved. Default’s red/blue crease colors are
@@ -108,3 +109,11 @@ shortcut, both turnover actions, Default on a fresh Fold sheet, and keeping
 an explicitly selected Diagram style across a turn. No page errors. No new
 translation strings, engine changes, or production build changes were added;
 the native/oracle/build exclusions above still apply.
+
+The action-icon reversion passed web lint, typecheck, `git diff --check`, and
+592 focused tests across 38 files. Chromium verified the restored Fold rail
+and Diagram empty-step icons, with no page errors. This removes the extracted
+looped-arrow component and restores the existing glyph assertion; no new tests
+are needed for the icon-only reversion. Paper colors, pens, viewing-side
+controls, Default starting style, and the merged Diagram import controls are
+preserved. The same native/oracle/build exclusions apply.

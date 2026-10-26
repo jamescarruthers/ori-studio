@@ -1,7 +1,6 @@
-import { Undo2, BookImage, Download, Images, RotateCw, Send, Trash2, Upload } from 'lucide-react';
+import { Undo2, BookImage, Download, Images, RotateCcwSquare, RotateCw, Send, Trash2, Upload } from 'lucide-react';
 import type { FoldActionIcon as FoldActionIconName } from '../../fold/foldActions';
 import { FoldKindMark } from './FoldKindMark';
-import { TurnOverIcon } from '../ui/TurnOverIcon';
 
 /** Repeat's icon, on the rail and beside a label: the diagram's repeat symbol. */
 export function FoldRepeatGlyph({ size }: { size: number }) {
@@ -12,8 +11,9 @@ export function FoldRepeatGlyph({ size }: { size: number }) {
  * The icon of a Fold verb (`fold/foldActions`' `FoldActionIcon`), wherever a
  * surface draws one with an icon — the header, the step cards' menus. The
  * fold kinds use the same symbols as on the
- * rail; turn over is the diagram's looped turnover arrow; Send to Edit is the
- * verb's icon in every workspace. Decorative: every verb is named in words beside it.
+ * rail; turn over is the rail's own glyph, the turn-over icon of Edit's Flip
+ * and the Diagram's turns; Send to Edit is the verb's icon in every
+ * workspace. Decorative: every verb is named in words beside it.
  */
 export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; size?: number }) {
   switch (icon) {
@@ -22,7 +22,7 @@ export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; 
     case 'precrease':
       return <FoldKindMark kind={icon} size={size} />;
     case 'turn-over':
-      return <TurnOverIcon size={size} aria-hidden="true" />;
+      return <RotateCcwSquare size={size} aria-hidden="true" />;
     case 'rotate':
       // The rail's Rotate tool, and the Diagram's rotate glyph tool: one icon for the one concept.
       return <RotateCw size={size} aria-hidden="true" />;

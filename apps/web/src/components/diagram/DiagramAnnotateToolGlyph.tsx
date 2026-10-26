@@ -1,6 +1,9 @@
 import type { ReactElement } from 'react';
 import { MousePointer2, RotateCw, SplinePointer, Type } from 'lucide-react';
 import {
+  TURN_OVER_BOX,
+  TURN_OVER_HEAD_PATH,
+  TURN_OVER_PATH,
   eyePathData,
   eyeShape,
   polygonPathData,
@@ -18,7 +21,6 @@ import {
 import { lineKindOf, type DiagramLineType } from '../../diagram/annotate/lineTypes';
 import type { DiagramStarFill } from '../../diagram/annotate/starFill';
 import type { DiagramAnnotationKind, DiagramZoomShape } from '../../diagram/document/diagramDocument';
-import { TurnOverIcon } from '../ui/TurnOverIcon';
 
 const SIZE = 20;
 
@@ -207,8 +209,19 @@ export function DiagramAnnotationGlyph({
           />
         </Glyph>
       );
-    case 'turn-over':
-      return <TurnOverIcon size={SIZE} />;
+    case 'turn-over': {
+      const scale = 17 / TURN_OVER_BOX.width;
+      return (
+        <Glyph>
+          <g
+            transform={`translate(${(SIZE - TURN_OVER_BOX.width * scale) / 2} ${(SIZE - TURN_OVER_BOX.height * scale) / 2}) scale(${scale})`}
+          >
+            <path d={TURN_OVER_PATH} strokeWidth={1.5 / scale} />
+            <path d={TURN_OVER_HEAD_PATH} fill="currentColor" stroke="none" />
+          </g>
+        </Glyph>
+      );
+    }
     case 'rotate':
       return <RotateCw size={17} aria-hidden="true" />;
     case 'valley-line':

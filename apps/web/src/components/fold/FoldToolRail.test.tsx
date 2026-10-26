@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { DiagramAnnotationGlyph } from '../diagram/DiagramAnnotateToolGlyph';
+import { RotateCcwSquare } from 'lucide-react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import {
@@ -235,7 +235,7 @@ describe('FoldToolGlyph', () => {
     expect(glyphs.querySelector('[data-glyph="fold"]')?.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('draws Turn over on the rail and in menus with the diagram’s looped arrow', () => {
+  it('draws Turn over, on the rail and in the menus, as the turn-over icon Edit’s Flip and the Diagram draw', () => {
     const drawn = mount(
       <>
         <span data-glyph="rail">
@@ -245,12 +245,12 @@ describe('FoldToolGlyph', () => {
           <FoldActionIcon icon="turn-over" />
         </span>
         <span data-glyph="shared">
-          <DiagramAnnotationGlyph kind="turn-over" />
+          <RotateCcwSquare />
         </span>
       </>
     );
     const paths = (which: string) =>
-      [...drawn.querySelectorAll(`[data-glyph="${which}"] svg path`)].map((shape) => shape.outerHTML);
+      [...drawn.querySelectorAll(`[data-glyph="${which}"] svg > *`)].map((shape) => shape.outerHTML);
     expect(paths('shared').length).toBeGreaterThan(0);
     expect(paths('rail')).toEqual(paths('shared'));
     expect(paths('menu')).toEqual(paths('shared'));

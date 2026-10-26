@@ -25,6 +25,7 @@ import {
   Replace,
   Rotate3d,
   RotateCcw,
+  RotateCcwSquare,
   RotateCw,
   Scaling,
   Trash2,
@@ -33,7 +34,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { DiagramStepActionId, DiagramStepChoice, DiagramStepGroup } from './diagramActions';
-import { TurnOverIcon } from '../../components/ui/TurnOverIcon';
 
 /** Everything in the step catalog that is drawn with an icon: a verb, a choice, a group. */
 export type DiagramActionIconId = DiagramStepActionId | DiagramStepChoice['id'] | DiagramStepGroup['id'];
@@ -55,10 +55,10 @@ export const DIAGRAM_ACTION_ICONS: Readonly<Record<DiagramActionIconId, LucideIc
   insert: Plus,
   'insert-before': BetweenHorizontalStart,
   'insert-after': BetweenHorizontalEnd,
-  // A turn's card and Make Turn Over / Make Rotate: the diagram's own symbols.
-  'insert-turn-over': TurnOverIcon,
+  // A turn's card and Make Turn Over / Make Rotate: Edit's Flip glyph, and a turn.
+  'insert-turn-over': RotateCcwSquare,
   'insert-rotate': RotateCw,
-  'make-turn-over': TurnOverIcon,
+  'make-turn-over': RotateCcwSquare,
   'make-rotate': RotateCw,
   // As the turn's pane moves it: earlier is up the list.
   move: ArrowUpDown,
